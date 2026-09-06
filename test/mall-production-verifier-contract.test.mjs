@@ -4,18 +4,18 @@ import { readFile } from 'node:fs/promises';
 
 const workflow = await readFile(new URL('../.github/workflows/verify-ekodi-mall-production.yml', import.meta.url), 'utf8');
 
-test('Mall production verifier follows the current Context Shopping contract', () => {
+test('Mall production verifier follows the current storefront contract', () => {
   for (const marker of [
-    'EKODI CONTEXT SHOPPING',
-    '상품보다 이유부터',
-    '추천순위는 제휴수수료와 분리합니다',
-    'ALL MARKET',
-    'Seller Studio',
-    '검증된 경로만 활성화'
-  ]) assert.match(workflow, new RegExp(marker));
-  assert.doesNotMatch(workflow, /SMART SHOPPING/);
-  assert.doesNotMatch(workflow, /오늘 필요한 것,/);
-  assert.doesNotMatch(workflow, /오늘의 상품/);
+    'ekodibizmall',
+    'GIFT CONTEXT INTELLIGENCE',
+    'CONNECTED COMMERCE',
+    'OUR PROMISE',
+    'data-ekodi-service="mall"',
+    'https://ekodi.kr/ekodibiz/mall'
+  ]) assert.match(workflow, new RegExp(marker.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+  assert.doesNotMatch(workflow, /EKODI CONTEXT SHOPPING/);
+  assert.doesNotMatch(workflow, /ALL MARKET/);
+  assert.doesNotMatch(workflow, /Seller Studio/);
 });
 
 test('Mall production verifier checks the server transaction safety boundary', () => {
@@ -24,12 +24,16 @@ test('Mall production verifier checks the server transaction safety boundary', (
     'schemaReady',
     'orderSchemaReady',
     'verificationSchemaReady',
+    'operationsReviewConfigured',
+    'operationsEmailAllowlistConfigured',
     'paymentsEnabled',
     'payoutExecutionEnabled',
     'buyerPiiReleaseEnabled',
     'supplierForwardEnabled',
     'refundExecutionEnabled'
   ]) assert.match(workflow, new RegExp(field));
+  assert.match(workflow, /operations review is not configured/);
+  assert.match(workflow, /operations email allowlist is not configured/);
   assert.match(workflow, /high-impact transaction gate unexpectedly enabled/);
 });
 

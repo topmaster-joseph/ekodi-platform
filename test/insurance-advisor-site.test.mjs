@@ -35,10 +35,14 @@ test('advisor public and admin surfaces preserve personal-site compliance bounda
   const html=fs.readFileSync(new URL('../sites/ekodi-insurance/public/advisor.html',import.meta.url),'utf8');
   const js=fs.readFileSync(new URL('../sites/ekodi-insurance/public/advisor.js',import.meta.url),'utf8');
   const worker=fs.readFileSync(new URL('../sites/ekodi-insurance/worker.js',import.meta.url),'utf8');
-  const demand=fs.readFileSync(new URL('../admin-demand-loader.js',import.meta.url),'utf8');
+  const layout=fs.readFileSync(new URL('../admin-menu-layout.js',import.meta.url),'utf8');
+  const build=fs.readFileSync(new URL('../scripts/build.mjs',import.meta.url),'utf8');
+  const siteWorker=fs.readFileSync(new URL('../site-worker.js',import.meta.url),'utf8');
   const insuranceAdmin=fs.readFileSync(new URL('../insurance-admin.js',import.meta.url),'utf8');
   const proxy=fs.readFileSync(new URL('../insurance-control-proxy.js',import.meta.url),'utf8');
   for(const marker of ['보험회사 공식 홈페이지가 아닌 보험설계사 개인 안내·상담 페이지','모집인 정보를 확인','상담 요청'])assert.ok(html.includes(marker));
   assert.ok(js.includes('advisorProfileId:profile.id'));assert.ok(js.includes('shareTranscript:false'));assert.ok(worker.includes("url.pathname==='/advisor'"));
-  assert.ok(demand.includes("scripts:['insurance-admin.js']"));assert.ok(insuranceAdmin.includes("import('./insurance-advisor-admin.js')"));assert.ok(proxy.includes('/network/advisor-profile'));assert.ok(proxy.includes("['PATCH','PUT']"));
+  assert.ok(layout.includes("section==='insurance'")&&layout.includes("import('./insurance-admin.js')"));assert.ok(insuranceAdmin.includes("import('./insurance-advisor-admin.js')"));
+  for(const asset of ['insurance-admin.js','insurance-network-admin.js','insurance-advisor-admin.js']){assert.ok(build.includes(asset));assert.ok(siteWorker.includes('/'+asset))}
+  assert.ok(proxy.includes('/network/advisor-profile'));assert.ok(proxy.includes("['PATCH','PUT']"));
 });

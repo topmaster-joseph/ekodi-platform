@@ -29,6 +29,7 @@
       hashes: ['#ai-ops', '#aiops'],
       insert: 'after-campus',
     },
+    openai:{label:'OpenAI',icon:'O',styles:['openai-workspace-admin.css'],scripts:['openai-workspace-admin.js'],real:'[data-section="openai"]',hashes:['#openai']},
     devotional:{label:'매일묵상',icon:'V',styles:['devotional-admin.css'],scripts:['devotional-admin.js'],real:'[data-section="devotional"]',hashes:['#devotional'],insert:'after-aiops'},
     'ai-module-spec':{label:'A',icon:'A',styles:['ai-module-spec-admin.css'],scripts:['ai-module-spec-admin.js'],real:'[data-section="ai-module-spec"]',hashes:['#ai-module-spec']},
     'life-ai':{label:'인생AI',icon:'Q',styles:['life-ai-admin.css'],scripts:['life-ai-admin.js'],real:'[data-section="life-ai"]',hashes:['#life-ai'],insert:'after-aiops'},
@@ -68,7 +69,6 @@
     books: { label:'출판 · 도서', icon:'B', styles:['books-admin.css'], scripts:['books-admin.js'], secondaryStyles:['books-finance-admin.css'], secondaryScripts:['books-finance-admin.js'], real:'[data-section="books"]', hashes:['#books'] },
     social: { label:'소셜', icon:'S', styles:['social-admin.css'], scripts:['social-admin.js'], real:'[data-section="social"]', hashes:['#social'] },
     affiliates: { label:'제휴마케팅', icon:'A', styles:['marketing-funnel-admin.css'], scripts:['marketing-funnel-admin.js'], real:'[data-section="affiliates"]', hashes:['#affiliates'] },
-    insurance:{scripts:['insurance-admin.js'],real:'[data-section=insurance]'},
     marketing: {
       label: 'MarketingAI', icon: 'AI',
       styles: ['marketing-ai-admin.css'],

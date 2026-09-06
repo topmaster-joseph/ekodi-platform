@@ -25,13 +25,12 @@ jobs:
           set -euo pipefail
           curl -fsS --retry 3 --retry-delay 2 --connect-timeout 5 --max-time 20 'https://ekodi.kr/ekodibiz/mall' -o /tmp/mall.html
           for marker in \
-            'EKODI MALL' \
-            'EKODI CONTEXT SHOPPING' \
-            '상품보다 이유부터' \
-            '추천순위는 제휴수수료와 분리합니다' \
-            'ALL MARKET' \
-            'Seller Studio' \
-            '검증된 경로만 활성화'; do
+            'ekodibizmall' \
+            'GIFT CONTEXT INTELLIGENCE' \
+            'CONNECTED COMMERCE' \
+            'OUR PROMISE' \
+            'data-ekodi-service="mall"' \
+            'https://ekodi.kr/ekodibiz/mall'; do
             grep -Fq "$marker" /tmp/mall.html || { echo "Missing Mall marker: $marker"; exit 1; }
           done
           if grep -Fq '추천링크 클릭 후 검색하세요' /tmp/mall.html || grep -Fq 'COUPANG AFFILIATE CURATION' /tmp/mall.html || grep -Fq 'cwWXWm' /tmp/mall.html; then
@@ -39,6 +38,23 @@ jobs:
             exit 1
           fi
           echo 'storefront=verified'
+
+          verification_entry_code=$(curl -sS -D /tmp/mall-verification-entry.headers -o /tmp/mall-verification-entry.body -w '%{http_code}' --retry 3 --retry-delay 2 --connect-timeout 5 --max-time 20 'https://ekodi.kr/ekodibiz/mall/verification-ops' || true)
+          if [[ ! "$verification_entry_code" =~ ^[23] ]] || ! grep -Fiq 'cache-control: no-store' /tmp/mall-verification-entry.headers; then
+            echo "Verification Ops canonical entry is not fail-closed for caching: HTTP $verification_entry_code"
+            cat /tmp/mall-verification-entry.headers || true
+            exit 1
+          fi
+          verification_final_code=$(curl -sS -D /tmp/mall-verification-final.headers -o /tmp/mall-verification-final.html -w '%{http_code}' --retry 3 --retry-delay 2 --connect-timeout 5 --max-time 20 'https://ekodi.kr/ekodibiz/mall/assets/verification-ops' || true)
+          if [ "$verification_final_code" != "200" ] \
+            || ! grep -Fiq 'cache-control: no-store' /tmp/mall-verification-final.headers \
+            || ! grep -Fiq 'x-robots-tag: noindex, nofollow, noarchive' /tmp/mall-verification-final.headers \
+            || ! grep -Fq '/assets/verification-ops.js' /tmp/mall-verification-final.html; then
+            echo "Verification Ops final HTML security contract failed: HTTP $verification_final_code"
+            cat /tmp/mall-verification-final.headers || true
+            exit 1
+          fi
+          echo 'verificationOpsCacheBoundary=verified'
 
           curl -fsS --retry 3 --retry-delay 2 --connect-timeout 5 --max-time 20 'https://mall-api.ekodi.kr/health' -o /tmp/mall-health.json
           node <<'NODE'
@@ -49,6 +65,8 @@ jobs:
           for (const key of ['schemaReady', 'orderSchemaReady', 'verificationSchemaReady']) {
             if (health[key] !== true) throw new Error(`${key} is not ready`);
           }
+          if (health.operationsReviewConfigured !== true) throw new Error('operations review is not configured');
+          if (health.operationsEmailAllowlistConfigured !== true) throw new Error('operations email allowlist is not configured');
           for (const key of ['paymentsEnabled', 'payoutExecutionEnabled', 'buyerPiiReleaseEnabled', 'supplierForwardEnabled', 'refundExecutionEnabled']) {
             if (health[key] !== false) throw new Error(`high-impact transaction gate unexpectedly enabled: ${key}`);
           }

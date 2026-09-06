@@ -124,6 +124,12 @@ const ADMIN_ASSETS = new Set([
   '/client-access.js',
   '/marketing-funnel-admin.css',
   '/marketing-funnel-admin.js',
+  '/insurance-admin.css',
+  '/insurance-admin.js',
+  '/insurance-network-admin.css',
+  '/insurance-network-admin.js',
+  '/insurance-advisor-admin.css',
+  '/insurance-advisor-admin.js',
   '/marketing-ai-admin.css',
   '/marketing-ai-admin.js',
   '/google-admin-auth.css',
@@ -242,6 +248,13 @@ function isMallPath(pathname) {
   return pathname === MALL_PREFIX || pathname.startsWith(`${MALL_PREFIX}/`);
 }
 
+function isMallVerificationOpsPath(pathname) {
+  return pathname === `${MALL_PREFIX}/verification-ops`
+    || pathname === `${MALL_PREFIX}/verification-ops/`
+    || pathname === `${MALL_PREFIX}/assets/verification-ops`
+    || pathname === `${MALL_PREFIX}/assets/verification-ops.html`;
+}
+
 function isLegacyMallPath(pathname) {
   return pathname === LEGACY_MALL_PREFIX || pathname.startsWith(`${LEGACY_MALL_PREFIX}/`);
 }
@@ -316,11 +329,13 @@ async function proxyMallService(request) {
   headers.set('x-ekodi-service', 'mall');
   const adminSurface = incoming.pathname === `${MALL_PREFIX}/admin` || incoming.pathname.startsWith(`${MALL_PREFIX}/admin/`);
   const apiSurface = incoming.pathname === `${MALL_PREFIX}/api` || incoming.pathname.startsWith(`${MALL_PREFIX}/api/`);
+  const verificationOpsSurface = isMallVerificationOpsPath(incoming.pathname);
   const adminEmbed = incoming.searchParams.get('embed') === 'admin';
-  const cacheControl = adminSurface || apiSurface || adminEmbed ? 'no-store' : 'public, max-age=0, must-revalidate';
-  const route = adminSurface ? 'admin-mall-proxy' : apiSurface ? 'mall-api-proxy' : 'public-ekodi-mall';
+  const cacheControl = adminSurface || apiSurface || verificationOpsSurface || adminEmbed ? 'no-store' : 'public, max-age=0, must-revalidate';
+  const route = adminSurface ? 'admin-mall-proxy' : apiSurface ? 'mall-api-proxy' : verificationOpsSurface ? 'mall-verification-ops' : 'public-ekodi-mall';
   const mallCsp = adminEmbed ? MALL_ADMIN_EMBED_CSP : MALL_CSP;
   const response = withHostSecurity(new Response(responseBody, { status: upstreamResponse.status, statusText: upstreamResponse.statusText, headers }), mallCsp, cacheControl, route);
+  if (verificationOpsSurface) response.headers.set('X-Robots-Tag', 'noindex, nofollow, noarchive');
   if (adminEmbed) response.headers.delete('X-Frame-Options');
   return injectEkodiShell(response, 'mall', adminSurface ? 'admin' : 'public');
 }

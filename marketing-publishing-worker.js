@@ -548,7 +548,7 @@ export default {
   async scheduled(event, env, ctx) {
     const tasks = [runScheduler(env)];
     const scheduledAt = new Date(Number(event?.scheduledTime || Date.now()));
-    if (scheduledAt.getUTCMinutes() === 5 && env.MARKETING_GROWTH?.runGrowthCycle) tasks.push(env.MARKETING_GROWTH.runGrowthCycle({reason:'shared-publishing-cron'}));
+    if (scheduledAt.getUTCMinutes() % 20 === 5 && env.MARKETING_GROWTH?.runGrowthCycle) tasks.push(env.MARKETING_GROWTH.runGrowthCycle({reason:'shared-publishing-cron'}));
     ctx.waitUntil(Promise.allSettled(tasks));
   },
 };

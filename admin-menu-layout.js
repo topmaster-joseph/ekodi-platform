@@ -12,24 +12,17 @@ const INTERNAL=new Set(['services','deployments','policies']);
 const ORDER=Object.freeze(adminMenuOrder());
 const RANK=new Map(ORDER.map((section,index)=>[section,index+1]));
 const DEMAND_KEYS=new Map([
-  ['campus','campus'],['public-site-controls','public-site-controls'],['aiops','aiops'],['devotional','devotional'],['ai-module-spec','ai-module-spec'],['ai-membership','aimembers'],
+  ['campus','campus'],['public-site-controls','public-site-controls'],['aiops','aiops'],['openai','openai'],['devotional','devotional'],['ai-module-spec','ai-module-spec'],['ai-membership','aimembers'],
   ['health','health'],['api-cost','api-cost'],['storage','storage'],['security','security'],['work','work'],
-  ['clients','clients'],['community','community'],['books','books'],['social','social'],['affiliates','affiliates'],['insurance','insurance'],
+  ['clients','clients'],['community','community'],['books','books'],['social','social'],['affiliates','affiliates'],
   ['marketing-ai','marketing'],['devices','devices'],['life-ai','life-ai'],['personal-finance','personal-finance']
 ]);
 const pairMap=value=>new Map(value.split(' ').map(pair=>pair.split(':')));
-const HASH=pairMap('#sites:sites #common-services:common-services #capabilities:capabilities #capability-center:capabilities #ai-ops:aiops #aiops:aiops #devotional:devotional #ai-module-spec:ai-module-spec #ai-membership:ai-membership #personal-finance:personal-finance #health:health #api-cost:api-cost #storage:storage #storige:storage #security:security #architecture:architecture #devices:devices #campus:campus #public-site-controls:public-site-controls #work:work #communication:communication #marketing-ai:marketing-ai #finance:finance #organization:organization #workspace:workspace #clients:clients #admins:admins #community:community #cheonggye-members:cheonggye-members #books:books #social:social #mall-ai-sales:affiliates #affiliates:affiliates #insurance:insurance #policies:policies #services:services #deployments:deployments #release:deployments');
-const CANON=pairMap('sites:#sites common-services:#common-services capabilities:#capabilities aiops:#ai-ops devotional:#devotional ai-module-spec:#ai-module-spec ai-membership:#ai-membership personal-finance:#personal-finance health:#health api-cost:#api-cost storage:#storage security:#security architecture:#architecture devices:#devices campus:#campus public-site-controls:#public-site-controls work:#work communication:#communication marketing-ai:#marketing-ai finance:#finance organization:#organization workspace:#workspace clients:#clients admins:#admins community:#community cheonggye-members:#cheonggye-members books:#books social:#social affiliates:#mall-ai-sales insurance:#insurance');
+const HASH=pairMap('#sites:sites #common-services:common-services #capabilities:capabilities #capability-center:capabilities #ai-ops:aiops #aiops:aiops #openai:openai #devotional:devotional #ai-module-spec:ai-module-spec #ai-membership:ai-membership #personal-finance:personal-finance #health:health #api-cost:api-cost #storage:storage #storige:storage #security:security #architecture:architecture #devices:devices #campus:campus #public-site-controls:public-site-controls #work:work #communication:communication #marketing-ai:marketing-ai #finance:finance #organization:organization #workspace:workspace #clients:clients #admins:admins #community:community #cheonggye-members:cheonggye-members #books:books #social:social #mall-ai-sales:affiliates #affiliates:affiliates #insurance:insurance #policies:policies #services:services #deployments:deployments #release:deployments');
+const CANON=pairMap('sites:#sites common-services:#common-services capabilities:#capabilities aiops:#ai-ops openai:#openai devotional:#devotional ai-module-spec:#ai-module-spec ai-membership:#ai-membership personal-finance:#personal-finance health:#health api-cost:#api-cost storage:#storage security:#security architecture:#architecture devices:#devices campus:#campus public-site-controls:#public-site-controls work:#work communication:#communication marketing-ai:#marketing-ai finance:#finance organization:#organization workspace:#workspace clients:#clients admins:#admins community:#community cheonggye-members:#cheonggye-members books:#books social:#social affiliates:#mall-ai-sales insurance:#insurance');
 let requestedSection = '';
 let sitesLoading,cheonggyeLoading,last='',queued=false,running=false,again=false,dc=false;
 const demandLoading=new Map();
-function installCompactStyle(){
-  if(document.querySelector('#ekodi-admin-menu-density'))return;
-  const style=document.createElement('style');
-  style.id='ekodi-admin-menu-density';
-  style.textContent='body.admin-compact .side-caption{margin-bottom:10px!important}body.admin-compact .sidebar nav{display:flex!important;flex-direction:column!important;gap:0!important;row-gap:0!important;overflow:visible!important;max-height:none!important;padding-right:0!important;flex:0 0 auto!important}body.admin-compact .sidebar nav>.nav{min-height:30px!important;padding:4px 9px!important;margin:0!important;border-radius:8px!important;line-height:1.1!important;gap:9px!important}body.admin-compact .sidebar nav>.nav span{font-size:12px!important;line-height:1.1!important}body.admin-compact .side-bottom{padding-top:8px!important}';
-  document.head.append(style);
-}
 function ensureFeatureStyle(href){
   if(document.querySelector(`link[data-ekodi-feature-style="${href}"]`))return;
   const link=document.createElement('link');link.rel='stylesheet';link.href=href;link.dataset.ekodiFeatureStyle=href;document.head.append(link);
@@ -141,6 +134,7 @@ function requestDemand(section){
   if(section==='communication')return import('./communication-admin.js').then(()=>{if(requestedSection!==section)return;applyOrder();activatePanel(section);syncTitle(section);});
   if(section==='capabilities')return import('./capability-center-admin.js').then(()=>{if(requestedSection!==section)return;applyOrder();activatePanel(section);syncTitle(section);});
   if(section==='admins')return requestAdminAccess();
+  if(section==='insurance')return import('./insurance-admin.js').then(()=>{if(requestedSection!==section)return;applyOrder();activatePanel(section);syncTitle(section);});
   const demandKey=DEMAND_KEYS.get(section);
   if(!demandKey||!window.EKODIAdminDemand?.activate){fallbackDemand(section);return null;}
   if(demandLoading.has(section))return demandLoading.get(section);
@@ -203,7 +197,7 @@ window.addEventListener('hashchange',()=>{
   if(section==='cheonggye-members')return openCheonggyeMembers();
   requestedSection=section;if(!activatePanel(section))requestDemand(section);
 });
-installCompactStyle();mountAdminSidebar(document);enforcePolicy();
+mountAdminSidebar(document);enforcePolicy();
 const initialHash = explicitHashSection();
 if(initialHash&&isInternal(initialHash))routeInternal();
 else if(initialHash==='sites')openSites();

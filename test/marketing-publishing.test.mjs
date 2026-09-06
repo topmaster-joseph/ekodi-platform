@@ -102,6 +102,6 @@ test('central publisher reuses OAuth vault over private service binding and supp
   assert.match(wrangler, /service = "ekodi-marketing-growth"/);
   assert.match(wrangler, /entrypoint = "MarketingGrowthPublisher"/);
   assert.match(publisher, /runGrowthCycle/);
-  assert.match(publisher, /getUTCMinutes\(\) === 5/);
+  assert.match(publisher, /getUTCMinutes\(\) % 20 === 5/);
   assert.match(growth, /async runGrowthCycle/);
 });

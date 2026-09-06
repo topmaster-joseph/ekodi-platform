@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises';
 import { adminMenuGroups, adminMenuOrder, getAdminMenuItem } from '../admin-menu-registry.js';
 
 const layout = await readFile(new URL('../admin-menu-layout.js', import.meta.url), 'utf8');
+const sidebar = await readFile(new URL('../admin-sidebar.js', import.meta.url), 'utf8');
 const menuRuntime = await readFile(new URL('../admin-menu-runtime.js', import.meta.url), 'utf8');
 
 test('internal technical sections stay out of primary navigation', () => {
@@ -41,8 +42,8 @@ test('human-facing Admin menu has one canonical order inside five domains plus O
   assert.deepEqual(adminMenuGroups(), ['structure','core','common','vertical','tenants','operations-center']);
   assert.deepEqual(adminMenuOrder(), [
     'campus','public-site-controls','architecture','security','admins','ai-module-spec','storage',
-    'common-services','communication','workspace','finance','life-ai','personal-finance','community','books','social','devotional','marketing-ai','ai-membership','tax','affiliates',
-    'insurance','work','organization','clients','cheonggye-members','capabilities','aiops','devices','health','api-cost',
+    'common-services','communication','workspace','finance','life-ai','personal-finance','community','books','social','devotional','marketing-ai','ai-membership','tax','affiliates','insurance',
+    'work','organization','clients','cheonggye-members','capabilities','aiops','openai','devices','health','api-cost',
   ]);
   assert.ok(layout.includes('const ORDER=Object.freeze(adminMenuOrder());'));
   assert.ok(layout.includes('const RANK=new Map(ORDER.map((section,index)=>[section,index+1]));'));
@@ -50,7 +51,7 @@ test('human-facing Admin menu has one canonical order inside five domains plus O
 });
 
 test('Admin sidebar menu uses compact spacing without shrinking label readability', () => {
-  for (const marker of ['ekodi-admin-menu-density','gap:0!important','min-height:30px!important','padding:4px 9px!important','font-size:12px!important']) assert.ok(layout.includes(marker));
+  for (const marker of ['ekodi-admin-workbench-tabs-style','gap:2px!important','min-height:40px','padding:8px 10px','font-size:14px']) assert.ok(sidebar.includes(marker));
 });
 
 test('administrator access waits for its runtime instead of recursively clicking the hidden source menu', () => {

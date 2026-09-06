@@ -4,6 +4,7 @@ const STOREFRONT = 'ekodi-mall';
 const NAVER_TREND_URL = 'https://naverapihub.apigw.ntruss.com/search-trend/v1/search';
 const MAX_PRODUCTS = 60;
 const MAX_TREND_CATEGORIES = 15;
+const FIRST_PARTY_PERFORMANCE_SOURCE = 'ekodi_first_party';
 
 const clean = (value, max = 240) => String(value ?? '').trim().slice(0, max);
 const nowIso = () => new Date().toISOString();
@@ -135,13 +136,36 @@ async function fetchNaverCategoryTrends(env, categories, runDate) {
 
 async function schemaReady(env) { return d1SchemaReady(env?.DB,['affiliate_storefront_products','affiliate_storefront_clicks','affiliate_demand_signals','affiliate_product_performance_daily','affiliate_growth_opportunities','affiliate_growth_strategy_runs']); }
 
+async function syncFirstPartyProductPerformance(env) {
+  const result = await env.DB.prepare(`INSERT INTO affiliate_product_performance_daily(product_row_id,metric_date,clicks,orders,cancels,gmv_krw,commission_krw,source,updated_at)
+    SELECT c.product_row_id,c.click_date,SUM(c.clicks),0,0,0,0,?,?
+    FROM affiliate_storefront_clicks c JOIN affiliate_storefront_products p ON p.id=c.product_row_id
+    WHERE p.account_id=? AND p.storefront_slug=? AND c.click_date >= date('now','-29 day')
+    GROUP BY c.product_row_id,c.click_date HAVING SUM(c.clicks) > 0
+    ON CONFLICT(product_row_id,metric_date,source) DO UPDATE SET clicks=excluded.clicks,updated_at=excluded.updated_at WHERE affiliate_product_performance_daily.clicks <> excluded.clicks`)
+    .bind(FIRST_PARTY_PERFORMANCE_SOURCE,nowIso(),ACCOUNT_ID,STOREFRONT).run();
+  return {rowsWritten:Number(result?.meta?.changes||0),source:FIRST_PARTY_PERFORMANCE_SOURCE};
+}
+
 async function productPerformanceStatus(env) {
-  const row = await env.DB.prepare(`SELECT COUNT(*) AS rows, MAX(metric_date) AS latest_metric_date, COALESCE(SUM(orders),0) AS orders, COALESCE(SUM(cancels),0) AS cancels, COALESCE(SUM(commission_krw),0) AS commission_krw FROM affiliate_product_performance_daily WHERE metric_date >= date('now','-29 day')`).first().catch(() => null);
-  if (!row) return {status:'error',rows:0,latestMetricDate:null,orders30d:0,cancels30d:0,commission30d:0};
+  const row = await env.DB.prepare(`SELECT COUNT(*) AS rows,MAX(metric_date) AS latest_metric_date,
+    SUM(CASE WHEN source=? THEN 1 ELSE 0 END) AS first_party_rows,MAX(CASE WHEN source=? THEN metric_date ELSE NULL END) AS latest_first_party_date,COALESCE(SUM(CASE WHEN source=? THEN clicks ELSE 0 END),0) AS first_party_clicks,
+    SUM(CASE WHEN source<>? THEN 1 ELSE 0 END) AS conversion_rows,MAX(CASE WHEN source<>? THEN metric_date ELSE NULL END) AS latest_conversion_date,
+    COALESCE(SUM(CASE WHEN source<>? THEN clicks ELSE 0 END),0) AS reported_clicks,COALESCE(SUM(orders),0) AS orders,COALESCE(SUM(cancels),0) AS cancels,COALESCE(SUM(gmv_krw),0) AS gmv_krw,COALESCE(SUM(commission_krw),0) AS commission_krw
+    FROM affiliate_product_performance_daily WHERE metric_date >= date('now','-29 day')`)
+    .bind(FIRST_PARTY_PERFORMANCE_SOURCE,FIRST_PARTY_PERFORMANCE_SOURCE,FIRST_PARTY_PERFORMANCE_SOURCE,FIRST_PARTY_PERFORMANCE_SOURCE,FIRST_PARTY_PERFORMANCE_SOURCE,FIRST_PARTY_PERFORMANCE_SOURCE).first().catch(() => null);
+  if (!row) return {status:'error',rows:0,latestMetricDate:null,orders30d:0,cancels30d:0,gmv30d:0,commission30d:0};
   const rows = Number(row.rows||0);
   const latestMetricDate = row.latest_metric_date || null;
-  const status = !rows ? 'empty' : latestMetricDate && latestMetricDate >= addDays(kstParts().date,-2) ? 'ready' : 'stale';
-  return {status,rows,latestMetricDate,orders30d:Number(row.orders||0),cancels30d:Number(row.cancels||0),commission30d:Number(row.commission_krw||0)};
+  const firstPartyRows = Number(row.first_party_rows||0);
+  const latestFirstPartyDate = row.latest_first_party_date || null;
+  const conversionRows = Number(row.conversion_rows||0);
+  const latestConversionDate = row.latest_conversion_date || null;
+  const recentCutoff = addDays(kstParts().date,-2);
+  const engagementStatus = !firstPartyRows ? 'empty' : latestFirstPartyDate && latestFirstPartyDate >= recentCutoff ? 'ready' : 'stale';
+  const conversionStatus = !conversionRows ? 'empty' : latestConversionDate && latestConversionDate >= recentCutoff ? 'ready' : 'stale';
+  const status = conversionStatus === 'ready' ? 'ready' : engagementStatus === 'ready' ? 'engagement_only' : rows ? 'stale' : 'empty';
+  return {status,rows,latestMetricDate,engagementStatus,conversionStatus,firstPartyRows,latestFirstPartyDate,firstPartyClicks30d:Number(row.first_party_clicks||0),conversionRows,latestConversionDate,reportedClicks30d:Number(row.reported_clicks||0),orders30d:Number(row.orders||0),cancels30d:Number(row.cancels||0),gmv30d:Number(row.gmv_krw||0),commission30d:Number(row.commission_krw||0)};
 }
 
 async function loadProducts(env) {
@@ -157,7 +181,7 @@ async function loadProducts(env) {
       FROM affiliate_storefront_clicks WHERE click_date >= date('now','-13 day') GROUP BY product_row_id
     ) c ON c.product_row_id=p.id
     LEFT JOIN (
-      SELECT product_row_id,SUM(clicks) AS reported_clicks_30d,SUM(orders) AS orders_30d,SUM(cancels) AS cancels_30d,SUM(commission_krw) AS commission_30d
+      SELECT product_row_id,SUM(CASE WHEN source <> '${FIRST_PARTY_PERFORMANCE_SOURCE}' THEN clicks ELSE 0 END) AS reported_clicks_30d,SUM(orders) AS orders_30d,SUM(cancels) AS cancels_30d,SUM(commission_krw) AS commission_30d
       FROM affiliate_product_performance_daily WHERE metric_date >= date('now','-29 day') GROUP BY product_row_id
     ) m ON m.product_row_id=p.id
     WHERE p.account_id=? AND p.storefront_slug=? AND p.status='active'
@@ -205,8 +229,9 @@ async function writeStrategyRun(env, values) {
 export async function runMallSalesIntelligence(env,{reason='cron',force=false}={}) {
   if (!(await schemaReady(env))) return {ok:false,status:'schema_required'};
   const kst = kstParts();
+  const performanceSync = await syncFirstPartyProductPerformance(env);
   const existing = await env.DB.prepare('SELECT status,completed_at FROM affiliate_growth_strategy_runs WHERE run_date=?').bind(kst.date).first().catch(() => null);
-  if (!force && existing?.status === 'completed') return {ok:true,status:'already_done',runDate:kst.date};
+  if (!force && existing?.status === 'completed' && performanceSync.rowsWritten === 0) return {ok:true,status:'already_done',runDate:kst.date,performanceSync};
   const startedAt = nowIso();
   await writeStrategyRun(env,{runDate:kst.date,reason,status:'running',startedAt});
   try {
@@ -252,7 +277,7 @@ export async function runMallSalesIntelligence(env,{reason='cron',force=false}={
     const top = ranked[0] || null;
     const degraded = naver.status === 'error';
     await writeStrategyRun(env,{runDate:kst.date,reason,status:degraded?'degraded':'completed',sources:{internal:'ok',naverSearchTrend:naver.status,productPerformance:performanceStatus.status},candidates:ranked.length,...counts,topProductRowId:top?.productRowId,topScore:top?.opportunityScore,startedAt,completedAt:nowIso(),error:naver.error||''});
-    return {ok:true,status:degraded?'degraded':'completed',runDate:kst.date,sources:{internal:'ok',naverSearchTrend:naver.status,productPerformance:performanceStatus.status},productPerformance:performanceStatus,candidates:ranked.length,counts,top:top?{productRowId:top.productRowId,productName:top.productName,score:top.opportunityScore,action:top.action,angle:top.angle}:null};
+    return {ok:true,status:degraded?'degraded':'completed',runDate:kst.date,sources:{internal:'ok',naverSearchTrend:naver.status,productPerformance:performanceStatus.status},performanceSync,productPerformance:performanceStatus,candidates:ranked.length,counts,top:top?{productRowId:top.productRowId,productName:top.productName,score:top.opportunityScore,action:top.action,angle:top.angle}:null};
   } catch (error) {
     const message = clean(error?.message||error,1000);
     await writeStrategyRun(env,{runDate:kst.date,reason,status:'failed',sources:{internal:'error'},startedAt,completedAt:nowIso(),error:message}).catch(() => {});
