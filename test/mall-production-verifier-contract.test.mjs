@@ -3,19 +3,22 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
 const workflow = await readFile(new URL('../.github/workflows/verify-ekodi-mall-production.yml', import.meta.url), 'utf8');
+const manifest = await readFile(new URL('../deploy/manifests/shared-site.worker.json', import.meta.url), 'utf8');
 
 test('Mall production verifier follows the current storefront contract', () => {
   for (const marker of [
-    'ekodibizmall',
-    'GIFT CONTEXT INTELLIGENCE',
-    'CONNECTED COMMERCE',
-    'OUR PROMISE',
+    'EKODI CONTEXT SHOPPING',
+    'ALL MARKET',
+    '/ekodibiz/mall/assets/context-curator.js',
     'data-ekodi-service="mall"',
     'https://ekodi.kr/ekodibiz/mall'
-  ]) assert.match(workflow, new RegExp(marker.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
-  assert.doesNotMatch(workflow, /EKODI CONTEXT SHOPPING/);
-  assert.doesNotMatch(workflow, /ALL MARKET/);
+  ]) assert.ok(workflow.includes(marker), `missing current Mall verifier marker: ${marker}`);
   assert.doesNotMatch(workflow, /Seller Studio/);
+  const mallGate = JSON.parse(manifest).worker.requests.find(request => request.url === 'https://ekodi.kr/ekodibiz/mall');
+  assert.ok(mallGate?.expect?.includes('EKODI CONTEXT SHOPPING'));
+  assert.ok(mallGate?.expect?.includes('data-ekodi-service="mall"'));
+  assert.ok(mallGate?.rollbackExpect?.includes('EKODI CONTEXT SHOPPING'));
+  assert.doesNotMatch(manifest, /ekodibizmall/);
 });
 
 test('Mall production verifier checks the server transaction safety boundary', () => {
