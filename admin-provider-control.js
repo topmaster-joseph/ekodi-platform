@@ -6,7 +6,7 @@
   const TOKEN_KEY='ekodi-auth-token';
   const ENVIRONMENTS=['production','staging','development'];
   const SUPABASE_DEFAULTS=[
-    {organization:'krxqskyavhrbsuxsjuzv',project:'cheonggye-market',ref:'renzehysxirjilvdxacv',region:'ap-southeast-1',status:'ACTIVE_HEALTHY'},
+    {organization:'krxqskyavhrbsuxsjuzv',project:'ekodi-platform',ref:'renzehysxirjilvdxacv',region:'ap-southeast-1',status:'ACTIVE_HEALTHY'},
     {organization:'krxqskyavhrbsuxsjuzv',project:'ekodi-church',ref:'lxcxwbdwwojjkgybbqii',region:'ap-southeast-1',status:'ACTIVE_HEALTHY'},
   ];
   const DEFINITIONS=Object.freeze({
