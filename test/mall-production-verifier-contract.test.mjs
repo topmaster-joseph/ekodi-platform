@@ -6,10 +6,10 @@ const workflow = await readFile(new URL('../.github/workflows/verify-ekodi-mall-
 
 test('Mall production verifier follows the current storefront contract', () => {
   for (const marker of [
-    'ekodibizmall',
+    'EKODI MALL',
     'GIFT CONTEXT INTELLIGENCE',
-    'CONNECTED COMMERCE',
-    'OUR PROMISE',
+    "TODAY'S PRODUCTS",
+    'SIMPLE SHOPPING',
     'data-ekodi-service="mall"',
     'https://ekodi.kr/ekodibiz/mall'
   ]) assert.match(workflow, new RegExp(marker.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
