@@ -32,6 +32,10 @@ jobs:
           ref: main
           path: church
 
+      - name: Capture Church source revision
+        shell: bash
+        run: echo "CHURCH_SOURCE_SHA=$(git -C church rev-parse HEAD)" >> "$GITHUB_ENV"
+
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
@@ -102,6 +106,7 @@ jobs:
           rm -rf /tmp/ekodi-church-pages /tmp/ekodi-church-functions
           mkdir -p /tmp/ekodi-church-pages
           rsync -a --exclude='.git' --exclude='.github' church/ /tmp/ekodi-church-pages/
+          printf '{"contract":"ekodi.church-release.v1","sourceRepository":"topmaster-joseph/ekodi-church","sourceSha":"%s"}\n' "$CHURCH_SOURCE_SHA" > /tmp/ekodi-church-pages/church-release.json
           cd /tmp/ekodi-church-pages
           if [[ -d functions ]] && find functions -type f -print -quit | grep -q .; then
             npx --yes wrangler@${WRANGLER_VERSION} pages functions build functions --outdir=/tmp/ekodi-church-functions
@@ -122,7 +127,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          release='church-header-i18n-20260906-ekodian-1'
+          release="$CHURCH_SOURCE_SHA"
           for attempt in $(seq 1 18); do
             root=$(curl -L -sS -o /tmp/church.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://church.ekodi.kr/?release=${release}" || true)
             character=$(curl -L -sS -o /tmp/character.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://church.ekodi.kr/church-character-identity.js?release=${release}" || true)
@@ -131,7 +136,8 @@ jobs:
             loader=$(curl -L -sS -o /tmp/loader.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://church.ekodi.kr/church-shell-i18n.js?release=${release}" || true)
             controls=$(curl -L -sS -o /tmp/controls.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://church.ekodi.kr/church-header-controls.js?release=${release}" || true)
             tune=$(curl -L -sS -o /tmp/tune.css -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://church.ekodi.kr/church-header-tune.css?release=${release}" || true)
-            if [[ "$root" == 200 && "$character" == 200 && "$ext" == 200 && "$pay" == 200 && "$loader" == 200 && "$controls" == 200 && "$tune" == 200 ]] \
+            marker=$(curl -L -sS -o /tmp/church-release.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://church.ekodi.kr/church-release.json?release=${release}" || true)
+            if [[ "$root" == 200 && "$character" == 200 && "$ext" == 200 && "$pay" == 200 && "$loader" == 200 && "$controls" == 200 && "$tune" == 200 && "$marker" == 200 ]] \
               && grep -Fq 'https://ekodi.kr/privacy' /tmp/church.html \
               && grep -Fq 'data-ekodi-character-identity="founder-pastor"' /tmp/church.html \
               && grep -Fq "id:'founder-pastor'" /tmp/character.js \
@@ -142,12 +148,13 @@ jobs:
               && grep -Fq 'EKODIChurchPaymentI18n' /tmp/pay.js \
               && grep -Fq "'/church-i18n-payment-patch.js'" /tmp/loader.js \
               && grep -Fq "getElementById('ekodi-ccm-mr-toggle')" /tmp/controls.js \
-              && grep -Fq 'font-weight:900' /tmp/tune.css; then
+              && grep -Fq 'font-weight:900' /tmp/tune.css \
+              && jq -e --arg sha "$CHURCH_SOURCE_SHA" '.contract == "ekodi.church-release.v1" and .sourceSha == $sha' /tmp/church-release.json >/dev/null; then
               echo 'Church production multilingual and EKODIAN identity assets verified.'
               break
             fi
             if [[ "$attempt" == 18 ]]; then
-              echo "Production did not converge: root=$root character=$character ext=$ext pay=$pay loader=$loader controls=$controls tune=$tune"
+              echo "Production did not converge: root=$root character=$character ext=$ext pay=$pay loader=$loader controls=$controls tune=$tune marker=$marker"
               exit 1
             fi
             sleep 5
@@ -167,7 +174,8 @@ jobs:
           const browser=await puppeteer.launch({executablePath:process.env.CHROME_BIN,headless:true,args:['--no-sandbox','--disable-dev-shm-usage']});
           const extended=new Set(['my','kac','vi','mn','id']);
           const base='https://church.ekodi.kr/';
-          const release='church-header-i18n-20260906-ekodian-1';
+          const release=process.env.CHURCH_SOURCE_SHA;
+          assert.match(release||'',/^[0-9a-f]{40}$/);
           try{
             const page=await browser.newPage();
             await page.setViewport({width:1440,height:1000});

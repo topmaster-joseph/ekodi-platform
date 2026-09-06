@@ -3,6 +3,7 @@ const NTS_BUSINESS_MARKER = 'loadAll();\n})();';
 const NTS_BUSINESS_CODE = String.raw`
 let ntsBusinessMap=new Map(),ntsBusinessBusy=false,ntsBusinessLoadedAt=0,ntsBusinessConfigured=null;
 const ntsBaseRenderCustomers=renderCustomers,ntsBaseRenderSuppliers=renderSuppliers,ntsBaseLoadAll=loadAll;
+const ntsOne=s=>document.querySelector(s),ntsAll=s=>[...document.querySelectorAll(s)];
 const ntsDigits=v=>String(v??'').replace(/\D/g,'').slice(0,10);
 function ntsBusinessNumbers(){return [...new Set([...profiles,...customers].map(x=>ntsDigits(x?.corpNum)).filter(x=>/^\d{10}$/.test(x)))]}
 function ntsBusinessLabel(item){
@@ -17,7 +18,7 @@ function ntsBusinessBadge(item){
  return '<span class="'+cls+'">'+label+'</span>'+(item.stale?'<small> · 마지막 확인 '+esc(date(item.checkedAt))+'</small>':'');
 }
 function ntsAnnotate(rootSelector,rows){
- const cards=$$(rootSelector+' article');
+ const cards=ntsAll(rootSelector+' article');
  rows.forEach((row,index)=>{
   const card=cards[index];if(!card)return;
   const no=ntsDigits(row?.corpNum),item=ntsBusinessMap.get(no);
@@ -28,12 +29,12 @@ function ntsAnnotate(rootSelector,rows){
 }
 renderCustomers=function(){ntsBaseRenderCustomers();ntsAnnotate('#customerList',customers)};
 renderSuppliers=function(){ntsBaseRenderSuppliers();ntsAnnotate('#supplierList',profiles)};
-function ntsSummary(textValue,bad=false){const el=$('#ntsBusinessSummary');if(!el)return;el.textContent=textValue;el.style.color=bad?'#fda4af':''}
+function ntsSummary(textValue,bad=false){const el=ntsOne('#ntsBusinessSummary');if(!el)return;el.textContent=textValue;el.style.color=bad?'#fda4af':''}
 async function ntsLoadBusinessStatuses(refresh=false){
  if(ntsBusinessBusy)return;
  const corpNums=ntsBusinessNumbers();
  if(!corpNums.length){ntsSummary('거래처가 등록되면 국세청 사업자 상태를 자동 확인합니다.');return}
- ntsBusinessBusy=true;const btn=$('#ntsBusinessRefresh');if(btn){btn.disabled=true;btn.textContent='국세청 확인 중…'}
+ ntsBusinessBusy=true;const btn=ntsOne('#ntsBusinessRefresh');if(btn){btn.disabled=true;btn.textContent='국세청 확인 중…'}
  try{
   const result=await api('/api/finance/tax-business-status',{method:'POST',body:{organizationId:ORG,corpNums,refresh}});
   ntsBusinessConfigured=result.configured;ntsBusinessLoadedAt=Date.now();
@@ -55,7 +56,7 @@ loadAll=async function(){
  if(missing||Date.now()-ntsBusinessLoadedAt>30*60*1000)void ntsLoadBusinessStatuses(false);
 };
 function ntsSetupPanel(){
- const panel=document.querySelector('[data-view="customers"]');if(!panel||$('#ntsBusinessRefresh'))return;
+ const panel=document.querySelector('[data-view="customers"]');if(!panel||ntsOne('#ntsBusinessRefresh'))return;
  const head=panel.querySelector('.panel-head');const refresh=head?.querySelector('[data-action="refresh"]');
  const button=document.createElement('button');button.type='button';button.className='btn primary';button.id='ntsBusinessRefresh';button.textContent='국세청 상태 확인';button.onclick=()=>void ntsLoadBusinessStatuses(true);
  if(refresh){const actions=document.createElement('div');actions.className='row-actions';refresh.replaceWith(actions);actions.append(button,refresh)}else head?.append(button);
@@ -80,7 +81,7 @@ function ntsAttachProbe(input){
  input.addEventListener('blur',()=>void ntsProbeInput(input));
 }
 function ntsScanForms(){
- for(const input of $$('#modal input[name="corpNum"]'))ntsAttachProbe(input);
+ for(const input of ntsAll('#modal input[name="corpNum"]'))ntsAttachProbe(input);
 }
 const ntsObserver=new MutationObserver(()=>ntsScanForms());ntsObserver.observe(document.body,{childList:true,subtree:true});
 ntsSetupPanel();ntsScanForms();
