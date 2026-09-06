@@ -66,11 +66,15 @@ jobs:
           test -f dist/assets/public-product.js
           test -f dist/assets/marketplace-live.js
           test -f dist/assets/shared-product.html
+          test -f dist/assets/verification-ops.html
+          test -f dist/assets/verification-ops.js
           test -f dist/seller/index.html
           grep -Fq '/assets/marketplace-live.js' dist/index.html
           grep -Fq '/api/public/attribution/visit' dist/assets/public-product.js
           grep -Fq 'api/public/checkout/quote' dist/assets/public-product.js
           grep -Fq '/share-links' dist/assets/seller-server.js
+          grep -Fq '/api/internal/verification/queue' dist/assets/verification-ops.js
+          grep -Fq '/checkout-gate' dist/assets/verification-ops.js
           grep -Fq '/p/* /assets/shared-product.html 200' dist/_redirects
           echo "Mall static build, first-touch attribution, discovery and order quote client verified"
 
