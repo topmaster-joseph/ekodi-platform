@@ -1,0 +1,17 @@
+{
+  "id": "2026-09-06-affiliate-marketplace-control-boundary-v1.8.2",
+  "constitutionVersion": "1.8.2",
+  "status": "approved",
+  "approvedBy": "topmaster-joseph",
+  "approvedAt": "2026-09-06",
+  "changeClass": "C2",
+  "taskId": "ekodi-mall-affiliate-account-hub-20260906",
+  "summary": "Register the existing affiliate marketplace, provider-feed, ProductIdentity and Offer Registry modules as explicit source members of the existing shared control-api boundary for the Generation-8 EKODI Mall affiliate marketing account hub.",
+  "approvalBasis": "The platform owner instructed EKODI to build the affiliate marketing account settings as an eighth-generation operating hub and, after the constitutional approval gate was reported, explicitly instructed the work to continue through completion.",
+  "boundaryRule": "This amendment does not create a new deployment boundary. affiliate-marketplace.js, affiliate-provider-feed.js, product-identity.js and Offer Registry modules remain inside the existing api.ekodi.kr shared control plane and its guarded deployment owner.",
+  "authorityRule": "Affiliate account ledgers, provider credentials and merchant-route mutations remain central-admin authority. Tenant-local Mall Admin receives only bounded operating projections and no platform affiliate credential authority.",
+  "recommendationRule": "Merchant offers fail closed until affiliate, tracking, product/price freshness and administrator recommendation gates are ready. Commission rate is not a ranking signal.",
+  "dataRule": "Provider credentials remain server-side. Seller-neutral product identity and verified price facts are stored only through existing governed control-plane schemas and additive migrations.",
+  "verificationPolicy": "Constitution, platform boundaries, security baseline, deployment guardrails, affiliate/admin contract tests, Mall doctor, full repository tests, PR staging and production smoke verification must pass.",
+  "rollback": "Revert the affiliate marketplace control modules and migrations from the shared control-api release, restore the previous affiliate-only source registration, and keep existing Coupang operation fail-safe. No destructive data rollback is permitted."
+}
