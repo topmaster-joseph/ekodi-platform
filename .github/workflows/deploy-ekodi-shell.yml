@@ -70,6 +70,8 @@ jobs:
           node --check shell/user-ui-footer.js
           node --check shell/user-language.js
           node --check shell/media-meeting-adapter.js
+          node --check shell/character-registry.js
+          node --check shell/character-identity-registry.js
           node --check shell/user-character.js
           node --check shell/admin-ui-shell.js
           node --check shell/mobile-fixed-header.js
@@ -89,12 +91,16 @@ jobs:
           grep -Fq "userFooterUrl.pathname='/user-ui-footer.js'" ekodi-shell-worker.js
           grep -Fq "userLanguageUrl.pathname='/user-language.js'" ekodi-shell-worker.js
           grep -Fq "mediaMeetingUrl.pathname='/media-meeting-adapter.js'" ekodi-shell-worker.js
+          grep -Fq "characterRegistryUrl.pathname='/character-registry.js'" ekodi-shell-worker.js
+          grep -Fq "characterIdentityUrl.pathname='/character-identity-registry.js'" ekodi-shell-worker.js
           grep -Fq "userCharacterUrl.pathname='/user-character.js'" ekodi-shell-worker.js
           grep -Fq "url.pathname==='/user-footer.json'" ekodi-shell-worker.js
           grep -Fq "x-ekodi-user-ui-header" ekodi-shell-worker.js
           grep -Fq "x-ekodi-user-ui-footer" ekodi-shell-worker.js
           grep -Fq "x-ekodi-user-language" ekodi-shell-worker.js
           grep -Fq "x-ekodi-media-meeting" ekodi-shell-worker.js
+          grep -Fq "x-ekodi-character-registry" ekodi-shell-worker.js
+          grep -Fq "x-ekodi-character-identity" ekodi-shell-worker.js
           grep -Fq "x-ekodi-user-character" ekodi-shell-worker.js
           grep -Fq "adminShellUrl.pathname='/admin-ui-shell.js'" ekodi-shell-worker.js
           grep -Fq "x-ekodi-admin-ui-shell" ekodi-shell-worker.js
@@ -112,6 +118,10 @@ jobs:
           grep -Fq 'window.EKODIMediaMeetingAdapter' shell/media-meeting-adapter.js
           grep -Fq 'const VERSION=2' shell/media-meeting-adapter.js
           grep -Fq 'social.ekodi.kr/api/media/youtube/status' shell/media-meeting-adapter.js
+          grep -Fq 'window.EKODICharacterRegistry' shell/character-registry.js
+          grep -Fq 'window.EKODICharacterIdentityRegistry' shell/character-identity-registry.js
+          grep -Fq 'ekodi.ekodian-identity.v1' shell/character-identity-registry.js
+          grep -Fq 'const VERSION=5' shell/user-character.js
           grep -Fq 'window.EKODIUserCharacter' shell/user-character.js
           grep -Fq '__EKODI_USER_FOOTER_CONFIG__' shell/user-ui-footer.js
           grep -Fq 'window.EKODIAdminUIShell' shell/admin-ui-shell.js
@@ -127,7 +137,7 @@ jobs:
           grep -Fq "'ekodibiz.kr':'biz'" shell/ecosystem-link-compat.js
           grep -Fq 'run_worker_first = true' wrangler.shell.toml
           grep -Fq 'run_worker_first = true' wrangler.shell.staging.toml
-          node --test test/ekodi-shell.test.mjs test/user-ui-header.test.mjs test/user-global-nav.test.mjs test/admin-ui-shell.test.mjs
+          node --test test/ekodi-shell.test.mjs test/user-ui-header.test.mjs test/user-global-nav.test.mjs test/admin-ui-shell.test.mjs test/ekodian-identity-profile.test.mjs
           node scripts/validate-user-ui-dna.mjs
           node scripts/validate-ekodi-shell-adoption.mjs
           node scripts/validate-seasonal-design-governance.mjs

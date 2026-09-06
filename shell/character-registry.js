@@ -3,7 +3,7 @@
 if(window.EKODICharacterRegistry)return;
 
 const registry={
-  schemaVersion:2,
+  schemaVersion:3,
   system:{
     id:'ekodian',
     name:'EKODIAN',
@@ -29,7 +29,7 @@ const registry={
     jubilee:{intent:'restore',labelKo:'회복과 새 기회'}
   },
   dna:{
-    fixed:['face','base_proportions','core_palette','worldview','warm_intelligent_tone'],
+    fixed:['species_face_language','base_proportions','core_palette','worldview','warm_intelligent_tone'],
     variable:['expression','pose','size','gesture','role','context','service_prop']
   },
   experienceStates:{
@@ -52,6 +52,15 @@ const registry={
     celebrate:'celebrate',
     error_recovery:'error'
   },
+  identityBridge:{
+    contract:'ekodi.ekodian-identity.v1',
+    registry:'character-identity-registry.js',
+    defaultProfile:'canonical',
+    activation:'explicit_only_for_human_inspired_profiles',
+    privacy:['no_biometric_embedding','no_identity_inference_from_email','reference_assets_only'],
+    authorityInvariant:'identity_never_creates_or_expands_authority'
+  },
+
   operationBridge:{
     contract:'ekodi.ekodian-operation.v1',
     generation:8,
