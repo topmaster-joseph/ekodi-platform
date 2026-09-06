@@ -53,7 +53,7 @@ test('migration scopes autonomous policy to internal EKODIBIZ and adds no plaint
   assert.doesNotMatch(migration,/(access_token|refresh_token|bearer_token)\s+TEXT/i);
 });
 
-test('growth entry exports its RPC entrypoint and temporary direct recovery cron', async () => {
+test('growth entry exports its RPC entrypoint while publishing owns the shared cron', async () => {
   const [entry, wrangler, publisher, publishConfig] = await Promise.all([read('marketing-growth-entry.js'), read('wrangler.marketing-growth.toml'), read('marketing-publishing-worker.js'), read('wrangler.marketing-publishing.toml')]);
   const intelligenceIndex = entry.indexOf('runMallSalesIntelligence');
   const promotionIndex = entry.lastIndexOf('runMallPromotionAutomation');
@@ -64,8 +64,9 @@ test('growth entry exports its RPC entrypoint and temporary direct recovery cron
   assert.match(entry,/scheduled\(_event, env, ctx\)/);
   assert.match(wrangler,/main = "marketing-growth-entry.js"/);
   assert.match(entry,/export \{ MarketingGrowthPublisher \} from '\.\/marketing-growth-worker\.js';/);
-  assert.match(wrangler,/crons = \["\*\/2 \* \* \* \*"\]/);
+  assert.doesNotMatch(wrangler,/crons\s*=/);
   assert.match(publishConfig,/crons = \["\* \* \* \* \*"\]/);
   assert.match(publisher,/runGrowthCycle/);
   assert.match(publisher,/getUTCMinutes\(\) === 5/);
+  assert.match(publisher,/growthServiceBinding/);
 });

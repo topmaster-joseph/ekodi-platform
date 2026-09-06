@@ -617,11 +617,22 @@ async function preparePaidPromotion(request, env, identity, subject, id) {
   }
 }
 
+function mallPromotionAutomationEnabled(env) {
+  return ['1','true','yes','on'].includes(String(env?.MALL_PROMOTION_AUTOMATION_ENABLED || '').trim().toLowerCase());
+}
+
 export class MarketingGrowthPublisher extends WorkerEntrypoint {
+  async healthProbe() {
+    const ready = await schemaReady(this.env);
+    return {ok:ready,service:'ekodi-marketing-growth',entrypoint:'MarketingGrowthPublisher',schemaReady:ready};
+  }
+
   async runGrowthCycle(input = {}) {
     const reason = clean(input?.reason || 'shared-publishing-cron',80);
     const intelligence = await runMallSalesIntelligence(this.env,{reason});
-    const promotion = await runMallPromotionAutomation(this.env,{reason});
+    const promotion = mallPromotionAutomationEnabled(this.env)
+      ? await runMallPromotionAutomation(this.env,{reason})
+      : {ok:true,status:'disabled'};
     return {ok:Boolean(intelligence?.ok || intelligence?.status === 'schema_required') && Boolean(promotion?.ok || promotion?.status === 'schema_required'),intelligence,promotion};
   }
 

@@ -89,7 +89,7 @@ test('staging health verifier accepts only explicit Cloudflare Access protection
 });
 
 test('central publisher reuses OAuth vault over private service binding and supports YouTube resumable upload', async () => {
-  const [publisher,growth,wrangler] = await Promise.all([read('marketing-publishing-worker.js'),read('marketing-growth-worker.js'),read('wrangler.marketing-publishing.toml')]);
+  const [publisher,growth,entry,wrangler] = await Promise.all([read('marketing-publishing-worker.js'),read('marketing-growth-worker.js'),read('marketing-growth-entry.js'),read('wrangler.marketing-publishing.toml')]);
   assert.match(publisher, /credentialMode === 'oauth-vault'/);
   assert.match(publisher, /MARKETING_GROWTH\.publishFromVault/);
   assert.match(publisher, /\['facebook','instagram','threads','youtube'\]/);
@@ -97,11 +97,16 @@ test('central publisher reuses OAuth vault over private service binding and supp
   assert.match(publisher, /upload\/youtube\/v3\/videos\?uploadType=resumable/);
   assert.match(publisher, /privacyStatus.*private/);
   assert.match(growth, /export class MarketingGrowthPublisher extends WorkerEntrypoint/);
+  assert.match(entry, /export \{ MarketingGrowthPublisher \} from/);
+  assert.match(growth, /async healthProbe\(\)/);
+  assert.match(growth, /MALL_PROMOTION_AUTOMATION_ENABLED/);
   assert.match(growth, /publishFromVault/);
   assert.match(wrangler, /binding = "MARKETING_GROWTH"/);
   assert.match(wrangler, /service = "ekodi-marketing-growth"/);
   assert.match(wrangler, /entrypoint = "MarketingGrowthPublisher"/);
   assert.match(publisher, /runGrowthCycle/);
   assert.match(publisher, /getUTCMinutes\(\) === 5/);
+  assert.match(publisher, /growthServiceBinding/);
+  assert.match(publisher, /EKODI Mall growth cycle failed/);
   assert.match(growth, /async runGrowthCycle/);
 });

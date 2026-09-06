@@ -482,6 +482,23 @@ async function runScheduler(env) {
   return {processed:rows.length,schemaReady:true};
 }
 
+async function growthServiceProbe(env) {
+  if (!env.MARKETING_GROWTH || typeof env.MARKETING_GROWTH.healthProbe !== 'function') return {ready:false,error:'SERVICE_BINDING_REQUIRED'};
+  try {
+    const result = await env.MARKETING_GROWTH.healthProbe();
+    return {ready:Boolean(result?.ok && result?.schemaReady),service:clean(result?.service,80),entrypoint:clean(result?.entrypoint,80),schemaReady:Boolean(result?.schemaReady),error:''};
+  } catch (error) { return {ready:false,error:clean(error?.message || error,300)}; }
+}
+
+async function runSharedGrowthCycle(env) {
+  if (!env.MARKETING_GROWTH || typeof env.MARKETING_GROWTH.runGrowthCycle !== 'function') throw new Error('MARKETING_GROWTH_SERVICE_BINDING_REQUIRED');
+  try {
+    const result = await env.MARKETING_GROWTH.runGrowthCycle({reason:'shared-publishing-cron'});
+    if (!result?.ok) console.error('EKODI Mall growth cycle returned non-ok', safeJson(result,{}));
+    return result;
+  } catch (error) { console.error('EKODI Mall growth cycle failed', String(error?.message || error)); throw error; }
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -489,7 +506,7 @@ export default {
     if (request.method === 'OPTIONS') return new Response(null,{status:corsInfo.allowed?204:403,headers:corsInfo.headers});
     if (url.pathname === '/admin' || url.pathname === '/admin/') return Response.redirect('https://admin.ekodi.kr/?route=marketing-ai&source=marketing-publish-api.ekodi.kr',307);
     const baseReady=await schemaReady(env), automationReady=await channelSchemaReady(env), serviceBridgeSchema=await channelServiceBridgeSchemaReady(env);
-    if (url.pathname === '/health') return json(request,env,{ok:true,service:'ekodi-marketing-publishing',environment:env.ENVIRONMENT || 'unknown',schemaReady:baseReady,channelAutomationCore:automationReady,channelServiceBridgeSchema:serviceBridgeSchema,channelServiceBridgeConfigured:channelServiceBridgeReady(env),scheduler:true,personalBrand:true,workspaceIdentity:true,youtubeOAuth:youtubeConnectionReady(env),credentialVault:channelCredentialReady(env),mutations:String(env.ALLOW_MUTATIONS || 'true') !== 'false'});
+    if (url.pathname === '/health') { const growthService=await growthServiceProbe(env); return json(request,env,{ok:true,service:'ekodi-marketing-publishing',environment:env.ENVIRONMENT || 'unknown',schemaReady:baseReady,channelAutomationCore:automationReady,channelServiceBridgeSchema:serviceBridgeSchema,channelServiceBridgeConfigured:channelServiceBridgeReady(env),scheduler:true,growthServiceBinding:growthService.ready,growthService,personalBrand:true,workspaceIdentity:true,youtubeOAuth:youtubeConnectionReady(env),credentialVault:channelCredentialReady(env),mutations:String(env.ALLOW_MUTATIONS || 'true') !== 'false'}); }
     if (!baseReady) return json(request,env,{error:'SCHEMA_NOT_READY'},503);
     if (url.pathname.startsWith('/v1/internal/')) {
       if (!automationReady || !serviceBridgeSchema) return json(request,env,{error:'CHANNEL_SERVICE_BRIDGE_NOT_READY'},503);
@@ -548,7 +565,7 @@ export default {
   async scheduled(event, env, ctx) {
     const tasks = [runScheduler(env)];
     const scheduledAt = new Date(Number(event?.scheduledTime || Date.now()));
-    if (scheduledAt.getUTCMinutes() === 5 && env.MARKETING_GROWTH?.runGrowthCycle) tasks.push(env.MARKETING_GROWTH.runGrowthCycle({reason:'shared-publishing-cron'}));
+    if (scheduledAt.getUTCMinutes() === 5) tasks.push(runSharedGrowthCycle(env));
     ctx.waitUntil(Promise.allSettled(tasks));
   },
 };

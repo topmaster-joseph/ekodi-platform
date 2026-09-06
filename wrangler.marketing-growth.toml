@@ -4,8 +4,6 @@ compatibility_date = "2026-08-29"
 workers_dev = false
 route = { pattern = "marketing-connect-api.ekodi.kr", custom_domain = true }
 
-[triggers]
-crons = ["*/2 * * * *"]
 
 [vars]
 ALLOWED_ORIGINS = "https://admin.ekodi.kr,https://marketing.ekodi.kr,https://my.ekodi.kr"
