@@ -2,14 +2,16 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
-const [api, entry, html, js, redirects, headers, deploy] = await Promise.all([
+const [api, entry, html, js, redirects, headers, deploy, siteWorker, productionVerifier] = await Promise.all([
   readFile(new URL('../sites/ekodi-mall/api/verification.js', import.meta.url), 'utf8'),
   readFile(new URL('../sites/ekodi-mall/api/entry.js', import.meta.url), 'utf8'),
   readFile(new URL('../sites/ekodi-mall/assets/verification-ops.html', import.meta.url), 'utf8'),
   readFile(new URL('../sites/ekodi-mall/assets/verification-ops.js', import.meta.url), 'utf8'),
   readFile(new URL('../sites/ekodi-mall/_redirects', import.meta.url), 'utf8'),
   readFile(new URL('../sites/ekodi-mall/_headers', import.meta.url), 'utf8'),
-  readFile(new URL('../.github/workflows/deploy-ekodi-mall.yml', import.meta.url), 'utf8')
+  readFile(new URL('../.github/workflows/deploy-ekodi-mall.yml', import.meta.url), 'utf8'),
+  readFile(new URL('../site-worker.js', import.meta.url), 'utf8'),
+  readFile(new URL('../.github/workflows/verify-ekodi-mall-production.yml', import.meta.url), 'utf8')
 ]);
 
 test('verification operations use server-validated Google allowlist auth without browser ops secrets', () => {
@@ -41,4 +43,14 @@ test('verification operations are built and routed as a Mall operations surface'
   assert.ok(deploy.includes('MALL_OPERATIONS_EMAILS = "$OPS_EMAILS"'));
   assert.ok(deploy.includes('operationsEmailAllowlistConfigured'));
   assert.ok(deploy.includes('verification_queue_code'));
+});
+
+test('canonical Mall gateway keeps Verification Ops HTML uncached', () => {
+  assert.ok(siteWorker.includes('isMallVerificationOpsPath'));
+  assert.ok(siteWorker.includes("verificationOpsSurface || adminEmbed ? 'no-store'"));
+  assert.ok(siteWorker.includes("verificationOpsSurface ? 'mall-verification-ops'"));
+  assert.ok(siteWorker.includes("X-Robots-Tag', 'noindex, nofollow, noarchive'"));
+  assert.ok(productionVerifier.includes('mall-verification-entry.headers'));
+  assert.ok(productionVerifier.includes('mall-verification-final.headers'));
+  assert.ok(productionVerifier.includes('cache-control: no-store'));
 });
