@@ -77,7 +77,7 @@ jobs:
           grep -Fq 'security invoker' "$migration"
           grep -Fq 'select true' "$migration"
           grep -Fq 'revoke all on function public.ekodi_keepalive() from public' "$migration"
-          grep -Fq 'three small read-only requests per day' "$workflow"
+          grep -Fiq 'three small read-only requests per day' "$workflow"
           ! grep -Eiq 'service[_-]?role|database[_-]?password|postgresql://' "$workflow" || {
             echo '::error::Privileged database credentials are forbidden in the liveness workflow.'
             exit 1
