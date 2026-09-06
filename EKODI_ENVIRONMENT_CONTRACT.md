@@ -1,6 +1,6 @@
 # EKODI Environment Contract
 
-Status: adopted architecture contract. The production Supabase display name is canonical; the development name remains in transition until the existing church data is safely consolidated.
+Status: adopted architecture contract. Production Supabase is canonicalized as `ekodi-platform`; the second project remains transitional until church data is safely consolidated.
 
 ## 1. Canonical source and promotion path
 
@@ -24,7 +24,7 @@ The intended end-to-end mapping is:
 
 The two existing free Supabase projects are retained while data is reorganized without destructive cutover.
 
-- Production logical target `ekodi-platform` maps to project ref `renzehysxirjilvdxacv`, whose current display name is also `ekodi-platform`.
+- Production `ekodi-platform` maps to project ref `renzehysxirjilvdxacv`; its canonical display name is `ekodi-platform` as of 2026-09-06.
 - Development logical target `ekodi-platform-dev` currently maps to project ref `lxcxwbdwwojjkgybbqii`, whose current display name is `ekodi-church`.
 - The second project must not be treated as disposable development data until church production data and dependencies have been safely migrated and verified.
 

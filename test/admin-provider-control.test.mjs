@@ -9,8 +9,11 @@ const release = await readFile(new URL('../.github/workflows/deploy-site-core.ym
 test('provider control covers Cloudflare GitHub and Supabase', () => {
   for (const marker of ['cloudflare','github','supabase','EKODIProviderControl']) assert.ok(source.includes(marker), marker);
   assert.ok(source.includes("VERSION:'1.0.1'"));
+});
+
+test('provider control reports the canonical production Supabase identity', () => {
   assert.ok(source.includes("project:'ekodi-platform',ref:'renzehysxirjilvdxacv'"));
-  assert.doesNotMatch(source, /project:'cheonggye-market',ref:'renzehysxirjilvdxacv'/);
+  assert.equal(source.includes("project:'cheonggye-market',ref:'renzehysxirjilvdxacv'"), false);
 });
 
 test('provider hierarchy includes environment and secret boundary', () => {

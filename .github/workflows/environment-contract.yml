@@ -54,7 +54,7 @@ jobs:
           assert prod['supabase']['currentProjectRef'] != dev['supabase']['currentProjectRef']
           assert prod['supabase']['logicalName'] == 'ekodi-platform'
           assert prod['supabase']['currentProjectName'] == 'ekodi-platform'
-          assert prod['supabase']['state'] == 'canonical-production'
+          assert prod['supabase']['state'] == 'canonical-platform-active'
           assert dev['supabase']['logicalName'] == 'ekodi-platform-dev'
           assert dev['supabase']['currentProjectName'] == 'ekodi-church'
 
