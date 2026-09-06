@@ -1,17 +1,14 @@
 import { chromium } from 'playwright';
+import { adminMenuOrder, getAdminMenuGroupForSection } from '../admin-menu-registry.js';
 
 const ADMIN_URL = process.env.ADMIN_URL || 'https://admin.ekodi.kr/';
 const SYNTHETIC_TOKEN = 'ekodi-production-ui-e2e';
 const SYNTHETIC_EMAIL = 'production-ui-e2e@local.invalid';
-const menus = [
-  ['campus','home'],['public-site-controls','home'],['work','operations'],['communication','operations'],
-  ['workspace','people'],['organization','people'],['clients','people'],['admins','people'],
-  ['life-ai','services'],['common-services','services'],['community','services'],['books','services'],['social','services'],
-  ['aiops','ai'],['marketing-ai','ai'],['ai-module-spec','ai'],['ai-membership','ai'],
-  ['finance','business'],['tax','business'],['affiliates','business'],
-  ['storage','data'],['api-cost','data'],
-  ['health','system'],['security','system'],['devices','system'],['architecture','system'],
-];
+const menuIds = adminMenuOrder();
+const menus = menuIds.map(id => [id, getAdminMenuGroupForSection(id)]);
+const workAreas = [...new Set(menus.map(([, group]) => group))];
+
+if (menus.some(([id, group]) => !id || !group)) throw new Error('Admin menu registry contains an ungrouped visible menu');
 
 const browser = await chromium.launch({ headless: true });
 const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
@@ -45,7 +42,7 @@ await page.route('https://api.ekodi.kr/api/session', async route => {
 async function waitForAdminShell() {
   await page.waitForFunction(() => document.documentElement.dataset.ekodiAdminReady === 'true', null, { timeout: 30000 });
   await page.waitForFunction(() => window.EKODIAdminPanels && window.EKODIAdminSidebar, null, { timeout: 30000 });
-  await page.waitForFunction(() => document.querySelectorAll('button[data-admin-global-group]').length >= 8, null, { timeout: 30000 });
+  await page.waitForFunction(expected => document.querySelectorAll('button[data-admin-global-group]').length >= expected, workAreas.length, { timeout: 30000 });
   await page.waitForFunction(() => document.querySelectorAll('.admin-context-source .nav').length >= 1, null, { timeout: 30000 });
 }
 
@@ -82,9 +79,9 @@ for (const asset of ['ekodi-message-ui.js', 'google-admin-auth.js']) {
   if (!/javascript|ecmascript|text\/plain/i.test(contentType)) throw new Error(`${asset} has non-script content type: ${contentType || '(missing)'}`);
 }
 
-const sourceIds = await page.locator('.admin-context-source .nav').evaluateAll(nodes => nodes.map(node => node.dataset.section || node.dataset.lazySection || '').filter(Boolean));
-const missingSources = menus.map(([id]) => id).filter(id => !sourceIds.includes(id));
-if (missingSources.length) throw new Error(`Missing production menu source(s): ${missingSources.join(', ')}`);
+const productionOrder = await page.evaluate(() => window.EKODIAdminPanels?.visibleMenuOrder || []);
+if (productionOrder.length !== menuIds.length) throw new Error(`Production menu count drifted: registry=${menuIds.length}, production=${productionOrder.length}`);
+for (const id of menuIds) if (!productionOrder.includes(id)) throw new Error(`Production menu registry missing ${id}`);
 
 async function dispatchClick(locator, timeout = 10_000) {
   await locator.waitFor({ state: 'visible', timeout });
@@ -117,7 +114,7 @@ for (const [id, group] of menus) {
     const taxResponse = await context.request.get('https://tax.ekodi.kr/', { maxRedirects: 5, timeout: 20000 });
     if (taxResponse.status() < 200 || taxResponse.status() >= 400) throw new Error(`Tax handoff endpoint returned ${taxResponse.status()}`);
     const taxUrl = taxRequest.url();
-    results.push({ id, kind: 'handoff', ok: true, detail: taxUrl });
+    results.push({ id, group, kind: 'handoff', ok: true, detail: taxUrl });
     console.log(`[PROD-E2E] ${id}: ok navigation-request ${taxUrl}`);
     await page.goto(ADMIN_URL, { waitUntil: 'domcontentloaded', timeout: 45000 });
     await waitForAdminShell();
@@ -144,14 +141,15 @@ for (const [id, group] of menus) {
     throw new Error(`${id} did not render a visible non-empty panel: ${JSON.stringify(visiblePanel)}`);
   }
   if (id === 'campus' && visiblePanel.id !== 'campusPanel') throw new Error(`Campus rendered unexpected panel: ${visiblePanel.id || '(no id)'}`);
-  results.push({ id, kind: 'panel', ok: true, detail: `${visiblePanel.id || visiblePanel.tag}:${visiblePanel.textLength}` });
+  results.push({ id, group, kind: 'panel', ok: true, detail: `${visiblePanel.id || visiblePanel.tag}:${visiblePanel.textLength}` });
   console.log(`[PROD-E2E] ${id}: ok ${visiblePanel.id || visiblePanel.tag}:${visiblePanel.textLength}`);
 }
 
 const activeCount = results.filter(result => result.ok).length;
 console.log(`ADMIN_PRODUCTION_UI_E2E=${activeCount}/${menus.length}`);
+console.log(`ADMIN_WORK_AREAS=${workAreas.join(',')}`);
 console.log(`ADMIN_FINGERPRINT=${assetVersion}`);
-for (const result of results) console.log(`PASS ${result.id} ${result.kind} ${result.detail}`);
+for (const result of results) console.log(`PASS ${result.id} ${result.group} ${result.kind} ${result.detail}`);
 
 const fatalErrors = pageErrors.filter(message => !/ResizeObserver loop/i.test(message));
 if (fatalErrors.length) {
