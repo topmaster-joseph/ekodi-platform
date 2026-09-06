@@ -29,7 +29,7 @@ test('workspace admin projects root and mall sections from tenant-local capabili
   assert.deepEqual(workspaceAdminSectionsForRole('marketing_manager'),['overview','mall','publishing','marketing']);
   assert.deepEqual(workspaceAdminSectionsForRole('accounting_manager'),['overview','mall','finance']);
   assert.deepEqual(workspaceAdminSectionsForRole('client_viewer'),['overview','mall']);
-  assert.deepEqual(workspaceAdminSectionsForRole('marketing_manager','mall'),['overview','sales','marketing','channels','automation','analytics']);
+  assert.deepEqual(workspaceAdminSectionsForRole('marketing_manager','mall'),['overview','sales','sourcing','marketing','channels','automation','growth','analytics']);
   assert.deepEqual(workspaceAdminSectionsForRole('accounting_manager','mall'),['overview','sales','analytics']);
   assert.equal(workspaceAdminCanAccess('manager','members'),false);
   assert.equal(workspaceAdminCanAccess('workspace_admin','members'),true);
@@ -40,6 +40,8 @@ test('workspace admin projects root and mall sections from tenant-local capabili
   assert.match(source,/canSection\(section\)/);
   assert.match(source,/noRoleSpecificAdminPages/);
   assert.match(source,/ekodi:tenant-context/);
+  assert.match(source,/mallGrowthControl/);
+  assert.match(source,/growthPolicyPanel/);
 });
 
 test('entry router applies the shared Admin Shell to tenant admin pages',async()=>{
