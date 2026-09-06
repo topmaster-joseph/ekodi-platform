@@ -22,6 +22,7 @@ const services={
   social:{name:'EKODI Social',tenant:null,role:'member',returnTo:'https://social.ekodi.kr',origins:['https://social.ekodi.kr'],requestable:false},
   energy:{name:'Energy AI',tenant:null,role:'member',returnTo:'https://energy.ekodi.kr',origins:['https://energy.ekodi.kr'],requestable:false},
   admin:{name:'EKODI 관리자',tenant:null,role:'platform_admin',returnTo:'https://admin.ekodi.kr',origins:['https://admin.ekodi.kr'],requestable:false},
+  oauth:{name:'EKODI AI 연결',tenant:null,role:'member',returnTo:'https://auth.ekodi.kr/oauth/consent',origins:['https://auth.ekodi.kr'],requestable:false},
   portal:{name:'EKODI',tenant:null,role:'member',returnTo:'https://ekodi.kr',origins:['https://ekodi.kr'],requestable:false}
 };
 const PERSON_SCOPED_SITES=new Set(['social','energy']);

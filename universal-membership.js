@@ -1,6 +1,7 @@
 import { handleMembershipBilling as handleLegacyMembershipBilling, runMembershipBillingSchedule } from './membership-billing.js';
 import { isAllowedOrigin } from './auth-worker.js';
 import { USER_SERVICES, USER_SERVICE_IDS } from './generated/user-services.js';
+import { canonicalAiSubject, legacyAiSubject, resolveCanonicalEkodiIdentity } from './personal-ai-bridge.js';
 
 const SUPABASE_URL = 'https://renzehysxirjilvdxacv.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
@@ -48,9 +49,19 @@ function bearerToken(request) {
   return auth.toLowerCase().startsWith('bearer ') ? auth.slice(7).trim() : '';
 }
 
+function oauthClientToken(token) {
+  try {
+    const segment=String(token||'').split('.')[1]||'';
+    const normalized=segment.replace(/-/g,'+').replace(/_/g,'/');
+    const padded=normalized+'='.repeat((4-normalized.length%4)%4);
+    const claims=JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(padded),c=>c.charCodeAt(0))));
+    return Boolean(String(claims?.client_id||'').trim());
+  } catch { return false; }
+}
+
 async function userIdentity(request) {
   const token = bearerToken(request);
-  if (!token || token.length > 8192) return null;
+  if (!token || token.length > 8192 || oauthClientToken(token)) return null;
   const response = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
     headers: { apikey: SUPABASE_PUBLISHABLE_KEY, authorization: `Bearer ${token}` },
   });
@@ -58,7 +69,7 @@ async function userIdentity(request) {
   const user = await response.json();
   const email = String(user?.email || '').trim().toLowerCase();
   if (!user?.id || !email || !user?.email_confirmed_at) return null;
-  return { id: String(user.id), email };
+  return resolveCanonicalEkodiIdentity({ token, authUser:{ id:String(user.id), email } });
 }
 
 async function ensureFreeSchema(db) {
@@ -112,33 +123,49 @@ function freeSubscription(row = null) {
   };
 }
 
+function subscriptionSubjects(identity) {
+  return [...new Set([canonicalAiSubject(identity), identity.personId, legacyAiSubject(identity)].filter(Boolean).map(String))];
+}
+
 async function materializeFree(db, identity, site) {
+  const subject = canonicalAiSubject(identity);
   const now = new Date().toISOString();
   await db.prepare(`INSERT OR IGNORE INTO service_subscriptions
     (subject_type,subject_key,site,plan_id,status,monthly_fee,created_at,updated_at)
     VALUES ('person', ?, ?, 'free', 'free', 0, ?, ?)`)
-    .bind(identity.id, site, now, now).run();
+    .bind(subject, site, now, now).run();
   return db.prepare(`SELECT * FROM service_subscriptions
     WHERE subject_type='person' AND subject_key=? AND site=?`)
-    .bind(identity.id, site).first();
+    .bind(subject, site).first();
 }
 
-async function portfolio(request, env) {
-  const identity = await userIdentity(request);
-  if (!identity) return json({ error: 'Google 로그인 세션을 확인해 주세요.' }, 401, request, env);
+async function portfolioForIdentity(request, env, identity) {
   await ensureFreeSchema(env.DB);
-  const rows = await env.DB.prepare(`SELECT site,plan_id,status,monthly_fee,current_period_end,next_billing_at,cancel_at_period_end
-    FROM service_subscriptions WHERE subject_type='person' AND subject_key=?`)
-    .bind(identity.id).all();
-  const bySite = new Map((rows.results || []).map((row) => [String(row.site), row]));
+  const bySite = new Map();
+  for (const subject of subscriptionSubjects(identity)) {
+    const rows = await env.DB.prepare(`SELECT site,plan_id,status,monthly_fee,current_period_end,next_billing_at,cancel_at_period_end
+      FROM service_subscriptions WHERE subject_type='person' AND subject_key=?`).bind(subject).all();
+    for (const row of rows.results || []) if (!bySite.has(String(row.site))) bySite.set(String(row.site), row);
+  }
   return json({
-    account: { email: identity.email, defaultTier: 'free' },
+    account: { email: identity.email, ekodiId:identity.ekodiId || null, defaultTier: 'free' },
     policy: 'one-account-free-everywhere-pay-where-needed',
     services: USER_SERVICES.map((service) => ({
       ...service,
       subscription: freeSubscription(bySite.get(service.id) || null),
     })),
   }, 200, request, env);
+}
+
+export async function membershipPortfolioForIdentity(request, env, identity) {
+  if (!env?.DB || !identity?.canonical) return json({ error:'EKODI ID가 필요합니다.', code:'MEMBERSHIP_CANONICAL_ID_REQUIRED' }, 403, request, env || {});
+  return portfolioForIdentity(request, env, identity);
+}
+
+async function portfolio(request, env) {
+  const identity = await userIdentity(request);
+  if (!identity) return json({ error: 'EKODI 로그인 세션을 확인해 주세요.' }, 401, request, env);
+  return portfolioForIdentity(request, env, identity);
 }
 
 async function genericCatalog(request, env, site) {
@@ -154,7 +181,7 @@ async function genericCatalog(request, env, site) {
 
 async function genericMe(request, env, site) {
   const identity = await userIdentity(request);
-  if (!identity) return json({ error: 'Google 로그인 세션을 확인해 주세요.' }, 401, request, env);
+  if (!identity) return json({ error: 'EKODI 로그인 세션을 확인해 주세요.' }, 401, request, env);
   await ensureFreeSchema(env.DB);
   const row = await materializeFree(env.DB, identity, site);
   return json({
