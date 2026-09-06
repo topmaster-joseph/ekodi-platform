@@ -53,7 +53,10 @@ jobs:
           assert dev['git']['githubEnvironment'] == 'development'
           assert prod['supabase']['currentProjectRef'] != dev['supabase']['currentProjectRef']
           assert prod['supabase']['logicalName'] == 'ekodi-platform'
+          assert prod['supabase']['currentProjectName'] == 'ekodi-platform'
+          assert prod['supabase']['state'] == 'canonical-platform-active'
           assert dev['supabase']['logicalName'] == 'ekodi-platform-dev'
+          assert dev['supabase']['currentProjectName'] == 'ekodi-church'
 
           expected_schemas = {
               'core', 'identity', 'tenancy', 'shared', 'church', 'church_private',
