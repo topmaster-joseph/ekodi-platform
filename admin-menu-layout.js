@@ -113,8 +113,10 @@ async function openCheonggyeMembers(){
   await cheonggyeLoading;applyOrder();activatePanel('cheonggye-members');syncTitle('cheonggye-members');
 }
 function fallbackDemand(section){
-  const selector=section==='aiops'?'[data-demand-feature="aiops"],[data-section="aiops"]':`[data-demand-feature="${section}"],[data-lazy-section="${section}"],[data-section="${section}"]`;
-  nav.querySelector(selector)?.click();
+  const selector=section==='aiops'?'[data-demand-feature="aiops"],[data-lazy-section="aiops"]':`[data-demand-feature="${section}"],[data-lazy-section="${section}"]`;
+  const target=nav.querySelector(selector);
+  if(!target){console.warn(`[EKODI Admin] ${section} has no safe demand fallback`);return false;}
+  target.click();return true;
 }
 function requestDemand(section){
   for(const item of allNav())item.classList.toggle('active',!isInternalNav(item)&&sectionOf(item)===section);
@@ -122,8 +124,10 @@ function requestDemand(section){
   if(section==='common-services')return import('./common-services-admin.js').then(()=>{applyOrder();activatePanel(section);syncTitle(section);});
   if(section==='communication')return import('./communication-admin.js').then(()=>{applyOrder();activatePanel(section);syncTitle(section);});
   if(section==='capabilities')return import('./capability-center-admin.js').then(()=>{applyOrder();activatePanel(section);syncTitle(section);});
+  if(section==='admins'){const load=window.EKODIAdminDemand?.loadScript;if(!load){console.warn('[EKODI Admin] Admin loader unavailable');return null;}return load('google-admin-auth.js').then(()=>{applyOrder();activatePanel(section);syncTitle(section);});}
   const demandKey=DEMAND_KEYS.get(section);
-  if(!demandKey||!window.EKODIAdminDemand?.activate){fallbackDemand(section);return null;}
+  if(!demandKey){console.warn(`[EKODI Admin] ${section} has no demand contract`);return null;}
+  if(!window.EKODIAdminDemand?.activate){fallbackDemand(section);return null;}
   if(demandLoading.has(section))return demandLoading.get(section);
   const task=Promise.resolve(window.EKODIAdminDemand.activate(demandKey)).then(()=>{
     applyOrder();

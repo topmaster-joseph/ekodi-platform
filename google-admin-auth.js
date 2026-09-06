@@ -138,17 +138,20 @@
     if (!token()) return;
     const nav = document.querySelector('.sidebar nav');
     const content = document.querySelector('.content');
-    if (!nav || !content || document.querySelector('[data-section="admins"]')) return;
+    if (!nav || !content || document.querySelector('[data-panel~="admins"]')) return;
 
-    const navButton = element('button', '', 'nav');
-    navButton.type = 'button';
-    navButton.dataset.section = 'admins';
-    navButton.append(document.createTextNode('◈ '), element('span', 'Admin'));
-    const clientButton = nav.querySelector('[data-section="clients"]');
-    const servicesButton = nav.querySelector('[data-section="services"]');
-    if (clientButton) clientButton.insertAdjacentElement('afterend', navButton);
-    else if (servicesButton) servicesButton.insertAdjacentElement('afterend', navButton);
-    else nav.append(navButton);
+    let navButton = nav.querySelector('[data-section="admins"]');
+    if (!navButton) {
+      navButton = element('button', '', 'nav');
+      navButton.type = 'button';
+      navButton.dataset.section = 'admins';
+      navButton.append(document.createTextNode('◈ '), element('span', 'Admin'));
+      const clientButton = nav.querySelector('[data-section="clients"]');
+      const servicesButton = nav.querySelector('[data-section="services"]');
+      if (clientButton) clientButton.insertAdjacentElement('afterend', navButton);
+      else if (servicesButton) servicesButton.insertAdjacentElement('afterend', navButton);
+      else nav.append(navButton);
+    }
 
     const section = element('section', '', 'section google-admin-access hidden-panel');
     section.dataset.panel = 'admins';
