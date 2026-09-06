@@ -158,6 +158,28 @@ async function selectWorkArea(group) {
   selectedWorkArea = group;
 }
 
+async function storageReauthHandoff(id, group, started, handoffUrl) {
+  const destination = new URL(handoffUrl);
+  if (destination.hostname !== 'accounts.google.com') {
+    throw new Error(`${id}: unexpected external handoff ${destination.hostname}`);
+  }
+  const result = {
+    id,
+    group,
+    ok: true,
+    durationMs: Date.now() - started,
+    reauthHandoff: true,
+    destinationHost: destination.hostname,
+  };
+  results.push(result);
+  console.log(`[E2E] ${id}: Google reauth handoff verified ${result.durationMs}ms`);
+  stage(`menu-${id}-reauth-return`);
+  await page.goto(authenticatedEntryUrl, { waitUntil: 'domcontentloaded', timeout: 15_000 });
+  selectedWorkArea = null;
+  await waitForAdminReady();
+  return true;
+}
+
 async function clickMenu(id) {
   const started = Date.now();
   const group = groups[id];
@@ -169,9 +191,40 @@ async function clickMenu(id) {
     stage(`menu-${id}-tab`);
     const tab = page.locator(`button.admin-context-tab[data-admin-context-section="${id}"]`);
     await tab.waitFor({ state: 'visible', timeout: 5_000 });
+    const storageOAuth = id === 'storage'
+      ? page.waitForURL(url => url.hostname === 'accounts.google.com', { timeout: 8_000 }).then(() => page.url()).catch(() => null)
+      : null;
     await dispatchClick(tab);
     stage(`menu-${id}-panel`);
-    await waitForVisiblePanel(id);
+
+    if (id === 'storage') {
+      const panelOutcome = waitForVisiblePanel(id)
+        .then(() => ({ kind: 'panel' }))
+        .catch(error => ({ kind: 'panel-error', error }));
+      const first = await Promise.race([
+        panelOutcome,
+        storageOAuth.then(url => url ? { kind: 'oauth', url } : { kind: 'oauth-timeout' }),
+      ]);
+      if (first.kind === 'oauth') {
+        await storageReauthHandoff(id, group, started, first.url);
+        return;
+      }
+      if (first.kind === 'panel-error') {
+        const handoffUrl = await Promise.race([storageOAuth, page.waitForTimeout(1_000).then(() => null)]);
+        if (handoffUrl) {
+          await storageReauthHandoff(id, group, started, handoffUrl);
+          return;
+        }
+        throw first.error;
+      }
+      const handoffUrl = await Promise.race([storageOAuth, page.waitForTimeout(2_500).then(() => null)]);
+      if (handoffUrl) {
+        await storageReauthHandoff(id, group, started, handoffUrl);
+        return;
+      }
+    } else {
+      await waitForVisiblePanel(id);
+    }
 
     let state = await menuDiagnostics(id);
     if (!state.panelFound) throw new Error('visible panel not found');
@@ -216,6 +269,7 @@ async function clickTaxHandoff() {
   console.log(`[E2E] tax: ok ${result.durationMs}ms`);
   stage('tax-return-admin');
   await page.goto(authenticatedEntryUrl, { waitUntil: 'domcontentloaded', timeout: 15_000 });
+  selectedWorkArea = null;
   await waitForAdminReady();
 }
 
