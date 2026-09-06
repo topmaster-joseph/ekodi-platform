@@ -98,6 +98,7 @@ jobs:
           node --check my/approval-brief.js
           node --check my/approvals/app.js
           node --check my/progressive-personalization.js
+          node --check my/character-identity.js
           node --check my/intent-navigator.js
           node --check capability-intent-runtime.js
           node --check scripts/validate-capability-registry.mjs
@@ -153,6 +154,7 @@ jobs:
             journey_app_code=$(curl -sS -o /tmp/my-stage-journey-app.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/journey/app.js" || true)
             config_code=$(curl -sS -o /tmp/my-stage-config.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/config.js" || true)
             personalization_code=$(curl -sS -o /tmp/my-stage-personalization.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/progressive-personalization.js" || true)
+            character_code=$(curl -sS -o /tmp/my-stage-character.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/character-identity.js" || true)
             app_code=$(curl -sS -o /tmp/my-stage-app.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/app.js" || true)
             membership_code=$(curl -sS -o /tmp/my-stage-membership.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/membership-summary.js" || true)
             membership_css_code=$(curl -sS -o /tmp/my-stage-membership.css -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/membership-summary.css" || true)
@@ -166,7 +168,7 @@ jobs:
               echo 'My EKODI staging is deployed and correctly protected by Cloudflare Access.'
               exit 0
             fi
-            if [[ "$root_code" == '200' && "$private_code" == '200' && "$journey_code" == '200' && "$approval_code" == '200' && "$journey_app_code" == '200' && "$config_code" == '200' && "$personalization_code" == '200' && "$app_code" == '200' && "$membership_code" == '200' && "$membership_css_code" == '200' && "$user_services_code" == '200' && "$manifest_code" == '200' && "$health_code" == '200' ]] \
+            if [[ "$root_code" == '200' && "$private_code" == '200' && "$journey_code" == '200' && "$approval_code" == '200' && "$journey_app_code" == '200' && "$config_code" == '200' && "$personalization_code" == '200' && "$character_code" == '200' && "$app_code" == '200' && "$membership_code" == '200' && "$membership_css_code" == '200' && "$user_services_code" == '200' && "$manifest_code" == '200' && "$health_code" == '200' ]] \
               && grep -Fq 'My EKODI' /tmp/my-stage.html \
               && grep -Fq 'MY PLATFORMS' /tmp/my-stage.html \
               && grep -Fq 'membership-summary.js' /tmp/my-stage.html \
@@ -181,6 +183,7 @@ jobs:
               && grep -Fq 'https://auth.ekodi.kr/' /tmp/my-stage-journey-app.js \
               && grep -Fq 'buildPersonalizedServiceView' /tmp/my-stage-app.js \
               && grep -Fq 'PERSONALIZATION_VERSION=1' /tmp/my-stage-personalization.js \
+              && grep -Fq "DB_NAME='ekodi-my-character-v1'" /tmp/my-stage-character.js \
               && grep -Fq 'const EKODI_SERVICE_MANIFEST_VERSION=' /tmp/my-stage-app.js \
               && grep -Fq "$(node -e 'const m=JSON.parse(require("fs").readFileSync("/tmp/my-stage-services.json","utf8"));const s=m.services.find(v=>v.id==="trade");process.stdout.write(JSON.stringify([s.id,s.name,s.url]));')" /tmp/my-stage-app.js \
               && grep -Fq '/api/membership/portfolio' /tmp/my-stage-membership.js \
@@ -232,18 +235,37 @@ jobs:
             client_code=$(curl -sS -o /tmp/my-client-auth.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://auth.ekodi.kr/client-auth.js' || true)
             router_code=$(curl -sS -o /tmp/my-auth-router.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://auth.ekodi.kr/auth-router.js' || true)
             manifest_code=$(curl -sS -o /tmp/my-shell-manifest.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://shell.ekodi.kr/manifest.json' || true)
-            if [[ "$client_code" == '200' && "$router_code" == '200' && "$manifest_code" == '200' ]] \
+            shell_health_code=$(curl -sS -o /tmp/my-shell-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://shell.ekodi.kr/health' || true)
+            if [[ "$client_code" == '200' && "$router_code" == '200' && "$manifest_code" == '200' && "$shell_health_code" == '200' ]] \
               && grep -Fq "'my':{name:'My EKODI'" /tmp/my-client-auth.js \
               && grep -Fq "returnTo:'https://my.ekodi.kr/'" /tmp/my-client-auth.js \
               && grep -Fq 'manifestService' /tmp/my-auth-router.js \
               && grep -Fq 'isRegistryUserService' /tmp/my-auth-router.js \
               && grep -Fq "site==='portal'||isRegistryUserService" /tmp/my-auth-router.js \
               && grep -Fq '"id":"my"' /tmp/my-shell-manifest.json \
-              && grep -Fq '"url":"https://my.ekodi.kr/"' /tmp/my-shell-manifest.json; then
+              && grep -Fq '"url":"https://my.ekodi.kr/"' /tmp/my-shell-manifest.json \
+              && grep -Fq '"characterIdentityRegistryVersion":2' /tmp/my-shell-health.json \
+              && grep -Fq '"userCharacterVersion":6' /tmp/my-shell-health.json; then
               echo 'Central My EKODI registry auth realm is live.'
               break
             fi
             if [[ "$attempt" == '24' ]]; then echo 'Central My EKODI registry auth realm is not live; deployment blocked.'; exit 1; fi
+            sleep 5
+          done
+      - name: Wait for central character profile API
+        shell: bash
+        run: |
+          set -euo pipefail
+          endpoint="$MY_SUPABASE_URL/functions/v1/profile-api/character"
+          for attempt in $(seq 1 24); do
+            code=$(curl -sS -D /tmp/my-character-profile.headers -o /dev/null -w '%{http_code}' -X OPTIONS --connect-timeout 5 --max-time 15 "$endpoint" -H 'Origin: https://my.ekodi.kr' -H 'Access-Control-Request-Method: PATCH' -H 'Access-Control-Request-Headers: authorization,apikey,content-type' || true)
+            if [[ "$code" =~ ^(200|204)$ ]] \
+              && grep -Eiq '^access-control-allow-origin:[[:space:]]*https://my\.ekodi\.kr' /tmp/my-character-profile.headers \
+              && grep -Eiq '^access-control-allow-methods:.*DELETE' /tmp/my-character-profile.headers; then
+              echo 'Central character profile API is live.'
+              break
+            fi
+            if [[ "$attempt" == '24' ]]; then echo 'Central character profile API is not live; My EKODI release blocked.'; exit 1; fi
             sleep 5
           done
       - name: Verify Creator portfolio database contract
@@ -294,13 +316,14 @@ jobs:
             journey_app_code=$(curl -sS -o /tmp/my-journey-app.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://my.ekodi.kr/journey/app.js' || true)
             config_code=$(curl -sS -o /tmp/my-config.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://my.ekodi.kr/config.js' || true)
             personalization_code=$(curl -sS -o /tmp/my-personalization.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://my.ekodi.kr/progressive-personalization.js' || true)
+            character_code=$(curl -sS -o /tmp/my-character.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://my.ekodi.kr/character-identity.js' || true)
             app_code=$(curl -sS -o /tmp/my-app.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://my.ekodi.kr/app.js' || true)
             membership_code=$(curl -sS -o /tmp/my-membership.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://my.ekodi.kr/membership-summary.js' || true)
             membership_css_code=$(curl -sS -o /tmp/my-membership.css -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://my.ekodi.kr/membership-summary.css' || true)
             user_services_code=$(curl -sS -o /tmp/my-user-services.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://my.ekodi.kr/user-services.js' || true)
             manifest_code=$(curl -sS -o /tmp/my-services.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://my.ekodi.kr/service-manifest.json' || true)
             health_code=$(curl -sS -o /tmp/my-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://my.ekodi.kr/health' || true)
-            if [[ "$root_code" == '200' && "$private_code" == '200' && "$journey_code" == '200' && "$approval_code" == '200' && "$journey_app_code" == '200' && "$config_code" == '200' && "$personalization_code" == '200' && "$app_code" == '200' && "$membership_code" == '200' && "$membership_css_code" == '200' && "$user_services_code" == '200' && "$manifest_code" == '200' && "$health_code" == '200' ]] \
+            if [[ "$root_code" == '200' && "$private_code" == '200' && "$journey_code" == '200' && "$approval_code" == '200' && "$journey_app_code" == '200' && "$config_code" == '200' && "$personalization_code" == '200' && "$character_code" == '200' && "$app_code" == '200' && "$membership_code" == '200' && "$membership_css_code" == '200' && "$user_services_code" == '200' && "$manifest_code" == '200' && "$health_code" == '200' ]] \
               && grep -Fq 'My EKODI' /tmp/my.html \
               && grep -Fq 'MY PLATFORMS' /tmp/my.html \
               && grep -Fq 'membership-summary.js' /tmp/my.html \
@@ -315,6 +338,7 @@ jobs:
               && grep -Fq 'https://auth.ekodi.kr/' /tmp/my-journey-app.js \
               && grep -Fq 'buildPersonalizedServiceView' /tmp/my-app.js \
               && grep -Fq 'PERSONALIZATION_VERSION=1' /tmp/my-personalization.js \
+              && grep -Fq "DB_NAME='ekodi-my-character-v1'" /tmp/my-character.js \
               && grep -Fq 'const EKODI_SERVICE_MANIFEST_VERSION=' /tmp/my-app.js \
               && grep -Fq "$(node -e 'const m=JSON.parse(require("fs").readFileSync("/tmp/my-services.json","utf8"));const s=m.services.find(v=>v.id==="trade");process.stdout.write(JSON.stringify([s.id,s.name,s.url]));')" /tmp/my-app.js \
               && grep -Fq '/api/membership/portfolio' /tmp/my-membership.js \
@@ -327,6 +351,7 @@ jobs:
               && grep -Fq '"approvalHub":true' /tmp/my-health.json \
               && grep -Fq '"ekodiShell":true' /tmp/my-health.json \
               && grep -Fq '"progressivePersonalization":true' /tmp/my-health.json \
+              && grep -Fq '"characterIdentityPersonalization":true' /tmp/my-health.json \
               && grep -Fq '"personalizationAuthority":"presentation-only"' /tmp/my-health.json; then
               echo 'My EKODI production verified with private workspace routes, Life Journey, universal membership and manifest-driven service registry.'
               exit 0

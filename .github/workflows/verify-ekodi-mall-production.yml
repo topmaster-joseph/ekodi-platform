@@ -19,44 +19,71 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Verify storefront and live product feed
+      - name: Verify storefront, transaction safety and live catalog
         shell: bash
         run: |
           set -euo pipefail
           curl -fsS --retry 3 --retry-delay 2 --connect-timeout 5 --max-time 20 'https://ekodi.kr/ekodibiz/mall' -o /tmp/mall.html
-          grep -Fq 'EKODI MALL' /tmp/mall.html
-          grep -Fq 'SMART SHOPPING' /tmp/mall.html
-          grep -Fq '오늘 필요한 것,' /tmp/mall.html
-          grep -Fq '에코디몰에서.' /tmp/mall.html
-          grep -Fq '오늘의 상품' /tmp/mall.html
-          grep -Fq '상품 둘러보기' /tmp/mall.html
-          grep -Fq '쿠팡 파트너스 활동의 일환으로' /tmp/mall.html
+          for marker in \
+            'EKODI MALL' \
+            'EKODI CONTEXT SHOPPING' \
+            '상품보다 이유부터' \
+            '추천순위는 제휴수수료와 분리합니다' \
+            'ALL MARKET' \
+            'Seller Studio' \
+            '검증된 경로만 활성화'; do
+            grep -Fq "$marker" /tmp/mall.html || { echo "Missing Mall marker: $marker"; exit 1; }
+          done
           if grep -Fq '추천링크 클릭 후 검색하세요' /tmp/mall.html || grep -Fq 'COUPANG AFFILIATE CURATION' /tmp/mall.html || grep -Fq 'cwWXWm' /tmp/mall.html; then
             echo 'Legacy affiliate storefront wording or fallback link is still exposed.'
             exit 1
           fi
           echo 'storefront=verified'
 
+          curl -fsS --retry 3 --retry-delay 2 --connect-timeout 5 --max-time 20 'https://mall-api.ekodi.kr/health' -o /tmp/mall-health.json
+          node <<'NODE'
+          const fs = require('node:fs');
+          const health = JSON.parse(fs.readFileSync('/tmp/mall-health.json', 'utf8'));
+          if (!health.ok || health.service !== 'ekodi-mall-api') throw new Error('Mall API health is not ready');
+          if (health.environment && health.environment !== 'production') throw new Error(`unexpected Mall API environment: ${health.environment}`);
+          for (const key of ['schemaReady', 'orderSchemaReady', 'verificationSchemaReady']) {
+            if (health[key] !== true) throw new Error(`${key} is not ready`);
+          }
+          for (const key of ['paymentsEnabled', 'payoutExecutionEnabled', 'buyerPiiReleaseEnabled', 'supplierForwardEnabled', 'refundExecutionEnabled']) {
+            if (health[key] !== false) throw new Error(`high-impact transaction gate unexpectedly enabled: ${key}`);
+          }
+          console.log(`mallApiVersion=${health.version}`);
+          console.log(`operationsReviewConfigured=${Boolean(health.operationsReviewConfigured)}`);
+          console.log('transactionSafety=verified');
+          NODE
+
           curl -fsS --retry 3 --retry-delay 2 --connect-timeout 5 --max-time 30 'https://api.ekodi.kr/api/affiliate/public/products?storefront=ekodi-mall&limit=100' -o /tmp/products.json
           node <<'NODE'
           const fs = require('node:fs');
           const payload = JSON.parse(fs.readFileSync('/tmp/products.json', 'utf8'));
           console.log(`automationStatus=${payload.automationStatus || 'missing'}`);
+          console.log(`catalogMode=${payload.catalogMode || 'missing'}`);
           console.log(`productCount=${Array.isArray(payload.products) ? payload.products.length : 'not-array'}`);
+          console.log(`identityCount=${Array.isArray(payload.productIdentities) ? payload.productIdentities.length : 'not-array'}`);
           if (payload.storefront !== 'ekodi-mall') throw new Error(`unexpected storefront: ${payload.storefront}`);
-          if (payload.providerKey !== 'coupang_partners') throw new Error(`unexpected provider: ${payload.providerKey}`);
           if (!payload.automationStatus) throw new Error('automationStatus is missing');
-          if (!Array.isArray(payload.products)) throw new Error('products is not an array');
-          const count = payload.products.length;
-          if (count < 1) throw new Error(`EKODI Mall has no live products; automationStatus=${payload.automationStatus}`);
+          if (payload.catalogMode !== 'product_identity_v1') throw new Error(`unexpected catalogMode: ${payload.catalogMode}`);
+          if (!Array.isArray(payload.providers) || payload.providers.length < 1) throw new Error('providers are missing');
+          if (!Array.isArray(payload.productIdentities) || payload.productIdentities.length < 1) throw new Error('product identities are missing');
+          if (!Array.isArray(payload.products) || payload.products.length < 1) throw new Error('EKODI Mall has no live products');
+          for (const identity of payload.productIdentities.slice(0, 5)) {
+            if (!String(identity.name || '').trim()) throw new Error('product identity name missing');
+            if (!Array.isArray(identity.offers) || identity.offers.length < 1) throw new Error(`offers missing for ${identity.name}`);
+          }
           for (const product of payload.products.slice(0, 5)) {
             if (!String(product.productName || '').trim()) throw new Error('productName missing');
             if (!(Number(product.priceKrw) > 0)) throw new Error(`invalid price for ${product.productName}`);
             if (!/^https:\/\//.test(String(product.imageUrl || ''))) throw new Error(`imageUrl missing for ${product.productName}`);
+            if (!String(product.providerKey || '').trim()) throw new Error(`providerKey missing for ${product.productName}`);
             const click = new URL(String(product.clickUrl || ''));
             if (click.origin !== 'https://api.ekodi.kr' || !click.pathname.startsWith('/api/affiliate/public/click/')) {
               throw new Error(`invalid tracked click URL for ${product.productName}`);
             }
           }
-          console.log('EKODI Mall live product feed verified.');
+          console.log('EKODI Mall live product catalog verified.');
           NODE
