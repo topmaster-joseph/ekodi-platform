@@ -100,7 +100,7 @@ async function openSites(){
     window.dispatchEvent(new CustomEvent('ekodi-feature-installed',{detail:{section:'sites'}}));
     return module;
   }).catch(error=>{sitesLoading=null;console.error(error);throw error;});
-  await sitesLoading;applyOrder();activatePanel('sites');
+  await sitesLoading;if(requestedSection!=='sites')return;applyOrder();activatePanel('sites');
   navItemFor('campus')?.classList.add('active');syncTitle('campus');
 }
 async function openCheonggyeMembers(){
@@ -110,7 +110,7 @@ async function openCheonggyeMembers(){
     window.dispatchEvent(new CustomEvent('ekodi-feature-installed',{detail:{section:'cheonggye-members'}}));
     return module;
   }).catch(error=>{cheonggyeLoading=null;console.error(error);throw error;});
-  await cheonggyeLoading;applyOrder();activatePanel('cheonggye-members');syncTitle('cheonggye-members');
+  await cheonggyeLoading;if(requestedSection!=='cheonggye-members')return;applyOrder();activatePanel('cheonggye-members');syncTitle('cheonggye-members');
 }
 function fallbackDemand(section){
   const selector=section==='aiops'?'[data-demand-feature="aiops"],[data-section="aiops"]':`[data-demand-feature="${section}"],[data-lazy-section="${section}"],[data-section="${section}"]`;
@@ -121,13 +121,14 @@ function requestAdminAccess(){
   const task=import('./admin-menu-runtime.js').then(async()=>{
     const panel=await window.EKODIAdminMenu?.ensureAdminAccess?.();
     if(!panel)throw new Error('administrator access panel unavailable');
-    applyOrder();activatePanel('admins');syncTitle('admins');
+    if(requestedSection!=='admins')return;applyOrder();activatePanel('admins');syncTitle('admins');
   }).catch(error=>console.error('[EKODI Admin] admins runtime activation failed',error)).finally(()=>demandLoading.delete('admins'));
   demandLoading.set('admins',task);return task;
 }
 function requestCommonServices(){
   if(demandLoading.has('common-services'))return demandLoading.get('common-services');
   const task=import('./common-services-admin.js').then(()=>{
+    if(requestedSection!=='common-services')return;
     applyOrder();
     if(activatePanel('common-services'))window.EKODICommonServicesAdmin?.activate?.();
   }).catch(error=>console.error('[EKODI Admin] common services runtime activation failed',error)).finally(()=>demandLoading.delete('common-services'));
@@ -137,13 +138,14 @@ function requestDemand(section){
   for(const item of allNav())item.classList.toggle('active',!isInternalNav(item)&&sectionOf(item)===section);
   if(section==='cheonggye-members')return openCheonggyeMembers();
   if(section==='common-services')return requestCommonServices();
-  if(section==='communication')return import('./communication-admin.js').then(()=>{applyOrder();activatePanel(section);syncTitle(section);});
-  if(section==='capabilities')return import('./capability-center-admin.js').then(()=>{applyOrder();activatePanel(section);syncTitle(section);});
+  if(section==='communication')return import('./communication-admin.js').then(()=>{if(requestedSection!==section)return;applyOrder();activatePanel(section);syncTitle(section);});
+  if(section==='capabilities')return import('./capability-center-admin.js').then(()=>{if(requestedSection!==section)return;applyOrder();activatePanel(section);syncTitle(section);});
   if(section==='admins')return requestAdminAccess();
   const demandKey=DEMAND_KEYS.get(section);
   if(!demandKey||!window.EKODIAdminDemand?.activate){fallbackDemand(section);return null;}
   if(demandLoading.has(section))return demandLoading.get(section);
   const task=Promise.resolve(window.EKODIAdminDemand.activate(demandKey)).then(()=>{
+    if(requestedSection!==section)return;
     applyOrder();
     if(!activatePanel(section)){
       const real=navItemFor(section);
@@ -152,7 +154,7 @@ function requestDemand(section){
     }
   }).catch(error=>{
     console.error(`[EKODI Admin] ${section} demand activation failed`,error);
-    fallbackDemand(section);
+    if(requestedSection===section)fallbackDemand(section);
   }).finally(()=>demandLoading.delete(section));
   demandLoading.set(section,task);return task;
 }

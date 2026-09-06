@@ -247,9 +247,6 @@
           if (placeholder !== real && placeholder.isConnected) placeholder.remove();
         }
         window.dispatchEvent(new CustomEvent('ekodi-nav-changed', { detail:{ feature:key } }));
-        if (!auto || feature.hashes?.includes(location.hash) || feature.paths?.includes(location.pathname)) {
-          queueMicrotask(() => real.click());
-        }
         mark(`ekodi-feature-${key}-ready`);
         scheduleSecondary(key, feature);
       } catch (error) {
