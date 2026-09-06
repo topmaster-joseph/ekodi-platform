@@ -135,6 +135,15 @@ async function fetchNaverCategoryTrends(env, categories, runDate) {
 
 async function schemaReady(env) { return d1SchemaReady(env?.DB,['affiliate_storefront_products','affiliate_storefront_clicks','affiliate_demand_signals','affiliate_product_performance_daily','affiliate_growth_opportunities','affiliate_growth_strategy_runs']); }
 
+async function productPerformanceStatus(env) {
+  const row = await env.DB.prepare(`SELECT COUNT(*) AS rows, MAX(metric_date) AS latest_metric_date, COALESCE(SUM(orders),0) AS orders, COALESCE(SUM(cancels),0) AS cancels, COALESCE(SUM(commission_krw),0) AS commission_krw FROM affiliate_product_performance_daily WHERE metric_date >= date('now','-29 day')`).first().catch(() => null);
+  if (!row) return {status:'error',rows:0,latestMetricDate:null,orders30d:0,cancels30d:0,commission30d:0};
+  const rows = Number(row.rows||0);
+  const latestMetricDate = row.latest_metric_date || null;
+  const status = !rows ? 'empty' : latestMetricDate && latestMetricDate >= addDays(kstParts().date,-2) ? 'ready' : 'stale';
+  return {status,rows,latestMetricDate,orders30d:Number(row.orders||0),cancels30d:Number(row.cancels||0),commission30d:Number(row.commission_krw||0)};
+}
+
 async function loadProducts(env) {
   const result = await env.DB.prepare(`SELECT p.id,p.product_id,p.product_name,p.price_krw,p.category,p.selection_score,p.is_rocket,p.is_free_shipping,
       COALESCE(c.clicks_7d,0) AS clicks_7d,COALESCE(c.clicks_prev_7d,0) AS clicks_prev_7d,
@@ -211,6 +220,7 @@ export async function runMallSalesIntelligence(env,{reason='cron',force=false}={
     try { naver = await fetchNaverCategoryTrends(env,categories,kst.date); }
     catch (error) { naver = {status:'error',error:clean(error?.message||error,300),signals:new Map()}; }
 
+    const performanceStatus = await productPerformanceStatus(env);
     const ranked = [];
     for (const product of products) {
       const category = clean(product.category,80);
@@ -241,8 +251,8 @@ export async function runMallSalesIntelligence(env,{reason='cron',force=false}={
     ranked.forEach(row => { counts[row.action] = (counts[row.action]||0)+1; });
     const top = ranked[0] || null;
     const degraded = naver.status === 'error';
-    await writeStrategyRun(env,{runDate:kst.date,reason,status:degraded?'degraded':'completed',sources:{internal:'ok',naverSearchTrend:naver.status,productPerformance:'ready'},candidates:ranked.length,...counts,topProductRowId:top?.productRowId,topScore:top?.opportunityScore,startedAt,completedAt:nowIso(),error:naver.error||''});
-    return {ok:true,status:degraded?'degraded':'completed',runDate:kst.date,sources:{internal:'ok',naverSearchTrend:naver.status},candidates:ranked.length,counts,top:top?{productRowId:top.productRowId,productName:top.productName,score:top.opportunityScore,action:top.action,angle:top.angle}:null};
+    await writeStrategyRun(env,{runDate:kst.date,reason,status:degraded?'degraded':'completed',sources:{internal:'ok',naverSearchTrend:naver.status,productPerformance:performanceStatus.status},candidates:ranked.length,...counts,topProductRowId:top?.productRowId,topScore:top?.opportunityScore,startedAt,completedAt:nowIso(),error:naver.error||''});
+    return {ok:true,status:degraded?'degraded':'completed',runDate:kst.date,sources:{internal:'ok',naverSearchTrend:naver.status,productPerformance:performanceStatus.status},productPerformance:performanceStatus,candidates:ranked.length,counts,top:top?{productRowId:top.productRowId,productName:top.productName,score:top.opportunityScore,action:top.action,angle:top.angle}:null};
   } catch (error) {
     const message = clean(error?.message||error,1000);
     await writeStrategyRun(env,{runDate:kst.date,reason,status:'failed',sources:{internal:'error'},startedAt,completedAt:nowIso(),error:message}).catch(() => {});
@@ -253,11 +263,12 @@ export async function runMallSalesIntelligence(env,{reason='cron',force=false}={
 export async function getMallSalesIntelligenceStatus(env) {
   if (!(await schemaReady(env))) return {enabled:true,schemaReady:false,status:'schema_required'};
   const kst = kstParts();
-  const [run,top] = await Promise.all([
+  const [run,top,productPerformance] = await Promise.all([
     env.DB.prepare('SELECT run_date,status,source_status_json,candidates,scale_count,test_count,observe_count,hold_count,top_opportunity_score,last_error,completed_at FROM affiliate_growth_strategy_runs ORDER BY run_date DESC LIMIT 1').first().catch(() => null),
     env.DB.prepare(`SELECT o.product_row_id,o.product_id,o.opportunity_score,o.recommended_action,o.campaign_angle,p.product_name,p.category
       FROM affiliate_growth_opportunities o JOIN affiliate_storefront_products p ON p.id=o.product_row_id
       WHERE o.run_date=? ORDER BY o.opportunity_score DESC,o.id DESC LIMIT 5`).bind(kst.date).all().catch(() => ({results:[]})),
+    productPerformanceStatus(env),
   ]);
   return {
     enabled:true,
@@ -265,6 +276,7 @@ export async function getMallSalesIntelligenceStatus(env) {
     mode:'active_sales',
     paidAds:false,
     naverSearchTrend:{configured:naverConfigured(env),provider:'NAVER API HUB'},
+    productPerformance,
     lastRun:run?{date:run.run_date,status:run.status,sources:(()=>{try{return JSON.parse(run.source_status_json||'{}')}catch{return{}}})(),candidates:Number(run.candidates||0),scale:Number(run.scale_count||0),test:Number(run.test_count||0),observe:Number(run.observe_count||0),hold:Number(run.hold_count||0),topScore:Number(run.top_opportunity_score||0),error:run.last_error||'',completedAt:run.completed_at||null}:null,
     topOpportunities:(top.results||[]).map(row => ({productRowId:Number(row.product_row_id),productId:row.product_id,productName:row.product_name,category:row.category,score:Number(row.opportunity_score||0),action:row.recommended_action,angle:row.campaign_angle})),
   };

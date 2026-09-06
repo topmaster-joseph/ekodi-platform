@@ -69,3 +69,11 @@ test('growth entry exports its RPC entrypoint and temporary direct recovery cron
   assert.match(publisher,/runGrowthCycle/);
   assert.match(publisher,/getUTCMinutes\(\) === 5/);
 });
+
+test('promotion health separates social readiness from YouTube Shorts readiness', async () => {
+  const worker = await read('mall-promotion-automation.js');
+  assert.match(worker,/channelReadiness/);
+  assert.match(worker,/youtubeConnected/);
+  assert.match(worker,/youtubeMallShortsReady:false/);
+  assert.match(worker,/product_short_video_asset_pipeline_required/);
+});
