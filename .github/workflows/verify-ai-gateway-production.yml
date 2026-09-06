@@ -4,6 +4,9 @@ on:
   workflow_run:
     workflows: ['Deploy EKODI AI Control Plane']
     types: [completed]
+  push:
+    branches: [main]
+    paths: ['.github/workflows/verify-ai-gateway-production.yml']
   workflow_dispatch:
 
 permissions:
@@ -16,7 +19,7 @@ concurrency:
 
 jobs:
   verify:
-    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.event != 'pull_request' && github.event.workflow_run.conclusion == 'success')
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || (github.event.workflow_run.event != 'pull_request' && github.event.workflow_run.conclusion == 'success')
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
