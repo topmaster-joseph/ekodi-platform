@@ -42,10 +42,10 @@ jobs:
           set -euo pipefail
           test -n "$CLOUDFLARE_API_TOKEN"
           test -n "$CLOUDFLARE_ACCOUNT_ID"
-          for file in index.html script.js church-i18n.js church-i18n-extended.js church-i18n-payment-patch.js church-shell-i18n.js church-header-controls.js church-header-tune.css giving.js church-footer.css community-visual.css; do
+          for file in index.html script.js church-character-identity.js church-i18n.js church-i18n-extended.js church-i18n-payment-patch.js church-shell-i18n.js church-header-controls.js church-header-tune.css giving.js church-footer.css community-visual.css; do
             test -s "church/$file"
           done
-          for file in script.js church-i18n.js church-i18n-extended.js church-i18n-payment-patch.js church-shell-i18n.js church-header-controls.js giving.js; do
+          for file in script.js church-character-identity.js church-i18n.js church-i18n-extended.js church-i18n-payment-patch.js church-shell-i18n.js church-header-controls.js giving.js; do
             node --check "church/$file"
           done
 
@@ -53,6 +53,17 @@ jobs:
           grep -Fq 'https://my.ekodi.kr/' church/index.html
           grep -Fq 'https://ekodi.kr/privacy' church/index.html
           grep -Fq 'https://ekodi.kr/terms' church/index.html
+          grep -Fq 'data-ekodi-character-context="church"' church/index.html
+          grep -Fq 'data-ekodi-character-identity="founder-pastor"' church/index.html
+          grep -Fq 'church-character-identity.js' church/index.html
+          grep -Fq "contract:'ekodi.ekodian-identity.v1'" church/church-character-identity.js
+          grep -Fq "id:'founder-pastor'" church/church-character-identity.js
+          grep -Fq 'subjectAuthorized:true' church/church-character-identity.js
+          grep -Fq 'EKODIUserCharacter?.setIdentity' church/church-character-identity.js
+          if grep -Eiq 'portraitUrl|face_embedding|biometric|data:image' church/church-character-identity.js; then
+            echo 'Church identity bridge must not carry portrait or biometric payload.'
+            exit 1
+          fi
           grep -Fq "const NEW=new Set(['my','kac','vi','mn','id'])" church/church-i18n-extended.js
           grep -Fq 'EKODIChurchPaymentI18n' church/church-i18n-payment-patch.js
           grep -Fq '카드·간편결제 PG 연결 필요' church/church-i18n-payment-patch.js
@@ -106,26 +117,32 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          release='church-header-i18n-20260830-5'
+          release='church-header-i18n-20260906-ekodian-1'
           for attempt in $(seq 1 18); do
             root=$(curl -L -sS -o /tmp/church.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://church.ekodi.kr/?release=${release}" || true)
+            character=$(curl -L -sS -o /tmp/character.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://church.ekodi.kr/church-character-identity.js?release=${release}" || true)
             ext=$(curl -L -sS -o /tmp/ext.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://church.ekodi.kr/church-i18n-extended.js?release=${release}" || true)
             pay=$(curl -L -sS -o /tmp/pay.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://church.ekodi.kr/church-i18n-payment-patch.js?release=${release}" || true)
             loader=$(curl -L -sS -o /tmp/loader.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://church.ekodi.kr/church-shell-i18n.js?release=${release}" || true)
             controls=$(curl -L -sS -o /tmp/controls.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://church.ekodi.kr/church-header-controls.js?release=${release}" || true)
             tune=$(curl -L -sS -o /tmp/tune.css -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://church.ekodi.kr/church-header-tune.css?release=${release}" || true)
-            if [[ "$root" == 200 && "$ext" == 200 && "$pay" == 200 && "$loader" == 200 && "$controls" == 200 && "$tune" == 200 ]] \
+            if [[ "$root" == 200 && "$character" == 200 && "$ext" == 200 && "$pay" == 200 && "$loader" == 200 && "$controls" == 200 && "$tune" == 200 ]] \
               && grep -Fq 'https://ekodi.kr/privacy' /tmp/church.html \
+              && grep -Fq 'data-ekodi-character-identity="founder-pastor"' /tmp/church.html \
+              && grep -Fq "id:'founder-pastor'" /tmp/character.js \
+              && grep -Fq 'subjectAuthorized:true' /tmp/character.js \
+              && grep -Fq 'EKODIUserCharacter?.setIdentity' /tmp/character.js \
+              && ! grep -Eiq 'portraitUrl|face_embedding|biometric|data:image' /tmp/character.js \
               && grep -Fq 'EKODIChurchExtendedI18n' /tmp/ext.js \
               && grep -Fq 'EKODIChurchPaymentI18n' /tmp/pay.js \
               && grep -Fq "'/church-i18n-payment-patch.js'" /tmp/loader.js \
               && grep -Fq "getElementById('ekodi-ccm-mr-toggle')" /tmp/controls.js \
               && grep -Fq 'font-weight:900' /tmp/tune.css; then
-              echo 'Church production multilingual header assets verified.'
+              echo 'Church production multilingual and EKODIAN identity assets verified.'
               break
             fi
             if [[ "$attempt" == 18 ]]; then
-              echo "Production did not converge: root=$root ext=$ext pay=$pay loader=$loader controls=$controls tune=$tune"
+              echo "Production did not converge: root=$root character=$character ext=$ext pay=$pay loader=$loader controls=$controls tune=$tune"
               exit 1
             fi
             sleep 5
@@ -145,13 +162,14 @@ jobs:
           const browser=await puppeteer.launch({executablePath:process.env.CHROME_BIN,headless:true,args:['--no-sandbox','--disable-dev-shm-usage']});
           const extended=new Set(['my','kac','vi','mn','id']);
           const base='https://church.ekodi.kr/';
-          const release='church-header-i18n-20260830-5';
+          const release='church-header-i18n-20260906-ekodian-1';
           try{
             const page=await browser.newPage();
             await page.setViewport({width:1440,height:1000});
 
             async function ready(expected){
               await page.waitForFunction(()=>window.EKODIChurchI18n&&window.EKODIChurchExtendedI18n&&window.EKODIUserLanguage&&window.EKODIChurchPaymentI18n&&document.querySelector('[data-ekodi-language-control] select')&&document.getElementById('ekodi-ccm-mr-toggle'),{timeout:25000});
+              await page.waitForFunction(()=>window.__EKODI_CHARACTER_IDENTITY__?.id==='founder-pastor'&&window.__EKODI_CHARACTER_IDENTITY__?.subjectAuthorized===true,{timeout:15000});
               await page.waitForFunction(locale=>document.documentElement.lang===locale&&window.EKODIUserLanguage?.getLocale?.()===locale,{timeout:20000},expected);
               if(extended.has(expected))await page.waitForFunction(locale=>window.EKODIChurchExtendedI18n?.getLocale?.()===locale,{timeout:20000},expected);
               await page.waitForFunction(()=>{
