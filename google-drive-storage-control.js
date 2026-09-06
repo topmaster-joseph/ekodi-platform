@@ -4,7 +4,7 @@ import { handleAdminSessionFastPath } from './admin-session-fastpath.js';
 const BASE = '/api/control/storage/google';
 const REDIRECT_URI = 'https://drive.ekodi.kr/api/control/storage/google/callback';
 const MARKETING_YOUTUBE_CALLBACK = 'https://marketing-connect-api.ekodi.kr/oauth/youtube/callback';
-const YOUTUBE_SCOPES = ['https://www.googleapis.com/auth/youtube.upload','https://www.googleapis.com/auth/youtube.readonly'];
+const YOUTUBE_SCOPES = ['https://www.googleapis.com/auth/youtube.upload','https://www.googleapis.com/auth/youtube.readonly','https://www.googleapis.com/auth/youtube'];
 const ADMIN_ORIGIN = 'https://admin.ekodi.kr';
 const ADMIN_RETURN_PATH = '/#storage';
 const ADMIN_RETURN = `${ADMIN_ORIGIN}${ADMIN_RETURN_PATH}`;

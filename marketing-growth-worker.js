@@ -148,7 +148,7 @@ function redirectResult(returnUrl, params) {
   Object.entries(params).forEach(([key,value]) => url.searchParams.set(key,String(value)));
   return Response.redirect(url.href,302);
 }
-async function schemaReady(env) { return d1SchemaReady(env?.DB,['marketing_oauth_states','marketing_oauth_connections','marketing_growth_campaigns']); }
+async function schemaReady(env) { return d1SchemaReady(env?.DB,['marketing_oauth_states','marketing_oauth_connections','marketing_growth_campaigns','marketing_channel_settings']); }
 function metaConfigured(env) { return Boolean(env.META_APP_ID && env.META_APP_SECRET); }
 function threadsConfigured(env) { return Boolean((env.THREADS_APP_ID || env.META_APP_ID) && (env.THREADS_APP_SECRET || env.META_APP_SECRET)); }
 function youtubeConfigured(env) { return Boolean(env.GOOGLE_CLIENT_ID && providerSecret(env,YOUTUBE_PROVIDER) && env.GOOGLE_OAUTH_BROKER); }
@@ -354,15 +354,15 @@ async function youtubeCallback(request, env) {
     const discoveredChannels = (channels.items || []).filter(channel => channel?.id);
     let selectedChannels = discoveredChannels;
     if (subject.type === 'tenant' && subject.key === 'ekodibiz') {
-      selectedChannels = discoveredChannels.filter(channel => clean(channel.snippet?.title || '',120) === '에코디비즈몰');
-      if (!selectedChannels.length) throw new Error('EKODIBIZ_YOUTUBE_CHANNEL_NOT_FOUND');
+      selectedChannels = discoveredChannels.filter(channel => clean(channel.snippet?.title || '',120) === '에코디몰');
+      if (!selectedChannels.length) throw new Error('EKODIMALL_YOUTUBE_CHANNEL_NOT_FOUND');
     }
     const expiresAt = Number(tokenData.expires_in || 0) > 0 ? new Date(Date.now() + Number(tokenData.expires_in) * 1000).toISOString() : '';
     let count = 0;
     for (const channel of selectedChannels) {
       const display = clean(channel.snippet?.title || 'YouTube',120);
       const token = safeJson({accessToken,refreshToken,expiresAt});
-      const row = await upsertConnection(env,subject,{provider:'youtube',resourceType:'channel',externalId:String(channel.id),displayName:display,token,expiresAt,scopes:['youtube.upload','youtube.readonly'],metadata:{source:'google_oauth'}});
+      const row = await upsertConnection(env,subject,{provider:'youtube',resourceType:'channel',externalId:String(channel.id),displayName:display,token,expiresAt,scopes:['youtube.upload','youtube.readonly','youtube'],metadata:{source:'google_oauth'}});
       if (row?.id) { await upsertPublishChannel(env,subject,{provider:'youtube',channelType:'channel',displayName:display,externalId:String(channel.id),connectionId:Number(row.id)}); count += 1; }
     }
     return redirectResult(state.return_url,{ekodi_connect:'success',provider:'youtube',connections:count});
@@ -372,8 +372,25 @@ async function youtubeCallback(request, env) {
 async function listConnections(request, env, subject) {
   const result = await env.DB.prepare(`SELECT id,provider,resource_type,external_id,display_name,token_expires_at,scopes_json,status,metadata_json,last_check_at,last_error,created_at,updated_at
     FROM marketing_oauth_connections WHERE subject_type=? AND subject_key=? ORDER BY provider,display_name`).bind(subject.type,subject.key).all();
-  const connections = (result.results || []).map(row => ({...row,scopes:safeParse(row.scopes_json,[]),metadata:safeParse(row.metadata_json,{})}));
+  const settings=await channelSettingsMap(env,subject);
+  const connections = (result.results || []).map(row => ({...row,scopes:safeParse(row.scopes_json,[]),metadata:safeParse(row.metadata_json,{}),settings:settings.get(row.provider+':'+row.external_id)||null}));
   return json(request,env,{connections,platform:{metaConfigured:metaConfigured(env),threadsConfigured:threadsConfigured(env),youtubeConfigured:youtubeConfigured(env),credentialMode:'central_oauth_vault'}});
+}
+async function channelSettingsMap(env, subject) {
+  const result = await env.DB.prepare(`SELECT provider,external_account_id,role,is_default,publish_privacy,category_id,description,keywords,country,default_language,unsubscribed_trailer,sync_status,last_sync_at,last_sync_error,updated_by,updated_at FROM marketing_channel_settings WHERE subject_type=? AND subject_key=?`).bind(subject.type,subject.key).all();
+  return new Map((result.results||[]).map(row=>[`${row.provider}:${row.external_account_id}`,row]));
+}
+async function saveChannelSettings(request, env, identity, subject, connectionId) {
+  const body=await readJson(request)||{};
+  const connection=await env.DB.prepare(`SELECT id,provider,external_id,display_name,status FROM marketing_oauth_connections WHERE id=? AND subject_type=? AND subject_key=?`).bind(Number(connectionId),subject.type,subject.key).first();
+  if(!connection) return json(request,env,{error:'CHANNEL_CONNECTION_NOT_FOUND'},404);
+  if(connection.provider!=='youtube') return json(request,env,{error:'CHANNEL_SETTINGS_PROVIDER_UNSUPPORTED'},409);
+  const role=clean(body.role||'mall',40)||'mall'; const privacy=['private','unlisted','public'].includes(String(body.publishPrivacy||''))?String(body.publishPrivacy):'private';
+  const categoryId=clean(body.categoryId||'22',8)||'22'; const description=clean(body.description,1000); const keywords=clean(body.keywords,500); const country=clean(body.country||'KR',2).toUpperCase(); const defaultLanguage=clean(body.defaultLanguage||'ko',16); const trailer=clean(body.unsubscribedTrailer,32);
+  const now=nowIso(); if(body.isDefault) await env.DB.prepare(`UPDATE marketing_channel_settings SET is_default=0,updated_at=? WHERE subject_type=? AND subject_key=? AND provider='youtube'`).bind(now,subject.type,subject.key).run();
+  await env.DB.prepare(`INSERT INTO marketing_channel_settings(subject_type,subject_key,provider,external_account_id,role,is_default,publish_privacy,category_id,description,keywords,country,default_language,unsubscribed_trailer,sync_status,last_sync_error,updated_by,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,'local','',?,?,?) ON CONFLICT(subject_type,subject_key,provider,external_account_id) DO UPDATE SET role=excluded.role,is_default=excluded.is_default,publish_privacy=excluded.publish_privacy,category_id=excluded.category_id,description=excluded.description,keywords=excluded.keywords,country=excluded.country,default_language=excluded.default_language,unsubscribed_trailer=excluded.unsubscribed_trailer,sync_status='local',last_sync_error='',updated_by=excluded.updated_by,updated_at=excluded.updated_at`).bind(subject.type,subject.key,'youtube',connection.external_id,role,body.isDefault?1:0,privacy,categoryId,description,keywords,country,defaultLanguage,trailer,identity.email,now,now).run();
+  if(body.syncToYouTube){ try{ const full=await connectionWithToken(env,subject,connectionId); const access=await youtubeAccessToken(env,full); const current=await fetchJson(`https://www.googleapis.com/youtube/v3/channels?part=brandingSettings&id=${encodeURIComponent(connection.external_id)}`,{headers:{authorization:`Bearer ${access}`}}); const existing=current.items?.[0]?.brandingSettings?.channel||{}; const channel={}; for(const key of ['description','keywords','trackingAnalyticsAccountId','unsubscribedTrailer','defaultLanguage','country']) if(existing[key]) channel[key]=existing[key]; Object.assign(channel,{description,keywords,country,defaultLanguage}); if(trailer) channel.unsubscribedTrailer=trailer; else delete channel.unsubscribedTrailer; await fetchJson('https://www.googleapis.com/youtube/v3/channels?part=brandingSettings',{method:'PUT',headers:{authorization:`Bearer ${access}`,'content-type':'application/json'},body:JSON.stringify({id:connection.external_id,brandingSettings:{channel}})}); await env.DB.prepare(`UPDATE marketing_channel_settings SET sync_status='synced',last_sync_at=?,last_sync_error='',updated_at=? WHERE subject_type=? AND subject_key=? AND provider='youtube' AND external_account_id=?`).bind(now,now,subject.type,subject.key,connection.external_id).run(); }catch(error){ await env.DB.prepare(`UPDATE marketing_channel_settings SET sync_status='error',last_sync_error=?,updated_at=? WHERE subject_type=? AND subject_key=? AND provider='youtube' AND external_account_id=?`).bind(clean(error.message,500),now,subject.type,subject.key,connection.external_id).run(); return json(request,env,{ok:true,saved:true,synced:false,error:'YOUTUBE_SYNC_FAILED',detail:clean(error.message,300)},207); } }
+  return json(request,env,{ok:true,saved:true,synced:Boolean(body.syncToYouTube)});
 }
 async function connectionWithToken(env, subject, id) {
   const row = await env.DB.prepare(`SELECT id,provider,resource_type,external_id,display_name,token_ciphertext,status,metadata_json
@@ -489,7 +506,10 @@ async function publishYouTube(env, connection, content) {
   const link = trackedUrl(content.linkUrl,'youtube',content.campaignName);
   const title = clean(content.title || content.campaignName || 'EKODI',100);
   const description = [clean(content.caption,4800),link].filter(Boolean).join('\n\n');
-  const metadata = {snippet:{title,description,categoryId:'22'},status:{privacyStatus:'private',selfDeclaredMadeForKids:false}};
+  const setting=await env.DB.prepare("SELECT publish_privacy,category_id FROM marketing_channel_settings WHERE provider='youtube' AND external_account_id=? ORDER BY is_default DESC,updated_at DESC LIMIT 1").bind(connection.external_id).first();
+  const privacy=['private','unlisted','public'].includes(String(setting?.publish_privacy||''))?String(setting.publish_privacy):'private';
+  const categoryId=clean(setting?.category_id||'22',8)||'22';
+  const metadata = {snippet:{title,description,categoryId},status:{privacyStatus:privacy,selfDeclaredMadeForKids:false}};
   const begin = await fetch('https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status',{method:'POST',headers:{authorization:`Bearer ${accessToken}`,'content-type':'application/json; charset=UTF-8','x-upload-content-type':contentType,'x-upload-content-length':String(bytes.byteLength)},body:JSON.stringify(metadata)});
   const beginData = await begin.clone().json().catch(()=>({}));
   const location = begin.headers.get('location');
@@ -650,6 +670,8 @@ export default {
     if (url.pathname === '/v1/connect/threads/start' && request.method === 'POST') return startThreads(request,env,identity,subject);
     if (url.pathname === '/v1/connect/youtube/start' && request.method === 'POST') return startYouTube(request,env,identity,subject);
     if (url.pathname === '/v1/connections' && request.method === 'GET') return listConnections(request,env,subject);
+    const channelSettingsRoute=url.pathname.match(/^\/v1\/connections\/(\d+)\/settings$/);
+    if(channelSettingsRoute && request.method==='POST') return saveChannelSettings(request,env,identity,subject,channelSettingsRoute[1]);
     if (url.pathname === '/v1/publish' && request.method === 'POST') {
       const body = await readJson(request);
       if (!body) return json(request,env,{error:'INVALID_JSON'},400);
