@@ -19,7 +19,7 @@ test('personal advisor profile stays draft until identity and advertising review
   result=await handleInsuranceNetwork(req('/api/internal/network/advisor-profile','PUT',{displayName:'Test Advisor',insurerName:'롯데손해보험',roleLabel:'보험설계사',intro:'기존 보험을 먼저 확인합니다.',registrationReference:'1234567',verificationUrl:'https://www.lotteins.co.kr/web/C/D/C/cdc033re.jsp',officialCompanyUrl:'https://www.lotteins.co.kr/',advertisingReviewRef:'review-2026-001',advertisingReviewExpiresAt:'2027-09-06',publicEnabled:true}),env);
   assert.equal(result.status,200);assert.equal(result.body.profile.publicEnabled,true);assert.equal(result.body.profile.publishable,true);
   result=await handleInsuranceNetwork(new Request('https://insurance.test/api/advisor/profile'),env);
-  assert.equal(result.status,200);assert.equal(result.body.profile.insurerName,'롯데손해보험');
+  assert.equal(result.status,200);assert.equal(result.body.profile.insurerName,'롯데손해보험');assert.equal(result.body.profile.wonderOfficialUrl,'https://ntc.lotteins.co.kr/landing.do');
 });
 
 test('advisor consultation attribution is allowed only for a public verified profile',async()=>{
@@ -41,7 +41,7 @@ test('advisor public and admin surfaces preserve personal-site compliance bounda
   const insuranceAdmin=fs.readFileSync(new URL('../insurance-admin.js',import.meta.url),'utf8');
   const proxy=fs.readFileSync(new URL('../insurance-control-proxy.js',import.meta.url),'utf8');
   for(const marker of ['보험회사 공식 홈페이지가 아닌 보험설계사 개인 안내·상담 페이지','모집인 정보를 확인','상담 요청'])assert.ok(html.includes(marker));
-  assert.ok(js.includes('advisorProfileId:profile.id'));assert.ok(js.includes('shareTranscript:false'));assert.ok(worker.includes("url.pathname==='/advisor'"));
+  assert.ok(js.includes('advisorProfileId:profile.id'));assert.ok(js.includes('shareTranscript:false'));assert.ok(js.includes('profile.directDesignUrl'));assert.ok(js.includes('profile.wonderOfficialUrl'));assert.ok(worker.includes("url.pathname==='/advisor'"));
   assert.ok(layout.includes("section==='insurance'")&&layout.includes("import('./insurance-admin.js')"));assert.ok(insuranceAdmin.includes("import('./insurance-advisor-admin.js')"));
   for(const asset of ['insurance-admin.js','insurance-network-admin.js','insurance-advisor-admin.js']){assert.ok(build.includes(asset));assert.ok(siteWorker.includes('/'+asset))}
   assert.ok(proxy.includes('/network/advisor-profile'));assert.ok(proxy.includes("['PATCH','PUT']"));

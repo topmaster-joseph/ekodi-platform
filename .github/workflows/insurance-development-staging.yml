@@ -96,4 +96,7 @@ jobs:
           curl --retry 6 --retry-all-errors -fsS "$UI_URL/health" -o /tmp/insurance-ui-health.json
           jq -e '.service=="ekodi-insurance"' /tmp/insurance-ui-health.json >/dev/null
           curl --retry 6 --retry-all-errors -fsS "$UI_URL/" | grep -Fq '보험 비교 준비'
+          curl --retry 6 --retry-all-errors -fsS "$UI_URL/advisor" | grep -Fq '보험설계사 개인 안내·상담 페이지'
+          profile_status=$(curl -sS -o /tmp/advisor-profile.json -w '%{http_code}' "$API_URL/api/advisor/profile")
+          test "$profile_status" = '404'
           echo 'INSURANCE_8G_DEVELOPMENT_STAGING_OK=1'
