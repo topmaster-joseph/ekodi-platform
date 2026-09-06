@@ -196,9 +196,10 @@ async function clickMenu(id) {
 
 async function clickTaxHandoff() {
   const started = Date.now();
+  const group = groups.tax;
   stage('menu-tax-global');
   console.log('[E2E] tax: begin');
-  await selectWorkArea('business');
+  await selectWorkArea(group);
   stage('menu-tax-tab');
   const taxTab = page.locator('button.admin-context-tab[data-admin-context-section="tax"]');
   await taxTab.waitFor({ state: 'visible', timeout: 5_000 });
@@ -210,7 +211,7 @@ async function clickTaxHandoff() {
   ]);
   if (response && !(response.status() >= 200 && response.status() < 400)) throw new Error(`tax: destination returned HTTP ${response.status()}`);
   if (new URL(page.url()).hostname !== 'tax.ekodi.kr') throw new Error(`tax: wrong handoff destination ${page.url()}`);
-  const result = { id: 'tax', group: 'business', ok: true, durationMs: Date.now() - started, destination: 'https://tax.ekodi.kr/' };
+  const result = { id: 'tax', group, ok: true, durationMs: Date.now() - started, destination: 'https://tax.ekodi.kr/' };
   results.push(result);
   console.log(`[E2E] tax: ok ${result.durationMs}ms`);
   stage('tax-return-admin');
