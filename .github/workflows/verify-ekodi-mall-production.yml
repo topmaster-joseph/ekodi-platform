@@ -49,6 +49,8 @@ jobs:
           for (const key of ['schemaReady', 'orderSchemaReady', 'verificationSchemaReady']) {
             if (health[key] !== true) throw new Error(`${key} is not ready`);
           }
+          if (health.operationsReviewConfigured !== true) throw new Error('operations review is not configured');
+          if (health.operationsEmailAllowlistConfigured !== true) throw new Error('operations email allowlist is not configured');
           for (const key of ['paymentsEnabled', 'payoutExecutionEnabled', 'buyerPiiReleaseEnabled', 'supplierForwardEnabled', 'refundExecutionEnabled']) {
             if (health[key] !== false) throw new Error(`high-impact transaction gate unexpectedly enabled: ${key}`);
           }
