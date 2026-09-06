@@ -39,9 +39,9 @@
 
         <div class="structure-flow" aria-label="에코디 시스템 기본 흐름">
           <div><small>ROOT</small><strong>ekodi.kr</strong><span>생태계 허브 · 정문</span></div><b>›</b>
-          <div><small>IDENTITY</small><strong>auth.ekodi.kr</strong><span>Google 인증 · 권한</span></div><b>›</b>
-          <div><small>SPACES</small><strong>전문 서비스 공간</strong><span>Church · Biz · Lab · Trade · 고객공간</span></div><b>›</b>
-          <div><small>PERSONAL</small><strong>my.ekodi.kr</strong><span>나의 활동 · 서비스 · 여정</span></div>
+          <div><small>CONSTITUTION</small><strong>헌법 · Guard</strong><span>요청과 실제 구조를 먼저 판정</span></div><b>›</b>
+          <div><small>WORKSPACES</small><strong>ekodi.kr/{type}/{slug}</strong><span>personal · org · group · project</span></div><b>›</b>
+          <div><small>CONTROL</small><strong>my · admin · auth · api</strong><span>정당화된 시스템 경계만 서브도메인 사용</span></div>
         </div>
 
         <div class="structure-layer-grid" aria-label="에코디 공통 플랫폼 계층">
@@ -116,6 +116,13 @@
       </div>
     </div>
     <div class="system-map-principle" data-system-map-principle>구조 기준을 읽는 중입니다.</div>
+    <section class="system-map-constitution" data-system-map-constitution>
+      <div class="system-map-constitution-head"><div><small>CONSTITUTION GUARD</small><h4>헌법 기준 구조 ↔ 현재 실제 구조</h4><p>헌법의 공식 경로와 현재 등록·운영 경계를 비교해 이탈과 이전 대상을 자동 판정합니다.</p></div><b data-system-map-constitution-state>판정 중</b></div>
+      <div class="system-map-constitution-paths" data-system-map-constitution-paths></div>
+      <div class="system-map-constitution-flow" data-system-map-constitution-flow></div>
+      <div class="system-map-drift-summary" data-system-map-drift-summary></div>
+      <div class="system-map-drift-list" data-system-map-drift-list></div>
+    </section>
     <div class="system-map-summary" data-system-map-summary></div>
     <div class="system-map-infra" data-system-map-infra></div>
     <div class="system-map-groups" data-system-map-groups><p class="operations-loading">플랫폼 경계를 읽는 중입니다.</p></div>
@@ -136,7 +143,26 @@
   let model = null;
 
   function productionDomains(row = {}) {
-    return (row.domains || []).filter(domain => domain.endsWith('.ekodi.kr') && !domain.includes('staging'));
+    return (row.domains || []).filter(domain => (domain === 'ekodi.kr' || domain.endsWith('.ekodi.kr')) && !domain.includes('staging'));
+  }
+
+  function inspectConstitution(boundaries = {}, constitution = {}) {
+    const systemHosts = new Set(constitution?.systemBoundaries?.production || []);
+    const legacyHosts = new Set(constitution?.legacyDomainAllowlist || []);
+    const targets = constitution?.legacyDomainTargets || {};
+    const seen = new Set();
+    const rows = [];
+    for (const [platform, boundary] of Object.entries(boundaries?.platforms || {})) {
+      for (const domain of productionDomains(boundary)) {
+        if (seen.has(domain)) continue;
+        seen.add(domain);
+        if (systemHosts.has(domain)) rows.push({ platform, domain, state:'ok', label:'헌법 경계', target:null });
+        else if (targets[domain]) rows.push({ platform, domain, state:'warn', label:'이전 대상', target:targets[domain] });
+        else if (legacyHosts.has(domain)) rows.push({ platform, domain, state:'warn', label:'레거시 허용', target:null });
+        else rows.push({ platform, domain, state:'error', label:'헌법 미등록', target:null });
+      }
+    }
+    return rows;
   }
 
   function statusFor(row, monitor) {
@@ -158,7 +184,7 @@
     return node;
   }
 
-  function platformCard(key, row, monitor) {
+  function platformCard(key, row, monitor, constitution) {
     const state = statusFor(row, monitor);
     const card = document.createElement('article');
     card.className = 'system-map-platform';
@@ -178,9 +204,16 @@
     domains.className = 'system-map-domains';
     const production = productionDomains(row);
     (production.length ? production : (row.domains || []).slice(0, 2)).forEach(domain => {
+      const route = document.createElement('span'); route.className = 'system-map-domain-route';
       const link = document.createElement('a');
       link.href = `https://${domain}`; link.target = '_blank'; link.rel = 'noopener noreferrer'; link.textContent = domain;
-      domains.append(link);
+      route.append(link);
+      const target = constitution?.legacyDomainTargets?.[domain];
+      if (target && target !== link.href) {
+        const canonical = document.createElement('small'); canonical.textContent = `→ ${target.replace(/^https?:\/\//, '')}`; canonical.title = '헌법상 canonical/이전 대상';
+        route.append(canonical);
+      }
+      domains.append(route);
     });
 
     const facts = document.createElement('dl');
@@ -203,7 +236,7 @@
     return card;
   }
 
-  function renderGroup(title, subtitle, rows, monitor) {
+  function renderGroup(title, subtitle, rows, monitor, constitution) {
     const section = document.createElement('section'); section.className = 'system-map-group';
     const head = document.createElement('div'); head.className = 'system-map-group-head';
     const copy = document.createElement('div');
@@ -213,7 +246,7 @@
     const count = document.createElement('span'); count.textContent = `${rows.length}`;
     head.append(copy, count);
     const grid = document.createElement('div'); grid.className = 'system-map-platform-grid';
-    rows.forEach(([key, row]) => grid.append(platformCard(key, row, monitor)));
+    rows.forEach(([key, row]) => grid.append(platformCard(key, row, monitor, constitution)));
     section.append(head, grid);
     return section;
   }
@@ -265,7 +298,48 @@
     });
   }
 
-  function render(boundaries, monitor, registry) {
+  function renderConstitution(boundaries, constitution) {
+    const root = get('[data-system-map-constitution]');
+    if (!root) return;
+    const rows = inspectConstitution(boundaries, constitution);
+    const errors = rows.filter(row => row.state === 'error');
+    const warnings = rows.filter(row => row.state === 'warn');
+    const ok = rows.filter(row => row.state === 'ok');
+    root.dataset.state = errors.length ? 'error' : warnings.length ? 'warn' : 'ok';
+    const badge = get('[data-system-map-constitution-state]');
+    badge.textContent = errors.length ? `위반 ${errors.length}` : warnings.length ? `이전 필요 ${warnings.length}` : '헌법 일치';
+    badge.dataset.state = root.dataset.state;
+
+    const paths = get('[data-system-map-constitution-paths]'); paths.textContent = '';
+    const pathLabel = document.createElement('small'); pathLabel.textContent = `CONSTITUTION v${constitution?.version || '—'} · canonical workspace`;
+    const pathValue = document.createElement('strong'); pathValue.textContent = (constitution?.canonicalWorkspacePatterns || []).join(' · ') || '정의 없음';
+    const identity = document.createElement('span'); identity.textContent = `identity: ${constitution?.workspaceRoutingPolicy?.identityKey || 'workspace_id'} · slug는 locator`;
+    paths.append(pathLabel, pathValue, identity);
+
+    const flow = get('[data-system-map-constitution-flow]'); flow.textContent = '';
+    [['1','헌법','최상위 구조·운영 기준'],['2','Constitution Guard','요청·변경 선판정'],['3','Control Plane','Admin · API · 정책·감사'],['4','Workspace Paths','ekodi.kr/{type}/{slug}'],['5','Adapters','레거시·커스텀 도메인 → canonical']].forEach(([step,title,detail]) => {
+      const card = document.createElement('div'); card.dataset.step = step;
+      const strong = document.createElement('strong'); strong.textContent = title;
+      const span = document.createElement('span'); span.textContent = detail;
+      card.append(strong, span); flow.append(card);
+    });
+
+    const summary = get('[data-system-map-drift-summary]'); summary.textContent = '';
+    [['헌법 경계', ok.length], ['이전·레거시', warnings.length], ['미등록/위반', errors.length]].forEach(([label,value]) => {
+      const item = document.createElement('div'); const small = document.createElement('small'); small.textContent = label; const strong = document.createElement('strong'); strong.textContent = value; item.append(small,strong); summary.append(item);
+    });
+    const list = get('[data-system-map-drift-list]'); list.textContent = '';
+    const drift = [...errors, ...warnings].slice(0, 12);
+    if (!drift.length) { const clean = document.createElement('p'); clean.className = 'system-map-drift-clean'; clean.textContent = '등록된 운영 경계가 현재 헌법과 일치합니다.'; list.append(clean); return; }
+    drift.forEach(row => {
+      const item = document.createElement('div'); item.className = 'system-map-drift-item'; item.dataset.state = row.state;
+      const copy = document.createElement('div'); const strong = document.createElement('strong'); strong.textContent = row.domain; const small = document.createElement('small'); small.textContent = `${row.platform} · ${row.label}`; copy.append(strong, small);
+      const target = document.createElement('span'); target.textContent = row.target ? `→ ${row.target}` : '헌법 등록/판정 필요';
+      item.append(copy,target); list.append(item);
+    });
+  }
+
+  function render(boundaries, monitor, registry, constitution) {
     const platforms = Object.entries(boundaries?.platforms || {});
     const identity = platforms.filter(([key]) => identityKeys.has(key));
     const core = platforms.filter(([key]) => coreKeys.has(key));
@@ -276,6 +350,7 @@
     const supabase = platforms.filter(([, row]) => /Supabase/i.test(row.database || '')).length;
 
     get('[data-system-map-principle]').textContent = boundaries?.principle || '공통화하되 서비스는 독립적으로 배포하고 권한을 재검증합니다.';
+    renderConstitution(boundaries, constitution);
     const summary = get('[data-system-map-summary]'); summary.textContent = '';
     [['등록 플랫폼', platforms.length], ['상태 정상', `${healthy}/${platforms.length}`], ['D1 연결', d1], ['Supabase 연결', supabase]].forEach(([label, value]) => {
       const item = document.createElement('div');
@@ -295,13 +370,13 @@
 
     groupsNode.textContent = '';
     groupsNode.append(
-      renderGroup('Identity & Context', '사람 · 공간 · 역할을 연결하는 공통 신원 계층', identity, monitor),
-      renderGroup('Shared Core', 'API · 공통 Edge · 중앙 운영 데이터와 계약', core, monitor),
-      renderGroup('Platform Family', '각자 독립 배포되고 명시적 계약으로 연결되는 서비스', services, monitor),
+      renderGroup('Identity & Context', '사람 · 공간 · 역할을 연결하는 공통 신원 계층', identity, monitor, constitution),
+      renderGroup('Shared Core', 'API · 공통 Edge · 중앙 운영 데이터와 계약', core, monitor, constitution),
+      renderGroup('Platform Family', '각자 독립 배포되고 명시적 계약으로 연결되는 서비스', services, monitor, constitution),
     );
     const updated = monitor?.generatedAt ? new Date(monitor.generatedAt).toLocaleString('ko-KR') : '모니터 시각 없음';
-    get('[data-system-map-updated]').textContent = `운영 상태 ${updated} · 구조 v${boundaries?.version ?? '—'} · 서비스 레지스트리 v${registry?.version ?? '—'}`;
-    model = { boundaries, monitor, registry };
+    get('[data-system-map-updated]').textContent = `운영 상태 ${updated} · 구조 v${boundaries?.version ?? '—'} · 서비스 레지스트리 v${registry?.version ?? '—'} · 헌법 v${constitution?.version ?? '—'}`;
+    model = { boundaries, monitor, registry, constitution };
     renderServiceRegistry(registry);
     applySearch();
   }
@@ -310,16 +385,18 @@
     refresh.disabled = true;
     groupsNode.innerHTML = '<p class="operations-loading">시스템 구조와 운영 상태를 동기화하는 중입니다.</p>';
     try {
-      const [boundariesResponse, monitorResponse, registryResponse] = await Promise.all([
+      const [boundariesResponse, monitorResponse, registryResponse, constitutionResponse] = await Promise.all([
         fetch('/platform-boundaries.json', { cache:'no-store' }),
         fetch('/monitor-status.json', { cache:'no-store' }),
         fetch('/ecosystem-services.json', { cache:'no-store' }),
+        fetch('/constitution-policy.json', { cache:'no-store' }),
       ]);
       if (!boundariesResponse.ok) throw new Error(`구조 기준 ${boundariesResponse.status}`);
       const boundaries = await boundariesResponse.json();
       const monitor = monitorResponse.ok ? await monitorResponse.json() : { sites:[] };
       const registry = registryResponse.ok ? await registryResponse.json() : { services:[] };
-      render(boundaries, monitor, registry);
+      const constitution = constitutionResponse.ok ? await constitutionResponse.json() : { version:'unavailable' };
+      render(boundaries, monitor, registry, constitution);
     } catch (error) {
       groupsNode.textContent = '';
       const message = document.createElement('p'); message.className = 'operations-error';
