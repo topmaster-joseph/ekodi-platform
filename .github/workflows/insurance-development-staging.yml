@@ -101,7 +101,7 @@ jobs:
           grep -Fq '보험 비교 준비' sites/ekodi-insurance/public/index.html
           grep -Fq '보험설계사 개인 안내·상담 페이지' sites/ekodi-insurance/public/advisor.html
           for url in "$API_URL/health" "$UI_URL/health" "$UI_URL/advisor"; do
-            curl --retry 5 --retry-all-errors -fsS "$url" -o /tmp/access.html
+            curl --retry 5 --retry-all-errors -LfsS "$url" -o /tmp/access.html
             grep -Fq 'Cloudflare Access' /tmp/access.html
           done
           echo 'INSURANCE_8G_DEVELOPMENT_STAGING_OK=1'
