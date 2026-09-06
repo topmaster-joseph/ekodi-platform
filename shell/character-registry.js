@@ -3,19 +3,23 @@
 if(window.EKODICharacterRegistry)return;
 
 const registry={
-  schemaVersion:1,
+  schemaVersion:2,
   system:{
     id:'ekodian',
     name:'EKODIAN',
     nameKo:'에코디언',
+    generation:8,
     role:'에코디의 가치와 서비스를 사람에게 연결하는 디지털 이웃',
+    operatingModel:'sovereign_autonomous_agentic_service_companion',
     constitutionalPrinciples:[
       'guide_not_protagonist',
       'one_identity_many_expressions',
       'relationship_before_feature',
       'state_driven_presence',
       'restrained_in_critical_workflows',
-      'warm_intelligent_not_childish'
+      'warm_intelligent_not_childish',
+      'character_never_expands_agent_authority',
+      'verified_state_before_success_expression'
     ]
   },
   values:{
@@ -48,6 +52,30 @@ const registry={
     celebrate:'celebrate',
     error_recovery:'error'
   },
+  operationBridge:{
+    contract:'ekodi.ekodian-operation.v1',
+    generation:8,
+    hierarchy:['sovereign','autonomous','agentic','services','experience'],
+    sourceOfTruth:'ai_agent_actions',
+    capabilityRegistry:'config/capability-registry.json',
+    authorityContext:'Person + Workspace + Role + Capability',
+    statusToState:{
+      assist_only:'explain',
+      awaiting_human:'ask',
+      approved_pending_executor:'confirm',
+      ready_for_executor:'wait',
+      executing:'wait',
+      verified:'complete',
+      failed:'error',
+      rejected:'calm',
+      blocked:'calm'
+    },
+    approval:{
+      humanGate:'required',
+      selfApproval:false,
+      characterMayExpandAuthority:false
+    }
+  },
   celebrationLevels:{
     1:'subtle',
     2:'medium',
@@ -55,7 +83,7 @@ const registry={
   },
   restraint:{
     minimize:['payment','personal_data','security','complex_admin','focus_heavy'],
-    never:['deceptive_authority','fear_inducing_error','blocking_critical_action','childish_toy_tone','decorative_omnipresence']
+    never:['deceptive_authority','fear_inducing_error','blocking_critical_action','childish_toy_tone','decorative_omnipresence','unverified_success_claim']
   },
   services:{
     church:{pose:'welcome',prop:'book',label:'함께 말씀을 나누는 에코디언'},
@@ -106,5 +134,5 @@ const deepFreeze=value=>{
 };
 
 window.EKODICharacterRegistry=deepFreeze(registry);
-window.dispatchEvent(new CustomEvent('ekodi:character-registry-ready',{detail:{schemaVersion:registry.schemaVersion,system:registry.system.id}}));
+window.dispatchEvent(new CustomEvent('ekodi:character-registry-ready',{detail:{schemaVersion:registry.schemaVersion,system:registry.system.id,generation:registry.system.generation}}));
 })();
