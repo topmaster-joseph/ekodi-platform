@@ -39,10 +39,12 @@ test('advisor public and admin surfaces preserve personal-site compliance bounda
   const build=fs.readFileSync(new URL('../scripts/build.mjs',import.meta.url),'utf8');
   const siteWorker=fs.readFileSync(new URL('../site-worker.js',import.meta.url),'utf8');
   const insuranceAdmin=fs.readFileSync(new URL('../insurance-admin.js',import.meta.url),'utf8');
+  const advisorAdmin=fs.readFileSync(new URL('../insurance-advisor-admin.js',import.meta.url),'utf8');
   const proxy=fs.readFileSync(new URL('../insurance-control-proxy.js',import.meta.url),'utf8');
   for(const marker of ['보험회사 공식 홈페이지가 아닌 보험설계사 개인 안내·상담 페이지','모집인 정보를 확인','상담 요청'])assert.ok(html.includes(marker));
   assert.ok(js.includes('advisorProfileId:profile.id'));assert.ok(js.includes('shareTranscript:false'));assert.ok(js.includes('profile.directDesignUrl'));assert.ok(js.includes('profile.wonderOfficialUrl'));assert.ok(worker.includes("url.pathname==='/advisor'"));
   assert.ok(layout.includes("section==='insurance'")&&layout.includes("import('./insurance-admin.js')"));assert.ok(insuranceAdmin.includes("import('./insurance-advisor-admin.js')"));
   for(const asset of ['insurance-admin.js','insurance-network-admin.js','insurance-advisor-admin.js']){assert.ok(build.includes(asset));assert.ok(siteWorker.includes('/'+asset))}
   assert.ok(proxy.includes('/network/advisor-profile'));assert.ok(proxy.includes("['PATCH','PUT']"));
+  for(const marker of ['본사 원더 업무','kr.co.lotteins.a2mars','고객등록 · 보장분석','본사 계약케어','COMPANION · READ ONLY'])assert.ok(advisorAdmin.includes(marker));
 });
