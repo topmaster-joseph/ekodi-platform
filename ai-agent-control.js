@@ -4,7 +4,7 @@ import { buildCoreAiGateway, getCoreAiGatewayStatus } from './core-ai-gateway.js
 import { createOpenAiProvider, getOpenAiProviderStatus } from './openai-provider-adapter.js';
 import { AI_MISSION_RUNTIME, evaluateMissionAction, getRuntimeAgentPolicy } from './ai-governance-runtime.js';
 import { evaluateAutonomousOperation, getSovereignAutonomySummary } from './sovereign-autonomy-runtime.js';
-import { buildEkodianOperationSnapshot, getEkodian8GSummary } from './ekodian-8g-runtime.js';
+import { buildEkodianOperationSnapshot, getEkodian8GSummary, validateEkodianCapabilityInput } from './ekodian-8g-runtime.js';
 
 const PREFIX = '/api/control/ai';
 const MAX_LIST = 100;
@@ -127,6 +127,16 @@ function payloadError(action) {
   if (!Number.isFinite(payload.bytes)) return { error: 'payload는 JSON으로 직렬화할 수 있어야 합니다.', code: 'INVALID_ACTION_PAYLOAD' };
   if (payload.bytes > MAX_PAYLOAD_BYTES) return { error: `AI action payload는 ${MAX_PAYLOAD_BYTES}바이트 이하여야 합니다.`, code: 'ACTION_PAYLOAD_TOO_LARGE' };
   return null;
+}
+
+function capabilityError(action) {
+  const result = validateEkodianCapabilityInput(action);
+  if (result.ok || !result.explicit) return null;
+  return {
+    error: `등록되지 않은 capability "${result.capabilityId}"는 실행할 수 없습니다.`,
+    code: result.code || 'CAPABILITY_NOT_REGISTERED',
+    capabilityId: result.capabilityId,
+  };
 }
 
 function initialStatus(result, action) {
@@ -425,6 +435,8 @@ export async function handleAgentMissionControl(request, env) {
     const body = await readJson(request);
     if (!body) return json({ error: '유효한 JSON 요청이 필요합니다.', code: 'INVALID_JSON' }, 400, request, env);
     const action = normalizeAction(body);
+    const capabilityIssue = capabilityError(action);
+    if (capabilityIssue) return json(capabilityIssue, 400, request, env);
     const payloadIssue = payloadError(action);
     if (payloadIssue) return json(payloadIssue, payloadIssue.code === 'ACTION_PAYLOAD_TOO_LARGE' ? 413 : 400, request, env);
     const decision = evaluateMissionAction(action);
@@ -443,6 +455,8 @@ export async function handleAgentMissionControl(request, env) {
     if (!action.agentId || !action.actionType || !action.area) {
       return json({ error: 'agentId, actionType, area는 필수입니다.', code: 'ACTION_FIELDS_REQUIRED' }, 400, request, env);
     }
+    const capabilityIssue = capabilityError(action);
+    if (capabilityIssue) return json(capabilityIssue, 400, request, env);
     const payloadIssue = payloadError(action);
     if (payloadIssue) return json(payloadIssue, payloadIssue.code === 'ACTION_PAYLOAD_TOO_LARGE' ? 413 : 400, request, env);
     const decision = evaluateMissionAction(action);
@@ -457,7 +471,7 @@ export async function handleAgentMissionControl(request, env) {
         decision,
         status: finalized.status,
         execution,
-        ekodian: ekodianFor(action, decision, finalized.status),
+        ekodian: ekodianFor({ ...action, id: stored.id }, decision, finalized.status),
       }, execution.ok ? 200 : 502, request, env);
     }
 
@@ -466,7 +480,7 @@ export async function handleAgentMissionControl(request, env) {
       id: stored.id,
       decision,
       status: stored.status,
-      ekodian: ekodianFor(action, decision, stored.status),
+      ekodian: ekodianFor({ ...action, id: stored.id }, decision, stored.status),
     }, decision.tier === 'forbidden' ? 403 : 202, request, env);
   }
 
