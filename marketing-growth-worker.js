@@ -354,8 +354,8 @@ async function youtubeCallback(request, env) {
     const discoveredChannels = (channels.items || []).filter(channel => channel?.id);
     let selectedChannels = discoveredChannels;
     if (subject.type === 'tenant' && subject.key === 'ekodibiz') {
-      selectedChannels = discoveredChannels.filter(channel => clean(channel.snippet?.title || '',120) === '에코디비즈몰');
-      if (!selectedChannels.length) throw new Error('EKODIBIZ_YOUTUBE_CHANNEL_NOT_FOUND');
+      selectedChannels = discoveredChannels.filter(channel => clean(channel.snippet?.title || '',120) === '에코디몰');
+      if (!selectedChannels.length) throw new Error('EKODIMALL_YOUTUBE_CHANNEL_NOT_FOUND');
     }
     const expiresAt = Number(tokenData.expires_in || 0) > 0 ? new Date(Date.now() + Number(tokenData.expires_in) * 1000).toISOString() : '';
     let count = 0;
