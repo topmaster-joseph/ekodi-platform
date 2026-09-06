@@ -176,6 +176,10 @@ function serviceHomeUrl(){
   }else url.pathname='/';
   return url;
 }
+function serviceHomeAnchor(){
+  const value=String(document.documentElement.dataset.ekodiHomeAnchor||document.body?.dataset?.ekodiHomeAnchor||'').trim();
+  return /^#[A-Za-z][\w:.-]*$/.test(value)?value:'';
+}
 function findHomeAnchor(header){
   const selectors=[`[${HOME_ATTR}]`,'.brand[href]','a.brand[href]','.site-brand a[href]','.logo a[href]','a.logo[href]','.site-logo a[href]'];
   for(const selector of selectors){const node=header?.querySelector(selector);if(node instanceof HTMLAnchorElement)return node;}
@@ -183,10 +187,13 @@ function findHomeAnchor(header){
 }
 function bindHomeAnchor(header){
   const anchor=findHomeAnchor(header);if(!anchor)return;
-  const home=serviceHomeUrl();anchor.setAttribute(HOME_ATTR,`v${VERSION}`);anchor.href=home.toString();
+  const localAnchor=serviceHomeAnchor();
+  anchor.setAttribute(HOME_ATTR,`v${VERSION}`);
+  if(localAnchor)anchor.setAttribute('href',localAnchor);else anchor.href=serviceHomeUrl().toString();
   if(anchor.dataset.ekodiHeaderHomeBound==='true')return;
   anchor.dataset.ekodiHeaderHomeBound='true';
   anchor.addEventListener('click',event=>{
+    if(serviceHomeAnchor())return;
     const target=serviceHomeUrl();
     const here=new URL(location.href);here.search='';here.hash='';
     if(here.origin===target.origin&&here.pathname.replace(/\/+$/,'/')===target.pathname.replace(/\/+$/,'/')){
@@ -288,5 +295,5 @@ window.addEventListener('resize',schedule,{passive:true});
 window.addEventListener('orientationchange',schedule,{passive:true});
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',schedule,{once:true});else schedule();
 mutationObserver=new MutationObserver(schedule);
-mutationObserver.observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['data-ekodi-shell-surface','data-ekodi-user-header']});
+mutationObserver.observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['data-ekodi-shell-surface','data-ekodi-user-header','data-ekodi-home-anchor']});
 })();
