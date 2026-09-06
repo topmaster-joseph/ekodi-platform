@@ -137,10 +137,7 @@ function setActiveWorkspace(key){
  activeWorkspaceKey=key;rememberWorkspace(key);identityUi();workspaceUi();platformUi();return selected;
 }
 function enterWorkspace(key){
- const selected=setActiveWorkspace(key);
- if(!selected)return;
- const destination=workspaceDestination(selected);
- if(destination)location.assign(serviceRoute(destination.id,destination.url));
+ setActiveWorkspace(key);
 }
 function identityUi(){
  const email=session?.user?.email||'',meta=session?.user?.user_metadata||{},current=activeWorkspace();
@@ -195,7 +192,7 @@ function workspaceUi(){
  if(!session){host.innerHTML='<div class="empty"><strong>Google 인증 후 Workspace를 확인할 수 있습니다.</strong></div>';return}
  const rows=uniqueWorkspaces();ensureActiveWorkspace();
  if(!rows.length){host.innerHTML='<div class="empty"><strong>아직 연결된 Workspace가 없습니다.</strong><p>개인 서비스를 시작하거나 기관 초대를 받으면 여기에 나타납니다.</p></div>';return}
- host.innerHTML=rows.map(w=>{const destination=workspaceDestination(w),action=destination?'열기 →':w.workspace_kind==='personal'?'현재 My 공간':'선택';return `<button class="workspace-card workspace-button${w.workspace_key===activeWorkspaceKey?' selected':''}" type="button" data-workspace-key="${esc(w.workspace_key)}"><span class="workspace-icon">${w.workspace_kind==='business'?'사':w.workspace_kind==='organization'?'기':'개'}</span><span class="workspace-body"><small>${esc(w.workspace_kind||'personal')}</small><h3>${esc(w.workspace_name||'내 Workspace')}</h3><p>${esc((w.services||[]).join(' · '))}</p><span class="meta"><span>${esc(plan(w.plan))}</span><span>${esc(w.role||'member')}</span>${w.workspace_key===activeWorkspaceKey?'<span>현재 공간</span>':''}<span>${esc(action)}</span></span></span></button>`}).join('');
+ host.innerHTML=rows.map(w=>{const active=w.workspace_key===activeWorkspaceKey,action=active?'?? ??':'? ?? ??';return `<button class="workspace-card workspace-button${w.workspace_key===activeWorkspaceKey?' selected':''}" type="button" data-workspace-key="${esc(w.workspace_key)}"><span class="workspace-icon">${w.workspace_kind==='business'?'사':w.workspace_kind==='organization'?'기':'개'}</span><span class="workspace-body"><small>${esc(w.workspace_kind||'personal')}</small><h3>${esc(w.workspace_name||'내 Workspace')}</h3><p>${esc((w.services||[]).join(' · '))}</p><span class="meta"><span>${esc(plan(w.plan))}</span><span>${esc(w.role||'member')}</span>${w.workspace_key===activeWorkspaceKey?'<span>현재 공간</span>':''}<span>${esc(action)}</span></span></span></button>`}).join('');
  host.querySelectorAll('[data-workspace-key]').forEach(button=>button.addEventListener('click',()=>enterWorkspace(button.dataset.workspaceKey||'')));
 }
 async function loadPersonalization(){

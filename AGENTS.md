@@ -17,16 +17,6 @@ If two sources conflict, the higher-precedence active source wins. Secondary pro
 
 The registry index is intentionally non-sovereign. It points to constitutional truth; it does not duplicate or replace it.
 
-## 0A. Execution continuity and completion
-
-A user-approved ordinary task is a completion mandate, not a request for a partial draft. Unless a higher-precedence rule or an important unresolved blocker requires a pause, continue through the full applicable loop: **inspect -> implement -> validate -> review/PR -> isolated staging -> guarded merge/release -> real production verification -> completion report**.
-
-Do not stop merely because source editing, a commit, a pull request, or a deploy command succeeded. Recover from transient tool, connector, session, network, or CI interruptions automatically when safe, and resume from the last verified state. Ask the user to intervene only when their action is genuinely required.
-
-Pause and report clearly when proceeding would require an unapproved Red/C2/C3 change, destructive or irreversible action, missing authorization or credential that cannot be recovered safely, a constitutional/security/privacy conflict, a failed safety or correctness gate that needs owner judgment, or an external outage that prevents verification. Never bypass a safeguard to preserve momentum.
-
-When deployment is part of the approved intent, completion means the guarded production path has succeeded and the real production surface has been verified. If deployment is not applicable, state the highest verified completion boundary instead of implying production completion.
-
 ## 1. Mission governance is the highest product invariant
 
 EKODI assumes that human administrators exercise limited, delegated stewardship rather than unlimited authority. AI authority is narrower still.

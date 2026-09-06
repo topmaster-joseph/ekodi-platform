@@ -40,15 +40,14 @@ test('My EKODI reuses central identity and inherits registry-driven one-login ha
   assert.match(router,/loadClientAuth/);
 });
 
-test('My workspace selection enters a linked workspace instead of only changing local state',async()=>{
+test('My workspace selection updates context without forcing service navigation',async()=>{
   const app=await read('my/app.js');
   assert.match(app,/function workspaceDestination\(workspace\)/);
   assert.match(app,/requires_handoff/);
-  assert.match(app,/function enterWorkspace\(key\)/);
-  assert.match(app,/location\.assign\(serviceRoute\(destination\.id,destination\.url\)\)/);
+  assert.match(app,/function enterWorkspace\(key\)\{\s*setActiveWorkspace\(key\);\s*\}/);
+  assert.doesNotMatch(app,/function enterWorkspace\(key\)\{[\s\S]{0,180}location\.assign/);
   assert.match(app,/data-workspace-key[\s\S]*enterWorkspace/);
-  assert.match(app,/return_to/);
-  assert.match(app,/new URL\(url\)\.origin===target\.origin/);
+  assert.match(app,/action=active/);
 });
 
 test('My keeps the active workspace when opening Social or Energy and when returning from their switchers',async()=>{
