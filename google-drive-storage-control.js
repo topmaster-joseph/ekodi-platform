@@ -1,3 +1,4 @@
+import { superviseConnection } from './integration-connection-supervisor.js';
 import { handleAdminSessionFastPath } from './admin-session-fastpath.js';
 
 const BASE = '/api/control/storage/google';
@@ -182,19 +183,40 @@ async function tokenRequest(env, body) {
     const error = new Error(data.error_description || `Google OAuth token exchange failed (${response.status})`);
     error.code = data.error === 'invalid_grant' ? GOOGLE_REAUTH_REQUIRED : 'GOOGLE_TOKEN_EXCHANGE_FAILED';
     error.googleError = String(data.error || '');
+    error.providerCode = String(data.error || '');
+    error.status = response.status;
+    error.retryAfter = response.headers.get('retry-after') || '';
     throw error;
   }
   return data;
 }
+async function supervisedGoogleRefresh(env, refreshToken) {
+  let token;
+  const recovery = await superviseConnection({
+    probe:async () => {
+      token = await tokenRequest(env,{client_id:googleClientId(env),client_secret:String(env.GOOGLE_DRIVE_CLIENT_SECRET),refresh_token:String(refreshToken||''),grant_type:'refresh_token'});
+      return {ok:true,status:200};
+    },
+    maxAttempts:3,
+    delaysMs:[100,500,1500],
+  });
+  if (recovery.ok) return token;
+  const reauth = ['reauth_required','permission_required'].includes(recovery.state);
+  throw Object.assign(new Error(reauth ? GOOGLE_REAUTH_REQUIRED : 'GOOGLE_TOKEN_RECOVERY_FAILED'), {
+    code:reauth ? GOOGLE_REAUTH_REQUIRED : 'GOOGLE_TOKEN_RECOVERY_FAILED',
+    recoveryState:recovery.state,
+  });
+}
 export async function refreshGoogleAccessToken(env,{refreshToken}={}) {
   if(!googleClientId(env)||!env.GOOGLE_DRIVE_CLIENT_SECRET) throw Object.assign(new Error('GOOGLE_OAUTH_BROKER_NOT_CONFIGURED'),{code:'GOOGLE_OAUTH_BROKER_NOT_CONFIGURED'});
-  return tokenRequest(env,{client_id:googleClientId(env),client_secret:String(env.GOOGLE_DRIVE_CLIENT_SECRET),refresh_token:String(refreshToken||''),grant_type:'refresh_token'});
+  return supervisedGoogleRefresh(env,refreshToken);
 }
-export async function startMarketingYouTubeOAuth(env,{state}={}) {
+export async function startMarketingYouTubeOAuth(env,{state,accountHint}={}) {
   if(!ready(env)) throw Object.assign(new Error('GOOGLE_OAUTH_BROKER_NOT_CONFIGURED'),{code:'GOOGLE_OAUTH_BROKER_NOT_CONFIGURED'});
   await ensureSchema(env.DB); const marketingState=String(state||'').trim(); if(!marketingState) throw new Error('MARKETING_STATE_REQUIRED');
   const signed=await signState(env,{purpose:'marketing_youtube',marketingState,exp:Date.now()+10*60*1000});
-  const params=new URLSearchParams({client_id:googleClientId(env),redirect_uri:REDIRECT_URI,response_type:'code',access_type:'offline',prompt:'consent',include_granted_scopes:'true',scope:YOUTUBE_SCOPES.join(' '),state:signed});
+  const params=new URLSearchParams({client_id:googleClientId(env),redirect_uri:REDIRECT_URI,response_type:'code',access_type:'offline',prompt:'consent select_account',include_granted_scopes:'true',scope:YOUTUBE_SCOPES.join(' '),state:signed});
+  const hint=String(accountHint||'').trim(); if(hint) params.set('login_hint',hint);
   return {authorizationUrl:`${AUTH_URL}?${params}`};
 }
 export async function consumeMarketingYouTubeTicket(env,{ticket}={}) {
@@ -208,10 +230,7 @@ async function accessToken(env, row) {
   if (!credential.refreshToken) {
     const error = new Error('Google refresh token missing'); error.code = GOOGLE_REAUTH_REQUIRED; throw error;
   }
-  const token = await tokenRequest(env, {
-    client_id:googleClientId(env), client_secret:String(env.GOOGLE_DRIVE_CLIENT_SECRET),
-    refresh_token:credential.refreshToken, grant_type:'refresh_token'
-  });
+  const token = await supervisedGoogleRefresh(env, credential.refreshToken);
   return token.access_token;
 }
 function needsGoogleReauth(error) { return String(error?.code || '') === GOOGLE_REAUTH_REQUIRED; }

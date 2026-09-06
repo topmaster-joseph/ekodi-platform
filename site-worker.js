@@ -34,8 +34,8 @@ const ADMIN_MARKETING_PUBLISHING_PREFIX = '/api/control/marketing-publishing';
 const ADMIN_COMMON_SERVICE_AI_PREFIX = '/api/control/common-services/ai/';
 
 const AUTH_HOST = 'auth.ekodi.kr';
-const AUTH_ASSETS = new Set(['/auth.js','/auth.css','/auth-router.js','/marketing-auth-hotfix.js','/auth-workspace-target.js','/admin-auth.js','/client-auth.js','/author-auth.js','/business-auth.js','/marketing-onboarding.js','/membership-ui.js']);
-const AUTH_CRITICAL_ASSETS = new Set(['/auth.js','/auth-router.js','/marketing-auth-hotfix.js','/auth-workspace-target.js','/admin-auth.js','/client-auth.js','/author-auth.js','/business-auth.js','/marketing-onboarding.js','/membership-ui.js']);
+const AUTH_ASSETS = new Set(['/auth.js','/auth.css','/auth-router.js','/oauth-consent.js','/marketing-auth-hotfix.js','/auth-workspace-target.js','/admin-auth.js','/client-auth.js','/author-auth.js','/business-auth.js','/marketing-onboarding.js','/membership-ui.js']);
+const AUTH_CRITICAL_ASSETS = new Set(['/auth.js','/auth-router.js','/oauth-consent.js','/marketing-auth-hotfix.js','/auth-workspace-target.js','/admin-auth.js','/client-auth.js','/author-auth.js','/business-auth.js','/marketing-onboarding.js','/membership-ui.js']);
 
 const HUB_HOSTS = new Set([
   'pay.ekodi.kr',
@@ -471,6 +471,13 @@ export default {
 
     if (host === PUBLIC_HOST) {
       if (RETIRED_ADMIN_PATHS.has(url.pathname)) return retiredAdminResponse();
+      if (url.pathname === '/oauth/consent' || url.pathname === '/cgma/oauth/consent') {
+        const target = new URL('https://auth.ekodi.kr/oauth/consent');
+        target.search = url.search;
+        const response = new Response(null, { status:307, headers:{ Location:target.toString(), 'Cache-Control':'no-store' } });
+        applyBaseSecurityHeaders(response.headers);
+        return response;
+      }
       if (url.pathname === '/' || url.pathname === '/index.html') {
         const response = await env.ASSETS.fetch(assetRequest(request, '/'));
         return withHostSecurity(response, PUBLIC_CSP, 'no-store', 'public-home');
@@ -549,6 +556,10 @@ export default {
       if (url.pathname === '/' || url.pathname === '/index.html' || url.pathname === '/login' || url.pathname === '/login/') {
         const response = await env.ASSETS.fetch(assetRequest(request, '/auth-center'));
         return withHostSecurity(response, AUTH_CSP, 'no-store', 'central-auth');
+      }
+      if (url.pathname === '/oauth/consent' || url.pathname === '/oauth/consent/') {
+        const response = await env.ASSETS.fetch(assetRequest(request, '/oauth-consent'));
+        return withHostSecurity(response, AUTH_CSP, 'no-store', 'oauth-consent');
       }
       if (AUTH_ASSETS.has(url.pathname)) {
         const response = await env.ASSETS.fetch(request);

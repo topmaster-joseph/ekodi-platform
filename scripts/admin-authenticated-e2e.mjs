@@ -121,7 +121,8 @@ async function waitForSettledPanel(id, timeout = 8_000) {
     });
     if (!panel) return false;
     const text = String(panel.innerText || '').replace(/\s+/g, ' ').trim();
-    const busy = [...panel.querySelectorAll('[aria-busy="true"],.loading,.spinner')].some(node => {
+    const busy = [panel, ...panel.querySelectorAll('[aria-busy="true"],.loading,.spinner')].some(node => {
+      if (!node.matches('[aria-busy="true"],.loading,.spinner')) return false;
       const style = getComputedStyle(node);
       return node.getAttribute('aria-hidden') !== 'true'
         && !node.hidden
@@ -143,7 +144,8 @@ async function menuDiagnostics(id) {
     });
     const selected = document.querySelector(`button.admin-context-tab[data-admin-context-section="${section}"]`);
     const text = String(panel?.innerText || '').replace(/\s+/g, ' ').trim();
-    const busy = panel ? [...panel.querySelectorAll('[aria-busy="true"],.loading,.spinner')].filter(node => {
+    const busy = panel ? [panel, ...panel.querySelectorAll('[aria-busy="true"],.loading,.spinner')].filter(node => {
+      if (!node.matches('[aria-busy="true"],.loading,.spinner')) return false;
       const style = getComputedStyle(node);
       return node.getAttribute('aria-hidden') !== 'true'
         && !node.hidden
@@ -259,7 +261,7 @@ async function clickMenu(id) {
 
     if (state.busy) {
       stage(`menu-${id}-loading`);
-      await page.waitForTimeout(2_000);
+      await waitForSettledPanel(id, 8_000);
       state = await menuDiagnostics(id);
       if (state.busy) throw new Error('loading indicator remained active');
     }
