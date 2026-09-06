@@ -7,6 +7,7 @@ const ACCOUNT_ID = 'coupang-ekodibiz';
 const STOREFRONT = 'ekodi-mall';
 const AFFILIATE_DISCLOSURE = '쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.';
 const PROVIDERS = Object.freeze(['facebook','instagram','threads']);
+export function mallPromotionAutomationEnabled(env) { return ['1','true','yes','on'].includes(String(env?.MALL_PROMOTION_AUTOMATION_ENABLED || '').trim().toLowerCase()); }
 const RUN_AFTER_KST_HOUR = 8;
 const MAX_DAILY_CHANNELS = 3;
 
