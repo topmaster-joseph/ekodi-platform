@@ -13,3 +13,14 @@ test('mall marketing channels deep link is handled by workspace admin', async ()
   assert.match(source, /mallMarketingChannels=clean\.match/);
   assert.match(source, /mallMarketingChannels\?'channels'/);
 });
+
+test('unauthenticated mall channel setup selects provider before EKODI or provider login', async () => {
+  const source=await readFile(new URL('../workspace-admin-page.js', import.meta.url),'utf8');
+  assert.match(source, /CHANNEL_INTENT_KEY='ekodi-workspace-channel-intent'/);
+  assert.match(source, /function channelPreAuth\(\)/);
+  assert.match(source, /연결할 게시 채널을 먼저 선택하세요/);
+  assert.match(source, /data-channel-preauth/);
+  assert.match(source, /if\(service==='mall'&&section==='channels'\)return channelPreAuth\(\)/);
+  assert.match(source, /pendingChannelIntent\(\)/);
+  assert.match(source, /return startChannelConnect\(pendingProvider\)/);
+});
