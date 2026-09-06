@@ -332,7 +332,7 @@
         ],
         "redirect": "manual",
         "expect": [
-          "label: '실행 인프라·Nodes'",
+          "label: '실행 인프라'",
           "remote-power-admin.js",
           "remote-power-admin.css",
           "device-browser-diagnostics.js",

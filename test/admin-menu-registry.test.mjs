@@ -42,9 +42,17 @@ test('every public admin subservice belongs to one work area', () => {
   assert.equal(getAdminMenuGroupForSection('finance'), 'common');
   assert.equal(getAdminMenuGroupForSection('workspace'), 'common');
   assert.equal(getAdminMenuGroupForSection('storage'), 'core');
-  assert.equal(getAdminMenuLabel('devices', 'ko'), '실행 인프라·Nodes');
-  assert.equal(getAdminMenuLabel('devices', 'en'), 'Execution Infrastructure & Nodes');
+  assert.equal(getAdminMenuLabel('devices', 'ko'), '실행 인프라');
+  assert.equal(getAdminMenuLabel('devices', 'en'), 'Execution Infrastructure');
   assert.equal(getAdminMenuGroupForSection('devices'), 'operations-center');
+  const execution = ADMIN_MENU_REGISTRY.find(item => item.id === 'devices');
+  assert.deepEqual(execution?.governance, {
+    track: 'agent',
+    changeClass: 'yellow',
+    authorityContext: 'Person + Workspace + Role + Capability',
+    controlPlane: true,
+    globalPolicyMutation: 'super_admin',
+  });
 });
 
 test('admin locale is deliberately limited to Korean and English', () => {
