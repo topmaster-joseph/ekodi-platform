@@ -1,7 +1,5 @@
 PRAGMA foreign_keys = ON;
 
-ALTER TABLE insurance_advisor_profiles ADD COLUMN wonder_official_url TEXT NOT NULL DEFAULT 'https://ntc.lotteins.co.kr/landing.do';
-ALTER TABLE insurance_advisor_profiles ADD COLUMN direct_design_url TEXT NOT NULL DEFAULT '';
 
 CREATE TABLE IF NOT EXISTS insurance_practices (
   id TEXT PRIMARY KEY,
