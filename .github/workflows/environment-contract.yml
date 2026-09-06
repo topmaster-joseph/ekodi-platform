@@ -1,0 +1,94 @@
+name: EKODI Environment Contract
+
+on:
+  pull_request:
+    paths:
+      - 'config/ekodi-environments.json'
+      - 'EKODI_ENVIRONMENT_CONTRACT.md'
+      - 'supabase/migrations/**'
+      - '.github/workflows/environment-contract.yml'
+      - '.github/workflows/supabase-free-plan-liveness.yml'
+  push:
+    branches: [main, development]
+    paths:
+      - 'config/ekodi-environments.json'
+      - 'EKODI_ENVIRONMENT_CONTRACT.md'
+      - 'supabase/migrations/**'
+      - '.github/workflows/environment-contract.yml'
+      - '.github/workflows/supabase-free-plan-liveness.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: environment-contract-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Validate canonical environment mapping
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          path = Path('config/ekodi-environments.json')
+          data = json.loads(path.read_text())
+
+          assert data['canonicalRepository'] == 'topmaster-joseph/ekodi-platform'
+          prod = data['environments']['production']
+          dev = data['environments']['development']
+
+          assert prod['git']['branch'] == 'main'
+          assert prod['git']['githubEnvironment'] == 'production'
+          assert dev['git']['branch'] == 'development'
+          assert dev['git']['githubEnvironment'] == 'development'
+          assert prod['supabase']['currentProjectRef'] != dev['supabase']['currentProjectRef']
+          assert prod['supabase']['logicalName'] == 'ekodi-platform'
+          assert dev['supabase']['logicalName'] == 'ekodi-platform-dev'
+
+          expected_schemas = {
+              'core', 'identity', 'tenancy', 'shared', 'church', 'church_private',
+              'market', 'commerce', 'community', 'work', 'content', 'ai',
+              'audit', 'private', 'api'
+          }
+          assert expected_schemas.issubset(set(data['postgres']['targetSchemas']))
+          assert data['liveness']['supabase']['method'] == 'read-only-rpc'
+          assert data['liveness']['supabase']['writesAllowed'] is False
+          assert data['liveness']['cloudflare']['syntheticKeepalive'] is False
+          PY
+
+      - name: Validate liveness migration and workflow safety
+        shell: bash
+        run: |
+          set -euo pipefail
+          migration='supabase/migrations/20260906143000_add_ekodi_platform_keepalive_rpc.sql'
+          workflow='.github/workflows/supabase-free-plan-liveness.yml'
+          test -f "$migration"
+          test -f "$workflow"
+          grep -Fq 'security invoker' "$migration"
+          grep -Fq 'select true' "$migration"
+          grep -Fq 'revoke all on function public.ekodi_keepalive() from public' "$migration"
+          grep -Fq 'three small read-only requests per day' "$workflow"
+          ! grep -Eiq 'service[_-]?role|database[_-]?password|postgresql://' "$workflow" || {
+            echo '::error::Privileged database credentials are forbidden in the liveness workflow.'
+            exit 1
+          }
+
+      - name: Summarize contract
+        run: |
+          {
+            echo '### EKODI environment contract'
+            echo '- GitHub main -> production'
+            echo '- GitHub development / PR staging -> development boundary'
+            echo '- Supabase liveness is read-only'
+            echo '- Cloudflare synthetic keepalive is disabled'
+          } >> "$GITHUB_STEP_SUMMARY"
