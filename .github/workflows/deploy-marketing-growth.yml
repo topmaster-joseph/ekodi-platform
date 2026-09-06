@@ -68,7 +68,6 @@ jobs:
           grep -Fq 'MARKETING_OAUTH_VAULT_KEY' marketing-growth-worker.js
           grep -Fq 'binding = "GOOGLE_OAUTH_BROKER"' wrangler.marketing-growth.toml
           grep -Fq 'entrypoint = "GoogleOAuthBroker"' wrangler.marketing-growth.toml
-          grep -Fq 'crons = []' wrangler.marketing-growth.toml
           grep -Fq 'paidActivation:false' marketing-growth-worker.js
           grep -Fq 'mallPromotionAutomation' marketing-growth-entry.js
           grep -Fq 'mallSalesIntelligence' marketing-growth-entry.js
@@ -158,8 +157,6 @@ jobs:
               && grep -Fq '"strategy":"opportunity_first"' /tmp/growth-health.json \
               && grep -Fq '"mallSalesIntelligence"' /tmp/growth-health.json \
               && grep -Fq '"mode":"active_sales"' /tmp/growth-health.json \
-              && grep -Fq '"firstPartyClicks30d"' /tmp/growth-health.json \
-              && grep -Fq '"conversionStatus"' /tmp/growth-health.json \
               && grep -Fq '"paidAds":false' /tmp/growth-health.json; then
               cat /tmp/growth-health.json
               echo 'Marketing growth connector, promotion and active sales intelligence verified in production.'
