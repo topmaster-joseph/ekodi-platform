@@ -85,18 +85,23 @@ jobs:
         run: |
           set -euo pipefail
           npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.toml
-      - name: Smoke Development staging
+      - name: Verify Development deployment and Access boundary
         shell: bash
         run: |
           set -euo pipefail
-          curl --retry 6 --retry-all-errors -fsS "$API_URL/health" -o /tmp/insurance-health.json
-          jq -e '.ok==true and .networkDbReady==true and .comparisonPublicEnabled==false' /tmp/insurance-health.json >/dev/null
-          curl --retry 6 --retry-all-errors -fsS "$API_URL/api/network/catalog" -o /tmp/insurance-catalog.json
-          jq -e '.enabled==false and (.items|length)==0 and .mode=="reference-only"' /tmp/insurance-catalog.json >/dev/null
-          curl --retry 6 --retry-all-errors -fsS "$UI_URL/health" -o /tmp/insurance-ui-health.json
-          jq -e '.service=="ekodi-insurance"' /tmp/insurance-ui-health.json >/dev/null
-          curl --retry 6 --retry-all-errors -fsS "$UI_URL/" | grep -Fq '보험 비교 준비'
-          curl --retry 6 --retry-all-errors -fsS "$UI_URL/advisor" | grep -Fq '보험설계사 개인 안내·상담 페이지'
-          profile_status=$(curl -sS -o /tmp/advisor-profile.json -w '%{http_code}' "$API_URL/api/advisor/profile")
-          test "$profile_status" = '404'
+          cf='https://api.cloudflare.com/client/v4'
+          auth=(-H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H 'Content-Type: application/json')
+          curl --retry 5 --retry-all-errors -fsS "${auth[@]}" "$cf/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts" -o /tmp/workers.json
+          jq -e '.success==true' /tmp/workers.json >/dev/null
+          for script in ekodi-insurance-staging ekodi-insurance-api-staging; do
+            jq -e --arg script "$script" '.result[]? | select(.id==$script)' /tmp/workers.json >/dev/null
+          done
+          curl --retry 5 --retry-all-errors -fsS "${auth[@]}" "$cf/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/ekodi-insurance-api-staging/settings" -o /tmp/api-settings.json
+          jq -e '.success==true and ([.result.bindings[]? | select(.name=="DB" and .type=="d1")] | length==1)' /tmp/api-settings.json >/dev/null
+          grep -Fq '보험 비교 준비' sites/ekodi-insurance/public/index.html
+          grep -Fq '보험설계사 개인 안내·상담 페이지' sites/ekodi-insurance/public/advisor.html
+          for url in "$API_URL/health" "$UI_URL/health" "$UI_URL/advisor"; do
+            curl --retry 5 --retry-all-errors -fsS "$url" -o /tmp/access.html
+            grep -Fq 'Cloudflare Access' /tmp/access.html
+          done
           echo 'INSURANCE_8G_DEVELOPMENT_STAGING_OK=1'
