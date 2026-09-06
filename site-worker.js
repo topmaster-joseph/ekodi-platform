@@ -509,8 +509,8 @@ export default {
       }
       if (isLegacyEkodiBizPath(url.pathname)) return redirectLegacyEkodiBizPath(request);
       if (isLegacyMallPath(url.pathname)) return redirectLegacyMallPath(request);
-      if (['GET','HEAD'].includes(request.method) && isChurchPastorAdminPath(url.pathname)) return churchPastorAdminPage();
-      if (isWorkspaceAdminPath(url.pathname)) return workspaceAdminPage();
+      if (['GET','HEAD'].includes(request.method) && isChurchPastorAdminPath(url.pathname)) return injectEkodiShell(churchPastorAdminPage(), 'church', 'admin');
+      if (isWorkspaceAdminPath(url.pathname)) return injectEkodiShell(workspaceAdminPage(), 'space', 'admin');
       if (['GET','HEAD'].includes(request.method) && isEkodiBizInvestPath(url.pathname)) {
         const page=ekodiBizInvestBusinessPage(request);
         const secured=withHostSecurity(page, PUBLIC_CSP, 'public, max-age=0, must-revalidate', 'public-ekodibiz-invest');
