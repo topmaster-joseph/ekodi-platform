@@ -1,0 +1,63 @@
+name: Supabase Free Plan Liveness
+
+on:
+  schedule:
+    # Three small read-only requests per day. GitHub cron is UTC.
+    - cron: '17 */8 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: supabase-free-plan-liveness
+  cancel-in-progress: true
+
+env:
+  # Supabase publishable keys are public-client credentials by design. Repository
+  # variables can override these defaults after rotation. Privileged DB credentials are forbidden here.
+  PROD_URL: ${{ vars.SUPABASE_PROD_URL || 'https://renzehysxirjilvdxacv.supabase.co' }}
+  PROD_KEY: ${{ vars.SUPABASE_PROD_PUBLISHABLE_KEY || 'sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_' }}
+  DEV_URL: ${{ vars.SUPABASE_DEV_URL || 'https://lxcxwbdwwojjkgybbqii.supabase.co' }}
+  DEV_KEY: ${{ vars.SUPABASE_DEV_PUBLISHABLE_KEY || 'sb_publishable_SyaM4rBxa1JdE9arZrhULg_z1BIQRXL' }}
+
+jobs:
+  production-liveness:
+    name: Production PostgreSQL liveness
+    environment: production
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Call read-only EKODI liveness RPC
+        shell: bash
+        run: |
+          set -euo pipefail
+          response=$(curl --fail-with-body --silent --show-error \
+            --connect-timeout 5 --max-time 15 --retry 2 \
+            -X POST "$PROD_URL/rest/v1/rpc/ekodi_keepalive" \
+            -H "apikey: $PROD_KEY" \
+            -H "Authorization: Bearer $PROD_KEY" \
+            -H 'Content-Type: application/json' \
+            -d '{}')
+          test "$response" = 'true'
+          echo 'Supabase production liveness RPC succeeded.' >> "$GITHUB_STEP_SUMMARY"
+
+  development-liveness:
+    name: Development transition PostgreSQL liveness
+    environment: development
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Call read-only EKODI liveness RPC
+        shell: bash
+        run: |
+          set -euo pipefail
+          response=$(curl --fail-with-body --silent --show-error \
+            --connect-timeout 5 --max-time 15 --retry 2 \
+            -X POST "$DEV_URL/rest/v1/rpc/ekodi_keepalive" \
+            -H "apikey: $DEV_KEY" \
+            -H "Authorization: Bearer $DEV_KEY" \
+            -H 'Content-Type: application/json' \
+            -d '{}')
+          test "$response" = 'true'
+          echo 'Supabase development/transition liveness RPC succeeded.' >> "$GITHUB_STEP_SUMMARY"
