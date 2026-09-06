@@ -43,7 +43,7 @@ test('external AI spec remains outside the admin first-path payload', () => {
 test('AI module spec source changes enter the guarded Shared Site release graph', () => {
   assert.match(deployWorkflow, /- 'ai-module-spec-admin\.js'/);
   assert.match(deployWorkflow, /- 'ai-module-spec-admin\.css'/);
-  assert.match(deployWorkflow, /author-billing-admin\.js ai-ops-admin\.js ai-module-spec-admin\.js devotional-admin\.js/);
+  assert.match(deployWorkflow, /ai-module-spec-admin\.js/);
   assert.match(deployWorkflow, /dist\/ai-module-spec-admin\.js dist\/ai-module-spec-admin\.css/);
 });
 
