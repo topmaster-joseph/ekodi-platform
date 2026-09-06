@@ -1,0 +1,22 @@
+name: Temporary Admin Menu Hash
+
+on:
+  pull_request:
+    paths:
+      - 'admin-menu-layout.js'
+      - 'admin-menu-layout.compact.js'
+      - '.github/workflows/tmp-admin-menu-hash.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  hash:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Print canonical Admin menu source hash
+        run: node -e "const fs=require('fs'),c=require('crypto');const s=fs.readFileSync('admin-menu-layout.js','utf8').replace(/\\r\\n/g,'\\n');console.log('ADMIN_MENU_SOURCE_SHA256='+c.createHash('sha256').update(s).digest('hex'))"
