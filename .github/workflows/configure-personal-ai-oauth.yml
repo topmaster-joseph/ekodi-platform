@@ -1,0 +1,105 @@
+name: Configure EKODI Personal AI OAuth
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'auth-site/oauth-consent.html'
+      - 'auth-site/oauth-consent.js'
+      - 'ekodi-mcp-gateway.js'
+      - 'sovereign-capability-fabric.js'
+      - 'supabase/migrations/*personal_ai_bridge*.sql'
+      - 'supabase/migrations/*ekodi_mcp*.sql'
+      - '.github/workflows/configure-personal-ai-oauth.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-personal-ai-oauth-production
+  cancel-in-progress: false
+
+jobs:
+  configure:
+    runs-on: ubuntu-latest
+    env:
+      PROJECT_REF: renzehysxirjilvdxacv
+      TOKEN_A: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      TOKEN_B: ${{ secrets.SUPABASE_TOKEN }}
+      TOKEN_C: ${{ secrets.SUPABASE_PAT }}
+      TOKEN_D: ${{ secrets.SUPABASE_MANAGEMENT_TOKEN }}
+    steps:
+      - name: Select Supabase management credential
+        shell: bash
+        run: |
+          set -euo pipefail
+          token="${TOKEN_A:-}"
+          [ -n "$token" ] || token="${TOKEN_B:-}"
+          [ -n "$token" ] || token="${TOKEN_C:-}"
+          [ -n "$token" ] || token="${TOKEN_D:-}"
+          if [ -z "$token" ]; then
+            echo 'No Supabase management credential is configured.'
+            exit 2
+          fi
+          echo "SUPABASE_MGMT_TOKEN=$token" >> "$GITHUB_ENV"
+
+      - name: Configure bounded OAuth server
+        shell: bash
+        run: |
+          set -euo pipefail
+          api="https://api.supabase.com/v1/projects/$PROJECT_REF/config/auth"
+          payload='{"oauth_server_enabled":true,"oauth_server_allow_dynamic_registration":false,"oauth_server_authorization_path":"/oauth/consent","hook_custom_access_token_enabled":true,"hook_custom_access_token_uri":"pg-functions://postgres/public/ekodi_mcp_access_token_hook"}'
+          code=$(curl -sS -o /tmp/auth.json -w '%{http_code}' -X PATCH "$api" \
+            -H "Authorization: Bearer $SUPABASE_MGMT_TOKEN" \
+            -H 'Content-Type: application/json' \
+            --data "$payload")
+          test "$code" = '200' || { cat /tmp/auth.json; exit 1; }
+      - name: Verify bounded OAuth configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          api="https://api.supabase.com/v1/projects/$PROJECT_REF/config/auth"
+          curl -fsS "$api" -H "Authorization: Bearer $SUPABASE_MGMT_TOKEN" -o /tmp/check.json
+          python - <<'PY'
+          import json, sys
+          d=json.load(open('/tmp/check.json'))
+          expected={
+            'oauth_server_enabled': True,
+            'oauth_server_allow_dynamic_registration': False,
+            'oauth_server_authorization_path': '/oauth/consent',
+            'hook_custom_access_token_enabled': True,
+            'hook_custom_access_token_uri': 'pg-functions://postgres/public/ekodi_mcp_access_token_hook',
+          }
+          bad={k:(d.get(k),v) for k,v in expected.items() if d.get(k)!=v}
+          print('oauth_config_ok=', not bad)
+          if bad:
+              print('mismatch=', bad)
+              sys.exit(1)
+          PY
+
+      - name: Verify OAuth discovery and asymmetric signing
+        shell: bash
+        run: |
+          set -euo pipefail
+          discovery="https://$PROJECT_REF.supabase.co/.well-known/oauth-authorization-server/auth/v1"
+          jwks="https://$PROJECT_REF.supabase.co/auth/v1/.well-known/jwks.json"
+          for attempt in 1 2 3 4 5; do
+            if curl -fsS "$discovery" -o /tmp/discovery.json; then break; fi
+            sleep 3
+          done
+          test -s /tmp/discovery.json
+          curl -fsS "$jwks" -o /tmp/jwks.json
+          python - <<'PY'
+          import json, sys
+          discovery=json.load(open('/tmp/discovery.json'))
+          jwks=json.load(open('/tmp/jwks.json'))
+          algs={key.get('alg') for key in jwks.get('keys',[]) if key.get('alg')}
+          print('authorization_endpoint=', discovery.get('authorization_endpoint'))
+          print('token_endpoint=', discovery.get('token_endpoint'))
+          print('jwks_algorithms=', sorted(algs))
+          if not discovery.get('authorization_endpoint') or not discovery.get('token_endpoint'):
+              sys.exit(1)
+          if not ({'ES256','RS256'} & algs):
+              sys.exit(1)
+          PY

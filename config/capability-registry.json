@@ -1,5 +1,5 @@
 {
-  "version": "2.0.0",
+  "version": "3.0.0",
   "name": "EKODI Universal Capability Registry",
   "principle": "Capabilities are stable reusable abilities. Intent selects capabilities; services and providers are replaceable implementations.",
   "surfacePolicy": {
@@ -563,5 +563,160 @@
     "modelFallback": "optional_provider_neutral",
     "modelMayInventCapabilities": false,
     "unknownCapabilityBehavior": "unresolved_not_guessed"
-  }
+  },
+  "fabricPolicy": {
+    "contract": "ekodi.sovereign-capability.v1",
+    "authorityContext": [
+      "person",
+      "workspace",
+      "role",
+      "capability"
+    ],
+    "defaultScope": "person_or_workspace",
+    "defaultExposure": {
+      "web": true,
+      "mcp": false,
+      "a2a": false,
+      "api": false,
+      "events": false
+    },
+    "protocolRole": {
+      "mcp": "tool_adapter",
+      "a2a": "reserved_agent_adapter",
+      "api": "service_adapter",
+      "events": "event_adapter"
+    },
+    "trustTiers": {
+      "first_party": 4,
+      "verified_partner": 3,
+      "approved_external": 2,
+      "unknown": 0
+    },
+    "actionTierPolicy": {
+      "observe": {
+        "risk": "low",
+        "humanGate": false
+      },
+      "assist": {
+        "risk": "low",
+        "humanGate": false
+      },
+      "execute_reversible": {
+        "risk": "medium",
+        "humanGate": false
+      },
+      "human_gate": {
+        "risk": "high",
+        "humanGate": true
+      },
+      "forbidden": {
+        "risk": "critical",
+        "humanGate": true
+      }
+    },
+    "overrides": {
+      "identity.self.read": {
+        "scope": "person",
+        "exposure": {
+          "mcp": true
+        }
+      },
+      "ai.personal.status.read": {
+        "scope": "person",
+        "exposure": {
+          "mcp": true
+        }
+      },
+      "services.membership.read": {
+        "scope": "person",
+        "exposure": {
+          "mcp": true
+        }
+      },
+      "core.analytics": {
+        "exposure": {
+          "mcp": true,
+          "a2a": false
+        }
+      },
+      "core.documents": {
+        "exposure": {
+          "a2a": false
+        }
+      },
+      "core.automation": {
+        "exposure": {
+          "a2a": false
+        }
+      },
+      "community.membership": {
+        "scope": "workspace"
+      },
+      "ministry.service": {
+        "scope": "workspace"
+      },
+      "business.operations": {
+        "scope": "workspace"
+      },
+      "commerce.market": {
+        "scope": "workspace"
+      },
+      "trade.operations": {
+        "scope": "workspace"
+      }
+    }
+  },
+  "fabricCapabilities": [
+    {
+      "id": "services.membership.read",
+      "name": "내 서비스 이용상태 조회",
+      "domain": "core",
+      "ownerAgent": "platform",
+      "actionTier": "observe",
+      "maturity": "service-backed",
+      "description": "현재 EKODI Person의 서비스 및 멤버십 상태를 읽는다.",
+      "surfaces": [
+        "my"
+      ],
+      "tags": [
+        "services",
+        "membership",
+        "read"
+      ]
+    },
+    {
+      "id": "ai.personal.status.read",
+      "name": "개인 AI 상태 조회",
+      "domain": "core",
+      "ownerAgent": "chief",
+      "actionTier": "observe",
+      "maturity": "service-backed",
+      "description": "개인 AI 라우팅, 요금제 한도와 연결 상태를 읽는다.",
+      "surfaces": [
+        "my"
+      ],
+      "tags": [
+        "ai",
+        "personal",
+        "status"
+      ]
+    },
+    {
+      "id": "identity.self.read",
+      "name": "내 EKODI ID 조회",
+      "domain": "core",
+      "ownerAgent": "platform",
+      "actionTier": "observe",
+      "maturity": "service-backed",
+      "description": "현재 인증 주체를 canonical EKODI Person ID로 해석한다.",
+      "surfaces": [
+        "my"
+      ],
+      "tags": [
+        "identity",
+        "person",
+        "read"
+      ]
+    }
+  ]
 }

@@ -17,6 +17,16 @@ on:
       - 'devotional-control.js'
       - 'test/devotional-control.test.mjs'
       - 'user-ai-control.js'
+      - 'personal-ai-bridge.js'
+      - 'sovereign-capability-fabric.js'
+      - 'config/capability-registry.json'
+      - 'ekodi-mcp-gateway.js'
+      - 'test/sovereign-capability-fabric.test.mjs'
+      - 'test/personal-ai-bridge.test.mjs'
+      - 'test/personal-ai-bridge-migration.test.mjs'
+      - 'test/ekodi-mcp-gateway.test.mjs'
+      - 'test/oauth-consent-contract.test.mjs'
+      - 'test/personal-ai-oauth-workflow.test.mjs'
       - 'ai-access-orchestration.js'
       - 'personal-ai-provider-registry.js'
       - 'gemini-provider-adapter.js'
@@ -92,6 +102,16 @@ on:
       - 'devotional-control.js'
       - 'test/devotional-control.test.mjs'
       - 'user-ai-control.js'
+      - 'personal-ai-bridge.js'
+      - 'sovereign-capability-fabric.js'
+      - 'config/capability-registry.json'
+      - 'ekodi-mcp-gateway.js'
+      - 'test/sovereign-capability-fabric.test.mjs'
+      - 'test/personal-ai-bridge.test.mjs'
+      - 'test/personal-ai-bridge-migration.test.mjs'
+      - 'test/ekodi-mcp-gateway.test.mjs'
+      - 'test/oauth-consent-contract.test.mjs'
+      - 'test/personal-ai-oauth-workflow.test.mjs'
       - 'ai-access-orchestration.js'
       - 'personal-ai-provider-registry.js'
       - 'gemini-provider-adapter.js'
@@ -179,7 +199,7 @@ jobs:
       - name: Validate control plane, Core AI Gateway and governance
         run: |
           set -euo pipefail
-          for file in api-worker.js auth-worker.js admin-session-fastpath.js admin-google-auth.js customer-auth.js customer-entry-worker.js mission-control-entry-worker.js traffic-intelligence.js traffic-intelligence-control.js devotional-control.js user-ai-control.js ai-access-orchestration.js personal-ai-provider-registry.js gemini-provider-adapter.js personal-openai-provider-adapter.js claude-provider-adapter.js user-openai-provider-adapter.js universal-membership.js membership-billing.js generated/user-services.js messenger-operator-control.js ekodi-principal.js messenger-outbox.js messenger-channel-adapters.js device-control.js security-edge.js ai-agent-control.js ai-governance-runtime.js ai-resilience-runtime.js core-ai-gateway.js core-api.js openai-provider-adapter.js api-usage-meter.js api-cost-control.js books-control.js books-finance-control.js books-distribution-control.js books-pipeline-control.js books-royalty-control.js affiliate-control.js affiliate-marketplace.js coupang-partners-automation.js offer-registry.js offer-registry-control.js offer-registry-sources.js social-registry-api.js mail-credential-vault.js mail-google-adapter.js mail-control.js; do
+          for file in api-worker.js auth-worker.js admin-session-fastpath.js admin-google-auth.js customer-auth.js customer-entry-worker.js mission-control-entry-worker.js traffic-intelligence.js traffic-intelligence-control.js devotional-control.js user-ai-control.js personal-ai-bridge.js ekodi-mcp-gateway.js ai-access-orchestration.js personal-ai-provider-registry.js gemini-provider-adapter.js personal-openai-provider-adapter.js claude-provider-adapter.js user-openai-provider-adapter.js universal-membership.js membership-billing.js generated/user-services.js messenger-operator-control.js ekodi-principal.js messenger-outbox.js messenger-channel-adapters.js device-control.js security-edge.js ai-agent-control.js ai-governance-runtime.js ai-resilience-runtime.js core-ai-gateway.js core-api.js openai-provider-adapter.js api-usage-meter.js api-cost-control.js books-control.js books-finance-control.js books-distribution-control.js books-pipeline-control.js books-royalty-control.js affiliate-control.js affiliate-marketplace.js coupang-partners-automation.js offer-registry.js offer-registry-control.js offer-registry-sources.js social-registry-api.js mail-credential-vault.js mail-google-adapter.js mail-control.js; do
             node --check "$file"
           done
           node --check scripts/generate-user-service-registry.mjs
@@ -192,7 +212,7 @@ jobs:
           node scripts/validate-additive-migrations.mjs migrations
           node scripts/validate-ai-mission-governance.mjs
           node scripts/validate-security-baseline.mjs
-          node --test test/universal-membership-contract.test.mjs test/device-control-contract.test.mjs test/core-ai-gateway.test.mjs test/openai-provider-adapter.test.mjs test/api-cost-control.test.mjs test/traffic-intelligence.test.mjs test/user-ai-routing-policy.test.mjs test/personal-ai-provider-registry.test.mjs test/devotional-control.test.mjs test/mail-control.test.mjs test/ekodi-coupang-mall.test.mjs
+          node --test test/universal-membership-contract.test.mjs test/device-control-contract.test.mjs test/core-ai-gateway.test.mjs test/openai-provider-adapter.test.mjs test/api-cost-control.test.mjs test/traffic-intelligence.test.mjs test/user-ai-routing-policy.test.mjs test/personal-ai-provider-registry.test.mjs test/personal-ai-bridge.test.mjs test/personal-ai-bridge-migration.test.mjs test/ekodi-mcp-gateway.test.mjs test/oauth-consent-contract.test.mjs test/devotional-control.test.mjs test/mail-control.test.mjs test/ekodi-coupang-mall.test.mjs
           bash -n scripts/apply-d1-migrations-with-retry.sh
           grep -Fq 'main = "mission-control-entry-worker.js"' wrangler.api.toml
           grep -Fq 'OPENAI_MODEL = "gpt-5.6-terra"' wrangler.api.toml

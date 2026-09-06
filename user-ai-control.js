@@ -1,5 +1,12 @@
 import { isAllowedOrigin } from './auth-worker.js';
 import { createSponsoredUserOpenAiProvider } from './user-openai-provider-adapter.js';
+import {
+  buildPersonalAiBridgeSnapshot,
+  canonicalAiSubject,
+  legacyAiSubject,
+  personalAiSubjectCandidates,
+  resolveCanonicalEkodiIdentity,
+} from './personal-ai-bridge.js';
 import { AI_ACCESS_POLICY, resolveAiAccessRoute, routeSequence } from './ai-access-orchestration.js';
 import {
   PERSONAL_AI_PROVIDER_REGISTRY,
@@ -44,9 +51,19 @@ function bearerToken(request) {
   return auth.toLowerCase().startsWith('bearer ') ? auth.slice(7).trim() : '';
 }
 
+function oauthClientToken(token) {
+  try {
+    const segment=String(token||'').split('.')[1]||'';
+    const normalized=segment.replace(/-/g,'+').replace(/_/g,'/');
+    const padded=normalized+'='.repeat((4-normalized.length%4)%4);
+    const claims=JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(padded),c=>c.charCodeAt(0))));
+    return Boolean(String(claims?.client_id||'').trim());
+  } catch { return false; }
+}
+
 async function userIdentity(request) {
   const token = bearerToken(request);
-  if (!token || token.length > 8192) return null;
+  if (!token || token.length > 8192 || oauthClientToken(token)) return null;
   const response = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
     headers:{ apikey:SUPABASE_PUBLISHABLE_KEY, authorization:`Bearer ${token}` },
   });
@@ -54,7 +71,7 @@ async function userIdentity(request) {
   const user = await response.json();
   const email = String(user?.email || '').trim().toLowerCase();
   if (!user?.id || !email || !user?.email_confirmed_at) return null;
-  return { id:String(user.id), email };
+  return resolveCanonicalEkodiIdentity({ token, authUser:{ id:String(user.id), email } });
 }
 
 async function ensureSchema(db) {
@@ -169,7 +186,11 @@ async function decryptSecret(env, cipher, iv) {
 }
 
 async function preferenceFor(env, identity) {
-  const row = await env.DB.prepare('SELECT mode,preferred_provider FROM user_ai_preferences WHERE user_id=?').bind(identity.id).first();
+  let row = null;
+  for (const subject of personalAiSubjectCandidates(identity)) {
+    row = await env.DB.prepare('SELECT mode,preferred_provider FROM user_ai_preferences WHERE user_id=?').bind(subject).first();
+    if (row) break;
+  }
   const preferred = String(row?.preferred_provider || 'gemini-api');
   return {
     mode:MODES.has(row?.mode) ? row.mode : 'auto',
@@ -178,9 +199,16 @@ async function preferenceFor(env, identity) {
 }
 
 async function credentialsFor(env, identity) {
-  const rows = await env.DB.prepare(`SELECT provider,secret_cipher,secret_iv,updated_at FROM user_ai_credentials
-    WHERE user_id=? AND revoked_at IS NULL ORDER BY updated_at DESC`).bind(identity.id).all();
-  return (rows.results || []).filter(row => API_PROVIDER_IDS.has(String(row.provider || '')));
+  const byProvider = new Map();
+  for (const subject of personalAiSubjectCandidates(identity)) {
+    const rows = await env.DB.prepare(`SELECT provider,secret_cipher,secret_iv,updated_at FROM user_ai_credentials
+      WHERE user_id=? AND revoked_at IS NULL ORDER BY updated_at DESC`).bind(subject).all();
+    for (const row of rows.results || []) {
+      const provider = String(row.provider || '');
+      if (API_PROVIDER_IDS.has(provider) && !byProvider.has(provider)) byProvider.set(provider, row);
+    }
+  }
+  return [...byProvider.values()];
 }
 
 function selectedCredential(pref, credentials) {
@@ -191,24 +219,34 @@ function selectedCredential(pref, credentials) {
   return [...credentials].sort((a, b) => order.indexOf(a.provider) - order.indexOf(b.provider))[0] || null;
 }
 
+function membershipSubjectCandidates(identity) {
+  return [...new Set([identity.personId, canonicalAiSubject(identity), legacyAiSubject(identity)].filter(Boolean).map(String))];
+}
+
 async function planFor(env, identity, site) {
-  const row = await env.DB.prepare(`SELECT plan_id,status FROM service_subscriptions
-    WHERE subject_type='person' AND subject_key=? AND site=? LIMIT 1`).bind(identity.id, site).first();
-  if (!row) return { planId:'free', status:'eligible' };
-  return { planId:String(row.plan_id || 'free').toLowerCase(), status:String(row.status || 'free').toLowerCase() };
+  for (const subject of membershipSubjectCandidates(identity)) {
+    const row = await env.DB.prepare(`SELECT plan_id,status FROM service_subscriptions
+      WHERE subject_type='person' AND subject_key=? AND site=? LIMIT 1`).bind(subject, site).first();
+    if (row) return { planId:String(row.plan_id || 'free').toLowerCase(), status:String(row.status || 'free').toLowerCase() };
+  }
+  return { planId:'free', status:'eligible' };
 }
 function monthStart() {
   const date = new Date();
   return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1)).toISOString();
 }
 async function sponsoredUsage(env, identity, site) {
-  const row = await env.DB.prepare(`SELECT COUNT(*) AS count FROM user_ai_usage
-    WHERE user_id=? AND site=? AND funding='ekodi' AND created_at>=?`).bind(identity.id, site, monthStart()).first();
-  return Number(row?.count || 0);
+  let count = 0;
+  for (const subject of personalAiSubjectCandidates(identity)) {
+    const row = await env.DB.prepare(`SELECT COUNT(*) AS count FROM user_ai_usage
+      WHERE user_id=? AND site=? AND funding='ekodi' AND created_at>=?`).bind(subject, site, monthStart()).first();
+    count += Number(row?.count || 0);
+  }
+  return count;
 }
 async function recordUsage(env, identity, { site, planId, funding, provider, model='' }) {
   await env.DB.prepare(`INSERT INTO user_ai_usage(user_id,site,plan_id,funding,provider,model,created_at)
-    VALUES(?,?,?,?,?,?,?)`).bind(identity.id, site, planId, funding, provider, model, new Date().toISOString()).run();
+    VALUES(?,?,?,?,?,?,?)`).bind(canonicalAiSubject(identity), site, planId, funding, provider, model, new Date().toISOString()).run();
 }
 
 function publicProviders(credentials = [], vaultReady = false) {
@@ -232,11 +270,12 @@ async function status(request, env, identity) {
   const vaultReady = Boolean(String(env.USER_AI_CREDENTIAL_ENCRYPTION_KEY || '').trim());
   const connectedProviderIds = credentials.map(row => row.provider);
   return json({
-    schemaVersion:3,
+    schemaVersion:4,
     policy:'automatic-personal-first-provider-independent',
     accessPolicyVersion:AI_ACCESS_POLICY.version,
     providerRegistryVersion:PERSONAL_AI_PROVIDER_REGISTRY.version,
-    account:{ email:identity.email },
+    bridge:buildPersonalAiBridgeSnapshot(identity),
+    account:{ email:identity.email, ekodiId:identity.ekodiId || null },
     site,
     preference:pref,
     plan:{ ...plan, sponsoredRequests:policy.sponsoredRequests, sponsoredUsed:used, sponsoredRemaining:remaining },
@@ -262,6 +301,12 @@ async function status(request, env, identity) {
   }, 200, request, env);
 }
 
+export async function userAiStatusForIdentity(request, env, identity) {
+  if (!env?.DB || !identity?.canonical) return json({ error:'EKODI ID가 필요합니다.', code:'USER_AI_CANONICAL_ID_REQUIRED' }, 403, request, env || {});
+  await ensureSchema(env.DB);
+  return status(request, env, identity);
+}
+
 async function savePreference(request, env, identity) {
   let body = null;
   try { body = await request.json(); } catch {}
@@ -271,7 +316,7 @@ async function savePreference(request, env, identity) {
   const now = new Date().toISOString();
   await env.DB.prepare(`INSERT INTO user_ai_preferences(user_id,mode,preferred_provider,created_at,updated_at)
     VALUES(?,?,?,?,?) ON CONFLICT(user_id) DO UPDATE SET mode=excluded.mode,preferred_provider=excluded.preferred_provider,updated_at=excluded.updated_at`)
-    .bind(identity.id, mode, provider, now, now).run();
+    .bind(canonicalAiSubject(identity), mode, provider, now, now).run();
   return json({ ok:true, preference:{ mode, preferredProvider:provider } }, 200, request, env);
 }
 
@@ -289,7 +334,7 @@ async function saveCredential(request, env, identity, providerId) {
   const now = new Date().toISOString();
   await env.DB.prepare(`INSERT INTO user_ai_credentials(user_id,provider,secret_cipher,secret_iv,created_at,updated_at,revoked_at)
     VALUES(?,?,?,?,?,?,NULL) ON CONFLICT(user_id,provider) DO UPDATE SET secret_cipher=excluded.secret_cipher,secret_iv=excluded.secret_iv,updated_at=excluded.updated_at,revoked_at=NULL`)
-    .bind(identity.id, providerId, encrypted.cipher, encrypted.iv, now, now).run();
+    .bind(canonicalAiSubject(identity), providerId, encrypted.cipher, encrypted.iv, now, now).run();
   const definition = getPersonalAiProvider(providerId);
   return json({ ok:true, provider:providerId, label:definition?.label || providerId, connected:true }, 200, request, env);
 }
@@ -297,8 +342,10 @@ async function saveCredential(request, env, identity, providerId) {
 async function revokeCredential(request, env, identity, providerId) {
   if (!API_PROVIDER_IDS.has(providerId)) return json({ error:'지원하지 않는 개인 AI 공급자입니다.', code:'USER_AI_PROVIDER_UNSUPPORTED' }, 404, request, env);
   const now = new Date().toISOString();
-  await env.DB.prepare(`UPDATE user_ai_credentials SET revoked_at=?,updated_at=? WHERE user_id=? AND provider=?`)
-    .bind(now, now, identity.id, providerId).run();
+  for (const subject of personalAiSubjectCandidates(identity)) {
+    await env.DB.prepare(`UPDATE user_ai_credentials SET revoked_at=?,updated_at=? WHERE user_id=? AND provider=?`)
+      .bind(now, now, subject, providerId).run();
+  }
   return json({ ok:true, provider:providerId, connected:false }, 200, request, env);
 }
 
@@ -449,7 +496,7 @@ export async function handleUserAiControl(request, env = {}) {
   }});
   if (!env.DB) return json({ error:'데이터베이스 연결이 설정되지 않았습니다.', code:'USER_AI_DATABASE_UNAVAILABLE' }, 503, request, env);
   const identity = await userIdentity(request);
-  if (!identity) return json({ error:'EKODI Google 로그인이 필요합니다.', code:'USER_AI_AUTH_REQUIRED' }, 401, request, env);
+  if (!identity) return json({ error:'EKODI 로그인이 필요합니다.', code:'USER_AI_AUTH_REQUIRED' }, 401, request, env);
   await ensureSchema(env.DB);
 
   if (request.method === 'GET' && url.pathname === '/api/user-ai/status') return status(request, env, identity);
