@@ -9,7 +9,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$AgentVersion = '2.1.0'
+$AgentVersion = '2.2.0'
 $Root = Join-Path $env:ProgramData 'EKODI\DeviceAgent'
 $AgentPath = Join-Path $Root 'ekodi-device-agent.ps1'
 $ConfigPath = Join-Path $Root 'config.json'
@@ -379,6 +379,33 @@ function Clear-SafeTempFiles {
   }
 }
 
+function Get-MinFreePct($Storage) {
+  $values = @($Storage.volumes | ForEach-Object { if ($_.freePct -ne $null) { [double]$_.freePct } })
+  if (-not $values.Count) { return $null }
+  return [math]::Round(($values | Measure-Object -Minimum).Minimum, 1)
+}
+
+function Invoke-SafeOptimization {
+  $before = Get-LightHealth
+  $cleanup = Clear-SafeTempFiles
+  $diagnostics = Get-FullDiagnostic
+  $after = @{ generatedAt = $diagnostics.generatedAt; system = $diagnostics.system; storage = $diagnostics.storage }
+  return @{
+    message = '안전 최적화를 완료했습니다. 임시파일만 정리하고 시스템 설정·시작프로그램·업데이트·전원 설정은 변경하지 않았습니다.'
+    profile = 'safe-optimize'
+    freedMB = $cleanup.freedMB
+    removedFiles = $cleanup.removedFiles
+    beforeMinFreePct = Get-MinFreePct $before.storage
+    afterMinFreePct = Get-MinFreePct $after.storage
+    before = $before
+    after = $after
+    diagnostics = $diagnostics
+    system = $diagnostics.system
+    storage = $diagnostics.storage
+    boundaries = @('no-startup-change','no-update-install','no-power-change','no-registry-tuning','no-reboot')
+  }
+}
+
 function Write-InternetShortcut([string]$Path, [string]$Url) {
   @('[InternetShortcut]', "URL=$Url") | Set-Content -Path $Path -Encoding ASCII
 }
@@ -567,6 +594,7 @@ function Invoke-DeviceCommand([pscustomobject]$Command) {
     'startup.disable' { return Disable-StartupItem ([string]$payload.itemId) }
     'startup.restore' { return Restore-StartupItem ([string]$payload.itemId) }
     'maintenance.temp_cleanup' { return Clear-SafeTempFiles }
+    'maintenance.safe_optimize' { return Invoke-SafeOptimization }
     'updates.scan' { $updates = Get-WindowsUpdateDiagnostic; return @{ message = 'Windows 업데이트 상태를 확인했습니다.'; pendingCount = $updates.pendingCount; rebootRequired = $updates.rebootPending; updates = $updates } }
     'updates.install' { return Install-WindowsUpdates }
     'profile.workstation.apply' { return Apply-WorkstationProfile }
@@ -814,7 +842,7 @@ if ($RegisterProtocol) { Register-ProtocolOnly; exit }
 if ($Install) { Install-Agent; exit }
 if ($Run) { Run-Agent; exit }
 
-Write-Host 'EKODI Device Agent 2.0.1' -ForegroundColor Cyan
+Write-Host "EKODI Device Agent $AgentVersion" -ForegroundColor Cyan
 Write-Host '등록: -Install -EnrollmentCode <코드>'
 Write-Host '원클릭 연결 등록: -RegisterProtocol'
 Write-Host '실행: -Run'
