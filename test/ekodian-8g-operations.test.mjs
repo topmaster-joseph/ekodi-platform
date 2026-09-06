@@ -110,7 +110,7 @@ test('shared character registry and renderer expose the governed operation bridg
   assert.match(characterRegistrySource, /characterMayExpandAuthority:false/);
   assert.match(characterRegistrySource, /ekodi\.ekodian-identity\.v1/);
   assert.match(characterRegistrySource, /identity_never_creates_or_expands_authority/);
-  assert.match(characterRendererSource, /const VERSION=5/);
+  assert.match(characterRendererSource, /const VERSION=6/);
   assert.match(characterRendererSource, /EKODICharacterIdentityRegistry/);
   assert.match(characterRendererSource, /applyOperation/);
   assert.match(characterRendererSource, /ekodi:agent-state/);
