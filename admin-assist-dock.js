@@ -55,6 +55,7 @@
     window.addEventListener('ekodi-nav-changed',updateContext);
     window.addEventListener('hashchange',updateContext);
     window.addEventListener('ekodi-admin-capability-requested',event=>{const capability=event.detail?.capability;if(!capability)return;setOpen(true);setTab('ai');submitAi(`${capability.name} (${capability.id}) Capability를 현재 관리자 화면 맥락에서 사용해줘. ${capability.description||''}`)});
+    window.addEventListener('ekodi-admin-assist-request',event=>{const text=String(event.detail?.text||'').trim();if(!text)return;setOpen(true);setTab('ai');submitAi(text)});
     window.addEventListener('focus',()=>{if(document.visibilityState==='visible')refreshSummary()});
     document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')refreshSummary()});
     setTab(state.tab,false);setOpen(Boolean(state.open),false);updateContext();refreshSummary();
