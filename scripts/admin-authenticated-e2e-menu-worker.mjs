@@ -62,7 +62,8 @@ async function visiblePanelState() {
     });
     const tab = document.querySelector(`button.admin-context-tab[data-admin-context-section="${section}"]`);
     const text = String(panel?.innerText || '').replace(/\s+/g, ' ').trim();
-    const busy = panel ? [...panel.querySelectorAll('[aria-busy="true"],.loading,.spinner')].filter(node => {
+    const busy = panel ? [panel, ...panel.querySelectorAll('[aria-busy="true"],.loading,.spinner')].filter(node => {
+      if (!node.matches('[aria-busy="true"],.loading,.spinner')) return false;
       const style = getComputedStyle(node);
       return node.getAttribute('aria-hidden') !== 'true' && !node.hidden && style.display !== 'none' && style.visibility !== 'hidden';
     }).length : 0;
@@ -73,6 +74,24 @@ async function visiblePanelState() {
       currentSection: window.EKODIAdminPanels?.current?.() || '', hash: location.hash,
     };
   }, menuId);
+}
+
+async function waitForSettledPanel(timeout = 8_000) {
+  await page.waitForFunction(section => {
+    const panel = [...document.querySelectorAll('[data-panel]')].find(node => {
+      const ids = String(node.dataset.panel || '').split(/\s+/).filter(Boolean);
+      const style = getComputedStyle(node);
+      return ids.includes(section) && !node.hidden && !node.classList.contains('hidden-panel') && style.display !== 'none' && style.visibility !== 'hidden';
+    });
+    if (!panel) return false;
+    const text = String(panel.innerText || '').replace(/\s+/g, ' ').trim();
+    const busy = [panel, ...panel.querySelectorAll('[aria-busy="true"],.loading,.spinner')].some(node => {
+      if (!node.matches('[aria-busy="true"],.loading,.spinner')) return false;
+      const style = getComputedStyle(node);
+      return node.getAttribute('aria-hidden') !== 'true' && !node.hidden && style.display !== 'none' && style.visibility !== 'hidden';
+    });
+    return text.length >= 4 && !busy;
+  }, menuId, { timeout });
 }
 
 function externalStorageNavigation() {
@@ -114,12 +133,19 @@ async function verifyStorage(tab, alreadyActive, started) {
 
 async function verifyTax(tab, alreadyActive, started) {
   stage('tax-handoff');
-  const navigation = page.waitForURL(url => url.hostname === 'tax.ekodi.kr', { timeout: 10_000 });
-  if (!alreadyActive) await clickFast(tab);
-  else await clickFast(tab);
-  await navigation;
-  if (new URL(page.url()).hostname !== 'tax.ekodi.kr') throw new Error(`tax: wrong destination ${page.url()}`);
-  results.push({ id: menuId, group, ok: true, durationMs: Date.now() - started, destination: 'https://tax.ekodi.kr/' });
+  const navigation = page.waitForRequest(request => {
+    try {
+      const destination = new URL(request.url());
+      return request.isNavigationRequest() && request.frame() === page.mainFrame() && destination.hostname === 'tax.ekodi.kr';
+    } catch { return false; }
+  }, { timeout: 10_000 });
+  await clickFast(tab);
+  const request = await navigation;
+  const destination = new URL(request.url());
+  if (destination.hostname !== 'tax.ekodi.kr') throw new Error(`tax: wrong handoff destination ${destination.hostname}`);
+  const probe = await fetch(destination.origin + '/', { redirect: 'manual', signal: AbortSignal.timeout(10_000) });
+  if (probe.status < 200 || probe.status >= 400) throw new Error(`tax: destination health probe returned HTTP ${probe.status}`);
+  results.push({ id: menuId, group, ok: true, durationMs: Date.now() - started, destination: destination.origin + '/', destinationStatus: probe.status });
 }
 
 async function verifyNormal(tab, alreadyActive, started) {
@@ -136,7 +162,7 @@ async function verifyNormal(tab, alreadyActive, started) {
   let state = await visiblePanelState();
   if (!state.panelFound || !state.selected || state.textLength < 4) throw new Error(`panel invalid: ${JSON.stringify(state)}`);
   if (state.busy) {
-    await page.waitForTimeout(2_000);
+    await waitForSettledPanel();
     state = await visiblePanelState();
     if (state.busy) throw new Error(`loading indicator remained active: ${JSON.stringify(state)}`);
   }
