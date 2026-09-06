@@ -1,0 +1,60 @@
+{
+  "version": 1,
+  "name": "EKODI Service Truth Policy",
+  "principle": "Evidence before reasoning. Current EKODI service facts must be verified from authoritative declarations and runtime evidence before an AI or operator asserts them as current truth.",
+  "scope": [
+    "service_exists",
+    "canonical_url",
+    "admin_url",
+    "domain_or_route",
+    "deployment_state",
+    "operational_state",
+    "public_exposure",
+    "authentication_route",
+    "service_owner_or_boundary"
+  ],
+  "authoritative_sources": {
+    "declared_topology": "platform-boundaries.json",
+    "declared_service_catalog": "ekodi-service-catalog.js",
+    "constitutional_domain_rules": "governance/constitution/constitution.json",
+    "runtime_service_controls": "GET /api/control/services",
+    "runtime_overview": "GET /api/control/overview",
+    "runtime_evidence_store": "service_checks",
+    "deployment_evidence": "declared deployWorkflow plus guarded deployment records",
+    "external_reachability": "direct HTTP/DNS verification when authorized and available"
+  },
+  "evidence_order": [
+    "constitutional_and_declared_topology",
+    "runtime_control_state",
+    "fresh_health_or_reachability_evidence",
+    "deployment_records",
+    "repository_implementation"
+  ],
+  "rules": [
+    "Repository code or a repository name proves implementation only; it does not prove deployment or operation.",
+    "A successful deployment record does not by itself prove that the canonical public route is operational.",
+    "Conversation history, model memory, examples and guessed URL patterns are never authoritative current-state evidence.",
+    "Canonical URLs must come from an authoritative EKODI declaration and, when the claim is that the service is currently operational, must also have fresh runtime evidence.",
+    "When required runtime evidence is unavailable, return unverified rather than infer a current fact.",
+    "Conflicting evidence must be surfaced explicitly and resolved according to EKODI governance precedence rather than silently choosing the most convenient source.",
+    "AI providers are consumers of verified EKODI context; they are not the source of truth for EKODI runtime state."
+  ],
+  "truth_states": {
+    "declared": "An authoritative EKODI source declares the service, route or boundary.",
+    "implemented": "Repository evidence shows an implementation exists.",
+    "deployed": "Guarded deployment evidence indicates a deployment occurred.",
+    "operational": "Declared canonical route and fresh runtime evidence agree that the service is reachable and intended to operate.",
+    "degraded": "The service is intended to operate but current runtime evidence reports degraded behavior.",
+    "offline": "The service is intended to operate but current runtime evidence reports failure.",
+    "unverified": "There is insufficient fresh evidence to assert current runtime state.",
+    "retired": "Governance marks the service or route as no longer current."
+  },
+  "ai_behavior": {
+    "must_verify_before_asserting": true,
+    "fallback_when_runtime_unavailable": "State the declared route or implementation evidence separately and label current operation as unverified.",
+    "forbid_url_inference": true,
+    "forbid_memory_as_current_truth": true,
+    "preferred_machine_interface": "EKODI Truth Gateway",
+    "provider_neutral": true
+  }
+}

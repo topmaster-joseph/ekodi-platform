@@ -91,6 +91,7 @@ export function buildExecutionPlan(task, capabilities = {}) {
 export function rolePrompt(task, role, context = {}) {
   const branch = clean(context.branch);
   const mission = context.missionDecision || task.missionDecision || null;
+  const truth = context.truthContext || null;
   return [
     `EKODI task: ${task.title}`,
     `Role: ${role}`,
@@ -100,6 +101,8 @@ export function rolePrompt(task, role, context = {}) {
     'Never mutate production directly. Production changes must promote the same verified immutable artifact through Governance Plane.',
     mission ? `Mission gate: ${mission.tier} (${mission.reason}); policy ${mission.policyVersion}.` : '',
     mission?.analysisOnly ? 'Mission governance permits analysis, review, and candidate preparation only. Do not perform the underlying high-impact action.' : '',
+    truth ? `Verified EKODI service context: ${JSON.stringify(truth)}` : '',
+    truth?.instruction || '',
     role === 'reviewer' ? 'Review independently and identify risks, missing tests, conflicts, and simpler alternatives.' : '',
     '',
     task.prompt,
