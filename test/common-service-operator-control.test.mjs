@@ -29,6 +29,10 @@ test('Admin menu mounts the common-service operator module', () => {
   assert.match(layout, /import\('\.\/common-services-admin\.js'\)/);
   assert.match(common, /common-services-admin\.css/);
   assert.match(layout, /#common-services:common-services/);
+  assert.match(layout, /if\(section==='common-services'\)return requestCommonServices\(\)/);
+  assert.match(layout, /EKODICommonServicesAdmin\?\.activate\?\.\(\)/);
+  assert.match(common, /window\.EKODICommonServicesAdmin=Object\.freeze\(\{mount,activate/);
+  assert.doesNotMatch(common, /function installNav\(|function showSection\(|addEventListener\('hashchange'/);
   assert.match(handoff, /campus common-services ai-ops/);
   assert.match(site, /ADMIN_COMMON_SERVICE_AI_PREFIX/);
   assert.match(site, /proxyAdminCommonServiceAi/);
