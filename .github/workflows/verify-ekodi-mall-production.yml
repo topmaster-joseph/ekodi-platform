@@ -25,13 +25,12 @@ jobs:
           set -euo pipefail
           curl -fsS --retry 3 --retry-delay 2 --connect-timeout 5 --max-time 20 'https://ekodi.kr/ekodibiz/mall' -o /tmp/mall.html
           for marker in \
-            'EKODI MALL' \
-            'EKODI CONTEXT SHOPPING' \
-            '상품보다 이유부터' \
-            '추천순위는 제휴수수료와 분리합니다' \
-            'ALL MARKET' \
-            'Seller Studio' \
-            '검증된 경로만 활성화'; do
+            'ekodibizmall' \
+            'GIFT CONTEXT INTELLIGENCE' \
+            'CONNECTED COMMERCE' \
+            'OUR PROMISE' \
+            'data-ekodi-service="mall"' \
+            'https://ekodi.kr/ekodibiz/mall'; do
             grep -Fq "$marker" /tmp/mall.html || { echo "Missing Mall marker: $marker"; exit 1; }
           done
           if grep -Fq '추천링크 클릭 후 검색하세요' /tmp/mall.html || grep -Fq 'COUPANG AFFILIATE CURATION' /tmp/mall.html || grep -Fq 'cwWXWm' /tmp/mall.html; then
