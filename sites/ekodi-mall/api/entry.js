@@ -155,7 +155,7 @@ export default {
         supplierPilotSchemaReady:supplierPilotReady, supplierDiscoverySchemaReady:supplierDiscoveryReady, domemaeConnectorReady:domemaeReady,
         domemaeLookupEnabled:String(env.DOMEMAE_LOOKUP_ENABLED || '').toLowerCase() === 'true', domemaeOrderEnabled:false,
         attributionWindowDays:ATTRIBUTION_WINDOW_DAYS,
-        operationsReviewConfigured:Boolean(env.MALL_OPERATIONS_TOKEN), operationsEmailAllowlistConfigured:Boolean(env.MALL_OPERATIONS_EMAILS),
+        operationsReviewConfigured:Boolean(env.MALL_OPERATIONS_TOKEN || env.MALL_OPERATIONS_EMAILS), operationsEmailAllowlistConfigured:Boolean(env.MALL_OPERATIONS_EMAILS),
         buyerPiiReleaseEnabled:String(env.BUYER_PII_RELEASE_ENABLED || '').toLowerCase() === 'true',
         supplierForwardEnabled:String(env.SUPPLIER_FORWARD_ENABLED || '').toLowerCase() === 'true', supplierPayoutExecutionEnabled:false, refundExecutionEnabled:false
       }, ok ? 200 : 503, origin, env);

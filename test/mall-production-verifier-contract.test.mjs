@@ -24,12 +24,16 @@ test('Mall production verifier checks the server transaction safety boundary', (
     'schemaReady',
     'orderSchemaReady',
     'verificationSchemaReady',
+    'operationsReviewConfigured',
+    'operationsEmailAllowlistConfigured',
     'paymentsEnabled',
     'payoutExecutionEnabled',
     'buyerPiiReleaseEnabled',
     'supplierForwardEnabled',
     'refundExecutionEnabled'
   ]) assert.match(workflow, new RegExp(field));
+  assert.match(workflow, /operations review is not configured/);
+  assert.match(workflow, /operations email allowlist is not configured/);
   assert.match(workflow, /high-impact transaction gate unexpectedly enabled/);
 });
 
