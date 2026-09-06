@@ -80,7 +80,13 @@ function cleanPayload(table,input){
 }
 function proxyResponse(upstream,origin){
   const headers={'content-type':upstream.headers.get('content-type')||'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff',...cors(origin)};
+  const range=upstream.headers.get('content-range');if(range)headers['content-range']=range;
   return new Response(upstream.body,{status:upstream.status,headers});
+}
+function jsonWithCount(rows,total,origin){
+  const end=rows.length?rows.length-1:0;
+  const range=rows.length?`0-${end}/${total}`:`*/${total}`;
+  return new Response(JSON.stringify(rows),{status:200,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff','content-range':range,...cors(origin)}});
 }
 
 Deno.serve(async req=>{
@@ -100,6 +106,12 @@ Deno.serve(async req=>{
     let rows=await upstream.json().catch(()=>[]);if(!Array.isArray(rows))rows=[];
     if(table==='church_staff'&&staff.role==='senior_pastor'){
       const requested=uuidOrNull(url.searchParams.get('user_id'));if(requested)rows=rows.filter(row=>String(row?.user_id||'')===requested);
+    }
+    if(String(req.headers.get('prefer')||'').toLowerCase().includes('count=exact')){
+      let counted;try{counted=await rpc('church_pastor_count',{p_table:table,p_church_slug:CHURCH_SLUG,p_requester_user_id:identity.id,p_is_senior:staff.role==='senior_pastor',p_status:eqValue(url.searchParams.get('status'))||null});}catch(error){return json({error:String(error?.message||error)},503,origin);}
+      if(!counted.ok)return proxyResponse(counted,origin);
+      const total=Number(await counted.json().catch(()=>0))||0;
+      return jsonWithCount(rows,total,origin);
     }
     return json(rows,200,origin);
   }
