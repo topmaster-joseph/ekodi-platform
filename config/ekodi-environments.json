@@ -19,8 +19,8 @@
       "supabase": {
         "logicalName": "ekodi-platform",
         "currentProjectRef": "renzehysxirjilvdxacv",
-        "currentProjectName": "cheonggye-market",
-        "state": "transition-to-canonical-platform"
+        "currentProjectName": "ekodi-platform",
+        "state": "canonical-platform-active"
       }
     },
     "development": {

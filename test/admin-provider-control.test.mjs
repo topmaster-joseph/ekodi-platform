@@ -11,6 +11,11 @@ test('provider control covers Cloudflare GitHub and Supabase', () => {
   assert.ok(source.includes("VERSION:'1.0.1'"));
 });
 
+test('provider control reports the canonical production Supabase identity', () => {
+  assert.ok(source.includes("project:'ekodi-platform',ref:'renzehysxirjilvdxacv'"));
+  assert.equal(source.includes("project:'cheonggye-market',ref:'renzehysxirjilvdxacv'"), false);
+});
+
 test('provider hierarchy includes environment and secret boundary', () => {
   assert.match(source, /계정.*Zone \/ 도메인.*Worker.*환경.*Secret/s);
   assert.match(source, /계정 \/ 조직.*Repository.*Branch \/ Environment.*Actions Secret/s);
