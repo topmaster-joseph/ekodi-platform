@@ -40,15 +40,14 @@ test('My EKODI reuses central identity and inherits registry-driven one-login ha
   assert.match(router,/loadClientAuth/);
 });
 
-test('My workspace selection enters a linked workspace instead of only changing local state',async()=>{
+test('My workspace selection updates context without forcing service navigation',async()=>{
   const app=await read('my/app.js');
   assert.match(app,/function workspaceDestination\(workspace\)/);
   assert.match(app,/requires_handoff/);
-  assert.match(app,/function enterWorkspace\(key\)/);
-  assert.match(app,/location\.assign\(serviceRoute\(destination\.id,destination\.url\)\)/);
+  assert.match(app,/function enterWorkspace\(key\)\{\s*setActiveWorkspace\(key\);\s*\}/);
+  assert.doesNotMatch(app,/function enterWorkspace\(key\)\{[\s\S]{0,180}location\.assign/);
   assert.match(app,/data-workspace-key[\s\S]*enterWorkspace/);
-  assert.match(app,/return_to/);
-  assert.match(app,/new URL\(url\)\.origin===target\.origin/);
+  assert.match(app,/action=active/);
 });
 
 test('My keeps the active workspace when opening Social or Energy and when returning from their switchers',async()=>{
@@ -199,4 +198,21 @@ test('My deployment verification derives Trade route from the live service manif
   assert.doesNotMatch(workflow,/https:\/\/trade\.ekodi\.kr\//);
   assert.equal((workflow.match(/m\.services\.find\(v=>v\.id===\"trade\"\)/g)||[]).length,2);
   assert.equal((workflow.match(/JSON\.stringify\(\[s\.id,s\.name,s\.url\]\)/g)||[]).length,2);
+});
+
+test('My EKODI keeps the guest entry sparse and turns the signed-in root into a contextual home',async()=>{
+  const [html,app,css,userAi]=await Promise.all([read('my/index.html'),read('my/app.js'),read('my/comfort-ui.css'),read('my/user-ai-ui.js')]);
+  assert.match(html,/data-auth-state="guest"/);
+  assert.match(html,/id="memberHome"/);
+  assert.match(html,/data-focus-surface="recommendations"/);
+  assert.match(html,/data-focus-surface="workspaces"/);
+  assert.match(app,/FOCUS_HASHES/);
+  assert.match(app,/function syncSurfaceState/);
+  assert.match(app,/function memberHomeUi/);
+  assert.match(app,/document\.body\.dataset\.homeMode/);
+  assert.match(app,/cards\.slice\(0,3\)/);
+  assert.match(css,/body\[data-auth-state="guest"\] main>:not\(\.comfort-hero\)/);
+  assert.match(css,/\.member-focus-grid/);
+  assert.match(css,/body\[data-auth-state="member"\]\[data-home-mode="focus"\]/);
+  assert.match(userAi,/내 에코디,<br>필요한 것만\./);
 });
