@@ -61,7 +61,7 @@
     button.className = 'nav';
     button.dataset.section = 'affiliates';
     const label = document.createElement('span');
-    label.textContent = '🛒 에코디몰 AI 영업';
+    label.textContent = '🛒 제휴마케팅';
     button.append(label);
     const policies = nav.querySelector('[data-section="policies"]');
     if (policies) nav.insertBefore(button, policies); else nav.append(button);
@@ -73,12 +73,26 @@
     panel.innerHTML = `
       <div class="section-head integration-head">
         <div>
-          <p class="kicker">EKODI MALL · AI SALES</p>
-          <h2>에코디몰 AI 영업</h2>
-          <p>상품 운영 → 몰 유입 → 상품 확인 → 제휴 클릭 → 주문·수익 연결 상태를 실제 원장 기준으로 관리합니다.</p>
+          <p class="kicker">EKODI MALL · AFFILIATE CONTROL</p>
+          <h2>제휴마케팅 계정</h2>
+          <p>계정 → 판매처 경로 → 추적·상품·가격 검증 → 추천 → 실제 성과를 하나의 운영 흐름으로 관리합니다.</p>
         </div>
         <a class="secondary compact" href="${MALL}" target="_blank" rel="noopener">에코디몰 열기 ↗</a>
       </div>
+
+      <article class="integration-provider" aria-labelledby="affiliateAccountHubTitle">
+        <div class="integration-provider-top">
+          <div class="integration-provider-brand"><span class="integration-provider-logo">8G</span><div><small>AFFILIATE ACCOUNT CONTROL PLANE</small><strong id="affiliateAccountHubTitle">제휴마케팅 계정 허브</strong><p>계정 자체와 판매처별 제휴 경로를 분리하고, 검증을 통과한 경로만 추천에 사용합니다.</p></div></div>
+          <span class="integration-status connected">중앙 권한</span>
+        </div>
+        <div class="integration-summary-grid" aria-label="제휴마케팅 계정 준비 상태">
+          <article><small>기본 계정</small><strong id="affiliateAccountReadiness">확인 중</strong></article>
+          <article><small>판매처 경로</small><strong id="affiliateRouteCount">—</strong></article>
+          <article><small>추천 가능 경로</small><strong id="affiliateRouteReadyCount">—</strong></article>
+          <article><small>추천 가드</small><strong id="affiliateGuardState">검증 전 차단</strong></article>
+        </div>
+        <div class="integration-security-note"><strong>8세대 권한 원칙</strong><span>제휴계정 원장과 비밀키는 중앙 Admin에서만 관리합니다. 고객 Mall Admin에는 허용된 운영 결과만 투영하며, 승인·추적·상품·가격 검증 전 경로는 자동으로 추천에서 차단합니다.</span></div>
+      </article>
 
       <article class="integration-provider" aria-labelledby="mallFunnelTitle">
         <div class="integration-provider-top">
@@ -126,14 +140,14 @@
         </div>
 
         <form id="affiliateAccountForm" class="integration-account-form">
-          <div class="integration-form-heading"><div><strong>에코디몰 운영 설정</strong><p>운영 이름, 기본 채널과 필수 제휴 고지 문구를 관리합니다.</p></div><span class="integration-mode" id="affiliateConnectionMode">AUTO</span></div>
+          <div class="integration-form-heading"><div><strong>제휴마케팅 계정 설정</strong><p>제휴계정 표시 이름, 기본 채널, 필수 고지와 운영 여부를 관리합니다. API 자격정보는 서버 비밀영역에서만 유지합니다.</p></div><span class="integration-mode" id="affiliateConnectionMode">AUTO</span></div>
           <div class="integration-form-grid">
             <label>연결 이름<input name="displayName" maxlength="120" placeholder="에코디비즈 쿠팡파트너스" required></label>
             <label>기본 채널<input name="defaultChannel" maxlength="120" placeholder="EKODI Mall"></label>
             <label class="integration-wide">제휴 고지 문구<textarea name="disclosureText" maxlength="1000" rows="3" placeholder="쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다."></textarea></label>
             <label class="integration-toggle"><input name="enabled" type="checkbox"> 이 연결을 에코디몰 운영에 사용</label>
           </div>
-          <div class="integration-form-actions"><button class="primary" type="submit">운영 설정 저장</button><span id="affiliateAccountUpdated"></span></div>
+          <div class="integration-form-actions"><button class="primary" type="submit">제휴계정 설정 저장</button><span id="affiliateAccountUpdated"></span></div>
         </form>
 
         <div class="integration-security-note"><strong>보안 원칙</strong><span>Access Key와 Secret Key는 브라우저나 데이터베이스에 저장하지 않고 서버의 암호화된 Worker Secret으로만 사용합니다.</span></div>
@@ -145,14 +159,47 @@
           <span class="integration-status connected">공통 커넥터</span>
         </div>
         <div id="affiliateFeedProviders" class="integration-capabilities" aria-live="polite"><span>서버 Feed 연결 상태를 확인하는 중입니다.</span></div>
-        <form id="affiliateExternalProductForm" class="integration-account-form">
-          <div class="integration-form-heading"><div><strong>제휴상품 등록</strong><p>제휴처 API가 없어도 구매 링크만 있으면 에코디몰에 즉시 연결할 수 있습니다.</p></div><span class="integration-mode">MANUAL</span></div>
+        <div class="integration-account-form" aria-labelledby="chinaAffiliateTitle">
+          <div class="integration-form-heading"><div><strong id="chinaAffiliateTitle">중국 쇼핑몰 제휴 빠른 설정</strong><p>중국 판매처는 공식 제휴망 경로를 불러온 뒤 직접 제휴 계약이 있으면 제휴 방식을 직접 제휴로 바꿔 저장할 수 있습니다. 모든 경로는 검증 전 추천 차단 상태로 시작합니다.</p></div><span class="integration-mode">CN</span></div>
+          <div id="chinaAffiliatePresets" class="integration-form-actions">
+            <button type="button" class="secondary compact" data-cn-affiliate-preset="taobao">淘宝 타오바오</button>
+            <button type="button" class="secondary compact" data-cn-affiliate-preset="tmall">天猫 티몰</button>
+            <button type="button" class="secondary compact" data-cn-affiliate-preset="jd">京东 징둥</button>
+            <button type="button" class="secondary compact" data-cn-affiliate-preset="aliexpress">AliExpress</button>
+            <button type="button" class="secondary compact" data-cn-affiliate-preset="pinduoduo">拼多多 핀둬둬</button>
+          </div>
+        </div>
+        <form id="affiliateMerchantRouteForm" class="integration-account-form">
+          <div class="integration-form-heading"><div><strong>판매처 제휴 경로 설정</strong><p>최저가여도 제휴 active, 추적링크 ready, 상품·가격 공급 ready, 추천 허용까지 모두 완료된 판매처만 사용자 추천에 올라갑니다.</p></div><span class="integration-mode">ROUTE</span></div>
           <div class="integration-form-grid">
-            <label>제휴처 코드<input name="providerKey" maxlength="80" placeholder="예: linkprice" required></label>
-            <label>제휴처 이름<input name="providerName" maxlength="120" placeholder="예: LinkPrice" required></label>
+            <label>판매처 코드<input name="merchantKey" maxlength="80" placeholder="예: elevenst" required></label>
+            <label>판매처 이름<input name="merchantName" maxlength="120" placeholder="예: 11번가" required></label>
+            <label>국가 코드<input name="marketCountry" maxlength="2" value="KR" placeholder="KR · CN · US · JP"></label>
+            <label>정산 통화<input name="settlementCurrency" maxlength="3" value="KRW" placeholder="KRW · CNY · USD · JPY"></label>
+            <label>제휴 방식<select name="affiliateMode"><option value="network">간접 제휴망</option><option value="direct">직접 제휴</option></select></label>
+            <label>제휴 상태<select name="affiliateStatus"><option value="candidate">후보</option><option value="pending">신청/승인 대기</option><option value="approved">승인됨</option><option value="active">활성</option><option value="suspended">중지</option></select></label>
+            <label>추적링크 상태<select name="trackingStatus"><option value="not_ready">미준비</option><option value="pending">확인 중</option><option value="ready">추적 확인 완료</option><option value="failed">오류</option></select></label>
+            <label>상품·가격 공급<select name="catalogStatus"><option value="not_ready">미준비</option><option value="manual_verified">수동 가격 검증</option><option value="feed_ready">Feed/API 정상</option><option value="stale">가격 만료</option><option value="failed">오류</option></select></label>
+            <label>제휴망 코드<input name="networkKey" maxlength="80" value="linkprice" list="affiliateNetworkKeys" placeholder="linkprice · taobao_alliance · jd_union"></label>
+            <label>제휴망 이름<input name="networkName" maxlength="120" value="LinkPrice" placeholder="LinkPrice · 淘宝联盟 · 京东联盟"></label>
+            <datalist id="affiliateNetworkKeys"><option value="linkprice"><option value="awin"><option value="impact"><option value="cj"><option value="rakuten"><option value="taobao_alliance"><option value="jd_union"><option value="aliexpress_affiliate"><option value="duoduo_jinbao"></datalist>
+            <label class="integration-wide">제휴 프로그램/관리 URL<input name="programUrl" type="url" inputmode="url" placeholder="https://... (선택)"></label>
+            <label class="integration-wide">운영 메모<textarea name="notes" maxlength="500" rows="2" placeholder="승인일, 담당자, 해외 세금/통화 메모 등"></textarea></label>
+            <label class="integration-toggle"><input name="recommendationEnabled" type="checkbox"> 제휴 완료 후 이 판매처의 상품을 추천 후보로 허용</label>
+          </div>
+          <div class="integration-form-actions"><button class="primary" type="submit">제휴 경로 저장</button><span id="affiliateMerchantRouteState"></span></div>
+        </form>
+        <div id="affiliateMerchantRoutes" class="integration-capabilities" aria-live="polite"><span>제휴 경로를 확인하는 중입니다.</span></div>
+        <form id="affiliateExternalProductForm" class="integration-account-form">
+          <div class="integration-form-heading"><div><strong>제휴 완료 상품 등록</strong><p>판매처 코드는 실제 Merchant 기준으로 입력합니다. 간접 제휴망(LinkPrice 등)은 위 제휴 경로 설정에서 관리합니다.</p></div><span class="integration-mode">MANUAL</span></div>
+          <div class="integration-form-grid">
+            <label>판매처 코드<input name="providerKey" maxlength="80" placeholder="예: elevenst" required></label>
+            <label>판매처 이름<input name="providerName" maxlength="120" placeholder="예: 11번가" required></label>
             <label>상품명<input name="productName" maxlength="240" required></label>
             <label>카테고리<input name="category" maxlength="120" placeholder="건강 · 식품 · 생활"></label>
-            <label>가격(원)<input name="priceKrw" type="number" min="0" step="1" placeholder="0"></label>
+            <label>검증 비교가격(원)<input name="priceKrw" type="number" min="1" step="1" required placeholder="해외상품도 현재 검증된 원화 환산값"></label>
+            <label>원 판매가<input name="sourcePriceAmount" type="number" min="0" step="0.01" placeholder="해외 판매가 선택"></label>
+            <label>원 판매가 통화<input name="sourcePriceCurrency" maxlength="3" placeholder="KRW · CNY · USD · JPY"></label>
             <label>제휴처 상품 ID<input name="sourceId" maxlength="160" placeholder="선택"></label>
             <label>GTIN/바코드<input name="gtin" inputmode="numeric" maxlength="32" placeholder="8?12?13?14자리"></label>
             <label>브랜드<input name="brand" maxlength="120" placeholder="선택"></label>
@@ -165,7 +212,7 @@
           </div>
           <div class="integration-form-actions"><button class="primary" type="submit">에코디몰에 상품 등록</button><span id="affiliateExternalProductState"></span></div>
         </form>
-        <div class="integration-security-note"><strong>운영 원칙</strong><span>판매처와 제휴 관계를 투명하게 표시하고, 판매 수수료보다 사용자 상황과 적합성을 우선해 추천합니다.</span></div>
+        <div class="integration-security-note"><strong>추천 원칙</strong><span>제휴 완료(active + 추천 허용)는 추천의 입장권입니다. 그 안에서 실제 가격·배송·사용자 적합성으로 순위를 정하며 수수료율은 추천 점수에 넣지 않습니다.</span></div>
       </article>
 
       <div class="integration-summary-grid" aria-label="에코디몰 최근 운영 현황">
@@ -178,6 +225,9 @@
     content.append(panel);
 
     const accountForm = document.querySelector('#affiliateAccountForm');
+    const merchantRouteForm = document.querySelector('#affiliateMerchantRouteForm');
+    const merchantRoutes = document.querySelector('#affiliateMerchantRoutes');
+    const chinaAffiliatePresets = document.querySelector('#chinaAffiliatePresets');
     const externalProductForm = document.querySelector('#affiliateExternalProductForm');
     const feedProviders = document.querySelector('#affiliateFeedProviders');
     const message = document.querySelector('#affiliateMessage');
@@ -256,6 +306,58 @@
       }
     }
 
+    const CHINA_AFFILIATE_PRESETS = {
+      taobao: { merchantKey: 'taobao', merchantName: '淘宝 타오바오', marketCountry: 'CN', settlementCurrency: 'CNY', networkKey: 'taobao_alliance', networkName: '淘宝联盟 / Alimama', programUrl: 'https://pub.alimama.com/' },
+      tmall: { merchantKey: 'tmall', merchantName: '天猫 티몰', marketCountry: 'CN', settlementCurrency: 'CNY', networkKey: 'taobao_alliance', networkName: '淘宝联盟 / Alimama', programUrl: 'https://pub.alimama.com/' },
+      jd: { merchantKey: 'jd', merchantName: '京东 징둥', marketCountry: 'CN', settlementCurrency: 'CNY', networkKey: 'jd_union', networkName: '京东联盟', programUrl: 'https://jos.jd.com/jdunion' },
+      aliexpress: { merchantKey: 'aliexpress', merchantName: 'AliExpress', marketCountry: 'CN', settlementCurrency: 'USD', networkKey: 'aliexpress_affiliate', networkName: 'AliExpress Affiliate', programUrl: 'https://portals.aliexpress.com/' },
+      pinduoduo: { merchantKey: 'pinduoduo', merchantName: '拼多多 핀둬둬', marketCountry: 'CN', settlementCurrency: 'CNY', networkKey: 'duoduo_jinbao', networkName: '多多进宝', programUrl: '' },
+    };
+
+    function applyChinaAffiliatePreset(key) {
+      const preset = CHINA_AFFILIATE_PRESETS[key];
+      if (!preset || !merchantRouteForm) return;
+      for (const [name, value] of Object.entries(preset)) if (merchantRouteForm.elements[name]) merchantRouteForm.elements[name].value = value;
+      merchantRouteForm.elements.affiliateMode.value = 'network';
+      merchantRouteForm.elements.affiliateStatus.value = 'candidate';
+      merchantRouteForm.elements.trackingStatus.value = 'not_ready';
+      merchantRouteForm.elements.catalogStatus.value = 'not_ready';
+      merchantRouteForm.elements.recommendationEnabled.checked = false;
+      merchantRouteForm.elements.notes.value = `${preset.merchantName} 중국 제휴 후보. 공식 승인·추적링크·상품/가격 공급 확인 전 추천 금지. 직접 계약이 있으면 제휴 방식을 직접 제휴로 변경.`;
+      merchantRouteForm.elements.merchantKey.focus();
+      setMessage(`${preset.merchantName} 중국 제휴 기본값을 불러왔습니다. 직접 계약이면 제휴 방식을 '직접 제휴'로 바꿔 저장할 수 있습니다.`);
+    }
+
+    function renderMerchantRoutes(routes = []) {
+      if (!merchantRoutes) return;
+      merchantRoutes.replaceChildren();
+      const readyRoutes = routes.filter(route => Boolean(route.recommendationReady));
+      const blockedRoutes = routes.length - readyRoutes.length;
+      const routeCount = document.querySelector('#affiliateRouteCount');
+      const routeReadyCount = document.querySelector('#affiliateRouteReadyCount');
+      const guardState = document.querySelector('#affiliateGuardState');
+      if (routeCount) routeCount.textContent = routes.length.toLocaleString('ko-KR');
+      if (routeReadyCount) routeReadyCount.textContent = readyRoutes.length.toLocaleString('ko-KR');
+      if (guardState) guardState.textContent = routes.length ? (blockedRoutes ? blockedRoutes.toLocaleString('ko-KR') + '개 차단' : '검증 경로만') : '미검증 차단';
+      if (!routes.length) {
+        const empty = document.createElement('span');
+        empty.textContent = '아직 판매처 제휴 경로가 없습니다. 최저가 후보를 발견하면 직접 또는 제휴망 경로를 먼저 등록하세요.';
+        merchantRoutes.append(empty);
+        return;
+      }
+      for (const route of routes) {
+        const row = document.createElement('div');
+        row.className = 'integration-form-actions';
+        const label = document.createElement('span');
+        const via = route.affiliateMode === 'network' ? `간접 · ${route.networkName || route.networkKey}` : '직접 제휴';
+        const market = `${route.marketCountry || 'KR'} · ${route.settlementCurrency || 'KRW'}`;
+        const eligible = route.recommendationReady ? '추천 가능' : '추천 차단';
+        label.textContent = `${route.merchantName || route.merchantKey} · ${via} · 제휴 ${route.affiliateStatus} · 추적 ${route.trackingStatus || 'not_ready'} · 가격 ${route.catalogStatus || 'not_ready'} · ${eligible} · ${market}`;
+        row.append(label);
+        merchantRoutes.append(row);
+      }
+    }
+
     function renderOverview(data) {
       const s = data.summary || {};
       const automation = data.automation || {};
@@ -267,6 +369,8 @@
 
       const accounts = data.accounts || [];
       const account = accounts.find(item => item.id === ACCOUNT) || accounts[0];
+      const accountReadiness = document.querySelector('#affiliateAccountReadiness');
+      if (accountReadiness) accountReadiness.textContent = !account ? '미등록' : !account.enabled ? '중지' : automation.configured ? '연결됨' : '계정 등록됨';
       const providerSummary = document.querySelector('#affiliateProviderSummary');
       if (providerSummary) {
         const names = [...new Set(accounts.map(item => item.displayName || item.providerKey).filter(Boolean))];
@@ -296,9 +400,10 @@
     }
 
     async function loadOverview() {
-      const [affiliate, providerData, events] = await Promise.all([api('/api/affiliate/overview'), api('/api/affiliate/providers').catch(() => ({ providers: [] })), mallEvents().catch(() => [])]);
+      const [affiliate, providerData, routeData, events] = await Promise.all([api('/api/affiliate/overview'), api('/api/affiliate/providers').catch(() => ({ providers: [] })), api('/api/affiliate/routes').catch(() => ({ routes: [] })), mallEvents().catch(() => [])]);
       renderOverview(affiliate);
       renderProviderFeeds(providerData.providers || []);
+      renderMerchantRoutes(routeData.routes || []);
       renderMallEvents(events);
       return affiliate;
     }
@@ -306,7 +411,7 @@
     const show = async () => {
       document.querySelectorAll('[data-panel]').forEach(item => item.classList.toggle('hidden-panel', !String(item.dataset.panel || '').split(' ').includes('affiliates')));
       document.querySelectorAll('.sidebar .nav[data-section]').forEach(item => item.classList.toggle('active', item.dataset.section === 'affiliates'));
-      const title = document.querySelector('#pageTitle'); if (title) title.textContent = '에코디몰 AI 영업';
+      const title = document.querySelector('#pageTitle'); if (title) title.textContent = '제휴마케팅 계정';
       history.replaceState(null, '', '#mall-ai-sales');
       try {
         setMessage('');
@@ -353,12 +458,41 @@
           }),
         });
         accountLoaded = false;
-        setMessage('에코디몰 운영 설정을 저장했습니다.');
+        setMessage('제휴마케팅 계정 설정을 저장했습니다.');
         const updated = document.querySelector('#affiliateAccountUpdated');
         if (updated) updated.textContent = data.account?.updatedAt ? `최근 설정 ${new Date(data.account.updatedAt).toLocaleString('ko-KR')}` : '방금 저장';
         await loadOverview();
       } catch (error) {
         setMessage(error.message, true);
+      } finally {
+        submit.disabled = false;
+      }
+    });
+
+    chinaAffiliatePresets?.addEventListener('click', event => {
+      const presetButton = event.target.closest('[data-cn-affiliate-preset]');
+      if (!presetButton) return;
+      applyChinaAffiliatePreset(String(presetButton.dataset.cnAffiliatePreset || ''));
+    });
+
+    merchantRouteForm?.addEventListener('submit', async event => {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const submit = form.querySelector('button[type="submit"]');
+      const state = document.querySelector('#affiliateMerchantRouteState');
+      submit.disabled = true;
+      if (state) state.textContent = '저장 중…';
+      try {
+        const payload = Object.fromEntries(new FormData(form).entries());
+        payload.recommendationEnabled = form.elements.recommendationEnabled.checked;
+        const data = await api('/api/affiliate/routes', { method: 'POST', body: JSON.stringify(payload) });
+        const route = data.route || {};
+        setMessage(`${route.merchantName || route.merchantKey} 제휴 경로를 저장했습니다.${route.recommendationReady ? ' 제휴·추적·가격 검증을 통과해 추천 가능합니다.' : ' 모든 게이트를 통과하기 전에는 추천되지 않습니다.'}`);
+        if (state) state.textContent = route.recommendationReady ? '검증 완료 · 추천 가능' : `제휴 ${route.affiliateStatus || 'candidate'} · 추적 ${route.trackingStatus || 'not_ready'} · 가격 ${route.catalogStatus || 'not_ready'}`;
+        await loadOverview();
+      } catch (error) {
+        setMessage(error.message, true);
+        if (state) state.textContent = '저장 실패';
       } finally {
         submit.disabled = false;
       }

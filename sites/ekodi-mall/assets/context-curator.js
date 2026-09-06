@@ -12,6 +12,7 @@
 
   const safeUrl = (value) => { try { const url = new URL(String(value || '')); return url.protocol === 'https:' ? url.toString() : ''; } catch { return ''; } };
   const money = (value) => Number(value) > 0 ? `${new Intl.NumberFormat('ko-KR').format(Number(value))}원` : '가격 확인';
+  const offerPriceText = (offer) => offer?.priceKrw > 0 ? money(offer.priceKrw) : (offer?.sourcePriceAmount > 0 && offer?.sourcePriceCurrency ? `${offer.sourcePriceCurrency} ${new Intl.NumberFormat('ko-KR', { maximumFractionDigits: 2 }).format(offer.sourcePriceAmount)}` : '가격 확인');
   const clean = (value) => String(value || '').replace(/\s+/g, ' ').trim();
   const canonical = (value) => clean(value).toLocaleLowerCase('ko-KR').replace(/[^0-9a-z가-힣]/gi, '');
   const tokens = (value) => clean(value).toLocaleLowerCase('ko-KR').split(/[^0-9a-z가-힣]+/i).filter((item) => item.length > 1);
@@ -21,7 +22,7 @@
     const clickUrl = safeUrl(raw?.clickUrl);
     if (!clickUrl) return null;
     const price = Number(raw?.priceKrw || 0);
-    return { id: String(raw?.id || index), name: clean(raw?.productName || '상품'), category: clean(raw?.category || '추천'), providerKey: clean(raw?.providerKey || 'affiliate'), providerName: clean(raw?.providerName || '제휴 판매처'), priceKrw: Number.isFinite(price) && price > 0 ? price : 0, clickUrl, imageUrl: safeUrl(raw?.imageUrl), priceFreshness: clean(raw?.priceFreshness || ''), priceVerifiedAt: clean(raw?.priceVerifiedAt || raw?.selectedAt || ''), isRocket: Boolean(raw?.isRocket), isFreeShipping: Boolean(raw?.isFreeShipping) };
+    return { id: String(raw?.id || index), name: clean(raw?.productName || '상품'), category: clean(raw?.category || '추천'), providerKey: clean(raw?.providerKey || 'affiliate'), providerName: clean(raw?.providerName || '제휴 판매처'), affiliateMode: clean(raw?.affiliateMode || ''), affiliateNetworkName: clean(raw?.affiliateNetworkName || ''), marketCountry: clean(raw?.marketCountry || ''), sourcePriceAmount: Number(raw?.sourcePriceAmount || 0), sourcePriceCurrency: clean(raw?.sourcePriceCurrency || ''), priceKrw: Number.isFinite(price) && price > 0 ? price : 0, clickUrl, imageUrl: safeUrl(raw?.imageUrl), priceFreshness: clean(raw?.priceFreshness || ''), priceVerifiedAt: clean(raw?.priceVerifiedAt || raw?.selectedAt || ''), isRocket: Boolean(raw?.isRocket), isFreeShipping: Boolean(raw?.isFreeShipping) };
   }
 
   function groupOffers(offers) {
@@ -92,7 +93,7 @@
   function contextLabel(context) { const parts = [context.recipient, context.occasion, context.budgetMax ? `${new Intl.NumberFormat('ko-KR').format(context.budgetMax)}원 이하` : '', ...context.prefs.slice(0, 2)].filter(Boolean); return parts.length ? parts.join(' · ') : '오늘의 에코디 추천'; }
   function offerLink(offer, compact = false) {
     const link = document.createElement('a'); link.href = offer.clickUrl; link.target = '_blank'; link.rel = 'sponsored noopener';
-    link.textContent = compact ? `${offer.providerName} · ${money(offer.priceKrw)}` : '판매처에서 보기';
+    link.textContent = compact ? `${offer.providerName} · ${offerPriceText(offer)}` : '판매처에서 보기';
     link.addEventListener('click', () => document.dispatchEvent(new CustomEvent('ekodi:context-offer-click', { detail: { providerKey: offer.providerKey, productName: offer.name } })));
     return link;
   }
@@ -105,9 +106,13 @@
   function offerBadges(offer, product) {
     const badges = []; const lowest = bestPrice(product);
     if (product.offers.length > 1 && lowest && offer.priceKrw === lowest) badges.push('현재 표시가 최저');
+    if (offer.affiliateMode === 'network' && offer.affiliateNetworkName) badges.push(`${offer.affiliateNetworkName} 경유`);
+    else if (offer.affiliateMode === 'direct') badges.push('직접 제휴');
+    if (offer.marketCountry && offer.marketCountry !== 'KR') badges.push(offer.marketCountry);
     if (offer.isRocket) badges.push('빠른배송');
     if (offer.isFreeShipping) badges.push('무료배송');
     if (offer.priceFreshness === 'stale') badges.push('판매처 최신가 확인');
+    if (!offer.priceKrw && offer.sourcePriceCurrency && offer.sourcePriceCurrency !== 'KRW') badges.push('환율·최신가 확인');
     return badges;
   }
   let offerDialog = null;
@@ -131,11 +136,11 @@
     const whySection = text('section', 'context-detail-why', ''); whySection.append(text('h3', '', '왜 이 상품인가'));
     const why = text('ul', 'context-card-reasons', ''); reasons(product, context).forEach((reason) => why.append(text('li', '', reason))); whySection.append(why);
     const offerSection = text('section', 'context-detail-offers', '');
-    offerSection.append(text('h3', '', '어디서 살까요?'), text('p', 'context-detail-note', product.offers.length > 1 ? '가격·배송·판매처 조건을 보고 선택하세요. 추천순위와 제휴수수료는 분리합니다.' : '현재 확인된 판매처는 1곳입니다. 다른 검증 판매처가 연결되면 이곳에서 함께 비교됩니다.'));
+    offerSection.append(text('h3', '', '어디서 살까요?'), text('p', 'context-detail-note', product.offers.length > 1 ? '제휴가 완료된 판매처 안에서 가격·배송·사용자 적합성을 비교합니다. 추천순위와 제휴수수료는 분리합니다.' : '현재 제휴 완료 및 추천 허용된 판매처는 1곳입니다. 다른 판매처도 제휴가 완료되면 함께 비교됩니다.'));
     const list = text('div', 'context-detail-offer-list', '');
     product.offers.forEach((offer) => {
       const row = text('article', 'context-detail-offer', ''); const copy = text('div', 'context-detail-offer-copy', '');
-      copy.append(text('strong', '', offer.providerName), text('span', 'context-detail-offer-price', money(offer.priceKrw)));
+      copy.append(text('strong', '', offer.providerName), text('span', 'context-detail-offer-price', offerPriceText(offer)));
       const badges = text('div', 'context-detail-badges', ''); offerBadges(offer, product).forEach((badge) => badges.append(text('span', '', badge))); copy.append(badges);
       const link = offerLink(offer); link.className = 'context-offer-buy'; link.textContent = '판매처에서 구매'; row.append(copy, link); list.append(row);
     });
