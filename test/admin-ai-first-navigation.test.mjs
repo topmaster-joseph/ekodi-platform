@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises';
 import { adminMenuGroups, adminMenuOrder, getAdminMenuItem } from '../admin-menu-registry.js';
 
 const layout = await readFile(new URL('../admin-menu-layout.js', import.meta.url), 'utf8');
+const menuRuntime = await readFile(new URL('../admin-menu-runtime.js', import.meta.url), 'utf8');
 
 test('internal technical sections stay out of primary navigation', () => {
   assert.ok(layout.includes("const INTERNAL=new Set(['services','deployments','policies']);"));
@@ -50,4 +51,13 @@ test('human-facing Admin menu has one canonical order inside five domains plus O
 
 test('Admin sidebar menu uses compact spacing without shrinking label readability', () => {
   for (const marker of ['ekodi-admin-menu-density','gap:0!important','min-height:30px!important','padding:4px 9px!important','font-size:12px!important']) assert.ok(layout.includes(marker));
+});
+
+test('administrator access waits for its runtime instead of recursively clicking the hidden source menu', () => {
+  assert.ok(layout.includes("if(section==='admins')return requestAdminAccess();"));
+  assert.ok(layout.includes("window.EKODIAdminMenu?.ensureAdminAccess?.()"));
+  assert.ok(menuRuntime.includes('function loadCurrentSession()'));
+  assert.ok(menuRuntime.includes('async function ensureAdminAccess()'));
+  assert.ok(menuRuntime.includes('refreshAdminAccess: loadAccounts, ensureAdminAccess'));
+  assert.ok(menuRuntime.indexOf("if (currentSession.role === 'super_admin') ensureAdminPanel();") < menuRuntime.indexOf('await installContextControl();'));
 });

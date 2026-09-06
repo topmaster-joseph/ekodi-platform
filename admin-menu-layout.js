@@ -116,12 +116,22 @@ function fallbackDemand(section){
   const selector=section==='aiops'?'[data-demand-feature="aiops"],[data-section="aiops"]':`[data-demand-feature="${section}"],[data-lazy-section="${section}"],[data-section="${section}"]`;
   nav.querySelector(selector)?.click();
 }
+function requestAdminAccess(){
+  if(demandLoading.has('admins'))return demandLoading.get('admins');
+  const task=import('./admin-menu-runtime.js').then(async()=>{
+    const panel=await window.EKODIAdminMenu?.ensureAdminAccess?.();
+    if(!panel)throw new Error('administrator access panel unavailable');
+    applyOrder();activatePanel('admins');syncTitle('admins');
+  }).catch(error=>console.error('[EKODI Admin] admins runtime activation failed',error)).finally(()=>demandLoading.delete('admins'));
+  demandLoading.set('admins',task);return task;
+}
 function requestDemand(section){
   for(const item of allNav())item.classList.toggle('active',!isInternalNav(item)&&sectionOf(item)===section);
   if(section==='cheonggye-members')return openCheonggyeMembers();
   if(section==='common-services')return import('./common-services-admin.js').then(()=>{applyOrder();activatePanel(section);syncTitle(section);});
   if(section==='communication')return import('./communication-admin.js').then(()=>{applyOrder();activatePanel(section);syncTitle(section);});
   if(section==='capabilities')return import('./capability-center-admin.js').then(()=>{applyOrder();activatePanel(section);syncTitle(section);});
+  if(section==='admins')return requestAdminAccess();
   const demandKey=DEMAND_KEYS.get(section);
   if(!demandKey||!window.EKODIAdminDemand?.activate){fallbackDemand(section);return null;}
   if(demandLoading.has(section))return demandLoading.get(section);
