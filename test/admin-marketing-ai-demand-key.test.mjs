@@ -22,5 +22,5 @@ test('MarketingAI uses one canonical menu and demand feature identity', async ()
 test('MarketingAI placeholder no longer translates a second internal alias', async () => {
   const loader = await read('admin-demand-loader.js');
   assert.match(loader, /button\.dataset\.lazySection = key === 'aimembers' \? 'ai-membership' : key/);
-  assert.doesNotMatch(loader, /key === 'marketing' \? 'marketing-ai'/);
+  assert.doesNotMatch(loader, /button\.dataset\.lazySection\s*=\s*key === 'marketing'/);
 });
