@@ -61,7 +61,7 @@
     button.className = 'nav';
     button.dataset.section = 'affiliates';
     const label = document.createElement('span');
-    label.textContent = '🛒 에코디몰 AI 영업';
+    label.textContent = '🛒 제휴마케팅';
     button.append(label);
     const policies = nav.querySelector('[data-section="policies"]');
     if (policies) nav.insertBefore(button, policies); else nav.append(button);
@@ -73,12 +73,26 @@
     panel.innerHTML = `
       <div class="section-head integration-head">
         <div>
-          <p class="kicker">EKODI MALL · AI SALES</p>
-          <h2>에코디몰 AI 영업</h2>
-          <p>상품 운영 → 몰 유입 → 상품 확인 → 제휴 클릭 → 주문·수익 연결 상태를 실제 원장 기준으로 관리합니다.</p>
+          <p class="kicker">EKODI MALL · AFFILIATE CONTROL</p>
+          <h2>제휴마케팅 계정</h2>
+          <p>계정 → 판매처 경로 → 추적·상품·가격 검증 → 추천 → 실제 성과를 하나의 운영 흐름으로 관리합니다.</p>
         </div>
         <a class="secondary compact" href="${MALL}" target="_blank" rel="noopener">에코디몰 열기 ↗</a>
       </div>
+
+      <article class="integration-provider" aria-labelledby="affiliateAccountHubTitle">
+        <div class="integration-provider-top">
+          <div class="integration-provider-brand"><span class="integration-provider-logo">8G</span><div><small>AFFILIATE ACCOUNT CONTROL PLANE</small><strong id="affiliateAccountHubTitle">제휴마케팅 계정 허브</strong><p>계정 자체와 판매처별 제휴 경로를 분리하고, 검증을 통과한 경로만 추천에 사용합니다.</p></div></div>
+          <span class="integration-status connected">중앙 권한</span>
+        </div>
+        <div class="integration-summary-grid" aria-label="제휴마케팅 계정 준비 상태">
+          <article><small>기본 계정</small><strong id="affiliateAccountReadiness">확인 중</strong></article>
+          <article><small>판매처 경로</small><strong id="affiliateRouteCount">—</strong></article>
+          <article><small>추천 가능 경로</small><strong id="affiliateRouteReadyCount">—</strong></article>
+          <article><small>추천 가드</small><strong id="affiliateGuardState">검증 전 차단</strong></article>
+        </div>
+        <div class="integration-security-note"><strong>8세대 권한 원칙</strong><span>제휴계정 원장과 비밀키는 중앙 Admin에서만 관리합니다. 고객 Mall Admin에는 허용된 운영 결과만 투영하며, 승인·추적·상품·가격 검증 전 경로는 자동으로 추천에서 차단합니다.</span></div>
+      </article>
 
       <article class="integration-provider" aria-labelledby="mallFunnelTitle">
         <div class="integration-provider-top">
@@ -126,14 +140,14 @@
         </div>
 
         <form id="affiliateAccountForm" class="integration-account-form">
-          <div class="integration-form-heading"><div><strong>에코디몰 운영 설정</strong><p>운영 이름, 기본 채널과 필수 제휴 고지 문구를 관리합니다.</p></div><span class="integration-mode" id="affiliateConnectionMode">AUTO</span></div>
+          <div class="integration-form-heading"><div><strong>제휴마케팅 계정 설정</strong><p>제휴계정 표시 이름, 기본 채널, 필수 고지와 운영 여부를 관리합니다. API 자격정보는 서버 비밀영역에서만 유지합니다.</p></div><span class="integration-mode" id="affiliateConnectionMode">AUTO</span></div>
           <div class="integration-form-grid">
             <label>연결 이름<input name="displayName" maxlength="120" placeholder="에코디비즈 쿠팡파트너스" required></label>
             <label>기본 채널<input name="defaultChannel" maxlength="120" placeholder="EKODI Mall"></label>
             <label class="integration-wide">제휴 고지 문구<textarea name="disclosureText" maxlength="1000" rows="3" placeholder="쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다."></textarea></label>
             <label class="integration-toggle"><input name="enabled" type="checkbox"> 이 연결을 에코디몰 운영에 사용</label>
           </div>
-          <div class="integration-form-actions"><button class="primary" type="submit">운영 설정 저장</button><span id="affiliateAccountUpdated"></span></div>
+          <div class="integration-form-actions"><button class="primary" type="submit">제휴계정 설정 저장</button><span id="affiliateAccountUpdated"></span></div>
         </form>
 
         <div class="integration-security-note"><strong>보안 원칙</strong><span>Access Key와 Secret Key는 브라우저나 데이터베이스에 저장하지 않고 서버의 암호화된 Worker Secret으로만 사용합니다.</span></div>
@@ -317,6 +331,14 @@
     function renderMerchantRoutes(routes = []) {
       if (!merchantRoutes) return;
       merchantRoutes.replaceChildren();
+      const readyRoutes = routes.filter(route => Boolean(route.recommendationReady));
+      const blockedRoutes = routes.length - readyRoutes.length;
+      const routeCount = document.querySelector('#affiliateRouteCount');
+      const routeReadyCount = document.querySelector('#affiliateRouteReadyCount');
+      const guardState = document.querySelector('#affiliateGuardState');
+      if (routeCount) routeCount.textContent = routes.length.toLocaleString('ko-KR');
+      if (routeReadyCount) routeReadyCount.textContent = readyRoutes.length.toLocaleString('ko-KR');
+      if (guardState) guardState.textContent = routes.length ? (blockedRoutes ? blockedRoutes.toLocaleString('ko-KR') + '개 차단' : '검증 경로만') : '미검증 차단';
       if (!routes.length) {
         const empty = document.createElement('span');
         empty.textContent = '아직 판매처 제휴 경로가 없습니다. 최저가 후보를 발견하면 직접 또는 제휴망 경로를 먼저 등록하세요.';
@@ -347,6 +369,8 @@
 
       const accounts = data.accounts || [];
       const account = accounts.find(item => item.id === ACCOUNT) || accounts[0];
+      const accountReadiness = document.querySelector('#affiliateAccountReadiness');
+      if (accountReadiness) accountReadiness.textContent = !account ? '미등록' : !account.enabled ? '중지' : automation.configured ? '연결됨' : '계정 등록됨';
       const providerSummary = document.querySelector('#affiliateProviderSummary');
       if (providerSummary) {
         const names = [...new Set(accounts.map(item => item.displayName || item.providerKey).filter(Boolean))];
@@ -387,7 +411,7 @@
     const show = async () => {
       document.querySelectorAll('[data-panel]').forEach(item => item.classList.toggle('hidden-panel', !String(item.dataset.panel || '').split(' ').includes('affiliates')));
       document.querySelectorAll('.sidebar .nav[data-section]').forEach(item => item.classList.toggle('active', item.dataset.section === 'affiliates'));
-      const title = document.querySelector('#pageTitle'); if (title) title.textContent = '에코디몰 AI 영업';
+      const title = document.querySelector('#pageTitle'); if (title) title.textContent = '제휴마케팅 계정';
       history.replaceState(null, '', '#mall-ai-sales');
       try {
         setMessage('');
@@ -434,7 +458,7 @@
           }),
         });
         accountLoaded = false;
-        setMessage('에코디몰 운영 설정을 저장했습니다.');
+        setMessage('제휴마케팅 계정 설정을 저장했습니다.');
         const updated = document.querySelector('#affiliateAccountUpdated');
         if (updated) updated.textContent = data.account?.updatedAt ? `최근 설정 ${new Date(data.account.updatedAt).toLocaleString('ko-KR')}` : '방금 저장';
         await loadOverview();
