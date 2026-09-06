@@ -528,6 +528,80 @@
       ]
     },
     {
+      "id": "insurance.claims",
+      "name": "보험청구 준비 AI",
+      "domain": "insurance",
+      "ownerAgent": "insurance",
+      "actionTier": "assist",
+      "maturity": "service-backed",
+      "description": "보험금 지급을 판정하지 않고 청구 준비자료와 공식 확인 경로를 정리한다.",
+      "surfaces": [
+        "my",
+        "workspace",
+        "dedicated"
+      ],
+      "tags": [
+        "insurance",
+        "claim",
+        "documents"
+      ]
+    },
+    {
+      "id": "insurance.handoff",
+      "name": "보험상담 연결",
+      "domain": "insurance",
+      "ownerAgent": "insurance",
+      "actionTier": "human_gate",
+      "maturity": "service-backed",
+      "description": "사용자의 명시적 요청과 동의가 있을 때만 등록된 상담 책임주체에게 최소정보를 연결한다.",
+      "surfaces": [
+        "workspace",
+        "dedicated"
+      ],
+      "tags": [
+        "insurance",
+        "handoff",
+        "consent"
+      ]
+    },
+    {
+      "id": "insurance.network",
+      "name": "보험 제휴·상품망 관리",
+      "domain": "insurance",
+      "ownerAgent": "insurance",
+      "actionTier": "human_gate",
+      "maturity": "service-backed",
+      "description": "제휴주체와 상품자료를 등록·검토하되 비교·추천 공개는 계약과 컴플라이언스 승인을 요구한다.",
+      "surfaces": [
+        "workspace",
+        "dedicated"
+      ],
+      "tags": [
+        "insurance",
+        "partner",
+        "catalog",
+        "compliance"
+      ]
+    },
+    {
+      "id": "insurance.analytics",
+      "name": "보험 운영성과 분석",
+      "domain": "insurance",
+      "ownerAgent": "insurance",
+      "actionTier": "observe",
+      "maturity": "service-backed",
+      "description": "상담 연결·진행·완료 흐름을 비식별 운영지표로 분석한다.",
+      "surfaces": [
+        "workspace",
+        "dedicated"
+      ],
+      "tags": [
+        "insurance",
+        "analytics",
+        "funnel"
+      ]
+    },
+    {
       "id": "energy.manage",
       "name": "에너지관리 AI",
       "domain": "energy",

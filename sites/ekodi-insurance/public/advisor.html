@@ -1,0 +1,65 @@
+﻿<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="보험사별 업무를 분리해 운영하는 개인 보험관리·상담 페이지">
+  <title>개인 보험상담 | EKODI Insurance</title>
+  <link rel="stylesheet" href="/advisor.css">
+  <script src="/advisor.js" defer></script>
+</head>
+<body>
+  <header class="advisor-topbar">
+    <a href="/" class="advisor-brand"><span>E</span><strong>EKODI Insurance Care</strong></a>
+    <nav><a href="#principles">상담원칙</a><a href="#process">상담과정</a><a href="#verify">모집인 확인</a><a class="cta-mini" href="#consult">상담 요청</a></nav>
+  </header>
+  <main>
+    <section class="hero">
+      <div class="hero-copy">
+        <p class="eyebrow">PERSONAL INSURANCE CARE</p>
+        <div id="profileBadge" class="profile-badge">프로필 확인 중</div>
+        <h1>보험을 권하기 전에,<br>지금 가진 보장을 함께 읽습니다.</h1>
+        <p id="profileIntro" class="lead">가입을 서두르기보다 기존 보험, 보험료 부담, 청구 준비를 먼저 정리하는 개인 상담 공간입니다.</p>
+        <div class="hero-actions"><a class="primary" href="/">내 보험 먼저 보기</a><a id="directDesignLink" class="secondary" href="#verify" target="_blank" rel="noopener noreferrer">본사 업무 안내 보기 ↗</a><a class="secondary" href="#consult">필요할 때 상담</a></div>
+        <p class="boundary">이 페이지는 보험회사 공식 홈페이지가 아닌 보험설계사 개인 안내·상담 페이지입니다. 계약 체결과 상품설명은 보험회사 공식 절차와 적법한 모집절차를 따릅니다.</p>
+      </div>
+      <aside class="advisor-card">
+        <small>YOUR ADVISOR</small>
+        <strong id="advisorName">프로필 준비 중</strong>
+        <span id="advisorRole">보험설계사 개인 상담</span>
+        <dl><div><dt>상담방향</dt><dd>기존 보장부터</dd></div><div><dt>개인정보</dt><dd>최소수집·암호화</dd></div><div><dt>상품가입</dt><dd>사람이 최종 확인</dd></div></dl>
+      </aside>
+    </section>
+
+    <section id="principles" class="section">
+      <div class="section-head"><p class="eyebrow">CARE PRINCIPLES</p><h2>상담의 세 가지 원칙</h2></div>
+      <div class="cards"><article><b>01</b><h3>먼저 정리합니다</h3><p>새 상품보다 현재 가입내역과 유지부담, 청구 필요를 먼저 살펴봅니다.</p></article><article><b>02</b><h3>모르는 것은 확인합니다</h3><p>보험금 지급, 보장 여부, 약관 해석을 AI나 개인 판단으로 확정하지 않습니다.</p></article><article><b>03</b><h3>결정은 고객에게 남깁니다</h3><p>중요한 계약 결정은 충분한 설명과 공식 절차 뒤 고객이 선택합니다.</p></article></div>
+    </section>
+
+    <section id="process" class="section soft">
+      <div class="section-head"><p class="eyebrow">CONSULTATION FLOW</p><h2>상담은 이렇게 이어집니다</h2></div>
+      <ol class="steps"><li><span>1</span><div><strong>상담 요청</strong><p>이름과 연락처, 상담 주제만 남깁니다.</p></div></li><li><span>2</span><div><strong>기존 상황 확인</strong><p>보험목록·보험료·청구 필요 등 현재 상태를 먼저 정리합니다.</p></div></li><li><span>3</span><div><strong>필요한 설명</strong><p>상품 설명이 필요한 경우 승인된 자료와 공식 정보를 기준으로 설명합니다.</p></div></li><li><span>4</span><div><strong>고객 결정</strong><p>가입·변경·해지 같은 중요한 결정은 고객이 최종 선택합니다.</p></div></li></ol>
+    </section>
+
+    <section id="verify" class="section verify">
+      <div><p class="eyebrow">VERIFIED PROFESSIONAL</p><h2>상담 전 선택한 보험사의 모집인 정보를 확인하세요</h2><p>보험사별 모집 관계와 업무는 서로 분리해 관리합니다. 아래 확인정보와 공식 조회 경로도 현재 선택한 보험사 Context에 맞춰 바뀝니다.</p></div>
+      <div class="verify-box"><strong id="registrationRef">확인정보 준비 중</strong><a id="verificationLink" href="#" target="_blank" rel="noopener noreferrer">모집종사자 공식 조회 ↗</a><a id="companyLink" href="#" target="_blank" rel="noopener noreferrer">보험사 공식 홈페이지 ↗</a></div>
+    </section>
+
+    <section id="consult" class="section consult">
+      <div class="consult-copy"><p class="eyebrow">REQUEST A CALL</p><h2>필요한 만큼만 이야기해 주세요.</h2><p>상세 병명, 주민번호, 보험증권 전체 이미지 같은 민감정보는 받지 않습니다. 상담요청 연락처는 암호화해 보관하고, 요청 철회가 가능합니다.</p></div>
+      <form id="advisorConsultForm" class="consult-form">
+        <label>이름<input name="advisorName" maxlength="60" required></label>
+        <label>연락처<input name="advisorContact" maxlength="80" required placeholder="전화번호 또는 연락 가능한 번호"></label>
+        <label>연락 희망시간<select name="preferredTime"><option>시간 관계없음</option><option>오전</option><option>오후</option><option>저녁</option></select></label>
+        <label>보험사 업무<select id="advisorCarrierSelect" name="affiliationId"><option value="">보험사 선택</option></select></label>
+        <label>상담 주제<select name="topic"><option value="COVERAGE">기존 보험·보장 점검</option><option value="PREMIUM">보험료 유지부담</option><option value="CLAIMS">보험금 청구 준비</option><option value="PRODUCT_HANDOFF">상품 설명·가입 상담</option><option value="GENERAL">기타 보험관리</option></select></label>
+        <label class="consent"><input type="checkbox" name="contactConsent" required><span><strong>상담 연락정보 처리 동의</strong><small>이름과 연락처를 상담 연결 목적으로 암호화해 저장하며, 철회 또는 보유기간 만료 시 삭제합니다.</small></span></label>
+        <button id="advisorConsultSubmit" class="primary" type="submit" disabled>프로필 확인 중</button>
+        <p id="advisorConsultStatus" class="form-status" role="status"></p>
+      </form>
+    </section>
+  </main>
+  <footer><strong>EKODI Insurance Care</strong><p id="reviewNotice">개인 설계사 안내 페이지 · 보험상품 자동추천·자동청약 기능 없음</p><a href="/#privacy">개인정보 보호센터</a></footer>
+</body>
+</html>
