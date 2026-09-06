@@ -19,4 +19,6 @@ test('Admin layout drops stale async completions instead of reopening an earlier
   assert.match(source, /await cheonggyeLoading;if\(requestedSection!=='cheonggye-members'\)return/);
   assert.match(source, /if\(requestedSection!=='common-services'\)return/);
   assert.match(source, /if\(requestedSection===section\)fallbackDemand\(section\)/);
+  assert.match(source, /if\(real&&!real\.dataset\.demandFeature\)real\.click\(\)/);
+  assert.match(source, /queueMicrotask\(\(\)=>\{if\(requestedSection===section\)activatePanel\(section\);\}\)/);
 });
