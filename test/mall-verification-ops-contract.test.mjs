@@ -37,4 +37,8 @@ test('verification operations are built and routed as a Mall operations surface'
   assert.ok(headers.includes('Cache-Control: no-store'));
   assert.ok(deploy.includes('dist/assets/verification-ops.html'));
   assert.ok(deploy.includes('/api/internal/verification/queue'));
+  assert.ok(deploy.includes('OPS_EMAILS=$(node -e'));
+  assert.ok(deploy.includes('MALL_OPERATIONS_EMAILS = "$OPS_EMAILS"'));
+  assert.ok(deploy.includes('operationsEmailAllowlistConfigured'));
+  assert.ok(deploy.includes('verification_queue_code'));
 });

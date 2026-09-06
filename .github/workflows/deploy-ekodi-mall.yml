@@ -176,6 +176,8 @@ jobs:
         env:
           DB_ID: ${{ steps.staging_d1.outputs.database_id }}
         run: |
+          OPS_EMAILS=$(node -e "const fs=require('fs');const s=fs.readFileSync('api/wrangler.toml','utf8');const m=s.match(/^MALL_OPERATIONS_EMAILS\s*=\s*\"([^\"]+)\"/m);if(!m)process.exit(2);process.stdout.write(m[1])")
+          test -n "$OPS_EMAILS"
           cat > api/wrangler.staging.runtime.toml <<EOF
           name = "ekodi-mall-api-staging"
           main = "entry.js"
@@ -189,6 +191,7 @@ jobs:
           ALLOWED_ORIGINS = "https://ekodi.kr,https://ekodi-mall.pages.dev"
           SUPABASE_URL = "https://renzehysxirjilvdxacv.supabase.co"
           SUPABASE_PUBLISHABLE_KEY = "sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_"
+          MALL_OPERATIONS_EMAILS = "$OPS_EMAILS"
           PAYMENTS_ENABLED = "false"
           SOURCING_AUTO_ORDER_ENABLED = "false"
           BUYER_PII_RELEASE_ENABLED = "false"
@@ -230,6 +233,8 @@ jobs:
               && grep -Fq '"firstTouchSchemaReady":true' /tmp/mall-stage-health.json \
               && grep -Fq '"environment":"staging"' /tmp/mall-stage-health.json \
               && grep -Fq '"version":3' /tmp/mall-stage-health.json \
+              && grep -Fq '"operationsReviewConfigured":true' /tmp/mall-stage-health.json \
+              && grep -Fq '"operationsEmailAllowlistConfigured":true' /tmp/mall-stage-health.json \
               && grep -Fq '"paymentsEnabled":false' /tmp/mall-stage-health.json \
               && grep -Fq '"payoutExecutionEnabled":false' /tmp/mall-stage-health.json \
               && grep -Fq '"direct":7' /tmp/mall-stage-fees.json \
@@ -367,12 +372,16 @@ jobs:
             health_code=$(curl -sS -o /tmp/mall-api.json -w '%{http_code}' --connect-timeout 5 --max-time 15 https://mall-api.ekodi.kr/health || true)
             fees_code=$(curl -sS -o /tmp/mall-fees.json -w '%{http_code}' --connect-timeout 5 --max-time 15 https://mall-api.ekodi.kr/api/public/fees || true)
             feed_code=$(curl -sS -o /tmp/mall-feed.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://mall-api.ekodi.kr/api/public/products?limit=1' || true)
+            verification_queue_code=$(curl -sS -o /tmp/mall-verification-unauth.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://mall-api.ekodi.kr/api/internal/verification/queue' || true)
             if [ "$health_code" = "200" ] && [ "$fees_code" = "200" ] && [ "$feed_code" = "200" ] \
               && grep -Fq '"schemaReady":true' /tmp/mall-api.json \
               && grep -Fq '"orderSchemaReady":true' /tmp/mall-api.json \
               && grep -Fq '"firstTouchSchemaReady":true' /tmp/mall-api.json \
               && grep -Fq '"environment":"production"' /tmp/mall-api.json \
               && grep -Fq '"version":3' /tmp/mall-api.json \
+              && grep -Fq '"operationsReviewConfigured":true' /tmp/mall-api.json \
+              && grep -Fq '"operationsEmailAllowlistConfigured":true' /tmp/mall-api.json \
+              && [ "$verification_queue_code" = "401" ] \
               && grep -Fq '"paymentsEnabled":false' /tmp/mall-api.json \
               && grep -Fq '"payoutExecutionEnabled":false' /tmp/mall-api.json \
               && grep -Fq '"direct":7' /tmp/mall-fees.json \
