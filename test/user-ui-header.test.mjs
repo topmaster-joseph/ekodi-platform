@@ -80,6 +80,10 @@ test('user UI header/footer/language are shared user-surface-only modules',async
   assert.match(header,/data-ekodi-header-home/);
   assert.match(header,/serviceHomeUrl/);
   assert.match(header,/bindHomeAnchor\(header\)/);
+  assert.match(header,/serviceHomeAnchor/);
+  assert.match(header,/dataset\.ekodiHomeAnchor/);
+  assert.match(header,/anchor\.setAttribute\('href',localAnchor\)/);
+  assert.match(header,/if\(serviceHomeAnchor\(\)\)return/);
   assert.match(userLanguage,/notranslate/);
   assert.match(injector,/name=\"google\" content=\"notranslate\"/);
   assert.match(userLanguage,/locale:'ne'/);
