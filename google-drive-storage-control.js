@@ -190,11 +190,12 @@ export async function refreshGoogleAccessToken(env,{refreshToken}={}) {
   if(!googleClientId(env)||!env.GOOGLE_DRIVE_CLIENT_SECRET) throw Object.assign(new Error('GOOGLE_OAUTH_BROKER_NOT_CONFIGURED'),{code:'GOOGLE_OAUTH_BROKER_NOT_CONFIGURED'});
   return tokenRequest(env,{client_id:googleClientId(env),client_secret:String(env.GOOGLE_DRIVE_CLIENT_SECRET),refresh_token:String(refreshToken||''),grant_type:'refresh_token'});
 }
-export async function startMarketingYouTubeOAuth(env,{state}={}) {
+export async function startMarketingYouTubeOAuth(env,{state,accountHint}={}) {
   if(!ready(env)) throw Object.assign(new Error('GOOGLE_OAUTH_BROKER_NOT_CONFIGURED'),{code:'GOOGLE_OAUTH_BROKER_NOT_CONFIGURED'});
   await ensureSchema(env.DB); const marketingState=String(state||'').trim(); if(!marketingState) throw new Error('MARKETING_STATE_REQUIRED');
   const signed=await signState(env,{purpose:'marketing_youtube',marketingState,exp:Date.now()+10*60*1000});
-  const params=new URLSearchParams({client_id:googleClientId(env),redirect_uri:REDIRECT_URI,response_type:'code',access_type:'offline',prompt:'consent',include_granted_scopes:'true',scope:YOUTUBE_SCOPES.join(' '),state:signed});
+  const params=new URLSearchParams({client_id:googleClientId(env),redirect_uri:REDIRECT_URI,response_type:'code',access_type:'offline',prompt:'consent select_account',include_granted_scopes:'true',scope:YOUTUBE_SCOPES.join(' '),state:signed});
+  const hint=String(accountHint||'').trim(); if(hint) params.set('login_hint',hint);
   return {authorizationUrl:`${AUTH_URL}?${params}`};
 }
 export async function consumeMarketingYouTubeTicket(env,{ticket}={}) {
