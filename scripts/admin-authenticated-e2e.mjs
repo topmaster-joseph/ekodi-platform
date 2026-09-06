@@ -259,7 +259,7 @@ async function clickMenu(id) {
 
     if (state.busy) {
       stage(`menu-${id}-loading`);
-      await page.waitForTimeout(2_000);
+      await waitForSettledPanel(id, 8_000);
       state = await menuDiagnostics(id);
       if (state.busy) throw new Error('loading indicator remained active');
     }
