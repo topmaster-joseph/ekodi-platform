@@ -60,7 +60,17 @@ async function snapshot(request,env){const body=await readJson(request);return r
 async function propose(request,env){const body=await readJson(request);return rpc(request,env,'business_os_propose_action',{
   p_workspace_key:String(body?.workspace||''),p_action_type:String(body?.actionType||''),p_title:String(body?.title||''),p_summary:body?.summary==null?null:String(body.summary),p_priority:String(body?.priority||'normal')
 })}
+async function approvals(request,env){const body=await readJson(request);return rpc(request,env,'business_os_pending_approvals',{p_workspace_key:String(body?.workspace||'')})}
 async function decide(request,env){const body=await readJson(request);return rpc(request,env,'business_os_decide_action',{p_action_id:String(body?.actionId||''),p_decision:String(body?.decision||'')})}
+async function injectApprovalClient(response){
+  const type=String(response.headers.get('content-type')||'').toLowerCase();
+  if(!type.includes('text/html')||response.status<200||response.status>=400)return response;
+  const html=await response.text();
+  const tag='<script src="/approval-center.js" defer></script>';
+  if(html.includes(tag)||!html.includes('</body>'))return new Response(html,{status:response.status,statusText:response.statusText,headers:response.headers});
+  const headers=new Headers(response.headers);headers.delete('content-length');
+  return new Response(html.replace('</body>',`${tag}</body>`),{status:response.status,statusText:response.statusText,headers});
+}
 
 export default{async fetch(request,env,ctx){
   const url=new URL(request.url);
@@ -69,6 +79,8 @@ export default{async fetch(request,env,ctx){
   if(request.method==='POST'&&url.pathname==='/api/auth/refresh')return refreshAuth(request,env);
   if(request.method==='POST'&&url.pathname==='/api/snapshot')return snapshot(request,env);
   if(request.method==='POST'&&url.pathname==='/api/propose-action')return propose(request,env);
+  if(request.method==='POST'&&url.pathname==='/api/approvals')return approvals(request,env);
   if(request.method==='POST'&&url.pathname==='/api/decide-action')return decide(request,env);
-  return injectEkodiShell(await baseWorker.fetch(request,env,ctx),'business');
+  const baseResponse=await baseWorker.fetch(request,env,ctx);
+  return injectEkodiShell(await injectApprovalClient(baseResponse),'business');
 }};
