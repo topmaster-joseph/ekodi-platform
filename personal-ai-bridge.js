@@ -1,3 +1,5 @@
+import { connectionRecoverySnapshot } from './integration-connection-supervisor.js';
+
 const DEFAULT_SUPABASE_URL = 'https://renzehysxirjilvdxacv.supabase.co';
 const DEFAULT_SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
 
@@ -31,6 +33,7 @@ export function buildPersonalAiBridgeSnapshot(identity = {}, options = {}) {
     loginProvider:text(identity.loginProvider) || null,
     forward:Object.freeze({ router:'ekodi-ai-router', automatic:true, coreFirst:true }),
     reverse:Object.freeze({ gateway:'ekodi-mcp', requiresFirstConnectionConsent:true, connected:Boolean(options.mcpConnected) }),
+    recovery:connectionRecoverySnapshot(options.recovery || {}),
   });
 }
 
@@ -92,4 +95,6 @@ export const PERSONAL_AI_BRIDGE_CONTRACT = Object.freeze({
   reverse:'ekodi-mcp',
   consumerAiConnectionRequiresConsent:true,
   consumerWebSessionNeverServerApi:true,
+  automaticSafeReconnect:true,
+  explicitDisconnectWins:true,
 });
