@@ -1,0 +1,54 @@
+name: Insurance 8G Guardrails
+
+on:
+  push:
+    paths:
+      - 'sites/ekodi-insurance/**'
+      - 'insurance-*.js'
+      - 'insurance-*.css'
+      - 'customer-entry-worker.js'
+      - 'admin-*.js'
+      - 'config/capability-registry.json'
+      - 'config/workspace-packs.json'
+      - 'test/insurance-8g.test.mjs'
+      - 'wrangler.api.toml'
+      - '.github/workflows/insurance-8g-ci.yml'
+  pull_request:
+    paths:
+      - 'sites/ekodi-insurance/**'
+      - 'insurance-*.js'
+      - 'insurance-*.css'
+      - 'customer-entry-worker.js'
+      - 'config/**'
+      - 'test/insurance-8g.test.mjs'
+      - 'wrangler.api.toml'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate Insurance source and 8G contracts
+        run: |
+          npm run validate:insurance
+          node scripts/validate-capability-registry.mjs
+          node --check insurance-control-proxy.js
+          node --check insurance-admin.js
+          node --check insurance-network-admin.js
+          node --check sites/ekodi-insurance/api/network.js
+          node --check sites/ekodi-insurance/api/worker.js
+      - name: Enforce production gates default off
+        shell: bash
+        run: |
+          grep -Fq 'INSURANCE_ADMIN_ENABLED = "false"' wrangler.api.toml
+          grep -Fq 'INSURANCE_COMPARISON_PUBLIC_ENABLED = "false"' sites/ekodi-insurance/api/wrangler.toml
+          grep -Fq "comparison_requires_approved_signed_partner" sites/ekodi-insurance/api/network.js
+          grep -Fq "mode:'reference-only'" sites/ekodi-insurance/api/network.js
+          ! grep -R -E 'persistentPolicyLedger:[[:space:]]*true|persistentClaimLedger:[[:space:]]*true' sites/ekodi-insurance

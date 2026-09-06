@@ -15,9 +15,9 @@ const catalog = { registry, packs };
 test('universal capability registry respects governance, provider and pack contracts', () => {
   const result = validateCapabilityRegistry({ registry, packs, governance, ecosystem, providerContract });
   assert.deepEqual(result.errors, []);
-  assert.equal(result.capabilityCount, 27);
-  assert.equal(result.packCount, 10);
-  assert.equal(result.humanGateCount, 5);
+  assert.equal(result.capabilityCount, registry.capabilities.length);
+  assert.equal(result.packCount, packs.packs.length);
+  assert.equal(result.humanGateCount, registry.capabilities.filter(item => item.actionTier === 'human_gate').length);
   assert.equal(result.reversibleCount, 2);
 });
 

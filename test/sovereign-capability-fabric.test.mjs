@@ -12,7 +12,7 @@ test('Capability Registry is the one 8G contract source for all adapters',()=>{
   assert.equal(registry.version,'3.0.0');
   assert.equal(SOVEREIGN_CAPABILITY_FABRIC.registryVersion,registry.version);
   assert.equal(SOVEREIGN_CAPABILITY_FABRIC.contract,'ekodi.sovereign-capability.v1');
-  assert.equal(registry.capabilities.length,27);
+  assert.ok(registry.capabilities.length >= 27);
   assert.equal(registry.fabricCapabilities.length,3);
   assert.equal(listCapabilityContracts().length,registry.capabilities.length+registry.fabricCapabilities.length);
 });

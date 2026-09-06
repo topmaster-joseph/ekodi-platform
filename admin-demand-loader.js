@@ -68,6 +68,7 @@
     books: { label:'출판 · 도서', icon:'B', styles:['books-admin.css'], scripts:['books-admin.js'], secondaryStyles:['books-finance-admin.css'], secondaryScripts:['books-finance-admin.js'], real:'[data-section="books"]', hashes:['#books'] },
     social: { label:'소셜', icon:'S', styles:['social-admin.css'], scripts:['social-admin.js'], real:'[data-section="social"]', hashes:['#social'] },
     affiliates: { label:'제휴마케팅', icon:'A', styles:['marketing-funnel-admin.css'], scripts:['marketing-funnel-admin.js'], real:'[data-section="affiliates"]', hashes:['#affiliates'] },
+    insurance:{scripts:['insurance-admin.js'],real:'[data-section=insurance]'},
     marketing: {
       label: 'MarketingAI', icon: 'AI',
       styles: ['marketing-ai-admin.css'],
