@@ -211,12 +211,20 @@ jobs:
               *ekodi-development.workers.dev*) ;;
               *) echo "::error::Endpoint escaped development account boundary: $url"; exit 1 ;;
             esac
-            code="$(curl --silent --show-error --output /tmp/ekodi-body --write-out '%{http_code}' --max-time 20 "$url/")"
-            if [ "$code" != "200" ]; then
-              echo "::error::$url returned HTTP $code"
-              failures=$((failures+1))
+            host="${url#https://}"
+            host="${host%%/*}"
+            headers="$(mktemp)"
+            code="$(curl --silent --show-error --dump-header "$headers" --output /dev/null --write-out '%{http_code}' --max-time 20 "$url/")"
+            location="$(awk 'BEGIN{IGNORECASE=1} /^location:/ {sub(/\r$/," "); sub(/^[^:]*:[[:space:]]*/,""); print; exit}' "$headers")"
+            location="${location% }"
+            rm -f "$headers"
+            if [ "$code" = "200" ]; then
+              echo "OK 200 $url"
+            elif [ "$code" = "302" ] && [[ "$location" == https://*.cloudflareaccess.com/cdn-cgi/access/login/* ]] && [[ "$location" == *"$host"* ]]; then
+              echo "OK 302 Access-protected $url"
             else
-              echo "OK $code $url"
+              echo "::error::$url returned HTTP $code with unexpected redirect: $location"
+              failures=$((failures+1))
             fi
           done
           test "$failures" -eq 0
@@ -226,7 +234,22 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          body="$(curl --fail --silent --show-error --max-time 20 https://ekodi-platform-development.ekodi-development.workers.dev/)"
-          test -n "$body"
-          printf '%s' "$body" | grep -qi '<html'
-          echo "Primary development HTML verification passed."
+          target="https://ekodi-platform-development.ekodi-development.workers.dev/"
+          headers="$(mktemp)"
+          body="$(mktemp)"
+          trap 'rm -f "$headers" "$body"' EXIT
+          code="$(curl --silent --show-error --dump-header "$headers" --output "$body" --write-out '%{http_code}' --max-time 20 "$target")"
+          if [ "$code" = "200" ]; then
+            test -s "$body"
+            grep -qi '<html' "$body"
+            echo "Primary development HTML verification passed."
+            exit 0
+          fi
+          location="$(awk 'BEGIN{IGNORECASE=1} /^location:/ {sub(/\r$/," "); sub(/^[^:]*:[[:space:]]*/,""); print; exit}' "$headers")"
+          location="${location% }"
+          if [ "$code" = "302" ] && [[ "$location" == https://*.cloudflareaccess.com/cdn-cgi/access/login/* ]] && [[ "$location" == *"ekodi-platform-development.ekodi-development.workers.dev"* ]]; then
+            echo "Primary development endpoint is online behind Cloudflare Access."
+            exit 0
+          fi
+          echo "::error::Primary development endpoint returned HTTP $code with unexpected redirect: $location"
+          exit 1
