@@ -201,7 +201,8 @@ async function startYouTube(request, env, identity, subject) {
   if (!youtubeConfigured(env)) return json(request,env,{error:'GOOGLE_APP_NOT_CONFIGURED',setup:'Google OAuth broker + encrypted Marketing vault'},503);
   const body = await readJson(request) || {};
   const state = await createOAuthState(env,YOUTUBE_PROVIDER,'publish',identity,subject,body.returnUrl);
-  const broker=await env.GOOGLE_OAUTH_BROKER.startYouTubeOAuth({state});
+  const accountHint = subject.type === 'tenant' && subject.key === 'ekodibiz' ? 'ekodibiz@gmail.com' : '';
+  const broker=await env.GOOGLE_OAUTH_BROKER.startYouTubeOAuth({state,accountHint});
   return json(request,env,{authorizationUrl:String(broker.authorizationUrl||''),provider:'youtube',mode:'publish'});
 }
 async function fetchJson(url, init = {}) {
