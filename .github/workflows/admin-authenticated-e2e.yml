@@ -9,6 +9,7 @@ on:
       - 'marketing-funnel-admin.js'
       - 'scripts/admin-authenticated-e2e.mjs'
       - 'scripts/admin-authenticated-e2e-retry.mjs'
+      - 'scripts/admin-authenticated-e2e-menu-worker.mjs'
       - '.github/workflows/admin-authenticated-e2e.yml'
 
 permissions:
