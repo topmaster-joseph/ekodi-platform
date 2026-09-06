@@ -68,7 +68,7 @@
     books: { label:'출판 · 도서', icon:'B', styles:['books-admin.css'], scripts:['books-admin.js'], secondaryStyles:['books-finance-admin.css'], secondaryScripts:['books-finance-admin.js'], real:'[data-section="books"]', hashes:['#books'] },
     social: { label:'소셜', icon:'S', styles:['social-admin.css'], scripts:['social-admin.js'], real:'[data-section="social"]', hashes:['#social'] },
     affiliates: { label:'제휴', icon:'A', styles:['marketing-funnel-admin.css'], scripts:['marketing-funnel-admin.js'], real:'[data-section="affiliates"]', hashes:['#affiliates'] },
-    marketing: {
+    'marketing-ai': {
       label: 'MarketingAI', icon: 'AI',
       styles: ['marketing-ai-admin.css'],
       scripts: ['marketing-ai-admin.js'],
@@ -277,7 +277,7 @@
       button = document.createElement('button');
       button.type = 'button';
       button.className = 'nav';
-      button.dataset.lazySection = key === 'marketing' ? 'marketing-ai' : key === 'aimembers' ? 'ai-membership' : key;
+      button.dataset.lazySection = key === 'aimembers' ? 'ai-membership' : key;
       button.append(document.createTextNode(`${feature.icon} `));
       const label = document.createElement('span');
       label.textContent = feature.label;
@@ -346,7 +346,10 @@
   });
 
   window.EKODIAdminDemand = Object.freeze({
-    activate: key => activateFeature(key, nav?.querySelector(`[data-demand-feature="${key}"]`), false),
+    activate: key => {
+      const canonical = key === 'marketing' ? 'marketing-ai' : key;
+      return activateFeature(canonical, nav?.querySelector(`[data-demand-feature="${canonical}"]`), false);
+    },
     loadScript,
     loadStyle,
   });
