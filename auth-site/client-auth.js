@@ -39,6 +39,8 @@ const realms={
 const params=new URLSearchParams(location.search);
 const site=params.get('site')||'portal';
 const DIRECT_LOGIN=params.get('direct')==='1'&&params.get('manage')!=='1'&&params.get('review')!=='1';
+const EXPECTED_ACCOUNT=/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(String(params.get('expected_account')||'').trim())?String(params.get('expected_account')).trim().toLowerCase():'';
+const FORCE_ACCOUNT=params.get('force_account')==='1'&&Boolean(EXPECTED_ACCOUNT);
 const requestedWorkspaceRaw=String(params.get('workspace')||'').trim();
 const REQUESTED_WORKSPACE=requestedWorkspaceRaw.length<=180&&WORKSPACE_KEY_RE.test(requestedWorkspaceRaw)?requestedWorkspaceRaw:'';
 async function manifestRealm(id){
@@ -222,7 +224,8 @@ async function renderGoogle(){
   $('serviceBadge').textContent='로그인';notice('Google 계정으로 계속해 주세요.');
   try{
     const [challenge]=await Promise.all([identity('/challenge',{method:'POST'}),loadGoogleLibrary()]);
-    window.google.accounts.id.initialize({client_id:challenge.clientId,nonce:challenge.nonce,auto_select:false,use_fedcm_for_button:true,button_auto_select:false,callback:r=>void handleCredential(r,challenge)});
+    window.google.accounts.id.disableAutoSelect?.();
+    window.google.accounts.id.initialize({client_id:challenge.clientId,nonce:challenge.nonce,auto_select:false,use_fedcm_for_button:false,button_auto_select:false,ux_mode:'popup',context:'signin',...(EXPECTED_ACCOUNT?{login_hint:EXPECTED_ACCOUNT}:{}),callback:r=>void handleCredential(r,challenge)});
     window.google.accounts.id.renderButton(host,{type:'standard',theme:'outline',size:'large',text:'continue_with',shape:'rectangular',logo_alignment:'left',width:Math.min(390,Math.max(260,host.clientWidth||340)),use_fedcm_for_button:true});
     if(DIRECT_LOGIN){
       notice('Google 계정 선택창을 여는 중입니다.');
@@ -242,6 +245,7 @@ async function prepare(){
   let existing=null;
   try{existing=await session()}catch(error){console.warn('central session bootstrap',error)}
   if(existing){
+    if(FORCE_ACCOUNT&&String(existing.user?.email||'').trim().toLowerCase()!==EXPECTED_ACCOUNT){await clearStaleSession();await renderGoogle();return}
     if(await handoffExistingSession(existing))return;
     if(recoverableStaleSession(lastHandoffError)){
       $('serviceBadge').textContent='복구 중';
