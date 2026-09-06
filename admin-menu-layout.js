@@ -147,11 +147,9 @@ function requestDemand(section){
   const task=Promise.resolve(window.EKODIAdminDemand.activate(demandKey)).then(()=>{
     if(requestedSection!==section)return;
     applyOrder();
-    if(!activatePanel(section)){
-      const real=navItemFor(section);
-      if(real&&!real.dataset.demandFeature)real.click();
-      queueMicrotask(()=>activatePanel(section));
-    }
+    const real=navItemFor(section);
+    if(real&&!real.dataset.demandFeature)real.click();
+    queueMicrotask(()=>{if(requestedSection===section)activatePanel(section);});
   }).catch(error=>{
     console.error(`[EKODI Admin] ${section} demand activation failed`,error);
     if(requestedSection===section)fallbackDemand(section);
