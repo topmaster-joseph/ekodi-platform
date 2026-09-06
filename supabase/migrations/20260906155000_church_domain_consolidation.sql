@@ -114,8 +114,28 @@ begin
   return new;
 end;
 $$;
-
 revoke all on function church_private.touch_updated_at() from public, anon, authenticated;
+
+create or replace function church_private.has_admin_access(p_tenant uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public, pg_catalog
+as $$
+  select
+    coalesce((select p.platform_admin from public.profiles p where p.user_id = auth.uid()), false)
+    or exists (
+      select 1
+      from public.tenant_members tm
+      where tm.tenant_id = p_tenant
+        and tm.user_id = auth.uid()
+        and tm.status = 'active'
+        and tm.role = 'tenant_admin'
+    )
+$$;
+revoke all on function church_private.has_admin_access(uuid) from public, anon;
+grant execute on function church_private.has_admin_access(uuid) to authenticated;
 
 create trigger church_staff_touch_updated_at before update on church.staff
 for each row execute function church_private.touch_updated_at();
@@ -138,29 +158,29 @@ alter table church_private.audit_logs enable row level security;
 create policy church_staff_read on church.staff for select to authenticated
 using (public.has_tenant_access(tenant_id));
 create policy church_staff_admin_write on church.staff for all to authenticated
-using (public.has_tenant_admin_access(tenant_id))
-with check (public.has_tenant_admin_access(tenant_id));
+using (church_private.has_admin_access(tenant_id))
+with check (church_private.has_admin_access(tenant_id));
 
 create policy church_services_read on church.services for select to authenticated
 using (public.has_tenant_access(tenant_id));
 create policy church_services_admin_write on church.services for all to authenticated
-using (public.has_tenant_admin_access(tenant_id))
-with check (public.has_tenant_admin_access(tenant_id));
+using (church_private.has_admin_access(tenant_id))
+with check (church_private.has_admin_access(tenant_id));
 
 create policy church_events_read on church.events for select to authenticated
 using (public.has_tenant_access(tenant_id));
 create policy church_events_admin_write on church.events for all to authenticated
-using (public.has_tenant_admin_access(tenant_id))
-with check (public.has_tenant_admin_access(tenant_id));
+using (church_private.has_admin_access(tenant_id))
+with check (church_private.has_admin_access(tenant_id));
 
 create policy church_members_admin_only on church_private.members for all to authenticated
-using (public.has_tenant_admin_access(tenant_id))
-with check (public.has_tenant_admin_access(tenant_id));
+using (church_private.has_admin_access(tenant_id))
+with check (church_private.has_admin_access(tenant_id));
 create policy church_care_admin_only on church_private.care_tasks for all to authenticated
-using (public.has_tenant_admin_access(tenant_id))
-with check (public.has_tenant_admin_access(tenant_id));
+using (church_private.has_admin_access(tenant_id))
+with check (church_private.has_admin_access(tenant_id));
 create policy church_audit_admin_read on church_private.audit_logs for select to authenticated
-using (public.has_tenant_admin_access(tenant_id));
+using (church_private.has_admin_access(tenant_id));
 
 grant select, insert, update, delete on church.staff, church.services, church.events to authenticated;
 grant select, insert, update, delete on church_private.members, church_private.care_tasks to authenticated;
