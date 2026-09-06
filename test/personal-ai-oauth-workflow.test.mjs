@@ -10,6 +10,10 @@ test('production OAuth is bounded and dynamic client registration is not default
   assert.match(workflow,/oauth_server_allow_dynamic_registration\\?":false|oauth_server_allow_dynamic_registration":false/);
   assert.match(workflow,/oauth_server_authorization_path\\?":\\?"\/oauth\/consent/);
   assert.match(workflow,/ekodi_mcp_access_token_hook/);
+  assert.match(workflow,/cron: '17 \* \* \* \*'/);
+  assert.match(workflow,/Probe current OAuth server state/);
+  assert.match(workflow,/OAUTH_STATE=bootstrap_required/);
+  assert.match(workflow,/Automatic hourly recovery is armed/);
 });
 
 test('MCP adapter targets the current stateless protocol while retaining legacy compatibility',()=>{

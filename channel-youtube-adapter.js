@@ -1,3 +1,5 @@
+import { superviseConnection } from './integration-connection-supervisor.js';
+
 const AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth';
 const TOKEN_URL = 'https://oauth2.googleapis.com/token';
 const API = 'https://www.googleapis.com/youtube/v3';
@@ -31,14 +33,28 @@ async function tokenRequest(fields) {
   Object.entries(fields).forEach(([key,value]) => body.set(key, String(value)));
   const response = await fetch(TOKEN_URL, { method:'POST', headers:{'content-type':'application/x-www-form-urlencoded'}, body });
   const data = await response.json().catch(() => ({}));
-  if (!response.ok || data.error) throw Object.assign(new Error(data.error_description || data.error || `YOUTUBE_TOKEN_${response.status}`), { code:'YOUTUBE_TOKEN_ERROR', status:response.status });
+  if (!response.ok || data.error) throw Object.assign(new Error(data.error_description || data.error || `YOUTUBE_TOKEN_${response.status}`), { code:'YOUTUBE_TOKEN_ERROR', providerCode:String(data.error || ''), status:response.status, retryAfter:response.headers.get('retry-after') || '' });
   return data;
 }
 export function exchangeYoutubeCode(env, code) {
   return tokenRequest({ code, client_id:clientId(env), client_secret:clientSecret(env), redirect_uri:redirectUri(env), grant_type:'authorization_code' });
 }
-export function refreshYoutubeAccessToken(env, refreshToken) {
-  return tokenRequest({ refresh_token:refreshToken, client_id:clientId(env), client_secret:clientSecret(env), grant_type:'refresh_token' });
+export async function refreshYoutubeAccessToken(env, refreshToken) {
+  let token;
+  const recovery = await superviseConnection({
+    probe:async () => {
+      token = await tokenRequest({ refresh_token:refreshToken, client_id:clientId(env), client_secret:clientSecret(env), grant_type:'refresh_token' });
+      return { ok:true, status:200 };
+    },
+    maxAttempts:3,
+    delaysMs:[100, 500, 1500],
+  });
+  if (recovery.ok) return token;
+  const reauth = recovery.state === 'reauth_required' || recovery.state === 'permission_required';
+  throw Object.assign(new Error(reauth ? 'CHANNEL_CONNECTION_RECONNECT_REQUIRED' : 'YOUTUBE_TOKEN_RECOVERY_FAILED'), {
+    code:reauth ? 'CHANNEL_CONNECTION_RECONNECT_REQUIRED' : 'YOUTUBE_TOKEN_RECOVERY_FAILED',
+    recoveryState:recovery.state,
+  });
 }
 export async function listYoutubeChannels(accessToken) {
   const response = await fetch(`${API}/channels?part=id,snippet&mine=true&maxResults=50`, { headers:{authorization:`Bearer ${accessToken}`} });

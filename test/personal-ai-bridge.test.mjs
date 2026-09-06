@@ -22,6 +22,8 @@ test('bridge snapshot keeps AI router automatic and MCP consent explicit',()=>{
   assert.equal(bridge.forward.coreFirst,true);
   assert.equal(bridge.reverse.gateway,'ekodi-mcp');
   assert.equal(bridge.reverse.requiresFirstConnectionConsent,true);
+  assert.equal(bridge.recovery.policy.automatic,true);
+  assert.equal(bridge.recovery.policy.explicitDisconnectWins,true);
 });
 test('canonical identity resolver projects Supabase login onto EKODI Person',async()=>{
   const identity=await resolveCanonicalEkodiIdentity({
