@@ -1,3 +1,4 @@
+import CAPABILITY_REGISTRY from './config/capability-registry.json' with { type: 'json' };
 import { AI_MISSION_RUNTIME, getRuntimeAgentPolicy } from './ai-governance-runtime.js';
 import { SOVEREIGN_AUTONOMY_POLICY } from './sovereign-autonomy-runtime.js';
 
@@ -49,6 +50,11 @@ const TIER_RISK = freeze({
   forbidden: 4,
 });
 
+const CAPABILITY_ENTRIES = freezeList([
+  ...(Array.isArray(CAPABILITY_REGISTRY.capabilities) ? CAPABILITY_REGISTRY.capabilities : []),
+  ...(Array.isArray(CAPABILITY_REGISTRY.fabricCapabilities) ? CAPABILITY_REGISTRY.fabricCapabilities : []),
+]);
+const CAPABILITY_BY_ID = new Map(CAPABILITY_ENTRIES.map(entry => [clean(entry?.id), entry]).filter(([id]) => id));
 const APPROVED_STATUSES = new Set(['approved_pending_executor', 'ready_for_executor', 'executing', 'verified']);
 const CRITICAL_AREAS = new Set([
   ...AI_MISSION_RUNTIME.humanGateAreas,
@@ -72,7 +78,7 @@ export const EKODIAN_8G_POLICY = freeze({
   finalHumanAuthority: SOVEREIGN_AUTONOMY_POLICY.finalHumanAuthority,
   capabilityRegistry: 'config/capability-registry.json',
   capabilityRegistryEnforcement: 'explicit_capabilities_must_be_registered',
-  capabilityProviderContract: 'governance/architecture/capability-provider-contract.v1.json',
+  capabilityProviderContract: clean(CAPABILITY_REGISTRY.providerContract) || 'governance/architecture/capability-provider-contract.v1.json',
   remoteExecutionAuthority: 'device-control',
   actionLog: 'ai_agent_actions',
   invariants: freezeList([
@@ -101,14 +107,36 @@ function payloadOf(input = {}) {
   return input.payload && typeof input.payload === 'object' && !Array.isArray(input.payload) ? input.payload : {};
 }
 
-export function resolveEkodianCapability(input = {}) {
+function explicitCapabilityId(input = {}) {
   const payload = payloadOf(input);
-  const explicit = clean(input.capabilityId || input.capability_id || payload.capabilityId || payload.capability_id);
+  return clean(input.capabilityId || input.capability_id || payload.capabilityId || payload.capability_id);
+}
+
+export function resolveEkodianCapability(input = {}) {
+  const explicit = explicitCapabilityId(input);
   if (explicit) return explicit;
   const actionType = clean(input.actionType || input.action_type);
   if (ACTION_CAPABILITY_MAP[actionType]) return ACTION_CAPABILITY_MAP[actionType];
   const area = clean(input.area);
   return AREA_CAPABILITY_MAP[area] || '';
+}
+
+export function getEkodianCapabilityEntry(input = {}) {
+  const capabilityId = typeof input === 'string' ? clean(input) : resolveEkodianCapability(input);
+  return CAPABILITY_BY_ID.get(capabilityId) || null;
+}
+
+export function validateEkodianCapabilityInput(input = {}) {
+  const explicit = explicitCapabilityId(input);
+  if (!explicit) return freeze({ ok: true, explicit: false, capabilityId: resolveEkodianCapability(input) || null, registered: Boolean(getEkodianCapabilityEntry(input)) });
+  const entry = CAPABILITY_BY_ID.get(explicit) || null;
+  return freeze({
+    ok: Boolean(entry),
+    explicit: true,
+    capabilityId: explicit,
+    registered: Boolean(entry),
+    code: entry ? null : 'CAPABILITY_NOT_REGISTERED',
+  });
 }
 
 export function resolveEkodianState(input = {}) {
@@ -153,8 +181,8 @@ export function resolveEkodianApproval(input = {}) {
 
 function capabilityEntryOf(input = {}) {
   const candidate = input.capabilityEntry;
-  if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate)) return null;
-  return candidate;
+  if (candidate && typeof candidate === 'object' && !Array.isArray(candidate)) return candidate;
+  return getEkodianCapabilityEntry(input);
 }
 
 function tierIsCompliant(registryTier, decisionTier) {
@@ -237,7 +265,7 @@ export function resolveEkodianGovernance(input = {}) {
     capability: freeze({
       id: capabilityId || null,
       registered,
-      registryVersion: clean(input.capabilityRegistryVersion) || null,
+      registryVersion: clean(input.capabilityRegistryVersion) || clean(CAPABILITY_REGISTRY.version) || null,
       domain: registered ? clean(entry.domain) || null : null,
       maturity: registered ? clean(entry.maturity) || null : null,
       ownerAgent: ownerAgent || null,
@@ -330,6 +358,8 @@ export function decorateEkodianActionRecord(record = {}) {
 }
 
 export function getEkodian8GSummary(extra = {}) {
+  const capabilities = Array.isArray(CAPABILITY_REGISTRY.capabilities) ? CAPABILITY_REGISTRY.capabilities : [];
+  const fabricCapabilities = Array.isArray(CAPABILITY_REGISTRY.fabricCapabilities) ? CAPABILITY_REGISTRY.fabricCapabilities : [];
   return freeze({
     version: EKODIAN_8G_POLICY.version,
     generation: EKODIAN_8G_POLICY.generation,
@@ -342,6 +372,18 @@ export function getEkodian8GSummary(extra = {}) {
     capabilityRegistry: EKODIAN_8G_POLICY.capabilityRegistry,
     capabilityRegistryEnforcement: EKODIAN_8G_POLICY.capabilityRegistryEnforcement,
     capabilityProviderContract: EKODIAN_8G_POLICY.capabilityProviderContract,
+    capabilityGovernance: freeze({
+      registryName: clean(CAPABILITY_REGISTRY.name) || null,
+      registryVersion: clean(CAPABILITY_REGISTRY.version) || null,
+      capabilityTargetGeneration: CAPABILITY_REGISTRY.generation?.capabilityTarget ?? null,
+      northStarGeneration: CAPABILITY_REGISTRY.generation?.northStar ?? null,
+      registeredCapabilities: capabilities.length,
+      fabricCapabilities: fabricCapabilities.length,
+      humanGatedCapabilities: capabilities.filter(item => item?.actionTier === 'human_gate').length,
+      reversibleCapabilities: capabilities.filter(item => item?.actionTier === 'execute_reversible').length,
+      unknownCapabilityBehavior: CAPABILITY_REGISTRY.intentPolicy?.unknownCapabilityBehavior || null,
+      modelMayInventCapabilities: CAPABILITY_REGISTRY.intentPolicy?.modelMayInventCapabilities ?? null,
+    }),
     remoteExecutionAuthority: EKODIAN_8G_POLICY.remoteExecutionAuthority,
     actionLog: EKODIAN_8G_POLICY.actionLog,
     invariants: EKODIAN_8G_POLICY.invariants,
