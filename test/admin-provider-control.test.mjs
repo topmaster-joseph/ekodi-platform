@@ -23,6 +23,13 @@ test('production secret writes remain gated and values are not exposed by this c
   assert.equal(source.includes('localStorage.setItem'), false);
 });
 
+test('provider observer installs only missing targets and cannot self-render recursively', () => {
+  assert.ok(source.includes('function renderMissingTargets()'));
+  assert.ok(source.includes('if(!inventory)return'));
+  assert.ok(source.includes("aiOps&&!aiOps.querySelector('[data-ekodi-unified-provider]')"));
+  assert.doesNotMatch(source, /MutationObserver\(\(\)=>\{if\(inventory\)renderAll\(\)\}\)/);
+});
+
 test('build bundles provider control behind existing lazy AI Ops and Security assets', () => {
   assert.ok(build.includes("readFile(`${root}admin-provider-control.js`, 'utf8')"));
   assert.ok(build.includes('Unified provider control marker missing'));
