@@ -3,7 +3,7 @@
 if(window.__EKODI_USER_CHARACTER_BOOTED)return;
 window.__EKODI_USER_CHARACTER_BOOTED=true;
 
-const VERSION=3;
+const VERSION=4;
 const STYLE_ID='ekodi-user-character-style';
 const REGISTRY_ATTR='data-ekodi-character-registry';
 const REGISTRY_ASSET='character-registry.js';
@@ -11,6 +11,7 @@ const USER_SURFACES=new Set(['public','workspace']);
 const DISABLED_MODES=new Set(['off','hidden','none']);
 const CHARACTER_ATTR='data-ekodi-user-character';
 const FALLBACK_RESTRAINT=new Set(['payment','personal_data','security','complex_admin','focus_heavy']);
+let operationSnapshot=null;
 const FALLBACK_PROFILES=Object.freeze({
   church:{pose:'welcome',prop:'book',label:'함께 말씀을 나누는 에코디언'},
   community:{pose:'welcome',prop:'heart',label:'이웃을 잇는 에코디언'},
@@ -64,7 +65,10 @@ function isLanding(){
   return parts.length===0;
 }
 function profile(){return profiles()[serviceId()]||FALLBACK_PROFILES[serviceId()]||{pose:'welcome',prop:'heart',label:'함께하는 에코디언'};}
+function operationCharacter(){return operationSnapshot?.character&&typeof operationSnapshot.character==='object'?operationSnapshot.character:null;}
 function experienceState(){
+  const operationState=String(operationCharacter()?.state||'').trim().toLowerCase();
+  if(operationState&&registry()?.experienceStates?.[operationState])return operationState;
   const requested=String(document.documentElement.dataset.ekodiCharacterState||document.body?.dataset?.ekodiCharacterState||'welcome').trim().toLowerCase();
   const active=registry();
   if(active?.experienceStates?.[requested])return requested;
@@ -76,7 +80,8 @@ function isRestrainedContext(){
   const configured=registry()?.restraint?.minimize;
   return Array.isArray(configured)?configured.includes(value):FALLBACK_RESTRAINT.has(value);
 }
-function eligible(){return USER_SURFACES.has(surface())&&!DISABLED_MODES.has(mode())&&isLanding()&&!isRestrainedContext();}
+function operationHidden(){return Number(operationCharacter()?.presence?.level)===0;}
+function eligible(){return USER_SURFACES.has(surface())&&!DISABLED_MODES.has(mode())&&isLanding()&&!isRestrainedContext()&&!operationHidden();}
 function propSvg(prop){
   if(prop==='book')return '<g transform="translate(103 92)"><path d="M-24 0c12-5 20-3 24 2v26c-7-5-15-6-24-3Z"/><path d="M24 0C12-5 3-3 0 2v26c7-5 15-6 24-3Z"/></g>';
   if(prop==='cup')return '<g transform="translate(109 96)"><path d="M-18-7h28v25h-28Z"/><path d="M10-2h7c10 0 10 15 0 15h-7" fill="none"/></g>';
@@ -110,9 +115,10 @@ function mount(){
   if(!eligible()||!document.body)return null;
   const host=heroTarget();if(!host)return null;
   installStyle();host.classList.add('ekodi-main-ekodian-host');
-  const selected=profile();const node=document.createElement('aside');node.className='ekodi-main-ekodian';node.setAttribute(CHARACTER_ATTR,`v${VERSION}`);node.dataset.ekodiCharacterVariant=String(document.documentElement.dataset.ekodiCharacterProfile||'auto');node.dataset.ekodiCharacterState=experienceState();node.setAttribute('aria-label',selected.label);node.innerHTML=svg(selected);host.append(node);
+  const selected=profile();const operation=operationCharacter();const node=document.createElement('aside');node.className='ekodi-main-ekodian';node.setAttribute(CHARACTER_ATTR,`v${VERSION}`);node.dataset.ekodiCharacterVariant=String(document.documentElement.dataset.ekodiCharacterProfile||'auto');node.dataset.ekodiCharacterState=experienceState();node.dataset.ekodiCharacterRole=String(operation?.role||'guide');node.dataset.ekodiCharacterGeneration=String(operationSnapshot?.generation||registry()?.system?.generation||8);node.dataset.ekodiCharacterPresence=String(operation?.presence?.token||'supporting');node.setAttribute('aria-label',selected.label);node.innerHTML=svg(selected);host.append(node);
   document.documentElement.dataset.ekodiUserCharacter=`v${VERSION}`;
-  window.dispatchEvent(new CustomEvent('ekodi:user-character-ready',{detail:{version:VERSION,registryVersion:registry()?.schemaVersion||0,service:serviceId(),profile:selected.prop,state:experienceState()}}));
+  document.documentElement.dataset.ekodiCharacterGeneration=String(operationSnapshot?.generation||registry()?.system?.generation||8);
+  window.dispatchEvent(new CustomEvent('ekodi:user-character-ready',{detail:{version:VERSION,registryVersion:registry()?.schemaVersion||0,generation:Number(document.documentElement.dataset.ekodiCharacterGeneration||8),service:serviceId(),profile:selected.prop,state:experienceState(),role:node.dataset.ekodiCharacterRole}}));
   return node;
 }
 function refresh(force=false){
@@ -122,8 +128,28 @@ function refresh(force=false){
   if(!eligible()){current?.remove();return null;}
   const variant=String(document.documentElement.dataset.ekodiCharacterProfile||'auto');
   const state=experienceState();
-  if(current&&(current.dataset.ekodiCharacterVariant!==variant||current.dataset.ekodiCharacterState!==state)){current.remove();return mount();}
+  const role=String(operationCharacter()?.role||'guide');
+  if(current&&(current.dataset.ekodiCharacterVariant!==variant||current.dataset.ekodiCharacterState!==state||current.dataset.ekodiCharacterRole!==role)){current.remove();return mount();}
   return current||mount();
+}
+function applyOperation(snapshot){
+  const value=snapshot?.ekodian&&typeof snapshot.ekodian==='object'?snapshot.ekodian:snapshot;
+  if(!value||typeof value!=='object')return false;
+  if(value.contract&&value.contract!=='ekodi.ekodian-operation.v1')return false;
+  if(value.generation&&Number(value.generation)!==8)return false;
+  operationSnapshot=value;
+  const character=operationCharacter();
+  document.documentElement.dataset.ekodiCharacterState=String(character?.state||'calm');
+  document.documentElement.dataset.ekodiCharacterRole=String(character?.role||'guide');
+  document.documentElement.dataset.ekodiCharacterGeneration='8';
+  refresh(true);
+  window.dispatchEvent(new CustomEvent('ekodi:user-character-operation-applied',{detail:{generation:8,state:character?.state||'calm',role:character?.role||'guide',presence:character?.presence||null}}));
+  return true;
+}
+function clearOperation(){
+  operationSnapshot=null;
+  delete document.documentElement.dataset.ekodiCharacterRole;
+  refresh(true);
 }
 function registryUrl(){
   try{const src=document.currentScript?.src;if(src)return new URL(REGISTRY_ASSET,src).href;}catch{}
@@ -136,7 +162,11 @@ function ensureRegistry(){
 
 window.EKODIUserCharacter=Object.freeze({
   version:VERSION,
+  generation:8,
   refresh,
+  applyOperation,
+  clearOperation,
+  operation:()=>operationSnapshot,
   profile:()=>({...profile()}),
   state:()=>experienceState(),
   registry:()=>registry()
@@ -145,5 +175,6 @@ const boot=()=>{ensureRegistry();setTimeout(refresh,0);setTimeout(refresh,600)};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 window.addEventListener('ekodi:surface-change',refresh);
 window.addEventListener('ekodi:design-profile-ready',refresh);
-window.addEventListener('ekodi:character-registry-ready',()=>{document.documentElement.dataset.ekodiCharacterRegistry=`v${registry()?.schemaVersion||1}`;refresh(true);});
+window.addEventListener('ekodi:agent-state',event=>applyOperation(event?.detail||null));
+window.addEventListener('ekodi:character-registry-ready',()=>{document.documentElement.dataset.ekodiCharacterRegistry=`v${registry()?.schemaVersion||1}`;document.documentElement.dataset.ekodiCharacterGeneration=String(registry()?.system?.generation||8);refresh(true);});
 })();
