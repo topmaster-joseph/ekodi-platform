@@ -1,11 +1,7 @@
 import growthWorker from './marketing-growth-worker.js';
 export { MarketingGrowthPublisher } from './marketing-growth-worker.js';
-import { getMallPromotionStatus, handleMallPromotionRequest, runMallPromotionAutomation } from './mall-promotion-automation.js';
+import { getMallPromotionStatus, handleMallPromotionRequest, mallPromotionAutomationEnabled, runMallPromotionAutomation } from './mall-promotion-automation.js';
 import { getMallSalesIntelligenceStatus, runMallSalesIntelligence } from './mall-sales-intelligence.js';
-
-function promotionAutomationEnabled(env) {
-  return ['1','true','yes','on'].includes(String(env.MALL_PROMOTION_AUTOMATION_ENABLED || '').trim().toLowerCase());
-}
 
 function json(data, status = 200, inheritedHeaders = null) {
   const headers = new Headers(inheritedHeaders || undefined);
@@ -28,7 +24,7 @@ export default {
         getMallPromotionStatus(env),
         getMallSalesIntelligenceStatus(env),
       ]);
-      const enabled = promotionAutomationEnabled(env);
+      const enabled = mallPromotionAutomationEnabled(env);
       const mallPromotionAutomation = {
         ...rawMallPromotionAutomation,
         enabled,

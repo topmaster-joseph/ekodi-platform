@@ -1,5 +1,5 @@
 import { WorkerEntrypoint } from 'cloudflare:workers';
-import { runMallPromotionAutomation } from './mall-promotion-automation.js';
+import { mallPromotionAutomationEnabled, runMallPromotionAutomation } from './mall-promotion-automation.js';
 import { runMallSalesIntelligence } from './mall-sales-intelligence.js';
 import { d1SchemaReady } from './d1-schema-readiness.js';
 const SUPABASE_URL = 'https://renzehysxirjilvdxacv.supabase.co';
@@ -621,7 +621,9 @@ export class MarketingGrowthPublisher extends WorkerEntrypoint {
   async runGrowthCycle(input = {}) {
     const reason = clean(input?.reason || 'shared-publishing-cron',80);
     const intelligence = await runMallSalesIntelligence(this.env,{reason});
-    const promotion = await runMallPromotionAutomation(this.env,{reason});
+    const promotion = mallPromotionAutomationEnabled(this.env)
+      ? await runMallPromotionAutomation(this.env,{reason})
+      : {ok:true,status:'disabled',reason:'promotion_safety_gate'};
     return {ok:Boolean(intelligence?.ok || intelligence?.status === 'schema_required') && Boolean(promotion?.ok || promotion?.status === 'schema_required'),intelligence,promotion};
   }
 
