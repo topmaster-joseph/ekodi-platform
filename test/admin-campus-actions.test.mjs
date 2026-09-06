@@ -88,7 +88,7 @@ test('public site Open links never inherit monitor-only health endpoints', () =>
 
 test('navigation ownership stays in the central registry rather than Campus DOM rewriting', () => {
   assert.doesNotMatch(registry, /id: 'domains'/);
-  assert.match(registry, /id: 'affiliates'[\s\S]*en: 'Mall AI Sales'/);
+  assert.match(registry, /id: 'affiliates'[\s\S]*en: 'Affiliate Marketing'/);
   assert.doesNotMatch(js, /data-section=\"domains\"|data-lazy-section=\"domains\"/);
 });
 
