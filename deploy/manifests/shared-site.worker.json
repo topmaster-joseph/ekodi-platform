@@ -247,12 +247,14 @@
         ],
         "redirect": "follow",
         "expect": [
-          "EKODI CONTEXT SHOPPING",
-          "data-ekodi-service=\"mall\""
+          "data-ekodi-service=\"mall\"",
+          "data-ekodi-user-surface=\"public\"",
+          "/ekodibiz/mall/assets/marketplace-live.js"
         ],
         "rollbackExpect": [
-          "EKODI CONTEXT SHOPPING",
-          "data-ekodi-service=\"mall\""
+          "data-ekodi-service=\"mall\"",
+          "data-ekodi-user-surface=\"public\"",
+          "/ekodibiz/mall/assets/marketplace-live.js"
         ],
         "headerExpect": [
           "x-content-type-options: nosniff",
