@@ -4,18 +4,25 @@ import { readFile } from 'node:fs/promises';
 
 const workflow = await readFile(new URL('../.github/workflows/verify-ekodi-mall-production.yml', import.meta.url), 'utf8');
 
-test('Mall production verifier follows the current storefront contract', () => {
+test('Mall production verifier follows stable route and storefront structure', () => {
+  for (const header of [
+    'x-ekodi-route: public-ekodi-mall',
+    'x-ekodi-edge: mall-path-gateway',
+    'x-ekodi-service: mall',
+    'x-ekodi-surface: public'
+  ]) assert.ok(workflow.includes(header), `missing route header contract: ${header}`);
+  assert.ok(workflow.includes('-D /tmp/mall.headers'));
+  assert.ok(workflow.includes('grep -Fiq "$header" /tmp/mall.headers'));
+
   for (const marker of [
-    'ekodibizmall',
-    'GIFT CONTEXT INTELLIGENCE',
-    'CONNECTED COMMERCE',
-    'OUR PROMISE',
     'data-ekodi-service="mall"',
-    'https://ekodi.kr/ekodibiz/mall'
-  ]) assert.match(workflow, new RegExp(marker.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
-  assert.doesNotMatch(workflow, /EKODI CONTEXT SHOPPING/);
-  assert.doesNotMatch(workflow, /ALL MARKET/);
-  assert.doesNotMatch(workflow, /Seller Studio/);
+    'data-ekodi-user-surface="public"',
+    'rel="canonical" href="https://ekodi.kr/ekodibiz/mall/',
+    '/ekodibiz/mall/assets/marketplace-live.js',
+    '/ekodibiz/mall/seller/'
+  ]) assert.ok(workflow.includes(marker), `missing structural contract: ${marker}`);
+
+  assert.doesNotMatch(workflow, /GIFT CONTEXT INTELLIGENCE|CONNECTED COMMERCE|OUR PROMISE|EKODI CONTEXT SHOPPING|ALL MARKET/);
 });
 
 test('Mall production verifier checks the server transaction safety boundary', () => {

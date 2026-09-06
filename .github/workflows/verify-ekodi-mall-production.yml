@@ -23,15 +23,21 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          curl -fsS --retry 3 --retry-delay 2 --connect-timeout 5 --max-time 20 'https://ekodi.kr/ekodibiz/mall' -o /tmp/mall.html
+          curl -fsS --retry 3 --retry-delay 2 --connect-timeout 5 --max-time 20 -D /tmp/mall.headers 'https://ekodi.kr/ekodibiz/mall' -o /tmp/mall.html
+          for header in \
+            'x-ekodi-route: public-ekodi-mall' \
+            'x-ekodi-edge: mall-path-gateway' \
+            'x-ekodi-service: mall' \
+            'x-ekodi-surface: public'; do
+            grep -Fiq "$header" /tmp/mall.headers || { echo "Missing Mall route header: $header"; exit 1; }
+          done
           for marker in \
-            'ekodibizmall' \
-            'GIFT CONTEXT INTELLIGENCE' \
-            'CONNECTED COMMERCE' \
-            'OUR PROMISE' \
             'data-ekodi-service="mall"' \
-            'https://ekodi.kr/ekodibiz/mall'; do
-            grep -Fq "$marker" /tmp/mall.html || { echo "Missing Mall marker: $marker"; exit 1; }
+            'data-ekodi-user-surface="public"' \
+            'rel="canonical" href="https://ekodi.kr/ekodibiz/mall/' \
+            '/ekodibiz/mall/assets/marketplace-live.js' \
+            '/ekodibiz/mall/seller/'; do
+            grep -Fq "$marker" /tmp/mall.html || { echo "Missing Mall structural marker: $marker"; exit 1; }
           done
           if grep -Fq '추천링크 클릭 후 검색하세요' /tmp/mall.html || grep -Fq 'COUPANG AFFILIATE CURATION' /tmp/mall.html || grep -Fq 'cwWXWm' /tmp/mall.html; then
             echo 'Legacy affiliate storefront wording or fallback link is still exposed.'
