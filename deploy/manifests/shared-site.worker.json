@@ -247,11 +247,11 @@
         ],
         "redirect": "follow",
         "expect": [
-          "EKODI MALL",
+          "ekodibizmall",
           "data-ekodi-service=\"mall\""
         ],
         "rollbackExpect": [
-          "EKODI MALL",
+          "ekodibizmall",
           "data-ekodi-service=\"mall\""
         ],
         "headerExpect": [
