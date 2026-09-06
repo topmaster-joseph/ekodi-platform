@@ -39,6 +39,23 @@ jobs:
           fi
           echo 'storefront=verified'
 
+          verification_entry_code=$(curl -sS -D /tmp/mall-verification-entry.headers -o /tmp/mall-verification-entry.body -w '%{http_code}' --retry 3 --retry-delay 2 --connect-timeout 5 --max-time 20 'https://ekodi.kr/ekodibiz/mall/verification-ops' || true)
+          if [[ ! "$verification_entry_code" =~ ^[23] ]] || ! grep -Fiq 'cache-control: no-store' /tmp/mall-verification-entry.headers; then
+            echo "Verification Ops canonical entry is not fail-closed for caching: HTTP $verification_entry_code"
+            cat /tmp/mall-verification-entry.headers || true
+            exit 1
+          fi
+          verification_final_code=$(curl -sS -D /tmp/mall-verification-final.headers -o /tmp/mall-verification-final.html -w '%{http_code}' --retry 3 --retry-delay 2 --connect-timeout 5 --max-time 20 'https://ekodi.kr/ekodibiz/mall/assets/verification-ops' || true)
+          if [ "$verification_final_code" != "200" ] \
+            || ! grep -Fiq 'cache-control: no-store' /tmp/mall-verification-final.headers \
+            || ! grep -Fiq 'x-robots-tag: noindex, nofollow, noarchive' /tmp/mall-verification-final.headers \
+            || ! grep -Fq '/assets/verification-ops.js' /tmp/mall-verification-final.html; then
+            echo "Verification Ops final HTML security contract failed: HTTP $verification_final_code"
+            cat /tmp/mall-verification-final.headers || true
+            exit 1
+          fi
+          echo 'verificationOpsCacheBoundary=verified'
+
           curl -fsS --retry 3 --retry-delay 2 --connect-timeout 5 --max-time 20 'https://mall-api.ekodi.kr/health' -o /tmp/mall-health.json
           node <<'NODE'
           const fs = require('node:fs');

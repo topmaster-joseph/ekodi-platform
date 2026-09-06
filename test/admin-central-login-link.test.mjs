@@ -45,7 +45,7 @@ test('central handoff preserves current admin destinations without retired route
   assert.ok(source.includes("storige:'storage'"));
   assert.ok(source.includes("aiops:'ai-ops'"));
   assert.ok(source.includes("release:'deployments'"));
-  assert.ok(source.includes('ai-ops devotional ai-module-spec'));
+  assert.ok(source.includes('ai-ops openai devotional ai-module-spec'));
   assert.ok(source.includes('health api-cost storage security'));
   assert.doesNotMatch(source, /const ALIASES=\{[^}]*\b(?:legacy|domains|activity|overview):/);
   assert.ok(source.includes("const q=normalizeRoute(new URLSearchParams(location.search).get('route'))"));
