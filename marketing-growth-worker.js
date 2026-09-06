@@ -351,10 +351,15 @@ async function youtubeCallback(request, env) {
     if (!accessToken || !refreshToken) throw new Error('YOUTUBE_REFRESH_TOKEN_MISSING');
     const channels = await fetchJson('https://www.googleapis.com/youtube/v3/channels?part=snippet&mine=true&maxResults=50',{headers:{authorization:`Bearer ${accessToken}`}});
     const subject = {type:state.subject_type,key:state.subject_key};
+    const discoveredChannels = (channels.items || []).filter(channel => channel?.id);
+    let selectedChannels = discoveredChannels;
+    if (subject.type === 'tenant' && subject.key === 'ekodibiz') {
+      selectedChannels = discoveredChannels.filter(channel => clean(channel.snippet?.title || '',120) === '에코디비즈몰');
+      if (!selectedChannels.length) throw new Error('EKODIBIZ_YOUTUBE_CHANNEL_NOT_FOUND');
+    }
     const expiresAt = Number(tokenData.expires_in || 0) > 0 ? new Date(Date.now() + Number(tokenData.expires_in) * 1000).toISOString() : '';
     let count = 0;
-    for (const channel of (channels.items || [])) {
-      if (!channel?.id) continue;
+    for (const channel of selectedChannels) {
       const display = clean(channel.snippet?.title || 'YouTube',120);
       const token = safeJson({accessToken,refreshToken,expiresAt});
       const row = await upsertConnection(env,subject,{provider:'youtube',resourceType:'channel',externalId:String(channel.id),displayName:display,token,expiresAt,scopes:['youtube.upload','youtube.readonly'],metadata:{source:'google_oauth'}});
