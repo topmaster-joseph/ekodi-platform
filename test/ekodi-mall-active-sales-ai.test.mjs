@@ -52,3 +52,12 @@ test('only bounded actions can be emitted', () => {
   ];
   for (const action of actions) assert.ok(['scale','test','observe','hold'].includes(action));
 });
+
+test('sales intelligence reports real product performance freshness', async () => {
+  const worker = await read('mall-sales-intelligence.js');
+  assert.match(worker,/productPerformanceStatus/);
+  assert.match(worker,/latestMetricDate/);
+  assert.match(worker,/'empty'/);
+  assert.match(worker,/'stale'/);
+  assert.match(worker,/productPerformance:performanceStatus\.status/);
+});
