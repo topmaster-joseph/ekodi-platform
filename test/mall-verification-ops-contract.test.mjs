@@ -2,12 +2,13 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
-const [api, entry, html, js, redirects, deploy] = await Promise.all([
+const [api, entry, html, js, redirects, headers, deploy] = await Promise.all([
   readFile(new URL('../sites/ekodi-mall/api/verification.js', import.meta.url), 'utf8'),
   readFile(new URL('../sites/ekodi-mall/api/entry.js', import.meta.url), 'utf8'),
   readFile(new URL('../sites/ekodi-mall/assets/verification-ops.html', import.meta.url), 'utf8'),
   readFile(new URL('../sites/ekodi-mall/assets/verification-ops.js', import.meta.url), 'utf8'),
   readFile(new URL('../sites/ekodi-mall/_redirects', import.meta.url), 'utf8'),
+  readFile(new URL('../sites/ekodi-mall/_headers', import.meta.url), 'utf8'),
   readFile(new URL('../.github/workflows/deploy-ekodi-mall.yml', import.meta.url), 'utf8')
 ]);
 
@@ -32,6 +33,8 @@ test('verification operations keep review, checkout gate and high-impact payment
 
 test('verification operations are built and routed as a Mall operations surface', () => {
   assert.ok(redirects.includes('/verification-ops /assets/verification-ops.html 200'));
+  assert.ok(headers.includes('/verification-ops*'));
+  assert.ok(headers.includes('Cache-Control: no-store'));
   assert.ok(deploy.includes('dist/assets/verification-ops.html'));
   assert.ok(deploy.includes('/api/internal/verification/queue'));
 });
