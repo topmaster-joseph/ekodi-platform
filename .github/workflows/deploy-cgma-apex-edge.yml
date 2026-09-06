@@ -21,7 +21,7 @@ concurrency:
 env:
   WRANGLER_VERSION: '4.119.0'
   CGMA_SOURCE_REPO: topmaster-joseph/cheonggye-market
-  CGMA_SOURCE_REF: '609aac9863aee2fd85103b0774dc11061e576f1c'
+  CGMA_SOURCE_REF: '9df99c06c4a7429867c015b8e4007ce2efbfce4e'
 
 jobs:
   validate:
@@ -96,7 +96,7 @@ jobs:
           }
           check_upstream 'https://cheonggye-market.pages.dev/' 'OFFICIAL ARCHIVE'
           check_upstream 'https://cheonggye-market.pages.dev/admin' 'ADMIN CONSOLE'
-          check_upstream 'https://cheonggye-market.pages.dev/member-admin' 'MEMBERSHIP REVIEW'
+          check_upstream 'https://cheonggye-market.pages.dev/member-admin' 'MOVED TO ADMIN CONSOLE'
           check_upstream 'https://cheonggye-market.pages.dev/api/resources' '"items"'
       - name: Deploy CGMA apex edge with central Production authority
         shell: bash
@@ -123,7 +123,7 @@ jobs:
           }
           check_cgma '/cgma' '청계면상인회 | 오늘도 청계에서 만나요'
           check_cgma '/cgma/admin' 'ADMIN CONSOLE'
-          check_cgma '/cgma/member-admin' 'MEMBERSHIP REVIEW'
+          check_cgma '/cgma/member-admin' 'ADMIN CONSOLE'
           check_cgma '/cgma/api/resources' '"items"'
       - name: Dispatch current EKODI Shared Site guarded release
         shell: bash
