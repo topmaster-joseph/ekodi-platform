@@ -22,7 +22,6 @@
       if(profile.verificationUrl)$('#verificationLink').href=profile.verificationUrl;
       if(profile.officialCompanyUrl)$('#companyLink').href=profile.officialCompanyUrl;
       const design=$('#directDesignLink');if(design){const direct=profile.directDesignUrl||'',wonder=profile.wonderOfficialUrl||'';design.href=direct||wonder||profile.officialCompanyUrl||'#';design.textContent=direct?'나의 원더 직접 설계하기 ↗':'원더 공식 안내 보기 ↗';}
-      const design=$('#directDesignLink');if(design)design.href=profile.directDesignUrl||profile.wonderOfficialUrl||'https://ntc.lotteins.co.kr/landing.do';
       const btn=$('#advisorConsultSubmit');btn.disabled=false;btn.textContent='상담 요청 등록';
       status('프로필과 상담 경로가 확인되었습니다.');
     }catch(error){
