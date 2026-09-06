@@ -1,0 +1,56 @@
+name: Deploy Central Profile API
+
+on:
+  pull_request:
+    paths:
+      - 'supabase/functions/profile-api/index.ts'
+      - '.github/workflows/deploy-profile-api.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/functions/profile-api/index.ts'
+      - '.github/workflows/deploy-profile-api.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Validate character preference contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -Fq 'path==="/character"' supabase/functions/profile-api/index.ts
+          grep -Fq 'character_biometric_payload_forbidden' supabase/functions/profile-api/index.ts
+          grep -Fq 'GET,PATCH,DELETE,OPTIONS' supabase/functions/profile-api/index.ts
+
+  production:
+    if: github.event_name == 'push'
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      PROJECT_REF: renzehysxirjilvdxacv
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Verify deployment credential
+        shell: bash
+        run: test -n "$SUPABASE_ACCESS_TOKEN"
+      - name: Deploy profile API
+        run: npx --yes supabase@2.116.0 functions deploy profile-api --project-ref "$PROJECT_REF"
+      - name: Verify My EKODI character CORS
+        shell: bash
+        run: |
+          set -euo pipefail
+          endpoint="https://$PROJECT_REF.supabase.co/functions/v1/profile-api/character"
+          code=$(curl -sS -D /tmp/profile-character.headers -o /dev/null -w '%{http_code}' -X OPTIONS "$endpoint" -H 'Origin: https://my.ekodi.kr' -H 'Access-Control-Request-Method: PATCH' -H 'Access-Control-Request-Headers: authorization,apikey,content-type' || true)
+          [[ "$code" =~ ^(200|204)$ ]]
+          grep -Eiq '^access-control-allow-origin:[[:space:]]*https://my\.ekodi\.kr' /tmp/profile-character.headers
+          grep -Eiq '^access-control-allow-methods:.*DELETE' /tmp/profile-character.headers
