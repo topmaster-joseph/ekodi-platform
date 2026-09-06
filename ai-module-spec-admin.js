@@ -199,6 +199,7 @@
     let section = document.querySelector('#aiModuleSpecPanel');
     if (!section) { section = el('section', '', 'section ai-module-spec-admin hidden-panel'); section.dataset.panel = SECTION; section.id = 'aiModuleSpecPanel'; section.hidden = true; content.append(section); }
     if (button.dataset.aiSpecBound !== 'true') { button.dataset.aiSpecBound = 'true'; button.addEventListener('click', () => activate(button, section)); }
+    render();
     window.dispatchEvent(new CustomEvent('ekodi-feature-installed', { detail: { section: SECTION } }));
     if (location.hash === HASH) queueMicrotask(() => activate(button, section));
   }

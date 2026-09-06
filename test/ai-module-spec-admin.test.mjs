@@ -38,3 +38,9 @@ test('external AI spec remains outside the admin first-path payload', () => {
   assert.match(perf, /'ai-module-spec-admin\.js','ai-module-spec-admin\.css'/);
   assert.doesNotMatch(page, /setInterval\(/);
 });
+
+test('demand-loaded spec renders before canonical router reveals the panel', () => {
+  const install = page.match(/function install\(\) \{([\s\S]*?)\n  \}/)?.[1] || '';
+  assert.match(install, /render\(\);[\s\S]*ekodi-feature-installed/);
+  assert.ok(install.indexOf('render();') < install.indexOf('ekodi-feature-installed'));
+});
