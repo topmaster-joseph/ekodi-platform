@@ -15,7 +15,7 @@ concurrency:
 
 env:
   # Supabase publishable keys are public-client credentials by design. Repository
-  # variables can override these defaults after rotation. Never use service_role here.
+  # variables can override these defaults after rotation. Privileged DB credentials are forbidden here.
   PROD_URL: ${{ vars.SUPABASE_PROD_URL || 'https://renzehysxirjilvdxacv.supabase.co' }}
   PROD_KEY: ${{ vars.SUPABASE_PROD_PUBLISHABLE_KEY || 'sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_' }}
   DEV_URL: ${{ vars.SUPABASE_DEV_URL || 'https://lxcxwbdwwojjkgybbqii.supabase.co' }}
