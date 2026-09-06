@@ -121,7 +121,10 @@ jobs:
           grep -Fq 'window.EKODICharacterRegistry' shell/character-registry.js
           grep -Fq 'window.EKODICharacterIdentityRegistry' shell/character-identity-registry.js
           grep -Fq 'ekodi.ekodian-identity.v1' shell/character-identity-registry.js
-          grep -Fq 'const VERSION=5' shell/user-character.js
+          grep -Fq 'const VERSION=6' shell/user-character.js
+          test -s shell/assets/ekodian/founder-face.webp
+          grep -Fq 'assets/ekodian/founder-face.webp' shell/character-identity-registry.js
+          grep -Fq 'schemaVersion:2' shell/character-identity-registry.js
           grep -Fq 'window.EKODIUserCharacter' shell/user-character.js
           grep -Fq '__EKODI_USER_FOOTER_CONFIG__' shell/user-ui-footer.js
           grep -Fq 'window.EKODIAdminUIShell' shell/admin-ui-shell.js

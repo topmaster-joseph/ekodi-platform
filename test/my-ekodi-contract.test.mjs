@@ -216,3 +216,30 @@ test('My EKODI keeps the guest entry sparse and turns the signed-in root into a 
   assert.match(css,/body\[data-auth-state="member"\]\[data-home-mode="focus"\]/);
   assert.match(userAi,/내 에코디,<br>필요한 것만\./);
 });
+
+
+test('My EKODI provides explicit privacy-first personal character selection',async()=>{
+  const [html,app,character,worker,profileApi]=await Promise.all([
+    read('my/index.html'),read('my/app.js'),read('my/character-identity.js'),read('my-worker.js'),read('supabase/functions/profile-api/index.ts')
+  ]);
+  assert.match(html,/id="characterPreview"/);
+  assert.match(html,/id="characterCanonical"/);
+  assert.match(html,/id="characterPersonal"/);
+  assert.match(html,/id="characterPortraitInput"/);
+  assert.match(html,/character-identity\.js/);
+  assert.match(app,/getUserId:\(\)=>String\(session\?\.user\?\.id\|\|''\)/);
+  assert.match(character,/DB_NAME='ekodi-my-character-v1'/);
+  assert.match(character,/indexedDB\.open/);
+  assert.match(character,/canvas\.toBlob/);
+  assert.match(character,/image\/webp/);
+  assert.match(character,/localOnly:Boolean\(portraitUrl\)/);
+  assert.match(character,/functions\/v1\/profile-api/);
+  assert.match(character,/api\('DELETE'\)/);
+  assert.doesNotMatch(character,/storage\.from|face_embedding|data:image/);
+  assert.match(worker,/characterIdentityPersonalization:true/);
+  assert.match(worker,/characterPortraitStorage:'local-device-only'/);
+  assert.match(profileApi,/path==="\/character"/);
+  assert.match(profileApi,/character_biometric_payload_forbidden/);
+  assert.match(profileApi,/\['canonical','personal'\]/);
+  assert.match(profileApi,/admin\.auth\.admin\.updateUserById/);
+});

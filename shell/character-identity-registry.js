@@ -20,7 +20,7 @@ const profiles={
     activation:'explicit_only',
     subjectBinding:'founder',
     subjectAuthorization:'recorded',
-    visual:{portraitUrl:null,portraitMode:'character-face',assetStatus:'awaiting-approved-reference-asset'},
+    visual:{portraitUrl:'https://shell.ekodi.kr/assets/ekodian/founder-face.webp',portraitMode:'character-face',assetStatus:'approved-production',assetVersion:'20260906-founder-v1'},
     allowedContexts:['public','workspace','story','education','community'],
     forbiddenContexts:['payment','personal_data','security','high_risk_decision']
   },
@@ -31,7 +31,7 @@ const profiles={
     activation:'explicit_only',
     subjectBinding:'founder',
     subjectAuthorization:'recorded',
-    visual:{portraitUrl:null,portraitMode:'character-face',assetStatus:'awaiting-approved-reference-asset'},
+    visual:{portraitUrl:'https://shell.ekodi.kr/assets/ekodian/founder-face.webp',portraitMode:'character-face',assetStatus:'approved-production',assetVersion:'20260906-founder-v1'},
     allowedContexts:['church','worship','education','care','community'],
     forbiddenContexts:['payment','personal_data','security','high_risk_decision']
   },
@@ -42,13 +42,13 @@ const profiles={
     activation:'authenticated_explicit',
     subjectBinding:'current_person',
     subjectAuthorization:'required',
-    visual:{portraitUrl:null,portraitMode:'character-face',assetStatus:'runtime-reference-only'},
+    visual:{portraitUrl:null,portraitMode:'character-face',assetStatus:'local-device-reference'},
     forbiddenContexts:['payment','personal_data','security','high_risk_decision']
   }
 };
 
 const registry={
-  schemaVersion:1,
+  schemaVersion:2,
   contract:CONTRACT,
   generation:8,
   defaultProfile:'canonical',
@@ -60,7 +60,7 @@ const registry={
     inferFromName:false,
     rawBiometricData:'forbidden',
     faceEmbeddings:'forbidden',
-    sourceImagePersistence:'outside-runtime',
+    sourceImagePersistence:'local-device-by-default',
     subjectAuthorization:'required-for-human-inspired-profile',
     criticalWorkflowPolicy:'canonical_or_hidden',
     characterNeverCreatesAuthority:true
@@ -69,7 +69,10 @@ const registry={
     allowedProtocols:['https:'],
     allowedHosts:['ekodi.kr','*.ekodi.kr'],
     runtimeStoresReferenceOnly:true,
-    noEmbeddedBase64Portraits:true
+    noEmbeddedBase64Portraits:true,
+    localPersonalPortraitProtocol:'blob:',
+    localPersonalPortraitRequiresExplicitAuthorization:true,
+    founderAssetPath:'/assets/ekodian/founder-face.webp'
   },
   resolve(id='canonical'){
     const key=String(id||'canonical').trim().toLowerCase();

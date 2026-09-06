@@ -3,7 +3,7 @@
 if(window.__EKODI_USER_CHARACTER_BOOTED)return;
 window.__EKODI_USER_CHARACTER_BOOTED=true;
 
-const VERSION=5;
+const VERSION=6;
 const STYLE_ID='ekodi-user-character-style';
 const REGISTRY_ATTR='data-ekodi-character-registry';
 const REGISTRY_ASSET='character-registry.js';
@@ -81,6 +81,7 @@ function identityProfile(){
 function trustedPortraitUrl(identity=identityProfile()){
   const raw=String(identity?.visual?.portraitUrl||'').trim();
   if(!raw||raw.startsWith('data:'))return '';
+  if(raw.startsWith('blob:'))return identity?.id==='personal'&&identity?.subjectAuthorized===true&&identity?.visual?.localOnly===true?raw:'';
   try{
     const scriptBase=document.currentScript?.src?new URL('.',document.currentScript.src):new URL('https://shell.ekodi.kr/');
     const url=new URL(raw,scriptBase);
@@ -90,6 +91,37 @@ function trustedPortraitUrl(identity=identityProfile()){
   }catch{return '';}
 }
 function escapeAttr(value){return String(value||'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));}
+function previewIdentity(value){
+  if(!value||typeof value!=='object')return identityProfile();
+  const id=String(value.id||'canonical').trim().toLowerCase();
+  const active=identityRegistry();
+  const canonical=active?.resolve?active.resolve('canonical'):active?.profiles?.canonical||{id:'canonical',kind:'canonical',visual:{portraitUrl:null,portraitMode:'character-face'}};
+  const base=active?.resolve?active.resolve(id):active?.profiles?.[id];
+  if(!base||base.id==='canonical')return base||canonical;
+  if(value.contract!==IDENTITY_CONTRACT||value.subjectAuthorized!==true)return canonical;
+  return {...base,...value,visual:{...(base.visual||{}),...(value.visual||{})},id};
+}
+function setIdentity(value){
+  if(!value||typeof value!=='object')return false;
+  const requested=String(value.id||'canonical').trim().toLowerCase();
+  const resolved=previewIdentity(value);
+  if(requested!=='canonical'&&resolved?.id!==requested)return false;
+  window.__EKODI_CHARACTER_IDENTITY__={...value,id:requested,contract:IDENTITY_CONTRACT,subjectAuthorized:requested==='canonical'?true:value.subjectAuthorized===true};
+  refresh(true);
+  window.dispatchEvent(new CustomEvent('ekodi:character-identity-change',{detail:{id:requested,subjectAuthorized:window.__EKODI_CHARACTER_IDENTITY__.subjectAuthorized}}));
+  return true;
+}
+function clearIdentity(){
+  delete window.__EKODI_CHARACTER_IDENTITY__;
+  refresh(true);
+  window.dispatchEvent(new CustomEvent('ekodi:character-identity-change',{detail:{id:'canonical',subjectAuthorized:false}}));
+  return true;
+}
+function renderPreview(options={}){
+  const selected={...profile(),...(options.profile||{})};
+  return svg(selected,previewIdentity(options.identity));
+}
+
 function profiles(){return registry()?.services||FALLBACK_PROFILES;}
 function isLanding(){
   const parts=location.pathname.split('/').filter(Boolean);
@@ -211,6 +243,9 @@ window.EKODIUserCharacter=Object.freeze({
   refresh,
   applyOperation,
   clearOperation,
+  setIdentity,
+  clearIdentity,
+  renderPreview,
   operation:()=>operationSnapshot,
   profile:()=>({...profile()}),
   identity:()=>({...identityProfile(),visual:{...(identityProfile()?.visual||{})}}),
