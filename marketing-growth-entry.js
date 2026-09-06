@@ -1,4 +1,5 @@
 import growthWorker from './marketing-growth-worker.js';
+export { MarketingGrowthPublisher } from './marketing-growth-worker.js';
 import { getMallPromotionStatus, handleMallPromotionRequest, runMallPromotionAutomation } from './mall-promotion-automation.js';
 import { getMallSalesIntelligenceStatus, runMallSalesIntelligence } from './mall-sales-intelligence.js';
 

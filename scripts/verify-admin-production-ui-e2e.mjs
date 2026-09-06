@@ -129,6 +129,14 @@ for (const [id, group] of menus) {
     return panels.some(panel => !panel.hidden && !panel.classList.contains('hidden-panel'));
   }, id, { timeout: 12000 });
 
+  await page.waitForFunction(section => {
+    const panel = [...document.querySelectorAll('.content [data-panel]')].find(node => String(node.dataset.panel || '').split(/\s+/).includes(section) && !node.hidden && !node.classList.contains('hidden-panel'));
+    if (!panel) return false;
+    const style = getComputedStyle(panel);
+    const rect = panel.getBoundingClientRect();
+    const text = String(panel.innerText || panel.textContent || '').replace(/\s+/g, ' ').trim();
+    return text.length > 0 && style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 0 && rect.height > 0;
+  }, id, { timeout: 12000 });
   const visiblePanel = await page.evaluate(section => {
     const panel = [...document.querySelectorAll('.content [data-panel]')].find(node => String(node.dataset.panel || '').split(/\s+/).includes(section) && !node.hidden && !node.classList.contains('hidden-panel'));
     if (!panel) return null;
@@ -143,6 +151,12 @@ for (const [id, group] of menus) {
   if (id === 'campus' && visiblePanel.id !== 'campusPanel') throw new Error(`Campus rendered unexpected panel: ${visiblePanel.id || '(no id)'}`);
   results.push({ id, group, kind: 'panel', ok: true, detail: `${visiblePanel.id || visiblePanel.tag}:${visiblePanel.textLength}` });
   console.log(`[PROD-E2E] ${id}: ok ${visiblePanel.id || visiblePanel.tag}:${visiblePanel.textLength}`);
+
+  // This verifier uses a synthetic UI-only token. Reload after each menu so a
+  // backend 401 from one lazy module cannot hide the shell and poison later UI checks.
+  await page.goto(ADMIN_URL, { waitUntil: 'domcontentloaded', timeout: 45000 });
+  await waitForAdminShell();
+  selectedWorkArea = null;
 }
 
 const activeCount = results.filter(result => result.ok).length;
