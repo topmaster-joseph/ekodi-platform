@@ -1,9 +1,10 @@
 # EKODIAN Character Constitution
 
 Status: Official shared character policy  
-Version: 1.0  
+Version: 1.1  
 Runtime registry: `shell/character-registry.js`  
-Runtime renderer: `shell/user-character.js`
+Runtime renderer: `shell/user-character.js`  
+Generation 8 operations runtime: `ekodian-8g-runtime.js`
 
 ## 1. Identity
 
@@ -23,6 +24,8 @@ EKODIAN is not the protagonist of an EKODI surface. People, relationships, commu
 6. **Restraint in critical workflows.** Payment, personal data, security, complex administration and focus-heavy work minimize or omit the character.
 7. **Warm and intelligent, never infantilizing.** Friendly is allowed. Toy-like, childish, manipulative or authority-claiming behavior is not.
 8. **Accessible by default.** The character must never block controls or essential content, must respect reduced-motion preferences, and must keep semantic labels useful but concise.
+9. **Authority never comes from appearance.** EKODIAN may express the state of an authorized agent operation but can never grant, expand, approve or disguise execution authority.
+10. **Verified state before success expression.** Completion and celebration are allowed only after the governed operation reports a verified success state.
 
 ## 3. EKODI value translation
 
@@ -122,6 +125,8 @@ EKODIAN must not:
 - change into unrelated mascots by tenant or service
 - become childlike merely to appear friendly
 - override service-specific visual families defined by EKODI User UI DNA
+- present an unverified or queued operation as completed
+- visually soften a forbidden or high-impact boundary in a way that confuses the user's authority decision
 
 ## 9. Service and tenant variation
 
@@ -142,7 +147,37 @@ The relationship among implementation artifacts is:
 
 Changes to fixed DNA, constitutional principles, prohibited patterns or the official role statement require a constitution-level review. New service profiles, props, poses and copy can be added through the registry when they remain compatible with this document.
 
-## 11. Review checklist
+## 11. Generation 8 operations
+
+EKODIAN is the human-facing experience layer of EKODI's Generation 8 operating hierarchy:
+
+**Sovereign → Autonomous → Agentic → Services → Experience**
+
+The character does not become an independent authority. Its state is derived from governed runtime evidence using the authority context:
+
+**Person + Workspace + Role + Capability**
+
+The operational relationship is:
+
+**Capability Registry → Agent decision → Permission / human gate → Execution state → Audit log → EKODIAN expression**
+
+The machine contract is `ekodi.ekodian-operation.v1` and is produced by `ekodian-8g-runtime.js`. The authoritative operational history remains `ai_agent_actions`; character state is a presentation of that record, never a replacement for it.
+
+Canonical state translations include:
+
+- assist-only → `explain`
+- awaiting human approval → `ask`
+- approved and waiting for executor → `confirm` / `wait`
+- executing → `wait`
+- verified → `complete`
+- failed → `error`
+- rejected / blocked → `calm`, with presence minimized or hidden according to risk
+
+Human-gated actions can never be self-approved by EKODIAN or its underlying agent. Security, payment, identity, privacy and other critical contexts may suppress the character entirely even when an agent operation exists.
+
+The shared renderer may consume a governed operation snapshot through `EKODIUserCharacter.applyOperation(...)` or the `ekodi:agent-state` event. It must reject incompatible operation contracts or non-Generation-8 snapshots rather than silently reinterpret them.
+
+## 12. Review checklist
 
 Before release, verify all of the following:
 
@@ -154,3 +189,5 @@ Before release, verify all of the following:
 - Does reduced-motion mode remain calm and fully usable?
 - Does the service keep its own visual family while sharing EKODIAN identity?
 - Would removing the character reduce guidance or warmth? If not, omit it.
+- Is any success expression backed by a verified operation state?
+- Can the character's presentation be mistaken for permission, approval or sovereign authority? If yes, redesign it.
