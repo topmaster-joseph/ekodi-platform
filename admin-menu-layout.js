@@ -15,7 +15,7 @@ const DEMAND_KEYS=new Map([
   ['campus','campus'],['public-site-controls','public-site-controls'],['aiops','aiops'],['devotional','devotional'],['ai-module-spec','ai-module-spec'],['ai-membership','aimembers'],
   ['health','health'],['api-cost','api-cost'],['storage','storage'],['security','security'],['work','work'],
   ['clients','clients'],['community','community'],['books','books'],['social','social'],['affiliates','affiliates'],
-  ['marketing-ai','marketing'],['devices','devices'],['life-ai','life-ai'],['personal-finance','personal-finance']
+  ['marketing-ai','marketing-ai'],['devices','devices'],['life-ai','life-ai'],['personal-finance','personal-finance']
 ]);
 const pairMap=value=>new Map(value.split(' ').map(pair=>pair.split(':')));
 const HASH=pairMap('#sites:sites #common-services:common-services #capabilities:capabilities #capability-center:capabilities #ai-ops:aiops #aiops:aiops #devotional:devotional #ai-module-spec:ai-module-spec #ai-membership:ai-membership #personal-finance:personal-finance #health:health #api-cost:api-cost #storage:storage #storige:storage #security:security #architecture:architecture #devices:devices #campus:campus #public-site-controls:public-site-controls #work:work #communication:communication #marketing-ai:marketing-ai #finance:finance #organization:organization #workspace:workspace #clients:clients #admins:admins #community:community #cheonggye-members:cheonggye-members #books:books #social:social #mall-ai-sales:affiliates #affiliates:affiliates #policies:policies #services:services #deployments:deployments #release:deployments');
