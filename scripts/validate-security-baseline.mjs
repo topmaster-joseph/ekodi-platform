@@ -85,6 +85,12 @@ assert(protectedWrite.allowed === false && protectedWrite.code === 'ELEVATION_RE
 const elevatedSuperAdmin = adminAuthorityForRole('super_admin', { elevated:true, elevatedUntil:'2099-01-01T00:00:00.000Z' });
 assert(authorizeEkodiAction({ authority:elevatedSuperAdmin, requiredCapabilities:['admin:accounts.write'] }).allowed === true,
   'elevated super admin must be allowed to perform admin account writes');
+const expiredSuperAdmin = adminAuthorityForRole('super_admin', { elevated:true, elevatedUntil:'2000-01-01T00:00:00.000Z' });
+assert(authorizeEkodiAction({ authority:expiredSuperAdmin, requiredCapabilities:['admin:accounts.write'] }).code === 'ELEVATION_REQUIRED',
+  'expired privileged state must not authorize sensitive admin writes');
+const timestampLessSuperAdmin = adminAuthorityForRole('super_admin', { elevated:true });
+assert(authorizeEkodiAction({ authority:timestampLessSuperAdmin, requiredCapabilities:['admin:accounts.write'] }).code === 'ELEVATION_REQUIRED',
+  'privileged state without an expiry must fail closed');
 assert(hasEkodiCapability(['admin:*'], 'admin:accounts.write', ['admin:accounts.write']) === false,
   'explicit capability deny must win over wildcard allow');
 assert(authorizeEkodiAction({ authority:adminAuthorityForRole('operator'), requiredCapabilities:['admin:accounts.read'] }).code === 'CAPABILITY_FORBIDDEN',
