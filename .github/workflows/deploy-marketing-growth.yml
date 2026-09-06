@@ -14,8 +14,11 @@ on:
       - 'migrations/0048_ekodi_mall_promotion_automation.sql'
       - 'migrations/0049_ekodi_mall_active_sales_ai.sql'
       - 'migrations/0050_ekodibiz_marketing_internal_entitlement.sql'
+      - 'migrations/0064_marketing_channel_settings.sql'
       - 'test/ekodi-mall-promotion-automation.test.mjs'
       - 'test/marketing-growth-oauth.test.mjs'
+      - 'test/ekodimall-channel-settings-admin.test.mjs'
+      - 'test/ekodibiz-youtube-channel-selection.test.mjs'
       - 'test/ekodi-mall-active-sales-ai.test.mjs'
       - '.github/workflows/deploy-marketing-growth.yml'
 
@@ -57,7 +60,7 @@ jobs:
           node --check marketing-growth-entry.js
           node --check mall-promotion-automation.js
           node --check mall-sales-intelligence.js
-          node --test test/ekodi-mall-promotion-automation.test.mjs test/ekodi-mall-active-sales-ai.test.mjs test/marketing-growth-oauth.test.mjs
+          node --test test/ekodi-mall-promotion-automation.test.mjs test/ekodi-mall-active-sales-ai.test.mjs test/marketing-growth-oauth.test.mjs test/ekodimall-channel-settings-admin.test.mjs test/ekodibiz-youtube-channel-selection.test.mjs
           grep -Fq 'encryptedVault:true' marketing-growth-worker.js
           grep -Fq 'oauthBroker:true' marketing-growth-worker.js
           grep -Fq 'youtubeConfigured' marketing-growth-worker.js
@@ -75,7 +78,7 @@ jobs:
           grep -Fq 'affiliate_product_performance_daily' migrations/0049_ekodi_mall_active_sales_ai.sql
           grep -Fq "'tenant','ekodibiz','marketing','auto','active'" migrations/0050_ekodibiz_marketing_internal_entitlement.sql
           grep -Fq 'token_ciphertext TEXT NOT NULL' migrations/0028_marketing_growth_connectors.sql
-          if grep -Eqi '(access_token|refresh_token|bearer_token)[[:space:]]+TEXT' migrations/0028_marketing_growth_connectors.sql migrations/0048_ekodi_mall_promotion_automation.sql migrations/0049_ekodi_mall_active_sales_ai.sql migrations/0050_ekodibiz_marketing_internal_entitlement.sql; then
+          if grep -Eqi '(access_token|refresh_token|bearer_token)[[:space:]]+TEXT' migrations/0028_marketing_growth_connectors.sql migrations/0048_ekodi_mall_promotion_automation.sql migrations/0049_ekodi_mall_active_sales_ai.sql migrations/0050_ekodibiz_marketing_internal_entitlement.sql migrations/0064_marketing_channel_settings.sql; then
             echo 'Plain provider token columns are forbidden.'
             exit 1
           fi
@@ -92,9 +95,9 @@ jobs:
         run: |
           set -euo pipefail
           npx --yes wrangler@${WRANGLER_VERSION} d1 execute ekodi-auth --remote --config wrangler.marketing-growth.toml \
-            --command "SELECT name FROM sqlite_master WHERE type='table' AND name IN ('marketing_oauth_states','marketing_oauth_connections','marketing_growth_campaigns','affiliate_promotion_runs','affiliate_promotion_visits','affiliate_demand_signals','affiliate_product_performance_daily','affiliate_growth_opportunities','affiliate_growth_strategy_runs') ORDER BY name;" \
+            --command "SELECT name FROM sqlite_master WHERE type='table' AND name IN ('marketing_oauth_states','marketing_oauth_connections','marketing_growth_campaigns','affiliate_promotion_runs','affiliate_promotion_visits','affiliate_demand_signals','affiliate_product_performance_daily','affiliate_growth_opportunities','affiliate_growth_strategy_runs','marketing_channel_settings') ORDER BY name;" \
             --json > /tmp/growth-schema.json
-          for table in marketing_oauth_states marketing_oauth_connections marketing_growth_campaigns affiliate_promotion_runs affiliate_promotion_visits affiliate_demand_signals affiliate_product_performance_daily affiliate_growth_opportunities affiliate_growth_strategy_runs; do
+          for table in marketing_oauth_states marketing_oauth_connections marketing_growth_campaigns affiliate_promotion_runs affiliate_promotion_visits affiliate_demand_signals affiliate_product_performance_daily affiliate_growth_opportunities affiliate_growth_strategy_runs marketing_channel_settings; do
             grep -Fq "$table" /tmp/growth-schema.json
           done
 
