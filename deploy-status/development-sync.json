@@ -1,0 +1,7 @@
+{
+  "status": "reconciled",
+  "branch": "development",
+  "canonical_main_sha": "dfaa6fdf92d44d6998b7978a8df6630775cbd46a",
+  "reconciled_commit": "b38446bd9a16415b1301831e0800bdd60ff90b18",
+  "purpose": "Trigger and record the guarded EKODI Development deployment after canonical main reconciliation."
+}
