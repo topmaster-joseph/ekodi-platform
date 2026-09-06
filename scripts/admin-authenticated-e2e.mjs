@@ -111,6 +111,27 @@ async function waitForVisiblePanel(id) {
   }, id, { timeout: 5_000 });
 }
 
+async function waitForSettledPanel(id, timeout = 8_000) {
+  await page.waitForFunction(section => {
+    const panel = [...document.querySelectorAll('[data-panel]')].find(node => {
+      const ids = String(node.dataset.panel || '').split(/\s+/).filter(Boolean);
+      if (!ids.includes(section)) return false;
+      const style = getComputedStyle(node);
+      return !node.hidden && !node.classList.contains('hidden-panel') && style.display !== 'none' && style.visibility !== 'hidden';
+    });
+    if (!panel) return false;
+    const text = String(panel.innerText || '').replace(/\s+/g, ' ').trim();
+    const busy = [...panel.querySelectorAll('[aria-busy="true"],.loading,.spinner')].some(node => {
+      const style = getComputedStyle(node);
+      return node.getAttribute('aria-hidden') !== 'true'
+        && !node.hidden
+        && style.display !== 'none'
+        && style.visibility !== 'hidden';
+    });
+    return text.length >= 4 && !busy;
+  }, id, { timeout });
+}
+
 async function menuDiagnostics(id) {
   return withTimeout(page.evaluate(section => {
     const panels = [...document.querySelectorAll('[data-panel]')];
@@ -177,7 +198,19 @@ async function storageReauthHandoff(id, group, started, handoffUrl) {
   await page.goto(authenticatedEntryUrl, { waitUntil: 'domcontentloaded', timeout: 15_000 });
   selectedWorkArea = null;
   await waitForAdminReady();
-  return true;
+}
+
+function storageExternalNavigationRequest() {
+  return page.waitForRequest(request => {
+    try {
+      const destination = new URL(request.url());
+      return request.isNavigationRequest()
+        && request.frame() === page.mainFrame()
+        && destination.hostname !== 'admin.ekodi.kr';
+    } catch {
+      return false;
+    }
+  }, { timeout: 10_000 }).then(request => request.url()).catch(() => null);
 }
 
 async function clickMenu(id) {
@@ -191,36 +224,29 @@ async function clickMenu(id) {
     stage(`menu-${id}-tab`);
     const tab = page.locator(`button.admin-context-tab[data-admin-context-section="${id}"]`);
     await tab.waitFor({ state: 'visible', timeout: 5_000 });
-    const storageOAuth = id === 'storage'
-      ? page.waitForURL(url => url.hostname === 'accounts.google.com', { timeout: 8_000 }).then(() => page.url()).catch(() => null)
-      : null;
+    const storageNavigation = id === 'storage' ? storageExternalNavigationRequest() : null;
     await dispatchClick(tab);
     stage(`menu-${id}-panel`);
 
     if (id === 'storage') {
-      const panelOutcome = waitForVisiblePanel(id)
+      const panelOutcome = waitForSettledPanel(id)
         .then(() => ({ kind: 'panel' }))
         .catch(error => ({ kind: 'panel-error', error }));
       const first = await Promise.race([
         panelOutcome,
-        storageOAuth.then(url => url ? { kind: 'oauth', url } : { kind: 'oauth-timeout' }),
+        storageNavigation.then(url => url ? { kind: 'handoff', url } : { kind: 'handoff-timeout' }),
       ]);
-      if (first.kind === 'oauth') {
+      if (first.kind === 'handoff') {
         await storageReauthHandoff(id, group, started, first.url);
         return;
       }
       if (first.kind === 'panel-error') {
-        const handoffUrl = await Promise.race([storageOAuth, page.waitForTimeout(1_000).then(() => null)]);
+        const handoffUrl = await Promise.race([storageNavigation, page.waitForTimeout(1_500).then(() => null)]);
         if (handoffUrl) {
           await storageReauthHandoff(id, group, started, handoffUrl);
           return;
         }
         throw first.error;
-      }
-      const handoffUrl = await Promise.race([storageOAuth, page.waitForTimeout(2_500).then(() => null)]);
-      if (handoffUrl) {
-        await storageReauthHandoff(id, group, started, handoffUrl);
-        return;
       }
     } else {
       await waitForVisiblePanel(id);
