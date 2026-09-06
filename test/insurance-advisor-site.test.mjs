@@ -6,7 +6,7 @@ import { handleInsuranceNetwork, linkAdvisorConsultation, networkReady } from '.
 
 class Statement{constructor(stmt,args=[]){this.stmt=stmt;this.args=args}bind(...args){return new Statement(this.stmt,args)}async all(){return{results:this.stmt.all(...this.args)}}async first(){return this.stmt.get(...this.args)||null}async run(){return this.stmt.run(...this.args)}}
 class D1{constructor(db){this.db=db}prepare(sql){return new Statement(this.db.prepare(sql))}}
-function migrate(db){for(const name of ['0001_consultation_queue.sql','0002_revoke_minimization.sql','0003_partner_catalog_outcomes.sql','0004_advisor_profile.sql'])db.exec(fs.readFileSync(new URL(`../sites/ekodi-insurance/api/migrations/${name}`,import.meta.url),'utf8'))}
+function migrate(db){for(const name of ['0001_consultation_queue.sql','0002_revoke_minimization.sql','0003_partner_catalog_outcomes.sql','0004_advisor_profile.sql','0005_insurance_practice_affiliations.sql'])db.exec(fs.readFileSync(new URL(`../sites/ekodi-insurance/api/migrations/${name}`,import.meta.url),'utf8'))}
 function req(path,method='GET',body){return new Request(`https://insurance.test${path}`,{method,headers:{'content-type':'application/json','x-ekodi-insurance-internal-token':'test-token'},body:body?JSON.stringify(body):undefined})}
 
 test('personal advisor profile stays draft until identity and advertising review gates pass',async()=>{
@@ -42,7 +42,7 @@ test('advisor public and admin surfaces preserve personal-site compliance bounda
   const advisorAdmin=fs.readFileSync(new URL('../insurance-advisor-admin.js',import.meta.url),'utf8');
   const proxy=fs.readFileSync(new URL('../insurance-control-proxy.js',import.meta.url),'utf8');
   for(const marker of ['보험회사 공식 홈페이지가 아닌 보험설계사 개인 안내·상담 페이지','모집인 정보를 확인','상담 요청'])assert.ok(html.includes(marker));
-  assert.ok(js.includes('advisorProfileId:profile.id'));assert.ok(js.includes('shareTranscript:false'));assert.ok(js.includes('profile.directDesignUrl'));assert.ok(js.includes('profile.wonderOfficialUrl'));assert.ok(worker.includes("url.pathname==='/advisor'"));
+  assert.ok(js.includes('advisorProfileId:profile.id'));assert.ok(js.includes('affiliationId:String(data.affiliationId'));assert.ok(js.includes('renderCarrierContext'));assert.ok(js.includes('shareTranscript:false'));assert.ok(js.includes('directDesignUrl'));assert.ok(js.includes('wonderOfficialUrl'));assert.ok(worker.includes("url.pathname==='/advisor'"));
   assert.ok(layout.includes("section==='insurance'")&&layout.includes("import('./insurance-admin.js')"));assert.ok(insuranceAdmin.includes("import('./insurance-advisor-admin.js')"));
   for(const asset of ['insurance-admin.js','insurance-network-admin.js','insurance-advisor-admin.js']){assert.ok(build.includes(asset));assert.ok(siteWorker.includes('/'+asset))}
   assert.ok(proxy.includes('/network/advisor-profile'));assert.ok(proxy.includes("['PATCH','PUT']"));

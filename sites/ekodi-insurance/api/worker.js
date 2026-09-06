@@ -1,4 +1,5 @@
 import { handleInsuranceNetwork, linkAdvisorConsultation, networkReady } from './network.js';
+import { linkConsultationAffiliation } from './practice.js';
 const DEFAULT_ORIGINS = [
   'https://ins.ekodi.kr',
   'https://ekodi-insurance-staging.ekodi-development.workers.dev'
@@ -189,12 +190,16 @@ async function createConsultation(request, env) {
       transcriptCiphertext, transcriptShared ? 1 : 0, await sha256(accessToken), now, now
     ).run();
   await audit(env, id, 'customer', user?.id || 'anonymous', 'consultation.created', transcriptShared ? 'explicit-transcript-consent' : 'summary-code-only');
-  const advisorProfileId=clean(body.advisorProfileId,80);
+  const advisorProfileId=clean(body.advisorProfileId,80),affiliationId=clean(body.affiliationId,80);
   if(advisorProfileId){
     const linked=await linkAdvisorConsultation(env,id,advisorProfileId);
     if(!linked){await env.DB.prepare('DELETE FROM consultation_requests WHERE id=?').bind(id).run();return{status:409,body:{error:'advisor_profile_not_accepting_consultations'}};}
   }
-  return { status: 201, body: { consultation: { id, status: 'new', summary, transcriptShared, advisorProfileId:advisorProfileId||null, createdAt: now }, accessToken } };
+  if(affiliationId){
+    const projected=await linkConsultationAffiliation(env,id,affiliationId);
+    if(!projected){await env.DB.prepare('DELETE FROM consultation_requests WHERE id=?').bind(id).run();return{status:409,body:{error:'carrier_affiliation_not_accepting_consultations'}};}
+  }
+  return { status: 201, body: { consultation: { id, status: 'new', summary, transcriptShared, advisorProfileId:advisorProfileId||null, affiliationId:affiliationId||null, createdAt: now }, accessToken } };
 }
 async function revokeConsultation(id, request, env) {
   const body = await readJson(request);
@@ -212,12 +217,15 @@ function internalAuthorized(request, env) {
   return safeEqual(request.headers.get('x-ekodi-insurance-internal-token'), env.INSURANCE_INTERNAL_TOKEN);
 }
 async function listConsultations(url, env) {
-  const status = clean(url.searchParams.get('status'), 20);
-  const limit = Math.max(1, Math.min(100, Math.trunc(Number(url.searchParams.get('limit')) || 50)));
-  const where = VALID_STATUS.has(status) ? 'WHERE status=?' : "WHERE status!='revoked'";
-  const statement = env.DB.prepare(`SELECT id,contact_name AS name,contact_hint AS contactHint,preferred_time AS preferredTime,ai_summary AS summary,status,transcript_shared AS transcriptShared,created_at AS createdAt,updated_at AS updatedAt FROM consultation_requests ${where} ORDER BY created_at DESC LIMIT ?`);
-  const rows = VALID_STATUS.has(status) ? await statement.bind(status, limit).all() : await statement.bind(limit).all();
-  return { consultations: (rows.results || []).map(r => ({ ...r, transcriptShared: Boolean(r.transcriptShared) })) };
+  const status=clean(url.searchParams.get('status'),20),affiliationId=clean(url.searchParams.get('affiliationId'),80);
+  const limit=Math.max(1,Math.min(100,Math.trunc(Number(url.searchParams.get('limit'))||50)));
+  const scoped=/^aff_[a-z0-9-]+$/i.test(affiliationId),filters=["c.status!='revoked'"],params=[];
+  if(VALID_STATUS.has(status)){filters.push('c.status=?');params.push(status)}
+  if(scoped){filters.push('p.affiliation_id=?');params.push(affiliationId)}
+  const join=scoped?'JOIN insurance_consultation_projections p ON p.consultation_id=c.id':'LEFT JOIN insurance_consultation_projections p ON p.consultation_id=c.id';
+  const statement=env.DB.prepare(`SELECT c.id,c.contact_name AS name,c.contact_hint AS contactHint,c.preferred_time AS preferredTime,c.ai_summary AS summary,c.status,c.transcript_shared AS transcriptShared,c.created_at AS createdAt,c.updated_at AS updatedAt,GROUP_CONCAT(DISTINCT p.affiliation_id) AS affiliationIds FROM consultation_requests c ${join} WHERE ${filters.join(' AND ')} GROUP BY c.id ORDER BY c.created_at DESC LIMIT ?`);
+  const rows=await statement.bind(...params,limit).all();
+  return{consultations:(rows.results||[]).map(r=>({...r,transcriptShared:Boolean(r.transcriptShared),affiliationIds:String(r.affiliationIds||'').split(',').filter(Boolean)}))};
 }
 async function consultationDetail(id, request, env) {
   const row = await env.DB.prepare('SELECT * FROM consultation_requests WHERE id=?').bind(id).first();

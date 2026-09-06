@@ -23,6 +23,13 @@ function mapPath(pathname){
   const detail=pathname.match(/^\/api\/insurance\/admin\/consultations\/(con_[a-f0-9-]+)$/i);if(detail)return`/api/internal/consultations/${detail[1]}`;
   const status=pathname.match(/^\/api\/insurance\/admin\/consultations\/(con_[a-f0-9-]+)\/status$/i);if(status)return`/api/internal/consultations/${status[1]}/status`;
   if(pathname===`${PREFIX}/network/advisor-profile`)return'/api/internal/network/advisor-profile';
+  if(pathname===`${PREFIX}/network/practice`)return'/api/internal/network/practice';
+  if(pathname===`${PREFIX}/network/affiliations`)return'/api/internal/network/affiliations';
+  const affiliation=pathname.match(/^\/api\/insurance\/admin\/network\/affiliations\/(aff_[a-z0-9-]+)$/i);if(affiliation)return`/api/internal/network/affiliations/${affiliation[1]}`;
+  if(pathname===`${PREFIX}/network/connectors`)return'/api/internal/network/connectors';
+  const connector=pathname.match(/^\/api\/insurance\/admin\/network\/connectors\/(cnx_[a-z0-9-]+)$/i);if(connector)return`/api/internal/network/connectors/${connector[1]}`;
+  if(pathname===`${PREFIX}/network/work-summary`)return'/api/internal/network/work-summary';
+  const projection=pathname.match(/^\/api\/insurance\/admin\/network\/projections\/(con_[a-z0-9-]+)$/i);if(projection)return`/api/internal/network/projections/${projection[1]}`;
   if(pathname===`${PREFIX}/network/partners`)return'/api/internal/network/partners';
   const partner=pathname.match(/^\/api\/insurance\/admin\/network\/partners\/(par_[a-z0-9-]+)$/i);if(partner)return`/api/internal/network/partners/${partner[1]}`;
   if(pathname===`${PREFIX}/network/catalog`)return'/api/internal/network/catalog';
@@ -53,7 +60,7 @@ async function fetchInternal(base,path,init){
 export async function handleInsuranceAdminProxy(request,env,ctx,apiWorker){
   if(request.method==='OPTIONS')return apiWorker.fetch(request,env,ctx);
   const auth=await centralSession(request,env,ctx,apiWorker);if(!auth.session)return auth.response;
-  const upstreamPath=mapPath(new URL(request.url).pathname);if(!upstreamPath)return json({error:'insurance_admin_endpoint_not_found'},404,auth.response.headers);
+  const incomingUrl=new URL(request.url);const upstreamPath=mapPath(incomingUrl.pathname);if(!upstreamPath)return json({error:'insurance_admin_endpoint_not_found'},404,auth.response.headers);
   if(!['GET','PATCH','PUT'].includes(request.method))return json({error:'method_not_allowed'},405,auth.response.headers);
   const base=String(env.INSURANCE_API_BASE||'').replace(/\/$/,'');
   const internalToken=String(env.INSURANCE_INTERNAL_TOKEN||'');
@@ -65,7 +72,7 @@ export async function handleInsuranceAdminProxy(request,env,ctx,apiWorker){
     const input=await request.json().catch(()=>({}));
     body=JSON.stringify(request.method==='PATCH'&&upstreamPath.endsWith('/status')?{...input,status:adminStatusToApi(input.status)}:input);
   }
-  const upstream=await fetchInternal(base,upstreamPath,{method:request.method,headers,body,cache:'no-store'});
+  const upstream=await fetchInternal(base,`${upstreamPath}${incomingUrl.search}`,{method:request.method,headers,body,cache:'no-store'});
   const text=await upstream.text();let data={};try{data=text?JSON.parse(text):{}}catch{data={error:'insurance_backend_invalid_response'}};
   return json(normalizeResponse(data),upstream.status,auth.response.headers);
 }

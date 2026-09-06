@@ -1,3 +1,5 @@
+import { handleInsurancePractice, practiceReady, publicPracticeSnapshot } from './practice.js';
+
 const PARTNER_TYPES=new Set(['insurer','ga','planner','affiliate','other']);
 const PARTNER_STATUS=new Set(['candidate','review','approved','paused','rejected']);
 const AGREEMENT_STATUS=new Set(['none','review','signed','expired']);
@@ -16,7 +18,7 @@ async function body(request){try{return await request.json()}catch{return null}}
 
 export async function networkReady(env){
   if(!env.DB)return false;
-  try{const rows=await env.DB.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name IN ('insurance_partners','insurance_catalog_items','insurance_consultation_outcomes','insurance_advisor_profiles','insurance_advisor_consultation_links')").all();return new Set((rows.results||[]).map(r=>r.name)).size===5}catch{return false}
+  try{const rows=await env.DB.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name IN ('insurance_partners','insurance_catalog_items','insurance_consultation_outcomes','insurance_advisor_profiles','insurance_advisor_consultation_links')").all();return new Set((rows.results||[]).map(r=>r.name)).size===5&&await practiceReady(env)}catch{return false}
 }
 
 async function listPartners(env){
@@ -118,13 +120,14 @@ export async function linkAdvisorConsultation(env,consultationId,advisorProfileI
 
 export async function handleInsuranceNetwork(request,env){
   const url=new URL(request.url),path=url.pathname;
-  if(request.method==='GET'&&path==='/api/advisor/profile'){const profile=await advisorProfile(env,true);return profile?{status:200,body:{profile}}:{status:404,body:{error:'advisor_profile_not_public'}};}
+  if(request.method==='GET'&&path==='/api/advisor/profile'){const profile=await advisorProfile(env,true),practice=profile?await publicPracticeSnapshot(env):null;return profile?{status:200,body:{profile,practice:practice?.practice||null,affiliations:practice?.affiliations||[],connectors:practice?.connectors||[]}}:{status:404,body:{error:'advisor_profile_not_public'}};}
   if(request.method==='GET'&&path==='/api/network/catalog'){
     if(!comparisonEnabled(env))return{status:200,body:{enabled:false,mode:'reference-only',items:[],reason:'compliance-gate'}};
     return{status:200,body:{enabled:true,mode:'reference-only',...(await listCatalog(url,env,true))}};
   }
   if(!path.startsWith('/api/internal/network/'))return null;
   if(!internalAuthorized(request,env))return{status:401,body:{error:'Internal admin authorization required.'}};
+  const practiceResult=await handleInsurancePractice(request,env);if(practiceResult)return practiceResult;
   if(request.method==='GET'&&path==='/api/internal/network/advisor-profile')return{status:200,body:{profile:await advisorProfile(env,false)}};
   if(request.method==='PUT'&&path==='/api/internal/network/advisor-profile')return putAdvisorProfile(request,env);
   if(request.method==='GET'&&path==='/api/internal/network/partners')return{status:200,body:await listPartners(env)};

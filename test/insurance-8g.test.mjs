@@ -16,7 +16,7 @@ class D1 {
   prepare(sql){return new D1Statement(this.db.prepare(sql))}
 }
 function req(path,method='GET',body){return new Request(`https://insurance.test${path}`,{method,headers:{'content-type':'application/json','x-ekodi-insurance-internal-token':'test-token','x-ekodi-actor':'admin@test'},body:body?JSON.stringify(body):undefined})}
-function migrate(db){for(const name of ['0001_consultation_queue.sql','0002_revoke_minimization.sql','0003_partner_catalog_outcomes.sql','0004_advisor_profile.sql'])db.exec(fs.readFileSync(new URL(`../sites/ekodi-insurance/api/migrations/${name}`,import.meta.url),'utf8'))}
+function migrate(db){for(const name of ['0001_consultation_queue.sql','0002_revoke_minimization.sql','0003_partner_catalog_outcomes.sql','0004_advisor_profile.sql','0005_insurance_practice_affiliations.sql'])db.exec(fs.readFileSync(new URL(`../sites/ekodi-insurance/api/migrations/${name}`,import.meta.url),'utf8'))}
 
 test('8G insurance network keeps comparison behind partner and compliance gates',async()=>{
   const db=new DatabaseSync(':memory:');migrate(db);const env={DB:new D1(db),INSURANCE_INTERNAL_TOKEN:'test-token',INSURANCE_COMPARISON_PUBLIC_ENABLED:'false'};
