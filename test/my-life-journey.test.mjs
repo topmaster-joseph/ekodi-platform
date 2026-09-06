@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { execFileSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import { EKODI_LIFE_JOURNEY } from '../my/life-journey.js';
 import { EKODI_SERVICE_MANIFEST } from '../ekodi-service-manifest.js';
 
@@ -70,6 +71,8 @@ test('My EKODI journey surface stays inside My and does not query specialist pri
   assert.doesNotMatch(app,/from\(['"]work_/);
   assert.doesNotMatch(app,/from\(['"]community_/);
   assert.doesNotMatch(app,/from\(['"]business_/);
+  assert.doesNotMatch(app,/from\(['"]life_reflections/);
+  assert.match(app,/https:\/\/life\.ekodi\.kr\/api\/journey/);
   assert.doesNotMatch(journeyContract,/EKODI_LIFE_STAGE_BY_ID|lifeStageForId/);
-  execFileSync(process.execPath,['--check',new URL('../my/journey/app.js',import.meta.url).pathname],{stdio:'pipe'});
+  execFileSync(process.execPath,['--check',fileURLToPath(new URL('../my/journey/app.js',import.meta.url))],{stdio:'pipe'});
 });

@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 
 const read=path=>fs.readFileSync(new URL(`../${path}`,import.meta.url),'utf8');
 
@@ -57,8 +58,8 @@ test('Mall gives every verified Google member an active free personal seller han
 test('legacy Mall seller login is normalized back to Seller Studio through the current router',()=>{
   assert.match(authRouter,/'mall-seller':'mall'/);
   assert.match(authRouter,/requestedSite==='mall-seller'/);
-  assert.match(authRouter,/https:\/\/mall\.ekodi\.kr\/seller\//);
-  assert.match(authHtml,/auth-router\.js\?v=20260826-universal-sso-1/);
+  assert.match(authRouter,/https:\/\/ekodi\.kr\/ekodibiz\/mall\/seller\//);
+  assert.match(authHtml,/auth-router\.js\?v=20260904-direct-login-1/);
 });
 
 test('stable Google subject cannot be silently replaced by a recycled email account',()=>{
@@ -70,8 +71,10 @@ test('stable Google subject cannot be silently replaced by a recycled email acco
   assert.match(takeoverGuardMigration,/comment on function public\.link_person_identity\(uuid,uuid,text,text,text,text\)/i);
 });
 
-test('identity api persists Google subject and can mint a one-time handoff from an authenticated central session',()=>{
-  assert.match(identityApi,/p_provider_subject:String\(profile\.sub\)/);
+test('identity api preserves Google subject while persisting a provider-neutral verified identity',()=>{
+  assert.match(identityApi,/subject:String\(verified\.sub\)/);
+  assert.match(identityApi,/p_provider_subject:profile\.subject/);
+  assert.match(identityApi,/p_provider:provider/);
   assert.match(identityApi,/\/google\/link\/challenge/);
   assert.match(identityApi,/\/google\/link\/exchange/);
   assert.match(identityApi,/\/identities/);
@@ -112,7 +115,7 @@ test('auth center is workspace-first and hides linked login identities outside a
 
 test('Marketing workspace labels are separated and current routed assets are force-refreshed',()=>{
   assert.match(authHtml,/auth-workspaces\.css\?v=20260817-workspace-label-1/);
-  assert.match(authHtml,/auth-router\.js\?v=20260826-universal-sso-1/);
+  assert.match(authHtml,/auth-router\.js\?v=20260904-direct-login-1/);
   assert.match(authRouter,/marketing-auth-hotfix\.js\?v=20260824-return-origin-1/);
   assert.match(authRouter,/marketing-onboarding\.js\?v=20260817-workspace-label-1/);
   assert.match(marketingOnboarding,/parts\.slice\(0,2\)/);
@@ -121,7 +124,7 @@ test('Marketing workspace labels are separated and current routed assets are for
 
 test('central auth directly honors a requested verified Social or Energy workspace',()=>{
   assert.match(authJs,/social:\{name:'EKODI Social'/);
-  assert.match(authJs,/energy:\{name:'EKODI Energy AI'/);
+  assert.match(authJs,/energy:\{name:'Energy AI'/);
   assert.match(authJs,/PERSON_SCOPED_SITES=new Set\(\['social','energy'\]\)/);
   assert.match(authJs,/SERVICE_API=PERSON_SCOPED_SITES\.has\(site\)\?PERSON_WORKSPACE:ACCESS/);
   assert.match(authJs,/requestedWorkspace=String\(params\.get\('workspace'\)/);
@@ -138,6 +141,13 @@ test('client auth reuses the central EKODI session instead of forcing Google log
   assert.match(clientAuth,/handoffExistingSession/);
 });
 
+test('direct login mode opens the Google prompt without a second intermediate click',()=>{
+  assert.match(clientAuth,/DIRECT_LOGIN=params\.get\('direct'\)==='1'/);
+  assert.match(clientAuth,/window\.google\.accounts\.id\.prompt/);
+  assert.match(clientAuth,/isNotDisplayed/);
+  assert.match(clientAuth,/isSkippedMoment/);
+});
+
 test('targeted workspace routing is available across shared and person-scoped EKODI services',()=>{
   for(const site of ['marketing','biz','books','church','lab','mall','social','energy'])assert.match(authTarget,new RegExp(`${site}:`));
   assert.match(authRouter,/targetableWorkspaceSites/);
@@ -148,7 +158,7 @@ test('targeted workspace routing is available across shared and person-scoped EK
 });
 
 test('My EKODI is the signed-in workspace home and routes connected platforms through central auth',()=>{
-  assert.match(myHtml,/MY EKODI · USER UI/);
+  assert.match(myHtml,/MY EKODI · PERSONAL AI HOME/);
   assert.match(myHtml,/data-ekodi-ui="USER"/);
   assert.match(myHtml,/id="workspaceList"/);
   assert.doesNotMatch(myHtml,/id="workspaceSwitcher"/);
@@ -165,7 +175,7 @@ test('My EKODI is the signed-in workspace home and routes connected platforms th
 
 test('browser auth and My router scripts parse as JavaScript',()=>{
   for(const path of ['auth-site/auth.js','auth-site/client-auth.js','auth-site/auth-router.js','auth-site/auth-workspace-target.js','auth-site/marketing-onboarding.js','my/app.js','my/user-ai-ui.js']){
-    const result=spawnSync(process.execPath,['--check',new URL(`../${path}`,import.meta.url).pathname],{encoding:'utf8'});
+    const result=spawnSync(process.execPath,['--check',fileURLToPath(new URL(`../${path}`,import.meta.url))],{encoding:'utf8'});
     assert.equal(result.status,0,`${path}\n${result.stderr||result.stdout}`);
   }
 });

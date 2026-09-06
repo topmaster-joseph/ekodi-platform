@@ -42,8 +42,9 @@ test('Google login uses one-time server challenges and EKODI sessions', () => {
   assert.match(backend, /session\.google_login/);
 });
 
-test('administrator preregistration is super-admin only and preserves a final super admin', () => {
-  assert.match(backend, /admin\.role !== 'super_admin'/);
+test('administrator preregistration is capability-gated and preserves a final super admin', () => {
+  assert.match(backend, /adminAuthorityForRole\(admin\.role/);
+  assert.match(backend, /requiredCapabilities: \[capability\]/);
   assert.match(backend, /활성 최고관리자는 최소 1명 이상 유지해야 합니다/);
   assert.match(backend, /현재 로그인한 최고관리자 계정은 비활성화할 수 없습니다/);
 });

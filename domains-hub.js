@@ -44,9 +44,7 @@
     navButton.dataset.section = 'domains';
     navButton.append(document.createTextNode('◎ '), element('span', 'Domains'));
     const placeholder = nav.querySelector('[data-lazy-section="domains"]');
-    const activity = nav.querySelector('a[href="/legacy#activity"]');
     if (placeholder) placeholder.insertAdjacentElement('beforebegin', navButton);
-    else if (activity) nav.insertBefore(navButton, activity);
     else nav.append(navButton);
 
     const section = element('section', '', 'section domains-hub hidden-panel');

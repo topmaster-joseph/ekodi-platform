@@ -1,8 +1,8 @@
 (() => {
   const SUPABASE_URL = 'https://renzehysxirjilvdxacv.supabase.co';
   const PUBLISHABLE_KEY = 'sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
-  const DRAFT_KEY = 'ekodiMallSellerStudioDraftV4';
-  const PRODUCT_BASE_URL = 'https://mall.ekodi.kr/p/';
+  const DRAFT_KEY = 'ekodiMallSellerStudioDraftV5';
+  const PRODUCT_BASE_URL = 'https://ekodi.kr/ekodibiz/mall/p/';
   const INDIVIDUAL_FEES = Object.freeze({
     direct: { ratePercent: 7, label: '직접 공유 판매' },
     marketplace: { ratePercent: 8, label: 'EKODI Mall 판매' },
@@ -111,6 +111,19 @@
     return String(value || '').split(/[\n,]/).map((item) => item.trim()).filter(Boolean).slice(0, 5);
   }
 
+  function selectedRegion() {
+    const option = form.elements.primaryRegionId?.selectedOptions?.[0];
+    const primaryRegionId = String(option?.value || '').trim();
+    if (!primaryRegionId) return null;
+    return {
+      primaryRegionId,
+      regionIds: String(option.dataset.path || '').split(',').map((item) => item.trim()).filter((item) => item && item !== 'kr'),
+      label: String(option.dataset.fullName || option.textContent || '').trim(),
+      relationship: 'seller-declared',
+      verified: false
+    };
+  }
+
   function commerceAction(data) {
     if (data.saleType === 'affiliate') {
       return {
@@ -174,7 +187,8 @@
         ownerType: hasStore ? 'store' : 'seller',
         ownerLabel: storeName || sellerName,
         name: product,
-        category: data.category || 'local',
+        category: data.category || 'general',
+        region: selectedRegion(),
         saleType: data.saleType || 'direct',
         audience,
         oneLine,
@@ -275,6 +289,7 @@
       addPreviewBlock(preview, 'WHO', draft.product.audience, draft.content.detailIntro);
       addPreviewBlock(preview, 'STORY', '상품 뒤의 이야기', draft.product.story);
       addPreviewBlock(preview, 'FULFILLMENT', '받는 방법', draft.product.fulfillment);
+      if (draft.product.region?.label) addPreviewBlock(preview, 'LOCAL', draft.product.region.label, '판매자가 연결 지역으로 선택했습니다. 검증 전 지역 정보입니다.');
       if (draft.product.benefits.length) addPreviewBlock(preview, 'BENEFITS', '핵심 장점', draft.product.benefits.join(' · '));
     }
 

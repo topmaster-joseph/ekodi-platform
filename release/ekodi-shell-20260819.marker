@@ -1,5 +1,0 @@
-EKODI Shell production release marker
-Date: 2026-08-24
-Purpose: force production redeploy after shared EKODI Message UI rollout to all Shell-enabled services.
-Message UI: v1
-Verification required: /health messageUIVersion=1 and /shell.js x-ekodi-message-ui=v1

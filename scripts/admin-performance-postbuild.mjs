@@ -4,13 +4,8 @@ import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const dist = fileURLToPath(new URL('../dist/', import.meta.url));
-const path = `${dist}control-center.html`;
+const path = `${dist}admin-shell.html`;
 let html = await readFile(path, 'utf8');
-
-function mustReplace(search, replacement, label) {
-  if (!html.includes(search)) throw new Error(`admin performance marker missing: ${label}`);
-  html = html.replace(search, replacement);
-}
 
 // Diagnostics never belong to the normal startup graph. They are published as a standalone
 // asset and fetched only when an administrator explicitly adds ?perf=1.
@@ -21,24 +16,52 @@ await copyFile(`${root}admin-perf-diagnostics.js`, `${dist}admin-perf-diagnostic
 const sharedAdminMenuModules = ['admin-menu-registry.js', 'admin-sidebar.js', 'admin-menu-runtime.js'];
 await Promise.all(sharedAdminMenuModules.map(asset => copyFile(`${root}${asset}`, `${dist}${asset}`)));
 
-// Keep the first-path demand router below its hard byte budget.
+// Keep the first-path demand router below its hard byte budget. Source remains readable;
+// only the generated runtime receives safe internal identifier compaction.
 const demandLoaderPath = `${dist}admin-demand-loader.js`;
-const demandLoaderSource = await readFile(demandLoaderPath, 'utf8');
-await writeFile(demandLoaderPath, demandLoaderSource.split('\n').map(line => line.trimStart()).filter(Boolean).join('\n') + '\n');
+let demandLoaderSource = await readFile(demandLoaderPath, 'utf8');
+for (const [from,to] of [
+  ['secondaryScheduled','sec'],
+  ['insertPlaceholder','insert'],
+  ['activateFeature','activate'],
+  ['bindBaseEnhancements','bindBase'],
+  ['requestedFeature','reqFeature'],
+  ['demandGenerated','dg'],
+  ['__ekodiDemandHandler','_dh'],
+  ['scheduleSecondary','schedule'],
+  ['authenticated','authed'],
+  ['assetUrl','urlFor'],
+  ['loadScript','loadJs'],
+  ['loadStyle','loadCss'],
+  ['inputPending','inputBusy'],
+  ['onBackground','background'],
+  ['FEATURES','F'],
+  ['loadedScripts','jsCache'],
+  ['loadedStyles','cssCache'],
+  ['stylesLoaded','cssReady'],
+  ['TOKEN_KEY','TK'],
+  ['secondaryStyles','secCss'],
+  ['waitFor','wait'],
+  ['pending','pnd'],
+  ['hashes','h'],
+  ['paths','p'],
+]) demandLoaderSource = demandLoaderSource.replaceAll(from, to);
+for (const [from,to] of [['ASSET_VERSION','AV'],['separator','sep'],['existing','ex'],['promise','pr'],['finish','fin'],['observer','obs'],['content','ct'],['timer','tm'],['callback','cb'],['handler','hd'],['placeholder','ph'],['requestedKey','rk'],['selector','sl'],['settled','st'],['deadline','dl'],['index','ix'],['changed','ch']]) {
+  demandLoaderSource = demandLoaderSource.replace(new RegExp(`\\b${from}\\b`, 'g'), to);
+}
+const selfInitializingIdentifier = demandLoaderSource.match(/\bconst\s+([A-Za-z_$][\w$]*)\s*=\s*\1\s*\(/);
+if (selfInitializingIdentifier) throw new Error(`Demand loader compaction created a TDZ self-call: ${selfInitializingIdentifier[0]}`);
+await writeFile(demandLoaderPath, demandLoaderSource.replace(/\r\n/g, '\n').split('\n').map(line => line.trimStart()).filter(Boolean).join('\n') + '\n');
 
 // Login/return parses only the base visual CSS and the small central-auth handoff.
 html = html
   .replace(/\s*<link rel="stylesheet" href="control-center-ops\.css">/g, '')
-  .replace(/\s*<link rel="stylesheet" href="control-center-finance\.css">/g, '')
+  .replace(/\s*<link rel="stylesheet" href="admin-finance\.css">/g, '')
   .replace(/\s*<script src="control-center\.js"><\/script>/g, '')
   .replace('<script src="admin-central-handoff.js"></script>', '<script src="admin-central-handoff.js" defer></script>');
 
-// Only the overview hero participates in first authenticated layout. Operational DOM remains
-// for compatibility but is display:none until its workspace is explicitly selected.
-mustReplace('<section class="metrics" data-panel="overview services"', '<section class="metrics hidden-panel" data-panel="services"', 'services metrics panel');
-mustReplace('<section class="section operations-section" data-panel="overview services"', '<section class="section operations-section hidden-panel" data-panel="services"', 'services operations panel');
-mustReplace('<section class="section" data-panel="overview finance"', '<section class="section hidden-panel" data-panel="finance"', 'finance panel');
-for (const section of ['communication', 'workspace', 'organization']) {
+// The retired overview/services bootstrap DOM no longer exists. Keep surviving workspaces hidden until selected.
+for (const section of ['finance', 'communication', 'workspace', 'organization']) {
   html = html.replace(`<section class="section" data-panel="${section}"`, `<section class="section hidden-panel" data-panel="${section}"`);
 }
 
@@ -46,7 +69,7 @@ for (const section of ['communication', 'workspace', 'organization']) {
 const financePath = `${dist}finance-monitor.js`;
 let finance = await readFile(financePath, 'utf8');
 const financeTail = /financeRefresh\.addEventListener\('click',[\s\S]*?setInterval\(\(\) => \{[\s\S]*?\}, 120000\);/;
-if (!financeTail.test(finance)) throw new Error('finance polling tail marker missing');
+if (financeTail.test(finance)) {
 finance = finance.replace(financeTail, `let financeRefreshTimer = 0;
 function cancelFinanceRefresh() {
   if (financeRefreshTimer) clearTimeout(financeRefreshTimer);
@@ -72,31 +95,48 @@ if ((location.hash === '#finance' || financeSectionButton.classList.contains('ac
   queueMicrotask(() => loadFinance(false).finally(scheduleFinanceRefresh));
 }`);
 await writeFile(financePath, finance);
+}
+if (finance.includes('setInterval(')) throw new Error('Finance monitor still contains perpetual polling');
 
 // Mobile browsers pay heavily for backdrop blur and off-screen panel painting.
-const cssPath = `${dist}control-center.css`;
+const cssPath = `${dist}admin-shell.css`;
 let css = await readFile(cssPath, 'utf8');
 const perfCss = `\n/* admin performance guards */\n.section,.architecture{content-visibility:auto;contain-intrinsic-size:280px}\n@media(max-width:760px){.topbar{-webkit-backdrop-filter:none!important;backdrop-filter:none!important;background:#091321f2}.section,.architecture{contain-intrinsic-size:360px}}\n@media(prefers-reduced-motion:reduce){[data-panel],.sidebar{transition:none!important;scroll-behavior:auto!important}}\n`;
 if (!css.includes('admin performance guards')) css += perfCss;
 await writeFile(cssPath, css);
 
 // Mobile Admin is its own flow: the compact header belongs to the document and scrolls away.
-const compactCssPath = `${dist}compact-control-center.css`;
+const compactCssPath = `${dist}admin-compact.css`;
 let compactCss = await readFile(compactCssPath, 'utf8');
-const mobileCss = `\n/* admin mobile flow */\n@media(max-width:760px){body.compact-control-center .app>main{padding-top:0!important}body.compact-control-center .topbar{position:static!important;inset:auto!important;width:auto!important;height:auto!important;min-height:56px!important;padding:8px 12px!important;box-sizing:border-box!important}body.compact-control-center .topbar .kicker{display:none!important}body.compact-control-center .topbar h1{font-size:16px!important;margin:0!important}body.compact-control-center .content{padding:12px 12px 32px!important}}\n`;
+const mobileCss = `\n/* admin mobile flow */\n@media(max-width:760px){body.admin-compact .app>main{padding-top:0!important}body.admin-compact .topbar{position:static!important;inset:auto!important;width:auto!important;height:auto!important;min-height:56px!important;padding:8px 12px!important;box-sizing:border-box!important}body.admin-compact .topbar .kicker{display:none!important}body.admin-compact .topbar h1{font-size:16px!important;margin:0!important}body.admin-compact .content{padding:12px 12px 32px!important}}\n`;
 if (!compactCss.includes('admin mobile flow')) compactCss += mobileCss;
 await writeFile(compactCssPath, compactCss);
+
+// Compact the generated compact runtime without changing JavaScript semantics.
+const compactJsPath = `${dist}admin-compact.js`;
+const compactJsSource = (await readFile(compactJsPath, 'utf8')).replace(/^[ \t]+/gm, '');
+await writeFile(compactJsPath, compactJsSource);
+
+// Keep the readable menu source in Git and ship a deterministic compact derivative.
+// The source hash makes stale generated runtime fail closed whenever the readable source changes.
+const menuRuntimePath = `${dist}admin-menu-layout.js`;
+const menuReadableSource = await readFile(`${root}admin-menu-layout.js`, 'utf8');
+const menuReadableHash = createHash('sha256').update(menuReadableSource.replace(/\r\n/g, '\n')).digest('hex');
+const menuCompactSource = await readFile(`${root}admin-menu-layout.compact.js`, 'utf8');
+const menuCompactHeader = menuCompactSource.match(/^\/\/ source-sha256:([a-f0-9]{64})\r?\n/);
+if (!menuCompactHeader || menuCompactHeader[1] !== menuReadableHash) throw new Error('Admin menu compact runtime is stale; regenerate it from admin-menu-layout.js');
+await writeFile(menuRuntimePath, menuCompactSource.slice(menuCompactHeader[0].length));
 
 // Fingerprint the complete admin runtime. HTML is no-store, while every referenced versioned
 // asset can then be cached immutably without ever mixing two releases in one browser session.
 const versionInputs = [
   'admin-central-handoff.js','admin-authenticated-shell.js','admin-demand-loader.js','admin-menu-layout.js',
   ...sharedAdminMenuModules,
-  'compact-control-center.js','compact-control-center.css','control-center.css','finance-monitor.js',
-  'campus-actions.js','campus-actions.css','device-control-admin.js','device-control-admin.css',
-  'ai-ops-admin.js','ai-ops-admin.css','ai-module-spec-admin.js','ai-module-spec-admin.css','mission-control-admin.js','mission-control-admin.css',
+  'admin-compact.js','admin-compact.css','admin-shell.css','finance-monitor.js',
+  'campus-actions.js','campus-actions.css','device-control-admin.js','device-control-admin.css','remote-power-admin.js','remote-power-admin.css',
+  'ai-ops-admin.js','ai-ops-admin.css','ai-module-spec-admin.js','ai-module-spec-admin.css','life-ai-admin.js','life-ai-admin.css','mission-control-admin.js','mission-control-admin.css',
   'release-control-admin.js','release-control-admin.css','admin-lazy-features.js',
-  'system-health-admin.js','system-health-admin.css','api-cost-admin.js','api-cost-admin.css','work-admin.js','work-admin.css',
+  'system-health-admin.js','system-health-admin.css','api-cost-admin.js','api-cost-admin.css','work-admin.js','work-admin.css','communication-admin.js','communication-admin.css',
   'marketing-ai-admin.js','marketing-ai-admin.css','author-billing-admin.js','author-billing-admin.css',
   'admin-perf-diagnostics.js',
 ];
@@ -109,6 +149,40 @@ for (const asset of ['admin-central-handoff.js','admin-authenticated-shell.js','
   if (!source.includes('__EKODI_ADMIN_ASSET_VERSION__')) throw new Error(`${asset} asset-version placeholder missing`);
   await writeFile(assetPath, source.replaceAll('__EKODI_ADMIN_ASSET_VERSION__', assetVersion));
 }
+
+// Compact generated first-path JS without changing source contracts.
+const handoffPath = `${dist}admin-central-handoff.js`;
+let compactHandoff = await readFile(handoffPath, 'utf8');
+compactHandoff = compactHandoff.replace(/^\/\/ Minimal admin entry runtime:[^\r\n]*(?:\r?\n)/, '');
+for (const [from,to] of [
+  ['CENTRAL_ADMIN_AUTH_URL','AUTH_URL'],
+  ['ensureCentralLoginFallback','ensureLogin'],
+  ['normalizeEntryRoute','normalizeEntry'],
+  ['syncLoginLink','syncLogin'],
+  ['routeFromLocation','routeNow'],
+  ['cleanRouteUrl','cleanUrl'],
+  ['centralAdminAuthUrl','authUrl'],
+  ['updateSessionState','updateState'],
+  ['loadPerfDiagnostics','loadPerf'],
+  ['validateSession','validate'],
+]) compactHandoff = compactHandoff.replaceAll(from, to);
+await writeFile(handoffPath, compactHandoff);
+
+const shellPath = `${dist}admin-authenticated-shell.js`;
+let compactShell = await readFile(shellPath, 'utf8');
+for (const [from,to] of [
+  ['postAuthStyles','styles'],
+  ['criticalPostAuthScripts','scripts'],
+  ['canonicalizeLegacyEntry','legacyEntry'],
+  ['applyOfficialAdminSurface','applySurface'],
+  ['keepLoginInteractive','keepLogin'],
+  ['installSharedAdminLayout','installLayout'],
+  ['deactivateMallFreeOps','closeMall'],
+  ['installMallFreeOpsIsolation','installMall'],
+  ['startAuthenticatedShell','startShell'],
+  ['onStateChange','onState'],
+]) compactShell = compactShell.replaceAll(from, to);
+await writeFile(shellPath, compactShell);
 
 // ES-module imports are versioned too. This prevents a browser from combining a new layout
 // with a five-minute-old menu registry after a deployment.
@@ -125,7 +199,7 @@ for (const [asset, imports] of moduleImportVersions) {
 }
 
 html = html
-  .replace(/href="control-center\.css(?:\?v=[^"]+)?"/, `href="control-center.css?v=${assetVersion}"`)
+  .replace(/href="admin-shell\.css(?:\?v=[^"]+)?"/, `href="admin-shell.css?v=${assetVersion}"`)
   .replace(/src="admin-central-handoff\.js(?:\?v=[^"]+)?"/, `src="admin-central-handoff.js?v=${assetVersion}"`)
   .replace(/src="admin-authenticated-shell\.js(?:\?v=[^"]+)?"/, `src="admin-authenticated-shell.js?v=${assetVersion}"`)
   .replaceAll('20260819-thin-shell-2', assetVersion)
@@ -133,26 +207,23 @@ html = html
 await writeFile(path, html);
 
 // Final budgets run after every postbuild layer so later CSS/JS cannot sneak past the guard.
-const menuBudgetPath = `${dist}admin-menu-layout.js`;
-const compactMenuForBudget = (await readFile(menuBudgetPath, 'utf8')).replace(/^[ \t]+/gm, '');
-await writeFile(menuBudgetPath, compactMenuForBudget);
 const files = {
   handoff: await readFile(`${dist}admin-central-handoff.js`, 'utf8'),
   shell: await readFile(`${dist}admin-authenticated-shell.js`, 'utf8'),
-  compact: await readFile(`${dist}compact-control-center.js`, 'utf8'),
+  compact: await readFile(`${dist}admin-compact.js`, 'utf8'),
   menu: await readFile(`${dist}admin-menu-layout.js`, 'utf8'),
   demand: await readFile(`${dist}admin-demand-loader.js`, 'utf8'),
 };
 const bytes = Object.fromEntries(Object.entries(files).map(([key, value]) => [key, Buffer.byteLength(value)]));
-const baseCssBytes = Buffer.byteLength(await readFile(`${dist}control-center.css`, 'utf8'));
-const compactCssBytes = Buffer.byteLength(await readFile(`${dist}compact-control-center.css`, 'utf8'));
+const baseCssBytes = Buffer.byteLength(await readFile(`${dist}admin-shell.css`, 'utf8'));
+const compactCssBytes = Buffer.byteLength(await readFile(`${dist}admin-compact.css`, 'utf8'));
 const postAuthBytes = bytes.shell + bytes.compact + bytes.menu + bytes.demand;
 const firstPathBytes = bytes.handoff + postAuthBytes;
 const firstCssBytes = baseCssBytes + compactCssBytes;
 
 if (html.includes('control-center.js"></script>')) throw new Error('Legacy control-center.js leaked into admin first path');
-if (html.includes('control-center-ops.css') || html.includes('control-center-finance.css')) throw new Error('Operational CSS leaked into admin first path');
-if (!html.includes(`control-center.css?v=${assetVersion}`) || !html.includes(`admin-central-handoff.js?v=${assetVersion}`)) throw new Error('Versioned first-path assets missing');
+if (html.includes('control-center-ops.css') || html.includes('admin-finance.css')) throw new Error('Operational CSS leaked into admin first path');
+if (!html.includes(`admin-shell.css?v=${assetVersion}`) || !html.includes(`admin-central-handoff.js?v=${assetVersion}`)) throw new Error('Versioned first-path assets missing');
 if (bytes.handoff > 9000) throw new Error(`Admin handoff budget exceeded: ${bytes.handoff} bytes`);
 if (bytes.compact > 5000) throw new Error(`Compact shell budget exceeded: ${bytes.compact} bytes`);
 if (bytes.menu > 10000) throw new Error(`Menu layout budget exceeded: ${bytes.menu} bytes`);
@@ -168,7 +239,7 @@ for (const [name, source] of Object.entries(files)) {
 }
 const finalFinance = await readFile(financePath, 'utf8');
 if (finalFinance.includes('setInterval(')) throw new Error('Finance monitor still contains perpetual polling');
-if ((await readFile(`${dist}compact-control-center.css`, 'utf8')).includes('admin-readable-command.css')) throw new Error('AI command CSS leaked into startup compact CSS');
+if ((await readFile(`${dist}admin-compact.css`, 'utf8')).includes('admin-readable-command.css')) throw new Error('AI command CSS leaked into startup compact CSS');
 if (!(await readFile(`${dist}ai-ops-admin.css`, 'utf8')).includes('admin-readable-command.css')) throw new Error('AI command CSS missing from on-demand AI Ops');
 
-console.log(`Admin performance postbuild: version=${assetVersion} handoff=${bytes.handoff}B post-auth=${postAuthBytes}B first-path=${firstPathBytes}B CSS=${firstCssBytes}B; immutable versioning ready, shared menu modules published, legacy runtime/polling deferred.`);
+console.log(`Admin performance postbuild: version=${assetVersion} handoff=${bytes.handoff}B post-auth=${postAuthBytes}B first-path=${firstPathBytes}B CSS=${firstCssBytes}B; immutable versioning ready, shared menu modules published, retired runtime removed and polling guarded.`);

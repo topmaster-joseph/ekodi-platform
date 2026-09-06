@@ -2,33 +2,32 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
-const js = await readFile(new URL('../compact-control-center.js', import.meta.url), 'utf8');
-const css = await readFile(new URL('../compact-control-center.css', import.meta.url), 'utf8');
+const [registry, campus, css] = await Promise.all([
+  readFile(new URL('../admin-menu-registry.js', import.meta.url), 'utf8'),
+  readFile(new URL('../campus-actions.js', import.meta.url), 'utf8'),
+  readFile(new URL('../admin-compact.css', import.meta.url), 'utf8'),
+]);
 
-test('compact control center keeps site management as the first screen and renders a simple site table', () => {
-  assert.match(js, /dataset\.section = 'campus'/);
-  assert.match(js, /campus: '사이트 관리'/);
-  assert.match(js, /campusServiceRows/);
-  assert.match(js, /class="finance-table campus-table"/);
-  assert.match(js, /<th>Type<\/th><th>Service<\/th><th>Domain<\/th><th>Manage<\/th>/);
-  assert.match(js, /showPanel\('campus'\)/);
-  assert.doesNotMatch(js, /Management Preview/);
-  assert.doesNotMatch(js, /campusOrbit/);
+test('Site Structure is the canonical home entry and renders registry-driven site groups', () => {
+  assert.match(registry, /id: 'campus'[\s\S]*en: 'Site Structure'/);
+  assert.ok(campus.includes('const ALL_SITES = ['));
+  assert.ok(campus.includes('const SITE_GROUPS = ['));
+  assert.ok(campus.includes('function renderSiteItem(site)'));
+  assert.ok(campus.includes("className = 'campus-site-item'"));
+  assert.ok(campus.includes('function renderGroup(group)'));
 });
 
-test('site-list rows open public sites and route to related admin sections', () => {
-  assert.match(js, /campusServiceRow/);
-  assert.match(js, /data\.campusSection|dataset\.campusSection/);
-  assert.match(js, /openAdminSection/);
-  assert.match(js, /highlightService/);
-  assert.match(js, /books\.ekodi\.kr/);
-  assert.match(js, /church\.ekodi\.kr/);
-  assert.match(js, /mall\.ekodi\.kr/);
-  assert.match(js, /link\.target = '_blank'/);
+test('site rows keep bounded manage, status and public-open actions', () => {
+  assert.ok(campus.includes("function openSection(section, domain, fallback = '')"));
+  assert.ok(campus.includes('function focusService(domain)'));
+  assert.ok(campus.includes('dataset.campusAction') && campus.includes('dataset.campusTarget'));
+  assert.ok(campus.includes("makeButton('Manage'"));
+  assert.ok(campus.includes("makeButton('Status'"));
+  assert.ok(campus.includes("link.target = '_blank'"));
+  assert.ok(campus.includes("link.rel = 'noopener'"));
 });
 
-test('existing compact table and service-focus styling remain available', () => {
-  assert.match(css, /\.campus-panel/);
-  assert.match(css, /\.campus-toolbar/);
-  assert.match(css, /\.service-control-card\.campus-focus/);
+test('compact styling retains Site Structure focus affordances', () => {
+  assert.match(css, /campus/);
+  assert.match(css, /campus-focus/);
 });

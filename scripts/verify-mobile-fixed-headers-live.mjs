@@ -1,7 +1,7 @@
 import { EKODI_SERVICE_MANIFEST } from '../ekodi-service-manifest.js';
 
 const release=String(process.env.GITHUB_SHA||Date.now()).slice(0,40);
-const attempts=Math.max(1,Math.min(3,Number(process.env.EKODI_MOBILE_HEADER_ATTEMPTS||2)));
+const attempts=Math.max(1,Math.min(30,Number(process.env.EKODI_MOBILE_HEADER_ATTEMPTS||6)));
 const delayMs=Math.max(0,Number(process.env.EKODI_MOBILE_HEADER_DELAY_MS||5000));
 const timeoutMs=Math.max(3000,Number(process.env.EKODI_MOBILE_HEADER_TIMEOUT_MS||15000));
 const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
@@ -31,14 +31,14 @@ async function audit(){
   const errors=[];
   const [root,adminCss,shell,liveManifest]=await Promise.all([
     get('https://ekodi.kr/'),
-    get('https://admin.ekodi.kr/control-center.css'),
+    get('https://admin.ekodi.kr/admin-shell.css'),
     get('https://shell.ekodi.kr/shell.js'),
     get('https://shell.ekodi.kr/manifest.json'),
   ]);
   http(root,'ekodi.kr',errors);
   need(root,'ekodi.kr','.site-header{position:fixed;top:0;left:0;right:0;width:100%',errors);
   need(root,'ekodi.kr','--ekodi-home-header-height',errors);
-  http(adminCss,'admin.ekodi.kr/control-center.css',errors);
+  http(adminCss,'admin.ekodi.kr/admin-shell.css',errors);
   need(adminCss,'admin','position:fixed!important',errors);
   need(adminCss,'admin','.app>main{padding-top:calc(78px + env(safe-area-inset-top,0px))}',errors);
   http(shell,'shell.ekodi.kr/shell.js',errors);

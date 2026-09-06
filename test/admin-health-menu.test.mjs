@@ -6,24 +6,27 @@ const read = path => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 const routePair = (source, hash, section) => source.includes(`['${hash}', '${section}']`) || source.includes(`${hash}:${section}`);
 const canonicalPair = (source, section, hash) => source.includes(`['${section}', '${hash}']`) || source.includes(`${section}:${hash}`);
 
-test('Health remains a visible standalone route before Security and later operational features', async () => {
+test('Health remains a visible Operations Center route after AI and node controls', async () => {
   const menu = await read('admin-menu-layout.js');
   const registry = await read('admin-menu-registry.js');
   const loader = await read('admin-demand-loader.js');
-  assert.ok(registry.indexOf("id: 'campus'") < registry.indexOf("id: 'aiops'"));
-  assert.ok(registry.indexOf("id: 'aiops'") < registry.indexOf("id: 'health'"));
-  assert.ok(registry.indexOf("id: 'health'") < registry.indexOf("id: 'security'"));
+  assert.match(registry, /id: 'security', group: 'core'/);
+  assert.match(registry, /id: 'capabilities', group: 'operations-center'/);
+  assert.match(registry, /id: 'health', group: 'operations-center'/);
+  assert.ok(registry.indexOf("id: 'capabilities'") < registry.indexOf("id: 'aiops'"));
+  assert.ok(registry.indexOf("id: 'aiops'") < registry.indexOf("id: 'devices'"));
+  assert.ok(registry.indexOf("id: 'devices'") < registry.indexOf("id: 'health'"));
   assert.ok(routePair(menu, '#health', 'health'));
   assert.ok(canonicalPair(menu, 'health', '#health'));
   assert.match(loader, /health:\s*\{/);
-  assert.match(loader, /health:\s*\{[\s\S]*?insert: 'after-aiops'/);
-  assert.match(loader, /security:\s*\{[\s\S]*?insert: 'after-health'/);
-  assert.match(loader, /deployments:\s*\{[\s\S]*?insert: 'after-security'/);
+  assert.match(loader, /health:\s*\{[\s\S]*?insert:\s*'after-aiops'/);
+  assert.match(loader, /security:\s*\{[\s\S]*?insert:\s*'after-health'/);
+  assert.match(loader, /deployments:\s*\{[\s\S]*?insert:\s*'after-security'/);
 });
 
 test('Health assets do not ride along with AI Ops secondary hydration', async () => {
   const loader = await read('admin-demand-loader.js');
-  const aiOpsBlock = loader.match(/aiops:\s*\{([\s\S]*?)\n\s*\},\n\s*health:/)?.[1] || '';
+  const aiOpsBlock = loader.match(/aiops:\s*\{([\s\S]*?)\n\s{4}\},/)?.[1] || '';
   assert.ok(aiOpsBlock);
   assert.doesNotMatch(aiOpsBlock, /system-health-admin/);
   assert.doesNotMatch(aiOpsBlock, /system-health-admin\.css/);

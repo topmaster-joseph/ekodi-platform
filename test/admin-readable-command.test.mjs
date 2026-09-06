@@ -6,7 +6,7 @@ const read = path => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 
 test('all authenticated Admin surfaces inherit the EKODI readability base', async () => {
   const css = await read('admin-readability-base.css');
-  assert.match(css, /body\.compact-control-center\{/);
+  assert.match(css, /body\.admin-compact\{/);
   assert.match(css, /font-size:16px!important/);
   assert.match(css, /\.content \[data-panel\] th\{font-size:13px!important/);
   assert.match(css, /\.content \[data-panel\] td\{font-size:14px!important/);
@@ -46,13 +46,13 @@ test('Chief AI owns action requests and routes specialists internally', async ()
 
 test('AI Ops no longer auto-hydrates Governance cockpit or Deployments', async () => {
   const loader = await read('admin-demand-loader.js');
-  const aiops = loader.match(/aiops:\s*\{([\s\S]*?)\n\s*\},\n\s*deployments:/)?.[1] || '';
+  const aiops = loader.match(/aiops:\s*\{([\s\S]*?)\n\s{4}\},/)?.[1] || '';
   assert.match(aiops, /admin-lazy-features\.js/);
-  assert.match(aiops, /system-health-admin\.js/);
+  assert.doesNotMatch(aiops, /system-health-admin\.js/);
   assert.doesNotMatch(aiops, /mission-control-admin/);
   assert.doesNotMatch(aiops, /release-control-admin/);
   assert.match(loader, /deployments:\s*\{/);
-  assert.match(loader, /scripts: \['release-control-admin\.js'\]/);
+  assert.match(loader, /scripts:\s*\['release-control-admin\.js'\]/);
 });
 
 test('base readability is first-path while AI orchestration stays lazy and performance guard runs last', async () => {
@@ -66,7 +66,7 @@ test('base readability is first-path while AI orchestration stays lazy and perfo
   const performanceIndex = build.indexOf('admin-performance-postbuild.mjs');
   assert.ok(readableIndex >= 0 && performanceIndex > readableIndex);
   assert.match(postbuild, /admin-readability-base\.css/);
-  assert.match(postbuild, /control-center\.css/);
+  assert.match(postbuild, /admin-shell\.css/);
   assert.match(postbuild, /ai-ops-admin\.css/);
   assert.match(postbuild, /admin-lazy-features\.js/);
   assert.doesNotMatch(postbuild, /control-center\.html/);

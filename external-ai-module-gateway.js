@@ -1,4 +1,5 @@
 import { storeEkodiDurableRecord } from './storage-gateway.js';
+import { projectForExternalAi, projectionStamp } from './secure-projection.js';
 
 const PREFIX = '/api/ai-modules/v1';
 const MODULE_ID = /^[a-z0-9][a-z0-9._-]{2,63}$/;
@@ -88,6 +89,12 @@ async function invokeModule(module, body, env, caller) {
   if (!secret) throw new Error('AI_MODULE_SECRET_MISSING');
 
   const requestId = crypto.randomUUID();
+  const projectionProfile = String(body.capability || '').startsWith('marketing') ? 'ai_marketing' : 'ai_minimum';
+  const projectionPurpose = `external-ai-module:${body.capability}`;
+  const projected = await projectForExternalAi({
+    context: { spaceId: body.context.spaceId, actorId: body.context.actorId, role: body.context.role },
+    input: body.input,
+  }, { profile: projectionProfile, purpose: projectionPurpose, salt: requestId });
   const timeoutMs = Math.max(1000, Math.min(30000, Number(module.timeoutMs || 12000)));
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort('timeout'), timeoutMs);
@@ -108,14 +115,15 @@ async function invokeModule(module, body, env, caller) {
         moduleId: module.id,
         capability: body.capability,
         context: {
-          spaceId: body.context.spaceId,
+          spaceId: projected.context.spaceId,
           serviceId: body.context.serviceId,
-          actorId: body.context.actorId,
-          role: body.context.role,
-          capabilities: body.context.capabilities,
+          actorId: projected.context.actorId,
+          role: projected.context.role,
+          capabilities: [body.capability],
           attestedBy: `ekodi:${caller}`,
+          projection: projectionStamp(projectionProfile, projectionPurpose),
         },
-        input: body.input,
+        input: projected.input,
       }),
     });
     const raw = await response.text();

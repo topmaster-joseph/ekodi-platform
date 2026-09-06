@@ -1,0 +1,23 @@
+{
+  "id": "EKODI-CONSTITUTION-2026-09-05-CHANNEL-SERVICE-BRIDGE-V1.6.1",
+  "date": "2026-09-05",
+  "class": "C2",
+  "status": "approved",
+  "approvedBy": "topmaster-joseph",
+  "approvalSource": "Explicit EKODI Platform Super Administrator instruction in the ChatGPT conversation to build and continue the shared per-workspace channel connection and publishing automation architecture, with Church devotional as a reusable devotional_daily template on the common automation core.",
+  "constitutionVersion": "1.6.1",
+  "summary": "Register the guarded service-to-service publishing bridge inside the existing Marketing Publishing independent-service boundary so internal automation services can use workspace-owned channel connections without receiving provider OAuth credentials.",
+  "affectedAreas": [
+    "responsible-independent-services",
+    "channel-automation",
+    "workspace-authority",
+    "oauth-credential-boundary",
+    "publishing",
+    "deployment-verification"
+  ],
+  "authorityRule": "Internal automation services may request publication only for explicitly allowlisted workspace subjects, through per-service credentials, active workspace automation delegation, and existing workspace-owned channel connections. They receive no OAuth management authority and no provider refresh tokens.",
+  "channelBindingRule": "A YouTube publication must fail closed unless the selected channel record, encrypted OAuth Vault connection and live Google OAuth channel context resolve to the same external channel identity.",
+  "dataRule": "Provider credentials remain encrypted in the existing Channel Automation credential vault. The additive provider-schedule ledger stores publication metadata and external post references only, never access, refresh or bearer tokens.",
+  "migrationPolicy": "Additive. Reuse the existing Marketing Publishing service, OAuth Vault, immutable workspace_id authority and guarded release owner. Add only a service bridge and provider-schedule ledger; do not create a tenant-owned publisher or duplicate OAuth store.",
+  "rollbackPlan": "Disable the internal service allowlist and per-service credential, revert the bridge and additive schedule-ledger migration through the guarded pipeline, and leave all existing workspace channel connections, OAuth Vault records and browser publishing flows intact."
+}

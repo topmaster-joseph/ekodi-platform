@@ -8,6 +8,51 @@ const DEVICE_STALE_MS = 10 * 60 * 1000;
 const COMMAND_CLAIM_TIMEOUT_MS = 60 * 60 * 1000;
 const JOB_ASSIGNMENT_TIMEOUT_MS = 65 * 60 * 1000;
 
+const DEVICE_TYPE_POLICIES = Object.freeze({
+  pc: Object.freeze({
+    label: 'PC', icon: '⊞', managementMode: 'managed', enrollment: 'windows-agent',
+    remoteCommandLevel: 'managed', autoExecution: 'desktop-only',
+    description: 'Windows Agent가 연결된 데스크톱은 승인된 진단·복구와 자동 작업배정에 사용할 수 있습니다.',
+    allowedCommands: '*',
+  }),
+  pos: Object.freeze({
+    label: 'POS', icon: '▤', managementMode: 'limited', enrollment: 'windows-agent',
+    remoteCommandLevel: 'observe', autoExecution: 'never',
+    description: '결제 업무를 방해하지 않도록 관찰·진단 중심으로 관리하며 파괴적 작업은 기본 차단합니다.',
+    allowedCommands: Object.freeze(['diagnostics.collect', 'network.diagnose', 'printers.diagnose', 'updates.scan']),
+  }),
+  kiosk: Object.freeze({
+    label: '키오스크', icon: '▣', managementMode: 'limited', enrollment: 'windows-agent',
+    remoteCommandLevel: 'observe', autoExecution: 'never',
+    description: '고객 접점 기기는 상태·네트워크·업데이트 확인까지만 기본 허용합니다.',
+    allowedCommands: Object.freeze(['diagnostics.collect', 'network.diagnose', 'updates.scan']),
+  }),
+  tablet: Object.freeze({
+    label: '태블릿', icon: '▯', managementMode: 'limited', enrollment: 'windows-agent',
+    remoteCommandLevel: 'observe', autoExecution: 'never',
+    description: '휴대형 기기는 자동 작업 노드에서 제외하고 관찰성 진단만 허용합니다.',
+    allowedCommands: Object.freeze(['diagnostics.collect', 'network.diagnose', 'updates.scan']),
+  }),
+  sensor: Object.freeze({
+    label: '센서', icon: '⌁', managementMode: 'observe', enrollment: 'inventory',
+    remoteCommandLevel: 'none', autoExecution: 'never',
+    description: '에너지·환경 센서는 기본적으로 등록·관찰만 하며 별도 검증 어댑터 전에는 원격 제어하지 않습니다.',
+    allowedCommands: Object.freeze([]),
+  }),
+  robot: Object.freeze({
+    label: '서비스로봇', icon: '◇', managementMode: 'observe', enrollment: 'inventory',
+    remoteCommandLevel: 'none', autoExecution: 'never',
+    description: '서비스로봇은 상태 관찰부터 시작하며 이동·구동·물리 행동은 전용 안전 어댑터와 별도 승인이 필요합니다.',
+    allowedCommands: Object.freeze([]),
+  }),
+  other: Object.freeze({
+    label: '기타 기기', icon: '○', managementMode: 'observe', enrollment: 'inventory',
+    remoteCommandLevel: 'none', autoExecution: 'never',
+    description: '유형을 확인하지 못한 기기는 관찰 전용으로 시작합니다.',
+    allowedCommands: Object.freeze([]),
+  }),
+});
+
 const COMMAND_POLICIES = Object.freeze({
   'power.always_on': { risk: 'maintain' },
   'power.presentation': { risk: 'maintain' },
@@ -28,6 +73,9 @@ const COMMAND_POLICIES = Object.freeze({
   'profile.workstation.apply': { risk: 'maintain', confirm: true },
   'profile.workstation.restore': { risk: 'maintain', confirm: true },
   'agent.self_update': { risk: 'maintain', confirm: true },
+  'remote_desktop.recovery.enable': { risk: 'maintain', confirm: true },
+  'remote_desktop.recovery.disable': { risk: 'maintain', confirm: true },
+  'remote_desktop.recovery.run': { risk: 'maintain', confirm: true },
 });
 
 const DIAGNOSTIC_SECTIONS = Object.freeze({
@@ -142,10 +190,40 @@ async function ensureSchema(db) {
       attempts INTEGER NOT NULL DEFAULT 0,
       last_error TEXT NOT NULL DEFAULT ''
     )`),
+    db.prepare(`CREATE TABLE IF NOT EXISTS device_enrollment_profiles (
+      enrollment_id TEXT PRIMARY KEY,
+      device_type TEXT NOT NULL DEFAULT 'pc',
+      label TEXT NOT NULL DEFAULT '',
+      location_label TEXT NOT NULL DEFAULT '',
+      created_at TEXT NOT NULL,
+      FOREIGN KEY (enrollment_id) REFERENCES device_enrollments(id)
+    )`),
+    db.prepare(`CREATE TABLE IF NOT EXISTS device_management_profiles (
+      device_id TEXT PRIMARY KEY,
+      device_type TEXT NOT NULL DEFAULT 'pc',
+      management_mode TEXT NOT NULL DEFAULT 'managed',
+      location_label TEXT NOT NULL DEFAULT '',
+      updated_at TEXT NOT NULL,
+      updated_by INTEGER,
+      FOREIGN KEY (device_id) REFERENCES device_registry(id)
+    )`),
+    db.prepare(`CREATE TABLE IF NOT EXISTS device_inventory (
+      id TEXT PRIMARY KEY,
+      label TEXT NOT NULL,
+      device_type TEXT NOT NULL,
+      management_mode TEXT NOT NULL DEFAULT 'observe',
+      location_label TEXT NOT NULL DEFAULT '',
+      notes TEXT NOT NULL DEFAULT '',
+      created_at TEXT NOT NULL,
+      created_by INTEGER,
+      updated_at TEXT NOT NULL,
+      archived_at TEXT
+    )`),
     db.prepare('CREATE INDEX IF NOT EXISTS idx_device_enrollments_expiry ON device_enrollments(expires_at, used_at)'),
     db.prepare('CREATE INDEX IF NOT EXISTS idx_device_registry_last_seen ON device_registry(last_seen_at DESC)'),
     db.prepare('CREATE INDEX IF NOT EXISTS idx_device_commands_queue ON device_commands(device_id, status, issued_at)'),
     db.prepare('CREATE INDEX IF NOT EXISTS idx_device_jobs_queue ON device_jobs(status, priority DESC, requested_at)'),
+    db.prepare('CREATE INDEX IF NOT EXISTS idx_device_inventory_type ON device_inventory(device_type, archived_at)'),
   ]);
 }
 
@@ -199,6 +277,33 @@ function safeJsonObject(value, max = 8000, fallback = '{}') {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return fallback;
   const encoded = JSON.stringify(value);
   return encoded.length <= max ? encoded : fallback;
+}
+
+function normalizeDeviceType(value) {
+  const type = safeText(value || 'pc', 24).toLowerCase();
+  return DEVICE_TYPE_POLICIES[type] ? type : 'other';
+}
+
+function deviceTypePolicy(value) {
+  return DEVICE_TYPE_POLICIES[normalizeDeviceType(value)];
+}
+
+function deviceCatalog() {
+  return Object.entries(DEVICE_TYPE_POLICIES).map(([id, policy]) => ({
+    id,
+    label: policy.label,
+    icon: policy.icon,
+    managementMode: policy.managementMode,
+    enrollment: policy.enrollment,
+    remoteCommandLevel: policy.remoteCommandLevel,
+    autoExecution: policy.autoExecution,
+    description: policy.description,
+  }));
+}
+
+function commandAllowedForDeviceType(deviceType, commandType) {
+  const allowed = deviceTypePolicy(deviceType).allowedCommands;
+  return allowed === '*' || allowed.includes(commandType);
 }
 
 function sanitizeCommandPayload(type, rawPayload) {
@@ -315,9 +420,32 @@ function summarizeCommandResult(result = {}) {
   return summary;
 }
 
-function serializeDevice(row) {
+function managementView(deviceType = 'pc', managementMode = '', locationLabel = '', source = 'agent') {
+  const type = normalizeDeviceType(deviceType);
+  const policy = deviceTypePolicy(type);
+  return {
+    type,
+    label: policy.label,
+    icon: policy.icon,
+    mode: managementMode || (source === 'inventory' ? 'observe' : policy.managementMode),
+    locationLabel: locationLabel || '',
+    source,
+    remoteCommandLevel: source === 'inventory' ? 'none' : policy.remoteCommandLevel,
+    autoExecution: source === 'inventory' ? 'never' : policy.autoExecution,
+  };
+}
+
+function serializeDevice(row, managementRow) {
   const settings = parseJson(row.settings_json);
   const diagnostics = parseJson(row.diagnostics_json);
+  const management = managementView(
+    managementRow?.device_type || 'pc',
+    managementRow?.management_mode || '',
+    managementRow?.location_label || '',
+    'agent',
+  );
+  const health = deviceHealth(settings, diagnostics);
+  health.recommendations = health.recommendations.filter(item => !item.action || commandAllowedForDeviceType(management.type, item.action));
   return {
     id: row.id,
     label: row.label,
@@ -330,11 +458,40 @@ function serializeDevice(row) {
     diagnostics,
     diagnosticsAt: row.diagnostics_at,
     profileName: row.profile_name || '',
-    health: deviceHealth(settings, diagnostics),
+    management,
+    health,
     lastSeenAt: row.last_seen_at,
     enrolledAt: row.enrolled_at,
     revokedAt: row.revoked_at,
     status: statusFor(row.last_seen_at, row.revoked_at),
+  };
+}
+
+function serializeInventory(row) {
+  const management = managementView(row.device_type, row.management_mode, row.location_label, 'inventory');
+  return {
+    id: row.id,
+    label: row.label,
+    platform: 'inventory',
+    hostname: '',
+    osVersion: '',
+    agentVersion: '',
+    capabilities: {},
+    settings: {},
+    diagnostics: {},
+    diagnosticsAt: null,
+    profileName: '',
+    management,
+    health: {
+      score: null,
+      label: '연결 준비',
+      recommendations: [{ level: 'low', title: '관찰 연결 준비', detail: '전용 어댑터 또는 안전한 데이터 연결 전에는 원격 제어하지 않습니다.' }],
+    },
+    lastSeenAt: null,
+    enrolledAt: row.created_at,
+    revokedAt: row.archived_at,
+    status: row.archived_at ? 'revoked' : 'inventory',
+    notes: row.notes || '',
   };
 }
 
@@ -349,14 +506,21 @@ async function authenticateDevice(request, env) {
     .bind(deviceId, tokenHash).first() || null;
 }
 
+async function managementProfile(env, deviceId) {
+  return await env.DB.prepare('SELECT * FROM device_management_profiles WHERE device_id = ?').bind(deviceId).first();
+}
+
 async function listDevices(env) {
-  const [devices, commandRows, profiles] = await Promise.all([
+  const [devices, commandRows, profiles, managementRows, inventory] = await Promise.all([
     env.DB.prepare('SELECT * FROM device_registry ORDER BY enrolled_at DESC').all(),
     env.DB.prepare(`SELECT id, device_id, command_type, status, issued_at, claimed_at, completed_at, result_json
       FROM device_commands ORDER BY issued_at DESC LIMIT 120`).all(),
     env.DB.prepare('SELECT * FROM device_execution_profiles').all(),
+    env.DB.prepare('SELECT * FROM device_management_profiles').all(),
+    env.DB.prepare('SELECT * FROM device_inventory WHERE archived_at IS NULL ORDER BY created_at DESC').all(),
   ]);
   const profileByDevice = new Map((profiles.results || []).map(row => [row.device_id, row]));
+  const managementByDevice = new Map((managementRows.results || []).map(row => [row.device_id, row]));
   const commandsByDevice = new Map();
   for (const command of commandRows.results || []) {
     if (!commandsByDevice.has(command.device_id)) commandsByDevice.set(command.device_id, []);
@@ -371,18 +535,25 @@ async function listDevices(env) {
       result: summarizeCommandResult(parseJson(command.result_json)),
     });
   }
-  return (devices.results || []).map(row => {
-    const profile = profileByDevice.get(row.id);
+  const agentDevices = (devices.results || []).map(row => {
+    const execution = profileByDevice.get(row.id);
+    const serialized = serializeDevice(row, managementByDevice.get(row.id));
     return {
-      ...serializeDevice(row),
+      ...serialized,
       execution: {
-        enabled: profile?.enabled === 1,
-        group: profile?.device_group || 'general',
-        maxConcurrency: profile?.max_concurrency || 1,
+        enabled: serialized.management.type === 'pc' && execution?.enabled === 1,
+        group: execution?.device_group || 'general',
+        maxConcurrency: execution?.max_concurrency || 1,
       },
       recentCommands: commandsByDevice.get(row.id) || [],
     };
   });
+  const inventoryDevices = (inventory.results || []).map(row => ({
+    ...serializeInventory(row),
+    execution: { enabled: false, group: 'observe', maxConcurrency: 0 },
+    recentCommands: [],
+  }));
+  return [...agentDevices, ...inventoryDevices].sort((a, b) => new Date(b.enrolledAt || 0) - new Date(a.enrolledAt || 0));
 }
 
 async function listJobs(env) {
@@ -409,16 +580,19 @@ async function reconcileJobs(env) {
     ORDER BY priority DESC, requested_at ASC LIMIT 20`).all();
   for (const job of jobs.results || []) {
     const requiredCapability = COMMAND_CAPABILITIES[job.command_type] || '';
-    const candidates = await env.DB.prepare(`SELECT r.*, p.device_group, p.max_concurrency,
+    const candidates = await env.DB.prepare(`SELECT r.*, p.device_group, p.max_concurrency, m.device_type,
       (SELECT COUNT(*) FROM device_commands c WHERE c.device_id = r.id AND c.status IN ('queued','claimed')) AS active_count
-      FROM device_registry r JOIN device_execution_profiles p ON p.device_id = r.id
+      FROM device_registry r
+      JOIN device_execution_profiles p ON p.device_id = r.id
+      LEFT JOIN device_management_profiles m ON m.device_id = r.id
       WHERE r.revoked_at IS NULL AND p.enabled = 1 AND p.device_group = ? AND r.last_seen_at >= ?
       ORDER BY active_count ASC, r.last_seen_at DESC`)
       .bind(job.target_group, new Date(Date.now() - DEVICE_ONLINE_MS).toISOString()).all();
     const device = (candidates.results || []).find(row => {
       const capabilities = parseJson(row.capabilities_json);
       const system = parseJson(row.settings_json)?.health?.system || {};
-      return Number(row.active_count || 0) < Number(row.max_concurrency || 1)
+      return normalizeDeviceType(row.device_type || 'pc') === 'pc'
+        && Number(row.active_count || 0) < Number(row.max_concurrency || 1)
         && system.autoExecutionEligible === true
         && system.isPortable === false
         && (!requiredCapability || capabilities[requiredCapability] === true);
@@ -444,7 +618,28 @@ async function handleAdmin(request, env) {
 
   if (request.method === 'GET' && path === ADMIN_PREFIX) {
     await reconcileJobs(env);
-    return json({ devices: await listDevices(env), jobs: await listJobs(env), generatedAt: new Date().toISOString() }, 200, request, env);
+    return json({ devices: await listDevices(env), jobs: await listJobs(env), catalog: deviceCatalog(), generatedAt: new Date().toISOString() }, 200, request, env);
+  }
+
+  if (request.method === 'GET' && path === `${ADMIN_PREFIX}/catalog`) {
+    return json({ catalog: deviceCatalog() }, 200, request, env);
+  }
+
+  if (request.method === 'POST' && path === `${ADMIN_PREFIX}/inventory`) {
+    const body = await readJson(request) || {};
+    const deviceType = normalizeDeviceType(body.deviceType);
+    const label = safeText(body.label || deviceTypePolicy(deviceType).label, 80);
+    const locationLabel = safeText(body.locationLabel, 120);
+    const notes = safeText(body.notes, 500);
+    const actorId = await adminId(env, auth.session);
+    const now = new Date().toISOString();
+    const id = `inv_${crypto.randomUUID()}`;
+    await env.DB.prepare(`INSERT INTO device_inventory
+      (id, label, device_type, management_mode, location_label, notes, created_at, created_by, updated_at)
+      VALUES (?, ?, ?, 'observe', ?, ?, ?, ?, ?)`)
+      .bind(id, label, deviceType, locationLabel, notes, now, actorId, now).run();
+    await audit(env, auth.session, 'device.inventory.create', id, `${deviceType}:${label}${locationLabel ? ` @ ${locationLabel}` : ''}`);
+    return json({ device: serializeInventory({ id, label, device_type: deviceType, management_mode: 'observe', location_label: locationLabel, notes, created_at: now, archived_at: null }) }, 201, request, env);
   }
 
   if (request.method === 'POST' && path === `${ADMIN_PREFIX}/jobs`) {
@@ -472,6 +667,43 @@ async function handleAdmin(request, env) {
     return json({ job: { id: jobId, type: commandType, targetGroup, priority, status: 'queued', requestedAt } }, 202, request, env);
   }
 
+  const managementMatch = path.match(/^\/api\/control\/devices\/([^/]+)\/management$/);
+  if (request.method === 'POST' && managementMatch) {
+    const deviceId = decodeURIComponent(managementMatch[1]);
+    const body = await readJson(request) || {};
+    if (body.confirmed !== true) return json({ error: '기기 유형 변경은 관리자 확인이 필요합니다.' }, 409, request, env);
+    const deviceType = normalizeDeviceType(body.deviceType);
+    const policy = deviceTypePolicy(deviceType);
+    const locationLabel = safeText(body.locationLabel, 120);
+    const now = new Date().toISOString();
+    const actorId = await adminId(env, auth.session);
+
+    if (deviceId.startsWith('inv_')) {
+      const result = await env.DB.prepare(`UPDATE device_inventory
+        SET device_type = ?, management_mode = 'observe', location_label = ?, updated_at = ?
+        WHERE id = ? AND archived_at IS NULL`)
+        .bind(deviceType, locationLabel, now, deviceId).run();
+      if (!result.meta?.changes) return json({ error: '기기를 찾을 수 없습니다.' }, 404, request, env);
+      await audit(env, auth.session, 'device.management.update', deviceId, `${deviceType}/observe/${locationLabel}`);
+      return json({ ok: true, deviceId, management: managementView(deviceType, 'observe', locationLabel, 'inventory') }, 200, request, env);
+    }
+
+    const device = await env.DB.prepare('SELECT id, label FROM device_registry WHERE id = ? AND revoked_at IS NULL').bind(deviceId).first();
+    if (!device) return json({ error: '기기를 찾을 수 없습니다.' }, 404, request, env);
+    await env.DB.prepare(`INSERT INTO device_management_profiles
+      (device_id, device_type, management_mode, location_label, updated_at, updated_by)
+      VALUES (?, ?, ?, ?, ?, ?)
+      ON CONFLICT(device_id) DO UPDATE SET device_type=excluded.device_type, management_mode=excluded.management_mode,
+      location_label=excluded.location_label, updated_at=excluded.updated_at, updated_by=excluded.updated_by`)
+      .bind(deviceId, deviceType, policy.managementMode, locationLabel, now, actorId).run();
+    if (deviceType !== 'pc') {
+      await env.DB.prepare('UPDATE device_execution_profiles SET enabled = 0, updated_at = ?, updated_by = ? WHERE device_id = ?')
+        .bind(now, actorId, deviceId).run();
+    }
+    await audit(env, auth.session, 'device.management.update', deviceId, `${device.label}: ${deviceType}/${policy.managementMode}/${locationLabel}`);
+    return json({ ok: true, deviceId, management: managementView(deviceType, policy.managementMode, locationLabel, 'agent') }, 200, request, env);
+  }
+
   const policyMatch = path.match(/^\/api\/control\/devices\/([^/]+)\/execution-policy$/);
   if (request.method === 'POST' && policyMatch) {
     const deviceId = decodeURIComponent(policyMatch[1]);
@@ -479,7 +711,12 @@ async function handleAdmin(request, env) {
     if (body.confirmed !== true) return json({ error: '실행 정책 변경은 관리자 확인이 필요합니다.' }, 409, request, env);
     const device = await env.DB.prepare('SELECT id, label FROM device_registry WHERE id = ? AND revoked_at IS NULL').bind(deviceId).first();
     if (!device) return json({ error: '기기를 찾을 수 없습니다.' }, 404, request, env);
+    const management = await managementProfile(env, deviceId);
+    const deviceType = normalizeDeviceType(management?.device_type || 'pc');
     const enabled = body.enabled === true ? 1 : 0;
+    if (enabled && deviceType !== 'pc') {
+      return json({ error: '자동 작업배정은 검증된 데스크톱 PC 유형에만 허용됩니다.', code: 'DEVICE_TYPE_NOT_AUTO_EXECUTABLE' }, 409, request, env);
+    }
     if (enabled) {
       const eligibility = await env.DB.prepare('SELECT settings_json FROM device_registry WHERE id = ?').bind(deviceId).first();
       const system = parseJson(eligibility?.settings_json)?.health?.system || {};
@@ -504,20 +741,36 @@ async function handleAdmin(request, env) {
 
   if (request.method === 'POST' && path === `${ADMIN_PREFIX}/enrollment`) {
     const body = await readJson(request) || {};
-    const label = safeText(body.label || '새 Windows PC', 80);
+    const deviceType = normalizeDeviceType(body.deviceType || 'pc');
+    const typePolicy = deviceTypePolicy(deviceType);
+    if (typePolicy.enrollment !== 'windows-agent') {
+      return json({ error: `${typePolicy.label} 유형은 현재 관찰 인벤토리로 먼저 등록해야 합니다.`, code: 'DEVICE_ADAPTER_REQUIRED' }, 409, request, env);
+    }
+    const label = safeText(body.label || `새 ${typePolicy.label}`, 80);
+    const locationLabel = safeText(body.locationLabel, 120);
     const enrollmentCode = `EKD-${randomHex(10).toUpperCase()}`;
     const codeHash = await sha256(enrollmentCode);
     const now = new Date();
+    const createdAt = now.toISOString();
     const expiresAt = new Date(now.getTime() + ENROLLMENT_TTL_MS).toISOString();
     const actorId = await adminId(env, auth.session);
-    await env.DB.prepare(`INSERT INTO device_enrollments
-      (id, code_hash, expires_at, created_at, created_by)
-      VALUES (?, ?, ?, ?, ?)`)
-      .bind(`enr_${crypto.randomUUID()}`, codeHash, expiresAt, now.toISOString(), actorId).run();
+    const enrollmentId = `enr_${crypto.randomUUID()}`;
+    await env.DB.batch([
+      env.DB.prepare(`INSERT INTO device_enrollments
+        (id, code_hash, expires_at, created_at, created_by)
+        VALUES (?, ?, ?, ?, ?)`)
+        .bind(enrollmentId, codeHash, expiresAt, createdAt, actorId),
+      env.DB.prepare(`INSERT INTO device_enrollment_profiles
+        (enrollment_id, device_type, label, location_label, created_at)
+        VALUES (?, ?, ?, ?, ?)`)
+        .bind(enrollmentId, deviceType, label, locationLabel, createdAt),
+    ]);
+    await env.DB.prepare('DELETE FROM device_enrollment_profiles WHERE enrollment_id IN (SELECT id FROM device_enrollments WHERE used_at IS NOT NULL OR expires_at < ?)')
+      .bind(new Date(Date.now() - 86400000).toISOString()).run();
     await env.DB.prepare('DELETE FROM device_enrollments WHERE used_at IS NOT NULL OR expires_at < ?')
       .bind(new Date(Date.now() - 86400000).toISOString()).run();
-    await audit(env, auth.session, 'device.enrollment.create', 'device', label);
-    return json({ enrollmentCode, label, expiresAt, protocolUrl: `ekodi-device://enroll?code=${encodeURIComponent(enrollmentCode)}` }, 201, request, env);
+    await audit(env, auth.session, 'device.enrollment.create', 'device', `${deviceType}:${label}`);
+    return json({ enrollmentCode, label, deviceType, locationLabel, expiresAt, protocolUrl: `ekodi-device://enroll?code=${encodeURIComponent(enrollmentCode)}` }, 201, request, env);
   }
 
   const commandMatch = path.match(/^\/api\/control\/devices\/([^/]+)\/commands$/);
@@ -535,7 +788,12 @@ async function handleAdmin(request, env) {
     catch { return json({ error: '기기 명령 인자가 유효하지 않습니다.', code: 'DEVICE_COMMAND_PAYLOAD_INVALID' }, 400, request, env); }
 
     const device = await env.DB.prepare('SELECT id, label, revoked_at FROM device_registry WHERE id = ?').bind(deviceId).first();
-    if (!device || device.revoked_at) return json({ error: '사용 가능한 기기를 찾을 수 없습니다.' }, 404, request, env);
+    if (!device || device.revoked_at) return json({ error: '사용 가능한 Agent 기기를 찾을 수 없습니다.' }, 404, request, env);
+    const management = await managementProfile(env, deviceId);
+    const deviceType = normalizeDeviceType(management?.device_type || 'pc');
+    if (!commandAllowedForDeviceType(deviceType, commandType)) {
+      return json({ error: `${deviceTypePolicy(deviceType).label} 유형에서는 이 원격 작업을 허용하지 않습니다.`, code: 'DEVICE_TYPE_COMMAND_BLOCKED' }, 403, request, env);
+    }
     const actorId = await adminId(env, auth.session);
     const commandId = `cmd_${crypto.randomUUID()}`;
     const issuedAt = new Date().toISOString();
@@ -543,19 +801,27 @@ async function handleAdmin(request, env) {
       (id, device_id, command_type, payload_json, status, issued_at, issued_by)
       VALUES (?, ?, ?, ?, 'queued', ?, ?)`)
       .bind(commandId, deviceId, commandType, JSON.stringify(payload), issuedAt, actorId).run();
-    await audit(env, auth.session, 'device.command.issue', deviceId, `${device.label}: ${commandType} [${policy.risk}]`);
-    return json({ command: { id: commandId, deviceId, type: commandType, risk: policy.risk, status: 'queued', issuedAt } }, 202, request, env);
+    await audit(env, auth.session, 'device.command.issue', deviceId, `${device.label}: ${commandType} [${policy.risk}] type=${deviceType}`);
+    return json({ command: { id: commandId, deviceId, type: commandType, risk: policy.risk, deviceType, status: 'queued', issuedAt } }, 202, request, env);
   }
 
   const revokeMatch = path.match(/^\/api\/control\/devices\/([^/]+)\/revoke$/);
   if (request.method === 'POST' && revokeMatch) {
     const deviceId = decodeURIComponent(revokeMatch[1]);
     const now = new Date().toISOString();
+    if (deviceId.startsWith('inv_')) {
+      const result = await env.DB.prepare('UPDATE device_inventory SET archived_at = ?, updated_at = ? WHERE id = ? AND archived_at IS NULL')
+        .bind(now, now, deviceId).run();
+      if (!result.meta?.changes) return json({ error: '기기를 찾을 수 없거나 이미 해제되었습니다.' }, 404, request, env);
+      await audit(env, auth.session, 'device.inventory.archive', deviceId, 'inventory archived');
+      return json({ ok: true, deviceId, revokedAt: now }, 200, request, env);
+    }
     const result = await env.DB.prepare('UPDATE device_registry SET revoked_at = ? WHERE id = ? AND revoked_at IS NULL')
       .bind(now, deviceId).run();
     if (!result.meta?.changes) return json({ error: '기기를 찾을 수 없거나 이미 해제되었습니다.' }, 404, request, env);
     await env.DB.prepare(`UPDATE device_commands SET status = 'cancelled', completed_at = ?
       WHERE device_id = ? AND status IN ('queued','claimed')`).bind(now, deviceId).run();
+    await env.DB.prepare('UPDATE device_execution_profiles SET enabled = 0, updated_at = ? WHERE device_id = ?').bind(now, deviceId).run();
     await audit(env, auth.session, 'device.revoke', deviceId, 'device access revoked');
     return json({ ok: true, deviceId, revokedAt: now }, 200, request, env);
   }
@@ -572,11 +838,14 @@ async function enrollAgent(request, env) {
     WHERE code_hash = ? AND used_at IS NULL AND expires_at > ?`)
     .bind(codeHash, new Date().toISOString()).first();
   if (!enrollment) return json({ error: '등록 코드가 유효하지 않거나 만료되었습니다.', code: 'ENROLLMENT_INVALID' }, 401, request, env);
+  const enrollmentProfile = await env.DB.prepare('SELECT * FROM device_enrollment_profiles WHERE enrollment_id = ?').bind(enrollment.id).first();
+  const deviceType = normalizeDeviceType(enrollmentProfile?.device_type || 'pc');
+  const typePolicy = deviceTypePolicy(deviceType);
 
   const platform = safeText(body.platform || 'windows', 40).toLowerCase();
-  if (platform !== 'windows') return json({ error: '현재 버전은 Windows Agent만 등록할 수 있습니다.' }, 400, request, env);
+  if (platform !== 'windows') return json({ error: '현재 Agent 등록 경로는 Windows만 지원합니다.' }, 400, request, env);
   const hostname = safeText(body.hostname, 120);
-  const label = safeText(body.label || hostname || 'Windows PC', 80);
+  const label = safeText(enrollmentProfile?.label || body.label || hostname || typePolicy.label, 80);
   const token = randomHex(32);
   const tokenHash = await sha256(token);
   const deviceId = `dev_${crypto.randomUUID()}`;
@@ -592,15 +861,21 @@ async function enrollAgent(request, env) {
   if (!claim.meta?.changes) return json({ error: '등록 코드가 이미 사용되었거나 만료되었습니다.', code: 'ENROLLMENT_ALREADY_CLAIMED' }, 409, request, env);
 
   try {
-    await env.DB.prepare(`INSERT INTO device_registry
-      (id, label, platform, hostname, os_version, agent_version, token_hash, capabilities_json, settings_json, diagnostics_json, profile_name, last_seen_at, enrolled_at, enrolled_by)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, '{}', '{}', '', ?, ?, ?)`)
-      .bind(deviceId, label, platform, hostname, osVersion, agentVersion, tokenHash, capabilities, now, now, enrollment.created_by).run();
+    await env.DB.batch([
+      env.DB.prepare(`INSERT INTO device_registry
+        (id, label, platform, hostname, os_version, agent_version, token_hash, capabilities_json, settings_json, diagnostics_json, profile_name, last_seen_at, enrolled_at, enrolled_by)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, '{}', '{}', '', ?, ?, ?)`)
+        .bind(deviceId, label, platform, hostname, osVersion, agentVersion, tokenHash, capabilities, now, now, enrollment.created_by),
+      env.DB.prepare(`INSERT INTO device_management_profiles
+        (device_id, device_type, management_mode, location_label, updated_at, updated_by)
+        VALUES (?, ?, ?, ?, ?, ?)`)
+        .bind(deviceId, deviceType, typePolicy.managementMode, safeText(enrollmentProfile?.location_label, 120), now, enrollment.created_by),
+    ]);
   } catch (error) {
     console.error('Device enrollment registry insert failed', error);
     return json({ error: '기기 등록 저장에 실패했습니다. 새 등록 코드를 발급해 주세요.', code: 'DEVICE_ENROLLMENT_STORE_FAILED' }, 500, request, env);
   }
-  return json({ deviceId, deviceToken: token, label, apiBase: new URL(request.url).origin }, 201, request, env);
+  return json({ deviceId, deviceToken: token, label, deviceType, apiBase: new URL(request.url).origin }, 201, request, env);
 }
 
 async function heartbeat(request, env, device) {
@@ -637,6 +912,14 @@ async function nextCommand(request, env, device) {
   const command = await env.DB.prepare(`SELECT * FROM device_commands
     WHERE device_id = ? AND status = 'queued' ORDER BY issued_at ASC LIMIT 1`).bind(device.id).first();
   if (!command) return json({ command: null }, 200, request, env);
+  const management = await managementProfile(env, device.id);
+  const deviceType = normalizeDeviceType(management?.device_type || 'pc');
+  if (!commandAllowedForDeviceType(deviceType, command.command_type)) {
+    const completedAt = new Date().toISOString();
+    await env.DB.prepare(`UPDATE device_commands SET status='cancelled', completed_at=?, result_json=? WHERE id=? AND status='queued'`)
+      .bind(completedAt, JSON.stringify({ message: '기기 유형 정책에 의해 명령이 취소되었습니다.' }), command.id).run();
+    return json({ command: null, policyCancelled: true }, 200, request, env);
+  }
   const claimedAt = new Date().toISOString();
   const claim = await env.DB.prepare(`UPDATE device_commands SET status = 'claimed', claimed_at = ?
     WHERE id = ? AND status = 'queued'`).bind(claimedAt, command.id).run();

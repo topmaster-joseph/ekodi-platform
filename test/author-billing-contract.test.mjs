@@ -112,7 +112,7 @@ test('admin pricing code is bundled into already authenticated admin assets', ()
   assert.match(build, /author-billing-admin\.css/);
   assert.match(build, /author-billing-admin\.js/);
   assert.match(build, /admin-lazy-features\.js/);
-  assert.match(build, /compact-control-center\.css/);
+  assert.match(build, /admin-compact\.css/);
   assert.match(admin, /Creator AI 유료회원 요금/);
-  assert.match(admin, /가격 변경은 새 구독에 적용/);
+  assert.match(admin, /가격 변경은 새 구독부터 적용/);
 });

@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - '.github/workflows/**'
+      - 'docs/operations/cloudflare-two-account-boundary.md'
       - 'scripts/ecosystem-load-test.mjs'
       - 'wrangler*.toml'
       - 'wrangler*.jsonc'
@@ -11,6 +12,7 @@ on:
     branches: [main, development]
     paths:
       - '.github/workflows/**'
+      - 'docs/operations/cloudflare-two-account-boundary.md'
       - 'scripts/ecosystem-load-test.mjs'
       - 'wrangler*.toml'
       - 'wrangler*.jsonc'
@@ -25,7 +27,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v7
-      - name: Enforce Cloudflare development production and load boundaries
+      - name: Enforce Cloudflare two-account boundary
         shell: bash
         run: |
           set -euo pipefail
@@ -36,32 +38,119 @@ jobs:
           root = Path('.github/workflows')
           errors = []
           dev_account = '46aad4738793fbaca88574832a2ccc0f'
+          dev_secret = 'secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN'
+          prod_secret_markers = ('secrets.CLOUDFLARE_API_TOKEN', 'secrets.CLOUDFLARE_ACCOUNT_ID')
+          prod_workers_namespace = 'topmaster-joseph.workers.dev'
+          dev_workers_namespace = 'ekodi-development.workers.dev'
+
+          def job_blocks(text):
+              lines = text.splitlines()
+              in_jobs = False
+              current_name = None
+              current = []
+              for line in lines:
+                  if line == 'jobs:':
+                      in_jobs = True
+                      continue
+                  if not in_jobs:
+                      continue
+                  match = re.match(r'^  ([A-Za-z0-9_-]+):\s*$', line)
+                  if match:
+                      if current_name is not None:
+                          yield current_name, '\n'.join(current)
+                      current_name = match.group(1)
+                      current = [line]
+                  elif current_name is not None:
+                      current.append(line)
+              if current_name is not None:
+                  yield current_name, '\n'.join(current)
+
+          def is_worker_deploy(block):
+              return bool(re.search(r'wrangler(?:@[^\s]+)?\s+deploy\b', block)) and 'pages deploy' not in block
+
+          def is_pages_deploy(block):
+              return bool(re.search(r'wrangler(?:@[^\s]+)?\s+pages\s+deploy\b', block))
+
+          def is_staging_job(name, block):
+              low_name = name.lower()
+              return (
+                  'staging' in low_name
+                  or 'preview' in low_name
+                  or 'STAGING_URL' in block
+                  or '.staging.toml' in block
+                  or '.staging.jsonc' in block
+                  or bool(re.search(r'\bekodi-[A-Za-z0-9_-]*staging[A-Za-z0-9_-]*\b', block))
+              )
+
           dev = (root / 'deploy-development.yml').read_text(encoding='utf-8')
           required = [
               'branches: [development]',
-              'paths-ignore:',
               'environment: development',
-              'secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN',
+              dev_secret,
               dev_account,
               'refs/heads/development',
-              'verify-development:',
-              'needs: validate-and-deploy',
-              'ekodi-development.workers.dev',
           ]
           for marker in required:
               if marker not in dev:
                   errors.append(f'deploy-development.yml missing boundary marker: {marker}')
-          if 'secrets.CLOUDFLARE_API_TOKEN' in dev:
-              errors.append('development deployment references the production Cloudflare token')
+          if any(marker in dev for marker in prod_secret_markers):
+              errors.append('development deployment references production Cloudflare credentials')
+
+          worker_staging_files = {
+              'deploy-admin-staging.yml',
+              'deploy-energy-staging.yml',
+              'deploy-work-staging.yml',
+              'stage-books-shell.yml',
+              'stage-shared-site-shell.yml',
+              'stage-marketing-pages-shell.yml',
+              'stage-social-shell.yml',
+          }
+          for filename in sorted(worker_staging_files):
+              path = root / filename
+              if not path.exists():
+                  errors.append(f'{filename}: required staging workflow is missing')
+                  continue
+              text = path.read_text(encoding='utf-8')
+              for marker in ('environment: development', dev_secret, dev_account, dev_workers_namespace):
+                  if marker not in text:
+                      errors.append(f'{filename}: missing Development boundary marker: {marker}')
+              if any(marker in text for marker in prod_secret_markers):
+                  errors.append(f'{filename}: staging Worker references production Cloudflare credentials')
+              if prod_workers_namespace in text:
+                  errors.append(f'{filename}: staging verification still targets the Production workers.dev namespace')
 
           for path in sorted(root.glob('*.yml')):
               text = path.read_text(encoding='utf-8')
-              uses_prod = ('secrets.CLOUDFLARE_API_TOKEN' in text or
-                           'secrets.CLOUDFLARE_ACCOUNT_ID' in text)
-              staging_trigger = bool(re.search(r"branches:\s*(?:\n\s*-\s*['\"]?staging/|\[[^\]]*staging/)", text))
-              cloudflare_write = ('wrangler@' in text and ' deploy ' in text) or '-X PATCH' in text or '-X POST' in text or '-X PUT' in text or '-X DELETE' in text
-              if staging_trigger and uses_prod and cloudflare_write:
-                  errors.append(f'{path.name}: staging branch can write with production Cloudflare credentials')
+              uses_prod = any(marker in text for marker in prod_secret_markers)
+              staging_workflow = 'staging' in path.stem or path.name.startswith('stage-')
+              cloudflare_write = (
+                  ('wrangler' in text and (' deploy ' in text or 'pages deploy' in text))
+                  or '-X PATCH' in text or '-X POST' in text or '-X PUT' in text or '-X DELETE' in text
+              )
+              if staging_workflow and uses_prod and cloudflare_write:
+                  errors.append(f'{path.name}: staging workflow can write with production Cloudflare credentials')
+
+              if path.name != 'cloudflare-boundary-audit.yml':
+                  for job_name, block in job_blocks(text):
+                      deploy_kind = 'worker' if is_worker_deploy(block) else ('pages' if is_pages_deploy(block) else None)
+                      if not deploy_kind or not is_staging_job(job_name, block):
+                          continue
+                      label = f'{path.name}:{job_name}'
+                      if 'environment: development' not in block:
+                          errors.append(f'{label}: staging {deploy_kind} deploy is missing environment: development')
+                      if dev_secret not in block:
+                          errors.append(f'{label}: staging {deploy_kind} deploy is missing Development API token')
+                      if dev_account not in block:
+                          errors.append(f'{label}: staging {deploy_kind} deploy is missing Development account ID')
+                      if any(marker in block for marker in prod_secret_markers):
+                          errors.append(f'{label}: staging {deploy_kind} deploy references Production Cloudflare credentials')
+                      if deploy_kind == 'worker':
+                          if prod_workers_namespace in block:
+                              errors.append(f'{label}: staging Worker deploy targets the Production workers.dev namespace')
+                          workers_urls = re.findall(r'https://[^\s\"\']+\.workers\.dev[^\s\"\']*', block)
+                          if workers_urls and not any(dev_workers_namespace in url for url in workers_urls):
+                              errors.append(f'{label}: staging Worker URL is not in the Development workers.dev namespace')
+
               if path.name not in {'ecosystem-load-test.yml', 'cloudflare-boundary-audit.yml'} and 'node scripts/ecosystem-load-test.mjs' in text:
                   errors.append(f'{path.name}: production load script may only be invoked by ecosystem-load-test.yml')
 
@@ -76,7 +165,7 @@ jobs:
               "LOAD_CONCURRENCY: '1'",
               "LOAD_REQUESTS_PER_STAGE: '5'",
               "LOAD_WARMUP_REQUESTS: '1'",
-              "refs/heads/main",
+              'refs/heads/main',
           ]
           for marker in load_required:
               if marker not in load_workflow:
@@ -107,8 +196,36 @@ jobs:
           if 'max-parallel: 4' not in shell_verify:
               errors.append('verify-shared-shell-production.yml missing bounded production matrix parallelism')
 
+          promotion_pairs = (
+              ('deploy-site-core.yml', 'stage-shared-site-shell.yml'),
+              ('deploy-work.yml', 'deploy-work-staging.yml'),
+              ('deploy-energy.yml', 'deploy-energy-staging.yml'),
+              ('deploy-books.yml', 'stage-books-shell.yml'),
+              ('deploy-marketing-pages.yml', 'stage-marketing-pages-shell.yml'),
+          )
+          for release_name, stage_name in promotion_pairs:
+              release_text = (root / release_name).read_text(encoding='utf-8')
+              for marker in (
+                  'staging_gate:',
+                  f'uses: ./.github/workflows/{stage_name}',
+                  'secrets: inherit',
+              ):
+                  if marker not in release_text:
+                      errors.append(f'{release_name} missing staging promotion gate marker: {marker}')
+              if not re.search(r'needs:\s*(?:staging_gate\b|\[[^\]]*\bstaging_gate\b[^\]]*\])', release_text):
+                  errors.append(f'{release_name} production deployment does not depend on staging_gate')
+              stage_text = (root / stage_name).read_text(encoding='utf-8')
+              if 'workflow_call:' not in stage_text:
+                  errors.append(f'{stage_name} must remain reusable by the production promotion gate')
+          social_release = (root / 'deploy-social.yml').read_text(encoding='utf-8')
+          if "if: github.ref != 'refs/heads/main'" in social_release:
+              errors.append('deploy-social.yml still skips staging on main')
+          if not re.search(r'deploy-production:\s*\n(?:.*\n){0,4}?\s*needs:\s*\[[^\]]*deploy-staging[^\]]*\]', social_release):
+              errors.append('deploy-social.yml production deployment does not depend on deploy-staging')
+          if 'environment: development' not in social_release or 'secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN' not in social_release:
+              errors.append('deploy-social.yml staging job lost the Development Cloudflare boundary')
           if errors:
               print('\n'.join(f'ERROR: {e}' for e in errors))
               sys.exit(1)
-          print('Cloudflare boundary audit passed, including isolated development deploy verification and bounded production probes.')
+          print('Cloudflare boundary audit passed: staging Cloudflare writes are Development-only and production guardrails remain intact.')
           PY

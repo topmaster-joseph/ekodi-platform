@@ -1,85 +1,139 @@
-body.compact-control-center .campus-table-wrap.campus-groups-wrap{overflow:visible;border:0;background:transparent;padding:0}
-body.compact-control-center .campus-groups-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;align-items:start}
-body.compact-control-center .campus-group-card{min-width:0;overflow:hidden;border:1px solid #1d3a58;border-radius:12px;background:#07182a;box-shadow:0 8px 24px rgba(0,0,0,.08)}
-body.compact-control-center .campus-group-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:11px 12px 9px;border-bottom:1px solid #17314b;background:#0a1d31}
-body.compact-control-center .campus-group-head h3{margin:0;color:#f7fbff;font-size:12px;line-height:1.25;letter-spacing:.01em}
-body.compact-control-center .campus-group-head p{margin:3px 0 0;color:#7694b3;font-size:9px;line-height:1.35;word-break:keep-all;overflow-wrap:break-word}
-body.compact-control-center .campus-group-count{display:inline-flex;align-items:center;justify-content:center;min-width:24px;height:20px;padding:0 7px;border:1px solid #31577c;border-radius:999px;background:#102c48;color:#a9cdf0;font-size:9px;font-weight:700}
-body.compact-control-center .campus-group-list{display:flex;flex-direction:column}
-body.compact-control-center .campus-site-item{display:grid;grid-template-columns:minmax(142px,1.05fr) minmax(118px,.8fr) auto;align-items:center;gap:8px;min-width:0;padding:7px 9px;border-bottom:1px solid #132c44;transition:background .16s ease}
-body.compact-control-center .campus-site-item:last-child{border-bottom:0}
-body.compact-control-center .campus-site-item:hover{background:#0d2137}
-body.compact-control-center .campus-site-item.is-planned{background:linear-gradient(90deg,rgba(29,58,88,.14),rgba(7,24,42,.3))}
-body.compact-control-center .campus-site-item.is-planned:hover{background:#0b1d30}
-body.compact-control-center .campus-site-item.is-preparing{background:linear-gradient(90deg,rgba(30,64,175,.08),rgba(7,24,42,.18))}
-body.compact-control-center .campus-site-item.is-beta{background:linear-gradient(90deg,rgba(14,116,144,.08),rgba(7,24,42,.12))}
-body.compact-control-center .campus-site-identity{display:flex;align-items:center;gap:7px;min-width:0}
-body.compact-control-center .campus-site-identity strong{overflow:hidden;color:#f2f7fc;font-size:10px;line-height:1.25;text-overflow:ellipsis;white-space:nowrap}
-body.compact-control-center .campus-site-item.is-planned .campus-site-identity strong{color:#bdcfe0}
-body.compact-control-center .campus-site-type{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;max-width:64px;padding:3px 5px;border:1px solid #284967;border-radius:5px;background:#0c2238;color:#8eb0d2;font-size:8px;line-height:1;white-space:nowrap}
-body.compact-control-center .campus-site-stage{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;padding:3px 6px;border:1px solid #5b526c;border-radius:999px;background:#241f31;color:#c8b9dd;font-size:7.5px;font-weight:700;line-height:1;white-space:nowrap}
-body.compact-control-center .campus-site-item.is-preparing .campus-site-stage{border-color:#31577c;background:#102c48;color:#a9cdf0}
-body.compact-control-center .campus-site-item.is-beta .campus-site-stage{border-color:#245568;background:#0c3040;color:#9ed8e8}
-body.compact-control-center .campus-site-domain{min-width:0;overflow:hidden;color:#9ab8d4;font-size:9px;line-height:1.2;text-decoration:none;text-overflow:ellipsis;white-space:nowrap;overflow-wrap:anywhere}
-body.compact-control-center .campus-site-item.is-planned .campus-site-domain{color:#6f8aa4}
-body.compact-control-center .campus-site-domain:hover{color:#dcecff;text-decoration:underline}
-body.compact-control-center .campus-row-actions{display:flex;align-items:center;justify-content:flex-end;gap:4px;white-space:nowrap}
-body.compact-control-center .campus-row-action{display:inline-flex;align-items:center;justify-content:center;min-width:46px;padding:5px 6px!important;font-size:8.5px!important;line-height:1.05;text-decoration:none}
-body.compact-control-center .campus-row-action.primary{min-width:48px}
-body.compact-control-center .campus-site-planned-action:disabled{min-width:48px;cursor:default;opacity:.72;color:#a994bd;border-color:#4e465d;background:#1d1927}
-body.compact-control-center .campus-table th:last-child,
-body.compact-control-center .campus-table td:last-child{width:250px;text-align:right}
-body.compact-control-center .campus-table td{vertical-align:middle}
-body.compact-control-center .campus-table tbody tr:hover{background:#0d2137}
+/* EKODI Admin · Site Management
+   Constitution-aligned C1 UI change: preserve behavior, reduce visual load,
+   keep the campus feature lazy-loaded, and make operational controls readable. */
 
-body.compact-control-center .campus-homepage-toolbar{display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap}
-body.compact-control-center .campus-homepage-notice{display:flex;align-items:center;gap:11px;margin:0 0 12px;padding:11px 13px;border:1px solid #d9e6f2;border-radius:12px;background:#f7fbff;color:#17324d}
-body.compact-control-center .campus-homepage-notice>span{display:grid;place-items:center;flex:0 0 34px;width:34px;height:34px;border-radius:10px;background:#e8f4ff;color:#0d5f9a;font-size:17px}
-body.compact-control-center .campus-homepage-notice strong{display:block;font-size:11px;line-height:1.35;word-break:keep-all}
-body.compact-control-center .campus-homepage-notice small{display:block;margin-top:2px;color:#647b91;font-size:9px;line-height:1.45;word-break:keep-all;overflow-wrap:break-word}
-body.compact-control-center .campus-homepage-notice[data-state="success"]{border-color:#bfe7d0;background:#f1fbf5}
-body.compact-control-center .campus-homepage-notice[data-state="warning"]{border-color:#ead9a3;background:#fffbeb}
-body.compact-control-center .campus-homepage-notice[data-state="error"]{border-color:#efc2c2;background:#fff5f5}
+body.admin-compact #campusPanel{color:#1f3348}
+body.admin-compact #campusPanel .campus-toolbar{padding:20px 22px!important;background:#ffffff!important;color:#1f3348!important;border-color:#d9e4ee!important}
+body.admin-compact #campusPanel .campus-toolbar h2{margin:0!important;color:#172b40!important;font-size:24px!important;line-height:1.25!important;font-weight:850!important;letter-spacing:-.025em!important}
+body.admin-compact #campusPanel .campus-toolbar p:not(.kicker){margin:5px 0 0!important;color:#5e7185!important;font-size:14px!important;line-height:1.55!important}
+body.admin-compact #campusPanel .campus-toolbar-actions{gap:9px!important;flex-wrap:wrap!important}
+body.admin-compact #campusPanel .campus-toolbar-actions button,
+body.admin-compact #campusPanel .campus-toolbar-actions a{min-height:40px!important;padding:9px 13px!important;font-size:13px!important;font-weight:750!important}
 
-body.compact-control-center .campus-homepage-controls{grid-column:1/-1;display:grid;grid-template-columns:auto auto minmax(112px,.55fr) minmax(130px,1fr);align-items:center;gap:6px 10px;min-width:0;margin-top:-1px;padding:6px 7px;border:1px solid #183550;border-radius:8px;background:#081d31}
-body.compact-control-center .campus-homepage-controls.is-unavailable{grid-template-columns:auto minmax(0,1fr);background:#0a1a2b;color:#7792ab}
-body.compact-control-center .campus-homepage-scope{font-size:8.5px;font-weight:700;white-space:nowrap}
-body.compact-control-center .campus-homepage-controls.is-unavailable small{font-size:8px;line-height:1.35;word-break:keep-all;overflow-wrap:break-word}
-body.compact-control-center .campus-homepage-check{display:flex;align-items:center;gap:4px;color:#b9cde0;font-size:8.5px;line-height:1.2;white-space:nowrap}
-body.compact-control-center .campus-homepage-check input{width:14px;height:14px;margin:0;accent-color:#1e88d8}
-body.compact-control-center .campus-homepage-order{display:flex;align-items:center;justify-content:flex-start;gap:4px;min-width:0;color:#89a8c5;font-size:8px;white-space:nowrap}
-body.compact-control-center .campus-homepage-order span{min-width:38px}
-body.compact-control-center .campus-homepage-order button{min-width:24px!important;width:24px;height:22px;padding:0!important;font-size:10px!important;line-height:1}
-body.compact-control-center .campus-homepage-state{min-width:0}
-body.compact-control-center .campus-homepage-state b{display:block;color:#cfe3f6;font-size:8.5px;line-height:1.2}
-body.compact-control-center .campus-homepage-state small{display:block;margin-top:2px;overflow:hidden;color:#6f8da9;font-size:7.8px;line-height:1.25;text-overflow:ellipsis;white-space:nowrap}
-body.compact-control-center .campus-site-item[data-eligible="false"] .campus-homepage-controls:not(.is-unavailable){opacity:.62}
+body.admin-compact .campus-table-wrap.campus-groups-wrap{overflow:visible!important;border:0!important;background:#f4f7fb!important;padding:16px!important}
+body.admin-compact .campus-groups-grid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:18px!important;align-items:start!important;width:100%!important}
+body.admin-compact .campus-group-card{min-width:0!important;overflow:hidden!important;border:1px solid #d8e3ed!important;border-radius:16px!important;background:#ffffff!important;color:#203247!important;box-shadow:0 6px 20px rgba(35,55,75,.05)!important}
+body.admin-compact .campus-group-head{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:14px!important;min-height:68px!important;padding:16px 18px!important;border-bottom:1px solid #dbe5ee!important;background:#f7faff!important;color:#203247!important}
+body.admin-compact .campus-group-head h3{margin:0!important;color:#1d3045!important;font-size:18px!important;line-height:1.35!important;font-weight:800!important;letter-spacing:-.01em!important}
+body.admin-compact .campus-group-head p{margin:4px 0 0!important;color:#607287!important;font-size:13px!important;line-height:1.45!important;word-break:keep-all!important;overflow-wrap:break-word!important}
+body.admin-compact .campus-group-count{display:inline-flex!important;align-items:center!important;justify-content:center!important;min-width:30px!important;height:30px!important;padding:0 9px!important;border:1px solid #cfdeeb!important;border-radius:999px!important;background:#eaf2f9!important;color:#31506d!important;font-size:12px!important;line-height:1!important;font-weight:800!important}
+body.admin-compact .campus-group-list{display:flex!important;flex-direction:column!important;background:#ffffff!important}
 
-body.compact-control-center .campus-homepage-preview{margin:0 0 12px;padding:10px 12px;border:1px dashed #c7d9ea;border-radius:12px;background:#fbfdff;color:#213c55}
-body.compact-control-center .campus-homepage-preview[hidden]{display:none}
-body.compact-control-center .campus-homepage-preview>strong{font-size:10px;line-height:1.3}
-body.compact-control-center .campus-homepage-preview-list{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
-body.compact-control-center .campus-homepage-preview-chip{display:inline-flex;align-items:center;padding:5px 7px;border:1px solid #d8e4ef;border-radius:8px;background:#fff;color:#35516c;font-size:8.5px;line-height:1.2}
-body.compact-control-center .campus-homepage-preview-chip.featured{border-color:#d8c36c;background:#fffbea;color:#735e13}
+body.admin-compact .campus-site-item{display:grid!important;grid-template-columns:minmax(260px,1.2fr) minmax(210px,.8fr) auto!important;align-items:center!important;gap:14px 18px!important;min-width:0!important;min-height:66px!important;padding:12px 16px!important;border:0!important;border-bottom:1px solid #e6edf4!important;background:#ffffff!important;color:#21364d!important;transition:background .16s ease,border-color .16s ease!important}
+body.admin-compact .campus-site-item:last-child{border-bottom:0!important}
+body.admin-compact .campus-site-item:hover{background:#f8fbff!important}
+body.admin-compact .campus-site-item.is-planned{background:#fbfcfe!important}
+body.admin-compact .campus-site-item.is-planned:hover,
+body.admin-compact .campus-site-item.is-preparing:hover,
+body.admin-compact .campus-site-item.is-beta:hover{background:#f5f9fd!important}
+body.admin-compact .campus-site-item.is-preparing{background:#fbfdff!important}
+body.admin-compact .campus-site-item.is-beta{background:#fbfeff!important}
 
-@media (max-width:1280px){
-  body.compact-control-center .campus-site-item{grid-template-columns:minmax(128px,1fr) minmax(100px,.72fr) auto}
-  body.compact-control-center .campus-site-type{display:none}
-  body.compact-control-center .campus-homepage-controls{grid-template-columns:auto auto minmax(100px,.55fr) minmax(115px,1fr)}
+body.admin-compact .campus-site-identity{display:flex!important;align-items:center!important;gap:9px!important;min-width:0!important;color:#21364d!important}
+body.admin-compact .campus-site-identity strong{min-width:0!important;overflow:hidden!important;color:#1e3045!important;font-size:15px!important;line-height:1.4!important;font-weight:800!important;text-overflow:ellipsis!important;white-space:nowrap!important}
+body.admin-compact .campus-site-item.is-planned .campus-site-identity strong{color:#64778a!important}
+body.admin-compact .campus-site-type,
+body.admin-compact .campus-site-stage{flex:0 0 auto!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;min-height:24px!important;padding:4px 7px!important;border:1px solid #d3e1ec!important;border-radius:7px!important;background:#eef5fb!important;color:#3a5873!important;font-size:11px!important;line-height:1!important;font-weight:800!important;white-space:nowrap!important}
+body.admin-compact .campus-site-stage{border-radius:999px!important;background:#f4f0fb!important;border-color:#ded4ec!important;color:#67547e!important}
+body.admin-compact .campus-site-item.is-preparing .campus-site-stage{background:#edf5ff!important;border-color:#cfe0f1!important;color:#335f86!important}
+body.admin-compact .campus-site-item.is-beta .campus-site-stage{background:#ecf9fb!important;border-color:#cce9ee!important;color:#276575!important}
+body.admin-compact .campus-site-domain{min-width:0!important;overflow:visible!important;color:#536a82!important;font-size:13px!important;line-height:1.45!important;font-weight:650!important;text-decoration:none!important;text-overflow:clip!important;white-space:normal!important;overflow-wrap:anywhere!important}
+body.admin-compact .campus-site-item.is-planned .campus-site-domain{color:#7a8b9c!important}
+body.admin-compact a.campus-site-domain:hover{color:#0b5cab!important;text-decoration:underline!important}
+
+body.admin-compact .campus-row-actions{display:flex!important;align-items:center!important;justify-content:flex-end!important;gap:8px!important;flex-wrap:nowrap!important;white-space:nowrap!important}
+body.admin-compact .campus-row-action{display:inline-flex!important;align-items:center!important;justify-content:center!important;min-width:68px!important;min-height:40px!important;padding:9px 12px!important;border:1px solid #c7d6e4!important;border-radius:9px!important;background:#ffffff!important;color:#27425d!important;font-size:13px!important;line-height:1!important;font-weight:800!important;text-decoration:none!important;white-space:nowrap!important}
+body.admin-compact .campus-row-action:hover:not(:disabled){background:#edf5ff!important;border-color:#9fc1de!important;color:#0b5cab!important}
+body.admin-compact .campus-row-action.primary{min-width:70px!important;background:#165f9d!important;border-color:#165f9d!important;color:#ffffff!important}
+body.admin-compact .campus-row-action.primary:hover{background:#0f538c!important;border-color:#0f538c!important;color:#ffffff!important}
+body.admin-compact .campus-site-planned-action:disabled{min-width:70px!important;cursor:not-allowed!important;opacity:.7!important;background:#f3f5f7!important;border-color:#d8e0e8!important;color:#7b8794!important}
+body.admin-compact .campus-row-action:focus-visible,
+body.admin-compact .campus-site-domain:focus-visible,
+body.admin-compact .campus-homepage-controls button:focus-visible,
+body.admin-compact .campus-homepage-controls input:focus-visible{outline:3px solid #b7daf8!important;outline-offset:2px!important}
+
+body.admin-compact .campus-table th:last-child,
+body.admin-compact .campus-table td:last-child{width:300px;text-align:right}
+body.admin-compact .campus-table td{vertical-align:middle}
+body.admin-compact .campus-table tbody tr:hover{background:#f8fbff!important}
+
+body.admin-compact .campus-homepage-toolbar{display:inline-flex!important;align-items:center!important;gap:8px!important;flex-wrap:wrap!important}
+body.admin-compact .campus-homepage-notice{display:flex!important;align-items:center!important;gap:12px!important;margin:0 0 14px!important;padding:13px 15px!important;border:1px solid #d9e6f2!important;border-radius:12px!important;background:#f7fbff!important;color:#17324d!important}
+body.admin-compact .campus-homepage-notice>span{display:grid!important;place-items:center!important;flex:0 0 38px!important;width:38px!important;height:38px!important;border-radius:10px!important;background:#e8f4ff!important;color:#0d5f9a!important;font-size:18px!important}
+body.admin-compact .campus-homepage-notice strong{display:block!important;font-size:13px!important;line-height:1.4!important;font-weight:800!important;word-break:keep-all!important}
+body.admin-compact .campus-homepage-notice small{display:block!important;margin-top:3px!important;color:#647b91!important;font-size:12px!important;line-height:1.5!important;word-break:keep-all!important;overflow-wrap:break-word!important}
+body.admin-compact .campus-homepage-notice[data-state="success"]{border-color:#bfe7d0!important;background:#f1fbf5!important}
+body.admin-compact .campus-homepage-notice[data-state="warning"]{border-color:#ead9a3!important;background:#fffbeb!important}
+body.admin-compact .campus-homepage-notice[data-state="error"]{border-color:#efc2c2!important;background:#fff5f5!important}
+
+body.admin-compact .campus-homepage-controls{grid-column:1/-1!important;display:grid!important;grid-template-columns:auto auto minmax(150px,.55fr) minmax(220px,1fr)!important;align-items:center!important;gap:9px 14px!important;min-width:0!important;margin-top:0!important;padding:11px 12px!important;border:1px solid #d8e4ef!important;border-radius:10px!important;background:#f8fbff!important;color:#334b63!important}
+body.admin-compact .campus-homepage-controls.is-unavailable{grid-template-columns:auto minmax(0,1fr)!important;background:#f7f9fb!important;color:#6c7f92!important}
+body.admin-compact .campus-homepage-scope{font-size:12px!important;line-height:1.4!important;font-weight:800!important;white-space:nowrap!important}
+body.admin-compact .campus-homepage-controls.is-unavailable small{font-size:11px!important;line-height:1.45!important;word-break:keep-all!important;overflow-wrap:break-word!important}
+body.admin-compact .campus-homepage-check{display:flex!important;align-items:center!important;gap:7px!important;color:#455f79!important;font-size:12px!important;line-height:1.35!important;font-weight:650!important;white-space:nowrap!important}
+body.admin-compact .campus-homepage-check input{width:18px!important;height:18px!important;margin:0!important;accent-color:#1e88d8!important}
+body.admin-compact .campus-homepage-order{display:flex!important;align-items:center!important;justify-content:flex-start!important;gap:6px!important;min-width:0!important;color:#55718b!important;font-size:12px!important;line-height:1.35!important;white-space:nowrap!important}
+body.admin-compact .campus-homepage-order span{min-width:48px!important}
+body.admin-compact .campus-homepage-order button{display:inline-flex!important;align-items:center!important;justify-content:center!important;min-width:34px!important;width:34px!important;height:34px!important;padding:0!important;border-radius:8px!important;font-size:14px!important;line-height:1!important}
+body.admin-compact .campus-homepage-state{min-width:0!important}
+body.admin-compact .campus-homepage-state b{display:block!important;color:#284761!important;font-size:12px!important;line-height:1.35!important;font-weight:800!important}
+body.admin-compact .campus-homepage-state small{display:block!important;margin-top:3px!important;overflow:visible!important;color:#6d8195!important;font-size:11px!important;line-height:1.4!important;text-overflow:clip!important;white-space:normal!important;overflow-wrap:anywhere!important}
+body.admin-compact .campus-site-item[data-eligible="false"] .campus-homepage-controls:not(.is-unavailable){opacity:.72!important}
+
+body.admin-compact .campus-homepage-preview{margin:0 0 14px!important;padding:12px 14px!important;border:1px dashed #c7d9ea!important;border-radius:12px!important;background:#fbfdff!important;color:#213c55!important}
+body.admin-compact .campus-homepage-preview[hidden]{display:none!important}
+body.admin-compact .campus-homepage-preview>strong{font-size:13px!important;line-height:1.4!important}
+body.admin-compact .campus-homepage-preview-list{display:flex!important;gap:8px!important;flex-wrap:wrap!important;margin-top:9px!important}
+body.admin-compact .campus-homepage-preview-chip{display:inline-flex!important;align-items:center!important;min-height:30px!important;padding:6px 9px!important;border:1px solid #d8e4ef!important;border-radius:8px!important;background:#ffffff!important;color:#35516c!important;font-size:12px!important;line-height:1.25!important}
+body.admin-compact .campus-homepage-preview-chip.featured{border-color:#d8c36c!important;background:#fffbea!important;color:#735e13!important}
+
+@media (max-width:1180px){
+  body.admin-compact .campus-groups-grid{grid-template-columns:minmax(0,1fr)!important}
+  body.admin-compact .campus-site-item{grid-template-columns:minmax(0,1fr) auto!important;gap:9px 14px!important}
+  body.admin-compact .campus-site-domain{grid-column:1!important}
+  body.admin-compact .campus-row-actions{grid-column:2!important;grid-row:1 / span 2!important}
+  body.admin-compact .campus-homepage-controls{grid-column:1/-1!important;grid-row:auto!important;grid-template-columns:auto auto minmax(130px,.7fr) minmax(180px,1fr)!important}
 }
-@media (max-width:1120px){
-  body.compact-control-center .campus-groups-grid{grid-template-columns:1fr}
-  body.compact-control-center .campus-site-type{display:inline-flex}
+
+@media (max-width:760px){
+  body.admin-compact #campusPanel .campus-toolbar{padding:16px!important}
+  body.admin-compact #campusPanel .campus-toolbar h2{font-size:22px!important}
+  body.admin-compact #campusPanel .campus-toolbar p:not(.kicker){font-size:14px!important}
+  body.admin-compact #campusPanel .campus-toolbar-actions{width:100%!important}
+  body.admin-compact #campusPanel .campus-toolbar-actions button,
+  body.admin-compact #campusPanel .campus-toolbar-actions a{flex:1 1 auto!important;min-height:44px!important;font-size:14px!important}
+  body.admin-compact .campus-table-wrap.campus-groups-wrap{padding:10px!important}
+  body.admin-compact .campus-groups-grid{gap:14px!important}
+  body.admin-compact .campus-group-head{min-height:0!important;padding:14px!important}
+  body.admin-compact .campus-group-head h3{font-size:17px!important}
+  body.admin-compact .campus-group-head p{font-size:13px!important}
+  body.admin-compact .campus-site-item{grid-template-columns:1fr!important;gap:10px!important;min-height:0!important;padding:14px!important}
+  body.admin-compact .campus-site-identity{flex-wrap:wrap!important}
+  body.admin-compact .campus-site-identity strong{font-size:16px!important;white-space:normal!important;overflow:visible!important;text-overflow:clip!important}
+  body.admin-compact .campus-site-domain{grid-column:auto!important;font-size:14px!important}
+  body.admin-compact .campus-row-actions{grid-column:auto!important;grid-row:auto!important;justify-content:stretch!important;width:100%!important}
+  body.admin-compact .campus-row-action{flex:1 1 0!important;min-width:0!important;min-height:44px!important;font-size:14px!important;padding:10px 8px!important}
+  body.admin-compact .campus-homepage-controls,
+  body.admin-compact .campus-homepage-controls.is-unavailable{grid-column:auto!important;grid-template-columns:1fr 1fr!important;gap:10px!important;padding:12px!important}
+  body.admin-compact .campus-homepage-state{grid-column:1/-1!important}
+  body.admin-compact .campus-homepage-controls.is-unavailable small{grid-column:1/-1!important}
+  body.admin-compact .campus-homepage-scope,
+  body.admin-compact .campus-homepage-check,
+  body.admin-compact .campus-homepage-order,
+  body.admin-compact .campus-homepage-state b{font-size:13px!important}
+  body.admin-compact .campus-homepage-state small{font-size:12px!important}
+  body.admin-compact .campus-homepage-order button{min-width:40px!important;width:40px!important;height:40px!important}
+  body.admin-compact .campus-homepage-toolbar{width:100%!important}
+  body.admin-compact .campus-homepage-toolbar button{flex:1 1 auto!important;min-height:44px!important}
+  body.admin-compact .campus-table th:last-child,
+  body.admin-compact .campus-table td:last-child{width:auto!important}
 }
+
 @media (max-width:720px){
-  body.compact-control-center .campus-site-item{grid-template-columns:minmax(0,1fr) auto;gap:5px 8px}
-  body.compact-control-center .campus-site-domain{grid-column:1/2}
-  body.compact-control-center .campus-row-actions{grid-column:2/3;grid-row:1/3;align-self:center;flex-wrap:wrap;max-width:108px}
-  body.compact-control-center .campus-homepage-controls{grid-column:1/-1;grid-row:auto;grid-template-columns:1fr 1fr;gap:7px 8px}
-  body.compact-control-center .campus-homepage-state{grid-column:1/-1}
-  body.compact-control-center .campus-homepage-controls.is-unavailable{grid-template-columns:1fr}
-  body.compact-control-center .campus-homepage-toolbar{width:100%}
-  body.compact-control-center .campus-homepage-toolbar button{flex:1 1 auto}
-  body.compact-control-center .campus-table th:last-child,
-  body.compact-control-center .campus-table td:last-child{width:auto}
+  body.admin-compact .campus-homepage-controls,
+  body.admin-compact .campus-homepage-controls.is-unavailable{grid-template-columns:1fr!important}
+  body.admin-compact .campus-homepage-state,
+  body.admin-compact .campus-homepage-controls.is-unavailable small{grid-column:auto!important}
+  body.admin-compact .campus-homepage-notice{align-items:flex-start!important}
+  body.admin-compact .campus-homepage-preview{overflow-wrap:anywhere!important}
 }

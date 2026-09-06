@@ -1,0 +1,80 @@
+{
+  "version": "1.0",
+  "canonicalRepository": "topmaster-joseph/ekodi-platform",
+  "principles": {
+    "oneCanonicalRepository": true,
+    "sharedDatabaseByDefault": true,
+    "dedicatedDatabaseWhenJustified": true,
+    "productionDataNeverCopiedRawToNonProduction": true
+  },
+  "environments": {
+    "production": {
+      "git": {
+        "branch": "main",
+        "githubEnvironment": "production"
+      },
+      "cloudflare": {
+        "environment": "production"
+      },
+      "supabase": {
+        "logicalName": "ekodi-platform",
+        "currentProjectRef": "renzehysxirjilvdxacv",
+        "currentProjectName": "cheonggye-market",
+        "state": "transition-to-canonical-platform"
+      }
+    },
+    "development": {
+      "git": {
+        "branch": "development",
+        "githubEnvironment": "development",
+        "pullRequestStagingUsesEnvironment": "development"
+      },
+      "cloudflare": {
+        "environment": "development-staging"
+      },
+      "supabase": {
+        "logicalName": "ekodi-platform-dev",
+        "currentProjectRef": "lxcxwbdwwojjkgybbqii",
+        "currentProjectName": "ekodi-church",
+        "state": "transition-until-church-data-is-safely-migrated"
+      }
+    }
+  },
+  "postgres": {
+    "isolationLayers": [
+      "schema",
+      "tenant_id",
+      "row_level_security",
+      "cloudflare_api_boundary"
+    ],
+    "targetSchemas": [
+      "core",
+      "identity",
+      "tenancy",
+      "shared",
+      "church",
+      "church_private",
+      "market",
+      "commerce",
+      "community",
+      "work",
+      "content",
+      "ai",
+      "audit",
+      "private",
+      "api"
+    ]
+  },
+  "liveness": {
+    "supabase": {
+      "enabled": true,
+      "method": "read-only-rpc",
+      "rpc": "public.ekodi_keepalive",
+      "cadence": "three-times-daily",
+      "writesAllowed": false
+    },
+    "cloudflare": {
+      "syntheticKeepalive": false
+    }
+  }
+}

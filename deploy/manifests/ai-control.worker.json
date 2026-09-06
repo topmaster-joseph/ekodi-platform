@@ -1,0 +1,61 @@
+{
+  "version": 1,
+  "worker": {
+    "name": "ekodi-ai-control",
+    "config": "wrangler.ai.release.toml",
+    "allowFirstDeploy": true,
+    "requests": [
+      {
+        "url": "https://ai.ekodi.kr/",
+        "statuses": [
+          307
+        ],
+        "redirect": "manual",
+        "headerExpect": [
+          "location: https://admin.ekodi.kr/?route=common-services&service=ai",
+          "x-ekodi-route: ai-runtime-admin-handoff"
+        ]
+      },
+      {
+        "url": "https://ai.ekodi.kr/__health",
+        "statuses": [
+          200
+        ],
+        "expect": [
+          "\"ok\":true",
+          "\"platform\":\"ai-control\"",
+          "\"surface\":\"runtime-only\""
+        ]
+      },
+      {
+        "url": "https://ai.ekodi.kr/config.js",
+        "statuses": [
+          410
+        ],
+        "expect": [
+          "operator_surface_moved",
+          "common-services"
+        ]
+      },
+      {
+        "url": "https://ai.ekodi.kr/api/status",
+        "statuses": [
+          401
+        ],
+        "expect": [
+          "authentication_required"
+        ]
+      },
+      {
+        "url": "https://ai.ekodi.kr/api/auth/exchange",
+        "statuses": [
+          410
+        ],
+        "expect": [
+          "service_local_auth_retired",
+          "common-services"
+        ]
+      }
+    ]
+  }
+}

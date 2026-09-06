@@ -43,14 +43,17 @@
     if (!nav || !content) return;
     installed = true;
 
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'nav';
-    button.dataset.section = 'books';
-    button.innerHTML = '▤ <span>에코디서점</span>';
-    const finance = nav.querySelector('[data-section="finance"]');
-    if (finance) nav.insertBefore(button, finance);
-    else nav.append(button);
+    let button = nav.querySelector('[data-section="books"], [data-lazy-section="books"]');
+    if (!button) {
+      button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'nav';
+      button.dataset.section = 'books';
+      button.innerHTML = 'B <span>Books</span>';
+      const finance = nav.querySelector('[data-section="finance"]');
+      if (finance?.parentElement) finance.parentElement.insertBefore(button, finance);
+      else nav.append(button);
+    }
 
     const section = document.createElement('section');
     section.id = 'booksAdminSection';
@@ -58,8 +61,8 @@
     section.dataset.panel = 'books';
     section.innerHTML = `
       <div class="section-head books-head">
-        <div><p class="kicker">에코디서점 · 에코디출판 운영</p><h2>에코디서점 관리</h2><p>출판물, 상담, 출판대행 서비스, 요금과 기능 노출을 한곳에서 관리합니다.</p></div>
-        <div class="books-head-actions"><a class="secondary books-public-link" href="https://books.ekodi.kr/publishing/" target="_blank" rel="noopener">에코디출판 ↗</a><button class="secondary" id="refreshBooksAdmin" type="button">↻ Refresh</button></div>
+        <div><p class="kicker">에코디서점 · 출판 운영</p><h2>에코디서점 관리</h2><p>출판물, 상담, 출판대행 서비스, 요금과 기능 노출을 한곳에서 관리합니다.</p></div>
+        <div class="books-head-actions"><a class="secondary books-public-link" href="https://books.ekodi.kr/publishing/" target="_blank" rel="noopener">출판 ↗</a><button class="secondary" id="refreshBooksAdmin" type="button">↻ Refresh</button></div>
       </div>
       <p class="books-flash" id="booksFlash" role="status"></p>
       <div class="books-tabs" role="tablist">
@@ -116,7 +119,7 @@
     `;
     content.append(section);
 
-    button.addEventListener('click', () => {
+    if (button.dataset.booksAdminBound !== 'true') button.addEventListener('click', () => {
       document.querySelectorAll('[data-panel]').forEach(panel => {
         const targets = String(panel.dataset.panel || '').split(' ');
         panel.classList.toggle('hidden-panel', !targets.includes('books'));
@@ -128,6 +131,7 @@
       if (location.hash !== '#books') history.replaceState(null, '', '#books');
       if (!loaded) load();
     });
+    button.dataset.booksAdminBound = 'true';
 
     section.querySelectorAll('[data-books-tab]').forEach(tab => tab.addEventListener('click', () => selectTab(tab.dataset.booksTab)));
     section.querySelector('#refreshBooksAdmin').addEventListener('click', load);

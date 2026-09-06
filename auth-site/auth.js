@@ -6,22 +6,23 @@ const ACCESS=`${SUPABASE_URL}/functions/v1/access-api`;
 const PERSON_WORKSPACE=`${SUPABASE_URL}/functions/v1/workspace-api`;
 const IDENTITY=`${SUPABASE_URL}/functions/v1/identity-api`;
 const services={
-  cgma:{name:'청계상권 · 정회원',tenant:'cheonggye',role:'member',returnTo:'https://cgma.ekodi.kr/member',origins:['https://cgma.ekodi.kr'],requestable:true},
+  cgma:{name:'청계상권 · 정회원',tenant:'cheonggye',role:'member',returnTo:'https://ekodi.kr/cgma/member',origins:['https://ekodi.kr','https://cgma.or.kr','https://cgma.ekodi.kr'],requestable:true},
   marketing:{name:'마케팅AI',tenant:null,role:'store_owner',returnTo:'https://marketing.ekodi.kr',origins:['https://marketing.ekodi.kr','https://jadam.ekodi.kr','https://pizzamaru.ekodi.kr','https://yogurt.ekodi.kr','https://yogurtpurple.ekodi.kr'],requestable:true},
   biz:{name:'에코디비즈',tenant:'ekodibiz',role:'member',returnTo:'https://biz.ekodi.kr',origins:['https://biz.ekodi.kr'],requestable:true},
-  trade:{name:'EKODI Global Trading',tenant:'ekodibiz',role:'member',returnTo:'https://trade.ekodi.kr',origins:['https://trade.ekodi.kr'],requestable:true},
-  mall:{name:'에코디몰',tenant:null,role:'member',returnTo:'https://mall.ekodi.kr',origins:['https://mall.ekodi.kr'],requestable:true},
+  trade:{name:'EKODI Global Trading',tenant:'ekodi-biz',role:'member',returnTo:'https://ekodi.kr/ekodibiz/trade',origins:['https://ekodi.kr','https://trade.biz.ekodi.kr','https://trade.ekodi.kr'],requestable:false},
+  mall:{name:'에코디몰',tenant:null,role:'member',returnTo:'https://ekodi.kr/ekodibiz/mall',origins:['https://ekodi.kr'],requestable:true},
   pay:{name:'에코디결제',tenant:null,role:'member',returnTo:'https://pay.ekodi.kr',origins:['https://pay.ekodi.kr'],requestable:false},
   books:{name:'에코디북스',tenant:null,role:'member',returnTo:'https://books.ekodi.kr',origins:['https://books.ekodi.kr'],requestable:true},
   church:{name:'에코디교회',tenant:null,role:'member',returnTo:'https://church.ekodi.kr',origins:['https://church.ekodi.kr'],requestable:true},
   lab:{name:'에코디연구소',tenant:null,role:'member',returnTo:'https://lab.ekodi.kr',origins:['https://lab.ekodi.kr'],requestable:true},
-  mission:{name:'에코디커뮤니티',tenant:null,role:'member',returnTo:'https://mission.ekodi.kr',origins:['https://mission.ekodi.kr'],requestable:true},
-  community:{name:'에코디커뮤니티',tenant:null,role:'member',returnTo:'https://community.ekodi.kr',origins:['https://community.ekodi.kr'],requestable:true},
+  mission:{name:'커뮤니티',tenant:null,role:'member',returnTo:'https://mission.ekodi.kr',origins:['https://mission.ekodi.kr'],requestable:true},
+  community:{name:'커뮤니티',tenant:null,role:'member',returnTo:'https://community.ekodi.kr',origins:['https://community.ekodi.kr'],requestable:true},
   edu:{name:'에코디교육',tenant:null,role:'member',returnTo:'https://edu.ekodi.kr',origins:['https://edu.ekodi.kr'],requestable:true},
   media:{name:'에코디미디어',tenant:null,role:'member',returnTo:'https://media.ekodi.kr',origins:['https://media.ekodi.kr'],requestable:true},
   social:{name:'EKODI Social',tenant:null,role:'member',returnTo:'https://social.ekodi.kr',origins:['https://social.ekodi.kr'],requestable:false},
-  energy:{name:'EKODI Energy AI',tenant:null,role:'member',returnTo:'https://energy.ekodi.kr',origins:['https://energy.ekodi.kr'],requestable:false},
+  energy:{name:'Energy AI',tenant:null,role:'member',returnTo:'https://energy.ekodi.kr',origins:['https://energy.ekodi.kr'],requestable:false},
   admin:{name:'EKODI 관리자',tenant:null,role:'platform_admin',returnTo:'https://admin.ekodi.kr',origins:['https://admin.ekodi.kr'],requestable:false},
+  oauth:{name:'EKODI AI 연결',tenant:null,role:'member',returnTo:'https://auth.ekodi.kr/oauth/consent',origins:['https://auth.ekodi.kr'],requestable:false},
   portal:{name:'EKODI',tenant:null,role:'member',returnTo:'https://ekodi.kr',origins:['https://ekodi.kr'],requestable:false}
 };
 const PERSON_SCOPED_SITES=new Set(['social','energy']);
@@ -39,7 +40,7 @@ function isMarketingReturnOrigin(origin){
   if(config.origins.includes(origin))return true;
   try{const u=new URL(origin);return u.protocol==='https:'&&/^[a-z0-9-]+\.ai\.ekodi\.kr$/i.test(u.hostname)&&u.origin===origin}catch{return false}
 }
-const safeReturn=raw=>{try{const target=new URL(raw||config.returnTo);if(target.protocol!=='https:'||target.username||target.password)return config.returnTo;return (config.origins.includes(target.origin)||(marketing&&isMarketingReturnOrigin(target.origin)))?target.href:config.returnTo}catch{return config.returnTo}};
+const safeReturn=raw=>{try{const target=new URL(raw||config.returnTo);if(target.protocol!=='https:'||target.username||target.password)return config.returnTo;const cgmaPlatform=site==='cgma'&&target.origin==='https://ekodi.kr'&&(target.pathname==='/cgma'||target.pathname.startsWith('/cgma/'));return ((config.origins.includes(target.origin)&&target.origin!=='https://ekodi.kr')||cgmaPlatform||(marketing&&isMarketingReturnOrigin(target.origin)))?target.href:config.returnTo}catch{return config.returnTo}};
 const returnTo=safeReturn(params.get('return_to'));
 const sb=createClient(SUPABASE_URL,PUBLISHABLE_KEY,{auth:{detectSessionInUrl:true,persistSession:true}});
 const $=id=>document.getElementById(id);
@@ -331,6 +332,11 @@ async function renderAccess(s){
         if(workspaces.length===1)show('approvedActions',true);
         return;
       }
+    }
+    if(site==='cgma'&&authorized.length===0){
+      routing=true;showProcessing('청계면상인회 관리자 권한을 확인하고 있습니다.');
+      try{await handoffToService();return;}
+      catch(e){if(e.message!=='site_access_required')console.error('cgma reviewer handoff',e);routing=false;}
     }
     if(marketing){location.assign(marketingFreeTarget());return;}
     showAccessFallback(s,config.requestable?'본인 인증은 완료되었지만 이 서비스의 이용 권한이 없습니다. 권한을 신청하거나 다른 계정으로 다시 시도할 수 있습니다.':'본인 인증은 완료되었지만 이 서비스의 이용 권한이 없습니다. 다른 계정으로 다시 시도하거나 취소해 주세요.','warn');

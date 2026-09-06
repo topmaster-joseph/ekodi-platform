@@ -1,0 +1,23 @@
+export const TENANT_ADMIN_CAPABILITIES=Object.freeze({
+  dashboard:'tenant.dashboard.read',site:'tenant.site.manage',catalog:'tenant.catalog.read',orders:'tenant.orders.read',
+  customers:'tenant.customers.insights',reviews:'tenant.reviews.manage',sales:'tenant.sales.read',inventory:'tenant.inventory.manage',
+  marketing:'tenant.marketing.manage',operations:'tenant.operations.manage',finance:'tenant.finance.read',connections:'tenant.connections.manage',access:'tenant.access.manage',
+  people:'tenant.people.read',worship:'tenant.worship.manage',care:'tenant.care.manage',calendar:'tenant.calendar.manage',ministry:'tenant.ministry.manage',ai:'tenant.ai.assist',
+});
+const FULL=Object.freeze(['*']);
+export const TENANT_ADMIN_ROLE_CAPABILITIES=Object.freeze({
+  platform_admin:FULL,tenant_admin:FULL,store_owner:FULL,owner:FULL,admin:FULL,client_admin:FULL,senior_pastor:FULL,workspace_admin:FULL,
+  pastor:Object.freeze([TENANT_ADMIN_CAPABILITIES.dashboard,TENANT_ADMIN_CAPABILITIES.people,TENANT_ADMIN_CAPABILITIES.worship,TENANT_ADMIN_CAPABILITIES.care,TENANT_ADMIN_CAPABILITIES.calendar,TENANT_ADMIN_CAPABILITIES.ministry,TENANT_ADMIN_CAPABILITIES.ai]),
+  care_staff:Object.freeze([TENANT_ADMIN_CAPABILITIES.dashboard,TENANT_ADMIN_CAPABILITIES.people,TENANT_ADMIN_CAPABILITIES.care,TENANT_ADMIN_CAPABILITIES.calendar,TENANT_ADMIN_CAPABILITIES.ministry,TENANT_ADMIN_CAPABILITIES.ai]),
+  hq_manager:Object.freeze([TENANT_ADMIN_CAPABILITIES.dashboard,TENANT_ADMIN_CAPABILITIES.catalog,TENANT_ADMIN_CAPABILITIES.orders,TENANT_ADMIN_CAPABILITIES.customers,TENANT_ADMIN_CAPABILITIES.reviews,TENANT_ADMIN_CAPABILITIES.sales,TENANT_ADMIN_CAPABILITIES.inventory,TENANT_ADMIN_CAPABILITIES.marketing,TENANT_ADMIN_CAPABILITIES.operations,TENANT_ADMIN_CAPABILITIES.finance,TENANT_ADMIN_CAPABILITIES.connections]),
+  manager:Object.freeze([TENANT_ADMIN_CAPABILITIES.dashboard,TENANT_ADMIN_CAPABILITIES.catalog,TENANT_ADMIN_CAPABILITIES.orders,TENANT_ADMIN_CAPABILITIES.customers,TENANT_ADMIN_CAPABILITIES.reviews,TENANT_ADMIN_CAPABILITIES.sales,TENANT_ADMIN_CAPABILITIES.inventory,TENANT_ADMIN_CAPABILITIES.marketing,TENANT_ADMIN_CAPABILITIES.operations,TENANT_ADMIN_CAPABILITIES.finance,TENANT_ADMIN_CAPABILITIES.connections]),
+  marketing_manager:Object.freeze([TENANT_ADMIN_CAPABILITIES.dashboard,TENANT_ADMIN_CAPABILITIES.customers,TENANT_ADMIN_CAPABILITIES.reviews,TENANT_ADMIN_CAPABILITIES.sales,TENANT_ADMIN_CAPABILITIES.marketing]),
+  marketer:Object.freeze([TENANT_ADMIN_CAPABILITIES.dashboard,TENANT_ADMIN_CAPABILITIES.customers,TENANT_ADMIN_CAPABILITIES.reviews,TENANT_ADMIN_CAPABILITIES.sales,TENANT_ADMIN_CAPABILITIES.marketing]),client_editor:Object.freeze([TENANT_ADMIN_CAPABILITIES.dashboard,TENANT_ADMIN_CAPABILITIES.customers,TENANT_ADMIN_CAPABILITIES.reviews,TENANT_ADMIN_CAPABILITIES.sales,TENANT_ADMIN_CAPABILITIES.marketing]),
+  accounting_manager:Object.freeze([TENANT_ADMIN_CAPABILITIES.dashboard,TENANT_ADMIN_CAPABILITIES.sales,TENANT_ADMIN_CAPABILITIES.finance]),accountant:Object.freeze([TENANT_ADMIN_CAPABILITIES.dashboard,TENANT_ADMIN_CAPABILITIES.sales,TENANT_ADMIN_CAPABILITIES.finance]),
+  store_staff:Object.freeze([TENANT_ADMIN_CAPABILITIES.dashboard,TENANT_ADMIN_CAPABILITIES.catalog,TENANT_ADMIN_CAPABILITIES.orders,TENANT_ADMIN_CAPABILITIES.customers,TENANT_ADMIN_CAPABILITIES.reviews,TENANT_ADMIN_CAPABILITIES.sales,TENANT_ADMIN_CAPABILITIES.inventory,TENANT_ADMIN_CAPABILITIES.operations]),staff:Object.freeze([TENANT_ADMIN_CAPABILITIES.dashboard,TENANT_ADMIN_CAPABILITIES.operations,TENANT_ADMIN_CAPABILITIES.people,TENANT_ADMIN_CAPABILITIES.worship,TENANT_ADMIN_CAPABILITIES.calendar,TENANT_ADMIN_CAPABILITIES.ministry]),
+  client_viewer:Object.freeze([TENANT_ADMIN_CAPABILITIES.dashboard,TENANT_ADMIN_CAPABILITIES.sales]),viewer:Object.freeze([TENANT_ADMIN_CAPABILITIES.dashboard,TENANT_ADMIN_CAPABILITIES.sales,TENANT_ADMIN_CAPABILITIES.worship,TENANT_ADMIN_CAPABILITIES.calendar]),member:Object.freeze([]),
+});
+export function normalizeTenantAdminRole(role){return String(role||'').trim().toLowerCase();}
+export function tenantAdminCapabilitiesForRole(role){const key=normalizeTenantAdminRole(role);return TENANT_ADMIN_ROLE_CAPABILITIES[key]||Object.freeze([]);}
+export function tenantAdminCan(role,capability){const allowed=tenantAdminCapabilitiesForRole(role);return allowed.includes('*')||allowed.includes(String(capability||''));}
+export function tenantAdminPolicySnapshot(){return{version:1,authorityScope:'tenant',noRoleSpecificAdminPages:true,platformAdminRequiresExplicitTenantContext:true,capabilities:TENANT_ADMIN_CAPABILITIES,roleCapabilities:TENANT_ADMIN_ROLE_CAPABILITIES};}

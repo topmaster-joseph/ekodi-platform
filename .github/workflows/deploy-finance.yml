@@ -2,10 +2,17 @@ name: Deploy EKODI Finance API
 
 on:
   workflow_dispatch:
+    inputs:
+      promote_production:
+        description: 'Promote the verified Finance candidate to Production'
+        required: false
+        default: false
+        type: boolean
   pull_request:
     paths:
       - 'finance-worker.js'
       - 'finance-entry-worker.js'
+      - 'tax-business-registry-service.js'
       - 'wrangler.finance.toml'
       - 'migrations/**'
       - 'scripts/apply-d1-migrations-with-retry.sh'
@@ -18,6 +25,7 @@ on:
     paths:
       - 'finance-worker.js'
       - 'finance-entry-worker.js'
+      - 'tax-business-registry-service.js'
       - 'wrangler.finance.toml'
       - 'migrations/**'
       - 'scripts/apply-d1-migrations-with-retry.sh'
@@ -34,7 +42,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  WRANGLER_VERSION: '4.119.0'
+  WRANGLER_VERSION: '4.127.1'
 
 jobs:
   validate:
@@ -50,6 +58,7 @@ jobs:
           set -euo pipefail
           node --check finance-worker.js
           node --check finance-entry-worker.js
+          node --check tax-business-registry-service.js
           node --check scripts/guarded-worker-release.mjs
           node --check scripts/validate-additive-migrations.mjs
           bash -n scripts/apply-d1-migrations-with-retry.sh
@@ -57,16 +66,20 @@ jobs:
           test -f deploy/manifests/finance-api.worker.json
           grep -Fq "finance_organizations" finance-entry-worker.js
           grep -Fq "finance_payments" finance-entry-worker.js
+          grep -Fq "finance_tax_business_registry_status" finance-entry-worker.js
+          grep -Fq "NTS_STATUS_ENDPOINT" tax-business-registry-service.js
+          grep -Fq "NTS_BUSINESS_STATUS_SERVICE_KEY" tax-business-registry-service.js
           grep -Fq "TOSS_SECRET_KEY_NOT_CONFIGURED" finance-worker.js
           grep -Fq "'/health'" finance-worker.js
 
   staging:
+    environment: development
     needs: validate
     runs-on: ubuntu-latest
     timeout-minutes: 18
     env:
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: 46aad4738793fbaca88574832a2ccc0f
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -102,11 +115,6 @@ jobs:
           compatibility_date = "2026-08-12"
           workers_dev = true
           preview_urls = false
-
-          [[routes]]
-          pattern = "finance-api-staging.ekodi.kr"
-          custom_domain = true
-
           [vars]
           ENVIRONMENT = "staging"
           ALLOWED_ORIGINS = "https://admin.ekodi.kr"
@@ -129,12 +137,28 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          npx --yes wrangler@$WRANGLER_VERSION deployments status --config wrangler.finance.staging.runtime.toml --json > /tmp/staging-deployments.json
+          npx --yes wrangler@$WRANGLER_VERSION d1 migrations apply DB --local --config wrangler.finance.staging.runtime.toml >/tmp/local-migrations.log 2>&1
+          npx --yes wrangler@$WRANGLER_VERSION dev --local --config wrangler.finance.staging.runtime.toml --ip 127.0.0.1 --port 8792 > /tmp/finance-remote-dev.log 2>&1 &
+          runtime_pid=$!
+          trap 'kill $runtime_pid 2>/dev/null || true' EXIT
+          ready=0
+          for attempt in $(seq 1 30); do
+            code=$(curl -sS -o /dev/null -w '%{http_code}' --connect-timeout 3 --max-time 8 'http://127.0.0.1:8792/health' || true)
+            if [ "$code" = '200' ]; then ready=1; break; fi
+            if ! kill -0 $runtime_pid 2>/dev/null; then cat /tmp/finance-remote-dev.log; exit 1; fi
+            sleep 2
+          done
+          if [ "$ready" != '1' ]; then cat /tmp/finance-remote-dev.log; exit 1; fi
           for attempt in $(seq 1 18); do
-            health=$(curl -fsS --connect-timeout 5 --max-time 12 'https://finance-api-staging.ekodi.kr/health' || true)
-            overview_code=$(curl -sS -o /tmp/finance-stage-overview.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://finance-api-staging.ekodi.kr/api/finance/overview' || true)
-            structure_code=$(curl -sS -o /tmp/finance-stage-structure.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://finance-api-staging.ekodi.kr/api/finance/structure' || true)
+            health=$(curl -fsS --connect-timeout 5 --max-time 12 'http://127.0.0.1:8792/health' || true)
+            registry_health=$(curl -fsS --connect-timeout 5 --max-time 12 'http://127.0.0.1:8792/api/finance/tax-business-status-health' || true)
+            overview_code=$(curl -sS -o /tmp/finance-stage-overview.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'http://127.0.0.1:8792/api/finance/overview' || true)
+            structure_code=$(curl -sS -o /tmp/finance-stage-structure.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'http://127.0.0.1:8792/api/finance/structure' || true)
             if printf '%s' "$health" | grep -q '"ok":true' \
               && printf '%s' "$health" | grep -Fq 'ekodi-finance-api' \
+              && printf '%s' "$registry_health" | grep -Fq '"service":"ekodi-tax-business-registry"' \
+              && printf '%s' "$registry_health" | grep -Fq '"provider":"NTS_PUBLIC_DATA"' \
               && [ "$overview_code" = '401' ] \
               && [ "$structure_code" = '401' ]; then
               echo 'Finance API isolated staging verified.'
@@ -149,14 +173,16 @@ jobs:
 
   production:
     needs: [validate, staging]
-    if: github.event_name != 'pull_request'
+    if: github.event_name == 'workflow_dispatch' && inputs.promote_production == true && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    environment: production
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       TOSS_PAYMENTS_SECRET_KEY: ${{ secrets.TOSS_PAYMENTS_SECRET_KEY }}
       TOSS_PAYMENTS_MID: ${{ secrets.TOSS_PAYMENTS_MID }}
+      NTS_BUSINESS_STATUS_SERVICE_KEY: ${{ secrets.NTS_BUSINESS_STATUS_SERVICE_KEY }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -166,6 +192,7 @@ jobs:
         run: |
           test -n "$CLOUDFLARE_API_TOKEN" || (echo 'Missing CLOUDFLARE_API_TOKEN' && exit 1)
           test -n "$CLOUDFLARE_ACCOUNT_ID" || (echo 'Missing CLOUDFLARE_ACCOUNT_ID' && exit 1)
+          test "$CLOUDFLARE_ACCOUNT_ID" != '46aad4738793fbaca88574832a2ccc0f' || (echo 'Refusing Finance Production deployment from the Development Cloudflare account' && exit 1)
       - name: Capture production D1 Time Travel bookmark
         id: d1_bookmark
         shell: bash
@@ -186,8 +213,9 @@ jobs:
           const secrets = {};
           if (process.env.TOSS_PAYMENTS_SECRET_KEY) secrets.TOSS_SECRET_KEY = process.env.TOSS_PAYMENTS_SECRET_KEY;
           if (process.env.TOSS_PAYMENTS_MID) secrets.TOSS_MID = process.env.TOSS_PAYMENTS_MID;
+          if (process.env.NTS_BUSINESS_STATUS_SERVICE_KEY) secrets.NTS_BUSINESS_STATUS_SERVICE_KEY = process.env.NTS_BUSINESS_STATUS_SERVICE_KEY;
           fs.writeFileSync('/tmp/finance-secrets.json', JSON.stringify(secrets), { mode: 0o600 });
-          console.log(`Prepared guarded Finance candidate with ${Object.keys(secrets).length} payment secret key(s); values remain hidden.`);
+          console.log(`Prepared guarded Finance candidate with ${Object.keys(secrets).length} secret key(s); values remain hidden.`);
           NODE
           trap 'rm -f /tmp/finance-secrets.json' EXIT
           node scripts/guarded-worker-release.mjs --manifest deploy/manifests/finance-api.worker.json --secrets-file /tmp/finance-secrets.json
@@ -197,10 +225,14 @@ jobs:
           set -euo pipefail
           for attempt in $(seq 1 18); do
             health=$(curl -fsS --connect-timeout 5 --max-time 12 'https://finance-api.ekodi.kr/health' || true)
+            registry_health=$(curl -fsS --connect-timeout 5 --max-time 12 'https://finance-api.ekodi.kr/api/finance/tax-business-status-health' || true)
             overview_code=$(curl -sS -o /tmp/finance-overview.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://finance-api.ekodi.kr/api/finance/overview' || true)
             structure_code=$(curl -sS -o /tmp/finance-structure.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://finance-api.ekodi.kr/api/finance/structure' || true)
             if printf '%s' "$health" | grep -q '"ok":true' \
               && printf '%s' "$health" | grep -Fq 'ekodi-finance-api' \
+              && printf '%s' "$registry_health" | grep -Fq '"service":"ekodi-tax-business-registry"' \
+              && printf '%s' "$registry_health" | grep -Fq '"provider":"NTS_PUBLIC_DATA"' \
+              && printf '%s' "$registry_health" | grep -Fq '"schemaVersion":1' \
               && [ "$overview_code" = '401' ] \
               && [ "$structure_code" = '401' ]; then
               echo 'EKODI Finance API production verified.'
@@ -218,7 +250,7 @@ jobs:
             echo '## Finance API production recovery point'
             echo
             echo "- D1 bookmark before production migrations: \`$BOOKMARK\`"
-            echo '- Toss secrets are included only in the 0% candidate version when GitHub secrets are present.'
+            echo '- Toss and optional NTS public-data secrets are included only in the 0% candidate version when GitHub secrets are present.'
             echo '- Missing keys in the candidate secrets file preserve the previous Worker secret values.'
             echo '- No immediate `wrangler secret put` runs after promotion, so secret rotation cannot bypass the release gate.'
             echo '- D1 restore remains manual to avoid discarding legitimate writes after deployment.'

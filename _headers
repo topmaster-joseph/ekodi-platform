@@ -6,3 +6,19 @@
   Strict-Transport-Security: max-age=31536000; includeSubDomains
   Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'; img-src data:; script-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'none'; object-src 'none'
   Cache-Control: public, max-age=300, s-maxage=86400, stale-while-revalidate=604800
+
+/ekodibiz/mall
+  Content-Security-Policy: default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; script-src 'self' 'unsafe-inline'; connect-src 'self' https://renzehysxirjilvdxacv.supabase.co; frame-ancestors 'none'; base-uri 'self'; form-action 'none'; object-src 'none'
+  Cache-Control: no-cache
+
+/auth-router.js
+  Cache-Control: no-store
+
+/client-auth.js
+  Cache-Control: no-store
+
+/auth-workspace-target.js
+  Cache-Control: no-store
+
+/admin-auth.js
+  Cache-Control: no-store

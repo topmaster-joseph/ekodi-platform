@@ -1,4 +1,4 @@
-name: Deploy EKODI Publishing
+name: Deploy Publishing
 # 2026-08-24 operational activation, live-state bootstrap, guarded updates and diagnostics
 
 on:
@@ -71,10 +71,10 @@ jobs:
             echo "attempt=$attempt root=$root_code studio=$studio_code admin=$admin_code"
             if [[ "$root_code" =~ ^[23] ]] && [[ "$studio_code" =~ ^[23] ]] && [[ "$admin_code" =~ ^30[1278]$ ]] \
               && grep -Fq 'EKODI PROFESSIONAL PUBLISHING SERVICE' /tmp/root.html \
-              && grep -Fq 'EKODI PUBLISHING STUDIO' /tmp/studio.html \
+              && grep -Fq 'PUBLISHING STUDIO' /tmp/studio.html \
               && grep -Fiq 'x-ekodi-shell: v2' /tmp/root-h \
               && grep -Fiq 'location: https://admin.ekodi.kr/publishing#publishing' /tmp/admin-h; then
-              echo 'EKODI Publishing production verified.'
+              echo 'Publishing production verified.'
               exit 0
             fi
             sleep 5

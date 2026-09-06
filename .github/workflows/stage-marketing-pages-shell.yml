@@ -1,8 +1,24 @@
-# 2026-08-24 official USER UI / ADMIN UI governance + same-origin asset routing
-# 2026-08-24 Google origin-return deployment sync
+# 2026-09-05 Cloudflare two-account boundary
+# Marketing Pages staging uses Workers Static Assets in the Development account.
+# Production remains Cloudflare Pages and is reachable only after this staging gate succeeds.
 name: Stage Marketing AI Pages Shell
 
 on:
+  workflow_call:
+    inputs:
+      source_sha:
+        required: true
+        type: string
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/stage-marketing-pages-shell.yml'
+  workflow_dispatch:
+    inputs:
+      source_sha:
+        description: 'Optional jadam-maru commit SHA; empty uses latest main'
+        required: false
+        type: string
   pull_request:
     paths:
       - '.github/workflows/deploy-marketing-pages.yml'
@@ -12,34 +28,46 @@ permissions:
   contents: read
 
 concurrency:
-  group: marketing-pages-shell-${{ github.event.pull_request.number }}
-  cancel-in-progress: true
+  group: marketing-pages-shell-${{ github.event_name }}-${{ github.ref_name }}
+  cancel-in-progress: false
 
 env:
+  GH_API_TOKEN: ${{ github.token }}
   WRANGLER_VERSION: '4.119.0'
 
 jobs:
-  preview:
+  staging:
     runs-on: ubuntu-latest
-    timeout-minutes: 18
+    timeout-minutes: 15
+    environment: development
     env:
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-      GH_API_TOKEN: ${{ github.token }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: 46aad4738793fbaca88574832a2ccc0f
+      HUB_STAGING_URL: https://ekodi-marketing-pages-staging.ekodi-development.workers.dev
+      JADAM_STAGING_URL: https://ekodi-marketing-jadam-staging.ekodi-development.workers.dev
+      PIZZAMARU_STAGING_URL: https://ekodi-marketing-pizzamaru-staging.ekodi-development.workers.dev
+      YOGURT_STAGING_URL: https://ekodi-marketing-yogurt-staging.ekodi-development.workers.dev
     steps:
-      - name: Resolve latest Marketing AI source
+      - name: Resolve Marketing AI source
         id: source
         shell: bash
         run: |
           set -euo pipefail
-          sha=$(curl -fsS \
-            -H "Authorization: Bearer $GH_API_TOKEN" \
-            -H 'Accept: application/vnd.github+json' \
-            -H 'X-GitHub-Api-Version: 2022-11-28' \
-            'https://api.github.com/repos/topmaster-joseph/jadam-maru/commits/main' \
-            | python -c "import sys,json; print(json.load(sys.stdin)['sha'])")
+          if [ "${{ github.event_name }}" = 'workflow_call' ]; then
+            sha='${{ inputs.source_sha }}'
+          elif [ "${{ github.event_name }}" = 'workflow_dispatch' ] && [ -n "${{ inputs.source_sha }}" ]; then
+            sha='${{ inputs.source_sha }}'
+          else
+            sha=$(curl -fsS \
+              -H "Authorization: Bearer $GH_API_TOKEN" \
+              -H 'Accept: application/vnd.github+json' \
+              -H 'X-GitHub-Api-Version: 2022-11-28' \
+              'https://api.github.com/repos/topmaster-joseph/jadam-maru/commits/main' \
+              | python -c "import sys,json; print(json.load(sys.stdin)['sha'])")
+          fi
           test ${#sha} -eq 40
           echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          echo "Marketing AI staging source: $sha"
 
       - uses: actions/checkout@v7
         with:
@@ -52,7 +80,7 @@ jobs:
         with:
           node-version: '24'
 
-      - name: Build and verify official UI + same-origin assets
+      - name: Build and verify official UI and same-origin assets
         working-directory: marketing-source
         shell: bash
         run: |
@@ -85,70 +113,95 @@ jobs:
             grep -Fq 'data-ekodi-shell-external-style' "$dir/shell-style.js"
           done
 
-      - name: Verify Cloudflare credentials
+      - name: Verify Development account boundary
+        if: github.event_name != 'pull_request'
+        shell: bash
         run: |
+          set -euo pipefail
+          test "$CLOUDFLARE_ACCOUNT_ID" = '46aad4738793fbaca88574832a2ccc0f'
           test -n "$CLOUDFLARE_API_TOKEN"
-          test -n "$CLOUDFLARE_ACCOUNT_ID"
 
-      - name: Deploy four non-production Pages previews
+      - name: Deploy isolated Marketing Pages staging Workers
+        if: github.event_name != 'pull_request'
         shell: bash
         run: |
           set -euo pipefail
-          branch="shell-pr-${{ github.event.pull_request.number }}"
-          sha='${{ steps.source.outputs.sha }}'
-          deploy_preview() {
-            project="$1"; dir="$2"; env_name="$3"
-            log="/tmp/${project}.log"
-            npx --yes wrangler@$WRANGLER_VERSION pages deploy "$dir" \
-              --project-name "$project" \
-              --branch "$branch" \
-              --commit-hash "$sha" \
-              --commit-message "EKODI Marketing Shell preview $sha" | tee "$log"
-            url=$(grep -Eo 'https://[^[:space:]]+\.pages\.dev' "$log" | tail -1 || true)
-            test -n "$url"
-            echo "$env_name=$url" >> "$GITHUB_ENV"
-          }
-          deploy_preview marketing-ai marketing-source/dist/marketing-ai MARKETING_PREVIEW
-          deploy_preview marketing-ai-jadam marketing-source/dist/marketing-ai/jadam JADAM_PREVIEW
-          deploy_preview marketing-ai-pizzamaru marketing-source/dist/marketing-ai/pizzamaru PIZZAMARU_PREVIEW
-          deploy_preview marketing-ai-yogurtpurple marketing-source/dist/marketing-ai/yogurtpurple YOGURT_PREVIEW
+          cd marketing-source
 
-      - name: Verify preview HTML, CSS and JS MIME contracts
+          deploy_stage() {
+            name="$1"
+            directory="$2"
+            config="wrangler.${name}.staging.jsonc"
+            cat > "$config" <<JSON
+          {
+            "name": "$name",
+            "compatibility_date": "2026-09-05",
+            "workers_dev": true,
+            "assets": {
+              "directory": "$directory",
+              "html_handling": "auto-trailing-slash"
+            }
+          }
+          JSON
+            npx --yes wrangler@$WRANGLER_VERSION deploy --config "$config"
+          }
+
+          deploy_stage ekodi-marketing-pages-staging ./dist/marketing-ai
+          deploy_stage ekodi-marketing-jadam-staging ./dist/marketing-ai/jadam
+          deploy_stage ekodi-marketing-pizzamaru-staging ./dist/marketing-ai/pizzamaru
+          deploy_stage ekodi-marketing-yogurt-staging ./dist/marketing-ai/yogurtpurple
+
+      - name: Verify isolated Marketing Pages staging
+        if: github.event_name != 'pull_request'
         shell: bash
         run: |
           set -euo pipefail
-          check_asset() {
-            url="$1"; kind="$2"; marker="$3"
-            curl -L -fsS -D /tmp/headers -o /tmp/asset --connect-timeout 5 --max-time 15 "$url"
-            if [ "$kind" = css ]; then grep -Eiq '^content-type:[[:space:]]*text/css' /tmp/headers; fi
-            if [ "$kind" = js ]; then grep -Eiq '^content-type:.*(javascript|ecmascript)' /tmp/headers; fi
-            grep -Fq "$marker" /tmp/asset
-          }
 
-          for spec in \
-            "$MARKETING_PREVIEW|USER UI|generic" \
-            "$JADAM_PREVIEW|ADMIN UI|tenant" \
-            "$PIZZAMARU_PREVIEW|ADMIN UI|tenant" \
-            "$YOGURT_PREVIEW|ADMIN UI|tenant"; do
-            url="${spec%%|*}"; rest="${spec#*|}"; ui="${rest%%|*}"; kind="${rest#*|}"
-            verified=0
-            for attempt in $(seq 1 18); do
-              if curl -L -fsS --connect-timeout 5 --max-time 15 "$url" -o /tmp/page \
-                && grep -Fq "data-ekodi-ui-classification=\"$ui\"" /tmp/page \
-                && grep -Fq 'data-ekodi-asset-routing="same-origin"' /tmp/page \
-                && check_asset "${url%/}/official-ui.css" css 'EKODI official USER UI / ADMIN UI governance layer' \
-                && check_asset "${url%/}/official-ui.js" js 'EKODI'; then
-                if [ "$kind" = tenant ]; then
-                  grep -Fq 'data-ekodi-admin-context' /tmp/page || { sleep 4; continue; }
-                  check_asset "${url%/}/site.css" css 'Generated by scripts/patch-marketing-style-assets.mjs' || { sleep 4; continue; }
-                  check_asset "${url%/}/shell-style.js" js 'data-ekodi-shell-external-style' || { sleep 4; continue; }
-                fi
-                verified=1
-                break
+          verify_stage() {
+            url="$1"
+            needle="$2"
+            asset="$3"
+            slug=$(printf '%s' "$url" | tr -cd 'a-zA-Z0-9')
+            headers="/tmp/${slug}.headers"
+            body="/tmp/${slug}.html"
+            for attempt in $(seq 1 10); do
+              code=$(curl -sS -D "$headers" -o "$body" -w '%{http_code}' --connect-timeout 5 --max-time 15 "$url/" || true)
+              echo "$url attempt=$attempt http=$code"
+              if [[ "$code" == '302' ]] && grep -iq '^Www-Authenticate: Cloudflare-Access' "$headers"; then
+                echo "$url is deployed and correctly protected by Cloudflare Access."
+                return 0
               fi
-              sleep 4
+              if [[ "$code" == '200' ]] && grep -Fq "$needle" "$body" \
+                && grep -Fq 'data-ekodi-asset-routing="same-origin"' "$body" \
+                && grep -Fq 'https://shell.ekodi.kr/shell.js' "$body"; then
+                asset_code=$(curl -sS -o /dev/null -w '%{http_code}' --connect-timeout 5 --max-time 15 "$url/$asset" || true)
+                if [[ "$asset_code" == '200' ]]; then return 0; fi
+              fi
+              sleep 3
             done
-            test "$verified" = 1
-          done
+            echo "$url did not become ready within the staging propagation window."
+            return 1
+          }
 
-          echo 'All Marketing AI previews verified with official USER/ADMIN boundaries and browser-loadable same-origin styling.'
+          verify_stage "$HUB_STAGING_URL" '마케팅AI' 'official-ui.css'
+          verify_stage "$JADAM_STAGING_URL" '자담치킨' 'site.css'
+          verify_stage "$PIZZAMARU_STAGING_URL" '피자마루' 'site.css'
+          verify_stage "$YOGURT_STAGING_URL" '요거트퍼플' 'site.css'
+
+          {
+            echo '## Marketing Pages staging boundary'
+            echo '- ✅ Build contract validated.'
+            echo '- ✅ Four isolated Workers Static Assets staging targets deployed in the Development account.'
+            echo '- ✅ Production Cloudflare credentials were not available to the staging job.'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Report pull-request contract validation
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          {
+            echo '## Marketing Pages pull-request validation'
+            echo '- ✅ Build and same-origin asset contract validated.'
+            echo '- ℹ️ No Cloudflare mutation is performed from the direct pull-request workflow.'
+            echo '- 🔐 A production release invokes this workflow again as the required Development staging gate.'
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -1,30 +1,30 @@
 (() => {
   const ALL_SITES = [
     { type: 'Core', name: 'EKODI Home', domain: 'ekodi.kr', section: 'services', group: 'core' },
-    { type: 'Control', name: 'EKODI Control Center', domain: 'admin.ekodi.kr', section: 'admins', fallback: 'services', group: 'core' },
+    { type: 'Control', name: 'EKODI Admin', domain: 'admin.ekodi.kr', section: 'admins', fallback: 'services', group: 'core' },
     { type: 'Auth', name: 'EKODI Auth', domain: 'auth.ekodi.kr', section: 'admins', fallback: 'services', group: 'core' },
     { type: '교회', name: '에코디교회', domain: 'church.ekodi.kr', section: 'services', group: 'community' },
     { type: '비즈', name: '에코디비즈', domain: 'biz.ekodi.kr', section: 'organization', fallback: 'services', group: 'business' },
-    { type: 'OS', name: 'EKODI Business OS', domain: 'business.ekodi.kr', section: 'services', group: 'business' },
-    { type: '출판', name: '에코디북스', domain: 'books.ekodi.kr', section: 'books', fallback: 'services', group: 'knowledge' },
-    { type: '작가AI', name: 'EKODI Creator AI', domain: 'author.ekodi.kr', section: 'books', fallback: 'services', group: 'knowledge' },
+    { type: 'OS', name: '비즈니스 OS', domain: 'business.ekodi.kr', section: 'services', group: 'business' },
+    { type: '출판', name: '에코디서점', domain: 'books.ekodi.kr', section: 'books', fallback: 'services', group: 'knowledge' },
+    { type: '작가AI', name: '크리에이터 AI', domain: 'author.ekodi.kr', section: 'books', fallback: 'services', group: 'knowledge' },
     { type: '연구소', name: '에코디연구소', domain: 'lab.ekodi.kr', section: 'services', group: 'knowledge' },
-    { type: '교육', name: 'EKODI Education', domain: 'edu.ekodi.kr', section: 'services', group: 'knowledge' },
-    { type: '커뮤니티', name: '에코디커뮤니티', domain: 'community.ekodi.kr', section: 'community', fallback: 'services', group: 'community' },
-    { type: '소셜', name: 'EKODI Social', domain: 'social.ekodi.kr', section: 'social', fallback: 'services', group: 'community' },
-    { type: '몰', name: '에코디몰', domain: 'mall.ekodi.kr', section: 'services', group: 'business' },
-    { type: '마케팅', name: 'EKODI Marketing AI', domain: 'marketing.ekodi.kr', section: 'services', group: 'business' },
-    { type: '무역', name: 'EKODI Trading', domain: 'trade.ekodi.kr', section: 'organization', fallback: 'services', group: 'business' },
-    { type: '결제', name: 'EKODI Pay', domain: 'pay.ekodi.kr', section: 'finance', fallback: 'services', group: 'business' },
-    { type: 'My', name: 'My EKODI', domain: 'my.ekodi.kr', section: 'services', group: 'worklife' },
-    { type: '워크', name: 'EKODI Work', domain: 'work.ekodi.kr', section: 'work', fallback: 'services', group: 'worklife' },
-    { type: '에너지', name: 'EKODI Energy AI', domain: 'energy.ekodi.kr', section: 'services', group: 'worklife' },
-    { type: '보험', name: 'EKODI Insurance', domain: 'ins.ekodi.kr', section: 'services', group: 'worklife', lifecycle: 'planned' },
-    { type: '메일', name: 'EKODI Mail', domain: 'mail.ekodi.kr', section: 'communication', fallback: 'services', group: 'communication', lifecycle: 'planned' },
-    { type: '라이브', name: 'EKODI Live', domain: 'live.ekodi.kr', section: 'communication', fallback: 'services', group: 'communication', lifecycle: 'planned' },
-    { type: '클라우드', name: 'EKODI Cloud', domain: 'cloud.ekodi.kr', section: 'workspace', fallback: 'services', group: 'communication', lifecycle: 'planned' },
+    { type: '교육', name: '에코디교육', domain: 'edu.ekodi.kr', section: 'services', group: 'knowledge' },
+    { type: '커뮤니티', name: '커뮤니티', domain: 'community.ekodi.kr', section: 'community', fallback: 'services', group: 'community' },
+    { type: '소셜', name: '에코디 소셜', domain: 'social.ekodi.kr', section: 'social', fallback: 'services', group: 'community' },
+    { type: '몰', name: '에코디몰', domain: 'ekodi.kr/ekodibiz/mall', section: 'services', group: 'business' },
+    { type: '마케팅', name: '마케팅 AI', domain: 'marketing.ekodi.kr', section: 'services', group: 'business' },
+    { type: '무역', name: '에코디 트레이딩', domain: 'trade.ekodi.kr', section: 'organization', fallback: 'services', group: 'business' },
+    { type: '결제', name: '에코디 페이', domain: 'pay.ekodi.kr', section: 'finance', fallback: 'services', group: 'business' },
+    { type: 'My', name: '마이 에코디', domain: 'my.ekodi.kr', section: 'services', group: 'worklife' },
+    { type: '워크', name: '에코디 워크', domain: 'work.ekodi.kr', section: 'work', fallback: 'services', group: 'worklife' },
+    { type: '에너지', name: '에너지 AI', domain: 'energy.ekodi.kr', section: 'services', group: 'worklife' },
+    { type: '보험', name: '에코디보험', domain: 'ins.ekodi.kr', section: 'services', group: 'worklife', lifecycle: 'planned' },
+    { type: '메일', name: '에코디 메일', domain: 'mail.ekodi.kr', section: 'communication', fallback: 'services', group: 'communication', lifecycle: 'planned' },
+    { type: '라이브', name: '에코디 라이브', domain: 'live.ekodi.kr', section: 'communication', fallback: 'services', group: 'communication', lifecycle: 'planned' },
+    { type: '클라우드', name: '에코디 클라우드', domain: 'cloud.ekodi.kr', section: 'workspace', fallback: 'services', group: 'communication', lifecycle: 'planned' },
     { type: '미디어', name: '에코디미디어', domain: 'media.ekodi.kr', section: 'communication', fallback: 'services', group: 'communication', lifecycle: 'planned' },
-    { type: '고객', name: '청계면상인회', domain: 'cgma.ekodi.kr', section: 'clients', fallback: 'services', group: 'clients' },
+    { type: '고객', name: '청계면상인회', domain: 'cgma.ekodi.kr', url: 'https://ekodi.kr/cgma/', label: 'ekodi.kr/cgma · cgma.or.kr', section: 'clients', fallback: 'services', group: 'clients' },
     { type: '고객', name: '자담치킨 목포대점', domain: 'jadam.ekodi.kr', section: 'clients', fallback: 'services', group: 'clients' },
     { type: '고객', name: '피자마루 목포대점', domain: 'pizzamaru.ekodi.kr', section: 'clients', fallback: 'services', group: 'clients' },
     { type: '고객', name: '요거트퍼플 목포대점', domain: 'yogurt.ekodi.kr', section: 'clients', fallback: 'services', group: 'clients' },
@@ -119,8 +119,9 @@
     button.className = `${className} campus-row-action`;
     button.dataset.campusAction = action;
     button.dataset.campusDomain = site.domain;
-    button.dataset.campusTarget = action === 'status' ? 'overview' : site.section;
+    button.dataset.campusTarget = action === 'status' ? 'health' : site.section;
     button.dataset.campusFallback = site.fallback || '';
+    if (action === 'manage' && site.group === 'core') button.dataset.section = 'campus';
     button.textContent = label;
     button.setAttribute('aria-label', `${site.name} ${label}`);
     return button;
@@ -138,7 +139,7 @@
     }
     const link = document.createElement('a');
     link.className = 'primary campus-row-action';
-    link.href = `https://${site.domain}`;
+    link.href = site.url || `https://${site.domain}`;
     link.target = '_blank';
     link.rel = 'noopener';
     link.textContent = 'Open ↗';
@@ -176,11 +177,11 @@
     const domain = site.lifecycle === 'planned' ? document.createElement('span') : document.createElement('a');
     domain.className = 'campus-site-domain';
     if (domain.tagName === 'A') {
-      domain.href = `https://${site.domain}`;
+      domain.href = site.url || `https://${site.domain}`;
       domain.target = '_blank';
       domain.rel = 'noopener';
     }
-    domain.textContent = site.domain;
+    domain.textContent = site.label || site.domain;
     return domain;
   }
 
@@ -365,7 +366,7 @@
       const target = button.dataset.campusTarget || 'services';
       const fallback = button.dataset.campusFallback || 'services';
       openSection(target, domain, fallback);
-      if (action === 'status' && location.hash !== '#operations') history.replaceState(null, '', '#operations');
+      if (action === 'status' && location.hash !== '#health') history.replaceState(null, '', '#health');
     });
 
     refreshCampusCounts();
@@ -391,50 +392,9 @@
     }
   }
 
-  function removeDomainsMenu() {
-    const root = nav();
-    if (!root) return;
-    root.querySelectorAll('a[href="/legacy#domains"], [data-section="domains"], [data-lazy-section="domains"]').forEach(item => item.remove());
-  }
-
-  function decorateAffiliates() {
-    const root = nav();
-    if (!root) return;
-    const item = root.querySelector('[data-section="affiliates"], [data-lazy-section="affiliates"]');
-    if (!item) return;
-    const span = item.querySelector('span');
-    if (span) {
-      if (span.textContent !== '🤝 Affiliates') span.textContent = '🤝 Affiliates';
-      const first = item.firstChild;
-      if (first && first.nodeType === Node.TEXT_NODE && first.textContent) first.textContent = '';
-      return;
-    }
-    if (item.textContent !== '🤝 Affiliates') item.textContent = '🤝 Affiliates';
-  }
-
-  function normalizeSidebar() {
-    removeDomainsMenu();
-    decorateAffiliates();
-  }
-
   function init() {
     renderCampus();
-    normalizeSidebar();
     normalizeServiceOpenLinks();
-
-    const sidebarNav = nav();
-    if (sidebarNav) {
-      let sidebarQueued = false;
-      const observer = new MutationObserver(() => {
-        if (sidebarQueued) return;
-        sidebarQueued = true;
-        queueMicrotask(() => {
-          sidebarQueued = false;
-          normalizeSidebar();
-        });
-      });
-      observer.observe(sidebarNav, { childList: true, subtree: true });
-    }
 
     const serviceGrid = document.querySelector('#serviceControlGrid');
     if (serviceGrid) {
@@ -449,8 +409,6 @@
       });
       observer.observe(content, { childList: true, subtree: true });
     }
-
-    window.addEventListener('ekodi-feature-installed', normalizeSidebar);
   }
 
   window.EKODICampus = Object.freeze({

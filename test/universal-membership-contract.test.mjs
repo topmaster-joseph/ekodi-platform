@@ -9,13 +9,20 @@ const runtime = fs.readFileSync(new URL('../universal-membership.js', import.met
 const entry = fs.readFileSync(new URL('../mission-control-entry-worker.js', import.meta.url), 'utf8');
 const myWorker = fs.readFileSync(new URL('../my-worker.js', import.meta.url), 'utf8');
 
-const registryIds = registry.services.map((service) => service.id);
+const registryUserServices = registry.services.filter((service) => service?.userVisible !== false);
+const registryIds = registryUserServices.map((service) => service.id);
 
 test('every registry user service inherits universal membership', () => {
   assert.deepEqual(USER_SERVICES.map((service) => service.id), registryIds);
   for (const id of registryIds) assert.equal(USER_SERVICE_IDS.has(id), true, id);
   assert.equal(policy.defaultEntitlement.tier, 'free');
   assert.equal(policy.defaultEntitlement.scope, 'all_registry_user_services');
+});
+
+test('internal workspace engines stay registered without becoming user entitlements', () => {
+  const hidden = registry.services.filter((service) => service?.userVisible === false);
+  assert.ok(hidden.some((service) => service.id === 'space'));
+  for (const service of hidden) assert.equal(USER_SERVICE_IDS.has(service.id), false, service.id);
 });
 
 test('internal infrastructure cannot become a user entitlement by accident', () => {

@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "worker": {
+    "name": "ekodi-delivery-hub-ai",
+    "config": "wrangler.delivery.toml",
+    "requests": [
+      {"url":"https://ekodi.kr/delivery","statuses":[200],"redirect":"follow","expect":["배달허브 AI","흩어진 주문과 배달","https://shell.ekodi.kr/shell.js"],"headerExpect":["x-ekodi-shell: v2"]},
+      {"url":"https://ekodi.kr/delivery/health","statuses":[200],"expect":["ekodi-delivery-hub-ai","\"canonicalPath\":\"/delivery\"","\"executionEnabled\":false","provider-independent-decision-support"]}
+    ]
+  }
+}

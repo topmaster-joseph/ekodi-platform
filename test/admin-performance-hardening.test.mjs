@@ -33,20 +33,28 @@ test('detailed diagnostics are standalone and only observe when explicitly loade
   assert.doesNotMatch(diagnostics, /setInterval\(/);
 });
 
-test('authenticated startup is observer-free and legacy URLs converge into the current shell', async () => {
-  const shell = await read('admin-authenticated-shell.js');
+test('authenticated startup is observer-free and entry routes converge through the central handoff', async () => {
+  const [shell, handoff] = await Promise.all([
+    read('admin-authenticated-shell.js'),
+    read('admin-central-handoff.js'),
+  ]);
   assert.match(shell, /window\.addEventListener\('ekodi-authenticated',\s*onStateChange\)/);
   assert.doesNotMatch(shell, /new MutationObserver/);
-  assert.match(shell, /function canonicalizeLegacyEntry\(\)/);
-  assert.match(shell, /location\.pathname\.startsWith\('\/legacy'\)/);
+  assert.match(shell, /const requestedHash=location\.hash/);
   assert.match(shell, /history\.replaceState/);
+  assert.match(handoff, /function normalizeEntryRoute\(\)/);
+  assert.match(handoff, /function normalizeRoute\(v\)/);
+  assert.match(handoff, /history\.replaceState/);
   assert.doesNotMatch(shell, /loadStyle\('control-center-ops\.css'\)/);
   assert.doesNotMatch(shell, /loadStyle\('control-center-finance\.css'\)/);
   assert.doesNotMatch(shell, /loadScript\('control-center\.js'\)/);
   assert.match(shell, /__EKODI_ADMIN_ASSET_VERSION__/);
   const critical = shell.match(/const criticalPostAuthScripts\s*=\s*\[([\s\S]*?)\];/)?.[1] || '';
-  for (const asset of ['compact-control-center.js', 'admin-menu-layout.js', 'admin-demand-loader.js', 'google-admin-auth.js']) assert.match(critical, new RegExp(`['\"]${asset.replaceAll('.', '\\.')}['\"]`));
-  for (const asset of ['control-center.js', 'campus-actions.js', 'device-control-admin.js', 'ai-ops-admin.js']) assert.doesNotMatch(critical, new RegExp(`['\"]${asset.replaceAll('.', '\\.')}['\"]`));
+  const deferred = shell.match(/const deferredPostAuthScripts\s*=\s*\[([\s\S]*?)\];/)?.[1] || '';
+  for (const asset of ['admin-compact.js', 'admin-menu-layout.js', 'admin-demand-loader.js']) assert.match(critical, new RegExp(`['\"]${asset.replaceAll('.', '\\.')}['\"]`));
+  for (const asset of ['google-admin-auth.js', 'ekodi-message-ui.js', 'control-center.js', 'campus-actions.js', 'device-control-admin.js', 'ai-ops-admin.js']) assert.doesNotMatch(critical, new RegExp(`['\"]${asset.replaceAll('.', '\\.')}['\"]`));
+  for (const asset of ['google-admin-auth.js', 'ekodi-message-ui.js']) assert.match(deferred, new RegExp(`['\"]${asset.replaceAll('.', '\\.')}['\"]`));
+  assert.match(shell, /announceReady\(\);loadDeferredEnhancements\(\)/);
 });
 
 test('menu routing is event-driven with no persistent mutation observer', async () => {
@@ -67,21 +75,29 @@ test('demand loader uses transient observation, background priority and input-aw
   assert.match(loader, /navigator\.scheduling\?\.isInputPending/);
   assert.match(loader, /requestIdleCallback\(callback\)/);
   assert.doesNotMatch(loader, /requestIdleCallback\(callback, \{ timeout/);
-  assert.match(loader, /control-center-finance\.css/);
-  assert.match(loader, /finance-monitor\.js/);
-  assert.match(loader, /author-billing-admin\.js/);
+  assert.match(loader, /campus-actions\.css/);
+  assert.match(loader, /campus-actions\.js/);
+  assert.match(loader, /system-health-admin\.js/);
+  assert.match(loader, /device-control-admin\.js/);
   assert.match(loader, /ekodi-nav-changed/);
   assert.doesNotMatch(loader, /setInterval\(/);
   assert.doesNotMatch(loader, /observer\.observe\(app/);
 });
 
-test('postbuild removes old first-path assets, versions the final graph and enforces final JS/CSS budgets', async () => {
+test('postbuild removes retired first-path assets, versions the current graph and enforces final JS/CSS budgets', async () => {
   const perf = await read('scripts/admin-performance-postbuild.mjs');
   assert.match(perf, /control-center-ops\\\.css/);
-  assert.match(perf, /control-center-finance\\\.css/);
+  assert.match(perf, /admin-finance\\\.css/);
   assert.match(perf, /control-center\\\.js/);
+  assert.match(perf, /admin-shell\.css/);
   assert.match(perf, /createHash\('sha256'\)/);
   assert.match(perf, /assetVersion/);
+  assert.match(perf, /\['requestedFeature','reqFeature'\]/);
+  assert.match(perf, /TDZ self-call/);
+  assert.match(perf, /moduleImportVersions/);
+  assert.match(perf, /admin-menu-registry\.js/);
+  assert.match(perf, /admin-sidebar\.js/);
+  assert.match(perf, /admin-menu-runtime\.js/);
   assert.match(perf, /first-path JavaScript budget exceeded/);
   assert.match(perf, /first-path CSS budget exceeded/);
   assert.match(perf, /AI command CSS leaked into startup compact CSS/);
@@ -97,8 +113,8 @@ test('postbuild removes old first-path assets, versions the final graph and enfo
 test('admin readability is first-path without consuming the compact CSS budget, while AI command styling stays lazy', async () => {
   const readable = await read('scripts/admin-readable-command-postbuild.mjs');
   assert.match(readable, /admin-readability-base\.css/);
-  assert.match(readable, /appendFile\(`\$\{output\}control-center\.css`/);
-  assert.doesNotMatch(readable, /appendFile\(`\$\{output\}compact-control-center\.css`/);
+  assert.match(readable, /appendFile\(`\$\{output\}admin-shell\.css`/);
+  assert.doesNotMatch(readable, /appendFile\(`\$\{output\}admin-compact\.css`/);
   assert.match(readable, /appendFile\(`\$\{output\}ai-ops-admin\.css`/);
   assert.match(readable, /admin-readable-command\.css/);
 });
@@ -110,6 +126,35 @@ test('versioned admin assets receive immutable cache headers while unversioned r
   assert.match(worker, /max-age=31536000, immutable/);
   assert.match(worker, /max-age=0, must-revalidate/);
   assert.match(worker, /admin-perf-diagnostics\.js/);
+});
+
+test('shared admin menu modules use the secured immutable admin asset route', async () => {
+  const [worker, wrangler] = await Promise.all([read('site-worker.js'), read('wrangler.site.toml')]);
+  for (const asset of ['admin-menu-registry.js', 'admin-sidebar.js', 'admin-menu-runtime.js']) {
+    assert.match(worker, new RegExp(`/${asset.replaceAll('.', '\\.')}`));
+    assert.match(wrangler, new RegExp(`/${asset.replaceAll('.', '\\.')}`));
+  }
+});
+
+test('versioned admin startup graph runs Worker-first so cache policy is not bypassed by static asset headers', async () => {
+  const wrangler = await read('wrangler.site.toml');
+  for (const asset of [
+    '/admin-shell.css',
+    '/admin-central-handoff.js',
+    '/admin-authenticated-shell.js',
+    '/admin-compact.js',
+    '/admin-compact.css',
+    '/admin-menu-layout.js',
+    '/admin-menu-registry.js',
+    '/admin-sidebar.js',
+    '/admin-menu-runtime.js',
+    '/admin-demand-loader.js',
+    '/admin-perf-diagnostics.js',
+    '/admin-lazy-features.js',
+    '/ai-ops-admin.css',
+    '/system-health-admin.js',
+    '/system-health-admin.css',
+  ]) assert.match(wrangler, new RegExp(asset.replaceAll('.', '\\.').replaceAll('/', '\\/')));
 });
 
 test('build ordering runs readable layer before the final performance guard', async () => {

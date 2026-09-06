@@ -172,14 +172,42 @@ grant execute on function public.bible_shared_feed(integer) to authenticated;
 -- Policies are recreated to keep this file idempotent for reviewed environments.
 drop policy if exists bible_journeys_own_all on public.bible_journeys;
 create policy bible_journeys_own_all on public.bible_journeys for all to authenticated using ((select auth.uid())=user_id) with check ((select auth.uid())=user_id);
+
 drop policy if exists bible_conversations_own_all on public.bible_conversations;
-create policy bible_conversations_own_all on public.bible_conversations for all to authenticated using ((select auth.uid())=user_id) with check ((select auth.uid())=user_id);
+create policy bible_conversations_own_all on public.bible_conversations for all to authenticated
+  using ((select auth.uid())=user_id)
+  with check (
+    (select auth.uid())=user_id
+    and (
+      journey_id is null
+      or exists(select 1 from public.bible_journeys j where j.id=journey_id and j.user_id=(select auth.uid()))
+    )
+  );
+
 drop policy if exists bible_messages_own_all on public.bible_messages;
-create policy bible_messages_own_all on public.bible_messages for all to authenticated using ((select auth.uid())=user_id) with check ((select auth.uid())=user_id);
+create policy bible_messages_own_all on public.bible_messages for all to authenticated
+  using ((select auth.uid())=user_id)
+  with check (
+    (select auth.uid())=user_id
+    and exists(select 1 from public.bible_conversations c where c.id=conversation_id and c.user_id=(select auth.uid()))
+  );
+
 drop policy if exists bible_practices_own_all on public.bible_practices;
-create policy bible_practices_own_all on public.bible_practices for all to authenticated using ((select auth.uid())=user_id) with check ((select auth.uid())=user_id);
+create policy bible_practices_own_all on public.bible_practices for all to authenticated
+  using ((select auth.uid())=user_id)
+  with check (
+    (select auth.uid())=user_id
+    and exists(select 1 from public.bible_journeys j where j.id=journey_id and j.user_id=(select auth.uid()))
+  );
+
 drop policy if exists bible_followups_own_all on public.bible_followups;
-create policy bible_followups_own_all on public.bible_followups for all to authenticated using ((select auth.uid())=user_id) with check ((select auth.uid())=user_id);
+create policy bible_followups_own_all on public.bible_followups for all to authenticated
+  using ((select auth.uid())=user_id)
+  with check (
+    (select auth.uid())=user_id
+    and exists(select 1 from public.bible_journeys j where j.id=journey_id and j.user_id=(select auth.uid()))
+  );
+
 drop policy if exists bible_groups_owner_all on public.bible_groups;
 create policy bible_groups_owner_all on public.bible_groups for all to authenticated using ((select auth.uid())=owner_id) with check ((select auth.uid())=owner_id);
 drop policy if exists bible_groups_member_read on public.bible_groups;
@@ -195,4 +223,4 @@ create policy bible_shared_member_read on public.bible_shared_journeys for selec
 drop policy if exists bible_shared_own_write on public.bible_shared_journeys;
 create policy bible_shared_own_write on public.bible_shared_journeys for all to authenticated using ((select auth.uid())=user_id) with check ((select auth.uid())=user_id and exists(select 1 from public.bible_journeys j where j.id=journey_id and j.user_id=(select auth.uid())) and public.bible_is_group_member(group_id));
 drop policy if exists bible_content_active_read on public.bible_content_plans;
-create policy bible_content_active_read on public.bible_content_plans for select to anon,authenticated using (is_active=true);
+create policy bible_content_active_read on public.bible_content_plans for select to authenticated using (is_active=true);

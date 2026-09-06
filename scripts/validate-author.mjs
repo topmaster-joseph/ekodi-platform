@@ -22,7 +22,7 @@ const content = Object.fromEntries(await Promise.all(Object.entries(files).map(a
 function must(key, marker) { if (!content[key].includes(marker)) throw new Error(`Creator validation failed: ${key} missing ${marker}`); }
 function mustNot(key, marker) { if (content[key].includes(marker)) throw new Error(`Creator validation failed: ${key} contains forbidden ${marker}`); }
 
-must('html', 'EKODI Creator AI');
+must('html', 'Creator AI');
 must('html', 'CREATOR APPROVED');
 must('html', '원고는 기본 비공개');
 must('html', 'FREE는 AI 과금 0원');
@@ -40,7 +40,7 @@ must('worker', "product: 'ekodi-creator-ai'");
 must('worker', 'myEkodiPortfolio: true');
 must('worker', "chiefAiProtocol: 'author-events-v1'");
 must('auth', 'author-access-api');
-must('auth', 'EKODI Creator AI');
+must('auth', 'Creator AI');
 must('router', "site==='author'");
 must('foundation', 'alter table public.author_projects enable row level security');
 must('foundation', 'owner_user_id = auth.uid()');
@@ -69,7 +69,7 @@ must('ai', 'paid_membership_required');
 must('ai', 'OPENAI_API_KEY');
 must('ai', 'store:false');
 must('ai', 'https://api.openai.com/v1/responses');
-must('ai', 'EKODI Creator AI');
+must('ai', 'Creator AI');
 must('ai', 'creator_mode');
 must('production', 'author.ekodi.kr');
 mustNot('staging', 'author.ekodi.kr');

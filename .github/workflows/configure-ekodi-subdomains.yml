@@ -63,14 +63,13 @@ jobs:
 
           add_domain "ekodi-church" "church.ekodi.kr"
           add_domain "ekodilab" "lab.ekodi.kr"
-          add_domain "ekodi-mall" "mall.ekodi.kr"
 
       - name: Verify configured Pages domains
         shell: bash
         run: |
           set -euo pipefail
           api="https://api.cloudflare.com/client/v4"
-          for spec in "ekodi-church:church.ekodi.kr" "ekodilab:lab.ekodi.kr" "ekodi-mall:mall.ekodi.kr"; do
+          for spec in "ekodi-church:church.ekodi.kr" "ekodilab:lab.ekodi.kr"; do
             project="${spec%%:*}"
             domain="${spec#*:}"
             echo "==> $domain"
@@ -81,6 +80,7 @@ jobs:
 
       - name: Note reserved EKODI addresses
         run: |
-          echo 'Active/attached in this workflow: church.ekodi.kr, lab.ekodi.kr, mall.ekodi.kr'
+          echo 'Active/attached in this workflow: church.ekodi.kr, lab.ekodi.kr'
+          echo 'Mall canonical URL: https://ekodi.kr/ekodibiz/mall'
           echo 'Already managed by Wrangler: books.ekodi.kr'
           echo 'Reserved for service deployment: biz.ekodi.kr, trade.ekodi.kr, ins.ekodi.kr, pay.ekodi.kr, mission.ekodi.kr, community.ekodi.kr, edu.ekodi.kr, media.ekodi.kr, event.ekodi.kr, give.ekodi.kr, admin.ekodi.kr, api.ekodi.kr'

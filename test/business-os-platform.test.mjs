@@ -10,16 +10,18 @@ const worker=readFileSync(new URL('../business-worker.js',import.meta.url),'utf8
 const liveWorker=readFileSync(new URL('../business-live-worker.js',import.meta.url),'utf8');
 const authRouter=readFileSync(new URL('../auth-site/auth-router.js',import.meta.url),'utf8');
 const businessAuth=readFileSync(new URL('../auth-site/business-auth.js',import.meta.url),'utf8');
+const businessHandoff=readFileSync(new URL('../supabase/functions/business-handoff-api/index.ts',import.meta.url),'utf8');
 const migration=readFileSync(new URL('../supabase/migrations/20260817003000_business_os_live_data.sql',import.meta.url),'utf8');
 const staging=readFileSync(new URL('../wrangler.business-staging.toml',import.meta.url),'utf8');
 const production=readFileSync(new URL('../wrangler.business.toml',import.meta.url),'utf8');
 
 test('Business OS exposes EKODIBIZ and Jadam tenant workspaces',()=>{
-  for(const term of ['EKODI BUSINESS OS','에코디비즈','자담치킨 목포대점','CHIEF AI BRIEF','ACTION GATE','Marketing AI','Customer AI','Sales AI','Finance AI','AI Report']) assert.match(html,new RegExp(term,'i'));
+  for(const term of ['BUSINESS OS','에코디비즈','자담치킨 목포대점','CHIEF AI BRIEF','ACTION GATE','Marketing AI','Customer AI','Sales AI','Finance AI','AI Report']) assert.match(html,new RegExp(term,'i'));
   assert.match(worker,/ekodibiz/);
   assert.match(worker,/jadam/);
-  assert.match(worker,/https:\/\/biz\.ekodi\.kr/);
-  assert.match(worker,/https:\/\/jadam\.ai\.ekodi\.kr/);
+  assert.match(worker,/https:\/\/ekodi\.kr\/ekodibiz/);
+  assert.match(worker,/https:\/\/ekodi\.kr\/jadam\/marketing/);
+  assert.doesNotMatch(worker,/https:\/\/jadam\.ai\.ekodi\.kr/);
   assert.match(worker,/external_client/);
   assert.match(worker,/internal/);
 });
@@ -34,7 +36,8 @@ test('Business OS starts from a customer problem instead of a module catalog',()
   assert.match(customerNext,/requestDoItForMe/);
   assert.match(customerNext,/\/api\/action-check/);
   assert.match(customerNext,/https:\/\/energy\.ekodi\.kr\/jadam/);
-  assert.match(customerNext,/https:\/\/jadam\.ai\.ekodi\.kr/);
+  assert.match(customerNext,/https:\/\/ekodi\.kr\/jadam\/marketing/);
+  assert.doesNotMatch(customerNext,/https:\/\/jadam\.ai\.ekodi\.kr/);
   assert.match(customerNextCss,/\.problem-grid/);
   assert.match(customerNextCss,/\.next-step-panel/);
 });
@@ -48,7 +51,7 @@ test('customer-first layer monetizes execution rather than inventing a subscript
 });
 
 test('public Business OS header stays local and keeps workspace chrome behind sign-in',()=>{
-  assert.match(html,/class="brand" href="\/" aria-label="EKODI Business OS 홈으로 이동"/);
+  assert.match(html,/class="brand" href="\/" aria-label="Business OS 홈으로 이동"/);
   assert.doesNotMatch(html,/class="brand" href="https:\/\/ekodi\.kr"/);
   assert.match(html,/class="workspace-picker session-only"/);
   assert.match(html,/:has\(#authLink\[href="#logout"\]\)/);
@@ -108,6 +111,18 @@ test('Business OS central auth has a dedicated one-time handoff path',()=>{
   assert.match(businessAuth,/business-handoff-api/);
   assert.match(businessAuth,/Google 계정/);
   assert.match(businessAuth,/ekodi_token/);
+});
+
+test('Business OS preserves the requested workspace across sign-in without trusting legacy UI query state',()=>{
+  assert.match(app,/target\.searchParams\.set\('return_to',canonicalBusinessUrl\(\)\)/);
+  assert.match(app,/target\.searchParams\.delete\('problem'\)/);
+  assert.match(app,/handoffWorkspace/);
+  assert.match(businessAuth,/workspaceFromReturn/);
+  assert.match(businessAuth,/REQUESTED_WORKSPACE/);
+  assert.match(businessAuth,/JSON\.stringify\(body\)/);
+  assert.match(businessHandoff,/requested_workspace_access_required/);
+  assert.match(businessHandoff,/const candidates=requested\?\[requested\]/);
+  assert.match(businessHandoff,/unknown_workspace/);
 });
 
 test('high-impact business decisions are permanently human-only',()=>{

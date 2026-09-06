@@ -24,7 +24,7 @@ test('retired Operations grid is not fetched and rendered during every login', a
 });
 
 test('Finance monitor is no longer a pre-auth bootstrap script', async () => {
-  const html = await read('control-center.html');
+  const html = await read('admin-shell.html');
   assert.doesNotMatch(html, /<script src="finance-monitor\.js"><\/script>/);
   const features = await read('control-center-features.js');
   assert.match(features, /async function loadFinance\(\) \{ await loadModule\('finance-monitor\.js'\); \}/);

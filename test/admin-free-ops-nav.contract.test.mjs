@@ -10,47 +10,55 @@ const [adminJs, siteWorker, mallHeaders, freeOpsJs, authRouter] = await Promise.
   readFile(new URL('../auth-site/auth-router.js', import.meta.url), 'utf8'),
 ]);
 
-test('admin sidebar renders Mall Free Ops inside the right content panel', () => {
-  assert.match(adminJs, /MALL_FREE_OPS_URL = 'https:\/\/mall\.ekodi\.kr\/free-ops\?embed=admin'/);
-  assert.match(adminJs, /dataset\.section = 'mall-free-ops'/);
-  assert.match(adminJs, /dataset\.adminLink = 'mall-free-ops'/);
-  assert.match(adminJs, /Mall · Free Ops/);
-  assert.match(adminJs, /section\.dataset\.panel = 'mall-free-ops'/);
-  assert.match(adminJs, /frame\.dataset\.mallFreeOpsFrame = 'true'/);
-  assert.match(adminJs, /allow-popups-to-escape-sandbox/);
-  assert.doesNotMatch(adminJs, /link\.target = '_blank'[\s\S]{0,180}dataset\.adminLink = 'mall-free-ops'/);
-  assert.match(adminJs, /getAttribute\('href'\) === '\/legacy#domains'/);
-  assert.match(adminJs, /insertBefore\(button, domains\)/);
+function headerBlock(path) {
+  const normalized = mallHeaders.replace(/\r\n/g,'\n');
+  const start = normalized.indexOf(`
+${path}
+`);
+  assert.ok(start >= 0, `missing Mall header block: ${path}`);
+  const rest = normalized.slice(start + 1);
+  const next = rest.slice(path.length + 1).search(/\n\/[^\n]+\n/);
+  return next < 0 ? rest : rest.slice(0, path.length + 1 + next);
+}
+
+test('admin sidebar renders canonical Mall Free Ops inside the content panel', () => {
+  assert.ok(adminJs.includes("const MALL_FREE_OPS_URL = 'https://ekodi.kr/ekodibiz/mall/free-ops?embed=admin'"));
+  for (const marker of ["dataset.section = 'mall-free-ops'","dataset.adminLink = 'mall-free-ops'","section.dataset.panel = 'mall-free-ops'","frame.dataset.mallFreeOpsFrame = 'true'",'allow-popups-to-escape-sandbox']) assert.ok(adminJs.includes(marker));
+  assert.doesNotMatch(adminJs, /\/legacy#/);
+  assert.ok(adminJs.includes('nav.append(button)'));
 });
 
-test('Admin CSP permits only the Mall origin as an additional frame source', () => {
-  assert.match(siteWorker, /frame-src https:\/\/accounts\.google\.com\/gsi\/ https:\/\/mall\.ekodi\.kr/);
+test('Admin CSP permits only Google sign-in plus the first-party EKODI Mall canonical origin for frames', () => {
+  assert.ok(siteWorker.includes('"frame-src https://accounts.google.com/gsi/ https://ekodi.kr"'));
   assert.match(siteWorker, /frame-ancestors 'none'/);
+  assert.doesNotMatch(siteWorker, /frame-src[^\n]*https:\/\/mall\.ekodi\.kr/);
 });
 
-test('Mall keeps global anti-framing but grants Admin a narrow Free Ops exception', () => {
-  const globalBlock = mallHeaders.slice(0, mallHeaders.indexOf('/free-ops*'));
+test('Mall keeps global anti-framing but grants Admin narrow Free Ops exceptions', () => {
+  const globalBlock = mallHeaders.replace(/\r\n/g,'\n').slice(0, mallHeaders.replace(/\r\n/g,'\n').indexOf('/free-ops*'));
   assert.match(globalBlock, /X-Frame-Options: DENY/);
   assert.match(globalBlock, /frame-ancestors 'none'/);
-  assert.match(mallHeaders, /\/free-ops\*[\s\S]*! X-Frame-Options[\s\S]*! Content-Security-Policy[\s\S]*frame-ancestors https:\/\/admin\.ekodi\.kr/);
-  assert.match(mallHeaders, /\/assets\/free-ops\n[\s\S]*! X-Frame-Options[\s\S]*! Content-Security-Policy[\s\S]*frame-ancestors https:\/\/admin\.ekodi\.kr/);
-  assert.match(mallHeaders, /\/assets\/free-ops\.html[\s\S]*! X-Frame-Options[\s\S]*frame-ancestors https:\/\/admin\.ekodi\.kr/);
+  for (const path of ['/free-ops*','/assets/free-ops','/assets/free-ops.html']) {
+    const block = headerBlock(path);
+    assert.ok(block.includes('! X-Frame-Options'));
+    assert.ok(block.includes('! Content-Security-Policy'));
+    assert.ok(block.includes('frame-ancestors https://admin.ekodi.kr'));
+  }
 });
 
-test('embedded Free Ops opens central auth outside the frame and returns to Mall Free Ops', () => {
+test('embedded Free Ops opens central auth and returns to the canonical Mall path', () => {
   assert.match(freeOpsJs, /EMBEDDED=.*embed.*admin/);
-  assert.match(freeOpsJs, /searchParams\.set\('site','mall'\)/);
-  assert.match(freeOpsJs, /searchParams\.set\('return_to','https:\/\/mall\.ekodi\.kr\/free-ops\?embed=admin'\)/);
+  assert.ok(freeOpsJs.includes("searchParams.set('site','mall')"));
+  assert.ok(freeOpsJs.includes("searchParams.set('return_to','https://ekodi.kr/ekodibiz/mall/free-ops?embed=admin')"));
   assert.doesNotMatch(freeOpsJs, /site=mall-seller/);
-  assert.doesNotMatch(freeOpsJs, /returnTo=/);
-  assert.match(freeOpsJs, /window\.open\(AUTH_URL,'ekodiMallAuth'/);
-  assert.match(freeOpsJs, /refreshEmbeddedSession/);
-  assert.match(freeOpsJs, /addEventListener\('storage'/);
+  assert.ok(freeOpsJs.includes("window.open(AUTH_URL,'ekodiMallAuth'"));
+  assert.ok(freeOpsJs.includes('refreshEmbeddedSession'));
+  assert.ok(freeOpsJs.includes("addEventListener('storage'"));
 });
 
 test('central auth router repairs legacy Free Ops links before loading auth.js', () => {
-  assert.match(authRouter, /'mall-seller':'mall'/);
-  assert.match(authRouter, /!params\.get\('return_to'\)&&params\.get\('returnTo'\)/);
-  assert.match(authRouter, /params\.set\('return_to',params\.get\('returnTo'\)\)/);
-  assert.match(authRouter, /params\.delete\('returnTo'\)/);
+  assert.ok(authRouter.includes("'mall-seller':'mall'"));
+  assert.ok(authRouter.includes("!params.get('return_to')&&params.get('returnTo')"));
+  assert.ok(authRouter.includes("params.set('return_to',params.get('returnTo'))"));
+  assert.ok(authRouter.includes("params.delete('returnTo')"));
 });

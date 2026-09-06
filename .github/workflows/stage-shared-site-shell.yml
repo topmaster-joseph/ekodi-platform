@@ -1,11 +1,15 @@
 name: Stage Shared Site Shell
 
 on:
+  workflow_call:
   pull_request:
     paths:
       - 'site-worker.js'
       - 'site-shell-worker.js'
       - 'platform-router-worker.js'
+      - 'platform-router-entry-worker.js'
+      - 'marketing-canonical-projection.js'
+      - 'deploy/manifests/shared-site.worker.json'
       - 'ekodi-shell-injector.js'
       - 'trade.html'
       - 'hub.html'
@@ -18,20 +22,21 @@ permissions:
   contents: read
 
 concurrency:
-  group: shared-site-shell-staging-${{ github.event.pull_request.number }}
+  group: shared-site-shell-staging-${{ github.event.pull_request.number || github.run_id }}
   cancel-in-progress: true
 
 env:
   WRANGLER_VERSION: '4.119.0'
-  STAGING_URL: https://ekodi-shared-site-staging.topmaster-joseph.workers.dev
+  STAGING_URL: https://ekodi-shared-site-staging.ekodi-development.workers.dev
 
 jobs:
   staging:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    environment: development
     env:
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: 46aad4738793fbaca88574832a2ccc0f
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -43,20 +48,38 @@ jobs:
           node --check site-worker.js
           node --check site-shell-worker.js
           node --check platform-router-worker.js
+          node --check platform-router-entry-worker.js
+          node --check marketing-canonical-projection.js
           node --check ekodi-shell-injector.js
+          node --test test/marketing-canonical-projection.test.mjs
           npm run build
           test -f dist/trade.html
           test -f dist/hub.html
-      - name: Verify Cloudflare credentials
-        run: |
-          test -n "$CLOUDFLARE_API_TOKEN"
-          test -n "$CLOUDFLARE_ACCOUNT_ID"
-      - name: Deploy no-route staging Worker
-        run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.site-staging.toml
-      - name: Verify all shared platform hosts without touching production routes
+      - name: Enforce Development account boundary
         shell: bash
         run: |
           set -euo pipefail
+          test "$CLOUDFLARE_ACCOUNT_ID" = '46aad4738793fbaca88574832a2ccc0f'
+          test -n "$CLOUDFLARE_API_TOKEN"
+      - name: Deploy no-route staging Worker
+        run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.site-staging.toml
+      - name: Verify protected shared-site staging
+        shell: bash
+        run: |
+          set -euo pipefail
+          access_code=$(curl -sS -D /tmp/shared-access.headers -o /tmp/shared-access.body -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/" || true)
+          if [[ "$access_code" == '302' ]] && grep -iq '^Www-Authenticate: Cloudflare-Access' /tmp/shared-access.headers; then
+            echo "Shared-site staging deployed and is correctly protected by Cloudflare Access at $STAGING_URL"
+            exit 0
+          fi
+          verify_public_path() {
+            path="$1"; needle="$2"; header_needle="$3"
+            code=$(curl -sS -D /tmp/shared-path.headers -o /tmp/shared-path.html -w '%{http_code}' --connect-timeout 5 --max-time 15 -H "x-ekodi-staging-host: ekodi.kr" "$STAGING_URL$path" || true)
+            echo "$path -> $code"
+            [[ "$code" == '200' ]]
+            grep -Fq "$needle" /tmp/shared-path.html
+            grep -Fiq "$header_needle" /tmp/shared-path.headers
+          }
           verify_shell() {
             host="$1"; needle="$2"
             code=$(curl -sS -D /tmp/shared-stage.headers -o /tmp/shared-stage.html -w '%{http_code}' --connect-timeout 5 --max-time 15 -H "x-ekodi-staging-host: $host" "$STAGING_URL/" || true)
@@ -71,8 +94,12 @@ jobs:
               && verify_shell 'pay.ekodi.kr' 'EKODI Pay' \
               && verify_shell 'pay.biz.ekodi.kr' 'EKODI Pay' \
               && verify_shell 'messenger.ekodi.kr' 'EKODI Messenger' \
-              && verify_shell 'invest.ekodi.kr' 'EKODI Investment'; then
-              echo 'Shared-site Trade, Pay, Messenger and Investment staging verified with EKODI Shell v2.'
+              && verify_shell 'invest.ekodi.kr' 'EKODI Investment' \
+              && verify_public_path '/deployment-probe' 'OPERATING SPACE' 'x-ekodi-workspace-gateway: space-service-binding' \
+              && verify_public_path '/ekodibiz' 'EKODIBIZ' 'x-ekodi-workspace-gateway: ekodibiz-service-binding' \
+              && verify_public_path '/ekodibiz/invest' 'EKODIBIZ · INVESTMENT BUSINESS' 'x-ekodi-route: public-ekodibiz-invest' \
+              && verify_public_path '/ekodibiz/invest/admin' 'WORKSPACE-LOCAL ADMIN' 'x-ekodi-route: public-ekodibiz-invest-admin'; then
+              echo 'Shared-site core, Space binding, EKODIBIZ and Invest staging verified through the production entry contract.'
               exit 0
             fi
             sleep 4

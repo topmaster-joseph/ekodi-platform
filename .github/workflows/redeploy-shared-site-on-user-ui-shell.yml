@@ -1,0 +1,45 @@
+name: Validate Shared Site User UI Shell
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths: &shell_paths
+      - 'ekodi-shell-injector.js'
+      - 'site-shell-worker.js'
+      - 'shell/ccm-mr-player.js'
+      - 'scripts/ccm-mr-postbuild.mjs'
+      - 'package.json'
+      - 'config/user-footer.js'
+      - 'config/user-ui-shell.json'
+      - 'scripts/validate-user-ui-dna.mjs'
+      - '.github/workflows/redeploy-shared-site-on-user-ui-shell.yml'
+  push:
+    branches: [main]
+    paths: *shell_paths
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate User UI Shell contract
+        run: |
+          set -euo pipefail
+          node --check config/user-footer.js
+          node --check ekodi-shell-injector.js
+          node --check site-shell-worker.js
+          node --check shell/ccm-mr-player.js
+          node --check scripts/ccm-mr-postbuild.mjs
+          node scripts/validate-user-ui-dna.mjs
+      - name: Enforce validation-only ownership
+        run: |
+          set -euo pipefail
+          ! grep -Eq 'gh +workflow +run +deploy-site-core\.yml|guarded-worker-release\.mjs|wrangler(@[^ ]+)? +deploy|npm +run +deploy:site' .github/workflows/redeploy-shared-site-on-user-ui-shell.yml
+          echo 'User UI shell changes are deployed directly by deploy-site-core.yml; no bridge redispatch is permitted.'

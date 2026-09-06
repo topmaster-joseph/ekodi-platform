@@ -1,12 +1,12 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 3,
   "provider": {
     "legalOperator": "EKODIBIZ",
     "role": "service_provider"
   },
   "entityBoundary": {
     "service": "EKODI가 제공·운영하는 공통 기능 또는 상품",
-    "workspace": "EKODI 서비스를 이용하는 개인·사업체·교회·기관·단체의 독립 운영공간",
+    "workspace": "EKODI 서비스를 이용하는 개인·사업체·교회·기관·단체·프로젝트의 독립 운영공간",
     "entitlement": "사용자 또는 Workspace가 특정 Service를 이용할 수 있는 권리"
   },
   "userServiceKinds": [
@@ -50,6 +50,52 @@
       "요거트퍼플 목포대점"
     ]
   },
+  "publicWorkspaceRouting": {
+    "canonicalHost": "ekodi.kr",
+    "workspaceIdentityKey": "workspace_id",
+    "slugRole": "routing_locator_only",
+    "workspaceSubdomains": "forbidden",
+    "legacyRedirects": {
+      "space.ekodi.kr/{slug}": "ekodi.kr/{slug}",
+      "user.ekodi.kr/{slug}": "ekodi.kr/{slug}"
+    },
+    "canonicalPattern": "/{slug}",
+    "servicePattern": "/{slug}/{service}",
+    "adminPattern": "/{slug}/admin",
+    "serviceAdminPattern": "/{slug}/{service}/admin",
+    "kindEncodedInUrl": false,
+    "reservedRootSlugsManagedBy": "platform_route_registry"
+  },
+  "serviceImplementationSelection": {
+    "workspaceMaySelectCompatibleImplementation": true,
+    "ekodiDefaultImplementationMayExist": true,
+    "externalImplementationRequiresStandardContract": true,
+    "externalImplementationDirectPrivateDatabaseAccess": false,
+    "disconnectPreservesWorkspaceIdentity": true,
+    "selectionAuthorities": [
+      "user",
+      "workspace-admin",
+      "ekodi-orchestrator-policy"
+    ],
+    "selectionFactors": [
+      "user-choice",
+      "workspace-policy",
+      "quality",
+      "cost",
+      "latency",
+      "availability",
+      "privacy",
+      "provider-independence"
+    ]
+  },
+  "subdomainExceptions": {
+    "personalHome": "my.ekodi.kr",
+    "administration": "admin.ekodi.kr",
+    "authentication": "auth.ekodi.kr",
+    "api": "api.ekodi.kr",
+    "status": "status.ekodi.kr",
+    "commonAndCoreServices": "allowed_only_when_security_operational_protocol_or_service_boundary_is_justified_and_registered"
+  },
   "commonServiceUserAccessRule": {
     "appliesTo": [
       "platform-core",
@@ -60,5 +106,40 @@
     "memberMinimumTier": "free",
     "loginProvider": "google",
     "excludeCustomerSites": true
+  },
+  "identityAuthority": "ekodi",
+  "linkedIdentityProviders": [
+    "google"
+  ],
+  "userSurfaceTopologyPolicy": {
+    "customerSpecificAiSubdomains": "forbidden_as_canonical",
+    "marketingProduct": "https://ekodi.kr/ekodibiz/marketing-ai",
+    "workspaceMarketingPattern": "https://ekodi.kr/{slug}/marketing",
+    "marketingCore": "https://marketing.ekodi.kr",
+    "aiGateway": "https://ai.ekodi.kr",
+    "providerTopologyVisibleToOrdinaryUsers": false,
+    "examples": {
+      "jadamMarketing": "https://ekodi.kr/jadam/marketing",
+      "pizzamaruMarketing": "https://ekodi.kr/pizzamaru/marketing",
+      "yogurtMarketing": "https://ekodi.kr/yogurt/marketing",
+      "cgmaMarketing": "https://ekodi.kr/cgma/marketing"
+    }
+  },
+  "commonServiceOperatorAccessRule": {
+    "surface": "admin.ekodi.kr",
+    "canonicalPath": "admin-menu/common-services",
+    "runtimeHostsAreOperatorPages": false,
+    "directRuntimeRootBehavior": "redirect_to_admin_control_plane",
+    "sessionAuthority": "central_admin_session",
+    "authorityContext": "Person + Workspace + Role + Capability",
+    "internalOperationalInfoBeforeAuthentication": false,
+    "perServiceLoginUi": false,
+    "runtimeApiMayRemainOnDedicatedHost": true,
+    "capabilityExamples": [
+      "service:read",
+      "service:operate",
+      "ai:read",
+      "ai:operate"
+    ]
   }
 }

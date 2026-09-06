@@ -187,8 +187,19 @@ function responseDiagnostic(response, body) {
   return `route=${route} mitigated=${mitigated} content-type=${contentType} body=${JSON.stringify(preview)}`;
 }
 
-async function fetchCheck(request, overrideVersion = '') {
+const STANDARD_VERIFY_ATTEMPTS = 18;
+const PROMOTION_VERIFY_ATTEMPTS = 36;
+const VERIFY_RETRY_DELAY_MS = 3500;
+
+async function fetchCheck(request, overrideVersion = '', phase = 'standard') {
+  if (phase === 'rollback' && request.rollbackVerify === false) {
+    console.log(`↩️ rollback verification skipped for candidate-only request: ${request.url}`);
+    return;
+  }
   const statuses = Array.isArray(request.statuses) && request.statuses.length ? request.statuses : [200];
+  const bodyExpect = phase === 'rollback' && Array.isArray(request.rollbackExpect) ? request.rollbackExpect : (request.expect || []);
+  const bodyForbid = phase === 'rollback' && Array.isArray(request.rollbackForbid) ? request.rollbackForbid : (request.forbid || []);
+  const headerExpect = phase === 'rollback' && Array.isArray(request.rollbackHeaderExpect) ? request.rollbackHeaderExpect : (request.headerExpect || []);
   const headers = {
     'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36',
     'accept': 'text/html,application/xhtml+xml,application/json;q=0.9,*/*;q=0.8',
@@ -197,7 +208,8 @@ async function fetchCheck(request, overrideVersion = '') {
     headers['Cloudflare-Workers-Version-Overrides'] = `${worker.name}="${overrideVersion}"`;
   }
   let last = '';
-  for (let attemptIndex = 1; attemptIndex <= 18; attemptIndex += 1) {
+  const attemptLimit = phase === 'production' && !overrideVersion ? PROMOTION_VERIFY_ATTEMPTS : STANDARD_VERIFY_ATTEMPTS;
+  for (let attemptIndex = 1; attemptIndex <= attemptLimit; attemptIndex += 1) {
     try {
       const response = await fetch(request.url, {
         redirect: request.redirect || 'manual',
@@ -208,13 +220,13 @@ async function fetchCheck(request, overrideVersion = '') {
       const diagnostic = responseDiagnostic(response, body);
       last = `${response.status} ${response.statusText}; ${diagnostic}`;
       if (!statuses.includes(response.status)) throw new Error(`unexpected HTTP ${response.status}; ${diagnostic}`);
-      for (const marker of request.expect || []) {
+      for (const marker of bodyExpect) {
         if (!body.includes(marker)) throw new Error(`missing body marker: ${marker}; ${diagnostic}`);
       }
-      for (const marker of request.forbid || []) {
+      for (const marker of bodyForbid) {
         if (body.includes(marker)) throw new Error(`forbidden body marker: ${marker}; ${diagnostic}`);
       }
-      for (const marker of request.headerExpect || []) {
+      for (const marker of headerExpect) {
         const normalized = [...response.headers.entries()].map(([key, value]) => `${key}: ${value}`).join('\n').toLowerCase();
         if (!normalized.includes(String(marker).toLowerCase())) throw new Error(`missing header marker: ${marker}; ${diagnostic}`);
       }
@@ -222,14 +234,17 @@ async function fetchCheck(request, overrideVersion = '') {
       return;
     } catch (error) {
       last = error?.message || String(error);
-      if (attemptIndex < 18) await new Promise(resolve => setTimeout(resolve, 3500));
+      if (attemptIndex === STANDARD_VERIFY_ATTEMPTS && attemptLimit > STANDARD_VERIFY_ATTEMPTS) {
+        console.log(`⏳ Production route has not stabilized yet; extending verification before rollback: ${request.url}`);
+      }
+      if (attemptIndex < attemptLimit) await new Promise(resolve => setTimeout(resolve, VERIFY_RETRY_DELAY_MS));
     }
   }
   throw new Error(`${request.url} verification failed: ${last}`);
 }
 
-async function verifyAll(overrideVersion = '') {
-  for (const request of worker.requests) await fetchCheck(request, overrideVersion);
+async function verifyAll(overrideVersion = '', phase = 'standard') {
+  for (const request of worker.requests) await fetchCheck(request, overrideVersion, phase);
 }
 
 function appendSummary(lines) {
@@ -288,7 +303,7 @@ try {
 
   console.log('Phase 3/3: candidate passed, promote it to 100% and verify production without overrides.');
   deployVersions([`${candidateVersion}@100%`], `EKODI guarded promote ${tag}`);
-  await verifyAll('');
+  await verifyAll('', 'production');
 
   appendSummary([
     `## EKODI guarded Worker release: ${worker.name}`,
@@ -307,8 +322,8 @@ try {
     try {
       console.error(`Rolling back ${worker.name} to ${previousVersion} at 100%.`);
       deployVersions([`${previousVersion}@100%`], `EKODI automatic rollback after failed gate ${tag}`);
-      await verifyAll('');
-      console.error('✅ Automatic rollback verified.');
+      await verifyAll('', 'rollback');
+      console.error('✅ Automatic rollback verified against the stable rollback contract.');
     } catch (rollbackError) {
       console.error(`❌ Automatic rollback verification failed: ${rollbackError?.message || rollbackError}`);
     }

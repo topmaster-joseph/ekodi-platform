@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
 const source = readFileSync(new URL('../marketing-admin-control.js', import.meta.url), 'utf8');
+const publications = readFileSync(new URL('../marketing-admin-publications.js', import.meta.url), 'utf8');
 const entry = readFileSync(new URL('../mission-control-entry-worker.js', import.meta.url), 'utf8');
 
 test('Marketing admin overview is admin-authenticated and read-only', () => {
@@ -13,6 +14,7 @@ test('Marketing admin overview is admin-authenticated and read-only', () => {
   assert.match(source, /readOnly:true/);
   assert.match(source, /customerPiiIncluded:false/);
   assert.match(source, /customerKeysIncluded:false/);
+  assert.match(source, /publicationCredentialsIncluded:false/);
   assert.match(source, /externalExecution:false/);
   assert.match(source, /approvalDecisionEndpointExposedHere:false/);
 });
@@ -30,11 +32,28 @@ test('Marketing admin overview exposes aggregate operational sources without bil
   for (const contract of ['campaigns','crm','channels','automation','approvals']) {
     assert.match(source, new RegExp(`${contract}:'connected'`));
   }
+  assert.match(source, /publications:publicationLedger\.connected \? 'connected' : 'unavailable'/);
   assert.doesNotMatch(source, /identity_salt/);
   assert.doesNotMatch(source, /payload_json/);
   assert.doesNotMatch(source, /billing_key_cipher/);
   assert.doesNotMatch(source, /billing_key_iv/);
   assert.doesNotMatch(source, /provider_payment_key/);
+});
+
+test('Marketing admin reads the authoritative publication queue without credentials or raw personal subject keys', () => {
+  assert.match(source, /readMarketingPublicationOverview/);
+  assert.match(source, /publicationJobs:publicationLedger\.jobs/);
+  assert.match(source, /postingEngine/);
+  assert.match(source, /adapterCoverage:\['webhook','facebook_page','instagram_business'\]/);
+  assert.match(publications, /marketing_publication_jobs/);
+  assert.match(publications, /marketing_content_items/);
+  assert.match(publications, /marketing_publish_channels/);
+  assert.match(publications, /external_post_url/);
+  assert.match(publications, /published_at/);
+  assert.match(publications, /subjectLabel/);
+  assert.match(publications, /개인 브랜드/);
+  assert.doesNotMatch(publications, /credential_ref/);
+  assert.doesNotMatch(publications, /external_account_id/);
 });
 
 test('Marketing CRM is aggregated without returning pseudonymous customer keys', () => {

@@ -8,12 +8,13 @@ const PERSON_SCOPED_SITES=new Set(['social','energy']);
 const params=new URLSearchParams(location.search);
 const site=String(params.get('site')||'').trim().toLowerCase();
 const requested=String(params.get('workspace')||'').trim();
+const serviceDefaults={cgma:'https://ekodi.kr/cgma/'};
 const serviceOrigins={
-  cgma:['https://cgma.ekodi.kr'],
+  cgma:['https://ekodi.kr','https://cgma.or.kr','https://cgma.ekodi.kr'],
   marketing:['https://marketing.ekodi.kr','https://jadam.ekodi.kr','https://pizzamaru.ekodi.kr','https://yogurt.ekodi.kr','https://yogurtpurple.ekodi.kr'],
   biz:['https://biz.ekodi.kr'],
-  trade:['https://trade.ekodi.kr'],
-  mall:['https://mall.ekodi.kr'],
+  trade:['https://ekodi.kr','https://trade.biz.ekodi.kr','https://trade.ekodi.kr'],
+  mall:['https://ekodi.kr'],
   pay:['https://pay.ekodi.kr'],
   books:['https://books.ekodi.kr'],
   church:['https://church.ekodi.kr'],
@@ -26,11 +27,12 @@ const serviceOrigins={
   energy:['https://energy.ekodi.kr'],
 };
 const origins=serviceOrigins[site]||[];
+const fallback=serviceDefaults[site]||`${origins[0]}/`;
 if(!origins.length||!requested||requested.length>180||!/^[a-z]+:[a-zA-Z0-9:_-]+$/.test(requested))throw new Error('target_workspace_not_applicable');
 
 function safeReturn(raw){
-  try{const target=new URL(raw||origins[0]);return target.protocol==='https:'&&origins.includes(target.origin)?target.href:`${origins[0]}/`;}
-  catch{return `${origins[0]}/`;}
+  try{const target=new URL(raw||fallback);const cgmaPlatform=site==='cgma'&&target.origin==='https://ekodi.kr'&&(target.pathname==='/cgma'||target.pathname.startsWith('/cgma/'));return target.protocol==='https:'&&((origins.includes(target.origin)&&target.origin!=='https://ekodi.kr')||cgmaPlatform)?target.href:fallback;}
+  catch{return fallback;}
 }
 const returnTo=safeReturn(params.get('return_to'));
 const sb=createClient(SUPABASE_URL,PUBLISHABLE_KEY,{auth:{detectSessionInUrl:true,persistSession:true}});

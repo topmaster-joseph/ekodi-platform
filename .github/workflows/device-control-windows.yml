@@ -6,6 +6,8 @@ on:
       - 'device-control.js'
       - 'device-control-admin.js'
       - 'device-control-admin.css'
+      - 'remote-power-admin.js'
+      - 'remote-power-admin.css'
       - 'admin-demand-loader.js'
       - 'ekodi-device-bootstrap.cmd'
       - 'scripts/build.mjs'
@@ -20,6 +22,8 @@ on:
       - 'device-control.js'
       - 'device-control-admin.js'
       - 'device-control-admin.css'
+      - 'remote-power-admin.js'
+      - 'remote-power-admin.css'
       - 'admin-demand-loader.js'
       - 'ekodi-device-bootstrap.cmd'
       - 'scripts/build.mjs'
@@ -45,6 +49,7 @@ jobs:
         run: |
           node --check device-control.js
           node --check device-control-admin.js
+          node --check remote-power-admin.js
           node --check admin-demand-loader.js
           node --test test/device-control-contract.test.mjs
       - name: Build authenticated true-lazy Admin with Device AI
@@ -53,12 +58,14 @@ jobs:
           npm run build
           test -f dist/device-control-admin.js
           test -f dist/device-control-admin.css
+          test -f dist/remote-power-admin.js
+          test -f dist/remote-power-admin.css
           test -f dist/admin-demand-loader.js
           test -f dist/ekodi-device-bootstrap.cmd
-          grep -Fq 'AI 운영 제안' dist/device-control-admin.js
+          grep -Fq '운영 제안' dist/device-control-admin.js
           grep -Fq '.device-health' dist/device-control-admin.css
-          grep -Fq "styles: ['device-control-admin.css']" dist/admin-demand-loader.js
-          grep -Fq "scripts: ['device-control-admin.js']" dist/admin-demand-loader.js
+          grep -Fq "styles: ['device-control-admin.css', 'remote-power-admin.css']" dist/admin-demand-loader.js
+          grep -Fq "scripts: ['device-control-admin.js', 'remote-power-admin.js']" dist/admin-demand-loader.js
           grep -Fq 'RegisterProtocol' dist/ekodi-device-bootstrap.cmd
           if grep -Fq '<script src="device-control-admin.js"' dist/control-center.html; then
             echo 'Device Control must remain demand-loaded after authentication.'
@@ -103,7 +110,8 @@ jobs:
           $commands = @(
             'power.always_on','power.presentation','power.normal','power.restore','lock.resume_off','lock.resume_on','autologon.open',
             'diagnostics.collect','network.diagnose','printers.diagnose','startup.scan','startup.disable','startup.restore',
-            'maintenance.temp_cleanup','updates.scan','updates.install','profile.workstation.apply','profile.workstation.restore','agent.self_update'
+            'maintenance.temp_cleanup','updates.scan','updates.install','profile.workstation.apply','profile.workstation.restore','agent.self_update',
+            'remote_desktop.recovery.enable','remote_desktop.recovery.disable','remote_desktop.recovery.run'
           )
           foreach ($command in $commands) {
             if (-not $content.Contains("'$command'")) { throw "Missing allowlisted command: $command" }

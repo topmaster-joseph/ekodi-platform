@@ -4,13 +4,13 @@
   const REPOSITORY = 'topmaster-joseph/ekodi-platform';
   const RUNS_URL = `https://api.github.com/repos/${REPOSITORY}/actions/runs?per_page=80`;
   const CACHE_MS = 60 * 1000;
-  const MALL_FREE_OPS_URL = 'https://mall.ekodi.kr/free-ops?embed=admin';
+  const MALL_FREE_OPS_URL = 'https://ekodi.kr/ekodibiz/mall/free-ops?embed=admin';
   const DEPLOYMENTS_SECTION = 'deployments';
   const RELEASE_UNITS = [
     { id:'shared-site', name:'Shared Site · Admin/Auth', workflow:'deploy-admin-site.yml', model:'Candidate 0% → verify → 100%', risk:'high', domains:['ekodi.kr','admin.ekodi.kr','auth.ekodi.kr'] },
     { id:'control-api', name:'Control API', workflow:'deploy-control-api.yml', model:'Staging D1 → recovery bookmark → Candidate 0%', risk:'critical', domains:['api.ekodi.kr'] },
     { id:'finance-api', name:'Finance API', workflow:'deploy-finance.yml', model:'Staging D1 → recovery bookmark → secret-safe Candidate 0%', risk:'critical', domains:['finance-api.ekodi.kr'] },
-    { id:'marketing-ai', name:'Marketing AI', workflow:'sync-marketing-ai.yml', alternates:['deploy-jadam-marketing-ai.yml'], model:'Pages preview → verify all → production', risk:'high', domains:['marketing.ekodi.kr','jadam.ekodi.kr','pizzamaru.ekodi.kr','yogurt.ekodi.kr'] },
+    { id:'marketing-ai', name:'마케팅 AI', workflow:'sync-marketing-ai.yml', alternates:['deploy-jadam-marketing-ai.yml'], model:'Pages preview → verify all → production', risk:'high', domains:['marketing.ekodi.kr','jadam.ekodi.kr','pizzamaru.ekodi.kr','yogurt.ekodi.kr'] },
     { id:'community', name:'Community', workflow:'deploy-community.yml', model:'Candidate 0% → verify → 100%', risk:'medium', domains:['community.ekodi.kr'] },
     { id:'books', name:'Books', workflow:'deploy-books.yml', model:'Candidate 0% → verify → 100%', risk:'medium', domains:['books.ekodi.kr'] },
     { id:'social', name:'Social', workflow:'deploy-social.yml', model:'Candidate 0% → verify → 100%', risk:'medium', domains:['social.ekodi.kr'] },
@@ -114,8 +114,7 @@
       button.dataset.adminLink = 'mall-free-ops';
       button.title = 'EKODI Mall 무료·수동 우선 공급 운영';
       button.append(document.createTextNode('◇ '), el('span', 'Mall · Free Ops'));
-      const domains = Array.from(nav.querySelectorAll('a.nav')).find(item => item.getAttribute('href') === '/legacy#domains');
-      if (domains) nav.insertBefore(button, domains); else nav.append(button);
+      nav.append(button);
     }
 
     let section = document.querySelector('#mallFreeOpsPanel');
@@ -133,7 +132,7 @@
       refresh.type = 'button';
       refresh.dataset.mallFreeOpsRefresh = 'true';
       const external = el('a', '전체화면 ↗', 'secondary');
-      external.href = 'https://mall.ekodi.kr/free-ops';
+      external.href = 'https://ekodi.kr/ekodibiz/mall/free-ops';
       external.target = '_blank';
       external.rel = 'noopener';
       actions.append(refresh, external);
@@ -217,8 +216,7 @@
       navButton.dataset.adminAccess = 'super-admin';
       navButton.title = '배포 상태와 운영 반영 이력';
       navButton.append(document.createTextNode('↑ '), el('span', 'Deployments'));
-      const activity = nav.querySelector('a[href="/legacy#activity"]');
-      if (activity) nav.insertBefore(navButton, activity); else nav.append(navButton);
+      nav.append(navButton);
     }
 
     if (document.querySelector('#releaseControl')) return;

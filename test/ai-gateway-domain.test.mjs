@@ -15,6 +15,10 @@ test('root AI Gateway is an admin-only provider status surface', async () => {
   assert.match(html, /EKODI AI Gateway/);
   assert.match(html, /Google 관리자 인증/);
   assert.match(html, /실제 연결 테스트/);
+  assert.match(html, /AI COMMAND CONSOLE/);
+  assert.match(html, /대화 · 운영 명령/);
+  assert.match(html, /activeProvider/);
+  assert.match(html, /chatForm/);
   assert.match(html, /sessionIdentity/);
   assert.match(html, /loginMessage/);
   assert.match(html, /\*\.ai\.ekodi\.kr/);
@@ -37,25 +41,29 @@ test('AI Gateway client preserves Google admin handoff until session validation'
   assert.match(script, /세션 확인 지연/);
   assert.match(script, /\/api\/control\/ai\/provider-status/);
   assert.match(script, /\/api\/control\/ai\/assist/);
-  assert.match(script, /OpenAI 실제 호출/);
+  assert.match(script, /queueOperationalRequest/);
+  assert.ok(script.includes('/api/control/ai/actions'));
+  assert.match(script, /providerName/);
+  assert.match(script, /sendChat/);
 
   const acceptBody = script.match(/function acceptHandoff\(\)\{([\s\S]*?)\}\nfunction clearHandoff/)?.[1] || '';
   assert.doesNotMatch(acceptBody, /history\.replaceState/);
   assert.match(acceptBody, /setToken\(value\)/);
 });
 
-test('Worker, auth and release contracts include the AI Gateway hostname', () => {
-  const router = read('platform-router-entry-worker.js');
-  const wrangler = read('wrangler.site.toml');
+test('dedicated AI control owns ai.ekodi.kr while Shared Site does not compete for the hostname', () => {
+  const sharedWrangler = read('wrangler.site.toml');
+  const aiWrangler = read('wrangler.ai.toml');
   const auth = read('auth-site/admin-auth.js');
   const manifest = JSON.parse(read('deploy/manifests/shared-site.worker.json'));
 
-  assert.match(router, /host===AI_GATEWAY_HOST/);
-  assert.match(wrangler, /pattern = "ai\.ekodi\.kr"[\s\S]*custom_domain = true/);
+  assert.match(aiWrangler, /name = "ekodi-ai-control"/);
+  assert.match(aiWrangler, /pattern = "ai\.ekodi\.kr"[\s\S]*custom_domain = true/);
+  assert.doesNotMatch(sharedWrangler, /pattern = "ai\.ekodi\.kr"/);
   assert.match(auth, /u\.origin==='https:\/\/ai\.ekodi\.kr'/);
   assert.match(auth, /ekodi_admin_token:result\.token/);
 
   const urls = new Set(manifest.worker.requests.map(item => item.url));
-  assert.equal(urls.has('https://ai.ekodi.kr/'), true);
-  assert.equal(urls.has('https://ai.ekodi.kr/ai-gateway.js'), true);
+  assert.equal(urls.has('https://ai.ekodi.kr/'), false);
+  assert.equal(urls.has('https://ai.ekodi.kr/ai-gateway.js'), false);
 });

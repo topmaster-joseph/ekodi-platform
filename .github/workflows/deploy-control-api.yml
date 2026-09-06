@@ -11,7 +11,22 @@ on:
       - 'customer-auth.js'
       - 'customer-entry-worker.js'
       - 'mission-control-entry-worker.js'
+      - 'traffic-intelligence.js'
+      - 'traffic-intelligence-control.js'
+      - 'test/traffic-intelligence.test.mjs'
+      - 'devotional-control.js'
+      - 'test/devotional-control.test.mjs'
       - 'user-ai-control.js'
+      - 'personal-ai-bridge.js'
+      - 'sovereign-capability-fabric.js'
+      - 'config/capability-registry.json'
+      - 'ekodi-mcp-gateway.js'
+      - 'test/sovereign-capability-fabric.test.mjs'
+      - 'test/personal-ai-bridge.test.mjs'
+      - 'test/personal-ai-bridge-migration.test.mjs'
+      - 'test/ekodi-mcp-gateway.test.mjs'
+      - 'test/oauth-consent-contract.test.mjs'
+      - 'test/personal-ai-oauth-workflow.test.mjs'
       - 'ai-access-orchestration.js'
       - 'personal-ai-provider-registry.js'
       - 'gemini-provider-adapter.js'
@@ -22,7 +37,6 @@ on:
       - 'test/personal-ai-provider-registry.test.mjs'
       - 'universal-membership.js'
       - 'membership-billing.js'
-      - 'generated/user-services.js'
       - 'config/ecosystem-services.json'
       - 'config/universal-membership.json'
       - 'scripts/generate-user-service-registry.mjs'
@@ -51,7 +65,17 @@ on:
       - 'books-pipeline-control.js'
       - 'books-royalty-control.js'
       - 'affiliate-control.js'
+      - 'affiliate-marketplace.js'
+      - 'coupang-partners-automation.js'
+      - 'offer-registry.js'
+      - 'offer-registry-control.js'
+      - 'offer-registry-sources.js'
+      - 'test/ekodi-coupang-mall.test.mjs'
       - 'social-registry-api.js'
+      - 'mail-control.js'
+      - 'mail-credential-vault.js'
+      - 'mail-google-adapter.js'
+      - 'test/mail-control.test.mjs'
       - 'migrations/**'
       - '!migrations/*messenger*.sql'
       - 'wrangler.api.toml'
@@ -72,7 +96,22 @@ on:
       - 'customer-auth.js'
       - 'customer-entry-worker.js'
       - 'mission-control-entry-worker.js'
+      - 'traffic-intelligence.js'
+      - 'traffic-intelligence-control.js'
+      - 'test/traffic-intelligence.test.mjs'
+      - 'devotional-control.js'
+      - 'test/devotional-control.test.mjs'
       - 'user-ai-control.js'
+      - 'personal-ai-bridge.js'
+      - 'sovereign-capability-fabric.js'
+      - 'config/capability-registry.json'
+      - 'ekodi-mcp-gateway.js'
+      - 'test/sovereign-capability-fabric.test.mjs'
+      - 'test/personal-ai-bridge.test.mjs'
+      - 'test/personal-ai-bridge-migration.test.mjs'
+      - 'test/ekodi-mcp-gateway.test.mjs'
+      - 'test/oauth-consent-contract.test.mjs'
+      - 'test/personal-ai-oauth-workflow.test.mjs'
       - 'ai-access-orchestration.js'
       - 'personal-ai-provider-registry.js'
       - 'gemini-provider-adapter.js'
@@ -83,7 +122,6 @@ on:
       - 'test/personal-ai-provider-registry.test.mjs'
       - 'universal-membership.js'
       - 'membership-billing.js'
-      - 'generated/user-services.js'
       - 'config/ecosystem-services.json'
       - 'config/universal-membership.json'
       - 'scripts/generate-user-service-registry.mjs'
@@ -112,7 +150,17 @@ on:
       - 'books-pipeline-control.js'
       - 'books-royalty-control.js'
       - 'affiliate-control.js'
+      - 'affiliate-marketplace.js'
+      - 'coupang-partners-automation.js'
+      - 'offer-registry.js'
+      - 'offer-registry-control.js'
+      - 'offer-registry-sources.js'
+      - 'test/ekodi-coupang-mall.test.mjs'
       - 'social-registry-api.js'
+      - 'mail-control.js'
+      - 'mail-credential-vault.js'
+      - 'mail-google-adapter.js'
+      - 'test/mail-control.test.mjs'
       - 'migrations/**'
       - '!migrations/*messenger*.sql'
       - 'wrangler.api.toml'
@@ -135,7 +183,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  WRANGLER_VERSION: '4.119.0'
+  WRANGLER_VERSION: '4.127.1'
 
 jobs:
   validate:
@@ -151,7 +199,7 @@ jobs:
       - name: Validate control plane, Core AI Gateway and governance
         run: |
           set -euo pipefail
-          for file in api-worker.js auth-worker.js admin-session-fastpath.js admin-google-auth.js customer-auth.js customer-entry-worker.js mission-control-entry-worker.js user-ai-control.js ai-access-orchestration.js personal-ai-provider-registry.js gemini-provider-adapter.js personal-openai-provider-adapter.js claude-provider-adapter.js user-openai-provider-adapter.js universal-membership.js membership-billing.js generated/user-services.js messenger-operator-control.js ekodi-principal.js messenger-outbox.js messenger-channel-adapters.js device-control.js security-edge.js ai-agent-control.js ai-governance-runtime.js ai-resilience-runtime.js core-ai-gateway.js core-api.js openai-provider-adapter.js api-usage-meter.js api-cost-control.js books-control.js books-finance-control.js books-distribution-control.js books-pipeline-control.js books-royalty-control.js affiliate-control.js social-registry-api.js; do
+          for file in api-worker.js auth-worker.js admin-session-fastpath.js admin-google-auth.js customer-auth.js customer-entry-worker.js mission-control-entry-worker.js traffic-intelligence.js traffic-intelligence-control.js devotional-control.js user-ai-control.js personal-ai-bridge.js ekodi-mcp-gateway.js ai-access-orchestration.js personal-ai-provider-registry.js gemini-provider-adapter.js personal-openai-provider-adapter.js claude-provider-adapter.js user-openai-provider-adapter.js universal-membership.js membership-billing.js generated/user-services.js messenger-operator-control.js ekodi-principal.js messenger-outbox.js messenger-channel-adapters.js device-control.js security-edge.js ai-agent-control.js ai-governance-runtime.js ai-resilience-runtime.js core-ai-gateway.js core-api.js openai-provider-adapter.js api-usage-meter.js api-cost-control.js books-control.js books-finance-control.js books-distribution-control.js books-pipeline-control.js books-royalty-control.js affiliate-control.js affiliate-marketplace.js affiliate-provider-feed.js product-identity.js coupang-partners-automation.js offer-registry.js offer-registry-control.js offer-registry-sources.js social-registry-api.js mail-credential-vault.js mail-google-adapter.js mail-control.js; do
             node --check "$file"
           done
           node --check scripts/generate-user-service-registry.mjs
@@ -164,19 +212,20 @@ jobs:
           node scripts/validate-additive-migrations.mjs migrations
           node scripts/validate-ai-mission-governance.mjs
           node scripts/validate-security-baseline.mjs
-          node --test test/universal-membership-contract.test.mjs test/device-control-contract.test.mjs test/core-ai-gateway.test.mjs test/openai-provider-adapter.test.mjs test/api-cost-control.test.mjs test/user-ai-routing-policy.test.mjs test/personal-ai-provider-registry.test.mjs
+          node --test test/universal-membership-contract.test.mjs test/device-control-contract.test.mjs test/core-ai-gateway.test.mjs test/openai-provider-adapter.test.mjs test/api-cost-control.test.mjs test/traffic-intelligence.test.mjs test/user-ai-routing-policy.test.mjs test/personal-ai-provider-registry.test.mjs test/personal-ai-bridge.test.mjs test/personal-ai-bridge-migration.test.mjs test/ekodi-mcp-gateway.test.mjs test/oauth-consent-contract.test.mjs test/devotional-control.test.mjs test/mail-control.test.mjs test/affiliate-provider-feed.test.mjs test/mall-product-identity.test.mjs test/ekodi-coupang-mall.test.mjs
           bash -n scripts/apply-d1-migrations-with-retry.sh
           grep -Fq 'main = "mission-control-entry-worker.js"' wrangler.api.toml
           grep -Fq 'OPENAI_MODEL = "gpt-5.6-terra"' wrangler.api.toml
           ! grep -Fq 'OPENAI_API_KEY' wrangler.api.toml
 
   staging:
+    environment: development
     needs: validate
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: 46aad4738793fbaca88574832a2ccc0f
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -213,9 +262,6 @@ jobs:
           compatibility_date = "2026-08-12"
           workers_dev = true
           preview_urls = false
-          [[routes]]
-          pattern = "api-staging.ekodi.kr"
-          custom_domain = true
           [vars]
           ENVIRONMENT = "staging"
           ADMIN_EMAIL = "topmaster.joseph@gmail.com"
@@ -224,7 +270,7 @@ jobs:
           GOOGLE_CLIENT_ID = "483044030492-4e6231l5glchhtniroinvuq3ev6n5mv5.apps.googleusercontent.com"
           AI_PROVIDER = "NONE"
           OPENAI_MODEL = "gpt-5.6-terra"
-          ALLOWED_ORIGINS = "https://admin.ekodi.kr,https://auth.ekodi.kr"
+          ALLOWED_ORIGINS = "https://admin.ekodi.kr,https://auth.ekodi.kr,https://mail.ekodi.kr,https://ekodi.kr"
           [observability.logs]
           enabled = true
           invocation_logs = true
@@ -254,15 +300,28 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          npx --yes wrangler@$WRANGLER_VERSION deployments status --config wrangler.api.staging.runtime.toml --json > /tmp/staging-deployments.json
+          npx --yes wrangler@$WRANGLER_VERSION d1 migrations apply DB --local --config wrangler.api.staging.runtime.toml >/tmp/local-migrations.log 2>&1
+          npx --yes wrangler@$WRANGLER_VERSION dev --local --config wrangler.api.staging.runtime.toml --ip 127.0.0.1 --port 8791 > /tmp/control-remote-dev.log 2>&1 &
+          runtime_pid=$!
+          trap 'kill $runtime_pid 2>/dev/null || true' EXIT
+          ready=0
+          for attempt in $(seq 1 30); do
+            code=$(curl -sS -o /dev/null -w '%{http_code}' --connect-timeout 3 --max-time 8 'http://127.0.0.1:8791/health' || true)
+            if [ "$code" = '200' ]; then ready=1; break; fi
+            if ! kill -0 $runtime_pid 2>/dev/null; then cat /tmp/control-remote-dev.log; exit 1; fi
+            sleep 2
+          done
+          if [ "$ready" != '1' ]; then cat /tmp/control-remote-dev.log; exit 1; fi
           for attempt in $(seq 1 18); do
-            health=$(curl -fsS --connect-timeout 5 --max-time 12 'https://api-staging.ekodi.kr/health' || true)
-            headers=$(curl -fsSI --connect-timeout 5 --max-time 12 'https://api-staging.ekodi.kr/health' || true)
-            devices=$(curl -sS -o /tmp/devices.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api-staging.ekodi.kr/api/control/devices' || true)
-            ai=$(curl -sS -o /tmp/ai.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api-staging.ekodi.kr/api/control/ai/governance' || true)
-            provider=$(curl -sS -o /tmp/provider.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api-staging.ekodi.kr/api/control/ai/provider-status' || true)
-            user_ai=$(curl -sS -o /tmp/user-ai.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api-staging.ekodi.kr/api/user-ai/status' || true)
-            membership=$(curl -sS -o /tmp/membership.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api-staging.ekodi.kr/api/membership/portfolio' || true)
-            catalog=$(curl -sS -o /tmp/catalog.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api-staging.ekodi.kr/api/membership/catalog?site=invest' || true)
+            health=$(curl -fsS --connect-timeout 5 --max-time 12 'http://127.0.0.1:8791/health' || true)
+            headers=$(curl -fsSI --connect-timeout 5 --max-time 12 'http://127.0.0.1:8791/health' || true)
+            devices=$(curl -sS -o /tmp/devices.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'http://127.0.0.1:8791/api/control/devices' || true)
+            ai=$(curl -sS -o /tmp/ai.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'http://127.0.0.1:8791/api/control/ai/governance' || true)
+            provider=$(curl -sS -o /tmp/provider.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'http://127.0.0.1:8791/api/control/ai/provider-status' || true)
+            user_ai=$(curl -sS -o /tmp/user-ai.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'http://127.0.0.1:8791/api/user-ai/status' || true)
+            membership=$(curl -sS -o /tmp/membership.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'http://127.0.0.1:8791/api/membership/portfolio' || true)
+            catalog=$(curl -sS -o /tmp/catalog.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'http://127.0.0.1:8791/api/membership/catalog?site=invest' || true)
             if printf '%s' "$health" | grep -q '"ok":true' \
               && printf '%s' "$headers" | tr '[:upper:]' '[:lower:]' | grep -q '^strict-transport-security:' \
               && [ "$devices" = '401' ] \
@@ -289,6 +348,8 @@ jobs:
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      MAIL_GOOGLE_CLIENT_SECRET: ${{ secrets.MAIL_GOOGLE_CLIENT_SECRET }}
+      GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -296,6 +357,22 @@ jobs:
           node-version: '24'
       - name: Generate universal user-service registry
         run: npm run generate:user-services
+      - name: Provision isolated Mail OAuth and credential secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+          oauth_secret="${MAIL_GOOGLE_CLIENT_SECRET:-${GOOGLE_CLIENT_SECRET:-}}"
+          if [ -n "$oauth_secret" ]; then
+            printf '%s' "$oauth_secret" | npx --yes wrangler@${WRANGLER_VERSION} secret put MAIL_GOOGLE_CLIENT_SECRET --config wrangler.api.toml >/dev/null
+            echo 'Mail Google OAuth client secret provisioned without printing its value.' >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo 'Mail Google OAuth client secret is not present; Gmail accounts will remain pending_oauth.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+          names=$(npx --yes wrangler@${WRANGLER_VERSION} secret list --config wrangler.api.toml 2>/dev/null || true)
+          if ! printf '%s' "$names" | grep -Fq 'MAIL_CREDENTIAL_KEY'; then
+            node -e "process.stdout.write(require('node:crypto').randomBytes(48).toString('base64url'))" | npx --yes wrangler@${WRANGLER_VERSION} secret put MAIL_CREDENTIAL_KEY --config wrangler.api.toml >/dev/null
+            echo 'Generated a persistent Mail credential-encryption key in Cloudflare Worker secrets.' >> "$GITHUB_STEP_SUMMARY"
+          fi
       - name: Capture production D1 recovery bookmark
         id: d1_bookmark
         run: |

@@ -1,0 +1,60 @@
+{
+  "version": 2,
+  "worker": {
+    "name": "ekodi-experience",
+    "config": "wrangler.experience.toml",
+    "requests": [
+      {
+        "url": "https://exp.ekodi.kr/",
+        "statuses": [200],
+        "redirect": "follow",
+        "expect": ["사용자모드", "개발자모드"],
+        "headerExpect": ["x-ekodi-shell: v2"]
+      },
+      {
+        "url": "https://exp.ekodi.kr/health",
+        "statuses": [200],
+        "redirect": "follow",
+        "expect": ["ekodi-experience", "synthetic-only", "experience_public", "https://exp.ekodi.kr"]
+      },
+      {
+        "url": "https://exp.ekodi.kr/api/catalog",
+        "statuses": [200],
+        "redirect": "follow",
+        "expect": ["curated-public-projection", "syntheticDataOnly", "internalTopologyVisible"]
+      },
+      {
+        "url": "https://exp.ekodi.kr/admin",
+        "statuses": [301, 302, 307, 308],
+        "redirect": "manual",
+        "headerExpect": ["location: https://admin.ekodi.kr/experience"]
+      },
+      {
+        "url": "https://dev.ekodi.kr/",
+        "statuses": [200],
+        "redirect": "follow",
+        "expect": ["EKODI DEVELOPER", "CONFORMANCE PREFLIGHT", "Certification"],
+        "headerExpect": ["x-ekodi-shell: v2"]
+      },
+      {
+        "url": "https://dev.ekodi.kr/health",
+        "statuses": [200],
+        "redirect": "follow",
+        "expect": ["ekodi-developer-portal", "public-contract-only", "public-preflight"]
+      },
+      {
+        "url": "https://dev.ekodi.kr/api/contract",
+        "statuses": [200],
+        "redirect": "follow",
+        "expect": ["ekodi.responsible-service.v1", "serviceBoundary.failureIsolation", "providerStrategy.externalProviderPrivateDbAccess"]
+      },
+      {
+        "url": "https://try.ekodi.kr/",
+        "statuses": [308],
+        "redirect": "manual",
+        "headerExpect": ["location: https://exp.ekodi.kr/"]
+      }
+    ],
+    "allowFirstDeploy": true
+  }
+}

@@ -1,7 +1,18 @@
+import { injectEkodiShell } from './ekodi-shell-injector.js';
+import { isWorkspaceAdminPath, workspaceAdminPage, workspaceAdminCss, workspaceAdminScript } from './workspace-admin-page.js';
+import { churchPastorAdminPage, churchPastorAdminScript, isChurchPastorAdminPath } from './church-pastor-admin-page.js';
+import { ekodiBizInvestBusinessPage, isEkodiBizInvestPath } from './ekodibiz-invest-business.js';
+import { ekodiBizInvestAdminPage, isEkodiBizInvestAdminPath } from './ekodibiz-invest-admin-page.js';
+
 // Static Assets canonicalizes *.html URLs to extensionless paths.
 // Always request canonical asset paths internally so edge redirects never escape the Worker.
 const PUBLIC_HOST = 'ekodi.kr';
 const PUBLIC_ALIAS_HOSTS = new Set(['www.ekodi.kr']);
+const MALL_PREFIX = '/ekodibiz/mall';
+const LEGACY_MALL_PREFIX = '/mall';
+const LEGACY_EKODIBIZ_PREFIX = '/org/ekodibiz';
+const MALL_ORIGIN_HOST = 'ekodi-mall.pages.dev';
+const MALL_PROXY_HEADER = 'x-ekodi-canonical-proxy';
 const PUBLIC_ASSETS = new Set([
   '/homepage-ambient.css',
   '/homepage-ambient.js',
@@ -19,10 +30,12 @@ const ADMIN_HOSTS = new Set([
   'admin.trade.ekodi.kr',
 ]);
 const ADMIN_STORAGE_PREFIX = '/api/control/storage/';
+const ADMIN_MARKETING_PUBLISHING_PREFIX = '/api/control/marketing-publishing';
+const ADMIN_COMMON_SERVICE_AI_PREFIX = '/api/control/common-services/ai/';
 
 const AUTH_HOST = 'auth.ekodi.kr';
-const AUTH_ASSETS = new Set(['/auth.js','/auth.css','/auth-router.js','/marketing-auth-hotfix.js','/auth-workspace-target.js','/admin-auth.js','/client-auth.js','/author-auth.js','/business-auth.js','/marketing-onboarding.js','/membership-ui.js']);
-const AUTH_CRITICAL_ASSETS = new Set(['/auth.js','/auth-router.js','/marketing-auth-hotfix.js','/auth-workspace-target.js','/admin-auth.js','/client-auth.js','/author-auth.js','/business-auth.js','/marketing-onboarding.js','/membership-ui.js']);
+const AUTH_ASSETS = new Set(['/auth.js','/auth.css','/auth-router.js','/oauth-consent.js','/marketing-auth-hotfix.js','/auth-workspace-target.js','/admin-auth.js','/client-auth.js','/author-auth.js','/business-auth.js','/marketing-onboarding.js','/membership-ui.js']);
+const AUTH_CRITICAL_ASSETS = new Set(['/auth.js','/auth-router.js','/oauth-consent.js','/marketing-auth-hotfix.js','/auth-workspace-target.js','/admin-auth.js','/client-auth.js','/author-auth.js','/business-auth.js','/marketing-onboarding.js','/membership-ui.js']);
 
 const HUB_HOSTS = new Set([
   'pay.ekodi.kr',
@@ -44,11 +57,7 @@ const ADMIN_ALIASES = new Set([
   '/',
   '/admin',
   '/admin/',
-  '/admin.html',
   '/index.html',
-  '/control-center',
-  '/control-center/',
-  '/control-center.html',
   '/community',
   '/community/',
   '/books',
@@ -56,35 +65,61 @@ const ADMIN_ALIASES = new Set([
   '/work',
   '/work/',
 ]);
-const LEGACY_ALIASES = new Set(['/legacy','/legacy/','/legacy.html']);
-const ADMIN_ASSETS = new Set([
-  '/ekodi-message-ui.js',
-  '/control-center.css',
-  '/control-center-ops.css',
-  '/control-center-finance.css',
+const RETIRED_ADMIN_PATHS = new Set([
+  '/admin.html',
+  '/control-center',
+  '/control-center/',
+  '/control-center.html',
+  '/legacy',
+  '/legacy/',
+  '/legacy.html',
   '/control-center.js',
   '/control-center-features.js',
+  '/control-center-ops.css',
+  '/control-center.css',
+  '/control-center-finance.css',
+  '/compact-control-center.css',
+  '/compact-control-center.js',
+]);
+const ADMIN_ASSETS = new Set([
+  '/ekodi-message-ui.js',
+  '/admin-shell.css',
+  '/admin-finance.css',
   '/admin-central-handoff.js',
   '/admin-authenticated-shell.js',
+  '/admin-public-site-controls.js',
   '/admin-demand-loader.js',
   '/admin-perf-diagnostics.js',
   '/admin-lazy-features.js',
   '/admin-menu-layout.js',
+  '/admin-menu-registry.js',
+  '/admin-sidebar.js',
+  '/admin-menu-runtime.js',
   '/homepage-admin.js',
   '/finance-monitor.js',
-  '/compact-control-center.css',
-  '/compact-control-center.js',
+  '/admin-compact.css',
+  '/admin-compact.js',
   '/ekodi-device-bootstrap.cmd',
   '/campus-actions.css',
   '/campus-actions.js',
   '/device-control-admin.css',
   '/device-control-admin.js',
+  '/device-browser-diagnostics.css',
+  '/device-browser-diagnostics.js',
   '/ai-ops-admin.css',
   '/ai-ops-admin.js',
+  '/common-services-admin.css',
+  '/common-services-admin.js',
+  '/life-ai-admin.css',
+  '/life-ai-admin.js',
+  '/personal-finance-admin.css',
+  '/personal-finance-admin.js',
   '/mission-control-admin.css',
   '/mission-control-admin.js',
   '/work-admin.css',
   '/work-admin.js',
+  '/communication-admin.css',
+  '/communication-admin.js',
   '/client-access.css',
   '/client-access.js',
   '/marketing-funnel-admin.css',
@@ -125,13 +160,29 @@ const PUBLIC_CSP = [
   "object-src 'none'",
 ].join('; ');
 
+const MALL_CSP = [
+  "default-src 'self'",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  "font-src 'self' https://fonts.gstatic.com",
+  "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://js.tosspayments.com",
+  "connect-src 'self' https://api.ekodi.kr https://mall-api.ekodi.kr https://mall-api-staging.ekodi.kr https://renzehysxirjilvdxacv.supabase.co https://*.tosspayments.com",
+  "frame-src https://*.tosspayments.com",
+  "img-src 'self' data: blob: https:",
+  "frame-ancestors 'none'",
+  "base-uri 'self'",
+  "form-action 'self' https://ekodibiz.kr https://*.tosspayments.com",
+  "object-src 'none'",
+].join('; ');
+
+const MALL_ADMIN_EMBED_CSP = MALL_CSP.replace("frame-ancestors 'none'", 'frame-ancestors https://admin.ekodi.kr');
+
 const ADMIN_CSP = [
   "default-src 'self'",
   "style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style",
   "script-src 'self' https://accounts.google.com/gsi/client",
   "img-src 'self' data:",
-  "connect-src 'self' https://api.ekodi.kr https://finance-api.ekodi.kr https://renzehysxirjilvdxacv.supabase.co https://api.github.com https://ekodi-auth-api.topmaster-joseph.workers.dev https://accounts.google.com/gsi/",
-  "frame-src https://accounts.google.com/gsi/ https://mall.ekodi.kr",
+  "connect-src 'self' https://api.ekodi.kr https://finance-api.ekodi.kr https://personal-finance-api.ekodi.kr https://renzehysxirjilvdxacv.supabase.co https://api.github.com https://ekodi-auth-api.topmaster-joseph.workers.dev https://accounts.google.com/gsi/ https://life.ekodi.kr",
+  "frame-src https://accounts.google.com/gsi/ https://ekodi.kr",
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "form-action 'self'",
@@ -187,6 +238,97 @@ function withHostSecurity(response, csp, cacheControl, routeName = '') {
   return secured;
 }
 
+function isMallPath(pathname) {
+  return pathname === MALL_PREFIX || pathname.startsWith(`${MALL_PREFIX}/`);
+}
+
+function isLegacyMallPath(pathname) {
+  return pathname === LEGACY_MALL_PREFIX || pathname.startsWith(`${LEGACY_MALL_PREFIX}/`);
+}
+
+function isLegacyEkodiBizPath(pathname) {
+  return pathname === LEGACY_EKODIBIZ_PREFIX || pathname.startsWith(`${LEGACY_EKODIBIZ_PREFIX}/`);
+}
+
+function redirectLegacyEkodiBizPath(request) {
+  const target = new URL(request.url);
+  target.pathname = `/ekodibiz${target.pathname.slice(LEGACY_EKODIBIZ_PREFIX.length)}`;
+  const response = new Response(null, { status: 308, headers: { Location: target.toString() } });
+  applyBaseSecurityHeaders(response.headers);
+  response.headers.set('Cache-Control', 'no-store');
+  response.headers.set('X-EKODI-Route', 'ekodibiz-legacy-canonical-redirect');
+  return response;
+}
+
+function redirectLegacyMallPath(request) {
+  const target = new URL(request.url);
+  target.pathname = `${MALL_PREFIX}${target.pathname.slice(LEGACY_MALL_PREFIX.length)}`;
+  const response = new Response(null, { status: 308, headers: { Location: target.toString() } });
+  applyBaseSecurityHeaders(response.headers);
+  response.headers.set('Cache-Control', 'no-store');
+  response.headers.set('X-EKODI-Route', 'mall-legacy-canonical-redirect');
+  return response;
+}
+
+function mallUpstreamPath(pathname) {
+  const suffix = pathname.slice(MALL_PREFIX.length);
+  return suffix || '/';
+}
+
+function rewriteMallHtmlDocument(html) {
+  return String(html || '').replace(
+    /\b(href|src|action)=("|')\/(?!\/|ekodibiz\/mall(?:\/|["']))([^"']*)\2/gi,
+    (_, attribute, quote, suffix) => `${attribute}=${quote}${MALL_PREFIX}/${suffix}${quote}`,
+  );
+}
+async function proxyMallService(request) {
+  const incoming = new URL(request.url);
+  const upstream = new URL(request.url);
+  upstream.protocol = 'https:';
+  upstream.hostname = MALL_ORIGIN_HOST;
+  upstream.port = '';
+  upstream.pathname = mallUpstreamPath(incoming.pathname);
+
+  const upstreamRequest = new Request(upstream.toString(), request);
+  upstreamRequest.headers.set(MALL_PROXY_HEADER, 'apex-mall-v1');
+  const upstreamResponse = await fetch(upstreamRequest, { redirect: 'manual' });
+  const headers = new Headers(upstreamResponse.headers);
+  const location = headers.get('location');
+  if (location) {
+    try {
+      const redirect = new URL(location, upstream);
+      if (redirect.hostname === MALL_ORIGIN_HOST) {
+        redirect.protocol = 'https:';
+        redirect.hostname = PUBLIC_HOST;
+        redirect.pathname = redirect.pathname === '/' ? MALL_PREFIX : `${MALL_PREFIX}${redirect.pathname}`;
+        headers.set('location', redirect.toString());
+      }
+    } catch {}
+  }
+  let responseBody = upstreamResponse.body;
+  if ((headers.get('content-type') || '').toLowerCase().includes('text/html')) {
+    responseBody = rewriteMallHtmlDocument(await upstreamResponse.text());
+    headers.delete('content-length');
+    headers.delete('content-encoding');
+    headers.delete('etag');
+  }
+  headers.set('x-ekodi-edge', 'mall-path-gateway');
+  headers.set('x-ekodi-service', 'mall');
+  const adminSurface = incoming.pathname === `${MALL_PREFIX}/admin` || incoming.pathname.startsWith(`${MALL_PREFIX}/admin/`);
+  const apiSurface = incoming.pathname === `${MALL_PREFIX}/api` || incoming.pathname.startsWith(`${MALL_PREFIX}/api/`);
+  const adminEmbed = incoming.searchParams.get('embed') === 'admin';
+  const cacheControl = adminSurface || apiSurface || adminEmbed ? 'no-store' : 'public, max-age=0, must-revalidate';
+  const route = adminSurface ? 'admin-mall-proxy' : apiSurface ? 'mall-api-proxy' : 'public-ekodi-mall';
+  const mallCsp = adminEmbed ? MALL_ADMIN_EMBED_CSP : MALL_CSP;
+  const response = withHostSecurity(new Response(responseBody, { status: upstreamResponse.status, statusText: upstreamResponse.statusText, headers }), mallCsp, cacheControl, route);
+  if (adminEmbed) response.headers.delete('X-Frame-Options');
+  return injectEkodiShell(response, 'mall', adminSurface ? 'admin' : 'public');
+}
+
+function retiredAdminResponse() {
+  return withHostSecurity(new Response('Not Found', { status: 404 }), ADMIN_CSP, 'no-store', 'admin-retired');
+}
+
 function adminAssetCacheControl(url) {
   return url.searchParams.has('v')
     ? 'public, max-age=31536000, immutable'
@@ -222,6 +364,7 @@ function adminAuthRedirect(returnPath) {
   const safePath = safeAdminReturnPath(returnPath);
   const target = new URL('https://auth.ekodi.kr/');
   target.searchParams.set('site', 'admin');
+  target.searchParams.set('direct', '1');
   target.searchParams.set('return_to', `https://admin.ekodi.kr${safePath}`);
   const response = new Response(null, {
     status: 302,
@@ -238,6 +381,7 @@ function adminAuthRedirect(returnPath) {
 function adminApexAuthUrl() {
   const target = new URL('https://auth.ekodi.kr/');
   target.searchParams.set('site', 'admin');
+  target.searchParams.set('direct', '1');
   target.searchParams.set('return_to', 'https://ekodi.kr/admin');
   return target.toString();
 }
@@ -266,6 +410,48 @@ async function proxyAdminStorage(request, env) {
   return withHostSecurity(response, ADMIN_CSP, 'no-store', 'admin-storage-proxy');
 }
 
+async function proxyAdminCommonServiceAi(request) {
+  const url = new URL(request.url);
+  const suffix = url.pathname.slice(ADMIN_COMMON_SERVICE_AI_PREFIX.length);
+  if (!/^(?:status|session|tasks(?:\/[a-z0-9._~-]+(?:\/(?:run|approve))?)?|nodes(?:\/pair)?)$/i.test(suffix)) {
+    return withHostSecurity(new Response(JSON.stringify({error:'NOT_FOUND'}), {status:404,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store'}}), ADMIN_CSP, 'no-store', 'admin-common-service-ai-proxy');
+  }
+  const target = new URL('https://ai.ekodi.kr');
+  target.pathname = '/api/' + suffix;
+  target.search = url.search;
+  const headers = new Headers(request.headers);
+  headers.delete('host');
+  headers.delete('origin');
+  headers.delete('referer');
+  headers.set('x-ekodi-admin-proxy', 'common-service-v1');
+  const body = ['GET','HEAD'].includes(request.method) ? undefined : await request.arrayBuffer();
+  const upstream = await fetch(target.toString(), {method:request.method,headers,body,redirect:'manual'});
+  const response = new Response(upstream.body, upstream);
+  response.headers.set('X-EKODI-Common-Service-Proxy', 'ai-runtime-v1');
+  return withHostSecurity(response, ADMIN_CSP, 'no-store', 'admin-common-service-ai-proxy');
+}
+async function proxyAdminMarketingPublishing(request) {
+  const url = new URL(request.url);
+  const suffix = url.pathname.slice(ADMIN_MARKETING_PUBLISHING_PREFIX.length) || '/health';
+  if (!(suffix === '/health' || suffix.startsWith('/v1/'))) {
+    return withHostSecurity(new Response(JSON.stringify({error:'NOT_FOUND'}), {
+      status:404,
+      headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store'},
+    }), ADMIN_CSP, 'no-store', 'admin-marketing-publishing-proxy');
+  }
+  const target = new URL('https://marketing-publish-api.ekodi.kr');
+  target.pathname = suffix;
+  target.search = url.search;
+  const headers = new Headers(request.headers);
+  headers.delete('origin');
+  headers.delete('host');
+  const body = ['GET','HEAD'].includes(request.method) ? undefined : await request.arrayBuffer();
+  const upstream = await fetch(target.toString(), {method:request.method,headers,body,redirect:'manual'});
+  const response = new Response(upstream.body, upstream);
+  response.headers.set('X-EKODI-Marketing-Publishing-Proxy', 'same-origin-v1');
+  return withHostSecurity(response, ADMIN_CSP, 'no-store', 'admin-marketing-publishing-proxy');
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -273,17 +459,56 @@ export default {
 
     if (PUBLIC_ALIAS_HOSTS.has(host)) return redirectToPublicCanonical(url);
 
+    if ((url.pathname === '/admin' || url.pathname === '/admin/') && host !== PUBLIC_HOST && !ADMIN_HOSTS.has(host)) {
+      const target = new URL('https://admin.ekodi.kr/');
+      target.searchParams.set('source', host);
+      const response = new Response(null, { status: 307, headers: { Location: target.toString() } });
+      applyBaseSecurityHeaders(response.headers);
+      response.headers.set('Cache-Control', 'no-store');
+      response.headers.set('X-Robots-Tag', 'noindex, nofollow, noarchive');
+      return response;
+    }
+
     if (host === PUBLIC_HOST) {
+      if (RETIRED_ADMIN_PATHS.has(url.pathname)) return retiredAdminResponse();
+      if (url.pathname === '/oauth/consent' || url.pathname === '/cgma/oauth/consent') {
+        const target = new URL('https://auth.ekodi.kr/oauth/consent');
+        target.search = url.search;
+        const response = new Response(null, { status:307, headers:{ Location:target.toString(), 'Cache-Control':'no-store' } });
+        applyBaseSecurityHeaders(response.headers);
+        return response;
+      }
       if (url.pathname === '/' || url.pathname === '/index.html') {
         const response = await env.ASSETS.fetch(assetRequest(request, '/'));
         return withHostSecurity(response, PUBLIC_CSP, 'no-store', 'public-home');
       }
-      if (url.pathname === '/mall' || url.pathname === '/mall/' || url.pathname === '/mall.html') {
-        const response = await env.ASSETS.fetch(assetRequest(request, '/mall'));
-        return withHostSecurity(response, PUBLIC_CSP, 'public, max-age=0, must-revalidate', 'public-ekodi-mall');
+      if (url.pathname === '/workspace-admin.css') return workspaceAdminCss();
+      if (url.pathname === '/workspace-admin.js') return workspaceAdminScript();
+      if (url.pathname === '/church-pastor-admin.js') return churchPastorAdminScript();
+      if (['GET','HEAD'].includes(request.method) && isEkodiBizInvestAdminPath(url.pathname)) {
+        const page=ekodiBizInvestAdminPage(request);
+        const secured=withHostSecurity(page, ADMIN_CSP, 'no-store', 'public-ekodibiz-invest-admin');
+        return injectEkodiShell(secured, 'biz', 'admin');
       }
+      if (isLegacyEkodiBizPath(url.pathname)) return redirectLegacyEkodiBizPath(request);
+      if (isLegacyMallPath(url.pathname)) return redirectLegacyMallPath(request);
+      if (['GET','HEAD'].includes(request.method) && isChurchPastorAdminPath(url.pathname)) return churchPastorAdminPage();
+      if (isWorkspaceAdminPath(url.pathname)) return workspaceAdminPage();
+      if (['GET','HEAD'].includes(request.method) && isEkodiBizInvestPath(url.pathname)) {
+        const page=ekodiBizInvestBusinessPage(request);
+        const secured=withHostSecurity(page, PUBLIC_CSP, 'public, max-age=0, must-revalidate', 'public-ekodibiz-invest');
+        return injectEkodiShell(secured, 'biz', 'public');
+      }
+      if (url.pathname === '/mall.html') {
+        const canonical = new URL(request.url);
+        canonical.pathname = MALL_PREFIX;
+        const response = new Response(null, { status: 308, headers: { Location: canonical.toString() } });
+        applyBaseSecurityHeaders(response.headers);
+        return response;
+      }
+      if (isMallPath(url.pathname)) return proxyMallService(request);
       if (PUBLIC_ADMIN_ALIASES.has(url.pathname)) {
-        const response = await env.ASSETS.fetch(assetRequest(request, '/control-center'));
+        const response = await env.ASSETS.fetch(assetRequest(request, '/admin-shell'));
         const rewritten = rewriteAdminApexLogin(response);
         return withHostSecurity(rewritten, ADMIN_CSP, 'no-store', 'admin-fallback');
       }
@@ -305,7 +530,10 @@ export default {
     }
 
     if (ADMIN_HOSTS.has(host)) {
+      if (RETIRED_ADMIN_PATHS.has(url.pathname)) return retiredAdminResponse();
       if (url.pathname.startsWith(ADMIN_STORAGE_PREFIX)) return proxyAdminStorage(request, env);
+      if (url.pathname.startsWith(ADMIN_MARKETING_PUBLISHING_PREFIX)) return proxyAdminMarketingPublishing(request);
+      if (url.pathname.startsWith(ADMIN_COMMON_SERVICE_AI_PREFIX)) return proxyAdminCommonServiceAi(request);
       if (url.pathname === '/auth/start') {
         if (!['GET', 'HEAD'].includes(request.method)) {
           const response = new Response('Method Not Allowed', { status: 405, headers: { 'Allow': 'GET, HEAD' } });
@@ -315,12 +543,8 @@ export default {
         return adminAuthRedirect(url.searchParams.get('return_to'));
       }
       if (ADMIN_ALIASES.has(url.pathname)) {
-        const response = await env.ASSETS.fetch(assetRequest(request, '/control-center'));
-        return withHostSecurity(response, ADMIN_CSP, 'no-store', 'admin-control-center');
-      }
-      if (LEGACY_ALIASES.has(url.pathname)) {
-        const response = await env.ASSETS.fetch(assetRequest(request, '/control-center'));
-        return withHostSecurity(response, ADMIN_CSP, 'no-store', 'admin-control-center');
+        const response = await env.ASSETS.fetch(assetRequest(request, '/admin-shell'));
+        return withHostSecurity(response, ADMIN_CSP, 'no-store', 'admin-shell');
       }
       if (ADMIN_ASSETS.has(url.pathname)) {
         const response = await env.ASSETS.fetch(request);
@@ -332,6 +556,10 @@ export default {
       if (url.pathname === '/' || url.pathname === '/index.html' || url.pathname === '/login' || url.pathname === '/login/') {
         const response = await env.ASSETS.fetch(assetRequest(request, '/auth-center'));
         return withHostSecurity(response, AUTH_CSP, 'no-store', 'central-auth');
+      }
+      if (url.pathname === '/oauth/consent' || url.pathname === '/oauth/consent/') {
+        const response = await env.ASSETS.fetch(assetRequest(request, '/oauth-consent'));
+        return withHostSecurity(response, AUTH_CSP, 'no-store', 'oauth-consent');
       }
       if (AUTH_ASSETS.has(url.pathname)) {
         const response = await env.ASSETS.fetch(request);

@@ -3,13 +3,16 @@
 if(window.__EKODI_USER_UI_HEADER_BOOTED)return;
 window.__EKODI_USER_UI_HEADER_BOOTED=true;
 
-const VERSION=1;
+const VERSION=2;
 const STYLE_ID='ekodi-user-ui-header-style';
 const USER_SURFACES=new Set(['public','workspace']);
 const DISABLED_MODES=new Set(['off','hidden','immersive']);
 const ROOT_CLASS='ekodi-user-ui-header';
 const CENTER_CLASS='ekodi-user-ui-header-center';
+const FALLBACK_CLASS='ekodi-user-ui-header-fallback';
 const SPACER_ATTR='data-ekodi-user-header-spacer';
+const FALLBACK_ATTR='data-ekodi-user-header-fallback';
+const HOME_ATTR='data-ekodi-header-home';
 const HEADER_SELECTORS=[
   'header[data-ekodi-user-header-root]',
   'header[data-ekodi-fixed-header]',
@@ -38,6 +41,7 @@ const CENTER_SELECTORS=[
 let activeHeader=null;
 let activeCenter=null;
 let spacer=null;
+let fallbackHeader=null;
 let resizeObserver=null;
 let mutationObserver=null;
 let scheduled=false;
@@ -76,6 +80,17 @@ function installStyle(){
       text-overflow:ellipsis;
       z-index:1;
     }
+    .${FALLBACK_CLASS}{
+      min-height:64px!important;
+      border-bottom:1px solid color-mix(in srgb,var(--ekodi-shell-border,#dfe4df) 72%,transparent)!important;
+      background:color-mix(in srgb,var(--ekodi-shell-surface,#fafaf7) 94%,transparent)!important;
+      backdrop-filter:blur(14px);
+      color:var(--ekodi-shell-text,#18251d)!important;
+      font:14px/1.4 system-ui,-apple-system,"Noto Sans KR","Malgun Gothic",sans-serif!important;
+    }
+    .${FALLBACK_CLASS} .ekodi-user-ui-header-fallback__inner{width:min(1180px,calc(100% - 32px));min-height:64px;margin:0 auto;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:16px}
+    .${FALLBACK_CLASS} a{color:inherit;text-decoration:none}.${FALLBACK_CLASS} a:focus-visible{outline:2px solid currentColor;outline-offset:4px;border-radius:4px}
+    .${FALLBACK_CLASS} .ekodi-user-ui-header-fallback__brand{font-weight:850;letter-spacing:.12em}.ekodi-user-ui-header-fallback__context{text-align:center;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ekodi-user-ui-header-fallback__my{color:var(--ekodi-shell-focus,#315d48)!important;font-weight:650}
     [${SPACER_ATTR}]{
       display:block!important;
       width:100%!important;
@@ -91,6 +106,7 @@ function installStyle(){
     }
     @media(max-width:480px){
       .${ROOT_CLASS} .${CENTER_CLASS}{max-width:48vw!important}
+      .${FALLBACK_CLASS} .ekodi-user-ui-header-fallback__inner{width:min(100% - 24px,1180px);gap:10px;font-size:12px}
     }
   `;
   (document.head||document.documentElement).append(style);
@@ -118,11 +134,68 @@ function visible(element){
 function findHeader(){
   for(const selector of HEADER_SELECTORS){
     for(const node of document.querySelectorAll(selector)){
+      if(node.hasAttribute(FALLBACK_ATTR))continue;
       if(node.dataset.ekodiUserHeader==='off'||node.dataset.ekodiHeaderFixed==='off')continue;
       if(visible(node))return node;
     }
   }
   return null;
+}
+function serviceLabel(){
+  const id=String(document.currentScript?.dataset?.ekodiService||document.documentElement.dataset.ekodiService||'').trim();
+  const fromTitle=String(document.title||'').split('|')[0].trim();
+  return fromTitle||id.toUpperCase()||'EKODI';
+}
+function ensureFallback(){
+  if(!document.body)return null;
+  const existing=document.querySelector(`[${FALLBACK_ATTR}]`);
+  if(existing){fallbackHeader=existing;fallbackHeader.classList.add(FALLBACK_CLASS);return fallbackHeader;}
+  const header=document.createElement('header');
+  header.className=FALLBACK_CLASS;
+  header.setAttribute(FALLBACK_ATTR,`v${VERSION}`);
+  header.setAttribute('data-ekodi-user-header-root',`v${VERSION}`);
+  header.setAttribute('role','banner');
+  header.innerHTML=`<div class="ekodi-user-ui-header-fallback__inner"><a class="ekodi-user-ui-header-fallback__brand" data-ekodi-header-home href="https://ekodi.kr/" aria-label="EKODI 홈">EKODI</a><span class="ekodi-user-ui-header-fallback__context" data-ekodi-header-center>${serviceLabel()}</span><a class="ekodi-user-ui-header-fallback__my" href="https://my.ekodi.kr/">My EKODI</a></div>`;
+  document.body.prepend(header);
+  fallbackHeader=header;
+  return header;
+}
+function removeFallback(){
+  if(fallbackHeader?.isConnected)fallbackHeader.remove();
+  fallbackHeader=null;
+}
+function serviceHomeUrl(){
+  const explicit=String(document.documentElement.dataset.ekodiHome||document.body?.dataset?.ekodiHome||'').trim();
+  if(explicit){try{return new URL(explicit,location.href)}catch{}}
+  const url=new URL(location.href);
+  url.search='';url.hash='';
+  if(url.hostname==='ekodi.kr'||url.hostname==='www.ekodi.kr'){
+    const segment=url.pathname.split('/').filter(Boolean)[0]||'';
+    const globalRoots=new Set(['privacy','terms','admin']);
+    url.pathname=segment&&!globalRoots.has(segment)?`/${segment}/`:'/';
+  }else url.pathname='/';
+  return url;
+}
+function findHomeAnchor(header){
+  const selectors=[`[${HOME_ATTR}]`,'.brand[href]','a.brand[href]','.site-brand a[href]','.logo a[href]','a.logo[href]','.site-logo a[href]'];
+  for(const selector of selectors){const node=header?.querySelector(selector);if(node instanceof HTMLAnchorElement)return node;}
+  return null;
+}
+function bindHomeAnchor(header){
+  const anchor=findHomeAnchor(header);if(!anchor)return;
+  const home=serviceHomeUrl();anchor.setAttribute(HOME_ATTR,`v${VERSION}`);anchor.href=home.toString();
+  if(anchor.dataset.ekodiHeaderHomeBound==='true')return;
+  anchor.dataset.ekodiHeaderHomeBound='true';
+  anchor.addEventListener('click',event=>{
+    const target=serviceHomeUrl();
+    const here=new URL(location.href);here.search='';here.hash='';
+    if(here.origin===target.origin&&here.pathname.replace(/\/+$/,'/')===target.pathname.replace(/\/+$/,'/')){
+      event.preventDefault();
+      const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
+      window.scrollTo({top:0,left:0,behavior:reduced?'auto':'smooth'});
+      try{history.replaceState(history.state,'',target.pathname+location.search);}catch{}
+    }
+  });
 }
 function safeCenterCandidate(node){
   if(!node||!visible(node))return false;
@@ -158,6 +231,7 @@ function detach(){
 }
 function attach(header){
   if(!header||!shouldEnable())return;
+  bindHomeAnchor(header);
   if(activeHeader===header&&spacer?.isConnected){
     const nextCenter=findCenter(header);
     if(nextCenter!==activeCenter){
@@ -175,7 +249,9 @@ function attach(header){
   header.style.setProperty('--ekodi-user-header-base-padding-top',computed.paddingTop||'0px');
   header.style.setProperty('--ekodi-user-header-min-height',`${beforeHeight}px`);
   header.classList.add(ROOT_CLASS);
+  header.setAttribute('data-ekodi-user-header-root',`v${VERSION}`);
   header.setAttribute('data-ekodi-user-header-fixed',`v${VERSION}`);
+  if(!header.getAttribute('role'))header.setAttribute('role','banner');
   activeCenter=findCenter(header);
   if(activeCenter){activeCenter.classList.add(CENTER_CLASS);activeCenter.setAttribute('data-ekodi-user-header-centered','true');}
   spacer=document.createElement('div');
@@ -185,14 +261,15 @@ function attach(header){
   resizeObserver=new ResizeObserver(updateSpacer);
   resizeObserver.observe(header);
   requestAnimationFrame(updateSpacer);
-  window.dispatchEvent(new CustomEvent('ekodi:user-header-ready',{detail:{version:VERSION,surface:surface(),centered:Boolean(activeCenter)}}));
+  window.dispatchEvent(new CustomEvent('ekodi:user-header-ready',{detail:{version:VERSION,surface:surface(),centered:Boolean(activeCenter),fallback:header.hasAttribute(FALLBACK_ATTR)}}));
 }
 function reconcile(){
   scheduled=false;
   installStyle();
-  if(!shouldEnable()){detach();return;}
+  if(!shouldEnable()){detach();removeFallback();return;}
   const header=findHeader();
-  if(header)attach(header);else detach();
+  if(header){if(activeHeader===fallbackHeader)detach();removeFallback();attach(header);return;}
+  attach(ensureFallback());
 }
 function schedule(){
   if(scheduled)return;
@@ -203,7 +280,7 @@ function schedule(){
 window.EKODIUserUIHeader=Object.freeze({
   version:VERSION,
   refresh:schedule,
-  getState:()=>({enabled:shouldEnable(),surface:surface(),mode:mode(),attached:Boolean(activeHeader),centered:Boolean(activeCenter)})
+  getState:()=>({enabled:shouldEnable(),surface:surface(),mode:mode(),attached:Boolean(activeHeader),centered:Boolean(activeCenter),fallback:Boolean(activeHeader?.hasAttribute(FALLBACK_ATTR))})
 });
 window.addEventListener('ekodi:shell-theme',schedule);
 window.addEventListener('ekodi:surface-change',schedule);

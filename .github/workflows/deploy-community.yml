@@ -1,4 +1,4 @@
-name: Deploy EKODI Community
+name: Deploy Community
 
 on:
   workflow_dispatch:
@@ -12,7 +12,6 @@ on:
       - 'scripts/guarded-worker-release.mjs'
       - 'deploy/manifests/community.worker.json'
       - '.github/workflows/deploy-community.yml'
-      - 'release/community-shell-20260819.marker'
   push:
     branches: [main]
     paths:
@@ -33,7 +32,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  WRANGLER_VERSION: '4.119.0'
+  WRANGLER_VERSION: '4.127.1'
 
 jobs:
   validate:
@@ -50,19 +49,22 @@ jobs:
           node --check community-worker.js
           node --check ekodi-shell-injector.js
           node --check community/app.js
+          node --check community/recommendation-lens.js
+          node --check community/community-enhancements.js
           node --check community/social-links.js
           node --check community/connect/app.js
           node --check scripts/guarded-worker-release.mjs
           test -f deploy/manifests/community.worker.json
           grep -Fq 'injectEkodiShell' community-worker.js
           grep -Fq "'community'" community-worker.js
-          grep -Fq 'EKODI Community' community/index.html
+          grep -Fq 'Community' community/index.html
           grep -Fq 'community-api' community/app.js
           grep -Fq 'EKODI Connect' community/connect/index.html
           grep -Fq 'connect-api' community/connect/app.js
           grep -Fq '<script src="/social-links.js" defer></script>' community/index.html
+          grep -Fq '<script src="/community-enhancements.js" defer></script>' community/index.html
           grep -Fq 'https://api.ekodi.kr/api/social/registry' community/social-links.js
-          grep -Fq "community:{name:'EKODI Community'" auth-site/client-auth.js
+          grep -Fq "community:{name:'Community'" auth-site/client-auth.js
           grep -Fq "returnTo:'https://community.ekodi.kr/'" auth-site/client-auth.js
           grep -Fq "open:true,kind:'community'" auth-site/client-auth.js
           grep -Fq "'community'" auth-site/auth-router.js
@@ -70,14 +72,15 @@ jobs:
           grep -Fq 'await loadClientAuth()' auth-site/auth-router.js
 
   staging:
+    environment: development
     if: github.event_name == 'pull_request'
     needs: validate
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-      STAGING_URL: https://ekodi-community-staging.topmaster-joseph.workers.dev
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: 46aad4738793fbaca88574832a2ccc0f
+      STAGING_URL: https://ekodi-community-staging.ekodi-development.workers.dev
     steps:
       - uses: actions/checkout@v7
       - name: Verify Cloudflare credentials
@@ -87,33 +90,64 @@ jobs:
       - name: Deploy isolated Community staging
         run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.community.staging.toml
       - name: Verify Community staging and Shell injection
+        shell: bash
         run: |
           set -euo pipefail
+          remote_protected=0
+          verify_base="$STAGING_URL"
+          runtime_pid=''
+          cleanup() {
+            if [[ -n "$runtime_pid" ]]; then kill "$runtime_pid" 2>/dev/null || true; fi
+          }
+          trap cleanup EXIT
+
+          access_code=$(curl -sS -D /tmp/community-access.headers -o /tmp/community-access.body -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/health" || true)
+          if [[ "$access_code" == '302' ]] && grep -iq '^Www-Authenticate: Cloudflare-Access' /tmp/community-access.headers; then
+            remote_protected=1
+            echo 'Community staging is protected by Cloudflare Access. Keeping Access enabled and validating the exact staging configuration locally.'
+            npx --yes wrangler@${WRANGLER_VERSION} dev --config wrangler.community.staging.toml --local --port 8794 >/tmp/community-local.log 2>&1 &
+            runtime_pid=$!
+            verify_base='http://127.0.0.1:8794'
+            ready=0
+            for attempt in $(seq 1 30); do
+              if curl -sSf --max-time 5 "$verify_base/health" >/dev/null 2>&1; then ready=1; break; fi
+              if ! kill -0 "$runtime_pid" 2>/dev/null; then cat /tmp/community-local.log; exit 1; fi
+              sleep 2
+            done
+            if [[ "$ready" != '1' ]]; then cat /tmp/community-local.log; exit 1; fi
+          fi
+
           for attempt in $(seq 1 18); do
-            root_code=$(curl -L -sS -D /tmp/community-stage.headers -o /tmp/community-stage.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/" || true)
-            health_code=$(curl -sS -o /tmp/community-stage-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/health" || true)
-            connect_code=$(curl -L -sS -o /tmp/community-stage-connect.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/connect/" || true)
+            root_code=$(curl -L -sS -D /tmp/community-stage.headers -o /tmp/community-stage.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$verify_base/" || true)
+            health_code=$(curl -sS -o /tmp/community-stage-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$verify_base/health" || true)
+            connect_code=$(curl -L -sS -o /tmp/community-stage-connect.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$verify_base/connect/" || true)
             if [[ "$root_code" == '200' && "$health_code" == '200' && "$connect_code" == '200' ]] \
-              && grep -Fq 'EKODI Community' /tmp/community-stage.html \
+              && grep -Fq 'Community' /tmp/community-stage.html \
               && grep -Fq 'EKODI Connect' /tmp/community-stage-connect.html \
               && grep -Fq 'https://shell.ekodi.kr/shell.js' /tmp/community-stage.html \
               && grep -Fiq 'x-ekodi-shell: v2' /tmp/community-stage.headers \
               && grep -Fq '"ekodiShell":true' /tmp/community-stage-health.json \
               && grep -Fq '"contextModel":"person-space-role"' /tmp/community-stage-health.json; then
-              echo 'Community staging verified with shared EKODI Shell v2 and Connect.'
+              if [[ "$remote_protected" == '1' ]]; then
+                echo 'Community staging deployment exists in Development, Access remains enforced, and its exact staging configuration passes Shell and Connect contracts.'
+              else
+                echo 'Community staging verified remotely with shared EKODI Shell v2 and Connect.'
+              fi
               exit 0
             fi
             sleep 4
           done
           echo "staging codes root=${root_code:-?} health=${health_code:-?} connect=${connect_code:-?}"
+          cat /tmp/community-access.headers || true
           grep -i '^x-ekodi-shell:' /tmp/community-stage.headers || true
+          cat /tmp/community-stage-health.json || true
+          cat /tmp/community-local.log 2>/dev/null || true
           exit 1
 
   production:
     if: >-
       always() && needs.validate.result == 'success' &&
-      (github.event_name != 'pull_request' ||
-       (github.event.pull_request.head.ref == 'release/community-shell-20260819' && needs.staging.result == 'success'))
+      github.event_name != 'pull_request'
     needs: [validate, staging]
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -150,14 +184,14 @@ jobs:
             connect_code=$(curl -L -sS -o /tmp/community-connect.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://community.ekodi.kr/connect/' || true)
             health_code=$(curl -sS -o /tmp/community-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://community.ekodi.kr/health' || true)
             if [[ "$root_code" == '200' && "$social_code" == '200' && "$connect_code" == '200' && "$health_code" == '200' ]] \
-              && grep -Fq 'EKODI Community' /tmp/community.html \
+              && grep -Fq 'Community' /tmp/community.html \
               && grep -Fq 'EKODI Connect' /tmp/community-connect.html \
               && grep -Fq 'https://shell.ekodi.kr/shell.js' /tmp/community.html \
               && grep -Fiq 'x-ekodi-shell: v2' /tmp/community.headers \
               && grep -Fq 'api.ekodi.kr/api/social/registry' /tmp/community-social.js \
               && grep -Fq '"socialRegistry":true' /tmp/community-health.json \
               && grep -Fq '"ekodiShell":true' /tmp/community-health.json; then
-              echo 'EKODI Community production verified with shared Shell v2 and Connect.'
+              echo 'Community production verified with shared Shell v2 and Connect.'
               break
             fi
             if [[ "$attempt" == '18' ]]; then
@@ -175,13 +209,13 @@ jobs:
             client_code=$(curl -sS -o /tmp/community-client-auth.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://auth.ekodi.kr/client-auth.js' || true)
             router_code=$(curl -sS -o /tmp/community-auth-router.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://auth.ekodi.kr/auth-router.js' || true)
             if [[ "$client_code" == '200' && "$router_code" == '200' ]] \
-              && grep -Fq "community:{name:'EKODI Community'" /tmp/community-client-auth.js \
+              && grep -Fq "community:{name:'Community'" /tmp/community-client-auth.js \
               && grep -Fq "returnTo:'https://community.ekodi.kr/'" /tmp/community-client-auth.js \
               && grep -Fq "open:true,kind:'community'" /tmp/community-client-auth.js \
               && grep -Fq "'community'" /tmp/community-auth-router.js \
               && grep -Fq 'isRegistryUserService' /tmp/community-auth-router.js \
               && grep -Fq 'await loadClientAuth()' /tmp/community-auth-router.js; then
-              echo 'EKODI Community central auth realm verified through registry routing.'
+              echo 'Community central auth realm verified through registry routing.'
               exit 0
             fi
             sleep 5

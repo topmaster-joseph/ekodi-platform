@@ -11,19 +11,17 @@ const loader = await readFile(new URL('../admin-demand-loader.js', import.meta.u
 const build = await readFile(new URL('../scripts/build.mjs', import.meta.url), 'utf8');
 const siteWorker = await readFile(new URL('../site-worker.js', import.meta.url), 'utf8');
 
-test('admin payment key panel consumes only shared readiness metadata on the Finance lazy path', () => {
+test('payment readiness belongs to the Finance lazy path while Creator Billing stays in Books', () => {
   assert.doesNotMatch(handoff, /api\/finance\/overview|FINANCE_API|ekodi-finance-overview|tossSecretConfigured/);
-  assert.match(billingAdmin, /ekodi-finance-overview/);
-  assert.match(billingAdmin, /tossSecretConfigured/);
-  assert.match(billingAdmin, /tossLiveKey/);
-  assert.match(billingAdmin, /tossMidConfigured/);
-  assert.match(billingAdmin, /원문 비노출/);
-  assert.doesNotMatch(billingAdmin, /TOSS_SECRET_KEY\s*[:=]/);
-  assert.doesNotMatch(billingAdmin, /api\/finance\/overview|FINANCE_API/);
+  assert.doesNotMatch(billingAdmin, /ekodi-finance-overview|tossSecretConfigured|tossLiveKey|tossMidConfigured/);
+  assert.doesNotMatch(billingAdmin, /TOSS_SECRET_KEY\s*[:=]|api\/finance\/overview|FINANCE_API/);
+  assert.match(billingAdmin, /#booksAdminSection/);
   assert.match(financeMonitor, /api\/finance\/overview/);
+  assert.match(financeMonitor, /tossSecretConfigured/);
+  assert.match(financeMonitor, /tossLiveKey/);
   assert.match(financeMonitor, /new CustomEvent\('ekodi-finance-overview'/);
-  assert.match(loader, /await loadScript\('author-billing-admin\.js'\);\s*\n\s*await loadScript\('finance-monitor\.js'\);/);
-  assert.match(billingCss, /\.payment-key-panel/);
+  assert.match(loader, /loadScript\('finance-monitor\.js'\)/);
+  assert.match(loader, /loadScript\('author-billing-admin\.js'\)/);
 });
 
 test('finance readiness exposes status booleans without exposing the server key value', () => {
@@ -43,7 +41,7 @@ test('admin HTML stays no-store while versioned static admin assets are immutabl
   assert.match(siteWorker, /'\/admin-central-handoff\.js'/);
   assert.match(siteWorker, /'\/author-billing-admin\.js'/);
   assert.match(siteWorker, /ADMIN_ASSETS/);
-  assert.match(siteWorker, /'no-store', 'admin-control-center'/);
+  assert.ok(siteWorker.includes("withHostSecurity(response, ADMIN_CSP, 'no-store', 'admin-shell')"));
   assert.match(siteWorker, /function adminAssetCacheControl\(url\)/);
   assert.match(siteWorker, /max-age=31536000, immutable/);
   assert.match(siteWorker, /max-age=0, must-revalidate/);

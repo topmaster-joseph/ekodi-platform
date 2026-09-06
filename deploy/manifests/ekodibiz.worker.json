@@ -1,0 +1,74 @@
+{
+  "version": 2,
+  "worker": {
+    "name": "ekodibiz-revenue-os",
+    "config": "wrangler.ekodibiz.toml",
+    "requests": [
+      {
+        "url": "https://biz.ekodi.kr/",
+        "statuses": [
+          200
+        ],
+        "redirect": "follow",
+        "expect": [
+          "EKODIBIZ",
+          "WHAT WE DO"
+        ]
+      },
+      {
+        "url": "https://biz.ekodi.kr/api/health",
+        "statuses": [
+          200
+        ],
+        "expect": [
+          "ekodibiz-revenue-os",
+          "operational-mvp",
+          "approval-gated",
+          "durable-object-sqlite",
+          "rules-first-active",
+          "https://pay.ekodi.kr"
+        ]
+      },
+      {
+        "url": "https://biz.ekodi.kr/api/catalog",
+        "statuses": [
+          200
+        ],
+        "expect": [
+          "30일 자동홍보팩",
+          "온라인 개업팩",
+          "행사 완성팩"
+        ]
+      },
+      {
+        "url": "https://biz.ekodi.kr/api/runtime",
+        "statuses": [
+          200
+        ],
+        "expect": [
+          "discover",
+          "promote",
+          "payment",
+          "ad_spend",
+          "external_publish",
+          "growth_scout",
+          "finance_gatekeeper",
+          "anonymous-goal-only"
+        ]
+      },
+      {
+        "url": "https://biz.ekodi.kr/api/ops/status",
+        "statuses": [
+          200
+        ],
+        "expect": [
+          "growth_scout",
+          "offer_builder",
+          "ops_coordinator",
+          "finance_gatekeeper",
+          "rules-first"
+        ]
+      }
+    ]
+  }
+}

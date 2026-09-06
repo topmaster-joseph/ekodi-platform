@@ -53,7 +53,7 @@ function nextReportPeriod(now = new Date()) {
 async function ensureReport(env, year, month) {
   if (!REPORT_MONTHS.has(month)) throw new Error('사역보고 월은 2·4·6·8·10·12월이어야 합니다.');
   const p = periodFor(year, month);
-  const title = `EKODI Community ${year}년 ${month}월 사역보고`;
+  const title = `Community ${year}년 ${month}월 사역보고`;
   await env.DB.prepare(`INSERT OR IGNORE INTO community_ministry_reports
     (id, report_year, report_month, activity_from, activity_to, plan_from, plan_to, title)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`)
@@ -82,7 +82,7 @@ function reportRow(row, includeSnapshot = false) {
 async function settings(env) {
   const row = await env.DB.prepare('SELECT * FROM community_report_settings WHERE id = 1').first();
   return {
-    recipientEmail: row?.recipient_email || '', ccEmail: row?.cc_email || '', senderName: row?.sender_name || 'EKODI Community',
+    recipientEmail: row?.recipient_email || '', ccEmail: row?.cc_email || '', senderName: row?.sender_name || 'Community',
     dueDay: Number(row?.due_day || 0), autoSendAfterApproval: row ? Boolean(row.auto_send_after_approval) : true,
   };
 }
@@ -102,7 +102,7 @@ async function overview(request, env) {
 }
 async function updateSettings(request, env, sessionData) {
   const body = await readBody(request); if (!body) return json({ error: '설정 정보를 확인해 주세요.' }, 400, request, env);
-  const recipient = clean(body.recipientEmail, 500); const cc = clean(body.ccEmail, 1000); const sender = clean(body.senderName, 160) || 'EKODI Community';
+  const recipient = clean(body.recipientEmail, 500); const cc = clean(body.ccEmail, 1000); const sender = clean(body.senderName, 160) || 'Community';
   const dueDay = Math.max(0, Math.min(28, Math.trunc(Number(body.dueDay) || 0))); const auto = body.autoSendAfterApproval !== false;
   const who = await adminId(env, sessionData.email); const now = new Date().toISOString();
   await env.DB.prepare(`UPDATE community_report_settings SET recipient_email=?, cc_email=?, sender_name=?, due_day=?, auto_send_after_approval=?, updated_at=?, updated_by=? WHERE id=1`)
@@ -274,7 +274,7 @@ async function generateWithOpenAI(env, report) {
     headers: { authorization: `Bearer ${env.OPENAI_API_KEY}`, 'content-type': 'application/json' },
     body: JSON.stringify({
       model: clean(env.OPENAI_MODEL, 120) || 'gpt-5',
-      instructions: 'You draft concise Korean ministry reports for EKODI Community. Use only supplied facts. Never invent names, counts, dates, outcomes, plans, or prayer requests. recordedSources are verified historical Community records; ongoingCircles are recurring-schedule context only and are not confirmed future events. Future plans must come from manual.plans. If evidence is missing, write 확인 필요. Keep the tone factual, pastoral, and suitable for headquarters reporting.',
+      instructions: 'You draft concise Korean ministry reports for Community. Use only supplied facts. Never invent names, counts, dates, outcomes, plans, or prayer requests. recordedSources are verified historical Community records; ongoingCircles are recurring-schedule context only and are not confirmed future events. Future plans must come from manual.plans. If evidence is missing, write 확인 필요. Keep the tone factual, pastoral, and suitable for headquarters reporting.',
       input: `보고서: ${report.title}\n활동기간 ${report.activityFrom}~${report.activityTo}\n계획기간 ${report.planFrom}~${report.planTo}\n\n자료(JSON):\n${JSON.stringify(facts)}\n\n다음 순서로 작성: 1. 지난 2개월 주요 사역 2. 참여·성과·변화 3. 감사와 평가 4. 향후 2개월 계획 5. 본부 협조 요청 6. 기도제목.`,
     }),
   });
@@ -313,7 +313,7 @@ async function sendGmail(env, config, report) {
   if (!mailConfigured(env)) throw new Error('Gmail 자동발송 연결이 아직 설정되지 않았습니다.');
   if (!config.recipientEmail) throw new Error('본부 수신 이메일을 먼저 설정해 주세요.');
   const token = await gmailAccessToken(env);
-  const subject = `[EKODI Community] ${report.year}년 ${report.month}월 사역보고`;
+  const subject = `[Community] ${report.year}년 ${report.month}월 사역보고`;
   const headers = [
     `To: ${config.recipientEmail}`,
     config.ccEmail ? `Cc: ${config.ccEmail}` : '',

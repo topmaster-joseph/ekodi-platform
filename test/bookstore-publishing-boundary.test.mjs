@@ -9,9 +9,9 @@ const contract=fs.readFileSync(new URL('../docs/operations/bookstore-publishing-
 
 const byId=new Map(EKODI_SERVICE_MANIFEST.services.map(service=>[service.id,service]));
 
-test('public bookstore brand is 에코디서점 and publishing is 에코디출판',()=>{
+test('public bookstore brand is 에코디서점 and publishing is 출판',()=>{
   assert.equal(byId.get('books')?.name,'에코디서점');
-  assert.equal(byId.get('publishing')?.name,'에코디출판');
+  assert.equal(byId.get('publishing')?.name,'출판');
   assert.equal(byId.get('books')?.url,'https://books.ekodi.kr/');
   assert.equal(byId.get('publishing')?.url,'https://publishing.ekodi.kr/');
 });
@@ -37,4 +37,16 @@ test('cross-service relationship is explicit contract only',()=>{
   assert.match(worker,/bookstoreRelationship:'explicit-public-handoff-only'/);
   assert.match(worker,/privateCrossServiceDataAccess:false/);
   assert.match(contract,/공개 또는 명시적으로 선언된 API·handoff 계약/);
+});
+
+
+test('publishing staging accepts only verified Cloudflare Access protection',()=>{
+  const flow=fs.readFileSync(new URL('../.github/workflows/publishing-boundary-ci.yml',import.meta.url),'utf8');
+  assert.match(flow,/is_access_protected/);
+  assert.match(flow,/www-authenticate: Cloudflare-Access/i);
+  assert.equal(flow.includes('-D /tmp/root-h'),true);
+  assert.equal(flow.includes('-D /tmp/studio-h'),true);
+  assert.equal(flow.includes('-D /tmp/health-h'),true);
+  assert.doesNotMatch(flow,/root=\$\(curl -L/);
+  assert.match(flow,/verified behind Cloudflare Access/);
 });

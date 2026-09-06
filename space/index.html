@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="ko" data-store-page="__SPACE_PAGE_THEME__">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow,noarchive">
+  <meta name="description" content="__SPACE_PAGE_DESCRIPTION__">
+  <title>__SPACE_PAGE_DOCUMENT_TITLE__</title>
+  <link rel="stylesheet" href="/style.css?v=20260906-store-user-pages-1">
+</head>
+<body>
+  <main class="shell">
+    <header class="top">
+      <a class="brand" href="https://ekodi.kr">EKODI</a>
+      <div class="top-actions">
+        <label id="spaceSwitcherWrap" class="space-switcher hidden">
+          <span>운영공간</span>
+          <select id="spaceSwitcher" aria-label="운영공간 전환"></select>
+        </label>
+        <a class="my" href="https://my.ekodi.kr">내 홈</a>
+      </div>
+    </header>
+    <div id="status" class="status">연결 상태를 확인하고 있습니다.</div>
+    <section id="signedOut" class="panel auth-panel hidden">
+      <span class="eyebrow">__SPACE_PAGE_KICKER__</span>
+      <h1>__SPACE_PAGE_NAME__</h1>
+      <p>__SPACE_PAGE_LEAD__</p>
+      <button id="login" type="button">이 운영페이지로 로그인</button>
+    </section>
+
+    <section id="signedIn" class="hidden">
+      <div class="account-row">
+        <span id="account">EKODI 사용자</span>
+        <button id="logout" class="quiet" type="button">로그아웃</button>
+      </div>
+      <section id="spaceIndex" class="space-index">
+        <div class="index-copy">
+          <span class="eyebrow">MY OPERATING SPACES</span>
+          <h1>내 운영공간</h1>
+          <p>같은 계정으로 들어오더라도 각 점포의 데이터와 운영 맥락은 서로 섞이지 않습니다.</p>
+        </div>
+        <div id="spaceList" class="space-list"></div>
+      </section>
+      <section id="workspaceView" class="workspace hidden">
+        <section class="workspace-head">
+          <div>
+            <span id="workspaceType" class="eyebrow">__SPACE_PAGE_KICKER__</span>
+            <h1 id="workspaceName">__SPACE_PAGE_NAME__</h1>
+            <p id="workspaceMeta">__SPACE_PAGE_LEAD__</p>
+          </div>
+          <span id="workspaceRole" class="role-badge"></span>
+        </section>
+
+        <section class="store-page-overview store-data" aria-label="점포 사용자페이지 요약">
+          <div class="store-page-copy">
+            <span class="eyebrow">USER OPERATIONS</span>
+            <h2 id="storePageTitle">__SPACE_PAGE_NAME__ 사용자 운영페이지</h2>
+            <p id="storePageLead">__SPACE_PAGE_LEAD__</p>
+          </div>
+          <div id="storePageStats" class="store-page-stats" aria-live="polite"></div>
+        </section>
+
+        <section class="panel store-profile-panel store-data">
+          <div class="section-head">
+            <div><span class="eyebrow">STORE MASTER</span><h2>매장 기준정보</h2></div>
+            <span class="source-chip">EKODI 기준정보</span>
+          </div>
+          <div id="storeBasics" class="store-basics"></div>
+        </section>
+
+        <section class="panel store-data">
+          <div class="section-head">
+            <div><span class="eyebrow">SALES CHANNELS</span><h2>배달플랫폼 연결</h2></div>
+            <span id="channelCount" class="count-chip">0 / 0 연결</span>
+          </div>
+          <div id="channelList" class="channel-list"></div>
+        </section>
+        <section class="panel menu-panel store-data">
+          <div class="section-head">
+            <div><span class="eyebrow">MENU MASTER</span><h2>메뉴 · 가격 기준정보</h2></div>
+            <div id="menuSummary" class="menu-summary"></div>
+          </div>
+          <div id="menuList" class="menu-list"></div>
+          <div id="unmappedList" class="unmapped-list"></div>
+          <div class="data-boundary">
+            배달앱의 메뉴·가격·옵션은 공식 API, 파트너 제공자료 또는 검증된 파일에서 가져온 값만 표시합니다.
+            연결 전에는 임의의 메뉴나 가격을 만들지 않습니다.
+          </div>
+        </section>
+
+        <section class="ops-grid store-data">
+          <article class="panel compact-panel">
+            <span class="eyebrow">AI OPERATIONS</span>
+            <h2>운영 신호</h2>
+            <div id="agentHints" class="agent-hints"></div>
+          </article>
+          <article class="panel compact-panel">
+            <span class="eyebrow">SERVICES</span>
+            <h2>이 점포의 서비스</h2>
+            <div id="serviceActions" class="service-actions"></div>
+          </article>
+        </section>
+      </section>
+    </section>
+  </main>
+  <script src="/config.js"></script>
+  <script type="module" src="/app.js?v=20260906-store-user-pages-1"></script>
+</body>
+</html>

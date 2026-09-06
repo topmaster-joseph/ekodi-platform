@@ -16,6 +16,8 @@ jobs:
     timeout-minutes: 8
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v7
         with:
           node-version: "24"
@@ -32,7 +34,13 @@ jobs:
             .github/workflows/verify-ekodi-core-completion.yml \
             .github/workflows/release-messenger-investment-functional.yml \
             .github/workflows/release-invest-personalization.yml \
-            .github/workflows/cloud-control-workers-builds.yml
+            .github/workflows/cloud-control-workers-builds.yml \
+            .github/workflows/redeploy-control-on-central-core.yml
+      - name: Enforce traffic-ready data plane
+        run: |
+          node --check data-plane.js
+          node --check data-plane-adapters.js
+          node --test test/data-plane.test.mjs
       - run: npm run check
       - run: npm run build
       - name: Validate AI provider independence
@@ -41,4 +49,9 @@ jobs:
         env:
           AI_PROVIDER: NONE
         run: npm run test:ai-none
-      - run: npm test
+      - name: Run full tests with PR regression gate
+        if: github.event_name == 'pull_request'
+        run: node scripts/test-no-regression.mjs
+      - name: Run full tests on main
+        if: github.event_name != 'pull_request'
+        run: npm test

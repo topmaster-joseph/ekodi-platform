@@ -2,16 +2,17 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
-const [api, admin, build, featureLoader, siteWorker, booksWorker, publishingHtml, publishingApp, migration] = await Promise.all([
+const [api, admin, build, featureLoader, siteWorker, booksWorker, publishingHtml, publishingApp, migration, sharedDeploy] = await Promise.all([
   readFile(new URL('../books-control.js', import.meta.url), 'utf8'),
   readFile(new URL('../books-admin.js', import.meta.url), 'utf8'),
   readFile(new URL('../scripts/build.mjs', import.meta.url), 'utf8'),
-  readFile(new URL('../control-center-features.js', import.meta.url), 'utf8'),
+  readFile(new URL('../admin-demand-loader.js', import.meta.url), 'utf8'),
   readFile(new URL('../site-worker.js', import.meta.url), 'utf8'),
   readFile(new URL('../books-worker.js', import.meta.url), 'utf8'),
   readFile(new URL('../books/publishing/index.html', import.meta.url), 'utf8'),
   readFile(new URL('../books/publishing/app.js', import.meta.url), 'utf8'),
   readFile(new URL('../migrations/0009_books_operations.sql', import.meta.url), 'utf8'),
+  readFile(new URL('../.github/workflows/deploy-site-core.yml', import.meta.url), 'utf8'),
 ]);
 
 test('Books control plane exposes publications, services, features and inquiries', () => {
@@ -26,28 +27,32 @@ test('Books control plane exposes publications, services, features and inquiries
   }
 });
 
-test('Books admin ships with the Control Center, stays visible in navigation, and loads heavy modules only when opened', () => {
+test('Books admin ships with the current Admin Shell and loads heavy modules only when opened', () => {
   for (const asset of ['books-admin.css', 'books-admin.js', 'books-finance-admin.css', 'books-finance-admin.js']) {
     assert.ok(build.includes(`'${asset}'`), `${asset} must remain in production assets`);
   }
-  assert.match(build, /'control-center-features\.js'/);
-  assert.doesNotMatch(build, /<link rel="stylesheet" href="books-admin\.css">/);
-  assert.doesNotMatch(build, /<script src="books-admin\.js" defer><\/script>/);
-  assert.match(featureLoader, /loadStyle\('books-admin\.css'\)/);
-  assert.match(featureLoader, /loadStyle\('books-finance-admin\.css'\)/);
-  assert.match(featureLoader, /loadModule\('books-admin\.js'\)/);
-  assert.match(featureLoader, /loadModule\('books-finance-admin\.js'\)/);
-  assert.match(featureLoader, /import\(`\.\/\$\{src\}`\)/);
-  assert.doesNotMatch(featureLoader, /requestIdleCallback/);
-  assert.match(featureLoader, /installStaticBooksNavigation/);
-  assert.match(featureLoader, /button\.dataset\.section = 'books'/);
-  assert.match(featureLoader, /await loadBooks\(\)/);
-  assert.match(admin, /에코디서점 관리/);
+  assert.match(build, /'admin-demand-loader\.js'/);
+  assert.match(featureLoader, /books:\s*\{[^}]*styles:\['books-admin\.css'\][^}]*scripts:\['books-admin\.js'\]/);
+  assert.match(featureLoader, /secondaryStyles:\['books-finance-admin\.css'\]/);
+  assert.match(featureLoader, /secondaryScripts:\['books-finance-admin\.js'\]/);
+  assert.match(featureLoader, /for \(const src of feature\.scripts \|\| \[\]\) await loadScript\(src\)/);
+  assert.match(featureLoader, /scheduleSecondary\(key, feature\)/);
+
   assert.match(admin, /Pricing & Services/);
   assert.match(admin, /Consultations/);
   assert.match(siteWorker, /'\/books'/);
   assert.match(siteWorker, /'\/books-admin\.js'/);
   assert.match(siteWorker, /'\/books-finance-admin\.js'/);
+});
+
+test('Shared Site release follows every Books admin source that feeds the deployed lazy bundle', () => {
+  for (const asset of [
+    'books-admin.js', 'books-admin.css', 'books-finance-admin.js', 'books-finance-admin.css',
+    'books-distribution-admin.js', 'books-distribution-admin.css', 'books-pipeline-admin.js',
+    'books-pipeline-admin.css', 'books-pipeline-bridge.js', 'books-royalty-admin.js',
+    'books-royalty-admin.css', 'author-billing-admin.js', 'author-billing-admin.css',
+  ]) assert.ok(sharedDeploy.includes(`- '${asset}'`), `${asset} must trigger Shared Site production release`);
+  assert.match(sharedDeploy, /client-access\.js [^\r\n]*books-admin\.js books-finance-admin\.js books-distribution-admin\.js books-pipeline-admin\.js books-pipeline-bridge\.js books-royalty-admin\.js author-billing-admin\.js ai-ops-admin\.js/);
 });
 
 test('Public publishing page has transparent pricing and consultation submission', () => {

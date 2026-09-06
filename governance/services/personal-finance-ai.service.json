@@ -1,0 +1,174 @@
+{
+  "schemaVersion": 1,
+  "serviceId": "personal-finance-ai",
+  "displayName": "개인재무 AI",
+  "status": "foundation",
+  "referenceService": true,
+  "contract": "governance/architecture/responsible-independent-service-contract.v1.json",
+  "responsibilityClass": "ekodi-responsible",
+  "serviceBoundary": {
+    "architectureCapability": "finance",
+    "publicExperience": "https://ekodi.kr/money",
+    "personalEntry": "https://my.ekodi.kr/money",
+    "api": "https://personal-finance-api.ekodi.kr",
+    "adminHandoff": "https://admin.ekodi.kr/?route=finance",
+    "deployment": "independently-guarded-worker",
+    "failureIsolation": true,
+    "extractable": true
+  },
+  "identity": {
+    "scope": "person-first",
+    "canonicalPersonIdSource": "EKODI Core linked identity",
+    "workspaceOptional": true,
+    "workspaceIdNeverDerivedFromUrl": true,
+    "serviceDoesNotOwnCanonicalIdentity": true
+  },
+  "dataBoundary": {
+    "mode": "isolated-finance-domain",
+    "databaseBinding": "PERSONAL_DB",
+    "databaseName": "ekodi-personal-finance",
+    "coreStoresOnly": [
+      "identity-link",
+      "service-connection",
+      "consent-summary",
+      "audit-reference"
+    ],
+    "serviceStores": [
+      "accounts",
+      "transactions",
+      "categories",
+      "recurring-patterns",
+      "financial-evidence",
+      "financial-insights",
+      "action-requests"
+    ],
+    "fullAccountNumberStored": false,
+    "financialCredentialStored": false,
+    "crossServicePrivateDatabaseAccess": false
+  },
+  "capabilities": [
+    "transaction-ledger",
+    "account-summary",
+    "recurring-payment-discovery",
+    "cashflow-analysis",
+    "asset-liability-analysis",
+    "anomaly-watch",
+    "financial-forecast",
+    "evidence-linked-recommendation"
+  ],
+  "connections": {
+    "externalConnectedServiceFamilies": [
+      "financial-data-provider",
+      "communications-provider",
+      "official-data-provider"
+    ],
+    "initialSources": [
+      "manual",
+      "csv",
+      "gmail-approved-projection"
+    ],
+    "futureSources": [
+      "open-banking",
+      "card-api",
+      "insurance-provider",
+      "public-benefit-data"
+    ],
+    "rawDataDefault": "remain-at-source-or-finance-boundary",
+    "ekodiCrossServiceDefault": "insight-only-projection"
+  },
+  "actionPolicy": {
+    "defaultMaximum": "L2",
+    "levels": {
+      "L0": [
+        "read-authorized-data",
+        "detect-patterns"
+      ],
+      "L1": [
+        "classify",
+        "analyze",
+        "forecast"
+      ],
+      "L2": [
+        "recommend",
+        "surface-risk",
+        "ask-for-confirmation"
+      ],
+      "L3": [
+        "execute-only-after-fresh-user-approval"
+      ],
+      "L4": [
+        "bounded-rule-only-when-separately-enabled"
+      ]
+    },
+    "financialExecutionEnabled": false,
+    "irreversibleAutonomousExecution": false
+  },
+  "projectionPolicy": {
+    "principle": "Raw Data at source; minimum Insight across boundaries.",
+    "defaultCrossServiceFields": [
+      "period",
+      "category",
+      "amount-range",
+      "trend",
+      "risk-flag",
+      "confidence"
+    ],
+    "merchantDetailDefault": false,
+    "accountDetailDefault": false,
+    "userMayRevoke": true
+  },
+  "providerStrategy": {
+    "mode": "multi-implementation-ready",
+    "ekodiNativeAllowed": true,
+    "externalCompatibleAllowed": true,
+    "parallelComparisonAllowed": true,
+    "providerSelectionBy": [
+      "user",
+      "policy",
+      "ekodi-orchestrator"
+    ],
+    "externalProviderPrivateDbAccess": false
+  },
+  "evidencePolicy": {
+    "insightRequiresEvidence": true,
+    "evidenceRequiresSource": true,
+    "userCanInspectBasis": true,
+    "userCanConfirmOrCorrect": true
+  },
+  "lifecycle": {
+    "exportSupported": true,
+    "disconnectSafe": true,
+    "providerReplacementSupported": true,
+    "backupRequired": true,
+    "recoveryPointBeforeProductionMigration": true,
+    "productionPromotion": "human-gated"
+  },
+  "referenceRequirements": {
+    "futureResponsibleServicesMustCopyDataBoundaryPattern": true,
+    "futureResponsibleServicesMustDeclareActionLevels": true,
+    "futureResponsibleServicesMustDeclareProjectionPolicy": true,
+    "futureResponsibleServicesMustDeclareProviderReplacementPath": true,
+    "futureResponsibleServicesMustDeclareEvidencePolicyWhenAIProducesAdvice": true
+  },
+  "surfaceComposition": {
+    "publicMoneySurface": {
+      "service": "money",
+      "purpose": "public financial cleanup, consent preview and official-provider handoff",
+      "privateFinanceDataAccess": false
+    },
+    "privateFinanceCore": {
+      "service": "personal-finance-api",
+      "purpose": "person-scoped financial ledger, evidence and insight boundary",
+      "browserOrigin": "https://my.ekodi.kr"
+    },
+    "rule": "One user experience, separate public and sensitive execution/data boundaries."
+  },
+  "adjacentServices": {
+    "lifeAiMoneyTopic": {
+      "route": "https://life.ekodi.kr/money",
+      "purpose": "life reflection and conversation about money",
+      "privateFinanceDataAccess": false,
+      "allowedFinanceInput": "user-authorized insight projection only"
+    }
+  }
+}

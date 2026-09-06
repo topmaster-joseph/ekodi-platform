@@ -1,8 +1,11 @@
 import { readFile } from 'node:fs/promises';
+import { execFileSync } from 'node:child_process';
 
 const files={
   html:'my/index.html',
   app:'my/app.js',
+  personalization:'my/progressive-personalization.js',
+  accessContext:'my/access-context.js',
   userAi:'my/user-ai.js',
   userAiUi:'my/user-ai-ui.js',
   userAiProviderUi:'my/user-ai-provider-ui.js',
@@ -23,11 +26,14 @@ const files={
   manifest:'deploy/manifests/my.worker.json',
   creatorMigration:'supabase/migrations/20260816155146_creator_ai_my_ekodi.sql',
   creatorPrivate:'supabase/migrations/20260816155454_creator_portfolio_private_person_helper.sql',
-  creatorOptimized:'supabase/migrations/20260816155749_creator_portfolio_rls_initplan_optimization.sql'
+  creatorOptimized:'supabase/migrations/20260816155749_creator_portfolio_rls_initplan_optimization.sql',
+  personalizationMigration:'supabase/migrations/20260904171000_my_progressive_personalization.sql'
 };
 const content=Object.fromEntries(await Promise.all(Object.entries(files).map(async([key,path])=>[key,await readFile(path,'utf8')])));
 function must(key,marker){if(!content[key].includes(marker))throw new Error(`My EKODI validation failed: ${key} missing ${marker}`)}
 function mustNot(key,marker){if(content[key].includes(marker))throw new Error(`My EKODI validation failed: ${key} contains forbidden ${marker}`)}
+
+execFileSync(process.execPath,['--check',files.accessContext],{stdio:'inherit'});
 
 must('html','My EKODI');
 must('html','data-ekodi-ui="USER"');
@@ -42,11 +48,30 @@ must('html','/user-ui.css');
 must('html','/user-ai-ui.js');
 must('html','/membership-summary.js');
 must('html','/membership-summary.css');
+const topNav=content.html.match(/<nav aria-label="주요 메뉴">([\s\S]*?)<\/nav>/)?.[1]||'';
+if(topNav.includes('href="/device-care/"'))throw new Error('My EKODI validation failed: Device Care must stay out of the fixed top navigation');
+must('html','class="my-utility-discovery"');
 must('html','href="/device-care/">내 PC</a>');
+must('html','id="discoverServicesButton"');
+must('html','data-intent-service="support"');
 must('app','creator_portfolio_items');
 must('app','current_site_access');
 must('app','current_site_workspaces');
 must('app','ekodi_token');
+must('app','buildPersonalizedServiceView');
+must('app','set_my_personalization_preference');
+must('personalization','PERSONALIZATION_STATES');
+must('personalization','recommendationLimit=2');
+must('personalizationMigration','my_personalization_preferences');
+must('personalizationMigration','my_personalization_signals');
+must('personalizationMigration','Never grants service authorization');
+must('accessContext','current_site_access');
+must('accessContext','current_site_workspaces');
+must('accessContext','요청한 공간을 바로 열 수 없습니다.');
+must('accessContext','다른 공간으로 임의 전환하지 않습니다.');
+must('accessContext','target.origin!==base.origin');
+must('accessContext','Google로 무료 시작');
+must('accessContext','minimumTier');
 must('userAi',"name:'EKODI User AI'");
 must('userAi',"role:'개인 AI 비서'");
 must('userAi',"boundary:'suggest-and-handoff'");
@@ -79,25 +104,36 @@ must('workspaceSync','ekodiWorkspaceOrder');
 must('workspaceCss','--ekodi-shell-accent');
 must('deviceCareHtml','FREE MEMBER');
 must('deviceCareHtml','무료회원');
+must('deviceCareHtml','PC·POS·키오스크·태블릿');
+must('deviceCareHtml','서비스로봇');
 must('deviceCareHtml','개인 파일 접근 안 함');
-must('deviceCareHtml','Windows 설정 자동변경 안 함');
-must('deviceCareHtml','Device Agent');
+must('deviceCareHtml','OS·기기 제어 자동실행 안 함');
+must('deviceCareHtml','Agent/전용 어댑터');
+must('deviceCareJs','DEVICE_TYPES');
+must('deviceCareJs','TYPE_KEY');
 must('deviceCareJs','CACHE_ALLOWLIST');
 must('deviceCareJs','registration.update()');
 must('deviceCareJs','window.confirm');
 must('deviceCareJs','ekodi_device_care_history_v1');
+must('deviceCareJs','실제 물리 기기의 건강점수가 아닙니다');
 mustNot('deviceCareJs','localStorage.clear(');
 mustNot('deviceCareJs','/api/control/devices');
 must('deviceCareCss','.device-care-section');
+must('deviceCareCss','.device-care-type-grid');
 must('worker',"service:'ekodi-my'");
 must('worker',"identity:'person-scoped'");
 must('worker',"privacy:'private-first'");
+must('worker','ACCESS_CONTEXT_TAG');
+must('worker','/access-context.js');
+must('worker','accessContextGuidance:true');
 must('prod','my.ekodi.kr');
 must('prod','DATA_ENABLED = "true"');
 must('staging','DATA_ENABLED = "false"');
 mustNot('staging','my.ekodi.kr');
 must('auth',"'my':{name:'My EKODI'");
 must('auth',"returnTo:'https://my.ekodi.kr/'");
+must('auth',"target.searchParams.set('return_to',RETURN_TO)");
+must('auth',"target.searchParams.set('workspace',REQUESTED_WORKSPACE)");
 must('router','isRegistryUserService');
 must('router',"site==='portal'||isRegistryUserService");
 must('router','await loadClientAuth()');
@@ -114,4 +150,4 @@ const combined=Object.values(content).join('\n');
 for(const secretLike of ['sk-proj-','sk-svcacct-','SUPABASE_SERVICE_ROLE_KEY="',"SUPABASE_SERVICE_ROLE_KEY='"]){
   if(combined.includes(secretLike))throw new Error(`My EKODI validation failed: secret-like material ${secretLike}`);
 }
-console.log('My EKODI validation passed: USER UI, truthful universal membership lifecycle states, Support AI registry coverage, free member Device Care, EKODI User AI onboarding, Shell-synced Workspace context, mobile fixed header, isolated staging, central auth and guarded production rollout are present.');
+console.log('My EKODI validation passed: USER UI, common-service access context, universal membership, multi-device Free Device Care with browser-only safety boundaries, User AI, Shell-synced Workspace context, isolated staging, central auth and guarded production rollout are present.');

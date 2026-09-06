@@ -5,12 +5,12 @@
   const ASSET_VERSION='__EKODI_ADMIN_ASSET_VERSION__';
   const app=document.querySelector('#app');
   const nav=document.querySelector('.sidebar nav');
-  const loadedScripts=new Map();
+  const loadedScripts=globalThis.__EKODIAdminScriptLoads||(globalThis.__EKODIAdminScriptLoads=new Map());
   const loadedStyles=new Map();
   const pending=new Map();
   const secondaryScheduled=new Set();
 
-  const FEATURES = {
+  const FEATURES={
     campus: {
       label: 'Campus', icon: '⌂',
       styles: ['campus-actions.css'],
@@ -19,6 +19,7 @@
       hashes: ['#campus'],
       insert: 'first',
     },
+    'public-site-controls':{scripts:['admin-public-site-controls.js'],real:'[data-section="public-site-controls"]'},
     aiops: {
       label: 'AI Ops', icon: '✦',
       styles: ['ai-ops-admin.css'],
@@ -28,7 +29,10 @@
       hashes: ['#ai-ops', '#aiops'],
       insert: 'after-campus',
     },
+    devotional:{label:'매일묵상',icon:'V',styles:['devotional-admin.css'],scripts:['devotional-admin.js'],real:'[data-section="devotional"]',hashes:['#devotional'],insert:'after-aiops'},
     'ai-module-spec':{label:'A',icon:'A',styles:['ai-module-spec-admin.css'],scripts:['ai-module-spec-admin.js'],real:'[data-section="ai-module-spec"]',hashes:['#ai-module-spec']},
+    'life-ai':{label:'인생AI',icon:'Q',styles:['life-ai-admin.css'],scripts:['life-ai-admin.js'],real:'[data-section="life-ai"]',hashes:['#life-ai'],insert:'after-aiops'},
+    'personal-finance':{label:'개인재무',icon:'₩',styles:['personal-finance-admin.css'],scripts:['personal-finance-admin.js'],real:'[data-section="personal-finance"]',hashes:['#personal-finance'],insert:'after-aiops'},
     aimembers: {
       label: 'AI 회원운영', icon: '◈',
       styles: ['ai-ops-admin.css'],
@@ -45,35 +49,10 @@
       hashes: ['#health'],
       insert: 'after-aiops',
     },
-    'api-cost': {
-      label: 'API Cost', icon: '₩',
-      styles: ['api-cost-admin.css'], scripts: ['api-cost-admin.js'],
-      real: '[data-section="api-cost"]', hashes: ['#api-cost'], insert: 'after-health',
-    },
-    storage: {
-      label: 'Storage', icon: '▣',
-      styles: ['storage-admin.css'],
-      scripts: ['storage-admin.js'],
-      real: '[data-section="storage"]',
-      hashes: ['#storage'],
-      insert: 'after-health',
-    },
-    security: {
-      label: 'Security', icon: '◆',
-      styles: ['admin-secret-generator.css'],
-      scripts: ['admin-secret-generator.js'],
-      real: '[data-section="security"]',
-      hashes: ['#security'],
-      insert: 'after-health',
-    },
-    deployments: {
-      label: 'Deployments', icon: '↑',
-      styles: ['release-control-admin.css'],
-      scripts: ['release-control-admin.js'],
-      real: '[data-section="deployments"]',
-      hashes: ['#deployments', '#release'],
-      insert: 'after-security',
-    },
+    'api-cost':{label:'API Cost',icon:'₩',styles:['api-cost-admin.css'],scripts:['api-cost-admin.js'],real:'[data-section="api-cost"]',hashes:['#api-cost'],insert:'after-health'},
+    storage:{label:'Storage',icon:'▣',styles:['storage-admin.css'],scripts:['storage-admin.js'],real:'[data-section="storage"]',hashes:['#storage'],insert:'after-health'},
+    security:{label:'Security',icon:'◆',styles:['admin-secret-generator.css'],scripts:['admin-secret-generator.js'],real:'[data-section="security"]',hashes:['#security'],insert:'after-health'},
+    deployments:{label:'Deployments',icon:'↑',styles:['release-control-admin.css'],scripts:['release-control-admin.js'],real:'[data-section="deployments"]',hashes:['#deployments','#release'],insert:'after-security'},
     work: {
       label: 'WORK', icon: 'W',
       styles: ['work-admin.css'],
@@ -83,6 +62,12 @@
       paths: ['/work', '/work/'],
       insert: 'after-services',
     },
+    clients: { label:'고객 사이트', icon:'C', styles:['client-access.css'], scripts:['client-access.js'], real:'[data-section="clients"]', hashes:['#clients'] },
+    community: { label:'커뮤니티', icon:'◎', styles:['community-reports-admin.css'], scripts:['community-reports-admin.js'], real:'[data-section="community"]', hashes:['#community'] },
+    'cheonggye-members': { label:'청계면상인회 정회원', icon:'名', styles:['cheonggye-members-admin.css'], scripts:['cheonggye-members-admin.js'], real:'[data-section="cheonggye-members"]', hashes:['#cheonggye-members'], insert:'after-workspace' },
+    books: { label:'출판 · 도서', icon:'B', styles:['books-admin.css'], scripts:['books-admin.js'], secondaryStyles:['books-finance-admin.css'], secondaryScripts:['books-finance-admin.js'], real:'[data-section="books"]', hashes:['#books'] },
+    social: { label:'소셜', icon:'S', styles:['social-admin.css'], scripts:['social-admin.js'], real:'[data-section="social"]', hashes:['#social'] },
+    affiliates: { label:'제휴마케팅', icon:'A', styles:['marketing-funnel-admin.css'], scripts:['marketing-funnel-admin.js'], real:'[data-section="affiliates"]', hashes:['#affiliates'] },
     marketing: {
       label: 'MarketingAI', icon: 'AI',
       styles: ['marketing-ai-admin.css'],
@@ -92,9 +77,11 @@
       insert: 'after-work',
     },
     devices: {
-      label: 'Devices', icon: '⌁',
-      styles: ['device-control-admin.css'],
-      scripts: ['device-control-admin.js'],
+      label: '실행 인프라', icon: '⌁',
+      styles: ['device-control-admin.css', 'remote-power-admin.css'],
+      scripts: ['device-control-admin.js', 'remote-power-admin.js'],
+      secondaryStyles: ['device-browser-diagnostics.css'],
+      secondaryScripts: ['device-browser-diagnostics.js'],
       real: '[data-device-control-nav]',
       hashes: ['#devices'],
       insert: 'after-workspace',
@@ -135,19 +122,14 @@
 
   function loadScript(src) {
     if (loadedScripts.has(src)) return loadedScripts.get(src);
-    const existing = document.querySelector(`script[data-ekodi-demand-script="${src}"]`);
-    if (existing) return Promise.resolve(existing);
     const promise = new Promise((resolve, reject) => {
       const script = document.createElement('script');
       script.src = assetUrl(src);
       script.dataset.ekodiDemandScript = src;
       script.addEventListener('load', () => resolve(script), { once:true });
-      script.addEventListener('error', () => reject(new Error(`${src} 로딩 실패`)), { once:true });
+      script.addEventListener('error', () => reject(new Error(`${src} load failed`)), { once:true });
       document.body.appendChild(script);
-    }).catch(error => {
-      loadedScripts.delete(src);
-      throw error;
-    });
+    }).catch(error => { loadedScripts.delete(src); throw error; });
     loadedScripts.set(src, promise);
     return promise;
   }
@@ -169,45 +151,23 @@
         if (node) finish(node);
       });
       if (nav) observer.observe(nav, { childList:true, subtree:true });
+      const content = document.querySelector('.content');
+      if (content) observer.observe(content, { childList:true, subtree:true });
       const timer = window.setTimeout(() => finish(null, new Error('관리 메뉴 준비 시간이 초과되었습니다.')), timeout);
     });
   }
 
-  function insertPlaceholder(button, feature) {
-    if (!nav) return;
-    if (feature.insert === 'first') return nav.prepend(button);
-    if (feature.insert === 'after-campus') {
-      const anchor = nav.querySelector('[data-demand-feature="campus"], [data-section="campus"]');
-      if (anchor) return anchor.insertAdjacentElement('afterend', button);
-    }
-    if (feature.insert === 'after-aiops') {
-      const anchor = nav.querySelector('[data-demand-feature="aiops"], [data-section="aiops"]');
-      if (anchor) return anchor.insertAdjacentElement('afterend', button);
-    }
-    if (feature.insert === 'after-health') {
-      const anchor = nav.querySelector('[data-demand-feature="health"], [data-section="health"]');
-      if (anchor) return anchor.insertAdjacentElement('afterend', button);
-    }
-    if (feature.insert === 'after-security') {
-      const anchor = nav.querySelector('[data-demand-feature="security"], [data-section="security"]');
-      if (anchor) return anchor.insertAdjacentElement('afterend', button);
-    }
-    if (feature.insert === 'after-deployments') {
-      const anchor = nav.querySelector('[data-demand-feature="deployments"], [data-section="deployments"]');
-      if (anchor) return anchor.insertAdjacentElement('afterend', button);
-    }
-    if (feature.insert === 'after-services') {
-      const anchor = nav.querySelector('[data-section="services"]');
-      if (anchor) return anchor.insertAdjacentElement('afterend', button);
-    }
-    if (feature.insert === 'after-work') {
-      const anchor = nav.querySelector('[data-demand-feature="work"], [data-section="work"]');
-      if (anchor) return anchor.insertAdjacentElement('afterend', button);
-    }
-    if (feature.insert === 'after-workspace') {
-      const anchor = nav.querySelector('[data-section="workspace"]');
-      if (anchor) return anchor.insertAdjacentElement('afterend', button);
-    }
+  function insertPlaceholder(button,feature){
+    if(!nav)return;
+    if(feature.insert==='first')return nav.prepend(button);
+    if(feature.insert==='after-campus'){const a=nav.querySelector('[data-demand-feature="campus"], [data-section="campus"]');if(a)return a.insertAdjacentElement('afterend',button);}
+    if(feature.insert==='after-aiops'){const a=nav.querySelector('[data-demand-feature="aiops"], [data-section="aiops"]');if(a)return a.insertAdjacentElement('afterend',button);}
+    if(feature.insert==='after-health'){const a=nav.querySelector('[data-demand-feature="health"], [data-section="health"]');if(a)return a.insertAdjacentElement('afterend',button);}
+    if(feature.insert==='after-security'){const a=nav.querySelector('[data-demand-feature="security"], [data-section="security"]');if(a)return a.insertAdjacentElement('afterend',button);}
+    if(feature.insert==='after-deployments'){const a=nav.querySelector('[data-demand-feature="deployments"], [data-section="deployments"]');if(a)return a.insertAdjacentElement('afterend',button);}
+    if(feature.insert==='after-services'){const a=nav.querySelector('[data-section="services"]');if(a)return a.insertAdjacentElement('afterend',button);}
+    if(feature.insert==='after-work'){const a=nav.querySelector('[data-demand-feature="work"], [data-section="work"]');if(a)return a.insertAdjacentElement('afterend',button);}
+    if(feature.insert==='after-workspace'){const a=nav.querySelector('[data-section="workspace"], [data-lazy-section="workspace"], [data-demand-feature="workspace"]');if(a)return a.insertAdjacentElement('afterend',button);}
     nav.append(button);
   }
 
@@ -276,11 +236,17 @@
         await Promise.all((feature.styles || []).map(loadStyle));
         for (const src of feature.scripts || []) await loadScript(src);
         const real = await waitFor(feature.real);
-        if (placeholder?.isConnected) placeholder.remove();
-        window.dispatchEvent(new CustomEvent('ekodi-nav-changed', { detail:{ feature:key } }));
-        if (!auto || feature.hashes?.includes(location.hash) || feature.paths?.includes(location.pathname)) {
-          queueMicrotask(() => real.click());
+        if (placeholder) {
+          const handler = placeholder.__ekodiDemandHandler;
+          if (handler) placeholder.removeEventListener('click', handler, true);
+          delete placeholder.__ekodiDemandHandler;
+          placeholder.disabled = false;
+          placeholder.removeAttribute('aria-busy');
+          placeholder.classList.remove('is-loading');
+          placeholder.removeAttribute('data-demand-feature');
+          if (placeholder !== real && placeholder.isConnected) placeholder.remove();
         }
+        window.dispatchEvent(new CustomEvent('ekodi-nav-changed', { detail:{ feature:key } }));
         mark(`ekodi-feature-${key}-ready`);
         scheduleSecondary(key, feature);
       } catch (error) {
@@ -301,42 +267,48 @@
   }
 
   function placeholder(key, feature) {
-    if (!nav || nav.querySelector(feature.real) || nav.querySelector(`[data-demand-feature="${key}"]`)) return;
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'nav';
-    button.dataset.demandFeature = key;
-    button.dataset.lazySection = key === 'marketing' ? 'marketing-ai' : key === 'aimembers' ? 'ai-membership' : key;
-    button.append(document.createTextNode(`${feature.icon} `));
-    const label = document.createElement('span');
-    label.textContent = feature.label;
-    button.append(label);
-    button.addEventListener('click', event => {
+    if (!nav || nav.querySelector(`[data-demand-feature="${key}"]`)) return false;
+    let button = nav.querySelector(feature.real);
+    let changed = false;
+    if (!button) {
+      button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'nav';
+      button.dataset.lazySection = key === 'marketing' ? 'marketing-ai' : key === 'aimembers' ? 'ai-membership' : key;
+      button.append(document.createTextNode(`${feature.icon} `));
+      const label = document.createElement('span');
+      label.textContent = feature.label;
+      button.append(label);
+      insertPlaceholder(button, feature);
+      changed = true;
+    }
+    if (button.dataset.demandFeature !== key) {
+      button.dataset.demandFeature = key;
+      changed = true;
+    }
+    const handler = event => {
       event.preventDefault();
       event.stopImmediatePropagation();
       activateFeature(key, button, false);
-    }, true);
-    insertPlaceholder(button, feature);
+    };
+    button.__ekodiDemandHandler = handler;
+    button.addEventListener('click', handler, true);
+    return changed;
   }
 
   function bindBaseEnhancements() {
     const finance = nav?.querySelector('[data-section="finance"]');
-    if (!finance || finance.dataset.financeDemandBound === 'true') return;
+    if (!finance || finance.dataset.financeDemandBound === 'true') return false;
     finance.dataset.financeDemandBound = 'true';
     finance.addEventListener('click', () => {
       if (finance.dataset.financeAssetsRequested === 'true') return;
       finance.dataset.financeAssetsRequested = 'true';
-      Promise.all([
-        loadStyle('control-center-finance.css'),
-        loadStyle('author-billing-admin.css'),
-      ]).then(async () => {
-        await loadScript('author-billing-admin.js');
-        await loadScript('finance-monitor.js');
-      }).catch(error => {
+      loadStyle('admin-finance.css').then(() => loadScript('finance-monitor.js')).catch(error => {
         finance.dataset.financeAssetsRequested = 'false';
         console.warn('[EKODI Admin] Finance lazy load failed', error);
       });
     }, true);
+    return true;
   }
 
   function requestedFeature() {
@@ -347,13 +319,15 @@
 
   function install() {
     if (!authenticated() || !nav) return;
-    Object.entries(FEATURES).forEach(([key, feature]) => placeholder(key, feature));
-    bindBaseEnhancements();
-    window.dispatchEvent(new CustomEvent('ekodi-nav-changed', { detail:{ feature:'placeholders' } }));
-    const requested = requestedFeature();
-    if (requested) {
-      const button = nav.querySelector(`[data-demand-feature="${requested}"]`);
-      activateFeature(requested, button, true);
+    let changed = false;
+    Object.entries(FEATURES).forEach(([key, feature]) => { if (placeholder(key, feature)) changed = true; });
+    if (bindBaseEnhancements()) changed = true;
+    if(!nav.dataset.cb){nav.dataset.cb='1';nav.addEventListener('click',e=>{if(!e.target.closest('[data-section="books"], [data-lazy-section="books"]')||nav.dataset.cbl)return;nav.dataset.cbl='1';loadStyle('author-billing-admin.css').then(()=>loadScript('author-billing-admin.js')).catch(()=>delete nav.dataset.cbl)},true);changed=true;}
+    if (changed) window.dispatchEvent(new CustomEvent('ekodi-nav-changed', { detail:{ feature:'placeholders' } }));
+    const requestedKey = requestedFeature();
+    if (requestedKey) {
+      const button = nav.querySelector(`[data-demand-feature="${requestedKey}"]`);
+      activateFeature(requestedKey, button, true);
     }
   }
 
@@ -362,10 +336,10 @@
   window.addEventListener('ekodi-admin-ready', install);
   window.addEventListener('ekodi-authenticated', onAuthState);
   window.addEventListener('hashchange', () => {
-    const requested = requestedFeature();
-    if (!requested || !authenticated()) return;
-    const button = nav?.querySelector(`[data-demand-feature="${requested}"]`);
-    if (button) activateFeature(requested, button, true);
+    const requestedKey = requestedFeature();
+    if (!requestedKey || !authenticated()) return;
+    const button = nav?.querySelector(`[data-demand-feature="${requestedKey}"]`);
+    if (button) activateFeature(requestedKey, button, true);
   });
 
   window.EKODIAdminDemand = Object.freeze({

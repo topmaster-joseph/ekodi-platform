@@ -21,7 +21,7 @@ const $=id=>document.getElementById(id);
 const show=(id,on=true)=>$(id)?.classList.toggle('hide',!on);
 function notice(id,text,type=''){const el=$(id);if(!el)return;el.textContent=text;el.className=`notice${type?` ${type}`:''}`;el.classList.remove('hide')}
 
-$('serviceName').textContent='EKODI Creator AI';
+$('serviceName').textContent='Creator AI';
 $('signedOutCopy').textContent='Google 계정으로 본인을 확인하면 개인 크리에이터 스튜디오를 무료로 시작하고 My EKODI와 연결할 수 있습니다.';
 show('requestActions',false);show('membershipPanel',false);show('identityPanel',false);
 

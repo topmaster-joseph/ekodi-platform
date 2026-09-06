@@ -2,20 +2,20 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
-const [source, css, directoryApi, entryWorker, build] = await Promise.all([
+const [source, css, directoryApi, entryWorker, build, loader] = await Promise.all([
   readFile(new URL('../client-access.js', import.meta.url), 'utf8'),
   readFile(new URL('../client-access.css', import.meta.url), 'utf8'),
   readFile(new URL('../customer-member-directory.js', import.meta.url), 'utf8'),
   readFile(new URL('../customer-entry-worker.js', import.meta.url), 'utf8'),
   readFile(new URL('../scripts/build.mjs', import.meta.url), 'utf8'),
+  readFile(new URL('../admin-demand-loader.js', import.meta.url), 'utf8'),
 ]);
 
-test('Control Center ships customer access assets only in the admin build', () => {
+test('Admin Shell ships customer access assets only through the demand-loaded admin path', () => {
   assert.match(build, /'client-access\.css'/);
   assert.match(build, /'client-access\.js'/);
-  assert.match(build, /asset === 'control-center\.html'/);
-  assert.match(build, /client-access\.js/);
-  assert.match(build, /client-access\.css/);
+  assert.match(loader, /clients:\s*\{[^}]*styles:\['client-access\.css'\][^}]*scripts:\['client-access\.js'\]/);
+  assert.doesNotMatch(build, /asset === 'control-center\.html'/);
 });
 
 test('customer member hub uses one authenticated directory endpoint instead of N+1 tenant user loads', () => {
@@ -72,4 +72,11 @@ test('Clients navigation and responsive layout are part of the module', () => {
   assert.match(source, /'clients'/);
   assert.match(css, /\.client-access-layout/);
   assert.match(css, /@media\(max-width:900px\)/);
+});
+
+test('Clients reuses the shared sidebar button and mounts based on panel readiness', () => {
+  assert.match(source, /content\.querySelector\('\[data-panel~="clients"\]'\)/);
+  assert.match(source, /let navButton = nav\.querySelector\('\[data-section="clients"\]'\)/);
+  assert.match(source, /if \(!navButton\) \{/);
+  assert.doesNotMatch(source, /document\.querySelector\('\[data-section="clients"\]'\)\) return null/);
 });

@@ -8,7 +8,7 @@ const fail = (message) => { throw new Error(`[universal-membership] ${message}`)
 
 const registry = JSON.parse(read('config/ecosystem-services.json'));
 const policy = JSON.parse(read('config/universal-membership.json'));
-const services = Array.isArray(registry.services) ? registry.services : [];
+const services = Array.isArray(registry.services) ? registry.services.filter((service) => service?.userVisible !== false) : [];
 const reserved = new Set(policy.excludedInfrastructure || []);
 const expectedIds = services.map((service) => String(service.id || '').trim().toLowerCase());
 

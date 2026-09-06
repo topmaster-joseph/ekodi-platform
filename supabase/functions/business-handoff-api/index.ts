@@ -6,6 +6,8 @@ const anon=Deno.env.get("SUPABASE_ANON_KEY")!;
 const service=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const admin=createClient(url,service,{auth:{persistSession:false}});
 const RETURN_TO="https://business.ekodi.kr/";
+const WORKSPACES=["ekodibiz","jadam"] as const;
+const WORKSPACE_SET=new Set<string>(WORKSPACES);
 
 const cors=(req:Request)=>{
   const origin=req.headers.get("Origin")||"https://auth.ekodi.kr";
@@ -18,6 +20,8 @@ const cors=(req:Request)=>{
   };
 };
 const json=(req:Request,body:unknown,status=200)=>new Response(JSON.stringify(body),{status,headers:{...cors(req),"content-type":"application/json; charset=utf-8","cache-control":"no-store","x-content-type-options":"nosniff"}});
+const clip=(value:unknown,max:number)=>String(value??"").trim().toLowerCase().slice(0,max);
+function returnToWorkspace(workspace:string|null){return workspace&&WORKSPACE_SET.has(workspace)?`${RETURN_TO}${workspace}`:RETURN_TO}
 
 Deno.serve(async(req:Request)=>{
   if(req.method==="OPTIONS")return new Response(null,{headers:cors(req)});
@@ -30,12 +34,17 @@ Deno.serve(async(req:Request)=>{
   const user=userData.user;
   if(userError||!user?.id||!user.email)return json(req,{error:"unauthorized"},401);
 
+  const body=await req.json().catch(()=>({}));
+  const requested=clip((body as Record<string,unknown>)?.workspace,40);
+  if(requested&&!WORKSPACE_SET.has(requested))return json(req,{error:"unknown_workspace"},400);
+  const candidates=requested?[requested]:[...WORKSPACES];
+
   let allowedWorkspace:string|null=null;
-  for(const workspace of ["ekodibiz","jadam"]){
+  for(const workspace of candidates){
     const {error}=await db.rpc("business_os_snapshot",{p_workspace_key:workspace});
     if(!error){allowedWorkspace=workspace;break;}
   }
-  if(!allowedWorkspace)return json(req,{error:"business_workspace_access_required"},403);
+  if(!allowedWorkspace)return json(req,{error:requested?"requested_workspace_access_required":"business_workspace_access_required",workspace:requested||null},403);
 
   const {data,error}=await admin.auth.admin.generateLink({type:"magiclink",email:user.email});
   const tokenHash=data?.properties?.hashed_token;
@@ -44,5 +53,5 @@ Deno.serve(async(req:Request)=>{
     return json(req,{error:"handoff_token_issue_failed"},503);
   }
 
-  return json(req,{ok:true,tokenHash,type:"email",returnTo:RETURN_TO,workspace:allowedWorkspace,expiresFor:"single_use"});
+  return json(req,{ok:true,tokenHash,type:"email",returnTo:returnToWorkspace(allowedWorkspace),workspace:allowedWorkspace,expiresFor:"single_use"});
 });

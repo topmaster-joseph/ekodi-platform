@@ -1,0 +1,224 @@
+name: Deploy Delivery Hub AI
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'delivery/**'
+      - 'delivery-worker.js'
+      - 'ekodi-service-manifest.js'
+      - 'platform-boundaries.json'
+      - 'test/delivery-hub-ai.test.mjs'
+      - 'wrangler.delivery.toml'
+      - 'wrangler.delivery.staging.toml'
+      - 'deploy/manifests/delivery.worker.json'
+      - '.github/workflows/deploy-delivery-hub-ai.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'delivery/**'
+      - 'delivery-worker.js'
+      - 'ekodi-service-manifest.js'
+      - 'platform-boundaries.json'
+      - 'test/delivery-hub-ai.test.mjs'
+      - 'wrangler.delivery.toml'
+      - 'wrangler.delivery.staging.toml'
+      - 'deploy/manifests/delivery.worker.json'
+      - '.github/workflows/deploy-delivery-hub-ai.yml'
+
+permissions:
+  contents: read
+  statuses: write
+
+concurrency:
+  group: ekodi-delivery-${{ github.event_name == 'pull_request' && format('staging-pr-{0}', github.event.pull_request.number) || 'production' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  WRANGLER_VERSION: '4.127.1'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate Delivery Hub AI contracts
+        run: |
+          set -euo pipefail
+          node --check delivery-worker.js
+          node --check delivery/core.js
+          node --check delivery/app.js
+          node --check delivery/account.js
+          node --check ekodi-service-manifest.js
+          node --test test/delivery-hub-ai.test.mjs
+          node scripts/validate-constitution.mjs
+          node scripts/validate-platform-boundaries.mjs
+          node scripts/validate-ai-mission-governance.mjs
+          node -e "JSON.parse(require('fs').readFileSync('deploy/manifests/delivery.worker.json','utf8'))"
+          grep -Fq '배달허브 AI' delivery/index.html
+          grep -Fq '외부 실행 잠금' delivery/index.html
+          grep -Fq 'pattern = "ekodi.kr/delivery*"' wrangler.delivery.toml
+          grep -Fq 'EXECUTION_ENABLED = "false"' wrangler.delivery.toml
+          grep -Fq "id:'delivery'" ekodi-service-manifest.js
+          grep -Fq '"delivery"' platform-boundaries.json
+
+  staging:
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: development
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: 46aad4738793fbaca88574832a2ccc0f
+      STAGING_URL: https://ekodi-delivery-hub-ai-staging.ekodi-development.workers.dev
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Verify Development Cloudflare boundary
+        run: |
+          set -euo pipefail
+          test "$CLOUDFLARE_ACCOUNT_ID" = '46aad4738793fbaca88574832a2ccc0f'
+          test -n "$CLOUDFLARE_API_TOKEN"
+      - name: Deploy isolated staging
+        run: npx wrangler@${WRANGLER_VERSION} deploy --config wrangler.delivery.staging.toml
+      - name: Confirm deployed staging revision exists
+        run: npx wrangler@${WRANGLER_VERSION} deployments status --config wrangler.delivery.staging.toml --json > /tmp/delivery-deployments.json
+      - name: Verify Development contract without weakening Cloudflare Access
+        shell: bash
+        run: |
+          set -euo pipefail
+          remote_protected=0
+          verify_base="$STAGING_URL"
+          runtime_pid=''
+          cleanup() {
+            if [[ -n "$runtime_pid" ]]; then kill "$runtime_pid" 2>/dev/null || true; fi
+          }
+          trap cleanup EXIT
+
+          access_code=$(curl -sS -D /tmp/delivery-access.headers -o /tmp/delivery-access.body -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/delivery/health" || true)
+          if [[ "$access_code" == '302' ]] && grep -iq '^Www-Authenticate: Cloudflare-Access' /tmp/delivery-access.headers; then
+            remote_protected=1
+            echo 'Development staging is protected by Cloudflare Access. Keeping Access enabled and using a local runtime contract check for this revision.'
+            npx wrangler@${WRANGLER_VERSION} dev --config wrangler.delivery.staging.toml --local --port 8789 >/tmp/delivery-local.log 2>&1 &
+            runtime_pid=$!
+            verify_base='http://127.0.0.1:8789'
+            ready=0
+            for attempt in $(seq 1 30); do
+              if curl -sSf --max-time 5 "$verify_base/delivery/health" >/dev/null 2>&1; then ready=1; break; fi
+              if ! kill -0 "$runtime_pid" 2>/dev/null; then cat /tmp/delivery-local.log; exit 1; fi
+              sleep 2
+            done
+            if [[ "$ready" != '1' ]]; then cat /tmp/delivery-local.log; exit 1; fi
+          fi
+
+          payload='{"order":{"amount":32000,"priority":"speed"},"providers":[{"id":"a","name":"A","fee":3800,"etaMinutes":28,"reliability":0.9},{"id":"b","name":"B","fee":4200,"etaMinutes":19,"reliability":0.92}]}'
+          for attempt in $(seq 1 12); do
+            root=$(curl -L -sS -D /tmp/delivery-headers -o /tmp/delivery.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$verify_base/delivery" || true)
+            health=$(curl -sS -o /tmp/delivery-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$verify_base/delivery/health" || true)
+            recommend=$(curl -sS -o /tmp/delivery-recommend.json -w '%{http_code}' -H 'content-type: application/json' -d "$payload" --connect-timeout 5 --max-time 15 "$verify_base/delivery/api/recommend" || true)
+            block=$(curl -sS -o /tmp/delivery-block.json -w '%{http_code}' -H 'content-type: application/json' -d '{}' --connect-timeout 5 --max-time 15 "$verify_base/delivery/api/dispatch" || true)
+            if [[ "$root" == '200' && "$health" == '200' && "$recommend" == '200' && "$block" == '409' ]] \
+              && grep -Fq '배달허브 AI' /tmp/delivery.html \
+              && grep -Fq '"canonicalPath":"/delivery"' /tmp/delivery-health.json \
+              && grep -Fq '"dataMode":"isolated-staging"' /tmp/delivery-health.json \
+              && grep -Fq '"executionEnabled":false' /tmp/delivery-health.json \
+              && grep -Fq '"recommendedProviderId":"b"' /tmp/delivery-recommend.json \
+              && grep -Fq '"dispatchExecuted":false' /tmp/delivery-recommend.json \
+              && grep -Fq '"reason":"official_adapter_required"' /tmp/delivery-block.json \
+              && grep -Eiq '^x-ekodi-shell: v2' /tmp/delivery-headers; then
+              if [[ "$remote_protected" == '1' ]]; then
+                echo 'Delivery staging deployment exists, Access remains enforced, and the exact staging configuration passes its local runtime contract.'
+              else
+                echo 'Delivery Hub AI Development staging verified remotely with external execution locked.'
+              fi
+              exit 0
+            fi
+            sleep 3
+          done
+          echo 'Delivery Hub AI Development staging verification failed.'
+          cat /tmp/delivery-access.headers || true
+          cat /tmp/delivery-health.json || true
+          cat /tmp/delivery-local.log 2>/dev/null || true
+          exit 1
+
+  production:
+    if: github.event_name != 'pull_request' && needs.validate.result == 'success' && needs.staging.result == 'success'
+    needs: [validate, staging]
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Wait for Shell service registration
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 24); do
+            code=$(curl -sS -o /tmp/manifest.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://shell.ekodi.kr/manifest.json' || true)
+            if [[ "$code" == '200' ]] && grep -Fq '"id":"delivery"' /tmp/manifest.json; then break; fi
+            if [[ "$attempt" == '24' ]]; then cat /tmp/manifest.json || true; exit 1; fi
+            sleep 5
+          done
+      - name: Bootstrap or guarded release
+        run: |
+          set -euo pipefail
+          if npx --yes wrangler@${WRANGLER_VERSION} deployments status --config wrangler.delivery.toml --json > /tmp/deployments.log 2>&1; then
+            node scripts/guarded-worker-release.mjs --manifest deploy/manifests/delivery.worker.json
+          elif grep -Eq 'This Worker does not exist|has no deployments|code: 10007' /tmp/deployments.log; then
+            npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.delivery.toml
+          else
+            cat /tmp/deployments.log
+            exit 1
+          fi
+      - name: Reconcile production route
+        run: npx --yes wrangler@${WRANGLER_VERSION} triggers deploy --config wrangler.delivery.toml
+      - name: Verify canonical production path
+        run: |
+          set -euo pipefail
+          payload='{"order":{"amount":32000,"priority":"speed"},"providers":[{"id":"a","name":"A","fee":3800,"etaMinutes":28,"reliability":0.9},{"id":"b","name":"B","fee":4200,"etaMinutes":19,"reliability":0.92}]}'
+          for attempt in $(seq 1 18); do
+            root=$(curl -L -sS -D /tmp/delivery-headers -o /tmp/delivery.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/delivery' || true)
+            health=$(curl -sS -o /tmp/delivery-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/delivery/health' || true)
+            recommend=$(curl -sS -o /tmp/delivery-recommend.json -w '%{http_code}' -H 'content-type: application/json' -d "$payload" --connect-timeout 5 --max-time 15 'https://ekodi.kr/delivery/api/recommend' || true)
+            block=$(curl -sS -o /tmp/delivery-block.json -w '%{http_code}' -H 'content-type: application/json' -d '{}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/delivery/api/dispatch' || true)
+            admin=$(curl -sS -o /dev/null -D /tmp/delivery-admin-headers -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/delivery/admin' || true)
+            if [[ "$root" == '200' && "$health" == '200' && "$recommend" == '200' && "$block" == '409' ]] \
+              && grep -Fq '배달허브 AI' /tmp/delivery.html \
+              && grep -Fq '"canonicalPath":"/delivery"' /tmp/delivery-health.json \
+              && grep -Fq '"dataMode":"production"' /tmp/delivery-health.json \
+              && grep -Fq '"executionEnabled":false' /tmp/delivery-health.json \
+              && grep -Fq '"recommendedProviderId":"b"' /tmp/delivery-recommend.json \
+              && grep -Fq '"dispatchExecuted":false' /tmp/delivery-recommend.json \
+              && grep -Fq '"reason":"official_adapter_required"' /tmp/delivery-block.json \
+              && grep -Eiq '^x-ekodi-shell: v2' /tmp/delivery-headers \
+              && grep -Eiq '^location: https://admin\.ekodi\.kr/?' /tmp/delivery-admin-headers; then
+              echo 'Delivery Hub AI production verified on https://ekodi.kr/delivery.'
+              exit 0
+            fi
+            sleep 5
+          done
+          cat /tmp/delivery-health.json || true
+          exit 1
+      - name: Publish production verification status
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERIFY_STATE: ${{ job.status == 'success' && 'success' || 'failure' }}
+        run: |
+          set -euo pipefail
+          curl -fsS -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \
+            -d "{\"state\":\"${VERIFY_STATE}\",\"context\":\"Delivery Hub AI Production\",\"description\":\"ekodi.kr/delivery production verification\",\"target_url\":\"${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}\"}"

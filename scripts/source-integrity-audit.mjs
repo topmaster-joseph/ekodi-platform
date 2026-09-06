@@ -43,6 +43,23 @@ const ignoredFiles = new Set(['monitor-status.json', REPORT_PATH]);
 const changedFiles = rawChangedFiles.filter(file => !ignoredFiles.has(file) && !file.startsWith('dist/') && !file.startsWith('.wrangler/'));
 const report = { startedAt, base, head, changedFiles, liveProbesEnabled, checks: [], tests: [], warnings: [], errors: [], probes: [] };
 function check(name, ok, detail = '') { report.checks.push({ name, ok, detail }); if (!ok) report.errors.push({ type: 'check', name, detail }); }
+const trackedFiles = git(['ls-files']).split('\n').filter(Boolean);
+const forbiddenTrackedFiles = new Set([
+  'generated/user-services.js','my/user-services.js','my/capability-registry.json','my/workspace-packs.json',
+  '.github/workflows/fix-development-staging-verification.yml','.github/workflows/persist-admin-display-names.yml',
+  '.github/workflows/cloudflare-boundary-repair.yml','.github/workflows/release-marketing-ai-ui.yml',
+  '.github/workflows/release-service-proxy-shell.yml','.github/workflows/release-work-shell.yml',
+]);
+for (const file of trackedFiles) {
+  if (existsSync(file) && (forbiddenTrackedFiles.has(file) || file.startsWith('ops/generated-workflows/') || (file.startsWith('release/') && file.endsWith('.marker')))) {
+    check(`source-cleanliness:${file}`, false, 'historical/generated artifact must remain in Git history, not the active source tree');
+  }
+}
+for (const file of trackedFiles.filter(file => file.startsWith('.github/workflows/') && /\.ya?ml$/i.test(file))) {
+  let text=''; try { text=await readFile(file,'utf8'); } catch { continue; }
+  if (text.includes('git push origin HEAD:main')) check(`workflow-self-mutation:${file}`, false, 'workflow must not push directly to main');
+  if (/release\/[A-Za-z0-9._-]*20[0-9]{6}/.test(text)) check(`dated-release-gate:${file}`, false, 'dated one-time release branches must not remain active workflow gates');
+}
 async function finish() {
   report.finishedAt = new Date().toISOString();
   report.status = report.errors.length ? 'failed' : (changedFiles.length ? 'passed' : 'no_changes');
@@ -58,11 +75,10 @@ if (!changedFiles.length) {
   for (const file of jsFiles) { const result = command(process.execPath, ['--check', file]); check(`syntax:${file}`, result.ok, result.ok ? 'ok' : result.output); }
   const testFiles = new Set(); const has = pattern => changedFiles.some(file => pattern.test(file)); const addTest = file => { if (existsSync(file)) testFiles.add(file); };
   if (has(/(?:^|\/)(?:auth|admin-google|google-admin|customer|client-access|api-worker|wrangler\.api)/i)) for (const file of ['test/auth-worker.test.mjs','test/business-contract.test.mjs','test/client-access.test.mjs','test/control-api.test.mjs','test/customer-auth-contract.test.mjs','test/google-admin-auth-contract.test.mjs']) addTest(file);
-  if (has(/(?:control-center|compact-control-center|policies)/i)) for (const file of ['test/compact-control-center-build.test.mjs','test/compact-control-center-contract.test.mjs','test/compact-control-center-navigation.test.mjs','test/policies-page-contract.test.mjs','test/static-app.test.mjs']) addTest(file);
+  if (has(/(?:control-center|admin-compact|policies)/i)) for (const file of ['test/admin-compact-build.test.mjs','test/admin-compact-contract.test.mjs','test/admin-compact-navigation.test.mjs','test/policies-page-contract.test.mjs','test/static-app.test.mjs']) addTest(file);
   if (has(/finance/i)) addTest('test/finance-worker.test.mjs'); if (has(/(?:monitor|service-registry)/i)) addTest('test/monitor.test.mjs'); if (has(/(?:responsive|site-worker|\.html$|\.css$)/i)) { addTest('test/responsive-standard.test.mjs'); addTest('test/static-app.test.mjs'); }
   if (testFiles.size) { const args = ['--test', ...[...testFiles].sort()]; const result = command(process.execPath, args); report.tests.push({ command: `node ${args.join(' ')}`, ok: result.ok, output: result.output }); if (!result.ok) report.errors.push({ type: 'tests', detail: result.output }); }
   if (changedFiles.some(file => file.startsWith('books/'))) { const result = command('npm', ['run', 'validate:books']); report.tests.push({ command: 'npm run validate:books', ok: result.ok, output: result.output }); if (!result.ok) report.errors.push({ type: 'books-validation', detail: result.output }); }
-  const trackedFiles = git(['ls-files']).split('\n').filter(Boolean);
   const runtimeFiles = trackedFiles.filter(file => !file.startsWith('docs/') && !file.startsWith('test/') && !file.startsWith('migrations/') && !file.startsWith('dist/') && !ignoredFiles.has(file) && (/\.(?:js|mjs|html|toml|json|yml|yaml)$/i.test(file) || file === 'service-registry.json'));
   const diffText = git(['diff', '--unified=0', `${base}...${head}`, '--', ...changedFiles]); const addedLines = diffText.split('\n').filter(line => line.startsWith('+') && !line.startsWith('+++')).map(line => line.slice(1)); const removedLines = diffText.split('\n').filter(line => line.startsWith('-') && !line.startsWith('---')).map(line => line.slice(1)); const addedUrls = unique(addedLines.flatMap(extractUrls)); const removedUrls = unique(removedLines.flatMap(extractUrls)); const addedHosts = new Set(addedUrls.map(hostOf).filter(isEkodiHost)); const removedHosts = unique(removedUrls.map(hostOf).filter(host => isEkodiHost(host) && !addedHosts.has(host)));
   if (removedHosts.length) { const ignoreLegacyLine = /\b(?:legacy|deprecated|retire|remove|delete|cleanup|grep|redirect|alias|compat|old[_-]?)\b/i; for (const oldHost of removedHosts) { const stale = []; for (const file of runtimeFiles) { let content = ''; try { content = await readFile(file, 'utf8'); } catch { continue; } content.split('\n').forEach((line, index) => { if (!line.includes(oldHost) || ignoreLegacyLine.test(line)) return; stale.push(`${file}:${index + 1}:${line.trim().slice(0, 220)}`); }); } if (stale.length) report.errors.push({ type: 'stale-domain-reference', host: oldHost, detail: stale.slice(0, 20) }); else report.checks.push({ name: `retired-domain:${oldHost}`, ok: true, detail: 'No active runtime/config references remain.' }); } }

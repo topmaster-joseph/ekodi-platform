@@ -393,7 +393,7 @@ function Apply-WorkstationProfile {
     @{ name = 'EKODI Admin'; url = 'https://admin.ekodi.kr' },
     @{ name = 'My EKODI'; url = 'https://my.ekodi.kr' },
     @{ name = 'EKODI Community'; url = 'https://community.ekodi.kr' },
-    @{ name = 'Marketing AI'; url = 'https://marketing.ekodi.kr' },
+    @{ name = 'Marketing AI'; url = 'https://ekodi.kr/ekodibiz/marketing-ai' },
     @{ name = 'EKODI Cloud'; url = 'https://cloud.ekodi.kr' }
   )
   $created = @()
@@ -572,8 +572,70 @@ function Invoke-DeviceCommand([pscustomobject]$Command) {
     'profile.workstation.apply' { return Apply-WorkstationProfile }
     'profile.workstation.restore' { return Restore-WorkstationProfile }
     'agent.self_update' { return Update-AgentFromOfficialSource }
+    'remote_desktop.recovery.enable' { return Set-DesktopCommanderRecovery $true }
+    'remote_desktop.recovery.disable' { return Set-DesktopCommanderRecovery $false }
+    'remote_desktop.recovery.run' { return Ensure-DesktopCommanderRunning $true }
     default { throw "허용되지 않은 명령입니다: $type" }
   }
+}
+
+
+$script:DesktopRecoveryStatePath = Join-Path $PSScriptRoot 'managed-apps.json'
+$script:LastDesktopRecoveryAttempt = [datetime]::MinValue
+
+function Get-RemoteDesktopRecoveryConfig {
+  if (!(Test-Path $script:DesktopRecoveryStatePath)) { return @{ enabled = $false } }
+  try {
+    $value = Get-Content $script:DesktopRecoveryStatePath -Raw | ConvertFrom-Json
+    return @{ enabled = [bool]$value.desktopCommanderAutoRecovery }
+  } catch { return @{ enabled = $false } }
+}
+
+function Set-RemoteDesktopRecoveryConfig([bool]$Enabled) {
+  @{ desktopCommanderAutoRecovery = $Enabled; updatedAt = (Get-Date).ToUniversalTime().ToString('o') } |
+    ConvertTo-Json | Set-Content -Path $script:DesktopRecoveryStatePath -Encoding UTF8
+  return Get-RemoteDesktopRecoveryConfig
+}
+
+function Resolve-DesktopCommanderExecutable {
+  $running = Get-Process -Name 'DesktopCommander' -ErrorAction SilentlyContinue | Select-Object -First 1
+  if ($running -and $running.Path) { return $running.Path }
+  $candidates = @(
+    "$env:LOCALAPPDATA\Programs\Desktop Commander\DesktopCommander.exe",
+    "$env:LOCALAPPDATA\Programs\DesktopCommander\DesktopCommander.exe",
+    "$env:ProgramFiles\Desktop Commander\DesktopCommander.exe",
+    "$env:ProgramFiles(x86)\Desktop Commander\DesktopCommander.exe"
+  )
+  return ($candidates | Where-Object { Test-Path $_ } | Select-Object -First 1)
+}
+
+function Ensure-DesktopCommanderRunning([bool]$Force = $false) {
+  $running = Get-Process -Name 'DesktopCommander' -ErrorAction SilentlyContinue | Select-Object -First 1
+  if ($running) { return @{ message = 'Remote Desktop Commander가 실행 중입니다.'; running = $true; recovered = $false } }
+  if (!$Force -and ((Get-Date) - $script:LastDesktopRecoveryAttempt).TotalSeconds -lt 120) {
+    return @{ message = 'Remote Desktop Commander 복구 재시도 대기 중입니다.'; running = $false; recovered = $false }
+  }
+  $script:LastDesktopRecoveryAttempt = Get-Date
+  $exe = Resolve-DesktopCommanderExecutable
+  if (!$exe) { return @{ message = 'Remote Desktop Commander 실행파일을 찾지 못했습니다.'; running = $false; recovered = $false } }
+  Start-Process -FilePath $exe | Out-Null
+  Start-Sleep -Milliseconds 700
+  $started = [bool](Get-Process -Name 'DesktopCommander' -ErrorAction SilentlyContinue | Select-Object -First 1)
+  return @{ message = $(if ($started) { 'Remote Desktop Commander를 자동 복구했습니다.' } else { 'Remote Desktop Commander 실행을 요청했지만 프로세스를 확인하지 못했습니다.' }); running = $started; recovered = $started }
+}
+
+function Set-DesktopCommanderRecovery([bool]$Enabled) {
+  $config = Set-RemoteDesktopRecoveryConfig $Enabled
+  if ($Enabled) {
+    $result = Ensure-DesktopCommanderRunning $true
+    return @{ message = "Remote Desktop Commander 자가복구를 활성화했습니다. $($result.message)"; enabled = $true; running = $result.running }
+  }
+  return @{ message = 'Remote Desktop Commander 자가복구를 비활성화했습니다.'; enabled = $false }
+}
+
+function Reconcile-DesktopCommanderRecovery {
+  $config = Get-RemoteDesktopRecoveryConfig
+  if ($config.enabled) { Ensure-DesktopCommanderRunning | Out-Null }
 }
 
 function Load-Config {
@@ -734,6 +796,7 @@ function Run-Agent {
     while ($true) {
       try {
         if (((Get-Date) - $lastHeartbeat).TotalSeconds -ge 60) { Send-Heartbeat $config; $lastHeartbeat = Get-Date }
+        Reconcile-DesktopCommanderRecovery
         Poll-Command $config
       } catch {
         # 네트워크 중단은 다음 주기에 자동 복구합니다. 임의 명령 실행으로 우회하지 않습니다.

@@ -1,0 +1,23 @@
+{
+  "id": "EKODI-CONSTITUTION-2026-09-01-PARALLEL-AI-DEVELOPMENT-V1.2",
+  "date": "2026-09-01",
+  "class": "C2",
+  "status": "approved",
+  "approvedBy": "topmaster-joseph",
+  "approvalSource": "explicit user instruction that Claude Code, ChatGPT/GPT and all other AI development agents must follow the same isolated parallel-development rule",
+  "constitutionVersion": "1.2.0",
+  "summary": "Standardize provider-neutral parallel development so every AI agent and human developer receives an isolated branch and worktree or equivalent sandbox, while production changes flow only through the central validation, review, merge and deployment pipeline.",
+  "affectedAreas": ["ai-governance", "source-control", "development", "ci", "release", "security"],
+  "coveredWorkers": ["Claude Code", "ChatGPT", "GPT", "Codex", "Gemini", "GitHub Copilot", "other AI development agents", "human developers"],
+  "isolationPolicy": {
+    "uniqueTaskIdRequired": true,
+    "independentBranchPerTask": true,
+    "independentWorktreeOrSandboxPerTask": true,
+    "sharedMutableWorkingDirectoryForbidden": true,
+    "directMainOrProductionWritesForbidden": true,
+    "directProductionDeployForbidden": true
+  },
+  "releasePolicy": "All source changes must enter production through the central validation, review, merge and guarded deployment pipeline. AI agents do not receive bypass authority.",
+  "verificationPolicy": "policy files and provider-specific agent instructions must resolve to one canonical policy; CI, constitution validation and release guardrails must pass before merge",
+  "rollbackPlan": "revert this amendment and the associated policy/instruction commits on the isolated branch; no production source or deployment topology is changed directly by this amendment"
+}

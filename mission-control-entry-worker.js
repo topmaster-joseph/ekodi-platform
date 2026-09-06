@@ -9,6 +9,8 @@ import { handleMessengerOperatorControl } from './messenger-operator-control.js'
 import { handleMessengerOperatorPage } from './messenger-operator-page.js';
 import { drainMessengerOutbox } from './messenger-outbox.js';
 import { handleDeviceControl } from './device-control.js';
+import { handleDeviceWakeControl, runWakeOrchestration } from './device-wake-control.js';
+import { disableIneligibleWakeProfiles, enforceDesktopWakeRequest } from './device-wake-policy.js';
 import { claimHybridFallback, handleHybridAgentResult, handleHybridExecution } from './hybrid-execution.js';
 import { handleHybridExecutionMonitor, runHybridExecutionMonitor } from './hybrid-execution-monitor.js';
 import { handleMarketingAdminControl } from './marketing-admin-control.js';
@@ -17,6 +19,7 @@ import { handleMarketingOrderConnectors } from './marketing-order-connectors.js'
 import { handleBusinessRevenueControl } from './business-revenue-control.js';
 import { handleAuthorBillingControl, runAuthorBillingSchedule } from './author-billing-control.js';
 import { handleSystemHealthControl } from './system-health-control.js';
+import { handleTrafficIntelligence } from './traffic-intelligence-control.js';
 import { handleApiCostControl } from './api-cost-control.js';
 import { handleCloudflareSecretControl } from './cloudflare-secret-control.js';
 import { handleBooksNetworkRequest } from './books-network-control.js';
@@ -24,6 +27,8 @@ import { handleUniversalMembership } from './universal-membership.js';
 import { handleHomepagePresentation } from './homepage-presentation-control.js';
 import { handleStorageGateway } from './storage-gateway.js';
 import { handleExternalAiModuleGateway } from './external-ai-module-gateway.js';
+import { handleEkodiMcpGateway, handleEkodiMcpMetadata } from './ekodi-mcp-gateway.js';
+import { handleDevotionalControl } from './devotional-control.js';
 import { applyApiSecurityHeaders, enforceEdgeSecurity } from './security-edge.js';
 
 function errorResponse(message, code) {
@@ -71,13 +76,30 @@ function handleCloudflareSecretPreflight(request, env = {}) {
 
 export default {
   async fetch(request, env, ctx) {
+    const incoming = new URL(request.url);
+    if (incoming.pathname === '/admin' || incoming.pathname === '/admin/') return Response.redirect('https://admin.ekodi.kr/?source=api.ekodi.kr', 307);
     const guard = await enforceEdgeSecurity(request, env);
     if (guard) return guard;
 
     const secretPreflight = handleCloudflareSecretPreflight(request, env);
     if (secretPreflight) return secretPreflight;
 
-    const path = new URL(request.url).pathname;
+    const path = incoming.pathname;
+
+    if (path === '/.well-known/oauth-protected-resource') {
+      try { return applyApiSecurityHeaders(handleEkodiMcpMetadata(request)); }
+      catch (error) { console.error('EKODI MCP metadata error', error); return errorResponse('EKODI MCP 인증 메타데이터 처리 중 오류가 발생했습니다.', 'MCP_METADATA_ERROR'); }
+    }
+
+    if (path === '/mcp') {
+      try { return applyApiSecurityHeaders(await handleEkodiMcpGateway(request, env)); }
+      catch (error) { console.error('EKODI MCP gateway error', error); return errorResponse('EKODI MCP 처리 중 오류가 발생했습니다.', 'MCP_GATEWAY_ERROR'); }
+    }
+
+    if (path === '/api/telemetry/visit') {
+      try { const response = await handleTrafficIntelligence(request, env); if (response) return applyApiSecurityHeaders(response); }
+      catch (error) { console.error('Traffic telemetry error', error); return applyApiSecurityHeaders(new Response(null, { status:204 })); }
+    }
 
     if (path.startsWith('/api/storage/v1')) {
       try { const response = await handleStorageGateway(request, env); if (response) return applyApiSecurityHeaders(response); }
@@ -156,6 +178,11 @@ export default {
       catch (error) { console.error('Cloudflare secret control error', error); return errorResponse('Cloudflare Secret 처리 중 오류가 발생했습니다.', 'CLOUDFLARE_SECRET_CONTROL_ERROR'); }
     }
 
+    if (path === '/api/control/traffic-intelligence') {
+      try { const response = await handleTrafficIntelligence(request, env); if (response) return applyApiSecurityHeaders(response); }
+      catch (error) { console.error('Traffic Intelligence control error', error); return errorResponse('Traffic Intelligence 처리 중 오류가 발생했습니다.', 'TRAFFIC_INTELLIGENCE_CONTROL_ERROR'); }
+    }
+
     if (path.startsWith('/api/control/system-health')) {
       try { const response = await handleSystemHealthControl(request, env); if (response) return applyApiSecurityHeaders(response); }
       catch (error) { console.error('System Health control error', error); return errorResponse('System Health 처리 중 오류가 발생했습니다.', 'SYSTEM_HEALTH_CONTROL_ERROR'); }
@@ -166,6 +193,11 @@ export default {
       catch (error) { console.error('API cost control error', error); return errorResponse('API 비용 관리 처리 중 오류가 발생했습니다.', 'API_COST_CONTROL_ERROR'); }
     }
 
+    if (path.startsWith('/api/control/devotional')) {
+      try { const response = await handleDevotionalControl(request, env, ctx); if (response) return applyApiSecurityHeaders(response); }
+      catch (error) { console.error('Devotional automation control error', error); return errorResponse('매일묵상 자동화 처리 중 오류가 발생했습니다.', 'DEVOTIONAL_CONTROL_ERROR'); }
+    }
+
     if (path.startsWith('/api/control/user-ai')) {
       try { const response = await handleUserAiAdminControl(request, env); if (response) return applyApiSecurityHeaders(response); }
       catch (error) { console.error('User AI admin control error', error); return errorResponse('User AI 운영 처리 중 오류가 발생했습니다.', 'USER_AI_ADMIN_CONTROL_ERROR'); }
@@ -174,6 +206,18 @@ export default {
     if (path.startsWith('/api/control/messenger')) {
       try { const response = await handleMessengerOperatorControl(request, env, ctx); if (response) return applyApiSecurityHeaders(response); }
       catch (error) { console.error('Messenger Operator Control error', error); return errorResponse('EKODI Messenger 관리자 처리 중 오류가 발생했습니다.', 'MESSENGER_OPERATOR_CONTROL_ERROR'); }
+    }
+
+    if (path.startsWith('/api/control/wake') || path.startsWith('/api/wake-agent')) {
+      try {
+        const desktopPolicy = await enforceDesktopWakeRequest(request, env);
+        if (desktopPolicy) return applyApiSecurityHeaders(desktopPolicy);
+        const response = await handleDeviceWakeControl(request, env);
+        if (response) return applyApiSecurityHeaders(response);
+      } catch (error) {
+        console.error('Device Wake Control error', error);
+        return errorResponse('원격 전원 복구 처리 중 오류가 발생했습니다.', 'DEVICE_WAKE_CONTROL_ERROR');
+      }
     }
 
     if (path === '/api/control/hybrid-execution/monitor') {
@@ -225,9 +269,18 @@ export default {
     const authorBilling = runAuthorBillingSchedule(env).catch(error => { console.error('Author billing schedule error', error); return { processed:0, error:'author_billing_schedule_failed' }; });
     const messengerOutbox = drainMessengerOutbox(env, { limit:20 }).catch(error => { console.error('Messenger outbox schedule error', error); return { processed:0, failed:1, error:'messenger_outbox_schedule_failed' }; });
     const hybridWatchdog = runHybridExecutionMonitor(env).catch(error => { console.error('Hybrid execution watchdog schedule error', error); return { status:'unavailable', error:'hybrid_execution_watchdog_failed' }; });
-    if (ctx?.waitUntil) { ctx.waitUntil(authorBilling); ctx.waitUntil(messengerOutbox); ctx.waitUntil(hybridWatchdog); }
+    const wakeOrchestration = (async () => {
+      await disableIneligibleWakeProfiles(env);
+      return runWakeOrchestration(env);
+    })().catch(error => { console.error('Device wake orchestration schedule error', error); return { status:'unavailable', error:'device_wake_orchestration_failed' }; });
+    if (ctx?.waitUntil) {
+      ctx.waitUntil(authorBilling);
+      ctx.waitUntil(messengerOutbox);
+      ctx.waitUntil(hybridWatchdog);
+      ctx.waitUntil(wakeOrchestration);
+    }
     if (typeof customerEntryWorker.scheduled === 'function') return customerEntryWorker.scheduled(controller, env, ctx);
-    return Promise.all([authorBilling, messengerOutbox, hybridWatchdog]);
+    return Promise.all([authorBilling, messengerOutbox, hybridWatchdog, wakeOrchestration]);
   },
 };
 

@@ -29,8 +29,8 @@ test('device credentials are stored as hashes and enrollment is one-time', () =>
   assert.match(api, /code_hash TEXT NOT NULL UNIQUE/);
   assert.match(api, /used_at IS NULL AND expires_at > \?/);
   assert.match(api, /sha256\(token\)/);
-  const registryInsert = api.match(/INSERT INTO device_registry[\s\S]*?\.run\(\);/)?.[0] || '';
-  assert.ok(registryInsert, 'device registry insert must exist');
+  const registryInsert = api.match(/INSERT INTO device_registry[\s\S]*?tokenHash[\s\S]*?enrollment\.created_by/)?.[0] || '';
+  assert.ok(registryInsert, 'device registry insert must exist and bind the hashed token');
   assert.match(registryInsert, /tokenHash/);
   assert.doesNotMatch(registryInsert, /deviceToken/);
 });
@@ -121,13 +121,18 @@ test('agent self-update validates actual PowerShell command AST instead of raw g
   assert.match(agent, /\('Invoke-' \+ 'Expression'\)/);
 });
 
-test('admin Device Control is bundled only into authenticated compact assets', () => {
-  assert.match(build, /device-control-admin\.css/);
-  assert.match(build, /device-control-admin\.js/);
+test('admin Device Control is lazy-loaded from authenticated production assets', () => {
+  const assets = build.match(/const assets = \[[\s\S]*?\];/)?.[0] || '';
+  assert.match(assets, /device-control-admin\.css/);
+  assert.match(assets, /device-control-admin\.js/);
+  assert.match(assets, /admin-menu-registry\.js/);
+  assert.match(assets, /admin-sidebar\.js/);
+  assert.match(assets, /admin-menu-runtime\.js/);
+  assert.match(assets, /storage-admin\.css/);
+  assert.match(assets, /storage-admin\.js/);
   assert.match(build, /ekodi-device-bootstrap\.cmd/);
-  assert.match(build, /compact-control-center\.css/);
-  assert.match(build, /compact-control-center\.js/);
-  assert.doesNotMatch(build.match(/const assets = \[[\s\S]*?\];/)?.[0] || '', /device-control-admin/);
+  assert.match(build, /admin-demand-loader\.js/);
+  assert.doesNotMatch(build, /data-ekodi-postauth=\"admin-compact\.js/);
 });
 
 test('Windows agent preserves reversible state before privileged changes', () => {
@@ -139,10 +144,11 @@ test('Windows agent preserves reversible state before privileged changes', () =>
   assert.match(agent, /profile\.workstation\.restore/);
 });
 
-test('Device AI health remains deterministic and action-bounded', () => {
+test('Device health remains deterministic, typed and action-bounded', () => {
   assert.match(api, /function deviceHealth/);
   assert.match(api, /recommendations\.slice\(0, 6\)/);
-  assert.match(admin, /AI 운영 제안/);
+  assert.match(api, /commandAllowedForDeviceType/);
+  assert.match(admin, /운영 제안/);
   assert.doesNotMatch(api, /eval\(|new Function/);
 });
 
@@ -161,13 +167,25 @@ test('hybrid execution uses an opt-in bounded queue with capacity-aware assignme
   assert.doesNotMatch(api, /shell\.exec|powershell\.exec|command\.script/);
 });
 
-test('portable computers are excluded from automatic execution nodes', () => {
+test('portable computers and non-PC types are excluded from automatic execution nodes', () => {
   assert.match(agent, /Win32_Battery/);
   assert.match(agent, /Win32_ComputerSystem/);
   assert.match(agent, /Win32_SystemEnclosure/);
   assert.match(agent, /autoExecutionEligible = \(-not \$isPortable\)/);
   assert.match(api, /system\.autoExecutionEligible === true/);
   assert.match(api, /system\.isPortable === false/);
+  assert.match(api, /normalizeDeviceType\(row\.device_type \|\| 'pc'\) === 'pc'/);
   assert.match(api, /PORTABLE_DEVICE_NOT_ELIGIBLE/);
+  assert.match(api, /DEVICE_TYPE_NOT_AUTO_EXECUTABLE/);
   assert.match(admin, /노트북·휴대형 기기는 자동 작업 노드에서 제외/);
+});
+
+test('unified fleet types reduce authority by default', () => {
+  for (const type of ['pc','pos','kiosk','tablet','sensor','robot','other']) assert.match(api, new RegExp(`${type}: Object\\.freeze`));
+  assert.match(api, /DEVICE_TYPE_COMMAND_BLOCKED/);
+  assert.match(api, /policyCancelled: true/);
+  assert.match(api, /sensor:[\s\S]*allowedCommands: Object\.freeze\(\[\]\)/);
+  assert.match(api, /robot:[\s\S]*allowedCommands: Object\.freeze\(\[\]\)/);
+  assert.match(admin, /원격 작업/);
+  assert.match(admin, /관찰 인벤토리 등록/);
 });

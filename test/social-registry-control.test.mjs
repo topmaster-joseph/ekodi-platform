@@ -6,7 +6,7 @@ import { DEFAULT_REGISTRY, normalizeRegistry } from '../social-registry-api.js';
 test('Social registry normalizes the canonical EKODI organizations', () => {
   const registry = normalizeRegistry(DEFAULT_REGISTRY);
   assert.equal(registry.version, 3);
-  assert.ok(registry.organizations.some(org => org.id === 'community' && org.name === '에코디커뮤니티'));
+  assert.ok(registry.organizations.some(org => org.id === 'community' && org.name === '커뮤니티'));
   assert.ok(registry.organizations.some(org => org.id === 'church'));
   assert.ok(registry.organizations.every(org => org.website.startsWith('https://')));
   assert.ok(registry.organizations.flatMap(org => org.channels).every(channel => channel.id && channel.url.startsWith('https://')));
@@ -43,18 +43,25 @@ test('Social workspace switcher consumes one-time handoff and revalidates person
 });
 
 test('Control Center lazy-loads Social Channels while security-wrapped Mission Control preserves the canonical API entry', async () => {
-  const [features, build, admin, entry, missionEntry, wrangler] = await Promise.all([
-    readFile(new URL('../control-center-features.js', import.meta.url), 'utf8'),
+  const [features, build, admin, entry, missionEntry, wrangler, sharedDeploy] = await Promise.all([
+    readFile(new URL('../admin-demand-loader.js', import.meta.url), 'utf8'),
     readFile(new URL('../scripts/build.mjs', import.meta.url), 'utf8'),
     readFile(new URL('../social-admin.js', import.meta.url), 'utf8'),
     readFile(new URL('../customer-entry-worker.js', import.meta.url), 'utf8'),
     readFile(new URL('../mission-control-entry-worker.js', import.meta.url), 'utf8'),
     readFile(new URL('../wrangler.api.toml', import.meta.url), 'utf8'),
+    readFile(new URL('../.github/workflows/deploy-site-core.yml', import.meta.url), 'utf8'),
   ]);
-  assert.match(features, /placeholder\('social', '◉', 'Social'\)/);
-  assert.match(features, /social-admin\.js/);
+  assert.match(features, /social:\s*\{[^}]*styles:\['social-admin\.css'\][^}]*scripts:\['social-admin\.js'\]/);
+  assert.match(features, /hashes:\['#social'\]/);
   assert.match(build, /social-admin\.css/);
   assert.match(build, /social-admin\.js/);
+  assert.match(admin, /content\.querySelector\('\[data-panel~="social"\]'\)/);
+  assert.match(admin, /nav\.querySelector\('\[data-section="social"\], \[data-lazy-section="social"\]'\)/);
+  assert.doesNotMatch(admin, /document\.querySelector\('\[data-section="social"\]'\)\) return/);
+  assert.ok(sharedDeploy.includes("- 'social-admin.js'"));
+  assert.ok(sharedDeploy.includes("- 'social-admin.css'"));
+  assert.match(sharedDeploy, /client-access\.js social-admin\.js [^\r\n]*books-admin\.js/);
   assert.match(admin, /\/api\/control\/social\/registry/);
   assert.match(entry, /handleSocialRegistry/);
   assert.match(entry, /\/api\/social\/registry/);

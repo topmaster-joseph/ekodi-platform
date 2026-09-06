@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="EKODI 통합 운영 허브: 서비스 상태, 결제, 회계, 조직, 메일, 라이브, 클라우드, 도메인을 한곳에서 관리합니다.">
+  <meta name="theme-color" content="#07111f">
+  <title>EKODI Admin</title>
+  <link rel="stylesheet" href="admin-shell.css">
+</head>
+<body>
+  <section class="login-screen" id="loginScreen" aria-labelledby="loginTitle">
+    <div class="login-card">
+      <a class="brand" href="https://ekodi.kr"><span>E</span><strong>EKODI</strong></a>
+      <p class="kicker">ADMIN</p>
+      <h1 id="loginTitle">한곳에서 모든 운영을 봅니다.</h1>
+      <p class="login-copy">서비스 상태와 통계, 결제·회계, 조직, 메일, 방송, 자료, 도메인을 한 화면에서 연결하는 EKODI 관리자 운영 화면입니다.</p>
+      <p class="login-copy" id="centralAdminLoginCopy">관리자 계정은 통합인증센터에서 Google 관리자 허용목록을 별도로 확인합니다.</p>
+      <a id="centralAdminLogin" class="primary full" href="https://auth.ekodi.kr/?site=admin&amp;direct=1&amp;return_to=https%3A%2F%2Fadmin.ekodi.kr%2F">EKODI 통합인증센터로 관리자 로그인</a>
+      <form id="loginForm" hidden>
+        <label>관리자 이메일<input name="email" type="email" autocomplete="username" required></label>
+        <label>비밀번호<input name="password" type="password" minlength="12" autocomplete="current-password" required></label>
+        <p class="error" id="loginError" role="alert"></p>
+        <button class="primary full" id="loginButton" type="submit">관리 콘솔 입장</button>
+      </form>
+</div>
+  </section>
+
+  <div class="app" id="app" hidden>
+    <aside class="sidebar">
+<nav aria-label="관리자 메뉴"></nav>
+      <div class="side-bottom">
+        <div><span class="dot"></span><strong>EKODI Platform</strong><small id="apiState">인증 연결 확인 중</small></div>
+        <button id="logoutButton" class="ghost">로그아웃</button>
+      </div>
+    </aside>
+
+    <main>
+      <header class="topbar">
+        <button class="menu" id="menuButton" aria-label="메뉴 열기">☰</button>
+        <div><h1 id="pageTitle">사이트 관리</h1></div>
+        <div class="profile"><div><strong id="profileName">관리자</strong><small id="profileEmail"></small></div></div>
+      </header>
+
+      <div class="content">
+<section class="section" data-panel="finance" aria-labelledby="financeTitle">
+          <div class="section-head">
+            <div><p class="kicker">PAYMENT · ACCOUNTING</p><h2 id="financeTitle">결제 · 회계 관제</h2><p class="operations-copy" id="financeGenerated">finance-api.ekodi.kr에서 결제·회계 상태를 불러오는 중입니다.</p></div>
+            <button class="secondary" id="refreshFinance" type="button">↻ 결제 · 회계 새로고침</button>
+          </div>
+          <div class="finance-status">
+            <article><small>이번 달 Toss 결제</small><strong id="financeMonthGross">₩0</strong><span id="financePaymentCount">동기화 0건</span></article>
+            <article><small>이번 달 회계 손익</small><strong id="financeProfit">₩0</strong><span id="financeProfitDetail">수익 ₩0 · 비용 ₩0</span></article>
+            <article><small>결제 연동</small><strong id="financeTossState">확인 중</strong><span id="financeWebhook">finance-api.ekodi.kr/webhooks/toss</span></article>
+            <article><small>최근 7일 연동 실패</small><strong id="financeFailures">0</strong><span>결제 웹훅 · 외부 연동</span></article>
+          </div>
+          <div class="finance-note" id="financeNotice">결제·회계 준비 상태를 점검하고 있습니다.</div>
+          <h3 class="finance-subtitle">최근 결제</h3>
+          <div class="finance-table-wrap"><table class="finance-table"><thead><tr><th>승인일</th><th>주문</th><th>조직</th><th>사업부</th><th>결제수단</th><th>상태</th><th class="right">금액</th></tr></thead><tbody id="financePaymentRows"><tr><td colspan="7" class="finance-empty">결제 원장을 불러오는 중입니다.</td></tr></tbody></table></div>
+          <h3 class="finance-subtitle">이번 달 사업부별 회계</h3>
+          <div class="finance-table-wrap"><table class="finance-table"><thead><tr><th>조직</th><th>사업부</th><th class="right">수익</th><th class="right">비용</th><th class="right">손익</th><th class="right">전표</th></tr></thead><tbody id="financeAccountingRows"><tr><td colspan="6" class="finance-empty">회계 원장을 불러오는 중입니다.</td></tr></tbody></table></div>
+          <h3 class="finance-subtitle">조직 → 사업부 → 프로젝트</h3>
+          <div class="finance-structure" id="financeStructure"><p class="finance-empty">회계 구조를 불러오는 중입니다.</p></div>
+        </section>
+
+        <section class="section" data-panel="communication"><div class="section-head"><div><p class="kicker">COMMUNICATION</p><h2>메일 · 라이브</h2></div><p>소통과 방송을 조직별로 분기하되 첫 진입은 하나의 로비로 통일합니다.</p></div><div class="cards">
+          <a class="module featured" href="https://mail.ekodi.kr/" target="_blank" rel="noopener"><span class="icon">✉</span><div><small>MAIL HUB</small><strong>에코디 메일</strong><p>연결된 Workspace 메일을 확인·검색하고 원본 Gmail로 안전하게 이동</p></div><b>↗</b></a>
+          <a class="module featured" href="https://live.ekodi.kr/" target="_blank" rel="noopener"><span class="icon">▶</span><div><small>LIVE LOBBY</small><strong>에코디 라이브</strong><p>교회·선교·사업·연구 방송의 공통 입구</p></div><b>↗</b></a>
+          <a class="module" href="https://live.church.ekodi.kr/" target="_blank" rel="noopener"><span class="icon">C</span><div><small>CHURCH LIVE</small><strong>교회 라이브</strong><p>예배·모임 방송 입구</p></div><b>↗</b></a>
+        </div></section>
+
+        <section class="section" data-panel="workspace"><div class="section-head"><div><p class="kicker">WORKSPACE</p><h2>클라우드 · 운영 도구</h2></div><p>자료와 실행도구를 같은 지도 위에 배치합니다.</p></div><div class="cards">
+          <a class="module featured" href="https://cloud.ekodi.kr/" target="_blank" rel="noopener"><span class="icon">▣</span><div><small>CLOUD LOBBY</small><strong>에코디 클라우드</strong><p>Google Drive·Docs 기반 자료 로비</p></div><b>↗</b></a>
+          <a class="module" href="https://ekodi.kr/ekodibiz/marketing-ai" target="_blank" rel="noopener"><span class="icon">AI</span><div><small>MARKETING</small><strong>마케팅 AI</strong><p>콘텐츠·마케팅 운영 도구</p></div><b>↗</b></a>
+          <a class="module" href="https://cgma.ekodi.kr/" target="_blank" rel="noopener"><span class="icon">청</span><div><small>LOCAL</small><strong>청계상권</strong><p>지역 상권 운영 공간</p></div><b>↗</b></a>
+          <a class="module" href="#ai-ops"><span class="icon">◎</span><div><small>DOMAIN CONTROL</small><strong>도메인 · DNS</strong><p>Cloudflare DNS와 등록대장 관리</p></div><b>→</b></a>
+        </div></section>
+
+        <section class="section" data-panel="organization"><div class="section-head"><div><p class="kicker">ORGANIZATIONS</p><h2>조직 · 사업 운영</h2></div><p>법적 주체와 사역은 분리하고, 운영 경험과 모니터링은 하나로 유지합니다.</p></div><div class="cards">
+          <a class="module" href="https://ekodi.kr/ekodibiz" target="_blank" rel="noopener"><span class="icon">B</span><div><small>BUSINESS</small><strong>에코디비즈</strong><p>사업·마케팅·상거래 허브</p></div><b>↗</b></a>
+          <a class="module" href="https://trade.biz.ekodi.kr/" target="_blank" rel="noopener"><span class="icon">T</span><div><small>TRADING</small><strong>EKODI Trading</strong><p>무역 운영 정식 주소</p></div><b>↗</b></a>
+          <a class="module" href="https://pay.ekodi.kr/" target="_blank" rel="noopener"><span class="icon">₩</span><div><small>PAYMENT</small><strong>EKODI Pay</strong><p>결제 게이트와 사업부별 귀속</p></div><b>↗</b></a>
+          <a class="module" href="https://ekodi.kr/ekodichurch" target="_blank" rel="noopener"><span class="icon">C</span><div><small>CHURCH</small><strong>에코디교회</strong><p>예배·공동체·사역 허브</p></div><b>↗</b></a>
+          <a class="module" href="https://ekodi.kr/ekodilab" target="_blank" rel="noopener"><span class="icon">L</span><div><small>LAB</small><strong>에코디연구소</strong><p>연구·교육·프로젝트 허브</p></div><b>↗</b></a>
+          <a class="module" href="#ai-ops"><span class="icon">⌘</span><div><small>ADVANCED</small><strong>고급 관리 콘솔</strong><p>DNS·등록기관·감사로그 등 고급 운영</p></div><b>→</b></a>
+        </div></section>
+
+        <section class="architecture hidden-panel" data-panel="architecture" aria-labelledby="architectureTitle">
+          <p class="kicker">SYSTEM ARCHITECTURE</p>
+          <h2 id="architectureTitle">EKODI System Architecture</h2>
+          <p>에코디 생태계가 무엇으로 구성되고 어떻게 연결되는지 설명하는 공식 시스템 지도입니다. 실시간 정상·주의·장애 판정은 이 화면이 아니라 Health가 담당합니다.</p>
+          <div class="hero-actions"><a class="secondary" href="#health">Health에서 현재 상태 확인 →</a><a class="secondary" href="#ai-ops">Logs · 감사기록 →</a></div>
+
+          <div class="flow" aria-label="에코디 핵심 연결 구조">
+            <span>ekodi.kr<br><small>생태계 정문 · 서비스 발견</small></span><b>→</b>
+            <span>EKODI Core<br><small>인증 · 권한 · AI · 보안 · 공통정책</small></span><b>→</b>
+            <span>*.ekodi.kr<br><small>고객사이트 · 독립 서비스</small></span><b>→</b>
+            <span>api · finance-api<br><small>공통 API · 결제 · 회계</small></span>
+          </div>
+
+          <div class="cards">
+            <article class="module"><span class="icon">C</span><div><small>CORE</small><strong>EKODI Core</strong><p>통합인증, 권한, AI 연결, 보안정책과 공통 운영규칙을 제공하는 기반 계층입니다.</p></div></article>
+            <article class="module"><span class="icon">T</span><div><small>TENANTS</small><strong>고객 사이트 · 독립 서비스</strong><p>교회, 비즈, 연구소, 마케팅과 고객별 사이트는 Core를 공유하되 서비스 경계와 데이터 책임을 분리합니다.</p></div></article>
+            <article class="module"><span class="icon">API</span><div><small>INTERFACES</small><strong>공통 API 계층</strong><p>api.ekodi.kr와 finance-api.ekodi.kr가 상태, 운영 데이터, 결제·회계 등 공통 인터페이스를 담당합니다.</p></div></article>
+            <article class="module"><span class="icon">↗</span><div><small>EXTERNAL</small><strong>외부 연동</strong><p>Google 인증·Workspace, AI 공급자, 결제와 메일 등은 교체 가능한 외부 연동으로 Core 경계 밖에 둡니다.</p></div></article>
+          </div>
+
+          <div class="section-head">
+            <div><p class="kicker">RESPONSIBILITY MAP</p><h2>구조 · 상태 · 조치 · 기록을 분리</h2></div>
+            <p>Architecture는 구조, Health는 현재 상태, Operations는 조치, Logs는 사건과 변경 이력을 담당합니다.</p>
+          </div>
+          <div class="cards">
+            <article class="module featured"><span class="icon">◇</span><div><small>ARCHITECTURE</small><strong>어떻게 연결되어 있는가</strong><p>서비스 역할, 경계, 의존성, 인터페이스와 영향 범위를 설명합니다.</p></div></article>
+            <a class="module" href="#health"><span class="icon">♥</span><div><small>HEALTH</small><strong>지금 정상인가</strong><p>가동률, 응답시간, 오류, 외부 연동과 백업 등 현재 상태를 확인합니다.</p></div><b>→</b></a>
+            <article class="module"><span class="icon">⚙</span><div><small>OPERATIONS</small><strong>무엇을 조치할 것인가</strong><p>배포, 복구, 공급자 전환, 서비스 제어 등 실제 운영 행동의 책임 영역입니다.</p></div></article>
+            <a class="module" href="#ai-ops"><span class="icon">≡</span><div><small>LOGS</small><strong>무슨 일이 있었는가</strong><p>로그인, 관리자 조작, API 오류, 배포와 보안 이벤트를 추적합니다.</p></div><b>→</b></a>
+          </div>
+
+          <div class="section-head">
+            <div><p class="kicker">SAFE EXTERNAL VIEW</p><h2>외부 개발자 · 유지보수 공유 기준</h2></div>
+            <p>이 페이지 자체는 설명 가능한 구조 정보만 담습니다. 비밀값은 어떤 보기에서도 노출하지 않습니다.</p>
+          </div>
+          <div class="cards">
+            <article class="module"><span class="icon">A</span><div><small>ADMIN</small><strong>관리자 관점</strong><p>생태계 전체 경계, 책임, 서비스 관계와 운영 진입점을 파악합니다.</p></div></article>
+            <article class="module"><span class="icon">D</span><div><small>DEVELOPER</small><strong>개발 · 유지보수 관점</strong><p>담당 서비스, 연결 API, 의존성, 배포 경계와 Health·Logs 진입점을 기준으로 작업합니다.</p></div></article>
+            <article class="module featured"><span class="icon">S</span><div><small>SAFE SHARE</small><strong>외부 공유 관점</strong><p>역할·경계·인터페이스만 공유하며 API Key, Secret, 환경변수, DB 접속정보, 내부 IP, PII, 토큰, 결제 인증정보는 제외합니다.</p></div></article>
+          </div>
+
+          <p class="finance-note">외부 업체에 보여줄 때의 원칙: 담당 범위와 연결 관계는 충분히 설명하되, 실제 인증정보와 개인정보는 이 화면에 존재하지 않도록 유지합니다.</p>
+        </section>
+      </div>
+    </main>
+  </div>
+  <script src="admin-central-handoff.js"></script>
+  <script src="admin-authenticated-shell.js?v=20260830-menu-service-audit-2" defer data-ekodi-postauth="admin-compact.js admin-menu-layout.js admin-demand-loader.js"></script>
+</body>
+</html>

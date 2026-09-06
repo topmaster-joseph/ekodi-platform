@@ -29,11 +29,43 @@ test('checkSite uses an injected fetch implementation', async () => {
   assert.equal(result.responseTime, 140);
 });
 
-test('monitor covers official services, shared infrastructure, Marketing AI tenants, private/public sites and legacy aliases', () => {
+test('checkSite treats an expected protected auth response as healthy', async () => {
+  const onlineTicks = [100, 220];
+  const online = await checkSite(
+    ['connect-api-auth-gate', 'Connect API Auth Gate', 'example.com', 'https://example.com/protected', [401]],
+    {
+      fetchImpl: async () => ({ status: 401, body: null }),
+      clock: () => onlineTicks.shift(),
+      now: () => new Date('2026-08-05T00:00:00.000Z')
+    }
+  );
+  assert.equal(online.status, 'online');
+  assert.equal(online.httpStatus, 401);
+  assert.deepEqual(online.expectedStatuses, [401]);
+
+  const offlineTicks = [100, 180];
+  const offline = await checkSite(
+    ['connect-api-auth-gate', 'Connect API Auth Gate', 'example.com', 'https://example.com/protected', [401]],
+    {
+      fetchImpl: async () => ({ status: 404, body: null }),
+      clock: () => offlineTicks.shift(),
+      now: () => new Date('2026-08-05T00:00:00.000Z')
+    }
+  );
+  assert.equal(offline.status, 'offline');
+});
+
+test('monitor covers official services, shared infrastructure, Connect dependencies, Marketing AI tenants, private/public sites and legacy aliases', () => {
   const byId = new Map(SITE_DEFINITIONS.map(site => [site[0], site]));
   assert.equal(byId.get('auth')?.[2], 'auth.ekodi.kr');
+  assert.equal(byId.get('auth-client-js')?.[3], 'https://auth.ekodi.kr/client-auth.js');
+  assert.equal(byId.get('auth-router-js')?.[3], 'https://auth.ekodi.kr/auth-router.js');
   assert.equal(byId.get('ai-gateway')?.[2], 'ai.ekodi.kr');
   assert.equal(byId.get('shell-js')?.[3], 'https://shell.ekodi.kr/shell.js');
+  assert.equal(byId.get('community-health')?.[3], 'https://community.ekodi.kr/health');
+  assert.equal(byId.get('community-connect')?.[3], 'https://community.ekodi.kr/connect/');
+  assert.equal(byId.get('community-connect-app')?.[3], 'https://community.ekodi.kr/connect/app.js');
+  assert.deepEqual(byId.get('connect-api-auth-gate')?.[4], [401]);
   assert.equal(byId.get('marketing-publish-api')?.[3], 'https://marketing-publish-api.ekodi.kr/health');
   assert.equal(byId.get('publishing')?.[2], 'publishing.ekodi.kr');
   assert.equal(byId.get('books')?.[2], 'books.ekodi.kr');
@@ -41,13 +73,15 @@ test('monitor covers official services, shared infrastructure, Marketing AI tena
   assert.equal(byId.get('marketing-tenant-pizzamaru')?.[2], 'pizzamaru.ai.ekodi.kr');
   assert.equal(byId.get('marketing-tenant-yogurt')?.[2], 'yogurt.ai.ekodi.kr');
   assert.equal(byId.get('marketing-tenant-cgma')?.[3], 'https://cgma.ai.ekodi.kr/market-ai');
-  assert.equal(byId.get('marketing-private-cgma')?.[2], 'cgma.ekodi.kr');
-  assert.equal(byId.has('marketing-public-cgma'), false);
+  assert.equal(byId.has('marketing-private-cgma'), false);
+  assert.equal(byId.get('marketing-public-cgma')?.[2], 'cgma.or.kr');
+  assert.equal(byId.get('marketing-public-cgma')?.[3], 'https://cgma.or.kr/');
+  assert.ok([...byId.keys()].some(id => id.startsWith('marketing-alias-cgma-')));
   assert.equal(byId.get('prelaunch-mail')?.[2], 'mail.ekodi.kr');
   assert.equal(byId.get('prelaunch-live')?.[2], 'live.ekodi.kr');
   assert.equal(byId.get('prelaunch-cloud')?.[2], 'cloud.ekodi.kr');
   assert.ok([...byId.keys()].some(id => id.startsWith('marketing-alias-jadam-')));
-  assert.ok(SITE_DEFINITIONS.length >= 46);
+  assert.ok(SITE_DEFINITIONS.length >= 52);
 });
 
 test('shouldPublish ignores timing jitter but publishes state changes and refreshes stale data', () => {

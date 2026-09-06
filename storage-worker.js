@@ -1,4 +1,5 @@
-import { handleGoogleDriveStorageControl } from './google-drive-storage-control.js';
+import { WorkerEntrypoint } from 'cloudflare:workers';
+import { handleGoogleDriveStorageControl, startMarketingYouTubeOAuth, consumeMarketingYouTubeTicket, refreshGoogleAccessToken } from './google-drive-storage-control.js';
 import { handleR2StorageControl } from './r2-storage-control.js';
 import { handleStorageGateway } from './storage-gateway.js';
 import { applyApiSecurityHeaders, enforceEdgeSecurity } from './security-edge.js';
@@ -26,6 +27,7 @@ export default {
       if(allowedOrigins(env).includes(origin))headers.set('access-control-allow-origin',origin);
       return new Response(null,{status:204,headers});
     }
+    if(url.pathname==='/admin'||url.pathname==='/admin/')return Response.redirect('https://admin.ekodi.kr/?route=storage&source=drive.ekodi.kr',307);
     const guard=await enforceEdgeSecurity(request,env);if(guard)return withCors(guard,request,env);
     if(url.pathname==='/health')return json({ok:true,service:'ekodi-storage-control',provider:'google_drive',configured:Boolean(env.GOOGLE_DRIVE_CLIENT_SECRET&&env.STORAGE_CREDENTIAL_KEY),r2:{configured:Boolean(env.R2_BUCKET),binding:'R2_BUCKET'},primaryDomains:String(env.STORAGE_PRIMARY_GOOGLE_DOMAINS||'ekodi.kr').split(',')},200,request,env);
     if(url.pathname.startsWith('/api/storage/v1')){
@@ -43,3 +45,9 @@ export default {
     return json({error:'Storage Control endpoint not found'},404,request,env);
   }
 };
+
+export class GoogleOAuthBroker extends WorkerEntrypoint {
+  async startYouTubeOAuth(input={}) { return startMarketingYouTubeOAuth(this.env,input); }
+  async consumeYouTubeTicket(input={}) { return consumeMarketingYouTubeTicket(this.env,input); }
+  async refreshAccessToken(input={}) { return refreshGoogleAccessToken(this.env,input); }
+}

@@ -43,7 +43,7 @@ Service URLs are defined in code rather than editable through the browser. This 
 
 ## Monitoring
 
-The API Worker runs a Cloudflare scheduled job every ten minutes. It records checks in D1 and keeps 30 days of operational health history. The admin dashboard receives monitoring data through the API instead of reading the GitHub monitoring snapshot directly.
+The API Worker runs a Cloudflare scheduled job every ten minutes. It keeps the raw `service_checks` log for 30-day audit/history, while normal dashboard reads use compact `service_check_latest` and `service_check_hourly` read models. Database schema is owned by guarded additive migrations, not request-time `CREATE TABLE` or `CREATE INDEX` probes. The admin dashboard receives monitoring data through the API instead of reading the GitHub monitoring snapshot directly.
 
 The existing GitHub monitoring workflow can remain temporarily as an independent fallback during migration. It should no longer be the admin dashboard's system of record after v4 is accepted.
 
@@ -76,3 +76,28 @@ Each adapter should expose read-only statistics first. Write operations should b
 In short:
 
 > Separate services, connected operations, unified management.
+
+## Admin UI principles
+
+These rules are the source of truth for the Admin presentation layer. Feature-specific UI and CSS may refine them, but must not weaken them.
+
+1. **Readability before density.** Default Admin copy is at least 15px with approximately 1.5 line-height. Inputs on narrow or mobile layouts use at least 16px text. Essential labels and statuses must not depend on tiny text.
+2. **Large, predictable controls.** Primary and secondary actions are at least 40px high. Navigation and mobile touch targets should be 44 to 48px where practical.
+3. **Clear information hierarchy.** Use page title → section title → control label/body → supplemental metadata. Do not use color alone to communicate priority or state.
+4. **High-contrast working surfaces.** Prefer a light neutral page background, white working panels, readable dark text, and clearly visible borders and focus states. Muted text must remain legible.
+5. **Forms are explicit.** Inputs, selects, and textareas require a visible label or accessible name, visible keyboard focus, readable borders, and clear success/error copy. Avoid placeholder-only instructions.
+6. **Tables favor scanning, not compression.** Use readable cell padding and headers. Allow wrapping or switch to stacked/mobile presentation rather than shrinking important text into narrow columns.
+7. **Operator language, not implementation language.** Prefer plain statuses such as `준비 완료`, `연결됨`, `확인 필요` over internal enums or developer terminology. Korean Admin screens avoid unnecessary English.
+8. **Primary task first.** Put the operator's next action and current state above diagnostics. Advanced, debug, provider, and implementation details remain secondary or demand-loaded.
+9. **Status is redundant by design.** Pair color with text, badge, or icon so status remains understandable without color perception.
+10. **Responsive without squeeze.** Essential controls and content must not be horizontally clipped. Mobile forms use 16px or larger text and expand controls to full width when that improves operation.
+11. **Accessibility is part of done.** Keyboard focus, semantic headings, accessible names, and non-hover-only critical actions are required.
+12. **Readability must preserve the thin shell.** Styling and UX improvements must not pull heavy feature runtimes, service maps, diagnostics, or AI orchestration into startup.
+13. **Release-gated.** Admin UI changes must pass build/CI and the guarded Admin production gate before promotion.
+
+### UI rule management
+
+- This section is the canonical Admin UI rulebook in source control.
+- When a design decision materially changes these principles, update this section in the same change so documentation and production UI do not drift.
+- Feature-level exceptions must be intentional, documented near the feature, and must not reduce accessibility, security, responsiveness, or startup performance.
+- New Admin subservices should inherit these principles by default rather than introducing a separate visual system.

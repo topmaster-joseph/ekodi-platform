@@ -1,0 +1,8 @@
+{
+  "id": "2026-08-29-workspace-paths-v1.1",
+  "date": "2026-08-29",
+  "status": "superseded",
+  "supersededBy": "EKODI-CONSTITUTION-2026-09-03-V1.5-ORGLESS-WORKSPACE-ROUTING",
+  "summary": "Historical typed workspace-path amendment. Its public route grammar is retired and intentionally omitted from the current source tree. Full prior text remains recoverable from Git history.",
+  "currentRule": "Public workspace routing is slug-rooted; workspace kind is internal metadata bound to workspace_id."
+}

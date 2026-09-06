@@ -1,17 +1,18 @@
 const SUPABASE_URL='https://renzehysxirjilvdxacv.supabase.co';
 const PUBLISHABLE_KEY='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
 const IDENTITY=`${SUPABASE_URL}/functions/v1/identity-api`;
+const WORKSPACE_KEY_RE=/^[a-z]+:[a-zA-Z0-9:_-]+$/;
 const timeout=(promise,ms,label)=>Promise.race([promise,new Promise((_,reject)=>setTimeout(()=>reject(new Error(label||'timeout')),ms))]);
 function fetchTimed(url,options={},ms=10000){const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),ms);return fetch(url,{...options,signal:controller.signal}).finally(()=>clearTimeout(timer))}
 
 const realms={
   portal:{name:'EKODI',returnTo:'https://ekodi.kr/',open:true,kind:'portal'},
   'my':{name:'My EKODI',returnTo:'https://my.ekodi.kr/',open:true,kind:'my'},
-  community:{name:'EKODI Community',returnTo:'https://community.ekodi.kr/',open:true,kind:'community'},
+  community:{name:'Community',returnTo:'https://community.ekodi.kr/',open:true,kind:'community'},
   church:{name:'EKODI Church',returnTo:'https://church.ekodi.kr/',open:true,kind:'church'},
   biz:{name:'EKODI Biz',returnTo:'https://biz.ekodi.kr/',open:true,kind:'biz'},
   trade:{name:'EKODI Trading',returnTo:'https://trade.ekodi.kr/',open:true,kind:'trade'},
-  mall:{name:'EKODI Mall',returnTo:'https://mall.ekodi.kr/',open:true,kind:'mall'},
+  mall:{name:'EKODI Mall',returnTo:'https://ekodi.kr/ekodibiz/mall',origins:['https://ekodi.kr'],open:true,kind:'mall'},
   pay:{name:'EKODI Pay',returnTo:'https://pay.ekodi.kr/',open:true,kind:'pay'},
   books:{name:'EKODI Books',returnTo:'https://books.ekodi.kr/',open:true,kind:'books'},
   lab:{name:'EKODI Lab',returnTo:'https://lab.ekodi.kr/',open:true,kind:'lab'},
@@ -19,24 +20,29 @@ const realms={
   edu:{name:'EKODI Education',returnTo:'https://edu.ekodi.kr/',open:true,kind:'edu'},
   media:{name:'EKODI Media',returnTo:'https://media.ekodi.kr/',open:true,kind:'media'},
   social:{name:'EKODI Social',returnTo:'https://social.ekodi.kr/',open:true,kind:'social'},
-  energy:{name:'EKODI Energy AI',returnTo:'https://energy.ekodi.kr/',open:true,kind:'energy'},
+  energy:{name:'Energy AI',returnTo:'https://energy.ekodi.kr/',open:true,kind:'energy'},
   work:{name:'EKODI Work',returnTo:'https://work.ekodi.kr/',open:true,kind:'work'},
   messenger:{name:'EKODI Messenger',returnTo:'https://messenger.ekodi.kr/',open:true,kind:'messenger'},
   invest:{name:'EKODI Investment',returnTo:'https://invest.ekodi.kr/',open:true,kind:'invest'},
   support:{name:'EKODI Support AI',returnTo:'https://support.ekodi.kr/',open:true,kind:'support'},
-  publishing:{name:'EKODI Publishing',returnTo:'https://publishing.ekodi.kr/',open:true,kind:'publishing'},
+  publishing:{name:'Publishing',returnTo:'https://publishing.ekodi.kr/',open:true,kind:'publishing'},
   money:{name:'EKODI Money',returnTo:'https://money.ekodi.kr/',open:true,kind:'money'},
   mail:{name:'EKODI Mail',returnTo:'https://mail.ekodi.kr/',open:true,kind:'mail'},
   live:{name:'EKODI Live',returnTo:'https://live.ekodi.kr/',open:true,kind:'live'},
   cloud:{name:'EKODI Cloud',returnTo:'https://cloud.ekodi.kr/',open:true,kind:'cloud'},
   cafe:{name:'EKODI Cafe',returnTo:'https://cafe.ekodi.kr/',open:true,kind:'cafe'},
-  'cgma-client':{name:'청계상권 고객관리',returnTo:'https://cgma.ekodi.kr/client/',origins:['https://cgma.ekodi.kr'],open:false,kind:'cgma-client'},
+  'cgma-client':{name:'청계상권 고객관리',returnTo:'https://ekodi.kr/cgma/client/',origins:['https://ekodi.kr','https://cgma.or.kr','https://cgma.ekodi.kr'],open:false,kind:'cgma-client'},
   'jadam-client':{name:'자담치킨 목포대점 고객관리',returnTo:'https://jadam.ai.ekodi.kr/',origins:['https://jadam.ai.ekodi.kr','https://jadam.ekodi.kr'],open:false,kind:'jadam-client'},
   'pizzamaru-client':{name:'피자마루 목포대점 고객관리',returnTo:'https://pizzamaru.ai.ekodi.kr/',origins:['https://pizzamaru.ai.ekodi.kr','https://pizzamaru.ekodi.kr'],open:false,kind:'pizzamaru-client'},
   'yogurt-client':{name:'요거트퍼플 목포대점 고객관리',returnTo:'https://yogurt.ai.ekodi.kr/',origins:['https://yogurt.ai.ekodi.kr','https://yogurt.ekodi.kr'],open:false,kind:'yogurt-client'}
 };
 const params=new URLSearchParams(location.search);
 const site=params.get('site')||'portal';
+const DIRECT_LOGIN=params.get('direct')==='1'&&params.get('manage')!=='1'&&params.get('review')!=='1';
+const EXPECTED_ACCOUNT=/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(String(params.get('expected_account')||'').trim())?String(params.get('expected_account')).trim().toLowerCase():'';
+const FORCE_ACCOUNT=params.get('force_account')==='1'&&Boolean(EXPECTED_ACCOUNT);
+const requestedWorkspaceRaw=String(params.get('workspace')||'').trim();
+const REQUESTED_WORKSPACE=requestedWorkspaceRaw.length<=180&&WORKSPACE_KEY_RE.test(requestedWorkspaceRaw)?requestedWorkspaceRaw:'';
 async function manifestRealm(id){
   if(!id)return null;
   try{
@@ -67,7 +73,8 @@ function safeReturn(raw){
     const target=new URL(raw);
     const allowedOrigins=new Set(config.origins||[fallback.origin]);
     const hostname=target.hostname.toLowerCase();
-    const internalEkodi=hostname==='ekodi.kr'||hostname.endsWith('.ekodi.kr');
+    const cgmaPlatform=config.kind==='cgma-client'&&target.origin==='https://ekodi.kr'&&(target.pathname==='/cgma'||target.pathname.startsWith('/cgma/'));
+    const internalEkodi=config.kind==='cgma-client'?cgmaPlatform:(hostname==='ekodi.kr'||hostname.endsWith('.ekodi.kr'));
     if(target.protocol!=='https:'||target.username||target.password||(!allowedOrigins.has(target.origin)&&!internalEkodi))return fallback.href;
     target.hash='';
     return target.href;
@@ -98,6 +105,7 @@ try{
 const sb=createClient(SUPABASE_URL,PUBLISHABLE_KEY,{auth:{detectSessionInUrl:true,persistSession:true}});
 let routing=false;
 let handlingCredential=false;
+let lastHandoffError=null;
 
 $('serviceName').textContent=config.name;
 $('serviceBadge').textContent='EKODI';
@@ -141,6 +149,8 @@ function loadGoogleLibrary(){
 function myEntryTarget(){
   const target=new URL('https://my.ekodi.kr/');
   if(site&&site!=='portal'&&site!=='my')target.searchParams.set('from',site);
+  if(site&&site!=='portal'&&site!=='my')target.searchParams.set('return_to',RETURN_TO);
+  if(REQUESTED_WORKSPACE)target.searchParams.set('workspace',REQUESTED_WORKSPACE);
   return target;
 }
 function routeTarget(proof){
@@ -152,6 +162,7 @@ function routeTarget(proof){
 async function handoffExistingSession(s){
   if(routing)return true;
   routing=true;
+  lastHandoffError=null;
   $('serviceBadge').textContent='인증 완료';
   show('googleButtonHost',false);show('googleRetry',false);show('cancelSignedOut',false);
   notice('로그인이 확인되었습니다. 서비스로 이동합니다.');
@@ -161,9 +172,24 @@ async function handoffExistingSession(s){
     return true;
   }catch(error){
     routing=false;
+    lastHandoffError=error;
     console.error('central session handoff',error);
     return false;
   }
+}
+function recoverableStaleSession(error){
+  return Boolean(error&&(error.status===401||error.status===409||error.message==='login_required'||error.message==='session_identity_mismatch'));
+}
+async function clearStaleSession(){
+  routing=false;
+  try{
+    await timeout(sb.auth.signOut({scope:'local'}),5000,'stale_session_clear_timeout');
+  }catch(error){
+    console.warn('stale central session signout',error);
+    try{localStorage.removeItem('sb-renzehysxirjilvdxacv-auth-token')}catch{}
+  }
+  lastHandoffError=null;
+  routing=false;
 }
 function showRetry(message){
   routing=false;
@@ -198,9 +224,15 @@ async function renderGoogle(){
   $('serviceBadge').textContent='로그인';notice('Google 계정으로 계속해 주세요.');
   try{
     const [challenge]=await Promise.all([identity('/challenge',{method:'POST'}),loadGoogleLibrary()]);
-    window.google.accounts.id.initialize({client_id:challenge.clientId,nonce:challenge.nonce,auto_select:false,use_fedcm_for_button:true,button_auto_select:false,callback:r=>void handleCredential(r,challenge)});
+    window.google.accounts.id.disableAutoSelect?.();
+    window.google.accounts.id.initialize({client_id:challenge.clientId,nonce:challenge.nonce,auto_select:false,use_fedcm_for_button:false,button_auto_select:false,ux_mode:'popup',context:'signin',...(EXPECTED_ACCOUNT?{login_hint:EXPECTED_ACCOUNT}:{}),callback:r=>void handleCredential(r,challenge)});
     window.google.accounts.id.renderButton(host,{type:'standard',theme:'outline',size:'large',text:'continue_with',shape:'rectangular',logo_alignment:'left',width:Math.min(390,Math.max(260,host.clientWidth||340)),use_fedcm_for_button:true});
-    notice('처음 한 번만 Google 계정으로 본인을 확인합니다.');
+    if(DIRECT_LOGIN){
+      notice('Google 계정 선택창을 여는 중입니다.');
+      window.google.accounts.id.prompt(notification=>{
+        if(notification?.isNotDisplayed?.()||notification?.isSkippedMoment?.())notice('Google 계정 선택창을 바로 열 수 없습니다. 아래 Google 버튼으로 계속해 주세요.');
+      });
+    }else notice('처음 한 번만 Google 계정으로 본인을 확인합니다.');
   }catch(error){
     console.error('prepare central identity',error);
     showRetry('Google 로그인을 준비하지 못했습니다. 다시 시도해 주세요.');
@@ -213,8 +245,16 @@ async function prepare(){
   let existing=null;
   try{existing=await session()}catch(error){console.warn('central session bootstrap',error)}
   if(existing){
+    if(FORCE_ACCOUNT&&String(existing.user?.email||'').trim().toLowerCase()!==EXPECTED_ACCOUNT){await clearStaleSession();await renderGoogle();return}
     if(await handoffExistingSession(existing))return;
-    showRetry('기존 로그인 연결을 완료하지 못했습니다. 다시 시도해 주세요.');
+    if(recoverableStaleSession(lastHandoffError)){
+      $('serviceBadge').textContent='복구 중';
+      notice('이전 로그인 연결을 새로 고칩니다. Google 계정으로 다시 확인해 주세요.');
+      await clearStaleSession();
+      await renderGoogle();
+      return;
+    }
+    showRetry('기존 로그인 연결을 완료하지 못했습니다. 네트워크를 확인한 뒤 다시 시도해 주세요.');
     return;
   }
   await renderGoogle();

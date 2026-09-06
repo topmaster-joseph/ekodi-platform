@@ -3,6 +3,7 @@ const PUBLISHABLE_KEY='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
 const IDENTITY=`${SUPABASE_URL}/functions/v1/identity-api`;
 const HANDOFF=`${SUPABASE_URL}/functions/v1/business-handoff-api`;
 const BUSINESS_HOME='https://business.ekodi.kr/';
+const BUSINESS_WORKSPACES=new Set(['ekodibiz','jadam']);
 const params=new URLSearchParams(location.search);
 const $=id=>document.getElementById(id);
 const show=(id,on=true)=>$(id)?.classList.toggle('hide',!on);
@@ -14,14 +15,19 @@ function safeReturn(raw){
   try{
     const target=new URL(raw);
     if(target.protocol!=='https:'||target.username||target.password||target.origin!=='https://business.ekodi.kr')return BUSINESS_HOME;
-    target.hash='';
+    target.hash='';target.searchParams.delete('problem');
     return target.href;
   }catch{return BUSINESS_HOME}
 }
+function workspaceFromReturn(raw){
+  try{const path=new URL(raw).pathname.replace(/^\/+|\/+$/g,'').toLowerCase();return BUSINESS_WORKSPACES.has(path)?path:null}catch{return null}
+}
 const RETURN_TO=safeReturn(params.get('return_to')||params.get('returnTo'));
+const REQUESTED_WORKSPACE=workspaceFromReturn(RETURN_TO);
+const REQUESTED_LABEL=REQUESTED_WORKSPACE==='jadam'?'자담치킨 목포대점':REQUESTED_WORKSPACE==='ekodibiz'?'에코디비즈':null;
 
-$('serviceName').textContent='EKODI Business OS';
-$('signedOutCopy').textContent='EKODI 통합 로그인은 무료회원 신원을 먼저 확인하고, 사업장 데이터 권한은 별도로 적용합니다.';
+$('serviceName').textContent=REQUESTED_LABEL?`Business OS · ${REQUESTED_LABEL}`:'Business OS';
+$('signedOutCopy').textContent=REQUESTED_LABEL?`${REQUESTED_LABEL} 공간으로 돌아가기 위해 Google 계정으로 무료회원 신원을 확인합니다. 실제 사업장 데이터는 해당 공간 권한이 있을 때만 열립니다.`:'EKODI 통합 로그인은 무료회원 신원을 먼저 확인하고, 사업장 데이터 권한은 별도로 적용합니다.';
 show('membershipPanel',false);show('identityPanel',false);show('requestActions',false);show('freeActions',false);show('approvedActions',false);show('workspacePanel',false);show('signedIn',false);show('signedOut',true);
 notice('authStatus','로그인 상태를 확인하고 있습니다.');
 
@@ -77,11 +83,12 @@ function redirectWithToken(tokenHash,type='email',workspace=null){
   location.assign(target.href);
 }
 async function tryBusinessHandoff(s){
-  const response=await fetchTimed(HANDOFF,{method:'POST',headers:{apikey:PUBLISHABLE_KEY,authorization:`Bearer ${s.access_token}`,'content-type':'application/json'},body:'{}',cache:'no-store'},10000);
+  const body=REQUESTED_WORKSPACE?{workspace:REQUESTED_WORKSPACE}:{};
+  const response=await fetchTimed(HANDOFF,{method:'POST',headers:{apikey:PUBLISHABLE_KEY,authorization:`Bearer ${s.access_token}`,'content-type':'application/json'},body:JSON.stringify(body),cache:'no-store'},10000);
   const text=await response.text();let data={};try{data=text?JSON.parse(text):{}}catch{}
   if(response.status===403)return false;
   if(!response.ok||!data.tokenHash)throw new Error(data.error||`business_handoff_${response.status}`);
-  redirectWithToken(data.tokenHash,data.type||'email',data.workspace||'ekodibiz');
+  redirectWithToken(data.tokenHash,data.type||'email',data.workspace||REQUESTED_WORKSPACE||'ekodibiz');
   return true;
 }
 async function freeIdentityHandoff(s){
@@ -93,10 +100,10 @@ async function routeSession(s){
   routing=true;
   $('serviceBadge').textContent='인증 완료';
   show('signedIn',false);show('signedOut',true);show('googleButtonHost',false);show('googleRetry',false);show('cancelSignedOut',false);
-  notice('authStatus','로그인이 확인되었습니다. Business OS로 이동합니다.');
+  notice('authStatus',REQUESTED_LABEL?`${REQUESTED_LABEL} 공간 권한을 확인하고 있습니다.`:'로그인이 확인되었습니다. Business OS로 이동합니다.');
   try{
     if(await tryBusinessHandoff(s))return;
-    notice('authStatus','EKODI 무료회원으로 Business OS에 연결합니다.');
+    notice('authStatus',REQUESTED_LABEL?`${REQUESTED_LABEL} 데이터 권한은 확인되지 않았습니다. 무료회원으로 서비스 안내 화면에 연결합니다.`:'EKODI 무료회원으로 Business OS에 연결합니다.');
     await freeIdentityHandoff(s);
   }catch(error){
     console.error('business session route',error);

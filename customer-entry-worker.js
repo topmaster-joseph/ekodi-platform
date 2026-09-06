@@ -13,6 +13,9 @@ import { handleBooksPipelineRequest } from './books-pipeline-control.js';
 import { handleBooksRoyaltyRequest } from './books-royalty-control.js';
 import { handleCommunityReportsRequest, runCommunityReportSchedule } from './community-reports-control.js';
 import { handleAffiliateRequest } from './affiliate-control.js';
+import { handleOfferRegistryRequest } from './offer-registry-control.js';
+import { handleMallAdminRequest } from './mall-admin-control.js';
+import { runAffiliateAutomation } from './coupang-partners-automation.js';
 import { handleSocialRegistry } from './social-registry-api.js';
 
 const LEGACY_ADMIN_PASSWORD_PATHS = new Set([
@@ -135,6 +138,32 @@ export default {
       }
     }
 
+    if (path.startsWith('/api/mall/admin')) {
+      try {
+        const response = await handleMallAdminRequest(request, env);
+        if (response) return response;
+      } catch (error) {
+        console.error('Mall Admin API error', error);
+        return new Response(JSON.stringify({ error: '에코디몰 운영 API 처리 중 오류가 발생했습니다.', code: 'MALL_ADMIN_API_ERROR' }), {
+          status: 500,
+          headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', 'x-content-type-options': 'nosniff' },
+        });
+      }
+    }
+
+    if (path.startsWith('/api/offers')) {
+      try {
+        const response = await handleOfferRegistryRequest(request, env);
+        if (response) return response;
+      } catch (error) {
+        console.error('Offer Registry API error', error);
+        return new Response(JSON.stringify({ error: 'EKODI Offer Registry 처리 중 오류가 발생했습니다.', code: 'OFFER_REGISTRY_API_ERROR' }), {
+          status: 500,
+          headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', 'x-content-type-options': 'nosniff' },
+        });
+      }
+    }
+
     if (path.startsWith('/api/affiliate') && request.method !== 'OPTIONS') {
       try {
         const response = await handleAffiliateRequest(request, env);
@@ -243,6 +272,7 @@ export default {
   async scheduled(controller, env, ctx) {
     ctx.waitUntil(runCommunityReportSchedule(env).catch(error => console.error('Community report schedule failed', error)));
     ctx.waitUntil(runMembershipBillingSchedule(env).catch(error => console.error('Membership billing schedule failed', error)));
+    ctx.waitUntil(runAffiliateAutomation(env, { reason: 'schedule' }).catch(error => console.error('EKODI Mall automatic curation schedule failed', error)));
     return apiWorker.scheduled(controller, env, ctx);
   },
 };

@@ -1,0 +1,59 @@
+name: Verify EKODI Mall Footer
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'mall.html'
+      - 'ekodi-shell-injector.js'
+      - 'config/user-footer.js'
+      - '.github/workflows/verify-mall-footer.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verify-ekodi-mall-footer
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Verify production Mall has only the shared EKODI footer
+        shell: bash
+        env:
+          VERIFY_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          url="https://ekodi.kr/ekodibiz/mall?footer_guard=${VERIFY_SHA}"
+          for attempt in $(seq 1 12); do
+            code=$(curl -L -sS --connect-timeout 5 --max-time 20 -o /tmp/mall.html -w '%{http_code}' "$url" || true)
+            if [ "$code" = "200" ]; then
+              break
+            fi
+            if [ "$attempt" = "12" ]; then
+              echo "Mall production did not return HTTP 200" >&2
+              exit 1
+            fi
+            sleep 5
+          done
+
+          local_footer='필요한 상품을 가볍게 발견하고 판매처에서 안전하게 확인하세요.'
+          if grep -Fq "$local_footer" /tmp/mall.html; then
+            echo 'Duplicate Mall-local footer is still present in production.' >&2
+            exit 1
+          fi
+
+          shared_count=$(grep -o 'data-ekodi-user-footer="v[0-9][0-9]*"' /tmp/mall.html | wc -l | tr -d ' ')
+          footer_count=$(grep -oi '<footer\b' /tmp/mall.html | wc -l | tr -d ' ')
+          if [ "$shared_count" != "1" ] || [ "$footer_count" != "1" ]; then
+            echo "Expected exactly one shared footer; shared=$shared_count total=$footer_count" >&2
+            exit 1
+          fi
+
+          grep -Fq '운영주체' /tmp/mall.html
+          grep -Fq '에코디비즈' /tmp/mall.html
+          echo "Mall footer verified: local=0 shared=1 total=1"

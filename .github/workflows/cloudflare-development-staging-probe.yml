@@ -1,0 +1,38 @@
+name: Cloudflare Development Staging Probe
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/cloudflare-development-staging-probe.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Probe Development workers.dev endpoints
+        shell: bash
+        run: |
+          set -euo pipefail
+          urls=(
+            'https://ekodi-auth-api-staging.ekodi-development.workers.dev/health'
+            'https://ekodi-finance-api-staging.ekodi-development.workers.dev/health'
+            'https://ekodi-marketing-domain-api-staging.ekodi-development.workers.dev/health'
+          )
+          for url in "${urls[@]}"; do
+            headers=$(mktemp)
+            body=$(mktemp)
+            code=$(curl -sS -D "$headers" -o "$body" -w '%{http_code}' --connect-timeout 5 --max-time 15 "$url" || true)
+            auth=$(awk 'BEGIN{IGNORECASE=1} /^www-authenticate:/{sub(/\r$/,""); print; exit}' "$headers")
+            loc=$(awk 'BEGIN{IGNORECASE=1} /^location:/{sub(/\r$/,""); print; exit}' "$headers")
+            echo "PROBE $url status=$code ${auth:-no-auth-header} ${loc%%\?*}"
+            if [[ "$code" == '200' ]]; then
+              head -c 500 "$body"; echo
+            fi
+            rm -f "$headers" "$body"
+          done

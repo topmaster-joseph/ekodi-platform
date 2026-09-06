@@ -1,0 +1,47 @@
+name: Validate EKODI Mall Shared Site Contract
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths: &mall_paths
+      - 'mall.html'
+      - 'mall.css'
+      - 'mall.js'
+      - 'config/ekodi-service-urls.json'
+      - '.github/workflows/release-ekodi-mall.yml'
+  push:
+    branches: [main]
+    paths: *mall_paths
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - name: Validate canonical Mall source
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check mall.js
+          test -f config/ekodi-service-urls.json
+          grep -Fq 'https://ekodi.kr/ekodibiz/mall' config/ekodi-service-urls.json
+          grep -Fq '<link rel="canonical" href="https://ekodi.kr/ekodibiz/mall">' mall.html
+          if grep -Eq 'https://(ekodi-mall\.pages\.dev|mall\.ekodi\.kr)' mall.html mall.js 2>/dev/null; then
+            echo 'Legacy Mall public URL detected in release source.'
+            exit 1
+          fi
+
+      - name: Enforce validation-only ownership
+        shell: bash
+        run: |
+          set -euo pipefail
+          ! grep -Eq 'gh +workflow +run +deploy-site-core\.yml|guarded-worker-release\.mjs|wrangler(@[^ ]+)? +deploy|npm +run +deploy:site' .github/workflows/release-ekodi-mall.yml
+          echo 'Mall changes are deployed directly by deploy-site-core.yml; no redispatch is permitted.'

@@ -10,7 +10,7 @@ nav?.querySelectorAll('a').forEach(a=>a.addEventListener('click',()=>{nav.classL
 
 function installPublishingEntry(){
   if(nav&&!nav.querySelector('a[href="/publishing/"]')){
-    const link=document.createElement('a');link.href='/publishing/';link.textContent='에코디출판';
+    const link=document.createElement('a');link.href='/publishing/';link.textContent='출판';
     const ekodi=nav.querySelector('a[href^="https://ekodi.kr"]');
     if(ekodi)nav.insertBefore(link,ekodi);else nav.append(link);
   }
@@ -20,11 +20,11 @@ function installPublishingEntry(){
       const section=document.createElement('section');section.id='publishing-service-callout';section.className='section shell';
       const head=document.createElement('div');head.className='section-head ruled';
       const titleWrap=document.createElement('div');
-      const kicker=document.createElement('p');kicker.className='kicker';kicker.textContent='에코디출판';
+      const kicker=document.createElement('p');kicker.className='kicker';kicker.textContent='출판';
       const title=document.createElement('h2');title.textContent='출판상담과 출판대행';titleWrap.append(kicker,title);
       const copy=document.createElement('div');
       const p=document.createElement('p');p.textContent='상담만, EPUB만, 유통만 선택할 수 있습니다. 한 권 단위 요금과 기능별 가격을 공개하고 필요한 범위만 맡깁니다.';
-      const link=document.createElement('a');link.href='/publishing/';link.className='text-link';link.textContent='에코디출판 보기 ↗';
+      const link=document.createElement('a');link.href='/publishing/';link.className='text-link';link.textContent='출판 보기 ↗';
       copy.append(p,link);head.append(titleWrap,copy);section.append(head);method.insertAdjacentElement('afterend',section);
     }
   }

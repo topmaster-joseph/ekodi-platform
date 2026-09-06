@@ -48,7 +48,6 @@ jobs:
 
           upsert_cname "church.ekodi.kr" "ekodi-church.pages.dev"
           upsert_cname "lab.ekodi.kr" "ekodilab.pages.dev"
-          upsert_cname "mall.ekodi.kr" "ekodi-mall.pages.dev"
 
       - name: Confirm Cloudflare activation and HTTPS
         shell: bash
@@ -59,7 +58,7 @@ jobs:
           for attempt in $(seq 1 12); do
             echo "activation-check=$attempt"
             all_ok=1
-            for spec in "ekodi-church:church.ekodi.kr" "ekodilab:lab.ekodi.kr" "ekodi-mall:mall.ekodi.kr"; do
+            for spec in "ekodi-church:church.ekodi.kr" "ekodilab:lab.ekodi.kr"; do
               project="${spec%%:*}"
               domain="${spec#*:}"
               result=$(curl -fsS -H "Authorization: Bearer $CF_API_TOKEN" "$api/accounts/$CF_ACCOUNT_ID/pages/projects/$project/domains/$domain" || true)

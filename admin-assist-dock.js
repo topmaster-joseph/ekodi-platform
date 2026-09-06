@@ -54,6 +54,7 @@
     document.addEventListener('keydown',event=>{if(event.key==='Escape'&&state.open)setOpen(false)});
     window.addEventListener('ekodi-nav-changed',updateContext);
     window.addEventListener('hashchange',updateContext);
+    window.addEventListener('ekodi-admin-capability-requested',event=>{const capability=event.detail?.capability;if(!capability)return;setOpen(true);setTab('ai');submitAi(`${capability.name} (${capability.id}) Capability를 현재 관리자 화면 맥락에서 사용해줘. ${capability.description||''}`)});
     window.addEventListener('focus',()=>{if(document.visibilityState==='visible')refreshSummary()});
     document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')refreshSummary()});
     setTab(state.tab,false);setOpen(Boolean(state.open),false);updateContext();refreshSummary();

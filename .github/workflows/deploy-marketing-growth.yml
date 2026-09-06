@@ -1,0 +1,168 @@
+name: Deploy Marketing Growth Connector
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'marketing-growth-worker.js'
+      - 'marketing-growth-entry.js'
+      - 'mall-promotion-automation.js'
+      - 'mall-sales-intelligence.js'
+      - 'wrangler.marketing-growth.toml'
+      - 'migrations/0028_marketing_growth_connectors.sql'
+      - 'migrations/0048_ekodi_mall_promotion_automation.sql'
+      - 'migrations/0049_ekodi_mall_active_sales_ai.sql'
+      - 'migrations/0050_ekodibiz_marketing_internal_entitlement.sql'
+      - 'migrations/0064_marketing_channel_settings.sql'
+      - 'test/ekodi-mall-promotion-automation.test.mjs'
+      - 'test/marketing-growth-oauth.test.mjs'
+      - 'test/ekodimall-channel-settings-admin.test.mjs'
+      - 'test/ekodibiz-youtube-channel-selection.test.mjs'
+      - 'test/ekodi-mall-active-sales-ai.test.mjs'
+      - '.github/workflows/deploy-marketing-growth.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-marketing-growth-production
+  cancel-in-progress: false
+
+env:
+  WRANGLER_VERSION: '4.119.0'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      META_APP_ID: ${{ secrets.META_APP_ID }}
+      META_APP_SECRET: ${{ secrets.META_APP_SECRET }}
+      THREADS_APP_ID: ${{ secrets.THREADS_APP_ID }}
+      THREADS_APP_SECRET: ${{ secrets.THREADS_APP_SECRET }}
+      GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET || secrets.MAIL_GOOGLE_CLIENT_SECRET }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      NAVER_API_HUB_CLIENT_ID: ${{ secrets.NAVER_API_HUB_CLIENT_ID }}
+      NAVER_API_HUB_CLIENT_SECRET: ${{ secrets.NAVER_API_HUB_CLIENT_SECRET }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - name: Validate central OAuth, promotion and active sales engines
+        run: |
+          set -euo pipefail
+          node --check marketing-growth-worker.js
+          node --check marketing-growth-entry.js
+          node --check mall-promotion-automation.js
+          node --check mall-sales-intelligence.js
+          node --test test/ekodi-mall-promotion-automation.test.mjs test/ekodi-mall-active-sales-ai.test.mjs test/marketing-growth-oauth.test.mjs test/ekodimall-channel-settings-admin.test.mjs test/ekodibiz-youtube-channel-selection.test.mjs
+          grep -Fq 'encryptedVault:true' marketing-growth-worker.js
+          grep -Fq 'oauthBroker:true' marketing-growth-worker.js
+          grep -Fq 'youtubeConfigured' marketing-growth-worker.js
+          grep -Fq 'GOOGLE_OAUTH_BROKER' marketing-growth-worker.js
+          grep -Fq 'MARKETING_OAUTH_VAULT_KEY' marketing-growth-worker.js
+          grep -Fq 'binding = "GOOGLE_OAUTH_BROKER"' wrangler.marketing-growth.toml
+          grep -Fq 'entrypoint = "GoogleOAuthBroker"' wrangler.marketing-growth.toml
+          grep -Fq 'paidActivation:false' marketing-growth-worker.js
+          grep -Fq 'mallPromotionAutomation' marketing-growth-entry.js
+          grep -Fq 'mallSalesIntelligence' marketing-growth-entry.js
+          grep -Fq "const SUBJECT_KEY = 'ekodibiz'" mall-promotion-automation.js
+          grep -Fq "strategy:'opportunity_first'" mall-promotion-automation.js
+          grep -Fq 'affiliate_promotion_runs' migrations/0048_ekodi_mall_promotion_automation.sql
+          grep -Fq 'affiliate_growth_opportunities' migrations/0049_ekodi_mall_active_sales_ai.sql
+          grep -Fq 'affiliate_product_performance_daily' migrations/0049_ekodi_mall_active_sales_ai.sql
+          grep -Fq "'tenant','ekodibiz','marketing','auto','active'" migrations/0050_ekodibiz_marketing_internal_entitlement.sql
+          grep -Fq 'token_ciphertext TEXT NOT NULL' migrations/0028_marketing_growth_connectors.sql
+          if grep -Eqi '(access_token|refresh_token|bearer_token)[[:space:]]+TEXT' migrations/0028_marketing_growth_connectors.sql migrations/0048_ekodi_mall_promotion_automation.sql migrations/0049_ekodi_mall_active_sales_ai.sql migrations/0050_ekodibiz_marketing_internal_entitlement.sql migrations/0064_marketing_channel_settings.sql; then
+            echo 'Plain provider token columns are forbidden.'
+            exit 1
+          fi
+
+      - name: Verify Cloudflare credentials
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+
+      - name: Apply encrypted connector, promotion and sales intelligence schemas
+        run: npx --yes wrangler@${WRANGLER_VERSION} d1 migrations apply ekodi-auth --remote --config wrangler.marketing-growth.toml
+
+      - name: Verify growth schemas
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@${WRANGLER_VERSION} d1 execute ekodi-auth --remote --config wrangler.marketing-growth.toml \
+            --command "SELECT name FROM sqlite_master WHERE type='table' AND name IN ('marketing_oauth_states','marketing_oauth_connections','marketing_growth_campaigns','affiliate_promotion_runs','affiliate_promotion_visits','affiliate_demand_signals','affiliate_product_performance_daily','affiliate_growth_opportunities','affiliate_growth_strategy_runs','marketing_channel_settings') ORDER BY name;" \
+            --json > /tmp/growth-schema.json
+          for table in marketing_oauth_states marketing_oauth_connections marketing_growth_campaigns affiliate_promotion_runs affiliate_promotion_visits affiliate_demand_signals affiliate_product_performance_daily affiliate_growth_opportunities affiliate_growth_strategy_runs marketing_channel_settings; do
+            grep -Fq "$table" /tmp/growth-schema.json
+          done
+
+      - name: Deploy growth connector worker
+        run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.marketing-growth.toml
+
+      - name: Ensure persistent Marketing OAuth vault key
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@${WRANGLER_VERSION} secret list --config wrangler.marketing-growth.toml > /tmp/marketing-secret-list.txt
+          if grep -Fq 'MARKETING_OAUTH_VAULT_KEY' /tmp/marketing-secret-list.txt; then
+            echo 'Marketing OAuth vault key already exists; keeping it unchanged.' >> "$GITHUB_STEP_SUMMARY"
+          else
+            openssl rand -hex 32 | npx --yes wrangler@${WRANGLER_VERSION} secret put MARKETING_OAUTH_VAULT_KEY --config wrangler.marketing-growth.toml >/dev/null
+            echo 'Generated the persistent Marketing OAuth vault key directly in Cloudflare without exposing its value.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+          rm -f /tmp/marketing-secret-list.txt
+
+      - name: Install provider and intelligence credentials when available
+        shell: bash
+        run: |
+          set -euo pipefail
+          put_secret() {
+            local key="$1" value="$2"
+            if [ -n "$value" ]; then
+              printf '%s' "$value" | npx --yes wrangler@${WRANGLER_VERSION} secret put "$key" --config wrangler.marketing-growth.toml >/dev/null
+              echo "$key installed."
+            else
+              echo "$key not supplied; related capability stays safely disabled or uses first-party fallback signals."
+            fi
+          }
+          put_secret META_APP_ID "$META_APP_ID"
+          put_secret META_APP_SECRET "$META_APP_SECRET"
+          put_secret THREADS_APP_ID "$THREADS_APP_ID"
+          put_secret THREADS_APP_SECRET "$THREADS_APP_SECRET"
+          put_secret GOOGLE_CLIENT_SECRET "$GOOGLE_CLIENT_SECRET"
+          put_secret OPENAI_API_KEY "$OPENAI_API_KEY"
+          put_secret NAVER_API_HUB_CLIENT_ID "$NAVER_API_HUB_CLIENT_ID"
+          put_secret NAVER_API_HUB_CLIENT_SECRET "$NAVER_API_HUB_CLIENT_SECRET"
+
+      - name: Verify production growth gateway and active sales scheduler
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 20); do
+            code=$(curl -sS -o /tmp/growth-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://marketing-connect-api.ekodi.kr/health' || true)
+            if [ "$code" = '200' ] \
+              && grep -Fq '"service":"ekodi-marketing-growth"' /tmp/growth-health.json \
+              && grep -Fq '"schemaReady":true' /tmp/growth-health.json \
+              && grep -Fq '"oauthBroker":true' /tmp/growth-health.json \
+              && grep -Fq '"encryptedVault":true' /tmp/growth-health.json \
+              && grep -Fq '"youtubeConfigured":true' /tmp/growth-health.json \
+              && grep -Fq '"organicPublishing":true' /tmp/growth-health.json \
+              && grep -Fq '"paidActivation":false' /tmp/growth-health.json \
+              && grep -Fq '"mallPromotionAutomation"' /tmp/growth-health.json \
+              && grep -Fq '"strategy":"opportunity_first"' /tmp/growth-health.json \
+              && grep -Fq '"mallSalesIntelligence"' /tmp/growth-health.json \
+              && grep -Fq '"mode":"active_sales"' /tmp/growth-health.json \
+              && grep -Fq '"paidAds":false' /tmp/growth-health.json; then
+              cat /tmp/growth-health.json
+              echo 'Marketing growth connector, promotion and active sales intelligence verified in production.'
+              exit 0
+            fi
+            sleep 5
+          done
+          cat /tmp/growth-health.json || true
+          exit 1

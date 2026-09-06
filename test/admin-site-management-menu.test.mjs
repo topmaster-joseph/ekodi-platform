@@ -7,15 +7,15 @@ const layout = await readFile(new URL('../admin-menu-layout.js', import.meta.url
 const campus = await readFile(new URL('../campus-actions.js', import.meta.url), 'utf8');
 const homepage = await readFile(new URL('../homepage-admin.js', import.meta.url), 'utf8');
 
-test('Campus and Sites are one canonical Site Management entry', () => {
-  assert.match(registry, /id: 'campus'[\s\S]*ko: '사이트 관리'[\s\S]*en: 'Site Management'/);
+test('Campus and Sites are one canonical Site Structure entry', () => {
+  assert.match(registry, /id: 'campus'[\s\S]*ko: '사이트 구조'[\s\S]*en: 'Site Structure'/);
   assert.doesNotMatch(registry, /id: 'sites'/);
-  assert.match(layout, /\['#sites', 'sites'\]/);
-  assert.match(layout, /if \(section === 'sites'\) return openSites\(\)/);
+  assert.match(layout, /#sites:sites/);
+  assert.ok(layout.includes("if(section==='sites')return openSites();"));
   assert.match(layout, /navItemFor\('campus'\)\?\.classList\.add\('active'\)/);
 });
 
-test('Site Management renders one shared list for operations and homepage presentation', () => {
+test('Site Structure renders one shared list for operations and homepage presentation', () => {
   assert.match(campus, /import\('\.\/homepage-admin\.js'\)/);
   assert.match(campus, /reconcileRegistryServices/);
   assert.match(campus, /EKODI\.KR 첫화면 공개 설정을 한 목록에서 관리합니다/);
@@ -27,7 +27,7 @@ test('Site Management renders one shared list for operations and homepage presen
 });
 
 test('legacy #sites entry converges into Campus instead of creating a second list', () => {
-  assert.match(layout, /\['#sites', 'sites'\]/);
+  assert.match(layout, /#sites:sites/);
   assert.match(homepage, /mountWhenCampusReady/);
   assert.match(homepage, /data-demand-feature="campus"/);
   assert.match(homepage, /window\.EKODIAdminPanels\?\.activate\?\.\('sites'\)/);

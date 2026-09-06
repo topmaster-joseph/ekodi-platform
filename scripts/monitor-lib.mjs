@@ -9,12 +9,27 @@ const INFRA_SITES = [
   ['root', 'EKODI Root', 'ekodi.kr'],
   ['admin', 'EKODI Admin', 'admin.ekodi.kr'],
   ['auth', 'EKODI Auth', 'auth.ekodi.kr'],
+  ['auth-client-js', 'EKODI Auth Client', 'auth.ekodi.kr', 'https://auth.ekodi.kr/client-auth.js'],
+  ['auth-router-js', 'EKODI Auth Router', 'auth.ekodi.kr', 'https://auth.ekodi.kr/auth-router.js'],
   ['ai-gateway', 'EKODI AI Gateway', 'ai.ekodi.kr'],
   ['api', 'EKODI API', 'api.ekodi.kr', 'https://api.ekodi.kr/health'],
   ['finance', 'EKODI Finance API', 'finance-api.ekodi.kr', 'https://finance-api.ekodi.kr/health'],
   ['marketing-publish-api', 'Marketing Publishing API', 'marketing-publish-api.ekodi.kr', 'https://marketing-publish-api.ekodi.kr/health'],
   ['shell-js', 'EKODI Shell JS', 'shell.ekodi.kr', 'https://shell.ekodi.kr/shell.js'],
   ['shell-workspace', 'EKODI Workspace CSS', 'shell.ekodi.kr', 'https://shell.ekodi.kr/workspace.css']
+];
+
+const COMMUNITY_CONNECT_SITES = [
+  ['community-health', 'Community Health', 'community.ekodi.kr', 'https://community.ekodi.kr/health'],
+  ['community-connect', 'EKODI Connect', 'community.ekodi.kr', 'https://community.ekodi.kr/connect/'],
+  ['community-connect-app', 'EKODI Connect App', 'community.ekodi.kr', 'https://community.ekodi.kr/connect/app.js'],
+  [
+    'connect-api-auth-gate',
+    'EKODI Connect API Auth Gate',
+    'renzehysxirjilvdxacv.supabase.co',
+    'https://renzehysxirjilvdxacv.supabase.co/functions/v1/connect-api/health',
+    [401]
+  ]
 ];
 
 const BUSINESS_CHAIN_SITES = [
@@ -26,7 +41,8 @@ const BUSINESS_CHAIN_SITES = [
   ['business-biz', 'EKODIBIZ Business Hub', 'biz.ekodi.kr', 'https://biz.ekodi.kr/'],
   ['business-pay', 'EKODI Business Pay', 'pay.biz.ekodi.kr', 'https://pay.biz.ekodi.kr/'],
   ['business-mail', 'EKODI Business Mail', 'mail.biz.ekodi.kr', 'https://mail.biz.ekodi.kr/'],
-  ['business-trade', 'EKODI Business Trade', 'trade.biz.ekodi.kr', 'https://trade.biz.ekodi.kr/']
+  ['business-trade', 'EKODI Business Trade', 'trade.biz.ekodi.kr', 'https://trade.biz.ekodi.kr/'],
+  ['business-ekodibiz-invest', 'EKODIBIZ Invest Business', 'ekodi.kr', 'https://ekodi.kr/ekodibiz/invest']
 ];
 
 const SERVICE_SITES = EKODI_SERVICE_MANIFEST.services
@@ -46,7 +62,7 @@ const MARKETING_TENANT_SITES = marketingTenants.tenants.map(row => [
 ]);
 
 const MARKETING_PUBLIC_SITES = marketingTenants.tenants
-  .filter(row => row.publicSiteDomain && row.visibility !== 'private')
+  .filter(row => row.publicSiteDomain)
   .map(row => [
     `marketing-public-${row.tenant}`,
     `${row.name} public site`,
@@ -96,6 +112,7 @@ function uniqueSites(sites) {
 
 export const SITE_DEFINITIONS = Object.freeze(uniqueSites([
   ...INFRA_SITES,
+  ...COMMUNITY_CONNECT_SITES,
   ...BUSINESS_CHAIN_SITES,
   ...SERVICE_SITES,
   ...MARKETING_TENANT_SITES,
@@ -111,8 +128,16 @@ export function classifyStatus(httpStatus, responseTime) {
   return responseTime > 2000 ? 'degraded' : 'online';
 }
 
+function classifyExpectedStatus(httpStatus, responseTime, expectedStatuses) {
+  if (!Array.isArray(expectedStatuses) || expectedStatuses.length === 0) {
+    return classifyStatus(httpStatus, responseTime);
+  }
+  if (!expectedStatuses.includes(httpStatus)) return 'offline';
+  return responseTime > 2000 ? 'degraded' : 'online';
+}
+
 export async function checkSite(
-  [id, name, domain, targetUrl],
+  [id, name, domain, targetUrl, expectedStatuses],
   { fetchImpl = fetch, clock = () => performance.now(), now = () => new Date() } = {}
 ) {
   const url = targetUrl || `https://${domain}`;
@@ -132,10 +157,11 @@ export async function checkSite(
       name,
       domain,
       url,
-      status: classifyStatus(response.status, responseTime),
+      status: classifyExpectedStatus(response.status, responseTime, expectedStatuses),
       httpStatus: response.status,
       responseTime,
       checkedAt,
+      expectedStatuses: Array.isArray(expectedStatuses) ? [...expectedStatuses] : null,
       error: null
     };
   } catch (error) {
@@ -148,6 +174,7 @@ export async function checkSite(
       httpStatus: null,
       responseTime: Math.round(clock() - started),
       checkedAt,
+      expectedStatuses: Array.isArray(expectedStatuses) ? [...expectedStatuses] : null,
       error: error?.name === 'TimeoutError' ? 'timeout' : String(error?.message || error)
     };
   }

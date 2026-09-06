@@ -1,101 +1,55 @@
-name: Deploy MarketingAI Admin Console
+name: Validate MarketingAI Admin Console
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
+  pull_request:
+    paths: &marketing_admin_paths
       - 'marketing-ai-admin.js'
       - 'marketing-ai-admin.css'
       - 'marketing-ai-admin-live-ops.js'
       - 'marketing-ai-admin-live-ops.css'
+      - 'marketing-ai-admin-posting-status.js'
       - 'test/marketing-ai-admin-layout.test.mjs'
       - 'test/marketing-ai-admin-live-ops.test.mjs'
+      - 'test/marketing-ai-admin-posting-status.test.mjs'
       - 'scripts/build.mjs'
       - 'site-worker.js'
       - '.github/workflows/deploy-marketing-admin-console.yml'
+  push:
+    branches: [main]
+    paths: *marketing_admin_paths
 
 permissions:
   contents: read
 
-concurrency:
-  group: ekodi-shared-site-worker-production
-  cancel-in-progress: false
-
 jobs:
-  deploy:
+  validate:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
-    env:
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    timeout-minutes: 14
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
-
       - name: Validate MarketingAI admin console
         run: |
           set -euo pipefail
           node --check marketing-ai-admin.js
           node --check marketing-ai-admin-live-ops.js
+          node --check marketing-ai-admin-posting-status.js
           node --check scripts/build.mjs
-          node --test test/marketing-ai-admin-layout.test.mjs test/marketing-ai-admin-live-ops.test.mjs
+          node --test test/marketing-ai-admin-layout.test.mjs test/marketing-ai-admin-live-ops.test.mjs test/marketing-ai-admin-posting-status.test.mjs
           grep -Fq 'Marketing AI 운영 관제센터' marketing-ai-admin.js
           grep -Fq '/api/marketing/admin/overview' marketing-ai-admin.js
           grep -Fq 'READ-ONLY OPS · 외부 자동실행 없음' marketing-ai-admin.js
-          grep -Fq '.marketing-ai-console-tabs' marketing-ai-admin.css
           grep -Fq 'AI AUTOMATION' marketing-ai-admin-live-ops.js
           grep -Fq 'HUMAN GATE' marketing-ai-admin-live-ops.js
           grep -Fq 'CHANNEL REGISTRY' marketing-ai-admin-live-ops.js
-          grep -Fq '.marketing-ai-approval-layout' marketing-ai-admin-live-ops.css
-          grep -Fq 'marketing-ai-admin-live-ops.js' scripts/build.mjs
-          grep -Fq 'marketing-ai-admin-live-ops.css' scripts/build.mjs
-
-      - name: Verify Cloudflare credentials
-        run: |
-          test -n "$CLOUDFLARE_API_TOKEN" || (echo 'Missing CLOUDFLARE_API_TOKEN' && exit 1)
-          test -n "$CLOUDFLARE_ACCOUNT_ID" || (echo 'Missing CLOUDFLARE_ACCOUNT_ID' && exit 1)
-
-      - name: Build shared admin assets
-        run: |
-          set -euo pipefail
+          grep -Fq 'POSTING LEDGER' marketing-ai-admin-posting-status.js
           npm run build
           test -f dist/marketing-ai-admin.js
           test -f dist/marketing-ai-admin.css
           grep -Fq 'Marketing AI 운영 관제센터' dist/marketing-ai-admin.js
-          grep -Fq 'AI AUTOMATION' dist/marketing-ai-admin.js
-          grep -Fq 'HUMAN GATE' dist/marketing-ai-admin.js
-          grep -Fq 'CHANNEL REGISTRY' dist/marketing-ai-admin.js
-          grep -Fq '.marketing-ai-console-tabs' dist/marketing-ai-admin.css
-          grep -Fq '.marketing-ai-approval-layout' dist/marketing-ai-admin.css
-
-      - name: Guarded shared-site release
-        run: |
-          set -euo pipefail
-          node scripts/guarded-worker-release.mjs --manifest deploy/manifests/shared-site.worker.json
-
-      - name: Verify production MarketingAI admin assets
-        shell: bash
-        run: |
-          set -euo pipefail
-          verify_asset() {
-            path="$1"; expected="$2"; expected2="$3"
-            code=$(curl -sS -D /tmp/headers -o /tmp/body -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://admin.ekodi.kr/$path" || true)
-            echo "$path -> $code"
-            [ "$code" = '200' ] || return 1
-            grep -Fiq 'x-ekodi-route: admin-asset' /tmp/headers || return 1
-            grep -Fq "$expected" /tmp/body || return 1
-            grep -Fq "$expected2" /tmp/body || return 1
-          }
-          for attempt in $(seq 1 15); do
-            if verify_asset 'marketing-ai-admin.js' 'Marketing AI 운영 관제센터' 'AI AUTOMATION' \
-              && verify_asset 'marketing-ai-admin.css' '.marketing-ai-console-tabs' '.marketing-ai-approval-layout'; then
-              echo 'MarketingAI admin live operations console verified in production.'
-              exit 0
-            fi
-            echo "Production asset verification pending ($attempt/15)."
-            sleep 4
-          done
-          exit 1
+          grep -Fq 'POSTING LEDGER' dist/marketing-ai-admin.js
+      - name: Verify single production owner policy
+        run: node scripts/validate-deployment-guardrails.mjs

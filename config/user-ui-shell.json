@@ -1,0 +1,94 @@
+{
+  "version": 7,
+  "name": "EKODI User UI Shell",
+  "parentPolicy": "config/user-ui-dna.json",
+  "purpose": "Keep one EKODI user experience while allowing each service to preserve its own visual family.",
+  "scope": ["public", "workspace"],
+  "adminExcluded": true,
+  "principles": {
+    "singleSource": true,
+    "progressiveAdoption": true,
+    "serviceVisualIdentityPreserved": true,
+    "mobileAndDesktopSemanticsMatch": true,
+    "noDuplicatedHeaderOrFooter": true,
+    "subserviceInheritance": true,
+    "fallbackHeaderWhenMissing": true,
+    "legacyCommonFooterSuppressed": true,
+    "rootInternalPathsExcluded": true,
+    "languageChoiceEverywhere": true,
+    "globalUtilitiesInHeader": true,
+    "centeredChrome": true,
+    "selectiveRoundedInteraction": true,
+    "serviceGeometryPreserved": true
+  },
+  "header": {
+    "owner": "shared-shell",
+    "strategy": "adopt-existing-first",
+    "fallback": "shared-shell-header-when-missing",
+    "requiredMeaning": ["EKODI identity", "current service context", "account or My EKODI path", "language choice"],
+    "localNavigation": "service-owned",
+    "behavior": ["single banner", "safe-area aware", "keyboard accessible", "responsive", "content offset when fixed", "compact language control", "brand returns to current service home top"],
+    "recognizedExistingHeaders": ["header", ".site-header", ".topbar", ".app-header", ".main-header", "[data-ekodi-fixed-header]"],
+    "forbidden": ["second global header", "service-specific copy of shared header runtime", "admin navigation mixed into user header"],
+    "alignment": "centered-canvas",
+    "geometry": "service-token-driven"
+  },
+  "footer": {
+    "owner": "shared-shell",
+    "strategy": "shell-supplied",
+    "contentSource": "config/user-footer.js",
+    "layout": "centered single-column operator copy and legal links; wrap naturally on narrow screens",
+    "alignment": "center",
+    "themePolicy": "inherit each service typography, palette and visual mood; optional --ekodi-user-footer-* tokens may refine it",
+    "serviceExtension": "append-only",
+    "separatePolicyPrecedence": true,
+    "dedupe": "exactly-one-shared-footer"
+  },
+  "language": {
+    "owner": "shared-shell",
+    "runtime": "shell/user-language.js",
+    "placement": "inside the adopted or fallback user header",
+    "supported": ["ko-KR", "en", "zh-CN", "ja", "ne", "vi"],
+    "default": "ko-KR",
+    "persistence": "ekodi_locale cookie scoped to .ekodi.kr with localStorage fallback",
+    "serviceContract": "set html lang and data-ekodi-locale, translate shared chrome, dispatch ekodi:locale-change for service-owned content",
+    "adminExcluded": true,
+    "browserTranslation": "managed native i18n surfaces opt out of Google automatic translation UI"
+  },
+  "mediaMeetingAdapter": {
+    "owner": "shared-shell",
+    "runtime": "shell/media-meeting-adapter.js",
+    "meetingProviders": ["jitsi"],
+    "mediaProviders": ["youtube"],
+    "stateOrder": ["language", "authentication", "provider state", "fallback"],
+    "fallbackRequired": true,
+    "statusResolver": {"provider":"youtube","endpoint":"https://social.ekodi.kr/api/media/youtube/status","strategy":"official-api-when-configured + public-page fallback","pollSeconds":60,"failSafe":"retain localized fallback"}
+  },
+  "ambientAudio": {
+    "owner": "shared-shell",
+    "runtime": "shell/ccm-mr-player.js",
+    "placement": "inside the adopted or fallback user header; floating only when no header exists",
+    "contentOverlapForbidden": true,
+    "adminExcluded": true
+  },
+  "inheritance": {
+    "hostRule": "all public/workspace service hosts inherit the manifest service shell",
+    "pathRule": "all subordinate paths inherit their parent service shell",
+    "rootServiceRule": "ekodi.kr/<service>/... inherits that service when the route is a user surface",
+    "rootPolicyPages": ["/privacy", "/terms"],
+    "excludedRootPrefixes": ["/admin"]
+  },
+  "geometry": {
+    "owner": "shared-shell + service-design-inheritance",
+    "scope": "public/workspace interactive UI",
+    "strategy": "selective-by-semantic-role-and-service-profile",
+    "tokens": ["--ekodi-control-radius", "--ekodi-field-radius", "--ekodi-chip-radius", "--ekodi-panel-radius", "--ekodi-image-radius", "--ekodi-section-radius"],
+    "applyTo": ["actions", "filters and chips", "search and form controls", "dialogs", "choice cards"],
+    "excludedByDefault": ["tables", "ledgers", "editorial rules", "code/data panels", "broadcast frames", "precision operational panels"]
+  },
+  "experienceProfiles": {
+    "source": "config/user-ui-experience-profiles.js",
+    "strategy": "service-opt-in",
+    "fallback": "service-native"
+  }
+}

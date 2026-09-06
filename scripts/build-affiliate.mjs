@@ -7,7 +7,7 @@ for (const asset of ['affiliate-admin.css', 'affiliate-admin.js']) {
   await cp(new URL(asset, root), new URL(asset, dist));
 }
 
-const controlPath = new URL('control-center.html', dist);
+const controlPath = new URL('admin-shell.html', dist);
 let html = await readFile(controlPath, 'utf8');
 if (!html.includes('affiliate-admin.css')) {
   html = html.replace('</head>', '<link rel="stylesheet" href="affiliate-admin.css">\n</head>');

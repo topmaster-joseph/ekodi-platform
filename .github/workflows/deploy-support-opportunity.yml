@@ -69,14 +69,15 @@ jobs:
           grep -Fq '"support"' platform-boundaries.json
 
   staging:
+    environment: development
     if: github.event_name == 'pull_request'
     needs: validate
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-      STAGING_URL: https://ekodi-support-opportunity-staging.topmaster-joseph.workers.dev
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: 46aad4738793fbaca88574832a2ccc0f
+      STAGING_URL: https://ekodi-support-opportunity-staging.ekodi-development.workers.dev
     steps:
       - uses: actions/checkout@v7
       - name: Verify Cloudflare credentials

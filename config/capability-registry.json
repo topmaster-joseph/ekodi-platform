@@ -1,0 +1,722 @@
+{
+  "version": "3.0.0",
+  "name": "EKODI Universal Capability Registry",
+  "principle": "Capabilities are stable reusable abilities. Intent selects capabilities; services and providers are replaceable implementations.",
+  "surfacePolicy": {
+    "defaultHome": "https://my.ekodi.kr",
+    "specialistSites": "showroom_and_entry",
+    "workspace": "compose_capabilities_on_demand",
+    "dedicatedSite": "exception_only_with_declared_boundary_evidence"
+  },
+  "capabilities": [
+    {
+      "id": "core.navigator",
+      "name": "AI 길찾기",
+      "domain": "core",
+      "ownerAgent": "chief",
+      "actionTier": "assist",
+      "maturity": "contract",
+      "description": "사용자의 현재 의도·상황·목표를 이해해 적합한 활동 경로와 AI 조합을 제안한다.",
+      "surfaces": [
+        "my"
+      ],
+      "tags": [
+        "discover",
+        "path",
+        "intent"
+      ]
+    },
+    {
+      "id": "core.project",
+      "name": "프로젝트 코치",
+      "domain": "core",
+      "ownerAgent": "chief",
+      "actionTier": "assist",
+      "maturity": "contract",
+      "description": "목표를 프로젝트·다음 행동·점검 주기로 구조화한다.",
+      "surfaces": [
+        "my",
+        "workspace"
+      ],
+      "tags": [
+        "project",
+        "task",
+        "goal"
+      ]
+    },
+    {
+      "id": "core.documents",
+      "name": "문서·업무 AI",
+      "domain": "core",
+      "ownerAgent": "chief",
+      "actionTier": "assist",
+      "maturity": "contract",
+      "description": "문서 초안, 요약, 정리, 양식화와 지식 산출물을 지원한다.",
+      "surfaces": [
+        "my",
+        "workspace"
+      ],
+      "tags": [
+        "document",
+        "office",
+        "writing"
+      ]
+    },
+    {
+      "id": "core.automation",
+      "name": "워크플로 자동화",
+      "domain": "core",
+      "ownerAgent": "platform",
+      "actionTier": "execute_reversible",
+      "maturity": "contract",
+      "description": "명시적으로 위임된 반복 업무를 되돌릴 수 있는 범위에서 자동화한다.",
+      "surfaces": [
+        "my",
+        "workspace",
+        "dedicated"
+      ],
+      "tags": [
+        "automation",
+        "workflow",
+        "agent"
+      ]
+    },
+    {
+      "id": "core.communication",
+      "name": "소통 AI",
+      "domain": "core",
+      "ownerAgent": "community",
+      "actionTier": "assist",
+      "maturity": "contract",
+      "description": "메시지, 안내, 응대, 관계 중심 커뮤니케이션을 지원한다.",
+      "surfaces": [
+        "my",
+        "workspace"
+      ],
+      "tags": [
+        "message",
+        "communication",
+        "response"
+      ]
+    },
+    {
+      "id": "core.analytics",
+      "name": "분석·리포트 AI",
+      "domain": "core",
+      "ownerAgent": "chief",
+      "actionTier": "observe",
+      "maturity": "contract",
+      "description": "활동·성과·운영 데이터를 읽고 의미 있는 변화와 다음 판단을 보여준다.",
+      "surfaces": [
+        "my",
+        "workspace",
+        "dedicated"
+      ],
+      "tags": [
+        "analytics",
+        "report",
+        "insight"
+      ]
+    },
+    {
+      "id": "core.public-site",
+      "name": "공개 사이트 구성",
+      "domain": "core",
+      "ownerAgent": "platform",
+      "actionTier": "execute_reversible",
+      "maturity": "contract",
+      "description": "필요할 때 포트폴리오·브랜드·기관용 공개 사이트 구성을 생성·관리한다.",
+      "surfaces": [
+        "workspace",
+        "dedicated"
+      ],
+      "tags": [
+        "site",
+        "domain",
+        "public"
+      ]
+    },
+    {
+      "id": "knowledge.research",
+      "name": "조사·리서치 AI",
+      "domain": "knowledge",
+      "ownerAgent": "books",
+      "actionTier": "assist",
+      "maturity": "contract",
+      "description": "자료 탐색, 비교, 근거 정리와 연구 초안을 지원한다.",
+      "surfaces": [
+        "my",
+        "workspace"
+      ],
+      "tags": [
+        "research",
+        "evidence",
+        "review"
+      ]
+    },
+    {
+      "id": "learning.coach",
+      "name": "학습 코치 AI",
+      "domain": "learning",
+      "ownerAgent": "books",
+      "actionTier": "assist",
+      "maturity": "contract",
+      "description": "학습 목표·과정·피드백을 개인 수준에 맞게 구성한다.",
+      "surfaces": [
+        "my",
+        "workspace"
+      ],
+      "tags": [
+        "learn",
+        "study",
+        "course"
+      ]
+    },
+    {
+      "id": "work.career",
+      "name": "일·진로 AI",
+      "domain": "work",
+      "ownerAgent": "chief",
+      "actionTier": "assist",
+      "maturity": "contract",
+      "description": "역량 발견, 일 탐색, 지원 준비와 직무 성장 경로를 돕는다.",
+      "surfaces": [
+        "my",
+        "workspace",
+        "showroom"
+      ],
+      "showroom": {
+        "serviceId": "work"
+      },
+      "tags": [
+        "career",
+        "job",
+        "work"
+      ]
+    },
+    {
+      "id": "creator.writing",
+      "name": "글쓰기 AI",
+      "domain": "creator",
+      "ownerAgent": "books",
+      "actionTier": "assist",
+      "maturity": "service-backed",
+      "description": "책·글·대본·강의·연구 콘텐츠의 기획, 작성, 수정과 검토를 돕는다.",
+      "surfaces": [
+        "my",
+        "workspace",
+        "showroom"
+      ],
+      "showroom": {
+        "serviceId": "author"
+      },
+      "tags": [
+        "write",
+        "book",
+        "script",
+        "author"
+      ]
+    },
+    {
+      "id": "creator.visual",
+      "name": "비주얼 창작 AI",
+      "domain": "creator",
+      "ownerAgent": "books",
+      "actionTier": "assist",
+      "maturity": "contract",
+      "description": "미술·일러스트·디자인·스토리보드의 기획과 제작 흐름을 지원한다.",
+      "surfaces": [
+        "my",
+        "workspace",
+        "showroom"
+      ],
+      "showroom": {
+        "serviceId": "author"
+      },
+      "tags": [
+        "art",
+        "illustration",
+        "design",
+        "visual"
+      ]
+    },
+    {
+      "id": "creator.media",
+      "name": "영상·오디오 AI",
+      "domain": "creator",
+      "ownerAgent": "books",
+      "actionTier": "assist",
+      "maturity": "contract",
+      "description": "영상·애니메이션·오디오·숏폼의 기획, 대본, 제작 브리프를 지원한다.",
+      "surfaces": [
+        "my",
+        "workspace",
+        "showroom"
+      ],
+      "showroom": {
+        "serviceId": "author"
+      },
+      "tags": [
+        "video",
+        "animation",
+        "audio",
+        "shorts"
+      ]
+    },
+    {
+      "id": "creator.publish",
+      "name": "출판·배포 AI",
+      "domain": "creator",
+      "ownerAgent": "books",
+      "actionTier": "human_gate",
+      "maturity": "contract",
+      "description": "출판·공개·배포 준비를 돕되 실제 공개와 권리 영향을 주는 결정은 사람이 승인한다.",
+      "surfaces": [
+        "my",
+        "workspace",
+        "showroom"
+      ],
+      "showroom": {
+        "serviceId": "books"
+      },
+      "tags": [
+        "publish",
+        "distribution",
+        "book"
+      ]
+    },
+    {
+      "id": "creator.rights",
+      "name": "창작권리 AI",
+      "domain": "creator",
+      "ownerAgent": "books",
+      "actionTier": "human_gate",
+      "maturity": "contract",
+      "description": "저작권·라이선스·출처·권리 이전 이슈를 점검하고 중요한 결정은 사람에게 넘긴다.",
+      "surfaces": [
+        "my",
+        "workspace"
+      ],
+      "tags": [
+        "copyright",
+        "license",
+        "rights"
+      ]
+    },
+    {
+      "id": "business.marketing",
+      "name": "마케팅 AI",
+      "domain": "business",
+      "ownerAgent": "marketing",
+      "actionTier": "assist",
+      "maturity": "service-backed",
+      "description": "고객에게 정직하고 지속 가능한 콘텐츠·채널·캠페인 운영을 지원한다.",
+      "surfaces": [
+        "my",
+        "workspace",
+        "showroom",
+        "dedicated"
+      ],
+      "showroom": {
+        "serviceId": "marketing"
+      },
+      "tags": [
+        "marketing",
+        "content",
+        "campaign",
+        "sns"
+      ]
+    },
+    {
+      "id": "business.crm",
+      "name": "CRM·고객관계 AI",
+      "domain": "business",
+      "ownerAgent": "marketing",
+      "actionTier": "assist",
+      "maturity": "contract",
+      "description": "고객 관계, 문의, 재방문과 직접 고객자산을 사용자의 통제 아래 관리하도록 돕는다.",
+      "surfaces": [
+        "my",
+        "workspace",
+        "dedicated"
+      ],
+      "tags": [
+        "crm",
+        "customer",
+        "relationship"
+      ]
+    },
+    {
+      "id": "business.sales",
+      "name": "영업 AI",
+      "domain": "business",
+      "ownerAgent": "commerce",
+      "actionTier": "assist",
+      "maturity": "contract",
+      "description": "리드, 제안, 견적, 후속 대응과 영업 파이프라인을 지원한다.",
+      "surfaces": [
+        "my",
+        "workspace",
+        "dedicated"
+      ],
+      "tags": [
+        "sales",
+        "lead",
+        "quote"
+      ]
+    },
+    {
+      "id": "business.operations",
+      "name": "사업운영 AI",
+      "domain": "business",
+      "ownerAgent": "commerce",
+      "actionTier": "assist",
+      "maturity": "service-backed",
+      "description": "사업 현황, 운영 과제, 거래 흐름을 한 작업공간에서 정리하도록 돕는다.",
+      "surfaces": [
+        "my",
+        "workspace",
+        "showroom"
+      ],
+      "showroom": {
+        "serviceId": "business"
+      },
+      "tags": [
+        "business",
+        "operations",
+        "management"
+      ]
+    },
+    {
+      "id": "commerce.market",
+      "name": "판매·커머스 AI",
+      "domain": "commerce",
+      "ownerAgent": "commerce",
+      "actionTier": "human_gate",
+      "maturity": "contract",
+      "description": "상품·판매·거래 준비를 지원하며 계약·결제 등 중요한 약정은 사람 승인을 요구한다.",
+      "surfaces": [
+        "my",
+        "workspace",
+        "showroom",
+        "dedicated"
+      ],
+      "showroom": {
+        "serviceId": "mall"
+      },
+      "tags": [
+        "commerce",
+        "market",
+        "product",
+        "sell"
+      ]
+    },
+    {
+      "id": "finance.stewardship",
+      "name": "재정·회계 AI",
+      "domain": "finance",
+      "ownerAgent": "finance",
+      "actionTier": "assist",
+      "maturity": "contract",
+      "description": "수입·지출·증빙·예산·정산과 지속가능성 판단을 투명하게 지원한다.",
+      "surfaces": [
+        "my",
+        "workspace",
+        "dedicated"
+      ],
+      "tags": [
+        "finance",
+        "accounting",
+        "budget"
+      ]
+    },
+    {
+      "id": "community.membership",
+      "name": "회원·공동체 AI",
+      "domain": "community",
+      "ownerAgent": "community",
+      "actionTier": "assist",
+      "maturity": "service-backed",
+      "description": "회원, 그룹, 관계, 참여와 상호 돌봄을 건강하게 연결한다.",
+      "surfaces": [
+        "my",
+        "workspace",
+        "showroom"
+      ],
+      "showroom": {
+        "serviceId": "community"
+      },
+      "tags": [
+        "community",
+        "member",
+        "group"
+      ]
+    },
+    {
+      "id": "community.events",
+      "name": "모임·행사 AI",
+      "domain": "community",
+      "ownerAgent": "community",
+      "actionTier": "assist",
+      "maturity": "contract",
+      "description": "모임·행사·봉사·프로젝트 참여의 준비와 운영을 지원한다.",
+      "surfaces": [
+        "my",
+        "workspace"
+      ],
+      "tags": [
+        "event",
+        "meeting",
+        "volunteer"
+      ]
+    },
+    {
+      "id": "ministry.service",
+      "name": "사역 AI",
+      "domain": "ministry",
+      "ownerAgent": "ministry",
+      "actionTier": "assist",
+      "maturity": "contract",
+      "description": "말씀·예배·교육·선교·돌봄을 돕되 목회적·영적 판단은 사람의 책임으로 남긴다.",
+      "surfaces": [
+        "my",
+        "workspace"
+      ],
+      "tags": [
+        "ministry",
+        "worship",
+        "mission",
+        "care"
+      ]
+    },
+    {
+      "id": "trade.operations",
+      "name": "무역·거래 AI",
+      "domain": "trade",
+      "ownerAgent": "commerce",
+      "actionTier": "human_gate",
+      "maturity": "contract",
+      "description": "상품, 공급자, 바이어, 견적, 물류와 거래 위험을 정리하며 계약 실행은 사람이 결정한다.",
+      "surfaces": [
+        "my",
+        "workspace",
+        "dedicated"
+      ],
+      "tags": [
+        "trade",
+        "supplier",
+        "buyer",
+        "logistics"
+      ]
+    },
+    {
+      "id": "insurance.guide",
+      "name": "보험관리 AI",
+      "domain": "insurance",
+      "ownerAgent": "insurance",
+      "actionTier": "human_gate",
+      "maturity": "contract",
+      "description": "보장 이해, 가입내역 관리, 청구 준비를 돕고 상품 가입·중대한 권고는 사람의 확인을 요구한다.",
+      "surfaces": [
+        "my",
+        "workspace"
+      ],
+      "tags": [
+        "insurance",
+        "coverage",
+        "claim"
+      ]
+    },
+    {
+      "id": "energy.manage",
+      "name": "에너지관리 AI",
+      "domain": "energy",
+      "ownerAgent": "platform",
+      "actionTier": "observe",
+      "maturity": "service-backed-readonly",
+      "description": "전기·태양광·시설 상태를 관찰하고 이상과 개선 기회를 제안한다.",
+      "surfaces": [
+        "my",
+        "workspace",
+        "showroom"
+      ],
+      "showroom": {
+        "serviceId": "energy"
+      },
+      "tags": [
+        "energy",
+        "solar",
+        "electricity",
+        "facility"
+      ]
+    }
+  ],
+  "schemaVersion": 2,
+  "generation": {
+    "currentFoundation": 2,
+    "capabilityTarget": 3,
+    "northStar": 8
+  },
+  "providerContract": "ekodi.capability-provider.v1",
+  "intentPolicy": {
+    "router": "deterministic_first",
+    "modelFallback": "optional_provider_neutral",
+    "modelMayInventCapabilities": false,
+    "unknownCapabilityBehavior": "unresolved_not_guessed"
+  },
+  "fabricPolicy": {
+    "contract": "ekodi.sovereign-capability.v1",
+    "authorityContext": [
+      "person",
+      "workspace",
+      "role",
+      "capability"
+    ],
+    "defaultScope": "person_or_workspace",
+    "defaultExposure": {
+      "web": true,
+      "mcp": false,
+      "a2a": false,
+      "api": false,
+      "events": false
+    },
+    "protocolRole": {
+      "mcp": "tool_adapter",
+      "a2a": "reserved_agent_adapter",
+      "api": "service_adapter",
+      "events": "event_adapter"
+    },
+    "trustTiers": {
+      "first_party": 4,
+      "verified_partner": 3,
+      "approved_external": 2,
+      "unknown": 0
+    },
+    "actionTierPolicy": {
+      "observe": {
+        "risk": "low",
+        "humanGate": false
+      },
+      "assist": {
+        "risk": "low",
+        "humanGate": false
+      },
+      "execute_reversible": {
+        "risk": "medium",
+        "humanGate": false
+      },
+      "human_gate": {
+        "risk": "high",
+        "humanGate": true
+      },
+      "forbidden": {
+        "risk": "critical",
+        "humanGate": true
+      }
+    },
+    "overrides": {
+      "identity.self.read": {
+        "scope": "person",
+        "exposure": {
+          "mcp": true
+        }
+      },
+      "ai.personal.status.read": {
+        "scope": "person",
+        "exposure": {
+          "mcp": true
+        }
+      },
+      "services.membership.read": {
+        "scope": "person",
+        "exposure": {
+          "mcp": true
+        }
+      },
+      "core.analytics": {
+        "exposure": {
+          "mcp": true,
+          "a2a": false
+        }
+      },
+      "core.documents": {
+        "exposure": {
+          "a2a": false
+        }
+      },
+      "core.automation": {
+        "exposure": {
+          "a2a": false
+        }
+      },
+      "community.membership": {
+        "scope": "workspace"
+      },
+      "ministry.service": {
+        "scope": "workspace"
+      },
+      "business.operations": {
+        "scope": "workspace"
+      },
+      "commerce.market": {
+        "scope": "workspace"
+      },
+      "trade.operations": {
+        "scope": "workspace"
+      }
+    }
+  },
+  "fabricCapabilities": [
+    {
+      "id": "services.membership.read",
+      "name": "내 서비스 이용상태 조회",
+      "domain": "core",
+      "ownerAgent": "platform",
+      "actionTier": "observe",
+      "maturity": "service-backed",
+      "description": "현재 EKODI Person의 서비스 및 멤버십 상태를 읽는다.",
+      "surfaces": [
+        "my"
+      ],
+      "tags": [
+        "services",
+        "membership",
+        "read"
+      ]
+    },
+    {
+      "id": "ai.personal.status.read",
+      "name": "개인 AI 상태 조회",
+      "domain": "core",
+      "ownerAgent": "chief",
+      "actionTier": "observe",
+      "maturity": "service-backed",
+      "description": "개인 AI 라우팅, 요금제 한도와 연결 상태를 읽는다.",
+      "surfaces": [
+        "my"
+      ],
+      "tags": [
+        "ai",
+        "personal",
+        "status"
+      ]
+    },
+    {
+      "id": "identity.self.read",
+      "name": "내 EKODI ID 조회",
+      "domain": "core",
+      "ownerAgent": "platform",
+      "actionTier": "observe",
+      "maturity": "service-backed",
+      "description": "현재 인증 주체를 canonical EKODI Person ID로 해석한다.",
+      "surfaces": [
+        "my"
+      ],
+      "tags": [
+        "identity",
+        "person",
+        "read"
+      ]
+    }
+  ]
+}

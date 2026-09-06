@@ -2,17 +2,31 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
-const [hybrid, mission, migration, admin, build] = await Promise.all([
+const [hybrid, mission, migration, fabricMigration, admin, thinPostbuild] = await Promise.all([
   readFile(new URL('../hybrid-execution.js', import.meta.url), 'utf8'),
   readFile(new URL('../mission-control-entry-worker.js', import.meta.url), 'utf8'),
   readFile(new URL('../migrations/0040_hybrid_execution.sql', import.meta.url), 'utf8'),
+  readFile(new URL('../migrations/0058_execution_fabric_settings.sql', import.meta.url), 'utf8'),
   readFile(new URL('../hybrid-execution-admin.js', import.meta.url), 'utf8'),
-  readFile(new URL('../scripts/build.mjs', import.meta.url), 'utf8'),
+  readFile(new URL('../scripts/admin-thin-postbuild.mjs', import.meta.url), 'utf8'),
 ]);
 
 test('hybrid queue is cloud-owned and new nodes default to auto execution off', () => {
   assert.match(hybrid, /auto_execute,\s*enabled[\s\S]*VALUES \(\?, 0, 1,/);
   assert.match(migration, /auto_execute INTEGER NOT NULL DEFAULT 0/);
+});
+
+test('execution fabric has one confirmed global assignment gate without interrupting leased work', () => {
+  assert.match(fabricMigration, /CREATE TABLE IF NOT EXISTS hybrid_execution_settings/);
+  assert.match(fabricMigration, /enabled INTEGER NOT NULL DEFAULT 1/);
+  assert.match(hybrid, /EXECUTION_FABRIC_CONFIRM_REQUIRED/);
+  assert.match(hybrid, /EXECUTION_FABRIC_SUPER_ADMIN_REQUIRED/);
+  assert.match(hybrid, /auth\.session\.role !== 'super_admin'/);
+  assert.match(hybrid, /last_error='fabric_paused'/);
+  assert.match(hybrid, /WHERE status='assigned'/);
+  assert.match(hybrid, /pauseKeepsLeasedJobsRunning:true/);
+  assert.match(admin, /id="toggleHybridFabric"/);
+  assert.match(admin, /\/api\/control\/hybrid-execution\/settings/);
 });
 
 test('hybrid execution hard-limits retries to three attempts', () => {
@@ -52,18 +66,20 @@ test('legacy agent bridge only falls back to hybrid work when the existing queue
 });
 
 test('admin control exposes node policy, execution records and audit state without enabling nodes automatically', () => {
-  assert.match(admin, /새 기기의 자동 실행은 기본 OFF/);
+  assert.match(admin, /새 Worker의 자동 실행은 기본 OFF/);
   assert.match(admin, /data-auto/);
   assert.match(admin, /maxConcurrency/);
-  assert.match(admin, /기기 관리 · 실행 기록/);
+  assert.match(admin, /실행 인프라 · 작업 관제/);
   assert.match(admin, /감사 이벤트/);
   assert.match(admin, /hybridStatusFilter/);
   assert.match(admin, /전체 진단 자동배정/);
 });
 
-test('production build bundles hybrid admin into authenticated control center', () => {
-  assert.match(build, /hybrid-execution-admin\.js/);
-  assert.match(build, /\$\{hybridExecutionAdminJs\}/);
+test('production admin postbuild bundles hybrid admin into on-demand Device Control', () => {
+  assert.match(thinPostbuild, /hybrid-execution-admin\.js/);
+  assert.match(thinPostbuild, /const hybridExecutionJs/);
+  assert.match(thinPostbuild, /`\$\{deviceJs\}\\n\$\{hybridExecutionJs\}\\n`/);
+  assert.match(thinPostbuild, /writeFile\(`\$\{dist\}device-control-admin\.js`/);
 });
 
 test('migration creates durable node, job and event ledgers with queue indexes', () => {

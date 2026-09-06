@@ -7,7 +7,7 @@ preview_urls = true
 [vars]
 MANAGEMENT_MODE = "isolated-staging"
 INTEGRATIONS_ENABLED = "false"
-AUTH_URL = "https://auth.ekodi.kr/?site=management&return_to=https%3A%2F%2Fekodi-management-staging.topmaster-joseph.workers.dev%2F"
+AUTH_URL = "https://auth.ekodi.kr/?site=management&return_to=https%3A%2F%2Fekodi-management-staging.ekodi-development.workers.dev%2F"
 
 [assets]
 directory = "./management"

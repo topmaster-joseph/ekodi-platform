@@ -1,4 +1,4 @@
-name: Deploy EKODI Creator AI
+name: Deploy Creator AI
 
 on:
   workflow_dispatch:
@@ -78,9 +78,10 @@ jobs:
     needs: validate
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    environment: development
     env:
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: 46aad4738793fbaca88574832a2ccc0f
     steps:
       - uses: actions/checkout@v7
       - name: Verify Cloudflare credentials
@@ -93,13 +94,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          base='https://ekodi-author-ai-staging.topmaster-joseph.workers.dev'
+          base='https://ekodi-author-ai-staging.ekodi-development.workers.dev'
           for attempt in $(seq 1 18); do
             root_code=$(curl -L -sS -o /tmp/creator-staging.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$base/" || true)
             health_code=$(curl -sS -o /tmp/creator-staging-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$base/health" || true)
             billing_js_code=$(curl -sS -o /tmp/creator-billing.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "$base/billing.js" || true)
             if [[ "$root_code" == '200' && "$health_code" == '200' && "$billing_js_code" == '200' ]] \
-              && grep -Fq 'EKODI Creator AI' /tmp/creator-staging.html \
+              && grep -Fq 'Creator AI' /tmp/creator-staging.html \
               && grep -Fq 'Creator AI가 세상과 연결될 형태로 만듭니다' /tmp/creator-staging.html \
               && grep -Fq '/billing.js' /tmp/creator-staging.html \
               && grep -Fq 'ekodi-creator-ai' /tmp/creator-staging-health.json \
@@ -161,13 +162,13 @@ jobs:
             health_code=$(curl -sS -o /tmp/creator-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://author.ekodi.kr/health' || true)
             billing_js_code=$(curl -sS -o /tmp/creator-billing.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://author.ekodi.kr/billing.js' || true)
             if [[ "$root_code" == '200' && "$health_code" == '200' && "$billing_js_code" == '200' ]] \
-              && grep -Fq 'EKODI Creator AI' /tmp/creator.html \
+              && grep -Fq 'Creator AI' /tmp/creator.html \
               && grep -Fq 'CREATOR APPROVED' /tmp/creator.html \
               && grep -Fq '/billing.js' /tmp/creator.html \
               && grep -Fq 'ekodi-creator-ai' /tmp/creator-health.json \
               && grep -Fq '"paidAiBilling":"server-verified"' /tmp/creator-health.json \
               && grep -Fq '/api/author/billing/start' /tmp/creator-billing.js; then
-              echo 'EKODI Creator AI production and paid-billing shell verified.'
+              echo 'Creator AI production and paid-billing shell verified.'
               exit 0
             fi
             sleep 5

@@ -9,18 +9,18 @@
     { domain:'admin.ekodi.kr', name:'Control Center', group:'Core & Access', role:'통합운영·권한·감사', manage:'admins', critical:true },
     { domain:'auth.ekodi.kr', name:'EKODI Auth', group:'Core & Access', role:'통합인증·계정·SSO', manage:'admins', critical:true },
     { domain:'church.ekodi.kr', name:'에코디교회', group:'Community', role:'예배·사역·공동체 운영', manage:'services' },
-    { domain:'community.ekodi.kr', name:'에코디커뮤니티', group:'Community', role:'관계·그룹·참여·소통', manage:'community' },
-    { domain:'social.ekodi.kr', name:'EKODI Social', group:'Community', role:'소셜채널·미디어 연동', manage:'social' },
+    { domain:'community.ekodi.kr', name:'커뮤니티', group:'Community', role:'관계·그룹·참여·소통', manage:'community' },
+    { domain:'social.ekodi.kr', name:'에코디 소셜', group:'Community', role:'소셜채널·미디어 연동', manage:'social' },
     { domain:'biz.ekodi.kr', name:'에코디비즈', group:'Business & Commerce', role:'사업·고객·서비스 운영', manage:'organization' },
     { domain:'mall.ekodi.kr', name:'에코디몰', group:'Business & Commerce', role:'상품·판매·셀러 운영', manage:'services' },
-    { domain:'marketing.ekodi.kr', name:'Marketing AI', group:'Business & Commerce', role:'마케팅·자동화·Workspace', manage:'services' },
-    { domain:'trade.ekodi.kr', name:'EKODI Trading', group:'Business & Commerce', role:'무역·견적·계약·거래', manage:'organization' },
-    { domain:'pay.ekodi.kr', name:'EKODI Pay', group:'Business & Commerce', role:'결제·정산·귀속', manage:'finance', critical:true },
-    { domain:'books.ekodi.kr', name:'에코디북스', group:'Knowledge & Content', role:'출판·배포·인세·콘텐츠', manage:'books' },
+    { domain:'marketing.ekodi.kr', name:'마케팅 AI', group:'Business & Commerce', role:'마케팅·자동화·Workspace', manage:'services' },
+    { domain:'trade.ekodi.kr', name:'에코디 트레이딩', group:'Business & Commerce', role:'무역·견적·계약·거래', manage:'organization' },
+    { domain:'pay.ekodi.kr', name:'에코디 페이', group:'Business & Commerce', role:'결제·정산·귀속', manage:'finance', critical:true },
+    { domain:'books.ekodi.kr', name:'에코디서점', group:'Knowledge & Content', role:'출판·배포·인세·콘텐츠', manage:'books' },
     { domain:'lab.ekodi.kr', name:'에코디연구소', group:'Knowledge & Content', role:'연구·교육·프로젝트', manage:'services' },
-    { domain:'mail.ekodi.kr', name:'EKODI Mail', group:'Communication & Cloud', role:'메일 허브·조직 연결', manage:'communication' },
-    { domain:'live.ekodi.kr', name:'EKODI Live', group:'Communication & Cloud', role:'라이브·방송·송출', manage:'communication' },
-    { domain:'cloud.ekodi.kr', name:'EKODI Cloud', group:'Communication & Cloud', role:'파일·문서·협업 자료', manage:'workspace' },
+    { domain:'mail.ekodi.kr', name:'에코디 메일', group:'Communication & Cloud', role:'메일 허브·조직 연결', manage:'communication' },
+    { domain:'live.ekodi.kr', name:'에코디 라이브', group:'Communication & Cloud', role:'라이브·방송·송출', manage:'communication' },
+    { domain:'cloud.ekodi.kr', name:'에코디 클라우드', group:'Communication & Cloud', role:'파일·문서·협업 자료', manage:'workspace' },
     { domain:'cgma.ekodi.kr', name:'청계면상인회', group:'Client Sites', role:'상권·회원·고객 운영', manage:'clients' },
     { domain:'jadam.ekodi.kr', name:'자담치킨 목포대점', group:'Client Sites', role:'점포·CRM·마케팅 운영', manage:'clients' },
     { domain:'pizzamaru.ekodi.kr', name:'피자마루 목포대점', group:'Client Sites', role:'점포·CRM·마케팅 운영', manage:'clients' },
@@ -44,6 +44,7 @@
   ];
 
   let overview = null;
+  let evolution = null;
   let lastReviewAt = null;
   let selectedDomain = '';
   let fleetQuery = '';
@@ -72,6 +73,24 @@
     overview = await response.json();
     lastReviewAt = new Date();
     return overview;
+  }
+
+  async function loadEvolution(force = false) {
+    const path = force ? '/api/control/evolution/check' : '/api/control/evolution';
+    try {
+      const response = await fetch(`${API}${path}`, {
+        method: force ? 'POST' : 'GET',
+        headers:authHeaders(),
+        cache:'no-store',
+      });
+      if (!response.ok) throw new Error(`Evolution API ${response.status}`);
+      evolution = await response.json();
+      return evolution;
+    } catch (error) {
+      evolution = { error:String(error?.message || 'Evolution Intelligence 연결 실패') };
+      console.warn('EKODI Evolution Intelligence unavailable', error);
+      return null;
+    }
   }
 
   function serviceMap() {
@@ -196,6 +215,10 @@
       </div>
       <div class="ai-ops-metrics" id="aiOpsMetrics"></div>
       <div class="ai-ops-main">
+        <section class="ai-ops-block ai-evolution-block" aria-live="polite">
+          <div class="ai-evolution-head"><div><small>EVOLUTION INTELLIGENCE</small><h3>플랫폼 진화 제안</h3></div><span id="aiEvolutionMeta">검증된 근거 기반 분석</span></div>
+          <div class="ai-evolution-cards" id="aiEvolutionCards"></div>
+        </section>
         <div class="ai-ops-observe">
           <section class="ai-ops-block ai-fleet-block">
             <div class="ai-block-head ai-fleet-head"><div><small>SITE FLEET</small><h3>사이트 상태</h3></div><div class="ai-fleet-tools"><input id="aiFleetSearch" type="search" autocomplete="off" placeholder="사이트·도메인 검색" aria-label="사이트 검색"><select id="aiFleetFilter" aria-label="상태 필터"><option value="all">전체 상태</option><option value="needs-attention">주의·장애</option><option value="healthy">정상</option><option value="standby">연결대기</option></select></div></div>
@@ -233,6 +256,43 @@
     const compact = $('#aiOpsDecisionCompact');
     if (compact) compact.textContent = String(data.decisions);
     panel()?.setAttribute('data-decision-count', String(data.decisions));
+  }
+
+  function evolutionRecommendations() {
+    const items = evolution?.recommendations || evolution?.live?.recommendations || [];
+    return [...items].filter(item => item?.publishable !== false).sort((left, right) => Number(right?.score || 0) - Number(left?.score || 0));
+  }
+
+  function evidenceLinks(item) {
+    const sources = (item?.references || []).filter(source => source?.url).slice(0, 2);
+    if (!sources.length) return '<span class="ai-evidence-missing">근거 링크 보강 필요</span>';
+    return sources.map(source => `<a href="${esc(source.url)}" target="_blank" rel="noopener" title="${esc(source.title || source.url)}">근거 ↗</a>`).join('');
+  }
+
+  function renderEvolution() {
+    const host = $('#aiEvolutionCards');
+    const meta = $('#aiEvolutionMeta');
+    if (!host) return;
+    if (evolution?.error) {
+      host.innerHTML = `<div class="ai-evolution-empty">진화 분석 연결 대기 · ${esc(evolution.error)}</div>`;
+      if (meta) meta.textContent = '기존 AI Ops는 정상 동작';
+      return;
+    }
+    const items = evolutionRecommendations();
+    const approvals = items.filter(item => item?.approval?.required).length;
+    if (meta) meta.textContent = `${items.length}개 제안 · 승인 필요 ${approvals} · ${evolution?.store?.lastSeenAt ? '근거원장 저장됨' : '실시간 분석'}`;
+    if (!items.length) {
+      host.innerHTML = '<div class="ai-evolution-empty">현재 우선 개선 제안 없음 · 운영지표와 기술 변화를 계속 관찰합니다.</div>';
+      return;
+    }
+    host.innerHTML = items.slice(0, 3).map(item => {
+      const tone = item?.approval?.required ? 'gate' : Number(item?.score || 0) >= 85 ? 'high' : 'normal';
+      return `<article class="ai-evolution-card ${tone}">
+        <div class="ai-evolution-card-top"><strong>${esc(item.title)}</strong><b>${esc(Math.round(Number(item.score || 0)))}점</b></div>
+        <p>${esc(item.summary || item.reason || '검증된 운영·기술 근거를 기반으로 제안')}</p>
+        <div class="ai-evolution-card-foot"><span>근거 ${esc(item.evidenceGrade || 'C')} · 신뢰 ${esc(Math.round(Number(item.confidence || 0)))}%</span><span class="ai-evidence-links">${evidenceLinks(item)}</span></div>
+      </article>`;
+    }).join('');
   }
 
   function severity(state) {
@@ -418,7 +478,9 @@
   function render(error = '') {
     if (!panel()) return;
     const data = summary();
+    data.decisions += evolutionRecommendations().filter(item => item?.approval?.required).length;
     renderMetrics(data);
+    renderEvolution();
     renderFleet();
     renderSelectedDetail();
     const button = $('#aiOpsRefresh');
@@ -432,6 +494,7 @@
     if (button) { button.disabled = true; button.textContent = '↻ 점검 중…'; }
     try {
       await loadOverview(true);
+      await loadEvolution(false);
       render();
     } catch (error) {
       render(error.message || '상태점검 실패');
@@ -442,7 +505,7 @@
 
   async function initialData() {
     try {
-      await loadOverview(false);
+      await Promise.all([loadOverview(false), loadEvolution(false)]);
       render();
     } catch (error) {
       console.warn('EKODI AI Ops overview unavailable', error);

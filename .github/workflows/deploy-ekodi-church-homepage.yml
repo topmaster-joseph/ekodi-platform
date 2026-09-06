@@ -1,0 +1,289 @@
+name: Deploy EKODI Church Homepage
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/deploy-ekodi-church-homepage.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-church-homepage-production
+  cancel-in-progress: false
+
+env:
+  WRANGLER_VERSION: '4.119.0'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Checkout Church source
+        uses: actions/checkout@v7
+        with:
+          repository: topmaster-joseph/ekodi-church
+          ref: main
+          path: church
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - name: Validate Church header and multilingual source
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+          for file in index.html script.js church-character-identity.js church-i18n.js church-i18n-extended.js church-i18n-payment-patch.js church-shell-i18n.js church-header-controls.js church-header-tune.css giving.js church-footer.css community-visual.css; do
+            test -s "church/$file"
+          done
+          for file in script.js church-character-identity.js church-i18n.js church-i18n-extended.js church-i18n-payment-patch.js church-shell-i18n.js church-header-controls.js giving.js; do
+            node --check "church/$file"
+          done
+
+          grep -Fq 'href="#top"' church/index.html
+          grep -Fq 'https://my.ekodi.kr/' church/index.html
+          grep -Fq 'https://ekodi.kr/privacy' church/index.html
+          grep -Fq 'https://ekodi.kr/terms' church/index.html
+          grep -Fq 'data-ekodi-character-context="church"' church/index.html
+          grep -Fq 'data-ekodi-character-identity="founder-pastor"' church/index.html
+          grep -Fq 'church-character-identity.js' church/index.html
+          grep -Fq "contract:'ekodi.ekodian-identity.v1'" church/church-character-identity.js
+          grep -Fq "id:'founder-pastor'" church/church-character-identity.js
+          grep -Fq 'subjectAuthorized:true' church/church-character-identity.js
+          grep -Fq 'EKODIUserCharacter?.setIdentity' church/church-character-identity.js
+          if grep -Eiq 'portraitUrl|face_embedding|biometric|data:image' church/church-character-identity.js; then
+            echo 'Church identity bridge must not carry portrait or biometric payload.'
+            exit 1
+          fi
+          grep -Fq "const NEW=new Set(['my','kac','vi','mn','id'])" church/church-i18n-extended.js
+          grep -Fq 'EKODIChurchPaymentI18n' church/church-i18n-payment-patch.js
+          grep -Fq '카드·간편결제 PG 연결 필요' church/church-i18n-payment-patch.js
+          grep -Fq "'/church-i18n-payment-patch.js'" church/church-shell-i18n.js
+          grep -Fq "'/church-header-controls.js'" church/church-shell-i18n.js
+          grep -Fq "link.href='/church-header-tune.css'" church/church-shell-i18n.js
+          grep -Fq "window.scrollTo({top:0,left:0,behavior})" church/church-header-controls.js
+          grep -Fq "getElementById('ekodi-ccm-mr-toggle')" church/church-header-controls.js
+          grep -Fq 'font-weight:900' church/church-header-tune.css
+          grep -Fq 'nav{gap:10px!important}' church/church-header-tune.css
+
+          python - <<'PY'
+          from html.parser import HTMLParser
+          from pathlib import Path
+          class Audit(HTMLParser):
+              def __init__(self):
+                  super().__init__(); self.ids=[]; self.anchors=[]
+              def handle_starttag(self, tag, attrs):
+                  attrs=dict(attrs)
+                  if 'id' in attrs:self.ids.append(attrs['id'])
+                  href=attrs.get('href','')
+                  if href.startswith('#') and len(href)>1:self.anchors.append(href[1:])
+          source=Path('church/index.html').read_text(encoding='utf-8')
+          parser=Audit(); parser.feed(source)
+          duplicates=sorted({x for x in parser.ids if parser.ids.count(x)>1})
+          missing=sorted(set(parser.anchors)-set(parser.ids))
+          if duplicates: raise SystemExit(f'duplicate ids: {duplicates}')
+          if missing: raise SystemExit(f'missing anchor targets: {missing}')
+          print(f'anchor audit ok: {len(set(parser.anchors))} internal targets')
+          PY
+
+      - name: Prepare static Pages payload
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/ekodi-church-pages /tmp/ekodi-church-functions
+          mkdir -p /tmp/ekodi-church-pages
+          rsync -a --exclude='.git' --exclude='.github' church/ /tmp/ekodi-church-pages/
+          cd /tmp/ekodi-church-pages
+          if [[ -d functions ]] && find functions -type f -print -quit | grep -q .; then
+            npx --yes wrangler@${WRANGLER_VERSION} pages functions build functions --outdir=/tmp/ekodi-church-functions
+            test -s /tmp/ekodi-church-functions/index.js
+            echo 'Church Pages Functions payload prepared.'
+          else
+            echo 'Church source is static-only; Pages Functions build skipped.'
+          fi
+
+      - name: Deploy Church to Cloudflare Pages
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/ekodi-church-pages
+          npx --yes wrangler@${WRANGLER_VERSION} pages deploy . --project-name ekodi-church --branch main --commit-dirty=true
+
+      - name: Verify production multilingual assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          release='church-header-i18n-20260906-ekodian-1'
+          for attempt in $(seq 1 18); do
+            root=$(curl -L -sS -o /tmp/church.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://church.ekodi.kr/?release=${release}" || true)
+            character=$(curl -L -sS -o /tmp/character.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://church.ekodi.kr/church-character-identity.js?release=${release}" || true)
+            ext=$(curl -L -sS -o /tmp/ext.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://church.ekodi.kr/church-i18n-extended.js?release=${release}" || true)
+            pay=$(curl -L -sS -o /tmp/pay.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://church.ekodi.kr/church-i18n-payment-patch.js?release=${release}" || true)
+            loader=$(curl -L -sS -o /tmp/loader.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://church.ekodi.kr/church-shell-i18n.js?release=${release}" || true)
+            controls=$(curl -L -sS -o /tmp/controls.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://church.ekodi.kr/church-header-controls.js?release=${release}" || true)
+            tune=$(curl -L -sS -o /tmp/tune.css -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://church.ekodi.kr/church-header-tune.css?release=${release}" || true)
+            if [[ "$root" == 200 && "$character" == 200 && "$ext" == 200 && "$pay" == 200 && "$loader" == 200 && "$controls" == 200 && "$tune" == 200 ]] \
+              && grep -Fq 'https://ekodi.kr/privacy' /tmp/church.html \
+              && grep -Fq 'data-ekodi-character-identity="founder-pastor"' /tmp/church.html \
+              && grep -Fq "id:'founder-pastor'" /tmp/character.js \
+              && grep -Fq 'subjectAuthorized:true' /tmp/character.js \
+              && grep -Fq 'EKODIUserCharacter?.setIdentity' /tmp/character.js \
+              && ! grep -Eiq 'portraitUrl|face_embedding|biometric|data:image' /tmp/character.js \
+              && grep -Fq 'EKODIChurchExtendedI18n' /tmp/ext.js \
+              && grep -Fq 'EKODIChurchPaymentI18n' /tmp/pay.js \
+              && grep -Fq "'/church-i18n-payment-patch.js'" /tmp/loader.js \
+              && grep -Fq "getElementById('ekodi-ccm-mr-toggle')" /tmp/controls.js \
+              && grep -Fq 'font-weight:900' /tmp/tune.css; then
+              echo 'Church production multilingual and EKODIAN identity assets verified.'
+              break
+            fi
+            if [[ "$attempt" == 18 ]]; then
+              echo "Production did not converge: root=$root character=$character ext=$ext pay=$pay loader=$loader controls=$controls tune=$tune"
+              exit 1
+            fi
+            sleep 5
+          done
+
+      - name: Verify rendered nine-language header and page switching
+        shell: bash
+        run: |
+          set -euo pipefail
+          CHROME_BIN="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || true)"
+          test -n "$CHROME_BIN"
+          npm install --no-save --no-package-lock puppeteer-core@24.16.0
+          CHROME_BIN="$CHROME_BIN" node --input-type=module <<'NODE'
+          import puppeteer from 'puppeteer-core';
+          import assert from 'node:assert/strict';
+
+          const browser=await puppeteer.launch({executablePath:process.env.CHROME_BIN,headless:true,args:['--no-sandbox','--disable-dev-shm-usage']});
+          const extended=new Set(['my','kac','vi','mn','id']);
+          const base='https://church.ekodi.kr/';
+          const release='church-header-i18n-20260906-ekodian-1';
+          try{
+            const page=await browser.newPage();
+            await page.setViewport({width:1440,height:1000});
+
+            async function ready(expected){
+              await page.waitForFunction(()=>window.EKODIChurchI18n&&window.EKODIChurchExtendedI18n&&window.EKODIUserLanguage&&window.EKODIChurchPaymentI18n&&document.querySelector('[data-ekodi-language-control] select')&&document.getElementById('ekodi-ccm-mr-toggle'),{timeout:25000});
+              await page.waitForFunction(()=>window.__EKODI_CHARACTER_IDENTITY__?.id==='founder-pastor'&&window.__EKODI_CHARACTER_IDENTITY__?.subjectAuthorized===true,{timeout:15000});
+              await page.waitForFunction(locale=>document.documentElement.lang===locale&&window.EKODIUserLanguage?.getLocale?.()===locale,{timeout:20000},expected);
+              if(extended.has(expected))await page.waitForFunction(locale=>window.EKODIChurchExtendedI18n?.getLocale?.()===locale,{timeout:20000},expected);
+              await page.waitForFunction(()=>{
+                const nav=document.querySelector('#main-nav');
+                const music=document.getElementById('ekodi-ccm-mr-toggle');
+                const lang=document.querySelector('[data-ekodi-language-control]');
+                return nav&&music&&lang&&music.parentElement===nav&&music.previousElementSibling===lang&&music===nav.lastElementChild;
+              },{timeout:15000});
+              await new Promise(resolve=>setTimeout(resolve,500));
+            }
+            async function openLocale(locale){
+              await page.goto(`${base}?lang=${encodeURIComponent(locale)}&release=${release}`,{waitUntil:'domcontentloaded',timeout:30000});
+              await ready(locale);
+              return snapshot();
+            }
+            async function chooseInline(locale){
+              await page.select('[data-ekodi-language-control] select',locale);
+              await ready(locale);
+              return snapshot();
+            }
+            async function chooseReload(locale){
+              const navigation=page.waitForNavigation({waitUntil:'domcontentloaded',timeout:25000});
+              await page.select('[data-ekodi-language-control] select',locale);
+              await navigation;
+              await ready(locale);
+              return snapshot();
+            }
+            async function snapshot(){
+              return page.evaluate(()=>{
+                const select=document.querySelector('[data-ekodi-language-control] select');
+                const control=select?.closest('[data-ekodi-language-control]');
+                const account=document.querySelector('#main-nav .shell-my');
+                const nav=document.querySelector('#main-nav');
+                const music=document.getElementById('ekodi-ccm-mr-toggle');
+                const brandLink=document.querySelector('.site-header .brand');
+                const brand=document.querySelector('.site-header .brand strong');
+                const clone=document.body.cloneNode(true);
+                clone.querySelectorAll('[data-ekodi-language-control]').forEach(node=>node.remove());
+                return {
+                  lang:document.documentElement.lang,
+                  selected:select?.value||'',
+                  optionValues:[...select?.options||[]].map(o=>o.value),
+                  optionLabels:[...select?.options||[]].map(o=>o.textContent.trim()),
+                  accountThenLanguage:Boolean(account&&control&&account.parentElement===control.parentElement&&(account.compareDocumentPosition(control)&Node.DOCUMENT_POSITION_FOLLOWING)),
+                  musicLast:Boolean(nav&&music&&music.parentElement===nav&&music===nav.lastElementChild&&music.previousElementSibling===control),
+                  musicText:music?.textContent?.trim()||'',
+                  navGap:nav?getComputedStyle(nav).gap:'',
+                  brand:brand?.textContent?.trim()||'',
+                  brandWeight:Number.parseInt(brand?getComputedStyle(brand).fontWeight:'0',10)||0,
+                  brandHref:brandLink?.getAttribute('href')||'',
+                  hero:document.querySelector('.hero h1')?.innerText?.trim()||'',
+                  privacy:document.querySelector('.church-footer-legal a[href="https://ekodi.kr/privacy"]')?.textContent?.trim()||'',
+                  bodyWithoutLanguage:clone.innerText,
+                };
+              });
+            }
+            function assertNoHangul(s,label){
+              const match=s.bodyWithoutLanguage.match(/.{0,30}[가-힣].{0,30}/);
+              if(match)console.error(`${label} residual Hangul: ${match[0]}`);
+              assert.equal(Boolean(match),false,`${label} page still contains visible Korean copy outside language menu`);
+            }
+
+            let ko=await openLocale('ko-KR');
+            assert.deepEqual(ko.optionValues,['ko-KR','en','zh-CN','ja','my','kac','vi','mn','id']);
+            assert.deepEqual(ko.optionLabels,['한국어','English','中文','日本語','မြန်မာ','Jinghpaw','Tiếng Việt','Монгол','Bahasa']);
+            assert.equal(ko.accountThenLanguage,true);
+            assert.equal(ko.musicLast,true);
+            assert.ok(ko.brandWeight>=800,`brand weight too light: ${ko.brandWeight}`);
+            assert.equal(ko.brandHref,'#top');
+            assert.ok(Number.parseFloat(ko.navGap)<=12,`nav gap too wide: ${ko.navGap}`);
+
+            await page.evaluate(()=>window.scrollTo(0,Math.min(1600,document.documentElement.scrollHeight-1000)));
+            await new Promise(resolve=>setTimeout(resolve,150));
+            assert.ok((await page.evaluate(()=>window.scrollY))>100,'page did not scroll before brand click audit');
+            await page.click('.site-header .brand');
+            await page.waitForFunction(()=>window.scrollY<4,{timeout:3000});
+
+            const en=await chooseInline('en');
+            assert.equal(en.brand,'EKODI Church'); assert.match(en.hero,/From calling to fellowship/); assertNoHangul(en,'English');
+            const zh=await chooseInline('zh-CN');
+            assert.equal(zh.brand,'EKODI教会'); assertNoHangul(zh,'Chinese');
+            const ja=await chooseInline('ja');
+            assert.equal(ja.brand,'EKODI教会'); assertNoHangul(ja,'Japanese');
+
+            const my=await chooseReload('my');
+            assert.equal(my.brand,'EKODI အသင်းတော်'); assert.match(my.hero,/ခေါ်တော်မူခြင်း/); assertNoHangul(my,'Myanmar');
+            const kac=await chooseReload('kac');
+            assert.equal(kac.brand,'EKODI Nawku Htingnu'); assert.match(kac.hero,/Shaga la ai/); assertNoHangul(kac,'Jinghpaw');
+
+            const vi=await openLocale('vi');
+            assert.equal(vi.brand,'Hội thánh EKODI'); assert.match(vi.hero,/Từ lời kêu gọi/); assertNoHangul(vi,'Vietnamese');
+            const mn=await openLocale('mn');
+            assert.equal(mn.brand,'EKODI Сүм'); assert.match(mn.hero,/Дуудлагаас/); assertNoHangul(mn,'Mongolian');
+            const id=await openLocale('id');
+            assert.equal(id.brand,'Gereja EKODI'); assert.match(id.hero,/Dari panggilan/); assertNoHangul(id,'Indonesian');
+
+            ko=await chooseReload('ko-KR');
+            assert.equal(ko.brand,'에코디교회'); assert.match(ko.hero,/부르심에서 교제로/);
+            console.log('Rendered header verified: bold top-link brand, compact actions, music at far right, and 9 functional page locales.');
+          }finally{
+            await browser.close();
+          }
+          NODE
+
+      - name: Verify linked EKODI services
+        shell: bash
+        run: |
+          set -euo pipefail
+          for target in 'https://church.ekodi.kr/' 'https://my.ekodi.kr/' 'https://community.ekodi.kr' 'https://ekodi.kr/privacy' 'https://ekodi.kr/terms'; do
+            code=$(curl -L -sS -o /dev/null -w '%{http_code}' --connect-timeout 5 --max-time 20 "$target" || true)
+            case "$code" in 2*|3*) echo "link ok: $code $target" ;; *) echo "link failed: $code $target"; exit 1 ;; esac
+          done

@@ -1,70 +1,63 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
+import { adminMenuGroups, adminMenuOrder, getAdminMenuItem } from '../admin-menu-registry.js';
 
 const layout = await readFile(new URL('../admin-menu-layout.js', import.meta.url), 'utf8');
-const registry = await readFile(new URL('../admin-menu-registry.js', import.meta.url), 'utf8');
+const menuRuntime = await readFile(new URL('../admin-menu-runtime.js', import.meta.url), 'utf8');
 
-test('internal operations stay available to the control plane but disappear from primary navigation', () => {
-  for (const section of ['overview', 'services', 'deployments', 'policies']) {
-    assert.match(layout, new RegExp(`['\"]${section}['\"]`));
+test('internal technical sections stay out of primary navigation', () => {
+  assert.ok(layout.includes("const INTERNAL=new Set(['services','deployments','policies']);"));
+  for (const section of ['services','deployments','policies']) {
+    assert.equal(getAdminMenuItem(section)?.internal, true);
+    assert.equal(adminMenuOrder().includes(section), false);
+    assert.ok(layout.includes(`#${section}:${section}`));
   }
-  assert.match(layout, /INTERNAL_ONLY_HREFS/);
-  assert.match(layout, /\/legacy#domains/);
-  assert.match(layout, /\/legacy#activity/);
-  assert.match(layout, /item\.hidden = true/);
-  assert.match(layout, /data\.aiInternal|dataset\.aiInternal/);
+  assert.ok(layout.includes('item.dataset.aiInternal='));
+  assert.doesNotMatch(layout, /\/legacy#/);
 });
 
-test('retired Operations and Services explicitly route to demand-loaded AI Ops without auto-opening it on normal login', () => {
-  assert.match(layout, /function routeInternalToAiOps/);
-  assert.match(layout, /openDemand\('aiops'\)/);
-  assert.match(layout, /#ai-ops/);
-  assert.match(layout, /\['#operations', 'overview'\]/);
-  assert.match(layout, /\['#services', 'services'\]/);
-  assert.match(layout, /let requestedSection = ''/);
-  assert.match(layout, /const initialHash = explicitHashSection\(\)/);
-  assert.match(layout, /else if \(initialHash\) requestedSection = initialHash/);
-  assert.doesNotMatch(layout, /preferAiOpsOnReady/);
+test('internal hashes converge into demand-loaded AI Ops', () => {
+  assert.ok(layout.includes("function routeInternal(){dc=false;requestedSection='aiops'"));
+  assert.ok(layout.includes("requestDemand('aiops')"));
+  assert.ok(layout.includes("history.replaceState(null,'','#ai-ops')"));
+  assert.ok(layout.includes("const explicitHashSection=()=>HASH.get(location.hash.toLowerCase())||''"));
   assert.doesNotMatch(layout, /setInterval\(/);
 });
 
-test('Devices participates in the central panel router even though its menu is installed dynamically', () => {
-  assert.match(layout, /deviceControlNav/);
-  assert.match(layout, /return 'devices'/);
-  assert.match(layout, /\.nav\[data-device-control-nav\]/);
+test('Devices participates in the central panel router even though installed dynamically', () => {
+  assert.ok(layout.includes('deviceControlNav'));
+  assert.ok(layout.includes("return'devices'"));
+  assert.ok(layout.includes('.nav[data-device-control-nav]'));
 });
 
-test('Campus shortcuts cannot reopen hidden operational panels', () => {
-  assert.match(layout, /\[data-campus-section\]/);
-  assert.match(layout, /isInternalSection\(control\.dataset\.campusSection\)/);
-  assert.match(layout, /routeInternalToAiOps\(\)/);
-  assert.match(layout, /openDemand\('aiops'\)/);
+test('Campus shortcuts cannot reopen hidden technical panels', () => {
+  assert.ok(layout.includes('[data-campus-section]'));
+  assert.ok(layout.includes('isInternal(control.dataset.campusSection)'));
+  assert.ok(layout.includes('routeInternal()'));
 });
 
-test('human-facing Admin menu has one canonical order independent of lazy module replacement', () => {
-  assert.match(layout, /VISIBLE_NAV_ORDER = Object\.freeze\(adminMenuOrder\(\)\)/);
-  const expected = [
-    'overview', 'campus', 'aiops', 'health', 'security', 'marketing-ai', 'work', 'finance',
-    'communication', 'workspace', 'devices', 'organization', 'clients', 'admins', 'community',
-    'books', 'social', 'affiliates',
-  ];
-  let cursor = -1;
-  for (const section of expected) {
-    const next = registry.indexOf(`id: '${section}'`, cursor + 1);
-    assert.ok(next > cursor, `${section} must remain in canonical menu order`);
-    cursor = next;
-  }
-  assert.match(layout, /VISIBLE_NAV_RANK/);
-  assert.match(layout, /applyStableNavigationOrder/);
-  assert.match(layout, /item\.style\.order/);
-  assert.match(layout, /data\.menuOrder|dataset\.menuOrder/);
+test('human-facing Admin menu has one canonical order inside five domains plus Operations Center', () => {
+  assert.deepEqual(adminMenuGroups(), ['structure','core','common','vertical','tenants','operations-center']);
+  assert.deepEqual(adminMenuOrder(), [
+    'campus','public-site-controls','architecture','security','admins','ai-module-spec','storage',
+    'common-services','communication','workspace','finance','life-ai','personal-finance','community','books','social','devotional','marketing-ai','ai-membership','tax','affiliates',
+    'work','organization','clients','cheonggye-members','capabilities','aiops','devices','health','api-cost',
+  ]);
+  assert.ok(layout.includes('const ORDER=Object.freeze(adminMenuOrder());'));
+  assert.ok(layout.includes('const RANK=new Map(ORDER.map((section,index)=>[section,index+1]));'));
+  assert.ok(layout.includes('function applyOrder()'));
 });
 
-test('Admin sidebar menu uses minimal vertical spacing without shrinking label readability', () => {
-  assert.match(layout, /ekodi-admin-menu-density/);
-  assert.match(layout, /gap:0!important/);
-  assert.match(layout, /min-height:30px!important/);
-  assert.match(layout, /padding:4px 9px!important/);
-  assert.match(layout, /font-size:12px!important/);
+test('Admin sidebar menu uses compact spacing without shrinking label readability', () => {
+  for (const marker of ['ekodi-admin-menu-density','gap:0!important','min-height:30px!important','padding:4px 9px!important','font-size:12px!important']) assert.ok(layout.includes(marker));
+});
+
+test('administrator access waits for its runtime instead of recursively clicking the hidden source menu', () => {
+  assert.ok(layout.includes("if(section==='admins')return requestAdminAccess();"));
+  assert.ok(layout.includes("window.EKODIAdminMenu?.ensureAdminAccess?.()"));
+  assert.ok(menuRuntime.includes('function loadCurrentSession()'));
+  assert.ok(menuRuntime.includes('async function ensureAdminAccess()'));
+  assert.ok(menuRuntime.includes('refreshAdminAccess: loadAccounts, ensureAdminAccess'));
+  assert.ok(menuRuntime.indexOf("if (currentSession.role === 'super_admin') ensureAdminPanel();") < menuRuntime.indexOf('await installContextControl();'));
 });

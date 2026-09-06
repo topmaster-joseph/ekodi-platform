@@ -1,0 +1,28 @@
+name: Enforce platform and AI display names
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: enforce-platform-ai-display-names
+  cancel-in-progress: true
+
+jobs:
+  enforce:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Verify prefix-free platform and specialist AI display names
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/normalize-platform-ai-names.mjs

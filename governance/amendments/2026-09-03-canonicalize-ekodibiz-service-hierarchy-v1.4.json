@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 2,
+  "id": "2026-09-03-canonicalize-ekodibiz-service-hierarchy",
+  "title": "Canonicalize EKODIBIZ service hierarchy",
+  "proposer": "topmaster-joseph",
+  "status": "accepted",
+  "approvedAt": "2026-09-03",
+  "approvalRef": "Owner confirmation in ChatGPT conversation on 2026-09-03",
+  "reason": "Unify the public EKODIBIZ hierarchy under /ekodibiz, publish Mall and Trade as child services, and remove the stale public /mall target that caused a production 404 while retaining compatibility redirects.",
+  "targetVersion": "1.4.0",
+  "previousVersion": "1.4.0",
+  "touches": [
+    {
+      "constitution": "C2",
+      "version": "1.4.0",
+      "path": "governance/constitution/constitution.json"
+    }
+  ],
+  "diff": [
+    {
+      "path": "governance/constitution/constitution.json",
+      "summary": "Change legacy domain targets for mall.ekodi.kr and mall.biz.ekodi.kr from https://ekodi.kr/mall to https://ekodi.kr/ekodibiz/mall, preserving the legacy domains only as compatibility entry points."
+    }
+  ],
+  "risks": [
+    "Stale external links may continue to request the former /mall path.",
+    "A routing mismatch between the worker boundary and canonical registry could reintroduce a 404 or redirect loop.",
+    "Cached redirects may temporarily preserve an older route after deployment."
+  ],
+  "rollback": "Revert the legacy-domain target mapping and canonical EKODIBIZ routing commit if production verification of /ekodibiz/mall, compatibility redirects, or worker-first routing fails.",
+  "approvals": [
+    {
+      "role": "owner",
+      "by": "topmaster-joseph"
+    }
+  ],
+  "proposedAt": "2026-09-03T11:43:00Z"
+}

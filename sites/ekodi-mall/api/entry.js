@@ -11,7 +11,7 @@ import { handleStorefrontRequest } from './storefront.js';
 
 const FEE_RATES = Object.freeze({ direct: 7, marketplace: 8, ai: 9 });
 const ATTRIBUTION_WINDOW_DAYS = 7;
-const DEFAULT_ALLOWED_ORIGINS = ['https://mall.ekodi.kr','https://mall.biz.ekodi.kr','https://ekodi-mall.pages.dev'];
+const DEFAULT_ALLOWED_ORIGINS = ['https://ekodi.kr','https://ekodi-mall.pages.dev'];
 
 const clean = (value, max = 500) => String(value ?? '').trim().slice(0, max);
 const nowIso = () => new Date().toISOString();
@@ -43,6 +43,7 @@ function headers(origin, env) {
 }
 function reply(data, status, origin, env) { return new Response(JSON.stringify(data), { status, headers: headers(origin, env) }); }
 function parseJson(value, fallback = []) { try { return JSON.parse(value || '') || fallback; } catch { return fallback; } }
+function publicCategory(value) { return ['general','living','book','gift'].includes(String(value || '').trim()) ? String(value).trim() : 'general'; }
 
 export function feeForFirstTouch({ sellerType = 'individual', businessStoreVerified = false, sourceType = 'marketplace' } = {}) {
   if (sellerType === 'business' && businessStoreVerified) return 10;
@@ -52,6 +53,7 @@ export function trustedSource(sourceType = '') { return sourceType === 'direct' 
 
 const PUBLIC_SELECT = `SELECT p.id,p.share_code,p.public_url,p.seller_type,p.seller_display_name,p.sale_type,p.category,p.name,p.audience,p.one_line,p.price,
   p.benefits_json,p.specs_json,p.story,p.fulfillment,p.contact,p.affiliate_url,p.checkout_ready,p.published_at,p.store_id,
+  p.primary_region_id,p.region_ids_json,p.region_label,p.local_relationship,p.region_verified,
   s.name AS store_name,s.slug AS store_slug,s.verification_status AS store_verification_status
   FROM products p LEFT JOIN stores s ON s.id=p.store_id`;
 
@@ -64,7 +66,7 @@ function publicProduct(row) {
     seller: { type: row.seller_type, displayName: row.seller_display_name },
     store: row.store_id ? { name: row.store_name || '', slug: row.store_slug || '', verificationStatus: row.store_verification_status || 'unverified' } : null,
     product: {
-      saleType: row.sale_type, category: row.category, name: row.name, audience: row.audience || '', oneLine: row.one_line || '', price: row.price,
+      saleType: row.sale_type, category: publicCategory(row.category), region: row.primary_region_id ? { primaryRegionId: row.primary_region_id, regionIds: parseJson(row.region_ids_json), label: row.region_label || '', relationship: row.local_relationship || 'seller-declared', verified: Boolean(row.region_verified) } : null, name: row.name, audience: row.audience || '', oneLine: row.one_line || '', price: row.price,
       benefits: parseJson(row.benefits_json), specs: parseJson(row.specs_json), story: row.story || '', fulfillment: row.fulfillment || '',
       contact: row.contact || '', affiliateUrl: row.sale_type === 'affiliate' ? row.affiliate_url || '' : ''
     },

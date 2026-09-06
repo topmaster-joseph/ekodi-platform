@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ko">
+<html lang="ko" data-ekodi-global-nav="off" data-ekodi-character="off" data-ekodi-footer-profile="inherit">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
@@ -7,44 +7,85 @@
   <meta name="robots" content="noindex,nofollow,noarchive">
   <meta name="ekodi-ui-type" content="USER">
   <title>My EKODI | 나의 에코디</title>
-  <link rel="stylesheet" href="/styles.css?v=20260821-user-ui-1">
+  <link rel="stylesheet" href="/styles.css?v=20260906-intent-os-1">
   <link rel="stylesheet" href="/user-ui.css?v=20260822-user-ai-1">
   <link rel="stylesheet" href="/workspace-selector-shell.css?v=20260822-shell-sync-1">
   <link rel="stylesheet" href="/membership-summary.css?v=20260822-universal-membership-1">
+  <link rel="stylesheet" href="/personal-finance.css?v=20260905-personal-finance-1">
+  <link rel="stylesheet" href="/comfort-ui.css?v=20260906-context-home-v1">
 </head>
-<body data-ekodi-ui="USER">
-  <header class="topbar">
-    <a class="brand" href="#home" aria-label="My EKODI 홈"><span class="mark">M</span><span><strong>My EKODI</strong><small>나의 에코디</small></span></a>
-    <nav aria-label="주요 메뉴"><a href="#recommendations">오늘</a><a href="/journey/">나의 여정</a><a href="#workspaces">내 공간</a><a href="#platforms">서비스</a><a href="/device-care/">내 PC</a><a href="#account">내 정보</a></nav>
-    <button id="authButton" class="ghost" type="button">Google로 시작</button>
+<body data-ekodi-ui="USER" data-auth-state="guest" data-home-mode="home">
+  <header class="topbar my-comfort-header">
+    <a class="brand" href="#home" aria-label="My EKODI 홈"><span class="brand-leaf" aria-hidden="true"></span><span><strong>My EKODI</strong><small>나의 에코디</small></span></a>
+    <nav aria-label="주요 메뉴"><a href="#home">홈</a><a href="#workspaces">공간</a><a href="#recommendations">AI 비서</a><a href="#money">재무</a><a href="/journey/">여정</a><a href="#account">정보</a></nav>
+    <div class="top-actions"><a class="header-search" href="#intentPlanText" aria-label="하고 싶은 일 입력으로 이동">&#54616;&#44256; &#49910;&#51008; &#51068;&#51012; &#47568;&#54644;&#48372;&#49464;&#50836;</a><button id="authButton" class="ghost" type="button">Google로 시작</button></div>
   </header>
 
   <main id="home">
-    <section class="welcome-shell">
+    <section class="welcome-shell comfort-hero">
       <div class="welcome-copy">
-        <p class="eyebrow">MY EKODI · USER UI</p>
+        <p class="eyebrow">MY EKODI · PERSONAL AI HOME</p>
         <h1><span id="welcomeLead">오늘도 편안하게,<br>필요한 것부터.</span></h1>
-        <p class="lead">My EKODI는 내 정보와 공간을 보여주는 곳을 넘어, 지금 필요한 일을 먼저 살피고 다음 행동을 제안하는 개인 AI 비서입니다.</p>
+        <p id="heroLead" class="lead">로그인하면 내 공간과 필요한 기능만 연결해 보여드립니다.</p>
+        <p id="memberContextLine" class="member-context-line" hidden>현재 맥락을 확인하고 있습니다.</p>
       </div>
-      <aside class="identity-card" aria-label="나의 EKODI 상태">
+      <aside class="identity-card comfort-identity" aria-label="나의 EKODI 상태">
+        <div class="guest-card-copy"><small>MY EKODI</small><strong>내 에코디 시작</strong><span>로그인 후 필요한 것만 나타납니다.</span></div>
+        <div class="sprout-orb" aria-hidden="true"><i></i><b></b><span>•ᴗ•</span></div>
         <div class="identity-top"><small>EKODI USER AI</small><span id="accountPlan" class="status-pill">Guest</span></div>
         <strong id="identityName">로그인 전</strong>
         <span id="identityEmail">Google 인증 후 연결됩니다.</span>
         <code id="workspaceKey">workspace:…</code>
         <p id="workspaceSummary">로그인하면 마지막으로 사용한 공간과 연결 상태를 기억합니다.</p>
+        <a class="hero-auth-link" href="https://auth.ekodi.kr/?site=my&amp;return_to=https%3A%2F%2Fmy.ekodi.kr%2F">Google로 시작하기 <span aria-hidden="true">→</span></a>
       </aside>
     </section>
 
-    <section id="recommendations" class="section assistant-section">
+
+
+    <section id="memberHome" class="section member-context-home" aria-label="맞춤 홈" hidden>
+      <div class="member-context-head">
+        <div><p class="eyebrow">NOW · CONTEXTUAL HOME</p><h2 id="memberFocusTitle">지금 필요한 것부터</h2><p id="memberFocusSummary">내 공간과 최근 맥락을 확인하고 있습니다.</p></div>
+        <a class="member-intent-entry" href="#intentPlanText">하고 싶은 일을 말해보세요 <span aria-hidden="true">→</span></a>
+      </div>
+      <div id="memberFocusGrid" class="member-focus-grid" aria-live="polite"></div>
+      <nav class="member-context-nav" aria-label="맞춤 홈 바로가기"><a href="#recommendations">AI 제안</a><a href="#workspaces">내 공간</a><a href="#platforms">내 서비스</a><a href="#money">재무</a><a href="#account">내 정보</a></nav>
+    </section>
+
+    <section id="recommendations" class="section assistant-section" data-focus-surface="recommendations">
       <div class="assistant-heading">
         <div class="assistant-orb" aria-hidden="true">✦</div>
-        <div><p class="eyebrow">EKODI USER AI · 개인 AI 비서</p><h2>오늘의 제안</h2><p>현재 연결 상태와 이용 범위를 바탕으로 지금 하면 좋은 일만 골라 제안합니다. 전문 AI를 직접 지휘하지 않으며, 필요한 서비스로 안전하게 이어줍니다.</p></div>
+        <div><p class="eyebrow">EKODI USER AI · 개인 AI 비서</p><h2>시작 제안</h2><p>복잡한 메뉴보다 지금 필요한 것부터 보여드립니다. 선택하면 해당 공간이나 기능으로 자연스럽게 이어집니다.</p></div>
+      </div>
+      <div class="comfort-quick-grid" aria-label="빠른 시작">
+        <a href="#workspaces"><span class="quick-icon">⌂</span><strong>내 공간 열기</strong><small>저장한 작업과 맥락을 이어갑니다.</small></a>
+        <a href="#intentPlanText"><span class="quick-icon">✦</span><strong>AI와 시작하기</strong><small>하고 싶은 일을 자연어로 말해 보세요.</small></a>
+        <a href="#money"><span class="quick-icon">₩</span><strong>재무 살피기</strong><small>내 원장을 차분하게 정리합니다.</small></a>
+        <a href="/journey/"><span class="quick-icon">↗</span><strong>여정 이어가기</strong><small>다음 단계만 가볍게 확인합니다.</small></a>
       </div>
       <div id="recommendationList" class="recommendation-grid" aria-live="polite"><div class="empty"><strong>로그인하면 맞춤 제안을 확인할 수 있습니다.</strong><p>내 공간과 연결된 서비스를 살펴보고 필요한 다음 행동을 준비합니다.</p></div></div>
       <div class="assistant-principles" aria-label="개인비서 작동 원칙"><span>지금 하면 좋은 것</span><span>미리 준비할 것</span><span>새로운 기회</span></div>
     </section>
 
-    <section id="journey-preview" class="section soft-section">
+
+    <section id="intent" class="intent-shelf intent-os" data-focus-surface="intent" aria-label="하고 싶은 일로 시작">
+      <div class="intent-copy"><p class="eyebrow">INTENT OS · CAPABILITY FIRST</p><h2>무엇을 하고 싶으세요?</h2><p>서비스 이름을 찾지 않아도 됩니다. My EKODI가 의도를 먼저 읽고 등록된 Capability만 조합해 실행 계획을 만듭니다.</p></div>
+      <form id="intentPlanForm" class="intent-plan-form">
+        <label class="intent-field"><span>하고 싶은 일</span><textarea id="intentPlanText" maxlength="1200" placeholder="예: 다음 상인회 행사를 준비하고 안내문과 홍보까지 도와줘" required></textarea></label>
+        <label class="intent-field intent-audience"><span>현재 맥락</span><select id="intentPlanAudience"><option value="person">개인</option><option value="business">사업</option><option value="organization">기관·단체</option><option value="community">공동체</option><option value="church">교회</option><option value="team">팀</option></select></label>
+        <button id="intentPlanSubmit" class="primary" type="submit">계획 만들기</button>
+      </form>
+      <div class="intent-examples" aria-label="빠른 예시"><button type="button" data-intent-example="다음 상인회 행사를 준비하고 안내문과 홍보까지 도와줘">행사 준비</button><button type="button" data-intent-example="우리 매장의 고객 홍보와 매출 관리를 정리해줘">사업 운영</button><button type="button" data-intent-example="토요모임 말씀과 안내 콘텐츠를 준비해줘">교회·콘텐츠</button><button type="button" data-intent-example="책 원고를 정리하고 출판 준비까지 해줘">창작·출판</button></div>
+      <div class="intent-actions intent-legacy-signals" aria-label="빠른 관심 영역"><button type="button" data-intent-service="support">혜택·지원</button><button type="button" data-intent-service="work">일·진로</button><button type="button" data-intent-service="business">사업</button><button type="button" data-intent-service="author">글·콘텐츠</button><button type="button" data-intent-service="community">관계·생활</button><button type="button" data-finance-open>돈·재무</button><button type="button" data-intent-service="marketing">알리기</button>
+      <div id="intentPlanResult" class="intent-plan-result" aria-live="polite"><div class="intent-empty"><strong>원하는 결과부터 말해 주세요.</strong><p>EKODI는 Capability를 먼저 고르고 서비스와 AI는 그 다음에 선택합니다.</p></div></div>
+    </section>
+
+    <section id="money" class="section finance-section" data-focus-surface="money">
+      <div class="section-head finance-heading"><div><p class="eyebrow">PERSONAL FINANCE · PRIVATE LEDGER</p><h2>나의 재무</h2><p>자산·부채·거래를 실제 데이터로 정리하고, 근거가 연결된 제안만 받습니다. 개인재무 원장은 다른 Workspace와 분리되며 금융 실행은 자동으로 이루어지지 않습니다.</p></div><span id="financeStatus" class="finance-status">로그인 확인 중</span></div>
+      <div id="personalFinanceApp" aria-live="polite"><div class="finance-empty"><strong>개인재무를 준비하고 있습니다.</strong></div></div>
+    </section>
+
+    <section id="journey-preview" class="section soft-section" data-focus-surface="journey-preview" data-progressive-services="work,edu" hidden>
       <div class="section-head"><div><p class="eyebrow">MY JOURNEY</p><h2>서비스보다 먼저, 나의 다음 단계</h2></div><p>입시·학습과 유학·취업과 진로·창업과 사업·생활과 정착을 하나의 강제된 코스로 만들지 않습니다. 지금 필요한 단계만 선택하고 기존 EKODI 전문 플랫폼으로 이어갑니다.</p></div>
       <div class="recommendation-grid">
         <article class="recommendation-card"><small>01 · PERSON FIRST</small><h3>한 사람의 맥락</h3><p>서비스를 바꿀 때마다 처음부터 다시 시작하지 않도록 My EKODI가 로그인과 선택 맥락을 이어갑니다.</p></article>
@@ -53,7 +94,7 @@
       </div>
     </section>
 
-    <section id="life-channels" class="section life-channel-section">
+    <section id="life-channels" class="section life-channel-section" data-focus-surface="life-channels" data-progressive-services="life,community,social" hidden>
       <div class="section-head"><div><p class="eyebrow">LIFE CONNECTIONS</p><h2>&#49373;&#54876; &#52292;&#45328; &#50672;&#44208;</h2></div><p>&#47700;&#51068;&#183;&#47928;&#51088;&#183;&#47700;&#49888;&#51200;&#183;SNS&#47484; &#54596;&#50836;&#54620; &#47564;&#53372;&#47564; &#50672;&#44208;&#54616;&#44256;, EKODI User AI&#44032; &#44288;&#44228;&#183;&#51068;&#51221;&#183;&#52712;&#48120;&#183;&#48176;&#50880;&#183;&#49457;&#52272;&#51032; &#45796;&#51020; &#54665;&#46041;&#51012; &#47676;&#51200; &#51228;&#50504;&#54616;&#46020;&#47197; &#49444;&#51221;&#54633;&#45768;&#45796;. &#50672;&#44208;&#54616;&#51648; &#50506;&#51008; &#52292;&#45328;&#51008; &#51069;&#44144;&#45208; &#48516;&#49437;&#54616;&#51648; &#50506;&#49845;&#45768;&#45796;.</p></div>
       <div class="life-ai-policy"><div><small>PROACTIVE AI</small><h3>&#47676;&#51200; &#50508;&#50500;&#52264;&#47532;&#46104;, &#44208;&#51221;&#51008; &#45236;&#44032;</h3><p>&#51312;&#54924;&#183;&#51221;&#47532;&#183;&#52628;&#52380;&#51008; &#54728;&#50857; &#48276;&#50948;&#50640;&#49436; &#51456;&#48708;&#54616;&#44256;, &#47700;&#49884;&#51648; &#48156;&#49569;&#183;&#50696;&#50557;&#183;&#44208;&#51228;&#183;&#49325;&#51228;&#183;&#50808;&#48512; &#51228;&#52636;&#51008; &#48324;&#46020;&#51032; &#49324;&#50857;&#51088; &#49849;&#51064; &#50630;&#51060; &#49892;&#54665;&#54616;&#51648; &#50506;&#49845;&#45768;&#45796;.</p></div><label>&#49440;&#51228; &#51228;&#50504; &#44053;&#46020;<select id="lifeProactiveLevel"><option value="quiet">&#51312;&#50857;&#55176;</option><option value="balanced" selected>&#51201;&#45817;&#55176;</option><option value="active">&#51201;&#44537;&#51201;&#51004;&#47196;</option></select></label></div>
       <div id="lifeChannelGrid" class="life-channel-grid" aria-live="polite"></div>
@@ -61,25 +102,27 @@
       <p id="lifeChannelStatus" class="section-note">&#49444;&#51221;&#51008; &#51060; &#48652;&#46972;&#50864;&#51200;&#51032; My EKODI &#44060;&#51064; &#44277;&#44036;&#50640; &#51200;&#51109;&#46121;&#45768;&#45796;. &#48124;&#44048;&#54620; &#47700;&#49884;&#51648; &#50896;&#47928;&#51060;&#45208; &#51064;&#51613;&#51221;&#48372;&#45716; &#51200;&#51109;&#54616;&#51648; &#50506;&#49845;&#45768;&#45796;.</p>
     </section>
 
-    <section id="workspaces" class="section workspace-section">
+    <section id="workspaces" class="section workspace-section" data-focus-surface="workspaces">
       <div class="section-head"><div><p class="eyebrow">MY SPACES</p><h2>내 공간</h2></div><p>공간 선택은 여기 한 곳에서만 합니다. 선택한 공간은 다른 EKODI 서비스로 이동할 때 기본 컨텍스트로 이어집니다.</p></div>
       <div id="workspaceList" class="workspace-grid"><div class="empty"><strong>Workspace가 아직 연결되지 않았습니다.</strong><p>로그인 후 개인·사업장·교회·기관 공간을 불러옵니다.</p></div></div>
     </section>
 
-    <section class="summary" aria-label="My EKODI 요약">
+    <section class="summary" data-focus-companion="workspaces" aria-label="My EKODI 요약">
       <article><span id="workspaceCount">0</span><small>내 공간</small></article>
       <article><span id="serviceCount">0</span><small>연결 서비스</small></article>
       <article><span id="creatorCount">0</span><small>내 작업</small></article>
       <article><span id="paidCount">0</span><small>이용 플랜</small></article>
     </section>
 
-    <section id="platforms" class="section">
-      <div class="section-head"><div><p class="eyebrow">MY PLATFORMS</p><h2>내가 쓰는 EKODI</h2></div><p>한 번 로그인하면 현재 공간의 권한으로 필요한 서비스를 이어서 사용할 수 있습니다.</p></div>
-      <div id="platformList" class="platform-grid"><div class="empty"><strong>로그인하면 내 플랫폼 상태를 확인할 수 있습니다.</strong><p>서비스마다 다시 가입하지 않고 현재 EKODI 사용자의 접근권한을 불러옵니다.</p></div></div>
-      <p class="section-note">서비스별 데이터와 권한은 Workspace 단위로 분리되며 My EKODI는 이동과 선택을 연결합니다.</p>
+    <section id="platforms" class="section" data-focus-surface="platforms">
+      <div class="section-head"><div><p class="eyebrow">MY PLATFORMS</p><h2>내가 꺼내 쓰는 EKODI</h2></div><p>현재 쓰는 것과 지금 관심이 생긴 것만 먼저 보여줍니다. 서비스 전체 목록은 내가 찾을 때만 엽니다.</p></div>
+      <div id="platformList"><div class="empty"><strong>로그인하면 필요한 서비스만 나타납니다.</strong><p>연결 상태와 관심 신호를 바탕으로 꼭 필요한 만큼만 제안합니다.</p></div></div>
+      <div class="service-discovery-control"><button id="discoverServicesButton" class="secondary" type="button" aria-expanded="false" hidden>필요한 서비스 찾기</button><span>전체 목록은 내가 원할 때만 펼칩니다.</span><details class="my-utility-discovery"><summary>개인 도구</summary><a class="text-link" href="/device-care/">내 PC</a></details></div>
+      <div id="serviceDiscoveryList" class="service-discovery" hidden></div>
+      <p class="section-note">추천과 화면 노출은 접근권한을 만들지 않습니다. 서비스 권한은 기존 Workspace·Membership·RBAC 기준을 그대로 따릅니다.</p>
     </section>
 
-    <section id="personal-brand" class="section soft-section">
+    <section id="personal-brand" class="section soft-section" data-focus-surface="personal-brand" data-progressive-services="marketing" hidden>
       <div class="section-head"><div><p class="eyebrow">PERSONAL BRAND MARKETING</p><h2>나도 하나의 브랜드</h2></div><p>소속이 없어도 개인 이름과 활동을 기준으로 Marketing AI를 사용할 수 있습니다. 필요한 경우에만 시작하세요.</p></div>
       <div class="recommendation-grid">
         <article class="recommendation-card"><small>01 · PROFILE</small><h3>나를 한 문장으로 정리</h3><p>이름, 활동 분야, 소개와 알리고 싶은 주제를 개인 프로필로 관리합니다.</p><a class="text-link" href="#account">내 기본정보 확인 →</a></article>
@@ -88,16 +131,17 @@
       </div>
     </section>
 
-    <section id="creator" class="section">
+    <section id="creator" class="section" data-focus-surface="creator" data-progressive-services="author,publishing,books" hidden>
       <div class="section-head"><div><p class="eyebrow">CREATOR PORTFOLIO</p><h2>내가 만든 것</h2></div><p>Creator AI에서 승인해 My EKODI로 보낸 작업을 한곳에서 이어봅니다. 새 항목은 기본 비공개입니다.</p></div>
       <div id="creatorFilters" class="filters" role="group" aria-label="창작물 필터"><button class="chip active" data-filter="all" type="button">전체</button><button class="chip" data-filter="writer" type="button">글</button><button class="chip" data-filter="video" type="button">영상</button><button class="chip" data-filter="podcast" type="button">오디오</button><button class="chip" data-filter="lecture" type="button">교육</button><button class="chip" data-filter="research" type="button">연구</button><button class="chip" data-filter="visual" type="button">디자인</button><button class="chip" data-filter="mission" type="button">사역</button><button class="chip" data-filter="ai" type="button">AI</button></div>
       <div id="creatorList" class="portfolio-grid"><div class="empty"><strong>아직 My EKODI에 연결된 창작물이 없습니다.</strong><p>Creator AI에서 작업을 최종 승인한 뒤 My EKODI에 등록하면 여기에 나타납니다.</p></div></div>
     </section>
 
-    <section id="account" class="section account-section">
+    <section id="account" class="section account-section" data-focus-surface="account">
       <div class="section-head"><div><p class="eyebrow">MY PROFILE</p><h2>내 정보</h2></div><p>개인 정체성과 사업장·단체 공간을 섞지 않고 연결해 관리합니다.</p></div>
       <div class="account-grid">
         <article class="profile-editor"><small>PROFILE</small><h3>기본정보</h3><p>EKODI 전체에서 사용하는 나의 대표 이름입니다.</p><form id="profileForm" class="profile-form"><label for="displayName">이름</label><div class="profile-field-row"><input id="displayName" name="display_name" maxlength="120" autocomplete="name" placeholder="로그인 후 불러옵니다" disabled><button id="saveProfile" class="primary" type="submit" disabled>저장</button></div><span id="profileStatus" class="profile-status">로그인하면 내 기본정보를 확인하고 수정할 수 있습니다.</span></form><div class="linked-identities"><small>연결된 GOOGLE 계정</small><div id="linkedIdentityList"><span class="identity-row muted-row">연결 계정을 불러오지 않았습니다.</span></div></div><a class="text-link" href="https://auth.ekodi.kr/?site=my&manage=1&return_to=https%3A%2F%2Fmy.ekodi.kr%2F%23account">연결 계정 관리 →</a></article>
+        <article class="character-identity-editor"><div class="character-card-head"><div><small>MY EKODIAN</small><h3>&#45208;&#51032; &#50640;&#53076;&#46356;&#50616;</h3></div><span id="characterModeBadge" class="status-pill">&#47196;&#44536;&#51064; &#54596;&#50836;</span></div><div id="characterPreview" class="character-preview" aria-live="polite"><div class="character-preview-fallback" aria-hidden="true">&#127793;</div></div><p>&#50640;&#53076;&#46356;&#50616;&#51032; &#44592;&#48376;&#54805;&#51012; &#50416;&#44144;&#45208;, &#45236;&#44032; &#51649;&#51217; &#49440;&#53469;&#54620; &#49324;&#51652;&#51012; &#51060; &#44592;&#44592;&#50640;&#49436;&#47564; &#48152;&#50689;&#54624; &#49688; &#51080;&#49845;&#45768;&#45796;.</p><div class="character-mode-actions" role="group" aria-label="&#50640;&#53076;&#46356;&#50616; &#49440;&#53469;"><button id="characterCanonical" class="character-mode active" type="button">&#44592;&#48376; EKODIAN</button><button id="characterPersonal" class="character-mode" type="button">My EKODIAN</button></div><div class="character-photo-actions"><label class="secondary character-upload" for="characterPortraitInput">&#49324;&#51652; &#49440;&#53469;</label><input id="characterPortraitInput" type="file" accept="image/jpeg,image/png,image/webp" hidden disabled><button id="characterRemove" class="text-button" type="button" disabled>&#44060;&#51064; &#49444;&#51221; &#49325;&#51228;</button></div><span id="characterStatus" class="profile-status">&#47196;&#44536;&#51064;&#54616;&#47732; &#45208;&#51032; &#50640;&#53076;&#46356;&#50616;&#51012; &#49440;&#53469;&#54616;&#44256; &#48148;&#44992; &#49688; &#51080;&#49845;&#45768;&#45796;.</span><p class="character-privacy-note">&#50620;&#44404; &#49324;&#51652; &#50896;&#48376;&#44284; &#50620;&#44404; &#51076;&#48288;&#46377;&#51008; &#49436;&#48260;&#50640; &#51200;&#51109;&#54616;&#51648; &#50506;&#49845;&#45768;&#45796;. &#49440;&#53469; &#49345;&#53468;&#47564; &#44228;&#51221;&#50640; &#46041;&#44592;&#54868;&#54616;&#47728;, &#49324;&#51652;&#51008; &#48652;&#46972;&#50864;&#51200;&#51032; &#51060; &#44592;&#44592; &#51200;&#51109;&#49548;&#50640;&#47564; &#48372;&#44288;&#54633;&#45768;&#45796;.</p></article>
         <article><small>LOGIN</small><h3>통합 로그인</h3><p id="accountLoginText">로그인 전입니다.</p><button id="accountAuthButton" class="secondary" type="button">Google로 시작</button></article>
         <article><small>PRIVACY</small><h3>내 선택이 우선</h3><p>개인정보와 창작물은 공개를 기본값으로 삼지 않습니다. 공개와 배포는 별도 선택입니다.</p></article>
         <article><small>DATA</small><h3>공간별 데이터</h3><p>개인·사업장·단체 데이터는 Workspace별로 분리하고 서비스 간 무제한 공유를 허용하지 않습니다.</p></article>
@@ -105,13 +149,25 @@
     </section>
   </main>
 
-  <footer><strong>My EKODI</strong><span>EKODI User AI · 개인 AI 비서 · 내 공간 · 내 선택</span><a href="/journey/">My Journey ↗</a><a href="https://ekodi.kr/">EKODI ↗</a></footer>
+  <footer class="my-custom-footer" aria-label="My EKODI 안내">
+    <div class="my-footer-inner">
+      <div class="my-footer-brand"><span class="brand-leaf" aria-hidden="true"></span><div><strong>My EKODI</strong><p>당신의 일상에 가까이, 필요한 순간에만 조용히 돕는 개인 AI 공간입니다.</p></div></div>
+      <nav aria-label="My EKODI 바로가기"><a href="#workspaces">공간</a><a href="#recommendations">AI 비서</a><a href="#money">재무</a><a href="/journey/">여정</a><a href="#account">정보</a></nav>
+      <p class="my-footer-note">좋은 생각이 모여, 더 좋은 하루가 됩니다.</p>
+    </div>
+    <div class="my-footer-credo"><strong>&#54632;&#44760;&#54616;&#51648;&#47564;, &#45824;&#49888; &#44208;&#51221;&#54616;&#51648; &#50506;&#49845;&#45768;&#45796;.</strong><span>My EKODI&#45716; &#45817;&#49888;&#51032; &#49440;&#53469;&#51012; &#51473;&#49900;&#50640; &#46160;&#44256; &#54596;&#50836;&#54620; &#51221;&#48372;&#50752; &#45796;&#51020; &#54665;&#46041;&#51012; &#50672;&#44208;&#54633;&#45768;&#45796;.</span></div>
+  </footer>
   <script src="/config.js"></script>
-  <script type="module" src="/app.js?v=20260821-user-ui-1"></script>
+  <script type="module" src="/app.js?v=20260906-context-home-v1"></script>
+  <script type="module" src="/character-identity.js?v=20260906-ekodian-personal-v1"></script>
+  <script type="module" src="/intent-navigator.js?v=20260906-intent-os-1"></script>
   <script type="module" src="/workspace-selector-sync.js?v=20260822-shell-sync-1"></script>
-  <script type="module" src="/user-ai-ui.js?v=20260822-user-ai-1"></script>
+  <script type="module" src="/user-ai-ui.js?v=20260906-context-home-v1"></script>
   <script type="module" src="/membership-summary.js?v=20260822-universal-membership-1"></script>
+  <script type="module" src="/approval-brief.js?v=20260904-approval-hub-1"></script>
+  <script type="module" src="/personal-finance.js?v=20260905-personal-finance-1"></script>
   <script type="module" src="/life-communication.js?v=20260824-life-ai-1"></script>
   <script src="/church-marketing-ai.js?v=20260827-church-marketing-1"></script>
+  <script src="/channel-automation.js?v=20260903-channel-automation-1"></script>
 </body>
 </html>

@@ -1,43 +1,91 @@
 /* EKODI Admin: bright, readable, flat command surface */
-body.compact-control-center{color-scheme:light;background:#f4f7fb!important;color:#182438!important;font-size:15px;line-height:1.55}
-body.compact-control-center .app,body.compact-control-center .app>main,body.compact-control-center .content{background:#f4f7fb!important;color:#182438!important}
-body.compact-control-center .sidebar,body.compact-control-center .topbar{background:#fff!important;color:#182438!important;border-color:#dde6ef!important}
-body.compact-control-center .topbar h1{font-size:22px!important;color:#182438!important}
-body.compact-control-center .nav{min-height:44px!important;color:#405269!important;background:transparent!important;border-radius:11px!important}
-body.compact-control-center .nav span{font-size:14px!important}
-body.compact-control-center .nav:hover,body.compact-control-center .nav.active{background:#edf5ff!important;color:#0b5cab!important}
-body.compact-control-center .hero,body.compact-control-center .section,body.compact-control-center .architecture,body.compact-control-center .metrics article,body.compact-control-center .module{background:#fff!important;color:#182438!important;border-color:#dde6ef!important;box-shadow:0 7px 22px rgba(44,62,84,.045)!important}
-body.compact-control-center .hero p:not(.kicker),body.compact-control-center .section-head>p,body.compact-control-center .operations-copy,body.compact-control-center .module p{color:#5f7084!important;font-size:14px!important;line-height:1.55!important}
+body.admin-compact{color-scheme:light;--panel:#fff;--line:#d9e3ec;--text:#182438;--muted:#607287;--blue:#165f9d;--green:#237a54;--amber:#8a6418;background:#f4f7fb!important;color:#182438!important;font-size:15px;line-height:1.55}
+body.admin-compact .app,body.admin-compact .app>main,body.admin-compact .content{background:#f4f7fb!important;color:#182438!important}
+body.admin-compact .sidebar,body.admin-compact .topbar{background:#fff!important;color:#182438!important;border-color:#dde6ef!important}
+body.admin-compact .topbar h1{font-size:22px!important;line-height:1.25!important;letter-spacing:-.025em!important;color:#182438!important}
+body.admin-compact .nav{min-height:44px!important;color:#405269!important;background:transparent!important;border-radius:11px!important}
+body.admin-compact .nav span{font-size:14px!important;line-height:1.35!important;font-weight:650!important}
+body.admin-compact .nav:hover,body.admin-compact .nav.active{background:#edf5ff!important;color:#0b5cab!important}
+body.admin-compact .side-caption{font-size:10px!important;color:#718297!important}body.admin-compact .kicker{font-size:11px!important}body.admin-compact .profile strong{font-size:13px!important}body.admin-compact .profile small{font-size:11px!important;color:#66798f!important}
+body.admin-compact .primary,body.admin-compact .secondary,body.admin-compact .ghost{font-size:13px!important;min-height:40px!important;padding:9px 13px!important;font-weight:700!important}
+body.admin-compact .hero,body.admin-compact .section,body.admin-compact .architecture,body.admin-compact .metrics article,body.admin-compact .module{background:#fff!important;color:#182438!important;border-color:#dde6ef!important;box-shadow:0 7px 22px rgba(44,62,84,.045)!important}
+body.admin-compact .hero p:not(.kicker),body.admin-compact .section-head>p,body.admin-compact .operations-copy,body.admin-compact .module p{color:#5f7084!important;font-size:14px!important;line-height:1.6!important}
+body.admin-compact .section h2,body.admin-compact .section-head h2,body.admin-compact .architecture h2{font-size:21px!important;line-height:1.3!important;letter-spacing:-.025em!important;color:#182438!important}
+body.admin-compact .section h3,body.admin-compact .module h3,body.admin-compact article h3{font-size:16px!important;line-height:1.4!important;color:#24364a!important}
+body.admin-compact input:not([type="checkbox"]):not([type="radio"]),body.admin-compact select,body.admin-compact textarea{min-height:42px!important;padding:9px 11px!important;border:1px solid #bccbd9!important;border-radius:10px!important;background:#fff!important;color:#203247!important;font:inherit!important;font-size:14px!important;line-height:1.45!important}
+body.admin-compact textarea{min-height:88px!important;resize:vertical!important}
+body.admin-compact input::placeholder,body.admin-compact textarea::placeholder{color:#8a98a8!important;opacity:1!important}
+body.admin-compact input:focus,body.admin-compact select:focus,body.admin-compact textarea:focus{outline:none!important;border-color:#4d8fc7!important;box-shadow:0 0 0 3px #dceeff!important}
+body.admin-compact label{font-size:13px!important;line-height:1.45!important;color:#42566c!important}
+body.admin-compact table{font-size:14px!important;line-height:1.45!important;color:#2d4157!important}
+body.admin-compact th{padding:11px 12px!important;background:#f4f7fa!important;color:#43566a!important;font-size:12px!important;font-weight:800!important;letter-spacing:.01em!important;border-color:#e1e8ef!important}
+body.admin-compact td{padding:12px!important;border-color:#e7edf3!important;vertical-align:middle!important}
+body.admin-compact tr:hover td{background:#f9fbfd!important}
+body.admin-compact code{font-size:12px!important;line-height:1.5!important}
+body.admin-compact small,body.admin-compact .muted,body.admin-compact .subtle{color:#697b8f!important;line-height:1.5!important}
+body.admin-compact :focus-visible{outline:3px solid #b7daf8!important;outline-offset:2px!important}
 
-body.compact-control-center #aiOpsPanel{height:auto!important;min-height:0!important;overflow:visible!important;display:flex!important;flex-direction:column!important;gap:12px!important}
-body.compact-control-center #aiOpsPanel.hidden-panel{display:none!important}
-body.compact-control-center .content:has(#aiOpsPanel:not(.hidden-panel)){overflow:visible!important}
-body.compact-control-center #aiOpsPanel .ai-ops-grid{display:block!important;min-height:0!important;overflow:visible!important}
-body.compact-control-center #aiOpsPanel .ai-ops-main{display:flex!important;flex-direction:column!important;gap:12px!important;overflow:visible!important}
-body.compact-control-center #aiOpsPanel .ai-ops-observe{order:20!important;display:block!important;overflow:visible!important}
-body.compact-control-center #aiOpsPanel .ai-ops-side,body.compact-control-center #aiOpsPanel .ai-selected-detail,body.compact-control-center .mission-dashboard,body.compact-control-center .mission-ecosystem-rail,body.compact-control-center .governance-command-bar{display:none!important}
-body.compact-control-center #aiOpsPanel .ai-ops-metrics{grid-template-columns:repeat(4,minmax(0,1fr))!important}
-body.compact-control-center #aiOpsPanel .ai-ops-metrics article:nth-child(n+5){display:none!important}
-body.compact-control-center #aiOpsPanel .ai-fleet-block{background:#fff!important;border-color:#dbe5ee!important;overflow:visible!important}
-body.compact-control-center #aiOpsPanel .ai-fleet-scroll{max-height:48vh!important;min-height:220px!important;overflow:auto!important;background:#f8fafc!important;border-color:#e1e8ef!important}
-body.compact-control-center #aiOpsPanel .ai-fleet-table tbody{grid-template-columns:1fr!important}
-body.compact-control-center #aiOpsPanel .ai-fleet-row{background:#fff!important;border-color:#dce6ef!important}
-body.compact-control-center #aiOpsPanel .ai-fleet-site strong{color:#22354b!important;font-size:14px!important}
+body.admin-compact #aiOpsPanel{height:auto!important;min-height:0!important;overflow:visible!important;display:flex!important;flex-direction:column!important;gap:12px!important}
+body.admin-compact #aiOpsPanel.hidden-panel{display:none!important}
+body.admin-compact .content:has(#aiOpsPanel:not(.hidden-panel)){overflow:visible!important}
+body.admin-compact #aiOpsPanel .ai-ops-grid{display:block!important;min-height:0!important;overflow:visible!important}
+body.admin-compact #aiOpsPanel .ai-ops-main{display:flex!important;flex-direction:column!important;gap:12px!important;overflow:visible!important}
+body.admin-compact #aiOpsPanel .ai-ops-observe{order:20!important;display:block!important;overflow:visible!important}
+body.admin-compact #aiOpsPanel .ai-ops-side,body.admin-compact #aiOpsPanel .ai-selected-detail,body.admin-compact .mission-dashboard,body.admin-compact .mission-ecosystem-rail,body.admin-compact .governance-command-bar{display:none!important}
+body.admin-compact #aiOpsPanel .ai-ops-metrics{grid-template-columns:repeat(4,minmax(0,1fr))!important}
+body.admin-compact #aiOpsPanel .ai-ops-metrics article:nth-child(n+5){display:none!important}
+body.admin-compact #aiOpsPanel .ai-fleet-block{background:#fff!important;border-color:#dbe5ee!important;overflow:visible!important}
+body.admin-compact #aiOpsPanel .ai-fleet-scroll{max-height:48vh!important;min-height:220px!important;overflow:auto!important;background:#f8fafc!important;border-color:#e1e8ef!important}
+body.admin-compact #aiOpsPanel .ai-fleet-table tbody{grid-template-columns:1fr!important}
+body.admin-compact #aiOpsPanel .ai-fleet-row{background:#fff!important;border-color:#dce6ef!important}
+body.admin-compact #aiOpsPanel .ai-fleet-site strong{color:#22354b!important;font-size:14px!important}
 
-body.compact-control-center #aiOpsPanel .ai-chief-chat{order:1!important;position:static!important;inset:auto!important;display:flex!important;flex-direction:column!important;flex:0 0 auto!important;min-height:0!important;max-height:none!important;border:1px solid #cddbe8!important;border-radius:16px!important;background:#fff!important;box-shadow:0 8px 24px rgba(42,62,84,.06)!important;overflow:hidden!important}
-body.compact-control-center #aiOpsPanel .ai-chat-head{order:1!important;padding:14px 16px!important;background:#f8fafc!important;border-color:#e2e9f0!important}
-body.compact-control-center #aiOpsPanel .ai-chat-head h3{font-size:20px!important;color:#182438!important}
-body.compact-control-center #aiOpsPanel .ai-chat-form{order:2!important;grid-template-columns:minmax(0,1fr) auto!important;gap:9px!important;padding:14px 16px 7px!important;background:#fff!important}
-body.compact-control-center #aiOpsPanel .ai-chat-input{min-height:70px!important;max-height:150px!important;padding:12px 13px!important;border:1px solid #b8c8d8!important;border-radius:12px!important;background:#fff!important;color:#182438!important;font-size:15px!important;line-height:1.55!important}
-body.compact-control-center #aiOpsPanel .ai-chat-send{height:46px!important;min-width:72px!important;background:#165f9d!important;color:#fff!important;font-size:13px!important}
-body.compact-control-center #aiOpsPanel .ai-auto-action-status{order:3!important;margin:0 16px 8px!important;padding:9px 11px!important;border:1px solid #c8ddec!important;border-radius:10px!important;background:#eef7ff!important;color:#245579!important;font-size:12px!important}
-body.compact-control-center #aiOpsPanel .ai-chat-quick{order:4!important;padding:2px 16px 10px!important;background:#fff!important}
-body.compact-control-center #aiOpsPanel .ai-chat-messages{order:5!important;height:330px!important;min-height:220px!important;max-height:45vh!important;overflow:auto!important;padding:14px 16px!important;background:#f7f9fc!important;gap:12px!important}
-body.compact-control-center #aiOpsPanel .ai-chat-message{max-width:92%!important}
-body.compact-control-center #aiOpsPanel .ai-chat-bubble{padding:11px 12px!important;background:#fff!important;border-color:#dce5ef!important;border-radius:11px!important}
-body.compact-control-center #aiOpsPanel .ai-chat-message.user .ai-chat-bubble{background:#edf5ff!important;border-color:#c9def2!important}
-body.compact-control-center #aiOpsPanel .ai-chat-text{font-size:15px!important;line-height:1.65!important;color:#26384e!important}
-body.compact-control-center #aiOpsPanel .ai-chat-council,body.compact-control-center #aiOpsPanel .ai-chat-context-card{display:none!important}
-body.compact-control-center #aiOpsPanel .ai-chat-foot{order:6!important;padding:8px 16px 13px!important;background:#fff!important;color:#718096!important;font-size:11px!important}
+body.admin-compact #aiOpsPanel .ai-chief-chat{order:1!important;position:static!important;inset:auto!important;display:flex!important;flex-direction:column!important;flex:0 0 auto!important;min-height:0!important;max-height:none!important;border:1px solid #cddbe8!important;border-radius:16px!important;background:#fff!important;box-shadow:0 8px 24px rgba(42,62,84,.06)!important;overflow:hidden!important}
+body.admin-compact #aiOpsPanel .ai-chat-head{order:1!important;padding:14px 16px!important;background:#f8fafc!important;border-color:#e2e9f0!important}
+body.admin-compact #aiOpsPanel .ai-chat-head h3{font-size:20px!important;color:#182438!important}
+body.admin-compact #aiOpsPanel .ai-chat-form{order:2!important;grid-template-columns:minmax(0,1fr) auto!important;gap:9px!important;padding:14px 16px 7px!important;background:#fff!important}
+body.admin-compact #aiOpsPanel .ai-chat-input{min-height:70px!important;max-height:150px!important;padding:12px 13px!important;border:1px solid #b8c8d8!important;border-radius:12px!important;background:#fff!important;color:#182438!important;font-size:15px!important;line-height:1.55!important}
+body.admin-compact #aiOpsPanel .ai-chat-send{height:46px!important;min-width:72px!important;background:#165f9d!important;color:#fff!important;font-size:13px!important}
+body.admin-compact #aiOpsPanel .ai-auto-action-status{order:3!important;margin:0 16px 8px!important;padding:9px 11px!important;border:1px solid #c8ddec!important;border-radius:10px!important;background:#eef7ff!important;color:#245579!important;font-size:12px!important}
+body.admin-compact #aiOpsPanel .ai-chat-quick{order:4!important;padding:2px 16px 10px!important;background:#fff!important}
+body.admin-compact #aiOpsPanel .ai-chat-messages{order:5!important;height:330px!important;min-height:220px!important;max-height:45vh!important;overflow:auto!important;padding:14px 16px!important;background:#f7f9fc!important;gap:12px!important}
+body.admin-compact #aiOpsPanel .ai-chat-message{max-width:92%!important}
+body.admin-compact #aiOpsPanel .ai-chat-bubble{padding:11px 12px!important;background:#fff!important;border-color:#dce5ef!important;border-radius:11px!important}
+body.admin-compact #aiOpsPanel .ai-chat-message.user .ai-chat-bubble{background:#edf5ff!important;border-color:#c9def2!important}
+body.admin-compact #aiOpsPanel .ai-chat-text{font-size:15px!important;line-height:1.65!important;color:#26384e!important}
+body.admin-compact #aiOpsPanel .ai-chat-council,body.admin-compact #aiOpsPanel .ai-chat-context-card{display:none!important}
+body.admin-compact #aiOpsPanel .ai-chat-foot{order:6!important;padding:8px 16px 13px!important;background:#fff!important;color:#718096!important;font-size:11px!important}
 
-@media(max-width:760px){body.compact-control-center{font-size:16px}body.compact-control-center .content{padding:14px 12px 30px!important}body.compact-control-center .nav{min-height:48px!important}body.compact-control-center .nav span{font-size:15px!important}body.compact-control-center #aiOpsPanel .ai-ops-metrics{grid-template-columns:repeat(2,minmax(0,1fr))!important}body.compact-control-center #aiOpsPanel .ai-chat-form{grid-template-columns:1fr!important;padding:12px 13px 7px!important}body.compact-control-center #aiOpsPanel .ai-chat-input{min-height:82px!important;font-size:16px!important}body.compact-control-center #aiOpsPanel .ai-chat-send{width:100%!important;height:48px!important}body.compact-control-center #aiOpsPanel .ai-chat-messages{height:min(42vh,360px)!important;max-height:none!important;padding:13px!important}body.compact-control-center #aiOpsPanel .ai-fleet-scroll{max-height:none!important;min-height:0!important}}
+@media(max-width:760px){body.admin-compact{font-size:16px}body.admin-compact .content{padding:14px 12px 30px!important}body.admin-compact .topbar h1{font-size:20px!important}body.admin-compact .nav{min-height:48px!important}body.admin-compact .nav span{font-size:15px!important}body.admin-compact input:not([type="checkbox"]):not([type="radio"]),body.admin-compact select,body.admin-compact textarea{font-size:16px!important;min-height:46px!important}body.admin-compact table{font-size:13px!important}body.admin-compact th,body.admin-compact td{padding:10px!important}body.admin-compact #aiOpsPanel .ai-ops-metrics{grid-template-columns:repeat(2,minmax(0,1fr))!important}body.admin-compact #aiOpsPanel .ai-chat-form{grid-template-columns:1fr!important;padding:12px 13px 7px!important}body.admin-compact #aiOpsPanel .ai-chat-input{min-height:82px!important;font-size:16px!important}body.admin-compact #aiOpsPanel .ai-chat-send{width:100%!important;height:48px!important}body.admin-compact #aiOpsPanel .ai-chat-messages{height:min(42vh,360px)!important;max-height:none!important;padding:13px!important}body.admin-compact #aiOpsPanel .ai-fleet-scroll{max-height:none!important;min-height:0!important}}
+
+/* Site Management: full-width, high-legibility command surface */
+body.admin-compact #campusPanel .campus-toolbar{padding:20px 22px!important;gap:16px!important}
+body.admin-compact #campusPanel .campus-toolbar h2{margin:0!important;font-size:24px!important;line-height:1.25!important;letter-spacing:-.025em!important;font-weight:850!important}
+body.admin-compact #campusPanel .campus-toolbar p:not(.kicker){margin:5px 0 0!important;font-size:14px!important;line-height:1.55!important}
+body.admin-compact #campusPanel .campus-toolbar-actions{gap:9px!important}
+body.admin-compact #campusSiteGroups,body.admin-compact .campus-groups-grid{display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:18px!important;width:100%!important}
+body.admin-compact .campus-groups-wrap{padding:16px!important;background:#f4f7fb!important}
+body.admin-compact .campus-group-card{overflow:hidden!important;background:#fff!important;color:#203247!important;border:1px solid #d8e3ed!important;border-radius:16px!important;box-shadow:0 6px 20px rgba(35,55,75,.05)!important}
+body.admin-compact .campus-group-head{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:14px!important;min-height:68px!important;padding:16px 18px!important;background:#f7faff!important;color:#203247!important;border-bottom:1px solid #dbe5ee!important}
+body.admin-compact .campus-group-head h3{margin:0!important;font-size:18px!important;line-height:1.35!important;font-weight:800!important;color:#1d3045!important}
+body.admin-compact .campus-group-head p{margin:4px 0 0!important;font-size:13px!important;line-height:1.45!important;color:#607287!important}
+body.admin-compact .campus-group-count{min-width:30px!important;height:30px!important;padding:0 9px!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;font-size:12px!important;line-height:1!important;font-weight:800!important;color:#31506d!important;background:#eaf2f9!important;border:1px solid #cfdeeb!important;border-radius:999px!important}
+body.admin-compact .campus-group-list{display:flex!important;flex-direction:column!important;background:#fff!important}
+body.admin-compact .campus-site-item{display:grid!important;grid-template-columns:minmax(250px,1.2fr) minmax(190px,.75fr) auto!important;gap:16px!important;align-items:center!important;min-height:64px!important;padding:12px 16px!important;background:#fff!important;color:#21364d!important;border:0!important;border-bottom:1px solid #e6edf4!important;border-radius:0!important}
+body.admin-compact .campus-site-item:last-child{border-bottom:0!important}
+body.admin-compact .campus-site-item:hover{background:#f8fbff!important}
+body.admin-compact .campus-site-identity{display:flex!important;align-items:center!important;gap:9px!important;min-width:0!important;color:#21364d!important}
+body.admin-compact .campus-site-identity strong{min-width:0!important;font-size:15px!important;line-height:1.4!important;font-weight:800!important;color:#1e3045!important}
+body.admin-compact .campus-site-type,body.admin-compact .campus-site-stage{display:inline-flex!important;align-items:center!important;min-height:24px!important;padding:4px 7px!important;font-size:11px!important;line-height:1!important;font-weight:800!important;color:#3a5873!important;background:#eef5fb!important;border:1px solid #d3e1ec!important;border-radius:7px!important;white-space:nowrap!important}
+body.admin-compact .campus-site-domain{min-width:0!important;font-size:13px!important;line-height:1.4!important;font-weight:650!important;color:#536a82!important;overflow-wrap:anywhere!important;text-decoration:none!important}
+body.admin-compact a.campus-site-domain:hover{color:#0b5cab!important;text-decoration:underline!important}
+body.admin-compact .campus-row-actions{display:flex!important;align-items:center!important;justify-content:flex-end!important;gap:8px!important;flex-wrap:nowrap!important}
+body.admin-compact .campus-row-action{display:inline-flex!important;align-items:center!important;justify-content:center!important;min-height:38px!important;padding:8px 12px!important;font-size:13px!important;line-height:1!important;font-weight:800!important;color:#27425d!important;background:#fff!important;border:1px solid #c7d6e4!important;border-radius:9px!important;text-decoration:none!important;white-space:nowrap!important}
+body.admin-compact .campus-row-action:hover:not(:disabled){background:#edf5ff!important;border-color:#9fc1de!important;color:#0b5cab!important}
+body.admin-compact .campus-row-action.primary{color:#fff!important;background:#165f9d!important;border-color:#165f9d!important}
+body.admin-compact .campus-row-action.primary:hover{color:#fff!important;background:#0f538c!important;border-color:#0f538c!important}
+body.admin-compact .campus-row-action:disabled{cursor:not-allowed!important;opacity:.58!important}
+body.admin-compact .campus-site-item.is-planned{opacity:.78!important}
+
+@media(max-width:1100px){body.admin-compact .campus-site-item{grid-template-columns:minmax(0,1fr) auto!important;gap:9px 14px!important}body.admin-compact .campus-site-domain{grid-column:1!important}body.admin-compact .campus-row-actions{grid-column:2!important;grid-row:1 / span 2!important}}
+@media(max-width:760px){body.admin-compact #campusPanel .campus-toolbar{padding:16px!important}body.admin-compact #campusPanel .campus-toolbar h2{font-size:22px!important}body.admin-compact #campusPanel .campus-toolbar p:not(.kicker){font-size:14px!important}body.admin-compact #campusSiteGroups,body.admin-compact .campus-groups-grid{gap:14px!important}body.admin-compact .campus-groups-wrap{padding:10px!important}body.admin-compact .campus-group-head{min-height:0!important;padding:14px!important}body.admin-compact .campus-group-head h3{font-size:17px!important}body.admin-compact .campus-site-item{grid-template-columns:1fr!important;gap:10px!important;min-height:0!important;padding:14px!important}body.admin-compact .campus-site-identity strong{font-size:16px!important}body.admin-compact .campus-site-domain{grid-column:auto!important;font-size:14px!important}body.admin-compact .campus-row-actions{grid-column:auto!important;grid-row:auto!important;justify-content:stretch!important}body.admin-compact .campus-row-action{flex:1 1 0!important;min-height:44px!important;font-size:14px!important}}

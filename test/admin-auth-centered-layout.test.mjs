@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const authHtml = await readFile(`${root}auth-site/index.html`, 'utf8');
-const controlCss = await readFile(`${root}control-center.css`, 'utf8');
+const controlCss = await readFile(`${root}admin-shell.css`, 'utf8');
 
 test('seamless auth shell is a single-column viewport-centered layout', () => {
   assert.match(authHtml, /html\[data-seamless-sso="1"\] \.shell\{[^}]*min-height:100dvh/);

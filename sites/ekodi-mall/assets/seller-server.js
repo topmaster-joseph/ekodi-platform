@@ -32,6 +32,19 @@
     return body;
   }
 
+  function selectedRegion() {
+    const option = form.elements.primaryRegionId?.selectedOptions?.[0];
+    const primaryRegionId = text(option?.value);
+    if (!primaryRegionId) return null;
+    return {
+      primaryRegionId,
+      regionIds: text(option.dataset.path).split(',').map((item) => text(item)).filter((item) => item && item !== 'kr'),
+      label: text(option.dataset.fullName || option.textContent),
+      relationship: 'seller-declared',
+      verified: false
+    };
+  }
+
   function payload() {
     const v = Object.fromEntries([...form.querySelectorAll('[name]')].map((field) => [field.name, text(field.value)]));
     const sellerName = v.sellerDisplayName || '판매자';
@@ -43,7 +56,7 @@
       seller: { type: v.sellerType || 'individual', displayName: sellerName },
       store,
       product: {
-        saleType: v.saleType || 'direct', category: v.category || 'local', name: productName, audience, oneLine: v.oneLine,
+        saleType: v.saleType || 'direct', category: v.category || 'general', region: selectedRegion(), name: productName, audience, oneLine: v.oneLine,
         price: v.price ? Number(v.price) : null, benefits, specs: list(v.specs), story: v.story, fulfillment: v.fulfillment,
         contact: v.contact, affiliateUrl: v.affiliateUrl, action: { url: v.saleType === 'affiliate' ? v.affiliateUrl : '' }
       },
@@ -81,7 +94,7 @@
     const store = product.store || {};
     const values = {
       productId: product.id, sellerType: s.type || 'individual', sellerDisplayName: s.displayName || '', contact: p.contact || store.contact || '',
-      saleType: p.saleType || 'direct', productName: p.name || '', category: p.category || 'local', price: p.price ?? '', affiliateUrl: p.affiliateUrl || '',
+      saleType: p.saleType || 'direct', productName: p.name || '', category: p.category || 'general', primaryRegionId: p.region?.primaryRegionId || '', price: p.price ?? '', affiliateUrl: p.affiliateUrl || '',
       storeName: store.name || '', storeSlug: store.slug || '', audience: p.audience || '', oneLine: p.oneLine || '', benefits: (p.benefits || []).join('\n'),
       story: p.story || '', specs: (p.specs || []).join('\n'), fulfillment: p.fulfillment || ''
     };

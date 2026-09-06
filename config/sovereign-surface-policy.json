@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 1,
+  "policyVersion": "1.8.1",
+  "status": "active",
+  "sourceOfTruth": "governance/architecture/sovereign-autonomous-operations.v1.json",
+  "authorityContext": "Person + Workspace + Role + Capability",
+  "tracks": {
+    "ui": {
+      "changeClass": "green",
+      "contract": "shell/theme + service manifest + secure projection",
+      "independentParallelWork": true
+    },
+    "service": {
+      "changeClass": "yellow",
+      "contract": "capability-provider + service contract",
+      "independentParallelWork": true,
+      "directCrossServicePrivateDb": false
+    },
+    "tenant": {
+      "changeClass": "yellow",
+      "contract": "workspace_id + membership + capability",
+      "independentParallelWork": true,
+      "urlIsIdentity": false
+    },
+    "knowledge": {
+      "changeClass": "green",
+      "contract": "purpose-bound retrieval + provenance + workspace authorization",
+      "independentParallelWork": true
+    },
+    "content": {
+      "changeClass": "green",
+      "contract": "content source + publication state + workspace authorization",
+      "independentParallelWork": true
+    },
+    "agent": {
+      "changeClass": "yellow",
+      "contract": "agent identity + capability tool + mission gate + audit",
+      "independentParallelWork": true,
+      "rootCredentialAccess": false
+    }
+  },
+  "protectedSovereignAreas": [
+    "auth",
+    "identity_authority",
+    "core_schema",
+    "gateway",
+    "policy",
+    "secrets",
+    "production_deployment",
+    "production_dns",
+    "destructive_data",
+    "permission_expansion",
+    "sovereign_control_plane",
+    "constitutional_change"
+  ],
+  "boundedProductionPromotion": {"changeClass":"yellow","directAgentMutation":false,"standingDelegation":true,"scope":"existing_registered_boundary_only","controlPlaneRequired":true},
+  "completionDefinition": [
+    "contract_declared",
+    "authority_bounded",
+    "tests_pass",
+    "security_pass",
+    "verified",
+    "audited",
+    "rollback_or_recovery_defined"
+  ]
+}

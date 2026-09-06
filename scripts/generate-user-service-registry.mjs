@@ -14,7 +14,7 @@ const AVAILABLE_STATUSES = new Set(['live', 'beta']);
 
 const raw = JSON.parse(fs.readFileSync(sourcePath, 'utf8'));
 const services = Array.isArray(raw.services) ? raw.services : [];
-const normalized = services.map((service) => {
+const normalized = services.filter(service => service.userVisible !== false).map((service) => {
   const id = String(service?.id || '').trim().toLowerCase();
   const sourceUrl = String(service?.url || (service?.domain ? `https://${service.domain}` : '')).trim();
   let parsed = null;
@@ -53,8 +53,20 @@ for (const service of normalized) {
 
 const ids = normalized.map((service) => service.id);
 if (new Set(ids).size !== ids.length) throw new Error('Duplicate user service id in ecosystem-services.json');
-const domains = normalized.map((service) => service.domain);
-if (new Set(domains).size !== domains.length) throw new Error('Duplicate user service domain in ecosystem-services.json');
+
+// Subdomain services are unique by hostname. Multiple first-class services may
+// intentionally live under different paths on the EKODI apex, for example
+// /mall and /delivery, so those are unique by their canonical first path.
+const serviceAddresses = normalized.map((service) => {
+  if (service.domain !== 'ekodi.kr') return service.domain;
+  let parsed = null;
+  try { parsed = new URL(service.url); } catch {}
+  const pathname = String(parsed?.pathname || '/').replace(/\/+$/, '') || '/';
+  return `${service.domain}${pathname}`;
+});
+if (new Set(serviceAddresses).size !== serviceAddresses.length) {
+  throw new Error('Duplicate user service address in ecosystem-services.json');
+}
 
 const banner = '// GENERATED from config/ecosystem-services.json. Do not edit by hand.\n';
 const payload = JSON.stringify(normalized, null, 2);
