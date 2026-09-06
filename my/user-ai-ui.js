@@ -46,7 +46,7 @@ function renderSuggestions(){
 function updateGreeting(){
   const lead=$('#welcomeLead'),name=$('#identityName')?.textContent?.trim();
   if(!lead)return;
-  lead.innerHTML=name&&name!=='로그인 전'?`${esc(name)}님,<br>오늘 필요한 것부터.`:'오늘도 편안하게,<br>필요한 것부터.';
+  lead.innerHTML=name&&name!=='로그인 전'?`${esc(name)}님,<br>지금 필요한 것부터.`:'내 에코디,<br>필요한 것만.';
 }
 
 let queued=false;
