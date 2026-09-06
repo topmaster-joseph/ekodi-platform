@@ -33,16 +33,31 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 12
     env:
-      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      TOKEN_A: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      TOKEN_B: ${{ secrets.SUPABASE_TOKEN }}
+      TOKEN_C: ${{ secrets.SUPABASE_PAT }}
+      TOKEN_D: ${{ secrets.SUPABASE_MANAGEMENT_TOKEN }}
       PROJECT_REF: renzehysxirjilvdxacv
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
-      - name: Verify deployment credential
+      - name: Select Supabase deployment credential
         shell: bash
-        run: test -n "$SUPABASE_ACCESS_TOKEN"
+        run: |
+          set -euo pipefail
+          token="${TOKEN_A:-}"
+          [ -n "$token" ] || token="${TOKEN_B:-}"
+          [ -n "$token" ] || token="${TOKEN_C:-}"
+          [ -n "$token" ] || token="${TOKEN_D:-}"
+          if [ -z "$token" ]; then
+            echo 'No Supabase deployment credential is configured.'
+            exit 2
+          fi
+          echo "::add-mask::$token"
+          echo "SUPABASE_ACCESS_TOKEN=$token" >> "$GITHUB_ENV"
+          echo 'Supabase deployment credential selected.'
       - name: Deploy profile API
         run: npx --yes supabase@2.116.0 functions deploy profile-api --project-ref "$PROJECT_REF"
       - name: Verify My EKODI character CORS
