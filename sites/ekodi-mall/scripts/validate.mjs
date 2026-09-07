@@ -12,6 +12,11 @@ const [site, products, pages, stores, regionsConfig] = await Promise.all([
   load('regions.json')
 ]);
 
+const wrangler = await readFile(path.join(root, 'api', 'wrangler.toml'), 'utf8');
+const wranglerVar = (name) => wrangler.match(new RegExp('^' + name + '\\s*=\\s*\"([^\"]*)\"', 'm'))?.[1] || '';
+const apiPaymentsEnabled = wranglerVar('PAYMENTS_ENABLED').toLowerCase() === 'true';
+const readinessRefs = ['MALL_LEGAL_READINESS_REF','MALL_PRIVACY_READINESS_REF','MALL_REFUND_READINESS_REF','MALL_PAYOUT_READINESS_REF'];
+
 const errors = [];
 const required = (value, label) => {
   if (value === undefined || value === null || String(value).trim() === '') errors.push(`${label} is required`);
@@ -46,6 +51,8 @@ if (site?.commerce?.inquiryBasketEnabled) {
 }
 if (!['inquiry-only', 'order-ready', 'live'].includes(site?.commerce?.orderMode)) errors.push('site.commerce.orderMode must be inquiry-only, order-ready, or live');
 if (!site?.commerce?.paymentsEnabled && site?.commerce?.orderMode === 'live') errors.push('site.commerce.orderMode cannot be live while paymentsEnabled=false');
+if (Boolean(site?.commerce?.paymentsEnabled) !== apiPaymentsEnabled) errors.push('site.commerce.paymentsEnabled must match api/wrangler.toml PAYMENTS_ENABLED');
+if (apiPaymentsEnabled) for (const name of readinessRefs) required(wranglerVar(name), `api/wrangler.toml ${name} (required when PAYMENTS_ENABLED=true)`);
 
 const categoryIds = new Set((site.categories || []).map((item) => item.id));
 if (!categoryIds.has('all')) errors.push('site.categories must include "all"');
