@@ -114,6 +114,30 @@ function productReadiness(row, env) {
   };
 }
 
+export function launchReadinessBlockers({ counts = {}, env = {} } = {}) {
+  const blockers = [];
+  if (Number(counts.checkoutGateEligibleCount || 0) < 1) blockers.push('no-checkout-eligible-product');
+  if (Number(counts.checkoutGateEnabledCount || 0) < 1) blockers.push('no-checkout-gate-product');
+  if (!env.TOSS_SECRET_KEY) blockers.push('toss-secret-missing');
+  if (!(Boolean(env.MALL_OPERATIONS_TOKEN) || allowedOpsEmails(env).size > 0)) blockers.push('operations-review-missing');
+  if (!clean(env.MALL_LEGAL_READINESS_REF, 500)) blockers.push('legal-readiness-missing');
+  if (!clean(env.MALL_PRIVACY_READINESS_REF, 500)) blockers.push('privacy-readiness-missing');
+  if (!clean(env.MALL_REFUND_READINESS_REF, 500)) blockers.push('refund-readiness-missing');
+  if (!clean(env.MALL_PAYOUT_READINESS_REF, 500)) blockers.push('payout-readiness-missing');
+  return blockers;
+}
+
+async function globalLaunchReadiness(env) {
+  const seller = await env.DB.prepare(`SELECT COUNT(*) AS sellerCount, SUM(CASE WHEN direct_sale_status='verified' THEN 1 ELSE 0 END) AS verifiedDirectSellerCount FROM seller_profiles`).first();
+  const store = await env.DB.prepare(`SELECT COUNT(*) AS storeCount, SUM(CASE WHEN verification_status='verified' AND status='active' THEN 1 ELSE 0 END) AS verifiedStoreCount FROM stores`).first();
+  const product = await env.DB.prepare(`SELECT COUNT(*) AS productCount, SUM(CASE WHEN p.sale_type='direct' AND p.status='published' AND p.price>0 AND sp.direct_sale_status='verified' AND (p.seller_type<>'business' OR (s.id IS NOT NULL AND s.verification_status='verified')) THEN 1 ELSE 0 END) AS checkoutGateEligibleCount, SUM(CASE WHEN p.sale_type='direct' AND p.status='published' AND p.price>0 AND sp.direct_sale_status='verified' AND (p.seller_type<>'business' OR (s.id IS NOT NULL AND s.verification_status='verified')) AND p.checkout_ready=1 THEN 1 ELSE 0 END) AS checkoutGateEnabledCount FROM products p JOIN seller_profiles sp ON sp.user_id=p.seller_id LEFT JOIN stores s ON s.id=p.store_id`).first();
+  const queue = await env.DB.prepare(`SELECT COUNT(*) AS openVerificationRequestCount FROM verification_requests WHERE status IN ('submitted','under_review')`).first();
+  const counts = { sellerCount:Number(seller?.sellerCount||0), verifiedDirectSellerCount:Number(seller?.verifiedDirectSellerCount||0), storeCount:Number(store?.storeCount||0), verifiedStoreCount:Number(store?.verifiedStoreCount||0), productCount:Number(product?.productCount||0), checkoutGateEligibleCount:Number(product?.checkoutGateEligibleCount||0), checkoutGateEnabledCount:Number(product?.checkoutGateEnabledCount||0), openVerificationRequestCount:Number(queue?.openVerificationRequestCount||0) };
+  const activationBlockers = launchReadinessBlockers({ counts, env });
+  const liveBlockers = [...activationBlockers]; if (!flag(env.PAYMENTS_ENABLED)) liveBlockers.push('payments-disabled');
+  return { status: liveBlockers.length===0?'live':activationBlockers.length===0?'activation-ready':'blocked', activationReady:activationBlockers.length===0, liveReady:liveBlockers.length===0, activationBlockers, liveBlockers, counts, global:{ paymentsEnabled:flag(env.PAYMENTS_ENABLED), tossSecretConfigured:Boolean(env.TOSS_SECRET_KEY), operationsReviewConfigured:Boolean(env.MALL_OPERATIONS_TOKEN)||allowedOpsEmails(env).size>0, legalReadinessConfigured:Boolean(clean(env.MALL_LEGAL_READINESS_REF,500)), privacyReadinessConfigured:Boolean(clean(env.MALL_PRIVACY_READINESS_REF,500)), refundReadinessConfigured:Boolean(clean(env.MALL_REFUND_READINESS_REF,500)), payoutReadinessConfigured:Boolean(clean(env.MALL_PAYOUT_READINESS_REF,500)), buyerPiiReleaseEnabled:flag(env.BUYER_PII_RELEASE_ENABLED), supplierForwardEnabled:flag(env.SUPPLIER_FORWARD_ENABLED), payoutExecutionEnabled:false, refundExecutionEnabled:false } };
+}
+
 async function sellerReadiness(env, sellerId) {
   const profile = await env.DB.prepare(`SELECT user_id AS userId,email,display_name AS displayName,seller_type AS sellerType,
     verification_status AS verificationStatus,direct_sale_status AS directSaleStatus FROM seller_profiles WHERE user_id=?`).bind(sellerId).first();
@@ -204,8 +228,9 @@ export async function handleVerificationRequest(request, env) {
   const internalReviewMatch = path.match(/^\/api\/internal\/verification\/([^/]+)\/review$/);
   const internalGateMatch = path.match(/^\/api\/internal\/products\/([^/]+)\/checkout-gate$/);
   const internalSellerReadinessMatch = path.match(/^\/api\/internal\/verification\/sellers\/([^/]+)\/readiness$/);
+  const internalLaunchReadiness = path === '/api/internal/verification/launch-readiness';
   const isRoute = path === '/api/readiness' || path === '/api/verification/requests' || sellerVerificationSubmit || Boolean(storeVerificationMatch)
-    || path === '/api/internal/verification/queue' || Boolean(internalReviewMatch) || Boolean(internalGateMatch) || Boolean(internalSellerReadinessMatch);
+    || path === '/api/internal/verification/queue' || internalLaunchReadiness || Boolean(internalReviewMatch) || Boolean(internalGateMatch) || Boolean(internalSellerReadinessMatch);
   if (!isRoute) return null;
   if (!env.DB) return { status: 503, body: { error: 'Mall 전용 데이터베이스 연결이 없습니다.' } };
 
@@ -221,6 +246,7 @@ export async function handleVerificationRequest(request, env) {
         FROM verification_requests vr JOIN seller_profiles sp ON sp.user_id=vr.seller_id WHERE vr.status=? ORDER BY vr.created_at ASC LIMIT 100`).bind(status).all();
       return { status: 200, body: { requests: rows.results || [], status, actor: auth.actor } };
     }
+    if (request.method === 'GET' && internalLaunchReadiness) return { status: 200, body: { launch: await globalLaunchReadiness(env), actor: auth.actor } };
     if (request.method === 'GET' && internalSellerReadinessMatch) {
       return { status: 200, body: { readiness: await sellerReadiness(env, decodeURIComponent(internalSellerReadinessMatch[1])), actor: auth.actor } };
     }

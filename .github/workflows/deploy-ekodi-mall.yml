@@ -74,6 +74,7 @@ jobs:
           grep -Fq 'api/public/checkout/quote' dist/assets/public-product.js
           grep -Fq '/share-links' dist/assets/seller-server.js
           grep -Fq '/api/internal/verification/queue' dist/assets/verification-ops.js
+          grep -Fq '/api/internal/verification/launch-readiness' dist/assets/verification-ops.js
           grep -Fq '/checkout-gate' dist/assets/verification-ops.js
           grep -Fq '/p/* /assets/shared-product.html 200' dist/_redirects
           echo "Mall static build, first-touch attribution, discovery and order quote client verified"
@@ -436,6 +437,7 @@ jobs:
             fees_code=$(curl -sS -o /tmp/mall-fees.json -w '%{http_code}' --connect-timeout 5 --max-time 15 https://mall-api.ekodi.kr/api/public/fees || true)
             feed_code=$(curl -sS -o /tmp/mall-feed.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://mall-api.ekodi.kr/api/public/products?limit=1' || true)
             verification_queue_code=$(curl -sS -o /tmp/mall-verification-unauth.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://mall-api.ekodi.kr/api/internal/verification/queue' || true)
+            launch_readiness_code=$(curl -sS -o /tmp/mall-launch-readiness-unauth.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://mall-api.ekodi.kr/api/internal/verification/launch-readiness' || true)
             rehearsal_code=$(curl -sS -o /tmp/mall-production-rehearsal.json -w '%{http_code}' --connect-timeout 5 --max-time 15 -X POST 'https://mall-api.ekodi.kr/api/internal/rehearsal/transaction' || true)
             if [ "$health_code" = "200" ] && [ "$fees_code" = "200" ] && [ "$feed_code" = "200" ] \
               && grep -Fq '"schemaReady":true' /tmp/mall-api.json \
@@ -446,6 +448,7 @@ jobs:
               && grep -Fq '"operationsReviewConfigured":true' /tmp/mall-api.json \
               && grep -Fq '"operationsEmailAllowlistConfigured":true' /tmp/mall-api.json \
               && [ "$verification_queue_code" = "401" ] \
+              && [ "$launch_readiness_code" = "401" ] \
               && [ "$rehearsal_code" = "404" ] \
               && grep -Fq '"transactionRehearsalEnabled":false' /tmp/mall-api.json \
               && grep -Fq '"paymentsEnabled":false' /tmp/mall-api.json \

@@ -68,6 +68,8 @@ test('Mall production verifier preserves Verification Ops cache safety checks', 
   assert.match(workflow, /cache-control: no-store/);
   assert.match(workflow, /x-robots-tag: noindex, nofollow, noarchive/);
   assert.match(workflow, /verificationOpsCacheBoundary=verified/);
+  assert.match(workflow, /api\/internal\/verification\/launch-readiness/);
+  assert.match(workflow, /launchReadinessAuthBoundary=verified/);
 });
 
 test('Mall production verifier checks the seller-neutral product identity catalog', () => {
