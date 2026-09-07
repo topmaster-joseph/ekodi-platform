@@ -148,6 +148,41 @@ async function verifyTax(tab, alreadyActive, started) {
   results.push({ id: menuId, group, ok: true, durationMs: Date.now() - started, destination: destination.origin + '/', destinationStatus: probe.status });
 }
 
+async function verifyPublicSiteControls(tab, alreadyActive, started) {
+  stage('public-site-controls-api');
+  const responsePromise = page.waitForResponse(response => {
+    try {
+      const url = new URL(response.url());
+      return response.request().method() === 'GET' && url.origin === 'https://api.ekodi.kr' && url.pathname === '/api/control/public-sites';
+    } catch { return false; }
+  }, { timeout: 10_000 });
+  if (alreadyActive) await page.evaluate(() => window.EKODIPublicSiteControls?.load?.());
+  else await clickFast(tab);
+  const response = await responsePromise;
+  if (response.status() !== 200) throw new Error(`public-site-controls: API returned HTTP ${response.status()}`);
+  const headers = response.headers();
+  if (headers['access-control-allow-origin'] !== 'https://admin.ekodi.kr') throw new Error('public-site-controls: production CORS origin mismatch');
+
+  stage('public-site-controls-render');
+  const form = page.locator('form[data-public-site-id="cgma"]');
+  await form.waitFor({ state: 'visible', timeout: 8_000 });
+  const state = await visiblePanelState();
+  const domainText = String(await form.locator('.muted').first().textContent() || '');
+  const publicStatus = await form.locator('select[name="publicStatus"]').inputValue();
+  const maintenanceDisplayType = await form.locator('select[name="maintenanceDisplayType"]').inputValue();
+  const redirectMode = await form.locator('select[name="redirectMode"]').inputValue();
+  const badge = String(await form.locator('[data-public-site-status-badge]').textContent() || '').trim();
+  const message = String(await page.locator('#publicSiteControlsPanel [data-public-site-message]').textContent() || '').replace(/\s+/g, ' ').trim();
+  if (!state.panelFound || !state.selected || state.busy) throw new Error(`public-site-controls panel invalid: ${JSON.stringify(state)}`);
+  if (!domainText.includes('cgma.or.kr')) throw new Error(`public-site-controls: CGMA domain missing: ${domainText}`);
+  if (!['public', 'maintenance'].includes(publicStatus)) throw new Error(`public-site-controls: invalid publicStatus ${publicStatus}`);
+  if (!['default', 'url'].includes(maintenanceDisplayType)) throw new Error(`public-site-controls: invalid maintenanceDisplayType ${maintenanceDisplayType}`);
+  if (!['button', 'auto'].includes(redirectMode)) throw new Error(`public-site-controls: invalid redirectMode ${redirectMode}`);
+  if (!badge) throw new Error('public-site-controls: empty status badge');
+  if (!message.includes('상태를 확인했습니다')) throw new Error(`public-site-controls: load confirmation missing: ${message}`);
+  results.push({ id: menuId, group, ok: true, durationMs: Date.now() - started, ...state, apiStatus: response.status(), corsOrigin: headers['access-control-allow-origin'], domain: 'cgma.or.kr', publicStatus, maintenanceDisplayType, redirectMode, badge });
+}
+
 async function verifyNormal(tab, alreadyActive, started) {
   if (!alreadyActive) await clickFast(tab);
   stage('panel');
@@ -200,6 +235,7 @@ try {
   const alreadyActive = aria === 'true' || classes.split(/\s+/).includes('active');
   if (menuId === 'storage') await verifyStorage(tab, alreadyActive, started);
   else if (menuId === 'tax') await verifyTax(tab, alreadyActive, started);
+  else if (menuId === 'public-site-controls') await verifyPublicSiteControls(tab, alreadyActive, started);
   else await verifyNormal(tab, alreadyActive, started);
 
   stage('diagnostics');
