@@ -1,4 +1,4 @@
-﻿name: EKODI Mall Sub ID Diagnose
+name: EKODI Mall Sub ID Diagnose
 
 on:
   workflow_dispatch:
@@ -16,7 +16,7 @@ env:
 jobs:
   diagnose:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 35
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -25,14 +25,31 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
+      - name: Request one-time forced report discovery
+        id: force_request
+        shell: bash
+        run: |
+          set -euo pipefail
+          requested_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          ready=false
+          for attempt in $(seq 1 60); do
+            if npx --yes wrangler@${WRANGLER_VERSION} d1 execute ekodi-auth --remote --config wrangler.api.toml --command "INSERT INTO affiliate_partner_report_control(account_id,force_requested_at,force_reason,force_consumed_at,updated_at) VALUES('coupang-ekodibiz','$requested_at','github_diagnostic',NULL,'$requested_at') ON CONFLICT(account_id) DO UPDATE SET force_requested_at=excluded.force_requested_at,force_reason=excluded.force_reason,force_consumed_at=NULL,updated_at=excluded.updated_at" >/tmp/force-request.log 2>&1; then
+              ready=true
+              break
+            fi
+            sleep 10
+          done
+          [ "$ready" = "true" ]
+          echo "request_epoch=$(date -u -d "$requested_at" +%s)" >> "$GITHUB_OUTPUT"
+          echo "One-time force request queued at $requested_at." >> "$GITHUB_STEP_SUMMARY"
       - name: Observe fresh scheduled discovery and aggregate Sub IDs
         id: discover
         shell: bash
         run: |
           set -euo pipefail
-          cutoff=$(date -u -d '2026-09-07T16:04:33Z' +%s)
+          cutoff='${{ steps.force_request.outputs.request_epoch }}'
           fresh=false
-          for attempt in $(seq 1 32); do
+          for attempt in $(seq 1 48); do
             npx --yes wrangler@${WRANGLER_VERSION} d1 execute ekodi-auth --remote --config wrangler.api.toml --json --command "SELECT sync_date,status,reason,start_date,end_date,orders_rows,cancels_rows,commission_rows,matched_product_rows,unmatched_product_rows,error_text,started_at,finished_at FROM affiliate_partner_report_runs ORDER BY id DESC LIMIT 3" > /tmp/runs.json
             fresh=$(CUTOFF="$cutoff" node - <<'NODE'
           const fs=require('node:fs');

@@ -357,6 +357,9 @@ async function ensureSchema(db) {
       id INTEGER PRIMARY KEY AUTOINCREMENT, account_id TEXT NOT NULL, candidate_sub_id TEXT NOT NULL DEFAULT '', is_default INTEGER NOT NULL DEFAULT 0, clicks_rows INTEGER NOT NULL DEFAULT 0, orders_rows INTEGER NOT NULL DEFAULT 0, cancels_rows INTEGER NOT NULL DEFAULT 0, commission_rows INTEGER NOT NULL DEFAULT 0, first_seen_date TEXT NOT NULL DEFAULT '', last_seen_date TEXT NOT NULL DEFAULT '', updated_at TEXT NOT NULL, UNIQUE(account_id,candidate_sub_id)
     )`),
     db.prepare('CREATE INDEX IF NOT EXISTS idx_affiliate_partner_subid_discovery_account ON affiliate_partner_subid_discovery(account_id, updated_at DESC)'),
+    db.prepare(`CREATE TABLE IF NOT EXISTS affiliate_partner_report_control (
+      account_id TEXT PRIMARY KEY, force_requested_at TEXT, force_reason TEXT NOT NULL DEFAULT '', force_consumed_at TEXT, updated_at TEXT NOT NULL
+    )`),
   ]);
 }
 
@@ -376,6 +379,27 @@ async function acquireLock(db, lockKey = STOREFRONT) {
 async function releaseLock(db, owner, lockKey = STOREFRONT) {
   if (!owner) return;
   await db.prepare('DELETE FROM affiliate_automation_locks WHERE storefront_slug = ? AND owner_token = ?').bind(lockKey, owner).run().catch(() => {});
+}
+
+async function claimCoupangReportForceRequest(db) {
+  const row = await db.prepare(`SELECT account_id, force_requested_at, force_reason FROM affiliate_partner_report_control
+    WHERE account_id = ? AND force_requested_at IS NOT NULL AND (force_consumed_at IS NULL OR force_consumed_at < force_requested_at)`).bind(ACCOUNT_ID).first();
+  if (!row?.force_requested_at) return null;
+  const consumedAt = isoNow();
+  const result = await db.prepare(`UPDATE affiliate_partner_report_control SET force_consumed_at = ?, updated_at = ?
+    WHERE account_id = ? AND force_requested_at = ? AND (force_consumed_at IS NULL OR force_consumed_at < force_requested_at)`)
+    .bind(consumedAt, consumedAt, ACCOUNT_ID, row.force_requested_at).run();
+  return Number(result?.meta?.changes ?? result?.changes ?? 0) > 0 ? row : null;
+}
+
+export async function syncScheduledCoupangPartnerReports(env = {}, { reason = 'schedule' } = {}) {
+  if (!env.DB?.prepare) return syncCoupangPartnerReports(env, { reason });
+  await ensureSchema(env.DB);
+  const request = await claimCoupangReportForceRequest(env.DB);
+  return syncCoupangPartnerReports(env, {
+    force: Boolean(request),
+    reason: request ? `schedule_force:${cleanText(request.force_reason, 40) || 'operator'}` : reason,
+  });
 }
 
 async function lastRun(db) {
