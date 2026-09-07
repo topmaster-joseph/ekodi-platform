@@ -15,6 +15,8 @@ const [site, products, pages, stores, regionsConfig] = await Promise.all([
 const wrangler = await readFile(path.join(root, 'api', 'wrangler.toml'), 'utf8');
 const wranglerVar = (name) => wrangler.match(new RegExp('^' + name + '\\s*=\\s*\"([^\"]*)\"', 'm'))?.[1] || '';
 const apiPaymentsEnabled = wranglerVar('PAYMENTS_ENABLED').toLowerCase() === 'true';
+const apiPaymentProvider = wranglerVar('PAYMENT_PROVIDER').trim().toLowerCase().replaceAll('-', '_');
+const supportedPaymentProviders = new Set(['none','toss','portone','manual_bank']);
 const readinessRefs = ['MALL_LEGAL_READINESS_REF','MALL_PRIVACY_READINESS_REF','MALL_REFUND_READINESS_REF','MALL_PAYOUT_READINESS_REF'];
 
 const errors = [];
@@ -52,6 +54,13 @@ if (site?.commerce?.inquiryBasketEnabled) {
 if (!['inquiry-only', 'order-ready', 'live'].includes(site?.commerce?.orderMode)) errors.push('site.commerce.orderMode must be inquiry-only, order-ready, or live');
 if (!site?.commerce?.paymentsEnabled && site?.commerce?.orderMode === 'live') errors.push('site.commerce.orderMode cannot be live while paymentsEnabled=false');
 if (Boolean(site?.commerce?.paymentsEnabled) !== apiPaymentsEnabled) errors.push('site.commerce.paymentsEnabled must match api/wrangler.toml PAYMENTS_ENABLED');
+required(site?.commerce?.orchestrationMode, 'site.commerce.orchestrationMode');
+if (site?.commerce?.orchestrationMode !== 'commerce-os-v1') errors.push('site.commerce.orchestrationMode must be commerce-os-v1');
+if (site?.commerce?.paymentProviderAuthority !== 'server-capability-registry') errors.push('site.commerce.paymentProviderAuthority must be server-capability-registry');
+if (site?.commerce?.highImpactExecution !== 'human-gated') errors.push('site.commerce.highImpactExecution must remain human-gated');
+if (!supportedPaymentProviders.has(apiPaymentProvider)) errors.push('api/wrangler.toml PAYMENT_PROVIDER must be none, toss, portone, or manual_bank');
+if (apiPaymentsEnabled && apiPaymentProvider === 'none') errors.push('PAYMENT_PROVIDER cannot be none when PAYMENTS_ENABLED=true');
+if (apiPaymentsEnabled && apiPaymentProvider !== 'toss') errors.push('selected PAYMENT_PROVIDER adapter is not implemented for live execution');
 if (apiPaymentsEnabled) for (const name of readinessRefs) required(wranglerVar(name), `api/wrangler.toml ${name} (required when PAYMENTS_ENABLED=true)`);
 
 const categoryIds = new Set((site.categories || []).map((item) => item.id));

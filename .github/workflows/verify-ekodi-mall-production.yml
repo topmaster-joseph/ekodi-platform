@@ -55,9 +55,15 @@ jobs:
           if [ "$verification_final_code" != "200" ] \
             || ! grep -Fiq 'cache-control: no-store' /tmp/mall-verification-final.headers \
             || ! grep -Fiq 'x-robots-tag: noindex, nofollow, noarchive' /tmp/mall-verification-final.headers \
-            || ! grep -Fq '/assets/verification-ops.js' /tmp/mall-verification-final.html; then
+            || ! grep -Fq '/assets/verification-ops.js' /tmp/mall-verification-final.html \
+            || ! grep -Fq 'COMMERCE OS COCKPIT' /tmp/mall-verification-final.html; then
             echo "Verification Ops final HTML security contract failed: HTTP $verification_final_code"
             cat /tmp/mall-verification-final.headers || true
+            exit 1
+          fi
+          verification_js_code=$(curl -sS -o /tmp/mall-verification-ops.js -w '%{http_code}' --retry 3 --retry-delay 2 --connect-timeout 5 --max-time 20 'https://ekodi.kr/ekodibiz/mall/assets/verification-ops.js' || true)
+          if [ "$verification_js_code" != "200" ] || ! grep -Fq '/api/internal/operations/cockpit' /tmp/mall-verification-ops.js; then
+            echo "Commerce OS Cockpit client contract failed: HTTP $verification_js_code"
             exit 1
           fi
           echo 'verificationOpsCacheBoundary=verified'
@@ -69,6 +75,14 @@ jobs:
             exit 1
           fi
           echo 'launchReadinessAuthBoundary=verified'
+
+          cockpit_code=$(curl -sS -o /tmp/mall-cockpit-unauth.json -w '%{http_code}' --retry 3 --retry-delay 2 --connect-timeout 5 --max-time 20 'https://mall-api.ekodi.kr/api/internal/operations/cockpit' || true)
+          if [ "$cockpit_code" != "401" ]; then
+            echo "Commerce OS Cockpit must require operator auth; HTTP $cockpit_code"
+            cat /tmp/mall-cockpit-unauth.json || true
+            exit 1
+          fi
+          echo 'commerceCockpitAuthBoundary=verified'
 
           rehearsal_code=$(curl -sS -o /tmp/mall-production-rehearsal.json -w '%{http_code}' --retry 3 --retry-delay 2 --connect-timeout 5 --max-time 20 -X POST 'https://mall-api.ekodi.kr/api/internal/rehearsal/transaction' || true)
           if [ "$rehearsal_code" != "404" ]; then
@@ -84,9 +98,11 @@ jobs:
           const health = JSON.parse(fs.readFileSync('/tmp/mall-health.json', 'utf8'));
           if (!health.ok || health.service !== 'ekodi-mall-api') throw new Error('Mall API health is not ready');
           if (health.environment && health.environment !== 'production') throw new Error(`unexpected Mall API environment: ${health.environment}`);
-          for (const key of ['schemaReady', 'orderSchemaReady', 'verificationSchemaReady']) {
+          for (const key of ['schemaReady', 'orderSchemaReady', 'verificationSchemaReady', 'commerceEventSchemaReady']) {
             if (health[key] !== true) throw new Error(`${key} is not ready`);
           }
+          if (health.commerceOsVersion !== 1) throw new Error('Commerce OS version is not ready');
+          if (health.paymentProvider?.id !== 'toss' || health.paymentProvider?.adapterImplemented !== true) throw new Error('payment provider registry is not explicit or adapter contract regressed');
           if (health.operationsReviewConfigured !== true) throw new Error('operations review is not configured');
           if (health.operationsEmailAllowlistConfigured !== true) throw new Error('operations email allowlist is not configured');
           if (health.transactionRehearsalEnabled !== false) throw new Error('production transaction rehearsal must be disabled');
