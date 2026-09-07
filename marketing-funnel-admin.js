@@ -193,7 +193,7 @@
             <label>상품·가격 공급<select name="catalogStatus"><option value="not_ready">미준비</option><option value="manual_verified">수동 가격 검증</option><option value="feed_ready">Feed/API 정상</option><option value="stale">가격 만료</option><option value="failed">오류</option></select></label>
             <label>제휴망 코드<input name="networkKey" maxlength="80" value="linkprice" list="affiliateNetworkKeys" placeholder="linkprice · taobao_alliance · jd_union"></label>
             <label>제휴망 이름<input name="networkName" maxlength="120" value="LinkPrice" placeholder="LinkPrice · 淘宝联盟 · 京东联盟"></label>
-            <datalist id="affiliateNetworkKeys"><option value="linkprice"><option value="awin"><option value="impact"><option value="cj"><option value="rakuten"><option value="taobao_alliance"><option value="jd_union"><option value="aliexpress_affiliate"><option value="duoduo_jinbao"></datalist>
+            <datalist id="affiliateNetworkKeys"><option value="linkprice"><option value="adpick"><option value="tenping"><option value="impact"><option value="rakuten"><option value="cj"><option value="awin"><option value="partnerize"><option value="admitad"><option value="taobao_alliance"><option value="jd_union"><option value="aliexpress_affiliate"><option value="duoduo_jinbao"></datalist>
             <label class="integration-wide">제휴 프로그램/관리 URL<input name="programUrl" type="url" inputmode="url" placeholder="https://... (선택)"></label>
             <label class="integration-wide">운영 메모<textarea name="notes" maxlength="500" rows="2" placeholder="승인일, 담당자, 해외 세금/통화 메모 등"></textarea></label>
             <label class="integration-toggle"><input name="recommendationEnabled" type="checkbox"> 제휴 완료 후 이 판매처의 상품을 추천 후보로 허용</label>
