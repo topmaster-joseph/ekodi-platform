@@ -9,7 +9,8 @@ const REPORT_BASE_PATH = '/v2/providers/affiliate_open_api/apis/openapi/v1/repor
 const REPORT_SOURCE = 'coupang_partner_api_purchase';
 const REPORT_METRICS_SOURCE = 'coupang_partner_api';
 const REPORT_LOOKBACK_DAYS = 7;
-const REPORT_DISCOVERY_LOOKBACK_DAYS = 30;
+const REPORT_DISCOVERY_LOOKBACK_DAYS = 7;
+const REPORT_DISCOVERY_MAX_PAGES = 2;
 const REPORT_START_KST_HOUR = 16;
 const REPORT_MAX_PAGES = 5;
 const REPORT_PAGE_SIZE = 1000;
@@ -443,9 +444,10 @@ async function lastReportRun(db) {
   } catch { return null; }
 }
 
-async function fetchReportRows(env, kind, window, { subIdOverride } = {}) {
+async function fetchReportRows(env, kind, window, { subIdOverride, maxPages = REPORT_MAX_PAGES } = {}) {
   const rows = [];
-  for (let page = 0; page < REPORT_MAX_PAGES; page += 1) {
+  const pageLimit = Math.max(1, Math.min(REPORT_MAX_PAGES, Number(maxPages) || REPORT_MAX_PAGES));
+  for (let page = 0; page < pageLimit; page += 1) {
     const query = new URLSearchParams({ startDate: window.startDate, endDate: window.endDate, page: String(page) });
     const subId = subIdOverride === undefined ? cleanText(env.COUPANG_PARTNERS_SUB_ID, 80) : cleanText(subIdOverride, 80);
     if (subId) query.set('subId', subId);
@@ -453,7 +455,7 @@ async function fetchReportRows(env, kind, window, { subIdOverride } = {}) {
     const batch = Array.isArray(payload?.data) ? payload.data : [];
     rows.push(...batch);
     if (batch.length < REPORT_PAGE_SIZE) break;
-    if (page === REPORT_MAX_PAGES - 1) throw new Error('COUPANG_REPORT_PAGE_LIMIT');
+    if (page === pageLimit - 1) throw new Error('COUPANG_REPORT_PAGE_LIMIT');
   }
   return rows;
 }
@@ -483,15 +485,13 @@ async function persistCoupangSubIdDiscovery(env, candidates) {
 }
 
 async function discoverCoupangPartnerSubIds(env, window) {
-  const [clicks,orders,cancels,commission] = [
-    await fetchReportRows(env,'clicks',window,{subIdOverride:''}),
-    await fetchReportRows(env,'orders',window,{subIdOverride:''}),
-    await fetchReportRows(env,'cancels',window,{subIdOverride:''}),
-    await fetchReportRows(env,'commission',window,{subIdOverride:''}),
-  ];
-  const candidates = summarizeCoupangSubIds({clicks,orders,cancels,commission});
+  const [clicks,orders] = await Promise.all([
+    fetchReportRows(env,'clicks',window,{subIdOverride:'',maxPages:REPORT_DISCOVERY_MAX_PAGES}),
+    fetchReportRows(env,'orders',window,{subIdOverride:'',maxPages:REPORT_DISCOVERY_MAX_PAGES}),
+  ]);
+  const candidates = summarizeCoupangSubIds({clicks,orders});
   await persistCoupangSubIdDiscovery(env,candidates);
-  return { candidates, clicksRows:clicks.length, ordersRows:orders.length, cancelsRows:cancels.length, commissionRows:commission.length };
+  return { candidates, clicksRows:clicks.length, ordersRows:orders.length, cancelsRows:0, commissionRows:0 };
 }
 
 export function aggregateCoupangProductPerformance(orderRows = [], cancelRows = [], productRows = []) {
