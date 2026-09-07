@@ -19,7 +19,7 @@
     { type: 'My', name: '마이 에코디', domain: 'my.ekodi.kr', section: 'services', group: 'worklife' },
     { type: '워크', name: '에코디 워크', domain: 'work.ekodi.kr', section: 'work', fallback: 'services', group: 'worklife' },
     { type: '에너지', name: '에너지 AI', domain: 'energy.ekodi.kr', section: 'services', group: 'worklife' },
-    { type: '보험', name: '에코디보험', domain: 'ins.ekodi.kr', section: 'services', group: 'worklife', lifecycle: 'planned' },
+    { type: '보험', name: '에코디보험', domain: 'ekodi.kr/insurance', url: 'https://ekodi.kr/insurance', label: 'ekodi.kr/insurance', section: 'services', group: 'worklife', lifecycle: 'beta' },
     { type: '메일', name: '에코디 메일', domain: 'mail.ekodi.kr', section: 'communication', fallback: 'services', group: 'communication', lifecycle: 'planned' },
     { type: '라이브', name: '에코디 라이브', domain: 'live.ekodi.kr', section: 'communication', fallback: 'services', group: 'communication', lifecycle: 'planned' },
     { type: '클라우드', name: '에코디 클라우드', domain: 'cloud.ekodi.kr', section: 'workspace', fallback: 'services', group: 'communication', lifecycle: 'planned' },
@@ -82,7 +82,13 @@
   }
 
   function normalizeDomain(value) {
-    return String(value || '').trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, '');
+    const raw=String(value||'').trim().toLowerCase();
+    if(!raw)return '';
+    try{
+      const url=new URL(/^https?:\/\//.test(raw)?raw:`https://${raw}`);
+      const path=url.pathname.replace(/\/+$/,'');
+      return `${url.hostname}${path==='/'?'':path}`;
+    }catch{return raw.replace(/^https?:\/\//,'').split(/[?#]/)[0].replace(/\/+$/,'');}
   }
 
   function sectionControl(section, fallback = '') {
@@ -240,7 +246,7 @@
 
   function registrySite(service, existing = null) {
     const id = String(service?.id || '').trim().toLowerCase();
-    const domain = normalizeDomain(service?.domain || service?.label || service?.url);
+    const domain = normalizeDomain(service?.label || service?.domain || service?.url);
     const [section, fallback = 'services'] = REGISTRY_SECTION_MAP[id] || ['services', ''];
     const group = REGISTRY_GROUP_MAP[service?.group] || 'other';
     const type = existing?.querySelector('.campus-site-type')?.textContent?.trim()
@@ -297,7 +303,7 @@
     if (!grid || !Array.isArray(services)) return false;
 
     for (const service of services) {
-      const domain = normalizeDomain(service?.domain || service?.label || service?.url);
+      const domain = normalizeDomain(service?.label || service?.domain || service?.url);
       if (!domain) continue;
       let item = [...grid.querySelectorAll('.campus-site-item')].find(row => normalizeDomain(row.dataset.siteDomain) === domain);
       const site = registrySite(service, item);

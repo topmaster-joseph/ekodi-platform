@@ -3,8 +3,9 @@
   const GREEN_API = 'https://ekodi-insurance-api-green.topmaster-joseph.workers.dev';
   const PRODUCTION_API = 'https://insurance-api.ekodi.kr';
   const GREEN_HOST = 'ekodi-insurance-green.topmaster-joseph.workers.dev';
-  const IS_PRODUCTION_UI = location.hostname === 'ins.ekodi.kr' || location.hostname === GREEN_HOST;
-  const API = location.hostname === 'ins.ekodi.kr'
+  const IS_CANONICAL_PRODUCTION_UI = location.hostname === 'ekodi.kr' && location.pathname.startsWith('/insurance');
+  const IS_PRODUCTION_UI = IS_CANONICAL_PRODUCTION_UI || location.hostname === GREEN_HOST;
+  const API = IS_CANONICAL_PRODUCTION_UI
     ? PRODUCTION_API
     : location.hostname === GREEN_HOST
       ? GREEN_API
