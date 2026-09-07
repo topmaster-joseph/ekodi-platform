@@ -6,6 +6,12 @@ const workflow = await readFile(new URL('../.github/workflows/verify-ekodi-mall-
 const manifestText = await readFile(new URL('../deploy/manifests/shared-site.worker.json', import.meta.url), 'utf8');
 const manifest = JSON.parse(manifestText);
 
+test('Mall production verifier follows both canonical Mall deployment owners', () => {
+  assert.match(workflow, /workflows: \['EKODI Mall · Stage and Deploy', 'Deploy EKODI Shared Site Core'\]/);
+  assert.match(workflow, /workflow_run:/);
+  assert.match(workflow, /types: \[completed\]/);
+});
+
 test('Mall production verifier follows stable route and storefront structure', () => {
   for (const header of [
     'x-ekodi-route: public-ekodi-mall',

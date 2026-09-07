@@ -3,7 +3,7 @@ name: Verify EKODI Mall Production
 on:
   workflow_dispatch:
   workflow_run:
-    workflows: ['Deploy EKODI Shared Site Core']
+    workflows: ['EKODI Mall · Stage and Deploy', 'Deploy EKODI Shared Site Core']
     types: [completed]
 
 permissions:
