@@ -14,6 +14,7 @@ const ORIGINS=new Set(["https://my.ekodi.kr","https://auth.ekodi.kr"]);
 const OPERATIONS=new Set(["proofread","rewrite","shorten","expand","summarize"]);
 const MAX_INPUT=18000;
 const MAX_INSTRUCTION=4000;
+const RELEASE="20260907-docs-ai-2";
 
 function clean(value:unknown,max=MAX_INPUT){return String(value??"").replace(/\u0000/g,"").slice(0,max).trim()}
 function cors(req:Request){const origin=req.headers.get("Origin")||"";return {
@@ -21,6 +22,8 @@ function cors(req:Request){const origin=req.headers.get("Origin")||"";return {
   "Vary":"Origin",
   "Access-Control-Allow-Headers":"authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods":"POST,OPTIONS",
+  "X-EKODI-Docs-Contract":"ekodi.document-ai.v1",
+  "X-EKODI-Docs-Release":RELEASE,
 }}
 function json(req:Request,body:unknown,status=200){return new Response(JSON.stringify(body),{status,headers:{...cors(req),"content-type":"application/json; charset=utf-8","cache-control":"no-store","x-content-type-options":"nosniff"}})}
 async function userFrom(req:Request){
