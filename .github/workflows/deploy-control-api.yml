@@ -422,6 +422,8 @@ jobs:
         run: bash scripts/apply-d1-migrations-with-retry.sh ekodi-auth wrangler.api.toml "$WRANGLER_VERSION"
       - name: Guarded 0-percent Control candidate then promote
         run: node scripts/guarded-worker-release.mjs --manifest deploy/manifests/control-api.worker.json
+      - name: Deploy production routes and Cron triggers
+        run: npx --yes wrangler@${WRANGLER_VERSION} triggers deploy --config wrangler.api.toml
       - name: Verify production Control and universal membership boundaries
         shell: bash
         run: |
