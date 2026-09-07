@@ -2,6 +2,7 @@ import { WorkerEntrypoint } from 'cloudflare:workers';
 import { handleGoogleDriveStorageControl, startMarketingYouTubeOAuth, consumeMarketingYouTubeTicket, refreshGoogleAccessToken } from './google-drive-storage-control.js';
 import { handleR2StorageControl } from './r2-storage-control.js';
 import { handleStorageGateway } from './storage-gateway.js';
+import { handleStorageBrowserControl } from './storage-browser-control.js';
 import { applyApiSecurityHeaders, enforceEdgeSecurity } from './security-edge.js';
 
 function allowedOrigins(env){return String(env.ALLOWED_ORIGINS||'').split(',').map(v=>v.trim()).filter(Boolean);}
@@ -27,12 +28,16 @@ export default {
       if(allowedOrigins(env).includes(origin))headers.set('access-control-allow-origin',origin);
       return new Response(null,{status:204,headers});
     }
-    if(url.pathname==='/admin'||url.pathname==='/admin/')return Response.redirect('https://admin.ekodi.kr/?route=storage&source=drive.ekodi.kr',307);
+    if(url.pathname==='/admin'||url.pathname==='/admin/')return Response.redirect('https://ekodi.kr/admin/storage?source=drive.ekodi.kr',307);
     const guard=await enforceEdgeSecurity(request,env);if(guard)return withCors(guard,request,env);
     if(url.pathname==='/health')return json({ok:true,service:'ekodi-storage-control',provider:'google_drive',configured:Boolean(env.GOOGLE_DRIVE_CLIENT_SECRET&&env.STORAGE_CREDENTIAL_KEY),r2:{configured:Boolean(env.R2_BUCKET),binding:'R2_BUCKET'},primaryDomains:String(env.STORAGE_PRIMARY_GOOGLE_DOMAINS||'ekodi.kr').split(',')},200,request,env);
     if(url.pathname.startsWith('/api/storage/v1')){
       try{const response=await handleStorageGateway(request,env);if(response)return secure(response,request,env);}
       catch(error){console.error('Storage Gateway error',error);return json({error:'EKODI Storage Gateway 처리 중 오류가 발생했습니다.',code:'STORAGE_GATEWAY_ERROR'},500,request,env);}
+    }
+    if(url.pathname.startsWith('/api/control/storage/browser')){
+      try{const response=await handleStorageBrowserControl(request,env);if(response)return secure(response,request,env);}
+      catch(error){console.error('Storage Browser Control error',error);return json({error:'Storage Browser 처리 중 오류가 발생했습니다.',code:'STORAGE_BROWSER_CONTROL_ERROR'},500,request,env);}
     }
     if(url.pathname.startsWith('/api/control/storage/r2')){
       try{const response=await handleR2StorageControl(request,env);if(response)return secure(response,request,env);}
