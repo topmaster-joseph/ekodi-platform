@@ -1,7 +1,7 @@
 (() => {
 'use strict';
 const PANEL_ID = 'publicSiteControlsPanel';
-const API = '/api/control/public-sites';
+const API = 'https://api.ekodi.kr/api/control/public-sites';
 const SECTION = 'public-site-controls';
 const LABELS = {
   public: '정상 공개',
