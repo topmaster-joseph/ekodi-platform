@@ -98,6 +98,12 @@ export function isSensitiveEkodiCapability(capability = '') {
   return SENSITIVE.has(value);
 }
 
+function hasActiveElevation(authority = {}) {
+  if (!authority.elevated) return false;
+  const expiresAt = Date.parse(String(authority.elevatedUntil || ''));
+  return Number.isFinite(expiresAt) && expiresAt > Date.now();
+}
+
 export function authorizeEkodiAction({
   authority,
   requiredCapabilities = [],
@@ -112,14 +118,14 @@ export function authorizeEkodiAction({
   const missing = required.filter(capability => !hasEkodiCapability(authority.capabilities, capability, authority.deniedCapabilities));
   if (missing.length) return Object.freeze({ allowed: false, code: 'CAPABILITY_FORBIDDEN', missing: Object.freeze(missing) });
   const elevationNeeded = Boolean(requireElevation) || required.some(isSensitiveEkodiCapability);
-  if (elevationNeeded && !authority.elevated) {
+  if (elevationNeeded && !hasActiveElevation(authority)) {
     return Object.freeze({ allowed: false, code: 'ELEVATION_REQUIRED', missing: [] });
   }
   return Object.freeze({ allowed: true, code: 'ALLOW', missing: [] });
 }
 
 export const EKODI_AUTHORIZATION_CONTRACT = Object.freeze({
-  version: '1.0.0',
+  version: '1.1.0',
   model: 'identity-context-capability',
   explicitDenyWins: true,
   serverEnforced: true,

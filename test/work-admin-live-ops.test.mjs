@@ -36,3 +36,9 @@ test('admin CSP allows only the Supabase origin needed by WORK live operations',
   const worker = await read('site-worker.js');
   assert.match(worker, /ADMIN_CSP[\s\S]+connect-src[^\n]+renzehysxirjilvdxacv\.supabase\.co/);
 });
+
+test('WORK admin asks central Admin OS for read or operate capability', async () => {
+  const source = await read('supabase/functions/work-admin-api/index.ts');
+  assert.match(source, /requiredCapability = req\.method === "GET" \? "service:read" : "service:operate"/);
+  assert.match(source, /"x-ekodi-required-capability": requiredCapability/);
+});

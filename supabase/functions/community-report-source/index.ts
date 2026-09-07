@@ -46,7 +46,7 @@ async function verifyEkodiAdmin(req: Request) {
   const authorization = req.headers.get("authorization") || "";
   if (!authorization.startsWith("Bearer ")) return null;
   const response = await fetch(EKODI_SESSION_URL, {
-    headers: { authorization, accept: "application/json", "user-agent": "EKODI-Community-Report-Source/1.0" },
+    headers: { authorization, accept: "application/json", "x-ekodi-required-capability": "service:read", "user-agent": "EKODI-Community-Report-Source/1.0" },
     redirect: "error",
   });
   if (!response.ok) return null;

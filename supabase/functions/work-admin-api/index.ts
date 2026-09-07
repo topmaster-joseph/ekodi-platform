@@ -44,12 +44,14 @@ async function verifyEkodiAdmin(req) {
   if (origin && !ALLOWED_ORIGINS.has(origin)) return null;
   const authorization = req.headers.get("Authorization") || "";
   if (!authorization.startsWith("Bearer ")) return null;
+  const requiredCapability = req.method === "GET" ? "service:read" : "service:operate";
   const response = await fetch(SESSION_URL, {
     method: "GET",
     headers: {
       authorization,
       origin: "https://admin.ekodi.kr",
       accept: "application/json",
+      "x-ekodi-required-capability": requiredCapability,
     },
     cache: "no-store",
   });

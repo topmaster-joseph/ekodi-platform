@@ -1,5 +1,6 @@
 import customerEntryWorker from './customer-entry-worker.js';
 import { handleAdminSessionFastPath } from './admin-session-fastpath.js';
+import { withAdminRouteCapability } from './admin-route-authorization.js';
 import { handleAgentMissionControl } from './ai-agent-control.js';
 import { handleUserAiControl } from './user-ai-control.js';
 import { applyUserAiPlanOverrides, handleUserAiAdminControl } from './user-ai-admin-control.js';
@@ -84,6 +85,7 @@ export default {
     if (secretPreflight) return secretPreflight;
 
     const path = incoming.pathname;
+    request = withAdminRouteCapability(request);
 
     if (path === '/.well-known/oauth-protected-resource') {
       try { return applyApiSecurityHeaders(handleEkodiMcpMetadata(request)); }

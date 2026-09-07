@@ -62,3 +62,13 @@ test('platform authority can enter workspace context without context becoming au
   assert.equal(scopeAllows(authority.scope, { type:'workspace', id:'church' }), true);
   assert.equal(authority.scope.type, 'platform');
 });
+
+test('expired or timestamp-less elevation is fail-closed', () => {
+  const expired = adminAuthorityForRole('super_admin', { elevated:true, elevatedUntil:'2000-01-01T00:00:00.000Z' });
+  const missingExpiry = adminAuthorityForRole('super_admin', { elevated:true });
+  for (const authority of [expired, missingExpiry]) {
+    const decision = authorizeEkodiAction({ authority, requiredCapabilities:['admin:accounts.write'] });
+    assert.equal(decision.allowed, false);
+    assert.equal(decision.code, 'ELEVATION_REQUIRED');
+  }
+});

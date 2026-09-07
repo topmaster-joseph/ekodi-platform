@@ -1,3 +1,6 @@
+import { authorizeAdminSessionCapability, resolveAdminSessionAuthority } from './admin-session-fastpath.js';
+import { EKODI_REQUIRED_CAPABILITY_HEADER } from './admin-route-authorization.js';
+
 const DEFAULT_ADMIN_EMAIL = 'topmaster.joseph@gmail.com';
 const DEFAULT_ALLOWED_ORIGIN = 'https://shy-thunder-39a4.topmaster-joseph.workers.dev';
 const LEGACY_ITERATIONS = 100000;
@@ -481,9 +484,21 @@ export default {
     }
 
     if (request.method === 'GET' && url.pathname === '/api/session') {
-      const admin = await authenticate(request, env.DB);
-      return admin ? reply({ authenticated: true, email: admin.email, role: admin.role, expiresAt: admin.expires_at })
-        : reply({ authenticated: false }, 401);
+      const session = await resolveAdminSessionAuthority(request, env);
+      if (!session) return reply({ authenticated: false }, 401);
+      const decision = authorizeAdminSessionCapability(session, request.headers.get(EKODI_REQUIRED_CAPABILITY_HEADER) || '');
+      if (!decision.allowed) {
+        return reply({
+          authenticated: true,
+          email: session.email,
+          role: session.role,
+          authority: session.authority,
+          error: decision.code === 'ELEVATION_REQUIRED' ? '보호된 작업은 추가 Google 인증이 필요합니다.' : '이 작업에 필요한 관리자 권한이 없습니다.',
+          code: decision.code,
+          missing: decision.missing || [],
+        }, 403);
+      }
+      return reply(session);
     }
 
     if (request.method === 'POST' && url.pathname === '/api/logout') {
