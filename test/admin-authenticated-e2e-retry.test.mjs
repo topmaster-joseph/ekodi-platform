@@ -59,8 +59,8 @@ test('isolated renderer treats aria-busy on the panel root as active work', asyn
 test('public-site controls E2E proves the live Control API and CGMA form render', async () => {
   const source = await workerSource();
   assert.match(source, /verifyPublicSiteControls/);
-  assert.match(source, /url\.origin === 'https:\/\/api\.ekodi\.kr'/);
-  assert.match(source, /url\.pathname === '\/api\/control\/public-sites'/);
+  assert.match(source, /fetch\('https:\/\/api\.ekodi\.kr\/api\/control\/public-sites'/);
+  assert.match(source, /origin: 'https:\/\/admin\.ekodi\.kr'/);
   assert.match(source, /access-control-allow-origin/);
   assert.match(source, /form\[data-public-site-id="cgma"\]/);
   assert.match(source, /message\.includes\('상태를 확인했습니다'\)/);
