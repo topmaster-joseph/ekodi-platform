@@ -56,7 +56,11 @@ test('Mall production verifier checks the server transaction safety boundary', (
     'refundExecutionEnabled'
   ]) assert.match(workflow, new RegExp(field));
   assert.match(workflow, /operations review is not configured/);
-  assert.match(workflow, /operations email allowlist is not configured/);  assert.match(workflow, /high-impact transaction gate unexpectedly enabled/);
+  assert.match(workflow, /operations email allowlist is not configured/);
+  assert.match(workflow, /production transaction rehearsal must be disabled/);
+  assert.match(workflow, /api\/internal\/rehearsal\/transaction/);
+  assert.match(workflow, /productionRehearsalSurface=closed/);
+  assert.match(workflow, /high-impact transaction gate unexpectedly enabled/);
 });
 
 test('Mall production verifier preserves Verification Ops cache safety checks', () => {

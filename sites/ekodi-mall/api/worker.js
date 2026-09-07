@@ -506,7 +506,7 @@ export async function buildOrderQuote(env, { shareCode, attributionToken = '', q
   };
 }
 
-async function createOrder(env, input) {
+export async function createOrder(env, input) {
   const result = await buildOrderQuote(env, input);
   if (!result.quote) return result;
   if (!result.quote.checkoutReady) return { error: '직접결제 활성화 조건이 아직 완료되지 않았습니다.', status: 409, quote: result.quote };
@@ -559,7 +559,7 @@ async function confirmTossPayment(env, order, paymentKey, amount) {
   return body;
 }
 
-async function recordConfirmedPayment(env, order, payment) {
+export async function recordConfirmedPayment(env, order, payment, provider = 'TOSS') {
   const now = isoNow();
   const paymentStatus = cleanText(payment.status, 80) || 'UNKNOWN';
   const paid = paymentStatus === 'DONE';
@@ -576,10 +576,10 @@ async function recordConfirmedPayment(env, order, payment) {
   const statements = [
     env.DB.prepare(`INSERT INTO order_payments
       (payment_key,order_id,provider,status,method,total_amount,approved_at,metadata_json,created_at,updated_at)
-      VALUES (?,?,'TOSS',?,?,?,?,?,?,?)
+      VALUES (?,?,?,?,?,?,?,?,?,?)
       ON CONFLICT(payment_key) DO UPDATE SET status=excluded.status,method=excluded.method,total_amount=excluded.total_amount,
       approved_at=excluded.approved_at,metadata_json=excluded.metadata_json,updated_at=excluded.updated_at`)
-      .bind(paymentKey, order.id, paymentStatus, cleanText(payment.method, 80), Math.trunc(Number(payment.totalAmount) || 0), approvedAt, metadata, now, now),
+      .bind(paymentKey, order.id, provider === 'REHEARSAL' ? 'REHEARSAL' : 'TOSS', paymentStatus, cleanText(payment.method, 80), Math.trunc(Number(payment.totalAmount) || 0), approvedAt, metadata, now, now),
     env.DB.prepare('UPDATE orders SET status=?,paid_at=?,updated_at=? WHERE id=?')
       .bind(paid ? 'paid' : 'payment_pending', paid ? approvedAt || now : null, now, order.id)
   ];
