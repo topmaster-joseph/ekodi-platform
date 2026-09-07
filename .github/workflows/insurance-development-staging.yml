@@ -1,0 +1,107 @@
+name: Insurance Development Staging
+
+on:
+  push:
+    branches: ['feat/insurance-8g']
+    paths:
+      - 'sites/ekodi-insurance/**'
+      - '.github/workflows/insurance-development-staging.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: insurance-development-staging
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: development
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: 46aad4738793fbaca88574832a2ccc0f
+      WRANGLER_VERSION: '4.119.0'
+      UI_URL: https://ekodi-insurance-staging.ekodi-development.workers.dev
+      API_URL: https://ekodi-insurance-api-staging.ekodi-development.workers.dev
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate before deployment
+        run: |
+          npm run validate:insurance
+          node scripts/validate-capability-registry.mjs
+      - name: Resolve isolated Development D1
+        id: d1
+        working-directory: sites/ekodi-insurance
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN"
+          DB_ID=$(npx --yes wrangler@${WRANGLER_VERSION} d1 list --json | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{const j=JSON.parse(s);const a=Array.isArray(j)?j:(j.result||[]);const x=a.find(v=>v.name==='ekodi-insurance-staging');if(x)process.stdout.write(x.uuid||x.id||'')})")
+          test -n "$DB_ID"
+          echo "db_id=$DB_ID" >> "$GITHUB_OUTPUT"
+      - name: Build Development API config
+        working-directory: sites/ekodi-insurance
+        shell: bash
+        run: |
+          cat > api/wrangler.development-staging.toml <<EOF
+          name = "ekodi-insurance-api-staging"
+          main = "worker.js"
+          compatibility_date = "2026-08-14"
+          workers_dev = true
+          preview_urls = false
+          [vars]
+          ENVIRONMENT = "staging-clean"
+          INSURANCE_COMPARISON_PUBLIC_ENABLED = "false"
+          ALLOWED_ORIGINS = "$UI_URL"
+          SUPABASE_URL = "https://renzehysxirjilvdxacv.supabase.co"
+          SUPABASE_PUBLISHABLE_KEY = "sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_"
+          [triggers]
+          crons = ["17 3 * * *"]
+          [observability.logs]
+          enabled = true
+          invocation_logs = true
+          [[d1_databases]]
+          binding = "DB"
+          database_name = "ekodi-insurance-staging"
+          database_id = "${{ steps.d1.outputs.db_id }}"
+          migrations_dir = "migrations"
+          EOF
+      - name: Migrate and deploy Insurance API staging
+        working-directory: sites/ekodi-insurance
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@${WRANGLER_VERSION} d1 migrations apply DB --remote --config api/wrangler.development-staging.toml
+          npx --yes wrangler@${WRANGLER_VERSION} deploy --config api/wrangler.development-staging.toml
+      - name: Deploy Insurance UI staging
+        working-directory: sites/ekodi-insurance
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.toml
+      - name: Verify Development deployment and Access boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          cf='https://api.cloudflare.com/client/v4'
+          auth=(-H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H 'Content-Type: application/json')
+          curl --retry 5 --retry-all-errors -fsS "${auth[@]}" "$cf/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts" -o /tmp/workers.json
+          jq -e '.success==true' /tmp/workers.json >/dev/null
+          for script in ekodi-insurance-staging ekodi-insurance-api-staging; do
+            jq -e --arg script "$script" '.result[]? | select(.id==$script)' /tmp/workers.json >/dev/null
+          done
+          curl --retry 5 --retry-all-errors -fsS "${auth[@]}" "$cf/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/ekodi-insurance-api-staging/settings" -o /tmp/api-settings.json
+          jq -e '.success==true and ([.result.bindings[]? | select(.name=="DB" and .type=="d1")] | length==1)' /tmp/api-settings.json >/dev/null
+          grep -Fq '보험 비교 준비' sites/ekodi-insurance/public/index.html
+          grep -Fq '보험설계사 개인 안내·상담 페이지' sites/ekodi-insurance/public/advisor.html
+          for url in "$API_URL/health" "$UI_URL/health" "$UI_URL/advisor"; do
+            curl --retry 5 --retry-all-errors -LfsS "$url" -o /tmp/access.html
+            grep -Fq 'Cloudflare Access' /tmp/access.html
+          done
+          echo 'INSURANCE_8G_DEVELOPMENT_STAGING_OK=1'

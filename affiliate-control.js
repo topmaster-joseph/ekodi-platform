@@ -439,6 +439,28 @@ async function handleLinks(request, env, auth, path, url) {
   return null;
 }
 
+async function handleProductPerformance(request, env, auth, path) {
+  if (request.method === 'GET' && path === `${PREFIX}/performance`) {
+    const rows = await env.DB.prepare(`SELECT d.product_row_id,p.product_id,p.product_name,d.metric_date,d.clicks,d.orders,d.cancels,d.gmv_krw,d.commission_krw,d.source,d.updated_at FROM affiliate_product_performance_daily d JOIN affiliate_storefront_products p ON p.id=d.product_row_id WHERE p.account_id=? AND p.storefront_slug=? ORDER BY d.metric_date DESC,d.id DESC LIMIT 180`).bind(DEFAULT_ACCOUNT_ID,PUBLIC_STOREFRONT_SLUG).all();
+    return json({ performance:(rows.results||[]).map(row=>({ productRowId:Number(row.product_row_id),productId:row.product_id,productName:row.product_name,metricDate:row.metric_date,clicks:Number(row.clicks||0),orders:Number(row.orders||0),cancels:Number(row.cancels||0),gmvKrw:Number(row.gmv_krw||0),commissionKrw:Number(row.commission_krw||0),source:row.source,updatedAt:row.updated_at })) },200,auth.response.headers);
+  }
+  if (request.method !== 'POST' || path !== `${PREFIX}/performance`) return null;
+  const body=await readJson(request);
+  if(!body) return json({error:'Valid JSON is required.'},400,auth.response.headers);
+  const metricDate=cleanText(body.metricDate,10); const productId=cleanText(body.productId,100); const productRowId=nonNegativeInt(body.productRowId);
+  const clicks=nonNegativeInt(body.clicks); const orders=nonNegativeInt(body.orders); const cancels=nonNegativeInt(body.cancels); const gmvKrw=nonNegativeInt(body.gmvKrw); const commissionKrw=nonNegativeInt(body.commissionKrw);
+  const source=cleanText(body.source||'coupang_partner_report',60).toLowerCase();
+  const allowedSources=new Set(['coupang_partner_report','coupang_partner_api','manual_import']);
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(metricDate)||[clicks,orders,cancels,gmvKrw,commissionKrw].some(v=>v===null)||!allowedSources.has(source)) return json({error:'Invalid performance payload.'},400,auth.response.headers);
+  let product=null;
+  if(productRowId) product=await env.DB.prepare('SELECT id,product_id,product_name FROM affiliate_storefront_products WHERE id=? AND account_id=? AND storefront_slug=? LIMIT 1').bind(productRowId,DEFAULT_ACCOUNT_ID,PUBLIC_STOREFRONT_SLUG).first();
+  if(!product&&productId) product=await env.DB.prepare('SELECT id,product_id,product_name FROM affiliate_storefront_products WHERE product_id=? AND account_id=? AND storefront_slug=? LIMIT 1').bind(productId,DEFAULT_ACCOUNT_ID,PUBLIC_STOREFRONT_SLUG).first();
+  if(!product) return json({error:'Mall product not found.'},404,auth.response.headers);
+  const now=new Date().toISOString();
+  await env.DB.prepare(`INSERT INTO affiliate_product_performance_daily(product_row_id,metric_date,clicks,orders,cancels,gmv_krw,commission_krw,source,updated_at) VALUES(?,?,?,?,?,?,?,?,?) ON CONFLICT(product_row_id,metric_date,source) DO UPDATE SET clicks=excluded.clicks,orders=excluded.orders,cancels=excluded.cancels,gmv_krw=excluded.gmv_krw,commission_krw=excluded.commission_krw,updated_at=excluded.updated_at`).bind(Number(product.id),metricDate,clicks,orders,cancels,gmvKrw,commissionKrw,source,now).run();
+  await audit(env,auth.session,'affiliate.performance.upsert',`${product.id}:${metricDate}:${source}`,JSON.stringify({productId:product.product_id,clicks,orders,cancels,gmvKrw,commissionKrw}));
+  return json({ok:true,productRowId:Number(product.id),productId:product.product_id,productName:product.product_name,metricDate,clicks,orders,cancels,gmvKrw,commissionKrw,source},200,auth.response.headers);
+}
 async function handleMetrics(request, env, auth, path) {
   if (request.method === 'GET' && path === `${PREFIX}/metrics`) {
     const rows = await env.DB.prepare(`SELECT account_id, metric_date, clicks, orders, revenue_krw, source, updated_at FROM affiliate_daily_metrics ORDER BY metric_date DESC, id DESC LIMIT 90`).all();
@@ -550,6 +572,8 @@ export async function handleAffiliateRequest(request, env) {
   if (accountResponse) return accountResponse;
   const linkResponse = await handleLinks(request, env, auth, path, url);
   if (linkResponse) return linkResponse;
+  const performanceResponse = await handleProductPerformance(request, env, auth, path);
+  if (performanceResponse) return performanceResponse;
   const metricsResponse = await handleMetrics(request, env, auth, path);
   if (metricsResponse) return metricsResponse;
   return json({ error: 'Affiliate API endpoint not found' }, 404, auth.response.headers);

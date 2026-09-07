@@ -44,9 +44,13 @@ test('workspace admin projects root and mall sections from tenant-local capabili
   assert.match(source,/growthPolicyPanel/);
 });
 
-test('entry router applies the shared Admin Shell to tenant admin pages',async()=>{
+test('entry routers apply the shared Admin Shell to every user-site admin page',async()=>{
   const source=await fs.promises.readFile(new URL('../platform-router-entry-worker.js',import.meta.url),'utf8');
+  const siteWorker=await fs.promises.readFile(new URL('../site-worker.js',import.meta.url),'utf8');
   assert.match(source,/injectEkodiShell\(storeAdminPage\(storeRoute\),'business','admin'\)/);
   assert.match(source,/injectEkodiShell\(churchPastorAdminPage\(\),'church','admin'\)/);
   assert.match(source,/injectEkodiShell\(workspaceAdminPage\(\),'space','admin'\)/);
+  assert.match(source,/injectEkodiShell\(mailAdminPage\(\),'mail','admin'\)/);
+  assert.match(siteWorker,/injectEkodiShell\(churchPastorAdminPage\(\), 'church', 'admin'\)/);
+  assert.match(siteWorker,/injectEkodiShell\(workspaceAdminPage\(\), 'space', 'admin'\)/);
 });

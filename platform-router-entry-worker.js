@@ -218,7 +218,7 @@ export default {
     if(host===MAIL_HOST){
       const apiResponse=await handleMailApi(request,env);
       if(apiResponse)return apiResponse;
-      if(request.method==='GET'&&url.pathname==='/admin')return mailAdminPage();
+      if(request.method==='GET'&&url.pathname==='/admin')return injectEkodiShell(mailAdminPage(),'mail','admin');
       if(request.method==='GET'&&(url.pathname==='/'||url.pathname===''))return injectEkodiShell(mailUserPage(),'mail');
     }
 
