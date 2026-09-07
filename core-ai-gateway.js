@@ -3,15 +3,25 @@ import {
   getAiResilienceStatus,
   runAiEnhancedTask,
 } from './ai-resilience-runtime.js';
+import { buildEkodiAiOrchestrator } from './ai-orchestrator-runtime.js';
+
+function normalizeCapabilities(value) {
+  const items = Array.isArray(value) ? value : value ? [value] : ['text'];
+  return Object.freeze([...new Set(items.map(item => String(item || '').trim().toLowerCase()).filter(Boolean))]);
+}
 
 function normalizeProvider(provider, index) {
   if (!provider || typeof provider.invoke !== 'function') return null;
   const id = String(provider.id || `provider_${index + 1}`).trim().toLowerCase();
   if (!/^[a-z0-9._-]{1,80}$/.test(id)) return null;
+  const priorityValue = Number(provider.priority);
   return Object.freeze({
     id,
     invoke: provider.invoke,
     available: provider.available !== false,
+    priority: Number.isFinite(priorityValue) ? priorityValue : index + 1,
+    capabilities: normalizeCapabilities(provider.capabilities),
+    trustClass: String(provider.trustClass || 'external').trim().toLowerCase() || 'external',
   });
 }
 
@@ -19,11 +29,18 @@ export function buildCoreAiGateway(env = {}, providers = []) {
   const adapters = Object.freeze((Array.isArray(providers) ? providers : [])
     .map(normalizeProvider)
     .filter(Boolean));
+  const orchestrator = buildEkodiAiOrchestrator(env, adapters);
 
   return Object.freeze({
     policyVersion: AI_RESILIENCE_POLICY.version,
     status() {
-      return getAiResilienceStatus(env, adapters);
+      return Object.freeze({
+        ...getAiResilienceStatus(env, adapters),
+        orchestration: orchestrator.status(),
+      });
+    },
+    plan(input = {}) {
+      return orchestrator.plan(input);
     },
     async run({ taskName, fallback, timeoutMs, context = {} } = {}) {
       const normalizedTask = String(taskName || '').trim().slice(0, 120);
@@ -43,6 +60,9 @@ export function buildCoreAiGateway(env = {}, providers = []) {
         timeoutMs,
       });
     },
+    async collaborate(options = {}) {
+      return orchestrator.run(options);
+    },
   });
 }
 
@@ -53,6 +73,7 @@ export function getCoreAiGatewayStatus(env = {}, providers = []) {
     gateway: 'ekodi-core-ai',
     providerIndependent: true,
     aiOptional: true,
+    orchestrator: 'ekodi-ai',
     ...status,
   });
 }
