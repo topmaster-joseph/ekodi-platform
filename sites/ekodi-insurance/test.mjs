@@ -3,6 +3,7 @@ const html=fs.readFileSync(new URL('./public/index.html',import.meta.url),'utf8'
 const js=fs.readFileSync(new URL('./public/app.js',import.meta.url),'utf8');
 const bridge=fs.readFileSync(new URL('./public/server-bridge.js',import.meta.url),'utf8');
 const worker=fs.readFileSync(new URL('./worker.js',import.meta.url),'utf8');
+const apiWorker=fs.readFileSync(new URL('./api/worker.js',import.meta.url),'utf8');
 const privacyCss=fs.readFileSync(new URL('./public/privacy.css',import.meta.url),'utf8');
 const chatCss=fs.readFileSync(new URL('./public/chat.css',import.meta.url),'utf8');
 const adminHtml=fs.readFileSync(new URL('./public/admin.html',import.meta.url),'utf8');
@@ -30,6 +31,7 @@ for(const marker of ['loadReferenceCatalog','/api/network/catalog','컴플라이
 for(const marker of ['serverConsultationPanel','상담요청 철회','revokeConsultation','/revoke'])if(!bridge.includes(marker))throw new Error(`customer revoke UI missing: ${marker}`);
 if(!worker.includes('실제 설계사 상담을 요청할 때만 이름과 연락처를 암호화'))throw new Error('server-rendered privacy truth copy missing');
 if(!worker.includes('ekodi-insurance-api-green.topmaster-joseph.workers.dev'))throw new Error('Green API CSP allowlist missing');
+if(!/dbReady,\s*networkDbReady,\s*encryptionReady/.test(apiWorker))throw new Error('health response must expose networkDbReady');
 if(!worker.includes("frame-ancestors 'none'"))throw new Error('CSP missing');
 for(const marker of ['insuranceAdminEnabled','INSURANCE_ADMIN_ENABLED','disabledInsuranceAdminResponse','INSURANCE_ADMIN_NOT_ENABLED'])if(!centralEntry.includes(marker))throw new Error(`central Insurance default-off gate missing: ${marker}`);
 if(!centralWrangler.includes('INSURANCE_ADMIN_ENABLED = "true"'))throw new Error('production central Insurance admin route must be enabled only after cutover contract is committed');

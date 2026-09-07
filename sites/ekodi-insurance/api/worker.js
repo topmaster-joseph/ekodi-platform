@@ -278,6 +278,7 @@ export default {
         environment: env.ENVIRONMENT || 'unknown',
         architecture: 'cloudflare-worker-d1',
         dbReady,
+        networkDbReady,
         encryptionReady,
         internalAdminReady,
         rateLimitReady,
