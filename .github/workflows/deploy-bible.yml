@@ -5,7 +5,11 @@ on:
   pull_request:
     paths:
       - 'bible/**'
+      - 'bible-core.js'
       - 'bible-worker.js'
+      - 'scripts/validate-bible-core.mjs'
+      - 'scripts/vendor-krv-data.mjs'
+      - 'test/bible-core.test.mjs'
       - 'supabase/bible-conversation.sql'
       - 'ekodi-service-manifest.js'
       - 'platform-boundaries.json'
@@ -17,7 +21,11 @@ on:
     branches: [main]
     paths:
       - 'bible/**'
+      - 'bible-core.js'
       - 'bible-worker.js'
+      - 'scripts/validate-bible-core.mjs'
+      - 'scripts/vendor-krv-data.mjs'
+      - 'test/bible-core.test.mjs'
       - 'supabase/bible-conversation.sql'
       - 'ekodi-service-manifest.js'
       - 'platform-boundaries.json'
@@ -48,8 +56,15 @@ jobs:
       - name: Validate Bible Conversation contracts
         run: |
           set -euo pipefail
+          node --check bible-core.js
           node --check bible-worker.js
+          node --check bible/books.js
+          node --check bible/reader.js
           node --check bible/app.js
+          node --check scripts/validate-bible-core.mjs
+          node --check scripts/vendor-krv-data.mjs
+          node scripts/validate-bible-core.mjs
+          node --test test/bible-core.test.mjs
           node --check ekodi-service-manifest.js
           node -e "JSON.parse(require('fs').readFileSync('platform-boundaries.json','utf8'))"
           node -e "JSON.parse(require('fs').readFileSync('deploy/manifests/bible.worker.json','utf8'))"
@@ -110,6 +125,7 @@ jobs:
             if [[ "$ready" != '1' ]]; then cat /tmp/bible-local.log; exit 1; fi
           fi
           for attempt in $(seq 1 18); do
+<<<<<<< HEAD
             root=$(curl -L -sS -D /tmp/bible-stage-h -o /tmp/bible-stage.html -w '%{http_code}' --max-time 15 "$verify_base/" || true)
             today=$(curl -L -sS -o /tmp/bible-stage-today.html -w '%{http_code}' --max-time 15 "$verify_base/today" || true)
             conversation=$(curl -L -sS -o /tmp/bible-stage-conversation.html -w '%{http_code}' --max-time 15 "$verify_base/conversation" || true)
@@ -119,11 +135,33 @@ jobs:
             config=$(curl -sS -o /tmp/bible-stage-config.js -w '%{http_code}' --max-time 15 "$verify_base/config.js" || true)
             assist=$(curl -sS -o /tmp/bible-stage-assist.json -w '%{http_code}' --max-time 15 -H 'content-type: application/json' -d '{"message":"앞으로가 불안해요","topic":"믿음"}' "$verify_base/api/assist" || true)
             if [[ "$root" == '200' && "$today" == '200' && "$conversation" == '200' && "$journey" == '200' && "$together" == '200' && "$health" == '200' && "$config" == '200' && "$assist" == '401' ]] \
+=======
+            root=$(curl -L -sS -D /tmp/bible-stage-h -o /tmp/bible-stage.html -w '%{http_code}' --max-time 15 "$STAGING_URL/" || true)
+            today=$(curl -L -sS -o /tmp/bible-stage-today.html -w '%{http_code}' --max-time 15 "$STAGING_URL/today" || true)
+            reader=$(curl -L -sS -o /tmp/bible-stage-reader.html -w '%{http_code}' --max-time 15 "$STAGING_URL/reader" || true)
+            providers=$(curl -sS -o /tmp/bible-stage-providers.json -w '%{http_code}' --max-time 15 "$STAGING_URL/api/bible/providers" || true)
+            passage=$(curl -sS -o /tmp/bible-stage-passage.json -w '%{http_code}' --max-time 15 "$STAGING_URL/api/bible/passage?reference=%EC%B0%BD%EC%84%B8%EA%B8%B0%201%3A1&provider=KRV1961" || true)
+            protected=$(curl -sS -o /tmp/bible-stage-protected.json -w '%{http_code}' --max-time 15 "$STAGING_URL/api/bible/passage?reference=%EC%8B%A0%EB%AA%85%EA%B8%B0%2017%3A14-20&provider=NKRV" || true)
+            conversation=$(curl -L -sS -o /tmp/bible-stage-conversation.html -w '%{http_code}' --max-time 15 "$STAGING_URL/conversation" || true)
+            journey=$(curl -L -sS -o /tmp/bible-stage-journey.html -w '%{http_code}' --max-time 15 "$STAGING_URL/journey" || true)
+            together=$(curl -L -sS -o /tmp/bible-stage-together.html -w '%{http_code}' --max-time 15 "$STAGING_URL/together" || true)
+            health=$(curl -sS -o /tmp/bible-stage-health.json -w '%{http_code}' --max-time 15 "$STAGING_URL/health" || true)
+            config=$(curl -sS -o /tmp/bible-stage-config.js -w '%{http_code}' --max-time 15 "$STAGING_URL/config.js" || true)
+            assist=$(curl -sS -o /tmp/bible-stage-assist.json -w '%{http_code}' --max-time 15 -H 'content-type: application/json' -d '{"message":"앞으로가 불안해요","topic":"믿음"}' "$STAGING_URL/api/assist" || true)
+            if [[ "$root" == '200' && "$today" == '200' && "$reader" == '200' && "$providers" == '200' && "$passage" == '200' && "$protected" == '200' && "$conversation" == '200' && "$journey" == '200' && "$together" == '200' && "$health" == '200' && "$config" == '200' && "$assist" == '401' ]] \
+>>>>>>> 6e43f51a (feat(bible): add provider-safe Bible Core)
               && grep -Fq '에코디 말씀대화' /tmp/bible-stage.html \
+              && grep -Fq 'EKODI Bible Core' /tmp/bible-stage-reader.html \
+              && grep -Fq '"defaultProvider":"KRV1961"' /tmp/bible-stage-providers.json \
+              && grep -Fq '태초에 하나님이 천지를 창조하시니라' /tmp/bible-stage-passage.json \
+              && grep -Fq '"integrity":"verbatim"' /tmp/bible-stage-passage.json \
+              && grep -Fq '"mode":"official-link-only"' /tmp/bible-stage-protected.json \
+              && grep -Fq '"verses":[]' /tmp/bible-stage-protected.json \
               && grep -Fq '돌아보기' /tmp/bible-stage-journey.html \
               && grep -Fq '공동체 피드' /tmp/bible-stage-together.html \
               && grep -Fq '"service":"ekodi-bible-conversation"' /tmp/bible-stage-health.json \
               && grep -Fq '"centralUserAi":true' /tmp/bible-stage-health.json \
+              && grep -Fq '"aiMayAlterScripture":false' /tmp/bible-stage-health.json \
               && grep -Fq '"dataMode":"isolated-staging"' /tmp/bible-stage-health.json \
               && grep -Fq '"dataEnabled":false' /tmp/bible-stage-config.js \
               && grep -Fq '"error":"authentication_required"' /tmp/bible-stage-assist.json \
@@ -183,6 +221,10 @@ jobs:
           for attempt in $(seq 1 18); do
             root=$(curl -L -sS -D /tmp/bible-h -o /tmp/bible.html -w '%{http_code}' --max-time 15 'https://bible.ekodi.kr/' || true)
             today=$(curl -L -sS -o /tmp/bible-today.html -w '%{http_code}' --max-time 15 'https://bible.ekodi.kr/today' || true)
+            reader=$(curl -L -sS -o /tmp/bible-reader.html -w '%{http_code}' --max-time 15 'https://bible.ekodi.kr/reader' || true)
+            providers=$(curl -sS -o /tmp/bible-providers.json -w '%{http_code}' --max-time 15 'https://bible.ekodi.kr/api/bible/providers' || true)
+            passage=$(curl -sS -o /tmp/bible-passage.json -w '%{http_code}' --max-time 15 'https://bible.ekodi.kr/api/bible/passage?reference=%EC%B0%BD%EC%84%B8%EA%B8%B0%201%3A1&provider=KRV1961' || true)
+            protected=$(curl -sS -o /tmp/bible-protected.json -w '%{http_code}' --max-time 15 'https://bible.ekodi.kr/api/bible/passage?reference=%EC%8B%A0%EB%AA%85%EA%B8%B0%2017%3A14-20&provider=NKRV' || true)
             conversation=$(curl -L -sS -o /tmp/bible-conversation.html -w '%{http_code}' --max-time 15 'https://bible.ekodi.kr/conversation' || true)
             journey=$(curl -L -sS -o /tmp/bible-journey.html -w '%{http_code}' --max-time 15 'https://bible.ekodi.kr/journey' || true)
             together=$(curl -L -sS -o /tmp/bible-together.html -w '%{http_code}' --max-time 15 'https://bible.ekodi.kr/together' || true)
@@ -191,14 +233,21 @@ jobs:
             assist=$(curl -sS -o /tmp/bible-assist.json -w '%{http_code}' --max-time 15 -H 'content-type: application/json' -d '{"message":"앞으로가 불안해요","topic":"믿음"}' 'https://bible.ekodi.kr/api/assist' || true)
             admin=$(curl -sS -o /dev/null -D /tmp/bible-admin-h -w '%{http_code}' --max-time 15 'https://bible.ekodi.kr/admin' || true)
             case "$admin" in 301|302|303|307|308) admin_redirect=true;; *) admin_redirect=false;; esac
-            if [[ "$root" == '200' && "$today" == '200' && "$conversation" == '200' && "$journey" == '200' && "$together" == '200' && "$health" == '200' && "$config" == '200' && "$assist" == '401' && "$admin_redirect" == 'true' ]] \
+            if [[ "$root" == '200' && "$today" == '200' && "$reader" == '200' && "$providers" == '200' && "$passage" == '200' && "$protected" == '200' && "$conversation" == '200' && "$journey" == '200' && "$together" == '200' && "$health" == '200' && "$config" == '200' && "$assist" == '401' && "$admin_redirect" == 'true' ]] \
               && grep -Fq '에코디 말씀대화' /tmp/bible.html \
               && grep -Fq '오늘의 말씀대화' /tmp/bible-today.html \
+              && grep -Fq 'EKODI Bible Core' /tmp/bible-reader.html \
+              && grep -Fq '"defaultProvider":"KRV1961"' /tmp/bible-providers.json \
+              && grep -Fq '태초에 하나님이 천지를 창조하시니라' /tmp/bible-passage.json \
+              && grep -Fq '"integrity":"verbatim"' /tmp/bible-passage.json \
+              && grep -Fq '"mode":"official-link-only"' /tmp/bible-protected.json \
+              && grep -Fq '"verses":[]' /tmp/bible-protected.json \
               && grep -Fq '말씀대화 AI' /tmp/bible-conversation.html \
               && grep -Fq '돌아보기' /tmp/bible-journey.html \
               && grep -Fq '공동체 피드' /tmp/bible-together.html \
               && grep -Fq '"dataMode":"production"' /tmp/bible-health.json \
               && grep -Fq '"centralUserAi":true' /tmp/bible-health.json \
+              && grep -Fq '"aiMayAlterScripture":false' /tmp/bible-health.json \
               && grep -Fq '"dataEnabled":true' /tmp/bible-config.js \
               && grep -Fq '"error":"authentication_required"' /tmp/bible-assist.json \
               && grep -Eiq '^x-ekodi-shell: v2' /tmp/bible-h \
