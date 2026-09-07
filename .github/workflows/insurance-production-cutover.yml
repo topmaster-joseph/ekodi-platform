@@ -1,0 +1,194 @@
+name: EKODI Insurance · Production Cutover
+
+on:
+  push:
+    branches:
+      - ai/gpt-5-6-sol/insurance-prod-cutover-20260907
+      - main
+    paths:
+      - '.github/workflows/insurance-production-cutover.yml'
+      - 'sites/ekodi-insurance/**'
+      - 'insurance-control-proxy.js'
+      - 'customer-entry-worker.js'
+      - 'wrangler.api.toml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-insurance-production-cutover
+  cancel-in-progress: false
+
+env:
+  WRANGLER_VERSION: '4.129.0'
+
+jobs:
+  cutover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      DATA_KEY: ${{ secrets.INSURANCE_PROD_DATA_KEY }}
+      INTERNAL_TOKEN: ${{ secrets.INSURANCE_PROD_INTERNAL_TOKEN }}
+      RATE_SALT: ${{ secrets.INSURANCE_PROD_RATE_SALT }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Require explicit production approval and stable secrets
+        env:
+          PRODUCTION_APPROVED: ${{ vars.INSURANCE_PRODUCTION_APPROVED }}
+        run: |
+          set -euo pipefail
+          test "$PRODUCTION_APPROVED" = 'true' || { echo 'INSURANCE_PRODUCTION_APPROVED is not true.'; exit 1; }
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+          test -n "$DATA_KEY"
+          test -n "$INTERNAL_TOKEN"
+          test -n "$RATE_SALT"
+          DATA_KEY="$DATA_KEY" node -e "const b=Buffer.from(process.env.DATA_KEY||'', 'base64'); if(b.length!==32) throw new Error('production data key must decode to 32 bytes')"
+          test ${#INTERNAL_TOKEN} -ge 32
+          test ${#RATE_SALT} -ge 32
+      - name: Validate Insurance release
+        run: |
+          set -euo pipefail
+          npm run validate:insurance
+          node scripts/validate-capability-registry.mjs
+          cd sites/ekodi-insurance
+          npm run check
+          node --check api/worker.js
+          node --check public/server-bridge.js
+      - name: Apply production D1 migrations
+        working-directory: sites/ekodi-insurance
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@${WRANGLER_VERSION} d1 migrations apply DB --remote --config api/wrangler.toml
+      - name: Deploy production Insurance API
+        working-directory: sites/ekodi-insurance
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@${WRANGLER_VERSION} deploy --config api/wrangler.toml
+      - name: Install production API secrets
+        working-directory: sites/ekodi-insurance
+        run: |
+          set -euo pipefail
+          printf '%s' "$DATA_KEY" | npx --yes wrangler@${WRANGLER_VERSION} secret put INSURANCE_DATA_KEY --config api/wrangler.toml >/dev/null
+          printf '%s' "$INTERNAL_TOKEN" | npx --yes wrangler@${WRANGLER_VERSION} secret put INSURANCE_INTERNAL_TOKEN --config api/wrangler.toml >/dev/null
+          printf '%s' "$RATE_SALT" | npx --yes wrangler@${WRANGLER_VERSION} secret put RATE_LIMIT_SALT --config api/wrangler.toml >/dev/null
+          echo 'Production API secrets installed without disclosure.'
+      - name: Verify production API readiness
+        shell: bash
+        run: |
+          set -euo pipefail
+          api='https://insurance-api.ekodi.kr'
+          for attempt in $(seq 1 24); do
+            code=$(curl -sS -o /tmp/insurance-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$api/health" || true)
+            if [ "$code" = 200 ] && grep -Fq '"ok":true' /tmp/insurance-health.json; then break; fi
+            sleep 5
+          done
+          cat /tmp/insurance-health.json
+          test "$code" = 200
+          grep -Fq '"environment":"production"' /tmp/insurance-health.json
+          grep -Fq '"dbReady":true' /tmp/insurance-health.json
+          grep -Fq '"networkDbReady":true' /tmp/insurance-health.json
+          grep -Fq '"encryptionReady":true' /tmp/insurance-health.json
+          grep -Fq '"internalAdminReady":true' /tmp/insurance-health.json
+          grep -Fq '"rateLimitReady":true' /tmp/insurance-health.json
+          grep -Fq '"transcriptDefault":"not-shared"' /tmp/insurance-health.json
+          catalog_code=$(curl -sS -o /tmp/insurance-catalog.json -w '%{http_code}' "$api/api/network/catalog")
+          test "$catalog_code" = 200
+          grep -Fq '"enabled":false' /tmp/insurance-catalog.json
+          grep -Fq '"reason":"compliance-gate"' /tmp/insurance-catalog.json
+      - name: Prove encrypted production consultation lifecycle
+        id: prod_e2e
+        shell: bash
+        run: |
+          set -euo pipefail
+          api='https://insurance-api.ekodi.kr'
+          create_code=$(curl -sS -o /tmp/prod-create.json -w '%{http_code}' -X POST "$api/api/consultations" \
+            -H 'origin: https://ins.ekodi.kr' -H 'content-type: application/json' \
+            --data '{"name":"EKODI SYNTHETIC","contact":"010-9000-0001","shareConsent":true,"shareTranscript":false,"summaryCode":"GENERAL"}')
+          test "$create_code" = 201
+          ID=$(node -e "const d=require('/tmp/prod-create.json');process.stdout.write(d.consultation.id)")
+          ACCESS=$(node -e "const d=require('/tmp/prod-create.json');process.stdout.write(d.accessToken)")
+          echo "synthetic_id=$ID" >> "$GITHUB_OUTPUT"
+          echo "::add-mask::$ACCESS"
+          grep -Fq '"transcriptShared":false' /tmp/prod-create.json
+          list_code=$(curl -sS -o /tmp/prod-list.json -w '%{http_code}' "$api/api/internal/consultations" \
+            -H "x-ekodi-insurance-internal-token: $INTERNAL_TOKEN" -H 'x-ekodi-actor: production-ci@ekodi.test')
+          test "$list_code" = 200
+          grep -Fq '***-***-0001' /tmp/prod-list.json
+          if grep -Fq '010-9000-0001' /tmp/prod-list.json; then echo 'Plain contact exposed in production list'; exit 1; fi
+          detail_code=$(curl -sS -o /tmp/prod-detail.json -w '%{http_code}' "$api/api/internal/consultations/$ID" \
+            -H "x-ekodi-insurance-internal-token: $INTERNAL_TOKEN" -H 'x-ekodi-actor: production-ci@ekodi.test')
+          test "$detail_code" = 200
+          grep -Fq '010-9000-0001' /tmp/prod-detail.json
+          revoke_code=$(curl -sS -o /tmp/prod-revoke.json -w '%{http_code}' -X POST "$api/api/consultations/$ID/revoke" \
+            -H 'origin: https://ins.ekodi.kr' -H 'content-type: application/json' \
+            --data "{\"accessToken\":\"$ACCESS\"}")
+          test "$revoke_code" = 200
+          grep -Fq '"status":"revoked"' /tmp/prod-revoke.json
+          after_code=$(curl -sS -o /tmp/prod-after.json -w '%{http_code}' "$api/api/internal/consultations/$ID" \
+            -H "x-ekodi-insurance-internal-token: $INTERNAL_TOKEN" -H 'x-ekodi-actor: production-ci@ekodi.test')
+          test "$after_code" = 404
+          echo 'Encrypted production lifecycle passed.'
+      - name: Remove this run's synthetic row
+        if: always() && steps.prod_e2e.outputs.synthetic_id != ''
+        working-directory: sites/ekodi-insurance
+        env:
+          ID: ${{ steps.prod_e2e.outputs.synthetic_id }}
+        run: |
+          set -euo pipefail
+          SAFE_ID=$(printf '%s' "$ID" | tr -cd 'A-Za-z0-9_-')
+          test "$SAFE_ID" = "$ID"
+          npx --yes wrangler@${WRANGLER_VERSION} d1 execute DB --remote --config api/wrangler.toml --command "DELETE FROM consultation_requests WHERE id='$SAFE_ID';" >/dev/null
+      - name: Deploy production Insurance UI
+        working-directory: sites/ekodi-insurance
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.production.toml
+      - name: Install central proxy secret and deploy central API
+        run: |
+          set -euo pipefail
+          printf '%s' "$INTERNAL_TOKEN" | npx --yes wrangler@${WRANGLER_VERSION} secret put INSURANCE_INTERNAL_TOKEN --config wrangler.api.toml >/dev/null
+          npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.api.toml
+          echo 'Central Insurance proxy enabled with shared secret undisclosed.'
+      - name: Verify production UI and central admin boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          ui='https://ins.ekodi.kr'
+          for attempt in $(seq 1 24); do
+            code=$(curl -sS -o /tmp/ins-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$ui/health" || true)
+            if [ "$code" = 200 ] && grep -Fq '"environment":"production"' /tmp/ins-health.json; then break; fi
+            sleep 5
+          done
+          test "$code" = 200
+          root=$(curl -fsS "$ui/")
+          advisor=$(curl -fsS "$ui/advisor")
+          printf '%s' "$root" | grep -Fq 'EKODI Insurance'
+          printf '%s' "$advisor" | grep -Fq '보험설계사 개인 안내·상담 페이지'
+          admin_headers=$(curl -sS -D - -o /dev/null "$ui/admin")
+          printf '%s' "$admin_headers" | grep -Eqi '^HTTP/.* 302'
+          printf '%s' "$admin_headers" | grep -Eqi '^location: https://admin\.ekodi\.kr/'
+          central_code=$(curl -sS -o /tmp/central-insurance.json -D /tmp/central-insurance.headers -w '%{http_code}' \
+            -H 'Origin: https://admin.ekodi.kr' 'https://api.ekodi.kr/api/insurance/admin/network/advisor-profile')
+          test "$central_code" = 401
+          grep -Eiq '^access-control-allow-origin:[[:space:]]*https://admin\.ekodi\.kr' /tmp/central-insurance.headers
+          if grep -Fq 'INSURANCE_ADMIN_NOT_ENABLED' /tmp/central-insurance.json; then echo 'Central Insurance route still disabled'; exit 1; fi
+          echo 'Production UI, API, and central admin transport verified.'
+      - name: Cutover summary
+        run: |
+          {
+            echo '### EKODI Insurance Production Cutover'
+            echo '- Production D1: migrated'
+            echo '- Production API: healthy and encrypted'
+            echo '- Comparison/catalog: compliance gate closed'
+            echo '- Synthetic create/masked-list/decrypt/revoke lifecycle: passed'
+            echo '- ins.ekodi.kr: production UI healthy'
+            echo '- /admin: central Admin redirect verified'
+            echo '- Central admin proxy: enabled; unauthenticated boundary returns readable 401 with CORS'
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -15,7 +15,7 @@ crons = ["*/10 * * * *"]
 
 [vars]
 ENVIRONMENT = "production"
-INSURANCE_ADMIN_ENABLED = "false"
+INSURANCE_ADMIN_ENABLED = "true"
 INSURANCE_API_BASE = "https://insurance-api.ekodi.kr"
 ADMIN_EMAIL = "topmaster.joseph@gmail.com"
 ADMIN_GOOGLE_BOOTSTRAP_EMAILS = "topmaster.joseph@gmail.com"

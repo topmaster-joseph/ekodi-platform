@@ -25,6 +25,7 @@ invocation_logs = true
 [[d1_databases]]
 binding = "DB"
 database_name = "ekodi-insurance"
+database_id = "dbd3efcc-83de-46d6-b366-fea215da2094"
 migrations_dir = "migrations"
 
 # Secrets, never source vars:
