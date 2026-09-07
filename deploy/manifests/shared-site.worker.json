@@ -168,7 +168,8 @@
         "redirect": "manual",
         "expect": [
           "에코디교회 목회자 관리자",
-          "church-pastor-admin.js"
+          "church-pastor-admin.js",
+          "church-reports-admin.js"
         ],
         "headerExpect": [
           "x-ekodi-route: church-pastor-admin",

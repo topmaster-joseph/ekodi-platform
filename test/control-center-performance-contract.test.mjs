@@ -16,7 +16,7 @@ const [loader, layout, handoff, finance, billing, build, mission, hybrid, cheong
 ]);
 
 test('heavy Admin features are demand-loaded rather than added to the first-path shell', () => {
-  for (const asset of ['client-access.js','books-admin.js','community-reports-admin.js','social-admin.js']) assert.ok(loader.includes(asset));
+  for (const asset of ['client-access.js','books-admin.js','social-admin.js']) assert.ok(loader.includes(asset));
   assert.match(loader, /async function activateFeature/);
   assert.ok(loader.includes('for (const src of feature.scripts || []) await loadScript(src)'));
   assert.ok(loader.includes('const real = await waitFor(feature.real)'));
