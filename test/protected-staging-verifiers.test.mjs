@@ -13,6 +13,7 @@ for(const [label,path,config] of cases){
     const source=readFileSync(path,'utf8');
     assert.match(source,/Www-Authenticate: Cloudflare-Access/i);
     assert.match(source,/remote_protected=0/);
+    assert.ok(source.includes("WRANGLER_VERSION: '4.129.0'"));
     assert.match(source,/verify_base="\$STAGING_URL"/);
     assert.ok(source.includes(`wrangler@\${WRANGLER_VERSION} dev --config ${config} --local`));
     assert.match(source,/verify_base='http:\/\/127\.0\.0\.1:/);
