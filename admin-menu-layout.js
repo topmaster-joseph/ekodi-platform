@@ -14,12 +14,12 @@ const RANK=new Map(ORDER.map((section,index)=>[section,index+1]));
 const DEMAND_KEYS=new Map([
   ['campus','campus'],['public-site-controls','public-site-controls'],['aiops','aiops'],['openai','openai'],['devotional','devotional'],['ai-module-spec','ai-module-spec'],['ai-membership','aimembers'],
   ['health','health'],['api-cost','api-cost'],['storage','storage'],['security','security'],['work','work'],
-  ['clients','clients'],['community','community'],['books','books'],['social','social'],['affiliates','affiliates'],
+  ['clients','clients'],['community','community'],['books','books'],['social','social'],['supply-network','supply-network'],
   ['marketing-ai','marketing'],['devices','devices'],['life-ai','life-ai'],['personal-finance','personal-finance']
 ]);
 const pairMap=value=>new Map(value.split(' ').map(pair=>pair.split(':')));
-const HASH=pairMap('#sites:sites #common-services:common-services #capabilities:capabilities #capability-center:capabilities #ai-ops:aiops #aiops:aiops #openai:openai #devotional:devotional #ai-module-spec:ai-module-spec #ai-membership:ai-membership #personal-finance:personal-finance #health:health #api-cost:api-cost #storage:storage #storige:storage #security:security #architecture:architecture #devices:devices #campus:campus #public-site-controls:public-site-controls #work:work #communication:communication #marketing-ai:marketing-ai #finance:finance #organization:organization #workspace:workspace #clients:clients #admins:admins #community:community #cheonggye-members:cheonggye-members #books:books #social:social #mall-ai-sales:affiliates #affiliates:affiliates #insurance:insurance #policies:policies #services:services #deployments:deployments #release:deployments');
-const CANON=pairMap('sites:#sites common-services:#common-services capabilities:#capabilities aiops:#ai-ops openai:#openai devotional:#devotional ai-module-spec:#ai-module-spec ai-membership:#ai-membership personal-finance:#personal-finance health:#health api-cost:#api-cost storage:#storage security:#security architecture:#architecture devices:#devices campus:#campus public-site-controls:#public-site-controls work:#work communication:#communication marketing-ai:#marketing-ai finance:#finance organization:#organization workspace:#workspace clients:#clients admins:#admins community:#community cheonggye-members:#cheonggye-members books:#books social:#social affiliates:#mall-ai-sales insurance:#insurance');
+const HASH=pairMap('#sites:sites #common-services:common-services #capabilities:capabilities #capability-center:capabilities #ai-ops:aiops #aiops:aiops #openai:openai #devotional:devotional #ai-module-spec:ai-module-spec #ai-membership:ai-membership #personal-finance:personal-finance #health:health #api-cost:api-cost #storage:storage #storige:storage #security:security #architecture:architecture #devices:devices #campus:campus #public-site-controls:public-site-controls #work:work #communication:communication #marketing-ai:marketing-ai #finance:finance #organization:organization #workspace:workspace #clients:clients #admins:admins #community:community #cheonggye-members:cheonggye-members #books:books #social:social #supply-network:supply-network #insurance:insurance #policies:policies #services:services #deployments:deployments #release:deployments');
+const CANON=pairMap('sites:#sites common-services:#common-services capabilities:#capabilities aiops:#ai-ops openai:#openai devotional:#devotional ai-module-spec:#ai-module-spec ai-membership:#ai-membership personal-finance:#personal-finance health:#health api-cost:#api-cost storage:#storage security:#security architecture:#architecture devices:#devices campus:#campus public-site-controls:#public-site-controls work:#work communication:#communication marketing-ai:#marketing-ai finance:#finance organization:#organization workspace:#workspace clients:#clients admins:#admins community:#community cheonggye-members:#cheonggye-members books:#books social:#social supply-network:#supply-network insurance:#insurance');
 let requestedSection = '';
 let sitesLoading,cheonggyeLoading,last='',queued=false,running=false,again=false,dc=false;
 const demandLoading=new Map();
@@ -153,6 +153,10 @@ function requestDemand(section){
 }
 function routeInternal(){dc=false;requestedSection='aiops';if(location.hash!=='#ai-ops')history.replaceState(null,'','#ai-ops');requestDemand('aiops');}
 const explicitHashSection=()=>HASH.get(location.hash.toLowerCase())||'';
+const LEGACY_MALL_AFFILIATE_HASHES=new Set(['#affiliates','#mall-ai-sales']);
+const MALL_SUPPLY_ADMIN='https://ekodi.kr/ekodibiz/mall/admin/sourcing';
+function handoffLegacyMallAffiliate(){if(!LEGACY_MALL_AFFILIATE_HASHES.has(location.hash.toLowerCase()))return false;location.replace(MALL_SUPPLY_ADMIN);return true;}
+if(handoffLegacyMallAffiliate())return;
 function reconcileNavigation(){
   if(running){again=true;return;}
   running=true;
@@ -192,6 +196,7 @@ window.addEventListener('ekodi-admin-ready',()=>{
   else{requestedSection='campus';dc=true;}
 });
 window.addEventListener('hashchange',()=>{
+  if(handoffLegacyMallAffiliate())return;
   const section=explicitHashSection();if(!section)return;dc=false;
   if(isInternal(section))return routeInternal();
   if(section==='sites')return openSites();
