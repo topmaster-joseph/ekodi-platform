@@ -65,11 +65,11 @@ const canonicalKey=value=>{
 };
 
 export const EKODI_SERVICE_MANIFEST = Object.freeze({
-  version: 18,
-  updatedAt: '2026-09-07',
+  version: 19,
+  updatedAt: '2026-09-08',
   identityModel: 'person-space-role',
   authorityModel: 'platform-admin-is-separate-from-tenant-activity',
-  shellVersion: 3,
+  shellVersion: 4,
   shellPolicy: 'required-for-user-facing-services',
   onboardingPolicyVersion: 1,
   userAccessPolicy: 'public-guide-workspace-member-content',
