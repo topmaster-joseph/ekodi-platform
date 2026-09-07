@@ -54,3 +54,14 @@ test('canonical Mall gateway keeps Verification Ops HTML uncached', () => {
   assert.ok(productionVerifier.includes('mall-verification-final.headers'));
   assert.ok(productionVerifier.includes('cache-control: no-store'));
 });
+
+test('Commerce OS cockpit reuses the hardened Verification Ops boundary', () => {
+  assert.ok(html.includes('COMMERCE OS COCKPIT'));
+  assert.ok(html.includes('commerceCockpit'));
+  assert.ok(js.includes('/api/internal/operations/cockpit'));
+  assert.ok(!js.includes('x-ekodi-mall-ops-token'));
+  assert.ok(deploy.includes('cockpit_code'));
+  assert.ok(deploy.includes('/api/internal/operations/cockpit'));
+  assert.ok(productionVerifier.includes('commerceCockpitAuthBoundary=verified'));
+  assert.ok(productionVerifier.includes('Commerce OS Cockpit must require operator auth'));
+});

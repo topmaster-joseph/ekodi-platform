@@ -9,6 +9,8 @@ const REPORT_BASE_PATH = '/v2/providers/affiliate_open_api/apis/openapi/v1/repor
 const REPORT_SOURCE = 'coupang_partner_api_purchase';
 const REPORT_METRICS_SOURCE = 'coupang_partner_api';
 const REPORT_LOOKBACK_DAYS = 7;
+const REPORT_DISCOVERY_LOOKBACK_DAYS = 7;
+const REPORT_DISCOVERY_MAX_PAGES = 2;
 const REPORT_START_KST_HOUR = 16;
 const REPORT_MAX_PAGES = 5;
 const REPORT_PAGE_SIZE = 1000;
@@ -351,6 +353,13 @@ async function ensureSchema(db) {
       id INTEGER PRIMARY KEY AUTOINCREMENT, account_id TEXT NOT NULL, sync_date TEXT NOT NULL, status TEXT NOT NULL, reason TEXT NOT NULL DEFAULT '', start_date TEXT NOT NULL, end_date TEXT NOT NULL, orders_rows INTEGER NOT NULL DEFAULT 0, cancels_rows INTEGER NOT NULL DEFAULT 0, commission_rows INTEGER NOT NULL DEFAULT 0, matched_product_rows INTEGER NOT NULL DEFAULT 0, unmatched_product_rows INTEGER NOT NULL DEFAULT 0, error_text TEXT NOT NULL DEFAULT '', started_at TEXT NOT NULL, finished_at TEXT, UNIQUE(account_id, sync_date)
     )`),
     db.prepare('CREATE INDEX IF NOT EXISTS idx_affiliate_partner_report_runs_account ON affiliate_partner_report_runs(account_id, sync_date DESC)'),
+    db.prepare(`CREATE TABLE IF NOT EXISTS affiliate_partner_subid_discovery (
+      id INTEGER PRIMARY KEY AUTOINCREMENT, account_id TEXT NOT NULL, candidate_sub_id TEXT NOT NULL DEFAULT '', is_default INTEGER NOT NULL DEFAULT 0, clicks_rows INTEGER NOT NULL DEFAULT 0, orders_rows INTEGER NOT NULL DEFAULT 0, cancels_rows INTEGER NOT NULL DEFAULT 0, commission_rows INTEGER NOT NULL DEFAULT 0, first_seen_date TEXT NOT NULL DEFAULT '', last_seen_date TEXT NOT NULL DEFAULT '', updated_at TEXT NOT NULL, UNIQUE(account_id,candidate_sub_id)
+    )`),
+    db.prepare('CREATE INDEX IF NOT EXISTS idx_affiliate_partner_subid_discovery_account ON affiliate_partner_subid_discovery(account_id, updated_at DESC)'),
+    db.prepare(`CREATE TABLE IF NOT EXISTS affiliate_partner_report_control (
+      account_id TEXT PRIMARY KEY, force_requested_at TEXT, force_reason TEXT NOT NULL DEFAULT '', force_consumed_at TEXT, updated_at TEXT NOT NULL
+    )`),
   ]);
 }
 
@@ -370,6 +379,27 @@ async function acquireLock(db, lockKey = STOREFRONT) {
 async function releaseLock(db, owner, lockKey = STOREFRONT) {
   if (!owner) return;
   await db.prepare('DELETE FROM affiliate_automation_locks WHERE storefront_slug = ? AND owner_token = ?').bind(lockKey, owner).run().catch(() => {});
+}
+
+async function claimCoupangReportForceRequest(db) {
+  const row = await db.prepare(`SELECT account_id, force_requested_at, force_reason FROM affiliate_partner_report_control
+    WHERE account_id = ? AND force_requested_at IS NOT NULL AND (force_consumed_at IS NULL OR force_consumed_at < force_requested_at)`).bind(ACCOUNT_ID).first();
+  if (!row?.force_requested_at) return null;
+  const consumedAt = isoNow();
+  const result = await db.prepare(`UPDATE affiliate_partner_report_control SET force_consumed_at = ?, updated_at = ?
+    WHERE account_id = ? AND force_requested_at = ? AND (force_consumed_at IS NULL OR force_consumed_at < force_requested_at)`)
+    .bind(consumedAt, consumedAt, ACCOUNT_ID, row.force_requested_at).run();
+  return Number(result?.meta?.changes ?? result?.changes ?? 0) > 0 ? row : null;
+}
+
+export async function syncScheduledCoupangPartnerReports(env = {}, { reason = 'schedule' } = {}) {
+  if (!env.DB?.prepare) return syncCoupangPartnerReports(env, { reason });
+  await ensureSchema(env.DB);
+  const request = await claimCoupangReportForceRequest(env.DB);
+  return syncCoupangPartnerReports(env, {
+    force: Boolean(request),
+    reason: request ? `schedule_force:${cleanText(request.force_reason, 40) || 'operator'}` : reason,
+  });
 }
 
 async function lastRun(db) {
@@ -438,20 +468,56 @@ async function lastReportRun(db) {
   } catch { return null; }
 }
 
-async function fetchReportRows(env, kind, window) {
+async function fetchReportRows(env, kind, window, { subIdOverride, maxPages = REPORT_MAX_PAGES } = {}) {
   const rows = [];
-  for (let page = 0; page < REPORT_MAX_PAGES; page += 1) {
+  const pageLimit = Math.max(1, Math.min(REPORT_MAX_PAGES, Number(maxPages) || REPORT_MAX_PAGES));
+  for (let page = 0; page < pageLimit; page += 1) {
     const query = new URLSearchParams({ startDate: window.startDate, endDate: window.endDate, page: String(page) });
-    const subId = cleanText(env.COUPANG_PARTNERS_SUB_ID, 80);
+    const subId = subIdOverride === undefined ? cleanText(env.COUPANG_PARTNERS_SUB_ID, 80) : cleanText(subIdOverride, 80);
     if (subId) query.set('subId', subId);
     const payload = await coupangRequest(env, { method: 'GET', path: `${REPORT_BASE_PATH}/${kind}`, query });
     const batch = Array.isArray(payload?.data) ? payload.data : [];
     rows.push(...batch);
     if (batch.length < REPORT_PAGE_SIZE) break;
-    if (page === REPORT_MAX_PAGES - 1) throw new Error('COUPANG_REPORT_PAGE_LIMIT');
+    if (page === pageLimit - 1) throw new Error('COUPANG_REPORT_PAGE_LIMIT');
   }
   return rows;
 }
+
+export function summarizeCoupangSubIds(reportGroups = {}) {
+  const buckets = new Map();
+  for (const [kind, rows] of Object.entries(reportGroups)) {
+    const field = kind === 'clicks' ? 'clicksRows' : kind === 'orders' ? 'ordersRows' : kind === 'cancels' ? 'cancelsRows' : 'commissionRows';
+    for (const row of Array.isArray(rows) ? rows : []) {
+      const subId = cleanText(row?.subId ?? row?.subid, 80);
+      const current = buckets.get(subId) || { subId, isDefault: subId ? 0 : 1, clicksRows:0, ordersRows:0, cancelsRows:0, commissionRows:0, firstSeenDate:'', lastSeenDate:'' };
+      current[field] += 1;
+      const metricDate = reportMetricDate(row?.date || row?.orderDate);
+      if (metricDate && (!current.firstSeenDate || metricDate < current.firstSeenDate)) current.firstSeenDate = metricDate;
+      if (metricDate && (!current.lastSeenDate || metricDate > current.lastSeenDate)) current.lastSeenDate = metricDate;
+      buckets.set(subId,current);
+    }
+  }
+  return [...buckets.values()].sort((a,b) => b.ordersRows-a.ordersRows || b.clicksRows-a.clicksRows || a.subId.localeCompare(b.subId));
+}
+
+async function persistCoupangSubIdDiscovery(env, candidates) {
+  const now = isoNow();
+  const statements = [env.DB.prepare('DELETE FROM affiliate_partner_subid_discovery WHERE account_id=?').bind(ACCOUNT_ID)];
+  for (const row of candidates) statements.push(env.DB.prepare(`INSERT INTO affiliate_partner_subid_discovery(account_id,candidate_sub_id,is_default,clicks_rows,orders_rows,cancels_rows,commission_rows,first_seen_date,last_seen_date,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?)`).bind(ACCOUNT_ID,row.subId,row.isDefault,row.clicksRows,row.ordersRows,row.cancelsRows,row.commissionRows,row.firstSeenDate,row.lastSeenDate,now));
+  await env.DB.batch(statements);
+}
+
+async function discoverCoupangPartnerSubIds(env, window) {
+  const [clicks,orders] = await Promise.all([
+    fetchReportRows(env,'clicks',window,{subIdOverride:'',maxPages:REPORT_DISCOVERY_MAX_PAGES}),
+    fetchReportRows(env,'orders',window,{subIdOverride:'',maxPages:REPORT_DISCOVERY_MAX_PAGES}),
+  ]);
+  const candidates = summarizeCoupangSubIds({clicks,orders});
+  await persistCoupangSubIdDiscovery(env,candidates);
+  return { candidates, clicksRows:clicks.length, ordersRows:orders.length, cancelsRows:0, commissionRows:0 };
+}
+
 export function aggregateCoupangProductPerformance(orderRows = [], cancelRows = [], productRows = []) {
   const productMap = new Map(productRows.map(row => [String(row.product_id), Number(row.id)]));
   const buckets = new Map();
@@ -550,10 +616,29 @@ export async function syncCoupangPartnerReports(env = {}, { force = false, reaso
   if (!env.DB?.prepare) return { ok:false, status:'database_required' };
   await ensureSchema(env.DB);
   if (!configured(env)) return { ok:false, status:'setup_required' };
-  if (!reportingConfigured(env)) return { ok:false, status:'sub_id_required' };
-  const window = coupangReportWindow(new Date(), lookbackDays);
+  const now = new Date();
+  const hasSubId = reportingConfigured(env);
+  const window = coupangReportWindow(now, hasSubId ? lookbackDays : REPORT_DISCOVERY_LOOKBACK_DAYS);
   const previous = await lastReportRun(env.DB);
-  if (!force && !coupangReportingDue(previous, new Date())) {
+  if (!hasSubId) {
+    if (!force && !coupangReportingDue(previous, now)) return { ok:true, status: previous?.sync_date === window.syncDate ? 'sub_id_required' : 'not_due', syncDate:window.syncDate };
+    const lockKey = `${STOREFRONT}:reports`;
+    const owner = await acquireLock(env.DB, lockKey);
+    if (!owner) return { ok:true, status:'already_running', syncDate:window.syncDate };
+    try {
+      const startedAt = isoNow();
+      await env.DB.prepare(`INSERT INTO affiliate_partner_report_runs(account_id,sync_date,status,reason,start_date,end_date,started_at,finished_at) VALUES(?,?,'discovering',?,?,?,?,NULL) ON CONFLICT(account_id,sync_date) DO UPDATE SET status='discovering',reason=excluded.reason,start_date=excluded.start_date,end_date=excluded.end_date,error_text='',started_at=excluded.started_at,finished_at=NULL`).bind(ACCOUNT_ID,window.syncDate,cleanText(reason,80),window.startIso,window.endIso,startedAt).run();
+      const discovery = await discoverCoupangPartnerSubIds(env,window);
+      const finishedAt = isoNow();
+      await env.DB.prepare(`UPDATE affiliate_partner_report_runs SET status='sub_id_required',orders_rows=?,cancels_rows=?,commission_rows=?,matched_product_rows=0,unmatched_product_rows=0,error_text='',finished_at=? WHERE account_id=? AND sync_date=?`).bind(discovery.ordersRows,discovery.cancelsRows,discovery.commissionRows,finishedAt,ACCOUNT_ID,window.syncDate).run();
+      return { ok:true,status:'sub_id_required',syncDate:window.syncDate,startDate:window.startIso,endDate:window.endIso,discoveryCandidates:discovery.candidates,clicksRows:discovery.clicksRows,ordersRows:discovery.ordersRows,cancelsRows:discovery.cancelsRows,commissionRows:discovery.commissionRows };
+    } catch (error) {
+      const message = cleanText(error?.message || error,500) || 'COUPANG_REPORT_DISCOVERY_FAILED';
+      await env.DB.prepare(`UPDATE affiliate_partner_report_runs SET status='failed',error_text=?,finished_at=? WHERE account_id=? AND sync_date=?`).bind(message,isoNow(),ACCOUNT_ID,window.syncDate).run().catch(()=>{});
+      return { ok:false,status:'failed',syncDate:window.syncDate,error:message };
+    } finally { await releaseLock(env.DB,owner,lockKey); }
+  }
+  if (!force && previous?.status !== 'sub_id_required' && !coupangReportingDue(previous, now)) {
     return { ok:true, status: previous?.sync_date === window.syncDate ? (previous?.status === 'failed' ? 'retry_cooldown' : 'already_done') : 'not_due', syncDate:window.syncDate };
   }
   const lockKey = `${STOREFRONT}:reports`;

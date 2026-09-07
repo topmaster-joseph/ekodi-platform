@@ -3,27 +3,68 @@ import {
   getAiResilienceStatus,
   runAiEnhancedTask,
 } from './ai-resilience-runtime.js';
+import { buildEkodiAiOrchestrator } from './ai-orchestrator-runtime.js';
+import { createEkodiAiProviderRegistry } from './ekodi-ai-provider-registry.js';
+import { buildEkodiCommandPlane } from './ekodi-command-plane.js';
+
+const ENABLED_VALUES = new Set(['1', 'true', 'yes', 'on', 'enabled']);
+
+function normalizeCapabilities(value) {
+  const items = Array.isArray(value) ? value : value ? [value] : ['text'];
+  return Object.freeze([...new Set(items.map(item => String(item || '').trim().toLowerCase()).filter(Boolean))]);
+}
 
 function normalizeProvider(provider, index) {
   if (!provider || typeof provider.invoke !== 'function') return null;
   const id = String(provider.id || `provider_${index + 1}`).trim().toLowerCase();
   if (!/^[a-z0-9._-]{1,80}$/.test(id)) return null;
+  const priorityValue = Number(provider.priority);
   return Object.freeze({
     id,
     invoke: provider.invoke,
     available: provider.available !== false,
+    priority: Number.isFinite(priorityValue) ? priorityValue : index + 1,
+    capabilities: normalizeCapabilities(provider.capabilities),
+    trustClass: String(provider.trustClass || 'external').trim().toLowerCase() || 'external',
   });
 }
 
+function isMultiProviderEnabled(env = {}) {
+  return ENABLED_VALUES.has(String(env.AI_MULTI_PROVIDER_ENABLED || '').trim().toLowerCase());
+}
+
+function buildProviderPool(env = {}, providers = []) {
+  const supplied = Array.isArray(providers) ? providers : [];
+  const raw = isMultiProviderEnabled(env)
+    ? [...createEkodiAiProviderRegistry(env), ...supplied]
+    : supplied;
+  const unique = new Map();
+  raw.map(normalizeProvider).filter(Boolean).forEach(provider => {
+    if (!unique.has(provider.id)) unique.set(provider.id, provider);
+  });
+  return Object.freeze([...unique.values()]);
+}
+
 export function buildCoreAiGateway(env = {}, providers = []) {
-  const adapters = Object.freeze((Array.isArray(providers) ? providers : [])
-    .map(normalizeProvider)
-    .filter(Boolean));
+  const adapters = buildProviderPool(env, providers);
+  const orchestrator = buildEkodiAiOrchestrator(env, adapters);
+  const commandPlane = buildEkodiCommandPlane(env, adapters);
 
   return Object.freeze({
     policyVersion: AI_RESILIENCE_POLICY.version,
     status() {
-      return getAiResilienceStatus(env, adapters);
+      return Object.freeze({
+        ...getAiResilienceStatus(env, adapters),
+        multiProviderEnabled: isMultiProviderEnabled(env),
+        orchestration: orchestrator.status(),
+        commandPlane: commandPlane.status(),
+      });
+    },
+    plan(input = {}) {
+      return orchestrator.plan(input);
+    },
+    commandPlan(input = {}) {
+      return commandPlane.plan(input);
     },
     async run({ taskName, fallback, timeoutMs, context = {} } = {}) {
       const normalizedTask = String(taskName || '').trim().slice(0, 120);
@@ -43,6 +84,15 @@ export function buildCoreAiGateway(env = {}, providers = []) {
         timeoutMs,
       });
     },
+    async collaborate(options = {}) {
+      return orchestrator.run(options);
+    },
+    async command(options = {}) {
+      return commandPlane.execute(options);
+    },
+    async handlePulse(options = {}) {
+      return commandPlane.handlePulse(options);
+    },
   });
 }
 
@@ -53,6 +103,8 @@ export function getCoreAiGatewayStatus(env = {}, providers = []) {
     gateway: 'ekodi-core-ai',
     providerIndependent: true,
     aiOptional: true,
+    orchestrator: 'ekodi-ai',
+    commandPlane: 'ekodi-v8',
     ...status,
   });
 }

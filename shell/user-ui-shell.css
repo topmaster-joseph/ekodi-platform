@@ -240,6 +240,11 @@ html[data-ekodi-user-ui] {
   scroll-padding-top: calc(var(--ekodi-user-header-height, var(--ekodi-user-header-fallback-height)) + 12px);
 }
 
+/* Shared language control replaces legacy per-service selectors. */
+html[data-ekodi-service="biz"] header .language,
+html[data-ekodi-service="community"] .language-menu {
+  display: none !important;
+}
 /* One language control is inherited by every public/workspace user surface. */
 .ekodi-user-language {
   position: relative;
@@ -279,6 +284,28 @@ html[data-ekodi-user-ui] {
   cursor: pointer;
 }
 
+.ekodi-user-language[data-ekodi-language-placement="footer"] {
+  margin-inline-start: 0;
+  margin-top: 2px;
+}
+
+.ekodi-language-notice {
+  position: fixed;
+  left: 50%;
+  bottom: max(22px, env(safe-area-inset-bottom));
+  z-index: 2147483600;
+  transform: translateX(-50%);
+  max-width: min(520px, calc(100vw - 28px));
+  padding: 11px 15px;
+  border-radius: 999px;
+  background: #17231d;
+  color: #fff;
+  font: 700 12px/1.45 system-ui, -apple-system, "Noto Sans KR", "Malgun Gothic", sans-serif;
+  text-align: center;
+  box-shadow: 0 12px 36px rgba(0,0,0,.2);
+}
+
+.ekodi-language-notice[hidden] { display: none !important; }
 .ekodi-user-language__select:focus-visible {
   outline: 2px solid var(--ekodi-user-chrome-link);
   outline-offset: 2px;

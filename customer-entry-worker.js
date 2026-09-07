@@ -11,11 +11,11 @@ import { handleBooksFinanceRequest } from './books-finance-control.js';
 import { handleBooksDistributionRequest } from './books-distribution-control.js';
 import { handleBooksPipelineRequest } from './books-pipeline-control.js';
 import { handleBooksRoyaltyRequest } from './books-royalty-control.js';
-import { handleCommunityReportsRequest, runCommunityReportSchedule } from './community-reports-control.js';
+import { handleChurchReportsRequest, runChurchReportSchedule } from './church-reports-control.js';
 import { handleAffiliateRequest } from './affiliate-control.js';
 import { handleOfferRegistryRequest } from './offer-registry-control.js';
 import { handleMallAdminRequest } from './mall-admin-control.js';
-import { runAffiliateAutomation, syncCoupangPartnerReports } from './coupang-partners-automation.js';
+import { runAffiliateAutomation, syncScheduledCoupangPartnerReports } from './coupang-partners-automation.js';
 import { handleSocialRegistry } from './social-registry-api.js';
 import { handleInsuranceAdminProxy } from './insurance-control-proxy.js';
 
@@ -138,13 +138,13 @@ export default {
       return disabledPasswordResponse('customer');
     }
 
-    if (path.startsWith('/api/community/admin/reports') && request.method !== 'OPTIONS') {
+    if (path.startsWith('/api/church/admin/reports')) {
       try {
-        const response = await handleCommunityReportsRequest(request, env);
+        const response = await handleChurchReportsRequest(request, env);
         if (response) return response;
       } catch (error) {
-        console.error('Community ministry reports API error', error);
-        return new Response(JSON.stringify({ error: '사역보고 운영 API 처리 중 오류가 발생했습니다.', code: 'COMMUNITY_REPORTS_API_ERROR' }), {
+        console.error('Church ministry reports API error', error);
+        return new Response(JSON.stringify({ error: '에코디교회 사역보고 API 처리 중 오류가 발생했습니다.', code: 'CHURCH_REPORTS_API_ERROR' }), {
           status: 500,
           headers: {
             'content-type': 'application/json; charset=utf-8',
@@ -154,6 +154,18 @@ export default {
           },
         });
       }
+    }
+
+    if (path.startsWith('/api/community/admin/reports')) {
+      return new Response(JSON.stringify({
+        error: '사역보고 관리는 에코디교회 목회자 관리자로 이동했습니다.',
+        code: 'CHURCH_REPORTS_MOVED',
+        canonical: '/api/church/admin/reports',
+        admin: 'https://ekodi.kr/ekodi-church/admin/reports',
+      }), {
+        status: 410,
+        headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', 'x-content-type-options': 'nosniff' },
+      });
     }
 
     if (path.startsWith('/api/mall/admin')) {
@@ -288,10 +300,10 @@ export default {
   },
 
   async scheduled(controller, env, ctx) {
-    ctx.waitUntil(runCommunityReportSchedule(env).catch(error => console.error('Community report schedule failed', error)));
+    ctx.waitUntil(runChurchReportSchedule(env).catch(error => console.error('Church report schedule failed', error)));
     ctx.waitUntil(runMembershipBillingSchedule(env).catch(error => console.error('Membership billing schedule failed', error)));
     ctx.waitUntil(runAffiliateAutomation(env, { reason: 'schedule' }).catch(error => console.error('EKODI Mall automatic curation schedule failed', error)));
-    ctx.waitUntil(syncCoupangPartnerReports(env, { reason: 'schedule' }).catch(error => console.error('EKODI Mall Coupang report schedule failed', error)));
+    ctx.waitUntil(syncScheduledCoupangPartnerReports(env, { reason: 'schedule' }).catch(error => console.error('EKODI Mall Coupang report schedule failed', error)));
     return apiWorker.scheduled(controller, env, ctx);
   },
 };

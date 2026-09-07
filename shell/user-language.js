@@ -3,11 +3,12 @@
 if(window.__EKODI_USER_LANGUAGE_BOOTED)return;
 window.__EKODI_USER_LANGUAGE_BOOTED=true;
 
-const VERSION=5;
+const VERSION=6;
 const STYLE_ID='ekodi-user-language-style';
 const STORAGE_KEY='ekodi_user_locale';
 const COOKIE_KEY='ekodi_locale';
 const PARAM_KEY='lang';
+const FALLBACK_LOCALE='ko-KR';
 const SUPPORTED=Object.freeze([
   {locale:'ko-KR',short:'\uD55C\uAD6D\uC5B4',label:'\uD55C\uAD6D\uC5B4'},
   {locale:'en',short:'English',label:'English'},
@@ -33,6 +34,7 @@ const COPY=Object.freeze({
 let activeLocale='ko-KR';
 let observer=null;
 let scheduled=false;
+let noticeTimer=null;
 
 function normalize(value){
   const raw=String(value||'').trim();
@@ -50,6 +52,17 @@ function normalize(value){
   if(lower==='id'||lower.startsWith('id-')||lower==='in')return'id';
   return'';
 }
+function parseLocales(value){
+  const result=[];
+  for(const token of String(value||'').split(/[\s,|]+/)){
+    const locale=normalize(token);
+    if(locale&&!result.includes(locale))result.push(locale);
+  }
+  if(!result.includes(FALLBACK_LOCALE))result.unshift(FALLBACK_LOCALE);
+  return result;
+}
+function readyLocales(){return parseLocales(document.documentElement.dataset.ekodiReadyLocales||FALLBACK_LOCALE);}
+function isLocaleReady(locale){return readyLocales().includes(normalize(locale)||FALLBACK_LOCALE);}
 function readCookie(){
   try{
     const prefix=`${COOKIE_KEY}=`;
@@ -58,16 +71,31 @@ function readCookie(){
   }catch{return'';}
 }
 function readStorage(){try{return normalize(localStorage.getItem(STORAGE_KEY)||'');}catch{return'';}}
-function initialLocale(){
+function initialPreference(){
   let query='';
   try{query=normalize(new URL(location.href).searchParams.get(PARAM_KEY));}catch{}
-  return query||readCookie()||readStorage()||normalize(navigator.languages?.[0]||navigator.language)||'ko-KR';
+  if(query)return{locale:query,explicit:true};
+  const cookie=readCookie();if(cookie)return{locale:cookie,explicit:true};
+  const stored=readStorage();if(stored)return{locale:stored,explicit:true};
+  return{locale:normalize(navigator.languages?.[0]||navigator.language)||FALLBACK_LOCALE,explicit:false};
 }
 function persist(locale){
   try{localStorage.setItem(STORAGE_KEY,locale);}catch{}
   try{document.cookie=`${COOKIE_KEY}=${encodeURIComponent(locale)}; Domain=.ekodi.kr; Path=/; Max-Age=31536000; SameSite=Lax; Secure`; }catch{}
 }
-function text(){return COPY[activeLocale]||COPY['ko-KR'];}
+function text(locale=activeLocale){return COPY[normalize(locale)||FALLBACK_LOCALE]||COPY[FALLBACK_LOCALE];}
+function preparingText(locale){
+  const code=normalize(locale)||FALLBACK_LOCALE;
+  const messages={
+    'ko-KR':'선택한 언어는 준비 중입니다. 한국어 페이지로 돌아갑니다.',
+    en:'This language is being prepared. Returning to the Korean page.',
+    'zh-CN':'该语言正在准备中。将返回韩语页面。',
+    ja:'この言語は準備中です。韓国語ページに戻ります。',
+    ne:'यो भाषा तयार हुँदैछ। कोरियाली पृष्ठमा फर्काइँदैछ।',
+    vi:'Ngôn ngữ này đang được chuẩn bị. Sẽ quay lại trang tiếng Hàn.'
+  };
+  return messages[code]||messages['ko-KR'];
+}
 function setText(node,value){if(node&&node.textContent!==String(value))node.textContent=String(value);}
 function setAttr(node,name,value){if(node&&node.getAttribute(name)!==String(value))node.setAttribute(name,String(value));}
 function updateSharedCopy(){
@@ -88,8 +116,32 @@ function ensureBrowserTranslationBoundary(){
   if(!meta&&document.head){meta=document.createElement('meta');meta.name='google';meta.content='notranslate';meta.dataset.ekodiBrowserTranslation='managed';document.head.append(meta);}
   document.documentElement.dataset.ekodiBrowserTranslation='native-i18n';
 }
-function apply(locale,{save=true,emit=true}={}){
-  const next=normalize(locale)||'ko-KR';
+function clearUnsupportedQuery(requested){
+  try{
+    const url=new URL(location.href);
+    if(normalize(url.searchParams.get(PARAM_KEY))!==requested)return;
+    url.searchParams.set(PARAM_KEY,FALLBACK_LOCALE);
+    history.replaceState(history.state,'',url);
+  }catch{}
+}
+function notifyPreparing(requested){
+  if(!document.body)return;
+  let notice=document.querySelector('[data-ekodi-language-notice]');
+  if(!notice){
+    notice=document.createElement('div');
+    notice.className='ekodi-language-notice';
+    notice.setAttribute('data-ekodi-language-notice',`v${VERSION}`);
+    notice.setAttribute('role','status');
+    notice.setAttribute('aria-live','polite');
+    document.body.append(notice);
+  }
+  notice.textContent=preparingText(requested);
+  notice.hidden=false;
+  clearTimeout(noticeTimer);
+  noticeTimer=setTimeout(()=>{if(notice?.isConnected)notice.hidden=true;},3200);
+}
+function commit(locale,{save=true,emit=true,source='shared-user-shell',requestedLocale=''}={}){
+  const next=normalize(locale)||FALLBACK_LOCALE;
   const changed=activeLocale!==next||document.documentElement.lang!==next;
   activeLocale=next;
   document.documentElement.lang=next;
@@ -98,9 +150,27 @@ function apply(locale,{save=true,emit=true}={}){
   if(save)persist(next);
   updateSharedCopy();
   syncControls();
-  if(emit&&changed)window.dispatchEvent(new CustomEvent('ekodi:locale-change',{detail:{locale:next,version:VERSION,source:'shared-user-shell'}}));
+  if(emit&&changed)window.dispatchEvent(new CustomEvent('ekodi:locale-change',{detail:{locale:next,version:VERSION,source,requestedLocale:requestedLocale||next}}));
   schedule();
   return next;
+}
+function apply(locale,{save=true,emit=true,notify=true,source='shared-user-shell'}={}){
+  const requested=normalize(locale)||FALLBACK_LOCALE;
+  if(requested!==FALLBACK_LOCALE&&!isLocaleReady(requested)){
+    clearUnsupportedQuery(requested);
+    const next=commit(FALLBACK_LOCALE,{save,emit,source:'unsupported-locale-fallback',requestedLocale:requested});
+    if(notify)notifyPreparing(requested);
+    return next;
+  }
+  return commit(requested,{save,emit,source,requestedLocale:requested});
+}
+function setReadyLocales(locales){
+  const ready=parseLocales(Array.isArray(locales)?locales.join(' '):locales);
+  document.documentElement.dataset.ekodiReadyLocales=ready.join(' ');
+  if(activeLocale!==FALLBACK_LOCALE&&!ready.includes(activeLocale))apply(activeLocale,{save:true,emit:true,notify:true,source:'readiness-change'});
+  syncControls();
+  schedule();
+  return ready;
 }
 function header(){
   return document.querySelector('[data-ekodi-user-header-root]:not([data-ekodi-user-header-fallback]):not([data-ekodi-language-ignore])')||
@@ -111,15 +181,16 @@ function installStyle(){
   if(document.getElementById(STYLE_ID))return;
   const style=document.createElement('style');
   style.id=STYLE_ID;
-  style.textContent=`.ekodi-user-language[data-ekodi-language-control]{position:relative!important;z-index:2147483400!important;overflow:visible!important;display:inline-flex!important;align-items:center!important;gap:6px!important;flex:0 0 auto!important;min-height:36px!important;margin-inline-start:6px!important;padding:0 22px 0 10px!important;border:1px solid rgba(37,82,61,.22)!important;border-radius:999px!important;background:#fbfcfa!important;color:#20362b!important;box-sizing:border-box!important;box-shadow:0 1px 2px rgba(20,45,34,.05)!important;text-shadow:none!important}.ekodi-user-language[data-ekodi-language-control]::after{content:'⌄';position:absolute;right:9px;top:50%;transform:translateY(-54%);font-size:11px;color:#52675d;opacity:.9;pointer-events:none}.ekodi-user-language__icon{font-size:13px;line-height:1;filter:none!important}.ekodi-user-language__label{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}.ekodi-user-language__select{appearance:none!important;-webkit-appearance:none!important;min-width:58px!important;max-width:96px!important;min-height:34px!important;margin:0!important;padding:0!important;border:0!important;border-radius:0!important;background:transparent!important;color:#20362b!important;-webkit-text-fill-color:#20362b!important;box-shadow:none!important;text-shadow:none!important;font:750 12px/1.2 system-ui,-apple-system,"Noto Sans KR","Malgun Gothic",sans-serif!important;cursor:pointer!important;outline:none!important}.ekodi-user-language__select option{background:#fff!important;color:#20362b!important}.ekodi-user-language:hover{background:#f5f8f5!important;border-color:rgba(37,82,61,.32)!important}.ekodi-user-language:focus-within{outline:2px solid rgba(49,93,72,.34)!important;outline-offset:2px}@media(max-width:480px){.ekodi-user-language[data-ekodi-language-control]{margin-inline-start:2px!important;padding-left:8px!important;padding-right:19px!important}.ekodi-user-language__select{max-width:70px!important;font-size:11px!important}}`;
+  style.textContent=`.ekodi-user-language[data-ekodi-language-control]{position:relative!important;z-index:2147483400!important;overflow:visible!important;display:inline-flex!important;align-items:center!important;gap:6px!important;flex:0 0 auto!important;min-height:36px!important;margin-inline-start:6px!important;padding:0 22px 0 10px!important;border:1px solid rgba(37,82,61,.22)!important;border-radius:999px!important;background:#fbfcfa!important;color:#20362b!important;box-sizing:border-box!important;box-shadow:0 1px 2px rgba(20,45,34,.05)!important;text-shadow:none!important}.ekodi-user-language[data-ekodi-language-control]::after{content:'⌄';position:absolute;right:9px;top:50%;transform:translateY(-54%);font-size:11px;color:#52675d;opacity:.9;pointer-events:none}.ekodi-user-language__icon{font-size:13px;line-height:1;filter:none!important}.ekodi-user-language__label{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}.ekodi-user-language__select{appearance:none!important;-webkit-appearance:none!important;min-width:58px!important;max-width:96px!important;min-height:34px!important;margin:0!important;padding:0!important;border:0!important;border-radius:0!important;background:transparent!important;color:#20362b!important;-webkit-text-fill-color:#20362b!important;box-shadow:none!important;text-shadow:none!important;font:750 12px/1.2 system-ui,-apple-system,"Noto Sans KR","Malgun Gothic",sans-serif!important;cursor:pointer!important;outline:none!important}.ekodi-user-language__select option{background:#fff!important;color:#20362b!important}.ekodi-user-language:hover{background:#f5f8f5!important;border-color:rgba(37,82,61,.32)!important}.ekodi-user-language:focus-within{outline:2px solid rgba(49,93,72,.34)!important;outline-offset:2px}.ekodi-user-language[data-ekodi-language-placement="footer"]{margin:2px 0 0!important}.ekodi-language-notice{position:fixed;left:50%;bottom:max(22px,env(safe-area-inset-bottom));z-index:2147483600;transform:translateX(-50%);max-width:min(520px,calc(100vw - 28px));padding:11px 15px;border-radius:999px;background:#17231d;color:#fff;-webkit-text-fill-color:#fff;box-shadow:0 12px 36px rgba(0,0,0,.2);font:700 12px/1.45 system-ui,-apple-system,"Noto Sans KR","Malgun Gothic",sans-serif;text-align:center}.ekodi-language-notice[hidden]{display:none!important}@media(max-width:480px){.ekodi-user-language[data-ekodi-language-control]{margin-inline-start:2px!important;padding-left:8px!important;padding-right:19px!important}.ekodi-user-language__select{max-width:70px!important;font-size:11px!important}}`;
   (document.head||document.documentElement).append(style);
 }
-function buildControl(){
+function buildControl(placement){
   installStyle();
   const wrap=document.createElement('label');
   wrap.className='ekodi-user-language';
   wrap.setAttribute('data-ekodi-language-control',`v${VERSION}`);
-  wrap.setAttribute('data-ekodi-header-side','right');
+  wrap.setAttribute('data-ekodi-language-placement',placement);
+  if(placement==='header')wrap.setAttribute('data-ekodi-header-side','right');
   const icon=document.createElement('span');
   icon.className='ekodi-user-language__icon';
   icon.setAttribute('aria-hidden','true');
@@ -141,6 +212,7 @@ function buildControl(){
   select.title=SUPPORTED.find(item=>item.locale===activeLocale)?.label||text().language;
   select.addEventListener('change',()=>apply(select.value));
   wrap.append(icon,textNode,select);
+  syncControl(wrap);
   return wrap;
 }
 function isAccountLink(link){
@@ -155,12 +227,27 @@ function isAccountLink(link){
 function actionContainer(target){
   return target.querySelector('.ekodi-user-ui-fallback-header__nav,[data-ekodi-header-actions],.header-actions,.nav-actions,.top-actions,.actions,#main-nav,nav')||target;
 }
-function placeControl(){
+function syncControl(control){
+  if(!control)return;
+  setText(control.querySelector('.ekodi-user-language__label'),text().language);
+  const select=control.querySelector('select');
+  setAttr(select,'aria-label',text().language);
+  if(!select)return;
+  if(select.value!==activeLocale)select.value=activeLocale;
+  select.title=SUPPORTED.find(item=>item.locale===activeLocale)?.label||text().language;
+  for(const option of select.options){
+    const ready=isLocaleReady(option.value);
+    option.dataset.ekodiLocaleReady=ready?'true':'false';
+    const item=SUPPORTED.find(candidate=>candidate.locale===option.value);
+    option.title=ready?(item?.label||option.textContent):preparingText(option.value);
+  }
+}
+function placeHeaderControl(){
   if(!document.body)return;
-  let control=document.querySelector('[data-ekodi-language-control]');
   const target=header();
   if(!target)return;
-  if(!control)control=buildControl();
+  let control=document.querySelector('[data-ekodi-language-placement="header"]');
+  if(!control)control=buildControl('header');
   const parent=actionContainer(target);
   const accountLinks=[...parent.querySelectorAll('a')].filter(isAccountLink);
   const accountLink=accountLinks.at(-1)||null;
@@ -169,39 +256,42 @@ function placeControl(){
   }else if(control.parentElement!==parent){
     parent.append(control);
   }
-  setText(control.querySelector('.ekodi-user-language__label'),text().language);
-  const select=control.querySelector('select');
-  setAttr(select,'aria-label',text().language);
-  if(select){
-    if(select.value!==activeLocale)select.value=activeLocale;
-    select.title=SUPPORTED.find(item=>item.locale===activeLocale)?.label||text().language;
-  }
+  syncControl(control);
 }
-function syncControls(){
-  for(const control of document.querySelectorAll('[data-ekodi-language-control]')){
-    setText(control.querySelector('.ekodi-user-language__label'),text().language);
-    const select=control.querySelector('select');
-    setAttr(select,'aria-label',text().language);
-    if(select){
-      if(select.value!==activeLocale)select.value=activeLocale;
-      select.title=SUPPORTED.find(item=>item.locale===activeLocale)?.label||text().language;
-    }
-  }
+function placeFooterControl(){
+  if(!document.body)return;
+  const footer=document.querySelector('[data-ekodi-user-footer],.ekodi-user-ui-footer,body > footer,footer');
+  if(!footer)return;
+  const parent=footer.querySelector('.ekodi-user-ui-footer__inner')||footer;
+  let control=footer.querySelector('[data-ekodi-language-placement="footer"]');
+  if(!control)control=buildControl('footer');
+  if(control.parentElement!==parent)parent.append(control);
+  syncControl(control);
 }
-function reconcile(){scheduled=false;placeControl();updateSharedCopy();}
+function syncControls(){for(const control of document.querySelectorAll('[data-ekodi-language-control]'))syncControl(control);}
+function reconcile(){scheduled=false;placeHeaderControl();placeFooterControl();updateSharedCopy();syncControls();}
 function schedule(){if(scheduled)return;scheduled=true;requestAnimationFrame(reconcile);}
-function boot(){ensureBrowserTranslationBoundary();apply(initialLocale(),{save:true,emit:false});schedule();}
+function boot(){
+  ensureBrowserTranslationBoundary();
+  const preferred=initialPreference();
+  apply(preferred.locale,{save:true,emit:true,notify:preferred.explicit,source:'initial'});
+  schedule();
+}
 
 window.EKODIUserLanguage=Object.freeze({
   version:VERSION,
   supported:SUPPORTED,
   getLocale:()=>activeLocale,
-  setLocale:locale=>apply(locale),
+  getReadyLocales:()=>Object.freeze([...readyLocales()]),
+  isLocaleReady,
+  setReadyLocales,
+  setLocale:locale=>apply(locale,{save:true,emit:true,notify:true}),
   refresh:schedule
 });
 window.addEventListener('ekodi:user-header-ready',schedule);
+window.addEventListener('ekodi:user-footer-ready',schedule);
 window.addEventListener('ekodi:shell-theme',schedule);
-window.addEventListener('popstate',()=>apply(initialLocale(),{save:true,emit:true}));
+window.addEventListener('popstate',()=>{const preferred=initialPreference();apply(preferred.locale,{save:true,emit:true,notify:preferred.explicit,source:'history'});});
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 observer=new MutationObserver(schedule);
 observer.observe(document.documentElement,{childList:true,subtree:true});

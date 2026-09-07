@@ -348,7 +348,15 @@ async function handlePartnerPrograms(request, env, auth, path) {
       const related = routes.filter(route => route.network_key === row.program_key || route.merchant_key === row.program_key);
       return { ...partnerProgramView(row), merchantRoutes: related.length, recommendationRoutes: related.filter(routeRecommendationReady).length };
     });
-    return json({ programs }, 200, auth.response.headers);
+    const pipeline = {
+      total: programs.length,
+      prepared: programs.filter(item => ['prepared', 'account_exists', 'applied', 'review'].includes(item.applicationStatus)).length,
+      approved: programs.filter(item => ['approved', 'active'].includes(item.applicationStatus)).length,
+      live: programs.filter(item => item.integrationStatus === 'live').length,
+      externalActionsRequired: programs.filter(item => item.externalActionRequired && !['approved', 'active'].includes(item.applicationStatus)).length,
+      playbookVersion: '2026-09-08',
+    };
+    return json({ programs, pipeline }, 200, auth.response.headers);
   }
   const match = path.match(/^\/api\/affiliate\/programs\/([a-z0-9_-]+)$/);
   if (!match || request.method !== 'PUT') return null;

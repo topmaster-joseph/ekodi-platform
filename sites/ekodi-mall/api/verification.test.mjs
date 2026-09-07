@@ -12,7 +12,7 @@ const readyIndividual = { sale_type:'direct', status:'published', price:10000, d
 
 test('checkout gate eligibility stays independent from global payment activation', () => {
   assert.deepEqual(checkoutGateBlockers(readyIndividual), []);
-  assert.deepEqual(livePaymentBlockers(readyIndividual, { PAYMENTS_ENABLED:'false' }), ['payments-disabled','toss-secret-missing']);
+  assert.deepEqual(livePaymentBlockers(readyIndividual, { PAYMENTS_ENABLED:'false' }), ['payment-provider-missing','payments-disabled']);
   assert.deepEqual(livePaymentBlockers(readyIndividual, { PAYMENTS_ENABLED:'true', TOSS_SECRET_KEY:'configured' }), []);
 });
 
@@ -32,7 +32,7 @@ test('manual checkout gate remains separate and auditable', () => {
 
 test('production launch gate stays fail-closed until commerce evidence is complete', () => {
   const counts={checkoutGateEligibleCount:1,checkoutGateEnabledCount:1};
-  assert.deepEqual(launchReadinessBlockers({counts,env:{MALL_OPERATIONS_EMAILS:'ops@example.com'}}), ['toss-secret-missing','legal-readiness-missing','privacy-readiness-missing','refund-readiness-missing','payout-readiness-missing']);
+  assert.deepEqual(launchReadinessBlockers({counts,env:{MALL_OPERATIONS_EMAILS:'ops@example.com'}}), ['payment-provider-missing','legal-readiness-missing','privacy-readiness-missing','refund-readiness-missing','payout-readiness-missing']);
   const env={TOSS_SECRET_KEY:'configured',MALL_OPERATIONS_EMAILS:'ops@example.com',MALL_LEGAL_READINESS_REF:'legal:v1',MALL_PRIVACY_READINESS_REF:'privacy:v1',MALL_REFUND_READINESS_REF:'refund:v1',MALL_PAYOUT_READINESS_REF:'payout:v1'};
   assert.deepEqual(launchReadinessBlockers({counts,env}), []);
   assert.deepEqual(launchReadinessBlockers({counts:{...counts,checkoutGateEnabledCount:0},env}), ['no-checkout-gate-product']);

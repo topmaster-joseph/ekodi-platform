@@ -5,7 +5,9 @@ import { readFile } from 'node:fs/promises';
 import {
   AFFILIATE_AUTOMATION_DEFAULTS,
   aggregateCoupangProductPerformance,
+  summarizeCoupangSubIds,
   syncCoupangPartnerReports,
+  syncScheduledCoupangPartnerReports,
   coupangReportingDue,
   coupangReportWindow,
 } from '../coupang-partners-automation.js';
@@ -76,17 +78,27 @@ test('runtime uses official report resource family and bounded daily pagination'
   assert.match(automation, /fetchReportRows\(env,'commission'/);
   assert.match(automation, /REPORT_MAX_PAGES = 5/);
   assert.match(automation, /coupang_partner_api_purchase/);
-  assert.match(entry, /syncCoupangPartnerReports/);
+  assert.match(entry, /syncScheduledCoupangPartnerReports/);
   assert.match(control, /\/reporting\/sync/);
   assert.doesNotMatch(automation, /buyerEmail|recipient|buyerName|receiverName/);
 });
 
-test('report sync refuses account-wide attribution when Sub ID is missing', async () => {
-  const db=new D1Db();
-  try {
-    const result=await syncCoupangPartnerReports({DB:db,COUPANG_PARTNERS_ACCESS_KEY:'a',COUPANG_PARTNERS_SECRET_KEY:'b'},{force:true});
-    assert.equal(result.status,'sub_id_required');
-  } finally { db.close(); }
+test('Sub ID discovery never writes account-wide outcomes into Mall performance', async () => {
+  const db=new D1Db(); const requested=[]; const originalFetch=globalThis.fetch;
+  globalThis.fetch=async (url)=>{ const u=new URL(String(url)); requested.push(u); assert.equal(u.searchParams.has('subId'),false); const d=coupangReportWindow(new Date(),30).endDate; let data=[];
+    if(u.pathname.endsWith('/clicks')) data=[{date:d,subId:'blog-main'},{date:d,subId:'ekodi-mall'}];
+    if(u.pathname.endsWith('/orders')) data=[{date:d,subId:'ekodi-mall',productId:123,orderId:1,gmv:10000,commission:300},{date:d,subId:'',productId:999,orderId:2,gmv:5000,commission:150}];
+    return new Response(JSON.stringify({rCode:'0',rMessage:'',data}),{status:200,headers:{'content-type':'application/json'}}); };
+  try { const result=await syncCoupangPartnerReports({DB:db,COUPANG_PARTNERS_ACCESS_KEY:'a',COUPANG_PARTNERS_SECRET_KEY:'b'},{force:true,reason:'test-discovery'});
+    assert.equal(result.status,'sub_id_required'); assert.equal(requested.length,2); assert.equal(result.discoveryCandidates.some(x=>x.subId==='ekodi-mall'),true);
+    assert.equal(Number((await db.prepare('SELECT COUNT(*) AS n FROM affiliate_product_performance_daily').first()).n),0); assert.equal(Number((await db.prepare('SELECT COUNT(*) AS n FROM affiliate_daily_metrics').first()).n),0);
+    const rows=(await db.prepare('SELECT candidate_sub_id,is_default,clicks_rows,orders_rows,cancels_rows,commission_rows FROM affiliate_partner_subid_discovery ORDER BY candidate_sub_id').all()).results; assert.equal(rows.length,3);
+  } finally { globalThis.fetch=originalFetch; db.close(); }
+});
+
+test('Sub ID summary is aggregate-only and contains no order payload', () => {
+  const rows=summarizeCoupangSubIds({orders:[{date:'20260906',subId:'mall',orderId:'secret-order',productName:'Hidden'}],clicks:[{date:'20260906',subId:'mall'}]});
+  assert.deepEqual(rows,[{subId:'mall',isDefault:0,clicksRows:1,ordersRows:1,cancelsRows:0,commissionRows:0,firstSeenDate:'2026-09-06',lastSeenDate:'2026-09-06'}]); assert.equal(JSON.stringify(rows).includes('secret-order'),false); assert.equal(JSON.stringify(rows).includes('Hidden'),false);
 });
 
 test('report sync sends Sub ID and persists normalized purchase outcomes', async () => {
@@ -111,5 +123,20 @@ test('report sync sends Sub ID and persists normalized purchase outcomes', async
     assert.deepEqual({orders:Number(perf.orders),cancels:Number(perf.cancels),gmv:Number(perf.gmv_krw),commission:Number(perf.commission_krw),source:perf.source},{orders:1,cancels:1,gmv:8000,commission:240,source:'coupang_partner_api_purchase'});
     const metric=await db.prepare(`SELECT clicks,orders,revenue_krw,source FROM affiliate_daily_metrics`).first();
     assert.deepEqual({clicks:Number(metric.clicks),orders:Number(metric.orders),revenue:Number(metric.revenue_krw),source:metric.source},{clicks:7,orders:1,revenue:240,source:'coupang_partner_api'});
+  } finally { globalThis.fetch=originalFetch; db.close(); }
+});
+
+test('scheduled reporting consumes a one-time force request', async () => {
+  const db=new D1Db();
+  db.exec(`CREATE TABLE affiliate_partner_report_control (account_id TEXT PRIMARY KEY,force_requested_at TEXT,force_reason TEXT NOT NULL DEFAULT '',force_consumed_at TEXT,updated_at TEXT NOT NULL);`);
+  const requestedAt=new Date().toISOString();
+  await db.prepare(`INSERT INTO affiliate_partner_report_control(account_id,force_requested_at,force_reason,force_consumed_at,updated_at) VALUES(?,?,?,?,?)`).bind('coupang-ekodibiz',requestedAt,'verification',null,requestedAt).run();
+  const originalFetch=globalThis.fetch; let requests=0;
+  globalThis.fetch=async (url)=>{ requests+=1; const u=new URL(String(url)); const date=coupangReportWindow(new Date()).endDate; const data=u.pathname.endsWith('/clicks')?[{date,subId:'ekodi-mall'}]:[{date,subId:'ekodi-mall',productId:123,orderId:1,gmv:10000,commission:300}]; return new Response(JSON.stringify({rCode:'0',rMessage:'',data}),{status:200,headers:{'content-type':'application/json'}}); };
+  try {
+    const result=await syncScheduledCoupangPartnerReports({DB:db,COUPANG_PARTNERS_ACCESS_KEY:'a',COUPANG_PARTNERS_SECRET_KEY:'b'});
+    assert.equal(result.status,'sub_id_required'); assert.equal(requests,2);
+    const control=await db.prepare(`SELECT force_consumed_at FROM affiliate_partner_report_control WHERE account_id=?`).bind('coupang-ekodibiz').first();
+    assert.ok(control.force_consumed_at);
   } finally { globalThis.fetch=originalFetch; db.close(); }
 });

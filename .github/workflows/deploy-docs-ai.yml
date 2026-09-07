@@ -30,7 +30,7 @@ env:
   DOCUMENT_MIGRATION: supabase/migrations/20260907113000_document_workspace_ai.sql
   DOCUMENT_HEALTH_MIGRATION: supabase/migrations/20260907135500_document_workspace_health.sql
   DOCUMENT_MIGRATION_GLOB: "supabase/migrations/*document_workspace*.sql"
-  DOCS_AI_RELEASE: "20260907-docs-ai-3"
+  DOCS_AI_RELEASE: "20260908-docs-ai-4"
   MY_SUPABASE_PUBLISHABLE_KEY: sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_
 
 jobs:
