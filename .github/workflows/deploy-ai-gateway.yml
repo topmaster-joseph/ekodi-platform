@@ -1,19 +1,19 @@
-name: Validate AI Gateway
+name: Validate AI Runtime Boundary
 
 on:
   pull_request:
-    paths: &ai_gateway_paths
-      - 'ai-gateway-page.js'
-      - 'platform-router-entry-worker.js'
-      - 'auth-site/admin-auth.js'
+    paths: &ai_runtime_paths
+      - 'ai-control-worker.js'
+      - 'wrangler.ai*.toml'
       - 'wrangler.site.toml'
-      - 'wrangler.ai.toml'
-      - 'test/ai-gateway-domain.test.mjs'
-      - 'test/ai-gateway-auth-flow.test.mjs'
+      - 'platform-router-entry-worker.js'
+      - 'deploy/manifests/ai-control.worker.json'
+      - 'test/ai-runtime-boundary.test.mjs'
       - '.github/workflows/deploy-ai-gateway.yml'
+      - '.github/workflows/verify-ai-gateway-production.yml'
   push:
     branches: [main]
-    paths: *ai_gateway_paths
+    paths: *ai_runtime_paths
   workflow_dispatch:
 
 permissions:
@@ -28,19 +28,21 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
-      - name: Validate AI Gateway auth handoff and routing contract
+      - name: Validate single AI Runtime owner and production contract
         shell: bash
         run: |
           set -euo pipefail
-          node --check ai-gateway-page.js
+          node --check ai-control-worker.js
           node --check platform-router-entry-worker.js
-          node --check auth-site/admin-auth.js
-          node --test test/ai-gateway-domain.test.mjs test/ai-gateway-auth-flow.test.mjs
-          grep -Fq 'pattern = "ai.ekodi.kr"' wrangler.ai.toml
+          node --test test/ai-runtime-boundary.test.mjs
+          grep -Fq 'pattern = "ai.ekodi.kr"' wrangler.ai.release.toml
           ! grep -Fq 'pattern = "ai.ekodi.kr"' wrangler.site.toml
-          grep -Fq 'ekodi_admin_token:result.token' auth-site/admin-auth.js
-          grep -Fq 'Google 관리자 인증 완료 · 세션 확인 중' ai-gateway-page.js
-          grep -Fq "let memoryToken=''" ai-gateway-page.js
-          npm run build
-      - name: Verify single production owner policy
+          grep -Fq "route=common-services&service=ai" ai-control-worker.js
+          grep -Fq "surface:'runtime-only'" ai-control-worker.js
+          grep -Fq 'operator_surface_moved' ai-control-worker.js
+          grep -Fq 'service_local_auth_retired' ai-control-worker.js
+          test ! -e ai-gateway-page.js
+          ! grep -Fq 'ai-gateway-page.js' platform-router-entry-worker.js
+          ! grep -Fq 'AI_GATEWAY_HOST' platform-router-entry-worker.js
+      - name: Verify deployment ownership guardrails
         run: node scripts/validate-deployment-guardrails.mjs

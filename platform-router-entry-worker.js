@@ -8,7 +8,6 @@ import { injectEkodiShell } from './ekodi-shell-injector.js';
 import { messengerUserPage, messengerUiScript } from './messenger-user-page.js';
 import { investUserPage, investUiScript } from './invest-user-page.js';
 import { investSubjectUiScript } from './invest-subject-ui.js';
-import { AI_GATEWAY_HOST, aiGatewayPage, aiGatewayScript, proxyAiGatewayApi } from './ai-gateway-page.js';
 import { MAIL_HOST, mailUserPage, handleMailApi } from './mail-user-page.js';
 import { mailAdminPage } from './mail-admin-page.js';
 import { isWorkspaceAdminPath, workspaceAdminPage, workspaceAdminCss, workspaceAdminScript } from './workspace-admin-page.js';
@@ -214,13 +213,6 @@ export default {
         return portal;
       }
       return new Response('Not Found',{status:404,headers:{'cache-control':'no-store','x-content-type-options':'nosniff'}});
-    }
-
-    if(host===AI_GATEWAY_HOST){
-      if(request.method==='GET'&&(url.pathname==='/'||url.pathname===''))return aiGatewayPage();
-      if(request.method==='GET'&&url.pathname==='/ai-gateway.js')return aiGatewayScript();
-      const proxied=await proxyAiGatewayApi(request);
-      if(proxied)return proxied;
     }
 
     if(host===MAIL_HOST){
