@@ -23,6 +23,8 @@ test('new programs fail closed until external approval and merchant verification
   assert.match(control, /integrationStatus === 'live'.*approved.*active/);
   assert.match(control, /recommendationRequiresVerifiedTrackingAndCatalog: true/);
   assert.match(control, /affiliate\.program\.update/);
+  assert.match(control, /playbookVersion: '2026-09-08'/);
+  assert.match(control, /externalActionsRequired/);
 });
 
 test('partner playbooks expose the next safe acquisition action', () => {
