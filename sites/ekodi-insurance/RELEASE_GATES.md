@@ -142,4 +142,4 @@ staging은 합성데이터만 사용하며 테스트 완료 후 자동 삭제한
 
 **Technical staging gates: PASS**
 
-**Production `main` / `ins.ekodi.kr`: NOT CHANGED. External compliance/privacy + production-secret gates remain.**
+**Production source: MERGED TO `main`. `ins.ekodi.kr` / `insurance-api.ekodi.kr` public cutover: NOT ENABLED. External compliance/privacy + production-secret gates remain. Production Green validation is the mandatory pre-cutover proof.**

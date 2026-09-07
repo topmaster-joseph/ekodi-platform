@@ -13,6 +13,7 @@ on:
       - 'test/insurance-8g.test.mjs'
       - 'wrangler.api.toml'
       - '.github/workflows/insurance-8g-ci.yml'
+      - '.github/workflows/insurance-production-green.yml'
   pull_request:
     paths:
       - 'sites/ekodi-insurance/**'
@@ -52,3 +53,10 @@ jobs:
           grep -Fq "comparison_requires_approved_signed_partner" sites/ekodi-insurance/api/network.js
           grep -Fq "mode:'reference-only'" sites/ekodi-insurance/api/network.js
           ! grep -R -E 'persistentPolicyLedger:[[:space:]]*true|persistentClaimLedger:[[:space:]]*true' sites/ekodi-insurance
+      - name: Production Green workflow must remain approval-gated
+        shell: bash
+        run: |
+          test -f .github/workflows/insurance-production-green.yml
+          grep -Fq 'INSURANCE_PRODUCTION_APPROVED' .github/workflows/insurance-production-green.yml
+          grep -Fq "WRANGLER_VERSION: '4.129.0'" .github/workflows/insurance-production-green.yml
+          grep -Fq 'Production custom domains: **NOT CHANGED**' .github/workflows/insurance-production-green.yml
