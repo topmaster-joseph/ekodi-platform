@@ -154,6 +154,14 @@ jobs:
             *) echo "Invalid Development staging URL" >&2; exit 1 ;;
           esac
 
+      - name: Generate one-time transaction rehearsal token
+        shell: bash
+        run: |
+          set -euo pipefail
+          token=$(openssl rand -hex 32)
+          echo "::add-mask::$token"
+          echo "TRANSACTION_REHEARSAL_TOKEN=$token" >> "$GITHUB_ENV"
+
       - name: Resolve or create isolated staging D1
         id: staging_d1
         shell: bash
@@ -193,6 +201,8 @@ jobs:
           SUPABASE_PUBLISHABLE_KEY = "sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_"
           MALL_OPERATIONS_EMAILS = "$OPS_EMAILS"
           PAYMENTS_ENABLED = "false"
+          TRANSACTION_REHEARSAL_ENABLED = "true"
+          TRANSACTION_REHEARSAL_TOKEN = "$TRANSACTION_REHEARSAL_TOKEN"
           SOURCING_AUTO_ORDER_ENABLED = "false"
           BUYER_PII_RELEASE_ENABLED = "false"
           SUPPLIER_FORWARD_ENABLED = "false"
@@ -235,6 +245,7 @@ jobs:
               && grep -Fq '"version":3' /tmp/mall-stage-health.json \
               && grep -Fq '"operationsReviewConfigured":true' /tmp/mall-stage-health.json \
               && grep -Fq '"operationsEmailAllowlistConfigured":true' /tmp/mall-stage-health.json \
+              && grep -Fq '"transactionRehearsalEnabled":true' /tmp/mall-stage-health.json \
               && grep -Fq '"paymentsEnabled":false' /tmp/mall-stage-health.json \
               && grep -Fq '"payoutExecutionEnabled":false' /tmp/mall-stage-health.json \
               && grep -Fq '"direct":7' /tmp/mall-stage-fees.json \
@@ -254,6 +265,33 @@ jobs:
             sleep 5
           done
 
+      - name: Run isolated staging transaction rehearsal
+        shell: bash
+        run: |
+          set -euo pipefail
+          code=000
+          for attempt in $(seq 1 12); do
+            code=$(curl -sS -o /tmp/mall-transaction-rehearsal.json -w '%{http_code}' --connect-timeout 5 --max-time 30 \
+              -X POST -H 'content-type: application/json' -H "x-ekodi-rehearsal-token: $TRANSACTION_REHEARSAL_TOKEN" \
+              --data "{\"runId\":\"gh-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT\"}" \
+              "${STAGING_URL}/api/internal/rehearsal/transaction" || true)
+            if [ "$code" = "200" ]; then break; fi
+            echo "Mall rehearsal Access propagation attempt=$attempt status=$code"
+            sleep 5
+          done
+          [ "$code" = "200" ] || { cat /tmp/mall-transaction-rehearsal.json || true; exit 1; }
+          node <<'NODE'
+          const fs = require('node:fs');
+          const body = JSON.parse(fs.readFileSync('/tmp/mall-transaction-rehearsal.json','utf8'));
+          if (!body.ok || body.cleanup !== true) throw new Error('rehearsal did not complete and clean up');
+          if (body.proof?.safetyGate?.checkoutReady !== false || !body.proof.safetyGate.blockers.includes('payments-disabled')) throw new Error('disabled-payment safety gate was not proven');
+          if (body.proof?.order?.status !== 'paid' || body.proof.order.feeRatePercent !== 10) throw new Error('business order proof failed');
+          if (body.proof?.payment?.provider !== 'REHEARSAL' || body.proof.payment.status !== 'DONE') throw new Error('synthetic payment proof failed');
+          if (body.proof?.settlement?.status !== 'pending' || body.proof.settlement.count !== 1) throw new Error('settlement idempotence proof failed');
+          if (body.proof.realPaymentExecuted !== false || body.proof.payoutExecuted !== false || body.proof.buyerPiiReleased !== false) throw new Error('rehearsal crossed a high-impact boundary');
+          console.log('Mall staging transaction rehearsal passed: order -> synthetic payment -> single settlement ledger -> cleanup.');
+          NODE
+
       - name: Verify staging private paths remain Access-protected
         shell: bash
         run: |
@@ -272,6 +310,31 @@ jobs:
             sleep 5
           done
           echo "Non-public Mall staging paths are not protected by Cloudflare Access; refusing promotion." >&2
+          exit 1
+
+      - name: Disable staging transaction rehearsal after proof
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ ! -f api/wrangler.staging.runtime.toml ]; then
+            echo "Staging runtime config was not created; nothing to disable."
+            exit 0
+          fi
+          sed -i 's/TRANSACTION_REHEARSAL_ENABLED = "true"/TRANSACTION_REHEARSAL_ENABLED = "false"/' api/wrangler.staging.runtime.toml
+          sed -i 's/TRANSACTION_REHEARSAL_TOKEN = ".*"/TRANSACTION_REHEARSAL_TOKEN = "disabled"/' api/wrangler.staging.runtime.toml
+          npx --yes wrangler@${WRANGLER_VERSION} deploy --config api/wrangler.staging.runtime.toml
+          for attempt in $(seq 1 12); do
+            health_code=$(curl -sS -o /tmp/mall-stage-disabled-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "${STAGING_URL}/health" || true)
+            rehearsal_code=$(curl -sS -o /tmp/mall-stage-disabled-rehearsal.json -w '%{http_code}' --connect-timeout 5 --max-time 15 -X POST "${STAGING_URL}/api/internal/rehearsal/transaction" || true)
+            if [ "$health_code" = "200" ] && [ "$rehearsal_code" = "404" ] && grep -Fq '"transactionRehearsalEnabled":false' /tmp/mall-stage-disabled-health.json; then
+              echo "Mall staging transaction rehearsal is disabled again after proof."
+              exit 0
+            fi
+            sleep 5
+          done
+          cat /tmp/mall-stage-disabled-health.json || true
+          cat /tmp/mall-stage-disabled-rehearsal.json || true
           exit 1
 
       - name: Cleanup staging config
@@ -373,6 +436,7 @@ jobs:
             fees_code=$(curl -sS -o /tmp/mall-fees.json -w '%{http_code}' --connect-timeout 5 --max-time 15 https://mall-api.ekodi.kr/api/public/fees || true)
             feed_code=$(curl -sS -o /tmp/mall-feed.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://mall-api.ekodi.kr/api/public/products?limit=1' || true)
             verification_queue_code=$(curl -sS -o /tmp/mall-verification-unauth.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://mall-api.ekodi.kr/api/internal/verification/queue' || true)
+            rehearsal_code=$(curl -sS -o /tmp/mall-production-rehearsal.json -w '%{http_code}' --connect-timeout 5 --max-time 15 -X POST 'https://mall-api.ekodi.kr/api/internal/rehearsal/transaction' || true)
             if [ "$health_code" = "200" ] && [ "$fees_code" = "200" ] && [ "$feed_code" = "200" ] \
               && grep -Fq '"schemaReady":true' /tmp/mall-api.json \
               && grep -Fq '"orderSchemaReady":true' /tmp/mall-api.json \
@@ -382,6 +446,8 @@ jobs:
               && grep -Fq '"operationsReviewConfigured":true' /tmp/mall-api.json \
               && grep -Fq '"operationsEmailAllowlistConfigured":true' /tmp/mall-api.json \
               && [ "$verification_queue_code" = "401" ] \
+              && [ "$rehearsal_code" = "404" ] \
+              && grep -Fq '"transactionRehearsalEnabled":false' /tmp/mall-api.json \
               && grep -Fq '"paymentsEnabled":false' /tmp/mall-api.json \
               && grep -Fq '"payoutExecutionEnabled":false' /tmp/mall-api.json \
               && grep -Fq '"direct":7' /tmp/mall-fees.json \
