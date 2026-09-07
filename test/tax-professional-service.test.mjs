@@ -2,6 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { execFileSync } from 'node:child_process';
+import taxServiceWorker from '../tax-service-worker.js';
+import freeFirstWorker from '../tax-invoice-free-first-worker.js';
+import taxInvoiceWorker from '../tax-invoice-worker.js';
 
 const read = path => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 
@@ -99,5 +102,25 @@ test('shared deployment manifest verifies Tax portal', async () => {
 test('changed JavaScript sources pass syntax checks', async () => {
   for (const file of ['tax-service-worker.js','tax-portal-worker.js','finance-entry-worker.js','finance-monitor.js','platform-router-entry-worker.js','author-billing-admin.js','admin-demand-loader.js','admin-menu-registry.js','admin-menu-runtime.js','auth-site/admin-auth.js']) {
     execFileSync(process.execPath, ['--check', file], { cwd:new URL('..', import.meta.url), stdio:'pipe' });
+  }
+});
+
+test('Tax browser origin is accepted across the full Finance Tax worker chain', async () => {
+  const origin = 'https://tax.ekodi.kr';
+  const service = await taxServiceWorker.fetch(new Request('https://finance-api.ekodi.kr/api/finance/tax-profiles/1', { method:'OPTIONS', headers:{ origin } }), {}, {});
+  assert.equal(service.status, 204);
+  assert.equal(service.headers.get('access-control-allow-origin'), origin);
+  const freeFirst = await freeFirstWorker.fetch(new Request('https://finance-api.ekodi.kr/api/finance/tax-health', { headers:{ origin } }), {}, {});
+  assert.equal(freeFirst.status, 200);
+  assert.equal(freeFirst.headers.get('access-control-allow-origin'), origin);
+  const invoice = await taxInvoiceWorker.fetch(new Request('https://finance-api.ekodi.kr/api/finance/tax-health', { headers:{ origin } }), {});
+  assert.equal(invoice.status, 503);
+  assert.equal(invoice.headers.get('access-control-allow-origin'), origin);
+});
+
+test('Finance deployment watches every imported Tax worker dependency', async () => {
+  const workflow = await read('.github/workflows/deploy-finance.yml');
+  for (const file of ['auth-worker.js','tax-service-worker.js','tax-invoice-free-first-worker.js','tax-invoice-worker.js','tax-hometax-ledger-service.js','tax-business-registry-service.js']) {
+    assert.ok(workflow.split("- '" + file + "'").length >= 3, file + ' must trigger both pull_request and main push Finance validation');
   }
 });

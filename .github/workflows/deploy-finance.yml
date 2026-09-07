@@ -12,6 +12,11 @@ on:
     paths:
       - 'finance-worker.js'
       - 'finance-entry-worker.js'
+      - 'auth-worker.js'
+      - 'tax-service-worker.js'
+      - 'tax-invoice-free-first-worker.js'
+      - 'tax-invoice-worker.js'
+      - 'tax-hometax-ledger-service.js'
       - 'tax-business-registry-service.js'
       - 'wrangler.finance.toml'
       - 'migrations/**'
@@ -25,6 +30,11 @@ on:
     paths:
       - 'finance-worker.js'
       - 'finance-entry-worker.js'
+      - 'auth-worker.js'
+      - 'tax-service-worker.js'
+      - 'tax-invoice-free-first-worker.js'
+      - 'tax-invoice-worker.js'
+      - 'tax-hometax-ledger-service.js'
       - 'tax-business-registry-service.js'
       - 'wrangler.finance.toml'
       - 'migrations/**'
@@ -56,9 +66,7 @@ jobs:
       - name: Validate Finance source, namespace and migration policy
         run: |
           set -euo pipefail
-          node --check finance-worker.js
-          node --check finance-entry-worker.js
-          node --check tax-business-registry-service.js
+          for f in finance-worker.js finance-entry-worker.js auth-worker.js tax-service-worker.js tax-invoice-free-first-worker.js tax-invoice-worker.js tax-hometax-ledger-service.js tax-business-registry-service.js; do node --check "$f"; done
           node --check scripts/guarded-worker-release.mjs
           node --check scripts/validate-additive-migrations.mjs
           bash -n scripts/apply-d1-migrations-with-retry.sh
@@ -69,6 +77,9 @@ jobs:
           grep -Fq "finance_tax_business_registry_status" finance-entry-worker.js
           grep -Fq "NTS_STATUS_ENDPOINT" tax-business-registry-service.js
           grep -Fq "NTS_BUSINESS_STATUS_SERVICE_KEY" tax-business-registry-service.js
+          grep -Fq "'https://tax.ekodi.kr'" tax-service-worker.js
+          grep -Fq "'https://tax.ekodi.kr'" tax-invoice-free-first-worker.js
+          grep -Fq "'https://tax.ekodi.kr'" tax-invoice-worker.js
           grep -Fq "TOSS_SECRET_KEY_NOT_CONFIGURED" finance-worker.js
           grep -Fq "'/health'" finance-worker.js
 
@@ -155,12 +166,16 @@ jobs:
             registry_health=$(curl -fsS --connect-timeout 5 --max-time 12 'http://127.0.0.1:8792/api/finance/tax-business-status-health' || true)
             overview_code=$(curl -sS -o /tmp/finance-stage-overview.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'http://127.0.0.1:8792/api/finance/overview' || true)
             structure_code=$(curl -sS -o /tmp/finance-stage-structure.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'http://127.0.0.1:8792/api/finance/structure' || true)
+            tax_origin_code=$(curl -sS -D /tmp/finance-stage-tax-origin.headers -o /dev/null -w '%{http_code}' -X OPTIONS --connect-timeout 5 --max-time 12 'http://127.0.0.1:8792/api/finance/tax-profiles/1' -H 'Origin: https://tax.ekodi.kr' -H 'Access-Control-Request-Method: PUT' || true)
+            tax_origin_header=$(tr -d '\r' < /tmp/finance-stage-tax-origin.headers | grep -Fic 'access-control-allow-origin: https://tax.ekodi.kr' || true)
             if printf '%s' "$health" | grep -q '"ok":true' \
               && printf '%s' "$health" | grep -Fq 'ekodi-finance-api' \
               && printf '%s' "$registry_health" | grep -Fq '"service":"ekodi-tax-business-registry"' \
               && printf '%s' "$registry_health" | grep -Fq '"provider":"NTS_PUBLIC_DATA"' \
               && [ "$overview_code" = '401' ] \
-              && [ "$structure_code" = '401' ]; then
+              && [ "$structure_code" = '401' ] \
+              && [ "$tax_origin_code" = '204' ] \
+              && [ "$tax_origin_header" -ge 1 ]; then
               echo 'Finance API isolated staging verified.'
               exit 0
             fi
