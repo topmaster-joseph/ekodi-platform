@@ -52,3 +52,5 @@ jobs:
           set -euo pipefail
           printf '%s' 'ekodi-mall' | npx --yes wrangler@${WRANGLER_VERSION} secret put COUPANG_PARTNERS_SUB_ID --config wrangler.api.toml >/dev/null
           echo 'Verified ekodi-mall Sub ID bound to production Worker secret.' >> "$GITHUB_STEP_SUMMARY"
+
+# rerun after subrequest-budget fix 2026-09-08
