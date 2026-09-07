@@ -5,6 +5,7 @@ import {
 } from './ai-resilience-runtime.js';
 import { buildEkodiAiOrchestrator } from './ai-orchestrator-runtime.js';
 import { createEkodiAiProviderRegistry } from './ekodi-ai-provider-registry.js';
+import { buildEkodiCommandPlane } from './ekodi-command-plane.js';
 
 const ENABLED_VALUES = new Set(['1', 'true', 'yes', 'on', 'enabled']);
 
@@ -47,6 +48,7 @@ function buildProviderPool(env = {}, providers = []) {
 export function buildCoreAiGateway(env = {}, providers = []) {
   const adapters = buildProviderPool(env, providers);
   const orchestrator = buildEkodiAiOrchestrator(env, adapters);
+  const commandPlane = buildEkodiCommandPlane(env, adapters);
 
   return Object.freeze({
     policyVersion: AI_RESILIENCE_POLICY.version,
@@ -55,10 +57,14 @@ export function buildCoreAiGateway(env = {}, providers = []) {
         ...getAiResilienceStatus(env, adapters),
         multiProviderEnabled: isMultiProviderEnabled(env),
         orchestration: orchestrator.status(),
+        commandPlane: commandPlane.status(),
       });
     },
     plan(input = {}) {
       return orchestrator.plan(input);
+    },
+    commandPlan(input = {}) {
+      return commandPlane.plan(input);
     },
     async run({ taskName, fallback, timeoutMs, context = {} } = {}) {
       const normalizedTask = String(taskName || '').trim().slice(0, 120);
@@ -81,6 +87,12 @@ export function buildCoreAiGateway(env = {}, providers = []) {
     async collaborate(options = {}) {
       return orchestrator.run(options);
     },
+    async command(options = {}) {
+      return commandPlane.execute(options);
+    },
+    async handlePulse(options = {}) {
+      return commandPlane.handlePulse(options);
+    },
   });
 }
 
@@ -92,6 +104,7 @@ export function getCoreAiGatewayStatus(env = {}, providers = []) {
     providerIndependent: true,
     aiOptional: true,
     orchestrator: 'ekodi-ai',
+    commandPlane: 'ekodi-v8',
     ...status,
   });
 }
