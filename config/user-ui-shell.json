@@ -1,5 +1,5 @@
 {
-  "version": 7,
+  "version": 8,
   "name": "EKODI User UI Shell",
   "parentPolicy": "config/user-ui-dna.json",
   "purpose": "Keep one EKODI user experience while allowing each service to preserve its own visual family.",
@@ -19,7 +19,8 @@
     "globalUtilitiesInHeader": true,
     "centeredChrome": true,
     "selectiveRoundedInteraction": true,
-    "serviceGeometryPreserved": true
+    "serviceGeometryPreserved": true,
+    "unavailableLanguageReturnsToKorean": true
   },
   "header": {
     "owner": "shared-shell",
@@ -42,16 +43,19 @@
     "themePolicy": "inherit each service typography, palette and visual mood; optional --ekodi-user-footer-* tokens may refine it",
     "serviceExtension": "append-only",
     "separatePolicyPrecedence": true,
-    "dedupe": "exactly-one-shared-footer"
+    "dedupe": "exactly-one-shared-footer",
+    "languageChoice": "same shared selector and locale state as header"
   },
   "language": {
     "owner": "shared-shell",
     "runtime": "shell/user-language.js",
-    "placement": "inside the adopted or fallback user header",
+    "placement": "inside both adopted/fallback user header and shared user footer",
     "supported": ["ko-KR", "en", "zh-CN", "ja", "ne", "vi"],
     "default": "ko-KR",
     "persistence": "ekodi_locale cookie scoped to .ekodi.kr with localStorage fallback",
-    "serviceContract": "set html lang and data-ekodi-locale, translate shared chrome, dispatch ekodi:locale-change for service-owned content",
+    "serviceContract": "set html lang and data-ekodi-locale, translate shared chrome, dispatch ekodi:locale-change for service-owned content; services declare readyLocales before non-Korean content is considered available",
+    "readiness": "service manifest readyLocales; ko-KR is mandatory fallback",
+    "unsupportedBehavior": "show preparing notice, clear unsupported lang route, switch current page to ko-KR",
     "adminExcluded": true,
     "browserTranslation": "managed native i18n surfaces opt out of Google automatic translation UI"
   },
