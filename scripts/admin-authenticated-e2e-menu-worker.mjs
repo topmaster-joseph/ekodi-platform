@@ -149,6 +149,9 @@ async function verifyTax(tab, alreadyActive, started) {
 }
 
 async function verifyPublicSiteControls(tab, alreadyActive, started) {
+  stage('public-site-controls-ready');
+  if (!alreadyActive) await clickFast(tab);
+  await page.waitForFunction(() => typeof window.EKODIPublicSiteControls?.load === 'function', null, { timeout: 10_000 });
   stage('public-site-controls-api');
   const responsePromise = page.waitForResponse(response => {
     try {
@@ -156,8 +159,7 @@ async function verifyPublicSiteControls(tab, alreadyActive, started) {
       return response.request().method() === 'GET' && url.origin === 'https://api.ekodi.kr' && url.pathname === '/api/control/public-sites';
     } catch { return false; }
   }, { timeout: 10_000 });
-  if (alreadyActive) await page.evaluate(() => window.EKODIPublicSiteControls?.load?.());
-  else await clickFast(tab);
+  await page.evaluate(() => window.EKODIPublicSiteControls.load());
   const response = await responsePromise;
   if (response.status() !== 200) throw new Error(`public-site-controls: API returned HTTP ${response.status()}`);
   const headers = response.headers();
