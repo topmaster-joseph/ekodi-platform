@@ -430,14 +430,14 @@
       "nameEn": "EKODI Insurance",
       "descriptionKo": "보험 진단, 관리, 청구를 돕는 허브",
       "descriptionEn": "Insurance diagnosis, management, and claims",
-      "url": "https://ins.ekodi.kr",
-      "label": "ins.ekodi.kr",
+      "url": "https://ekodi.kr/insurance",
+      "label": "ekodi.kr/insurance",
       "icon": "insurance",
       "category": "work-life",
       "order": 170,
       "homepage": false,
       "productionVerified": false,
-      "status": "planned"
+      "status": "beta"
     },
     {
       "id": "messenger",
