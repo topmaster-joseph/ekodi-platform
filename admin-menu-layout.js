@@ -83,6 +83,7 @@ function activatePanel(section){
   const hash=CANON.get(section);
   if(hash&&location.hash!==hash)history.replaceState(null,'',hash);
   if(section === 'architecture'&&!window.EKODISystemMap)import('./system-health-admin.js').catch(console.error);
+  if(section === 'public-site-controls')window.EKODIPublicSiteControls?.load?.();
   sidebar.classList.remove('open');
   return true;
 }
