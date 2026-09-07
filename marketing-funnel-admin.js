@@ -159,6 +159,17 @@
           <span class="integration-status connected">공통 커넥터</span>
         </div>
         <div id="affiliateFeedProviders" class="integration-capabilities" aria-live="polite"><span>서버 Feed 연결 상태를 확인하는 중입니다.</span></div>
+        <div class="integration-account-form" aria-labelledby="affiliateProgramPipelineTitle">
+          <div class="integration-form-heading"><div><strong id="affiliateProgramPipelineTitle">국내·글로벌 제휴처 확보 파이프라인</strong><p>집합형 제휴망을 먼저 확보하고, 그 안의 판매처를 추가 승인하는 방식으로 연결 수를 빠르게 늘립니다. 외부 가입·약관·세금·정산 동의는 계정 소유자 확인이 필요한 단계로 분리합니다.</p></div><span class="integration-mode">NETWORK</span></div>
+          <div class="integration-summary-grid" aria-label="제휴처 확보 현황">
+            <article><small>관리 대상</small><strong id="affiliateProgramCount">—</strong></article>
+            <article><small>가입 준비</small><strong id="affiliateProgramPrepared">—</strong></article>
+            <article><small>승인/활성</small><strong id="affiliateProgramApproved">—</strong></article>
+            <article><small>실연동</small><strong id="affiliateProgramLive">—</strong></article>
+          </div>
+          <div id="affiliateProgramPipeline" class="affiliate-program-list" aria-live="polite"><span>제휴 프로그램 원장을 확인하는 중입니다.</span></div>
+          <div class="integration-security-note"><strong>확보 순서</strong><span>국내는 LinkPrice·ADPICK을 우선, 글로벌은 impact.com·Rakuten·CJ·Amazon을 우선합니다. 승인 전에는 상품 추천 경로가 열리지 않습니다.</span></div>
+        </div>
         <div class="integration-account-form" aria-labelledby="chinaAffiliateTitle">
           <div class="integration-form-heading"><div><strong id="chinaAffiliateTitle">중국 쇼핑몰 제휴 빠른 설정</strong><p>중국 판매처는 공식 제휴망 경로를 불러온 뒤 직접 제휴 계약이 있으면 제휴 방식을 직접 제휴로 바꿔 저장할 수 있습니다. 모든 경로는 검증 전 추천 차단 상태로 시작합니다.</p></div><span class="integration-mode">CN</span></div>
           <div id="chinaAffiliatePresets" class="integration-form-actions">
@@ -182,7 +193,7 @@
             <label>상품·가격 공급<select name="catalogStatus"><option value="not_ready">미준비</option><option value="manual_verified">수동 가격 검증</option><option value="feed_ready">Feed/API 정상</option><option value="stale">가격 만료</option><option value="failed">오류</option></select></label>
             <label>제휴망 코드<input name="networkKey" maxlength="80" value="linkprice" list="affiliateNetworkKeys" placeholder="linkprice · taobao_alliance · jd_union"></label>
             <label>제휴망 이름<input name="networkName" maxlength="120" value="LinkPrice" placeholder="LinkPrice · 淘宝联盟 · 京东联盟"></label>
-            <datalist id="affiliateNetworkKeys"><option value="linkprice"><option value="awin"><option value="impact"><option value="cj"><option value="rakuten"><option value="taobao_alliance"><option value="jd_union"><option value="aliexpress_affiliate"><option value="duoduo_jinbao"></datalist>
+            <datalist id="affiliateNetworkKeys"><option value="linkprice"><option value="adpick"><option value="tenping"><option value="impact"><option value="rakuten"><option value="cj"><option value="awin"><option value="partnerize"><option value="admitad"><option value="taobao_alliance"><option value="jd_union"><option value="aliexpress_affiliate"><option value="duoduo_jinbao"></datalist>
             <label class="integration-wide">제휴 프로그램/관리 URL<input name="programUrl" type="url" inputmode="url" placeholder="https://... (선택)"></label>
             <label class="integration-wide">운영 메모<textarea name="notes" maxlength="500" rows="2" placeholder="승인일, 담당자, 해외 세금/통화 메모 등"></textarea></label>
             <label class="integration-toggle"><input name="recommendationEnabled" type="checkbox"> 제휴 완료 후 이 판매처의 상품을 추천 후보로 허용</label>
@@ -227,6 +238,7 @@
     const accountForm = document.querySelector('#affiliateAccountForm');
     const merchantRouteForm = document.querySelector('#affiliateMerchantRouteForm');
     const merchantRoutes = document.querySelector('#affiliateMerchantRoutes');
+    const programPipeline = document.querySelector('#affiliateProgramPipeline');
     const chinaAffiliatePresets = document.querySelector('#chinaAffiliatePresets');
     const externalProductForm = document.querySelector('#affiliateExternalProductForm');
     const feedProviders = document.querySelector('#affiliateFeedProviders');
@@ -303,6 +315,43 @@
         button.disabled = !provider.enabled || (provider.secretRequired && !provider.secretConfigured);
         row.append(label, button);
         feedProviders.append(row);
+      }
+    }
+
+    const PROGRAM_APPLICATION_LABELS = { candidate:'후보', prepared:'가입 준비', account_exists:'계정보유', applied:'신청완료', review:'심사중', approved:'승인됨', active:'활성', blocked:'보류' };
+    const PROGRAM_INTEGRATION_LABELS = { not_ready:'미연동', manual:'수동', deeplink:'딥링크', api:'API', feed:'Feed', live:'실연동' };
+
+    function programSelect(values, current, dataName, key) {
+      const select = document.createElement('select');
+      select.dataset[dataName] = key;
+      for (const [value, label] of Object.entries(values)) {
+        const option = document.createElement('option'); option.value = value; option.textContent = label; option.selected = value === current; select.append(option);
+      }
+      return select;
+    }
+
+    function renderPartnerPrograms(programs = []) {
+      if (!programPipeline) return;
+      programPipeline.replaceChildren();
+      const prepared = programs.filter(item => ['prepared','account_exists','applied','review'].includes(item.applicationStatus)).length;
+      const approved = programs.filter(item => ['approved','active'].includes(item.applicationStatus)).length;
+      const live = programs.filter(item => item.integrationStatus === 'live').length;
+      document.querySelector('#affiliateProgramCount').textContent = programs.length.toLocaleString('ko-KR');
+      document.querySelector('#affiliateProgramPrepared').textContent = prepared.toLocaleString('ko-KR');
+      document.querySelector('#affiliateProgramApproved').textContent = approved.toLocaleString('ko-KR');
+      document.querySelector('#affiliateProgramLive').textContent = live.toLocaleString('ko-KR');
+      if (!programs.length) { const empty=document.createElement('span'); empty.textContent='제휴 프로그램 원장이 비어 있습니다.'; programPipeline.append(empty); return; }
+      for (const program of programs) {
+        const row = document.createElement('div'); row.className = 'affiliate-program-row'; row.dataset.programKey = program.programKey;
+        const identity = document.createElement('div'); const name = document.createElement('strong'); name.textContent = program.programName;
+        const meta = document.createElement('small'); meta.textContent = `${program.region} · ${program.programKind === 'network' ? '집합 제휴망' : '직접 프로그램'} · ${program.coverageSummary || '판매처 확장'}`; identity.append(name, meta);
+        const capability = document.createElement('small'); capability.textContent = [program.apiCapable?'API':'',program.deepLinkCapable?'딥링크':'',program.productFeedCapable?'상품Feed':'',program.reportingCapable?'리포트':''].filter(Boolean).join(' · ') || '수동 연동';
+        const app = programSelect(PROGRAM_APPLICATION_LABELS, program.applicationStatus, 'programApplication', program.programKey);
+        const integration = programSelect(PROGRAM_INTEGRATION_LABELS, program.integrationStatus, 'programIntegration', program.programKey);
+        const actions = document.createElement('div'); actions.className='program-actions';
+        if (program.programUrl) { const link=document.createElement('a'); link.className='secondary compact'; link.href=program.programUrl; link.target='_blank'; link.rel='noopener'; link.textContent=program.externalActionRequired?'가입/관리 ↗':'관리 ↗'; actions.append(link); }
+        const save=document.createElement('button'); save.type='button'; save.className='primary compact'; save.dataset.programSave=program.programKey; save.textContent='상태 저장'; actions.append(save);
+        row.append(identity, capability, app, integration, actions); programPipeline.append(row);
       }
     }
 
@@ -400,9 +449,10 @@
     }
 
     async function loadOverview() {
-      const [affiliate, providerData, routeData, events] = await Promise.all([api('/api/affiliate/overview'), api('/api/affiliate/providers').catch(() => ({ providers: [] })), api('/api/affiliate/routes').catch(() => ({ routes: [] })), mallEvents().catch(() => [])]);
+      const [affiliate, providerData, programData, routeData, events] = await Promise.all([api('/api/affiliate/overview'), api('/api/affiliate/providers').catch(() => ({ providers: [] })), api('/api/affiliate/programs').catch(() => ({ programs: [] })), api('/api/affiliate/routes').catch(() => ({ routes: [] })), mallEvents().catch(() => [])]);
       renderOverview(affiliate);
       renderProviderFeeds(providerData.providers || []);
+      renderPartnerPrograms(programData.programs || []);
       renderMerchantRoutes(routeData.routes || []);
       renderMallEvents(events);
       return affiliate;
@@ -467,6 +517,22 @@
       } finally {
         submit.disabled = false;
       }
+    });
+
+    programPipeline?.addEventListener('click', async event => {
+      const save = event.target.closest('[data-program-save]');
+      if (!save) return;
+      const key = String(save.dataset.programSave || '');
+      const row = save.closest('[data-program-key]');
+      const application = row?.querySelector(`[data-program-application="${key}"]`)?.value || 'candidate';
+      const integration = row?.querySelector(`[data-program-integration="${key}"]`)?.value || 'not_ready';
+      const original = save.textContent; save.disabled = true; save.textContent = '저장 중…';
+      try {
+        const data = await api(`/api/affiliate/programs/${encodeURIComponent(key)}`, { method:'PUT', body:JSON.stringify({ applicationStatus:application, integrationStatus:integration }) });
+        setMessage(`${data.program?.programName || key} 확보 상태를 저장했습니다. 판매처 추천은 별도 검증 게이트를 통과해야 열립니다.`);
+        await loadOverview();
+      } catch (error) { setMessage(error.message, true); }
+      finally { save.disabled = false; save.textContent = original; }
     });
 
     chinaAffiliatePresets?.addEventListener('click', event => {
