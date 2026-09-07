@@ -107,7 +107,7 @@ jobs:
             echo 'Support staging is protected by Cloudflare Access. Keeping Access enabled and validating the exact staging configuration locally.'
             npx --yes wrangler@${WRANGLER_VERSION} deployments status --config wrangler.support.staging.toml --json > /tmp/support-deployments.json
             test -s /tmp/support-deployments.json
-            npx --yes wrangler@${WRANGLER_VERSION} dev --config wrangler.support.staging.toml --local --port 8791 >/tmp/support-local.log 2>&1 &
+            npx --yes wrangler@4.129.0 dev --config wrangler.support.staging.toml --local --port 8791 >/tmp/support-local.log 2>&1 &
             runtime_pid=$!
             verify_base='http://127.0.0.1:8791'
             ready=0
