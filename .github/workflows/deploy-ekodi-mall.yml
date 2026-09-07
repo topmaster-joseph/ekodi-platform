@@ -269,10 +269,16 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          code=$(curl -sS -o /tmp/mall-transaction-rehearsal.json -w '%{http_code}' --connect-timeout 5 --max-time 30 \
-            -X POST -H 'content-type: application/json' -H "x-ekodi-rehearsal-token: $TRANSACTION_REHEARSAL_TOKEN" \
-            --data "{\"runId\":\"gh-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT\"}" \
-            "${STAGING_URL}/api/internal/rehearsal/transaction" || true)
+          code=000
+          for attempt in $(seq 1 12); do
+            code=$(curl -sS -o /tmp/mall-transaction-rehearsal.json -w '%{http_code}' --connect-timeout 5 --max-time 30 \
+              -X POST -H 'content-type: application/json' -H "x-ekodi-rehearsal-token: $TRANSACTION_REHEARSAL_TOKEN" \
+              --data "{\"runId\":\"gh-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT\"}" \
+              "${STAGING_URL}/api/internal/rehearsal/transaction" || true)
+            if [ "$code" = "200" ]; then break; fi
+            echo "Mall rehearsal Access propagation attempt=$attempt status=$code"
+            sleep 5
+          done
           [ "$code" = "200" ] || { cat /tmp/mall-transaction-rehearsal.json || true; exit 1; }
           node <<'NODE'
           const fs = require('node:fs');
