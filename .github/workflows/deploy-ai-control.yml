@@ -139,7 +139,7 @@ jobs:
         with:
           node-version: '24'
       - name: Download immutable AI Control artifact
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v8
         with:
           name: ekodi-ai-control-release
           path: .release/ai-control
@@ -239,7 +239,7 @@ jobs:
         with:
           node-version: '24'
       - name: Download the same immutable artifact verified in staging
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v8
         with:
           name: ekodi-ai-control-release
           path: .release/ai-control
