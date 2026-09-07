@@ -1,5 +1,5 @@
 {
-  "version": 53,
+  "version": 54,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
@@ -326,6 +326,22 @@
           "cross-origin-opener-policy: same-origin-allow-popups",
           "cache-control: no-store"
         ]
+      },
+      {
+        "url": "https://admin.ekodi.kr/openai-workspace-admin.js",
+        "statuses": [200],
+        "redirect": "manual",
+        "expect": ["Permission transfer: NONE", "EKODIAdminContext", "ekodi-admin-assist-request"],
+        "headerExpect": ["x-content-type-options: nosniff"],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://admin.ekodi.kr/openai-workspace-admin.css",
+        "statuses": [200],
+        "redirect": "manual",
+        "expect": [".openai-workspace-policy", "@media(max-width:900px)"],
+        "headerExpect": ["x-content-type-options: nosniff"],
+        "rollbackVerify": false
       },
       {
         "url": "https://admin.ekodi.kr/admin-demand-loader.js?device=v28",
