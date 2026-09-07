@@ -30,7 +30,7 @@ env:
   DOCUMENT_MIGRATION: supabase/migrations/20260907113000_document_workspace_ai.sql
   DOCUMENT_HEALTH_MIGRATION: supabase/migrations/20260907135500_document_workspace_health.sql
   DOCUMENT_MIGRATION_GLOB: "supabase/migrations/*document_workspace*.sql"
-  DOCS_AI_RELEASE: "20260907-docs-ai-2"
+  DOCS_AI_RELEASE: "20260907-docs-ai-3"
   MY_SUPABASE_PUBLISHABLE_KEY: sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_
 
 jobs:
@@ -54,7 +54,7 @@ jobs:
           grep -Fq "workspace_key = ('personal:' || auth.uid()::text)" "$DOCUMENT_MIGRATION"
           grep -Fq 'revoke insert, update, delete on public.document_ai_usage from anon, authenticated' "$DOCUMENT_MIGRATION"
           grep -Fq 'document_workspace_health' "$DOCUMENT_HEALTH_MIGRATION"
-          grep -Fq "'contract', 'ekodi.documents.v1'" "$DOCUMENT_HEALTH_MIGRATION"
+          grep -Fq "'contract', 'ekodi.documents.v2'" "$DOCUMENT_HEALTH_MIGRATION"
           grep -Fq 'DAILY_LIMIT' supabase/functions/document-ai-api/index.ts
           grep -Fq 'GEMINI_API_KEY' supabase/functions/document-ai-api/index.ts
           grep -Fq 'OPENAI_API_KEY' supabase/functions/document-ai-api/index.ts
@@ -129,7 +129,7 @@ jobs:
             --data '{}')
           [[ "$health_code" == '200' ]]
           grep -Fq '"ok": true' /tmp/docs-health.json || grep -Fq '"ok":true' /tmp/docs-health.json
-          grep -Fq 'ekodi.documents.v1' /tmp/docs-health.json
+          grep -Fq 'ekodi.documents.v2' /tmp/docs-health.json
           grep -Fq '"files": true' /tmp/docs-health.json || grep -Fq '"files":true' /tmp/docs-health.json
           grep -Fq '"versions": true' /tmp/docs-health.json || grep -Fq '"versions":true' /tmp/docs-health.json
           grep -Fq '"usage": true' /tmp/docs-health.json || grep -Fq '"usage":true' /tmp/docs-health.json
@@ -141,7 +141,7 @@ jobs:
             -H 'Access-Control-Request-Headers: authorization,apikey,content-type' || true)
           [[ "$options_code" =~ ^(200|204)$ ]]
           grep -Eiq '^access-control-allow-origin:[[:space:]]*https://my\.ekodi\.kr' /tmp/docs-ai.headers
-          grep -Eiq '^x-ekodi-docs-contract:[[:space:]]*ekodi\.document-ai\.v1' /tmp/docs-ai.headers
+          grep -Eiq '^x-ekodi-docs-contract:[[:space:]]*ekodi\.document-ai\.v2' /tmp/docs-ai.headers
           grep -Eiq "^x-ekodi-docs-release:[[:space:]]*$DOCS_AI_RELEASE" /tmp/docs-ai.headers
 
           unauth_code=$(curl -sS -o /tmp/docs-ai-unauth.json -w '%{http_code}' -X POST "$endpoint" \

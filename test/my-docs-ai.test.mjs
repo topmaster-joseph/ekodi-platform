@@ -55,7 +55,7 @@ test('private document schema is owner-scoped and usage writes stay server-side'
   assert.match(migration,/workspace_key = \('personal:' \|\| auth\.uid\(\)::text\)/);
   assert.match(migration,/revoke insert, update, delete on public\.document_ai_usage from anon, authenticated/i);
   assert.match(healthMigration,/document_workspace_health/);
-  assert.match(healthMigration,/ekodi\.documents\.v1/);
+  assert.match(healthMigration,/ekodi\.documents\.v2/);
 });
 
 test('document AI is authenticated, provider-resilient and bounded',()=>{
