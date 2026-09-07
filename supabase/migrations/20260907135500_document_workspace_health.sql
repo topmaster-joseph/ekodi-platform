@@ -8,7 +8,7 @@ set search_path = public, pg_temp
 as $$
   select jsonb_build_object(
     'ok', true,
-    'contract', 'ekodi.documents.v1',
+    'contract', 'ekodi.documents.v2',
     'files', to_regclass('public.document_files') is not null,
     'versions', to_regclass('public.document_versions') is not null,
     'usage', to_regclass('public.document_ai_usage') is not null

@@ -10,6 +10,8 @@ const worker=read('my-worker.js');
 const migration=read('supabase/migrations/20260907113000_document_workspace_ai.sql');
 const healthMigration=read('supabase/migrations/20260907135500_document_workspace_health.sql');
 const ai=read('supabase/functions/document-ai-api/index.ts');
+const hwpx=read('my/docs/hwpx.js');
+const registry=JSON.parse(read('config/capability-registry.json'));
 const manifest=JSON.parse(read('deploy/manifests/my.worker.json'));
 
 test('Docs AI exposes a human-controlled editable workspace',()=>{
@@ -18,6 +20,12 @@ test('Docs AI exposes a human-controlled editable workspace',()=>{
   assert.match(html,/id="applyAi"/);
   assert.match(html,/AI는 바로 덮어쓰지 않습니다/);
   assert.match(html,/data-export="docx"/);
+  assert.match(html,/data-export="hwpx"/);
+  assert.match(html,/\.hwpx/);
+  assert.match(html,/id="versionPanel"/);
+  assert.match(html,/id="aiQuota"/);
+  assert.match(html,/id="dropOverlay"/);
+  assert.match(html,/긴 문서는 자동 분할/);
   assert.match(html,/HWPX/);
 });
 
@@ -26,9 +34,19 @@ test('document client keeps auth, sanitization and storage boundaries explicit',
   assert.match(js,/document_versions/);
   assert.match(js,/personal:\$\{session\.user\.id\}/);
   assert.match(js,/script,style,iframe,object,embed,form,input,button,meta,link/);
-  assert.match(js,/mammoth@1\.9\.1/);
+  assert.match(js,/mammoth@1\.9\.1\/mammoth\.browser\.min\.js/);
+  assert.doesNotMatch(js,/mammoth@1\.9\.1\/\+esm/);
   assert.match(js,/docx@8\.5\.0/);
+  assert.match(js,/importHwpx/);
+  assert.match(js,/createHwpxBlob/);
+  assert.match(js,/loadVersions/);
+  assert.match(js,/extractRawText/);
+  assert.match(js,/ensureEditorVisible/);
+  assert.match(js,/dragstart/);
+  assert.match(js,/dropOverlay/);
   assert.match(js,/document-ai-api/);
+  assert.match(hwpx,/application\/hwp\+zip/);
+  assert.match(hwpx,/MAX_HWPX_BYTES=20\*1024\*1024/);
 });
 
 test('private document schema is owner-scoped and usage writes stay server-side',()=>{
@@ -37,7 +55,7 @@ test('private document schema is owner-scoped and usage writes stay server-side'
   assert.match(migration,/workspace_key = \('personal:' \|\| auth\.uid\(\)::text\)/);
   assert.match(migration,/revoke insert, update, delete on public\.document_ai_usage from anon, authenticated/i);
   assert.match(healthMigration,/document_workspace_health/);
-  assert.match(healthMigration,/ekodi\.documents\.v1/);
+  assert.match(healthMigration,/ekodi\.documents\.v2/);
 });
 
 test('document AI is authenticated, provider-resilient and bounded',()=>{
@@ -47,13 +65,32 @@ test('document AI is authenticated, provider-resilient and bounded',()=>{
   assert.match(ai,/OPENAI_API_KEY/);
   assert.match(ai,/store:false/);
   assert.match(ai,/사용자가 제공하지 않은 사실/);
-  assert.match(ai,/20260907-docs-ai-2/);
+  assert.match(ai,/MAX_INPUT=120000/);
+  assert.doesNotMatch(ai,/MAX_INPUT=18000|18,000자/);
+  assert.match(ai,/CHUNK_INPUT=14000/);
+  assert.match(ai,/invokeDocument/);
+  assert.match(ai,/chunking:/);
+  assert.match(ai,/20260907-docs-ai-3/);
+  assert.match(ai,/ekodi\.document-ai\.v2/);
   assert.match(ai,/X-EKODI-Docs-Contract/);
+});
+
+test('core.documents is service-backed with an observable provider contract',()=>{
+  const capability=registry.capabilities.find(item=>item.id==='core.documents');
+  assert.equal(capability?.maturity,'service-backed');
+  assert.equal(capability?.provider?.id,'my-docs');
+  assert.equal(capability?.provider?.contract,'ekodi.documents.v2');
+  assert.equal(capability?.provider?.generation,8);
+  assert.ok(capability?.provider?.formats?.import?.includes('hwpx'));
+  assert.ok(capability?.provider?.formats?.export?.includes('hwpx'));
 });
 
 test('My EKODI advertises and probes the document workspace in production',()=>{
   assert.match(worker,/documentWorkspace:true/);
   assert.match(worker,/documentCapability:'core\.documents'/);
+  assert.match(worker,/documentContract:'ekodi\.documents\.v2'/);
+  assert.match(worker,/documentHwpx:true/);
+  assert.match(worker,/documentVersionHistory:true/);
   assert.match(worker,/url\.pathname==='\/docs'/);
   const docsProbe=manifest.worker.requests.find(item=>item.url==='https://my.ekodi.kr/docs/');
   assert.ok(docsProbe);
