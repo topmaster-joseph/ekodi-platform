@@ -104,7 +104,12 @@ requireText('.github/workflows/deploy-control-api.yml', [
   'control-api.worker.json',
   'validate-additive-migrations.mjs',
 ]);
-forbidText('.github/workflows/deploy-control-api.yml', ['npm run deploy:api', 'deploy --config wrangler.api.toml']);
+forbidText('.github/workflows/deploy-control-api.yml', ['npm run deploy:api']);
+const controlApiWorkflow = read('.github/workflows/deploy-control-api.yml');
+const directControlWorkerDeploy = /(?:^|\s)(?:npx\s+--yes\s+)?wrangler(?:@[^\s]+)?\s+deploy\s+--config\s+wrangler\.api\.toml/;
+if (directControlWorkerDeploy.test(controlApiWorkflow)) {
+  fail('.github/workflows/deploy-control-api.yml', 'unsafe production bypass detected: direct wrangler Worker deploy --config wrangler.api.toml');
+}
 requireText('.github/workflows/deploy-finance.yml', [
   'environment: development',
   'ekodi-finance-api-staging',
