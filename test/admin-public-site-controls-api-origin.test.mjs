@@ -7,6 +7,8 @@ const controls = await readFile(new URL('../admin-public-site-controls.js', impo
 test('public-site controls call the canonical EKODI API origin', () => {
   assert.match(controls, /const API = 'https:\/\/api\.ekodi\.kr\/api\/control\/public-sites';/);
   assert.doesNotMatch(controls, /const API = '\/api\/control\/public-sites';/);
+  assert.match(controls, /credentials: 'omit'/);
+  assert.doesNotMatch(controls, /credentials: 'include'/);
 });
 
 test('central Admin navigation refreshes public-site controls when the panel becomes active', async () => {

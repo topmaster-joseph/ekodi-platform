@@ -32,7 +32,7 @@ async function api(path = '', options = {}) {
   if (options.body && !headers.has('content-type')) headers.set('content-type', 'application/json');
   const token = currentToken();
   if (token) headers.set('authorization', `Bearer ${token}`);
-  const response = await fetch(`${API}${path}`, { ...options, headers, credentials: 'include' });
+  const response = await fetch(`${API}${path}`, { ...options, headers, credentials: 'omit' });
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(payload.error || '임시페이지 설정을 처리하지 못했습니다.');
   return payload;
