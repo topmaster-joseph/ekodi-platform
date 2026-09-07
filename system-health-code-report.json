@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-01T05:20:18.998Z",
-  "startedAt": "2026-09-01T05:20:11.706Z",
+  "generatedAt": "2026-09-07T04:24:24.007Z",
+  "startedAt": "2026-09-07T04:24:12.913Z",
   "repository": "topmaster-joseph/ekodi-platform",
   "branch": "main",
-  "head": "0daa73fc91295c09fa45e0b564379edad447646a",
-  "overallScore": 69.7,
-  "status": "restricted",
+  "head": "cbde913701997665091b12378fe046e0a1e90d9c",
+  "overallScore": 90.1,
+  "status": "healthy",
   "thresholds": {
     "healthy": 90,
     "watch": 80,
@@ -16,21 +16,21 @@
   "dimensions": {
     "tests": {
       "weight": 25,
-      "score": 5,
-      "status": "error",
-      "detail": "전체 테스트 실패 또는 시간 초과"
+      "score": 25,
+      "status": "ok",
+      "detail": "314개 테스트 파일 · 전체 테스트 통과"
     },
     "duplication": {
       "weight": 15,
-      "score": 4.7,
+      "score": 5.1,
       "status": "error",
-      "detail": "교차 파일 중복 군집 23개 · 겹침 창 53개 정규화"
+      "detail": "교차 파일 중복 군집 22개 · 겹침 창 51개 정규화"
     },
     "complexity": {
       "weight": 15,
       "score": 15,
       "status": "ok",
-      "detail": "대형 파일 0개 · 매우 큰 파일 0개 · TODO/FIXME 5건"
+      "detail": "대형 파일 0개 · 매우 큰 파일 0개 · TODO/FIXME 7건"
     },
     "security": {
       "weight": 15,
@@ -48,7 +48,7 @@
       "weight": 10,
       "score": 10,
       "status": "ok",
-      "detail": "144개 Workflow · 배포 가드 검증 통과"
+      "detail": "161개 Workflow · 배포 가드 검증 통과"
     },
     "documentation": {
       "weight": 5,
@@ -58,26 +58,17 @@
     }
   },
   "metrics": {
-    "runtimeFiles": 396,
-    "runtimeLines": 67517,
-    "testFiles": 202,
-    "workflows": 144,
+    "runtimeFiles": 518,
+    "runtimeLines": 86311,
+    "testFiles": 314,
+    "workflows": 161,
     "largeFiles": 0,
     "veryLargeFiles": 0,
-    "todoMarkers": 5,
-    "duplicateGroups": 23,
-    "duplicateWindows": 53
+    "todoMarkers": 7,
+    "duplicateGroups": 22,
+    "duplicateWindows": 51
   },
   "technicalDebt": [
-    {
-      "id": "tests-failing",
-      "severity": "critical",
-      "category": "tests",
-      "title": "전체 테스트 점검 필요",
-      "detail": "정기 코드 건강검사에서 전체 테스트가 통과하지 않았습니다.",
-      "recommendation": "신규 기능 반영보다 실패 테스트의 원인을 먼저 분리하고 회귀 범위를 확인하세요.",
-      "evidence": []
-    },
     {
       "id": "duplicate-0",
       "severity": "medium",
@@ -112,8 +103,8 @@
       "detail": "2개 파일에서 동일한 코드 블록 후보가 반복됩니다.",
       "recommendation": "공통 Core로 승격 가능한지 영향 범위를 분석한 뒤, 테스트가 있는 경우에만 통합하세요.",
       "evidence": [
-        "affiliate-control.js:54",
-        "device-control.js:247"
+        "admin-google-auth.js:98",
+        "auth-worker-core.js:86"
       ]
     },
     {
@@ -124,7 +115,7 @@
       "detail": "2개 파일에서 동일한 코드 블록 후보가 반복됩니다.",
       "recommendation": "공통 Core로 승격 가능한지 영향 범위를 분석한 뒤, 테스트가 있는 경우에만 통합하세요.",
       "evidence": [
-        "ai-agent-control.js:24",
+        "ai-agent-control.js:26",
         "homepage-presentation-control.js:28"
       ]
     },
@@ -172,29 +163,29 @@
       "detail": "2개 파일에서 동일한 코드 블록 후보가 반복됩니다.",
       "recommendation": "공통 Core로 승격 가능한지 영향 범위를 분석한 뒤, 테스트가 있는 경우에만 통합하세요.",
       "evidence": [
-        "customer-auth.js:94",
-        "customer-google-prereg.js:63"
+        "channel-credential-vault.js:1",
+        "mail-credential-vault.js:1"
       ]
     }
   ],
   "checks": {
     "tests": {
-      "ok": false,
-      "status": 1,
+      "ok": true,
+      "status": 0,
       "timedOut": false,
-      "summary": "meout-minutes: 24\\n    env:\\n      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}\\n      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}\\n    steps:\\n      - uses: actions/checkout@v7\\n      - uses: actions/setup-node@v7\\n        with:\\n          node-version: \\'24\\'\\n      - name: Capture D1 recovery bookmark\\n        run: npx --yes wrangler@${WRANGLER_VERSION} d1 time-travel info ekodi-auth --config wrangler.workspace-platform.toml --json > /tmp/bookmark.json\\n      - name: Apply production migration once after both staging gates\\n        run: bash scripts/apply-d1-migrations-with-retry.sh ekodi-auth wrangler.workspace-platform.toml \"$WRANGLER_VERSION\"\\n      - name: Guarded Workspace API release\\n        run: node scripts/guarded-worker-release.mjs --manifest deploy/manifests/workspace-platform.worker.json\\n      - name: Verify production Conversation foundation\\n        run: |\\n          curl -fsS \\'https://workspace-api.ekodi.kr/health\\' > /tmp/live-health.json\\n          grep -Fq \\'\"schemaReady\":true\\' /tmp/live-health.json\\n          grep -Fq \\'\"conversationSchemaReady\":true\\' /tmp/live-health.json\\n          grep -Fq \\'\"profileEvidenceFoundation\":\"v1\"\\' /tmp/live-health.json\\n\\n  production-control:\\n    needs: production-workspace\\n    if: github.event_name == \\'push\\' && github.ref == \\'refs/heads/main\\'\\n    runs-on: ubuntu-latest\\n    timeout-minutes: 20\\n    env:\\n      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}\\n      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}\\n    steps:\\n      - uses: actions/checkout@v7\\n      - uses: actions/setup-node@v7\\n        with:\\n          nod'... 549 more characters,\n    expected: /production-ui:\\n\\s+needs: production-control/,\n    operator: 'match',\n    diff: 'simple'\n  }"
+      "summary": "✔ Operator uses normalized admin principal, canonical ledger and channel outbox (0.951106ms)\n✔ workspace configs use V2 entrypoint without consuming another Cloudflare cron slot (1.450368ms)\n✔ functional Messenger UI understands asynchronous assistant and human takeover (1.082221ms)\n✔ Conversation release is additive, isolated, ordered and guarded (1.165657ms)\nℹ tests 1489\nℹ suites 0\nℹ pass 1489\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 9982.250873"
     },
     "security": {
       "ok": true,
       "status": 0,
       "timedOut": false,
-      "summary": "> ekodi-platform@4.3.1 validate:security\n> node scripts/validate-security-baseline.mjs\n\nSecurity baseline valid: fail-closed edge throttling, browser headers, Google allowlist, session revocation and password shutdown enforced."
+      "summary": "> ekodi-platform@4.3.1 validate:security\n> node scripts/validate-security-baseline.mjs\n\nSecurity baseline valid: fail-closed edge throttling, capability-scoped Admin OS authority, temporary Google elevation, browser headers, session revocation, password shutdown and Secure Projection enforced."
     },
     "architecture": {
       "ok": true,
       "status": 0,
       "timedOut": false,
-      "summary": "> ekodi-platform@4.3.1 validate:boundaries\n> node scripts/validate-platform-boundaries.mjs\n\nPlatform boundaries OK: 27 platform/service boundaries"
+      "summary": "> ekodi-platform@4.3.1 validate:boundaries\n> node scripts/validate-platform-boundaries.mjs\n\nPlatform boundaries OK: 31 platform/service boundaries"
     },
     "deployment": {
       "ok": true,
