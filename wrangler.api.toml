@@ -22,6 +22,8 @@ ADMIN_GOOGLE_BOOTSTRAP_EMAILS = "topmaster.joseph@gmail.com"
 ADMIN_WORKSPACE_DOMAIN = "ekodi.kr"
 GOOGLE_CLIENT_ID = "483044030492-4e6231l5glchhtniroinvuq3ev6n5mv5.apps.googleusercontent.com"
 OPENAI_MODEL = "gpt-5.6-terra"
+MY_SUPABASE_URL = "https://renzehysxirjilvdxacv.supabase.co"
+MY_SUPABASE_PUBLISHABLE_KEY = "sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_"
 AI_MULTI_PROVIDER_ENABLED = "true"
 AI_COMMAND_TIMEOUT_MS = "20000"
 # Storage policy: Google Workspace Shared Drive EKODI is the canonical durable store.

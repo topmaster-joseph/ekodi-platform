@@ -1,5 +1,6 @@
 import { storeEkodiDurableRecord } from './storage-gateway.js';
 import { projectForExternalAi, projectionStamp } from './secure-projection.js';
+import { handleAiProviderControl } from './ai-provider-control.js';
 
 const PREFIX = '/api/ai-modules/v1';
 const MODULE_ID = /^[a-z0-9][a-z0-9._-]{2,63}$/;
@@ -183,6 +184,17 @@ function statusFor(message) {
 export async function handleExternalAiModuleGateway(request, env = {}) {
   const url = new URL(request.url);
   if (!url.pathname.startsWith(PREFIX)) return null;
+
+  if (url.pathname.startsWith(`${PREFIX}/providers`)) {
+    try {
+      const providerResponse = await handleAiProviderControl(request, env);
+      if (providerResponse) return providerResponse;
+    } catch (error) {
+      console.error('AI Provider Control error', error);
+      return json({ error:'AI Provider 처리에 실패했습니다.', code:'AI_PROVIDER_CONTROL_ERROR' }, 500);
+    }
+  }
+
   const modules = registry(env);
 
   if (request.method === 'GET' && url.pathname === `${PREFIX}/health`) {

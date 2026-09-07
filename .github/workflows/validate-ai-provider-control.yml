@@ -1,0 +1,69 @@
+name: Validate AI Provider Control
+
+on:
+  pull_request:
+    paths: &provider_paths
+      - 'ai-provider-control.js'
+      - 'ekodi-ai-provider-registry.js'
+      - 'external-ai-module-gateway.js'
+      - 'admin-provider-control.js'
+      - 'migrations/0068_ai_provider_registry.sql'
+      - 'supabase/functions/document-ai-api/index.ts'
+      - 'test/ai-provider-control.test.mjs'
+      - 'test/my-docs-ai.test.mjs'
+      - '.github/workflows/validate-ai-provider-control.yml'
+  push:
+    branches: [main]
+    paths: *provider_paths
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 2
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate provider contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check ai-provider-control.js
+          node --check ekodi-ai-provider-registry.js
+          node --check external-ai-module-gateway.js
+          node --check admin-provider-control.js
+          node scripts/validate-additive-migrations.mjs migrations
+          node --test test/ai-provider-control.test.mjs test/ai-provider-registry.test.mjs test/ai-provider-pool-activation.test.mjs test/my-docs-ai.test.mjs
+          ! grep -Fq 'OPENAI_API_KEY =' wrangler.api.toml
+          ! grep -Fq 'GEMINI_API_KEY =' wrangler.api.toml
+          ! grep -Fq 'ANTHROPIC_API_KEY =' wrangler.api.toml
+
+  dispatch-canonical-release:
+    if: github.event_name == 'push'
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 2
+      - name: Dispatch only when canonical Control API path filters would not already fire
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          changed=$(git diff --name-only HEAD^ HEAD)
+          printf '%s\n' "$changed"
+          if printf '%s\n' "$changed" | grep -Eq '^(migrations/|wrangler\.api\.toml$|mission-control-entry-worker\.js$)'; then
+            echo 'Canonical Deploy Control API is already triggered by this push.'
+            exit 0
+          fi
+          gh workflow run deploy-control-api.yml --ref main
+          echo 'Dispatched canonical Control API owner workflow.'
