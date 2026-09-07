@@ -60,3 +60,17 @@ jobs:
           }
           console.log('EKODI Mall live product feed verified.');
           NODE
+
+      - name: Verify channel-first admin connection flow
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsS --retry 3 --retry-delay 2 --connect-timeout 5 --max-time 20 'https://ekodi.kr/ekodibiz/mall/admin/channels' -o /tmp/mall-channels.html
+          grep -Fq 'workspace-admin.js' /tmp/mall-channels.html
+          asset=$(node -e "const s=require('fs').readFileSync('/tmp/mall-channels.html','utf8');const m=s.match(/<script src=\"([^\"]*workspace-admin\.js[^\"]*)\"/);if(!m)process.exit(1);process.stdout.write(m[1]);")
+          curl -fsS --retry 3 --retry-delay 2 --connect-timeout 5 --max-time 20 "https://ekodi.kr${asset}" -o /tmp/workspace-admin.js
+          grep -Fq 'data-channel-preauth' /tmp/workspace-admin.js
+          grep -Fq 'channelPreAuth' /tmp/workspace-admin.js
+          grep -Fq 'pendingChannelIntent' /tmp/workspace-admin.js
+          curl -fsS --retry 3 --retry-delay 2 --connect-timeout 5 --max-time 20 'https://marketing-connect-api.ekodi.kr/health' -o /tmp/marketing-connect-health.json
+          node -e "const h=JSON.parse(require('fs').readFileSync('/tmp/marketing-connect-health.json','utf8'));if(!h.ok||!h.oauthBroker||!h.encryptedVault||!h.platform?.youtubeConfigured)throw new Error('YouTube channel broker is not production-ready');console.log('channel-first admin flow=verified');"
