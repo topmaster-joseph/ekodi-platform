@@ -442,3 +442,5 @@ jobs:
             -H 'X-GitHub-Api-Version: 2022-11-28' \
             "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \
             -d "$payload"
+
+# manual rerun 2026-09-08T00:36+09
