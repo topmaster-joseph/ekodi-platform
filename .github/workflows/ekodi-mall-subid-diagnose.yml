@@ -1,0 +1,54 @@
+name: EKODI Mall Sub ID Diagnose
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/ekodi-mall-subid-diagnose.yml'
+
+permissions:
+  contents: read
+
+env:
+  WRANGLER_VERSION: '4.127.1'
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Query aggregate Sub ID discovery only
+        id: discover
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@${WRANGLER_VERSION} d1 execute ekodi-auth --remote --config wrangler.api.toml --json --command "SELECT candidate_sub_id,is_default,clicks_rows,orders_rows,cancels_rows,commission_rows,first_seen_date,last_seen_date,updated_at FROM affiliate_partner_subid_discovery ORDER BY orders_rows DESC,clicks_rows DESC" > /tmp/subids.json
+          npx --yes wrangler@${WRANGLER_VERSION} d1 execute ekodi-auth --remote --config wrangler.api.toml --json --command "SELECT sync_date,status,reason,start_date,end_date,orders_rows,cancels_rows,commission_rows,matched_product_rows,unmatched_product_rows,error_text,started_at,finished_at FROM affiliate_partner_report_runs ORDER BY id DESC LIMIT 3" > /tmp/runs.json
+          node <<'NODE'
+          const fs=require('node:fs');
+          const unwrap=(x)=>{const a=Array.isArray(x)?x:(x?.result||[]);const block=Array.isArray(a)?a[0]:a;return block?.results||block?.result||[]};
+          const candidates=unwrap(JSON.parse(fs.readFileSync('/tmp/subids.json','utf8')));
+          const runs=unwrap(JSON.parse(fs.readFileSync('/tmp/runs.json','utf8')));
+          const safe=candidates.map(r=>({subId:String(r.candidate_sub_id||''),isDefault:Number(r.is_default||0),clicks:Number(r.clicks_rows||0),orders:Number(r.orders_rows||0),cancels:Number(r.cancels_rows||0),commissionRows:Number(r.commission_rows||0),firstSeen:r.first_seen_date||'',lastSeen:r.last_seen_date||''}));
+          const exact=safe.some(r=>r.subId==='ekodi-mall');
+          fs.appendFileSync(process.env.GITHUB_OUTPUT,`exact_ekodi_mall=${exact?'true':'false'}\n`);
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,'## EKODI Mall Coupang Sub ID discovery\n\n');
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,'Candidates (aggregate only): `'+JSON.stringify(safe)+'`\n\n');
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,'Latest report runs: `'+JSON.stringify(runs)+'`\n');
+          console.log(JSON.stringify({candidates:safe,latestRuns:runs,exactEkodiMall:exact}));
+          NODE
+      - name: Bind verified EKODI Mall Sub ID
+        if: steps.discover.outputs.exact_ekodi_mall == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf '%s' 'ekodi-mall' | npx --yes wrangler@${WRANGLER_VERSION} secret put COUPANG_PARTNERS_SUB_ID --config wrangler.api.toml >/dev/null
+          echo 'Verified ekodi-mall Sub ID bound to production Worker secret.' >> "$GITHUB_STEP_SUMMARY"
