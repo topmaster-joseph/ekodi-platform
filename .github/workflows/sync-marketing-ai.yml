@@ -227,3 +227,5 @@ jobs:
           exit 1
 
 # Release policy: build -> isolated preview -> preview smoke test -> production promote -> production verify
+
+# release trigger: small-business AI PoC a089ad610f00160fc22edf94cfecd9fa75b839e5 · 2026-09-07
