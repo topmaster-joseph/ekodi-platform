@@ -19,6 +19,11 @@ function forbidText(file, needles) {
   for (const needle of needles) if (text.includes(needle)) fail(file, `unsafe production bypass detected: ${needle}`);
   return text;
 }
+function forbidPattern(file, patterns) {
+  const text = read(file);
+  for (const pattern of patterns) if (pattern.test(text)) fail(file, `unsafe production bypass detected: ${pattern}`);
+  return text;
+}
 
 const workerGuarded = {
   '.github/workflows/deploy-site-core.yml': ['guarded-worker-release.mjs', 'shared-site.worker.json'],
@@ -104,7 +109,8 @@ requireText('.github/workflows/deploy-control-api.yml', [
   'control-api.worker.json',
   'validate-additive-migrations.mjs',
 ]);
-forbidText('.github/workflows/deploy-control-api.yml', ['npm run deploy:api', 'deploy --config wrangler.api.toml']);
+forbidText('.github/workflows/deploy-control-api.yml', ['npm run deploy:api']);
+forbidPattern('.github/workflows/deploy-control-api.yml', [/wrangler(?:@[^\s]+)?\s+deploy\s+--config\s+wrangler\.api\.toml/]);
 requireText('.github/workflows/deploy-finance.yml', [
   'environment: development',
   'ekodi-finance-api-staging',

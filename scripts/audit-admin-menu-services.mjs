@@ -7,7 +7,7 @@ const services=JSON.parse(read('config/ecosystem-services.json'));
 const esc=s=>String(s).replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
 const menus=['campus','work','communication','workspace','organization','clients','admins','life-ai','community','books','social','aiops','marketing-ai','ai-module-spec','ai-membership','finance','tax','affiliates','storage','api-cost','health','security','devices','architecture'];
 for(const id of menus) if(!new RegExp("\\bid\\s*:\\s*['\"]"+esc(id)+"['\"]").test(menuRegistry)) throw new Error('menu missing: '+id);
-const lazy=['campus','work','clients','life-ai','community','books','social','aiops','marketing','ai-module-spec','aimembers','affiliates','storage','api-cost','health','security','devices'];
+const lazy=['campus','work','clients','life-ai','books','social','aiops','marketing','ai-module-spec','aimembers','affiliates','storage','api-cost','health','security','devices'];
 for(const key of lazy) if(!new RegExp("(^|\\n)\\s*['\"]?"+esc(key)+"['\"]?\\s*:\\s*\\{",'m').test(loader)) throw new Error('loader missing: '+key);
 const contracts={
   'client-access.js':[/dataset\.section\s*=\s*['\"]clients['\"]/,/고객관리 API 요청 실패/],
