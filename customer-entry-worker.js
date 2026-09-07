@@ -15,7 +15,7 @@ import { handleChurchReportsRequest, runChurchReportSchedule } from './church-re
 import { handleAffiliateRequest } from './affiliate-control.js';
 import { handleOfferRegistryRequest } from './offer-registry-control.js';
 import { handleMallAdminRequest } from './mall-admin-control.js';
-import { runAffiliateAutomation, syncCoupangPartnerReports } from './coupang-partners-automation.js';
+import { runAffiliateAutomation, syncScheduledCoupangPartnerReports } from './coupang-partners-automation.js';
 import { handleSocialRegistry } from './social-registry-api.js';
 import { handleInsuranceAdminProxy } from './insurance-control-proxy.js';
 
@@ -303,7 +303,7 @@ export default {
     ctx.waitUntil(runChurchReportSchedule(env).catch(error => console.error('Church report schedule failed', error)));
     ctx.waitUntil(runMembershipBillingSchedule(env).catch(error => console.error('Membership billing schedule failed', error)));
     ctx.waitUntil(runAffiliateAutomation(env, { reason: 'schedule' }).catch(error => console.error('EKODI Mall automatic curation schedule failed', error)));
-    ctx.waitUntil(syncCoupangPartnerReports(env, { reason: 'schedule' }).catch(error => console.error('EKODI Mall Coupang report schedule failed', error)));
+    ctx.waitUntil(syncScheduledCoupangPartnerReports(env, { reason: 'schedule' }).catch(error => console.error('EKODI Mall Coupang report schedule failed', error)));
     return apiWorker.scheduled(controller, env, ctx);
   },
 };
