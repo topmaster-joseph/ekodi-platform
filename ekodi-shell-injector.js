@@ -51,6 +51,7 @@ function sharedFooterReplacesLocalFooter(serviceId){return SHARED_FOOTER_REPLACE
 function defaultSurface(serviceId){return cleanSurface(serviceForId(serviceId)?.defaultSurface)||'public';}
 function resolvedSurface(serviceId,surface=''){return cleanSurface(surface)||defaultSurface(serviceId);}
 function userSurfaceForService(serviceId){return USER_SURFACES.has(defaultSurface(serviceId));}
+function readyLocalesForService(serviceId){const id=cleanServiceId(serviceId);if(id==='ekodi')return 'ko-KR en zh-CN ja';const configured=serviceForId(id)?.readyLocales;const values=Array.isArray(configured)&&configured.length?configured:['ko-KR'];return [...new Set(['ko-KR',...values])].join(' ');}
 function serviceLabel(serviceId){const service=serviceForId(serviceId);return service?.shortName||service?.name||(serviceId==='ekodi'?'EKODI':'');}
 function surfaceBootStyle(surface){
   if(surface==='admin')return ADMIN_BOOT_STYLE;
@@ -88,6 +89,7 @@ class UserUiHtmlInjector{
     element.setAttribute('data-ekodi-service',service);
     element.setAttribute('data-ekodi-user-surface',resolvedSurface(this.serviceId,this.surface));
     element.setAttribute('data-ekodi-user-layout',USER_LAYOUT_VERSION);
+    element.setAttribute('data-ekodi-ready-locales',readyLocalesForService(service));
     if(serviceOwnsFooter(service))element.setAttribute('data-ekodi-footer-mode','service');
   }
 }
@@ -136,6 +138,7 @@ export function injectEkodiUserUi(response,serviceId='ekodi',surface='public'){
   headers.set('x-ekodi-user-ui',USER_UI_VERSION);
   headers.set('x-ekodi-user-ui-surface',resolved);
   headers.set('x-ekodi-user-layout',USER_LAYOUT_VERSION);
+  headers.set('x-ekodi-ready-locales',readyLocalesForService(serviceId));
   headers.set('x-ekodi-user-footer',serviceOwnsFooter(serviceId)?'service':'shared');
   const headerAdopter=new UserHeaderAdopter();
   const canvasAdopter=new UserCanvasAdopter();

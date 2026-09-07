@@ -8,6 +8,12 @@ on:
       - 'site-shell-worker.js'
       - 'platform-router-worker.js'
       - 'platform-router-entry-worker.js'
+      - 'insurance-public-route.js'
+      - 'sites/ekodi-insurance/public/**'
+      - 'workspace-route-policy.js'
+      - 'ekodi-service-manifest.js'
+      - 'config/ecosystem-services.json'
+      - 'test/insurance-public-route.test.mjs'
       - 'marketing-canonical-projection.js'
       - 'deploy/manifests/shared-site.worker.json'
       - 'ekodi-shell-injector.js'
@@ -49,10 +55,15 @@ jobs:
           node --check site-shell-worker.js
           node --check platform-router-worker.js
           node --check platform-router-entry-worker.js
+          node --check insurance-public-route.js
+          node --check sites/ekodi-insurance/public/advisor.js
+          node --check sites/ekodi-insurance/public/server-bridge.js
           node --check marketing-canonical-projection.js
           node --check ekodi-shell-injector.js
-          node --test test/marketing-canonical-projection.test.mjs
+          node --test test/marketing-canonical-projection.test.mjs test/insurance-public-route.test.mjs test/public-workspace-gateway.test.mjs
           npm run build
+          test -f dist/insurance/index.html
+          test -f dist/insurance/advisor.html
           test -f dist/trade.html
           test -f dist/hub.html
       - name: Enforce Development account boundary
@@ -97,9 +108,11 @@ jobs:
               && verify_shell 'invest.ekodi.kr' 'EKODI Investment' \
               && verify_public_path '/deployment-probe' 'OPERATING SPACE' 'x-ekodi-workspace-gateway: space-service-binding' \
               && verify_public_path '/ekodibiz' 'EKODIBIZ' 'x-ekodi-workspace-gateway: ekodibiz-service-binding' \
+              && verify_public_path '/insurance' '보험을 파는 AI가 아니라, 내 보험을 챙겨주는 AI' 'x-ekodi-route: public-insurance' \
+              && verify_public_path '/insurance/advisor' 'PERSONAL INSURANCE CARE' 'x-ekodi-route: public-insurance' \
               && verify_public_path '/ekodibiz/invest' 'EKODIBIZ · INVESTMENT BUSINESS' 'x-ekodi-route: public-ekodibiz-invest' \
               && verify_public_path '/ekodibiz/invest/admin' 'WORKSPACE-LOCAL ADMIN' 'x-ekodi-route: public-ekodibiz-invest-admin'; then
-              echo 'Shared-site core, Space binding, EKODIBIZ and Invest staging verified through the production entry contract.'
+              echo 'Shared-site core, Insurance public path, Space binding, EKODIBIZ and Invest staging verified through the production entry contract.'
               exit 0
             fi
             sleep 4

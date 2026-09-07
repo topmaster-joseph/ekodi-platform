@@ -1,0 +1,110 @@
+﻿name: EKODI Mall Sub ID Diagnose
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/ekodi-mall-subid-diagnose.yml'
+
+permissions:
+  contents: read
+
+env:
+  WRANGLER_VERSION: '4.127.1'
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Observe fresh scheduled discovery and aggregate Sub IDs
+        id: discover
+        shell: bash
+        run: |
+          set -euo pipefail
+          cutoff=$(date -u -d '2026-09-07T16:04:33Z' +%s)
+          fresh=false
+          for attempt in $(seq 1 32); do
+            npx --yes wrangler@${WRANGLER_VERSION} d1 execute ekodi-auth --remote --config wrangler.api.toml --json --command "SELECT sync_date,status,reason,start_date,end_date,orders_rows,cancels_rows,commission_rows,matched_product_rows,unmatched_product_rows,error_text,started_at,finished_at FROM affiliate_partner_report_runs ORDER BY id DESC LIMIT 3" > /tmp/runs.json
+            fresh=$(CUTOFF="$cutoff" node - <<'NODE'
+          const fs=require('node:fs');
+          const unwrap=x=>{const a=Array.isArray(x)?x:(x?.result||[]);const b=Array.isArray(a)?a[0]:a;return b?.results||b?.result||[]};
+          const rows=unwrap(JSON.parse(fs.readFileSync('/tmp/runs.json','utf8')));
+          const t=Date.parse(rows[0]?.started_at||'')/1000;
+          process.stdout.write(Number.isFinite(t)&&t>=Number(process.env.CUTOFF)?'true':'false');
+          NODE
+            )
+            [ "$fresh" = "true" ] && break
+            sleep 15
+          done
+          if [ "$fresh" != "true" ]; then
+            echo 'No fresh scheduled Coupang report run observed within diagnostic window.' >&2
+            exit 1
+          fi
+          npx --yes wrangler@${WRANGLER_VERSION} d1 execute ekodi-auth --remote --config wrangler.api.toml --json --command "SELECT candidate_sub_id,is_default,clicks_rows,orders_rows,cancels_rows,commission_rows,first_seen_date,last_seen_date,updated_at FROM affiliate_partner_subid_discovery ORDER BY orders_rows DESC,clicks_rows DESC" > /tmp/subids.json
+          node <<'NODE'
+          const fs=require('node:fs');
+          const unwrap=x=>{const a=Array.isArray(x)?x:(x?.result||[]);const b=Array.isArray(a)?a[0]:a;return b?.results||b?.result||[]};
+          const c=unwrap(JSON.parse(fs.readFileSync('/tmp/subids.json','utf8')));
+          const runs=unwrap(JSON.parse(fs.readFileSync('/tmp/runs.json','utf8')));
+          const safe=c.map(r=>({subId:String(r.candidate_sub_id||''),isDefault:Number(r.is_default||0),clicks:Number(r.clicks_rows||0),orders:Number(r.orders_rows||0),cancels:Number(r.cancels_rows||0),commissionRows:Number(r.commission_rows||0),firstSeen:r.first_seen_date||'',lastSeen:r.last_seen_date||''}));
+          const exact=safe.some(r=>r.subId==='ekodi-mall');
+          fs.appendFileSync(process.env.GITHUB_OUTPUT,`exact_ekodi_mall=${exact?'true':'false'}\n`);
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,'## Fresh Coupang Sub ID discovery\n\nCandidates: `'+JSON.stringify(safe)+'`\n\nRun: `'+JSON.stringify(runs[0]||{})+'`\n');
+          console.log(JSON.stringify({candidates:safe,latestRun:runs[0]||{},exactEkodiMall:exact}));
+          NODE
+      - name: Bind verified EKODI Mall Sub ID
+        id: bind
+        if: steps.discover.outputs.exact_ekodi_mall == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf '%s' 'ekodi-mall' | npx --yes wrangler@${WRANGLER_VERSION} secret put COUPANG_PARTNERS_SUB_ID --config wrangler.api.toml >/dev/null
+          date -u +%s > /tmp/bind-cutoff
+          echo 'Verified ekodi-mall Sub ID bound to production Worker secret.' >> "$GITHUB_STEP_SUMMARY"
+      - name: Verify bound report closed loop
+        if: steps.discover.outputs.exact_ekodi_mall == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          cutoff=$(cat /tmp/bind-cutoff)
+          success=false
+          for attempt in $(seq 1 48); do
+            npx --yes wrangler@${WRANGLER_VERSION} d1 execute ekodi-auth --remote --config wrangler.api.toml --json --command "SELECT sync_date,status,start_date,end_date,orders_rows,cancels_rows,commission_rows,matched_product_rows,unmatched_product_rows,error_text,started_at,finished_at FROM affiliate_partner_report_runs ORDER BY id DESC LIMIT 1" > /tmp/bound-run.json
+            success=$(CUTOFF="$cutoff" node - <<'NODE'
+          const fs=require('node:fs');
+          const unwrap=x=>{const a=Array.isArray(x)?x:(x?.result||[]);const b=Array.isArray(a)?a[0]:a;return b?.results||b?.result||[]};
+          const r=unwrap(JSON.parse(fs.readFileSync('/tmp/bound-run.json','utf8')))[0]||{};
+          const fresh=Date.parse(r.started_at||'')/1000>=Number(process.env.CUTOFF);
+          process.stdout.write(fresh&&r.status==='success'?'true':'false');
+          NODE
+            )
+            [ "$success" = "true" ] && break
+            sleep 15
+          done
+          if [ "$success" != "true" ]; then
+            echo 'Bound Sub ID report did not reach success within diagnostic window.' >&2
+            cat /tmp/bound-run.json >&2
+            exit 1
+          fi
+          npx --yes wrangler@${WRANGLER_VERSION} d1 execute ekodi-auth --remote --config wrangler.api.toml --json --command "SELECT COUNT(*) AS rows,SUM(orders) AS orders,SUM(cancels) AS cancels,SUM(gmv_krw) AS gmv_krw,SUM(commission_krw) AS commission_krw FROM affiliate_product_performance_daily WHERE source='coupang_partner_api_purchase'" > /tmp/perf.json
+          npx --yes wrangler@${WRANGLER_VERSION} d1 execute ekodi-auth --remote --config wrangler.api.toml --json --command "SELECT COUNT(*) AS rows,SUM(clicks) AS clicks,SUM(orders) AS orders,SUM(revenue_krw) AS commission_krw FROM affiliate_daily_metrics WHERE account_id='coupang-ekodibiz' AND source='coupang_partner_api'" > /tmp/metrics.json
+          node <<'NODE'
+          const fs=require('node:fs');
+          const unwrap=x=>{const a=Array.isArray(x)?x:(x?.result||[]);const b=Array.isArray(a)?a[0]:a;return b?.results||b?.result||[]};
+          const run=unwrap(JSON.parse(fs.readFileSync('/tmp/bound-run.json','utf8')))[0]||{};
+          const perf=unwrap(JSON.parse(fs.readFileSync('/tmp/perf.json','utf8')))[0]||{};
+          const metrics=unwrap(JSON.parse(fs.readFileSync('/tmp/metrics.json','utf8')))[0]||{};
+          const proof={run,productPerformance:perf,dailyMetrics:metrics};
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,'\n## Bound report proof\n\n`'+JSON.stringify(proof)+'`\n');
+          console.log(JSON.stringify(proof));
+          NODE
+

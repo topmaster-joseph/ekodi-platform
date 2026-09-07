@@ -892,6 +892,64 @@
         ]
       },
       {
+        "url": "https://ekodi.kr/insurance",
+        "statuses": [200],
+        "redirect": "manual",
+        "expect": [
+          "EKODI Insurance",
+          "보험을 파는 AI가 아니라, 내 보험을 챙겨주는 AI",
+          "/insurance/server-bridge.js"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: public-insurance",
+          "x-ekodi-shell: v2",
+          "cache-control: no-store",
+          "x-content-type-options: nosniff"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/insurance/advisor",
+        "statuses": [200],
+        "redirect": "manual",
+        "expect": [
+          "PERSONAL INSURANCE CARE",
+          "보험을 권하기 전에",
+          "/insurance/advisor.js"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: public-insurance",
+          "x-ekodi-shell: v2",
+          "cache-control: no-store"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/insurance/health",
+        "statuses": [200],
+        "redirect": "manual",
+        "expect": [
+          "ekodi-insurance",
+          "https://ekodi.kr/insurance"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: public-insurance-health",
+          "cache-control: no-store"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/insurance/admin",
+        "statuses": [302],
+        "redirect": "manual",
+        "headerExpect": [
+          "location: https://admin.ekodi.kr/#insurance",
+          "x-ekodi-route: insurance-admin-handoff",
+          "cache-control: no-store"
+        ],
+        "rollbackVerify": false
+      },
+      {
         "url": "https://admin.ekodi.kr/personal-finance-admin.js?pf=v1",
         "statuses": [
           200

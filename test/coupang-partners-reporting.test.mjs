@@ -87,11 +87,9 @@ test('Sub ID discovery never writes account-wide outcomes into Mall performance'
   globalThis.fetch=async (url)=>{ const u=new URL(String(url)); requested.push(u); assert.equal(u.searchParams.has('subId'),false); const d=coupangReportWindow(new Date(),30).endDate; let data=[];
     if(u.pathname.endsWith('/clicks')) data=[{date:d,subId:'blog-main'},{date:d,subId:'ekodi-mall'}];
     if(u.pathname.endsWith('/orders')) data=[{date:d,subId:'ekodi-mall',productId:123,orderId:1,gmv:10000,commission:300},{date:d,subId:'',productId:999,orderId:2,gmv:5000,commission:150}];
-    if(u.pathname.endsWith('/cancels')) data=[{date:d,subId:'ekodi-mall',productId:123,orderId:1,gmv:1000,commission:30}];
-    if(u.pathname.endsWith('/commission')) data=[{date:d,subId:'ekodi-mall',click:2,order:1,cancel:1,gmv:9000,commission:270}];
     return new Response(JSON.stringify({rCode:'0',rMessage:'',data}),{status:200,headers:{'content-type':'application/json'}}); };
   try { const result=await syncCoupangPartnerReports({DB:db,COUPANG_PARTNERS_ACCESS_KEY:'a',COUPANG_PARTNERS_SECRET_KEY:'b'},{force:true,reason:'test-discovery'});
-    assert.equal(result.status,'sub_id_required'); assert.equal(requested.length,4); assert.equal(result.discoveryCandidates.some(x=>x.subId==='ekodi-mall'),true);
+    assert.equal(result.status,'sub_id_required'); assert.equal(requested.length,2); assert.equal(result.discoveryCandidates.some(x=>x.subId==='ekodi-mall'),true);
     assert.equal(Number((await db.prepare('SELECT COUNT(*) AS n FROM affiliate_product_performance_daily').first()).n),0); assert.equal(Number((await db.prepare('SELECT COUNT(*) AS n FROM affiliate_daily_metrics').first()).n),0);
     const rows=(await db.prepare('SELECT candidate_sub_id,is_default,clicks_rows,orders_rows,cancels_rows,commission_rows FROM affiliate_partner_subid_discovery ORDER BY candidate_sub_id').all()).results; assert.equal(rows.length,3);
   } finally { globalThis.fetch=originalFetch; db.close(); }

@@ -68,7 +68,7 @@ test('user UI header/footer/language are shared user-surface-only modules',async
   assert.doesNotMatch(footerClient,/백련동1길 17-4/);
   assert.doesNotMatch(footerClient,/© 2026 EKODI · EKODIBIZ/);
 
-  assert.match(userLanguage,/const VERSION=5/);
+  assert.match(userLanguage,/const VERSION=6/);
   assert.match(userLanguage,/const COOKIE_KEY='ekodi_locale'/);
   assert.match(userLanguage,/data-ekodi-language-control/);
   assert.match(userLanguage,/document\.documentElement\.lang=next/);
@@ -76,6 +76,12 @@ test('user UI header/footer/language are shared user-surface-only modules',async
   assert.match(userLanguage,/ko-KR/);
   assert.match(userLanguage,/zh-CN/);
   assert.match(userLanguage,/window\.EKODIUserLanguage/);
+  assert.match(userLanguage,/FALLBACK_LOCALE='ko-KR'/);
+  assert.match(userLanguage,/placeFooterControl/);
+  assert.match(userLanguage,/data-ekodi-language-notice/);
+  assert.match(userLanguage,/isLocaleReady/);
+  assert.match(injector,/data-ekodi-ready-locales/);
+  assert.match(injector,/x-ekodi-ready-locales/);
   assert.match(userLanguage,/-webkit-text-fill-color:#20362b!important/);
   assert.match(header,/data-ekodi-header-home/);
   assert.match(header,/serviceHomeUrl/);

@@ -47,6 +47,12 @@ on:
       - 'device-control.js'
       - 'security-edge.js'
       - 'ai-agent-control.js'
+      - 'ai-command-control.js'
+      - 'ekodi-command-ledger.js'
+      - 'ekodi-pulse-runtime.js'
+      - 'ekodi-command-plane.js'
+      - 'ekodi-ai-provider-registry.js'
+      - 'test/ekodi-v8-durable-command-plane.test.mjs'
       - 'ai-governance-runtime.js'
       - 'ai-resilience-runtime.js'
       - 'core-ai-gateway.js'
@@ -135,6 +141,12 @@ on:
       - 'device-control.js'
       - 'security-edge.js'
       - 'ai-agent-control.js'
+      - 'ai-command-control.js'
+      - 'ekodi-command-ledger.js'
+      - 'ekodi-pulse-runtime.js'
+      - 'ekodi-command-plane.js'
+      - 'ekodi-ai-provider-registry.js'
+      - 'test/ekodi-v8-durable-command-plane.test.mjs'
       - 'ai-governance-runtime.js'
       - 'ai-resilience-runtime.js'
       - 'core-ai-gateway.js'
@@ -205,7 +217,7 @@ jobs:
       - name: Validate control plane, Core AI Gateway and governance
         run: |
           set -euo pipefail
-          for file in api-worker.js auth-worker.js admin-session-fastpath.js admin-google-auth.js customer-auth.js customer-entry-worker.js church-reports-control.js mission-control-entry-worker.js traffic-intelligence.js traffic-intelligence-control.js devotional-control.js user-ai-control.js personal-ai-bridge.js ekodi-mcp-gateway.js ai-access-orchestration.js personal-ai-provider-registry.js gemini-provider-adapter.js personal-openai-provider-adapter.js claude-provider-adapter.js user-openai-provider-adapter.js universal-membership.js membership-billing.js generated/user-services.js messenger-operator-control.js ekodi-principal.js messenger-outbox.js messenger-channel-adapters.js device-control.js security-edge.js ai-agent-control.js ai-governance-runtime.js ai-resilience-runtime.js core-ai-gateway.js core-api.js openai-provider-adapter.js api-usage-meter.js api-cost-control.js books-control.js books-finance-control.js books-distribution-control.js books-pipeline-control.js books-royalty-control.js affiliate-control.js affiliate-marketplace.js affiliate-provider-feed.js product-identity.js coupang-partners-automation.js offer-registry.js offer-registry-control.js offer-registry-sources.js social-registry-api.js mail-credential-vault.js mail-google-adapter.js mail-control.js; do
+          for file in api-worker.js auth-worker.js admin-session-fastpath.js admin-google-auth.js customer-auth.js customer-entry-worker.js church-reports-control.js mission-control-entry-worker.js traffic-intelligence.js traffic-intelligence-control.js devotional-control.js user-ai-control.js personal-ai-bridge.js ekodi-mcp-gateway.js ai-access-orchestration.js personal-ai-provider-registry.js gemini-provider-adapter.js personal-openai-provider-adapter.js claude-provider-adapter.js user-openai-provider-adapter.js universal-membership.js membership-billing.js generated/user-services.js messenger-operator-control.js ekodi-principal.js messenger-outbox.js messenger-channel-adapters.js device-control.js security-edge.js ai-agent-control.js ai-command-control.js ekodi-command-ledger.js ekodi-pulse-runtime.js ekodi-command-plane.js ekodi-ai-provider-registry.js ai-orchestrator-runtime.js anthropic-provider-adapter.js gemini-orchestrator-provider-adapter.js ai-governance-runtime.js ai-resilience-runtime.js core-ai-gateway.js core-api.js openai-provider-adapter.js api-usage-meter.js api-cost-control.js books-control.js books-finance-control.js books-distribution-control.js books-pipeline-control.js books-royalty-control.js affiliate-control.js affiliate-marketplace.js affiliate-provider-feed.js product-identity.js coupang-partners-automation.js offer-registry.js offer-registry-control.js offer-registry-sources.js social-registry-api.js mail-credential-vault.js mail-google-adapter.js mail-control.js; do
             node --check "$file"
           done
           node --check scripts/generate-user-service-registry.mjs
@@ -218,10 +230,11 @@ jobs:
           node scripts/validate-additive-migrations.mjs migrations
           node scripts/validate-ai-mission-governance.mjs
           node scripts/validate-security-baseline.mjs
-          node --test test/universal-membership-contract.test.mjs test/device-control-contract.test.mjs test/core-ai-gateway.test.mjs test/openai-provider-adapter.test.mjs test/api-cost-control.test.mjs test/traffic-intelligence.test.mjs test/user-ai-routing-policy.test.mjs test/personal-ai-provider-registry.test.mjs test/personal-ai-bridge.test.mjs test/personal-ai-bridge-migration.test.mjs test/ekodi-mcp-gateway.test.mjs test/oauth-consent-contract.test.mjs test/devotional-control.test.mjs test/mail-control.test.mjs test/affiliate-provider-feed.test.mjs test/mall-product-identity.test.mjs test/ekodi-coupang-mall.test.mjs test/coupang-partners-reporting.test.mjs
+          node --test test/universal-membership-contract.test.mjs test/device-control-contract.test.mjs test/core-ai-gateway.test.mjs test/ai-orchestrator-runtime.test.mjs test/ekodi-command-plane.test.mjs test/core-ai-command-plane-gateway.test.mjs test/ekodi-v8-durable-command-plane.test.mjs test/openai-provider-adapter.test.mjs test/api-cost-control.test.mjs test/traffic-intelligence.test.mjs test/user-ai-routing-policy.test.mjs test/personal-ai-provider-registry.test.mjs test/personal-ai-bridge.test.mjs test/personal-ai-bridge-migration.test.mjs test/ekodi-mcp-gateway.test.mjs test/oauth-consent-contract.test.mjs test/devotional-control.test.mjs test/mail-control.test.mjs test/affiliate-provider-feed.test.mjs test/mall-product-identity.test.mjs test/ekodi-coupang-mall.test.mjs test/coupang-partners-reporting.test.mjs
           bash -n scripts/apply-d1-migrations-with-retry.sh
           grep -Fq 'main = "mission-control-entry-worker.js"' wrangler.api.toml
           grep -Fq 'OPENAI_MODEL = "gpt-5.6-terra"' wrangler.api.toml
+          grep -Fq 'AI_MULTI_PROVIDER_ENABLED = "true"' wrangler.api.toml
           ! grep -Fq 'OPENAI_API_KEY' wrangler.api.toml
 
   staging:
@@ -379,6 +392,24 @@ jobs:
             node -e "process.stdout.write(require('node:crypto').randomBytes(48).toString('base64url'))" | npx --yes wrangler@${WRANGLER_VERSION} secret put MAIL_CREDENTIAL_KEY --config wrangler.api.toml >/dev/null
             echo 'Generated a persistent Mail credential-encryption key in Cloudflare Worker secrets.' >> "$GITHUB_STEP_SUMMARY"
           fi
+      - name: Record AI provider readiness without exposing secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+          names=$(npx --yes wrangler@${WRANGLER_VERSION} secret list --config wrangler.api.toml 2>/dev/null || true)
+          has_secret() { printf '%s' "$names" | grep -Fq "$1"; }
+          openai=0; anthropic=0; gemini=0
+          if has_secret 'OPENAI_API_KEY'; then openai=1; fi
+          if has_secret 'ANTHROPIC_API_KEY'; then anthropic=1; fi
+          if has_secret 'GEMINI_API_KEY' || has_secret 'GOOGLE_AI_API_KEY'; then gemini=1; fi
+          provider_count=$((openai + anthropic + gemini))
+          collaboration_ready=false; sentinel_ready=false
+          if [ "$provider_count" -ge 2 ]; then collaboration_ready=true; fi
+          if [ "$provider_count" -ge 3 ]; then sentinel_ready=true; fi
+          echo "AI_PROVIDER_READY_COUNT=$provider_count" >> "$GITHUB_ENV"
+          echo "AI_PROVIDER_COLLABORATION_READY=$collaboration_ready" >> "$GITHUB_ENV"
+          echo "AI_PROVIDER_SENTINEL_READY=$sentinel_ready" >> "$GITHUB_ENV"
+          echo "AI provider readiness: configured=$provider_count collaboration=$collaboration_ready independent_sentinel=$sentinel_ready. Secret values were not read or printed." >> "$GITHUB_STEP_SUMMARY"
       - name: Capture production D1 recovery bookmark
         id: d1_bookmark
         run: |
@@ -432,7 +463,7 @@ jobs:
           payload=$(jq -n \
             --arg state "$state" \
             --arg context 'ekodi/control-api-production' \
-            --arg description "Control API production deployment: $JOB_STATUS" \
+            --arg description "Control API production deployment: $JOB_STATUS; AI providers=${AI_PROVIDER_READY_COUNT:-0}" \
             --arg target_url "$target_url" \
             '{state:$state,context:$context,description:$description,target_url:$target_url}')
           curl --fail-with-body -sS \
@@ -442,3 +473,5 @@ jobs:
             -H 'X-GitHub-Api-Version: 2022-11-28' \
             "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \
             -d "$payload"
+
+# manual rerun 2026-09-08T00:36+09
