@@ -1,5 +1,5 @@
 import authWorker from './auth-worker.js';
-import { getAffiliateAutomationStatus, ingestAffiliateProductsOnDemand, runAffiliateAutomation } from './coupang-partners-automation.js';
+import { getAffiliateAutomationStatus, getCoupangPartnerReportingStatus, ingestAffiliateProductsOnDemand, runAffiliateAutomation, syncCoupangPartnerReports } from './coupang-partners-automation.js';
 import { archiveMarketplaceOffer, listMarketplaceProducts, MULTI_AFFILIATE_DISCLOSURE, publicMarketplaceClick, registerMarketplaceProduct } from './affiliate-marketplace.js';
 import { applyProductIdentityAliases, groupProductOffers } from './product-identity.js';
 import { listProviderFeedDescriptors, mixProductsByProvider, syncProviderFeed } from './affiliate-provider-feed.js';
@@ -543,6 +543,12 @@ export async function handleAffiliateRequest(request, env) {
   const path = url.pathname;
   if (request.method === 'GET' && path === `${PREFIX}/overview`) return json(await overview(env), 200, auth.response.headers);
   if (request.method === 'GET' && path === `${PREFIX}/automation`) return json(await getAffiliateAutomationStatus(env), 200, auth.response.headers);
+  if (request.method === 'GET' && path === `${PREFIX}/reporting`) return json({ reporting: await getCoupangPartnerReportingStatus(env) }, 200, auth.response.headers);
+  if (request.method === 'POST' && path === `${PREFIX}/reporting/sync`) {
+    const result = await syncCoupangPartnerReports(env, { force: true, reason: 'admin' });
+    await audit(env, auth.session, 'affiliate.reporting.sync', PUBLIC_STOREFRONT_SLUG, JSON.stringify({ status: result.status, matchedProductRows: result.matchedProductRows || 0, unmatchedProductRows: result.unmatchedProductRows || 0 }));
+    return json(result, result.ok ? 200 : 409, auth.response.headers);
+  }
   if (request.method === 'POST' && path === `${PREFIX}/automation/run`) {
     const result = await runAffiliateAutomation(env, { force: true, reason: 'admin' });
     await audit(env, auth.session, 'affiliate.automation.run', PUBLIC_STOREFRONT_SLUG, JSON.stringify({ status: result.status, selectedCount: result.selectedCount || 0 }));
