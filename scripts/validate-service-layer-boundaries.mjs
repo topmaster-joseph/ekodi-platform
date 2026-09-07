@@ -8,7 +8,7 @@ const json = async relative => JSON.parse(await read(relative));
 const failures = [];
 const requireTrue = (value, message) => { if (!value) failures.push(message); };
 
-const [boundaries, registry, packs, menu, workspace, tenantPolicy, supplyAdmin, layout] = await Promise.all([
+const [boundaries, registry, packs, menu, workspace, tenantPolicy, supplyAdmin, layout, cgmaAdmin, storageControl, siteWorker] = await Promise.all([
   json('config/service-layer-boundaries.json'),
   json('config/capability-registry.json'),
   json('config/workspace-packs.json'),
@@ -17,6 +17,9 @@ const [boundaries, registry, packs, menu, workspace, tenantPolicy, supplyAdmin, 
   read('tenant-admin-policy.js'),
   read('supply-network-admin.js'),
   read('admin-menu-layout.js'),
+  read('cgma-member-admin.js'),
+  read('google-drive-storage-control.js'),
+  read('site-worker.js'),
 ]);
 
 requireTrue(boundaries.version === '1.0.0', 'service-layer-boundaries version must be 1.0.0');
@@ -39,13 +42,22 @@ requireTrue(/id: 'supply-network'.*group: 'vertical'/s.test(menu), 'central Admi
 requireTrue(!/id: 'affiliates'/.test(menu), 'central Admin must not expose Mall affiliate operations as a canonical top-level section');
 requireTrue(!/id: 'cheonggye-members'/.test(menu), 'central Admin must not expose association member records as canonical navigation');
 requireTrue(/supplyNetwork:'tenant\.supply-network\.manage'/.test(tenantPolicy), 'tenant supply-network capability is required');
+requireTrue(/memberRoster:'tenant\.member-roster\.manage'/.test(tenantPolicy), 'tenant member-roster capability is required');
 requireTrue(/sourcing:TENANT_ADMIN_CAPABILITIES\.supplyNetwork/.test(workspace), 'Mall sourcing must use the tenant supply-network capability');
+requireTrue(/member:TENANT_ADMIN_CAPABILITIES\.memberRoster/.test(workspace), 'association member admin must use tenant member-roster capability');
 requireTrue(/sourcing:\['판매·공급망'/.test(workspace), 'Mall admin must label the owner projection as 판매·공급망');
+requireTrue(workspace.includes("workspace==='cgma'") && workspace.includes('/cgma-member-admin.js'), 'CGMA member admin must be projected from its workspace');
 requireTrue(!workspace.includes('/api/affiliate/accounts'), 'workspace admin must not access central affiliate account credentials');
 requireTrue(!workspace.includes('affiliateMerchantRouteForm'), 'workspace admin must not mount the central merchant-route credential form');
 requireTrue(supplyAdmin.includes("api('/providers')") && supplyAdmin.includes("api('/programs')"), 'professional supply admin must expose provider/program health');
 requireTrue(!supplyAdmin.includes("api('/routes')") && !supplyAdmin.includes("api('/accounts')"), 'professional supply admin must not own workspace routes or credentials');
-requireTrue(layout.includes("LEGACY_MALL_AFFILIATE_HASHES") && layout.includes("/ekodibiz/mall/admin/sourcing"), 'legacy affiliate entry must hand off to Mall owner admin');
+requireTrue(layout.includes('LEGACY_MALL_AFFILIATE_HASHES') && layout.includes('/ekodibiz/mall/admin/sourcing'), 'legacy affiliate entry must hand off to Mall owner admin');
+requireTrue(layout.includes('LEGACY_CGMA_MEMBER_HASH') && layout.includes('/cgma/admin/member'), 'legacy association member entry must hand off to CGMA owner admin');
+requireTrue(!layout.includes('openCheonggyeMembers') && !layout.includes("import('./cheonggye-members-admin.js')"), 'central Admin must not load association member CRUD');
+requireTrue(cgmaAdmin.includes('/api/control/storage/google/cheonggye-members'), 'CGMA member admin must use the protected storage projection');
+requireTrue(!cgmaAdmin.includes('/oauth/start'), 'CGMA member admin must not control Google credential OAuth');
+requireTrue(storageControl.includes('cheonggyeWorkspaceSession') && storageControl.includes('current_site_activity_contexts'), 'member API must validate CGMA workspace authority');
+requireTrue(siteWorker.includes("url.pathname.startsWith('/api/control/storage/google/cheonggye-members')") && siteWorker.includes('proxyAdminStorage(request, env)'), 'public workspace route must proxy protected member API through the storage binding');
 requireTrue(boundaries.serviceOwnership?.mall?.adminRoot === '/ekodibiz/mall/admin', 'Mall owner admin root must remain canonical');
 requireTrue(boundaries.serviceOwnership?.['cheonggye-association']?.adminRoot === '/cgma/admin', 'Cheonggye association owner admin root must be declared');
 

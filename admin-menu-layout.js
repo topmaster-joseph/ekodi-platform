@@ -18,15 +18,11 @@ const DEMAND_KEYS=new Map([
   ['marketing-ai','marketing'],['devices','devices'],['life-ai','life-ai'],['personal-finance','personal-finance']
 ]);
 const pairMap=value=>new Map(value.split(' ').map(pair=>pair.split(':')));
-const HASH=pairMap('#sites:sites #common-services:common-services #capabilities:capabilities #capability-center:capabilities #ai-ops:aiops #aiops:aiops #openai:openai #devotional:devotional #ai-module-spec:ai-module-spec #ai-membership:ai-membership #personal-finance:personal-finance #health:health #api-cost:api-cost #storage:storage #storige:storage #security:security #architecture:architecture #devices:devices #campus:campus #public-site-controls:public-site-controls #work:work #communication:communication #marketing-ai:marketing-ai #finance:finance #organization:organization #workspace:workspace #clients:clients #admins:admins #community:community #cheonggye-members:cheonggye-members #books:books #social:social #supply-network:supply-network #insurance:insurance #policies:policies #services:services #deployments:deployments #release:deployments');
-const CANON=pairMap('sites:#sites common-services:#common-services capabilities:#capabilities aiops:#ai-ops openai:#openai devotional:#devotional ai-module-spec:#ai-module-spec ai-membership:#ai-membership personal-finance:#personal-finance health:#health api-cost:#api-cost storage:#storage security:#security architecture:#architecture devices:#devices campus:#campus public-site-controls:#public-site-controls work:#work communication:#communication marketing-ai:#marketing-ai finance:#finance organization:#organization workspace:#workspace clients:#clients admins:#admins community:#community cheonggye-members:#cheonggye-members books:#books social:#social supply-network:#supply-network insurance:#insurance');
+const HASH=pairMap('#sites:sites #common-services:common-services #capabilities:capabilities #capability-center:capabilities #ai-ops:aiops #aiops:aiops #openai:openai #devotional:devotional #ai-module-spec:ai-module-spec #ai-membership:ai-membership #personal-finance:personal-finance #health:health #api-cost:api-cost #storage:storage #storige:storage #security:security #architecture:architecture #devices:devices #campus:campus #public-site-controls:public-site-controls #work:work #communication:communication #marketing-ai:marketing-ai #finance:finance #organization:organization #workspace:workspace #clients:clients #admins:admins #community:community #books:books #social:social #supply-network:supply-network #insurance:insurance #policies:policies #services:services #deployments:deployments #release:deployments');
+const CANON=pairMap('sites:#sites common-services:#common-services capabilities:#capabilities aiops:#ai-ops openai:#openai devotional:#devotional ai-module-spec:#ai-module-spec ai-membership:#ai-membership personal-finance:#personal-finance health:#health api-cost:#api-cost storage:#storage security:#security architecture:#architecture devices:#devices campus:#campus public-site-controls:#public-site-controls work:#work communication:#communication marketing-ai:#marketing-ai finance:#finance organization:#organization workspace:#workspace clients:#clients admins:#admins community:#community books:#books social:#social supply-network:#supply-network insurance:#insurance');
 let requestedSection = '';
-let sitesLoading,cheonggyeLoading,last='',queued=false,running=false,again=false,dc=false;
+let sitesLoading,last='',queued=false,running=false,again=false,dc=false;
 const demandLoading=new Map();
-function ensureFeatureStyle(href){
-  if(document.querySelector(`link[data-ekodi-feature-style="${href}"]`))return;
-  const link=document.createElement('link');link.rel='stylesheet';link.href=href;link.dataset.ekodiFeatureStyle=href;document.head.append(link);
-}
 function sectionOf(item){
   if(window.EKODIAdminSidebar?.sectionOf)return window.EKODIAdminSidebar.sectionOf(item);
   if(item?.dataset?.deviceControlNav==='true')return'devices';
@@ -97,15 +93,6 @@ async function openSites(){
   await sitesLoading;if(requestedSection!=='sites')return;applyOrder();activatePanel('sites');
   navItemFor('campus')?.classList.add('active');syncTitle('campus');
 }
-async function openCheonggyeMembers(){
-  dc=false;requestedSection='cheonggye-members';
-  ensureFeatureStyle('cheonggye-members-admin.css');
-  if(!cheonggyeLoading)cheonggyeLoading=import('./cheonggye-members-admin.js').then(module=>{
-    window.dispatchEvent(new CustomEvent('ekodi-feature-installed',{detail:{section:'cheonggye-members'}}));
-    return module;
-  }).catch(error=>{cheonggyeLoading=null;console.error(error);throw error;});
-  await cheonggyeLoading;if(requestedSection!=='cheonggye-members')return;applyOrder();activatePanel('cheonggye-members');syncTitle('cheonggye-members');
-}
 function fallbackDemand(section){
   const selector=section==='aiops'?'[data-demand-feature="aiops"],[data-section="aiops"]':`[data-demand-feature="${section}"],[data-lazy-section="${section}"],[data-section="${section}"]`;
   nav.querySelector(selector)?.click();
@@ -130,7 +117,6 @@ function requestCommonServices(){
 }
 function requestDemand(section){
   for(const item of allNav())item.classList.toggle('active',!isInternalNav(item)&&sectionOf(item)===section);
-  if(section==='cheonggye-members')return openCheonggyeMembers();
   if(section==='common-services')return requestCommonServices();
   if(section==='communication')return import('./communication-admin.js').then(()=>{if(requestedSection!==section)return;applyOrder();activatePanel(section);syncTitle(section);});
   if(section==='capabilities')return import('./capability-center-admin.js').then(()=>{if(requestedSection!==section)return;applyOrder();activatePanel(section);syncTitle(section);});
@@ -155,8 +141,11 @@ function routeInternal(){dc=false;requestedSection='aiops';if(location.hash!=='#
 const explicitHashSection=()=>HASH.get(location.hash.toLowerCase())||'';
 const LEGACY_MALL_AFFILIATE_HASHES=new Set(['#affiliates','#mall-ai-sales']);
 const MALL_SUPPLY_ADMIN='https://ekodi.kr/ekodibiz/mall/admin/sourcing';
+const LEGACY_CGMA_MEMBER_HASH='#cheonggye-members';
+const CGMA_MEMBER_ADMIN='https://ekodi.kr/cgma/admin/member';
 function handoffLegacyMallAffiliate(){if(!LEGACY_MALL_AFFILIATE_HASHES.has(location.hash.toLowerCase()))return false;location.replace(MALL_SUPPLY_ADMIN);return true;}
-if(handoffLegacyMallAffiliate())return;
+function handoffLegacyCgmaMember(){if(location.hash.toLowerCase()!==LEGACY_CGMA_MEMBER_HASH)return false;location.replace(CGMA_MEMBER_ADMIN);return true;}
+if(handoffLegacyMallAffiliate()||handoffLegacyCgmaMember())return;
 function reconcileNavigation(){
   if(running){again=true;return;}
   running=true;
@@ -164,7 +153,6 @@ function reconcileNavigation(){
     enforcePolicy();
     if(!requestedSection||dc)return;
     if(requestedSection==='sites'&&!hasPanel('sites'))openSites();
-    else if(requestedSection==='cheonggye-members'&&!hasPanel('cheonggye-members'))openCheonggyeMembers();
     else if(!activatePanel(requestedSection))requestDemand(requestedSection);
   }finally{running=false;if(again){again=false;scheduleNav();}}
 }
@@ -176,7 +164,6 @@ nav.addEventListener('click',event=>{
   if(isInternalNav(item)){event.preventDefault();event.stopImmediatePropagation();return routeInternal();}
   const section=sectionOf(item);if(!section)return;dc=false;
   if(section==='sites'){event.preventDefault();event.stopImmediatePropagation();return openSites();}
-  if(section==='cheonggye-members'){event.preventDefault();event.stopImmediatePropagation();return openCheonggyeMembers();}
   requestedSection=section;window.setTimeout(()=>{if(!activatePanel(section))requestDemand(section);},0);
 },true);
 content.addEventListener('click',event=>{
@@ -191,23 +178,20 @@ window.addEventListener('ekodi-admin-ready',()=>{
   enforcePolicy();const section=explicitHashSection();
   if(section&&isInternal(section))return routeInternal();
   if(section==='sites')return openSites();
-  if(section==='cheonggye-members')return openCheonggyeMembers();
   if(section){dc=false;requestedSection=section;if(!activatePanel(section))requestDemand(section);}
   else{requestedSection='campus';dc=true;}
 });
 window.addEventListener('hashchange',()=>{
-  if(handoffLegacyMallAffiliate())return;
+  if(handoffLegacyMallAffiliate()||handoffLegacyCgmaMember())return;
   const section=explicitHashSection();if(!section)return;dc=false;
   if(isInternal(section))return routeInternal();
   if(section==='sites')return openSites();
-  if(section==='cheonggye-members')return openCheonggyeMembers();
   requestedSection=section;if(!activatePanel(section))requestDemand(section);
 });
 mountAdminSidebar(document);enforcePolicy();
 const initialHash = explicitHashSection();
 if(initialHash&&isInternal(initialHash))routeInternal();
 else if(initialHash==='sites')openSites();
-else if(initialHash==='cheonggye-members')openCheonggyeMembers();
 else if (initialHash) requestedSection = initialHash;
 else{requestedSection = 'campus';dc=true;requestDemand('campus');}
 window.EKODIAdminPanels=Object.freeze({
@@ -215,7 +199,6 @@ window.EKODIAdminPanels=Object.freeze({
     dc=false;
     if(isInternal(section))return routeInternal();
     if(section==='sites')return openSites();
-    if(section==='cheonggye-members')return openCheonggyeMembers();
     requestedSection=section;return activatePanel(section)||requestDemand(section);
   },
   current:()=>requestedSection,
