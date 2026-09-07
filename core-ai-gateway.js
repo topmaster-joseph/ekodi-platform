@@ -4,6 +4,9 @@ import {
   runAiEnhancedTask,
 } from './ai-resilience-runtime.js';
 import { buildEkodiAiOrchestrator } from './ai-orchestrator-runtime.js';
+import { createEkodiAiProviderRegistry } from './ekodi-ai-provider-registry.js';
+
+const ENABLED_VALUES = new Set(['1', 'true', 'yes', 'on', 'enabled']);
 
 function normalizeCapabilities(value) {
   const items = Array.isArray(value) ? value : value ? [value] : ['text'];
@@ -25,10 +28,24 @@ function normalizeProvider(provider, index) {
   });
 }
 
+function isMultiProviderEnabled(env = {}) {
+  return ENABLED_VALUES.has(String(env.AI_MULTI_PROVIDER_ENABLED || '').trim().toLowerCase());
+}
+
+function buildProviderPool(env = {}, providers = []) {
+  const supplied = Array.isArray(providers) ? providers : [];
+  const raw = isMultiProviderEnabled(env)
+    ? [...createEkodiAiProviderRegistry(env), ...supplied]
+    : supplied;
+  const unique = new Map();
+  raw.map(normalizeProvider).filter(Boolean).forEach(provider => {
+    if (!unique.has(provider.id)) unique.set(provider.id, provider);
+  });
+  return Object.freeze([...unique.values()]);
+}
+
 export function buildCoreAiGateway(env = {}, providers = []) {
-  const adapters = Object.freeze((Array.isArray(providers) ? providers : [])
-    .map(normalizeProvider)
-    .filter(Boolean));
+  const adapters = buildProviderPool(env, providers);
   const orchestrator = buildEkodiAiOrchestrator(env, adapters);
 
   return Object.freeze({
@@ -36,6 +53,7 @@ export function buildCoreAiGateway(env = {}, providers = []) {
     status() {
       return Object.freeze({
         ...getAiResilienceStatus(env, adapters),
+        multiProviderEnabled: isMultiProviderEnabled(env),
         orchestration: orchestrator.status(),
       });
     },
