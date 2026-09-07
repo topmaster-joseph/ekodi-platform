@@ -39,7 +39,7 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
-  WRANGLER_VERSION: '4.119.0'
+  WRANGLER_VERSION: '4.129.0'
 
 jobs:
   validate:
@@ -84,16 +84,38 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          remote_protected=0
+          verify_base="$STAGING_URL"
+          runtime_pid=''
+          cleanup() {
+            if [[ -n "$runtime_pid" ]]; then kill "$runtime_pid" 2>/dev/null || true; fi
+          }
+          trap cleanup EXIT
+          access_code=$(curl -sS -D /tmp/life-access.headers -o /tmp/life-access.body -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/health" || true)
+          if [[ "$access_code" == '302' ]] && grep -iq '^Www-Authenticate: Cloudflare-Access' /tmp/life-access.headers; then
+            remote_protected=1
+            echo 'Life AI staging is protected by Cloudflare Access. Keeping Access enabled and validating the exact staging configuration locally.'
+            npx --yes wrangler@${WRANGLER_VERSION} dev --config wrangler.life.staging.toml --local --port 8798 >/tmp/life-local.log 2>&1 &
+            runtime_pid=$!
+            verify_base='http://127.0.0.1:8798'
+            ready=0
+            for attempt in $(seq 1 30); do
+              if curl -sSf --max-time 5 "$verify_base/health" >/dev/null 2>&1; then ready=1; break; fi
+              if ! kill -0 "$runtime_pid" 2>/dev/null; then cat /tmp/life-local.log; exit 1; fi
+              sleep 2
+            done
+            if [[ "$ready" != '1' ]]; then cat /tmp/life-local.log; exit 1; fi
+          fi
           for attempt in $(seq 1 18); do
-            root=$(curl -L -sS -D /tmp/life-stage-h -o /tmp/life-stage.html -w '%{http_code}' --max-time 15 "$STAGING_URL/" || true)
-            health=$(curl -sS -o /tmp/life-stage-health.json -w '%{http_code}' --max-time 15 "$STAGING_URL/health" || true)
-            config=$(curl -sS -o /tmp/life-stage-config.js -w '%{http_code}' --max-time 15 "$STAGING_URL/config.js" || true)
-            today=$(curl -sS -o /tmp/life-stage-today.json -w '%{http_code}' --max-time 15 "$STAGING_URL/api/today" || true)
-            guest=$(curl -sS -o /tmp/life-stage-guest.json -w '%{http_code}' --max-time 15 -H 'content-type: application/json' -d '{"message":"요즘 장사가 힘들어요","topic":"money"}' "$STAGING_URL/api/reflect" || true)
-            member=$(curl -sS -o /tmp/life-stage-member.json -w '%{http_code}' --max-time 15 -H 'authorization: Bearer staging-contract' -H 'content-type: application/json' -d '{"message":"요즘 장사가 힘들어요","topic":"money"}' "$STAGING_URL/api/reflect" || true)
+            root=$(curl -L -sS -D /tmp/life-stage-h -o /tmp/life-stage.html -w '%{http_code}' --max-time 15 "$verify_base/" || true)
+            health=$(curl -sS -o /tmp/life-stage-health.json -w '%{http_code}' --max-time 15 "$verify_base/health" || true)
+            config=$(curl -sS -o /tmp/life-stage-config.js -w '%{http_code}' --max-time 15 "$verify_base/config.js" || true)
+            today=$(curl -sS -o /tmp/life-stage-today.json -w '%{http_code}' --max-time 15 "$verify_base/api/today" || true)
+            guest=$(curl -sS -o /tmp/life-stage-guest.json -w '%{http_code}' --max-time 15 -H 'content-type: application/json' -d '{"message":"요즘 장사가 힘들어요","topic":"money"}' "$verify_base/api/reflect" || true)
+            member=$(curl -sS -o /tmp/life-stage-member.json -w '%{http_code}' --max-time 15 -H 'authorization: Bearer staging-contract' -H 'content-type: application/json' -d '{"message":"요즘 장사가 힘들어요","topic":"money"}' "$verify_base/api/reflect" || true)
             topics_ok=true
             for path in relationship money work family heart future faith meaning; do
-              code=$(curl -L -sS -o "/tmp/life-stage-${path}.html" -w '%{http_code}' --max-time 15 "$STAGING_URL/$path" || true)
+              code=$(curl -L -sS -o "/tmp/life-stage-${path}.html" -w '%{http_code}' --max-time 15 "$verify_base/$path" || true)
               [[ "$code" == '200' ]] || topics_ok=false
               grep -Fq '오늘의 질문' "/tmp/life-stage-${path}.html" || topics_ok=false
             done

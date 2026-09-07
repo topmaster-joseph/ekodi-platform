@@ -35,7 +35,7 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
-  WRANGLER_VERSION: '4.119.0'
+  WRANGLER_VERSION: '4.129.0'
 
 jobs:
   validate:
@@ -87,15 +87,37 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          remote_protected=0
+          verify_base="$STAGING_URL"
+          runtime_pid=''
+          cleanup() {
+            if [[ -n "$runtime_pid" ]]; then kill "$runtime_pid" 2>/dev/null || true; fi
+          }
+          trap cleanup EXIT
+          access_code=$(curl -sS -D /tmp/bible-access.headers -o /tmp/bible-access.body -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/health" || true)
+          if [[ "$access_code" == '302' ]] && grep -iq '^Www-Authenticate: Cloudflare-Access' /tmp/bible-access.headers; then
+            remote_protected=1
+            echo 'Bible Conversation staging is protected by Cloudflare Access. Keeping Access enabled and validating the exact staging configuration locally.'
+            npx --yes wrangler@${WRANGLER_VERSION} dev --config wrangler.bible.staging.toml --local --port 8796 >/tmp/bible-local.log 2>&1 &
+            runtime_pid=$!
+            verify_base='http://127.0.0.1:8796'
+            ready=0
+            for attempt in $(seq 1 30); do
+              if curl -sSf --max-time 5 "$verify_base/health" >/dev/null 2>&1; then ready=1; break; fi
+              if ! kill -0 "$runtime_pid" 2>/dev/null; then cat /tmp/bible-local.log; exit 1; fi
+              sleep 2
+            done
+            if [[ "$ready" != '1' ]]; then cat /tmp/bible-local.log; exit 1; fi
+          fi
           for attempt in $(seq 1 18); do
-            root=$(curl -L -sS -D /tmp/bible-stage-h -o /tmp/bible-stage.html -w '%{http_code}' --max-time 15 "$STAGING_URL/" || true)
-            today=$(curl -L -sS -o /tmp/bible-stage-today.html -w '%{http_code}' --max-time 15 "$STAGING_URL/today" || true)
-            conversation=$(curl -L -sS -o /tmp/bible-stage-conversation.html -w '%{http_code}' --max-time 15 "$STAGING_URL/conversation" || true)
-            journey=$(curl -L -sS -o /tmp/bible-stage-journey.html -w '%{http_code}' --max-time 15 "$STAGING_URL/journey" || true)
-            together=$(curl -L -sS -o /tmp/bible-stage-together.html -w '%{http_code}' --max-time 15 "$STAGING_URL/together" || true)
-            health=$(curl -sS -o /tmp/bible-stage-health.json -w '%{http_code}' --max-time 15 "$STAGING_URL/health" || true)
-            config=$(curl -sS -o /tmp/bible-stage-config.js -w '%{http_code}' --max-time 15 "$STAGING_URL/config.js" || true)
-            assist=$(curl -sS -o /tmp/bible-stage-assist.json -w '%{http_code}' --max-time 15 -H 'content-type: application/json' -d '{"message":"앞으로가 불안해요","topic":"믿음"}' "$STAGING_URL/api/assist" || true)
+            root=$(curl -L -sS -D /tmp/bible-stage-h -o /tmp/bible-stage.html -w '%{http_code}' --max-time 15 "$verify_base/" || true)
+            today=$(curl -L -sS -o /tmp/bible-stage-today.html -w '%{http_code}' --max-time 15 "$verify_base/today" || true)
+            conversation=$(curl -L -sS -o /tmp/bible-stage-conversation.html -w '%{http_code}' --max-time 15 "$verify_base/conversation" || true)
+            journey=$(curl -L -sS -o /tmp/bible-stage-journey.html -w '%{http_code}' --max-time 15 "$verify_base/journey" || true)
+            together=$(curl -L -sS -o /tmp/bible-stage-together.html -w '%{http_code}' --max-time 15 "$verify_base/together" || true)
+            health=$(curl -sS -o /tmp/bible-stage-health.json -w '%{http_code}' --max-time 15 "$verify_base/health" || true)
+            config=$(curl -sS -o /tmp/bible-stage-config.js -w '%{http_code}' --max-time 15 "$verify_base/config.js" || true)
+            assist=$(curl -sS -o /tmp/bible-stage-assist.json -w '%{http_code}' --max-time 15 -H 'content-type: application/json' -d '{"message":"앞으로가 불안해요","topic":"믿음"}' "$verify_base/api/assist" || true)
             if [[ "$root" == '200' && "$today" == '200' && "$conversation" == '200' && "$journey" == '200' && "$together" == '200' && "$health" == '200' && "$config" == '200' && "$assist" == '401' ]] \
               && grep -Fq '에코디 말씀대화' /tmp/bible-stage.html \
               && grep -Fq '돌아보기' /tmp/bible-stage-journey.html \

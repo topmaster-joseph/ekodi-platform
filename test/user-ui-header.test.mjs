@@ -22,6 +22,7 @@ test('user UI header/footer/language are shared user-surface-only modules',async
     read('config/user-ui-shell.json')
   ]);
 
+  assert.match(header,/const VERSION=3/);
   assert.match(header,/USER_SURFACES=new Set\(\['public','workspace'\]\)/);
   assert.match(header,/DISABLED_MODES=new Set\(\['off','hidden','immersive'\]\)/);
   assert.match(header,/position:fixed!important/);
@@ -32,6 +33,10 @@ test('user UI header/footer/language are shared user-surface-only modules',async
   assert.match(header,/window\.EKODIUserUIHeader/);
   assert.match(header,/ekodi:shell-theme/);
   assert.match(header,/data-ekodi-header-title/);
+  assert.match(header,/findContentCanvas/);
+  assert.match(header,/ResizeObserver\(updateContentFrame\)/);
+  assert.match(header,/--ekodi-user-content-inline-size/);
+  assert.match(header,/main-aligned-v1/);
   assert.doesNotMatch(header,/body\s*\{[^}]*text-align\s*:\s*center/is);
 
   assert.equal(EKODI_USER_FOOTER.version,3);
@@ -114,6 +119,9 @@ test('user UI header/footer/language are shared user-surface-only modules',async
   assert.match(sharedCss,/justify-content:\s*center/);
   assert.match(sharedCss,/\.ekodi-user-language\s*\{/);
   assert.match(sharedCss,/--ekodi-user-header-inline-gutter/);
+  assert.match(sharedCss,/--ekodi-user-content-inline-size/);
+  assert.match(sharedCss,/--ekodi-user-content-left/);
+  assert.match(sharedCss,/Main-aligned Chrome Contract/);
   assert.match(sharedCss,/Selective geometry principle/);
   assert.match(sharedCss,/consumer-commerce/);
   assert.match(sharedCss,/body > \[data-ekodi-user-footer\] ~ \[data-ekodi-user-footer\]/);
@@ -130,7 +138,7 @@ test('user UI header/footer/language are shared user-surface-only modules',async
   assert.doesNotMatch(sharedCss,/\.ekodi-user-ui-footer\s*\{[^}]*rgba\(250,\s*250,\s*247/is);
   assert.doesNotMatch(sharedCss,/\.ekodi-user-ui-footer\s*\{[^}]*rgba\(16,\s*21,\s*18/is);
 
-  assert.match(injector,/SHELL_USER_UI_STYLE=`\$\{SHELL_ORIGIN\}\/user-ui-shell\.css`/);
+  assert.match(injector,/SHELL_USER_UI_STYLE=`\$\{SHELL_ORIGIN\}\/user-ui-shell\.css\?v=\$\{EKODI_SERVICE_MANIFEST\.shellVersion\}`/);
   assert.match(injector,/renderEkodiUserFooter/);
   assert.match(injector,/data-ekodi-user-ui-style/);
   assert.doesNotMatch(injector,/213-13-01959/);
@@ -142,6 +150,10 @@ test('user UI header/footer/language are shared user-surface-only modules',async
   assert.equal(parsedPolicy.footer.alignment,'center');
   assert.equal(parsedPolicy.footer.dedupe,'exactly-one-shared-footer');
   assert.equal(parsedPolicy.header.alignment,'centered-canvas');
+  assert.equal(parsedPolicy.principles.mainAlignedChrome,true);
+  assert.equal(parsedPolicy.header.contentWidth,'match-adopted-main-canvas');
+  assert.equal(parsedPolicy.footer.contentWidth,'match-adopted-main-canvas');
+  assert.equal(parsedPolicy.contentFrame.alignment,'header-main-footer-content-edges-match');
   assert.equal(parsedPolicy.principles.selectiveRoundedInteraction,true);
   assert.equal(parsedPolicy.experienceProfiles.source,'config/user-ui-experience-profiles.js');
   assert.equal(parsedPolicy.experienceProfiles.strategy,'service-opt-in');
