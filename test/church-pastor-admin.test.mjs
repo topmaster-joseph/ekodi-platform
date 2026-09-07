@@ -6,19 +6,21 @@ import { churchPastorAdminPage, churchPastorAdminScript, isChurchPastorAdminPath
 test('pastor admin route is scoped to ekodi-church', () => {
   assert.equal(isChurchPastorAdminPath('/ekodi-church/admin'), true);
   assert.equal(isChurchPastorAdminPath('/ekodi-church/admin/care'), true);
+  assert.equal(isChurchPastorAdminPath('/ekodi-church/admin/reports'), true);
   assert.equal(isChurchPastorAdminPath('/ekodi-church/admin/access/extra'), false);
   assert.equal(isChurchPastorAdminPath('/ekodibiz/admin'), false);
   assert.equal(isChurchPastorAdminPath('/other-church/admin'), false);
 });
 
 test('one pastor admin page projects navigation from the church-local role', () => {
-  assert.deepEqual(churchPastorSectionsForRole('senior_pastor'), ['overview','people','worship','care','calendar','ministry','ai','access']);
-  assert.deepEqual(churchPastorSectionsForRole('pastor'), ['overview','people','worship','care','calendar','ministry','ai']);
+  assert.deepEqual(churchPastorSectionsForRole('senior_pastor'), ['overview','people','worship','care','calendar','ministry','reports','ai','access']);
+  assert.deepEqual(churchPastorSectionsForRole('pastor'), ['overview','people','worship','care','calendar','ministry','reports','ai']);
   assert.deepEqual(churchPastorSectionsForRole('care_staff'), ['overview','people','care','calendar','ministry','ai']);
-  assert.deepEqual(churchPastorSectionsForRole('staff'), ['overview','people','worship','calendar','ministry']);
+  assert.deepEqual(churchPastorSectionsForRole('staff'), ['overview','people','worship','calendar','ministry','reports']);
   assert.deepEqual(churchPastorSectionsForRole('viewer'), ['overview','worship','calendar']);
   assert.equal(churchPastorCanAccess('viewer','care'), false);
   assert.equal(churchPastorCanAccess('pastor','access'), false);
+  assert.equal(churchPastorCanAccess('care_staff','reports'), false);
 });
 
 test('pastor admin page is private-by-default', async () => {

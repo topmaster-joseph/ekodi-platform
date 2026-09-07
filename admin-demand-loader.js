@@ -64,7 +64,6 @@
       insert: 'after-services',
     },
     clients: { label:'고객 사이트', icon:'C', styles:['client-access.css'], scripts:['client-access.js'], real:'[data-section="clients"]', hashes:['#clients'] },
-    community: { label:'커뮤니티', icon:'◎', styles:['community-reports-admin.css'], scripts:['community-reports-admin.js'], real:'[data-section="community"]', hashes:['#community'] },
     'cheonggye-members': { label:'청계면상인회 정회원', icon:'名', styles:['cheonggye-members-admin.css'], scripts:['cheonggye-members-admin.js'], real:'[data-section="cheonggye-members"]', hashes:['#cheonggye-members'], insert:'after-workspace' },
     books: { label:'출판 · 도서', icon:'B', styles:['books-admin.css'], scripts:['books-admin.js'], secondaryStyles:['books-finance-admin.css'], secondaryScripts:['books-finance-admin.js'], real:'[data-section="books"]', hashes:['#books'] },
     social: { label:'소셜', icon:'S', styles:['social-admin.css'], scripts:['social-admin.js'], real:'[data-section="social"]', hashes:['#social'] },
