@@ -19,11 +19,9 @@ function forbidText(file, needles) {
   for (const needle of needles) if (text.includes(needle)) fail(file, `unsafe production bypass detected: ${needle}`);
   return text;
 }
-function forbidDirectWorkerDeploy(file, configFile) {
+function forbidPattern(file, patterns) {
   const text = read(file);
-  const escaped = configFile.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const pattern = new RegExp(`\\bwrangler(?:@[^\\s]+)?\\s+deploy\\s+--config(?:=|\\s+)${escaped}\\b`);
-  if (pattern.test(text)) fail(file, `unsafe direct Worker deploy detected for ${configFile}`);
+  for (const pattern of patterns) if (pattern.test(text)) fail(file, `unsafe production bypass detected: ${pattern}`);
   return text;
 }
 
@@ -112,7 +110,7 @@ requireText('.github/workflows/deploy-control-api.yml', [
   'validate-additive-migrations.mjs',
 ]);
 forbidText('.github/workflows/deploy-control-api.yml', ['npm run deploy:api']);
-forbidDirectWorkerDeploy('.github/workflows/deploy-control-api.yml', 'wrangler.api.toml');
+forbidPattern('.github/workflows/deploy-control-api.yml', [/wrangler(?:@[^\s]+)?\s+deploy\s+--config\s+wrangler\.api\.toml/]);
 requireText('.github/workflows/deploy-finance.yml', [
   'environment: development',
   'ekodi-finance-api-staging',

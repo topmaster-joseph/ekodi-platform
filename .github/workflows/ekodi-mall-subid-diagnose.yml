@@ -108,3 +108,5 @@ jobs:
           console.log(JSON.stringify(proof));
           NODE
 
+
+# rerun after production Cron trigger restore 2026-09-08 01:30 KST
