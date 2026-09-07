@@ -1,0 +1,134 @@
+name: Deploy EKODI Docs AI
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "my/docs/**"
+      - "supabase/functions/document-ai-api/**"
+      - "supabase/migrations/*document_workspace_ai*.sql"
+      - "test/my-docs-ai.test.mjs"
+      - ".github/workflows/deploy-docs-ai.yml"
+  push:
+    branches: [main]
+    paths:
+      - "my/docs/**"
+      - "supabase/functions/document-ai-api/**"
+      - "supabase/migrations/*document_workspace_ai*.sql"
+      - "test/my-docs-ai.test.mjs"
+      - ".github/workflows/deploy-docs-ai.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-docs-ai-${{ github.event_name == 'pull_request' && format('validate-pr-{0}', github.event.pull_request.number) || 'production' }}
+  cancel-in-progress: false
+
+env:
+  SUPABASE_CLI_VERSION: "2.116.0"
+  PROJECT_REF: renzehysxirjilvdxacv
+  DOCUMENT_MIGRATION: supabase/migrations/20260907113000_document_workspace_ai.sql
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: Validate document contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check my/docs/docs.js
+          node --test test/my-docs-ai.test.mjs
+          test -f "$DOCUMENT_MIGRATION"
+          grep -Fq 'alter table public.document_files enable row level security' "$DOCUMENT_MIGRATION"
+          grep -Fq "workspace_key = ('personal:' || auth.uid()::text)" "$DOCUMENT_MIGRATION"
+          grep -Fq 'revoke insert, update, delete on public.document_ai_usage from anon, authenticated' "$DOCUMENT_MIGRATION"
+          grep -Fq 'DAILY_LIMIT' supabase/functions/document-ai-api/index.ts
+          grep -Fq 'GEMINI_API_KEY' supabase/functions/document-ai-api/index.ts
+          grep -Fq 'OPENAI_API_KEY' supabase/functions/document-ai-api/index.ts
+          grep -Fq 'store:false' supabase/functions/document-ai-api/index.ts
+          ! grep -Eiq 'drop[[:space:]]+table|truncate[[:space:]]+table' "$DOCUMENT_MIGRATION"
+
+  production:
+    if: github.event_name != 'pull_request'
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+    env:
+      TOKEN_A: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      TOKEN_B: ${{ secrets.SUPABASE_TOKEN }}
+      TOKEN_C: ${{ secrets.SUPABASE_PAT }}
+      TOKEN_D: ${{ secrets.SUPABASE_MANAGEMENT_TOKEN }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: Select Supabase deployment credential
+        shell: bash
+        run: |
+          set -euo pipefail
+          token="${TOKEN_A:-}"
+          [ -n "$token" ] || token="${TOKEN_B:-}"
+          [ -n "$token" ] || token="${TOKEN_C:-}"
+          [ -n "$token" ] || token="${TOKEN_D:-}"
+          if [ -z "$token" ]; then
+            echo 'No Supabase deployment credential is configured.'
+            exit 2
+          fi
+          echo "::add-mask::$token"
+          echo "SUPABASE_ACCESS_TOKEN=$token" >> "$GITHUB_ENV"
+      - name: Apply idempotent private document schema through Management API
+        shell: bash
+        run: |
+          set -euo pipefail
+          jq -Rs '{query:.,read_only:false}' "$DOCUMENT_MIGRATION" > /tmp/docs-migration.json
+          code=$(curl -sS -o /tmp/docs-migration-result.json -w '%{http_code}' \
+            -X POST "https://api.supabase.com/v1/projects/$PROJECT_REF/database/query" \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            -H 'Content-Type: application/json' \
+            --data-binary @/tmp/docs-migration.json)
+          if [[ "$code" != '201' ]]; then
+            echo "Document schema migration failed with HTTP $code."
+            cat /tmp/docs-migration-result.json
+            exit 1
+          fi
+          echo 'Document schema migration applied.'
+      - name: Deploy document AI function
+        run: npx --yes supabase@${SUPABASE_CLI_VERSION} functions deploy document-ai-api --project-ref "$PROJECT_REF"
+      - name: Verify schema and production function boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          jq -n '{query:"select to_regclass('"'"'public.document_files'"'"')::text as files, to_regclass('"'"'public.document_versions'"'"')::text as versions, to_regclass('"'"'public.document_ai_usage'"'"')::text as usage",parameters:[]}' > /tmp/docs-schema-query.json
+          schema_code=$(curl -sS -o /tmp/docs-schema.json -w '%{http_code}' \
+            -X POST "https://api.supabase.com/v1/projects/$PROJECT_REF/database/query/read-only" \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            -H 'Content-Type: application/json' \
+            --data-binary @/tmp/docs-schema-query.json)
+          [[ "$schema_code" == '201' ]]
+          grep -Fq 'document_files' /tmp/docs-schema.json
+          grep -Fq 'document_versions' /tmp/docs-schema.json
+          grep -Fq 'document_ai_usage' /tmp/docs-schema.json
+
+          endpoint="https://$PROJECT_REF.supabase.co/functions/v1/document-ai-api"
+          options_code=$(curl -sS -D /tmp/docs-ai.headers -o /dev/null -w '%{http_code}' -X OPTIONS "$endpoint" \
+            -H 'Origin: https://my.ekodi.kr' \
+            -H 'Access-Control-Request-Method: POST' \
+            -H 'Access-Control-Request-Headers: authorization,apikey,content-type' || true)
+          [[ "$options_code" =~ ^(200|204)$ ]]
+          grep -Eiq '^access-control-allow-origin:[[:space:]]*https://my\.ekodi\.kr' /tmp/docs-ai.headers
+
+          unauth_code=$(curl -sS -o /tmp/docs-ai-unauth.json -w '%{http_code}' -X POST "$endpoint" \
+            -H 'Content-Type: application/json' \
+            --data '{"operation":"proofread","text":"test"}' || true)
+          [[ "$unauth_code" == '401' ]]
+          grep -Fq 'authentication_required' /tmp/docs-ai-unauth.json
+          echo 'EKODI Docs AI schema and authenticated function boundary verified.'

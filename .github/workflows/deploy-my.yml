@@ -29,6 +29,9 @@ on:
       - 'test/my-life-journey.test.mjs'
       - 'test/my-life-communication.test.mjs'
       - 'test/my-progressive-personalization.test.mjs'
+      - 'test/my-docs-ai.test.mjs'
+      - 'supabase/functions/document-ai-api/**'
+      - 'supabase/migrations/*document_workspace_ai*.sql'
       - 'auth-site/client-auth.js'
       - 'auth-site/auth-router.js'
       - 'supabase/migrations/*creator_*'
@@ -62,6 +65,9 @@ on:
       - 'test/my-life-journey.test.mjs'
       - 'test/my-life-communication.test.mjs'
       - 'test/my-progressive-personalization.test.mjs'
+      - 'test/my-docs-ai.test.mjs'
+      - 'supabase/functions/document-ai-api/**'
+      - 'supabase/migrations/*document_workspace_ai*.sql'
       - 'auth-site/client-auth.js'
       - 'auth-site/auth-router.js'
       - 'supabase/migrations/*creator_*'
@@ -95,6 +101,7 @@ jobs:
           set -euo pipefail
           node --check my-worker.js
           node --check my/app.js
+          node --check my/docs/docs.js
           node --check my/approval-brief.js
           node --check my/approvals/app.js
           node --check my/progressive-personalization.js
@@ -114,7 +121,7 @@ jobs:
           node --check scripts/validate-universal-membership.mjs
           node scripts/validate-my.mjs
           node scripts/validate-universal-membership.mjs
-          node --test test/universal-membership-contract.test.mjs test/my-ekodi-contract.test.mjs test/my-private-workspace-routing.test.mjs test/my-manifest-services.test.mjs test/my-life-journey.test.mjs test/my-life-communication.test.mjs test/my-progressive-personalization.test.mjs test/my-intent-os.test.mjs test/my-intent-execution-bridge.test.mjs
+          node --test test/universal-membership-contract.test.mjs test/my-ekodi-contract.test.mjs test/my-private-workspace-routing.test.mjs test/my-manifest-services.test.mjs test/my-life-journey.test.mjs test/my-life-communication.test.mjs test/my-progressive-personalization.test.mjs test/my-docs-ai.test.mjs test/my-intent-os.test.mjs test/my-intent-execution-bridge.test.mjs
           test -f deploy/manifests/my.worker.json
 
   staging:
