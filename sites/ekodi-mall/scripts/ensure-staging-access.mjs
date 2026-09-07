@@ -55,6 +55,10 @@ const specs = [
     name: 'EKODI Mall staging public API bypass',
     uri: `${url.hostname}/api/public/*`,
   },
+  {
+    name: 'EKODI Mall staging transaction rehearsal bypass',
+    uri: `${url.hostname}/api/internal/rehearsal/transaction`,
+  },
 ];
 
 const listed = await cf(`/accounts/${accountId}/access/apps?per_page=100`);

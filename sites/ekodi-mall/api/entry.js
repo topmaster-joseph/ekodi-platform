@@ -1,4 +1,5 @@
 import core from './worker.js';
+import { handleTransactionRehearsal, transactionRehearsalEnabled } from './transaction-rehearsal.js';
 import { handleSourcingRequest, sourcingSchemaReady } from './sourcing.js';
 import { handleSourcingPlanRequest } from './sourcing-plan.js';
 import { handleFulfillmentRequest, fulfillmentSchemaReady } from './fulfillment.js';
@@ -156,6 +157,7 @@ export default {
         domemaeLookupEnabled:String(env.DOMEMAE_LOOKUP_ENABLED || '').toLowerCase() === 'true', domemaeOrderEnabled:false,
         attributionWindowDays:ATTRIBUTION_WINDOW_DAYS,
         operationsReviewConfigured:Boolean(env.MALL_OPERATIONS_TOKEN || env.MALL_OPERATIONS_EMAILS), operationsEmailAllowlistConfigured:Boolean(env.MALL_OPERATIONS_EMAILS),
+        transactionRehearsalEnabled:transactionRehearsalEnabled(env),
         buyerPiiReleaseEnabled:String(env.BUYER_PII_RELEASE_ENABLED || '').toLowerCase() === 'true',
         supplierForwardEnabled:String(env.SUPPLIER_FORWARD_ENABLED || '').toLowerCase() === 'true', supplierPayoutExecutionEnabled:false, refundExecutionEnabled:false
       }, ok ? 200 : 503, origin, env);
@@ -172,6 +174,9 @@ export default {
       if (!body) return reply({ error:'Invalid JSON' },400,origin,env);
       const result=await firstTouch(env,body); return reply(result.body,result.status,origin,env);
     }
+
+    const rehearsal = await handleTransactionRehearsal(request, env);
+    if (rehearsal) return reply(rehearsal.body, rehearsal.status, origin, env);
 
     const storefront = await handleStorefrontRequest(request, env);
     if (storefront) return reply(storefront.body, storefront.status, origin, env);
