@@ -152,20 +152,20 @@ async function verifyPublicSiteControls(tab, alreadyActive, started) {
   stage('public-site-controls-ready');
   if (!alreadyActive) await clickFast(tab);
   await page.waitForFunction(() => typeof window.EKODIPublicSiteControls?.load === 'function', null, { timeout: 10_000 });
+
   stage('public-site-controls-api');
-  const responsePromise = page.waitForResponse(response => {
-    try {
-      const url = new URL(response.url());
-      return response.request().method() === 'GET' && url.origin === 'https://api.ekodi.kr' && url.pathname === '/api/control/public-sites';
-    } catch { return false; }
-  }, { timeout: 10_000 });
-  await page.evaluate(() => window.EKODIPublicSiteControls.load());
-  const response = await responsePromise;
-  if (response.status() !== 200) throw new Error(`public-site-controls: API returned HTTP ${response.status()}`);
-  const headers = response.headers();
-  if (headers['access-control-allow-origin'] !== 'https://admin.ekodi.kr') throw new Error('public-site-controls: production CORS origin mismatch');
+  const response = await fetch('https://api.ekodi.kr/api/control/public-sites', {
+    headers: { accept: 'application/json', authorization: `Bearer ${token}`, origin: 'https://admin.ekodi.kr' },
+    signal: AbortSignal.timeout(10_000),
+  });
+  if (response.status !== 200) throw new Error(`public-site-controls: API returned HTTP ${response.status}`);
+  const corsOrigin = response.headers.get('access-control-allow-origin') || '';
+  if (corsOrigin !== 'https://admin.ekodi.kr') throw new Error(`public-site-controls: production CORS origin mismatch: ${corsOrigin || 'missing'}`);
+  const payload = await response.json().catch(() => ({}));
+  if (!Array.isArray(payload.sites)) throw new Error('public-site-controls: API payload missing sites array');
 
   stage('public-site-controls-render');
+  await page.evaluate(() => window.EKODIPublicSiteControls.load());
   const form = page.locator('form[data-public-site-id="cgma"]');
   await form.waitFor({ state: 'visible', timeout: 8_000 });
   const state = await visiblePanelState();
@@ -182,7 +182,7 @@ async function verifyPublicSiteControls(tab, alreadyActive, started) {
   if (!['button', 'auto'].includes(redirectMode)) throw new Error(`public-site-controls: invalid redirectMode ${redirectMode}`);
   if (!badge) throw new Error('public-site-controls: empty status badge');
   if (!message.includes('상태를 확인했습니다')) throw new Error(`public-site-controls: load confirmation missing: ${message}`);
-  results.push({ id: menuId, group, ok: true, durationMs: Date.now() - started, ...state, apiStatus: response.status(), corsOrigin: headers['access-control-allow-origin'], domain: 'cgma.or.kr', publicStatus, maintenanceDisplayType, redirectMode, badge });
+  results.push({ id: menuId, group, ok: true, durationMs: Date.now() - started, ...state, apiStatus: response.status, corsOrigin, domain: 'cgma.or.kr', publicStatus, maintenanceDisplayType, redirectMode, badge });
 }
 
 async function verifyNormal(tab, alreadyActive, started) {
