@@ -1,0 +1,356 @@
+{
+  "id": "KRV1961",
+  "title": "성경전서 개역한글판",
+  "language": "ko",
+  "mode": "embedded-verbatim",
+  "attribution": "대한성서공회 · 성경전서 개역한글판(1961)",
+  "rights": {
+    "propertyRights": "expired",
+    "moralRights": [
+      "attribution",
+      "integrity"
+    ],
+    "officialNotice": "https://bskorea.or.kr/bbs/board.php?bo_table=copyright_faq&wr_id=5"
+  },
+  "source": {
+    "repository": "https://github.com/bluesaurel/Korean-Bible-1961-KRV",
+    "commit": "65cdce887b141581b45097163b4b224de4a332fa"
+  },
+  "counts": {
+    "books": 66,
+    "chapters": 1189,
+    "verses": 31102
+  },
+  "files": [
+    {
+      "bookId": "GEN",
+      "sha256": "561ff59e2371b84fdba5d6c11ec763b3d62757cd051d7a3f2e37613f950c5f30",
+      "bytes": 243481
+    },
+    {
+      "bookId": "EXO",
+      "sha256": "e97b95f119fd57b10f6259d496dd56ea07c5b7fd5060eb5fe6e9c54fb8b163aa",
+      "bytes": 192788
+    },
+    {
+      "bookId": "LEV",
+      "sha256": "f9e1bb8956c268873265a756a9b9abbb55d1f19b35b803f6b4fbae4c31617b83",
+      "bytes": 135660
+    },
+    {
+      "bookId": "NUM",
+      "sha256": "0fc1db2a6fa6c94baa0deb035f9bf87e02bccd4ac4364478980b82e4957a43d3",
+      "bytes": 198378
+    },
+    {
+      "bookId": "DEU",
+      "sha256": "54be9099e2230ddbe24cc156979f8330d9596dfad09f68a396fcdf2d8c87e89c",
+      "bytes": 177196
+    },
+    {
+      "bookId": "JOS",
+      "sha256": "4ec6d77465c8e851ab476374c22f629ed47c48afe33f5ac51f09fe271eec8e45",
+      "bytes": 116938
+    },
+    {
+      "bookId": "JDG",
+      "sha256": "4c49b12f3b069350f6355efe32821b27ccaf560e60a09a76a17b03a9cffc1b74",
+      "bytes": 120310
+    },
+    {
+      "bookId": "RUT",
+      "sha256": "1328b70f299d53ac3ab95cea5ed7648af3be91d5490ebfcdb95dc4336ab9873a",
+      "bytes": 16626
+    },
+    {
+      "bookId": "1SA",
+      "sha256": "60efc743cce1969c46d00c668e97500308a06971d301d6a53aaccd6d3d601142",
+      "bytes": 159380
+    },
+    {
+      "bookId": "2SA",
+      "sha256": "af85bb317337edea8bfffc3fd19cceb028ad8beed794b17e92ce9c1cc1bae642",
+      "bytes": 131405
+    },
+    {
+      "bookId": "1KI",
+      "sha256": "36b1353abbb11521d4b14e984958ad2be48cdbf9266e309485a70737973e3759",
+      "bytes": 152568
+    },
+    {
+      "bookId": "2KI",
+      "sha256": "94bab82b7f4858a41392f227868ad7588a90c827709996e7540960e754cc4361",
+      "bytes": 141908
+    },
+    {
+      "bookId": "1CH",
+      "sha256": "46ff26acc3deeb57c5bd8045e909c90459d098d7f6e798daa86175c1977b3534",
+      "bytes": 140020
+    },
+    {
+      "bookId": "2CH",
+      "sha256": "f13ac3b0000c1108a80ea70cfe444e630b61348939facee2b2f1bf4a1da25aa4",
+      "bytes": 159876
+    },
+    {
+      "bookId": "EZR",
+      "sha256": "e4b6403369291ea864e0e3153a9898b3fe99126bd5fc2ac454227200ca6423ae",
+      "bytes": 46338
+    },
+    {
+      "bookId": "NEH",
+      "sha256": "fb6965811f133eb6c7c27575628d5c0b138c08e12c4fbfe88935c1af0ead54ff",
+      "bytes": 68513
+    },
+    {
+      "bookId": "EST",
+      "sha256": "8d5a2578bc25d3b9f114092b6c650728fe65a7dce06e3ba838bfae21109a3734",
+      "bytes": 32202
+    },
+    {
+      "bookId": "JOB",
+      "sha256": "5a06a2b43b4d4fbe3f92c6b0d1110f38d237bb7a9d067144022621cc88d76b80",
+      "bytes": 133875
+    },
+    {
+      "bookId": "PSA",
+      "sha256": "228a1bf11615a4bdfd1541884158a5baa03506c5f4e9b6890dd4f5ed6ae46784",
+      "bytes": 318424
+    },
+    {
+      "bookId": "PRO",
+      "sha256": "39ddde3cb62955c93c1685c6d3d66974ed14699a53fde5a7a25912be2786b92d",
+      "bytes": 112334
+    },
+    {
+      "bookId": "ECC",
+      "sha256": "b33ab0c5367559da1316323be56c8c5a2082a30f273bfe23d875a0037525d44f",
+      "bytes": 36250
+    },
+    {
+      "bookId": "SNG",
+      "sha256": "43c31adf511770e9b63f9a84194ac6cc568c2ff3794c68b2ec471386923c5fe6",
+      "bytes": 18433
+    },
+    {
+      "bookId": "ISA",
+      "sha256": "c4567150533aeca1fa3dd9cc67e734bf1c613fc79dbc8702d5d8991b28362d26",
+      "bytes": 246186
+    },
+    {
+      "bookId": "JER",
+      "sha256": "5775a0bc91712b73e9a9592c07af6cb1aea06a38a8eb2b1d485145c0ccb6df9a",
+      "bytes": 274189
+    },
+    {
+      "bookId": "LAM",
+      "sha256": "7f08e1adb4c23e893b2c2d60b366a5a243162920bdc5c250f7fb0030239c8905",
+      "bytes": 23269
+    },
+    {
+      "bookId": "EZK",
+      "sha256": "bfebb577ebba5efb626811e3d34e5dba99e6bef7127ce019a0ddeff3e1623357",
+      "bytes": 236583
+    },
+    {
+      "bookId": "DAN",
+      "sha256": "4228c051aa677a9ec8659a231d96337a8db0a13433ec765caa99a7768671855f",
+      "bytes": 73351
+    },
+    {
+      "bookId": "HOS",
+      "sha256": "b8d1e0866b57e422d5f22ca4897984ddfe2c60d658cf4e89d5c11814289d211d",
+      "bytes": 36387
+    },
+    {
+      "bookId": "JOL",
+      "sha256": "188144b477d93b26735b641ce632327bd01a3ced3fb345c911201cd7a467409a",
+      "bytes": 13398
+    },
+    {
+      "bookId": "AMO",
+      "sha256": "f21e21a37ce3d7d3a06b788fc4e189b561b9abd5601008eaba757a9065e47b42",
+      "bytes": 27761
+    },
+    {
+      "bookId": "OBA",
+      "sha256": "d05a3888484ab69410df5eddde20cf5aec9554a68fd4ad449e37bf69f765af4e",
+      "bytes": 4506
+    },
+    {
+      "bookId": "JON",
+      "sha256": "05a29bad468c95ec80b65a32f37b975c56136b0fa53543ef9a7ae1de9a9a73aa",
+      "bytes": 8955
+    },
+    {
+      "bookId": "MIC",
+      "sha256": "6b8ff7a3e194daa20a157a6bdda9871af8af69467574273257557b04096baa2f",
+      "bytes": 20664
+    },
+    {
+      "bookId": "NAM",
+      "sha256": "ea6daf47f82e871477a292edca46bab63bc201fcddcbbb4e98b8a0edfc1ce248",
+      "bytes": 8723
+    },
+    {
+      "bookId": "HAB",
+      "sha256": "9914ccca830c3c6f9047170ed409b00ca46dbcb1cca2503b73378fbbbbb9fd2a",
+      "bytes": 10304
+    },
+    {
+      "bookId": "ZEP",
+      "sha256": "410c6bf814f1e5b83cea69f8f8831a9af24c843ba9ebe054988b4ef1e2ef705e",
+      "bytes": 10705
+    },
+    {
+      "bookId": "HAG",
+      "sha256": "d2ca05690677d05f539576e7e6eaf28c34c1696fc1c6c6129cdfa1a5a221830c",
+      "bytes": 7550
+    },
+    {
+      "bookId": "ZEC",
+      "sha256": "1aec5c53220d9a462c3d1225ffac585911184916592e5a3896785cdd7738bcc4",
+      "bytes": 39602
+    },
+    {
+      "bookId": "MAL",
+      "sha256": "3fce380476806ca6045ecd8b2482b8e275aa570deb55f24e3365f1a91c69e631",
+      "bytes": 13181
+    },
+    {
+      "bookId": "MAT",
+      "sha256": "f7c2f6be28c3dd06600dd8b7008d66b72b3f3f4b1bce96f229445e5db79e6c63",
+      "bytes": 157920
+    },
+    {
+      "bookId": "MRK",
+      "sha256": "1a8d25161d53fde53e61f4b2e930cd6daaa70bd80a1060f88eab9697be73c88f",
+      "bytes": 99703
+    },
+    {
+      "bookId": "LUK",
+      "sha256": "640d2f737f3c0164cd9e2088daed0f7e1206e93c4463c8f928fde8417ef23ea0",
+      "bytes": 169303
+    },
+    {
+      "bookId": "JHN",
+      "sha256": "d95425eeaafda764434b9483686a557f875bef436aa640a0f2c10be38553e4c7",
+      "bytes": 135800
+    },
+    {
+      "bookId": "ACT",
+      "sha256": "e00907fc3d2d52790c667fa3c43a00428638642410f340bb9e0aa9e9bf216b7f",
+      "bytes": 156413
+    },
+    {
+      "bookId": "ROM",
+      "sha256": "6759896bf929939a1aeb0f02851bde401549cac4a640afce19a1ed074a89935a",
+      "bytes": 70649
+    },
+    {
+      "bookId": "1CO",
+      "sha256": "4db0bda3715eb08878dcf6a6daf406d8000d6ef2815df5f753b6270213152b4b",
+      "bytes": 69096
+    },
+    {
+      "bookId": "2CO",
+      "sha256": "67aa958a50a681349af2a040475bc10b1778eecd11212021138575100293b334",
+      "bytes": 45271
+    },
+    {
+      "bookId": "GAL",
+      "sha256": "13a00144e29cd7565fdb8149ab4d95d5aba26bd7d54d4b1ccf2274f4282c2354",
+      "bytes": 23466
+    },
+    {
+      "bookId": "EPH",
+      "sha256": "15493dcf9d52c422fe72fdc934e8cc99aafc7a20bda713be8f3e9c307b489f2c",
+      "bytes": 22579
+    },
+    {
+      "bookId": "PHP",
+      "sha256": "b5d20a415b14373102362914c8451428998497a68d1d061c4b4c4c803baff7ae",
+      "bytes": 16284
+    },
+    {
+      "bookId": "COL",
+      "sha256": "2663f3b07cb201949a5ef9596a230f05548de62b3ae5d08cb0a51ec546ab5963",
+      "bytes": 15039
+    },
+    {
+      "bookId": "1TH",
+      "sha256": "aa2dbf088e5b3f792554da2f43b5ae7dba9673dd66d96ab26d8f4967c5eeddf5",
+      "bytes": 14140
+    },
+    {
+      "bookId": "2TH",
+      "sha256": "f6ada13fafcb8784e0244ea72ce05e16c384608bac8344818aadde5c214f61a7",
+      "bytes": 7846
+    },
+    {
+      "bookId": "1TI",
+      "sha256": "49b49121e14651c45a3ecce72e9c92f0c49e692ea5e830adbec6bc90c9483a7b",
+      "bytes": 17547
+    },
+    {
+      "bookId": "2TI",
+      "sha256": "adfbf4d36f434b64fd1f66d3569903d694d9000f07d286c05108a40feeec3a07",
+      "bytes": 12984
+    },
+    {
+      "bookId": "TIT",
+      "sha256": "9e868e09e22216afe7d2fdd0973ca14287bf13741a079c955265525d237c7583",
+      "bytes": 7643
+    },
+    {
+      "bookId": "PHM",
+      "sha256": "75af1d96a71c101961037ab35df42a8d7af521fe3e26c4a3b047265fc98e0376",
+      "bytes": 3556
+    },
+    {
+      "bookId": "HEB",
+      "sha256": "a546173ac6b6fff1893bd1c7ed77f80e5a2fae48a4d6fd0570b6fa19efacf5c0",
+      "bytes": 49523
+    },
+    {
+      "bookId": "JAS",
+      "sha256": "492f843297e807467156b8b461ab95d7f7621a966aa6b071973ed80fd68f2f8a",
+      "bytes": 16714
+    },
+    {
+      "bookId": "1PE",
+      "sha256": "8669b8555017500420aedf6080962822f230560f4a5e32216229f99ec2b87501",
+      "bytes": 18161
+    },
+    {
+      "bookId": "2PE",
+      "sha256": "ddbae4060e8a25ef82f7d9f879cf4e3c4ccbd3309a3718147e6e96108ba3256c",
+      "bytes": 10916
+    },
+    {
+      "bookId": "1JN",
+      "sha256": "6f22247b68485daa2b7fbab3a0e6e99cdc22f16cb2a0547e440eb2231bccf7ac",
+      "bytes": 18704
+    },
+    {
+      "bookId": "2JN",
+      "sha256": "8d4597d01d67816274b9bd7a2310f02c88ab2a88e711cdfe477fb47842db7db5",
+      "bytes": 2302
+    },
+    {
+      "bookId": "3JN",
+      "sha256": "50848013eea9df0a3234fd7850691b9bf9e7ae579c9c1d4282af160e882a8cac",
+      "bytes": 2503
+    },
+    {
+      "bookId": "JUD",
+      "sha256": "1bf4f5605723d5671d945249e19585bd7f071f481c2ad6fc28289b19a4d63104",
+      "bytes": 4953
+    },
+    {
+      "bookId": "REV",
+      "sha256": "e095048450121e66f1c4f65d0d981866bf07362b08f0ed0b9e7240ee2daa45bc",
+      "bytes": 72702
+    }
+  ]
+}
