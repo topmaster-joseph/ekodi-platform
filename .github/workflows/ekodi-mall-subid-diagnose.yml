@@ -30,7 +30,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          cutoff=$(date -u +%s)
+          cutoff=$(date -u -d '2026-09-07T16:04:33Z' +%s)
           fresh=false
           for attempt in $(seq 1 32); do
             npx --yes wrangler@${WRANGLER_VERSION} d1 execute ekodi-auth --remote --config wrangler.api.toml --json --command "SELECT sync_date,status,reason,start_date,end_date,orders_rows,cancels_rows,commission_rows,matched_product_rows,unmatched_product_rows,error_text,started_at,finished_at FROM affiliate_partner_report_runs ORDER BY id DESC LIMIT 3" > /tmp/runs.json
@@ -107,3 +107,4 @@ jobs:
           fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,'\n## Bound report proof\n\n`'+JSON.stringify(proof)+'`\n');
           console.log(JSON.stringify(proof));
           NODE
+
