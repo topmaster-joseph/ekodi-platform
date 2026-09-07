@@ -36,7 +36,10 @@
           "creatorPortfolio",
           "person-scoped",
           "private-first",
-          "privateWorkspaceRouting"
+          "privateWorkspaceRouting",
+          "documentWorkspace",
+          "/docs/",
+          "core.documents"
         ],
         "headerExpect": [
           "x-ekodi-service: my-ekodi",
@@ -59,6 +62,23 @@
           "x-robots-tag: noindex, nofollow, noarchive",
           "x-ekodi-private-workspace: v1",
           "x-ekodi-workspace-service: social"
+        ]
+      },
+      {
+        "url": "https://my.ekodi.kr/docs/",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "EKODI Docs AI",
+          "CORE.DOCUMENTS",
+          "/docs/docs.js?v=20260907-docs-ai-1"
+        ],
+        "headerExpect": [
+          "x-ekodi-service: my-ekodi",
+          "cache-control: no-store",
+          "x-robots-tag: noindex, nofollow, noarchive"
         ]
       }
     ]

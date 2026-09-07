@@ -23,6 +23,7 @@ export function validateCapabilityRegistry({ registry = {}, packs = {}, governan
   const allowedAgents = new Set(Object.keys(governance.agents ?? {}));
   const publicServices = new Set((ecosystem.services ?? []).map(service => service.id));
   const capabilityIds = new Set();
+  const fabricCapabilityIds = new Set();
   const packIds = new Set();
   const usedCapabilities = new Set();
   if (registry.name !== 'EKODI Universal Capability Registry') errors.push('Registry name must be canonical.');
@@ -56,6 +57,17 @@ export function validateCapabilityRegistry({ registry = {}, packs = {}, governan
     }
   }
 
+  for (const capability of registry.fabricCapabilities ?? []) {
+    const id = String(capability?.id ?? '');
+    if (!idPattern.test(id)) errors.push(`Fabric capability id "${id}" is invalid.`);
+    if (capabilityIds.has(id) || fabricCapabilityIds.has(id)) errors.push(`Fabric capability id "${id}" is duplicated.`);
+    fabricCapabilityIds.add(id);
+    if (!capability?.name || !capability?.description || !capability?.domain) errors.push(`Fabric capability "${id}" is missing core metadata.`);
+    if (!allowedAgents.has(capability?.ownerAgent)) errors.push(`Fabric capability "${id}" references unknown agent "${capability?.ownerAgent ?? ''}".`);
+    if (!allowedActionTiers.has(capability?.actionTier)) errors.push(`Fabric capability "${id}" references unknown action tier "${capability?.actionTier ?? ''}".`);
+    if (!allowedMaturity.has(capability?.maturity)) errors.push(`Fabric capability "${id}" has unsupported maturity "${capability?.maturity ?? ''}".`);
+  }
+
   for (const pack of packs.packs ?? []) {
     const id = String(pack?.id ?? '');
     if (!idPattern.test(id)) errors.push(`Workspace pack id "${id}" is invalid.`);
@@ -80,6 +92,7 @@ export function validateCapabilityRegistry({ registry = {}, packs = {}, governan
   return {
     errors,
     capabilityCount: capabilityIds.size,
+    fabricCapabilityCount: fabricCapabilityIds.size,
     packCount: packIds.size,
     humanGateCount: (registry.capabilities ?? []).filter(item => item.actionTier === 'human_gate').length,
     reversibleCount: (registry.capabilities ?? []).filter(item => item.actionTier === 'execute_reversible').length,

@@ -8,7 +8,6 @@ import { injectEkodiShell } from './ekodi-shell-injector.js';
 import { messengerUserPage, messengerUiScript } from './messenger-user-page.js';
 import { investUserPage, investUiScript } from './invest-user-page.js';
 import { investSubjectUiScript } from './invest-subject-ui.js';
-import { AI_GATEWAY_HOST, aiGatewayPage, aiGatewayScript, proxyAiGatewayApi } from './ai-gateway-page.js';
 import { MAIL_HOST, mailUserPage, handleMailApi } from './mail-user-page.js';
 import { mailAdminPage } from './mail-admin-page.js';
 import { isWorkspaceAdminPath, workspaceAdminPage, workspaceAdminCss, workspaceAdminScript } from './workspace-admin-page.js';
@@ -33,6 +32,7 @@ const MESSENGER_HOST='messenger.ekodi.kr';
 const INVEST_HOST='invest.ekodi.kr';
 const TAX_HOST='tax.ekodi.kr';
 const EKODIBIZ_PUBLIC_ROUTE=/^\/ekodibiz\/?$/i;
+const EKODIBIZ_API_PREFIX='/ekodibiz/api/';
 const EKODIBIZ_ASSET_PREFIX='/_ekodi/ekodibiz/';
 const EKODIBIZ_ASSETS=new Set(['style.css','site.js']);
 const WORKSPACE_ASSET_PREFIX='/_ekodi/space/';
@@ -124,6 +124,11 @@ async function routeEkodiBizPublic(request,env){
   if(!env?.EKODIBIZ?.fetch)return workspaceServiceUnavailable();const upstream=await env.EKODIBIZ.fetch(workspaceUpstreamRequest(request,'/'));const routed=new Response(upstream.body,upstream);routed.headers.set('x-ekodi-workspace-gateway','ekodibiz-service-binding');
   const rewrite=(element,name)=>{const v=element.getAttribute(name)||'';for(const asset of EKODIBIZ_ASSETS){const rootPath=`/${asset}`;if(v===rootPath||v.startsWith(`${rootPath}?`)){element.setAttribute(name,EKODIBIZ_ASSET_PREFIX+asset+v.slice(rootPath.length));break}}};return new HTMLRewriter().on('link[href]',{element:e=>rewrite(e,'href')}).on('script[src]',{element:e=>rewrite(e,'src')}).transform(routed);
 }
+async function routeEkodiBizApi(request,env){
+  if(!env?.EKODIBIZ?.fetch)return workspaceServiceUnavailable();
+  const url=new URL(request.url);const suffix=url.pathname.slice('/ekodibiz'.length);
+  const upstream=await env.EKODIBIZ.fetch(workspaceUpstreamRequest(request,suffix));const routed=new Response(upstream.body,upstream);routed.headers.set('x-ekodi-workspace-gateway','ekodibiz-service-binding');return routed;
+}
 async function routeDeploymentProbe(request,env){
   if(!env?.SPACE?.fetch)return workspaceServiceUnavailable();
   const upstream=await env.SPACE.fetch(workspaceUpstreamRequest(request,'/'));const routed=new Response(upstream.body,upstream);routed.headers.set('x-ekodi-workspace-gateway','space-service-binding');
@@ -186,6 +191,7 @@ export default {
       }
       if(marketingProjectionForPath(url.pathname)){const projected=await proxyCanonicalMarketing(request);if(projected)return projected;}
       if(['GET','HEAD'].includes(request.method)&&EKODIBIZ_PUBLIC_ROUTE.test(url.pathname))return routeEkodiBizPublic(request,env);
+      if(url.pathname.startsWith(EKODIBIZ_API_PREFIX))return routeEkodiBizApi(request,env);
       if(['GET','HEAD'].includes(request.method)&&url.pathname.startsWith(EKODIBIZ_ASSET_PREFIX))return routeEkodiBizAsset(request,env);
       if(['GET','HEAD'].includes(request.method)&&url.pathname===DEPLOYMENT_PROBE_PATH)return routeDeploymentProbe(request,env);
       if(['GET','HEAD'].includes(request.method)&&isPublicWorkspacePath(url.pathname))return routePublicWorkspace(request,env);
@@ -209,17 +215,10 @@ export default {
       return new Response('Not Found',{status:404,headers:{'cache-control':'no-store','x-content-type-options':'nosniff'}});
     }
 
-    if(host===AI_GATEWAY_HOST){
-      if(request.method==='GET'&&(url.pathname==='/'||url.pathname===''))return aiGatewayPage();
-      if(request.method==='GET'&&url.pathname==='/ai-gateway.js')return aiGatewayScript();
-      const proxied=await proxyAiGatewayApi(request);
-      if(proxied)return proxied;
-    }
-
     if(host===MAIL_HOST){
       const apiResponse=await handleMailApi(request,env);
       if(apiResponse)return apiResponse;
-      if(request.method==='GET'&&url.pathname==='/admin')return mailAdminPage();
+      if(request.method==='GET'&&url.pathname==='/admin')return injectEkodiShell(mailAdminPage(),'mail','admin');
       if(request.method==='GET'&&(url.pathname==='/'||url.pathname===''))return injectEkodiShell(mailUserPage(),'mail');
     }
 

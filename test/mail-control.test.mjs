@@ -60,7 +60,7 @@ test('Mail admin is a central projection of personal and workspace authority', a
   assert.match(page, /내 개인 메일/);
   assert.match(page, /기관 메일 도메인·주소 상세설정/);
   assert.match(page, /refresh token은 이 화면이나 계정 레지스트리에 평문 저장하지 않습니다/);
-  assert.match(router, /url\.pathname==='\/admin'\)return mailAdminPage\(\)/);
+  assert.match(router, /url\.pathname==='\/admin'\)return injectEkodiShell\(mailAdminPage\(\),'mail','admin'\)/);
 });
 
 test('Mail account content rights are separate from workspace administration', async () => {

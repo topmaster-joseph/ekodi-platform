@@ -1,0 +1,113 @@
+import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from "jsr:@supabase/supabase-js@2";
+
+const SUPABASE_URL=Deno.env.get("SUPABASE_URL")!;
+const SUPABASE_ANON_KEY=Deno.env.get("SUPABASE_ANON_KEY")!;
+const SUPABASE_SERVICE_ROLE_KEY=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const GEMINI_API_KEY=Deno.env.get("GEMINI_API_KEY")||"";
+const GEMINI_MODEL=Deno.env.get("GEMINI_MODEL")||"gemini-3.7-flash";
+const OPENAI_API_KEY=Deno.env.get("OPENAI_API_KEY")||"";
+const OPENAI_MODEL=Deno.env.get("OPENAI_MODEL")||"gpt-5.6-luna";
+const DAILY_LIMIT=Math.max(1,Math.min(200,Number(Deno.env.get("DOCUMENT_AI_DAILY_LIMIT")||30)));
+const admin=createClient(SUPABASE_URL,SUPABASE_SERVICE_ROLE_KEY,{auth:{persistSession:false}});
+const ORIGINS=new Set(["https://my.ekodi.kr","https://auth.ekodi.kr"]);
+const OPERATIONS=new Set(["proofread","rewrite","shorten","expand","summarize"]);
+const MAX_INPUT=18000;
+const MAX_INSTRUCTION=4000;
+const RELEASE="20260907-docs-ai-2";
+
+function clean(value:unknown,max=MAX_INPUT){return String(value??"").replace(/\u0000/g,"").slice(0,max).trim()}
+function cors(req:Request){const origin=req.headers.get("Origin")||"";return {
+  "Access-Control-Allow-Origin":ORIGINS.has(origin)?origin:"https://my.ekodi.kr",
+  "Vary":"Origin",
+  "Access-Control-Allow-Headers":"authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods":"POST,OPTIONS",
+  "X-EKODI-Docs-Contract":"ekodi.document-ai.v1",
+  "X-EKODI-Docs-Release":RELEASE,
+}}
+function json(req:Request,body:unknown,status=200){return new Response(JSON.stringify(body),{status,headers:{...cors(req),"content-type":"application/json; charset=utf-8","cache-control":"no-store","x-content-type-options":"nosniff"}})}
+async function userFrom(req:Request){
+  const authorization=req.headers.get("Authorization");if(!authorization)return null;
+  const client=createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{global:{headers:{Authorization:authorization}},auth:{persistSession:false}});
+  const {data,error}=await client.auth.getUser();return error?null:data.user;
+}
+function instruction(operation:string){
+  const roles:Record<string,string>={
+    proofread:"맞춤법, 문법, 어색한 표현, 중복을 고치되 의미와 사실 관계를 바꾸지 마세요.",
+    rewrite:"핵심 의미와 사실을 보존하면서 더 명확하고 자연스럽게 다시 쓰세요.",
+    shorten:"핵심 정보와 필요한 수치·근거를 보존하면서 군더더기를 제거해 더 짧게 쓰세요.",
+    expand:"원문의 의도와 사실을 벗어나 새 사실을 지어내지 말고, 논리 연결과 설명을 보강하세요.",
+    summarize:"핵심 주장, 결정, 수치, 다음 행동을 중심으로 간결하게 요약하세요.",
+  };
+  return [
+    "당신은 EKODI Docs AI의 전문 문서 편집자입니다.",
+    roles[operation]||roles.proofread,
+    "사용자가 제공하지 않은 사실, 출처, 수치, 인용을 만들어내지 마세요.",
+    "원문에 개인정보나 민감정보가 있더라도 불필요하게 확대하거나 추론하지 마세요.",
+    "결과에는 설명, 머리말, 코드펜스 없이 실제로 문서에 붙여 넣을 수정 결과만 반환하세요.",
+    "최종 적용 여부는 사용자가 결정합니다.",
+  ].join(" ");
+}
+function outputText(payload:any){
+  if(typeof payload?.output_text==="string"&&payload.output_text.trim())return payload.output_text.trim();
+  const parts:string[]=[];for(const item of payload?.output||[])for(const content of item?.content||[])if(typeof content?.text==="string")parts.push(content.text);
+  return parts.join("\n").trim();
+}
+async function invokeGemini(system:string,input:string){
+  if(!GEMINI_API_KEY)throw new Error("gemini_not_configured");
+  const response=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(GEMINI_MODEL)}:generateContent`,{
+    method:"POST",headers:{"content-type":"application/json","x-goog-api-key":GEMINI_API_KEY,"x-goog-api-client":"ekodi-docs/1.0"},
+    body:JSON.stringify({systemInstruction:{parts:[{text:system}]},contents:[{role:"user",parts:[{text:input}]}],generationConfig:{temperature:0.2,maxOutputTokens:4096}}),
+    signal:AbortSignal.timeout(60000),
+  });
+  const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data?.error?.message||`gemini_${response.status}`);
+  const text=(data?.candidates?.[0]?.content?.parts||[]).map((part:any)=>part?.text||"").join("\n").trim();if(!text)throw new Error("gemini_empty_response");
+  return {text,provider:"gemini",model:GEMINI_MODEL,inputTokens:Number(data?.usageMetadata?.promptTokenCount||0),outputTokens:Number(data?.usageMetadata?.candidatesTokenCount||0)};
+}
+async function invokeOpenAI(system:string,input:string){
+  if(!OPENAI_API_KEY)throw new Error("openai_not_configured");
+  const response=await fetch("https://api.openai.com/v1/responses",{
+    method:"POST",headers:{"authorization":`Bearer ${OPENAI_API_KEY}`,"content-type":"application/json"},
+    body:JSON.stringify({model:OPENAI_MODEL,store:false,instructions:system,input,max_output_tokens:4096}),
+    signal:AbortSignal.timeout(60000),
+  });
+  const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data?.error?.message||`openai_${response.status}`);
+  const text=outputText(data);if(!text)throw new Error("openai_empty_response");
+  return {text,provider:"openai",model:String(data?.model||OPENAI_MODEL),inputTokens:Number(data?.usage?.input_tokens||0),outputTokens:Number(data?.usage?.output_tokens||0)};
+}
+async function invokeModel(system:string,input:string){
+  const errors:string[]=[];
+  if(GEMINI_API_KEY){try{return await invokeGemini(system,input)}catch(error){errors.push(clean(error instanceof Error?error.message:error,300))}}
+  if(OPENAI_API_KEY){try{return await invokeOpenAI(system,input)}catch(error){errors.push(clean(error instanceof Error?error.message:error,300))}}
+  throw new Error(errors.length?`providers_failed:${errors.join("|")}`:"provider_unavailable");
+}
+async function dailyUsage(userId:string){
+  const since=new Date();since.setUTCHours(0,0,0,0);
+  const {count,error}=await admin.from("document_ai_usage").select("id",{count:"exact",head:true}).eq("owner_user_id",userId).gte("created_at",since.toISOString()).eq("status","completed");
+  if(error)throw error;return Number(count||0);
+}
+async function recordUsage(userId:string,operation:string,result:{provider?:string,model?:string,inputTokens?:number,outputTokens?:number},status:string,errorCode=""){
+  try{await admin.from("document_ai_usage").insert({owner_user_id:userId,operation,provider:result.provider||"",model:result.model||"",input_tokens:Number(result.inputTokens||0),output_tokens:Number(result.outputTokens||0),status,error_code:errorCode})}catch(error){console.error("document usage audit",error)}
+}
+
+Deno.serve(async(req)=>{
+  if(req.method==="OPTIONS")return new Response(null,{headers:cors(req)});
+  if(req.method!=="POST")return json(req,{error:"method_not_allowed"},405);
+  const user=await userFrom(req);if(!user)return json(req,{error:"authentication_required",message:"Google 로그인 후 AI 편집을 사용할 수 있습니다."},401);
+  const body=await req.json().catch(()=>({}));
+  const operation=clean(body?.operation,30).toLowerCase(),text=clean(body?.text),title=clean(body?.title,180),scope=clean(body?.scope,20),extra=clean(body?.instruction,MAX_INSTRUCTION);
+  if(!OPERATIONS.has(operation)||!text)return json(req,{error:"invalid_request"},400);
+  if(String(body?.text||"").length>MAX_INPUT)return json(req,{error:"document_too_large",message:`한 번의 AI 편집은 ${MAX_INPUT.toLocaleString()}자까지 지원합니다. 선택 영역을 줄여 주세요.`},413);
+  let used=0;try{used=await dailyUsage(user.id)}catch(error){console.error("document ai quota",error);return json(req,{error:"usage_check_unavailable"},503)}
+  if(used>=DAILY_LIMIT)return json(req,{error:"daily_limit_reached",message:`오늘의 문서 AI 사용 한도 ${DAILY_LIMIT}회에 도달했습니다. 직접 편집과 저장은 계속 사용할 수 있습니다.`},429);
+  const input=[`문서 제목: ${title||"제목 없음"}`,`편집 범위: ${scope==="selection"?"선택 영역":"전체 문서"}`,extra?`사용자 추가 요청: ${extra}`:"",`원문:\n${text}`].filter(Boolean).join("\n\n");
+  try{
+    const result=await invokeModel(instruction(operation),input);
+    await recordUsage(user.id,operation,result,"completed");
+    return json(req,{ok:true,contract:"ekodi.document-ai.v1",providerMode:"ai",operation,text:result.text,usage:{today:used+1,dailyLimit:DAILY_LIMIT},provider:{id:result.provider,model:result.model}});
+  }catch(error){
+    const code=clean(error instanceof Error?error.message:error,600)||"provider_failed";console.error("document-ai-api",code);
+    await recordUsage(user.id,operation,{},"failed",code);
+    return json(req,{error:"ai_provider_unavailable",message:"AI 공급자 연결이 일시적으로 사용할 수 없습니다. 직접 편집과 저장은 계속 사용할 수 있습니다."},503);
+  }
+});

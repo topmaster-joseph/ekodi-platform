@@ -22,6 +22,16 @@ test('Operations Center owns capability, AI, nodes and observability surfaces', 
   }
 });
 
+test('Execution Infrastructure is constitution-bound inside Operations Center', () => {
+  const execution = ADMIN_MENU_REGISTRY.find(item => item.id === 'devices');
+  assert.equal(execution?.labels?.ko, '실행 인프라');
+  assert.equal(execution?.governance?.track, 'agent');
+  assert.equal(execution?.governance?.changeClass, 'yellow');
+  assert.equal(execution?.governance?.authorityContext, 'Person + Workspace + Role + Capability');
+  assert.equal(execution?.governance?.controlPlane, true);
+  assert.equal(execution?.governance?.globalPolicyMutation, 'super_admin');
+});
+
 test('control-only operations remain internal instead of becoming top-level clutter', () => {
   const byId = new Map(ADMIN_MENU_REGISTRY.map(item => [item.id, item]));
   for (const id of ['services', 'deployments', 'policies']) {

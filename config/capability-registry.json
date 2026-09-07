@@ -1,5 +1,5 @@
 {
-  "version": "2.0.0",
+  "version": "3.0.0",
   "name": "EKODI Universal Capability Registry",
   "principle": "Capabilities are stable reusable abilities. Intent selects capabilities; services and providers are replaceable implementations.",
   "surfacePolicy": {
@@ -528,6 +528,80 @@
       ]
     },
     {
+      "id": "insurance.claims",
+      "name": "보험청구 준비 AI",
+      "domain": "insurance",
+      "ownerAgent": "insurance",
+      "actionTier": "assist",
+      "maturity": "service-backed",
+      "description": "보험금 지급을 판정하지 않고 청구 준비자료와 공식 확인 경로를 정리한다.",
+      "surfaces": [
+        "my",
+        "workspace",
+        "dedicated"
+      ],
+      "tags": [
+        "insurance",
+        "claim",
+        "documents"
+      ]
+    },
+    {
+      "id": "insurance.handoff",
+      "name": "보험상담 연결",
+      "domain": "insurance",
+      "ownerAgent": "insurance",
+      "actionTier": "human_gate",
+      "maturity": "service-backed",
+      "description": "사용자의 명시적 요청과 동의가 있을 때만 등록된 상담 책임주체에게 최소정보를 연결한다.",
+      "surfaces": [
+        "workspace",
+        "dedicated"
+      ],
+      "tags": [
+        "insurance",
+        "handoff",
+        "consent"
+      ]
+    },
+    {
+      "id": "insurance.network",
+      "name": "보험 제휴·상품망 관리",
+      "domain": "insurance",
+      "ownerAgent": "insurance",
+      "actionTier": "human_gate",
+      "maturity": "service-backed",
+      "description": "제휴주체와 상품자료를 등록·검토하되 비교·추천 공개는 계약과 컴플라이언스 승인을 요구한다.",
+      "surfaces": [
+        "workspace",
+        "dedicated"
+      ],
+      "tags": [
+        "insurance",
+        "partner",
+        "catalog",
+        "compliance"
+      ]
+    },
+    {
+      "id": "insurance.analytics",
+      "name": "보험 운영성과 분석",
+      "domain": "insurance",
+      "ownerAgent": "insurance",
+      "actionTier": "observe",
+      "maturity": "service-backed",
+      "description": "상담 연결·진행·완료 흐름을 비식별 운영지표로 분석한다.",
+      "surfaces": [
+        "workspace",
+        "dedicated"
+      ],
+      "tags": [
+        "insurance",
+        "analytics",
+        "funnel"
+      ]
+    },
+    {
       "id": "energy.manage",
       "name": "에너지관리 AI",
       "domain": "energy",
@@ -563,5 +637,160 @@
     "modelFallback": "optional_provider_neutral",
     "modelMayInventCapabilities": false,
     "unknownCapabilityBehavior": "unresolved_not_guessed"
-  }
+  },
+  "fabricPolicy": {
+    "contract": "ekodi.sovereign-capability.v1",
+    "authorityContext": [
+      "person",
+      "workspace",
+      "role",
+      "capability"
+    ],
+    "defaultScope": "person_or_workspace",
+    "defaultExposure": {
+      "web": true,
+      "mcp": false,
+      "a2a": false,
+      "api": false,
+      "events": false
+    },
+    "protocolRole": {
+      "mcp": "tool_adapter",
+      "a2a": "reserved_agent_adapter",
+      "api": "service_adapter",
+      "events": "event_adapter"
+    },
+    "trustTiers": {
+      "first_party": 4,
+      "verified_partner": 3,
+      "approved_external": 2,
+      "unknown": 0
+    },
+    "actionTierPolicy": {
+      "observe": {
+        "risk": "low",
+        "humanGate": false
+      },
+      "assist": {
+        "risk": "low",
+        "humanGate": false
+      },
+      "execute_reversible": {
+        "risk": "medium",
+        "humanGate": false
+      },
+      "human_gate": {
+        "risk": "high",
+        "humanGate": true
+      },
+      "forbidden": {
+        "risk": "critical",
+        "humanGate": true
+      }
+    },
+    "overrides": {
+      "identity.self.read": {
+        "scope": "person",
+        "exposure": {
+          "mcp": true
+        }
+      },
+      "ai.personal.status.read": {
+        "scope": "person",
+        "exposure": {
+          "mcp": true
+        }
+      },
+      "services.membership.read": {
+        "scope": "person",
+        "exposure": {
+          "mcp": true
+        }
+      },
+      "core.analytics": {
+        "exposure": {
+          "mcp": true,
+          "a2a": false
+        }
+      },
+      "core.documents": {
+        "exposure": {
+          "a2a": false
+        }
+      },
+      "core.automation": {
+        "exposure": {
+          "a2a": false
+        }
+      },
+      "community.membership": {
+        "scope": "workspace"
+      },
+      "ministry.service": {
+        "scope": "workspace"
+      },
+      "business.operations": {
+        "scope": "workspace"
+      },
+      "commerce.market": {
+        "scope": "workspace"
+      },
+      "trade.operations": {
+        "scope": "workspace"
+      }
+    }
+  },
+  "fabricCapabilities": [
+    {
+      "id": "services.membership.read",
+      "name": "내 서비스 이용상태 조회",
+      "domain": "core",
+      "ownerAgent": "platform",
+      "actionTier": "observe",
+      "maturity": "service-backed",
+      "description": "현재 EKODI Person의 서비스 및 멤버십 상태를 읽는다.",
+      "surfaces": [
+        "my"
+      ],
+      "tags": [
+        "services",
+        "membership",
+        "read"
+      ]
+    },
+    {
+      "id": "ai.personal.status.read",
+      "name": "개인 AI 상태 조회",
+      "domain": "core",
+      "ownerAgent": "chief",
+      "actionTier": "observe",
+      "maturity": "service-backed",
+      "description": "개인 AI 라우팅, 요금제 한도와 연결 상태를 읽는다.",
+      "surfaces": [
+        "my"
+      ],
+      "tags": [
+        "ai",
+        "personal",
+        "status"
+      ]
+    },
+    {
+      "id": "identity.self.read",
+      "name": "내 EKODI ID 조회",
+      "domain": "core",
+      "ownerAgent": "platform",
+      "actionTier": "observe",
+      "maturity": "service-backed",
+      "description": "현재 인증 주체를 canonical EKODI Person ID로 해석한다.",
+      "surfaces": [
+        "my"
+      ],
+      "tags": [
+        "identity",
+        "person",
+        "read"
+      ]
+    }
+  ]
 }

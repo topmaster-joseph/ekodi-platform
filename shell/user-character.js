@@ -1,16 +1,20 @@
-﻿(()=>{
+(()=>{
 'use strict';
 if(window.__EKODI_USER_CHARACTER_BOOTED)return;
 window.__EKODI_USER_CHARACTER_BOOTED=true;
 
-const VERSION=3;
+const VERSION=6;
 const STYLE_ID='ekodi-user-character-style';
 const REGISTRY_ATTR='data-ekodi-character-registry';
 const REGISTRY_ASSET='character-registry.js';
+const IDENTITY_REGISTRY_ATTR='data-ekodi-character-identity-registry';
+const IDENTITY_REGISTRY_ASSET='character-identity-registry.js';
+const IDENTITY_CONTRACT='ekodi.ekodian-identity.v1';
 const USER_SURFACES=new Set(['public','workspace']);
 const DISABLED_MODES=new Set(['off','hidden','none']);
 const CHARACTER_ATTR='data-ekodi-user-character';
 const FALLBACK_RESTRAINT=new Set(['payment','personal_data','security','complex_admin','focus_heavy']);
+let operationSnapshot=null;
 const FALLBACK_PROFILES=Object.freeze({
   church:{pose:'welcome',prop:'book',label:'함께 말씀을 나누는 에코디언'},
   community:{pose:'welcome',prop:'heart',label:'이웃을 잇는 에코디언'},
@@ -57,6 +61,67 @@ function surface(){return String(document.documentElement.dataset.ekodiShellSurf
 function mode(){return String(document.documentElement.dataset.ekodiCharacter||document.body?.dataset?.ekodiCharacter||'auto').trim().toLowerCase();}
 function context(){return String(document.documentElement.dataset.ekodiCharacterContext||document.body?.dataset?.ekodiCharacterContext||'').trim().toLowerCase();}
 function registry(){return window.EKODICharacterRegistry||null;}
+function identityRegistry(){return window.EKODICharacterIdentityRegistry||null;}
+function requestedIdentityId(){
+  const explicit=window.__EKODI_CHARACTER_IDENTITY__;
+  return String(document.documentElement.dataset.ekodiCharacterIdentity||document.body?.dataset?.ekodiCharacterIdentity||explicit?.id||'canonical').trim().toLowerCase();
+}
+function identityProfile(){
+  const id=requestedIdentityId();
+  const active=identityRegistry();
+  const canonical=active?.resolve?active.resolve('canonical'):active?.profiles?.canonical;
+  const fallback=canonical||{id:'canonical',kind:'canonical',visual:{portraitUrl:null,portraitMode:'character-face'}};
+  const base=active?.resolve?active.resolve(id):active?.profiles?.[id];
+  if(!base||base.id==='canonical')return base||fallback;
+  const explicit=window.__EKODI_CHARACTER_IDENTITY__;
+  const authorized=explicit&&typeof explicit==='object'&&explicit.contract===IDENTITY_CONTRACT&&explicit.subjectAuthorized===true&&String(explicit.id||'').trim().toLowerCase()===id;
+  if(!authorized)return fallback;
+  return {...base,...explicit,visual:{...(base.visual||{}),...(explicit.visual||{})},id};
+}
+function trustedPortraitUrl(identity=identityProfile()){
+  const raw=String(identity?.visual?.portraitUrl||'').trim();
+  if(!raw||raw.startsWith('data:'))return '';
+  if(raw.startsWith('blob:'))return identity?.id==='personal'&&identity?.subjectAuthorized===true&&identity?.visual?.localOnly===true?raw:'';
+  try{
+    const scriptBase=document.currentScript?.src?new URL('.',document.currentScript.src):new URL('https://shell.ekodi.kr/');
+    const url=new URL(raw,scriptBase);
+    const host=url.hostname.toLowerCase();
+    const allowed=host==='ekodi.kr'||host.endsWith('.ekodi.kr');
+    return url.protocol==='https:'&&allowed?url.href:'';
+  }catch{return '';}
+}
+function escapeAttr(value){return String(value||'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));}
+function previewIdentity(value){
+  if(!value||typeof value!=='object')return identityProfile();
+  const id=String(value.id||'canonical').trim().toLowerCase();
+  const active=identityRegistry();
+  const canonical=active?.resolve?active.resolve('canonical'):active?.profiles?.canonical||{id:'canonical',kind:'canonical',visual:{portraitUrl:null,portraitMode:'character-face'}};
+  const base=active?.resolve?active.resolve(id):active?.profiles?.[id];
+  if(!base||base.id==='canonical')return base||canonical;
+  if(value.contract!==IDENTITY_CONTRACT||value.subjectAuthorized!==true)return canonical;
+  return {...base,...value,visual:{...(base.visual||{}),...(value.visual||{})},id};
+}
+function setIdentity(value){
+  if(!value||typeof value!=='object')return false;
+  const requested=String(value.id||'canonical').trim().toLowerCase();
+  const resolved=previewIdentity(value);
+  if(requested!=='canonical'&&resolved?.id!==requested)return false;
+  window.__EKODI_CHARACTER_IDENTITY__={...value,id:requested,contract:IDENTITY_CONTRACT,subjectAuthorized:requested==='canonical'?true:value.subjectAuthorized===true};
+  refresh(true);
+  window.dispatchEvent(new CustomEvent('ekodi:character-identity-change',{detail:{id:requested,subjectAuthorized:window.__EKODI_CHARACTER_IDENTITY__.subjectAuthorized}}));
+  return true;
+}
+function clearIdentity(){
+  delete window.__EKODI_CHARACTER_IDENTITY__;
+  refresh(true);
+  window.dispatchEvent(new CustomEvent('ekodi:character-identity-change',{detail:{id:'canonical',subjectAuthorized:false}}));
+  return true;
+}
+function renderPreview(options={}){
+  const selected={...profile(),...(options.profile||{})};
+  return svg(selected,previewIdentity(options.identity));
+}
+
 function profiles(){return registry()?.services||FALLBACK_PROFILES;}
 function isLanding(){
   const parts=location.pathname.split('/').filter(Boolean);
@@ -64,7 +129,10 @@ function isLanding(){
   return parts.length===0;
 }
 function profile(){return profiles()[serviceId()]||FALLBACK_PROFILES[serviceId()]||{pose:'welcome',prop:'heart',label:'함께하는 에코디언'};}
+function operationCharacter(){return operationSnapshot?.character&&typeof operationSnapshot.character==='object'?operationSnapshot.character:null;}
 function experienceState(){
+  const operationState=String(operationCharacter()?.state||'').trim().toLowerCase();
+  if(operationState&&registry()?.experienceStates?.[operationState])return operationState;
   const requested=String(document.documentElement.dataset.ekodiCharacterState||document.body?.dataset?.ekodiCharacterState||'welcome').trim().toLowerCase();
   const active=registry();
   if(active?.experienceStates?.[requested])return requested;
@@ -76,7 +144,8 @@ function isRestrainedContext(){
   const configured=registry()?.restraint?.minimize;
   return Array.isArray(configured)?configured.includes(value):FALLBACK_RESTRAINT.has(value);
 }
-function eligible(){return USER_SURFACES.has(surface())&&!DISABLED_MODES.has(mode())&&isLanding()&&!isRestrainedContext();}
+function operationHidden(){return Number(operationCharacter()?.presence?.level)===0;}
+function eligible(){return USER_SURFACES.has(surface())&&!DISABLED_MODES.has(mode())&&isLanding()&&!isRestrainedContext()&&!operationHidden();}
 function propSvg(prop){
   if(prop==='book')return '<g transform="translate(103 92)"><path d="M-24 0c12-5 20-3 24 2v26c-7-5-15-6-24-3Z"/><path d="M24 0C12-5 3-3 0 2v26c7-5 15-6 24-3Z"/></g>';
   if(prop==='cup')return '<g transform="translate(109 96)"><path d="M-18-7h28v25h-28Z"/><path d="M10-2h7c10 0 10 15 0 15h-7" fill="none"/></g>';
@@ -87,14 +156,18 @@ function propSvg(prop){
   if(prop==='spark')return '<g transform="translate(111 91)"><path d="M0-20 6-6 20 0 6 6 0 20-6 6-20 0-6-6Z"/></g>';
   return '<g transform="translate(110 94)"><path d="M0 22C-28 3-19-18-5-18 4-18 8-12 10-7c3-5 7-11 16-11 14 0 23 21-6 40L10 29Z"/></g>';
 }
-function svg(p){
+function svg(p,identity=identityProfile()){
+  const portrait=trustedPortraitUrl(identity);
+  const face=portrait&&identity?.visual?.portraitMode==='character-face'
+    ? `<defs><clipPath id="ekodian-face-clip"><circle cx="82" cy="64" r="25"/></clipPath></defs><image class="ekodian-portrait" href="${escapeAttr(portrait)}" x="57" y="39" width="50" height="50" preserveAspectRatio="xMidYMid slice" clip-path="url(#ekodian-face-clip)"/><circle cx="82" cy="64" r="25" class="ekodian-face-outline"/>`
+    : '<circle cx="82" cy="64" r="25" class="ekodian-skin"/><path d="M58 61c3-24 38-32 50-5-8-4-14-10-18-18-8 10-18 18-32 23Z" class="ekodian-hair"/>';
   const wave=p.pose==='welcome'?'<path class="ekodian-line" d="M70 84C52 72 43 59 47 47"/>':'';
-  return `<svg viewBox="0 0 180 180" role="img" aria-label="${p.label}"><ellipse cx="89" cy="153" rx="55" ry="9" class="ekodian-shadow"/><g class="ekodian-body"><circle cx="82" cy="64" r="25" class="ekodian-skin"/><path d="M58 61c3-24 38-32 50-5-8-4-14-10-18-18-8 10-18 18-32 23Z" class="ekodian-hair"/><path d="M58 91c16-15 41-15 56 0l10 53H48Z" class="ekodian-shirt"/><path class="ekodian-line" d="M70 62h3M91 62h3M76 73c5 4 10 4 15 0"/>${wave}<path class="ekodian-line" d="M58 102c-12 9-17 19-18 32M112 102c11 8 17 19 18 32"/>${propSvg(p.prop)}</g></svg>`;
+  return `<svg viewBox="0 0 180 180" role="img" aria-label="${p.label}"><ellipse cx="89" cy="153" rx="55" ry="9" class="ekodian-shadow"/><g class="ekodian-body">${face}<path d="M58 91c16-15 41-15 56 0l10 53H48Z" class="ekodian-shirt"/><path class="ekodian-line" d="M70 62h3M91 62h3M76 73c5 4 10 4 15 0"/>${wave}<path class="ekodian-line" d="M58 102c-12 9-17 19-18 32M112 102c11 8 17 19 18 32"/>${propSvg(p.prop)}</g></svg>`;
 }
 function installStyle(){
   if(document.getElementById(STYLE_ID))return;
   const style=document.createElement('style');style.id=STYLE_ID;style.textContent=`
-  .ekodi-main-ekodian-host{position:relative!important;isolation:isolate}.ekodi-main-ekodian{position:absolute;z-index:3;right:clamp(10px,3vw,42px);bottom:clamp(6px,1.6vw,24px);width:clamp(108px,13vw,176px);pointer-events:none;opacity:.96;filter:drop-shadow(0 10px 18px rgba(22,43,31,.10));color:var(--ekodi-service-accent,var(--accent,#78b89b))}.ekodi-main-ekodian svg{display:block;width:100%;height:auto;overflow:visible}.ekodi-main-ekodian .ekodian-shadow{fill:color-mix(in srgb,currentColor 10%,transparent)}.ekodi-main-ekodian .ekodian-skin{fill:#f1c3a0;stroke:#26372e;stroke-width:3}.ekodi-main-ekodian .ekodian-hair{fill:#26372e}.ekodi-main-ekodian .ekodian-shirt{fill:color-mix(in srgb,currentColor 64%,#fff 36%);stroke:#26372e;stroke-width:3}.ekodi-main-ekodian .ekodian-line{fill:none;stroke:#26372e;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}.ekodi-main-ekodian g g{fill:color-mix(in srgb,currentColor 28%,#fff 72%);stroke:#26372e;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}.ekodi-main-ekodian .ekodian-body{transform-origin:88px 142px;animation:ekodi-ekodian-breathe 5.8s ease-in-out infinite}@keyframes ekodi-ekodian-breathe{0%,100%{transform:translateY(0) rotate(0)}50%{transform:translateY(-3px) rotate(.4deg)}}
+  .ekodi-main-ekodian-host{position:relative!important;isolation:isolate}.ekodi-main-ekodian{position:absolute;z-index:3;right:clamp(10px,3vw,42px);bottom:clamp(6px,1.6vw,24px);width:clamp(108px,13vw,176px);pointer-events:none;opacity:.96;filter:drop-shadow(0 10px 18px rgba(22,43,31,.10));color:var(--ekodi-service-accent,var(--accent,#78b89b))}.ekodi-main-ekodian svg{display:block;width:100%;height:auto;overflow:visible}.ekodi-main-ekodian .ekodian-shadow{fill:color-mix(in srgb,currentColor 10%,transparent)}.ekodi-main-ekodian .ekodian-skin{fill:#f1c3a0;stroke:#26372e;stroke-width:3}.ekodi-main-ekodian .ekodian-hair{fill:#26372e}.ekodi-main-ekodian .ekodian-portrait{pointer-events:none}.ekodi-main-ekodian .ekodian-face-outline{fill:none;stroke:#26372e;stroke-width:3}.ekodi-main-ekodian .ekodian-shirt{fill:color-mix(in srgb,currentColor 64%,#fff 36%);stroke:#26372e;stroke-width:3}.ekodi-main-ekodian .ekodian-line{fill:none;stroke:#26372e;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}.ekodi-main-ekodian g g{fill:color-mix(in srgb,currentColor 28%,#fff 72%);stroke:#26372e;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}.ekodi-main-ekodian .ekodian-body{transform-origin:88px 142px;animation:ekodi-ekodian-breathe 5.8s ease-in-out infinite}@keyframes ekodi-ekodian-breathe{0%,100%{transform:translateY(0) rotate(0)}50%{transform:translateY(-3px) rotate(.4deg)}}
   @media(max-width:760px){.ekodi-main-ekodian{right:8px;bottom:5px;width:clamp(92px,28vw,126px);opacity:.91}.ekodi-main-ekodian-host{padding-right:min(22vw,88px)!important}}
   @media(max-width:420px){.ekodi-main-ekodian{width:88px;opacity:.88}.ekodi-main-ekodian-host{padding-right:68px!important}}
   @media(prefers-reduced-motion:reduce){.ekodi-main-ekodian .ekodian-body{animation:none!important}}
@@ -110,9 +183,10 @@ function mount(){
   if(!eligible()||!document.body)return null;
   const host=heroTarget();if(!host)return null;
   installStyle();host.classList.add('ekodi-main-ekodian-host');
-  const selected=profile();const node=document.createElement('aside');node.className='ekodi-main-ekodian';node.setAttribute(CHARACTER_ATTR,`v${VERSION}`);node.dataset.ekodiCharacterVariant=String(document.documentElement.dataset.ekodiCharacterProfile||'auto');node.dataset.ekodiCharacterState=experienceState();node.setAttribute('aria-label',selected.label);node.innerHTML=svg(selected);host.append(node);
+  const selected=profile();const identity=identityProfile();const operation=operationCharacter();const node=document.createElement('aside');node.className='ekodi-main-ekodian';node.setAttribute(CHARACTER_ATTR,`v${VERSION}`);node.dataset.ekodiCharacterVariant=String(document.documentElement.dataset.ekodiCharacterProfile||'auto');node.dataset.ekodiCharacterState=experienceState();node.dataset.ekodiCharacterRole=String(operation?.role||'guide');node.dataset.ekodiCharacterGeneration=String(operationSnapshot?.generation||registry()?.system?.generation||8);node.dataset.ekodiCharacterPresence=String(operation?.presence?.token||'supporting');node.dataset.ekodiCharacterIdentity=String(identity?.id||'canonical');node.setAttribute('aria-label',selected.label);node.innerHTML=svg(selected,identity);host.append(node);
   document.documentElement.dataset.ekodiUserCharacter=`v${VERSION}`;
-  window.dispatchEvent(new CustomEvent('ekodi:user-character-ready',{detail:{version:VERSION,registryVersion:registry()?.schemaVersion||0,service:serviceId(),profile:selected.prop,state:experienceState()}}));
+  document.documentElement.dataset.ekodiCharacterGeneration=String(operationSnapshot?.generation||registry()?.system?.generation||8);
+  window.dispatchEvent(new CustomEvent('ekodi:user-character-ready',{detail:{version:VERSION,registryVersion:registry()?.schemaVersion||0,generation:Number(document.documentElement.dataset.ekodiCharacterGeneration||8),service:serviceId(),profile:selected.prop,identity:node.dataset.ekodiCharacterIdentity,state:experienceState(),role:node.dataset.ekodiCharacterRole}}));
   return node;
 }
 function refresh(force=false){
@@ -122,8 +196,29 @@ function refresh(force=false){
   if(!eligible()){current?.remove();return null;}
   const variant=String(document.documentElement.dataset.ekodiCharacterProfile||'auto');
   const state=experienceState();
-  if(current&&(current.dataset.ekodiCharacterVariant!==variant||current.dataset.ekodiCharacterState!==state)){current.remove();return mount();}
+  const role=String(operationCharacter()?.role||'guide');
+  const identity=String(identityProfile()?.id||'canonical');
+  if(current&&(current.dataset.ekodiCharacterVariant!==variant||current.dataset.ekodiCharacterState!==state||current.dataset.ekodiCharacterRole!==role||current.dataset.ekodiCharacterIdentity!==identity)){current.remove();return mount();}
   return current||mount();
+}
+function applyOperation(snapshot){
+  const value=snapshot?.ekodian&&typeof snapshot.ekodian==='object'?snapshot.ekodian:snapshot;
+  if(!value||typeof value!=='object')return false;
+  if(value.contract&&value.contract!=='ekodi.ekodian-operation.v1')return false;
+  if(value.generation&&Number(value.generation)!==8)return false;
+  operationSnapshot=value;
+  const character=operationCharacter();
+  document.documentElement.dataset.ekodiCharacterState=String(character?.state||'calm');
+  document.documentElement.dataset.ekodiCharacterRole=String(character?.role||'guide');
+  document.documentElement.dataset.ekodiCharacterGeneration='8';
+  refresh(true);
+  window.dispatchEvent(new CustomEvent('ekodi:user-character-operation-applied',{detail:{generation:8,state:character?.state||'calm',role:character?.role||'guide',presence:character?.presence||null}}));
+  return true;
+}
+function clearOperation(){
+  operationSnapshot=null;
+  delete document.documentElement.dataset.ekodiCharacterRole;
+  refresh(true);
 }
 function registryUrl(){
   try{const src=document.currentScript?.src;if(src)return new URL(REGISTRY_ASSET,src).href;}catch{}
@@ -133,17 +228,36 @@ function ensureRegistry(){
   if(registry()||document.querySelector(`script[${REGISTRY_ATTR}]`))return;
   const script=document.createElement('script');script.src=registryUrl();script.async=true;script.setAttribute(REGISTRY_ATTR,'');script.addEventListener('error',()=>{document.documentElement.dataset.ekodiCharacterRegistry='fallback';},{once:true});(document.head||document.documentElement).append(script);
 }
+function identityRegistryUrl(){
+  try{const src=document.currentScript?.src;if(src)return new URL(IDENTITY_REGISTRY_ASSET,src).href;}catch{}
+  return `https://shell.ekodi.kr/${IDENTITY_REGISTRY_ASSET}`;
+}
+function ensureIdentityRegistry(){
+  if(identityRegistry()||document.querySelector(`script[${IDENTITY_REGISTRY_ATTR}]`))return;
+  const script=document.createElement('script');script.src=identityRegistryUrl();script.async=true;script.setAttribute(IDENTITY_REGISTRY_ATTR,'');script.addEventListener('error',()=>{document.documentElement.dataset.ekodiCharacterIdentityRegistry='fallback';},{once:true});(document.head||document.documentElement).append(script);
+}
 
 window.EKODIUserCharacter=Object.freeze({
   version:VERSION,
+  generation:8,
   refresh,
+  applyOperation,
+  clearOperation,
+  setIdentity,
+  clearIdentity,
+  renderPreview,
+  operation:()=>operationSnapshot,
   profile:()=>({...profile()}),
+  identity:()=>({...identityProfile(),visual:{...(identityProfile()?.visual||{})}}),
   state:()=>experienceState(),
-  registry:()=>registry()
+  registry:()=>registry(),
+  identityRegistry:()=>identityRegistry()
 });
-const boot=()=>{ensureRegistry();setTimeout(refresh,0);setTimeout(refresh,600)};
+const boot=()=>{ensureRegistry();ensureIdentityRegistry();setTimeout(refresh,0);setTimeout(refresh,600)};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 window.addEventListener('ekodi:surface-change',refresh);
 window.addEventListener('ekodi:design-profile-ready',refresh);
-window.addEventListener('ekodi:character-registry-ready',()=>{document.documentElement.dataset.ekodiCharacterRegistry=`v${registry()?.schemaVersion||1}`;refresh(true);});
+window.addEventListener('ekodi:agent-state',event=>applyOperation(event?.detail||null));
+window.addEventListener('ekodi:character-registry-ready',()=>{document.documentElement.dataset.ekodiCharacterRegistry=`v${registry()?.schemaVersion||1}`;document.documentElement.dataset.ekodiCharacterGeneration=String(registry()?.system?.generation||8);refresh(true);});
+window.addEventListener('ekodi:character-identity-registry-ready',()=>{document.documentElement.dataset.ekodiCharacterIdentityRegistry=`v${identityRegistry()?.schemaVersion||1}`;refresh(true);});
 })();

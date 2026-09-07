@@ -6,7 +6,7 @@
   const TOKEN_KEY='ekodi-auth-token';
   const ENVIRONMENTS=['production','staging','development'];
   const SUPABASE_DEFAULTS=[
-    {organization:'krxqskyavhrbsuxsjuzv',project:'cheonggye-market',ref:'renzehysxirjilvdxacv',region:'ap-southeast-1',status:'ACTIVE_HEALTHY'},
+    {organization:'krxqskyavhrbsuxsjuzv',project:'ekodi-platform',ref:'renzehysxirjilvdxacv',region:'ap-southeast-1',status:'ACTIVE_HEALTHY'},
     {organization:'krxqskyavhrbsuxsjuzv',project:'ekodi-church',ref:'lxcxwbdwwojjkgybbqii',region:'ap-southeast-1',status:'ACTIVE_HEALTHY'},
   ];
   const DEFINITIONS=Object.freeze({
@@ -38,7 +38,8 @@
   function bind(root){root.querySelectorAll('[data-up]').forEach(el=>el.addEventListener('change',()=>{const key=el.dataset.up;const patch={[key]:el.value};if(key==='provider')Object.assign(patch,{account:'',scope:'',runtime:''});setSelection(patch)}))}
   function renderInto(host){if(!host)return;host.querySelector('[data-ekodi-unified-provider]')?.remove();const wrap=document.createElement('div');wrap.innerHTML=panel();const node=wrap.firstElementChild;host.prepend(node);bind(node)}
   function renderAll(){installStyle();renderInto(document.querySelector('#aiOpsPanel'));const secret=document.querySelector('#ekodiAdminSecretGenerator .admin-secret-auto-card');if(secret)renderInto(secret)}
-  const observer=new MutationObserver(()=>{if(inventory)renderAll()});observer.observe(document.documentElement,{childList:true,subtree:true});
+  function renderMissingTargets(){if(!inventory)return;const aiOps=document.querySelector('#aiOpsPanel');if(aiOps&&!aiOps.querySelector('[data-ekodi-unified-provider]'))renderInto(aiOps);const secret=document.querySelector('#ekodiAdminSecretGenerator .admin-secret-auto-card');if(secret&&!secret.querySelector('[data-ekodi-unified-provider]'))renderInto(secret)}
+  const observer=new MutationObserver(renderMissingTargets);observer.observe(document.documentElement,{childList:true,subtree:true});
   window.EKODIProviderControl=Object.freeze({VERSION:'1.0.1',DEFINITIONS,ENVIRONMENTS,load,setSelection,snapshot});
   window.addEventListener('ekodi-authenticated',load);queueMicrotask(load);
 })();

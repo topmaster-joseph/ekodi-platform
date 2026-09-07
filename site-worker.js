@@ -34,8 +34,8 @@ const ADMIN_MARKETING_PUBLISHING_PREFIX = '/api/control/marketing-publishing';
 const ADMIN_COMMON_SERVICE_AI_PREFIX = '/api/control/common-services/ai/';
 
 const AUTH_HOST = 'auth.ekodi.kr';
-const AUTH_ASSETS = new Set(['/auth.js','/auth.css','/auth-router.js','/marketing-auth-hotfix.js','/auth-workspace-target.js','/admin-auth.js','/client-auth.js','/author-auth.js','/business-auth.js','/marketing-onboarding.js','/membership-ui.js']);
-const AUTH_CRITICAL_ASSETS = new Set(['/auth.js','/auth-router.js','/marketing-auth-hotfix.js','/auth-workspace-target.js','/admin-auth.js','/client-auth.js','/author-auth.js','/business-auth.js','/marketing-onboarding.js','/membership-ui.js']);
+const AUTH_ASSETS = new Set(['/auth.js','/auth.css','/auth-router.js','/oauth-consent.js','/marketing-auth-hotfix.js','/auth-workspace-target.js','/admin-auth.js','/client-auth.js','/author-auth.js','/business-auth.js','/marketing-onboarding.js','/membership-ui.js']);
+const AUTH_CRITICAL_ASSETS = new Set(['/auth.js','/auth-router.js','/oauth-consent.js','/marketing-auth-hotfix.js','/auth-workspace-target.js','/admin-auth.js','/client-auth.js','/author-auth.js','/business-auth.js','/marketing-onboarding.js','/membership-ui.js']);
 
 const HUB_HOSTS = new Set([
   'pay.ekodi.kr',
@@ -124,6 +124,14 @@ const ADMIN_ASSETS = new Set([
   '/client-access.js',
   '/marketing-funnel-admin.css',
   '/marketing-funnel-admin.js',
+  '/insurance-admin.css',
+  '/insurance-admin.js',
+  '/insurance-network-admin.css',
+  '/insurance-network-admin.js',
+  '/insurance-advisor-admin.css',
+  '/insurance-advisor-admin.js',
+  '/insurance-practice-admin.css',
+  '/insurance-practice-admin.js',
   '/marketing-ai-admin.css',
   '/marketing-ai-admin.js',
   '/google-admin-auth.css',
@@ -242,6 +250,13 @@ function isMallPath(pathname) {
   return pathname === MALL_PREFIX || pathname.startsWith(`${MALL_PREFIX}/`);
 }
 
+function isMallVerificationOpsPath(pathname) {
+  return pathname === `${MALL_PREFIX}/verification-ops`
+    || pathname === `${MALL_PREFIX}/verification-ops/`
+    || pathname === `${MALL_PREFIX}/assets/verification-ops`
+    || pathname === `${MALL_PREFIX}/assets/verification-ops.html`;
+}
+
 function isLegacyMallPath(pathname) {
   return pathname === LEGACY_MALL_PREFIX || pathname.startsWith(`${LEGACY_MALL_PREFIX}/`);
 }
@@ -316,11 +331,13 @@ async function proxyMallService(request) {
   headers.set('x-ekodi-service', 'mall');
   const adminSurface = incoming.pathname === `${MALL_PREFIX}/admin` || incoming.pathname.startsWith(`${MALL_PREFIX}/admin/`);
   const apiSurface = incoming.pathname === `${MALL_PREFIX}/api` || incoming.pathname.startsWith(`${MALL_PREFIX}/api/`);
+  const verificationOpsSurface = isMallVerificationOpsPath(incoming.pathname);
   const adminEmbed = incoming.searchParams.get('embed') === 'admin';
-  const cacheControl = adminSurface || apiSurface || adminEmbed ? 'no-store' : 'public, max-age=0, must-revalidate';
-  const route = adminSurface ? 'admin-mall-proxy' : apiSurface ? 'mall-api-proxy' : 'public-ekodi-mall';
+  const cacheControl = adminSurface || apiSurface || verificationOpsSurface || adminEmbed ? 'no-store' : 'public, max-age=0, must-revalidate';
+  const route = adminSurface ? 'admin-mall-proxy' : apiSurface ? 'mall-api-proxy' : verificationOpsSurface ? 'mall-verification-ops' : 'public-ekodi-mall';
   const mallCsp = adminEmbed ? MALL_ADMIN_EMBED_CSP : MALL_CSP;
   const response = withHostSecurity(new Response(responseBody, { status: upstreamResponse.status, statusText: upstreamResponse.statusText, headers }), mallCsp, cacheControl, route);
+  if (verificationOpsSurface) response.headers.set('X-Robots-Tag', 'noindex, nofollow, noarchive');
   if (adminEmbed) response.headers.delete('X-Frame-Options');
   return injectEkodiShell(response, 'mall', adminSurface ? 'admin' : 'public');
 }
@@ -471,6 +488,13 @@ export default {
 
     if (host === PUBLIC_HOST) {
       if (RETIRED_ADMIN_PATHS.has(url.pathname)) return retiredAdminResponse();
+      if (url.pathname === '/oauth/consent' || url.pathname === '/cgma/oauth/consent') {
+        const target = new URL('https://auth.ekodi.kr/oauth/consent');
+        target.search = url.search;
+        const response = new Response(null, { status:307, headers:{ Location:target.toString(), 'Cache-Control':'no-store' } });
+        applyBaseSecurityHeaders(response.headers);
+        return response;
+      }
       if (url.pathname === '/' || url.pathname === '/index.html') {
         const response = await env.ASSETS.fetch(assetRequest(request, '/'));
         return withHostSecurity(response, PUBLIC_CSP, 'no-store', 'public-home');
@@ -485,8 +509,8 @@ export default {
       }
       if (isLegacyEkodiBizPath(url.pathname)) return redirectLegacyEkodiBizPath(request);
       if (isLegacyMallPath(url.pathname)) return redirectLegacyMallPath(request);
-      if (['GET','HEAD'].includes(request.method) && isChurchPastorAdminPath(url.pathname)) return churchPastorAdminPage();
-      if (isWorkspaceAdminPath(url.pathname)) return workspaceAdminPage();
+      if (['GET','HEAD'].includes(request.method) && isChurchPastorAdminPath(url.pathname)) return injectEkodiShell(churchPastorAdminPage(), 'church', 'admin');
+      if (isWorkspaceAdminPath(url.pathname)) return injectEkodiShell(workspaceAdminPage(), 'space', 'admin');
       if (['GET','HEAD'].includes(request.method) && isEkodiBizInvestPath(url.pathname)) {
         const page=ekodiBizInvestBusinessPage(request);
         const secured=withHostSecurity(page, PUBLIC_CSP, 'public, max-age=0, must-revalidate', 'public-ekodibiz-invest');
@@ -549,6 +573,10 @@ export default {
       if (url.pathname === '/' || url.pathname === '/index.html' || url.pathname === '/login' || url.pathname === '/login/') {
         const response = await env.ASSETS.fetch(assetRequest(request, '/auth-center'));
         return withHostSecurity(response, AUTH_CSP, 'no-store', 'central-auth');
+      }
+      if (url.pathname === '/oauth/consent' || url.pathname === '/oauth/consent/') {
+        const response = await env.ASSETS.fetch(assetRequest(request, '/oauth-consent'));
+        return withHostSecurity(response, AUTH_CSP, 'no-store', 'oauth-consent');
       }
       if (AUTH_ASSETS.has(url.pathname)) {
         const response = await env.ASSETS.fetch(request);

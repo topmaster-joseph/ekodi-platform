@@ -1,5 +1,5 @@
 {
-  "version": 53,
+  "version": 54,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
@@ -247,12 +247,14 @@
         ],
         "redirect": "follow",
         "expect": [
-          "EKODI MALL",
-          "data-ekodi-service=\"mall\""
+          "data-ekodi-service=\"mall\"",
+          "data-ekodi-user-surface=\"public\"",
+          "/ekodibiz/mall/assets/marketplace-live.js"
         ],
         "rollbackExpect": [
-          "EKODI MALL",
-          "data-ekodi-service=\"mall\""
+          "data-ekodi-service=\"mall\"",
+          "data-ekodi-user-surface=\"public\"",
+          "/ekodibiz/mall/assets/marketplace-live.js"
         ],
         "headerExpect": [
           "x-content-type-options: nosniff",
@@ -326,13 +328,29 @@
         ]
       },
       {
+        "url": "https://admin.ekodi.kr/openai-workspace-admin.js",
+        "statuses": [200],
+        "redirect": "manual",
+        "expect": ["Permission transfer: NONE", "EKODIAdminContext", "ekodi-admin-assist-request"],
+        "headerExpect": ["x-content-type-options: nosniff"],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://admin.ekodi.kr/openai-workspace-admin.css",
+        "statuses": [200],
+        "redirect": "manual",
+        "expect": [".openai-workspace-policy", "@media(max-width:900px)"],
+        "headerExpect": ["x-content-type-options: nosniff"],
+        "rollbackVerify": false
+      },
+      {
         "url": "https://admin.ekodi.kr/admin-demand-loader.js?device=v28",
         "statuses": [
           200
         ],
         "redirect": "manual",
         "expect": [
-          "label: '실행 인프라·Nodes'",
+          "label: '실행 인프라'",
           "remote-power-admin.js",
           "remote-power-admin.css",
           "device-browser-diagnostics.js",

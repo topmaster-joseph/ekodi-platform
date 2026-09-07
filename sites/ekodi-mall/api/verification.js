@@ -25,10 +25,20 @@ function displayNameFromUser(user) {
   return clean(metadata.full_name || metadata.name || String(user?.email || '').split('@')[0], 100) || '판매자';
 }
 
-function operationsAuthorization(request, env) {
-  if (!env.MALL_OPERATIONS_TOKEN) return { ok: false, status: 503, error: 'Mall 운영 검증 채널이 아직 구성되지 않았습니다.' };
-  if ((request.headers.get('x-ekodi-mall-ops-token') || '') !== env.MALL_OPERATIONS_TOKEN) return { ok: false, status: 401, error: 'Mall 운영자 권한이 필요합니다.' };
-  return { ok: true };
+function allowedOpsEmails(env) {
+  return new Set(clean(env.MALL_OPERATIONS_EMAILS, 2000).split(',').map((item) => item.trim().toLowerCase()).filter(Boolean));
+}
+
+export async function authorizeVerificationOperations(request, env) {
+  const supplied = request.headers.get('x-ekodi-mall-ops-token') || '';
+  if (env.MALL_OPERATIONS_TOKEN && supplied && supplied === env.MALL_OPERATIONS_TOKEN) return { ok: true, actor: 'mall-ops:service-token' };
+  const user = await authenticate(request, env);
+  if (!user) return { ok: false, status: 401, error: 'Mall 운영자 Google 로그인이 필요합니다.' };
+  const email = clean(user.email, 240).toLowerCase();
+  const allow = allowedOpsEmails(env);
+  if (!allow.size) return { ok: false, status: 503, error: 'Mall 운영자 이메일 allowlist가 구성되지 않았습니다.' };
+  if (!allow.has(email)) return { ok: false, status: 403, error: '이 Google 계정은 Mall 검증 운영 권한이 없습니다.' };
+  return { ok: true, actor: `mall-ops:${email}`, user };
 }
 
 async function ensureSellerProfile(env, user, sellerType) {
@@ -120,7 +130,7 @@ async function sellerReadiness(env, sellerId) {
     profile, stores: storesResult.results || [], products, requests: requestsResult.results || [],
     global: {
       paymentsEnabled: flag(env.PAYMENTS_ENABLED), tossSecretConfigured: Boolean(env.TOSS_SECRET_KEY),
-      operationsReviewConfigured: Boolean(env.MALL_OPERATIONS_TOKEN), buyerPiiReleaseEnabled: flag(env.BUYER_PII_RELEASE_ENABLED),
+      operationsReviewConfigured: Boolean(env.MALL_OPERATIONS_TOKEN) || allowedOpsEmails(env).size > 0, operationsEmailAllowlistConfigured: allowedOpsEmails(env).size > 0, buyerPiiReleaseEnabled: flag(env.BUYER_PII_RELEASE_ENABLED),
       supplierForwardEnabled: flag(env.SUPPLIER_FORWARD_ENABLED), payoutExecutionEnabled: false, refundExecutionEnabled: false
     },
     summary: {
@@ -137,7 +147,7 @@ async function audit(env, { actor, action, sellerId = null, storeId = null, prod
     .bind(clean(actor, 120), clean(action, 120), sellerId, storeId, productId, requestIdValue, JSON.stringify(metadata).slice(0, 5000), nowIso()).run();
 }
 
-async function reviewRequest(env, id, body) {
+async function reviewRequest(env, id, body, actor) {
   const decision = body?.decision === 'verified' ? 'verified' : body?.decision === 'rejected' ? 'rejected' : '';
   if (!decision) return { status: 400, body: { error: 'decision은 verified 또는 rejected여야 합니다.' } };
   const request = await env.DB.prepare('SELECT * FROM verification_requests WHERE id=?').bind(id).first();
@@ -145,7 +155,6 @@ async function reviewRequest(env, id, body) {
   if (!OPEN_STATUSES.has(request.status)) return { status: 409, body: { error: '이미 처리된 검증 요청입니다.' } };
   const now = nowIso();
   const reviewNote = clean(body?.reviewNote, 1200);
-  const actor = `mall-ops:${clean(body?.reviewer, 80) || 'operator'}`;
   const statements = [env.DB.prepare(`UPDATE verification_requests SET status=?,review_note=?,reviewed_at=?,updated_at=? WHERE id=?`).bind(decision, reviewNote, now, now, id)];
   let storeId = null;
   if (request.entity_type === 'seller') {
@@ -160,7 +169,7 @@ async function reviewRequest(env, id, body) {
   return { status: 200, body: { request: { id, status: decision, reviewedAt: now } } };
 }
 
-async function setCheckoutGate(env, productId, body) {
+async function setCheckoutGate(env, productId, body, actor) {
   if (typeof body?.ready !== 'boolean') return { status: 400, body: { error: 'ready boolean 값이 필요합니다.' } };
   const row = await env.DB.prepare(`SELECT p.id,p.name,p.status,p.sale_type,p.price,p.seller_type,p.store_id,p.checkout_ready,p.seller_id,
     sp.direct_sale_status,s.verification_status AS store_verification_status
@@ -171,7 +180,7 @@ async function setCheckoutGate(env, productId, body) {
   const now = nowIso();
   await env.DB.prepare('UPDATE products SET checkout_ready=?,updated_at=? WHERE id=?').bind(body.ready ? 1 : 0, now, productId).run();
   await audit(env, {
-    actor: `mall-ops:${clean(body?.reviewer, 80) || 'operator'}`, action: body.ready ? 'product.checkout_gate.enabled' : 'product.checkout_gate.disabled',
+    actor, action: body.ready ? 'product.checkout_gate.enabled' : 'product.checkout_gate.disabled',
     sellerId: row.seller_id, storeId: row.store_id || null, productId,
     metadata: { note: clean(body?.note, 800), blockersAtDecision: blockers }
   });
@@ -194,13 +203,14 @@ export async function handleVerificationRequest(request, env) {
   const storeVerificationMatch = path.match(/^\/api\/stores\/([^/]+)\/verification\/submit$/);
   const internalReviewMatch = path.match(/^\/api\/internal\/verification\/([^/]+)\/review$/);
   const internalGateMatch = path.match(/^\/api\/internal\/products\/([^/]+)\/checkout-gate$/);
+  const internalSellerReadinessMatch = path.match(/^\/api\/internal\/verification\/sellers\/([^/]+)\/readiness$/);
   const isRoute = path === '/api/readiness' || path === '/api/verification/requests' || sellerVerificationSubmit || Boolean(storeVerificationMatch)
-    || path === '/api/internal/verification/queue' || Boolean(internalReviewMatch) || Boolean(internalGateMatch);
+    || path === '/api/internal/verification/queue' || Boolean(internalReviewMatch) || Boolean(internalGateMatch) || Boolean(internalSellerReadinessMatch);
   if (!isRoute) return null;
   if (!env.DB) return { status: 503, body: { error: 'Mall 전용 데이터베이스 연결이 없습니다.' } };
 
   if (path.startsWith('/api/internal/')) {
-    const auth = operationsAuthorization(request, env);
+    const auth = await authorizeVerificationOperations(request, env);
     if (!auth.ok) return { status: auth.status, body: { error: auth.error } };
     if (request.method === 'GET' && path === '/api/internal/verification/queue') {
       const requested = clean(url.searchParams.get('status'), 30) || 'submitted';
@@ -209,17 +219,20 @@ export async function handleVerificationRequest(request, env) {
         vr.request_note AS requestNote,vr.review_note AS reviewNote,vr.submitted_at AS submittedAt,vr.reviewed_at AS reviewedAt,
         sp.email,sp.display_name AS displayName,sp.seller_type AS sellerType,sp.direct_sale_status AS directSaleStatus
         FROM verification_requests vr JOIN seller_profiles sp ON sp.user_id=vr.seller_id WHERE vr.status=? ORDER BY vr.created_at ASC LIMIT 100`).bind(status).all();
-      return { status: 200, body: { requests: rows.results || [], status } };
+      return { status: 200, body: { requests: rows.results || [], status, actor: auth.actor } };
+    }
+    if (request.method === 'GET' && internalSellerReadinessMatch) {
+      return { status: 200, body: { readiness: await sellerReadiness(env, decodeURIComponent(internalSellerReadinessMatch[1])), actor: auth.actor } };
     }
     if (request.method === 'POST' && internalReviewMatch) {
       const body = await readJson(request);
       if (!body) return { status: 400, body: { error: 'Invalid JSON' } };
-      return reviewRequest(env, decodeURIComponent(internalReviewMatch[1]), body);
+      return reviewRequest(env, decodeURIComponent(internalReviewMatch[1]), body, auth.actor);
     }
     if (request.method === 'POST' && internalGateMatch) {
       const body = await readJson(request);
       if (!body) return { status: 400, body: { error: 'Invalid JSON' } };
-      return setCheckoutGate(env, decodeURIComponent(internalGateMatch[1]), body);
+      return setCheckoutGate(env, decodeURIComponent(internalGateMatch[1]), body, auth.actor);
     }
     return { status: 405, body: { error: 'Method not allowed' } };
   }

@@ -26,6 +26,7 @@ import { handleUniversalMembership } from './universal-membership.js';
 import { handleHomepagePresentation } from './homepage-presentation-control.js';
 import { handleStorageGateway } from './storage-gateway.js';
 import { handleExternalAiModuleGateway } from './external-ai-module-gateway.js';
+import { handleEkodiMcpGateway, handleEkodiMcpMetadata } from './ekodi-mcp-gateway.js';
 import { handleDevotionalControl } from './devotional-control.js';
 import { applyApiSecurityHeaders, enforceEdgeSecurity } from './security-edge.js';
 
@@ -83,6 +84,16 @@ export default {
     if (secretPreflight) return secretPreflight;
 
     const path = incoming.pathname;
+
+    if (path === '/.well-known/oauth-protected-resource') {
+      try { return applyApiSecurityHeaders(handleEkodiMcpMetadata(request)); }
+      catch (error) { console.error('EKODI MCP metadata error', error); return errorResponse('EKODI MCP 인증 메타데이터 처리 중 오류가 발생했습니다.', 'MCP_METADATA_ERROR'); }
+    }
+
+    if (path === '/mcp') {
+      try { return applyApiSecurityHeaders(await handleEkodiMcpGateway(request, env)); }
+      catch (error) { console.error('EKODI MCP gateway error', error); return errorResponse('EKODI MCP 처리 중 오류가 발생했습니다.', 'MCP_GATEWAY_ERROR'); }
+    }
 
     if (path === '/api/telemetry/visit') {
       try { const response = await handleTrafficIntelligence(request, env); if (response) return applyApiSecurityHeaders(response); }

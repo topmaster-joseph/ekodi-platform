@@ -251,12 +251,15 @@
         "person",
         "business"
       ],
-      "description": "보험 가입내역과 보장·청구 준비를 이해하기 쉽게 관리.",
+      "description": "보험 가입내역·보장·청구 준비와 필요 시 사람 연결, 사후 점검을 안전하게 이어가는 작업공간.",
       "capabilities": [
         "core.documents",
         "core.analytics",
         "finance.stewardship",
-        "insurance.guide"
+        "insurance.guide",
+        "insurance.claims",
+        "insurance.handoff",
+        "insurance.analytics"
       ],
       "signals": [
         "보험",
@@ -264,6 +267,33 @@
         "실손",
         "청구",
         "보험료"
+      ]
+    },
+    {
+      "id": "insurance-operations",
+      "name": "Insurance Operations Workspace",
+      "audiences": [
+        "business",
+        "organization"
+      ],
+      "description": "보험 제휴주체·승인 자료·상담 연결·성과를 컴플라이언스 게이트 아래 운영.",
+      "capabilities": [
+        "core.project",
+        "core.analytics",
+        "business.crm",
+        "business.operations",
+        "insurance.handoff",
+        "insurance.network",
+        "insurance.analytics"
+      ],
+      "signals": [
+        "보험 제휴",
+        "보험 운영",
+        "GA",
+        "설계사 운영",
+        "보험 상담관리",
+        "보험 상품자료",
+        "보험 성과"
       ]
     },
     {

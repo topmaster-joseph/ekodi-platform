@@ -35,12 +35,15 @@ const checks = [
   ['assets/supplier-ops.html', ['SUPPLIER OPS', 'Supplier Partner', 'SKU → EKODI 상품 매핑', '/assets/supplier-ops.js']],
   ['assets/supplier-ops.js', ['/api/internal/supplier-pilot/context', '/create-source', '/verify-contract', '/products', 'Auto Order OFF']],
   ['assets/supplier-ops.css', ['ops-grid', 'ops-map-form', 'ops-table']],
+  ['assets/verification-ops.html', ['SELLER VERIFICATION OPS', 'verificationLogin', 'verificationQueue', 'approveVerification', '/assets/verification-ops.js']],
+  ['assets/verification-ops.js', ['/api/internal/verification/queue', '/readiness', '/review', '/checkout-gate', 'return_to']],
+  ['assets/verification-ops.css', ['verify-layout', 'verify-queue', 'readiness-grid']],
   ['assets/supplier-discovery.html', ['SUPPLIER DISCOVERY', '증거 기반 평가', 'PILOT PREFLIGHT', '/assets/supplier-discovery.js']],
   ['assets/supplier-discovery.js', ['/api/internal/supplier-discovery/context', '/assessment', '/evidence', '/outreach-draft', '/api/internal/supplier-preflight', '자동 발송하지 않습니다']],
   ['assets/supplier-connectors.html', ['OFFICIAL SUPPLIER CONNECTORS', '도매매 · 도매꾹 공식 API', 'ORDER DRY-RUN', '/assets/supplier-connectors.js', '코드 없음']],
   ['assets/supplier-connectors.js', ['/api/internal/connectors/domemae/readiness', '/api/internal/connectors/domemae/item-lookup', '/api/internal/connectors/domemae/order-dry-run', '실제 주문 API는 호출하지 않았습니다']],
   ['assets/shared-product.html', ['PUBLIC PRODUCT', '/assets/public-product.js']],
-  ['_redirects', ['/p/* /assets/shared-product.html 200', '/store/* /assets/shared-store.html 200', '/free-ops /assets/free-ops.html 200', '/sourcing /assets/sourcing-lab.html 200', '/fulfillment', '/supplier-ops /assets/supplier-ops.html 200', '/supplier-discovery /assets/supplier-discovery.html 200', '/supplier-connectors /assets/supplier-connectors.html 200']],
+  ['_redirects', ['/p/* /assets/shared-product.html 200', '/store/* /assets/shared-store.html 200', '/free-ops /assets/free-ops.html 200', '/sourcing /assets/sourcing-lab.html 200', '/fulfillment', '/supplier-ops /assets/supplier-ops.html 200', '/verification-ops /assets/verification-ops.html 200', '/supplier-discovery /assets/supplier-discovery.html 200', '/supplier-connectors /assets/supplier-connectors.html 200']],
   ['build-meta.json', ['"platformMode": "marketplace-v2"', '"paymentsEnabled": false', '"affiliateExternalRouting": true']]
 ];
 const errors = [];

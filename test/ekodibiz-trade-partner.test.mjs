@@ -71,6 +71,8 @@ test('canonical EKODIBIZ URL slug maps to immutable internal tenant slug',async(
 test('EKODIBIZ canonical workspace root is backed by the EKODIBIZ service',async()=>{
   const [router,wrangler,html,manifestText,deployWorkflow]=await Promise.all([read('platform-router-entry-worker.js'),read('wrangler.site.toml'),read('ekodibiz/index.html'),read('deploy/manifests/shared-site.worker.json'),read('.github/workflows/deploy-ekodibiz.yml')]);
   assert.ok(router.includes('EKODIBIZ_PUBLIC_ROUTE'));
+  assert.ok(router.includes("EKODIBIZ_API_PREFIX='/ekodibiz/api/'"));
+  assert.ok(router.includes('routeEkodiBizApi(request,env)'));
   assert.ok(router.includes("env?.EKODIBIZ?.fetch"));
   assert.ok(router.includes("x-ekodi-workspace-gateway','ekodibiz-service-binding"));
   assert.ok(router.includes("const EKODIBIZ_ASSETS=new Set(['style.css','site.js'])"));

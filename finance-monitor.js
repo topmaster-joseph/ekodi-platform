@@ -114,22 +114,35 @@ function renderFinanceAccounting(rows) {
 
 function renderFinanceStructure(data) {
   const root = document.querySelector('#financeStructure');
-  root.textContent = '';
-  for (const organization of data.organizations) {
+  if (!root) return;
+  const unitsByOrganization = new Map();
+  const projectCountByUnit = new Map();
+  for (const unit of data.businessUnits || []) {
+    const key = String(unit.organizationId || '');
+    const units = unitsByOrganization.get(key) || [];
+    units.push(unit);
+    unitsByOrganization.set(key, units);
+  }
+  for (const project of data.projects || []) {
+    const key = String(project.businessUnitId || '');
+    projectCountByUnit.set(key, (projectCountByUnit.get(key) || 0) + 1);
+  }
+  const fragment = document.createDocumentFragment();
+  for (const organization of data.organizations || []) {
     const card = document.createElement('article'); card.className = 'finance-org';
     const title = document.createElement('strong'); title.textContent = `${organization.name} · ${organization.id}`; card.append(title);
-    const units = data.businessUnits.filter(unit => unit.organizationId === organization.id);
+    const units = unitsByOrganization.get(String(organization.id || '')) || [];
     if (!units.length) { const empty = document.createElement('small'); empty.textContent = '등록된 사업부 없음'; card.append(empty); }
     for (const unit of units) {
       const box = document.createElement('div'); box.className = 'finance-unit';
       const name = document.createElement('strong'); name.textContent = `${unit.name} · ${unit.id}`;
       const domain = document.createElement('small'); domain.textContent = unit.sourceDomain || '도메인 미지정';
-      const projects = data.projects.filter(project => project.businessUnitId === unit.id);
-      const count = document.createElement('small'); count.textContent = `프로젝트 ${projects.length}개`;
+      const count = document.createElement('small'); count.textContent = `프로젝트 ${projectCountByUnit.get(String(unit.id || '')) || 0}개`;
       box.append(name, domain, count); card.append(box);
     }
-    root.append(card);
+    fragment.append(card);
   }
+  root.replaceChildren(fragment);
 }
 
 async function loadFinance(force = false) {
@@ -137,6 +150,8 @@ async function loadFinance(force = false) {
   const now = Date.now();
   if (!force && financeLastLoadedAt && now - financeLastLoadedAt < FINANCE_TTL_MS) return;
   financeLoading = true;
+  const financePanel = document.querySelector('[data-panel~="finance"]');
+  financePanel?.setAttribute('aria-busy', 'true');
   if (financeRefresh) { financeRefresh.disabled = true; financeRefresh.textContent = '↻ 확인 중…'; }
   try {
     const [overview, payments, accounting, structure] = await Promise.all([
@@ -157,6 +172,7 @@ async function loadFinance(force = false) {
     if (notice) { notice.className = 'finance-note'; notice.textContent = `결제·회계 관제 연결을 확인해야 합니다: ${error.message}`; }
   } finally {
     financeLoading = false;
+    financePanel?.removeAttribute('aria-busy');
     if (financeRefresh) { financeRefresh.disabled = false; financeRefresh.textContent = '↻ 결제 · 회계 새로고침'; }
   }
 }

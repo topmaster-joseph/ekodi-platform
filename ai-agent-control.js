@@ -4,6 +4,7 @@ import { buildCoreAiGateway, getCoreAiGatewayStatus } from './core-ai-gateway.js
 import { createOpenAiProvider, getOpenAiProviderStatus } from './openai-provider-adapter.js';
 import { AI_MISSION_RUNTIME, evaluateMissionAction, getRuntimeAgentPolicy } from './ai-governance-runtime.js';
 import { evaluateAutonomousOperation, getSovereignAutonomySummary } from './sovereign-autonomy-runtime.js';
+import { buildEkodianOperationSnapshot, getEkodian8GSummary } from './ekodian-8g-runtime.js';
 
 const PREFIX = '/api/control/ai';
 const MAX_LIST = 100;
@@ -74,13 +75,16 @@ async function readJson(request) {
 function normalizeAction(body = {}) {
   const actionType = String(body.actionType || '').trim().slice(0, 100);
   const area = String(body.area || '').trim().slice(0, 120);
+  const sourcePayload = body.payload && typeof body.payload === 'object' && !Array.isArray(body.payload) ? body.payload : {};
+  const capabilityId = String(body.capabilityId || sourcePayload.capabilityId || '').trim().slice(0, 160);
   return {
     agentId: String(body.agentId || '').trim().slice(0, 80),
     actionType,
     area,
     target: String(body.target || '').trim().slice(0, 240),
     rationale: String(body.rationale || '').trim().slice(0, 1000),
-    payload: body.payload && typeof body.payload === 'object' && !Array.isArray(body.payload) ? body.payload : {},
+    capabilityId,
+    payload: capabilityId ? { ...sourcePayload, capabilityId } : sourcePayload,
     reversible: Boolean(body.reversible),
     delegated: Boolean(body.delegated),
     logged: true,
@@ -132,6 +136,16 @@ function initialStatus(result, action) {
   if (result.tier === 'execute_reversible' && SAFE_EXECUTORS.has(action.actionType)) return 'executing';
   if (result.tier === 'execute_reversible') return 'ready_for_executor';
   return 'assist_only';
+}
+
+function ekodianFor(action, decision, status, extra = {}) {
+  return buildEkodianOperationSnapshot({
+    ...action,
+    ...extra,
+    decisionTier: decision?.tier || action?.decision_tier || action?.decisionTier,
+    status,
+    surface: extra.surface || 'admin',
+  });
 }
 
 async function insertAction(env, session, action, result) {
@@ -217,16 +231,24 @@ async function listActions(env, url) {
   if (agentId) { clauses.push('agent_id = ?'); values.push(agentId); }
   const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
   const rows = await env.DB.prepare(`SELECT id, agent_id, agent_name, action_type, area, target, rationale,
-      decision_tier, decision_reason, status, requested_by, created_at, decided_by, decided_at,
+      payload_json, decision_tier, decision_reason, status, requested_by, created_at, decided_by, decided_at,
       decision_note, result_json, verified_at
     FROM ai_agent_actions ${where}
     ORDER BY id DESC LIMIT ?`)
     .bind(...values, limit).all();
-  return (rows.results || []).map(row => ({
-    ...row,
-    result: safeParse(row.result_json),
-    result_json: undefined,
-  }));
+  return (rows.results || []).map(row => {
+    const payload = safeParse(row.payload_json);
+    const record = {
+      ...row,
+      result: safeParse(row.result_json),
+      result_json: undefined,
+      payload_json: undefined,
+    };
+    return {
+      ...record,
+      ekodian: buildEkodianOperationSnapshot({ ...record, payload, surface: 'admin' }),
+    };
+  });
 }
 
 function safeParse(value) {
@@ -245,6 +267,7 @@ async function handleAdminAssist(request, env, session) {
     agentId: 'chief',
     actionType: 'admin.assist_chat',
     area: 'read_only_audits',
+    capabilityId: 'core.navigator',
     target: page.section || 'admin',
     rationale: message,
     payload: {
@@ -279,6 +302,7 @@ async function handleAdminAssist(request, env, session) {
   });
   const value = result.value && typeof result.value === 'object' ? result.value : { text: String(result.value || '') };
   const finalized = await finalizeAssistAction(env, stored.id, result, value);
+  const ekodian = ekodianFor(auditAction, decision, finalized.status);
   if (!result.ok) {
     return json({
       ok: false,
@@ -289,6 +313,7 @@ async function handleAdminAssist(request, env, session) {
       provider: null,
       reply: 'AI 보조 기능 없이 핵심 기능을 계속 이용할 수 있습니다.',
       notice: result.notice || '',
+      ekodian,
     }, 503, request, env);
   }
   return json({
@@ -301,6 +326,7 @@ async function handleAdminAssist(request, env, session) {
     model: value.model || null,
     reply: String(value.text || '').trim(),
     notice: result.notice || '',
+    ekodian,
   }, 200, request, env);
 }
 
@@ -309,7 +335,7 @@ async function decideAction(request, env, session, id) {
   const decision = String(body?.decision || '').trim().toLowerCase();
   if (!['approve', 'reject'].includes(decision)) return json({ error: 'decision은 approve 또는 reject여야 합니다.', code: 'INVALID_DECISION' }, 400, request, env);
 
-  const row = await env.DB.prepare('SELECT id, decision_tier, status FROM ai_agent_actions WHERE id = ?').bind(id).first();
+  const row = await env.DB.prepare('SELECT id, agent_id, action_type, area, payload_json, decision_tier, status FROM ai_agent_actions WHERE id = ?').bind(id).first();
   if (!row) return json({ error: 'AI action을 찾을 수 없습니다.', code: 'ACTION_NOT_FOUND' }, 404, request, env);
   if (row.decision_tier !== 'human_gate' || row.status !== 'awaiting_human') {
     return json({ error: '사람의 결정 대기 상태인 action만 결정할 수 있습니다.', code: 'ACTION_NOT_AWAITING_HUMAN' }, 409, request, env);
@@ -323,7 +349,13 @@ async function decideAction(request, env, session, id) {
     WHERE id = ?`)
     .bind(nextStatus, String(session.email || 'unknown'), now, note, id).run();
 
-  return json({ ok: true, id, status: nextStatus, decidedAt: now, note }, 200, request, env);
+  const ekodian = buildEkodianOperationSnapshot({
+    ...row,
+    payload: safeParse(row.payload_json),
+    status: nextStatus,
+    surface: 'admin',
+  });
+  return json({ ok: true, id, status: nextStatus, decidedAt: now, note, ekodian }, 200, request, env);
 }
 
 export async function handleAgentMissionControl(request, env) {
@@ -358,7 +390,12 @@ export async function handleAgentMissionControl(request, env) {
       humanGateAreas: AI_MISSION_RUNTIME.humanGateAreas,
       forbiddenAreas: AI_MISSION_RUNTIME.forbiddenAreas,
       sovereignAutonomy: getSovereignAutonomySummary(),
+      ekodian8g: getEkodian8GSummary(),
     }, 200, request, env);
+  }
+
+  if (request.method === 'GET' && url.pathname === `${PREFIX}/ekodian`) {
+    return json({ ok: true, ...getEkodian8GSummary() }, 200, request, env);
   }
 
   if (request.method === 'GET' && url.pathname === `${PREFIX}/sovereign`) {
@@ -390,7 +427,9 @@ export async function handleAgentMissionControl(request, env) {
     const action = normalizeAction(body);
     const payloadIssue = payloadError(action);
     if (payloadIssue) return json(payloadIssue, payloadIssue.code === 'ACTION_PAYLOAD_TOO_LARGE' ? 413 : 400, request, env);
-    return json({ ok: true, action, decision: evaluateMissionAction(action) }, 200, request, env);
+    const decision = evaluateMissionAction(action);
+    const status = initialStatus(decision, action);
+    return json({ ok: true, action, decision, ekodian: ekodianFor(action, decision, status) }, 200, request, env);
   }
 
   if (request.method === 'GET' && url.pathname === `${PREFIX}/actions`) {
@@ -412,10 +451,23 @@ export async function handleAgentMissionControl(request, env) {
     if (stored.status === 'executing') {
       const execution = await executeSafeAction(request, env, action);
       const finalized = await finalizeAction(env, stored.id, execution);
-      return json({ ok: execution.ok, id: stored.id, decision, status: finalized.status, execution }, execution.ok ? 200 : 502, request, env);
+      return json({
+        ok: execution.ok,
+        id: stored.id,
+        decision,
+        status: finalized.status,
+        execution,
+        ekodian: ekodianFor(action, decision, finalized.status),
+      }, execution.ok ? 200 : 502, request, env);
     }
 
-    return json({ ok: true, id: stored.id, decision, status: stored.status }, decision.tier === 'forbidden' ? 403 : 202, request, env);
+    return json({
+      ok: true,
+      id: stored.id,
+      decision,
+      status: stored.status,
+      ekodian: ekodianFor(action, decision, stored.status),
+    }, decision.tier === 'forbidden' ? 403 : 202, request, env);
   }
 
   const decisionMatch = url.pathname.match(/^\/api\/control\/ai\/actions\/(\d+)\/decision$/);

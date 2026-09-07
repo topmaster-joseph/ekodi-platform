@@ -29,6 +29,7 @@
       hashes: ['#ai-ops', '#aiops'],
       insert: 'after-campus',
     },
+    openai:{label:'OpenAI',icon:'O',styles:['openai-workspace-admin.css'],scripts:['openai-workspace-admin.js'],real:'[data-section="openai"]',hashes:['#openai']},
     devotional:{label:'매일묵상',icon:'V',styles:['devotional-admin.css'],scripts:['devotional-admin.js'],real:'[data-section="devotional"]',hashes:['#devotional'],insert:'after-aiops'},
     'ai-module-spec':{label:'A',icon:'A',styles:['ai-module-spec-admin.css'],scripts:['ai-module-spec-admin.js'],real:'[data-section="ai-module-spec"]',hashes:['#ai-module-spec']},
     'life-ai':{label:'인생AI',icon:'Q',styles:['life-ai-admin.css'],scripts:['life-ai-admin.js'],real:'[data-section="life-ai"]',hashes:['#life-ai'],insert:'after-aiops'},
@@ -77,7 +78,7 @@
       insert: 'after-work',
     },
     devices: {
-      label: '실행 인프라·Nodes', icon: '⌁',
+      label: '실행 인프라', icon: '⌁',
       styles: ['device-control-admin.css', 'remote-power-admin.css'],
       scripts: ['device-control-admin.js', 'remote-power-admin.js'],
       secondaryStyles: ['device-browser-diagnostics.css'],
@@ -247,9 +248,6 @@
           if (placeholder !== real && placeholder.isConnected) placeholder.remove();
         }
         window.dispatchEvent(new CustomEvent('ekodi-nav-changed', { detail:{ feature:key } }));
-        if (!auto || feature.hashes?.includes(location.hash) || feature.paths?.includes(location.pathname)) {
-          queueMicrotask(() => real.click());
-        }
         mark(`ekodi-feature-${key}-ready`);
         scheduleSecondary(key, feature);
       } catch (error) {

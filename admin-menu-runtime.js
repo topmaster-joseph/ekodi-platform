@@ -10,6 +10,7 @@ const ROLES = ['super_admin', 'operator', 'viewer'];
 let locale = readLocale();
 let panelInstalled = false;
 let currentSession = null;
+let sessionLoadPromise = null;
 let contextOptions = [];
 let currentContext = Object.freeze({ type:'platform', id:'global', label:'EKODI Platform' });
 let contextInstallPromise = null;
@@ -74,6 +75,14 @@ async function api(path, options = {}) {
     throw error;
   }
   return data;
+}
+function loadCurrentSession() {
+  if (currentSession) return Promise.resolve(currentSession);
+  if (sessionLoadPromise) return sessionLoadPromise;
+  sessionLoadPromise = api('/api/session')
+    .then(session => { currentSession = session; return session; })
+    .finally(() => { sessionLoadPromise = null; });
+  return sessionLoadPromise;
 }
 function navItems() {
   return document.querySelectorAll('.sidebar nav .nav[data-section],.sidebar nav .nav[data-lazy-section],.sidebar nav .nav[data-device-control-nav]');
@@ -206,6 +215,17 @@ function ensureAdminPanel() {
   panelInstalled = true;
   translateAdminPanel();
   return section;
+}
+async function ensureAdminAccess() {
+  const session = await loadCurrentSession();
+  if (session?.role !== 'super_admin') return null;
+  const requestedContext = readRequestedContext();
+  if (currentContext.type !== 'platform' || (requestedContext && requestedContext !== 'platform:global')) return null;
+  ensureAdminNav();
+  const panel = ensureAdminPanel();
+  applyMenuLabels();
+  if (panel) void loadAccounts();
+  return panel;
 }
 function setMessage(text, error = false) {
   const node = document.querySelector('[data-admin-message]');
@@ -470,7 +490,8 @@ async function install() {
   installStyle(); installLocaleControl(); ensureExternalMenuItems(); applyMenuLabels();
   if (!token()) return;
   try {
-    currentSession = await api('/api/session');
+    currentSession = await loadCurrentSession();
+    if (currentSession.role === 'super_admin') ensureAdminPanel();
     await installContextControl();
     if (currentSession.role === 'super_admin' && currentContext.type === 'platform') { ensureAdminNav(); ensureAdminPanel(); applyMenuLabels(); }
     else document.querySelector('.sidebar nav .nav[data-section="admins"]')?.remove();
@@ -482,7 +503,7 @@ if (document.readyState === 'loading') document.addEventListener('DOMContentLoad
 window.addEventListener('ekodi-admin-ready', install);
 window.addEventListener('ekodi-nav-changed', applyMenuLabels);
 window.addEventListener('ekodi-feature-installed', applyMenuLabels);
-window.EKODIAdminMenu = Object.freeze({ locale: () => locale, setLocale: value => { saveLocale(value); applyLocale(); }, label: id => getAdminMenuLabel(id, locale), refreshAdminAccess: loadAccounts });
+window.EKODIAdminMenu = Object.freeze({ locale: () => locale, setLocale: value => { saveLocale(value); applyLocale(); }, label: id => getAdminMenuLabel(id, locale), refreshAdminAccess: loadAccounts, ensureAdminAccess });
 window.EKODIAdminContext = Object.freeze({
   current: () => currentContext,
   authority: () => currentSession?.authority || null,

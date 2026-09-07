@@ -15,6 +15,7 @@ const SERVICE_CATALOG = [
   { id: 'trade', name: 'EKODI Global Trading', domain: 'trade.ekodi.kr', url: 'https://trade.ekodi.kr', group: 'business', defaultState: 'planned', defaultMonitor: false },
   { id: 'mall', name: '에코디몰', domain: 'ekodi.kr/ekodibiz/mall', url: 'https://ekodi.kr/ekodibiz/mall', group: 'business', defaultState: 'active', defaultMonitor: true },
   { id: 'pay', name: '에코디결제', domain: 'pay.ekodi.kr', url: 'https://pay.ekodi.kr', group: 'business', defaultState: 'planned', defaultMonitor: false },
+  { id: 'insurance', name: '에코디보험', domain: 'ins.ekodi.kr', url: 'https://ins.ekodi.kr', group: 'business', defaultState: 'planned', defaultMonitor: false },
   { id: 'books', name: '에코디북스', domain: 'books.ekodi.kr', url: 'https://books.ekodi.kr', group: 'knowledge', defaultState: 'active', defaultMonitor: true },
   { id: 'lab', name: '에코디연구소', domain: 'lab.ekodi.kr', url: 'https://lab.ekodi.kr', group: 'knowledge', defaultState: 'active', defaultMonitor: true },
   { id: 'edu', name: '에코디교육', domain: 'edu.ekodi.kr', url: 'https://edu.ekodi.kr', group: 'knowledge', defaultState: 'planned', defaultMonitor: false },

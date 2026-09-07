@@ -394,6 +394,10 @@ export function mountAdminSidebar(root = document, options = {}) {
     const tab = event.target.closest?.('[data-admin-context-section]');
     if (!tab) return;
     event.preventDefault();
+    if (tab.dataset.adminContextSection === 'openai') {
+      const source = activeSection(nav);
+      if (source && source !== 'openai') try { sessionStorage.setItem('ekodi-openai-source-section', source); } catch {}
+    }
     activateSection(nav, tab.dataset.adminContextSection);
     schedule();
   };
