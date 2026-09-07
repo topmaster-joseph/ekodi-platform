@@ -8,6 +8,7 @@ const html=read('my/docs/index.html');
 const js=read('my/docs/docs.js');
 const worker=read('my-worker.js');
 const migration=read('supabase/migrations/20260907113000_document_workspace_ai.sql');
+const healthMigration=read('supabase/migrations/20260907135500_document_workspace_health.sql');
 const ai=read('supabase/functions/document-ai-api/index.ts');
 const manifest=JSON.parse(read('deploy/manifests/my.worker.json'));
 
@@ -35,6 +36,8 @@ test('private document schema is owner-scoped and usage writes stay server-side'
   assert.match(migration,/auth\.uid\(\) = owner_user_id/);
   assert.match(migration,/workspace_key = \('personal:' \|\| auth\.uid\(\)::text\)/);
   assert.match(migration,/revoke insert, update, delete on public\.document_ai_usage from anon, authenticated/i);
+  assert.match(healthMigration,/document_workspace_health/);
+  assert.match(healthMigration,/ekodi\.documents\.v1/);
 });
 
 test('document AI is authenticated, provider-resilient and bounded',()=>{
@@ -44,6 +47,8 @@ test('document AI is authenticated, provider-resilient and bounded',()=>{
   assert.match(ai,/OPENAI_API_KEY/);
   assert.match(ai,/store:false/);
   assert.match(ai,/사용자가 제공하지 않은 사실/);
+  assert.match(ai,/20260907-docs-ai-2/);
+  assert.match(ai,/X-EKODI-Docs-Contract/);
 });
 
 test('My EKODI advertises and probes the document workspace in production',()=>{
