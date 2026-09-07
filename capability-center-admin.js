@@ -85,12 +85,14 @@
   function card(item) {
     const tags = (item.tags || []).slice(0, 4).map(tag => `<span>${esc(tag)}</span>`).join('');
     const surfaces = (item.surfaces || []).join(' · ') || 'admin';
+    const provider = item.provider?.id ? `<span>Provider ${esc(item.provider.id)}</span>` : '';
+    const contract = item.provider?.contract ? ` · ${esc(item.provider.contract)}` : '';
     return `<article class="capability-card">
       <div class="capability-card-head"><div><small>${esc(item.domain)}</small><h3>${esc(item.name)}</h3></div><code>${esc(item.id)}</code></div>
       <p>${esc(item.description)}</p>
-      <div class="capability-meta"><span>Agent ${esc(item.ownerAgent)}</span><span>${esc(item.actionTier)}</span><span>${esc(item.maturity)}</span></div>
+      <div class="capability-meta"><span>Agent ${esc(item.ownerAgent)}</span><span>${esc(item.actionTier)}</span><span>${esc(item.maturity)}</span>${provider}</div>
       <div class="capability-tags">${tags}</div>
-      <footer><small>Surface ${esc(surfaces)}</small><button type="button" data-capability-use="${esc(item.id)}">AI로 사용</button></footer>
+      <footer><small>Surface ${esc(surfaces)}${contract}</small><button type="button" data-capability-use="${esc(item.id)}">AI로 사용</button></footer>
     </article>`;
   }
 

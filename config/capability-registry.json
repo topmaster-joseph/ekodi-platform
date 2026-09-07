@@ -50,8 +50,8 @@
       "domain": "core",
       "ownerAgent": "chief",
       "actionTier": "assist",
-      "maturity": "contract",
-      "description": "문서 초안, 요약, 정리, 양식화와 지식 산출물을 지원한다.",
+      "maturity": "service-backed",
+      "description": "문서 작성·편집·계정 저장·버전 복원·AI 교정과 DOCX·HWPX 등 실사용 파일 흐름을 사람 통제 아래 지원한다.",
       "surfaces": [
         "my",
         "workspace"
@@ -60,7 +60,33 @@
         "document",
         "office",
         "writing"
-      ]
+      ],
+      "provider": {
+        "id": "my-docs",
+        "surface": "https://my.ekodi.kr/docs/",
+        "health": "https://my.ekodi.kr/health",
+        "contract": "ekodi.documents.v2",
+        "generation": 8,
+        "storage": "person-scoped-rls",
+        "ai": "provider-resilient-human-gated",
+        "formats": {
+          "import": [
+            "txt",
+            "markdown",
+            "html",
+            "docx",
+            "hwpx"
+          ],
+          "export": [
+            "docx",
+            "hwpx",
+            "html",
+            "markdown",
+            "txt",
+            "pdf"
+          ]
+        }
+      }
     },
     {
       "id": "core.automation",

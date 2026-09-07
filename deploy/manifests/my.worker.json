@@ -39,7 +39,10 @@
           "privateWorkspaceRouting",
           "documentWorkspace",
           "/docs/",
-          "core.documents"
+          "core.documents",
+          "ekodi.documents.v2",
+          "documentHwpx",
+          "documentVersionHistory"
         ],
         "headerExpect": [
           "x-ekodi-service: my-ekodi",
@@ -73,7 +76,9 @@
         "expect": [
           "EKODI Docs AI",
           "CORE.DOCUMENTS",
-          "/docs/docs.js?v=20260907-docs-ai-1"
+          "HWPX",
+          "버전",
+          "/docs/docs.js?v=20260907-docs-ai-3"
         ],
         "headerExpect": [
           "x-ekodi-service: my-ekodi",

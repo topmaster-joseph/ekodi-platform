@@ -12,9 +12,11 @@ const DAILY_LIMIT=Math.max(1,Math.min(200,Number(Deno.env.get("DOCUMENT_AI_DAILY
 const admin=createClient(SUPABASE_URL,SUPABASE_SERVICE_ROLE_KEY,{auth:{persistSession:false}});
 const ORIGINS=new Set(["https://my.ekodi.kr","https://auth.ekodi.kr"]);
 const OPERATIONS=new Set(["proofread","rewrite","shorten","expand","summarize"]);
-const MAX_INPUT=18000;
+const MAX_INPUT=120000;
+const CHUNK_INPUT=14000;
+const MAX_CHUNKS=10;
 const MAX_INSTRUCTION=4000;
-const RELEASE="20260907-docs-ai-2";
+const RELEASE="20260907-docs-ai-3";
 
 function clean(value:unknown,max=MAX_INPUT){return String(value??"").replace(/\u0000/g,"").slice(0,max).trim()}
 function cors(req:Request){const origin=req.headers.get("Origin")||"";return {
@@ -22,7 +24,7 @@ function cors(req:Request){const origin=req.headers.get("Origin")||"";return {
   "Vary":"Origin",
   "Access-Control-Allow-Headers":"authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods":"POST,OPTIONS",
-  "X-EKODI-Docs-Contract":"ekodi.document-ai.v1",
+  "X-EKODI-Docs-Contract":"ekodi.document-ai.v2",
   "X-EKODI-Docs-Release":RELEASE,
 }}
 function json(req:Request,body:unknown,status=200){return new Response(JSON.stringify(body),{status,headers:{...cors(req),"content-type":"application/json; charset=utf-8","cache-control":"no-store","x-content-type-options":"nosniff"}})}
@@ -57,7 +59,7 @@ async function invokeGemini(system:string,input:string){
   if(!GEMINI_API_KEY)throw new Error("gemini_not_configured");
   const response=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(GEMINI_MODEL)}:generateContent`,{
     method:"POST",headers:{"content-type":"application/json","x-goog-api-key":GEMINI_API_KEY,"x-goog-api-client":"ekodi-docs/1.0"},
-    body:JSON.stringify({systemInstruction:{parts:[{text:system}]},contents:[{role:"user",parts:[{text:input}]}],generationConfig:{temperature:0.2,maxOutputTokens:4096}}),
+    body:JSON.stringify({systemInstruction:{parts:[{text:system}]},contents:[{role:"user",parts:[{text:input}]}],generationConfig:{temperature:0.2,maxOutputTokens:8192}}),
     signal:AbortSignal.timeout(60000),
   });
   const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data?.error?.message||`gemini_${response.status}`);
@@ -68,7 +70,7 @@ async function invokeOpenAI(system:string,input:string){
   if(!OPENAI_API_KEY)throw new Error("openai_not_configured");
   const response=await fetch("https://api.openai.com/v1/responses",{
     method:"POST",headers:{"authorization":`Bearer ${OPENAI_API_KEY}`,"content-type":"application/json"},
-    body:JSON.stringify({model:OPENAI_MODEL,store:false,instructions:system,input,max_output_tokens:4096}),
+    body:JSON.stringify({model:OPENAI_MODEL,store:false,instructions:system,input,max_output_tokens:8192}),
     signal:AbortSignal.timeout(60000),
   });
   const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data?.error?.message||`openai_${response.status}`);
@@ -80,6 +82,38 @@ async function invokeModel(system:string,input:string){
   if(GEMINI_API_KEY){try{return await invokeGemini(system,input)}catch(error){errors.push(clean(error instanceof Error?error.message:error,300))}}
   if(OPENAI_API_KEY){try{return await invokeOpenAI(system,input)}catch(error){errors.push(clean(error instanceof Error?error.message:error,300))}}
   throw new Error(errors.length?`providers_failed:${errors.join("|")}`:"provider_unavailable");
+}
+function splitSemantic(text:string,maxChars=CHUNK_INPUT){
+  const paragraphs=String(text||"").replace(/\r\n/g,"\n").split(/\n{2,}/);
+  const chunks:string[]=[];let current="";
+  const push=(value:string)=>{const v=value.trim();if(v)chunks.push(v)};
+  for(const paragraph of paragraphs){
+    const part=paragraph.trim();if(!part)continue;
+    if(part.length>maxChars){push(current);current="";for(let i=0;i<part.length;i+=maxChars)push(part.slice(i,i+maxChars));continue}
+    const next=current?`${current}\n\n${part}`:part;
+    if(next.length>maxChars){push(current);current=part}else current=next;
+  }
+  push(current);return chunks;
+}
+async function invokeDocument(system:string,{text,title,scope,extra,operation}:{text:string,title:string,scope:string,extra:string,operation:string}){
+  const chunks=splitSemantic(text);if(chunks.length>MAX_CHUNKS)throw new Error("document_chunk_limit");
+  if(chunks.length<=1){
+    const input=[`문서 제목: ${title||"제목 없음"}`,`편집 범위: ${scope==="selection"?"선택 영역":"전체 문서"}`,extra?`사용자 추가 요청: ${extra}`:"",`원문:\n${text}`].filter(Boolean).join("\n\n");
+    return {...await invokeModel(system,input),chunkCount:1};
+  }
+  const tasks=chunks.map((chunk,index)=>async()=>{
+    const input=[`문서 제목: ${title||"제목 없음"}`,`전체 ${chunks.length}개 분할 중 ${index+1}번째`,extra?`사용자 추가 요청: ${extra}`:"",`이 부분의 원문:\n${chunk}`].filter(Boolean).join("\n\n");
+    return invokeModel(`${system} 전체 문서의 일부이므로 앞뒤 문맥을 추측해 새 사실을 만들지 말고 이 부분만 편집하세요.`,input);
+  });
+  const results:any[]=[];for(let i=0;i<tasks.length;i+=3)results.push(...await Promise.all(tasks.slice(i,i+3).map(fn=>fn())));
+  let joined=results.map(item=>item.text).join("\n\n").trim();
+  let inputTokens=results.reduce((sum,item)=>sum+Number(item.inputTokens||0),0),outputTokens=results.reduce((sum,item)=>sum+Number(item.outputTokens||0),0);
+  const providers=[...new Set(results.map(item=>item.provider).filter(Boolean))],models=[...new Set(results.map(item=>item.model).filter(Boolean))];
+  if(operation==="summarize"){
+    const final=await invokeModel(system,`문서 제목: ${title||"제목 없음"}\n\n부분 요약을 하나의 중복 없는 최종 요약으로 통합하세요.\n\n${joined}`);
+    joined=final.text;inputTokens+=Number(final.inputTokens||0);outputTokens+=Number(final.outputTokens||0);providers.push(final.provider);models.push(final.model);
+  }
+  return {text:joined,provider:[...new Set(providers)].join("+"),model:[...new Set(models)].join("+"),inputTokens,outputTokens,chunkCount:chunks.length};
 }
 async function dailyUsage(userId:string){
   const since=new Date();since.setUTCHours(0,0,0,0);
@@ -95,16 +129,16 @@ Deno.serve(async(req)=>{
   if(req.method!=="POST")return json(req,{error:"method_not_allowed"},405);
   const user=await userFrom(req);if(!user)return json(req,{error:"authentication_required",message:"Google 로그인 후 AI 편집을 사용할 수 있습니다."},401);
   const body=await req.json().catch(()=>({}));
-  const operation=clean(body?.operation,30).toLowerCase(),text=clean(body?.text),title=clean(body?.title,180),scope=clean(body?.scope,20),extra=clean(body?.instruction,MAX_INSTRUCTION);
+  const rawText=String(body?.text||"");
+  const operation=clean(body?.operation,30).toLowerCase(),text=clean(rawText),title=clean(body?.title,180),scope=clean(body?.scope,20),extra=clean(body?.instruction,MAX_INSTRUCTION);
   if(!OPERATIONS.has(operation)||!text)return json(req,{error:"invalid_request"},400);
-  if(String(body?.text||"").length>MAX_INPUT)return json(req,{error:"document_too_large",message:`한 번의 AI 편집은 ${MAX_INPUT.toLocaleString()}자까지 지원합니다. 선택 영역을 줄여 주세요.`},413);
+  if(rawText.length>MAX_INPUT)return json(req,{error:"document_too_large",message:`한 번의 AI 문서 편집은 ${MAX_INPUT.toLocaleString()}자까지 자동 분할 처리합니다. 더 긴 문서는 장 또는 선택 영역 단위로 나눠 주세요.`},413);
   let used=0;try{used=await dailyUsage(user.id)}catch(error){console.error("document ai quota",error);return json(req,{error:"usage_check_unavailable"},503)}
   if(used>=DAILY_LIMIT)return json(req,{error:"daily_limit_reached",message:`오늘의 문서 AI 사용 한도 ${DAILY_LIMIT}회에 도달했습니다. 직접 편집과 저장은 계속 사용할 수 있습니다.`},429);
-  const input=[`문서 제목: ${title||"제목 없음"}`,`편집 범위: ${scope==="selection"?"선택 영역":"전체 문서"}`,extra?`사용자 추가 요청: ${extra}`:"",`원문:\n${text}`].filter(Boolean).join("\n\n");
   try{
-    const result=await invokeModel(instruction(operation),input);
+    const result=await invokeDocument(instruction(operation),{text,title,scope,extra,operation});
     await recordUsage(user.id,operation,result,"completed");
-    return json(req,{ok:true,contract:"ekodi.document-ai.v1",providerMode:"ai",operation,text:result.text,usage:{today:used+1,dailyLimit:DAILY_LIMIT},provider:{id:result.provider,model:result.model}});
+    return json(req,{ok:true,contract:"ekodi.document-ai.v2",providerMode:"ai",operation,text:result.text,chunking:{automatic:result.chunkCount>1,chunks:result.chunkCount,maxInput:MAX_INPUT},usage:{today:used+1,dailyLimit:DAILY_LIMIT},provider:{id:result.provider,model:result.model}});
   }catch(error){
     const code=clean(error instanceof Error?error.message:error,600)||"provider_failed";console.error("document-ai-api",code);
     await recordUsage(user.id,operation,{},"failed",code);
