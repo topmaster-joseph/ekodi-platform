@@ -19,6 +19,13 @@ function forbidText(file, needles) {
   for (const needle of needles) if (text.includes(needle)) fail(file, `unsafe production bypass detected: ${needle}`);
   return text;
 }
+function forbidDirectWorkerDeploy(file, configFile) {
+  const text = read(file);
+  const escaped = configFile.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const pattern = new RegExp(`\\bwrangler(?:@[^\\s]+)?\\s+deploy\\s+--config(?:=|\\s+)${escaped}\\b`);
+  if (pattern.test(text)) fail(file, `unsafe direct Worker deploy detected for ${configFile}`);
+  return text;
+}
 
 const workerGuarded = {
   '.github/workflows/deploy-site-core.yml': ['guarded-worker-release.mjs', 'shared-site.worker.json'],
@@ -104,7 +111,8 @@ requireText('.github/workflows/deploy-control-api.yml', [
   'control-api.worker.json',
   'validate-additive-migrations.mjs',
 ]);
-forbidText('.github/workflows/deploy-control-api.yml', ['npm run deploy:api', 'deploy --config wrangler.api.toml']);
+forbidText('.github/workflows/deploy-control-api.yml', ['npm run deploy:api']);
+forbidDirectWorkerDeploy('.github/workflows/deploy-control-api.yml', 'wrangler.api.toml');
 requireText('.github/workflows/deploy-finance.yml', [
   'environment: development',
   'ekodi-finance-api-staging',
