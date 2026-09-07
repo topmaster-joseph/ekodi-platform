@@ -50,7 +50,7 @@ jobs:
           grep -Fq '/church-marketing-ai.js?v=20260827-church-marketing-1' my/index.html
           grep -Fq 'MARKETING_URL' my/church-marketing-ai.js
           grep -Fq "url.searchParams.set('workspace', workspaceKey)" my/church-marketing-ai.js
-          grep -Fq 'https://marketing.ekodi.kr/church/' my/church-marketing-ai.js
+          grep -Fq 'https://ekodi.kr/ekodichurch/marketing/' my/church-marketing-ai.js
 
       - name: Build and validate church Marketing AI workspace
         working-directory: source
