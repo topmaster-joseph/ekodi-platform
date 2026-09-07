@@ -1,3 +1,5 @@
+import { paymentActivationBlockers, paymentExecutionBlockers, paymentProviderPublicView } from './payment-capabilities.js';
+
 const VALID_SELLER_TYPES = new Set(['individual', 'business']);
 const OPEN_STATUSES = new Set(['submitted', 'under_review']);
 const QUEUE_STATUSES = new Set(['submitted', 'under_review', 'verified', 'rejected', 'cancelled']);
@@ -98,8 +100,7 @@ export function checkoutGateBlockers(row = {}) {
 export function livePaymentBlockers(row = {}, env = {}) {
   const blockers = checkoutGateBlockers(row);
   if (!row.checkout_ready) blockers.push('product-checkout-gate');
-  if (!flag(env.PAYMENTS_ENABLED)) blockers.push('payments-disabled');
-  if (!env.TOSS_SECRET_KEY) blockers.push('toss-secret-missing');
+  for (const blocker of paymentExecutionBlockers(env)) blockers.push(blocker);
   return blockers;
 }
 
@@ -118,7 +119,7 @@ export function launchReadinessBlockers({ counts = {}, env = {} } = {}) {
   const blockers = [];
   if (Number(counts.checkoutGateEligibleCount || 0) < 1) blockers.push('no-checkout-eligible-product');
   if (Number(counts.checkoutGateEnabledCount || 0) < 1) blockers.push('no-checkout-gate-product');
-  if (!env.TOSS_SECRET_KEY) blockers.push('toss-secret-missing');
+  for (const blocker of paymentActivationBlockers(env)) blockers.push(blocker);
   if (!(Boolean(env.MALL_OPERATIONS_TOKEN) || allowedOpsEmails(env).size > 0)) blockers.push('operations-review-missing');
   if (!clean(env.MALL_LEGAL_READINESS_REF, 500)) blockers.push('legal-readiness-missing');
   if (!clean(env.MALL_PRIVACY_READINESS_REF, 500)) blockers.push('privacy-readiness-missing');
@@ -135,7 +136,7 @@ async function globalLaunchReadiness(env) {
   const counts = { sellerCount:Number(seller?.sellerCount||0), verifiedDirectSellerCount:Number(seller?.verifiedDirectSellerCount||0), storeCount:Number(store?.storeCount||0), verifiedStoreCount:Number(store?.verifiedStoreCount||0), productCount:Number(product?.productCount||0), checkoutGateEligibleCount:Number(product?.checkoutGateEligibleCount||0), checkoutGateEnabledCount:Number(product?.checkoutGateEnabledCount||0), openVerificationRequestCount:Number(queue?.openVerificationRequestCount||0) };
   const activationBlockers = launchReadinessBlockers({ counts, env });
   const liveBlockers = [...activationBlockers]; if (!flag(env.PAYMENTS_ENABLED)) liveBlockers.push('payments-disabled');
-  return { status: liveBlockers.length===0?'live':activationBlockers.length===0?'activation-ready':'blocked', activationReady:activationBlockers.length===0, liveReady:liveBlockers.length===0, activationBlockers, liveBlockers, counts, global:{ paymentsEnabled:flag(env.PAYMENTS_ENABLED), tossSecretConfigured:Boolean(env.TOSS_SECRET_KEY), operationsReviewConfigured:Boolean(env.MALL_OPERATIONS_TOKEN)||allowedOpsEmails(env).size>0, legalReadinessConfigured:Boolean(clean(env.MALL_LEGAL_READINESS_REF,500)), privacyReadinessConfigured:Boolean(clean(env.MALL_PRIVACY_READINESS_REF,500)), refundReadinessConfigured:Boolean(clean(env.MALL_REFUND_READINESS_REF,500)), payoutReadinessConfigured:Boolean(clean(env.MALL_PAYOUT_READINESS_REF,500)), buyerPiiReleaseEnabled:flag(env.BUYER_PII_RELEASE_ENABLED), supplierForwardEnabled:flag(env.SUPPLIER_FORWARD_ENABLED), payoutExecutionEnabled:false, refundExecutionEnabled:false } };
+  return { status: liveBlockers.length===0?'live':activationBlockers.length===0?'activation-ready':'blocked', activationReady:activationBlockers.length===0, liveReady:liveBlockers.length===0, activationBlockers, liveBlockers, counts, global:{ paymentsEnabled:flag(env.PAYMENTS_ENABLED), tossSecretConfigured:Boolean(env.TOSS_SECRET_KEY), paymentProvider:paymentProviderPublicView(env), operationsReviewConfigured:Boolean(env.MALL_OPERATIONS_TOKEN)||allowedOpsEmails(env).size>0, legalReadinessConfigured:Boolean(clean(env.MALL_LEGAL_READINESS_REF,500)), privacyReadinessConfigured:Boolean(clean(env.MALL_PRIVACY_READINESS_REF,500)), refundReadinessConfigured:Boolean(clean(env.MALL_REFUND_READINESS_REF,500)), payoutReadinessConfigured:Boolean(clean(env.MALL_PAYOUT_READINESS_REF,500)), buyerPiiReleaseEnabled:flag(env.BUYER_PII_RELEASE_ENABLED), supplierForwardEnabled:flag(env.SUPPLIER_FORWARD_ENABLED), payoutExecutionEnabled:false, refundExecutionEnabled:false } };
 }
 
 async function sellerReadiness(env, sellerId) {
@@ -153,7 +154,7 @@ async function sellerReadiness(env, sellerId) {
   return {
     profile, stores: storesResult.results || [], products, requests: requestsResult.results || [],
     global: {
-      paymentsEnabled: flag(env.PAYMENTS_ENABLED), tossSecretConfigured: Boolean(env.TOSS_SECRET_KEY),
+      paymentsEnabled: flag(env.PAYMENTS_ENABLED), tossSecretConfigured: Boolean(env.TOSS_SECRET_KEY), paymentProvider: paymentProviderPublicView(env),
       operationsReviewConfigured: Boolean(env.MALL_OPERATIONS_TOKEN) || allowedOpsEmails(env).size > 0, operationsEmailAllowlistConfigured: allowedOpsEmails(env).size > 0, buyerPiiReleaseEnabled: flag(env.BUYER_PII_RELEASE_ENABLED),
       supplierForwardEnabled: flag(env.SUPPLIER_FORWARD_ENABLED), payoutExecutionEnabled: false, refundExecutionEnabled: false
     },

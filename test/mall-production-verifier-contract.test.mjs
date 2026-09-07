@@ -80,3 +80,14 @@ test('Mall production verifier checks the seller-neutral product identity catalo
   assert.match(workflow, /api\.ekodi\.kr\/api\/affiliate\/public\/products/);
   assert.match(workflow, /workflow_dispatch/);
 });
+
+test('Mall production verifier proves Commerce OS provider, ledger and cockpit boundaries', () => {
+  assert.match(workflow, /commerceEventSchemaReady/);
+  assert.match(workflow, /commerceOsVersion/);
+  assert.match(workflow, /paymentProvider/);
+  assert.match(workflow, /adapterImplemented/);
+  assert.match(workflow, /COMMERCE OS COCKPIT/);
+  assert.match(workflow, /api\/internal\/operations\/cockpit/);
+  assert.match(workflow, /commerceCockpitAuthBoundary=verified/);
+  assert.match(workflow, /Cockpit must require operator auth/);
+});
