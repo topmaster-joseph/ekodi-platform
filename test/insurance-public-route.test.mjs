@@ -11,8 +11,8 @@ test('insurance is a canonical public service path, not a workspace slug',()=>{
   assert.equal(isInsurancePublicPath('/insurance'),true);
   assert.equal(isInsurancePublicPath('/insurance/advisor'),true);
   assert.equal(isInsurancePublicPath('/yogurt'),false);
-  assert.equal(insuranceAssetPath('/insurance'),'/insurance/index.html');
-  assert.equal(insuranceAssetPath('/insurance/advisor'),'/insurance/advisor.html');
+  assert.equal(insuranceAssetPath('/insurance'),'/insurance/');
+  assert.equal(insuranceAssetPath('/insurance/advisor'),'/insurance/advisor');
   assert.equal(insuranceAssetPath('/insurance/styles.css'),'/insurance/styles.css');
   assert.equal(insuranceAssetPath('/insurance/unknown.js'),null);
 });

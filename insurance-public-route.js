@@ -19,8 +19,11 @@ export function isInsurancePublicPath(pathname){
 
 export function insuranceAssetPath(pathname){
   const path=String(pathname||'');
-  if(path===PREFIX||path===`${PREFIX}/`)return `${PREFIX}/index.html`;
-  if(path===`${PREFIX}/advisor`||path===`${PREFIX}/advisor/`)return `${PREFIX}/advisor.html`;
+  // Cloudflare Static Assets canonicalizes explicit *.html requests with a 307.
+  // Ask the binding for the extensionless public URL so the Worker receives the
+  // actual HTML response instead of forwarding an asset-layer redirect.
+  if(path===PREFIX||path===`${PREFIX}/`)return `${PREFIX}/`;
+  if(path===`${PREFIX}/advisor`||path===`${PREFIX}/advisor/`)return `${PREFIX}/advisor`;
   const match=new RegExp(`^${PREFIX}/([^/]+)$`).exec(path);
   return match&&STATIC_ASSETS.has(match[1])?path:null;
 }

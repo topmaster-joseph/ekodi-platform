@@ -309,7 +309,10 @@ await write('build-meta.json', JSON.stringify({
   platformMode: site.platform?.mode || 'unknown',
   inquiryBasket: Boolean(site.commerce?.inquiryBasketEnabled),
   paymentsEnabled: Boolean(site.commerce?.paymentsEnabled),
+  commerceOsVersion: site.commerce?.orchestrationMode === 'commerce-os-v1' ? 1 : 0,
+  paymentProviderAuthority: site.commerce?.paymentProviderAuthority || 'unknown',
+  highImpactExecution: site.commerce?.highImpactExecution || 'unknown',
   affiliateExternalRouting: site.platform?.sellerPolicy?.affiliateRouting === 'external'
 }, null, 2));
 
-console.log(`EKODI Commerce Platform built: ${stores.length} stores, ${products.length} products, Seller Studio + affiliate routing + inquiry basket -> dist/`);
+console.log(`EKODI Commerce Platform built: ${stores.length} stores, ${products.length} products, Commerce OS + Seller Studio + affiliate routing + inquiry basket -> dist/`);
