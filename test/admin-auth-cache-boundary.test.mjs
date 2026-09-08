@@ -20,17 +20,17 @@ test('critical central auth JavaScript cannot remain stale in the browser or edg
 
 test('guarded production release verifies current auth entry and workspace handoff assets', () => {
   const requests = manifest.worker.requests;
-  const root = requests.find(item => item.url === 'https://auth.ekodi.kr/');
-  const router = requests.find(item => item.url.startsWith('https://auth.ekodi.kr/auth-router.js'));
-  const client = requests.find(item => item.url.startsWith('https://auth.ekodi.kr/client-auth.js'));
-  const workspaceTarget = requests.find(item => item.url.startsWith('https://auth.ekodi.kr/auth-workspace-target.js'));
-  const admin = requests.find(item => item.url.startsWith('https://auth.ekodi.kr/admin-auth.js'));
+  const root = requests.find(item => item.url === 'https://ekodi.kr/auth/');
+  const router = requests.find(item => item.url.startsWith('https://ekodi.kr/auth/auth-router.js'));
+  const client = requests.find(item => item.url.startsWith('https://ekodi.kr/auth/client-auth.js'));
+  const workspaceTarget = requests.find(item => item.url.startsWith('https://ekodi.kr/auth/auth-workspace-target.js'));
+  const admin = requests.find(item => item.url.startsWith('https://ekodi.kr/auth/admin-auth.js'));
   assert.ok(root);
   assert.ok(router);
   assert.ok(client);
   assert.ok(workspaceTarget);
   assert.ok(admin);
-  assert.ok(root.expect.includes('/auth-router.js?v=20260904-direct-login-1'));
+  assert.ok(root.expect.includes('/auth/auth-router.js?v=20260904-direct-login-1'));
   assert.ok(router.expect.includes('admin-auth.js?v=20260904-direct-bridge-1'));
   assert.ok(router.expect.includes('business-auth.js?v=20260826-free-fallback-1'));
   assert.ok(router.expect.includes('client-auth.js?v=20260904-direct-login-1'));
@@ -49,4 +49,5 @@ test('guarded production release verifies current auth entry and workspace hando
   assert.ok(admin.expect.includes('location.replace(targetHref)'));
   assert.ok(admin.expect.includes('button_auto_select:false'));
   assert.ok(admin.headerExpect.includes('cache-control: no-store'));
+  for (const probe of [root, router, client, workspaceTarget, admin]) assert.equal(probe.rollbackVerify, false);
 });

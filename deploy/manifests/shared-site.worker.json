@@ -308,7 +308,10 @@
         "redirect": "manual",
         "expect": [
           "EKODI Workspace Admin",
-          "workspace-admin.js"
+          "workspace-admin.js",
+          "data-ekodi-admin-layout=\"two-level\"",
+          "data-ekodi-admin-nav-mode=\"primary\"",
+          "data-ekodi-admin-subnav"
         ],
         "headerExpect": [
           "x-ekodi-route: workspace-admin",
@@ -339,7 +342,7 @@
           "return_to=https%3A%2F%2Fekodi.kr%2Fadmin"
         ],
         "headerExpect": [
-          "x-ekodi-route: admin-fallback",
+          "x-ekodi-route: admin-shell",
           "cross-origin-opener-policy: same-origin-allow-popups",
           "cache-control: no-store"
         ]
@@ -522,7 +525,7 @@
         ]
       },
       {
-        "url": "https://auth.ekodi.kr/",
+        "url": "https://ekodi.kr/auth/",
         "statuses": [
           200
         ],
@@ -530,14 +533,15 @@
         "expect": [
           "통합 인증센터",
           "dataset.seamlessSso",
-          "/auth-router.js?v=20260904-direct-login-1"
+          "/auth/auth-router.js?v=20260904-direct-login-1"
         ],
         "headerExpect": [
           "x-ekodi-route: central-auth"
-        ]
+        ],
+        "rollbackVerify": false
       },
       {
-        "url": "https://auth.ekodi.kr/auth-router.js?release=31",
+        "url": "https://ekodi.kr/auth/auth-router.js?release=31",
         "statuses": [
           200
         ],
@@ -553,10 +557,11 @@
           "x-ekodi-route: central-auth-asset",
           "cache-control: no-store",
           "x-content-type-options: nosniff"
-        ]
+        ],
+        "rollbackVerify": false
       },
       {
-        "url": "https://auth.ekodi.kr/client-auth.js?release=31",
+        "url": "https://ekodi.kr/auth/client-auth.js?release=31",
         "statuses": [
           200
         ],
@@ -576,10 +581,11 @@
           "x-ekodi-route: central-auth-asset",
           "cache-control: no-store",
           "x-content-type-options: nosniff"
-        ]
+        ],
+        "rollbackVerify": false
       },
       {
-        "url": "https://auth.ekodi.kr/auth-workspace-target.js?release=31",
+        "url": "https://ekodi.kr/auth/auth-workspace-target.js?release=31",
         "statuses": [
           200
         ],
@@ -597,10 +603,11 @@
           "x-ekodi-route: central-auth-asset",
           "cache-control: no-store",
           "x-content-type-options: nosniff"
-        ]
+        ],
+        "rollbackVerify": false
       },
       {
-        "url": "https://auth.ekodi.kr/admin-auth.js?release=31",
+        "url": "https://ekodi.kr/auth/admin-auth.js?release=31",
         "statuses": [
           200
         ],
@@ -624,7 +631,8 @@
           "x-ekodi-route: central-auth-asset",
           "cache-control: no-store",
           "x-content-type-options: nosniff"
-        ]
+        ],
+        "rollbackVerify": false
       },
       {
         "url": "https://messenger.ekodi.kr/",
@@ -730,7 +738,8 @@
           "x-ekodi-route: mail-contact",
           "x-ekodi-shell: v2",
           "cache-control: no-store"
-        ]
+        ],
+        "rollbackVerify": false
       },
       {
         "url": "https://mail.ekodi.kr/admin",
