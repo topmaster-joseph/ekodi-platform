@@ -49,7 +49,7 @@ test('weekly board stays bounded at A7 and B10 with diverse primary categories',
 });
 
 test('implementation uses official APIs and keeps paid advertising outside the selector', async () => {
-  const [worker,migration]=await Promise.all([read('mall-official-promotion-board.js'),read('migrations/0072_affiliate_official_signal_promotion.sql')]);
+  const [worker,migration]=await Promise.all([read('mall-official-promotion-board.js'),read('migrations/0073_affiliate_official_signal_promotion.sql')]);
   assert.equal(OFFICIAL_PROMOTION_DEFAULTS.primaryLimit,7);
   assert.equal(OFFICIAL_PROMOTION_DEFAULTS.backupLimit,10);
   assert.match(worker,/naverapihub\.apigw\.ntruss\.com\/shopping\/v1\/categories/);
