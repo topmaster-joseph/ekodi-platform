@@ -16,7 +16,9 @@ test('Admin layout drops stale async completions instead of reopening an earlier
   const source = await layoutSource();
   assert.match(source, /if\(requestedSection!==section\)return;\s*applyOrder\(\)/);
   assert.match(source, /await sitesLoading;if\(requestedSection!=='sites'\)return/);
-  assert.match(source, /await cheonggyeLoading;if\(requestedSection!=='cheonggye-members'\)return/);
+  assert.match(source, /LEGACY_CGMA_MEMBER_HASH='#cheonggye-members'/);
+  assert.match(source, /CGMA_MEMBER_ADMIN='https:\/\/ekodi\.kr\/cgma\/admin\/member'/);
+  assert.doesNotMatch(source, /cheonggyeLoading|openCheonggyeMembers/);
   assert.match(source, /if\(requestedSection!=='common-services'\)return/);
   assert.match(source, /if\(requestedSection===section\)fallbackDemand\(section\)/);
   assert.match(source, /if\(real&&!real\.dataset\.demandFeature\)real\.click\(\)/);
