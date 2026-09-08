@@ -329,7 +329,7 @@
         "rollbackVerify": false
       },
       {
-        "url": "https://ekodi.kr/admin",
+        "url": "https://ekodi.kr/admin/",
         "statuses": [
           200
         ],
