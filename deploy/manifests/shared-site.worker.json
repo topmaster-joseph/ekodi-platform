@@ -1008,6 +1008,8 @@
           "x-ekodi-route: insurance-admin-handoff",
           "cache-control: no-store"
         ],
+        "candidateVerify": false,
+        "candidateVerifyReason": "insurance admin handoff can transiently omit redirect headers while 0% version-override routing propagates; verify the canonical handoff immediately after promotion",
         "rollbackVerify": false
       },
       {

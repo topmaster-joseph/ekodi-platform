@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
 const release = await readFile(new URL('../scripts/guarded-worker-release.mjs', import.meta.url), 'utf8');
+const manifest = JSON.parse(await readFile(new URL('../deploy/manifests/shared-site.worker.json', import.meta.url), 'utf8'));
 
 test('production promotion gets a bounded propagation window before rollback', () => {
   assert.match(release, /const STANDARD_VERIFY_ATTEMPTS = 18;/);
@@ -19,4 +20,15 @@ test('candidate and rollback verification remain fail-closed', () => {
   assert.match(release, /await verifyAll\('', 'rollback'\);/);
   assert.match(release, /throw new Error\(`\$\{request\.url\} verification failed:/);
   assert.match(release, /Rolling back \$\{worker\.name\} to \$\{previousVersion\} at 100%/);
+});
+
+
+test('transient routing gates defer candidate-only handoffs without weakening production verification', () => {
+  const insurance = manifest.worker.requests.find(request => request.url === 'https://ekodi.kr/insurance/admin');
+  const mallAdmin = manifest.worker.requests.find(request => request.url === 'https://ekodi.kr/ekodibiz/mall/admin/');
+  assert.equal(insurance?.candidateVerify, false);
+  assert.match(insurance?.candidateVerifyReason || '', /0% version-override routing/);
+  assert.equal(insurance?.rollbackVerify, false);
+  assert.equal(mallAdmin?.rollbackVerify, false);
+  assert.ok(!('candidateVerify' in mallAdmin), 'Mall admin must still be candidate verified');
 });
