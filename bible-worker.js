@@ -4,6 +4,9 @@ import { bibleCorePolicy, bibleProviderCatalog, readBiblePassage, readBibleRefer
 const MAX_MESSAGE = 4000;
 const MAX_HISTORY = 8;
 const USER_AI_URL = 'https://api.ekodi.kr/api/user-ai/assist';
+const CANONICAL_HOST = 'ekodi.kr';
+const CANONICAL_PREFIX = '/bible';
+const LEGACY_HOST = 'bible.ekodi.kr';
 
 const TOPICS = {
   관계: ['골로새서 3:12-14', '지금 그 관계에서 가장 지키고 싶은 것은 무엇인가요?'],
@@ -43,13 +46,35 @@ function runtimeConfig(env) {
     dataMode: env.DATA_MODE || 'isolated-staging',
     supabaseUrl: dataEnabled ? env.SUPABASE_URL : '',
     supabasePublishableKey: dataEnabled ? env.SUPABASE_PUBLISHABLE_KEY : '',
-    authUrl: env.AUTH_URL || 'https://auth.ekodi.kr/?site=bible',
+    authUrl: env.AUTH_URL || 'https://ekodi.kr/auth/?site=bible',
     tenantSlug: env.TENANT_SLUG || 'ekodi-church',
+    canonicalUrl: 'https://ekodi.kr/bible',
+    legacyAlias: 'https://bible.ekodi.kr',
   };
 }
 
 function clean(value, max = MAX_MESSAGE) {
   return String(value ?? '').replace(/[<>]/g, '').trim().slice(0, max);
+}
+
+function normalizeBiblePath(pathname) {
+  if (pathname === CANONICAL_PREFIX || pathname === CANONICAL_PREFIX + '/') return '/';
+  if (pathname.startsWith(CANONICAL_PREFIX + '/')) return pathname.slice(CANONICAL_PREFIX.length) || '/';
+  return pathname;
+}
+
+function legacyCanonicalRedirect(url) {
+  if (url.hostname.toLowerCase() !== LEGACY_HOST) return null;
+  const suffix = url.pathname === '/' ? '' : url.pathname;
+  const target = new URL('https://' + CANONICAL_HOST + CANONICAL_PREFIX + suffix);
+  target.search = url.search;
+  return Response.redirect(target.toString(), 308);
+}
+
+function requestAtPath(request, pathname) {
+  const url = new URL(request.url);
+  url.pathname = pathname;
+  return new Request(url, request);
 }
 
 function topicGuide(topic) {
@@ -230,7 +255,11 @@ async function assetFor(request, env, path) {
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
-    if (url.pathname === '/health') {
+    const legacyRedirect = legacyCanonicalRedirect(url);
+    if (legacyRedirect) return legacyRedirect;
+    const internalUrl = new URL(url);
+    internalUrl.pathname = normalizeBiblePath(url.pathname);
+    if (internalUrl.pathname === '/health') {
       return json({
         ok: true,
         service: 'ekodi-bible-conversation',
@@ -243,22 +272,24 @@ export default {
         bibleCore: bibleCorePolicy(),
         bibleProviders: bibleProviderCatalog().map(provider => ({ id:provider.id, mode:provider.mode })),
         dataMode: runtimeConfig(env).dataMode,
+        canonicalPath: CANONICAL_PREFIX,
+        legacyAlias: LEGACY_HOST,
         ekodiShell: true,
       });
     }
-    if (url.pathname === '/config.js') {
+    if (internalUrl.pathname === '/config.js') {
       return new Response(`window.EKODI_BIBLE_CONFIG=${JSON.stringify(runtimeConfig(env))};`, {
         headers: { 'content-type': 'application/javascript; charset=utf-8', 'cache-control': 'no-store', ...SECURITY_HEADERS },
       });
     }
-    if (url.pathname.startsWith('/api/bible/')) return handleBibleApi(request, env, url);
-    if (url.pathname === '/api/assist' && request.method === 'POST') return handleAssist(request, env);
-    if (url.pathname === '/admin' || url.pathname === '/admin/') return Response.redirect('https://admin.ekodi.kr/#ai-services', 307);
+    if (internalUrl.pathname.startsWith('/api/bible/')) return handleBibleApi(request, env, internalUrl);
+    if (internalUrl.pathname === '/api/assist' && request.method === 'POST') return handleAssist(request, env);
+    if (internalUrl.pathname === '/admin' || internalUrl.pathname === '/admin/') return Response.redirect('https://ekodi.kr/admin/operations/aiops', 307);
 
     let response;
-    const route = url.pathname.replace(/\/$/, '');
+    const route = internalUrl.pathname.replace(/\/$/, '');
     if (['/today', '/reader', '/search', '/conversation', '/journey', '/together'].includes(route)) response = await assetFor(request, env, '/');
-    else response = await env.ASSETS.fetch(request);
+    else response = await env.ASSETS.fetch(requestAtPath(request, internalUrl.pathname));
     return injectEkodiShell(withHeaders(response), 'bible');
   },
 };

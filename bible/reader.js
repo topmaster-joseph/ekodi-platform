@@ -1,10 +1,11 @@
 import { BOOKS } from './books.js';
 
 const $ = selector => document.querySelector(selector);
+const BASE_PATH = '/bible';
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
 
 async function fetchJson(path) {
-  const response = await fetch(path, { headers:{ accept:'application/json' } });
+  const response = await fetch(BASE_PATH + path, { headers:{ accept:'application/json' } });
   const data = await response.json().catch(() => ({}));
   if (!response.ok || data.ok === false) throw new Error(data.error || `HTTP_${response.status}`);
   return data;
