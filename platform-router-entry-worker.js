@@ -188,6 +188,8 @@ export default {
     if(CGMA_HOSTS.has(host)&&['GET','HEAD'].includes(request.method))return routeCgmaPublic(request,env);
 
     if(host===PUBLIC_HOST){
+      const contactResponse=await handleMailContactApi(request,env);if(contactResponse)return contactResponse;
+      if(request.method==='GET'&&url.pathname==='/mail/contact')return injectEkodiShell(mailContactPage(),'mail','public');
       const previewResponse=handlePreviewRequest(request);if(previewResponse)return previewResponse;
       if(['GET','HEAD'].includes(request.method)&&isInsurancePublicPath(url.pathname))return routeInsurancePublic(request,env);
       if(request.method==='GET'){

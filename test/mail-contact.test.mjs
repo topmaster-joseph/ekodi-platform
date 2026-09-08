@@ -72,6 +72,8 @@ test('contact delivery ignores client recipient and sends fixed To with user Rep
 test('canonical apex exposes public contact and legacy mail host redirects', async()=>{
   const entry=await readFile(new URL('../platform-router-entry-worker.js',import.meta.url),'utf8');
   assert.match(entry,/handleMailContactApi\(request,env\)/);
+  assert.match(entry,/url\.pathname==='\/mail\/contact'/);
+  assert.match(entry,/mailContactPage\(\)/);
   assert.match(entry,/url\.pathname==='\/contact'/);
   assert.ok(entry.indexOf('handleMailContactApi(request,env)')<entry.indexOf('handleMailApi(request,env)'));
 });
@@ -86,6 +88,7 @@ test('public contact release guard is registered', async()=>{
   assert.equal(probe?.rollbackVerify,false);
   const wrangler=await readFile(new URL('../wrangler.site.toml',import.meta.url),'utf8');
   assert.match(wrangler,/name = "MAIL_CONTACT_RATE_LIMITER"/);
+  assert.doesNotMatch(wrangler,/binding = "MAIL_CONTACT_RATE_LIMITER"/);
   assert.match(wrangler,/"\/mail\*"/);
   assert.match(wrangler,/limit = 5/);
 });
