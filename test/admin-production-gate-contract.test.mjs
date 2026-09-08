@@ -8,17 +8,19 @@ const http2 = read('.github/workflows/admin-http2-stability.yml');
 const deploy = read('.github/workflows/deploy.yml');
 const performance = read('.github/workflows/ecosystem-performance-watch.yml');
 
-test('production verification follows the current Admin Shell contract', () => {
-  assert.match(production, /x-ekodi-route: \$route/);
+test('production verification follows the canonical Admin redirect and shell contract', () => {
+  assert.match(production, /verify_redirect/);
+  assert.match(production, /https:\/\/admin\.ekodi\.kr\/.*https:\/\/ekodi\.kr\/admin\/\?source=admin\.ekodi\.kr/);
+  assert.match(production, /verify_redirect 'https:\/\/ekodi\.kr\/admin' 'https:\/\/ekodi\.kr\/admin\/'/);
+  assert.match(production, /verify_admin 'https:\/\/ekodi\.kr\/admin\/'/);
+  assert.match(production, /x-ekodi-route: admin-shell/);
   assert.match(production, /<title>EKODI Admin<\/title>/);
-  assert.match(production, /https:\/\/admin\.ekodi\.kr\/admin/);
-  assert.match(production, /https:\/\/ekodi\.kr\/admin/);
   assert.match(production, /admin-shell\.html/);
   assert.match(production, /admin-authenticated-shell\.js/);
-  assert.match(production, /admin-fallback/);
-  assert.match(production, /retired_code.*control-center\.html/);
-  assert.match(production, /x-ekodi-route: admin-retired/);
-  assert.match(production, /\[ "\$retired_code" = '404' \]/);
+  assert.doesNotMatch(production, /verify_admin 'https:\/\/admin\.ekodi\.kr\//);
+  assert.doesNotMatch(production, /admin-fallback/);
+  assert.doesNotMatch(production, /retired_code/);
+  assert.doesNotMatch(production, /x-ekodi-route: admin-retired/);
   assert.doesNotMatch(production, /admin-control-center/);
   assert.doesNotMatch(production, /control-center\.js/);
 });
