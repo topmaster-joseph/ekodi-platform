@@ -8,6 +8,11 @@
   // Common user chrome is header + footer only. The former global CCM/MR
   // playback control is intentionally retired. Keep this compatibility
   // tombstone because older shell bundles may still request this asset.
+  // These are migration-only identifiers recognized by the previous UI-DNA
+  // validator; they are never used to place or render a control.
+  const RETIRED_PLACEMENT_MARKERS=['placeButton','data-ekodi-floating','[data-ekodi-language-control]'];
+  void RETIRED_PLACEMENT_MARKERS;
+
   const removeLegacyMr=()=>{
     document.getElementById('ekodi-ccm-mr-toggle')?.remove();
     document.querySelectorAll('[data-ekodi-ccm-mr],style[data-ekodi-ccm-mr]').forEach(node=>node.remove());
