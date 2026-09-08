@@ -185,6 +185,34 @@ async function verifyPublicSiteControls(tab, alreadyActive, started) {
   results.push({ id: menuId, group, ok: true, durationMs: Date.now() - started, ...state, apiStatus: response.status, corsOrigin, domain: 'cgma.or.kr', publicStatus, maintenanceDisplayType, redirectMode, badge });
 }
 
+async function verifyLanguageStatus(tab, alreadyActive, started) {
+  stage('language-status-ready');
+  if (!alreadyActive) await clickFast(tab);
+  await page.waitForFunction(() => typeof window.EKODILanguageStatus?.load === 'function', null, { timeout: 10_000 });
+  stage('language-status-api');
+  const response = await fetch('https://api.ekodi.kr/api/control/language-status', {
+    headers: { accept:'application/json', authorization:`Bearer ${token}`, origin:'https://admin.ekodi.kr' },
+    signal: AbortSignal.timeout(10_000),
+  });
+  if (response.status !== 200) throw new Error(`language-status: API returned HTTP ${response.status}`);
+  const payload = await response.json().catch(() => ({}));
+  if (!Array.isArray(payload.sites) || !Array.isArray(payload.languages)) throw new Error('language-status: invalid payload');
+  if (!payload.sites.some(site => site.id === 'ekodi')) throw new Error('language-status: root site missing');
+  if (payload.sites.some(site => !Array.isArray(site.languages))) throw new Error('language-status: site languages missing');
+  stage('language-status-render');
+  await page.evaluate(() => window.EKODILanguageStatus.load());
+  const rootCard = page.locator('[data-language-site="ekodi"]');
+  await rootCard.waitFor({ state:'visible', timeout:8_000 });
+  const panel = page.locator('#languageStatusPanel');
+  const state = await visiblePanelState();
+  const controls = await panel.locator('form,input[type="checkbox"],button[type="submit"]').count();
+  const text = String(await panel.textContent() || '').replace(/\s+/g,' ').trim();
+  if (!state.panelFound || !state.selected || state.busy) throw new Error(`language-status panel invalid: ${JSON.stringify(state)}`);
+  if (controls !== 0) throw new Error('language-status: mutation control exposed');
+  if (!text.includes('사용자 화면에는 준비 완료 언어만 표시됩니다')) throw new Error('language-status: readiness message missing');
+  results.push({ id:menuId, group, ok:true, durationMs:Date.now()-started, ...state, apiStatus:response.status, sites:payload.sites.length, languages:payload.languages.length });
+}
+
 async function verifyNormal(tab, alreadyActive, started) {
   if (!alreadyActive) await clickFast(tab);
   stage('panel');
@@ -238,6 +266,7 @@ try {
   if (menuId === 'storage') await verifyStorage(tab, alreadyActive, started);
   else if (menuId === 'tax') await verifyTax(tab, alreadyActive, started);
   else if (menuId === 'public-site-controls') await verifyPublicSiteControls(tab, alreadyActive, started);
+  else if (menuId === 'language-status') await verifyLanguageStatus(tab, alreadyActive, started);
   else await verifyNormal(tab, alreadyActive, started);
 
   stage('diagnostics');
