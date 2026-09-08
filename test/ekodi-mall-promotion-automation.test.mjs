@@ -6,11 +6,11 @@ import { campaignKey, fallbackContent, kstParts, mallPromotionAutomationEnabled,
 const read = path => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 
 test('mall promotion stays first-party, organic and bounded', () => {
-  assert.equal(MALL_PROMOTION_DEFAULTS.subjectKey, 'ekodibiz');
+  assert.equal(MALL_PROMOTION_DEFAULTS.subjectKey, 'ekodi-biz');
   assert.equal(MALL_PROMOTION_DEFAULTS.storefront, 'ekodi-mall');
   assert.deepEqual(MALL_PROMOTION_DEFAULTS.providers, ['facebook','instagram','threads']);
   assert.equal(MALL_PROMOTION_DEFAULTS.maxDailyChannels, 3);
-  assert.equal(MALL_PROMOTION_DEFAULTS.strategy, 'official_weekly_board');
+  assert.equal(MALL_PROMOTION_DEFAULTS.strategy, 'official_board_profit_learning_loop');
   assert.match(MALL_PROMOTION_DEFAULTS.disclosure, /쿠팡 파트너스/);
 });
 
@@ -86,10 +86,15 @@ test('promotion health separates social readiness from YouTube Shorts readiness'
   assert.match(worker,/youtubeMallShortsReady:false/);
   assert.match(worker,/product_short_video_asset_pipeline_required/);
 });
-test('all connected social channels share the same daily weekly-board product', async () => {
+test('official weekly board selects the product while the profit loop allocates channel intensity', async () => {
   const worker=await read('mall-promotion-automation.js');
+  const boardIndex=worker.indexOf('ensureWeeklyPromotionBoard');
   const productIndex=worker.indexOf('const product=board?.todayProduct||null');
-  const loopIndex=worker.indexOf('for(const connection of connections)');
-  assert.ok(productIndex>=0 && loopIndex>productIndex);
+  const policyIndex=worker.indexOf('channelPoliciesForProduct');
+  assert.ok(boardIndex>=0 && productIndex>boardIndex && policyIndex>=0);
+  assert.match(worker,/official_board_profit_learning_loop/);
+  assert.match(worker,/learning\.action==='scale'/);
+  assert.match(worker,/learning\.action==='test'/);
+  assert.match(worker,/affiliate_growth_policy_snapshots/);
   assert.match(worker,/WHERE run_date=\? AND product_row_id=\?/);
 });

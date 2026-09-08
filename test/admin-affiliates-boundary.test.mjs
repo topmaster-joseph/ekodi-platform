@@ -29,7 +29,7 @@ test('sales and supply network separates professional engine health from Mall op
   assert.match(professionalPanel, /mallAdminUrl/);
   assert.match(professionalPanel, /ekodi_admin_token/);
   assert.doesNotMatch(professionalPanel, /api\('\/routes'\)|api\('\/accounts'\)/);
-  assert.match(workspace, /sourcing:\['판매·공급망'/);
+  assert.match(workspace, /sourcing:\['제휴·소싱'/);
   assert.match(workspace, /sourcing:POLICY\.capabilities\.supplyNetwork/);
   assert.match(workspace, /let platformAdminSessionToken=''/);
   assert.doesNotMatch(workspace, /sessionStorage\.setItem\(PLATFORM_ADMIN_TOKEN_KEY/);

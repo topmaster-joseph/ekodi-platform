@@ -3,6 +3,7 @@ import { mallPromotionAutomationEnabled, runMallPromotionAutomation } from './ma
 import { runMallSalesIntelligence } from './mall-sales-intelligence.js';
 import { ensureWeeklyPromotionBoard } from './mall-official-promotion-board.js';
 import { d1SchemaReady } from './d1-schema-readiness.js';
+import { mallGrowthDashboardSnapshot } from './mall-growth-dashboard.js';
 const SUPABASE_URL = 'https://renzehysxirjilvdxacv.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
 const WRITE_ROLES = new Set(['store_owner','hq_manager','client_admin','client_editor','manager','owner']);
@@ -202,7 +203,7 @@ async function startYouTube(request, env, identity, subject) {
   if (!youtubeConfigured(env)) return json(request,env,{error:'GOOGLE_APP_NOT_CONFIGURED',setup:'Google OAuth broker + encrypted Marketing vault'},503);
   const body = await readJson(request) || {};
   const state = await createOAuthState(env,YOUTUBE_PROVIDER,'publish',identity,subject,body.returnUrl);
-  const accountHint = subject.type === 'tenant' && subject.key === 'ekodibiz' ? 'ekodibiz@gmail.com' : '';
+  const accountHint = subject.type === 'tenant' && subject.key === 'ekodi-biz' ? 'ekodibiz@gmail.com' : '';
   const broker=await env.GOOGLE_OAUTH_BROKER.startYouTubeOAuth({state,accountHint});
   return json(request,env,{authorizationUrl:String(broker.authorizationUrl||''),provider:'youtube',mode:'publish'});
 }
@@ -354,7 +355,7 @@ async function youtubeCallback(request, env) {
     const subject = {type:state.subject_type,key:state.subject_key};
     const discoveredChannels = (channels.items || []).filter(channel => channel?.id);
     let selectedChannels = discoveredChannels;
-    if (subject.type === 'tenant' && subject.key === 'ekodibiz') {
+    if (subject.type === 'tenant' && subject.key === 'ekodi-biz') {
       selectedChannels = discoveredChannels.filter(channel => clean(channel.snippet?.title || '',120) === '에코디몰');
       if (!selectedChannels.length) throw new Error('EKODIMALL_YOUTUBE_CHANNEL_NOT_FOUND');
     }
@@ -655,7 +656,7 @@ export default {
     const url = new URL(request.url);
     const { allowed, headers } = cors(request,env);
     if (request.method === 'OPTIONS') return new Response(null,{status:allowed ? 204 : 403,headers});
-    if (url.pathname === '/admin' || url.pathname === '/admin/') return Response.redirect('https://admin.ekodi.kr/?route=marketing-ai&source=marketing-connect-api.ekodi.kr',307);
+    if (url.pathname === '/admin' || url.pathname === '/admin/') return Response.redirect('https://ekodi.kr/admin/professional/marketing-ai?source=marketing-connect-api.ekodi.kr',307);
     if (!allowed) return json(request,env,{error:'ORIGIN_FORBIDDEN'},403);
     if (url.pathname === '/health' && request.method === 'GET') {
       const ready = await schemaReady(env);
@@ -671,6 +672,10 @@ export default {
     if (auth.error) return json(request,env,{error:auth.error},auth.status);
     const {identity,subject} = auth;
 
+    if (url.pathname === '/v1/mall/dashboard' && request.method === 'GET') {
+      if (subject.type !== 'tenant' || subject.key !== 'ekodi-biz') return json(request,env,{error:'SUBJECT_FORBIDDEN'},403);
+      return json(request,env,await mallGrowthDashboardSnapshot(env));
+    }
     if (url.pathname === '/v1/connect/meta/start' && request.method === 'POST') return startMeta(request,env,identity,subject);
     if (url.pathname === '/v1/connect/threads/start' && request.method === 'POST') return startThreads(request,env,identity,subject);
     if (url.pathname === '/v1/connect/youtube/start' && request.method === 'POST') return startYouTube(request,env,identity,subject);
