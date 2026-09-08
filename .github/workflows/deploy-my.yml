@@ -255,8 +255,7 @@ jobs:
               && grep -Fq "site==='portal'||isRegistryUserService" /tmp/my-auth-router.js \
               && grep -Fq '"id":"my"' /tmp/my-shell-manifest.json \
               && grep -Fq '"url":"https://ekodi.kr/my/"' /tmp/my-shell-manifest.json \
-              && grep -Fq '"characterIdentityRegistryVersion":2' /tmp/my-shell-health.json \
-              && grep -Fq '"userCharacterVersion":6' /tmp/my-shell-health.json; then
+              && node -e "const fs=require('node:fs');const h=JSON.parse(fs.readFileSync('/tmp/my-shell-health.json','utf8'));if(Number(h.characterIdentityRegistryVersion)!==2||Number(h.userCharacterVersion)<6)process.exit(1)"; then
               echo 'Central My EKODI registry auth realm is live.'
               break
             fi

@@ -186,6 +186,13 @@ test('My EKODI approval hub keeps unified visibility and person-scoped decision 
   assert.doesNotMatch(approvalApp,/service_role|SUPABASE_SERVICE_ROLE_KEY/);
 });
 
+test('My production dependency gate accepts forward-compatible Shell character renderer versions',async()=>{
+  const workflow=await read('.github/workflows/deploy-my.yml');
+  assert.doesNotMatch(workflow,/userCharacterVersion\":6/);
+  assert.match(workflow,/Number\(h\.characterIdentityRegistryVersion\)!==2/);
+  assert.match(workflow,/Number\(h\.userCharacterVersion\)<6/);
+});
+
 test('My staging verification preserves Cloudflare Access instead of weakening it',async()=>{
   const workflow=await read('.github/workflows/deploy-my.yml');
   assert.match(workflow,/Cloudflare Access/);
