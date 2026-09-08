@@ -66,6 +66,8 @@ test('legacy My, Admin and Auth entry hosts converge to apex canonical paths',as
   assert.equal(response.status,308);assert.equal(new URL(response.headers.get('location')).href,'https://ekodi.kr/my/docs/?x=1');
   response=await platformEntry.fetch(new Request('https://auth.ekodi.kr/?site=my'),{},{});
   assert.equal(response.status,308);assert.equal(new URL(response.headers.get('location')).pathname,'/auth/');
+  response=await platformEntry.fetch(new Request('https://admin.ekodi.kr/'),{},{});
+  assert.equal(response.status,308);assert.equal(new URL(response.headers.get('location')).href,'https://ekodi.kr/admin/?source=admin.ekodi.kr');
   response=await platformEntry.fetch(new Request('https://admin.ekodi.kr/books'),{},{});
   assert.equal(response.status,308);const target=new URL(response.headers.get('location'));assert.equal(target.pathname,'/admin/');assert.equal(target.searchParams.get('route'),'books');
 });
