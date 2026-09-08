@@ -2,6 +2,7 @@ import { userAiStatusForIdentity } from './user-ai-control.js';
 import { membershipPortfolioForIdentity } from './universal-membership.js';
 import { buildPersonalAiBridgeSnapshot, resolveCanonicalEkodiIdentity } from './personal-ai-bridge.js';
 import { authorizeCapabilityInvocation, SOVEREIGN_CAPABILITY_FABRIC } from './sovereign-capability-fabric.js';
+import { buildCoreAiGateway } from './core-ai-gateway.js';
 
 const SUPABASE_URL='https://renzehysxirjilvdxacv.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
@@ -16,6 +17,7 @@ const TOOL_CAPABILITIES=Object.freeze({
   ekodi_my_identity:'identity.self.read',
   ekodi_my_ai_status:'ai.personal.status.read',
   ekodi_my_services:'services.membership.read',
+  ekodi_delegate_command:'ai.command.delegate',
 });
 
 function json(data,status=200,headers={}){
@@ -107,6 +109,30 @@ export const EKODI_MCP_TOOLS=Object.freeze([
     securitySchemes:[OAUTH_SCHEME],
     ekodiCapability:'services.membership.read',
   }),
+  Object.freeze({
+    name:'ekodi_delegate_command',
+    title:'EKODI AI Command Delegation',
+    description:'Use this when the signed-in user wants EKODI AI to coordinate configured AI providers, synthesize specialist evidence, and independently verify the result before ChatGPT continues. This delegates AI collaboration only and does not grant external system permissions or perform privileged side effects.',
+    inputSchema:{
+      type:'object',
+      properties:{
+        goal:{type:'string',minLength:1,maxLength:1200},
+        risk:{type:'string',enum:['low','normal','high','critical'],default:'normal'},
+        target:{type:'object',properties:{
+          workspaceId:{type:'string',maxLength:120},
+          workspaceSlug:{type:'string',maxLength:120},
+          service:{type:'string',maxLength:120},
+          capability:{type:'string',maxLength:160},
+          surface:{type:'string',maxLength:80},
+        },additionalProperties:false},
+      },
+      required:['goal'],
+      additionalProperties:false,
+    },
+    annotations:{readOnlyHint:false,destructiveHint:false,openWorldHint:true,idempotentHint:false},
+    securitySchemes:[OAUTH_SCHEME],
+    ekodiCapability:'ai.command.delegate',
+  }),
 ]);
 
 function textResult(text,structuredContent={},meta={}){
@@ -170,6 +196,34 @@ export async function callEkodiMcpTool(name,args,request,env,dependencies={}){
     role:'member',
   });
   if(!authorization.allowed)return textResult('이 EKODI 기능은 현재 MCP에서 사용할 수 없습니다.',{error:'CAPABILITY_DENIED',reason:authorization.reason,capabilityId});
+  if(name==='ekodi_delegate_command'){
+    const goal=String(args?.goal||'').trim().slice(0,1200);
+    if(!goal)return textResult('EKODI AI command goal is required.',{error:'GOAL_REQUIRED'});
+    const requestedRisk=String(args?.risk||'normal').trim().toLowerCase();
+    const risk=['low','normal','high','critical'].includes(requestedRisk)?requestedRisk:'normal';
+    const target=args?.target&&typeof args.target==='object'?args.target:{};
+    const gateway=dependencies.coreAiGateway||buildCoreAiGateway(env,[]);
+    const result=await gateway.command({
+      taskId:`mcp_${Date.now()}`,
+      taskName:'mcp-delegated-command',
+      goal,
+      risk,
+      target,
+      context:Object.freeze({source:'chatgpt-mcp',channel:'mcp',canonicalIdentity:true,authorityTransfer:false}),
+    });
+    const humanGateRequired=risk==='high'||risk==='critical';
+    const data={
+      delegated:true,executor:'ekodi-v8',providerIndependent:true,
+      sideEffectsPerformed:false,authorityTransferred:false,externalExecutionAuthorized:false,
+      humanGateRequiredForExternalExecution:humanGateRequired,collaboration:result,
+    };
+    const summary=result?.state==='verified'
+      ?'EKODI AI completed multi-provider collaboration and independent verification.'
+      :result?.state==='degraded'
+        ?'EKODI AI collaborated, but one or more providers or independent verification are degraded.'
+        :'EKODI Core returned a safe non-AI or limited-mode result.';
+    return textResult(summary,data);
+  }
   if(name==='ekodi_my_identity'){
     const bridge=buildPersonalAiBridgeSnapshot(identity,{mcpConnected:true});
     const data={ekodiId:identity.ekodiId,canonical:true,providerIndependent:true,bridge};
@@ -201,12 +255,12 @@ async function handleRpc(message,request,env,dependencies={}){
     cacheScope:'public',
     resource:EKODI_MCP_RESOURCE,
     fabric:SOVEREIGN_CAPABILITY_FABRIC,
-    _meta:{'io.modelcontextprotocol/serverInfo':{name:'ekodi-sovereign-capability-fabric',version:'2026-09-08.1'}},
+    _meta:{'io.modelcontextprotocol/serverInfo':{name:'ekodi-sovereign-capability-fabric',version:'2026-09-09.1'}},
   });
   if(method==='initialize')return rpcResult(id,{
     protocolVersion:'2025-06-18',
     capabilities:{tools:{listChanged:false}},
-    serverInfo:{name:'ekodi-sovereign-capability-fabric',version:'2026-09-08.1'},
+    serverInfo:{name:'ekodi-sovereign-capability-fabric',version:'2026-09-09.1'},
     instructions:'Legacy compatibility. Modern clients should use MCP 2026-07-28 server/discover.',
   });
   if(method==='ping')return rpcResult(id,{});
