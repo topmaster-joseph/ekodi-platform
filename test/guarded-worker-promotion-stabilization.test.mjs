@@ -12,6 +12,9 @@ test('production promotion gets a bounded propagation window before rollback', (
 });
 
 test('candidate and rollback verification remain fail-closed', () => {
+  assert.match(release, /phase === 'standard' && overrideVersion && request\.candidateVerify === false/);
+  assert.match(release, /candidateVerify=false requires candidateVerifyReason/);
+  assert.match(release, /deferred until post-promotion routing is active/);
   assert.match(release, /await verifyAll\(candidateVersion\);/);
   assert.match(release, /await verifyAll\('', 'rollback'\);/);
   assert.match(release, /throw new Error\(`\$\{request\.url\} verification failed:/);
