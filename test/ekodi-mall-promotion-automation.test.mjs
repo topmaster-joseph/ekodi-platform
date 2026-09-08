@@ -10,7 +10,7 @@ test('mall promotion stays first-party, organic and bounded', () => {
   assert.equal(MALL_PROMOTION_DEFAULTS.storefront, 'ekodi-mall');
   assert.deepEqual(MALL_PROMOTION_DEFAULTS.providers, ['facebook','instagram','threads']);
   assert.equal(MALL_PROMOTION_DEFAULTS.maxDailyChannels, 3);
-  assert.equal(MALL_PROMOTION_DEFAULTS.strategy, 'opportunity_first');
+  assert.equal(MALL_PROMOTION_DEFAULTS.strategy, 'official_weekly_board');
   assert.match(MALL_PROMOTION_DEFAULTS.disclosure, /쿠팡 파트너스/);
 });
 
@@ -69,6 +69,8 @@ test('growth entry exports its RPC entrypoint and uses only the canonical shared
   assert.match(entry,/mallSalesIntelligence/);
   assert.match(entry,/mallPromotionAutomation/);
   assert.match(entry,/scheduled\(_event, env, ctx\)/);
+  assert.match(entry,/mallPromotionAutomationEnabled\(env\)/);
+  assert.doesNotMatch(entry,/[^A-Za-z]promotionAutomationEnabled\(env\)/);
   assert.match(wrangler,/main = "marketing-growth-entry.js"/);
   assert.match(entry,/export \{ MarketingGrowthPublisher \} from '\.\/marketing-growth-worker\.js';/);
   assert.match(wrangler,/crons = \[\]/);
@@ -83,4 +85,11 @@ test('promotion health separates social readiness from YouTube Shorts readiness'
   assert.match(worker,/youtubeConnected/);
   assert.match(worker,/youtubeMallShortsReady:false/);
   assert.match(worker,/product_short_video_asset_pipeline_required/);
+});
+test('all connected social channels share the same daily weekly-board product', async () => {
+  const worker=await read('mall-promotion-automation.js');
+  const productIndex=worker.indexOf('const product=board?.todayProduct||null');
+  const loopIndex=worker.indexOf('for(const connection of connections)');
+  assert.ok(productIndex>=0 && loopIndex>productIndex);
+  assert.match(worker,/WHERE run_date=\? AND product_row_id=\?/);
 });
