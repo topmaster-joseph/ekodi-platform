@@ -73,6 +73,8 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
+      - name: EKODI AI Orchestration Gate
+        run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
       - name: Validate AI control and Cognitive Control Plane
         shell: bash
         run: |
@@ -138,6 +140,8 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
+      - name: EKODI AI Orchestration Gate
+        run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
       - name: Download immutable AI Control artifact
         uses: actions/download-artifact@v5
         with:
@@ -238,6 +242,8 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
+      - name: EKODI AI Orchestration Gate
+        run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
       - name: Download the same immutable artifact verified in staging
         uses: actions/download-artifact@v5
         with:

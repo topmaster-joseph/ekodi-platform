@@ -56,6 +56,8 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
+      - name: EKODI AI Orchestration Gate
+        run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
       - name: Validate Conversation, Operator, Investment and Profile boundaries
         run: |
           set -euo pipefail
@@ -89,6 +91,8 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
+      - name: EKODI AI Orchestration Gate
+        run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
       - name: Resolve isolated Workspace staging D1
         id: db
         shell: bash
@@ -166,6 +170,8 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
+      - name: EKODI AI Orchestration Gate
+        run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
       - name: Resolve isolated Control staging D1
         id: db
         shell: bash
@@ -230,6 +236,8 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
+      - name: EKODI AI Orchestration Gate
+        run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
       - name: Capture D1 recovery bookmark
         run: npx --yes wrangler@${WRANGLER_VERSION} d1 time-travel info ekodi-auth --config wrangler.workspace-platform.toml --json > /tmp/bookmark.json
       - name: Apply production migration once after both staging gates
@@ -260,6 +268,8 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
+      - name: EKODI AI Orchestration Gate
+        run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
       - name: Guarded Conversation Control API release
         run: node scripts/guarded-worker-release.mjs --manifest deploy/manifests/control-api.worker.json
       - name: Verify production Operator boundary

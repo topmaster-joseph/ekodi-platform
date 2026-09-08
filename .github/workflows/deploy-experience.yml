@@ -73,6 +73,8 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
+      - name: EKODI AI Orchestration Gate
+        run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
       - name: Verify Development boundary
         run: |
           test -n "$CLOUDFLARE_API_TOKEN"
@@ -143,6 +145,8 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
+      - name: EKODI AI Orchestration Gate
+        run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
       - name: Synchronize Experience production routes
         run: npx --yes wrangler@${WRANGLER_VERSION} triggers deploy --config wrangler.experience.toml
       - name: Guarded Experience production release

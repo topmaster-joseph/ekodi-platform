@@ -139,6 +139,8 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
+      - name: EKODI AI Orchestration Gate
+        run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
       - name: Generate universal user-service registry
         run: npm run generate:user-services
       - name: Verify Development staging boundary
@@ -228,6 +230,8 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
+      - name: EKODI AI Orchestration Gate
+        run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
       - name: Generate universal user-service registry
         run: npm run generate:user-services
       - name: Verify Cloudflare credentials

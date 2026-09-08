@@ -49,6 +49,16 @@ let previousVersion = '';
 let candidateVersion = '';
 let candidateAttached = false;
 
+function runChangeOrchestrationGate() {
+  const result = spawnSync(process.execPath, ['scripts/validate-ekodi-ai-change-orchestration.mjs', '--release'], {
+    cwd: policyRoot,
+    env: process.env,
+    encoding: 'utf8',
+    stdio: 'inherit',
+  });
+  if (result.status !== 0) throw new Error('EKODI AI orchestration release gate failed.');
+  console.log('EKODI AI orchestration release gate passed.');
+}
 function runProviderIndependenceGate() {
   const env = { ...process.env, AI_PROVIDER: 'NONE' };
   for (const argv of [
@@ -283,6 +293,7 @@ async function bootstrapFirstDeploy() {
 
 try {
   console.log(`Worker guarded release: ${worker.name}`);
+  runChangeOrchestrationGate();
   runProviderIndependenceGate();
   if (secretsFilePath) console.log('Candidate will include the supplied secret set without printing secret values.');
   try {
