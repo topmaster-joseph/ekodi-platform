@@ -21,6 +21,10 @@ const PUBLIC_ASSETS = new Set([
   '/mall.js',
 ]);
 const PUBLIC_ADMIN_ALIASES = new Set(['/admin', '/admin/']);
+const WORKSPACE_ADMIN_ASSET_ALIASES = new Map([
+  ['/cgma/admin/assets/cgma-member-admin.js','/cgma-member-admin.js'],
+  ['/cgma/admin/assets/cgma-member-admin.css','/cgma-member-admin.css'],
+]);
 
 const ADMIN_HOSTS = new Set([
   'admin.ekodi.kr',
@@ -507,6 +511,11 @@ export default {
       if (url.pathname === '/workspace-admin.js') return workspaceAdminScript();
       if (url.pathname.startsWith('/api/control/storage/google/cheonggye-members')) return proxyAdminStorage(request, env);
       if (url.pathname === '/church-pastor-admin.js') return churchPastorAdminScript();
+      const workspaceAdminAsset = WORKSPACE_ADMIN_ASSET_ALIASES.get(url.pathname);
+      if (workspaceAdminAsset) {
+        const response = await env.ASSETS.fetch(assetRequest(request, workspaceAdminAsset));
+        return withHostSecurity(response, ADMIN_CSP, adminAssetCacheControl(url), 'admin-workspace-asset');
+      }
       if (['GET','HEAD'].includes(request.method) && isEkodiBizInvestAdminPath(url.pathname)) {
         const page=ekodiBizInvestAdminPage(request);
         const secured=withHostSecurity(page, ADMIN_CSP, 'no-store', 'public-ekodibiz-invest-admin');
