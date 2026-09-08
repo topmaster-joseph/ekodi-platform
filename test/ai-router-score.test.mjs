@@ -16,9 +16,9 @@ test('code work keeps the origin lane and ranks repository-capable nodes first a
   const task=normalizeTaskInput({prompt:'fix this repository code, run tests, and prepare deployment',mode:'single'});
   assert.equal(inferTaskTraits(task).category,'code');
   const plan=buildExecutionPlan(task,{geminiFree:true,nodeProviders:['codex','gemini-cli'],openaiApi:true});
-  assert.equal(plan[0].providerId,'gemini-free');
+  assert.equal(plan[0].providerId,'node:codex');
   assert.equal(plan[0].role,'origin-primary');
-  assert.equal(plan[1].providerId,'node:codex');
+  assert.equal(plan[1].providerId,'node:gemini-cli');
   assert.equal(plan[1].routerScorePolicyVersion,AI_ROUTER_SCORE_POLICY.version);
 });
 

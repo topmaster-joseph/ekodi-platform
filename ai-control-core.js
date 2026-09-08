@@ -9,10 +9,10 @@ export const AI_CONTROL_POLICY = Object.freeze({
   defaultMode: 'parallel',
   modes: Object.freeze(['parallel']),
   providerOrder: Object.freeze([
-    'gemini-free',
     'node:codex',
-    'node:gemini-cli',
     'node:claude-code',
+    'node:gemini-cli',
+    'gemini-free',
     'openai-api',
     'anthropic-api',
     'worker:claude',
@@ -44,10 +44,10 @@ const ORIGIN_ALIASES = Object.freeze({
 });
 
 const ORIGIN_PROVIDER_PREFERENCES = Object.freeze({
-  chatgpt:Object.freeze(['worker:chatgpt','openai-api','node:codex']),
+  chatgpt:Object.freeze(['node:codex','worker:chatgpt','openai-api']),
   codex:Object.freeze(['node:codex','openai-api','worker:chatgpt']),
-  claude:Object.freeze(['worker:claude','anthropic-api','node:claude-code']),
-  gemini:Object.freeze(['worker:gemini','gemini-free','node:gemini-cli']),
+  claude:Object.freeze(['node:claude-code','worker:claude','anthropic-api']),
+  gemini:Object.freeze(['node:gemini-cli','worker:gemini','gemini-free']),
   ekodi:Object.freeze([]),
 });
 

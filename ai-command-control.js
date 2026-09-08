@@ -87,6 +87,8 @@ function pulseInput(body = {}, session = {}) {
 async function collaborationResponse(request, env, session, url) {
   const writeAction = request.method === 'PUT' || (request.method === 'POST' && url.pathname === `${COLLABORATION_PATH}/reset`);
   const requiredCapability = writeAction ? 'ai:operate' : 'ai:read';
+  const role = text(session.role || session.authority?.role || 'viewer', 80).toLowerCase();
+  if (writeAction && role !== 'super_admin') return json(request, env, { error: 'global_policy_super_admin_required', capability: requiredCapability }, 403);
   if (!sessionCapabilityGranted(session, requiredCapability)) return json(request, env, { error: 'capability_required', capability: requiredCapability }, 403);
   if (request.method === 'GET' && url.pathname === COLLABORATION_PATH) {
     return json(request, env, { ok: true, ...(await getAiCollaborationAdminSnapshot(env)) });

@@ -43,7 +43,7 @@ test('execution plan uses at most five distinct suppliers and pins the origin fa
   const plan=buildExecutionPlan(task,fullCapabilities);
   assert.equal(plan.length,5);
   assert.equal(new Set(plan.map(item=>item.providerId)).size,5);
-  assert.equal(plan[0].providerId,'worker:chatgpt');
+  assert.equal(plan[0].providerId,'node:codex');
   assert.equal(plan[0].role,'origin-primary');
   assert.ok(plan.slice(1).every(item=>item.role.startsWith('parallel-')));
 });
@@ -52,7 +52,7 @@ test('explicit collaborator list cannot evict the available origin responder',()
   const task=normalizeTaskInput({prompt:'compare',originProvider:'claude',providers:['gemini-free','node:codex','node:gemini-cli','openai-api','worker:chatgpt']});
   const plan=buildExecutionPlan(task,fullCapabilities);
   assert.equal(plan.length,5);
-  assert.equal(plan[0].providerId,'worker:claude');
+  assert.equal(plan[0].providerId,'node:claude-code');
   assert.equal(new Set(plan.map(item=>item.providerId)).size,5);
 });
 

@@ -117,9 +117,9 @@ test('tax admin subservice reuses the authenticated admin session through an exp
   assert.match(taxPortal, /history\.replaceState/);
 });
 
-test('AI membership admin presents the Core-first execution policy', async () => {
+test('AI membership admin presents the Core-governed personal-first execution policy', async () => {
   const panel = await read('user-ai-tier-panel.js');
-  assert.match(panel, /Core 우선 · AI 필요 시 자동 선택/);
+  assert.match(panel, /Core 통제 · 개인구독 → 개인 API → 지원 AI/);
   assert.match(panel, /대체 경로 준비됨/);
   assert.doesNotMatch(panel, /개인 API → EKODI → 개인 Web → Core/);
   assert.match(panel, /자동화·백그라운드·관리자·시스템 실행은 소비자 Web 세션에 의존하지 않습니다/);

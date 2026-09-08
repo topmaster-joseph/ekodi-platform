@@ -1,4 +1,5 @@
 import { AI_ROUTER_SCORE_POLICY, normalizeRouterWeights } from './ai-router-score.js';
+import { DEFAULT_AI_RESOURCE_POLICY, normalizeAiResourcePolicy } from './ai-resource-policy.js';
 
 const SCOPE = 'global';
 const MAX_AUDIT_ROWS = 50;
@@ -36,6 +37,7 @@ export const DEFAULT_AI_COLLABORATION_POLICY = Object.freeze({
     localFallback: Object.freeze({ enabled: true, allowedReasons: LOCAL_REASONS }),
     requireLiveProductionVerification: true,
   }),
+  resources: DEFAULT_AI_RESOURCE_POLICY,
   openai: Object.freeze({
     enabled: true,
     credentialMode: 'project_service_credential',
@@ -107,6 +109,7 @@ export function normalizeAiCollaborationPolicy(value = {}) {
       },
       requireLiveProductionVerification: bool(execution.requireLiveProductionVerification, true),
     },
+    resources: normalizeAiResourcePolicy(source.resources),
     openai: {
       enabled: bool(openai.enabled, true),
       credentialMode: 'project_service_credential',
@@ -165,6 +168,10 @@ async function ensureTables(db) {
     policy_json TEXT NOT NULL,
     created_at TEXT NOT NULL
   )`).run();
+  await db.prepare(`CREATE TABLE IF NOT EXISTS ai_core_learning_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, task_id TEXT, capability TEXT, outcome TEXT NOT NULL,
+    evidence_json TEXT NOT NULL DEFAULT '{}', created_at TEXT NOT NULL
+  )`).run();
 }
 
 async function rowForPolicy(env) {
@@ -217,9 +224,28 @@ export async function listAiCollaborationAudit(env = {}, limit = 20) {
   return rows.results || [];
 }
 
+export async function recordAiCoreLearningEvent(env = {}, event = {}) {
+  if (!env.DB?.prepare) return null;
+  await ensureTables(env.DB);
+  const now = new Date().toISOString();
+  const evidence = JSON.stringify(event.evidence && typeof event.evidence === 'object' ? event.evidence : {});
+  await env.DB.prepare(`INSERT INTO ai_core_learning_events (task_id, capability, outcome, evidence_json, created_at) VALUES (?, ?, ?, ?, ?)` )
+    .bind(text(event.taskId,120), text(event.capability,120), text(event.outcome,40)||'verified', evidence.slice(0,12000), now).run();
+  return { taskId:text(event.taskId,120), outcome:text(event.outcome,40)||'verified', createdAt:now };
+}
+
+export async function getAiCoreLearningStatus(env = {}) {
+  if (!env.DB?.prepare) return { count:0, recent:[] };
+  await ensureTables(env.DB);
+  const count = await env.DB.prepare('SELECT COUNT(*) AS count FROM ai_core_learning_events').first();
+  const rows = await env.DB.prepare('SELECT task_id, capability, outcome, created_at FROM ai_core_learning_events ORDER BY id DESC LIMIT 8').all();
+  return { count:Number(count?.count)||0, recent:rows.results||[] };
+}
+
 export async function getAiCollaborationAdminSnapshot(env = {}) {
   const loaded = await loadAiCollaborationPolicy(env);
   const profiles = resolveOpenAiProfiles(env, loaded.policy);
+  const coreLearning = await getAiCoreLearningStatus(env);
   return Object.freeze({
     ...loaded,
     credential: Object.freeze({
@@ -227,6 +253,13 @@ export async function getAiCollaborationAdminSnapshot(env = {}) {
       storage: 'server_secret_only',
       recommendedIsolation: 'openai_project_per_environment',
     }),
+    resourceStatus: Object.freeze({
+      personalSubscriptions: Object.freeze({ mode:'official-client-nodes', secretShared:false }),
+      personalApis: Object.freeze({ openai:Boolean(text(env.OPENAI_API_KEY,10000)), anthropic:Boolean(text(env.ANTHROPIC_API_KEY,10000)), gemini:Boolean(text(env.GEMINI_API_KEY,10000)) }),
+      ekodiSharedApi: Object.freeze({ configured:Boolean(text(env.EKODI_SHARED_OPENAI_API_KEY,10000)||text(env.EKODI_SHARED_AI_URL,1000)) }),
+      hostedAi: Object.freeze({ configured:Boolean(text(env.EKODI_HOSTED_AI_URL,1000)), mode:'cloud-gpu-on-demand' }),
+    }),
+    coreLearning: Object.freeze(coreLearning),
     resolvedProfiles: profiles,
     executionRule: 'cloud_first_remote_second_local_exception_only',
     routerScore: Object.freeze({ algorithmVersion: AI_ROUTER_SCORE_POLICY.version, weights: loaded.policy.router.weights }),

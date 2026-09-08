@@ -93,6 +93,8 @@ on:
       - 'author-billing-admin.js'
       - 'author-billing-admin.css'
       - 'ai-ops-admin.js'
+      - 'ai-management-admin.js'
+      - 'ai-management-admin.css'
       - 'user-ai-tier-panel.js'
       - 'ai-ops-admin.css'
       - 'ai-module-spec-admin.js'
@@ -197,7 +199,7 @@ jobs:
       - name: Validate current shared site and admin sources
         run: |
           set -euo pipefail
-          for f in site-worker.js platform-router-entry-worker.js store-gateway-page.js preview-page.js insurance-public-route.js sites/ekodi-insurance/public/advisor.js sites/ekodi-insurance/public/server-bridge.js marketing-canonical-projection.js workspace-admin-page.js tenant-admin-policy.js store-admin-engine.js church-pastor-admin-page.js church-reports-admin.js workspace-trade-admin-page.js workspace-trade-portal.js mail-user-page.js mail-contact.js mail-admin-page.js tax-portal-worker.js tax-business-registry.js tax-service-worker.js finance-entry-worker.js script.js homepage-ambient.js mall.js admin-ai-control-plane.js admin-ai-governor.js admin-provider-control.js admin-secret-generator.js ekodi-shell-injector.js site-shell-worker.js auth-site/auth-workspace-target.js marketing-ai-admin.js admin-authenticated-shell.js admin-central-handoff.js finance-monitor.js admin-demand-loader.js admin-public-site-controls.js client-access.js social-admin.js books-admin.js books-finance-admin.js books-distribution-admin.js books-pipeline-admin.js books-pipeline-bridge.js books-royalty-admin.js author-billing-admin.js ai-ops-admin.js devotional-admin.js ai-module-spec-admin.js communication-admin.js openai-workspace-admin.js common-services-admin.js storage-admin.js admin-menu-registry.js admin-menu-layout.js admin-sidebar.js admin-menu-runtime.js admin-design-engine.js campus-actions.js discovery-layer.js scripts/discovery-build.mjs scripts/ecosystem-registry.mjs scripts/admin-thin-postbuild.mjs scripts/build.mjs scripts/guarded-worker-release.mjs scripts/ensure-church-route-ownership.mjs scripts/admin-authenticated-e2e.mjs scripts/admin-authenticated-e2e-retry.mjs scripts/admin-authenticated-e2e-menu-worker.mjs scripts/validate-user-ui-dna.mjs scripts/validate-design-engine.mjs admin-language-status.js; do
+          for f in site-worker.js platform-router-entry-worker.js store-gateway-page.js preview-page.js insurance-public-route.js sites/ekodi-insurance/public/advisor.js sites/ekodi-insurance/public/server-bridge.js marketing-canonical-projection.js workspace-admin-page.js tenant-admin-policy.js store-admin-engine.js church-pastor-admin-page.js church-reports-admin.js workspace-trade-admin-page.js workspace-trade-portal.js mail-user-page.js mail-contact.js mail-admin-page.js tax-portal-worker.js tax-business-registry.js tax-service-worker.js finance-entry-worker.js script.js homepage-ambient.js mall.js admin-ai-control-plane.js admin-ai-governor.js admin-provider-control.js admin-secret-generator.js ekodi-shell-injector.js site-shell-worker.js auth-site/auth-workspace-target.js marketing-ai-admin.js admin-authenticated-shell.js admin-central-handoff.js finance-monitor.js admin-demand-loader.js admin-public-site-controls.js client-access.js social-admin.js books-admin.js books-finance-admin.js books-distribution-admin.js books-pipeline-admin.js books-pipeline-bridge.js books-royalty-admin.js author-billing-admin.js ai-ops-admin.js devotional-admin.js ai-management-admin.js ai-module-spec-admin.js communication-admin.js openai-workspace-admin.js common-services-admin.js storage-admin.js admin-menu-registry.js admin-menu-layout.js admin-sidebar.js admin-menu-runtime.js admin-design-engine.js campus-actions.js discovery-layer.js scripts/discovery-build.mjs scripts/ecosystem-registry.mjs scripts/admin-thin-postbuild.mjs scripts/build.mjs scripts/guarded-worker-release.mjs scripts/ensure-church-route-ownership.mjs scripts/admin-authenticated-e2e.mjs scripts/admin-authenticated-e2e-retry.mjs scripts/admin-authenticated-e2e-menu-worker.mjs scripts/validate-user-ui-dna.mjs scripts/validate-design-engine.mjs admin-language-status.js; do
             node --check "$f"
           done
           node --test test/discovery-layer.test.mjs test/preview-page.test.mjs test/mail-contact.test.mjs
@@ -219,6 +221,8 @@ jobs:
           test -f admin-public-site-controls.js
           test -f admin-language-status.js
           test -f ai-ops-admin.css
+          test -f ai-management-admin.css
+          test -f ai-management-admin.js
           test -f communication-admin.css
           grep -Fq 'EKODI COMMUNICATION ADMIN' communication-admin.js
           grep -Fq 'https://mail.ekodi.kr/admin' communication-admin.js
