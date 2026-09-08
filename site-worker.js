@@ -40,7 +40,7 @@ const ADMIN_MARKETING_PUBLISHING_PREFIX = '/api/control/marketing-publishing';
 const ADMIN_COMMON_SERVICE_AI_PREFIX = '/api/control/common-services/ai/';
 
 const AUTH_HOST = 'auth.ekodi.kr';
-const AUTH_ASSETS = new Set(['/auth.js','/auth.css','/auth-router.js','/oauth-consent.js','/marketing-auth-hotfix.js','/auth-workspace-target.js','/admin-auth.js','/client-auth.js','/author-auth.js','/business-auth.js','/marketing-onboarding.js','/membership-ui.js']);
+const AUTH_ASSETS = new Set(['/auth.js','/auth.css','/auth-router.js','/oauth-consent.js','/marketing-auth-hotfix.js','/auth-workspace-target.js','/admin-auth.js','/client-auth.js','/author-auth.js','/business-auth.js','/marketing-onboarding.js','/membership-ui.js','/google-origin-bridge.js']);
 const AUTH_CRITICAL_ASSETS = new Set(['/auth.js','/auth-router.js','/oauth-consent.js','/marketing-auth-hotfix.js','/auth-workspace-target.js','/admin-auth.js','/client-auth.js','/author-auth.js','/business-auth.js','/marketing-onboarding.js','/membership-ui.js']);
 
 const HUB_HOSTS = new Set([
@@ -617,6 +617,10 @@ export default {
       if (url.pathname === '/' || url.pathname === '/index.html' || url.pathname === '/login' || url.pathname === '/login/') {
         const response = await env.ASSETS.fetch(assetRequest(request, '/auth-center'));
         return withHostSecurity(response, AUTH_CSP, 'no-store', 'central-auth');
+      }
+      if (url.pathname === '/google-origin-bridge' || url.pathname === '/google-origin-bridge/') {
+        const response = await env.ASSETS.fetch(assetRequest(request, '/google-origin-bridge'));
+        return withHostSecurity(response, AUTH_CSP, 'no-store', 'google-origin-bridge');
       }
       if (url.pathname === '/oauth/consent' || url.pathname === '/oauth/consent/') {
         const response = await env.ASSETS.fetch(assetRequest(request, '/oauth-consent'));
