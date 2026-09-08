@@ -53,3 +53,18 @@ test('mail root is exclusively owned by the shared site core',async()=>{
   const workflow=await read('.github/workflows/deploy-site-core.yml');
   assert.match(workflow,/for host in ekodi\.kr admin\.ekodi\.kr auth\.ekodi\.kr tax\.ekodi\.kr mail\.ekodi\.kr; do/);
 });
+
+
+test('Mail aliases remain compatibility-only and converge on the constitutional Mail boundary',async()=>{
+  const [source,proxyConfig,siteConfig,boundaries]=await Promise.all([
+    read('service-proxy.js'),read('wrangler.service-proxy.toml'),read('wrangler.site.toml'),read('platform-boundaries.json')
+  ]);
+  assert.match(source,/const MAIL_CANONICAL = 'https:\/\/mail\.ekodi\.kr'/);
+  assert.doesNotMatch(source,/mail\.google\.com/);
+  for(const alias of ['mail.biz.ekodi.kr','mail.church.ekodi.kr','mail.lab.ekodi.kr','mail.books.ekodi.kr','mail.trade.ekodi.kr']){
+    assert.match(source,new RegExp(`'${alias.replaceAll('.','\\.')}': MAIL_CANONICAL`));
+    assert.match(proxyConfig,new RegExp(`pattern = "${alias.replaceAll('.','\\.')}"`));
+    assert.doesNotMatch(siteConfig,new RegExp(`pattern = "${alias.replaceAll('.','\\.')}"`));
+  }
+  assert.match(boundaries,/"mail-service"[\s\S]*?"domains":\["mail\.ekodi\.kr","api\.ekodi\.kr"\]/);
+});
