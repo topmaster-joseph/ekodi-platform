@@ -34,6 +34,12 @@ test('sales and supply network separates professional engine health from Mall op
   assert.match(workspace, /let platformAdminSessionToken=''/);
   assert.doesNotMatch(workspace, /sessionStorage\.setItem\(PLATFORM_ADMIN_TOKEN_KEY/);
   assert.match(workspace, /acceptPlatformAdminHandoff/);
+  assert.match(workspace, /PLATFORM_ADMIN_INTENT_KEY='ekodi-platform-admin-intent'/);
+  assert.match(workspace, /PLATFORM_ADMIN_INTENT_MAX_AGE_MS=10\*60\*1000/);
+  assert.match(workspace, /markPlatformAdminIntent/);
+  assert.match(workspace, /hasPlatformAdminIntent/);
+  assert.match(workspace, /1단계 운영공간 로그인 후 플랫폼 관리자 인증으로 자동 이어집니다/);
+  assert.match(workspace, /location\.assign\(platformAdminAuthUrl\(\)\)/);
   assert.match(workspace, /site','admin'/);
   assert.match(workspace, /AFFILIATE_API='https:\/\/api\.ekodi\.kr\/api\/affiliate'/);
   assert.equal(workspace.includes("affiliateApi('/programs')"), true);
