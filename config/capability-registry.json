@@ -1,5 +1,5 @@
 {
-  "version": "3.0.0",
+  "version": "3.1.0",
   "name": "EKODI Universal Capability Registry",
   "principle": "Capabilities are stable reusable abilities. Intent selects capabilities; services and providers are replaceable implementations.",
   "surfacePolicy": {
@@ -788,6 +788,12 @@
       },
       "commerce.supply-network": {
         "scope": "workspace"
+      },
+      "ai.command.delegate": {
+        "scope": "person",
+        "exposure": {
+          "mcp": true
+        }
       }
     }
   },
@@ -841,6 +847,25 @@
         "identity",
         "person",
         "read"
+      ]
+    },
+    {
+      "id": "ai.command.delegate",
+      "name": "EKODI AI Command Delegation",
+      "domain": "core",
+      "ownerAgent": "chief",
+      "actionTier": "assist",
+      "maturity": "service-backed",
+      "description": "Delegates an authenticated user goal to the EKODI AI Command Plane for multi-provider collaboration and independent verification without transferring external execution authority.",
+      "surfaces": [
+        "my",
+        "mcp"
+      ],
+      "tags": [
+        "ai",
+        "command",
+        "collaboration",
+        "verification"
       ]
     }
   ]

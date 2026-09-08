@@ -9,21 +9,26 @@ import {
 } from '../sovereign-capability-fabric.js';
 
 test('Capability Registry is the one 8G contract source for all adapters',()=>{
-  assert.equal(registry.version,'3.0.0');
+  assert.equal(registry.version,'3.1.0');
   assert.equal(SOVEREIGN_CAPABILITY_FABRIC.registryVersion,registry.version);
   assert.equal(SOVEREIGN_CAPABILITY_FABRIC.contract,'ekodi.sovereign-capability.v1');
   assert.ok(registry.capabilities.length >= 27);
-  assert.equal(registry.fabricCapabilities.length,3);
+  assert.equal(registry.fabricCapabilities.length,4);
   assert.equal(listCapabilityContracts().length,registry.capabilities.length+registry.fabricCapabilities.length);
 });
 
-test('MCP exposes only explicitly allowed read capabilities',()=>{
+test('MCP exposes only explicitly allowed capabilities with bounded command delegation',()=>{
   for(const id of ['identity.self.read','ai.personal.status.read','services.membership.read']){
     const contract=compileCapabilityContract(id);
     assert.equal(contract.actionTier,'observe');
     assert.equal(contract.exposure.mcp,true);
     assert.equal(contract.humanGate,false);
   }
+  const delegate=compileCapabilityContract('ai.command.delegate');
+  assert.equal(delegate.actionTier,'assist');
+  assert.equal(delegate.exposure.mcp,true);
+  assert.equal(delegate.humanGate,false);
+  assert.equal(delegate.scope,'person');
   assert.equal(compileCapabilityContract('creator.publish').exposure.mcp,false);
 });
 test('external protocol invocation needs a trusted client and canonical person',()=>{
