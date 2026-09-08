@@ -1,4 +1,4 @@
-import {buildExecutionPlan,rolePrompt,summarizeRuns} from './ai-control-core.js';
+import {buildExecutionPlan,buildOriginSynthesisPrompt,isOriginPreserved,resolveOriginResponseProvider,rolePrompt,summarizeRuns} from './ai-control-core.js';
 
 const clean=value=>String(value??'').trim();
 const DEFAULT_WORKER_PROVIDERS=Object.freeze([]);
@@ -34,7 +34,7 @@ export function providerStatus(env={},nodeProviders=[]){
 async function invokeGemini(env,prompt){
   const key=clean(env.GEMINI_API_KEY);if(!key)throw new Error('gemini_not_configured');
   const model=clean(env.GEMINI_MODEL)||'gemini-3.7-flash';
-  const response=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,{method:'POST',headers:{'content-type':'application/json','x-goog-api-key':key,'x-goog-api-client':'ekodi-ai-control/0.2.0'},body:JSON.stringify({contents:[{role:'user',parts:[{text:prompt}]}]})});
+  const response=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,{method:'POST',headers:{'content-type':'application/json','x-goog-api-key':key,'x-goog-api-client':'ekodi-ai-control/0.3.0'},body:JSON.stringify({contents:[{role:'user',parts:[{text:prompt}]}]})});
   const data=await response.json().catch(()=>({}));
   if(!response.ok)throw new Error(data?.error?.message||`gemini_${response.status}`);
   const text=(data?.candidates?.[0]?.content?.parts||[]).map(part=>part.text||'').join('\n').trim();
@@ -68,7 +68,7 @@ async function invokeWorker(env,provider,prompt,task,role){
   const base=clean(env.AI_WORKER_URL).replace(/\/+$/,'');
   const token=clean(env.AI_WORKER_TOKEN);
   if(!base||!token)throw new Error('worker_unavailable');
-  const response=await fetch(`${base}/v1/execute`,{method:'POST',headers:{authorization:`Bearer ${token}`,'content-type':'application/json','x-ekodi-task-id':task.id},body:JSON.stringify({task_id:task.id,provider,role,prompt})});
+  const response=await fetch(`${base}/v1/execute`,{method:'POST',headers:{authorization:`Bearer ${token}`,'content-type':'application/json','x-ekodi-task-id':task.id},body:JSON.stringify({task_id:task.id,provider,role,prompt,origin:task.origin||task.governance?.origin||null})});
   const data=await response.json().catch(()=>({}));
   if(!response.ok||data?.ok===false)throw new Error(data?.error||`worker_${response.status}`);
   const output=clean(data.output||data.text||data.result);
@@ -86,7 +86,8 @@ export async function invokeProvider(env,providerId,prompt,task,role){
 }
 
 export async function runExecutionPlan(env,task,onRun=async()=>{},nodeProviders=[]){
-  const plan=buildExecutionPlan(task,providerCapabilities(env,nodeProviders));
+  const capabilities=providerCapabilities(env,nodeProviders);
+  const plan=buildExecutionPlan(task,capabilities);
   if(!plan.length)throw new Error('no_provider_available');
   if(plan.some(entry=>entry.providerId.startsWith('node:')))throw new Error('node_provider_requires_queue');
   const execute=async entry=>{
@@ -97,6 +98,16 @@ export async function runExecutionPlan(env,task,onRun=async()=>{},nodeProviders=
     await onRun(run,'finish');
     return{...run,ok:run.state==='completed'};
   };
-  const runs=task.mode==='parallel'?await Promise.all(plan.map(execute)):await (async()=>{const out=[];for(const entry of plan)out.push(await execute(entry));return out})();
-  return{runs,summary:summarizeRuns(runs)};
+  const runs=await Promise.all(plan.map(execute));
+  const successful=runs.filter(run=>run.ok);
+  if(!successful.length)return{runs,summary:summarizeRuns(runs),finalResponse:'',responseProvider:'',originPreserved:false,error:'all_providers_failed'};
+  const responseProvider=resolveOriginResponseProvider(task,capabilities);
+  if(!responseProvider||responseProvider.startsWith('node:'))throw new Error('origin_response_provider_requires_queue');
+  const synthesisRun={id:crypto.randomUUID(),taskId:task.id,providerId:responseProvider,role:'origin-synthesis',state:'running',output:'',error:'',startedAt:new Date().toISOString(),finishedAt:''};
+  await onRun(synthesisRun,'start');
+  try{synthesisRun.output=await invokeProvider(env,responseProvider,buildOriginSynthesisPrompt(task,successful),task,'origin-synthesis');synthesisRun.state='completed'}catch(error){synthesisRun.state='failed';synthesisRun.error=clean(error?.message||error)}
+  synthesisRun.finishedAt=new Date().toISOString();
+  await onRun(synthesisRun,'finish');
+  const allRuns=[...runs,{...synthesisRun,ok:synthesisRun.state==='completed'}];
+  return{runs:allRuns,summary:summarizeRuns(allRuns),finalResponse:synthesisRun.output||'',responseProvider,originPreserved:isOriginPreserved(task,responseProvider),error:synthesisRun.error||''};
 }
