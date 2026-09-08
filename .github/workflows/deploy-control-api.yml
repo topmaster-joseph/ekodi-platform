@@ -409,7 +409,7 @@ jobs:
             node -e "process.stdout.write(require('node:crypto').randomBytes(48).toString('base64url'))" | npx --yes wrangler@${WRANGLER_VERSION} secret put MAIL_CREDENTIAL_KEY --config wrangler.api.toml >/dev/null
             echo 'Generated a persistent Mail credential-encryption key in Cloudflare Worker secrets.' >> "$GITHUB_STEP_SUMMARY"
           fi
-      - name: Record AI provider readiness without exposing secrets
+      - name: Record configured AI providers without exposing secrets
         shell: bash
         run: |
           set -euo pipefail
@@ -426,7 +426,7 @@ jobs:
           echo "AI_PROVIDER_READY_COUNT=$provider_count" >> "$GITHUB_ENV"
           echo "AI_PROVIDER_COLLABORATION_READY=$collaboration_ready" >> "$GITHUB_ENV"
           echo "AI_PROVIDER_SENTINEL_READY=$sentinel_ready" >> "$GITHUB_ENV"
-          echo "AI provider readiness: configured=$provider_count collaboration=$collaboration_ready independent_sentinel=$sentinel_ready. Secret values were not read or printed." >> "$GITHUB_STEP_SUMMARY"
+          echo "AI provider configuration: configured=$provider_count multi_provider_configured=$collaboration_ready independent_sentinel_configured=$sentinel_ready. Runtime health is reported separately. Secret values were not read or printed." >> "$GITHUB_STEP_SUMMARY"
       - name: Capture production D1 recovery bookmark
         id: d1_bookmark
         run: |
@@ -448,6 +448,7 @@ jobs:
           health=$(curl -fsS --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/health')
           devices=$(curl -sS -o /tmp/devices.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/control/devices')
           ai=$(curl -sS -o /tmp/ai.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/control/ai/governance')
+          ai_v8=$(curl -sS -o /tmp/ai-v8.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/control/ai/v8/status')
           provider=$(curl -sS -o /tmp/provider.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/control/ai/provider-status')
           user_ai=$(curl -sS -o /tmp/user-ai.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/user-ai/status')
           membership=$(curl -sS -o /tmp/membership.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/membership/portfolio')
@@ -457,6 +458,7 @@ jobs:
           printf '%s' "$health" | grep -q '"ok":true'
           [ "$devices" = '401' ]
           [ "$ai" = '401' ]
+          [ "$ai_v8" = '401' ]
           [ "$provider" = '401' ]
           [ "$user_ai" = '401' ]
           [ "$membership" = '401' ]
@@ -487,7 +489,7 @@ jobs:
           payload=$(jq -n \
             --arg state "$state" \
             --arg context 'ekodi/control-api-production' \
-            --arg description "Control API production deployment: $JOB_STATUS; AI providers=${AI_PROVIDER_READY_COUNT:-0}" \
+            --arg description "Control API production deployment: $JOB_STATUS; AI configured=${AI_PROVIDER_READY_COUNT:-0}" \
             --arg target_url "$target_url" \
             '{state:$state,context:$context,description:$description,target_url:$target_url}')
           curl --fail-with-body -sS \
