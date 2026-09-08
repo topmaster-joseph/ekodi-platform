@@ -77,3 +77,13 @@ test('production growth deploy combines the official weekly board with the V8 pr
   assert.match(workflow,/\"strategy\":\"official_board_profit_learning_loop\"/);
   assert.match(workflow,/\"weeklyBoard\"/);
 });
+test('weekly board prepares independently from the external publishing master gate', async () => {
+  const [worker,entry]=await Promise.all([read('marketing-growth-worker.js'),read('marketing-growth-entry.js')]);
+  const workerBoard=worker.indexOf('ensureWeeklyPromotionBoard(this.env');
+  const workerGate=worker.indexOf('mallPromotionAutomationEnabled(this.env)',workerBoard);
+  assert.ok(workerBoard>=0 && workerGate>workerBoard);
+  assert.match(worker,/intelligence,weeklyBoard,promotion/);
+  const entryBoard=entry.indexOf('ensureWeeklyPromotionBoard(env');
+  const entryGate=entry.indexOf('mallPromotionAutomationEnabled(env)',entryBoard);
+  assert.ok(entryBoard>=0 && entryGate>entryBoard);
+});
