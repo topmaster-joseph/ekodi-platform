@@ -1,15 +1,16 @@
-﻿import fs from 'node:fs';
+import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 
-const root = path.resolve(process.env.GITHUB_WORKSPACE || process.cwd());
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const policyPath = path.join(root, 'config', 'ai-change-orchestration-policy.json');
 const releaseMode = process.argv.includes('--release');
 const ciMode = process.argv.includes('--ci') || releaseMode;
 
 function fail(message) {
-  console.error(`??AI-ORCHESTRATE-001: ${message}`);
+  console.error(`[EKODI][AI-ORCHESTRATE-001] ${message}`);
   process.exit(1);
 }
 function text(value) { return String(value ?? '').trim(); }
@@ -150,5 +151,5 @@ if (process.env.GITHUB_STEP_SUMMARY) {
   ].join('\n'));
 }
 
-console.log(`??${policy.policyId} passed: ${orchestrationId}`);
+console.log(`[EKODI] ${policy.policyId} passed: ${orchestrationId}`);
 console.log(`   source=${source} classes=${taskClasses.join(',')} provider=${policy.execution.providerSelection}`);

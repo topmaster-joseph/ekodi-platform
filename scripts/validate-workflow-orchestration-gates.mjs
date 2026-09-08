@@ -5,7 +5,8 @@ const root = process.cwd();
 const workflowDir = path.join(root, '.github', 'workflows');
 const fix = process.argv.includes('--fix');
 const gateName = 'EKODI AI Orchestration Gate';
-const gateCommand = 'node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release';
+const gateCommand = 'node \"$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs\" --release';
+const gatePattern = /node \"\$GITHUB_WORKSPACE\/(?:((?:\.ekodi-control|controller))\/)?scripts\/validate-ekodi-ai-change-orchestration\.mjs\" --release/;
 
 const mutationPatterns = [
   /guarded-worker-release\.mjs/,
@@ -18,6 +19,34 @@ const mutationPatterns = [
   /wrangler(?:@[^\s]+)?[^\n]*\bpages\s+deploy\b/i,
   /wrangler(?:@[^\s]+)?[^\n]*\bdeploy\b(?!ments)/i,
 ];
+
+function checkoutSteps(block) {
+  const lines = block.split(/\n/);
+  const steps = [];
+  let current = null;
+  for (const line of lines) {
+    if (/^      - /.test(line)) {
+      if (current) steps.push(current);
+      current = [line];
+    } else if (current) current.push(line);
+  }
+  if (current) steps.push(current);
+  return steps.map(lines => lines.join('\n')).filter(step => /uses:\s*actions\/checkout@/.test(step));
+}
+
+function gateHasMatchingCheckout(block) {
+  const match = block.match(gatePattern);
+  if (!match) return false;
+  const expectedPath = match[1] || '';
+  const gateIndex = block.indexOf(match[0]);
+  return checkoutSteps(block).some(step => {
+    if (block.indexOf(step) > gateIndex) return false;
+    if (/\n\s+repository:\s*/.test(step)) return false;
+    const pathMatch = step.match(/\n\s+path:\s*([^\s#]+)/);
+    const checkoutPath = pathMatch ? pathMatch[1].trim() : '';
+    return checkoutPath === expectedPath;
+  });
+}
 
 function isMutation(block) {
   return mutationPatterns.some(pattern => pattern.test(block.replace(/--dry-run[^\n]*/g, '')));
@@ -62,7 +91,15 @@ for (const name of fs.readdirSync(workflowDir).filter(name => /\.ya?ml$/.test(na
   let fileChanged = false;
   for (const range of ranges) {
     const block = lines.slice(range.start, range.end).join('\n');
-    if (!isMutation(block) || block.includes(gateCommand)) continue;
+    if (!isMutation(block)) continue;
+    if (gatePattern.test(block)) {
+      if (!gateHasMatchingCheckout(block)) {
+        const jobName = (lines[range.start].match(/^  ([^:]+):/) || [])[1] || 'unknown';
+        console.error(`❌ ${name}:${jobName} has ${gateName} but its EKODI control checkout path does not match the gate script path.`);
+        failed = true;
+      }
+      continue;
+    }
     const jobName = (lines[range.start].match(/^  ([^:]+):/) || [])[1] || 'unknown';
     const insertAt = findInsertion(lines, range);
     if (insertAt < 0) {

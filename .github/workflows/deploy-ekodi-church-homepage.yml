@@ -40,8 +40,13 @@ jobs:
         with:
           node-version: '24'
 
+      - name: Checkout EKODI orchestration control
+        uses: actions/checkout@v7
+        with:
+          path: .ekodi-control
+
       - name: EKODI AI Orchestration Gate
-        run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
+        run: node "$GITHUB_WORKSPACE/.ekodi-control/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
       - name: Validate Church header and multilingual source
         shell: bash
         run: |

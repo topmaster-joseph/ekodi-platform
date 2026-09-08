@@ -80,8 +80,13 @@ jobs:
         with:
           node-version: '24'
 
+      - name: Checkout EKODI orchestration control
+        uses: actions/checkout@v7
+        with:
+          path: .ekodi-control
+
       - name: EKODI AI Orchestration Gate
-        run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
+        run: node "$GITHUB_WORKSPACE/.ekodi-control/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
       - name: Build and verify official UI and same-origin assets
         working-directory: marketing-source
         shell: bash
