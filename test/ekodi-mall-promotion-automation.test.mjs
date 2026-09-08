@@ -10,7 +10,7 @@ test('mall promotion stays first-party, organic and bounded', () => {
   assert.equal(MALL_PROMOTION_DEFAULTS.storefront, 'ekodi-mall');
   assert.deepEqual(MALL_PROMOTION_DEFAULTS.providers, ['facebook','instagram','threads']);
   assert.equal(MALL_PROMOTION_DEFAULTS.maxDailyChannels, 3);
-  assert.equal(MALL_PROMOTION_DEFAULTS.strategy, 'opportunity_first');
+  assert.equal(MALL_PROMOTION_DEFAULTS.strategy, 'profit_learning_loop');
   assert.match(MALL_PROMOTION_DEFAULTS.disclosure, /쿠팡 파트너스/);
 });
 

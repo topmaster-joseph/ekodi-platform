@@ -13,9 +13,11 @@ on:
       - 'migrations/0028_marketing_growth_connectors.sql'
       - 'migrations/0048_ekodi_mall_promotion_automation.sql'
       - 'migrations/0049_ekodi_mall_active_sales_ai.sql'
+      - 'migrations/0072_ekodi_mall_growth_learning_loop.sql'
       - 'migrations/0050_ekodibiz_marketing_internal_entitlement.sql'
       - 'migrations/0064_marketing_channel_settings.sql'
       - 'test/ekodi-mall-promotion-automation.test.mjs'
+      - 'test/ekodi-mall-growth-learning-loop.test.mjs'
       - 'test/marketing-growth-oauth.test.mjs'
       - 'test/ekodimall-channel-settings-admin.test.mjs'
       - 'test/ekodibiz-youtube-channel-selection.test.mjs'
@@ -60,7 +62,7 @@ jobs:
           node --check marketing-growth-entry.js
           node --check mall-promotion-automation.js
           node --check mall-sales-intelligence.js
-          node --test test/ekodi-mall-promotion-automation.test.mjs test/ekodi-mall-active-sales-ai.test.mjs test/marketing-growth-oauth.test.mjs test/ekodimall-channel-settings-admin.test.mjs test/ekodibiz-youtube-channel-selection.test.mjs
+          node --test test/ekodi-mall-promotion-automation.test.mjs test/ekodi-mall-growth-learning-loop.test.mjs test/ekodi-mall-active-sales-ai.test.mjs test/marketing-growth-oauth.test.mjs test/ekodimall-channel-settings-admin.test.mjs test/ekodibiz-youtube-channel-selection.test.mjs
           grep -Fq 'encryptedVault:true' marketing-growth-worker.js
           grep -Fq 'oauthBroker:true' marketing-growth-worker.js
           grep -Fq 'youtubeConfigured' marketing-growth-worker.js
@@ -72,10 +74,12 @@ jobs:
           grep -Fq 'mallPromotionAutomation' marketing-growth-entry.js
           grep -Fq 'mallSalesIntelligence' marketing-growth-entry.js
           grep -Fq "const SUBJECT_KEY = 'ekodibiz'" mall-promotion-automation.js
-          grep -Fq "strategy:'opportunity_first'" mall-promotion-automation.js
+          grep -Fq "strategy:'profit_learning_loop'" mall-promotion-automation.js
           grep -Fq 'affiliate_promotion_runs' migrations/0048_ekodi_mall_promotion_automation.sql
           grep -Fq 'affiliate_growth_opportunities' migrations/0049_ekodi_mall_active_sales_ai.sql
           grep -Fq 'affiliate_product_performance_daily' migrations/0049_ekodi_mall_active_sales_ai.sql
+          grep -Fq 'affiliate_promotion_outbound_clicks' migrations/0072_ekodi_mall_growth_learning_loop.sql
+          grep -Fq 'affiliate_growth_policy_snapshots' migrations/0072_ekodi_mall_growth_learning_loop.sql
           grep -Fq "'tenant','ekodibiz','marketing','auto','active'" migrations/0050_ekodibiz_marketing_internal_entitlement.sql
           grep -Fq 'token_ciphertext TEXT NOT NULL' migrations/0028_marketing_growth_connectors.sql
           if grep -Eqi '(access_token|refresh_token|bearer_token)[[:space:]]+TEXT' migrations/0028_marketing_growth_connectors.sql migrations/0048_ekodi_mall_promotion_automation.sql migrations/0049_ekodi_mall_active_sales_ai.sql migrations/0050_ekodibiz_marketing_internal_entitlement.sql migrations/0064_marketing_channel_settings.sql; then
@@ -95,9 +99,9 @@ jobs:
         run: |
           set -euo pipefail
           npx --yes wrangler@${WRANGLER_VERSION} d1 execute ekodi-auth --remote --config wrangler.marketing-growth.toml \
-            --command "SELECT name FROM sqlite_master WHERE type='table' AND name IN ('marketing_oauth_states','marketing_oauth_connections','marketing_growth_campaigns','affiliate_promotion_runs','affiliate_promotion_visits','affiliate_demand_signals','affiliate_product_performance_daily','affiliate_growth_opportunities','affiliate_growth_strategy_runs','marketing_channel_settings') ORDER BY name;" \
+            --command "SELECT name FROM sqlite_master WHERE type='table' AND name IN ('marketing_oauth_states','marketing_oauth_connections','marketing_growth_campaigns','affiliate_promotion_runs','affiliate_promotion_visits','affiliate_demand_signals','affiliate_product_performance_daily','affiliate_growth_opportunities','affiliate_growth_strategy_runs','affiliate_promotion_outbound_clicks','affiliate_growth_policy_snapshots','marketing_channel_settings') ORDER BY name;" \
             --json > /tmp/growth-schema.json
-          for table in marketing_oauth_states marketing_oauth_connections marketing_growth_campaigns affiliate_promotion_runs affiliate_promotion_visits affiliate_demand_signals affiliate_product_performance_daily affiliate_growth_opportunities affiliate_growth_strategy_runs marketing_channel_settings; do
+          for table in marketing_oauth_states marketing_oauth_connections marketing_growth_campaigns affiliate_promotion_runs affiliate_promotion_visits affiliate_demand_signals affiliate_product_performance_daily affiliate_growth_opportunities affiliate_growth_strategy_runs affiliate_promotion_outbound_clicks affiliate_growth_policy_snapshots marketing_channel_settings; do
             grep -Fq "$table" /tmp/growth-schema.json
           done
 
@@ -154,7 +158,7 @@ jobs:
               && grep -Fq '"organicPublishing":true' /tmp/growth-health.json \
               && grep -Fq '"paidActivation":false' /tmp/growth-health.json \
               && grep -Fq '"mallPromotionAutomation"' /tmp/growth-health.json \
-              && grep -Fq '"strategy":"opportunity_first"' /tmp/growth-health.json \
+              && grep -Fq '"strategy":"profit_learning_loop"' /tmp/growth-health.json \
               && grep -Fq '"mallSalesIntelligence"' /tmp/growth-health.json \
               && grep -Fq '"mode":"active_sales"' /tmp/growth-health.json \
               && grep -Fq '"paidAds":false' /tmp/growth-health.json; then

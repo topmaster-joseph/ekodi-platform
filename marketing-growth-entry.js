@@ -41,7 +41,7 @@ export default {
       if (!intelligence.ok && intelligence.status !== 'schema_required') {
         console.error('EKODI Mall sales intelligence failed', intelligence.error || intelligence.status);
       }
-      if (!promotionAutomationEnabled(env)) return;
+      if (!mallPromotionAutomationEnabled(env)) return;
       await runMallPromotionAutomation(env, {reason:'cron'});
     })());
   },
