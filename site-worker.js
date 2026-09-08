@@ -19,6 +19,8 @@ const PUBLIC_ASSETS = new Set([
   '/ekodi-message-ui.js',
   '/mall.css',
   '/mall.js',
+  '/pizzamaru-mokpodae.css',
+  '/pizzamaru-mokpodae.js',
 ]);
 const PUBLIC_ADMIN_ALIASES = new Set(['/admin', '/admin/']);
 const WORKSPACE_ADMIN_ASSET_ALIASES = new Map([
@@ -518,6 +520,10 @@ export default {
       if (url.pathname === '/' || url.pathname === '/index.html') {
         const response = await env.ASSETS.fetch(assetRequest(request, '/'));
         return withHostSecurity(response, PUBLIC_CSP, 'no-store', 'public-home');
+      }
+      if (['GET','HEAD'].includes(request.method) && (url.pathname === '/pizzamaru/mokpodae' || url.pathname === '/pizzamaru/mokpodae/')) {
+        const response = await env.ASSETS.fetch(assetRequest(request, '/pizzamaru-mokpodae'));
+        return withHostSecurity(response, PUBLIC_CSP, 'public, max-age=0, must-revalidate', 'public-pizzamaru-mokpodae');
       }
       if (url.pathname === '/workspace-admin.css') return workspaceAdminCss();
       if (url.pathname === '/workspace-admin.js') return workspaceAdminScript();
