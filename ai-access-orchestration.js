@@ -27,12 +27,11 @@ export function resolveAiAccessRoute(options = {}) {
   }
 
   // Foreground user experience: provider details stay behind the gateway.
-  // A connected personal API remains preferred; otherwise bounded EKODI sponsorship avoids an unnecessary handoff.
+  // Personal AI remains preferred for interactive work; EKODI-sponsored API is a bounded fallback.
   if (mode === 'ekodi-first' && sponsored) return { route:'ekodi-sponsored', reason:'explicit-ekodi-first', intent, surface };
   if (personalApi) return { route:'personal-api', reason:'personal-api-available', intent, surface };
-  if (mode === 'personal-first' && personalWeb) return { route:'personal-web', reason:'explicit-personal-first', intent, surface };
-  if (sponsored) return { route:'ekodi-sponsored', reason:'membership-supported-seamless', intent, surface };
-  if (personalWeb) return { route:'personal-web', reason:'personal-web-fallback', intent, surface };
+  if (personalWeb) return { route:'personal-web', reason:mode === 'personal-first' ? 'explicit-personal-first' : 'personal-web-preferred', intent, surface };
+  if (sponsored) return { route:'ekodi-sponsored', reason:'personal-ai-unavailable', intent, surface };
   return { route:'core-only', reason:'no-ai-route', intent, surface };
 }
 
@@ -48,11 +47,11 @@ export function routeSequence(options = {}) {
   }
   if (mode === 'personal-first') return ['core', 'personal-api', 'personal-web', 'ekodi-sponsored', 'core-only'];
   if (mode === 'ekodi-first') return ['core', 'ekodi-sponsored', 'personal-api', 'personal-web', 'core-only'];
-  return ['core', 'personal-api', 'ekodi-sponsored', 'personal-web', 'core-only'];
+  return ['core', 'personal-api', 'personal-web', 'ekodi-sponsored', 'core-only'];
 }
 
 export const AI_ACCESS_POLICY = Object.freeze({
-  version:'2026-08-23.2',
+  version:'2026-09-09.1',
   modes:[...MODES],
   intents:[...INTENTS],
   surfaces:[...SURFACES],
@@ -62,7 +61,7 @@ export const AI_ACCESS_POLICY = Object.freeze({
     personalApiPreferredWhenSafe:true,
     providerDetailsHiddenByDefault:true,
     consumerWebNeverUsedForProactiveExecution:true,
-    interactiveMayUseSponsoredApiToAvoidHandoff:true,
+    interactivePersonalWebPreferredBeforeSponsored:true,
     adminAndSystemExecutionRequireServerCallableApi:true,
     providerIndependent:true,
   }),

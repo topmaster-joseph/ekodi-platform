@@ -1,6 +1,12 @@
 ﻿import authWorker from './auth-worker.js';
 import { getCoreAiGatewayStatus } from './core-ai-gateway.js';
 import {
+  getAiCollaborationAdminSnapshot,
+  listAiCollaborationAudit,
+  resetAiCollaborationPolicy,
+  saveAiCollaborationPolicy,
+} from './ai-collaboration-settings.js';
+import {
   getEkodiCommandLedgerStatus,
   getEkodiCommandTask,
   ingestEkodiPulse,
@@ -9,6 +15,7 @@ import {
 import { getEkodiProviderOperationalReadiness, runEkodiCommandQueue } from './ekodi-pulse-runtime.js';
 
 const PREFIX = '/api/control/ai/v8';
+const COLLABORATION_PATH = `${PREFIX}/collaboration-settings`;
 
 function text(value, max = 1200) {
   return String(value ?? '').trim().slice(0, max);
@@ -70,6 +77,27 @@ function pulseInput(body = {}, session = {}) {
   };
 }
 
+async function collaborationResponse(request, env, session, url) {
+  if (request.method === 'GET' && url.pathname === COLLABORATION_PATH) {
+    return json(request, env, { ok: true, ...(await getAiCollaborationAdminSnapshot(env)) });
+  }
+  if (request.method === 'GET' && url.pathname === `${COLLABORATION_PATH}/audit`) {
+    const limit = Math.min(Math.max(Number(url.searchParams.get('limit')) || 20, 1), 50);
+    return json(request, env, { ok: true, audit: await listAiCollaborationAudit(env, limit) });
+  }
+  if (request.method === 'PUT' && url.pathname === COLLABORATION_PATH) {
+    const body = await readJson(request);
+    if (!body || typeof body !== 'object') return json(request, env, { error: '유효한 협업 설정 JSON이 필요합니다.', code: 'INVALID_COLLABORATION_POLICY' }, 400);
+    const saved = await saveAiCollaborationPolicy(env, body.policy || body, session.email || 'admin', 'update');
+    return json(request, env, { ok: true, ...saved, snapshot: await getAiCollaborationAdminSnapshot(env) });
+  }
+  if (request.method === 'POST' && url.pathname === `${COLLABORATION_PATH}/reset`) {
+    const saved = await resetAiCollaborationPolicy(env, session.email || 'admin');
+    return json(request, env, { ok: true, ...saved, snapshot: await getAiCollaborationAdminSnapshot(env) });
+  }
+  return null;
+}
+
 export async function handleEkodiV8CommandControl(request, env) {
   const url = new URL(request.url);
   if (!url.pathname.startsWith(PREFIX)) return null;
@@ -82,21 +110,28 @@ export async function handleEkodiV8CommandControl(request, env) {
   if (!auth.session?.authenticated) return auth.response;
   if (!env.DB?.prepare) return json(request, env, { error: 'Command Ledger DB가 연결되지 않았습니다.', code: 'COMMAND_LEDGER_DB_UNAVAILABLE' }, 503);
 
+  const collaboration = await collaborationResponse(request, env, auth.session, url);
+  if (collaboration) return collaboration;
+
   if (request.method === 'GET' && url.pathname === `${PREFIX}/status`) {
-    const [ledger, gateway, readiness] = await Promise.all([
+    const [ledger, gateway, readiness, collaborationSettings] = await Promise.all([
       getEkodiCommandLedgerStatus(env),
       Promise.resolve(getCoreAiGatewayStatus(env, [])),
       getEkodiProviderOperationalReadiness(env),
+      getAiCollaborationAdminSnapshot(env),
     ]);
     return json(request, env, {
       ok: true,
       schemaVersion: 1,
       runtime: 'ekodi-v8-command-plane',
       proactive: true,
+      collaborationByDefault: collaborationSettings.policy.collaborationByDefault,
+      executionRule: collaborationSettings.executionRule,
       durableTaskLedger: true,
       scheduledDrain: true,
       readiness,
       gateway,
+      collaboration: collaborationSettings,
       ledger,
     });
   }
@@ -134,7 +169,7 @@ export async function handleEkodiV8CommandControl(request, env) {
 }
 
 export const EKODI_V8_COMMAND_CONTROL = Object.freeze({
-  version: '1.0.0',
+  version: '1.1.0',
   prefix: PREFIX,
-  surfaces: Object.freeze(['status', 'tasks', 'pulse', 'drain']),
+  surfaces: Object.freeze(['status', 'tasks', 'pulse', 'drain', 'collaboration-settings', 'collaboration-settings/audit']),
 });
