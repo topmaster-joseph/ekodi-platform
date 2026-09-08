@@ -29,7 +29,7 @@ export default {
         ...rawMallPromotionAutomation,
         enabled,
         scheduler: enabled && rawMallPromotionAutomation?.scheduler !== false,
-        safetyGate: enabled ? 'explicitly_enabled' : 'youtube_connection_and_test_publish_required',
+        safetyGate: enabled ? 'explicitly_enabled' : 'social_oauth_connection_and_test_publish_required',
       };
       return json({...base, mallPromotionAutomation, mallSalesIntelligence}, baseResponse.status, baseResponse.headers);
     }
@@ -41,7 +41,7 @@ export default {
       if (!intelligence.ok && intelligence.status !== 'schema_required') {
         console.error('EKODI Mall sales intelligence failed', intelligence.error || intelligence.status);
       }
-      if (!promotionAutomationEnabled(env)) return;
+      if (!mallPromotionAutomationEnabled(env)) return;
       await runMallPromotionAutomation(env, {reason:'cron'});
     })());
   },
