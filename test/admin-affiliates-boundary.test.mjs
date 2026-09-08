@@ -27,7 +27,7 @@ test('sales and supply network separates professional engine health from Mall op
   assert.match(professionalPanel, /https:\/\/api\.ekodi\.kr\/api\/affiliate/);
   assert.match(professionalPanel, /관리 ↗/);
   assert.doesNotMatch(professionalPanel, /api\('\/routes'\)|api\('\/accounts'\)/);
-  assert.match(workspace, /sourcing:\['판매·공급망'/);
+  assert.match(workspace, /sourcing:\['제휴·소싱'/);
   assert.match(workspace, /sourcing:POLICY\.capabilities\.supplyNetwork/);
   assert.doesNotMatch(workspace, /\/api\/affiliate\/accounts|affiliateMerchantRouteForm/);
   assert.match(layout, /LEGACY_MALL_AFFILIATE_HASHES/);
