@@ -307,7 +307,7 @@ export default {
       });
     // A real Coupang report pass owns this invocation's subrequest budget.
     // The other recurring jobs defer only this single ten-minute cycle.
-    if (reporting?.ran) return;
+    if (reporting?.ran) return { reporting };
     ctx.waitUntil(runChurchReportSchedule(env).catch(error => console.error('Church report schedule failed', error)));
     ctx.waitUntil(runMembershipBillingSchedule(env).catch(error => console.error('Membership billing schedule failed', error)));
     ctx.waitUntil(syncScheduledAffiliateAutomation(env, { reason: 'schedule' }).catch(error => console.error('EKODI Mall automatic curation schedule failed', error)));

@@ -69,7 +69,9 @@ test('admin routing serves the official shell and fails closed for retired entry
 });
 
 test('nested EKODI business service routes remain explicit compatibility boundaries', () => {
-  for (const d of ['pay.ekodi.kr','pay.biz.ekodi.kr','mail.biz.ekodi.kr','live.biz.ekodi.kr']) { hasDomain(siteWorker,d); hasRoute(siteToml,d); }
+  for (const d of ['pay.ekodi.kr','pay.biz.ekodi.kr','live.biz.ekodi.kr']) { hasDomain(siteWorker,d); hasRoute(siteToml,d); }
+  hasRoute(proxyToml, 'mail.biz.ekodi.kr');
+  assert.doesNotMatch(siteToml, /pattern = "mail\.biz\.ekodi\.kr"/);
   assert.match(hub, /pay\.ekodi\.kr/);
   assert.match(siteWorker, /TRADE_CANONICAL_HOST = 'trade\.biz\.ekodi\.kr'/);
   assert.match(siteWorker, /TRADE_LEGACY_HOSTS/);

@@ -87,8 +87,10 @@ jobs:
           set -euo pipefail
           test -n "${VERIFIED_MALL_SUB_ID}"
           printf '%s' "${VERIFIED_MALL_SUB_ID}" | npx --yes wrangler@${WRANGLER_VERSION} secret put COUPANG_PARTNERS_SUB_ID --config wrangler.api.toml >/dev/null
-          date -u +%s > /tmp/bind-cutoff
-          echo 'Registry-verified EKODI Mall Sub ID bound to production Worker secret.' >> "$GITHUB_STEP_SUMMARY"
+          force_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          npx --yes wrangler@${WRANGLER_VERSION} d1 execute ekodi-auth --remote --config wrangler.api.toml --command "INSERT INTO affiliate_partner_report_control(account_id,force_requested_at,force_reason,force_consumed_at,updated_at) VALUES('coupang-ekodibiz','$force_at','post_bind_verify',NULL,'$force_at') ON CONFLICT(account_id) DO UPDATE SET force_requested_at=excluded.force_requested_at,force_reason=excluded.force_reason,force_consumed_at=NULL,updated_at=excluded.updated_at" >/dev/null
+          date -u -d "$force_at" +%s > /tmp/bind-cutoff
+          echo 'Registry-verified EKODI Mall Sub ID bound; one-time post-bind report verification queued.' >> "$GITHUB_STEP_SUMMARY"
       - name: Verify bound report closed loop
         shell: bash
         run: |
