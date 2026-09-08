@@ -18,6 +18,26 @@ test('shared user navigation runtime removes legacy floating global and workspac
   assert.doesNotMatch(nav,/EKODI 사용자 공통 메뉴/);
 });
 
+test('common chrome policy retires global audio and workspace selection',async()=>{
+  const [policyText,ccmPlayer]=await Promise.all([
+    read('config/user-ui-shell.json'),
+    read('shell/ccm-mr-player.js')
+  ]);
+  const policy=JSON.parse(policyText);
+  assert.equal(policy.version,11);
+  assert.equal(policy.principles.persistentChromeHeaderFooterOnly,true);
+  assert.equal(policy.principles.workspaceSelectionLivesInMyEkodi,true);
+  assert.equal(policy.principles.globalAmbientAudioForbidden,true);
+  assert.equal(policy.ambientAudio.globalControl,'retired');
+  assert.equal(policy.ambientAudio.runtimeRole,'compatibility-tombstone');
+  assert.equal(policy.ambientAudio.persistentChromeAllowed,false);
+  assert.equal(policy.workspaceSelection.owner,'my-ekodi-content');
+  assert.equal(policy.workspaceSelection.persistentGlobalControl,'forbidden');
+  assert.match(ccmPlayer,/__EKODI_CCM_MR_RETIRED__/);
+  assert.match(ccmPlayer,/dataset\.ekodiGlobalMr='off'/);
+  assert.match(ccmPlayer,/ekodi-ccm-mr-toggle/);
+});
+
 test('Shell Worker keeps compatibility guards beside shared header/footer, Media/Meeting and language in one payload',async()=>{
   const worker=await read('ekodi-shell-worker.js');
   assert.match(worker,/user-global-nav\.js/);
