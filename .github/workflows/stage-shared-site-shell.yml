@@ -80,7 +80,7 @@ jobs:
           grep -Fq 'Disallow: /' dist/robots.txt
           grep -Fq '<loc>https://ekodi.kr/</loc>' dist/sitemap.xml
           grep -Fq 'Canonical site: https://ekodi.kr/' dist/llms.txt
-          grep -Fq 'data-ekodi-discovery="v1"' dist/index.html
+          grep -Fq 'data-ekodi-discovery="v2"' dist/index.html
       - name: Enforce Development account boundary
         shell: bash
         run: |
