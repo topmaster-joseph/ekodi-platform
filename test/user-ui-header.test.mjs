@@ -51,6 +51,7 @@ test('user UI header/footer/language are shared user-surface-only modules',async
   assert.match(renderedFooter,/data-ekodi-i18n="privacy"/);
   assert.match(renderedFooter,/data-ekodi-i18n="terms"/);
   assert.match(renderedFooter,/data-ekodi-i18n="contact"/);
+  assert.doesNotMatch(renderedFooter,/운영주체|사업장 소재지/);
 
   assert.match(worker,/userHeaderUrl\.pathname='\/user-ui-header\.js'/);
   assert.match(worker,/userFooterUrl\.pathname='\/user-ui-footer\.js'/);
