@@ -55,4 +55,5 @@ test('shared-site guarded release accepts any valid content fingerprint instead 
   assert.equal(admin.expect.includes('control-center-features.js'), false);
   assert.ok(admin.headerExpect.includes('x-ekodi-route: admin-shell'));
   assert.ok(admin.headerExpect.includes('cache-control: no-store'));
+  assert.equal(admin.redirect, 'follow');
 });

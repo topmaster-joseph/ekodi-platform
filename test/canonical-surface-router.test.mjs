@@ -106,3 +106,13 @@ test('Bible canonical path uses its service binding without double-prefixing ass
   assert.equal(response.headers.get('x-ekodi-canonical-surface'),'bible');assert.equal(response.headers.get('x-ekodi-canonical-path'),'/bible');
   const html=await response.text();assert.match(html,/href="\/bible\/styles\.css"/);assert.doesNotMatch(html,/\/bible\/bible\//);
 });
+
+
+test('legacy Admin release probes follow canonical redirects while canonical Admin owns release truth',async()=>{
+  const manifest=JSON.parse(await fs.promises.readFile(new URL('../deploy/manifests/shared-site.worker.json',import.meta.url),'utf8'));
+  const canonical=manifest.worker.requests.find(item=>item.url==='https://ekodi.kr/admin/');
+  assert.equal(canonical?.rollbackVerify,false);
+  const legacy=manifest.worker.requests.filter(item=>item.url.startsWith('https://admin.ekodi.kr/'));
+  assert.ok(legacy.length>1);
+  for(const probe of legacy) assert.equal(probe.redirect,'follow',probe.url);
+});
