@@ -52,7 +52,8 @@ jobs:
           grep -q 'AI_DEVELOPMENT_POLICY.md' .github/copilot-instructions.md
           grep -q 'config/ai-development-completion-policy.json' AGENTS.override.md
           grep -q 'Direct production deployment from an agent workspace is forbidden' AI_DEVELOPMENT_POLICY.md
-          grep -q 'production-verified-before-complete' AI_DEVELOPMENT_POLICY.md
+          grep -q 'production verification and rollback visibility' AI_DEVELOPMENT_POLICY.md
+          grep -q 'not proof of production completion' AI_DEVELOPMENT_POLICY.md
           grep -q 'ai-task-allocator.yml' AI_DEVELOPMENT_POLICY.md
           grep -q 'ai-conflict-guard.yml' AI_DEVELOPMENT_POLICY.md
           grep -q 'ekodi-task-start.mjs' AGENTS.override.md
@@ -78,4 +79,4 @@ jobs:
           set -euo pipefail
           grep -q 'central pipeline' AI_DEVELOPMENT_POLICY.md
           grep -q 'guarded deployment workflow' AI_DEVELOPMENT_POLICY.md
-          grep -q 'production verification evidence' AI_DEVELOPMENT_POLICY.md
+          grep -q 'not proof of production completion' AI_DEVELOPMENT_POLICY.md
