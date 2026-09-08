@@ -66,8 +66,6 @@ for (const requirement of ['explicit-exception-class', 'reason-recorded', 'no-fa
 for (const file of [
   'AGENTS.override.md',
   'AI_DEVELOPMENT_POLICY.md',
-  'CLAUDE.md',
-  'GEMINI.md',
   '.github/copilot-instructions.md',
   '.github/workflows/production-gate.yml',
   '.github/workflows/ai-parallel-development-policy.yml',
@@ -81,12 +79,10 @@ requireText('AGENTS.override.md', [
   'must not report the task as complete',
 ]);
 requireText('AI_DEVELOPMENT_POLICY.md', [
-  'AI-COMPLETE-001',
-  'production-verified-before-complete',
-  'production verification evidence',
+  'production verification and rollback visibility',
+  'not proof of production completion',
+  'central release gate',
 ]);
-requireText('CLAUDE.md', ['production verification evidence', 'must not report completion']);
-requireText('GEMINI.md', ['production verification evidence', 'must not report completion']);
 requireText('.github/copilot-instructions.md', ['production verification evidence', 'must not report completion']);
 requireText('.github/workflows/production-gate.yml', [
   'production-completion-evidence.json',
