@@ -41,7 +41,7 @@ const EKODIBIZ_ASSET_PREFIX='/_ekodi/ekodibiz/';
 const EKODIBIZ_ASSETS=new Set(['style.css','site.js']);
 const WORKSPACE_ASSET_PREFIX='/_ekodi/space/';
 const DEPLOYMENT_PROBE_PATH='/deployment-probe';
-const WORKSPACE_ASSETS=new Set(['style.css','config.js','app.js']);
+const WORKSPACE_ASSETS=new Set(['style.css','config.js','app.js','storefront.json']);
 
 function resolvedHost(request,env){
   const url=new URL(request.url);

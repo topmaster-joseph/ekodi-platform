@@ -13,6 +13,28 @@ const storePageProfiles=Object.freeze({
 let sb=null;
 let currentSpaces=[];
 
+const publicDeliveryProviders=Object.freeze([
+  {provider:'baemin',name:'배달의민족',url:'https://www.baemin.com/',tone:'baemin'},
+  {provider:'coupang_eats',name:'쿠팡이츠',url:'https://www.coupangeats.com/',tone:'coupang'},
+  {provider:'yogiyo',name:'요기요',url:'https://www.yogiyo.co.kr/mobile/',tone:'yogiyo'},
+]);
+function publicHours(hours){if(!hours||typeof hours!=='object')return {display:'영업시간은 전화로 확인해 주세요',note:''};return {display:String(hours.display||formatHours(hours)),note:String(hours.note||'')}}
+function publicWon(value){return value==null?'가격은 주문채널에서 확인':won(value)}
+async function renderPublicStorefront(slug){
+  show('publicStorefront',true);show('internalShell',false);
+  let data={slug,name:'요거트퍼플 목포대점',address:'전남 무안군 청계면 승달산길 37-1',phone:'061-453-8295',business_hours:{display:'11:00–22:00',note:'휴무·마감시간은 전화 확인'},channels:[],menu:[]};
+  try{const response=await fetch(`/_ekodi/space/storefront.json?slug=${encodeURIComponent(slug)}`,{cache:'no-store'});if(response.ok){const live=await response.json();if(live&&typeof live==='object')data={...data,...live}}}catch(error){console.warn('public storefront fallback',error)}
+  const address=String(data.address||'전남 무안군 청계면 승달산길 37-1');const phone=String(data.phone||'061-453-8295');const phoneHref='tel:'+phone.replace(/[^0-9+]/g,'');const hours=publicHours(data.business_hours);
+  $('publicAddress').textContent=address;$('publicPhone').textContent=phone;$('publicHours').textContent=hours.display;$('publicHoursNote').textContent=hours.note;$('heroPhone').href=phoneHref;$('phoneLink').href=phoneHref;
+  $('mapLink').href='https://map.naver.com/p/search/'+encodeURIComponent(address+' 요거트퍼플 목포대점');
+  const channelRows=Array.isArray(data.channels)?data.channels:[];
+  $('publicDeliveryLinks').innerHTML=publicDeliveryProviders.map(provider=>{const live=channelRows.find(row=>row.provider===provider.provider)||{};const href=live.direct_url||provider.url;const direct=Boolean(live.direct_url);return `<a class="yp-delivery-card ${provider.tone}" href="${esc(href)}" target="_blank" rel="noopener"><span class="yp-delivery-name">${esc(provider.name)}</span><strong>${direct?'목포대점 바로 주문':'배달앱에서 매장 찾기'}</strong><small>${direct?'요거트퍼플 목포대점 주문화면으로 이동':'앱에서 “요거트퍼플 목포대점”을 검색해 주세요'}</small><b>${direct?'주문하기':'배달앱 열기'} →</b></a>`}).join('');
+  const menu=Array.isArray(data.menu)?data.menu:[];
+  $('publicMenu').innerHTML=menu.length?menu.map(item=>`<article class="yp-menu-card"><div><small>${esc(item.category||'요거트 · 디저트')}</small><strong>${esc(item.name)}</strong>${item.description?`<p>${esc(item.description)}</p>`:''}</div><b>${esc(publicWon(item.price))}</b></article>`).join(''):'<div class="yp-menu-empty"><strong>목포대점 메뉴를 연결하고 있습니다.</strong><p>임의의 메뉴나 가격을 만들지 않습니다. 지금은 전화 또는 배달앱에서 최신 메뉴를 확인해 주세요.</p><a href="'+phoneHref+'">전화로 메뉴 문의 →</a></div>';
+  document.title='요거트퍼플 목포대점 · 메뉴 · 배달주문';
+}
+
+
 function authStart(){const target=new URL('/auth/start',location.origin);target.searchParams.set('return_to',location.href.split('#')[0]);location.assign(target.href)}
 function status(text,type=''){const el=$('status');if(!el)return;el.textContent=text;el.dataset.type=type}
 function show(id,on=true){$(id)?.classList.toggle('hidden',!on)}
@@ -190,6 +212,7 @@ async function renderSignedIn(){
   renderSpaces(currentSpaces);renderSwitcher(currentSpaces);await renderWorkspace();
 }
 async function boot(){
+  if(routeMatch?.[1]==='yogurt'){await renderPublicStorefront('yogurt');return;}
   if(!cfg.dataEnabled||!cfg.supabaseUrl||!cfg.supabasePublishableKey||!cfg.workspaceApi){show('signedOut',true);show('signedIn',false);show('login',false);show('spaceSwitcherWrap',false);status('이 환경은 개인 운영데이터와 분리된 검증 환경입니다.');return;}
   try{
     const mod=await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm');
