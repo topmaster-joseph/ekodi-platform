@@ -20,6 +20,11 @@ custom_domain = true
 pattern = "www.ekodi.kr"
 custom_domain = true
 
+# Canonical private EKODIBIZ trade workspace must outrank public/static trade assets.
+[[routes]]
+pattern = "ekodi.kr/ekodibiz/trade*"
+zone_name = "ekodi.kr"
+
 # Canonical Church admin must outrank the public /ekodichurch* path gateway.
 [[routes]]
 pattern = "ekodi.kr/ekodichurch/admin*"
