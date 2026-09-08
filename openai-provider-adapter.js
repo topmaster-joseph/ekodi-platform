@@ -6,6 +6,16 @@ const DEFAULT_OPENAI_MODEL = 'gpt-5.6-terra';
 const MAX_MESSAGE_CHARS = 4_000;
 const MAX_HISTORY_ITEMS = 8;
 const MAX_HISTORY_CHARS = 8_000;
+const PROFILE_NAMES = new Set(['fast', 'balanced', 'deep']);
+const ROLE_PROFILE_DEFAULTS = Object.freeze({
+  coordinator: 'deep',
+  planner: 'balanced',
+  operator: 'balanced',
+  builder: 'balanced',
+  reviewer: 'deep',
+  sentinel: 'deep',
+  verifier: 'balanced',
+});
 
 const ADMIN_AI_INSTRUCTIONS = [
   'You are EKODI Admin AI, the operational AI employee for the EKODI admin control plane.',
@@ -59,16 +69,15 @@ function buildAdminInput(context = {}) {
   const page = normalizePageContext(context.page || context.context || {});
   const history = normalizeHistory(context.history);
   const lines = [
-    `?꾩옱 愿由ъ옄 ?붾㈃: ${page.title || page.section || 'Admin'}`,
+    `현재 관리자 화면: ${page.title || page.section || 'Admin'}`,
     `section: ${page.section || '-'}`,
     `pathname: ${page.pathname || '-'}`,
-    `hash: ${page.hash || '-'}`,
   ];
   if (history.length) {
-    lines.push('', '理쒓렐 ???');
-    for (const item of history) lines.push(`${item.role === 'assistant' ? 'EKODI Admin AI' : '愿由ъ옄'}: ${item.text}`);
+    lines.push('', '최근 대화:');
+    for (const item of history) lines.push(`${item.role === 'assistant' ? 'EKODI Admin AI' : '관리자'}: ${item.text}`);
   }
-  lines.push('', `?꾩옱 ?붿껌: ${message || '?붿껌 ?댁슜 ?놁쓬'}`);
+  lines.push('', `현재 요청: ${message || '요청 내용 없음'}`);
   return lines.join('\n');
 }
 
@@ -83,6 +92,23 @@ function extractOutputText(data) {
   return parts.join('\n').trim();
 }
 
+function normalizedProfile(value, fallback = 'balanced') {
+  const profile = text(value, 40).toLowerCase();
+  return PROFILE_NAMES.has(profile) ? profile : fallback;
+}
+
+function collaborationRole(context = {}) {
+  return text(context?.commandPlane?.role || context?.collaborationRole || '', 40).toLowerCase();
+}
+
+export function resolveOpenAiModelForContext(env = {}, context = {}) {
+  const role = collaborationRole(context);
+  const roleKey = role ? `EKODI_OPENAI_ROLE_${role.toUpperCase()}_PROFILE` : '';
+  const profile = normalizedProfile(roleKey ? env[roleKey] : '', ROLE_PROFILE_DEFAULTS[role] || 'balanced');
+  const profileModel = text(env[`EKODI_OPENAI_MODEL_${profile.toUpperCase()}`], 120);
+  return profileModel || text(env.OPENAI_MODEL, 120) || DEFAULT_OPENAI_MODEL;
+}
+
 async function budgetGuard(env) {
   if (!env.DB?.prepare) {
     if (String(env.ENVIRONMENT || '').toLowerCase() === 'production') throw new Error('AI_USAGE_METER_UNAVAILABLE');
@@ -94,17 +120,18 @@ async function budgetGuard(env) {
 
 export function createOpenAiProvider(env = {}, options = {}) {
   const apiKey = String(env.OPENAI_API_KEY || '').trim();
-  const model = String(env.OPENAI_MODEL || DEFAULT_OPENAI_MODEL).trim() || DEFAULT_OPENAI_MODEL;
+  const defaultModel = resolveOpenAiModelForContext(env);
   const fetchImpl = options.fetchImpl || globalThis.fetch;
   const available = Boolean(apiKey && typeof fetchImpl === 'function');
 
   return Object.freeze({
     id: 'openai',
-    model,
+    model: defaultModel,
     available,
     async invoke({ taskName, context = {} } = {}) {
       if (!available) throw new Error('OPENAI_PROVIDER_NOT_CONFIGURED');
       await budgetGuard(env);
+      const model = resolveOpenAiModelForContext(env, context);
       const projectedContext = await projectForExternalAi(context, {
         profile: 'ai_minimum',
         purpose: 'admin-ai-assist',
@@ -125,6 +152,7 @@ export function createOpenAiProvider(env = {}, options = {}) {
           metadata: {
             ekodi_surface: 'admin',
             ekodi_task: text(taskName, 120) || 'admin-assist',
+            ekodi_collaboration_role: collaborationRole(context) || 'general',
           },
         }),
       });
@@ -158,6 +186,11 @@ export function getOpenAiProviderStatus(env = {}) {
     configured: Boolean(String(env.OPENAI_API_KEY || '').trim()),
     available: provider.available,
     model: provider.model,
+    profiles: Object.freeze({
+      fast: text(env.EKODI_OPENAI_MODEL_FAST, 120) || text(env.OPENAI_MODEL, 120) || DEFAULT_OPENAI_MODEL,
+      balanced: text(env.EKODI_OPENAI_MODEL_BALANCED, 120) || text(env.OPENAI_MODEL, 120) || DEFAULT_OPENAI_MODEL,
+      deep: text(env.EKODI_OPENAI_MODEL_DEEP, 120) || text(env.OPENAI_MODEL, 120) || DEFAULT_OPENAI_MODEL,
+    }),
   });
 }
 
@@ -166,4 +199,5 @@ export const OPENAI_PROVIDER_DEFAULTS = Object.freeze({
   model: DEFAULT_OPENAI_MODEL,
   maxMessageChars: MAX_MESSAGE_CHARS,
   maxHistoryItems: MAX_HISTORY_ITEMS,
+  roleProfiles: ROLE_PROFILE_DEFAULTS,
 });
