@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 
 const center = readFileSync(new URL('../ai-operations-center-admin.js', import.meta.url), 'utf8');
 const menu = readFileSync(new URL('../admin-menu-registry.js', import.meta.url), 'utf8');
+const build = readFileSync(new URL('../scripts/build.mjs', import.meta.url), 'utf8');
 const providerControl = readFileSync(new URL('../ai-provider-control.js', import.meta.url), 'utf8');
 const agentControl = readFileSync(new URL('../ai-agent-control.js', import.meta.url), 'utf8');
 
@@ -11,11 +12,16 @@ test('AI operations center source parses as JavaScript', () => {
   assert.doesNotThrow(() => new Function(center));
 });
 
-test('AI operations center is promoted in the canonical admin menu', () => {
+test('AI operations center is promoted without breaking canonical English menu contracts', () => {
   assert.match(menu, /ko: 'AI 운영센터'/);
-  assert.match(menu, /en: 'AI Operations Center'/);
+  assert.match(menu, /en: 'AI & Agents'/);
+  assert.match(menu, /id: 'openai'[\s\S]*?en: 'OpenAI'/);
   assert.match(menu, /import\('\.\/ai-operations-center-admin\.js'\)/);
   assert.match(menu, /globalPolicyMutation: 'super_admin'/);
+});
+
+test('AI operations center is included in the deployable admin build', () => {
+  assert.match(build, /'ai-operations-center-admin\.js'/);
 });
 
 test('AI operations center uses the existing provider-neutral control contracts', () => {
