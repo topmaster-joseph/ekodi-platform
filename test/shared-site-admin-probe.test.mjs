@@ -9,4 +9,5 @@ test('shared-site release probes the canonical slash form of apex Admin',()=>{
   assert.deepEqual(admin.statuses,[200]);
   assert.ok(admin.expect.includes('EKODI Admin'));
   assert.ok(admin.headerExpect.includes('x-ekodi-route: admin-shell'));
+  assert.equal(admin.rollbackVerify,false);
 });
