@@ -4,6 +4,7 @@ import { EKODI_SERVICE_MANIFEST } from './ekodi-service-manifest.js';
 import { remotePowerSnapshot, requestRemoteWake } from './remote-power-control.js';
 import { analyzeServiceFleet, evaluateTechnologyCandidate } from './evolution-intelligence-runtime.js';
 import { evolutionStoreSummary, listEvolutionRecommendations, persistEvolutionReport } from './evolution-intelligence-store.js';
+import { buildPublicPreviewProjection } from './preview-public-projection.js';
 
 // Provider service registry only. Customer organizations and their sites are managed as
 // customer tenants/workspaces through the customer directory, never as EKODI services.
@@ -517,6 +518,64 @@ async function overview(env) {
   };
 }
 
+async function publicPreviewSnapshot(env) {
+  await ensureControlCatalog(env.DB);
+  const [serviceRows, environmentRows] = await Promise.all([
+    env.DB.prepare('SELECT service_id, status, http_status, response_ms, checked_at FROM service_check_latest').all(),
+    env.DB.prepare("SELECT service_id, status, http_status, response_ms, checked_at FROM cloudflare_environment_checks WHERE environment = 'production'").all().catch(() => ({ results:[] }))
+  ]);
+  const latest = new Map();
+  for (const row of [...(environmentRows.results || []), ...(serviceRows.results || [])]) {
+    const id = String(row.service_id || '');
+    if (!id) continue;
+    const previous = latest.get(id);
+    if (!previous || String(row.checked_at || '') > String(previous.checkedAt || '')) {
+      latest.set(id, { status:row.status, httpStatus:row.http_status, responseTime:row.response_ms, checkedAt:row.checked_at });
+    }
+  }
+  return { generatedAt:new Date().toISOString(), services:[...latest.entries()].map(([id, item]) => ({ id, latest:item })) };
+}
+
+const PUBLIC_PREVIEW_PATH = '/api/public/preview/map';
+const PUBLIC_PREVIEW_ORIGINS = new Set(['https://ekodi.kr', 'https://www.ekodi.kr']);
+
+function publicPreviewHeaders(request) {
+  const headers = new Headers({
+    'content-type':'application/json; charset=utf-8',
+    'cache-control':'public, max-age=15, s-maxage=30, stale-while-revalidate=60',
+    'x-content-type-options':'nosniff',
+    'referrer-policy':'no-referrer',
+    'vary':'Origin',
+  });
+  const origin = String(request.headers.get('origin') || '');
+  if (PUBLIC_PREVIEW_ORIGINS.has(origin)) headers.set('access-control-allow-origin', origin);
+  return headers;
+}
+
+async function handlePublicPreview(request, env) {
+  const url = new URL(request.url);
+  if (url.pathname !== PUBLIC_PREVIEW_PATH) return null;
+  if (request.method === 'OPTIONS') {
+    const headers = publicPreviewHeaders(request);
+    headers.set('access-control-allow-methods', 'GET, OPTIONS');
+    headers.set('access-control-max-age', '86400');
+    return new Response(null, { status:204, headers });
+  }
+  if (request.method !== 'GET') return controlJson({ error:'Method not allowed' }, 405);
+  const origin = String(request.headers.get('origin') || '');
+  if (origin && !PUBLIC_PREVIEW_ORIGINS.has(origin)) return controlJson({ error:'Origin not allowed' }, 403);
+  try {
+    const projection = buildPublicPreviewProjection(await publicPreviewSnapshot(env), {
+      scope:url.searchParams.get('scope') || 'ekodi',
+      mode:url.searchParams.get('mode') || 'platform',
+    });
+    return new Response(JSON.stringify(projection), { status:200, headers:publicPreviewHeaders(request) });
+  } catch (error) {
+    if (error instanceof TypeError) return controlJson({ error:'Unsupported preview scope or mode' }, 400);
+    throw error;
+  }
+}
+
 async function evolutionSnapshot(env, force = false) {
   if (force) await runChecks(env);
   const controlOverview = await overview(env);
@@ -698,6 +757,8 @@ export default {
     const url = new URL(request.url);
     const publicDomainResponse = await handlePublicDomainRequest(request, env);
     if (publicDomainResponse) return publicDomainResponse;
+    const publicPreviewResponse = await handlePublicPreview(request, env);
+    if (publicPreviewResponse) return publicPreviewResponse;
     if (url.pathname.startsWith('/api/mail/control')) {
       try {
         const response = await handleMailControl(request, env);

@@ -1,5 +1,6 @@
 import { createOpenAiProvider } from './openai-provider-adapter.js';
 import { d1SchemaReady } from './d1-schema-readiness.js';
+import { ensureWeeklyPromotionBoard, getWeeklyPromotionBoardStatus } from './mall-official-promotion-board.js';
 
 const SUBJECT_TYPE = 'tenant';
 const SUBJECT_KEY = 'ekodi-biz';
@@ -10,6 +11,7 @@ const PROVIDERS = Object.freeze(['facebook','instagram','threads']);
 export function mallPromotionAutomationEnabled(env) { return ['1','true','yes','on'].includes(String(env?.MALL_PROMOTION_AUTOMATION_ENABLED || '').trim().toLowerCase()); }
 const RUN_AFTER_KST_HOUR = 8;
 const MAX_DAILY_CHANNELS = 3;
+const STRATEGY = 'official_board_profit_learning_loop';
 
 const clean = (value,max=240) => String(value ?? '').trim().slice(0,max);
 const nowIso = () => new Date().toISOString();
@@ -22,7 +24,7 @@ export function kstParts(date=new Date()) { const shifted=new Date(date.getTime(
 export function campaignKey(runDate,provider,productRowId) { return `mall-${String(runDate).replaceAll('-','')}-${slug(provider)}-${Number(productRowId)}`; }
 function parseJsonObject(text) { const source=clean(text,12000); const start=source.indexOf('{'); const end=source.lastIndexOf('}'); if(start<0||end<=start) return null; try { return JSON.parse(source.slice(start,end+1)); } catch { return null; } }
 
-async function schemaReady(env) { return d1SchemaReady(env?.DB,['affiliate_storefront_products','affiliate_storefront_clicks','affiliate_promotion_runs','affiliate_promotion_visits','affiliate_promotion_outbound_clicks','affiliate_growth_opportunities','affiliate_growth_policy_snapshots','affiliate_product_performance_daily','marketing_oauth_connections','marketing_publish_channels','marketing_content_items','marketing_publication_jobs','marketing_publish_policies','service_subscriptions']); }
+async function schemaReady(env) { return d1SchemaReady(env?.DB,['affiliate_storefront_products','affiliate_storefront_clicks','affiliate_promotion_runs','affiliate_promotion_visits','affiliate_promotion_outbound_clicks','affiliate_growth_opportunities','affiliate_growth_policy_snapshots','affiliate_product_performance_daily','affiliate_official_market_signals','affiliate_promotion_weekly_boards','affiliate_promotion_weekly_products','marketing_oauth_connections','marketing_publish_channels','marketing_content_items','marketing_publication_jobs','marketing_publish_policies','service_subscriptions']); }
 
 async function autonomyGate(env) {
   const [policy,subscription] = await Promise.all([
@@ -51,36 +53,16 @@ async function channelReadiness(env) {
   return {active,activeProviders,socialPublishReady:activeProviders.some(provider=>PROVIDERS.includes(provider)),youtubeConnected:activeProviders.includes('youtube'),youtubeMallShortsReady:false,youtubeBlocker:activeProviders.includes('youtube')?'product_short_video_asset_pipeline_required':'youtube_oauth_connection_required'};
 }
 
-async function candidateProducts(env,limit=8) {
-  const result = await env.DB.prepare(`SELECT p.id,p.product_id,p.product_name,p.price_krw,p.category,p.selection_score,p.is_rocket,p.is_free_shipping,
+async function productLearningMetrics(env,productRowId) {
+  return env.DB.prepare(`SELECT p.id,p.product_id,p.product_name,p.price_krw,p.category,p.selection_score,p.is_rocket,p.is_free_shipping,
       COALESCE(c.clicks_7d,0) AS clicks_7d,COALESCE(c.clicks_30d,0) AS clicks_30d,
-      COALESCE(m.orders_30d,0) AS orders_30d,COALESCE(m.cancels_30d,0) AS cancels_30d,COALESCE(m.commission_30d,0) AS commission_30d,
-      COALESCE(o.opportunity_score,0) AS opportunity_score,COALESCE(o.recommended_action,'hold') AS recommended_action,COALESCE(o.campaign_angle,'') AS campaign_angle
+      COALESCE(m.orders_30d,0) AS orders_30d,COALESCE(m.cancels_30d,0) AS cancels_30d,COALESCE(m.commission_30d,0) AS commission_30d
     FROM affiliate_storefront_products p
     LEFT JOIN (SELECT product_row_id,SUM(CASE WHEN click_date>=date('now','-6 day') THEN clicks ELSE 0 END) AS clicks_7d,SUM(clicks) AS clicks_30d FROM affiliate_storefront_clicks WHERE click_date>=date('now','-29 day') GROUP BY product_row_id) c ON c.product_row_id=p.id
     LEFT JOIN (SELECT product_row_id,SUM(orders) AS orders_30d,SUM(cancels) AS cancels_30d,SUM(commission_krw) AS commission_30d FROM affiliate_product_performance_daily WHERE metric_date>=date('now','-29 day') GROUP BY product_row_id) m ON m.product_row_id=p.id
-    LEFT JOIN affiliate_growth_opportunities o ON o.product_row_id=p.id
-      AND o.run_date=(SELECT MAX(run_date) FROM affiliate_growth_opportunities)
-    WHERE p.account_id=? AND p.storefront_slug=? AND p.status='active'
-    ORDER BY CASE COALESCE(o.recommended_action,'hold') WHEN 'scale' THEN 1 WHEN 'test' THEN 2 WHEN 'observe' THEN 3 ELSE 4 END,
-      COALESCE(o.opportunity_score,0) DESC,COALESCE(c.clicks_7d,0) DESC,p.selection_score DESC,p.id DESC
-    LIMIT ?`).bind(ACCOUNT_ID,STOREFRONT,limit).all();
-  return result.results || [];
+    WHERE p.id=? AND p.account_id=? AND p.storefront_slug=? AND p.status='active' LIMIT 1`).bind(Number(productRowId),ACCOUNT_ID,STOREFRONT).first();
 }
 
-async function recentlyPromotedProductIds(env) {
-  const result = await env.DB.prepare(`SELECT DISTINCT product_row_id FROM affiliate_promotion_runs
-    WHERE run_date >= date('now','-2 day') AND status IN ('planned','publishing','published')`).all().catch(()=>({results:[]}));
-  return new Set((result.results||[]).map(row=>Number(row.product_row_id)));
-}
-
-function chooseProduct(products,recent,index) {
-  const fresh = products.filter(row=>!recent.has(Number(row.id)));
-  const pool = fresh.length ? fresh : products;
-  if (!pool.length) return null;
-  if (pool[0].recommended_action === 'scale') return pool[0];
-  return pool[index % pool.length];
-}
 export function scorePromotionLearning(input={}) {
   const opportunityScore=clamp(input.opportunityScore,0,100);
   const selectionScore=clamp(input.selectionScore,0,100);
@@ -140,17 +122,16 @@ async function writePolicySnapshot(env,runDate,product,provider,learning) {
     .bind(runDate,Number(product.id),provider,learning.policyScore,learning.action,learning.visits30d,learning.outboundClicks30d,learning.funnelRate,learning.productClicks30d,learning.orders30d,learning.cancels30d,learning.commission30d,learning.earningsPerClick,learning.expectedCommissionPerVisit,learning.confidenceScore,learning.explorationBonus,learning.fatiguePenalty,safeJson({reason:learning.reason,coldStart:learning.coldStart,source:'direct_funnel_plus_estimated_product_revenue'}),now,now).run();
 }
 
-function learnedCandidates(products,statsMap) {
-  return products.map(product=>({product,learning:scorePromotionLearning({opportunityScore:product.opportunity_score,recommendedAction:product.recommended_action,selectionScore:product.selection_score,productClicks30d:product.clicks_30d,orders30d:product.orders_30d,cancels30d:product.cancels_30d,commission30d:product.commission_30d,...(statsMap.get(Number(product.id))||{})})}))
-    .sort((a,b)=>b.learning.policyScore-a.learning.policyScore||Number(b.product.opportunity_score||0)-Number(a.product.opportunity_score||0));
+async function channelPoliciesForProduct(env,runDate,product,connections) {
+  const rows=[];
+  for(const connection of connections){
+    const stats=await promotionLearningStats(env,connection.provider);
+    const learning=scorePromotionLearning({opportunityScore:product.opportunity_score,recommendedAction:product.recommended_action,selectionScore:product.selection_score,productClicks30d:product.clicks_30d,orders30d:product.orders_30d,cancels30d:product.cancels_30d,commission30d:product.commission_30d,...(stats.get(Number(product.id))||{})});
+    await writePolicySnapshot(env,runDate,product,connection.provider,learning);
+    rows.push({connection,learning});
+  }
+  return rows.sort((a,b)=>b.learning.policyScore-a.learning.policyScore||String(a.connection.provider).localeCompare(String(b.connection.provider)));
 }
-function chooseLearnedProduct(scored,recent) {
-  const eligible=scored.filter(row=>['scale','test'].includes(row.learning.action));
-  const fresh=eligible.filter(row=>!recent.has(Number(row.product.id)));
-  if(fresh.length) return fresh[0];
-  return eligible.find(row=>row.learning.action==='scale')||null;
-}
-
 
 export function fallbackContent(product,provider) {
   const name=clean(product?.product_name,90);
@@ -174,6 +155,10 @@ async function aiContent(env,product,provider) {
     `채널: ${provider}`,
     `상품명: ${clean(product.product_name,180)}`,
     `카테고리: ${clean(product.category,60)}`,
+    `공식 쇼핑몰 순위 신호: ${Number(product.provider_rank||0)>0?Number(product.provider_rank):'미제공'}`,
+    `공식 시장 신호: ${clean(product.signal_direction||'unknown',30)}`,
+    `주간 선정 등급: ${clean(product.tier||'A',10)}`,
+    `주간 슬롯: ${Number(product.slot||0)}`,
     `AI 영업기회 점수: ${Number(product.opportunity_score||0)}/100`,
     `권장행동: ${clean(product.recommended_action,30)}`,
     `캠페인 각도: ${clean(product.campaign_angle,140)}`,
@@ -210,7 +195,7 @@ async function ensurePublishChannel(env,connection){ const channelType=connectio
   .bind(SUBJECT_TYPE,SUBJECT_KEY,connection.provider,channelType,clean(connection.display_name,120),clean(connection.external_id,160),safeJson({credentialMode:'oauth-vault',oauthConnectionId:Number(connection.id)}),now,now,now).run(); const row=await env.DB.prepare('SELECT id FROM marketing_publish_channels WHERE subject_type=? AND subject_key=? AND provider=? AND channel_type=? AND external_account_id=?').bind(SUBJECT_TYPE,SUBJECT_KEY,connection.provider,channelType,connection.external_id).first(); return Number(row?.id||0); }
 
 async function insertMarketingLedger(env,connection,content,publishResult){ const channelId=await ensurePublishChannel(env,connection); if(!channelId) return; const now=nowIso(); const item=await env.DB.prepare(`INSERT INTO marketing_content_items(subject_type,subject_key,title,content_type,caption,asset_url,link_url,content_json,source,approval_state,created_by,created_at,updated_at)
-  VALUES(?,?,?,?,?,?,?,?, 'ai','auto_approved','promotion-ai',?,?)`).bind(SUBJECT_TYPE,SUBJECT_KEY,clean(content.title,240),'social_post',clean(content.caption,12000),content.imageUrl,content.linkUrl,safeJson({campaignKey:content.campaignKey,storefront:STOREFRONT,productRowId:content.productRowId,opportunityScore:content.opportunityScore,recommendedAction:content.recommendedAction,campaignAngle:content.campaignAngle}),now,now).run(); const contentId=Number(item.meta?.last_row_id||0); if(!contentId) return; await env.DB.prepare(`INSERT INTO marketing_publication_jobs(subject_type,subject_key,content_id,channel_id,schedule_kind,scheduled_at,recurrence_rule,status,requested_by,attempt_count,max_attempts,external_post_id,external_post_url,provider_response_json,last_error,published_at,created_at,updated_at)
+  VALUES(?,?,?,?,?,?,?,?, 'ai','auto_approved','promotion-ai',?,?)`).bind(SUBJECT_TYPE,SUBJECT_KEY,clean(content.title,240),'social_post',clean(content.caption,12000),content.imageUrl,content.linkUrl,safeJson({campaignKey:content.campaignKey,storefront:STOREFRONT,strategy:STRATEGY,productRowId:content.productRowId,weeklyTier:content.weeklyTier,weeklySlot:content.weeklySlot,signalDirection:content.signalDirection,opportunityScore:content.opportunityScore,recommendedAction:content.recommendedAction,campaignAngle:content.campaignAngle,policyScore:content.policyScore,learningReason:content.learningReason,confidenceScore:content.confidenceScore}),now,now).run(); const contentId=Number(item.meta?.last_row_id||0); if(!contentId) return; await env.DB.prepare(`INSERT INTO marketing_publication_jobs(subject_type,subject_key,content_id,channel_id,schedule_kind,scheduled_at,recurrence_rule,status,requested_by,attempt_count,max_attempts,external_post_id,external_post_url,provider_response_json,last_error,published_at,created_at,updated_at)
   VALUES(?,?,?,?,'immediate',?,'','published','ai',1,1,?,?,?,'',?,?,?)`).bind(SUBJECT_TYPE,SUBJECT_KEY,contentId,channelId,now,clean(publishResult.id,240),safeUrl(publishResult.url),safeJson({ok:true,provider:connection.provider}),now,now,now).run(); }
 
 async function upsertRun(env,values){ const now=nowIso(); await env.DB.prepare(`INSERT INTO affiliate_promotion_runs(run_date,product_row_id,product_id,provider,connection_id,campaign_key,status,ai_mode,ai_model,content_json,external_post_id,external_post_url,last_error,published_at,created_at,updated_at)
@@ -218,66 +203,74 @@ async function upsertRun(env,values){ const now=nowIso(); await env.DB.prepare(`
   ON CONFLICT(run_date,product_row_id,provider,connection_id) DO UPDATE SET campaign_key=excluded.campaign_key,status=excluded.status,ai_mode=excluded.ai_mode,ai_model=excluded.ai_model,content_json=excluded.content_json,external_post_id=excluded.external_post_id,external_post_url=excluded.external_post_url,last_error=excluded.last_error,published_at=excluded.published_at,updated_at=excluded.updated_at`)
   .bind(values.runDate,Number(values.productRowId),clean(values.productId,100),clean(values.provider,30),Number(values.connectionId),clean(values.campaignKey,160),clean(values.status,40),clean(values.aiMode,30),clean(values.aiModel,120),safeJson(values.content||{}),clean(values.externalPostId,240),safeUrl(values.externalPostUrl),clean(values.lastError,1000),values.publishedAt||null,now,now).run(); }
 
-export async function getMallPromotionStatus(env){ if(!(await schemaReady(env))) return {enabled:true,schemaReady:false,status:'schema_required'}; const [gate,connections,readiness,latest,today]=await Promise.all([autonomyGate(env),activeConnections(env),channelReadiness(env),env.DB.prepare('SELECT run_date,status,provider,published_at,last_error,updated_at,content_json FROM affiliate_promotion_runs ORDER BY id DESC LIMIT 1').first().catch(()=>null),env.DB.prepare("SELECT COUNT(*) AS planned,SUM(CASE WHEN status='published' THEN 1 ELSE 0 END) AS published,SUM(CASE WHEN status='failed' THEN 1 ELSE 0 END) AS failed FROM affiliate_promotion_runs WHERE run_date=?").bind(kstParts().date).first().catch(()=>null)]); const latestContent=safeParse(latest?.content_json,{}); return {enabled:true,schemaReady:true,scheduler:true,organicOnly:true,paidActivation:false,strategy:'profit_learning_loop',subject:`${SUBJECT_TYPE}:${SUBJECT_KEY}`,channels:connections.map(row=>row.provider),channelReadiness:readiness,gate,today:{planned:Number(today?.planned||0),published:Number(today?.published||0),failed:Number(today?.failed||0)},lastRun:latest?{date:latest.run_date,status:latest.status,provider:latest.provider,publishedAt:latest.published_at||null,error:latest.last_error||'',opportunityScore:Number(latestContent.opportunityScore||0),recommendedAction:latestContent.recommendedAction||'',updatedAt:latest.updated_at}:null}; }
+export async function getMallPromotionStatus(env){
+  if(!(await schemaReady(env))) return {enabled:true,schemaReady:false,status:'schema_required'};
+  const [gate,connections,readiness,latest,today,weeklyBoard]=await Promise.all([
+    autonomyGate(env),activeConnections(env),channelReadiness(env),
+    env.DB.prepare('SELECT run_date,status,provider,published_at,last_error,updated_at,content_json FROM affiliate_promotion_runs ORDER BY id DESC LIMIT 1').first().catch(()=>null),
+    env.DB.prepare("SELECT COUNT(*) AS planned,SUM(CASE WHEN status='published' THEN 1 ELSE 0 END) AS published,SUM(CASE WHEN status='failed' THEN 1 ELSE 0 END) AS failed FROM affiliate_promotion_runs WHERE run_date=?").bind(kstParts().date).first().catch(()=>null),
+    getWeeklyPromotionBoardStatus(env),
+  ]);
+  const latestContent=safeParse(latest?.content_json,{});
+  return {enabled:true,schemaReady:true,scheduler:true,organicOnly:true,paidActivation:false,strategy:STRATEGY,subject:`${SUBJECT_TYPE}:${SUBJECT_KEY}`,channels:connections.map(row=>row.provider),channelReadiness:readiness,gate,weeklyBoard,today:{planned:Number(today?.planned||0),published:Number(today?.published||0),failed:Number(today?.failed||0)},lastRun:latest?{date:latest.run_date,status:latest.status,provider:latest.provider,publishedAt:latest.published_at||null,error:latest.last_error||'',productRowId:Number(latestContent.productRowId||0),weeklyTier:latestContent.weeklyTier||'',signalDirection:latestContent.signalDirection||'',opportunityScore:Number(latestContent.opportunityScore||0),recommendedAction:latestContent.recommendedAction||'',policyScore:Number(latestContent.policyScore||0),learningReason:latestContent.learningReason||'',confidenceScore:Number(latestContent.confidenceScore||0),updatedAt:latest.updated_at}:null};
+}
 
 export async function runMallPromotionAutomation(env,{reason='cron',force=false}={}){
   if(!(await schemaReady(env))) return {ok:false,status:'schema_required'};
   const kst=kstParts();
   if(!force&&kst.hour<RUN_AFTER_KST_HOUR) return {ok:true,status:'not_due',runDate:kst.date};
+  const board=await ensureWeeklyPromotionBoard(env,{reason,force:false});
+  if(!board?.ok&&board?.status==='schema_required') return {ok:false,status:'schema_required'};
+  const product=board?.todayProduct||null;
+  if(!product) return {ok:true,status:'no_products',runDate:kst.date,strategy:STRATEGY,board};
+  const metrics=await productLearningMetrics(env,product.id);
+  if(!metrics) return {ok:true,status:'no_products',runDate:kst.date,strategy:STRATEGY,board};
+  Object.assign(product,metrics);
   const gate=await autonomyGate(env);
-  const allConnections=await activeConnections(env);
-  if(!allConnections.length) return {ok:true,status:'connection_required',runDate:kst.date,gate};
-  const products=await candidateProducts(env,8);
-  if(!products.length) return {ok:true,status:'no_products',runDate:kst.date};
+  const connections=await activeConnections(env);
+  if(!connections.length) return {ok:true,status:'connection_required',runDate:kst.date,strategy:STRATEGY,gate,board,todayProduct:{productRowId:Number(product.id),productId:product.product_id,productName:product.product_name}};
+  const policies=await channelPoliciesForProduct(env,kst.date,product,connections);
   if(!gate.allowed){
-    for(const connection of allConnections){
-      const product=products[0];
-      await upsertRun(env,{runDate:kst.date,productRowId:product.id,productId:product.product_id,provider:connection.provider,connectionId:connection.id,campaignKey:campaignKey(kst.date,connection.provider,product.id),status:'approval_required',aiMode:'rules',content:{reason,opportunityScore:Number(product.opportunity_score||0),recommendedAction:product.recommended_action,campaignAngle:product.campaign_angle},lastError:gate.reason});
+    for(const {connection,learning} of policies){
+      await upsertRun(env,{runDate:kst.date,productRowId:product.id,productId:product.product_id,provider:connection.provider,connectionId:connection.id,campaignKey:campaignKey(kst.date,connection.provider,product.id),status:'approval_required',aiMode:'rules',content:{reason,productRowId:Number(product.id),weeklyTier:product.tier,weeklySlot:Number(product.slot||0),signalDirection:product.signal_direction,providerRank:Number(product.provider_rank||0),boardEvidence:product.boardEvidence||{},opportunityScore:Number(product.opportunity_score||0),recommendedAction:learning.action,baseRecommendedAction:clean(product.recommended_action,30),campaignAngle:clean(product.campaign_angle,160),policyScore:learning.policyScore,learningReason:learning.reason,expectedCommissionPerVisitKrw:learning.expectedCommissionPerVisit,confidenceScore:learning.confidenceScore},lastError:gate.reason});
     }
-    return {ok:true,status:'approval_required',runDate:kst.date,gate};
+    return {ok:true,status:'approval_required',runDate:kst.date,strategy:STRATEGY,gate,board};
   }
-  const connections=allConnections.slice(0,gate.maxDailyPosts);
-  if(!connections.length) return {ok:true,status:'no_action',runDate:kst.date,reason:'daily_post_limit_zero'};
-  const existing=await env.DB.prepare('SELECT provider,connection_id,status FROM affiliate_promotion_runs WHERE run_date=?').bind(kst.date).all();
+  if(gate.maxDailyPosts<=0) return {ok:true,status:'no_action',runDate:kst.date,strategy:STRATEGY,reason:'daily_post_limit_zero',board};
+  const existing=await env.DB.prepare('SELECT provider,connection_id,status FROM affiliate_promotion_runs WHERE run_date=? AND product_row_id=?').bind(kst.date,Number(product.id)).all();
   const completed=new Set((existing.results||[]).filter(row=>['published','publishing','planned'].includes(row.status)).map(row=>String(row.provider)+':'+String(row.connection_id)));
-  const recent=await recentlyPromotedProductIds(env);
-  const results=[];
-  for(let index=0;index<connections.length;index+=1){
-    const connection=connections[index];
-    const connectionKey=String(connection.provider)+':'+String(connection.id);
-    if(completed.has(connectionKey)) continue;
-    const stats=await promotionLearningStats(env,connection.provider);
-    const scored=learnedCandidates(products,stats);
-    for(const row of scored) await writePolicySnapshot(env,kst.date,row.product,connection.provider,row.learning);
-    const selected=chooseLearnedProduct(scored,recent);
-    if(!selected){
-      const top=scored[0]||null;
-      results.push({provider:connection.provider,status:'no_action',reason:top?.learning?.reason||'no_eligible_candidate',policyScore:Number(top?.learning?.policyScore||0)});
-      continue;
-    }
-    const {product,learning}=selected;
+  const pending=policies.filter(({connection})=>!completed.has(String(connection.provider)+':'+String(connection.id)));
+  const scale=pending.filter(row=>row.learning.action==='scale');
+  const tests=pending.filter(row=>row.learning.action==='test');
+  const selected=scale.length?scale.slice(0,gate.maxDailyPosts):tests.slice(0,Math.min(1,gate.maxDailyPosts));
+  const selectedKeys=new Set(selected.map(({connection})=>String(connection.provider)+':'+String(connection.id)));
+  const results=pending.filter(({connection})=>!selectedKeys.has(String(connection.provider)+':'+String(connection.id))).map(({connection,learning})=>({provider:connection.provider,status:'no_action',recommendedAction:learning.action,policyScore:learning.policyScore,reason:learning.reason,confidenceScore:learning.confidenceScore}));
+  if(!selected.length){
+    const status=pending.length?'no_action':'already_done';
+    return {ok:true,status,runDate:kst.date,reason,strategy:STRATEGY,board:{weekKey:board.weekKey,daySlot:board.daySlot,boardStatus:board.boardStatus},todayProduct:{productRowId:Number(product.id),productId:product.product_id,productName:product.product_name,tier:product.tier,slot:Number(product.slot||0)},results};
+  }
+  for(const {connection,learning} of selected){
     const keyValue=campaignKey(kst.date,connection.provider,product.id);
     const linkUrl='https://marketing-connect-api.ekodi.kr/r/mall/'+encodeURIComponent(keyValue);
     const imageUrl='https://api.ekodi.kr/api/affiliate/public/image/'+Number(product.id)+'?storefront='+STOREFRONT;
     const generated=await aiContent(env,product,connection.provider);
-    const content={title:generated.title,caption:generated.caption,imageUrl,linkUrl,campaignKey:keyValue,productRowId:Number(product.id),productId:clean(product.product_id,100),opportunityScore:Number(product.opportunity_score||0),recommendedAction:learning.action,baseRecommendedAction:clean(product.recommended_action,30),campaignAngle:clean(product.campaign_angle,160),policyScore:learning.policyScore,learningReason:learning.reason,expectedCommissionPerVisitKrw:learning.expectedCommissionPerVisit,confidenceScore:learning.confidenceScore};
+    const content={title:generated.title,caption:generated.caption,imageUrl,linkUrl,campaignKey:keyValue,productRowId:Number(product.id),productId:clean(product.product_id,100),weeklyTier:clean(product.tier||'A',10),weeklySlot:Number(product.slot||0),signalDirection:clean(product.signal_direction||'unknown',30),providerRank:Number(product.provider_rank||0),boardEvidence:product.boardEvidence||{},opportunityScore:Number(product.opportunity_score||0),recommendedAction:learning.action,baseRecommendedAction:clean(product.recommended_action,30),campaignAngle:clean(product.campaign_angle,160),policyScore:learning.policyScore,learningReason:learning.reason,expectedCommissionPerVisitKrw:learning.expectedCommissionPerVisit,confidenceScore:learning.confidenceScore};
     await upsertRun(env,{runDate:kst.date,productRowId:product.id,productId:product.product_id,provider:connection.provider,connectionId:connection.id,campaignKey:keyValue,status:'publishing',aiMode:generated.mode,aiModel:generated.model||'',content});
     try {
       const published=await executeProvider(env,connection,content);
       const publishedAt=nowIso();
       await upsertRun(env,{runDate:kst.date,productRowId:product.id,productId:product.product_id,provider:connection.provider,connectionId:connection.id,campaignKey:keyValue,status:'published',aiMode:generated.mode,aiModel:generated.model||'',content,externalPostId:published.id,externalPostUrl:published.url,publishedAt});
       await insertMarketingLedger(env,connection,content,published).catch(error=>console.error('EKODI Mall marketing ledger write failed after publication',String(error?.message||error)));
-      results.push({provider:connection.provider,status:'published',campaignKey:keyValue,productRowId:Number(product.id),opportunityScore:Number(product.opportunity_score||0),recommendedAction:learning.action,policyScore:learning.policyScore,expectedCommissionPerVisitKrw:learning.expectedCommissionPerVisit,confidenceScore:learning.confidenceScore,externalPostUrl:safeUrl(published.url)});
-      recent.add(Number(product.id));
+      results.push({provider:connection.provider,status:'published',campaignKey:keyValue,productRowId:Number(product.id),weeklyTier:product.tier,weeklySlot:Number(product.slot||0),signalDirection:product.signal_direction,recommendedAction:learning.action,policyScore:learning.policyScore,expectedCommissionPerVisitKrw:learning.expectedCommissionPerVisit,confidenceScore:learning.confidenceScore,externalPostUrl:safeUrl(published.url)});
     } catch(error){
       const message=clean(error?.message||error,1000);
       await upsertRun(env,{runDate:kst.date,productRowId:product.id,productId:product.product_id,provider:connection.provider,connectionId:connection.id,campaignKey:keyValue,status:'failed',aiMode:generated.mode,aiModel:generated.model||'',content,lastError:message});
-      results.push({provider:connection.provider,status:'failed',campaignKey:keyValue,error:message});
+      results.push({provider:connection.provider,status:'failed',campaignKey:keyValue,recommendedAction:learning.action,policyScore:learning.policyScore,error:message});
     }
   }
   const published=results.some(row=>row.status==='published');
   const failed=results.some(row=>row.status==='failed');
-  return {ok:!failed||published,status:published?'ran':failed?'failed':results.length?'no_action':'already_done',runDate:kst.date,reason,strategy:'profit_learning_loop',results};
+  return {ok:!failed||published,status:published?'ran':failed?'failed':'no_action',runDate:kst.date,reason,strategy:STRATEGY,board:{weekKey:board.weekKey,daySlot:board.daySlot,boardStatus:board.boardStatus},todayProduct:{productRowId:Number(product.id),productId:product.product_id,productName:product.product_name,tier:product.tier,slot:Number(product.slot||0)},results};
 }
 
 export async function handleMallPromotionRequest(request,env){
@@ -309,4 +302,4 @@ export async function handleMallPromotionRequest(request,env){
   return new Response(null,{status:302,headers:{location:target.href,'cache-control':'no-store','x-content-type-options':'nosniff'}});
 }
 
-export const MALL_PROMOTION_DEFAULTS=Object.freeze({subjectType:SUBJECT_TYPE,subjectKey:SUBJECT_KEY,storefront:STOREFRONT,accountId:ACCOUNT_ID,providers:PROVIDERS,runAfterKstHour:RUN_AFTER_KST_HOUR,maxDailyChannels:MAX_DAILY_CHANNELS,disclosure:AFFILIATE_DISCLOSURE,strategy:'profit_learning_loop'});
+export const MALL_PROMOTION_DEFAULTS=Object.freeze({subjectType:SUBJECT_TYPE,subjectKey:SUBJECT_KEY,storefront:STOREFRONT,accountId:ACCOUNT_ID,providers:PROVIDERS,runAfterKstHour:RUN_AFTER_KST_HOUR,maxDailyChannels:MAX_DAILY_CHANNELS,disclosure:AFFILIATE_DISCLOSURE,strategy:STRATEGY});

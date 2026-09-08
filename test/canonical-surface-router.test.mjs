@@ -34,6 +34,8 @@ test('My and system paths preserve the internal execution boundary',async()=>{
   assert.equal(response.status,200);assert.equal(control.calls[0].pathname,'/api/session');
   response=await routeCanonicalSurface(new Request('https://ekodi.kr/mcp'),{CONTROL_API:control});
   assert.equal(response.status,200);assert.equal(control.calls[1].pathname,'/mcp');
+  response=await routeCanonicalSurface(new Request('https://ekodi.kr/.well-known/oauth-protected-resource'),{CONTROL_API:control});
+  assert.equal(response.status,200);assert.equal(control.calls[2].pathname,'/.well-known/oauth-protected-resource');
 });
 
 test('Auth uses the legacy runtime but exposes apex-prefixed assets',async()=>{

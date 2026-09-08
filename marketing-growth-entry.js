@@ -29,7 +29,7 @@ export default {
         ...rawMallPromotionAutomation,
         enabled,
         scheduler: enabled && rawMallPromotionAutomation?.scheduler !== false,
-        safetyGate: enabled ? 'explicitly_enabled' : 'youtube_connection_and_test_publish_required',
+        safetyGate: enabled ? 'explicitly_enabled' : 'social_oauth_connection_and_test_publish_required',
       };
       return json({...base, mallPromotionAutomation, mallSalesIntelligence}, baseResponse.status, baseResponse.headers);
     }
