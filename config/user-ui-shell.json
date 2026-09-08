@@ -1,8 +1,8 @@
 {
-  "version": 10,
+  "version": 11,
   "name": "EKODI User UI Shell",
   "parentPolicy": "config/user-ui-dna.json",
-  "purpose": "Keep one EKODI user experience while allowing each service to preserve its own visual family.",
+  "purpose": "Keep one EKODI user experience while allowing each service to preserve its own visual family, with persistent common chrome limited to one shared header and one shared footer.",
   "scope": [
     "public",
     "workspace"
@@ -26,7 +26,10 @@
     "unavailableLanguageReturnsToKorean": true,
     "mainAlignedChrome": true,
     "unreadyLanguageHidden": true,
-    "automaticTranslationLifecycle": true
+    "automaticTranslationLifecycle": true,
+    "persistentChromeHeaderFooterOnly": true,
+    "workspaceSelectionLivesInMyEkodi": true,
+    "globalAmbientAudioForbidden": true
   },
   "header": {
     "owner": "shared-shell",
@@ -59,7 +62,9 @@
     "forbidden": [
       "second global header",
       "service-specific copy of shared header runtime",
-      "admin navigation mixed into user header"
+      "admin navigation mixed into user header",
+      "global MR or background-music playback control",
+      "global workspace or space-selection control"
     ],
     "alignment": "centered-canvas",
     "geometry": "service-token-driven",
@@ -132,9 +137,20 @@
   "ambientAudio": {
     "owner": "shared-shell",
     "runtime": "shell/ccm-mr-player.js",
-    "placement": "inside the adopted or fallback user header; floating only when no header exists",
+    "runtimeRole": "compatibility-tombstone",
+    "globalControl": "retired",
+    "placement": "none",
+    "persistentChromeAllowed": false,
+    "taskLocalOnly": true,
     "contentOverlapForbidden": true,
     "adminExcluded": true
+  },
+  "workspaceSelection": {
+    "owner": "my-ekodi-content",
+    "canonicalPath": "https://ekodi.kr/my",
+    "persistentGlobalControl": "forbidden",
+    "servicePageSwitcher": "forbidden",
+    "contextHandoff": "central-auth-and-workspace-context"
   },
   "inheritance": {
     "hostRule": "all public/workspace service hosts inherit the manifest service shell",
