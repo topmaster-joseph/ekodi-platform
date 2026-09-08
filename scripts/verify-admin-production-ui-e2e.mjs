@@ -143,9 +143,10 @@ for (const [id, group] of menus) {
     const source = page.locator('.admin-context-source .nav[data-section="tax"]');
     const href = await source.getAttribute('href');
     if (!href?.startsWith('https://tax.ekodi.kr/')) throw new Error(`Tax handoff href is invalid: ${href}`);
-    const taxNavigation = page.waitForRequest(request => request.isNavigationRequest() && request.url().startsWith('https://tax.ekodi.kr/'), { timeout: 15000 });
+    const taxRequestPending = page.waitForRequest(request => request.isNavigationRequest() && request.url().startsWith('https://tax.ekodi.kr/'), { timeout: 15000 });
+    const taxCommitPending = page.waitForURL(url => url.href.startsWith('https://tax.ekodi.kr/'), { waitUntil: 'commit', timeout: 15000 });
     await dispatchClick(tab);
-    const taxRequest = await taxNavigation;
+    const [taxRequest] = await Promise.all([taxRequestPending, taxCommitPending]);
     const taxResponse = await context.request.get('https://tax.ekodi.kr/', { maxRedirects: 5, timeout: 20000 });
     if (taxResponse.status() < 200 || taxResponse.status() >= 400) throw new Error(`Tax handoff endpoint returned ${taxResponse.status()}`);
     const taxUrl = taxRequest.url();

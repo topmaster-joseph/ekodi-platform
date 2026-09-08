@@ -29,3 +29,9 @@ test('synthetic production Admin UI verifier targets the canonical apex Admin pa
   assert.match(text, /const ADMIN_URL = process\.env\.ADMIN_URL \|\| 'https:\/\/ekodi\.kr\/admin\/'/);
   assert.doesNotMatch(text, /https:\/\/admin\.ekodi\.kr\//);
 });
+
+test('synthetic production Admin UI verifier waits for the external tax handoff to commit before returning', async () => {
+  const text = await source();
+  assert.match(text, /page\.waitForURL\(url => url\.href\.startsWith\('https:\/\/tax\.ekodi\.kr\/'\), \{ waitUntil: 'commit', timeout: 15000 \}\)/);
+  assert.match(text, /Promise\.all\(\[taxRequestPending, taxCommitPending\]\)/);
+});
