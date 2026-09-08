@@ -250,9 +250,17 @@ function applyBaseSecurityHeaders(headers) {
   headers.set('X-XSS-Protection', '0');
 }
 
+function ensureUtf8TextContentType(headers) {
+  const type = String(headers.get('Content-Type') || '');
+  if (!type || /;\s*charset=/i.test(type)) return;
+  if (/^text\//i.test(type) || /^application\/(?:javascript|json|xml)(?:;|$)/i.test(type)) {
+    headers.set('Content-Type', `${type}; charset=utf-8`);
+  }
+}
 function withHostSecurity(response, csp, cacheControl, routeName = '') {
   const secured = new Response(response.body, response);
   applyBaseSecurityHeaders(secured.headers);
+  ensureUtf8TextContentType(secured.headers);
   secured.headers.set('Content-Security-Policy', csp);
   secured.headers.set('Cache-Control', cacheControl);
   if (routeName.startsWith('admin-')) {

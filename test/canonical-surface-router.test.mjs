@@ -5,6 +5,7 @@ import vm from 'node:vm';
 import { routeCanonicalSurface } from '../canonical-surface-router.js';
 import myWorker from '../my-worker.js';
 import platformEntry from '../platform-router-entry-worker.js';
+import siteWorker from '../site-worker.js';
 
 function binding(body='ok',type='text/plain'){
   const calls=[];
@@ -53,6 +54,25 @@ test('Auth uses the legacy runtime but exposes apex-prefixed assets',async()=>{
   const html=await response.text();assert.match(html,/href="\/auth\/auth\.css"/);assert.match(html,/src="\/auth\/auth\.js"/);
 });
 
+test('Auth runtime text assets cannot render as top-level documents',async()=>{
+  const legacy=legacyRecorder();
+  let response=await routeCanonicalSurface(new Request('https://ekodi.kr/auth/client-auth.js?v=31',{headers:{'sec-fetch-dest':'document'}}),{}, {legacyFetch:legacy.fetch});
+  assert.equal(response.status,302);assert.equal(new URL(response.headers.get('location')).href,'https://ekodi.kr/auth/');assert.equal(response.headers.get('x-ekodi-route'),'auth-document-guard');assert.equal(legacy.calls.length,0);
+  response=await routeCanonicalSurface(new Request('https://ekodi.kr/auth/client-auth.js?v=31',{headers:{'sec-fetch-dest':'script'}}),{}, {legacyFetch:legacy.fetch});
+  assert.equal(response.status,200);assert.equal(legacy.calls.length,1);assert.equal(legacy.calls[0].pathname,'/client-auth.js');
+});
+
+test('Auth secured text responses explicitly declare UTF-8',async()=>{
+  const assets={fetch:async request=>{
+    const path=new URL(request.url).pathname;
+    if(path==='/auth-center')return new Response('<!doctype html><meta charset="utf-8"><title>인증</title>',{headers:{'content-type':'text/html'}});
+    return new Response("const label='자담치킨 목포대점';",{headers:{'content-type':'text/javascript'}});
+  }};
+  let response=await siteWorker.fetch(new Request('https://auth.ekodi.kr/'),{ASSETS:assets},{});
+  assert.equal(response.status,200);assert.equal(response.headers.get('content-type'),'text/html; charset=utf-8');
+  response=await siteWorker.fetch(new Request('https://auth.ekodi.kr/client-auth.js'),{ASSETS:assets},{});
+  assert.equal(response.status,200);assert.equal(response.headers.get('content-type'),'text/javascript; charset=utf-8');assert.match(await response.text(),/자담치킨 목포대점/);
+});
 test('Admin deep routes render the shell while runtime assets stay addressable',async()=>{
   const legacy=legacyRecorder();
   let response=await routeCanonicalSurface(new Request('https://ekodi.kr/admin/professional/insurance'),{}, {legacyFetch:legacy.fetch});
