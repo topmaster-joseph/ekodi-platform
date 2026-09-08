@@ -278,17 +278,6 @@ async function publicClick(request, env, url) {
   await env.DB.prepare(`INSERT INTO affiliate_storefront_clicks (product_row_id, click_date, clicks, updated_at) VALUES (?, ?, 1, ?)
     ON CONFLICT(product_row_id, click_date) DO UPDATE SET clicks = affiliate_storefront_clicks.clicks + 1, updated_at = excluded.updated_at`)
     .bind(row.id, today, now).run().catch(() => {});
-  const campaignKey = cleanText(url.searchParams.get('campaign'), 160);
-  if (/^mall-\d{8}-(facebook|instagram|threads)-\d+$/.test(campaignKey)) {
-    const matchedCampaign = await env.DB.prepare(`SELECT 1 AS ok FROM affiliate_promotion_runs
-      WHERE campaign_key=? AND product_row_id=? AND status IN ('published','publishing','planned') LIMIT 1`)
-      .bind(campaignKey, row.id).first().catch(() => null);
-    if (matchedCampaign?.ok) {
-      await env.DB.prepare(`INSERT INTO affiliate_promotion_outbound_clicks(campaign_key,click_date,clicks,updated_at)
-        VALUES(?,?,1,?) ON CONFLICT(campaign_key,click_date) DO UPDATE SET clicks=affiliate_promotion_outbound_clicks.clicks+1,updated_at=excluded.updated_at`)
-        .bind(campaignKey,today,now).run().catch(() => {});
-    }
-  }
   const headers = publicHeaders(request);
   headers.set('location', target);
   headers.set('cache-control', 'no-store');

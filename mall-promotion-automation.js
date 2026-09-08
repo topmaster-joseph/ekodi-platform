@@ -280,6 +280,33 @@ export async function runMallPromotionAutomation(env,{reason='cron',force=false}
   return {ok:!failed||published,status:published?'ran':failed?'failed':results.length?'no_action':'already_done',runDate:kst.date,reason,strategy:'profit_learning_loop',results};
 }
 
-export async function handleMallPromotionRequest(request,env){ const url=new URL(request.url); const match=url.pathname.match(/^\/r\/mall\/([a-z0-9가-힣_-]{8,160})$/i); if(!match||request.method!=='GET') return null; if(!(await schemaReady(env))) return new Response('Not ready',{status:503}); const key=clean(decodeURIComponent(match[1]),160); const row=await env.DB.prepare('SELECT campaign_key,provider,product_id,status FROM affiliate_promotion_runs WHERE campaign_key=? ORDER BY id DESC LIMIT 1').bind(key).first(); if(!row||!['published','publishing','planned'].includes(row.status)) return new Response('Not found',{status:404}); const today=kstParts().date; await env.DB.prepare(`INSERT INTO affiliate_promotion_visits(campaign_key,visit_date,visits,updated_at) VALUES(?,?,1,?) ON CONFLICT(campaign_key,visit_date) DO UPDATE SET visits=affiliate_promotion_visits.visits+1,updated_at=excluded.updated_at`).bind(key,today,nowIso()).run().catch(()=>{}); const target=new URL('https://ekodi.kr/ekodibiz/mall'); target.searchParams.set('utm_source',clean(row.provider,30)); target.searchParams.set('utm_medium','organic_social'); target.searchParams.set('utm_campaign',key); if(row.product_id) target.searchParams.set('product',clean(row.product_id,100)); return new Response(null,{status:302,headers:{location:target.href,'cache-control':'no-store','x-content-type-options':'nosniff'}}); }
+export async function handleMallPromotionRequest(request,env){
+  const url=new URL(request.url);
+  const outbound=url.pathname.match(/^\/r\/mall\/outbound\/([a-z0-9_-]{8,160})\/(\d+)$/i);
+  if(outbound&&request.method==='POST'){
+    if(!(await schemaReady(env))) return new Response(null,{status:503,headers:{'cache-control':'no-store'}});
+    const key=clean(decodeURIComponent(outbound[1]),160);
+    const productRowId=Number(outbound[2]);
+    const row=await env.DB.prepare(`SELECT campaign_key,status,product_row_id FROM affiliate_promotion_runs WHERE campaign_key=? AND product_row_id=? ORDER BY id DESC LIMIT 1`).bind(key,productRowId).first().catch(()=>null);
+    if(!row||!['published','publishing','planned'].includes(row.status)) return new Response(null,{status:404,headers:{'cache-control':'no-store'}});
+    const today=kstParts().date;
+    await env.DB.prepare(`INSERT INTO affiliate_promotion_outbound_clicks(campaign_key,click_date,clicks,updated_at) VALUES(?,?,1,?) ON CONFLICT(campaign_key,click_date) DO UPDATE SET clicks=affiliate_promotion_outbound_clicks.clicks+1,updated_at=excluded.updated_at`).bind(key,today,nowIso()).run().catch(()=>{});
+    return new Response(null,{status:204,headers:{'cache-control':'no-store','x-content-type-options':'nosniff'}});
+  }
+  const match=url.pathname.match(/^\/r\/mall\/([a-z0-9_-]{8,160})$/i);
+  if(!match||request.method!=='GET') return null;
+  if(!(await schemaReady(env))) return new Response('Not ready',{status:503});
+  const key=clean(decodeURIComponent(match[1]),160);
+  const row=await env.DB.prepare('SELECT campaign_key,provider,product_id,status FROM affiliate_promotion_runs WHERE campaign_key=? ORDER BY id DESC LIMIT 1').bind(key).first();
+  if(!row||!['published','publishing','planned'].includes(row.status)) return new Response('Not found',{status:404});
+  const today=kstParts().date;
+  await env.DB.prepare(`INSERT INTO affiliate_promotion_visits(campaign_key,visit_date,visits,updated_at) VALUES(?,?,1,?) ON CONFLICT(campaign_key,visit_date) DO UPDATE SET visits=affiliate_promotion_visits.visits+1,updated_at=excluded.updated_at`).bind(key,today,nowIso()).run().catch(()=>{});
+  const target=new URL('https://ekodi.kr/ekodibiz/mall');
+  target.searchParams.set('utm_source',clean(row.provider,30));
+  target.searchParams.set('utm_medium','organic_social');
+  target.searchParams.set('utm_campaign',key);
+  if(row.product_id) target.searchParams.set('product',clean(row.product_id,100));
+  return new Response(null,{status:302,headers:{location:target.href,'cache-control':'no-store','x-content-type-options':'nosniff'}});
+}
 
 export const MALL_PROMOTION_DEFAULTS=Object.freeze({subjectType:SUBJECT_TYPE,subjectKey:SUBJECT_KEY,storefront:STOREFRONT,accountId:ACCOUNT_ID,providers:PROVIDERS,runAfterKstHour:RUN_AFTER_KST_HOUR,maxDailyChannels:MAX_DAILY_CHANNELS,disclosure:AFFILIATE_DISCLOSURE,strategy:'profit_learning_loop'});
