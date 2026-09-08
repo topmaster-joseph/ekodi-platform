@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises';
 
 const workflow = await readFile(new URL('../.github/workflows/verify-ekodi-mall-production.yml', import.meta.url), 'utf8');
 const manifestText = await readFile(new URL('../deploy/manifests/shared-site.worker.json', import.meta.url), 'utf8');
+const wrangler = await readFile(new URL('../wrangler.site.toml', import.meta.url), 'utf8');
 const manifest = JSON.parse(manifestText);
 
 test('Mall production verifier follows both canonical Mall deployment owners', () => {
@@ -39,6 +40,7 @@ test('shared-site Mall release gate uses the same stable ownership contract', ()
     assert.ok(mallGate.rollbackExpect?.includes(marker), `missing rollback marker: ${marker}`);
   }
   assert.equal(mallGate.candidateVerify,false);
+  assert.match(wrangler,/pattern = "ekodi\.kr\/ekodibiz\/mall\*"[\s\S]*zone_name = "ekodi\.kr"/);
   assert.match(mallGate.candidateVerifyReason||'',/run_worker_first bootstrap/);
   assert.ok(mallGate.expect?.includes('/ekodibiz/mall/app.js'));
   assert.ok(mallGate.rollbackExpect?.includes('/ekodibiz/mall/app.js'));

@@ -25,6 +25,15 @@ custom_domain = true
 pattern = "ekodi.kr/ekodichurch/admin*"
 zone_name = "ekodi.kr"
 
+# Canonical EKODIBIZ dynamic surfaces must outrank colliding static asset paths.
+[[routes]]
+pattern = "ekodi.kr/ekodibiz/trade*"
+zone_name = "ekodi.kr"
+
+[[routes]]
+pattern = "ekodi.kr/ekodibiz/mall*"
+zone_name = "ekodi.kr"
+
 [[routes]]
 pattern = "trade.ekodi.kr"
 custom_domain = true

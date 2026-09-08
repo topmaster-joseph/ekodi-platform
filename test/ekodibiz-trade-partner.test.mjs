@@ -23,6 +23,7 @@ test('trade partner and trade admin routes are apex workspace routes',async()=>{
   assert.ok(portal.includes('/ekodibiz\\/trade'));
   assert.ok(admin.includes('/trade\\/admin'));
   for(const asset of ['/workspace-trade-admin.js','/workspace-trade-portal.css','/workspace-trade-portal.js'])assert.ok(wrangler.includes(`"${asset}"`),asset);
+  assert.match(wrangler,/pattern = "ekodi\.kr\/ekodibiz\/trade\*"[\s\S]*zone_name = "ekodi\.kr"/);
   const probe=JSON.parse(manifestText).worker.requests.find(x=>x.url==='https://ekodi.kr/ekodibiz/trade');
   assert.equal(probe?.candidateVerify,false);
   assert.match(probe?.candidateVerifyReason||'',/run_worker_first bootstrap/);
