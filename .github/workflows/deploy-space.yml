@@ -16,6 +16,7 @@ on:
       - 'supabase/migrations/20260909003000_storefront_public_snapshot.sql'
       - 'supabase/migrations/20260906006000_store_admin_routing.sql'
       - 'supabase/migrations/20260909001000_public_storefront.sql'
+      - 'supabase/migrations/20260909012000_platform_menu_storefront.sql'
       - 'supabase/tests/store_operating_spaces.test.sql'
       - 'supabase/tests/store_user_site_provisioning.test.sql'
       - 'test/store-operating-space.test.mjs'
@@ -37,6 +38,7 @@ on:
       - 'supabase/migrations/20260909003000_storefront_public_snapshot.sql'
       - 'supabase/migrations/20260906006000_store_admin_routing.sql'
       - 'supabase/migrations/20260909001000_public_storefront.sql'
+      - 'supabase/migrations/20260909012000_platform_menu_storefront.sql'
       - 'supabase/tests/store_operating_spaces.test.sql'
       - 'supabase/tests/store_user_site_provisioning.test.sql'
       - 'test/store-operating-space.test.mjs'
@@ -87,6 +89,8 @@ jobs:
           test -f supabase/migrations/20260906006000_store_admin_routing.sql
           grep -Fq 'store_admin_route_profile' supabase/migrations/20260906006000_store_admin_routing.sql
           grep -Fq 'store_public_storefront' supabase/migrations/20260909001000_public_storefront.sql
+          grep -Fq 'store_menu_platform_listings' supabase/migrations/20260909012000_platform_menu_storefront.sql
+          grep -Fq 'store_user_site_public_snapshot' supabase/migrations/20260909012000_platform_menu_storefront.sql
           grep -Fq 'publicStorefront' space/index.html
           grep -Fq 'storefront.json' platform-router-entry-worker.js
 

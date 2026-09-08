@@ -77,7 +77,8 @@ test('production smoke covers each store user page separately',()=>{
   assert.match(manifest,/yogurtpurple/);
   assert.match(manifest,/피자마루 목포대점/);
   assert.match(manifest,/요거트퍼플 목포대점/);
-  assert.match(manifest,/메뉴 보기/);
+  assert.match(manifest,/메뉴·가격/);
+  assert.match(manifest,/배달앱 주문/);
   assert.match(manifest,/space-storefront/);
 });
 
