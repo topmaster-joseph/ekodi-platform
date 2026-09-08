@@ -28,14 +28,13 @@ test('Mall production verifier follows stable route and storefront structure', (
 
 test('shared-site Mall release gate uses the same stable ownership contract', () => {
   const mallGate = manifest.worker.requests.find(request => request.url === 'https://ekodi.kr/ekodibiz/mall');  assert.ok(mallGate);
-  for (const marker of [
-    'data-ekodi-service="mall"',
-    'data-ekodi-user-surface="public"',
-    '/ekodibiz/mall/assets/marketplace-live.js'
-  ]) {
+  for (const marker of ['data-ekodi-service="mall"','data-ekodi-user-surface="public"']) {
     assert.ok(mallGate.expect?.includes(marker), `missing release marker: ${marker}`);
     assert.ok(mallGate.rollbackExpect?.includes(marker), `missing rollback marker: ${marker}`);
   }
+  assert.ok(mallGate.expect?.includes('/ekodibiz/mall/assets/marketplace-live.js'));
+  assert.ok(mallGate.rollbackExpect?.includes('/ekodibiz/mall/app.js'));
+  assert.ok(!mallGate.rollbackExpect?.includes('/ekodibiz/mall/assets/marketplace-live.js'));
   assert.ok(mallGate.headerExpect?.includes('x-ekodi-route: public-ekodi-mall'));
   assert.ok(mallGate.headerExpect?.includes('x-ekodi-edge: mall-path-gateway'));
   assert.doesNotMatch(manifestText, /EKODI CONTEXT SHOPPING|GIFT CONTEXT INTELLIGENCE|CONNECTED COMMERCE|OUR PROMISE/);

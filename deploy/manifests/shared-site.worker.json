@@ -238,6 +238,8 @@
           "x-ekodi-route: trade-partner-workspace",
           "cache-control: no-store"
         ],
+        "candidateVerify": false,
+        "candidateVerifyReason": "run_worker_first bootstrap for /ekodibiz/trade collides with static trade.html until the promoted routing table is active",
         "rollbackVerify": false
       },
       {
@@ -285,7 +287,7 @@
         "rollbackExpect": [
           "data-ekodi-service=\"mall\"",
           "data-ekodi-user-surface=\"public\"",
-          "/ekodibiz/mall/assets/marketplace-live.js"
+          "/ekodibiz/mall/app.js"
         ],
         "headerExpect": [
           "x-content-type-options: nosniff",
