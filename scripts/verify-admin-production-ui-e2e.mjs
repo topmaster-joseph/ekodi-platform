@@ -143,18 +143,24 @@ for (const [id, group] of menus) {
     const source = page.locator('.admin-context-source .nav[data-section="tax"]');
     const href = await source.getAttribute('href');
     if (!href?.startsWith('https://tax.ekodi.kr/')) throw new Error(`Tax handoff href is invalid: ${href}`);
-    const taxRequestPending = page.waitForRequest(request => request.isNavigationRequest() && request.url().startsWith('https://tax.ekodi.kr/'), { timeout: 15000 });
-    const taxCommitPending = page.waitForURL(url => url.href.startsWith('https://tax.ekodi.kr/'), { waitUntil: 'commit', timeout: 15000 });
-    await dispatchClick(tab);
-    const [taxRequest] = await Promise.all([taxRequestPending, taxCommitPending]);
+    const taxNavigationPattern = 'https://tax.ekodi.kr/**';
+    const keepAdminMounted = async route => route.abort('aborted');
+    await page.route(taxNavigationPattern, keepAdminMounted);
+    let taxRequest;
+    try {
+      const taxRequestPending = page.waitForRequest(request => request.isNavigationRequest() && request.url().startsWith('https://tax.ekodi.kr/'), { timeout: 15000 });
+      await dispatchClick(tab);
+      taxRequest = await taxRequestPending;
+      await page.waitForTimeout(100);
+    } finally {
+      await page.unroute(taxNavigationPattern, keepAdminMounted);
+    }
+    if (!page.url().startsWith(ADMIN_URL)) throw new Error(`Tax handoff verifier left canonical Admin: ${page.url()}`);
     const taxResponse = await context.request.get('https://tax.ekodi.kr/', { maxRedirects: 5, timeout: 20000 });
     if (taxResponse.status() < 200 || taxResponse.status() >= 400) throw new Error(`Tax handoff endpoint returned ${taxResponse.status()}`);
     const taxUrl = taxRequest.url();
     results.push({ id, group, kind: 'handoff', ok: true, detail: taxUrl });
     console.log(`[PROD-E2E] ${id}: ok navigation-request ${taxUrl}`);
-    await page.goto(ADMIN_URL, { waitUntil: 'domcontentloaded', timeout: 45000 });
-    await waitForAdminShell();
-    selectedWorkArea = null;
     continue;
   }
 
