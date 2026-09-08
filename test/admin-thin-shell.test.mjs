@@ -8,7 +8,7 @@ const routePair = (source, hash, section) => source.includes(`['${hash}', '${sec
 
 test('post-auth startup contains only the minimal shell/navigation/demand loader', async () => {
   const shell = await read('admin-authenticated-shell.js');
-  assert.match(shell, /const postAuthStyles = \['admin-compact\.css','google-admin-auth\.css'\]/);
+  assert.match(shell, /const postAuthStyles = \['admin-compact\.css','admin-design-engine\.css','google-admin-auth\.css'\]/);
   const criticalBlock = shell.match(/const criticalPostAuthScripts\s*=\s*\[([\s\S]*?)\];/)?.[1] || '';
   const deferredBlock = shell.match(/const deferredPostAuthScripts\s*=\s*\[([\s\S]*?)\];/)?.[1] || '';
   assert.match(criticalBlock, /'admin-compact\.js'/);
@@ -26,16 +26,20 @@ test('post-auth startup contains only the minimal shell/navigation/demand loader
   assert.doesNotMatch(shell, /'system-health-admin\.js'/);
 });
 
-test('authenticated ADMIN UI declares the official stable Core surface and tokens', async () => {
+test('authenticated ADMIN UI declares the official 8th-gen workbench surface and tokens', async () => {
   const shell = await read('admin-authenticated-shell.js');
   assert.match(shell, /function applyOfficialAdminSurface\(\)/);
-  assert.match(shell, /root\.dataset\.ekodiShellSurface = 'admin'/);
-  assert.match(shell, /root\.dataset\.ekodiAdminUi = 'official'/);
-  assert.match(shell, /'--ekodi-ui-bg': '#071522'/);
-  assert.match(shell, /'--ekodi-ui-surface': '#0B1D2E'/);
-  assert.match(shell, /'--ekodi-ui-border': '#24425E'/);
-  assert.match(shell, /'--ekodi-ui-text': '#F4F7FB'/);
-  assert.match(shell, /'--ekodi-ui-accent': '#8EC8FF'/);
+  assert.match(shell, /root\.dataset\.ekodiShellSurface='admin'/);
+  assert.match(shell, /root\.dataset\.ekodiAdminUi='official'/);
+  assert.match(shell, /'--ekodi-ui-bg':'#f6f8fb'/);
+  assert.match(shell, /'--ekodi-ui-surface':'#ffffff'/);
+  assert.match(shell, /'--ekodi-ui-border':'#d9e2ec'/);
+  assert.match(shell, /'--ekodi-ui-text':'#172033'/);
+  assert.match(shell, /'--ekodi-ui-accent':'#155eef'/);
+  assert.match(shell, /nav\.dataset\.ekodiIndependentScroll='false'/);
+  assert.match(shell, /main\.dataset\.ekodiScrollOwner='workspace'/);
+  assert.match(shell, /nav\.style\.setProperty\('overflow-y','hidden','important'\)/);
+  assert.match(shell, /main\.style\.setProperty\('overflow-y','auto'\)/);
   assert.match(shell, /applyOfficialAdminSurface\(\);/);
 });
 
