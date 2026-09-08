@@ -8,6 +8,8 @@ on:
       - 'site-shell-worker.js'
       - 'platform-router-worker.js'
       - 'platform-router-entry-worker.js'
+      - 'store-gateway-page.js'
+      - 'test/store-public-gateway.test.mjs'
       - 'insurance-public-route.js'
       - 'sites/ekodi-insurance/public/**'
       - 'workspace-route-policy.js'
@@ -59,6 +61,7 @@ jobs:
           node --check site-shell-worker.js
           node --check platform-router-worker.js
           node --check platform-router-entry-worker.js
+          node --check store-gateway-page.js
           node --check insurance-public-route.js
           node --check sites/ekodi-insurance/public/advisor.js
           node --check sites/ekodi-insurance/public/server-bridge.js
@@ -66,7 +69,7 @@ jobs:
           node --check ekodi-shell-injector.js
           node --check discovery-layer.js
           node --check scripts/discovery-build.mjs
-          node --test test/marketing-canonical-projection.test.mjs test/insurance-public-route.test.mjs test/public-workspace-gateway.test.mjs test/discovery-layer.test.mjs
+          node --test test/marketing-canonical-projection.test.mjs test/insurance-public-route.test.mjs test/public-workspace-gateway.test.mjs test/store-public-gateway.test.mjs test/discovery-layer.test.mjs
           npm run build
           test -f dist/insurance/index.html
           test -f dist/insurance/advisor.html
@@ -128,6 +131,7 @@ jobs:
               && verify_shell 'pay.biz.ekodi.kr' 'EKODI Pay' \
               && verify_shell 'messenger.ekodi.kr' 'EKODI Messenger' \
               && verify_shell 'invest.ekodi.kr' 'EKODI Investment' \
+              && verify_public_path '/stores' 'THREE STORES · ONE GATE' 'x-ekodi-route: store-gateway' \
               && verify_public_path '/deployment-probe' 'OPERATING SPACE' 'x-ekodi-workspace-gateway: space-service-binding' \
               && verify_public_path '/ekodibiz' 'EKODIBIZ' 'x-ekodi-workspace-gateway: ekodibiz-service-binding' \
               && verify_public_path '/insurance' '보험을 파는 AI가 아니라, 내 보험을 챙겨주는 AI' 'x-ekodi-route: public-insurance' \
