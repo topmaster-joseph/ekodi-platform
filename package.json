@@ -50,7 +50,7 @@
     "validate:capabilities": "node scripts/validate-capability-registry.mjs",
     "pretest": "npm run generate:user-services",
     "validate:insurance": "node sites/ekodi-insurance/test.mjs && node --test test/insurance-8g.test.mjs test/insurance-advisor-site.test.mjs test/insurance-practice-affiliations.test.mjs",
-    "validate:orchestration": "node scripts/validate-ekodi-ai-change-orchestration.mjs && node scripts/validate-workflow-orchestration-gates.mjs"
+    "validate:orchestration": "node scripts/validate-ekodi-ai-change-orchestration.mjs && node scripts/validate-workflow-orchestration-gates.mjs && node scripts/validate-main-write-boundaries.mjs"
   },
   "engines": {
     "node": ">=20"
