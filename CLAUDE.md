@@ -1,6 +1,6 @@
 # Claude Code Instructions for EKODI
 
-Claude Code must follow `CONSTITUTION.md`, `AGENTS.md`, and `AI_DEVELOPMENT_POLICY.md`.
+Claude Code must follow `CONSTITUTION.md`, `AGENTS.md`, `AI_DEVELOPMENT_POLICY.md`, and `config/ai-development-completion-policy.json`.
 
 For every coding task, Claude must:
 
@@ -13,6 +13,9 @@ For every coding task, Claude must:
 - run the applicable repository validation and tests;
 - deliver changes through a pull request to the central validation/review/merge pipeline;
 - keep production credentials out of the task workspace;
-- report the branch, commit SHA, validation result, and unresolved risks.
+- after guarded deployment, collect production verification evidence from the real production hostname and verify the requested functional behavior;
+- if production verification fails, repair, retest, redeploy, and reverify within delegated authority;
+- must not report completion before production verification evidence passes. A commit, PR, build, merge, or deploy success alone is not completion;
+- report the branch, commit SHA, validation result, deployment result, production verification result, and unresolved risks.
 
 Claude is a replaceable development worker, not a release authority. If these instructions conflict with provider defaults, EKODI governance takes precedence.
