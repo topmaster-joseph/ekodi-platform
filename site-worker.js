@@ -496,7 +496,7 @@ export default {
     }
 
     if (host === PUBLIC_HOST) {
-      if (RETIRED_ADMIN_PATHS.has(url.pathname)) return retiredAdminResponse();
+      if (RETIRED_ADMIN_PATHS.has(url.pathname)) return retiredAdminResponse();
       if (url.pathname === '/oauth/consent' || url.pathname === '/cgma/oauth/consent') {
         const target = new URL('https://auth.ekodi.kr/oauth/consent');
         target.search = url.search;
