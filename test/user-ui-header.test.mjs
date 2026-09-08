@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises';
 import { shellCsp } from '../ekodi-shell-injector.js';
 import { EKODI_USER_FOOTER, renderEkodiUserFooter } from '../config/user-footer.js';
 import { EKODI_USER_EXPERIENCE_PROFILES } from '../config/user-ui-experience-profiles.js';
+import { EKODI_LANGUAGE_REGISTRY } from '../config/language-registry.js';
 
 const read=path=>readFile(new URL(`../${path}`,import.meta.url),'utf8');
 
@@ -76,7 +77,7 @@ test('user UI header/footer/language are shared user-surface-only modules',async
   assert.doesNotMatch(footerClient,/백련동1길 17-4/);
   assert.doesNotMatch(footerClient,/© 2026 EKODI · EKODIBIZ/);
 
-  assert.match(userLanguage,/const VERSION=6/);
+  assert.match(userLanguage,/const VERSION=7/);
   assert.match(userLanguage,/const COOKIE_KEY='ekodi_locale'/);
   assert.match(userLanguage,/data-ekodi-language-control/);
   assert.match(userLanguage,/document\.documentElement\.lang=next/);
@@ -100,7 +101,12 @@ test('user UI header/footer/language are shared user-surface-only modules',async
   assert.match(header,/if\(serviceHomeAnchor\(\)\)return/);
   assert.match(userLanguage,/notranslate/);
   assert.match(injector,/name=\"google\" content=\"notranslate\"/);
-  assert.match(userLanguage,/locale:'ne'/);
+  assert.match(userLanguage,/__EKODI_LANGUAGE_REGISTRY__/);
+  assert.match(userLanguage,/visibleLanguages/);
+  assert.match(userLanguage,/languageChoiceAvailable/);
+  assert.match(userLanguage,/replaceChildren/);
+  assert.match(worker,/LANGUAGE_REGISTRY_BOOTSTRAP/);
+  assert.match(worker,/language-registry[.]json/);
 
   assert.match(mediaMeeting,/const VERSION=2/);
   assert.match(mediaMeeting,/window\.EKODIMediaMeetingAdapter/);
@@ -168,7 +174,7 @@ test('user UI header/footer/language are shared user-surface-only modules',async
   assert.match(parsedPolicy.footer.themePolicy,/inherit each service/);
   assert.equal(parsedPolicy.language.owner,'shared-shell');
   assert.equal(parsedPolicy.language.adminExcluded,true);
-  assert.deepEqual(parsedPolicy.language.supported,['ko-KR','en','zh-CN','ja','ne','vi']);
+  assert.deepEqual(parsedPolicy.language.supported,EKODI_LANGUAGE_REGISTRY.languages.map(language=>language.locale));
 
   assert.match(principles,/consumer-commerce/);
 

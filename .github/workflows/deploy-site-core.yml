@@ -22,6 +22,7 @@ on:
       - 'test/insurance-public-route.test.mjs'
       - 'test/discovery-layer.test.mjs'
       - 'ekodi-service-manifest.js'
+      - 'config/language-registry.js'
       - 'marketing-canonical-projection.js'
       - 'workspace-route-policy.js'
       - 'workspace-admin-page.js'
@@ -66,6 +67,7 @@ on:
       - 'personal-finance-admin.js'
       - 'personal-finance-admin.css'
       - 'admin-public-site-controls.js'
+      - 'admin-language-status.js'
       - 'client-access.js'
       - 'client-access.css'
       - 'marketing-funnel-admin.js'
@@ -179,7 +181,7 @@ jobs:
       - name: Validate current shared site and admin sources
         run: |
           set -euo pipefail
-          for f in site-worker.js platform-router-entry-worker.js preview-page.js insurance-public-route.js sites/ekodi-insurance/public/advisor.js sites/ekodi-insurance/public/server-bridge.js marketing-canonical-projection.js workspace-admin-page.js tenant-admin-policy.js store-admin-engine.js church-pastor-admin-page.js church-reports-admin.js workspace-trade-admin-page.js workspace-trade-portal.js mail-user-page.js mail-admin-page.js tax-portal-worker.js tax-business-registry.js tax-service-worker.js finance-entry-worker.js script.js homepage-ambient.js mall.js admin-ai-control-plane.js admin-ai-governor.js admin-provider-control.js admin-secret-generator.js ekodi-shell-injector.js site-shell-worker.js auth-site/auth-workspace-target.js marketing-ai-admin.js admin-authenticated-shell.js admin-central-handoff.js finance-monitor.js admin-demand-loader.js admin-public-site-controls.js client-access.js social-admin.js books-admin.js books-finance-admin.js books-distribution-admin.js books-pipeline-admin.js books-pipeline-bridge.js books-royalty-admin.js author-billing-admin.js ai-ops-admin.js devotional-admin.js ai-module-spec-admin.js communication-admin.js openai-workspace-admin.js storage-admin.js admin-menu-registry.js admin-menu-layout.js admin-sidebar.js admin-menu-runtime.js campus-actions.js discovery-layer.js scripts/discovery-build.mjs scripts/ecosystem-registry.mjs scripts/admin-thin-postbuild.mjs scripts/build.mjs scripts/guarded-worker-release.mjs scripts/admin-authenticated-e2e.mjs scripts/admin-authenticated-e2e-retry.mjs scripts/admin-authenticated-e2e-menu-worker.mjs scripts/validate-user-ui-dna.mjs; do
+          for f in site-worker.js platform-router-entry-worker.js preview-page.js insurance-public-route.js sites/ekodi-insurance/public/advisor.js sites/ekodi-insurance/public/server-bridge.js marketing-canonical-projection.js workspace-admin-page.js tenant-admin-policy.js store-admin-engine.js church-pastor-admin-page.js church-reports-admin.js workspace-trade-admin-page.js workspace-trade-portal.js mail-user-page.js mail-admin-page.js tax-portal-worker.js tax-business-registry.js tax-service-worker.js finance-entry-worker.js script.js homepage-ambient.js mall.js admin-ai-control-plane.js admin-ai-governor.js admin-provider-control.js admin-secret-generator.js ekodi-shell-injector.js site-shell-worker.js auth-site/auth-workspace-target.js marketing-ai-admin.js admin-authenticated-shell.js admin-central-handoff.js finance-monitor.js admin-demand-loader.js admin-public-site-controls.js client-access.js social-admin.js books-admin.js books-finance-admin.js books-distribution-admin.js books-pipeline-admin.js books-pipeline-bridge.js books-royalty-admin.js author-billing-admin.js ai-ops-admin.js devotional-admin.js ai-module-spec-admin.js communication-admin.js openai-workspace-admin.js storage-admin.js admin-menu-registry.js admin-menu-layout.js admin-sidebar.js admin-menu-runtime.js campus-actions.js discovery-layer.js scripts/discovery-build.mjs scripts/ecosystem-registry.mjs scripts/admin-thin-postbuild.mjs scripts/build.mjs scripts/guarded-worker-release.mjs scripts/admin-authenticated-e2e.mjs scripts/admin-authenticated-e2e-retry.mjs scripts/admin-authenticated-e2e-menu-worker.mjs scripts/validate-user-ui-dna.mjs admin-language-status.js; do
             node --check "$f"
           done
           node --test test/discovery-layer.test.mjs test/preview-page.test.mjs
@@ -199,6 +201,7 @@ jobs:
           fi
           test -f marketing-ai-admin.css
           test -f admin-public-site-controls.js
+          test -f admin-language-status.js
           test -f ai-ops-admin.css
           test -f communication-admin.css
           grep -Fq 'EKODI COMMUNICATION ADMIN' communication-admin.js
@@ -211,6 +214,7 @@ jobs:
           grep -Fq "const API='/api/control/storage/google'" storage-admin.js
           ! grep -Fq 'drive.ekodi.kr/api/control/storage/google' storage-admin.js
           grep -Fq '/api/control/public-sites' admin-public-site-controls.js
+          grep -Fq '/api/control/language-status' admin-language-status.js
           grep -Fq 'admin-public-site-controls.js' admin-authenticated-shell.js
           grep -Fq 'EVOLUTION INTELLIGENCE' ai-ops-admin.js
           grep -Fq '/api/control/evolution' ai-ops-admin.js
@@ -251,16 +255,17 @@ jobs:
           set -euo pipefail
           npm run build
           cp auth-site/auth-workspace-target.js dist/auth-workspace-target.js
-          for f in dist/index.html dist/robots.txt dist/sitemap.xml dist/llms.txt dist/mall.html dist/mall.css dist/mall.js dist/admin-shell.html dist/admin-shell.css dist/admin-authenticated-shell.js dist/admin-demand-loader.js dist/admin-public-site-controls.js dist/ai-ops-admin.js dist/ai-ops-admin.css dist/devotional-admin.js dist/devotional-admin.css dist/ai-module-spec-admin.js dist/ai-module-spec-admin.css dist/communication-admin.js dist/communication-admin.css dist/openai-workspace-admin.js dist/openai-workspace-admin.css dist/storage-admin.js dist/storage-admin.css dist/admin-menu-registry.js dist/admin-menu-layout.js dist/admin-sidebar.js dist/campus-actions.js dist/campus-actions.css dist/marketing-ai-admin.js dist/marketing-ai-admin.css dist/ecosystem-services.json dist/auth-workspace-target.js; do
+          for f in dist/index.html dist/robots.txt dist/sitemap.xml dist/llms.txt dist/mall.html dist/mall.css dist/mall.js dist/admin-shell.html dist/admin-shell.css dist/admin-authenticated-shell.js dist/admin-demand-loader.js dist/admin-public-site-controls.js dist/ai-ops-admin.js dist/ai-ops-admin.css dist/devotional-admin.js dist/devotional-admin.css dist/ai-module-spec-admin.js dist/ai-module-spec-admin.css dist/communication-admin.js dist/communication-admin.css dist/openai-workspace-admin.js dist/openai-workspace-admin.css dist/storage-admin.js dist/storage-admin.css dist/admin-menu-registry.js dist/admin-menu-layout.js dist/admin-sidebar.js dist/campus-actions.js dist/campus-actions.css dist/marketing-ai-admin.js dist/marketing-ai-admin.css dist/ecosystem-services.json dist/auth-workspace-target.js dist/admin-language-status.js; do
             test -f "$f"
           done
           grep -Fq 'OAI-SearchBot' dist/robots.txt
           grep -Fq 'User-agent: GPTBot' dist/robots.txt
           grep -Fq '<loc>https://ekodi.kr/</loc>' dist/sitemap.xml
           grep -Fq 'Canonical site: https://ekodi.kr/' dist/llms.txt
-          grep -Fq 'data-ekodi-discovery="v1"' dist/index.html
+          grep -Fq 'data-ekodi-discovery="v2"' dist/index.html
           grep -Fq 'workspace_key:requested' dist/auth-workspace-target.js
           grep -Fq '/api/control/public-sites' dist/admin-public-site-controls.js
+          grep -Fq '/api/control/language-status' dist/admin-language-status.js
           grep -Fq 'admin-public-site-controls.js' dist/admin-authenticated-shell.js
           grep -Fq 'EVOLUTION INTELLIGENCE' dist/ai-ops-admin.js
           grep -Fq '/api/control/evolution' dist/ai-ops-admin.js
@@ -431,6 +436,7 @@ jobs:
             'https://admin.ekodi.kr/campus-actions.js' \
             'https://admin.ekodi.kr/marketing-ai-admin.js' \
             'https://admin.ekodi.kr/admin-public-site-controls.js' \
+            'https://admin.ekodi.kr/admin-language-status.js' \
             'https://auth.ekodi.kr/auth-workspace-target.js'; do
             check "$asset" || failed=1
           done

@@ -34,10 +34,10 @@ function includesAll(text,label,needles,failures){
 }
 
 for(let attempt=1;attempt<=attempts;attempt++){
-  const [healthResult,manifestResult,footerConfigResult,shellResult,characterRegistryResult,identityRegistryResult,founderAssetResult,themeResult,styleResult,userUiStyleResult]=await Promise.all([
-    read('/health',attempt),read('/manifest.json',attempt),read('/user-footer.json',attempt),read('/shell.js',attempt),read('/character-registry.js',attempt),read('/character-identity-registry.js',attempt),read('/assets/ekodian/founder-face.webp',attempt),read('/theme.json',attempt),read('/workspace.css',attempt),read('/user-ui-shell.css',attempt),
+  const [healthResult,manifestResult,footerConfigResult,languageRegistryResult,shellResult,characterRegistryResult,identityRegistryResult,founderAssetResult,themeResult,styleResult,userUiStyleResult]=await Promise.all([
+    read('/health',attempt),read('/manifest.json',attempt),read('/user-footer.json',attempt),read('/language-registry.json',attempt),read('/shell.js',attempt),read('/character-registry.js',attempt),read('/character-identity-registry.js',attempt),read('/assets/ekodian/founder-face.webp',attempt),read('/theme.json',attempt),read('/workspace.css',attempt),read('/user-ui-shell.css',attempt),
   ]);
-  const results=[healthResult,manifestResult,footerConfigResult,shellResult,characterRegistryResult,identityRegistryResult,founderAssetResult,themeResult,styleResult,userUiStyleResult];
+  const results=[healthResult,manifestResult,footerConfigResult,languageRegistryResult,shellResult,characterRegistryResult,identityRegistryResult,founderAssetResult,themeResult,styleResult,userUiStyleResult];
   if(allowAccessGate&&results.every(result=>result.ok&&isCloudflareAccessGate(result))){
     console.log(`✅ EKODI Shell staging deployed at ${base}; endpoint is intentionally protected by Cloudflare Access, so content verification remains covered by the Shell contract test suite. release=${release}.`);
     process.exit(0);
@@ -47,6 +47,7 @@ for(let attempt=1;attempt<=attempts;attempt++){
   const health=parseJson(healthResult,'health',failures);
   const manifest=parseJson(manifestResult,'manifest',failures);
   const footerConfig=parseJson(footerConfigResult,'user-footer',failures);
+  const languageRegistry=parseJson(languageRegistryResult,'language-registry',failures);
   const theme=parseJson(themeResult,'theme',failures);
   if(!shellResult.ok)failures.push(`shell:http-${shellResult.status||'network'}`);
   if(!characterRegistryResult.ok)failures.push(`character-registry:http-${characterRegistryResult.status||'network'}`);
@@ -61,6 +62,7 @@ for(let attempt=1;attempt<=attempts;attempt++){
     if(Number(health.shellVersion)<2)failures.push(`health:shellVersion:${health.shellVersion||'missing'}`);
     if(Number(health.userUIHeaderVersion)<1)failures.push(`health:userUIHeaderVersion:${health.userUIHeaderVersion||'missing'}`);
     if(Number(health.userUIFooterVersion)<2)failures.push(`health:userUIFooterVersion:${health.userUIFooterVersion||'missing'}`);
+    if(Number(health.userLanguageVersion)<7)failures.push(`health:userLanguageVersion:${health.userLanguageVersion||'missing'}`);
     if(Number(health.mediaMeetingAdapterVersion)<2)failures.push(`health:mediaMeetingAdapterVersion:${health.mediaMeetingAdapterVersion||'missing'}`);
     if(Number(health.characterRegistryVersion)<3)failures.push(`health:characterRegistryVersion:${health.characterRegistryVersion||'missing'}`);
     if(Number(health.characterIdentityRegistryVersion)<2)failures.push(`health:characterIdentityRegistryVersion:${health.characterIdentityRegistryVersion||'missing'}`);
@@ -89,6 +91,11 @@ for(let attempt=1;attempt<=attempts;attempt++){
     if(links.get('이용약관')!=='https://ekodi.kr/terms')failures.push('user-footer:terms-link');
     if(!String(footerConfig.precedenceNotice||'').includes('해당 정책이 우선 적용됩니다'))failures.push('user-footer:precedence-notice');
   }
+  if(languageRegistry){
+    if(Number(languageRegistry.version)<1)failures.push(`language-registry:version:${languageRegistry.version||'missing'}`);
+    if(!Array.isArray(languageRegistry.languages)||languageRegistry.languages.length<6)failures.push('language-registry:languages');
+    if(languageRegistry.policy?.visibility!=='published-only')failures.push(`language-registry:visibility:${languageRegistry.policy?.visibility||'missing'}`);
+  }
   if(theme){
     if(theme.publicExperience?.rotation!=='weekly-deterministic')failures.push(`theme:rotation:${theme.publicExperience?.rotation||'missing'}`);
     if(theme.publicExperience?.timezone!=='Asia/Seoul')failures.push(`theme:timezone:${theme.publicExperience?.timezone||'missing'}`);
@@ -99,7 +106,7 @@ for(let attempt=1;attempt<=attempts;attempt++){
     'window.EKODIAdminUIShell','ekodi-admin-ui-shell-style','.side-brand','ekodi:admin-shell-ready',
     'ekodi-mobile-fixed-header-style','data-ekodi-mobile-header-spacer','ResizeObserver','position:fixed!important',
     'window.EKODIMessage','window.EKODIIllustration','ekodiIllustrationSystem','window.EKODIServiceDesign','ekodiDesignInheritance','--ekodi-service-accent',
-    '__EKODI_ECOSYSTEM_LINK_COMPAT',"'ekodibiz.kr':'biz'",'TRAFFIC_TELEMETRY','globalPrivacyControl','sendTrafficBeacon'
+    '__EKODI_ECOSYSTEM_LINK_COMPAT',"'ekodibiz.kr':'biz'",'window.__EKODI_LANGUAGE_REGISTRY__','api.ekodi.kr/api/i18n/v1','visibleLanguages','TRAFFIC_TELEMETRY','globalPrivacyControl','sendTrafficBeacon'
   ],failures);
   if(shellResult.headers?.get?.('x-ekodi-media-meeting')!=='v2')failures.push(`shell:media-meeting:${shellResult.headers?.get?.('x-ekodi-media-meeting')||'missing'}`);
   if(shellResult.headers?.get?.('x-ekodi-character-registry')!=='v3')failures.push(`shell:character-registry:${shellResult.headers?.get?.('x-ekodi-character-registry')||'missing'}`);
