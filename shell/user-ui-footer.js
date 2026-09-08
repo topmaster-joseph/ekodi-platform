@@ -148,11 +148,11 @@ function createFooter(config){
   const copy=appendText(inner,'div','','ekodi-user-ui-footer__copy');
   appendText(copy,'strong',config.brand,'ekodi-user-ui-footer__brand');
   const business=appendText(copy,'div','','ekodi-user-ui-footer__business');
-  appendText(business,'span',`${config.operator.label} ${config.operator.name}`);
+  appendText(business,'span',config.operator.name);
   appendText(business,'span',`${config.operator.representativeLabel} ${config.operator.representative}`);
   appendText(business,'span',`${config.operator.registrationLabel} ${config.operator.businessRegistrationNumber}`);
   const address=appendText(copy,'div','','ekodi-user-ui-footer__address');
-  appendText(address,'span',`${config.contact.addressLabel} ${config.contact.address}`);
+  appendText(address,'span',config.contact.address);
   appendText(address,'span','·','ekodi-user-ui-footer__separator').setAttribute('aria-hidden','true');
   const email=appendText(address,'a',config.contact.email);
   email.href=String(config.contact.emailHref||`mailto:${config.contact.email}`);
