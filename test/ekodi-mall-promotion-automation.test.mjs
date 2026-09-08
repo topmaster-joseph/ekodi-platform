@@ -6,7 +6,7 @@ import { campaignKey, fallbackContent, kstParts, mallPromotionAutomationEnabled,
 const read = path => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 
 test('mall promotion stays first-party, organic and bounded', () => {
-  assert.equal(MALL_PROMOTION_DEFAULTS.subjectKey, 'ekodibiz');
+  assert.equal(MALL_PROMOTION_DEFAULTS.subjectKey, 'ekodi-biz');
   assert.equal(MALL_PROMOTION_DEFAULTS.storefront, 'ekodi-mall');
   assert.deepEqual(MALL_PROMOTION_DEFAULTS.providers, ['facebook','instagram','threads']);
   assert.equal(MALL_PROMOTION_DEFAULTS.maxDailyChannels, 3);
