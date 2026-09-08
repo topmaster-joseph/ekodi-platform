@@ -45,3 +45,18 @@ test('EKODIAN constitution governs registry and renderer',()=>{
   assert.match(constitution,/personal-data review/i);
   assert.match(constitution,/authentication and security/i);
 });
+
+test('EKODIAN adaptive placement yields to content instead of covering it',()=>{
+  assert.match(rendererSource,/PLACEMENT_LEVELS=.*regular.*compact.*mini/);
+  assert.match(rendererSource,/PLACEMENT_POINTS=.*bottom-right.*bottom-left.*top-right.*top-left.*right-center.*left-center/);
+  assert.match(rendererSource,/data-ekodi-character-avoid/);
+  assert.match(rendererSource,/function adaptPlacement\(host,node\)/);
+  assert.match(rendererSource,/ekodiCharacterPlacement='hidden'/);
+  assert.match(rendererSource,/reason:'no-safe-zone'/);
+  assert.match(rendererSource,/ResizeObserver/);
+  assert.doesNotMatch(rendererSource,/ekodi-main-ekodian-host\{[^}]*padding-right/);
+  assert.match(constitution,/Content-first adaptive placement/);
+  assert.match(constitution,/regular to compact to mini/);
+  assert.match(constitution,/Never cover essential content or controls/);
+  assert.match(constitution,/Do not create compensating content padding/);
+});

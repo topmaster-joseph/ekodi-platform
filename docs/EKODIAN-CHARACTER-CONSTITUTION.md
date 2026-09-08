@@ -1,7 +1,7 @@
 # EKODIAN Character Constitution
 
 Status: Official shared character policy  
-Version: 1.1  
+Version: 1.2
 Runtime registry: `shell/character-registry.js`  
 Runtime renderer: `shell/user-character.js`  
 Generation 8 operations runtime: `ekodian-8g-runtime.js`
@@ -105,6 +105,17 @@ Product placements map onto those states:
 - repeated appearances that add no new guidance
 
 The default renderer therefore limits automatic placement to eligible user-facing landing surfaces. Administrative and critical workflows require deliberate, contextual opt-in rather than decorative insertion.
+
+### Content-first adaptive placement
+
+The default renderer treats page content as protected space and EKODIAN as the yielding layer.
+
+- Measure headings, explanatory text, controls, forms, embedded media, tables and service-marked `[data-ekodi-character-avoid]` regions before choosing a position.
+- Prefer a collision-free anchor based on the actual available space rather than a permanent corner.
+- If no normal-size safe zone exists, reduce the character from regular to compact to mini before considering omission.
+- If no safe zone remains, hide EKODIAN. Never cover essential content or controls merely to preserve character presence.
+- Do not create compensating content padding or shift the user's reading layout just to make room for the shared character.
+- Re-evaluate placement after responsive layout changes. Services may express a preferred anchor, but the safety check remains authoritative.
 
 ## 7. Celebration levels
 
