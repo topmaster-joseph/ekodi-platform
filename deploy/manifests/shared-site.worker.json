@@ -189,6 +189,17 @@
         ]
       },
       {
+        "url": "https://ekodi.kr/ekodi-church/admin",
+        "statuses": [308],
+        "redirect": "manual",
+        "headerExpect": [
+          "location: https://ekodi.kr/ekodichurch/admin",
+          "cache-control: no-store",
+          "x-content-type-options: nosniff"
+        ],
+        "rollbackVerify": false
+      },
+      {
         "url": "https://ekodi.kr/ekodichurch/admin",
         "statuses": [
           200
@@ -204,6 +215,7 @@
           "cache-control: no-store",
           "x-content-type-options: nosniff"
         ],
+        "candidateVerify": false,
         "rollbackVerify": false
       },
       {

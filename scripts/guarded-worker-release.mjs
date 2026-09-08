@@ -192,6 +192,10 @@ const PROMOTION_VERIFY_ATTEMPTS = 36;
 const VERIFY_RETRY_DELAY_MS = 3500;
 
 async function fetchCheck(request, overrideVersion = '', phase = 'standard') {
+  if (phase === 'standard' && overrideVersion && request.candidateVerify === false) {
+    console.log(`CANDIDATE-DEFERRED post-promotion verification required: ${request.url}`);
+    return;
+  }
   if (phase === 'rollback' && request.rollbackVerify === false) {
     console.log(`↩️ rollback verification skipped for candidate-only request: ${request.url}`);
     return;

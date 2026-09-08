@@ -11,6 +11,13 @@ test('production promotion gets a bounded propagation window before rollback', (
   assert.match(release, /await verifyAll\('', 'production'\);/);
 });
 
+test('post-promotion-only routes may defer candidate override without skipping production verification', () => {
+  assert.match(release, /phase === 'standard' && overrideVersion && request\.candidateVerify === false/);
+  assert.match(release, /await verifyAll\(candidateVersion\);/);
+  assert.match(release, /await verifyAll\('', 'production'\);/);
+  assert.doesNotMatch(release, /phase === 'production'[^\n]*candidateVerify === false/);
+});
+
 test('candidate and rollback verification remain fail-closed', () => {
   assert.match(release, /await verifyAll\(candidateVersion\);/);
   assert.match(release, /await verifyAll\('', 'rollback'\);/);
