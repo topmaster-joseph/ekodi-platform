@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { handleAiProviderControl, runAiProviderHealthSchedule, AI_PROVIDER_CONTROL_CONTRACT } from '../ai-provider-control.js';
+import { handleAiProviderControl, invokeAiProviderCapability, runAiProviderHealthSchedule, AI_PROVIDER_CONTROL_CONTRACT } from '../ai-provider-control.js';
 import { createEkodiAiProviderRegistry } from '../ekodi-ai-provider-registry.js';
 
 const read=path=>readFileSync(new URL(`../${path}`,import.meta.url),'utf8');
@@ -61,4 +61,13 @@ test('scheduled OpenAI health preserves safe 429 error subtype without exposing 
   const originalFetch=globalThis.fetch;
   globalThis.fetch=async()=>new Response(JSON.stringify({error:{type:'insufficient_quota',code:'project_spend_limit_exceeded'}}),{status:429,headers:{'content-type':'application/json'}});
   try{const result=await runAiProviderHealthSchedule({DB,OPENAI_API_KEY:'test-key-1234567890'},{now:Date.parse('2026-09-08T00:00:00Z')});assert.equal(result.ok,false);assert.equal(result.results[0].errorCode,'openai_429_project_spend_limit_exceeded');assert.ok(writes.some(item=>item.args.includes('openai_429_project_spend_limit_exceeded')))}finally{globalThis.fetch=originalFetch}
+});
+
+
+test('provider traffic circuit breaker skips a known exhausted-credit provider',async()=>{
+  let providerFetches=0;
+  const provider={provider_id:'openai',enabled:1,priority:10,default_model:'gpt-5.6-terra',secret_binding:'OPENAI_API_KEY',health_status:'error',last_error:'openai_429_credit_balance_exhausted'};
+  const DB={batch:async()=>[],prepare(sql){const stmt={args:[],bind(...args){this.args=args;return this},async first(){if(sql.startsWith('SELECT COUNT(*) calls'))return{calls:0,cost:0,input_tokens:0,cached_input_tokens:0,output_tokens:0};if(sql.startsWith('SELECT * FROM ai_provider_registry WHERE'))return provider;if(sql.startsWith('SELECT * FROM ai_provider_routes WHERE'))return{primary_provider:'openai',fallback_json:'[]',model_override:''};return null},async run(){return{meta:{changes:1}}}};return stmt}};
+  const originalFetch=globalThis.fetch;globalThis.fetch=async()=>{providerFetches+=1;throw new Error('provider_should_not_be_called')};
+  try{await assert.rejects(invokeAiProviderCapability({DB,OPENAI_API_KEY:'test-key-1234567890'},{input:'health-aware routing test'}),error=>error?.message==='provider_unavailable'&&error?.blocked?.includes('openai'));assert.equal(providerFetches,0)}finally{globalThis.fetch=originalFetch}
 });

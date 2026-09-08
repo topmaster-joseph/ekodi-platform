@@ -48,3 +48,10 @@ test('provider source changes trigger and verify the canonical Shared Site produ
   assert.ok(release.includes('admin-provider-control.js admin-secret-generator.js'));
   assert.ok(release.includes("grep -Fq 'renderMissingTargets' dist/ai-ops-admin.js"));
 });
+
+
+test('provider UI distinguishes configured from operational and surfaces safe billing guidance', () => {
+  assert.ok(source.includes('Operational'));
+  assert.ok(source.includes('크레딧 잔액 소진'));
+  assert.ok(source.includes("p.health==='healthy'"));
+});

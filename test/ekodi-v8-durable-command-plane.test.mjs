@@ -65,3 +65,12 @@ test('operational readiness does not treat configured but unhealthy providers as
   assert.equal(status.independentSentinelReady,false);
   assert.equal(status.providers.find(provider=>provider.id==='openai').operational,false);
 });
+
+
+test('Control production release continuously verifies the protected v8 route and labels configured providers accurately', () => {
+  const workflow = fs.readFileSync(new URL('../.github/workflows/deploy-control-api.yml', import.meta.url), 'utf8');
+  assert.match(workflow, /api\/control\/ai\/v8\/status/);
+  assert.match(workflow, /AI configured=\$\{AI_PROVIDER_READY_COUNT:-0\}/);
+  assert.doesNotMatch(workflow, /AI providers=\$\{AI_PROVIDER_READY_COUNT:-0\}/);
+  assert.match(workflow, /Runtime health is reported separately/);
+});
