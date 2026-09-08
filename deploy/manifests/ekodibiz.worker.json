@@ -34,7 +34,10 @@
           "durable-object-sqlite",
           "rules-first-active",
           "https://pay.ekodi.kr"
-        ]
+        ],
+        "candidateVerify": false,
+        "candidateVerifyReason": "run_worker_first bootstrap on biz.ekodi.kr can keep stable routing active during 0% version-override smoke; verify this API immediately after promotion",
+        "rollbackVerify": false
       },
       {
         "url": "https://biz.ekodi.kr/api/catalog",
@@ -45,7 +48,10 @@
           "30일 자동홍보팩",
           "온라인 개업팩",
           "행사 완성팩"
-        ]
+        ],
+        "candidateVerify": false,
+        "candidateVerifyReason": "run_worker_first bootstrap on biz.ekodi.kr can keep stable routing active during 0% version-override smoke; verify this API immediately after promotion",
+        "rollbackVerify": false
       },
       {
         "url": "https://biz.ekodi.kr/api/runtime",
@@ -61,7 +67,10 @@
           "growth_scout",
           "finance_gatekeeper",
           "anonymous-goal-only"
-        ]
+        ],
+        "candidateVerify": false,
+        "candidateVerifyReason": "run_worker_first bootstrap on biz.ekodi.kr can keep stable routing active during 0% version-override smoke; verify this API immediately after promotion",
+        "rollbackVerify": false
       },
       {
         "url": "https://biz.ekodi.kr/api/ops/status",
@@ -74,7 +83,10 @@
           "ops_coordinator",
           "finance_gatekeeper",
           "rules-first"
-        ]
+        ],
+        "candidateVerify": false,
+        "candidateVerifyReason": "run_worker_first bootstrap on biz.ekodi.kr can keep stable routing active during 0% version-override smoke; verify this API immediately after promotion",
+        "rollbackVerify": false
       }
     ]
   }
