@@ -58,8 +58,8 @@
         "redirect": "manual",
         "expect": [
           "자담치킨 목포대점",
-          "메뉴 보기",
-          "바로 주문하기"
+          "메뉴·가격 보기",
+          "배달앱 주문"
         ],
         "headerExpect": [
           "x-ekodi-route: space-storefront",
@@ -75,8 +75,8 @@
         "redirect": "manual",
         "expect": [
           "피자마루 목포대점",
-          "메뉴 보기",
-          "바로 주문하기"
+          "메뉴·가격 보기",
+          "배달앱 주문"
         ],
         "headerExpect": [
           "x-ekodi-route: space-storefront",
@@ -92,8 +92,8 @@
         "redirect": "manual",
         "expect": [
           "요거트퍼플 목포대점",
-          "메뉴 보기",
-          "바로 주문하기"
+          "메뉴·가격 보기",
+          "배달앱 주문"
         ],
         "headerExpect": [
           "x-ekodi-route: space-storefront",
