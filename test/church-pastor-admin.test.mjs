@@ -63,6 +63,7 @@ test('production entry routes church admin before generic workspace admin', asyn
   const wrangler = await fs.promises.readFile(new URL('../wrangler.site.toml', import.meta.url), 'utf8');
   assert.ok(wrangler.includes('"/ekodichurch*"'));
   assert.ok(wrangler.includes('"/ekodi-church*"'));
+  assert.match(wrangler,/pattern = "ekodi\.kr\/ekodichurch\/admin\*"[\s\S]*zone_name = "ekodi\.kr"/);
 });
 
 test('pastor admin release contract requires nosniff and candidate-only rollback semantics', async () => {
