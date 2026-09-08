@@ -12,6 +12,7 @@ const mutationPatterns = [
   /guarded-worker-release\.mjs/,
   /guarded-pages-release\.mjs/,
   /apply-d1-migrations-with-retry\.sh/,
+  /github-governance-controller\.mjs[^\n]*--apply/,
   /wrangler(?:@[^\s]+)?[^\n]*\bsecret\s+put\b/i,
   /wrangler(?:@[^\s]+)?[^\n]*\bd1\s+migrations\s+apply\b[^\n]*--remote/i,
   /wrangler(?:@[^\s]+)?[^\n]*\bd1\s+execute\b[^\n]*--remote/i,
