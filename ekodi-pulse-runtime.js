@@ -1,4 +1,5 @@
 ﻿import { buildCoreAiGateway } from './core-ai-gateway.js';
+import { loadAiCollaborationPolicy } from './ai-collaboration-settings.js';
 import { getEkodiAiProviderRegistryStatus } from './ekodi-ai-provider-registry.js';
 import {
   claimNextEkodiCommandTask,
@@ -11,8 +12,31 @@ function text(value, max = 1200) {
   return String(value ?? '').trim().slice(0, max);
 }
 
-function enabled(value) {
-  return ['1', 'true', 'yes', 'on', 'enabled'].includes(String(value ?? '').trim().toLowerCase());
+function enabled(value, fallback = false) {
+  const raw = String(value ?? '').trim().toLowerCase();
+  if (!raw) return fallback;
+  return ['1', 'true', 'yes', 'on', 'enabled'].includes(raw);
+}
+
+function runtimeEnvForCollaboration(env = {}, policy = {}) {
+  const roles = policy?.openai?.roles || {};
+  return Object.freeze({
+    ...env,
+    AI_MULTI_PROVIDER_ENABLED: 'true',
+    EKODI_PROVIDER_OPENAI_ENABLED: policy?.openai?.enabled === false ? 'false' : 'true',
+    EKODI_OPENAI_ROLE_COORDINATOR_PROFILE: roles.coordinator?.profile || 'deep',
+    EKODI_OPENAI_ROLE_PLANNER_PROFILE: roles.planner?.profile || 'balanced',
+    EKODI_OPENAI_ROLE_OPERATOR_PROFILE: roles.builder?.profile || 'balanced',
+    EKODI_OPENAI_ROLE_BUILDER_PROFILE: roles.builder?.profile || 'balanced',
+    EKODI_OPENAI_ROLE_REVIEWER_PROFILE: roles.reviewer?.profile || 'deep',
+    EKODI_OPENAI_ROLE_SENTINEL_PROFILE: roles.reviewer?.profile || 'deep',
+    EKODI_OPENAI_ROLE_VERIFIER_PROFILE: roles.verifier?.profile || 'balanced',
+  });
+}
+
+async function collaborationRuntime(env = {}) {
+  const loaded = await loadAiCollaborationPolicy(env);
+  return Object.freeze({ ...loaded, env: runtimeEnvForCollaboration(env, loaded.policy) });
 }
 
 function pulseFromTask(task) {
@@ -31,7 +55,7 @@ function pulseFromTask(task) {
 export function getEkodiProviderReadiness(env = {}) {
   const providers = getEkodiAiProviderRegistryStatus(env);
   const configured = providers.filter(provider => provider.available);
-  const multiProviderEnabled = enabled(env.AI_MULTI_PROVIDER_ENABLED);
+  const multiProviderEnabled = enabled(env.AI_MULTI_PROVIDER_ENABLED, true);
   return Object.freeze({
     multiProviderEnabled,
     readinessBasis: 'configuration',
@@ -46,7 +70,13 @@ export function getEkodiProviderReadiness(env = {}) {
 }
 
 export async function getEkodiProviderOperationalReadiness(env = {}) {
-  const configured = getEkodiProviderReadiness(env);
+  let runtimeEnv = env;
+  try {
+    runtimeEnv = (await collaborationRuntime(env)).env;
+  } catch (error) {
+    return Object.freeze({ ...getEkodiProviderReadiness({ ...env, AI_MULTI_PROVIDER_ENABLED: 'false' }), policyError: text(error?.message || error, 160) });
+  }
+  const configured = getEkodiProviderReadiness(runtimeEnv);
   if (!env.DB?.prepare) return configured;
   let rows = [];
   try {
@@ -86,7 +116,13 @@ export async function getEkodiProviderOperationalReadiness(env = {}) {
 export async function runEkodiCommandQueue(env = {}, options = {}) {
   if (!env.DB?.prepare) return Object.freeze({ ok: false, processed: 0, reason: 'command_ledger_db_unavailable' });
   const limit = Math.min(Math.max(Number(options.limit) || 1, 1), 3);
-  const gateway = buildCoreAiGateway(env, []);
+  let collaboration;
+  try {
+    collaboration = await collaborationRuntime(env);
+  } catch (error) {
+    return Object.freeze({ ok: false, processed: 0, reason: 'ai_collaboration_policy_invalid', error: text(error?.message || error, 240) });
+  }
+  const gateway = buildCoreAiGateway(collaboration.env, []);
   const results = [];
 
   for (let index = 0; index < limit; index += 1) {
@@ -102,7 +138,15 @@ export async function runEkodiCommandQueue(env = {}, options = {}) {
         risk: task.risk,
         target: task.target,
         delegation: task.delegation,
-        context: task.context,
+        context: Object.freeze({
+          ...(task.context || {}),
+          aiCollaboration: Object.freeze({
+            byDefault: true,
+            revision: collaboration.revision,
+            source: collaboration.source,
+            cloudFirst: true,
+          }),
+        }),
         event: pulseFromTask(task),
         timeoutMs: Math.min(Math.max(Number(env.AI_COMMAND_TIMEOUT_MS) || 20000, 5000), 30000),
       });
@@ -119,7 +163,13 @@ export async function runEkodiCommandQueue(env = {}, options = {}) {
     results.push(Object.freeze({ taskId: task.id, resultState: result.state, state: settled?.state || result.state }));
   }
 
-  return Object.freeze({ ok: true, processed: results.length, results: Object.freeze(results) });
+  return Object.freeze({
+    ok: true,
+    processed: results.length,
+    collaborationByDefault: true,
+    collaborationRevision: collaboration.revision,
+    results: Object.freeze(results),
+  });
 }
 
 async function discoverSystemHealthPulse(env = {}) {
@@ -179,9 +229,9 @@ export async function runEkodiPulseSchedule(env = {}, options = {}) {
 }
 
 export const EKODI_PULSE_RUNTIME = Object.freeze({
-  version: '1.0.0',
+  version: '1.1.0',
   schedule: 'existing-control-cron',
   autonomousBatchLimit: 1,
   automaticTriggers: Object.freeze(['queued-command-task', 'degraded-system-health']),
-  principle: 'detect-first-execute-only-with-standing-delegation',
+  principle: 'collaboration-by-default-cloud-first-detect-first-standing-delegation',
 });
