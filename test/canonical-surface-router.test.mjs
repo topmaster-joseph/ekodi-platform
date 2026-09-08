@@ -40,6 +40,12 @@ test('My and system paths preserve the internal execution boundary',async()=>{
   assert.equal(response.status,200);assert.equal(control.calls[3].pathname,'/api/control/ai/v8/status');
 });
 
+test('v8 control candidate probe does not make rollback depend on a newly introduced endpoint',async()=>{
+  const manifest=JSON.parse(await fs.promises.readFile(new URL('../deploy/manifests/shared-site.worker.json',import.meta.url),'utf8'));
+  const probe=manifest.worker.requests.find(item=>item.url==='https://ekodi.kr/api/control/ai/v8/status');
+  assert.equal(probe?.rollbackVerify,false);
+});
+
 test('Auth uses the legacy runtime but exposes apex-prefixed assets',async()=>{
   const legacy=legacyRecorder();
   const response=await routeCanonicalSurface(new Request('https://ekodi.kr/auth/'),{}, {legacyFetch:legacy.fetch});

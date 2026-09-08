@@ -60,6 +60,9 @@ test('production entry routes church admin before generic workspace admin', asyn
   const church = source.indexOf('isChurchPastorAdminPath(url.pathname)');
   const generic = source.indexOf('isWorkspaceAdminPath(url.pathname)&&!isEkodiBizInvestAdminPath');
   assert.ok(church >= 0 && generic > church);
+  const wrangler = await fs.promises.readFile(new URL('../wrangler.site.toml', import.meta.url), 'utf8');
+  assert.ok(wrangler.includes('"/ekodichurch*"'));
+  assert.ok(wrangler.includes('"/ekodi-church*"'));
 });
 
 test('pastor admin release contract requires nosniff and candidate-only rollback semantics', async () => {
