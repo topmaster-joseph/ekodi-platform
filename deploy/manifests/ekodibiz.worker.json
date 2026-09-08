@@ -13,7 +13,14 @@
         "expect": [
           "EKODIBIZ",
           "WHAT WE DO"
-        ]
+        ],
+        "rollbackExpect": [
+          "EKODIBIZ",
+          "data-ekodi-service=\"biz\"",
+          "data-ekodi-user-surface=\"public\""
+        ],
+        "candidateVerify": false,
+        "candidateVerifyReason": "run_worker_first bootstrap for biz.ekodi.kr can serve the stable static Business Hub during 0% version-override smoke; verify the EKODIBIZ WHAT WE DO asset immediately after promotion"
       },
       {
         "url": "https://biz.ekodi.kr/api/health",
