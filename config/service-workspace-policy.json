@@ -107,10 +107,11 @@
       "shared-service"
     ],
     "surface": "user-pages",
-    "guestExperience": "service-guide-only",
+    "guestExperience": "public-content",
     "memberMinimumTier": "free",
     "loginProvider": "google",
-    "excludeCustomerSites": true
+    "excludeCustomerSites": true,
+    "protectedMemberOnly": ["personal-data", "workspace-data", "write-actions", "account-settings"]
   },
   "identityAuthority": "ekodi",
   "linkedIdentityProviders": [
