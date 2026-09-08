@@ -25,7 +25,7 @@ const isDone=item=>item.status!=='pending';
 const dueSoon=item=>item.status==='pending'&&item.due_at&&new Date(item.due_at).getTime()<=Date.now()+48*60*60*1000;
 const overdue=item=>item.status==='pending'&&item.due_at&&new Date(item.due_at).getTime()<Date.now();
 function authTarget(){
-  const target=new URL(cfg.authUrl||'https://auth.ekodi.kr/?site=my');
+  const target=new URL(cfg.authUrl||'https://ekodi.kr/auth/?site=my');
   target.searchParams.set('site','my');
   target.searchParams.set('return_to',location.href.split('#')[0]);
   return target.href;

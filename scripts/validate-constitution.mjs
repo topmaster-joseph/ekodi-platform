@@ -13,7 +13,7 @@ const coreData = json('config/core-data-boundaries.json');
 const storage = json('config/storage-policy.json');
 const workspace = json('config/service-workspace-policy.json');
 
-if (constitution.version !== '1.8.3') fail('constitution version must remain 1.8.3 with the approved Bible Core provider-boundary amendment');
+if (constitution.version !== '1.9.0') fail('constitution version must be 1.9.0 with the approved one-domain C3 amendment and all prior approved amendments');
 if (constitution.status !== 'active') fail('constitution must be active');
 for (const principle of ['free-first-not-free-only','ekodi-core-is-source-of-truth','provider-independent-by-default','secure-by-default','one-domain-grammar','isolated-parallel-development','verification-first-evolution','security-native-intelligence','evidence-linked-recommendations','secure-projection-minimum-disclosure','integrated-responsibility-distributed-execution-standardized-connections','layered-governance-os-core-services-connections-workspaces','user-surface-engine-separation','capability-first-reuse','sustainable-scale-by-evidence','workspace-over-space','living-digital-commons-north-star','sovereign-autonomy-with-human-authority','person-workspace-role-capability-authority','observe-detect-reason-plan-execute-verify-recover-learn']) {
   if (!constitution.principles?.includes(principle)) fail(`missing constitutional principle: ${principle}`);
@@ -100,6 +100,10 @@ if (secureProjection.adminDefaultProfile !== 'admin_safe') fail('administrator d
 if (secureProjection.externalAiDefaultProfile !== 'ai_minimum') fail('external operational AI projection must default to ai_minimum');
 if (secureProjection.viewExportDownloadApiRawDataSeparated !== true) fail('view/export/download/API/raw-data capabilities must remain distinct');
 
+const surfaces=constitution.surfaceRoutingPolicy||{};
+if (surfaces.canonicalHost !== 'ekodi.kr') fail('one-domain canonical host must be ekodi.kr');
+for (const [key,path] of Object.entries({user:'/my',admin:'/admin',authentication:'/auth',api:'/api',mcp:'/mcp',webhooks:'/webhooks',health:'/health'})) if (surfaces[key] !== path) fail(`canonical surface drift: ${key}`);
+if (surfaces.humanSurfacesUsePaths !== true || surfaces.subdomainExecutionBoundariesAreNonCanonical !== true) fail('one-domain surface policy flags missing');
 const systemDomains = new Set(constitution.systemBoundaries?.production || []);
 const legacy = new Set(constitution.legacyDomainAllowlist || []);
 const registeredCommon = new Set(constitution.registeredCommonServiceBoundaries || []);
@@ -140,7 +144,7 @@ if (JSON.stringify(constitution.publicNamespaces || []) !== JSON.stringify(expec
 if (constitution.workspaceRoutingPolicy?.canonicalHost !== 'ekodi.kr') fail('workspace canonical host must be ekodi.kr');
 if (constitution.workspaceRoutingPolicy?.identityKey !== 'workspace_id') fail('workspace routing identity key must be workspace_id');
 if (constitution.workspaceRoutingPolicy?.workspaceSubdomainsForbidden !== true) fail('workspace subdomains must be forbidden');
-if (constitution.workspaceRoutingPolicy?.personalHomeSubdomainException !== 'my.ekodi.kr') fail('My EKODI must remain the personal-home subdomain exception');
+if (constitution.workspaceRoutingPolicy?.personalHomeSubdomainException !== null || constitution.workspaceRoutingPolicy?.personalHomeCanonicalPath !== '/my') fail('My EKODI canonical surface must be /my with no user-entry subdomain exception');
 if (constitution.workspaceRoutingPolicy?.canonicalOperatingTerm !== 'Workspace') fail('Workspace must be the canonical operating-context term');
 if (constitution.workspaceRoutingPolicy?.legacySpaceIsCompatibilityOnly !== true) fail('Space must remain compatibility-only during migration');
 
@@ -149,7 +153,7 @@ if (JSON.stringify(canonicalPatterns) !== JSON.stringify(['https://ekodi.kr/{slu
 if (constitution.workspaceRoutingPolicy?.kindEncodedInUrl !== false) fail('workspace kind/type must not be encoded in public URLs');
 if (constitution.workspaceRoutingPolicy?.reservedRootSlugsManagedBy !== 'platform_route_registry') fail('workspace root slug collisions must be controlled by the platform route registry');
 const servicePatterns = new Set(constitution.canonicalWorkspaceServicePatterns || []);
-for (const pattern of ['https://ekodi.kr/{slug}/{service}','https://ekodi.kr/{slug}/admin','https://ekodi.kr/{slug}/{service}/admin']) {
+for (const pattern of ['https://ekodi.kr/{slug}/{service}']) {
   if (!servicePatterns.has(pattern)) fail(`canonical workspace service pattern missing: ${pattern}`);
 }
 
@@ -174,7 +178,7 @@ if (!Array.isArray(coreData.protectedTables) || coreData.protectedTables.length 
 for (const table of ['customer_tenants','customer_users','customer_memberships','customer_access_grants']) if (!coreData.protectedTables?.includes(table)) fail(`core source-of-truth table not protected: ${table}`);
 if (!String(coreData.rule || '').includes('must not directly reference EKODI Core protected tables')) fail('core data access rule missing');
 
-if (workspace.schemaVersion !== 3) fail('service workspace policy schemaVersion must be 3');
+if (workspace.schemaVersion !== 4) fail('service workspace policy schemaVersion must be 4');
 if (workspace.identityAuthority !== 'ekodi') fail('service workspace identityAuthority must be ekodi');
 if (workspace.commonServiceUserAccessRule?.memberMinimumTier !== 'free') fail('common services must preserve free-member minimum access');
 if (workspace.customerWorkspaceRule?.preserveCustomerOwnership !== true) fail('customer workspace ownership must remain preserved');
@@ -183,12 +187,12 @@ if (workspace.publicWorkspaceRouting?.workspaceIdentityKey !== 'workspace_id') f
 if (workspace.publicWorkspaceRouting?.workspaceSubdomains !== 'forbidden') fail('service workspace subdomains must be forbidden');
 if (workspace.publicWorkspaceRouting?.canonicalPattern !== '/{slug}') fail('service workspace canonical route must be /{slug}');
 if (workspace.publicWorkspaceRouting?.servicePattern !== '/{slug}/{service}') fail('service workspace child service route must be /{slug}/{service}');
-if (workspace.publicWorkspaceRouting?.adminPattern !== '/{slug}/admin') fail('service workspace admin route must be /{slug}/admin');
-if (workspace.publicWorkspaceRouting?.serviceAdminPattern !== '/{slug}/{service}/admin') fail('service workspace child admin route must be /{slug}/{service}/admin');
+if (workspace.publicWorkspaceRouting?.adminPattern !== null || workspace.publicWorkspaceRouting?.adminSurface !== '/admin/workspaces') fail('workspace administration must use the centralized /admin/workspaces surface');
+if (workspace.publicWorkspaceRouting?.serviceAdminPattern !== null) fail('workspace service admin must not have a canonical tenant path');
 if (workspace.publicWorkspaceRouting?.kindEncodedInUrl !== false) fail('service workspace kind/type must not be encoded in public URLs');
-if (workspace.subdomainExceptions?.personalHome !== 'my.ekodi.kr') fail('service workspace policy must preserve my.ekodi.kr exception');
-if (workspace.subdomainExceptions?.administration !== 'admin.ekodi.kr') fail('service workspace policy must preserve admin.ekodi.kr exception');
-if (workspace.subdomainExceptions?.authentication !== 'auth.ekodi.kr') fail('service workspace policy must preserve auth.ekodi.kr exception');
+if (workspace.subdomainExceptions?.personalHome !== null) fail('service workspace policy must not preserve a personal-home user-entry subdomain');
+if (workspace.subdomainExceptions?.administration !== null) fail('service workspace policy must not preserve an administrator user-entry subdomain');
+if (workspace.subdomainExceptions?.authentication !== null) fail('service workspace policy must not preserve an authentication user-entry subdomain');
 if (workspace.userSurfaceTopologyPolicy?.customerSpecificAiSubdomains !== 'forbidden_as_canonical') fail('service workspace policy must forbid customer AI subdomains as canonical');
 if (workspace.userSurfaceTopologyPolicy?.marketingProduct !== 'https://ekodi.kr/ekodibiz/marketing-ai') fail('service workspace Marketing product canonical drift');
 if (workspace.userSurfaceTopologyPolicy?.workspaceMarketingPattern !== 'https://ekodi.kr/{slug}/marketing') fail('service workspace Marketing path pattern drift');

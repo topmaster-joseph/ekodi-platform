@@ -112,7 +112,7 @@ async function measureLatency(samples = 3) {
   for (let i = 0; i < samples; i += 1) {
     const started = performance.now();
     try {
-      const response = await fetch(`/config.js?device-care=${Date.now()}-${i}`, { cache: 'no-store', credentials: 'same-origin' });
+      const response = await fetch(`/my/config.js?device-care=${Date.now()}-${i}`, { cache: 'no-store', credentials: 'same-origin' });
       if (response.ok) values.push(performance.now() - started);
     } catch {}
   }
@@ -391,7 +391,7 @@ async function init() {
   $('#deviceCareOptimize')?.addEventListener('click', safeOptimize);
   $('#deviceCareLogin')?.addEventListener('click', () => {
     const target = encodeURIComponent(`${location.origin}${location.pathname}#device-care`);
-    location.assign(`https://auth.ekodi.kr/?site=my&return_to=${target}`);
+    location.assign(`https://ekodi.kr/auth/?site=my&return_to=${target}`);
   });
 
   if (!sb) {

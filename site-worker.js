@@ -89,6 +89,7 @@ const ADMIN_ASSETS = new Set([
   '/ekodi-message-ui.js',
   '/admin-shell.css',
   '/admin-finance.css',
+  '/admin-canonical-routes.js',
   '/admin-central-handoff.js',
   '/admin-authenticated-shell.js',
   '/admin-public-site-controls.js',
@@ -404,7 +405,7 @@ function adminAuthRedirect(returnPath) {
 }
 
 function adminApexAuthUrl() {
-  const target = new URL('https://auth.ekodi.kr/');
+  const target = new URL('https://ekodi.kr/auth/');
   target.searchParams.set('site', 'admin');
   target.searchParams.set('direct', '1');
   target.searchParams.set('return_to', 'https://ekodi.kr/admin');
@@ -523,6 +524,7 @@ export default {
       }
       if (isLegacyEkodiBizPath(url.pathname)) return redirectLegacyEkodiBizPath(request);
       if (isLegacyMallPath(url.pathname)) return redirectLegacyMallPath(request);
+      if (['GET','HEAD'].includes(request.method) && (url.pathname === '/ekodi-church' || url.pathname.startsWith('/ekodi-church/'))) { const target=new URL(request.url); target.pathname=url.pathname.replace(/^\/ekodi-church(?=\/|$)/i,'/ekodichurch'); return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-content-type-options':'nosniff'}}); }
       if (['GET','HEAD'].includes(request.method) && isChurchPastorAdminPath(url.pathname)) return injectEkodiShell(churchPastorAdminPage(), 'church', 'admin');
       if (isWorkspaceAdminPath(url.pathname)) return injectEkodiShell(workspaceAdminPage(), 'space', 'admin');
       if (['GET','HEAD'].includes(request.method) && isEkodiBizInvestPath(url.pathname)) {

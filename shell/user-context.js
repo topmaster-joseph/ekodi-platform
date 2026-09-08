@@ -3,7 +3,7 @@
 if(window.__EKODI_USER_CONTEXT_BOOTED)return;
 window.__EKODI_USER_CONTEXT_BOOTED=true;
 const USER_SURFACES=new Set(['public','workspace']);
-const MY='https://my.ekodi.kr/';
+const MY='https://ekodi.kr/my/';
 let surface='';
 let context={name:'',workspace:'',workspaceId:'',role:'',signedIn:false};
 let boundShadow=null;

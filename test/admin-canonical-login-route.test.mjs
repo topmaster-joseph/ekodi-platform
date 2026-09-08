@@ -6,9 +6,10 @@ const read = path => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 
 test('historical storige entry is normalized and preserved through central auth', async () => {
   const handoff = await read('admin-central-handoff.js');
-  assert.match(handoff, /storige:'storage'/);
-  assert.match(handoff, /target=`https:\/\/admin\.ekodi\.kr\/\?route=\$\{encodeURIComponent\(r\)\}`/);
-  assert.match(handoff, /return_to=\$\{encodeURIComponent\(target\)\}/);
+  const routes = await read('admin-canonical-routes.js');
+  assert.match(routes, /storige:'storage'/);
+  assert.match(handoff, /new URL\('https:\/\/ekodi\.kr\/admin\/'\)/);
+  assert.match(handoff, /auth\.searchParams\.set\('return_to',target\.href\)/);
   assert.match(handoff, /query\.get\('route'\)/);
   assert.match(handoff, /cleanRouteUrl\(route\)/);
 });
@@ -25,9 +26,10 @@ test('legacy path is compatibility-only and converges to current AI Ops', async 
 
 test('authenticated Admin routing exposes only current hashes and cannot reopen retired legacy UI', async () => {
   const handoff = await read('admin-central-handoff.js');
+  const routes = await read('admin-canonical-routes.js');
   const shell = await read('admin-authenticated-shell.js');
-  assert.doesNotMatch(handoff, /legacy/);
-  assert.match(handoff, /ai-ops/);
+  assert.doesNotMatch(handoff, /\/legacy|legacy:/);
+  assert.match(routes, /'ai-ops':'aiops'/);
   assert.match(shell, /'ai-ops':'aiops'/);
   assert.doesNotMatch(shell, /control-center|\/legacy/);
 });

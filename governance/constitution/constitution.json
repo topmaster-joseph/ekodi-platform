@@ -1,5 +1,5 @@
 {
-  "version": "1.8.3",
+  "version": "1.9.0",
   "effectiveDate": "2026-09-08",
   "status": "active",
   "title": "EKODI Platform Constitution",
@@ -95,11 +95,14 @@
     "identityKey": "workspace_id",
     "slugIsLocatorOnly": true,
     "workspaceSubdomainsForbidden": true,
-    "personalHomeSubdomainException": "my.ekodi.kr",
+    "personalHomeSubdomainException": null,
     "kindEncodedInUrl": false,
     "reservedRootSlugsManagedBy": "platform_route_registry",
     "canonicalOperatingTerm": "Workspace",
-    "legacySpaceIsCompatibilityOnly": true
+    "legacySpaceIsCompatibilityOnly": true,
+    "personalHomeCanonicalPath": "/my",
+    "administrationCanonicalPath": "/admin",
+    "workspaceAdminCanonical": "/admin/workspaces"
   },
   "domainPolicy": {
     "newFeatureSubdomainsForbidden": true,
@@ -109,7 +112,9 @@
     "customDomainsMapToTenantPublicSpace": true,
     "legacyAliasesMayRedirect": true,
     "legacyAliasesMustBeRegistered": true,
-    "userFacingEngineAddressesForbidden": true
+    "userFacingEngineAddressesForbidden": true,
+    "canonicalHumanAndManagementHost": "ekodi.kr",
+    "subdomainUserEntryForbidden": true
   },
   "legacyPathAliases": {
     "https://space.ekodi.kr/{slug}": "https://ekodi.kr/{slug}",
@@ -276,8 +281,8 @@
     "rule": "C2/C3 changes are proposed first and applied only after explicit owner confirmation."
   },
   "legacyDomainTargets": {
-    "shell.ekodi.kr": "https://my.ekodi.kr",
-    "management.ekodi.kr": "https://my.ekodi.kr/management",
+    "shell.ekodi.kr": "https://ekodi.kr/my",
+    "management.ekodi.kr": "https://ekodi.kr/my/management",
     "mall.ekodi.kr": "https://ekodi.kr/ekodibiz/mall",
     "mall.biz.ekodi.kr": "https://ekodi.kr/ekodibiz/mall",
     "cafe.ekodi.kr": "https://ekodi.kr/cafe",
@@ -293,26 +298,32 @@
     "social.ekodi.kr": "https://ekodi.kr/social",
     "energy.ekodi.kr": "https://ekodi.kr/energy",
     "business.ekodi.kr": "https://ekodi.kr/business",
-    "finance-api.ekodi.kr": "https://api.ekodi.kr/v1/finance",
-    "drive.ekodi.kr": "https://my.ekodi.kr/files",
-    "marketing-api.ekodi.kr": "https://api.ekodi.kr/v1/marketing/domains",
-    "marketing-publish-api.ekodi.kr": "https://api.ekodi.kr/v1/marketing/publish",
+    "finance-api.ekodi.kr": "https://ekodi.kr/api/v1/finance",
+    "drive.ekodi.kr": "https://ekodi.kr/my/files",
+    "marketing-api.ekodi.kr": "https://ekodi.kr/api/v1/marketing/domains",
+    "marketing-publish-api.ekodi.kr": "https://ekodi.kr/api/v1/marketing/publish",
     "www.ekodi.kr": "https://ekodi.kr",
     "pay.ekodi.kr": "https://ekodi.kr/pay",
-    "trade.ekodi.kr": "https://ekodi.kr/trade",
-    "mail.ekodi.kr": "https://my.ekodi.kr/mail",
+    "trade.ekodi.kr": "https://ekodi.kr/ekodibiz/trade",
+    "mail.ekodi.kr": "https://ekodi.kr/my/mail",
     "live.ekodi.kr": "https://ekodi.kr/live",
     "biz.ekodi.kr": "https://ekodi.kr/ekodibiz",
-    "church.ekodi.kr": "https://ekodi.kr/ekodi-church",
-    "lab.ekodi.kr": "https://ekodi.kr/ekodi-lab",
-    "mail.*.ekodi.kr": "https://my.ekodi.kr/mail",
+    "church.ekodi.kr": "https://ekodi.kr/ekodichurch",
+    "lab.ekodi.kr": "https://ekodi.kr/ekodilab",
+    "mail.*.ekodi.kr": "https://ekodi.kr/my/mail",
     "cgma.ekodi.kr": "https://ekodi.kr/cgma",
     "cgma.ai.ekodi.kr": "https://ekodi.kr/cgma/marketing",
     "jadam.ai.ekodi.kr": "https://ekodi.kr/jadam/marketing",
     "pizzamaru.ai.ekodi.kr": "https://ekodi.kr/pizzamaru/marketing",
     "yogurt.ai.ekodi.kr": "https://ekodi.kr/yogurt/marketing",
     "space.ekodi.kr": "https://ekodi.kr",
-    "user.ekodi.kr": "https://ekodi.kr"
+    "user.ekodi.kr": "https://ekodi.kr",
+    "my.ekodi.kr": "https://ekodi.kr/my",
+    "admin.ekodi.kr": "https://ekodi.kr/admin",
+    "auth.ekodi.kr": "https://ekodi.kr/auth",
+    "api.ekodi.kr": "https://ekodi.kr/api",
+    "trade.biz.ekodi.kr": "https://ekodi.kr/ekodibiz/trade",
+    "ins.ekodi.kr": "https://ekodi.kr/insurance"
   },
   "registeredCommonServiceBoundaries": [
     "journal.ekodi.kr",
@@ -401,9 +412,7 @@
     "workspaceConvergenceTarget": "Person + Workspace + Membership + Capability"
   },
   "canonicalWorkspaceServicePatterns": [
-    "https://ekodi.kr/{slug}/{service}",
-    "https://ekodi.kr/{slug}/admin",
-    "https://ekodi.kr/{slug}/{service}/admin"
+    "https://ekodi.kr/{slug}/{service}"
   ],
   "customerOwnedDomainMappings": {
     "cgma.or.kr": "https://ekodi.kr/cgma"
@@ -473,5 +482,27 @@
     "sharedRuntimeAllowedAtS0": true,
     "experienceDataPolicy": "synthetic-only",
     "developerDataPolicy": "public-contract-only"
+  },
+  "surfaceRoutingPolicy": {
+    "canonicalHost": "ekodi.kr",
+    "public": "/",
+    "user": "/my",
+    "admin": "/admin",
+    "authentication": "/auth",
+    "api": "/api",
+    "mcp": "/mcp",
+    "webhooks": "/webhooks",
+    "health": "/health",
+    "humanSurfacesUsePaths": true,
+    "systemExecutionUsesDedicatedSecurityRealms": true,
+    "subdomainExecutionBoundariesAreNonCanonical": true,
+    "adminServiceManagement": {
+      "system": "/admin/system/{service}",
+      "common": "/admin/common/{service}",
+      "professional": "/admin/professional/{service}",
+      "workspaces": "/admin/workspaces/{capability}",
+      "operations": "/admin/operations/{capability}"
+    },
+    "rule": "One domain, multiple security realms: human and management surfaces are canonical paths on ekodi.kr; subdomains may remain only as justified internal, protocol, emergency or compatibility execution boundaries."
   }
 }

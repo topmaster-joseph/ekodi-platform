@@ -12,7 +12,7 @@ function setStatus(message,error=false){
   $('status').style.color=error?'#9b2c2c':'';
 }
 function loginUrl(){
-  const target=new URL('https://auth.ekodi.kr/');
+  const target=new URL('https://ekodi.kr/auth/');
   target.searchParams.set('site','oauth');
   target.searchParams.set('return_to',location.href);
   return target.href;

@@ -5,9 +5,11 @@ import { authorizeCapabilityInvocation, SOVEREIGN_CAPABILITY_FABRIC } from './so
 
 const SUPABASE_URL='https://renzehysxirjilvdxacv.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
-export const EKODI_MCP_RESOURCE='https://api.ekodi.kr/mcp';
+export const EKODI_MCP_RESOURCE='https://ekodi.kr/mcp';
+export const EKODI_MCP_LEGACY_RESOURCES=Object.freeze(['https://api.ekodi.kr/mcp']);
+const ACCEPTED_MCP_RESOURCES=Object.freeze([EKODI_MCP_RESOURCE,...EKODI_MCP_LEGACY_RESOURCES]);
 export const EKODI_MCP_AUTH_SERVER=`${SUPABASE_URL}/auth/v1`;
-export const EKODI_MCP_METADATA_URL='https://api.ekodi.kr/.well-known/oauth-protected-resource';
+export const EKODI_MCP_METADATA_URL='https://ekodi.kr/.well-known/oauth-protected-resource';
 const PROTOCOL_VERSION='2026-07-28';
 const OAUTH_SCHEME=Object.freeze({type:'oauth2',scopes:['openid','email','profile']});
 const TOOL_CAPABILITIES=Object.freeze({
@@ -21,6 +23,17 @@ function json(data,status=200,headers={}){
     'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff',...headers,
   }});
 }
+function mcpResponseHeaders(request,headers={}){
+  const host=(()=>{try{return new URL(request.url).hostname.toLowerCase()}catch{return ''}})();
+  return {
+    link:`<${EKODI_MCP_RESOURCE}>; rel="canonical"`,
+    'x-ekodi-mcp-resource':EKODI_MCP_RESOURCE,
+    ...(host==='api.ekodi.kr'?{'x-ekodi-mcp-legacy-endpoint':'true'}:{}),
+    ...headers,
+  };
+}
+function mcpJson(request,data,status=200,headers={}){return json(data,status,mcpResponseHeaders(request,headers))}
+function mcpEmpty(request,status=202,headers={}){return new Response(null,{status,headers:mcpResponseHeaders(request,headers)})}
 function bearerToken(request){
   const value=String(request.headers.get('authorization')||'');
   return value.toLowerCase().startsWith('bearer ')?value.slice(7).trim():'';
@@ -33,10 +46,11 @@ function base64UrlJson(segment){
 export function mcpProtectedResourceMetadata(){
   return Object.freeze({
     resource:EKODI_MCP_RESOURCE,
+    resource_name:'EKODI MCP Gateway',
     authorization_servers:[EKODI_MCP_AUTH_SERVER],
     scopes_supported:['openid','email','profile'],
     bearer_methods_supported:['header'],
-    resource_documentation:'https://auth.ekodi.kr/oauth/consent',
+    resource_documentation:'https://ekodi.kr/auth/oauth/consent',
   });
 }
 
@@ -50,11 +64,12 @@ export async function validateMcpBearer(request,{fetchImpl=fetch}={}){
   }}).catch(()=>null);
   if(!response?.ok)return {ok:false,reason:'invalid_token'};
   const user=await response.json();
-  const audience=Array.isArray(claims.aud)?claims.aud:[claims.aud];
+  const audience=(Array.isArray(claims.aud)?claims.aud:[claims.aud]).filter(Boolean).map(String);
   if(!claims.client_id)return {ok:false,reason:'oauth_client_required'};
-  if(!audience.includes(EKODI_MCP_RESOURCE))return {ok:false,reason:'invalid_audience'};
+  const resourceAudience=ACCEPTED_MCP_RESOURCES.find(resource=>audience.includes(resource));
+  if(!resourceAudience)return {ok:false,reason:'invalid_audience'};
   if(String(claims.sub||'')!==String(user?.id||''))return {ok:false,reason:'subject_mismatch'};
-  return {ok:true,token,user,claims};
+  return {ok:true,token,user,claims,resourceAudience,legacyAudience:resourceAudience!==EKODI_MCP_RESOURCE};
 }
 export const EKODI_MCP_TOOLS=Object.freeze([
   Object.freeze({
@@ -184,12 +199,14 @@ async function handleRpc(message,request,env,dependencies={}){
     instructions:'Use EKODI capabilities only for the signed-in user and within the declared Capability Fabric contract.',
     ttlMs:300000,
     cacheScope:'public',
-    _meta:{'io.modelcontextprotocol/serverInfo':{name:'ekodi-sovereign-capability-fabric',version:'2026-09-06.1'}},
+    resource:EKODI_MCP_RESOURCE,
+    fabric:SOVEREIGN_CAPABILITY_FABRIC,
+    _meta:{'io.modelcontextprotocol/serverInfo':{name:'ekodi-sovereign-capability-fabric',version:'2026-09-08.1'}},
   });
   if(method==='initialize')return rpcResult(id,{
     protocolVersion:'2025-06-18',
     capabilities:{tools:{listChanged:false}},
-    serverInfo:{name:'ekodi-sovereign-capability-fabric',version:'2026-09-06.1'},
+    serverInfo:{name:'ekodi-sovereign-capability-fabric',version:'2026-09-08.1'},
     instructions:'Legacy compatibility. Modern clients should use MCP 2026-07-28 server/discover.',
   });
   if(method==='ping')return rpcResult(id,{});
@@ -204,18 +221,18 @@ async function handleRpc(message,request,env,dependencies={}){
 }
 
 export function handleEkodiMcpMetadata(request){
-  if(request.method!=='GET'&&request.method!=='HEAD')return json({error:'method_not_allowed'},405,{allow:'GET, HEAD'});
-  return json(mcpProtectedResourceMetadata());
+  if(request.method!=='GET'&&request.method!=='HEAD')return mcpJson(request,{error:'method_not_allowed'},405,{allow:'GET, HEAD'});
+  return mcpJson(request,mcpProtectedResourceMetadata());
 }
 export async function handleEkodiMcpGateway(request,env,dependencies={}){
-  if(request.method==='GET')return json({error:'streaming_get_not_supported',transport:'stateless-streamable-http'},405,{allow:'POST'});
-  if(request.method!=='POST')return json({error:'method_not_allowed'},405,{allow:'POST'});
+  if(request.method==='GET')return mcpJson(request,{error:'streaming_get_not_supported',transport:'stateless-streamable-http'},405,{allow:'POST'});
+  if(request.method!=='POST')return mcpJson(request,{error:'method_not_allowed'},405,{allow:'POST'});
   let payload=null;
-  try{payload=await request.json()}catch{return json(rpcError(null,-32700,'Parse error'),400)}
+  try{payload=await request.json()}catch{return mcpJson(request,rpcError(null,-32700,'Parse error'),400)}
   if(Array.isArray(payload)){
     const output=(await Promise.all(payload.map(item=>handleRpc(item,request,env,dependencies)))).filter(Boolean);
-    return output.length?json(output):new Response(null,{status:202});
+    return output.length?mcpJson(request,output):mcpEmpty(request,202);
   }
   const result=await handleRpc(payload,request,env,dependencies);
-  return result?json(result):new Response(null,{status:202});
+  return result?mcpJson(request,result):mcpEmpty(request,202);
 }
