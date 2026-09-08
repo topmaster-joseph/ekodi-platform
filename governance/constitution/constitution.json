@@ -1,5 +1,5 @@
 {
-  "version": "1.8.3",
+  "version": "1.8.4",
   "effectiveDate": "2026-09-08",
   "status": "active",
   "title": "EKODI Platform Constitution",
@@ -27,7 +27,8 @@
     "living-digital-commons-north-star",
     "sovereign-autonomy-with-human-authority",
     "person-workspace-role-capability-authority",
-    "observe-detect-reason-plan-execute-verify-recover-learn"
+    "observe-detect-reason-plan-execute-verify-recover-learn",
+    "external-canonical-surface-internal-boundary-separation"
   ],
   "architectureModel": {
     "registry": "governance/architecture/ekodi-os-architecture.json",
@@ -68,7 +69,28 @@
       "auth.dev.ekodi.kr",
       "api.dev.ekodi.kr"
     ],
-    "rule": "User-operated spaces live under ekodi.kr paths. Subdomains are reserved for justified system, security, protocol, common-service or core-service boundaries and never define workspace identity."
+    "rule": "These hosts are registered internal runtime, security, protocol or deployment boundaries. They do not define EKODI-owned external canonical URLs, which use ekodi.kr paths."
+  },
+  "externalCanonicalSurfacePolicy": {
+    "host": "ekodi.kr",
+    "rule": "All EKODI-owned externally presented canonical URLs use ekodi.kr paths. Internal runtime hosts remain separated by responsibility, security, protocol and deployment boundaries and are not canonical external URLs.",
+    "pathBased": true,
+    "paths": {
+      "personalHome": "/my",
+      "administration": "/admin",
+      "authentication": "/auth",
+      "api": "/api",
+      "mcp": "/mcp",
+      "webhooks": "/webhooks",
+      "status": "/status",
+      "developer": "/dev",
+      "experience": "/exp"
+    },
+    "internalBoundaryVisibility": "not_canonical_external",
+    "internalServiceCallsMayUseRegisteredRuntimeBoundaries": true,
+    "edgeMayRouteCanonicalPathsToInternalBoundaries": true,
+    "customerOwnedDomainsAllowed": true,
+    "runtimeMigrationMode": "compatibility_first_no_breaking_cutover"
   },
   "publicNamespaces": [
     "workspace-root-slug"
@@ -84,11 +106,11 @@
     "association",
     "institution"
   ],
-  "privateWorkspacePattern": "https://my.ekodi.kr/w/{workspace}",
+  "privateWorkspacePattern": "https://ekodi.kr/my/w/{workspace}",
   "featurePatterns": [
     "https://ekodi.kr/{feature}",
-    "https://my.ekodi.kr/{feature}",
-    "https://api.ekodi.kr/v1/{feature}"
+    "https://ekodi.kr/my/{feature}",
+    "https://ekodi.kr/api/v1/{feature}"
   ],
   "workspaceRoutingPolicy": {
     "canonicalHost": "ekodi.kr",
@@ -96,6 +118,9 @@
     "slugIsLocatorOnly": true,
     "workspaceSubdomainsForbidden": true,
     "personalHomeSubdomainException": "my.ekodi.kr",
+    "personalHomeCanonicalPath": "/my",
+    "personalHomeRuntimeBoundary": "my.ekodi.kr",
+    "personalHomeSubdomainExceptionRole": "runtime_compatibility_only",
     "kindEncodedInUrl": false,
     "reservedRootSlugsManagedBy": "platform_route_registry",
     "canonicalOperatingTerm": "Workspace",
@@ -109,7 +134,11 @@
     "customDomainsMapToTenantPublicSpace": true,
     "legacyAliasesMayRedirect": true,
     "legacyAliasesMustBeRegistered": true,
-    "userFacingEngineAddressesForbidden": true
+    "userFacingEngineAddressesForbidden": true,
+    "ekodiOwnedExternalCanonicalHost": "ekodi.kr",
+    "externalCanonicalPathsRequired": true,
+    "registeredRuntimeSubdomainsAreExternallyCanonical": false,
+    "internalRuntimeBoundariesMayRemainReachable": true
   },
   "legacyPathAliases": {
     "https://space.ekodi.kr/{slug}": "https://ekodi.kr/{slug}",
@@ -276,8 +305,8 @@
     "rule": "C2/C3 changes are proposed first and applied only after explicit owner confirmation."
   },
   "legacyDomainTargets": {
-    "shell.ekodi.kr": "https://my.ekodi.kr",
-    "management.ekodi.kr": "https://my.ekodi.kr/management",
+    "shell.ekodi.kr": "https://ekodi.kr/my",
+    "management.ekodi.kr": "https://ekodi.kr/my/management",
     "mall.ekodi.kr": "https://ekodi.kr/ekodibiz/mall",
     "mall.biz.ekodi.kr": "https://ekodi.kr/ekodibiz/mall",
     "cafe.ekodi.kr": "https://ekodi.kr/cafe",
@@ -293,19 +322,19 @@
     "social.ekodi.kr": "https://ekodi.kr/social",
     "energy.ekodi.kr": "https://ekodi.kr/energy",
     "business.ekodi.kr": "https://ekodi.kr/business",
-    "finance-api.ekodi.kr": "https://api.ekodi.kr/v1/finance",
-    "drive.ekodi.kr": "https://my.ekodi.kr/files",
-    "marketing-api.ekodi.kr": "https://api.ekodi.kr/v1/marketing/domains",
-    "marketing-publish-api.ekodi.kr": "https://api.ekodi.kr/v1/marketing/publish",
+    "finance-api.ekodi.kr": "https://ekodi.kr/api/v1/finance",
+    "drive.ekodi.kr": "https://ekodi.kr/my/files",
+    "marketing-api.ekodi.kr": "https://ekodi.kr/api/v1/marketing/domains",
+    "marketing-publish-api.ekodi.kr": "https://ekodi.kr/api/v1/marketing/publish",
     "www.ekodi.kr": "https://ekodi.kr",
     "pay.ekodi.kr": "https://ekodi.kr/pay",
     "trade.ekodi.kr": "https://ekodi.kr/trade",
-    "mail.ekodi.kr": "https://my.ekodi.kr/mail",
+    "mail.ekodi.kr": "https://ekodi.kr/my/mail",
     "live.ekodi.kr": "https://ekodi.kr/live",
     "biz.ekodi.kr": "https://ekodi.kr/ekodibiz",
     "church.ekodi.kr": "https://ekodi.kr/ekodi-church",
     "lab.ekodi.kr": "https://ekodi.kr/ekodi-lab",
-    "mail.*.ekodi.kr": "https://my.ekodi.kr/mail",
+    "mail.*.ekodi.kr": "https://ekodi.kr/my/mail",
     "cgma.ekodi.kr": "https://ekodi.kr/cgma",
     "cgma.ai.ekodi.kr": "https://ekodi.kr/cgma/marketing",
     "jadam.ai.ekodi.kr": "https://ekodi.kr/jadam/marketing",
@@ -417,7 +446,9 @@
     "marketingCore": "https://marketing.ekodi.kr",
     "aiGateway": "https://ai.ekodi.kr",
     "customerAiSubdomains": "legacy_execution_alias_only",
-    "providerTopologyVisibleToOrdinaryUsers": false
+    "providerTopologyVisibleToOrdinaryUsers": false,
+    "engineBoundaryRole": "internal_runtime_not_external_canonical",
+    "engineBoundariesExternallyCanonical": false
   },
   "sovereignAutonomousOperations": {
     "version": "1.8.1",
@@ -466,10 +497,13 @@
     "unbudgetedPaidCommitmentForbidden": true
   },
   "publicPortalPolicy": {
-    "developerPortal": "https://dev.ekodi.kr",
-    "experiencePortal": "https://exp.ekodi.kr",
-    "legacyExperienceAlias": "https://try.ekodi.kr",
-    "developmentMirrorRule": "nested *.dev.ekodi.kr system hosts only; dev.ekodi.kr root is reserved for the public developer portal",
+    "developerPortal": "https://ekodi.kr/dev",
+    "experiencePortal": "https://ekodi.kr/exp",
+    "legacyExperienceAlias": "https://ekodi.kr/exp",
+    "developerRuntimeBoundary": "https://dev.ekodi.kr",
+    "experienceRuntimeBoundary": "https://exp.ekodi.kr",
+    "legacyExperienceRuntimeAlias": "https://try.ekodi.kr",
+    "developmentMirrorRule": "nested *.dev.ekodi.kr hosts are internal development boundaries; EKODI-owned external canonical development and experience entries use ekodi.kr paths",
     "sharedRuntimeAllowedAtS0": true,
     "experienceDataPolicy": "synthetic-only",
     "developerDataPolicy": "public-contract-only"

@@ -1,4 +1,4 @@
-# EKODI Platform Constitution v1.8.3
+# EKODI Platform Constitution v1.8.4
 
 Effective: 2026-09-08
 
@@ -38,25 +38,20 @@ This constitution is the highest architecture and operations rule for EKODI Plat
 - Machine-readable authority is `governance/architecture/sovereign-autonomous-operations.v1.json`; cross-cutting surface policy is `config/sovereign-surface-policy.json`.
 
 ## 2. Domain Constitution
-- The apex `ekodi.kr` is the canonical public ecosystem entry point and canonical host for user-operated public spaces.
-- Stable production system boundaries include `my.ekodi.kr`, `admin.ekodi.kr`, `auth.ekodi.kr`, `api.ekodi.kr` and `status.ekodi.kr` in addition to `ekodi.kr`.
-- Development mirrors production system boundaries on nested `*.dev.ekodi.kr` hosts such as `my.dev.ekodi.kr`, `admin.dev.ekodi.kr`, `auth.dev.ekodi.kr` and `api.dev.ekodi.kr`; the root `dev.ekodi.kr` is reserved for the public EKODI Developer portal.
-- Subdomains represent justified system, security, protocol, common-service or core-service boundaries. They must not represent person, organization, group or project identity.
-- Canonical public user-space addresses use the universal root pattern `ekodi.kr/{slug}`. Workspace kind is internal metadata and is never encoded into the public URL.
-- Workspace child services use `ekodi.kr/{slug}/{service}`; workspace administration uses `ekodi.kr/{slug}/admin` or `ekodi.kr/{slug}/{service}/admin`. Root slugs reserved for platform, common-service or core-service routes cannot be claimed by a workspace.
-- `space.ekodi.kr`, `user.ekodi.kr` and per-tenant subdomains are not canonical workspace addresses. If such aliases exist, they must redirect to the corresponding `ekodi.kr` path while preserving the remaining path where practical.
-- `my.ekodi.kr` remains the personal authenticated home/control surface and may present workspace participation, switching and private controls without becoming the canonical public workspace address.
+- **External canonical surface:** every EKODI-owned externally presented canonical URL uses the apex host `ekodi.kr` with a path. EKODI is one platform externally even when many independent runtimes operate internally.
+- Canonical system paths include `ekodi.kr/my`, `ekodi.kr/admin`, `ekodi.kr/auth`, `ekodi.kr/api`, `ekodi.kr/mcp`, `ekodi.kr/webhooks`, `ekodi.kr/status`, `ekodi.kr/dev` and `ekodi.kr/exp`.
+- Canonical public Workspace addresses use `ekodi.kr/{slug}`. Child services use `ekodi.kr/{slug}/{service}`; Workspace administration uses `ekodi.kr/{slug}/admin` or `ekodi.kr/{slug}/{service}/admin`. Workspace kind is internal metadata and is never encoded into the public URL.
+- **Internal responsibility boundaries:** hosts such as `my.ekodi.kr`, `admin.ekodi.kr`, `auth.ekodi.kr`, `api.ekodi.kr`, `status.ekodi.kr`, `ai.ekodi.kr`, common/core-service hosts and protocol-specific hosts may remain registered runtime, security, protocol or deployment boundaries when justified. Their existence does not make them externally canonical URLs.
+- Internal service-to-service calls may use registered runtime boundaries, Service Bindings, queues, events, webhooks or adapters. External canonical routing may be edge-mapped to those internal boundaries without exposing implementation topology as the user contract.
+- A capability is routed by its responsible service contract, not merely because the request is an API. `api.ekodi.kr` is therefore an internal Shared Control Plane boundary, not the canonical address of every EKODI API.
+- Development and staging may use dedicated internal hosts such as nested `*.dev.ekodi.kr` or provider preview hosts, but published EKODI-owned production links use the canonical `ekodi.kr` path grammar unless an explicit external-domain exception is constitutionally registered.
+- Existing EKODI subdomains migrate compatibility-first. They may remain reachable as runtime or compatibility aliases while links, documentation, UI navigation and public contracts converge to `ekodi.kr` canonical paths. Breaking DNS or security cutovers require the applicable C3 migration gate.
 - Public and private routing resolve tenant/workspace authorization from immutable `workspace_id`; URL host, path and slug are routing locators, not identity or authorization truth.
-- Common services and core services may keep or receive dedicated subdomains only when security, operational isolation, protocol separation or independently managed service boundaries justify them and the domain is registered in constitutional governance.
-- `journal.ekodi.kr` is a registered common-service boundary for the EKODI living journal. It does not represent workspace identity; personal and tenant journal surfaces remain under their canonical `ekodi.kr` workspace paths and resolve authority from immutable `workspace_id`.
-- `exp.ekodi.kr` is the canonical registered common-service boundary for EKODI Experience. It exposes synthetic data and sanitized public projections only; it is never a workspace identity, production-data mirror or internal architecture surface. Legacy `try.ekodi.kr` permanently redirects to `exp.ekodi.kr`.
-- `dev.ekodi.kr` is the registered public EKODI Developer and Conformance portal. It exposes public integration contracts, examples and browser-local preflight validation only; private repository structure, secrets, production customer data and internal provider topology remain excluded.
-- `invest.ekodi.kr` is the registered common Invest Core for Evidence-First research, diligence, IR and connection support; workspace-specific investment businesses remain under `ekodi.kr/{slug}/invest`.
-- `marketing.ekodi.kr` is the registered EKODI Marketing Core engine boundary. It is not the ordinary product or customer entry; the product entry is `ekodi.kr/ekodibiz/marketing-ai`, and workspace marketing uses `ekodi.kr/{slug}/marketing`.
-- `ai.ekodi.kr` is the registered provider-independent AI Gateway/Core boundary. Customer-specific `*.ai.ekodi.kr` addresses are compatibility execution aliases only and must not be presented as canonical user URLs.
-- Existing feature subdomains are legacy aliases unless explicitly registered as current system/common/core service boundaries. No new convenience or tenant-specific subdomain may be added without a constitutional amendment and the sustainable boundary-creation gate.
-- Customer-owned domains map to a workspace public surface and never redefine EKODI internal identity, `workspace_id` or private routing.
-- CGMA uses `https://ekodi.kr/cgma` as its EKODI platform route and `https://cgma.or.kr` as its customer-owned public address; legacy `cgma.ekodi.kr` is compatibility-only.
+- Common/core engines such as Marketing Core or AI Gateway may retain internal runtime boundaries. `ai.ekodi.kr` is the registered provider-independent AI Gateway/Core boundary for internal runtime use and is not an external canonical URL. Ordinary users must receive the corresponding canonical product or Workspace path rather than engine topology.
+- `dev.ekodi.kr`, `exp.ekodi.kr` and `try.ekodi.kr` are runtime or compatibility boundaries; canonical EKODI-owned Developer and Experience entries are `https://ekodi.kr/dev` and `https://ekodi.kr/exp`.
+- No new convenience, feature, tenant, person, organization, group or project subdomain may become an external canonical EKODI URL. Any new internal runtime boundary still requires constitutional governance and the sustainable boundary-creation gate.
+- Customer-owned domains are explicit external exceptions. They may map to a Workspace public surface but never redefine EKODI internal identity, `workspace_id`, authorization or private routing.
+- CGMA uses `https://ekodi.kr/cgma` as its EKODI canonical platform route and `https://cgma.or.kr` as its customer-owned public address; legacy `cgma.ekodi.kr` remains compatibility-only.
 
 ## 3. Identity and Tenant Constitution
 - EKODI `user_id` is canonical. Google, Microsoft, email and future identities are linked identities.

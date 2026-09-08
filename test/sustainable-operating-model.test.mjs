@@ -9,7 +9,7 @@ test('EKODI keeps separate user experience and administrator control planes', as
   const constitution = await read('AGENTS.md');
   const myHome = await read('my/index.html');
   assert.match(constitution, /A Super Administrator acts with platform authority only inside an explicit platform administration context/);
-  assert.match(constitution, /`admin\.ekodi\.kr` or the appropriate control plane can observe resulting service state/);
+  assert.match(constitution, /canonical `https:\/\/ekodi\.kr\/admin` surface, backed by the appropriate internal control plane, can observe resulting service state/);
   assert.match(myHome, /모든 일반사용자를 위한 EKODI 개인 홈/);
   assert.match(myHome, /data-ekodi-ui="USER"/);
   assert.match(myHome, /내 공간/);

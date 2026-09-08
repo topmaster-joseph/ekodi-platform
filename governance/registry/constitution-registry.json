@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-09-05",
+  "updatedAt": "2026-09-08",
   "title": "EKODI Constitution Registry Index",
   "mode": "index-only",
   "authority": {
@@ -99,6 +99,26 @@
         "platform-router-entry-worker.js",
         "auth-site/admin-auth.js",
         "test/ai-gateway-domain.test.mjs"
+      ]
+    },
+    {
+      "id": "DOMAIN-003",
+      "area": "external-canonical-surface",
+      "title": "One external EKODI surface with internal responsibility boundaries",
+      "status": "active",
+      "sourcePointer": "/externalCanonicalSurfacePolicy",
+      "impactPaths": [
+        "CONSTITUTION.md",
+        "AGENTS.md",
+        "platform-boundaries.json",
+        "config/service-workspace-policy.json",
+        "platform-router-entry-worker.js",
+        "site-worker.js",
+        "wrangler.*.toml",
+        "deploy/**",
+        ".github/workflows/**",
+        "docs/**",
+        "test/**"
       ]
     },
     {

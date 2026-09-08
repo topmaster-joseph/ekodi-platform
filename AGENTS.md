@@ -43,13 +43,15 @@ Existing hard safeguards remain hard safeguards. Security validation, tenant iso
 
 ## 3. Domain and workspace identity
 
-Do not invent domain or tenant naming rules from memory. Consult `DOMAIN-001`, `WORKSPACE-001` and the corresponding canonical fields in `governance/constitution/constitution.json`.
+Do not invent domain or tenant naming rules from memory. Consult `DOMAIN-001`, `DOMAIN-003`, `WORKSPACE-001` and the corresponding canonical fields in `governance/constitution/constitution.json`.
 
 Current canonical workspace identity is derived from immutable `workspace_id`. Hostnames, slugs and URL paths are routing locators, not authorization truth. Public user-operated spaces follow the canonical workspace routing grammar declared by the constitution. Workspace type remains internal metadata unless a separately approved constitutional rule says otherwise.
 
-Dedicated subdomains are reserved for justified system, security, protocol, common-service or core-service boundaries registered in constitutional governance. Historical customer, feature or AI subdomain examples are legacy or compatibility information unless the current constitution explicitly registers them as active boundaries.
+All EKODI-owned externally presented canonical URLs use `ekodi.kr` paths. This includes platform system surfaces such as `/my`, `/admin`, `/auth`, `/api`, `/mcp`, `/webhooks`, `/status`, `/dev` and `/exp`, as well as Workspace and product paths. Do not infer an external canonical URL from an internal Worker, service, subdomain, deployment manifest or origin.
 
-Marketing user surfaces are canonical paths: `ekodi.kr/ekodibiz/marketing-ai` for the EKODIBIZ product and `ekodi.kr/{slug}/marketing` for workspace use, including `ekodi.kr/jadam/marketing`, `ekodi.kr/pizzamaru/marketing`, `ekodi.kr/yogurt/marketing`, and `ekodi.kr/cgma/marketing`. `marketing.ekodi.kr` is an engine boundary and `ai.ekodi.kr` is the AI Gateway/Core; do not expose either as an ordinary customer entry.
+Dedicated subdomains may remain only as justified internal runtime, security, protocol, common-service, core-service or compatibility boundaries registered in constitutional governance. They may be used for service-to-service execution and operational isolation, but they are not externally canonical merely because they exist. External links, documentation, navigation and public contracts must prefer the canonical `ekodi.kr` path. Customer-owned domains are explicit governed exceptions.
+
+Marketing user surfaces are canonical paths: `ekodi.kr/ekodibiz/marketing-ai` for the EKODIBIZ product and `ekodi.kr/{slug}/marketing` for workspace use, including `ekodi.kr/jadam/marketing`, `ekodi.kr/pizzamaru/marketing`, `ekodi.kr/yogurt/marketing`, and `ekodi.kr/cgma/marketing`. `marketing.ekodi.kr` is an internal engine boundary and `ai.ekodi.kr` is an internal AI Gateway/Core boundary; do not expose either as an ordinary customer entry.
 
 Customer-owned domains may map to a workspace public surface but never redefine EKODI internal identity or authorization.
 
@@ -108,7 +110,7 @@ For business-critical changes, “done” means all applicable items below are t
 4. Guarded deployment succeeds when deployment is part of the task.
 5. Real production hostname returns the expected status and content.
 6. Redirect behavior is verified when routing changes.
-7. `admin.ekodi.kr` or the appropriate control plane can observe resulting service state.
+7. The canonical `https://ekodi.kr/admin` surface, backed by the appropriate internal control plane, can observe resulting service state.
 8. Security, human agency and tenant boundaries remain intact.
 9. Failure is visible through monitoring or operational logs.
 

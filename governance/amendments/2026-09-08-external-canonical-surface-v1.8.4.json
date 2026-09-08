@@ -1,0 +1,42 @@
+{
+  "id": "external-canonical-surface-v1.8.4",
+  "constitutionVersion": "1.8.4",
+  "status": "approved",
+  "changeClass": "C2",
+  "approvedBy": "topmaster-joseph",
+  "approvedAt": "2026-09-08",
+  "taskId": "external-canonical-surface-v1.8.4-20260908",
+  "summary": "Establish one EKODI-owned external canonical surface under ekodi.kr paths while preserving internal runtime, security, protocol and deployment boundaries by responsibility.",
+  "approvalBasis": "The platform owner explicitly approved consistent external ekodi.kr routing with separated internal services and requested that the rule be recorded, managed and operated as repository constitution.",
+  "rules": [
+    "All EKODI-owned externally presented canonical URLs use ekodi.kr paths.",
+    "Internal subdomains and Workers may remain separated for responsibility, security, protocol, deployment and service-to-service execution.",
+    "Internal runtime hostnames do not become external canonical URLs merely because they are reachable.",
+    "Customer-owned domains remain governed external exceptions and never become EKODI identity authority.",
+    "External canonical path convergence is compatibility-first; destructive DNS or security-boundary cutovers require a staged C3 migration."
+  ],
+  "canonicalSystemPaths": {
+    "personalHome": "https://ekodi.kr/my",
+    "administration": "https://ekodi.kr/admin",
+    "authentication": "https://ekodi.kr/auth",
+    "api": "https://ekodi.kr/api",
+    "mcp": "https://ekodi.kr/mcp",
+    "webhooks": "https://ekodi.kr/webhooks",
+    "status": "https://ekodi.kr/status",
+    "developer": "https://ekodi.kr/dev",
+    "experience": "https://ekodi.kr/exp"
+  },
+  "migrationPolicy": {
+    "mode": "compatibility-first",
+    "internalRuntimeHostsRemainAvailable": true,
+    "newExternalLinksMustUseApexPaths": true,
+    "runtimeCutoverRequiresSeparateGuardedMigration": true
+  },
+  "rollback": "Revert the v1.8.4 constitutional, registry, policy and validator changes. This amendment performs no destructive DNS, data or production runtime cutover, so rollback leaves existing runtime boundaries intact.",
+  "verification": [
+    "validate constitution and platform boundary registries",
+    "validate amendment approval gate",
+    "run focused external canonical surface contract tests",
+    "run repository check and test suites before merge"
+  ]
+}

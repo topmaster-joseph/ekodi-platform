@@ -12,6 +12,12 @@ const requireFile = async relative => {
 
 const manifest = JSON.parse(await read('platform-boundaries.json'));
 if (manifest.version !== 1) failures.push('platform-boundaries.json version must be 1');
+const externalSurface = manifest.externalCanonicalSurfacePolicy || {};
+const expectedCanonicalPaths = { personalHome:'/my', administration:'/admin', authentication:'/auth', api:'/api', mcp:'/mcp', webhooks:'/webhooks', status:'/status', developer:'/dev', experience:'/exp' };
+if (externalSurface.host !== 'ekodi.kr' || externalSurface.pathBased !== true) failures.push('external canonical surface must be path-based on ekodi.kr');
+if (externalSurface.internalDomainsAreImplementationBoundaries !== true || externalSurface.internalDomainsDoNotDefineCanonicalExternalUrls !== true) failures.push('internal platform domains must remain implementation boundaries, not external canonical URLs');
+for (const [key,value] of Object.entries(expectedCanonicalPaths)) if (externalSurface.canonicalSystemPaths?.[key] !== value) failures.push(`external canonical path mismatch: ${key}`);
+if (externalSurface.migration !== 'compatibility-first') failures.push('external canonical surface migration must remain compatibility-first');
 
 for (const [id, platform] of Object.entries(manifest.platforms || {})) {
   if (!platform.deployWorkflow) failures.push(`${id}: deployWorkflow is required`);

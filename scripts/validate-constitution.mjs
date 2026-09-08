@@ -13,9 +13,9 @@ const coreData = json('config/core-data-boundaries.json');
 const storage = json('config/storage-policy.json');
 const workspace = json('config/service-workspace-policy.json');
 
-if (constitution.version !== '1.8.3') fail('constitution version must remain 1.8.3 with the approved Bible Core provider-boundary amendment');
+if (constitution.version !== '1.8.4') fail('constitution version must remain 1.8.4 with the approved external canonical surface amendment');
 if (constitution.status !== 'active') fail('constitution must be active');
-for (const principle of ['free-first-not-free-only','ekodi-core-is-source-of-truth','provider-independent-by-default','secure-by-default','one-domain-grammar','isolated-parallel-development','verification-first-evolution','security-native-intelligence','evidence-linked-recommendations','secure-projection-minimum-disclosure','integrated-responsibility-distributed-execution-standardized-connections','layered-governance-os-core-services-connections-workspaces','user-surface-engine-separation','capability-first-reuse','sustainable-scale-by-evidence','workspace-over-space','living-digital-commons-north-star','sovereign-autonomy-with-human-authority','person-workspace-role-capability-authority','observe-detect-reason-plan-execute-verify-recover-learn']) {
+for (const principle of ['free-first-not-free-only','ekodi-core-is-source-of-truth','provider-independent-by-default','secure-by-default','one-domain-grammar','isolated-parallel-development','verification-first-evolution','security-native-intelligence','evidence-linked-recommendations','secure-projection-minimum-disclosure','integrated-responsibility-distributed-execution-standardized-connections','layered-governance-os-core-services-connections-workspaces','user-surface-engine-separation','capability-first-reuse','sustainable-scale-by-evidence','workspace-over-space','living-digital-commons-north-star','sovereign-autonomy-with-human-authority','person-workspace-role-capability-authority','observe-detect-reason-plan-execute-verify-recover-learn','external-canonical-surface-internal-boundary-separation']) {
   if (!constitution.principles?.includes(principle)) fail(`missing constitutional principle: ${principle}`);
 }
 
@@ -106,21 +106,35 @@ const registeredCommon = new Set(constitution.registeredCommonServiceBoundaries 
 const registeredCore = new Set(constitution.registeredCoreServiceBoundaries || []);
 const targets = constitution.legacyDomainTargets || {};
 const customerOwned = constitution.customerOwnedDomainMappings || {};
-if (!systemDomains.has('ekodi.kr') || !systemDomains.has('api.ekodi.kr') || !systemDomains.has('auth.ekodi.kr')) fail('canonical system domain set is incomplete');
+const externalSurface = constitution.externalCanonicalSurfacePolicy || {};
+const expectedSystemPaths = {personalHome:'/my',administration:'/admin',authentication:'/auth',api:'/api',mcp:'/mcp',webhooks:'/webhooks',status:'/status',developer:'/dev',experience:'/exp'};
+if (!systemDomains.has('ekodi.kr') || !systemDomains.has('api.ekodi.kr') || !systemDomains.has('auth.ekodi.kr')) fail('registered runtime boundary set is incomplete');
+if (externalSurface.host !== 'ekodi.kr' || externalSurface.pathBased !== true) fail('external canonical surface must be path-based on ekodi.kr');
+for (const [key,value] of Object.entries(expectedSystemPaths)) if (externalSurface.paths?.[key] !== value) fail(`external canonical system path mismatch: ${key}`);
+if (externalSurface.internalBoundaryVisibility !== 'not_canonical_external') fail('internal runtime boundaries must not become external canonical URLs');
+if (externalSurface.internalServiceCallsMayUseRegisteredRuntimeBoundaries !== true) fail('internal service calls must be allowed to use registered runtime boundaries');
+if (externalSurface.edgeMayRouteCanonicalPathsToInternalBoundaries !== true) fail('canonical edge paths must be allowed to route to internal boundaries');
+if (externalSurface.runtimeMigrationMode !== 'compatibility_first_no_breaking_cutover') fail('external canonical migration must remain compatibility-first');
+const boundarySurface = boundaries.externalCanonicalSurfacePolicy || {};
+if (boundarySurface.host !== 'ekodi.kr' || boundarySurface.pathBased !== true) fail('platform boundary registry must declare the ekodi.kr external canonical surface');
+if (boundarySurface.internalDomainsAreImplementationBoundaries !== true || boundarySurface.internalDomainsDoNotDefineCanonicalExternalUrls !== true) fail('platform boundary registry must separate internal domains from external canonical URLs');
+for (const [key,value] of Object.entries(expectedSystemPaths)) if (boundarySurface.canonicalSystemPaths?.[key] !== value) fail(`platform boundary canonical path mismatch: ${key}`);
+if (boundarySurface.migration !== 'compatibility-first') fail('platform boundary migration must be compatibility-first');
+if (constitution.domainPolicy?.ekodiOwnedExternalCanonicalHost !== 'ekodi.kr' || constitution.domainPolicy?.externalCanonicalPathsRequired !== true) fail('domain policy must require ekodi.kr canonical paths');
+if (constitution.domainPolicy?.registeredRuntimeSubdomainsAreExternallyCanonical !== false) fail('runtime subdomains must not be externally canonical');
 if (constitution.domainPolicy?.newFeatureSubdomainsForbidden !== true) fail('new feature subdomains must be forbidden');
 if (constitution.domainPolicy?.newTenantSubdomainsForbidden !== true) fail('new tenant/workspace subdomains must be forbidden');
 if (constitution.domainPolicy?.sustainableBoundaryGateRequired !== true) fail('new system/common/core subdomains must pass the sustainable boundary gate');
 if (!registeredCommon.has('journal.ekodi.kr')) fail('registered common-service boundary missing: journal.ekodi.kr');
-if (!registeredCommon.has('dev.ekodi.kr')) fail('registered public developer boundary missing: dev.ekodi.kr');
-if (!registeredCommon.has('exp.ekodi.kr')) fail('registered experience boundary missing: exp.ekodi.kr');
-if (!registeredCommon.has('try.ekodi.kr')) fail('registered Experience compatibility boundary missing: try.ekodi.kr');
+if (!registeredCommon.has('dev.ekodi.kr') || !registeredCommon.has('exp.ekodi.kr') || !registeredCommon.has('try.ekodi.kr')) fail('Developer/Experience runtime boundaries are incomplete');
 if (!registeredCommon.has('invest.ekodi.kr')) fail('registered common-service boundary missing: invest.ekodi.kr');
 if (!registeredCommon.has('marketing.ekodi.kr')) fail('registered common-service boundary missing: marketing.ekodi.kr');
 if (!registeredCore.has('ai.ekodi.kr')) fail('registered core-service boundary missing: ai.ekodi.kr');
-if (!systemDomains.has('dev.ekodi.kr') || !systemDomains.has('exp.ekodi.kr')) fail('public Developer/Experience production boundaries are incomplete');
-if ((constitution.systemBoundaries?.development || []).includes('dev.ekodi.kr')) fail('root dev.ekodi.kr must not remain a Development environment host');
+if (!systemDomains.has('dev.ekodi.kr') || !systemDomains.has('exp.ekodi.kr')) fail('Developer/Experience runtime boundary set is incomplete');
+if ((constitution.systemBoundaries?.development || []).includes('dev.ekodi.kr')) fail('root dev.ekodi.kr must not be a nested development-environment host');
 const portals=constitution.publicPortalPolicy||{};
-if (portals.developerPortal!=='https://dev.ekodi.kr' || portals.experiencePortal!=='https://exp.ekodi.kr') fail('public portal canonical domain policy mismatch');
+if (portals.developerPortal!=='https://ekodi.kr/dev' || portals.experiencePortal!=='https://ekodi.kr/exp') fail('public portal canonical path policy mismatch');
+if (portals.developerRuntimeBoundary!=='https://dev.ekodi.kr' || portals.experienceRuntimeBoundary!=='https://exp.ekodi.kr') fail('public portal runtime boundary policy mismatch');
 if (portals.sharedRuntimeAllowedAtS0!==true) fail('public portal S0 shared-runtime policy missing');
 if (portals.experienceDataPolicy!=='synthetic-only' || portals.developerDataPolicy!=='public-contract-only') fail('public portal data projection policy mismatch');
 const separation=constitution.userSurfaceEngineSeparation||{};
@@ -130,6 +144,7 @@ if (separation.marketingCore !== 'https://marketing.ekodi.kr') fail('Marketing C
 if (separation.aiGateway !== 'https://ai.ekodi.kr') fail('AI Gateway/Core boundary drift');
 if (separation.customerAiSubdomains !== 'legacy_execution_alias_only') fail('customer AI subdomains must remain legacy execution aliases');
 if (separation.providerTopologyVisibleToOrdinaryUsers !== false) fail('provider topology must stay hidden from ordinary users');
+if (separation.engineBoundaryRole !== 'internal_runtime_not_external_canonical' || separation.engineBoundariesExternallyCanonical !== false) fail('engine boundaries must remain internal runtime boundaries, not external canonical URLs');
 if (targets['cgma.ekodi.kr'] !== 'https://ekodi.kr/cgma') fail('CGMA legacy domain must target the canonical platform path');
 if (customerOwned['cgma.or.kr'] !== 'https://ekodi.kr/cgma') fail('CGMA customer-owned domain mapping must target the canonical platform path');
 
@@ -140,7 +155,10 @@ if (JSON.stringify(constitution.publicNamespaces || []) !== JSON.stringify(expec
 if (constitution.workspaceRoutingPolicy?.canonicalHost !== 'ekodi.kr') fail('workspace canonical host must be ekodi.kr');
 if (constitution.workspaceRoutingPolicy?.identityKey !== 'workspace_id') fail('workspace routing identity key must be workspace_id');
 if (constitution.workspaceRoutingPolicy?.workspaceSubdomainsForbidden !== true) fail('workspace subdomains must be forbidden');
-if (constitution.workspaceRoutingPolicy?.personalHomeSubdomainException !== 'my.ekodi.kr') fail('My EKODI must remain the personal-home subdomain exception');
+if (constitution.workspaceRoutingPolicy?.personalHomeSubdomainException !== 'my.ekodi.kr') fail('My EKODI runtime boundary must remain registered during compatibility migration');
+if (constitution.workspaceRoutingPolicy?.personalHomeCanonicalPath !== '/my') fail('My EKODI external canonical path must be /my');
+if (constitution.workspaceRoutingPolicy?.personalHomeRuntimeBoundary !== 'my.ekodi.kr') fail('My EKODI runtime boundary mismatch');
+if (constitution.workspaceRoutingPolicy?.personalHomeSubdomainExceptionRole !== 'runtime_compatibility_only') fail('My EKODI subdomain must be runtime compatibility only');
 if (constitution.workspaceRoutingPolicy?.canonicalOperatingTerm !== 'Workspace') fail('Workspace must be the canonical operating-context term');
 if (constitution.workspaceRoutingPolicy?.legacySpaceIsCompatibilityOnly !== true) fail('Space must remain compatibility-only during migration');
 
@@ -167,7 +185,7 @@ for (const [serviceId, service] of Object.entries(boundaries.platforms || {})) {
 for (const domain of legacy) {
   const target = targets[domain];
   if (!target) fail(`legacy domain target missing: ${domain}`);
-  else if (!/^https:\/\/(ekodi\.kr|my\.ekodi\.kr|api\.ekodi\.kr)(\/|$)/.test(target)) fail(`legacy target violates canonical grammar: ${domain} -> ${target}`);
+  else if (!/^https:\/\/ekodi\.kr(\/|$)/.test(target)) fail(`legacy target violates external canonical grammar: ${domain} -> ${target}`);
 }
 
 if (!Array.isArray(coreData.protectedTables) || coreData.protectedTables.length < 4) fail('core data protection table set is incomplete');
@@ -186,9 +204,15 @@ if (workspace.publicWorkspaceRouting?.servicePattern !== '/{slug}/{service}') fa
 if (workspace.publicWorkspaceRouting?.adminPattern !== '/{slug}/admin') fail('service workspace admin route must be /{slug}/admin');
 if (workspace.publicWorkspaceRouting?.serviceAdminPattern !== '/{slug}/{service}/admin') fail('service workspace child admin route must be /{slug}/{service}/admin');
 if (workspace.publicWorkspaceRouting?.kindEncodedInUrl !== false) fail('service workspace kind/type must not be encoded in public URLs');
-if (workspace.subdomainExceptions?.personalHome !== 'my.ekodi.kr') fail('service workspace policy must preserve my.ekodi.kr exception');
+if (workspace.externalCanonicalSurface?.host !== 'ekodi.kr') fail('service workspace external canonical host must be ekodi.kr');
+for (const [key,value] of Object.entries(expectedSystemPaths)) if (workspace.externalCanonicalSurface?.paths?.[key] !== value) fail(`service workspace external canonical path mismatch: ${key}`);
+if (workspace.externalCanonicalSurface?.internalRuntimeHostsAreCanonical !== false) fail('service workspace runtime hosts must not be externally canonical');
+if (workspace.subdomainExceptionsRole !== 'internal_runtime_or_compatibility_only') fail('service workspace subdomain exceptions must be runtime/compatibility only');
+if (workspace.subdomainExceptions?.personalHome !== 'my.ekodi.kr') fail('service workspace policy must preserve my.ekodi.kr runtime boundary');
 if (workspace.subdomainExceptions?.administration !== 'admin.ekodi.kr') fail('service workspace policy must preserve admin.ekodi.kr exception');
 if (workspace.subdomainExceptions?.authentication !== 'auth.ekodi.kr') fail('service workspace policy must preserve auth.ekodi.kr exception');
+if (workspace.commonServiceOperatorAccessRule?.canonicalSurface !== 'https://ekodi.kr/admin') fail('common-service operator canonical surface must be https://ekodi.kr/admin');
+if (workspace.commonServiceOperatorAccessRule?.runtimeHostsAreCanonicalExternalUrls !== false) fail('common-service runtime hosts must not be canonical external URLs');
 if (workspace.userSurfaceTopologyPolicy?.customerSpecificAiSubdomains !== 'forbidden_as_canonical') fail('service workspace policy must forbid customer AI subdomains as canonical');
 if (workspace.userSurfaceTopologyPolicy?.marketingProduct !== 'https://ekodi.kr/ekodibiz/marketing-ai') fail('service workspace Marketing product canonical drift');
 if (workspace.userSurfaceTopologyPolicy?.workspaceMarketingPattern !== 'https://ekodi.kr/{slug}/marketing') fail('service workspace Marketing path pattern drift');
@@ -219,6 +243,7 @@ console.log(`- ${Object.keys(boundaries.platforms || {}).length} platform/servic
 console.log(`- ${legacy.size} legacy domains registered with canonical migration targets`);
 console.log(`- ${registeredCommon.size} registered common-service boundaries checked`);
 console.log(`- sustainable evolution: generation ${sustainable.currentGeneration} -> ${sustainable.northStarGeneration}, scale ${sustainable.currentScaleTier}`);
+console.log('- external canonical surface: ekodi.kr paths; internal runtime boundaries remain responsibility-separated');
 console.log('- canonical user spaces: /{slug} on ekodi.kr; workspace kind remains internal metadata');
 console.log('- Workspace is canonical; Space remains compatibility-only during migration');
 console.log('- service workspace routing policy aligned to immutable workspace_id');

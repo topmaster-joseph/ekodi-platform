@@ -88,6 +88,23 @@
       "provider-independence"
     ]
   },
+  "externalCanonicalSurface": {
+    "host": "ekodi.kr",
+    "paths": {
+      "personalHome": "/my",
+      "administration": "/admin",
+      "authentication": "/auth",
+      "api": "/api",
+      "mcp": "/mcp",
+      "webhooks": "/webhooks",
+      "status": "/status",
+      "developer": "/dev",
+      "experience": "/exp"
+    },
+    "internalRuntimeHostsAreCanonical": false,
+    "customerOwnedDomainsAreExplicitExceptions": true
+  },
+  "subdomainExceptionsRole": "internal_runtime_or_compatibility_only",
   "subdomainExceptions": {
     "personalHome": "my.ekodi.kr",
     "administration": "admin.ekodi.kr",
@@ -127,8 +144,10 @@
   },
   "commonServiceOperatorAccessRule": {
     "surface": "admin.ekodi.kr",
+    "canonicalSurface": "https://ekodi.kr/admin",
     "canonicalPath": "admin-menu/common-services",
     "runtimeHostsAreOperatorPages": false,
+    "runtimeHostsAreCanonicalExternalUrls": false,
     "directRuntimeRootBehavior": "redirect_to_admin_control_plane",
     "sessionAuthority": "central_admin_session",
     "authorityContext": "Person + Workspace + Role + Capability",
