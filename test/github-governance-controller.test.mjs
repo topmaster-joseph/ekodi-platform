@@ -7,6 +7,7 @@ const config = JSON.parse(fs.readFileSync('config/github-governance.json', 'utf8
 const source = fs.readFileSync('scripts/github-governance-controller.mjs', 'utf8');
 const workflow = fs.readFileSync('.github/workflows/github-governance-audit.yml', 'utf8');
 const ci = fs.readFileSync('.github/workflows/ci.yml', 'utf8');
+const bootstrap = fs.readFileSync('scripts/apply-github-governance.ps1', 'utf8');
 
 test('main governance contract is fail-closed around source changes', () => {
   const policy = config.branchProtection;
@@ -52,4 +53,13 @@ test('apply fails closed before any network mutation without the admin token', (
     env: { ...process.env, EKODI_GITHUB_ADMIN_TOKEN: '', GITHUB_TOKEN: '' },
     stdio: ['ignore', 'pipe', 'pipe'],
   }));
+});
+
+test('local bootstrap keeps the admin token ephemeral and least-lived', () => {
+  assert.match(bootstrap, /expires_in=1&administration=write/);
+  assert.match(bootstrap, /Read-Host 'Fine-grained PAT' -AsSecureString/);
+  assert.match(bootstrap, /EKODI_GITHUB_ADMIN_TOKEN/);
+  assert.match(bootstrap, /ZeroFreeBSTR/);
+  assert.match(bootstrap, /github-governance-controller\.mjs' --apply/);
+  assert.match(bootstrap, /github-governance-controller\.mjs' --live/);
 });
