@@ -11,6 +11,17 @@ body.admin-compact.ekodi-admin-design-engine{
   --admin-soft:#f1f5f9;
   --admin-active:#edf4ff;
 }
+body.admin-compact.ekodi-admin-design-engine .app{
+  height:100dvh!important;
+  overflow:hidden!important;
+}
+body.admin-compact.ekodi-admin-design-engine .app>main{
+  height:100dvh!important;
+  min-height:0!important;
+  overflow-y:auto!important;
+  overflow-x:hidden!important;
+  overscroll-behavior:contain!important;
+}
 body.admin-compact.ekodi-admin-design-engine .sidebar{
   background:#fff!important;
   border-right:1px solid #d9e2ec!important;
@@ -42,7 +53,9 @@ body.admin-compact.ekodi-admin-design-engine .admin-global-nav.active{
 body.admin-compact.ekodi-admin-design-engine .admin-global-nav b{color:#52738a!important}
 body.admin-compact.ekodi-admin-design-engine .admin-global-nav.active b{color:#155eef!important}
 body.admin-compact.ekodi-admin-design-engine .admin-context-tabs-shell{
+  position:sticky!important;
   top:0!important;
+  z-index:35!important;
   min-height:50px!important;
   border-bottom:1px solid #d9e2ec!important;
   background:rgba(255,255,255,.98)!important;

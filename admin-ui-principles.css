@@ -1,11 +1,8 @@
-/* EKODI Admin UI Principles v1
- * Information first, decoration second.
- * One light shell, one spacing rhythm, readable type, semantic status colors,
- * explicit empty/error/auth states, responsive density, and no decorative heavy effects.
- * This file is appended to the authenticated Admin shell at build time.
+/* EKODI Admin subservice normalization v2
+ * Shared shell, scroll ownership, navigation and global tokens belong to admin-design-engine.*.
+ * This file only normalizes Marketing AI into that common workbench grammar.
  */
-body.admin-compact{
-  padding-top:0!important;
+body.admin-compact #marketingAiAdminPanel.marketing-ai-admin-panel{
   --admin-page:#f6f8fb;
   --admin-surface:#ffffff;
   --admin-surface-soft:#f8fafc;
@@ -22,22 +19,6 @@ body.admin-compact{
   --admin-radius:12px;
   --admin-gap:16px;
   --admin-control-h:40px;
-}
-body.admin-compact .content{max-width:1600px;margin-inline:auto!important}
-body.admin-compact .content [data-panel]{min-height:0}
-body.admin-compact .content :is(.section,.panel,.module,.architecture){box-shadow:none!important}
-body.admin-compact .content :is(button,.primary,.secondary,.ghost){min-height:var(--admin-control-h)}
-body.admin-compact .content :is(p,small,span,label,td,th){text-rendering:optimizeLegibility}
-
-/* Admin shell viewport contract: public-header offsets never leak into admin. */
-@media(min-width:761px){
-  body.admin-compact .app{align-items:start}
-  body.admin-compact .sidebar{position:sticky;top:0;height:100vh;height:100dvh;overflow:hidden}
-}
-
-/* Marketing AI is an Admin subservice, not a separate dark console.
- * It inherits the same visual grammar as the rest of admin. */
-body.admin-compact #marketingAiAdminPanel.marketing-ai-admin-panel{
   margin:0!important;
   padding:0!important;
   overflow:clip!important;
@@ -47,6 +28,8 @@ body.admin-compact #marketingAiAdminPanel.marketing-ai-admin-panel{
   border-radius:var(--admin-radius)!important;
   box-shadow:none!important;
 }
+
+/* Marketing AI is an Admin subservice, not a separate dark console. */
 body.admin-compact #marketingAiAdminPanel .marketing-ai-admin-toolbar{
   display:flex!important;
   align-items:flex-start!important;

@@ -66,7 +66,7 @@ test('global navigation remains synchronized to the actually active panel', () =
 
 test('global menu labels use readable contrast on the light sidebar', () => {
   assert.match(sidebar, /\.admin-global-nav\{[^}]*color:#40566d!important/);
-  assert.match(sidebar, /\.admin-global-nav\.active\{[^}]*background:#dff3fb[^}]*color:#07344f!important/);
+  assert.match(sidebar, /\.admin-global-nav\.active\{[^}]*background:#edf4ff[^}]*color:#0b4f8a!important/);
   assert.match(sidebar, /\.admin-global-nav span\{color:inherit!important;opacity:1!important\}/);
   assert.match(sidebar, /font-size:14px;font-weight:780/);
 });

@@ -23,17 +23,19 @@ test('all administrator hostnames inherit the same official admin shell', () => 
 });
 
 test('shared shell removes the desktop title strip and moves account above logout', () => {
-  assert.ok(shell.includes("document.body.classList.add('ekodi-admin-shell-v2')"));
-  assert.ok(shell.includes("sideBottom.insertBefore(profile, logoutButton || null)"));
-  assert.ok(shell.includes('pageTitle.parentElement.hidden = true'));
-  assert.ok(shell.includes("matchMedia('(max-width:760px)').matches ? 'flex' : 'none'"));
+  assert.match(shell, /document\.body\.classList\.add\('ekodi-admin-shell-v2'\)/);
+  assert.match(shell, /sideBottom\.insertBefore\(profile,\s*logoutButton\s*\|\|\s*null\)/);
+  assert.match(shell, /pageTitle\.parentElement\.hidden\s*=\s*true/);
+  assert.match(shell, /matchMedia\('\(max-width:760px\)'\)\.matches\s*\?\s*'flex'\s*:\s*'none'/);
 });
 
-test('sidebar menu and workspace have independent vertical scrolling', () => {
-  assert.ok(shell.includes("nav.style.setProperty('overflow-y', 'auto', 'important')"));
-  assert.ok(shell.includes("nav.style.setProperty('flex', '1 1 auto', 'important')"));
-  assert.ok(shell.includes("main.style.setProperty('overflow-y', 'auto')"));
-  assert.ok(shell.includes("sideBottom.style.setProperty('position', 'static', 'important')"));
-  assert.ok(shell.includes("nav.dataset.ekodiIndependentScroll = 'true'"));
-  assert.ok(shell.includes("content.dataset.ekodiIndependentScroll = 'workspace'"));
+test('workspace is the single vertical scroll owner and sidebar stays fixed', () => {
+  assert.match(shell, /nav\.style\.setProperty\('overflow-y',\s*'hidden',\s*'important'\)/);
+  assert.match(shell, /nav\.style\.setProperty\('flex',\s*'0 0 auto',\s*'important'\)/);
+  assert.match(shell, /main\.style\.setProperty\('overflow-y',\s*'auto'\)/);
+  assert.match(shell, /sideBottom\.style\.setProperty\('position',\s*'static',\s*'important'\)/);
+  assert.match(shell, /nav\.dataset\.ekodiIndependentScroll\s*=\s*'false'/);
+  assert.match(shell, /content\.dataset\.ekodiIndependentScroll\s*=\s*'false'/);
+  assert.match(shell, /main\.dataset\.ekodiScrollOwner\s*=\s*'workspace'/);
+  assert.doesNotMatch(shell, /nav\.style\.setProperty\('overflow-y',\s*'auto'/);
 });
