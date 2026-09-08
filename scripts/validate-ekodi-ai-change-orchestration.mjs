@@ -41,12 +41,15 @@ const allowedPrefixes = policy.sourceControl.allowedChangeBranchPrefixes || ['ai
 function branchAllowed(branch) {
   return allowedPrefixes.some(prefix => text(branch).startsWith(prefix));
 }
+function isPrMergeMessage(message) {
+  return /^Merge (?:pull request|PR) #\d+\b/m.test(text(message));
+}
 function commitLooksLikePrMerge() {
   const eventMessage = text(event.head_commit?.message);
-  if (/^Merge pull request #\d+/m.test(eventMessage)) return true;
+  if (isPrMergeMessage(eventMessage)) return true;
   const parents = git(['rev-list', '--parents', '-n', '1', sha]).split(/\s+/).filter(Boolean);
   const message = git(['log', '-1', '--pretty=%B', sha]);
-  return parents.length >= 3 && /^Merge pull request #\d+/m.test(message);
+  return parents.length >= 3 && isPrMergeMessage(message);
 }
 function currentChangedFiles() {
   const base = event.pull_request?.base?.sha;
