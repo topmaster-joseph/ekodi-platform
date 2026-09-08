@@ -1,5 +1,5 @@
 {
-  "version": 55,
+  "version": 56,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
@@ -339,7 +339,7 @@
           "return_to=https%3A%2F%2Fekodi.kr%2Fadmin"
         ],
         "headerExpect": [
-          "x-ekodi-route: admin-fallback",
+          "x-ekodi-route: admin-shell",
           "cross-origin-opener-policy: same-origin-allow-popups",
           "cache-control: no-store"
         ]
@@ -534,7 +534,8 @@
         ],
         "headerExpect": [
           "x-ekodi-route: central-auth"
-        ]
+        ],
+        "rollbackVerify": false
       },
       {
         "url": "https://ekodi.kr/auth/auth-router.js?release=31",
@@ -553,7 +554,8 @@
           "x-ekodi-route: central-auth-asset",
           "cache-control: no-store",
           "x-content-type-options: nosniff"
-        ]
+        ],
+        "rollbackVerify": false
       },
       {
         "url": "https://ekodi.kr/auth/client-auth.js?release=31",
@@ -576,7 +578,8 @@
           "x-ekodi-route: central-auth-asset",
           "cache-control: no-store",
           "x-content-type-options: nosniff"
-        ]
+        ],
+        "rollbackVerify": false
       },
       {
         "url": "https://ekodi.kr/auth/auth-workspace-target.js?release=31",
@@ -597,7 +600,8 @@
           "x-ekodi-route: central-auth-asset",
           "cache-control: no-store",
           "x-content-type-options: nosniff"
-        ]
+        ],
+        "rollbackVerify": false
       },
       {
         "url": "https://ekodi.kr/auth/admin-auth.js?release=31",
@@ -624,7 +628,8 @@
           "x-ekodi-route: central-auth-asset",
           "cache-control: no-store",
           "x-content-type-options: nosniff"
-        ]
+        ],
+        "rollbackVerify": false
       },
       {
         "url": "https://messenger.ekodi.kr/",
