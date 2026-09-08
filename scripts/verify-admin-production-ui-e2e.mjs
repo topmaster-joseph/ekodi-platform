@@ -44,6 +44,7 @@ async function waitForAdminShell() {
   await page.waitForFunction(() => window.EKODIAdminPanels && window.EKODIAdminSidebar, null, { timeout: 30000 });
   await page.waitForFunction(expected => document.querySelectorAll('button[data-admin-global-group]').length >= expected, workAreas.length, { timeout: 30000 });
   await page.waitForFunction(() => document.querySelectorAll('.admin-context-source .nav').length >= 1, null, { timeout: 30000 });
+  await page.waitForFunction(() => Boolean(document.documentElement.dataset.ekodiDesignEngine) && document.documentElement.dataset.ekodiDesignAudit === 'pass', null, { timeout: 30000 });
 }
 
 const response = await page.goto(ADMIN_URL, { waitUntil: 'domcontentloaded', timeout: 45000 });
@@ -69,6 +70,39 @@ if (shellState.hidden || shellState.display === 'none' || shellState.visibility 
   throw new Error(`Admin shell is not rendered: ${JSON.stringify(shellState)}`);
 }
 if (shellState.shell !== 'shared-v2') throw new Error(`Admin shared shell did not install: ${JSON.stringify(shellState)}`);
+
+const workbenchState = await page.evaluate(() => {
+  const body = document.body;
+  const app = document.querySelector('#app');
+  const sidebar = document.querySelector('.sidebar');
+  const nav = sidebar?.querySelector('nav');
+  const workspace = app?.querySelector('main');
+  const contextTabs = workspace?.querySelector(':scope>.admin-context-tabs-shell');
+  const style = node => node ? getComputedStyle(node) : null;
+  const sidebarRect = sidebar?.getBoundingClientRect();
+  return {
+    topOffset: parseFloat(style(body)?.paddingTop || '0'),
+    bodyOverflowY: style(body)?.overflowY || '',
+    appOverflowY: style(app)?.overflowY || '',
+    sidebarOverflowY: style(sidebar)?.overflowY || '',
+    navOverflowY: style(nav)?.overflowY || '',
+    navIndependentScroll: nav?.dataset.ekodiIndependentScroll || '',
+    workspaceOverflowY: style(workspace)?.overflowY || '',
+    workspaceScrollOwner: workspace?.dataset.ekodiScrollOwner || '',
+    contextTabsPosition: style(contextTabs)?.position || '',
+    contextTabsTop: style(contextTabs)?.top || '',
+    sidebarTop: sidebarRect ? Math.round(sidebarRect.top) : null,
+    designAudit: document.documentElement.dataset.ekodiDesignAudit || '',
+    designEngine: document.documentElement.dataset.ekodiDesignEngine || '',
+  };
+});
+if (workbenchState.topOffset > 0.5) throw new Error(`Admin top offset leaked into production: ${JSON.stringify(workbenchState)}`);
+if (workbenchState.bodyOverflowY !== 'hidden' || workbenchState.appOverflowY !== 'hidden') throw new Error(`Admin frame must be scroll-locked: ${JSON.stringify(workbenchState)}`);
+if (workbenchState.sidebarOverflowY !== 'hidden' || workbenchState.navOverflowY !== 'hidden' || workbenchState.navIndependentScroll !== 'false') throw new Error(`Admin primary sidebar scroll contract failed: ${JSON.stringify(workbenchState)}`);
+if (!['auto','scroll'].includes(workbenchState.workspaceOverflowY) || workbenchState.workspaceScrollOwner !== 'workspace') throw new Error(`Admin workspace must be the single vertical scroll owner: ${JSON.stringify(workbenchState)}`);
+if (workbenchState.contextTabsPosition !== 'sticky' || workbenchState.sidebarTop !== 0) throw new Error(`Admin fixed workbench geometry failed: ${JSON.stringify(workbenchState)}`);
+if (!workbenchState.designEngine || workbenchState.designAudit === 'fail') throw new Error(`Admin Design Engine did not activate cleanly: ${JSON.stringify(workbenchState)}`);
+console.log(`ADMIN_WORKBENCH=${JSON.stringify(workbenchState)}`);
 
 const assetVersion = await page.locator('script[src*="admin-authenticated-shell.js?v="]').getAttribute('src').then(src => new URL(src, ADMIN_URL).searchParams.get('v'));
 if (!assetVersion) throw new Error('Production Admin fingerprint is missing');

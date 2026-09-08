@@ -4,7 +4,7 @@ import { ADMIN_MENU_GROUPS, ADMIN_MENU_REGISTRY } from '../admin-menu-registry.j
 const readText = async (path) => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 const readJson = async (path) => JSON.parse(await readText(path));
 
-const [policy, userDna, userShell, theme, adminRuntime, adminCss, adminPrinciples, sidebar, build, siteWorker, postbuild] = await Promise.all([
+const [policy, userDna, userShell, theme, adminRuntime, adminCss, adminPrinciples, sidebar, authenticatedShell, build, siteWorker, postbuild] = await Promise.all([
   readJson('config/design-engine.json'),
   readJson('config/user-ui-dna.json'),
   readJson('config/user-ui-shell.json'),
@@ -13,6 +13,7 @@ const [policy, userDna, userShell, theme, adminRuntime, adminCss, adminPrinciple
   readText('admin-design-engine.css'),
   readText('ADMIN_UI_PRINCIPLES.md'),
   readText('admin-sidebar.js'),
+  readText('admin-authenticated-shell.js'),
   readText('scripts/build.mjs'),
   readText('site-worker.js'),
   readText('scripts/admin-performance-postbuild.mjs'),
@@ -38,12 +39,21 @@ for (const group of ADMIN_MENU_GROUPS) {
   if (!target) errors.push(`admin group "${group.id}" has invalid default section "${group.defaultSection}".`);
 }
 
+if (Number(policy?.version) < 2 || Number(policy?.admin?.generation) !== 8) errors.push('admin design policy must declare the 8th-generation contract.');
 if (policy?.admin?.desktopPrimarySidebarScroll !== false) errors.push('desktop primary sidebar scrolling must remain disabled.');
+if (policy?.admin?.scrollContract?.workspace !== 'single-vertical-scroll-owner') errors.push('workspace must be the single vertical scroll owner in policy.');
+if (!Array.isArray(policy?.admin?.regions) || policy.admin.regions.length !== 4) errors.push('admin design policy must define exactly four shell regions.');
+if (!Array.isArray(policy?.admin?.navigationLevels) || policy.admin.navigationLevels.length !== 3) errors.push('admin design policy must define exactly three navigation levels.');
 if (!adminRuntime.includes("nav.style.setProperty('overflow-y', 'hidden', 'important')")) errors.push('admin design runtime must override vertical sidebar scrolling.');
 if (!adminRuntime.includes("nav.dataset.ekodiIndependentScroll = 'false'")) errors.push('admin design runtime must declare primary sidebar as non-independent scroll.');
+if (!adminRuntime.includes("workspace must own vertical scrolling")) errors.push('admin design runtime must audit the workspace scroll owner.');
 if (!adminCss.includes('overflow-y:hidden!important')) errors.push('admin design CSS must keep the primary sidebar overflow hidden.');
+if (!adminCss.includes('overflow-y:auto!important')) errors.push('admin design CSS must keep the workspace as vertical scroll owner.');
 if (sidebar.includes('overflow-y:auto!important')) errors.push('shared admin sidebar source must not reintroduce independent vertical scrolling.');
 if (!sidebar.includes('overflow-y:hidden!important')) errors.push('shared admin sidebar source must keep vertical overflow hidden.');
+if (authenticatedShell.includes("nav.dataset.ekodiIndependentScroll = 'true'") || authenticatedShell.includes("nav.style.setProperty('overflow-y', 'auto'")) errors.push('authenticated shell must not reintroduce sidebar scrolling.');
+if (!authenticatedShell.includes("nav.dataset.ekodiIndependentScroll='false'") || !authenticatedShell.includes("main.dataset.ekodiScrollOwner='workspace'")) errors.push('authenticated shell must declare the canonical scroll ownership contract.');
+if (!authenticatedShell.includes("'admin-design-engine.css'")) errors.push('authenticated shell must preload the canonical design surface before first visible admin paint.');
 for (const asset of ['admin-design-engine.js', 'admin-design-engine.css']) {
   if (!build.includes(`'${asset}'`)) errors.push(`production build must publish ${asset}.`);
   if (!siteWorker.includes(`'/${asset}'`)) errors.push(`site worker ADMIN_ASSETS must expose ${asset}.`);
@@ -53,7 +63,7 @@ if (!postbuild.includes("['admin-menu-registry.js', ['admin-design-engine.js']]"
 if (!adminCss.includes('[data-ekodian-character]')) errors.push('admin design CSS must contain the EKODIAN character layer.');
 if (!adminCss.includes('@media(prefers-reduced-motion:reduce)')) errors.push('admin character layer must respect reduced-motion preferences.');
 
-for (const marker of ['EKODI Design Engine 계층', '캐릭터는 장식이 아니라 기능적 인터페이스다', '반복 수정을 시스템 결함으로 전환한다']) {
+for (const marker of ['8세대 공통 쉘은 네 영역과 하나의 스크롤 주체로 구성한다', 'EKODI Design Engine 계층', '내비게이션은 최대 세 단계까지만 허용한다', '서비스 개성은 Shell 교체가 아니라 Theme Token으로 표현한다', '공통 UI의 소유권을 코드 수준에서 분리한다']) {
   if (!adminPrinciples.includes(marker)) errors.push(`admin UI principles lost design-engine marker: ${marker}`);
 }
 

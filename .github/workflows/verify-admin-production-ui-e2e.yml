@@ -11,6 +11,8 @@ on:
       - 'admin-shell.css'
       - 'admin-central-handoff.js'
       - 'admin-authenticated-shell.js'
+      - 'admin-design-engine.js'
+      - 'admin-design-engine.css'
       - 'admin-menu-layout.js'
       - 'admin-menu-registry.js'
       - 'admin-sidebar.js'

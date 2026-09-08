@@ -20,7 +20,7 @@ const baseCssMarkers = [
   ':focus-visible',
 ];
 const principlesCssMarkers = [
-  'EKODI Admin UI Principles v1',
+  'EKODI Admin subservice normalization v2',
   '--admin-page:#f6f8fb',
   '#marketingAiAdminPanel.marketing-ai-admin-panel',
   '.marketing-ai-console-view',

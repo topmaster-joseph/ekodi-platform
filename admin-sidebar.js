@@ -55,24 +55,24 @@ function ensureStyle() {
   const style = document.createElement('style');
   style.id = 'ekodi-admin-workbench-tabs-style';
   style.textContent = `
-body.admin-compact{--admin-readable:#f4f8fc;--admin-secondary:#aebed0;--admin-border:rgba(148,163,184,.18);--admin-soft:rgba(148,163,184,.07);--admin-active:rgba(56,189,248,.13)}
-body.admin-compact .sidebar nav{display:flex!important;flex-direction:column!important;gap:2px!important;overflow-y:hidden!important;overflow-x:hidden!important}
+body.admin-compact{--admin-readable:#172033;--admin-secondary:#66768a;--admin-border:#d9e2ec;--admin-soft:#f1f5f9;--admin-active:#edf4ff}
+body.admin-compact .sidebar nav{display:flex!important;flex-direction:column!important;gap:2px!important;overflow-y:hidden!important;overflow-x:hidden!important;overscroll-behavior:none!important}
 body.admin-compact .${GLOBAL_CLASS}{display:grid;gap:3px;margin:2px 0 8px}
-body.admin-compact .admin-global-nav{display:flex;align-items:center;gap:9px;width:100%;min-height:40px;padding:8px 10px;border:1px solid transparent;border-radius:9px;background:transparent;color:#40566d!important;font:inherit;font-size:14px;font-weight:780;line-height:1.25;text-align:left;cursor:pointer;box-shadow:none!important;transition:none!important;opacity:1!important}
+body.admin-compact .admin-global-nav{display:flex;align-items:center;gap:9px;width:100%;min-height:42px;padding:8px 10px;border:1px solid transparent;border-radius:9px;background:transparent;color:#40566d!important;font:inherit;font-size:14px;font-weight:780;line-height:1.25;text-align:left;cursor:pointer;box-shadow:none!important;transition:none!important;opacity:1!important}
 body.admin-compact .admin-global-nav span{color:inherit!important;opacity:1!important}
 body.admin-compact .admin-global-nav:hover{border-color:#d5e6ef;background:#eef7fb;color:#123c58!important}
-body.admin-compact .admin-global-nav.active{border-color:#a8d7e9;background:#dff3fb;color:#07344f!important}
+body.admin-compact .admin-global-nav.active{border-color:#b7d4f6;background:#edf4ff;color:#0b4f8a!important}
 body.admin-compact .admin-global-nav b{display:inline-grid;place-items:center;min-width:22px;color:#52738a!important;font-size:12px;font-weight:850;letter-spacing:-.03em;opacity:1!important}
-body.admin-compact .admin-global-nav.active b{color:#0876a8!important}
+body.admin-compact .admin-global-nav.active b{color:#155eef!important}
 body.admin-compact .${SOURCE_CLASS}{display:none!important}
-body.admin-compact .${TABS_SHELL_CLASS}{position:sticky;top:0;z-index:35;display:flex;align-items:center;gap:12px;min-height:50px;padding:7px 16px;border-bottom:1px solid var(--admin-border);background:rgba(7,21,34,.97);box-shadow:none!important;backdrop-filter:none!important}
-body.admin-compact .admin-context-title{flex:0 0 auto;color:#b9c9d7;font-size:11px;font-weight:820;letter-spacing:.02em;white-space:nowrap}
+body.admin-compact .${TABS_SHELL_CLASS}{position:sticky;top:0;z-index:35;display:flex;align-items:center;gap:12px;min-height:50px;padding:7px 16px;border-bottom:1px solid var(--admin-border);background:rgba(255,255,255,.98);color:#172033;box-shadow:none!important;backdrop-filter:none!important}
+body.admin-compact .admin-context-title{flex:0 0 auto;color:#66768a;font-size:11px;font-weight:820;letter-spacing:.02em;white-space:nowrap}
 body.admin-compact .${TABS_CLASS}{display:flex;align-items:center;gap:3px;min-width:0;overflow-x:auto;scrollbar-width:none}
 body.admin-compact .${TABS_CLASS}::-webkit-scrollbar{display:none}
-body.admin-compact .admin-context-tab{flex:0 0 auto;min-height:34px;padding:0 10px;border:1px solid transparent;border-radius:8px;background:transparent;color:#c6d4df;font:inherit;font-size:13px;font-weight:760;white-space:nowrap;cursor:pointer;box-shadow:none!important;transition:none!important}
-body.admin-compact .admin-context-tab:hover{background:var(--admin-soft);color:#fff}
-body.admin-compact .admin-context-tab.active{border-color:rgba(56,189,248,.28);background:rgba(56,189,248,.16);color:#fff}
-body.admin-compact .admin-capability-shortcut{margin-left:auto;flex:0 0 auto;min-height:32px;padding:0 10px;border:1px solid rgba(56,189,248,.24);border-radius:8px;background:rgba(56,189,248,.08);color:#dff6ff;font:inherit;font-size:12px;font-weight:800;cursor:pointer}
+body.admin-compact .admin-context-tab{flex:0 0 auto;min-height:34px;padding:0 10px;border:1px solid transparent;border-radius:8px;background:transparent;color:#52657a;font:inherit;font-size:13px;font-weight:760;white-space:nowrap;cursor:pointer;box-shadow:none!important;transition:none!important}
+body.admin-compact .admin-context-tab:hover{background:#f1f5f9;color:#172033}
+body.admin-compact .admin-context-tab.active{border-color:#bfd5ee;background:#edf4ff;color:#0b5cab}
+body.admin-compact .admin-capability-shortcut{margin-left:auto;flex:0 0 auto;min-height:32px;padding:0 10px;border:1px solid #bfd5ee;border-radius:8px;background:#f3f8ff;color:#0b5cab;font:inherit;font-size:12px;font-weight:800;cursor:pointer}
 body.admin-compact .content{padding:14px 16px 28px!important}
 body.admin-compact .content .hero{margin-bottom:12px!important;padding:14px 16px!important;box-shadow:none!important;backdrop-filter:none!important}
 body.admin-compact .content .section,body.admin-compact .content .module,body.admin-compact .content .architecture,body.admin-compact .content .arch-zone{box-shadow:none!important;backdrop-filter:none!important}

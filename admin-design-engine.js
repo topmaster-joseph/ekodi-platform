@@ -1,4 +1,4 @@
-const VERSION = '1.0.0';
+const VERSION = '2.0.0';
 const EXPECTED_GROUPS = Object.freeze(['home', 'operations', 'space', 'services', 'system']);
 const ROOT_TOKENS = Object.freeze({
   '--ekodi-ui-bg': '#f6f8fb',
@@ -14,7 +14,8 @@ const ROOT_TOKENS = Object.freeze({
 let queued = false;
 
 function ensureStylesheet() {
-  if (document.querySelector('link[data-ekodi-admin-design-engine]')) return;
+  const existing = document.querySelector('link[data-ekodi-admin-design-engine],link[data-ekodi-postauth-style="admin-design-engine.css"]');
+  if (existing) { existing.dataset.ekodiAdminDesignEngine = VERSION; return; }
   const link = document.createElement('link');
   link.rel = 'stylesheet';
   link.href = new URL('./admin-design-engine.css', import.meta.url).href;
@@ -70,9 +71,24 @@ function audit() {
 
   const overflowY = getComputedStyle(nav).overflowY;
   if (overflowY === 'auto' || overflowY === 'scroll') violations.push(`primary sidebar must not scroll vertically; overflow-y=${overflowY}`);
+  if (nav.dataset.ekodiIndependentScroll === 'true') violations.push('primary sidebar must never declare itself as an independent scroll owner');
 
   const topOffset = parseFloat(getComputedStyle(document.body).paddingTop || '0');
   if (matchMedia('(min-width:761px)').matches && topOffset > 0.5) violations.push(`admin shell top offset must be zero; padding-top=${topOffset}px`);
+
+  if (document.documentElement.dataset.ekodiAdminReady === 'true') {
+    const app = document.querySelector('#app');
+    const workspace = app?.querySelector('main');
+    const contextTabs = workspace?.querySelector(':scope>.admin-context-tabs-shell');
+    const bodyOverflowY = getComputedStyle(document.body).overflowY;
+    const appOverflowY = app ? getComputedStyle(app).overflowY : '';
+    const workspaceOverflowY = workspace ? getComputedStyle(workspace).overflowY : '';
+    if (bodyOverflowY !== 'hidden') violations.push(`body must not own admin scrolling; overflow-y=${bodyOverflowY}`);
+    if (app && appOverflowY !== 'hidden') violations.push(`admin app frame must not own scrolling; overflow-y=${appOverflowY}`);
+    if (workspace && !['auto','scroll'].includes(workspaceOverflowY)) violations.push(`workspace must own vertical scrolling; overflow-y=${workspaceOverflowY}`);
+    if (workspace?.dataset.ekodiScrollOwner !== 'workspace') violations.push('workspace scroll owner marker is missing');
+    if (!contextTabs) violations.push('contextual top tabs must exist between primary navigation and workspace content');
+  }
 
   const detail = Object.freeze({
     version: VERSION,
