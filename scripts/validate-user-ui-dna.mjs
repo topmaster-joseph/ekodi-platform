@@ -3,6 +3,7 @@ import { EKODI_SERVICE_MANIFEST } from '../ekodi-service-manifest.js';
 import { shellServiceForHost, shellServiceForRootPath } from '../ekodi-shell-injector.js';
 import { EKODI_USER_FOOTER, renderEkodiUserFooter } from '../config/user-footer.js';
 import { EKODI_USER_EXPERIENCE_PROFILES } from '../config/user-ui-experience-profiles.js';
+import { EKODI_LANGUAGE_REGISTRY } from '../config/language-registry.js';
 
 const readJson = async (path) => JSON.parse(await readFile(new URL(`../${path}`, import.meta.url), 'utf8'));
 const readText = async (path) => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
@@ -107,7 +108,7 @@ for(const [id,requested] of Object.entries(serviceProfiles)){
 }
 const commerceProfile=experienceProfiles['consumer-commerce'];
 if(!commerceProfile?.geometry?.controlRadius || serviceProfiles.mall!=='consumer-commerce') errors.push('Mall must inherit the reusable consumer-commerce experience profile from the central registry.');
-for (const principle of ['subserviceInheritance','fallbackHeaderWhenMissing','legacyCommonFooterSuppressed','rootInternalPathsExcluded','languageChoiceEverywhere','globalUtilitiesInHeader','unavailableLanguageReturnsToKorean']) {
+for (const principle of ['subserviceInheritance','fallbackHeaderWhenMissing','legacyCommonFooterSuppressed','rootInternalPathsExcluded','languageChoiceEverywhere','globalUtilitiesInHeader','unavailableLanguageReturnsToKorean','unreadyLanguageHidden','automaticTranslationLifecycle']) {
   if (shell?.principles?.[principle] !== true) errors.push(`User UI Shell principle must remain enabled: ${principle}.`);
 }
 if (shell?.header?.strategy !== 'adopt-existing-first' || shell?.header?.owner !== 'shared-shell') {
@@ -163,14 +164,14 @@ if (!shell?.inheritance?.excludedRootPrefixes?.includes('/admin')) {
   errors.push('Admin root paths must stay outside the User UI Shell.');
 }
 
-const expectedLocales=['ko-KR','en','zh-CN','ja','ne','vi'];
+const expectedLocales=EKODI_LANGUAGE_REGISTRY.languages.map(language=>language.locale);
 if(shell?.language?.owner!=='shared-shell'||shell?.language?.runtime!=='shell/user-language.js'||shell?.language?.adminExcluded!==true){
   errors.push('Shared user language selector must be owned by the User UI Shell and exclude admin surfaces.');
 }
 if(!expectedLocales.every(locale=>shell?.language?.supported?.includes(locale))){
-  errors.push('Shared user language selector must support Korean, English, Simplified Chinese, Japanese, Nepali and Vietnamese.');
+  errors.push('Shared user language selector must inherit every registered platform locale from the central Language Registry.');
 }
-for(const marker of ['ekodi_locale','data-ekodi-language-control','ekodi:locale-change','document.documentElement.lang','ko-KR','zh-CN','ekodi-user-language-style','appearance:none!important','FALLBACK_LOCALE','placeFooterControl','data-ekodi-language-notice','isLocaleReady']){
+for(const marker of ['ekodi_locale','data-ekodi-language-control','ekodi:locale-change','document.documentElement.lang','ko-KR','zh-CN','ekodi-user-language-style','appearance:none!important','FALLBACK_LOCALE','placeFooterControl','data-ekodi-language-notice','isLocaleReady','visibleLanguages','refreshRuntimeReadiness','/api/i18n/v1']){
   if(!userLanguageSource.includes(marker))errors.push(`Shared user language runtime lost required marker: ${marker}`);
 }
 if(shell?.ambientAudio?.owner!=='shared-shell'||shell?.ambientAudio?.runtime!=='shell/ccm-mr-player.js'||shell?.ambientAudio?.contentOverlapForbidden!==true||shell?.ambientAudio?.adminExcluded!==true){
@@ -192,7 +193,7 @@ for (const marker of ['Natural-language word integrity','word-break: keep-all','
 for (const marker of ['Responsive Typography Standard v2','word-break:keep-all','overflow-wrap:break-word','hyphens:none','[data-ekodi-break-anywhere]','.ekodi-break-anywhere']) {
   if (!responsiveTypographySource.includes(marker)) errors.push(`Responsive typography standard lost required marker: ${marker}`);
 }
-for (const marker of ['EKODI_USER_FOOTER','USER_FOOTER_BOOTSTRAP','USER_EXPERIENCE_PROFILES_BOOTSTRAP','x-ekodi-user-experience-profiles','/user-footer.json','x-ekodi-user-ui-footer','userLanguageUrl','x-ekodi-user-language']) {
+for (const marker of ['EKODI_USER_FOOTER','USER_FOOTER_BOOTSTRAP','USER_EXPERIENCE_PROFILES_BOOTSTRAP','x-ekodi-user-experience-profiles','/user-footer.json','x-ekodi-user-ui-footer','userLanguageUrl','x-ekodi-user-language','LANGUAGE_REGISTRY_BOOTSTRAP','/language-registry.json']) {
   if (!shellWorkerSource.includes(marker)) errors.push(`Shared Shell worker lost central user chrome marker: ${marker}`);
 }
 for (const marker of ['__EKODI_USER_FOOTER_CONFIG__','user-footer.json','VERSION=6','ekodi-user-ui-footer__copy','--ekodi-user-content-inline-size','--ekodi-user-canvas-max,1240px','applyReadableFooter','--ekodi-user-footer-safe-text','data-ekodi-i18n','data-ekodi-legacy-common-footer-hidden','suppressLegacyCommonFooters','dedupeSharedFooters','observeFooterChanges']) {

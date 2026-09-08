@@ -10,6 +10,7 @@ export const ADMIN_MENU_GROUPS = Object.freeze([
 export const ADMIN_MENU_REGISTRY = Object.freeze([
   { id: 'campus', group: 'structure', icon: '⌂', labels: { ko: '사이트 구조', en: 'Site Structure' } },
   { id: 'public-site-controls', group: 'structure', icon: '▤', labels: { ko: '채널·임시페이지', en: 'Channels & Maintenance' } },
+  { id: 'language-status', group: 'structure', icon: '文', labels: { ko: '다국어 지원 현황', en: 'Language Readiness' } },
   { id: 'architecture', group: 'structure', icon: '◇', labels: { ko: '시스템 구조', en: 'System Structure' } },
   { id: 'security', group: 'core', icon: 'S', labels: { ko: '보안·Identity', en: 'Security & Identity' } },
   { id: 'admins', group: 'core', icon: '♙', labels: { ko: '관리자·권한', en: 'Administrators & Access' }, superAdminOnly: true },

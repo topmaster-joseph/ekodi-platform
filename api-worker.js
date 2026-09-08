@@ -1,6 +1,7 @@
 import authWorker from './auth-worker.js';
 import { handleMailControl } from './mail-control.js';
 import { EKODI_SERVICE_MANIFEST } from './ekodi-service-manifest.js';
+import { handleLanguageAutomationPublic, languageStatusForAdmin, runLanguageAutomation } from './language-automation.js';
 import { remotePowerSnapshot, requestRemoteWake } from './remote-power-control.js';
 import { analyzeServiceFleet, evaluateTechnologyCandidate } from './evolution-intelligence-runtime.js';
 import { evolutionStoreSummary, listEvolutionRecommendations, persistEvolutionReport } from './evolution-intelligence-store.js';
@@ -614,6 +615,10 @@ async function handleControl(request, env) {
     return controlJson({ sites: await publicSiteSnapshot(env) }, 200, auth.response.headers);
   }
 
+  if (request.method === 'GET' && path === `${CONTROL_PREFIX}/language-status`) {
+    return controlJson(await languageStatusForAdmin(env), 200, auth.response.headers);
+  }
+
   const publicSiteMatch = path.match(/^\/api\/control\/public-sites\/([a-z0-9-]+)$/);
   if (publicSiteMatch && request.method === 'PUT') {
     const siteId = publicSiteMatch[1];
@@ -757,8 +762,12 @@ export default {
     const url = new URL(request.url);
     const publicDomainResponse = await handlePublicDomainRequest(request, env);
     if (publicDomainResponse) return publicDomainResponse;
+
     const publicPreviewResponse = await handlePublicPreview(request, env);
     if (publicPreviewResponse) return publicPreviewResponse;
+
+    const languageResponse = await handleLanguageAutomationPublic(request, env);
+    if (languageResponse) return languageResponse;
     if (url.pathname.startsWith('/api/mail/control')) {
       try {
         const response = await handleMailControl(request, env);
@@ -789,7 +798,7 @@ export default {
         runChecks(env),
         cloudflareAccountSnapshot(env)
       ]);
-      await evolutionSnapshot(env);
+      await Promise.all([evolutionSnapshot(env), runLanguageAutomation(env)]);
     })().catch(error => console.error('Scheduled service, account, or evolution check failed', error)));
   }
 };

@@ -12,6 +12,7 @@ on:
       - 'shell/**'
       - 'config/ecosystem-services.json'
       - 'config/user-footer.js'
+      - 'config/language-registry.js'
       - 'config/user-ui-shell.json'
       - 'config/illustration-system.json'
       - 'config/internal-ui-rollout.json'
@@ -28,6 +29,7 @@ on:
       - 'wrangler.shell.staging.toml'
       - 'test/ekodi-shell.test.mjs'
       - 'test/user-ui-header.test.mjs'
+      - 'test/language-registry-v8.test.mjs'
       - 'test/user-global-nav.test.mjs'
       - 'test/admin-ui-shell.test.mjs'
       - '.github/workflows/deploy-ekodi-shell.yml'
@@ -63,6 +65,7 @@ jobs:
           node --check ekodi-message-ui.js
           node --check admin-authenticated-shell.js
           node --check config/user-footer.js
+          node --check config/language-registry.js
           node --check shell/shell.js
           grep -Fq 'TRAFFIC_TELEMETRY' shell/shell.js
           grep -Fq 'globalPrivacyControl' shell/shell.js
@@ -95,6 +98,7 @@ jobs:
           grep -Fq "characterIdentityUrl.pathname='/character-identity-registry.js'" ekodi-shell-worker.js
           grep -Fq "userCharacterUrl.pathname='/user-character.js'" ekodi-shell-worker.js
           grep -Fq "url.pathname==='/user-footer.json'" ekodi-shell-worker.js
+          grep -Fq "url.pathname==='/language-registry.json'" ekodi-shell-worker.js
           grep -Fq "x-ekodi-user-ui-header" ekodi-shell-worker.js
           grep -Fq "x-ekodi-user-ui-footer" ekodi-shell-worker.js
           grep -Fq "x-ekodi-user-language" ekodi-shell-worker.js
@@ -140,7 +144,7 @@ jobs:
           grep -Fq "'ekodibiz.kr':'biz'" shell/ecosystem-link-compat.js
           grep -Fq 'run_worker_first = true' wrangler.shell.toml
           grep -Fq 'run_worker_first = true' wrangler.shell.staging.toml
-          node --test test/ekodi-shell.test.mjs test/user-ui-header.test.mjs test/user-global-nav.test.mjs test/admin-ui-shell.test.mjs test/ekodian-identity-profile.test.mjs
+          node --test test/ekodi-shell.test.mjs test/user-ui-header.test.mjs test/language-registry-v8.test.mjs test/user-global-nav.test.mjs test/admin-ui-shell.test.mjs test/ekodian-identity-profile.test.mjs
           node scripts/validate-user-ui-dna.mjs
           node scripts/validate-ekodi-shell-adoption.mjs
           node scripts/validate-seasonal-design-governance.mjs

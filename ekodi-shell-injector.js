@@ -1,7 +1,9 @@
 import { EKODI_SERVICE_MANIFEST, serviceForId, serviceForHost as manifestServiceForHost } from './ekodi-service-manifest.js';
+import { publishedLocalesForService } from './config/language-registry.js';
 import { renderEkodiUserFooter } from './config/user-footer.js';
 
 const SHELL_ORIGIN='https://shell.ekodi.kr';
+const I18N_API_ORIGIN='https://api.ekodi.kr';
 const SHELL_SCRIPT=`${SHELL_ORIGIN}/shell.js`;
 const SHELL_WORKSPACE_STYLE=`${SHELL_ORIGIN}/workspace.css`;
 const SHELL_USER_UI_STYLE=`${SHELL_ORIGIN}/user-ui-shell.css?v=${EKODI_SERVICE_MANIFEST.shellVersion}`;
@@ -39,6 +41,7 @@ function shellCsp(csp){
   next=extendDirective(next,'script-src',SHELL_ORIGIN);
   next=extendDirective(next,'style-src',SHELL_ORIGIN);
   next=extendDirective(next,'connect-src',SHELL_ORIGIN);
+  next=extendDirective(next,'connect-src',I18N_API_ORIGIN);
   return next;
 }
 
@@ -51,7 +54,7 @@ function sharedFooterReplacesLocalFooter(serviceId){return SHARED_FOOTER_REPLACE
 function defaultSurface(serviceId){return cleanSurface(serviceForId(serviceId)?.defaultSurface)||'public';}
 function resolvedSurface(serviceId,surface=''){return cleanSurface(surface)||defaultSurface(serviceId);}
 function userSurfaceForService(serviceId){return USER_SURFACES.has(defaultSurface(serviceId));}
-function readyLocalesForService(serviceId){const id=cleanServiceId(serviceId);if(id==='ekodi')return 'ko-KR en zh-CN ja';const configured=serviceForId(id)?.readyLocales;const values=Array.isArray(configured)&&configured.length?configured:['ko-KR'];return [...new Set(['ko-KR',...values])].join(' ');}
+function readyLocalesForService(serviceId){return publishedLocalesForService(cleanServiceId(serviceId)).join(' ');}
 function serviceLabel(serviceId){const service=serviceForId(serviceId);return service?.shortName||service?.name||(serviceId==='ekodi'?'EKODI':'');}
 function surfaceBootStyle(surface){
   if(surface==='admin')return ADMIN_BOOT_STYLE;
