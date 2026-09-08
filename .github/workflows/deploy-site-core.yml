@@ -15,9 +15,12 @@ on:
       - 'ekodibiz-invest-business.js'
       - 'ekodibiz-invest-admin-page.js'
       - 'platform-router-entry-worker.js'
+      - 'preview-page.js'
+      - 'test/preview-page.test.mjs'
       - 'insurance-public-route.js'
       - 'sites/ekodi-insurance/public/**'
       - 'test/insurance-public-route.test.mjs'
+      - 'test/discovery-layer.test.mjs'
       - 'ekodi-service-manifest.js'
       - 'marketing-canonical-projection.js'
       - 'workspace-route-policy.js'
@@ -38,6 +41,7 @@ on:
       - 'tax-service-worker.js'
       - 'finance-entry-worker.js'
       - 'index.html'
+      - 'discovery-layer.js'
       - 'homepage-ambient.css'
       - 'homepage-ambient.js'
       - 'hub.html'
@@ -125,6 +129,7 @@ on:
       - 'scripts/validate-admin-source.mjs'
       - 'scripts/validate-deployment-guardrails.mjs'
       - 'scripts/validate-user-ui-dna.mjs'
+      - 'scripts/discovery-build.mjs'
       - 'scripts/ccm-mr-postbuild.mjs'
       - 'scripts/admin-authenticated-e2e.mjs'
       - 'scripts/admin-thin-postbuild.mjs'
@@ -174,9 +179,10 @@ jobs:
       - name: Validate current shared site and admin sources
         run: |
           set -euo pipefail
-          for f in site-worker.js platform-router-entry-worker.js insurance-public-route.js sites/ekodi-insurance/public/advisor.js sites/ekodi-insurance/public/server-bridge.js marketing-canonical-projection.js workspace-admin-page.js tenant-admin-policy.js store-admin-engine.js church-pastor-admin-page.js church-reports-admin.js workspace-trade-admin-page.js workspace-trade-portal.js mail-user-page.js mail-admin-page.js tax-portal-worker.js tax-business-registry.js tax-service-worker.js finance-entry-worker.js script.js homepage-ambient.js mall.js admin-ai-control-plane.js admin-ai-governor.js admin-provider-control.js admin-secret-generator.js ekodi-shell-injector.js site-shell-worker.js auth-site/auth-workspace-target.js marketing-ai-admin.js admin-authenticated-shell.js admin-central-handoff.js finance-monitor.js admin-demand-loader.js admin-public-site-controls.js client-access.js social-admin.js books-admin.js books-finance-admin.js books-distribution-admin.js books-pipeline-admin.js books-pipeline-bridge.js books-royalty-admin.js author-billing-admin.js ai-ops-admin.js devotional-admin.js ai-module-spec-admin.js communication-admin.js openai-workspace-admin.js storage-admin.js admin-menu-registry.js admin-menu-layout.js admin-sidebar.js admin-menu-runtime.js campus-actions.js scripts/ecosystem-registry.mjs scripts/admin-thin-postbuild.mjs scripts/build.mjs scripts/guarded-worker-release.mjs scripts/admin-authenticated-e2e.mjs scripts/admin-authenticated-e2e-retry.mjs scripts/admin-authenticated-e2e-menu-worker.mjs scripts/validate-user-ui-dna.mjs; do
+          for f in site-worker.js platform-router-entry-worker.js preview-page.js insurance-public-route.js sites/ekodi-insurance/public/advisor.js sites/ekodi-insurance/public/server-bridge.js marketing-canonical-projection.js workspace-admin-page.js tenant-admin-policy.js store-admin-engine.js church-pastor-admin-page.js church-reports-admin.js workspace-trade-admin-page.js workspace-trade-portal.js mail-user-page.js mail-admin-page.js tax-portal-worker.js tax-business-registry.js tax-service-worker.js finance-entry-worker.js script.js homepage-ambient.js mall.js admin-ai-control-plane.js admin-ai-governor.js admin-provider-control.js admin-secret-generator.js ekodi-shell-injector.js site-shell-worker.js auth-site/auth-workspace-target.js marketing-ai-admin.js admin-authenticated-shell.js admin-central-handoff.js finance-monitor.js admin-demand-loader.js admin-public-site-controls.js client-access.js social-admin.js books-admin.js books-finance-admin.js books-distribution-admin.js books-pipeline-admin.js books-pipeline-bridge.js books-royalty-admin.js author-billing-admin.js ai-ops-admin.js devotional-admin.js ai-module-spec-admin.js communication-admin.js openai-workspace-admin.js storage-admin.js admin-menu-registry.js admin-menu-layout.js admin-sidebar.js admin-menu-runtime.js campus-actions.js discovery-layer.js scripts/discovery-build.mjs scripts/ecosystem-registry.mjs scripts/admin-thin-postbuild.mjs scripts/build.mjs scripts/guarded-worker-release.mjs scripts/admin-authenticated-e2e.mjs scripts/admin-authenticated-e2e-retry.mjs scripts/admin-authenticated-e2e-menu-worker.mjs scripts/validate-user-ui-dna.mjs; do
             node --check "$f"
           done
+          node --test test/discovery-layer.test.mjs test/preview-page.test.mjs
           node --test test/store-admin-systems.test.mjs test/store-user-site-admin.test.mjs test/tenant-admin-policy.test.mjs test/workspace-admin-marketing-channels-route.test.mjs test/personal-finance-admin-control.test.mjs test/admin-finance-render-performance.test.mjs test/admin-authenticated-e2e-retry.test.mjs
           node --test test/admin-communication.test.mjs test/devotional-admin-readiness.test.mjs test/ekodibiz-invest-business.test.mjs test/ekodibiz-invest-admin.test.mjs test/public-workspace-gateway.test.mjs test/marketing-canonical-projection.test.mjs test/church-pastor-admin.test.mjs
           node scripts/validate-admin-source.mjs
@@ -245,9 +251,14 @@ jobs:
           set -euo pipefail
           npm run build
           cp auth-site/auth-workspace-target.js dist/auth-workspace-target.js
-          for f in dist/index.html dist/mall.html dist/mall.css dist/mall.js dist/admin-shell.html dist/admin-shell.css dist/admin-authenticated-shell.js dist/admin-demand-loader.js dist/admin-public-site-controls.js dist/ai-ops-admin.js dist/ai-ops-admin.css dist/devotional-admin.js dist/devotional-admin.css dist/ai-module-spec-admin.js dist/ai-module-spec-admin.css dist/communication-admin.js dist/communication-admin.css dist/openai-workspace-admin.js dist/openai-workspace-admin.css dist/storage-admin.js dist/storage-admin.css dist/admin-menu-registry.js dist/admin-menu-layout.js dist/admin-sidebar.js dist/campus-actions.js dist/campus-actions.css dist/marketing-ai-admin.js dist/marketing-ai-admin.css dist/ecosystem-services.json dist/auth-workspace-target.js; do
+          for f in dist/index.html dist/robots.txt dist/sitemap.xml dist/llms.txt dist/mall.html dist/mall.css dist/mall.js dist/admin-shell.html dist/admin-shell.css dist/admin-authenticated-shell.js dist/admin-demand-loader.js dist/admin-public-site-controls.js dist/ai-ops-admin.js dist/ai-ops-admin.css dist/devotional-admin.js dist/devotional-admin.css dist/ai-module-spec-admin.js dist/ai-module-spec-admin.css dist/communication-admin.js dist/communication-admin.css dist/openai-workspace-admin.js dist/openai-workspace-admin.css dist/storage-admin.js dist/storage-admin.css dist/admin-menu-registry.js dist/admin-menu-layout.js dist/admin-sidebar.js dist/campus-actions.js dist/campus-actions.css dist/marketing-ai-admin.js dist/marketing-ai-admin.css dist/ecosystem-services.json dist/auth-workspace-target.js; do
             test -f "$f"
           done
+          grep -Fq 'OAI-SearchBot' dist/robots.txt
+          grep -Fq 'User-agent: GPTBot' dist/robots.txt
+          grep -Fq '<loc>https://ekodi.kr/</loc>' dist/sitemap.xml
+          grep -Fq 'Canonical site: https://ekodi.kr/' dist/llms.txt
+          grep -Fq 'data-ekodi-discovery="v1"' dist/index.html
           grep -Fq 'workspace_key:requested' dist/auth-workspace-target.js
           grep -Fq '/api/control/public-sites' dist/admin-public-site-controls.js
           grep -Fq 'admin-public-site-controls.js' dist/admin-authenticated-shell.js
@@ -389,6 +400,17 @@ jobs:
             [ -n "$url" ] || continue
             check "$url" || failed=1
           done < "$urls_file"
+
+          for attempt in $(seq 1 12); do
+            if curl -fsS --retry 2 --retry-delay 1 --connect-timeout 5 --max-time 15 'https://ekodi.kr/robots.txt' | grep -Fq 'OAI-SearchBot' \
+              && curl -fsS --retry 2 --retry-delay 1 --connect-timeout 5 --max-time 15 'https://ekodi.kr/sitemap.xml' | grep -Fq '<loc>https://ekodi.kr/</loc>' \
+              && curl -fsS --retry 2 --retry-delay 1 --connect-timeout 5 --max-time 15 'https://ekodi.kr/llms.txt' | grep -Fq 'Canonical site: https://ekodi.kr/'; then
+              echo 'EKODI Discovery Layer production endpoints verified.'
+              break
+            fi
+            if [ "$attempt" -eq 12 ]; then failed=1; fi
+            sleep 5
+          done
 
           : > /tmp/mail-body
           if curl -L -fsS --retry 3 --retry-delay 2 --connect-timeout 5 --max-time 20 'https://mail.ekodi.kr/' -o /tmp/mail-body; then
