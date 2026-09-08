@@ -22,3 +22,10 @@ test('synthetic production Admin UI verifier stubs the canonical apex session ro
   assert.match(text, /page\.route\('https:\/\/ekodi\.kr\/api\/session'/);
   assert.doesNotMatch(text, /page\.route\('https:\/\/api\.ekodi\.kr\/api\/session'/);
 });
+
+
+test('synthetic production Admin UI verifier targets the canonical apex Admin path', async () => {
+  const text = await source();
+  assert.match(text, /const ADMIN_URL = process\.env\.ADMIN_URL \|\| 'https:\/\/ekodi\.kr\/admin\/'/);
+  assert.doesNotMatch(text, /https:\/\/admin\.ekodi\.kr\//);
+});

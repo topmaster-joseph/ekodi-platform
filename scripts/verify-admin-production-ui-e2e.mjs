@@ -1,7 +1,7 @@
 import { chromium } from 'playwright';
 import { adminMenuOrder, getAdminMenuGroupForSection } from '../admin-menu-registry.js';
 
-const ADMIN_URL = process.env.ADMIN_URL || 'https://admin.ekodi.kr/';
+const ADMIN_URL = process.env.ADMIN_URL || 'https://ekodi.kr/admin/';
 const SYNTHETIC_TOKEN = 'ekodi-production-ui-e2e';
 const SYNTHETIC_EMAIL = 'production-ui-e2e@local.invalid';
 const menuIds = adminMenuOrder();
