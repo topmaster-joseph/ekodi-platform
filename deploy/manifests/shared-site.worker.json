@@ -345,14 +345,15 @@
           "x-ekodi-route: admin-shell",
           "cross-origin-opener-policy: same-origin-allow-popups",
           "cache-control: no-store"
-        ]
+        ],
+        "rollbackVerify": false
       },
       {
         "url": "https://admin.ekodi.kr/",
         "statuses": [
           200
         ],
-        "redirect": "manual",
+        "redirect": "follow",
         "expect": [
           "EKODI Admin",
           "admin-authenticated-shell.js?v=",
@@ -368,7 +369,7 @@
       {
         "url": "https://admin.ekodi.kr/openai-workspace-admin.js",
         "statuses": [200],
-        "redirect": "manual",
+        "redirect": "follow",
         "expect": ["Permission transfer: NONE", "EKODIAdminContext", "ekodi-admin-assist-request"],
         "headerExpect": ["x-content-type-options: nosniff"],
         "rollbackVerify": false
@@ -376,7 +377,7 @@
       {
         "url": "https://admin.ekodi.kr/openai-workspace-admin.css",
         "statuses": [200],
-        "redirect": "manual",
+        "redirect": "follow",
         "expect": [".openai-workspace-policy", "@media(max-width:900px)"],
         "headerExpect": ["x-content-type-options: nosniff"],
         "rollbackVerify": false
@@ -386,7 +387,7 @@
         "statuses": [
           200
         ],
-        "redirect": "manual",
+        "redirect": "follow",
         "expect": [
           "label: '실행 인프라'",
           "remote-power-admin.js",
@@ -407,7 +408,7 @@
         "statuses": [
           200
         ],
-        "redirect": "manual",
+        "redirect": "follow",
         "expect": [
           "Remote Desktop 자가복구",
           "#deviceControlPanel",
@@ -423,7 +424,7 @@
         "statuses": [
           200
         ],
-        "redirect": "manual",
+        "redirect": "follow",
         "expect": [
           ".remote-power-card",
           ".remote-power-actions"
@@ -438,7 +439,7 @@
         "statuses": [
           200
         ],
-        "redirect": "manual",
+        "redirect": "follow",
         "expect": [
           "현재 관리자 브라우저 진단",
           "서버로 업로드하지 않습니다",
@@ -456,7 +457,7 @@
         "statuses": [
           200
         ],
-        "redirect": "manual",
+        "redirect": "follow",
         "expect": [
           ".admin-browser-diagnostic",
           "@media(max-width:720px)"
@@ -472,7 +473,7 @@
         "statuses": [
           200
         ],
-        "redirect": "manual",
+        "redirect": "follow",
         "expect": [
           "ekodiAssistBootstrap",
           "admin-lazy-features.js"
@@ -486,7 +487,7 @@
         "statuses": [
           200
         ],
-        "redirect": "manual",
+        "redirect": "follow",
         "expect": [
           ".ekodi-assist-bootstrap",
           "@media(max-width:720px)"
@@ -500,7 +501,7 @@
         "statuses": [
           200
         ],
-        "redirect": "manual",
+        "redirect": "follow",
         "expect": [
           "ekodi-chief-ai-chat-v1",
           "DECISION_RULES"
@@ -514,7 +515,7 @@
         "statuses": [
           200
         ],
-        "redirect": "manual",
+        "redirect": "follow",
         "expect": [
           ".ekodi-assist-launcher",
           ".ekodi-assist-panel",
@@ -839,7 +840,7 @@
         "statuses": [
           200
         ],
-        "redirect": "manual",
+        "redirect": "follow",
         "expect": [
           "EVOLUTION INTELLIGENCE",
           "/api/control/evolution",
@@ -854,7 +855,7 @@
         "statuses": [
           200
         ],
-        "redirect": "manual",
+        "redirect": "follow",
         "expect": [
           "EKODI COMMUNICATION ADMIN",
           "https://mail.ekodi.kr/admin",
@@ -1013,7 +1014,7 @@
         "statuses": [
           200
         ],
-        "redirect": "manual",
+        "redirect": "follow",
         "expect": [
           "전문서비스 · PERSONAL FINANCE",
           "/api/admin/personal-finance/control",
@@ -1029,7 +1030,7 @@
         "statuses": [
           200
         ],
-        "redirect": "manual",
+        "redirect": "follow",
         "expect": [
           ".personal-finance-admin",
           ".pf-admin-setting",
