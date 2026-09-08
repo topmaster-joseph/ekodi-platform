@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { handleMailContactApi, mailContactPage, MAIL_CONTACT_RECIPIENT } from '../mail-contact.js';
 import { sendGoogleMailMessage } from '../mail-google-adapter.js';
+import platformEntry from '../platform-router-entry-worker.js';
 
 const contactRequest=(body,headers={})=>new Request('https://ekodi.kr/mail/api/contact',{
   method:'POST',
@@ -69,13 +70,26 @@ test('contact delivery ignores client recipient and sends fixed To with user Rep
   } finally { globalThis.fetch=original; }
 });
 
-test('canonical apex exposes public contact and legacy mail host redirects', async()=>{
-  const entry=await readFile(new URL('../platform-router-entry-worker.js',import.meta.url),'utf8');
-  assert.match(entry,/handleMailContactApi\(request,env\)/);
-  assert.match(entry,/url\.pathname==='\/contact'/);
-  assert.ok(entry.indexOf('handleMailContactApi(request,env)')<entry.indexOf('handleMailApi(request,env)'));
+test('canonical apex owns public contact page and contact API end to end', async()=>{
+  const page=await platformEntry.fetch(new Request('https://ekodi.kr/mail/contact'),{ENVIRONMENT:'test'},{});
+  assert.equal(page.status,200);
+  assert.equal(page.headers.get('x-ekodi-route'),'mail-contact');
+  assert.match(await page.text(),/에코디에 문의하기/);
+
+  const api=await platformEntry.fetch(new Request('https://ekodi.kr/mail/api/contact',{
+    method:'POST',
+    headers:{origin:'https://ekodi.kr','content-type':'application/json','cf-connecting-ip':'203.0.113.9'},
+    body:JSON.stringify({email:'bad-address',subject:'문의',message:'내용'}),
+  }),{ENVIRONMENT:'test'},{});
+  assert.equal(api.status,400);
+  assert.equal((await api.json()).code,'INVALID_EMAIL');
 });
 
+test('legacy mail host keeps redirecting contact UI to the canonical apex', async()=>{
+  const response=await platformEntry.fetch(new Request('https://mail.ekodi.kr/contact'),{ENVIRONMENT:'test'},{});
+  assert.equal(response.status,308);
+  assert.equal(response.headers.get('location'),'https://ekodi.kr/mail/contact');
+});
 
 test('public contact release guard is registered', async()=>{
   const manifest=JSON.parse(await readFile(new URL('../deploy/manifests/shared-site.worker.json',import.meta.url),'utf8'));
@@ -89,7 +103,6 @@ test('public contact release guard is registered', async()=>{
   assert.match(wrangler,/"\/mail\*"/);
   assert.match(wrangler,/limit = 5/);
 });
-
 
 test('shared-site workflow watches and validates the contact surface', async()=>{
   const workflow=await readFile(new URL('../.github/workflows/deploy-site-core.yml',import.meta.url),'utf8');
