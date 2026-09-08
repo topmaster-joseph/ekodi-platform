@@ -106,3 +106,25 @@ test('Bible canonical path uses its service binding without double-prefixing ass
   assert.equal(response.headers.get('x-ekodi-canonical-surface'),'bible');assert.equal(response.headers.get('x-ekodi-canonical-path'),'/bible');
   const html=await response.text();assert.match(html,/href="\/bible\/styles\.css"/);assert.doesNotMatch(html,/\/bible\/bible\//);
 });
+
+test('shared-site release guards canonical Auth while legacy Auth follows the migration path',async()=>{
+  const manifest=JSON.parse(await fs.promises.readFile(new URL('../deploy/manifests/shared-site.worker.json',import.meta.url),'utf8'));
+  const requests=manifest.worker.requests;
+  const canonical=requests.find(item=>item.url.startsWith('https://ekodi.kr/auth/?site=social'));
+  assert.equal(canonical?.statuses?.[0],200);
+  assert.equal(canonical?.redirect,'manual');
+  assert.equal(canonical?.rollbackVerify,false);
+  assert.ok(canonical?.expect?.includes('/auth/auth-router.js?v=20260904-direct-login-1'));
+  assert.ok(canonical?.headerExpect?.includes('x-ekodi-canonical-surface: auth'));
+  assert.ok(canonical?.headerExpect?.includes('x-ekodi-canonical-path: /auth'));
+  for(const url of [
+    'https://auth.ekodi.kr/',
+    'https://auth.ekodi.kr/auth-router.js?release=31',
+    'https://auth.ekodi.kr/client-auth.js?release=31',
+    'https://auth.ekodi.kr/auth-workspace-target.js?release=31',
+    'https://auth.ekodi.kr/admin-auth.js?release=31'
+  ]){
+    assert.equal(requests.find(item=>item.url===url)?.redirect,'follow',url);
+  }
+  assert.equal(requests.find(item=>item.url==='https://mail.ekodi.kr/contact')?.rollbackVerify,false);
+});

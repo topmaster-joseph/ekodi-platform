@@ -1,5 +1,5 @@
 {
-  "version": 55,
+  "version": 56,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
@@ -522,11 +522,29 @@
         ]
       },
       {
-        "url": "https://auth.ekodi.kr/",
+        "url": "https://ekodi.kr/auth/?site=social&return_to=https%3A%2F%2Fsocial.ekodi.kr%2F",
         "statuses": [
           200
         ],
         "redirect": "manual",
+        "expect": [
+          "통합 인증센터",
+          "dataset.seamlessSso",
+          "/auth/auth-router.js?v=20260904-direct-login-1"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: central-auth",
+          "x-ekodi-canonical-surface: auth",
+          "x-ekodi-canonical-path: /auth"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://auth.ekodi.kr/",
+        "statuses": [
+          200
+        ],
+        "redirect": "follow",
         "expect": [
           "통합 인증센터",
           "dataset.seamlessSso",
@@ -541,7 +559,7 @@
         "statuses": [
           200
         ],
-        "redirect": "manual",
+        "redirect": "follow",
         "expect": [
           "admin-auth.js?v=20260904-direct-bridge-1",
           "business-auth.js?v=20260826-free-fallback-1",
@@ -560,7 +578,7 @@
         "statuses": [
           200
         ],
-        "redirect": "manual",
+        "redirect": "follow",
         "expect": [
           "EKODI Messenger",
           "EKODI Investment",
@@ -583,7 +601,7 @@
         "statuses": [
           200
         ],
-        "redirect": "manual",
+        "redirect": "follow",
         "expect": [
           "workspace_key:requested",
           "serviceOrigins",
@@ -604,7 +622,7 @@
         "statuses": [
           200
         ],
-        "redirect": "manual",
+        "redirect": "follow",
         "expect": [
           "use_fedcm_for_button:false",
           "ux_mode:'popup'",
@@ -730,7 +748,8 @@
           "x-ekodi-route: mail-contact",
           "x-ekodi-shell: v2",
           "cache-control: no-store"
-        ]
+        ],
+        "rollbackVerify": false
       },
       {
         "url": "https://mail.ekodi.kr/admin",
