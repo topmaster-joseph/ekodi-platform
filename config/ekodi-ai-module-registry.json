@@ -1,0 +1,137 @@
+{
+  "schemaVersion": 1,
+  "version": "1.0.0",
+  "name": "EKODI Specialist AI Module Registry",
+  "status": "foundation",
+  "currentFoundationGeneration": 2,
+  "northStarGeneration": 8,
+  "principle": "Small specialist modules compose behind one EKODI AI experience. Capability authority always precedes module or provider selection.",
+  "character": "ekodian",
+  "engine": "ekodi-engine",
+  "defaults": {
+    "maxSuggestedModules": 3,
+    "intervention": "suggest",
+    "unknownModuleBehavior": "unresolved_not_guessed",
+    "providerIndependent": true,
+    "userShouldNotNeedModuleKnowledge": true
+  },
+  "modules": [
+    {
+      "id": "core.navigator",
+      "name": "Navigator AI",
+      "domain": "core",
+      "ownerAgent": "chief",
+      "serviceId": "my",
+      "capabilityIds": ["core.navigator"],
+      "activation": "contextual",
+      "signals": ["도움", "어떻게", "무엇을", "정리", "방향", "다음", "help", "next"],
+      "mediaKinds": [],
+      "nextMoves": ["QUESTION", "PRACTICE", "STOP"]
+    },
+    {
+      "id": "knowledge.books",
+      "name": "Books AI",
+      "domain": "knowledge",
+      "ownerAgent": "books",
+      "serviceId": "books",
+      "capabilityIds": ["knowledge.research", "learning.coach", "creator.writing"],
+      "activation": "contextual",
+      "signals": ["책", "독서", "읽", "문학", "소설", "고전", "시", "작가", "book", "read"],      "mediaKinds": ["book", "essay", "poem"],
+      "nextMoves": ["CONTENT", "QUESTION", "CIRCLE"]
+    },
+    {
+      "id": "culture.music",
+      "name": "Music Curator AI",
+      "domain": "culture",
+      "ownerAgent": "books",
+      "serviceId": "author",
+      "capabilityIds": ["creator.media", "learning.coach"],
+      "activation": "contextual",
+      "signals": ["음악", "노래", "곡", "듣", "클래식", "찬송", "music", "song"],
+      "mediaKinds": ["music", "audio"],
+      "nextMoves": ["CONTENT", "QUESTION", "PRACTICE"]
+    },
+    {
+      "id": "culture.art",
+      "name": "Art Curator AI",
+      "domain": "culture",
+      "ownerAgent": "books",
+      "serviceId": "author",
+      "capabilityIds": ["creator.visual", "learning.coach"],
+      "activation": "contextual",
+      "signals": ["미술", "그림", "회화", "사진", "조각", "건축", "작품", "art", "painting"],
+      "mediaKinds": ["art", "photo", "architecture"],
+      "nextMoves": ["CONTENT", "QUESTION", "PRACTICE"]
+    },
+    {
+      "id": "culture.video",
+      "name": "Video Curator AI",
+      "domain": "culture",
+      "ownerAgent": "books",
+      "serviceId": "author",
+      "capabilityIds": ["creator.media", "knowledge.research"],
+      "activation": "contextual",
+      "signals": ["영상", "영화", "다큐", "인터뷰", "유튜브", "video", "film"],      "mediaKinds": ["video", "film", "documentary"],
+      "nextMoves": ["CONTENT", "QUESTION", "CIRCLE"]
+    },
+    {
+      "id": "scripture.bible",
+      "name": "Bible Guide AI",
+      "domain": "ministry",
+      "ownerAgent": "ministry",
+      "serviceId": "bible",
+      "capabilityIds": ["ministry.service", "knowledge.research"],
+      "activation": "opt_in_or_direct",
+      "signals": ["성경", "말씀", "본문", "하나님", "예수", "복음", "신앙", "묵상", "bible", "scripture"],
+      "mediaKinds": ["scripture"],
+      "nextMoves": ["CONTENT", "QUESTION", "PRACTICE"]
+    },
+    {
+      "id": "community.connector",
+      "name": "Community Connector AI",
+      "domain": "community",
+      "ownerAgent": "community",
+      "serviceId": "community",
+      "capabilityIds": ["community.membership", "community.events", "core.communication"],
+      "activation": "contextual",
+      "signals": ["함께", "토론", "모임", "사람", "이웃", "지역", "공동체", "나누", "community", "circle"],
+      "mediaKinds": ["person", "place", "event"],
+      "nextMoves": ["CIRCLE", "PERSON", "PRACTICE"]
+    },
+    {
+      "id": "life.reflection",
+      "name": "Reflection AI",
+      "domain": "life",
+      "ownerAgent": "chief",
+      "serviceId": "life",
+      "capabilityIds": ["core.navigator", "core.project", "core.communication"],
+      "activation": "contextual",
+      "signals": ["삶", "인생", "의미", "성공", "행복", "관계", "쉼", "돈", "돌아보", "살아", "life", "meaning"],      "mediaKinds": ["experience", "reflection"],
+      "nextMoves": ["QUESTION", "PRACTICE", "REFLECTION", "STOP"]
+    },
+    {
+      "id": "business.stewardship",
+      "name": "Business Stewardship AI",
+      "domain": "business",
+      "ownerAgent": "commerce",
+      "serviceId": "business",
+      "capabilityIds": ["business.operations", "business.marketing", "finance.stewardship"],
+      "activation": "contextual",
+      "signals": ["사업", "가게", "매출", "고객", "마케팅", "운영", "창업", "일", "business"],
+      "mediaKinds": ["case", "data"],
+      "nextMoves": ["CONTENT", "QUESTION", "PRACTICE"]
+    },
+    {
+      "id": "finance.stewardship",
+      "name": "Finance Stewardship AI",
+      "domain": "finance",
+      "ownerAgent": "finance",
+      "serviceId": "money",
+      "capabilityIds": ["finance.stewardship"],
+      "activation": "contextual",
+      "signals": ["돈", "재정", "소비", "예산", "수입", "지출", "충분", "나눔", "finance", "money"],
+      "mediaKinds": ["data", "practice"],
+      "nextMoves": ["QUESTION", "PRACTICE"]
+    }
+  ]
+}

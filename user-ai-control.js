@@ -8,6 +8,7 @@ import {
   resolveCanonicalEkodiIdentity,
 } from './personal-ai-bridge.js';
 import { AI_ACCESS_POLICY, resolveAiAccessRoute, routeSequence } from './ai-access-orchestration.js';
+import { getEkodiEngineSummary, planEkodiExperience } from './ekodi-engine.js';
 import {
   PERSONAL_AI_PROVIDER_REGISTRY,
   createPersonalProvider,
@@ -274,6 +275,7 @@ async function status(request, env, identity) {
     policy:'automatic-personal-first-provider-independent',
     accessPolicyVersion:AI_ACCESS_POLICY.version,
     providerRegistryVersion:PERSONAL_AI_PROVIDER_REGISTRY.version,
+    engine:getEkodiEngineSummary(),
     bridge:buildPersonalAiBridgeSnapshot(identity),
     account:{ email:identity.email, ekodiId:identity.ekodiId || null },
     site,
@@ -374,6 +376,33 @@ function personalProviderOptions(providerId, apiKey, env) {
   if (providerId === 'openai-api') return { apiKey, model:String(env.USER_AI_OPENAI_MODEL || '').trim() || undefined };
   if (providerId === 'claude-api') return { apiKey, model:String(env.USER_AI_CLAUDE_MODEL || '').trim() || undefined };
   return { apiKey };
+}
+
+async function enginePlan(request, env) {
+  let body = null;
+  try { body = await request.json(); } catch {}
+  if (!body || typeof body !== 'object') return json({ error:'유효한 JSON 요청이 필요합니다.', code:'USER_AI_ENGINE_INVALID_JSON' }, 400, request, env);
+  const compact = value => Array.isArray(value) ? value.slice(0, 8).map(item => String(item || '').slice(0, 80)) : [];
+  const input = {
+    text:String(body.text || body.message || '').trim().slice(0, 4000),
+    surface:'user',
+    journeyState:String(body.journeyState || body.phase || '').trim().slice(0, 40),
+    currentMedia:String(body.currentMedia || '').trim().slice(0, 40),
+    requestedMedia:compact(body.requestedMedia),
+    requestedModules:compact(body.requestedModules),
+    includeBiblicalRoot:body.includeBiblicalRoot === true,
+    readyToLive:body.readyToLive === true,
+    practiceInProgress:body.practiceInProgress === true,
+    reflectionCompleted:body.reflectionCompleted === true,
+    connected:body.connected === true,
+    returning:body.returning === true,
+    returnWithStory:body.returnWithStory === true,
+    contentConsumed:Math.max(0, Math.min(Number(body.contentConsumed || 0) || 0, 100)),
+    explicitRequest:body.explicitRequest !== false,
+    characterEnabled:body.characterEnabled !== false,
+    interruptionsDisabled:body.interruptionsDisabled === true,
+  };
+  return json({ ok:true, plan:planEkodiExperience(input) }, 200, request, env);
 }
 
 async function assist(request, env, identity) {
@@ -508,6 +537,7 @@ export async function handleUserAiControl(request, env = {}) {
 
   if (request.method === 'POST' && url.pathname === '/api/user-ai/credentials/gemini') return saveCredential(request, env, identity, 'gemini-api');
   if (request.method === 'DELETE' && url.pathname === '/api/user-ai/credentials/gemini') return revokeCredential(request, env, identity, 'gemini-api');
+  if (request.method === 'POST' && url.pathname === '/api/user-ai/plan') return enginePlan(request, env);
   if (request.method === 'POST' && url.pathname === '/api/user-ai/assist') return assist(request, env, identity);
   return json({ error:'User AI endpoint not found', code:'USER_AI_NOT_FOUND' }, 404, request, env);
 }

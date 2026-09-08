@@ -6,6 +6,7 @@ import {
 import { buildEkodiAiOrchestrator } from './ai-orchestrator-runtime.js';
 import { createEkodiAiProviderRegistry } from './ekodi-ai-provider-registry.js';
 import { buildEkodiCommandPlane } from './ekodi-command-plane.js';
+import { getEkodiEngineSummary, planEkodiExperience } from './ekodi-engine.js';
 
 const ENABLED_VALUES = new Set(['1', 'true', 'yes', 'on', 'enabled']);
 
@@ -58,10 +59,14 @@ export function buildCoreAiGateway(env = {}, providers = []) {
         multiProviderEnabled: isMultiProviderEnabled(env),
         orchestration: orchestrator.status(),
         commandPlane: commandPlane.status(),
+        engine: getEkodiEngineSummary(),
       });
     },
     plan(input = {}) {
       return orchestrator.plan(input);
+    },
+    experiencePlan(input = {}) {
+      return planEkodiExperience(input);
     },
     commandPlan(input = {}) {
       return commandPlane.plan(input);
