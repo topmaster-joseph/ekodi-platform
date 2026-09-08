@@ -14,6 +14,22 @@
         ]
       },
       {
+        "url": "https://api.ekodi.kr/api/ai-modules/v1/providers/health",
+        "statuses": [
+          200
+        ],
+        "expect": [
+          "\"ok\":true",
+          "ekodi.ai-provider.v1",
+          "\"providerIndependent\":true",
+          "\"secretValuesReturned\":false"
+        ],
+        "headerExpect": [
+          "cache-control: no-store",
+          "x-content-type-options: nosniff"
+        ]
+      },
+      {
         "url": "https://api.ekodi.kr/operator",
         "statuses": [
           200

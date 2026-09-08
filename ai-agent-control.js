@@ -1,7 +1,7 @@
 import authWorker from './auth-worker.js';
 import apiWorker from './api-worker.js';
 import { buildCoreAiGateway, getCoreAiGatewayStatus } from './core-ai-gateway.js';
-import { createOpenAiProvider, getOpenAiProviderStatus } from './openai-provider-adapter.js';
+import { getEkodiAiProviderRegistryStatus } from './ekodi-ai-provider-registry.js';
 import { AI_MISSION_RUNTIME, evaluateMissionAction, getRuntimeAgentPolicy } from './ai-governance-runtime.js';
 import { evaluateAutonomousOperation, getSovereignAutonomySummary } from './sovereign-autonomy-runtime.js';
 import { buildEkodianOperationSnapshot, getEkodian8GSummary } from './ekodian-8g-runtime.js';
@@ -281,8 +281,7 @@ async function handleAdminAssist(request, env, session) {
   });
   const decision = evaluateMissionAction(auditAction);
   const stored = await insertAction(env, session, auditAction, decision);
-  const provider = createOpenAiProvider(env);
-  const gateway = buildCoreAiGateway(env, [provider]);
+  const gateway = buildCoreAiGateway(env, []);
   const configuredTimeout = Number(env.AI_ADMIN_TIMEOUT_MS || 15_000);
   const timeoutMs = Math.min(Math.max(Number.isFinite(configuredTimeout) ? configuredTimeout : 15_000, 2_500), 30_000);
   const result = await gateway.run({
@@ -409,11 +408,10 @@ export async function handleAgentMissionControl(request, env) {
   }
 
   if (request.method === 'GET' && url.pathname === `${PREFIX}/provider-status`) {
-    const provider = createOpenAiProvider(env);
     return json({
       ok: true,
-      gateway: getCoreAiGatewayStatus(env, [provider]),
-      openai: getOpenAiProviderStatus(env),
+      gateway: getCoreAiGatewayStatus(env, []),
+      providers: getEkodiAiProviderRegistryStatus(env),
     }, 200, request, env);
   }
 

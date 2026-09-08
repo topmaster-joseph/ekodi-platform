@@ -29,7 +29,10 @@ test('workspace admin projects root and mall sections from tenant-local capabili
   assert.deepEqual(workspaceAdminSectionsForRole('marketing_manager'),['overview','mall','publishing','marketing']);
   assert.deepEqual(workspaceAdminSectionsForRole('accounting_manager'),['overview','mall','finance']);
   assert.deepEqual(workspaceAdminSectionsForRole('client_viewer'),['overview','mall']);
-  assert.deepEqual(workspaceAdminSectionsForRole('marketing_manager','mall'),['overview','sales','sourcing','marketing','channels','automation','growth','analytics']);
+  assert.deepEqual(workspaceAdminSectionsForRole('marketing_manager','mall'),['overview','sales','marketing','channels','automation','growth','analytics']);
+  assert.deepEqual(workspaceAdminSectionsForRole('manager','mall'),['overview','sales','products','sourcing','marketing','channels','automation','growth','analytics']);
+  assert.equal(workspaceAdminCanAccess('marketing_manager','sourcing','mall'),false);
+  assert.equal(workspaceAdminCanAccess('manager','sourcing','mall'),true);
   assert.deepEqual(workspaceAdminSectionsForRole('accounting_manager','mall'),['overview','sales','analytics']);
   assert.equal(workspaceAdminCanAccess('manager','members'),false);
   assert.equal(workspaceAdminCanAccess('workspace_admin','members'),true);

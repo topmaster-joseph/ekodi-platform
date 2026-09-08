@@ -20,6 +20,17 @@ function addDays(dateText, delta) {
   value.setUTCDate(value.getUTCDate() + delta);
   return value.toISOString().slice(0,10);
 }
+export function conversionFeedState(input = {}, now = new Date()) {
+  const rows = Number(input.conversionRows || 0);
+  const latest = input.latestConversionDate || null;
+  const cutoff = addDays(kstParts(now).date,-2);
+  if (rows > 0) return {status:latest && latest >= cutoff ? 'ready' : 'stale',feedReady:true};
+  const reportAt = input.latestReportRunAt || null;
+  const reportDate = reportAt ? kstParts(new Date(reportAt)).date : null;
+  if (input.latestReportStatus === 'success' && reportDate) return {status:reportDate >= cutoff ? 'ready_zero' : 'stale_zero',feedReady:true};
+  return {status:'empty',feedReady:false};
+}
+
 function ratioMomentum(current, previous) {
   const cur = Number(current) || 0;
   const prev = Number(previous) || 0;
@@ -134,7 +145,7 @@ async function fetchNaverCategoryTrends(env, categories, runDate) {
   return {status:'ok',signals};
 }
 
-async function schemaReady(env) { return d1SchemaReady(env?.DB,['affiliate_storefront_products','affiliate_storefront_clicks','affiliate_demand_signals','affiliate_product_performance_daily','affiliate_growth_opportunities','affiliate_growth_strategy_runs']); }
+async function schemaReady(env) { return d1SchemaReady(env?.DB,['affiliate_storefront_products','affiliate_storefront_clicks','affiliate_demand_signals','affiliate_product_performance_daily','affiliate_growth_opportunities','affiliate_growth_strategy_runs','affiliate_partner_report_runs']); }
 
 async function syncFirstPartyProductPerformance(env) {
   const result = await env.DB.prepare(`INSERT INTO affiliate_product_performance_daily(product_row_id,metric_date,clicks,orders,cancels,gmv_krw,commission_krw,source,updated_at)
@@ -148,6 +159,7 @@ async function syncFirstPartyProductPerformance(env) {
 }
 
 async function productPerformanceStatus(env) {
+  const report = await env.DB.prepare(`SELECT status,finished_at FROM affiliate_partner_report_runs WHERE account_id=? AND status='success' ORDER BY sync_date DESC,id DESC LIMIT 1`).bind(ACCOUNT_ID).first().catch(() => null);
   const row = await env.DB.prepare(`SELECT COUNT(*) AS rows,MAX(metric_date) AS latest_metric_date,
     SUM(CASE WHEN source=? THEN 1 ELSE 0 END) AS first_party_rows,MAX(CASE WHEN source=? THEN metric_date ELSE NULL END) AS latest_first_party_date,COALESCE(SUM(CASE WHEN source=? THEN clicks ELSE 0 END),0) AS first_party_clicks,
     SUM(CASE WHEN source<>? THEN 1 ELSE 0 END) AS conversion_rows,MAX(CASE WHEN source<>? THEN metric_date ELSE NULL END) AS latest_conversion_date,
@@ -163,9 +175,10 @@ async function productPerformanceStatus(env) {
   const latestConversionDate = row.latest_conversion_date || null;
   const recentCutoff = addDays(kstParts().date,-2);
   const engagementStatus = !firstPartyRows ? 'empty' : latestFirstPartyDate && latestFirstPartyDate >= recentCutoff ? 'ready' : 'stale';
-  const conversionStatus = !conversionRows ? 'empty' : latestConversionDate && latestConversionDate >= recentCutoff ? 'ready' : 'stale';
-  const status = conversionStatus === 'ready' ? 'ready' : engagementStatus === 'ready' ? 'engagement_only' : rows ? 'stale' : 'empty';
-  return {status,rows,latestMetricDate,engagementStatus,conversionStatus,firstPartyRows,latestFirstPartyDate,firstPartyClicks30d:Number(row.first_party_clicks||0),conversionRows,latestConversionDate,reportedClicks30d:Number(row.reported_clicks||0),orders30d:Number(row.orders||0),cancels30d:Number(row.cancels||0),gmv30d:Number(row.gmv_krw||0),commission30d:Number(row.commission_krw||0)};
+  const conversionFeed = conversionFeedState({conversionRows,latestConversionDate,latestReportStatus:report?.status||'',latestReportRunAt:report?.finished_at||null});
+  const conversionStatus = conversionFeed.status;
+  const status = conversionStatus === 'ready' || conversionStatus === 'ready_zero' ? 'ready' : engagementStatus === 'ready' ? 'engagement_only' : rows || conversionFeed.feedReady ? 'stale' : 'empty';
+  return {status,rows,latestMetricDate,engagementStatus,conversionStatus,conversionFeedReady:conversionFeed.feedReady,latestReportRunAt:report?.finished_at||null,firstPartyRows,latestFirstPartyDate,firstPartyClicks30d:Number(row.first_party_clicks||0),conversionRows,latestConversionDate,reportedClicks30d:Number(row.reported_clicks||0),orders30d:Number(row.orders||0),cancels30d:Number(row.cancels||0),gmv30d:Number(row.gmv_krw||0),commission30d:Number(row.commission_krw||0)};
 }
 
 async function loadProducts(env) {

@@ -22,9 +22,10 @@ test('Campus first screen renders the full site catalog with direct operational 
 });
 
 test('Campus always keeps pre-open platforms visible and prevents dead planned links', () => {
-  for (const domain of ['my.ekodi.kr', 'ins.ekodi.kr', 'edu.ekodi.kr', 'media.ekodi.kr']) {
+  for (const domain of ['my.ekodi.kr', 'ekodi.kr/insurance', 'edu.ekodi.kr', 'media.ekodi.kr']) {
     assert.match(js, new RegExp(domain.replaceAll('.', '\\.')));
   }
+  assert.match(js, /domain: 'ekodi\.kr\/insurance'[\s\S]*url: 'https:\/\/ekodi\.kr\/insurance'[\s\S]*lifecycle: 'beta'/);
   assert.match(js, /lifecycle: 'planned'/);
   assert.match(js, /dataset\.siteLifecycle = site\.lifecycle \|\| 'live'/);
   assert.match(js, /if \(lifecycle === 'planned'\) return '오픈 전'/);
@@ -46,7 +47,8 @@ test('Campus includes verified ecosystem services that were missing from the old
 test('Campus reconciles the canonical homepage registry so the two old lists cannot drift', () => {
   assert.match(js, /REGISTRY_GROUP_MAP/);
   assert.match(js, /reconcileRegistryServices/);
-  assert.match(js, /normalizeDomain\(service\?\.domain \|\| service\?\.label \|\| service\?\.url\)/);
+  assert.match(js, /normalizeDomain\(service\?\.label \|\| service\?\.domain \|\| service\?\.url\)/);
+  assert.match(js, /return `\$\{url\.hostname\}\$\{path==='\/'\?'':path\}`/);
   assert.match(js, /window\.EKODICampus = Object\.freeze/);
   assert.match(js, /import\('\.\/homepage-admin\.js'\)/);
   assert.match(js, /Other Services/);
@@ -88,7 +90,8 @@ test('public site Open links never inherit monitor-only health endpoints', () =>
 
 test('navigation ownership stays in the central registry rather than Campus DOM rewriting', () => {
   assert.doesNotMatch(registry, /id: 'domains'/);
-  assert.match(registry, /id: 'affiliates'[\s\S]*en: 'Affiliate Marketing'/);
+  assert.match(registry, /id: 'supply-network'[\s\S]*en: 'Sales & Supply Network'/);
+  assert.doesNotMatch(registry, /id: 'affiliates'|id: 'cheonggye-members'/);
   assert.doesNotMatch(js, /data-section=\"domains\"|data-lazy-section=\"domains\"/);
 });
 

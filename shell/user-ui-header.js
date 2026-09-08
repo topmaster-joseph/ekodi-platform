@@ -3,7 +3,7 @@
 if(window.__EKODI_USER_UI_HEADER_BOOTED)return;
 window.__EKODI_USER_UI_HEADER_BOOTED=true;
 
-const VERSION=2;
+const VERSION=3;
 const STYLE_ID='ekodi-user-ui-header-style';
 const USER_SURFACES=new Set(['public','workspace']);
 const DISABLED_MODES=new Set(['off','hidden','immersive']);
@@ -43,6 +43,9 @@ let activeCenter=null;
 let spacer=null;
 let fallbackHeader=null;
 let resizeObserver=null;
+let canvasResizeObserver=null;
+let activeCanvas=null;
+let contentFrameSignature='';
 let mutationObserver=null;
 let scheduled=false;
 
@@ -60,6 +63,9 @@ function installStyle(){
       max-width:none!important;
       z-index:2147482000!important;
       box-sizing:border-box!important;
+      --ekodi-user-header-inline-gutter:var(--ekodi-user-content-left,max(16px,calc((100vw - var(--ekodi-user-canvas-max,1240px)) / 2)));
+      padding-left:var(--ekodi-user-header-inline-gutter)!important;
+      padding-right:var(--ekodi-user-content-right,var(--ekodi-user-header-inline-gutter))!important;
       min-height:var(--ekodi-user-header-min-height,48px)!important;
       padding-top:calc(var(--ekodi-user-header-base-padding-top,0px) + env(safe-area-inset-top,0px))!important;
       transform:none!important;
@@ -87,8 +93,10 @@ function installStyle(){
       backdrop-filter:blur(14px);
       color:var(--ekodi-shell-text,#18251d)!important;
       font:14px/1.4 system-ui,-apple-system,"Noto Sans KR","Malgun Gothic",sans-serif!important;
+      padding-left:0!important;
+      padding-right:0!important;
     }
-    .${FALLBACK_CLASS} .ekodi-user-ui-header-fallback__inner{width:min(1180px,calc(100% - 32px));min-height:64px;margin:0 auto;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:16px}
+    .${FALLBACK_CLASS} .ekodi-user-ui-header-fallback__inner{width:min(var(--ekodi-user-content-inline-size,var(--ekodi-user-canvas-max,1240px)),calc(100% - 32px));min-height:64px;margin:0 auto;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:16px}
     .${FALLBACK_CLASS} a{color:inherit;text-decoration:none}.${FALLBACK_CLASS} a:focus-visible{outline:2px solid currentColor;outline-offset:4px;border-radius:4px}
     .${FALLBACK_CLASS} .ekodi-user-ui-header-fallback__brand{font-weight:850;letter-spacing:.12em}.ekodi-user-ui-header-fallback__context{text-align:center;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ekodi-user-ui-header-fallback__my{color:var(--ekodi-shell-focus,#315d48)!important;font-weight:650}
     [${SPACER_ATTR}]{
@@ -106,12 +114,34 @@ function installStyle(){
     }
     @media(max-width:480px){
       .${ROOT_CLASS} .${CENTER_CLASS}{max-width:48vw!important}
-      .${FALLBACK_CLASS} .ekodi-user-ui-header-fallback__inner{width:min(100% - 24px,1180px);gap:10px;font-size:12px}
+      .${FALLBACK_CLASS} .ekodi-user-ui-header-fallback__inner{width:min(var(--ekodi-user-content-inline-size,var(--ekodi-user-canvas-max,1240px)),calc(100% - 20px));gap:10px;font-size:12px}
     }
   `;
   (document.head||document.documentElement).append(style);
 }
 
+function findContentCanvas(){
+  const selectors=['[data-ekodi-user-canvas="centered-v1"]','body > main','body > [role="main"]','main','[role="main"]'];
+  for(const selector of selectors){for(const node of document.querySelectorAll(selector)){if(visible(node)&&!node.closest('[data-ekodi-shell-root]'))return node;}}
+  return null;
+}
+function clearContentFrame(){
+  if(canvasResizeObserver){canvasResizeObserver.disconnect();canvasResizeObserver=null;}
+  activeCanvas=null;contentFrameSignature='';
+  for(const key of ['--ekodi-user-content-inline-size','--ekodi-user-content-left','--ekodi-user-content-right'])document.documentElement.style.removeProperty(key);
+  delete document.documentElement.dataset.ekodiContentFrame;
+}
+function updateContentFrame(){
+  if(!shouldEnable()){clearContentFrame();return;}
+  const canvas=findContentCanvas();
+  if(canvas!==activeCanvas){if(canvasResizeObserver)canvasResizeObserver.disconnect();activeCanvas=canvas;canvasResizeObserver=null;if(canvas&&typeof ResizeObserver==='function'){canvasResizeObserver=new ResizeObserver(updateContentFrame);canvasResizeObserver.observe(canvas);}}
+  if(!canvas)return;
+  const rect=canvas.getBoundingClientRect(),viewport=Math.max(document.documentElement.clientWidth||0,window.innerWidth||0);
+  if(!(rect.width>0)||!(viewport>0))return;
+  const inline=Math.min(viewport,Math.round(rect.width*100)/100),left=Math.max(0,Math.round(rect.left*100)/100),right=Math.max(0,Math.round((viewport-rect.right)*100)/100);
+  const signature=[inline,left,right].join(':');if(signature===contentFrameSignature)return;contentFrameSignature=signature;
+  document.documentElement.style.setProperty('--ekodi-user-content-inline-size',inline+'px');document.documentElement.style.setProperty('--ekodi-user-content-left',left+'px');document.documentElement.style.setProperty('--ekodi-user-content-right',right+'px');document.documentElement.dataset.ekodiContentFrame='main-aligned-v1';
+}
 function surface(){return String(document.documentElement.dataset.ekodiShellSurface||'').toLowerCase();}
 function mode(){
   const htmlMode=String(document.documentElement.dataset.ekodiUserHeader||'').toLowerCase();
@@ -273,7 +303,8 @@ function attach(header){
 function reconcile(){
   scheduled=false;
   installStyle();
-  if(!shouldEnable()){detach();removeFallback();return;}
+  if(!shouldEnable()){detach();removeFallback();clearContentFrame();return;}
+  updateContentFrame();
   const header=findHeader();
   if(header){if(activeHeader===fallbackHeader)detach();removeFallback();attach(header);return;}
   attach(ensureFallback());
@@ -287,7 +318,7 @@ function schedule(){
 window.EKODIUserUIHeader=Object.freeze({
   version:VERSION,
   refresh:schedule,
-  getState:()=>({enabled:shouldEnable(),surface:surface(),mode:mode(),attached:Boolean(activeHeader),centered:Boolean(activeCenter),fallback:Boolean(activeHeader?.hasAttribute(FALLBACK_ATTR))})
+  getState:()=>({enabled:shouldEnable(),surface:surface(),mode:mode(),attached:Boolean(activeHeader),centered:Boolean(activeCenter),fallback:Boolean(activeHeader?.hasAttribute(FALLBACK_ATTR)),contentFrame:document.documentElement.dataset.ekodiContentFrame||''})
 });
 window.addEventListener('ekodi:shell-theme',schedule);
 window.addEventListener('ekodi:surface-change',schedule);
@@ -295,5 +326,5 @@ window.addEventListener('resize',schedule,{passive:true});
 window.addEventListener('orientationchange',schedule,{passive:true});
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',schedule,{once:true});else schedule();
 mutationObserver=new MutationObserver(schedule);
-mutationObserver.observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['data-ekodi-shell-surface','data-ekodi-user-header','data-ekodi-home-anchor']});
+mutationObserver.observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['data-ekodi-shell-surface','data-ekodi-user-header','data-ekodi-home-anchor','data-ekodi-user-canvas','data-ekodi-user-layout']});
 })();

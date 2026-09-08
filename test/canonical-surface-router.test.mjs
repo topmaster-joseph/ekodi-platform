@@ -72,21 +72,17 @@ test('Admin canonical route registry maps menu sections into constitutional grou
   assert.equal(routes.sectionFromPath('/admin/system/security'),'security');
 });
 
-test('Business, Insurance and Trade canonical paths hide execution hosts',async()=>{
+test('Business and Trade canonical paths hide execution hosts',async()=>{
   const externalCalls=[];
   const externalFetch=async request=>{
     const url=new URL(request.url);externalCalls.push(url);
-    if(url.hostname==='business.ekodi.kr')return new Response("fetch('/api/workspaces');https://auth.ekodi.kr/?site=business&return_to=https%3A%2F%2Fbusiness.ekodi.kr%2F",{headers:{'content-type':'text/javascript'}});
-    if(url.hostname==='ins.ekodi.kr')return new Response("const PROD=location.hostname === 'ins.ekodi.kr';",{headers:{'content-type':'text/javascript'}});
+    if(url.hostname==='business.ekodi.kr')return new Response("fetch('/api/workspaces');https://auth.ekodi.kr/?site=business&return_to=https%3A%2F%2Fbusiness.ekodi.kr%2F\nfunction routeWorkspaceId(){\n  const path=location.pathname.replace(/^\\/+|\\/+$/g,'').toLowerCase();\n  if(path)return path;\n}\nif(push&&location.pathname!==`/${workspace.id}`)history.pushState({workspace:workspace.id},'',`/${workspace.id}`);",{headers:{'content-type':'text/javascript'}});
     throw new Error(`unexpected execution host ${url.hostname}`);
   };
   const assets=binding('<html><body><a href="https://trade.biz.ekodi.kr/">trade.biz.ekodi.kr</a></body></html>','text/html');
   let response=await routeCanonicalSurface(new Request('https://ekodi.kr/business/app.js'),{ASSETS:assets},{externalFetch});
   assert.equal(externalCalls[0].hostname,'business.ekodi.kr');assert.equal(externalCalls[0].pathname,'/app.js');
-  let text=await response.text();assert.match(text,/fetch\('\/business\/api\/workspaces'/);assert.match(text,/https:\/\/ekodi\.kr\/auth\//);assert.doesNotMatch(text,/business\.ekodi\.kr/);
-  response=await routeCanonicalSurface(new Request('https://ekodi.kr/insurance/server-bridge.js'),{ASSETS:assets},{externalFetch});
-  assert.equal(externalCalls[1].hostname,'ins.ekodi.kr');assert.equal(externalCalls[1].pathname,'/server-bridge.js');
-  text=await response.text();assert.match(text,/location\.hostname==='ekodi\.kr'/);assert.match(text,/startsWith\('\/insurance'\)/);
+  let text=await response.text();assert.match(text,/fetch\('\/business\/api\/workspaces'/);assert.match(text,/https:\/\/ekodi\.kr\/auth\//);assert.match(text,/path\.startsWith\('business\/'\)/);assert.match(text,/`\/business\/\$\{workspace\.id\}`/);assert.doesNotMatch(text,/business\.ekodi\.kr/);
   response=await routeCanonicalSurface(new Request('https://ekodi.kr/ekodibiz/trade'),{ASSETS:assets},{externalFetch});
   assert.equal(assets.calls.at(-1).pathname,'/trade');text=await response.text();assert.match(text,/https:\/\/ekodi\.kr\/ekodibiz\/trade/);assert.doesNotMatch(text,/trade\.biz\.ekodi\.kr/);
 });

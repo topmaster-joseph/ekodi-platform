@@ -3,7 +3,6 @@ const SURFACE_PREFIXES=Object.freeze({my:'/my',admin:'/admin',auth:'/auth'});
 const SYSTEM_PATHS=Object.freeze(['/api','/mcp','/webhooks','/health']);
 const PUBLIC_EXECUTION_SURFACES=Object.freeze([
   Object.freeze({id:'business',prefix:'/business',host:'business.ekodi.kr'}),
-  Object.freeze({id:'insurance',prefix:'/insurance',host:'ins.ekodi.kr'}),
   Object.freeze({id:'trade',prefix:'/ekodibiz/trade',assetPath:'/trade'}),
 ]);
 const ADMIN_RUNTIME_FILE=/\.(?:js|css|cmd|json|map|svg|png|webp|ico)$/i;
@@ -71,8 +70,11 @@ function executionSurfaceForPath(pathname){return PUBLIC_EXECUTION_SURFACES.find
 function rewriteExecutionText(text,spec,type=''){
   let output=String(text||'');
   if(type.includes('text/html')) output=output.replace(/(href|src|action)=(["'])\/(?!\/)/g,(m,a,q)=>`${a}=${q}${spec.prefix}/`);
-  if(spec.id==='business') output=output.replace(/fetch\((['"])\/api\//g,(m,q)=>`fetch(${q}${spec.prefix}/api/`).replaceAll('https://auth.ekodi.kr/','https://ekodi.kr/auth/').replaceAll('https%3A%2F%2Fbusiness.ekodi.kr%2F','https%3A%2F%2Fekodi.kr%2Fbusiness');
-  if(spec.id==='insurance') output=output.replace(/location\.hostname\s*===\s*(['"])ins\.ekodi\.kr\1/g,"(location.hostname==='ins.ekodi.kr'||(location.hostname==='ekodi.kr'&&location.pathname.startsWith('/insurance')))" );
+  if(spec.id==='business'){
+    output=output.replace(/fetch\((['"])\/api\//g,(m,q)=>`fetch(${q}${spec.prefix}/api/`).replaceAll('https://auth.ekodi.kr/','https://ekodi.kr/auth/').replaceAll('https%3A%2F%2Fbusiness.ekodi.kr%2F','https%3A%2F%2Fekodi.kr%2Fbusiness');
+    output=output.replace("function routeWorkspaceId(){\n  const path=location.pathname.replace(/^\\/+|\\/+$/g,'').toLowerCase();\n  if(path)return path;","function routeWorkspaceId(){\n  const path=location.pathname.replace(/^\\/+|\\/+$/g,'').toLowerCase();\n  if(path.startsWith('business/'))return path.slice('business/'.length).split('/')[0];\n  if(path&&path!=='business')return path;");
+    output=output.replace("if(push&&location.pathname!==`/${workspace.id}`)history.pushState({workspace:workspace.id},'',`/${workspace.id}`);","const nextPath=location.hostname==='ekodi.kr'?`/business/${workspace.id}`:`/${workspace.id}`;if(push&&location.pathname!==nextPath)history.pushState({workspace:workspace.id},'',nextPath);");
+  }
   if(spec.id==='trade') output=output.replaceAll('https://trade.biz.ekodi.kr/','https://ekodi.kr/ekodibiz/trade').replaceAll('trade.biz.ekodi.kr','ekodi.kr/ekodibiz/trade');
   return output;
 }

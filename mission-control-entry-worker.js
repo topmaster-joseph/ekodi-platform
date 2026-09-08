@@ -1,6 +1,8 @@
 import customerEntryWorker from './customer-entry-worker.js';
 import { handleAdminSessionFastPath } from './admin-session-fastpath.js';
 import { handleAgentMissionControl } from './ai-agent-control.js';
+import { handleEkodiV8CommandControl } from './ai-command-control.js';
+import { runEkodiPulseSchedule } from './ekodi-pulse-runtime.js';
 import { handleUserAiControl } from './user-ai-control.js';
 import { applyUserAiPlanOverrides, handleUserAiAdminControl } from './user-ai-admin-control.js';
 import { AI_ACCESS_POLICY } from './ai-access-orchestration.js';
@@ -26,6 +28,7 @@ import { handleUniversalMembership } from './universal-membership.js';
 import { handleHomepagePresentation } from './homepage-presentation-control.js';
 import { handleStorageGateway } from './storage-gateway.js';
 import { handleExternalAiModuleGateway } from './external-ai-module-gateway.js';
+import { runAiProviderHealthSchedule } from './ai-provider-control.js';
 import { handleEkodiMcpGateway, handleEkodiMcpMetadata } from './ekodi-mcp-gateway.js';
 import { handleDevotionalControl } from './devotional-control.js';
 import { applyApiSecurityHeaders, enforceEdgeSecurity } from './security-edge.js';
@@ -250,6 +253,11 @@ export default {
       catch (error) { console.error('Device Control error', error); return errorResponse('Device Control 처리 중 오류가 발생했습니다.', 'DEVICE_CONTROL_ERROR'); }
     }
 
+    if (path.startsWith('/api/control/ai/v8')) {
+      try { const response = await handleEkodiV8CommandControl(request, env); if (response) return applyApiSecurityHeaders(response); }
+      catch (error) { console.error('EKODI v8 Command Control error', error); return errorResponse('EKODI v8 Command Control 처리 중 오류가 발생했습니다.', 'V8_COMMAND_CONTROL_ERROR'); }
+    }
+
     if (path.startsWith('/api/control/ai/')) {
       try { const response = await handleAgentMissionControl(request, env); if (response) return applyApiSecurityHeaders(response); }
       catch (error) { console.error('AI Mission Control error', error); return errorResponse('AI Mission Control 처리 중 오류가 발생했습니다.', 'AI_MISSION_CONTROL_ERROR'); }
@@ -262,6 +270,8 @@ export default {
   async scheduled(controller, env, ctx) {
     const authorBilling = runAuthorBillingSchedule(env).catch(error => { console.error('Author billing schedule error', error); return { processed:0, error:'author_billing_schedule_failed' }; });
     const messengerOutbox = drainMessengerOutbox(env, { limit:20 }).catch(error => { console.error('Messenger outbox schedule error', error); return { processed:0, failed:1, error:'messenger_outbox_schedule_failed' }; });
+    const commandPulse = runEkodiPulseSchedule(env, { limit:1 }).catch(error => { console.error('EKODI v8 Pulse schedule error', error); return { ok:false, error:'ekodi_v8_pulse_failed' }; });
+    const aiProviderHealth = runAiProviderHealthSchedule(env, { scheduledTime:controller?.scheduledTime }).catch(error => { console.error('AI provider health schedule error', error); return { ok:false, checked:0, error:'ai_provider_health_failed' }; });
     const hybridWatchdog = runHybridExecutionMonitor(env).catch(error => { console.error('Hybrid execution watchdog schedule error', error); return { status:'unavailable', error:'hybrid_execution_watchdog_failed' }; });
     const wakeOrchestration = (async () => {
       await disableIneligibleWakeProfiles(env);
@@ -270,11 +280,13 @@ export default {
     if (ctx?.waitUntil) {
       ctx.waitUntil(authorBilling);
       ctx.waitUntil(messengerOutbox);
+      ctx.waitUntil(commandPulse);
+      ctx.waitUntil(aiProviderHealth);
       ctx.waitUntil(hybridWatchdog);
       ctx.waitUntil(wakeOrchestration);
     }
     if (typeof customerEntryWorker.scheduled === 'function') return customerEntryWorker.scheduled(controller, env, ctx);
-    return Promise.all([authorBilling, messengerOutbox, hybridWatchdog, wakeOrchestration]);
+    return Promise.all([authorBilling, messengerOutbox, commandPulse, aiProviderHealth, hybridWatchdog, wakeOrchestration]);
   },
 };
 

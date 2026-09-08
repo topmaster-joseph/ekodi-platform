@@ -18,6 +18,7 @@ function idsFor(runId) {
 async function cleanup(env, ids, orderId = '') {
   const statements = [];
   if (orderId) {
+    statements.push(env.DB.prepare("DELETE FROM commerce_events WHERE aggregate_type='order' AND aggregate_id=?").bind(orderId));
     statements.push(env.DB.prepare('DELETE FROM settlement_ledger WHERE order_id=?').bind(orderId));
     statements.push(env.DB.prepare('DELETE FROM order_payments WHERE order_id=?').bind(orderId));
     statements.push(env.DB.prepare('DELETE FROM orders WHERE id=?').bind(orderId));
@@ -79,7 +80,7 @@ export async function handleTransactionRehearsal(request, env) {
     requireProof(safety.quote.checkoutReady === false, 'staging-safety-gate-open');
     requireProof(safety.quote.blockers.includes('payments-disabled'), 'payments-disabled-blocker-missing');
 
-    const isolatedEnv = { ...env, PAYMENTS_ENABLED: 'true', TOSS_SECRET_KEY: 'rehearsal-no-network' };
+    const isolatedEnv = { ...env, PAYMENTS_ENABLED:'true', PAYMENT_PROVIDER:'toss', TOSS_SECRET_KEY:'rehearsal-no-network' };
     const created = await createOrder(isolatedEnv, { shareCode: ids.shareCode, quantity: 1 });
     requireProof(created.status === 201 && Boolean(created.order?.id), 'order-not-created');
     orderId = created.order.id;
@@ -105,6 +106,8 @@ export async function handleTransactionRehearsal(request, env) {
     const paidPayment = await env.DB.prepare('SELECT * FROM order_payments WHERE order_id=?').bind(orderId).first();
     const settlement = await env.DB.prepare('SELECT * FROM settlement_ledger WHERE order_id=? AND entry_type=\'sale\'').bind(orderId).first();
     const settlementCount = await env.DB.prepare('SELECT COUNT(*) AS count FROM settlement_ledger WHERE order_id=? AND entry_type=\'sale\'').bind(orderId).first();
+    const commerceEvents = await env.DB.prepare("SELECT event_type AS eventType,COUNT(*) AS count FROM commerce_events WHERE aggregate_type='order' AND aggregate_id=? GROUP BY event_type").bind(orderId).all();
+    const eventCounts = Object.fromEntries((commerceEvents.results || []).map((row) => [row.eventType, Number(row.count || 0)]));
 
     requireProof(paidOrder?.status === 'paid', 'order-not-paid');
     requireProof(paidPayment?.status === 'DONE' && paidPayment?.provider === 'REHEARSAL', 'payment-proof-invalid');
@@ -113,6 +116,9 @@ export async function handleTransactionRehearsal(request, env) {
     requireProof(Number(settlement?.gross_amount) === Number(paidOrder.gross_amount), 'settlement-gross-mismatch');
     requireProof(Number(settlement?.platform_fee_amount) === Number(paidOrder.platform_fee_amount), 'settlement-fee-mismatch');
     requireProof(Number(settlement?.seller_amount) === Number(paidOrder.seller_settlement_amount), 'settlement-seller-mismatch');
+    requireProof(eventCounts['order.created'] === 1, 'order-event-not-idempotent');
+    requireProof(eventCounts['payment.recorded'] === 1, 'payment-event-not-idempotent');
+    requireProof(eventCounts['settlement.prepared'] === 1, 'settlement-event-not-idempotent');
 
     proof = {
       runId: clean(body.runId, 48) || 'generated',
@@ -123,6 +129,7 @@ export async function handleTransactionRehearsal(request, env) {
       order: { status: paidOrder.status, grossAmount: paidOrder.gross_amount, feeRatePercent: paidOrder.fee_rate_percent },
       payment: { provider: paidPayment.provider, status: paidPayment.status, totalAmount: paidPayment.total_amount },
       settlement: { status: settlement.status, count: Number(settlementCount.count), platformFeeAmount: settlement.platform_fee_amount, sellerAmount: settlement.seller_amount },
+      commerceEvents: eventCounts,
       realPaymentExecuted: false,
       payoutExecuted: false,
       buyerPiiReleased: false,

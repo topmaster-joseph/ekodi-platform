@@ -9,6 +9,8 @@ import { handleSupplierDiscoveryRequest, supplierDiscoverySchemaReady } from './
 import { handleDomemaeRequest, domemaeConnectorReady } from './domemae.js';
 import { handleAnalyticsRequest } from './analytics.js';
 import { handleStorefrontRequest } from './storefront.js';
+import { commerceEventSchemaReady } from './commerce-events.js';
+import { handleCommerceOperationsRequest } from './commerce-operations.js';
 
 const FEE_RATES = Object.freeze({ direct: 7, marketplace: 8, ai: 9 });
 const ATTRIBUTION_WINDOW_DAYS = 7;
@@ -149,11 +151,13 @@ export default {
       const supplierPilotReady = Boolean(env.DB) && await supplierPilotSchemaReady(env);
       const supplierDiscoveryReady = Boolean(env.DB) && await supplierDiscoverySchemaReady(env);
       const domemaeReady = Boolean(env.DB) && await domemaeConnectorReady(env);
-      const ok = coreResponse.ok && firstTouchReady && sourcingReady && fulfillmentReady && verificationReady && supplierPilotReady && supplierDiscoveryReady && domemaeReady;
+      const commerceEventsReady = Boolean(env.DB) && await commerceEventSchemaReady(env);
+      const ok = coreResponse.ok && firstTouchReady && sourcingReady && fulfillmentReady && verificationReady && supplierPilotReady && supplierDiscoveryReady && domemaeReady && commerceEventsReady;
       return reply({
         ...coreBody, ok, version:3, environment:env.ENVIRONMENT || 'unknown', firstTouchSchemaReady:firstTouchReady,
         sourcingSchemaReady:sourcingReady, fulfillmentSchemaReady:fulfillmentReady, verificationSchemaReady:verificationReady,
         supplierPilotSchemaReady:supplierPilotReady, supplierDiscoverySchemaReady:supplierDiscoveryReady, domemaeConnectorReady:domemaeReady,
+        commerceEventSchemaReady:commerceEventsReady, commerceOsVersion:1,
         domemaeLookupEnabled:String(env.DOMEMAE_LOOKUP_ENABLED || '').toLowerCase() === 'true', domemaeOrderEnabled:false,
         attributionWindowDays:ATTRIBUTION_WINDOW_DAYS,
         operationsReviewConfigured:Boolean(env.MALL_OPERATIONS_TOKEN || env.MALL_OPERATIONS_EMAILS), operationsEmailAllowlistConfigured:Boolean(env.MALL_OPERATIONS_EMAILS),
@@ -186,6 +190,9 @@ export default {
 
     const verification = await handleVerificationRequest(request, env);
     if (verification) return reply(verification.body, verification.status, origin, env);
+
+    const commerceOperations = await handleCommerceOperationsRequest(request, env);
+    if (commerceOperations) return reply(commerceOperations.body, commerceOperations.status, origin, env);
 
     const domemae = await handleDomemaeRequest(request, env);
     if (domemae) return reply(domemae.body, domemae.status, origin, env);

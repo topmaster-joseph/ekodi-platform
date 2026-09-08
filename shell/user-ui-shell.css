@@ -50,6 +50,9 @@ html[data-ekodi-user-ui] {
   --ekodi-user-header-fallback-height: 64px;
   --ekodi-user-canvas-max: 1240px;
   --ekodi-user-reading-max: 760px;
+  --ekodi-user-content-inline-size: var(--ekodi-user-canvas-max);
+  --ekodi-user-content-left: max(16px, calc((100vw - var(--ekodi-user-canvas-max)) / 2));
+  --ekodi-user-content-right: var(--ekodi-user-content-left);
   --ekodi-user-control-radius: var(--ekodi-control-radius, var(--ekodi-service-radius-soft, 12px));
   --ekodi-user-field-radius: var(--ekodi-field-radius, var(--ekodi-service-radius-soft, 12px));
   --ekodi-user-chip-radius: var(--ekodi-chip-radius, var(--ekodi-service-radius-soft, 999px));
@@ -82,6 +85,12 @@ html[data-ekodi-user-ui][data-ekodi-user-layout="centered-v1"] [data-ekodi-user-
   margin-inline: auto;
 }
 
+/* Main-aligned Chrome Contract
+ * Header/footer backgrounds stay full bleed. Their inner content follows the actual
+ * adopted main canvas width. Runtime measurement updates --ekodi-user-content-*;
+ * 1240px remains the no-JS/canonical fallback.
+ */
+
 /* Server fallback. It is present from the first HTML response, before JS boots. */
 .ekodi-user-ui-fallback-header {
   position: sticky;
@@ -98,7 +107,7 @@ html[data-ekodi-user-ui][data-ekodi-user-layout="centered-v1"] [data-ekodi-user-
 }
 
 .ekodi-user-ui-fallback-header__inner {
-  width: min(var(--ekodi-user-canvas-max), calc(100% - 32px));
+  width: min(var(--ekodi-user-content-inline-size, var(--ekodi-user-canvas-max)), calc(100% - 32px));
   min-height: var(--ekodi-user-header-fallback-height);
   margin: 0 auto;
   display: grid;
@@ -163,9 +172,9 @@ body:has([data-ekodi-user-header-root]:not(.ekodi-user-ui-fallback-header):not(.
   z-index: 2147483000 !important;
   overflow: visible !important;
   box-sizing: border-box !important;
-  --ekodi-user-header-inline-gutter: max(16px, calc((100vw - var(--ekodi-user-canvas-max)) / 2));
+  --ekodi-user-header-inline-gutter: var(--ekodi-user-content-left, max(16px, calc((100vw - var(--ekodi-user-canvas-max)) / 2)));
   padding-left: var(--ekodi-user-header-inline-gutter) !important;
-  padding-right: var(--ekodi-user-header-inline-gutter) !important;
+  padding-right: var(--ekodi-user-content-right, var(--ekodi-user-header-inline-gutter)) !important;
   min-height: var(--ekodi-user-header-min-height, var(--ekodi-user-header-fallback-height)) !important;
   padding-top: calc(var(--ekodi-user-header-base-padding-top, 0px) + env(safe-area-inset-top, 0px)) !important;
   transform: none !important;
@@ -205,7 +214,7 @@ body:has([data-ekodi-user-header-root]:not(.ekodi-user-ui-fallback-header):not(.
 }
 
 .ekodi-user-ui-header-fallback .ekodi-user-ui-header-fallback__inner {
-  width: min(var(--ekodi-user-canvas-max), calc(100% - 32px));
+  width: min(var(--ekodi-user-content-inline-size, var(--ekodi-user-canvas-max)), calc(100% - 32px));
   min-height: var(--ekodi-user-header-fallback-height);
   margin: 0 auto;
   display: grid;
@@ -240,6 +249,11 @@ html[data-ekodi-user-ui] {
   scroll-padding-top: calc(var(--ekodi-user-header-height, var(--ekodi-user-header-fallback-height)) + 12px);
 }
 
+/* Shared language control replaces legacy per-service selectors. */
+html[data-ekodi-service="biz"] header .language,
+html[data-ekodi-service="community"] .language-menu {
+  display: none !important;
+}
 /* One language control is inherited by every public/workspace user surface. */
 .ekodi-user-language {
   position: relative;
@@ -279,6 +293,28 @@ html[data-ekodi-user-ui] {
   cursor: pointer;
 }
 
+.ekodi-user-language[data-ekodi-language-placement="footer"] {
+  margin-inline-start: 0;
+  margin-top: 2px;
+}
+
+.ekodi-language-notice {
+  position: fixed;
+  left: 50%;
+  bottom: max(22px, env(safe-area-inset-bottom));
+  z-index: 2147483600;
+  transform: translateX(-50%);
+  max-width: min(520px, calc(100vw - 28px));
+  padding: 11px 15px;
+  border-radius: 999px;
+  background: #17231d;
+  color: #fff;
+  font: 700 12px/1.45 system-ui, -apple-system, "Noto Sans KR", "Malgun Gothic", sans-serif;
+  text-align: center;
+  box-shadow: 0 12px 36px rgba(0,0,0,.2);
+}
+
+.ekodi-language-notice[hidden] { display: none !important; }
 .ekodi-user-language__select:focus-visible {
   outline: 2px solid var(--ekodi-user-chrome-link);
   outline-offset: 2px;
@@ -303,7 +339,7 @@ html[data-ekodi-user-ui] {
 }
 
 .ekodi-user-ui-footer__inner {
-  width: min(980px, calc(100% - 32px));
+  width: min(var(--ekodi-user-content-inline-size, var(--ekodi-user-canvas-max)), calc(100% - 32px));
   margin: 0 auto;
   padding: 24px 0;
   display: flex;
@@ -400,8 +436,13 @@ body > [data-ekodi-user-footer] ~ [data-ekodi-user-footer] {
     width: min(var(--ekodi-user-canvas-max), calc(100% - 24px));
   }
 
+  .ekodi-user-ui-fallback-header__inner,
+  .ekodi-user-ui-header-fallback .ekodi-user-ui-header-fallback__inner {
+    width: min(var(--ekodi-user-content-inline-size, var(--ekodi-user-canvas-max)), calc(100% - 24px));
+  }
+
   .ekodi-user-ui-footer__inner {
-    width: min(100% - 24px, 980px);
+    width: min(var(--ekodi-user-content-inline-size, var(--ekodi-user-canvas-max)), calc(100% - 24px));
     padding: 20px 0;
     gap: 10px;
   }
@@ -425,7 +466,7 @@ body > [data-ekodi-user-footer] ~ [data-ekodi-user-footer] {
 
   .ekodi-user-ui-fallback-header__inner,
   .ekodi-user-ui-header-fallback .ekodi-user-ui-header-fallback__inner {
-    width: min(100% - 20px, var(--ekodi-user-canvas-max));
+    width: min(var(--ekodi-user-content-inline-size, var(--ekodi-user-canvas-max)), calc(100% - 20px));
     gap: 8px;
   }
 
@@ -437,6 +478,10 @@ body > [data-ekodi-user-footer] ~ [data-ekodi-user-footer] {
   .ekodi-user-ui-fallback-header__nav,
   .ekodi-user-ui-header-fallback__my {
     font-size: 12px;
+  }
+
+  .ekodi-user-ui-footer__inner {
+    width: min(var(--ekodi-user-content-inline-size, var(--ekodi-user-canvas-max)), calc(100% - 20px));
   }
 
   .ekodi-user-language {

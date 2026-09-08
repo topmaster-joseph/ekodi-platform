@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises';
 import router from '../platform-router-entry-worker.js';
 
 const wrangler = await readFile(new URL('../wrangler.site.toml', import.meta.url), 'utf8');
+const financeWrangler = await readFile(new URL('../wrangler.finance.toml', import.meta.url), 'utf8');
 
 test('shared Tax host binds to the production Finance Worker instead of duplicating Finance D1', () => {
   assert.match(wrangler, /\[\[services\]\][\s\S]*?binding = "FINANCE"[\s\S]*?service = "ekodi-finance-api"/);
@@ -11,6 +12,9 @@ test('shared Tax host binds to the production Finance Worker instead of duplicat
   assert.match(wrangler, /database_name = "ekodi-auth"/);
 });
 
+test('Finance binding authorizes the registered Tax browser origin', () => {
+  assert.match(financeWrangler, /ALLOWED_ORIGINS = \"[^\"]*https:\/\/tax\.ekodi\.kr[^\"]*\"/);
+});
 test('Tax same-origin API uses Finance service binding and preserves browser origin', async () => {
   let seenUrl = '';
   let seenOrigin = '';

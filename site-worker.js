@@ -125,6 +125,8 @@ const ADMIN_ASSETS = new Set([
   '/client-access.js',
   '/marketing-funnel-admin.css',
   '/marketing-funnel-admin.js',
+  '/cgma-member-admin.css',
+  '/cgma-member-admin.js',
   '/insurance-admin.css',
   '/insurance-admin.js',
   '/insurance-network-admin.css',
@@ -502,6 +504,7 @@ export default {
       }
       if (url.pathname === '/workspace-admin.css') return workspaceAdminCss();
       if (url.pathname === '/workspace-admin.js') return workspaceAdminScript();
+      if (url.pathname.startsWith('/api/control/storage/google/cheonggye-members')) return proxyAdminStorage(request, env);
       if (url.pathname === '/church-pastor-admin.js') return churchPastorAdminScript();
       if (['GET','HEAD'].includes(request.method) && isEkodiBizInvestAdminPath(url.pathname)) {
         const page=ekodiBizInvestAdminPage(request);

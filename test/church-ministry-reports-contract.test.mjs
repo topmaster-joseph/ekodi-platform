@@ -52,12 +52,13 @@ test('church report source evidence uses church operations and excludes pastoral
 });
 
 test('church report UI is mounted inside pastor admin and removed from global Admin lazy navigation', async () => {
-  const [ui, page, features, build, site] = await Promise.all([
+  const [ui, page, features, build, site, audit] = await Promise.all([
     read('church-reports-admin.js'),
     read('church-pastor-admin-page.js'),
     read('admin-demand-loader.js'),
     read('scripts/build.mjs'),
     read('site-worker.js'),
+    read('scripts/audit-admin-menu-services.mjs'),
   ]);
   for (const marker of ['#churchReportsRoot', '/api/church/admin/reports', '사역보고 발송 설정', '교회 원자료', 'ekodi-church-pastor-session']) {
     assert.ok(ui.includes(marker), `missing church report UI marker: ${marker}`);
@@ -66,6 +67,7 @@ test('church report UI is mounted inside pastor admin and removed from global Ad
     assert.ok(page.includes(marker), `missing pastor admin integration marker: ${marker}`);
   }
   assert.ok(!features.includes('community-reports-admin.js'), 'global Admin must no longer lazy-load the Community report UI');
+  assert.ok(!/const lazy=\[[^\]]*'community'/.test(audit), 'shared Admin audit must not require the retired Community lazy module');
   assert.ok(build.includes('church-reports-admin.js'));
   assert.ok(build.includes('church-reports-admin.css'));
   assert.ok(site.includes("'/church-reports-admin.js'"));

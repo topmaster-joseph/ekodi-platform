@@ -413,7 +413,7 @@ export const USER_SERVICES = Object.freeze([
     "url": "https://ekodi.kr/insurance",
     "domain": "ekodi.kr",
     "group": "work-life",
-    "status": "planned",
+    "status": "beta",
     "productionVerified": false,
     "available": false,
     "homepageEligible": false,

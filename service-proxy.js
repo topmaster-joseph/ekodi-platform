@@ -14,7 +14,6 @@ const CANONICAL_REDIRECTS = Object.freeze({
 
 const REDIRECTS = Object.freeze({
   'live.church.ekodi.kr': 'https://www.youtube.com/@ekodichurch/live',
-  'mail.ekodi.kr': GMAIL,
   'mail.biz.ekodi.kr': GMAIL,
   'mail.church.ekodi.kr': GMAIL,
   'mail.lab.ekodi.kr': GMAIL,

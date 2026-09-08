@@ -7,4 +7,16 @@ const controls = await readFile(new URL('../admin-public-site-controls.js', impo
 test('public-site controls call the canonical EKODI API origin', () => {
   assert.match(controls, /const API = 'https:\/\/ekodi\.kr\/api\/control\/public-sites';/);
   assert.doesNotMatch(controls, /const API = '\/api\/control\/public-sites';/);
+  assert.match(controls, /credentials: 'omit'/);
+  assert.doesNotMatch(controls, /credentials: 'include'/);
+});
+
+test('central Admin navigation refreshes public-site controls when the panel becomes active', async () => {
+  const layout = await readFile(new URL('../admin-menu-layout.js', import.meta.url), 'utf8');
+  assert.match(layout, /section === 'public-site-controls'\)window\.EKODIPublicSiteControls\?\.load\?\.\(\)/);
+});
+
+test('production compact Admin runtime also refreshes public-site controls on activation', async () => {
+  const compact = await readFile(new URL('../admin-menu-layout.compact.js', import.meta.url), 'utf8');
+  assert.match(compact, /"public-site-controls"===e&&window\.EKODIPublicSiteControls\?\.load\?\.\(\)/);
 });

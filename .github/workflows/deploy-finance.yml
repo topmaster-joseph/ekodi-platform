@@ -12,8 +12,15 @@ on:
     paths:
       - 'finance-worker.js'
       - 'finance-entry-worker.js'
+      - 'tax-service-worker.js'
+      - 'tax-invoice-free-first-worker.js'
+      - 'tax-invoice-worker.js'
+      - 'tax-hometax-ledger-service.js'
+      - 'auth-worker.js'
+      - 'auth-worker-core.js'
       - 'tax-business-registry-service.js'
       - 'wrangler.finance.toml'
+      - 'test/tax-finance-service-binding.test.mjs'
       - 'migrations/**'
       - 'scripts/apply-d1-migrations-with-retry.sh'
       - 'scripts/guarded-worker-release.mjs'
@@ -25,8 +32,15 @@ on:
     paths:
       - 'finance-worker.js'
       - 'finance-entry-worker.js'
+      - 'tax-service-worker.js'
+      - 'tax-invoice-free-first-worker.js'
+      - 'tax-invoice-worker.js'
+      - 'tax-hometax-ledger-service.js'
+      - 'auth-worker.js'
+      - 'auth-worker-core.js'
       - 'tax-business-registry-service.js'
       - 'wrangler.finance.toml'
+      - 'test/tax-finance-service-binding.test.mjs'
       - 'migrations/**'
       - 'scripts/apply-d1-migrations-with-retry.sh'
       - 'scripts/guarded-worker-release.mjs'
@@ -58,7 +72,14 @@ jobs:
           set -euo pipefail
           node --check finance-worker.js
           node --check finance-entry-worker.js
+          node --check tax-service-worker.js
+          node --check tax-invoice-free-first-worker.js
+          node --check tax-invoice-worker.js
+          node --check tax-hometax-ledger-service.js
           node --check tax-business-registry-service.js
+          node --check auth-worker.js
+          node --check auth-worker-core.js
+          node --test test/tax-finance-service-binding.test.mjs
           node --check scripts/guarded-worker-release.mjs
           node --check scripts/validate-additive-migrations.mjs
           bash -n scripts/apply-d1-migrations-with-retry.sh
@@ -117,7 +138,7 @@ jobs:
           preview_urls = false
           [vars]
           ENVIRONMENT = "staging"
-          ALLOWED_ORIGINS = "https://admin.ekodi.kr"
+          ALLOWED_ORIGINS = "https://tax.ekodi.kr,https://admin.ekodi.kr"
 
           [observability.logs]
           enabled = true
@@ -155,12 +176,14 @@ jobs:
             registry_health=$(curl -fsS --connect-timeout 5 --max-time 12 'http://127.0.0.1:8792/api/finance/tax-business-status-health' || true)
             overview_code=$(curl -sS -o /tmp/finance-stage-overview.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'http://127.0.0.1:8792/api/finance/overview' || true)
             structure_code=$(curl -sS -o /tmp/finance-stage-structure.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'http://127.0.0.1:8792/api/finance/structure' || true)
+            tax_profile_code=$(curl -sS -o /tmp/finance-stage-tax-profile.json -w '%{http_code}' --connect-timeout 5 --max-time 12 -H 'Origin: https://tax.ekodi.kr' 'http://127.0.0.1:8792/api/finance/tax-profiles?organizationId=EKODIBIZ' || true)
             if printf '%s' "$health" | grep -q '"ok":true' \
               && printf '%s' "$health" | grep -Fq 'ekodi-finance-api' \
               && printf '%s' "$registry_health" | grep -Fq '"service":"ekodi-tax-business-registry"' \
               && printf '%s' "$registry_health" | grep -Fq '"provider":"NTS_PUBLIC_DATA"' \
               && [ "$overview_code" = '401' ] \
-              && [ "$structure_code" = '401' ]; then
+              && [ "$structure_code" = '401' ] \
+              && [ "$tax_profile_code" = '401' ]; then
               echo 'Finance API isolated staging verified.'
               exit 0
             fi
@@ -228,13 +251,15 @@ jobs:
             registry_health=$(curl -fsS --connect-timeout 5 --max-time 12 'https://finance-api.ekodi.kr/api/finance/tax-business-status-health' || true)
             overview_code=$(curl -sS -o /tmp/finance-overview.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://finance-api.ekodi.kr/api/finance/overview' || true)
             structure_code=$(curl -sS -o /tmp/finance-structure.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://finance-api.ekodi.kr/api/finance/structure' || true)
+            tax_profile_code=$(curl -sS -o /tmp/finance-tax-profile.json -w '%{http_code}' --connect-timeout 5 --max-time 12 -H 'Origin: https://tax.ekodi.kr' 'https://finance-api.ekodi.kr/api/finance/tax-profiles?organizationId=EKODIBIZ' || true)
             if printf '%s' "$health" | grep -q '"ok":true' \
               && printf '%s' "$health" | grep -Fq 'ekodi-finance-api' \
               && printf '%s' "$registry_health" | grep -Fq '"service":"ekodi-tax-business-registry"' \
               && printf '%s' "$registry_health" | grep -Fq '"provider":"NTS_PUBLIC_DATA"' \
               && printf '%s' "$registry_health" | grep -Fq '"schemaVersion":1' \
               && [ "$overview_code" = '401' ] \
-              && [ "$structure_code" = '401' ]; then
+              && [ "$structure_code" = '401' ] \
+              && [ "$tax_profile_code" = '401' ]; then
               echo 'EKODI Finance API production verified.'
               exit 0
             fi

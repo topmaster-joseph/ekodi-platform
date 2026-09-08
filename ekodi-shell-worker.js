@@ -83,7 +83,7 @@ async function bundledShell(request,env,ctx){
   const headers=new Headers(shellResponse.headers);
   headers.set('content-type','application/javascript; charset=utf-8');
   headers.set('cache-control','public, max-age=60, stale-while-revalidate=300');
-  headers.set('x-ekodi-user-ui-header',userHeader?'v1':'missing');
+  headers.set('x-ekodi-user-ui-header',userHeader?'v3':'missing');
   headers.set('x-ekodi-user-ui-footer',userFooter?`v${EKODI_USER_FOOTER.version}`:'missing');
   headers.set('x-ekodi-user-experience-profiles','v1');
   headers.set('x-ekodi-user-language',userLanguage?'v1':'missing');
@@ -113,7 +113,7 @@ export default {
   async fetch(request,env,ctx){
     const url=new URL(request.url);
     if(request.method==='OPTIONS')return new Response(null,{status:204,headers:corsHeaders()});
-    if(url.pathname==='/health')return json({ok:true,service:'ekodi-shell',environment:env.ENVIRONMENT||'unknown',manifestVersion:EKODI_SERVICE_MANIFEST.version,shellVersion:EKODI_SERVICE_MANIFEST.shellVersion,userUIHeaderVersion:1,userUIFooterVersion:EKODI_USER_FOOTER.version,userLanguageVersion:5,mediaMeetingAdapterVersion:2,characterRegistryVersion:3,characterIdentityRegistryVersion:2,userCharacterVersion:6,ccmMrVersion:1,adminUIShellVersion:1,messageUIVersion:1,illustrationSystemVersion:1,serviceDesignVersion:4,userExperienceProfilesVersion:1,linkCompatVersion:1,userAccessPolicyVersion:1,identityModel:EKODI_SERVICE_MANIFEST.identityModel,services:EKODI_SERVICE_MANIFEST.services.length},200,'no-store');
+    if(url.pathname==='/health')return json({ok:true,service:'ekodi-shell',environment:env.ENVIRONMENT||'unknown',manifestVersion:EKODI_SERVICE_MANIFEST.version,shellVersion:EKODI_SERVICE_MANIFEST.shellVersion,userUIHeaderVersion:3,userUIFooterVersion:EKODI_USER_FOOTER.version,userLanguageVersion:6,mediaMeetingAdapterVersion:2,characterRegistryVersion:3,characterIdentityRegistryVersion:2,userCharacterVersion:6,ccmMrVersion:1,adminUIShellVersion:1,messageUIVersion:1,illustrationSystemVersion:1,serviceDesignVersion:4,userExperienceProfilesVersion:1,linkCompatVersion:1,userAccessPolicyVersion:1,identityModel:EKODI_SERVICE_MANIFEST.identityModel,services:EKODI_SERVICE_MANIFEST.services.length},200,'no-store');
     if(url.pathname==='/manifest.json')return json(EKODI_SERVICE_MANIFEST);
     if(url.pathname==='/user-footer.json')return json(EKODI_USER_FOOTER,200,'public, max-age=300, stale-while-revalidate=3600');
     if(url.pathname==='/service'){

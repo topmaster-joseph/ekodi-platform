@@ -75,6 +75,8 @@ jobs:
           grep -Fq '/share-links' dist/assets/seller-server.js
           grep -Fq '/api/internal/verification/queue' dist/assets/verification-ops.js
           grep -Fq '/api/internal/verification/launch-readiness' dist/assets/verification-ops.js
+          grep -Fq '/api/internal/operations/cockpit' dist/assets/verification-ops.js
+          grep -Fq 'COMMERCE OS COCKPIT' dist/assets/verification-ops.html
           grep -Fq '/checkout-gate' dist/assets/verification-ops.js
           grep -Fq '/p/* /assets/shared-product.html 200' dist/_redirects
           echo "Mall static build, first-touch attribution, discovery and order quote client verified"
@@ -90,7 +92,7 @@ jobs:
           for migration in sorted(Path('api/migrations').glob('*.sql')):
               db.executescript(migration.read_text(encoding='utf-8'))
           tables = {row[0] for row in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
-          required = {'seller_profiles','memberships','stores','products','attribution_tokens','product_events','share_links','orders','order_payments','settlement_ledger','attribution_visits'}
+          required = {'seller_profiles','memberships','stores','products','attribution_tokens','product_events','share_links','orders','order_payments','settlement_ledger','attribution_visits','commerce_events'}
           missing = required - tables
           if missing:
               raise SystemExit(f'Missing Mall tables: {sorted(missing)}')
@@ -202,6 +204,7 @@ jobs:
           SUPABASE_PUBLISHABLE_KEY = "sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_"
           MALL_OPERATIONS_EMAILS = "$OPS_EMAILS"
           PAYMENTS_ENABLED = "false"
+          PAYMENT_PROVIDER = "toss"
           TRANSACTION_REHEARSAL_ENABLED = "true"
           TRANSACTION_REHEARSAL_TOKEN = "$TRANSACTION_REHEARSAL_TOKEN"
           SOURCING_AUTO_ORDER_ENABLED = "false"
@@ -242,12 +245,17 @@ jobs:
               && grep -Fq '"schemaReady":true' /tmp/mall-stage-health.json \
               && grep -Fq '"orderSchemaReady":true' /tmp/mall-stage-health.json \
               && grep -Fq '"firstTouchSchemaReady":true' /tmp/mall-stage-health.json \
+              && grep -Fq '"verificationSchemaReady":true' /tmp/mall-stage-health.json \
+              && grep -Fq '"commerceEventSchemaReady":true' /tmp/mall-stage-health.json \
+              && grep -Fq '"commerceOsVersion":1' /tmp/mall-stage-health.json \
               && grep -Fq '"environment":"staging"' /tmp/mall-stage-health.json \
               && grep -Fq '"version":3' /tmp/mall-stage-health.json \
               && grep -Fq '"operationsReviewConfigured":true' /tmp/mall-stage-health.json \
               && grep -Fq '"operationsEmailAllowlistConfigured":true' /tmp/mall-stage-health.json \
               && grep -Fq '"transactionRehearsalEnabled":true' /tmp/mall-stage-health.json \
               && grep -Fq '"paymentsEnabled":false' /tmp/mall-stage-health.json \
+              && grep -Fq '"paymentProvider":{"id":"toss"' /tmp/mall-stage-health.json \
+              && grep -Fq '"adapterImplemented":true' /tmp/mall-stage-health.json \
               && grep -Fq '"payoutExecutionEnabled":false' /tmp/mall-stage-health.json \
               && grep -Fq '"direct":7' /tmp/mall-stage-fees.json \
               && grep -Fq '"marketplace":8' /tmp/mall-stage-fees.json \
@@ -289,6 +297,7 @@ jobs:
           if (body.proof?.order?.status !== 'paid' || body.proof.order.feeRatePercent !== 10) throw new Error('business order proof failed');
           if (body.proof?.payment?.provider !== 'REHEARSAL' || body.proof.payment.status !== 'DONE') throw new Error('synthetic payment proof failed');
           if (body.proof?.settlement?.status !== 'pending' || body.proof.settlement.count !== 1) throw new Error('settlement idempotence proof failed');
+          for (const key of ['order.created','payment.recorded','settlement.prepared']) if (body.proof?.commerceEvents?.[key] !== 1) throw new Error(`commerce event proof failed: ${key}`);
           if (body.proof.realPaymentExecuted !== false || body.proof.payoutExecuted !== false || body.proof.buyerPiiReleased !== false) throw new Error('rehearsal crossed a high-impact boundary');
           console.log('Mall staging transaction rehearsal passed: order -> synthetic payment -> single settlement ledger -> cleanup.');
           NODE
@@ -438,20 +447,27 @@ jobs:
             feed_code=$(curl -sS -o /tmp/mall-feed.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://mall-api.ekodi.kr/api/public/products?limit=1' || true)
             verification_queue_code=$(curl -sS -o /tmp/mall-verification-unauth.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://mall-api.ekodi.kr/api/internal/verification/queue' || true)
             launch_readiness_code=$(curl -sS -o /tmp/mall-launch-readiness-unauth.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://mall-api.ekodi.kr/api/internal/verification/launch-readiness' || true)
+            cockpit_code=$(curl -sS -o /tmp/mall-cockpit-unauth.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://mall-api.ekodi.kr/api/internal/operations/cockpit' || true)
             rehearsal_code=$(curl -sS -o /tmp/mall-production-rehearsal.json -w '%{http_code}' --connect-timeout 5 --max-time 15 -X POST 'https://mall-api.ekodi.kr/api/internal/rehearsal/transaction' || true)
             if [ "$health_code" = "200" ] && [ "$fees_code" = "200" ] && [ "$feed_code" = "200" ] \
               && grep -Fq '"schemaReady":true' /tmp/mall-api.json \
               && grep -Fq '"orderSchemaReady":true' /tmp/mall-api.json \
               && grep -Fq '"firstTouchSchemaReady":true' /tmp/mall-api.json \
+              && grep -Fq '"verificationSchemaReady":true' /tmp/mall-api.json \
+              && grep -Fq '"commerceEventSchemaReady":true' /tmp/mall-api.json \
+              && grep -Fq '"commerceOsVersion":1' /tmp/mall-api.json \
               && grep -Fq '"environment":"production"' /tmp/mall-api.json \
               && grep -Fq '"version":3' /tmp/mall-api.json \
               && grep -Fq '"operationsReviewConfigured":true' /tmp/mall-api.json \
               && grep -Fq '"operationsEmailAllowlistConfigured":true' /tmp/mall-api.json \
               && [ "$verification_queue_code" = "401" ] \
               && [ "$launch_readiness_code" = "401" ] \
+              && [ "$cockpit_code" = "401" ] \
               && [ "$rehearsal_code" = "404" ] \
               && grep -Fq '"transactionRehearsalEnabled":false' /tmp/mall-api.json \
               && grep -Fq '"paymentsEnabled":false' /tmp/mall-api.json \
+              && grep -Fq '"paymentProvider":{"id":"toss"' /tmp/mall-api.json \
+              && grep -Fq '"adapterImplemented":true' /tmp/mall-api.json \
               && grep -Fq '"payoutExecutionEnabled":false' /tmp/mall-api.json \
               && grep -Fq '"direct":7' /tmp/mall-fees.json \
               && grep -Fq '"marketplace":8' /tmp/mall-fees.json \

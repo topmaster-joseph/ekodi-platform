@@ -1,0 +1,80 @@
+{
+  "schemaVersion": 1,
+  "architectureVersion": "1.0.0",
+  "effectiveDate": "2026-09-07",
+  "status": "candidate",
+  "name": "EKODI v8 Command Plane",
+  "purpose": "Coordinate provider-diverse AI specialists under EKODI-owned identity, policy, authorization, audit and verification authority without coupling work to user-facing hostnames.",
+  "controlLoop": [
+    "observe",
+    "detect",
+    "reason",
+    "plan",
+    "delegate",
+    "execute",
+    "verify",
+    "recover",
+    "close",
+    "learn"
+  ],
+  "roles": {
+    "pulse": "event and state change intake",
+    "commander": "goal decomposition, assignment and bounded coordination",
+    "specialists": "provider-diverse reasoning or execution advice",
+    "sentinel": "independent evidence review and completion challenge",
+    "core": "identity, policy, authorization, resource truth and audit"
+  },
+  "providerPolicy": {
+    "providerIndependent": true,
+    "providerDiversityPreferred": true,
+    "independentSentinelPreferred": true,
+    "providerMayOwnAuthority": false,
+    "providerMayOwnCanonicalState": false,
+    "coreOnlyFallbackRequired": true
+  },
+  "resourceAddressing": {
+    "mode": "symbolic",
+    "fields": [
+      "workspaceId",
+      "workspaceSlug",
+      "service",
+      "capability",
+      "surface"
+    ],
+    "userFacingHostnameMayDefineAuthority": false,
+    "commandPlaneMayHardCodeLegacyUserOrAdminHostname": false,
+    "routeResolutionOwnedBy": "EKODI routing governance and runtime adapters"
+  },
+  "proactiveExecution": {
+    "source": "EKODI Pulse",
+    "requiresStandingDelegation": true,
+    "standingDelegationRequires": [
+      "allowed",
+      "reversible",
+      "audited",
+      "preflightVerified",
+      "verificationDefined"
+    ],
+    "highRiskRequiresHumanGate": true,
+    "criticalRiskRequiresHumanGate": true,
+    "redChangeClassRequiresHumanGate": true,
+    "noNewAuthorityFromModelOutput": true
+  },
+  "parallelCollaboration": {
+    "specialistCallsMayRunInParallel": true,
+    "roleAssignmentsPreferDistinctProviders": true,
+    "sentinelRunsAfterSpecialistEvidence": true,
+    "actualProviderDiversityMustBeReported": true,
+    "degradedModeMustBeVisible": true
+  },
+  "currentRuntime": {
+    "entry": "core-ai-gateway.js",
+    "commandPlane": "ekodi-command-plane.js",
+    "orchestrator": "ai-orchestrator-runtime.js",
+    "providerRegistry": "ekodi-ai-provider-registry.js"
+  },
+  "relationshipToUrlMigration": {
+    "canonicalIntent": "my and admin user surfaces may migrate to ekodi.kr path namespaces without changing Command Plane identity or authority semantics",
+    "rule": "Command Plane targets resources symbolically and leaves canonical URL resolution to routing governance, so URL migration and AI orchestration may proceed in parallel."
+  }
+}

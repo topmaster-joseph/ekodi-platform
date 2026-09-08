@@ -35,3 +35,21 @@ test('retired Mall subdomains permanently redirect to the canonical EKODIBIZ pat
   assert.match(source,/'mall\.biz\.ekodi\.kr': MALL_CANONICAL/);
   assert.match(source,/Response\.redirect\(target\.toString\(\), 308\)/);
 });
+
+test('mail root is exclusively owned by the shared site core',async()=>{
+  const [source,proxyConfig,siteConfig,entry]=await Promise.all([
+    read('service-proxy.js'),
+    read('wrangler.service-proxy.toml'),
+    read('wrangler.site.toml'),
+    read('platform-router-entry-worker.js'),
+  ]);
+  assert.doesNotMatch(source,/'mail\.ekodi\.kr': GMAIL/);
+  assert.doesNotMatch(proxyConfig,/pattern = "mail\.ekodi\.kr"/);
+  assert.match(proxyConfig,/pattern = "mail\.biz\.ekodi\.kr"/);
+  assert.match(siteConfig,/pattern = "mail\.ekodi\.kr"/);
+  assert.match(entry,/if\(host===MAIL_HOST\)/);
+  assert.match(entry,/mailUserPage\(\)/);
+  assert.match(entry,/mailAdminPage\(\)/);
+  const workflow=await read('.github/workflows/deploy-site-core.yml');
+  assert.match(workflow,/for host in ekodi\.kr admin\.ekodi\.kr auth\.ekodi\.kr tax\.ekodi\.kr mail\.ekodi\.kr; do/);
+});
