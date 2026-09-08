@@ -94,7 +94,7 @@ test('Space worker renders PizzaMaru and YogurtPurple as distinct user pages',as
     assert.ok(body.includes(name));
     assert.ok(body.includes(`data-store-page="${theme}"`));
     assert.doesNotMatch(body,/__SPACE_PAGE_/);
-    if(theme==='yogurt'){assert.match(body,/오늘 뭐 먹을까/);assert.match(body,/바로 주문하기/);assert.doesNotMatch(body,/USER OPERATIONS|STORE MASTER|로그아웃/);}
+    if(theme==='yogurt'){assert.match(body,/메뉴와 앱별 가격/);assert.match(body,/배달앱에서 바로 주문/);assert.doesNotMatch(body,/USER OPERATIONS|STORE MASTER|로그아웃/);}
   }
   const alias=await spaceWorker.fetch(new Request('https://ekodi.kr/yogurtpurple'),env);
   assert.equal(alias.status,308);
