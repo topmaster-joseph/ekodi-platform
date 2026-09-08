@@ -2,7 +2,7 @@
   'use strict';
   const TOKEN_KEY = 'ekodi-auth-token';
   const PANEL_ID = 'supplyNetworkAdminSection';
-  const API = '/api/affiliate';
+  const API = 'https://api.ekodi.kr/api/affiliate';
   const MALL_ADMIN = 'https://ekodi.kr/ekodibiz/mall/admin/sourcing';
   const APPLICATION = { candidate:'후보', prepared:'가입 준비', account_exists:'계정보유', applied:'신청완료', review:'심사중', approved:'승인됨', active:'활성', blocked:'보류' };
   const INTEGRATION = { not_ready:'미연동', manual:'수동', deeplink:'딥링크', api:'API', feed:'Feed', live:'실연동' };
@@ -46,7 +46,7 @@
   function programRow(item) {
     const key = esc(item.programKey);
     const contacted = item.lastOutreachAt ? `${item.outreachChannel || '연락'} · ${new Date(item.lastOutreachAt).toLocaleDateString('ko-KR')}` : '연락 기록 없음';
-    return `<div class="supply-network-program" data-supply-program="${key}"><div><strong>${esc(item.programName || item.programKey)}</strong><small>${esc(item.coverageSummary || item.region)}</small><small>${esc(contacted)}</small></div><div class="supply-network-program-controls"><select data-program-application>${options(APPLICATION,item.applicationStatus)}</select><select data-program-integration>${options(INTEGRATION,item.integrationStatus)}</select><select data-program-outreach>${options(OUTREACH,item.outreachStatus || 'none')}</select><button type="button" data-supply-program-save="${key}">저장</button></div></div>`;
+    return `<div class="supply-network-program" data-supply-program="${key}"><div><strong>${esc(item.programName || item.programKey)}</strong><small>${esc(item.coverageSummary || item.region)}</small><small>${esc(contacted)}</small></div><div class="supply-network-program-controls"><select data-program-application>${options(APPLICATION,item.applicationStatus)}</select><select data-program-integration>${options(INTEGRATION,item.integrationStatus)}</select><select data-program-outreach>${options(OUTREACH,item.outreachStatus || 'none')}</select>${item.programUrl?`<a href="${esc(item.programUrl)}" target="_blank" rel="noopener">관리 ↗</a>`:''}<button type="button" data-supply-program-save="${key}">저장</button></div></div>`;
   }
   function providerState(provider) {
     if (!provider.enabled) return '중지';
