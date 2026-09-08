@@ -92,3 +92,10 @@ test('Business and Trade canonical paths hide execution hosts',async()=>{
   response=await routeCanonicalSurface(new Request('https://ekodi.kr/ekodibiz/trade/admin'),{ASSETS:assets},{externalFetch});
   assert.equal(response,null);
 });
+
+test('canonical v8 candidate probe is rollback-safe while stable production converges',()=>{
+  const manifest=JSON.parse(fs.readFileSync(new URL('../deploy/manifests/shared-site.worker.json',import.meta.url),'utf8'));
+  const probe=manifest.worker.requests.find(item=>item.url==='https://ekodi.kr/api/control/ai/v8/status');
+  assert.equal(probe?.rollbackVerify,false);
+  assert.deepEqual(probe?.statuses,[401]);
+});

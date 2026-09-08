@@ -71,3 +71,9 @@ test('pastor admin release contract requires nosniff and candidate-only rollback
   assert.equal(probe?.rollbackVerify, false);
   assert.ok(probe?.headerExpect?.includes('x-content-type-options: nosniff'));
 });
+
+test('canonical church admin path runs Worker-first at the shared edge', async () => {
+  const wrangler = await fs.promises.readFile(new URL('../wrangler.site.toml', import.meta.url), 'utf8');
+  const workerFirst = wrangler.match(/run_worker_first = \[([^\]]+)\]/)?.[1] || '';
+  assert.match(workerFirst, /"\/ekodichurch\*"/);
+});

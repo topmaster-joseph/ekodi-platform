@@ -170,7 +170,8 @@
         "statuses": [401],
         "redirect": "manual",
         "expect": ["\"authenticated\":false"],
-        "headerExpect": ["cache-control: no-store"]
+        "headerExpect": ["cache-control: no-store"],
+        "rollbackVerify": false
       },
       {
         "url": "https://ekodi.kr/ekodibiz/trade/admin",
