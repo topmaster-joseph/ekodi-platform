@@ -267,6 +267,11 @@ export default {
   },
 
   async scheduled(controller, env, ctx) {
+    const customerSchedule = typeof customerEntryWorker.scheduled === 'function'
+      ? await customerEntryWorker.scheduled(controller, env, ctx)
+      : null;
+    // A real Coupang report pass owns the whole Mission Control invocation budget.
+    if (customerSchedule?.reporting?.ran) return customerSchedule;
     const authorBilling = runAuthorBillingSchedule(env).catch(error => { console.error('Author billing schedule error', error); return { processed:0, error:'author_billing_schedule_failed' }; });
     const messengerOutbox = drainMessengerOutbox(env, { limit:20 }).catch(error => { console.error('Messenger outbox schedule error', error); return { processed:0, failed:1, error:'messenger_outbox_schedule_failed' }; });
     const commandPulse = runEkodiPulseSchedule(env, { limit:1 }).catch(error => { console.error('EKODI v8 Pulse schedule error', error); return { ok:false, error:'ekodi_v8_pulse_failed' }; });
@@ -276,14 +281,10 @@ export default {
       return runWakeOrchestration(env);
     })().catch(error => { console.error('Device wake orchestration schedule error', error); return { status:'unavailable', error:'device_wake_orchestration_failed' }; });
     if (ctx?.waitUntil) {
-      ctx.waitUntil(authorBilling);
-      ctx.waitUntil(messengerOutbox);
-      ctx.waitUntil(commandPulse);
-      ctx.waitUntil(hybridWatchdog);
-      ctx.waitUntil(wakeOrchestration);
+      ctx.waitUntil(authorBilling); ctx.waitUntil(messengerOutbox); ctx.waitUntil(commandPulse);
+      ctx.waitUntil(hybridWatchdog); ctx.waitUntil(wakeOrchestration);
     }
-    if (typeof customerEntryWorker.scheduled === 'function') return customerEntryWorker.scheduled(controller, env, ctx);
-    return Promise.all([authorBilling, messengerOutbox, commandPulse, hybridWatchdog, wakeOrchestration]);
+    return customerSchedule || Promise.all([authorBilling, messengerOutbox, commandPulse, hybridWatchdog, wakeOrchestration]);
   },
 };
 

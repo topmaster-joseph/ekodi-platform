@@ -87,8 +87,10 @@ jobs:
           set -euo pipefail
           test -n "${VERIFIED_MALL_SUB_ID}"
           printf '%s' "${VERIFIED_MALL_SUB_ID}" | npx --yes wrangler@${WRANGLER_VERSION} secret put COUPANG_PARTNERS_SUB_ID --config wrangler.api.toml >/dev/null
-          date -u +%s > /tmp/bind-cutoff
-          echo 'Registry-verified EKODI Mall Sub ID bound to production Worker secret.' >> "$GITHUB_STEP_SUMMARY"
+          force_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          npx --yes wrangler@${WRANGLER_VERSION} d1 execute ekodi-auth --remote --config wrangler.api.toml --command "INSERT INTO affiliate_partner_report_control(account_id,force_requested_at,force_reason,force_consumed_at,updated_at) VALUES('coupang-ekodibiz','$force_at','post_bind_verify',NULL,'$force_at') ON CONFLICT(account_id) DO UPDATE SET force_requested_at=excluded.force_requested_at,force_reason=excluded.force_reason,force_consumed_at=NULL,updated_at=excluded.updated_at" >/dev/null
+          date -u -d "$force_at" +%s > /tmp/bind-cutoff
+          echo 'Registry-verified EKODI Mall Sub ID bound; one-time post-bind report verification queued.' >> "$GITHUB_STEP_SUMMARY"
       - name: Verify bound report closed loop
         shell: bash
         run: |
@@ -124,6 +126,57 @@ jobs:
           const proof={run,productPerformance:perf,dailyMetrics:metrics};
           fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,'\n## Bound report proof\n\n`'+JSON.stringify(proof)+'`\n');
           console.log(JSON.stringify(proof));
+          NODE
+
+      - name: Request one-time catalog refresh after Sub ID bind
+        id: catalog_force
+        shell: bash
+        run: |
+          set -euo pipefail
+          requested_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          ready=false
+          for attempt in $(seq 1 60); do
+            if npx --yes wrangler@${WRANGLER_VERSION} d1 execute ekodi-auth --remote --config wrangler.api.toml --command "INSERT INTO affiliate_partner_report_control(account_id,catalog_force_requested_at,catalog_force_reason,catalog_force_consumed_at,updated_at) VALUES('coupang-ekodibiz','$requested_at','subid_rebind',NULL,'$requested_at') ON CONFLICT(account_id) DO UPDATE SET catalog_force_requested_at=excluded.catalog_force_requested_at,catalog_force_reason=excluded.catalog_force_reason,catalog_force_consumed_at=NULL,updated_at=excluded.updated_at" >/tmp/catalog-force.log 2>&1; then
+              ready=true
+              break
+            fi
+            sleep 10
+          done
+          [ "$ready" = "true" ]
+          echo "request_epoch=$(date -u -d "$requested_at" +%s)" >> "$GITHUB_OUTPUT"
+          echo "One-time catalog refresh queued at $requested_at." >> "$GITHUB_STEP_SUMMARY"
+      - name: Verify refreshed Sub ID catalog
+        shell: bash
+        run: |
+          set -euo pipefail
+          cutoff='${{ steps.catalog_force.outputs.request_epoch }}'
+          success=false
+          for attempt in $(seq 1 48); do
+            npx --yes wrangler@${WRANGLER_VERSION} d1 execute ekodi-auth --remote --config wrangler.api.toml --json --command "SELECT status,reason,selected_count,started_at,finished_at FROM affiliate_recommendation_runs WHERE storefront_slug='ekodi-mall' ORDER BY id DESC LIMIT 1" > /tmp/catalog-run.json
+            success=$(CUTOFF="$cutoff" node - <<'NODE'
+          const fs=require('node:fs');
+          const unwrap=x=>{const a=Array.isArray(x)?x:(x?.result||[]);const b=Array.isArray(a)?a[0]:a;return b?.results||b?.result||[]};
+          const r=unwrap(JSON.parse(fs.readFileSync('/tmp/catalog-run.json','utf8')))[0]||{};
+          const fresh=Date.parse(r.started_at||'')/1000>=Number(process.env.CUTOFF);
+          process.stdout.write(fresh&&r.status==='success'&&r.reason==='schedule_force:subid_rebind'?'true':'false');
+          NODE
+            )
+            [ "$success" = "true" ] && break
+            sleep 15
+          done
+          if [ "$success" != "true" ]; then
+            echo 'Sub ID catalog refresh did not reach success.' >&2
+            cat /tmp/catalog-run.json >&2
+            exit 1
+          fi
+          npx --yes wrangler@${WRANGLER_VERSION} d1 execute ekodi-auth --remote --config wrangler.api.toml --json --command "SELECT COUNT(*) AS active_products,MAX(selected_at) AS latest_selected_at FROM affiliate_storefront_products WHERE account_id='coupang-ekodibiz' AND storefront_slug='ekodi-mall' AND status='active'" > /tmp/catalog-proof.json
+          node <<'NODE'
+          const fs=require('node:fs');
+          const unwrap=x=>{const a=Array.isArray(x)?x:(x?.result||[]);const b=Array.isArray(a)?a[0]:a;return b?.results||b?.result||[]};
+          const run=unwrap(JSON.parse(fs.readFileSync('/tmp/catalog-run.json','utf8')))[0]||{};
+          const catalog=unwrap(JSON.parse(fs.readFileSync('/tmp/catalog-proof.json','utf8')))[0]||{};
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,'\n## Refreshed Sub ID catalog\n\n`'+JSON.stringify({run,catalog})+'`\n');
+          console.log(JSON.stringify({run,catalog}));
           NODE
 
 
