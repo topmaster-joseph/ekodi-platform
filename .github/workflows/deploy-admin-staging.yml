@@ -75,10 +75,11 @@ jobs:
           node --check admin-demand-loader.js
           node --check admin-menu-layout.js
           node --check marketing-funnel-admin.js
-          node --test test/admin-true-lazy.test.mjs test/admin-thin-shell.test.mjs test/admin-health-menu.test.mjs test/admin-preauth-shell.test.mjs test/admin-performance-hardening.test.mjs test/admin-readable-command.test.mjs test/mission-control-admin.test.mjs
+          node --check supply-network-admin.js
+          node --test test/admin-true-lazy.test.mjs test/admin-thin-shell.test.mjs test/admin-health-menu.test.mjs test/admin-preauth-shell.test.mjs test/admin-performance-hardening.test.mjs test/admin-readable-command.test.mjs test/mission-control-admin.test.mjs test/admin-affiliates-boundary.test.mjs
           npm run build
 
-          for asset in admin-shell.html admin-shell.css admin-compact.js admin-compact.css admin-central-handoff.js admin-authenticated-shell.js admin-demand-loader.js admin-menu-layout.js admin-menu-registry.js marketing-funnel-admin.js marketing-funnel-admin.css mall.html mall.js mall.css; do
+          for asset in admin-shell.html admin-shell.css admin-compact.js admin-compact.css admin-central-handoff.js admin-authenticated-shell.js admin-demand-loader.js admin-menu-layout.js admin-menu-registry.js marketing-funnel-admin.js marketing-funnel-admin.css supply-network-admin.js supply-network-admin.css mall.html mall.js mall.css; do
             test -f "dist/$asset"
           done
 
@@ -87,9 +88,12 @@ jobs:
           grep -Fq "admin-shell.css?v=$version" dist/admin-shell.html
           grep -Fq "admin-central-handoff.js?v=$version" dist/admin-shell.html
           grep -Fq 'data-ekodi-postauth="admin-compact.js admin-menu-layout.js admin-demand-loader.js"' dist/admin-shell.html
-          grep -Fq '#mall-ai-sales:affiliates' dist/admin-menu-layout.js
-          grep -Fq 'affiliates:#mall-ai-sales' dist/admin-menu-layout.js
-          grep -Fq '제휴마케팅' dist/admin-menu-registry.js
+          grep -Fq '#affiliates' dist/admin-menu-layout.js
+          grep -Fq '#mall-ai-sales' dist/admin-menu-layout.js
+          grep -Fq 'https://ekodi.kr/ekodibiz/mall/admin/sourcing' dist/admin-menu-layout.js
+          grep -Fq '판매·공급망' dist/admin-menu-registry.js
+          grep -Fq 'data-program-outreach' dist/supply-network-admin.js
+          grep -Fq '/programs/' dist/supply-network-admin.js
           grep -Fq 'mall_sales_events' dist/marketing-funnel-admin.js
           grep -Fq "test: 'eq.false'" dist/marketing-funnel-admin.js
           grep -Fq 'https://ekodi.kr/ekodibiz/mall' dist/marketing-funnel-admin.js
