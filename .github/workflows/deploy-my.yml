@@ -296,8 +296,8 @@ jobs:
         run: |
           set -euo pipefail
           if npx --yes wrangler@${WRANGLER_VERSION} deployments status --config wrangler.my.toml --json > /tmp/my-deployments.log 2>&1; then
-            health_code=$(curl -sS -o /tmp/my-live-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://my.ekodi.kr/health' || true)
-            root_code=$(curl -L -sS -o /tmp/my-live.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://my.ekodi.kr/' || true)
+            health_code=$(curl -sS -o /tmp/my-live-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/my/health' || true)
+            root_code=$(curl -L -sS -o /tmp/my-live.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/my/' || true)
             if [[ "$health_code" == '200' && "$root_code" == '200' ]] \
               && grep -Fq '"service":"ekodi-my"' /tmp/my-live-health.json \
               && grep -Fq 'MY PLATFORMS' /tmp/my-live.html; then
@@ -314,25 +314,30 @@ jobs:
             cat /tmp/my-deployments.log
             exit 1
           fi
-      - name: Verify real My EKODI production hostname, private workspace routes, Life Journey and universal membership
+      - name: Verify canonical My EKODI production surface, legacy redirect, private workspace routes, Life Journey and universal membership
         shell: bash
         run: |
           set -euo pipefail
+          legacy_code=$(curl -sS -D /tmp/my-legacy.headers -o /dev/null -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://my.ekodi.kr/' || true)
+          if [[ "$legacy_code" != '308' ]] || ! grep -Eiq '^location:[[:space:]]*https://ekodi\.kr/my/?[[:space:]]*$' /tmp/my-legacy.headers; then
+            echo 'Legacy My EKODI host must redirect permanently to the canonical ekodi.kr/my path.'
+            exit 1
+          fi
           for attempt in $(seq 1 18); do
-            root_code=$(curl -L -sS -o /tmp/my.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://my.ekodi.kr/' || true)
-            private_code=$(curl -sS -D /tmp/my-private.headers -o /tmp/my-private.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://my.ekodi.kr/w/person:deployment-probe' || true)
-            journey_code=$(curl -L -sS -o /tmp/my-journey.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://my.ekodi.kr/journey/' || true)
-            approval_code=$(curl -L -sS -o /tmp/my-approvals.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://my.ekodi.kr/approvals/' || true)
-            journey_app_code=$(curl -sS -o /tmp/my-journey-app.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://my.ekodi.kr/journey/app.js' || true)
-            config_code=$(curl -sS -o /tmp/my-config.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://my.ekodi.kr/config.js' || true)
-            personalization_code=$(curl -sS -o /tmp/my-personalization.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://my.ekodi.kr/progressive-personalization.js' || true)
-            character_code=$(curl -sS -o /tmp/my-character.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://my.ekodi.kr/character-identity.js' || true)
-            app_code=$(curl -sS -o /tmp/my-app.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://my.ekodi.kr/app.js' || true)
-            membership_code=$(curl -sS -o /tmp/my-membership.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://my.ekodi.kr/membership-summary.js' || true)
-            membership_css_code=$(curl -sS -o /tmp/my-membership.css -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://my.ekodi.kr/membership-summary.css' || true)
-            user_services_code=$(curl -sS -o /tmp/my-user-services.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://my.ekodi.kr/user-services.js' || true)
-            manifest_code=$(curl -sS -o /tmp/my-services.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://my.ekodi.kr/service-manifest.json' || true)
-            health_code=$(curl -sS -o /tmp/my-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://my.ekodi.kr/health' || true)
+            root_code=$(curl -L -sS -o /tmp/my.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/my/' || true)
+            private_code=$(curl -sS -D /tmp/my-private.headers -o /tmp/my-private.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/my/w/person:deployment-probe' || true)
+            journey_code=$(curl -L -sS -o /tmp/my-journey.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/my/journey/' || true)
+            approval_code=$(curl -L -sS -o /tmp/my-approvals.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/my/approvals/' || true)
+            journey_app_code=$(curl -sS -o /tmp/my-journey-app.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/my/journey/app.js' || true)
+            config_code=$(curl -sS -o /tmp/my-config.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/my/config.js' || true)
+            personalization_code=$(curl -sS -o /tmp/my-personalization.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/my/progressive-personalization.js' || true)
+            character_code=$(curl -sS -o /tmp/my-character.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/my/character-identity.js' || true)
+            app_code=$(curl -sS -o /tmp/my-app.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/my/app.js' || true)
+            membership_code=$(curl -sS -o /tmp/my-membership.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/my/membership-summary.js' || true)
+            membership_css_code=$(curl -sS -o /tmp/my-membership.css -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/my/membership-summary.css' || true)
+            user_services_code=$(curl -sS -o /tmp/my-user-services.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/my/user-services.js' || true)
+            manifest_code=$(curl -sS -o /tmp/my-services.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/my/service-manifest.json' || true)
+            health_code=$(curl -sS -o /tmp/my-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/my/health' || true)
             if [[ "$root_code" == '200' && "$private_code" == '200' && "$journey_code" == '200' && "$approval_code" == '200' && "$journey_app_code" == '200' && "$config_code" == '200' && "$personalization_code" == '200' && "$character_code" == '200' && "$app_code" == '200' && "$membership_code" == '200' && "$membership_css_code" == '200' && "$user_services_code" == '200' && "$manifest_code" == '200' && "$health_code" == '200' ]] \
               && grep -Fq 'My EKODI' /tmp/my.html \
               && grep -Fq 'MY PLATFORMS' /tmp/my.html \
