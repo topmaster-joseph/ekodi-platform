@@ -717,6 +717,22 @@
         ]
       },
       {
+        "url": "https://mail.ekodi.kr/contact",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "에코디에 문의하기",
+          "joseph@ekodi.kr"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: mail-contact",
+          "x-ekodi-shell: v2",
+          "cache-control: no-store"
+        ]
+      },
+      {
         "url": "https://mail.ekodi.kr/admin",
         "statuses": [
           200
