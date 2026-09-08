@@ -4,7 +4,6 @@ const SYSTEM_PATHS=Object.freeze(['/api','/mcp','/webhooks','/health']);
 const PUBLIC_EXECUTION_SURFACES=Object.freeze([
   Object.freeze({id:'bible',prefix:'/bible',binding:'BIBLE',basePathAware:true}),
   Object.freeze({id:'business',prefix:'/business',host:'business.ekodi.kr'}),
-  Object.freeze({id:'trade',prefix:'/ekodibiz/trade',assetPath:'/trade',exact:true}),
 ]);
 const ADMIN_RUNTIME_FILE=/\.(?:js|css|cmd|json|map|svg|png|webp|ico)$/i;
 
@@ -76,7 +75,6 @@ function rewriteExecutionText(text,spec,type=''){
     output=output.replace("function routeWorkspaceId(){\n  const path=location.pathname.replace(/^\\/+|\\/+$/g,'').toLowerCase();\n  if(path)return path;","function routeWorkspaceId(){\n  const path=location.pathname.replace(/^\\/+|\\/+$/g,'').toLowerCase();\n  if(path.startsWith('business/'))return path.slice('business/'.length).split('/')[0];\n  if(path&&path!=='business')return path;");
     output=output.replace("if(push&&location.pathname!==`/${workspace.id}`)history.pushState({workspace:workspace.id},'',`/${workspace.id}`);","const nextPath=location.hostname==='ekodi.kr'?`/business/${workspace.id}`:`/${workspace.id}`;if(push&&location.pathname!==nextPath)history.pushState({workspace:workspace.id},'',nextPath);");
   }
-  if(spec.id==='trade') output=output.replaceAll('https://trade.biz.ekodi.kr/','https://ekodi.kr/ekodibiz/trade').replaceAll('trade.biz.ekodi.kr','ekodi.kr/ekodibiz/trade');
   return output;
 }
 function canonicalExecutionLocation(value,spec){try{const target=new URL(value);if(spec.host&&target.hostname===spec.host){target.hostname=CANONICAL_HOST;target.pathname=spec.prefix+(target.pathname==='/'?'':target.pathname);return target.toString()}if(target.hostname==='admin.ekodi.kr'){target.hostname=CANONICAL_HOST;target.pathname=target.pathname==='/'?'/admin/':`/admin${target.pathname}`;return target.toString()}if(target.hostname==='auth.ekodi.kr'){target.hostname=CANONICAL_HOST;target.pathname=target.pathname==='/'?'/auth/':`/auth${target.pathname}`;return target.toString()}}catch{}return value}
