@@ -58,6 +58,7 @@ test('Bible staging preserves Access protection and verifies the staged contract
   const workflow = await fs.readFile(path.resolve('.github/workflows/deploy-bible.yml'), 'utf8');
   assert.match(workflow, /Www-Authenticate: Cloudflare-Access/i);
   assert.match(workflow, /deployments status --config wrangler\.bible\.staging\.toml/);
-  assert.match(workflow, /wrangler@4\.129\.0 dev --config wrangler\.bible\.staging\.toml --local/);
+  assert.ok(workflow.includes("WRANGLER_VERSION: '4.129.0'"));
+  assert.ok(workflow.includes('wrangler@${WRANGLER_VERSION} dev --config wrangler.bible.staging.toml --local'));
   assert.match(workflow, /verify_base='http:\/\/127\.0\.0\.1:8793'/);
 });
