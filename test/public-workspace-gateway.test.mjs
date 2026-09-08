@@ -45,7 +45,7 @@ test('canonical public workspace paths use the isolated Space service binding',a
 test('workspace shell assets and auth handoff stay inside the apex gateway',async()=>{
   const router=await read('platform-router-entry-worker.js');
   assert.ok(router.includes("const WORKSPACE_ASSET_PREFIX='/_ekodi/space/'"));
-  assert.ok(router.includes("const WORKSPACE_ASSETS=new Set(['style.css','config.js','app.js','storefront.json'])"));
+  assert.ok(router.includes("const WORKSPACE_ASSETS=new Set(['style.css','config.js','app.js','storefront.json','storefront.css'])"));
   assert.match(router,/rewriteWorkspaceShellAssets/);
   assert.match(router,/workspaceAuthRedirect/);
   assert.ok(router.includes("target.origin!=='https://ekodi.kr'"));

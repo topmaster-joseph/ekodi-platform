@@ -12,9 +12,9 @@ const [html, css, js, worker, build] = await Promise.all([
 
 test('Pizza Maru Mokpo page exposes canonical store contact and order actions', () => {
   assert.match(html, /피자마루 목포대점/);
-  assert.match(html, /전남 무안군 청계면 도림리 326-4/);
-  assert.match(html, /tel:0614531082/);
-  assert.match(html, /https:\/\/ekodi\.kr\/pizzamaru\/mokpodae/);
+  assert.match(html, /전남 무안군 청계면 승달산길 37-1 1층/);
+  assert.match(html, /tel:0614538295/);
+  assert.match(html, /https:\/\/ekodi\.kr\/pizzamaru/);
   assert.match(html, /배달의민족/);
   assert.match(html, /요기요/);
   assert.match(html, /쿠팡이츠/);
@@ -30,9 +30,10 @@ test('Pizza Maru Mokpo interactive actions remain CSP compatible', () => {
   assert.match(css, /--brand:#b3132b/);
 });
 
-test('shared site worker and build publish the canonical branch route', () => {
+test('legacy branch route redirects to the canonical root storefront', () => {
   assert.match(worker, /url\.pathname === '\/pizzamaru\/mokpodae'/);
-  assert.match(worker, /public-pizzamaru-mokpodae/);
+  assert.match(worker, /x-ekodi-canonical-storefront/);
+  assert.match(worker, /new URL\('\/pizzamaru',request\.url\)/);
   assert.match(worker, /'\/pizzamaru-mokpodae\.css'/);
   assert.match(worker, /'\/pizzamaru-mokpodae\.js'/);
   for (const asset of ['pizzamaru-mokpodae.html','pizzamaru-mokpodae.css','pizzamaru-mokpodae.js']) assert.match(build, new RegExp(asset.replaceAll('.', '\\.')));

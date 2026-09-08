@@ -1,4 +1,4 @@
-const STORE={name:'피자마루 목포대점',address:'전남 무안군 청계면 도림리 326-4',phone:'061-453-1082',canonical:'https://ekodi.kr/pizzamaru/mokpodae'};
+const STORE={name:'피자마루 목포대점',address:'전남 무안군 청계면 승달산길 37-1 1층',phone:'061-453-8295',canonical:'https://ekodi.kr/pizzamaru'};
 const $=(selector)=>document.querySelector(selector);
 let toastTimer;
 function toast(message){const node=$('#toast');if(!node)return;node.textContent=message;node.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>node.classList.remove('show'),1800)}

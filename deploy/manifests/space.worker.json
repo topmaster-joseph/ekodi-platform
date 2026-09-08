@@ -35,37 +35,82 @@
       },
       {
         "url": "https://space.ekodi.kr/deployment-probe",
-        "statuses": [200],
+        "statuses": [
+          200
+        ],
         "redirect": "manual",
-        "expect": ["OPERATING SPACE", "STORE MASTER", "MENU MASTER"],
-        "headerExpect": ["x-ekodi-service: space", "x-ekodi-route: space-workspace", "cache-control: no-store"]
+        "expect": [
+          "OPERATING SPACE",
+          "STORE MASTER",
+          "MENU MASTER"
+        ],
+        "headerExpect": [
+          "x-ekodi-service: space",
+          "x-ekodi-route: space-workspace",
+          "cache-control: no-store"
+        ]
       },
       {
         "url": "https://ekodi.kr/jadam",
-        "statuses": [200],
+        "statuses": [
+          200
+        ],
         "redirect": "manual",
-        "expect": ["자담치킨 목포대점", "CHICKEN STORE USER PAGE", "USER OPERATIONS"],
-        "headerExpect": ["x-ekodi-route: space-workspace", "cache-control: no-store"]
+        "expect": [
+          "자담치킨 목포대점",
+          "메뉴 보기",
+          "바로 주문하기"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: space-storefront",
+          "x-robots-tag: index, follow",
+          "cache-control: no-store"
+        ]
       },
       {
         "url": "https://ekodi.kr/pizzamaru",
-        "statuses": [200],
+        "statuses": [
+          200
+        ],
         "redirect": "manual",
-        "expect": ["피자마루 목포대점", "PIZZA STORE USER PAGE", "USER OPERATIONS"],
-        "headerExpect": ["x-ekodi-route: space-workspace", "cache-control: no-store"]
+        "expect": [
+          "피자마루 목포대점",
+          "메뉴 보기",
+          "바로 주문하기"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: space-storefront",
+          "x-robots-tag: index, follow",
+          "cache-control: no-store"
+        ]
       },
       {
         "url": "https://ekodi.kr/yogurt",
-        "statuses": [200],
+        "statuses": [
+          200
+        ],
         "redirect": "manual",
-        "expect": ["요거트퍼플 목포대점", "YOGURT PURPLE", "배달 주문", "061-453-8295"],
-        "headerExpect": ["x-ekodi-route: space-workspace", "cache-control: no-store"]
+        "expect": [
+          "요거트퍼플 목포대점",
+          "메뉴 보기",
+          "바로 주문하기"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: space-storefront",
+          "x-robots-tag: index, follow",
+          "cache-control: no-store"
+        ]
       },
       {
         "url": "https://ekodi.kr/yogurtpurple",
-        "statuses": [308],
+        "statuses": [
+          308
+        ],
         "redirect": "manual",
-        "headerExpect": ["location: https://ekodi.kr/yogurt", "x-ekodi-workspace-alias: yogurtpurple->yogurt"]
+        "headerExpect": [
+          "location: https://ekodi.kr/yogurt",
+          "x-ekodi-workspace-alias: yogurtpurple->yogurt"
+        ]
       }
     ]
   }
