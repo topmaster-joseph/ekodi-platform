@@ -15,6 +15,8 @@ on:
       - 'admin-central-handoff.js'
       - 'admin-authenticated-shell.js'
       - 'admin-demand-loader.js'
+      - 'common-services-admin.js'
+      - 'common-services-admin.css'
       - 'personal-finance-admin.js'
       - 'personal-finance-admin.css'
       - 'admin-menu-layout.js'
@@ -80,11 +82,12 @@ jobs:
           node --check admin-central-handoff.js
           node --check admin-authenticated-shell.js
           node --check admin-demand-loader.js
+          node --check common-services-admin.js
           node --check admin-menu-layout.js
           node --check admin-design-engine.js
           node --check scripts/validate-design-engine.mjs
           node --check marketing-funnel-admin.js
-          node --test test/admin-true-lazy.test.mjs test/admin-thin-shell.test.mjs test/admin-health-menu.test.mjs test/admin-preauth-shell.test.mjs test/admin-performance-hardening.test.mjs test/admin-readable-command.test.mjs test/mission-control-admin.test.mjs test/admin-affiliates-boundary.test.mjs
+          node --test test/admin-true-lazy.test.mjs test/admin-thin-shell.test.mjs test/admin-health-menu.test.mjs test/admin-preauth-shell.test.mjs test/admin-performance-hardening.test.mjs test/admin-readable-command.test.mjs test/mission-control-admin.test.mjs test/common-service-operator-control.test.mjs test/admin-affiliates-boundary.test.mjs
           node scripts/validate-design-engine.mjs
           npm run build
 

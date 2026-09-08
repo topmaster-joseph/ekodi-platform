@@ -1,5 +1,6 @@
 ﻿import authWorker from './auth-worker.js';
 import { getCoreAiGatewayStatus } from './core-ai-gateway.js';
+import { adminAuthorityForRole, hasEkodiCapability } from './ekodi-authorization.js';
 import {
   getAiCollaborationAdminSnapshot,
   listAiCollaborationAudit,
@@ -50,6 +51,12 @@ async function readJson(request) {
   try { return await request.json(); } catch { return null; }
 }
 
+function sessionCapabilityGranted(session = {}, required = '') {
+  const role = text(session.role || session.authority?.role || 'viewer', 80).toLowerCase();
+  const authority = session.authority && typeof session.authority === 'object' ? session.authority : adminAuthorityForRole(role);
+  return hasEkodiCapability(authority.capabilities || [], required, authority.deniedCapabilities || []);
+}
+
 function pulseInput(body = {}, session = {}) {
   const source = body.event && typeof body.event === 'object' ? body.event : body;
   const summary = text(source.summary || source.message || body.goal, 1000);
@@ -78,6 +85,9 @@ function pulseInput(body = {}, session = {}) {
 }
 
 async function collaborationResponse(request, env, session, url) {
+  const writeAction = request.method === 'PUT' || (request.method === 'POST' && url.pathname === `${COLLABORATION_PATH}/reset`);
+  const requiredCapability = writeAction ? 'ai:operate' : 'ai:read';
+  if (!sessionCapabilityGranted(session, requiredCapability)) return json(request, env, { error: 'capability_required', capability: requiredCapability }, 403);
   if (request.method === 'GET' && url.pathname === COLLABORATION_PATH) {
     return json(request, env, { ok: true, ...(await getAiCollaborationAdminSnapshot(env)) });
   }

@@ -3,7 +3,7 @@ const clean=value=>String(value??'').trim().toLowerCase();
 const round=(value,digits=4)=>{const factor=10**digits;return Math.round(value*factor)/factor};
 
 export const AI_ROUTER_SCORE_POLICY=Object.freeze({
-  version:'1.0.0',
+  version:'1.1.0',
   historyWindowHours:168,
   recentHealthWindowHours:6,
   maxHistoryRuns:500,
@@ -19,6 +19,19 @@ export const AI_ROUTER_SCORE_POLICY=Object.freeze({
     quality:0.08,
   }),
 });
+
+export function normalizeRouterWeights(value={}){
+  const defaults=AI_ROUTER_SCORE_POLICY.weights;
+  const source=value&&typeof value==='object'?value:{};
+  const raw=Object.fromEntries(Object.keys(defaults).map(key=>{const input=Number(source[key]);const value=Number.isFinite(input)?(input>1?input/100:input):defaults[key];return[key,Math.max(0,Math.min(1,value))]}));
+  const total=Object.values(raw).reduce((sum,n)=>sum+n,0);
+  if(total<=0)return Object.freeze({...defaults});
+  const entries=Object.entries(raw).map(([key,n])=>[key,round(n/total,6)]);
+  const sum=entries.reduce((value,[,n])=>value+n,0);
+  const target=entries.reduce((best,current)=>current[1]>best[1]?current:best,entries[0]);
+  if(target)target[1]=round(target[1]+(1-sum),6);
+  return Object.freeze(Object.fromEntries(entries));
+}
 
 const COST_SCORES=Object.freeze({
   'free-preferred':1,
@@ -129,7 +142,8 @@ export function scoreProvider(providerId,task={},context={}){
     load:loadScore(metric),
     quality:clamp(metric?.qualityScore??profile.qualityScore??AI_ROUTER_SCORE_POLICY.neutralScore),
   };
-  const weighted=Object.entries(AI_ROUTER_SCORE_POLICY.weights).reduce((sum,[key,weight])=>sum+dimensions[key]*weight,0);
+  const weights=normalizeRouterWeights(context.routerPolicy?.weights||AI_ROUTER_SCORE_POLICY.weights);
+  const weighted=Object.entries(weights).reduce((sum,[key,weight])=>sum+dimensions[key]*weight,0);
   return Object.freeze({
     providerId,
     score:round(weighted*100,2),

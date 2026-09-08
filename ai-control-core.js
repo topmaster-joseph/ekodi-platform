@@ -145,7 +145,7 @@ export function isOriginPreserved(task, providerId) {
 }
 
 function routerContext(capabilities = {}, role = 'parallel') {
-  return {role,providerMetrics:capabilities.providerMetrics||{},providerProfiles:capabilities.providerProfiles||{}};
+  return {role,providerMetrics:capabilities.providerMetrics||{},providerProfiles:capabilities.providerProfiles||{},routerPolicy:capabilities.routerPolicy||{}};
 }
 function executionEntry(rating,role){return Object.freeze({providerId:rating.providerId,role,routerScore:rating.score,routerScoreBreakdown:rating.breakdown,routerScorePolicyVersion:rating.policyVersion});}
 function rankedForRole(providerIds,task,capabilities,role,preserveOrder=false){
@@ -163,7 +163,8 @@ export function buildExecutionPlan(task, capabilities = {}) {
   const ranked=rankedForRole(collaborators,task,capabilities,'parallel',preserveRequestedOrder);
   const originRating=originProvider?scoreProvider(originProvider,task,routerContext(capabilities,'origin-primary')):null;
   const entries=originRating?[executionEntry(originRating,'origin-primary')]:[];
-  for(const rating of ranked){if(entries.length>=AI_CONTROL_POLICY.maxParallelProviders)break;entries.push(executionEntry(rating,`parallel-${entries.length+1}`));}
+  const configuredMax=Math.max(1,Math.min(AI_CONTROL_POLICY.maxParallelProviders,Number(capabilities.maxParallelProviders)||AI_CONTROL_POLICY.maxParallelProviders));
+  for(const rating of ranked){if(entries.length>=configuredMax)break;entries.push(executionEntry(rating,`parallel-${entries.length+1}`));}
   return Object.freeze(entries);
 }
 

@@ -26,11 +26,11 @@ export function providerCapabilities(env={},nodeProviders=[]){
 
 export function providerStatus(env={},nodeProviders=[]){
   const capabilities=providerCapabilities(env,nodeProviders);const providers=[];
-  if(capabilities.geminiFree)providers.push({id:'gemini-free',kind:'official-api',costClass:providerCostClass('gemini-free'),available:true});
-  for(const id of capabilities.nodeProviders){const providerId=`node:${id}`;providers.push({id:providerId,kind:'account-cli',costClass:providerCostClass(providerId),available:true});}
-  if(capabilities.openaiApi)providers.push({id:'openai-api',kind:'official-api',costClass:providerCostClass('openai-api'),available:true});
-  if(capabilities.anthropicApi)providers.push({id:'anthropic-api',kind:'official-api',costClass:providerCostClass('anthropic-api'),available:true});
-  for(const id of capabilities.workerProviders){const providerId=`worker:${id}`;providers.push({id:providerId,kind:'external-worker',costClass:providerCostClass(providerId),available:true});}
+  providers.push({id:'gemini-free',kind:'official-api',costClass:providerCostClass('gemini-free'),available:capabilities.geminiFree,configured:capabilities.geminiFree,model:clean(env.GEMINI_MODEL)||'gemini-3.7-flash'});
+  for(const id of capabilities.nodeProviders){const providerId=`node:${id}`;providers.push({id:providerId,kind:'account-cli',costClass:providerCostClass(providerId),available:true,configured:true,model:'account-managed'});}
+  providers.push({id:'openai-api',kind:'official-api',costClass:providerCostClass('openai-api'),available:capabilities.openaiApi,configured:capabilities.openaiApi,model:clean(env.OPENAI_MODEL)||'gpt-5.6-luna'});
+  providers.push({id:'anthropic-api',kind:'official-api',costClass:providerCostClass('anthropic-api'),available:capabilities.anthropicApi,configured:capabilities.anthropicApi,model:clean(env.ANTHROPIC_MODEL)||'claude-haiku-4-5-20251001'});
+  for(const id of capabilities.workerProviders){const providerId=`worker:${id}`;providers.push({id:providerId,kind:'external-worker',costClass:providerCostClass(providerId),available:true,configured:true,model:'provider-managed'});}
   return providers;
 }
 

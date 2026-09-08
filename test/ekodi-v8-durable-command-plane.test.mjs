@@ -78,3 +78,11 @@ test('Control production release continuously verifies the protected v8 route an
   assert.doesNotMatch(workflow, /AI providers=\$\{AI_PROVIDER_READY_COUNT:-0\}/);
   assert.match(workflow, /Runtime health is reported separately/);
 });
+
+test('collaboration settings enforce read and operate capabilities server-side', () => {
+  const source = fs.readFileSync(new URL('../ai-command-control.js', import.meta.url), 'utf8');
+  assert.match(source, /adminAuthorityForRole, hasEkodiCapability/);
+  assert.match(source, /requiredCapability = writeAction \? 'ai:operate' : 'ai:read'/);
+  assert.match(source, /error: 'capability_required', capability: requiredCapability/);
+  assert.match(source, /sessionCapabilityGranted\(session, requiredCapability\)/);
+});
