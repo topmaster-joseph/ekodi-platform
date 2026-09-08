@@ -6,6 +6,11 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/sync-control-center-services.yml'
+      - 'admin-menu-registry.js'
+      - 'admin-demand-loader.js'
+      - 'admin-shell.html'
+      - 'config/ecosystem-services.json'
+      - 'scripts/audit-admin-menu-services.mjs'
 
 permissions:
   contents: read
@@ -15,40 +20,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - name: Add Marketing AI and CGMA to admin UI
-        shell: python
-        run: |
-          from pathlib import Path
-          p = Path('admin.html')
-          s = p.read_text(encoding='utf-8')
-
-          mission_portal = '''        <a href="https://youtube.com/@ekodicommunity" target="_blank" rel="noopener"><span class="service-logo mission">S</span><strong>에코디선교회</strong><small>YouTube 채널</small><b>↗</b></a>'''
-          portal_extra = '''\n        <a href="https://marketing.ekodi.kr" target="_blank" rel="noopener"><span class="service-logo biz">AI</span><strong>마케팅AI</strong><small>marketing.ekodi.kr</small><b>↗</b></a>\n        <a href="https://ekodi.kr/cgma/" target="_blank" rel="noopener"><span class="service-logo mall">청</span><strong>청계상권</strong><small>ekodi.kr/cgma · cgma.or.kr</small><b>↗</b></a>'''
-          if 'marketing.ekodi.kr</small><b>↗</b>' not in s:
-              assert mission_portal in s
-              s = s.replace(mission_portal, mission_portal + portal_extra, 1)
-
-          s = s.replace('<strong>6 <small>/ 6</small></strong>', '<strong>8 <small>/ 8</small></strong>', 1)
-          s = s.replace('6개 EKODI 서비스 실측 현황', '8개 EKODI 서비스 실측 현황', 1)
-
-          mission_row = '''              <a class="service-row searchable" data-domain="youtube.com/@ekodicommunity" href="https://youtube.com/@ekodicommunity" target="_blank" rel="noopener"><span class="service-logo mission">S</span><div class="service-name"><strong>에코디선교회</strong><small>youtube.com/@ekodicommunity</small></div><span class="health"><i></i>확인 중</span><div class="mini-metric"><small>응답 시간</small><strong>—</strong></div><div class="mini-metric"><small>HTTP</small><strong>—</strong></div><span class="open">↗</span></a>'''
-          rows_extra = '''\n              <a class="service-row searchable" data-domain="marketing.ekodi.kr" href="https://marketing.ekodi.kr" target="_blank" rel="noopener"><span class="service-logo biz">AI</span><div class="service-name"><strong>마케팅AI</strong><small>marketing.ekodi.kr</small></div><span class="health"><i></i>확인 중</span><div class="mini-metric"><small>응답 시간</small><strong>—</strong></div><div class="mini-metric"><small>HTTP</small><strong>—</strong></div><span class="open">↗</span></a>\n              <a class="service-row searchable" data-domain="cgma.ekodi.kr" href="https://ekodi.kr/cgma/" target="_blank" rel="noopener"><span class="service-logo mall">청</span><div class="service-name"><strong>청계상권</strong><small>ekodi.kr/cgma · cgma.or.kr</small></div><span class="health"><i></i>확인 중</span><div class="mini-metric"><small>응답 시간</small><strong>—</strong></div><div class="mini-metric"><small>HTTP</small><strong>—</strong></div><span class="open">↗</span></a>'''
-          if 'data-domain="marketing.ekodi.kr"' not in s:
-              assert mission_row in s
-              s = s.replace(mission_row, mission_row + rows_extra, 1)
-
-          p.write_text(s, encoding='utf-8')
-      - name: Verify admin registry
-        run: |
-          grep -Fq 'data-domain="marketing.ekodi.kr"' admin.html
-          grep -Fq 'data-domain="cgma.ekodi.kr"' admin.html
-          grep -Fq '<strong>8 <small>/ 8</small></strong>' admin.html
-          grep -Fq '8개 EKODI 서비스 실측 현황' admin.html
-      - name: Assert Admin source is already converged
+      - name: Verify canonical Admin and service registry
+        run: node scripts/audit-admin-menu-services.mjs
+      - name: Assert registry verification is read-only
         shell: bash
-        run: |
-          set -euo pipefail
-          if ! git diff --exit-code -- admin.html; then
-            echo 'Admin source drift detected. EKODI AI must prepare and merge the source change through a guarded PR.' >&2
-            exit 1
-          fi
+        run: git diff --exit-code
