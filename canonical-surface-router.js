@@ -3,7 +3,7 @@ const SURFACE_PREFIXES=Object.freeze({my:'/my',admin:'/admin',auth:'/auth'});
 const SYSTEM_PATHS=Object.freeze(['/api','/mcp','/webhooks','/health']);
 const PUBLIC_EXECUTION_SURFACES=Object.freeze([
   Object.freeze({id:'business',prefix:'/business',host:'business.ekodi.kr'}),
-  Object.freeze({id:'trade',prefix:'/ekodibiz/trade',assetPath:'/trade'}),
+  Object.freeze({id:'trade',prefix:'/ekodibiz/trade',assetPath:'/trade',exact:true}),
 ]);
 const ADMIN_RUNTIME_FILE=/\.(?:js|css|cmd|json|map|svg|png|webp|ico)$/i;
 
@@ -66,7 +66,7 @@ function rewriteAdminHtml(html){
   if(/<base\s/i.test(html))return html;
   return html.replace(/<head(\s[^>]*)?>/i,match=>`${match}<base href="/admin/">`);
 }
-function executionSurfaceForPath(pathname){return PUBLIC_EXECUTION_SURFACES.find(item=>pathname===item.prefix||pathname.startsWith(`${item.prefix}/`))||null}
+function executionSurfaceForPath(pathname){return PUBLIC_EXECUTION_SURFACES.find(item=>item.exact?pathname===item.prefix:(pathname===item.prefix||pathname.startsWith(`${item.prefix}/`)))||null}
 function rewriteExecutionText(text,spec,type=''){
   let output=String(text||'');
   if(type.includes('text/html')) output=output.replace(/(href|src|action)=(["'])\/(?!\/)/g,(m,a,q)=>`${a}=${q}${spec.prefix}/`);

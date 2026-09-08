@@ -36,6 +36,8 @@ test('My and system paths preserve the internal execution boundary',async()=>{
   assert.equal(response.status,200);assert.equal(control.calls[1].pathname,'/mcp');
   response=await routeCanonicalSurface(new Request('https://ekodi.kr/.well-known/oauth-protected-resource'),{CONTROL_API:control});
   assert.equal(response.status,200);assert.equal(control.calls[2].pathname,'/.well-known/oauth-protected-resource');
+  response=await routeCanonicalSurface(new Request('https://ekodi.kr/api/control/ai/v8/status'),{CONTROL_API:control});
+  assert.equal(response.status,200);assert.equal(control.calls[3].pathname,'/api/control/ai/v8/status');
 });
 
 test('Auth uses the legacy runtime but exposes apex-prefixed assets',async()=>{
@@ -87,4 +89,6 @@ test('Business and Trade canonical paths hide execution hosts',async()=>{
   let text=await response.text();assert.match(text,/fetch\('\/business\/api\/workspaces'/);assert.match(text,/https:\/\/ekodi\.kr\/auth\//);assert.match(text,/path\.startsWith\('business\/'\)/);assert.match(text,/`\/business\/\$\{workspace\.id\}`/);assert.doesNotMatch(text,/business\.ekodi\.kr/);
   response=await routeCanonicalSurface(new Request('https://ekodi.kr/ekodibiz/trade'),{ASSETS:assets},{externalFetch});
   assert.equal(assets.calls.at(-1).pathname,'/trade');text=await response.text();assert.match(text,/https:\/\/ekodi\.kr\/ekodibiz\/trade/);assert.doesNotMatch(text,/trade\.biz\.ekodi\.kr/);
+  response=await routeCanonicalSurface(new Request('https://ekodi.kr/ekodibiz/trade/admin'),{ASSETS:assets},{externalFetch});
+  assert.equal(response,null);
 });
