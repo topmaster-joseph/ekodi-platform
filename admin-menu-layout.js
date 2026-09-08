@@ -203,7 +203,8 @@ window.EKODIAdminPanels=Object.freeze({
   },
   current:()=>requestedSection,
   internalSections:Object.freeze([...INTERNAL]),
-  visibleMenuOrder:ORDER
+  visibleMenuOrder:ORDER,
+  legacyMallAffiliateContract:'#mall-ai-sales:affiliates affiliates:#mall-ai-sales'
 });
 import('./admin-menu-runtime.js').catch(console.error);
 })();
