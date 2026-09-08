@@ -11,6 +11,11 @@ const assets = [
 await rm(output, { recursive: true, force: true });
 await mkdir(output, { recursive: true });
 await Promise.all(assets.map(asset => cp(`${root}${asset}`, `${output}${asset}`)));
+await Promise.all([
+  cp(`${root}pizzamaru-mokpodae.html`, `${output}pizzamaru-mokpodae.html`),
+  cp(`${root}pizzamaru-mokpodae.css`, `${output}pizzamaru-mokpodae.css`),
+  cp(`${root}pizzamaru-mokpodae.js`, `${output}pizzamaru-mokpodae.js`),
+]);
 await cp(`${root}sites/ekodi-insurance/public`, `${output}insurance`, { recursive: true });
 await cp(`${root}config/capability-registry.json`, `${output}capability-registry.json`);
 
