@@ -1,7 +1,13 @@
 import {buildExecutionPlan,buildOriginSynthesisPrompt,isOriginPreserved,resolveOriginResponseProvider,rolePrompt,summarizeRuns} from './ai-control-core.js';
+import {providerCostClass} from './ai-router-score.js';
 
 const clean=value=>String(value??'').trim();
 const DEFAULT_WORKER_PROVIDERS=Object.freeze([]);
+
+function configuredProviderProfiles(env={}){
+  const raw=clean(env.AI_ROUTER_PROVIDER_PROFILES);if(!raw)return{};
+  try{const parsed=JSON.parse(raw);return parsed&&typeof parsed==='object'&&!Array.isArray(parsed)?parsed:{}}catch{return{}}
+}
 
 export function providerCapabilities(env={},nodeProviders=[]){
   const workerReady=Boolean(clean(env.AI_WORKER_URL)&&clean(env.AI_WORKER_TOKEN));
@@ -14,20 +20,17 @@ export function providerCapabilities(env={},nodeProviders=[]){
     openaiApi:Boolean(clean(env.OPENAI_API_KEY)),
     anthropicApi:Boolean(clean(env.ANTHROPIC_API_KEY)),
     workerProviders:workerReady?configuredWorkers:[],
+    providerProfiles:configuredProviderProfiles(env),
   };
 }
 
 export function providerStatus(env={},nodeProviders=[]){
-  const capabilities=providerCapabilities(env,nodeProviders);
-  const providers=[];
-  if(capabilities.geminiFree)providers.push({id:'gemini-free',kind:'official-api',costClass:'free-preferred',available:true});
-  for(const id of capabilities.nodeProviders){
-    const costClass=id==='codex'?'chatgpt-plan-included':id==='gemini-cli'?'google-free-quota':id==='claude-code'?'claude-subscription':'account-managed';
-    providers.push({id:`node:${id}`,kind:'account-cli',costClass,available:true});
-  }
-  if(capabilities.openaiApi)providers.push({id:'openai-api',kind:'official-api',costClass:'paid-opt-in',available:true});
-  if(capabilities.anthropicApi)providers.push({id:'anthropic-api',kind:'official-api',costClass:'paid-opt-in',available:true});
-  for(const id of capabilities.workerProviders)providers.push({id:`worker:${id}`,kind:'external-worker',costClass:'provider-managed',available:true});
+  const capabilities=providerCapabilities(env,nodeProviders);const providers=[];
+  if(capabilities.geminiFree)providers.push({id:'gemini-free',kind:'official-api',costClass:providerCostClass('gemini-free'),available:true});
+  for(const id of capabilities.nodeProviders){const providerId=`node:${id}`;providers.push({id:providerId,kind:'account-cli',costClass:providerCostClass(providerId),available:true});}
+  if(capabilities.openaiApi)providers.push({id:'openai-api',kind:'official-api',costClass:providerCostClass('openai-api'),available:true});
+  if(capabilities.anthropicApi)providers.push({id:'anthropic-api',kind:'official-api',costClass:providerCostClass('anthropic-api'),available:true});
+  for(const id of capabilities.workerProviders){const providerId=`worker:${id}`;providers.push({id:providerId,kind:'external-worker',costClass:providerCostClass(providerId),available:true});}
   return providers;
 }
 
@@ -91,7 +94,7 @@ export async function runExecutionPlan(env,task,onRun=async()=>{},nodeProviders=
   if(!plan.length)throw new Error('no_provider_available');
   if(plan.some(entry=>entry.providerId.startsWith('node:')))throw new Error('node_provider_requires_queue');
   const execute=async entry=>{
-    const run={id:crypto.randomUUID(),taskId:task.id,providerId:entry.providerId,role:entry.role,state:'running',output:'',error:'',startedAt:new Date().toISOString(),finishedAt:''};
+    const run={id:crypto.randomUUID(),taskId:task.id,providerId:entry.providerId,role:entry.role,state:'running',output:'',error:'',startedAt:new Date().toISOString(),finishedAt:'',routerScore:entry.routerScore,routerScoreBreakdown:entry.routerScoreBreakdown,routerScorePolicyVersion:entry.routerScorePolicyVersion};
     await onRun(run,'start');
     try{run.output=await invokeProvider(env,entry.providerId,rolePrompt(task,entry.role,{branch:task.branch,missionDecision:task.missionDecision}),task,entry.role);run.state='completed'}catch(error){run.state='failed';run.error=clean(error?.message||error)}
     run.finishedAt=new Date().toISOString();

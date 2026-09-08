@@ -236,6 +236,8 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
+      - name: EKODI AI Orchestration Gate
+        run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
       - name: Generate universal user-service registry
         run: npm run generate:user-services
       - name: Validate control plane, Core AI Gateway and governance
@@ -274,6 +276,8 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
+      - name: EKODI AI Orchestration Gate
+        run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
       - name: Generate universal user-service registry
         run: npm run generate:user-services
       - name: Verify Cloudflare credentials
@@ -403,6 +407,8 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
+      - name: EKODI AI Orchestration Gate
+        run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
       - name: Generate universal user-service registry
         run: npm run generate:user-services
       - name: Provision isolated Mail OAuth and credential secrets
@@ -467,6 +473,12 @@ jobs:
           catalog=$(curl -sS -o /tmp/catalog.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/membership/catalog?site=invest')
           i18n=$(curl -sS -o /tmp/i18n.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/i18n/v1/status?service=community')
           language_admin=$(curl -sS -o /tmp/language-admin.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/control/language-status')
+          mcp_tools=$(curl -fsS --connect-timeout 5 --max-time 12 -H 'content-type: application/json' --data-binary '{"jsonrpc":"2.0","id":901,"method":"tools/list","params":{}}' 'https://ekodi.kr/mcp')
+          printf '%s' "$mcp_tools" > /tmp/mcp-tools.json
+          node -e "const b=require('/tmp/mcp-tools.json');const t=b?.result?.tools?.find(x=>x.name==='ekodi_delegate_command');if(!t||t.ekodiCapability!=='ai.command.delegate'||t.securitySchemes?.[0]?.type!=='oauth2'||t.annotations?.destructiveHint!==false)process.exit(1)"
+          mcp_unauth=$(curl -fsS --connect-timeout 5 --max-time 12 -H 'content-type: application/json' --data-binary '{"jsonrpc":"2.0","id":902,"method":"tools/call","params":{"name":"ekodi_delegate_command","arguments":{"goal":"production boundary probe","risk":"normal"}}}' 'https://ekodi.kr/mcp')
+          printf '%s' "$mcp_unauth" > /tmp/mcp-unauth.json
+          node -e "const b=require('/tmp/mcp-unauth.json');const r=b?.result;if(r?.structuredContent?.authenticated!==false||!String(r?._meta?.['mcp/www_authenticate']?.[0]||'').includes('oauth-protected-resource'))process.exit(1)"
           printf '%s' "$health" | grep -q '"ok":true'
           [ "$devices" = '401' ]
           [ "$ai" = '401' ]

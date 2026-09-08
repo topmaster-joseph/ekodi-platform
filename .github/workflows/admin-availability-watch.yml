@@ -40,6 +40,8 @@ jobs:
         with:
           node-version: '24'
 
+      - name: EKODI AI Orchestration Gate
+        run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
       - name: Inspect canonical Worker and DNS state
         id: infra
         shell: bash

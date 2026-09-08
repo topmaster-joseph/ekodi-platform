@@ -6,8 +6,13 @@ on:
     paths:
       - 'ai-control/**'
       - 'ai-control-*.js'
+      - 'ai-router-score.js'
       - 'ai-governance-runtime.js'
       - 'config/ai-mission-governance.json'
+      - 'config/ai-change-orchestration-policy.json'
+      - 'scripts/validate-ekodi-ai-change-orchestration.mjs'
+      - 'scripts/validate-workflow-orchestration-gates.mjs'
+      - 'test/ai-change-orchestration-enforcement.test.mjs'
       - 'cognitive-control-plane.js'
       - 'config/cognitive-control-plane.json'
       - 'config/data-plane-contract.json'
@@ -15,10 +20,12 @@ on:
       - 'scripts/build-ai-control-release.mjs'
       - 'wrangler.ai*.toml'
       - 'test/ai-control-platform.test.mjs'
+      - 'test/ai-router-score.test.mjs'
       - 'test/cognitive-control-plane.test.mjs'
       - 'migrations/0050_ai_control_plane.sql'
       - 'migrations/0051_ai_account_nodes.sql'
       - 'migrations/0052_ai_mission_governance.sql'
+      - 'migrations/0074_ai_router_score.sql'
       - 'deploy/manifests/ai-control.worker.json'
       - 'scripts/validate-cognitive-control-plane.mjs'
       - 'scripts/validate-additive-migrations.mjs'
@@ -31,8 +38,13 @@ on:
     paths:
       - 'ai-control/**'
       - 'ai-control-*.js'
+      - 'ai-router-score.js'
       - 'ai-governance-runtime.js'
       - 'config/ai-mission-governance.json'
+      - 'config/ai-change-orchestration-policy.json'
+      - 'scripts/validate-ekodi-ai-change-orchestration.mjs'
+      - 'scripts/validate-workflow-orchestration-gates.mjs'
+      - 'test/ai-change-orchestration-enforcement.test.mjs'
       - 'cognitive-control-plane.js'
       - 'config/cognitive-control-plane.json'
       - 'config/data-plane-contract.json'
@@ -40,10 +52,12 @@ on:
       - 'scripts/build-ai-control-release.mjs'
       - 'wrangler.ai*.toml'
       - 'test/ai-control-platform.test.mjs'
+      - 'test/ai-router-score.test.mjs'
       - 'test/cognitive-control-plane.test.mjs'
       - 'migrations/0050_ai_control_plane.sql'
       - 'migrations/0051_ai_account_nodes.sql'
       - 'migrations/0052_ai_mission_governance.sql'
+      - 'migrations/0074_ai_router_score.sql'
       - 'deploy/manifests/ai-control.worker.json'
       - 'scripts/validate-cognitive-control-plane.mjs'
       - 'scripts/validate-additive-migrations.mjs'
@@ -73,12 +87,15 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
+      - name: EKODI AI Orchestration Gate
+        run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
       - name: Validate AI control and Cognitive Control Plane
         shell: bash
         run: |
           set -euo pipefail
           node --check cognitive-control-plane.js
           node --check ai-control-core.js
+          node --check ai-router-score.js
           node --check ai-control-provider-router.js
           node --check ai-control-worker.js
           node --check ai-control/app.js
@@ -91,7 +108,7 @@ jobs:
           node scripts/validate-constitution.mjs
           node scripts/validate-ai-mission-governance.mjs
           node scripts/validate-additive-migrations.mjs migrations
-          node --test test/ai-control-platform.test.mjs test/cognitive-control-plane.test.mjs test/common-service-operator-control.test.mjs
+          node --test test/ai-control-platform.test.mjs test/ai-router-score.test.mjs test/cognitive-control-plane.test.mjs test/common-service-operator-control.test.mjs
           bash -n scripts/apply-d1-migrations-with-retry.sh
           grep -Fq 'pattern = "ai.ekodi.kr"' wrangler.ai.release.toml
           grep -Fq 'AI_TASK_EXECUTION_ENABLED = "false"' wrangler.ai.staging.release.toml
@@ -110,6 +127,7 @@ jobs:
           test -f migrations/0050_ai_control_plane.sql
           test -f migrations/0051_ai_account_nodes.sql
           test -f migrations/0052_ai_mission_governance.sql
+          test -f migrations/0074_ai_router_score.sql
           test -f deploy/manifests/ai-control.worker.json
       - name: Build one immutable AI Control application artifact
         id: build_artifact
@@ -138,6 +156,8 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
+      - name: EKODI AI Orchestration Gate
+        run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
       - name: Download immutable AI Control artifact
         uses: actions/download-artifact@v5
         with:
@@ -238,6 +258,8 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
+      - name: EKODI AI Orchestration Gate
+        run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
       - name: Download the same immutable artifact verified in staging
         uses: actions/download-artifact@v5
         with:

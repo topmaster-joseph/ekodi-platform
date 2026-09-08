@@ -42,6 +42,8 @@ jobs:
         with:
           node-version: '24'
 
+      - name: EKODI AI Orchestration Gate
+        run: node "$GITHUB_WORKSPACE/controller/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
       - name: Validate My EKODI church entry
         working-directory: controller
         run: |

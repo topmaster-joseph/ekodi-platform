@@ -2,6 +2,7 @@ import { evaluateAutonomousOperation } from './sovereign-autonomy-runtime.js';
 import { getControlPlaneSummary } from './cognitive-control-plane.js';
 import { getSovereignAutonomySummary } from './sovereign-autonomy-runtime.js';
 import {AI_MISSION_RUNTIME,evaluateMissionAction} from './ai-governance-runtime.js';
+import {AI_ROUTER_SCORE_POLICY,rankProviders,scoreProvider} from './ai-router-score.js';
 
 export const AI_CONTROL_POLICY = Object.freeze({
   version: '0.6.0',
@@ -28,6 +29,7 @@ export const AI_CONTROL_POLICY = Object.freeze({
   controlPlane: getControlPlaneSummary(),
   sovereignAutonomy: getSovereignAutonomySummary(),
   missionPolicyVersion: AI_MISSION_RUNTIME.version,
+  routerScorePolicyVersion: AI_ROUTER_SCORE_POLICY.version,
 });
 
 const clean = value => String(value ?? '').trim();
@@ -142,14 +144,27 @@ export function isOriginPreserved(task, providerId) {
   return providerFamily(providerId)===originFamily(origin);
 }
 
+function routerContext(capabilities = {}, role = 'parallel') {
+  return {role,providerMetrics:capabilities.providerMetrics||{},providerProfiles:capabilities.providerProfiles||{}};
+}
+function executionEntry(rating,role){return Object.freeze({providerId:rating.providerId,role,routerScore:rating.score,routerScoreBreakdown:rating.breakdown,routerScorePolicyVersion:rating.policyVersion});}
+function rankedForRole(providerIds,task,capabilities,role,preserveOrder=false){
+  const context=routerContext(capabilities,role);
+  return preserveOrder?providerIds.map(providerId=>scoreProvider(providerId,task,context)):rankProviders(providerIds,task,context);
+}
+
 export function buildExecutionPlan(task, capabilities = {}) {
-  const available = availableProviderIds(capabilities);
-  const requested = task.requestedProviders?.length ? task.requestedProviders.filter(id => available.includes(id)) : [];
-  const base = requested.length ? requested : AI_CONTROL_POLICY.providerOrder.filter(id => available.includes(id));
+  const available=availableProviderIds(capabilities);
+  const requested=task.requestedProviders?.length?task.requestedProviders.filter(id=>available.includes(id)):[];
+  const base=requested.length?requested:AI_CONTROL_POLICY.providerOrder.filter(id=>available.includes(id));
   const originProvider=resolveOriginResponseProvider(task,capabilities);
-  const ordered=unique([originProvider,...base]);
-  if (!ordered.length) return Object.freeze([]);
-  return Object.freeze(ordered.slice(0,AI_CONTROL_POLICY.maxParallelProviders).map((providerId,index)=>Object.freeze({providerId,role:providerId===originProvider?'origin-primary':`parallel-${index+1}`})));
+  const collaborators=unique(base.filter(id=>id!==originProvider));
+  const preserveRequestedOrder=requested.length>0;
+  const ranked=rankedForRole(collaborators,task,capabilities,'parallel',preserveRequestedOrder);
+  const originRating=originProvider?scoreProvider(originProvider,task,routerContext(capabilities,'origin-primary')):null;
+  const entries=originRating?[executionEntry(originRating,'origin-primary')]:[];
+  for(const rating of ranked){if(entries.length>=AI_CONTROL_POLICY.maxParallelProviders)break;entries.push(executionEntry(rating,`parallel-${entries.length+1}`));}
+  return Object.freeze(entries);
 }
 
 export function rolePrompt(task, role, context = {}) {

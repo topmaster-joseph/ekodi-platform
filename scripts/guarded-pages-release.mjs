@@ -39,6 +39,16 @@ const attempt = String(process.env.GITHUB_RUN_ATTEMPT || '1');
 const previewBranch = `staging-${runId}-${attempt}`.toLowerCase().replace(/[^a-z0-9-]/g, '-').slice(0, 48);
 const previewResults = [];
 
+function runChangeOrchestrationGate() {
+  const result = spawnSync(process.execPath, ['scripts/validate-ekodi-ai-change-orchestration.mjs', '--release'], {
+    cwd: policyRoot,
+    env: process.env,
+    encoding: 'utf8',
+    stdio: 'inherit',
+  });
+  if (result.status !== 0) throw new Error('EKODI AI orchestration release gate failed.');
+  console.log('EKODI AI orchestration release gate passed.');
+}
 function runProviderIndependenceGate() {
   const env = { ...process.env, AI_PROVIDER: 'NONE' };
   for (const argv of [
@@ -143,6 +153,7 @@ function appendSummary(lines) {
   fs.appendFileSync(summary, `${lines.join('\n')}\n`);
 }
 
+runChangeOrchestrationGate();
 runProviderIndependenceGate();
 console.log(`Release gate preview branch: ${previewBranch}`);
 console.log('Phase 1/3: deploy every target to isolated Cloudflare Pages previews.');
