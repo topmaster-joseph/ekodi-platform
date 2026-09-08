@@ -34,7 +34,7 @@ jobs:
           grep -Fq 'https://ekodi.kr/history' history.html
           grep -Fq 'EKODI HISTORY' history.html
           grep -Fq "'history.html'" scripts/build.mjs
-          grep -Fq "href = '/history'" homepage-ambient.js
+          grep -Fq 'href="/history"' index.html
           npm run build
           test -f dist/history.html
           grep -Fq 'https://ekodi.kr/history' dist/history.html
