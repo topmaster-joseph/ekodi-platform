@@ -18,6 +18,15 @@ test('authenticated Admin E2E isolates every menu in a fresh Chromium process an
   assert.match(source, /isolated-menu-renderers/);
 });
 
+test('authenticated Admin E2E waits for canonical production menu-registry convergence', async () => {
+  const source = await retrySource();
+  assert.match(source, /https:\/\/ekodi\.kr\/admin-menu-registry\.js/);
+  assert.match(source, /const productionConvergenceAttempts = 36/);
+  assert.match(source, /cache: 'no-store'/);
+  assert.match(source, /missingProductionMenus/);
+  assert.match(source, /await waitForProductionMenuRegistry\(\)/);
+  assert.match(source, /production Admin registry converged/);
+});
 test('isolated worker skips redundant clicks for an already-active context tab', async () => {
   const source = await workerSource();
   assert.match(source, /const alreadyActive = aria === 'true'/);
