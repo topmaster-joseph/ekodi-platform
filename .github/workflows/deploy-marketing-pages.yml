@@ -203,6 +203,13 @@ jobs:
         with:
           node-version: '24'
 
+      - name: Checkout EKODI orchestration control
+        uses: actions/checkout@v7
+        with:
+          path: .ekodi-control
+
+      - name: EKODI AI Orchestration Gate
+        run: node "$GITHUB_WORKSPACE/.ekodi-control/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
       - name: Build and verify Marketing AI deployment contract
         if: github.event_name == 'pull_request' || steps.plan.outputs.deploy_needed == 'true'
         working-directory: marketing-source

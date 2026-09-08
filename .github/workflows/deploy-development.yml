@@ -38,6 +38,8 @@ jobs:
         with:
           node-version: "24"
           cache: npm
+      - name: EKODI AI Orchestration Gate
+        run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
       - name: Install dependencies
         run: npm ci
       - name: Validate development deployment sources

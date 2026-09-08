@@ -32,6 +32,8 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
+      - name: EKODI AI Orchestration Gate
+        run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
       - name: Validate EKODI constitution and deployment ownership
         run: |
           set -euo pipefail
@@ -78,6 +80,13 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
+      - name: Checkout EKODI orchestration control
+        uses: actions/checkout@v7
+        with:
+          path: .ekodi-control
+
+      - name: EKODI AI Orchestration Gate
+        run: node "$GITHUB_WORKSPACE/.ekodi-control/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
       - name: Verify EKODI Production account boundary
         shell: bash
         run: |

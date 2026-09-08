@@ -146,6 +146,8 @@ jobs:
         with:
           node-version: "24"
 
+      - name: EKODI AI Orchestration Gate
+        run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
       - name: Verify Development boundary
         shell: bash
         run: |
@@ -404,6 +406,8 @@ jobs:
         with:
           node-version: "24"
 
+      - name: EKODI AI Orchestration Gate
+        run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
       - name: Rebuild exact production artifact
         if: steps.production_scope.outputs.site_changed == 'true'
         run: npm run build
