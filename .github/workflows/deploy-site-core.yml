@@ -380,6 +380,8 @@ jobs:
             'https://ekodi.kr/yogurt/marketing',
             'https://ekodi.kr/cgma/marketing',
             'https://ekodi.kr/admin',
+            'https://ekodi.kr/auth',
+            'https://ekodi.kr/auth/',
             'https://admin.ekodi.kr/',
             'https://auth.ekodi.kr/',
             'https://ai.ekodi.kr/',
