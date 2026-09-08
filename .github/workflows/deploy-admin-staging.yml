@@ -21,6 +21,11 @@ on:
       - 'admin-menu-registry.js'
       - 'admin-sidebar.js'
       - 'admin-menu-runtime.js'
+      - 'admin-design-engine.js'
+      - 'admin-design-engine.css'
+      - 'config/design-engine.json'
+      - 'scripts/validate-design-engine.mjs'
+      - 'ADMIN_UI_PRINCIPLES.md'
       - 'marketing-funnel-admin.js'
       - 'marketing-funnel-admin.css'
       - 'mall.html'
@@ -74,11 +79,14 @@ jobs:
           node --check admin-authenticated-shell.js
           node --check admin-demand-loader.js
           node --check admin-menu-layout.js
+          node --check admin-design-engine.js
+          node --check scripts/validate-design-engine.mjs
           node --check marketing-funnel-admin.js
           node --test test/admin-true-lazy.test.mjs test/admin-thin-shell.test.mjs test/admin-health-menu.test.mjs test/admin-preauth-shell.test.mjs test/admin-performance-hardening.test.mjs test/admin-readable-command.test.mjs test/mission-control-admin.test.mjs test/admin-affiliates-boundary.test.mjs
+          node scripts/validate-design-engine.mjs
           npm run build
 
-          for asset in admin-shell.html admin-shell.css admin-compact.js admin-compact.css admin-central-handoff.js admin-authenticated-shell.js admin-demand-loader.js admin-menu-layout.js admin-menu-registry.js marketing-funnel-admin.js marketing-funnel-admin.css mall.html mall.js mall.css; do
+          for asset in admin-shell.html admin-shell.css admin-compact.js admin-compact.css admin-central-handoff.js admin-authenticated-shell.js admin-demand-loader.js admin-menu-layout.js admin-menu-registry.js admin-design-engine.js admin-design-engine.css marketing-funnel-admin.js marketing-funnel-admin.css mall.html mall.js mall.css; do
             test -f "dist/$asset"
           done
 
@@ -90,6 +98,8 @@ jobs:
           grep -Fq '#mall-ai-sales' dist/admin-menu-layout.js
           grep -Fq 'https://ekodi.kr/ekodibiz/mall/admin/sourcing' dist/admin-menu-layout.js
           grep -Fq "id: 'supply-network'" dist/admin-menu-registry.js
+          grep -Eq "admin-design-engine\\.js\\?v=[a-f0-9]{16}" dist/admin-menu-registry.js
+          grep -Fq 'overflow-y:hidden!important' dist/admin-design-engine.css
           grep -Fq 'mall_sales_events' dist/marketing-funnel-admin.js
           grep -Fq "test: 'eq.false'" dist/marketing-funnel-admin.js
           grep -Fq 'https://ekodi.kr/ekodibiz/mall' dist/marketing-funnel-admin.js

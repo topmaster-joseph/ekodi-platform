@@ -9,11 +9,11 @@ const [registry, layout, css, build] = await Promise.all([
   readFile(new URL('../scripts/build.mjs', import.meta.url), 'utf8'),
 ]);
 
-test('Admin navigation is grouped into five domains plus Operations Center', () => {
-  for (const id of ['structure','core','common','vertical','tenants','operations-center']) {
+test('Admin navigation is grouped into five canonical EKODI axes', () => {
+  for (const id of ['home','operations','space','services','system']) {
     assert.match(registry, new RegExp(`id: '${id}'`));
   }
-  assert.match(registry, /id: 'campus'[\s\S]*en: 'Site Structure'/);
+  assert.match(registry, /id: 'campus'[\s\S]*en: 'Admin Home & Sites'/);
   assert.match(registry, /id: 'admins'[\s\S]*en: 'Administrators & Access'/);
 });
 

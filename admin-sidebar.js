@@ -56,7 +56,7 @@ function ensureStyle() {
   style.id = 'ekodi-admin-workbench-tabs-style';
   style.textContent = `
 body.admin-compact{--admin-readable:#f4f8fc;--admin-secondary:#aebed0;--admin-border:rgba(148,163,184,.18);--admin-soft:rgba(148,163,184,.07);--admin-active:rgba(56,189,248,.13)}
-body.admin-compact .sidebar nav{display:flex!important;flex-direction:column!important;gap:2px!important;overflow-y:auto!important;overflow-x:hidden!important}
+body.admin-compact .sidebar nav{display:flex!important;flex-direction:column!important;gap:2px!important;overflow-y:hidden!important;overflow-x:hidden!important}
 body.admin-compact .${GLOBAL_CLASS}{display:grid;gap:3px;margin:2px 0 8px}
 body.admin-compact .admin-global-nav{display:flex;align-items:center;gap:9px;width:100%;min-height:40px;padding:8px 10px;border:1px solid transparent;border-radius:9px;background:transparent;color:#40566d!important;font:inherit;font-size:14px;font-weight:780;line-height:1.25;text-align:left;cursor:pointer;box-shadow:none!important;transition:none!important;opacity:1!important}
 body.admin-compact .admin-global-nav span{color:inherit!important;opacity:1!important}

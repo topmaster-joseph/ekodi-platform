@@ -12,9 +12,9 @@ const [menu, demand, layout, page, build, perf, deployWorkflow] = await Promise.
   readFile(new URL('../.github/workflows/deploy-site-core.yml', import.meta.url), 'utf8'),
 ]);
 
-test('administrator menu exposes the AI and API integration contract under Core', () => {
+test('administrator menu exposes the AI and API integration contract under System', () => {
   assert.match(menu, /id: 'ai-module-spec'/);
-  assert.match(menu, /id: 'ai-module-spec'[^\n]*group: 'core'/);
+  assert.match(menu, /id: 'ai-module-spec'[^\n]*group: 'system'/);
   assert.match(menu, /AI & API Contracts/);
   assert.match(demand, /ai-module-spec-admin\.js/);
   assert.match(demand, /ai-module-spec-admin\.css/);

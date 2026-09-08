@@ -103,6 +103,8 @@ const ADMIN_ASSETS = new Set([
   '/admin-menu-registry.js',
   '/admin-sidebar.js',
   '/admin-menu-runtime.js',
+  '/admin-design-engine.js',
+  '/admin-design-engine.css',
   '/homepage-admin.js',
   '/finance-monitor.js',
   '/admin-compact.css',
