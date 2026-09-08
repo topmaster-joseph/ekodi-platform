@@ -87,3 +87,12 @@ test('public contact release guard is registered', async()=>{
   assert.match(wrangler,/binding = "MAIL_CONTACT_RATE_LIMITER"/);
   assert.match(wrangler,/limit = 5/);
 });
+
+
+test('shared-site workflow watches and validates the contact surface', async()=>{
+  const workflow=await readFile(new URL('../.github/workflows/deploy-site-core.yml',import.meta.url),'utf8');
+  assert.match(workflow,/- 'mail-contact\.js'/);
+  assert.match(workflow,/- 'test\/mail-contact\.test\.mjs'/);
+  assert.match(workflow,/mail-user-page\.js mail-contact\.js mail-admin-page\.js/);
+  assert.match(workflow,/test\/preview-page\.test\.mjs test\/mail-contact\.test\.mjs/);
+});
