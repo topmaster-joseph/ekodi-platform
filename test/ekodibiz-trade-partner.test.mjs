@@ -14,8 +14,8 @@ test('EKODIBIZ public site keeps partner login inside business-area detail',asyn
 });
 
 test('trade partner and trade admin routes are apex workspace routes',async()=>{
-  const [router,wrangler,portal,admin]=await Promise.all([
-    read('platform-router-entry-worker.js'),read('wrangler.site.toml'),read('workspace-trade-portal.js'),read('workspace-trade-admin-page.js')
+  const [router,wrangler,portal,admin,manifestText]=await Promise.all([
+    read('platform-router-entry-worker.js'),read('wrangler.site.toml'),read('workspace-trade-portal.js'),read('workspace-trade-admin-page.js'),read('deploy/manifests/shared-site.worker.json')
   ]);
   assert.ok(router.includes("from './workspace-trade-portal.js'"));
   assert.ok(router.includes('isTradePartnerPath(url.pathname)'));
@@ -23,6 +23,11 @@ test('trade partner and trade admin routes are apex workspace routes',async()=>{
   assert.ok(portal.includes('/ekodibiz\\/trade'));
   assert.ok(admin.includes('/trade\\/admin'));
   for(const asset of ['/workspace-trade-admin.js','/workspace-trade-portal.css','/workspace-trade-portal.js'])assert.ok(wrangler.includes(`"${asset}"`),asset);
+  const probe=JSON.parse(manifestText).worker.requests.find(x=>x.url==='https://ekodi.kr/ekodibiz/trade');
+  assert.equal(probe?.candidateVerify,false);
+  assert.match(probe?.candidateVerifyReason||'',/run_worker_first bootstrap/);
+  assert.ok(probe?.expect?.includes('PRIVATE TRADE WORKSPACE'));
+  assert.ok(probe?.headerExpect?.includes('x-ekodi-route: trade-partner-workspace'));
 });
 
 test('trade auth uses EKODIBIZ tenant and canonical apex portal',async()=>{
