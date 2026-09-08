@@ -1,6 +1,7 @@
 const JSZIP_URL='https://cdn.jsdelivr.net/npm/jszip@3.10.1/+esm';
 export const HWPX_MIMETYPE='application/hwp+zip';
 export const HWPX_CONTRACT='ekodi.hwpx.v1';
+export const HWPX_ROUNDTRIP_CONTRACT='ekodi.hwpx.roundtrip.v2';
 const MAX_HWPX_BYTES=20*1024*1024;
 const MAX_SECTION_CHARS=8*1024*1024;
 
@@ -127,14 +128,62 @@ function paragraphText(xml){
     .map(match=>decodeXmlText(match[1].replace(/<[^>]+>/g,''))).join('');
 }
 
-export function sectionXmlToHtml(xml){
-  const paragraphs=[];
-  for(const match of String(xml||'').matchAll(/<(?:[A-Za-z0-9_-]+:)?p\b[^>]*>([\s\S]*?)<\/(?:[A-Za-z0-9_-]+:)?p>/g)){
-    const text=paragraphText(match[1]);
-    if(text||paragraphs.length)paragraphs.push(text);
-  }
-  return paragraphs.map(text=>`<p>${esc(text).replace(/\t/g,'&emsp;')}</p>`).join('')||'<p><br></p>';
+function xmlDocument(value){
+  if(typeof DOMParser==='undefined')return null;
+  const doc=new DOMParser().parseFromString(String(value||''),'application/xml');
+  return doc.querySelector?.('parsererror')?null:doc;
 }
+function localName(node){return String(node?.localName||node?.nodeName||'').split(':').pop().toLowerCase()}
+function descendants(root,name){
+  if(!root)return[];
+  if(root.getElementsByTagNameNS)return [...root.getElementsByTagNameNS('*',name)];
+  return [...(root.querySelectorAll?.(name)||[])];
+}
+function closestLocal(node,name,stop=null){
+  let cur=node?.parentElement||node?.parentNode||null;
+  while(cur&&cur!==stop){if(localName(cur)===name)return cur;cur=cur.parentElement||cur.parentNode||null}
+  return null;
+}
+function ownTextNodes(paragraph){return descendants(paragraph,'t').filter(node=>!closestLocal(node,'p',paragraph))}
+
+function runHtml(node,section,indexMap){
+  const index=indexMap.get(node),text=String(node?.textContent||'');
+  const empty=text?'':' data-hwpx-empty="1"';
+  return `<span data-hwpx-section="${section}" data-hwpx-text="${index}"${empty}>${esc(text)}</span>`;
+}
+function paragraphHtml(paragraph,section,indexMap,pIndexMap){
+  const runs=ownTextNodes(paragraph).map(node=>runHtml(node,section,indexMap)).join('');
+  const pIndex=pIndexMap.get(paragraph);
+  return `<p data-hwpx-section="${section}" data-hwpx-p="${pIndex}">${runs||'<br>'}</p>`;
+}
+function tableHtml(table,section,indexMap,pIndexMap){
+  const rows=[...table.children].filter(node=>localName(node)==='tr');
+  return '<table data-hwpx-table="1"><tbody>'+rows.map(row=>'<tr>'+[...row.children].filter(node=>localName(node)==='tc').map(cell=>{
+    const span=[...cell.children].find(node=>localName(node)==='cellspan');
+    const col=Math.max(1,Number(span?.getAttribute?.('colSpan')||1)),rowSpan=Math.max(1,Number(span?.getAttribute?.('rowSpan')||1));
+    const paragraphs=descendants(cell,'p').filter(node=>closestLocal(node,'tc')===cell);
+    const attrs=` colspan="${col}" rowspan="${rowSpan}"`;
+    return `<td${attrs}>${paragraphs.map(node=>paragraphHtml(node,section,indexMap,pIndexMap)).join('')||'<p><br></p>'}</td>`;
+  }).join('')+'</tr>').join('')+'</tbody></table>';
+}
+export function sectionXmlToEditableHtml(xml,section=0){
+  const doc=xmlDocument(xml);
+  if(!doc){
+    const paragraphs=[];for(const match of String(xml||'').matchAll(/<(?:[A-Za-z0-9_-]+:)?p\b[^>]*>([\s\S]*?)<\/(?:[A-Za-z0-9_-]+:)?p>/g)){const text=paragraphText(match[1]);if(text||paragraphs.length)paragraphs.push(text)}
+    return paragraphs.map(text=>`<p>${esc(text).replace(/\t/g,'&emsp;')}</p>`).join('')||'<p><br></p>';
+  }
+  const allT=descendants(doc,'t'),allP=descendants(doc,'p'),indexMap=new Map(allT.map((node,index)=>[node,index])),pIndexMap=new Map(allP.map((node,index)=>[node,index]));
+  const root=doc.documentElement,top=[...root.children].filter(node=>localName(node)==='p');let html='';
+  for(const paragraph of top){
+    const tables=descendants(paragraph,'tbl').filter(node=>closestLocal(node,'p')===paragraph);
+    const own=ownTextNodes(paragraph);
+    if(own.length||!tables.length)html+=paragraphHtml(paragraph,section,indexMap,pIndexMap);
+    for(const table of tables)html+=tableHtml(table,section,indexMap,pIndexMap);
+  }
+  return html||'<p><br></p>';
+}
+export function sectionXmlToHtml(xml){return sectionXmlToEditableHtml(xml,0)}
+
 function metadataTitle(content){
   const match=String(content||'').match(/<(?:dc:)?title(?:\s[^>]*)?>([\s\S]*?)<\/(?:dc:)?title>/i);
   return match?decodeXmlText(match[1].replace(/<[^>]+>/g,'')).trim():'';
@@ -143,7 +192,8 @@ function metadataTitle(content){
 export async function importHwpx(file,providedZip=null){
   if(!file)throw new Error('HWPX 파일이 없습니다.');
   if(Number(file.size||0)>MAX_HWPX_BYTES)throw new Error('HWPX는 20MB 이하 파일만 가져올 수 있습니다.');
-  const JSZip=await zipCtor(providedZip),zip=await JSZip.loadAsync(await file.arrayBuffer());
+  const sourceBuffer=await file.arrayBuffer();
+  const JSZip=await zipCtor(providedZip),zip=await JSZip.loadAsync(sourceBuffer);
   const entries=Object.keys(zip.files);
   if(entries.length>300)throw new Error('HWPX 내부 파일 수가 허용 범위를 초과했습니다.');
   const mime=await zip.file('mimetype')?.async('string');
@@ -151,12 +201,27 @@ export async function importHwpx(file,providedZip=null){
   const sections=entries.filter(name=>/^Contents\/section\d+\.xml$/i.test(name)).sort((a,b)=>Number(a.match(/\d+/)?.[0]||0)-Number(b.match(/\d+/)?.[0]||0));
   if(!sections.length)throw new Error('HWPX 본문 섹션을 찾을 수 없습니다.');
   let total=0,html='';
-  for(const name of sections){
-    const xml=await zip.file(name)?.async('string');
-    total+=String(xml||'').length;
-    if(total>MAX_SECTION_CHARS)throw new Error('HWPX 본문 크기가 허용 범위를 초과했습니다.');
-    html+=sectionXmlToHtml(xml);
-  }
+  for(let index=0;index<sections.length;index+=1){const xml=await zip.file(sections[index])?.async('string');total+=String(xml||'').length;if(total>MAX_SECTION_CHARS)throw new Error('HWPX 본문 크기가 허용 범위를 초과했습니다.');html+=sectionXmlToEditableHtml(xml,index)}
   const hpf=await zip.file('Contents/content.hpf')?.async('string');
-  return {contract:HWPX_CONTRACT,title:metadataTitle(hpf),html:html||'<p><br></p>',sourceFormat:'hwpx'};
+  return {contract:HWPX_CONTRACT,roundTripContract:HWPX_ROUNDTRIP_CONTRACT,title:metadataTitle(hpf),html:html||'<p><br></p>',sourceFormat:'hwpx',sourceBuffer,sourceName:String(file.name||'document.hwpx'),sectionNames:sections};
+}
+
+function textTagRegex(){return /<((?:[A-Za-z0-9_-]+:)?t)\b([^>]*?)(\/>|>([\s\S]*?)<\/\1>)/g}
+function countTextTags(xml){let count=0;for(const _ of String(xml||'').matchAll(textTagRegex()))count+=1;return count}
+function patchTextTags(xml,edits){let index=0;return String(xml||'').replace(textTagRegex(),(full,tag,attrs,_tail)=>{const current=index++;if(!edits.has(current))return full;return `<${tag}${attrs}>${esc(edits.get(current))}</${tag}>`})}
+function editorSectionEdits(editor,section){const edits=new Map();for(const node of editor.querySelectorAll(`[data-hwpx-section="${section}"][data-hwpx-text]`)){const index=Number(node.getAttribute('data-hwpx-text'));if(Number.isInteger(index)&&index>=0&&!edits.has(index))edits.set(index,String(node.textContent||'').replace(/\u200b/g,''))}return edits}
+
+export async function createRoundTripHwpxBlob({sourceBuffer,title,editor},providedZip=null){
+  if(!sourceBuffer||!editor)throw new Error('원본 HWPX 패키지와 편집 문서가 필요합니다.');
+  const JSZip=await zipCtor(providedZip),sourceZip=await JSZip.loadAsync(sourceBuffer),entries=Object.keys(sourceZip.files);
+  const sections=entries.filter(name=>/^Contents\/section\d+\.xml$/i.test(name)).sort((a,b)=>Number(a.match(/\d+/)?.[0]||0)-Number(b.match(/\d+/)?.[0]||0));
+  const modified=new Map();let totalExpected=0,totalTracked=0;
+  for(let section=0;section<sections.length;section+=1){const name=sections[section],xml=await sourceZip.file(name)?.async('string'),expected=countTextTags(xml),edits=editorSectionEdits(editor,section);totalExpected+=expected;totalTracked+=edits.size;if(edits.size!==expected){const error=new Error(`원본 서식 매핑이 변경되었습니다. 추적 ${edits.size}/${expected}`);error.code='HWPX_ROUNDTRIP_MAPPING_LOST';throw error}modified.set(name,patchTextTags(xml,edits))}
+  const hpf=String(await sourceZip.file('Contents/content.hpf')?.async('string')||''),safeTitle=esc(strip(title)||'제목 없는 문서');
+  if(hpf)modified.set('Contents/content.hpf',hpf.replace(/<opf:title\s*\/>/i,`<opf:title>${safeTitle}</opf:title>`).replace(/<opf:title>[\s\S]*?<\/opf:title>/i,`<opf:title>${safeTitle}</opf:title>`));
+  modified.set('Preview/PrvText.txt',String(editor.innerText||editor.textContent||'').slice(0,12000));
+  const out=new JSZip();
+  const add=async(name)=>{if(name==='mimetype'){out.file(name,HWPX_MIMETYPE,{compression:'STORE',createFolders:false});return}const file=sourceZip.file(name);if(!file)return;const data=modified.has(name)?modified.get(name):await file.async('uint8array');out.file(name,data,{compression:'DEFLATE',createFolders:false,compressionOptions:{level:6}})};
+  if(entries.includes('mimetype'))await add('mimetype');for(const name of entries){if(name==='mimetype'||sourceZip.files[name]?.dir)continue;await add(name)}
+  const blob=await out.generateAsync({type:'blob',mimeType:HWPX_MIMETYPE});return {blob,contract:HWPX_ROUNDTRIP_CONTRACT,tracked:totalTracked,expected:totalExpected};
 }
