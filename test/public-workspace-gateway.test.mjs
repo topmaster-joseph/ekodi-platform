@@ -20,9 +20,12 @@ test('canonical public workspace paths use the isolated Space service binding',a
   assert.match(router,/routeDeploymentProbe[\s\S]*workspaceUpstreamRequest\(request,'\/'\)/);
   assert.ok(router.includes('isWorkspaceAdminPath(url.pathname)&&!isEkodiBizInvestAdminPath(url.pathname)'));
   assert.match(wrangler,/binding = "SPACE"[\s\S]*service = "ekodi-space"/);
-  for(const route of ['/deployment-probe','/_ekodi/space/*','/auth/start']){
+  for(const route of ['/deployment-probe','/_ekodi/space/*']){
     assert.ok(wrangler.includes(`"${route}"`),route);
   }
+  const workerFirstRoutes=[...wrangler.matchAll(/"([^"]+)"/g)].map(match=>match[1]);
+  const workerFirstCovers=path=>workerFirstRoutes.some(route=>route===path||(route.endsWith('*')&&path.startsWith(route.slice(0,-1))));
+  assert.ok(workerFirstCovers('/auth/start'),'/auth/start must remain Worker-first directly or through a covering route');
   const manifest=JSON.parse(manifestText);
   assert.ok(!manifest.worker.requests.some(item=>item.url==='https://ekodi.kr/deployment-probe'));
   const spaceConfig=manifest.worker.requests.find(item=>item.url==='https://ekodi.kr/_ekodi/space/config.js');
