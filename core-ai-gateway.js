@@ -26,6 +26,10 @@ function normalizeProvider(provider, index) {
     priority: Number.isFinite(priorityValue) ? priorityValue : index + 1,
     capabilities: normalizeCapabilities(provider.capabilities),
     trustClass: String(provider.trustClass || 'external').trim().toLowerCase() || 'external',
+    resourceClass: String(provider.resourceClass || 'personal-api'),
+    fundingSource: String(provider.fundingSource || 'personal'),
+    officialPath: provider.officialPath !== false,
+    automationAllowed: provider.automationAllowed !== false,
   });
 }
 

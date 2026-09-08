@@ -5,7 +5,7 @@ const SECTION_GROUP=Object.freeze({
   'common-services':'common',communication:'common',workspace:'common',finance:'common',
   'life-ai':'professional','personal-finance':'professional',community:'professional',books:'professional',social:'professional',devotional:'professional','marketing-ai':'professional','ai-membership':'professional',tax:'professional',affiliates:'professional','supply-network':'professional',insurance:'professional',
   work:'workspaces',organization:'workspaces',clients:'workspaces','cheonggye-members':'workspaces',
-  capabilities:'operations',aiops:'operations',openai:'operations',devices:'operations',health:'operations','api-cost':'operations',services:'operations',deployments:'operations',policies:'operations',
+  capabilities:'operations',aiops:'operations','ai-settings':'operations',openai:'operations',devices:'operations',health:'operations','api-cost':'operations',services:'operations',deployments:'operations',policies:'operations',
 });
 const GROUP_DEFAULT=Object.freeze({
   system:'campus',common:'common-services',professional:'life-ai',workspaces:'clients',operations:'capabilities',

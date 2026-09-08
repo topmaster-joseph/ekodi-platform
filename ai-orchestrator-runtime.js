@@ -2,6 +2,7 @@ import {
   isAiProviderDisabled,
   runAiEnhancedTask,
 } from './ai-resilience-runtime.js';
+import { rankAiResourceCandidates } from './ai-resource-policy.js';
 
 const RISK_LEVELS = new Set(['low', 'normal', 'high', 'critical']);
 const COLLABORATION_MODES = new Set(['auto', 'primary', 'review']);
@@ -27,6 +28,10 @@ function normalizeProvider(provider, index) {
     priority: Number.isFinite(priorityValue) ? priorityValue : index + 1,
     capabilities: normalizeCapabilities(provider.capabilities || ['text']),
     trustClass: text(provider.trustClass || 'external', 40).toLowerCase() || 'external',
+    resourceClass: text(provider.resourceClass || 'personal-api', 40),
+    fundingSource: text(provider.fundingSource || 'personal', 40),
+    officialPath: provider.officialPath !== false,
+    automationAllowed: provider.automationAllowed !== false,
   });
 }
 
@@ -55,6 +60,8 @@ function publicProvider(provider) {
     priority: provider.priority,
     capabilities: provider.capabilities,
     trustClass: provider.trustClass,
+    resourceClass: provider.resourceClass, fundingSource: provider.fundingSource,
+    officialPath: provider.officialPath, automationAllowed: provider.automationAllowed,
   });
 }
 
@@ -67,7 +74,10 @@ export function buildAiOrchestrationPlan(input = {}, providers = []) {
     : 'auto';
   const requiredCapabilities = normalizeCapabilities(input.requiredCapabilities || ['text']);
   const normalized = normalizeProviders(providers);
-  const eligible = normalized.filter(provider => provider.available && supports(provider, requiredCapabilities));
+  const eligibleBase = normalized.filter(provider => provider.available && supports(provider, requiredCapabilities));
+  const lane = input.lane === 'autonomous' ? 'autonomous' : 'interactive';
+  const ranked = rankAiResourceCandidates(eligibleBase, { lane });
+  const eligible = ranked.map(item => normalized.find(provider => provider.id === item.id)).filter(Boolean);
   const mode = chooseMode(collaboration, risk);
   const primary = eligible[0] || null;
   const reviewer = mode === 'review' ? eligible.find(provider => provider.id !== primary?.id) || null : null;
@@ -77,6 +87,7 @@ export function buildAiOrchestrationPlan(input = {}, providers = []) {
     orchestrator: 'ekodi-ai',
     taskName: text(input.taskName || 'ai_task', 120) || 'ai_task',
     risk,
+    lane,
     requestedMode: collaboration,
     mode,
     requiredCapabilities,
@@ -140,6 +151,7 @@ export function buildEkodiAiOrchestrator(env = {}, providers = []) {
       risk = 'normal',
       collaboration = 'auto',
       requiredCapabilities = ['text'],
+      lane = 'interactive',
     } = {}) {
       const normalizedTaskName = text(taskName, 120);
       if (!normalizedTaskName) throw new TypeError('EKODI AI Orchestrator requires taskName.');
@@ -150,6 +162,7 @@ export function buildEkodiAiOrchestrator(env = {}, providers = []) {
         risk,
         collaboration,
         requiredCapabilities,
+        lane,
       }, normalized);
       const eligibleIds = new Set(plan.eligibleProviders);
       const eligible = normalized.filter(provider => eligibleIds.has(provider.id));

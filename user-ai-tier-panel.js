@@ -74,8 +74,8 @@
 
   function executionPolicy(plan) {
     return Number(plan?.monthlyRequests || 0) > 0
-      ? 'Core 우선 · AI 필요 시 자동 선택'
-      : 'Core 우선 · 개인 API 사용 가능';
+      ? 'Core 통제 · 개인구독 → 개인 API → 지원 AI'
+      : 'Core 통제 · 개인구독 → 개인 API';
   }
 
   function costView(planId) {
@@ -122,7 +122,7 @@
       <thead><tr><th>회원단계</th><th>AI 허용량</th><th>사용량</th><th>비용</th><th>AI 경로 상태</th><th>상태</th><th>실행 정책</th><th>개인 API 여부</th></tr></thead>
       <tbody>${rows}</tbody>
     </table></div></div>
-    <p class="uam-note">기본 원칙은 Core 우선입니다. AI가 꼭 필요한 요청에서만 개인 API 또는 EKODI 지원 AI를 자동 선택합니다. 개인 Web 전환은 사용자가 직접 참여하는 대화형 요청에서만 사용할 수 있으며, 자동화·백그라운드·관리자·시스템 실행은 소비자 Web 세션에 의존하지 않습니다. 허용량 0은 EKODI 지원 AI만 중지하며 Core와 개인 API 경로는 유지합니다.</p>`;
+    <p class="uam-note">EKODI Core가 모든 요청의 정책·권한·검증을 통제합니다. 사람이 참여하는 AI 작업은 개인구독 AI를 먼저 활용하고, 다음으로 개인 API와 EKODI 지원 AI를 사용합니다. 개인 Web 전환은 사용자가 직접 참여하는 대화형 요청에서만 사용할 수 있으며, 자동화·백그라운드·관리자·시스템 실행은 소비자 Web 세션에 의존하지 않습니다. 허용량 0은 EKODI 지원 AI만 중지하며 Core와 개인 API 경로는 유지합니다.</p>`;
   }
 
   async function load() {
