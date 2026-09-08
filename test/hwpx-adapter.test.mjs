@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import {
   HWPX_CONTRACT,
+  HWPX_ROUNDTRIP_CONTRACT,
   HWPX_MIMETYPE,
   buildHwpxParts,
   sectionXmlToHtml,
@@ -10,6 +11,7 @@ import {
 
 test('HWPX adapter exposes a bounded EKODI open-document contract',()=>{
   assert.equal(HWPX_CONTRACT,'ekodi.hwpx.v1');
+  assert.equal(HWPX_ROUNDTRIP_CONTRACT,'ekodi.hwpx.roundtrip.v2');
   assert.equal(HWPX_MIMETYPE,'application/hwp+zip');
 });
 
