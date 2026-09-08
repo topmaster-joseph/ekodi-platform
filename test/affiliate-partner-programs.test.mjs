@@ -1,7 +1,7 @@
-import test from 'node:test';
+﻿import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { AFFILIATE_PARTNER_PROGRAMS, partnerProgramView } from '../affiliate-partner-programs.js';
+import { AFFILIATE_OUTREACH_STATUSES, AFFILIATE_PARTNER_PROGRAMS, partnerProgramView } from '../affiliate-partner-programs.js';
 
 const read = path => fs.readFileSync(new URL(path, import.meta.url), 'utf8');
 
@@ -40,6 +40,15 @@ test('partner playbooks expose the next safe acquisition action', () => {
   assert.match(adpick.coverageSummary, /다음:/);
 });
 
+test('outreach ledger distinguishes contact from application approval', () => {
+  assert.ok(AFFILIATE_OUTREACH_STATUSES.has('sent'));
+  const view = partnerProgramView({ program_key:'linkprice', program_name:'LinkPrice', program_kind:'network', region:'KR', home_country:'KR', coverage_summary:'국내외', application_status:'account_exists', integration_status:'not_ready', outreach_status:'sent', outreach_channel:'email', last_outreach_at:'2026-09-08T00:36:00Z', next_followup_at:'2026-09-11T00:00:00Z', outreach_note:'후속 문의 발송', api_capable:1, deeplink_capable:1, product_feed_capable:1, reporting_capable:1, external_action_required:1, priority:98, notes:'', updated_at:'2026-09-08T00:36:00Z' });
+  assert.equal(view.outreachStatus, 'sent');
+  assert.equal(view.outreachChannel, 'email');
+  assert.match(view.nextAction, /회신/);
+  assert.equal(view.applicationStatus, 'account_exists');
+});
+
 test('approved programs progress to integration verification, not recommendation', () => {
   const view = partnerProgramView({
     program_key:'cj', program_name:'CJ Affiliate', program_kind:'network', region:'GLOBAL', home_country:'US', coverage_summary:'글로벌',
@@ -53,11 +62,17 @@ test('approved programs progress to integration verification, not recommendation
 
 test('migration and admin expose the partner acquisition pipeline', () => {
   const migration = read('../migrations/0066_affiliate_partner_pipeline.sql');
+  const outreachMigration = read('../migrations/0072_affiliate_partner_outreach_ledger.sql');
   const admin = read('../marketing-funnel-admin.js');
   assert.match(migration, /CREATE TABLE IF NOT EXISTS affiliate_partner_programs/);
   assert.match(migration, /ADPICK Biz/);
   assert.match(migration, /impact\.com/);
+  assert.match(outreachMigration, /outreach_status/);
+  assert.match(outreachMigration, /program_key = 'linkprice'/);
+  assert.match(outreachMigration, /program_key = 'adpick'/);
   assert.match(admin, /국내·글로벌 제휴처 확보 파이프라인/);
+  assert.match(admin, /실제 연락/);
+  assert.match(admin, /data-program-outreach/);
   assert.match(admin, /\/api\/affiliate\/programs/);
   assert.match(admin, /data-program-save/);
   assert.doesNotMatch(admin, /secretKey|accessKey|apiSecret/i);
