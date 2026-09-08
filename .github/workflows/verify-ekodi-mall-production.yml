@@ -3,7 +3,7 @@ name: Verify EKODI Mall Production
 on:
   workflow_dispatch:
   workflow_run:
-    workflows: ['Deploy EKODI Shared Site Core']
+    workflows: ['EKODI Mall · Stage and Deploy', 'Deploy EKODI Shared Site Core']
     types: [completed]
 
 permissions:
@@ -34,9 +34,9 @@ jobs:
           for marker in \
             'data-ekodi-service="mall"' \
             'data-ekodi-user-surface="public"' \
-            'rel="canonical" href="https://ekodi.kr/ekodibiz/mall/' \
-            '/ekodibiz/mall/assets/marketplace-live.js' \
-            '/ekodibiz/mall/seller/'; do
+            'rel="canonical" href="https://ekodi.kr/ekodibiz/mall"' \
+            '/ekodibiz/mall/app.js' \
+            '/ekodibiz/mall/affiliate-client.js'; do
             grep -Fq "$marker" /tmp/mall.html || { echo "Missing Mall structural marker: $marker"; exit 1; }
           done
           if grep -Fq '추천링크 클릭 후 검색하세요' /tmp/mall.html || grep -Fq 'COUPANG AFFILIATE CURATION' /tmp/mall.html || grep -Fq 'cwWXWm' /tmp/mall.html; then
