@@ -8,6 +8,7 @@ import {
   summarizeCoupangSubIds,
   syncCoupangPartnerReports,
   syncScheduledCoupangPartnerReports,
+  syncScheduledAffiliateAutomation,
   coupangReportingDue,
   coupangReportWindow,
 } from '../coupang-partners-automation.js';
@@ -93,7 +94,8 @@ test('Sub ID discovery never writes account-wide outcomes into Mall performance'
     if(u.pathname.endsWith('/orders')) data=[{date:d,subId:'ekodi-mall',productId:123,orderId:1,gmv:10000,commission:300},{date:d,subId:'',productId:999,orderId:2,gmv:5000,commission:150}];
     return new Response(JSON.stringify({rCode:'0',rMessage:'',data}),{status:200,headers:{'content-type':'application/json'}}); };
   try { const result=await syncCoupangPartnerReports({DB:db,COUPANG_PARTNERS_ACCESS_KEY:'a',COUPANG_PARTNERS_SECRET_KEY:'b'},{force:true,reason:'test-discovery'});
-    assert.equal(result.status,'sub_id_required'); assert.equal(requested.length,2); assert.equal(result.discoveryCandidates.some(x=>x.subId==='ekodi-mall'),true);
+    assert.equal(result.status,'sub_id_required');
+    assert.equal(result.ran,true); assert.equal(requested.length,2); assert.equal(result.discoveryCandidates.some(x=>x.subId==='ekodi-mall'),true);
     assert.equal(Number((await db.prepare('SELECT COUNT(*) AS n FROM affiliate_product_performance_daily').first()).n),0); assert.equal(Number((await db.prepare('SELECT COUNT(*) AS n FROM affiliate_daily_metrics').first()).n),0);
     const rows=(await db.prepare('SELECT candidate_sub_id,is_default,clicks_rows,orders_rows,cancels_rows,commission_rows FROM affiliate_partner_subid_discovery ORDER BY candidate_sub_id').all()).results; assert.equal(rows.length,3);
   } finally { globalThis.fetch=originalFetch; db.close(); }
@@ -142,4 +144,31 @@ test('scheduled reporting consumes a one-time force request', async () => {
     const control=await db.prepare(`SELECT force_consumed_at FROM affiliate_partner_report_control WHERE account_id=?`).bind('coupang-ekodibiz').first();
     assert.ok(control.force_consumed_at);
   } finally { globalThis.fetch=originalFetch; db.close(); }
+});
+
+
+test('scheduled catalog automation consumes one-time force request even when the prior run is fresh', async () => {
+  const db=new D1Db();
+  await syncCoupangPartnerReports({DB:db},{force:true,reason:'schema-only'});
+  const now=new Date().toISOString();
+  await db.prepare(`INSERT INTO affiliate_partner_report_control(account_id,catalog_force_requested_at,catalog_force_reason,updated_at) VALUES(?,?,?,?)`).bind('coupang-ekodibiz',now,'subid_rebind',now).run();
+  const result=await syncScheduledAffiliateAutomation({DB:db},{reason:'schedule'});
+  assert.equal(result.status,'setup_required');
+  const control=await db.prepare(`SELECT catalog_force_consumed_at FROM affiliate_partner_report_control WHERE account_id=?`).bind('coupang-ekodibiz').first();
+  assert.ok(control.catalog_force_consumed_at);
+  const run=await db.prepare(`SELECT reason,status FROM affiliate_recommendation_runs ORDER BY id DESC LIMIT 1`).first();
+  assert.equal(run.reason,'schedule_force:subid_rebind');
+  db.close();
+});
+
+
+test('report execution owns one scheduled invocation budget', async () => {
+  const entry = await readFile(new URL('../customer-entry-worker.js', import.meta.url), 'utf8');
+  const start = entry.indexOf('async scheduled(controller, env, ctx)');
+  const end = entry.indexOf('\n  },\n};', start);
+  const block = entry.slice(start,end);
+  assert.match(block,/const reporting = await syncScheduledCoupangPartnerReports/);
+  assert.match(block,/if \(reporting\?\.ran\) return;/);
+  assert.ok(block.indexOf('syncScheduledCoupangPartnerReports') < block.indexOf('runChurchReportSchedule'));
+  assert.ok(block.indexOf('syncScheduledCoupangPartnerReports') < block.indexOf('syncScheduledAffiliateAutomation'));
 });
