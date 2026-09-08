@@ -47,6 +47,13 @@ test('v8 control candidate probe does not make rollback depend on a newly introd
   assert.equal(probe?.rollbackVerify,false);
 });
 
+test('shared-site guarded release keeps canonical My Docs alive',async()=>{
+  const manifest=JSON.parse(await fs.promises.readFile(new URL('../deploy/manifests/shared-site.worker.json',import.meta.url),'utf8'));
+  const probe=manifest.worker.requests.find(item=>item.url==='https://ekodi.kr/my/docs/');
+  assert.deepEqual(probe?.statuses,[200]);assert.equal(probe?.redirect,'manual');
+  assert.ok(probe?.expect.includes('EKODI Docs AI'));assert.ok(probe?.expect.includes('docs-focus'));
+  assert.ok(probe?.headerExpect.includes('x-ekodi-canonical-surface: my'));assert.equal(probe?.rollbackVerify,false);
+});
 test('Auth uses the legacy runtime but exposes apex-prefixed assets',async()=>{
   const legacy=legacyRecorder();
   const response=await routeCanonicalSurface(new Request('https://ekodi.kr/auth/'),{}, {legacyFetch:legacy.fetch});
