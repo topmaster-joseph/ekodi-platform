@@ -1,3 +1,4 @@
+import { jadamStorefrontCss, renderJadamStorefrontPage } from './jadam-storefront.js';
 const BRAND=Object.freeze({
   pizzamaru:{brand:'피자마루',branch:'목포대점',category:'피자',mark:'PM',tagline:'목포대 후문에서 오늘 먹고 싶은 피자를 바로 만나보세요.',address:'전남 무안군 청계면 승달산길 37-1 1층',phone:'061-453-8295'},
   jadam:{brand:'자담치킨',branch:'목포대점',category:'치킨',mark:'JD',tagline:'국립목포대학교 후문, 메뉴·앱별 가격·주문을 한 화면에서 확인하세요.',address:'전남 무안군 청계면 승달산길 37-1',phone:'061-453-8295'},
@@ -78,9 +79,10 @@ function menuCard(item,meta,channels){
   return `<article class="menu-card"><div class="menu-media">${image?`<img src="${e(image)}" alt="${e(item.name)}" loading="lazy" referrerpolicy="no-referrer">`:`<span class="fallback">${e(fallbackMark)}</span>`}</div><div class="menu-body"><div class="menu-meta"><small>${e(item.category||meta.category||'MENU')}</small><span class="menu-source">${e(source)}</span></div><h3>${e(item.name)}</h3>${item.description?`<p class="menu-desc">${e(item.description)}</p>`:'<p class="menu-desc"></p>'}${base}${platform}${lowest}</div></article>`;
 }
 export function storefrontCss(){
-  return new Response(CSS+MENU_CSS,{headers:{'content-type':'text/css; charset=utf-8','cache-control':'public, max-age=300','x-content-type-options':'nosniff'}});
+  return new Response(CSS+MENU_CSS+jadamStorefrontCss(),{headers:{'content-type':'text/css; charset=utf-8','cache-control':'public, max-age=300','x-content-type-options':'nosniff'}});
 }
 export async function renderStorefrontPage(request,env,resolved,slug){
+  if(slug==='jadam')return renderJadamStorefrontPage(request,env,resolved,slug);
   const page=resolved?.profile||{};
   const meta=BRAND[slug]||{brand:page.name||slug,branch:'매장',category:'매장',tagline:'오늘의 메뉴와 주문을 빠르게 확인하세요.'};
   const links=officialLinks(slug);
