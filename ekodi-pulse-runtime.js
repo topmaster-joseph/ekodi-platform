@@ -1,5 +1,5 @@
 ﻿import { buildCoreAiGateway } from './core-ai-gateway.js';
-import { loadAiCollaborationPolicy } from './ai-collaboration-settings.js';
+import { loadAiCollaborationPolicy, recordAiCoreLearningEvent } from './ai-collaboration-settings.js';
 import { getEkodiAiProviderRegistryStatus } from './ekodi-ai-provider-registry.js';
 import {
   claimNextEkodiCommandTask,
@@ -154,7 +154,11 @@ export async function runEkodiCommandQueue(env = {}, options = {}) {
       });
     }
     const settled = await settleEkodiCommandTask(env, task, result, { startedAt });
-    results.push(Object.freeze({ taskId: task.id, resultState: result.state, state: settled?.state || result.state }));
+    const finalState = settled?.state || result.state;
+    if (collaboration.policy?.resources?.core?.learnAfterSuccess && ['verified','completed','complete'].includes(String(finalState).toLowerCase())) {
+      await recordAiCoreLearningEvent(env, { taskId:task.id, capability:task.target?.capability || task.target?.service || 'general', outcome:finalState, evidence:result.evidence || {} });
+    }
+    results.push(Object.freeze({ taskId: task.id, resultState: result.state, state: finalState }));
   }
 
   return Object.freeze({
@@ -223,7 +227,7 @@ export async function runEkodiPulseSchedule(env = {}, options = {}) {
 }
 
 export const EKODI_PULSE_RUNTIME = Object.freeze({
-  version: '1.1.0',
+  version: '1.2.0',
   schedule: 'existing-control-cron',
   autonomousBatchLimit: 1,
   automaticTriggers: Object.freeze(['queued-command-task', 'degraded-system-health']),
