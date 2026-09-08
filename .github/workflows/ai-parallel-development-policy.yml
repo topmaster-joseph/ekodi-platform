@@ -13,10 +13,13 @@ on:
       - 'CONSTITUTION.md'
       - 'governance/constitution/**'
       - 'governance/amendments/**'
+      - 'config/ai-development-completion-policy.json'
+      - 'scripts/validate-ai-development-completion-policy.mjs'
       - 'scripts/ai-task-start.sh'
       - 'scripts/ekodi-task-start.mjs'
       - '.github/workflows/ai-task-allocator.yml'
       - '.github/workflows/ai-conflict-guard.yml'
+      - '.github/workflows/production-gate.yml'
       - '.github/workflows/ai-parallel-development-policy.yml'
 
 permissions:
@@ -37,6 +40,8 @@ jobs:
           test -s CLAUDE.md
           test -s GEMINI.md
           test -s .github/copilot-instructions.md
+          test -s config/ai-development-completion-policy.json
+          test -s scripts/validate-ai-development-completion-policy.mjs
           test -s scripts/ai-task-start.sh
           test -s scripts/ekodi-task-start.mjs
           test -s .github/workflows/ai-task-allocator.yml
@@ -45,12 +50,17 @@ jobs:
           grep -q 'AI_DEVELOPMENT_POLICY.md' CLAUDE.md
           grep -q 'AI_DEVELOPMENT_POLICY.md' GEMINI.md
           grep -q 'AI_DEVELOPMENT_POLICY.md' .github/copilot-instructions.md
+          grep -q 'config/ai-development-completion-policy.json' AGENTS.override.md
           grep -q 'Direct production deployment from an agent workspace is forbidden' AI_DEVELOPMENT_POLICY.md
+          grep -q 'production-verified-before-complete' AI_DEVELOPMENT_POLICY.md
           grep -q 'ai-task-allocator.yml' AI_DEVELOPMENT_POLICY.md
           grep -q 'ai-conflict-guard.yml' AI_DEVELOPMENT_POLICY.md
           grep -q 'ekodi-task-start.mjs' AGENTS.override.md
           bash -n scripts/ai-task-start.sh
           node --check scripts/ekodi-task-start.mjs
+          node --check scripts/validate-ai-development-completion-policy.mjs
+      - name: Enforce production-verified completion contract
+        run: node scripts/validate-ai-development-completion-policy.mjs
       - name: Enforce AI branch naming
         if: startsWith(github.head_ref, 'ai/')
         shell: bash
@@ -68,3 +78,4 @@ jobs:
           set -euo pipefail
           grep -q 'central pipeline' AI_DEVELOPMENT_POLICY.md
           grep -q 'guarded deployment workflow' AI_DEVELOPMENT_POLICY.md
+          grep -q 'production verification evidence' AI_DEVELOPMENT_POLICY.md
