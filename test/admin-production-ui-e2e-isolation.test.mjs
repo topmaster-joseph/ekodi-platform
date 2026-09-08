@@ -30,11 +30,11 @@ test('synthetic production Admin UI verifier targets the canonical apex Admin pa
   assert.doesNotMatch(text, /https:\/\/admin\.ekodi\.kr\//);
 });
 
-test('synthetic production Admin UI verifier observes tax handoff without leaving canonical Admin', async () => {
+test('synthetic production Admin UI verifier validates tax handoff without navigating the Admin page', async () => {
   const text = await source();
-  assert.match(text, /const taxNavigationPattern = 'https:\/\/tax\.ekodi\.kr\/\*\*'/);
-  assert.match(text, /route\.abort\('aborted'\)/);
-  assert.match(text, /page\.unroute\(taxNavigationPattern, keepAdminMounted\)/);
+  assert.match(text, /const href = await source\.getAttribute\('href'\)/);
+  assert.match(text, /context\.request\.get\(href, \{ maxRedirects: 5, timeout: 20000 \}\)/);
   assert.match(text, /if \(!page\.url\(\)\.startsWith\(ADMIN_URL\)\)/);
-  assert.doesNotMatch(text, /taxCommitPending/);
+  assert.match(text, /ok handoff-link/);
+  assert.doesNotMatch(text, /taxNavigationPattern|taxRequestPending|taxCommitPending/);
 });
