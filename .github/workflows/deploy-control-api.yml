@@ -104,6 +104,7 @@ on:
       - 'scripts/validate-additive-migrations.mjs'
       - 'scripts/validate-ai-mission-governance.mjs'
       - 'scripts/validate-security-baseline.mjs'
+      - 'scripts/verify-ai-collaboration-settings-roundtrip.mjs'
       - 'scripts/apply-d1-migrations-with-retry.sh'
       - 'deploy/manifests/control-api.worker.json'
       - '.github/workflows/deploy-control-api.yml'
@@ -210,6 +211,7 @@ on:
       - 'scripts/validate-additive-migrations.mjs'
       - 'scripts/validate-ai-mission-governance.mjs'
       - 'scripts/validate-security-baseline.mjs'
+      - 'scripts/verify-ai-collaboration-settings-roundtrip.mjs'
       - 'scripts/apply-d1-migrations-with-retry.sh'
       - 'deploy/manifests/control-api.worker.json'
       - '.github/workflows/deploy-control-api.yml'
@@ -252,6 +254,7 @@ jobs:
           node --check scripts/validate-additive-migrations.mjs
           node --check scripts/validate-ai-mission-governance.mjs
           node --check scripts/validate-security-baseline.mjs
+          node --check scripts/verify-ai-collaboration-settings-roundtrip.mjs
           node scripts/validate-universal-membership.mjs
           node scripts/validate-additive-migrations.mjs migrations
           node scripts/validate-ai-mission-governance.mjs
@@ -349,6 +352,12 @@ jobs:
           set -euo pipefail
           npx --yes wrangler@$WRANGLER_VERSION deployments status --config wrangler.api.staging.runtime.toml --json > /tmp/staging-deployments.json
           npx --yes wrangler@$WRANGLER_VERSION d1 migrations apply DB --local --config wrangler.api.staging.runtime.toml >/tmp/local-migrations.log 2>&1
+          e2e_token="ai-settings-staging-$(openssl rand -hex 24)"
+          e2e_token_hash=$(printf '%s' "$e2e_token" | sha256sum | awk '{print $1}')
+          e2e_created=$(date -u +'%Y-%m-%dT%H:%M:%S.000Z')
+          e2e_expires=$(date -u -d '+20 minutes' +'%Y-%m-%dT%H:%M:%S.000Z')
+          e2e_sql="INSERT INTO admins(email,password_hash,password_salt,birth_hash,birth_salt,role,created_at) VALUES ('ai-settings-e2e@ekodi.local','x','x','x','x','super_admin','$e2e_created') ON CONFLICT(email) DO UPDATE SET role='super_admin'; INSERT OR REPLACE INTO sessions(token_hash,admin_id,expires_at,created_at) SELECT '$e2e_token_hash',id,'$e2e_expires','$e2e_created' FROM admins WHERE email='ai-settings-e2e@ekodi.local';"
+          npx --yes wrangler@$WRANGLER_VERSION d1 execute DB --local --config wrangler.api.staging.runtime.toml --command "$e2e_sql" >/tmp/ai-settings-e2e-session.log 2>&1
           npx --yes wrangler@$WRANGLER_VERSION dev --local --config wrangler.api.staging.runtime.toml --ip 127.0.0.1 --port 8791 > /tmp/control-remote-dev.log 2>&1 &
           runtime_pid=$!
           trap 'kill $runtime_pid 2>/dev/null || true' EXIT
@@ -360,6 +369,8 @@ jobs:
             sleep 2
           done
           if [ "$ready" != '1' ]; then cat /tmp/control-remote-dev.log; exit 1; fi
+          node scripts/verify-ai-collaboration-settings-roundtrip.mjs 'http://127.0.0.1:8791' "$e2e_token" > /tmp/ai-settings-roundtrip.json
+          node -e "const j=require('/tmp/ai-settings-roundtrip.json');if(!j.ok||!j.auditVerified||j.productionMutation!==false)process.exit(1);console.log('AI collaboration settings staging roundtrip verified: router='+j.routerScoreVersion+' saved='+j.savedRevision+' restored='+j.restoredRevision)"
           for attempt in $(seq 1 18); do
             health=$(curl -fsS --connect-timeout 5 --max-time 12 'http://127.0.0.1:8791/health' || true)
             headers=$(curl -fsSI --connect-timeout 5 --max-time 12 'http://127.0.0.1:8791/health' || true)
