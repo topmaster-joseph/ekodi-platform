@@ -111,24 +111,25 @@ test('normal login opens Site Management without auto-opening AI or internal wor
   assert.doesNotMatch(menu, /setInterval\(/);
 });
 
-test('admin menu governance uses five domains plus Operations Center with contextual top tabs', async () => {
+test('admin menu governance uses five canonical EKODI axes with contextual top tabs', async () => {
   const registry = await read('admin-menu-registry.js');
   const sidebar = await read('admin-sidebar.js');
   assert.match(registry, /ADMIN_MENU_GROUPS/);
-  for (const group of ['structure', 'core', 'common', 'vertical', 'tenants', 'operations-center']) {
+  for (const group of ['home', 'operations', 'space', 'services', 'system']) {
     assert.match(registry, new RegExp(`id: '${group}'`));
   }
-  for (const retired of ['home', 'operations', 'people', 'services', 'ai', 'business', 'data', 'system', 'site-management', 'access', 'space', 'security-audit', 'settings']) {
+  for (const retired of ['structure', 'core', 'common', 'vertical', 'tenants', 'operations-center', 'people', 'ai', 'business', 'data', 'site-management', 'access', 'security-audit', 'settings']) {
     assert.doesNotMatch(registry, new RegExp(`id: '${retired}', icon:`));
   }
-  assert.match(registry, /id: 'campus', group: 'structure'/);
-  assert.match(registry, /id: 'security', group: 'core'/);
-  assert.match(registry, /id: 'common-services', group: 'common'/);
-  assert.match(registry, /id: 'life-ai', group: 'vertical'/);
-  assert.match(registry, /id: 'clients', group: 'tenants'/);
-  assert.match(registry, /id: 'capabilities', group: 'operations-center'/);
-  assert.match(registry, /id: 'devices', group: 'operations-center'/);
-  assert.match(registry, /id: 'health', group: 'operations-center'/);
+  assert.match(registry, /id: 'campus', group: 'home'/);
+  assert.match(registry, /id: 'work', group: 'operations'/);
+  assert.match(registry, /id: 'clients', group: 'space'/);
+  assert.match(registry, /id: 'common-services', group: 'services'/);
+  assert.match(registry, /id: 'life-ai', group: 'services'/);
+  assert.match(registry, /id: 'security', group: 'system'/);
+  assert.match(registry, /id: 'capabilities', group: 'system'/);
+  assert.match(registry, /id: 'devices', group: 'system'/);
+  assert.match(registry, /id: 'health', group: 'system'/);
   assert.match(sidebar, /function pruneNonRegistryItems\(nav\)/);
   assert.match(sidebar, /RETIRED_MENU_SECTIONS = new Set\(\['overview'\]\)/);
   assert.match(sidebar, /GLOBAL_CLASS = 'admin-global-navs'/);
