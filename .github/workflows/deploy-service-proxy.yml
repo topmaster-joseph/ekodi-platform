@@ -49,7 +49,7 @@ jobs:
         run: |
           set -u
           failed=0
-          for domain in biz.ekodi.kr church.ekodi.kr live.church.ekodi.kr lab.ekodi.kr mall.ekodi.kr mall.biz.ekodi.kr mail.ekodi.kr mail.biz.ekodi.kr mail.church.ekodi.kr mail.lab.ekodi.kr mail.books.ekodi.kr mail.trade.ekodi.kr; do
+          for domain in biz.ekodi.kr church.ekodi.kr live.church.ekodi.kr lab.ekodi.kr mall.ekodi.kr mall.biz.ekodi.kr mail.biz.ekodi.kr mail.church.ekodi.kr mail.lab.ekodi.kr mail.books.ekodi.kr mail.trade.ekodi.kr; do
             code=000
             for attempt in $(seq 1 20); do code=$(curl -sS -o /tmp/site.html -w '%{http_code}' --connect-timeout 5 --max-time 10 "https://$domain/" || true); case "$code" in 2*|3*) break ;; esac; sleep 3; done
             echo "$domain edge_http=$code"; case "$code" in 2*|3*) ;; *) failed=1 ;; esac

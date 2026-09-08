@@ -2,6 +2,7 @@
 # Tax release trigger: serialize Shared Site deployment for NTS business registry
 # Mall canonical release: publish ekodi.kr/ekodibiz/mall disclosures and centered footer
 # CGMA public domain remains externally DNS-managed until the approved cutover stage; ekodi.kr/cgma stays canonical inside EKODI.
+# Domain ownership reconcile 2026-09-08: re-apply declared custom domains after mail.ekodi.kr drifted to an external redirect.
 name = "shy-thunder-39a4"
 main = "platform-router-entry-worker.js"
 compatibility_date = "2026-08-12"

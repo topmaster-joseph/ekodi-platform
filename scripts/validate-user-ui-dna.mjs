@@ -78,11 +78,14 @@ if (!Array.isArray(shell?.scope) || !['public', 'workspace'].every(surface => sh
 if (shell?.principles?.singleSource !== true || shell?.principles?.noDuplicatedHeaderOrFooter !== true) {
   errors.push('User UI Shell must enforce single-source chrome without duplicate headers or footers.');
 }
-if (shell?.principles?.centeredChrome !== true || shell?.principles?.selectiveRoundedInteraction !== true || shell?.principles?.serviceGeometryPreserved !== true) {
-  errors.push('User UI Shell must center shared chrome and use selective service-aware geometry.');
+if (shell?.principles?.centeredChrome !== true || shell?.principles?.selectiveRoundedInteraction !== true || shell?.principles?.serviceGeometryPreserved !== true || shell?.principles?.mainAlignedChrome !== true) {
+  errors.push('User UI Shell must center shared chrome, align it to the adopted main canvas and use selective service-aware geometry.');
 }
-if (shell?.header?.alignment !== 'centered-canvas' || shell?.footer?.dedupe !== 'exactly-one-shared-footer') {
-  errors.push('Shared header/footer alignment and footer cardinality contract is incomplete.');
+if (shell?.header?.alignment !== 'centered-canvas' || shell?.footer?.dedupe !== 'exactly-one-shared-footer' || shell?.header?.contentWidth !== 'match-adopted-main-canvas' || shell?.footer?.contentWidth !== 'match-adopted-main-canvas') {
+  errors.push('Shared header/footer alignment, main-width matching and footer cardinality contract is incomplete.');
+}
+if (shell?.contentFrame?.strategy !== 'measure-adopted-main-with-canonical-fallback' || shell?.contentFrame?.alignment !== 'header-main-footer-content-edges-match' || Number(shell?.contentFrame?.canonicalMaxPx) !== 1240) {
+  errors.push('Shared content-frame contract must measure the adopted main canvas with the canonical 1240px fallback.');
 }
 if (shell?.geometry?.strategy !== 'selective-by-semantic-role-and-service-profile' || !shell?.geometry?.tokens?.includes('--ekodi-control-radius')) {
   errors.push('Shared geometry policy must expose semantic, service-aware radius tokens.');
@@ -180,7 +183,7 @@ for(const marker of ['placeButton','data-ekodi-floating','[data-ekodi-language-c
 for (const marker of ['fallbackHeader(serviceId)','data-ekodi-user-header-fallback','renderEkodiUserFooter','manifestServiceForHost','shellServiceForRootPath','data-ekodi-user-ui-style','data-ekodi-ready-locales','x-ekodi-ready-locales']) {
   if (!injectorSource.includes(marker)) errors.push(`Shared user UI injector lost required marker: ${marker}`);
 }
-for (const marker of ['[data-ekodi-legal-footer]:not(.ekodi-user-ui-footer)','.ekodi-user-ui-footer','.ekodi-user-ui-header','.ekodi-user-ui-footer__copy','--ekodi-user-footer-background','text-align: center','.ekodi-user-language','justify-content: center','--ekodi-user-header-inline-gutter','Selective geometry principle','consumer-commerce','body > [data-ekodi-user-footer] ~ [data-ekodi-user-footer]']) {
+for (const marker of ['[data-ekodi-legal-footer]:not(.ekodi-user-ui-footer)','.ekodi-user-ui-footer','.ekodi-user-ui-header','.ekodi-user-ui-footer__copy','--ekodi-user-footer-background','text-align: center','.ekodi-user-language','justify-content: center','--ekodi-user-header-inline-gutter','--ekodi-user-content-inline-size','--ekodi-user-content-left','Main-aligned Chrome Contract','Selective geometry principle','consumer-commerce','body > [data-ekodi-user-footer] ~ [data-ekodi-user-footer]']) {
   if (!userUiStyle.includes(marker)) errors.push(`Shared CSP-safe user UI stylesheet lost required marker: ${marker}`);
 }
 for (const marker of ['Natural-language word integrity','word-break: keep-all','overflow-wrap: break-word','hyphens: none','[data-ekodi-break-anywhere]']) {

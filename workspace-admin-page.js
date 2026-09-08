@@ -132,3 +132,4 @@ export function workspaceAdminPage(){return new Response(`<!doctype html><html l
 export function workspaceAdminCss(){return new Response(CSS,{headers:{'content-type':'text/css; charset=utf-8','cache-control':'public, max-age=300','x-content-type-options':'nosniff'}})}
 export function workspaceAdminScript(){const payload=tenantAdminPolicySnapshot();return new Response(`const __name=(target)=>target;\n(${clientMain.toString()})(${JSON.stringify(payload)});`,{headers:{'content-type':'text/javascript; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}})}
 export function isWorkspaceAdminPath(pathname){return isWorkspaceAdminPathShape(pathname)}
+

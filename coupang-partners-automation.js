@@ -20,6 +20,7 @@ const TARGET_PRODUCTS = 24;
 const REFRESH_MS = 4 * 60 * 60 * 1000;
 const LOCK_MS = 10 * 60 * 1000;
 const ON_DEMAND_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+const affiliateSchemaReadyBindings = new WeakSet();
 
 const BASE_SEEDS = Object.freeze([
   { keyword: '생필품', category: '생활' },
@@ -290,6 +291,7 @@ async function issuePartnerLinks(env, products) {
 }
 
 async function ensureSchema(db) {
+  if (affiliateSchemaReadyBindings.has(db)) return;
   await db.batch([
     db.prepare(`CREATE TABLE IF NOT EXISTS affiliate_storefront_products (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -358,9 +360,10 @@ async function ensureSchema(db) {
     )`),
     db.prepare('CREATE INDEX IF NOT EXISTS idx_affiliate_partner_subid_discovery_account ON affiliate_partner_subid_discovery(account_id, updated_at DESC)'),
     db.prepare(`CREATE TABLE IF NOT EXISTS affiliate_partner_report_control (
-      account_id TEXT PRIMARY KEY, force_requested_at TEXT, force_reason TEXT NOT NULL DEFAULT '', force_consumed_at TEXT, updated_at TEXT NOT NULL
+      account_id TEXT PRIMARY KEY, force_requested_at TEXT, force_reason TEXT NOT NULL DEFAULT '', force_consumed_at TEXT, catalog_force_requested_at TEXT, catalog_force_reason TEXT NOT NULL DEFAULT '', catalog_force_consumed_at TEXT, updated_at TEXT NOT NULL
     )`),
   ]);
+  affiliateSchemaReadyBindings.add(db);
 }
 
 async function acquireLock(db, lockKey = STOREFRONT) {
@@ -399,6 +402,26 @@ export async function syncScheduledCoupangPartnerReports(env = {}, { reason = 's
   return syncCoupangPartnerReports(env, {
     force: Boolean(request),
     reason: request ? `schedule_force:${cleanText(request.force_reason, 40) || 'operator'}` : reason,
+    schemaReady: true,
+  });
+}
+
+async function claimAffiliateCatalogForceRequest(db) {
+  const row = await db.prepare(`SELECT account_id,catalog_force_requested_at,catalog_force_reason FROM affiliate_partner_report_control WHERE account_id=? AND catalog_force_requested_at IS NOT NULL AND (catalog_force_consumed_at IS NULL OR catalog_force_consumed_at < catalog_force_requested_at)`).bind(ACCOUNT_ID).first();
+  if (!row?.catalog_force_requested_at) return null;
+  const consumedAt=isoNow();
+  const result=await db.prepare(`UPDATE affiliate_partner_report_control SET catalog_force_consumed_at=?,updated_at=? WHERE account_id=? AND catalog_force_requested_at=? AND (catalog_force_consumed_at IS NULL OR catalog_force_consumed_at < catalog_force_requested_at)`).bind(consumedAt,consumedAt,ACCOUNT_ID,row.catalog_force_requested_at).run();
+  return Number(result?.meta?.changes ?? result?.changes ?? 0)>0 ? row : null;
+}
+
+export async function syncScheduledAffiliateAutomation(env = {}, { reason='schedule' } = {}) {
+  if (!env.DB?.prepare) return runAffiliateAutomation(env,{reason});
+  await ensureSchema(env.DB);
+  const request=await claimAffiliateCatalogForceRequest(env.DB);
+  return runAffiliateAutomation(env,{
+    force:Boolean(request),
+    reason:request ? `schedule_force:${cleanText(request.catalog_force_reason,40)||'operator'}` : reason,
+    schemaReady:true,
   });
 }
 
@@ -612,38 +635,38 @@ export async function getCoupangPartnerReportingStatus(env = {}) {
   status.error = cleanText(run.error_text,300);
   return status;
 }
-export async function syncCoupangPartnerReports(env = {}, { force = false, reason = 'schedule', lookbackDays = REPORT_LOOKBACK_DAYS } = {}) {
-  if (!env.DB?.prepare) return { ok:false, status:'database_required' };
-  await ensureSchema(env.DB);
-  if (!configured(env)) return { ok:false, status:'setup_required' };
+export async function syncCoupangPartnerReports(env = {}, { force = false, reason = 'schedule', lookbackDays = REPORT_LOOKBACK_DAYS, schemaReady = false } = {}) {
+  if (!env.DB?.prepare) return { ok:false, status:'database_required', ran:false };
+  if (!schemaReady) await ensureSchema(env.DB);
+  if (!configured(env)) return { ok:false, status:'setup_required', ran:false };
   const now = new Date();
   const hasSubId = reportingConfigured(env);
   const window = coupangReportWindow(now, hasSubId ? lookbackDays : REPORT_DISCOVERY_LOOKBACK_DAYS);
   const previous = await lastReportRun(env.DB);
   if (!hasSubId) {
-    if (!force && !coupangReportingDue(previous, now)) return { ok:true, status: previous?.sync_date === window.syncDate ? 'sub_id_required' : 'not_due', syncDate:window.syncDate };
+    if (!force && !coupangReportingDue(previous, now)) return { ok:true, status: previous?.sync_date === window.syncDate ? 'sub_id_required' : 'not_due', syncDate:window.syncDate, ran:false };
     const lockKey = `${STOREFRONT}:reports`;
     const owner = await acquireLock(env.DB, lockKey);
-    if (!owner) return { ok:true, status:'already_running', syncDate:window.syncDate };
+    if (!owner) return { ok:true, status:'already_running', syncDate:window.syncDate, ran:false };
     try {
       const startedAt = isoNow();
       await env.DB.prepare(`INSERT INTO affiliate_partner_report_runs(account_id,sync_date,status,reason,start_date,end_date,started_at,finished_at) VALUES(?,?,'discovering',?,?,?,?,NULL) ON CONFLICT(account_id,sync_date) DO UPDATE SET status='discovering',reason=excluded.reason,start_date=excluded.start_date,end_date=excluded.end_date,error_text='',started_at=excluded.started_at,finished_at=NULL`).bind(ACCOUNT_ID,window.syncDate,cleanText(reason,80),window.startIso,window.endIso,startedAt).run();
       const discovery = await discoverCoupangPartnerSubIds(env,window);
       const finishedAt = isoNow();
       await env.DB.prepare(`UPDATE affiliate_partner_report_runs SET status='sub_id_required',orders_rows=?,cancels_rows=?,commission_rows=?,matched_product_rows=0,unmatched_product_rows=0,error_text='',finished_at=? WHERE account_id=? AND sync_date=?`).bind(discovery.ordersRows,discovery.cancelsRows,discovery.commissionRows,finishedAt,ACCOUNT_ID,window.syncDate).run();
-      return { ok:true,status:'sub_id_required',syncDate:window.syncDate,startDate:window.startIso,endDate:window.endIso,discoveryCandidates:discovery.candidates,clicksRows:discovery.clicksRows,ordersRows:discovery.ordersRows,cancelsRows:discovery.cancelsRows,commissionRows:discovery.commissionRows };
+      return { ok:true,status:'sub_id_required',syncDate:window.syncDate,startDate:window.startIso,endDate:window.endIso,discoveryCandidates:discovery.candidates,clicksRows:discovery.clicksRows,ordersRows:discovery.ordersRows,cancelsRows:discovery.cancelsRows,commissionRows:discovery.commissionRows,ran:true };
     } catch (error) {
       const message = cleanText(error?.message || error,500) || 'COUPANG_REPORT_DISCOVERY_FAILED';
       await env.DB.prepare(`UPDATE affiliate_partner_report_runs SET status='failed',error_text=?,finished_at=? WHERE account_id=? AND sync_date=?`).bind(message,isoNow(),ACCOUNT_ID,window.syncDate).run().catch(()=>{});
-      return { ok:false,status:'failed',syncDate:window.syncDate,error:message };
+      return { ok:false,status:'failed',syncDate:window.syncDate,error:message,ran:true };
     } finally { await releaseLock(env.DB,owner,lockKey); }
   }
   if (!force && previous?.status !== 'sub_id_required' && !coupangReportingDue(previous, now)) {
-    return { ok:true, status: previous?.sync_date === window.syncDate ? (previous?.status === 'failed' ? 'retry_cooldown' : 'already_done') : 'not_due', syncDate:window.syncDate };
+    return { ok:true, status: previous?.sync_date === window.syncDate ? (previous?.status === 'failed' ? 'retry_cooldown' : 'already_done') : 'not_due', syncDate:window.syncDate, ran:false };
   }
   const lockKey = `${STOREFRONT}:reports`;
   const owner = await acquireLock(env.DB, lockKey);
-  if (!owner) return { ok:true, status:'already_running', syncDate:window.syncDate };
+  if (!owner) return { ok:true, status:'already_running', syncDate:window.syncDate, ran:false };
   const startedAt = isoNow();
   try {
     await env.DB.prepare(`INSERT INTO affiliate_partner_report_runs(account_id,sync_date,status,reason,start_date,end_date,started_at,finished_at)
@@ -658,12 +681,12 @@ export async function syncCoupangPartnerReports(env = {}, { force = false, reaso
     const finishedAt = isoNow();
     await env.DB.prepare(`UPDATE affiliate_partner_report_runs SET status='success',orders_rows=?,cancels_rows=?,commission_rows=?,matched_product_rows=?,unmatched_product_rows=?,error_text='',finished_at=? WHERE account_id=? AND sync_date=?`)
       .bind(orders.length,cancels.length,commission.length,matched,unmatched,finishedAt,ACCOUNT_ID,window.syncDate).run();
-    return { ok:true,status:'success',syncDate:window.syncDate,startDate:window.startIso,endDate:window.endIso,ordersRows:orders.length,cancelsRows:cancels.length,commissionRows:commission.length,matchedProductRows:matched,unmatchedProductRows:unmatched,productPerformanceRows:persisted.performance.rows.length,dailyMetricRows:persisted.daily.length };
+    return { ok:true,status:'success',syncDate:window.syncDate,startDate:window.startIso,endDate:window.endIso,ordersRows:orders.length,cancelsRows:cancels.length,commissionRows:commission.length,matchedProductRows:matched,unmatchedProductRows:unmatched,productPerformanceRows:persisted.performance.rows.length,dailyMetricRows:persisted.daily.length,ran:true };
   } catch (error) {
     const message = cleanText(error?.message || error,500) || 'COUPANG_REPORT_SYNC_FAILED';
     await env.DB.prepare(`UPDATE affiliate_partner_report_runs SET status='failed',error_text=?,finished_at=? WHERE account_id=? AND sync_date=?`).bind(message,isoNow(),ACCOUNT_ID,window.syncDate).run().catch(()=>{});
     console.error('EKODI Mall Coupang report sync failed',message);
-    return { ok:false,status:'failed',syncDate:window.syncDate,error:message };
+    return { ok:false,status:'failed',syncDate:window.syncDate,error:message,ran:true };
   } finally {
     await releaseLock(env.DB,owner,lockKey);
   }

@@ -1,5 +1,5 @@
 {
-  "version": 8,
+  "version": 9,
   "name": "EKODI User UI Shell",
   "parentPolicy": "config/user-ui-dna.json",
   "purpose": "Keep one EKODI user experience while allowing each service to preserve its own visual family.",
@@ -20,7 +20,8 @@
     "centeredChrome": true,
     "selectiveRoundedInteraction": true,
     "serviceGeometryPreserved": true,
-    "unavailableLanguageReturnsToKorean": true
+    "unavailableLanguageReturnsToKorean": true,
+    "mainAlignedChrome": true
   },
   "header": {
     "owner": "shared-shell",
@@ -32,7 +33,8 @@
     "recognizedExistingHeaders": ["header", ".site-header", ".topbar", ".app-header", ".main-header", "[data-ekodi-fixed-header]"],
     "forbidden": ["second global header", "service-specific copy of shared header runtime", "admin navigation mixed into user header"],
     "alignment": "centered-canvas",
-    "geometry": "service-token-driven"
+    "geometry": "service-token-driven",
+    "contentWidth": "match-adopted-main-canvas"
   },
   "footer": {
     "owner": "shared-shell",
@@ -44,7 +46,8 @@
     "serviceExtension": "append-only",
     "separatePolicyPrecedence": true,
     "dedupe": "exactly-one-shared-footer",
-    "languageChoice": "same shared selector and locale state as header"
+    "languageChoice": "same shared selector and locale state as header",
+    "contentWidth": "match-adopted-main-canvas"
   },
   "language": {
     "owner": "shared-shell",
@@ -94,5 +97,15 @@
     "source": "config/user-ui-experience-profiles.js",
     "strategy": "service-opt-in",
     "fallback": "service-native"
+  },
+  "contentFrame": {
+    "owner": "shared-shell",
+    "strategy": "measure-adopted-main-with-canonical-fallback",
+    "canonicalMaxPx": 1240,
+    "readingMaxPx": 760,
+    "alignment": "header-main-footer-content-edges-match",
+    "backgrounds": "header-and-footer-shells-remain-full-bleed",
+    "responsive": "follow-adopted-main-resize",
+    "subserviceInheritance": true
   }
 }
