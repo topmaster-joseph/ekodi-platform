@@ -7,6 +7,44 @@ const maxAttemptsPerMenu = 2;
 const menuTimeoutMs = 30_000;
 const artifactsDir = path.resolve('artifacts/admin-authenticated-e2e');
 const menuIds = adminMenuOrder();
+const productionRegistryUrl = 'https://ekodi.kr/admin-menu-registry.js';
+const productionConvergenceAttempts = 36;
+const productionConvergenceDelayMs = 5_000;
+const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+function missingProductionMenus(source) {
+  return menuIds.filter(id => !source.includes(`id: '${id}'`));
+}
+
+async function waitForProductionMenuRegistry() {
+  let lastMissing = [...menuIds];
+  for (let attempt = 1; attempt <= productionConvergenceAttempts; attempt += 1) {
+    try {
+      const probe = new URL(productionRegistryUrl);
+      probe.searchParams.set('e2e_sha', process.env.GITHUB_SHA || 'manual');
+      probe.searchParams.set('probe', String(Date.now()));
+      const response = await fetch(probe, {
+        headers: { accept: 'text/javascript', 'cache-control': 'no-cache' },
+        cache: 'no-store',
+        signal: AbortSignal.timeout(10_000),
+      });
+      if (response.ok) {
+        lastMissing = missingProductionMenus(await response.text());
+        if (!lastMissing.length) {
+          console.log(`[E2E] production Admin registry converged: ${menuIds.length}/${menuIds.length} menus`);
+          return;
+        }
+      }
+    } catch (error) {
+      console.warn(`[E2E] production Admin registry probe ${attempt} failed: ${error?.message || error}`);
+    }
+    console.warn(`[E2E] production Admin registry not converged (${attempt}/${productionConvergenceAttempts}); missing=${lastMissing.join(',') || 'probe-error'}`);
+    if (attempt < productionConvergenceAttempts) await sleep(productionConvergenceDelayMs);
+  }
+  throw new Error(`Production Admin registry did not converge to ${menuIds.length} menus; missing: ${lastMissing.join(',') || 'unknown'}`);
+}
+
+await waitForProductionMenuRegistry();
 await fs.rm(artifactsDir, { recursive: true, force: true });
 await fs.mkdir(artifactsDir, { recursive: true });
 
