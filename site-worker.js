@@ -122,6 +122,8 @@ const ADMIN_ASSETS = new Set([
   '/communication-admin.js',
   '/client-access.css',
   '/client-access.js',
+  '/community-admin.css',
+  '/community-admin.js',
   '/marketing-funnel-admin.css',
   '/marketing-funnel-admin.js',
   '/cgma-member-admin.css',
