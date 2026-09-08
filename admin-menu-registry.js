@@ -38,8 +38,8 @@ export const ADMIN_MENU_REGISTRY = Object.freeze([
   { id: 'ai-module-spec', group: 'system', icon: 'API', labels: { ko: 'AI·API 연동규격', en: 'AI & API Contracts' } },
   { id: 'storage', group: 'system', icon: '▣', labels: { ko: '저장소', en: 'Storage' } },
   { id: 'capabilities', group: 'system', icon: '⚡', labels: { ko: 'Capability Center', en: 'Capability Center' } },
-  { id: 'aiops', group: 'system', icon: 'AI', labels: { ko: 'AI·Agent', en: 'AI & Agents' } },
-  { id: 'openai', group: 'system', icon: 'O', labels: { ko: 'OpenAI', en: 'OpenAI' }, providerWorkspace: true },
+  { id: 'aiops', group: 'system', icon: 'AI', labels: { ko: 'AI 운영센터', en: 'AI & Agents' }, governance: { track: 'agent', changeClass: 'yellow', authorityContext: 'Person + Workspace + Role + Capability', controlPlane: true, globalPolicyMutation: 'super_admin' } },
+  { id: 'openai', group: 'system', icon: 'O', labels: { ko: 'OpenAI 작업공간', en: 'OpenAI' }, providerWorkspace: true },
   { id: 'devices', group: 'system', icon: 'D', labels: { ko: '실행 인프라', en: 'Execution Infrastructure' }, governance: { track: 'agent', changeClass: 'yellow', authorityContext: 'Person + Workspace + Role + Capability', controlPlane: true, globalPolicyMutation: 'super_admin' } },
   { id: 'health', group: 'system', icon: '◉', labels: { ko: '상태·관측', en: 'Health & Observability' } },
   { id: 'api-cost', group: 'system', icon: '₩', labels: { ko: 'API·비용', en: 'API & Cost' } },
@@ -63,5 +63,6 @@ export function adminMenuOrder() { return ADMIN_MENU_REGISTRY.filter(item => !it
 
 if (typeof document !== 'undefined') {
   import('./admin-design-engine.js').catch(error => console.warn('[EKODI Admin] design engine bootstrap failed', error));
+  import('./ai-operations-center-admin.js').catch(error => console.warn('[EKODI Admin] AI operations center bootstrap failed', error));
   import('./devotional-admin.js').catch(error => console.warn('[EKODI Admin] devotional bootstrap failed', error));
 }
