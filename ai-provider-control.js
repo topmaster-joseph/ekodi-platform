@@ -5,7 +5,7 @@ const PREFIX='/api/ai-modules/v1/providers';
 const ADMIN_BASE=`${PREFIX}/admin`;
 const GATEWAY=`${PREFIX}/generate`;
 const PROVIDERS=new Set(['openai','gemini','anthropic']);
-const CAPABILITIES=new Set(['default','documents','admin','marketing']);
+const CAPABILITIES=new Set(['default','documents','admin','marketing','translation']);
 const DEFAULTS=Object.freeze({
   openai:{name:'OpenAI',model:'gpt-5.6-terra',binding:'OPENAI_API_KEY',costClass:'paid-opt-in'},
   gemini:{name:'Google Gemini',model:'gemini-3.7-flash',binding:'GEMINI_API_KEY',costClass:'free-preferred'},
@@ -44,6 +44,32 @@ async function recordCall(env,{capability,provider,model,status,responseMs,input
 async function recordMeter(env,result,capability){if(!env.DB)return;await recordProviderUsage(env,{provider:result.provider,model:result.model,surface:`provider-gateway:${capability}`,funding:'ekodi-sponsored',requestId:crypto.randomUUID(),usage:{inputTokens:result.inputUnits,cachedInputTokens:result.cachedUnits||0,outputTokens:result.outputUnits,totalTokens:result.inputUnits+result.outputUnits}}).catch(()=>{})}
 async function verifySupabaseUser(request,env){const auth=clean(request.headers.get('authorization'),8192);if(!auth)return null;const base=clean(env.MY_SUPABASE_URL,400).replace(/\/$/,'');const key=clean(env.MY_SUPABASE_PUBLISHABLE_KEY,1000);if(!base||!key)return null;const response=await fetch(`${base}/auth/v1/user`,{headers:{authorization:auth,apikey:key},signal:AbortSignal.timeout(10000)});if(!response.ok)return null;const user=await response.json().catch(()=>null);return user?.id?user:null}
 async function budgetAllowed(env){if(!env.DB?.prepare)return clean(env.ENVIRONMENT,40).toLowerCase()!=='production';const allowance=await getSponsoredAiAllowance(env);return allowance.allowed!==false}
+export async function invokeAiProviderCapability(env,{capability='default',system='',input='',maxOutputTokens=4096}={}){
+  const cap=CAPABILITIES.has(clean(capability,40))?clean(capability,40):'default';
+  const safeInput=clean(input,120000),safeSystem=clean(system,12000);
+  if(!safeInput)throw new Error('input_required');
+  if(!await budgetAllowed(env))throw new Error('budget_limit_reached');
+  const selected=await route(env,cap);
+  const order=[selected.primaryProvider,...selected.fallbacks].filter((id,index,array)=>PROVIDERS.has(id)&&array.indexOf(id)===index);
+  const attempted=[];
+  for(const id of order){
+    const row=await providerRow(env,id);
+    if(row&&Number(row.enabled)!==1)continue;
+    const binding=row?.secret_binding||DEFAULTS[id]?.binding;
+    if(!configured(env,binding))continue;
+    const model=selected.modelOverride||row?.default_model||DEFAULTS[id]?.model||'';
+    const started=Date.now();attempted.push(id);
+    try{
+      const result=await invokeProvider(env,id,model,safeSystem,safeInput,Math.max(64,Math.min(8192,Number(maxOutputTokens)||4096)));
+      await recordCall(env,{capability:cap,provider:id,model:result.model,status:'completed',responseMs:Date.now()-started,inputUnits:result.inputUnits,outputUnits:result.outputUnits});
+      await recordMeter(env,result,cap);
+      return Object.freeze({ok:true,capability:cap,text:result.text,provider:result.provider,model:result.model,usage:Object.freeze({inputUnits:result.inputUnits,outputUnits:result.outputUnits})});
+    }catch(error){
+      await recordCall(env,{capability:cap,provider:id,model,status:'failed',responseMs:Date.now()-started,errorCode:clean(error?.message||error,160)});
+    }
+  }
+  const error=new Error('provider_unavailable');error.attempted=attempted;throw error;
+}
 async function runGateway(request,env){if(request.method==='OPTIONS'){const headers=corsHeaders(request,env);if(!headers.get('access-control-allow-origin'))return json(request,env,{error:'origin_forbidden'},403);return new Response(null,{status:204,headers})}if(request.method!=='POST')return json(request,env,{error:'method_not_allowed'},405);const user=await verifySupabaseUser(request,env);if(!user)return json(request,env,{error:'authentication_required'},401);if(!await budgetAllowed(env))return json(request,env,{error:'budget_limit_reached'},429);const body=await request.json().catch(()=>({}));const capability=CAPABILITIES.has(clean(body?.capability,40))?clean(body.capability,40):'default';const system=clean(body?.system,12000),input=clean(body?.input,120000),maxOutputTokens=Math.max(64,Math.min(8192,Number(body?.maxOutputTokens)||4096));if(!input)return json(request,env,{error:'input_required'},400);const selected=await route(env,capability);const order=[selected.primaryProvider,...selected.fallbacks].filter((id,index,array)=>PROVIDERS.has(id)&&array.indexOf(id)===index);const attempted=[];for(const id of order){const row=await providerRow(env,id);if(row&&Number(row.enabled)!==1)continue;const binding=row?.secret_binding||DEFAULTS[id]?.binding;if(!configured(env,binding))continue;const model=selected.modelOverride||row?.default_model||DEFAULTS[id]?.model||'';const started=Date.now();attempted.push(id);try{const result=await invokeProvider(env,id,model,system,input,maxOutputTokens);await recordCall(env,{capability,provider:id,model:result.model,status:'completed',responseMs:Date.now()-started,inputUnits:result.inputUnits,outputUnits:result.outputUnits});await recordMeter(env,result,capability);return json(request,env,{ok:true,contract:'ekodi.ai-provider.v1',text:result.text,provider:{id:result.provider,model:result.model},usage:{inputUnits:result.inputUnits,outputUnits:result.outputUnits}},200)}catch(error){await recordCall(env,{capability,provider:id,model,status:'failed',responseMs:Date.now()-started,errorCode:clean(error?.message||error,160)})}}return json(request,env,{error:'provider_unavailable',attempted},503)}
 async function syncProviderRuntime(env,id,{enabled,priority,model}){const bindings=RUNTIME_BINDINGS[id];if(!bindings)throw new Error('unknown_provider');const pairs=[['AI_MULTI_PROVIDER_ENABLED','true'],[bindings.enabled,enabled?'true':'false'],[bindings.priority,String(priority)],[bindings.model,model]];for(const[name,value]of pairs)await putRuntimeSecret(env,name,value)}
 async function updateProvider(request,env,session,id){if(request.headers.get('x-ekodi-confirm-impact')!=='ai-provider-runtime-update')return json(request,env,{error:'confirmation_required',code:'AI_PROVIDER_CONFIRMATION_REQUIRED'},428);if(!PROVIDERS.has(id))return json(request,env,{error:'unknown_provider'},404);const body=await request.json().catch(()=>({}));const enabled=body.enabled===true?1:body.enabled===false?0:null;if(enabled===null)return json(request,env,{error:'enabled_required'},400);const priority=Math.max(1,Math.min(999,Number(body.priority)||100)),current=await providerRow(env,id),model=clean(body.defaultModel,120)||current?.default_model||DEFAULTS[id].model;try{await syncProviderRuntime(env,id,{enabled:Boolean(enabled),priority,model})}catch{return json(request,env,{error:'provider_runtime_sync_failed'},503)}await env.DB.prepare('UPDATE ai_provider_registry SET enabled=?,priority=?,default_model=?,updated_at=?,updated_by=? WHERE provider_id=?').bind(enabled,priority,model,new Date().toISOString(),clean(session.email,240),id).run();await audit(env,session,'provider.update',id,JSON.stringify({enabled:Boolean(enabled),priority,model,runtimeSynced:true}));return json(request,env,await providerSnapshot(env))}

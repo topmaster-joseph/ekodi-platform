@@ -41,7 +41,7 @@ test('Campus shortcuts cannot reopen hidden technical panels', () => {
 test('human-facing Admin menu has one canonical order inside five domains plus Operations Center', () => {
   assert.deepEqual(adminMenuGroups(), ['structure','core','common','vertical','tenants','operations-center']);
   assert.deepEqual(adminMenuOrder(), [
-    'campus','public-site-controls','architecture','security','admins','ai-module-spec','storage',
+    'campus','public-site-controls','language-status','architecture','security','admins','ai-module-spec','storage',
     'common-services','communication','workspace','finance','life-ai','personal-finance','community','books','social','devotional','marketing-ai','ai-membership','tax','supply-network','insurance',
     'work','organization','clients','capabilities','aiops','openai','devices','health','api-cost',
   ]);

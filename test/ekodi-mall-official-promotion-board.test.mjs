@@ -59,16 +59,22 @@ test('implementation uses official APIs and keeps paid advertising outside the s
   assert.match(migration,/affiliate_promotion_weekly_products/);
   assert.doesNotMatch(worker,/ads_management|dailyBudget|spendKrw/);
 });
-test('production growth deploy follows the official weekly-board contract', async () => {
+test('production growth deploy combines the official weekly board with the V8 profit learning loop', async () => {
   const workflow=await read('.github/workflows/deploy-marketing-growth.yml');
   assert.match(workflow,/mall-official-promotion-board\.js/);
+  assert.match(workflow,/mall-growth-dashboard\.js/);
+  assert.match(workflow,/0072_ekodi_mall_growth_learning_loop\.sql/);
   assert.match(workflow,/0073_affiliate_official_signal_promotion\.sql/);
+  assert.match(workflow,/0073_ekodibiz_marketing_subject_canonical\.sql/);
   assert.match(workflow,/ekodi-mall-official-promotion-board\.test\.mjs/);
-  assert.match(workflow,/strategy:'official_weekly_board'/);
+  assert.match(workflow,/official_board_profit_learning_loop/);
+  assert.match(workflow,/ensureWeeklyPromotionBoard/);
+  assert.match(workflow,/affiliate_growth_policy_snapshots/);
   assert.match(workflow,/affiliate_official_market_signals/);
   assert.match(workflow,/affiliate_promotion_weekly_boards/);
   assert.match(workflow,/affiliate_promotion_weekly_products/);
-  assert.match(workflow,/\"strategy\":\"official_weekly_board\"/);
+  assert.match(workflow,/subject_key='ekodi-biz'/);
+  assert.match(workflow,/\"strategy\":\"official_board_profit_learning_loop\"/);
   assert.match(workflow,/\"weeklyBoard\"/);
 });
 test('weekly board prepares independently from the external publishing master gate', async () => {

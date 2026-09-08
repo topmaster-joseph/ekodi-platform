@@ -1,9 +1,12 @@
 {
-  "version": 9,
+  "version": 10,
   "name": "EKODI User UI Shell",
   "parentPolicy": "config/user-ui-dna.json",
   "purpose": "Keep one EKODI user experience while allowing each service to preserve its own visual family.",
-  "scope": ["public", "workspace"],
+  "scope": [
+    "public",
+    "workspace"
+  ],
   "adminExcluded": true,
   "principles": {
     "singleSource": true,
@@ -21,17 +24,43 @@
     "selectiveRoundedInteraction": true,
     "serviceGeometryPreserved": true,
     "unavailableLanguageReturnsToKorean": true,
-    "mainAlignedChrome": true
+    "mainAlignedChrome": true,
+    "unreadyLanguageHidden": true,
+    "automaticTranslationLifecycle": true
   },
   "header": {
     "owner": "shared-shell",
     "strategy": "adopt-existing-first",
     "fallback": "shared-shell-header-when-missing",
-    "requiredMeaning": ["EKODI identity", "current service context", "account or My EKODI path", "language choice"],
+    "requiredMeaning": [
+      "EKODI identity",
+      "current service context",
+      "account or My EKODI path",
+      "language choice"
+    ],
     "localNavigation": "service-owned",
-    "behavior": ["single banner", "safe-area aware", "keyboard accessible", "responsive", "content offset when fixed", "compact language control", "brand returns to current service home top"],
-    "recognizedExistingHeaders": ["header", ".site-header", ".topbar", ".app-header", ".main-header", "[data-ekodi-fixed-header]"],
-    "forbidden": ["second global header", "service-specific copy of shared header runtime", "admin navigation mixed into user header"],
+    "behavior": [
+      "single banner",
+      "safe-area aware",
+      "keyboard accessible",
+      "responsive",
+      "content offset when fixed",
+      "compact language control",
+      "brand returns to current service home top"
+    ],
+    "recognizedExistingHeaders": [
+      "header",
+      ".site-header",
+      ".topbar",
+      ".app-header",
+      ".main-header",
+      "[data-ekodi-fixed-header]"
+    ],
+    "forbidden": [
+      "second global header",
+      "service-specific copy of shared header runtime",
+      "admin navigation mixed into user header"
+    ],
     "alignment": "centered-canvas",
     "geometry": "service-token-driven",
     "contentWidth": "match-adopted-main-canvas"
@@ -53,23 +82,52 @@
     "owner": "shared-shell",
     "runtime": "shell/user-language.js",
     "placement": "inside both adopted/fallback user header and shared user footer",
-    "supported": ["ko-KR", "en", "zh-CN", "ja", "ne", "vi"],
+    "supported": [
+      "ko-KR",
+      "en",
+      "zh-CN",
+      "ja",
+      "vi",
+      "ne",
+      "my",
+      "mn",
+      "id"
+    ],
     "default": "ko-KR",
     "persistence": "ekodi_locale cookie scoped to .ekodi.kr with localStorage fallback",
-    "serviceContract": "set html lang and data-ekodi-locale, translate shared chrome, dispatch ekodi:locale-change for service-owned content; services declare readyLocales before non-Korean content is considered available",
-    "readiness": "service manifest readyLocales; ko-KR is mandatory fallback",
-    "unsupportedBehavior": "show preparing notice, clear unsupported lang route, switch current page to ko-KR",
+    "serviceContract": "central language registry + runtime published locales; shared shell dispatches ekodi:locale-change and applies generated public catalogs only when present",
+    "readiness": "D1 language_site_state runtime overlay with central registry baseline; ko-KR is mandatory source/fallback",
+    "unsupportedBehavior": "unready languages are hidden from selectors; stale/direct links safely return to ko-KR",
     "adminExcluded": true,
-    "browserTranslation": "managed native i18n surfaces opt out of Google automatic translation UI"
+    "browserTranslation": "managed native i18n surfaces opt out of Google automatic translation UI",
+    "registry": "config/language-registry.js",
+    "visibility": "published-only",
+    "automation": "public source change detection -> queued/stale -> translating -> validating -> release-ready -> published",
+    "adminView": "read-only per-site language readiness status; no manual publish toggles"
   },
   "mediaMeetingAdapter": {
     "owner": "shared-shell",
     "runtime": "shell/media-meeting-adapter.js",
-    "meetingProviders": ["jitsi"],
-    "mediaProviders": ["youtube"],
-    "stateOrder": ["language", "authentication", "provider state", "fallback"],
+    "meetingProviders": [
+      "jitsi"
+    ],
+    "mediaProviders": [
+      "youtube"
+    ],
+    "stateOrder": [
+      "language",
+      "authentication",
+      "provider state",
+      "fallback"
+    ],
     "fallbackRequired": true,
-    "statusResolver": {"provider":"youtube","endpoint":"https://social.ekodi.kr/api/media/youtube/status","strategy":"official-api-when-configured + public-page fallback","pollSeconds":60,"failSafe":"retain localized fallback"}
+    "statusResolver": {
+      "provider": "youtube",
+      "endpoint": "https://social.ekodi.kr/api/media/youtube/status",
+      "strategy": "official-api-when-configured + public-page fallback",
+      "pollSeconds": 60,
+      "failSafe": "retain localized fallback"
+    }
   },
   "ambientAudio": {
     "owner": "shared-shell",
@@ -82,16 +140,41 @@
     "hostRule": "all public/workspace service hosts inherit the manifest service shell",
     "pathRule": "all subordinate paths inherit their parent service shell",
     "rootServiceRule": "ekodi.kr/<service>/... inherits that service when the route is a user surface",
-    "rootPolicyPages": ["/privacy", "/terms"],
-    "excludedRootPrefixes": ["/admin"]
+    "rootPolicyPages": [
+      "/privacy",
+      "/terms"
+    ],
+    "excludedRootPrefixes": [
+      "/admin"
+    ]
   },
   "geometry": {
     "owner": "shared-shell + service-design-inheritance",
     "scope": "public/workspace interactive UI",
     "strategy": "selective-by-semantic-role-and-service-profile",
-    "tokens": ["--ekodi-control-radius", "--ekodi-field-radius", "--ekodi-chip-radius", "--ekodi-panel-radius", "--ekodi-image-radius", "--ekodi-section-radius"],
-    "applyTo": ["actions", "filters and chips", "search and form controls", "dialogs", "choice cards"],
-    "excludedByDefault": ["tables", "ledgers", "editorial rules", "code/data panels", "broadcast frames", "precision operational panels"]
+    "tokens": [
+      "--ekodi-control-radius",
+      "--ekodi-field-radius",
+      "--ekodi-chip-radius",
+      "--ekodi-panel-radius",
+      "--ekodi-image-radius",
+      "--ekodi-section-radius"
+    ],
+    "applyTo": [
+      "actions",
+      "filters and chips",
+      "search and form controls",
+      "dialogs",
+      "choice cards"
+    ],
+    "excludedByDefault": [
+      "tables",
+      "ledgers",
+      "editorial rules",
+      "code/data panels",
+      "broadcast frames",
+      "precision operational panels"
+    ]
   },
   "experienceProfiles": {
     "source": "config/user-ui-experience-profiles.js",

@@ -3,54 +3,38 @@
 if(window.__EKODI_USER_LANGUAGE_BOOTED)return;
 window.__EKODI_USER_LANGUAGE_BOOTED=true;
 
-const VERSION=6;
+const VERSION=7;
 const STYLE_ID='ekodi-user-language-style';
 const STORAGE_KEY='ekodi_user_locale';
 const COOKIE_KEY='ekodi_locale';
 const PARAM_KEY='lang';
 const FALLBACK_LOCALE='ko-KR';
-const SUPPORTED=Object.freeze([
-  {locale:'ko-KR',short:'\uD55C\uAD6D\uC5B4',label:'\uD55C\uAD6D\uC5B4'},
-  {locale:'en',short:'English',label:'English'},
-  {locale:'zh-CN',short:'\u4E2D\u6587',label:'\u4E2D\u6587'},
-  {locale:'ja',short:'\u65E5\u672C\u8A9E',label:'\u65E5\u672C\u8A9E'},
-  {locale:'ne',short:'\u0928\u0947\u092A\u093E\u0932\u0940',label:'\u0928\u0947\u092A\u093E\u0932\u0940'},
-  {locale:'vi',short:'Ti\u1EBFng Vi\u1EC7t',label:'Ti\u1EBFng Vi\u1EC7t'}
-]);
-
-const LOCALES=new Set(SUPPORTED.map(item=>item.locale));
-const COPY=Object.freeze({
-  'ko-KR':{language:'언어',home:'EKODI 홈',account:'사용자 계정',privacy:'개인정보처리방침',terms:'이용약관',contact:'문의',legal:'법적 고지'},
-  en:{language:'Language',home:'EKODI Home',account:'User account',privacy:'Privacy Policy',terms:'Terms of Use',contact:'Contact',legal:'Legal information'},
-  'zh-CN':{language:'语言',home:'EKODI 首页',account:'用户账户',privacy:'隐私政策',terms:'使用条款',contact:'联系',legal:'法律信息'},
-  ja:{language:'言語',home:'EKODI ホーム',account:'ユーザーアカウント',privacy:'プライバシーポリシー',terms:'利用規約',contact:'お問い合わせ',legal:'法的情報'},
-  ne:{language:'\u092D\u093E\u0937\u093E',home:'EKODI \u0917\u0943\u0939',account:'\u092A\u094D\u0930\u092F\u094B\u0917\u0915\u0930\u094D\u0924\u093E \u0916\u093E\u0924\u093E',privacy:'\u0917\u094B\u092A\u0928\u0940\u092F\u0924\u093E \u0928\u0940\u0924\u093F',terms:'\u092A\u094D\u0930\u092F\u094B\u0917\u0915\u093E \u0938\u0930\u094D\u0924\u0939\u0930\u0942',contact:'\u0938\u092E\u094D\u092A\u0930\u094D\u0915',legal:'\u0915\u093E\u0928\u0941\u0928\u0940 \u091C\u093E\u0928\u0915\u093E\u0930\u0940'},
-  my:{language:'ဘာသာစကား',home:'EKODI ပင်မ',account:'အသုံးပြုသူ အကောင့်',privacy:'ကိုယ်ရေးအချက်အလက် မူဝါဒ',terms:'အသုံးပြုမှု စည်းကမ်းများ',contact:'ဆက်သွယ်ရန်',legal:'ဥပဒေဆိုင်ရာ အချက်အလက်'},
-  kac:{language:'Ga',home:'EKODI Home',account:'User account',privacy:'Privacy Policy',terms:'Terms of Use',contact:'Contact',legal:'Legal information'},
-  vi:{language:'Ngôn ngữ',home:'Trang chủ EKODI',account:'Tài khoản người dùng',privacy:'Chính sách quyền riêng tư',terms:'Điều khoản sử dụng',contact:'Liên hệ',legal:'Thông tin pháp lý'},
-  mn:{language:'Хэл',home:'EKODI нүүр',account:'Хэрэглэгчийн бүртгэл',privacy:'Нууцлалын бодлого',terms:'Үйлчилгээний нөхцөл',contact:'Холбоо барих',legal:'Хууль зүйн мэдээлэл'},
-  id:{language:'Bahasa',home:'Beranda EKODI',account:'Akun pengguna',privacy:'Kebijakan Privasi',terms:'Ketentuan Penggunaan',contact:'Kontak',legal:'Informasi hukum'}
+const I18N_API='https://api.ekodi.kr/api/i18n/v1';
+const READINESS_REFRESH_MS=300000;
+const REGISTRY=window.__EKODI_LANGUAGE_REGISTRY__||Object.freeze({
+  version:0,sourceLocale:'ko-KR',languages:[{locale:'ko-KR',aliases:['ko','ko-kr'],short:'한국어',label:'한국어',direction:'ltr',chrome:{language:'언어',home:'EKODI 홈',account:'사용자 계정',privacy:'개인정보처리방침',terms:'이용약관',contact:'문의',legal:'법적 고지'}}]
 });
+const SUPPORTED=Object.freeze((REGISTRY.languages||[]).map(item=>Object.freeze({...item})));
+const COPY=Object.freeze(Object.fromEntries(SUPPORTED.map(item=>[item.locale,Object.freeze(item.chrome||{})])));
+const ALIASES=new Map();
+for(const item of SUPPORTED){
+  ALIASES.set(String(item.locale||'').toLowerCase(),item.locale);
+  for(const alias of item.aliases||[])ALIASES.set(String(alias||'').toLowerCase(),item.locale);
+}
 let activeLocale='ko-KR';
 let observer=null;
 let scheduled=false;
 let noticeTimer=null;
+let readinessTimer=null;
+let catalogRequest=0;
+const translatedTextNodes=new Map();
+const translatedAttributes=new Map();
+let activeCatalog=null;
+let catalogApplying=false;
 
 function normalize(value){
-  const raw=String(value||'').trim();
-  if(LOCALES.has(raw))return raw;
-  const lower=raw.toLowerCase();
-  if(lower==='ko'||lower.startsWith('ko-'))return'ko-KR';
-  if(lower==='en'||lower.startsWith('en-'))return'en';
-  if(lower==='zh'||lower.startsWith('zh-'))return'zh-CN';
-  if(lower==='ja'||lower.startsWith('ja-'))return'ja';
-  if(lower==='ne'||lower.startsWith('ne-')||lower==='nep')return'ne';
-  if(lower==='my'||lower.startsWith('my-')||lower==='bur'||lower==='mya')return'my';
-  if(lower==='kac'||lower.startsWith('kac-')||lower==='jinghpaw'||lower==='kachin')return'kac';
-  if(lower==='vi'||lower.startsWith('vi-'))return'vi';
-  if(lower==='mn'||lower.startsWith('mn-'))return'mn';
-  if(lower==='id'||lower.startsWith('id-')||lower==='in')return'id';
-  return'';
+  const raw=String(value||'').trim().toLowerCase();
+  return ALIASES.get(raw)||'';
 }
 function parseLocales(value){
   const result=[];
@@ -63,6 +47,8 @@ function parseLocales(value){
 }
 function readyLocales(){return parseLocales(document.documentElement.dataset.ekodiReadyLocales||FALLBACK_LOCALE);}
 function isLocaleReady(locale){return readyLocales().includes(normalize(locale)||FALLBACK_LOCALE);}
+function visibleLanguages(){const ready=new Set(readyLocales());return SUPPORTED.filter(item=>ready.has(item.locale));}
+function languageChoiceAvailable(){return visibleLanguages().length>1;}
 function readCookie(){
   try{
     const prefix=`${COOKIE_KEY}=`;
@@ -143,6 +129,7 @@ function notifyPreparing(requested){
 function commit(locale,{save=true,emit=true,source='shared-user-shell',requestedLocale=''}={}){
   const next=normalize(locale)||FALLBACK_LOCALE;
   const changed=activeLocale!==next||document.documentElement.lang!==next;
+  if(activeLocale!==next)restoreAutoTranslations();
   activeLocale=next;
   document.documentElement.lang=next;
   document.documentElement.dir='ltr';
@@ -152,6 +139,7 @@ function commit(locale,{save=true,emit=true,source='shared-user-shell',requested
   syncControls();
   if(emit&&changed)window.dispatchEvent(new CustomEvent('ekodi:locale-change',{detail:{locale:next,version:VERSION,source,requestedLocale:requestedLocale||next}}));
   schedule();
+  if(changed)setTimeout(()=>refreshActiveCatalog(next),0);
   return next;
 }
 function apply(locale,{save=true,emit=true,notify=true,source='shared-user-shell'}={}){
@@ -171,6 +159,77 @@ function setReadyLocales(locales){
   syncControls();
   schedule();
   return ready;
+}
+function currentServiceId(){
+  const id=String(document.documentElement.dataset.ekodiService||'ekodi').trim().toLowerCase().replace(/[^a-z0-9-]/g,'');
+  return id||'ekodi';
+}
+function normalizedCatalogText(value){return String(value||'').replace(/\s+/g,' ').trim();}
+function excludedCatalogElement(element){return !element||Boolean(element.closest('script,style,noscript,template,svg,code,pre,[data-ekodi-language-control],[data-ekodi-user-footer],[data-ekodi-user-header-root],[data-ekodi-auto-i18n-ignore]'));}
+function excludedCatalogNode(node){return excludedCatalogElement(node?.parentElement);}
+function restoreAutoTranslations(){
+  if(!translatedTextNodes.size&&!translatedAttributes.size){activeCatalog=null;return;}
+  catalogApplying=true;
+  for(const [node,original] of translatedTextNodes){if(node?.isConnected)node.nodeValue=original;}
+  for(const [element,attributes] of translatedAttributes){if(!element?.isConnected)continue;for(const [name,original] of attributes)element.setAttribute(name,original);}
+  translatedTextNodes.clear();translatedAttributes.clear();activeCatalog=null;catalogApplying=false;
+}
+function applyCatalogToDom(catalog){
+  if(!catalog||activeLocale===FALLBACK_LOCALE||!document.body)return;
+  const items=catalog.items||{};
+  if(!items||typeof items!=='object')return;
+  catalogApplying=true;
+  try{
+    const walker=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT);
+    let node;
+    while((node=walker.nextNode())){
+      if(excludedCatalogNode(node)||translatedTextNodes.has(node))continue;
+      const original=String(node.nodeValue||'');
+      const key=normalizedCatalogText(original);
+      const translated=typeof items[key]==='string'?items[key].trim():'';
+      if(!translated||translated===key)continue;
+      const leading=original.match(/^\s*/)?.[0]||'',trailing=original.match(/\s*$/)?.[0]||'';
+      translatedTextNodes.set(node,original);
+      node.nodeValue=`${leading}${translated}${trailing}`;
+    }
+    for(const element of document.querySelectorAll('[placeholder],[title],[aria-label],[alt]')){
+      if(excludedCatalogElement(element))continue;
+      let stored=translatedAttributes.get(element);
+      for(const name of ['placeholder','title','aria-label','alt']){
+        if(!element.hasAttribute(name)||stored?.has(name))continue;
+        const original=element.getAttribute(name)||'';
+        const key=normalizedCatalogText(original);
+        const translated=typeof items[key]==='string'?items[key].trim():'';
+        if(!translated||translated===key)continue;
+        if(!stored){stored=new Map();translatedAttributes.set(element,stored);}
+        stored.set(name,original);element.setAttribute(name,translated);
+      }
+    }
+  }finally{catalogApplying=false;}
+}
+async function refreshActiveCatalog(locale=activeLocale){
+  const target=normalize(locale)||FALLBACK_LOCALE;
+  const requestId=++catalogRequest;
+  restoreAutoTranslations();
+  if(target===FALLBACK_LOCALE||!isLocaleReady(target))return;
+  try{
+    const url=`${I18N_API}/catalog?service=${encodeURIComponent(currentServiceId())}&locale=${encodeURIComponent(target)}`;
+    const response=await fetch(url,{headers:{accept:'application/json'},cache:'no-store',credentials:'omit'});
+    if(requestId!==catalogRequest||target!==activeLocale||!response.ok)return;
+    const catalog=await response.json();
+    if(requestId!==catalogRequest||target!==activeLocale)return;
+    activeCatalog=catalog;applyCatalogToDom(catalog);
+  }catch{}
+}
+async function refreshRuntimeReadiness(){
+  try{
+    const url=`${I18N_API}/status?service=${encodeURIComponent(currentServiceId())}`;
+    const response=await fetch(url,{headers:{accept:'application/json'},cache:'no-store',credentials:'omit'});
+    if(!response.ok)return;
+    const data=await response.json();
+    if(Array.isArray(data?.publishedLocales)&&data.publishedLocales.length)setReadyLocales(data.publishedLocales);
+    if(activeLocale!==FALLBACK_LOCALE)await refreshActiveCatalog(activeLocale);
+  }catch{}
 }
 function header(){
   return document.querySelector('[data-ekodi-user-header-root]:not([data-ekodi-user-header-fallback]):not([data-ekodi-language-ignore])')||
@@ -201,7 +260,7 @@ function buildControl(placement){
   const select=document.createElement('select');
   select.className='ekodi-user-language__select';
   select.setAttribute('aria-label',text().language);
-  for(const item of SUPPORTED){
+  for(const item of visibleLanguages()){
     const option=document.createElement('option');
     option.value=item.locale;
     option.textContent=item.short;
@@ -233,17 +292,25 @@ function syncControl(control){
   const select=control.querySelector('select');
   setAttr(select,'aria-label',text().language);
   if(!select)return;
+  const visible=visibleLanguages();
+  const signature=visible.map(item=>item.locale).join('|');
+  if(select.dataset.ekodiVisibleLocales!==signature){
+    select.replaceChildren(...visible.map(item=>{
+      const option=document.createElement('option');
+      option.value=item.locale;
+      option.textContent=item.short;
+      option.title=item.label;
+      option.dataset.ekodiLocaleReady='true';
+      return option;
+    }));
+    select.dataset.ekodiVisibleLocales=signature;
+  }
   if(select.value!==activeLocale)select.value=activeLocale;
   select.title=SUPPORTED.find(item=>item.locale===activeLocale)?.label||text().language;
-  for(const option of select.options){
-    const ready=isLocaleReady(option.value);
-    option.dataset.ekodiLocaleReady=ready?'true':'false';
-    const item=SUPPORTED.find(candidate=>candidate.locale===option.value);
-    option.title=ready?(item?.label||option.textContent):preparingText(option.value);
-  }
 }
 function placeHeaderControl(){
   if(!document.body)return;
+  if(!languageChoiceAvailable()){document.querySelector('[data-ekodi-language-placement="header"]')?.remove();return;}
   const target=header();
   if(!target)return;
   let control=document.querySelector('[data-ekodi-language-placement="header"]');
@@ -260,6 +327,7 @@ function placeHeaderControl(){
 }
 function placeFooterControl(){
   if(!document.body)return;
+  if(!languageChoiceAvailable()){document.querySelector('[data-ekodi-language-placement="footer"]')?.remove();return;}
   const footer=document.querySelector('[data-ekodi-user-footer],.ekodi-user-ui-footer,body > footer,footer');
   if(!footer)return;
   const parent=footer.querySelector('.ekodi-user-ui-footer__inner')||footer;
@@ -269,13 +337,15 @@ function placeFooterControl(){
   syncControl(control);
 }
 function syncControls(){for(const control of document.querySelectorAll('[data-ekodi-language-control]'))syncControl(control);}
-function reconcile(){scheduled=false;placeHeaderControl();placeFooterControl();updateSharedCopy();syncControls();}
+function reconcile(){scheduled=false;placeHeaderControl();placeFooterControl();updateSharedCopy();syncControls();if(activeCatalog&&!catalogApplying)applyCatalogToDom(activeCatalog);}
 function schedule(){if(scheduled)return;scheduled=true;requestAnimationFrame(reconcile);}
 function boot(){
   ensureBrowserTranslationBoundary();
   const preferred=initialPreference();
   apply(preferred.locale,{save:true,emit:true,notify:preferred.explicit,source:'initial'});
   schedule();
+  refreshRuntimeReadiness();
+  if(!readinessTimer)readinessTimer=setInterval(refreshRuntimeReadiness,READINESS_REFRESH_MS);
 }
 
 window.EKODIUserLanguage=Object.freeze({
@@ -286,7 +356,8 @@ window.EKODIUserLanguage=Object.freeze({
   isLocaleReady,
   setReadyLocales,
   setLocale:locale=>apply(locale,{save:true,emit:true,notify:true}),
-  refresh:schedule
+  refresh:schedule,
+  refreshReadiness:refreshRuntimeReadiness
 });
 window.addEventListener('ekodi:user-header-ready',schedule);
 window.addEventListener('ekodi:user-footer-ready',schedule);
