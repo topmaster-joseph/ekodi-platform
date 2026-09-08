@@ -19,6 +19,10 @@ const CHEONGGYE_ADMIN_SESSION_CACHE_PREFIX = 'control/cheonggye/admin-session/';
 const CHEONGGYE_ADMIN_SESSION_FRESH_MS = 5 * 60 * 1000;
 const CHEONGGYE_ADMIN_SESSION_STALE_MS = 30 * 60 * 1000;
 const GOOGLE_REAUTH_REQUIRED = 'GOOGLE_REAUTH_REQUIRED';
+const SUPABASE_URL = 'https://renzehysxirjilvdxacv.supabase.co';
+const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
+const CHEONGGYE_WORKSPACE_SLUGS = new Set(['cheonggye','cgma']);
+const CHEONGGYE_WORKSPACE_ADMIN_ROLES = new Set(['tenant_admin','workspace_admin','owner','admin','manager','client_admin']);
 const AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth';
 const SCOPES = [
   'openid', 'email', 'profile',
@@ -134,7 +138,31 @@ function cheonggyeBearerToken(request) {
   const authorization = request.headers.get('authorization') || '';
   if (!authorization.startsWith('Bearer ')) return '';
   const token = authorization.slice(7);
-  return token && token.length <= 256 ? token : '';
+  return token && token.length <= 8192 ? token : '';
+}
+async function cheonggyeSupabaseJson(path, token, env, init = {}) {
+  const response = await fetch(`${SUPABASE_URL}${path}`, { ...init, headers:{ apikey:String(env.SUPABASE_PUBLISHABLE_KEY || SUPABASE_PUBLISHABLE_KEY), authorization:`Bearer ${token}`, 'content-type':'application/json', ...(init.headers || {}) }, cache:'no-store' });
+  const data = await response.json().catch(() => null);
+  if (!response.ok) throw Object.assign(new Error(data?.message || data?.error || `SUPABASE_${response.status}`), { status:response.status });
+  return data;
+}
+async function cheonggyeWorkspaceSession(request, env) {
+  const token = cheonggyeBearerToken(request);
+  if (!token || token.split('.').length !== 3) return null;
+  try {
+    const [user, raw] = await Promise.all([cheonggyeSupabaseJson('/auth/v1/user', token, env), cheonggyeSupabaseJson('/rest/v1/rpc/current_site_activity_contexts', token, env, {method:'POST',body:'{}'})]);
+    const context = (Array.isArray(raw) ? raw : []).find(item => CHEONGGYE_WORKSPACE_SLUGS.has(String(item?.tenant || '').trim().toLowerCase()));
+    const role = String(context?.authorization_role || '').trim().toLowerCase();
+    if (!user?.id || !user?.email || !context?.tenant_id) return { response:json({authenticated:false,error:'청계면상인회 운영공간 권한이 필요합니다.',code:'CHEONGGYE_WORKSPACE_REQUIRED'},401) };
+    if (!CHEONGGYE_WORKSPACE_ADMIN_ROLES.has(role)) return { response:json({authenticated:false,error:'정회원 명단 관리 권한이 없습니다.',code:'CHEONGGYE_MEMBER_FORBIDDEN'},403) };
+    const session={authenticated:true,email:String(user.email).toLowerCase(),role,workspaceId:String(context.tenant_id),workspaceKey:String(context.workspace_key || `tenant:${context.tenant_id}`),authorityScope:'tenant'};
+    return { response:json(session,200), session };
+  } catch (error) {
+    const status=Number(error?.status || 0);
+    if (status===401 || status===403) return { response:json({authenticated:false,error:'운영공간 로그인이 만료되었습니다.',code:'CHEONGGYE_WORKSPACE_AUTH_EXPIRED'},401) };
+    console.error('Cheonggye workspace session failed',error);
+    return { response:json({authenticated:false,error:'운영공간 권한을 확인할 수 없습니다.',code:'CHEONGGYE_WORKSPACE_AUTH_UNAVAILABLE'},503) };
+  }
 }
 async function cheonggyeAdminSessionCacheKey(request) {
   const token = cheonggyeBearerToken(request);
@@ -155,6 +183,9 @@ function cheonggyeCachedAdminResult(cached) {
   return { response:json(session,200), session };
 }
 async function cheonggyeAdminSession(request,env) {
+  const bearer=cheonggyeBearerToken(request);
+  if(!bearer)return {response:json({authenticated:false},401)};
+  if(bearer.split('.').length===3){const workspace=await cheonggyeWorkspaceSession(request,env);if(workspace)return workspace;}
   const key=await cheonggyeAdminSessionCacheKey(request);
   if(!key)return {response:json({authenticated:false},401)};
   const cached=await readCheonggyeAdminSessionCache(env,key);

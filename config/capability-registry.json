@@ -438,6 +438,28 @@
       ]
     },
     {
+      "id": "commerce.supply-network",
+      "name": "판매·공급망 엔진",
+      "domain": "commerce",
+      "ownerAgent": "commerce",
+      "actionTier": "human_gate",
+      "maturity": "service-backed",
+      "description": "공급자·판매처·제휴망·상품 Feed·가격·배송·추천 진입 게이트를 표준화해 여러 커머스 서비스가 재사용하도록 한다. 실제 판매처 선택과 적용 여부는 각 운영공간이 소유한다.",
+      "surfaces": [
+        "workspace",
+        "dedicated"
+      ],
+      "tags": [
+        "commerce",
+        "supplier",
+        "affiliate",
+        "partner",
+        "catalog",
+        "feed",
+        "supply-chain"
+      ]
+    },
+    {
       "id": "finance.stewardship",
       "name": "재정·회계 AI",
       "domain": "finance",
@@ -762,6 +784,9 @@
         "scope": "workspace"
       },
       "trade.operations": {
+        "scope": "workspace"
+      },
+      "commerce.supply-network": {
         "scope": "workspace"
       }
     }
