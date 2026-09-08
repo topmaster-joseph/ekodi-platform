@@ -61,7 +61,10 @@ test('user UI header/footer/language are shared user-surface-only modules',async
   assert.match(worker,/x-ekodi-user-language/);
   assert.match(legacyMobileHeader,/if\(window\.__EKODI_USER_UI_HEADER_BOOTED\)return/);
 
-  assert.match(footerClient,/const VERSION=5/);
+  assert.match(footerClient,/const VERSION=6/);
+  assert.match(footerClient,/--ekodi-user-content-inline-size/);
+  assert.match(footerClient,/--ekodi-user-canvas-max,1240px/);
+  assert.doesNotMatch(footerClient,/min\(1040px/);
   assert.match(footerClient,/__EKODI_USER_FOOTER_CONFIG__/);
   assert.match(footerClient,/user-footer\.json/);
   assert.match(footerClient,/ekodi-user-ui-footer__copy/);
