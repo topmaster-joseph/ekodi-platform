@@ -67,7 +67,7 @@ test('service-control migration is additive and has no personal-profile foreign 
 });
 test('Admin navigation classifies Personal Finance under the v8 professional-services domain',()=>{
   const registry=fs.readFileSync(new URL('../admin-menu-registry.js',import.meta.url),'utf8');const loader=fs.readFileSync(new URL('../admin-demand-loader.js',import.meta.url),'utf8');
-  assert.match(registry,/id: 'personal-finance'[\s\S]*group: 'vertical'[\s\S]*managementArea: 'professional-services'/);assert.match(loader,/'personal-finance':[\s\S]*personal-finance-admin\.css[\s\S]*personal-finance-admin\.js/);
+  assert.match(registry,/id: 'personal-finance'[\s\S]*group: 'services'[\s\S]*managementArea: 'professional-services'/);assert.match(loader,/'personal-finance':[\s\S]*personal-finance-admin\.css[\s\S]*personal-finance-admin\.js/);
   assert.equal(PERSONAL_FINANCE_ADMIN_CONTROL_CONTRACT.managementArea,'professional-services');assert.equal(PERSONAL_FINANCE_ADMIN_CONTROL_CONTRACT.personalDataAdminReadable,false);
 });
 

@@ -4,7 +4,7 @@ import { ADMIN_MENU_GROUPS, ADMIN_MENU_REGISTRY } from '../admin-menu-registry.j
 const readText = async (path) => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 const readJson = async (path) => JSON.parse(await readText(path));
 
-const [policy, userDna, userShell, theme, adminRuntime, adminCss, adminPrinciples] = await Promise.all([
+const [policy, userDna, userShell, theme, adminRuntime, adminCss, adminPrinciples, sidebar, build, siteWorker, postbuild] = await Promise.all([
   readJson('config/design-engine.json'),
   readJson('config/user-ui-dna.json'),
   readJson('config/user-ui-shell.json'),
@@ -12,6 +12,10 @@ const [policy, userDna, userShell, theme, adminRuntime, adminCss, adminPrinciple
   readText('admin-design-engine.js'),
   readText('admin-design-engine.css'),
   readText('ADMIN_UI_PRINCIPLES.md'),
+  readText('admin-sidebar.js'),
+  readText('scripts/build.mjs'),
+  readText('site-worker.js'),
+  readText('scripts/admin-performance-postbuild.mjs'),
 ]);
 
 const errors = [];
@@ -38,6 +42,14 @@ if (policy?.admin?.desktopPrimarySidebarScroll !== false) errors.push('desktop p
 if (!adminRuntime.includes("nav.style.setProperty('overflow-y', 'hidden', 'important')")) errors.push('admin design runtime must override vertical sidebar scrolling.');
 if (!adminRuntime.includes("nav.dataset.ekodiIndependentScroll = 'false'")) errors.push('admin design runtime must declare primary sidebar as non-independent scroll.');
 if (!adminCss.includes('overflow-y:hidden!important')) errors.push('admin design CSS must keep the primary sidebar overflow hidden.');
+if (sidebar.includes('overflow-y:auto!important')) errors.push('shared admin sidebar source must not reintroduce independent vertical scrolling.');
+if (!sidebar.includes('overflow-y:hidden!important')) errors.push('shared admin sidebar source must keep vertical overflow hidden.');
+for (const asset of ['admin-design-engine.js', 'admin-design-engine.css']) {
+  if (!build.includes(`'${asset}'`)) errors.push(`production build must publish ${asset}.`);
+  if (!siteWorker.includes(`'/${asset}'`)) errors.push(`site worker ADMIN_ASSETS must expose ${asset}.`);
+  if (!postbuild.includes(`'${asset}'`)) errors.push(`admin asset fingerprint must include ${asset}.`);
+}
+if (!postbuild.includes("['admin-menu-registry.js', ['admin-design-engine.js']]")) errors.push('admin registry must version-pin the Design Engine runtime import.');
 if (!adminCss.includes('[data-ekodian-character]')) errors.push('admin design CSS must contain the EKODIAN character layer.');
 if (!adminCss.includes('@media(prefers-reduced-motion:reduce)')) errors.push('admin character layer must respect reduced-motion preferences.');
 
