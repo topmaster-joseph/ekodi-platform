@@ -308,7 +308,10 @@
         "redirect": "manual",
         "expect": [
           "EKODI Workspace Admin",
-          "workspace-admin.js"
+          "workspace-admin.js",
+          "data-ekodi-admin-layout=\"two-level\"",
+          "data-ekodi-admin-nav-mode=\"primary\"",
+          "data-ekodi-admin-subnav"
         ],
         "headerExpect": [
           "x-ekodi-route: workspace-admin",

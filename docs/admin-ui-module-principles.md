@@ -1,7 +1,7 @@
 # EKODI 관리자 UI Shell 원칙
 
 상태: 표준
-버전: v1
+버전: v2
 적용 대상: EKODI 생태계의 관리자 화면(`admin` surface)
 
 ## 1. 구조 원칙
@@ -27,12 +27,15 @@ EKODI Common Shell
 
 즉, **관리자 왼쪽 상단 헤더는 삭제가 기본 원칙**이다.
 
-## 3. 좌측 내비게이션
+## 3. 좌측 내비게이션과 상단 세부메뉴
 
-- 좌측 메뉴는 독립적으로 세로 스크롤한다.
-- 본문 영역의 스크롤과 메뉴 스크롤은 서로 영향을 주지 않는다.
-- 메뉴 구조와 그룹은 각 관리자 서비스의 기능에 맞게 유지할 수 있다.
-- 공통 Shell은 메뉴의 위치·스크롤 계약만 책임지고 메뉴 내용을 소유하지 않는다.
+- 신규·개편 관리자 화면의 표준은 **2단 내비게이션**이다.
+- 좌측에는 서비스의 1차 메뉴만 두고 데스크톱에서는 세로 스크롤을 만들지 않는다.
+- 좌측 1차 메뉴를 선택하면 해당 메뉴의 2차 기능을 중앙 작업영역 상단의 세부메뉴에 표시한다.
+- 상단 세부메뉴를 선택하면 중앙 작업영역의 실제 화면이 바뀐다.
+- 계정·로그아웃은 좌측 하단에 고정하고 1차 메뉴와 함께 스크롤시키지 않는다.
+- 레거시 관리자 화면은 마이그레이션 기간에 한해 독립 메뉴 스크롤을 유지할 수 있으나, data-ekodi-admin-nav-mode="primary" 계약으로 전환하는 것을 기본으로 한다.
+- 표·코드·대용량 데이터처럼 필요한 영역 외에는 중첩 스크롤을 만들지 않는다.
 
 ## 4. 계정과 로그아웃
 
@@ -60,10 +63,11 @@ EKODI Common Shell
 Admin Shell 아래의 실제 관리 화면, 카드, 표, 폼, 대시보드, 색상, 서비스별 정보구조는 각 사이트의 목적에 맞게 설계한다. 공통 Shell은 다음만 표준화한다.
 
 1. 좌측 상단 중복 헤더 제거
-2. 좌측 메뉴 독립 스크롤
-3. 관리자 작업영역 독립 스크롤
-4. 계정/로그아웃 하단 배치
-5. 사용자 Shell과 관리자 Shell의 분리
+2. 좌측 1차 메뉴 고정·무스크롤
+3. 상단 2차 세부메뉴와 중앙 작업영역 분리
+4. 관리자 작업영역 스크롤
+5. 계정/로그아웃 하단 고정
+6. 사용자 Shell과 관리자 Shell의 분리
 
 ## 8. 표준 마크업 계약
 
@@ -71,13 +75,16 @@ Admin Shell 아래의 실제 관리 화면, 카드, 표, 폼, 대시보드, 색�
 
 ```html
 <aside data-ekodi-admin-sidebar>
-  <nav data-ekodi-admin-nav>...</nav>
+  <nav data-ekodi-admin-nav data-ekodi-admin-nav-mode="primary">...</nav>
   <div data-ekodi-admin-sidebar-footer>
     <div data-ekodi-account>...</div>
     <button data-ekodi-logout>로그아웃</button>
   </div>
 </aside>
-<main data-ekodi-admin-main>...</main>
+<main data-ekodi-admin-main>
+  <nav data-ekodi-admin-subnav>...</nav>
+  ...
+</main>
 ```
 
 레거시 관리자 화면은 공통 모듈이 기존 클래스명을 탐색하여 점진적으로 같은 계약으로 정규화한다.
