@@ -49,4 +49,5 @@ test('guarded production release verifies current auth entry and workspace hando
   assert.ok(admin.expect.includes('location.replace(targetHref)'));
   assert.ok(admin.expect.includes('button_auto_select:false'));
   assert.ok(admin.headerExpect.includes('cache-control: no-store'));
+  for (const probe of [root, router, client, workspaceTarget, admin]) assert.equal(probe.rollbackVerify, false);
 });
