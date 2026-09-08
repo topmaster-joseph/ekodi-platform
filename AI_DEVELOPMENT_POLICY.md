@@ -55,6 +55,22 @@ Minimum gate:
 
 A successful commit, build, local test, or agent statement is not proof of production completion.
 
+## Production-verified completion contract
+
+`AI-COMPLETE-001` in `config/ai-development-completion-policy.json` is the machine-readable completion contract for development and release work.
+
+The default rule is `production-verified-before-complete`.
+
+For production-bound work, implementation, commit, pull request, build success, merge success, and deploy-command success are intermediate states. The task may be reported as complete only after the real production hostname has been checked and the requested functional behavior has been confirmed.
+
+Production verification evidence must include, where applicable, the task ID, branch, commit SHA, validation result, deployment result, production hostname, functional checks, observability check, and verification timestamp. A production endpoint returning HTTP 200 alone is not sufficient when the requested user-visible or system behavior can be tested more directly.
+
+If production verification fails, the default operating loop is repair -> retest -> redeploy -> reverify. The agent must not convert a failed or unverified release into a completion report merely because its delegated execution window ended.
+
+Before production verification passes, report a non-final state such as `deployed-awaiting-production-verification`. Only after evidence is recorded may the final state be reported as `production-verified-complete`.
+
+Bounded exceptions are allowed only for the explicit classes declared by `AI-COMPLETE-001`, such as read-only analysis, documentation-only work, non-production experiments, required human gates, or work blocked by external authority. The exception class and reason must be recorded, and an exception must never be described as successful production completion.
+
 ## Agent identity and audit
 
 Every automated development action should be attributable to an `agent_id`, `task_id`, branch, commit SHA, and execution environment where practical.
@@ -70,6 +86,7 @@ Recommended metadata:
 - validation result
 - review/merge decision
 - deployment result
+- production verification evidence when deployment is part of the task
 
 ## Conflict and failure isolation
 
