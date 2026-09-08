@@ -12,6 +12,12 @@ test('service manifest is the person-space-role registry for future EKODI sites'
   assert.match(manifest,/serviceForId/);
 });
 
+test('Shell live verifier follows the canonical EKODIBIZ apex route',async()=>{
+  const verifier=await read('scripts/verify-ekodi-shell-live.mjs');
+  assert.match(verifier,/https:\/\/ekodi\.kr\/ekodibiz/);
+  assert.doesNotMatch(verifier,/https:\/\/biz\.ekodi\.kr\//);
+});
+
 test('browser shell preserves workspace context, bounded surfaces and intent-first navigation',async()=>{
   const shell=await read('shell/shell.js');
   assert.match(shell,/ekodiShellSurface/);

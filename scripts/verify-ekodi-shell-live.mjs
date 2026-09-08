@@ -80,7 +80,7 @@ for(let attempt=1;attempt<=attempts;attempt++){
     if(!manifest.services?.some(service=>service.defaultSurface==='workspace'))failures.push('manifest:no-workspace-surface');
     if(!manifest.services?.some(service=>service.defaultSurface==='public'))failures.push('manifest:no-public-surface');
     const biz=manifest.services?.find(service=>service.id==='biz');
-    if(biz?.url!=='https://biz.ekodi.kr/')failures.push(`manifest:biz-url:${biz?.url||'missing'}`);
+    if(biz?.url!=='https://ekodi.kr/ekodibiz')failures.push(`manifest:biz-url:${biz?.url||'missing'}`);
   }
   if(footerConfig){
     if(Number(footerConfig.version)<2)failures.push(`user-footer:version:${footerConfig.version||'missing'}`);

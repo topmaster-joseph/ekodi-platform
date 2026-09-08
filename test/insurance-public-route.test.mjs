@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { isInsurancePublicPath, insuranceAssetPath } from '../insurance-public-route.js';
+import { isInsurancePublicPath, insuranceAssetPath, routeInsurancePublic } from '../insurance-public-route.js';
 import { isWorkspaceSlug } from '../workspace-route-policy.js';
 
 const read=path=>readFile(new URL(`../${path}`,import.meta.url),'utf8');
@@ -15,6 +15,13 @@ test('insurance is a canonical public service path, not a workspace slug',()=>{
   assert.equal(insuranceAssetPath('/insurance/advisor'),'/insurance/advisor');
   assert.equal(insuranceAssetPath('/insurance/styles.css'),'/insurance/styles.css');
   assert.equal(insuranceAssetPath('/insurance/unknown.js'),null);
+});
+
+test('insurance admin handoff follows the canonical apex admin path',async()=>{
+  const response=await routeInsurancePublic(new Request('https://ekodi.kr/insurance/admin'),{});
+  assert.equal(response.status,302);
+  assert.equal(response.headers.get('location'),'https://ekodi.kr/admin/professional/insurance');
+  assert.equal(response.headers.get('x-ekodi-route'),'insurance-admin-handoff');
 });
 
 test('shared-site router owns insurance before workspace routing',async()=>{
