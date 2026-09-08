@@ -76,7 +76,7 @@ function handleCloudflareSecretPreflight(request, env = {}) {
 export default {
   async fetch(request, env, ctx) {
     const incoming = new URL(request.url);
-    if (incoming.pathname === '/admin' || incoming.pathname === '/admin/') return Response.redirect('https://admin.ekodi.kr/?source=api.ekodi.kr', 307);
+    if (incoming.pathname === '/admin' || incoming.pathname === '/admin/') return Response.redirect('https://ekodi.kr/admin/?source=api', 307);
     const guard = await enforceEdgeSecurity(request, env);
     if (guard) return guard;
 

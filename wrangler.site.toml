@@ -120,6 +120,14 @@ service = "ekodi-space"
 binding = "EKODIBIZ"
 service = "ekodibiz-revenue-os"
 
+[[services]]
+binding = "MY"
+service = "ekodi-my"
+
+[[services]]
+binding = "CONTROL_API"
+service = "ekodi-auth-api"
+
 [[d1_databases]]
 binding = "DB"
 database_name = "ekodi-auth"

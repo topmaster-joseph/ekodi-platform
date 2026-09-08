@@ -18,6 +18,7 @@ import { workspaceTradeAdminScript } from './workspace-trade-admin-page.js';
 import { isTradePartnerPath, tradePartnerPage, tradePartnerCss, tradePartnerScript } from './workspace-trade-portal.js';
 import { isPublicWorkspacePath } from './workspace-route-policy.js';
 import { marketingProjectionForPath, proxyCanonicalMarketing } from './marketing-canonical-projection.js';
+import { routeCanonicalSurface } from './canonical-surface-router.js';
 
 const PUBLIC_HOST='ekodi.kr';
 const CGMA_HOSTS=new Set(['cgma.or.kr','www.cgma.or.kr']);
@@ -166,10 +167,17 @@ async function withInvestSubjectScript(response){
   return new Response(patched,{status:response.status,statusText:response.statusText,headers:response.headers});
 }
 
+const LEGACY_ADMIN_HOSTS=new Set(['admin.ekodi.kr','admin.biz.ekodi.kr','admin.church.ekodi.kr','admin.lab.ekodi.kr','admin.trade.ekodi.kr']);
+const LEGACY_ADMIN_PATHS=Object.freeze({books:'books',community:'community',work:'work',business:'organization',publishing:'books',energy:'life-ai',journal:'common-services',experience:'campus'});
+function legacySurfaceRedirect(request){const url=new URL(request.url),host=url.hostname.toLowerCase();if(!['GET','HEAD'].includes(request.method))return null;if(host==='auth.ekodi.kr'){const target=new URL(request.url);target.hostname='ekodi.kr';target.pathname=url.pathname==='/'?'/auth/':`/auth${url.pathname}`;return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-ekodi-legacy-surface':host}})}if(!LEGACY_ADMIN_HOSTS.has(host))return null;const target=new URL(request.url);target.hostname='ekodi.kr';const key=url.pathname.split('/').filter(Boolean)[0]||'';if(url.pathname==='/'||url.pathname==='/admin'||url.pathname==='/admin/')target.pathname='/admin/';else if(/\.(?:js|css|cmd|json|map|svg|png|webp|ico)$/i.test(url.pathname)||url.pathname.startsWith('/api/')||url.pathname==='/auth/start')target.pathname=`/admin${url.pathname}`;else{target.pathname='/admin/';if(!target.searchParams.has('route')&&LEGACY_ADMIN_PATHS[key])target.searchParams.set('route',LEGACY_ADMIN_PATHS[key])}target.searchParams.set('source',host);return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-ekodi-legacy-surface':host}})}
+
 export default {
   async fetch(request,env,ctx){
     const url=new URL(request.url);
     const host=resolvedHost(request,env);
+    const legacySurface=legacySurfaceRedirect(request);if(legacySurface)return legacySurface;
+    const canonical=await routeCanonicalSurface(request,env,{legacyFetch:next=>legacyPlatformRouter.fetch(next,env,ctx)});
+    if(canonical)return canonical;
 
     if(CGMA_HOSTS.has(host)&&['GET','HEAD'].includes(request.method))return routeCgmaPublic(request,env);
 

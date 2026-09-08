@@ -12,7 +12,7 @@ const enabled=Boolean(cfg.dataEnabled&&cfg.supabaseUrl&&cfg.supabasePublishableK
 function esc(value){return String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[ch])}
 function sourceAllowed(){return SERVICE_ID_RE.test(source)}
 function workspaceAllowed(){return !requestedWorkspace||(requestedWorkspace.length<=180&&WORKSPACE_KEY_RE.test(requestedWorkspace))}
-function authUrl(){const target=new URL(cfg.authUrl||'https://auth.ekodi.kr/?site=my');target.searchParams.set('site','my');target.searchParams.set('return_to',location.href.split('#')[0]);return target.href}
+function authUrl(){const target=new URL(cfg.authUrl||'https://ekodi.kr/auth/?site=my');target.searchParams.set('site','my');target.searchParams.set('return_to',location.href.split('#')[0]);return target.href}
 function canonicalWorkspacePath(key){return WORKSPACE_KEY_RE.test(String(key||''))?`/w/${encodeURIComponent(key)}`:'/#workspaces'}
 function rememberWorkspace(key){try{if(WORKSPACE_KEY_RE.test(String(key||'')))localStorage.setItem('ekodi_my_active_workspace',key)}catch{}}
 function planLabel(value){return ({free:'Free',basic:'Basic',standard:'Standard',pro:'Pro',enterprise:'Enterprise'})[String(value||'free').toLowerCase()]||String(value||'Free')}
@@ -20,7 +20,7 @@ function accessStatusLabel(value){return ({active:'이용 가능',pre_registered
 
 async function manifestService(){
   try{
-    const response=await fetch('/service-manifest.json',{cache:'no-store'});
+    const response=await fetch('/my/service-manifest.json',{cache:'no-store'});
     if(!response.ok)return null;
     const manifest=await response.json();
     return (manifest.services||[]).find(item=>item.id===source)||null;

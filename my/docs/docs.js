@@ -4,7 +4,7 @@ import { createHwpxBlob, editorToHwpxBlocks, importHwpx } from './hwpx.js';
 const cfg=window.EKODI_MY_CONFIG||{};
 const enabled=Boolean(cfg.dataEnabled&&cfg.supabaseUrl&&cfg.supabasePublishableKey);
 const sb=enabled?createClient(cfg.supabaseUrl,cfg.supabasePublishableKey,{auth:{detectSessionInUrl:true,persistSession:true}}):null;
-const authUrl=cfg.authUrl||'https://auth.ekodi.kr/?site=my';
+const authUrl=cfg.authUrl||'https://ekodi.kr/auth/?site=my';
 const AI_URL=enabled?`${cfg.supabaseUrl}/functions/v1/document-ai-api`:'';
 const LOCAL_KEY='ekodi.docs.v1';
 const $=s=>document.querySelector(s);

@@ -1,5 +1,5 @@
 {
-  "version": "1.0.0",
+  "version": "1.1.0",
   "logicalEntry": "ekodi.index",
   "externalDefaultPath": "/",
   "principles": {
@@ -8,7 +8,8 @@
     "primaryAndEmergencyShareMentalModel": true,
     "primaryAndEmergencyMustNotShareCriticalFailureDependencies": true,
     "emergencyIsReducedCapability": true,
-    "lastKnownGoodIsVerifiedRelease": true
+    "lastKnownGoodIsVerifiedRelease": true,
+    "oneDomainMultipleSecurityRealms": true
   },
   "roles": {
     "primary": "normal service entry",
@@ -25,21 +26,30 @@
       "lastKnownGood": "release-ledger"
     },
     "admin": {
-      "host": "admin.ekodi.kr",
+      "host": "ekodi.kr",
       "entry": "ekodi.index",
-      "path": "/",
-      "primary": "https://admin.ekodi.kr/",
+      "path": "/admin",
+      "primary": "https://ekodi.kr/admin/",
       "emergency": "https://ekodi-admin-staging.topmaster-joseph.workers.dev/",
       "lastKnownGood": "release-ledger",
       "emergencyMode": "reduced-capability"
     },
     "auth": {
-      "host": "auth.ekodi.kr",
+      "host": "ekodi.kr",
       "entry": "ekodi.index",
-      "path": "/",
-      "primary": "https://auth.ekodi.kr/",
+      "path": "/auth",
+      "primary": "https://ekodi.kr/auth/",
       "emergency": null,
       "lastKnownGood": "release-ledger"
+    },
+    "user": {
+      "host": "ekodi.kr",
+      "entry": "ekodi.index",
+      "path": "/my",
+      "primary": "https://ekodi.kr/my/",
+      "emergency": "https://ekodi-my-staging.topmaster-joseph.workers.dev/",
+      "lastKnownGood": "release-ledger",
+      "emergencyMode": "reduced-capability"
     }
   }
 }

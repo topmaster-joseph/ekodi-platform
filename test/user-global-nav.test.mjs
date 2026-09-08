@@ -10,9 +10,9 @@ test('shared user navigation exposes the stable EKODI links only on user surface
   assert.match(nav,/https:\/\/ekodi\.kr\//);
   assert.match(nav,/https:\/\/ekodi\.kr\/#services/);
   assert.match(nav,/https:\/\/ekodi\.kr\/history/);
-  assert.match(nav,/https:\/\/my\.ekodi\.kr\//);
-  assert.match(nav,/https:\/\/my\.ekodi\.kr\/#recommendations/);
-  assert.match(nav,/https:\/\/auth\.ekodi\.kr\//);
+  assert.match(nav,/https:\/\/ekodi\.kr\/my\//);
+  assert.match(nav,/https:\/\/ekodi\.kr\/my\/#recommendations/);
+  assert.match(nav,/https:\/\/ekodi\.kr\/auth\//);
   for(const label of ['홈','서비스','역사','마이 에코디','개인 AI 비서','로그인 · 계정'])assert.match(nav,new RegExp(label));
   assert.match(nav,/EKODI User AI/);
   assert.match(nav,/data-ekodi-global-link="assistant"/);

@@ -7,7 +7,7 @@ const read = path => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 test('current admin shell ships the central-admin link before JavaScript runs', async () => {
   const html = await read('admin-shell.html');
   assert.match(html, /id="centralAdminLogin"/);
-  assert.match(html, /href="https:\/\/auth\.ekodi\.kr\/\?site=admin&amp;direct=1&amp;return_to=https%3A%2F%2Fadmin\.ekodi\.kr%2F"/);
+  assert.match(html, /href="https:\/\/ekodi\.kr\/auth\/\?site=admin&amp;direct=1&amp;return_to=https%3A%2F%2Fekodi\.kr%2Fadmin%2F"/);
   assert.match(html, /<form id="loginForm" hidden>/);
   assert.match(html, /<script src="admin-central-handoff\.js"><\/script>/);
   assert.match(html, /<script src="admin-authenticated-shell\.js(?:\?v=[^"]+)?"[^>]*><\/script>/);
@@ -42,14 +42,14 @@ test('admin auth start remains a fixed-origin allow-listed fallback', async () =
 
 test('central handoff preserves current admin destinations without retired route aliases', async () => {
   const source = await read('admin-central-handoff.js');
-  assert.ok(source.includes("storige:'storage'"));
-  assert.ok(source.includes("aiops:'ai-ops'"));
-  assert.ok(source.includes("release:'deployments'"));
-  assert.ok(source.includes('ai-ops openai devotional ai-module-spec'));
-  assert.ok(source.includes('health api-cost storage security'));
-  assert.doesNotMatch(source, /const ALIASES=\{[^}]*\b(?:legacy|domains|activity|overview):/);
-  assert.ok(source.includes("const q=normalizeRoute(new URLSearchParams(location.search).get('route'))"));
-  assert.ok(source.includes("const target=`https://admin.ekodi.kr/?route=${encodeURIComponent(r)}`"));
+  const routes = await read('admin-canonical-routes.js');
+  assert.ok(routes.includes("storige:'storage'"));
+  assert.ok(routes.includes("'ai-ops':'aiops'"));
+  assert.ok(routes.includes("release:'deployments'"));
+  assert.doesNotMatch(routes, /(?:legacy|domains|activity|overview):/);
+  assert.ok(source.includes("routes()?.normalizeSection"));
+  assert.ok(source.includes("routes()?.pathFor"));
+  assert.ok(source.includes("new URL('https://ekodi.kr/admin/')"));
   assert.ok(source.includes("route=normalizeRoute(query.get('route')||hash.get('ekodi_admin_route')"));
 });
 

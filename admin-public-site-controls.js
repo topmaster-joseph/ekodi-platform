@@ -1,7 +1,7 @@
 (() => {
 'use strict';
 const PANEL_ID = 'publicSiteControlsPanel';
-const API = 'https://api.ekodi.kr/api/control/public-sites';
+const API = 'https://ekodi.kr/api/control/public-sites';
 const SECTION = 'public-site-controls';
 const LABELS = {
   public: '정상 공개',
@@ -227,7 +227,7 @@ if (document.documentElement.dataset.ekodiAdminReady === 'true') boot();
 'use strict';
 const SECTION = 'auth-providers';
 const PANEL_ID = 'authProviderControlPanel';
-const API = 'https://api.ekodi.kr/api/admin/auth/providers';
+const API = 'https://ekodi.kr/api/admin/auth/providers';
 
 function token(){try{return sessionStorage.getItem('ekodi-auth-token')||''}catch{return''}}
 function node(tag,text='',className=''){const n=document.createElement(tag);if(className)n.className=className;if(text)n.textContent=text;return n}

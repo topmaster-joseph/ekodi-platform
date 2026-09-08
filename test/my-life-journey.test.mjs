@@ -66,7 +66,7 @@ test('My EKODI journey surface stays inside My and does not query specialist pri
   assert.match(page,/MY JOURNEY · PERSON FIRST/);
   assert.match(page,/외국인만을 위한 경로가 아니라/);
   assert.match(app,/current_site_access/);
-  assert.match(app,/auth\.ekodi\.kr/);
+  assert.match(app,/ekodi\.kr\/auth/);
   assert.doesNotMatch(app,/from\(['"]education_/);
   assert.doesNotMatch(app,/from\(['"]work_/);
   assert.doesNotMatch(app,/from\(['"]community_/);

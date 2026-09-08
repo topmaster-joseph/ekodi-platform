@@ -7,7 +7,7 @@ const page = fs.readFileSync(new URL('../my/device-care/index.html', import.meta
 const home = fs.readFileSync(new URL('../my/index.html', import.meta.url), 'utf8');
 
 test('free members can discover My Device Care from My EKODI', () => {
-  assert.match(home, /href="\/device-care\/">내 PC<\/a>/);
+  assert.match(home, /href="\/my\/device-care\/">내 PC<\/a>/);
   assert.match(page, /FREE MEMBER/);
   assert.match(page, /무료회원/);
 });

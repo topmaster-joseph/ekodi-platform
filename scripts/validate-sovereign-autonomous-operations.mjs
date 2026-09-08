@@ -1,4 +1,4 @@
-﻿import fs from 'node:fs';
+import fs from 'node:fs';
 import path from 'node:path';
 import { SOVEREIGN_AUTONOMY_POLICY, getSovereignAutonomySummary } from '../sovereign-autonomy-runtime.js';
 
@@ -12,6 +12,12 @@ const constitution = readJson('governance/constitution/constitution.json');
 const architecture = readJson('governance/architecture/ekodi-os-architecture.json');
 const evolution = readJson('governance/architecture/ekodi-evolution-model.json');
 const runtime = getSovereignAutonomySummary();
+function versionAtLeast(actual,minimum){
+  const parse=value=>String(value||'').split('.').map(part=>Number(part)||0);
+  const a=parse(actual),b=parse(minimum),length=Math.max(a.length,b.length);
+  for(let i=0;i<length;i++){const delta=(a[i]||0)-(b[i]||0);if(delta!==0)return delta>0;}
+  return true;
+}
 
 if (registry.schemaVersion !== 1) fail('sovereign operations registry schemaVersion must be 1');
 if (registry.architectureVersion !== '1.8.1') fail('sovereign operations architectureVersion must be 1.8.1');
@@ -49,7 +55,7 @@ if (surface.tracks?.service?.directCrossServicePrivateDb !== false) fail('servic
 if (surface.tracks?.tenant?.urlIsIdentity !== false) fail('tenant track must keep URL separate from identity authority');
 if (surface.tracks?.agent?.rootCredentialAccess !== false) fail('agent track must forbid root credential access');
 
-if (constitution.version !== '1.8.2') fail('constitution must be v1.8.2 while Sovereign Autonomous Operations remains v1.8.1');
+if (!versionAtLeast(constitution.version,'1.8.2')) fail('constitution must be v1.8.2 or newer while Sovereign Autonomous Operations remains v1.8.1');
 if (constitution.architectureModel?.operatingArchitectureVersion !== '1.8.1') fail('constitution operating architecture version mismatch');
 if (constitution.architectureModel?.sovereignOperationsRegistry !== 'governance/architecture/sovereign-autonomous-operations.v1.json') fail('constitution sovereign registry path mismatch');
 if (JSON.stringify(constitution.sovereignAutonomousOperations?.hierarchy) !== JSON.stringify(hierarchy)) fail('constitution sovereign hierarchy mismatch');

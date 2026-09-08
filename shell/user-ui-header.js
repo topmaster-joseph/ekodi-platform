@@ -155,7 +155,7 @@ function ensureFallback(){
   header.setAttribute(FALLBACK_ATTR,`v${VERSION}`);
   header.setAttribute('data-ekodi-user-header-root',`v${VERSION}`);
   header.setAttribute('role','banner');
-  header.innerHTML=`<div class="ekodi-user-ui-header-fallback__inner"><a class="ekodi-user-ui-header-fallback__brand" data-ekodi-header-home href="https://ekodi.kr/" aria-label="EKODI 홈">EKODI</a><span class="ekodi-user-ui-header-fallback__context" data-ekodi-header-center>${serviceLabel()}</span><a class="ekodi-user-ui-header-fallback__my" href="https://my.ekodi.kr/">My EKODI</a></div>`;
+  header.innerHTML=`<div class="ekodi-user-ui-header-fallback__inner"><a class="ekodi-user-ui-header-fallback__brand" data-ekodi-header-home href="https://ekodi.kr/" aria-label="EKODI 홈">EKODI</a><span class="ekodi-user-ui-header-fallback__context" data-ekodi-header-center>${serviceLabel()}</span><a class="ekodi-user-ui-header-fallback__my" href="https://ekodi.kr/my/">My EKODI</a></div>`;
   document.body.prepend(header);
   fallbackHeader=header;
   return header;

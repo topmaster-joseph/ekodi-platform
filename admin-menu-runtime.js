@@ -1,10 +1,10 @@
 import { adminMenuOrder, getAdminMenuItem, getAdminMenuLabel, normalizeAdminLocale } from './admin-menu-registry.js';
 
-const API = 'https://api.ekodi.kr';
+const API = 'https://ekodi.kr';
 const LOCALE_KEY = 'ekodi-admin-locale';
 const LOCALE_COOKIE = 'ekodi_admin_locale';
 const CONTEXT_KEY = 'ekodi-admin-context-v1';
-const CENTRAL_ADMIN_AUTH = 'https://auth.ekodi.kr/';
+const CENTRAL_ADMIN_AUTH = 'https://ekodi.kr/auth/';
 const ADMIN_HANDOFF_ALLOWED_TARGETS = new Set(['https://tax.ekodi.kr/']);
 const ROLES = ['super_admin', 'operator', 'viewer'];
 let locale = readLocale();

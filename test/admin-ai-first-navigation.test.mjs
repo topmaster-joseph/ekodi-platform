@@ -21,7 +21,7 @@ test('internal technical sections stay out of primary navigation', () => {
 test('internal hashes converge into demand-loaded AI Ops', () => {
   assert.ok(layout.includes("function routeInternal(){dc=false;requestedSection='aiops'"));
   assert.ok(layout.includes("requestDemand('aiops')"));
-  assert.ok(layout.includes("history.replaceState(null,'','#ai-ops')"));
+  assert.ok(layout.includes("replaceSectionUrl('aiops')"));
   assert.ok(layout.includes("const explicitHashSection=()=>HASH.get(location.hash.toLowerCase())||''"));
   assert.doesNotMatch(layout, /setInterval\(/);
 });

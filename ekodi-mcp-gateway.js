@@ -5,9 +5,9 @@ import { authorizeCapabilityInvocation, SOVEREIGN_CAPABILITY_FABRIC } from './so
 
 const SUPABASE_URL='https://renzehysxirjilvdxacv.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
-export const EKODI_MCP_RESOURCE='https://api.ekodi.kr/mcp';
+export const EKODI_MCP_RESOURCE='https://ekodi.kr/mcp';
 export const EKODI_MCP_AUTH_SERVER=`${SUPABASE_URL}/auth/v1`;
-export const EKODI_MCP_METADATA_URL='https://api.ekodi.kr/.well-known/oauth-protected-resource';
+export const EKODI_MCP_METADATA_URL='https://ekodi.kr/.well-known/oauth-protected-resource';
 const PROTOCOL_VERSION='2026-07-28';
 const OAUTH_SCHEME=Object.freeze({type:'oauth2',scopes:['openid','email','profile']});
 const TOOL_CAPABILITIES=Object.freeze({
@@ -36,7 +36,7 @@ export function mcpProtectedResourceMetadata(){
     authorization_servers:[EKODI_MCP_AUTH_SERVER],
     scopes_supported:['openid','email','profile'],
     bearer_methods_supported:['header'],
-    resource_documentation:'https://auth.ekodi.kr/oauth/consent',
+    resource_documentation:'https://ekodi.kr/auth/oauth/consent',
   });
 }
 

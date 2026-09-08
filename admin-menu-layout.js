@@ -20,6 +20,8 @@ const DEMAND_KEYS=new Map([
 const pairMap=value=>new Map(value.split(' ').map(pair=>pair.split(':')));
 const HASH=pairMap('#sites:sites #common-services:common-services #capabilities:capabilities #capability-center:capabilities #ai-ops:aiops #aiops:aiops #openai:openai #devotional:devotional #ai-module-spec:ai-module-spec #ai-membership:ai-membership #personal-finance:personal-finance #health:health #api-cost:api-cost #storage:storage #storige:storage #security:security #architecture:architecture #devices:devices #campus:campus #public-site-controls:public-site-controls #work:work #communication:communication #marketing-ai:marketing-ai #finance:finance #organization:organization #workspace:workspace #clients:clients #admins:admins #community:community #cheonggye-members:cheonggye-members #books:books #social:social #mall-ai-sales:affiliates #affiliates:affiliates #insurance:insurance #policies:policies #services:services #deployments:deployments #release:deployments');
 const CANON=pairMap('sites:#sites common-services:#common-services capabilities:#capabilities aiops:#ai-ops openai:#openai devotional:#devotional ai-module-spec:#ai-module-spec ai-membership:#ai-membership personal-finance:#personal-finance health:#health api-cost:#api-cost storage:#storage security:#security architecture:#architecture devices:#devices campus:#campus public-site-controls:#public-site-controls work:#work communication:#communication marketing-ai:#marketing-ai finance:#finance organization:#organization workspace:#workspace clients:#clients admins:#admins community:#community cheonggye-members:#cheonggye-members books:#books social:#social affiliates:#mall-ai-sales insurance:#insurance');
+const adminRoutes=()=>window.EKODIAdminRoutes;
+function replaceSectionUrl(section){const target=adminRoutes()?.navigationTarget?.(section,location)||CANON.get(section);if(!target)return;if(target.startsWith('/')){const current=`${location.pathname}${location.search}${location.hash}`;if(current!==target)history.replaceState(null,'',target)}else if(location.hash!==target)history.replaceState(null,'',target)}
 let requestedSection = '';
 let sitesLoading,cheonggyeLoading,last='',queued=false,running=false,again=false,dc=false;
 const demandLoading=new Map();
@@ -80,8 +82,7 @@ function activatePanel(section){
   }
   for(const item of allNav())item.classList.toggle('active',!isInternalNav(item)&&sectionOf(item)===section);
   syncTitle(section);
-  const hash=CANON.get(section);
-  if(hash&&location.hash!==hash)history.replaceState(null,'',hash);
+  replaceSectionUrl(section);
   if(section === 'architecture'&&!window.EKODISystemMap)import('./system-health-admin.js').catch(console.error);
   sidebar.classList.remove('open');
   return true;
@@ -150,8 +151,10 @@ function requestDemand(section){
   }).finally(()=>demandLoading.delete(section));
   demandLoading.set(section,task);return task;
 }
-function routeInternal(){dc=false;requestedSection='aiops';if(location.hash!=='#ai-ops')history.replaceState(null,'','#ai-ops');requestDemand('aiops');}
+function routeInternal(){dc=false;requestedSection='aiops';replaceSectionUrl('aiops');requestDemand('aiops');}
 const explicitHashSection=()=>HASH.get(location.hash.toLowerCase())||'';
+const explicitPathSection=()=>adminRoutes()?.sectionFromPath?.(location.pathname)||'';
+const explicitAdminSection=()=>explicitPathSection()||explicitHashSection();
 function reconcileNavigation(){
   if(running){again=true;return;}
   running=true;
@@ -183,13 +186,14 @@ window.addEventListener('ekodi-nav-changed',scheduleNav);
 window.addEventListener('ekodi-feature-installed',scheduleNav);
 window.addEventListener('ekodi-session-validated',afterAuth,{once:true});
 window.addEventListener('ekodi-admin-ready',()=>{
-  enforcePolicy();const section=explicitHashSection();
+  enforcePolicy();const section=explicitAdminSection();
   if(section&&isInternal(section))return routeInternal();
   if(section==='sites')return openSites();
   if(section==='cheonggye-members')return openCheonggyeMembers();
   if(section){dc=false;requestedSection=section;if(!activatePanel(section))requestDemand(section);}
   else{requestedSection='campus';dc=true;}
 });
+window.addEventListener('popstate',()=>{const section=explicitPathSection();if(!section)return;dc=false;if(isInternal(section))return routeInternal();if(section==='sites')return openSites();if(section==='cheonggye-members')return openCheonggyeMembers();requestedSection=section;if(!activatePanel(section))requestDemand(section);});
 window.addEventListener('hashchange',()=>{
   const section=explicitHashSection();if(!section)return;dc=false;
   if(isInternal(section))return routeInternal();
@@ -198,11 +202,11 @@ window.addEventListener('hashchange',()=>{
   requestedSection=section;if(!activatePanel(section))requestDemand(section);
 });
 mountAdminSidebar(document);enforcePolicy();
-const initialHash = explicitHashSection();
-if(initialHash&&isInternal(initialHash))routeInternal();
-else if(initialHash==='sites')openSites();
-else if(initialHash==='cheonggye-members')openCheonggyeMembers();
-else if (initialHash) requestedSection = initialHash;
+const initialSection = explicitAdminSection();
+if(initialSection&&isInternal(initialSection))routeInternal();
+else if(initialSection==='sites')openSites();
+else if(initialSection==='cheonggye-members')openCheonggyeMembers();
+else if (initialSection) requestedSection = initialSection;
 else{requestedSection = 'campus';dc=true;requestDemand('campus');}
 window.EKODIAdminPanels=Object.freeze({
   activate:section=>{
