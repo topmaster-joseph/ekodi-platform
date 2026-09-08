@@ -5,6 +5,7 @@
  * This file is appended to the authenticated Admin shell at build time.
  */
 body.admin-compact{
+  padding-top:0!important;
   --admin-page:#f6f8fb;
   --admin-surface:#ffffff;
   --admin-surface-soft:#f8fafc;
@@ -27,6 +28,12 @@ body.admin-compact .content [data-panel]{min-height:0}
 body.admin-compact .content :is(.section,.panel,.module,.architecture){box-shadow:none!important}
 body.admin-compact .content :is(button,.primary,.secondary,.ghost){min-height:var(--admin-control-h)}
 body.admin-compact .content :is(p,small,span,label,td,th){text-rendering:optimizeLegibility}
+
+/* Admin shell viewport contract: public-header offsets never leak into admin. */
+@media(min-width:761px){
+  body.admin-compact .app{align-items:start}
+  body.admin-compact .sidebar{position:sticky;top:0;height:100vh;height:100dvh;overflow:hidden}
+}
 
 /* Marketing AI is an Admin subservice, not a separate dark console.
  * It inherits the same visual grammar as the rest of admin. */
