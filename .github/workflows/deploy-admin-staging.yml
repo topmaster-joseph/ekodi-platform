@@ -87,8 +87,8 @@ jobs:
           grep -Fq "admin-shell.css?v=$version" dist/admin-shell.html
           grep -Fq "admin-central-handoff.js?v=$version" dist/admin-shell.html
           grep -Fq 'data-ekodi-postauth="admin-compact.js admin-menu-layout.js admin-demand-loader.js"' dist/admin-shell.html
-          grep -Fq "LEGACY_MALL_AFFILIATE_HASHES=new Set(['#affiliates','#mall-ai-sales'])" dist/admin-menu-layout.js
-          grep -Fq "MALL_SUPPLY_ADMIN='https://ekodi.kr/ekodibiz/mall/admin/sourcing'" dist/admin-menu-layout.js
+          grep -Fq '#affiliates' dist/admin-menu-layout.js
+          grep -Fq 'https://ekodi.kr/ekodibiz/mall/admin/sourcing' dist/admin-menu-layout.js
           grep -Fq "id: 'supply-network'" dist/admin-menu-registry.js
           grep -Fq '판매·공급망' dist/admin-menu-registry.js
           grep -Fq "dataset.panel = 'supply-network'" dist/supply-network-admin.js

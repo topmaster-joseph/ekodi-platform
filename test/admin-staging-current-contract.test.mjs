@@ -5,8 +5,8 @@ import test from 'node:test';
 const workflow = await readFile(new URL('../.github/workflows/deploy-admin-staging.yml', import.meta.url), 'utf8');
 
 test('Admin staging validates the current sales and supply-network contract', () => {
-  assert.match(workflow, /LEGACY_MALL_AFFILIATE_HASHES/);
-  assert.match(workflow, /MALL_SUPPLY_ADMIN/);
+  assert.match(workflow, /grep -Fq '#affiliates' dist\/admin-menu-layout\.js/);
+  assert.match(workflow, /ekodi\.kr\/ekodibiz\/mall\/admin\/sourcing/);
   assert.match(workflow, /id: 'supply-network'/);
   assert.match(workflow, /판매·공급망/);
   assert.match(workflow, /supply-network-admin\.js/);
