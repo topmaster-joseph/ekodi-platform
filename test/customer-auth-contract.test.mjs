@@ -75,7 +75,8 @@ test('customer APIs keep their dedicated entry layer behind security-wrapped Mis
   assert.ok(missionEntry.includes('const response = await customerEntryWorker.fetch(request, env, ctx)'));
   assert.ok(missionEntry.includes('return applyApiSecurityHeaders(response)'));
   assert.ok(missionEntry.includes('const guard = await enforceEdgeSecurity(request, env)'));
-  assert.ok(missionEntry.includes('return customerEntryWorker.scheduled(controller, env, ctx)'));
+  assert.ok(missionEntry.includes("await customerEntryWorker.scheduled(controller, env, ctx)"));
+  assert.ok(missionEntry.includes('if (customerSchedule?.reporting?.ran) return customerSchedule'));
 });
 
 test('all customer production origins are explicitly allowed', () => {

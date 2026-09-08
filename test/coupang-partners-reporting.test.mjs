@@ -168,7 +168,20 @@ test('report execution owns one scheduled invocation budget', async () => {
   const end = entry.indexOf('\n  },\n};', start);
   const block = entry.slice(start,end);
   assert.match(block,/const reporting = await syncScheduledCoupangPartnerReports/);
-  assert.match(block,/if \(reporting\?\.ran\) return;/);
+  assert.match(block,/if \(reporting\?\.ran\) return \{ reporting \};/);
   assert.ok(block.indexOf('syncScheduledCoupangPartnerReports') < block.indexOf('runChurchReportSchedule'));
   assert.ok(block.indexOf('syncScheduledCoupangPartnerReports') < block.indexOf('syncScheduledAffiliateAutomation'));
 });
+
+
+test('Mission Control also yields the whole cron budget to a real Coupang report pass', async () => {
+  const mission = await readFile(new URL('../mission-control-entry-worker.js', import.meta.url), 'utf8');
+  const start = mission.indexOf('async scheduled(controller, env, ctx)');
+  const end = mission.indexOf('\n  },\n};', start);
+  const block = mission.slice(start,end);
+  assert.match(block,/const customerSchedule = typeof customerEntryWorker\.scheduled/);
+  assert.match(block,/if \(customerSchedule\?\.reporting\?\.ran\) return customerSchedule/);
+  assert.ok(block.indexOf('await customerEntryWorker.scheduled') < block.indexOf('runAuthorBillingSchedule'));
+  assert.ok(block.indexOf('await customerEntryWorker.scheduled') < block.indexOf('drainMessengerOutbox'));
+});
+
