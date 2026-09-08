@@ -153,7 +153,7 @@ test('Personal users can enter personal-brand Marketing without a tenant or stor
 test('Production rollout migrates legacy My EKODI before future guarded promotions',async()=>{
   const workflow=await read('.github/workflows/deploy-my.yml');
   assert.match(workflow,/has no deployments/);
-  assert.match(workflow,/my\.ekodi\.kr\/health/);
+  assert.match(workflow,/ekodi\.kr\/my\/health/);
   assert.match(workflow,/MY PLATFORMS/);
   assert.match(workflow,/one-time direct migration from staging-validated source/);
   assert.match(workflow,/Existing production .*satisfies.*My EKODI hub contract/);
@@ -184,6 +184,21 @@ test('My EKODI approval hub keeps unified visibility and person-scoped decision 
   assert.match(migration,/create table if not exists public\.approval_executions/);
   assert.match(migration,/approval_not_assignee/);
   assert.doesNotMatch(approvalApp,/service_role|SUPABASE_SERVICE_ROLE_KEY/);
+});
+
+test('My production verification uses the canonical apex path and proves the legacy redirect',async()=>{
+  const workflow=await read('.github/workflows/deploy-my.yml');
+  assert.match(workflow,/legacy_code=.*https:\/\/my\.ekodi\.kr\//);
+  assert.ok(workflow.includes("^location:[[:space:]]*https://ekodi\\.kr/my/?[[:space:]]*$"));
+  assert.match(workflow,/https:\/\/ekodi\.kr\/my\/w\/person:deployment-probe/);
+  assert.match(workflow,/https:\/\/ekodi\.kr\/my\/service-manifest\.json/);
+  assert.doesNotMatch(workflow,/private_code=.*https:\/\/my\.ekodi\.kr\/w\//);
+});
+test('My production dependency gate accepts forward-compatible Shell character renderer versions',async()=>{
+  const workflow=await read('.github/workflows/deploy-my.yml');
+  assert.doesNotMatch(workflow,/userCharacterVersion\":6/);
+  assert.match(workflow,/Number\(h\.characterIdentityRegistryVersion\)!==2/);
+  assert.match(workflow,/Number\(h\.userCharacterVersion\)<6/);
 });
 
 test('My staging verification preserves Cloudflare Access instead of weakening it',async()=>{
