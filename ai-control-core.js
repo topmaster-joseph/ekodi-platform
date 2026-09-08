@@ -57,8 +57,9 @@ export function createTaskId(now = new Date(), random = Math.random) {
 
 export function normalizeOrigin(input = {}) {
   const raw = input.origin && typeof input.origin === 'object' ? input.origin : {};
-  const requestedProvider = clean(raw.provider || input.originProvider || input.sourceProvider || 'ekodi').toLowerCase();
-  const provider = ORIGIN_ALIASES[requestedProvider] || requestedProvider || 'ekodi';
+  const requestedProvider = clean(raw.requestedProvider || raw.provider || input.originProvider || input.sourceProvider || 'ekodi').toLowerCase();
+  const normalizedProvider = clean(raw.provider || input.originProvider || input.sourceProvider || requestedProvider || 'ekodi').toLowerCase();
+  const provider = ORIGIN_ALIASES[normalizedProvider] || normalizedProvider || ORIGIN_ALIASES[requestedProvider] || requestedProvider || 'ekodi';
   const channel = clip(raw.channel || input.originChannel || input.sourceChannel || provider, 80).toLowerCase() || provider;
   const requestId = clip(raw.requestId || raw.request_id || input.originRequestId || input.requestId, 160);
   return Object.freeze({provider,channel,requestId,requestedProvider:requestedProvider||provider});
