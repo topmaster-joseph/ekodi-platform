@@ -34,3 +34,8 @@ test('admin destination still accepts the same handoff token and router cache is
   assert.match(handoff, /sessionStorage\.setItem\('ekodi-auth-token'/);
   assert.match(router, /admin-auth\.js\?v=20260904-direct-bridge-1/);
 });
+
+test('admin auth can return a verified platform session to nested Mall admin controls', () => {
+  assert.equal(adminAuth.includes("u.pathname.startsWith('/ekodibiz/mall/admin/')"), true);
+  assert.match(adminAuth, /ekodi_admin_token:result\.token/);
+});
