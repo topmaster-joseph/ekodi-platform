@@ -21,6 +21,11 @@ test('sales and supply network separates professional engine health from Mall op
   assert.match(demand, /'supply-network':[\s\S]*supply-network-admin\.js/);
   assert.match(professionalPanel, /api\('\/providers'\)/);
   assert.match(professionalPanel, /api\('\/programs'\)/);
+  assert.match(professionalPanel, /outreachStatus/);
+  assert.match(professionalPanel, /data-supply-program-save/);
+  assert.match(professionalPanel, /method:'PUT'/);
+  assert.match(professionalPanel, /https:\/\/api\.ekodi\.kr\/api\/affiliate/);
+  assert.match(professionalPanel, /관리 ↗/);
   assert.doesNotMatch(professionalPanel, /api\('\/routes'\)|api\('\/accounts'\)/);
   assert.match(workspace, /sourcing:\['판매·공급망'/);
   assert.match(workspace, /sourcing:POLICY\.capabilities\.supplyNetwork/);
