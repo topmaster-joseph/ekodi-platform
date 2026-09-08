@@ -522,8 +522,8 @@ export default {
         return withHostSecurity(response, PUBLIC_CSP, 'no-store', 'public-home');
       }
       if (['GET','HEAD'].includes(request.method) && (url.pathname === '/pizzamaru/mokpodae' || url.pathname === '/pizzamaru/mokpodae/')) {
-        const response = await env.ASSETS.fetch(assetRequest(request, '/pizzamaru-mokpodae'));
-        return withHostSecurity(response, PUBLIC_CSP, 'public, max-age=0, must-revalidate', 'public-pizzamaru-mokpodae');
+        const target=new URL('/pizzamaru',request.url);target.search=url.search;
+        return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-content-type-options':'nosniff','x-ekodi-canonical-storefront':'pizzamaru'}});
       }
       if (url.pathname === '/workspace-admin.css') return workspaceAdminCss();
       if (url.pathname === '/workspace-admin.js') return workspaceAdminScript();
