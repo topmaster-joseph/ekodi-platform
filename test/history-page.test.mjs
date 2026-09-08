@@ -19,13 +19,13 @@ test('EKODI History is a canonical public page with responsive timeline semantic
 });
 
 test('site build publishes History and homepage exposes the entry point', async () => {
-  const [build, ambient] = await Promise.all([
+  const [build, homepage] = await Promise.all([
     read('scripts/build.mjs'),
-    read('homepage-ambient.js'),
+    read('index.html'),
   ]);
 
   assert.match(build, /'history\.html'/);
-  assert.match(ambient, /href = '\/history'/);
-  assert.match(ambient, /data\.ekodiHistoryLink|dataset\.ekodiHistoryLink/);
-  assert.match(ambient, /역사 <span>History<\/span>/);
+  assert.match(homepage, /href="\/history"/);
+  assert.match(homepage, />역사<\/a>/);
+  assert.match(homepage, /id="contact"/);
 });

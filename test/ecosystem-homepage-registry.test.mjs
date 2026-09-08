@@ -24,8 +24,8 @@ test('homepage registry exposes only production-verified live bilingual services
   for (const required of ['church', 'community', 'social', 'biz', 'mall', 'marketing', 'books', 'author', 'lab', 'work']) {
     assert.ok(ids.includes(required), `missing verified live homepage service: ${required}`);
   }
-  for (const hidden of ['business', 'invest', 'energy', 'messenger']) {
-    assert.ok(!ids.includes(hidden), `beta service must stay off the public root: ${hidden}`);
+  for (const hidden of ['business', 'invest', 'energy', 'messenger', 'trade', 'mail', 'live']) {
+    assert.ok(!ids.includes(hidden), `non-public service must stay off the public root: ${hidden}`);
   }
   assert.ok(!ids.includes('mission'), 'legacy mission service must not be published separately');
 
@@ -39,7 +39,7 @@ test('homepage registry exposes only production-verified live bilingual services
   assert.equal(community?.category, 'community-ministry');
 });
 
-test('homepage semi-list renders Korean and English together with live badges', async () => {
+test('homepage service registry renders Korean and English together with live badges', async () => {
   const services = await loadHomepageServices();
   const html = renderServiceCards(services);
   for (const service of services) {
@@ -71,16 +71,17 @@ test('beta and roadmap services remain in the registry but stay hidden from the 
   }
 });
 
-test('homepage navigation and bilingual hero remain compact without roadmap lifecycle filters', () => {
-  for (const anchor of ['#about', '#services', '#connect', '#contact']) {
+test('homepage navigation and character-village entry remain compact without lifecycle filters', () => {
+  for (const anchor of ['#about', '#services', '#contact']) {
     assert.match(homepage, new RegExp(`href="${anchor}"`));
   }
   for (const id of ['about', 'services', 'connect', 'contact']) {
     assert.match(homepage, new RegExp(`id="${id}"`));
   }
-  assert.match(homepage, /에코디의 모든 길을 한눈에/);
-  assert.match(homepage, /One ecosystem\. Many ways to connect\./);
+  assert.match(homepage, /누구나 시작할 수 있는/);
+  assert.match(homepage, /EKODIAN CHARACTER VILLAGE V6/);
   assert.match(homepage, /class="ecosystem-pulse"/);
+  assert.match(homepage, /data-ekodi-village-gates/);
   assert.match(homepage, /class="service-grid"/);
   assert.doesNotMatch(homepage, /data-status-filter=/);
   assert.doesNotMatch(homepage, /class="[^"]*orbit|ecosystem-orbit|network-orbit/i);
@@ -93,6 +94,6 @@ test('guarded release smoke markers stay aligned with the actual EKODI homepage'
   for (const marker of rootCheck.expect) {
     assert.ok(homepage.includes(marker), `release marker drifted from homepage: ${marker}`);
   }
-  assert.ok(rootCheck.expect.includes('에코디의 모든 길을 한눈에'));
-  assert.ok(rootCheck.expect.includes('One ecosystem. Many ways to connect.'));
+  assert.ok(rootCheck.expect.includes('누구나 시작할 수 있는'));
+  assert.ok(rootCheck.expect.includes('EKODIAN CHARACTER VILLAGE V6'));
 });

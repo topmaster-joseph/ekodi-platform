@@ -4,13 +4,14 @@ import { readFile } from 'node:fs/promises';
 
 const css = await readFile(new URL('../homepage-ambient.css', import.meta.url), 'utf8');
 const js = await readFile(new URL('../homepage-ambient.js', import.meta.url), 'utf8');
+const homepage = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 const build = await readFile(new URL('../scripts/build.mjs', import.meta.url), 'utf8');
 const deploySiteCore = await readFile(new URL('../.github/workflows/deploy-site-core.yml', import.meta.url), 'utf8');
 
-test('homepage keeps a translucent daily Seoul-date ambient scene', () => {
+test('homepage keeps a deterministic Seoul-date ambient scene', () => {
   assert.match(css, /body::before/);
   assert.match(css, /backdrop-filter:blur/);
-  assert.match(css, /ekodiAmbientDrift/);
+  assert.match(css, /@keyframes ekodiAmbient/);
   assert.match(js, /const palettes = \[/);
   assert.match(js, /Asia\/Seoul/);
   assert.match(js, /function dailySeed/);
@@ -23,54 +24,42 @@ test('homepage keeps a translucent daily Seoul-date ambient scene', () => {
   assert.match(deploySiteCore, /npm run build/);
 });
 
-test('public homepage is intent-first and does not lead with the full directory', () => {
-  assert.match(js, /원하는 일, 바로 시작하세요/);
-  assert.match(js, /오늘 무엇을 하시나요\?/);
-  assert.match(js, /intentSets/);
-  assert.match(js, /function rankServices/);
-  assert.match(js, /slice\(0, limit\)/);
-  assert.match(js, /dataset\.livingGateway = 'v5-intent-journey'/);
-  assert.match(js, /daily-connect intent-panel/);
-  assert.match(js, /function arrangeHomepageJourney/);
-  assert.match(css, /\.daily-connect\{/);
-  assert.match(css, /\.intent-results/);
-  assert.match(css, /EKODI homepage intent journey v5/);
-  assert.match(css, /body\[data-living-gateway="v5-intent-journey"\] #ecosystem\{display:none!important\}/);
-  assert.match(css, /\.about-grid\{grid-template-columns:1fr!important/);
-  assert.match(css, /\.hero\{display:flex!important;flex-direction:column!important/);
+test('public homepage is EKODIAN character-village first', () => {
+  assert.match(homepage, /EKODIAN CHARACTER VILLAGE V6/);
+  assert.match(homepage, /누구나 시작할 수 있는/);
+  assert.match(homepage, /data-ekodi-village-gates/);
+  assert.match(homepage, /class="ekodian-guide"/);
+  assert.match(js, /gatePriority/);
+  assert.match(js, /function buildCharacterVillage/);
+  assert.match(js, /visible\.slice\(0, 8\)/);
+  assert.match(js, /dataset\.livingGateway = 'v6-character-village'/);
+  assert.match(css, /\.village-gate\{/);
+  assert.match(css, /\.ekodian-guide\{/);
+  assert.match(css, /\.value-grid\{/);
 });
 
-test('intent gateway reveals services only after category selection or search', () => {
+test('character village respects verified homepage presentation controls', () => {
   assert.match(js, /data-service-status|dataset\.serviceStatus/);
-  assert.match(js, /renderRecommendations/);
-  assert.match(js, /limit = 5/);
-  assert.match(js, /id:'all'/);
-  assert.match(js, /results\.hidden = true/);
-  assert.match(js, /results\.hidden = false/);
-  assert.match(js, /intent\.id === 'all'/);
-  assert.doesNotMatch(js, /buildQuickLinks/);
-  assert.doesNotMatch(js, /quickPaths/);
-  assert.match(js, /무료로 시작/);
+  assert.match(js, /applyHomepagePresentation/);
+  assert.match(js, /homepageDefault/);
+  assert.match(js, /visibility === 'hidden'/);
+  assert.match(js, /api\/homepage\/presentation/);
+  assert.match(js, /visible\.slice\(0, 8\)/);
   assert.doesNotMatch(js, /data-status-filter/);
   assert.doesNotMatch(js, /function applyFilter/);
 });
 
-test('homepage locale handling keeps Korean English Chinese and Japanese paths', () => {
-  assert.match(js, /ekodi_user_locale/);
-  assert.match(js, /ekodi\.locale/);
-  assert.match(js, /'ko-KR'/);
-  assert.match(js, /'zh-CN'/);
-  assert.match(js, /en:/);
-  assert.match(js, /ja:/);
-  assert.match(js, /document\.documentElement\.lang=locale|document\.documentElement\.lang = locale/);
-  assert.match(js, /ekodi:locale-change/);
-  assert.match(css, /@media\(max-width:640px\)/);
+test('character village stays responsive and motion-safe', () => {
+  assert.match(css, /@media\(max-width:760px\)/);
+  assert.match(css, /\.village-gates/);
+  assert.match(css, /grid-template-columns:repeat\(2,1fr\)/);
+  assert.match(css, /@media\(prefers-reduced-motion:reduce\)/);
 });
 
-test('ambient layer stays visible above the body background and below content', () => {
-  assert.match(css, /body::before,[\s\S]*?z-index:0/);
-  assert.match(css, /\.site-header,[\s\S]*?main\{[\s\S]*?z-index:1/);
-  assert.doesNotMatch(css, /body::before,[\s\S]*?z-index:-1/);
+test('ambient layer stays behind interface content', () => {
+  assert.match(css, /body\{[^}]*isolation:isolate/);
+  assert.match(css, /body::before\{[\s\S]*?z-index:-2/);
+  assert.match(css, /\.site-header\{[\s\S]*?z-index:50/);
 });
 
 test('ambient assets are shipped and injected into the EKODI homepage build', () => {
