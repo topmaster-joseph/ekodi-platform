@@ -67,7 +67,7 @@ test('PizzaMaru and YogurtPurple get dedicated user-page profiles',()=>{
   assert.match(html,/storePageStats/);
   assert.match(app,/renderStorePageOverview/);
   assert.match(css,/data-store-page="pizzamaru"/);
-  assert.match(css,/data-store-page="yogurt"/);
+  assert.match(css,/data-store-page="yogurt"/);assert.match(css,/\.yp-mobile-dock/);assert.match(css,/\.yp-local-strip/);assert.match(html,/id="mobilePhone"/);assert.match(html,/www\.yogurtpurple\.com/);
 });
 
 test('production smoke covers each store user page separately',()=>{

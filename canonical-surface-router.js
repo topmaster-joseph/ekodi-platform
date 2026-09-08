@@ -1,3 +1,6 @@
+import { handleMailContactApi, mailContactPage } from './mail-contact.js';
+import { injectEkodiShell } from './ekodi-shell-injector.js';
+
 const CANONICAL_HOST='ekodi.kr';
 const SURFACE_PREFIXES=Object.freeze({my:'/my',admin:'/admin',auth:'/auth'});
 const SYSTEM_PATHS=Object.freeze(['/api','/mcp','/webhooks','/health']);
@@ -6,6 +9,7 @@ const PUBLIC_EXECUTION_SURFACES=Object.freeze([
   Object.freeze({id:'business',prefix:'/business',host:'business.ekodi.kr'}),
 ]);
 const ADMIN_RUNTIME_FILE=/\.(?:js|css|cmd|json|map|svg|png|webp|ico)$/i;
+const AUTH_TOP_LEVEL_TEXT_ASSET=/\.(?:js|css|json|map)$/i;
 
 function cloneRequest(request,url){
   return new Request(url.toString(),{
@@ -24,6 +28,15 @@ function stripPrefix(pathname,prefix){
 function canonicalSlashRedirect(request,prefix){
   const target=new URL(request.url);target.pathname=`${prefix}/`;
   return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-content-type-options':'nosniff'}});
+}
+function directDocumentNavigation(request){
+  return String(request.headers.get('sec-fetch-dest')||'').toLowerCase()==='document';
+}
+function authAssetDocumentRedirect(request,pathname){
+  const stripped=stripPrefix(pathname,SURFACE_PREFIXES.auth);
+  if(!directDocumentNavigation(request)||!AUTH_TOP_LEVEL_TEXT_ASSET.test(stripped))return null;
+  const target=new URL(request.url);target.pathname=`${SURFACE_PREFIXES.auth}/`;target.search='';target.hash='';
+  return new Response(null,{status:302,headers:{location:target.toString(),'cache-control':'no-store','x-content-type-options':'nosniff','x-ekodi-route':'auth-document-guard'}});
 }
 function serviceUnavailable(surface){
   return new Response(`${surface} surface unavailable`,{status:503,headers:{
@@ -128,11 +141,18 @@ export async function routeCanonicalSurface(request,env,{legacyFetch,externalFet
   const url=new URL(request.url);
   if(url.hostname.toLowerCase()!==CANONICAL_HOST)return null;
   const path=url.pathname;
+  const contactResponse=await handleMailContactApi(request,env);
+  if(contactResponse)return contactResponse;
+  if(request.method==='GET'&&path==='/mail/contact'){
+    const page=mailContactPage();
+    return typeof HTMLRewriter==='function'?injectEkodiShell(page,'mail'):page;
+  }
   const executionSurface=executionSurfaceForPath(path);if(executionSurface)return proxyExecutionSurface(request,env,executionSurface,externalFetch);
   if(path===SURFACE_PREFIXES.my)return canonicalSlashRedirect(request,SURFACE_PREFIXES.my);
   if(path.startsWith(`${SURFACE_PREFIXES.my}/`))return proxyBinding(request,env?.MY,SURFACE_PREFIXES.my,'my');
   if(path===SURFACE_PREFIXES.auth)return canonicalSlashRedirect(request,SURFACE_PREFIXES.auth);
   if(path.startsWith(`${SURFACE_PREFIXES.auth}/`)){
+    const documentRedirect=authAssetDocumentRedirect(request,path);if(documentRedirect)return documentRedirect;
     if(typeof legacyFetch!=='function')return serviceUnavailable('auth');
     return proxyAuth(request,legacyFetch);
   }
