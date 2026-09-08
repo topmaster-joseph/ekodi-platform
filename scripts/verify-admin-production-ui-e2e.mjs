@@ -24,7 +24,8 @@ page.on('console', message => {
   if (message.type() === 'error' && !/cloudflareinsights\.com\/beacon/i.test(message.text())) console.log(`[browser console] ${message.text()}`);
 });
 
-await page.route('https://api.ekodi.kr/api/session', async route => {
+// Admin session validation is canonically served through the apex Core route.
+await page.route('https://ekodi.kr/api/session', async route => {
   await route.fulfill({
     status: 200,
     contentType: 'application/json; charset=utf-8',

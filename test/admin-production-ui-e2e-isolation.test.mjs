@@ -16,3 +16,9 @@ test('synthetic production Admin UI verifier isolates backend auth side effects 
   assert.match(text, /backend 401 from one lazy module cannot hide the shell and poison later UI checks/);
   assert.match(text, /await page\.goto\(ADMIN_URL, \{ waitUntil: 'domcontentloaded', timeout: 45000 \}\);\s*await waitForAdminShell\(\);\s*selectedWorkArea = null;/);
 });
+
+test('synthetic production Admin UI verifier stubs the canonical apex session route', async () => {
+  const text = await source();
+  assert.match(text, /page\.route\('https:\/\/ekodi\.kr\/api\/session'/);
+  assert.doesNotMatch(text, /page\.route\('https:\/\/api\.ekodi\.kr\/api\/session'/);
+});
