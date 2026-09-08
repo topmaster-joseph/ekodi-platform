@@ -63,7 +63,7 @@ jobs:
           grep -Fq 'window.google.accounts.id.prompt' auth-site/client-auth.js
           grep -Fq 'ekodi_token:proof.tokenHash' auth-site/client-auth.js
           grep -Fq "commonServiceEntry&&proof.platformAdmin!==true" auth-site/client-auth.js
-          grep -Fq "new URL('https://my.ekodi.kr/')" auth-site/client-auth.js
+          grep -Fq "new URL('https://ekodi.kr/my/')" auth-site/client-auth.js
           grep -Fq 'recoverableStaleSession' auth-site/client-auth.js
           grep -Fq "sb.auth.signOut({scope:'local'})" auth-site/client-auth.js
           grep -Fq "error.message==='session_identity_mismatch'" auth-site/client-auth.js
