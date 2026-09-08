@@ -1,3 +1,6 @@
+import { handleMailContactApi, mailContactPage } from './mail-contact.js';
+import { injectEkodiShell } from './ekodi-shell-injector.js';
+
 const CANONICAL_HOST='ekodi.kr';
 const SURFACE_PREFIXES=Object.freeze({my:'/my',admin:'/admin',auth:'/auth'});
 const SYSTEM_PATHS=Object.freeze(['/api','/mcp','/webhooks','/health']);
@@ -138,6 +141,12 @@ export async function routeCanonicalSurface(request,env,{legacyFetch,externalFet
   const url=new URL(request.url);
   if(url.hostname.toLowerCase()!==CANONICAL_HOST)return null;
   const path=url.pathname;
+  const contactResponse=await handleMailContactApi(request,env);
+  if(contactResponse)return contactResponse;
+  if(request.method==='GET'&&path==='/mail/contact'){
+    const page=mailContactPage();
+    return typeof HTMLRewriter==='function'?injectEkodiShell(page,'mail'):page;
+  }
   const executionSurface=executionSurfaceForPath(path);if(executionSurface)return proxyExecutionSurface(request,env,executionSurface,externalFetch);
   if(path===SURFACE_PREFIXES.my)return canonicalSlashRedirect(request,SURFACE_PREFIXES.my);
   if(path.startsWith(`${SURFACE_PREFIXES.my}/`))return proxyBinding(request,env?.MY,SURFACE_PREFIXES.my,'my');
