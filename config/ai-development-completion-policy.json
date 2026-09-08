@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "policyId": "AI-COMPLETE-001",
+  "status": "active",
+  "defaultRule": "production-verified-before-complete",
+  "scope": [
+    "ai-assisted-development",
+    "human-development",
+    "platform-change",
+    "deployment",
+    "release"
+  ],
+  "completionStates": {
+    "implementation": "code-or-config-change-prepared",
+    "deployed": "guarded-deployment-succeeded-but-production-not-yet-proven",
+    "verified": "real-production-service-behavior-confirmed",
+    "complete": "verified-and-evidence-recorded"
+  },
+  "requiredEvidenceForProductionChange": [
+    "task_id",
+    "branch",
+    "commit_sha",
+    "validation_result",
+    "deployment_result",
+    "production_hostname",
+    "production_functional_checks",
+    "observability_check",
+    "verification_timestamp"
+  ],
+  "rules": {
+    "successfulDeployCommandIsNotCompletion": true,
+    "successfulCommitIsNotCompletion": true,
+    "successfulPullRequestIsNotCompletion": true,
+    "realProductionHostnameRequired": true,
+    "functionalBehaviorRequired": true,
+    "retryRepairRedeployReverifyOnFailure": true,
+    "completionReportBlockedUntilVerified": true,
+    "productionCredentialsRemainOutsideAgentWorkspace": true,
+    "guardedCentralReleasePathRequired": true
+  },
+  "exceptionPolicy": {
+    "allowed": true,
+    "allowedClasses": [
+      "read-only-analysis",
+      "documentation-only",
+      "non-production-experiment",
+      "human-gate-required",
+      "external-authority-blocked"
+    ],
+    "requirements": [
+      "explicit-exception-class",
+      "reason-recorded",
+      "no-false-production-completion-claim"
+    ]
+  },
+  "reporting": {
+    "preVerificationLabel": "deployed-awaiting-production-verification",
+    "successLabel": "production-verified-complete",
+    "failureLabel": "verification-failed-recovery-required"
+  }
+}
