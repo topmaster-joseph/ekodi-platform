@@ -359,13 +359,14 @@
           "EKODI Admin",
           "admin-authenticated-shell.js?v=",
           "admin-compact.js admin-menu-layout.js admin-demand-loader.js",
-          "https://auth.ekodi.kr/?site=admin"
+          "https://ekodi.kr/auth/?site=admin"
         ],
         "headerExpect": [
           "x-ekodi-route: admin-shell",
           "cross-origin-opener-policy: same-origin-allow-popups",
           "cache-control: no-store"
-        ]
+        ],
+        "rollbackVerify": false
       },
       {
         "url": "https://admin.ekodi.kr/openai-workspace-admin.js",
