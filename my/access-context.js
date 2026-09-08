@@ -1,6 +1,8 @@
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 
 const cfg=window.EKODI_MY_CONFIG||{};
+const MY_BASE=(location.pathname==='/my'||location.pathname.startsWith('/my/'))?'/my':'';
+const myPath=path=>`${MY_BASE}${path}`;
 const WORKSPACE_KEY_RE=/^[a-z]+:[a-zA-Z0-9:_-]+$/;
 const SERVICE_ID_RE=/^[a-z][a-z0-9-]*$/;
 const ACTIVE_STATUSES=new Set(['active','pre_registered']);
@@ -13,14 +15,14 @@ function esc(value){return String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;
 function sourceAllowed(){return SERVICE_ID_RE.test(source)}
 function workspaceAllowed(){return !requestedWorkspace||(requestedWorkspace.length<=180&&WORKSPACE_KEY_RE.test(requestedWorkspace))}
 function authUrl(){const target=new URL(cfg.authUrl||'https://auth.ekodi.kr/?site=my');target.searchParams.set('site','my');target.searchParams.set('return_to',location.href.split('#')[0]);return target.href}
-function canonicalWorkspacePath(key){return WORKSPACE_KEY_RE.test(String(key||''))?`/w/${encodeURIComponent(key)}`:'/#workspaces'}
+function canonicalWorkspacePath(key){return WORKSPACE_KEY_RE.test(String(key||''))?`${MY_BASE}/w/${encodeURIComponent(key)}`:`${MY_BASE}/#workspaces`}
 function rememberWorkspace(key){try{if(WORKSPACE_KEY_RE.test(String(key||'')))localStorage.setItem('ekodi_my_active_workspace',key)}catch{}}
 function planLabel(value){return ({free:'Free',basic:'Basic',standard:'Standard',pro:'Pro',enterprise:'Enterprise'})[String(value||'free').toLowerCase()]||String(value||'Free')}
 function accessStatusLabel(value){return ({active:'이용 가능',pre_registered:'사전등록',pending:'승인 대기',rejected:'승인되지 않음',unregistered:'미연결'})[String(value||'unregistered')]||'권한 확인'}
 
 async function manifestService(){
   try{
-    const response=await fetch('/service-manifest.json',{cache:'no-store'});
+    const response=await fetch(myPath('/service-manifest.json'),{cache:'no-store'});
     if(!response.ok)return null;
     const manifest=await response.json();
     return (manifest.services||[]).find(item=>item.id===source)||null;

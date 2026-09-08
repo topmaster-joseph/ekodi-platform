@@ -15,7 +15,7 @@ const activeStages=()=>EKODI_LIFE_JOURNEY.stages.filter(stage=>stage.state==='ac
 function authStartUrl(){
   const target=new URL('https://auth.ekodi.kr/');
   target.searchParams.set('site','my');
-  target.searchParams.set('return_to','https://my.ekodi.kr/journey/');
+  target.searchParams.set('return_to',location.href.split('#')[0]);
   return target.href;
 }
 function serviceUrl(stage){

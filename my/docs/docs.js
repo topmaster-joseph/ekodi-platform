@@ -1,5 +1,5 @@
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
-import { createHwpxBlob, editorToHwpxBlocks, importHwpx } from './hwpx.js';
+import { createHwpxBlob, createRoundTripHwpxBlob, editorToHwpxBlocks, importHwpx } from './hwpx.js';
 
 const cfg=window.EKODI_MY_CONFIG||{};
 const enabled=Boolean(cfg.dataEnabled&&cfg.supabaseUrl&&cfg.supabasePublishableKey);
@@ -7,9 +7,11 @@ const sb=enabled?createClient(cfg.supabaseUrl,cfg.supabasePublishableKey,{auth:{
 const authUrl=cfg.authUrl||'https://auth.ekodi.kr/?site=my';
 const AI_URL=enabled?`${cfg.supabaseUrl}/functions/v1/document-ai-api`:'';
 const LOCAL_KEY='ekodi.docs.v1';
+const PANEL_KEY='ekodi.docs.panels.v1';
+const SOURCE_BUCKET='document-sources';
 const $=s=>document.querySelector(s);
 const editor=$('#editor'),titleInput=$('#titleInput'),docList=$('#docList'),saveState=$('#saveState');
-let session=null,cloudDocs=[],localDocs=[],versions=[],current={id:'',cloudId:'',sourceFormat:'ekodi',updatedAt:new Date().toISOString()};
+let session=null,cloudDocs=[],localDocs=[],versions=[],current={id:'',cloudId:'',sourceFormat:'ekodi',sourceStoragePath:'',sourceName:'',sourceBuffer:null,sourceFile:null,updatedAt:new Date().toISOString()};
 const pageParams=new URLSearchParams(location.search),requestedDocId=pageParams.get('doc')||'',readOnlyView=pageParams.get('view')==='1';
 let requestedDocOpened=false;
 let savedRange=null,selectedText='',aiOperation='proofread',lastAiTarget=null,saveTimer=null,draggedBlock=null,fileDragDepth=0;
@@ -86,7 +88,7 @@ function setEditorHtml(html,{fallbackText='',focus=false}={}){const safe=sanitiz
 function readLocal(){try{const rows=JSON.parse(localStorage.getItem(LOCAL_KEY)||'[]');return Array.isArray(rows)?rows:[]}catch{return[]}}
 function writeLocal(){localStorage.setItem(LOCAL_KEY,JSON.stringify(localDocs.slice(0,40)))}
 function snapshotCurrent(){
-  return {id:current.id||localId(),title:cleanTitle(titleInput.value),content_html:sanitizeHtml(editor.innerHTML),source_format:current.sourceFormat||'ekodi',updated_at:nowIso(),cloud_id:current.cloudId||''};
+  return {id:current.id||localId(),title:cleanTitle(titleInput.value),content_html:sanitizeHtml(editor.innerHTML),source_format:current.sourceFormat||'ekodi',source_storage_path:current.sourceStoragePath||'',updated_at:nowIso(),cloud_id:current.cloudId||''};
 }
 function persistLocal(){
   const snap=snapshotCurrent();current.id=snap.id;current.updatedAt=snap.updated_at;
@@ -94,12 +96,15 @@ function persistLocal(){
   writeLocal();setState('로컬 자동저장');renderList();updateMeta();
 }
 function scheduleSave(){clearTimeout(saveTimer);setState('저장 중…');saveTimer=setTimeout(()=>{persistLocal();if(session&&current.cloudId)void saveCloud(false)},700)}
-function updateMeta(){const text=editorPlainText().replace(/\s+/g,' ').trim();$('#wordCount').textContent=`${text.length.toLocaleString()}자`;$('#updatedAt').textContent=humanTime(current.updatedAt);$('#formatBadge').textContent=String(current.sourceFormat||'EKODI').toUpperCase()}
+function sourceFileName(){return current.sourceName||decodeURIComponent(String(current.sourceStoragePath||'').split('/').pop()||'')}
+function sourceExtension(){return String(sourceFileName()).split('.').pop()?.toLowerCase()||''}
+function updateSourceUi(){const status=$('#sourceStatus'),button=$('#downloadSource');const linked=Boolean(current.sourceFile||current.sourceStoragePath);if(status){status.textContent=linked?`원본 ${sourceExtension().toUpperCase()||'FILE'} 연결`:'웹 문서';status.dataset.linked=String(linked)}if(button)button.hidden=!linked;editor.classList.toggle('hwpx-roundtrip',roundTripMode())}
+function updateMeta(){const text=editorPlainText().replace(/\s+/g,' ').trim();$('#wordCount').textContent=`${text.length.toLocaleString()}자`;$('#updatedAt').textContent=humanTime(current.updatedAt);$('#formatBadge').textContent=String(current.sourceFormat||'EKODI').toUpperCase();updateSourceUi()}
 function newDocument(){
-  current={id:localId(),cloudId:'',sourceFormat:'ekodi',updatedAt:nowIso()};titleInput.value='제목 없는 문서';setEditorHtml('<h1>새 문서</h1><p>내용을 입력하세요.</p>',{focus:true});persistLocal()
+  current={id:localId(),cloudId:'',sourceFormat:'ekodi',sourceStoragePath:'',sourceName:'',sourceBuffer:null,sourceFile:null,updatedAt:nowIso()};titleInput.value='제목 없는 문서';setEditorHtml('<h1>새 문서</h1><p>내용을 입력하세요.</p>',{focus:true});persistLocal()
 }
 function openRow(row,cloud=false){
-  current={id:cloud?`cloud-${row.id}`:row.id,cloudId:cloud?row.id:(row.cloud_id||''),sourceFormat:row.source_format||'ekodi',updatedAt:row.updated_at||nowIso()};
+  current={id:cloud?`cloud-${row.id}`:row.id,cloudId:cloud?row.id:(row.cloud_id||''),sourceFormat:row.source_format||'ekodi',sourceStoragePath:row.source_storage_path||'',sourceName:'',sourceBuffer:null,sourceFile:null,updatedAt:row.updated_at||nowIso()};
   titleInput.value=row.title||'제목 없는 문서';setEditorHtml(row.content_html||'<p><br></p>');renderList();captureSelection();if(!$('#versionPanel').hidden)void loadVersions()
 }
 function renderList(){
@@ -140,12 +145,30 @@ async function loadCloud(){
 function applyReadOnlyView(){
   if(!readOnlyView)return;
   editor.contentEditable='false';titleInput.readOnly=true;document.body.dataset.docsView='readonly';
-  document.querySelectorAll('[data-command],#insertTable,#insertLink,#runAi,#applyAi,#appendAi,#saveCloud,#fileInput,#newDoc').forEach(node=>{node.disabled=true;node.setAttribute?.('aria-disabled','true')});
+  document.querySelectorAll('[data-command],#insertTable,#insertLink,#runAi,#applyAi,#appendAi,#saveCloud,#fileInput,#sourceFileInput,#newDoc').forEach(node=>{node.disabled=true;node.setAttribute?.('aria-disabled','true')});
   setState('읽기 전용 웹 보기','ok');
 }
+function sourceMime(file){const ext=String(file?.name||'').split('.').pop()?.toLowerCase()||'';if(ext==='hwpx')return 'application/hwp+zip';if(ext==='hwp')return 'application/x-hwp';if(ext==='pdf')return 'application/pdf';return String(file?.type||'application/octet-stream')}
+function sourceObjectName(file){const name=String(file?.name||'source-file').normalize('NFKC');const ext=name.includes('.')?'.'+name.split('.').pop().toLowerCase():'';const stem=name.replace(/\.[^.]+$/,'').replace(/[^\p{L}\p{N}._-]+/gu,'-').replace(/^-+|-+$/g,'').slice(0,70)||'document-source';return stem+ext}
+async function uploadOriginalSource(file){
+  if(!session||!sb||!file)return '';
+  const ext=String(file.name||'').split('.').pop()?.toLowerCase()||'';if(!['hwp','hwpx','pdf'].includes(ext))throw new Error('원본 저장은 HWP, HWPX, PDF를 지원합니다.');
+  const localKey=String(current.id||localId()).replace(/^local-/,'').replace(/^cloud-/,'');const path=`${session.user.id}/${localKey}/${sourceObjectName(file)}`;
+  const {error}=await sb.storage.from(SOURCE_BUCKET).upload(path,file,{contentType:sourceMime(file),upsert:true,cacheControl:'3600'});if(error)throw error;
+  current.sourceStoragePath=path;current.sourceName=file.name;current.sourceFile=file;if(ext==='hwpx')current.sourceBuffer=await file.arrayBuffer();updateSourceUi();return path;
+}
+async function loadOriginalBlob(){
+  if(current.sourceFile)return current.sourceFile;if(!current.sourceStoragePath||!session||!sb)throw new Error('계정에 연결된 원본 파일을 불러올 수 없습니다.');
+  const {data,error}=await sb.storage.from(SOURCE_BUCKET).download(current.sourceStoragePath);if(error||!data)throw error||new Error('원본 파일 다운로드 실패');current.sourceFile=data;current.sourceName=sourceFileName();return data;
+}
+async function ensureRoundTripSourceBuffer(){if(current.sourceBuffer)return current.sourceBuffer;if(sourceExtension()!=='hwpx')return null;const blob=await loadOriginalBlob();current.sourceBuffer=await blob.arrayBuffer();return current.sourceBuffer}
+async function attachOriginalSource(file){if(!file)return;const ext=String(file.name||'').split('.').pop()?.toLowerCase()||'';if(!['hwp','hwpx','pdf'].includes(ext))throw new Error('HWP, HWPX, PDF 원본만 연결할 수 있습니다.');current.sourceFile=file;current.sourceName=file.name;current.sourceBuffer=ext==='hwpx'?await file.arrayBuffer():null;if(session)await uploadOriginalSource(file);persistLocal();updateSourceUi();setState(session?'원본 파일 연결·저장 완료':'원본 연결됨 · 로그인 후 계정 저장','ok')}
+async function downloadOriginalSource(){try{const blob=await loadOriginalBlob();downloadBlob(blob,sourceFileName()||'document-source')}catch(error){alert(`원본 파일을 받지 못했습니다: ${error.message}`)}}
+
 async function saveCloud(version=true){
   if(!session||!sb){setState('로그인 후 계정 저장 가능','error');return}
-  const snap=snapshotCurrent(),payload={owner_user_id:session.user.id,workspace_key:`personal:${session.user.id}`,title:snap.title,content_html:snap.content_html,source_format:snap.source_format,updated_at:nowIso()};
+  if(current.sourceFile&&!current.sourceStoragePath){try{await uploadOriginalSource(current.sourceFile)}catch(error){console.warn('document source upload',error);setState('원본 저장 실패 · 문서 저장 계속','error')}}
+  const snap=snapshotCurrent(),payload={owner_user_id:session.user.id,workspace_key:`personal:${session.user.id}`,title:snap.title,content_html:snap.content_html,source_format:snap.source_format,source_storage_path:current.sourceStoragePath||null,updated_at:nowIso()};
   setState('계정 저장 중…');
   if(current.cloudId&&version){
     const previous=cloudDocs.find(row=>row.id===current.cloudId);
@@ -219,22 +242,22 @@ async function getMammoth(){
   return mammothPromise;
 }
 async function importFile(file){
-  const name=file.name||'문서',ext=(name.split('.').pop()||'').toLowerCase();let html='',format=ext||'txt',importedTitle='';
+  const name=file.name||'문서',ext=(name.split('.').pop()||'').toLowerCase();let html='',format=ext||'txt',importedTitle='',sourceBuffer=null;
   if(ext==='docx'){
     const mammoth=await getMammoth();
     const buffer=await file.arrayBuffer(),result=await mammoth.convertToHtml({arrayBuffer:buffer});html=result.value;
     const probe=new DOMParser().parseFromString(String(html||''),'text/html').body.textContent?.trim()||'';
     if(!probe){const raw=await mammoth.extractRawText({arrayBuffer:buffer});html=plainToHtml(raw.value||'')}
   }else if(ext==='hwpx'){
-    const result=await importHwpx(file);html=result.html;format=result.sourceFormat;importedTitle=result.title||'';
+    const result=await importHwpx(file);html=result.html;format=result.sourceFormat;importedTitle=result.title||'';sourceBuffer=result.sourceBuffer||null;
   }else{
     const text=await file.text();
     if(ext==='html'||ext==='htm')html=text;
     else if(ext==='md'||ext==='markdown')html=markdownToHtml(text);
     else html=plainToHtml(text);
   }
-  current={id:localId(),cloudId:'',sourceFormat:format,updatedAt:nowIso()};titleInput.value=importedTitle||name.replace(/\.[^.]+$/,'')||'가져온 문서';
-  const count=setEditorHtml(html,{focus:true});if(!count)throw new Error('문서 본문을 읽지 못했습니다. 파일을 HWPX 또는 DOCX로 다시 저장한 뒤 가져와 주세요.');persistLocal();setState(`가져오기 완료 · ${count.toLocaleString()}자`,'ok');
+  current={id:localId(),cloudId:'',sourceFormat:format,sourceStoragePath:'',sourceName:ext==='hwpx'?name:'',sourceBuffer:ext==='hwpx'?sourceBuffer:null,sourceFile:ext==='hwpx'?file:null,updatedAt:nowIso()};titleInput.value=importedTitle||name.replace(/\.[^.]+$/,'')||'가져온 문서';
+  const count=setEditorHtml(html,{focus:true});if(!count)throw new Error('문서 본문을 읽지 못했습니다. 파일을 HWPX 또는 DOCX로 다시 저장한 뒤 가져와 주세요.');if(ext==='hwpx'&&session){try{await uploadOriginalSource(file)}catch(error){console.warn('source upload',error)}}persistLocal();setState(ext==='hwpx'?`원본 보존 HWPX 가져오기 완료 · ${count.toLocaleString()}자`:`가져오기 완료 · ${count.toLocaleString()}자`,'ok');
 }
 function downloadBlob(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.append(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500)}
 async function exportDocx(){
@@ -256,14 +279,14 @@ async function exportFile(kind){
   persistLocal();const name=slug(titleInput.value);
   if(kind==='pdf'){window.print();return}
   if(kind==='docx'){try{await exportDocx()}catch(error){alert(`DOCX 내보내기 실패: ${error.message}`)}return}
-  if(kind==='hwpx'){try{const blob=await createHwpxBlob({title:cleanTitle(titleInput.value),blocks:editorToHwpxBlocks(editor)});downloadBlob(blob,`${name}.hwpx`)}catch(error){alert(`HWPX 내보내기 실패: ${error.message}`)}return}
+  if(kind==='hwpx'){try{const sourceBuffer=await ensureRoundTripSourceBuffer();if(sourceBuffer){const result=await createRoundTripHwpxBlob({sourceBuffer,title:cleanTitle(titleInput.value),editor});downloadBlob(result.blob,`${name}.hwpx`);setState(`원본 서식 보존 HWPX · ${result.tracked}/${result.expected} 텍스트런`,'ok')}else{const blob=await createHwpxBlob({title:cleanTitle(titleInput.value),blocks:editorToHwpxBlocks(editor)});downloadBlob(blob,`${name}.hwpx`);setState('새 HWPX로 내보냄 · 원본 패키지 없음','ok')}}catch(error){if(error?.code==='HWPX_ROUNDTRIP_MAPPING_LOST')alert(`원본 서식 매핑이 일부 변경되어 안전한 원형 보존 내보내기를 중단했습니다. 원본 HWPX를 다시 가져온 뒤 텍스트만 수정해 주세요.\n\n${error.message}`);else alert(`HWPX 내보내기 실패: ${error.message}`)}return}
   let text='',type='text/plain;charset=utf-8',ext=kind;
   if(kind==='html'){text=`<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>${esc(cleanTitle(titleInput.value))}</title></head><body>${sanitizeHtml(editor.innerHTML)}</body></html>`;type='text/html;charset=utf-8'}
   else if(kind==='md'){text=htmlToMarkdown();type='text/markdown;charset=utf-8'}
   else{text=editorPlainText();ext='txt'}
   downloadBlob(new Blob([text],{type}),`${name}.${ext}`);
 }
-function exec(command,value=null){editor.focus();document.execCommand(command,false,value);scheduleSave()}
+function exec(command,value=null){if(roundTripMode()&&['formatBlock','insertUnorderedList','insertOrderedList'].includes(command)){alert('원본 서식 보존 모드에서는 문단 구조를 바꾸지 않습니다. 기존 텍스트 편집을 사용해 주세요.');return}editor.focus();document.execCommand(command,false,value);scheduleSave()}
 function insertTable(){
   const rows=Math.min(20,Math.max(1,Number(prompt('행 수','3')||0))),cols=Math.min(12,Math.max(1,Number(prompt('열 수','3')||0)));if(!rows||!cols)return;
   const html=`<table><tbody>${Array.from({length:rows},()=>`<tr>${Array.from({length:cols},()=>'<td><br></td>').join('')}</tr>`).join('')}</tbody></table><p><br></p>`;exec('insertHTML',html);
@@ -275,6 +298,10 @@ function showDropOverlay(active){const overlay=$('#dropOverlay'),wrap=$('#pageWr
 async function importDroppedFiles(files){const accepted=[...files].filter(file=>IMPORT_EXTENSIONS.has(importExtension(file)));if(!accepted.length){setState('지원되는 문서 파일을 놓아 주세요.','error');return}for(const file of accepted)await importFile(file);setState(`${accepted.length}개 문서 가져오기 완료`,'ok')}
 function clearBlockIndicators(){editor.querySelectorAll('.ekodi-drop-before,.ekodi-drop-after').forEach(node=>node.classList.remove('ekodi-drop-before','ekodi-drop-after'))}
 function finishBlockDrag(){if(draggedBlock)draggedBlock.classList.remove('ekodi-block-dragging');draggedBlock=null;clearBlockIndicators()}
+function readPanelPrefs(){try{return JSON.parse(localStorage.getItem(PANEL_KEY)||'{}')||{}}catch{return{}}}
+function applyPanelPrefs(next=readPanelPrefs()){const library=Boolean(next.libraryCollapsed),ai=Boolean(next.aiCollapsed);document.body.classList.toggle('library-collapsed',library);document.body.classList.toggle('ai-collapsed',ai);const left=$('#toggleLibrary'),right=$('#toggleAi');if(left){left.setAttribute('aria-pressed',String(library));left.textContent=library?'문서함 열기':'문서함';left.title=library?'문서함 열기':'문서함 접기'}if(right){right.setAttribute('aria-pressed',String(ai));right.textContent=ai?'AI 열기':'AI';right.title=ai?'AI 패널 열기':'AI 패널 접기'}}
+function togglePanel(name){const prefs=readPanelPrefs();const key=name==='library'?'libraryCollapsed':'aiCollapsed';prefs[key]=!prefs[key];localStorage.setItem(PANEL_KEY,JSON.stringify(prefs));applyPanelPrefs(prefs)}
+applyPanelPrefs();
 document.addEventListener('selectionchange',captureSelection);
 editor.addEventListener('input',()=>{updateMeta();scheduleSave()});
 titleInput.addEventListener('input',scheduleSave);
@@ -287,13 +314,16 @@ $('#historyToggle').addEventListener('click',async()=>{
   panel.hidden=false;await loadVersions();
 });
 $('#authButton').addEventListener('click',()=>void authAction());
+$('#toggleLibrary')?.addEventListener('click',()=>togglePanel('library'));$('#toggleAi')?.addEventListener('click',()=>togglePanel('ai'));
 $('#fileInput').addEventListener('change',async e=>{const file=e.target.files?.[0];if(!file)return;try{await importFile(file)}catch(error){alert(`파일을 가져오지 못했습니다: ${error.message}`)}finally{e.target.value=''}});
+$('#sourceFileInput')?.addEventListener('change',async e=>{const file=e.target.files?.[0];if(!file)return;try{await attachOriginalSource(file)}catch(error){alert(`원본 파일을 연결하지 못했습니다: ${error.message}`)}finally{e.target.value=''}});
+$('#downloadSource')?.addEventListener('click',()=>void downloadOriginalSource());
 const pageWrap=$('#pageWrap');
 pageWrap?.addEventListener('dragenter',e=>{if(Array.from(e.dataTransfer?.types||[]).includes('Files')){e.preventDefault();showDropOverlay(true)}});
 pageWrap?.addEventListener('dragover',e=>{if(Array.from(e.dataTransfer?.types||[]).includes('Files')){e.preventDefault();if(e.dataTransfer)e.dataTransfer.dropEffect='copy';showDropOverlay(true)}});
 pageWrap?.addEventListener('dragleave',e=>{if(!pageWrap.contains(e.relatedTarget))showDropOverlay(false)});
 pageWrap?.addEventListener('drop',async e=>{if(e.dataTransfer?.files?.length){e.preventDefault();showDropOverlay(false);try{await importDroppedFiles(e.dataTransfer.files)}catch(error){setState(`가져오기 실패: ${error.message}`,'error')}}});
-editor.addEventListener('dragstart',e=>{const handle=e.target.closest?.('[data-ekodi-drag-handle]'),whole=e.target.closest?.('[data-ekodi-block][draggable="true"]');const block=handle?.parentElement||whole;if(!block||!editor.contains(block))return;draggedBlock=block;block.classList.add('ekodi-block-dragging');if(e.dataTransfer){e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/x-ekodi-block','move')}});
+editor.addEventListener('dragstart',e=>{if(roundTripMode()){e.preventDefault();return}const handle=e.target.closest?.('[data-ekodi-drag-handle]'),whole=e.target.closest?.('[data-ekodi-block][draggable="true"]');const block=handle?.parentElement||whole;if(!block||!editor.contains(block))return;draggedBlock=block;block.classList.add('ekodi-block-dragging');if(e.dataTransfer){e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/x-ekodi-block','move')}});
 editor.addEventListener('dragover',e=>{if(!draggedBlock)return;const target=e.target.closest?.('[data-ekodi-block]');if(!target||target===draggedBlock)return;e.preventDefault();clearBlockIndicators();const rect=target.getBoundingClientRect(),after=e.clientY>rect.top+rect.height/2;target.classList.add(after?'ekodi-drop-after':'ekodi-drop-before');if(e.dataTransfer)e.dataTransfer.dropEffect='move'});
 editor.addEventListener('drop',e=>{if(!draggedBlock)return;const target=e.target.closest?.('[data-ekodi-block]');if(!target||target===draggedBlock){finishBlockDrag();return}e.preventDefault();const after=target.classList.contains('ekodi-drop-after');target.parentNode.insertBefore(draggedBlock,after?target.nextSibling:target);finishBlockDrag();persistLocal();setState('블록 이동 · 자동저장','ok')});
 editor.addEventListener('dragend',finishBlockDrag);editor.addEventListener('blur',decorateBlocks);

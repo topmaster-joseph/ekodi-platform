@@ -13,6 +13,8 @@ const LEGACY_MALL_PREFIX = '/mall';
 const LEGACY_EKODIBIZ_PREFIX = '/org/ekodibiz';
 const MALL_ORIGIN_HOST = 'ekodi-mall.pages.dev';
 const MALL_PROXY_HEADER = 'x-ekodi-canonical-proxy';
+const MY_PATH_PREFIX = '/my';
+const MY_DOCS_PREFIX = '/my/docs';
 const PUBLIC_ASSETS = new Set([
   '/homepage-ambient.css',
   '/homepage-ambient.js',
@@ -350,6 +352,39 @@ async function proxyMallService(request) {
   return injectEkodiShell(response, 'mall', adminSurface ? 'admin' : 'public');
 }
 
+function isMyApexPath(pathname) {
+  return pathname === MY_PATH_PREFIX || pathname.startsWith(MY_PATH_PREFIX + '/');
+}
+function myUpstreamPath(pathname) {
+  if (pathname === MY_PATH_PREFIX || pathname === MY_PATH_PREFIX + '/') return '/';
+  return pathname.slice(MY_PATH_PREFIX.length) || '/';
+}
+function prefixMyPathValue(value) {
+  const raw=String(value||'');
+  if(!raw.startsWith('/')||raw.startsWith('//')||raw===MY_PATH_PREFIX||raw.startsWith(MY_PATH_PREFIX+'/')) return raw;
+  return MY_PATH_PREFIX + raw;
+}
+function rewriteMyHtml(response) {
+  return new HTMLRewriter()
+    .on('[href]',{element(el){const value=el.getAttribute('href');if(value)el.setAttribute('href',prefixMyPathValue(value))}})
+    .on('[src]',{element(el){const value=el.getAttribute('src');if(value)el.setAttribute('src',prefixMyPathValue(value))}})
+    .on('[action]',{element(el){const value=el.getAttribute('action');if(value)el.setAttribute('action',prefixMyPathValue(value))}})
+    .transform(response);
+}
+async function proxyMyPath(request, env) {
+  if (!env.MY?.fetch) return withHostSecurity(new Response('My EKODI service unavailable', {status:503}), PUBLIC_CSP, 'no-store', 'my-path-unavailable');
+  const incoming = new URL(request.url), target = new URL(request.url);
+  target.hostname = 'my.ekodi.kr'; target.pathname = myUpstreamPath(incoming.pathname);
+  const headers = new Headers(request.headers); headers.set('x-ekodi-apex-path-proxy','my-v1'); headers.delete('host');
+  const init = {method:request.method, headers, redirect:'manual'}; if(!['GET','HEAD'].includes(request.method)) init.body = await request.arrayBuffer();
+  const upstream = await env.MY.fetch(new Request(target.toString(), init));
+  const outHeaders = new Headers(upstream.headers), location = outHeaders.get('location');
+  if(location){try{const next=new URL(location,target);if(next.hostname==='my.ekodi.kr'){next.hostname=PUBLIC_HOST;next.pathname=MY_PATH_PREFIX + (next.pathname==='/'?'/':next.pathname);outHeaders.set('location',next.toString())}}catch{}}
+  outHeaders.set('x-ekodi-route','my-apex-path-proxy'); outHeaders.set('x-ekodi-canonical-path',MY_PATH_PREFIX);
+  const response=new Response(upstream.body,{status:upstream.status,statusText:upstream.statusText,headers:outHeaders});
+  return String(outHeaders.get('content-type')||'').toLowerCase().includes('text/html') ? rewriteMyHtml(response) : response;
+}
+
 function retiredAdminResponse() {
   return withHostSecurity(new Response('Not Found', { status: 404 }), ADMIN_CSP, 'no-store', 'admin-retired');
 }
@@ -496,6 +531,7 @@ export default {
 
     if (host === PUBLIC_HOST) {
       if (RETIRED_ADMIN_PATHS.has(url.pathname)) return retiredAdminResponse();
+      if (isMyApexPath(url.pathname)) return proxyMyPath(request, env);
       if (url.pathname === '/oauth/consent' || url.pathname === '/cgma/oauth/consent') {
         const target = new URL('https://auth.ekodi.kr/oauth/consent');
         target.search = url.search;
