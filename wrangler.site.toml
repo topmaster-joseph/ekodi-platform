@@ -30,11 +30,6 @@ zone_name = "ekodi.kr"
 pattern = "ekodi.kr/ekodichurch/admin*"
 zone_name = "ekodi.kr"
 
-# Canonical private Trade workspace must outrank static /ekodibiz asset projection.
-[[routes]]
-pattern = "ekodi.kr/ekodibiz/trade*"
-zone_name = "ekodi.kr"
-
 [[routes]]
 pattern = "trade.ekodi.kr"
 custom_domain = true
