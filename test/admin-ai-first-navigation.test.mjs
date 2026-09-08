@@ -42,8 +42,8 @@ test('human-facing Admin menu has one canonical order inside five domains plus O
   assert.deepEqual(adminMenuGroups(), ['structure','core','common','vertical','tenants','operations-center']);
   assert.deepEqual(adminMenuOrder(), [
     'campus','public-site-controls','architecture','security','admins','ai-module-spec','storage',
-    'common-services','communication','workspace','finance','life-ai','personal-finance','community','books','social','devotional','marketing-ai','ai-membership','tax','affiliates','insurance',
-    'work','organization','clients','cheonggye-members','capabilities','aiops','openai','devices','health','api-cost',
+    'common-services','communication','workspace','finance','life-ai','personal-finance','community','books','social','devotional','marketing-ai','ai-membership','tax','supply-network','insurance',
+    'work','organization','clients','capabilities','aiops','openai','devices','health','api-cost',
   ]);
   assert.ok(layout.includes('const ORDER=Object.freeze(adminMenuOrder());'));
   assert.ok(layout.includes('const RANK=new Map(ORDER.map((section,index)=>[section,index+1]));'));

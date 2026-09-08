@@ -6,27 +6,25 @@ import { isWorkspaceAdminPathShape } from '../workspace-route-policy.js';
 
 const read = path => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 
-test('affiliate marketing account control stays inside central Admin while customer Mall Admin remains tenant-local', async () => {
-  const definition = getAdminMenuItem('affiliates');
-  assert.equal(definition?.href, undefined);
-  assert.equal(definition?.adminHandoff, undefined);
-  assert.equal(definition?.labels?.ko, '제휴마케팅');
-  assert.equal(definition?.labels?.en, 'Affiliate Marketing');
-  assert.equal(isWorkspaceAdminPathShape('/ekodibiz/mall/admin/'), true);
+test('sales and supply network separates professional engine health from Mall operating decisions', async () => {
+  const professional = getAdminMenuItem('supply-network');
+  assert.equal(professional?.group, 'vertical');
+  assert.equal(professional?.managementArea, 'professional-services');
+  assert.equal(professional?.labels?.ko, '판매·공급망');
+  assert.equal(getAdminMenuItem('affiliates'), null);
+  assert.equal(isWorkspaceAdminPathShape('/ekodibiz/mall/admin/sourcing'), true);
 
   const demand = await read('admin-demand-loader.js');
-  const panel = await read('marketing-funnel-admin.js');
+  const professionalPanel = await read('supply-network-admin.js');
   const workspace = await read('workspace-admin-page.js');
-  assert.match(demand, /affiliates:[\s\S]*label:'제휴마케팅'[\s\S]*marketing-funnel-admin\.js/);
-  assert.match(panel, /button\.dataset\.section = 'affiliates'/);
-  assert.match(panel, /panel\.dataset\.panel = 'affiliates'/);
-  assert.match(panel, /제휴마케팅 계정 허브/);
-  assert.match(panel, /제휴마케팅 계정 설정/);
-  assert.match(panel, /affiliateAccountReadiness/);
-  assert.match(panel, /affiliateRouteReadyCount/);
-  assert.match(panel, /api\('\/api\/affiliate\/overview'\)/);
-  assert.match(panel, /api\('\/api\/affiliate\/routes'\)/);
-  assert.match(panel, /mallEvents\(\)\.catch\(\(\) => \[\]\)/);
-  assert.doesNotMatch(workspace, /\/api\/affiliate\/accounts/);
-  assert.doesNotMatch(workspace, /affiliateMerchantRouteForm/);
+  const layout = await read('admin-menu-layout.js');
+  assert.match(demand, /'supply-network':[\s\S]*supply-network-admin\.js/);
+  assert.match(professionalPanel, /api\('\/providers'\)/);
+  assert.match(professionalPanel, /api\('\/programs'\)/);
+  assert.doesNotMatch(professionalPanel, /api\('\/routes'\)|api\('\/accounts'\)/);
+  assert.match(workspace, /sourcing:\['판매·공급망'/);
+  assert.match(workspace, /sourcing:POLICY\.capabilities\.supplyNetwork/);
+  assert.doesNotMatch(workspace, /\/api\/affiliate\/accounts|affiliateMerchantRouteForm/);
+  assert.match(layout, /LEGACY_MALL_AFFILIATE_HASHES/);
+  assert.match(layout, /\/ekodibiz\/mall\/admin\/sourcing/);
 });

@@ -80,6 +80,7 @@
         "business.sales",
         "business.operations",
         "commerce.market",
+        "commerce.supply-network",
         "finance.stewardship",
         "core.public-site"
       ],
@@ -230,6 +231,7 @@
         "business.sales",
         "business.operations",
         "commerce.market",
+        "commerce.supply-network",
         "trade.operations",
         "finance.stewardship"
       ],
