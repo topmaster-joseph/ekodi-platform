@@ -69,3 +69,5 @@ if (violations.length) {
   process.exit(1);
 }
 console.log('✅ Retired admin source policy passed: deleted implementation stays deleted and old entry paths are explicit 404s.');
+
+await import('./validate-design-engine.mjs');
