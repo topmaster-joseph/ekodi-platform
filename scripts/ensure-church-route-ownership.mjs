@@ -7,7 +7,7 @@ export const CHURCH_ROUTE_CONTRACT=Object.freeze({
   publicUrl:'https://ekodi.kr/ekodichurch/',
   adminUrl:'https://ekodi.kr/ekodichurch/admin',
   publicRoute:'church-public-path',
-  adminRoute:'workspace-admin',
+  adminRoute:'church-pastor-admin',
 });
 function headers(token){return{Authorization:`Bearer ${token}`,'content-type':'application/json'}}
 async function cf(url,token,options={}){
