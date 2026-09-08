@@ -2,6 +2,7 @@ const CANONICAL_HOST='ekodi.kr';
 const SURFACE_PREFIXES=Object.freeze({my:'/my',admin:'/admin',auth:'/auth'});
 const SYSTEM_PATHS=Object.freeze(['/api','/mcp','/webhooks','/health']);
 const PUBLIC_EXECUTION_SURFACES=Object.freeze([
+  Object.freeze({id:'bible',prefix:'/bible',binding:'BIBLE',basePathAware:true}),
   Object.freeze({id:'business',prefix:'/business',host:'business.ekodi.kr'}),
   Object.freeze({id:'trade',prefix:'/ekodibiz/trade',assetPath:'/trade',exact:true}),
 ]);
@@ -103,7 +104,11 @@ async function proxyAdminRuntime(request,legacyFetch){
 async function proxyExecutionSurface(request,env,spec,externalFetch){
   const upstreamUrl=new URL(request.url);
   let response;
-  if(spec.assetPath){
+  if(spec.binding){
+    const binding=env?.[spec.binding];if(!binding?.fetch)return serviceUnavailable(spec.id);
+    upstreamUrl.pathname=stripPrefix(upstreamUrl.pathname,spec.prefix);
+    response=await binding.fetch(cloneRequest(request,upstreamUrl));
+  }else if(spec.assetPath){
     if(!env?.ASSETS?.fetch)return serviceUnavailable(spec.id);
     upstreamUrl.pathname=spec.assetPath;
     upstreamUrl.search='';
@@ -116,7 +121,7 @@ async function proxyExecutionSurface(request,env,spec,externalFetch){
   }
   const type=String(response.headers.get('content-type')||'');
   const headers=new Headers(response.headers);let body=response.body;
-  if(type.includes('text/html')||type.includes('javascript')){body=rewriteExecutionText(await response.text(),spec,type);headers.delete('content-length');headers.delete('etag');}
+  if(!spec.basePathAware&&(type.includes('text/html')||type.includes('javascript'))){body=rewriteExecutionText(await response.text(),spec,type);headers.delete('content-length');headers.delete('etag');}
   const location=headers.get('location');if(location)headers.set('location',canonicalExecutionLocation(location,spec));
   headers.set('x-ekodi-canonical-surface',spec.id);headers.set('x-ekodi-canonical-path',spec.prefix);
   return new Response(body,{status:response.status,statusText:response.statusText,headers});

@@ -5,7 +5,7 @@ import path from 'node:path';
 import { readBiblePassage, readBibleReference, searchBible } from '../bible-core.js';
 
 const root = path.resolve('bible');
-const request = new Request('https://bible.ekodi.kr/');
+const request = new Request('https://ekodi.kr/bible');
 const env = {
   ASSETS: {
     async fetch(input) {

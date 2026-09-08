@@ -1,6 +1,8 @@
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 import { initBibleReader } from './reader.js';
 
+const BASE_PATH = '/bible';
+
 const cfg = window.EKODI_BIBLE_CONFIG || {};
 const enabled = Boolean(cfg.dataEnabled && cfg.supabaseUrl && cfg.supabasePublishableKey);
 const sb = enabled ? createClient(cfg.supabaseUrl, cfg.supabasePublishableKey, { auth: { detectSessionInUrl: true, persistSession: true } }) : null;
@@ -82,7 +84,7 @@ async function authAction() {
 function showView(name, push = true) {
   $$('.view').forEach(view => view.classList.toggle('active', view.id === `view-${name}`));
   $$('[data-view]').forEach(button => button.classList.toggle('active', button.dataset.view === name));
-  if (push) window.history.replaceState({}, '', `/${name}`);
+  if (push) window.history.replaceState({}, '', BASE_PATH + '/' + name);
   if (name === 'journey') loadJourneyArea();
   if (name === 'together') loadTogetherArea();
 }
@@ -179,7 +181,7 @@ async function sendMessage(message) {
   chatHistory.push({ role: 'user', content: message });
   await saveMessage('user', message);
   const token = session?.access_token || '';
-  const response = await fetch('/api/assist', {
+  const response = await fetch(BASE_PATH + '/api/assist', {
     method: 'POST',
     headers: { 'content-type': 'application/json', ...(token ? { authorization: `Bearer ${token}` } : {}) },
     body: JSON.stringify({ message, topic, history: chatHistory.slice(-8) }),
@@ -462,7 +464,8 @@ renderTopics();
 applyGuide();
 renderIdentity();
 await initBibleReader().catch(error => console.error('Bible reader init', error));
-const initial = location.pathname.split('/')[1];
+const pathParts = location.pathname.split('/').filter(Boolean);
+const initial = pathParts[0] === 'bible' ? pathParts[1] : pathParts[0];
 const initialView = initial === 'search' ? 'reader' : initial;
 showView(['reader', 'conversation', 'journey', 'together'].includes(initialView) ? initialView : 'today', false);
 await loadToday();
