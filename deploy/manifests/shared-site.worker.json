@@ -166,6 +166,13 @@
         ]
       },
       {
+        "url": "https://ekodi.kr/api/control/ai/v8/status",
+        "statuses": [401],
+        "redirect": "manual",
+        "expect": ["\"authenticated\":false"],
+        "headerExpect": ["cache-control: no-store"]
+      },
+      {
         "url": "https://ekodi.kr/ekodibiz/trade/admin",
         "statuses": [
           200
