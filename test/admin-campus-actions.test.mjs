@@ -114,6 +114,8 @@ test('Campus action assets are shipped but fetched only after the administrator 
   assert.match(demand, /return Boolean\(token\(\) && app && !app\.hidden\)/);
   assert.match(postbuild, /On-demand Campus shell/);
   assert.match(postbuild, /section\.id = 'campusPanel'/);
+  assert.match(postbuild, /button\.dataset\.section = 'campus'/);
+  assert.match(postbuild, /delete button\.dataset\.lazySection/);
   assert.match(css, /\.campus-row-actions/);
   assert.match(css, /\.campus-row-action/);
 });

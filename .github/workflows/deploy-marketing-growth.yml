@@ -177,6 +177,7 @@ jobs:
               && grep -Fq '"paidActivation":false' /tmp/growth-health.json \
               && grep -Fq '"mallPromotionAutomation"' /tmp/growth-health.json \
               && grep -Fq '"strategy":"official_board_profit_learning_loop"' /tmp/growth-health.json \
+              && grep -Fq '"weeklyBoard"' /tmp/growth-health.json \
               && grep -Fq '"mallSalesIntelligence"' /tmp/growth-health.json \
               && grep -Fq '"mode":"active_sales"' /tmp/growth-health.json \
               && grep -Fq '"paidAds":false' /tmp/growth-health.json; then
