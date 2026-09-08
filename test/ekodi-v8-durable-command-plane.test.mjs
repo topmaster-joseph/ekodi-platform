@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { getEkodiProviderReadiness } from '../ekodi-pulse-runtime.js';
+import { getEkodiProviderOperationalReadiness, getEkodiProviderReadiness } from '../ekodi-pulse-runtime.js';
 
 test('multi-provider readiness is enabled without exposing credentials', () => {
   const status = getEkodiProviderReadiness({
@@ -47,4 +47,21 @@ test('production config opts into guarded multi-provider pooling', () => {
   assert.doesNotMatch(config, /OPENAI_API_KEY\s*=/);
   assert.doesNotMatch(config, /ANTHROPIC_API_KEY\s*=/);
   assert.doesNotMatch(config, /GEMINI_API_KEY\s*=/);
+});
+
+test('operational readiness does not treat configured but unhealthy providers as ready', async () => {
+  const rows = [
+    { provider_id:'openai', enabled:1, health_status:'error', last_checked_at:'2026-09-08T01:00:00Z', last_error:'openai_429' },
+    { provider_id:'anthropic', enabled:1, health_status:'healthy', last_checked_at:'2026-09-08T01:00:00Z', last_error:'' },
+    { provider_id:'gemini', enabled:1, health_status:'healthy', last_checked_at:'2026-09-08T01:00:00Z', last_error:'' },
+  ];
+  const DB={prepare(){return{async all(){return{results:rows}}}}};
+  const status=await getEkodiProviderOperationalReadiness({DB,AI_MULTI_PROVIDER_ENABLED:'true',OPENAI_API_KEY:'x',ANTHROPIC_API_KEY:'y',GEMINI_API_KEY:'z'});
+  assert.equal(status.configuredCount,3);
+  assert.equal(status.operationalCount,2);
+  assert.equal(status.collaborationConfigured,true);
+  assert.equal(status.collaborationReady,true);
+  assert.equal(status.independentSentinelConfigured,true);
+  assert.equal(status.independentSentinelReady,false);
+  assert.equal(status.providers.find(provider=>provider.id==='openai').operational,false);
 });

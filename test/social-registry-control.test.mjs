@@ -71,5 +71,6 @@ test('Control Center lazy-loads Social Channels while security-wrapped Mission C
   assert.match(missionEntry, /const response = await customerEntryWorker\.fetch\(request, env, ctx\)/);
   assert.match(missionEntry, /return applyApiSecurityHeaders\(response\)/);
   assert.match(missionEntry, /const guard = await enforceEdgeSecurity\(request, env\)/);
-  assert.match(missionEntry, /return customerEntryWorker\.scheduled\(controller, env, ctx\)/);
+  assert.match(missionEntry, /await customerEntryWorker\.scheduled\(controller, env, ctx\)/);
+  assert.match(missionEntry, /customerSchedule\?\.reporting\?\.ran/);
 });

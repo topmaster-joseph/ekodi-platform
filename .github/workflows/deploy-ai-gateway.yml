@@ -37,7 +37,7 @@ jobs:
           node --test test/ai-runtime-boundary.test.mjs
           grep -Fq 'pattern = "ai.ekodi.kr"' wrangler.ai.release.toml
           ! grep -Fq 'pattern = "ai.ekodi.kr"' wrangler.site.toml
-          grep -Fq "route=common-services&service=ai" ai-control-worker.js
+          grep -Fq "https://ekodi.kr/admin/common/common-services?service=ai" ai-control-worker.js
           grep -Fq "surface:'runtime-only'" ai-control-worker.js
           grep -Fq 'operator_surface_moved' ai-control-worker.js
           grep -Fq 'service_local_auth_retired' ai-control-worker.js

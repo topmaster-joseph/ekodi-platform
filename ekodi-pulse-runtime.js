@@ -31,12 +31,55 @@ function pulseFromTask(task) {
 export function getEkodiProviderReadiness(env = {}) {
   const providers = getEkodiAiProviderRegistryStatus(env);
   const configured = providers.filter(provider => provider.available);
+  const multiProviderEnabled = enabled(env.AI_MULTI_PROVIDER_ENABLED);
   return Object.freeze({
-    multiProviderEnabled: enabled(env.AI_MULTI_PROVIDER_ENABLED),
+    multiProviderEnabled,
+    readinessBasis: 'configuration',
     configuredCount: configured.length,
-    collaborationReady: enabled(env.AI_MULTI_PROVIDER_ENABLED) && configured.length >= 2,
-    independentSentinelReady: enabled(env.AI_MULTI_PROVIDER_ENABLED) && configured.length >= 3,
+    operationalCount: null,
+    collaborationConfigured: multiProviderEnabled && configured.length >= 2,
+    independentSentinelConfigured: multiProviderEnabled && configured.length >= 3,
+    collaborationReady: multiProviderEnabled && configured.length >= 2,
+    independentSentinelReady: multiProviderEnabled && configured.length >= 3,
     providers,
+  });
+}
+
+export async function getEkodiProviderOperationalReadiness(env = {}) {
+  const configured = getEkodiProviderReadiness(env);
+  if (!env.DB?.prepare) return configured;
+  let rows = [];
+  try {
+    const result = await env.DB.prepare(`SELECT provider_id, enabled, health_status, last_checked_at, last_error
+      FROM ai_provider_registry ORDER BY priority, provider_id`).all();
+    rows = result?.results || [];
+  } catch {
+    return configured;
+  }
+  const health = new Map(rows.map(row => [String(row.provider_id || '').toLowerCase(), row]));
+  const providers = configured.providers.map(provider => {
+    const row = health.get(provider.id) || {};
+    const healthStatus = text(row.health_status || 'unknown', 40).toLowerCase() || 'unknown';
+    const registryEnabled = row.enabled === undefined ? true : Number(row.enabled) === 1;
+    const operational = provider.available && registryEnabled && healthStatus === 'healthy';
+    return Object.freeze({
+      ...provider,
+      configured: provider.available,
+      registryEnabled,
+      health: healthStatus,
+      operational,
+      lastCheckedAt: text(row.last_checked_at, 80) || null,
+      lastError: text(row.last_error, 160) || '',
+    });
+  });
+  const operationalCount = providers.filter(provider => provider.operational).length;
+  return Object.freeze({
+    ...configured,
+    readinessBasis: 'verified-provider-health',
+    operationalCount,
+    collaborationReady: configured.multiProviderEnabled && operationalCount >= 2,
+    independentSentinelReady: configured.multiProviderEnabled && operationalCount >= 3,
+    providers: Object.freeze(providers),
   });
 }
 
@@ -130,7 +173,7 @@ export async function runEkodiPulseSchedule(env = {}, options = {}) {
     detected,
     processed: queue.processed,
     queue: queue.results,
-    readiness: getEkodiProviderReadiness(env),
+    readiness: await getEkodiProviderOperationalReadiness(env),
     ledger: await getEkodiCommandLedgerStatus(env),
   });
 }

@@ -67,7 +67,7 @@ export async function routeInsurancePublic(request,env){
   const url=new URL(request.url);
   if(!['GET','HEAD'].includes(request.method))return new Response('Method Not Allowed',{status:405,headers:{allow:'GET, HEAD','cache-control':'no-store'}});
   if(url.pathname===`${PREFIX}/admin`||url.pathname===`${PREFIX}/admin/`){
-    return new Response(null,{status:302,headers:{location:'https://admin.ekodi.kr/#insurance','cache-control':'no-store','x-ekodi-route':'insurance-admin-handoff'}});
+    return new Response(null,{status:302,headers:{location:'https://ekodi.kr/admin/professional/insurance','cache-control':'no-store','x-ekodi-route':'insurance-admin-handoff'}});
   }
   if(url.pathname===`${PREFIX}/health`){
     return new Response(JSON.stringify({ok:true,service:'ekodi-insurance',surface:'public',canonical:'https://ekodi.kr/insurance'}),{headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-ekodi-route':'public-insurance-health','x-content-type-options':'nosniff'}});
@@ -84,4 +84,3 @@ export async function routeInsurancePublic(request,env){
   headers.delete('content-length');headers.delete('etag');
   return injectEkodiShell(new Response(request.method==='HEAD'?null:html,{status:upstream.status,statusText:upstream.statusText,headers}),'insurance','public');
 }
-

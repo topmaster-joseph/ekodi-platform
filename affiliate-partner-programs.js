@@ -1,5 +1,6 @@
 export const AFFILIATE_PROGRAM_STATUSES = new Set(['candidate', 'prepared', 'account_exists', 'applied', 'review', 'approved', 'active', 'blocked']);
 export const AFFILIATE_INTEGRATION_STATUSES = new Set(['not_ready', 'manual', 'deeplink', 'api', 'feed', 'live']);
+export const AFFILIATE_OUTREACH_STATUSES = new Set(['none', 'planned', 'sent', 'replied', 'action_required', 'closed']);
 
 export const AFFILIATE_PARTNER_PROGRAMS = [
   { key:'coupang_partners', name:'Coupang Partners', kind:'direct', region:'KR', country:'KR', coverage:'쿠팡', status:'active', integration:'live', api:1, deeplink:1, feed:1, reporting:1, external:0, priority:100, url:'https://partners.coupang.com/' },
@@ -37,7 +38,10 @@ const PLAYBOOKS = {
   duoduo_jinbao:{ requirements:['한국 운영 주체 참여 가능 여부','联盟 계정','API 권한','정산 수단'] },
 };
 
-function nextAction(applicationStatus, integrationStatus) {
+function nextAction(applicationStatus, integrationStatus, outreachStatus = 'none') {
+  if (outreachStatus === 'action_required') return '회신의 추가 요구사항을 처리하고 신청·승인 상태를 갱신';
+  if (outreachStatus === 'replied' && !['approved','active'].includes(applicationStatus)) return '회신 내용을 반영해 계정·매체 등록 또는 권한 신청으로 진행';
+  if (outreachStatus === 'sent' && ['prepared','account_exists'].includes(applicationStatus)) return '회신을 확인하고 계정·매체 등록 또는 API·딥링크 권한 신청으로 진행';
   if (applicationStatus === 'blocked') return '보류 사유를 확인하고 가입 요건을 보완';
   if (applicationStatus === 'candidate') return '운영 주체의 가입 가능 여부와 약관을 확인';
   if (applicationStatus === 'prepared') return '공식 가입 페이지에서 계정·매체·정산 정보를 제출';
@@ -57,7 +61,7 @@ function readinessScore(applicationStatus, integrationStatus) {
 
 export function partnerProgramView(row = {}) {
   const playbook = PLAYBOOKS[row.program_key] || { requirements:[] };
-  const action = nextAction(row.application_status, row.integration_status);
+  const action = nextAction(row.application_status, row.integration_status, row.outreach_status || 'none');
   return {
     programKey: row.program_key, programName: row.program_name, programKind: row.program_kind,
     region: row.region, homeCountry: row.home_country,
@@ -69,6 +73,8 @@ export function partnerProgramView(row = {}) {
     programUrl: (AFFILIATE_PARTNER_PROGRAMS.find(item => item.key === row.program_key)?.url || row.program_url || ''),
     docsUrl: playbook.docsUrl || '', requirements: playbook.requirements,
     nextAction: action, readinessScore: readinessScore(row.application_status, row.integration_status),
+    outreachStatus: row.outreach_status || 'none', outreachChannel: row.outreach_channel || '',
+    lastOutreachAt: row.last_outreach_at || null, nextFollowupAt: row.next_followup_at || null, outreachNote: row.outreach_note || '',
     notes: row.notes || '', updatedAt: row.updated_at || null,
   };
 }

@@ -164,6 +164,7 @@
           <div class="integration-summary-grid" aria-label="제휴처 확보 현황">
             <article><small>관리 대상</small><strong id="affiliateProgramCount">—</strong></article>
             <article><small>가입 준비</small><strong id="affiliateProgramPrepared">—</strong></article>
+            <article><small>실제 연락</small><strong id="affiliateProgramContacted">—</strong></article>
             <article><small>승인/활성</small><strong id="affiliateProgramApproved">—</strong></article>
             <article><small>실연동</small><strong id="affiliateProgramLive">—</strong></article>
           </div>
@@ -320,6 +321,7 @@
 
     const PROGRAM_APPLICATION_LABELS = { candidate:'후보', prepared:'가입 준비', account_exists:'계정보유', applied:'신청완료', review:'심사중', approved:'승인됨', active:'활성', blocked:'보류' };
     const PROGRAM_INTEGRATION_LABELS = { not_ready:'미연동', manual:'수동', deeplink:'딥링크', api:'API', feed:'Feed', live:'실연동' };
+    const PROGRAM_OUTREACH_LABELS = { none:'미연락', planned:'연락 예정', sent:'문의 발송', replied:'회신 수신', action_required:'추가조치', closed:'연락 종료' };
 
     function programSelect(values, current, dataName, key) {
       const select = document.createElement('select');
@@ -334,10 +336,12 @@
       if (!programPipeline) return;
       programPipeline.replaceChildren();
       const prepared = programs.filter(item => ['prepared','account_exists','applied','review'].includes(item.applicationStatus)).length;
+      const contacted = programs.filter(item => ['sent','replied','action_required','closed'].includes(item.outreachStatus)).length;
       const approved = programs.filter(item => ['approved','active'].includes(item.applicationStatus)).length;
       const live = programs.filter(item => item.integrationStatus === 'live').length;
       document.querySelector('#affiliateProgramCount').textContent = programs.length.toLocaleString('ko-KR');
       document.querySelector('#affiliateProgramPrepared').textContent = prepared.toLocaleString('ko-KR');
+      const contactedEl = document.querySelector('#affiliateProgramContacted'); if (contactedEl) contactedEl.textContent = contacted.toLocaleString('ko-KR');
       document.querySelector('#affiliateProgramApproved').textContent = approved.toLocaleString('ko-KR');
       document.querySelector('#affiliateProgramLive').textContent = live.toLocaleString('ko-KR');
       if (!programs.length) { const empty=document.createElement('span'); empty.textContent='제휴 프로그램 원장이 비어 있습니다.'; programPipeline.append(empty); return; }
@@ -348,10 +352,13 @@
         const capability = document.createElement('small'); capability.textContent = [program.apiCapable?'API':'',program.deepLinkCapable?'딥링크':'',program.productFeedCapable?'상품Feed':'',program.reportingCapable?'리포트':''].filter(Boolean).join(' · ') || '수동 연동';
         const app = programSelect(PROGRAM_APPLICATION_LABELS, program.applicationStatus, 'programApplication', program.programKey);
         const integration = programSelect(PROGRAM_INTEGRATION_LABELS, program.integrationStatus, 'programIntegration', program.programKey);
+        const outreachWrap = document.createElement('div'); outreachWrap.className='program-outreach';
+        const outreach = programSelect(PROGRAM_OUTREACH_LABELS, program.outreachStatus || 'none', 'programOutreach', program.programKey); outreachWrap.append(outreach);
+        const outreachMeta = document.createElement('small'); outreachMeta.textContent = program.lastOutreachAt ? `${program.outreachChannel || '연락'} · ${new Date(program.lastOutreachAt).toLocaleDateString('ko-KR')}` : '연락 기록 없음'; outreachWrap.append(outreachMeta);
         const actions = document.createElement('div'); actions.className='program-actions';
         if (program.programUrl) { const link=document.createElement('a'); link.className='secondary compact'; link.href=program.programUrl; link.target='_blank'; link.rel='noopener'; link.textContent=program.externalActionRequired?'가입/관리 ↗':'관리 ↗'; actions.append(link); }
         const save=document.createElement('button'); save.type='button'; save.className='primary compact'; save.dataset.programSave=program.programKey; save.textContent='상태 저장'; actions.append(save);
-        row.append(identity, capability, app, integration, actions); programPipeline.append(row);
+        row.append(identity, capability, app, integration, outreachWrap, actions); programPipeline.append(row);
       }
     }
 
@@ -526,9 +533,10 @@
       const row = save.closest('[data-program-key]');
       const application = row?.querySelector(`[data-program-application="${key}"]`)?.value || 'candidate';
       const integration = row?.querySelector(`[data-program-integration="${key}"]`)?.value || 'not_ready';
+      const outreach = row?.querySelector(`[data-program-outreach="${key}"]`)?.value || 'none';
       const original = save.textContent; save.disabled = true; save.textContent = '저장 중…';
       try {
-        const data = await api(`/api/affiliate/programs/${encodeURIComponent(key)}`, { method:'PUT', body:JSON.stringify({ applicationStatus:application, integrationStatus:integration }) });
+        const data = await api(`/api/affiliate/programs/${encodeURIComponent(key)}`, { method:'PUT', body:JSON.stringify({ applicationStatus:application, integrationStatus:integration, outreachStatus:outreach }) });
         setMessage(`${data.program?.programName || key} 확보 상태를 저장했습니다. 판매처 추천은 별도 검증 게이트를 통과해야 열립니다.`);
         await loadOverview();
       } catch (error) { setMessage(error.message, true); }

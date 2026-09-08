@@ -243,7 +243,7 @@ jobs:
               && grep -Fq '"dataEnabled":true' /tmp/bible-config.js \
               && grep -Fq '"error":"authentication_required"' /tmp/bible-assist.json \
               && grep -Eiq '^x-ekodi-shell: v2' /tmp/bible-h \
-              && grep -Eiq '^location: https://admin\.ekodi\.kr/#ai-services' /tmp/bible-admin-h \
+              && grep -Eiq '^location: https://ekodi\.kr/admin/operations/aiops' /tmp/bible-admin-h \
               && grep -Eiq '^location: https://ekodi\.kr/bible/reader\?provider=KRV1961' /tmp/bible-legacy-h; then
               echo 'EKODI Bible production verified.'
               exit 0

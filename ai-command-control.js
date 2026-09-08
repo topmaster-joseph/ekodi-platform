@@ -6,7 +6,7 @@ import {
   ingestEkodiPulse,
   listEkodiCommandTasks,
 } from './ekodi-command-ledger.js';
-import { getEkodiProviderReadiness, runEkodiCommandQueue } from './ekodi-pulse-runtime.js';
+import { getEkodiProviderOperationalReadiness, runEkodiCommandQueue } from './ekodi-pulse-runtime.js';
 
 const PREFIX = '/api/control/ai/v8';
 
@@ -83,9 +83,10 @@ export async function handleEkodiV8CommandControl(request, env) {
   if (!env.DB?.prepare) return json(request, env, { error: 'Command Ledger DB가 연결되지 않았습니다.', code: 'COMMAND_LEDGER_DB_UNAVAILABLE' }, 503);
 
   if (request.method === 'GET' && url.pathname === `${PREFIX}/status`) {
-    const [ledger, gateway] = await Promise.all([
+    const [ledger, gateway, readiness] = await Promise.all([
       getEkodiCommandLedgerStatus(env),
       Promise.resolve(getCoreAiGatewayStatus(env, [])),
+      getEkodiProviderOperationalReadiness(env),
     ]);
     return json(request, env, {
       ok: true,
@@ -94,7 +95,7 @@ export async function handleEkodiV8CommandControl(request, env) {
       proactive: true,
       durableTaskLedger: true,
       scheduledDrain: true,
-      readiness: getEkodiProviderReadiness(env),
+      readiness,
       gateway,
       ledger,
     });

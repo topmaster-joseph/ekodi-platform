@@ -1,9 +1,29 @@
 {
-  "version": 54,
+  "version": 55,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
     "requests": [
+      {
+        "url": "https://ekodi.kr/preview/platform",
+        "statuses": [200],
+        "redirect": "manual",
+        "expect": ["EKODI Platform Preview", "data-scope=\"ekodi\"", "LIVE SAFE PROJECTION"],
+        "headerExpect": ["x-ekodi-route: live-preview-ekodi-platform", "x-content-type-options: nosniff"]
+      },
+      {
+        "url": "https://ekodi.kr/preview/dev",
+        "statuses": [200],
+        "redirect": "manual",
+        "expect": ["EKODI Developer Preview", "공개 가능한 기술 계약과 현재 서비스 상태"],
+        "headerExpect": ["x-ekodi-route: live-preview-ekodi-dev"]
+      },
+      {
+        "url": "https://ekodi.kr/ekodibiz/preview/platform",
+        "statuses": [200],
+        "redirect": "manual",
+        "expect": ["EKODIBIZ Platform Preview", "data-scope=\"ekodibiz\""]
+      },
       {
         "url": "https://ekodi.kr/",
         "statuses": [
@@ -161,7 +181,7 @@
         ]
       },
       {
-        "url": "https://ekodi.kr/ekodi-church/admin",
+        "url": "https://ekodi.kr/ekodichurch/admin",
         "statuses": [
           200
         ],

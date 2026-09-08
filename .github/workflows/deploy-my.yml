@@ -187,7 +187,7 @@ jobs:
               && grep -Fq 'MY APPROVAL · DECISION INBOX' /tmp/my-stage-approvals.html \
               && grep -Fq '외국인만을 위한 경로가 아니라' /tmp/my-stage-journey.html \
               && grep -Fq 'current_site_access' /tmp/my-stage-journey-app.js \
-              && grep -Fq 'https://auth.ekodi.kr/' /tmp/my-stage-journey-app.js \
+              && grep -Fq 'https://ekodi.kr/auth/' /tmp/my-stage-journey-app.js \
               && grep -Fq 'buildPersonalizedServiceView' /tmp/my-stage-app.js \
               && grep -Fq 'PERSONALIZATION_VERSION=1' /tmp/my-stage-personalization.js \
               && grep -Fq "DB_NAME='ekodi-my-character-v1'" /tmp/my-stage-character.js \
@@ -245,12 +245,12 @@ jobs:
             shell_health_code=$(curl -sS -o /tmp/my-shell-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://shell.ekodi.kr/health' || true)
             if [[ "$client_code" == '200' && "$router_code" == '200' && "$manifest_code" == '200' && "$shell_health_code" == '200' ]] \
               && grep -Fq "'my':{name:'My EKODI'" /tmp/my-client-auth.js \
-              && grep -Fq "returnTo:'https://my.ekodi.kr/'" /tmp/my-client-auth.js \
+              && grep -Fq "returnTo:'https://ekodi.kr/my/'" /tmp/my-client-auth.js \
               && grep -Fq 'manifestService' /tmp/my-auth-router.js \
               && grep -Fq 'isRegistryUserService' /tmp/my-auth-router.js \
               && grep -Fq "site==='portal'||isRegistryUserService" /tmp/my-auth-router.js \
               && grep -Fq '"id":"my"' /tmp/my-shell-manifest.json \
-              && grep -Fq '"url":"https://my.ekodi.kr/"' /tmp/my-shell-manifest.json \
+              && grep -Fq '"url":"https://ekodi.kr/my/"' /tmp/my-shell-manifest.json \
               && grep -Fq '"characterIdentityRegistryVersion":2' /tmp/my-shell-health.json \
               && grep -Fq '"userCharacterVersion":6' /tmp/my-shell-health.json; then
               echo 'Central My EKODI registry auth realm is live.'
@@ -342,7 +342,7 @@ jobs:
               && grep -Fq 'MY APPROVAL · DECISION INBOX' /tmp/my-approvals.html \
               && grep -Fq '외국인만을 위한 경로가 아니라' /tmp/my-journey.html \
               && grep -Fq 'current_site_access' /tmp/my-journey-app.js \
-              && grep -Fq 'https://auth.ekodi.kr/' /tmp/my-journey-app.js \
+              && grep -Fq 'https://ekodi.kr/auth/' /tmp/my-journey-app.js \
               && grep -Fq 'buildPersonalizedServiceView' /tmp/my-app.js \
               && grep -Fq 'PERSONALIZATION_VERSION=1' /tmp/my-personalization.js \
               && grep -Fq "DB_NAME='ekodi-my-character-v1'" /tmp/my-character.js \

@@ -46,7 +46,7 @@ function runtimeConfig(env) {
     dataMode: env.DATA_MODE || 'isolated-staging',
     supabaseUrl: dataEnabled ? env.SUPABASE_URL : '',
     supabasePublishableKey: dataEnabled ? env.SUPABASE_PUBLISHABLE_KEY : '',
-    authUrl: env.AUTH_URL || 'https://auth.ekodi.kr/?site=bible',
+    authUrl: env.AUTH_URL || 'https://ekodi.kr/auth/?site=bible',
     tenantSlug: env.TENANT_SLUG || 'ekodi-church',
     canonicalUrl: 'https://ekodi.kr/bible',
     legacyAlias: 'https://bible.ekodi.kr',
@@ -284,7 +284,7 @@ export default {
     }
     if (internalUrl.pathname.startsWith('/api/bible/')) return handleBibleApi(request, env, internalUrl);
     if (internalUrl.pathname === '/api/assist' && request.method === 'POST') return handleAssist(request, env);
-    if (internalUrl.pathname === '/admin' || internalUrl.pathname === '/admin/') return Response.redirect('https://admin.ekodi.kr/#ai-services', 307);
+    if (internalUrl.pathname === '/admin' || internalUrl.pathname === '/admin/') return Response.redirect('https://ekodi.kr/admin/operations/aiops', 307);
 
     let response;
     const route = internalUrl.pathname.replace(/\/$/, '');

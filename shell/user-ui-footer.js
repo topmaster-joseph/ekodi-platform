@@ -3,7 +3,7 @@
 if(window.__EKODI_USER_UI_FOOTER_BOOTED)return;
 window.__EKODI_USER_UI_FOOTER_BOOTED=true;
 
-const VERSION=5;
+const VERSION=6;
 const STYLE_ID='ekodi-user-ui-footer-style';
 const CONFIG_URL='https://shell.ekodi.kr/user-footer.json';
 const USER_SURFACES=new Set(['public','workspace']);
@@ -60,13 +60,13 @@ function installStyle(){
   style.id=STYLE_ID;
   style.textContent=`
     .ekodi-user-ui-footer{position:relative!important;z-index:2!important;width:100%!important;box-sizing:border-box!important;margin-top:32px!important;border-top:1px solid var(--ekodi-user-footer-border,color-mix(in srgb,var(--ekodi-service-accent,currentColor) 18%,transparent))!important;background:var(--ekodi-user-footer-background,color-mix(in srgb,var(--ekodi-service-paper,transparent) 92%,var(--ekodi-service-accent,transparent) 8%))!important;color:var(--ekodi-user-footer-safe-text,#f4f7f5)!important;-webkit-text-fill-color:var(--ekodi-user-footer-safe-text,#f4f7f5)!important;font-family:system-ui,-apple-system,"Noto Sans KR","Malgun Gothic",sans-serif!important;font-size:14px!important;line-height:1.75!important;text-align:center!important;text-shadow:none!important}
-    .ekodi-user-ui-footer__inner{width:min(1040px,calc(100% - 40px))!important;margin:0 auto!important;padding:28px 0 30px!important;display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:14px!important}
+    .ekodi-user-ui-footer__inner{width:min(var(--ekodi-user-content-inline-size,var(--ekodi-user-canvas-max,1240px)),calc(100% - 40px))!important;margin:0 auto!important;padding:28px 0 30px!important;display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:14px!important}
     .ekodi-user-ui-footer__copy{min-width:0!important;width:100%!important;display:grid!important;justify-items:center!important;gap:7px!important}.ekodi-user-ui-footer__service{font-size:12px!important;font-weight:750!important;letter-spacing:.04em!important;color:var(--ekodi-user-footer-safe-muted,#dbe5df)!important;-webkit-text-fill-color:var(--ekodi-user-footer-safe-muted,#dbe5df)!important}.ekodi-user-ui-footer__brand{font-size:14px!important;font-weight:850!important;letter-spacing:.13em!important;color:var(--ekodi-user-footer-safe-text,#f4f7f5)!important;-webkit-text-fill-color:var(--ekodi-user-footer-safe-text,#f4f7f5)!important}
     .ekodi-user-ui-footer__business,.ekodi-user-ui-footer__address{width:100%!important;display:flex!important;align-items:baseline!important;justify-content:center!important;gap:5px 16px!important;flex-wrap:wrap!important;color:var(--ekodi-user-footer-safe-text,#f4f7f5)!important;-webkit-text-fill-color:var(--ekodi-user-footer-safe-text,#f4f7f5)!important}.ekodi-user-ui-footer__address{word-break:keep-all!important}.ekodi-user-ui-footer__separator{color:var(--ekodi-user-footer-safe-muted,#dbe5df)!important;opacity:.9!important}
     .ekodi-user-ui-footer__links{display:flex!important;justify-content:center!important;align-items:center!important;gap:7px 18px!important;flex-wrap:wrap!important;white-space:normal!important}.ekodi-user-ui-footer a{color:var(--ekodi-user-footer-safe-link,#fff)!important;-webkit-text-fill-color:var(--ekodi-user-footer-safe-link,#fff)!important;font-weight:700!important;text-decoration:none!important;text-underline-offset:3px!important}.ekodi-user-ui-footer a:hover,.ekodi-user-ui-footer a:focus-visible{text-decoration:underline!important}.ekodi-user-ui-footer a:focus-visible{outline:2px solid currentColor!important;outline-offset:3px!important}
     .ekodi-user-ui-footer__copyright,.ekodi-user-ui-footer__scope{color:var(--ekodi-user-footer-safe-muted,#dbe5df)!important;-webkit-text-fill-color:var(--ekodi-user-footer-safe-muted,#dbe5df)!important;opacity:1!important}.ekodi-user-ui-footer__scope{max-width:800px!important;font-size:13px!important;line-height:1.7!important}
     [data-ekodi-legal-footer]:not(.ekodi-user-ui-footer),[data-ekodi-legacy-common-footer-hidden]{display:none!important}
-    @media(max-width:720px){.ekodi-user-ui-footer{font-size:13px!important}.ekodi-user-ui-footer__inner{width:min(100% - 28px,1040px)!important;padding:24px 0 26px!important;gap:12px!important}.ekodi-user-ui-footer__business,.ekodi-user-ui-footer__address{gap:4px 11px!important}.ekodi-user-ui-footer__scope{font-size:12.5px!important}}
+    @media(max-width:720px){.ekodi-user-ui-footer{font-size:13px!important}.ekodi-user-ui-footer__inner{width:min(var(--ekodi-user-content-inline-size,var(--ekodi-user-canvas-max,1240px)),calc(100% - 28px))!important;padding:24px 0 26px!important;gap:12px!important}.ekodi-user-ui-footer__business,.ekodi-user-ui-footer__address{gap:4px 11px!important}.ekodi-user-ui-footer__scope{font-size:12.5px!important}}
   `;
   (document.head||document.documentElement).append(style);
 }

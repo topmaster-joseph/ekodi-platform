@@ -4,12 +4,14 @@ import { createHwpxBlob, editorToHwpxBlocks, importHwpx } from './hwpx.js';
 const cfg=window.EKODI_MY_CONFIG||{};
 const enabled=Boolean(cfg.dataEnabled&&cfg.supabaseUrl&&cfg.supabasePublishableKey);
 const sb=enabled?createClient(cfg.supabaseUrl,cfg.supabasePublishableKey,{auth:{detectSessionInUrl:true,persistSession:true}}):null;
-const authUrl=cfg.authUrl||'https://auth.ekodi.kr/?site=my';
+const authUrl=cfg.authUrl||'https://ekodi.kr/auth/?site=my';
 const AI_URL=enabled?`${cfg.supabaseUrl}/functions/v1/document-ai-api`:'';
 const LOCAL_KEY='ekodi.docs.v1';
 const $=s=>document.querySelector(s);
 const editor=$('#editor'),titleInput=$('#titleInput'),docList=$('#docList'),saveState=$('#saveState');
 let session=null,cloudDocs=[],localDocs=[],versions=[],current={id:'',cloudId:'',sourceFormat:'ekodi',updatedAt:new Date().toISOString()};
+const pageParams=new URLSearchParams(location.search),requestedDocId=pageParams.get('doc')||'',readOnlyView=pageParams.get('view')==='1';
+let requestedDocOpened=false;
 let savedRange=null,selectedText='',aiOperation='proofread',lastAiTarget=null,saveTimer=null,draggedBlock=null,fileDragDepth=0;
 
 const cleanTitle=v=>(String(v||'').trim()||'제목 없는 문서').slice(0,160);
@@ -130,9 +132,16 @@ async function authAction(){
 }
 async function loadCloud(){
   if(!session||!sb){cloudDocs=[];renderList();return}
-  const {data,error}=await sb.from('document_files').select('id,title,content_html,source_format,workspace_key,updated_at').order('updated_at',{ascending:false}).limit(60);
+  const {data,error}=await sb.from('document_files').select('id,title,content_html,source_format,workspace_key,source_storage_path,updated_at').order('updated_at',{ascending:false}).limit(60);
   if(error){console.error('document load',error);setState('계정 문서 불러오기 실패','error');return}
   cloudDocs=data||[];renderList();
+  if(requestedDocId&&!requestedDocOpened){const row=cloudDocs.find(item=>String(item.id)===String(requestedDocId));if(row){requestedDocOpened=true;openRow(row,true)}}
+}
+function applyReadOnlyView(){
+  if(!readOnlyView)return;
+  editor.contentEditable='false';titleInput.readOnly=true;document.body.dataset.docsView='readonly';
+  document.querySelectorAll('[data-command],#insertTable,#insertLink,#runAi,#applyAi,#appendAi,#saveCloud,#fileInput,#newDoc').forEach(node=>{node.disabled=true;node.setAttribute?.('aria-disabled','true')});
+  setState('읽기 전용 웹 보기','ok');
 }
 async function saveCloud(version=true){
   if(!session||!sb){setState('로그인 후 계정 저장 가능','error');return}
@@ -299,7 +308,7 @@ localDocs=readLocal();if(localDocs.length)openRow(localDocs[0],false);else newDo
 document.querySelector('[data-ai-operation="proofread"]').classList.add('active');
 if(enabled){
   try{await handoff()}catch(error){console.error('document auth handoff',error)}
-  const {data}=await sb.auth.getSession();session=data.session;authUi();await loadCloud();
-  sb.auth.onAuthStateChange(async(_event,next)=>{session=next;authUi();await loadCloud()});
+  const {data}=await sb.auth.getSession();session=data.session;authUi();await loadCloud();applyReadOnlyView();
+  sb.auth.onAuthStateChange(async(_event,next)=>{session=next;authUi();await loadCloud();applyReadOnlyView()});
 }else authUi();
 updateMeta();captureSelection();

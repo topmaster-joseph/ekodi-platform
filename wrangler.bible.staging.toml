@@ -7,7 +7,7 @@ preview_urls = false
 [vars]
 DATA_ENABLED = "false"
 DATA_MODE = "isolated-staging"
-AUTH_URL = "https://auth.ekodi.kr/?site=bible"
+AUTH_URL = "https://ekodi.kr/auth/?site=bible"
 TENANT_SLUG = "ekodi-church"
 AI_PROVIDER = "none"
 

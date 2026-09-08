@@ -79,7 +79,7 @@ function handleCloudflareSecretPreflight(request, env = {}) {
 export default {
   async fetch(request, env, ctx) {
     const incoming = new URL(request.url);
-    if (incoming.pathname === '/admin' || incoming.pathname === '/admin/') return Response.redirect('https://admin.ekodi.kr/?source=api.ekodi.kr', 307);
+    if (incoming.pathname === '/admin' || incoming.pathname === '/admin/') return Response.redirect('https://ekodi.kr/admin/?source=api', 307);
     const guard = await enforceEdgeSecurity(request, env);
     if (guard) return guard;
 
@@ -268,6 +268,11 @@ export default {
   },
 
   async scheduled(controller, env, ctx) {
+    const customerSchedule = typeof customerEntryWorker.scheduled === 'function'
+      ? await customerEntryWorker.scheduled(controller, env, ctx)
+      : null;
+    // A real Coupang report pass owns the whole Mission Control invocation budget.
+    if (customerSchedule?.reporting?.ran) return customerSchedule;
     const authorBilling = runAuthorBillingSchedule(env).catch(error => { console.error('Author billing schedule error', error); return { processed:0, error:'author_billing_schedule_failed' }; });
     const messengerOutbox = drainMessengerOutbox(env, { limit:20 }).catch(error => { console.error('Messenger outbox schedule error', error); return { processed:0, failed:1, error:'messenger_outbox_schedule_failed' }; });
     const commandPulse = runEkodiPulseSchedule(env, { limit:1 }).catch(error => { console.error('EKODI v8 Pulse schedule error', error); return { ok:false, error:'ekodi_v8_pulse_failed' }; });
@@ -285,8 +290,7 @@ export default {
       ctx.waitUntil(hybridWatchdog);
       ctx.waitUntil(wakeOrchestration);
     }
-    if (typeof customerEntryWorker.scheduled === 'function') return customerEntryWorker.scheduled(controller, env, ctx);
-    return Promise.all([authorBilling, messengerOutbox, commandPulse, aiProviderHealth, hybridWatchdog, wakeOrchestration]);
+    return customerSchedule || Promise.all([authorBilling, messengerOutbox, commandPulse, aiProviderHealth, hybridWatchdog, wakeOrchestration]);
   },
 };
 

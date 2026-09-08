@@ -21,6 +21,10 @@ on:
       - 'hub.html'
       - 'wrangler.site.toml'
       - 'wrangler.site-staging.toml'
+      - 'discovery-layer.js'
+      - 'scripts/discovery-build.mjs'
+      - 'scripts/ccm-mr-postbuild.mjs'
+      - 'test/discovery-layer.test.mjs'
       - 'scripts/build.mjs'
       - '.github/workflows/stage-shared-site-shell.yml'
 
@@ -60,12 +64,23 @@ jobs:
           node --check sites/ekodi-insurance/public/server-bridge.js
           node --check marketing-canonical-projection.js
           node --check ekodi-shell-injector.js
-          node --test test/marketing-canonical-projection.test.mjs test/insurance-public-route.test.mjs test/public-workspace-gateway.test.mjs
+          node --check discovery-layer.js
+          node --check scripts/discovery-build.mjs
+          node --test test/marketing-canonical-projection.test.mjs test/insurance-public-route.test.mjs test/public-workspace-gateway.test.mjs test/discovery-layer.test.mjs
           npm run build
           test -f dist/insurance/index.html
           test -f dist/insurance/advisor.html
           test -f dist/trade.html
           test -f dist/hub.html
+          test -f dist/robots.txt
+          test -f dist/sitemap.xml
+          test -f dist/llms.txt
+          grep -Fq 'OAI-SearchBot' dist/robots.txt
+          grep -Fq 'User-agent: GPTBot' dist/robots.txt
+          grep -Fq 'Disallow: /' dist/robots.txt
+          grep -Fq '<loc>https://ekodi.kr/</loc>' dist/sitemap.xml
+          grep -Fq 'Canonical site: https://ekodi.kr/' dist/llms.txt
+          grep -Fq 'data-ekodi-discovery="v1"' dist/index.html
       - name: Enforce Development account boundary
         shell: bash
         run: |
@@ -91,6 +106,13 @@ jobs:
             grep -Fq "$needle" /tmp/shared-path.html
             grep -Fiq "$header_needle" /tmp/shared-path.headers
           }
+          verify_discovery_path() {
+            path="$1"; needle="$2"
+            code=$(curl -sS -o /tmp/shared-discovery.body -w '%{http_code}' --connect-timeout 5 --max-time 15 -H "x-ekodi-staging-host: ekodi.kr" "$STAGING_URL$path" || true)
+            echo "$path -> $code"
+            [[ "$code" == '200' ]]
+            grep -Fq "$needle" /tmp/shared-discovery.body
+          }
           verify_shell() {
             host="$1"; needle="$2"
             code=$(curl -sS -D /tmp/shared-stage.headers -o /tmp/shared-stage.html -w '%{http_code}' --connect-timeout 5 --max-time 15 -H "x-ekodi-staging-host: $host" "$STAGING_URL/" || true)
@@ -111,8 +133,11 @@ jobs:
               && verify_public_path '/insurance' '보험을 파는 AI가 아니라, 내 보험을 챙겨주는 AI' 'x-ekodi-route: public-insurance' \
               && verify_public_path '/insurance/advisor' 'PERSONAL INSURANCE CARE' 'x-ekodi-route: public-insurance' \
               && verify_public_path '/ekodibiz/invest' 'EKODIBIZ · INVESTMENT BUSINESS' 'x-ekodi-route: public-ekodibiz-invest' \
-              && verify_public_path '/ekodibiz/invest/admin' 'WORKSPACE-LOCAL ADMIN' 'x-ekodi-route: public-ekodibiz-invest-admin'; then
-              echo 'Shared-site core, Insurance public path, Space binding, EKODIBIZ and Invest staging verified through the production entry contract.'
+              && verify_public_path '/ekodibiz/invest/admin' 'WORKSPACE-LOCAL ADMIN' 'x-ekodi-route: public-ekodibiz-invest-admin' \
+              && verify_discovery_path '/robots.txt' 'OAI-SearchBot' \
+              && verify_discovery_path '/sitemap.xml' '<urlset' \
+              && verify_discovery_path '/llms.txt' 'Canonical site: https://ekodi.kr/'; then
+              echo 'Shared-site core, Discovery Layer, Insurance public path, Space binding, EKODIBIZ and Invest staging verified through the production entry contract.'
               exit 0
             fi
             sleep 4

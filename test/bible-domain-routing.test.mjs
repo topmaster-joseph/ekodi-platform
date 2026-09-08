@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import worker from '../bible-worker.js';
 
 const env = { DATA_ENABLED:'false', DATA_MODE:'test' };
@@ -36,4 +37,18 @@ test('canonical asset requests strip the /bible prefix before asset lookup', asy
   const response = await worker.fetch(new Request('https://ekodi.kr/bible/styles.css'), assetEnv);
   assert.equal(response.status, 200);
   assert.equal(seenPath, '/styles.css');
+});
+
+test('Bible route ownership follows Constitution v1.9 apex gateway', () => {
+  const site=fs.readFileSync(new URL('../wrangler.site.toml',import.meta.url),'utf8');
+  const bible=fs.readFileSync(new URL('../wrangler.bible.toml',import.meta.url),'utf8');
+  assert.match(site,/binding = "BIBLE"[\s\S]*service = "ekodi-bible-conversation"/);
+  assert.match(site,/"\/bible\*"/);
+  assert.doesNotMatch(bible,/pattern = "ekodi\.kr\/bible\*"/);
+});
+
+test('Bible admin handoff uses the canonical admin surface', async () => {
+  const response=await worker.fetch(new Request('https://ekodi.kr/bible/admin'),env);
+  assert.equal(response.status,307);
+  assert.equal(response.headers.get('location'),'https://ekodi.kr/admin/operations/aiops');
 });

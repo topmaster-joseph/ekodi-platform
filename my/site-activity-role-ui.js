@@ -28,7 +28,7 @@ function rememberWorkspace(key){try{if(key)localStorage.setItem('ekodi_my_active
 function routeFor(context){
   const returnTo=OWNED_SITE_URLS[context.site];
   if(!returnTo)return '';
-  const target=new URL('https://auth.ekodi.kr/');
+  const target=new URL('https://ekodi.kr/auth/');
   target.searchParams.set('site',context.site);
   target.searchParams.set('return_to',returnTo);
   target.searchParams.set('workspace',context.workspace_key);
@@ -75,7 +75,7 @@ function renderAdminContext(){
   if(existing)return;
   const link=document.createElement('a');
   link.className='workspace-card workspace-button platform-admin-workspace';
-  link.href='https://auth.ekodi.kr/?site=admin&direct=1&return_to=https%3A%2F%2Fadmin.ekodi.kr%2F';
+  link.href='https://ekodi.kr/auth/?site=admin&direct=1&return_to=https%3A%2F%2Fekodi.kr%2Fadmin%2F';
   link.dataset.platformAdminContext='1';
   link.dataset.authorityScope='platform';
   link.innerHTML='<span class="workspace-icon">관</span><span class="workspace-body"><small>platform · 별도 관리자 모드</small><h3>EKODI 생태계 관리자</h3><p>전체 생태계 제어와 운영을 위한 독립 컨텍스트</p><span class="meta"><span>Platform</span><span>최고관리자</span><span>전역 권한</span><span>관리자 열기 →</span></span></span>';

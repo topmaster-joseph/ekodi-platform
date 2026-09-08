@@ -21,6 +21,10 @@ const PUBLIC_ASSETS = new Set([
   '/mall.js',
 ]);
 const PUBLIC_ADMIN_ALIASES = new Set(['/admin', '/admin/']);
+const WORKSPACE_ADMIN_ASSET_ALIASES = new Map([
+  ['/cgma/admin/assets/cgma-member-admin.js','/cgma-member-admin.js'],
+  ['/cgma/admin/assets/cgma-member-admin.css','/cgma-member-admin.css'],
+]);
 
 const ADMIN_HOSTS = new Set([
   'admin.ekodi.kr',
@@ -85,6 +89,7 @@ const ADMIN_ASSETS = new Set([
   '/ekodi-message-ui.js',
   '/admin-shell.css',
   '/admin-finance.css',
+  '/admin-canonical-routes.js',
   '/admin-central-handoff.js',
   '/admin-authenticated-shell.js',
   '/admin-public-site-controls.js',
@@ -122,6 +127,8 @@ const ADMIN_ASSETS = new Set([
   '/communication-admin.js',
   '/client-access.css',
   '/client-access.js',
+  '/community-admin.css',
+  '/community-admin.js',
   '/marketing-funnel-admin.css',
   '/marketing-funnel-admin.js',
   '/cgma-member-admin.css',
@@ -398,7 +405,7 @@ function adminAuthRedirect(returnPath) {
 }
 
 function adminApexAuthUrl() {
-  const target = new URL('https://auth.ekodi.kr/');
+  const target = new URL('https://ekodi.kr/auth/');
   target.searchParams.set('site', 'admin');
   target.searchParams.set('direct', '1');
   target.searchParams.set('return_to', 'https://ekodi.kr/admin');
@@ -505,6 +512,11 @@ export default {
       if (url.pathname === '/workspace-admin.js') return workspaceAdminScript();
       if (url.pathname.startsWith('/api/control/storage/google/cheonggye-members')) return proxyAdminStorage(request, env);
       if (url.pathname === '/church-pastor-admin.js') return churchPastorAdminScript();
+      const workspaceAdminAsset = WORKSPACE_ADMIN_ASSET_ALIASES.get(url.pathname);
+      if (workspaceAdminAsset) {
+        const response = await env.ASSETS.fetch(assetRequest(request, workspaceAdminAsset));
+        return withHostSecurity(response, ADMIN_CSP, adminAssetCacheControl(url), 'admin-workspace-asset');
+      }
       if (['GET','HEAD'].includes(request.method) && isEkodiBizInvestAdminPath(url.pathname)) {
         const page=ekodiBizInvestAdminPage(request);
         const secured=withHostSecurity(page, ADMIN_CSP, 'no-store', 'public-ekodibiz-invest-admin');
@@ -512,6 +524,7 @@ export default {
       }
       if (isLegacyEkodiBizPath(url.pathname)) return redirectLegacyEkodiBizPath(request);
       if (isLegacyMallPath(url.pathname)) return redirectLegacyMallPath(request);
+      if (['GET','HEAD'].includes(request.method) && (url.pathname === '/ekodi-church' || url.pathname.startsWith('/ekodi-church/'))) { const target=new URL(request.url); target.pathname=url.pathname.replace(/^\/ekodi-church(?=\/|$)/i,'/ekodichurch'); return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-content-type-options':'nosniff'}}); }
       if (['GET','HEAD'].includes(request.method) && isChurchPastorAdminPath(url.pathname)) return injectEkodiShell(churchPastorAdminPage(), 'church', 'admin');
       if (isWorkspaceAdminPath(url.pathname)) return injectEkodiShell(workspaceAdminPage(), 'space', 'admin');
       if (['GET','HEAD'].includes(request.method) && isEkodiBizInvestPath(url.pathname)) {

@@ -1,5 +1,6 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
+import { emitDiscoveryAssets } from './discovery-build.mjs';
 
 const root=fileURLToPath(new URL('../',import.meta.url));
 const homepagePath=`${root}dist/homepage-ambient.js`;
@@ -14,5 +15,7 @@ if(!player.includes("buttonId='ekodi-ccm-mr-toggle'"))throw new Error('CCM MR to
 if(!homepage.includes("window.__EKODI_CCM_MR__")){
   await writeFile(homepagePath,`${homepage}\n\n${player}\n`);
 }
+
+await emitDiscoveryAssets();
 
 console.log('Built shared CCM MR runtime into homepage-ambient.js');

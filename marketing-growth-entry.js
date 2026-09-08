@@ -2,6 +2,7 @@ import growthWorker from './marketing-growth-worker.js';
 export { MarketingGrowthPublisher } from './marketing-growth-worker.js';
 import { getMallPromotionStatus, handleMallPromotionRequest, mallPromotionAutomationEnabled, runMallPromotionAutomation } from './mall-promotion-automation.js';
 import { getMallSalesIntelligenceStatus, runMallSalesIntelligence } from './mall-sales-intelligence.js';
+import { ensureWeeklyPromotionBoard } from './mall-official-promotion-board.js';
 
 function json(data, status = 200, inheritedHeaders = null) {
   const headers = new Headers(inheritedHeaders || undefined);
@@ -29,7 +30,7 @@ export default {
         ...rawMallPromotionAutomation,
         enabled,
         scheduler: enabled && rawMallPromotionAutomation?.scheduler !== false,
-        safetyGate: enabled ? 'explicitly_enabled' : 'youtube_connection_and_test_publish_required',
+        safetyGate: enabled ? 'explicitly_enabled' : 'social_oauth_connection_and_test_publish_required',
       };
       return json({...base, mallPromotionAutomation, mallSalesIntelligence}, baseResponse.status, baseResponse.headers);
     }
@@ -41,7 +42,11 @@ export default {
       if (!intelligence.ok && intelligence.status !== 'schema_required') {
         console.error('EKODI Mall sales intelligence failed', intelligence.error || intelligence.status);
       }
-      if (!promotionAutomationEnabled(env)) return;
+      const weeklyBoard = await ensureWeeklyPromotionBoard(env, {reason:'cron',force:false});
+      if (!weeklyBoard.ok && weeklyBoard.status !== 'schema_required') {
+        console.error('EKODI Mall weekly promotion board failed', weeklyBoard.error || weeklyBoard.status);
+      }
+      if (!mallPromotionAutomationEnabled(env)) return;
       await runMallPromotionAutomation(env, {reason:'cron'});
     })());
   },

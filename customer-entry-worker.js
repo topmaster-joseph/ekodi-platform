@@ -161,7 +161,7 @@ export default {
         error: '사역보고 관리는 에코디교회 목회자 관리자로 이동했습니다.',
         code: 'CHURCH_REPORTS_MOVED',
         canonical: '/api/church/admin/reports',
-        admin: 'https://ekodi.kr/ekodi-church/admin/reports',
+        admin: 'https://ekodi.kr/ekodichurch/admin/reports',
       }), {
         status: 410,
         headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', 'x-content-type-options': 'nosniff' },
@@ -307,7 +307,7 @@ export default {
       });
     // A real Coupang report pass owns this invocation's subrequest budget.
     // The other recurring jobs defer only this single ten-minute cycle.
-    if (reporting?.ran) return;
+    if (reporting?.ran) return { reporting };
     ctx.waitUntil(runChurchReportSchedule(env).catch(error => console.error('Church report schedule failed', error)));
     ctx.waitUntil(runMembershipBillingSchedule(env).catch(error => console.error('Membership billing schedule failed', error)));
     ctx.waitUntil(syncScheduledAffiliateAutomation(env, { reason: 'schedule' }).catch(error => console.error('EKODI Mall automatic curation schedule failed', error)));

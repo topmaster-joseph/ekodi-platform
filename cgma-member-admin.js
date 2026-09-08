@@ -1,5 +1,5 @@
 const API='/api/control/storage/google/cheonggye-members';
-const STYLE='/cgma-member-admin.css';
+const STYLE='/cgma/admin/assets/cgma-member-admin.css';
 const POLL_MS=60_000;
 const esc=value=>String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 const text=value=>String(value??'').trim();

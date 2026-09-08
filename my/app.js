@@ -5,13 +5,13 @@ const cfg=window.EKODI_MY_CONFIG||{};
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const MODES={writer:'Writer',video:'Video',podcast:'Podcast',lecture:'Educator',research:'Research',visual:'Visual',mission:'Mission',ai:'AI Creator'};
 const SERVICES=[
- ['church','에코디교회','https://church.ekodi.kr'],['biz','에코디비즈','https://biz.ekodi.kr'],['books','출판','https://books.ekodi.kr'],['author','Creator AI','https://author.ekodi.kr'],['lab','에코디연구소','https://lab.ekodi.kr'],['community','커뮤니티','https://community.ekodi.kr'],['work','EKODI Work','https://work.ekodi.kr'],['social','EKODI Social','https://social.ekodi.kr'],['energy','Energy AI','https://energy.ekodi.kr'],['business','Business OS','https://business.ekodi.kr'],['mall','에코디몰','https://ekodi.kr/ekodibiz/mall'],['marketing','Marketing AI','https://ekodi.kr/ekodibiz/marketing-ai']
+ ['church','에코디교회','https://ekodi.kr/ekodichurch'],['biz','에코디비즈','https://ekodi.kr/ekodibiz'],['books','출판','https://books.ekodi.kr'],['author','Creator AI','https://author.ekodi.kr'],['lab','에코디연구소','https://ekodi.kr/ekodilab'],['community','커뮤니티','https://community.ekodi.kr'],['work','EKODI Work','https://work.ekodi.kr'],['social','EKODI Social','https://social.ekodi.kr'],['energy','Energy AI','https://energy.ekodi.kr'],['business','Business OS','https://ekodi.kr/business'],['mall','에코디몰','https://ekodi.kr/ekodibiz/mall'],['marketing','Marketing AI','https://ekodi.kr/ekodibiz/marketing-ai']
 ];
 const OPEN_SSO_SITES=new Set(['social','energy']);
 const SSO_SITES=new Set(['church','biz','books','author','lab','community','work','business','mall','marketing','social','energy']);
 const TARGETABLE_WORKSPACE_SITES=new Set(['church','biz','books','lab','mall','marketing','social','energy']);
 const WORKSPACE_ENTRY_PRIORITY=['biz','marketing','mall','church','books','lab','business','community','work','author','social','energy'];
-const authUrl=cfg.authUrl||'https://auth.ekodi.kr/?site=my';
+const authUrl=cfg.authUrl||'https://ekodi.kr/auth/?site=my';
 const enabled=Boolean(cfg.dataEnabled&&cfg.supabaseUrl&&cfg.supabasePublishableKey);
 const PROFILE_API=enabled?`${cfg.supabaseUrl}/functions/v1/profile-api`:'';
 const sb=enabled?createClient(cfg.supabaseUrl,cfg.supabasePublishableKey,{auth:{detectSessionInUrl:true,persistSession:true}}):null;
@@ -112,7 +112,7 @@ function personalizationView(){
 function serviceRoute(id,url){
  const open=OPEN_SSO_SITES.has(id);
  if(!session||!SSO_SITES.has(id)||(!connected(id)&&!open))return url;
- const target=new URL('https://auth.ekodi.kr/');
+ const target=new URL('https://ekodi.kr/auth/');
  target.searchParams.set('site',id);target.searchParams.set('return_to',url);
  const current=activeWorkspace();
  if(current&&TARGETABLE_WORKSPACE_SITES.has(id)&&(current.services?.includes(id)||open))target.searchParams.set('workspace',current.workspace_key);

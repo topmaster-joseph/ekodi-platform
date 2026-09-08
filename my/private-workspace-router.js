@@ -25,7 +25,7 @@
     return serviceId&&SERVICE_ID_RE.test(serviceId)?`${base}/${encodeURIComponent(serviceId)}`:base;
   }
   function centralMyLogin(){
-    const target=new URL('https://auth.ekodi.kr/');
+    const target=new URL('https://ekodi.kr/auth/');
     target.searchParams.set('site','my');
     const returnTo=new URL(location.href);
     returnTo.hash='';
@@ -34,7 +34,7 @@
   }
   async function serviceMap(){
     try{
-      const response=await fetch('/service-manifest.json',{cache:'no-store'});
+      const response=await fetch('/my/service-manifest.json',{cache:'no-store'});
       if(!response.ok)return new Map();
       const data=await response.json();
       return new Map((data.services||[]).map(service=>[String(service.id||''),service]));
@@ -44,7 +44,7 @@
     const raw=link.dataset.ekodiServiceTarget||link.getAttribute('href')||'';
     try{
       const target=new URL(raw,location.href);
-      if(target.origin==='https://auth.ekodi.kr'){
+      if((target.origin==='https://ekodi.kr'&&target.pathname.startsWith('/auth'))||target.origin==='https://auth.ekodi.kr'){
         const site=String(target.searchParams.get('site')||'');
         return services.has(site)?site:'';
       }

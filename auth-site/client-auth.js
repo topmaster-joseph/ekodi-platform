@@ -7,7 +7,7 @@ function fetchTimed(url,options={},ms=10000){const controller=new AbortControlle
 
 const realms={
   portal:{name:'EKODI',returnTo:'https://ekodi.kr/',open:true,kind:'portal'},
-  'my':{name:'My EKODI',returnTo:'https://my.ekodi.kr/',open:true,kind:'my'},
+  'my':{name:'My EKODI',returnTo:'https://ekodi.kr/my/',open:true,kind:'my'},
   community:{name:'Community',returnTo:'https://community.ekodi.kr/',open:true,kind:'community'},
   church:{name:'EKODI Church',returnTo:'https://church.ekodi.kr/',open:true,kind:'church'},
   biz:{name:'EKODI Biz',returnTo:'https://biz.ekodi.kr/',open:true,kind:'biz'},
@@ -147,7 +147,7 @@ function loadGoogleLibrary(){
   }),7000,'google_library_timeout');
 }
 function myEntryTarget(){
-  const target=new URL('https://my.ekodi.kr/');
+  const target=new URL('https://ekodi.kr/my/');
   if(site&&site!=='portal'&&site!=='my')target.searchParams.set('from',site);
   if(site&&site!=='portal'&&site!=='my')target.searchParams.set('return_to',RETURN_TO);
   if(REQUESTED_WORKSPACE)target.searchParams.set('workspace',REQUESTED_WORKSPACE);
