@@ -65,4 +65,3 @@ export async function listCommerceEvents(env, { limit = 40, riskClass = '' } = {
     return { ...row, payload, payloadJson: undefined };
   });
 }
-

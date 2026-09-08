@@ -40,14 +40,14 @@
     {
       "id": "my",
       "label": "마이 에코디",
-      "entry": "https://my.ekodi.kr/",
+      "entry": "https://ekodi.kr/my/",
       "audience": ["member", "operator", "platform_admin"],
       "purpose": "나 중심의 개인 홈, 내 정보, 내 서비스, 내 활동, 운영공간 전환"
     },
     {
       "id": "workspace",
       "label": "운영공간",
-      "entry": "https://my.ekodi.kr/#workspaces",
+      "entry": "https://ekodi.kr/my/#workspaces",
       "audience": ["member", "operator", "platform_admin"],
       "purpose": "개인·사업자·교회·기관·단체·프로젝트 단위의 분리된 활동 공간"
     },
@@ -63,7 +63,7 @@
     {
       "id": "admin",
       "label": "관리자 제어영역",
-      "entry": "https://admin.ekodi.kr/",
+      "entry": "https://ekodi.kr/admin/",
       "audience": ["platform_admin"],
       "purpose": "EKODI 전체 회원·서비스·권한·도메인·배포·보안·AI 운영 통합관리"
     }

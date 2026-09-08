@@ -35,7 +35,7 @@ export function validateCapabilityRegistry({ registry = {}, packs = {}, governan
   if (registry.intentPolicy?.router !== 'deterministic_first') errors.push('Intent routing must remain deterministic_first by default.');
   if (registry.intentPolicy?.modelMayInventCapabilities !== false) errors.push('Models must never invent unregistered capabilities.');
   if (registry.intentPolicy?.unknownCapabilityBehavior !== 'unresolved_not_guessed') errors.push('Unknown capabilities must remain unresolved rather than guessed.');
-  if (registry.surfacePolicy?.defaultHome !== 'https://my.ekodi.kr') errors.push('Default private home must remain My EKODI.');
+  if (registry.surfacePolicy?.defaultHome !== 'https://ekodi.kr/my') errors.push('Default private home must remain My EKODI.');
   if (registry.surfacePolicy?.specialistSites !== 'showroom_and_entry') errors.push('Specialist sites must remain showroom_and_entry surfaces.');
 
   for (const capability of registry.capabilities ?? []) {

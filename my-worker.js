@@ -13,7 +13,7 @@ function securityHeaders(env={}){
   const connect=["'self'",'https://cdn.jsdelivr.net','https://api.ekodi.kr','https://marketing-publish-api.ekodi.kr','https://personal-finance-api.ekodi.kr'];
   if(env.SUPABASE_URL){try{connect.push(new URL(env.SUPABASE_URL).origin)}catch{}}
   return {
-    'content-security-policy':`default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self'; img-src 'self' data: https:; connect-src ${connect.join(' ')}; frame-ancestors 'none'; base-uri 'self'; form-action 'self' https://auth.ekodi.kr; object-src 'none'; upgrade-insecure-requests`,
+    'content-security-policy':`default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self'; img-src 'self' data: https:; connect-src ${connect.join(' ')}; frame-ancestors 'none'; base-uri 'self'; form-action 'self' https://ekodi.kr https://auth.ekodi.kr; object-src 'none'; upgrade-insecure-requests`,
     'referrer-policy':'no-referrer',
     'x-content-type-options':'nosniff',
     'x-frame-options':'DENY',
@@ -32,8 +32,8 @@ function withHeaders(env,response){
   }else if(!headers.has('cache-control'))headers.set('cache-control','public, max-age=300');
   return new Response(response.body,{status:response.status,statusText:response.statusText,headers});
 }
-function runtimeConfig(env){const dataEnabled=env.DATA_ENABLED==='true'&&Boolean(env.SUPABASE_URL&&env.SUPABASE_PUBLISHABLE_KEY);return{dataEnabled,dataMode:env.DATA_MODE||'isolated-staging',supabaseUrl:dataEnabled?env.SUPABASE_URL:'',supabasePublishableKey:dataEnabled?env.SUPABASE_PUBLISHABLE_KEY:'',authUrl:env.AUTH_URL||'https://auth.ekodi.kr/?site=my',personalFinanceApi:'https://personal-finance-api.ekodi.kr'}}
-function personalBrandUrl(){const target='https://ekodi.kr/ekodibiz/marketing-ai?mode=personal-brand&source=my';return `https://auth.ekodi.kr/?site=marketing&return_to=${encodeURIComponent(target)}`}
+function runtimeConfig(env){const dataEnabled=env.DATA_ENABLED==='true'&&Boolean(env.SUPABASE_URL&&env.SUPABASE_PUBLISHABLE_KEY);return{dataEnabled,dataMode:env.DATA_MODE||'isolated-staging',supabaseUrl:dataEnabled?env.SUPABASE_URL:'',supabasePublishableKey:dataEnabled?env.SUPABASE_PUBLISHABLE_KEY:'',authUrl:env.AUTH_URL||'https://ekodi.kr/auth/?site=my',personalFinanceApi:'https://personal-finance-api.ekodi.kr'}}
+function personalBrandUrl(){const target='https://ekodi.kr/ekodibiz/marketing-ai?mode=personal-brand&source=my';return `https://ekodi.kr/auth/?site=marketing&return_to=${encodeURIComponent(target)}`}
 function visibleServices(){return EKODI_SERVICE_MANIFEST.services.filter(service=>service.id!=='my'&&service.state!=='planned').sort((a,b)=>(a.order||999)-(b.order||999));}
 function myServicePreamble(){
   const services=visibleServices();
@@ -188,6 +188,8 @@ async function routedMyHome(request,env,route=null){
 export default{
   async fetch(request,env){
     const url=new URL(request.url);
+    const rawHost=url.hostname.toLowerCase();
+    if(rawHost==='my.ekodi.kr'&&['GET','HEAD'].includes(request.method)){const target=new URL(request.url);target.hostname='ekodi.kr';target.pathname=url.pathname==='/'?'/my/':`/my${url.pathname}`;return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-content-type-options':'nosniff','x-ekodi-legacy-surface':'my.ekodi.kr'}})}
     if(url.pathname==='/config.js'){
       const cfg=runtimeConfig(env);
       return new Response(`window.EKODI_MY_CONFIG=${JSON.stringify(cfg)};`,{headers:{'content-type':'application/javascript; charset=utf-8','cache-control':'no-store',...securityHeaders(env)}});
@@ -204,7 +206,7 @@ export default{
       return json(env,{ok:true,service:'ekodi-my',product:'my-ekodi',identity:'person-scoped',creatorPortfolio:true,personalBrandMarketing:true,universalMembership:true,ekodiShell:true,contextModel:'person-space-role',manifestDrivenServices:true,privateWorkspaceRouting:true,privateWorkspacePath:'/w/{workspace_key}/{service}',accessContextGuidance:true,lifeChannels:true,proactiveUserAi:true,progressivePersonalization:true,characterIdentityPersonalization:true,characterPortraitStorage:'local-device-only',intentOs:true,intentPlanContract:'ekodi.intent-plan.v1',intentExecutionBridge:true,intentExecutionContract:'ekodi.intent-execution.v1',capabilityRegistry:'universal-v3',personalizationPolicy:'detect-suggest-consent-activate-learn-fade',personalizationAuthority:'presentation-only',humanGatedOutbound:true,approvalHub:true,approvalPath:'/approvals/',documentWorkspace:true,documentPath:'/docs/',documentCapability:'core.documents',documentContract:'ekodi.documents.v2',documentHwpx:true,documentVersionHistory:true,documentStorage:'person-scoped-rls',documentFormats:{import:['txt','markdown','html','docx','hwpx'],export:['docx','hwpx','html','markdown','txt','pdf']},personalFinanceControl:true,personalFinanceBoundary:'dedicated-d1',serviceManifestVersion:EKODI_SERVICE_MANIFEST.version,visibleServices:visibleServices().length,privacy:'private-first',dataMode:cfg.dataMode,dataEnabled:cfg.dataEnabled});
     }
     if(url.pathname==='/approvals')return Response.redirect(new URL('/approvals/',request.url).toString(),307);
-    if(url.pathname==='/admin'||url.pathname==='/admin/')return Response.redirect('https://admin.ekodi.kr/?route=workspace&source=my.ekodi.kr',307);
+    if(url.pathname==='/admin'||url.pathname==='/admin/')return Response.redirect('https://ekodi.kr/admin/common/workspace?source=my',307);
     if(url.pathname==='/docs')return Response.redirect(new URL('/docs/',request.url).toString(),307);
     if(url.pathname==='/creator'||url.pathname==='/creator/')return Response.redirect('https://author.ekodi.kr/',307);
     if(url.pathname==='/personal-brand'||url.pathname==='/personal-brand/')return Response.redirect(personalBrandUrl(),307);

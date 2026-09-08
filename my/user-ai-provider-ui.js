@@ -1,6 +1,6 @@
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 
-const API = 'https://api.ekodi.kr/api/user-ai';
+const API = 'https://ekodi.kr/api/user-ai';
 const cfg = window.EKODI_MY_CONFIG || {};
 const enabled = Boolean(cfg.dataEnabled && cfg.supabaseUrl && cfg.supabasePublishableKey);
 const sb = enabled ? createClient(cfg.supabaseUrl, cfg.supabasePublishableKey, { auth:{ detectSessionInUrl:false, persistSession:true } }) : null;

@@ -33,7 +33,7 @@ test('My EKODI reuses central identity and inherits registry-driven one-login ha
   assert.match(app,/ekodi_token/);
   assert.match(app,/verifyOtp/);
   assert.match(auth,/'my':\{name:'My EKODI'/);
-  assert.match(auth,/returnTo:'https:\/\/my\.ekodi\.kr\/'/);
+  assert.match(auth,/returnTo:'https:\/\/ekodi\.kr\/my\/'/);
   assert.match(auth,/\/session\/handoff/);
   assert.match(router,/isRegistryUserService/);
   assert.match(router,/site==='portal'\|\|isRegistryUserService/);

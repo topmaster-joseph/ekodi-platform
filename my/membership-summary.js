@@ -112,7 +112,7 @@ async function loadPortfolio(session) {
     return;
   }
   try {
-    const response = await fetch('https://api.ekodi.kr/api/membership/portfolio', {
+    const response = await fetch('https://ekodi.kr/api/membership/portfolio', {
       cache: 'no-store',
       headers: { authorization: `Bearer ${session.access_token}` },
     });

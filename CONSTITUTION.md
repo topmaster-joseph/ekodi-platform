@@ -1,4 +1,4 @@
-# EKODI Platform Constitution v1.8.3
+# EKODI Platform Constitution v1.9.0
 
 Effective: 2026-09-08
 
@@ -39,13 +39,13 @@ This constitution is the highest architecture and operations rule for EKODI Plat
 
 ## 2. Domain Constitution
 - The apex `ekodi.kr` is the canonical public ecosystem entry point and canonical host for user-operated public spaces.
-- Stable production system boundaries include `my.ekodi.kr`, `admin.ekodi.kr`, `auth.ekodi.kr`, `api.ekodi.kr` and `status.ekodi.kr` in addition to `ekodi.kr`.
+- `ekodi.kr` is the canonical human and management host. Existing system subdomains may remain only as internal execution, protocol, emergency or compatibility boundaries and are not canonical user entry points.
 - Development mirrors production system boundaries on nested `*.dev.ekodi.kr` hosts such as `my.dev.ekodi.kr`, `admin.dev.ekodi.kr`, `auth.dev.ekodi.kr` and `api.dev.ekodi.kr`; the root `dev.ekodi.kr` is reserved for the public EKODI Developer portal.
 - Subdomains represent justified system, security, protocol, common-service or core-service boundaries. They must not represent person, organization, group or project identity.
 - Canonical public user-space addresses use the universal root pattern `ekodi.kr/{slug}`. Workspace kind is internal metadata and is never encoded into the public URL.
-- Workspace child services use `ekodi.kr/{slug}/{service}`; workspace administration uses `ekodi.kr/{slug}/admin` or `ekodi.kr/{slug}/{service}/admin`. Root slugs reserved for platform, common-service or core-service routes cannot be claimed by a workspace.
+- Workspace child services use `ekodi.kr/{slug}/{service}`. Administration is centralized under `ekodi.kr/admin`, with Workspace context carried by authorization and operating context rather than customer identity encoded in the canonical management URL.
 - `space.ekodi.kr`, `user.ekodi.kr` and per-tenant subdomains are not canonical workspace addresses. If such aliases exist, they must redirect to the corresponding `ekodi.kr` path while preserving the remaining path where practical.
-- `my.ekodi.kr` remains the personal authenticated home/control surface and may present workspace participation, switching and private controls without becoming the canonical public workspace address.
+- `ekodi.kr/my` is the canonical personal authenticated home. `my.ekodi.kr` may remain temporarily as a compatibility or internal execution boundary only.
 - Public and private routing resolve tenant/workspace authorization from immutable `workspace_id`; URL host, path and slug are routing locators, not identity or authorization truth.
 - Common services and core services may keep or receive dedicated subdomains only when security, operational isolation, protocol separation or independently managed service boundaries justify them and the domain is registered in constitutional governance.
 - `journal.ekodi.kr` is a registered common-service boundary for the EKODI living journal. It does not represent workspace identity; personal and tenant journal surfaces remain under their canonical `ekodi.kr` workspace paths and resolve authority from immutable `workspace_id`.

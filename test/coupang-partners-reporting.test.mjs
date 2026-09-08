@@ -184,4 +184,3 @@ test('Mission Control also yields the whole cron budget to a real Coupang report
   assert.ok(block.indexOf('await customerEntryWorker.scheduled') < block.indexOf('runAuthorBillingSchedule'));
   assert.ok(block.indexOf('await customerEntryWorker.scheduled') < block.indexOf('drainMessengerOutbox'));
 });
-

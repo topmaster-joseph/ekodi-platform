@@ -76,7 +76,7 @@ test('church report UI is mounted inside pastor admin and removed from global Ad
 
 test('control entry serves canonical church reports and retires the old Community route', async () => {
   const entry = await read('customer-entry-worker.js');
-  for (const marker of ['handleChurchReportsRequest', 'runChurchReportSchedule', '/api/church/admin/reports', 'CHURCH_REPORTS_MOVED', 'https://ekodi.kr/ekodi-church/admin/reports']) {
+  for (const marker of ['handleChurchReportsRequest', 'runChurchReportSchedule', '/api/church/admin/reports', 'CHURCH_REPORTS_MOVED', 'https://ekodi.kr/ekodichurch/admin/reports']) {
     assert.ok(entry.includes(marker), `missing route marker: ${marker}`);
   }
   assert.ok(!entry.includes('handleCommunityReportsRequest'));
@@ -85,7 +85,7 @@ test('control entry serves canonical church reports and retires the old Communit
 test('production manifests verify the Church report move', async () => {
   const [siteManifest, apiManifest] = await Promise.all([read('deploy/manifests/shared-site.worker.json'), read('deploy/manifests/control-api.worker.json')]);
   const site = JSON.parse(siteManifest); const api = JSON.parse(apiManifest);
-  const church = site.worker.requests.find(item => item.url === 'https://ekodi.kr/ekodi-church/admin');
+  const church = site.worker.requests.find(item => item.url === 'https://ekodi.kr/ekodichurch/admin');
   assert.ok(church?.expect?.includes('church-reports-admin.js'));
   assert.ok(api.worker.requests.some(item => item.url === 'https://api.ekodi.kr/api/church/admin/reports' && item.statuses.includes(401)));
   assert.ok(api.worker.requests.some(item => item.url === 'https://api.ekodi.kr/api/community/admin/reports' && item.statuses.includes(410)));

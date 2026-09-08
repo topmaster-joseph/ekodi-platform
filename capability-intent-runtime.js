@@ -97,7 +97,7 @@ export function buildIntentPlan(input = {}, catalog = {}, options = {}) {
     router: registry.intentPolicy?.router || 'deterministic_first',
     autonomyPolicyVersion: SOVEREIGN_AUTONOMY_POLICY.version,
     authorityContext: SOVEREIGN_AUTONOMY_POLICY.authorityContext,
-    home: registry.surfacePolicy?.defaultHome || 'https://my.ekodi.kr',
+    home: registry.surfacePolicy?.defaultHome || 'https://ekodi.kr/my',
     audience: normalize(input.audience || 'person'),
     packIds: Object.freeze(packIds),
     recommendations: Object.freeze(recommendations),

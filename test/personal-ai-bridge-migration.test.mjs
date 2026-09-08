@@ -7,6 +7,7 @@ const audienceSql=await readFile(new URL('../supabase/migrations/20260906008000_
 const resourceBoundSql=await readFile(new URL('../supabase/migrations/20260906009000_ekodi_mcp_resource_bound_audience.sql',import.meta.url),'utf8');
 const activeConsentSql=await readFile(new URL('../supabase/migrations/20260906010000_ekodi_mcp_active_consent_audience.sql',import.meta.url),'utf8');
 const leastPrivilegeSql=await readFile(new URL('../supabase/migrations/20260906011000_ekodi_oauth_least_privilege.sql',import.meta.url),'utf8');
+const canonicalResourceSql=await readFile(new URL('../supabase/migrations/20260908193000_ekodi_mcp_canonical_resource.sql',import.meta.url),'utf8');
 
 test('canonical identity projection is authenticated-only and person based',()=>{
   assert.match(identitySql,/create or replace function public\.current_ekodi_identity\(\)/i);
@@ -39,4 +40,11 @@ test('OAuth clients are isolated from the normal authenticated database role',()
   assert.match(leastPrivilegeSql,/v_jwt->>'ekodi_ai_client'/i);
   assert.match(leastPrivilegeSql,/grant execute on function public\.current_ekodi_mcp_identity\(\) to anon/i);
   assert.match(leastPrivilegeSql,/revoke all on function public\.current_ekodi_mcp_identity\(\) from public, authenticated/i);
+});
+
+test('canonical MCP resource migration preserves approved legacy consent but emits only the apex audience',()=>{
+  assert.match(canonicalResourceSql,/oa\.resource in \('https:\/\/ekodi\.kr\/mcp', 'https:\/\/api\.ekodi\.kr\/mcp'\)/i);
+  assert.match(canonicalResourceSql,/claims := jsonb_set\(claims, '\{aud\}', to_jsonb\('https:\/\/ekodi\.kr\/mcp'::text\)/i);
+  assert.match(canonicalResourceSql,/v_jwt->>'aud'.*https:\/\/ekodi\.kr\/mcp.*https:\/\/api\.ekodi\.kr\/mcp/is);
+  assert.match(canonicalResourceSql,/revoke execute on function public\.ekodi_mcp_access_token_hook\(jsonb\) from authenticated, anon, public/i);
 });
