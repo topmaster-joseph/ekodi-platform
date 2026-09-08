@@ -4,16 +4,17 @@
     "name": "ekodi-bible-conversation",
     "config": "wrangler.bible.toml",
     "requests": [
-      {"url":"https://bible.ekodi.kr/","statuses":[200],"redirect":"follow","expect":["에코디 말씀대화","정답보다 질문에서 시작합니다","성경읽기","나의 Journey"],"headerExpect":["x-ekodi-shell: v2"]},
-      {"url":"https://bible.ekodi.kr/today","statuses":[200],"redirect":"follow","expect":["오늘의 말씀대화","이 질문으로 이야기하기"]},
-      {"url":"https://bible.ekodi.kr/reader","statuses":[200],"redirect":"follow","expect":["EKODI Bible Core","본문은 본문으로, 해설은 해설로","대한성서공회 공식 본문에서 보기"]},
-      {"url":"https://bible.ekodi.kr/conversation","statuses":[200],"redirect":"follow","expect":["말씀대화 AI","삶에서 말씀으로"]},
-      {"url":"https://bible.ekodi.kr/journey","statuses":[200],"redirect":"follow","expect":["나의 Journey","작은 실천","돌아보기"]},
-      {"url":"https://bible.ekodi.kr/together","statuses":[200],"redirect":"follow","expect":["함께","초대코드","공동체 피드","명시적으로 공유"]},
-      {"url":"https://bible.ekodi.kr/api/bible/providers","statuses":[200],"expect":["\"defaultProvider\":\"KRV1961\"","\"id\":\"KRV1961\"","\"mode\":\"embedded-verbatim\"","\"id\":\"NKRV\"","\"mode\":\"official-link-only\""]},
-      {"url":"https://bible.ekodi.kr/api/bible/passage?reference=%EC%B0%BD%EC%84%B8%EA%B8%B0%201%3A1&provider=KRV1961","statuses":[200],"expect":["\"integrity\":\"verbatim\"","태초에 하나님이 천지를 창조하시니라","대한성서공회"]},
-      {"url":"https://bible.ekodi.kr/api/bible/passage?reference=%EC%8B%A0%EB%AA%85%EA%B8%B0%2017%3A14-20&provider=NKRV","statuses":[200],"expect":["\"mode\":\"official-link-only\"","\"verses\":[]","bible.bskorea.or.kr"]},
-      {"url":"https://bible.ekodi.kr/health","statuses":[200],"expect":["ekodi-bible-conversation","\"privacyDefault\":\"private\"","\"explicitSharing\":true","\"providerIndependent\":true","\"centralUserAi\":true","\"defaultProvider\":\"KRV1961\"","\"aiMayAlterScripture\":false","\"ekodiShell\":true"]}
+      {"url":"https://ekodi.kr/bible/","statuses":[200],"redirect":"follow","expect":["에코디 말씀대화","정답보다 질문에서 시작합니다","성경읽기","나의 Journey"],"headerExpect":["x-ekodi-shell: v2"]},
+      {"url":"https://ekodi.kr/bible/today","statuses":[200],"redirect":"follow","expect":["오늘의 말씀대화","이 질문으로 이야기하기"]},
+      {"url":"https://ekodi.kr/bible/reader","statuses":[200],"redirect":"follow","expect":["EKODI Bible Core","본문은 본문으로, 해설은 해설로","대한성서공회 공식 본문에서 보기"]},
+      {"url":"https://ekodi.kr/bible/conversation","statuses":[200],"redirect":"follow","expect":["말씀대화 AI","삶에서 말씀으로"]},
+      {"url":"https://ekodi.kr/bible/journey","statuses":[200],"redirect":"follow","expect":["나의 Journey","작은 실천","돌아보기"]},
+      {"url":"https://ekodi.kr/bible/together","statuses":[200],"redirect":"follow","expect":["함께","초대코드","공동체 피드","명시적으로 공유"]},
+      {"url":"https://ekodi.kr/bible/api/bible/providers","statuses":[200],"expect":["\"defaultProvider\":\"KRV1961\"","\"id\":\"KRV1961\"","\"mode\":\"embedded-verbatim\"","\"id\":\"NKRV\"","\"mode\":\"official-link-only\""]},
+      {"url":"https://ekodi.kr/bible/api/bible/passage?reference=%EC%B0%BD%EC%84%B8%EA%B8%B0%201%3A1&provider=KRV1961","statuses":[200],"expect":["\"integrity\":\"verbatim\"","태초에 하나님이 천지를 창조하시니라","대한성서공회"]},
+      {"url":"https://ekodi.kr/bible/api/bible/passage?reference=%EC%8B%A0%EB%AA%85%EA%B8%B0%2017%3A14-20&provider=NKRV","statuses":[200],"expect":["\"mode\":\"official-link-only\"","\"verses\":[]","bible.bskorea.or.kr"]},
+      {"url":"https://bible.ekodi.kr/reader?provider=KRV1961","statuses":[308],"redirect":"manual","headerExpect":["location: https://ekodi.kr/bible/reader?provider=KRV1961"]},
+      {"url":"https://ekodi.kr/bible/health","statuses":[200],"expect":["ekodi-bible-conversation","\"privacyDefault\":\"private\"","\"explicitSharing\":true","\"providerIndependent\":true","\"centralUserAi\":true","\"defaultProvider\":\"KRV1961\"","\"aiMayAlterScripture\":false","\"canonicalPath\":\"/bible\"","\"legacyAlias\":\"bible.ekodi.kr\"","\"ekodiShell\":true"]}
     ]
   }
 }
