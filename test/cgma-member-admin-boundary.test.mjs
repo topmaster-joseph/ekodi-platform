@@ -15,7 +15,8 @@ test('CGMA member roster is owned by the association workspace', async () => {
   const script = await (await workspaceAdminScript()).text();
   assert.match(script, /workspace==='cgma'/);
   assert.match(script, /member:POLICY\.capabilities\.memberRoster/);
-  assert.match(script, /cgma-member-admin\.js/);
+  assert.match(script, /import\('\.\/cgma-member-admin\.js\?v=20260908-workspace-owner-1'\)/);
+  assert.doesNotMatch(script, /import\('\/cgma-member-admin\.js/);
   assert.match(script, /site',workspace==='cgma'\?'cgma':'space'/);
 });
 
