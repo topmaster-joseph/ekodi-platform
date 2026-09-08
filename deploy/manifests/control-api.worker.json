@@ -1,9 +1,22 @@
 {
-  "version": 2,
+  "version": 3,
   "worker": {
     "name": "ekodi-auth-api",
     "config": "wrangler.api.toml",
     "requests": [
+      {
+        "url": "https://api.ekodi.kr/api/public/preview/map?scope=ekodi&mode=platform",
+        "statuses": [200],
+        "redirect": "manual",
+        "expect": ["\"schemaVersion\":1", "\"secrets\":false", "\"personalData\":false", "\"scope\":{\"id\":\"ekodi\""],
+        "headerExpect": ["x-content-type-options: nosniff", "cache-control: public"]
+      },
+      {
+        "url": "https://api.ekodi.kr/api/public/preview/map?scope=ekodibiz&mode=dev",
+        "statuses": [200],
+        "redirect": "manual",
+        "expect": ["\"scope\":{\"id\":\"ekodibiz\"", "\"mode\":\"dev\"", "\"sourcePaths\":false"]
+      },
       {
         "url": "https://api.ekodi.kr/health",
         "statuses": [
