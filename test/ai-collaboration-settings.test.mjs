@@ -6,13 +6,14 @@ import {
   resolveOpenAiProfiles,
   selectAiExecutionTarget,
 } from '../ai-collaboration-settings.js';
+import { resolveOpenAiModelForContext } from '../openai-provider-adapter.js';
 
-test('collaboration is on by default and Cloud First cannot be disabled', () => {
+test('collaboration by default and Cloud First cannot be disabled', () => {
   const policy = normalizeAiCollaborationPolicy({
     collaborationByDefault: false,
     execution: { cloudFirst: false, order: ['local', 'cloud'] },
   });
-  assert.equal(policy.collaborationByDefault, false);
+  assert.equal(policy.collaborationByDefault, true);
   assert.equal(policy.execution.cloudFirst, true);
   assert.deepEqual(policy.execution.order, ['cloud', 'remote', 'local']);
 });
@@ -43,6 +44,21 @@ test('OpenAI profiles resolve from logical environment slots without exposing se
     deep: 'deep-model',
   });
   assert.equal(JSON.stringify(profiles).includes('never-return-this'), false);
+});
+
+test('OpenAI role profile selects the configured logical model', () => {
+  const env = {
+    OPENAI_MODEL: 'fallback-model',
+    EKODI_OPENAI_MODEL_FAST: 'fast-model',
+    EKODI_OPENAI_MODEL_BALANCED: 'balanced-model',
+    EKODI_OPENAI_MODEL_DEEP: 'deep-model',
+    EKODI_OPENAI_ROLE_PLANNER_PROFILE: 'fast',
+    EKODI_OPENAI_ROLE_OPERATOR_PROFILE: 'balanced',
+    EKODI_OPENAI_ROLE_SENTINEL_PROFILE: 'deep',
+  };
+  assert.equal(resolveOpenAiModelForContext(env, { commandPlane: { role: 'planner' } }), 'fast-model');
+  assert.equal(resolveOpenAiModelForContext(env, { commandPlane: { role: 'operator' } }), 'balanced-model');
+  assert.equal(resolveOpenAiModelForContext(env, { commandPlane: { role: 'sentinel' } }), 'deep-model');
 });
 
 test('execution target prefers cloud, then remote, then approved local fallback', () => {
