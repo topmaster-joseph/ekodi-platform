@@ -38,7 +38,8 @@ for (const [serviceId, service] of Object.entries(boundaries.professionalService
   requireTrue((service.centralAdminMustNotOwn || []).length > 0, `${serviceId} must define owner-scoped exclusions`);
 }
 
-requireTrue(/id: 'supply-network'.*group: 'vertical'/s.test(menu), 'central Admin must expose sales/supply network as a professional service');
+requireTrue(/id: 'supply-network'.*group: 'services'.*managementArea: 'professional-services'/s.test(menu), 'central Admin must expose sales/supply network inside the Services axis while preserving its professional-service classification');
+requireTrue(/id: 'personal-finance'.*group: 'services'.*managementArea: 'professional-services'/s.test(menu), 'central Admin must expose personal finance inside the Services axis while preserving its professional-service classification');
 requireTrue(!/id: 'affiliates'/.test(menu), 'central Admin must not expose Mall affiliate operations as a canonical top-level section');
 requireTrue(!/id: 'cheonggye-members'/.test(menu), 'central Admin must not expose association member records as canonical navigation');
 requireTrue(/supplyNetwork:'tenant\.supply-network\.manage'/.test(tenantPolicy), 'tenant supply-network capability is required');
