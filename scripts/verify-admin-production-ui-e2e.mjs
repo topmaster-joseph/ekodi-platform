@@ -1,7 +1,7 @@
 import { chromium } from 'playwright';
 import { adminMenuOrder, getAdminMenuGroupForSection } from '../admin-menu-registry.js';
 
-const ADMIN_URL = process.env.ADMIN_URL || 'https://admin.ekodi.kr/';
+const ADMIN_URL = process.env.ADMIN_URL || 'https://ekodi.kr/admin/';
 const SYNTHETIC_TOKEN = 'ekodi-production-ui-e2e';
 const SYNTHETIC_EMAIL = 'production-ui-e2e@local.invalid';
 const menuIds = adminMenuOrder();
@@ -24,7 +24,8 @@ page.on('console', message => {
   if (message.type() === 'error' && !/cloudflareinsights\.com\/beacon/i.test(message.text())) console.log(`[browser console] ${message.text()}`);
 });
 
-await page.route('https://api.ekodi.kr/api/session', async route => {
+// Admin session validation is canonically served through the apex Core route.
+await page.route('https://ekodi.kr/api/session', async route => {
   await route.fulfill({
     status: 200,
     contentType: 'application/json; charset=utf-8',
