@@ -77,6 +77,8 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
+      - name: EKODI AI Orchestration Gate
+        run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
       - name: Verify Development boundary
         run: |
           test -n "$CLOUDFLARE_API_TOKEN"
@@ -136,6 +138,8 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
+      - name: EKODI AI Orchestration Gate
+        run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
       - name: Guarded Journal production release
         run: node scripts/guarded-worker-release.mjs --manifest deploy/manifests/journal.worker.json
       - name: Deep verify Journal production

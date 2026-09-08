@@ -1,0 +1,77 @@
+{
+  "schemaVersion": 1,
+  "policyId": "AI-ORCHESTRATE-001",
+  "status": "enforced",
+  "controlPlane": "EKODI AI",
+  "orchestrator": "ekodi-ai-orchestrator",
+  "defaultRule": "all-ekodi-change-intents-enter-through-ekodi-ai",
+  "scope": [
+    "ekodi-platform",
+    "ekodi-services",
+    "customer-sites",
+    "admin-surfaces",
+    "control-api",
+    "data-migrations",
+    "secrets-and-integrations",
+    "cloud-runtime",
+    "deployment-and-release"
+  ],
+  "ownerExperience": {
+    "intentOnlyByDefault": true,
+    "automaticAgentSelection": true,
+    "automaticProviderSelection": true,
+    "automaticImplementationValidationRecovery": true,
+    "resultOnlyReporting": true,
+    "technicalInterruptionOnlyWhenHumanGateIsRequired": true
+  },
+  "execution": {
+    "cloudFirst": true,
+    "localNodeFallback": true,
+    "externalAiRole": "worker-under-ekodi-orchestrator",
+    "externalAiMayOwnProductionMutation": false,
+    "providerSelection": "ekodi-ai-provider-registry:auto",
+    "requiredRoles": ["architect", "builder", "reviewer", "release", "sentinel"],
+    "noProviderFallback": "EKODI Core deterministic path"
+  },
+  "sourceControl": {
+    "defaultBranch": "main",
+    "directPushToMain": false,
+    "pullRequestRequired": true,
+    "allowedChangeBranchPrefixes": ["ai/"],
+    "requiredStatusCheck": "EKODI AI Orchestration Gate",
+    "forcePush": false,
+    "branchDeletion": false
+  },
+  "mutationBoundary": {
+    "orchestrationGateRequiredBeforeMutation": true,
+    "directLocalProductionDeploy": false,
+    "directManualProductionMutation": false,
+    "workflowDispatchBecomesEkodiIntent": true,
+    "scheduledMutationBecomesEkodiIntent": true,
+    "guardedReleaseRequired": true,
+    "breakGlassBypassEnabled": false
+  },
+  "humanGate": {
+    "preserved": true,
+    "areas": [
+      "destructive-data-operation",
+      "identity-or-access-recovery",
+      "credential-revocation-or-rotation-with-outage-risk",
+      "domain-ownership-transfer",
+      "financial-or-legal-commitment",
+      "orchestration-policy-weakening"
+    ]
+  },
+  "governance": {
+    "policyOwners": ["topmaster-joseph"],
+    "policyWeakeningRequiresOwnerIntent": true,
+    "auditPlanRequired": true,
+    "completionPolicy": "AI-COMPLETE-001",
+    "runtimeMissionPolicy": "AI-MISSION-001"
+  },
+  "reporting": {
+    "default": "result-only",
+    "include": ["what-changed", "validation", "deployment", "production-verification", "exceptions"],
+    "excludeByDefault": ["low-level-tool-steps", "provider-chatter", "intermediate-implementation-detail"]
+  }
+}

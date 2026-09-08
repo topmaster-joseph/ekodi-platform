@@ -1,0 +1,44 @@
+name: EKODI AI Orchestration Gate
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  schedule:
+    - cron: '17 3 * * *'
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: ekodi-ai-orchestration-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  orchestration:
+    name: EKODI AI Orchestration Gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 2
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Route change intent through EKODI AI
+        id: ekodi_ai
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          node scripts/validate-ekodi-ai-change-orchestration.mjs --ci
+          node scripts/validate-workflow-orchestration-gates.mjs
+      - name: Upload orchestration evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: ekodi-ai-orchestration-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/ekodi-ai-orchestration-attestation.json
+          if-no-files-found: error
+          retention-days: 30
