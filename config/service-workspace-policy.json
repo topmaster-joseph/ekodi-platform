@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 4,
+  "schemaVersion": 5,
   "provider": {
     "legalOperator": "EKODIBIZ",
     "role": "service_provider"
@@ -21,22 +21,25 @@
   ],
   "visibilityPolicies": [
     {
-      "id": "guest_visible",
-      "label": "비회원 노출 ON",
+      "id": "public_default",
+      "label": "사용자 사이트 기본 공개",
       "guestVisible": true,
-      "existingMemberAccess": true
+      "existingMemberAccess": true,
+      "immutableForUserSurface": true
     },
     {
-      "id": "guest_hidden",
-      "label": "비회원 노출 OFF",
+      "id": "authenticated_personal_state",
+      "label": "개인 저장·내역·설정",
       "guestVisible": false,
-      "existingMemberAccess": true
+      "existingMemberAccess": true,
+      "reason": "private_personal_data"
     },
     {
-      "id": "member_forced_off",
-      "label": "회원 이용 강제 OFF",
+      "id": "administrator_only",
+      "label": "관리자 기능",
       "guestVisible": false,
-      "existingMemberAccess": false
+      "existingMemberAccess": false,
+      "reason": "administrator_surface"
     }
   ],
   "customerWorkspaceRule": {
@@ -104,13 +107,15 @@
   "commonServiceUserAccessRule": {
     "appliesTo": [
       "platform-core",
-      "shared-service"
+      "shared-service",
+      "professional-service"
     ],
     "surface": "user-pages",
-    "guestExperience": "service-guide-only",
-    "memberMinimumTier": "free",
-    "loginProvider": "google",
-    "excludeCustomerSites": true
+    "guestExperience": "full-public-site",
+    "memberMinimumTier": null,
+    "loginProvider": null,
+    "loginPurpose": "personal_state_and_member_benefits_only",
+    "excludeCustomerSites": false
   },
   "identityAuthority": "ekodi",
   "linkedIdentityProviders": [
@@ -163,5 +168,25 @@
     "professional": "/admin/professional/{service}",
     "workspaces": "/admin/workspaces/{capability}",
     "operations": "/admin/operations/{capability}"
+  },
+  "membershipBenefitAdministration": {
+    "capability": "tenant.membership-benefits.manage",
+    "section": "membership",
+    "publicAccessImmutable": true,
+    "siteAdminControls": [
+      "free_benefits",
+      "paid_features",
+      "paid_packages",
+      "price",
+      "billing_period",
+      "availability",
+      "display_order"
+    ],
+    "platformControls": [
+      "schema",
+      "security",
+      "audit",
+      "public_access_guardrail"
+    ]
   }
 }

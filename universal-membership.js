@@ -2,6 +2,7 @@ import { handleMembershipBilling as handleLegacyMembershipBilling, runMembership
 import { isAllowedOrigin } from './auth-worker.js';
 import { USER_SERVICES, USER_SERVICE_IDS } from './generated/user-services.js';
 import { canonicalAiSubject, legacyAiSubject, resolveCanonicalEkodiIdentity } from './personal-ai-bridge.js';
+import { handleSiteMembershipBenefits } from './site-membership-benefits.js';
 
 const SUPABASE_URL = 'https://renzehysxirjilvdxacv.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
@@ -149,7 +150,7 @@ async function portfolioForIdentity(request, env, identity) {
   }
   return json({
     account: { email: identity.email, ekodiId:identity.ekodiId || null, defaultTier: 'free' },
-    policy: 'one-account-free-everywhere-pay-where-needed',
+    policy: 'public-by-default-progressive-membership',
     services: USER_SERVICES.map((service) => ({
       ...service,
       subscription: freeSubscription(bySite.get(service.id) || null),
@@ -176,6 +177,8 @@ async function genericCatalog(request, env, site) {
     billingReady: false,
     billingProvider: null,
     paidPlanPolicy: 'service-specific',
+    publicAccess: 'public',
+    membershipRequiredForPublicContent: false,
   }, 200, request, env);
 }
 
@@ -226,6 +229,10 @@ export async function handleUniversalMembership(request, env) {
 
   const url = new URL(request.url);
   const path = url.pathname;
+  if (path === '/api/membership/site-benefits' || path === '/api/membership/site-benefits/admin') {
+    return handleSiteMembershipBenefits(request, env);
+  }
+
   if (request.method === 'GET' && path === '/api/membership/portfolio') return portfolio(request, env);
 
   const querySite = normalizeRegistrySite(url.searchParams.get('site'));

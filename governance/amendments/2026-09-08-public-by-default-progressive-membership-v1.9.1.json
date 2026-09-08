@@ -1,0 +1,15 @@
+{
+  "id": "2026-09-08-public-by-default-progressive-membership-v1.9.1",
+  "constitutionVersion": "1.9.1",
+  "status": "approved",
+  "approvedBy": "topmaster-joseph",
+  "approvedAt": "2026-09-08",
+  "changeClass": "C2",
+  "taskId": "ekodi-public-progressive-membership-20260908",
+  "summary": "Make every ordinary user-facing EKODI site public by default, redefine FREE signup as additional benefits rather than access permission, and let each site administrator configure FREE and paid benefits/packages within immutable security guardrails.",
+  "approvalBasis": "The platform owner explicitly instructed a full-site audit, constitutional recording, implementation, and site-local administration of free and paid membership benefits.",
+  "migrationPlan": "Replace FREE-as-content-gate policy with public-by-default access, preserve authentication for private/admin/security-sensitive state, add site-local benefit configuration, then audit all registered user services and workspace public routes for regressions.",
+  "securityModel": "Public content requires no membership. Personal state, private workspace data, billing, mutations and administrator controls remain authenticated and capability-authorized. Site admins can configure benefits but cannot disable the public-content invariant.",
+  "rollback": "Revert the v1.9.1 amendment and benefit configuration runtime while preserving existing private/admin authorization boundaries and stored benefit profiles for later recovery.",
+  "verificationPolicy": "Constitution validation, universal membership validation, workspace-admin authorization tests, public-access audit, build/check, guarded merge, deployment and production public-host probes must pass."
+}

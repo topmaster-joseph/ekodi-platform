@@ -11,10 +11,11 @@ const myWorker = read('my-worker.js');
 const shellInjector = read('ekodi-shell-injector.js');
 const membership = JSON.parse(read('config/universal-membership.json'));
 
-test('common-service public pages stay visible as guide landings before Google FREE membership', () => {
-  assert.equal(membership.guestAccess?.mode, 'guide_only');
-  assert.equal(membership.guestAccess?.minimumTierForContent, 'free');
-  assert.match(manifest, /guestMode:'public-guide'/);
+test('common-service public pages stay fully visible before membership while private workspace state remains authenticated', () => {
+  assert.equal(membership.guestAccess?.mode, 'full_public_site');
+  assert.equal(membership.guestAccess?.minimumTierForContent, null);
+  assert.match(manifest, /guestMode:'full-public'/);
+  assert.match(manifest, /minimumTier:null/);
   assert.match(manifest, /service\.defaultSurface==='public'\?COMMON_PUBLIC_ACCESS_POLICY:COMMON_USER_ACCESS_POLICY/);
   assert.match(manifest, /operatingModel==='customer-site'\?null:/);
   assert.match(shell, /p\.guestMode==='guide-only'/);
@@ -37,7 +38,7 @@ test('workspace common services remain member-gated while public services use se
   assert.match(manifest, /const COMMON_USER_ACCESS_POLICY/);
   assert.match(manifest, /const COMMON_PUBLIC_ACCESS_POLICY/);
   assert.match(manifest, /enforcedBy:'service-ui-and-protected-api'/);
-  assert.match(manifest, /userAccessPolicy: 'public-guide-workspace-member-content'/);
+  assert.match(manifest, /userAccessPolicy: 'public-default-private-workspace-auth'/);
 });
 
 test('ordinary common-service members land in My EKODI while platform admins keep original return', () => {

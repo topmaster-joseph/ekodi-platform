@@ -9,7 +9,9 @@ const COMMON_USER_ACCESS_POLICY = Object.freeze({
 });
 const COMMON_PUBLIC_ACCESS_POLICY = Object.freeze({
   ...COMMON_USER_ACCESS_POLICY,
-  guestMode:'public-guide',
+  guestMode:'full-public',
+  minimumTier:null,
+  identityProvider:null,
   enforcedBy:'service-ui-and-protected-api',
 });
 
@@ -72,7 +74,7 @@ export const EKODI_SERVICE_MANIFEST = Object.freeze({
   shellVersion: 4,
   shellPolicy: 'required-for-user-facing-services',
   onboardingPolicyVersion: 1,
-  userAccessPolicy: 'public-guide-workspace-member-content',
+  userAccessPolicy: 'public-default-private-workspace-auth',
   services: Object.freeze(SERVICES)
 });
 export const EKODI_SERVICE_BY_ID = new Map(EKODI_SERVICE_MANIFEST.services.map(service=>[service.id,service]));

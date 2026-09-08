@@ -1,6 +1,6 @@
 import { TENANT_ADMIN_CAPABILITIES, tenantAdminPolicySnapshot } from './tenant-admin-policy.js';
 
-const STORE_SECTION_CAPABILITY=Object.freeze({overview:TENANT_ADMIN_CAPABILITIES.dashboard,site:TENANT_ADMIN_CAPABILITIES.site,menu:TENANT_ADMIN_CAPABILITIES.catalog,orders:TENANT_ADMIN_CAPABILITIES.orders,customers:TENANT_ADMIN_CAPABILITIES.customers,reviews:TENANT_ADMIN_CAPABILITIES.reviews,sales:TENANT_ADMIN_CAPABILITIES.sales,inventory:TENANT_ADMIN_CAPABILITIES.inventory,marketing:TENANT_ADMIN_CAPABILITIES.marketing,work:TENANT_ADMIN_CAPABILITIES.operations,finance:TENANT_ADMIN_CAPABILITIES.finance,connections:TENANT_ADMIN_CAPABILITIES.connections});
+const STORE_SECTION_CAPABILITY=Object.freeze({overview:TENANT_ADMIN_CAPABILITIES.dashboard,site:TENANT_ADMIN_CAPABILITIES.site,membership:TENANT_ADMIN_CAPABILITIES.membershipBenefits,menu:TENANT_ADMIN_CAPABILITIES.catalog,orders:TENANT_ADMIN_CAPABILITIES.orders,customers:TENANT_ADMIN_CAPABILITIES.customers,reviews:TENANT_ADMIN_CAPABILITIES.reviews,sales:TENANT_ADMIN_CAPABILITIES.sales,inventory:TENANT_ADMIN_CAPABILITIES.inventory,marketing:TENANT_ADMIN_CAPABILITIES.marketing,work:TENANT_ADMIN_CAPABILITIES.operations,finance:TENANT_ADMIN_CAPABILITIES.finance,connections:TENANT_ADMIN_CAPABILITIES.connections});
 export function storeAdminCanAccess(role,section){const policy=tenantAdminPolicySnapshot();const allowed=policy.roleCapabilities[String(role||'').trim().toLowerCase()]||[];const capability=STORE_SECTION_CAPABILITY[String(section||'overview').toLowerCase()];return Boolean(capability&&(allowed.includes('*')||allowed.includes(capability)));}
 export function storeAdminSectionsForRole(role){return Object.keys(STORE_SECTION_CAPABILITY).filter(section=>storeAdminCanAccess(role,section));}
 
@@ -23,11 +23,13 @@ function clientMain(POLICY){
   const SUPABASE_URL='https://renzehysxirjilvdxacv.supabase.co';
   const SUPABASE_KEY='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
   const API='https://api.ekodi.kr';
+  const BENEFITS_API='https://ekodi.kr/api/membership/site-benefits/admin';
   const SESSION_KEY='ekodi-store-admin-session:'+SLUG;
   const LEGACY_SESSION_KEYS={jadam:'ekodi-jadam-admin-session',pizzamaru:'ekodi-pizzamaru-admin-session',yogurt:'ekodi-yogurt-admin-session'};
-  const NAV=[['overview','운영 홈'],['site','사용자 사이트'],['menu','메뉴 · 가격'],['orders','주문 · 채널'],['customers','고객'],['reviews','리뷰'],['sales','매출'],['inventory','재고'],['marketing','마케팅'],['work','매장업무'],['finance','비용 · 정산'],['connections','연결관리']];
+  const NAV=[['overview','운영 홈'],['site','사용자 사이트'],['membership','회원 · 혜택'],['menu','메뉴 · 가격'],['orders','주문 · 채널'],['customers','고객'],['reviews','리뷰'],['sales','매출'],['inventory','재고'],['marketing','마케팅'],['work','매장업무'],['finance','비용 · 정산'],['connections','연결관리']];
   const META={
     site:['사용자 사이트','이 점포의 사용자 사이트 생성 상태·주소·표현·별칭을 관리합니다.'],
+    membership:['회원 · 혜택','무료회원 추가 혜택과 유료 기능·패키지를 점포별로 구성합니다.'],
     overview:['운영 홈','오늘 매장의 핵심 신호와 다음 행동을 한눈에 봅니다.'],
     menu:['메뉴 · 가격','배달앱·POS에서 들어온 실제 메뉴와 가격 차이를 비교합니다.'],
     orders:['주문 · 채널','오늘 주문과 채널별 매출 흐름을 집계값으로 확인합니다.'],
@@ -48,7 +50,7 @@ function clientMain(POLICY){
   const section=location.pathname.replace(/\/+$/,'').split('/')[3]||'overview';
   const page=META[section]||META.overview;
   const state={session:null,snapshot:null,menu:null,connector:null,site:null,role:''};
-  const SECTION_CAPABILITY={overview:POLICY.capabilities.dashboard,site:POLICY.capabilities.site,menu:POLICY.capabilities.catalog,orders:POLICY.capabilities.orders,customers:POLICY.capabilities.customers,reviews:POLICY.capabilities.reviews,sales:POLICY.capabilities.sales,inventory:POLICY.capabilities.inventory,marketing:POLICY.capabilities.marketing,work:POLICY.capabilities.operations,finance:POLICY.capabilities.finance,connections:POLICY.capabilities.connections};
+  const SECTION_CAPABILITY={overview:POLICY.capabilities.dashboard,site:POLICY.capabilities.site,membership:POLICY.capabilities.membershipBenefits,menu:POLICY.capabilities.catalog,orders:POLICY.capabilities.orders,customers:POLICY.capabilities.customers,reviews:POLICY.capabilities.reviews,sales:POLICY.capabilities.sales,inventory:POLICY.capabilities.inventory,marketing:POLICY.capabilities.marketing,work:POLICY.capabilities.operations,finance:POLICY.capabilities.finance,connections:POLICY.capabilities.connections};
 
   function card(label,value,small=''){return `<article class="card"><small>${esc(label)}</small><strong>${esc(value)}</strong><span>${esc(small)}</span></article>`}
   function setState(text,kind=''){const el=$('pageState');el.textContent=text;el.className=`state ${kind}`.trim()}
@@ -73,6 +75,35 @@ function clientMain(POLICY){
     $('summaryCards').innerHTML=[card('운영공간',STORE_NAME,'store-scoped'),card('데이터 경계','점포 전용','다른 매장과 분리')].join('');
     $('mainPanel').innerHTML=`<div class="empty"><strong>운영공간 로그인</strong>${esc(message)}<div class="actions"><a class="button primary" href="${esc(authUrl())}">Google 계정으로 계속</a></div></div>`;setState('로그인 필요','warn');
   }
+
+  async function benefitsApi(options={}){
+    const token=await accessToken();if(!token)throw Object.assign(new Error('AUTH_REQUIRED'),{status:401});
+    const url=new URL(BENEFITS_API);url.searchParams.set('workspace',SLUG);
+    const r=await fetch(url,{...options,headers:{authorization:`Bearer ${token}`,'content-type':'application/json',...(options.headers||{})},cache:'no-store'});
+    const d=await r.json().catch(()=>({}));if(!r.ok)throw Object.assign(new Error(d.error||`benefits_${r.status}`),{status:r.status,code:d.code});return d;
+  }
+  function freeBenefitEditorRow(item={},index=0){return `<div class="site-field site-wide" data-free-benefit><div class="site-grid"><label class="site-field"><strong>혜택명</strong><input data-field="label" maxlength="80" value="${esc(item.label||'')}"></label><label class="site-field"><strong>상태</strong><select data-field="enabled"><option value="1" ${item.enabled!==false?'selected':''}>사용</option><option value="0" ${item.enabled===false?'selected':''}>중지</option></select></label></div><strong>설명</strong><textarea data-field="description" rows="2" maxlength="280">${esc(item.description||'')}</textarea><input type="hidden" data-field="id" value="${esc(item.id||`benefit-${index+1}`)}"><div class="actions"><button class="button" type="button" data-remove-benefit>삭제</button></div></div>`;}
+  function paidBenefitEditorRow(item={},index=0){
+    const sel=(v,x,d='package')=>(v||d)===x?'selected':'';
+    return `<div class="site-field site-wide" data-paid-package><div class="site-grid"><label class="site-field"><strong>패키지명</strong><input data-field="name" maxlength="80" value="${esc(item.name||'')}"></label><label class="site-field"><strong>종류</strong><select data-field="kind"><option value="feature" ${sel(item.kind,'feature')}>기능</option><option value="addon" ${sel(item.kind,'addon')}>Add-on</option><option value="package" ${sel(item.kind,'package')}>패키지</option><option value="service" ${sel(item.kind,'service')}>서비스</option><option value="organization_plan" ${sel(item.kind,'organization_plan')}>조직 플랜</option></select></label></div><div class="site-grid"><label class="site-field"><strong>가격(원)</strong><input data-field="priceKrw" type="number" min="0" step="100" value="${Number(item.priceKrw||0)}"></label><label class="site-field"><strong>결제주기</strong><select data-field="billingPeriod"><option value="monthly" ${sel(item.billingPeriod,'monthly','monthly')}>월</option><option value="yearly" ${sel(item.billingPeriod,'yearly','monthly')}>연</option><option value="one_time" ${sel(item.billingPeriod,'one_time','monthly')}>1회</option><option value="custom" ${sel(item.billingPeriod,'custom','monthly')}>별도</option></select></label></div><strong>설명</strong><textarea data-field="description" rows="2" maxlength="320">${esc(item.description||'')}</textarea><strong>포함 기능</strong><textarea data-field="features" rows="3" maxlength="2000">${esc((item.features||[]).join('\n'))}</textarea><label><input data-field="enabled" type="checkbox" ${item.enabled!==false?'checked':''}> 제공</label><input type="hidden" data-field="id" value="${esc(item.id||`package-${index+1}`)}"><div class="actions"><button class="button" type="button" data-remove-package>삭제</button></div></div>`;
+  }
+  function collectStoreFreeBenefits(){return [...document.querySelectorAll('[data-free-benefit]')].map(row=>({id:row.querySelector('[data-field="id"]')?.value,label:row.querySelector('[data-field="label"]')?.value,description:row.querySelector('[data-field="description"]')?.value,enabled:row.querySelector('[data-field="enabled"]')?.value==='1'}));}
+  function collectStorePaidPackages(){return [...document.querySelectorAll('[data-paid-package]')].map(row=>({id:row.querySelector('[data-field="id"]')?.value,name:row.querySelector('[data-field="name"]')?.value,kind:row.querySelector('[data-field="kind"]')?.value,priceKrw:Number(row.querySelector('[data-field="priceKrw"]')?.value||0),billingPeriod:row.querySelector('[data-field="billingPeriod"]')?.value,description:row.querySelector('[data-field="description"]')?.value,features:String(row.querySelector('[data-field="features"]')?.value||'').split(/\r?\n/).map(x=>x.trim()).filter(Boolean),enabled:Boolean(row.querySelector('[data-field="enabled"]')?.checked)}));}
+  function bindStoreBenefitEditor(){
+    document.querySelectorAll('[data-remove-benefit]').forEach(b=>b.onclick=()=>b.closest('[data-free-benefit]')?.remove());
+    document.querySelectorAll('[data-remove-package]').forEach(b=>b.onclick=()=>b.closest('[data-paid-package]')?.remove());
+    if($('addFreeBenefit'))$('addFreeBenefit').onclick=()=>{$('freeBenefitList')?.insertAdjacentHTML('beforeend',freeBenefitEditorRow({},document.querySelectorAll('[data-free-benefit]').length));bindStoreBenefitEditor()};
+    if($('addPaidPackage'))$('addPaidPackage').onclick=()=>{$('paidPackageList')?.insertAdjacentHTML('beforeend',paidBenefitEditorRow({},document.querySelectorAll('[data-paid-package]').length));bindStoreBenefitEditor()};
+    if($('membershipBenefitForm'))$('membershipBenefitForm').onsubmit=async event=>{event.preventDefault();setState('저장 중');try{await benefitsApi({method:'PUT',body:JSON.stringify({freeBenefits:collectStoreFreeBenefits(),paidPackages:collectStorePaidPackages()})});await membershipPanel();setState('저장됨','live')}catch(error){$('pageCopy').textContent=error.message;setState('저장 실패','warn')}};
+  }
+  async function membershipPanel(){
+    try{setState('혜택 설정 확인 중');const data=await benefitsApi();const free=data.freeBenefits||[],paid=data.paidPackages||[];
+      $('summaryCards').innerHTML=[card('공개 접근','누구나','헌법상 고정'),card('무료회원 혜택',String(free.filter(x=>x.enabled!==false).length),free.length+'개 설정'),card('유료 패키지',String(paid.filter(x=>x.enabled!==false).length),paid.length+'개 설정'),card('관리 권한',state.role||'-','점포별 설정')].join('');
+      $('mainPanel').innerHTML=`<form id="membershipBenefitForm"><div class="service-row"><div><strong>사이트 공개 접근</strong><p>비회원도 일반 사용자 사이트와 공개 콘텐츠를 봅니다. 이 원칙은 이 화면에서 끌 수 없습니다.</p></div><span class="tag live">PUBLIC · 고정</span></div><h2 style="margin-top:20px">무료회원 추가 혜택</h2><p class="panel-lead">가입은 사이트 입장권이 아니라 저장·참여·개인화 같은 추가 경험을 얻는 단계입니다.</p><div id="freeBenefitList" class="service-list">${free.map(freeBenefitEditorRow).join('')}</div><div class="actions"><button class="button" id="addFreeBenefit" type="button">무료 혜택 추가</button></div><h2 style="margin-top:22px">유료 기능 · 패키지</h2><p class="panel-lead">기능, Add-on, 패키지, 서비스, 조직 플랜을 이 점포 상황에 맞게 구성합니다.</p><div id="paidPackageList" class="service-list">${paid.map(paidBenefitEditorRow).join('')}</div><div class="actions"><button class="button" id="addPaidPackage" type="button">유료 항목 추가</button><button class="button primary" type="submit">전체 설정 저장</button></div><div class="note">가격·제공 내용은 여기서 관리합니다. 실제 결제 활성화는 약관·환불·결제수단 검증과 분리됩니다.</div></form>`;
+      bindStoreBenefitEditor();setState('회원 · 혜택 관리','live');
+    }catch(error){if(error.status===401)return loginPanel('회원·혜택 설정에는 점포 관리자 로그인이 필요합니다.');$('summaryCards').innerHTML=[card('회원 · 혜택','확인 필요','실패를 성공으로 표시하지 않음')].join('');$('mainPanel').innerHTML=`<div class="empty"><strong>회원 · 혜택 설정 확인 필요</strong>${esc(error.message)}</div>`;setState('확인 필요','warn')}
+  }
+
   function connectorStatus(provider){
     const row=(state.connector?.connectors||[]).find(x=>x.provider===provider);return row||{provider,status:'setup_required',displayName:provider};
   }
@@ -127,7 +158,7 @@ function clientMain(POLICY){
     $('siteForm').onsubmit=async e=>{e.preventDefault();const v=Object.fromEntries(new FormData(e.currentTarget).entries());const aliasSlugs=String(v.alias_slugs||'').split(',').map(x=>x.trim().toLowerCase()).filter(Boolean);setState('사이트 설정 저장 중');try{state.site=await rpc('update_store_user_site_settings',{p_slug:workspaceSlug,p_status:v.status,p_page_kicker:v.page_kicker,p_page_lead:v.page_lead,p_page_theme:v.page_theme,p_page_description:v.page_description,p_alias_slugs:aliasSlugs});sitePanel();setState('사용자 사이트 관리','live')}catch(err){$('pageCopy').textContent=err.message;setState('저장 실패','warn')}};
     setState('사용자 사이트 관리','live');
   }
-  function render(){if(section==='site')return sitePanel();summary();({overview,menu:menuPanel,orders:ordersPanel,customers:customerPanel,reviews:reviewsPanel,sales:salesPanel,inventory:inventoryPanel,marketing:marketingPanel,work:workPanel,finance:financePanel,connections:connectionsPanel}[section]||overview)();setState('점포 운영','live')}
+  function render(){if(section==='site')return sitePanel();if(section==='membership')return membershipPanel();summary();({overview,menu:menuPanel,orders:ordersPanel,customers:customerPanel,reviews:reviewsPanel,sales:salesPanel,inventory:inventoryPanel,marketing:marketingPanel,work:workPanel,finance:financePanel,connections:connectionsPanel}[section]||overview)();setState('점포 운영','live')}
   async function loadData(){
     setState('\uAD8C\uD55C \uD655\uC778 \uC911');
     const menu=await rpc('store_operating_space_snapshot',{p_operating_slug:SLUG});
@@ -151,7 +182,7 @@ function clientMain(POLICY){
   boot();
 }
 
-const STORE_SECTIONS='overview|site|menu|orders|customers|reviews|sales|inventory|marketing|work|finance|connections';
+const STORE_SECTIONS='overview|site|membership|menu|orders|customers|reviews|sales|inventory|marketing|work|finance|connections';
 const BOOTSTRAP_STORE_PROFILES=Object.freeze({jadam:{slug:'jadam',name:'자담치킨 목포대점',id:'4b1e5933-b9ae-4cb9-9d31-dcbb0a5b25aa',mark:'JD',brand:'JADAM CHICKEN'},pizzamaru:{slug:'pizzamaru',name:'피자마루 목포대점',id:'6b1b6ae0-8641-4ee1-8e6a-7cb6019fab27',mark:'PM',brand:'PIZZAMARU'},yogurt:{slug:'yogurt',name:'요거트퍼플 목포대점',id:'43ef7c9c-5932-46b9-b31e-4ab4ee6a60ce',mark:'YP',brand:'YOGURT PURPLE'}});
 const ROUTE_CACHE=new Map();
 export function storeAdminSlug(pathname){const m=new RegExp('^/([^/]+)/admin(?:/(?:'+STORE_SECTIONS+'))?/?$','i').exec(String(pathname||''));return m?m[1].toLowerCase():''}

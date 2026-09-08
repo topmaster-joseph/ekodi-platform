@@ -12,12 +12,14 @@ const services = Array.isArray(registry.services) ? registry.services.filter((se
 const reserved = new Set(policy.excludedInfrastructure || []);
 const expectedIds = services.map((service) => String(service.id || '').trim().toLowerCase());
 
-if (policy.policyId !== 'one-account-free-everywhere-pay-where-needed') fail('canonical policy id changed');
+if (policy.policyId !== 'public-by-default-progressive-membership') fail('canonical policy id changed');
 if (policy.defaultEntitlement?.tier !== 'free') fail('default entitlement must remain FREE');
 if (policy.defaultEntitlement?.scope !== 'all_registry_user_services') fail('FREE must cover all registry user services');
-if (policy.guestAccess?.scope !== 'common_service_user_pages' || policy.guestAccess?.mode !== 'guide_only') fail('guest user pages must stay guide-only');
-if (policy.guestAccess?.minimumTierForContent !== 'free' || policy.guestAccess?.identityProvider !== 'google') fail('common service content must require Google FREE membership');
-if (policy.paidPlans?.scope !== 'service_specific' || policy.paidPlans?.upgradeIndependently !== true) fail('paid plans must remain service-specific');
+if (policy.guestAccess?.scope !== 'all_user_facing_sites' || policy.guestAccess?.mode !== 'full_public_site') fail('user-facing sites must remain public by default');
+if (policy.guestAccess?.minimumTierForContent !== null || policy.guestAccess?.identityProvider !== null) fail('public content must not require membership or an identity provider');
+if (policy.freeMemberBenefits?.purpose !== 'additional_basic_benefits_not_access' || policy.freeMemberBenefits?.siteAdminConfigurable !== true) fail('FREE membership must add configurable benefits rather than unlock public content');
+if (policy.siteBenefitAdministration?.publicAccessImmutable !== true || policy.siteBenefitAdministration?.centralPlatformDefinesGuardrailsOnly !== true) fail('site benefit administration guardrails are incomplete');
+if (policy.paidPlans?.scope !== 'service_specific' || policy.paidPlans?.upgradeIndependently !== true || policy.paidPlans?.siteAdminMayEdit !== true) fail('paid plans must remain service-specific and site-admin configurable');
 if (policy.automaticInheritance?.enabledForFutureRegistryServices !== true) fail('future service inheritance must stay enabled');
 
 for (const id of expectedIds) {
@@ -44,4 +46,4 @@ if (!missionEntry.includes("path.startsWith('/api/membership/')") || !missionEnt
 if (!myIndex.includes('/membership-summary.js') || !myIndex.includes('/membership-summary.css')) fail('My EKODI membership summary assets missing');
 if (!mySummary.includes("https://ekodi.kr/api/membership/portfolio")) fail('My EKODI is not connected to portfolio endpoint');
 
-console.log(`Universal membership contract OK: ${expectedIds.length} user services inherit FREE; paid tiers remain service-specific.`);
+console.log(`Universal membership contract OK: ${expectedIds.length} user services stay public by default; FREE adds benefits; paid tiers remain site-configurable.`);

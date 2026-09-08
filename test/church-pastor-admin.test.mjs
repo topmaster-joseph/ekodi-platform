@@ -14,7 +14,7 @@ test('pastor admin route is scoped to canonical ekodichurch path', () => {
 });
 
 test('one pastor admin page projects navigation from the church-local role', () => {
-  assert.deepEqual(churchPastorSectionsForRole('senior_pastor'), ['overview','people','worship','care','calendar','ministry','reports','ai','access']);
+  assert.deepEqual(churchPastorSectionsForRole('senior_pastor'), ['overview','membership','people','worship','care','calendar','ministry','reports','ai','access']);
   assert.deepEqual(churchPastorSectionsForRole('pastor'), ['overview','people','worship','care','calendar','ministry','reports','ai']);
   assert.deepEqual(churchPastorSectionsForRole('care_staff'), ['overview','people','care','calendar','ministry','ai']);
   assert.deepEqual(churchPastorSectionsForRole('staff'), ['overview','people','worship','calendar','ministry','reports']);

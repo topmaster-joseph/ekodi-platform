@@ -32,7 +32,8 @@ test('internal infrastructure cannot become a user entitlement by accident', () 
 test('paid plans stay service-specific and universal runtime is wired', () => {
   assert.equal(policy.paidPlans.scope, 'service_specific');
   assert.equal(policy.paidPlans.upgradeIndependently, true);
-  assert.match(runtime, /one-account-free-everywhere-pay-where-needed/);
+  assert.match(runtime, /public-by-default-progressive-membership/);
+  assert.match(runtime, /membershipRequiredForPublicContent: false/);
   assert.match(runtime, /\/api\/membership\/portfolio/);
   assert.match(entry, /handleUniversalMembership/);
 });

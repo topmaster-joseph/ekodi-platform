@@ -13,11 +13,19 @@ const coreData = json('config/core-data-boundaries.json');
 const storage = json('config/storage-policy.json');
 const workspace = json('config/service-workspace-policy.json');
 
-if (constitution.version !== '1.9.0') fail('constitution version must be 1.9.0 with the approved one-domain C3 amendment and all prior approved amendments');
+if (constitution.version !== '1.9.1') fail('constitution version must be 1.9.1 with the approved public-by-default progressive-membership C2 amendment and all prior approved amendments');
 if (constitution.status !== 'active') fail('constitution must be active');
-for (const principle of ['free-first-not-free-only','ekodi-core-is-source-of-truth','provider-independent-by-default','secure-by-default','one-domain-grammar','isolated-parallel-development','verification-first-evolution','security-native-intelligence','evidence-linked-recommendations','secure-projection-minimum-disclosure','integrated-responsibility-distributed-execution-standardized-connections','layered-governance-os-core-services-connections-workspaces','user-surface-engine-separation','capability-first-reuse','sustainable-scale-by-evidence','workspace-over-space','living-digital-commons-north-star','sovereign-autonomy-with-human-authority','person-workspace-role-capability-authority','observe-detect-reason-plan-execute-verify-recover-learn']) {
+for (const principle of ['free-first-not-free-only','ekodi-core-is-source-of-truth','provider-independent-by-default','secure-by-default','one-domain-grammar','isolated-parallel-development','verification-first-evolution','security-native-intelligence','evidence-linked-recommendations','secure-projection-minimum-disclosure','integrated-responsibility-distributed-execution-standardized-connections','layered-governance-os-core-services-connections-workspaces','user-surface-engine-separation','capability-first-reuse','sustainable-scale-by-evidence','workspace-over-space','living-digital-commons-north-star','sovereign-autonomy-with-human-authority','person-workspace-role-capability-authority','observe-detect-reason-plan-execute-verify-recover-learn','public-by-default-progressive-membership']) {
   if (!constitution.principles?.includes(principle)) fail(`missing constitutional principle: ${principle}`);
 }
+
+const membershipAccess=constitution.membershipAccessPolicy||{};
+if (membershipAccess.publicUserSurfaces !== 'public_by_default') fail('public user surfaces must be public by default');
+if (membershipAccess.signupMeaning !== 'benefit_upgrade_not_access_gate') fail('signup must add benefits rather than unlock public content');
+if (membershipAccess.siteBenefitAuthority !== 'tenant_local_admin') fail('site benefit authority must remain tenant-local');
+if (!membershipAccess.immutableGuards?.includes('public_content_must_not_require_membership')) fail('public-content membership gate guard missing');
+if (workspace.membershipBenefitAdministration?.publicAccessImmutable !== true) fail('site admins must not be able to disable public access');
+if (workspace.membershipBenefitAdministration?.capability !== 'tenant.membership-benefits.manage') fail('site benefit administration capability mismatch');
 
 const architectureModel = constitution.architectureModel || {};
 if (architectureModel.registry !== 'governance/architecture/ekodi-os-architecture.json') fail('constitutional architecture registry path mismatch');
@@ -178,9 +186,9 @@ if (!Array.isArray(coreData.protectedTables) || coreData.protectedTables.length 
 for (const table of ['customer_tenants','customer_users','customer_memberships','customer_access_grants']) if (!coreData.protectedTables?.includes(table)) fail(`core source-of-truth table not protected: ${table}`);
 if (!String(coreData.rule || '').includes('must not directly reference EKODI Core protected tables')) fail('core data access rule missing');
 
-if (workspace.schemaVersion !== 4) fail('service workspace policy schemaVersion must be 4');
+if (workspace.schemaVersion !== 5) fail('service workspace policy schemaVersion must be 5');
 if (workspace.identityAuthority !== 'ekodi') fail('service workspace identityAuthority must be ekodi');
-if (workspace.commonServiceUserAccessRule?.memberMinimumTier !== 'free') fail('common services must preserve free-member minimum access');
+if (workspace.commonServiceUserAccessRule?.guestExperience !== 'full-public-site' || workspace.commonServiceUserAccessRule?.memberMinimumTier !== null) fail('ordinary user-facing services must remain public without a membership tier gate');
 if (workspace.customerWorkspaceRule?.preserveCustomerOwnership !== true) fail('customer workspace ownership must remain preserved');
 if (workspace.publicWorkspaceRouting?.canonicalHost !== 'ekodi.kr') fail('service workspace public canonical host must be ekodi.kr');
 if (workspace.publicWorkspaceRouting?.workspaceIdentityKey !== 'workspace_id') fail('service workspace identity key must be workspace_id');

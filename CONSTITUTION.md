@@ -1,4 +1,4 @@
-# EKODI Platform Constitution v1.9.0
+# EKODI Platform Constitution v1.9.1
 
 Effective: 2026-09-08
 
@@ -64,6 +64,15 @@ This constitution is the highest architecture and operations rule for EKODI Plat
 - Provider groups or accounts may synchronize with EKODI but cannot become the authorization source of truth.
 - Protected requests resolve authentication, tenant, authorization, rate policy and input validity before business logic.
 - `Workspace` is the canonical operating-context term. Legacy `Space` terminology may remain only as a compatibility surface during migration and must not create a second identity, authority or routing model.
+
+## 3A. Public Access and Progressive Membership Constitution
+- Every user-facing EKODI site and public content surface is public by default. Membership must never be used as the gate for merely entering or reading a public site.
+- Administrator surfaces, private personal data, private workspace data and security-sensitive actions remain authenticated and authorized exceptions.
+- Free membership adds benefits such as saved state, favorites, personalization, participation history and other site-defined benefits; signup is an upgrade of experience, not permission to see the site.
+- Paid value expands progressively by feature, add-on, package, service or organization plan. A single global paid tier must not flatten service-specific value.
+- Each Workspace or Workspace service administrator manages its own free-member benefits and paid benefits/packages, including availability, price, billing period and display order, within platform security and audit guardrails.
+- The platform defines schemas, safe defaults, public-access invariants, authorization and audit. It does not hard-code each site’s commercial benefit content.
+- Site administrators may change benefits and packages without a production code deployment, but may not disable the constitutional public-access baseline for ordinary user-facing content.
 
 ## 4. Data and Storage Constitution
 - Structured core/operational truth lives in an EKODI-controlled database with tenant isolation and auditability.

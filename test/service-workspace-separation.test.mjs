@@ -18,12 +18,12 @@ test('user-facing service kinds remain deliberately small', () => {
   assert.deepEqual(policy.userServiceKinds.map(item => item.id), ['shared_user_service', 'dedicated_user_service']);
 });
 
-test('visibility policy protects existing members unless explicitly forced off', () => {
+test('ordinary user surfaces are public while private/admin state stays protected', () => {
   const byId = Object.fromEntries(policy.visibilityPolicies.map(item => [item.id, item]));
-  assert.equal(byId.guest_visible.guestVisible, true);
-  assert.equal(byId.guest_visible.existingMemberAccess, true);
-  assert.equal(byId.guest_hidden.guestVisible, false);
-  assert.equal(byId.guest_hidden.existingMemberAccess, true);
-  assert.equal(byId.member_forced_off.guestVisible, false);
-  assert.equal(byId.member_forced_off.existingMemberAccess, false);
+  assert.equal(byId.public_default.guestVisible, true);
+  assert.equal(byId.public_default.immutableForUserSurface, true);
+  assert.equal(byId.authenticated_personal_state.guestVisible, false);
+  assert.equal(byId.authenticated_personal_state.reason, 'private_personal_data');
+  assert.equal(byId.administrator_only.guestVisible, false);
+  assert.equal(policy.membershipBenefitAdministration.publicAccessImmutable, true);
 });

@@ -1,6 +1,6 @@
 {
-  "schemaVersion": 1,
-  "policyId": "one-account-free-everywhere-pay-where-needed",
+  "schemaVersion": 2,
+  "policyId": "public-by-default-progressive-membership",
   "identity": {
     "primaryLogin": "google",
     "singleEcosystemAccount": true,
@@ -17,7 +17,16 @@
     "sharedPaidTierAcrossAllServices": false,
     "upgradeIndependently": true,
     "downgradeIndependently": true,
-    "billingLedger": "service_subscriptions"
+    "billingLedger": "service_subscriptions",
+    "configurationAuthority": "site_admin",
+    "benefitUnit": [
+      "feature",
+      "addon",
+      "package",
+      "service",
+      "organization_plan"
+    ],
+    "siteAdminMayEdit": true
   },
   "myEkodi": {
     "showAllRegistryServices": true,
@@ -44,15 +53,33 @@
     "workspace-api"
   ],
   "guestAccess": {
-    "scope": "common_service_user_pages",
-    "mode": "guide_only",
-    "minimumTierForContent": "free",
-    "identityProvider": "google",
-    "publicExceptions": [
-      "auth_handoff",
-      "legal_notice",
-      "health_check",
-      "required_webhook"
+    "scope": "all_user_facing_sites",
+    "mode": "full_public_site",
+    "minimumTierForContent": null,
+    "identityProvider": null,
+    "exceptions": [
+      "administrator_surface",
+      "private_personal_data",
+      "private_workspace_data",
+      "security_sensitive_action"
     ]
+  },
+  "freeMemberBenefits": {
+    "purpose": "additional_basic_benefits_not_access",
+    "siteAdminConfigurable": true,
+    "platformDefaults": [
+      "favorites_and_saved",
+      "personalized_updates",
+      "participation_history"
+    ],
+    "mayRequireLoginForPersonalState": true
+  },
+  "siteBenefitAdministration": {
+    "surface": "workspace_admin",
+    "canonicalSection": "membership",
+    "scope": "workspace_or_workspace_service",
+    "publicAccessImmutable": true,
+    "auditRequired": true,
+    "centralPlatformDefinesGuardrailsOnly": true
   }
 }

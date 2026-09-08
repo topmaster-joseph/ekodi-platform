@@ -1,5 +1,5 @@
 {
-  "version": "1.9.0",
+  "version": "1.9.1",
   "effectiveDate": "2026-09-08",
   "status": "active",
   "title": "EKODI Platform Constitution",
@@ -27,7 +27,8 @@
     "living-digital-commons-north-star",
     "sovereign-autonomy-with-human-authority",
     "person-workspace-role-capability-authority",
-    "observe-detect-reason-plan-execute-verify-recover-learn"
+    "observe-detect-reason-plan-execute-verify-recover-learn",
+    "public-by-default-progressive-membership"
   ],
   "architectureModel": {
     "registry": "governance/architecture/ekodi-os-architecture.json",
@@ -504,5 +505,29 @@
       "operations": "/admin/operations/{capability}"
     },
     "rule": "One domain, multiple security realms: human and management surfaces are canonical paths on ekodi.kr; subdomains may remain only as justified internal, protocol, emergency or compatibility execution boundaries."
+  },
+  "membershipAccessPolicy": {
+    "publicUserSurfaces": "public_by_default",
+    "administratorSurfaces": "authenticated_authorized_only",
+    "signupMeaning": "benefit_upgrade_not_access_gate",
+    "freeMemberRole": "additional_basic_benefits",
+    "paidModel": "feature_addon_package_service_or_organization_plan",
+    "siteBenefitAuthority": "tenant_local_admin",
+    "siteBenefitConfigurable": [
+      "free_member_benefits",
+      "paid_features",
+      "paid_packages",
+      "price",
+      "billing_period",
+      "availability",
+      "display_order"
+    ],
+    "immutableGuards": [
+      "public_content_must_not_require_membership",
+      "private_personal_data_requires_authentication",
+      "admin_actions_require_authorization",
+      "security_sensitive_actions_remain_protected"
+    ],
+    "platformRole": "define_schema_guardrails_audit_and_safe_defaults_not_site_commercial_content"
   }
 }

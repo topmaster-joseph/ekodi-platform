@@ -1,5 +1,5 @@
 export const TENANT_ADMIN_CAPABILITIES=Object.freeze({
-  dashboard:'tenant.dashboard.read',site:'tenant.site.manage',catalog:'tenant.catalog.read',orders:'tenant.orders.read',
+  dashboard:'tenant.dashboard.read',site:'tenant.site.manage',membershipBenefits:'tenant.membership-benefits.manage',catalog:'tenant.catalog.read',orders:'tenant.orders.read',
   customers:'tenant.customers.insights',reviews:'tenant.reviews.manage',sales:'tenant.sales.read',inventory:'tenant.inventory.manage',
   marketing:'tenant.marketing.manage',supplyNetwork:'tenant.supply-network.manage',memberRoster:'tenant.member-roster.manage',operations:'tenant.operations.manage',finance:'tenant.finance.read',connections:'tenant.connections.manage',access:'tenant.access.manage',
   people:'tenant.people.read',worship:'tenant.worship.manage',care:'tenant.care.manage',calendar:'tenant.calendar.manage',ministry:'tenant.ministry.manage',reports:'tenant.reports.manage',ai:'tenant.ai.assist',
@@ -20,4 +20,4 @@ export const TENANT_ADMIN_ROLE_CAPABILITIES=Object.freeze({
 export function normalizeTenantAdminRole(role){return String(role||'').trim().toLowerCase();}
 export function tenantAdminCapabilitiesForRole(role){const key=normalizeTenantAdminRole(role);return TENANT_ADMIN_ROLE_CAPABILITIES[key]||Object.freeze([]);}
 export function tenantAdminCan(role,capability){const allowed=tenantAdminCapabilitiesForRole(role);return allowed.includes('*')||allowed.includes(String(capability||''));}
-export function tenantAdminPolicySnapshot(){return{version:1,authorityScope:'tenant',noRoleSpecificAdminPages:true,platformAdminRequiresExplicitTenantContext:true,capabilities:TENANT_ADMIN_CAPABILITIES,roleCapabilities:TENANT_ADMIN_ROLE_CAPABILITIES};}
+export function tenantAdminPolicySnapshot(){return{version:2,authorityScope:'tenant',noRoleSpecificAdminPages:true,platformAdminRequiresExplicitTenantContext:true,capabilities:TENANT_ADMIN_CAPABILITIES,roleCapabilities:TENANT_ADMIN_ROLE_CAPABILITIES};}

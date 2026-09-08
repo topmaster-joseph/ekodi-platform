@@ -102,10 +102,12 @@ for(const service of manifest.services||[]){
   const commonUserPage=service.operatingModel!=='customer-site';
   if(commonUserPage){
     const p=service.userAccessPolicy;
-    const publicGuide=service.defaultSurface==='public';
-    const expectedGuestMode=publicGuide?'public-guide':'guide-only';
-    const expectedEnforcer=publicGuide?'service-ui-and-protected-api':'shared-shell';
-    if(p?.scope!=='user-pages'||p?.guestMode!==expectedGuestMode||p?.minimumTier!=='free'||p?.identityProvider!=='google'||p?.enforcedBy!==expectedEnforcer)fail(`${service.id} must keep public guide pages visible while protecting member content`);
+    const publicSurface=service.defaultSurface==='public';
+    const expectedGuestMode=publicSurface?'full-public':'guide-only';
+    const expectedMinimumTier=publicSurface?null:'free';
+    const expectedIdentityProvider=publicSurface?null:'google';
+    const expectedEnforcer=publicSurface?'service-ui-and-protected-api':'shared-shell';
+    if(p?.scope!=='user-pages'||p?.guestMode!==expectedGuestMode||p?.minimumTier!==expectedMinimumTier||p?.identityProvider!==expectedIdentityProvider||p?.enforcedBy!==expectedEnforcer)fail(`${service.id} must keep public content fully open while protecting private workspace state`);
   }
   else if(service.userAccessPolicy!==null)fail(`${service.id} customer site must keep its own user access policy`);
   const serviceTheme=theme.services?.[service.id];
