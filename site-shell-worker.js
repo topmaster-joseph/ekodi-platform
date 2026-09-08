@@ -25,6 +25,10 @@ function rootUserService(pathname){
   return service.id;
 }
 
+function standaloneBrandPlacePath(pathname){
+  return normalizedPath(pathname)==='/pizzamaru/mokpodae';
+}
+
 function rootInternalPath(pathname){
   const path=normalizedPath(pathname);
   return path==='/admin'||path==='/admin.html'||path.startsWith('/admin/');
@@ -56,7 +60,7 @@ export default {
     const response = await siteWorker.fetch(effective.request, env, ctx);
     if (effective.host === PUBLIC_HOST) {
       const pathname=new URL(effective.request.url).pathname;
-      if(rootInternalPath(pathname))return response;
+      if(rootInternalPath(pathname)||standaloneBrandPlacePath(pathname))return response;
       const serviceId=rootUserService(pathname);
       if(serviceId)return injectEkodiShell(response,serviceId);
       return injectEkodiShell(response,'ekodi','public');
