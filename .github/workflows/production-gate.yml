@@ -11,6 +11,8 @@ on:
       - 'admin-authenticated-shell.js'
       - 'admin-central-handoff.js'
       - 'test/**'
+      - 'config/ai-development-completion-policy.json'
+      - 'scripts/validate-ai-development-completion-policy.mjs'
       - '.github/workflows/production-gate.yml'
   schedule:
     - cron: '5 * * * *'
@@ -88,3 +90,49 @@ jobs:
           api_code=$(curl -sS -o /tmp/api -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://api.ekodi.kr/health')
           echo "CONTROL API | https://api.ekodi.kr/health | HTTP $api_code"
           [ "$api_code" = '200' ]
+      - name: Create production completion evidence
+        shell: bash
+        env:
+          RELEASE_SHA: ${{ github.sha }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+          verified_at=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
+          cat > artifacts/production-completion-evidence.json <<EOF
+          {
+            "schemaVersion": 1,
+            "policyId": "AI-COMPLETE-001",
+            "status": "production-verified-complete",
+            "releaseSha": "${RELEASE_SHA}",
+            "workflowRunId": "${RUN_ID}",
+            "workflowRunAttempt": "${RUN_ATTEMPT}",
+            "productionHostname": "ekodi.kr ecosystem",
+            "functionalChecks": [
+              "canonical apex admin and legacy admin redirects",
+              "cgma customer surface content",
+              "jadam customer surface content",
+              "pizzamaru customer surface content",
+              "yogurt customer surface content",
+              "marketing platform content",
+              "control API health"
+            ],
+            "observabilityCheck": "workflow logs and endpoint responses captured by Production Revenue Gate",
+            "verificationTimestamp": "${verified_at}"
+          }
+          EOF
+      - name: Upload production completion evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-completion-evidence-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/production-completion-evidence.json
+          if-no-files-found: error
+          retention-days: 30
+      - name: Production completion summary
+        run: |
+          echo '### AI-COMPLETE-001' >> "$GITHUB_STEP_SUMMARY"
+          echo '- Status: production-verified-complete' >> "$GITHUB_STEP_SUMMARY"
+          echo '- Real production hostnames: verified' >> "$GITHUB_STEP_SUMMARY"
+          echo '- Functional production checks: passed' >> "$GITHUB_STEP_SUMMARY"
+          echo '- Completion evidence artifact: uploaded' >> "$GITHUB_STEP_SUMMARY"
