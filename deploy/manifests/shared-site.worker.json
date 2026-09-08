@@ -1,5 +1,5 @@
 {
-  "version": 55,
+  "version": 56,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
@@ -308,7 +308,10 @@
         "redirect": "manual",
         "expect": [
           "EKODI Workspace Admin",
-          "workspace-admin.js"
+          "workspace-admin.js",
+          "data-ekodi-admin-layout=\"two-level\"",
+          "data-ekodi-admin-nav-mode=\"primary\"",
+          "data-ekodi-admin-subnav"
         ],
         "headerExpect": [
           "x-ekodi-route: workspace-admin",

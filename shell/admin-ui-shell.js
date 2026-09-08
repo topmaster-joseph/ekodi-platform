@@ -28,6 +28,7 @@ function installStyle(){
     html[data-ekodi-shell-surface="admin"] :is([data-ekodi-admin-sidebar-header],[data-ekodi-admin-brand],.side-brand,.sidebar-brand,.admin-sidebar-brand){display:none!important}
     html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-sidebar{display:flex!important;flex-direction:column!important;height:100dvh!important;min-height:0!important;overflow:hidden!important;box-sizing:border-box!important;padding-top:max(8px,env(safe-area-inset-top,0px))!important}
     html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-nav{flex:1 1 auto!important;min-height:0!important;overflow-y:auto!important;overflow-x:hidden!important;overscroll-behavior:contain!important;scrollbar-gutter:stable}
+    html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-nav[data-ekodi-admin-nav-mode="primary"]{flex:0 0 auto!important;overflow:hidden!important;overscroll-behavior:auto!important;scrollbar-gutter:auto!important}
     html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-main{height:100dvh!important;min-height:0!important;overflow-y:auto!important;overflow-x:hidden!important;overscroll-behavior:contain!important}
     html[data-ekodi-shell-surface="admin"] .ekodi-admin-sidebar-footer{margin-top:auto!important;flex:0 0 auto!important;position:static!important}
     html[data-ekodi-shell-surface="admin"] .ekodi-admin-header-account-hidden,
@@ -129,7 +130,7 @@ function normalize(){
     sidebar.dataset.ekodiAdminRegion='navigation';
     removeSidebarBrand(sidebar);
     const nav=findNav(sidebar);
-    if(nav){nav.classList.add('ekodi-admin-shell-nav');nav.dataset.ekodiIndependentScroll='true';}
+    if(nav){const primaryOnly=nav.dataset.ekodiAdminNavMode==='primary';nav.classList.add('ekodi-admin-shell-nav');nav.dataset.ekodiIndependentScroll=primaryOnly?'false':'true';nav.dataset.ekodiAdminNavContract=primaryOnly?'primary-fixed':'legacy-scroll';}
     ensureFooter(sidebar);
   }
 
