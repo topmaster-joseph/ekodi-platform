@@ -10,7 +10,7 @@ test('Church route contract avoids the ambiguous no-slash wildcard and verifies 
   assert.equal(CHURCH_ROUTE_CONTRACT.publicUrl,'https://ekodi.kr/ekodichurch/');
   assert.equal(CHURCH_ROUTE_CONTRACT.adminUrl,'https://ekodi.kr/ekodichurch/admin');
   assert.equal(CHURCH_ROUTE_CONTRACT.publicRoute,'church-public-path');
-  assert.equal(CHURCH_ROUTE_CONTRACT.adminRoute,'workspace-admin');
+  assert.equal(CHURCH_ROUTE_CONTRACT.adminRoute,'church-pastor-admin');
 });
 
 test('Shared Site production workflow repairs Church route ownership before guarded promotion',async()=>{
