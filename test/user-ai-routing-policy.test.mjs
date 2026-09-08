@@ -38,14 +38,14 @@ test('FREE interactive request without personal API uses personal web, never EKO
   assert.equal(chooseUserAiRoute({ mode:'auto', hasPersonal:false, personalAllowed:true, sponsoredAvailable:false, sponsoredRemaining:0 }), 'personal-web');
 });
 
-test('paid interactive automatic mode uses sponsored API before forcing a web handoff', () => {
+test('paid interactive automatic mode prefers personal web before EKODI sponsored API', () => {
   const decision = resolveAiAccessRoute({
     mode:'auto', intent:'interactive', surface:'user', aiRequired:true,
     hasPersonalApi:false, personalApiAllowed:true, personalWebAvailable:true,
     sponsoredAvailable:true, sponsoredRemaining:100,
   });
-  assert.equal(decision.route, 'ekodi-sponsored');
-  assert.equal(decision.reason, 'membership-supported-seamless');
+  assert.equal(decision.route, 'personal-web');
+  assert.equal(decision.reason, 'personal-web-preferred');
 });
 
 test('personal-first explicit mode preserves user-owned web access before sponsored API', () => {

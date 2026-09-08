@@ -186,11 +186,6 @@ export function getOpenAiProviderStatus(env = {}) {
     configured: Boolean(String(env.OPENAI_API_KEY || '').trim()),
     available: provider.available,
     model: provider.model,
-    profiles: Object.freeze({
-      fast: text(env.EKODI_OPENAI_MODEL_FAST, 120) || text(env.OPENAI_MODEL, 120) || DEFAULT_OPENAI_MODEL,
-      balanced: text(env.EKODI_OPENAI_MODEL_BALANCED, 120) || text(env.OPENAI_MODEL, 120) || DEFAULT_OPENAI_MODEL,
-      deep: text(env.EKODI_OPENAI_MODEL_DEEP, 120) || text(env.OPENAI_MODEL, 120) || DEFAULT_OPENAI_MODEL,
-    }),
   });
 }
 

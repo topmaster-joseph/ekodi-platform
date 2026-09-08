@@ -55,7 +55,7 @@ function pulseFromTask(task) {
 export function getEkodiProviderReadiness(env = {}) {
   const providers = getEkodiAiProviderRegistryStatus(env);
   const configured = providers.filter(provider => provider.available);
-  const multiProviderEnabled = enabled(env.AI_MULTI_PROVIDER_ENABLED, true);
+  const multiProviderEnabled = enabled(env.AI_MULTI_PROVIDER_ENABLED, false);
   return Object.freeze({
     multiProviderEnabled,
     readinessBasis: 'configuration',
@@ -70,13 +70,7 @@ export function getEkodiProviderReadiness(env = {}) {
 }
 
 export async function getEkodiProviderOperationalReadiness(env = {}) {
-  let runtimeEnv = env;
-  try {
-    runtimeEnv = (await collaborationRuntime(env)).env;
-  } catch (error) {
-    return Object.freeze({ ...getEkodiProviderReadiness({ ...env, AI_MULTI_PROVIDER_ENABLED: 'false' }), policyError: text(error?.message || error, 160) });
-  }
-  const configured = getEkodiProviderReadiness(runtimeEnv);
+  const configured = getEkodiProviderReadiness(env);
   if (!env.DB?.prepare) return configured;
   let rows = [];
   try {
