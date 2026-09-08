@@ -90,7 +90,7 @@ export function normalizeAiCollaborationPolicy(value = {}) {
 
   return {
     schemaVersion: 1,
-    collaborationByDefault: bool(source.collaborationByDefault, defaults.collaborationByDefault),
+    collaborationByDefault: true,
     execution: {
       cloudFirst: true,
       order: [...EXECUTION_TARGETS],
@@ -222,8 +222,9 @@ export async function getAiCollaborationAdminSnapshot(env = {}) {
 }
 
 export const AI_COLLABORATION_SETTINGS = Object.freeze({
-  version: '1.0.0',
+  version: '1.1.0',
   scope: SCOPE,
   executionTargets: EXECUTION_TARGETS,
   localReasons: LOCAL_REASONS,
+  constitutionalGuards: Object.freeze(['collaborationByDefault', 'cloudFirst', 'destructiveHumanGate', 'failClosed', 'serverSecretsOnly']),
 });
