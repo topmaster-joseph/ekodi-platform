@@ -12,14 +12,14 @@ test('all shared first-page contracts use ekodi.index as a logical role while ke
   assert.equal(policy.principles.keepPublicUrlsSimple, true);
   for (const service of Object.values(policy.services)) {
     assert.equal(service.entry, 'ekodi.index');
-    assert.equal(service.path, '/');
+    assert.match(service.path, /^\//);
   }
 });
 
 test('admin emergency is independent but preserves a reduced-capability ekodi.index role', async () => {
   const policy = JSON.parse(await read('config/ekodi-entrypoints.json'));
   const admin = policy.services.admin;
-  assert.match(admin.primary, /^https:\/\/admin\.ekodi\.kr\/$/);
+  assert.match(admin.primary, /^https:\/\/ekodi\.kr\/admin\/$/);
   assert.match(admin.emergency, /^https:\/\/[^/]+\.workers\.dev\/$/);
   assert.equal(admin.emergencyMode, 'reduced-capability');
   assert.equal(policy.principles.primaryAndEmergencyShareMentalModel, true);

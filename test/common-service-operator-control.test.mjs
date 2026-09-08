@@ -8,7 +8,7 @@ const read = path => fs.readFileSync(new URL(`../${path}`, import.meta.url), 'ut
 test('common services have one operator surface in central Admin', () => {
   const policy = JSON.parse(read('config/service-workspace-policy.json'));
   const rule = policy.commonServiceOperatorAccessRule;
-  assert.equal(rule.surface, 'admin.ekodi.kr');
+  assert.equal(rule.surface, 'https://ekodi.kr/admin');
   assert.equal(rule.runtimeHostsAreOperatorPages, false);
   assert.equal(rule.directRuntimeRootBehavior, 'redirect_to_admin_control_plane');
   assert.equal(rule.sessionAuthority, 'central_admin_session');
@@ -22,7 +22,7 @@ test('Admin menu mounts the common-service operator module', () => {
   const loader = read('admin-demand-loader.js');
   const layout = read('admin-menu-layout.js');
   const common = read('common-services-admin.js');
-  const handoff = read('admin-central-handoff.js');
+  const routes = read('admin-canonical-routes.js');
   const site = read('site-worker.js');
   assert.match(registry, /id: 'common-services'.*group: 'common'/);
   assert.doesNotMatch(loader, /common-services-admin\.(?:css|js)/);
@@ -33,7 +33,8 @@ test('Admin menu mounts the common-service operator module', () => {
   assert.match(layout, /EKODICommonServicesAdmin\?\.activate\?\.\(\)/);
   assert.match(common, /window\.EKODICommonServicesAdmin=Object\.freeze\(\{mount,activate/);
   assert.doesNotMatch(common, /function installNav\(|function showSection\(|addEventListener\('hashchange'/);
-  assert.match(handoff, /campus common-services ai-ops/);
+  assert.match(routes, /'common-services':'common'/);
+  assert.match(routes, /aiops:'operations'/);
   assert.match(site, /ADMIN_COMMON_SERVICE_AI_PREFIX/);
   assert.match(site, /proxyAdminCommonServiceAi/);
 });
@@ -50,7 +51,7 @@ test('common-service Admin UI consumes the central admin session and has no serv
 test('AI runtime root is an operator handoff, not a standalone admin page', async () => {
   const response = await aiWorker.fetch(new Request('https://ai.ekodi.kr/'), {}, { waitUntil() {} });
   assert.equal(response.status, 307);
-  assert.equal(response.headers.get('location'), 'https://admin.ekodi.kr/?route=common-services&service=ai');
+  assert.equal(response.headers.get('location'), 'https://ekodi.kr/admin/common/common-services?service=ai');
   assert.equal(response.headers.get('x-ekodi-route'), 'ai-runtime-admin-handoff');
 });
 

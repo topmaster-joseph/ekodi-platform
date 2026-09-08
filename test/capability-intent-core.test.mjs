@@ -48,7 +48,7 @@ test('small business intent composes reusable capabilities before services', () 
   assert.ok(plan.capabilityIds.includes('business.crm'));
   assert.ok(plan.capabilityIds.includes('finance.stewardship'));
   assert.ok(plan.showroomEntries.includes('marketing'));
-  assert.equal(plan.home, 'https://my.ekodi.kr');
+  assert.equal(plan.home, 'https://ekodi.kr/my');
   assert.equal(plan.contract, 'ekodi.intent-plan.v1');
 });
 test('execution modes expose autonomy preflight and sovereign human gates', () => {

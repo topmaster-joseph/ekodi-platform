@@ -3,7 +3,7 @@
   "name": "EKODI Universal Capability Registry",
   "principle": "Capabilities are stable reusable abilities. Intent selects capabilities; services and providers are replaceable implementations.",
   "surfacePolicy": {
-    "defaultHome": "https://my.ekodi.kr",
+    "defaultHome": "https://ekodi.kr/my",
     "specialistSites": "showroom_and_entry",
     "workspace": "compose_capabilities_on_demand",
     "dedicatedSite": "exception_only_with_declared_boundary_evidence"
@@ -63,8 +63,8 @@
       ],
       "provider": {
         "id": "my-docs",
-        "surface": "https://my.ekodi.kr/docs/",
-        "health": "https://my.ekodi.kr/health",
+        "surface": "https://ekodi.kr/my/docs/",
+        "health": "https://ekodi.kr/my/health",
         "contract": "ekodi.documents.v2",
         "generation": 8,
         "storage": "person-scoped-rls",

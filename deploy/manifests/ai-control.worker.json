@@ -12,7 +12,7 @@
         ],
         "redirect": "manual",
         "headerExpect": [
-          "location: https://admin.ekodi.kr/?route=common-services&service=ai",
+          "location: https://ekodi.kr/admin/common/common-services?service=ai",
           "x-ekodi-route: ai-runtime-admin-handoff"
         ]
       },

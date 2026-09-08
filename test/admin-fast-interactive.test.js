@@ -1,4 +1,4 @@
-import test from 'node:test';
+﻿import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
@@ -8,24 +8,26 @@ test('Admin critical shell stays interactive without eager operational modules',
   const source = await read('admin-authenticated-shell.js');
   assert.match(source, /criticalPostAuthScripts/);
   assert.match(source, /'admin-demand-loader\.js'/);
-  assert.match(source, /Promise\.all\(criticalPostAuthScripts\.map\(loadScript\)\)/);
+  assert.match(source, /for\(const src of criticalPostAuthScripts\)[\s\S]*?await loadScript\(src\)/);
   for (const heavy of ['ai-ops-admin.js', 'admin-lazy-features.js', 'release-control-admin.js', 'work-admin.js', 'marketing-ai-admin.js']) {
     assert.doesNotMatch(source, new RegExp(`'${heavy.replaceAll('.', '\\.')}'`));
   }
-  assert.doesNotMatch(source, /deferredPostAuthScripts|scheduleDeferredFeatures/);
+  assert.match(source, /deferredPostAuthScripts/);
+  assert.match(source, /Promise\.allSettled\(deferredPostAuthScripts\.map\(loadScript\)\)/);
+  assert.match(source, /requestAnimationFrame/);
 });
 
-test('retired Operations grid is not fetched and rendered during every login', async () => {
-  const source = await read('control-center.js');
-  const showApp = source.match(/function showApp\(email\) \{([\s\S]*?)\n\}/)?.[1] || '';
-  assert.ok(showApp, 'showApp must exist');
-  assert.doesNotMatch(showApp, /loadOperationsOverview\s*\(/);
-  assert.match(showApp, /AI Ops/);
-});
-
-test('Finance monitor is no longer a pre-auth bootstrap script', async () => {
+test('retired Operations grid is absent from the current Admin shell', async () => {
   const html = await read('admin-shell.html');
+  assert.doesNotMatch(html, /control-center\.js|control-center-features\.js/);
+  await assert.rejects(read('control-center.js'), error => error?.code === 'ENOENT');
+  await assert.rejects(read('control-center-features.js'), error => error?.code === 'ENOENT');
+});
+
+test('Finance monitor is demand-loaded after authentication', async () => {
+  const html = await read('admin-shell.html');
+  const loader = await read('admin-demand-loader.js');
   assert.doesNotMatch(html, /<script src="finance-monitor\.js"><\/script>/);
-  const features = await read('control-center-features.js');
-  assert.match(features, /async function loadFinance\(\) \{ await loadModule\('finance-monitor\.js'\); \}/);
+  assert.match(loader, /finance\.addEventListener\('click'/);
+  assert.match(loader, /loadStyle\('admin-finance\.css'\)\.then\(\(\) => loadScript\('finance-monitor\.js'\)\)/);
 });
