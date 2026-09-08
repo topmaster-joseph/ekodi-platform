@@ -1,5 +1,5 @@
 {
-  "version": 59,
+  "version": 60,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
@@ -34,6 +34,14 @@
           "에코디의 모든 길을 한눈에",
           "One ecosystem. Many ways to connect."
         ]
+      },
+      {
+        "url": "https://ekodi.kr/my/docs/",
+        "statuses": [200],
+        "redirect": "manual",
+        "expect": ["EKODI Docs AI", "docs-focus"],
+        "headerExpect": ["x-ekodi-canonical-surface: my"],
+        "rollbackVerify": false
       },
       {
         "url": "https://ekodi.kr/ekodibiz",
