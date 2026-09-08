@@ -8,7 +8,7 @@ const read = path => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 
 test('sales and supply network separates professional engine health from Mall operating decisions', async () => {
   const professional = getAdminMenuItem('supply-network');
-  assert.equal(professional?.group, 'vertical');
+  assert.equal(professional?.group, 'services');
   assert.equal(professional?.managementArea, 'professional-services');
   assert.equal(professional?.labels?.ko, '판매·공급망');
   assert.equal(getAdminMenuItem('affiliates'), null);

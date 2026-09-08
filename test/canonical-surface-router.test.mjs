@@ -82,7 +82,7 @@ test('Admin canonical route registry maps menu sections into constitutional grou
   assert.equal(routes.sectionFromPath('/admin/system/security'),'security');
 });
 
-test('Business and Trade canonical paths hide execution hosts',async()=>{
+test('Business canonical paths hide execution hosts while EKODIBIZ Trade stays tenant-owned',async()=>{
   const externalCalls=[];
   const externalFetch=async request=>{
     const url=new URL(request.url);externalCalls.push(url);
@@ -94,7 +94,9 @@ test('Business and Trade canonical paths hide execution hosts',async()=>{
   assert.equal(externalCalls[0].hostname,'business.ekodi.kr');assert.equal(externalCalls[0].pathname,'/app.js');
   let text=await response.text();assert.match(text,/fetch\('\/business\/api\/workspaces'/);assert.match(text,/https:\/\/ekodi\.kr\/auth\//);assert.match(text,/path\.startsWith\('business\/'\)/);assert.match(text,/`\/business\/\$\{workspace\.id\}`/);assert.doesNotMatch(text,/business\.ekodi\.kr/);
   response=await routeCanonicalSurface(new Request('https://ekodi.kr/ekodibiz/trade'),{ASSETS:assets},{externalFetch});
-  assert.equal(assets.calls.at(-1).pathname,'/trade');text=await response.text();assert.match(text,/https:\/\/ekodi\.kr\/ekodibiz\/trade/);assert.doesNotMatch(text,/trade\.biz\.ekodi\.kr/);
+  assert.equal(response,null);
+  const portal=await platformEntry.fetch(new Request('https://ekodi.kr/ekodibiz/trade'),{},{});
+  assert.equal(portal.status,200);assert.equal(portal.headers.get('x-ekodi-route'),'trade-partner-workspace');assert.match(await portal.text(),/PRIVATE TRADE WORKSPACE/);
   response=await routeCanonicalSurface(new Request('https://ekodi.kr/ekodibiz/trade/admin'),{ASSETS:assets},{externalFetch});
   assert.equal(response,null);
 });

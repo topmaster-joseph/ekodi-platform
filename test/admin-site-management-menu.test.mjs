@@ -7,8 +7,8 @@ const layout = await readFile(new URL('../admin-menu-layout.js', import.meta.url
 const campus = await readFile(new URL('../campus-actions.js', import.meta.url), 'utf8');
 const homepage = await readFile(new URL('../homepage-admin.js', import.meta.url), 'utf8');
 
-test('Campus and Sites are one canonical Site Structure entry', () => {
-  assert.match(registry, /id: 'campus'[\s\S]*ko: '사이트 구조'[\s\S]*en: 'Site Structure'/);
+test('Campus and Sites are one canonical Admin Home & Sites entry', () => {
+  assert.match(registry, /id: 'campus'[\s\S]*ko: '관리 홈·사이트'[\s\S]*en: 'Admin Home & Sites'/);
   assert.doesNotMatch(registry, /id: 'sites'/);
   assert.match(layout, /#sites:sites/);
   assert.ok(layout.includes("if(section==='sites')return openSites();"));

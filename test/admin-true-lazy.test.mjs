@@ -73,15 +73,19 @@ test('device browser diagnostics are shipped and stay on the immutable admin wor
   assert.match(smoke, /\.admin-browser-diagnostic/);
 });
 
-test('shared admin navigation exposes five domains plus Operations Center with top contextual tabs', async () => {
+test('shared admin navigation exposes five canonical axes with top contextual tabs', async () => {
   const registry = await read('admin-menu-registry.js');
   const sidebar = await read('admin-sidebar.js');
   const postbuild = await read('scripts/admin-performance-postbuild.mjs');
   assert.doesNotMatch(registry, /id: 'overview'/);
-  for (const area of ['structure', 'core', 'common', 'vertical', 'tenants', 'operations-center']) assert.match(registry, new RegExp(`id: '${area}'`));
-  for (const retired of ['home', 'operations', 'people', 'services', 'ai', 'business', 'data', 'system', 'site-management', 'security-audit', 'settings', 'access', 'space']) assert.doesNotMatch(registry, new RegExp(`id: '${retired}', icon:`));
-  assert.match(registry, /id: 'capabilities', group: 'operations-center'/);
-  assert.match(registry, /id: 'devices', group: 'operations-center'/);
+  for (const area of ['home', 'operations', 'space', 'services', 'system']) assert.match(registry, new RegExp(`id: '${area}'`));
+  for (const retired of ['structure', 'core', 'common', 'vertical', 'tenants', 'operations-center', 'people', 'ai', 'business', 'data', 'site-management', 'security-audit', 'settings', 'access']) assert.doesNotMatch(registry, new RegExp(`id: '${retired}', icon:`));
+  assert.match(registry, /id: 'campus', group: 'home'/);
+  assert.match(registry, /id: 'work', group: 'operations'/);
+  assert.match(registry, /id: 'clients', group: 'space'/);
+  assert.match(registry, /id: 'common-services', group: 'services'/);
+  assert.match(registry, /id: 'capabilities', group: 'system'/);
+  assert.match(registry, /id: 'devices', group: 'system'/);
   assert.match(sidebar, /RETIRED_MENU_SECTIONS = new Set\(\['overview'\]\)/);
   assert.match(sidebar, /admin-global-navs/);
   assert.match(sidebar, /admin-context-tabs-shell/);

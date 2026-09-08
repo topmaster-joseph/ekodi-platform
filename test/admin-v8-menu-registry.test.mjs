@@ -6,23 +6,23 @@ import {
   getAdminMenuGroupDefault,
 } from '../admin-menu-registry.js';
 
-test('v8 admin exposes five management domains plus Operations Center', () => {
+test('v8 admin exposes the five canonical EKODI management axes', () => {
   assert.deepEqual(ADMIN_MENU_GROUPS.map(group => group.id), [
-    'structure', 'core', 'common', 'vertical', 'tenants', 'operations-center',
+    'home', 'operations', 'space', 'services', 'system',
   ]);
-  assert.equal(ADMIN_MENU_GROUPS.length, 6);
-  assert.equal(getAdminMenuGroupDefault('operations-center'), 'capabilities');
+  assert.equal(ADMIN_MENU_GROUPS.length, 5);
+  assert.equal(getAdminMenuGroupDefault('system'), 'health');
 });
 
-test('Operations Center owns capability, AI, nodes and observability surfaces', () => {
+test('System owns capability, AI, nodes and observability surfaces', () => {
   const byId = new Map(ADMIN_MENU_REGISTRY.map(item => [item.id, item]));
   for (const id of ['capabilities', 'aiops', 'devices', 'health', 'api-cost']) {
-    assert.equal(byId.get(id)?.group, 'operations-center', `${id} must live in Operations Center`);
+    assert.equal(byId.get(id)?.group, 'system', `${id} must live in System`);
     assert.notEqual(byId.get(id)?.internal, true, `${id} must remain directly accessible`);
   }
 });
 
-test('Execution Infrastructure is constitution-bound inside Operations Center', () => {
+test('Execution Infrastructure is constitution-bound inside System', () => {
   const execution = ADMIN_MENU_REGISTRY.find(item => item.id === 'devices');
   assert.equal(execution?.labels?.ko, '실행 인프라');
   assert.equal(execution?.governance?.track, 'agent');
@@ -35,9 +35,9 @@ test('Execution Infrastructure is constitution-bound inside Operations Center', 
 test('control-only operations remain internal instead of becoming top-level clutter', () => {
   const byId = new Map(ADMIN_MENU_REGISTRY.map(item => [item.id, item]));
   for (const id of ['services', 'deployments', 'policies']) {
-    assert.equal(byId.get(id)?.group, 'operations-center');
+    assert.equal(byId.get(id)?.group, 'system');
     assert.equal(byId.get(id)?.internal, true);
   }
-  assert.equal(byId.get('clients')?.group, 'tenants');
-  assert.equal(byId.get('common-services')?.group, 'common');
+  assert.equal(byId.get('clients')?.group, 'space');
+  assert.equal(byId.get('common-services')?.group, 'services');
 });
