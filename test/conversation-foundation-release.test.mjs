@@ -56,7 +56,10 @@ test('canonical Shared Site workflow owns the shared-site manifest',async()=>{
 test('generic Control workflow no longer owns Conversation-specific release triggers',async()=>{
   const workflow=await read('.github/workflows/deploy-control-api.yml');
   const triggers=triggerBlock(workflow);
-  assert.match(workflow,/group: ekodi-control-api-release/);
+  assert.match(workflow,/group: "ekodi-control-api-release-\$\{\{/);
+  assert.match(workflow,/github\.event_name == 'pull_request'/);
+  assert.match(workflow,/format\('pr-\{0\}', github\.event\.pull_request\.number\)/);
+  assert.match(workflow,/\|\| 'production'/);
   assert.match(triggers,/!migrations\/\*messenger\*\.sql/);
   assert.doesNotMatch(triggers,/messenger-operator-control\.js/);
   assert.doesNotMatch(triggers,/messenger-outbox\.js/);
