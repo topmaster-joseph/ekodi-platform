@@ -238,7 +238,7 @@ export default {
       if(contactResponse)return contactResponse;
       const apiResponse=await handleMailApi(request,env);
       if(apiResponse)return apiResponse;
-      if(request.method==='GET'&&url.pathname==='/contact')return injectEkodiShell(mailContactPage(),'mail');
+      if(request.method==='GET'&&url.pathname==='/contact'){const target=new URL('https://ekodi.kr/mail/contact');target.search=url.search;return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-content-type-options':'nosniff','x-ekodi-legacy-surface':'mail.ekodi.kr'}});}
       if(request.method==='GET'&&url.pathname==='/admin')return injectEkodiShell(mailAdminPage(),'mail','admin');
       if(request.method==='GET'&&(url.pathname==='/'||url.pathname===''))return injectEkodiShell(mailUserPage(),'mail');
     }

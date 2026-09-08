@@ -25,7 +25,7 @@ function validEmail(value) {
 }
 function contactOriginAllowed(request,env) {
   const origin=String(request.headers.get('origin')||'');
-  if(origin==='https://mail.ekodi.kr') return true;
+  if(origin==='https://ekodi.kr'||origin==='https://mail.ekodi.kr') return true;
   return env.ENVIRONMENT!=='production' && /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(origin);
 }
 async function contactRateLimit(request,env) {
@@ -56,7 +56,7 @@ function contactSender() { return MAIL_CONTACT_RECIPIENT; }
 function contactRecipient() { return MAIL_CONTACT_RECIPIENT; }
 export async function handleMailContactApi(request,env={}) {
   const url=new URL(request.url);
-  if(url.pathname!=='/api/mail/contact') return null;
+  if(!['/api/mail/contact','/mail/api/contact'].includes(url.pathname)) return null;
   if(request.method==='OPTIONS') return new Response(null,{status:204,headers:secureHeaders()});
   if(request.method!=='POST') return json({error:'허용되지 않은 요청입니다.',code:'METHOD_NOT_ALLOWED'},405,{allow:'POST, OPTIONS'});
   if(!contactOriginAllowed(request,env)) return json({error:'허용되지 않은 요청 출처입니다.',code:'ORIGIN_FORBIDDEN'},403);
@@ -107,7 +107,7 @@ export function mailContactPage() {
   if(site||source){sourceBox.style.display='block';sourceBox.textContent='문의 출처: '+[site,source].filter(Boolean).join(' · ');}
   form.addEventListener('submit',async function(event){event.preventDefault();status.className='status';status.textContent='문의 내용을 전송하고 있습니다.';send.disabled=true;
     var payload={name:document.getElementById('name').value,email:document.getElementById('email').value,subject:document.getElementById('subject').value,message:document.getElementById('message').value,website:document.getElementById('website').value,source:source,site:site,sourceUrl:sourceUrl};
-    try{var response=await fetch('/api/mail/contact',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload),cache:'no-store'});var data=await response.json().catch(function(){return{};});if(!response.ok)throw new Error(data.error||'문의 전송에 실패했습니다.');status.className='status success';status.textContent=data.message||'문의가 에코디에 전달되었습니다.';form.reset();}
+    try{var response=await fetch('/mail/api/contact',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload),cache:'no-store'});var data=await response.json().catch(function(){return{};});if(!response.ok)throw new Error(data.error||'문의 전송에 실패했습니다.');status.className='status success';status.textContent=data.message||'문의가 에코디에 전달되었습니다.';form.reset();}
     catch(error){status.className='status error';status.textContent=error.message||'문의 전송에 실패했습니다. 잠시 후 다시 시도해 주세요.';}
     finally{send.disabled=false;}
   });
