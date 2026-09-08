@@ -250,7 +250,10 @@ function withHostSecurity(response, csp, cacheControl, routeName = '') {
   applyBaseSecurityHeaders(secured.headers);
   secured.headers.set('Content-Security-Policy', csp);
   secured.headers.set('Cache-Control', cacheControl);
-  if (routeName.startsWith('admin-')) secured.headers.set('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
+  if (routeName.startsWith('admin-')) {
+    secured.headers.set('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
+    secured.headers.set('X-Robots-Tag', 'noindex, nofollow, noarchive');
+  }
   if (routeName) secured.headers.set('X-EKODI-Route', routeName);
   return secured;
 }
@@ -299,11 +302,18 @@ function mallUpstreamPath(pathname) {
   return suffix || '/';
 }
 
-function rewriteMallHtmlDocument(html) {
-  return String(html || '').replace(
+function rewriteMallHtmlDocument(html, pathname = MALL_PREFIX) {
+  let rewritten = String(html || '').replace(
     /\b(href|src|action)=("|')\/(?!\/|ekodibiz\/mall(?:\/|["']))([^"']*)\2/gi,
     (_, attribute, quote, suffix) => `${attribute}=${quote}${MALL_PREFIX}/${suffix}${quote}`,
   );
+  const canonical = `https://${PUBLIC_HOST}${pathname || MALL_PREFIX}`;
+  const canonicalTag = `<link rel="canonical" href="${canonical}">`;
+  const canonicalPattern = /<link\b[^>]*\brel=(['"])canonical\1[^>]*>/i;
+  rewritten = canonicalPattern.test(rewritten)
+    ? rewritten.replace(canonicalPattern, canonicalTag)
+    : rewritten.replace('</head>', `${canonicalTag}\n</head>`);
+  return rewritten;
 }
 async function proxyMallService(request) {
   const incoming = new URL(request.url);
@@ -331,7 +341,7 @@ async function proxyMallService(request) {
   }
   let responseBody = upstreamResponse.body;
   if ((headers.get('content-type') || '').toLowerCase().includes('text/html')) {
-    responseBody = rewriteMallHtmlDocument(await upstreamResponse.text());
+    responseBody = rewriteMallHtmlDocument(await upstreamResponse.text(), incoming.pathname);
     headers.delete('content-length');
     headers.delete('content-encoding');
     headers.delete('etag');
@@ -346,7 +356,7 @@ async function proxyMallService(request) {
   const route = adminSurface ? 'admin-mall-proxy' : apiSurface ? 'mall-api-proxy' : verificationOpsSurface ? 'mall-verification-ops' : 'public-ekodi-mall';
   const mallCsp = adminEmbed ? MALL_ADMIN_EMBED_CSP : MALL_CSP;
   const response = withHostSecurity(new Response(responseBody, { status: upstreamResponse.status, statusText: upstreamResponse.statusText, headers }), mallCsp, cacheControl, route);
-  if (verificationOpsSurface) response.headers.set('X-Robots-Tag', 'noindex, nofollow, noarchive');
+  if (adminSurface || apiSurface || verificationOpsSurface) response.headers.set('X-Robots-Tag', 'noindex, nofollow, noarchive');
   if (adminEmbed) response.headers.delete('X-Frame-Options');
   return injectEkodiShell(response, 'mall', adminSurface ? 'admin' : 'public');
 }
