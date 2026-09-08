@@ -33,3 +33,19 @@ test('legacy mission service database rows are explicitly retired', async () => 
   assert.match(migration, /DELETE FROM service_checks WHERE service_id = 'mission'/);
   assert.match(migration, /DELETE FROM service_controls WHERE service_id = 'mission'/);
 });
+
+
+test('Community Admin has its own service surface after ministry reports moved to Church', async () => {
+  const [loader, panel, build, site] = await Promise.all([
+    text('admin-demand-loader.js'), text('community-admin.js'), text('scripts/build.mjs'), text('site-worker.js'),
+  ]);
+  assert.match(loader, /community:\s*\{[\s\S]*community-admin\.css[\s\S]*community-admin\.js[\s\S]*data-section=\"community\"/);
+  assert.doesNotMatch(loader, /community-reports-admin\.js/);
+  assert.match(panel, /dataset\.panel = 'community'/);
+  assert.match(panel, /community\.ekodi\.kr/);
+  assert.match(panel, /교회 사역보고는 교회 목회자 관리자/);
+  assert.match(build, /community-admin\.css/);
+  assert.match(build, /community-admin\.js/);
+  assert.match(site, /'\/community-admin\.css'/);
+  assert.match(site, /'\/community-admin\.js'/);
+});
