@@ -58,3 +58,24 @@ test('platform router does not add member chrome to customer storefronts',async(
   assert.match(router,/x-ekodi-public-surface','customer-storefront'/);
   assert.match(router,/storefront\.css/);
 });
+
+test('Jadam Mokpo storefront is customer-first, brand-specific, and platform-ready',async()=>{
+  const originalFetch=globalThis.fetch;
+  globalThis.fetch=async()=>new Response(JSON.stringify({
+    store:{name:'자담치킨 목포대점',address:'전남 무안군 청계면 승달산길 37-1',phone:'061-453-8295'},
+    channels:[],
+    menu:[{name:'후라이드치킨',category:'치킨',base_price:19000,source_basis:'operator_verified',listings:[
+      {provider:'ddangyo',display_name:'땡겨요',price:19000},{provider:'baemin',display_name:'배달의민족',price:20000},
+      {provider:'yogiyo',display_name:'요기요',price:20000},{provider:'mukkebi',display_name:'먹깨비',price:19000}
+    ]}]
+  }),{status:200,headers:{'content-type':'application/json'}});
+  try{
+    const response=await renderStorefrontPage(new Request('https://ekodi.kr/jadam'),{SUPABASE_URL:'https://example.supabase.co',SUPABASE_PUBLISHABLE_KEY:'test'},{profile:{name:'자담치킨 목포대점',theme:'jadam'}},'jadam');
+    const html=await response.text();
+    for(const value of ['자담치킨','목포대점','승달산길 37-1','061-453-8295','메뉴·가격 보기','배달앱 주문','땡겨요','배달의민족','요기요','먹깨비','JD'])assert.match(html,new RegExp(value));
+    for(const value of ['USER OPERATIONS','STORE MASTER','로그아웃','운영공간'])assert.doesNotMatch(html,new RegExp(value));
+    const css=await storefrontCss().text();
+    assert.match(css,/data-store-page=\"jadam\"/);
+    assert.match(css,/#174f2c/);
+  }finally{globalThis.fetch=originalFetch}
+});
