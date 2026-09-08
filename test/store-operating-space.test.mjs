@@ -58,9 +58,9 @@ test('production smoke manifest follows the current store dashboard shell',()=>{
 
 test('PizzaMaru and YogurtPurple get dedicated user-page profiles',()=>{
   assert.match(worker,/pizzamaru:\{documentTitle:'피자마루 목포대점 · EKODI'/);
-  assert.match(worker,/yogurt:\{documentTitle:'요거트퍼플 목포대점 · EKODI'/);
+  assert.match(worker,/yogurt:\{documentTitle:'요거트퍼플 목포대점 · 메뉴 · 배달주문'/);
   assert.match(worker,/PIZZA STORE USER PAGE/);
-  assert.match(worker,/YOGURT DESSERT USER PAGE/);
+  assert.match(worker,/YOGURT PURPLE · MOKPO UNIVERSITY/);
   assert.match(worker,/yogurtpurple->yogurt/);
   assert.match(worker,/pageProfile\(url\.pathname,env\)/);
   assert.match(html,/__SPACE_PAGE_NAME__/);
@@ -93,8 +93,18 @@ test('Space worker renders PizzaMaru and YogurtPurple as distinct user pages',as
     assert.ok(body.includes(name));
     assert.ok(body.includes(`data-store-page="${theme}"`));
     assert.doesNotMatch(body,/__SPACE_PAGE_/);
+    if(theme==='yogurt'){assert.match(body,/id="publicStorefront" class="public-storefront "/);assert.match(body,/id="internalShell" class="shell hidden"/);assert.match(body,/061-453-8295/);assert.match(body,/승달산길 37-1/);assert.match(body,/배달 주문/);}
   }
   const alias=await spaceWorker.fetch(new Request('https://ekodi.kr/yogurtpurple'),env);
   assert.equal(alias.status,308);
   assert.equal(alias.headers.get('location'),'https://ekodi.kr/yogurt');
+});
+
+test('Yogurt storefront publishes only customer-safe store projection without login',async()=>{
+  const originalFetch=globalThis.fetch;
+  globalThis.fetch=async()=>new Response(JSON.stringify({slug:'yogurt',name:'요거트퍼플 목포대점',address:'전남 무안군 청계면 승달산길 37-1',phone:'061-453-8295',business_hours:{display:'11:00–22:00'},channels:[{provider:'baemin',display_name:'배달의민족',direct_url:null}],menu:[]}),{status:200,headers:{'content-type':'application/json'}});
+  try{
+    const response=await spaceWorker.fetch(new Request('https://space.ekodi.kr/storefront.json?slug=yogurt'),{DATA_ENABLED:'true',SUPABASE_URL:'https://example.supabase.co',SUPABASE_PUBLISHABLE_KEY:'public-test',ASSETS:{fetch:async()=>new Response('')}});
+    const data=await response.json();assert.equal(response.status,200);assert.equal(data.slug,'yogurt');assert.equal(data.phone,'061-453-8295');assert.equal('role' in data,false);assert.equal('email' in data,false);
+  }finally{globalThis.fetch=originalFetch}
 });

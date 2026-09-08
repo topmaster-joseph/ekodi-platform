@@ -58,7 +58,7 @@
         "url": "https://ekodi.kr/yogurt",
         "statuses": [200],
         "redirect": "manual",
-        "expect": ["요거트퍼플 목포대점", "YOGURT DESSERT USER PAGE", "USER OPERATIONS"],
+        "expect": ["요거트퍼플 목포대점", "YOGURT PURPLE", "배달 주문", "061-453-8295"],
         "headerExpect": ["x-ekodi-route: space-workspace", "cache-control: no-store"]
       },
       {
