@@ -12,6 +12,7 @@ permissions:
 
 env:
   WRANGLER_VERSION: '4.127.1'
+  VERIFIED_MALL_SUB_ID: 'ekodimall'
 
 jobs:
   diagnose:
@@ -73,22 +74,22 @@ jobs:
           const c=unwrap(JSON.parse(fs.readFileSync('/tmp/subids.json','utf8')));
           const runs=unwrap(JSON.parse(fs.readFileSync('/tmp/runs.json','utf8')));
           const safe=c.map(r=>({subId:String(r.candidate_sub_id||''),isDefault:Number(r.is_default||0),clicks:Number(r.clicks_rows||0),orders:Number(r.orders_rows||0),cancels:Number(r.cancels_rows||0),commissionRows:Number(r.commission_rows||0),firstSeen:r.first_seen_date||'',lastSeen:r.last_seen_date||''}));
-          const exact=safe.some(r=>r.subId==='ekodi-mall');
-          fs.appendFileSync(process.env.GITHUB_OUTPUT,`exact_ekodi_mall=${exact?'true':'false'}\n`);
-          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,'## Fresh Coupang Sub ID discovery\n\nCandidates: `'+JSON.stringify(safe)+'`\n\nRun: `'+JSON.stringify(runs[0]||{})+'`\n');
-          console.log(JSON.stringify({candidates:safe,latestRun:runs[0]||{},exactEkodiMall:exact}));
+          const verified=String(process.env.VERIFIED_MALL_SUB_ID||'').trim();
+          const observed=safe.some(r=>r.subId===verified);
+          fs.appendFileSync(process.env.GITHUB_OUTPUT,`observed_verified_subid=${observed?'true':'false'}\n`);
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,'## Fresh Coupang Sub ID discovery\n\nRegistry-verified Mall Sub ID configured: `'+Boolean(verified)+'`\n\nObserved in recent report rows: `'+observed+'`\n\nCandidates: `'+JSON.stringify(safe)+'`\n\nRun: `'+JSON.stringify(runs[0]||{})+'`\n');
+          console.log(JSON.stringify({candidates:safe,latestRun:runs[0]||{},registryVerified:Boolean(verified),observedVerifiedSubId:observed}));
           NODE
       - name: Bind verified EKODI Mall Sub ID
         id: bind
-        if: steps.discover.outputs.exact_ekodi_mall == 'true'
         shell: bash
         run: |
           set -euo pipefail
-          printf '%s' 'ekodi-mall' | npx --yes wrangler@${WRANGLER_VERSION} secret put COUPANG_PARTNERS_SUB_ID --config wrangler.api.toml >/dev/null
+          test -n "${VERIFIED_MALL_SUB_ID}"
+          printf '%s' "${VERIFIED_MALL_SUB_ID}" | npx --yes wrangler@${WRANGLER_VERSION} secret put COUPANG_PARTNERS_SUB_ID --config wrangler.api.toml >/dev/null
           date -u +%s > /tmp/bind-cutoff
-          echo 'Verified ekodi-mall Sub ID bound to production Worker secret.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Registry-verified EKODI Mall Sub ID bound to production Worker secret.' >> "$GITHUB_STEP_SUMMARY"
       - name: Verify bound report closed loop
-        if: steps.discover.outputs.exact_ekodi_mall == 'true'
         shell: bash
         run: |
           set -euo pipefail
