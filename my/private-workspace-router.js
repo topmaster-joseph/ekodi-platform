@@ -1,9 +1,8 @@
 (()=>{
   const STORAGE_KEY='ekodi_my_active_workspace';
-  const MY_BASE=(location.pathname==='/my'||location.pathname.startsWith('/my/'))?'/my':'';
   const WORKSPACE_KEY_RE=/^[a-z]+:[a-zA-Z0-9:_-]+$/;
   const SERVICE_ID_RE=/^[a-z][a-z0-9-]*$/;
-  const PRIVATE_PREFIX=`${MY_BASE}/w/`;
+  const PRIVATE_PREFIX='/w/';
   const requested=parsePrivateRoute(location.pathname);
 
   function parsePrivateRoute(pathname){
@@ -21,12 +20,12 @@
   function activeWorkspaceKey(){try{return localStorage.getItem(STORAGE_KEY)||''}catch{return''}}
   function rememberWorkspace(key){try{if(key)localStorage.setItem(STORAGE_KEY,key)}catch{}}
   function privatePath(workspaceKey,serviceId=''){
-    if(!WORKSPACE_KEY_RE.test(String(workspaceKey||'')))return `${MY_BASE}/`;
-    const base=`${MY_BASE}/w/${encodeURIComponent(workspaceKey)}`;
+    if(!WORKSPACE_KEY_RE.test(String(workspaceKey||'')))return '/';
+    const base=`/w/${encodeURIComponent(workspaceKey)}`;
     return serviceId&&SERVICE_ID_RE.test(serviceId)?`${base}/${encodeURIComponent(serviceId)}`:base;
   }
   function centralMyLogin(){
-    const target=new URL('https://auth.ekodi.kr/');
+    const target=new URL('https://ekodi.kr/auth/');
     target.searchParams.set('site','my');
     const returnTo=new URL(location.href);
     returnTo.hash='';
@@ -35,7 +34,7 @@
   }
   async function serviceMap(){
     try{
-      const response=await fetch(`${MY_BASE}/service-manifest.json`,{cache:'no-store'});
+      const response=await fetch('/my/service-manifest.json',{cache:'no-store'});
       if(!response.ok)return new Map();
       const data=await response.json();
       return new Map((data.services||[]).map(service=>[String(service.id||''),service]));
@@ -45,7 +44,7 @@
     const raw=link.dataset.ekodiServiceTarget||link.getAttribute('href')||'';
     try{
       const target=new URL(raw,location.href);
-      if(target.origin==='https://auth.ekodi.kr'){
+      if((target.origin==='https://ekodi.kr'&&target.pathname.startsWith('/auth'))||target.origin==='https://auth.ekodi.kr'){
         const site=String(target.searchParams.get('site')||'');
         return services.has(site)?site:'';
       }

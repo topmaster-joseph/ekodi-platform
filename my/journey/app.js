@@ -13,15 +13,15 @@ const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&
 const activeStages=()=>EKODI_LIFE_JOURNEY.stages.filter(stage=>stage.state==='active');
 
 function authStartUrl(){
-  const target=new URL('https://auth.ekodi.kr/');
+  const target=new URL('https://ekodi.kr/auth/');
   target.searchParams.set('site','my');
-  target.searchParams.set('return_to',location.href.split('#')[0]);
+  target.searchParams.set('return_to','https://ekodi.kr/my/journey/');
   return target.href;
 }
 function serviceUrl(stage){
   if(stage.state!=='active'||!stage.route)return '';
   if(!session)return stage.route;
-  const target=new URL('https://auth.ekodi.kr/');
+  const target=new URL('https://ekodi.kr/auth/');
   target.searchParams.set('site',stage.ownerService);
   target.searchParams.set('return_to',stage.route);
   return target.href;

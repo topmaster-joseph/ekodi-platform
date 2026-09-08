@@ -1,18 +1,28 @@
 {
-  "version": 1,
+  "version": 3,
   "canonical": {
     "root": "https://ekodi.kr/",
     "mall": "https://ekodi.kr/ekodibiz/mall",
-    "admin": "https://admin.ekodi.kr/",
-    "auth": "https://auth.ekodi.kr/",
+    "admin": "https://ekodi.kr/admin/",
+    "auth": "https://ekodi.kr/auth/",
     "ekodichurch": "https://ekodi.kr/ekodichurch",
     "ekodichurchMarketing": "https://ekodi.kr/ekodichurch/marketing",
     "cgma": "https://ekodi.kr/cgma",
-    "cgmaMarketing": "https://ekodi.kr/cgma/marketing"
+    "cgmaMarketing": "https://ekodi.kr/cgma/marketing",
+    "my": "https://ekodi.kr/my/",
+    "api": "https://ekodi.kr/api/",
+    "mcp": "https://ekodi.kr/mcp",
+    "biz": "https://ekodi.kr/ekodibiz",
+    "business": "https://ekodi.kr/business",
+    "trade": "https://ekodi.kr/ekodibiz/trade",
+    "insurance": "https://ekodi.kr/insurance",
+    "ekodilab": "https://ekodi.kr/ekodilab"
   },
   "policy": {
     "mallPublicUrl": "https://ekodi.kr/ekodibiz/mall",
     "legacyMallUrlsAllowed": false,
-    "sharedSiteProductionOwner": "deploy-site-core.yml"
+    "sharedSiteProductionOwner": "deploy-site-core.yml",
+    "humanSurfaceCanonicalHost": "ekodi.kr",
+    "legacySurfaceSubdomains": "compatibility-or-execution-only"
   }
 }

@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 3,
+  "schemaVersion": 4,
   "provider": {
     "legalOperator": "EKODIBIZ",
     "role": "service_provider"
@@ -61,10 +61,15 @@
     },
     "canonicalPattern": "/{slug}",
     "servicePattern": "/{slug}/{service}",
-    "adminPattern": "/{slug}/admin",
-    "serviceAdminPattern": "/{slug}/{service}/admin",
+    "adminPattern": null,
+    "serviceAdminPattern": null,
     "kindEncodedInUrl": false,
-    "reservedRootSlugsManagedBy": "platform_route_registry"
+    "reservedRootSlugsManagedBy": "platform_route_registry",
+    "adminSurface": "/admin/workspaces",
+    "legacyAdminPatterns": [
+      "/{slug}/admin",
+      "/{slug}/{service}/admin"
+    ]
   },
   "serviceImplementationSelection": {
     "workspaceMaySelectCompatibleImplementation": true,
@@ -89,10 +94,10 @@
     ]
   },
   "subdomainExceptions": {
-    "personalHome": "my.ekodi.kr",
-    "administration": "admin.ekodi.kr",
-    "authentication": "auth.ekodi.kr",
-    "api": "api.ekodi.kr",
+    "personalHome": null,
+    "administration": null,
+    "authentication": null,
+    "api": null,
     "status": "status.ekodi.kr",
     "commonAndCoreServices": "allowed_only_when_security_operational_protocol_or_service_boundary_is_justified_and_registered"
   },
@@ -126,8 +131,8 @@
     }
   },
   "commonServiceOperatorAccessRule": {
-    "surface": "admin.ekodi.kr",
-    "canonicalPath": "admin-menu/common-services",
+    "surface": "https://ekodi.kr/admin",
+    "canonicalPath": "/admin/common/common-services",
     "runtimeHostsAreOperatorPages": false,
     "directRuntimeRootBehavior": "redirect_to_admin_control_plane",
     "sessionAuthority": "central_admin_session",
@@ -141,5 +146,22 @@
       "ai:read",
       "ai:operate"
     ]
+  },
+  "canonicalSurfaces": {
+    "public": "/",
+    "user": "/my",
+    "admin": "/admin",
+    "auth": "/auth",
+    "api": "/api",
+    "mcp": "/mcp",
+    "webhooks": "/webhooks",
+    "health": "/health"
+  },
+  "managementRouting": {
+    "system": "/admin/system/{service}",
+    "common": "/admin/common/{service}",
+    "professional": "/admin/professional/{service}",
+    "workspaces": "/admin/workspaces/{capability}",
+    "operations": "/admin/operations/{capability}"
   }
 }

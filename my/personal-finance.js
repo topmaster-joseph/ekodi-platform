@@ -8,7 +8,7 @@ const token=()=>window.EKODI_MY_AUTH?.getAccessToken?.()||'';
 let state={summary:null,accounts:[],transactions:[],controls:null,insights:[],planning:null,pendingRows:[],pendingFile:''};
 
 function authHref(){
-  const target=new URL(cfg.authUrl||'https://auth.ekodi.kr/?site=my');
+  const target=new URL(cfg.authUrl||'https://ekodi.kr/auth/?site=my');
   target.searchParams.set('site','my');
   target.searchParams.set('return_to',`${location.origin}${location.pathname}#money`);
   return target.href;

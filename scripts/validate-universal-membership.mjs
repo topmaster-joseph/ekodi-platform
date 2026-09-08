@@ -42,6 +42,6 @@ if (!runtime.includes('inherited: true')) fail('lazy inherited FREE projection m
 if (!runtime.includes('USER_SERVICE_ORIGINS')) fail('registry-driven CORS missing');
 if (!missionEntry.includes("path.startsWith('/api/membership/')") || !missionEntry.includes('handleUniversalMembership')) fail('Control API does not route membership through universal layer');
 if (!myIndex.includes('/membership-summary.js') || !myIndex.includes('/membership-summary.css')) fail('My EKODI membership summary assets missing');
-if (!mySummary.includes("https://api.ekodi.kr/api/membership/portfolio")) fail('My EKODI is not connected to portfolio endpoint');
+if (!mySummary.includes("https://ekodi.kr/api/membership/portfolio")) fail('My EKODI is not connected to portfolio endpoint');
 
 console.log(`Universal membership contract OK: ${expectedIds.length} user services inherit FREE; paid tiers remain service-specific.`);

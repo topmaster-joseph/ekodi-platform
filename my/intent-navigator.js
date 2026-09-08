@@ -1,5 +1,3 @@
-const MY_BASE=(location.pathname==='/my'||location.pathname.startsWith('/my/'))?'/my':'';
-const myPath=path=>`${MY_BASE}${path}`;
 const form=document.querySelector('#intentPlanForm');
 const input=document.querySelector('#intentPlanText');
 const audience=document.querySelector('#intentPlanAudience');
@@ -33,12 +31,12 @@ function renderExecution(data){
 async function continueExecution(text){
  const token=accessToken(),workspaceKey=activeWorkspaceKey();if(!token||!workspaceKey)return;
  try{
-  const response=await fetch(myPath('/api/intent/execute'),{method:'POST',headers:{authorization:`Bearer ${token}`,'content-type':'application/json'},body:JSON.stringify({text,audience:audience?.value||'person',workspace_key:workspaceKey})});
+  const response=await fetch('/my/api/intent/execute',{method:'POST',headers:{authorization:`Bearer ${token}`,'content-type':'application/json'},body:JSON.stringify({text,audience:audience?.value||'person',workspace_key:workspaceKey})});
   const data=await response.json();
   if(response.ok&&data?.ok)renderExecution(data);
   else if(response.status===401||response.status===403)console.info('EKODI Intent execution requires renewed workspace authority');
  }catch(e){console.warn('EKODI Intent execution bridge',e)}
 }
-async function navigate(event){event?.preventDefault();const text=String(input?.value||'').trim();if(!text){input?.focus();return}submit.disabled=true;submit.textContent='계획 중';loading();try{const response=await fetch(myPath('/api/intent/plan'),{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({text,audience:audience?.value||'person'})});const data=await response.json();if(!response.ok||!data?.ok)throw new Error(data?.error||`intent_${response.status}`);render(data);await continueExecution(text)}catch(e){console.error('EKODI Intent OS',e);error()}finally{submit.disabled=false;submit.textContent='계획 만들기'}}
+async function navigate(event){event?.preventDefault();const text=String(input?.value||'').trim();if(!text){input?.focus();return}submit.disabled=true;submit.textContent='계획 중';loading();try{const response=await fetch('/my/api/intent/plan',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({text,audience:audience?.value||'person'})});const data=await response.json();if(!response.ok||!data?.ok)throw new Error(data?.error||`intent_${response.status}`);render(data);await continueExecution(text)}catch(e){console.error('EKODI Intent OS',e);error()}finally{submit.disabled=false;submit.textContent='계획 만들기'}}
 form?.addEventListener('submit',navigate);
 examples.forEach(button=>button.addEventListener('click',()=>{if(input)input.value=button.dataset.intentExample||'';navigate()}));
