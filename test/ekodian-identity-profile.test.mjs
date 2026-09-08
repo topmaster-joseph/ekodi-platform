@@ -62,5 +62,7 @@ test('Shell bundles character DNA, identity profile registry and renderer in tha
   assert.match(worker,/x-ekodi-character-registry/);
   assert.match(worker,/x-ekodi-character-identity/);
   assert.match(worker,/characterIdentityRegistryVersion:2/);
-  assert.match(worker,/userCharacterVersion:6/);
+  const rendererVersion=read('shell/user-character.js').match(/const VERSION=(\d+);/)?.[1];
+  assert.ok(rendererVersion);
+  assert.ok(worker.includes(`userCharacterVersion:${rendererVersion}`));
 });
