@@ -1,5 +1,5 @@
 {
-  "version": 57,
+  "version": 58,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
@@ -317,7 +317,8 @@
           "x-ekodi-route: workspace-admin",
           "cache-control: no-store",
           "x-content-type-options: nosniff"
-        ]
+        ],
+        "rollbackVerify": false
       },
       {
         "url": "https://ekodi.kr/mall/admin/",
@@ -1003,7 +1004,7 @@
         "statuses": [302],
         "redirect": "manual",
         "headerExpect": [
-          "location: https://admin.ekodi.kr/#insurance",
+          "location: https://ekodi.kr/admin/professional/insurance",
           "x-ekodi-route: insurance-admin-handoff",
           "cache-control: no-store"
         ],
