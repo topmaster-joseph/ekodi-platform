@@ -67,7 +67,8 @@ test('church report UI is mounted inside pastor admin and removed from global Ad
     assert.ok(page.includes(marker), `missing pastor admin integration marker: ${marker}`);
   }
   assert.ok(!features.includes('community-reports-admin.js'), 'global Admin must no longer lazy-load the Community report UI');
-  assert.ok(!/const lazy=\[[^\]]*'community'/.test(audit), 'shared Admin audit must not require the retired Community lazy module');
+  assert.ok(!audit.includes('community-reports-admin.js'), 'shared Admin audit must not revive the retired Community reports module');
+  assert.ok(audit.includes("'community-admin.js'"), 'shared Admin audit must validate the replacement Community service operations module');
   assert.ok(build.includes('church-reports-admin.js'));
   assert.ok(build.includes('church-reports-admin.css'));
   assert.ok(site.includes("'/church-reports-admin.js'"));
