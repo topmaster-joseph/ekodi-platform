@@ -21,7 +21,7 @@ concurrency:
 env:
   WRANGLER_VERSION: '4.119.0'
   CGMA_SOURCE_REPO: topmaster-joseph/cheonggye-market
-  CGMA_SOURCE_REF: '005ef51ef69abd47da3e44404cc765f17aac8a8a'
+  CGMA_SOURCE_REF: 'f156eff2cf54bbd59fc21a89119e7f29d8f815c0'
 
 jobs:
   validate:
@@ -53,6 +53,8 @@ jobs:
           node --check cgma-root-gateway.js
           node verify-root-gateway.mjs
           node verify-canonical.mjs
+          grep -Fq 'isOwnerAdminPath' cgma-root-gateway.js
+          grep -Fq 'delegatedOwnerAdminResponse' cgma-root-gateway.js
           npx --yes wrangler@${WRANGLER_VERSION} deploy --dry-run --config wrangler.cgma-root-gateway.toml
           grep -Fq 'binding = "EKODI_SHARED"' wrangler.cgma-root-gateway.toml
           grep -Fq 'service = "shy-thunder-39a4"' wrangler.cgma-root-gateway.toml
@@ -109,22 +111,31 @@ jobs:
         run: |
           set -euo pipefail
           check_cgma() {
-            local path="$1" needle="$2" code
+            local path="$1" needle="$2" route="$3" code
             for attempt in $(seq 1 18); do
               code=$(curl -sS -L --max-redirs 6 -D /tmp/cgma.headers -o /tmp/cgma.body -w '%{http_code}' --max-time 20 "https://ekodi.kr${path}?edge_release=${GITHUB_SHA}" || true)
-              if [[ "$code" == '200' ]] && grep -Fq "$needle" /tmp/cgma.body && grep -Fiq 'x-ekodi-route: cgma-root-gateway' /tmp/cgma.headers; then
-                echo "CGMA edge verified: ${path}"
+              if [[ "$code" == '200' ]] && grep -Fq "$needle" /tmp/cgma.body && grep -Fiq "x-ekodi-route: ${route}" /tmp/cgma.headers; then
+                echo "CGMA edge verified: ${path} route=${route}"
                 return 0
               fi
               sleep 4
             done
-            echo "CGMA edge verification failed: ${path} code=${code}"
+            echo "CGMA edge verification failed: ${path} route=${route} code=${code}"
             return 1
           }
-          check_cgma '/cgma' '청계면상인회 | 오늘도 청계에서 만나요'
-          check_cgma '/cgma/admin' 'id="memberReview"'
-          check_cgma '/cgma/member-admin' 'id="memberReview"'
-          check_cgma '/cgma/api/resources' '"items"'
+          check_redirect() {
+            local path="$1" location_prefix="$2" code
+            code=$(curl -sS --max-redirs 0 -D /tmp/cgma.redirect.headers -o /dev/null -w '%{http_code}' --max-time 20 "https://ekodi.kr${path}?edge_release=${GITHUB_SHA}" || true)
+            test "$code" = '308'
+            grep -Fiq "location: ${location_prefix}" /tmp/cgma.redirect.headers
+          }
+          check_cgma '/cgma' '청계면상인회 | 오늘도 청계에서 만나요' 'cgma-root-gateway'
+          check_cgma '/cgma/admin' 'id="memberReview"' 'cgma-root-gateway'
+          check_cgma '/cgma/api/resources' '"items"' 'cgma-root-gateway'
+          check_cgma '/cgma/admin/member' 'EKODI Workspace Admin' 'workspace-admin'
+          check_cgma '/cgma/admin/assets/cgma-member-admin.js' 'mountCgmaMemberAdmin' 'admin-workspace-asset'
+          check_cgma '/cgma/admin/assets/cgma-member-admin.css' '.cgma-member-head' 'admin-workspace-asset'
+          check_redirect '/cgma/member-admin' 'https://ekodi.kr/cgma/admin/member?edge_release='
       - name: Dispatch current EKODI Shared Site guarded release
         shell: bash
         run: |
