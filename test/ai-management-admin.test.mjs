@@ -33,3 +33,15 @@ test('build and additive migration carry the AI management surface and Core lear
   assert.match(migration, /CREATE TABLE IF NOT EXISTS ai_core_learning_events/);
   assert.match(migration, /idx_ai_core_learning_events_capability_created/);
 });
+
+test('AI management unifies resource routing and dynamic provider Router Score', () => {
+  const admin = read('ai-management-admin.js');
+  assert.match(admin, /RESOURCE ROUTER/);
+  assert.match(admin, /PROVIDER ROUTER SCORE/);
+  assert.match(admin, /data-provider-weight/);
+  assert.match(admin, /\/api\/control\/common-services\/ai\/status/);
+  assert.match(admin, /PROVIDERS · METRICS/);
+  assert.match(admin, /POLICY AUDIT/);
+  assert.match(admin, /\[1,2,3,4\]\.map/);
+  assert.match(admin, /Origin AI · LOCK/);
+});

@@ -20,6 +20,13 @@ test('parallel plan preserves origin and scores the remaining suppliers dynamica
   assert.ok(plan.every(item=>Number.isFinite(item.routerScore)));
 });
 
+test('stored collaboration ceiling limits collaborators while preserving origin',()=>{
+  const task=normalizeTaskInput({prompt:'analyze this'});
+  const plan=buildExecutionPlan(task,{geminiFree:true,nodeProviders:['codex','gemini-cli'],openaiApi:true,anthropicApi:true,maxParallelProviders:3});
+  assert.equal(plan.length,3);
+  assert.equal(plan[0].role,'origin-primary');
+});
+
 test('legacy default requests still fan out in parallel instead of primary-review',()=>{
   const task=normalizeTaskInput({prompt:'이 설계를 상호 검토해줘'});
   const plan=buildExecutionPlan(task,{geminiFree:true,nodeProviders:['codex'],openaiApi:true});

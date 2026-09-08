@@ -1,3 +1,4 @@
+import { AI_ROUTER_SCORE_POLICY, normalizeRouterWeights } from './ai-router-score.js';
 import { DEFAULT_AI_RESOURCE_POLICY, normalizeAiResourcePolicy } from './ai-resource-policy.js';
 
 const SCOPE = 'global';
@@ -28,7 +29,7 @@ function roleDefaults(profile, risk, tools) {
 }
 
 export const DEFAULT_AI_COLLABORATION_POLICY = Object.freeze({
-  schemaVersion: 1,
+  schemaVersion: 2,
   collaborationByDefault: true,
   execution: Object.freeze({
     cloudFirst: true,
@@ -53,6 +54,10 @@ export const DEFAULT_AI_COLLABORATION_POLICY = Object.freeze({
       reviewer: roleDefaults('deep', 'read_only', ['review', 'security', 'quality']),
       verifier: roleDefaults('balanced', 'read_only', ['test', 'health', 'production_verify']),
     }),
+  }),
+  router: Object.freeze({
+    weights: AI_ROUTER_SCORE_POLICY.weights,
+    algorithmVersion: AI_ROUTER_SCORE_POLICY.version,
   }),
   governance: Object.freeze({
     maxParallelCollaborators: 4,
@@ -85,6 +90,7 @@ export function normalizeAiCollaborationPolicy(value = {}) {
   const execution = source.execution && typeof source.execution === 'object' ? source.execution : {};
   const openai = source.openai && typeof source.openai === 'object' ? source.openai : {};
   const roles = openai.roles && typeof openai.roles === 'object' ? openai.roles : {};
+  const router = source.router && typeof source.router === 'object' ? source.router : {};
   const governance = source.governance && typeof source.governance === 'object' ? source.governance : {};
   const defaults = DEFAULT_AI_COLLABORATION_POLICY;
 
@@ -92,7 +98,7 @@ export function normalizeAiCollaborationPolicy(value = {}) {
   for (const [name, fallback] of Object.entries(defaults.openai.roles)) normalizedRoles[name] = normalizeRole(roles[name], fallback);
 
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     collaborationByDefault: true,
     execution: {
       cloudFirst: true,
@@ -111,8 +117,12 @@ export function normalizeAiCollaborationPolicy(value = {}) {
       profiles: defaults.openai.profiles,
       roles: normalizedRoles,
     },
+    router: {
+      weights: normalizeRouterWeights(router.weights || defaults.router.weights),
+      algorithmVersion: AI_ROUTER_SCORE_POLICY.version,
+    },
     governance: {
-      maxParallelCollaborators: finite(governance.maxParallelCollaborators, defaults.governance.maxParallelCollaborators, 1, 8),
+      maxParallelCollaborators: finite(governance.maxParallelCollaborators, defaults.governance.maxParallelCollaborators, 1, 4),
       requireHumanApprovalForProductionWrite: bool(governance.requireHumanApprovalForProductionWrite, true),
       requireHumanApprovalForDestructiveAction: true,
       failClosedOnInvalidPolicy: true,
@@ -252,6 +262,7 @@ export async function getAiCollaborationAdminSnapshot(env = {}) {
     coreLearning: Object.freeze(coreLearning),
     resolvedProfiles: profiles,
     executionRule: 'cloud_first_remote_second_local_exception_only',
+    routerScore: Object.freeze({ algorithmVersion: AI_ROUTER_SCORE_POLICY.version, weights: loaded.policy.router.weights }),
   });
 }
 

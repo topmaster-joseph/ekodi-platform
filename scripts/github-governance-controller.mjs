@@ -85,6 +85,11 @@ function compareProtection(protection) {
   if (protection?.required_status_checks?.strict !== policy.requireBranchesUpToDate) drift.push('branch update requirement differs.');
   if (protection?.enforce_admins?.enabled !== policy.enforceAdmins) drift.push('admin enforcement differs.');
   if (policy.requirePullRequest && !protection?.required_pull_request_reviews) drift.push('pull request requirement is missing.');
+  if (policy.requirePullRequest) {
+    const actualReviews = Number(protection?.required_pull_request_reviews?.required_approving_review_count ?? 0);
+    const desiredReviews = Number(policy.requiredApprovingReviewCount ?? 0);
+    if (actualReviews !== desiredReviews) drift.push(`required approving review count differs: expected ${desiredReviews}, got ${actualReviews}.`);
+  }
   if (protection?.allow_force_pushes?.enabled !== policy.allowForcePushes) drift.push('force-push policy differs.');
   if (protection?.allow_deletions?.enabled !== policy.allowDeletions) drift.push('branch deletion policy differs.');
   return drift;

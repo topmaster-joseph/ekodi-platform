@@ -54,6 +54,15 @@ test('origin governance stays first while explicit collaborator order is preserv
   assert.equal(plan[0].role,'origin-primary');
 });
 
+test('stored router weights can change collaborator ranking without changing code',()=>{
+  const task=normalizeTaskInput({prompt:'analyze this operating note'});
+  const metrics={'gemini-free':{totalRuns:20,successfulRuns:2},'openai-api':{totalRuns:20,successfulRuns:20}};
+  const reliability=rankProviders(['gemini-free','openai-api'],task,{providerMetrics:metrics,routerPolicy:{weights:{reliability:1,taskFit:0,cost:0,latency:0,health:0,load:0,quality:0}}});
+  const cost=rankProviders(['gemini-free','openai-api'],task,{providerMetrics:metrics,routerPolicy:{weights:{cost:1,taskFit:0,reliability:0,latency:0,health:0,load:0,quality:0}}});
+  assert.equal(reliability[0].providerId,'openai-api');
+  assert.equal(cost[0].providerId,'gemini-free');
+});
+
 test('provider profile overrides can tune task fit without code changes',()=>{
   const task=normalizeTaskInput({prompt:'research the evidence and compare findings',mode:'single'});
   const ranked=rankProviders(['gemini-free','worker:specialist'],task,{providerProfiles:{
