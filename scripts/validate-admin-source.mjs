@@ -54,6 +54,15 @@ for (const path of ['/admin.html','/control-center','/control-center/','/control
 }
 if (!worker.includes('RETIRED_ADMIN_PATHS.has(url.pathname)')) violations.push('site-worker.js: retired admin 404 gate missing');
 
+const adminPrinciples = readFileSync(join(root, 'ADMIN_UI_PRINCIPLES.md'), 'utf8');
+for (const marker of ['공개 사이트의 고정 헤더용 body 상단 여백', '좌측 전역 사이드바는 데스크톱에서 뷰포트에 고정', '독립 세로 스크롤을 만들지 않는다']) {
+  if (!adminPrinciples.includes(marker)) violations.push(`ADMIN_UI_PRINCIPLES.md: missing admin viewport contract marker: ${marker}`);
+}
+const adminPrinciplesCss = readFileSync(join(root, 'admin-ui-principles.css'), 'utf8');
+for (const marker of ['padding-top:0!important', 'height:100dvh', 'overflow:hidden']) {
+  if (!adminPrinciplesCss.includes(marker)) violations.push(`admin-ui-principles.css: missing admin viewport contract marker: ${marker}`);
+}
+
 if (violations.length) {
   console.error('❌ Retired admin source policy failed');
   for (const violation of violations) console.error(` - ${violation}`);
