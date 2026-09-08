@@ -14,7 +14,7 @@ on:
       - '.github/workflows/deploy-publishing.yml'
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: ekodi-publishing-production
@@ -110,10 +110,12 @@ jobs:
           open('ops/deploy-status/publishing.json','w').write(json.dumps(payload,ensure_ascii=False,indent=2)+'\n')
           PY
           cat ops/deploy-status/publishing.json
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add ops/deploy-status/publishing.json
-          git diff --cached --quiet && exit 0
-          git commit -m 'chore(ops): record Publishing production probe [skip ci]'
-          git pull --rebase origin main || true
-          git push || true
+          echo 'Publishing production probe prepared as workflow evidence.'
+      - name: Upload Publishing production probe
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: publishing-production-probe-${{ github.run_id }}
+          path: ops/deploy-status/publishing.json
+          if-no-files-found: error
+          retention-days: 90

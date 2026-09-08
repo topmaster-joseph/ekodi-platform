@@ -8,7 +8,7 @@ on:
       - '.github/workflows/sync-control-center-services.yml'
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   sync:
@@ -44,11 +44,11 @@ jobs:
           grep -Fq 'data-domain="cgma.ekodi.kr"' admin.html
           grep -Fq '<strong>8 <small>/ 8</small></strong>' admin.html
           grep -Fq '8개 EKODI 서비스 실측 현황' admin.html
-      - name: Commit admin UI update
+      - name: Assert Admin source is already converged
+        shell: bash
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add admin.html
-          git diff --cached --quiet && exit 0
-          git commit -m "feat: add Marketing AI and CGMA to control center"
-          git push
+          set -euo pipefail
+          if ! git diff --exit-code -- admin.html; then
+            echo 'Admin source drift detected. EKODI AI must prepare and merge the source change through a guarded PR.' >&2
+            exit 1
+          fi
