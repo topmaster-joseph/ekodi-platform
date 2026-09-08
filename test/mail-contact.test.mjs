@@ -4,9 +4,9 @@ import { readFile } from 'node:fs/promises';
 import { handleMailContactApi, mailContactPage, MAIL_CONTACT_RECIPIENT } from '../mail-contact.js';
 import { sendGoogleMailMessage } from '../mail-google-adapter.js';
 
-const contactRequest=(body,headers={})=>new Request('https://mail.ekodi.kr/api/mail/contact',{
+const contactRequest=(body,headers={})=>new Request('https://ekodi.kr/mail/api/contact',{
   method:'POST',
-  headers:{origin:'https://mail.ekodi.kr','content-type':'application/json','cf-connecting-ip':'203.0.113.9',...headers},
+  headers:{origin:'https://ekodi.kr','content-type':'application/json','cf-connecting-ip':'203.0.113.9',...headers},
   body:JSON.stringify(body),
 });
 const decodeRaw=value=>Buffer.from(String(value||''),'base64url').toString('utf8');
@@ -23,7 +23,7 @@ test('public contact page fixes the recipient and does not require sign-in', asy
   assert.equal(response.status,200);
   assert.match(html,/에코디에 문의하기/);
   assert.match(html,new RegExp(MAIL_CONTACT_RECIPIENT.replace('.','\\.')));
-  assert.match(html,/\/api\/mail\/contact/);
+  assert.match(html,/\/mail\/api\/contact/);
   assert.doesNotMatch(html,/auth\.ekodi\.kr/);
 });
 test('public contact validates reply email before sending', async()=>{
@@ -69,7 +69,7 @@ test('contact delivery ignores client recipient and sends fixed To with user Rep
   } finally { globalThis.fetch=original; }
 });
 
-test('mail host exposes the public contact route before the authenticated inbox', async()=>{
+test('canonical apex exposes public contact and legacy mail host redirects', async()=>{
   const entry=await readFile(new URL('../platform-router-entry-worker.js',import.meta.url),'utf8');
   assert.match(entry,/handleMailContactApi\(request,env\)/);
   assert.match(entry,/url\.pathname==='\/contact'/);
@@ -79,13 +79,14 @@ test('mail host exposes the public contact route before the authenticated inbox'
 
 test('public contact release guard is registered', async()=>{
   const manifest=JSON.parse(await readFile(new URL('../deploy/manifests/shared-site.worker.json',import.meta.url),'utf8'));
-  const probe=manifest.worker.requests.find(item=>item.url==='https://mail.ekodi.kr/contact');
+  const probe=manifest.worker.requests.find(item=>item.url==='https://ekodi.kr/mail/contact');
   assert.deepEqual(probe?.statuses,[200]);
   assert.ok(probe?.expect?.includes('joseph@ekodi.kr'));
   assert.ok(probe?.headerExpect?.includes('x-ekodi-route: mail-contact'));
   assert.equal(probe?.rollbackVerify,false);
   const wrangler=await readFile(new URL('../wrangler.site.toml',import.meta.url),'utf8');
   assert.match(wrangler,/name = "MAIL_CONTACT_RATE_LIMITER"/);
+  assert.match(wrangler,/"\/mail\*"/);
   assert.match(wrangler,/limit = 5/);
 });
 
