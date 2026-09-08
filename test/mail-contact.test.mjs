@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { handleMailContactApi, mailContactPage, MAIL_CONTACT_RECIPIENT } from '../mail-contact.js';
 import { sendGoogleMailMessage } from '../mail-google-adapter.js';
+import platformRouter from '../platform-router-entry-worker.js';
 
 const contactRequest=(body,headers={})=>new Request('https://ekodi.kr/mail/api/contact',{
   method:'POST',
@@ -70,10 +71,20 @@ test('contact delivery ignores client recipient and sends fixed To with user Rep
 });
 
 test('canonical apex exposes public contact and legacy mail host redirects', async()=>{
-  const entry=await readFile(new URL('../platform-router-entry-worker.js',import.meta.url),'utf8');
-  assert.match(entry,/handleMailContactApi\(request,env\)/);
-  assert.match(entry,/url\.pathname==='\/contact'/);
-  assert.ok(entry.indexOf('handleMailContactApi(request,env)')<entry.indexOf('handleMailApi(request,env)'));
+  const originalRewriter=globalThis.HTMLRewriter;
+  globalThis.HTMLRewriter=class{on(){return this}transform(response){return response}};
+  let page;
+  try{page=await platformRouter.fetch(new Request('https://ekodi.kr/mail/contact'),{ENVIRONMENT:'test'});}finally{if(originalRewriter)globalThis.HTMLRewriter=originalRewriter;else delete globalThis.HTMLRewriter;}
+  assert.equal(page.status,200);
+  assert.equal(page.headers.get('x-ekodi-route'),'mail-contact');
+  assert.equal(page.headers.get('x-ekodi-shell'),'v2');
+  assert.match(await page.text(),/joseph@ekodi\.kr/);
+  const invalid=await platformRouter.fetch(contactRequest({email:'bad-address',subject:'문의',message:'내용'}),{ENVIRONMENT:'test'});
+  assert.equal(invalid.status,400);
+  assert.equal((await invalid.json()).code,'INVALID_EMAIL');
+  const legacy=await platformRouter.fetch(new Request('https://mail.ekodi.kr/contact'),{ENVIRONMENT:'test'});
+  assert.equal(legacy.status,308);
+  assert.equal(legacy.headers.get('location'),'https://ekodi.kr/mail/contact');
 });
 
 
