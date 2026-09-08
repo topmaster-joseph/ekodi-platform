@@ -282,7 +282,7 @@
         "expect": [
           "data-ekodi-service=\"mall\"",
           "data-ekodi-user-surface=\"public\"",
-          "/ekodibiz/mall/assets/marketplace-live.js"
+          "/ekodibiz/mall/app.js"
         ],
         "rollbackExpect": [
           "data-ekodi-service=\"mall\"",

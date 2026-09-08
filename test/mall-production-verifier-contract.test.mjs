@@ -6,6 +6,12 @@ const workflow = await readFile(new URL('../.github/workflows/verify-ekodi-mall-
 const manifestText = await readFile(new URL('../deploy/manifests/shared-site.worker.json', import.meta.url), 'utf8');
 const manifest = JSON.parse(manifestText);
 
+test('Mall production verifier follows both canonical Mall deployment owners', () => {
+  assert.match(workflow, /workflows: \['EKODI Mall \u00B7 Stage and Deploy', 'Deploy EKODI Shared Site Core'\]/);
+  assert.match(workflow, /workflow_run:/);
+  assert.match(workflow, /types: \[completed\]/);
+});
+
 test('Mall production verifier follows stable route and storefront structure', () => {
   for (const header of [
     'x-ekodi-route: public-ekodi-mall',
@@ -19,9 +25,9 @@ test('Mall production verifier follows stable route and storefront structure', (
   for (const marker of [
     'data-ekodi-service="mall"',
     'data-ekodi-user-surface="public"',
-    'rel="canonical" href="https://ekodi.kr/ekodibiz/mall/',
-    '/ekodibiz/mall/assets/marketplace-live.js',
-    '/ekodibiz/mall/seller/'
+    'rel="canonical" href="https://ekodi.kr/ekodibiz/mall"',
+    '/ekodibiz/mall/app.js',
+    '/ekodibiz/mall/affiliate-client.js'
   ]) assert.ok(workflow.includes(marker), `missing structural contract: ${marker}`);
   assert.doesNotMatch(workflow, /GIFT CONTEXT INTELLIGENCE|CONNECTED COMMERCE|OUR PROMISE|EKODI CONTEXT SHOPPING|ALL MARKET/);
 });
@@ -34,9 +40,9 @@ test('shared-site Mall release gate uses the same stable ownership contract', ()
   }
   assert.equal(mallGate.candidateVerify,false);
   assert.match(mallGate.candidateVerifyReason||'',/run_worker_first bootstrap/);
-  assert.ok(mallGate.expect?.includes('/ekodibiz/mall/assets/marketplace-live.js'));
+  assert.ok(mallGate.expect?.includes('/ekodibiz/mall/app.js'));
   assert.ok(mallGate.rollbackExpect?.includes('/ekodibiz/mall/app.js'));
-  assert.ok(!mallGate.rollbackExpect?.includes('/ekodibiz/mall/assets/marketplace-live.js'));
+  assert.ok(!manifestText.includes('/ekodibiz/mall/assets/marketplace-live.js'));
   assert.ok(mallGate.headerExpect?.includes('x-ekodi-route: public-ekodi-mall'));
   assert.ok(mallGate.headerExpect?.includes('x-ekodi-edge: mall-path-gateway'));
   assert.doesNotMatch(manifestText, /EKODI CONTEXT SHOPPING|GIFT CONTEXT INTELLIGENCE|CONNECTED COMMERCE|OUR PROMISE/);
