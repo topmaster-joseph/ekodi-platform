@@ -14,6 +14,7 @@ test('main governance contract is fail-closed around source changes', () => {
   assert.equal(config.defaultBranch, 'main');
   assert.equal(policy.required, true);
   assert.equal(policy.requirePullRequest, true);
+  assert.equal(policy.requiredApprovingReviewCount, 0);
   assert.equal(policy.enforceAdmins, true);
   assert.equal(policy.allowForcePushes, false);
   assert.equal(policy.allowDeletions, false);
@@ -24,6 +25,7 @@ test('controller supports audit and explicit admin-token application', () => {
   assert.match(source, /EKODI_GITHUB_ADMIN_TOKEN/);
   assert.match(source, /method: 'PUT'/);
   assert.match(source, /required_pull_request_reviews/);
+  assert.match(source, /required approving review count differs/);
   assert.match(source, /allow_force_pushes/);
   assert.match(source, /allow_deletions/);
 });

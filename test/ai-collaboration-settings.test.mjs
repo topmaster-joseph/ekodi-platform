@@ -26,9 +26,17 @@ test('unsafe governance controls remain fail-closed', () => {
       failClosedOnInvalidPolicy: false,
     },
   });
-  assert.equal(policy.governance.maxParallelCollaborators, 8);
+  assert.equal(policy.governance.maxParallelCollaborators, 4);
   assert.equal(policy.governance.requireHumanApprovalForDestructiveAction, true);
   assert.equal(policy.governance.failClosedOnInvalidPolicy, true);
+});
+
+test('router weights are normalized and stored in the collaboration policy', () => {
+  const policy = normalizeAiCollaborationPolicy({router:{weights:{taskFit:50,reliability:25,cost:25,latency:0,health:0,load:0,quality:0}}});
+  const total=Object.values(policy.router.weights).reduce((sum,value)=>sum+value,0);
+  assert.equal(Number(total.toFixed(6)),1);
+  assert.equal(policy.router.weights.taskFit,0.5);
+  assert.equal(policy.router.algorithmVersion.length>0,true);
 });
 
 test('OpenAI profiles resolve from logical environment slots without exposing secrets', () => {

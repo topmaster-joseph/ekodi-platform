@@ -45,6 +45,8 @@ test('common-service Admin UI consumes the central admin session and has no serv
   assert.match(source, /\/api\/control\/common-services\/\$\{path\}/);
   assert.match(source, /Person \+ Workspace \+ Role \+ Capability/);
   assert.match(source, /AI Control Runtime/);
+  assert.match(source, /routeButton\('ai-settings','AI 설정 관리'\)/);
+  assert.doesNotMatch(source, /commonAiSettingsSave|data-ai-weight/);
   assert.doesNotMatch(source, /Google 로그인|ekodi-ai-control-session|site=ai/);
 });
 
