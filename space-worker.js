@@ -1,4 +1,5 @@
 import { isPublicWorkspacePath, workspaceSlugFromPublicPath } from './workspace-route-policy.js';
+import { renderStorefrontPage, storefrontCss } from './storefront-page.js';
 
 const DEFAULT_PAGE_PROFILE=Object.freeze({
   documentTitle:'운영공간 · EKODI',name:'내 운영공간',kicker:'OPERATING SPACE',
@@ -14,16 +15,16 @@ function staticPageProfile(pathname){const slug=workspaceSlugFromPublicPath(path
 async function pageProfile(pathname,env){
   const slug=workspaceSlugFromPublicPath(pathname);
   const fallback=staticPageProfile(pathname);
-  if(!slug||!env.SUPABASE_URL||!env.SUPABASE_PUBLISHABLE_KEY)return {profile:fallback,canonicalSlug:slug,status:'active',source:'static'};
+  if(!slug||!env.SUPABASE_URL||!env.SUPABASE_PUBLISHABLE_KEY)return {profile:fallback,canonicalSlug:slug,status:'active',source:'static',storefront:Boolean(STORE_PAGE_PROFILES[slug])};
   try{
     const response=await fetch(`${env.SUPABASE_URL}/rest/v1/rpc/store_user_site_public_profile`,{
       method:'POST',headers:{apikey:env.SUPABASE_PUBLISHABLE_KEY,'content-type':'application/json'},body:JSON.stringify({p_slug:slug})
     });
-    if(!response.ok)return {profile:fallback,canonicalSlug:slug,status:'active',source:'fallback'};
+    if(!response.ok)return {profile:fallback,canonicalSlug:slug,status:'active',source:'fallback',storefront:Boolean(STORE_PAGE_PROFILES[slug])};
     const data=await response.json().catch(()=>null);
-    if(!data||typeof data!=='object')return {profile:fallback,canonicalSlug:slug,status:'active',source:'fallback'};
-    return {profile:{documentTitle:data.document_title||`${data.name||fallback.name} · EKODI`,name:data.name||fallback.name,kicker:data.kicker||fallback.kicker,lead:data.lead||fallback.lead,theme:data.theme||fallback.theme,description:data.description||fallback.description,robots:fallback.robots||'index,follow'},canonicalSlug:data.canonical_slug||slug,status:data.status||'active',source:'store-user-sites'};
-  }catch{return {profile:fallback,canonicalSlug:slug,status:'active',source:'fallback'}}
+    if(!data||typeof data!=='object')return {profile:fallback,canonicalSlug:slug,status:'active',source:'fallback',storefront:Boolean(STORE_PAGE_PROFILES[slug])};
+    return {profile:{documentTitle:data.document_title||`${data.name||fallback.name} · EKODI`,name:data.name||fallback.name,kicker:data.kicker||fallback.kicker,lead:data.lead||fallback.lead,theme:data.theme||fallback.theme,description:data.description||fallback.description,robots:fallback.robots||'index,follow'},canonicalSlug:data.canonical_slug||slug,status:data.status||'active',source:'store-user-sites',storefront:true};
+  }catch{return {profile:fallback,canonicalSlug:slug,status:'active',source:'fallback',storefront:Boolean(STORE_PAGE_PROFILES[slug])}}
 }
 function htmlText(value){return String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]))}
 
@@ -46,7 +47,7 @@ function withHeaders(env,response,route='asset'){
   const contentType=headers.get('content-type')||'';
   if(contentType.includes('text/html')){
     headers.set('cache-control','no-store');
-    headers.set('x-robots-tag',route==='space-workspace'?'index, follow':'noindex, nofollow, noarchive');
+    headers.set('x-robots-tag',route==='space-storefront'?'index, follow':'noindex, nofollow, noarchive');
   }else if(!headers.has('cache-control'))headers.set('cache-control','public, max-age=300');
   return new Response(response.body,{status:response.status,statusText:response.statusText,headers});
 }
@@ -109,6 +110,7 @@ export default{
       const data=await publicStorefront(slug,env);
       return data?json(env,data):json(env,{error:'storefront_unavailable'},503);
     }
+    if(url.pathname==='/storefront.css'||url.pathname==='/_ekodi/space/storefront.css')return withHeaders(env,storefrontCss(),'storefront-asset');
     if(url.pathname==='/admin'||url.pathname==='/admin/')return Response.redirect('https://admin.ekodi.kr/?route=workspace&source=space.ekodi.kr',307);
     if(url.pathname==='/auth/start'){
       if(!['GET','HEAD'].includes(request.method))return json(env,{error:'method_not_allowed'},405);
@@ -129,6 +131,7 @@ export default{
         return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-ekodi-workspace-alias':`${requested}->${resolved.canonicalSlug}`}});
       }
       if(resolved.status==='paused')return withHeaders(env,new Response('<!doctype html><html lang="ko"><meta charset="utf-8"><title>사용자 사이트 일시중지 · EKODI</title><body><main><h1>사용자 사이트가 일시중지되었습니다.</h1><p>운영공간 관리자 설정에서 다시 활성화할 수 있습니다.</p></main></body></html>',{status:404,headers:{'content-type':'text/html; charset=utf-8'}}),'space-paused');
+      if(resolved.storefront)return withHeaders(env,await renderStorefrontPage(request,env,resolved,requested),'space-storefront');
       return appShell(request,env,'space-workspace',resolved.profile);
     }
     return withHeaders(env,await env.ASSETS.fetch(request),'space-asset');

@@ -41,7 +41,7 @@ const EKODIBIZ_ASSET_PREFIX='/_ekodi/ekodibiz/';
 const EKODIBIZ_ASSETS=new Set(['style.css','site.js']);
 const WORKSPACE_ASSET_PREFIX='/_ekodi/space/';
 const DEPLOYMENT_PROBE_PATH='/deployment-probe';
-const WORKSPACE_ASSETS=new Set(['style.css','config.js','app.js','storefront.json']);
+const WORKSPACE_ASSETS=new Set(['style.css','config.js','app.js','storefront.json','storefront.css']);
 
 function resolvedHost(request,env){
   const url=new URL(request.url);
@@ -141,6 +141,7 @@ async function routeDeploymentProbe(request,env){
 async function routePublicWorkspace(request,env){
   if(!env?.SPACE?.fetch)return workspaceServiceUnavailable();
   const upstream=await env.SPACE.fetch(request);const routed=new Response(upstream.body,upstream);routed.headers.set('x-ekodi-workspace-gateway','space-service-binding');
+  if(routed.headers.get('x-ekodi-route')==='space-storefront'){routed.headers.set('x-ekodi-public-surface','customer-storefront');return routed;}
   return injectEkodiShell(rewriteWorkspaceShellAssets(routed),'space','workspace');
 }
 
