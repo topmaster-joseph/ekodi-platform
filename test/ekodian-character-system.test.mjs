@@ -6,6 +6,7 @@ import vm from 'node:vm';
 const registrySource=fs.readFileSync(new URL('../shell/character-registry.js',import.meta.url),'utf8');
 const rendererSource=fs.readFileSync(new URL('../shell/user-character.js',import.meta.url),'utf8');
 const constitution=fs.readFileSync(new URL('../docs/EKODIAN-CHARACTER-CONSTITUTION.md',import.meta.url),'utf8');
+const shellWorkflow=fs.readFileSync(new URL('../.github/workflows/deploy-ekodi-shell.yml',import.meta.url),'utf8');
 
 test('EKODIAN registry exposes constitutional identity and service profiles',()=>{
   const events=[];
@@ -59,4 +60,7 @@ test('EKODIAN adaptive placement yields to content instead of covering it',()=>{
   assert.match(constitution,/regular to compact to mini/);
   assert.match(constitution,/Never cover essential content or controls/);
   assert.match(constitution,/Do not create compensating content padding/);
+  const rendererVersion=rendererSource.match(/const VERSION=(\d+);/)?.[1];
+  assert.ok(rendererVersion);
+  assert.ok(shellWorkflow.includes(`grep -Fq 'const VERSION=${rendererVersion}' shell/user-character.js`));
 });
