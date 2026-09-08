@@ -1,5 +1,6 @@
 import {AI_CONTROL_POLICY,buildExecutionPlan,buildOriginSynthesisPrompt,createTaskId,evaluateTaskMissionPolicy,isOriginPreserved,normalizeTaskInput,resolveOriginResponseProvider,rolePrompt,summarizeRuns,taskOrigin} from './ai-control-core.js';
 import {invokeProvider,providerCapabilities,providerStatus} from './ai-control-provider-router.js';
+import {AI_ROUTER_SCORE_POLICY} from './ai-router-score.js';
 
 const clean=value=>String(value??'').trim();
 const now=()=>new Date().toISOString();
@@ -7,7 +8,7 @@ const ONLINE_WINDOW_MS=10*60*1000;
 function headers(){return{'x-content-type-options':'nosniff','referrer-policy':'strict-origin-when-cross-origin','permissions-policy':'camera=(), microphone=(), geolocation=(), payment=()','content-security-policy':"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://auth.ekodi.kr https://*.supabase.co; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"}}
 function json(data,status=200){return new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store',...headers()}})}
 async function body(request){try{return await request.json()}catch{return null}}
-function config(env={}){return{platform:'ai-control',architectureVersion:'1.9.0',hierarchy:['sovereign','autonomous','agentic','services'],mode:'parallel',policyVersion:AI_CONTROL_POLICY.version,missionPolicyVersion:AI_CONTROL_POLICY.missionPolicyVersion,maxParallelProviders:AI_CONTROL_POLICY.maxParallelProviders,originPreservation:true,adminUrl:'https://ekodi.kr/admin/common/common-services?service=ai',authUrl:env.AUTH_URL||'https://ekodi.kr/auth/?site=admin&direct=1&return_to=https%3A%2F%2Fekodi.kr%2Fadmin%2Fcommon%2Fcommon-services%3Fservice%3Dai',taskExecutionEnabled:env.AI_TASK_EXECUTION_ENABLED==='true',branchAllocationEnabled:env.AI_GITHUB_ORCHESTRATION_ENABLED==='true',humanApprovalRequired:true,nodePairingEnabled:true}}
+function config(env={}){return{platform:'ai-control',architectureVersion:'1.9.0',hierarchy:['sovereign','autonomous','agentic','services'],mode:'parallel',policyVersion:AI_CONTROL_POLICY.version,missionPolicyVersion:AI_CONTROL_POLICY.missionPolicyVersion,maxParallelProviders:AI_CONTROL_POLICY.maxParallelProviders,originPreservation:true,routerScorePolicyVersion:AI_ROUTER_SCORE_POLICY.version,adminUrl:'https://ekodi.kr/admin/common/common-services?service=ai',authUrl:env.AUTH_URL||'https://ekodi.kr/auth/?site=admin&direct=1&return_to=https%3A%2F%2Fekodi.kr%2Fadmin%2Fcommon%2Fcommon-services%3Fservice%3Dai',taskExecutionEnabled:env.AI_TASK_EXECUTION_ENABLED==='true',branchAllocationEnabled:env.AI_GITHUB_ORCHESTRATION_ENABLED==='true',humanApprovalRequired:true,nodePairingEnabled:true}}
 function dbReady(env){return Boolean(env.DB&&typeof env.DB.prepare==='function')}
 function supabaseReady(env){return Boolean(clean(env.SUPABASE_URL)&&clean(env.SUPABASE_PUBLISHABLE_KEY))}
 function bearer(request){const value=clean(request.headers.get('authorization'));return value.toLowerCase().startsWith('bearer ')?value.slice(7).trim():''}
@@ -76,6 +77,15 @@ async function onlineNodeProviders(env){
   const data=await env.DB.prepare("SELECT providers FROM ai_control_nodes WHERE state='online' AND last_seen_at>=?").bind(cutoff).all();
   return [...new Set((data.results||[]).flatMap(row=>JSON.parse(row.providers||'[]')).map(v=>clean(v).toLowerCase()).filter(Boolean))];
 }
+async function providerPerformanceMetrics(env){
+  if(!dbReady(env))return{};
+  const cutoff=new Date(Date.now()-AI_ROUTER_SCORE_POLICY.historyWindowHours*60*60*1000).toISOString();
+  const recentCutoff=Date.now()-AI_ROUTER_SCORE_POLICY.recentHealthWindowHours*60*60*1000;
+  const data=await env.DB.prepare('SELECT provider_id,state,started_at,finished_at FROM ai_control_runs WHERE started_at>=? ORDER BY started_at DESC LIMIT ?').bind(cutoff,AI_ROUTER_SCORE_POLICY.maxHistoryRuns).all();
+  const out={};
+  for(const row of data.results||[]){const id=clean(row.provider_id).toLowerCase();if(!id)continue;const m=out[id]||(out[id]={totalRuns:0,successfulRuns:0,failedRuns:0,recentRuns:0,recentFailures:0,activeRuns:0,averageLatencyMs:null,_latencyTotal:0,_latencyCount:0});const state=clean(row.state).toLowerCase();const terminal=state==='completed'||state==='failed';if(terminal){m.totalRuns++;if(state==='completed')m.successfulRuns++;else m.failedRuns++;}if(['queued','leased','running'].includes(state))m.activeRuns++;const started=Date.parse(row.started_at||'');if(terminal&&Number.isFinite(started)&&started>=recentCutoff){m.recentRuns++;if(state==='failed')m.recentFailures++;}const finished=Date.parse(row.finished_at||'');if(terminal&&Number.isFinite(started)&&Number.isFinite(finished)&&finished>=started){m._latencyTotal+=finished-started;m._latencyCount++;}}
+  for(const m of Object.values(out)){m.averageLatencyMs=m._latencyCount?Math.round(m._latencyTotal/m._latencyCount):null;delete m._latencyTotal;delete m._latencyCount;}return out;
+}
 async function listNodes(env){
   if(!dbReady(env))throw new Error('state_store_unavailable');const cutoff=Date.now()-ONLINE_WINDOW_MS;
   const data=await env.DB.prepare('SELECT id,name,providers,state,created_at,updated_at,last_seen_at FROM ai_control_nodes ORDER BY last_seen_at DESC').all();
@@ -103,19 +113,19 @@ function taskRow(row){if(!row)return null;const tier=row.mission_tier||'';const 
 async function getTask(env,id){return dbReady(env)?taskRow(await env.DB.prepare('SELECT * FROM ai_control_tasks WHERE id=?').bind(id).first()):null}
 async function listTasks(env){if(!dbReady(env))throw new Error('state_store_unavailable');const data=await env.DB.prepare('SELECT * FROM ai_control_tasks ORDER BY created_at DESC LIMIT 100').all();return(data.results||[]).map(taskRow)}
 async function patchTask(env,id,fields){const entries=Object.entries(fields);if(!entries.length)return;await env.DB.prepare(`UPDATE ai_control_tasks SET ${entries.map(([key])=>`${key}=?`).join(',')} WHERE id=?`).bind(...entries.map(([,value])=>typeof value==='object'?JSON.stringify(value):value),id).run()}
-async function createRun(env,run){await env.DB.prepare('INSERT INTO ai_control_runs (id,task_id,provider_id,role,state,output,error,started_at,finished_at) VALUES (?,?,?,?,?,?,?,?,?)').bind(run.id,run.taskId,run.providerId,run.role,run.state,'','',run.startedAt,'').run()}
+async function createRun(env,run){await env.DB.prepare('INSERT INTO ai_control_runs (id,task_id,provider_id,role,state,output,error,started_at,finished_at,router_score,router_score_breakdown,router_score_policy_version) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)').bind(run.id,run.taskId,run.providerId,run.role,run.state,'','',run.startedAt,'',Number(run.routerScore)||0,JSON.stringify(run.routerScoreBreakdown||{}),clean(run.routerScorePolicyVersion)).run()}
 async function finishRun(env,run){await env.DB.prepare('UPDATE ai_control_runs SET state=?,output=?,error=?,finished_at=? WHERE id=?').bind(run.state,run.output||'',run.error||'',run.finishedAt||now(),run.id).run()}
-async function runs(env,id){if(!dbReady(env))return[];const data=await env.DB.prepare('SELECT * FROM ai_control_runs WHERE task_id=? ORDER BY started_at ASC').bind(id).all();return(data.results||[]).map(row=>({id:row.id,providerId:row.provider_id,role:row.role,state:row.state,ok:row.state==='completed',output:row.output||'',error:row.error||'',startedAt:row.started_at,finishedAt:row.finished_at}))}
+async function runs(env,id){if(!dbReady(env))return[];const data=await env.DB.prepare('SELECT * FROM ai_control_runs WHERE task_id=? ORDER BY started_at ASC').bind(id).all();return(data.results||[]).map(row=>({id:row.id,providerId:row.provider_id,role:row.role,state:row.state,ok:row.state==='completed',output:row.output||'',error:row.error||'',startedAt:row.started_at,finishedAt:row.finished_at,routerScore:Number(row.router_score)||0,routerScoreBreakdown:JSON.parse(row.router_score_breakdown||'{}'),routerScorePolicyVersion:row.router_score_policy_version||''}))}
 async function allocateBranch(env,task){
   if(!task.needsCodeBranch||env.AI_GITHUB_ORCHESTRATION_ENABLED!=='true')return'';const token=clean(env.GITHUB_TASK_TOKEN);if(!token)throw new Error('branch_allocator_not_configured');const repo=clean(env.GITHUB_REPOSITORY)||'topmaster-joseph/ekodi-platform';
   const response=await fetch(`https://api.github.com/repos/${repo}/actions/workflows/ai-task-allocator.yml/dispatches`,{method:'POST',headers:{authorization:`Bearer ${token}`,accept:'application/vnd.github+json','content-type':'application/json','user-agent':'EKODI-AI-Control'},body:JSON.stringify({ref:'main',inputs:{agent:'generic',task_id:task.id,base_ref:'main'}})});if(!response.ok)throw new Error(`branch_allocator_${response.status}`);return `ai/generic/${task.id.toLowerCase().replace(/[^a-z0-9._-]+/g,'-').slice(0,64)}`;
 }
 async function enqueueNodeRun(env,task,entry,prompt){
-  const stamp=now();const run={id:crypto.randomUUID(),taskId:task.id,providerId:entry.providerId,role:entry.role,state:'queued',startedAt:stamp};await createRun(env,run);const jobId=crypto.randomUUID();
+  const stamp=now();const run={id:crypto.randomUUID(),taskId:task.id,providerId:entry.providerId,role:entry.role,state:'queued',startedAt:stamp,routerScore:entry.routerScore,routerScoreBreakdown:entry.routerScoreBreakdown,routerScorePolicyVersion:entry.routerScorePolicyVersion};await createRun(env,run);const jobId=crypto.randomUUID();
   await env.DB.prepare('INSERT INTO ai_control_jobs (id,task_id,run_id,provider_id,role,prompt,branch,repository,needs_code_branch,state,lease_owner,lease_until,output,error,created_at,updated_at,finished_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)').bind(jobId,task.id,run.id,entry.providerId,entry.role,prompt,task.branch||'',clean(env.GITHUB_REPOSITORY)||'topmaster-joseph/ekodi-platform',task.needsCodeBranch?1:0,'queued','','','','',stamp,stamp,'').run();
 }
 async function executeDirectRun(env,task,entry,prompt){
-  const stamp=now();const run={id:crypto.randomUUID(),taskId:task.id,providerId:entry.providerId,role:entry.role,state:'running',output:'',error:'',startedAt:stamp,finishedAt:''};await createRun(env,run);
+  const stamp=now();const run={id:crypto.randomUUID(),taskId:task.id,providerId:entry.providerId,role:entry.role,state:'running',output:'',error:'',startedAt:stamp,finishedAt:'',routerScore:entry.routerScore,routerScoreBreakdown:entry.routerScoreBreakdown,routerScorePolicyVersion:entry.routerScorePolicyVersion};await createRun(env,run);
   try{run.output=await invokeProvider(env,entry.providerId,prompt,task,entry.role);run.state='completed'}catch(error){run.state='failed';run.error=clean(error?.message||error)}run.finishedAt=now();await finishRun(env,run);return{...run,ok:run.state==='completed'};
 }
 async function finalizeTask(env,id){
@@ -143,7 +153,7 @@ async function execute(env,id){
   if(currentMission.forbidden){await patchTask(env,id,{state:'blocked_policy',updated_at:now(),error:`mission_policy:${currentMission.reason}`});return}
   task={...task,mode:'parallel',missionDecision:currentMission};
   await patchTask(env,id,{state:'allocating',updated_at:now(),error:''});
-  try{const branch=await allocateBranch(env,task);if(branch){await patchTask(env,id,{branch,updated_at:now()});task={...task,branch}}const nodes=await onlineNodeProviders(env);const plan=buildExecutionPlan(task,providerCapabilities(env,nodes));if(!plan.length)throw new Error('no_provider_available');await patchTask(env,id,{state:'running',updated_at:now()});
+  try{const branch=await allocateBranch(env,task);if(branch){await patchTask(env,id,{branch,updated_at:now()});task={...task,branch}}const nodes=await onlineNodeProviders(env);const metrics=await providerPerformanceMetrics(env);const capabilities=providerCapabilities(env,nodes);const plan=buildExecutionPlan(task,{...capabilities,providerMetrics:metrics});if(!plan.length)throw new Error('no_provider_available');await patchTask(env,id,{state:'running',updated_at:now()});
     await Promise.all(plan.map(entry=>{const prompt=rolePrompt(task,entry.role,{branch:task.branch,missionDecision:task.missionDecision});return entry.providerId.startsWith('node:')?enqueueNodeRun(env,task,entry,prompt):executeDirectRun(env,task,entry,prompt)}));await finalizeTask(env,id);
   }catch(error){await patchTask(env,id,{state:'failed',updated_at:now(),error:clean(error?.message||error)});throw error}
 }
@@ -173,7 +183,7 @@ export default{async fetch(request,env,ctx){
   if(['GET','HEAD'].includes(request.method)&&(url.pathname==='/'||url.pathname==='/index.html'||url.pathname==='/admin'||url.pathname==='/admin/'))return adminControlRedirect();
   if(url.pathname==='/config.js')return json({error:'operator_surface_moved',adminUrl:config(env).adminUrl},410);
   if(request.method==='GET'&&url.pathname==='/__health')return json({ok:true,platform:'ai-control',architectureVersion:config(env).architectureVersion,surface:'runtime-only'});
-  if(request.method==='GET'&&url.pathname==='/api/status'){const auth=await requireAdmin(request,env,'ai:read');if(auth.error)return auth.error;const nodes=await onlineNodeProviders(env);return json({ok:true,platform:'ai-control',config:config(env),providers:providerStatus(env,nodes),stateStore:dbReady(env)?'ready':'unavailable',onlineNodeProviders:nodes,authoritySource:auth.source||'admin'})}
+  if(request.method==='GET'&&url.pathname==='/api/status'){const auth=await requireAdmin(request,env,'ai:read');if(auth.error)return auth.error;const nodes=await onlineNodeProviders(env);const metrics=await providerPerformanceMetrics(env);const providers=providerStatus(env,nodes).map(item=>({...item,routerMetrics:metrics[item.id]||null}));return json({ok:true,platform:'ai-control',config:config(env),providers,routerScorePolicy:{version:AI_ROUTER_SCORE_POLICY.version,weights:AI_ROUTER_SCORE_POLICY.weights,historyWindowHours:AI_ROUTER_SCORE_POLICY.historyWindowHours,recentHealthWindowHours:AI_ROUTER_SCORE_POLICY.recentHealthWindowHours},stateStore:dbReady(env)?'ready':'unavailable',onlineNodeProviders:nodes,authoritySource:auth.source||'admin'})}
   if(url.pathname==='/api/auth/exchange')return json({error:'service_local_auth_retired',adminUrl:config(env).adminUrl},410);
   if(request.method==='POST'&&url.pathname==='/api/node/enroll')return enrollNode(request,env);
   if(url.pathname.startsWith('/api/node/')){
