@@ -103,7 +103,7 @@ jobs:
           grep -Fq 'missionPolicyVersion' ai-control-worker.js
           grep -Fq 'ai-task-allocator.yml' ai-control-worker.js
           grep -Fq '/api/node/lease' ai-control-worker.js
-          grep -Fq "admin/common/common-services?service=ai" ai-control-worker.js
+          grep -Fq "https://ekodi.kr/admin/common/common-services?service=ai" ai-control-worker.js
           grep -Fq "surface:'runtime-only'" ai-control-worker.js
           grep -Fq "centralAdminSession" ai-control-worker.js
           grep -Fq "['login','status']" scripts/ai-account-node.mjs
