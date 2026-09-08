@@ -531,7 +531,7 @@ jobs:
             echo '' >> "$GITHUB_STEP_SUMMARY"
             echo '| Menu | Group | Result | Duration |' >> "$GITHUB_STEP_SUMMARY"
             echo '|---|---|---|---:|' >> "$GITHUB_STEP_SUMMARY"
-            jq -r '.results[] | "| \(.id) | \(.group) | ✅ | \(.durationMs) ms |"' artifacts/admin-authenticated-e2e/report.json >> "$GITHUB_STEP_SUMMARY"
+            jq -r '.results[] | "| \(.id) | \(.group) | ??| \(.durationMs) ms |"' artifacts/admin-authenticated-e2e/report.json >> "$GITHUB_STEP_SUMMARY"
           fi
 
       - name: Revoke short-lived E2E session
