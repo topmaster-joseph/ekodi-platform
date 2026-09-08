@@ -22,6 +22,7 @@ import { isInsurancePublicPath, routeInsurancePublic } from './insurance-public-
 import { marketingProjectionForPath, proxyCanonicalMarketing } from './marketing-canonical-projection.js';
 import { routeCanonicalSurface } from './canonical-surface-router.js';
 import { handlePreviewRequest } from './preview-page.js';
+import { storeGatewayPage } from './store-gateway-page.js';
 
 const PUBLIC_HOST='ekodi.kr';
 const CGMA_HOSTS=new Set(['cgma.or.kr','www.cgma.or.kr']);
@@ -41,6 +42,7 @@ const EKODIBIZ_ASSET_PREFIX='/_ekodi/ekodibiz/';
 const EKODIBIZ_ASSETS=new Set(['style.css','site.js']);
 const WORKSPACE_ASSET_PREFIX='/_ekodi/space/';
 const DEPLOYMENT_PROBE_PATH='/deployment-probe';
+const STORE_GATEWAY_PATHS=new Set(['/stores','/stores/']);
 const WORKSPACE_ASSETS=new Set(['style.css','config.js','app.js','storefront.json','storefront.css']);
 
 function resolvedHost(request,env){
@@ -204,6 +206,7 @@ export default {
         if(isChurchPastorAdminPath(url.pathname))return injectEkodiShell(churchPastorAdminPage(),'church','admin');
         if(isWorkspaceAdminPath(url.pathname)&&!isEkodiBizInvestAdminPath(url.pathname))return injectEkodiShell(workspaceAdminPage(),'space','admin');
       }
+      if(['GET','HEAD'].includes(request.method)&&STORE_GATEWAY_PATHS.has(url.pathname))return injectEkodiShell(storeGatewayPage(),'ekodi','public');
       if(marketingProjectionForPath(url.pathname)){const projected=await proxyCanonicalMarketing(request);if(projected)return projected;}
       if(['GET','HEAD'].includes(request.method)&&EKODIBIZ_PUBLIC_ROUTE.test(url.pathname))return routeEkodiBizPublic(request,env);
       if(url.pathname.startsWith(EKODIBIZ_API_PREFIX))return routeEkodiBizApi(request,env);

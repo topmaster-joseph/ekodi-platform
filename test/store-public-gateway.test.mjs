@@ -1,0 +1,25 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import { storeGatewayPage, STORES } from '../store-gateway-page.js';
+import { RESERVED_WORKSPACE_SLUGS, isWorkspaceSlug } from '../workspace-route-policy.js';
+const read=path=>readFile(new URL(`../${path}`,import.meta.url),'utf8');
+test('store gateway is a public three-store chooser with canonical EKODI routes',async()=>{
+  const response=storeGatewayPage(); const html=await response.text();
+  assert.equal(response.status,200); assert.equal(response.headers.get('x-ekodi-route'),'store-gateway');
+  assert.match(html,/THREE STORES .* ONE GATE/); assert.match(html,/https:\/\/ekodi\.kr\/stores/);
+  assert.deepEqual(STORES.map(store=>store.slug),['jadam','pizzamaru','yogurt']);
+  for(const slug of ['jadam','pizzamaru','yogurt'])assert.ok(html.includes(`href="/${slug}"`),slug);
+  for(const store of STORES)assert.ok(html.includes(store.name),store.name);
+  assert.ok(!html.includes('pages.dev')); assert.ok(!html.includes('.ai.ekodi.kr'));
+});
+test('stores is reserved and guarded by staging plus real-production verification',async()=>{
+  const [router,stage,prod,discovery]=await Promise.all([read('platform-router-entry-worker.js'),read('.github/workflows/stage-shared-site-shell.yml'),read('.github/workflows/deploy-site-core.yml'),read('discovery-layer.js')]);
+  assert.ok(RESERVED_WORKSPACE_SLUGS.has('stores')); assert.equal(isWorkspaceSlug('stores'),false);
+  assert.ok(router.includes("import { storeGatewayPage } from './store-gateway-page.js'"));
+  assert.ok(router.includes('STORE_GATEWAY_PATHS.has(url.pathname)'));
+  for(const workflow of [stage,prod]){assert.ok(workflow.includes('store-gateway-page.js'));assert.ok(workflow.includes('test/store-public-gateway.test.mjs'));}
+  assert.ok(stage.includes("verify_public_path '/stores' 'THREE STORES .* ONE GATE' 'x-ekodi-route: store-gateway'".replace('.*','·')) || stage.includes("verify_public_path '/stores' 'THREE STORES · ONE GATE' 'x-ekodi-route: store-gateway'"));
+  assert.ok(prod.includes("https://ekodi.kr/stores")); assert.ok(prod.includes('x-ekodi-route: store-gateway'));
+  for(const path of ['/stores','/jadam','/pizzamaru','/yogurt'])assert.ok(discovery.includes(`path: '${path}'`),path);
+});
