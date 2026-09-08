@@ -49,7 +49,8 @@ test('shared-site guarded release accepts any valid content fingerprint instead 
   assert.ok(admin, 'admin.ekodi.kr smoke request must exist');
   assert.ok(admin.expect.includes('EKODI Admin'));
   assert.ok(admin.expect.includes('admin-authenticated-shell.js?v='));
-  assert.ok(admin.expect.includes('https://auth.ekodi.kr/?site=admin'));
+  assert.ok(admin.expect.includes('https://ekodi.kr/auth/?site=admin'));
+  assert.equal(admin.rollbackVerify, false);
   assert.equal(admin.expect.some(value => value.includes('20260819-e2e-perf-1')), false);
   assert.ok(admin.expect.includes('admin-compact.js admin-menu-layout.js admin-demand-loader.js'));
   assert.equal(admin.expect.includes('control-center-features.js'), false);
