@@ -3,7 +3,7 @@ import { getAffiliateAutomationStatus, getCoupangPartnerReportingStatus, ingestA
 import { archiveMarketplaceOffer, listMarketplaceProducts, MULTI_AFFILIATE_DISCLOSURE, publicMarketplaceClick, registerMarketplaceProduct } from './affiliate-marketplace.js';
 import { applyProductIdentityAliases, groupProductOffers } from './product-identity.js';
 import { listProviderFeedDescriptors, mixProductsByProvider, syncProviderFeed } from './affiliate-provider-feed.js';
-import { AFFILIATE_INTEGRATION_STATUSES, AFFILIATE_PARTNER_PROGRAMS, AFFILIATE_PROGRAM_STATUSES, partnerProgramView } from './affiliate-partner-programs.js';
+import { AFFILIATE_INTEGRATION_STATUSES, AFFILIATE_OUTREACH_STATUSES, AFFILIATE_PARTNER_PROGRAMS, AFFILIATE_PROGRAM_STATUSES, partnerProgramView } from './affiliate-partner-programs.js';
 
 const PREFIX = '/api/affiliate';
 const DEFAULT_ACCOUNT_ID = 'coupang-ekodibiz';
@@ -98,9 +98,15 @@ async function ensureSchema(db) {
     "ALTER TABLE affiliate_merchant_routes ADD COLUMN tracking_status TEXT NOT NULL DEFAULT 'not_ready'",
     "ALTER TABLE affiliate_merchant_routes ADD COLUMN catalog_status TEXT NOT NULL DEFAULT 'not_ready'",
     'ALTER TABLE affiliate_merchant_routes ADD COLUMN recommendation_verified_at TEXT',
+    "ALTER TABLE affiliate_partner_programs ADD COLUMN outreach_status TEXT NOT NULL DEFAULT 'none'",
+    "ALTER TABLE affiliate_partner_programs ADD COLUMN outreach_channel TEXT NOT NULL DEFAULT ''",
+    'ALTER TABLE affiliate_partner_programs ADD COLUMN last_outreach_at TEXT',
+    'ALTER TABLE affiliate_partner_programs ADD COLUMN next_followup_at TEXT',
+    "ALTER TABLE affiliate_partner_programs ADD COLUMN outreach_note TEXT NOT NULL DEFAULT ''",
   ]) await db.prepare(statement).run().catch(() => {});
   await db.prepare("CREATE INDEX IF NOT EXISTS idx_affiliate_merchant_routes_readiness ON affiliate_merchant_routes(affiliate_status, tracking_status, catalog_status, recommendation_enabled, merchant_key)").run().catch(() => {});
   await db.prepare("CREATE INDEX IF NOT EXISTS idx_affiliate_partner_programs_pipeline ON affiliate_partner_programs(application_status, integration_status, priority DESC)").run().catch(() => {});
+  await db.prepare("CREATE INDEX IF NOT EXISTS idx_affiliate_partner_programs_outreach ON affiliate_partner_programs(outreach_status, next_followup_at, priority DESC)").run().catch(() => {});
   const now = new Date().toISOString();
   for (const program of AFFILIATE_PARTNER_PROGRAMS) {
     await db.prepare(`INSERT OR IGNORE INTO affiliate_partner_programs (program_key, program_name, program_kind, region, home_country, coverage_summary, application_status, integration_status, api_capable, deeplink_capable, product_feed_capable, reporting_capable, external_action_required, priority, program_url, notes, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '', ?, ?)`)
@@ -351,6 +357,7 @@ async function handlePartnerPrograms(request, env, auth, path) {
     const pipeline = {
       total: programs.length,
       prepared: programs.filter(item => ['prepared', 'account_exists', 'applied', 'review'].includes(item.applicationStatus)).length,
+      contacted: programs.filter(item => ['sent', 'replied', 'action_required', 'closed'].includes(item.outreachStatus)).length,
       approved: programs.filter(item => ['approved', 'active'].includes(item.applicationStatus)).length,
       live: programs.filter(item => item.integrationStatus === 'live').length,
       externalActionsRequired: programs.filter(item => item.externalActionRequired && !['approved', 'active'].includes(item.applicationStatus)).length,
@@ -367,14 +374,22 @@ async function handlePartnerPrograms(request, env, auth, path) {
   const applicationStatus = cleanText(body.applicationStatus ?? current.application_status, 24).toLowerCase();
   const integrationStatus = cleanText(body.integrationStatus ?? current.integration_status, 24).toLowerCase();
   const notes = cleanText(body.notes ?? current.notes, 500);
+  const outreachStatus = cleanText(body.outreachStatus ?? current.outreach_status ?? 'none', 24).toLowerCase();
+  const outreachChannel = cleanText(body.outreachChannel ?? current.outreach_channel ?? '', 32).toLowerCase();
+  const outreachNote = cleanText(body.outreachNote ?? current.outreach_note ?? '', 500);
+  const parseIso = value => { const text = cleanText(value, 40); return text && Number.isFinite(Date.parse(text)) ? new Date(text).toISOString() : null; };
+  let lastOutreachAt = parseIso(body.lastOutreachAt ?? current.last_outreach_at);
+  const nextFollowupAt = parseIso(body.nextFollowupAt ?? current.next_followup_at);
   if (!AFFILIATE_PROGRAM_STATUSES.has(applicationStatus)) return json({ error: '지원하지 않는 신청 상태입니다.' }, 400, auth.response.headers);
   if (!AFFILIATE_INTEGRATION_STATUSES.has(integrationStatus)) return json({ error: '지원하지 않는 연동 상태입니다.' }, 400, auth.response.headers);
+  if (!AFFILIATE_OUTREACH_STATUSES.has(outreachStatus)) return json({ error: '지원하지 않는 연락 상태입니다.' }, 400, auth.response.headers);
+  if (['sent','replied','action_required','closed'].includes(outreachStatus) && !lastOutreachAt) lastOutreachAt = new Date().toISOString();
   if (integrationStatus === 'live' && !['approved', 'active'].includes(applicationStatus)) return json({ error: '실연동(live)은 제휴 승인 후에만 설정할 수 있습니다.' }, 409, auth.response.headers);
   const now = new Date().toISOString();
-  await env.DB.prepare('UPDATE affiliate_partner_programs SET application_status = ?, integration_status = ?, notes = ?, updated_at = ? WHERE program_key = ?')
-    .bind(applicationStatus, integrationStatus, notes, now, match[1]).run();
+  await env.DB.prepare('UPDATE affiliate_partner_programs SET application_status = ?, integration_status = ?, outreach_status = ?, outreach_channel = ?, last_outreach_at = ?, next_followup_at = ?, outreach_note = ?, notes = ?, updated_at = ? WHERE program_key = ?')
+    .bind(applicationStatus, integrationStatus, outreachStatus, outreachChannel, lastOutreachAt, nextFollowupAt, outreachNote, notes, now, match[1]).run();
   const updated = await env.DB.prepare('SELECT * FROM affiliate_partner_programs WHERE program_key = ?').bind(match[1]).first();
-  await audit(env, auth.session, 'affiliate.program.update', match[1], JSON.stringify({ applicationStatus, integrationStatus }));
+  await audit(env, auth.session, 'affiliate.program.update', match[1], JSON.stringify({ applicationStatus, integrationStatus, outreachStatus, outreachChannel }));
   return json({ program: partnerProgramView(updated) }, 200, auth.response.headers);
 }
 

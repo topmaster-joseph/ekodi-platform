@@ -8,7 +8,7 @@
   async function request(path,options={}){const h=new Headers(options.headers||{});if(token())h.set('authorization',`Bearer ${token()}`);if(options.body&&!h.has('content-type'))h.set('content-type','application/json');const r=await fetch(`${API}${path}`,{...options,headers:h,cache:'no-store'});let d={};try{d=await r.json()}catch{}if(!r.ok)throw new Error(d.error||`사역보고 API 오류 (${r.status})`);return d}
   function flash(msg,error=false){const el=document.querySelector('#churchReportFlash');if(!el)return;el.textContent=msg||'';el.style.color=error?'#fda4af':''}
   function install(){if(installed)return true;const root=document.querySelector('#churchReportsRoot');if(!root)return false;installed=true;root.innerHTML=`
-      <div class="church-head"><div><p class="church-kicker">EKODI CHURCH · MINISTRY REPORTS</p><h2>사역보고</h2><p>2·4·6·8·10·12월 에코디교회 사역보고를 준비하고, 예배·말씀·교회 일정의 실제 기록을 원자료로 모아 검토·승인·발송까지 관리합니다.</p></div><div><a class="secondary" href="/ekodi-church" target="_blank" rel="noopener">교회 화면 ↗</a> <button class="secondary" id="churchReportRefresh" type="button">↻ Refresh</button></div></div>
+      <div class="church-head"><div><p class="church-kicker">EKODI CHURCH · MINISTRY REPORTS</p><h2>사역보고</h2><p>2·4·6·8·10·12월 에코디교회 사역보고를 준비하고, 예배·말씀·교회 일정의 실제 기록을 원자료로 모아 검토·승인·발송까지 관리합니다.</p></div><div><a class="secondary" href="/ekodichurch" target="_blank" rel="noopener">교회 화면 ↗</a> <button class="secondary" id="churchReportRefresh" type="button">↻ Refresh</button></div></div>
       <p class="church-report-flash" id="churchReportFlash" role="status"></p>
       <div class="church-capabilities" id="churchReportCapabilities"></div>
       <div class="church-report-metrics" id="churchReportMetrics"></div>

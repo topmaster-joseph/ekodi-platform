@@ -166,7 +166,7 @@ jobs:
             health_code=$(curl -sS -o /tmp/ai-local-health.json -w '%{http_code}' --connect-timeout 2 --max-time 5 http://127.0.0.1:8787/__health || true)
             status_code=$(curl -sS -o /tmp/ai-local-status.json -w '%{http_code}' --connect-timeout 2 --max-time 5 http://127.0.0.1:8787/api/status || true)
             if [[ "$root_code" == "307" && "$config_code" == "410" && "$exchange_code" == "410" && "$health_code" == "200" && "$status_code" == "401" ]] \
-              && grep -Fqi 'location: https://admin.ekodi.kr/?route=common-services&service=ai' /tmp/ai-local-root-headers.txt \
+              && grep -Fqi 'location: https://ekodi.kr/admin/common/common-services?service=ai' /tmp/ai-local-root-headers.txt \
               && grep -Fq 'operator_surface_moved' /tmp/ai-local-config.json \
               && grep -Fq 'service_local_auth_retired' /tmp/ai-local-exchange.json \
               && grep -Fq '"platform":"ai-control"' /tmp/ai-local-health.json \
@@ -204,7 +204,7 @@ jobs:
           headers=/tmp/ai-edge-headers.txt
           body=/tmp/ai-edge-body.txt
           code=$(curl -sS -D "$headers" -o "$body" -w '%{http_code}' --connect-timeout 5 --max-time 20 "$STAGING_URL/" || true)
-          if [[ "$code" == "307" ]] && grep -Fqi 'location: https://admin.ekodi.kr/?route=common-services&service=ai' "$headers"; then
+          if [[ "$code" == "307" ]] && grep -Fqi 'location: https://ekodi.kr/admin/common/common-services?service=ai' "$headers"; then
             echo "AI Runtime staging redirects operator entry to the central Admin Control Plane."
             exit 0
           fi
