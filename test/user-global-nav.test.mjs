@@ -4,26 +4,41 @@ import { readFile } from 'node:fs/promises';
 
 const read=path=>readFile(new URL(`../${path}`,import.meta.url),'utf8');
 
-test('shared user navigation exposes the stable EKODI links only on user surfaces',async()=>{
+test('shared user navigation runtime removes legacy floating global and workspace selectors',async()=>{
   const nav=await read('shell/user-global-nav.js');
-  assert.match(nav,/new Set\(\['public','workspace'\]\)/);
-  assert.match(nav,/https:\/\/ekodi\.kr\//);
-  assert.match(nav,/https:\/\/ekodi\.kr\/#services/);
-  assert.match(nav,/https:\/\/ekodi\.kr\/history/);
-  assert.match(nav,/https:\/\/ekodi\.kr\/my\//);
-  assert.match(nav,/https:\/\/ekodi\.kr\/my\/#recommendations/);
-  assert.match(nav,/https:\/\/ekodi\.kr\/auth\//);
-  for(const label of ['홈','서비스','역사','마이 에코디','개인 AI 비서','로그인 · 계정'])assert.match(nav,new RegExp(label));
-  assert.match(nav,/EKODI User AI/);
-  assert.match(nav,/data-ekodi-global-link="assistant"/);
-  assert.match(nav,/return_to/);
-  assert.match(nav,/data-ekodi-user-global-nav/);
-  assert.match(nav,/attachShadow\(\{mode:'open'\}\)/);
-  assert.match(nav,/@media\(max-width:768px\)/);
-  assert.match(nav,/aria-label','EKODI 사용자 공통 메뉴/);
+  assert.match(nav,/LEGACY_SELECTOR='\[data-ekodi-shell-root\],\[data-ekodi-user-global-nav\]'/);
+  assert.match(nav,/dataset\.ekodiGlobalNav='off'/);
+  assert.match(nav,/dataset\.ekodiWorkspaceSelector='hidden'/);
+  assert.match(nav,/querySelectorAll\(LEGACY_SELECTOR\)/);
+  assert.match(nav,/node\.remove\(\)/);
+  assert.match(nav,/MutationObserver/);
+  assert.match(nav,/removeLegacyFloatingChrome/);
+  assert.doesNotMatch(nav,/attachShadow\(\{mode:'open'\}\)/);
+  assert.doesNotMatch(nav,/data-ekodi-global-link="assistant"/);
+  assert.doesNotMatch(nav,/EKODI 사용자 공통 메뉴/);
 });
 
-test('Shell Worker bundles global navigation, shared chrome, Media/Meeting, CCM MR and language into one shell payload',async()=>{
+test('common chrome policy retires global audio and workspace selection',async()=>{
+  const [policyText,ccmPlayer]=await Promise.all([
+    read('config/user-ui-shell.json'),
+    read('shell/ccm-mr-player.js')
+  ]);
+  const policy=JSON.parse(policyText);
+  assert.equal(policy.version,11);
+  assert.equal(policy.principles.persistentChromeHeaderFooterOnly,true);
+  assert.equal(policy.principles.workspaceSelectionLivesInMyEkodi,true);
+  assert.equal(policy.principles.globalAmbientAudioForbidden,true);
+  assert.equal(policy.ambientAudio.globalControl,'retired');
+  assert.equal(policy.ambientAudio.runtimeRole,'compatibility-tombstone');
+  assert.equal(policy.ambientAudio.persistentChromeAllowed,false);
+  assert.equal(policy.workspaceSelection.owner,'my-ekodi-content');
+  assert.equal(policy.workspaceSelection.persistentGlobalControl,'forbidden');
+  assert.match(ccmPlayer,/__EKODI_CCM_MR_RETIRED__/);
+  assert.match(ccmPlayer,/dataset\.ekodiGlobalMr='off'/);
+  assert.match(ccmPlayer,/ekodi-ccm-mr-toggle/);
+});
+
+test('Shell Worker keeps compatibility guards beside shared header/footer, Media/Meeting and language in one payload',async()=>{
   const worker=await read('ekodi-shell-worker.js');
   assert.match(worker,/user-global-nav\.js/);
   assert.match(worker,/user-ui-header\.js/);
