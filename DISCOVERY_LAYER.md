@@ -1,24 +1,26 @@
 # EKODI Discovery Layer
 
-EKODI Discovery Layer is the shared public-discovery contract for SEO, AEO, GEO/LLMO, crawler policy, and machine-readable entity metadata.
+EKODI Discovery Layer is the shared public-discovery contract for SEO, AEO, GEO/LLMO, crawler policy, canonical URLs, and machine-readable entity metadata.
 
 ## Runtime outputs
 
-The guarded shared-site build emits:
+The real `npm run build` path invokes `scripts/discovery-build.mjs` through `scripts/ccm-mr-postbuild.mjs` and emits or validates:
 
 - `/robots.txt`
 - `/sitemap.xml`
 - `/llms.txt`
-- Open Graph metadata on the public homepage
-- Schema.org JSON-LD for the EKODI Organization and WebSite entities
+- canonical URL consistency on EKODI-owned static public pages
+- Open Graph and Twitter discovery metadata on EKODI-owned static public pages
+- Schema.org JSON-LD linking `Organization` → `WebSite` → `WebPage`
+- canonical URL rewriting for the path-proxied EKODI Mall
 
-The source contract is `discovery-layer.js`. `scripts/discovery-build.mjs` emits and validates the deployment artifacts during the existing shared-site build pipeline.
+`llms.txt` is a supplemental machine-readable discovery aid. It is not treated as a ranking standard and does not replace robots.txt, sitemap, canonical URLs, visible content, or structured data.
 
 ## Public-first, private-by-default boundary
 
-Only explicitly declared canonical public routes belong in `DISCOVERY_PUBLIC_ROUTES`. Admin, auth, API, tenant-private, and operational surfaces must never be added to the sitemap or LLM discovery source list.
+Only explicitly declared canonical public routes belong in `DISCOVERY_PUBLIC_ROUTES`. Admin, auth, API, development-preview, tenant-private, and operational surfaces must never be added to the sitemap or LLM discovery source list.
 
-Private prefixes are centralized in `DISCOVERY_PRIVATE_PREFIXES` and are emitted to the generic/search crawler groups in `robots.txt`.
+Private prefixes are centralized in `DISCOVERY_PRIVATE_PREFIXES`. Admin and Mall operational routes also receive `X-Robots-Tag: noindex, nofollow, noarchive` at the edge.
 
 ## AI crawler policy
 
@@ -32,20 +34,16 @@ Changing this policy is a governance decision, not a marketing toggle. Review pr
 ## AEO / GEO rules
 
 1. Prefer visible, human-useful content over hidden search-only copy.
-2. Keep canonical URLs stable and extensionless where the platform canonicalizes HTML assets.
-3. Structured data must describe entities and claims that are supported by public content.
-4. Do not publish private tenant relationships, admin routes, credentials, internal APIs, or operational details as discovery metadata.
-5. Add service-specific Schema.org types only when the corresponding public page and facts exist.
-6. Treat `llms.txt` as a machine-readable discovery aid, not as a guaranteed ranking mechanism.
+2. Keep canonical URLs stable and extensionless.
+3. Structured data must describe entities and claims supported by public content.
+4. Use stable `@id` values so answer engines can connect EKODI pages to the same Organization and WebSite entities.
+5. Do not publish private tenant relationships, admin routes, credentials, internal APIs, or operational details as discovery metadata.
+6. Add service-specific Schema.org types only when the corresponding public page and facts exist.
+7. Add FAQ markup only when the same questions and answers are visibly present on the page.
+8. Add `hreflang` only when real translated/localized page pairs exist.
 
 ## Validation
 
-`test/discovery-layer.test.mjs` verifies:
+`test/discovery-layer.test.mjs` verifies the route allowlist, private-route exclusion, crawler separation, canonical source list, and Organization/WebSite/WebPage graph.
 
-- sitemap public-route allowlisting
-- private-route exclusion
-- search-vs-training crawler separation
-- canonical LLM discovery references
-- public-only Organization/WebSite structured data
-
-The production build also fails if expected discovery artifacts or JSON-LD markers are missing.
+The production build itself fails when canonical, Open Graph, or JSON-LD markers are missing from EKODI-owned public pages. CI runs the same `npm run build`, so a Discovery Layer regression blocks the release path instead of silently shipping.
