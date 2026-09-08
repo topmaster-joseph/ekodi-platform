@@ -71,6 +71,8 @@ test('pastor admin release contract requires nosniff and candidate-only rollback
   assert.match(page, /x-content-type-options':'nosniff'/);
   const manifest = JSON.parse(await fs.promises.readFile(new URL('../deploy/manifests/shared-site.worker.json', import.meta.url), 'utf8'));
   const probe = manifest.worker.requests.find((item) => item.url === 'https://ekodi.kr/ekodichurch/admin');
+  assert.equal(probe?.candidateVerify, false);
+  assert.match(probe?.candidateVerifyReason || '', /run_worker_first bootstrap/);
   assert.equal(probe?.rollbackVerify, false);
   assert.ok(probe?.headerExpect?.includes('x-content-type-options: nosniff'));
 });

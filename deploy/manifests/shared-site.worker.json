@@ -204,6 +204,8 @@
           "cache-control: no-store",
           "x-content-type-options: nosniff"
         ],
+        "candidateVerify": false,
+        "candidateVerifyReason": "run_worker_first bootstrap requires the promoted static-asset routing table before the Worker can receive this path",
         "rollbackVerify": false
       },
       {
