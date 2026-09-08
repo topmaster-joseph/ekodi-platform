@@ -117,7 +117,8 @@
         "space-worker.js",
         "platform-router-entry-worker.js",
         "config/data-plane-contract.json",
-        "scripts/validate-cognitive-control-plane.mjs"
+        "scripts/validate-cognitive-control-plane.mjs",
+        "ai-router-score.js"
       ]
     },
     {
