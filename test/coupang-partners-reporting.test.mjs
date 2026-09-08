@@ -66,10 +66,11 @@ test('product reporting keeps purchase outcome separate from first-party clicks'
 });
 
 test('runtime uses official report resource family and bounded daily pagination', async () => {
-  const [automation, entry, control] = await Promise.all([
+  const [automation, entry, control, diagnose] = await Promise.all([
     readFile(new URL('../coupang-partners-automation.js', import.meta.url), 'utf8'),
     readFile(new URL('../customer-entry-worker.js', import.meta.url), 'utf8'),
     readFile(new URL('../affiliate-control.js', import.meta.url), 'utf8'),
+    readFile(new URL('../.github/workflows/ekodi-mall-subid-diagnose.yml', import.meta.url), 'utf8'),
   ]);
   assert.equal(AFFILIATE_AUTOMATION_DEFAULTS.reportStartKstHour, 16);
   assert.match(automation, /REPORT_BASE_PATH = '.*\/reports'/);
@@ -81,6 +82,8 @@ test('runtime uses official report resource family and bounded daily pagination'
   assert.match(entry, /syncScheduledCoupangPartnerReports/);
   assert.match(control, /\/reporting\/sync/);
   assert.doesNotMatch(automation, /buyerEmail|recipient|buyerName|receiverName/);
+  assert.match(diagnose, /VERIFIED_MALL_SUB_ID: 'ekodimall'/);
+  assert.match(diagnose, /printf '%s' \"\$\{VERIFIED_MALL_SUB_ID\}\"/);
 });
 
 test('Sub ID discovery never writes account-wide outcomes into Mall performance', async () => {
