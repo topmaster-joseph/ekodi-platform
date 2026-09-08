@@ -23,13 +23,13 @@ test('cold-start exploration is bounded and high cancellation fails closed', () 
   assert.equal(risky.reason,'high_cancel_rate');
 });
 test('Mall campaign survives landing to outbound click without storing customer PII', async () => {
-  const [mall,affiliate,migration,entry]=await Promise.all([
-    read('mall.js'),read('affiliate-control.js'),read('migrations/0072_ekodi_mall_growth_learning_loop.sql'),read('marketing-growth-entry.js'),
+  const [mall,promotion,migration,entry]=await Promise.all([
+    read('mall.js'),read('mall-promotion-automation.js'),read('migrations/0072_ekodi_mall_growth_learning_loop.sql'),read('marketing-growth-entry.js'),
   ]);
-  assert.match(mall,/campaignAwareClickUrl/);
-  assert.match(mall,/searchParams\.set\('campaign', campaign\)/);
-  assert.match(affiliate,/affiliate_promotion_outbound_clicks/);
-  assert.match(affiliate,/campaign_key=\? AND product_row_id=\?/);
+  assert.match(mall,/recordPromotionOutbound/);
+  assert.match(mall,/\/r\/mall\/outbound\//);
+  assert.match(promotion,/affiliate_promotion_outbound_clicks/);
+  assert.match(promotion,/campaign_key=\? AND product_row_id=\?/);
   assert.match(migration,/affiliate_growth_policy_snapshots/);
   assert.match(migration,/expected_commission_per_visit_krw/);
   assert.doesNotMatch(migration,/(email|phone|address)\s+TEXT/i);

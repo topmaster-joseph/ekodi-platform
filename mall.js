@@ -36,20 +36,8 @@
     } catch { return ''; }
   }
 
-  function campaignAwareClickUrl(value) {
-    const clickUrl = safeUrl(value);
-    if (!clickUrl) return '';
-    const campaign = String(new URLSearchParams(location.search).get('utm_campaign') || '').slice(0, 160);
-    if (!/^mall-\d{8}-(facebook|instagram|threads)-\d+$/.test(campaign)) return clickUrl;
-    try {
-      const url = new URL(clickUrl);
-      if (url.hostname === 'api.ekodi.kr' && /^\/api\/affiliate\/public\/click\/\d+$/.test(url.pathname)) url.searchParams.set('campaign', campaign);
-      return url.toString();
-    } catch { return clickUrl; }
-  }
-
   function normalize(product, popularityRank = 0) {
-    const clickUrl = campaignAwareClickUrl(product?.clickUrl);
+    const clickUrl = safeUrl(product?.clickUrl);
     if (!clickUrl) return null;
     const price = Number(product?.priceKrw || 0);
     const selectedAt = String(product?.selectedAt || '').trim();
@@ -322,6 +310,15 @@
     renderProducts();
   });
 
+  function recordPromotionOutbound(productRowId) {
+    const rowId=Number(productRowId||0);
+    const campaign=String(new URLSearchParams(location.search).get('utm_campaign')||'').slice(0,160);
+    if(!Number.isInteger(rowId)||rowId<=0||!/^mall-\d{8}-(facebook|instagram|threads)-\d+$/.test(campaign)) return;
+    const endpoint='https://marketing-connect-api.ekodi.kr/r/mall/outbound/'+encodeURIComponent(campaign)+'/'+rowId;
+    fetch(endpoint,{method:'POST',mode:'no-cors',credentials:'omit',keepalive:true}).catch(()=>{});
+  }
+
+  dialogBuy?.addEventListener('click',()=>recordPromotionOutbound(state.dialogProductId),true);
   dialogClose?.addEventListener('click', closeProductDialog);
   dialog?.addEventListener('click', event => {
     if (event.target === dialog) closeProductDialog();
