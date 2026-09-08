@@ -6,6 +6,7 @@ import vm from 'node:vm';
 const registrySource=fs.readFileSync(new URL('../shell/character-registry.js',import.meta.url),'utf8');
 const rendererSource=fs.readFileSync(new URL('../shell/user-character.js',import.meta.url),'utf8');
 const constitution=fs.readFileSync(new URL('../docs/EKODIAN-CHARACTER-CONSTITUTION.md',import.meta.url),'utf8');
+const shellWorkflow=fs.readFileSync(new URL('../.github/workflows/deploy-ekodi-shell.yml',import.meta.url),'utf8');
 
 test('EKODIAN registry exposes constitutional identity and service profiles',()=>{
   const events=[];
@@ -44,4 +45,22 @@ test('EKODIAN constitution governs registry and renderer',()=>{
   assert.match(constitution,/payment and checkout confirmation/i);
   assert.match(constitution,/personal-data review/i);
   assert.match(constitution,/authentication and security/i);
+});
+
+test('EKODIAN adaptive placement yields to content instead of covering it',()=>{
+  assert.match(rendererSource,/PLACEMENT_LEVELS=.*regular.*compact.*mini/);
+  assert.match(rendererSource,/PLACEMENT_POINTS=.*bottom-right.*bottom-left.*top-right.*top-left.*right-center.*left-center/);
+  assert.match(rendererSource,/data-ekodi-character-avoid/);
+  assert.match(rendererSource,/function adaptPlacement\(host,node\)/);
+  assert.match(rendererSource,/ekodiCharacterPlacement='hidden'/);
+  assert.match(rendererSource,/reason:'no-safe-zone'/);
+  assert.match(rendererSource,/ResizeObserver/);
+  assert.doesNotMatch(rendererSource,/ekodi-main-ekodian-host\{[^}]*padding-right/);
+  assert.match(constitution,/Content-first adaptive placement/);
+  assert.match(constitution,/regular to compact to mini/);
+  assert.match(constitution,/Never cover essential content or controls/);
+  assert.match(constitution,/Do not create compensating content padding/);
+  const rendererVersion=rendererSource.match(/const VERSION=(\d+);/)?.[1];
+  assert.ok(rendererVersion);
+  assert.ok(shellWorkflow.includes(`grep -Fq 'const VERSION=${rendererVersion}' shell/user-character.js`));
 });

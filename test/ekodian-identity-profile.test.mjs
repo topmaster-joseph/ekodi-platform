@@ -37,7 +37,7 @@ test('EKODIAN identity registry is explicit, privacy-preserving and Generation 8
 
 test('user character binds identity only through explicit governed profile references',()=>{
   const source=read('shell/user-character.js');
-  assert.match(source,/const VERSION=6/);
+  assert.match(source,/const VERSION=7/);
   assert.match(source,/IDENTITY_CONTRACT='ekodi\.ekodian-identity\.v1'/);
   assert.match(source,/data-ekodi-character-identity-registry/);
   assert.match(source,/window\.EKODICharacterIdentityRegistry/);
