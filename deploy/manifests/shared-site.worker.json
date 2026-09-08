@@ -296,7 +296,9 @@
         ],
         "rollbackHeaderExpect": [
           "x-content-type-options: nosniff"
-        ]
+        ],
+        "candidateVerify": false,
+        "candidateVerifyReason": "run_worker_first bootstrap for /ekodibiz/mall can serve the stable static storefront during 0% version-override smoke; verify the marketplace Worker route immediately after promotion"
       },
       {
         "url": "https://ekodi.kr/ekodibiz/mall/admin/",

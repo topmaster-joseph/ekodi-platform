@@ -32,6 +32,8 @@ test('shared-site Mall release gate uses the same stable ownership contract', ()
     assert.ok(mallGate.expect?.includes(marker), `missing release marker: ${marker}`);
     assert.ok(mallGate.rollbackExpect?.includes(marker), `missing rollback marker: ${marker}`);
   }
+  assert.equal(mallGate.candidateVerify,false);
+  assert.match(mallGate.candidateVerifyReason||'',/run_worker_first bootstrap/);
   assert.ok(mallGate.expect?.includes('/ekodibiz/mall/assets/marketplace-live.js'));
   assert.ok(mallGate.rollbackExpect?.includes('/ekodibiz/mall/app.js'));
   assert.ok(!mallGate.rollbackExpect?.includes('/ekodibiz/mall/assets/marketplace-live.js'));
