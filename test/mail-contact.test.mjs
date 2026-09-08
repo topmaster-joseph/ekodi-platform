@@ -83,6 +83,7 @@ test('public contact release guard is registered', async()=>{
   assert.deepEqual(probe?.statuses,[200]);
   assert.ok(probe?.expect?.includes('joseph@ekodi.kr'));
   assert.ok(probe?.headerExpect?.includes('x-ekodi-route: mail-contact'));
+  assert.equal(probe?.rollbackVerify,false);
   const wrangler=await readFile(new URL('../wrangler.site.toml',import.meta.url),'utf8');
   assert.match(wrangler,/name = "MAIL_CONTACT_RATE_LIMITER"/);
   assert.match(wrangler,/limit = 5/);
