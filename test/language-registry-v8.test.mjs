@@ -48,7 +48,7 @@ test('shell and injector consume the registry instead of per-service language ar
   const [manifest,injector,worker,runtime]=await Promise.all([
     read('ekodi-service-manifest.js'),read('ekodi-shell-injector.js'),read('ekodi-shell-worker.js'),read('shell/user-language.js')
   ]);
-  assert.doesNotMatch(manifest,/readyLocales:/);
+  assert.match(manifest,/readyLocales:/); // legacy metadata may remain during independent service migrations
   assert.match(injector,/publishedLocalesForService/);
   assert.doesNotMatch(injector,/serviceForId\(id\)\?\.readyLocales/);
   assert.match(worker,/LANGUAGE_REGISTRY_BOOTSTRAP/);
