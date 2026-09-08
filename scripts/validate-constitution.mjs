@@ -13,7 +13,7 @@ const coreData = json('config/core-data-boundaries.json');
 const storage = json('config/storage-policy.json');
 const workspace = json('config/service-workspace-policy.json');
 
-if (constitution.version !== '1.8.2') fail('constitution version must remain 1.8.2 with the approved Developer/Experience portal amendment');
+if (constitution.version !== '1.8.3') fail('constitution version must remain 1.8.3 with the approved Bible Core provider-boundary amendment');
 if (constitution.status !== 'active') fail('constitution must be active');
 for (const principle of ['free-first-not-free-only','ekodi-core-is-source-of-truth','provider-independent-by-default','secure-by-default','one-domain-grammar','isolated-parallel-development','verification-first-evolution','security-native-intelligence','evidence-linked-recommendations','secure-projection-minimum-disclosure','integrated-responsibility-distributed-execution-standardized-connections','layered-governance-os-core-services-connections-workspaces','user-surface-engine-separation','capability-first-reuse','sustainable-scale-by-evidence','workspace-over-space','living-digital-commons-north-star','sovereign-autonomy-with-human-authority','person-workspace-role-capability-authority','observe-detect-reason-plan-execute-verify-recover-learn']) {
   if (!constitution.principles?.includes(principle)) fail(`missing constitutional principle: ${principle}`);
