@@ -85,6 +85,7 @@ async function officialSchemaReady(env) {
   return d1SchemaReady(env?.DB,[
     'affiliate_storefront_products',
     'affiliate_product_performance_daily',
+    'affiliate_growth_opportunities',
     'affiliate_official_market_signals',
     'affiliate_promotion_weekly_boards',
     'affiliate_promotion_weekly_products',
