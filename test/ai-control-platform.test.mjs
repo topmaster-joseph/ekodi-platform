@@ -14,7 +14,7 @@ test('coding work requests an isolated branch and is forced into parallel develo
 test('parallel plan fills up to five suppliers in free/account-first order',()=>{
   const task=normalizeTaskInput({prompt:'검토해줘',mode:'parallel'});
   const plan=buildExecutionPlan(task,{geminiFree:true,nodeProviders:['codex','gemini-cli'],openaiApi:true,anthropicApi:true,workerProviders:['claude']});
-  assert.deepEqual(plan.map(item=>item.providerId),['gemini-free','node:codex','node:gemini-cli','openai-api','anthropic-api']);
+  assert.deepEqual(plan.map(item=>item.providerId),['node:codex','node:gemini-cli','gemini-free','openai-api','anthropic-api']);
   assert.equal(plan.length,AI_CONTROL_POLICY.maxParallelProviders);
   assert.equal(plan[0].role,'origin-primary');
 });
@@ -22,7 +22,7 @@ test('parallel plan fills up to five suppliers in free/account-first order',()=>
 test('legacy default requests still fan out in parallel instead of primary-review',()=>{
   const task=normalizeTaskInput({prompt:'이 설계를 상호 검토해줘'});
   const plan=buildExecutionPlan(task,{geminiFree:true,nodeProviders:['codex'],openaiApi:true});
-  assert.deepEqual(plan,[{providerId:'gemini-free',role:'origin-primary'},{providerId:'node:codex',role:'parallel-2'},{providerId:'openai-api',role:'parallel-3'}]);
+  assert.deepEqual(plan,[{providerId:'node:codex',role:'origin-primary'},{providerId:'gemini-free',role:'parallel-2'},{providerId:'openai-api',role:'parallel-3'}]);
 });
 
 test('legacy single requests are upgraded to all available parallel suppliers',()=>{

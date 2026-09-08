@@ -30,8 +30,8 @@ test('environment can lower or raise a plan allowance without code changes', () 
   assert.equal(fundingPolicyForPlan('plus', { USER_AI_PLUS_MONTHLY_REQUESTS:'0' }).sponsoredEligible, false);
 });
 
-test('personal API wins in automatic mode when safe and connected', () => {
-  assert.equal(chooseUserAiRoute({ mode:'auto', hasPersonal:true, personalAllowed:true, sponsoredAvailable:true, sponsoredRemaining:100 }), 'personal-api');
+test('human-present automatic mode prefers an already-paid personal subscription before metered personal API', () => {
+  assert.equal(chooseUserAiRoute({ mode:'auto', hasPersonal:true, personalAllowed:true, sponsoredAvailable:true, sponsoredRemaining:100 }), 'personal-web');
 });
 
 test('FREE interactive request without personal API uses personal web, never EKODI paid API', () => {
