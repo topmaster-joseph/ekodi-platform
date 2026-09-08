@@ -1,6 +1,6 @@
 const SUPABASE_URL='https://renzehysxirjilvdxacv.supabase.co';
 const DEFAULT_PUBLISHABLE_KEY='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
-const GMAIL_SCOPE='https://www.googleapis.com/auth/gmail.readonly';
+const GMAIL_READ_SCOPE='https://www.googleapis.com/auth/gmail.readonly';
 export const MAIL_HOST='mail.ekodi.kr';
 
 const tokenCache=new Map();
@@ -56,14 +56,15 @@ function mailboxFor(identity,env){
   if(!allowedDomains(env).has(domain))return null;
   return mapped;
 }
-async function serviceAccountToken(mailbox,env){
-  const cached=tokenCache.get(mailbox);
+export async function serviceAccountToken(mailbox,env,scope=GMAIL_READ_SCOPE){
+  const cacheKey=`${mailbox}:${scope}`;
+  const cached=tokenCache.get(cacheKey);
   if(cached&&cached.expiresAt>Date.now()+60000)return cached.token;
   const serviceEmail=String(env.GOOGLE_SERVICE_ACCOUNT_EMAIL||'').trim();
   if(!serviceEmail||!env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY)throw new Error('MAIL_SERVICE_ACCOUNT_NOT_CONFIGURED');
   const now=Math.floor(Date.now()/1000);
   const header=base64Url(JSON.stringify({alg:'RS256',typ:'JWT'}));
-  const claims=base64Url(JSON.stringify({iss:serviceEmail,sub:mailbox,scope:GMAIL_SCOPE,aud:'https://oauth2.googleapis.com/token',iat:now,exp:now+3600}));
+  const claims=base64Url(JSON.stringify({iss:serviceEmail,sub:mailbox,scope,aud:'https://oauth2.googleapis.com/token',iat:now,exp:now+3600}));
   const input=`${header}.${claims}`;
   const key=await crypto.subtle.importKey('pkcs8',pemBytes(env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY),{name:'RSASSA-PKCS1-v1_5',hash:'SHA-256'},false,['sign']);
   const signature=await crypto.subtle.sign('RSASSA-PKCS1-v1_5',key,encoder.encode(input));
@@ -74,7 +75,7 @@ async function serviceAccountToken(mailbox,env){
     const error=new Error(data.error_description||data.error||'GOOGLE_TOKEN_EXCHANGE_FAILED');
     error.code='GOOGLE_TOKEN_EXCHANGE_FAILED';throw error;
   }
-  tokenCache.set(mailbox,{token:data.access_token,expiresAt:Date.now()+Math.max(60,Number(data.expires_in||3600)-120)*1000});
+  tokenCache.set(cacheKey,{token:data.access_token,expiresAt:Date.now()+Math.max(60,Number(data.expires_in||3600)-120)*1000});
   return data.access_token;
 }
 async function gmailFetch(mailbox,env,path){

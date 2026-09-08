@@ -9,6 +9,7 @@ import { messengerUserPage, messengerUiScript } from './messenger-user-page.js';
 import { investUserPage, investUiScript } from './invest-user-page.js';
 import { investSubjectUiScript } from './invest-subject-ui.js';
 import { MAIL_HOST, mailUserPage, handleMailApi } from './mail-user-page.js';
+import { handleMailContactApi, mailContactPage } from './mail-contact.js';
 import { mailAdminPage } from './mail-admin-page.js';
 import { isWorkspaceAdminPath, workspaceAdminPage, workspaceAdminCss, workspaceAdminScript } from './workspace-admin-page.js';
 import { isStoreAdminPathShape, resolveStoreAdminRoute, storeAdminPage, storeAdminCss, storeAdminScript } from './store-admin-engine.js';
@@ -229,8 +230,11 @@ export default {
     }
 
     if(host===MAIL_HOST){
+      const contactResponse=await handleMailContactApi(request,env);
+      if(contactResponse)return contactResponse;
       const apiResponse=await handleMailApi(request,env);
       if(apiResponse)return apiResponse;
+      if(request.method==='GET'&&url.pathname==='/contact')return injectEkodiShell(mailContactPage(),'mail');
       if(request.method==='GET'&&url.pathname==='/admin')return injectEkodiShell(mailAdminPage(),'mail','admin');
       if(request.method==='GET'&&(url.pathname==='/'||url.pathname===''))return injectEkodiShell(mailUserPage(),'mail');
     }

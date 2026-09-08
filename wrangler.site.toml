@@ -131,6 +131,13 @@ database_name = "ekodi-auth"
 database_id = "e38778f1-b059-4fe7-8816-300f3eec6e19"
 migrations_dir = "migrations"
 
+[[ratelimits]]
+binding = "MAIL_CONTACT_RATE_LIMITER"
+namespace_id = "3901"
+[ratelimits.simple]
+limit = 5
+period = 60
+
 [assets]
 directory = "./dist"
 binding = "ASSETS"
