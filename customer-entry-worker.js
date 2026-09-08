@@ -161,7 +161,7 @@ export default {
         error: '사역보고 관리는 에코디교회 목회자 관리자로 이동했습니다.',
         code: 'CHURCH_REPORTS_MOVED',
         canonical: '/api/church/admin/reports',
-        admin: 'https://ekodi.kr/ekodi-church/admin/reports',
+        admin: 'https://ekodi.kr/ekodichurch/admin/reports',
       }), {
         status: 410,
         headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', 'x-content-type-options': 'nosniff' },
