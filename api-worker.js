@@ -5,6 +5,7 @@ import { handleLanguageAutomationPublic, languageStatusForAdmin, runLanguageAuto
 import { remotePowerSnapshot, requestRemoteWake } from './remote-power-control.js';
 import { analyzeServiceFleet, evaluateTechnologyCandidate } from './evolution-intelligence-runtime.js';
 import { evolutionStoreSummary, listEvolutionRecommendations, persistEvolutionReport } from './evolution-intelligence-store.js';
+import { analyzeCapabilityEcosystem, capabilityEcosystemSnapshot } from './ekodi-self-automation-engine.js';
 import { buildPublicPreviewProjection } from './preview-public-projection.js';
 
 // Provider service registry only. Customer organizations and their sites are managed as
@@ -679,6 +680,20 @@ async function handleControl(request, env) {
     return controlJson({ recommendation }, 200, auth.response.headers);
   }
 
+  if (request.method === 'GET' && path === `${CONTROL_PREFIX}/capability-ecosystem`) {
+    return controlJson(await capabilityEcosystemSnapshot(env.DB), 200, auth.response.headers);
+  }
+
+  if (request.method === 'POST' && path === `${CONTROL_PREFIX}/capability-ecosystem/analyze`) {
+    const snapshot = await analyzeCapabilityEcosystem(env.DB);
+    await writeAudit(env, auth.session, 'capability.ecosystem.analyze', 'platform', JSON.stringify({
+      patterns: snapshot.patterns.length,
+      candidates: snapshot.candidates.length,
+      productionMutation: false,
+    }));
+    return controlJson(snapshot, 200, auth.response.headers);
+  }
+
   if (request.method === 'GET' && path === `${CONTROL_PREFIX}/cloudflare-accounts`) {
     return controlJson(await cloudflareAccountSnapshot(env), 200, auth.response.headers);
   }
@@ -798,7 +813,7 @@ export default {
         runChecks(env),
         cloudflareAccountSnapshot(env)
       ]);
-      await Promise.all([evolutionSnapshot(env), runLanguageAutomation(env)]);
+      await Promise.all([evolutionSnapshot(env), runLanguageAutomation(env), analyzeCapabilityEcosystem(env.DB)]);
     })().catch(error => console.error('Scheduled service, account, or evolution check failed', error)));
   }
 };
