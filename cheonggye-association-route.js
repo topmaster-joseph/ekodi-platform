@@ -2,42 +2,31 @@ import { cheonggyeAssociationPage, cheonggyeAssociationScript } from './cheonggy
 
 const CGMA_PAGE_PATHS = new Set(['/cgma','/cgma/','/cgma/notice','/cgma/campaigns','/cgma/stores','/cgma/proposal']);
 const API_PREFIX = '/cgma-community-api';
+const LEGACY_PUBLIC_PREFIX = '/api/cheonggye';
 const VALID_UPDATE_TYPES = new Set(['notice','campaign','contest','store']);
 const VALID_FEEDBACK_TYPES = new Set(['proposal','store','campaign','question']);
 const VALID_FEEDBACK_STATUS = new Set(['new','reviewing','resolved','hidden']);
 
 function json(data, status = 200, request) {
   const origin = request ? String(request.headers.get('origin') || '') : '';
-  const headers = new Headers({
-    'content-type': 'application/json; charset=utf-8',
-    'cache-control': 'no-store',
-    'x-content-type-options': 'nosniff'
-  });
+  const headers = new Headers({ 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', 'x-content-type-options': 'nosniff' });
   if (['https://admin.ekodi.kr','https://ekodi.kr','https://cgma.or.kr','https://www.cgma.or.kr'].includes(origin)) {
-    headers.set('access-control-allow-origin', origin);
-    headers.set('vary', 'Origin');
-    headers.set('access-control-allow-credentials', 'true');
+    headers.set('access-control-allow-origin', origin); headers.set('vary', 'Origin'); headers.set('access-control-allow-credentials', 'true');
   }
   return new Response(JSON.stringify(data), { status, headers });
 }
 function options(request) {
   const origin = String(request.headers.get('origin') || '');
-  const headers = new Headers({
-    'access-control-allow-methods': 'GET,POST,PUT,OPTIONS',
-    'access-control-allow-headers': 'content-type,authorization',
-    'access-control-max-age': '600',
-    'cache-control': 'no-store'
-  });
+  const headers = new Headers({ 'access-control-allow-methods': 'GET,POST,PUT,OPTIONS', 'access-control-allow-headers': 'content-type,authorization', 'access-control-max-age': '600', 'cache-control': 'no-store' });
   if (['https://admin.ekodi.kr','https://ekodi.kr','https://cgma.or.kr','https://www.cgma.or.kr'].includes(origin)) {
-    headers.set('access-control-allow-origin', origin);
-    headers.set('vary', 'Origin');
-    headers.set('access-control-allow-credentials', 'true');
+    headers.set('access-control-allow-origin', origin); headers.set('vary', 'Origin'); headers.set('access-control-allow-credentials', 'true');
   }
   return new Response(null, { status: 204, headers });
 }
 function id(prefix) { return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 9)}`; }
 function clean(value, limit = 500) { return String(value || '').trim().slice(0, limit); }
 async function readBody(request) { try { return await request.json(); } catch { return null; } }
+function publicPath(url, suffix) { return url.pathname === `${API_PREFIX}${suffix}` || url.pathname === `${LEGACY_PUBLIC_PREFIX}${suffix}`; }
 async function ensureSchema(env) {
   if (!env?.DB) return false;
   await env.DB.batch([
@@ -58,30 +47,17 @@ async function ensureSchema(env) {
 }
 function updateRow(row) { return { id:row.id, type:row.type, title:row.title, body:row.body, storeName:row.store_name || '', eventDate:row.event_date || '', status:row.status, isPinned:Boolean(row.is_pinned), createdAt:row.created_at, updatedAt:row.updated_at }; }
 function feedbackRow(row) { return { id:row.id, type:row.type, name:row.name, contact:row.contact || '', title:row.title, body:row.body, status:row.status, createdAt:row.created_at, updatedAt:row.updated_at }; }
-async function listUpdates(env, includeHidden = false) {
-  await ensureSchema(env);
-  const where = includeHidden ? '' : "WHERE status = 'public'";
-  const rows = await env.DB.prepare(`SELECT * FROM cheonggye_community_updates ${where} ORDER BY is_pinned DESC, updated_at DESC LIMIT 100`).all();
-  return (rows.results || []).map(updateRow);
-}
-async function listFeedback(env) {
-  await ensureSchema(env);
-  const rows = await env.DB.prepare('SELECT * FROM cheonggye_community_feedback ORDER BY created_at DESC LIMIT 200').all();
-  return (rows.results || []).map(feedbackRow);
-}
+async function listUpdates(env, includeHidden = false) { await ensureSchema(env); const where = includeHidden ? '' : "WHERE status = 'public'"; const rows = await env.DB.prepare(`SELECT * FROM cheonggye_community_updates ${where} ORDER BY is_pinned DESC, updated_at DESC LIMIT 100`).all(); return (rows.results || []).map(updateRow); }
+async function listFeedback(env) { await ensureSchema(env); const rows = await env.DB.prepare('SELECT * FROM cheonggye_community_feedback ORDER BY created_at DESC LIMIT 200').all(); return (rows.results || []).map(feedbackRow); }
 async function publicApi(request, env, url) {
   if (!await ensureSchema(env)) return json({ error:'데이터 저장소가 연결되지 않았습니다.' }, 503, request);
-  if (request.method === 'GET' && url.pathname === `${API_PREFIX}/updates`) return json({ updates: await listUpdates(env, false) }, 200, request);
-  if (request.method === 'POST' && url.pathname === `${API_PREFIX}/feedback`) {
-    const body = await readBody(request);
-    if (!body || typeof body !== 'object') return json({ error:'접수 형식을 확인해 주세요.' }, 400, request);
+  if (request.method === 'GET' && publicPath(url, '/updates')) return json({ updates: await listUpdates(env, false) }, 200, request);
+  if (request.method === 'POST' && publicPath(url, '/feedback')) {
+    const body = await readBody(request); if (!body || typeof body !== 'object') return json({ error:'접수 형식을 확인해 주세요.' }, 400, request);
     const type = VALID_FEEDBACK_TYPES.has(clean(body.type, 20)) ? clean(body.type, 20) : 'proposal';
-    const name = clean(body.name, 80);
-    const title = clean(body.title, 120);
-    const text = clean(body.body, 1200);
+    const name = clean(body.name, 80); const title = clean(body.title, 120); const text = clean(body.body, 1200);
     if (!name || !title || !text) return json({ error:'이름, 제목, 내용을 입력해 주세요.' }, 400, request);
-    const now = new Date().toISOString();
-    const itemId = id('fb');
+    const now = new Date().toISOString(); const itemId = id('fb');
     await env.DB.prepare(`INSERT INTO cheonggye_community_feedback (id,type,name,contact,title,body,status,created_at,updated_at) VALUES (?, ?, ?, ?, ?, ?, 'new', ?, ?)`).bind(itemId, type, name, clean(body.contact, 120), title, text, now, now).run();
     return json({ ok:true, id:itemId }, 201, request);
   }
@@ -93,50 +69,38 @@ async function adminApi(request, env, url) {
   if (!await ensureSchema(env)) return json({ error:'데이터 저장소가 연결되지 않았습니다.' }, 503, request);
   if (request.method === 'GET' && url.pathname === `${API_PREFIX}/admin/updates`) return json({ updates: await listUpdates(env, true) }, 200, request);
   if (request.method === 'POST' && url.pathname === `${API_PREFIX}/admin/updates`) {
-    const body = await readBody(request);
-    const type = VALID_UPDATE_TYPES.has(clean(body?.type, 20)) ? clean(body.type, 20) : 'notice';
-    const title = clean(body?.title, 120);
-    const text = clean(body?.body, 1200);
-    if (!title || !text) return json({ error:'제목과 내용을 입력해 주세요.' }, 400, request);
-    const now = new Date().toISOString();
-    const itemId = id('up');
+    const body = await readBody(request); const type = VALID_UPDATE_TYPES.has(clean(body?.type, 20)) ? clean(body.type, 20) : 'notice';
+    const title = clean(body?.title, 120); const text = clean(body?.body, 1200); if (!title || !text) return json({ error:'제목과 내용을 입력해 주세요.' }, 400, request);
+    const now = new Date().toISOString(); const itemId = id('up');
     await env.DB.prepare(`INSERT INTO cheonggye_community_updates (id,type,title,body,store_name,event_date,status,is_pinned,created_at,updated_at) VALUES (?, ?, ?, ?, ?, ?, 'public', ?, ?, ?)`).bind(itemId, type, title, text, clean(body?.storeName, 120), clean(body?.eventDate, 40), body?.isPinned ? 1 : 0, now, now).run();
     return json({ ok:true, id:itemId, updates: await listUpdates(env, true) }, 201, request);
   }
   const updateMatch = url.pathname.match(/^\/cgma-community-api\/admin\/updates\/([^/]+)$/);
   if (updateMatch && request.method === 'PUT') {
-    const body = await readBody(request) || {};
-    const current = await env.DB.prepare('SELECT * FROM cheonggye_community_updates WHERE id = ?').bind(decodeURIComponent(updateMatch[1])).first();
+    const body = await readBody(request) || {}; const current = await env.DB.prepare('SELECT * FROM cheonggye_community_updates WHERE id = ?').bind(decodeURIComponent(updateMatch[1])).first();
     if (!current) return json({ error:'소식을 찾지 못했습니다.' }, 404, request);
-    const nextStatus = clean(body.status, 20) || current.status;
-    const nextPinned = body.togglePinned ? (current.is_pinned ? 0 : 1) : (body.isPinned === undefined ? current.is_pinned : (body.isPinned ? 1 : 0));
+    const nextStatus = clean(body.status, 20) || current.status; const nextPinned = body.togglePinned ? (current.is_pinned ? 0 : 1) : (body.isPinned === undefined ? current.is_pinned : (body.isPinned ? 1 : 0));
     await env.DB.prepare('UPDATE cheonggye_community_updates SET status = ?, is_pinned = ?, updated_at = ? WHERE id = ?').bind(nextStatus, nextPinned, new Date().toISOString(), current.id).run();
     return json({ ok:true, updates: await listUpdates(env, true) }, 200, request);
   }
   if (request.method === 'GET' && url.pathname === `${API_PREFIX}/admin/feedback`) return json({ feedback: await listFeedback(env) }, 200, request);
   const feedbackMatch = url.pathname.match(/^\/cgma-community-api\/admin\/feedback\/([^/]+)$/);
   if (feedbackMatch && request.method === 'PUT') {
-    const body = await readBody(request) || {};
-    const status = VALID_FEEDBACK_STATUS.has(clean(body.status, 20)) ? clean(body.status, 20) : 'reviewing';
+    const body = await readBody(request) || {}; const status = VALID_FEEDBACK_STATUS.has(clean(body.status, 20)) ? clean(body.status, 20) : 'reviewing';
     await env.DB.prepare('UPDATE cheonggye_community_feedback SET status = ?, updated_at = ? WHERE id = ?').bind(status, new Date().toISOString(), decodeURIComponent(feedbackMatch[1])).run();
     return json({ ok:true, feedback: await listFeedback(env) }, 200, request);
   }
   return null;
 }
 
-export function isCheonggyeAssociationPath(pathname) {
-  const path = String(pathname || '').replace(/\/+$/, '') || '/';
-  return CGMA_PAGE_PATHS.has(pathname) || CGMA_PAGE_PATHS.has(path) || path.startsWith('/cgma/');
-}
+export function isCheonggyeAssociationPath(pathname) { const path = String(pathname || '').replace(/\/+$/, '') || '/'; return CGMA_PAGE_PATHS.has(pathname) || CGMA_PAGE_PATHS.has(path) || path.startsWith('/cgma/'); }
 
 export async function routeCheonggyeAssociation(request, env) {
   const url = new URL(request.url);
-  if (url.pathname.startsWith(API_PREFIX)) {
+  if (url.pathname.startsWith(API_PREFIX) || url.pathname.startsWith(LEGACY_PUBLIC_PREFIX)) {
     if (request.method === 'OPTIONS') return options(request);
-    const admin = await adminApi(request, env, url);
-    if (admin) return admin;
-    const pub = await publicApi(request, env, url);
-    if (pub) return pub;
+    if (url.pathname.startsWith(`${API_PREFIX}/admin/`)) { const admin = await adminApi(request, env, url); if (admin) return admin; }
+    const pub = await publicApi(request, env, url); if (pub) return pub;
     return json({ error:'청계상권 소통 API 경로를 찾지 못했습니다.' }, 404, request);
   }
   if (!['GET','HEAD'].includes(request.method)) return null;
