@@ -6,7 +6,7 @@ const SERVICE_ROLE=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const GOOGLE_CLIENT_ID="483044030492-4e6231l5glchhtniroinvuq3ev6n5mv5.apps.googleusercontent.com";
 const GOOGLE_ISSUERS=new Set(["accounts.google.com","https://accounts.google.com"]);
 const GOOGLE_JWKS_URL="https://www.googleapis.com/oauth2/v3/certs";
-const AUTH_ORIGIN="https://auth.ekodi.kr";
+const AUTH_ORIGINS=new Set(["https://ekodi.kr","https://auth.ekodi.kr"]);
 const CHALLENGE_MINUTES=10;
 const admin=createClient(SUPABASE_URL,SERVICE_ROLE,{auth:{persistSession:false}});
 const encoder=new TextEncoder();
@@ -22,7 +22,7 @@ type ProviderAdapter={
 const cors=(req:Request)=>{
   const origin=req.headers.get("Origin");
   return {
-    "Access-Control-Allow-Origin":origin===AUTH_ORIGIN?AUTH_ORIGIN:"null",
+    "Access-Control-Allow-Origin":origin&&AUTH_ORIGINS.has(origin)?origin:"null",
     "Access-Control-Allow-Headers":"content-type, apikey, x-client-info, authorization",
     "Access-Control-Allow-Methods":"GET,POST,DELETE,OPTIONS",
     "Vary":"Origin"
@@ -317,7 +317,8 @@ function providerFrom(path:string,suffix:string){
 
 Deno.serve(async(req)=>{
   if(req.method==="OPTIONS")return new Response(null,{status:204,headers:cors(req)});
-  if(req.headers.get("Origin")!==AUTH_ORIGIN)return json(req,{error:"origin_not_allowed"},403);
+  const origin=req.headers.get("Origin");
+  if(!origin||!AUTH_ORIGINS.has(origin))return json(req,{error:"origin_not_allowed"},403);
   const path=new URL(req.url).pathname.replace(/^\/identity-api/,"")||"/";
   try{
     if(req.method==="GET"&&path==="/providers")return await listProviders(req);

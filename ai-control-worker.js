@@ -174,6 +174,7 @@ function adminControlRedirect(){
   const redirect=Response.redirect(target,307);
   const response=new Response(redirect.body,redirect);
   response.headers.set('cache-control','no-store');
+  response.headers.set('x-content-type-options','nosniff');
   response.headers.set('x-robots-tag','noindex, nofollow, noarchive');
   response.headers.set('x-ekodi-route','ai-runtime-admin-handoff');
   return response;

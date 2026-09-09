@@ -203,7 +203,8 @@ async function startYouTube(request, env, identity, subject) {
   if (!youtubeConfigured(env)) return json(request,env,{error:'GOOGLE_APP_NOT_CONFIGURED',setup:'Google OAuth broker + encrypted Marketing vault'},503);
   const body = await readJson(request) || {};
   const state = await createOAuthState(env,YOUTUBE_PROVIDER,'publish',identity,subject,body.returnUrl);
-  const accountHint = subject.type === 'tenant' && subject.key === 'ekodi-biz' ? 'ekodibiz@gmail.com' : '';
+  const requestedHint = clean(body.accountHint,180).trim().toLowerCase();
+  const accountHint = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(requestedHint) ? requestedHint : '';
   const broker=await env.GOOGLE_OAUTH_BROKER.startYouTubeOAuth({state,accountHint});
   return json(request,env,{authorizationUrl:String(broker.authorizationUrl||''),provider:'youtube',mode:'publish'});
 }
@@ -354,11 +355,8 @@ async function youtubeCallback(request, env) {
     const channels = await fetchJson('https://www.googleapis.com/youtube/v3/channels?part=snippet&mine=true&maxResults=50',{headers:{authorization:`Bearer ${accessToken}`}});
     const subject = {type:state.subject_type,key:state.subject_key};
     const discoveredChannels = (channels.items || []).filter(channel => channel?.id);
-    let selectedChannels = discoveredChannels;
-    if (subject.type === 'tenant' && subject.key === 'ekodi-biz') {
-      selectedChannels = discoveredChannels.filter(channel => clean(channel.snippet?.title || '',120) === '에코디몰');
-      if (!selectedChannels.length) throw new Error('EKODIMALL_YOUTUBE_CHANNEL_NOT_FOUND');
-    }
+    const selectedChannels = discoveredChannels;
+    if (!selectedChannels.length) throw new Error('YOUTUBE_CHANNEL_NOT_FOUND');
     const expiresAt = Number(tokenData.expires_in || 0) > 0 ? new Date(Date.now() + Number(tokenData.expires_in) * 1000).toISOString() : '';
     let count = 0;
     for (const channel of selectedChannels) {
@@ -377,6 +375,19 @@ async function listConnections(request, env, subject) {
   const settings=await channelSettingsMap(env,subject);
   const connections = (result.results || []).map(row => ({...row,scopes:safeParse(row.scopes_json,[]),metadata:safeParse(row.metadata_json,{}),settings:settings.get(row.provider+':'+row.external_id)||null}));
   return json(request,env,{connections,platform:{metaConfigured:metaConfigured(env),threadsConfigured:threadsConfigured(env),youtubeConfigured:youtubeConfigured(env),credentialMode:'central_oauth_vault'}});
+}
+async function disconnectConnection(request, env, identity, subject, connectionId) {
+  const id = Number(connectionId);
+  if (!Number.isInteger(id) || id <= 0) return json(request,env,{error:'CHANNEL_CONNECTION_ID_INVALID'},400);
+  const row = await env.DB.prepare(`SELECT id,provider,external_id,display_name,status FROM marketing_oauth_connections WHERE id=? AND subject_type=? AND subject_key=?`).bind(id,subject.type,subject.key).first();
+  if (!row) return json(request,env,{error:'CHANNEL_CONNECTION_NOT_FOUND'},404);
+  const now = nowIso();
+  await env.DB.prepare(`UPDATE marketing_oauth_connections SET status='revoked',token_ciphertext='',token_expires_at=NULL,last_check_at=?,last_error='disconnected_by_user',updated_at=? WHERE id=? AND subject_type=? AND subject_key=?`).bind(now,now,id,subject.type,subject.key).run();
+  await env.DB.prepare(`UPDATE marketing_publish_channels SET status='disconnected',credential_ref='',last_check_at=?,last_error='connection_revoked',updated_at=? WHERE subject_type=? AND subject_key=? AND provider=? AND external_account_id=?`).bind(now,now,subject.type,subject.key,row.provider,row.external_id).run();
+  if (row.provider === 'youtube') {
+    await env.DB.prepare(`UPDATE marketing_channel_settings SET sync_status='disconnected',last_sync_error='',updated_by=?,updated_at=? WHERE subject_type=? AND subject_key=? AND provider='youtube' AND external_account_id=?`).bind(identity.email,now,subject.type,subject.key,row.external_id).run();
+  }
+  return json(request,env,{ok:true,connection:{id,provider:row.provider,externalId:row.external_id,displayName:row.display_name,status:'revoked'},reconnectable:true},200);
 }
 async function channelSettingsMap(env, subject) {
   const result = await env.DB.prepare(`SELECT provider,external_account_id,role,is_default,publish_privacy,category_id,description,keywords,country,default_language,unsubscribed_trailer,sync_status,last_sync_at,last_sync_error,updated_by,updated_at FROM marketing_channel_settings WHERE subject_type=? AND subject_key=?`).bind(subject.type,subject.key).all();
@@ -680,6 +691,8 @@ export default {
     if (url.pathname === '/v1/connect/threads/start' && request.method === 'POST') return startThreads(request,env,identity,subject);
     if (url.pathname === '/v1/connect/youtube/start' && request.method === 'POST') return startYouTube(request,env,identity,subject);
     if (url.pathname === '/v1/connections' && request.method === 'GET') return listConnections(request,env,subject);
+    const disconnectRoute=url.pathname.match(/^\/v1\/connections\/(\d+)\/disconnect$/);
+    if(disconnectRoute && request.method==='POST') return disconnectConnection(request,env,identity,subject,disconnectRoute[1]);
     const channelSettingsRoute=url.pathname.match(/^\/v1\/connections\/(\d+)\/settings$/);
     if(channelSettingsRoute && request.method==='POST') return saveChannelSettings(request,env,identity,subject,channelSettingsRoute[1]);
     if (url.pathname === '/v1/publish' && request.method === 'POST') {

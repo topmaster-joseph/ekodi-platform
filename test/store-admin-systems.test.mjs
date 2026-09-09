@@ -35,7 +35,7 @@ test('existing first stores are compatibility profiles on one Store Admin Engine
     assert.equal(response.headers.get('x-ekodi-route'),`${store.slug}-store-admin`);
     assert.equal(response.headers.get('x-ekodi-store-scope'),store.id);
     assert.equal(response.headers.get('cache-control'),'no-store');
-    assert.match(html,new RegExp(store.brand));assert.match(html,/\/store-admin\.js\?v=20260909-two-level-v2/);assert.match(html,/data-ekodi-admin-sidebar/);assert.match(html,/data-ekodi-authority-scope="tenant"/);assert.match(html,/data-ekodi-admin-layout="two-level"/);assert.match(html,/id="sectionNav"[^>]*data-ekodi-admin-subnav/);assert.match(html,/data-ekodi-admin-nav-mode="primary"/);
+    assert.match(html,new RegExp(store.brand));assert.match(html,/\/store-admin\.js\?v=20260910-delivery-v1/);assert.match(html,/data-ekodi-admin-sidebar/);assert.match(html,/data-ekodi-authority-scope="tenant"/);assert.match(html,/data-ekodi-admin-layout="two-level"/);assert.match(html,/id="sectionNav"[^>]*data-ekodi-admin-subnav/);assert.match(html,/data-ekodi-admin-nav-mode="primary"/);
   }
   assert.match(router,/injectEkodiShell\(storeAdminPage\(storeRoute\),'business','admin'\)/);
   assert.match(await storeAdminCss().text(),/word-break:keep-all/);
@@ -49,7 +49,7 @@ test('existing first stores are compatibility profiles on one Store Admin Engine
 
 test('one Store Admin page projects sections from tenant role capabilities',()=>{
   const all=storeAdminSectionsForRole('store_owner');
-  assert.equal(all.length,12);assert.ok(all.includes('site'));assert.ok(all.includes('finance'));
+  assert.equal(all.length,13);assert.ok(all.includes('site'));assert.ok(all.includes('delivery'));assert.ok(all.includes('finance'));
   assert.deepEqual(storeAdminSectionsForRole('marketing_manager'),['overview','customers','reviews','sales','marketing']);
   assert.deepEqual(storeAdminSectionsForRole('accounting_manager'),['overview','sales','finance']);
   assert.equal(storeAdminCanAccess('hq_manager','connections'),true);assert.equal(storeAdminCanAccess('hq_manager','site'),false);

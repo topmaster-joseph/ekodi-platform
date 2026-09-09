@@ -66,3 +66,25 @@ test('public-site controls E2E proves the live Control API and CGMA form render'
   assert.match(source, /message\.includes\('상태를 확인했습니다'\)/);
   assert.match(source, /menuId === 'public-site-controls'/);
 });
+
+test('AI settings E2E proves protected policy, Router Score and locked UI without production mutation', async () => {
+  const source = await workerSource();
+  assert.match(source, /verifyAiSettings/);
+  assert.match(source, /api\/control\/ai\/v8\/collaboration-settings/);
+  assert.match(source, /AI_ROUTER_SCORE_POLICY\.version/);
+  assert.match(source, /Collaboration ON · LOCK/);
+  assert.match(source, /Cloud First · LOCK/);
+  assert.match(source, /productionMutation:false/);
+  assert.match(source, /menuId === 'ai-settings'/);
+});
+
+test('Control staging writes and reloads AI collaboration settings only in the isolated local D1', async () => {
+  const workflow = await readFile(new URL('../.github/workflows/deploy-control-api.yml', import.meta.url), 'utf8');
+  const verifier = await readFile(new URL('../scripts/verify-ai-collaboration-settings-roundtrip.mjs', import.meta.url), 'utf8');
+  assert.match(workflow, /ai-settings-e2e@ekodi\.local/);
+  assert.match(workflow, /verify-ai-collaboration-settings-roundtrip\.mjs/);
+  assert.match(verifier, /method: 'PUT'/);
+  assert.match(verifier, /audit\?limit=5/);
+  assert.match(verifier, /productionMutation: false/);
+  assert.match(verifier, /requireHumanApprovalForDestructiveAction/);
+});

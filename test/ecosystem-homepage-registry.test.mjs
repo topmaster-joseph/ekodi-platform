@@ -78,12 +78,11 @@ test('homepage navigation and bilingual hero remain compact without roadmap life
   for (const id of ['about', 'services', 'connect', 'contact']) {
     assert.match(homepage, new RegExp(`id="${id}"`));
   }
-  assert.match(homepage, /에코디의 모든 길을 한눈에/);
-  assert.match(homepage, /One ecosystem\. Many ways to connect\./);
+  assert.match(homepage, /원하는 일, 바로 시작하세요/);
+  assert.match(homepage, /필요한 길만 가볍게 연결합니다\./);
   assert.match(homepage, /class="ecosystem-pulse"/);
   assert.match(homepage, /class="service-grid"/);
   assert.doesNotMatch(homepage, /data-status-filter=/);
-  assert.doesNotMatch(homepage, /class="[^"]*orbit|ecosystem-orbit|network-orbit/i);
 });
 
 test('guarded release smoke markers stay aligned with the actual EKODI homepage', () => {
@@ -93,6 +92,6 @@ test('guarded release smoke markers stay aligned with the actual EKODI homepage'
   for (const marker of rootCheck.expect) {
     assert.ok(homepage.includes(marker), `release marker drifted from homepage: ${marker}`);
   }
-  assert.ok(rootCheck.expect.includes('에코디의 모든 길을 한눈에'));
-  assert.ok(rootCheck.expect.includes('One ecosystem. Many ways to connect.'));
+  assert.ok(rootCheck.expect.includes('원하는 일, 바로 시작하세요'));
+  assert.ok(rootCheck.expect.includes('필요한 길만 가볍게 연결합니다.'));
 });

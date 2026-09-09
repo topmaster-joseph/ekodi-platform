@@ -68,7 +68,7 @@
     clients: { label:'고객 사이트', icon:'C', styles:['client-access.css'], scripts:['client-access.js'], real:'[data-section="clients"]', hashes:['#clients'] },
     community: { label:'커뮤니티', icon:'◎', styles:['community-admin.css'], scripts:['community-admin.js'], real:'[data-section="community"]', hashes:['#community'] },
     books: { label:'출판 · 도서', icon:'B', styles:['books-admin.css'], scripts:['books-admin.js'], secondaryStyles:['books-finance-admin.css'], secondaryScripts:['books-finance-admin.js'], real:'[data-section="books"]', hashes:['#books'] },
-    social: { label:'소셜', icon:'S', styles:['social-admin.css'], scripts:['social-admin.js'], real:'[data-section="social"]', hashes:['#social'] },
+    social: { label:'채널·계정 연결', icon:'S', styles:['social-admin.css'], scripts:['social-admin.js'], real:'[data-section="social"]', hashes:['#social'] },
     'supply-network': { label:'판매·공급망', icon:'N', styles:['supply-network-admin.css'], scripts:['supply-network-admin.js'], real:'[data-section="supply-network"]', hashes:['#supply-network'] },
     marketing: {
       label: 'MarketingAI', icon: 'AI',

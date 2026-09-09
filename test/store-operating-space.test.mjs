@@ -109,3 +109,15 @@ test('Yogurt storefront publishes only customer-safe store projection without lo
     const data=await response.json();assert.equal(response.status,200);assert.equal(data.slug,'yogurt');assert.equal(data.phone,'061-453-8295');assert.equal('role' in data,false);assert.equal('email' in data,false);
   }finally{globalThis.fetch=originalFetch}
 });
+
+test('Yogurt Mokpo storefront exposes five customer order channels and verified-price fallback labeling',async()=>{
+  assert.match(await read('storefront-page.js'),/당근주문/);
+  assert.match(await read('storefront-page.js'),/네이버주문/);
+  assert.match(await read('storefront-page.js'),/본사 공식 메뉴 \+ 공개 등록가 참고/);
+  const env={DATA_ENABLED:'false',ASSETS:{fetch:async()=>new Response(html,{headers:{'content-type':'text/html; charset=utf-8'}})}};
+  const response=await spaceWorker.fetch(new Request('https://ekodi.kr/yogurt'),env);
+  const body=await response.text();
+  for(const marker of ['배달의민족','쿠팡이츠','요기요','당근주문','네이버주문'])assert.match(body,new RegExp(marker));
+  for(const marker of ['플레인 요거트아이스크림','딸기 요아츄','그릭요거트 100g','참고가'])assert.match(body,new RegExp(marker));
+  assert.match(body,/본사 등록명 ‘무안목포대점’/);
+});
