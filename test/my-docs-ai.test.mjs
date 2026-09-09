@@ -29,7 +29,9 @@ test('core.documents is service-backed with an observable provider contract',()=
   const capability=registry.capabilities.find(item=>item.id==='core.documents');assert.equal(capability?.maturity,'service-backed');assert.equal(capability?.provider?.id,'my-docs');assert.equal(capability?.provider?.contract,'ekodi.documents.v2');assert.equal(capability?.provider?.generation,8);assert.ok(capability?.provider?.formats?.import?.includes('hwpx'));assert.ok(capability?.provider?.formats?.export?.includes('hwpx'));
 });
 test('My EKODI advertises and probes the document workspace on the canonical production path',()=>{
-  assert.match(worker,/documentWorkspace:true/);assert.match(worker,/documentCapability:'core\.documents'/);assert.match(worker,/documentContract:'ekodi\.documents\.v2'/);assert.match(worker,/documentHwpx:true/);assert.match(worker,/documentVersionHistory:true/);assert.match(worker,/url\.pathname==='\/docs'/);const docsProbe=manifest.worker.requests.find(item=>item.url==='https://ekodi.kr/my/docs/');assert.ok(docsProbe);assert.ok(docsProbe.expect.includes('EKODI Docs AI'));assert.equal(docsProbe.candidateVerify,false);
+  assert.match(worker,/documentWorkspace:true/);assert.match(worker,/documentCapability:'core\.documents'/);assert.match(worker,/documentContract:'ekodi\.documents\.v2'/);assert.match(worker,/documentHwpx:true/);assert.match(worker,/documentVersionHistory:true/);assert.match(worker,/url\.pathname==='\/docs'/);
+  const docsProbe=manifest.worker.requests.find(item=>item.url==='https://ekodi.kr/my/docs/');assert.ok(docsProbe);assert.ok(docsProbe.expect.includes('EKODI Docs AI'));assert.equal(docsProbe.candidateVerify,false);
+  const docsAsset=html.match(/src="\.\/(docs\.js\?v=[^"]+)"/)?.[1];assert.ok(docsAsset);assert.ok(docsProbe.expect.includes(`/docs/${docsAsset}`));
 });
 test('My guarded release smoke-tests the legacy redirect and defers canonical content probes until promotion',()=>{
   const requests=manifest.worker.requests;
