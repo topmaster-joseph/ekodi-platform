@@ -558,7 +558,7 @@
         ],
         "redirect": "manual",
         "expect": [
-          "admin-auth.js?v=20260904-direct-bridge-1",
+          "admin-auth.js?v=20260909-origin-bridge-1",
           "business-auth.js?v=20260826-free-fallback-1",
           "client-auth.js?v=20260904-direct-login-1",
           "isRegistryUserService",
@@ -569,6 +569,22 @@
           "cache-control: no-store",
           "x-content-type-options: nosniff"
         ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://auth.ekodi.kr/google-origin-bridge",
+        "statuses": [200],
+        "redirect": "manual",
+        "expect": ["EKODI 관리자 Google 인증", "/google-origin-bridge.js"],
+        "headerExpect": ["x-ekodi-route: google-origin-bridge", "cache-control: no-store"],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://auth.ekodi.kr/google-origin-bridge.js",
+        "statuses": [200],
+        "redirect": "manual",
+        "expect": ["TARGET_ORIGIN='https://ekodi.kr'", "use_fedcm_for_button:false", "window.opener.postMessage"],
+        "headerExpect": ["x-ekodi-route: central-auth-asset", "cache-control: no-store"],
         "rollbackVerify": false
       },
       {
@@ -624,16 +640,14 @@
         ],
         "redirect": "manual",
         "expect": [
-          "use_fedcm_for_button:false",
-          "ux_mode:'popup'",
+          "GOOGLE_BRIDGE_ORIGIN='https://auth.ekodi.kr'",
+          "requestGoogleCredential",
+          "renderOriginBridgeButton",
+          "event.origin!==GOOGLE_BRIDGE_ORIGIN",
           "directEntry",
-          "isDisplayed",
-          "clearDirectFallback",
-          "button_auto_select:false",
           "isEmbeddedWebView",
           "Chrome에서 관리자 로그인 열기",
           "location.replace(targetHref)",
-          "expired_challenge",
           "u.origin==='https://ekodi.kr'",
           "u.origin==='https://ai.ekodi.kr'",
           "u.origin==='https://tax.ekodi.kr'"
