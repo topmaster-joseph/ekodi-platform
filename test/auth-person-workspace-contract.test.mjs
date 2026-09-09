@@ -83,6 +83,12 @@ test('identity api preserves Google subject while persisting a provider-neutral 
   assert.match(identityApi,/link\.user\.id!==user\.id/);
 });
 
+test('identity api accepts the canonical path-based auth origin while retaining the legacy auth bridge',()=>{
+  assert.match(identityApi,/const AUTH_ORIGINS=new Set\(\["https:\/\/ekodi\.kr","https:\/\/auth\.ekodi\.kr"\]\)/);
+  assert.match(identityApi,/origin&&AUTH_ORIGINS\.has\(origin\)\?origin:"null"/);
+  assert.match(identityApi,/if\(!origin\|\|!AUTH_ORIGINS\.has\(origin\)\)return json\(req,\{error:"origin_not_allowed"\},403\)/);
+});
+
 test('access api resolves and revalidates workspace-scoped handoff',()=>{
   assert.match(accessApi,/\/workspaces/);
   assert.match(accessApi,/current_site_workspaces/);

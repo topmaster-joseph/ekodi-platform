@@ -1,12 +1,9 @@
 name: Supabase Local CI
 
 on:
-  pull_request:
-    paths:
-      - 'supabase/**'
-      - 'auth-site/**'
-      - 'test/**'
-      - '.github/workflows/supabase-local-ci.yml'
+  # This check is required by main branch protection. Keep PR validation unconditional
+  # so path-filtered changes do not leave the required check permanently "expected".
+  pull_request: {}
   push:
     branches: [main]
     paths:

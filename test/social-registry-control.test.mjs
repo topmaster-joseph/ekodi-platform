@@ -68,7 +68,9 @@ test('Control Center lazy-loads Social Channels while security-wrapped Mission C
   assert.match(admin, /\/v1\/connect\/meta\/start/);
   assert.match(admin, /\/v1\/connect\/threads\/start/);
   assert.match(admin, /OAuth 비밀값은 암호화 Vault에만 보관됩니다/);
-  assert.match(features, /label:'채널 연결 관리'/);
+  assert.match(admin, /MULTI-CHANNEL CONTROL CENTER/);
+  assert.match(admin, /data-disconnect-connection/);
+  assert.match(features, /label:'채널·계정 연결'/);
   assert.match(entry, /handleSocialRegistry/);
   assert.match(entry, /\/api\/social\/registry/);
   assert.match(entry, /return apiWorker\.fetch\(request, env, ctx\)/);
