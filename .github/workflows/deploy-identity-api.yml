@@ -1,0 +1,90 @@
+name: Deploy Central Identity API
+
+on:
+  pull_request:
+    paths:
+      - "supabase/functions/identity-api/**"
+      - "test/auth-person-workspace-contract.test.mjs"
+      - ".github/workflows/deploy-identity-api.yml"
+  push:
+    branches: [main]
+    paths:
+      - "supabase/functions/identity-api/**"
+      - ".github/workflows/deploy-identity-api.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: Validate identity origin contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --test test/auth-person-workspace-contract.test.mjs
+          grep -Fq 'const AUTH_ORIGINS=new Set(["https://ekodi.kr","https://auth.ekodi.kr"])' supabase/functions/identity-api/index.ts
+          grep -Fq 'AUTH_ORIGINS.has(origin)' supabase/functions/identity-api/index.ts
+          grep -Fq 'origin_not_allowed' supabase/functions/identity-api/index.ts
+
+  production:
+    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      TOKEN_A: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      TOKEN_B: ${{ secrets.SUPABASE_TOKEN }}
+      TOKEN_C: ${{ secrets.SUPABASE_PAT }}
+      TOKEN_D: ${{ secrets.SUPABASE_MANAGEMENT_TOKEN }}
+      PROJECT_REF: renzehysxirjilvdxacv
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 2
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: EKODI AI Orchestration Gate
+        run: node scripts/validate-ekodi-ai-change-orchestration.mjs --release
+      - name: Validate deployment guardrails
+        run: node scripts/validate-deployment-guardrails.mjs
+      - name: Select Supabase deployment credential
+        shell: bash
+        run: |
+          set -euo pipefail
+          token="${TOKEN_A:-}"
+          [ -n "$token" ] || token="${TOKEN_B:-}"
+          [ -n "$token" ] || token="${TOKEN_C:-}"
+          [ -n "$token" ] || token="${TOKEN_D:-}"
+          if [ -z "$token" ]; then
+            echo 'No Supabase deployment credential is configured.'
+            exit 2
+          fi
+          echo "::add-mask::$token"
+          echo "SUPABASE_ACCESS_TOKEN=$token" >> "$GITHUB_ENV"
+      - name: Deploy identity API
+        run: npx --yes supabase@2.116.0 functions deploy identity-api --project-ref "$PROJECT_REF" --no-verify-jwt
+      - name: Verify canonical and legacy auth origins
+        shell: bash
+        run: |
+          set -euo pipefail
+          endpoint="https://$PROJECT_REF.supabase.co/functions/v1/identity-api/challenge"
+          key='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_'
+          for origin in https://ekodi.kr https://auth.ekodi.kr; do
+            code=$(curl -sS -D /tmp/identity.headers -o /tmp/identity.json -w '%{http_code}' -X POST "$endpoint" -H "Origin: $origin" -H "apikey: $key")
+            test "$code" = '201'
+            grep -Eiq "^access-control-allow-origin:[[:space:]]*$origin" /tmp/identity.headers
+            grep -Fq '483044030492-4e6231l5glchhtniroinvuq3ev6n5mv5.apps.googleusercontent.com' /tmp/identity.json
+            grep -Eq '"nonce":"[a-f0-9]{48}"' /tmp/identity.json
+          done
+          bad=$(curl -sS -o /tmp/identity-bad.json -w '%{http_code}' -X POST "$endpoint" -H 'Origin: https://evil.example' -H "apikey: $key")
+          test "$bad" = '403'
+          grep -Fq 'origin_not_allowed' /tmp/identity-bad.json
