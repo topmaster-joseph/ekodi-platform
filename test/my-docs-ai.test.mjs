@@ -31,7 +31,7 @@ test('core.documents is service-backed with an observable provider contract',()=
 test('My EKODI advertises and probes the document workspace on the canonical production path',()=>{
   assert.match(worker,/documentWorkspace:true/);assert.match(worker,/documentCapability:'core\.documents'/);assert.match(worker,/documentContract:'ekodi\.documents\.v2'/);assert.match(worker,/documentHwpx:true/);assert.match(worker,/documentVersionHistory:true/);assert.match(worker,/url\.pathname==='\/docs'/);
   const docsProbe=manifest.worker.requests.find(item=>item.url==='https://ekodi.kr/my/docs/');assert.ok(docsProbe);assert.ok(docsProbe.expect.includes('EKODI Docs AI'));assert.equal(docsProbe.candidateVerify,false);
-  const docsAsset=html.match(/src="\.\/(docs\.js\?v=[^"]+)"/)?.[1];assert.ok(docsAsset);assert.ok(docsProbe.expect.includes(`/docs/${docsAsset}`));
+  const docsAssetSrc=html.match(/<script type="module" src="([^"]*docs\.js\?v=[^"]+)"/)?.[1];assert.ok(docsAssetSrc);assert.ok(docsProbe.expect.includes(docsAssetSrc));
 });
 test('My guarded release smoke-tests the legacy redirect and defers canonical content probes until promotion',()=>{
   const requests=manifest.worker.requests;
