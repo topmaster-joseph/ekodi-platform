@@ -58,7 +58,7 @@
         "redirect": "manual",
         "expect": [
           "자담치킨 목포대점",
-          "메뉴·가격 보기",
+          "대표 메뉴",
           "배달앱 주문"
         ],
         "headerExpect": [
