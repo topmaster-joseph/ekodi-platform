@@ -1,5 +1,5 @@
 export const AI_MISSION_RUNTIME = Object.freeze({
-  version: '1.1.0',
+  version: '1.2.0',
   authorityModel: Object.freeze({
     humanRole: 'steward_delegate',
     chiefAiRole: 'orchestrator_not_sovereign',
@@ -17,6 +17,17 @@ export const AI_MISSION_RUNTIME = Object.freeze({
     safeActionDefault: 'observe_consult_act_verify_report',
     missingExecutorBehavior: 'queue_and_disclose_without_false_completion',
     humanGateOnlyForHighImpact: true,
+    connectorLifecycle: Object.freeze({
+      preferExistingConnections: true,
+      disconnectAfterTask: false,
+      refreshBeforeExpiryWhereSupported: true,
+      preserveIntentAcrossReauth: true,
+      providerAuthControlsRemainAuthoritative: true,
+      expiryBypassAllowed: false,
+      shortLivedCredentialPersistenceAllowed: false,
+      healthStates: Object.freeze(['connected', 'degraded', 'reauth_required', 'unavailable']),
+      operaBrowserConnector: 'prefer_when_connected',
+    }),
   }),
   policyPriority: Object.freeze([
     'mission_and_human_dignity',
@@ -26,7 +37,7 @@ export const AI_MISSION_RUNTIME = Object.freeze({
     'operational_reliability',
     'efficiency_and_revenue',
   ]),
-  observeAreas: Object.freeze(['health_checks', 'analytics', 'anomaly_detection', 'read_only_audits', 'provider_inventory', 'repository_status', 'deployment_status']),
+  observeAreas: Object.freeze(['health_checks', 'connector_health', 'analytics', 'anomaly_detection', 'read_only_audits', 'provider_inventory', 'repository_status', 'deployment_status']),
   humanGateAreas: Object.freeze([
     'spiritual_or_pastoral_judgment_about_a_person',
     'legal_commitment_or_contract_execution',
@@ -62,6 +73,8 @@ export const AI_MISSION_RUNTIME = Object.freeze({
     'no_irreversible_action_when_a_reversible_path_is_reasonably_available',
     'no_ai_provider_dependency_for_core_service',
     'provider_failure_must_degrade_not_disable_service',
+    'no_connector_auth_or_expiry_bypass',
+    'no_short_lived_connector_credentials_in_source_or_logs',
   ]),
   agents: Object.freeze({
     chief: Object.freeze({ name: 'Chief AI', mustEscalate: ['human_gate_actions', 'principle_conflicts', 'material_uncertainty', 'cross_tenant_private_data_requests'], mustNot: ['override_human_gate', 'expand_its_own_authority', 'suppress_specialist_dissent', 'optimize_revenue_over_user_agency'] }),

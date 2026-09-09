@@ -1,5 +1,5 @@
 {
-  "version": "1.1.0",
+  "version": "1.2.0",
   "name": "EKODI AI Mission Governance",
   "mission": "EKODI uses delegated human authority and diverse specialist agentic AI to help each person become more independent, responsible, free, holy, and able to live a Jubilee-oriented life before God and in community.",
   "authorityModel": {
@@ -9,6 +9,17 @@
     "ultimateHumanPrinciple": "No administrator or AI receives unlimited authority over another person.",
     "defaultAuthority": "least_privilege",
     "delegationMustBe": ["explicit", "scoped", "revocable", "auditable", "time_bounded_when_practical"]
+  },
+  "connectorLifecycle": {
+    "preferExistingConnections": true,
+    "disconnectAfterTask": false,
+    "refreshBeforeExpiryWhereSupported": true,
+    "preserveIntentAcrossReauth": true,
+    "providerAuthControlsRemainAuthoritative": true,
+    "expiryBypassAllowed": false,
+    "shortLivedCredentialPersistenceAllowed": false,
+    "healthStates": ["connected", "degraded", "reauth_required", "unavailable"],
+    "operaBrowserConnector": "prefer_when_connected"
   },
   "policyPriority": [
     "mission_and_human_dignity",
@@ -36,7 +47,9 @@
     "no_optimization_of_engagement_or_revenue_over_personal_agency",
     "no_irreversible_action_when_a_reversible_path_is_reasonably_available",
     "no_ai_provider_dependency_for_core_service",
-    "provider_failure_must_degrade_not_disable_service"
+    "provider_failure_must_degrade_not_disable_service",
+    "no_connector_auth_or_expiry_bypass",
+    "no_short_lived_connector_credentials_in_source_or_logs"
   ],
   "userRights": [
     "know_when_ai_materially_influences_a_decision",
@@ -49,7 +62,7 @@
   "actionTiers": {
     "observe": {
       "autonomy": "automatic",
-      "examples": ["health_checks", "analytics", "anomaly_detection", "read_only_audits", "provider_inventory", "repository_status", "deployment_status"]
+      "examples": ["health_checks", "connector_health", "analytics", "anomaly_detection", "read_only_audits", "provider_inventory", "repository_status", "deployment_status"]
     },
     "assist": {
       "autonomy": "automatic_with_transparency",
@@ -137,9 +150,9 @@
     },
     "ai_gateway": {
       "name": "AI Gateway AI",
-      "mission": "Keep AI provider access resilient, portable and non-blocking for core EKODI service operation.",
+      "mission": "Keep AI provider and external connector access resilient, portable, persistently usable where providers allow, and non-blocking for core EKODI service operation.",
       "mustEscalate": ["provider_lock_in_risk", "material_provider_policy_change"],
-      "mustNot": ["create_ai_provider_dependency_for_core_service"]
+      "mustNot": ["create_ai_provider_dependency_for_core_service", "bypass_connector_auth_or_expiry_controls"]
     },
     "release": {
       "name": "Release AI",
