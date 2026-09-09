@@ -8,16 +8,36 @@ const clearButton=document.getElementById('clearHistory');
 const metricOrders=document.getElementById('metricOrders');
 const metricFee=document.getElementById('metricFee');
 const metricDelay=document.getElementById('metricDelay');
+const metricAdapters=document.getElementById('metricAdapters');
+const resolverForm=document.getElementById('storeResolverForm');
+const resolverStatus=document.getElementById('storeResolverStatus');
+const resolverResults=document.getElementById('storeResolverResults');
+const resolverAdapterCount=document.getElementById('resolverAdapterCount');
 const STORAGE_KEY='ekodi.delivery.requests.v1';
 const API_PREFIX='/delivery/api';
 let signedIn=false;
 
 const money=value=>`${Math.round(Number(value)||0).toLocaleString('ko-KR')}원`;
-const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[char]));
 function readHistory(){try{const rows=JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]');return Array.isArray(rows)?rows.slice(0,30):[]}catch{return[]}}
 function writeHistory(rows){localStorage.setItem(STORAGE_KEY,JSON.stringify(rows.slice(0,30)));}
 async function post(path,payload){const response=await fetch(`${API_PREFIX}${path}`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.error||data.reason||`request_${response.status}`);return data;}
-
+async function memberPost(path,payload){const runner=window.EKODIDeliveryMemberFetch;if(typeof runner!=='function')throw new Error('member_session_unavailable');const response=await runner(`${API_PREFIX}${path}`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.error||data.reason||`request_${response.status}`);return data;}
+function resolverProviders(){return Array.isArray(window.EKODI_DELIVERY_CONFIG?.storeResolver?.providers)?window.EKODI_DELIVERY_CONFIG.storeResolver.providers:[]}
+function renderAdapterState(){const rows=resolverProviders();const configured=rows.filter(row=>row.configured);if(metricAdapters)metricAdapters.textContent=String(configured.length);if(resolverAdapterCount)resolverAdapterCount.textContent=`${configured.length}/${rows.length||7} Adapter 활성`;if(resolverStatus){resolverStatus.innerHTML=`<div class="adapter-summary">${rows.map(row=>`<span>${esc(row.label)} · ${row.configured?esc(row.mode):'연결 대기'}</span>`).join('')}</div>`;}}
+function renderResolver(data){
+  const rows=Array.isArray(data?.providers)?data.providers:[];
+  if(!rows.length){resolverResults.innerHTML='<p class="empty-state">검색 가능한 Adapter가 아직 없습니다.</p>';return;}
+  resolverResults.innerHTML=rows.map(row=>{
+    const best=row.best;
+    const state=row.status||'unconfigured';
+    if(!best)return `<article class="resolver-result" data-state="${esc(state)}"><span class="provider-badge">${esc(row.label||row.provider)}</span><div><strong>${esc(row.label||row.provider)}</strong><small>${state==='error'?`연결 오류 · ${esc(row.error||'확인 필요')}`:'공식·승인 Adapter 연결 대기'}</small></div><span class="match-score">—</span></article>`;
+    const pct=Math.round(Number(best.score||0)*100);
+    const detail=[best.address,best.phone].filter(Boolean).join(' · ');
+    return `<article class="resolver-result" data-state="${esc(state)}" data-match="${esc(best.match||'candidate')}"><span class="provider-badge">${esc(row.label||row.provider).slice(0,4)}</span><div><strong>${esc(best.name)}</strong><small>${esc(detail||'상세정보 확인')}</small>${best.storeUrl?`<a href="${esc(best.storeUrl)}" target="_blank" rel="noopener noreferrer">원본 열기</a>`:''}</div><span class="match-score">${pct}%</span></article>`;
+  }).join('');
+}
+if(resolverForm)resolverForm.addEventListener('submit',async event=>{event.preventDefault();if(!signedIn)return;const fd=new FormData(resolverForm);const payload={name:String(fd.get('name')||'').trim(),address:String(fd.get('address')||'').trim(),phone:String(fd.get('phone')||'').trim()};resolverStatus.textContent='플랫폼별 후보를 찾고 동일매장 신뢰도를 계산하는 중입니다.';resolverResults.innerHTML='';try{const data=await memberPost('/store-resolver/discover',payload);renderResolver(data);resolverStatus.textContent='검색 완료 · 95% 이상 자동연결 후보, 70~94% 관리자 확인 후보로 분류합니다.';}catch(error){resolverStatus.textContent=`매장 검색을 완료하지 못했습니다. ${error.message}`;resolverResults.innerHTML='<p class="error-state">공식 또는 승인된 Adapter 연결 상태를 확인하세요.</p>';}});
 async function renderHistory(){
   if(!signedIn)return;
   const rows=readHistory();
@@ -31,13 +51,11 @@ async function renderHistory(){
     brief.innerHTML=operations.messages.map(message=>`<p>${esc(message)}</p>`).join('');
   }catch(error){brief.innerHTML=`<p>운영 브리프를 계산하지 못했습니다. ${esc(error.message)}</p>`;}
 }
-
 function renderRecommendation(data){
   const recommended=data.recommended;
   const comparison=data.comparison||{};
   result.innerHTML=`<div class="recommendation"><p class="eyebrow">추천</p><h4>${esc(recommended.name)}</h4><div class="recommend-stats"><span>배달비 <b>${money(recommended.fee)}</b></span><span>예상시간 <b>${esc(recommended.etaMinutes)}분</b></span><span>신뢰도 <b>${Math.round((recommended.reliability||0)*100)}%</b></span></div><ul>${(data.rationale||[]).map(item=>`<li>${esc(item)}</li>`).join('')}</ul><p class="safety-note">이 결과는 판단지원입니다. 외부 배차는 실행되지 않았습니다.</p>${comparison.feeRate!=null?`<small>주문금액 대비 예상 배달비 ${esc(comparison.feeRate)}%</small>`:''}</div>`;
 }
-
 if(form)form.addEventListener('submit',async event=>{
   event.preventDefault();
   if(!signedIn)return;
@@ -55,19 +73,17 @@ if(form)form.addEventListener('submit',async event=>{
     renderRecommendation(data);
     const rows=readHistory();
     rows.unshift({createdAt:new Date().toISOString(),priority,priorityLabel:labels[priority]||'균형',recommendedId:data.recommendedProviderId,recommendedName:data.recommended.name,deliveryFee:data.recommended.fee,etaMinutes:data.recommended.etaMinutes,dispatchExecuted:false});
-    writeHistory(rows);
-    await renderHistory();
+    writeHistory(rows);await renderHistory();
   }catch(error){result.innerHTML=`<p class="error-state">추천 계산에 실패했습니다. ${esc(error.message)}</p>`;}
 });
-
 if(clearButton)clearButton.addEventListener('click',()=>{if(!signedIn)return;localStorage.removeItem(STORAGE_KEY);renderHistory();result.innerHTML='조건을 입력하면 비용·시간·신뢰도 균형을 계산합니다.';});
-
 async function applyAccountState(account={}){
   signedIn=Boolean(account.signedIn);
   document.documentElement.dataset.deliveryAuth=signedIn?'signed-in':'public';
   workspace.hidden=!signedIn;
   guide.hidden=signedIn;
+  renderAdapterState();
   if(signedIn){await renderHistory();workspace.scrollIntoView({block:'start'});}
 }
 window.addEventListener('ekodi:delivery-account',event=>{applyAccountState(event.detail||{});});
-if(window.EKODI_DELIVERY_ACCOUNT_STATE)applyAccountState(window.EKODI_DELIVERY_ACCOUNT_STATE);
+if(window.EKODI_DELIVERY_ACCOUNT_STATE)applyAccountState(window.EKODI_DELIVERY_ACCOUNT_STATE);else renderAdapterState();
