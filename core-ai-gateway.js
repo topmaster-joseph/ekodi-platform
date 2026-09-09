@@ -6,6 +6,8 @@ import {
 import { buildEkodiAiOrchestrator } from './ai-orchestrator-runtime.js';
 import { createEkodiAiProviderRegistry } from './ekodi-ai-provider-registry.js';
 import { buildEkodiCommandPlane } from './ekodi-command-plane.js';
+import { buildExperienceRecord } from './ekodi-capability-ecosystem.js';
+import { appendCapabilityExperience } from './ekodi-capability-ecosystem-store.js';
 
 const ENABLED_VALUES = new Set(['1', 'true', 'yes', 'on', 'enabled']);
 
@@ -54,6 +56,19 @@ export function buildCoreAiGateway(env = {}, providers = []) {
   const orchestrator = buildEkodiAiOrchestrator(env, adapters);
   const commandPlane = buildEkodiCommandPlane(env, adapters);
 
+  async function recordExperience(options, result, startedAt, fallbackSource) {
+    if (!env.DB || !result?.taskId) return;
+    try {
+      const record = buildExperienceRecord(options, result, {
+        source: options.context?.source || fallbackSource,
+        durationMs: Date.now() - startedAt,
+      });
+      await appendCapabilityExperience(env.DB, record);
+    } catch (error) {
+      console.warn('EKODI Capability Ecosystem experience recording unavailable', error);
+    }
+  }
+
   return Object.freeze({
     policyVersion: AI_RESILIENCE_POLICY.version,
     status() {
@@ -92,10 +107,16 @@ export function buildCoreAiGateway(env = {}, providers = []) {
       return orchestrator.run(options);
     },
     async command(options = {}) {
-      return commandPlane.execute(options);
+      const startedAt = Date.now();
+      const result = await commandPlane.execute(options);
+      await recordExperience(options, result, startedAt, 'core-ai-command');
+      return result;
     },
     async handlePulse(options = {}) {
-      return commandPlane.handlePulse(options);
+      const startedAt = Date.now();
+      const result = await commandPlane.handlePulse(options);
+      await recordExperience(options, result, startedAt, 'core-ai-pulse');
+      return result;
     },
   });
 }
