@@ -53,7 +53,7 @@ test('common-service Admin UI consumes the central admin session and has no serv
 test('AI runtime root is an operator handoff, not a standalone admin page', async () => {
   const response = await aiWorker.fetch(new Request('https://ai.ekodi.kr/'), {}, { waitUntil() {} });
   assert.equal(response.status, 307);
-  assert.equal(response.headers.get('location'), 'https://ekodi.kr/admin/common/common-services?service=ai');
+  assert.equal(response.headers.get('location'), 'https://ekodi.kr/admin/services/common-services?service=ai');
   assert.equal(response.headers.get('x-ekodi-route'), 'ai-runtime-admin-handoff');
   assert.equal(response.headers.get('x-content-type-options'), 'nosniff');
 });

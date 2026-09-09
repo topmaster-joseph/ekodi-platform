@@ -12,14 +12,16 @@ test('Admin boot degradation preserves the base shell instead of replacing conte
   assert.doesNotMatch(shell, /c\.innerHTML=.*관리자 메뉴 로딩 실패/);
 });
 
-test('Admin OS has a context selector that never grants authority', async () => {
+test('Admin OS keeps authority context internal without rendering a management-target bar', async () => {
   const runtime = await read('admin-menu-runtime.js');
   assert.match(runtime, /CONTEXT_KEY = 'ekodi-admin-context-v1'/);
   assert.match(runtime, /\/api\/customers\/directory/);
   assert.match(runtime, /ecosystem-services\.json/);
   assert.match(runtime, /ekodi-admin-context-changed/);
-  assert.match(runtime, /전환은 권한을 추가하지 않습니다/);
   assert.match(runtime, /authority:currentSession\?\.authority \|\| null/);
+  assert.ok(runtime.includes("document.querySelector('[data-ekodi-admin-context-control]')?.remove();"));
+  assert.ok(runtime.includes("document.documentElement.dataset.ekodiAdminContextUi = 'hidden';"));
+  assert.doesNotMatch(runtime, /host\.className = 'ekodi-admin-context'/);
   assert.match(runtime, /EKODIAdminContext/);
 });
 
