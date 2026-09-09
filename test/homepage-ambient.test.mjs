@@ -23,34 +23,31 @@ test('homepage keeps a translucent daily Seoul-date ambient scene', () => {
   assert.match(deploySiteCore, /npm run build/);
 });
 
-test('public homepage is intent-first and does not lead with the full directory', () => {
+test('public homepage leads with the dynamic EKODI ecosystem experience', () => {
   assert.match(js, /원하는 일, 바로 시작하세요/);
-  assert.match(js, /오늘 무엇을 하시나요\?/);
-  assert.match(js, /intentSets/);
-  assert.match(js, /function rankServices/);
-  assert.match(js, /slice\(0, limit\)/);
-  assert.match(js, /dataset\.livingGateway = 'v5-intent-journey'/);
-  assert.match(js, /daily-connect intent-panel/);
-  assert.match(js, /function arrangeHomepageJourney/);
-  assert.match(css, /\.daily-connect\{/);
-  assert.match(css, /\.intent-results/);
-  assert.match(css, /EKODI homepage intent journey v5/);
-  assert.match(css, /body\[data-living-gateway="v5-intent-journey"\] #ecosystem\{display:none!important\}/);
-  assert.match(css, /\.about-grid\{grid-template-columns:1fr!important/);
-  assert.match(css, /\.hero\{display:flex!important;flex-direction:column!important/);
+  assert.match(js, /function buildDynamicVisual/);
+  assert.match(js, /function buildQuickLaunch/);
+  assert.match(js, /dataset\.livingGateway = 'v6-dynamic-ecosystem'/);
+  assert.match(js, /ecosystem-orbit ecosystem-orbit-/);
+  assert.match(js, /domain-float domain-/);
+  assert.match(js, /dynamic-service-launchers/);
+  assert.match(css, /EKODI dynamic ecosystem landing v6/);
+  assert.match(css, /\.ecosystem-core\{/);
+  assert.match(css, /\.ecosystem-orbit\{/);
+  assert.match(css, /\.dynamic-start-panel\{/);
+  assert.match(css, /body\[data-living-gateway="v6-dynamic-ecosystem"\] #ecosystem\{display:block!important/);
+  assert.match(css, /grid-template-columns:minmax\(0,\.92fr\) minmax\(460px,1\.08fr\)/);
 });
 
-test('intent gateway reveals services only after category selection or search', () => {
-  assert.match(js, /data-service-status|dataset\.serviceStatus/);
-  assert.match(js, /renderRecommendations/);
-  assert.match(js, /limit = 5/);
-  assert.match(js, /id:'all'/);
-  assert.match(js, /results\.hidden = true/);
-  assert.match(js, /results\.hidden = false/);
-  assert.match(js, /intent\.id === 'all'/);
-  assert.doesNotMatch(js, /buildQuickLinks/);
-  assert.doesNotMatch(js, /quickPaths/);
-  assert.match(js, /무료로 시작/);
+test('quick launch respects homepage presentation and links only to verified live launch choices', () => {
+  assert.match(js, /applyHomepagePresentation/);
+  assert.match(js, /cards\.filter\(card => !card\.hasAttribute\('hidden'\)\)/);
+  assert.match(js, /\['church','biz','books','lab','work'\]/);
+  assert.match(js, /https:\/\/ekodi\.kr\/my\//);
+  assert.match(js, /dynamic-more-link/);
+  assert.match(js, /무료로 시작하기/);
+  assert.doesNotMatch(js, /dataset\.quickService = 'mail'/);
+  assert.doesNotMatch(js, /dataset\.quickService = 'live'/);
   assert.doesNotMatch(js, /data-status-filter/);
   assert.doesNotMatch(js, /function applyFilter/);
 });
@@ -68,9 +65,9 @@ test('homepage locale handling keeps Korean English Chinese and Japanese paths',
 });
 
 test('ambient layer stays visible above the body background and below content', () => {
-  assert.match(css, /body::before,[\s\S]*?z-index:0/);
-  assert.match(css, /\.site-header,[\s\S]*?main\{[\s\S]*?z-index:1/);
-  assert.doesNotMatch(css, /body::before,[\s\S]*?z-index:-1/);
+  assert.match(css, /body::before,\s*body::after\{[\s\S]*?z-index:0/);
+  assert.match(css, /\.site-header,\s*main\{[\s\S]*?z-index:1/);
+  assert.doesNotMatch(css, /body::before,\s*body::after\{[^}]*z-index:-1/);
 });
 
 test('ambient assets are shipped and injected into the EKODI homepage build', () => {
