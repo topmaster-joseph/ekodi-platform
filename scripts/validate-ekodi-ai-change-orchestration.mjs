@@ -60,42 +60,52 @@ function parseProvenancePayload(raw, sourceLabel) {
     throw error;
   }
 }
+function githubHeaders() {
+  const headers = { Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2026-03-10', 'User-Agent': 'ekodi-ai-orchestration-gate' };
+  const token = text(process.env.GITHUB_TOKEN || process.env.GH_TOKEN);
+  if (token) headers.Authorization = `Bearer ${token}`;
+  return headers;
+}
+async function fetchGithubJson(endpoint, sourceLabel) {
+  let response;
+  try { response = await fetch(endpoint, { headers: githubHeaders(), signal: AbortSignal.timeout(10000) }); }
+  catch (error) { fail(`unable to verify PR merge provenance from ${sourceLabel}: ${error?.message || 'network error'}`); }
+  if (!response.ok) fail(`unable to verify PR merge provenance from ${sourceLabel}: HTTP ${response.status}`);
+  try { return JSON.parse(await response.text()); }
+  catch { fail(`PR merge provenance from ${sourceLabel} is malformed JSON.`); }
+}
 async function loadAssociatedPullRequests() {
   const provenancePath = text(process.env.EKODI_GITHUB_PR_PROVENANCE);
   if (provenancePath) {
     if (!fs.existsSync(provenancePath)) fail(`PR merge provenance file is missing: ${provenancePath}`);
     return parseProvenancePayload(fs.readFileSync(provenancePath, 'utf8'), provenancePath);
   }
-
   if (!repository.includes('/') || sha === 'unknown') fail('GitHub repository/SHA is unavailable for PR merge provenance verification.');
   const apiBase = text(process.env.GITHUB_API_URL || 'https://api.github.com').replace(/\/+$/, '');
-  const endpoint = `${apiBase}/repos/${repository}/commits/${encodeURIComponent(sha)}/pulls`;
-  const headers = {
-    Accept: 'application/vnd.github+json',
-    'X-GitHub-Api-Version': '2026-03-10',
-    'User-Agent': 'ekodi-ai-orchestration-gate',
-  };
-  const token = text(process.env.GITHUB_TOKEN || process.env.GH_TOKEN);
-  if (token) headers.Authorization = `Bearer ${token}`;
-
-  let response;
-  try {
-    response = await fetch(endpoint, { headers, signal: AbortSignal.timeout(10000) });
-  } catch (error) {
-    fail(`unable to verify PR merge provenance from GitHub: ${error?.message || 'network error'}`);
-  }
-  if (!response.ok) fail(`unable to verify PR merge provenance from GitHub: HTTP ${response.status}`);
-  return parseProvenancePayload(await response.text(), 'GitHub API');
+  const pulls = await fetchGithubJson(`${apiBase}/repos/${repository}/commits/${encodeURIComponent(sha)}/pulls`, 'GitHub API');
+  if (!Array.isArray(pulls)) fail('PR merge provenance from GitHub API must be a JSON array.');
+  return pulls;
+}
+async function loadPullRequest(number) {
+  const apiBase = text(process.env.GITHUB_API_URL || 'https://api.github.com').replace(/\/+$/, '');
+  return fetchGithubJson(`${apiBase}/repos/${repository}/pulls/${encodeURIComponent(number)}`, 'GitHub PR API');
+}
+function isVerifiedMainPr(pr) {
+  return text(pr?.state) === 'closed' && Boolean(pr?.merged_at) && text(pr?.base?.ref) === defaultBranch && text(pr?.merge_commit_sha) === sha && branchAllowed(pr?.head?.ref);
 }
 async function verifiedMainPrMerge() {
-  const pulls = await loadAssociatedPullRequests();
-  return pulls.some(pr => (
-    text(pr?.state) === 'closed'
-    && Boolean(pr?.merged_at)
-    && text(pr?.base?.ref) === defaultBranch
-    && text(pr?.merge_commit_sha) === sha
-    && branchAllowed(pr?.head?.ref)
-  ));
+  const provenancePath = text(process.env.EKODI_GITHUB_PR_PROVENANCE);
+  const attempts = provenancePath ? 1 : 7;
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    const pulls = await loadAssociatedPullRequests();
+    for (const pr of pulls) {
+      if (text(pr?.base?.ref) !== defaultBranch || !branchAllowed(pr?.head?.ref)) continue;
+      const candidate = provenancePath ? pr : await loadPullRequest(pr?.number);
+      if (isVerifiedMainPr(candidate)) return true;
+    }
+    if (attempt + 1 < attempts) await new Promise(resolve => setTimeout(resolve, Math.min(1000 * 2 ** attempt, 5000)));
+  }
+  return false;
 }
 
 let source = 'static-policy-validation';
