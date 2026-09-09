@@ -23,7 +23,7 @@ export const ADMIN_MENU_REGISTRY = Object.freeze([
   { id: 'personal-finance', group: 'services', icon: '₩', managementArea: 'professional-services', labels: { ko: '개인재무', en: 'Personal Finance' } },
   { id: 'community', group: 'services', icon: '◎', labels: { ko: '커뮤니티', en: 'Community' } },
   { id: 'books', group: 'services', icon: 'B', labels: { ko: '출판·도서', en: 'Books & Publishing' } },
-  { id: 'social', group: 'services', icon: 'S', labels: { ko: '채널 연결 관리', en: 'Channel Connections' } },
+  { id: 'social', group: 'services', icon: 'S', labels: { ko: '채널·계정 연결', en: 'Channel Connections' } },
   { id: 'devotional', group: 'services', icon: 'V', labels: { ko: '매일묵상', en: 'Daily Devotional' } },
   { id: 'marketing-ai', group: 'services', icon: 'M', labels: { ko: '마케팅AI', en: 'Marketing AI' } },
   { id: 'ai-membership', group: 'services', icon: '◈', labels: { ko: 'AI 회원운영', en: 'AI Membership' } },
