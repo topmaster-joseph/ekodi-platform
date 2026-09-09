@@ -2,6 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { chromium } from 'playwright';
 import { adminMenuOrder, getAdminMenuGroupForSection } from '../admin-menu-registry.js';
+import { AI_ROUTER_SCORE_POLICY } from '../ai-router-score.js';
 
 const token = String(process.env.E2E_ADMIN_TOKEN || '').trim();
 const menuId = String(process.env.E2E_MENU_ID || '').trim();
@@ -185,6 +186,45 @@ async function verifyPublicSiteControls(tab, alreadyActive, started) {
   results.push({ id: menuId, group, ok: true, durationMs: Date.now() - started, ...state, apiStatus: response.status, corsOrigin, domain: 'cgma.or.kr', publicStatus, maintenanceDisplayType, redirectMode, badge });
 }
 
+async function verifyAiSettings(tab, alreadyActive, started) {
+  stage('ai-settings-ready');
+  if (!alreadyActive) await clickFast(tab);
+  await page.waitForFunction(() => typeof window.EKODIAIManagement?.load === 'function', null, { timeout: 10_000 });
+  stage('ai-settings-api');
+  const response = await fetch('https://api.ekodi.kr/api/control/ai/v8/collaboration-settings', {
+    headers: { accept:'application/json', authorization:`Bearer ${token}`, origin:'https://admin.ekodi.kr' },
+    signal: AbortSignal.timeout(10_000),
+  });
+  if (response.status !== 200) throw new Error(`ai-settings: API returned HTTP ${response.status}`);
+  const corsOrigin = response.headers.get('access-control-allow-origin') || '';
+  if (corsOrigin !== 'https://admin.ekodi.kr') throw new Error(`ai-settings: production CORS origin mismatch: ${corsOrigin || 'missing'}`);
+  const payload = await response.json().catch(() => ({}));
+  const policy = payload.policy || {};
+  const weights = policy.router?.weights || {};
+  const weightSum = Object.values(weights).reduce((sum,value) => sum + Number(value || 0), 0);
+  if (payload.ok !== true) throw new Error('ai-settings: API payload not ok');
+  if (policy.collaborationByDefault !== true) throw new Error('ai-settings: collaborationByDefault unlocked');
+  if (policy.execution?.cloudFirst !== true || JSON.stringify(policy.execution?.order) !== JSON.stringify(['cloud','remote','local'])) throw new Error('ai-settings: Cloud First contract drift');
+  if (policy.governance?.requireHumanApprovalForDestructiveAction !== true) throw new Error('ai-settings: destructive human gate drift');
+  if (policy.openai?.secretStorage !== 'server_secret_only') throw new Error('ai-settings: secret storage contract drift');
+  if (policy.resources?.strategy !== 'personal-first') throw new Error('ai-settings: personal-first strategy drift');
+  if (Math.abs(weightSum - 1) > 0.00001) throw new Error(`ai-settings: Router Score weights sum to ${weightSum}`);
+  if (payload.routerScore?.algorithmVersion !== AI_ROUTER_SCORE_POLICY.version) throw new Error(`ai-settings: Router Score version mismatch ${payload.routerScore?.algorithmVersion || 'missing'}`);
+  stage('ai-settings-render');
+  await page.evaluate(() => window.EKODIAIManagement.load());
+  await page.locator('#aiManagementBody .ai-mgmt-hero').waitFor({ state:'visible', timeout:8_000 });
+  const state = await visiblePanelState();
+  const panel = page.locator('#aiManagementPanel');
+  const providerWeights = await panel.locator('[data-provider-weight]').count();
+  const guards = String(await panel.locator('.ai-mgmt-guards').textContent() || '').replace(/\s+/g,' ').trim();
+  const saveVisible = await panel.locator('#aiMgmtSave').isVisible();
+  if (!state.panelFound || !state.selected || state.busy) throw new Error(`ai-settings panel invalid: ${JSON.stringify(state)}`);
+  if (providerWeights !== Object.keys(AI_ROUTER_SCORE_POLICY.weights).length) throw new Error(`ai-settings: expected ${Object.keys(AI_ROUTER_SCORE_POLICY.weights).length} provider weights, got ${providerWeights}`);
+  for (const label of ['Collaboration ON · LOCK','Cloud First · LOCK','Origin AI · LOCK','Destructive Human Gate · LOCK','Secret Server Only · LOCK']) if (!guards.includes(label)) throw new Error(`ai-settings: guard missing: ${label}`);
+  if (!saveVisible) throw new Error('ai-settings: save control missing');
+  results.push({ id:menuId, group, ok:true, durationMs:Date.now()-started, ...state, apiStatus:response.status, corsOrigin, routerScoreVersion:payload.routerScore.algorithmVersion, routerWeightCount:providerWeights, revision:Number(payload.revision)||0, source:payload.source||'unknown', productionMutation:false });
+}
+
 async function verifyLanguageStatus(tab, alreadyActive, started) {
   stage('language-status-ready');
   if (!alreadyActive) await clickFast(tab);
@@ -267,6 +307,7 @@ try {
   else if (menuId === 'tax') await verifyTax(tab, alreadyActive, started);
   else if (menuId === 'public-site-controls') await verifyPublicSiteControls(tab, alreadyActive, started);
   else if (menuId === 'language-status') await verifyLanguageStatus(tab, alreadyActive, started);
+  else if (menuId === 'ai-settings') await verifyAiSettings(tab, alreadyActive, started);
   else await verifyNormal(tab, alreadyActive, started);
 
   stage('diagnostics');
