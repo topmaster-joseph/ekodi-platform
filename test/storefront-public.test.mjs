@@ -46,9 +46,9 @@ test('platform-menu migration exposes verified public listings and protected imp
   assert.match(migration,/revoke all on function public\.import_store_platform_menu_snapshot[\s\S]*from public, anon/);
 });
 
-test('admin manages five delivery URLs and verified platform menu snapshots',async()=>{
+test('admin manages seven delivery URLs and verified platform menu snapshots',async()=>{
   const js=await storeAdminScript().text();
-  for(const value of ['고객 공개정보 · 주문 연결','땡겨요 주문 URL','배달의민족 주문 URL','요기요 주문 URL','먹깨비 주문 URL','쿠팡이츠 주문 URL','update_storefront_public_settings_v2','store_user_site_admin_snapshot_v2','배달앱 메뉴 스냅샷 등록','import_store_platform_menu_snapshot'])assert.match(js,new RegExp(value));
+  for(const value of ['고객 공개정보 · 주문 연결','땡겨요 주문 URL','배달의민족 주문 URL','요기요 주문 URL','먹깨비 주문 URL','쿠팡이츠 주문 URL','당근주문 URL','네이버주문 URL','update_storefront_public_settings_v3','store_user_site_admin_snapshot_v2','배달플랫폼 메뉴 스냅샷 등록','import_store_platform_menu_snapshot'])assert.match(js,new RegExp(value));
   for(const value of ['배달플랫폼 연결','기준메뉴','가격차이','플랫폼 등록상태','데이터 출처','공식연결 상태'])assert.match(js,new RegExp(value));
 });
 
