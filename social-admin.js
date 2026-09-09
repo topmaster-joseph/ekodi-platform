@@ -88,9 +88,9 @@
     const copy = el('div');
     copy.append(el('p','MULTI-CHANNEL CONTROL CENTER','kicker'), el('h2','멀티채널·계정 연결'), el('p','YouTube·Facebook·Instagram·Threads의 여러 계정과 여러 채널을 한 곳에서 연결·상태확인·해제하고, 기관별 채널 등록정보까지 함께 관리합니다. OAuth 비밀값은 암호화 Vault에만 보관됩니다.','operations-copy'));
     const actions = el('div','','social-admin-actions');
-    const open = el('a','Open Social ↗','secondary'); open.href='https://social.ekodi.kr'; open.target='_blank'; open.rel='noopener';
-    const refresh = el('button','↻ Refresh','secondary'); refresh.type='button';
-    const save = el('button','Save changes','primary'); save.type='button'; save.disabled=true;
+    const open = el('a','Social Hub 열기 ↗','secondary'); open.href='https://social.ekodi.kr'; open.target='_blank'; open.rel='noopener';
+    const refresh = el('button','↻ 새로고침','secondary'); refresh.type='button';
+    const save = el('button','변경사항 저장','primary'); save.type='button'; save.disabled=true;
     actions.append(open, refresh, save); head.append(copy, actions);
 
     const connectionPanel = el('section','','social-connections');
