@@ -64,7 +64,9 @@ test('public-site controls E2E proves the live Control API and CGMA form render'
   assert.match(source, /verifyPublicSiteControls/);
   assert.match(source, /fetch\('https:\/\/api\.ekodi\.kr\/api\/control\/public-sites'/);
   assert.match(source, /origin: 'https:\/\/admin\.ekodi\.kr'/);
+  assert.match(source, /authorization: `Bearer \$\{token\}`/);
   assert.match(source, /access-control-allow-origin/);
+  assert.match(source, /page\.evaluate\(\(\) => window\.EKODIPublicSiteControls\.load\(\)\)/);
   assert.match(source, /form\[data-public-site-id="cgma"\]/);
   assert.match(source, /message\.includes\('상태를 확인했습니다'\)/);
   assert.match(source, /menuId === 'public-site-controls'/);
