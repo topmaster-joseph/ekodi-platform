@@ -1,6 +1,6 @@
 {
-  "version": "1.9.1",
-  "effectiveDate": "2026-09-09",
+  "version": "1.9.2",
+  "effectiveDate": "2026-09-10",
   "status": "active",
   "title": "EKODI Platform Constitution",
   "principles": [
@@ -504,5 +504,29 @@
       "system": "/admin/system/{capability}"
     },
     "rule": "One domain, multiple security realms: human and management surfaces are canonical paths on ekodi.kr; subdomains may remain only as justified internal, protocol, emergency or compatibility execution boundaries."
+  },
+  "executionReportingPolicy": {
+    "mode": "completion_only",
+    "intermediateProgressReports": false,
+    "completionRequires": [
+      "implementation",
+      "validation",
+      "error_correction",
+      "revalidation",
+      "governed_merge",
+      "guarded_deployment_when_production_bound",
+      "production_verification_when_production_bound"
+    ],
+    "blockedExecution": {
+      "reportOnlyWhenAutonomousRecoveryCannotProceed": true,
+      "requiredContents": [
+        "exact_blocker",
+        "attempted_recovery",
+        "concrete_resolution_steps",
+        "minimum_required_human_action",
+        "automatic_resume_plan"
+      ]
+    },
+    "rule": "Do not report routine intermediate progress. Report when the requested work is verified complete. If execution cannot proceed after reasonable autonomous recovery, report the exact blocker and a concrete minimum-action resolution path instead of a vague progress status."
   }
 }
