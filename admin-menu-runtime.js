@@ -323,26 +323,8 @@ function syncPlatformOnlyNavigation() {
   if (currentSession?.role === 'super_admin') ensureAdminNav();
 }
 function renderContextControl() {
-  const host = document.querySelector('[data-ekodi-admin-context-control]');
-  if (!host) return;
-  const select = host.querySelector('select');
-  const title = host.querySelector('strong');
-  const note = host.querySelector('.ekodi-admin-context-note');
-  const badge = host.querySelector('.ekodi-admin-context-badge');
-  if (title) title.textContent = t('현재 관리 대상', 'Current context');
-  if (note) note.textContent = t('전환은 권한을 추가하지 않습니다.', 'Switching never grants authority.');
-  if (badge) badge.textContent = contextBadgeLabel(currentContext);
-  if (!select) return;
-  const value = contextKey(currentContext);
-  select.replaceChildren(...contextOptions.map(context => {
-    const option = document.createElement('option');
-    option.value = contextKey(context);
-    option.textContent = contextDisplayLabel(context);
-    return option;
-  }));
-  select.value = contextOptions.some(item => contextKey(item) === value) ? value : 'platform:global';
-  select.setAttribute('aria-label', t('현재 관리 대상 선택', 'Select current admin context'));
-  select.title = t('관리 대상을 바꾸어도 서버 권한은 변하지 않습니다.', 'Changing context never changes server authority.');
+  document.querySelector('[data-ekodi-admin-context-control]')?.remove();
+  document.documentElement.dataset.ekodiAdminContextUi = 'hidden';
 }
 function setContext(next, { persist = true, announce = true } = {}) {
   const context = typeof next === 'string' ? contextFromKey(next) : contextOptions.find(item => contextKey(item) === contextKey(next));
@@ -377,28 +359,7 @@ async function installContextControl() {
   if (!token()) return;
   if (contextInstallPromise) return contextInstallPromise;
   contextInstallPromise = (async () => {
-    installStyle();
-    const main = document.querySelector('#app main') || document.querySelector('main');
-    if (!main) return;
-    let host = document.querySelector('[data-ekodi-admin-context-control]');
-    if (!host) {
-      host = document.createElement('div');
-      host.className = 'ekodi-admin-context';
-      host.dataset.ekodiAdminContextControl = 'true';
-      const label = document.createElement('label');
-      const title = document.createElement('strong');
-      const select = document.createElement('select');
-      const note = document.createElement('span'); note.className = 'ekodi-admin-context-note';
-      const badge = document.createElement('span'); badge.className = 'ekodi-admin-context-badge';
-      label.append(title, select); host.append(label, note, badge);
-      const tabs = main.querySelector(':scope>.admin-context-tabs-shell');
-      if (tabs) tabs.insertAdjacentElement('beforebegin', host);
-      else {
-        const topbar = main.querySelector(':scope>.topbar');
-        if (topbar) topbar.insertAdjacentElement('afterend', host); else main.prepend(host);
-      }
-      select.addEventListener('change', () => setContext(select.value));
-    }
+    renderContextControl();
     await loadContextOptions();
     const requested = contextFromKey(readRequestedContext()) || contextOptions[0];
     setContext(requested, { persist:true, announce:false });
