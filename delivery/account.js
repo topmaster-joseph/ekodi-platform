@@ -6,6 +6,7 @@ const detail=document.getElementById('ekodiAccountDetail');
 const heroLogin=document.getElementById('heroLogin');
 
 const state={client:null,session:null,profile:null,enabled:Boolean(config.enabled&&config.supabaseUrl&&config.publishableKey&&config.profileApi)};
+window.EKODIDeliveryMemberFetch=async(path,options={})=>{if(!state.session)throw new Error('authentication_required');const headers=new Headers(options.headers||{});headers.set('authorization','Bearer '+state.session.access_token);return fetch(path,{...options,headers});};
 const emit=payload=>{window.EKODI_DELIVERY_ACCOUNT_STATE=payload;window.dispatchEvent(new CustomEvent('ekodi:delivery-account',{detail:payload}));};
 const setUi=(label,buttonLabel='',mode='public',message='')=>{
   if(host)host.dataset.state=mode;
