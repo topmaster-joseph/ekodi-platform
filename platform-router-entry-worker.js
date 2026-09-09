@@ -42,7 +42,8 @@ const EKODIBIZ_ASSET_PREFIX='/_ekodi/ekodibiz/';
 const EKODIBIZ_ASSETS=new Set(['style.css','site.js']);
 const WORKSPACE_ASSET_PREFIX='/_ekodi/space/';
 const DEPLOYMENT_PROBE_PATH='/deployment-probe';
-const STORE_GATEWAY_PATHS=new Set(['/stores','/stores/']);
+const CMPMYI_USER_PATHS=new Set(['/cmpmyi','/cmpmyi/']);
+const LEGACY_STORE_GATEWAY_PATHS=new Set(['/stores','/stores/']);
 const WORKSPACE_ASSETS=new Set(['style.css','config.js','app.js','storefront.json','storefront.css']);
 
 function resolvedHost(request,env){
@@ -206,7 +207,8 @@ export default {
         if(isChurchPastorAdminPath(url.pathname))return injectEkodiShell(churchPastorAdminPage(),'church','admin');
         if(isWorkspaceAdminPath(url.pathname)&&!isEkodiBizInvestAdminPath(url.pathname))return injectEkodiShell(workspaceAdminPage(),'space','admin');
       }
-      if(['GET','HEAD'].includes(request.method)&&STORE_GATEWAY_PATHS.has(url.pathname))return injectEkodiShell(storeGatewayPage(),'ekodi','public');
+      if(['GET','HEAD'].includes(request.method)&&LEGACY_STORE_GATEWAY_PATHS.has(url.pathname)){const target=new URL('https://ekodi.kr/cmpmyi');target.search=url.search;return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-content-type-options':'nosniff','x-ekodi-route':'cmpmyi-legacy-redirect'}});}
+      if(['GET','HEAD'].includes(request.method)&&CMPMYI_USER_PATHS.has(url.pathname))return injectEkodiShell(storeGatewayPage(),'ekodi','public');
       if(marketingProjectionForPath(url.pathname)){const projected=await proxyCanonicalMarketing(request);if(projected)return projected;}
       if(['GET','HEAD'].includes(request.method)&&EKODIBIZ_PUBLIC_ROUTE.test(url.pathname))return routeEkodiBizPublic(request,env);
       if(url.pathname.startsWith(EKODIBIZ_API_PREFIX))return routeEkodiBizApi(request,env);

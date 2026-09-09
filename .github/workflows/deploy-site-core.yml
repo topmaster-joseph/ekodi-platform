@@ -439,13 +439,17 @@ jobs:
           for attempt in $(seq 1 12); do
             : > /tmp/store-gateway.headers
             : > /tmp/store-gateway.body
-            if curl -fsS -D /tmp/store-gateway.headers -o /tmp/store-gateway.body --retry 2 --retry-delay 1 --connect-timeout 5 --max-time 15 'https://ekodi.kr/stores' \
+            : > /tmp/store-legacy.headers
+            legacy_code=$(curl -sS -D /tmp/store-legacy.headers -o /dev/null -w '%{http_code}' --retry 2 --retry-delay 1 --connect-timeout 5 --max-time 15 'https://ekodi.kr/stores' || true)
+            if [ "$legacy_code" = '308' ] \
+              && grep -Fiq 'location: https://ekodi.kr/cmpmyi' /tmp/store-legacy.headers \
+              && curl -fsS -D /tmp/store-gateway.headers -o /tmp/store-gateway.body --retry 2 --retry-delay 1 --connect-timeout 5 --max-time 15 'https://ekodi.kr/cmpmyi' \
               && grep -Fq 'THREE STORES · ONE GATE' /tmp/store-gateway.body \
-              && grep -Fiq 'x-ekodi-route: store-gateway' /tmp/store-gateway.headers \
+              && grep -Fiq 'x-ekodi-route: cmpmyi-user-page' /tmp/store-gateway.headers \
               && curl -fsS --retry 2 --retry-delay 1 --connect-timeout 5 --max-time 15 'https://ekodi.kr/robots.txt' | grep -Fq 'OAI-SearchBot' \
-              && curl -fsS --retry 2 --retry-delay 1 --connect-timeout 5 --max-time 15 'https://ekodi.kr/sitemap.xml' | grep -Fq '<loc>https://ekodi.kr/stores</loc>' \
-              && curl -fsS --retry 2 --retry-delay 1 --connect-timeout 5 --max-time 15 'https://ekodi.kr/llms.txt' | grep -Fq 'https://ekodi.kr/stores'; then
-              echo 'EKODI Store Gateway and Discovery Layer production endpoints verified.'
+              && curl -fsS --retry 2 --retry-delay 1 --connect-timeout 5 --max-time 15 'https://ekodi.kr/sitemap.xml' | grep -Fq '<loc>https://ekodi.kr/cmpmyi</loc>' \
+              && curl -fsS --retry 2 --retry-delay 1 --connect-timeout 5 --max-time 15 'https://ekodi.kr/llms.txt' | grep -Fq 'https://ekodi.kr/cmpmyi'; then
+              echo 'EKODI CMPMYI user page, legacy redirect, and Discovery Layer production endpoints verified.'
               break
             fi
             if [ "$attempt" -eq 12 ]; then failed=1; fi

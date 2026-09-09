@@ -111,6 +111,13 @@ jobs:
             grep -Fq "$needle" /tmp/shared-path.html
             grep -Fiq "$header_needle" /tmp/shared-path.headers
           }
+          verify_redirect_path() {
+            path="$1"; expected="$2"
+            code=$(curl -sS -D /tmp/shared-redirect.headers -o /tmp/shared-redirect.body -w '%{http_code}' --connect-timeout 5 --max-time 15 -H "x-ekodi-staging-host: ekodi.kr" "$STAGING_URL$path" || true)
+            echo "$path -> $code"
+            [[ "$code" == '308' ]]
+            grep -Fiq "location: $expected" /tmp/shared-redirect.headers
+          }
           verify_discovery_path() {
             path="$1"; needle="$2"
             code=$(curl -sS -o /tmp/shared-discovery.body -w '%{http_code}' --connect-timeout 5 --max-time 15 -H "x-ekodi-staging-host: ekodi.kr" "$STAGING_URL$path" || true)
@@ -133,7 +140,8 @@ jobs:
               && verify_shell 'pay.biz.ekodi.kr' 'EKODI Pay' \
               && verify_shell 'messenger.ekodi.kr' 'EKODI Messenger' \
               && verify_shell 'invest.ekodi.kr' 'EKODI Investment' \
-              && verify_public_path '/stores' 'THREE STORES · ONE GATE' 'x-ekodi-route: store-gateway' \
+              && verify_public_path '/cmpmyi' 'THREE STORES · ONE GATE' 'x-ekodi-route: cmpmyi-user-page' \
+              && verify_redirect_path '/stores' 'https://ekodi.kr/cmpmyi' \
               && verify_public_path '/deployment-probe' 'OPERATING SPACE' 'x-ekodi-workspace-gateway: space-service-binding' \
               && verify_public_path '/ekodibiz' 'EKODIBIZ' 'x-ekodi-workspace-gateway: ekodibiz-service-binding' \
               && verify_public_path '/insurance' '보험을 파는 AI가 아니라, 내 보험을 챙겨주는 AI' 'x-ekodi-route: public-insurance' \
