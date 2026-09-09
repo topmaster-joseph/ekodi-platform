@@ -160,3 +160,10 @@ Machine-readable sustainable evolution authority: `governance/architecture/ekodi
 - Existing independent deployment boundaries are grandfathered as a migration baseline and are reviewed for convergence before expansion. Their existence is not precedent for creating additional boundaries.
 - The canonical operating-context target is **Person + Workspace + Membership + Capability**. Legacy `Space` names may remain only as migration aliases and must converge without breaking `workspace_id`.
 - Machine-readable rules, scale tiers, boundary gates and generation definitions are maintained in `governance/architecture/ekodi-evolution-model.json` and are enforced by repository validators.
+
+## 15. Completion-Only Execution Reporting Constitution
+- EKODI work uses **completion-only reporting** by default. Routine intermediate progress is not reported to the requester.
+- A task is reported as complete only after implementation, validation, error correction, revalidation, governed integration, guarded production deployment when production-bound, and production verification when production-bound have succeeded.
+- If autonomous execution cannot continue after reasonable recovery attempts, EKODI reports the exact blocker, recovery already attempted, concrete resolution steps, the minimum required human action, and the automatic resume plan. Vague status such as 'in progress' is not a substitute for completion or a resolution path.
+- This reporting rule changes communication cadence only. It never bypasses approval, security, constitutional, deployment, rollback or human-authority gates.
+

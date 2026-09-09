@@ -1,0 +1,25 @@
+{
+  "version": "1.9.2",
+  "effectiveDate": "2026-09-10",
+  "classification": "C2",
+  "title": "Completion-only execution reporting",
+  "ownerConfirmation": "Explicitly confirmed by platform owner in ChatGPT on 2026-09-10: complete this policy with EKODI collaboration.",
+  "changes": [
+    "Routine intermediate progress reports are disabled by default.",
+    "Completion is reported only after the applicable implementation-to-production verification chain succeeds.",
+    "When autonomous recovery cannot proceed, the report must contain the exact blocker and concrete minimum-action resolution path."
+  ],
+  "rollback": "Remove executionReportingPolicy, remove Constitution section 15, restore version 1.9.1, and rerun constitutional validation.",
+  "id": "2026-09-10-completion-only-execution-reporting-v1.9.2",
+  "constitutionVersion": "1.9.2",
+  "status": "approved",
+  "approvedBy": "topmaster-joseph",
+  "approvedAt": "2026-09-10",
+  "changeClass": "C2",
+  "taskId": "20260910-completion-only-reporting",
+  "summary": "Make completion-only reporting the default for EKODI execution and require a concrete resolution path only when autonomous recovery cannot proceed.",
+  "approvalBasis": "The platform owner explicitly instructed EKODI to complete and fix this operating method on 2026-09-10.",
+  "migrationPlan": "Apply the communication policy to future EKODI execution without changing security, approval, deployment, or human-authority gates.",
+  "securityModel": "Reporting cadence only; no execution authority is expanded.",
+  "verificationPolicy": "Validate constitution, run repository checks, merge through governed PR, and verify the merged constitutional authority."
+}
