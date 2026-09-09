@@ -13,9 +13,9 @@ const coreData = json('config/core-data-boundaries.json');
 const storage = json('config/storage-policy.json');
 const workspace = json('config/service-workspace-policy.json');
 
-if (constitution.version !== '1.9.0') fail('constitution version must be 1.9.0 with the approved one-domain C3 amendment and all prior approved amendments');
+if (constitution.version !== '1.10.0') fail('constitution version must be 1.10.0 with the approved identity-environment isolation C3 amendment and all prior approved amendments');
 if (constitution.status !== 'active') fail('constitution must be active');
-for (const principle of ['free-first-not-free-only','ekodi-core-is-source-of-truth','provider-independent-by-default','secure-by-default','one-domain-grammar','isolated-parallel-development','verification-first-evolution','security-native-intelligence','evidence-linked-recommendations','secure-projection-minimum-disclosure','integrated-responsibility-distributed-execution-standardized-connections','layered-governance-os-core-services-connections-workspaces','user-surface-engine-separation','capability-first-reuse','sustainable-scale-by-evidence','workspace-over-space','living-digital-commons-north-star','sovereign-autonomy-with-human-authority','person-workspace-role-capability-authority','observe-detect-reason-plan-execute-verify-recover-learn']) {
+for (const principle of ['free-first-not-free-only','ekodi-core-is-source-of-truth','provider-independent-by-default','secure-by-default','one-domain-grammar','isolated-parallel-development','verification-first-evolution','security-native-intelligence','evidence-linked-recommendations','secure-projection-minimum-disclosure','integrated-responsibility-distributed-execution-standardized-connections','layered-governance-os-core-services-connections-workspaces','user-surface-engine-separation','capability-first-reuse','sustainable-scale-by-evidence','workspace-over-space','living-digital-commons-north-star','sovereign-autonomy-with-human-authority','person-workspace-role-capability-authority','observe-detect-reason-plan-execute-verify-recover-learn','environment-isolated-identity','canonical-auth-at-apex-path','service-oauth-separated-from-login']) {
   if (!constitution.principles?.includes(principle)) fail(`missing constitutional principle: ${principle}`);
 }
 
@@ -89,6 +89,16 @@ if (sovereign.autonomousAuthorityExpansionForbidden !== true) fail('autonomous a
 if (sovereign.productionDirectAgentMutationForbidden !== true) fail('direct production mutation by agents must be forbidden');
 if (sovereign.verificationAfterExecutionRequired !== true) fail('autonomous execution verification must be required');
 if (sovereign.currentGenerationUnchanged !== true || sovereign.currentScaleTierUnchanged !== true) fail('v1.8 must not silently promote generation or scale tier');
+
+const identityEnvironment = constitution.identityEnvironmentPolicy || {};
+if (identityEnvironment.registry !== 'config/identity-environments.json') fail('identity environment registry mismatch');
+if (identityEnvironment.canonicalProductionAuth !== 'https://ekodi.kr/auth') fail('canonical production auth must be https://ekodi.kr/auth');
+if (JSON.stringify(identityEnvironment.productionJavaScriptOrigins || []) !== JSON.stringify(['https://ekodi.kr'])) fail('production Google JavaScript origins must contain only https://ekodi.kr');
+if (identityEnvironment.stagingCanonicalAuth !== 'https://staging.ekodi.kr/auth') fail('staging canonical auth mismatch');
+if (identityEnvironment.oauthClientReuseAcrossEnvironmentsForbidden !== true) fail('OAuth clients must not be reused across environments');
+if (identityEnvironment.sessionReuseAcrossEnvironmentsForbidden !== true || identityEnvironment.secretReuseAcrossEnvironmentsForbidden !== true) fail('identity sessions and secrets must not cross environments');
+if (identityEnvironment.serviceOAuthSeparatedFromIdentityLogin !== true || identityEnvironment.serviceOAuthGenericIdentityFallbackForbidden !== true) fail('Google service OAuth must remain separate from sign-in identity');
+if (!(constitution.systemBoundaries?.staging || []).includes('staging.ekodi.kr')) fail('staging system boundary must include staging.ekodi.kr');
 
 const secureProjection = constitution.securityPolicy?.secureProjection || {};
 if (secureProjection.enabledByDefault !== true) fail('Secure Projection must be enabled by default');

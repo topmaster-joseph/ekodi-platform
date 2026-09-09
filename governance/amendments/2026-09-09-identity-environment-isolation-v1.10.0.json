@@ -1,0 +1,15 @@
+{
+  "id": "2026-09-09-identity-environment-isolation-v1.10.0",
+  "constitutionVersion": "1.10.0",
+  "status": "approved",
+  "approvedBy": "topmaster-joseph",
+  "approvedAt": "2026-09-09",
+  "changeClass": "C3",
+  "taskId": "oauth-origin-fix-20260909",
+  "summary": "Separate Production, Staging and Development identity environments and make https://ekodi.kr/auth the canonical production authentication surface.",
+  "approvalBasis": "The platform owner explicitly approved the Production/Staging/Development OAuth separation model and instructed continued implementation under the EKODI authentication constitution.",
+  "migrationPlan": "Register exact environment origins, inject environment-specific Google client IDs, isolate session and deployment credential namespaces, migrate all first-party login entrypoints to ekodi.kr/auth, then remove legacy Google JavaScript origins only after live traffic confirms no dependency.",
+  "securityModel": "Google sign-in is an identity adapter. Environment credentials and sessions cannot cross boundaries. Gmail, Drive, YouTube and other capability OAuth clients and token vaults remain independent from login identity and from each other.",
+  "rollback": "Keep the prior production client and legacy redirect surfaces available while reverting runtime identity-origin enforcement and environment-specific client injection. Never roll back by sharing staging or development credentials with production.",
+  "verificationPolicy": "Identity registry validation, auth contract tests, staging smoke, guarded production promotion and live Google sign-in verification must pass before legacy OAuth origins are removed."
+}

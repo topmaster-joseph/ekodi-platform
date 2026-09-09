@@ -6,7 +6,8 @@ import { handleAdminGoogleAuth } from '../admin-google-auth.js';
 const CLIENT_ID = '483044030492-4e6231l5glchhtniroinvuq3ev6n5mv5.apps.googleusercontent.com';
 const baseEnv = {
   ENVIRONMENT: 'production',
-  ALLOWED_ORIGINS: 'https://admin.ekodi.kr,https://auth.ekodi.kr',
+  ALLOWED_ORIGINS: 'https://ekodi.kr',
+  GOOGLE_IDENTITY_ORIGIN: 'https://ekodi.kr',
   GOOGLE_CLIENT_ID: CLIENT_ID,
   ADMIN_GOOGLE_BOOTSTRAP_EMAILS: '',
   ADMIN_WORKSPACE_DOMAIN: 'ekodi.kr',
@@ -15,7 +16,7 @@ const baseEnv = {
 function request(path, method = 'GET') {
   return new Request(`https://api.ekodi.kr${path}`, {
     method,
-    headers: { origin: 'https://auth.ekodi.kr' },
+    headers: { origin: 'https://ekodi.kr' },
   });
 }
 
@@ -25,6 +26,7 @@ test('Google client config remains available without touching D1', async () => {
   assert.deepEqual(await response.json(), {
     enabled: true,
     clientId: CLIENT_ID,
+    identityOrigin: 'https://ekodi.kr',
     mode: 'google_allowlist',
   });
 });

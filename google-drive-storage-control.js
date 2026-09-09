@@ -77,7 +77,7 @@ function primaryDomains(env) {
 }
 function primarySharedDriveId(env) { return String(env.STORAGE_PRIMARY_SHARED_DRIVE_ID || '').trim(); }
 function primarySharedDriveName(env) { return String(env.STORAGE_PRIMARY_SHARED_DRIVE_NAME || 'EKODI').trim() || 'EKODI'; }
-function googleClientId(env) { return String(env.GOOGLE_DRIVE_CLIENT_ID || env.GOOGLE_CLIENT_ID || '').trim(); }
+function googleClientId(env) { return String(env.GOOGLE_DRIVE_CLIENT_ID || '').trim(); }
 function ready(env) { return Boolean(googleClientId(env) && env.GOOGLE_DRIVE_CLIENT_SECRET && env.STORAGE_CREDENTIAL_KEY && env.DB); }
 function b64url(bytes) {
   let binary=''; for (const byte of bytes) binary += String.fromCharCode(byte);

@@ -267,13 +267,14 @@ jobs:
           ! grep -Fq 'OPENAI_API_KEY' wrangler.api.toml
 
   staging:
-    environment: development
+    environment: staging
     needs: validate
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: 46aad4738793fbaca88574832a2ccc0f
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_STAGING_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_STAGING_ACCOUNT_ID }}
+      GOOGLE_STAGING_CLIENT_ID: ${{ vars.GOOGLE_STAGING_CLIENT_ID }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -283,10 +284,11 @@ jobs:
         run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
       - name: Generate universal user-service registry
         run: npm run generate:user-services
-      - name: Verify Cloudflare credentials
+      - name: Verify isolated Staging credentials
         run: |
           test -n "$CLOUDFLARE_API_TOKEN"
           test -n "$CLOUDFLARE_ACCOUNT_ID"
+          test -n "$GOOGLE_STAGING_CLIENT_ID"
       - name: Resolve isolated Control staging D1
         id: staging_d1
         shell: bash
@@ -316,11 +318,12 @@ jobs:
           ENVIRONMENT = "staging"
           ADMIN_EMAIL = "topmaster.joseph@gmail.com"
           ADMIN_GOOGLE_BOOTSTRAP_EMAILS = "topmaster.joseph@gmail.com"
-          ADMIN_WORKSPACE_DOMAIN = "ekodibiz.kr"
-          GOOGLE_CLIENT_ID = "483044030492-4e6231l5glchhtniroinvuq3ev6n5mv5.apps.googleusercontent.com"
+          ADMIN_WORKSPACE_DOMAIN = "ekodi.kr"
+          GOOGLE_CLIENT_ID = "$GOOGLE_STAGING_CLIENT_ID"
+          GOOGLE_IDENTITY_ORIGIN = "https://staging.ekodi.kr"
           AI_PROVIDER = "NONE"
           OPENAI_MODEL = "gpt-5.6-terra"
-          ALLOWED_ORIGINS = "https://admin.ekodi.kr,https://auth.ekodi.kr,https://mail.ekodi.kr,https://ekodi.kr"
+          ALLOWED_ORIGINS = "https://staging.ekodi.kr"
           [observability.logs]
           enabled = true
           invocation_logs = true
@@ -412,7 +415,6 @@ jobs:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       MAIL_GOOGLE_CLIENT_SECRET: ${{ secrets.MAIL_GOOGLE_CLIENT_SECRET }}
-      GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -426,7 +428,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          oauth_secret="${MAIL_GOOGLE_CLIENT_SECRET:-${GOOGLE_CLIENT_SECRET:-}}"
+          oauth_secret="${MAIL_GOOGLE_CLIENT_SECRET:-}"
           if [ -n "$oauth_secret" ]; then
             printf '%s' "$oauth_secret" | npx --yes wrangler@${WRANGLER_VERSION} secret put MAIL_GOOGLE_CLIENT_SECRET --config wrangler.api.toml >/dev/null
             echo 'Mail Google OAuth client secret provisioned without printing its value.' >> "$GITHUB_STEP_SUMMARY"

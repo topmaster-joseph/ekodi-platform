@@ -9,16 +9,16 @@ Status: adopted architecture contract. Production Supabase is canonicalized as `
 - `main` is the production source.
 - `development` is the persistent development source already used by the Cloudflare development deployment.
 - Short-lived AI/feature branches merge through pull requests.
-- Pull-request staging uses the existing GitHub `development` environment and isolated Cloudflare staging resources.
+- Pull-request staging uses the dedicated GitHub `staging` environment and isolated Cloudflare staging resources.
 - Production changes are promoted only after CI, migration, staging, and smoke checks pass.
 
 The intended end-to-end mapping is:
 
 | Layer | Production | Development / Staging |
 | --- | --- | --- |
-| GitHub | `main` + `production` environment | `development` + `development` environment; PR staging uses the same non-production boundary |
-| Cloudflare | production account/resources | development/staging account/resources |
-| Supabase | logical `ekodi-platform` | logical `ekodi-platform-dev` |
+| GitHub | `main` + `production` environment | pull-request candidate + `staging` environment | `development` + `development` environment |
+| Cloudflare | production account/resources | isolated staging resources and staging-only credential profile | development resources |
+| Supabase | logical `ekodi-platform` | synthetic/anonymized non-production data only | logical `ekodi-platform-dev` |
 
 ## 2. Supabase transition mapping
 
@@ -29,6 +29,12 @@ The two existing free Supabase projects are retained while data is reorganized w
 - The second project must not be treated as disposable development data until church production data and dependencies have been safely migrated and verified.
 
 Display-name changes and service-data consolidation are separate operations. A rename must never be treated as a data migration.
+
+## 2A. Identity environment isolation
+
+Production, Staging and Development have distinct Google Identity clients, exact authorized origins, session namespaces and deployment credential profiles. Production uses `https://ekodi.kr/auth` with JavaScript origin `https://ekodi.kr`; Staging uses `https://staging.ekodi.kr/auth`; local Development uses the exact port registered in `config/identity-environments.json`.
+
+Google service authorization is separate from sign-in identity. Gmail, Drive, YouTube and other channel connections use capability-specific client bindings and token vaults; they never fall back to the Google login client. Channel connection lifecycle is independent from platform release lifecycle.
 
 ## 3. PostgreSQL isolation policy
 

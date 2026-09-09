@@ -21,7 +21,8 @@ test('EKODI central social connector exposes login-only YouTube OAuth and vault 
   assert.match(ui,/data-connect="youtube"/);
   assert.match(ui,/Google로 YouTube 연결/);
   assert.match(ui,/Metricool은 필수가 아닙니다/);
-  assert.match(config,/GOOGLE_CLIENT_ID/);
+  assert.doesNotMatch(config,/GOOGLE_CLIENT_ID/);
+  assert.doesNotMatch(growth,/env\.GOOGLE_CLIENT_SECRET/);
   assert.match(config,/binding = "GOOGLE_OAUTH_BROKER"/);
   assert.match(config,/service = "ekodi-storage-control"/);
   assert.match(config,/entrypoint = "GoogleOAuthBroker"/);

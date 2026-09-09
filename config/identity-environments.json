@@ -1,0 +1,66 @@
+{
+  "version": "1.0",
+  "canonicalAuthPath": "/auth",
+  "provider": "google_identity_services",
+  "isolationRequired": true,
+  "environments": {
+    "production": {
+      "canonicalOrigin": "https://ekodi.kr",
+      "authorizedJavaScriptOrigins": [
+        "https://ekodi.kr"
+      ],
+      "googleClientBinding": "GOOGLE_CLIENT_ID",
+      "sessionNamespace": "ekodi-auth-production",
+      "cookieScope": "host-only",
+      "deploymentEnvironment": "production"
+    },
+    "staging": {
+      "canonicalOrigin": "https://staging.ekodi.kr",
+      "authorizedJavaScriptOrigins": [
+        "https://staging.ekodi.kr"
+      ],
+      "googleClientBinding": "GOOGLE_STAGING_CLIENT_ID",
+      "sessionNamespace": "ekodi-auth-staging",
+      "cookieScope": "host-only",
+      "deploymentEnvironment": "staging"
+    },
+    "development": {
+      "canonicalOrigin": "http://127.0.0.1:4173",
+      "authorizedJavaScriptOrigins": [
+        "http://127.0.0.1:4173",
+        "http://localhost:4173"
+      ],
+      "googleClientBinding": "GOOGLE_DEVELOPMENT_CLIENT_ID",
+      "sessionNamespace": "ekodi-auth-development",
+      "cookieScope": "host-only",
+      "deploymentEnvironment": "development"
+    }
+  },
+  "legacyCompatibilityOrigins": [
+    "https://auth.ekodi.kr",
+    "https://admin.ekodi.kr"
+  ],
+  "serviceOAuth": {
+    "separateFromIdentityLogin": true,
+    "channelIsolationRequired": true,
+    "genericIdentityClientFallbackForbidden": true,
+    "tokenVaultPerCapability": true,
+    "connectionLifecycleIndependentFromPlatformRelease": true
+  },
+  "productionRules": {
+    "testOriginsForbidden": true,
+    "stagingOriginsForbidden": true,
+    "localhostOriginsForbidden": true,
+    "clientSecretInBrowserForbidden": true,
+    "crossEnvironmentSessionReuseForbidden": true,
+    "crossEnvironmentSecretReuseForbidden": true
+  },
+  "providerMigration": {
+    "productionOriginRegistration": "pending-google-console",
+    "stagingIdentityClient": "pending-google-console",
+    "developmentIdentityClient": "pending-google-console",
+    "mailDedicatedClient": "pending-google-console",
+    "driveDedicatedClientRotation": "pending-provider-reauthorization",
+    "youtubeDedicatedClientRotation": "pending-provider-reauthorization"
+  }
+}
