@@ -41,16 +41,6 @@ const allowedPrefixes = policy.sourceControl.allowedChangeBranchPrefixes || ['ai
 function branchAllowed(branch) {
   return allowedPrefixes.some(prefix => text(branch).startsWith(prefix));
 }
-function isPrMergeMessage(message) {
-  return /^Merge (?:pull request|PR) #\d+\b/m.test(text(message));
-}
-function commitLooksLikePrMerge() {
-  const eventMessage = text(event.head_commit?.message);
-  if (isPrMergeMessage(eventMessage)) return true;
-  const parents = git(['rev-list', '--parents', '-n', '1', sha]).split(/\s+/).filter(Boolean);
-  const message = git(['log', '-1', '--pretty=%B', sha]);
-  return parents.length >= 3 && isPrMergeMessage(message);
-}
 function currentChangedFiles() {
   const base = event.pull_request?.base?.sha;
   if (base) {
@@ -59,6 +49,53 @@ function currentChangedFiles() {
   }
   const out = git(['diff-tree', '--no-commit-id', '--name-only', '-r', sha]);
   return out ? out.split(/\r?\n/).filter(Boolean) : [];
+}
+function parseProvenancePayload(raw, sourceLabel) {
+  try {
+    const value = JSON.parse(raw);
+    if (!Array.isArray(value)) fail(`PR merge provenance from ${sourceLabel} must be a JSON array.`);
+    return value;
+  } catch (error) {
+    if (error instanceof SyntaxError) fail(`PR merge provenance from ${sourceLabel} is malformed JSON.`);
+    throw error;
+  }
+}
+async function loadAssociatedPullRequests() {
+  const provenancePath = text(process.env.EKODI_GITHUB_PR_PROVENANCE);
+  if (provenancePath) {
+    if (!fs.existsSync(provenancePath)) fail(`PR merge provenance file is missing: ${provenancePath}`);
+    return parseProvenancePayload(fs.readFileSync(provenancePath, 'utf8'), provenancePath);
+  }
+
+  if (!repository.includes('/') || sha === 'unknown') fail('GitHub repository/SHA is unavailable for PR merge provenance verification.');
+  const apiBase = text(process.env.GITHUB_API_URL || 'https://api.github.com').replace(/\/+$/, '');
+  const endpoint = `${apiBase}/repos/${repository}/commits/${encodeURIComponent(sha)}/pulls`;
+  const headers = {
+    Accept: 'application/vnd.github+json',
+    'X-GitHub-Api-Version': '2026-03-10',
+    'User-Agent': 'ekodi-ai-orchestration-gate',
+  };
+  const token = text(process.env.GITHUB_TOKEN || process.env.GH_TOKEN);
+  if (token) headers.Authorization = `Bearer ${token}`;
+
+  let response;
+  try {
+    response = await fetch(endpoint, { headers, signal: AbortSignal.timeout(10000) });
+  } catch (error) {
+    fail(`unable to verify PR merge provenance from GitHub: ${error?.message || 'network error'}`);
+  }
+  if (!response.ok) fail(`unable to verify PR merge provenance from GitHub: HTTP ${response.status}`);
+  return parseProvenancePayload(await response.text(), 'GitHub API');
+}
+async function verifiedMainPrMerge() {
+  const pulls = await loadAssociatedPullRequests();
+  return pulls.some(pr => (
+    text(pr?.state) === 'closed'
+    && Boolean(pr?.merged_at)
+    && text(pr?.base?.ref) === defaultBranch
+    && text(pr?.merge_commit_sha) === sha
+    && branchAllowed(pr?.head?.ref)
+  ));
 }
 
 let source = 'static-policy-validation';
@@ -69,7 +106,7 @@ if (eventName === 'pull_request' || eventName === 'pull_request_target') {
   if (!branchAllowed(intentBranch)) fail(`change branch must enter through EKODI AI namespace (${allowedPrefixes.join(', ')}): ${intentBranch || 'missing'}`);
   source = `pull-request:${event.pull_request?.number || 'unknown'}`;
 } else if (eventName === 'push' && text(process.env.GITHUB_REF_NAME) === defaultBranch) {
-  if (!commitLooksLikePrMerge()) fail(`direct push to ${defaultBranch} is forbidden; merge an EKODI AI orchestrated PR instead.`);
+  if (!await verifiedMainPrMerge()) fail(`direct push to ${defaultBranch} is forbidden; merge an EKODI AI orchestrated PR instead.`);
   source = 'protected-main-pr-merge';
 } else if (eventName === 'push') {
   if (!branchAllowed(text(process.env.GITHUB_REF_NAME))) fail('non-main change pushes must use an EKODI AI branch namespace.');
