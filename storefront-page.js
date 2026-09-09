@@ -1,5 +1,5 @@
 const BRAND=Object.freeze({
-  pizzamaru:{brand:'피자마루',branch:'목포대점',category:'피자',mark:'PM',tagline:'목포대 후문에서 오늘 먹고 싶은 피자를 바로 만나보세요.',address:'전남 무안군 청계면 승달산길 37-1 1층',phone:'061-453-8295'},
+  pizzamaru:{brand:'피자마루',branch:'목포대점',category:'피자',mark:'PM',tagline:'목포대 후문에서 오늘 먹고 싶은 피자를 바로 만나보세요.',address:'전남 무안군 청계면 승달산길 37-1 1층',phone:'061-453-8295',officialImageHosts:['www.pizzamaru.co.kr','pizzamaru.co.kr']},
   jadam:{brand:'자담치킨',branch:'목포대점',category:'치킨',mark:'JD',tagline:'국립목포대학교 후문, 메뉴·앱별 가격·주문을 한 화면에서 확인하세요.',address:'전남 무안군 청계면 승달산길 37-1',phone:'061-453-8295'},
   yogurt:{brand:'요거트퍼플',branch:'목포대점',category:'요거트',mark:'YP',tagline:'목포대점의 디저트와 주문을 가장 빠르게 연결합니다.'},
 });
@@ -32,6 +32,7 @@ const YOGURT_ORDER_PROVIDERS=Object.freeze([
 
 const e=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function safeHttps(value){try{const u=new URL(String(value||''));return u.protocol==='https:'?u.href:''}catch{return''}}
+function officialImage(value,hosts=[]){const src=safeHttps(value);if(!src)return'';try{return hosts.map(x=>String(x).toLowerCase()).includes(new URL(src).hostname.toLowerCase())?src:''}catch{return''}}
 function phoneText(value){return String(value||'').trim()}
 function telUrl(value){const phone=phoneText(value).replace(/[^0-9+]/g,'');return phone?`tel:${phone}`:''}
 function won(value){return Number.isFinite(Number(value))?`${Number(value).toLocaleString('ko-KR')}원`:''}
@@ -96,7 +97,7 @@ function normalizedListings(item,channels){
 }
 function menuCard(item,meta,channels){
   const listings=normalizedListings(item,channels);
-  const image=safeHttps(listings.find(x=>x.image_url)?.image_url)||safeHttps(item.image_url);
+  const image=Array.isArray(meta.officialImageHosts)?officialImage(item.image_url,meta.officialImageHosts):(safeHttps(listings.find(x=>x.image_url)?.image_url)||safeHttps(item.image_url));
   const priced=listings.filter(x=>Number.isFinite(Number(x.price)));
   const min=priced.length?Math.min(...priced.map(x=>Number(x.price))):null;
   const fallbackMark=meta.mark||String(meta.brand||'ST').slice(0,2);

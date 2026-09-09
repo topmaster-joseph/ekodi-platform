@@ -102,12 +102,16 @@ function candidatePullRequestNumbers() {
   }
   return [...numbers];
 }
-function isVerifiedMergedPr(pr) {
+function isVerifiedMergedPr(pr, { shaBound = false } = {}) {
+  const reportedMergeSha = text(pr?.merge_commit_sha);
+  const shaVerified = shaBound
+    ? (!reportedMergeSha || reportedMergeSha === sha)
+    : reportedMergeSha === sha;
   return Boolean(pr)
     && text(pr?.state) === 'closed'
     && Boolean(pr?.merged_at)
     && text(pr?.base?.ref) === defaultBranch
-    && text(pr?.merge_commit_sha) === sha
+    && shaVerified
     && branchAllowed(pr?.head?.ref);
 }
 async function loadAssociatedPullRequests() {
@@ -160,7 +164,7 @@ async function verifiedMainPrMerge() {
 
     try {
       const pulls = await loadAssociatedPullRequests();
-      if (pulls.some(isVerifiedMergedPr)) return true;
+      if (pulls.some(pr => isVerifiedMergedPr(pr, { shaBound: true }))) return true;
     } catch (error) {
       lastError = error?.message || String(error);
     }
