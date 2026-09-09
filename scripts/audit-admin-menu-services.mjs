@@ -14,7 +14,7 @@ const contracts={
   'client-access.js':[/dataset\.section\s*=\s*['\"]clients['\"]/,/고객관리 API 요청 실패/],
   'books-admin.js':[/dataset\.section\s*=\s*['\"]books['\"]/,/Publications/],
   'books-finance-admin.js':[/Sales & Costs/,/CHANNEL P&L/],
-  'social-admin.js':[/dataset\.section\s*=\s*['\"]social['\"]/,/Social Channels/],
+  'social-admin.js':[/dataset\.section\s*=\s*['\"]social['\"]/,/MULTI-CHANNEL CONTROL CENTER/],
   'supply-network-admin.js':[/panel\.dataset\.panel\s*=\s*['\"]supply-network['\"]/,/PROFESSIONAL SERVICE/,/MALL_ADMIN/],
 };
 for(const [file,patterns] of Object.entries(contracts)){if(!fs.existsSync(file))throw new Error('module missing: '+file);const src=read(file);for(const pattern of patterns)if(!pattern.test(src))throw new Error(file+' contract failed: '+pattern)}
