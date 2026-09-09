@@ -45,9 +45,10 @@
   ],
   "guestAccess": {
     "scope": "common_service_user_pages",
-    "mode": "guide_only",
-    "minimumTierForContent": "free",
+    "mode": "public_content",
+    "minimumTierForContent": "guest",
     "identityProvider": "google",
+    "memberTierForPersonalization": "free",
     "publicExceptions": [
       "auth_handoff",
       "legal_notice",
