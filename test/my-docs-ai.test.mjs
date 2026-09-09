@@ -28,6 +28,15 @@ test('document AI is authenticated, common-gateway-first and bounded',()=>{
 test('core.documents is service-backed with an observable provider contract',()=>{
   const capability=registry.capabilities.find(item=>item.id==='core.documents');assert.equal(capability?.maturity,'service-backed');assert.equal(capability?.provider?.id,'my-docs');assert.equal(capability?.provider?.contract,'ekodi.documents.v2');assert.equal(capability?.provider?.generation,8);assert.ok(capability?.provider?.formats?.import?.includes('hwpx'));assert.ok(capability?.provider?.formats?.export?.includes('hwpx'));
 });
-test('My EKODI advertises and probes the document workspace in production',()=>{
-  assert.match(worker,/documentWorkspace:true/);assert.match(worker,/documentCapability:'core\.documents'/);assert.match(worker,/documentContract:'ekodi\.documents\.v2'/);assert.match(worker,/documentHwpx:true/);assert.match(worker,/documentVersionHistory:true/);assert.match(worker,/url\.pathname==='\/docs'/);const docsProbe=manifest.worker.requests.find(item=>item.url==='https://my.ekodi.kr/docs/');assert.ok(docsProbe);assert.ok(docsProbe.expect.includes('EKODI Docs AI'));
+test('My EKODI advertises and probes the document workspace on the canonical production path',()=>{
+  assert.match(worker,/documentWorkspace:true/);assert.match(worker,/documentCapability:'core\.documents'/);assert.match(worker,/documentContract:'ekodi\.documents\.v2'/);assert.match(worker,/documentHwpx:true/);assert.match(worker,/documentVersionHistory:true/);assert.match(worker,/url\.pathname==='\/docs'/);const docsProbe=manifest.worker.requests.find(item=>item.url==='https://ekodi.kr/my/docs/');assert.ok(docsProbe);assert.ok(docsProbe.expect.includes('EKODI Docs AI'));assert.equal(docsProbe.candidateVerify,false);
+});
+test('My guarded release smoke-tests the legacy redirect and defers canonical content probes until promotion',()=>{
+  const requests=manifest.worker.requests;
+  const legacy=requests.find(item=>item.url==='https://my.ekodi.kr/');
+  assert.ok(legacy);assert.deepEqual(legacy.statuses,[308]);assert.equal(legacy.redirect,'manual');assert.ok(legacy.headerExpect.includes('location: https://ekodi.kr/my/'));
+  const canonical=requests.filter(item=>item.url.startsWith('https://ekodi.kr/my/'));
+  assert.equal(canonical.length,4);
+  for(const probe of canonical){assert.equal(probe.candidateVerify,false);assert.match(probe.candidateVerifyReason,/verified after promotion/);}
+  assert.equal(requests.filter(item=>item.url.startsWith('https://my.ekodi.kr/')).length,1);
 });
