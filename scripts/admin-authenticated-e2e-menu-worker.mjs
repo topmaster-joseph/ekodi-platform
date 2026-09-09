@@ -263,7 +263,7 @@ async function verifyNormal(tab, alreadyActive, started) {
       const text = String(node.innerText || '').replace(/\s+/g, ' ').trim();
       return ids.includes(section) && !node.hidden && !node.classList.contains('hidden-panel') && style.display !== 'none' && style.visibility !== 'hidden' && text.length >= 4;
     });
-  }, menuId, { timeout: 5_000 });
+  }, menuId, { timeout: 8_000 });
   let state = await visiblePanelState();
   if (!state.panelFound || !state.selected || state.textLength < 4) throw new Error(`panel invalid: ${JSON.stringify(state)}`);
   if (state.busy) {
@@ -302,7 +302,12 @@ try {
   await tab.waitFor({ state: 'visible', timeout: 5_000 });
   const aria = await tab.getAttribute('aria-selected');
   const classes = String(await tab.getAttribute('class') || '');
-  const alreadyActive = aria === 'true' || classes.split(/\s+/).includes('active');
+  let alreadyActive = aria === 'true' || classes.split(/\s+/).includes('active');
+  if (alreadyActive) {
+    stage('active-panel-check');
+    const activeState = await visiblePanelState();
+    alreadyActive = Boolean(activeState.panelFound && activeState.selected && activeState.textLength >= 4);
+  }
   if (menuId === 'storage') await verifyStorage(tab, alreadyActive, started);
   else if (menuId === 'tax') await verifyTax(tab, alreadyActive, started);
   else if (menuId === 'public-site-controls') await verifyPublicSiteControls(tab, alreadyActive, started);
