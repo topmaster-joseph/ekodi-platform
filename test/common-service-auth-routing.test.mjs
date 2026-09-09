@@ -11,14 +11,16 @@ const myWorker = read('my-worker.js');
 const shellInjector = read('ekodi-shell-injector.js');
 const membership = JSON.parse(read('config/universal-membership.json'));
 
-test('common-service public pages stay visible as guide landings before Google FREE membership', () => {
-  assert.equal(membership.guestAccess?.mode, 'guide_only');
-  assert.equal(membership.guestAccess?.minimumTierForContent, 'free');
+test('common-service public pages stay fully visible before Google FREE membership', () => {
+  assert.equal(membership.guestAccess?.mode, 'public_content');
+  assert.equal(membership.guestAccess?.minimumTierForContent, 'guest');
+  assert.equal(membership.guestAccess?.memberTierForPersonalization, 'free');
   assert.match(manifest, /guestMode:'public-guide'/);
   assert.match(manifest, /service\.defaultSurface==='public'\?COMMON_PUBLIC_ACCESS_POLICY:COMMON_USER_ACCESS_POLICY/);
   assert.match(manifest, /operatingModel==='customer-site'\?null:/);
   assert.match(shell, /p\.guestMode==='guide-only'/);
-  assert.match(shell, /surface==='public'\|\|surface==='workspace'/);
+  assert.match(shell, /surface==='workspace'&&explicitWorkspace/);
+  assert.match(shell, /pathname\.toLowerCase\(\)\.startsWith\('\/w\/'\)/);
   assert.match(shell, /Google로 무료 시작/);
   assert.match(shell, /capabilitySummary/);
   assert.match(shell, /guestPublicException/);

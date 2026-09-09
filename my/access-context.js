@@ -70,7 +70,7 @@ async function resolve(){
   const sb=createClient(cfg.supabaseUrl,cfg.supabasePublishableKey,{auth:{detectSessionInUrl:true,persistSession:true}});
   const {data,error}=await sb.auth.getSession();
   const session=data?.session||null;
-  if(error||!session){render(section,{state:'로그인 필요',headline:'Google 무료회원 확인 후 이어집니다.',detail:'로그인 전에는 서비스 안내까지만 보이고 개인·공간 데이터는 읽지 않습니다.',copy:`${service.name}의 내 이용범위는 로그인 후 확인합니다.`,primaryLabel:'Google로 무료 시작',primaryHref:authUrl(),secondaryHref:serviceReturn});return}
+  if(error||!session){render(section,{state:'로그인 필요',headline:'Google 무료회원 확인 후 이어집니다.',detail:'공개 콘텐츠는 로그인 없이 계속 볼 수 있고, 개인·공간 데이터와 저장·작성 기능은 로그인 후 열립니다.',copy:`${service.name}의 내 이용범위는 로그인 후 확인합니다.`,primaryLabel:'Google로 무료 시작',primaryHref:authUrl(),secondaryHref:serviceReturn});return}
   const [{data:access,error:accessError},{data:rows,error:workspaceError}]=await Promise.all([
     sb.rpc('current_site_access',{p_site_key:source}),
     sb.rpc('current_site_workspaces',{p_site_key:source})

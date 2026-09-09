@@ -15,8 +15,8 @@ const expectedIds = services.map((service) => String(service.id || '').trim().to
 if (policy.policyId !== 'one-account-free-everywhere-pay-where-needed') fail('canonical policy id changed');
 if (policy.defaultEntitlement?.tier !== 'free') fail('default entitlement must remain FREE');
 if (policy.defaultEntitlement?.scope !== 'all_registry_user_services') fail('FREE must cover all registry user services');
-if (policy.guestAccess?.scope !== 'common_service_user_pages' || policy.guestAccess?.mode !== 'guide_only') fail('guest user pages must stay guide-only');
-if (policy.guestAccess?.minimumTierForContent !== 'free' || policy.guestAccess?.identityProvider !== 'google') fail('common service content must require Google FREE membership');
+if (policy.guestAccess?.scope !== 'common_service_user_pages' || policy.guestAccess?.mode !== 'public_content') fail('guest user pages must keep public content visible');
+if (policy.guestAccess?.minimumTierForContent !== 'guest' || policy.guestAccess?.memberTierForPersonalization !== 'free' || policy.guestAccess?.identityProvider !== 'google') fail('public content must be guest-visible while personalization starts at Google FREE membership');
 if (policy.paidPlans?.scope !== 'service_specific' || policy.paidPlans?.upgradeIndependently !== true) fail('paid plans must remain service-specific');
 if (policy.automaticInheritance?.enabledForFutureRegistryServices !== true) fail('future service inheritance must stay enabled');
 

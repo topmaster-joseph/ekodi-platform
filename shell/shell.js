@@ -220,7 +220,7 @@ function myUrl(){const u=new URL(MY);u.searchParams.set('return_to',currentRetur
 
 function memberPolicy(){return service?.userAccessPolicy||null;}
 function guestPublicException(){const p=location.pathname.toLowerCase();return p==='/health'||p.startsWith('/health/')||p.startsWith('/api/')||p.includes('callback')||/(?:^|\/)(?:privacy|terms|legal|policy)(?:[.\/-]|$)/.test(p);}
-function memberGateApplies(){const p=memberPolicy();return Boolean(memberGateMode!=='service-owned'&&p&&p.guestMode==='guide-only'&&p.minimumTier==='free'&&!guestPublicException()&&(surface==='public'||surface==='workspace'));}
+function memberGateApplies(){const p=memberPolicy();const explicitWorkspace=location.pathname.toLowerCase().startsWith('/w/')||new URLSearchParams(location.search).has('workspace');return Boolean(memberGateMode!=='service-owned'&&p&&p.guestMode==='guide-only'&&p.minimumTier==='free'&&!guestPublicException()&&surface==='workspace'&&explicitWorkspace);}
 function handoffPending(){try{return new URLSearchParams(location.hash.startsWith('#')?location.hash.slice(1):'').has('ekodi_token');}catch{return false;}}
 function localMemberSession(){
   try{for(let i=0;i<localStorage.length;i++){const key=localStorage.key(i)||'';if(!/^sb-[a-z0-9]+-auth-token(?:\.\d+)?$/i.test(key))continue;let parsed;try{parsed=JSON.parse(localStorage.getItem(key)||'null');}catch{continue;}const s=parsed?.currentSession||parsed?.session||parsed;const token=String(s?.access_token||'');const user=s?.user;const exp=Number(s?.expires_at||0);if(token&&user?.id&&(!exp||exp*1000>Date.now()-60000))return true;}}catch{}return false;
