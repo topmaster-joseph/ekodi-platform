@@ -7,7 +7,6 @@ const migration = fs.readFileSync('migrations/0031_core_backup_state.sql', 'utf8
 
 test('Core recovery exports D1 and proves an independent SQLite restore', () => {
   assert.match(workflow, /PRODUCTION_BACKUP_DATABASE: 'ekodi-auth'/);
-  assert.match(workflow, /CLOUDFLARE_DEVELOPMENT_API_TOKEN/);
   assert.match(workflow, /ekodi-core-backup-pr-/);
   assert.match(workflow, /d1 create "\$DB_NAME"/);
   assert.match(workflow, /d1 migrations apply DB --remote --config wrangler\.backup\.pr\.toml/);

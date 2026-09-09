@@ -73,7 +73,6 @@ requireText('.github/workflows/deploy-control-api.yml', [
 ]);
 requireText('.github/workflows/backup-ekodi-core.yml', [
   "'ekodi-auth'",
-  'CLOUDFLARE_DEVELOPMENT_API_TOKEN',
   'ekodi-core-backup-pr-',
   'd1 migrations apply DB',
   'd1 delete "$BACKUP_DATABASE"',
