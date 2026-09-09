@@ -94,7 +94,7 @@ async function fetchGithubJson(endpoint, sourceLabel, { allowNotFound = false } 
   }
 }
 function candidatePullRequestNumbers() {
-  const firstLine = text(event.head_commit?.message || git(['log', '-1', '--pretty=%s', sha]));
+  const firstLine = text(event.head_commit?.message || git(['log', '-1', '--pretty=%s', sha])).split(/\r?\n/, 1)[0];
   const numbers = new Set();
   for (const pattern of [/^Merge (?:pull request|PR) #(\d+)\b/i, /\(#(\d+)\)\s*$/]) {
     const match = firstLine.match(pattern);
@@ -143,8 +143,8 @@ async function loadPullRequestByNumber(number) {
 }
 async function verifiedMainPrMerge() {
   const fixtureMode = Boolean(text(process.env.EKODI_GITHUB_PR_PROVENANCE) || text(process.env.EKODI_GITHUB_PR_LOOKUP));
-  const attempts = fixtureMode ? 1 : boundedInteger(process.env.EKODI_GITHUB_PROVENANCE_ATTEMPTS, 6, 1, 10);
-  const retryMs = boundedInteger(process.env.EKODI_GITHUB_PROVENANCE_RETRY_MS, 1500, 0, 5000);
+  const attempts = fixtureMode ? 1 : boundedInteger(process.env.EKODI_GITHUB_PROVENANCE_ATTEMPTS, 10, 1, 12);
+  const retryBaseMs = boundedInteger(process.env.EKODI_GITHUB_PROVENANCE_RETRY_MS, 1000, 0, 5000);
   const candidateNumbers = candidatePullRequestNumbers();
   let lastError = '';
 
@@ -165,7 +165,10 @@ async function verifiedMainPrMerge() {
       lastError = error?.message || String(error);
     }
 
-    if (attempt + 1 < attempts) await sleep(retryMs);
+    if (attempt + 1 < attempts) {
+      const retryDelayMs = Math.min(retryBaseMs * 2 ** attempt, 5000);
+      await sleep(retryDelayMs);
+    }
   }
 
   if (lastError) console.warn(`[EKODI][AI-ORCHESTRATE-001] ${lastError}`);

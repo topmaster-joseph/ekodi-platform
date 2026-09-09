@@ -38,7 +38,7 @@ test('production verifier follows the AI Control runtime-only contract', () => {
   const requests = manifest.worker.requests;
   assert.equal(requests.find(item => item.url === 'https://ai.ekodi.kr/')?.statuses?.[0], 307);
   const rootProbe = requests.find(item => item.url === 'https://ai.ekodi.kr/');
-  assert.ok(rootProbe.headerExpect.includes('location: https://ekodi.kr/admin/common/common-services?service=ai'));
+  assert.ok(rootProbe.headerExpect.includes('location: https://ekodi.kr/admin/services/common-services?service=ai'));
   assert.ok(rootProbe.headerExpect.includes('x-content-type-options: nosniff'));
   assert.equal(requests.find(item => item.url.endsWith('/__health'))?.statuses?.[0], 200);
   assert.equal(requests.find(item => item.url.endsWith('/config.js'))?.statuses?.[0], 410);

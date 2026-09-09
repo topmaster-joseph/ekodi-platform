@@ -1080,7 +1080,7 @@
         "statuses": [302],
         "redirect": "manual",
         "headerExpect": [
-          "location: https://ekodi.kr/admin/professional/insurance",
+          "location: https://ekodi.kr/admin/services/insurance",
           "x-ekodi-route: insurance-admin-handoff",
           "cache-control: no-store"
         ],

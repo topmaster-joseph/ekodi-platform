@@ -20,7 +20,7 @@ test('insurance is a canonical public service path, not a workspace slug',()=>{
 test('insurance admin handoff follows the canonical apex admin path',async()=>{
   const response=await routeInsurancePublic(new Request('https://ekodi.kr/insurance/admin'),{});
   assert.equal(response.status,302);
-  assert.equal(response.headers.get('location'),'https://ekodi.kr/admin/professional/insurance');
+  assert.equal(response.headers.get('location'),'https://ekodi.kr/admin/services/insurance');
   assert.equal(response.headers.get('x-ekodi-route'),'insurance-admin-handoff');
 });
 

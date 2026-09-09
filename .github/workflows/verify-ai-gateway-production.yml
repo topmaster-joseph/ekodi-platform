@@ -46,7 +46,7 @@ jobs:
               && [ "$config_code" = '410' ] \
               && [ "$status_code" = '401' ] \
               && [ "$exchange_code" = '410' ] \
-              && grep -Fiq 'location: https://ekodi.kr/admin/common/common-services?service=ai' /tmp/ai-root-headers \
+              && grep -Fiq 'location: https://ekodi.kr/admin/services/common-services?service=ai' /tmp/ai-root-headers \
               && grep -Fiq 'x-ekodi-route: ai-runtime-admin-handoff' /tmp/ai-root-headers \
               && grep -Fiq 'cache-control: no-store' /tmp/ai-root-headers \
               && grep -Fiq 'x-content-type-options: nosniff' /tmp/ai-root-headers \
