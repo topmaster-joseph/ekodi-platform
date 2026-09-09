@@ -76,6 +76,7 @@
   });
 
   let homepageModulePromise = null;
+  let activeSiteGroup = 'all';
 
   function nav() {
     return document.querySelector('.sidebar nav');
@@ -89,6 +90,13 @@
       const path=url.pathname.replace(/\/+$/,'');
       return `${url.hostname}${path==='/'?'':path}`;
     }catch{return raw.replace(/^https?:\/\//,'').split(/[?#]/)[0].replace(/\/+$/,'');}
+  }
+
+  function surfaceInfo(site) {
+    const resolver = window.EKODIAdminSurfaceLabels;
+    if (resolver?.info) return resolver.info(site?.domain, site?.label || '', site?.url || '');
+    const raw = String(site?.domain || '').trim();
+    return { label: site?.label || raw, url: site?.url || (raw ? `https://${raw}` : ''), kind: 'fallback' };
   }
 
   function sectionControl(section, fallback = '') {
@@ -145,7 +153,7 @@
     }
     const link = document.createElement('a');
     link.className = 'primary campus-row-action';
-    link.href = site.url || `https://${site.domain}`;
+    link.href = surfaceInfo(site).url;
     link.target = '_blank';
     link.rel = 'noopener';
     link.textContent = 'Open ↗';
@@ -180,14 +188,12 @@
   }
 
   function makeDomainControl(site) {
-    const domain = site.lifecycle === 'planned' ? document.createElement('span') : document.createElement('a');
+    const info = surfaceInfo(site);
+    const domain = site.lifecycle === 'planned' || !info.url ? document.createElement('span') : document.createElement('a');
     domain.className = 'campus-site-domain';
-    if (domain.tagName === 'A') {
-      domain.href = site.url || `https://${site.domain}`;
-      domain.target = '_blank';
-      domain.rel = 'noopener';
-    }
-    domain.textContent = site.label || site.domain;
+    if (domain.tagName === 'A') { domain.href = info.url; domain.target = '_blank'; domain.rel = 'noopener'; }
+    domain.textContent = info.label;
+    if (info.kind === 'runtime') domain.title = '운영에는 사용되지만 사용자 대표 주소로 표시하지 않는 내부 실행 경계입니다.';
     return domain;
   }
 
@@ -244,6 +250,33 @@
     return card;
   }
 
+  function renderGroupTabs() {
+    const bar = document.createElement('div');
+    bar.className = 'campus-group-tabs';
+    bar.setAttribute('role', 'tablist');
+    bar.setAttribute('aria-label', '사이트 분류');
+    for (const group of [{ key:'all', title:'전체' }, ...SITE_GROUPS]) {
+      const button = document.createElement('button');
+      button.type = 'button'; button.className = 'campus-group-tab'; button.dataset.campusGroupTab = group.key; button.setAttribute('role', 'tab');
+      button.innerHTML = `<span>${group.title}</span><b data-campus-tab-count>0</b>`;
+      button.addEventListener('click', () => applyGroupFilter(group.key));
+      bar.append(button);
+    }
+    return bar;
+  }
+
+  function refreshGroupTabs() {
+    const grid = document.querySelector('#campusSiteGroups'); if (!grid) return;
+    const total = grid.querySelectorAll('.campus-site-item').length;
+    for (const button of document.querySelectorAll('[data-campus-group-tab]')) {
+      const key = button.dataset.campusGroupTab || 'all';
+      const count = key === 'all' ? total : grid.querySelector(`[data-campus-group="${key}"]`)?.querySelectorAll('.campus-site-item').length || 0;
+      button.querySelector('[data-campus-tab-count]')?.replaceChildren(document.createTextNode(String(count)));
+      button.setAttribute('aria-selected', key === activeSiteGroup ? 'true' : 'false');
+      button.classList.toggle('active', key === activeSiteGroup);
+    }
+  }
+
   function registrySite(service, existing = null) {
     const id = String(service?.id || '').trim().toLowerCase();
     const domain = normalizeDomain(service?.label || service?.domain || service?.url);
@@ -280,6 +313,22 @@
     if (actions) actions.replaceWith(makeOperationalActions(site));
   }
 
+  function applyGroupFilter(group, { syncUrl = true } = {}) {
+    const valid = group === 'all' || SITE_GROUPS.some(item => item.key === group);
+    activeSiteGroup = valid ? group : 'all';
+    const grid = document.querySelector('#campusSiteGroups');
+    if (grid) for (const card of grid.querySelectorAll('.campus-group-card')) {
+      const count = card.querySelectorAll('.campus-site-item').length;
+      card.hidden = count === 0 || (activeSiteGroup !== 'all' && card.dataset.campusGroup !== activeSiteGroup);
+    }
+    refreshGroupTabs();
+    if (syncUrl) {
+      const url = new URL(location.href);
+      if (activeSiteGroup === 'all') url.searchParams.delete('site_group'); else url.searchParams.set('site_group', activeSiteGroup);
+      history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`);
+    }
+  }
+
   function refreshCampusCounts() {
     const grid = document.querySelector('#campusSiteGroups');
     if (!grid) return;
@@ -287,13 +336,14 @@
     for (const card of grid.querySelectorAll('.campus-group-card')) {
       const count = card.querySelectorAll('.campus-site-item').length;
       total += count;
-      card.hidden = count === 0;
+      card.hidden = count === 0 || (activeSiteGroup !== 'all' && card.dataset.campusGroup !== activeSiteGroup);
       const badge = card.querySelector('.campus-group-count');
       if (badge) {
         badge.textContent = String(count);
         badge.setAttribute('aria-label', `${count}개 사이트`);
       }
     }
+    refreshGroupTabs();
     const heading = document.querySelector('#campusPanel .campus-toolbar h2');
     if (heading) heading.textContent = `사이트 관리 · ${total}`;
   }
@@ -359,8 +409,9 @@
     grid.setAttribute('aria-label', 'EKODI 전체 사이트, 운영 상태 및 첫화면 공개 설정');
     grid.append(...SITE_GROUPS.map(renderGroup));
 
+    const tabs = renderGroupTabs();
     wrapper.classList.add('campus-groups-wrap');
-    wrapper.replaceChildren(grid);
+    wrapper.replaceChildren(tabs, grid);
     wrapper.dataset.allSitesReady = 'true';
 
     grid.addEventListener('click', event => {
@@ -375,6 +426,8 @@
       if (action === 'status' && location.hash !== '#health') history.replaceState(null, '', '#health');
     });
 
+    const requestedGroup = new URLSearchParams(location.search).get('site_group') || 'all';
+    applyGroupFilter(requestedGroup, { syncUrl:false });
     refreshCampusCounts();
     loadHomepageAdmin();
     return true;

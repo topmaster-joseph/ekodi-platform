@@ -39,17 +39,17 @@
 
         <div class="structure-flow" aria-label="에코디 시스템 기본 흐름">
           <div><small>ROOT</small><strong>ekodi.kr</strong><span>생태계 허브 · 정문</span></div><b>›</b>
-          <div><small>IDENTITY</small><strong>auth.ekodi.kr</strong><span>Google 인증 · 권한</span></div><b>›</b>
+          <div><small>IDENTITY</small><strong>ekodi.kr/auth</strong><span>Google 인증 · 권한</span></div><b>›</b>
           <div><small>SPACES</small><strong>전문 서비스 공간</strong><span>Church · Biz · Lab · Trade · 고객공간</span></div><b>›</b>
-          <div><small>PERSONAL</small><strong>my.ekodi.kr</strong><span>나의 활동 · 서비스 · 여정</span></div>
+          <div><small>PERSONAL</small><strong>ekodi.kr/my</strong><span>나의 활동 · 서비스 · 여정</span></div>
         </div>
 
         <div class="structure-layer-grid" aria-label="에코디 공통 플랫폼 계층">
           <article><small>01 · 생태계 허브</small><strong>ekodi.kr</strong><span>전체 입구와 정체성</span></article>
           <article><small>02 · 전문 서비스 공간</small><strong>Church · Biz · Lab · Trade</strong><span>분야별 서비스와 고객별 공간</span></article>
-          <article><small>03 · 사용자 공간</small><strong>my.ekodi.kr</strong><span>개인 중심 활동과 서비스</span></article>
-          <article><small>04 · 통합 인증</small><strong>auth.ekodi.kr</strong><span>Google 인증 · 회원 · 권한</span></article>
-          <article><small>05 · 통합 관리자</small><strong>admin.ekodi.kr</strong><span>회원 · 권한 · CRM · 운영 관제</span></article>
+          <article><small>03 · 사용자 공간</small><strong>ekodi.kr/my</strong><span>개인 중심 활동과 서비스</span></article>
+          <article><small>04 · 통합 인증</small><strong>ekodi.kr/auth</strong><span>Google 인증 · 회원 · 권한</span></article>
+          <article><small>05 · 통합 관리자</small><strong>ekodi.kr/admin</strong><span>회원 · 권한 · CRM · 운영 관제</span></article>
           <article><small>06 · AI 계층</small><strong>공통 AI + 전문 AI</strong><span>상담 · 분석 · 자동화 · 맞춤 서비스</span></article>
           <article><small>07 · 데이터 계층</small><strong>D1 + Supabase/PostgreSQL</strong><span>공통 운영 원장과 서비스별 데이터</span></article>
           <article><small>08 · 파일 · 콘텐츠</small><strong>Google Drive + Cloudflare R2</strong><span>원본 보관 · 웹 파일 · 백업 복제</span></article>
@@ -62,10 +62,10 @@
           <article class="structure-card">
             <small>USER VIEW</small><h3>사용자는 시스템을 몰라도 됩니다</h3>
             <p>로그인하면 자신에게 허용된 공간만 보이고, 서비스 종류·서버 구조·권한 체계를 사용자가 따로 이해할 필요가 없도록 합니다.</p>
-            <div class="structure-mini-flow"><span>ekodi.kr</span><b>›</b><span>Google 로그인</span><b>›</b><span>auth.ekodi.kr</span><b>›</b><span>허용된 공간</span><b>›</b><span>my.ekodi.kr</span></div>
+            <div class="structure-mini-flow"><span>ekodi.kr</span><b>›</b><span>Google 로그인</span><b>›</b><span>ekodi.kr/auth</span><b>›</b><span>허용된 공간</span><b>›</b><span>ekodi.kr/my</span></div>
           </article>
           <article class="structure-card">
-            <small>ADMIN VIEW</small><h3>admin.ekodi.kr은 관제탑입니다</h3>
+            <small>ADMIN VIEW</small><h3>ekodi.kr/admin은 관제탑입니다</h3>
             <p>회원 · 인증/권한 · 공간 · 고객 · CRM · 콘텐츠 · AI · 이용량 · 결제 · 파일 · 시스템 상태 · 로그를 하나의 운영 관점에서 연결합니다.</p>
             <div class="structure-tags"><span>회원</span><span>권한</span><span>공간</span><span>CRM</span><span>AI</span><span>결제</span><span>파일</span><span>상태</span><span>로그</span></div>
           </article>

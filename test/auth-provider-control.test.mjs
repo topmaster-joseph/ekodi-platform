@@ -36,7 +36,7 @@ test('admin asset preserves maintenance controls and adds login provider setting
     read('admin-menu-layout.js'),
     read('scripts/build.mjs')
   ]);
-  assert.match(ui, /임시페이지 설정/);
+  assert.match(ui, /공개·점검 전환/);
   assert.match(ui, /멀티 로그인 사용/);
   assert.match(ui, /기본 로그인 방식/);
   assert.match(ui, /현재 기본값은 Google 단일 로그인/);
