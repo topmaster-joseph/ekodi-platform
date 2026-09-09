@@ -1,0 +1,100 @@
+name: Deploy Delivery Commerce Intelligence
+
+on:
+  pull_request:
+    paths:
+      - 'store-admin-engine.js'
+      - 'supabase/functions/delivery-commerce-sync/**'
+      - 'supabase/migrations/20260909020000_delivery_commerce_admin.sql'
+      - 'test/delivery-commerce-admin.test.mjs'
+      - '.github/workflows/deploy-delivery-commerce.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'store-admin-engine.js'
+      - 'supabase/functions/delivery-commerce-sync/**'
+      - 'supabase/migrations/20260909020000_delivery_commerce_admin.sql'
+      - 'test/delivery-commerce-admin.test.mjs'
+      - '.github/workflows/deploy-delivery-commerce.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: delivery-commerce-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || 'production' }}
+  cancel-in-progress: false
+
+env:
+  SUPABASE_CLI_VERSION: '2.116.0'
+  PROJECT_REF: renzehysxirjilvdxacv
+  MIGRATION: supabase/migrations/20260909020000_delivery_commerce_admin.sql
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate delivery commerce contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check store-admin-engine.js
+          node --test test/delivery-commerce-admin.test.mjs test/store-admin-systems.test.mjs test/store-user-site-admin.test.mjs
+          test -f "$MIGRATION"
+          test -f supabase/functions/delivery-commerce-sync/index.ts
+          grep -Fq 'store_delivery_commerce_snapshot' "$MIGRATION"
+          grep -Fq 'save_store_delivery_review_reply' "$MIGRATION"
+          grep -Fq 'service_role_required' supabase/functions/delivery-commerce-sync/index.ts
+          ! grep -Eiq 'drop[[:space:]]+table|truncate[[:space:]]+table' "$MIGRATION"
+
+  production:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+    env:
+      TOKEN_A: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      TOKEN_B: ${{ secrets.SUPABASE_TOKEN }}
+      TOKEN_C: ${{ secrets.SUPABASE_PAT }}
+      TOKEN_D: ${{ secrets.SUPABASE_MANAGEMENT_TOKEN }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Select Supabase deployment credential
+        shell: bash
+        run: |
+          set -euo pipefail
+          token="${TOKEN_A:-}"; [ -n "$token" ] || token="${TOKEN_B:-}"
+          [ -n "$token" ] || token="${TOKEN_C:-}"; [ -n "$token" ] || token="${TOKEN_D:-}"
+          test -n "$token"
+          echo "::add-mask::$token"
+          echo "SUPABASE_ACCESS_TOKEN=$token" >> "$GITHUB_ENV"
+      - name: Apply delivery commerce migration
+        shell: bash
+        run: |
+          set -euo pipefail
+          jq -Rs '{query:.,read_only:false}' "$MIGRATION" > /tmp/delivery-commerce-migration.json
+          code=$(curl -sS -o /tmp/delivery-commerce-migration-result.json -w '%{http_code}' \
+            -X POST "https://api.supabase.com/v1/projects/$PROJECT_REF/database/query" \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            -H 'Content-Type: application/json' \
+            --data-binary @/tmp/delivery-commerce-migration.json)
+          if [[ "$code" != '201' ]]; then cat /tmp/delivery-commerce-migration-result.json; exit 1; fi
+      - name: Deploy delivery commerce sync
+        run: npx --yes supabase@${SUPABASE_CLI_VERSION} functions deploy delivery-commerce-sync --project-ref "$PROJECT_REF"
+      - name: Verify live delivery commerce schema
+        shell: bash
+        run: |
+          set -euo pipefail
+          jq -n '{query:"select to_regclass('"'"'public.store_delivery_orders'"'"') as orders, to_regclass('"'"'public.store_delivery_reviews'"'"') as reviews, to_regprocedure('"'"'public.store_delivery_commerce_snapshot(text)'"'"') as snapshot;",read_only:true}' > /tmp/delivery-commerce-health.json
+          code=$(curl -sS -o /tmp/delivery-commerce-health-result.json -w '%{http_code}' -X POST "https://api.supabase.com/v1/projects/$PROJECT_REF/database/query" -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" -H 'Content-Type: application/json' --data-binary @/tmp/delivery-commerce-health.json)
+          [[ "$code" == '201' ]]
+          grep -Fq 'store_delivery_orders' /tmp/delivery-commerce-health-result.json
+          grep -Fq 'store_delivery_reviews' /tmp/delivery-commerce-health-result.json
