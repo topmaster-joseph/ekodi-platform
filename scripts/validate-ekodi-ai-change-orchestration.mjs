@@ -3,9 +3,10 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { isGithubPrMergeCommit } from './lib/ekodi-pr-merge-evidence.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const policyPath = path.join(root, 'config', 'ai-change-orchestration-policy.json');
+const policyPath = path.join(root, 'config/ai-change-orchestration-policy.json');
 const releaseMode = process.argv.includes('--release');
 const ciMode = process.argv.includes('--ci') || releaseMode;
 
@@ -41,15 +42,12 @@ const allowedPrefixes = policy.sourceControl.allowedChangeBranchPrefixes || ['ai
 function branchAllowed(branch) {
   return allowedPrefixes.some(prefix => text(branch).startsWith(prefix));
 }
-function isPrMergeMessage(message) {
-  return /^Merge (?:pull request|PR) #\d+\b/m.test(text(message));
-}
 function commitLooksLikePrMerge() {
-  const eventMessage = text(event.head_commit?.message);
-  if (isPrMergeMessage(eventMessage)) return true;
-  const parents = git(['rev-list', '--parents', '-n', '1', sha]).split(/\s+/).filter(Boolean);
-  const message = git(['log', '-1', '--pretty=%B', sha]);
-  return parents.length >= 3 && isPrMergeMessage(message);
+  return isGithubPrMergeCommit({
+    eventMessage: text(event.head_commit?.message),
+    message: git(['log', '-1', '--pretty=%B', sha]),
+    rawCommit: git(['cat-file', '-p', sha]),
+  });
 }
 function currentChangedFiles() {
   const base = event.pull_request?.base?.sha;
