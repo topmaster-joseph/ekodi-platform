@@ -84,3 +84,11 @@ test('fails closed on malformed provenance JSON', () => {
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, /malformed JSON/);
 });
+
+test('live provenance verification refreshes PR detail and tolerates GitHub merge-state lag', () => {
+  const source = fs.readFileSync(validator, 'utf8');
+  assert.match(source, /const attempts = provenancePath \? 1 : 7/);
+  assert.match(source, /loadPullRequest\(pr\?\.number\)/);
+  assert.match(source, /Math\.min\(1000 \* 2 \*\* attempt, 5000\)/);
+  assert.match(source, /\/pulls\/\$\{encodeURIComponent\(number\)\}/);
+});
