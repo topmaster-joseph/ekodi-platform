@@ -15,6 +15,7 @@ import {
   nextCapabilityState,
 } from '../ekodi-capability-ecosystem.js';
 import { EKODI_SELF_AUTOMATION_POLICY } from '../ekodi-self-automation-engine.js';
+import { CAPABILITY_SANDBOX_POLICY, buildSandboxSuite, runCapabilitySandbox } from '../ekodi-capability-sandbox.js';
 
 const verifiedExperience = (id, patternKey, risk = 'normal') => Object.freeze({
   id,
@@ -175,4 +176,41 @@ test('Capability Factory proposes missing abilities without activating or expand
   });
   assert.equal(candidate.capabilityProposal.proposedCapabilityId, proposal.proposedCapabilityId);
   assert.equal(candidate.steps[0].type, 'capability_gap');
+});
+
+test('contract sandbox produces benchmark evidence without granting verification', () => {
+  const candidate = buildAutomationCandidate({
+    patternKey: 'capability:core.automation', occurrences: 5, verifiedCount: 5,
+    successRate: 1, risk: 'normal', capabilityIds: ['core.automation'],
+  });
+  const suite = buildSandboxSuite(candidate, { trials: 10 });
+  assert.equal(suite.checks.allCapabilitiesRegistered, true);
+  const run = runCapabilitySandbox(candidate, { trials: 10 });
+  assert.equal(run.evaluation.state, 'sandboxed');
+  assert.equal(run.evaluation.verified, false);
+  assert.equal(run.evaluation.verificationScope, 'contract_safety');
+  assert.equal(run.evaluation.promotion, 'functional_benchmark_required');
+  assert.equal(run.externalExecutionPerformed, false);
+  assert.equal(run.productionMutationPerformed, false);
+  assert.equal(run.authorityExpansionPerformed, false);
+});
+test('sandbox blocks capability gaps and remains side-effect free', () => {
+  const candidate = buildAutomationCandidate({
+    patternKey: 'goal:new-gap', occurrences: 5, verifiedCount: 5,
+    successRate: 1, risk: 'normal', capabilityIds: [],
+  });
+  const run = runCapabilitySandbox(candidate, { trials: 8 });
+  assert.equal(run.suite.checks.allCapabilitiesRegistered, false);
+  assert.equal(run.evaluation.promotion, 'blocked');
+  assert.equal(run.evaluation.verified, false);
+  assert.equal(CAPABILITY_SANDBOX_POLICY.externalExecution, false);
+  assert.equal(CAPABILITY_SANDBOX_POLICY.directProductionMutation, false);
+});
+
+test('sandbox evidence has an additive production persistence lane', () => {
+  const migration = fs.readFileSync(new URL('../migrations/0077_capability_sandbox_evidence.sql', import.meta.url), 'utf8');
+  const store = fs.readFileSync(new URL('../ekodi-capability-ecosystem-store.js', import.meta.url), 'utf8');
+  assert.match(migration, /CREATE TABLE IF NOT EXISTS capability_sandbox_runs/);
+  assert.match(store, /INSERT OR REPLACE INTO capability_sandbox_runs/);
+  assert.match(store, /SELECT 1 FROM capability_sandbox_runs LIMIT 0/);
 });

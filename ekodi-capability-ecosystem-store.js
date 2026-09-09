@@ -1,9 +1,10 @@
-export async function assertCapabilityEcosystemSchema(db) {
+﻿export async function assertCapabilityEcosystemSchema(db) {
   if (!db) throw new Error('EKODI Capability Ecosystem requires a database binding.');
   try {
     await db.batch([
       db.prepare('SELECT 1 FROM capability_experiences LIMIT 0'),
       db.prepare('SELECT 1 FROM capability_automation_candidates LIMIT 0'),
+      db.prepare('SELECT 1 FROM capability_sandbox_runs LIMIT 0'),
     ]);
   } catch {
     throw new Error('EKODI Capability Ecosystem schema is not migrated. Run the guarded additive migration lane first.');
@@ -128,5 +129,50 @@ export async function capabilityEcosystemStoreSummary(db) {
       quarantined: Number(candidates?.quarantined || 0),
       lastSeenAt: candidates?.last_seen_at || null,
     }),
+  });
+}
+
+
+export async function persistSandboxRun(db, run = {}) {
+  await assertCapabilityEcosystemSchema(db);
+  const evaluation = run.evaluation || {};
+  await db.prepare(`INSERT OR REPLACE INTO capability_sandbox_runs
+    (id, candidate_id, status, test_count, passed, success_rate, promotion, evidence_json, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+    .bind(
+      run.id,
+      run.candidateId,
+      evaluation.state || 'sandboxed',
+      Number(evaluation.testCount || 0),
+      Number(evaluation.passed || 0),
+      Number(evaluation.successRate || 0),
+      evaluation.promotion || 'blocked',
+      JSON.stringify(run),
+      run.completedAt || new Date().toISOString(),
+    ).run();
+  return run;
+}
+export async function listSandboxRuns(db, options = {}) {
+  await assertCapabilityEcosystemSchema(db);
+  const limit = Math.max(1, Math.min(200, Math.trunc(Number(options.limit) || 50)));
+  const rows = await db.prepare(`SELECT evidence_json
+    FROM capability_sandbox_runs
+    ORDER BY created_at DESC
+    LIMIT ?`).bind(limit).all();
+  return Object.freeze((rows.results || []).map(row => Object.freeze(JSON.parse(row.evidence_json || '{}'))));
+}
+
+export async function sandboxStoreSummary(db) {
+  await assertCapabilityEcosystemSchema(db);
+  const row = await db.prepare(`SELECT COUNT(*) AS total,
+    SUM(CASE WHEN status = 'verified' THEN 1 ELSE 0 END) AS verified,
+    SUM(CASE WHEN promotion = 'blocked' THEN 1 ELSE 0 END) AS blocked,
+    MAX(created_at) AS last_seen_at
+    FROM capability_sandbox_runs`).first();
+  return Object.freeze({
+    total: Number(row?.total || 0),
+    verified: Number(row?.verified || 0),
+    blocked: Number(row?.blocked || 0),
+    lastSeenAt: row?.last_seen_at || null,
   });
 }
