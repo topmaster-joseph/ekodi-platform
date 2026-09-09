@@ -1,4 +1,4 @@
-﻿export async function assertCapabilityEcosystemSchema(db) {
+export async function assertCapabilityEcosystemSchema(db) {
   if (!db) throw new Error('EKODI Capability Ecosystem requires a database binding.');
   try {
     await db.batch([
