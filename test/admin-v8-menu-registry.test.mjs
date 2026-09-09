@@ -8,7 +8,7 @@ import {
 
 test('v8 admin exposes the five canonical EKODI management axes', () => {
   assert.deepEqual(ADMIN_MENU_GROUPS.map(group => group.id), [
-    'home', 'operations', 'workspaces', 'services', 'system',
+    'home', 'operations', 'space', 'services', 'system',
   ]);
   assert.equal(ADMIN_MENU_GROUPS.length, 5);
   assert.equal(getAdminMenuGroupDefault('system'), 'health');
@@ -38,6 +38,6 @@ test('control-only operations remain internal instead of becoming top-level clut
     assert.equal(byId.get(id)?.group, 'system');
     assert.equal(byId.get(id)?.internal, true);
   }
-  assert.equal(byId.get('clients')?.group, 'workspaces');
+  assert.equal(byId.get('clients')?.group, 'space');
   assert.equal(byId.get('common-services')?.group, 'services');
 });

@@ -1,7 +1,7 @@
 export const ADMIN_MENU_GROUPS = Object.freeze([
   { id: 'home', icon: '⌂', defaultSection: 'campus', labels: { ko: '홈', en: 'Home' } },
   { id: 'operations', icon: '✦', defaultSection: 'work', labels: { ko: '운영', en: 'Operations' } },
-  { id: 'workspaces', icon: '▣', defaultSection: 'clients', labels: { ko: '공간', en: 'Spaces' } },
+  { id: 'space', icon: '▣', defaultSection: 'clients', labels: { ko: '공간', en: 'Spaces' } },
   { id: 'services', icon: '◆', defaultSection: 'common-services', labels: { ko: '서비스', en: 'Services' } },
   { id: 'system', icon: '◎', defaultSection: 'health', labels: { ko: '시스템', en: 'System' } },
 ]);
@@ -14,9 +14,9 @@ export const ADMIN_MENU_REGISTRY = Object.freeze([
   { id: 'finance', group: 'operations', icon: '₩', labels: { ko: '결제·회계', en: 'Finance & Accounting' } },
   { id: 'tax', group: 'operations', icon: 'T', labels: { ko: '세금·증빙', en: 'Tax & Evidence' }, href: 'https://tax.ekodi.kr/', adminHandoff: true },
 
-  { id: 'clients', group: 'workspaces', icon: 'C', labels: { ko: '고객·운영공간', en: 'Customer & Operating Spaces' } },
-  { id: 'organization', group: 'workspaces', icon: '◌', labels: { ko: '조직·협업', en: 'Organizations' } },
-  { id: 'workspace', group: 'workspaces', icon: '▧', labels: { ko: '공간·자료', en: 'Spaces & Files' } },
+  { id: 'clients', group: 'space', icon: 'C', labels: { ko: '고객·운영공간', en: 'Customer & Operating Spaces' } },
+  { id: 'organization', group: 'space', icon: '◌', labels: { ko: '조직·협업', en: 'Organizations' } },
+  { id: 'workspace', group: 'space', icon: '▧', labels: { ko: '공간·자료', en: 'Spaces & Files' } },
 
   { id: 'common-services', group: 'services', icon: '▦', labels: { ko: '공통서비스', en: 'Common Services' } },
   { id: 'life-ai', group: 'services', icon: 'Q', labels: { ko: '인생AI', en: 'Life AI' } },
