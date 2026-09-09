@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "policyId": "AI-COMPLETE-001",
   "status": "active",
   "defaultRule": "production-verified-before-complete",
@@ -14,7 +14,8 @@
     "implementation": "code-or-config-change-prepared",
     "deployed": "guarded-deployment-succeeded-but-production-not-yet-proven",
     "verified": "real-production-service-behavior-confirmed",
-    "complete": "verified-and-evidence-recorded"
+    "complete": "verified-and-evidence-recorded",
+    "blocked": "completion-cannot-proceed-with-current-authority-or-dependency-and-resolution-plan-is-required"
   },
   "requiredEvidenceForProductionChange": [
     "task_id",
@@ -36,7 +37,14 @@
     "retryRepairRedeployReverifyOnFailure": true,
     "completionReportBlockedUntilVerified": true,
     "productionCredentialsRemainOutsideAgentWorkspace": true,
-    "guardedCentralReleasePathRequired": true
+    "guardedCentralReleasePathRequired": true,
+    "unresolvedIssueRequiresConcreteResolutionPlan": true,
+    "blockedStateMustNameBlockingAuthorityOrDependency": true,
+    "agentMustContinueAllResolvableWorkBeforeEscalation": true,
+    "humanActionMustBeMinimalAndSpecific": true,
+    "workaroundAndRiskMustBeReportedWhenAvailable": true,
+    "completionCriteriaMustBeExplicit": true,
+    "nextExecutableStepMustBeExplicit": true
   },
   "exceptionPolicy": {
     "allowed": true,
@@ -50,12 +58,38 @@
     "requirements": [
       "explicit-exception-class",
       "reason-recorded",
-      "no-false-production-completion-claim"
+      "no-false-production-completion-claim",
+      "current-state-recorded",
+      "root-cause-or-best-known-cause-recorded",
+      "ekodi-actions-already-completed-recorded",
+      "remaining-ekodi-actions-recorded",
+      "blocking-authority-or-dependency-recorded",
+      "minimal-owner-or-external-action-recorded-when-needed",
+      "safe-workaround-recorded-when-available",
+      "risk-of-deferral-recorded",
+      "completion-criteria-recorded",
+      "next-executable-step-recorded"
     ]
   },
   "reporting": {
     "preVerificationLabel": "deployed-awaiting-production-verification",
     "successLabel": "production-verified-complete",
-    "failureLabel": "verification-failed-recovery-required"
+    "failureLabel": "verification-failed-recovery-required",
+    "blockedLabel": "blocked-resolution-plan-required",
+    "unresolvedReportRequired": true,
+    "unresolvedReportFields": [
+      "current-state",
+      "what-is-working",
+      "what-is-not-complete",
+      "root-cause-or-best-known-cause",
+      "what-ekodi-already-did",
+      "what-ekodi-will-do-next",
+      "blocking-authority-or-dependency",
+      "minimal-user-or-external-action-if-required",
+      "safe-workaround-if-available",
+      "risk-if-left-unresolved",
+      "completion-criteria",
+      "next-executable-step"
+    ]
   }
 }
