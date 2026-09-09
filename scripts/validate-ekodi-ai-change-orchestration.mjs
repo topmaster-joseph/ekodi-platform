@@ -94,7 +94,7 @@ async function fetchGithubJson(endpoint, sourceLabel, { allowNotFound = false } 
   }
 }
 function candidatePullRequestNumbers() {
-  const firstLine = text(event.head_commit?.message || git(['log', '-1', '--pretty=%s', sha]));
+  const firstLine = text(event.head_commit?.message || git(['log', '-1', '--pretty=%B', sha])).split(/\r?\n/, 1)[0];
   const numbers = new Set();
   for (const pattern of [/^Merge (?:pull request|PR) #(\d+)\b/i, /\(#(\d+)\)\s*$/]) {
     const match = firstLine.match(pattern);
