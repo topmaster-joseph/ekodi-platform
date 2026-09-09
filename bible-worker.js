@@ -284,7 +284,7 @@ export default {
     }
     if (internalUrl.pathname.startsWith('/api/bible/')) return handleBibleApi(request, env, internalUrl);
     if (internalUrl.pathname === '/api/assist' && request.method === 'POST') return handleAssist(request, env);
-    if (internalUrl.pathname === '/admin' || internalUrl.pathname === '/admin/') return Response.redirect('https://ekodi.kr/admin/operations/aiops', 307);
+    if (internalUrl.pathname === '/admin' || internalUrl.pathname === '/admin/') return Response.redirect('https://ekodi.kr/admin/system/aiops', 307);
 
     let response;
     const route = internalUrl.pathname.replace(/\/$/, '');

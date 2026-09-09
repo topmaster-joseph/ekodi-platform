@@ -25,7 +25,7 @@ concurrency:
 
 env:
   WRANGLER_VERSION: '4.119.0'
-  BACKUP_DATABASE: ${{ github.event_name == 'pull_request' && 'ekodi-auth-staging' || 'ekodi-auth' }}
+  PRODUCTION_BACKUP_DATABASE: 'ekodi-auth'
   R2_BACKUP_BUCKET: 'ekodi-backups'
 
 jobs:
@@ -41,13 +41,53 @@ jobs:
         with:
           node-version: '24'
 
+      - name: EKODI AI Orchestration Gate
+        run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
+
       - name: Verify backup credentials
         run: |
           set -euo pipefail
           test -n "$CLOUDFLARE_API_TOKEN"
           test -n "$CLOUDFLARE_ACCOUNT_ID"
-          test -n "$BACKUP_DATABASE"
+          test -n "$PRODUCTION_BACKUP_DATABASE"
           test -n "$R2_BACKUP_BUCKET"
+
+      - name: Prepare isolated backup source
+        id: backup_source
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "$GITHUB_EVENT_NAME" != "pull_request" ]; then
+            echo "BACKUP_DATABASE=$PRODUCTION_BACKUP_DATABASE" >> "$GITHUB_ENV"
+            echo "BACKUP_CONFIG=wrangler.api.toml" >> "$GITHUB_ENV"
+            echo "temporary=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          PREFIX="ekodi-core-backup-pr-${{ github.event.pull_request.number }}-"
+          DB_NAME="${PREFIX}${GITHUB_RUN_ATTEMPT}"
+          echo "BACKUP_DATABASE=$DB_NAME" >> "$GITHUB_ENV"
+          echo "BACKUP_CONFIG=wrangler.backup.pr.toml" >> "$GITHUB_ENV"
+          echo "temporary=true" >> "$GITHUB_OUTPUT"
+          npx --yes wrangler@${WRANGLER_VERSION} d1 list --json | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{const a=JSON.parse(s);for(const x of a){if(String(x.name||'').startsWith(process.argv[1]))console.log(x.name)}})" "$PREFIX" | while read -r stale; do
+            [ -n "$stale" ] && npx --yes wrangler@${WRANGLER_VERSION} d1 delete "$stale" --skip-confirmation
+          done
+          npx --yes wrangler@${WRANGLER_VERSION} d1 create "$DB_NAME" --location apac
+          DB_ID=$(npx --yes wrangler@${WRANGLER_VERSION} d1 list --json | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{const a=JSON.parse(s);const x=a.find(v=>v.name===process.argv[1]);if(x)process.stdout.write(x.uuid||x.id||'')})" "$DB_NAME")
+          test -n "$DB_ID"
+          cat > wrangler.backup.pr.toml <<EOF
+          name = "ekodi-core-backup-pr"
+          main = "core-api.js"
+          compatibility_date = "2026-08-12"
+          [[d1_databases]]
+          binding = "DB"
+          database_name = "$DB_NAME"
+          database_id = "$DB_ID"
+          migrations_dir = "migrations"
+          EOF
+
+      - name: Apply migrations to isolated PR backup D1
+        if: github.event_name == 'pull_request'
+        run: npx --yes wrangler@${WRANGLER_VERSION} d1 migrations apply DB --remote --config wrangler.backup.pr.toml
 
       - name: Export EKODI Core D1
         run: |
@@ -57,7 +97,7 @@ jobs:
             --remote \
             --skip-confirmation \
             --output=backup/ekodi-auth.sql \
-            --config wrangler.api.toml
+            --config "$BACKUP_CONFIG"
           test -s backup/ekodi-auth.sql
 
       - name: Restore export outside D1 and verify
@@ -117,7 +157,7 @@ jobs:
           test "$ACTUAL_CHECKSUM" = "$EXPECTED_CHECKSUM"
 
       - name: Record successful recovery drill
-        if: steps.verify.outcome == 'success'
+        if: github.event_name != 'pull_request' && steps.verify.outcome == 'success'
         env:
           CHECKSUM: ${{ steps.verify.outputs.checksum }}
           BYTES: ${{ steps.verify.outputs.bytes }}
@@ -129,7 +169,18 @@ jobs:
           NOW=$(date -u +%Y-%m-%dT%H:%M:%SZ)
           SQL="INSERT INTO core_backup_runs(source,status,artifact_name,checksum_sha256,export_bytes,restore_integrity,required_tables,created_at) VALUES('$BACKUP_DATABASE','verified','$ARTIFACT','$CHECKSUM',$BYTES,'$INTEGRITY',$REQUIRED,'$NOW');"
           npx --yes wrangler@${WRANGLER_VERSION} d1 execute "$BACKUP_DATABASE" \
-            --remote --yes --config wrangler.api.toml --command "$SQL"
+            --remote --yes --config "$BACKUP_CONFIG" --command "$SQL"
+
+      - name: Remove isolated PR backup database
+        if: always() && github.event_name == 'pull_request' && steps.backup_source.outputs.temporary == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@${WRANGLER_VERSION} d1 delete "$BACKUP_DATABASE" --skip-confirmation
+          if npx --yes wrangler@${WRANGLER_VERSION} d1 list --json | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{const a=JSON.parse(s);process.exit(a.some(v=>v.name===process.argv[1])?0:1)})" "$BACKUP_DATABASE"; then
+            echo "Temporary backup database still exists: $BACKUP_DATABASE" >&2
+            exit 1
+          fi
 
       - name: Upload independent backup artifact
         if: always() && steps.verify.outcome == 'success'
@@ -152,6 +203,7 @@ jobs:
           echo '- Required Core tables: ${{ steps.verify.outputs.required_tables }}/6' >> "$GITHUB_STEP_SUMMARY"
           echo '- SHA-256: ${{ steps.verify.outputs.checksum }}' >> "$GITHUB_STEP_SUMMARY"
           if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo '- PR source: isolated temporary D1; production ekodi-auth data is not read' >> "$GITHUB_STEP_SUMMARY"
             echo '- R2: skipped on pull request' >> "$GITHUB_STEP_SUMMARY"
           elif [ "${{ steps.r2_persist.outcome }}" = "success" ]; then
             echo "- R2: verified private copy in $R2_BACKUP_BUCKET" >> "$GITHUB_STEP_SUMMARY"

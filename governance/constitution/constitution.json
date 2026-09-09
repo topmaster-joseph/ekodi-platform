@@ -1,6 +1,6 @@
 {
-  "version": "1.9.0",
-  "effectiveDate": "2026-09-08",
+  "version": "1.9.1",
+  "effectiveDate": "2026-09-09",
   "status": "active",
   "title": "EKODI Platform Constitution",
   "principles": [
@@ -497,11 +497,11 @@
     "systemExecutionUsesDedicatedSecurityRealms": true,
     "subdomainExecutionBoundariesAreNonCanonical": true,
     "adminServiceManagement": {
-      "system": "/admin/system/{service}",
-      "common": "/admin/common/{service}",
-      "professional": "/admin/professional/{service}",
+      "home": "/admin/home/{capability}",
+      "operations": "/admin/operations/{capability}",
       "workspaces": "/admin/workspaces/{capability}",
-      "operations": "/admin/operations/{capability}"
+      "services": "/admin/services/{service}",
+      "system": "/admin/system/{capability}"
     },
     "rule": "One domain, multiple security realms: human and management surfaces are canonical paths on ekodi.kr; subdomains may remain only as justified internal, protocol, emergency or compatibility execution boundaries."
   }
