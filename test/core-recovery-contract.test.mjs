@@ -6,7 +6,13 @@ const workflow = fs.readFileSync('.github/workflows/backup-ekodi-core.yml', 'utf
 const migration = fs.readFileSync('migrations/0031_core_backup_state.sql', 'utf8');
 
 test('Core recovery exports D1 and proves an independent SQLite restore', () => {
-  assert.match(workflow, /BACKUP_DATABASE: \$\{\{ github\.event_name == 'pull_request' && 'ekodi-auth-staging' \|\| 'ekodi-auth' \}\}/);
+  assert.match(workflow, /PRODUCTION_BACKUP_DATABASE: 'ekodi-auth'/);
+  assert.match(workflow, /CLOUDFLARE_DEVELOPMENT_API_TOKEN/);
+  assert.match(workflow, /ekodi-core-backup-pr-/);
+  assert.match(workflow, /d1 create "\$DB_NAME"/);
+  assert.match(workflow, /d1 migrations apply DB --remote --config wrangler\.backup\.pr\.toml/);
+  assert.match(workflow, /d1 delete "\$BACKUP_DATABASE" --skip-confirmation/);
+  assert.doesNotMatch(workflow, /ekodi-auth-staging/);
   assert.match(workflow, /wrangler@\$\{WRANGLER_VERSION\} d1 export "\$BACKUP_DATABASE"/);
   assert.match(workflow, /sqlite3 backup\/restored\.sqlite < backup\/ekodi-auth\.sql/);
   assert.match(workflow, /PRAGMA integrity_check/);
