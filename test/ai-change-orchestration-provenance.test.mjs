@@ -56,10 +56,10 @@ test('accepts a verified squash merge from an EKODI AI branch', () => {
   assert.match(result.stdout, /source=protected-main-pr-merge/);
 });
 
-test('accepts authoritative PR lookup when commit association is not ready yet', () => {
+test('accepts authoritative PR lookup from a multiline GitHub merge message when commit association is not ready yet', () => {
   const pr = validPr({ number: 1325 });
   const result = run([], {
-    message: 'fix(ai): verify squash-merge provenance at the main gate (#1325)',
+    message: 'fix(ai): verify squash-merge provenance at the main gate (#1325)\n\nDetailed merge body that must not hide the PR locator.',
     lookup: { 1325: pr },
   });
   assert.equal(result.status, 0, result.stderr);
@@ -69,7 +69,7 @@ test('accepts authoritative PR lookup when commit association is not ready yet',
 test('PR-looking commit text cannot bypass merge SHA verification', () => {
   const forged = validPr({ number: 1325, merge_commit_sha: '2222222222222222222222222222222222222222' });
   const result = run([], {
-    message: 'feature that only looks merged (#1325)',
+    message: 'feature that only looks merged (#1325)\n\nA body is present just like GitHub merge commits.',
     lookup: { 1325: forged },
   });
   assert.notEqual(result.status, 0);
@@ -79,7 +79,7 @@ test('PR-looking commit text cannot bypass merge SHA verification', () => {
 test('accepts classic Merge PR title only with authoritative matching provenance', () => {
   const pr = validPr({ number: 1374 });
   const result = run([], {
-    message: 'Merge PR #1374: resilient connector sessions',
+    message: 'Merge PR #1374: resilient connector sessions\n\nMerge body',
     lookup: { 1374: pr },
   });
   assert.equal(result.status, 0, result.stderr);
