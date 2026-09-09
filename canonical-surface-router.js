@@ -142,7 +142,7 @@ export async function routeCanonicalSurface(request,env,{legacyFetch,externalFet
   const url=new URL(request.url);
   if(url.hostname.toLowerCase()!==CANONICAL_HOST)return null;
   const path=url.pathname;
-  const cheonggyeResponse=routeCheonggyeAssociation(request);if(cheonggyeResponse)return cheonggyeResponse;
+  const cheonggyeResponse=await routeCheonggyeAssociation(request,env);if(cheonggyeResponse)return cheonggyeResponse;
   const contactResponse=await handleMailContactApi(request,env);
   if(contactResponse)return contactResponse;
   if(request.method==='GET'&&path==='/mail/contact'){
