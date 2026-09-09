@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
+import { ADMIN_MENU_REGISTRY } from '../admin-menu-registry.js';
 import { routeCanonicalSurface } from '../canonical-surface-router.js';
 import myWorker from '../my-worker.js';
 import platformEntry from '../platform-router-entry-worker.js';
@@ -82,7 +83,7 @@ test('Auth secured text responses explicitly declare UTF-8',async()=>{
 });
 test('Admin deep routes render the shell while runtime assets stay addressable',async()=>{
   const legacy=legacyRecorder();
-  let response=await routeCanonicalSurface(new Request('https://ekodi.kr/admin/professional/insurance'),{}, {legacyFetch:legacy.fetch});
+  let response=await routeCanonicalSurface(new Request('https://ekodi.kr/admin/services/insurance'),{}, {legacyFetch:legacy.fetch});
   assert.equal(legacy.calls[0].hostname,'admin.ekodi.kr');assert.equal(legacy.calls[0].pathname,'/');
   assert.match(await response.text(),/<base href="\/admin\/">/);
   response=await routeCanonicalSurface(new Request('https://ekodi.kr/admin/admin-menu-layout.js'),{}, {legacyFetch:legacy.fetch});
@@ -97,16 +98,26 @@ test('legacy My, Admin and Auth entry hosts converge to apex canonical paths',as
   assert.equal(response.status,308);const target=new URL(response.headers.get('location'));assert.equal(target.pathname,'/admin/');assert.equal(target.searchParams.get('route'),'books');
 });
 
-test('Admin canonical route registry maps menu sections into constitutional groups',()=>{
+test('Admin canonical route registry mirrors the five management work areas and migrates legacy groups',()=>{
   const source=fs.readFileSync(new URL('../admin-canonical-routes.js',import.meta.url),'utf8');
   const location={href:'https://ekodi.kr/admin/',hostname:'ekodi.kr',pathname:'/admin/',search:'',hash:''};
   const window={location};vm.runInNewContext(source,{window,URL,URLSearchParams,Object,Set,String});
   const routes=window.EKODIAdminRoutes;
-  assert.equal(routes.pathFor('insurance'),'/admin/professional/insurance');
-  assert.equal(routes.pathFor('workspace'),'/admin/common/workspace');
+  assert.equal(routes.pathFor('campus'),'/admin/home/campus');
+  assert.equal(routes.pathFor('communication'),'/admin/operations/communication');
+  assert.equal(routes.pathFor('insurance'),'/admin/services/insurance');
+  assert.equal(routes.pathFor('workspace'),'/admin/workspaces/workspace');
   assert.equal(routes.pathFor('clients'),'/admin/workspaces/clients');
-  assert.equal(routes.pathFor('aiops'),'/admin/operations/aiops');
+  assert.equal(routes.pathFor('aiops'),'/admin/system/aiops');
   assert.equal(routes.sectionFromPath('/admin/system/security'),'security');
+  assert.equal(routes.sectionFromPath('/admin/system/campus'),'campus');
+  assert.equal(routes.sectionFromPath('/admin/common/common-services'),'common-services');
+  assert.equal(routes.sectionFromPath('/admin/professional/insurance'),'insurance');
+  assert.equal(routes.sectionFromPath('/admin/space/clients'),'clients');
+  const canonicalGroupForWorkArea = workArea => workArea === 'space' ? 'workspaces' : workArea;
+  for (const item of ADMIN_MENU_REGISTRY.filter(item => !item.href)) {
+    assert.equal(routes.pathFor(item.id).split('/')[2], canonicalGroupForWorkArea(item.group), `${item.id} route group must match its canonical Admin path area`);
+  }
 });
 
 test('Business canonical paths hide execution hosts while EKODIBIZ Trade stays tenant-owned',async()=>{

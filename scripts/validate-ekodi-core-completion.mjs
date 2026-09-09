@@ -72,8 +72,10 @@ requireText('.github/workflows/deploy-control-api.yml', [
   'Verify production Control and universal membership boundaries',
 ]);
 requireText('.github/workflows/backup-ekodi-core.yml', [
-  'ekodi-auth-staging',
   "'ekodi-auth'",
+  'ekodi-core-backup-pr-',
+  'd1 migrations apply DB',
+  'd1 delete "$BACKUP_DATABASE"',
   'sqlite3 backup/restored.sqlite',
   'PRAGMA integrity_check',
   'actions/upload-artifact@v4',

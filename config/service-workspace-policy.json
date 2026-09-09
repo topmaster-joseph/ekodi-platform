@@ -132,7 +132,7 @@
   },
   "commonServiceOperatorAccessRule": {
     "surface": "https://ekodi.kr/admin",
-    "canonicalPath": "/admin/common/common-services",
+    "canonicalPath": "/admin/services/common-services",
     "runtimeHostsAreOperatorPages": false,
     "directRuntimeRootBehavior": "redirect_to_admin_control_plane",
     "sessionAuthority": "central_admin_session",
@@ -158,10 +158,10 @@
     "health": "/health"
   },
   "managementRouting": {
-    "system": "/admin/system/{service}",
-    "common": "/admin/common/{service}",
-    "professional": "/admin/professional/{service}",
+    "home": "/admin/home/{capability}",
+    "operations": "/admin/operations/{capability}",
     "workspaces": "/admin/workspaces/{capability}",
-    "operations": "/admin/operations/{capability}"
+    "services": "/admin/services/{service}",
+    "system": "/admin/system/{capability}"
   }
 }

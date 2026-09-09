@@ -50,5 +50,5 @@ test('Bible route ownership follows Constitution v1.9 apex gateway', () => {
 test('Bible admin handoff uses the canonical admin surface', async () => {
   const response=await worker.fetch(new Request('https://ekodi.kr/bible/admin'),env);
   assert.equal(response.status,307);
-  assert.equal(response.headers.get('location'),'https://ekodi.kr/admin/operations/aiops');
+  assert.equal(response.headers.get('location'),'https://ekodi.kr/admin/system/aiops');
 });

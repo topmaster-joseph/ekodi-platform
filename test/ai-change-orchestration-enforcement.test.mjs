@@ -34,39 +34,17 @@ test('main and production releases are fail-closed around orchestration', () => 
   assert.match(pagesRelease, /runChangeOrchestrationGate\(\)/);
 });
 
-test('main accepts guarded PR merge titles and still rejects a direct push', () => {
-  const cwd = new URL('..', import.meta.url);
-  const head = spawnSync('git', ['rev-parse', 'HEAD'], { cwd, encoding: 'utf8' }).stdout.trim();
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ekodi-orchestration-'));
-  const eventPath = path.join(dir, 'event.json');
-  const baseEnv = {
-    ...process.env,
-    GITHUB_EVENT_NAME: 'push',
-    GITHUB_EVENT_PATH: eventPath,
-    GITHUB_REF_NAME: 'main',
-    GITHUB_RUN_ID: 'test-main-merge',
-    GITHUB_ACTOR: 'topmaster-joseph',
-  };
-
+test('main accepts verified PR provenance and still rejects a direct push', () => {
+  const cwd = new URL('..', import.meta.url); const head = spawnSync('git', ['rev-parse', 'HEAD'], { cwd, encoding: 'utf8' }).stdout.trim();
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ekodi-orchestration-')); const eventPath = path.join(dir, 'event.json'); const provenancePath = path.join(dir, 'pulls.json');
+  const baseEnv = { ...process.env, GITHUB_EVENT_NAME: 'push', GITHUB_EVENT_PATH: eventPath, GITHUB_REF_NAME: 'main', GITHUB_RUN_ID: 'test-main-merge', GITHUB_ACTOR: 'topmaster-joseph', EKODI_GITHUB_PR_PROVENANCE: provenancePath };
   try {
-    for (const message of ['Merge pull request #1302 from ai/router-score', 'Merge PR #1302: add dynamic AI Router Score']) {
-      fs.writeFileSync(eventPath, JSON.stringify({ head_commit: { message }, sender: { login: 'topmaster-joseph' } }));
-      const result = spawnSync(process.execPath, ['scripts/validate-ekodi-ai-change-orchestration.mjs', '--release'], {
-        cwd, env: { ...baseEnv, GITHUB_SHA: head }, encoding: 'utf8',
-      });
-      assert.equal(result.status, 0, `${message}\n${result.stdout}\n${result.stderr}`);
-      assert.match(result.stdout, /source=protected-main-pr-merge/);
-    }
-
-    fs.writeFileSync(eventPath, JSON.stringify({ head_commit: { message: 'feat: direct push sentinel' }, sender: { login: 'topmaster-joseph' } }));
-    const direct = spawnSync(process.execPath, ['scripts/validate-ekodi-ai-change-orchestration.mjs', '--release'], {
-      cwd, env: { ...baseEnv, GITHUB_SHA: '0000000000000000000000000000000000000001' }, encoding: 'utf8',
-    });
-    assert.notEqual(direct.status, 0);
-    assert.match(`${direct.stdout}\n${direct.stderr}`, /direct push to main is forbidden/);
-  } finally {
-    fs.rmSync(dir, { recursive: true, force: true });
-  }
+    fs.writeFileSync(eventPath, JSON.stringify({ head_commit: { message: 'squashed PR title (#1302)' } }));
+    fs.writeFileSync(provenancePath, JSON.stringify([{ number:1302,state:'closed',merged_at:'2026-09-09T00:00:00Z',merge_commit_sha:head,base:{ref:'main'},head:{ref:'ai/router-score'} }]));
+    const merged=spawnSync(process.execPath,['scripts/validate-ekodi-ai-change-orchestration.mjs','--release'],{cwd,env:{...baseEnv,GITHUB_SHA:head},encoding:'utf8'}); assert.equal(merged.status,0,merged.stdout+'\n'+merged.stderr); assert.match(merged.stdout,/source=protected-main-pr-merge/);
+    fs.writeFileSync(eventPath, JSON.stringify({ head_commit: { message: 'feat: direct push sentinel' } })); fs.writeFileSync(provenancePath,'[]');
+    const direct=spawnSync(process.execPath,['scripts/validate-ekodi-ai-change-orchestration.mjs','--release'],{cwd,env:{...baseEnv,GITHUB_SHA:'0000000000000000000000000000000000000001'},encoding:'utf8'}); assert.notEqual(direct.status,0); assert.match(direct.stdout+'\n'+direct.stderr,/direct push to main is forbidden/);
+  } finally { fs.rmSync(dir,{recursive:true,force:true}); }
 });
 test('direct local guarded release is refused without orchestration context', () => {
   const env = { ...process.env };
