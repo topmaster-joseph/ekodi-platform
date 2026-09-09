@@ -86,7 +86,7 @@
           "CORE.DOCUMENTS",
           "HWPX",
           "버전",
-          "/docs/docs.js?v=20260909-docs-ai-6"
+          "./docs.js?v=20260909-docs-ai-6"
         ]
       }
     ]
