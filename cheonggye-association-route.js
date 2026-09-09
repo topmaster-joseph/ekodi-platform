@@ -1,3 +1,4 @@
+import authWorker from './auth-worker.js';
 import { cheonggyeAssociationPage, cheonggyeAssociationScript } from './cheonggye-association-page.js';
 
 const CGMA_PAGE_PATHS = new Set(['/cgma','/cgma/','/cgma/notice','/cgma/campaigns','/cgma/stores','/cgma/proposal']);
@@ -6,11 +7,13 @@ const LEGACY_PUBLIC_PREFIX = '/api/cheonggye';
 const VALID_UPDATE_TYPES = new Set(['notice','campaign','contest','store']);
 const VALID_FEEDBACK_TYPES = new Set(['proposal','store','campaign','question']);
 const VALID_FEEDBACK_STATUS = new Set(['new','reviewing','resolved','hidden']);
+const ADMIN_ORIGINS = new Set(['https://admin.ekodi.kr','https://ekodi.kr']);
+const PUBLIC_ORIGINS = new Set(['https://admin.ekodi.kr','https://ekodi.kr','https://cgma.or.kr','https://www.cgma.or.kr']);
 
 function json(data, status = 200, request) {
   const origin = request ? String(request.headers.get('origin') || '') : '';
   const headers = new Headers({ 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', 'x-content-type-options': 'nosniff' });
-  if (['https://admin.ekodi.kr','https://ekodi.kr','https://cgma.or.kr','https://www.cgma.or.kr'].includes(origin)) {
+  if (PUBLIC_ORIGINS.has(origin)) {
     headers.set('access-control-allow-origin', origin); headers.set('vary', 'Origin'); headers.set('access-control-allow-credentials', 'true');
   }
   return new Response(JSON.stringify(data), { status, headers });
@@ -18,7 +21,7 @@ function json(data, status = 200, request) {
 function options(request) {
   const origin = String(request.headers.get('origin') || '');
   const headers = new Headers({ 'access-control-allow-methods': 'GET,POST,PUT,OPTIONS', 'access-control-allow-headers': 'content-type,authorization', 'access-control-max-age': '600', 'cache-control': 'no-store' });
-  if (['https://admin.ekodi.kr','https://ekodi.kr','https://cgma.or.kr','https://www.cgma.or.kr'].includes(origin)) {
+  if (PUBLIC_ORIGINS.has(origin)) {
     headers.set('access-control-allow-origin', origin); headers.set('vary', 'Origin'); headers.set('access-control-allow-credentials', 'true');
   }
   return new Response(null, { status: 204, headers });
@@ -63,9 +66,23 @@ async function publicApi(request, env, url) {
   }
   return null;
 }
-function authorizedAdmin(request) { return Boolean(String(request.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim()); }
+async function authorizedAdmin(request, env) {
+  const origin = String(request.headers.get('origin') || '');
+  if (origin && !ADMIN_ORIGINS.has(origin)) return false;
+  const token = String(request.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
+  if (!token) return false;
+  const sessionUrl = new URL(request.url);
+  sessionUrl.hostname = 'api.ekodi.kr';
+  sessionUrl.pathname = '/api/session';
+  sessionUrl.search = '';
+  const sessionRequest = new Request(sessionUrl.toString(), { method:'GET', headers:request.headers });
+  const response = await authWorker.fetch(sessionRequest, env);
+  if (!response.ok) return false;
+  const session = await response.json().catch(() => null);
+  return Boolean(session?.email && (session?.isSuperAdmin || session?.role || Array.isArray(session?.roles)));
+}
 async function adminApi(request, env, url) {
-  if (!authorizedAdmin(request)) return json({ error:'관리자 인증이 필요합니다.' }, 401, request);
+  if (!await authorizedAdmin(request, env)) return json({ error:'관리자 인증이 필요합니다.' }, 401, request);
   if (!await ensureSchema(env)) return json({ error:'데이터 저장소가 연결되지 않았습니다.' }, 503, request);
   if (request.method === 'GET' && url.pathname === `${API_PREFIX}/admin/updates`) return json({ updates: await listUpdates(env, true) }, 200, request);
   if (request.method === 'POST' && url.pathname === `${API_PREFIX}/admin/updates`) {
