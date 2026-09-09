@@ -3,6 +3,9 @@
   "worker": {
     "name": "ekodi-my",
     "config": "wrangler.my.toml",
+    "runtimeHeaders": [
+      "x-ekodi-service: my-ekodi"
+    ],
     "requests": [
       {
         "url": "https://my.ekodi.kr/",
