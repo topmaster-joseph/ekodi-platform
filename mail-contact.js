@@ -41,8 +41,10 @@ async function contactRateLimit(request,env) {
   }
 }
 function contactText({name,email,message,site,source,sourceUrl,receivedAt}) {
+  const adminLabel=site?`${site} 관리자`:'EKODI 관리자';
   return [
     'EKODI 웹 문의가 접수되었습니다.','',
+    `문의 대상: ${adminLabel}`,
     `이름: ${name||'-'}`,
     `답변받을 이메일: ${email}`,
     `접수 사이트: ${site||'-'}`,
@@ -78,11 +80,12 @@ export async function handleMailContactApi(request,env={}) {
   if(!subject) return json({error:'제목을 입력해 주세요.',code:'SUBJECT_REQUIRED'},400);
   if(!message) return json({error:'문의 내용을 입력해 주세요.',code:'MESSAGE_REQUIRED'},400);
   const recipient=contactRecipient(),sender=contactSender(),receivedAt=new Date().toISOString();
+  const adminLabel=site?`${site} 관리자`:'EKODI 관리자';
   try {
     const token=await serviceAccountToken(sender,env,GMAIL_SEND_SCOPE);
-    const sent=await sendGoogleMailMessage(token,{to:recipient,replyTo:email,subject:`[EKODI 문의] ${subject}`,body:contactText({name,email,message,site,source,sourceUrl,receivedAt})});
+    const sent=await sendGoogleMailMessage(token,{to:recipient,replyTo:email,subject:`[${adminLabel} 문의] ${subject}`,body:contactText({name,email,message,site,source,sourceUrl,receivedAt})});
     console.log('EKODI contact sent',{messageId:sent?.id||'',source:source||site||'public',ray:request.headers.get('cf-ray')||''});
-    return json({ok:true,message:'문의가 에코디에 전달되었습니다.'});
+    return json({ok:true,message:`${adminLabel}에게 문의가 전달되었습니다.`});
   } catch(error) {
     console.error('EKODI contact send failed',{code:String(error?.code||error?.message||'MAIL_CONTACT_SEND_FAILED'),ray:request.headers.get('cf-ray')||''});
     return json({error:'문의 전송에 실패했습니다. 잠시 후 다시 시도해 주세요.',code:'MAIL_CONTACT_SEND_FAILED'},502);
@@ -96,18 +99,19 @@ export function mailContactPage() {
   form{display:grid;gap:14px}.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}label{display:grid;gap:7px;font-size:12px;font-weight:800;color:#315148}input,textarea{width:100%;border:1px solid #ccd8d2;border-radius:12px;background:#fff;padding:12px 13px;color:#172f29;font:inherit;outline:none}input:focus,textarea:focus{border-color:#50796c;box-shadow:0 0 0 3px rgba(80,121,108,.11)}input[readonly]{background:#f2f5f3;color:#5d6c67}textarea{min-height:180px;resize:vertical;line-height:1.65}
   .source{display:none;padding:10px 12px;border-radius:12px;background:#f6f7f2;color:#68756f;font-size:12px}.actions{display:flex;align-items:center;gap:10px;margin-top:4px}.send{border:0;border-radius:999px;background:#143f35;color:#fff;padding:12px 19px;font:inherit;font-weight:800;cursor:pointer}.send:disabled{opacity:.55;cursor:wait}.status{font-size:13px;color:#53665f;line-height:1.5}.status.error{color:#a33a32}.status.success{color:#236342;font-weight:800}.privacy{margin:16px 0 0;color:#84918c;font-size:11px;line-height:1.6}.trap{position:absolute!important;left:-10000px!important;width:1px!important;height:1px!important;overflow:hidden!important}
   @media(max-width:600px){.wrap{padding:18px 10px}.card{border-radius:20px;padding:24px 18px}.row{grid-template-columns:1fr}.actions{align-items:flex-start;flex-direction:column}.send{width:100%}}
-  </style></head><body><main class="wrap"><section class="card" aria-labelledby="contactTitle"><div class="mark" aria-hidden="true">E</div><div class="eyebrow">EKODI CONTACT</div><h1 id="contactTitle">에코디에 문의하기</h1><p class="lead">답변받을 이메일과 제목, 문의 내용을 남겨 주세요. 받는 사람은 에코디로 고정되어 안전하게 전달됩니다.</p>
+  </style></head><body><main class="wrap"><section class="card" aria-labelledby="contactTitle"><div class="mark" aria-hidden="true">E</div><div class="eyebrow">EKODI CONTACT</div><h1 id="contactTitle">사이트 관리자에게 문의하기</h1><p class="lead" id="contactLead">답변받을 이메일과 제목, 문의 내용을 남겨 주세요. 로그인 없이 누구나 해당 사이트 관리자에게 문의할 수 있습니다.</p>
   <form id="contactForm"><div class="row"><label>이름 <input id="name" name="name" autocomplete="name" maxlength="80" placeholder="선택 입력"></label><label>답변받을 이메일 <input id="email" name="email" type="email" autocomplete="email" maxlength="254" required placeholder="name@example.com"></label></div>
-  <label>받는 사람 <input value="${MAIL_CONTACT_RECIPIENT}" readonly aria-readonly="true"></label><label>제목 <input id="subject" name="subject" maxlength="180" required placeholder="문의 제목을 입력해 주세요"></label><label>문의 내용 <textarea id="message" name="message" maxlength="12000" required placeholder="문의하실 내용을 입력해 주세요"></textarea></label>
+  <label>받는 사람 <input id="recipientLabel" value="EKODI 관리자" readonly aria-readonly="true"></label><label>제목 <input id="subject" name="subject" maxlength="180" required placeholder="문의 제목을 입력해 주세요"></label><label>문의 내용 <textarea id="message" name="message" maxlength="12000" required placeholder="문의하실 내용을 입력해 주세요"></textarea></label>
   <label class="trap" aria-hidden="true">Website <input id="website" name="website" tabindex="-1" autocomplete="off"></label><div id="sourceBox" class="source"></div><div class="actions"><button class="send" id="send" type="submit">문의 보내기</button><div class="status" id="status" role="status" aria-live="polite"></div></div></form>
-  <p class="privacy">입력한 이메일은 문의 답변을 위한 회신 주소로만 사용됩니다. 메일은 에코디 발송 계정에서 전송되며 회신 시 입력하신 주소로 연결됩니다.</p></section></main>`;
+  <p class="privacy">입력한 이메일은 문의 답변을 위한 회신 주소로만 사용됩니다. 문의는 해당 사이트 관리자 앞으로 접수되며, 에코디 공통 메일 시스템이 안전하게 전달합니다.</p></section></main>`;
   const script=`<script>(function(){
-  var form=document.getElementById('contactForm'),status=document.getElementById('status'),send=document.getElementById('send'),sourceBox=document.getElementById('sourceBox');
-  var params=new URLSearchParams(location.search),source=(params.get('source')||'').slice(0,80),site=(params.get('site')||'').slice(0,100),sourceUrl=(params.get('source_url')||document.referrer||'').slice(0,1000);
+  var form=document.getElementById('contactForm'),status=document.getElementById('status'),send=document.getElementById('send'),sourceBox=document.getElementById('sourceBox'),recipientLabel=document.getElementById('recipientLabel'),contactTitle=document.getElementById('contactTitle');
+  var params=new URLSearchParams(location.search),source=(params.get('source')||'').slice(0,80),site=(params.get('site')||'').slice(0,100),sourceUrl=(params.get('source_url')||document.referrer||'').slice(0,1000),prefillSubject=(params.get('subject')||'').slice(0,180),adminLabel=site?site+' 관리자':'EKODI 관리자';
+  recipientLabel.value=adminLabel;if(site)contactTitle.textContent=adminLabel+'에게 문의하기';if(prefillSubject)document.getElementById('subject').value=prefillSubject;
   if(site||source){sourceBox.style.display='block';sourceBox.textContent='문의 출처: '+[site,source].filter(Boolean).join(' · ');}
   form.addEventListener('submit',async function(event){event.preventDefault();status.className='status';status.textContent='문의 내용을 전송하고 있습니다.';send.disabled=true;
     var payload={name:document.getElementById('name').value,email:document.getElementById('email').value,subject:document.getElementById('subject').value,message:document.getElementById('message').value,website:document.getElementById('website').value,source:source,site:site,sourceUrl:sourceUrl};
-    try{var response=await fetch('/mail/api/contact',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload),cache:'no-store'});var data=await response.json().catch(function(){return{};});if(!response.ok)throw new Error(data.error||'문의 전송에 실패했습니다.');status.className='status success';status.textContent=data.message||'문의가 에코디에 전달되었습니다.';form.reset();}
+    try{var response=await fetch('/mail/api/contact',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload),cache:'no-store'});var data=await response.json().catch(function(){return{};});if(!response.ok)throw new Error(data.error||'문의 전송에 실패했습니다.');status.className='status success';status.textContent=data.message||adminLabel+'에게 문의가 전달되었습니다.';form.reset();}
     catch(error){status.className='status error';status.textContent=error.message||'문의 전송에 실패했습니다. 잠시 후 다시 시도해 주세요.';}
     finally{send.disabled=false;}
   });

@@ -1,5 +1,5 @@
 {
-  "version": 59,
+  "version": 60,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
@@ -734,14 +734,16 @@
         ],
         "redirect": "manual",
         "expect": [
-          "에코디에 문의하기",
-          "joseph@ekodi.kr"
+          "사이트 관리자에게 문의하기",
+          "로그인 없이 누구나 해당 사이트 관리자에게 문의할 수 있습니다."
         ],
         "headerExpect": [
           "x-ekodi-route: mail-contact",
           "x-ekodi-shell: v2",
           "cache-control: no-store"
         ],
+        "candidateVerify": false,
+        "candidateVerifyReason": "new /mail* Worker-first routing becomes authoritative only after candidate promotion",
         "rollbackVerify": false
       },
       {
@@ -754,6 +756,8 @@
           "location: https://ekodi.kr/mail/contact",
           "cache-control: no-store"
         ],
+        "candidateVerify": false,
+        "candidateVerifyReason": "legacy redirect is introduced with the same promoted mail contact release",
         "rollbackVerify": false
       },
       {

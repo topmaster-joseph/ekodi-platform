@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { shellCsp } from '../ekodi-shell-injector.js';
-import { EKODI_USER_FOOTER, renderEkodiUserFooter } from '../config/user-footer.js';
+import { EKODI_USER_FOOTER, contactHrefForSite, renderEkodiUserFooter } from '../config/user-footer.js';
 import { EKODI_USER_EXPERIENCE_PROFILES } from '../config/user-ui-experience-profiles.js';
 import { EKODI_LANGUAGE_REGISTRY } from '../config/language-registry.js';
 
@@ -42,9 +42,14 @@ test('user UI header/footer/language are shared user-surface-only modules',async
 
   assert.equal(EKODI_USER_FOOTER.version,3);
   assert.equal(EKODI_USER_FOOTER.operator.businessRegistrationNumber,'213-13-01959');
-  assert.equal(EKODI_USER_FOOTER.contact.email,'ekodibiz@gmail.com');
+  assert.equal(EKODI_USER_FOOTER.contact.email,'joseph@ekodi.kr');
+  assert.equal(EKODI_USER_FOOTER.contact.emailHref,'https://ekodi.kr/mail/contact');
   assert.match(EKODI_USER_FOOTER.precedenceNotice,/별도 정책이 표시된 경우 해당 정책이 우선 적용됩니다/);
-  const renderedFooter=renderEkodiUserFooter();
+  const contactHref=contactHrefForSite({serviceId:'trade',siteLabel:'EKODI Global Trading',sourceUrl:'https://ekodi.kr/ekodibiz/trade'});
+  assert.match(contactHref,/^https:\/\/ekodi\.kr\/mail\/contact\?/);
+  assert.match(contactHref,/source=trade/);
+  assert.match(contactHref,/site=EKODI\+Global\+Trading/);
+  const renderedFooter=renderEkodiUserFooter(undefined,{serviceId:'trade',siteLabel:'EKODI Global Trading'});
   assert.match(renderedFooter,/data-ekodi-user-footer="v3"/);
   assert.match(renderedFooter,/data-ekodi-legal-footer="user-shell-v2"/);
   assert.match(renderedFooter,/ekodi-user-ui-footer__copy/);
@@ -52,6 +57,7 @@ test('user UI header/footer/language are shared user-surface-only modules',async
   assert.match(renderedFooter,/data-ekodi-i18n="terms"/);
   assert.match(renderedFooter,/data-ekodi-i18n="contact"/);
   assert.doesNotMatch(renderedFooter,/운영주체|사업장 소재지/);
+  assert.match(renderedFooter,/https:\/\/ekodi\.kr\/mail\/contact\?source=trade&amp;site=EKODI\+Global\+Trading/);
 
   assert.match(worker,/userHeaderUrl\.pathname='\/user-ui-header\.js'/);
   assert.match(worker,/userFooterUrl\.pathname='\/user-ui-footer\.js'/);
@@ -71,6 +77,11 @@ test('user UI header/footer/language are shared user-surface-only modules',async
   assert.match(footerClient,/user-footer\.json/);
   assert.match(footerClient,/ekodi-user-ui-footer__copy/);
   assert.match(footerClient,/data-ekodi-i18n/);
+  assert.match(footerClient,/siteContactHref/);
+  assert.match(footerClient,/source_url/);
+  assert.match(footerClient,/data-ekodi-contact-link/);
+  assert.match(injector,/data-ekodi-service-label/);
+  assert.match(injector,/renderEkodiUserFooter\(undefined,\{serviceId:/);
   assert.match(footerClient,/applyReadableFooter/);
   assert.match(footerClient,/--ekodi-user-footer-safe-text/);
   assert.match(footerClient,/dataset\.ekodiFooterContrast/);

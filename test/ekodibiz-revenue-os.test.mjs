@@ -37,10 +37,14 @@ test('public company page moves partner access behind business-area detail views
   assert.match(css, /@media\(max-width:600px\)/);
 });
 
-test('business inquiries use a browser-based Gmail composer instead of mailto', () => {
-  assert.match(html, /https:\/\/mail\.google\.com\/mail\/\?view=cm/);
+test('business inquiries use the canonical site-admin contact flow', () => {
+  assert.match(html, /https:\/\/ekodi\.kr\/mail\/contact\?source=ekodibiz&amp;site=EKODIBIZ/);
+  assert.doesNotMatch(html, /mail\.google\.com\/mail/);
   assert.doesNotMatch(html, /mailto:/);
-  assert.match(site, /mail\.google\.com\/mail\/\?view=cm/);
+  assert.match(site, /new URL\('https:\/\/ekodi\.kr\/mail\/contact'\)/);
+  assert.match(site, /searchParams\.set\('source','ekodibiz'\)/);
+  assert.match(site, /searchParams\.set\('site','EKODIBIZ'\)/);
+  assert.match(site, /searchParams\.set\('source_url',location\.href\)/);
 });
 
 test('business areas and common shell are localized as one surface', () => {
@@ -62,10 +66,11 @@ test('personalized catalog offers several repeatable revenue paths', () => {
   assert.match(app, /slice\(0,\s*4\)/);
 });
 
-test('shared user footer stays centered and keeps legal and contact routes visible', () => {
+test('shared user footer stays centered and keeps legal and site-admin contact routes visible', () => {
   assert.match(html, /개인정보처리방침/);
   assert.match(html, /이용약관/);
-  assert.match(html, /mail\.google\.com/);
+  assert.match(html, /https:\/\/ekodi\.kr\/mail\/contact\?source=ekodibiz&amp;site=EKODIBIZ/);
+  assert.doesNotMatch(html, /mail\.google\.com/);
   assert.match(html, /Turn value into a business/);
   assert.match(css, /\.footer/);
   assert.match(css, /grid-template-columns/);
