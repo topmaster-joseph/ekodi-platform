@@ -3,7 +3,7 @@
 const SECTION_GROUP=Object.freeze({
   campus:'system','public-site-controls':'system',architecture:'system',security:'system',admins:'system','ai-module-spec':'system',storage:'system',
   'common-services':'common',communication:'common',workspace:'common',finance:'common',
-  'life-ai':'professional','personal-finance':'professional',community:'professional',books:'professional',social:'professional',devotional:'professional','marketing-ai':'professional','ai-membership':'professional',tax:'professional',affiliates:'professional','supply-network':'professional',insurance:'professional',
+  'life-ai':'professional','personal-finance':'professional',community:'professional',books:'professional',social:'professional',devotional:'professional','marketing-ai':'professional','ai-membership':'professional',tax:'professional','supply-network':'professional',insurance:'professional',
   work:'workspaces',organization:'workspaces',clients:'workspaces','cheonggye-members':'workspaces',
   capabilities:'operations',aiops:'operations','ai-settings':'operations',openai:'operations',devices:'operations',health:'operations','api-cost':'operations',services:'operations',deployments:'operations',policies:'operations',
 });
@@ -11,7 +11,7 @@ const GROUP_DEFAULT=Object.freeze({
   system:'campus',common:'common-services',professional:'life-ai',workspaces:'clients',operations:'capabilities',
 });
 const ALIASES=Object.freeze({
-  'ai-ops':'aiops',storige:'storage',release:'deployments','mall-ai-sales':'affiliates',
+  'ai-ops':'aiops',storige:'storage',release:'deployments',
 });
 const SECTION_SET=new Set(Object.keys(SECTION_GROUP));
 function normalizeSection(value){
@@ -46,7 +46,6 @@ function legacyHashFor(section){
   const normalized=normalizeSection(section);
   if(!normalized)return'';
   if(normalized==='aiops')return'#ai-ops';
-  if(normalized==='affiliates')return'#mall-ai-sales';
   return `#${normalized}`;
 }
 function canonicalUrl(section,loc=window.location){

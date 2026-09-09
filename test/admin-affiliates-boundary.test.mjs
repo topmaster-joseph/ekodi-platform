@@ -18,6 +18,9 @@ test('sales and supply network separates professional engine health from Mall op
   const professionalPanel = await read('supply-network-admin.js');
   const workspace = await read('workspace-admin-page.js');
   const layout = await read('admin-menu-layout.js');
+  const centralHandoff = await read('admin-central-handoff.js');
+  const canonicalRoutes = await read('admin-canonical-routes.js');
+  const authenticatedShell = await read('admin-authenticated-shell.js');
   assert.match(demand, /'supply-network':[\s\S]*supply-network-admin\.js/);
   assert.match(professionalPanel, /api\('\/providers'\)/);
   assert.match(professionalPanel, /api\('\/programs'\)/);
@@ -53,4 +56,10 @@ test('sales and supply network separates professional engine health from Mall op
   assert.doesNotMatch(workspace, /\/api\/affiliate\/accounts|affiliateMerchantRouteForm/);
   assert.match(layout, /LEGACY_MALL_AFFILIATE_HASHES/);
   assert.match(layout, /\/ekodibiz\/mall\/admin\/sourcing/);
+  assert.match(centralHandoff, /LEGACY_MALL_AFFILIATE_HASHES/);
+  assert.match(centralHandoff, /professional.*affiliates/);
+  assert.match(centralHandoff, /location\.replace\(MALL_SUPPLY_ADMIN\)/);
+  assert.doesNotMatch(canonicalRoutes, /affiliates:'professional'/);
+  assert.doesNotMatch(canonicalRoutes, /'mall-ai-sales':'affiliates'/);
+  assert.doesNotMatch(authenticatedShell, /'mall-ai-sales':'affiliates'/);
 });
