@@ -18,9 +18,12 @@ test('authenticated Admin E2E isolates every menu in a fresh Chromium process an
   assert.match(source, /isolated-menu-renderers/);
 });
 
-test('isolated worker skips redundant clicks for an already-active context tab', async () => {
+test('isolated worker skips redundant clicks only when the active context tab has a visible rendered panel', async () => {
   const source = await workerSource();
-  assert.match(source, /const alreadyActive = aria === 'true'/);
+  assert.match(source, /let alreadyActive = aria === 'true'/);
+  assert.match(source, /stage\('active-panel-check'\)/);
+  assert.match(source, /const activeState = await visiblePanelState\(\)/);
+  assert.match(source, /alreadyActive = Boolean\(activeState\.panelFound && activeState\.selected && activeState\.textLength >= 4\)/);
   assert.match(source, /if \(!alreadyActive\) await clickFast\(tab\)/);
   assert.match(source, /click\(\{ force: true, noWaitAfter: true/);
   assert.match(source, /destination\.hostname !== 'accounts\.google\.com'/);
