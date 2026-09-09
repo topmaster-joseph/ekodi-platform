@@ -25,7 +25,8 @@ test('PizzaMaru storefront renders verified image, app prices, and direct order 
     const response=await renderStorefrontPage(new Request('https://ekodi.kr/pizzamaru'),{SUPABASE_URL:'https://example.supabase.co',SUPABASE_PUBLISHABLE_KEY:'test'},{profile:{name:'피자마루 목포대점',theme:'pizzamaru'}},'pizzamaru');
     const html=await response.text();
     for(const value of ['콤비네이션 피자','12,900원','14,900원','15,900원','16,900원','땡겨요','배달의민족','요기요','먹깨비','앱 최저'])assert.match(html,new RegExp(value));
-    assert.match(html,/<img[^>]+https:\/\/example\.com\/menu\.jpg/);
+    assert.match(html,/<img[^>]+https:\/\/www\.pizzamaru\.co\.kr\/d_fileinfo\/img\/0120221229154437\.jpg/);
+    assert.doesNotMatch(html,/https:\/\/example\.com\/menu\.jpg/);
     assert.match(html,/https:\/\/example\.com\/ddangyo/);
   }finally{globalThis.fetch=originalFetch}
 });
@@ -44,6 +45,12 @@ test('platform-menu migration exposes verified public listings and protected imp
   assert.match(migration,/can_manage_store_user_site/);
   assert.match(migration,/grant execute on function public\.store_user_site_public_snapshot\(text\) to anon, authenticated/);
   assert.match(migration,/revoke all on function public\.import_store_platform_menu_snapshot[\s\S]*from public, anon/);
+});
+
+test('PizzaMaru official image migration pins HQ product assets',async()=>{
+  const migration=await read('supabase/migrations/20260910002000_pizzamaru_official_menu_images.sql');
+  for(const value of ['www.pizzamaru.co.kr/d_fileinfo/img','brand_official','이탈리안 치즈 피자','페퍼로니 피자','콤비네이션 피자','포테이토 피자','꿀고구마 피자','불고기 피자'])assert.match(migration,new RegExp(value));
+  assert.doesNotMatch(migration,/example\.com|baemin\.com|yogiyo\.co\.kr|coupangeats\.com/);
 });
 
 test('admin manages seven order URLs and verified platform menu snapshots',async()=>{
