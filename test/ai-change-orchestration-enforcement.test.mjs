@@ -49,7 +49,7 @@ test('main accepts guarded PR merge titles and still rejects a direct push', () 
   };
 
   try {
-    for (const message of ['Merge pull request #1302 from ai/router-score', 'Merge PR #1302: add dynamic AI Router Score']) {
+    for (const message of ['Merge pull request #1302 from ai/router-score', 'Merge PR #1302: add dynamic AI Router Score', 'ci(shared-site): deploy canonical router changes (#1273)']) {
       fs.writeFileSync(eventPath, JSON.stringify({ head_commit: { message }, sender: { login: 'topmaster-joseph' } }));
       const result = spawnSync(process.execPath, ['scripts/validate-ekodi-ai-change-orchestration.mjs', '--release'], {
         cwd, env: { ...baseEnv, GITHUB_SHA: head }, encoding: 'utf8',

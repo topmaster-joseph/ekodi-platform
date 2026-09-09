@@ -42,7 +42,9 @@ function branchAllowed(branch) {
   return allowedPrefixes.some(prefix => text(branch).startsWith(prefix));
 }
 function isPrMergeMessage(message) {
-  return /^Merge (?:pull request|PR) #\d+\b/m.test(text(message));
+  const value = text(message);
+  return /^Merge (?:pull request|PR) #\d+\b/m.test(value)
+    || /^[^\r\n]+ \(#\d+\)(?:\r?\n|$)/m.test(value);
 }
 function commitLooksLikePrMerge() {
   const eventMessage = text(event.head_commit?.message);
