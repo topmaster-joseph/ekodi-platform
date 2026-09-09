@@ -66,6 +66,15 @@ test('accepts authoritative PR lookup when commit association is not ready yet',
   assert.match(result.stdout, /source=protected-main-pr-merge/);
 });
 
+test('uses only the squash merge subject when head_commit also contains a commit body', () => {
+  const pr = validPr({ number: 1368 });
+  const result = run([], {
+    message: 'fix(admin): align internal routes with five work areas (#1368)\n\n* fix(admin): align internal routes\n\n* test(admin): preserve compatibility',
+    lookup: { 1368: pr },
+  });
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /source=protected-main-pr-merge/);
+});
 test('PR-looking commit text cannot bypass merge SHA verification', () => {
   const forged = validPr({ number: 1325, merge_commit_sha: '2222222222222222222222222222222222222222' });
   const result = run([], {
