@@ -2,7 +2,7 @@
 'use strict';
 const SECTION='cheonggye-community';
 const PANEL_ID='cheonggyeCommunityPanel';
-const API='/api/control/cheonggye';
+const API='https://ekodi.kr/cgma-community-api/admin';
 const LABELS={notice:'공지',campaign:'캠페인',contest:'공모전',store:'상가소식',proposal:'제안',question:'문의',new:'신규',reviewing:'검토중',resolved:'처리완료',hidden:'숨김'};
 function el(html){const t=document.createElement('template');t.innerHTML=html.trim();return t.content.firstElementChild;}
 function token(){try{return sessionStorage.getItem('ekodi-auth-token')||'';}catch{return'';}}
