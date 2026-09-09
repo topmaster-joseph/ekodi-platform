@@ -100,7 +100,10 @@ forbidText('.github/workflows/deploy-social.yml', ['deploy --config wrangler.soc
 // Stateful services are allowed isolated workers.dev staging; their production
 // artifacts remain independently owned and must not write the shared-site runtime.
 requireText('.github/workflows/deploy-control-api.yml', [
-  'environment: development',
+  'environment: staging',
+  'CLOUDFLARE_STAGING_API_TOKEN',
+  'GOOGLE_STAGING_CLIENT_ID',
+  'GOOGLE_IDENTITY_ORIGIN = "https://staging.ekodi.kr"',
   'ekodi-auth-api-staging',
   'ekodi-auth-staging',
   'needs: [validate, staging]',

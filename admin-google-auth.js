@@ -71,6 +71,16 @@ function configuredGoogleClientId(env) {
   return value.endsWith('.apps.googleusercontent.com') ? value : '';
 }
 
+function configuredIdentityOrigin(env) {
+  const value = String(env.GOOGLE_IDENTITY_ORIGIN || '').trim();
+  if (!value) return '';
+  try {
+    const url = new URL(value);
+    const local = /^(localhost|127\.0\.0\.1)$/i.test(url.hostname);
+    return (url.protocol === 'https:' || (url.protocol === 'http:' && local)) ? url.origin : '';
+  } catch { return ''; }
+}
+
 function workspaceDomain(env) {
   return String(env.ADMIN_WORKSPACE_DOMAIN || '').trim().toLowerCase();
 }
@@ -534,11 +544,16 @@ export async function handleAdminGoogleAuth(request, env) {
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors(origin, env) });
   const url = new URL(request.url);
   const path = url.pathname;
+  const identityOrigin = configuredIdentityOrigin(env);
+  const identitySensitive = path.startsWith('/api/google/') || (path === '/api/admin-access/elevation' && request.method === 'POST');
+  if (identitySensitive && origin && identityOrigin && origin !== identityOrigin) {
+    return json({ error: '현재 인증 환경에서 허용되지 않은 Google 로그인 Origin입니다.', code: 'IDENTITY_ORIGIN_MISMATCH' }, 403, request, env);
+  }
 
   // This route is environment-backed. It must not consume D1 reads just to render the Google sign-in entry.
   if (request.method === 'GET' && path === '/api/google/config') {
     const clientId = configuredGoogleClientId(env);
-    return json({ enabled: Boolean(clientId), clientId, mode: clientId ? 'google_allowlist' : 'password_fallback' }, 200, request, env);
+    return json({ enabled: Boolean(clientId), clientId, identityOrigin, mode: clientId ? 'google_allowlist' : 'password_fallback' }, 200, request, env);
   }
   if (!env.DB) return json({ error: '데이터베이스 연결이 설정되지 않았습니다.' }, 503, request, env);
 

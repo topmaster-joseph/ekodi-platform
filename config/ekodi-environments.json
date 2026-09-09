@@ -1,11 +1,12 @@
 {
-  "version": "1.0",
+  "version": "1.1",
   "canonicalRepository": "topmaster-joseph/ekodi-platform",
   "principles": {
     "oneCanonicalRepository": true,
     "sharedDatabaseByDefault": true,
     "dedicatedDatabaseWhenJustified": true,
-    "productionDataNeverCopiedRawToNonProduction": true
+    "productionDataNeverCopiedRawToNonProduction": true,
+    "identityEnvironmentIsolation": true
   },
   "environments": {
     "production": {
@@ -21,13 +22,17 @@
         "currentProjectRef": "renzehysxirjilvdxacv",
         "currentProjectName": "ekodi-platform",
         "state": "canonical-platform-active"
+      },
+      "identity": {
+        "canonicalOrigin": "https://ekodi.kr",
+        "authPath": "/auth",
+        "profile": "production"
       }
     },
     "development": {
       "git": {
         "branch": "development",
-        "githubEnvironment": "development",
-        "pullRequestStagingUsesEnvironment": "development"
+        "githubEnvironment": "development"
       },
       "cloudflare": {
         "environment": "development-staging"
@@ -37,6 +42,32 @@
         "currentProjectRef": "lxcxwbdwwojjkgybbqii",
         "currentProjectName": "ekodi-church",
         "state": "transition-until-church-data-is-safely-migrated"
+      },
+      "identity": {
+        "canonicalOrigin": "http://127.0.0.1:4173",
+        "authPath": "/auth",
+        "profile": "development"
+      }
+    },
+    "staging": {
+      "git": {
+        "branch": "pull-request",
+        "githubEnvironment": "staging"
+      },
+      "cloudflare": {
+        "environment": "staging",
+        "accountBoundary": "development-staging-account",
+        "credentialProfile": "staging-only"
+      },
+      "identity": {
+        "canonicalOrigin": "https://staging.ekodi.kr",
+        "authPath": "/auth",
+        "profile": "staging",
+        "sessionStore": "ekodi-auth-staging"
+      },
+      "data": {
+        "productionDataAllowed": false,
+        "syntheticOrAnonymizedOnly": true
       }
     }
   },

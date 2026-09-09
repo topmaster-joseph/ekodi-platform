@@ -1,6 +1,6 @@
-# EKODI Platform Constitution v1.9.0
+# EKODI Platform Constitution v1.10.0
 
-Effective: 2026-09-08
+Effective: 2026-09-09
 
 This constitution is the highest architecture and operations rule for EKODI Platform. Existing validators remain authoritative implementation guards; this document unifies their intent and governs future changes.
 
@@ -65,6 +65,15 @@ This constitution is the highest architecture and operations rule for EKODI Plat
 - Protected requests resolve authentication, tenant, authorization, rate policy and input validity before business logic.
 - `Workspace` is the canonical operating-context term. Legacy `Space` terminology may remain only as a compatibility surface during migration and must not create a second identity, authority or routing model.
 
+## 3A. Identity Environment Constitution
+- The canonical production human authentication surface is `https://ekodi.kr/auth`; its Google Identity JavaScript origin is exactly `https://ekodi.kr`.
+- Production, Staging and Development are separate identity environments. They must not share Google OAuth clients, redirect URIs, session stores or namespaces, cookies, client secrets, privileged deployment credentials or environment-specific authorization configuration.
+- Staging uses the canonical non-production host `https://staging.ekodi.kr` and a staging-only Google client. Development uses explicitly registered localhost origins with exact ports and a development-only Google client.
+- A production Google OAuth client contains production origins only. Test, preview, staging and localhost origins are forbidden in the production client.
+- `auth.ekodi.kr` and `admin.ekodi.kr` are legacy compatibility surfaces. They redirect toward canonical apex paths and are not canonical Google Identity JavaScript origins.
+- Google Identity login is an identity adapter only. Gmail, Drive, YouTube and other Google service authorization use capability-specific OAuth clients or brokers, scopes, redirect URIs, token vaults and lifecycle controls; service OAuth credentials must not fall back to the login identity client.
+- Channel OAuth connection state is operated independently from platform release state. Disconnecting or rotating one channel credential must not invalidate EKODI identity or unrelated channels.
+- Identity environment policy is machine-readable in `config/identity-environments.json` and validated before release.
 ## 4. Data and Storage Constitution
 - Structured core/operational truth lives in an EKODI-controlled database with tenant isolation and auditability.
 - Google Workspace is preferred for human collaboration documents, not canonical EKODI identity/permission/business tables.

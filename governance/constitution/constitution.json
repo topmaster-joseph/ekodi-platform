@@ -1,6 +1,6 @@
 {
-  "version": "1.9.0",
-  "effectiveDate": "2026-09-08",
+  "version": "1.10.0",
+  "effectiveDate": "2026-09-09",
   "status": "active",
   "title": "EKODI Platform Constitution",
   "principles": [
@@ -27,7 +27,10 @@
     "living-digital-commons-north-star",
     "sovereign-autonomy-with-human-authority",
     "person-workspace-role-capability-authority",
-    "observe-detect-reason-plan-execute-verify-recover-learn"
+    "observe-detect-reason-plan-execute-verify-recover-learn",
+    "environment-isolated-identity",
+    "canonical-auth-at-apex-path",
+    "service-oauth-separated-from-login"
   ],
   "architectureModel": {
     "registry": "governance/architecture/ekodi-os-architecture.json",
@@ -68,7 +71,10 @@
       "auth.dev.ekodi.kr",
       "api.dev.ekodi.kr"
     ],
-    "rule": "User-operated spaces live under ekodi.kr paths. Subdomains are reserved for justified system, security, protocol, common-service or core-service boundaries and never define workspace identity."
+    "rule": "User-operated spaces live under ekodi.kr paths. Subdomains are reserved for justified system, security, protocol, common-service or core-service boundaries and never define workspace identity.",
+    "staging": [
+      "staging.ekodi.kr"
+    ]
   },
   "publicNamespaces": [
     "workspace-root-slug"
@@ -275,7 +281,9 @@
       "governance/architecture/sovereign-autonomous-operations.v1.json",
       "config/sovereign-surface-policy.json",
       "sovereign-autonomy-runtime.js",
-      "scripts/validate-sovereign-autonomous-operations.mjs"
+      "scripts/validate-sovereign-autonomous-operations.mjs",
+      "config/identity-environments.json",
+      "scripts/validate-identity-environments.mjs"
     ],
     "owner": "topmaster-joseph",
     "rule": "C2/C3 changes are proposed first and applied only after explicit owner confirmation."
@@ -504,5 +512,22 @@
       "operations": "/admin/operations/{capability}"
     },
     "rule": "One domain, multiple security realms: human and management surfaces are canonical paths on ekodi.kr; subdomains may remain only as justified internal, protocol, emergency or compatibility execution boundaries."
+  },
+  "identityEnvironmentPolicy": {
+    "registry": "config/identity-environments.json",
+    "canonicalProductionAuth": "https://ekodi.kr/auth",
+    "productionJavaScriptOrigins": [
+      "https://ekodi.kr"
+    ],
+    "stagingCanonicalAuth": "https://staging.ekodi.kr/auth",
+    "developmentOriginPolicy": "exact-localhost-port-only",
+    "oauthClientReuseAcrossEnvironmentsForbidden": true,
+    "sessionReuseAcrossEnvironmentsForbidden": true,
+    "secretReuseAcrossEnvironmentsForbidden": true,
+    "productionClientMayContainNonProductionOrigins": false,
+    "legacyAuthOriginsCanonical": false,
+    "serviceOAuthSeparatedFromIdentityLogin": true,
+    "serviceOAuthGenericIdentityFallbackForbidden": true,
+    "channelConnectionLifecycleIndependentFromRelease": true
   }
 }

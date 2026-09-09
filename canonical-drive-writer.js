@@ -51,7 +51,7 @@ async function decryptCredential(env, row) {
 }
 
 function googleClientId(env) {
-  return String(env.GOOGLE_DRIVE_CLIENT_ID || env.GOOGLE_CLIENT_ID || '').trim();
+  return String(env.GOOGLE_DRIVE_CLIENT_ID || '').trim();
 }
 
 async function accessToken(env, row) {

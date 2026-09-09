@@ -108,7 +108,7 @@ async function encryptionKey(secret) {
 }
 function providerSecret(env, provider) {
   if (provider === THREADS_PROVIDER) return String(env.THREADS_APP_SECRET || env.META_APP_SECRET || '');
-  if (provider === YOUTUBE_PROVIDER) return String(env.MARKETING_OAUTH_VAULT_KEY || env.GOOGLE_CLIENT_SECRET || '');
+  if (provider === YOUTUBE_PROVIDER) return String(env.MARKETING_OAUTH_VAULT_KEY || '');
   return String(env.META_APP_SECRET || '');
 }
 async function encryptToken(env, provider, token) {
@@ -153,7 +153,7 @@ function redirectResult(returnUrl, params) {
 async function schemaReady(env) { return d1SchemaReady(env?.DB,['marketing_oauth_states','marketing_oauth_connections','marketing_growth_campaigns','marketing_channel_settings']); }
 function metaConfigured(env) { return Boolean(env.META_APP_ID && env.META_APP_SECRET); }
 function threadsConfigured(env) { return Boolean((env.THREADS_APP_ID || env.META_APP_ID) && (env.THREADS_APP_SECRET || env.META_APP_SECRET)); }
-function youtubeConfigured(env) { return Boolean(env.GOOGLE_CLIENT_ID && providerSecret(env,YOUTUBE_PROVIDER) && env.GOOGLE_OAUTH_BROKER); }
+function youtubeConfigured(env) { return Boolean(providerSecret(env,YOUTUBE_PROVIDER) && env.GOOGLE_OAUTH_BROKER); }
 
 async function createOAuthState(env, provider, mode, identity, subject, returnUrl) {
   const state = randomState();

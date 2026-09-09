@@ -7,7 +7,7 @@ export const GMAIL_SEND_SCOPE = 'https://www.googleapis.com/auth/gmail.send';
 const BASE_SCOPES = ['openid', 'email', 'profile'];
 
 export function googleMailClientId(env) {
-  return String(env.MAIL_GOOGLE_CLIENT_ID || env.GOOGLE_CLIENT_ID || '').trim();
+  return String(env.MAIL_GOOGLE_CLIENT_ID || '').trim();
 }
 function googleMailClientSecret(env) { return String(env.MAIL_GOOGLE_CLIENT_SECRET || '').trim(); }
 export function googleMailConfigured(env) { return Boolean(googleMailClientId(env) && googleMailClientSecret(env)); }
