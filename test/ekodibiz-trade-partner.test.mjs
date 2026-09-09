@@ -95,3 +95,16 @@ test('EKODIBIZ canonical workspace root is backed by the EKODIBIZ service',async
   assert.ok(deployWorkflow.includes("grep -Fq 'WHAT WE DO'"));
   assert.ok(!deployWorkflow.includes("grep -Fq '프로그램 개발'"));
 });
+
+test('trade admin uses shared two-level UI and canonical apex auth',async()=>{
+  const [workspaceAdmin,tradeAdmin]=await Promise.all([read('workspace-admin-page.js'),read('workspace-trade-admin-page.js')]);
+  assert.ok(workspaceAdmin.includes("tradeAdminRoute=/^\\/[^/]+\\/trade\\/admin"));
+  assert.ok(workspaceAdmin.includes('/workspace-trade-admin.js?v=20260909-admin-ui-v8'));
+  assert.ok(tradeAdmin.includes("b.dataset.adminGroup=key"));
+  assert.ok(tradeAdmin.includes('renderSecondaryNav(key)'));
+  assert.ok(tradeAdmin.includes('id="tradeAdminSearch"'));
+  assert.ok(tradeAdmin.includes('id="roles"'));
+  assert.ok(tradeAdmin.includes("new URL('/auth/',location.origin)"));
+  assert.ok(!tradeAdmin.includes('https://auth.ekodi.kr/'));
+  assert.ok(tradeAdmin.includes("'cache-control':'no-store'"));
+});
