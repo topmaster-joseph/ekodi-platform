@@ -13,6 +13,21 @@ test('current conversation owns normal user requests', () => {
   assert.equal(mustOwnAndRouteRequest(), true);
 });
 
+test('external connectors stay connected where possible without bypassing provider auth', () => {
+  const lifecycle = getOrchestrationContract().connectorLifecycle;
+  assert.equal(lifecycle.preferExistingConnections, true);
+  assert.equal(lifecycle.disconnectAfterTask, false);
+  assert.equal(lifecycle.refreshBeforeExpiryWhereSupported, true);
+  assert.equal(lifecycle.preserveIntentAcrossReauth, true);
+  assert.equal(lifecycle.providerAuthControlsRemainAuthoritative, true);
+  assert.equal(lifecycle.expiryBypassAllowed, false);
+  assert.equal(lifecycle.shortLivedCredentialPersistenceAllowed, false);
+  assert.equal(lifecycle.operaBrowserConnector, 'prefer_when_connected');
+  assert.deepEqual(lifecycle.healthStates, ['connected', 'degraded', 'reauth_required', 'unavailable']);
+  assert.ok(AI_MISSION_RUNTIME.observeAreas.includes('connector_health'));
+  assert.ok(AI_MISSION_RUNTIME.nonNegotiables.includes('no_connector_auth_or_expiry_bypass'));
+});
+
 test('high impact or forbidden requests remain outside autonomous ownership', () => {
   assert.equal(mustOwnAndRouteRequest({ highImpact:true }), false);
   assert.equal(mustOwnAndRouteRequest({ forbidden:true }), false);
