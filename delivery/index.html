@@ -9,7 +9,7 @@
 </head>
 <body>
   <header class="app-header" data-ekodi-fixed-header>
-    <a class="brand" href="/delivery" aria-label="EKODI 배달허브 홈"><span class="brand-mark">E</span><span><b>EKODI</b><small>DELIVERY HUB</small></span></a>
+    <a class="brand" href="/delivery" aria-label="EKODI 배달허브 홈"><span class="brand-mark">E</span><span><b>EKODI</b><small>배달허브 AI · DELIVERY HUB</small></span></a>
     <nav class="main-nav" aria-label="주요 메뉴"><a href="#how">서비스</a><a href="#storeResolver">매장 찾기</a><a href="#memberWorkspace">운영공간</a></nav>
     <div class="account" id="ekodiAccount" data-state="loading"><span id="ekodiAccountText">계정 확인 중</span><button type="button" id="ekodiAccountAction" hidden>EKODI 로그인</button><small id="ekodiAccountDetail" hidden></small></div>
   </header>
@@ -44,7 +44,7 @@
     </section>
 
     <section class="workspace" id="memberWorkspace" hidden aria-labelledby="workspaceTitle">
-      <div class="workspace-head"><div><p class="eyebrow">MEMBER WORKSPACE · 10G PREVIEW</p><h2 id="workspaceTitle">매장 연결 운영</h2><p>공식 API 또는 승인된 Adapter만 사용하며, 자동 연결 전에는 신뢰도와 출처를 함께 보여줍니다.</p></div><div class="guard-badge">검증 우선</div></div>
+      <div class="workspace-head"><div><p class="eyebrow">MEMBER WORKSPACE · 10G PREVIEW</p><h2 id="workspaceTitle">매장 연결 운영</h2><p>공식 API 또는 승인된 Adapter만 사용하며, 자동 연결 전에는 신뢰도와 출처를 함께 보여줍니다.</p></div><div class="guard-badge">외부 실행 잠금 · 검증 우선</div></div>
       <section class="panel resolver-panel" id="storeResolver">
         <div class="panel-head"><div><p class="eyebrow">STORE DISCOVERY</p><h3>배달플랫폼에서 내 매장 찾기</h3><p>정확한 지점명을 모르더라도 주소와 전화번호를 함께 넣으면 동일매장 판별 정확도가 올라갑니다.</p></div><span class="chip" id="resolverAdapterCount">Adapter 확인 중</span></div>
         <form id="storeResolverForm" class="resolver-form">
