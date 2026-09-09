@@ -56,6 +56,14 @@ test('accepts a verified squash merge from an EKODI AI branch', () => {
   assert.match(result.stdout, /source=protected-main-pr-merge/);
 });
 
+test('accepts SHA-bound commit association when GitHub omits merge_commit_sha', () => {
+  const associated = validPr();
+  delete associated.merge_commit_sha;
+  const result = run([associated]);
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /source=protected-main-pr-merge/);
+});
+
 test('accepts authoritative PR lookup when commit association is not ready yet', () => {
   const pr = validPr({ number: 1325 });
   const result = run([], {
