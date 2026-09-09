@@ -1,8 +1,12 @@
 name: Validate AI Provider Control
 
 on:
-  pull_request:
-    paths: &provider_paths
+  # This check is required by main branch protection. Do not path-filter PR events,
+  # otherwise unrelated but valid PRs remain permanently "expected" and cannot merge.
+  pull_request: {}
+  push:
+    branches: [main]
+    paths:
       - 'ai-provider-control.js'
       - 'ekodi-ai-provider-registry.js'
       - 'external-ai-module-gateway.js'
@@ -12,9 +16,6 @@ on:
       - 'test/ai-provider-control.test.mjs'
       - 'test/my-docs-ai.test.mjs'
       - '.github/workflows/validate-ai-provider-control.yml'
-  push:
-    branches: [main]
-    paths: *provider_paths
 
 permissions:
   contents: read
