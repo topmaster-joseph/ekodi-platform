@@ -15,6 +15,13 @@ test('Jadam customer page is public, brand-first, and exposes only the four requ
   assert.match(html,/공개 참고가/);
   assert.match(html,/앱별 목포대점 가격 연결 대기/);
   assert.match(html,/주문 링크 확인 중/);
+  const menuImages=[...html.matchAll(/<div class="jd-menu-photo"><img src="([^"]+)/g)].map(match=>match[1]);
+  assert.equal(menuImages.length,12);
+  assert.ok(menuImages.every(url=>new URL(url).hostname.endsWith('ejadam.co.kr')));
+  assert.match(html,/본사 공식 제품 이미지/);
+  assert.match(html,/메뉴 이미지는 본사 공식 제품 이미지를 유지합니다/);
+  assert.match(html,/data-jadam-menu-images="brand-official"/);
+  assert.match(html,/jadam-storefront\.css\?v=20260910-hq-menu-v1/);
   assert.doesNotMatch(html,/쿠팡이츠|당근 주문|네이버 주문|USER OPERATIONS|STORE MASTER|로그아웃/);
   assert.doesNotMatch(html,/example\.com/);
 });
@@ -29,7 +36,8 @@ test('verified Mokpo platform snapshot overrides reference display and activates
   try{
     const response=await renderJadamStorefrontPage(new Request('https://ekodi.kr/jadam'),{SUPABASE_URL:'https://project.example.test',SUPABASE_PUBLISHABLE_KEY:'test'},resolved,'jadam');
     const html=await response.text();
-    for(const marker of ['21,500원','23,500원','목포대점 확인','https://order.example.test/ddangyo','https://order.example.test/baemin','https://images.example.test/chicken.jpg'])assert.match(html,new RegExp(marker.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')));
+    for(const marker of ['21,500원','23,500원','목포대점 확인','https://order.example.test/ddangyo','https://order.example.test/baemin','본사 공식 제품 이미지','https://www.ejadam.co.kr/data/editor/1709/de8720524886cf91e6ef20f944eabc48_1506676434_3065.jpg'])assert.match(html,new RegExp(marker.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')));
+    assert.doesNotMatch(html,/https:\/\/images\.example\.test\/chicken\.jpg/);
   }finally{globalThis.fetch=originalFetch}
 });
 
