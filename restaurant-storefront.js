@@ -27,6 +27,8 @@ export async function renderRestaurantStorefrontPage(request,env,resolved,slug){
   if(!response.headers.get('content-type')?.includes('text/html'))return response;
   let html=await response.text();
   html=html.replace(`<html lang="ko" data-restaurant-theme="${slug==='pizzamaru'?'pizza':'yogurt'}">`,`<html lang="ko" data-store-page="${slug}" data-restaurant-theme="${slug==='pizzamaru'?'pizza':'yogurt'}">`);
+  html=html.replace('<div class="rs-actions">','<div class="rs-actions"><a class="rs-action primary" href="#menu">메뉴·가격 보기</a>');
+  html=html.replace('class="rs-action primary" href="tel:','class="rs-action " href="tel:');
   html=html.replace('<h2>대표 메뉴</h2>','<h2>메뉴와 앱별 가격</h2>');
   if(slug==='yogurt'){
     html=html.replace('<h3>배달앱 주문</h3>','<h3>배달앱에서 바로 주문</h3>');
