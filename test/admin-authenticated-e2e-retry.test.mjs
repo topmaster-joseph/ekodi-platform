@@ -50,6 +50,7 @@ test('isolated Tax E2E verifies authenticated handoff and value-preserving suppl
   assert.match(source, /destination\.hostname === 'tax\.ekodi\.kr'/);
   assert.match(source, /page\.waitForURL/);
   assert.match(source, /sessionStorage\.getItem\('ekodi-auth-token'\)/);
+  assert.match(source, /button\[data-tab=\"suppliers\"\]/);
   assert.match(source, /authenticated supplier read failed HTTP/);
   assert.match(source, /response\.request\(\)\.method\(\) === 'PUT'/);
   assert.match(source, /supplier UI save returned HTTP/);
