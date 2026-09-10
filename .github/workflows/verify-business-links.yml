@@ -49,7 +49,9 @@ jobs:
           node --check site-worker.js
 
           grep -Fq 'site=business&amp;return_to=https%3A%2F%2Fbusiness.ekodi.kr%2F' business/index.html
-          grep -Fq "const AUTH_FALLBACK='https://auth.ekodi.kr/?site=business&return_to=https%3A%2F%2Fbusiness.ekodi.kr%2F'" business/app.js
+          grep -Fq "const AUTH_FALLBACK='https://auth.ekodi.kr/';" business/app.js
+          grep -Fq "target.searchParams.set('site','business');" business/app.js
+          grep -Fq "target.searchParams.set('return_to',canonicalBusinessUrl());" business/app.js
           grep -Fq 'AUTH_URL = "https://auth.ekodi.kr/?site=business&return_to=https%3A%2F%2Fbusiness.ekodi.kr%2F"' wrangler.business.toml
           grep -Fq "business-auth.js?v=20260826-free-fallback-1" auth-site/auth-router.js
           grep -Fq "'/business-auth.js'" site-worker.js
