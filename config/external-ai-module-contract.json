@@ -38,12 +38,7 @@
   },
   "security": {
     "executionTrust": "registered_ekodi_internal_caller",
-    "callerHeader": "x-ekodi-caller-id",
-    "callerRegistry": "EKODI_AI_MODULE_CALLERS",
-    "callerGatewaySecret": "EKODI_AI_MODULE_GATEWAY_KEY",
     "browserDirectExecution": false,
-    "providerMayReceiveGoogleCredentials": false,
-    "providerMayAccessSharedDriveDirectly": false,
     "providerMayAccessEkodiDatabaseDirectly": false,
     "providerSecretsStayServerSide": true,
     "tenantContextRequired": true,
@@ -55,14 +50,15 @@
     "canonicalActorIdMayLeaveEkodi": false,
     "canonicalSpaceIdMayLeaveEkodi": false,
     "personalDataDefault": "drop",
-    "sourceTopologyMayLeaveEkodi": false
+    "sourceTopologyMayLeaveEkodi": false,
+    "providerMayReceiveEkodiStorageCredentials": false,
+    "providerMayAccessCanonicalStorageDirectly": false
   },
   "persistence": {
     "providerReturnsOutputToEkodi": true,
     "durableOutputRoute": "EKODI Storage Gateway",
-    "canonicalStore": "google_workspace_shared_drive",
-    "canonicalCredentialsSource": "encrypted_storage_connections",
-    "canonicalRouteSource": "storage_routes"
+    "canonicalStore": "ekodi_managed_canonical_store",
+    "implementationHiddenFromProvider": true
   },
   "moduleManifestRequired": [
     "id",
@@ -72,5 +68,94 @@
     "capabilities",
     "secretBinding"
   ],
-  "moduleIdPattern": "^[a-z0-9][a-z0-9._-]{2,63}$"
+  "moduleIdPattern": "^[a-z0-9][a-z0-9._-]{2,63}$",
+  "guardrails": {
+    "policyVersion": "2026-09-08",
+    "capabilityGrant": {
+      "ttlSeconds": 60,
+      "singleCapability": true,
+      "singleUseIntent": true,
+      "providerCannotUseGrantAgainstEkodi": true
+    },
+    "dataMinimization": {
+      "secureProjectionRequired": true,
+      "canonicalIdentifiersPseudonymized": true,
+      "secretsProjected": false,
+      "sourceTopologyProjected": false,
+      "purposeBound": true
+    },
+    "idempotency": {
+      "header": "x-ekodi-idempotency-key",
+      "retryRequiresManifestOptIn": true,
+      "maxAttempts": 2
+    },
+    "providerDataUse": {
+      "retention": "transient",
+      "trainingAllowed": false,
+      "secondaryUseAllowed": false
+    },
+    "responseLimits": {
+      "maxBytesDefault": 1048576,
+      "maxBytesMax": 2097152
+    },
+    "failureIsolation": {
+      "timeoutRequired": true,
+      "circuitBreaker": "gateway-local-best-effort",
+      "coreServiceMustRemainAvailable": true
+    },
+    "audit": {
+      "requiredFields": [
+        "request_id",
+        "module_id",
+        "capability",
+        "space_id",
+        "service_id",
+        "actor_id",
+        "caller_id",
+        "provider_model",
+        "latency_ms",
+        "storage_status",
+        "guardrail_policy_version",
+        "error_code",
+        "status",
+        "created_at"
+      ]
+    }
+  },
+  "moduleManifestOptional": {
+    "retrySafe": "boolean; default false",
+    "retryMaxAttempts": "integer 1..2; used only when retrySafe=true",
+    "retryBackoffMs": "integer 0..2000",
+    "responseMaxBytes": "integer 1024..2097152",
+    "circuitBreakerThreshold": "integer 2..20",
+    "circuitBreakerCooldownMs": "integer 1000..120000"
+  },
+  "providerExecutionEnvelope": {
+    "required": [
+      "contractVersion",
+      "requestId",
+      "moduleId",
+      "capability",
+      "context",
+      "capabilityGrant",
+      "dataPolicy",
+      "input"
+    ],
+    "capabilityGrantRequired": [
+      "grantId",
+      "audience",
+      "capability",
+      "issuedAt",
+      "expiresAt",
+      "singleUseIntent",
+      "ekodiApiToken",
+      "attestedBy"
+    ],
+    "dataPolicyRequired": [
+      "retention",
+      "trainingAllowed",
+      "secondaryUseAllowed",
+      "canonicalStorageOwnedByEkodi"
+    ]
+  }
 }

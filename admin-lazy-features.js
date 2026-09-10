@@ -85,6 +85,8 @@
   }
   function now() { return new Date().toISOString(); }
   function normalize(text) { return String(text || '').toLowerCase().replace(/\s+/g, ' ').trim(); }
+  function displayAddress(domain) { return window.EKODIAdminSurfaceLabels?.label?.(domain) || domain; }
+  function publicAddress(domain, explicit = '') { return window.EKODIAdminSurfaceLabels?.info?.(domain, '', explicit)?.url || explicit || `https://${domain}`; }
   function safeDomain(value) { return SITE_META.some(site => site.domain === value) ? value : 'all'; }
 
   function loadChatState() {
@@ -366,7 +368,7 @@
     if (includeReview) actions.push({ type:'review', label:'Council Review', primary:true });
     if (site) {
       actions.push({ type:'manage', domain:site.domain, label:'Manage' });
-      actions.push({ type:'open', domain:site.domain, url:site.url||'', label:'Open ↗' });
+      actions.push({ type:'open', domain:site.domain, url:publicAddress(site.domain, site.url||''), label:'Open ↗' });
       actions.push({ type:'scope', domain:site.domain, label:'이 사이트로 대화' });
     }
     if (includeDecision) actions.push({ type:'decision', label:'Decision Gate', primary:true });
@@ -380,7 +382,7 @@
     const offline = overview?.summary?.offline ?? 0;
     const issues = overviewIssues(overview);
     let text = `현재 자동점검 대상 ${total}개 중 정상 ${online}, 지연 ${degraded}, 장애 ${offline}입니다.`;
-    if (issues.length) text += `\n\n확인이 필요한 항목: ${issues.slice(0, 6).map(item => `${item.name}(${item.domain})`).join(', ')}`;
+    if (issues.length) text += `\n\n확인이 필요한 항목: ${issues.slice(0, 6).map(item => `${item.name}(${displayAddress(item.domain)})`).join(', ')}`;
     else text += '\n\n현재 실측 기준 즉시 대응이 필요한 장애는 보이지 않습니다.';
     return text;
   }
@@ -406,7 +408,7 @@
       const status = site ? statusFor(site, overview) : null;
       return {
         role:'assistant', classification:'DECISION',
-        content:`이 요청은 “${risk}” 범주라 자동 실행하지 않습니다.${site ? `\n\n대상: ${site.name} · ${site.domain}${status ? `\n현재 상태: ${status.label} · ${status.note}` : ''}` : ''}\n\nChief AI 권고: 영향범위와 되돌리기 방법을 먼저 확정한 뒤 Decision Gate에서 승인하도록 하겠습니다.`,
+        content:`이 요청은 “${risk}” 범주라 자동 실행하지 않습니다.${site ? `\n\n대상: ${site.name} · ${displayAddress(site.domain)}${status ? `\n현재 상태: ${status.label} · ${status.note}` : ''}` : ''}\n\nChief AI 권고: 영향범위와 되돌리기 방법을 먼저 확정한 뒤 Decision Gate에서 승인하도록 하겠습니다.`,
         council:councilFor(site, status, input, 'DECISION'),
         actions:actionSet(site, { includeReview:true, includeDecision:true }),
       };
@@ -470,7 +472,7 @@
       if (site) {
         const status = statusFor(site, overview);
         const service = status?.service;
-        let content = `${site.name} · ${site.domain}\n현재 상태: ${status?.label || '확인 대기'}${status?.note ? ` · ${status.note}` : ''}`;
+        let content = `${site.name} · ${displayAddress(site.domain)}\n현재 상태: ${status?.label || '확인 대기'}${status?.note ? ` · ${status.note}` : ''}`;
         if (service?.stats24h) content += `\n24시간 가용률: ${service.stats24h.availabilityPercent ?? '—'}% · 평균응답 ${service.stats24h.averageResponseTime ?? '—'}ms`;
         if (!service) content += '\n\n이 사이트는 AI Ops에는 등록되어 있지만 Control API 실시간 점검 레지스트리에는 아직 직접 연결되지 않았습니다. 상태판에서는 “연결 대기”로 표시합니다.';
         return {
@@ -626,7 +628,7 @@
     const select = section.querySelector('#aiChiefChatScope');
     const all = document.createElement('option'); all.value = 'all'; all.textContent = '전체 EKODI'; select.append(all);
     SITE_META.forEach(site => {
-      const option = document.createElement('option'); option.value = site.domain; option.textContent = `${site.name} · ${site.domain}`; select.append(option);
+      const option = document.createElement('option'); option.value = site.domain; option.textContent = `${site.name} · ${displayAddress(site.domain)}`; select.append(option);
     });
     select.value = state.scope;
     select.addEventListener('change', () => setScope(select.value));

@@ -28,3 +28,8 @@ test('mall primary groups keep detail routes in the upper secondary navigation',
   assert.match(script,/id:'ai-sales'.*\['growth','AI 자동영업'\].*\['analytics','성과·학습'\]/s);
   assert.doesNotMatch(script,/\[null,'상품'\]/);
 });
+
+test('workspace admin keeps the desktop secondary menu at the upper right', async()=>{
+  const css=await (await workspaceAdminCss()).text();
+  assert.match(css,/\.admin-subnav\{[^}]*justify-content:flex-end/);
+});
