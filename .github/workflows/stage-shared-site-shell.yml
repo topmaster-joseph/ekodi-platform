@@ -32,7 +32,8 @@ on:
       - 'discovery-layer.js'
       - 'scripts/discovery-build.mjs'
       - 'scripts/ccm-mr-postbuild.mjs'
-      - 'test/discovery-layer.test.mjs test/ekodi-mall-owned-geo.test.mjs'
+      - 'test/discovery-layer.test.mjs'
+      - 'test/ekodi-mall-owned-geo.test.mjs'
       - 'scripts/build.mjs'
       - '.github/workflows/stage-shared-site-shell.yml'
 
@@ -81,7 +82,7 @@ jobs:
           node --check ekodi-shell-injector.js
           node --check discovery-layer.js
           node --check scripts/discovery-build.mjs
-          node --test test/marketing-canonical-projection.test.mjs test/insurance-public-route.test.mjs test/public-workspace-gateway.test.mjs test/store-public-gateway.test.mjs test/store-portfolio-admin.test.mjs test/discovery-layer.test.mjs
+          node --test test/marketing-canonical-projection.test.mjs test/insurance-public-route.test.mjs test/public-workspace-gateway.test.mjs test/store-public-gateway.test.mjs test/store-portfolio-admin.test.mjs test/discovery-layer.test.mjs test/ekodi-mall-owned-geo.test.mjs
           npm run build
           test -f dist/insurance/index.html
           test -f dist/insurance/advisor.html
