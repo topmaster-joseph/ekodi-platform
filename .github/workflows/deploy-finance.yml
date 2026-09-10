@@ -8,6 +8,8 @@ on:
         required: false
         default: false
         type: boolean
+  issues:
+    types: [labeled]
   pull_request:
     paths:
       - 'finance-worker.js'
@@ -60,10 +62,26 @@ env:
 
 jobs:
   validate:
+    if: >-
+      github.event_name != 'issues' ||
+      (github.event.issue.user.login == 'topmaster-joseph' &&
+       github.event.label.name == 'finance-release' &&
+       startsWith(github.event.issue.title, '[EKODI RELEASE] Finance production '))
     runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
       - uses: actions/checkout@v7
+      - name: Validate audited issue release intent
+        if: github.event_name == 'issues'
+        shell: bash
+        env:
+          RELEASE_BODY: ${{ github.event.issue.body }}
+          RELEASE_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          printf '%s\n' "$RELEASE_BODY" | grep -Fxq 'service: finance-api'
+          printf '%s\n' "$RELEASE_BODY" | grep -Fxq 'confirmation: PROMOTE_EKODI_FINANCE_PRODUCTION'
+          printf '%s\n' "$RELEASE_BODY" | grep -Fxq "target_sha: $RELEASE_SHA"
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
@@ -105,6 +123,17 @@ jobs:
       CLOUDFLARE_ACCOUNT_ID: 46aad4738793fbaca88574832a2ccc0f
     steps:
       - uses: actions/checkout@v7
+      - name: Validate audited issue release intent
+        if: github.event_name == 'issues'
+        shell: bash
+        env:
+          RELEASE_BODY: ${{ github.event.issue.body }}
+          RELEASE_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          printf '%s\n' "$RELEASE_BODY" | grep -Fxq 'service: finance-api'
+          printf '%s\n' "$RELEASE_BODY" | grep -Fxq 'confirmation: PROMOTE_EKODI_FINANCE_PRODUCTION'
+          printf '%s\n' "$RELEASE_BODY" | grep -Fxq "target_sha: $RELEASE_SHA"
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
@@ -200,7 +229,9 @@ jobs:
 
   production:
     needs: [validate, staging]
-    if: github.event_name == 'workflow_dispatch' && inputs.promote_production == true && github.ref == 'refs/heads/main'
+    if: >-
+      (github.event_name == 'workflow_dispatch' && inputs.promote_production == true && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'issues' && github.event.issue.user.login == 'topmaster-joseph' && github.event.label.name == 'finance-release' && startsWith(github.event.issue.title, '[EKODI RELEASE] Finance production '))
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment: production
@@ -212,6 +243,17 @@ jobs:
       NTS_BUSINESS_STATUS_SERVICE_KEY: ${{ secrets.NTS_BUSINESS_STATUS_SERVICE_KEY }}
     steps:
       - uses: actions/checkout@v7
+      - name: Validate audited issue release intent
+        if: github.event_name == 'issues'
+        shell: bash
+        env:
+          RELEASE_BODY: ${{ github.event.issue.body }}
+          RELEASE_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          printf '%s\n' "$RELEASE_BODY" | grep -Fxq 'service: finance-api'
+          printf '%s\n' "$RELEASE_BODY" | grep -Fxq 'confirmation: PROMOTE_EKODI_FINANCE_PRODUCTION'
+          printf '%s\n' "$RELEASE_BODY" | grep -Fxq "target_sha: $RELEASE_SHA"
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
