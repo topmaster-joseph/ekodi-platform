@@ -75,6 +75,10 @@ test('Mall production verifier preserves Verification Ops cache safety checks', 
   assert.match(workflow, /cache-control: no-store/);
   assert.match(workflow, /x-robots-tag: noindex, nofollow, noarchive/);
   assert.match(workflow, /verificationOpsCacheBoundary=verified/);
+  assert.match(workflow, /verification_ready=false/);
+  assert.match(workflow, /seq 1 12/);
+  assert.match(workflow, /Verification Ops final HTML pending/);
+  assert.match(workflow, /security contract failed after propagation wait/);
   assert.match(workflow, /api\/internal\/verification\/launch-readiness/);
   assert.match(workflow, /launchReadinessAuthBoundary=verified/);
 });
