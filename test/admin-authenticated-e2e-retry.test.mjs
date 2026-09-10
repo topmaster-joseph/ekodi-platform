@@ -5,6 +5,7 @@ import { readFile } from 'node:fs/promises';
 const retrySource = () => readFile(new URL('../scripts/admin-authenticated-e2e-retry.mjs', import.meta.url), 'utf8');
 const workerSource = () => readFile(new URL('../scripts/admin-authenticated-e2e-menu-worker.mjs', import.meta.url), 'utf8');
 const workflowSource = () => readFile(new URL('../.github/workflows/admin-authenticated-e2e.yml', import.meta.url), 'utf8');
+const productionWorkflowSource = () => readFile(new URL('../.github/workflows/verify-admin-authenticated-production-e2e.yml', import.meta.url), 'utf8');
 const sharedWorkflowSource = () => readFile(new URL('../.github/workflows/deploy-site-core.yml', import.meta.url), 'utf8');
 
 test('authenticated Admin E2E isolates every menu in a fresh Chromium process and retries only that menu once', async () => {
@@ -43,13 +44,18 @@ test('Shared Site release uses the same isolated authenticated Admin verifier', 
   assert.doesNotMatch(workflow, /run: node scripts\/admin-authenticated-e2e\.mjs\s*$/m);
 });
 
-test('isolated Tax handoff verifies navigation intent and live destination without depending on Chromium load completion', async () => {
+test('isolated Tax E2E verifies authenticated handoff and value-preserving supplier save in production verification', async () => {
   const source = await workerSource();
-  assert.match(source, /page\.waitForRequest/);
+  const productionWorkflow = await productionWorkflowSource();
   assert.match(source, /destination\.hostname === 'tax\.ekodi\.kr'/);
-  assert.match(source, /AbortSignal\.timeout\(10_000\)/);
-  assert.match(source, /destination health probe returned HTTP/);
-  assert.doesNotMatch(source, /verifyTax[\s\S]{0,500}page\.waitForURL/);
+  assert.match(source, /page\.waitForURL/);
+  assert.match(source, /sessionStorage\.getItem\('ekodi-auth-token'\)/);
+  assert.match(source, /authenticated supplier read failed HTTP/);
+  assert.match(source, /response\.request\(\)\.method\(\) === 'PUT'/);
+  assert.match(source, /supplier UI save returned HTTP/);
+  assert.match(source, /value-preserving save changed fields/);
+  assert.match(source, /persistenceVerified:true/);
+  assert.match(productionWorkflow, /E2E_TAX_WRITE_VERIFY: '1'/);
 });
 
 test('isolated renderer treats aria-busy on the panel root as active work', async () => {

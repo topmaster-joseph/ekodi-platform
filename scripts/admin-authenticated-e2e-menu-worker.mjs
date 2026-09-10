@@ -134,6 +134,7 @@ async function verifyStorage(tab, alreadyActive, started) {
 
 async function verifyTax(tab, alreadyActive, started) {
   stage('tax-handoff');
+  const writeVerification = process.env.E2E_TAX_WRITE_VERIFY === '1';
   const navigation = page.waitForRequest(request => {
     try {
       const destination = new URL(request.url());
@@ -144,9 +145,77 @@ async function verifyTax(tab, alreadyActive, started) {
   const request = await navigation;
   const destination = new URL(request.url());
   if (destination.hostname !== 'tax.ekodi.kr') throw new Error(`tax: wrong handoff destination ${destination.hostname}`);
-  const probe = await fetch(destination.origin + '/', { redirect: 'manual', signal: AbortSignal.timeout(10_000) });
-  if (probe.status < 200 || probe.status >= 400) throw new Error(`tax: destination health probe returned HTTP ${probe.status}`);
-  results.push({ id: menuId, group, ok: true, durationMs: Date.now() - started, destination: destination.origin + '/', destinationStatus: probe.status });
+  await page.waitForURL(url => url.hostname === 'tax.ekodi.kr', { waitUntil:'domcontentloaded', timeout:15_000 });
+  stage('tax-session-handoff');
+  await page.waitForFunction(() => Boolean(sessionStorage.getItem('ekodi-auth-token')) && location.hash === '', null, { timeout:15_000 });
+  await page.waitForFunction(() => document.querySelector('#notice')?.classList.contains('good'), null, { timeout:15_000 });
+
+  async function readProfile(profileId) {
+    return page.evaluate(async id => {
+      const auth = sessionStorage.getItem('ekodi-auth-token') || '';
+      const response = await fetch('/api/finance/tax-profiles?organizationId=EKODIBIZ', {
+        headers:{ accept:'application/json', authorization:`Bearer ${auth}` }, cache:'no-store'
+      });
+      const payload = await response.json().catch(() => ({}));
+      const profile = Array.isArray(payload.profiles) ? payload.profiles.find(item => Number(item.id) === Number(id)) : null;
+      return { status:response.status, profile };
+    }, profileId);
+  }
+  const edit = page.locator('button[data-edit-supplier]').first();
+  await edit.waitFor({ state:'visible', timeout:10_000 });
+  const profileId = Number(await edit.getAttribute('data-edit-supplier'));
+  if (!Number.isInteger(profileId) || profileId <= 0) throw new Error('tax: invalid supplier profile id');
+  const before = await readProfile(profileId);
+  if (before.status !== 200 || !before.profile) throw new Error(`tax: authenticated supplier read failed HTTP ${before.status}`);
+
+  if (!writeVerification) {
+    results.push({
+      id:menuId, group, ok:true, durationMs:Date.now()-started,
+      destination:'https://tax.ekodi.kr/', tokenHandoffVerified:true,
+      authenticatedReadStatus:before.status, supplierProfileId:profileId,
+      supplierSaveVerification:'not-requested'
+    });
+    return;
+  }
+
+  stage('tax-supplier-edit');
+  await clickFast(edit);
+  const modal = page.locator('#modal');
+  await modal.waitFor({ state:'visible', timeout:8_000 });
+  const modalTitle = String(await page.locator('#modalTitle').textContent() || '').trim();
+  if (modalTitle !== '공급자 수정') throw new Error(`tax: supplier edit modal mismatch: ${modalTitle}`);
+  const save = page.locator('#supplierSave');
+  await save.waitFor({ state:'visible', timeout:5_000 });
+  const writeResponse = page.waitForResponse(response => {
+    try {
+      const url = new URL(response.url());
+      return response.request().method() === 'PUT' && url.pathname === `/api/finance/tax-profiles/${profileId}`;
+    } catch { return false; }
+  }, { timeout:12_000 });
+  await save.click({ noWaitAfter:true, timeout:5_000 });
+  const response = await writeResponse;
+  if (response.status() !== 200) {
+    const payload = await response.text().catch(() => '');
+    throw new Error(`tax: supplier UI save returned HTTP ${response.status()} ${payload.slice(0,180)}`);
+  }
+  await modal.waitFor({ state:'hidden', timeout:10_000 });
+  await page.waitForFunction(() => document.querySelector('#notice')?.classList.contains('good'), null, { timeout:10_000 });
+
+  stage('tax-supplier-readback');
+  const after = await readProfile(profileId);
+  if (after.status !== 200 || !after.profile) throw new Error(`tax: supplier readback failed HTTP ${after.status}`);
+  const fields = ['profileName','corpNum','taxRegId','corpName','ceoName','addr','bizType','bizClass','contactName','tel','email','isDefault','active'];
+  const changed = fields.filter(key => JSON.stringify(before.profile[key] ?? null) !== JSON.stringify(after.profile[key] ?? null));
+  if (changed.length) throw new Error(`tax: value-preserving save changed fields: ${changed.join(',')}`);
+
+  results.push({
+    id:menuId, group, ok:true, durationMs:Date.now()-started,
+    destination:'https://tax.ekodi.kr/', tokenHandoffVerified:true,
+    authenticatedReadStatus:before.status, supplierProfileId:profileId,
+    supplierSaveVerification:'passed', writeStatus:response.status(),
+    persistenceReadbackStatus:after.status, persistenceVerified:true,
+    comparedFieldCount:fields.length
+  });
 }
 
 async function verifyPublicSiteControls(tab, alreadyActive, started) {
