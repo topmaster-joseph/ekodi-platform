@@ -5,6 +5,10 @@ on:
   pull_request:
     paths:
       - 'site-worker.js'
+      - 'mall-owned-geo.js'
+      - 'affiliate-control.js'
+      - 'mall-promotion-automation.js'
+      - 'test/ekodi-mall-owned-geo.test.mjs'
       - 'site-shell-worker.js'
       - 'platform-router-worker.js'
       - 'platform-router-entry-worker.js'
@@ -28,7 +32,7 @@ on:
       - 'discovery-layer.js'
       - 'scripts/discovery-build.mjs'
       - 'scripts/ccm-mr-postbuild.mjs'
-      - 'test/discovery-layer.test.mjs'
+      - 'test/discovery-layer.test.mjs test/ekodi-mall-owned-geo.test.mjs'
       - 'scripts/build.mjs'
       - '.github/workflows/stage-shared-site-shell.yml'
 
@@ -62,6 +66,9 @@ jobs:
         run: |
           set -euo pipefail
           node --check site-worker.js
+          node --check mall-owned-geo.js
+          node --check affiliate-control.js
+          node --check mall-promotion-automation.js
           node --check site-shell-worker.js
           node --check platform-router-worker.js
           node --check platform-router-entry-worker.js

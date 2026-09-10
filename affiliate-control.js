@@ -225,6 +225,22 @@ async function publicProducts(request, env, url) {
   return json({ storefront: PUBLIC_STOREFRONT_SLUG, providerKey: marketplaceProducts.length ? 'multi_affiliate' : 'coupang_partners', providers, automationStatus, disclosureText: combinedDisclosure, catalogMode: 'product_identity_v1', productIdentities, products }, 200, publicHeaders(request));
 }
 
+async function publicProductDetail(request, env, url) {
+  const match = url.pathname.match(/^\/api\/affiliate\/public\/product\/(\d+)$/);
+  if (!match || request.method !== 'GET') return null;
+  const storefront = cleanText(url.searchParams.get('storefront') || PUBLIC_STOREFRONT_SLUG, 80);
+  if (storefront !== PUBLIC_STOREFRONT_SLUG) return json({ error: '지원하지 않는 공개 쇼핑몰입니다.' }, 404, publicHeaders(request));
+  const row = await env.DB.prepare("SELECT id, product_id, product_name, price_krw, image_url, category, is_rocket, is_free_shipping, selected_at FROM affiliate_storefront_products WHERE id = ? AND account_id = ? AND storefront_slug = ? AND status = 'active' LIMIT 1")
+    .bind(Number(match[1]), DEFAULT_ACCOUNT_ID, PUBLIC_STOREFRONT_SLUG).first().catch(() => null);
+  if (!row) return json({ error: '상품을 찾을 수 없습니다.' }, 404, publicHeaders(request));
+  const recommendedMerchants = await recommendedMerchantKeys(env.DB);
+  if (!recommendedMerchants.has('coupang_partners')) return json({ error: '상품을 찾을 수 없습니다.' }, 404, publicHeaders(request));
+  let disclosureText = DEFAULT_DISCLOSURE;
+  try { const account = await env.DB.prepare('SELECT disclosure_text FROM affiliate_accounts WHERE id = ? AND enabled = 1').bind(DEFAULT_ACCOUNT_ID).first(); disclosureText = cleanText(account?.disclosure_text, 1000) || DEFAULT_DISCLOSURE; } catch {}
+  const product = { ...publicProductView(request, row), recommendationEligible: true, affiliateMode: 'direct', marketCountry: 'KR', settlementCurrency: 'KRW' };
+  return json({ storefront: PUBLIC_STOREFRONT_SLUG, disclosureText, product }, 200, publicHeaders(request));
+}
+
 function coupangImageUrl(value) {
   const url = httpsUrl(value);
   if (!url) return '';
@@ -553,6 +569,8 @@ export async function handleAffiliateRequest(request, env) {
   if (!url.pathname.startsWith(PREFIX)) return null;
   if (!env.DB) return json({ error: '제휴마케팅 데이터베이스 연결이 설정되지 않았습니다.' }, 503);
   if (request.method === 'GET' && url.pathname === `${PREFIX}/public/products`) return publicProducts(request, env, url);
+  const publicProductResponse = await publicProductDetail(request, env, url);
+  if (publicProductResponse) return publicProductResponse;
   const imageResponse = await publicImage(request, env, url);
   if (imageResponse) return imageResponse;
   const clickResponse = await publicClick(request, env, url);
