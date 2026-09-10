@@ -258,20 +258,21 @@ async function verifyRegistryHref(tab, started) {
   if (!definition?.href || definition.adminHandoff) throw new Error(`${menuId}: direct registry href contract missing`);
   const expected = new URL(definition.href);
   stage('registry-handoff');
-  const navigation = page.waitForResponse(response => {
+  const navigation = page.waitForRequest(request => {
     try {
-      const request = response.request();
-      const destination = new URL(response.url());
+      const destination = new URL(request.url());
       return request.isNavigationRequest() && request.frame() === page.mainFrame() && destination.origin === expected.origin && destination.pathname.replace(/\/$/, '') === expected.pathname.replace(/\/$/, '');
     } catch { return false; }
   }, { timeout: 10_000 });
   await clickFast(tab);
-  const response = await navigation;
-  if (response.status() < 200 || response.status() >= 400) throw new Error(`${menuId}: destination returned HTTP ${response.status()}`);
-  const html = await response.text();
+  const request = await navigation;
+  const destination = new URL(request.url());
+  const probe = await fetch(expected.href, { redirect: 'manual', signal: AbortSignal.timeout(10_000) });
+  if (probe.status < 200 || probe.status >= 400) throw new Error(`${menuId}: destination returned HTTP ${probe.status}`);
+  const html = await probe.text();
   if (html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().length < 4) throw new Error(`${menuId}: destination did not render meaningful content`);
-  if (menuId === 'cmpmyi' && (response.headers()['x-ekodi-route'] !== 'cmpmyi-store-portfolio-admin' || !html.includes('통합 매장 운영'))) throw new Error('cmpmyi: dedicated portfolio admin contract missing');
-  results.push({ id:menuId, group, ok:true, durationMs:Date.now()-started, destination:response.url(), destinationStatus:response.status(), route:response.headers()['x-ekodi-route']||'' });
+  if (menuId === 'cmpmyi' && (probe.headers.get('x-ekodi-route') !== 'cmpmyi-store-portfolio-admin' || !html.includes('통합 매장 운영'))) throw new Error('cmpmyi: dedicated portfolio admin contract missing');
+  results.push({ id:menuId, group, ok:true, durationMs:Date.now()-started, destination:destination.href, destinationStatus:probe.status, route:probe.headers.get('x-ekodi-route')||'' });
 }
 
 async function verifyNormal(tab, alreadyActive, started) {

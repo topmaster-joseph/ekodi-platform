@@ -11,8 +11,9 @@ test('authenticated Admin E2E verifies direct registry href menus as real naviga
   assert.equal(cmpmyi?.adminHandoff, undefined);
   const source = await workerSource();
   assert.match(source, /async function verifyRegistryHref\(tab, started\)/);
-  assert.match(source, /page\.waitForResponse\(response =>/);
+  assert.match(source, /page\.waitForRequest\(request =>/);
   assert.match(source, /request\.isNavigationRequest\(\)/);
+  assert.match(source, /fetch\(expected\.href, \{ redirect: 'manual'/);
   assert.match(source, /x-ekodi-route.*cmpmyi-store-portfolio-admin/);
   assert.match(source, /html\.includes\('통합 매장 운영'\)/);
   assert.match(source, /getAdminMenuItem\(menuId\)\?\.href && !getAdminMenuItem\(menuId\)\?\.adminHandoff/);
