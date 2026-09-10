@@ -158,7 +158,7 @@ jobs:
           set -euo pipefail
           for attempt in $(seq 1 30); do
             shell_code=$(curl -sS -o /tmp/life-manifest.json -w '%{http_code}' --max-time 15 'https://shell.ekodi.kr/manifest.json' || true)
-            auth_code=$(curl -sS -o /tmp/life-auth.js -w '%{http_code}' --max-time 15 'https://auth.ekodi.kr/client-auth.js' || true)
+            auth_code=$(curl -sS -o /tmp/life-auth.js -w '%{http_code}' --max-time 15 'https://ekodi.kr/auth/client-auth.js' || true)
             if [[ "$shell_code" == '200' && "$auth_code" == '200' ]] \
               && grep -Fq '"id":"life"' /tmp/life-manifest.json \
               && grep -Fq '"authMode":"client"' /tmp/life-manifest.json \
@@ -217,7 +217,7 @@ jobs:
               && grep -Fq '"code":"LIFE_AUTH_REQUIRED"' /tmp/life-guest.json \
               && grep -Eiq '^x-ekodi-shell: v2' /tmp/life-h \
               && grep -Eiq '^location: https://admin\.ekodi\.kr/#life-ai' /tmp/life-admin-h \
-              && grep -Eiq '^location: https://my\.ekodi\.kr/journey/\?source=life' /tmp/life-my-h; then
+              && grep -Eiq '^location: https://ekodi\.kr/my/journey/\?source=life' /tmp/life-my-h; then
               echo 'Life AI production verified.'
               exit 0
             fi
