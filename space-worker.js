@@ -124,7 +124,7 @@ export default{
       const target=new URL('/yogurt'+url.search,'https://ekodi.kr');
       return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-ekodi-workspace-alias':'yogurtpurple->yogurt'}});
     }
-    if(legacyAlias&&(url.pathname==='/'||url.pathname===''||url.pathname==='/index.html'))return new Response(null,{status:308,headers:{location:'https://my.ekodi.kr/','cache-control':'no-store','x-ekodi-legacy-alias':'space.ekodi.kr'}});
+    if(legacyAlias&&(url.pathname==='/'||url.pathname===''||url.pathname==='/index.html'))return new Response(null,{status:308,headers:{location:'https://ekodi.kr/my/','cache-control':'no-store','x-ekodi-legacy-alias':'space.ekodi.kr'}});
     if(url.pathname==='/'||url.pathname===''||url.pathname==='/index.html')return appShell(request,env,'space-home');
     if(isPublicWorkspacePath(url.pathname)){
       if(legacyAlias&&url.pathname!=='/deployment-probe')return canonicalRedirect();
