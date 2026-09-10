@@ -271,6 +271,12 @@ function activateSection(nav, section) {
   if (!section) return false;
   const definition = getAdminMenuItem(section);
   const fallback = [...navItems(nav)].find(item => adminSidebarSectionOf(item) === section);
+  if (definition?.href && definition.adminHandoff !== true) {
+    const destination = new URL(definition.href, window.location.origin);
+    if (destination.protocol !== 'https:') return false;
+    window.open(destination.href, '_blank', 'noopener');
+    return true;
+  }
   if (definition?.href && fallback) {
     fallback.click();
     return true;
