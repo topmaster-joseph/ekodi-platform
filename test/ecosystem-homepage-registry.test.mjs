@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
-import { CATEGORY_DEFINITIONS, STATUS_DEFINITIONS, loadHomepageServices, renderServiceCards } from '../scripts/ecosystem-registry.mjs';
+import { CATEGORY_DEFINITIONS, STATUS_DEFINITIONS, loadHomepageServices, loadHomepageStatusCounts, renderServiceCards } from '../scripts/ecosystem-registry.mjs';
 
 const homepage = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 const releaseManifest = JSON.parse(await readFile(new URL('../deploy/manifests/shared-site.worker.json', import.meta.url), 'utf8'));
@@ -94,4 +94,13 @@ test('guarded release smoke markers stay aligned with the actual EKODI homepage'
   }
   assert.ok(rootCheck.expect.includes('원하는 일, 바로 시작하세요'));
   assert.ok(rootCheck.expect.includes('필요한 길만 가볍게 연결합니다.'));
+});
+
+test('homepage status satellites are registry-derived rather than hardcoded zeroes', async () => {
+  const counts = await loadHomepageStatusCounts();
+  for (const status of ['live', 'beta']) {
+    const expected = registry.services.filter(service => service.homepage === true && service.productionVerified === true && service.status === status).length;
+    assert.equal(counts[status], expected);
+    assert.ok(counts[status] > 0, `${status} must reflect at least one verified homepage service`);
+  }
 });

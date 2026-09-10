@@ -98,7 +98,7 @@ jobs:
           for attempt in $(seq 1 24); do
             if verify 'https://marketing.ekodi.kr/church/' 'data-ekodi-church-marketing-ai' /tmp/church.html \
               && verify 'https://marketing.ekodi.kr/church/app.js' 'ekodi-church-marketing-drafts-v1' /tmp/church-app.js \
-              && verify 'https://my.ekodi.kr/' 'church-marketing-ai.js?v=20260827-church-marketing-1' /tmp/my.html \
+              && verify 'https://ekodi.kr/my/' 'church-marketing-ai.js?v=20260827-church-marketing-1' /tmp/my.html \
               && verify 'https://marketing.ekodi.kr/' 'id="freeTrialForm"' /tmp/marketing.html \
               && verify 'https://jadam.ekodi.kr/' 'id="googleCustomerAuth"' /tmp/jadam.html \
               && verify 'https://pizzamaru.ekodi.kr/' 'id="googleCustomerAuth"' /tmp/pizza.html \

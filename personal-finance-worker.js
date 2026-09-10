@@ -1,5 +1,5 @@
 import {handlePersonalFinanceAdminControl,personalFinanceFeatureGate,readPersonalFinanceServiceConfig} from './personal-finance-service-control.js';
-const USER_ORIGINS=new Set(['https://my.ekodi.kr']);
+const USER_ORIGINS=new Set(['https://ekodi.kr','https://my.ekodi.kr']);
 const ADMIN_ORIGINS=new Set(['https://admin.ekodi.kr']);
 const ALLOWED_ORIGINS=new Set([...USER_ORIGINS,...ADMIN_ORIGINS]);
 const ACCOUNT_TYPES=new Set(['CASH','BANK','CARD','SAVINGS','INVESTMENT','LOAN','INSURANCE','OTHER']);
