@@ -23,6 +23,7 @@
       <article><small>BOOK CONTRACT</small><strong>에코디서점</strong><span>책 메타데이터와 카탈로그는 Books의 명시적 서비스 계약으로 연결</span></article>
       <article><small>LOCAL OPERATIONS</small><strong>Service / Site Admin</strong><span>교회 · 상인회 · 기관 · 단체 등 개별 운영공간은 해당 관리자 역할과 권한 범위에서 자기 모임을 관리</span></article>
       <article><small>PLATFORM OVERSIGHT</small><strong>Super Administrator</strong><span>Core · 인증 · 보안 · 감사 · 관찰 · 공통 가드레일을 중앙 관리하며 서비스 로컬 권한을 자동 승계하지 않음</span></article>
+      <article><small>MINISTRY REPORTS</small><strong>Church Pastor Admin</strong><span>교회 사역보고는 교회 목회자 관리자에서 관리</span></article>
       <article><small>BOUNDARY</small><strong>Community owns participation</strong><span>Circle · 회원 · 추천 · 토론 운영은 Community가 소유하고, 교회 등은 소비자·호스트 Workspace로 참여</span></article>
     </div>
     <p class="community-admin-note">서비스 상태·배포·보안 진단은 중앙 운영센터가 관찰하지만, 외부 제공 서비스의 콘텐츠·모임·참여·운영 설정은 각 서비스/사이트 관리자 화면을 기준으로 관리합니다.</p>`;
