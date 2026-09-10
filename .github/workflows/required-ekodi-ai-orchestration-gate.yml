@@ -1,0 +1,37 @@
+name: Required EKODI AI Orchestration Gate
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  orchestration-gate:
+    name: EKODI AI Orchestration Gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate canonical orchestration contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s AI_DEVELOPMENT_POLICY.md
+          test -s config/ai-development-completion-policy.json
+          test -s scripts/validate-ai-development-completion-policy.mjs
+          test -s scripts/ekodi-task-start.mjs
+          node --check scripts/ekodi-task-start.mjs
+          node --check scripts/validate-ai-development-completion-policy.mjs
+          node scripts/validate-ai-development-completion-policy.mjs
+      - name: Enforce guarded production path
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q 'central pipeline' AI_DEVELOPMENT_POLICY.md
+          grep -q 'guarded deployment workflow' AI_DEVELOPMENT_POLICY.md
+          grep -q 'not proof of production completion' AI_DEVELOPMENT_POLICY.md
