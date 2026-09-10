@@ -6,8 +6,8 @@ const workflow = await readFile(new URL('../.github/workflows/verify-ekodi-mall-
 const manifestText = await readFile(new URL('../deploy/manifests/shared-site.worker.json', import.meta.url), 'utf8');
 const manifest = JSON.parse(manifestText);
 
-test('Mall production verifier follows both canonical Mall deployment owners', () => {
-  assert.match(workflow, /workflows: \['EKODI Mall \u00B7 Stage and Deploy', 'Deploy EKODI Shared Site Core'\]/);
+test('Mall production verifier follows all canonical Mall channel deployment owners', () => {
+  assert.match(workflow, /workflows: \['EKODI Mall \u00B7 Stage and Deploy', 'Deploy EKODI Shared Site Core', 'Deploy Marketing Publishing', 'Deploy Marketing Growth Connector'\]/);
   assert.match(workflow, /workflow_run:/);
   assert.match(workflow, /types: \[completed\]/);
 });

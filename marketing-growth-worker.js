@@ -234,12 +234,18 @@ async function upsertConnection(env, subject, {provider,resourceType,externalId,
     .bind(subject.type,subject.key,provider,resourceType,externalId).first();
 }
 async function upsertPublishChannel(env, subject, {provider,channelType,displayName,externalId,connectionId}) {
-  const now = nowIso();
+  const now=nowIso(),mallSubject=subject.type==='tenant'&&subject.key==='ekodi-biz';
+  const current=await env.DB.prepare('SELECT status,config_json FROM marketing_publish_channels WHERE subject_type=? AND subject_key=? AND provider=? AND channel_type=? AND external_account_id=?').bind(subject.type,subject.key,provider,channelType,externalId).first();
+  const defaults=mallSubject?{autoPublishEnabled:['facebook','instagram','threads'].includes(provider),maxPostsPerDay:1,minHoursBetweenPosts:6,publishWindowStart:'08:00',publishWindowEnd:'22:00',timezone:'Asia/Seoul',maxAttempts:5}:{};
+  const config={...defaults,...safeParse(current?.config_json,{}),credentialMode:'oauth-vault',oauthConnectionId:connectionId};
+  const auto=config.autoPublishEnabled!==false;
+  const status=auto?'active':'paused';
   await env.DB.prepare(`INSERT INTO marketing_publish_channels(subject_type,subject_key,provider,channel_type,display_name,external_account_id,credential_ref,status,config_json,last_check_at,last_error,created_at,updated_at)
-    VALUES(?,?,?,?,?,?,'','active',?,?,'',?,?)
-    ON CONFLICT(subject_type,subject_key,provider,channel_type,external_account_id) DO UPDATE SET display_name=excluded.display_name,credential_ref='',status='active',config_json=excluded.config_json,last_check_at=excluded.last_check_at,last_error='',updated_at=excluded.updated_at`)
-    .bind(subject.type,subject.key,provider,channelType,displayName,externalId,safeJson({credentialMode:'oauth-vault',oauthConnectionId:connectionId}),now,now,now).run();
+    VALUES(?,?,?,?,?,?,'',?,?,?,'',?,?)
+    ON CONFLICT(subject_type,subject_key,provider,channel_type,external_account_id) DO UPDATE SET display_name=excluded.display_name,credential_ref='',status=excluded.status,config_json=excluded.config_json,last_check_at=excluded.last_check_at,last_error='',updated_at=excluded.updated_at`)
+    .bind(subject.type,subject.key,provider,channelType,displayName,externalId,status,safeJson(config),now,now,now).run();
 }
+
 async function metaCallback(request, env) {
   const url = new URL(request.url);
   const state = await consumeOAuthState(env,url.searchParams.get('state') || '',META_PROVIDER);
@@ -383,7 +389,7 @@ async function disconnectConnection(request, env, identity, subject, connectionI
   if (!row) return json(request,env,{error:'CHANNEL_CONNECTION_NOT_FOUND'},404);
   const now = nowIso();
   await env.DB.prepare(`UPDATE marketing_oauth_connections SET status='revoked',token_ciphertext='',token_expires_at=NULL,last_check_at=?,last_error='disconnected_by_user',updated_at=? WHERE id=? AND subject_type=? AND subject_key=?`).bind(now,now,id,subject.type,subject.key).run();
-  await env.DB.prepare(`UPDATE marketing_publish_channels SET status='disconnected',credential_ref='',last_check_at=?,last_error='connection_revoked',updated_at=? WHERE subject_type=? AND subject_key=? AND provider=? AND external_account_id=?`).bind(now,now,subject.type,subject.key,row.provider,row.external_id).run();
+  await env.DB.prepare(`UPDATE marketing_publish_channels SET status='credentials_required',credential_ref='',last_check_at=?,last_error='connection_revoked',updated_at=? WHERE subject_type=? AND subject_key=? AND provider=? AND external_account_id=?`).bind(now,now,subject.type,subject.key,row.provider,row.external_id).run();
   if (row.provider === 'youtube') {
     await env.DB.prepare(`UPDATE marketing_channel_settings SET sync_status='disconnected',last_sync_error='',updated_by=?,updated_at=? WHERE subject_type=? AND subject_key=? AND provider='youtube' AND external_account_id=?`).bind(identity.email,now,subject.type,subject.key,row.external_id).run();
   }

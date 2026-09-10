@@ -21,7 +21,10 @@ test('worker exposes real scheduled publishing lifecycle and never persists prov
   assert.match(worker, /runScheduler/);
   assert.match(worker, /status='publishing'/);
   assert.match(worker, /status='published'/);
-  assert.match(worker, /status = credential \? 'credentials_required' : retryable \? 'retrying' : 'failed'/);
+  assert.match(worker, /credential=.*credentials_required.*retryable.*retrying.*failed/);
+  assert.match(worker, /publication_deferred/);
+  assert.match(worker, /CHANNEL_DAILY_LIMIT/);
+  assert.match(worker, /CHANNEL_COOLDOWN/);
   assert.match(worker, /credential_ref/);
   assert.doesNotMatch(worker, /INSERT[^\n]+accessToken/i);
   assert.match(worker, /instagram_business/);

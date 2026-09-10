@@ -23,7 +23,7 @@ test('OAuth connection ledger remains multi-resource and supports scoped soft di
   assert.match(worker, /ON CONFLICT\(subject_type,subject_key,provider,resource_type,external_id\)/);
   assert.match(worker, /async function disconnectConnection/);
   assert.match(worker, /status='revoked',token_ciphertext='',token_expires_at=NULL/);
-  assert.match(worker, /marketing_publish_channels SET status='disconnected'/);
+  assert.match(worker, /marketing_publish_channels SET status='credentials_required'/);
   assert.match(worker, /\/v1\\\/connections\\\/\(\\d\+\)\\\/disconnect/);
   assert.match(worker, /reconnectable:true/);
 });
