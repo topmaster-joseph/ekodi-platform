@@ -13,6 +13,9 @@
     "selfAutomationEngine": "ekodi-self-automation-engine.js",
     "contractSandbox": "ekodi-capability-sandbox.js",
     "evolutionIntelligence": "evolution-intelligence-runtime.js",
+    "autonomousHealthFramework": "governance/architecture/autonomous-health-framework.json",
+    "autonomousHealthRuntime": "ekodi-autonomous-health.js",
+    "autonomousHealthTests": "test/ekodi-autonomous-health.test.mjs",
     "guardedReleasePolicy": "AI_DEVELOPMENT_POLICY.md",
     "canonicalEvolutionModel": "governance/architecture/ekodi-evolution-model.json"
   },
@@ -21,7 +24,8 @@
     "architecture_candidate_benchmark_evidence",
     "security_and_authorization_regression_evidence",
     "rollback_and_degraded_operation_evidence",
-    "sustainable_cost_and_capacity_evidence"
+    "sustainable_cost_and_capacity_evidence",
+    "autonomous_health_and_traffic_elasticity_evidence"
   ],
   "authority": "EKODI Platform Super Administrator through C2/C3 constitutional change control"
 }
