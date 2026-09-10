@@ -20,6 +20,11 @@ custom_domain = true
 pattern = "www.ekodi.kr"
 custom_domain = true
 
+# Canonical Mail contact and send API must reach the Shared Site Worker before asset fallback.
+[[routes]]
+pattern = "ekodi.kr/mail*"
+zone_name = "ekodi.kr"
+
 # Canonical private EKODIBIZ trade workspace must outrank public/static trade assets.
 [[routes]]
 pattern = "ekodi.kr/ekodibiz/trade*"
