@@ -57,7 +57,7 @@ test('Assist is current-screen aware, action-first and high-impact actions map t
   assert.match(js,/운영 큐에 기록하고 Admin AI가 응답했습니다/);
 });
 
-test('Assist first path is launcher-only and upgrades through existing secured lazy assets',async()=>{
+test('Assist first path is command-entry-only and upgrades through existing secured lazy assets',async()=>{
   const [postbuild,shell,bootstrap,bootstrapCss]=await Promise.all([
     read('scripts/admin-thin-postbuild.mjs'),read('admin-authenticated-shell.js'),read('admin-assist-bootstrap.js'),read('admin-assist-bootstrap.css')
   ]);
@@ -67,12 +67,16 @@ test('Assist first path is launcher-only and upgrades through existing secured l
   assert.match(postbuild,/admin-assist-dock\.css/);
   assert.match(postbuild,/admin-lazy-features\.js/);
   assert.match(postbuild,/ai-ops-admin\.css/);
-  assert.match(postbuild,/Assist launcher-only first path/);
+  assert.match(postbuild,/centered Assist command entry \+ fixed recent-command workbench verified/);
   assert.doesNotMatch(bootstrap,/requestIdleCallback/);
+  assert.match(bootstrap,/ekodi-assist-bootstrap-form/);
+  assert.match(bootstrap,/에코디 AI에게 물어보세요/);
   assert.match(bootstrap,/button\.addEventListener\('click'/);
   assert.match(bootstrap,/demand\.loadStyle\('ai-ops-admin\.css'\)/);
   assert.match(bootstrap,/demand\.loadScript\('admin-lazy-features\.js'\)/);
   assert.match(bootstrapCss,/\.ekodi-assist-bootstrap/);
+  assert.match(bootstrapCss,/left:var\(--ekodi-assist-left,260px\)/);
+  assert.match(bootstrapCss,/top:50%/);
   assert.doesNotMatch(bootstrap,/\/api\/control\/messenger\/inbox/);
   assert.match(shell,/admin-compact\.js/);
   assert.doesNotMatch(shell,/admin-assist-dock\.js/);
