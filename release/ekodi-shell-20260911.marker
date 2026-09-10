@@ -1,0 +1,4 @@
+﻿EKODI Shell guarded redeploy marker
+date=2026-09-11
+reason=refresh canonical My EKODI fallback header in production
+source_main=829349db2e8dcc5c3fd4080397c5100074494fe2
