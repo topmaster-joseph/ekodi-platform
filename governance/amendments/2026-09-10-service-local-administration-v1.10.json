@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 2,
+  "id": "2026-09-10-service-local-administration",
+  "title": "Adopt service-local administration for externally provided services",
+  "proposer": "topmaster-joseph",
+  "status": "accepted",
+  "approvedAt": "2026-09-10",
+  "approvalRef": "Owner confirmation in ChatGPT conversation on 2026-09-10: core/internal services remain centrally governed while externally provided services and sites use their own administrator surfaces as the operational source of truth.",
+  "reason": "Separate platform-global stewardship from service/workspace-local operations so the Super Administrator governs EKODI Core, internal control services and cross-service guardrails without implicitly absorbing each site's operational authority. Register Community as the external operator of 함께읽기 while allowing Church, merchant associations and other workspaces to operate their own reading circles locally.",
+  "targetVersion": "1.10.0",
+  "previousVersion": "1.10.0",
+  "touches": [
+    {
+      "constitution": "C2",
+      "version": "1.10.0",
+      "path": "config/service-workspace-policy.json"
+    }
+  ],
+  "diff": [
+    {
+      "path": "config/service-workspace-policy.json",
+      "summary": "Add serviceAdministrationPolicy separating platform-global stewardship from service/site operational administration, and register Community as the public operator of 함께읽기 at the intended canonical path /community/reading."
+    }
+  ],
+  "risks": [
+    "Ambiguous UI wording could make platform oversight appear equivalent to a service-local admin role.",
+    "A future route rollout could expose /community/reading before the Community runtime owns the canonical apex path.",
+    "Local administrators could be granted broader workspace authority than intended if membership and capability checks are not preserved."
+  ],
+  "rollback": "Revert the serviceAdministrationPolicy/publicServiceOperators additions and Community admin projection if authority separation, administrator routing, tenant isolation or production admin verification fails. Do not weaken central identity, security, audit or constitutional controls during rollback.",
+  "approvals": [
+    {
+      "role": "owner",
+      "by": "topmaster-joseph"
+    }
+  ],
+  "proposedAt": "2026-09-10T12:32:00Z"
+}
