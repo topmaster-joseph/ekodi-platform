@@ -15,6 +15,7 @@ test('PizzaMaru public storefront is customer-first and management-free',async()
   for(const value of ['피자마루','목포대점','메뉴·가격 보기','전화하기','지도 보기','배달앱 주문','061-453-8295'])assert.match(html,new RegExp(value));
   for(const value of ['운영공간','내 홈','로그아웃','USER OPERATIONS','STORE MASTER','0 / 3','미연결'])assert.doesNotMatch(html,new RegExp(value));
   assert.match(html,/\/_ekodi\/space\/storefront\.css/);
+  assert.match(html,/href="\/pizzamaru\/admin" data-ekodi-admin-entry>관리자 로그인/);
   assert.doesNotMatch(html,/<script/i);
 });
 
@@ -80,7 +81,8 @@ test('Jadam Mokpo storefront is customer-first, brand-specific, and platform-rea
   try{
     const response=await renderStorefrontPage(new Request('https://ekodi.kr/jadam'),{SUPABASE_URL:'https://example.supabase.co',SUPABASE_PUBLISHABLE_KEY:'test'},{profile:{name:'자담치킨 목포대점',theme:'jadam'}},'jadam');
     const html=await response.text();
-    for(const value of ['자담치킨','목포대점','승달산길 37-1','061-453-8295','메뉴·가격 보기','배달앱 주문','땡겨요','배달의민족','요기요','먹깨비','JD'])assert.match(html,new RegExp(value));
+    for(const value of ['자담치킨','목포대점','승달산길 37-1','061-453-8295','메뉴·가격 보기','배달앱 주문','땡겨요','배달의민족','요기요','먹깨비','JD','관리자 로그인'])assert.match(html,new RegExp(value));
+    assert.match(html,/href="\/jadam\/admin" data-ekodi-admin-entry/);
     for(const value of ['USER OPERATIONS','STORE MASTER','로그아웃','운영공간'])assert.doesNotMatch(html,new RegExp(value));
     const css=await storefrontCss().text();
     assert.match(css,/data-store-page=\"jadam\"/);

@@ -30,6 +30,7 @@ function clientMain(POLICY){
   const SUPABASE_URL='https://renzehysxirjilvdxacv.supabase.co';
   const SUPABASE_KEY='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
   const API='https://api.ekodi.kr';
+  const SHARED_SESSION_KEY='ekodi-store-admin-session';
   const SESSION_KEY=IS_PORTFOLIO?'ekodi-cmpmyi-admin-session':'ekodi-store-admin-session:'+SLUG;
   const LEGACY_SESSION_KEYS={jadam:'ekodi-jadam-admin-session',pizzamaru:'ekodi-pizzamaru-admin-session',yogurt:'ekodi-yogurt-admin-session'};
   const GROUPS=[{id:'home',label:'홈',items:[['overview','운영 홈']]},{id:'site',label:'사이트',items:[['site','사용자 사이트']]},{id:'sales',label:'판매',items:[['delivery','배달플랫폼'],['orders','주문 · 채널'],['menu','메뉴 · 가격'],['sales','매출'],['inventory','재고']]},{id:'customers',label:'고객',items:[['customers','고객'],['reviews','리뷰']]},{id:'marketing',label:'마케팅',items:[['marketing','Marketing AI']]},{id:'operations',label:'운영',items:[['work','매장업무'],['connections','연결관리']]},{id:'management',label:'경영',items:[['finance','비용 · 정산']]}];
@@ -61,7 +62,7 @@ function clientMain(POLICY){
 
   function card(label,value,small=''){return `<article class="card"><small>${esc(label)}</small><strong>${esc(value)}</strong><span>${esc(small)}</span></article>`}
   function setState(text,kind=''){const el=$('pageState');el.textContent=text;el.className=`state ${kind}`.trim()}
-  function authUrl(){const u=new URL('https://auth.ekodi.kr/');u.searchParams.set('site','space');u.searchParams.set('return_to',location.origin+location.pathname+location.search);return u.href}
+  function authUrl(){const u=new URL('/auth/',location.origin);u.searchParams.set('site','space');u.searchParams.set('return_to',location.origin+location.pathname+location.search);return u.href}
   function roleCapabilities(role=state.role){return POLICY.roleCapabilities[String(role||'').trim().toLowerCase()]||[]}
   function canSection(key,role=state.role){const capability=SECTION_CAPABILITY[key];const allowed=roleCapabilities(role);return Boolean(capability&&(allowed.includes('*')||allowed.includes(capability)))}
   function activeGroup(){return GROUPS.find(group=>group.items.some(([key])=>key===section))||GROUPS[0]}
@@ -71,9 +72,9 @@ function clientMain(POLICY){
   function applyRole(role){state.role=String(role||'').trim().toLowerCase();const el=$('roleStatus');if(el)el.textContent='\uAD8C\uD55C \u00B7 '+(state.role||'\uD655\uC778 \uC911');renderNav();publishTenantContext()}
   function setup(){$('pageTitle').textContent=page[0];$('pageCopy').textContent=page[1];document.title=page[0]+' \u00B7 '+STORE_NAME;publishTenantContext('')}
   function permissionPanel(){const label=state.role||'\uAD8C\uD55C \uC5C6\uC74C';$('summaryCards').innerHTML=[card('\uC6B4\uC601\uACF5\uAC04',STORE_NAME,'tenant scoped'),card('\uB0B4 \uAD8C\uD55C',label,'\uD5C8\uC6A9 \uC601\uC5ED\uB9CC \uD45C\uC2DC')].join('');$('mainPanel').innerHTML=`<div class="empty"><strong>\uD604\uC7AC \uAD8C\uD55C\uC73C\uB85C \uC774 \uC601\uC5ED\uC744 \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.</strong>${esc(page[0])} \uC601\uC5ED\uC740 \uBD80\uC5EC\uB41C \uC5ED\uD560\uC758 Capability \uBC94\uC704 \uBC16\uC785\uB2C8\uB2E4.<div class="actions"><a class="button primary" href="${ADMIN_BASE}">\uD5C8\uC6A9\uB41C \uC6B4\uC601 \uD648\uC73C\uB85C</a></div></div>`;setState('\uAD8C\uD55C \uC81C\uD55C','warn')}
-  function storedSession(){try{let raw=sessionStorage.getItem(SESSION_KEY);if(!raw&&LEGACY_SESSION_KEYS[SLUG])raw=sessionStorage.getItem(LEGACY_SESSION_KEYS[SLUG]);const v=JSON.parse(raw||'null');return v?.accessToken?v:null}catch{return null}}
-  function saveSession(v){state.session=v;sessionStorage.setItem(SESSION_KEY,JSON.stringify(v));if(LEGACY_SESSION_KEYS[SLUG])sessionStorage.removeItem(LEGACY_SESSION_KEYS[SLUG])}
-  function clearSession(){state.session=null;sessionStorage.removeItem(SESSION_KEY);if(LEGACY_SESSION_KEYS[SLUG])sessionStorage.removeItem(LEGACY_SESSION_KEYS[SLUG])}
+  function storedSession(){try{let raw=sessionStorage.getItem(SESSION_KEY)||sessionStorage.getItem(SHARED_SESSION_KEY);if(!raw&&LEGACY_SESSION_KEYS[SLUG])raw=sessionStorage.getItem(LEGACY_SESSION_KEYS[SLUG]);const v=JSON.parse(raw||'null');return v?.accessToken?v:null}catch{return null}}
+  function saveSession(v){state.session=v;sessionStorage.setItem(SESSION_KEY,JSON.stringify(v));sessionStorage.setItem(SHARED_SESSION_KEY,JSON.stringify(v));if(LEGACY_SESSION_KEYS[SLUG])sessionStorage.removeItem(LEGACY_SESSION_KEYS[SLUG])}
+  function clearSession(){state.session=null;sessionStorage.removeItem(SESSION_KEY);sessionStorage.removeItem(SHARED_SESSION_KEY);if(LEGACY_SESSION_KEYS[SLUG])sessionStorage.removeItem(LEGACY_SESSION_KEYS[SLUG])}
   async function supabaseAuth(path,body){const r=await fetch(SUPABASE_URL+path,{method:'POST',headers:{apikey:SUPABASE_KEY,'content-type':'application/json'},body:JSON.stringify(body)});const d=await r.json().catch(()=>({}));if(!r.ok)throw Object.assign(new Error(d.msg||d.error_description||d.error||`auth_${r.status}`),{status:r.status});return d}
   function normalizeSession(d,current={}){return{accessToken:d.access_token||'',refreshToken:d.refresh_token||current.refreshToken||'',expiresAt:Number(d.expires_at||0)||Math.floor(Date.now()/1000)+Number(d.expires_in||3600),user:{id:d.user?.id||current.user?.id||'',email:d.user?.email||current.user?.email||''}}}
   async function exchangeCentralToken(){const p=new URLSearchParams(location.hash.slice(1));const tokenHash=p.get('ekodi_token');if(!tokenHash)return;const d=await supabaseAuth('/auth/v1/verify',{token_hash:tokenHash,type:p.get('ekodi_type')||'email'});const session=normalizeSession(d);if(!session.accessToken)throw new Error('로그인 연결에 실패했습니다.');saveSession(session);history.replaceState(null,'',location.pathname+location.search)}
