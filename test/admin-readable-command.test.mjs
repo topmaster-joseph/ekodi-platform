@@ -17,6 +17,12 @@ test('all authenticated Admin surfaces inherit the EKODI readability base', asyn
   assert.match(css, /:focus-visible/);
 });
 
+test('service-level tabs remain readable on desktop and mobile', async () => {
+  const css = await read('admin-ui-principles.css');
+  assert.match(css, /\.marketing-ai-console-tabs button\{[\s\S]*?min-height:40px!important[\s\S]*?font-size:14px!important/);
+  assert.match(css, /@media\(max-width:620px\)[\s\S]*?\.marketing-ai-console-tabs button\{min-height:42px!important;font-size:15px!important\}/);
+});
+
 test('AI Ops is a flat readable command workspace', async () => {
   const css = await read('admin-readable-command.css');
   assert.match(css, /governance-command-bar\{display:none!important\}/);

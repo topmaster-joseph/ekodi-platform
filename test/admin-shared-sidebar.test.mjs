@@ -71,6 +71,24 @@ test('global menu labels use readable contrast on the light sidebar', () => {
   assert.match(sidebar, /font-size:14px;font-weight:780/);
 });
 
+test('context tabs keep the same light readable hierarchy as the sidebar', () => {
+  assert.match(sidebar, /\.\$\{TABS_SHELL_CLASS\}\{[^}]*min-height:56px[^}]*background:rgba\(255,255,255,\.98\)/);
+  assert.match(sidebar, /\.admin-context-title\{[^}]*font-size:13px/);
+  assert.match(sidebar, /\.admin-context-tab\{[^}]*min-height:40px[^}]*font-size:14px[^}]*line-height:1\.35/);
+  assert.match(sidebar, /\.admin-context-tab\.active\{[^}]*background:#edf4ff[^}]*color:#0b5cab/);
+  assert.match(sidebar, /\.admin-capability-shortcut\{[^}]*min-height:40px[^}]*font-size:14px/);
+  assert.match(sidebar, /@media\(max-width:760px\)[^`]*\.admin-context-tab\{min-height:42px[^}]*font-size:15px/);
+});
+
+test('site-management workbench keeps operational text above miniature-preview density', () => {
+  assert.match(sidebar, /#campusPanel \.campus-toolbar p:not\(\.kicker\)\{font-size:14px!important/);
+  assert.match(sidebar, /#campusSiteGroups \.campus-group-head h3\{font-size:17px!important/);
+  assert.match(sidebar, /#campusSiteGroups \.campus-site-identity strong\{font-size:15px!important/);
+  assert.match(sidebar, /#campusSiteGroups \.campus-site-domain\{font-size:13px!important/);
+  assert.match(sidebar, /#campusSiteGroups \.campus-row-action\{[^}]*min-height:38px!important[^}]*font-size:13px!important/);
+  assert.match(sidebar, /#campusSiteGroups \.campus-homepage-state small\{[^}]*font-size:11px!important/);
+});
+
 test('menu labels and tab state are repaired when features are installed or sections change', () => {
   assert.match(sidebar, /MutationObserver\(schedule\)/);
   assert.match(sidebar, /observer\.observe\(nav, \{ childList: true, subtree: false \}\)/);
