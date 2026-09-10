@@ -210,6 +210,9 @@ const governanceFiles = new Set([
   'scripts/validate-ekodi-ai-change-orchestration.mjs',
   '.github/workflows/ekodi-ai-orchestration-gate.yml',
   'scripts/validate-deployment-guardrails.mjs',
+  'config/parallel-change-review-scopes.json',
+  'scripts/detect-related-change-overlap.mjs',
+  '.github/workflows/ai-conflict-guard.yml',
 ]);
 if (changedFiles.some(file => governanceFiles.has(file)) && eventName && !(policy.governance.policyOwners || []).includes(actor)) {
   fail(`orchestration governance may only be changed from an owner-authorized intent; actor=${actor}`);
