@@ -1,4 +1,4 @@
-﻿name = "ekodi-marketing-growth"
+name = "ekodi-marketing-growth"
 main = "marketing-growth-entry.js"
 compatibility_date = "2026-08-29"
 workers_dev = false
@@ -9,7 +9,8 @@ crons = []
 
 
 [vars]
-MALL_PROMOTION_AUTOMATION_ENABLED = "true"`r`nALLOWED_ORIGINS = "https://ekodi.kr,https://admin.ekodi.kr,https://marketing.ekodi.kr,https://my.ekodi.kr"
+MALL_PROMOTION_AUTOMATION_ENABLED = "true"
+ALLOWED_ORIGINS = "https://ekodi.kr,https://admin.ekodi.kr,https://marketing.ekodi.kr,https://my.ekodi.kr"
 PUBLIC_BASE_URL = "https://marketing-connect-api.ekodi.kr"
 GOOGLE_CLIENT_ID = "483044030492-4e6231l5glchhtniroinvuq3ev6n5mv5.apps.googleusercontent.com"
 META_GRAPH_VERSION = "v25.0"
