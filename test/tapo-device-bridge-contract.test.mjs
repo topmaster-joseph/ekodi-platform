@@ -48,7 +48,7 @@ test('admin exposes Tapo bridge enrollment and live view without raw RTSP',()=>{
   assert.match(deviceAdmin,/loadScript\('tapo-device-admin\.js'\)/);
   assert.match(build,/tapo-device-admin\.js/);
 });
-test('device observation is a registered generation-8 capability composition',()=>{
+test('device observation is a registered generation-10 capability composition',()=>{
   const capability=registry.capabilities.find(x=>x.id==='device.observe');
   assert.ok(capability);
   assert.equal(registry.version,'3.1.0');
@@ -56,4 +56,16 @@ test('device observation is a registered generation-8 capability composition',()
   assert.equal(capability.maturity,'service-backed-readonly');
   assert.ok(capability.surfaces.includes('my'));
   assert.ok(packs.packs.find(x=>x.id==='small-business').capabilities.includes('device.observe'));
+});
+
+test('stream session persists only a hash and browser assembles the edge token',()=>{
+  assert.match(control,/CREATE TABLE IF NOT EXISTS device_stream_sessions/);
+  assert.match(control,/secret_hash TEXT NOT NULL/);
+  assert.match(control,/statusUrl/);
+  assert.match(control,/DEVICE_STREAM_ROUTE_REQUIRED/);
+  assert.match(control,/payload_json='\{\}'/);
+  assert.match(admin,/waitForStream/);
+  assert.match(admin,/issued\.sessionToken/);
+  assert.match(admin,/ready\.playbackBase/);
+  assert.doesNotMatch(control,/playbackUrl:[^\n]+sessionSecret/);
 });

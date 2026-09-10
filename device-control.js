@@ -174,6 +174,19 @@ async function ensureSchema(db) {
       result_json TEXT NOT NULL DEFAULT '{}',
       FOREIGN KEY (device_id) REFERENCES device_registry(id)
     )`),
+    db.prepare(`CREATE TABLE IF NOT EXISTS device_stream_sessions (
+      id TEXT PRIMARY KEY,
+      command_id TEXT NOT NULL UNIQUE,
+      device_id TEXT NOT NULL,
+      external_id TEXT NOT NULL,
+      secret_hash TEXT NOT NULL,
+      public_base TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'queued',
+      created_at TEXT NOT NULL,
+      expires_at TEXT NOT NULL,
+      completed_at TEXT,
+      FOREIGN KEY (device_id) REFERENCES device_registry(id)
+    )`),
     db.prepare(`CREATE TABLE IF NOT EXISTS device_execution_profiles (
       device_id TEXT PRIMARY KEY,
       enabled INTEGER NOT NULL DEFAULT 0,
@@ -232,6 +245,7 @@ async function ensureSchema(db) {
     db.prepare('CREATE INDEX IF NOT EXISTS idx_device_enrollments_expiry ON device_enrollments(expires_at, used_at)'),
     db.prepare('CREATE INDEX IF NOT EXISTS idx_device_registry_last_seen ON device_registry(last_seen_at DESC)'),
     db.prepare('CREATE INDEX IF NOT EXISTS idx_device_commands_queue ON device_commands(device_id, status, issued_at)'),
+    db.prepare('CREATE INDEX IF NOT EXISTS idx_device_stream_sessions_expiry ON device_stream_sessions(status, expires_at)'),
     db.prepare('CREATE INDEX IF NOT EXISTS idx_device_jobs_queue ON device_jobs(status, priority DESC, requested_at)'),
     db.prepare('CREATE INDEX IF NOT EXISTS idx_device_inventory_type ON device_inventory(device_type, archived_at)'),
   ]);
@@ -821,10 +835,25 @@ async function handleAdmin(request, env) {
     const settings=parseJson(device.settings_json),camera=providerCamera(settings,externalId); if(!camera||!(camera.capabilities||[]).includes('camera.live'))return json({error:'실시간 보기가 가능한 카메라를 찾을 수 없습니다.'},404,request,env);
     const publicBase=sanitizeProviderPublicBase(settings?.providerBridge?.publicBase,env); if(!publicBase)return json({error:'브리지 공개 주소가 안전하게 설정되지 않았습니다.',code:'DEVICE_BRIDGE_PUBLIC_BASE_REQUIRED'},409,request,env);
     const actorId=await adminId(env,auth.session),sessionId=`str_${crypto.randomUUID()}`,sessionSecret=randomHex(24),issuedAt=new Date().toISOString(),expiresAt=new Date(Date.now()+STREAM_SESSION_TTL_MS).toISOString();
-    const payload=sanitizeCommandPayload('camera.live.start',{externalId,sessionId,sessionSecret,expiresAt}),commandId=`cmd_${crypto.randomUUID()}`;
-    await env.DB.prepare(`INSERT INTO device_commands (id, device_id, command_type, payload_json, status, issued_at, issued_by) VALUES (?, ?, 'camera.live.start', ?, 'queued', ?, ?)`).bind(commandId,deviceId,JSON.stringify(payload),issuedAt,actorId).run();
+    const payload=sanitizeCommandPayload('camera.live.start',{externalId,sessionId,sessionSecret,expiresAt}),commandId=`cmd_${crypto.randomUUID()}`,secretHash=await sha256(sessionSecret);
+    await env.DB.batch([
+      env.DB.prepare(`INSERT INTO device_commands (id, device_id, command_type, payload_json, status, issued_at, issued_by) VALUES (?, ?, 'camera.live.start', ?, 'queued', ?, ?)`).bind(commandId,deviceId,JSON.stringify(payload),issuedAt,actorId),
+      env.DB.prepare(`INSERT INTO device_stream_sessions (id, command_id, device_id, external_id, secret_hash, public_base, status, created_at, expires_at) VALUES (?, ?, ?, ?, ?, ?, 'queued', ?, ?)`).bind(sessionId,commandId,deviceId,externalId,secretHash,publicBase,issuedAt,expiresAt),
+    ]);
+    await env.DB.prepare(`UPDATE device_stream_sessions SET status='expired', completed_at=? WHERE status IN ('queued','claimed','succeeded') AND expires_at < ?`).bind(issuedAt,issuedAt).run();
+    await env.DB.prepare(`UPDATE device_commands SET payload_json='{}' WHERE id IN (SELECT command_id FROM device_stream_sessions WHERE status='expired')`).run();
     await audit(env,auth.session,'device.camera.stream.start',deviceId,`${device.label}:${externalId}`);
-    return json({stream:{sessionId,commandId,deviceId,externalId,status:'queued',expiresAt,playbackUrl:`${publicBase}/stream/${encodeURIComponent(sessionId)}?token=${sessionSecret}`}},202,request,env);
+    return json({stream:{sessionId,commandId,deviceId,externalId,status:'queued',expiresAt,sessionToken:sessionSecret,statusUrl:`${ADMIN_PREFIX}/streams/${encodeURIComponent(sessionId)}`}},202,request,env);
+  }
+
+  const streamStatusMatch=path.match(/^\/api\/control\/devices\/streams\/(str_[a-f0-9-]{36})$/);
+  if(request.method==='GET'&&streamStatusMatch){
+    const now=new Date().toISOString();
+    const session=await env.DB.prepare('SELECT id, command_id, device_id, external_id, public_base, status, created_at, expires_at, completed_at FROM device_stream_sessions WHERE id = ?').bind(streamStatusMatch[1]).first();
+    if(!session)return json({error:'스트림 세션을 찾을 수 없습니다.'},404,request,env);
+    if(new Date(session.expires_at).getTime()<=Date.now()&&session.status!=='expired')await env.DB.prepare("UPDATE device_stream_sessions SET status='expired', completed_at=? WHERE id=?").bind(now,session.id).run();
+    const status=new Date(session.expires_at).getTime()<=Date.now()?'expired':session.status;
+    return json({stream:{sessionId:session.id,commandId:session.command_id,deviceId:session.device_id,externalId:session.external_id,status,createdAt:session.created_at,expiresAt:session.expires_at,completedAt:session.completed_at||null,playbackBase:status==='succeeded'?session.public_base:null}},200,request,env);
   }
 
   const commandMatch = path.match(/^\/api\/control\/devices\/([^/]+)\/commands$/);
@@ -834,6 +863,7 @@ async function handleAdmin(request, env) {
     const commandType = safeText(body.type, 80);
     const policy = COMMAND_POLICIES[commandType];
     if (!policy) return json({ error: '허용되지 않은 기기 명령입니다.', code: 'DEVICE_COMMAND_NOT_ALLOWED' }, 400, request, env);
+    if (commandType === 'camera.live.start') return json({ error: '카메라 스트림은 전용 임시 세션 경로로만 시작할 수 있습니다.', code: 'DEVICE_STREAM_ROUTE_REQUIRED' }, 409, request, env);
     if (policy.confirm && body.confirmed !== true) {
       return json({ error: '이 작업은 관리자 확인이 필요합니다.', code: 'DEVICE_COMMAND_CONFIRM_REQUIRED' }, 409, request, env);
     }
@@ -943,7 +973,7 @@ async function heartbeat(request, env, device) {
   let settings = device.settings_json;
   if (deviceType === 'gateway') {
     const bridge=body.settings?.providerBridge||{};
-    settings=JSON.stringify({providerBridge:{providerId:'tp-link.tapo',publicBase:sanitizeProviderPublicBase(bridge.publicBase,env),devices:sanitizeTapoProviderDevices(bridge.devices,device.id),generatedAt:now}});
+    settings=JSON.stringify({providerBridge:{providerId:'tp-link.tapo',publicBase:sanitizeProviderPublicBase(bridge.publicBase,env),devices:sanitizeTapoProviderDevices(bridge.devices,device.id),lastSyncAt:now,generatedAt:now}});
   } else if (body.settings && typeof body.settings === 'object') settings=safeJsonObject(body.settings,10000,device.settings_json);
   const profileName = safeText(body.profileName || parseJson(settings).workstationProfile || device.profile_name, 80);
   await env.DB.prepare(`UPDATE device_registry
@@ -1022,7 +1052,14 @@ async function commandResult(request, env, device, commandId) {
     .bind(status, completedAt, safeJsonObject(result, 24000), commandId, device.id).run();
   if (!update.meta?.changes) return json({ error: '처리 중인 명령을 찾을 수 없습니다.' }, 404, request, env);
 
-  if (success) {
+  if(command.command_type==='camera.live.start'){
+    await env.DB.batch([
+      env.DB.prepare(`UPDATE device_stream_sessions SET status=?, completed_at=? WHERE command_id=? AND device_id=?`).bind(status,completedAt,commandId,device.id),
+      env.DB.prepare(`UPDATE device_commands SET payload_json='{}' WHERE id=? AND device_id=?`).bind(commandId,device.id),
+    ]);
+  }
+
+  if (success && command.command_type !== 'camera.live.start') {
     const diagnostics = mergeDiagnosticResult(device, command.command_type, result);
     const diagnosticsJson = safeJsonObject(diagnostics, 30000, device.diagnostics_json || '{}');
     const settingsJson = result.settings && typeof result.settings === 'object'

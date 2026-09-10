@@ -32,12 +32,25 @@
     if(!dialog.open)dialog.showModal();
     setTimeout(load,900);
   }
+  async function waitForStream(statusUrl){
+    for(let attempt=0;attempt<14;attempt+=1){
+      const data=await request(statusUrl);
+      const stream=data.stream||{};
+      if(stream.status==='succeeded'&&stream.playbackBase)return stream;
+      if(['failed','expired','cancelled'].includes(stream.status))throw new Error('카메라 스트림 세션을 시작하지 못했습니다.');
+      await new Promise(resolve=>setTimeout(resolve,450));
+    }
+    throw new Error('카메라 스트림 준비 시간이 초과되었습니다.');
+  }
   async function openStream(device,camera,button){
     const label=button.textContent;button.disabled=true;button.textContent='연결 중…';
     try{
       const data=await request(`/api/control/devices/${encodeURIComponent(device.id)}/cameras/${encodeURIComponent(camera.externalId)}/stream`,{method:'POST',body:'{}'});
-      if(!data.stream?.playbackUrl)throw new Error('재생 주소를 받지 못했습니다.');
-      cameraDialog(device,camera,data.stream.playbackUrl);
+      const issued=data.stream||{};
+      if(!issued.sessionId||!issued.sessionToken||!issued.statusUrl)throw new Error('보안 스트림 세션을 발급받지 못했습니다.');
+      const ready=await waitForStream(issued.statusUrl);
+      const playbackUrl=`${ready.playbackBase}/stream/${encodeURIComponent(issued.sessionId)}?token=${encodeURIComponent(issued.sessionToken)}`;
+      cameraDialog(device,camera,playbackUrl);
     }catch(error){alert(error.message);}
     finally{setTimeout(()=>{button.disabled=false;button.textContent=label;},1200);}
   }
