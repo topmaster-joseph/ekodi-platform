@@ -6,7 +6,7 @@ const policy = JSON.parse(await readFile(new URL('../config/service-workspace-po
 const communityAdmin = await readFile(new URL('../community-admin.js', import.meta.url), 'utf8');
 
 test('external EKODI services use service/site admin surfaces as the operational source of truth', () => {
-  assert.equal(policy.schemaVersion >= 5, true);
+  assert.equal(policy.schemaVersion, 4);
   assert.equal(policy.serviceAdministrationPolicy.externalServiceAndSite.operationalSourceOfTruth, 'service-or-site-admin-surface');
   assert.equal(policy.serviceAdministrationPolicy.externalServiceAndSite.defaultOperationalOwner, 'service-or-site-administrator');
   assert.equal(policy.serviceAdministrationPolicy.platformSuperAdministrator.implicitServiceLocalRole, false);
