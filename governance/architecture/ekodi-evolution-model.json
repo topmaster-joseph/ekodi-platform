@@ -1,30 +1,83 @@
 {
-  "schemaVersion": 1,
-  "effectiveDate": "2026-09-05",
+  "schemaVersion": 2,
+  "effectiveDate": "2026-09-10",
   "status": "active",
-  "name": "EKODI Sustainable Evolution Model",
-  "northStarGeneration": 8,
-  "northStarName": "Living Digital Commons",
-  "currentGeneration": 2,
-  "currentGenerationLabel": "Integrated Platform moving toward Capability Platform",
+  "name": "EKODI Open-Ended Sustainable Evolution Model",
+  "northStarGeneration": null,
+  "northStarName": "Open-Ended Evidence-Driven Evolution",
+  "currentGeneration": 10,
+  "currentGenerationLabel": "Self-Architecture Optimization",
   "currentScaleTier": "S0",
   "operatingArchitectureVersion": "1.8.1",
   "operatingArchitectureName": "Sovereign Autonomous Operations",
   "operatingArchitectureRegistry": "governance/architecture/sovereign-autonomous-operations.v1.json",
   "generationPromotion": {
     "changedByV18": false,
-    "note": "v1.8 reorganizes the operating architecture and autonomous control contract without promoting the constitutional generation or scale tier."
+    "latestConstitutionalPromotion": "1.10.0",
+    "note": "Generation 10 is the active baseline. Future generations remain undefined until evidence satisfies the promotion gate."
   },
-  "principle": "Grow by verified need, preserve user and workspace sovereignty, and expand cost only after value is proven.",
+  "principle": "Remain Generation 10 until verified evidence justifies a new generation; define future generations only through governed evidence and owner-approved constitutional promotion.",
   "generations": [
-    {"generation":1,"name":"Service Collection","goal":"Independent services exist and deliver value."},
-    {"generation":2,"name":"Integrated Platform","goal":"Shared identity, workspace, admin, core contracts and guarded operations unify the ecosystem."},
-    {"generation":3,"name":"Capability Platform","goal":"Capabilities become canonical contracts and compatible implementations can be selected without redefining workspace identity."},
-    {"generation":4,"name":"Intent OS","goal":"User intent is resolved into authorized capabilities and orchestrated workflows."},
-    {"generation":5,"name":"Agentic OS","goal":"Multiple bounded agents collaborate through governed capabilities, tools and approval gates."},
-    {"generation":6,"name":"Federated Ecosystem","goal":"Independent organizations and platforms interoperate while retaining identity, data and policy sovereignty."},
-    {"generation":7,"name":"Self-Evolving Ecosystem","goal":"Evidence-driven evolution intelligence recommends and safely experiments within delegated limits; governance remains authoritative."},
-    {"generation":8,"name":"Living Digital Commons","goal":"People, organizations, communities and projects share reusable digital capabilities without surrendering sovereignty, with durable public-interest governance and sustainable economics."}
+    {
+      "generation": 1,
+      "name": "Service Collection",
+      "goal": "Independent services exist and deliver value.",
+      "status": "achieved_milestone"
+    },
+    {
+      "generation": 2,
+      "name": "Integrated Platform",
+      "goal": "Shared identity, workspace, admin, core contracts and guarded operations unify the ecosystem.",
+      "status": "achieved_milestone"
+    },
+    {
+      "generation": 3,
+      "name": "Capability Platform",
+      "goal": "Capabilities become canonical contracts and compatible implementations can be selected without redefining workspace identity.",
+      "status": "achieved_milestone"
+    },
+    {
+      "generation": 4,
+      "name": "Intent OS",
+      "goal": "User intent is resolved into authorized capabilities and orchestrated workflows.",
+      "status": "achieved_milestone"
+    },
+    {
+      "generation": 5,
+      "name": "Agentic OS",
+      "goal": "Multiple bounded agents collaborate through governed capabilities, tools and approval gates.",
+      "status": "achieved_milestone"
+    },
+    {
+      "generation": 6,
+      "name": "Federated Ecosystem",
+      "goal": "Independent organizations and platforms interoperate while retaining identity, data and policy sovereignty.",
+      "status": "achieved_milestone"
+    },
+    {
+      "generation": 7,
+      "name": "Self-Evolving Ecosystem",
+      "goal": "Evidence-driven evolution intelligence recommends and safely experiments within delegated limits; governance remains authoritative.",
+      "status": "achieved_milestone"
+    },
+    {
+      "generation": 8,
+      "name": "Living Digital Commons",
+      "goal": "People, organizations, communities and projects share reusable digital capabilities without surrendering sovereignty, with durable public-interest governance and sustainable economics.",
+      "status": "achieved_milestone"
+    },
+    {
+      "generation": 9,
+      "name": "Self-Capability Evolution",
+      "goal": "Repeated verified work becomes reusable capability and automation candidates through governed learning, sandbox evaluation and guarded promotion.",
+      "status": "achieved_milestone"
+    },
+    {
+      "generation": 10,
+      "name": "Self-Architecture Optimization",
+      "goal": "EKODI continuously observes architecture and operations, proposes structural improvements, evaluates them safely and promotes only verified, reversible changes through sovereign release gates.",
+      "status": "current"
+    }
   ],
   "sustainability": {
     "defaultOperatingMode": "minimum-viable-shared-infrastructure",
@@ -49,38 +102,90 @@
   },
   "scaleTiers": [
     {
-      "tier":"S0",
-      "name":"Seed",
-      "economics":"pre-revenue or experimental",
-      "rules":["free or lowest safe tier first","shared runtime first","shared database/storage namespaces where isolation permits","cache-first public delivery","manual approval for paid commitments"]
+      "tier": "S0",
+      "name": "Seed",
+      "economics": "pre-revenue or experimental",
+      "rules": [
+        "free or lowest safe tier first",
+        "shared runtime first",
+        "shared database/storage namespaces where isolation permits",
+        "cache-first public delivery",
+        "manual approval for paid commitments"
+      ]
     },
     {
-      "tier":"S1",
-      "name":"Validated",
-      "economics":"repeat usage or early recurring revenue",
-      "entryEvidence":["measured sustained demand","repeated capacity pressure","revenue or committed funding supports incremental cost","security or reliability requirement"],
-      "rules":["increase limits or capacity before service extraction when practical","introduce queues for retryable/heavy work","add targeted observability and cost budgets"]
+      "tier": "S1",
+      "name": "Validated",
+      "economics": "repeat usage or early recurring revenue",
+      "entryEvidence": [
+        "measured sustained demand",
+        "repeated capacity pressure",
+        "revenue or committed funding supports incremental cost",
+        "security or reliability requirement"
+      ],
+      "rules": [
+        "increase limits or capacity before service extraction when practical",
+        "introduce queues for retryable/heavy work",
+        "add targeted observability and cost budgets"
+      ]
     },
     {
-      "tier":"S2",
-      "name":"Growth",
-      "economics":"material recurring revenue or mission-critical usage",
-      "entryEvidence":["shared runtime is a measured bottleneck","fault isolation has measurable value","dedicated data/storage improves security or reliability","capacity expansion has positive or justified unit economics"],
-      "rules":["dedicated worker/service boundaries allowed with evidence","autoscaling and stronger SLOs allowed","regional or provider redundancy considered where justified"]
+      "tier": "S2",
+      "name": "Growth",
+      "economics": "material recurring revenue or mission-critical usage",
+      "entryEvidence": [
+        "shared runtime is a measured bottleneck",
+        "fault isolation has measurable value",
+        "dedicated data/storage improves security or reliability",
+        "capacity expansion has positive or justified unit economics"
+      ],
+      "rules": [
+        "dedicated worker/service boundaries allowed with evidence",
+        "autoscaling and stronger SLOs allowed",
+        "regional or provider redundancy considered where justified"
+      ]
     },
     {
-      "tier":"S3",
-      "name":"Scale",
-      "economics":"large sustainable revenue, committed institutional funding or critical public-interest operation",
-      "entryEvidence":["multi-region need is measured","regulatory or contractual availability targets","large sustained traffic or data scale","recovery objectives require dedicated architecture"],
-      "rules":["multi-region and advanced redundancy allowed","dedicated clusters/datastores allowed","capacity reservations or enterprise contracts require explicit economic and governance review"]
+      "tier": "S3",
+      "name": "Scale",
+      "economics": "large sustainable revenue, committed institutional funding or critical public-interest operation",
+      "entryEvidence": [
+        "multi-region need is measured",
+        "regulatory or contractual availability targets",
+        "large sustained traffic or data scale",
+        "recovery objectives require dedicated architecture"
+      ],
+      "rules": [
+        "multi-region and advanced redundancy allowed",
+        "dedicated clusters/datastores allowed",
+        "capacity reservations or enterprise contracts require explicit economic and governance review"
+      ]
     }
   ],
   "boundaryCreationGate": {
-    "defaultDecision":"reuse-existing-capability-or-shared-runtime",
-    "newIndependentDeploymentRequiresAny":["measured scale bottleneck","security isolation requirement","regulatory isolation requirement","fault-containment requirement","independent lifecycle required by verified external contract"],
-    "newDedicatedSubdomainRequiresAny":["security boundary","protocol boundary","operational isolation","registered common/core service boundary"],
-    "requiredEvidence":["expected benefit","incremental monthly cost","funding or revenue basis when applicable","rollback path","ownership","observability plan","fallback or degraded path"],
+    "defaultDecision": "reuse-existing-capability-or-shared-runtime",
+    "newIndependentDeploymentRequiresAny": [
+      "measured scale bottleneck",
+      "security isolation requirement",
+      "regulatory isolation requirement",
+      "fault-containment requirement",
+      "independent lifecycle required by verified external contract"
+    ],
+    "newDedicatedSubdomainRequiresAny": [
+      "security boundary",
+      "protocol boundary",
+      "operational isolation",
+      "registered common/core service boundary"
+    ],
+    "requiredEvidence": [
+      "expected benefit",
+      "incremental monthly cost",
+      "funding or revenue basis when applicable",
+      "rollback path",
+      "ownership",
+      "observability plan",
+      "fallback or degraded path"
+    ],
     "grandfatherExistingBoundaries": true,
     "grandfatheredDeploymentBoundaries": [
       "ekodi-shell",
@@ -116,19 +221,67 @@
       "marketing-ai"
     ],
     "approvedExpansionExceptions": [],
-    "existingBoundaryAction":"review for convergence before expansion; do not split further without passing the gate"
+    "existingBoundaryAction": "review for convergence before expansion; do not split further without passing the gate"
   },
   "workspaceConvergence": {
-    "canonicalIdentity":"workspace_id",
-    "canonicalTerm":"Workspace",
-    "legacyTerms":["Space"],
-    "rule":"legacy Space surfaces may remain compatibility aliases during migration but must not create a second identity, authority or public routing model",
-    "target":"Person + Workspace + Membership + Capability"
+    "canonicalIdentity": "workspace_id",
+    "canonicalTerm": "Workspace",
+    "legacyTerms": [
+      "Space"
+    ],
+    "rule": "legacy Space surfaces may remain compatibility aliases during migration but must not create a second identity, authority or public routing model",
+    "target": "Person + Workspace + Membership + Capability"
   },
   "promotionRule": {
     "generationAdvancementIsNotDateDriven": true,
-    "requirements":["previous generation contracts are stable","security and authorization remain centralized and auditable","cost profile is sustainable","measured user value exists","rollback and degraded operation are defined"],
-    "authority":"EKODI Platform Super Administrator through constitutional change control"
+    "requirements": [
+      "previous generation contracts are stable",
+      "security and authorization remain centralized and auditable",
+      "cost profile is sustainable",
+      "measured user value exists",
+      "rollback and degraded operation are defined"
+    ],
+    "authority": "EKODI Platform Super Administrator through constitutional change control",
+    "currentGenerationMustRemainUntilEvidence": true,
+    "futureGenerationNamesMayNotBePredeclared": true
   },
-  "boundedProductionStandingDelegation": {"enabled":true,"scope":"existing_registered_boundary_only","directAgentMutationForbidden":true,"highImpactRemainsSovereign":true}
+  "boundedProductionStandingDelegation": {
+    "enabled": true,
+    "scope": "existing_registered_boundary_only",
+    "directAgentMutationForbidden": true,
+    "highImpactRemainsSovereign": true
+  },
+  "currentGenerationStatus": "active_baseline",
+  "nextGeneration": null,
+  "nextGenerationLabel": "Evidence-defined future generation",
+  "historicalNorthStar": {
+    "generation": 8,
+    "name": "Living Digital Commons",
+    "status": "achieved_as_foundational_milestone"
+  },
+  "futureGenerationPolicy": {
+    "openEnded": true,
+    "firstCandidateGeneration": 11,
+    "predeclareNames": false,
+    "promotionEligibleByDefault": false,
+    "generationSkippingForbidden": true,
+    "authorityExpansionForbidden": true,
+    "requiredEvidence": [
+      "measured_user_or_mission_value",
+      "stable_prior_generation_contracts",
+      "security_and_authorization_integrity",
+      "observability_and_operational_evidence",
+      "functional_sandbox_or_equivalent_safe_evaluation",
+      "rollback_and_degraded_operation",
+      "sustainable_cost_and_capacity",
+      "verified_architectural_need"
+    ],
+    "promotionRequires": [
+      "C2_or_C3_constitutional_amendment",
+      "explicit_super_administrator_confirmation",
+      "repository_validation",
+      "guarded_merge",
+      "guarded_production_verification_when_runtime_changes"
+    ]
+  }
 }

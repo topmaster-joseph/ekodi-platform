@@ -1,6 +1,6 @@
 {
-  "version": "1.9.1",
-  "effectiveDate": "2026-09-09",
+  "version": "1.10.0",
+  "effectiveDate": "2026-09-10",
   "status": "active",
   "title": "EKODI Platform Constitution",
   "principles": [
@@ -24,10 +24,11 @@
     "capability-first-reuse",
     "sustainable-scale-by-evidence",
     "workspace-over-space",
-    "living-digital-commons-north-star",
     "sovereign-autonomy-with-human-authority",
     "person-workspace-role-capability-authority",
-    "observe-detect-reason-plan-execute-verify-recover-learn"
+    "observe-detect-reason-plan-execute-verify-recover-learn",
+    "generation-10-active-baseline",
+    "open-ended-evidence-driven-generation-evolution"
   ],
   "architectureModel": {
     "registry": "governance/architecture/ekodi-os-architecture.json",
@@ -392,16 +393,21 @@
     ],
     "autonomousAuthorityExpansionForbidden": true,
     "verificationAfterAutonomousExecutionRequired": true,
-    "productionChangeApprovalMode": "explicit_or_preapproved_bounded_standing_delegation"
+    "productionChangeApprovalMode": "explicit_or_preapproved_bounded_standing_delegation",
+    "currentGeneration": 10,
+    "currentGenerationName": "Self-Architecture Optimization",
+    "generationPromotionRequiresEvidence": true,
+    "futureGenerationOpenEnded": true,
+    "futureGenerationNamesPredeclared": false
   },
   "sustainableEvolutionModel": {
     "registry": "governance/architecture/ekodi-evolution-model.json",
-    "currentGeneration": 2,
-    "currentGenerationName": "Integrated Platform",
-    "nextGeneration": 3,
-    "nextGenerationName": "Capability Platform",
-    "northStarGeneration": 8,
-    "northStarName": "Living Digital Commons",
+    "currentGeneration": 10,
+    "currentGenerationName": "Self-Architecture Optimization",
+    "nextGeneration": null,
+    "nextGenerationName": "Evidence-defined future generation",
+    "northStarGeneration": null,
+    "northStarName": "Open-Ended Evidence-Driven Evolution",
     "generationAdvancement": "evidence_driven_not_date_driven",
     "currentScaleTier": "S0",
     "defaultEconomics": "minimum-viable-shared-infrastructure",
@@ -409,7 +415,11 @@
     "sharedBeforeDedicated": true,
     "existingDeploymentBoundariesGrandfathered": true,
     "newIndependentDeploymentRequiresEvidence": true,
-    "workspaceConvergenceTarget": "Person + Workspace + Membership + Capability"
+    "workspaceConvergenceTarget": "Person + Workspace + Membership + Capability",
+    "historicalNorthStarGeneration": 8,
+    "historicalNorthStarName": "Living Digital Commons",
+    "forwardEvolutionFrameworkReady": true,
+    "futureGenerationNamesPredeclared": false
   },
   "canonicalWorkspaceServicePatterns": [
     "https://ekodi.kr/{slug}/{service}"
@@ -472,7 +482,9 @@
     "boundedProductionStandingDelegation": true,
     "standingDelegationScope": "existing_registered_boundary_only",
     "automaticSafeRecoveryForFailedBoundedPromotion": true,
-    "unbudgetedPaidCommitmentForbidden": true
+    "unbudgetedPaidCommitmentForbidden": true,
+    "generationBaselineAtConstitutionVersion": 10,
+    "futureGenerationOpenEnded": true
   },
   "publicPortalPolicy": {
     "developerPortal": "https://dev.ekodi.kr",

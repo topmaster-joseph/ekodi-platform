@@ -21,9 +21,13 @@ test('universal capability registry respects governance, provider and pack contr
   assert.equal(result.reversibleCount, 2);
 });
 
-test('registry is Generation 3 ready while preserving Generation 8 north star', () => {
-  assert.equal(registry.generation.capabilityTarget, 3);
-  assert.equal(registry.generation.northStar, 8);
+test('registry preserves capability milestones under the Generation 10 open-ended baseline', () => {
+  assert.equal(registry.generation.currentFoundation, 10);
+  assert.equal(registry.generation.capabilityPlatformMilestone, 3);
+  assert.equal(registry.generation.livingCommonsMilestone, 8);
+  assert.equal(registry.generation.selfCapabilityMilestone, 9);
+  assert.equal(registry.generation.architectureOptimizationBaseline, 10);
+  assert.equal(registry.generation.futureMode, 'open_ended_evidence_driven');
   assert.equal(registry.intentPolicy.modelMayInventCapabilities, false);
 });
 test('unclear personal intent falls back to My EKODI personal starter', () => {

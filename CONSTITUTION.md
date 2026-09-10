@@ -1,6 +1,6 @@
-# EKODI Platform Constitution v1.9.0
+# EKODI Platform Constitution v1.10.0
 
-Effective: 2026-09-08
+Effective: 2026-09-10
 
 This constitution is the highest architecture and operations rule for EKODI Platform. Existing validators remain authoritative implementation guards; this document unifies their intent and governs future changes.
 
@@ -26,7 +26,7 @@ This constitution is the highest architecture and operations rule for EKODI Plat
 - Machine-readable architecture authority is `governance/architecture/ekodi-os-architecture.json`; `platform-boundaries.json` remains the deployment-boundary registry and does not by itself define responsibility ownership.
 
 ## 1B. Sovereign Autonomous Operations Constitution
-- EKODI v1.8 uses the operating hierarchy **Sovereign → Autonomous → Agentic → Services**. This is an operating-architecture upgrade, not a constitutional promotion beyond Generation 2 or S0.
+- EKODI v1.8 introduced the operating hierarchy **Sovereign → Autonomous → Agentic → Services**. Operating-architecture version and architectural generation are separate axes; the current generation is governed by Section 13 and the evolution registry, while scale remains independently governed by the S0-S3 evidence gates.
 - Sovereign authority owns constitution, identity, policy, authorization, audit and final control authority. AI, providers and services never become sovereign actors.
 - Every autonomous execution resolves the canonical authority context **Person + Workspace + Role + Capability**. Missing context permits analysis but not implicit execution authority.
 - Autonomous Operations follow **Observe → Detect → Reason → Plan → Execute → Verify → Recover → Learn**. Execution is never complete until verification succeeds; failed verification enters recovery or a safe degraded state.
@@ -146,17 +146,19 @@ Machine-readable sustainable evolution authority: `governance/architecture/ekodi
 - Low-risk observation, analysis, forecasting, scoring and sandbox experiments may run automatically within delegated limits. Production changes, shared-core creation, permission expansion, paid commitments, data migration, destructive changes, security-boundary changes and production DNS changes require EKODI Platform Super Administrator approval and the guarded release pipeline.
 - `EKODI Evolution Intelligence` recommends; it never becomes sovereign authority. Final platform authority remains the EKODI Platform Super Administrator.
 
-## 13. Sustainable 8-Generation Evolution Constitution
-- EKODI's current architectural generation is **Generation 2: Integrated Platform**, with an active transition toward **Generation 3: Capability Platform**. Generation labels describe maturity and direction, not marketing claims.
-- EKODI's constitutional north star is **Generation 8: Living Digital Commons**: people, organizations, communities and projects share reusable digital capabilities without surrendering identity, data or policy sovereignty, under durable governance and sustainable economics.
-- The canonical generation path is: **1 Service Collection -> 2 Integrated Platform -> 3 Capability Platform -> 4 Intent OS -> 5 Agentic OS -> 6 Federated Ecosystem -> 7 Self-Evolving Ecosystem -> 8 Living Digital Commons**.
-- Generation advancement is evidence-driven, not date-driven. A later generation must not bypass incomplete identity, authorization, security, observability, cost or rollback foundations from an earlier generation.
-- Current operations default to **S0 Seed** economics: free or lowest safe tiers, shared runtime, shared infrastructure and cache-first delivery where security and isolation permit.
-- **S1 Validated** expansion is allowed when sustained demand, repeated capacity pressure, early recurring revenue/committed funding, or a verified security/reliability need justifies incremental cost.
-- **S2 Growth** allows dedicated service/runtime/data boundaries when shared infrastructure is a measured bottleneck, fault isolation has measurable value, stronger isolation is required, and the incremental cost has justified unit economics or mission value.
-- **S3 Scale** allows advanced redundancy, multi-region architecture, dedicated clusters/datastores or enterprise commitments only for large sustainable revenue, committed institutional funding, regulatory/contractual requirements or critical public-interest operation.
-- Revenue is not the only reason to scale: security, legal, privacy, backup, recovery and reliability requirements may require paid capacity earlier. Such exceptions remain explicitly justified and approved.
+## 13. Open-Ended Generation Evolution Constitution
+- EKODI's current architectural generation is **Generation 10: Self-Architecture Optimization**. Generation 10 is the active platform baseline, not a claim that every conceivable future capability is complete.
+- The verified progression to the current baseline is: **1 Service Collection -> 2 Integrated Platform -> 3 Capability Platform -> 4 Intent OS -> 5 Agentic OS -> 6 Federated Ecosystem -> 7 Self-Evolving Ecosystem -> 8 Living Digital Commons -> 9 Self-Capability Evolution -> 10 Self-Architecture Optimization**.
+- **Generation 8: Living Digital Commons** remains a foundational milestone and mission-shaped ecosystem model; it is no longer treated as a fixed terminal ceiling.
+- **Generation 9: Self-Capability Evolution** turns repeated verified work into governed reusable capability and automation candidates through experience patterns, capability graphs, sandbox evaluation and guarded promotion.
+- **Generation 10: Self-Architecture Optimization** continuously observes operational and architectural evidence, proposes structural improvements, evaluates them safely, and promotes only verified and reversible changes through sovereign release gates.
+- Generation 10 never grants AI direct sovereign authority over production architecture, identity, permissions, secrets, destructive data operations, paid commitments, DNS or constitutional policy.
+- Future generations begin at **Generation 11** but are deliberately unnamed until evidence demonstrates a materially new maturity level. EKODI has no predetermined terminal generation.
+- Generation advancement is evidence-driven, not date-driven. A new generation requires stable prior-generation contracts, measurable user or mission value, security and authorization integrity, observability evidence, safe functional evaluation, rollback/degraded-operation proof, sustainable cost and capacity, and a verified architectural need.
+- Generation skipping is forbidden. A future label may not be used to bypass incomplete identity, authorization, security, observability, cost, rollback or governance foundations.
+- Current operations remain **S0 Seed** unless independent scale evidence justifies S1-S3 promotion. Architectural generation and infrastructure scale tier are separate decisions.
 - New capability development follows **reuse before creation**. New independent deployment follows **shared before dedicated**. New provider adoption follows **adapter/gateway before lock-in**.
-- Existing independent deployment boundaries are grandfathered as a migration baseline and are reviewed for convergence before expansion. Their existence is not precedent for creating additional boundaries.
-- The canonical operating-context target is **Person + Workspace + Membership + Capability**. Legacy `Space` names may remain only as migration aliases and must converge without breaking `workspace_id`.
-- Machine-readable rules, scale tiers, boundary gates and generation definitions are maintained in `governance/architecture/ekodi-evolution-model.json` and are enforced by repository validators.
+- Existing independent deployment boundaries remain a convergence baseline and do not create precedent for speculative fragmentation.
+- The canonical operating-context target remains **Person + Workspace + Membership + Capability**, with authority resolved through **Person + Workspace + Role + Capability**.
+- Future-generation promotion requires an explicit C2/C3 constitutional amendment, EKODI Platform Super Administrator confirmation, repository validation, guarded merge, and production verification whenever runtime behavior changes.
+- Machine-readable generation definitions, scale tiers, forward-evolution gates and boundary rules are maintained in `governance/architecture/ekodi-evolution-model.json` and enforced by repository validators.

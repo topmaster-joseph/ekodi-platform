@@ -675,9 +675,12 @@
   ],
   "schemaVersion": 2,
   "generation": {
-    "currentFoundation": 2,
-    "capabilityTarget": 3,
-    "northStar": 8
+    "currentFoundation": 10,
+    "capabilityPlatformMilestone": 3,
+    "livingCommonsMilestone": 8,
+    "selfCapabilityMilestone": 9,
+    "architectureOptimizationBaseline": 10,
+    "futureMode": "open_ended_evidence_driven"
   },
   "providerContract": "ekodi.capability-provider.v1",
   "intentPolicy": {

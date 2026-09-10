@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "effectiveDate": "2026-09-10",
+  "status": "active",
+  "currentGeneration": 10,
+  "currentGenerationName": "Self-Architecture Optimization",
+  "forwardEvolutionFrameworkReady": true,
+  "nextGenerationPromotionEligible": false,
+  "nextGenerationPolicy": "evidence_defined_not_predeclared",
+  "firstCandidateGeneration": 11,
+  "evidenceSources": {
+    "capabilityEcosystemKernel": "docs/architecture/EKODI-10G-CAPABILITY-ECOSYSTEM-KERNEL.md",
+    "selfAutomationEngine": "ekodi-self-automation-engine.js",
+    "contractSandbox": "ekodi-capability-sandbox.js",
+    "evolutionIntelligence": "evolution-intelligence-runtime.js",
+    "guardedReleasePolicy": "AI_DEVELOPMENT_POLICY.md",
+    "canonicalEvolutionModel": "governance/architecture/ekodi-evolution-model.json"
+  },
+  "promotionBlockersUntilEvidence": [
+    "functional_sandbox_or_equivalent_safe_evaluation_evidence",
+    "architecture_candidate_benchmark_evidence",
+    "security_and_authorization_regression_evidence",
+    "rollback_and_degraded_operation_evidence",
+    "sustainable_cost_and_capacity_evidence"
+  ],
+  "authority": "EKODI Platform Super Administrator through C2/C3 constitutional change control"
+}
