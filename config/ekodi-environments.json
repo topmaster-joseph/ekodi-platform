@@ -34,9 +34,10 @@
       },
       "supabase": {
         "logicalName": "ekodi-platform-dev",
-        "currentProjectRef": "lxcxwbdwwojjkgybbqii",
-        "currentProjectName": "ekodi-church",
-        "state": "transition-until-church-data-is-safely-migrated"
+        "currentProjectRef": null,
+        "currentProjectName": null,
+        "state": "not-provisioned-cost-gated",
+        "validationMode": "ephemeral-local-ci"
       }
     }
   },
@@ -76,5 +77,15 @@
     "cloudflare": {
       "syntheticKeepalive": false
     }
-  }
+  },
+  "legacySupabaseProjects": [
+    {
+      "logicalName": "ekodi-church-legacy",
+      "currentProjectRef": "lxcxwbdwwojjkgybbqii",
+      "currentProjectName": "ekodi-church",
+      "state": "legacy-integration-drain",
+      "allowedAsDevelopment": false,
+      "retirementGate": "migrate-or-retire-active-edge-functions-and-verify-no-runtime-dependency"
+    }
+  ]
 }

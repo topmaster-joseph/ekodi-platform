@@ -1,6 +1,6 @@
 # EKODI Environment Contract
 
-Status: adopted architecture contract. Production Supabase is canonicalized as `ekodi-platform`; the second project remains transitional until church data is safely consolidated.
+Status: adopted architecture contract. Production Supabase is canonicalized as `ekodi-platform`. `ekodi-church` is a legacy integration project and is explicitly not a development database.
 
 ## 1. Canonical source and promotion path
 
@@ -18,7 +18,7 @@ The intended end-to-end mapping is:
 | --- | --- | --- |
 | GitHub | `main` + `production` environment | `development` + `development` environment; PR staging uses the same non-production boundary |
 | Cloudflare | production account/resources | development/staging account/resources |
-| Supabase | logical `ekodi-platform` | logical `ekodi-platform-dev` |
+| Supabase | canonical `ekodi-platform` | logical `ekodi-platform-dev`; dedicated remote DB not yet provisioned, CI uses ephemeral local Supabase |
 
 ## 2. Supabase transition mapping
 
