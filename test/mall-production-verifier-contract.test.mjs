@@ -75,6 +75,8 @@ test('Mall production verifier preserves Verification Ops cache safety checks', 
   assert.match(workflow, /cache-control: no-store/);
   assert.match(workflow, /x-robots-tag: noindex, nofollow, noarchive/);
   assert.match(workflow, /verificationOpsCacheBoundary=verified/);
+  assert.match(workflow, /\/ekodibiz\/mall\/assets\/verification-ops\.js/);
+  assert.doesNotMatch(workflow, /grep -Fq '\/assets\/verification-ops\.js' \/tmp\/mall-verification-final\.html/);
   assert.match(workflow, /verification_ready=false/);
   assert.match(workflow, /seq 1 12/);
   assert.match(workflow, /Verification Ops final HTML pending/);
