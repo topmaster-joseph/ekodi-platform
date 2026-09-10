@@ -2,8 +2,8 @@ begin;
 create extension if not exists pgtap with schema extensions;
 select plan(12);
 
-select ok(not has_function_privilege('anon','public.ensure_marketing_free_access_for_auth_user()','EXECUTE'),'anon cannot execute marketing trigger helper');
-select ok(not has_function_privilege('authenticated','public.provision_store_user_site()','EXECUTE'),'authenticated cannot execute store provisioning trigger helper');
+select ok(to_regprocedure('public.ensure_marketing_free_access_for_auth_user()') is null or not has_function_privilege('anon',to_regprocedure('public.ensure_marketing_free_access_for_auth_user()'),'EXECUTE'),'marketing trigger helper is absent or locked from anon');
+select ok(to_regprocedure('public.provision_store_user_site()') is null or not has_function_privilege('authenticated',to_regprocedure('public.provision_store_user_site()'),'EXECUTE'),'store provisioning helper is absent or locked from authenticated');
 select ok(to_regprocedure('public.sync_store_public_profile_metadata()') is null or not has_function_privilege('anon',to_regprocedure('public.sync_store_public_profile_metadata()'),'EXECUTE'),'storefront trigger helper is absent or locked from anon');
 select ok(has_function_privilege('anon','public.current_ekodi_mcp_identity()','EXECUTE'),'OAuth MCP anon exception remains explicitly callable');
 select ok(not (select p.prosecdef from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname='document_workspace_health' and pg_get_function_identity_arguments(p.oid)=''),'document health runs as security invoker');

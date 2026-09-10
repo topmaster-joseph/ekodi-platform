@@ -1,12 +1,16 @@
 -- EKODI Supabase security/performance hardening 2026-09-10
 -- Preserve intentional OAuth MCP anon execution; remove accidental public trigger execution.
 
-revoke execute on function public.ensure_marketing_free_access_for_auth_user() from public, anon, authenticated;
-revoke execute on function public.provision_store_user_site() from public, anon, authenticated;
-grant execute on function public.ensure_marketing_free_access_for_auth_user() to service_role;
-grant execute on function public.provision_store_user_site() to service_role;
 do $$
 begin
+  if to_regprocedure('public.ensure_marketing_free_access_for_auth_user()') is not null then
+    execute 'revoke execute on function public.ensure_marketing_free_access_for_auth_user() from public, anon, authenticated';
+    execute 'grant execute on function public.ensure_marketing_free_access_for_auth_user() to service_role';
+  end if;
+  if to_regprocedure('public.provision_store_user_site()') is not null then
+    execute 'revoke execute on function public.provision_store_user_site() from public, anon, authenticated';
+    execute 'grant execute on function public.provision_store_user_site() to service_role';
+  end if;
   if to_regprocedure('public.sync_store_public_profile_metadata()') is not null then
     execute 'revoke execute on function public.sync_store_public_profile_metadata() from public, anon, authenticated';
     execute 'grant execute on function public.sync_store_public_profile_metadata() to service_role';
@@ -28,7 +32,9 @@ alter policy site_access_requests_self_update on public.site_access_requests
   using (user_id=(select auth.uid()) or public.is_platform_admin())
   with check (user_id=(select auth.uid()) or public.is_platform_admin());
 alter policy mall_sales_events_authenticated_select on public.mall_sales_events
-  using ((select auth.uid()) is not null);alter policy document_files_select_own on public.document_files
+  using ((select auth.uid()) is not null);
+
+alter policy document_files_select_own on public.document_files
   using ((select auth.uid())=owner_user_id);
 alter policy document_files_insert_own on public.document_files
   with check ((select auth.uid())=owner_user_id and workspace_key='personal:'||(select auth.uid())::text);
