@@ -60,3 +60,14 @@ test('shared-site guarded release accepts any valid content fingerprint instead 
   assert.ok(admin.headerExpect.includes('cache-control: no-store'));
   assert.equal(admin.redirect, 'follow');
 });
+
+test('shared-site production promotion proves canonical Admin ownership and legacy redirect compatibility', async () => {
+  const workflow = await read('.github/workflows/deploy-site-core.yml');
+  assert.match(workflow, /Verify canonical Admin route ownership/);
+  assert.match(workflow, /https:\/\/ekodi\.kr\/admin\//);
+  assert.match(workflow, /x-ekodi-route: admin-shell/);
+  assert.match(workflow, /https:\/\/admin\.ekodi\.kr\//);
+  assert.match(workflow, /legacy_code.*308/);
+  assert.match(workflow, /location: https:\/\/ekodi\.kr\/admin\/\?source=admin\.ekodi\.kr/);
+  assert.match(workflow, /canonicalAdminRouteOwnership=verified/);
+});
