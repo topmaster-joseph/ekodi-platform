@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-09-05",
+  "updatedAt": "2026-09-10",
   "title": "EKODI Constitution Registry Index",
   "mode": "index-only",
   "authority": {
@@ -286,7 +286,8 @@
         "marketing-canonical-projection.js",
         "marketing-growth-worker.js",
         "marketing-publishing-worker.js",
-        "my/progressive-personalization.js",        "config/ecosystem-services.json",
+        "my/progressive-personalization.js",
+        "config/ecosystem-services.json",
         "scripts/generate-user-service-registry.mjs"
       ]
     },
@@ -301,7 +302,10 @@
         "traffic-intelligence-control.js",
         "scripts/collect-traffic-intelligence.mjs",
         "evolution-intelligence-store.js",
-        "system-health-admin.js"
+        "system-health-admin.js",
+        "governance/architecture/ekodi-evolution-model.json",
+        "governance/architecture/generation-10-readiness.json",
+        "scripts/validate-generation-readiness.mjs"
       ]
     },
     {

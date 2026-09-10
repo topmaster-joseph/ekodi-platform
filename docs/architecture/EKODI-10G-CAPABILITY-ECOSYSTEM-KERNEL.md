@@ -1,6 +1,6 @@
 # EKODI 10G Capability Ecosystem Kernel
 
-Status: runtime target kernel, not a constitutional generation amendment.
+Status: active Generation 10 runtime kernel under Constitution v1.10.0. The kernel remains bounded by sovereign approval and guarded promotion.
 
 ## Purpose
 

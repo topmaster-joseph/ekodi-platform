@@ -1,4 +1,4 @@
-import fs from 'node:fs';
+﻿import fs from 'node:fs';
 import path from 'node:path';
 
 const root = process.cwd();
@@ -13,9 +13,9 @@ const coreData = json('config/core-data-boundaries.json');
 const storage = json('config/storage-policy.json');
 const workspace = json('config/service-workspace-policy.json');
 
-if (constitution.version !== '1.9.1') fail('constitution version must be 1.9.1 with the approved Admin five-area routing amendment and all prior approved amendments');
+if (constitution.version !== '1.10.0') fail('constitution version must be 1.10.0 with the approved Generation 10 open-ended evolution amendment and all prior approved amendments');
 if (constitution.status !== 'active') fail('constitution must be active');
-for (const principle of ['free-first-not-free-only','ekodi-core-is-source-of-truth','provider-independent-by-default','secure-by-default','one-domain-grammar','isolated-parallel-development','verification-first-evolution','security-native-intelligence','evidence-linked-recommendations','secure-projection-minimum-disclosure','integrated-responsibility-distributed-execution-standardized-connections','layered-governance-os-core-services-connections-workspaces','user-surface-engine-separation','capability-first-reuse','sustainable-scale-by-evidence','workspace-over-space','living-digital-commons-north-star','sovereign-autonomy-with-human-authority','person-workspace-role-capability-authority','observe-detect-reason-plan-execute-verify-recover-learn']) {
+for (const principle of ['free-first-not-free-only','ekodi-core-is-source-of-truth','provider-independent-by-default','secure-by-default','one-domain-grammar','isolated-parallel-development','verification-first-evolution','security-native-intelligence','evidence-linked-recommendations','secure-projection-minimum-disclosure','integrated-responsibility-distributed-execution-standardized-connections','layered-governance-os-core-services-connections-workspaces','user-surface-engine-separation','capability-first-reuse','sustainable-scale-by-evidence','workspace-over-space','generation-10-active-baseline','open-ended-evidence-driven-generation-evolution','sovereign-autonomy-with-human-authority','person-workspace-role-capability-authority','observe-detect-reason-plan-execute-verify-recover-learn']) {
   if (!constitution.principles?.includes(principle)) fail(`missing constitutional principle: ${principle}`);
 }
 
@@ -63,9 +63,9 @@ for (const control of ['least_privilege','zero_trust','audit','tenant_isolation'
 
 const sustainable = constitution.sustainableEvolutionModel || {};
 if (sustainable.registry !== 'governance/architecture/ekodi-evolution-model.json') fail('sustainable evolution registry mismatch');
-if (sustainable.currentGeneration !== 2 || sustainable.currentGenerationName !== 'Integrated Platform') fail('constitutional current generation must be 2 Integrated Platform');
-if (sustainable.nextGeneration !== 3 || sustainable.nextGenerationName !== 'Capability Platform') fail('constitutional next generation must be 3 Capability Platform');
-if (sustainable.northStarGeneration !== 8 || sustainable.northStarName !== 'Living Digital Commons') fail('constitutional north star must be Generation 8 Living Digital Commons');
+if (sustainable.currentGeneration !== 10 || sustainable.currentGenerationName !== 'Self-Architecture Optimization') fail('constitutional current generation must be 10 Self-Architecture Optimization');
+if (sustainable.nextGeneration !== null || sustainable.nextGenerationName !== 'Evidence-defined future generation') fail('future generation must remain evidence-defined rather than predeclared');
+if (sustainable.northStarGeneration !== null || sustainable.northStarName !== 'Open-Ended Evidence-Driven Evolution') fail('constitutional evolution must remain open-ended beyond Generation 10');
 if (sustainable.currentScaleTier !== 'S0') fail('constitutional current scale tier must be S0');
 if (sustainable.reuseCapabilityBeforeNewService !== true) fail('capability reuse must precede new service creation');
 if (sustainable.sharedBeforeDedicated !== true) fail('shared infrastructure must precede dedicated infrastructure');
@@ -73,7 +73,7 @@ if (sustainable.existingDeploymentBoundariesGrandfathered !== true) fail('existi
 if (sustainable.newIndependentDeploymentRequiresEvidence !== true) fail('new independent deployment must require evidence');
 if (sustainable.workspaceConvergenceTarget !== 'Person + Workspace + Membership + Capability') fail('workspace convergence target mismatch');
 if (evolutionModel.currentGeneration !== sustainable.currentGeneration) fail('constitution/evolution current generation mismatch');
-if (evolutionModel.northStarGeneration !== sustainable.northStarGeneration) fail('constitution/evolution north star mismatch');
+if (evolutionModel.northStarGeneration !== sustainable.northStarGeneration || evolutionModel.northStarName !== sustainable.northStarName) fail('constitution/evolution open-ended north star mismatch');
 if (evolutionModel.currentScaleTier !== sustainable.currentScaleTier) fail('constitution/evolution scale tier mismatch');
 if (evolutionModel.sustainability?.noSpeculativeScale !== true) fail('evolution model must forbid speculative scale');
 if (evolutionModel.sustainability?.sharedBeforeDedicated !== true) fail('evolution model must preserve shared-before-dedicated');
@@ -228,7 +228,7 @@ console.log(`EKODI Constitution ${constitution.version}: OK`);
 console.log(`- ${Object.keys(boundaries.platforms || {}).length} platform/service boundaries checked`);
 console.log(`- ${legacy.size} legacy domains registered with canonical migration targets`);
 console.log(`- ${registeredCommon.size} registered common-service boundaries checked`);
-console.log(`- sustainable evolution: generation ${sustainable.currentGeneration} -> ${sustainable.northStarGeneration}, scale ${sustainable.currentScaleTier}`);
+console.log(`- sustainable evolution: generation ${sustainable.currentGeneration}, future open-ended, scale ${sustainable.currentScaleTier}`);
 console.log('- canonical user spaces: /{slug} on ekodi.kr; workspace kind remains internal metadata');
 console.log('- Workspace is canonical; Space remains compatibility-only during migration');
 console.log('- service workspace routing policy aligned to immutable workspace_id');

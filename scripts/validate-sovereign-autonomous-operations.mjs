@@ -71,7 +71,7 @@ if (JSON.stringify(architecture.sovereignHierarchy?.order) !== JSON.stringify(hi
 if (architecture.authorityContext?.workspaceIdentityKey !== 'workspace_id') fail('architecture authority context must keep workspace_id');
 if (evolution.operatingArchitectureVersion !== '1.8.1') fail('evolution model operating architecture version mismatch');
 if (evolution.generationPromotion?.changedByV18 !== false) fail('v1.8 must not promote generation');
-if (evolution.currentGeneration !== 2) fail('current generation must remain 2');
+if (evolution.currentGeneration !== 10) fail('current generation must be 10');
 if (evolution.currentScaleTier !== 'S0') fail('current scale tier must remain S0');
 if (evolution.sustainability?.sharedBeforeDedicated !== true) fail('shared-before-dedicated must remain active');
 if (evolution.sustainability?.noSpeculativeScale !== true) fail('no-speculative-scale must remain active');
@@ -86,4 +86,4 @@ console.log('- hierarchy: Sovereign > Autonomous > Agentic > Services');
 console.log('- authority: Person + Workspace + Role + Capability');
 console.log('- loop: Observe > Detect > Reason > Plan > Execute > Verify > Recover > Learn');
 console.log('- parallel tracks: UI, Service, Tenant, Knowledge, Content, Agent');
-console.log('- generation 2 / scale S0 preserved; no speculative scale');
+console.log('- generation 10 baseline / scale S0 preserved; future generations remain evidence-gated');
