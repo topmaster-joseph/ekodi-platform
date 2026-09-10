@@ -6,6 +6,7 @@
   "status": "accepted",
   "approvedAt": "2026-09-10",
   "approvalRef": "Owner confirmation in ChatGPT conversation on 2026-09-10: core/internal services remain centrally governed while externally provided services and sites use their own administrator surfaces as the operational source of truth.",
+  "approvalMechanism": "constitution-approved label on PR #1440 after explicit owner confirmation",
   "reason": "Separate platform-global stewardship from service/workspace-local operations so the Super Administrator governs EKODI Core, internal control services and cross-service guardrails without implicitly absorbing each site's operational authority. Register Community as the external operator of 함께읽기 while allowing Church, merchant associations and other workspaces to operate their own reading circles locally.",
   "targetVersion": "1.10.0",
   "previousVersion": "1.10.0",
