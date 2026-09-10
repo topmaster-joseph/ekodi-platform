@@ -1,4 +1,5 @@
 import { adminMenuOrder, getAdminMenuItem, getAdminMenuLabel, normalizeAdminLocale } from './admin-menu-registry.js';
+import { EKODIBIZ_ADMIN_SCOPES } from './ekodibiz-admin-registry.js';
 
 const API = 'https://ekodi.kr';
 const LOCALE_KEY = 'ekodi-admin-locale';
@@ -151,6 +152,22 @@ function installStyle() {
 `;
   document.head.append(style);
 }
+function installEkodiBizSourceHub() {
+  const source = new URL(location.href).searchParams.get('source') || '';
+  const existing = document.querySelector('[data-ekodibiz-admin-hub]');
+  if (source !== 'ekodibiz' || currentSession?.role !== 'super_admin') { existing?.remove(); return; }
+  if (!document.querySelector('#ekodibiz-admin-hub-style')) {
+    const style=document.createElement('style'); style.id='ekodibiz-admin-hub-style';
+    style.textContent='.ekodibiz-admin-hub{display:flex;align-items:center;gap:7px;padding:8px 16px;border-bottom:1px solid rgba(148,163,184,.22);background:#fff;color:#172033;overflow-x:auto;scrollbar-width:none}.ekodibiz-admin-hub::-webkit-scrollbar{display:none}.ekodibiz-admin-hub>strong{flex:0 0 auto;font-size:11px;color:#66768a}.ekodibiz-admin-hub a{flex:0 0 auto;display:inline-flex;align-items:center;min-height:36px;padding:7px 10px;border:1px solid #dfe5ee;border-radius:8px;background:#fafbfc;color:#405269;text-decoration:none;font-size:12px;font-weight:760;white-space:nowrap}.ekodibiz-admin-hub a.active{border-color:#bfd5ee;background:#edf4ff;color:#0b5cab}@media(max-width:760px){.ekodibiz-admin-hub{padding:7px 10px}.ekodibiz-admin-hub a{min-height:42px;font-size:13px}}';
+    document.head.append(style);
+  }
+  const main=document.querySelector('#app main')||document.querySelector('main'); if(!main)return;
+  const host=existing||document.createElement('nav'); host.className='ekodibiz-admin-hub'; host.dataset.ekodibizAdminHub='true'; host.setAttribute('aria-label','에코디비즈 관리 영역'); host.replaceChildren();
+  const label=document.createElement('strong'); label.textContent='에코디비즈 관리'; host.append(label);
+  for(const scope of EKODIBIZ_ADMIN_SCOPES){const link=document.createElement('a');link.href=scope.adminHref;link.textContent=scope.label;link.title=scope.description||scope.label;if(scope.id==='books'){link.classList.add('active');link.setAttribute('aria-current','page')}host.append(link)}
+  if(!existing)main.prepend(host);
+}
+
 function bindAdminHandoff(link, definition) {
   if (!link || definition?.adminHandoff !== true || link.dataset.adminHandoffBound === 'true') return link;
   link.dataset.adminHandoff = 'true';
@@ -452,6 +469,7 @@ async function install() {
   if (!token()) return;
   try {
     currentSession = await loadCurrentSession();
+    installEkodiBizSourceHub();
     if (currentSession.role === 'super_admin') ensureAdminPanel();
     await installContextControl();
     if (currentSession.role === 'super_admin' && currentContext.type === 'platform') { ensureAdminNav(); ensureAdminPanel(); applyMenuLabels(); }
