@@ -10,6 +10,8 @@ on:
       - 'platform-router-entry-worker.js'
       - 'store-gateway-page.js'
       - 'store-portfolio-admin-page.js'
+      - 'store-admin-menu-profile.js'
+      - 'store-admin-engine.js'
       - 'test/store-public-gateway.test.mjs'
       - 'test/store-portfolio-admin.test.mjs'
       - 'insurance-public-route.js'
@@ -67,6 +69,8 @@ jobs:
           node --check platform-router-entry-worker.js
           node --check store-gateway-page.js
           node --check store-portfolio-admin-page.js
+          node --check store-admin-menu-profile.js
+          node --check store-admin-engine.js
           node --check insurance-public-route.js
           node --check sites/ekodi-insurance/public/advisor.js
           node --check sites/ekodi-insurance/public/server-bridge.js

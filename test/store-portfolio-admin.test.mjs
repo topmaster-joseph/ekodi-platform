@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { storePortfolioAdminPage, CMPMYI_STORES, CMPMYI_ADMIN_SECTIONS } from '../store-portfolio-admin-page.js';
+import { storePortfolioAdminPage, CMPMYI_STORES, CMPMYI_ADMIN_SECTIONS, CMPMYI_STORE_MENUS } from '../store-portfolio-admin-page.js';
 import { storePortfolioAdminAuthScript } from '../store-portfolio-admin-auth.js';
-import { isIntegratedStoreAdminPathShape, resolveIntegratedStoreAdminRoute, storeAdminPage } from '../store-admin-engine.js';
+import { isIntegratedStoreAdminPathShape, resolveIntegratedStoreAdminRoute, storeAdminPage, storeAdminScript } from '../store-admin-engine.js';
 import { ADMIN_MENU_REGISTRY } from '../admin-menu-registry.js';
 
 const router=readFileSync(new URL('../platform-router-entry-worker.js',import.meta.url),'utf8');
@@ -14,6 +14,14 @@ test('cmpmyi admin is the three-store operations entry hub',async()=>{
   assert.equal(response.headers.get('x-ekodi-authority-scope'),'platform-entry');
   assert.deepEqual(CMPMYI_STORES.map(x=>x.slug),['jadam','pizzamaru','yogurt']);
   assert.ok(CMPMYI_ADMIN_SECTIONS.some(([section])=>section==='reviews'));
+  assert.ok(CMPMYI_ADMIN_SECTIONS.some(([section])=>section==='delivery'));
+  const menuLabels=CMPMYI_STORES.map(store=>CMPMYI_STORE_MENUS[store.slug]?.labels?.menu);
+  assert.equal(new Set(menuLabels).size,3);
+  for(const store of CMPMYI_STORES){
+    const profile=CMPMYI_STORE_MENUS[store.slug];assert.ok(profile);
+    for(const [section,label] of Object.entries(profile.labels)){assert.ok(html.includes(label));assert.ok(profile.descriptions[section]);}
+    assert.ok(html.includes(`/cmpmyi/admin/${store.slug}/delivery`));
+  }
   for(const store of CMPMYI_STORES){assert.ok(html.includes(store.name));assert.ok(html.includes(`/cmpmyi/admin/${store.slug}/menu`));}
   assert.match(html,/id="portfolioLogin"/);assert.match(html,/id="portfolioContent" class="wrap" hidden/);
   assert.match(html,/Google 계정으로 계속/);assert.match(html,/\/store-portfolio-admin\.js\?v=20260910-sso-v1/);
@@ -35,9 +43,16 @@ test('integrated deep routes reuse the store admin engine without merging tenant
   const response=storeAdminPage(profile);const html=await response.text();
   assert.equal(response.headers.get('x-ekodi-route'),'cmpmyi-jadam-store-admin');
   assert.equal(response.headers.get('x-ekodi-authority-scope'),'tenant');
-  assert.match(html,/data-ekodi-store-portfolio="cmpmyi"/);assert.match(html,/\/cmpmyi\/admin\/pizzamaru/);
+  assert.match(html,/data-ekodi-store-portfolio="cmpmyi"/);assert.match(html,/data-ekodi-store-menu-profile="jadam"/);
+  assert.ok(html.includes(CMPMYI_STORE_MENUS.jadam.labels.overview));assert.ok(html.includes(CMPMYI_STORE_MENUS.jadam.descriptions.overview));
+  assert.match(html,/\/cmpmyi\/admin\/pizzamaru/);
 });
 
+test('store admin runtime uses a concrete menu profile for each store',async()=>{
+  const script=await storeAdminScript().text();
+  for(const store of CMPMYI_STORES){assert.ok(script.includes(CMPMYI_STORE_MENUS[store.slug].labels.menu));}
+  assert.match(script,/MENU_PROFILES/);assert.match(script,/menuLabel\(key,label\)/);
+});
 test('super administrator navigation exposes the integrated store hub under Spaces',()=>{
   const item=ADMIN_MENU_REGISTRY.find(row=>row.id==='cmpmyi');
   assert.ok(item);assert.equal(item.group,'space');assert.equal(item.superAdminOnly,true);
