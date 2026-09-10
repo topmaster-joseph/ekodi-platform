@@ -375,6 +375,21 @@ jobs:
       - name: Candidate at 0%, verify routes, promote and auto-rollback on failure
         run: node scripts/guarded-worker-release.mjs --manifest deploy/manifests/shared-site.worker.json
 
+      - name: Verify canonical Admin route ownership
+        shell: bash
+        run: |
+          set -euo pipefail
+          canonical_code=$(curl -sS --max-redirs 0 -D /tmp/admin-canonical.headers -o /tmp/admin-canonical.html -w '%{http_code}' --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 20 'https://ekodi.kr/admin/' || true)
+          [ "$canonical_code" = '200' ] || { echo "Canonical Admin route must return 200; HTTP $canonical_code"; exit 1; }
+          grep -Fiq 'x-ekodi-route: admin-shell' /tmp/admin-canonical.headers || { echo 'Canonical Admin route owner missing.'; exit 1; }
+          grep -Fiq 'cache-control: no-store' /tmp/admin-canonical.headers || { echo 'Canonical Admin shell must remain no-store.'; exit 1; }
+
+          legacy_code=$(curl -sS --max-redirs 0 -D /tmp/admin-legacy.headers -o /tmp/admin-legacy.body -w '%{http_code}' --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 20 'https://admin.ekodi.kr/' || true)
+          [ "$legacy_code" = '308' ] || { echo "Legacy Admin host must redirect permanently; HTTP $legacy_code"; exit 1; }
+          grep -Fiq 'location: https://ekodi.kr/admin/?source=admin.ekodi.kr' /tmp/admin-legacy.headers || { echo 'Legacy Admin redirect target is not canonical.'; exit 1; }
+          grep -Fiq 'cache-control: no-store' /tmp/admin-legacy.headers || { echo 'Legacy Admin redirect must remain no-store.'; exit 1; }
+          echo 'canonicalAdminRouteOwnership=verified'
+
       - name: Verify admin assets and every registered production service
         shell: bash
         run: |
