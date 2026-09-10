@@ -37,6 +37,7 @@ on:
       - 'scripts/admin-thin-postbuild.mjs'
       - 'scripts/admin-readable-command-postbuild.mjs'
       - 'scripts/admin-performance-postbuild.mjs'
+      - 'scripts/admin-authenticated-e2e-menu-worker.mjs'
       - 'test/admin-readable-command.test.mjs'
       - 'test/admin-true-lazy.test.mjs'
       - 'test/admin-thin-shell.test.mjs'
