@@ -216,7 +216,7 @@ async function verifyAiSettings(tab, alreadyActive, started) {
   const state = await visiblePanelState();
   const panel = page.locator('#aiManagementPanel');
   const providerWeights = await panel.locator('[data-provider-weight]').count();
-  const guards = String(await panel.locator('.ai-mgmt-guards').textContent() || '').replace(/\s+/g,' ').trim();
+  const guards = (await panel.locator('.ai-mgmt-guards').allTextContents()).join(' ').replace(/\s+/g,' ').trim();
   const saveVisible = await panel.locator('#aiMgmtSave').isVisible();
   if (!state.panelFound || !state.selected || state.busy) throw new Error(`ai-settings panel invalid: ${JSON.stringify(state)}`);
   if (providerWeights !== Object.keys(AI_ROUTER_SCORE_POLICY.weights).length) throw new Error(`ai-settings: expected ${Object.keys(AI_ROUTER_SCORE_POLICY.weights).length} provider weights, got ${providerWeights}`);
