@@ -7,7 +7,6 @@ route = { pattern = "marketing-connect-api.ekodi.kr", custom_domain = true }
 [triggers]
 crons = []
 
-
 [vars]
 MALL_PROMOTION_AUTOMATION_ENABLED = "true"
 ALLOWED_ORIGINS = "https://ekodi.kr,https://admin.ekodi.kr,https://marketing.ekodi.kr,https://my.ekodi.kr"
@@ -27,4 +26,3 @@ binding = "DB"
 database_name = "ekodi-auth"
 database_id = "e38778f1-b059-4fe7-8816-300f3eec6e19"
 migrations_dir = "migrations"
-
