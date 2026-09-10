@@ -18,6 +18,13 @@ function el(html) {
   return template.content.firstElementChild;
 }
 
+function surfaceInfo(site) {
+  const resolver = window.EKODIAdminSurfaceLabels;
+  if (resolver?.info) return resolver.info(site?.domain, site?.label || '', site?.url || '');
+  const raw = String(site?.domain || '').trim();
+  return { label: site?.label || raw, url: site?.url || (raw ? 'https://' + raw : '') };
+}
+
 function currentToken() {
   try {
     return sessionStorage.getItem('ekodi-auth-token') || '';
@@ -34,7 +41,7 @@ async function api(path = '', options = {}) {
   if (token) headers.set('authorization', `Bearer ${token}`);
   const response = await fetch(`${API}${path}`, { ...options, headers, credentials: 'omit' });
   const payload = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(payload.error || '임시페이지 설정을 처리하지 못했습니다.');
+  if (!response.ok) throw new Error(payload.error || '공개·점검 전환을 처리하지 못했습니다.');
   return payload;
 }
 
@@ -46,7 +53,7 @@ function bindNavLink(link) {
   if (!link) return;
   link.dataset.adminLink = SECTION;
   link.dataset.section = SECTION;
-  if (!link.querySelector('span')) link.innerHTML = '<span>임시페이지 설정</span>';
+  if (!link.querySelector('span')) link.innerHTML = '<span>공개·점검 전환</span>';
   if (link.dataset.publicSiteControlsBound === 'true') return;
   link.dataset.publicSiteControlsBound = 'true';
   link.addEventListener('click', event => {
@@ -62,7 +69,7 @@ function ensureNavLink() {
   if (!nav) return;
   let link = nav.querySelector('[data-admin-link="public-site-controls"], [data-section="public-site-controls"], [data-lazy-section="public-site-controls"]');
   if (!link) {
-    link = el('<button type="button" class="nav" data-admin-link="public-site-controls" data-section="public-site-controls"><span>임시페이지 설정</span></button>');
+    link = el('<button type="button" class="nav" data-admin-link="public-site-controls" data-section="public-site-controls"><span>공개·점검 전환</span></button>');
     nav.appendChild(link);
   }
   bindNavLink(link);
@@ -77,8 +84,8 @@ function ensurePanel() {
     <section id="${PANEL_ID}" class="section" hidden data-panel="public-site-controls">
       <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap">
         <div>
-          <h2>임시페이지 설정</h2>
-          <p class="muted">cgma.or.kr 같은 공개 도메인을 정상 공개 또는 임시페이지 모드로 전환합니다.</p>
+          <h2>공개·점검 전환</h2>
+          <p class="muted">사이트 목록을 다시 만들지 않고, 공개 주소의 정상 공개·점검 모드만 전환합니다.</p>
         </div>
         <button type="button" class="btn" data-public-site-refresh>새로고침</button>
       </div>
@@ -103,7 +110,7 @@ function siteForm(site) {
       <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap">
         <div>
           <strong style="font-size:18px">${site.name}</strong>
-          <div class="muted">${site.domain} · ${site.workspaceId}</div>
+          <div class="muted">${surfaceInfo(site).label} · ${site.workspaceId}</div>
         </div>
         <span data-public-site-status-badge style="padding:7px 10px;border-radius:999px;background:rgba(142,200,255,.14);height:max-content">${LABELS[site.publicStatus] || site.publicStatus}</span>
       </div>
@@ -136,7 +143,7 @@ function siteForm(site) {
       </label>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <button type="submit" class="btn primary">저장</button>
-        <a class="btn" href="https://${site.domain}" target="_blank" rel="noopener noreferrer">사이트 확인</a>
+        <a class="btn" href="${surfaceInfo(site).url}" target="_blank" rel="noopener noreferrer">사이트 확인</a>
       </div>
       <small class="muted">지정 주소 연결은 http 또는 https 주소만 허용합니다. 기본값은 방문자가 길을 잃지 않도록 버튼 이동입니다.</small>
     </form>
@@ -175,7 +182,7 @@ function render(panel, sites) {
         fillForm(form, result.site);
         const badge = form.querySelector('[data-public-site-status-badge]');
         if (badge) badge.textContent = LABELS[result.site.publicStatus] || result.site.publicStatus;
-        setMessage(panel, `${result.site.domain} 임시페이지 설정을 저장했습니다.`);
+        setMessage(panel, `${surfaceInfo(result.site).label} 공개·점검 전환을 저장했습니다.`);
       } catch (error) {
         setMessage(panel, error.message || '저장하지 못했습니다.', true);
       }
@@ -187,11 +194,11 @@ function render(panel, sites) {
 async function load() {
   const panel = ensurePanel();
   if (!panel) return;
-  setMessage(panel, '임시페이지 설정을 불러오는 중입니다.');
+  setMessage(panel, '공개·점검 전환을 불러오는 중입니다.');
   try {
     const data = await api();
     render(panel, data.sites || []);
-    setMessage(panel, '임시페이지 설정 상태를 확인했습니다.');
+    setMessage(panel, '공개·점검 전환 상태를 확인했습니다.');
   } catch (error) {
     setMessage(panel, error.message || '설정을 불러오지 못했습니다.', true);
   }
@@ -206,7 +213,7 @@ function activate() {
   });
   document.querySelectorAll('.sidebar .nav').forEach(item => item.classList.toggle('active', isPublicSiteNav(item)));
   const title = document.querySelector('#pageTitle');
-  if (title) title.textContent = '임시페이지 설정';
+  if (title) title.textContent = '공개·점검 전환';
   load();
 }
 

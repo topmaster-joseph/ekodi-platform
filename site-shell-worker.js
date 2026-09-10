@@ -108,13 +108,13 @@ export default {
     if (effective.host === PUBLIC_HOST) {
       const pathname=new URL(effective.request.url).pathname;
       if(rootInternalPath(pathname)||standaloneBrandPlacePath(pathname)||isWorkspaceAdminPathShape(pathname))return response;
+      const serviceId=rootUserService(pathname);
+      if(serviceId)return injectEkodiShell(response,serviceId);
       const workspaceSlug=workspaceSlugForPath(pathname);
       if(workspaceSlug){
         const shelled=injectEkodiShell(response,'ekodi','workspace');
         return applyWorkspaceVisual(shelled,workspaceSlug);
       }
-      const serviceId=rootUserService(pathname);
-      if(serviceId)return injectEkodiShell(response,serviceId);
       return injectEkodiShell(response,'ekodi','public');
     }
     const serviceId = shellServiceForHost(effective.host);

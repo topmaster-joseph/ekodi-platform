@@ -126,8 +126,9 @@ for (const marker of [
   'projected.context.spaceId',
   'projected.context.actorId',
   'capabilities: [body.capability]',
-  'input: projected.input',
+  'capabilityGrant',
 ]) assert(externalAi.includes(marker), `External AI projection boundary missing: ${marker}`);
+assert(externalAi.includes('input: state.projected.input') || externalAi.includes('input: projected.input'), 'External AI input must use the secure projected payload');
 
 assert(openAi.includes('projectForExternalAi(context'), 'Admin OpenAI context must be projected before outbound calls');
 assert(claude.includes('sanitizeProjectionText(text(message), { strict: true'), 'Claude personal provider must sanitize outbound text');

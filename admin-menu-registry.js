@@ -31,7 +31,7 @@ export const ADMIN_MENU_REGISTRY = Object.freeze([
   { id: 'supply-network', group: 'services', icon: 'N', managementArea: 'professional-services', labels: { ko: '판매·공급망', en: 'Sales & Supply Network' } },
   { id: 'insurance', group: 'services', icon: 'I', labels: { ko: '보험', en: 'Insurance' } },
 
-  { id: 'public-site-controls', group: 'system', icon: '▤', labels: { ko: '공개상태·임시페이지', en: 'Public Status & Maintenance' } },
+  { id: 'public-site-controls', group: 'system', icon: '▤', labels: { ko: '공개·점검 전환', en: 'Public & Maintenance Mode' } },
   { id: 'language-status', group: 'system', icon: '文', labels: { ko: '다국어 지원 현황', en: 'Language Readiness' } },
   { id: 'architecture', group: 'system', icon: '◇', labels: { ko: '시스템 구조', en: 'System Structure' } },
   { id: 'security', group: 'system', icon: 'S', labels: { ko: '보안·Identity', en: 'Security & Identity' } },

@@ -26,12 +26,21 @@ assert(ai.version === '1.0.0', 'External AI contract version must be 1.0.0');
 assert(ai.executionPath === '/v1/execute', 'External AI execute path must be stable');
 assert(ai.security?.executionTrust === 'registered_ekodi_internal_caller', 'AI execution must require registered EKODI callers');
 assert(ai.security?.browserDirectExecution === false, 'Browser direct AI module execution must be forbidden');
-assert(ai.security?.providerMayReceiveGoogleCredentials === false, 'Providers must never receive Google credentials');
-assert(ai.security?.providerMayAccessSharedDriveDirectly === false, 'Providers must never access Shared Drive directly');
+assert(ai.security?.providerMayReceiveEkodiStorageCredentials === false, 'Providers must never receive EKODI storage credentials');
+assert(ai.security?.providerMayAccessCanonicalStorageDirectly === false, 'Providers must never access canonical storage directly');
 assert(ai.security?.providerMayAccessEkodiDatabaseDirectly === false, 'Providers must never access EKODI DB directly');
-assert(ai.persistence?.canonicalStore === storage.canonicalStore, 'AI persistence and storage canonical store must match');
+assert(ai.persistence?.canonicalStore === 'ekodi_managed_canonical_store', 'External contract must expose only the abstract EKODI canonical store');
 assert(ai.persistence?.durableOutputRoute === 'EKODI Storage Gateway', 'AI durable output must use Storage Gateway');
+assert(ai.persistence?.implementationHiddenFromProvider === true, 'Storage implementation must stay behind the gateway');
 assert(Array.isArray(ai.moduleManifestRequired) && ai.moduleManifestRequired.includes('secretBinding'), 'Module manifest must use server-side secret binding');
+assert(ai.providerExecutionEnvelope?.required?.includes('capabilityGrant') && ai.providerExecutionEnvelope?.required?.includes('dataPolicy'), 'Provider execution envelope must carry guardrail metadata');
+assert(ai.guardrails?.capabilityGrant?.ttlSeconds === 60, 'Capability grants must be short-lived');
+assert(ai.guardrails?.capabilityGrant?.providerCannotUseGrantAgainstEkodi === true, 'Capability grants must not become EKODI API tokens');
+assert(ai.guardrails?.dataMinimization?.canonicalIdentifiersPseudonymized === true, 'Canonical identifiers must be pseudonymized');
+assert(ai.guardrails?.providerDataUse?.trainingAllowed === false, 'Provider training on EKODI task data must be forbidden');
+assert(ai.guardrails?.providerDataUse?.secondaryUseAllowed === false, 'Provider secondary use must be forbidden');
+assert(ai.guardrails?.idempotency?.maxAttempts === 2, 'Retry attempts must remain tightly bounded');
+assert(ai.guardrails?.responseLimits?.maxBytesMax === 2097152, 'Provider response hard limit must be declared');
 
 const storageRuntime = fs.readFileSync(new URL('../storage-gateway.js', import.meta.url), 'utf8');
 const driveWriter = fs.readFileSync(new URL('../canonical-drive-writer.js', import.meta.url), 'utf8');
@@ -42,6 +51,7 @@ const missionControl = fs.readFileSync(new URL('../mission-control-entry-worker.
 const wranglerApi = fs.readFileSync(new URL('../wrangler.api.toml', import.meta.url), 'utf8');
 const wranglerStorage = fs.readFileSync(new URL('../wrangler.storage.toml', import.meta.url), 'utf8');
 const migration = fs.readFileSync(new URL('../migrations/0039_storage_ai_gateway.sql', import.meta.url), 'utf8');
+const guardrailMigration = fs.readFileSync(new URL('../migrations/0078_ai_module_guardrails.sql', import.meta.url), 'utf8');
 
 assert(storageRuntime.includes('/api/storage/v1'), 'Storage runtime prefix missing');
 assert(storageRuntime.includes('https://drive.ekodi.kr'), 'API storage facade must terminate at drive.ekodi.kr');
@@ -58,7 +68,15 @@ assert(aiRuntime.includes("new URL('/v1/execute'"), 'Vendor execute contract mis
 assert(aiRuntime.includes('storeEkodiDurableRecord'), 'AI module persistence must route through EKODI Storage Gateway');
 assert(aiRuntime.includes('EKODI_AI_MODULE_CALLERS'), 'AI module execution must require registered internal callers');
 assert(aiRuntime.includes('attestedBy'), 'Vendor context must carry EKODI caller attestation');
+assert(aiRuntime.includes('capabilityGrant'), 'Vendor execution must carry a short-lived capability grant');
+assert(aiRuntime.includes('x-ekodi-idempotency-key'), 'Vendor execution must carry an idempotency key');
+assert(aiRuntime.includes('trainingAllowed: false'), 'Vendor data-use policy must prohibit training');
+assert(aiRuntime.includes('AI_MODULE_RESPONSE_TOO_LARGE'), 'Gateway must enforce response size limits');
+assert(aiRuntime.includes('AI_MODULE_CIRCUIT_OPEN'), 'Gateway must isolate repeated provider failure');
 assert(migration.includes('storage_audit_logs') && migration.includes('ai_module_audit_logs'), 'Gateway audit tables must be migration-managed');
+for (const field of ['provider_model', 'latency_ms', 'storage_status', 'guardrail_policy_version', 'error_code']) {
+  assert(guardrailMigration.includes(field), `AI module guardrail audit field missing: ${field}`);
+}
 
 assert(missionControl.includes("import { handleStorageGateway } from './storage-gateway.js'"), 'Canonical Mission Control must import Storage Gateway');
 assert(missionControl.includes("import { handleExternalAiModuleGateway } from './external-ai-module-gateway.js'"), 'Canonical Mission Control must import External AI Module Gateway');

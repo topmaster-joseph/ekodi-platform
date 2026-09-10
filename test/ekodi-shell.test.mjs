@@ -71,6 +71,17 @@ test('remaining Worker services use thin shared Shell adapters without moving do
   assert.match(siteToml,/main = "platform-router-entry-worker\.js"/);
 });
 
+test('canonical root services win before generic workspace slug classification',async()=>{
+  const site=await read('site-shell-worker.js');
+  const {shellServiceForRootPath}=await import('../ekodi-shell-injector.js');
+  assert.equal(shellServiceForRootPath('/ekodibiz/mall'),'mall');
+  assert.equal(shellServiceForRootPath('/ekodibiz/trade'),'trade');
+  const service=site.indexOf('const serviceId=rootUserService(pathname);');
+  const workspace=site.indexOf('const workspaceSlug=workspaceSlugForPath(pathname);');
+  assert.ok(service>=0&&workspace>=0&&service<workspace);
+  assert.match(site,/if\(serviceId\)return injectEkodiShell\(response,serviceId\)/);
+});
+
 test('Shell-enabled asset Workers keep dynamic roots and APIs behind their wrapper',async()=>{
   const configs=await Promise.all([
     'wrangler.business.toml','wrangler.business-staging.toml','wrangler.work.toml','wrangler.work-staging.toml','wrangler.author.toml','wrangler.books.toml','wrangler.books.staging.toml','wrangler.social.toml','wrangler.social-staging.toml','wrangler.energy.toml','wrangler.energy-staging.toml','wrangler.site.toml','wrangler.site-staging.toml'

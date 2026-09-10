@@ -41,7 +41,8 @@ test('Google credentials stay out of the API worker', () => {
 test('External AI execution is server-to-server and registered-caller attested', () => {
   assert.equal(aiContract.security.executionTrust, 'registered_ekodi_internal_caller');
   assert.equal(aiContract.security.browserDirectExecution, false);
-  assert.equal(aiContract.security.providerMayAccessSharedDriveDirectly, false);
+  assert.equal(aiContract.security.providerMayAccessCanonicalStorageDirectly, false);
+  assert.equal(aiContract.security.providerMayReceiveEkodiStorageCredentials, false);
   assert.equal(aiContract.security.providerMayAccessEkodiDatabaseDirectly, false);
   assert.match(aiGateway, /EKODI_AI_MODULE_CALLERS/);
   assert.match(aiGateway, /x-ekodi-caller-id/);
@@ -50,7 +51,8 @@ test('External AI execution is server-to-server and registered-caller attested',
 
 test('External AI durable output returns through EKODI Storage Gateway', () => {
   assert.equal(aiContract.persistence.durableOutputRoute, 'EKODI Storage Gateway');
-  assert.equal(aiContract.persistence.canonicalStore, 'google_workspace_shared_drive');
+  assert.equal(aiContract.persistence.canonicalStore, 'ekodi_managed_canonical_store');
+  assert.equal(aiContract.persistence.implementationHiddenFromProvider, true);
   assert.match(aiGateway, /storeEkodiDurableRecord/);
   assert.doesNotMatch(aiGateway, /googleapis\.com\/drive/);
 });
