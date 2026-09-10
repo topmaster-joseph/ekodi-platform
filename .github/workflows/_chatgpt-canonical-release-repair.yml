@@ -1,0 +1,93 @@
+name: ChatGPT Canonical Release Repair
+
+on:
+  push:
+    branches:
+      - ai/chatgpt/canonical-release-repair-20260911
+    paths:
+      - '.github/workflows/_chatgpt-canonical-release-repair.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ai/chatgpt/canonical-release-repair-20260911
+          fetch-depth: 0
+      - name: Apply deterministic release contract repairs
+        shell: bash
+        run: |
+          set -euo pipefail
+          python <<'PY'
+          from pathlib import Path
+
+          def replace_exact(path, old, new, count=None):
+              p = Path(path)
+              text = p.read_text()
+              actual = text.count(old)
+              expected = 1 if count is None else count
+              if actual != expected:
+                  raise SystemExit(f'{path}: expected {expected} occurrences, found {actual}: {old!r}')
+              p.write_text(text.replace(old, new))
+
+          replace_exact(
+              '.github/workflows/deploy-my.yml',
+              "grep -Fqi 'access-control-allow-origin: https://my.ekodi.kr' <<<\"$response_headers\"",
+              "grep -Fqi 'access-control-allow-origin: https://ekodi.kr' <<<\"$response_headers\"",
+          )
+
+          p = Path('wrangler.marketing-growth.toml')
+          text = p.read_text()
+          if text.count('`r`n') != 1:
+              raise SystemExit(f'wrangler.marketing-growth.toml: expected one literal `r`n separator, found {text.count("`r`n")}')
+          p.write_text(text.replace('`r`n', '\n'))
+
+          replace_exact(
+              '.github/workflows/verify-business-links.yml',
+              "          grep -Fq \"const AUTH_FALLBACK='https://auth.ekodi.kr/?site=business&return_to=https%3A%2F%2Fbusiness.ekodi.kr%2F'\" business/app.js",
+              "          grep -Fq \"const AUTH_FALLBACK='https://auth.ekodi.kr/';\" business/app.js\n          grep -Fq \"target.searchParams.set('site','business');\" business/app.js\n          grep -Fq \"target.searchParams.set('return_to',canonicalBusinessUrl());\" business/app.js",
+          )
+
+          replace_exact(
+              '.github/workflows/deploy-life-ai.yml',
+              "https://auth.ekodi.kr/client-auth.js",
+              "https://ekodi.kr/auth/client-auth.js",
+          )
+          replace_exact(
+              '.github/workflows/deploy-life-ai.yml',
+              "^location: https://my\\.ekodi\\.kr/journey/\\?source=life",
+              "^location: https://ekodi\\.kr/my/journey/\\?source=life",
+          )
+
+          replace_exact(
+              '.github/workflows/deploy-education.yml',
+              "https://auth.ekodi.kr/client-auth.js",
+              "https://ekodi.kr/auth/client-auth.js",
+          )
+
+          Path('.github/workflows/_chatgpt-canonical-release-repair.yml').unlink()
+          PY
+      - name: Validate repaired contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -Fq "access-control-allow-origin: https://ekodi.kr" .github/workflows/deploy-my.yml
+          ! grep -Fq '`r`n' wrangler.marketing-growth.toml
+          grep -Fq "target.searchParams.set('return_to',canonicalBusinessUrl());" .github/workflows/verify-business-links.yml
+          grep -Fq 'https://ekodi.kr/auth/client-auth.js' .github/workflows/deploy-life-ai.yml
+          grep -Fq 'https://ekodi\\.kr/my/journey/\\?source=life' .github/workflows/deploy-life-ai.yml
+          grep -Fq 'https://ekodi.kr/auth/client-auth.js' .github/workflows/deploy-education.yml
+          git diff --check
+      - name: Commit repaired release contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'topmaster-joseph'
+          git config user.email 'topmaster.joseph@gmail.com'
+          git add .github/workflows/deploy-my.yml wrangler.marketing-growth.toml .github/workflows/verify-business-links.yml .github/workflows/deploy-life-ai.yml .github/workflows/deploy-education.yml .github/workflows/_chatgpt-canonical-release-repair.yml
+          git commit -m 'fix: align canonical release verification contracts'
+          git push origin HEAD:ai/chatgpt/canonical-release-repair-20260911
