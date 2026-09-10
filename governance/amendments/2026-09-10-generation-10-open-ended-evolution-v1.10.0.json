@@ -23,5 +23,6 @@
   },
   "scaleImpact": "None. EKODI remains S0 until independent scale evidence justifies promotion.",
   "authorityImpact": "None. AI gains no sovereign authority and no direct production mutation path.",
-  "rollback": "Revert this amendment and the v1.10.0 generation metadata/validator changes through the guarded release path. Runtime Generation 10 kernels remain bounded and may continue operating without changing production authority."
+  "rollback": "Revert this amendment and the v1.10.0 generation metadata/validator changes through the guarded release path. Runtime Generation 10 kernels remain bounded and may continue operating without changing production authority.",
+  "pullRequest": 1392
 }
