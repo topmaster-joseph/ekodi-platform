@@ -39,7 +39,7 @@ test('origin envelope is immutable and survives inside persisted governance JSON
 });
 
 test('execution plan uses at most five distinct suppliers and pins the origin family first',()=>{
-  const task=normalizeTaskInput({prompt:'build it',originProvider:'chatgpt'});
+  const task=normalizeTaskInput({prompt:'build it',originProvider:'chatgpt',governance:{paidCommitment:true,explicitDelegatedBudget:true}});
   const plan=buildExecutionPlan(task,fullCapabilities);
   assert.equal(plan.length,5);
   assert.equal(new Set(plan.map(item=>item.providerId)).size,5);
@@ -49,7 +49,7 @@ test('execution plan uses at most five distinct suppliers and pins the origin fa
 });
 
 test('explicit collaborator list cannot evict the available origin responder',()=>{
-  const task=normalizeTaskInput({prompt:'compare',originProvider:'claude',providers:['gemini-free','node:codex','node:gemini-cli','openai-api','worker:chatgpt']});
+  const task=normalizeTaskInput({prompt:'compare',originProvider:'claude',providers:['gemini-free','node:codex','node:gemini-cli','openai-api','worker:chatgpt'],governance:{paidCommitment:true,explicitDelegatedBudget:true}});
   const plan=buildExecutionPlan(task,fullCapabilities);
   assert.equal(plan.length,5);
   assert.equal(plan[0].providerId,'node:claude-code');
@@ -57,7 +57,7 @@ test('explicit collaborator list cannot evict the available origin responder',()
 });
 
 test('origin responder falls back within the same AI family before cross-family fallback',()=>{
-  const task=normalizeTaskInput({prompt:'answer',originProvider:'chatgpt'});
+  const task=normalizeTaskInput({prompt:'answer',originProvider:'chatgpt',governance:{paidCommitment:true,explicitDelegatedBudget:true}});
   const capabilities={geminiFree:true,nodeProviders:[],openaiApi:true,anthropicApi:true,workerProviders:[]};
   assert.equal(resolveOriginResponseProvider(task,capabilities),'openai-api');
   assert.equal(isOriginPreserved(task,'openai-api'),true);

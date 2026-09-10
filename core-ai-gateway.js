@@ -32,6 +32,8 @@ function normalizeProvider(provider, index) {
     fundingSource: String(provider.fundingSource || 'personal'),
     officialPath: provider.officialPath !== false,
     automationAllowed: provider.automationAllowed !== false,
+    costClass: String(provider.costClass || '').trim().toLowerCase(),
+    freeQuotaRemaining: provider.freeQuotaRemaining ?? null,
   });
 }
 

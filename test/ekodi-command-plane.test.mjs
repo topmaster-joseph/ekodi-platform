@@ -12,6 +12,7 @@ function provider(id, priority, capabilities, handler) {
     priority,
     capabilities,
     available: true,
+    costClass: 'account-managed',
     async invoke(input) {
       return handler ? handler(input) : { text: `${id}:${input?.context?.commandPlane?.role || 'unknown'}` };
     },

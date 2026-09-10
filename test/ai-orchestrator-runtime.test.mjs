@@ -11,6 +11,7 @@ function provider(id, priority, value, capabilities = ['text']) {
     priority,
     capabilities,
     available: true,
+    costClass: 'account-managed',
     async invoke({ context }) {
       return { text: value, role: context?.collaboration?.role || '' };
     },
