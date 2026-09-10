@@ -2,7 +2,7 @@ name: Deploy EKODI Church Homepage
 
 on:
   workflow_dispatch:
-  # 2026-09-11: redeploy after squash-merge provenance verification fix
+  # 2026-09-11: redeploy after church nine-language selector restoration
   push:
     branches: [main]
     paths:
