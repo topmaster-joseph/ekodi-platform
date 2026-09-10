@@ -257,22 +257,28 @@ async function verifyRegistryHref(tab, started) {
   const definition = getAdminMenuItem(menuId);
   if (!definition?.href || definition.adminHandoff) throw new Error(`${menuId}: direct registry href contract missing`);
   const expected = new URL(definition.href);
+  const source = page.locator(`.sidebar nav .nav[data-section="${menuId}"]`);
+  await source.waitFor({ state:'attached', timeout:5_000 });
+  const sourceHref = await source.getAttribute('href');
+  const sourceTarget = await source.getAttribute('target');
+  if (!sourceHref || new URL(sourceHref, baseUrl).href !== expected.href) throw new Error(`${menuId}: production registry href does not match canonical destination`);
+  if (sourceTarget !== '_blank') throw new Error(`${menuId}: direct registry href must open as an isolated external admin surface`);
   stage('registry-handoff');
-  const navigation = page.waitForRequest(request => {
-    try {
-      const destination = new URL(request.url());
-      return request.isNavigationRequest() && request.frame() === page.mainFrame() && destination.origin === expected.origin && destination.pathname.replace(/\/$/, '') === expected.pathname.replace(/\/$/, '');
-    } catch { return false; }
-  }, { timeout: 10_000 });
+  const popupPromise = page.waitForEvent('popup', { timeout:10_000 });
   await clickFast(tab);
-  const request = await navigation;
-  const destination = new URL(request.url());
-  const probe = await fetch(expected.href, { redirect: 'manual', signal: AbortSignal.timeout(10_000) });
-  if (probe.status < 200 || probe.status >= 400) throw new Error(`${menuId}: destination returned HTTP ${probe.status}`);
-  const html = await probe.text();
-  if (html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().length < 4) throw new Error(`${menuId}: destination did not render meaningful content`);
-  if (menuId === 'cmpmyi' && (probe.headers.get('x-ekodi-route') !== 'cmpmyi-store-portfolio-admin' || !html.includes('통합 매장 운영'))) throw new Error('cmpmyi: dedicated portfolio admin contract missing');
-  results.push({ id:menuId, group, ok:true, durationMs:Date.now()-started, destination:destination.href, destinationStatus:probe.status, route:probe.headers.get('x-ekodi-route')||'' });
+  const popup = await popupPromise;
+  try {
+    await popup.waitForURL(url => url.origin === expected.origin && url.pathname.replace(/\/$/, '') === expected.pathname.replace(/\/$/, ''), { waitUntil:'commit', timeout:10_000 });
+    const destination = new URL(popup.url());
+    const probe = await fetch(expected.href, { redirect:'manual', signal:AbortSignal.timeout(10_000) });
+    if (probe.status < 200 || probe.status >= 400) throw new Error(`${menuId}: destination returned HTTP ${probe.status}`);
+    const html = await probe.text();
+    if (html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().length < 4) throw new Error(`${menuId}: destination did not render meaningful content`);
+    if (menuId === 'cmpmyi' && (probe.headers.get('x-ekodi-route') !== 'cmpmyi-store-portfolio-admin' || !html.includes('통합 매장 운영'))) throw new Error('cmpmyi: dedicated portfolio admin contract missing');
+    results.push({ id:menuId, group, ok:true, durationMs:Date.now()-started, destination:destination.href, destinationStatus:probe.status, route:probe.headers.get('x-ekodi-route')||'' });
+  } finally {
+    await popup.close().catch(() => {});
+  }
 }
 
 async function verifyNormal(tab, alreadyActive, started) {
