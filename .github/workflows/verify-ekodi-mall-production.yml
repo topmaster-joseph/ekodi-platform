@@ -58,7 +58,7 @@ jobs:
             if [ "$verification_final_code" = "200" ] \
               && grep -Fiq 'cache-control: no-store' /tmp/mall-verification-final.headers \
               && grep -Fiq 'x-robots-tag: noindex, nofollow, noarchive' /tmp/mall-verification-final.headers \
-              && grep -Fq '/assets/verification-ops.js' /tmp/mall-verification-final.html \
+              && grep -Fq '/ekodibiz/mall/assets/verification-ops.js' /tmp/mall-verification-final.html \
               && grep -Fq 'COMMERCE OS COCKPIT' /tmp/mall-verification-final.html; then
               verification_ready=true
               break
