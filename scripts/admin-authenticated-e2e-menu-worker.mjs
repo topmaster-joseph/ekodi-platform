@@ -145,7 +145,11 @@ async function verifyTax(tab, alreadyActive, started) {
   const request = await navigation;
   const destination = new URL(request.url());
   if (destination.hostname !== 'tax.ekodi.kr') throw new Error(`tax: wrong handoff destination ${destination.hostname}`);
-  await page.waitForURL(url => url.hostname === 'tax.ekodi.kr', { waitUntil:'domcontentloaded', timeout:15_000 });
+  try {
+    await page.waitForURL(url => url.hostname === 'tax.ekodi.kr', { waitUntil:'commit', timeout:15_000 });
+  } catch (error) {
+    if (new URL(page.url()).hostname !== 'tax.ekodi.kr') throw error;
+  }
   stage('tax-session-handoff');
   await page.waitForFunction(() => Boolean(sessionStorage.getItem('ekodi-auth-token')) && location.hash === '', null, { timeout:15_000 });
   await page.waitForFunction(() => document.querySelector('#notice')?.classList.contains('good'), null, { timeout:15_000 });
@@ -161,6 +165,12 @@ async function verifyTax(tab, alreadyActive, started) {
       return { status:response.status, profile };
     }, profileId);
   }
+  const suppliersTab = page.locator('button[data-tab="suppliers"]');
+  await clickFast(suppliersTab);
+  await page.waitForFunction(() => {
+    const view = document.querySelector('[data-view="suppliers"]');
+    return Boolean(view && !view.classList.contains('hidden'));
+  }, null, { timeout:5_000 });
   const edit = page.locator('button[data-edit-supplier]').first();
   await edit.waitFor({ state:writeVerification ? 'visible' : 'attached', timeout:10_000 });
   const profileId = Number(await edit.getAttribute('data-edit-supplier'));
