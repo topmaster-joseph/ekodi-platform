@@ -25,7 +25,7 @@ function apply(session){
     workspaceSwitch.classList.remove('guest-login');
     if(!workspaceSwitch.textContent||workspaceSwitch.textContent==='Google로 시작'){
       workspaceSwitch.textContent='Workspace 선택 ▾';
-      workspaceSwitch.href='https://my.ekodi.kr/#workspaces';
+      workspaceSwitch.href='https://ekodi.kr/my/#workspaces';
       workspaceSwitch.title='My EKODI에서 Workspace 선택';
     }
   }

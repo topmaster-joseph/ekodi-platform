@@ -44,7 +44,7 @@ async function migrationSnapshot(db){
 }
 async function snapshot(db,session){
   const [config,migration]=await Promise.all([readPersonalFinanceServiceConfig(db),migrationSnapshot(db)]);
-  return{service:{id:'personal-finance',name:'개인재무',domain:'personal-finance-api.ekodi.kr',userEntry:'https://my.ekodi.kr/#money',dataBoundary:'dedicated-d1',runtimeVersion:3},config,schema:{...migration,serviceControlSchema:1},safety:{actionCeiling:'L2',financialExecution:false,aiWriteEnabled:false,personalDataAdminReadable:false,fullAccountNumberStorage:false,safeToSpendExpectedIncome:false,externalFinancialConnectors:'LOCKED'},privacy:{rawImportFileRetention:'none',ledgerOwnerScope:'person',adminLedgerAccess:'blocked'},admin:{role:clean(session?.role,40)||'viewer',canWrite:session?.role==='super_admin'}};
+  return{service:{id:'personal-finance',name:'개인재무',domain:'personal-finance-api.ekodi.kr',userEntry:'https://ekodi.kr/my/#money',dataBoundary:'dedicated-d1',runtimeVersion:3},config,schema:{...migration,serviceControlSchema:1},safety:{actionCeiling:'L2',financialExecution:false,aiWriteEnabled:false,personalDataAdminReadable:false,fullAccountNumberStorage:false,safeToSpendExpectedIncome:false,externalFinancialConnectors:'LOCKED'},privacy:{rawImportFileRetention:'none',ledgerOwnerScope:'person',adminLedgerAccess:'blocked'},admin:{role:clean(session?.role,40)||'viewer',canWrite:session?.role==='super_admin'}};
 }
 async function audit(db,session,action,detail){
   const actorHash=await sha256(String(session?.email||'unknown').trim().toLowerCase());
