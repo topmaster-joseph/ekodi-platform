@@ -1,5 +1,5 @@
 name = "ekodi-shell-staging"
-main = "ekodi-shell-worker.js"
+main = "ekodi-shell-ai-entry.js"
 compatibility_date = "2026-08-18"
 workers_dev = true
 preview_urls = false
