@@ -8,6 +8,7 @@ function provider(id, priority) {
     priority,
     capabilities: ['text', 'reasoning', 'review'],
     available: true,
+    costClass: 'account-managed',
     async invoke({ context }) {
       return { text: `${id}:${context?.commandPlane?.role || 'single'}` };
     },

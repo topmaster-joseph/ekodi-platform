@@ -45,7 +45,7 @@ test('load and latency affect collaborator ranking without bypassing availabilit
 });
 
 test('origin governance stays first while explicit collaborator order is preserved',()=>{
-  const task=normalizeTaskInput({prompt:'analyze this',mode:'primary-review',providers:['openai-api','gemini-free'],origin:{provider:'claude'}});
+  const task=normalizeTaskInput({prompt:'analyze this',mode:'primary-review',providers:['openai-api','gemini-free'],origin:{provider:'claude'},governance:{paidCommitment:true,explicitDelegatedBudget:true}});
   const plan=buildExecutionPlan(task,{geminiFree:true,openaiApi:true,workerProviders:['claude'],providerMetrics:{
     'openai-api':{totalRuns:20,successfulRuns:2,recentRuns:10,recentFailures:8},
     'gemini-free':{totalRuns:20,successfulRuns:20,recentRuns:10,recentFailures:0},

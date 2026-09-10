@@ -89,3 +89,20 @@ test('roles are normalized to known profiles and bounded tools', () => {
   assert.equal(policy.openai.roles.builder.risk, 'production_write');
   assert.deepEqual(policy.openai.roles.builder.tools, ['code', 'git']);
 });
+
+test('free-first funding guard cannot be weakened by saved collaboration settings', () => {
+  const policy=normalizeAiCollaborationPolicy({
+    resources:{
+      funding:{
+        automaticPaidBudgetKrw:500000,
+        paidApiAutoEscalation:true,
+        paidApiRequiresExplicitDelegatedBudget:false,
+      },
+    },
+  });
+  assert.equal(policy.resources.funding.principle,'free-first-never-free-only');
+  assert.equal(policy.resources.funding.automaticPaidBudgetKrw,0);
+  assert.equal(policy.resources.funding.paidApiAutoEscalation,false);
+  assert.equal(policy.resources.funding.paidApiRequiresExplicitDelegatedBudget,true);
+  assert.deepEqual(policy.resources.funding.freeExhaustedFallback,['alternate-zero-cost','core-only','retry-later']);
+});

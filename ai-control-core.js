@@ -2,7 +2,8 @@ import { evaluateAutonomousOperation } from './sovereign-autonomy-runtime.js';
 import { getControlPlaneSummary } from './cognitive-control-plane.js';
 import { getSovereignAutonomySummary } from './sovereign-autonomy-runtime.js';
 import {AI_MISSION_RUNTIME,evaluateMissionAction} from './ai-governance-runtime.js';
-import {AI_ROUTER_SCORE_POLICY,rankProviders,scoreProvider} from './ai-router-score.js';
+import {AI_ROUTER_SCORE_POLICY,providerCostClass,rankProviders,scoreProvider} from './ai-router-score.js';
+import {AI_COST_POLICY,evaluateAiCostEligibility} from './ai-cost-policy.js';
 
 export const AI_CONTROL_POLICY = Object.freeze({
   version: '0.6.0',
@@ -30,6 +31,7 @@ export const AI_CONTROL_POLICY = Object.freeze({
   sovereignAutonomy: getSovereignAutonomySummary(),
   missionPolicyVersion: AI_MISSION_RUNTIME.version,
   routerScorePolicyVersion: AI_ROUTER_SCORE_POLICY.version,
+  costPolicyVersion: AI_COST_POLICY.version,
 });
 
 const clean = value => String(value ?? '').trim();
@@ -115,18 +117,30 @@ export function evaluateTaskMissionPolicy(task = {}) {
   return Object.freeze({...decision,forbidden:false,humanGate:false,analysisOnly:!autonomousActionAllowed,allowModelConsultation:true,autonomousActionAllowed,humanApprovalRequired:false});
 }
 
-export function availableProviderIds(capabilities = {}) {
+function providerCostClassForTask(providerId, capabilities = {}) {
+  const id=clean(providerId).toLowerCase();
+  const canonical=providerCostClass(id);
+  if (canonical === 'paid-opt-in') return canonical;
+  const override = id.startsWith('worker:') ? capabilities.providerProfiles?.[providerId]?.costClass : '';
+  return clean(override).toLowerCase() || canonical;
+}
+function providerAllowedForTask(providerId, task = {}, capabilities = {}) {
+  const quota = capabilities.providerQuotas?.[providerId];
+  return evaluateAiCostEligibility({ costClass:providerCostClassForTask(providerId, capabilities), freeQuotaRemaining:quota?.remaining }, task).eligible;
+}
+export function availableProviderIds(capabilities = {}, task = null) {
   const ids = [];
   if (capabilities.geminiFree) ids.push('gemini-free');
   for (const id of capabilities.nodeProviders || []) ids.push(`node:${clean(id).toLowerCase()}`);
   if (capabilities.openaiApi) ids.push('openai-api');
   if (capabilities.anthropicApi) ids.push('anthropic-api');
   for (const id of capabilities.workerProviders || []) ids.push(`worker:${clean(id).toLowerCase()}`);
-  return unique(ids);
+  const inventory = unique(ids);
+  return task ? inventory.filter(id => providerAllowedForTask(id, task, capabilities)) : inventory;
 }
 
 export function resolveOriginResponseProvider(task, capabilities = {}) {
-  const available=availableProviderIds(capabilities);
+  const available=availableProviderIds(capabilities, task);
   if(!available.length)return'';
   const origin=taskOrigin(task);
   const preferences=ORIGIN_PROVIDER_PREFERENCES[origin.provider]||[];
@@ -154,7 +168,7 @@ function rankedForRole(providerIds,task,capabilities,role,preserveOrder=false){
 }
 
 export function buildExecutionPlan(task, capabilities = {}) {
-  const available=availableProviderIds(capabilities);
+  const available=availableProviderIds(capabilities, task);
   const requested=task.requestedProviders?.length?task.requestedProviders.filter(id=>available.includes(id)):[];
   const base=requested.length?requested:AI_CONTROL_POLICY.providerOrder.filter(id=>available.includes(id));
   const originProvider=resolveOriginResponseProvider(task,capabilities);

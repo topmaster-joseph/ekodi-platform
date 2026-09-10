@@ -43,31 +43,41 @@ test('provider control requires human gates and never returns raw secrets',()=>{
 });
 
 
-test('scheduled provider health performs a bounded real provider probe contract',async()=>{
+test('scheduled free provider health performs a bounded real provider probe contract',async()=>{
   const writes=[];
-  const row={provider_id:'openai',enabled:1,priority:10,default_model:'gpt-5.6-terra',secret_binding:'OPENAI_API_KEY',health_status:'unknown',last_checked_at:null};
+  const row={provider_id:'gemini',enabled:1,priority:10,default_model:'gemini-3.7-flash',secret_binding:'GEMINI_API_KEY',health_status:'unknown',last_checked_at:null};
   const DB={prepare(sql){const stmt={args:[],bind(...args){this.args=args;return this},async all(){if(sql.startsWith('SELECT * FROM ai_provider_registry'))return{results:[row]};return{results:[]}},async first(){return null},async run(){writes.push({sql,args:this.args});return{meta:{changes:1}}}};return stmt}};
   const originalFetch=globalThis.fetch;
-  globalThis.fetch=async(url)=>{assert.equal(String(url),'https://api.openai.com/v1/responses');return new Response(JSON.stringify({model:'gpt-5.6-terra',output_text:'EKODI_PROVIDER_OK',usage:{input_tokens:7,output_tokens:3}}),{status:200,headers:{'content-type':'application/json'}})};
-  try{const result=await runAiProviderHealthSchedule({DB,OPENAI_API_KEY:'test-key-1234567890'},{now:Date.parse('2026-09-08T00:00:00Z')});assert.equal(result.ok,true);assert.equal(result.checked,1);assert.equal(result.results[0].status,'healthy');assert.ok(writes.some(item=>item.sql.includes('UPDATE ai_provider_registry SET health_status')));assert.ok(writes.some(item=>item.sql.includes('INSERT INTO ai_provider_calls')))}finally{globalThis.fetch=originalFetch}
+  globalThis.fetch=async(url)=>{assert.match(String(url),/generativelanguage.googleapis.com/);return new Response(JSON.stringify({candidates:[{content:{parts:[{text:'EKODI_PROVIDER_OK'}]}}],usageMetadata:{promptTokenCount:7,candidatesTokenCount:3}}),{status:200,headers:{'content-type':'application/json'}})};
+  try{const result=await runAiProviderHealthSchedule({DB,GEMINI_API_KEY:'test-key-1234567890'},{now:Date.parse('2026-09-08T00:00:00Z')});assert.equal(result.ok,true);assert.equal(result.checked,1);assert.equal(result.results[0].status,'healthy');assert.ok(writes.some(item=>item.sql.includes('UPDATE ai_provider_registry SET health_status')));assert.ok(writes.some(item=>item.sql.includes('INSERT INTO ai_provider_calls')))}finally{globalThis.fetch=originalFetch}
 });
 
 test('mission control schedules provider health without delaying core work',()=>{const source=read('mission-control-entry-worker.js');assert.match(source,/runAiProviderHealthSchedule/);assert.match(source,/ctx\.waitUntil\(aiProviderHealth\)/);});
 
-test('scheduled OpenAI health preserves safe 429 error subtype without exposing credentials',async()=>{
-  const writes=[];
+test('scheduled paid provider health is blocked before network access',async()=>{
+  let providerFetches=0;
   const row={provider_id:'openai',enabled:1,priority:10,default_model:'gpt-5.6-terra',secret_binding:'OPENAI_API_KEY',health_status:'unknown',last_checked_at:null};
-  const DB={prepare(sql){const stmt={args:[],bind(...args){this.args=args;return this},async all(){if(sql.startsWith('SELECT * FROM ai_provider_registry'))return{results:[row]};return{results:[]}},async first(){return null},async run(){writes.push({sql,args:this.args});return{meta:{changes:1}}}};return stmt}};
-  const originalFetch=globalThis.fetch;
-  globalThis.fetch=async()=>new Response(JSON.stringify({error:{type:'insufficient_quota',code:'project_spend_limit_exceeded'}}),{status:429,headers:{'content-type':'application/json'}});
-  try{const result=await runAiProviderHealthSchedule({DB,OPENAI_API_KEY:'test-key-1234567890'},{now:Date.parse('2026-09-08T00:00:00Z')});assert.equal(result.ok,false);assert.equal(result.results[0].errorCode,'openai_429_project_spend_limit_exceeded');assert.ok(writes.some(item=>item.args.includes('openai_429_project_spend_limit_exceeded')))}finally{globalThis.fetch=originalFetch}
+  const DB={prepare(sql){const stmt={bind(){return this},async all(){if(sql.startsWith('SELECT * FROM ai_provider_registry'))return{results:[row]};return{results:[]}},async run(){return{meta:{changes:1}}}};return stmt}};
+  const originalFetch=globalThis.fetch;globalThis.fetch=async()=>{providerFetches+=1;throw new Error('paid_provider_should_not_be_called')};
+  try{const result=await runAiProviderHealthSchedule({DB},{now:Date.parse('2026-09-08T00:00:00Z')});assert.equal(result.ok,true);assert.equal(result.checked,0);assert.equal(result.results[0].status,'cost-blocked');assert.equal(providerFetches,0)}finally{globalThis.fetch=originalFetch}
 });
 
+test('default provider capability skips paid primary and uses free fallback',async()=>{
+  const calls=[];const originalFetch=globalThis.fetch;
+  globalThis.fetch=async url=>{calls.push(String(url));if(String(url).includes('generativelanguage.googleapis.com'))return new Response(JSON.stringify({candidates:[{content:{parts:[{text:'free-ok'}]}}]}),{status:200,headers:{'content-type':'application/json'}});throw new Error('paid_provider_should_not_be_called')};
+  try{const result=await invokeAiProviderCapability({OPENAI_API_KEY:'configured',GEMINI_API_KEY:'configured'},{input:'zero cost routing'});assert.equal(result.provider,'gemini');assert.equal(calls.some(url=>url.includes('api.openai.com')),false)}finally{globalThis.fetch=originalFetch}
+});
+
+test('trusted internal invocation may use paid provider only with explicit delegated budget',async()=>{
+  const calls=[];const originalFetch=globalThis.fetch;
+  globalThis.fetch=async url=>{calls.push(String(url));return new Response(JSON.stringify({model:'gpt-test',output_text:'paid-ok',usage:{input_tokens:1,output_tokens:1}}),{status:200,headers:{'content-type':'application/json'}})};
+  try{const result=await invokeAiProviderCapability({OPENAI_API_KEY:'configured'},{input:'approved paid routing',governance:{paidCommitment:true,explicitDelegatedBudget:true}});assert.equal(result.provider,'openai');assert.equal(calls.some(url=>url.includes('api.openai.com')),true)}finally{globalThis.fetch=originalFetch}
+});
 
 test('provider traffic circuit breaker skips a known exhausted-credit provider',async()=>{
   let providerFetches=0;
   const provider={provider_id:'openai',enabled:1,priority:10,default_model:'gpt-5.6-terra',secret_binding:'OPENAI_API_KEY',health_status:'error',last_error:'openai_429_credit_balance_exhausted'};
   const DB={batch:async()=>[],prepare(sql){const stmt={args:[],bind(...args){this.args=args;return this},async first(){if(sql.startsWith('SELECT COUNT(*) calls'))return{calls:0,cost:0,input_tokens:0,cached_input_tokens:0,output_tokens:0};if(sql.startsWith('SELECT * FROM ai_provider_registry WHERE'))return provider;if(sql.startsWith('SELECT * FROM ai_provider_routes WHERE'))return{primary_provider:'openai',fallback_json:'[]',model_override:''};return null},async run(){return{meta:{changes:1}}}};return stmt}};
   const originalFetch=globalThis.fetch;globalThis.fetch=async()=>{providerFetches+=1;throw new Error('provider_should_not_be_called')};
-  try{await assert.rejects(invokeAiProviderCapability({DB,OPENAI_API_KEY:'test-key-1234567890'},{input:'health-aware routing test'}),error=>error?.message==='provider_unavailable'&&error?.blocked?.includes('openai'));assert.equal(providerFetches,0)}finally{globalThis.fetch=originalFetch}
+  try{await assert.rejects(invokeAiProviderCapability({DB,OPENAI_API_KEY:'test-key-1234567890'},{input:'health-aware routing test',governance:{paidCommitment:true,explicitDelegatedBudget:true}}),error=>error?.message==='provider_unavailable'&&error?.blocked?.includes('openai'));assert.equal(providerFetches,0)}finally{globalThis.fetch=originalFetch}
 });
