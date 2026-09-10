@@ -16,7 +16,7 @@ function hasSensitiveKeys(value){if(!value||typeof value!=='object')return false
 function runtimeConfig(env){const readiness=buildIntegrationReadiness(env);return{
   dataMode:env.DATA_MODE||'isolated-staging',
   authUrl:env.AUTH_URL||'https://auth.ekodi.kr/?site=money',
-  myUrl:'https://my.ekodi.kr/',
+  myUrl:'https://ekodi.kr/my/',
   officialHandoffUrl:env.ACCOUNTINFO_URL||'https://www.payinfo.or.kr/main/main.do',
   financialExecution:false,
   autonomousFinancialExecution:false,

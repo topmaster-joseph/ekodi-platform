@@ -9,7 +9,7 @@
   "serviceBoundary": {
     "architectureCapability": "finance",
     "publicExperience": "https://ekodi.kr/money",
-    "personalEntry": "https://my.ekodi.kr/money",
+    "personalEntry": "https://ekodi.kr/my/money",
     "api": "https://personal-finance-api.ekodi.kr",
     "adminHandoff": "https://admin.ekodi.kr/?route=finance",
     "deployment": "independently-guarded-worker",
@@ -159,7 +159,7 @@
     "privateFinanceCore": {
       "service": "personal-finance-api",
       "purpose": "person-scoped financial ledger, evidence and insight boundary",
-      "browserOrigin": "https://my.ekodi.kr"
+      "browserOrigin": "https://ekodi.kr"
     },
     "rule": "One user experience, separate public and sensitive execution/data boundaries."
   },

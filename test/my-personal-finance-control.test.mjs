@@ -30,7 +30,7 @@ test('My EKODI exposes a private personal finance control surface',async()=>{
 });
 test('public Money does not present demo balances as operational data',async()=>{
   const [html,app]=await Promise.all([read('money/index.html'),read('money/app.js')]);
-  assert.match(html,/https:\/\/my\.ekodi\.kr\/#money/);
+  assert.match(html,/https:\/\/ekodi\.kr\/my\/#money/);
   assert.match(app,/const demoAccounts = \[\];/);
   assert.match(app,/실데이터 미연결/);
   assert.match(app,/공개 Money 화면에는 개인 잔액이나 예시 숫자를 표시하지 않습니다/);

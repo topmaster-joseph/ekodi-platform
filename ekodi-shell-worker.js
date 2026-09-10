@@ -128,7 +128,7 @@ export default {
     }
     if(url.pathname==='/shell.js')return bundledShell(request,env,ctx);
     if(url.pathname==='/admin'||url.pathname==='/admin/')return Response.redirect('https://admin.ekodi.kr/?source=shell.ekodi.kr',307);
-    if(url.pathname==='/')return Response.redirect('https://my.ekodi.kr/',302);
+    if(url.pathname==='/')return Response.redirect('https://ekodi.kr/my/',302);
     return withHeaders(await safeAssetFetch(env,url,request));
   }
 };

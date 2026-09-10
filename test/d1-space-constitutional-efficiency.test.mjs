@@ -39,7 +39,7 @@ test('Space stays an internal engine while public aliases follow canonical works
   assert.match(worker,/legacyAlias=url\.hostname\.toLowerCase\(\)==='space\.ekodi\.kr'/);
   assert.match(worker,/status:308/);
   assert.match(worker,/new URL\(url\.pathname\+url\.search,'https:\/\/ekodi\.kr'\)/);
-  assert.match(worker,/location:'https:\/\/my\.ekodi\.kr\/'/);
+  assert.match(worker,/location:'https:\/\/ekodi\.kr\/my\/'/);
   assert.match(manifest,/id:'space'[^\n]*selectorHidden:true/);
   assert.match(shell,/s\.id!=='my'&&!s\.selectorHidden/);
   const registrySpace=JSON.parse(services).services.find(service=>service.id==='space');
