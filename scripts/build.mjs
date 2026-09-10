@@ -1,6 +1,6 @@
 import { cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
-import { loadHomepageServices, renderServiceCards } from './ecosystem-registry.mjs';
+import { loadHomepageServices, loadHomepageStatusCounts, renderServiceCards } from './ecosystem-registry.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const output = fileURLToPath(new URL('../dist/', import.meta.url));
@@ -91,7 +91,7 @@ await cp(`${root}auth-site/oauth-consent.html`, `${output}oauth-consent.html`);
 await cp(`${root}auth-site/google-origin-bridge.html`, `${output}google-origin-bridge.html`);
 for (const asset of ['auth.css', 'auth.js', 'auth-router.js', 'oauth-consent.js', 'marketing-auth-hotfix.js', 'auth-workspace-target.js', 'admin-auth.js', 'client-auth.js', 'author-auth.js', 'business-auth.js', 'marketing-onboarding.js', 'membership-ui.js', 'google-origin-bridge.js']) await cp(`${root}auth-site/${asset}`, `${output}${asset}`);
 
-const homepageServices = await loadHomepageServices();
+const [homepageServices, homepageStatusCounts] = await Promise.all([loadHomepageServices(), loadHomepageStatusCounts()]);
 const homepageCards = renderServiceCards(homepageServices);
 const responsiveCss = await readFile(`${root}responsive.css`, 'utf8');
 const htmlAssets = [...assets.filter(asset => asset.endsWith('.html')), 'auth-center.html'];
@@ -102,6 +102,7 @@ for (const asset of htmlAssets) {
     const serviceGrid = /<div class="service-grid">[\s\S]*?(\r?\n\s*<\/div>\r?\n\s*<\/div>\r?\n\s*<\/section>)/;
     if (!serviceGrid.test(html)) throw new Error('EKODI homepage service grid marker not found');
     html = html.replace(serviceGrid, `<div class="service-grid" data-ekodi-service-registry="v1">\n${homepageCards}$1`);
+    html = html.replace(/(<em data-status-count="live">)\d+(<\/em>)/, `$1${homepageStatusCounts.live}$2`).replace(/(<em data-status-count="beta">)\d+(<\/em>)/, `$1${homepageStatusCounts.beta}$2`);
     html = html.replaceAll('EKODI선교회', '커뮤니티').replaceAll('에코디선교회', '커뮤니티').replaceAll('https://youtube.com/@ekodicommunity', 'https://community.ekodi.kr').replaceAll('https://www.youtube.com/@ekodicommunity', 'https://community.ekodi.kr');
     if (html.includes('EKODI선교회') || html.includes('에코디선교회')) throw new Error('Legacy EKODI mission brand remains on homepage');
     if (!html.includes('homepage-ambient.css')) html = html.replace('</head>', '<link rel="stylesheet" href="/homepage-ambient.css">\n</head>');

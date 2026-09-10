@@ -85,10 +85,10 @@
     "association",
     "institution"
   ],
-  "privateWorkspacePattern": "https://my.ekodi.kr/w/{workspace}",
+  "privateWorkspacePattern": "https://ekodi.kr/my/w/{workspace}",
   "featurePatterns": [
     "https://ekodi.kr/{feature}",
-    "https://my.ekodi.kr/{feature}",
+    "https://ekodi.kr/my/{feature}",
     "https://api.ekodi.kr/v1/{feature}"
   ],
   "workspaceRoutingPolicy": {

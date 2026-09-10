@@ -1,4 +1,4 @@
-﻿export const EXPERIENCE_META = Object.freeze({
+export const EXPERIENCE_META = Object.freeze({
   serviceId: 'experience',
   publicName: '에코디 체험',
   publicNameEn: 'EKODI Experience',
@@ -19,7 +19,7 @@ const PERSONAS = Object.freeze([
 ]);
 
 const SERVICES = Object.freeze([
-  { id:'my', name:'My EKODI', group:'개인·공간', status:'live', statusLabel:'운영 중', experience:'simulation', publicUrl:'https://my.ekodi.kr/', summary:'나의 공간과 활동을 한곳에서 연결합니다.', personas:['personal','church','small-business','business','organization','project'], flow:['사용자 공간','필요한 서비스 선택','활동과 연결','결과 확인'] },
+  { id:'my', name:'My EKODI', group:'개인·공간', status:'live', statusLabel:'운영 중', experience:'simulation', publicUrl:'https://ekodi.kr/my/', summary:'나의 공간과 활동을 한곳에서 연결합니다.', personas:['personal','church','small-business','business','organization','project'], flow:['사용자 공간','필요한 서비스 선택','활동과 연결','결과 확인'] },
   { id:'church', name:'에코디교회', group:'공동체', status:'live', statusLabel:'운영 중', experience:'simulation', publicUrl:'https://church.ekodi.kr/', summary:'예배, 말씀, 공동체의 경험을 연결합니다.', personas:['church','organization','personal'], flow:['교회 공간','말씀·모임','공동체 연결','지속적 돌봄'] },
   { id:'marketing', name:'Marketing AI', group:'사업', status:'live', statusLabel:'운영 중', experience:'simulation', publicUrl:'https://marketing.ekodi.kr/', summary:'상황에 맞는 홍보 콘텐츠와 채널 실행을 돕습니다.', personas:['small-business','business','church','organization','project'], flow:['공간의 필요','마케팅 기능 연결','콘텐츠 제안','채널 결과'] },
   { id:'mall', name:'에코디몰', group:'사업', status:'live', statusLabel:'운영 중', experience:'simulation', publicUrl:'https://ekodi.kr/mall', summary:'관계와 상황에 맞는 상품 발견과 추천을 돕습니다.', personas:['personal','small-business','business','organization'], flow:['필요 발견','관계형 추천','상품 비교','외부 구매 연결'] },
