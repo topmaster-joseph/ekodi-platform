@@ -671,6 +671,27 @@
         "electricity",
         "facility"
       ]
+    },
+    {
+      "id": "device.observe",
+      "name": "기기·IoT 관찰",
+      "domain": "device",
+      "ownerAgent": "platform",
+      "actionTier": "observe",
+      "maturity": "service-backed-readonly",
+      "description": "카메라·센서·IoT 장치를 Provider-neutral Edge Bridge로 연결하고 최소권한으로 상태와 실시간 영상을 관찰한다.",
+      "surfaces": [
+        "my",
+        "workspace",
+        "dedicated"
+      ],
+      "tags": [
+        "device",
+        "iot",
+        "camera",
+        "edge",
+        "tapo"
+      ]
     }
   ],
   "schemaVersion": 2,

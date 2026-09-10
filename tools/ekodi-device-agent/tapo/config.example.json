@@ -1,0 +1,15 @@
+{
+  "apiBase": "https://api.ekodi.kr",
+  "publicBase": "https://tapo-bridge.example.ekodi.kr",
+  "port": 8789,
+  "ffmpegPath": "ffmpeg",
+  "cameras": [
+    {
+      "id": "front",
+      "label": "Front camera",
+      "model": "Tapo C210",
+      "locationLabel": "Store entrance",
+      "rtspUrl": "rtsp://CAMERA_ACCOUNT:PASSWORD@192.168.0.100/stream1"
+    }
+  ]
+}
