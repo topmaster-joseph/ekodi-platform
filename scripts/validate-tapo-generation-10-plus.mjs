@@ -1,0 +1,38 @@
+import fs from 'node:fs';
+import { projectTapoDeviceForCloud, assertSafeTapoCloudProjection } from '../tapo-provider-adapter.js';
+const json=file=>JSON.parse(fs.readFileSync(file,'utf8').replace(/^\uFEFF/,''));
+const text=file=>fs.readFileSync(file,'utf8');
+const evolution=json('governance/architecture/ekodi-evolution-model.json');
+const registry=json('config/capability-registry.json');
+const packs=json('config/workspace-packs.json');
+const control=text('device-control.js');
+const admin=text('device-control-admin.js');
+const loader=text('admin-demand-loader.js');
+const bridge=text('tools/ekodi-device-agent/tapo/index.mjs');
+const build=text('scripts/build.mjs');
+const failures=[]; const pass=[];
+const check=(name,ok)=>{(ok?pass:failures).push(name);};
+const capability=(registry.capabilities||[]).find(item=>item.id==='device.observe');
+const smallBusiness=(packs.packs||[]).find(item=>item.id==='small-business');
+check('G10 active baseline',evolution.currentGeneration===10&&evolution.currentGenerationLabel==='Self-Architecture Optimization');
+check('G11+ open-ended evidence gate',evolution.futureGenerationPolicy?.openEnded===true&&evolution.futureGenerationPolicy?.firstCandidateGeneration===11&&evolution.futureGenerationPolicy?.predeclareNames===false&&evolution.futureGenerationPolicy?.promotionEligibleByDefault===false);
+check('provider-neutral capability',capability?.actionTier==='observe'&&!(registry.capabilities||[]).some(item=>/^tapo\./i.test(item.id||'')));
+check('workspace composition',Array.isArray(smallBusiness?.capabilities)&&smallBusiness.capabilities.includes('device.observe'));
+const projected=projectTapoDeviceForCloud({externalId:'front',label:'Front',type:'camera',model:'C210',protocols:['rtsp','onvif','matter'],username:'secret-user',password:'secret-pass',host:'192.168.0.20'},'bridge-1');
+check('edge-local secret/topology boundary',projected.credentialRef.startsWith('edge-local://')&&!JSON.stringify(projected).includes('192.168.')&&!JSON.stringify(projected).includes('secret-pass'));
+let unsafeRejected=false; try{assertSafeTapoCloudProjection({...projected,host:'10.0.0.9'});}catch{unsafeRejected=true;} check('unsafe cloud projection rejected',unsafeRejected);
+check('observe-only gateway',/gateway:\s*Object\.freeze\([\s\S]*?remoteCommandLevel:\s*'observe'[\s\S]*?autoExecution:\s*'never'[\s\S]*?allowedCommands:\s*Object\.freeze\(\['camera\.live\.start'\]\)/.test(control));check('ephemeral hashed stream session',/STREAM_SESSION_TTL_MS\s*=\s*3\s*\*\s*60\s*\*\s*1000/.test(control)&&/secret_hash/i.test(control)&&/camera\.live\.start/.test(control));
+check('loopback fixed-process media bridge',/server\.listen\([^\n]*'127\.0\.0\.1'/.test(bridge)&&/spawn\(config\.ffmpegPath\|\|'ffmpeg'/.test(bridge)&&!/shell\s*:\s*true/.test(bridge));
+check('lazy admin extension',/loadScript\('tapo-device-admin\.js'\)/.test(admin)&&!/tapo-device-admin\.js/.test(loader));
+check('operational observability',/heartbeatLoop/.test(bridge)&&/lastSyncAt/.test(control)&&/providerBridge/.test(control));
+check('deployable isolated assets',/tapo-device-admin\.js/.test(build)&&/tapo-device-admin\.css/.test(build));
+check('forward provider replaceability',projected.capabilities.includes('camera.live')&&projected.provider==='tp-link.tapo'&&capability?.id==='device.observe');
+if(failures.length){
+  console.error(`EKODI Tapo Generation 10+ validation failed (${failures.length})`);
+  failures.forEach(item=>console.error(`- ${item}`));
+  process.exit(1);
+}
+console.log(`EKODI Tapo Generation 10+ validation: OK (${pass.length}/${pass.length})`);
+pass.forEach(item=>console.log(`- ${item}`));
+console.log('- Generation 10: verified against current baseline contracts');
+console.log('- Generation 11+: structurally ready for evidence-driven extension; no unsupported promotion claim');

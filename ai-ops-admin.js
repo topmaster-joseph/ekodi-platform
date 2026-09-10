@@ -47,6 +47,8 @@
   let evolution = null;
   let lastReviewAt = null;
   let selectedDomain = '';
+  const displayAddress = domain => window.EKODIAdminSurfaceLabels?.label?.(domain) || domain;
+  const publicAddress = domain => window.EKODIAdminSurfaceLabels?.url?.(domain) || `https://${domain}`;
   let fleetQuery = '';
   let fleetFilter = 'all';
 
@@ -344,7 +346,7 @@
     tr.dataset.aiAgentDomain = agent.domain;
     tr.tabIndex = 0;
     tr.innerHTML = `
-      <td><span class="ai-fleet-site"><span class="ai-state-dot"></span><span><strong>${esc(agent.name)}</strong><small>${esc(agent.domain)} · ${esc(agent.group)}</small></span></span></td>
+      <td><span class="ai-fleet-site"><span class="ai-state-dot"></span><span><strong>${esc(agent.name)}</strong><small>${esc(displayAddress(agent.domain))} · ${esc(agent.group)}</small></span></span></td>
       <td><span class="ai-status-pill ${esc(state.key)}">${esc(state.label)}</span></td>
       <td class="ai-fleet-response">${esc(responseText(state))}</td>
       <td><span class="ai-owner">${esc(agent.name)} AI</span></td>
@@ -372,7 +374,7 @@
   }
 
   function detailActions(agent) {
-    return `<div class="ai-detail-actions"><button class="secondary" type="button" id="aiSelectedManage">Manage</button><a class="primary" href="https://${esc(agent.domain)}" target="_blank" rel="noopener">Open ↗</a></div>`;
+    return `<div class="ai-detail-actions"><button class="secondary" type="button" id="aiSelectedManage">Manage</button><a class="primary" href="${esc(publicAddress(agent.domain))}" target="_blank" rel="noopener">Open ↗</a></div>`;
   }
 
   function aiActionText(agent, state) {
@@ -400,7 +402,7 @@
     const availability = service?.stats24h?.availabilityPercent;
     const average = service?.stats24h?.averageResponseTime;
     host.innerHTML = `
-      <div class="ai-detail-head"><div><small>SELECTED SITE DETAIL</small><h3>${esc(agent.name)} <span>${esc(agent.domain)}</span></h3></div><div class="ai-detail-head-right"><span class="ai-status-pill ${esc(state.key)}">${esc(state.label)}</span>${detailActions(agent)}</div></div>
+      <div class="ai-detail-head"><div><small>SELECTED SITE DETAIL</small><h3>${esc(agent.name)} <span>${esc(displayAddress(agent.domain))}</span></h3></div><div class="ai-detail-head-right"><span class="ai-status-pill ${esc(state.key)}">${esc(state.label)}</span>${detailActions(agent)}</div></div>
       <div class="ai-detail-grid">
         <div><small>이슈 요약</small><strong>${esc(state.note)}</strong><span>${esc(agent.role)}</span></div>
         <div><small>실측 상태</small><strong>${esc(responseText(state))} · ${esc(lastCheck(service))}</strong><span>24시간 가용률 ${availability ?? '—'}% · 평균응답 ${average ?? '—'}${average == null ? '' : 'ms'}</span></div>

@@ -7,7 +7,7 @@ function fetchTimed(url,options={},ms=10000){const controller=new AbortControlle
 
 const realms={
   portal:{name:'EKODI',returnTo:'https://ekodi.kr/',open:true,kind:'portal'},
-  'my':{name:'My EKODI',returnTo:'https://my.ekodi.kr/',open:true,kind:'my'},
+  'my':{name:'My EKODI',returnTo:'https://ekodi.kr/my/',open:true,kind:'my'},
   community:{name:'Community',returnTo:'https://community.ekodi.kr/',open:true,kind:'community'},
   church:{name:'EKODI Church',returnTo:'https://church.ekodi.kr/',open:true,kind:'church'},
   biz:{name:'EKODI Biz',returnTo:'https://biz.ekodi.kr/',open:true,kind:'biz'},
@@ -38,6 +38,9 @@ const realms={
 };
 const params=new URLSearchParams(location.search);
 const site=params.get('site')||'portal';
+const DIRECT_LOGIN=params.get('direct')==='1'&&params.get('manage')!=='1'&&params.get('review')!=='1';
+const EXPECTED_ACCOUNT=/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(String(params.get('expected_account')||'').trim())?String(params.get('expected_account')).trim().toLowerCase():'';
+const FORCE_ACCOUNT=params.get('force_account')==='1'&&Boolean(EXPECTED_ACCOUNT);
 const requestedWorkspaceRaw=String(params.get('workspace')||'').trim();
 const REQUESTED_WORKSPACE=requestedWorkspaceRaw.length<=180&&WORKSPACE_KEY_RE.test(requestedWorkspaceRaw)?requestedWorkspaceRaw:'';
 async function manifestRealm(id){
@@ -144,7 +147,7 @@ function loadGoogleLibrary(){
   }),7000,'google_library_timeout');
 }
 function myEntryTarget(){
-  const target=new URL('https://my.ekodi.kr/');
+  const target=new URL('https://ekodi.kr/my/');
   if(site&&site!=='portal'&&site!=='my')target.searchParams.set('from',site);
   if(site&&site!=='portal'&&site!=='my')target.searchParams.set('return_to',RETURN_TO);
   if(REQUESTED_WORKSPACE)target.searchParams.set('workspace',REQUESTED_WORKSPACE);
@@ -221,9 +224,15 @@ async function renderGoogle(){
   $('serviceBadge').textContent='로그인';notice('Google 계정으로 계속해 주세요.');
   try{
     const [challenge]=await Promise.all([identity('/challenge',{method:'POST'}),loadGoogleLibrary()]);
-    window.google.accounts.id.initialize({client_id:challenge.clientId,nonce:challenge.nonce,auto_select:false,use_fedcm_for_button:true,button_auto_select:false,callback:r=>void handleCredential(r,challenge)});
+    window.google.accounts.id.disableAutoSelect?.();
+    window.google.accounts.id.initialize({client_id:challenge.clientId,nonce:challenge.nonce,auto_select:false,use_fedcm_for_button:false,button_auto_select:false,ux_mode:'popup',context:'signin',...(EXPECTED_ACCOUNT?{login_hint:EXPECTED_ACCOUNT}:{}),callback:r=>void handleCredential(r,challenge)});
     window.google.accounts.id.renderButton(host,{type:'standard',theme:'outline',size:'large',text:'continue_with',shape:'rectangular',logo_alignment:'left',width:Math.min(390,Math.max(260,host.clientWidth||340)),use_fedcm_for_button:true});
-    notice('처음 한 번만 Google 계정으로 본인을 확인합니다.');
+    if(DIRECT_LOGIN){
+      notice('Google 계정 선택창을 여는 중입니다.');
+      window.google.accounts.id.prompt(notification=>{
+        if(notification?.isNotDisplayed?.()||notification?.isSkippedMoment?.())notice('Google 계정 선택창을 바로 열 수 없습니다. 아래 Google 버튼으로 계속해 주세요.');
+      });
+    }else notice('처음 한 번만 Google 계정으로 본인을 확인합니다.');
   }catch(error){
     console.error('prepare central identity',error);
     showRetry('Google 로그인을 준비하지 못했습니다. 다시 시도해 주세요.');
@@ -236,6 +245,7 @@ async function prepare(){
   let existing=null;
   try{existing=await session()}catch(error){console.warn('central session bootstrap',error)}
   if(existing){
+    if(FORCE_ACCOUNT&&String(existing.user?.email||'').trim().toLowerCase()!==EXPECTED_ACCOUNT){await clearStaleSession();await renderGoogle();return}
     if(await handoffExistingSession(existing))return;
     if(recoverableStaleSession(lastHandoffError)){
       $('serviceBadge').textContent='복구 중';

@@ -1,10 +1,8 @@
-/* EKODI Admin UI Principles v1
- * Information first, decoration second.
- * One light shell, one spacing rhythm, readable type, semantic status colors,
- * explicit empty/error/auth states, responsive density, and no decorative heavy effects.
- * This file is appended to the authenticated Admin shell at build time.
+/* EKODI Admin subservice normalization v2
+ * Shared shell, scroll ownership, navigation and global tokens belong to admin-design-engine.*.
+ * This file only normalizes Marketing AI into that common workbench grammar.
  */
-body.admin-compact{
+body.admin-compact #marketingAiAdminPanel.marketing-ai-admin-panel{
   --admin-page:#f6f8fb;
   --admin-surface:#ffffff;
   --admin-surface-soft:#f8fafc;
@@ -21,16 +19,6 @@ body.admin-compact{
   --admin-radius:12px;
   --admin-gap:16px;
   --admin-control-h:40px;
-}
-body.admin-compact .content{max-width:1600px;margin-inline:auto!important}
-body.admin-compact .content [data-panel]{min-height:0}
-body.admin-compact .content :is(.section,.panel,.module,.architecture){box-shadow:none!important}
-body.admin-compact .content :is(button,.primary,.secondary,.ghost){min-height:var(--admin-control-h)}
-body.admin-compact .content :is(p,small,span,label,td,th){text-rendering:optimizeLegibility}
-
-/* Marketing AI is an Admin subservice, not a separate dark console.
- * It inherits the same visual grammar as the rest of admin. */
-body.admin-compact #marketingAiAdminPanel.marketing-ai-admin-panel{
   margin:0!important;
   padding:0!important;
   overflow:clip!important;
@@ -40,6 +28,8 @@ body.admin-compact #marketingAiAdminPanel.marketing-ai-admin-panel{
   border-radius:var(--admin-radius)!important;
   box-shadow:none!important;
 }
+
+/* Marketing AI is an Admin subservice, not a separate dark console. */
 body.admin-compact #marketingAiAdminPanel .marketing-ai-admin-toolbar{
   display:flex!important;
   align-items:flex-start!important;
@@ -89,7 +79,7 @@ body.admin-compact #marketingAiAdminPanel .marketing-ai-console-tabs{
   display:flex!important;gap:4px!important;overflow-x:auto!important;overflow-y:hidden!important;padding:8px 12px!important;background:var(--admin-surface)!important;border-bottom:1px solid var(--admin-border)!important;scrollbar-width:thin!important
 }
 body.admin-compact #marketingAiAdminPanel .marketing-ai-console-tabs button{
-  flex:0 0 auto!important;min-height:38px!important;padding:8px 11px!important;border:1px solid transparent!important;border-radius:8px!important;background:transparent!important;color:#53657a!important;font-size:13px!important;line-height:1.25!important;font-weight:720!important;box-shadow:none!important
+  flex:0 0 auto!important;min-height:40px!important;padding:8px 12px!important;border:1px solid transparent!important;border-radius:8px!important;background:transparent!important;color:#455970!important;font-size:14px!important;line-height:1.35!important;font-weight:750!important;box-shadow:none!important
 }
 body.admin-compact #marketingAiAdminPanel .marketing-ai-console-tabs button:hover{background:#f3f6fa!important;color:#1f3650!important}
 body.admin-compact #marketingAiAdminPanel .marketing-ai-console-tabs button.active{
@@ -215,7 +205,7 @@ body.admin-compact #marketingAiAdminPanel .marketing-ai-contract-icon{margin:0 0
   body.admin-compact #marketingAiAdminPanel .marketing-ai-admin-status{grid-template-columns:repeat(2,minmax(0,1fr))!important;padding:10px!important}
   body.admin-compact #marketingAiAdminPanel .marketing-ai-admin-status strong{font-size:20px!important}
   body.admin-compact #marketingAiAdminPanel .marketing-ai-console-tabs{padding:7px 9px!important}
-  body.admin-compact #marketingAiAdminPanel .marketing-ai-console-tabs button{min-height:40px!important;font-size:13px!important}
+  body.admin-compact #marketingAiAdminPanel .marketing-ai-console-tabs button{min-height:42px!important;font-size:15px!important}
   body.admin-compact #marketingAiAdminPanel .marketing-ai-console-meta{align-items:flex-start!important;flex-direction:column!important}
   body.admin-compact #marketingAiAdminPanel .marketing-ai-console-view{min-height:180px!important;padding:10px!important}
   body.admin-compact #marketingAiAdminPanel .marketing-ai-console-card{padding:13px!important}

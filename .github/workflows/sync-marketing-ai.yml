@@ -2,8 +2,6 @@ name: Sync Marketing AI
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '17 * * * *'
   push:
     branches: [main]
     paths:
@@ -42,6 +40,8 @@ jobs:
         with:
           node-version: '24'
 
+      - name: EKODI AI Orchestration Gate
+        run: node "$GITHUB_WORKSPACE/controller/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
       - name: Verify release controller and Cloudflare credentials
         run: |
           set -euo pipefail
@@ -229,3 +229,5 @@ jobs:
           exit 1
 
 # Release policy: build -> isolated preview -> preview smoke test -> production promote -> production verify
+
+# release trigger: small-business AI PoC a089ad610f00160fc22edf94cfecd9fa75b839e5 · 2026-09-07

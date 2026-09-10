@@ -7,7 +7,7 @@ const authIndex = await readFile(new URL('../auth-site/index.html', import.meta.
 const manifest = JSON.parse(await readFile(new URL('../deploy/manifests/shared-site.worker.json', import.meta.url), 'utf8'));
 const siteConfig = await readFile(new URL('../wrangler.site.toml', import.meta.url), 'utf8');
 
-const criticalAuthAssets = ['/auth.js', '/auth-router.js', '/marketing-auth-hotfix.js', '/auth-workspace-target.js', '/admin-auth.js', '/client-auth.js', '/author-auth.js', '/business-auth.js', '/marketing-onboarding.js', '/membership-ui.js'];
+const criticalAuthAssets = ['/auth.js', '/auth-router.js', '/marketing-auth-hotfix.js', '/auth-workspace-target.js', '/admin-auth.js', '/google-origin-bridge.js', '/client-auth.js', '/author-auth.js', '/business-auth.js', '/marketing-onboarding.js', '/membership-ui.js'];
 
 test('critical central auth JavaScript cannot remain stale in the browser or edge cache', () => {
   for (const asset of criticalAuthAssets) {
@@ -15,36 +15,40 @@ test('critical central auth JavaScript cannot remain stale in the browser or edg
     assert.ok(siteConfig.includes(`"${asset}"`), `${asset} must be Worker-first so candidate and production security headers match`);
   }
   assert.match(worker, /AUTH_CRITICAL_ASSETS\.has\(url\.pathname\) \? 'no-store'/);
-  assert.match(authIndex, /auth-router\.js\?v=20260826-universal-sso-1/);
+  assert.match(authIndex, /auth-router\.js\?v=20260904-direct-login-1/);
 });
 
-test('guarded production release verifies current auth entry and workspace handoff assets', () => {
+test('guarded production release verifies current auth entry, bridge and workspace handoff assets', () => {
   const requests = manifest.worker.requests;
-  const root = requests.find(item => item.url === 'https://auth.ekodi.kr/');
-  const router = requests.find(item => item.url.startsWith('https://auth.ekodi.kr/auth-router.js'));
-  const client = requests.find(item => item.url.startsWith('https://auth.ekodi.kr/client-auth.js'));
-  const workspaceTarget = requests.find(item => item.url.startsWith('https://auth.ekodi.kr/auth-workspace-target.js'));
-  const admin = requests.find(item => item.url.startsWith('https://auth.ekodi.kr/admin-auth.js'));
-  assert.ok(root);
-  assert.ok(router);
-  assert.ok(client);
-  assert.ok(workspaceTarget);
-  assert.ok(admin);
-  assert.ok(root.expect.includes('/auth-router.js?v=20260826-universal-sso-1'));
-  assert.ok(router.expect.includes('admin-auth.js?v=20260823-mobile-handoff-1'));
+  const root = requests.find(item => item.url === 'https://ekodi.kr/auth/');
+  const router = requests.find(item => item.url.startsWith('https://ekodi.kr/auth/auth-router.js'));
+  const client = requests.find(item => item.url.startsWith('https://ekodi.kr/auth/client-auth.js'));
+  const workspaceTarget = requests.find(item => item.url.startsWith('https://ekodi.kr/auth/auth-workspace-target.js'));
+  const admin = requests.find(item => item.url.startsWith('https://ekodi.kr/auth/admin-auth.js'));
+  const bridgeDoc = requests.find(item => item.url === 'https://auth.ekodi.kr/google-origin-bridge');
+  const bridgeScript = requests.find(item => item.url === 'https://auth.ekodi.kr/google-origin-bridge.js');
+  for (const probe of [root, router, client, workspaceTarget, admin, bridgeDoc, bridgeScript]) assert.ok(probe);
+  assert.ok(root.expect.includes('/auth/auth-router.js?v=20260904-direct-login-1'));
+  assert.ok(router.expect.includes('admin-auth.js?v=20260909-origin-bridge-1'));
   assert.ok(router.expect.includes('business-auth.js?v=20260826-free-fallback-1'));
-  assert.ok(router.expect.includes('client-auth.js?v=20260829-stale-session-recovery-1'));
-  assert.ok(router.expect.includes('isRegistryUserService'));
+  assert.ok(router.expect.includes('client-auth.js?v=20260904-direct-login-1'));
   assert.ok(client.expect.includes('/session/handoff'));
   assert.ok(client.expect.includes('session_timeout'));
-  assert.ok(client.headerExpect.includes('cache-control: no-store'));
   assert.ok(workspaceTarget.expect.includes('workspace_key:requested'));
   assert.ok(workspaceTarget.expect.includes('serviceOrigins'));
-  assert.ok(workspaceTarget.headerExpect.includes('cache-control: no-store'));
-  assert.ok(admin.expect.includes('use_fedcm_for_button:supportsFedCmButton()'));
+  assert.ok(admin.expect.includes("GOOGLE_BRIDGE_ORIGIN='https://auth.ekodi.kr'"));
+  assert.ok(admin.expect.includes('requestGoogleCredential'));
+  assert.ok(admin.expect.includes('renderOriginBridgeButton'));
+  assert.ok(admin.expect.includes('event.origin!==GOOGLE_BRIDGE_ORIGIN'));
+  assert.ok(admin.expect.includes('directEntry'));
   assert.ok(admin.expect.includes('isEmbeddedWebView'));
-  assert.ok(admin.expect.includes('Chrome에서 관리자 로그인 열기'));
   assert.ok(admin.expect.includes('location.replace(targetHref)'));
-  assert.ok(admin.expect.includes('button_auto_select:false'));
-  assert.ok(admin.headerExpect.includes('cache-control: no-store'));
+  assert.ok(bridgeDoc.expect.includes('/google-origin-bridge.js'));
+  assert.ok(bridgeScript.expect.includes("TARGET_ORIGIN='https://ekodi.kr'"));
+  assert.ok(bridgeScript.expect.includes('use_fedcm_for_button:false'));
+  assert.ok(bridgeScript.expect.includes('window.opener.postMessage'));
+  for (const probe of [root, router, client, workspaceTarget, admin, bridgeDoc, bridgeScript]) {
+    assert.ok(probe.headerExpect?.includes('cache-control: no-store') || probe === root);
+    assert.equal(probe.rollbackVerify, false);
+  }
 });

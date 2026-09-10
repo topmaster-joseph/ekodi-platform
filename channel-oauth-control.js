@@ -45,7 +45,7 @@ function callbackResponse(message, ok = false, returnTo = '', params = {}) {
   }
   const title = ok ? 'YouTube 채널 연결 완료' : 'YouTube 채널 연결 확인 필요';
   const escaped = String(message || '').replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
-  return new Response(`<!doctype html><html lang="ko"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>${title}</title><body style="font-family:system-ui;padding:32px;max-width:680px;margin:auto"><h1>${title}</h1><p>${escaped}</p><p><a href="https://my.ekodi.kr/">My EKODI로 돌아가기</a></p></body></html>`,{status:ok?200:400,headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-frame-options':'DENY'}});
+  return new Response(`<!doctype html><html lang="ko"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>${title}</title><body style="font-family:system-ui;padding:32px;max-width:680px;margin:auto"><h1>${title}</h1><p>${escaped}</p><p><a href="https://ekodi.kr/my/">My EKODI로 돌아가기</a></p></body></html>`,{status:ok?200:400,headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-frame-options':'DENY'}});
 }
 export async function handleYoutubeCallback(request, env) {
   const url = new URL(request.url);

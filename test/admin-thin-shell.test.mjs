@@ -8,7 +8,7 @@ const routePair = (source, hash, section) => source.includes(`['${hash}', '${sec
 
 test('post-auth startup contains only the minimal shell/navigation/demand loader', async () => {
   const shell = await read('admin-authenticated-shell.js');
-  assert.match(shell, /const postAuthStyles = \['admin-compact\.css','google-admin-auth\.css'\]/);
+  assert.match(shell, /const postAuthStyles = \['admin-compact\.css','admin-design-engine\.css','google-admin-auth\.css'\]/);
   const criticalBlock = shell.match(/const criticalPostAuthScripts\s*=\s*\[([\s\S]*?)\];/)?.[1] || '';
   const deferredBlock = shell.match(/const deferredPostAuthScripts\s*=\s*\[([\s\S]*?)\];/)?.[1] || '';
   assert.match(criticalBlock, /'admin-compact\.js'/);
@@ -26,16 +26,20 @@ test('post-auth startup contains only the minimal shell/navigation/demand loader
   assert.doesNotMatch(shell, /'system-health-admin\.js'/);
 });
 
-test('authenticated ADMIN UI declares the official stable Core surface and tokens', async () => {
+test('authenticated ADMIN UI declares the official 8th-gen workbench surface and tokens', async () => {
   const shell = await read('admin-authenticated-shell.js');
   assert.match(shell, /function applyOfficialAdminSurface\(\)/);
-  assert.match(shell, /root\.dataset\.ekodiShellSurface = 'admin'/);
-  assert.match(shell, /root\.dataset\.ekodiAdminUi = 'official'/);
-  assert.match(shell, /'--ekodi-ui-bg': '#071522'/);
-  assert.match(shell, /'--ekodi-ui-surface': '#0B1D2E'/);
-  assert.match(shell, /'--ekodi-ui-border': '#24425E'/);
-  assert.match(shell, /'--ekodi-ui-text': '#F4F7FB'/);
-  assert.match(shell, /'--ekodi-ui-accent': '#8EC8FF'/);
+  assert.match(shell, /root\.dataset\.ekodiShellSurface='admin'/);
+  assert.match(shell, /root\.dataset\.ekodiAdminUi='official'/);
+  assert.match(shell, /'--ekodi-ui-bg':'#f6f8fb'/);
+  assert.match(shell, /'--ekodi-ui-surface':'#ffffff'/);
+  assert.match(shell, /'--ekodi-ui-border':'#d9e2ec'/);
+  assert.match(shell, /'--ekodi-ui-text':'#172033'/);
+  assert.match(shell, /'--ekodi-ui-accent':'#155eef'/);
+  assert.match(shell, /nav\.dataset\.ekodiIndependentScroll='false'/);
+  assert.match(shell, /main\.dataset\.ekodiScrollOwner='workspace'/);
+  assert.match(shell, /nav\.style\.setProperty\('overflow-y','hidden','important'\)/);
+  assert.match(shell, /main\.style\.setProperty\('overflow-y','auto'\)/);
   assert.match(shell, /applyOfficialAdminSurface\(\);/);
 });
 
@@ -96,8 +100,9 @@ test('normal login opens Site Management without auto-opening AI or internal wor
   const menu = await read('admin-menu-layout.js');
   const registry = await read('admin-menu-registry.js');
   assert.match(menu, /let requestedSection = ''/);
-  assert.match(menu, /const initialHash = explicitHashSection\(\)/);
-  assert.match(menu, /else if \(initialHash\) requestedSection = initialHash/);
+  assert.match(menu, /const initialSection\s*=\s*explicitAdminSection\(\)/);
+  assert.match(menu, /const explicitPathSection=\(\)=>adminRoutes\(\)\?\.sectionFromPath/);
+  assert.match(menu, /else if\s*\(initialSection\)\s*requestedSection\s*=\s*initialSection/);
   assert.match(menu, /requestedSection = 'campus';[\s\S]*requestDemand\('campus'\)/);
   assert.match(menu, /\['campus','campus'\]/);
   assert.match(menu, /EKODIAdminDemand\.activate\(demandKey\)/);
@@ -110,22 +115,24 @@ test('normal login opens Site Management without auto-opening AI or internal wor
   assert.doesNotMatch(menu, /setInterval\(/);
 });
 
-test('admin menu governance uses eight work areas and one contextual top-tab registry', async () => {
+test('admin menu governance uses five canonical EKODI axes with contextual top tabs', async () => {
   const registry = await read('admin-menu-registry.js');
   const sidebar = await read('admin-sidebar.js');
   assert.match(registry, /ADMIN_MENU_GROUPS/);
-  for (const group of ['home', 'operations', 'people', 'services', 'ai', 'business', 'data', 'system']) {
+  for (const group of ['home', 'operations', 'space', 'services', 'system']) {
     assert.match(registry, new RegExp(`id: '${group}'`));
   }
-  for (const retired of ['site-management', 'access', 'space', 'security-audit', 'settings']) {
-    assert.doesNotMatch(registry, new RegExp(`id: '${retired}'`));
+  for (const retired of ['structure', 'core', 'common', 'vertical', 'tenants', 'operations-center', 'people', 'ai', 'business', 'data', 'site-management', 'access', 'security-audit', 'settings']) {
+    assert.doesNotMatch(registry, new RegExp(`id: '${retired}', icon:`));
   }
   assert.match(registry, /id: 'campus', group: 'home'/);
   assert.match(registry, /id: 'work', group: 'operations'/);
-  assert.match(registry, /id: 'workspace', group: 'people'/);
-  assert.match(registry, /id: 'ai-membership', group: 'ai'/);
-  assert.match(registry, /id: 'finance', group: 'business'/);
-  assert.match(registry, /id: 'storage', group: 'data'/);
+  assert.match(registry, /id: 'clients', group: 'space'/);
+  assert.match(registry, /id: 'common-services', group: 'services'/);
+  assert.match(registry, /id: 'life-ai', group: 'services'/);
+  assert.match(registry, /id: 'security', group: 'system'/);
+  assert.match(registry, /id: 'capabilities', group: 'system'/);
+  assert.match(registry, /id: 'devices', group: 'system'/);
   assert.match(registry, /id: 'health', group: 'system'/);
   assert.match(sidebar, /function pruneNonRegistryItems\(nav\)/);
   assert.match(sidebar, /RETIRED_MENU_SECTIONS = new Set\(\['overview'\]\)/);
@@ -134,6 +141,7 @@ test('admin menu governance uses eight work areas and one contextual top-tab reg
   assert.match(sidebar, /TABS_SHELL_CLASS = 'admin-context-tabs-shell'/);
   assert.match(sidebar, /TABS_CLASS = 'admin-context-tabs'/);
   assert.match(sidebar, /data-admin-context-section/);
+  assert.match(sidebar, /data-admin-capability-shortcut/);
   assert.match(sidebar, /nav\.dataset\.adminMenuGovernance = 'workbench-tabs-v2'/);
   assert.match(sidebar, /item\.dataset\.adminMenuGroup = definition\.group/);
   assert.match(sidebar, /observer\.observe\(nav, \{ childList: true, subtree: false \}\)/);
@@ -141,7 +149,6 @@ test('admin menu governance uses eight work areas and one contextual top-tab reg
   assert.doesNotMatch(sidebar, /innerHTML\s*=/);
   assert.match(sidebar, /tabs\.dataset\.renderSignature/);
 });
-
 test('postbuild emits a purpose-built minimal compact runtime and strips legacy Admin chrome', async () => {
   const pkg = JSON.parse(await read('package.json'));
   const postbuild = await read('scripts/admin-thin-postbuild.mjs');

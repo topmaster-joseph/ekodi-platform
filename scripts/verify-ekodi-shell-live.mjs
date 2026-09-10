@@ -34,10 +34,10 @@ function includesAll(text,label,needles,failures){
 }
 
 for(let attempt=1;attempt<=attempts;attempt++){
-  const [healthResult,manifestResult,footerConfigResult,shellResult,themeResult,styleResult,userUiStyleResult]=await Promise.all([
-    read('/health',attempt),read('/manifest.json',attempt),read('/user-footer.json',attempt),read('/shell.js',attempt),read('/theme.json',attempt),read('/workspace.css',attempt),read('/user-ui-shell.css',attempt),
+  const [healthResult,manifestResult,footerConfigResult,languageRegistryResult,shellResult,characterRegistryResult,identityRegistryResult,founderAssetResult,themeResult,styleResult,userUiStyleResult]=await Promise.all([
+    read('/health',attempt),read('/manifest.json',attempt),read('/user-footer.json',attempt),read('/language-registry.json',attempt),read('/shell.js',attempt),read('/character-registry.js',attempt),read('/character-identity-registry.js',attempt),read('/assets/ekodian/founder-face.webp',attempt),read('/theme.json',attempt),read('/workspace.css',attempt),read('/user-ui-shell.css',attempt),
   ]);
-  const results=[healthResult,manifestResult,footerConfigResult,shellResult,themeResult,styleResult,userUiStyleResult];
+  const results=[healthResult,manifestResult,footerConfigResult,languageRegistryResult,shellResult,characterRegistryResult,identityRegistryResult,founderAssetResult,themeResult,styleResult,userUiStyleResult];
   if(allowAccessGate&&results.every(result=>result.ok&&isCloudflareAccessGate(result))){
     console.log(`✅ EKODI Shell staging deployed at ${base}; endpoint is intentionally protected by Cloudflare Access, so content verification remains covered by the Shell contract test suite. release=${release}.`);
     process.exit(0);
@@ -47,8 +47,13 @@ for(let attempt=1;attempt<=attempts;attempt++){
   const health=parseJson(healthResult,'health',failures);
   const manifest=parseJson(manifestResult,'manifest',failures);
   const footerConfig=parseJson(footerConfigResult,'user-footer',failures);
+  const languageRegistry=parseJson(languageRegistryResult,'language-registry',failures);
   const theme=parseJson(themeResult,'theme',failures);
   if(!shellResult.ok)failures.push(`shell:http-${shellResult.status||'network'}`);
+  if(!characterRegistryResult.ok)failures.push(`character-registry:http-${characterRegistryResult.status||'network'}`);
+  if(!identityRegistryResult.ok)failures.push(`identity-registry:http-${identityRegistryResult.status||'network'}`);
+  if(!founderAssetResult.ok)failures.push(`founder-asset:http-${founderAssetResult.status||'network'}`);
+  else if(!String(founderAssetResult.headers?.get?.('content-type')||'').includes('image/webp'))failures.push('founder-asset:content-type');
   if(!styleResult.ok)failures.push(`workspace:http-${styleResult.status||'network'}`);
   if(!userUiStyleResult.ok)failures.push(`user-ui-style:http-${userUiStyleResult.status||'network'}`);
 
@@ -57,7 +62,11 @@ for(let attempt=1;attempt<=attempts;attempt++){
     if(Number(health.shellVersion)<2)failures.push(`health:shellVersion:${health.shellVersion||'missing'}`);
     if(Number(health.userUIHeaderVersion)<1)failures.push(`health:userUIHeaderVersion:${health.userUIHeaderVersion||'missing'}`);
     if(Number(health.userUIFooterVersion)<2)failures.push(`health:userUIFooterVersion:${health.userUIFooterVersion||'missing'}`);
-    if(Number(health.userCharacterVersion)<1)failures.push(`health:userCharacterVersion:${health.userCharacterVersion||'missing'}`);
+    if(Number(health.userLanguageVersion)<7)failures.push(`health:userLanguageVersion:${health.userLanguageVersion||'missing'}`);
+    if(Number(health.mediaMeetingAdapterVersion)<2)failures.push(`health:mediaMeetingAdapterVersion:${health.mediaMeetingAdapterVersion||'missing'}`);
+    if(Number(health.characterRegistryVersion)<3)failures.push(`health:characterRegistryVersion:${health.characterRegistryVersion||'missing'}`);
+    if(Number(health.characterIdentityRegistryVersion)<2)failures.push(`health:characterIdentityRegistryVersion:${health.characterIdentityRegistryVersion||'missing'}`);
+    if(Number(health.userCharacterVersion)<6)failures.push(`health:userCharacterVersion:${health.userCharacterVersion||'missing'}`);
     if(Number(health.adminUIShellVersion)<1)failures.push(`health:adminUIShellVersion:${health.adminUIShellVersion||'missing'}`);
     if(Number(health.messageUIVersion)<1)failures.push(`health:messageUIVersion:${health.messageUIVersion||'missing'}`);
     if(Number(health.illustrationSystemVersion)<1)failures.push(`health:illustrationSystemVersion:${health.illustrationSystemVersion||'missing'}`);
@@ -71,7 +80,7 @@ for(let attempt=1;attempt<=attempts;attempt++){
     if(!manifest.services?.some(service=>service.defaultSurface==='workspace'))failures.push('manifest:no-workspace-surface');
     if(!manifest.services?.some(service=>service.defaultSurface==='public'))failures.push('manifest:no-public-surface');
     const biz=manifest.services?.find(service=>service.id==='biz');
-    if(biz?.url!=='https://biz.ekodi.kr/')failures.push(`manifest:biz-url:${biz?.url||'missing'}`);
+    if(biz?.url!=='https://ekodi.kr/ekodibiz')failures.push(`manifest:biz-url:${biz?.url||'missing'}`);
   }
   if(footerConfig){
     if(Number(footerConfig.version)<2)failures.push(`user-footer:version:${footerConfig.version||'missing'}`);
@@ -82,20 +91,28 @@ for(let attempt=1;attempt<=attempts;attempt++){
     if(links.get('이용약관')!=='https://ekodi.kr/terms')failures.push('user-footer:terms-link');
     if(!String(footerConfig.precedenceNotice||'').includes('해당 정책이 우선 적용됩니다'))failures.push('user-footer:precedence-notice');
   }
+  if(languageRegistry){
+    if(Number(languageRegistry.version)<1)failures.push(`language-registry:version:${languageRegistry.version||'missing'}`);
+    if(!Array.isArray(languageRegistry.languages)||languageRegistry.languages.length<6)failures.push('language-registry:languages');
+    if(languageRegistry.policy?.visibility!=='published-only')failures.push(`language-registry:visibility:${languageRegistry.policy?.visibility||'missing'}`);
+  }
   if(theme){
     if(theme.publicExperience?.rotation!=='weekly-deterministic')failures.push(`theme:rotation:${theme.publicExperience?.rotation||'missing'}`);
     if(theme.publicExperience?.timezone!=='Asia/Seoul')failures.push(`theme:timezone:${theme.publicExperience?.timezone||'missing'}`);
   }
   includesAll(shellResult.text,'shell',[
     'window.EKODIShell','내 공간 · My EKODI','EKODI 다음 행동','suggestedServices','모든 서비스 보기','ekodi:public-experience',
-    'window.EKODIUserUIHeader','window.EKODIUserUIFooter','window.__EKODI_USER_FOOTER_CONFIG__','user-footer.json','window.EKODIUserCharacter',
+    'window.EKODIUserUIHeader','window.EKODIUserUIFooter','window.EKODIMediaMeetingAdapter','social.ekodi.kr/api/media/youtube/status','window.__EKODI_USER_FOOTER_CONFIG__','user-footer.json','window.EKODICharacterRegistry','window.EKODICharacterIdentityRegistry','ekodi.ekodian-identity.v1','window.EKODIUserCharacter',
     'window.EKODIAdminUIShell','ekodi-admin-ui-shell-style','.side-brand','ekodi:admin-shell-ready',
     'ekodi-mobile-fixed-header-style','data-ekodi-mobile-header-spacer','ResizeObserver','position:fixed!important',
     'window.EKODIMessage','window.EKODIIllustration','ekodiIllustrationSystem','window.EKODIServiceDesign','ekodiDesignInheritance','--ekodi-service-accent',
-    '__EKODI_ECOSYSTEM_LINK_COMPAT',"'ekodibiz.kr':'biz'"
+    '__EKODI_ECOSYSTEM_LINK_COMPAT',"'ekodibiz.kr':'biz'",'window.__EKODI_LANGUAGE_REGISTRY__','api.ekodi.kr/api/i18n/v1','visibleLanguages','TRAFFIC_TELEMETRY','globalPrivacyControl','sendTrafficBeacon'
   ],failures);
-  if(shellResult.headers?.get?.('x-ekodi-user-character')!=='v1')failures.push(`shell:user-character:${shellResult.headers?.get?.('x-ekodi-user-character')||'missing'}`);
-  if(shellResult.headers?.get?.('x-ekodi-user-ui-header')!=='v1')failures.push(`shell:user-ui-header:${shellResult.headers?.get?.('x-ekodi-user-ui-header')||'missing'}`);
+  if(shellResult.headers?.get?.('x-ekodi-media-meeting')!=='v2')failures.push(`shell:media-meeting:${shellResult.headers?.get?.('x-ekodi-media-meeting')||'missing'}`);
+  if(shellResult.headers?.get?.('x-ekodi-character-registry')!=='v3')failures.push(`shell:character-registry:${shellResult.headers?.get?.('x-ekodi-character-registry')||'missing'}`);
+  if(shellResult.headers?.get?.('x-ekodi-character-identity')!=='v2')failures.push(`shell:character-identity:${shellResult.headers?.get?.('x-ekodi-character-identity')||'missing'}`);
+  if(shellResult.headers?.get?.('x-ekodi-user-character')!=='v6')failures.push(`shell:user-character:${shellResult.headers?.get?.('x-ekodi-user-character')||'missing'}`);
+  if(shellResult.headers?.get?.('x-ekodi-user-ui-header')!=='v3')failures.push(`shell:user-ui-header:${shellResult.headers?.get?.('x-ekodi-user-ui-header')||'missing'}`);
   const expectedFooterHeader=footerConfig?.version?`v${Number(footerConfig.version)}`:'';
   if(expectedFooterHeader&&shellResult.headers?.get?.('x-ekodi-user-ui-footer')!==expectedFooterHeader)failures.push(`shell:user-ui-footer:${shellResult.headers?.get?.('x-ekodi-user-ui-footer')||'missing'}`);
   if(shellResult.headers?.get?.('x-ekodi-admin-ui-shell')!=='v1')failures.push(`shell:admin-ui-shell:${shellResult.headers?.get?.('x-ekodi-admin-ui-shell')||'missing'}`);
@@ -106,12 +123,12 @@ for(let attempt=1;attempt<=attempts;attempt++){
   includesAll(styleResult.text,'workspace',['data-ekodi-shell-surface="workspace"','data-ekodi-document-surface'],failures);
   includesAll(userUiStyleResult.text,'user-ui-style',[
     '.ekodi-user-ui-header','.ekodi-user-ui-footer','.ekodi-user-ui-footer__copy','--ekodi-user-footer-background','[data-ekodi-user-header-spacer]',
-    '--ekodi-user-canvas-max: 1240px','[data-ekodi-user-layout="centered-v1"]','margin-inline: auto;'
+    '--ekodi-user-canvas-max: 1240px','--ekodi-user-content-inline-size','--ekodi-user-content-left','[data-ekodi-user-layout="centered-v1"]','margin-inline: auto;'
   ],failures);
 
   const statuses=results.map(item=>item.status).join('/');
   if(!failures.length){
-    console.log(`✅ EKODI Shell live verified at ${base}: statuses=${statuses}, services=${manifest.services.length}, userUI=header-v1/footer-${expectedFooterHeader||'current'}+centered-v1+csp-safe-css, centralFooter=ok, userCharacter=v1, adminUI=v1, messageUI=v1, illustrations=v1, serviceDesign=v1, linkCompat=v1, release=${release}.`);
+    console.log(`✅ EKODI Shell live verified at ${base}: statuses=${statuses}, services=${manifest.services.length}, userUI=header-v3/footer-${expectedFooterHeader||'current'}+main-aligned-centered-v1+csp-safe-css, centralFooter=ok, userCharacter=v6+identity-v2, adminUI=v1, messageUI=v1, illustrations=v1, serviceDesign=v1, linkCompat=v1, release=${release}.`);
     process.exit(0);
   }
   console.log(`Shell live verify ${attempt}/${attempts}: statuses=${statuses}; ${failures.join(' | ')}`);

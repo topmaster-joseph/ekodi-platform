@@ -1,9 +1,15 @@
 import growthWorker from './marketing-growth-worker.js';
-import { getMallPromotionStatus, handleMallPromotionRequest, runMallPromotionAutomation } from './mall-promotion-automation.js';
+export { MarketingGrowthPublisher } from './marketing-growth-worker.js';
+import { getMallPromotionStatus, handleMallPromotionRequest, mallPromotionAutomationEnabled, runMallPromotionAutomation } from './mall-promotion-automation.js';
 import { getMallSalesIntelligenceStatus, runMallSalesIntelligence } from './mall-sales-intelligence.js';
+import { ensureWeeklyPromotionBoard } from './mall-official-promotion-board.js';
 
-function json(data, status = 200) {
-  return new Response(JSON.stringify(data), {status, headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}});
+function json(data, status = 200, inheritedHeaders = null) {
+  const headers = new Headers(inheritedHeaders || undefined);
+  headers.set('content-type','application/json; charset=utf-8');
+  headers.set('cache-control','no-store');
+  headers.set('x-content-type-options','nosniff');
+  return new Response(JSON.stringify(data), {status, headers});
 }
 
 export default {
@@ -15,11 +21,18 @@ export default {
       const baseResponse = await growthWorker.fetch(request, env, ctx);
       let base = {};
       try { base = await baseResponse.clone().json(); } catch {}
-      const [mallPromotionAutomation, mallSalesIntelligence] = await Promise.all([
+      const [rawMallPromotionAutomation, mallSalesIntelligence] = await Promise.all([
         getMallPromotionStatus(env),
         getMallSalesIntelligenceStatus(env),
       ]);
-      return json({...base, mallPromotionAutomation, mallSalesIntelligence}, baseResponse.status);
+      const enabled = mallPromotionAutomationEnabled(env);
+      const mallPromotionAutomation = {
+        ...rawMallPromotionAutomation,
+        enabled,
+        scheduler: enabled && rawMallPromotionAutomation?.scheduler !== false,
+        safetyGate: enabled ? 'explicitly_enabled' : 'social_oauth_connection_and_test_publish_required',
+      };
+      return json({...base, mallPromotionAutomation, mallSalesIntelligence}, baseResponse.status, baseResponse.headers);
     }
     return growthWorker.fetch(request, env, ctx);
   },
@@ -29,6 +42,11 @@ export default {
       if (!intelligence.ok && intelligence.status !== 'schema_required') {
         console.error('EKODI Mall sales intelligence failed', intelligence.error || intelligence.status);
       }
+      const weeklyBoard = await ensureWeeklyPromotionBoard(env, {reason:'cron',force:false});
+      if (!weeklyBoard.ok && weeklyBoard.status !== 'schema_required') {
+        console.error('EKODI Mall weekly promotion board failed', weeklyBoard.error || weeklyBoard.status);
+      }
+      if (!mallPromotionAutomationEnabled(env)) return;
       await runMallPromotionAutomation(env, {reason:'cron'});
     })());
   },

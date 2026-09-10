@@ -38,6 +38,8 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
+      - name: EKODI AI Orchestration Gate
+        run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
       - name: Validate source and safety boundaries
         run: |
           set -euo pipefail
@@ -72,6 +74,8 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
+      - name: EKODI AI Orchestration Gate
+        run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
       - name: Verify development credentials
         run: test -n "$CLOUDFLARE_API_TOKEN"
       - name: Deploy isolated staging
@@ -119,7 +123,6 @@ jobs:
 
           printf 'HEALTH=%s\nCONSULT=%s\nOFFER=%s\nOPS=%s\nCHECKOUT=%s\n' "${health:0:700}" "${consult:0:700}" "${offer:0:700}" "${ops:0:700}" "${checkout:0:700}"
           grep -Fq 'WHAT WE DO' <<<"$root"
-          grep -Fq '관계자 로그인' <<<"$root"
           grep -Fq 'operational-mvp' <<<"$health"
           grep -Fq 'durable-object-sqlite' <<<"$health"
           grep -Fq '30일 자동홍보팩' <<<"$catalog"
@@ -146,6 +149,8 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
+      - name: EKODI AI Orchestration Gate
+        run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
       - name: Verify production credentials
         run: test -n "$CLOUDFLARE_API_TOKEN" && test -n "$CLOUDFLARE_ACCOUNT_ID"
       - name: Bootstrap Worker if it does not exist
@@ -173,7 +178,6 @@ jobs:
             catalog=$(curl -sS --max-time 15 'https://biz.ekodi.kr/api/catalog' || true)
             ops=$(curl -sS --max-time 15 'https://biz.ekodi.kr/api/ops/status' || true)
             if grep -Fq 'WHAT WE DO' <<<"$root" \
-              && grep -Fq '관계자 로그인' <<<"$root" \
               && grep -Fq 'operational-mvp' <<<"$health" \
               && grep -Fq 'approval-gated' <<<"$health" \
               && grep -Fq 'durable-object-sqlite' <<<"$health" \

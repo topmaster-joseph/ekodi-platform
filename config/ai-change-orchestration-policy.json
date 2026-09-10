@@ -1,0 +1,153 @@
+{
+  "schemaVersion": 4,
+  "policyId": "AI-ORCHESTRATE-001",
+  "status": "enforced",
+  "controlPlane": "EKODI AI",
+  "orchestrator": "ekodi-ai-orchestrator",
+  "defaultRule": "all-ekodi-change-intents-enter-through-ekodi-ai",
+  "scope": [
+    "ekodi-platform",
+    "ekodi-services",
+    "customer-sites",
+    "admin-surfaces",
+    "control-api",
+    "data-migrations",
+    "secrets-and-integrations",
+    "cloud-runtime",
+    "deployment-and-release"
+  ],
+  "ownerExperience": {
+    "intentOnlyByDefault": true,
+    "automaticAgentSelection": true,
+    "automaticProviderSelection": true,
+    "automaticImplementationValidationRecovery": true,
+    "resultOnlyReporting": true,
+    "technicalInterruptionOnlyWhenHumanGateIsRequired": true,
+    "unresolvedResolutionPlanRequired": true,
+    "minimalSpecificHumanActionOnly": true
+  },
+  "execution": {
+    "cloudFirst": true,
+    "localNodeFallback": true,
+    "externalAiRole": "worker-under-ekodi-orchestrator",
+    "externalAiMayOwnProductionMutation": false,
+    "providerSelection": "ekodi-ai-provider-registry:auto-parallel",
+    "collaborationMode": "parallel",
+    "alwaysParallel": true,
+    "maxParallelProviders": 5,
+    "originPreservation": true,
+    "originEnvelopeFields": [
+      "provider",
+      "requestedProvider",
+      "channel",
+      "requestId"
+    ],
+    "originFamilyPinnedIntoExecutionPlan": true,
+    "finalSynthesis": "origin-family-provider",
+    "finalResponseRoute": "origin-channel",
+    "finalSynthesisAddsNewSupplier": false,
+    "requiredRoles": [
+      "architect",
+      "builder",
+      "reviewer",
+      "release",
+      "sentinel"
+    ],
+    "noProviderFallback": "EKODI Core deterministic path",
+    "continueAllResolvableWorkBeforeEscalation": true,
+    "rootCauseFirst": true,
+    "retryRepairRedeployReverify": true
+  },
+  "sourceControl": {
+    "defaultBranch": "main",
+    "directPushToMain": false,
+    "pullRequestRequired": true,
+    "allowedChangeBranchPrefixes": [
+      "ai/"
+    ],
+    "requiredStatusCheck": "EKODI AI Orchestration Gate",
+    "forcePush": false,
+    "branchDeletion": false
+  },
+  "mutationBoundary": {
+    "orchestrationGateRequiredBeforeMutation": true,
+    "directLocalProductionDeploy": false,
+    "directManualProductionMutation": false,
+    "workflowDispatchBecomesEkodiIntent": true,
+    "scheduledMutationBecomesEkodiIntent": true,
+    "guardedReleaseRequired": true,
+    "breakGlassBypassEnabled": false
+  },
+  "humanGate": {
+    "preserved": true,
+    "areas": [
+      "destructive-data-operation",
+      "identity-or-access-recovery",
+      "credential-revocation-or-rotation-with-outage-risk",
+      "domain-ownership-transfer",
+      "financial-or-legal-commitment",
+      "orchestration-policy-weakening"
+    ]
+  },
+  "governance": {
+    "policyOwners": [
+      "topmaster-joseph"
+    ],
+    "policyWeakeningRequiresOwnerIntent": true,
+    "auditPlanRequired": true,
+    "completionPolicy": "AI-COMPLETE-001",
+    "runtimeMissionPolicy": "AI-MISSION-001",
+    "parallelChangeReview": {
+      "required": true,
+      "policyId": "PARALLEL-RELATED-REVIEW-001",
+      "scopeConfig": "config/parallel-change-review-scopes.json",
+      "detectExactFileOverlap": true,
+      "detectRelatedScopeOverlap": true,
+      "reviewCompleteLabel": "related-change-review-complete",
+      "integrationOrderLabel": "integration-order-approved",
+      "evidenceMarker": "[EKODI RELATED CHANGE REVIEW]",
+      "remainingPrsMustRefreshAfterWinner": true
+    }
+  },
+  "reporting": {
+    "default": "result-only",
+    "include": [
+      "what-changed",
+      "validation",
+      "deployment",
+      "production-verification",
+      "exceptions",
+      "resolution-plan-when-unresolved"
+    ],
+    "excludeByDefault": [
+      "low-level-tool-steps",
+      "provider-chatter",
+      "intermediate-implementation-detail"
+    ],
+    "unresolvedPolicy": {
+      "required": true,
+      "neverStopAtProblemStatement": true,
+      "mustSeparateEkodiActionFromHumanOrExternalAction": true,
+      "mustIdentifyBestKnownRootCause": true,
+      "mustStateWorkaroundWhenAvailable": true,
+      "mustStateRiskOfDeferral": true,
+      "mustStateCompletionCriteria": true,
+      "mustStateNextExecutableStep": true,
+      "humanActionMustBeMinimalAndSpecific": true,
+      "fields": [
+        "current-state",
+        "what-is-working",
+        "what-is-not-complete",
+        "root-cause-or-best-known-cause",
+        "what-ekodi-already-did",
+        "what-ekodi-will-do-next",
+        "blocking-authority-or-dependency",
+        "minimal-user-or-external-action-if-required",
+        "safe-workaround-if-available",
+        "risk-if-left-unresolved",
+        "completion-criteria",
+        "next-executable-step"
+      ]
+    }
+  }
+}

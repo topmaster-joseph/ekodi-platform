@@ -144,8 +144,14 @@
   }
 
   function setHookFirstHero(locale) {
+    const labels = ({
+      'ko-KR':{services:'서비스',ecosystem:'생태계',explore:'둘러보기'},
+      en:{services:'Services',ecosystem:'Ecosystem',explore:'Explore'},
+      'zh-CN':{services:'服务',ecosystem:'生态',explore:'浏览'},
+      ja:{services:'サービス',ecosystem:'エコシステム',explore:'見る'},
+    })[locale] || {services:'서비스',ecosystem:'생태계',explore:'둘러보기'};
     const eyebrow = document.querySelector('.hero .eyebrow');
-    if (eyebrow) eyebrow.textContent = 'EKODI NEXT';
+    if (eyebrow) eyebrow.textContent = 'PEOPLE · PURPOSE · CONNECTED';
 
     const title = document.getElementById('hero-title');
     if (title) {
@@ -160,10 +166,12 @@
     if (nav) {
       const utilities = [...nav.querySelectorAll('[data-ekodi-language-control],#ekodi-ccm-mr-toggle')];
       nav.replaceChildren();
-      const about = document.createElement('a');
-      about.href = '#about';
-      about.textContent = copy(locale, 'about');
-      nav.append(about);
+      for (const [href, text] of [['#about', copy(locale, 'about')], ['#start', labels.services], ['#connect', labels.ecosystem]]) {
+        const link = document.createElement('a');
+        link.href = href;
+        link.textContent = text;
+        nav.append(link);
+      }
       if (login) {
         login.textContent = copy(locale, 'login');
         login.setAttribute('aria-label', copy(locale, 'login'));
@@ -178,15 +186,12 @@
       const start = document.createElement('a');
       start.href = '#start';
       start.className = 'hero-primary-action';
-      start.textContent = copy(locale, 'start');
-      actions.append(start);
-      if (login) {
-        const signIn = document.createElement('a');
-        signIn.href = login.href;
-        signIn.className = 'hero-secondary-action';
-        signIn.textContent = copy(locale, 'login');
-        actions.append(signIn);
-      }
+      start.textContent = locale === 'ko-KR' ? '무료로 시작하기' : copy(locale, 'start');
+      const explore = document.createElement('a');
+      explore.href = '#services';
+      explore.className = 'hero-secondary-action';
+      explore.textContent = labels.explore;
+      actions.append(start, explore);
       let note = document.querySelector('.hero-note');
       if (!note) {
         note = document.createElement('p');
@@ -288,85 +293,175 @@
     }
   }
 
-  function buildDailyPanel(cards, locale) {
-    const host = document.querySelector('.ecosystem-pulse');
-    if (!host) return;
-    host.id = 'start';
-    host.className = 'ecosystem-pulse living-daily intent-gateway';
-    host.setAttribute('aria-label', copy(locale, 'today'));
-    host.replaceChildren();
-
-    const panel = document.createElement('article');
-    panel.className = 'daily-connect intent-panel';
-
-    const kicker = document.createElement('p');
-    kicker.className = 'daily-connect-kicker';
-    kicker.textContent = copy(locale, 'quick');
-
-    const title = document.createElement('h2');
-    title.className = 'intent-title';
-    title.textContent = copy(locale, 'today');
-
-    const desc = document.createElement('p');
-    desc.className = 'intent-desc';
-    desc.textContent = copy(locale, 'desc');
-
-    const chips = document.createElement('div');
-    chips.className = 'intent-chips';
-
-    const results = document.createElement('div');
-    results.className = 'intent-results';
-    results.setAttribute('aria-live', 'polite');
-    results.hidden = true;
-
-    intentSets.forEach((intent, index) => {
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.className = 'intent-chip';
-      button.textContent = copy(locale, 'intents')[index] || intent.label;
-      button.addEventListener('click', () => {
-        chips.querySelectorAll('.intent-chip').forEach(node => node.classList.remove('is-active'));
-        button.classList.add('is-active');
-        results.hidden = false;
-        const limit = intent.id === 'all' ? Math.max(1, cards.length) : 5;
-        renderRecommendations(results, cards, intent.query, intent.preferred, `${button.textContent} ${copy(locale, 'recommendation')}`, locale, limit);
-      });
-      chips.append(button);
-    });
-
-    const form = document.createElement('form');
-    form.className = 'intent-form';
-    form.setAttribute('role', 'search');
-    const input = document.createElement('input');
-    input.type = 'search';
-    input.name = 'intent';
-    input.autocomplete = 'off';
-    input.placeholder = copy(locale, 'placeholder');
-    input.setAttribute('aria-label', copy(locale, 'today'));
-    const submit = document.createElement('button');
-    submit.type = 'submit';
-    submit.textContent = copy(locale, 'find');
-    form.append(input, submit);
-    form.addEventListener('submit', event => {
-      event.preventDefault();
-      const query = input.value.trim();
-      if (!query) {
-        input.focus();
-        return;
-      }
-      results.hidden = false;
-      renderRecommendations(results, cards, query, [], `“${query.slice(0, 24)}” ${copy(locale, 'recommendation')}`, locale);
-    });
-
-    panel.append(kicker, title, desc, chips, form, results);
-    host.append(panel);
+  function dynamicCopy(locale) {
+    return ({
+      'ko-KR':{
+        stage:'사람을 중심으로 연결되는 더 큰 가능성',
+        domains:[['공동체','함께하는 사람들이 더 큰 변화를 만듭니다.'],['사역','좋은 사역이 더 멀리, 더 깊이 이어집니다.'],['비즈니스','가치 있는 일이 지속되도록 연결합니다.'],['삶','오늘도, 더 나은 내일을 향해 이어집니다.']],
+        kicker:'EKODI NEXT',title:'지금, 당신의 필요를 여기서 시작하세요.',desc:'독립적인 서비스들이 필요한 순간 연결되어 더 큰 가치를 만듭니다.',more:'모든 서비스',my:['마이 에코디','나의 활동과 서비스를 한곳에서'],
+        values:[['사람 중심','사람이 있는 곳에서 가능성이 시작됩니다.'],['독립적 운영','각 서비스는 목적과 경계를 지킵니다.'],['필요한 연결','선택한 범위 안에서 안전하게 연결됩니다.']],
+      },
+      en:{
+        stage:'More possibility, connected around people',
+        domains:[['Community','People together create larger change.'],['Ministry','Good ministry travels farther and deeper.'],['Business','Helping valuable work endure.'],['Life','For a better tomorrow, starting today.']],
+        kicker:'EKODI NEXT',title:'Start with what you need, right here.',desc:'Independent services connect when needed to create more value.',more:'All services',my:['My EKODI','Your activity and services in one place'],
+        values:[['Human centered','Possibility starts where people are.'],['Independent','Each service keeps its purpose and boundary.'],['Connected by choice','Connections stay within the scope you choose.']],
+      },
+      'zh-CN':{
+        stage:'以人为中心，连接更多可能',
+        domains:[['社区','同行的人一起创造更大的改变。'],['事工','让好的事工走得更远、更深。'],['商业','让有价值的工作持续成长。'],['生活','从今天连接更好的明天。']],
+        kicker:'EKODI NEXT',title:'从这里开始你此刻需要的事。',desc:'独立服务在需要时连接，创造更大的价值。',more:'全部服务',my:['My EKODI','集中管理我的活动与服务'],
+        values:[['以人为本','可能性从人所在之处开始。'],['独立运营','每项服务守住自己的目标与边界。'],['按需连接','只在你选择的范围内安全连接。']],
+      },
+      ja:{
+        stage:'人を中心につながる、より大きな可能性',
+        domains:[['コミュニティ','人が集まり、より大きな変化を生み出します。'],['ミニストリー','良い働きを、より遠く深くへ。'],['ビジネス','価値ある仕事が続くようにつなぎます。'],['暮らし','今日から、より良い明日へ。']],
+        kicker:'EKODI NEXT',title:'今必要なことを、ここから始めよう。',desc:'独立したサービスが必要な時につながり、より大きな価値を生みます。',more:'すべてのサービス',my:['My EKODI','活動とサービスを一か所に'],
+        values:[['人を中心に','人がいる場所から可能性が始まります。'],['独立運営','各サービスが目的と境界を守ります。'],['必要なつながり','選んだ範囲の中で安全につながります。']],
+      },
+    })[locale] || null;
   }
 
-  function arrangeHomepageJourney() {
+  function buildDynamicVisual(locale) {
+    const host = document.querySelector('.ecosystem-pulse');
+    const c = dynamicCopy(locale) || dynamicCopy('ko-KR');
+    if (!host) return;
+    host.className = 'ecosystem-pulse dynamic-ecosystem';
+    host.removeAttribute('id');
+    host.setAttribute('aria-label', c.stage);
+    host.replaceChildren();
+
+    const stage = document.createElement('div');
+    stage.className = 'ecosystem-stage';
+    const field = document.createElement('div');
+    field.className = 'orbital-field';
+    field.setAttribute('aria-hidden', 'true');
+    for (let i = 1; i <= 3; i += 1) {
+      const orbit = document.createElement('span');
+      orbit.className = `ecosystem-orbit ecosystem-orbit-${i}`;
+      const node = document.createElement('i');
+      node.className = 'orbit-node';
+      orbit.append(node);
+      field.append(orbit);
+    }
+    const core = document.createElement('div');
+    core.className = 'ecosystem-core';
+    core.innerHTML = '<strong>EKODI</strong><small>ECOSYSTEM</small>';
+    const coreCopy = document.createElement('span');
+    coreCopy.textContent = c.stage;
+    core.append(coreCopy);
+    stage.append(field, core);
+
+    const classes = ['community','ministry','business','life'];
+    c.domains.forEach((item, index) => {
+      const card = document.createElement('article');
+      card.className = `domain-float domain-${classes[index]}`;
+      const mark = document.createElement('i');
+      mark.setAttribute('aria-hidden', 'true');
+      mark.textContent = ['●','✦','↗','♥'][index];
+      const text = document.createElement('div');
+      const strong = document.createElement('strong');
+      strong.textContent = item[0];
+      const small = document.createElement('small');
+      small.textContent = item[1];
+      text.append(strong, small);
+      card.append(mark, text);
+      stage.append(card);
+    });
+    host.append(stage);
+  }
+
+  function buildQuickLaunch(cards, locale) {
+    document.querySelector('.dynamic-start-panel')?.remove();
     const hero = document.querySelector('.hero');
-    const host = hero?.querySelector('.ecosystem-pulse');
-    const connect = document.getElementById('connect');
-    if (hero && host && connect && connect.parentElement !== hero) hero.insertBefore(connect, host);
+    if (!hero) return;
+    const c = dynamicCopy(locale) || dynamicCopy('ko-KR');
+    const section = document.createElement('section');
+    section.id = 'start';
+    section.className = 'dynamic-start-panel section-anchor';
+    section.setAttribute('aria-labelledby', 'dynamic-start-title');
+
+    const intro = document.createElement('div');
+    intro.className = 'dynamic-start-intro';
+    const kicker = document.createElement('p');
+    kicker.className = 'dynamic-start-kicker';
+    kicker.textContent = c.kicker;
+    const title = document.createElement('h2');
+    title.id = 'dynamic-start-title';
+    title.textContent = c.title;
+    const desc = document.createElement('p');
+    desc.textContent = c.desc;
+    intro.append(kicker, title, desc);
+
+    const launcher = document.createElement('div');
+    launcher.className = 'dynamic-service-launchers';
+    const preferred = ['church','biz','books','lab','work'];
+    const byId = new Map(cards.filter(card => !card.hasAttribute('hidden')).map(card => [card.dataset.serviceId, card]));
+    const selected = preferred.map(id => byId.get(id)).filter(Boolean);
+    if (selected.length < 5) {
+      for (const card of cards) {
+        if (selected.length >= 5) break;
+        if (!card.hasAttribute('hidden') && !selected.includes(card)) selected.push(card);
+      }
+    }
+    selected.slice(0, 5).forEach((card, index) => {
+      const item = serviceData(card);
+      const link = document.createElement('a');
+      link.className = 'dynamic-service-card';
+      link.href = item.url;
+      link.dataset.quickService = item.id;
+      const icon = document.createElement('span');
+      icon.className = 'dynamic-service-icon';
+      icon.setAttribute('aria-hidden', 'true');
+      icon.textContent = ['교','비','책','연','일'][index] || '•';
+      const strong = document.createElement('strong');
+      strong.textContent = item.name;
+      const small = document.createElement('small');
+      small.textContent = item.copy;
+      link.append(icon, strong, small);
+      launcher.append(link);
+    });
+
+    const my = document.createElement('a');
+    my.className = 'dynamic-service-card dynamic-service-my';
+    my.href = 'https://ekodi.kr/my/';
+    my.dataset.quickService = 'my';
+    const myIcon = document.createElement('span');
+    myIcon.className = 'dynamic-service-icon';
+    myIcon.setAttribute('aria-hidden', 'true');
+    myIcon.textContent = '나';
+    const myTitle = document.createElement('strong');
+    myTitle.textContent = c.my[0];
+    const myCopy = document.createElement('small');
+    myCopy.textContent = c.my[1];
+    my.append(myIcon, myTitle, myCopy);
+    launcher.append(my);
+
+    const more = document.createElement('a');
+    more.className = 'dynamic-more-link';
+    more.href = '#services';
+    more.textContent = `${c.more} →`;
+
+    const values = document.createElement('div');
+    values.className = 'dynamic-values';
+    c.values.forEach((item, index) => {
+      const value = document.createElement('div');
+      value.className = 'dynamic-value';
+      const badge = document.createElement('span');
+      badge.setAttribute('aria-hidden', 'true');
+      badge.textContent = ['◎','◇','↗'][index];
+      const text = document.createElement('div');
+      const strong = document.createElement('strong');
+      strong.textContent = item[0];
+      const small = document.createElement('small');
+      small.textContent = item[1];
+      text.append(strong, small);
+      value.append(badge, text);
+      values.append(value);
+    });
+
+    section.append(intro, launcher, more, values);
+    hero.after(section);
   }
 
   function staticPresentation(card) {
@@ -457,7 +552,8 @@
     applyPageLocale(next);
     installSecondaryLinks(next);
     const cards=[...document.querySelectorAll('.service-card[data-service-status][data-service-id]')].filter(card=>!card.hasAttribute('hidden'));
-    buildDailyPanel(cards,next);
+    buildDynamicVisual(next);
+    buildQuickLaunch(cards,next);
   }
 
   async function start() {
@@ -476,11 +572,10 @@
     keys.forEach((key, index) => root.style.setProperty(key, palette[index]));
     root.dataset.ambientTheme = String((seed % palettes.length) + 1);
     root.dataset.dailyDate = dateKey;
-    document.body.dataset.livingGateway = 'v5-intent-journey';
+    document.body.dataset.livingGateway = 'v6-dynamic-ecosystem';
 
     const allCards = [...document.querySelectorAll('.service-card[data-service-status][data-service-id]')];
     await applyHomepagePresentation(allCards);
-    arrangeHomepageJourney();
     renderHomepageLocale(locale);
   }
 

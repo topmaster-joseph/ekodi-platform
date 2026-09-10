@@ -1,3 +1,5 @@
+import { paymentActivationBlockers, paymentExecutionBlockers, paymentProviderPublicView } from './payment-capabilities.js';
+
 const VALID_SELLER_TYPES = new Set(['individual', 'business']);
 const OPEN_STATUSES = new Set(['submitted', 'under_review']);
 const QUEUE_STATUSES = new Set(['submitted', 'under_review', 'verified', 'rejected', 'cancelled']);
@@ -25,10 +27,20 @@ function displayNameFromUser(user) {
   return clean(metadata.full_name || metadata.name || String(user?.email || '').split('@')[0], 100) || '판매자';
 }
 
-function operationsAuthorization(request, env) {
-  if (!env.MALL_OPERATIONS_TOKEN) return { ok: false, status: 503, error: 'Mall 운영 검증 채널이 아직 구성되지 않았습니다.' };
-  if ((request.headers.get('x-ekodi-mall-ops-token') || '') !== env.MALL_OPERATIONS_TOKEN) return { ok: false, status: 401, error: 'Mall 운영자 권한이 필요합니다.' };
-  return { ok: true };
+function allowedOpsEmails(env) {
+  return new Set(clean(env.MALL_OPERATIONS_EMAILS, 2000).split(',').map((item) => item.trim().toLowerCase()).filter(Boolean));
+}
+
+export async function authorizeVerificationOperations(request, env) {
+  const supplied = request.headers.get('x-ekodi-mall-ops-token') || '';
+  if (env.MALL_OPERATIONS_TOKEN && supplied && supplied === env.MALL_OPERATIONS_TOKEN) return { ok: true, actor: 'mall-ops:service-token' };
+  const user = await authenticate(request, env);
+  if (!user) return { ok: false, status: 401, error: 'Mall 운영자 Google 로그인이 필요합니다.' };
+  const email = clean(user.email, 240).toLowerCase();
+  const allow = allowedOpsEmails(env);
+  if (!allow.size) return { ok: false, status: 503, error: 'Mall 운영자 이메일 allowlist가 구성되지 않았습니다.' };
+  if (!allow.has(email)) return { ok: false, status: 403, error: '이 Google 계정은 Mall 검증 운영 권한이 없습니다.' };
+  return { ok: true, actor: `mall-ops:${email}`, user };
 }
 
 async function ensureSellerProfile(env, user, sellerType) {
@@ -88,8 +100,7 @@ export function checkoutGateBlockers(row = {}) {
 export function livePaymentBlockers(row = {}, env = {}) {
   const blockers = checkoutGateBlockers(row);
   if (!row.checkout_ready) blockers.push('product-checkout-gate');
-  if (!flag(env.PAYMENTS_ENABLED)) blockers.push('payments-disabled');
-  if (!env.TOSS_SECRET_KEY) blockers.push('toss-secret-missing');
+  for (const blocker of paymentExecutionBlockers(env)) blockers.push(blocker);
   return blockers;
 }
 
@@ -102,6 +113,30 @@ function productReadiness(row, env) {
     checkoutGateEnabled: Boolean(row.checkout_ready), eligibleForCheckoutGate: gateBlockers.length === 0, gateBlockers,
     livePaymentReady: liveBlockers.length === 0, liveBlockers
   };
+}
+
+export function launchReadinessBlockers({ counts = {}, env = {} } = {}) {
+  const blockers = [];
+  if (Number(counts.checkoutGateEligibleCount || 0) < 1) blockers.push('no-checkout-eligible-product');
+  if (Number(counts.checkoutGateEnabledCount || 0) < 1) blockers.push('no-checkout-gate-product');
+  for (const blocker of paymentActivationBlockers(env)) blockers.push(blocker);
+  if (!(Boolean(env.MALL_OPERATIONS_TOKEN) || allowedOpsEmails(env).size > 0)) blockers.push('operations-review-missing');
+  if (!clean(env.MALL_LEGAL_READINESS_REF, 500)) blockers.push('legal-readiness-missing');
+  if (!clean(env.MALL_PRIVACY_READINESS_REF, 500)) blockers.push('privacy-readiness-missing');
+  if (!clean(env.MALL_REFUND_READINESS_REF, 500)) blockers.push('refund-readiness-missing');
+  if (!clean(env.MALL_PAYOUT_READINESS_REF, 500)) blockers.push('payout-readiness-missing');
+  return blockers;
+}
+
+async function globalLaunchReadiness(env) {
+  const seller = await env.DB.prepare(`SELECT COUNT(*) AS sellerCount, SUM(CASE WHEN direct_sale_status='verified' THEN 1 ELSE 0 END) AS verifiedDirectSellerCount FROM seller_profiles`).first();
+  const store = await env.DB.prepare(`SELECT COUNT(*) AS storeCount, SUM(CASE WHEN verification_status='verified' AND status='active' THEN 1 ELSE 0 END) AS verifiedStoreCount FROM stores`).first();
+  const product = await env.DB.prepare(`SELECT COUNT(*) AS productCount, SUM(CASE WHEN p.sale_type='direct' AND p.status='published' AND p.price>0 AND sp.direct_sale_status='verified' AND (p.seller_type<>'business' OR (s.id IS NOT NULL AND s.verification_status='verified')) THEN 1 ELSE 0 END) AS checkoutGateEligibleCount, SUM(CASE WHEN p.sale_type='direct' AND p.status='published' AND p.price>0 AND sp.direct_sale_status='verified' AND (p.seller_type<>'business' OR (s.id IS NOT NULL AND s.verification_status='verified')) AND p.checkout_ready=1 THEN 1 ELSE 0 END) AS checkoutGateEnabledCount FROM products p JOIN seller_profiles sp ON sp.user_id=p.seller_id LEFT JOIN stores s ON s.id=p.store_id`).first();
+  const queue = await env.DB.prepare(`SELECT COUNT(*) AS openVerificationRequestCount FROM verification_requests WHERE status IN ('submitted','under_review')`).first();
+  const counts = { sellerCount:Number(seller?.sellerCount||0), verifiedDirectSellerCount:Number(seller?.verifiedDirectSellerCount||0), storeCount:Number(store?.storeCount||0), verifiedStoreCount:Number(store?.verifiedStoreCount||0), productCount:Number(product?.productCount||0), checkoutGateEligibleCount:Number(product?.checkoutGateEligibleCount||0), checkoutGateEnabledCount:Number(product?.checkoutGateEnabledCount||0), openVerificationRequestCount:Number(queue?.openVerificationRequestCount||0) };
+  const activationBlockers = launchReadinessBlockers({ counts, env });
+  const liveBlockers = [...activationBlockers]; if (!flag(env.PAYMENTS_ENABLED)) liveBlockers.push('payments-disabled');
+  return { status: liveBlockers.length===0?'live':activationBlockers.length===0?'activation-ready':'blocked', activationReady:activationBlockers.length===0, liveReady:liveBlockers.length===0, activationBlockers, liveBlockers, counts, global:{ paymentsEnabled:flag(env.PAYMENTS_ENABLED), tossSecretConfigured:Boolean(env.TOSS_SECRET_KEY), paymentProvider:paymentProviderPublicView(env), operationsReviewConfigured:Boolean(env.MALL_OPERATIONS_TOKEN)||allowedOpsEmails(env).size>0, legalReadinessConfigured:Boolean(clean(env.MALL_LEGAL_READINESS_REF,500)), privacyReadinessConfigured:Boolean(clean(env.MALL_PRIVACY_READINESS_REF,500)), refundReadinessConfigured:Boolean(clean(env.MALL_REFUND_READINESS_REF,500)), payoutReadinessConfigured:Boolean(clean(env.MALL_PAYOUT_READINESS_REF,500)), buyerPiiReleaseEnabled:flag(env.BUYER_PII_RELEASE_ENABLED), supplierForwardEnabled:flag(env.SUPPLIER_FORWARD_ENABLED), payoutExecutionEnabled:false, refundExecutionEnabled:false } };
 }
 
 async function sellerReadiness(env, sellerId) {
@@ -119,8 +154,8 @@ async function sellerReadiness(env, sellerId) {
   return {
     profile, stores: storesResult.results || [], products, requests: requestsResult.results || [],
     global: {
-      paymentsEnabled: flag(env.PAYMENTS_ENABLED), tossSecretConfigured: Boolean(env.TOSS_SECRET_KEY),
-      operationsReviewConfigured: Boolean(env.MALL_OPERATIONS_TOKEN), buyerPiiReleaseEnabled: flag(env.BUYER_PII_RELEASE_ENABLED),
+      paymentsEnabled: flag(env.PAYMENTS_ENABLED), tossSecretConfigured: Boolean(env.TOSS_SECRET_KEY), paymentProvider: paymentProviderPublicView(env),
+      operationsReviewConfigured: Boolean(env.MALL_OPERATIONS_TOKEN) || allowedOpsEmails(env).size > 0, operationsEmailAllowlistConfigured: allowedOpsEmails(env).size > 0, buyerPiiReleaseEnabled: flag(env.BUYER_PII_RELEASE_ENABLED),
       supplierForwardEnabled: flag(env.SUPPLIER_FORWARD_ENABLED), payoutExecutionEnabled: false, refundExecutionEnabled: false
     },
     summary: {
@@ -137,7 +172,7 @@ async function audit(env, { actor, action, sellerId = null, storeId = null, prod
     .bind(clean(actor, 120), clean(action, 120), sellerId, storeId, productId, requestIdValue, JSON.stringify(metadata).slice(0, 5000), nowIso()).run();
 }
 
-async function reviewRequest(env, id, body) {
+async function reviewRequest(env, id, body, actor) {
   const decision = body?.decision === 'verified' ? 'verified' : body?.decision === 'rejected' ? 'rejected' : '';
   if (!decision) return { status: 400, body: { error: 'decision은 verified 또는 rejected여야 합니다.' } };
   const request = await env.DB.prepare('SELECT * FROM verification_requests WHERE id=?').bind(id).first();
@@ -145,7 +180,6 @@ async function reviewRequest(env, id, body) {
   if (!OPEN_STATUSES.has(request.status)) return { status: 409, body: { error: '이미 처리된 검증 요청입니다.' } };
   const now = nowIso();
   const reviewNote = clean(body?.reviewNote, 1200);
-  const actor = `mall-ops:${clean(body?.reviewer, 80) || 'operator'}`;
   const statements = [env.DB.prepare(`UPDATE verification_requests SET status=?,review_note=?,reviewed_at=?,updated_at=? WHERE id=?`).bind(decision, reviewNote, now, now, id)];
   let storeId = null;
   if (request.entity_type === 'seller') {
@@ -160,7 +194,7 @@ async function reviewRequest(env, id, body) {
   return { status: 200, body: { request: { id, status: decision, reviewedAt: now } } };
 }
 
-async function setCheckoutGate(env, productId, body) {
+async function setCheckoutGate(env, productId, body, actor) {
   if (typeof body?.ready !== 'boolean') return { status: 400, body: { error: 'ready boolean 값이 필요합니다.' } };
   const row = await env.DB.prepare(`SELECT p.id,p.name,p.status,p.sale_type,p.price,p.seller_type,p.store_id,p.checkout_ready,p.seller_id,
     sp.direct_sale_status,s.verification_status AS store_verification_status
@@ -171,7 +205,7 @@ async function setCheckoutGate(env, productId, body) {
   const now = nowIso();
   await env.DB.prepare('UPDATE products SET checkout_ready=?,updated_at=? WHERE id=?').bind(body.ready ? 1 : 0, now, productId).run();
   await audit(env, {
-    actor: `mall-ops:${clean(body?.reviewer, 80) || 'operator'}`, action: body.ready ? 'product.checkout_gate.enabled' : 'product.checkout_gate.disabled',
+    actor, action: body.ready ? 'product.checkout_gate.enabled' : 'product.checkout_gate.disabled',
     sellerId: row.seller_id, storeId: row.store_id || null, productId,
     metadata: { note: clean(body?.note, 800), blockersAtDecision: blockers }
   });
@@ -194,13 +228,15 @@ export async function handleVerificationRequest(request, env) {
   const storeVerificationMatch = path.match(/^\/api\/stores\/([^/]+)\/verification\/submit$/);
   const internalReviewMatch = path.match(/^\/api\/internal\/verification\/([^/]+)\/review$/);
   const internalGateMatch = path.match(/^\/api\/internal\/products\/([^/]+)\/checkout-gate$/);
+  const internalSellerReadinessMatch = path.match(/^\/api\/internal\/verification\/sellers\/([^/]+)\/readiness$/);
+  const internalLaunchReadiness = path === '/api/internal/verification/launch-readiness';
   const isRoute = path === '/api/readiness' || path === '/api/verification/requests' || sellerVerificationSubmit || Boolean(storeVerificationMatch)
-    || path === '/api/internal/verification/queue' || Boolean(internalReviewMatch) || Boolean(internalGateMatch);
+    || path === '/api/internal/verification/queue' || internalLaunchReadiness || Boolean(internalReviewMatch) || Boolean(internalGateMatch) || Boolean(internalSellerReadinessMatch);
   if (!isRoute) return null;
   if (!env.DB) return { status: 503, body: { error: 'Mall 전용 데이터베이스 연결이 없습니다.' } };
 
   if (path.startsWith('/api/internal/')) {
-    const auth = operationsAuthorization(request, env);
+    const auth = await authorizeVerificationOperations(request, env);
     if (!auth.ok) return { status: auth.status, body: { error: auth.error } };
     if (request.method === 'GET' && path === '/api/internal/verification/queue') {
       const requested = clean(url.searchParams.get('status'), 30) || 'submitted';
@@ -209,17 +245,21 @@ export async function handleVerificationRequest(request, env) {
         vr.request_note AS requestNote,vr.review_note AS reviewNote,vr.submitted_at AS submittedAt,vr.reviewed_at AS reviewedAt,
         sp.email,sp.display_name AS displayName,sp.seller_type AS sellerType,sp.direct_sale_status AS directSaleStatus
         FROM verification_requests vr JOIN seller_profiles sp ON sp.user_id=vr.seller_id WHERE vr.status=? ORDER BY vr.created_at ASC LIMIT 100`).bind(status).all();
-      return { status: 200, body: { requests: rows.results || [], status } };
+      return { status: 200, body: { requests: rows.results || [], status, actor: auth.actor } };
+    }
+    if (request.method === 'GET' && internalLaunchReadiness) return { status: 200, body: { launch: await globalLaunchReadiness(env), actor: auth.actor } };
+    if (request.method === 'GET' && internalSellerReadinessMatch) {
+      return { status: 200, body: { readiness: await sellerReadiness(env, decodeURIComponent(internalSellerReadinessMatch[1])), actor: auth.actor } };
     }
     if (request.method === 'POST' && internalReviewMatch) {
       const body = await readJson(request);
       if (!body) return { status: 400, body: { error: 'Invalid JSON' } };
-      return reviewRequest(env, decodeURIComponent(internalReviewMatch[1]), body);
+      return reviewRequest(env, decodeURIComponent(internalReviewMatch[1]), body, auth.actor);
     }
     if (request.method === 'POST' && internalGateMatch) {
       const body = await readJson(request);
       if (!body) return { status: 400, body: { error: 'Invalid JSON' } };
-      return setCheckoutGate(env, decodeURIComponent(internalGateMatch[1]), body);
+      return setCheckoutGate(env, decodeURIComponent(internalGateMatch[1]), body, auth.actor);
     }
     return { status: 405, body: { error: 'Method not allowed' } };
   }

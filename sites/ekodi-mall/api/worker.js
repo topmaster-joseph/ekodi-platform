@@ -1,3 +1,7 @@
+import { commerceEventStatement } from './commerce-events.js';
+import { paymentExecutionBlockers, paymentProviderPublicView, selectedPaymentProvider } from './payment-capabilities.js';
+import { routeCommerceModel } from './commerce-os.js';
+
 const DEFAULT_ALLOWED_ORIGINS = [
   'https://ekodi.kr',
   'https://ekodi-mall.pages.dev'
@@ -5,7 +9,8 @@ const DEFAULT_ALLOWED_ORIGINS = [
 const FEE_RATES = Object.freeze({ direct: 7, marketplace: 8, ai: 9 });
 const VALID_SELLER_TYPES = new Set(['individual', 'business']);
 const VALID_SALE_TYPES = new Set(['direct', 'affiliate', 'inquiry']);
-const VALID_CATEGORIES = new Set(['local', 'living', 'book', 'gift']);
+const VALID_CATEGORIES = new Set(['general', 'living', 'book', 'gift']);
+const VALID_LOCAL_RELATIONSHIPS = new Set(['seller-declared', 'community', 'producer', 'store', 'experience', 'service', 'origin']);
 const VALID_CHANNELS = new Set(['copy', 'share', 'sms', 'kakao', 'qr', 'social', 'mall', 'unknown']);
 const VALID_ATTRIBUTION_TYPES = new Set(['direct', 'marketplace', 'ai']);
 
@@ -43,6 +48,28 @@ function cleanHttpsUrl(value) {
 function slugOrBlank(value) {
   const slug = cleanText(value, 80).toLowerCase();
   return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) ? slug : '';
+}
+
+function normalizeCategory(value) {
+  const category = cleanText(value, 40).toLowerCase();
+  return VALID_CATEGORIES.has(category) ? category : 'general';
+}
+
+function cleanRegionId(value) {
+  const id = cleanText(value, 100).toLowerCase();
+  return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(id) ? id : '';
+}
+
+function normalizeRegion(value) {
+  if (!value || typeof value !== 'object') return null;
+  const primaryRegionId = cleanRegionId(value.primaryRegionId);
+  if (!primaryRegionId) return null;
+  const ids = Array.isArray(value.regionIds) ? value.regionIds : [];
+  const regionIds = [...new Set(ids.map(cleanRegionId).filter(Boolean).concat(primaryRegionId))].slice(0, 8);
+  const label = cleanText(value.label, 160);
+  const requestedRelationship = cleanText(value.relationship, 40).toLowerCase();
+  const relationship = VALID_LOCAL_RELATIONSHIPS.has(requestedRelationship) ? requestedRelationship : 'seller-declared';
+  return { primaryRegionId, regionIds, label, relationship, verified: false };
 }
 
 function flag(value) {
@@ -129,7 +156,8 @@ export function normalizeProductInput(body = {}) {
   const content = body.content || {};
   const sellerType = VALID_SELLER_TYPES.has(seller.type) ? seller.type : 'individual';
   const saleType = VALID_SALE_TYPES.has(product.saleType) ? product.saleType : 'direct';
-  const category = VALID_CATEGORIES.has(product.category) ? product.category : 'local';
+  const category = normalizeCategory(product.category);
+  const region = normalizeRegion(product.region);
   const affiliateUrl = cleanHttpsUrl(product.action?.url || product.affiliateUrl || '');
   const normalized = {
     sellerType,
@@ -144,6 +172,7 @@ export function normalizeProductInput(body = {}) {
     product: {
       saleType,
       category,
+      region,
       name: cleanText(product.name, 160),
       audience: cleanText(product.audience, 500),
       oneLine: cleanText(product.oneLine, 300),
@@ -165,6 +194,7 @@ export function normalizeProductInput(body = {}) {
   if (!normalized.sellerDisplayName) errors.push('판매자 표시명을 입력해 주세요.');
   if (!normalized.product.name) errors.push('상품명을 입력해 주세요.');
   if (!normalized.contact) errors.push('연락·문의 채널을 입력해 주세요.');
+  if (normalized.product.region && !normalized.product.region.label) errors.push('지역 연결에는 표시할 행정지역명이 필요합니다.');
   if (saleType === 'affiliate' && !affiliateUrl) errors.push('제휴판매는 유효한 HTTPS 제휴링크가 필요합니다.');
   if (normalized.store?.name && !normalized.store.slug) errors.push('스토어를 연결하려면 영문 소문자·숫자·하이픈 slug가 필요합니다.');
   return { value: normalized, errors };
@@ -249,7 +279,14 @@ function rowToOwnerProduct(row) {
     store: row.store_id ? { id: row.store_id, name: row.store_name || '', slug: row.store_slug || '', contact: row.store_contact || '' } : null,
     product: {
       saleType: row.sale_type,
-      category: row.category,
+      category: normalizeCategory(row.category),
+      region: row.primary_region_id ? {
+        primaryRegionId: row.primary_region_id,
+        regionIds: JSON.parse(row.region_ids_json || '[]'),
+        label: row.region_label || '',
+        relationship: row.local_relationship || 'seller-declared',
+        verified: Boolean(row.region_verified)
+      } : null,
       name: row.name,
       audience: row.audience || '',
       oneLine: row.one_line || '',
@@ -284,9 +321,10 @@ async function saveProduct(env, user, body, existingId = '') {
     const current = await getOwnerProduct(env, user.id, existingId);
     if (!current) return { notFound: true };
     await env.DB.prepare(`UPDATE products SET
-      store_id=?,seller_display_name=?,seller_type=?,sale_type=?,category=?,name=?,audience=?,one_line=?,price=?,benefits_json=?,specs_json=?,story=?,fulfillment=?,contact=?,affiliate_url=?,content_json=?,version=version+1,updated_at=?
+      store_id=?,seller_display_name=?,seller_type=?,sale_type=?,category=?,primary_region_id=?,region_ids_json=?,region_label=?,local_relationship=?,region_verified=0,name=?,audience=?,one_line=?,price=?,benefits_json=?,specs_json=?,story=?,fulfillment=?,contact=?,affiliate_url=?,content_json=?,version=version+1,updated_at=?
       WHERE id=? AND seller_id=?`)
-      .bind(linkedStoreId, seller.displayName, value.sellerType, value.product.saleType, value.product.category, value.product.name,
+      .bind(linkedStoreId, seller.displayName, value.sellerType, value.product.saleType, value.product.category, value.product.region?.primaryRegionId || '', JSON.stringify(value.product.region?.regionIds || []),
+        value.product.region?.label || '', value.product.region?.relationship || '', value.product.name,
         value.product.audience, value.product.oneLine, value.product.price, JSON.stringify(value.product.benefits), JSON.stringify(value.product.specs),
         value.product.story, value.product.fulfillment, value.contact, value.product.affiliateUrl, JSON.stringify(value.content), now, existingId, user.id).run();
     return { product: rowToOwnerProduct(await getOwnerProduct(env, user.id, existingId)) };
@@ -295,9 +333,10 @@ async function saveProduct(env, user, body, existingId = '') {
   const shareCode = randomCode(12);
   const publicUrl = makePublicUrl(env.MALL_BASE_URL, shareCode);
   await env.DB.prepare(`INSERT INTO products
-    (id,seller_id,store_id,share_code,public_url,seller_display_name,seller_type,sale_type,category,name,audience,one_line,price,benefits_json,specs_json,story,fulfillment,contact,affiliate_url,content_json,status,checkout_ready,version,created_at,updated_at)
-    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'draft',0,1,?,?)`)
+    (id,seller_id,store_id,share_code,public_url,seller_display_name,seller_type,sale_type,category,primary_region_id,region_ids_json,region_label,local_relationship,region_verified,name,audience,one_line,price,benefits_json,specs_json,story,fulfillment,contact,affiliate_url,content_json,status,checkout_ready,version,created_at,updated_at)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,0,?,?,?,?,?,?,?,?,?,?,?,'draft',0,1,?,?)`)
     .bind(id, user.id, linkedStoreId, shareCode, publicUrl, seller.displayName, value.sellerType, value.product.saleType, value.product.category,
+      value.product.region?.primaryRegionId || '', JSON.stringify(value.product.region?.regionIds || []), value.product.region?.label || '', value.product.region?.relationship || '',
       value.product.name, value.product.audience, value.product.oneLine, value.product.price, JSON.stringify(value.product.benefits),
       JSON.stringify(value.product.specs), value.product.story, value.product.fulfillment, value.contact, value.product.affiliateUrl,
       JSON.stringify(value.content), now, now).run();
@@ -345,7 +384,7 @@ async function getPublicProduct(env, shareCode) {
     seller: { type: row.seller_type, displayName: row.seller_display_name },
     store: row.store_id ? { name: row.store_name || '', slug: row.store_slug || '' } : null,
     product: {
-      saleType: row.sale_type, category: row.category, name: row.name, audience: row.audience || '', oneLine: row.one_line || '', price: row.price,
+      saleType: row.sale_type, category: normalizeCategory(row.category), region: row.primary_region_id ? { primaryRegionId: row.primary_region_id, regionIds: JSON.parse(row.region_ids_json || '[]'), label: row.region_label || '', relationship: row.local_relationship || 'seller-declared', verified: Boolean(row.region_verified) } : null, name: row.name, audience: row.audience || '', oneLine: row.one_line || '', price: row.price,
       benefits: JSON.parse(row.benefits_json || '[]'), specs: JSON.parse(row.specs_json || '[]'), story: row.story || '', fulfillment: row.fulfillment || '',
       contact: row.contact || '', affiliateUrl: row.sale_type === 'affiliate' ? row.affiliate_url || '' : ''
     },
@@ -447,8 +486,7 @@ export async function buildOrderQuote(env, { shareCode, attributionToken = '', q
   if (row.direct_sale_status !== 'verified') blockers.push('seller-verification');
   if (row.seller_type === 'business' && !businessStoreVerified) blockers.push('business-store-verification');
   if (!row.checkout_ready) blockers.push('product-checkout-gate');
-  if (!flag(env.PAYMENTS_ENABLED)) blockers.push('payments-disabled');
-  if (!env.TOSS_SECRET_KEY) blockers.push('toss-secret-missing');
+  for (const blocker of paymentExecutionBlockers(env)) blockers.push(blocker);
   return {
     status: 200,
     quote: {
@@ -462,6 +500,7 @@ export async function buildOrderQuote(env, { shareCode, attributionToken = '', q
       unitAmount: row.price,
       currency: 'KRW',
       attributionType,
+      commerceRoute: routeCommerceModel({ saleType: row.sale_type, env }),
       pgIncluded: true,
       vatIncluded: true,
       ...amounts,
@@ -471,7 +510,7 @@ export async function buildOrderQuote(env, { shareCode, attributionToken = '', q
   };
 }
 
-async function createOrder(env, input) {
+export async function createOrder(env, input) {
   const result = await buildOrderQuote(env, input);
   if (!result.quote) return result;
   if (!result.quote.checkoutReady) return { error: '직접결제 활성화 조건이 아직 완료되지 않았습니다.', status: 409, quote: result.quote };
@@ -479,13 +518,20 @@ async function createOrder(env, input) {
   const id = orderId();
   const now = isoNow();
   const expiresAt = addMinutesIso(30);
-  await env.DB.prepare(`INSERT INTO orders
+  const orderInsert = env.DB.prepare(`INSERT INTO orders
     (id,product_id,seller_id,store_id,status,quantity,unit_amount,gross_amount,currency,attribution_type,attribution_token,
      fee_rate_percent,platform_fee_amount,seller_settlement_amount,expires_at,created_at,updated_at)
     VALUES (?,?,?,?,'payment_pending',?,?,?,?,?,?,?,?,?,?,?,?)`)
     .bind(id, quote.productId, quote.sellerId, quote.storeId, quote.quantity, quote.unitAmount, quote.grossAmount, quote.currency,
       quote.attributionType, cleanText(input.attributionToken, 100) || null, quote.feeRatePercent, quote.platformFeeAmount,
-      quote.sellerSettlementAmount, expiresAt, now, now).run();
+      quote.sellerSettlementAmount, expiresAt, now, now);
+  const orderEvent = commerceEventStatement(env, {
+    eventType:'order.created', aggregateType:'order', aggregateId:id, actor:'mall-order-engine', action:'order.prepare',
+    idempotencyKey:`order.created:${id}`, occurredAt:now,
+    payload:{ productId:quote.productId, sellerId:quote.sellerId, amount:quote.grossAmount, currency:quote.currency, attributionType:quote.attributionType, paymentProvider:quote.commerceRoute?.paymentProvider || null },
+  });
+  if (!orderEvent) throw new Error('COMMERCE_EVENT_STATEMENT_REQUIRED');
+  await env.DB.batch([orderInsert, orderEvent.statement]);
   return {
     status: 201,
     order: {
@@ -524,57 +570,55 @@ async function confirmTossPayment(env, order, paymentKey, amount) {
   return body;
 }
 
-async function recordConfirmedPayment(env, order, payment) {
+export async function recordConfirmedPayment(env, order, payment, provider = 'TOSS') {
   const now = isoNow();
   const paymentStatus = cleanText(payment.status, 80) || 'UNKNOWN';
   const paid = paymentStatus === 'DONE';
   const approvedAt = payment.approvedAt || null;
   const paymentKey = cleanText(payment.paymentKey, 220);
-  const metadata = JSON.stringify({
-    type: payment.type || '',
-    method: payment.method || '',
-    mId: payment.mId || '',
-    requestedAt: payment.requestedAt || null,
-    approvedAt,
-    cancelCount: Array.isArray(payment.cancels) ? payment.cancels.length : 0
-  }).slice(0, 6000);
+  const providerName = cleanText(provider || 'TOSS', 40).toUpperCase() || 'TOSS';
+  const metadata = JSON.stringify({ type:payment.type || '', method:payment.method || '', mId:payment.mId || '', requestedAt:payment.requestedAt || null, approvedAt, cancelCount:Array.isArray(payment.cancels) ? payment.cancels.length : 0 }).slice(0, 6000);
   const statements = [
     env.DB.prepare(`INSERT INTO order_payments
       (payment_key,order_id,provider,status,method,total_amount,approved_at,metadata_json,created_at,updated_at)
-      VALUES (?,?,'TOSS',?,?,?,?,?,?,?)
+      VALUES (?,?,?,?,?,?,?,?,?,?)
       ON CONFLICT(payment_key) DO UPDATE SET status=excluded.status,method=excluded.method,total_amount=excluded.total_amount,
       approved_at=excluded.approved_at,metadata_json=excluded.metadata_json,updated_at=excluded.updated_at`)
-      .bind(paymentKey, order.id, paymentStatus, cleanText(payment.method, 80), Math.trunc(Number(payment.totalAmount) || 0), approvedAt, metadata, now, now),
-    env.DB.prepare('UPDATE orders SET status=?,paid_at=?,updated_at=? WHERE id=?')
-      .bind(paid ? 'paid' : 'payment_pending', paid ? approvedAt || now : null, now, order.id)
+      .bind(paymentKey, order.id, providerName, paymentStatus, cleanText(payment.method,80), Math.trunc(Number(payment.totalAmount)||0), approvedAt, metadata, now, now),
+    env.DB.prepare('UPDATE orders SET status=?,paid_at=?,updated_at=? WHERE id=?').bind(paid ? 'paid' : 'payment_pending', paid ? approvedAt || now : null, now, order.id),
   ];
-  await env.DB.batch(statements);
+  const paymentEvent = commerceEventStatement(env, { eventType:'payment.recorded', aggregateType:'order', aggregateId:order.id, actor:`payment-provider:${providerName.toLowerCase()}`, action:'payment.capture', idempotencyKey:`payment.recorded:${providerName}:${paymentKey}`, occurredAt:approvedAt || now, payload:{ provider:providerName, status:paymentStatus, method:cleanText(payment.method,80), totalAmount:Math.trunc(Number(payment.totalAmount)||0) } });
+  if (!paymentEvent) throw new Error('COMMERCE_PAYMENT_EVENT_REQUIRED');
+  statements.push(paymentEvent.statement);
   if (paid) {
-    await env.DB.prepare(`INSERT INTO settlement_ledger
+    statements.push(env.DB.prepare(`INSERT INTO settlement_ledger
       (order_id,seller_id,entry_type,gross_amount,platform_fee_amount,seller_amount,status,effective_at,created_at)
       SELECT ?,?,'sale',?,?,?,'pending',?,?
       WHERE NOT EXISTS (SELECT 1 FROM settlement_ledger WHERE order_id=? AND entry_type='sale')`)
-      .bind(order.id, order.seller_id, order.gross_amount, order.platform_fee_amount, order.seller_settlement_amount,
-        approvedAt || now, now, order.id).run();
+      .bind(order.id, order.seller_id, order.gross_amount, order.platform_fee_amount, order.seller_settlement_amount, approvedAt || now, now, order.id));
+    const settlementEvent = commerceEventStatement(env, { eventType:'settlement.prepared', aggregateType:'order', aggregateId:order.id, actor:'mall-settlement-engine', action:'settlement.prepare', idempotencyKey:`settlement.sale:${order.id}`, occurredAt:approvedAt || now, payload:{ sellerId:order.seller_id, grossAmount:order.gross_amount, platformFeeAmount:order.platform_fee_amount, sellerAmount:order.seller_settlement_amount } });
+    if (!settlementEvent) throw new Error('COMMERCE_SETTLEMENT_EVENT_REQUIRED');
+    statements.push(settlementEvent.statement);
   }
+  await env.DB.batch(statements);
 }
-
 async function confirmOrderPayment(env, body) {
-  if (!flag(env.PAYMENTS_ENABLED)) return { error: '온라인 결제는 아직 비활성 상태입니다.', status: 503 };
+  if (!flag(env.PAYMENTS_ENABLED)) return { error:'온라인 결제는 아직 비활성 상태입니다.', status:503 };
+  const provider = selectedPaymentProvider(env);
+  if (provider !== 'toss') return { error:'선택한 결제 공급자의 온라인 승인 어댑터가 아직 활성화되지 않았습니다.', status:503 };
   const id = cleanText(body?.orderId, 80);
   const paymentKey = cleanText(body?.paymentKey, 220);
   const amount = Math.trunc(Number(body?.amount));
-  if (!id || !paymentKey || !Number.isFinite(amount)) return { error: 'paymentKey, orderId, amount가 필요합니다.', status: 400 };
+  if (!id || !paymentKey || !Number.isFinite(amount)) return { error:'paymentKey, orderId, amount가 필요합니다.', status:400 };
   const order = await env.DB.prepare('SELECT * FROM orders WHERE id=?').bind(id).first();
-  if (!order) return { error: '주문을 찾을 수 없습니다.', status: 404 };
-  if (amount !== order.gross_amount) return { error: '서버 주문금액과 결제금액이 일치하지 않습니다.', status: 409 };
+  if (!order) return { error:'주문을 찾을 수 없습니다.', status:404 };
+  if (amount !== order.gross_amount) return { error:'서버 주문금액과 결제금액이 일치하지 않습니다.', status:409 };
   const existing = await env.DB.prepare("SELECT * FROM order_payments WHERE order_id=? AND status='DONE' LIMIT 1").bind(id).first();
-  if (existing) return { status: 200, payment: { paymentKey: existing.payment_key, orderId: id, status: existing.status, totalAmount: existing.total_amount }, idempotent: true };
+  if (existing) return { status:200, payment:{ paymentKey:existing.payment_key, orderId:id, status:existing.status, totalAmount:existing.total_amount }, idempotent:true };
   const payment = await confirmTossPayment(env, order, paymentKey, amount);
-  await recordConfirmedPayment(env, order, payment);
-  return { status: 200, payment: { paymentKey: payment.paymentKey, orderId: payment.orderId, status: payment.status, totalAmount: payment.totalAmount, approvedAt: payment.approvedAt || null } };
+  await recordConfirmedPayment(env, order, payment, 'TOSS');
+  return { status:200, payment:{ paymentKey:payment.paymentKey, orderId:payment.orderId, status:payment.status, totalAmount:payment.totalAmount, approvedAt:payment.approvedAt || null } };
 }
-
 async function listSellerOrders(env, sellerId, limit) {
   const rows = await env.DB.prepare(`SELECT id,product_id AS productId,status,quantity,unit_amount AS unitAmount,gross_amount AS grossAmount,
     attribution_type AS attributionType,fee_rate_percent AS feeRatePercent,platform_fee_amount AS platformFeeAmount,
@@ -631,6 +675,7 @@ export default {
         orderSchemaReady: ready.order,
         paymentsEnabled: flag(env.PAYMENTS_ENABLED),
         tossSecretConfigured: Boolean(env.TOSS_SECRET_KEY),
+        paymentProvider: paymentProviderPublicView(env),
         payoutExecutionEnabled: false
       }, ok ? 200 : 503, origin, env);
     }

@@ -1,6 +1,6 @@
-# EKODI Shell Contract v2
+# EKODI Shell Contract v3
 
-EKODI sites use one person identity, many spaces, service-specific capabilities, one shared service selector, and one stable interaction grammar.
+EKODI uses one person identity, many workspaces, service-specific capabilities, and one shared interaction grammar. Persistent user chrome is intentionally minimal: **one common header and one common footer**.
 
 ## Identity model
 
@@ -8,118 +8,117 @@ Every authenticated action is interpreted as:
 
 `Person + Space + Role + Capability`
 
-- **Person**: the canonical EKODI identity. Do not create a second profile source of truth inside a service.
-- **Space**: personal, business, organization, church, community, or project context.
-- **Role**: the permission held by the person inside that space.
-- **Capability**: the service function being used, such as marketing, community, work, publishing, or finance.
+`Space` remains a compatibility term in this browser contract. The platform constitution uses `Workspace` as the canonical operating-context term.
+
+- **Person**: the canonical EKODI identity. A service must not create a second profile source of truth.
+- **Space / Workspace**: personal, business, organization, church, community, or project context.
+- **Role**: the permission held by the person inside that workspace.
+- **Capability**: the service function being used.
 
 ## My EKODI responsibility
 
-`my.ekodi.kr` is the canonical place for selecting and changing spaces. Services do not duplicate the full workspace directory.
+`ekodi.kr/my` is the canonical personal home and the canonical place for selecting and changing workspaces. `my.ekodi.kr` is compatibility/internal routing only.
 
-The Shell's `공간 전환 · My EKODI` action returns to My EKODI with `return_to=<current service URL>`. After a user chooses a space, the existing central auth/workspace handoff routes the user back to that service with a verified workspace context.
+Workspace selection, ecosystem discovery, recommendations, and service switching belong in My EKODI content. Service pages must not duplicate a global workspace directory or add persistent floating selectors.
+
+After a user chooses a workspace, central auth/workspace handoff returns to the target service with verified context. Browser context helps navigation but never proves authorization.
 
 ## Service responsibility
 
-A service owns only its domain work. For example:
+A service owns its domain work. It may expose compact service-local actions in its own toolbar when they are necessary for the current task.
 
-- Church owns worship, pastoral, group and church activity.
-- Community owns groups, messages, events and community activity.
-- Marketing owns brand, content, publishing and performance.
-
-Account identity, global workspace switching, and ecosystem navigation stay in the Shell / My EKODI layer.
+A service must not create persistent platform-level chrome for account identity, global workspace switching, music/audio playback, or ecosystem-wide navigation. Those concerns belong to the shared header/footer and My EKODI content model.
 
 ## Visual architecture
 
-The Shell has four layers. They must remain separate.
+The shared visual architecture has three persistent responsibilities:
 
-1. **EKODI Core UI**: stable interaction grammar for authenticated work surfaces. The shared baseline is deep dark, high contrast, mobile-safe, keyboard-focusable, and consistent in header/navigation/card/action behavior.
-2. **Service Identity**: each EKODI service has its own visual-family key, accent, companion color, and motif. Church, Community, Books, Lab, Business, Mall, Marketing and the other services must remain recognizably different rather than becoming one recolored template.
-3. **Public Experience**: public service roots may use a thin, pre-approved rotating Shell treatment. It changes only the shared selector accent/glow, a narrow identity rail, and published experience tokens. It never rearranges the host site's content.
-4. **Dynamic Transition Theme**: transition, bridge, loading and handoff surfaces may rotate background ambience, illustration, microcopy or restrained motion. They must not move navigation, change button geometry, alter form layout, lower contrast, change authentication meaning, or make a core service depend on an AI provider.
+1. **Common header**: stable identity/service context, home behavior, language/account actions when applicable, mobile-safe fixed positioning, and accessibility behavior.
+2. **Service content**: the widest practical work canvas. Task-specific controls stay local to the task and must not become global floating chrome.
+3. **Common footer**: stable EKODI identity, policy/ecosystem links, language affordance where applicable, and shared closing navigation.
 
-The canonical declarative theme source is `shell/theme.json`. `shell/shell.js` publishes the resolved tokens as CSS custom properties on `document.documentElement` and emits `ekodi:shell-theme`.
+The canonical declarative theme source is `shell/theme.json`. `shell/shell.js` may publish theme/context APIs and events, but it must not require a visible floating selector in order to provide those APIs.
 
-Stable work surfaces use `data-ekodi-surface="workspace"` by default. Public roots use `data-ekodi-surface="public"`. A controlled transition page may opt in with `data-ekodi-surface="transition"` or call `window.EKODIShell.setSurface('transition')`.
+Stable work surfaces use `data-ekodi-surface="workspace"` by default. Public roots use `data-ekodi-surface="public"`. Admin, form, document, data, transition, bridge, loading, and handoff surfaces keep their declared semantics.
 
-## Public service selector
+### Common chrome invariant
 
-Every active EKODI user-facing site carries the same shared Shell at the top.
+The following are forbidden as automatically injected persistent user chrome:
 
-On a **public** site, the compact top control shows the current service name and `EKODI 서비스 전환`. Opening it presents the active EKODI services, highlights the current service, and keeps a direct path to My EKODI.
+- `MR 재생`, background CCM/MR playback, or any equivalent global audio control.
+- `공간 선택`, current-space pills, global workspace switchers, or equivalent floating workspace controls.
+- A second floating EKODI global menu that duplicates the common header/footer.
+- Service-local copies of the complete ecosystem service registry.
 
-On an **authenticated internal** surface, the same control prioritizes Person + Space + Role context. My EKODI remains the canonical full space selector. This prevents every service from inventing its own workspace directory while still allowing service-to-service movement from every site.
+Specialized audio or workspace tools may exist only as explicit, task-local features inside a service that genuinely needs them. They must be opt-in and must not be injected by the global Shell bundle.
 
-The selector is isolated in Shadow DOM and uses the canonical service manifest. A service must not copy the ecosystem service map into local page code.
+## Public service selector (retired)
+
+The former shared floating public/service selector is retired. Its navigation purpose is now fulfilled by the common header/footer and My EKODI content.
+
+The Shell may retain compatibility code or navigation APIs during migration, but no user-facing service may depend on the floating selector being rendered. Legacy selector nodes are removed by the shared runtime guard.
 
 ## Public experience rotation
 
-Public selector presentation rotates automatically under a pre-approved runtime contract:
+Public experience rotation remains presentation-only and provider-independent.
 
 - Time basis: `Asia/Seoul`.
 - Cadence: deterministic seven-day cycle.
-- Dependency: provider-independent. No AI API, remote generated asset, or scheduled production deployment is required for a new cycle.
-- Service specificity: each service keeps its declared visual DNA, accent, companion color, and motif.
-- Seasonal nuance: spring, summer, autumn and winter may change which pre-approved variation is selected, but service identity wins over season.
-- Runtime output: selector accent/glow, a thin identity rail, and CSS experience tokens such as `--ekodi-public-accent`, `--ekodi-public-companion`, and `--ekodi-public-rail`.
-- Browser event: `ekodi:public-experience` publishes the resolved service/cycle/season presentation metadata.
-
-The automatic rotation must never change site layout, content order, navigation position, button geometry, font scale, focus treatment, contrast floor, authentication meaning, transaction meaning, or service identity. Manual administrator override always outranks automatic presentation.
-
-Authenticated workspace/admin/form/document/data surfaces do not receive this public rotation. Their common dark work UI stays stable.
+- Service identity, accessibility, navigation position, button geometry, content order, authentication meaning, and transaction meaning remain stable.
+- Rotation may publish accent, companion, motif, rail, or CSS experience tokens, but it must not reintroduce retired floating selectors or global audio controls.
+- Authenticated workspace/admin/form/document/data surfaces stay stable.
 
 ## Future-site onboarding
 
-A new EKODI site must do only these things to join the common My layer:
+A new EKODI user-facing site must:
 
-1. Add one entry to `ekodi-service-manifest.js` with `id`, `url`, `workspaceKinds`, `capabilities`, `sso`, and `targetable`.
-2. Add the service visual identity, accent, companion color and approved public motif to `shell/theme.json`.
-3. Inject the shared Shell with `injectEkodiShell(response, '<service-id>')` for Worker-rendered HTML, or include:
-   `<script src="https://shell.ekodi.kr/shell.js" data-ekodi-service="<service-id>" data-ekodi-surface="workspace"></script>`
-4. When the service has richer verified context, call:
-   `window.EKODIShell?.setContext({ workspaceKey, workspaceName, role, personName })`
-5. Declare the host surface explicitly. Use `public` for public roots and `workspace` for normal authenticated work. Use `transition` only for approved transition surfaces.
-6. Do not create an independent global account/profile/workspace source of truth.
-7. If the service accepts a targeted workspace handoff, register the service in the central auth workspace target list.
+1. Register the service in `ekodi-service-manifest.js` with the required identity, workspace, capability, SSO, targetability, surface, and integration metadata.
+2. Register its visual identity in `shell/theme.json` where appropriate.
+3. Adopt the shared Shell or shared proxy so the common header/footer, context APIs, security rules, and shared tokens are available.
+4. Call `window.EKODIShell?.setContext(...)` only for richer verified display/navigation context.
+5. Declare the host surface explicitly.
+6. Keep workspace selection and ecosystem discovery in My EKODI rather than adding global floating controls.
+7. Never create an independent global account/profile/workspace source of truth.
 
 ## Browser context contract
 
-The central auth handoff may deliver:
+Central handoff may deliver:
 
 - `ekodi_workspace`
 - `ekodi_tenant`
 - `ekodi_store`
 
-The Shell captures these values and retains only a small per-service navigation context in browser storage. Private workspace data remains in the owning service/database.
+The Shell may retain a small per-service navigation context in browser storage. Private workspace data remains in the owning service/database. Server-side authorization must be re-checked for every protected action.
 
 ## Shell API
 
-The browser API is intentionally small:
+The browser API remains intentionally small:
 
-- `EKODIShell.setContext(context)` updates display/navigation context only.
-- `EKODIShell.getContext()` reads the current display/navigation context.
-- `EKODIShell.getTheme()` returns the resolved Core UI + service identity + optional public/transition presentation contract.
-- `EKODIShell.setSurface(surface)` changes only the declared surface class and resolved visual tokens.
-- `EKODIShell.navigate(service)` uses the canonical manifest and central handoff rules.
+- `EKODIShell.setContext(context)` updates display/navigation context.
+- `EKODIShell.getContext()` reads current display/navigation context.
+- `EKODIShell.getTheme()` returns resolved shared/service presentation tokens.
+- `EKODIShell.setSurface(surface)` changes declared surface semantics and resolved tokens.
+- `EKODIShell.navigate(service)` uses canonical manifest and central handoff rules.
+- `EKODIShell.open()` is compatibility-only while legacy selector code is retired and must not be required by new UI.
 
-Services should consume these APIs and emitted events rather than copying service maps or inventing independent shell state.
+Services consume these APIs and events rather than copying platform registries or inventing independent Shell state.
 
 ## Security boundaries
 
-- The Shell manifest and theme contract are public metadata only.
-- The Shell never stores provider tokens, billing keys, or private records.
+- Shell manifest/theme metadata is public-only metadata.
+- The Shell never stores provider tokens, billing keys, reusable secrets, or private records.
 - Workspace authorization remains server-side in the owning service or central access API.
-- The Shell's browser context is navigation context, never proof of authorization.
-- Every protected service must re-check Person + Space + Role on the server.
-- Public and transition design rotation is presentation only and must never change permissions, approval gates, prices, claims, transaction meaning, or authenticated workspace structure.
-- A rotating public selector must continue to function even when every external AI provider is unavailable.
+- Browser workspace context is navigation context, never proof of authorization.
+- Protected services re-check Person + Workspace + Role + Capability on the server.
+- Presentation rotation never changes permissions, approvals, prices, claims, or transaction meaning.
+- Shared header/footer behavior must continue to work when external AI providers are unavailable.
 
 ## UX rule
 
-Every EKODI service should answer three questions at a glance:
+Every EKODI service should answer three questions without adding permanent floating chrome:
 
-1. **Who am I?** Person identity, when available.
-2. **Which space am I acting in?** Current Space, on authenticated work surfaces.
-3. **What am I doing here?** Current service/capability.
+1. **Who am I?** Identity/account context when needed.
+2. **Which workspace am I acting in?** Shown where task context requires it, not as a global switcher.
+3. **What am I doing here?** Current service/capability, expressed by the service content and common header.
 
-Public faces may differ and their shared selector may change its light through the week, but authenticated work should still feel like one EKODI building. The doors, stairs and exits stay where people expect them.
+The common header and footer are the building frame. The work itself gets the floor space.

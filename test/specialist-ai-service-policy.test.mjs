@@ -64,7 +64,9 @@ test('specialist AI policy preserves human authority and provider independence',
 
   assert.equal(external.security.browserDirectExecution, false);
   assert.equal(external.security.providerMayAccessEkodiDatabaseDirectly, false);
-  assert.equal(external.security.providerMayAccessSharedDriveDirectly, false);
+  assert.equal(external.security.providerMayAccessCanonicalStorageDirectly, false);
+  assert.equal(external.security.providerMayReceiveEkodiStorageCredentials, false);
+  assert.equal(external.guardrails.providerDataUse.trainingAllowed, false);
   assert.equal(external.security.providerSecretsStayServerSide, true);
   assert.equal(external.security.tenantContextRequired, true);
   assert.equal(external.security.capabilityCheckRequired, true);

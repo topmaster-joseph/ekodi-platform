@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#b3132b">
+  <meta name="description" content="피자마루 목포대점 매장 안내. 주소, 전화, 길찾기, 포장·배달 주문 연결을 한 화면에서 확인하세요.">
+  <link rel="canonical" href="https://ekodi.kr/pizzamaru">
+  <link rel="stylesheet" href="/pizzamaru-mokpodae.css">
+  <title>피자마루 목포대점 | 포장·배달</title>
+</head>
+<body>
+  <div class="app">
+    <header class="hero" aria-label="피자마루 목포대점">
+      <div class="brand-lockup" aria-label="피자마루 Pizza Maru">
+        <span class="brand-ko">피자마루</span><span class="brand-divider" aria-hidden="true"></span><span class="brand-en">Pizza<br>Maru</span>
+      </div>
+      <span class="branch-mark">목포대점</span>
+      <div class="hero-copy">
+        <p class="hero-kicker">PIZZA MARU</p>
+        <p class="hero-title">매일매일 먹고 싶은<br>맛있는 피자<strong>피자마루</strong></p>
+      </div>
+      <svg class="pizza-art" viewBox="0 0 280 210" role="img" aria-label="토핑이 올라간 피자 일러스트">
+        <defs>
+          <radialGradient id="cheese" cx="42%" cy="36%" r="66%"><stop offset="0" stop-color="#ffe9ad"/><stop offset=".72" stop-color="#f6c870"/><stop offset="1" stop-color="#e8a64d"/></radialGradient>
+          <radialGradient id="crust" cx="45%" cy="40%" r="62%"><stop offset="0" stop-color="#f5c56c"/><stop offset=".78" stop-color="#d88e36"/><stop offset="1" stop-color="#b96d25"/></radialGradient>
+          <clipPath id="pizzaClip"><ellipse cx="145" cy="122" rx="124" ry="79"/></clipPath>
+        </defs>
+        <ellipse cx="147" cy="127" rx="130" ry="84" fill="url(#crust)"/><ellipse cx="145" cy="122" rx="117" ry="72" fill="#c94332"/><ellipse cx="144" cy="119" rx="111" ry="67" fill="url(#cheese)"/>
+        <g clip-path="url(#pizzaClip)">
+          <g fill="#a93731" stroke="#7a2727" stroke-width="2"><ellipse cx="78" cy="102" rx="18" ry="13"/><ellipse cx="139" cy="84" rx="18" ry="13"/><ellipse cx="202" cy="110" rx="18" ry="13"/><ellipse cx="127" cy="145" rx="19" ry="13"/><ellipse cx="220" cy="152" rx="17" ry="12"/></g>
+          <g fill="#efe3cf" stroke="#b9a78d" stroke-width="2"><path d="M86 145c4-15 19-22 32-14 7 4 6 13-1 16-8 4-19 4-31-2Z"/><path d="M172 128c5-14 19-19 30-11 6 4 4 12-2 15-8 4-18 3-28-4Z"/></g>
+          <g fill="none" stroke="#54773b" stroke-width="8" stroke-linecap="round"><path d="M50 124c13-8 25-8 34-1"/><path d="M157 158c13-11 27-12 39-4"/><path d="M178 77c12-7 23-7 34-1"/></g>
+          <g fill="#f6f0d4"><circle cx="109" cy="103" r="7"/><circle cx="158" cy="115" r="6"/><circle cx="70" cy="161" r="6"/><circle cx="236" cy="124" r="7"/></g>
+        </g>
+        <path d="M29 118c7 48 56 80 117 81 63 1 110-27 124-71-11 59-60 89-126 88-63-1-109-33-115-98Z" fill="#8f4c1c" opacity=".42"/>
+      </svg>
+    </header>
+
+    <main>
+      <section class="store-head" aria-labelledby="store-title">
+        <div class="title-row">
+          <h1 class="store-title" id="store-title">피자마루 목포대점</h1>
+          <a class="search-link" href="https://search.naver.com/search.naver?query=%ED%94%BC%EC%9E%90%EB%A7%88%EB%A3%A8%20%EB%AA%A9%ED%8F%AC%EB%8C%80%EC%A0%90" target="_blank" rel="noopener noreferrer" aria-label="피자마루 목포대점 검색"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg></a>
+        </div>
+        <div class="chips" aria-label="이용 서비스"><span class="chip">포장</span><span class="chip">배달</span></div>
+      </section>
+
+      <section class="place-card" aria-label="매장 정보와 빠른 기능">
+        <nav class="action-grid" aria-label="빠른 기능">
+          <a class="action" href="tel:0614538295" aria-label="피자마루 목포대점 전화하기"><span class="action-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.1 3.7 4.8 5.3c-.9.6-1.2 1.8-.7 2.8 2.6 5.3 6.6 9.3 11.9 11.9 1 .5 2.2.2 2.8-.7l1.5-2.3c.5-.8.3-1.8-.4-2.4l-2.8-2.1c-.7-.5-1.7-.4-2.3.2l-1.1 1.1a14.3 14.3 0 0 1-3.6-3.6l1.1-1.1c.6-.6.7-1.6.2-2.3L9.5 4c-.6-.8-1.7-.9-2.4-.3Z"/></svg></span><span>전화</span></a>
+          <button class="action" id="save-store" type="button" aria-pressed="false"><span class="action-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 3.5h11a1 1 0 0 1 1 1v16l-6.5-4-6.5 4v-16a1 1 0 0 1 1-1Z"/></svg></span><span id="save-label">저장</span></button>
+          <a class="action" id="map-link" href="https://map.naver.com/p/search/%ED%94%BC%EC%9E%90%EB%A7%88%EB%A3%A8%20%EB%AA%A9%ED%8F%AC%EB%8C%80%EC%A0%90" target="_blank" rel="noopener noreferrer" aria-label="피자마루 목포대점 길찾기"><span class="action-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7.5 9 4l6 3 5-3v12.5L15 20l-6-3-5 3V7.5Z"/><path d="M9 4v13m6-10v13"/></svg></span><span>길찾기</span></a>
+          <button class="action" id="share-store" type="button"><span class="action-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="18" cy="5" r="2.4"/><circle cx="6" cy="12" r="2.4"/><circle cx="18" cy="19" r="2.4"/><path d="m8.1 10.8 7.7-4.5m-7.7 6.9 7.7 4.5"/></svg></span><span>공유</span></button>
+        </nav>
+        <div class="info-list">
+          <div class="info-row"><span class="row-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s6-5.4 6-11a6 6 0 1 0-12 0c0 5.6 6 11 6 11Z"/><circle cx="12" cy="10" r="2"/></svg></span><span class="address-text" id="store-address">전남 무안군 청계면 승달산길 37-1 1층</span><button class="copy-btn" id="copy-address" type="button">주소복사</button></div>
+          <div class="info-row"><span class="row-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/></svg></span><span class="hours-line"><span>매일 11:00 - 22:00</span><span class="hours-state" id="hours-state" aria-live="polite"></span></span><span></span></div>
+          <div class="info-row"><span class="row-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.1 3.7 4.8 5.3c-.9.6-1.2 1.8-.7 2.8 2.6 5.3 6.6 9.3 11.9 11.9 1 .5 2.2.2 2.8-.7l1.5-2.3"/></svg></span><a class="phone-link" href="tel:0614538295">061-453-8295</a><span></span></div>
+        </div>
+      </section>
+
+      <section class="order-card" aria-labelledby="order-title">
+        <div class="order-head"><h2 class="order-title" id="order-title">배달 주문</h2><p class="order-sub">배달앱에서 ‘피자마루 목포대점’을 확인해 주문할 수 있습니다.</p></div>
+        <div class="platforms">
+          <a class="platform" href="https://www.baemin.com/" target="_blank" rel="noopener noreferrer"><span class="platform-badge" aria-hidden="true">배</span><span class="platform-name">배달의민족</span><span class="platform-go">열기</span></a>
+          <a class="platform" href="https://www.yogiyo.co.kr/" target="_blank" rel="noopener noreferrer"><span class="platform-badge" aria-hidden="true">요</span><span class="platform-name">요기요</span><span class="platform-go">열기</span></a>
+          <a class="platform" href="https://www.coupangeats.com/" target="_blank" rel="noopener noreferrer"><span class="platform-badge" aria-hidden="true">쿠</span><span class="platform-name">쿠팡이츠</span><span class="platform-go">열기</span></a>
+        </div>
+        <div class="phone-order-wrap"><a class="phone-order" href="tel:0614538295">전화로 주문하기</a></div>
+        <p class="platform-note">배달 가능 지역, 영업 상태와 실제 주문 가능 여부는 각 배달 플랫폼 또는 매장 상황에 따라 달라질 수 있습니다.</p>
+      </section>
+      <footer class="page-footer">피자마루 목포대점 매장 안내 · EKODI</footer>
+    </main>
+  </div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="/pizzamaru-mokpodae.js" defer></script>
+</body>
+</html>

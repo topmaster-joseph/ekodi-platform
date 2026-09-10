@@ -11,6 +11,7 @@ on:
       - 'tools/ekodi-device-agent/windows/ekodi-device-agent.ps1'
       - 'migrations/0040_hybrid_execution.sql'
       - 'migrations/0041_hybrid_execution_monitor.sql'
+      - 'migrations/0058_execution_fabric_settings.sql'
       - 'test/hybrid-execution-contract.test.mjs'
       - 'test/hybrid-execution-monitor-contract.test.mjs'
       - 'test/device-control-contract.test.mjs'
@@ -45,8 +46,10 @@ jobs:
           grep -Fq 'EKODI HYBRID EXECUTION' dist/device-control-admin.js
           grep -Fq '/api/control/hybrid-execution/dashboard' dist/device-control-admin.js
           grep -Fq '/api/control/hybrid-execution/monitor' dist/device-control-admin.js
+          grep -Fq '/api/control/hybrid-execution/settings' dist/device-control-admin.js
           grep -Fq '운영 자동감시' dist/device-control-admin.js
-          grep -Fq '새 기기의 자동 실행은 기본 OFF' dist/device-control-admin.js
+          grep -Fq '새 Worker의 자동 실행은 기본 OFF' dist/device-control-admin.js
+          grep -Fq '실행 인프라 · 작업 관제' dist/device-control-admin.js
           ! grep -Eq 'child_process|execSync|spawnSync|Invoke-Expression' hybrid-execution.js
           ! grep -Eq 'child_process|execSync|spawnSync|Invoke-Expression' hybrid-execution-monitor.js
           node scripts/validate-deployment-guardrails.mjs

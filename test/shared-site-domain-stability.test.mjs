@@ -20,3 +20,10 @@ test('manual deployment exposes an explicit domain-sync switch instead of implic
   assert.match(workflow, /Force Cloudflare custom-domain trigger synchronization/);
   assert.match(workflow, /FORCE_SYNC: \$\{\{ inputs\.sync_domains \}\}/);
 });
+
+test('production link audit retries transient transport failures without accepting HTTP errors', async () => {
+  const workflow = await read('.github/workflows/deploy-site-core.yml');
+  const audit = workflow.match(/check\(\) \{[\s\S]*?\n\s*\}/)?.[0] || '';
+  assert.match(audit, /curl -L -sS --retry 3 --retry-delay 1 --retry-all-errors --connect-timeout 5 --max-time 20/);
+  assert.match(audit, /\[\[ "\$status" =~ \^\[23\] \]\]/);
+});

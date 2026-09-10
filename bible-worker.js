@@ -1,8 +1,12 @@
 import { injectEkodiShell } from './ekodi-shell-injector.js';
+import { bibleCorePolicy, bibleProviderCatalog, readBiblePassage, readBibleReference, searchBible } from './bible-core.js';
 
 const MAX_MESSAGE = 4000;
 const MAX_HISTORY = 8;
 const USER_AI_URL = 'https://api.ekodi.kr/api/user-ai/assist';
+const CANONICAL_HOST = 'ekodi.kr';
+const CANONICAL_PREFIX = '/bible';
+const LEGACY_HOST = 'bible.ekodi.kr';
 
 const TOPICS = {
   관계: ['골로새서 3:12-14', '지금 그 관계에서 가장 지키고 싶은 것은 무엇인가요?'],
@@ -42,13 +46,35 @@ function runtimeConfig(env) {
     dataMode: env.DATA_MODE || 'isolated-staging',
     supabaseUrl: dataEnabled ? env.SUPABASE_URL : '',
     supabasePublishableKey: dataEnabled ? env.SUPABASE_PUBLISHABLE_KEY : '',
-    authUrl: env.AUTH_URL || 'https://auth.ekodi.kr/?site=bible',
+    authUrl: env.AUTH_URL || 'https://ekodi.kr/auth/?site=bible',
     tenantSlug: env.TENANT_SLUG || 'ekodi-church',
+    canonicalUrl: 'https://ekodi.kr/bible',
+    legacyAlias: 'https://bible.ekodi.kr',
   };
 }
 
 function clean(value, max = MAX_MESSAGE) {
   return String(value ?? '').replace(/[<>]/g, '').trim().slice(0, max);
+}
+
+function normalizeBiblePath(pathname) {
+  if (pathname === CANONICAL_PREFIX || pathname === CANONICAL_PREFIX + '/') return '/';
+  if (pathname.startsWith(CANONICAL_PREFIX + '/')) return pathname.slice(CANONICAL_PREFIX.length) || '/';
+  return pathname;
+}
+
+function legacyCanonicalRedirect(url) {
+  if (url.hostname.toLowerCase() !== LEGACY_HOST) return null;
+  const suffix = url.pathname === '/' ? '' : url.pathname;
+  const target = new URL('https://' + CANONICAL_HOST + CANONICAL_PREFIX + suffix);
+  target.search = url.search;
+  return Response.redirect(target.toString(), 308);
+}
+
+function requestAtPath(request, pathname) {
+  const url = new URL(request.url);
+  url.pathname = pathname;
+  return new Request(url, request);
 }
 
 function topicGuide(topic) {
@@ -81,7 +107,7 @@ async function verifyUser(request, env) {
   }
 }
 
-function buildBiblePrompt({ topic, scriptureRef, history, message }) {
+function buildBiblePrompt({ topic, scriptureRef, scriptureText, history, message }) {
   const recent = (Array.isArray(history) ? history : [])
     .slice(-MAX_HISTORY)
     .map(item => `${item?.role === 'assistant' ? '말씀대화' : '사용자'}: ${clean(item?.content || item?.text, 900)}`)
@@ -89,12 +115,14 @@ function buildBiblePrompt({ topic, scriptureRef, history, message }) {
   const instructions = [
     '역할: EKODI 말씀대화의 성경 묵상 대화 도우미. 목회자나 교회를 대체하지 않는다.',
     '한국어로 따뜻하고 간결하게 답한다. 설교문처럼 길게 설명하지 말고 사용자의 말을 먼저 듣는다.',
-    '성경 본문 자체와 해석을 구분하고, 하나님이 사용자에게 직접 특정 내용을 말씀하셨다고 선언하거나 예언하지 않는다.',
+    '성경 본문과 해석을 엄격히 구분한다. 제공된 본문은 KRV1961 원문이며 수정·교정·의역하거나 AI 문장을 성경본문처럼 제시하지 않는다.',
+    '성경본문은 별도 scripture 필드로 표시되므로 답변에서는 본문 전체를 재출력하지 않는다. 필요한 경우 짧은 표현만 인용하고 반드시 해석임을 분명히 한다.',
+    '하나님이 사용자에게 직접 특정 내용을 말씀하셨다고 선언하거나 예언하지 않는다.',
     '가능하면 연결된 본문을 근거로 3~7문장 안에서 답하고 마지막에는 사용자가 답할 수 있는 질문 하나를 둔다.',
     '개인정보 공개를 권하지 않는다. 공동체 공유는 사용자의 명시적 선택이 있을 때만 권한다.',
     '자해·타해·학대·폭력·즉각적 위험이 드러나면 영적 조언만 하지 말고 지역 응급지원, 신뢰할 수 있는 사람, 전문기관의 도움을 함께 권한다.',
   ].join('\n');
-  return clean(`${instructions}\n\n주제: ${clean(topic, 60)}\n연결 본문: ${clean(scriptureRef, 120)}\n최근 대화:\n${recent || '(없음)'}\n\n현재 사용자 이야기: ${clean(message, 1800)}`, 3900);
+  return clean(`${instructions}\n\n주제: ${clean(topic, 60)}\n연결 본문: ${clean(scriptureRef, 120)}\n검증된 성경본문(KRV1961, 원문 그대로):\n${clean(scriptureText, 1600) || '(본문 조회 실패, 참조만 사용)'}\n최근 대화:\n${recent || '(없음)'}\n\n현재 사용자 이야기: ${clean(message, 1400)}`, 3900);
 }
 
 async function centralAiReply(request, context) {
@@ -143,11 +171,14 @@ async function handleAssist(request, env) {
 
   const [scriptureRef] = topicGuide(topic);
   const fallback = fallbackReply(topic, message);
+  const scripture = await readBibleReference(request, env, scriptureRef, 'KRV1961').catch(() => null);
+  const scriptureText = scripture?.ok ? scripture.verses.map(verse => `${verse.verse} ${verse.text}`).join('\n') : '';
   try {
     const ai = await centralAiReply(request, {
       message,
       topic,
       scriptureRef,
+      scriptureText,
       history: Array.isArray(body?.history) ? body.history : [],
     });
     if (ai) {
@@ -158,6 +189,7 @@ async function handleAssist(request, env) {
         authenticated: true,
         reply: ai.text,
         scriptureRef,
+        scripture: scripture?.ok ? scripture : null,
         provider: ai.provider,
         funding: ai.funding,
         model: ai.model,
@@ -174,8 +206,35 @@ async function handleAssist(request, env) {
     degraded: true,
     authenticated: true,
     ...fallback,
+    scripture: scripture?.ok ? scripture : null,
     notice: 'AI 고급 연결이 준비되지 않았거나 사용 한도에 도달해 기본 말씀대화 모드로 이어갑니다.',
   });
+}
+
+async function handleBibleApi(request, env, url) {
+  if (request.method !== 'GET') return json({ ok:false, error:'method_not_allowed' }, 405);
+  if (url.pathname === '/api/bible/providers') {
+    return json({ ok:true, policy:bibleCorePolicy(), providers:bibleProviderCatalog() });
+  }
+  if (url.pathname === '/api/bible/passage') {
+    const reference = clean(url.searchParams.get('reference'), 120);
+    const provider = clean(url.searchParams.get('provider') || url.searchParams.get('translation'), 30) || 'KRV1961';
+    const result = reference
+      ? await readBibleReference(request, env, reference, provider)
+      : await readBiblePassage(request, env, {
+          provider,
+          bookId:clean(url.searchParams.get('book'), 40),
+          chapter:Number(url.searchParams.get('chapter')),
+          verseStart:Number(url.searchParams.get('verseStart') || url.searchParams.get('verse')) || null,
+          verseEnd:Number(url.searchParams.get('verseEnd')) || null,
+        });
+    return json(result, result.ok ? 200 : 400);
+  }
+  if (url.pathname === '/api/bible/search') {
+    const result = await searchBible(request, env, url.searchParams.get('q'), url.searchParams.get('limit'));
+    return json(result, result.ok ? 200 : 400);
+  }
+  return json({ ok:false, error:'not_found' }, 404);
 }
 
 function withHeaders(response) {
@@ -196,32 +255,41 @@ async function assetFor(request, env, path) {
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
-    if (url.pathname === '/health') {
+    const legacyRedirect = legacyCanonicalRedirect(url);
+    if (legacyRedirect) return legacyRedirect;
+    const internalUrl = new URL(url);
+    internalUrl.pathname = normalizeBiblePath(url.pathname);
+    if (internalUrl.pathname === '/health') {
       return json({
         ok: true,
         service: 'ekodi-bible-conversation',
         surface: 'scripture-conversation',
-        areas: ['today', 'conversation', 'journey', 'together'],
+        areas: ['today', 'reader', 'search', 'conversation', 'journey', 'together'],
         privacyDefault: 'private',
         explicitSharing: true,
         providerIndependent: true,
         centralUserAi: true,
+        bibleCore: bibleCorePolicy(),
+        bibleProviders: bibleProviderCatalog().map(provider => ({ id:provider.id, mode:provider.mode })),
         dataMode: runtimeConfig(env).dataMode,
+        canonicalPath: CANONICAL_PREFIX,
+        legacyAlias: LEGACY_HOST,
         ekodiShell: true,
       });
     }
-    if (url.pathname === '/config.js') {
+    if (internalUrl.pathname === '/config.js') {
       return new Response(`window.EKODI_BIBLE_CONFIG=${JSON.stringify(runtimeConfig(env))};`, {
         headers: { 'content-type': 'application/javascript; charset=utf-8', 'cache-control': 'no-store', ...SECURITY_HEADERS },
       });
     }
-    if (url.pathname === '/api/assist' && request.method === 'POST') return handleAssist(request, env);
-    if (url.pathname === '/admin' || url.pathname === '/admin/') return Response.redirect('https://admin.ekodi.kr/#ai-services', 307);
+    if (internalUrl.pathname.startsWith('/api/bible/')) return handleBibleApi(request, env, internalUrl);
+    if (internalUrl.pathname === '/api/assist' && request.method === 'POST') return handleAssist(request, env);
+    if (internalUrl.pathname === '/admin' || internalUrl.pathname === '/admin/') return Response.redirect('https://ekodi.kr/admin/system/aiops', 307);
 
     let response;
-    const route = url.pathname.replace(/\/$/, '');
-    if (['/today', '/conversation', '/journey', '/together'].includes(route)) response = await assetFor(request, env, '/');
-    else response = await env.ASSETS.fetch(request);
+    const route = internalUrl.pathname.replace(/\/$/, '');
+    if (['/today', '/reader', '/search', '/conversation', '/journey', '/together'].includes(route)) response = await assetFor(request, env, '/');
+    else response = await env.ASSETS.fetch(requestAtPath(request, internalUrl.pathname));
     return injectEkodiShell(withHeaders(response), 'bible');
   },
 };

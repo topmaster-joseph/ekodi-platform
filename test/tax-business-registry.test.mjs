@@ -45,4 +45,7 @@ test('Tax portal injects batch refresh and inline business number verification',
   assert.match(ui, /국세청 상태 확인/);
   assert.match(ui, /30\*60\*1000/);
   assert.match(ui, /x-ekodi-tax-business-registry/);
+  assert.match(ui, /ntsOne=s=>document\.querySelector/);
+  assert.match(ui, /ntsAll=s=>\[\.\.\.document\.querySelectorAll/);
+  assert.match(ui, /ntsAll\('#modal input\[name=\"corpNum\"\]'\)/);
 });

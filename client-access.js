@@ -91,14 +91,17 @@
   function installShell() {
     const nav = document.querySelector('.sidebar nav');
     const content = document.querySelector('.content');
-    if (!nav || !content || document.querySelector('[data-section="clients"]')) return null;
+    if (!nav || !content || content.querySelector('[data-panel~="clients"]')) return null;
 
-    const navButton = button('', 'nav');
-    navButton.dataset.section = 'clients';
-    navButton.append(document.createTextNode('◎ '), text('span', 'Clients'));
-    const servicesButton = nav.querySelector('[data-section="services"]');
-    if (servicesButton) servicesButton.insertAdjacentElement('afterend', navButton);
-    else nav.append(navButton);
+    let navButton = nav.querySelector('[data-section="clients"]');
+    if (!navButton) {
+      navButton = button('', 'nav');
+      navButton.dataset.section = 'clients';
+      navButton.append(document.createTextNode('◎ '), text('span', 'Clients'));
+      const servicesButton = nav.querySelector('[data-section="services"]');
+      if (servicesButton) servicesButton.insertAdjacentElement('afterend', navButton);
+      else nav.append(navButton);
+    }
 
     const section = document.createElement('section');
     section.className = 'section client-access-section hidden-panel';

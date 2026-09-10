@@ -1,10 +1,12 @@
 import { assert, assertEquals, assertThrows } from "jsr:@std/assert@1";
 import {
   buildSecurityContext,
+  canonicalCapability,
   capabilitySet,
   compareWithLegacy,
   compatibilityDecision,
   evaluatePolicy,
+  policyCovers,
   secureProjection,
 } from "./trust.ts";
 
@@ -18,6 +20,81 @@ Deno.test("security context normalizes duplicate roles", () => {
     action: "view",
   });
   assertEquals(context.roles, ["member", "tenant_admin"]);
+});
+
+Deno.test("canonical capability uses Admin OS namespace grammar", () => {
+  assertEquals(canonicalCapability("workspace", "access", "review"), "workspace:access.review");
+  assertEquals(canonicalCapability("admin", "accounts", "write"), "admin:accounts.write");
+  assertThrows(
+    () => canonicalCapability("workspace:*", "access", "review"),
+    Error,
+    "invalid_canonical_capability",
+  );
+});
+
+Deno.test("candidate policy coverage must be explicit", () => {
+  const context = buildSecurityContext({
+    subjectId: "user-1",
+    workspaceId: "workspace-1",
+    roles: ["tenant_admin"],
+    service: "biz",
+    resource: "access-request",
+    action: "review",
+    risk: "high",
+  });
+  assertEquals(policyCovers(context, []), false);
+  assertEquals(policyCovers(context, [{ services: ["*"], resources: ["access-request"], actions: ["review"] }]), true);
+  assertEquals(policyCovers(context, [{ services: ["*"], resources: ["access-request"], actions: ["pending.read"] }]), false);
+});
+
+Deno.test("access reviewer candidate policy allows tenant admin with canonical capability", () => {
+  const context = buildSecurityContext({
+    subjectId: "user-1",
+    workspaceId: "workspace-1",
+    roles: ["tenant_admin"],
+    service: "biz",
+    resource: "access-request",
+    action: "review",
+    risk: "high",
+  });
+  const decision = evaluatePolicy(context, [{
+    id: "access-request-review-reviewer",
+    priority: 100,
+    services: ["*"],
+    resources: ["access-request"],
+    actions: ["review"],
+    rolesAny: ["tenant_admin", "platform_admin"],
+    allow: true,
+    capabilities: ["workspace:access.review"],
+    projectionProfile: "safe-admin",
+  }]);
+  assertEquals(decision.allowed, true);
+  assertEquals(decision.capabilities, ["workspace:access.review"]);
+  assertEquals(decision.projectionProfile, "safe-admin");
+});
+
+Deno.test("access reviewer candidate policy default-denies ordinary member", () => {
+  const context = buildSecurityContext({
+    subjectId: "user-2",
+    workspaceId: "workspace-1",
+    roles: ["member"],
+    service: "biz",
+    resource: "access-request",
+    action: "review",
+    risk: "high",
+  });
+  const decision = evaluatePolicy(context, [{
+    id: "access-request-review-reviewer",
+    priority: 100,
+    services: ["*"],
+    resources: ["access-request"],
+    actions: ["review"],
+    rolesAny: ["tenant_admin", "platform_admin"],
+    allow: true,
+    capabilities: ["workspace:access.review"],
+  }]);
+  assertEquals(decision.allowed, false);
+  assertEquals(decision.ruleId, "default-deny");
 });
 
 Deno.test("policy is default deny when no rule matches", () => {

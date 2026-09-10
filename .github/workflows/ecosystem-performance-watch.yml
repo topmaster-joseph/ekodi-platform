@@ -3,15 +3,16 @@ name: Ecosystem Performance Watch
 on:
   workflow_dispatch:
   schedule:
-    - cron: '7,22,37,52 * * * *'
+    - cron: '37 * * * *'
   push:
     branches: [main]
     paths:
       - '.github/workflows/ecosystem-performance-watch.yml'
       - 'test/ecosystem-performance-watch.test.mjs'
       - 'site-worker.js'
-      - 'control-center.html'
-      - 'control-center.js'
+      - 'admin-shell.html'
+      - 'admin-authenticated-shell.js'
+      - 'admin-central-handoff.js'
       - 'index.html'
       - 'homepage-ambient.js'
       - 'homepage-ambient.css'
@@ -37,6 +38,10 @@ jobs:
       FAIL_SECONDS: '5.0'
     steps:
       - uses: actions/checkout@v7
+      - name: Identify EKODI monitor traffic
+        shell: bash
+        run: |
+          printf '%s\n' 'user-agent = "EKODI-github-monitor/1.0"' > "$HOME/.curlrc"
 
       - name: Measure public entry performance
         id: perf
@@ -76,8 +81,8 @@ jobs:
           }
 
           probe homepage 'https://ekodi.kr/' '<title>EKODI'
-          probe admin 'https://admin.ekodi.kr/' 'EKODI Control Center'
-          probe admin_fallback 'https://ekodi.kr/admin' 'EKODI Control Center'
+          probe admin 'https://admin.ekodi.kr/' '<title>EKODI Admin</title>'
+          probe admin_fallback 'https://ekodi.kr/admin' '<title>EKODI Admin</title>'
           probe support 'https://support.ekodi.kr/' 'EKODI SUPPORT · OPPORTUNITY FIRST'
           probe support_health 'https://support.ekodi.kr/health' '"service":"ekodi-support-opportunity"'
 

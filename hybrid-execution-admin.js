@@ -3,8 +3,11 @@
 
   const API_BASE = 'https://api.ekodi.kr';
   const TOKEN_KEY = 'ekodi-auth-token';
+  const ENGINE_MARKER = 'EKODI HYBRID EXECUTION';
+  const HYBRID_REFRESH_MS = 30 * 1000;
   let timer = null;
-  let lastDashboard = { nodes:[], jobs:[], events:[], monitoring:null };
+  let loadPromise = null;
+  let lastDashboard = { fabric:{ enabled:true }, nodes:[], jobs:[], events:[], monitoring:null };
 
   function authHeaders(json = false) {
     const token = sessionStorage.getItem(TOKEN_KEY) || '';
@@ -97,6 +100,10 @@
       .hybrid-head{display:flex;gap:14px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap}
       .hybrid-head h3{margin:3px 0 5px}.hybrid-head p{margin:0;max-width:780px}
       .hybrid-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+      .hybrid-fabric-policy{display:flex;align-items:center;justify-content:space-between;gap:14px;margin:14px 0;padding:14px;border:1px solid var(--line,#e0e4eb);border-radius:14px;background:rgba(127,127,127,.04)}
+      .hybrid-fabric-policy[data-enabled="true"]{border-color:rgba(24,130,76,.35)}
+      .hybrid-fabric-policy[data-enabled="false"]{border-color:rgba(191,126,0,.45)}
+      .hybrid-fabric-policy strong{display:block;margin-bottom:3px}.hybrid-fabric-policy p{margin:0;max-width:760px;font-size:.86rem;opacity:.78}
       .hybrid-watchdog{margin:14px 0;padding:13px;border:1px solid var(--line,#e0e4eb);border-radius:14px;background:rgba(127,127,127,.04)}
       .hybrid-watchdog[data-status="healthy"]{border-color:rgba(24,130,76,.35)}
       .hybrid-watchdog[data-status="degraded"]{border-color:rgba(191,126,0,.45)}
@@ -140,11 +147,15 @@
   function panelHtml() {
     return `
       <div class="hybrid-head">
-        <div><p class="kicker">EKODI HYBRID EXECUTION</p><h3>기기 관리 · 실행 기록</h3>
-        <p>클라우드가 작업·권한·기록을 보관하고, 승인된 PC 중 온라인 상태·기능·부하·동시작업 한도를 비교해 실행 노드를 자동 선택합니다. 새 기기의 자동 실행은 기본 OFF입니다.</p></div>
+        <div><p class="kicker">EKODI EXECUTION FABRIC · HYBRID EXECUTION</p><h3>실행 인프라 · 작업 관제</h3>
+        <p>클라우드 큐가 작업·권한·기록을 보관하고, 승인된 Worker의 온라인 상태·기능·부하·동시작업 한도를 비교해 안전하게 실행처를 선택합니다. 새 Worker의 자동 실행은 기본 OFF입니다.</p></div>
         <div class="hybrid-actions"><span id="hybridGeneratedAt">확인 전</span><button type="button" class="secondary" id="refreshHybrid">↻ 새로고침</button>
         <button type="button" class="primary" id="enqueueHybridDiagnostic">전체 진단 자동배정</button></div>
       </div>
+      <section class="hybrid-fabric-policy" id="hybridFabricPolicy" data-enabled="true">
+        <div><strong id="hybridFabricState">실행망 가동 중</strong><p id="hybridFabricNote">승인된 Worker에 새 작업을 자동 배정합니다. 일시중지하면 실행 중 작업은 완료하고 새 배정만 멈춥니다.</p></div>
+        <button type="button" class="secondary" id="toggleHybridFabric">실행망 일시중지</button>
+      </section>
       <section class="hybrid-watchdog" id="hybridWatchdog" data-status="unknown">
         <div class="hybrid-watchdog-head"><div><strong>운영 자동감시</strong><span class="hybrid-pill" id="hybridMonitorStatus">확인 전</span></div><small id="hybridMonitorTime">10분 주기 감시</small></div>
         <div class="hybrid-incidents" id="hybridIncidentList"><div class="hybrid-empty">감시 상태를 불러오는 중입니다.</div></div>
@@ -165,8 +176,19 @@
       <p class="hybrid-privacy">보안 원칙: 실행 기록에는 작업 상태와 기기·프로세스 수준의 진단 메타데이터만 사용하며, 입력한 문자·비밀번호·메시지 내용은 수집하지 않습니다.</p>`;
   }
 
+  function renameDeviceSurface() {
+    document.querySelectorAll('[data-device-control-nav] span').forEach(node => { node.textContent = '실행 인프라'; });
+    const host = document.querySelector('#deviceControlPanel');
+    const title = host?.querySelector('.device-panel-head h2');
+    if (title) title.textContent = '실행 인프라';
+    if (location.hash === '#devices') {
+      const pageTitle = document.querySelector('#pageTitle');
+      if (pageTitle) pageTitle.textContent = '실행 인프라';
+    }
+  }
+
   function install() {
-    if (document.querySelector('#hybridExecutionPanel')) return true;
+    if (document.querySelector('#hybridExecutionPanel')) { renameDeviceSurface(); return true; }
     const host = document.querySelector('#deviceControlPanel');
     if (!host) return false;
     ensureStyle();
@@ -176,14 +198,17 @@
     panel.innerHTML = panelHtml();
     const list = host.querySelector('#ekodiDeviceList');
     if (list) list.insertAdjacentElement('beforebegin', panel); else host.append(panel);
+    renameDeviceSurface();
     panel.querySelector('#refreshHybrid')?.addEventListener('click', load);
+    panel.querySelector('#toggleHybridFabric')?.addEventListener('click', toggleFabric);
     panel.querySelector('#enqueueHybridDiagnostic')?.addEventListener('click', enqueueDiagnostic);
     panel.querySelector('#hybridStatusFilter')?.addEventListener('change', renderJobs);
     panel.querySelector('#hybridJobSearch')?.addEventListener('input', renderJobs);
     load();
     if (!timer) timer = window.setInterval(() => {
-      if (!host.classList.contains('hidden-panel')) load();
-    }, 10000);
+      if (document.visibilityState === 'visible' && !host.classList.contains('hidden-panel')) load();
+    }, HYBRID_REFRESH_MS);
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && !host.classList.contains('hidden-panel')) load(); });
     return true;
   }
 
@@ -220,6 +245,26 @@
     </article>`;
   }
 
+  function renderFabric() {
+    const panel = document.querySelector('#hybridExecutionPanel');
+    if (!panel) return;
+    const enabled = lastDashboard.fabric?.enabled !== false;
+    const policy = panel.querySelector('#hybridFabricPolicy');
+    if (policy) policy.dataset.enabled = String(enabled);
+    const state = panel.querySelector('#hybridFabricState');
+    const note = panel.querySelector('#hybridFabricNote');
+    const button = panel.querySelector('#toggleHybridFabric');
+    if (state) state.textContent = enabled ? '실행망 가동 중' : '실행망 일시중지';
+    if (note) note.textContent = enabled
+      ? '승인된 Worker에 새 작업을 자동 배정합니다. 일시중지하면 실행 중 작업은 완료하고 새 배정만 멈춥니다.'
+      : '새 작업 배정이 중지되어 있습니다. 이미 실행 중인 작업은 안전하게 완료됩니다.';
+    if (button) {
+      button.hidden = lastDashboard.fabric?.canManage !== true;
+      button.textContent = enabled ? '실행망 일시중지' : '실행망 가동';
+      button.className = enabled ? 'secondary' : 'primary';
+    }
+  }
+
   function renderMonitoring() {
     const panel = document.querySelector('#hybridExecutionPanel');
     if (!panel) return;
@@ -231,6 +276,10 @@
     panel.querySelector('#hybridMonitorTime').textContent = monitoring?.lastRunAt ? `최근 점검 ${timeLabel(monitoring.lastRunAt)}` : '점검 기록 없음';
     const list = panel.querySelector('#hybridIncidentList');
     const open = (monitoring?.incidents || []).filter(item => item.status === 'open');
+    if (lastDashboard.fabric?.enabled === false) {
+      list.innerHTML = '<div class="hybrid-empty">관리자가 실행망을 일시중지했습니다. 새 작업 배정은 멈추고 진행 중 작업만 완료합니다.</div>';
+      return;
+    }
     if (status === 'unavailable') {
       list.innerHTML = '<div class="hybrid-empty">감시 API 상태를 확인할 수 없습니다. 실행망 자체 기능은 계속 동작합니다.</div>';
       return;
@@ -301,7 +350,9 @@
     events.innerHTML = rows.length ? rows.slice(0, 100).map(eventMarkup).join('') : '<div class="hybrid-empty">아직 감사 이벤트가 없습니다.</div>';
   }
 
-  async function load() {
+  function load() {
+    if (loadPromise) return loadPromise;
+    loadPromise = (async () => {
     const panel = document.querySelector('#hybridExecutionPanel');
     if (!panel || !sessionStorage.getItem(TOKEN_KEY)) return;
     try {
@@ -309,7 +360,7 @@
         request('/api/control/hybrid-execution/dashboard'),
         request('/api/control/hybrid-execution/monitor').catch(error => ({ status:'unavailable', error:error.message, incidents:[] })),
       ]);
-      lastDashboard = { nodes:data.nodes || [], jobs:data.jobs || [], events:data.events || [], monitoring };
+      lastDashboard = { fabric:data.fabric || { enabled:true }, nodes:data.nodes || [], jobs:data.jobs || [], events:data.events || [], monitoring };
       const summary = data.summary || {};
       panel.querySelector('#hybridOnlineNodes').textContent = String(summary.onlineNodes ?? 0);
       panel.querySelector('#hybridAutoNodes').textContent = String(summary.autoNodes ?? 0);
@@ -320,6 +371,7 @@
       const nodes = panel.querySelector('#hybridNodeList');
       nodes.innerHTML = lastDashboard.nodes.length ? lastDashboard.nodes.map(nodeMarkup).join('') : '<div class="hybrid-empty">Agent가 다음 작업을 확인하면 실행 노드로 나타납니다.</div>';
       nodes.querySelectorAll('[data-save-node]').forEach(button => button.addEventListener('click', saveNode));
+      renderFabric();
       renderMonitoring();
       renderJobs();
       renderEvents();
@@ -327,6 +379,8 @@
       const nodes = panel.querySelector('#hybridNodeList');
       if (nodes) nodes.innerHTML = `<div class="hybrid-empty">${escapeHtml(error.message)}</div>`;
     }
+    })().finally(() => { loadPromise = null; });
+    return loadPromise;
   }
 
   async function saveNode(event) {
@@ -343,6 +397,24 @@
           deviceGroup:card.querySelector('[data-group]').value,
           maxConcurrency:Number(card.querySelector('[data-concurrency]').value) || 1,
         }),
+      });
+      await load();
+    } catch (error) { alert(error.message); }
+    finally { button.disabled = false; }
+  }
+
+  async function toggleFabric(event) {
+    const button = event.currentTarget;
+    const nextEnabled = lastDashboard.fabric?.enabled === false;
+    const message = nextEnabled
+      ? '승인된 Worker에 대기 작업 배정을 다시 시작할까요?'
+      : '새 작업 배정을 일시중지할까요? 이미 실행 중인 작업은 중단하지 않고 완료합니다.';
+    if (!confirm(message)) return;
+    button.disabled = true;
+    try {
+      await request('/api/control/hybrid-execution/settings', {
+        method:'PATCH',
+        body:JSON.stringify({ enabled:nextEnabled, confirmed:true }),
       });
       await load();
     } catch (error) { alert(error.message); }
@@ -379,5 +451,7 @@
     observer.observe(document.documentElement, { childList:true, subtree:true });
   }
   window.addEventListener('ekodi-admin-ready', install);
+  window.addEventListener('ekodi-admin-section-changed', () => queueMicrotask(renameDeviceSurface));
+  window.addEventListener('hashchange', () => queueMicrotask(renameDeviceSurface));
   window.addEventListener('beforeunload', () => { if (timer) clearInterval(timer); });
 })();

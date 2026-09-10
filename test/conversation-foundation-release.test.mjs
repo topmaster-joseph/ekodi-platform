@@ -29,6 +29,23 @@ test('Conversation release owns only Conversation APIs, never the shared-site Wo
   assert.doesNotMatch(workflow,/gh workflow run deploy-site-core\.yml/);
 });
 
+test('Workspace API has one deployment owner while Invest keeps an independent validation gate',async()=>{
+  const canonical=await read('.github/workflows/release-messenger-investment-functional.yml');
+  const invest=await read('.github/workflows/release-invest-personalization.yml');
+  const triggers=triggerBlock(canonical);
+  assert.match(triggers,/profile-official-data-adapter\.js/);
+  assert.match(triggers,/invest-personalization-runtime\.js/);
+  assert.match(triggers,/test\/invest-personalization-contract\.test\.mjs/);
+  assert.match(canonical,/node --test[^\n]*invest-personalization-contract\.test\.mjs/);
+  assert.match(canonical,/"investPersonalization":"v1"/);
+  assert.match(canonical,/"transactionExecution":false/);
+  assert.match(invest,/name: Validate EKODI Invest Personalization/);
+  assert.doesNotMatch(invest,/\n\s*workspace-staging:/);
+  assert.doesNotMatch(invest,/\n\s*production-workspace:/);
+  assert.doesNotMatch(invest,/wrangler@\$\{WRANGLER_VERSION\} deploy/);
+  assert.doesNotMatch(invest,/guarded-worker-release\.mjs/);
+});
+
 test('canonical Shared Site workflow owns the shared-site manifest',async()=>{
   const workflow=await read('.github/workflows/deploy-site-core.yml');
   assert.match(workflow,/name: Deploy EKODI Shared Site Core/);
@@ -39,7 +56,10 @@ test('canonical Shared Site workflow owns the shared-site manifest',async()=>{
 test('generic Control workflow no longer owns Conversation-specific release triggers',async()=>{
   const workflow=await read('.github/workflows/deploy-control-api.yml');
   const triggers=triggerBlock(workflow);
-  assert.match(workflow,/group: ekodi-control-api-release/);
+  assert.match(workflow,/group: "ekodi-control-api-release-\$\{\{/);
+  assert.match(workflow,/github\.event_name == 'pull_request'/);
+  assert.match(workflow,/format\('pr-\{0\}', github\.event\.pull_request\.number\)/);
+  assert.match(workflow,/\|\| 'production'/);
   assert.match(triggers,/!migrations\/\*messenger\*\.sql/);
   assert.doesNotMatch(triggers,/messenger-operator-control\.js/);
   assert.doesNotMatch(triggers,/messenger-outbox\.js/);
@@ -89,4 +109,43 @@ test('CI actionlint checks release workflows without legacy shellcheck noise',as
   assert.match(workflow,/\.github\/workflows\/ci\.yml/);
   assert.match(workflow,/\.github\/workflows\/deploy-control-api\.yml/);
   assert.match(workflow,/\.github\/workflows\/release-messenger-investment-functional\.yml/);
+});
+
+test('CI actionlint covers the central Core Control redispatch workflow',async()=>{
+  const workflow=await read('.github/workflows/ci.yml');
+  assert.match(workflow,/\.github\/workflows\/redeploy-control-on-central-core\.yml/);
+});
+
+test('central Core redispatch suppresses a duplicate native Control push run for the same SHA',async()=>{
+  const workflow=await read('.github/workflows/redeploy-control-on-central-core.yml');
+  assert.match(workflow,/event=push/);
+  assert.match(workflow,/--arg sha "\$GITHUB_SHA"/);
+  assert.match(workflow,/\.head_sha == \$sha/);
+  assert.match(workflow,/native_control_run=true/);
+  assert.match(workflow,/steps\.dedupe\.outputs\.native_control_run != 'true'/);
+  assert.match(workflow,/github\.event_name == 'workflow_dispatch'/);
+  assert.match(workflow,/gh workflow run deploy-control-api\.yml --ref main/);
+});
+
+test('Conversation staging writes temporary Wrangler configs inside the checked-out repository',async()=>{
+  const workflow=await read('.github/workflows/release-messenger-investment-functional.yml');
+  assert.match(workflow,/cat > \.workspace-staging\.toml/);
+  assert.match(workflow,/--config \.workspace-staging\.toml/);
+  assert.match(workflow,/cat > \.control-staging\.toml/);
+  assert.match(workflow,/--config \.control-staging\.toml/);
+  assert.doesNotMatch(workflow,/\/tmp\/(?:workspace|control)-staging\.toml/);
+  assert.match(workflow,/main = "workspace-platform-entry-worker\.js"[\s\S]*migrations_dir = "migrations"/);
+});
+
+
+test('Access-protected Conversation staging keeps runtime verification fail-closed',async()=>{
+  const workflow=await read('.github/workflows/release-messenger-investment-functional.yml');
+  assert.match(workflow,/Cloudflare Access\|Log in to All Workers/);
+  assert.match(workflow,/deployments status --config \.workspace-staging\.toml/);
+  assert.match(workflow,/d1 execute DB --remote --config \.workspace-staging\.toml --file \/tmp\/workspace-schema-probe\.sql/);
+  for(const table of ['messenger_outbox','messenger_identity_audit','ekodi_profiles','ekodi_profile_evidence','ekodi_profile_confirmations','ekodi_profile_discovery_runs','site_design_profiles']) assert.match(workflow,new RegExp(`SELECT 1 FROM ${table} LIMIT 0`));
+  assert.match(workflow,/deployments status --config \.control-staging\.toml/);
+  assert.match(workflow,/d1 execute DB --remote --config \.control-staging\.toml --file \/tmp\/control-schema-probe\.sql/);
+  for(const table of ['messenger_threads','messenger_messages','messenger_handoffs','messenger_outbox']) assert.match(workflow,new RegExp(`SELECT 1 FROM ${table} LIMIT 0`));
+  assert.match(workflow,/Production still enforces the live 401 boundary/);
 });

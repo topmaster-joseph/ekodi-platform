@@ -1,5 +1,6 @@
 name: Cloudflare Production Residue Safe Cleanup
 
+# Production residue safe-cleanup revalidation trigger: 2026-09-10
 on:
   push:
     branches: [main]

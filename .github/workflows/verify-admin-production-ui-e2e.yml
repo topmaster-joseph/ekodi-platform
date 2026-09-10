@@ -11,6 +11,8 @@ on:
       - 'admin-shell.css'
       - 'admin-central-handoff.js'
       - 'admin-authenticated-shell.js'
+      - 'admin-design-engine.js'
+      - 'admin-design-engine.css'
       - 'admin-menu-layout.js'
       - 'admin-menu-registry.js'
       - 'admin-sidebar.js'
@@ -44,7 +46,7 @@ jobs:
       - name: Verify production Admin menu paths
         shell: bash
         env:
-          ADMIN_URL: https://admin.ekodi.kr/
+          ADMIN_URL: https://ekodi.kr/admin/
         run: |
           set -euo pipefail
           node scripts/verify-admin-production-ui-e2e.mjs

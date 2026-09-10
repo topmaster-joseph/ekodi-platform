@@ -1,4 +1,5 @@
 import core from './worker.js';
+import { handleTransactionRehearsal, transactionRehearsalEnabled } from './transaction-rehearsal.js';
 import { handleSourcingRequest, sourcingSchemaReady } from './sourcing.js';
 import { handleSourcingPlanRequest } from './sourcing-plan.js';
 import { handleFulfillmentRequest, fulfillmentSchemaReady } from './fulfillment.js';
@@ -8,6 +9,8 @@ import { handleSupplierDiscoveryRequest, supplierDiscoverySchemaReady } from './
 import { handleDomemaeRequest, domemaeConnectorReady } from './domemae.js';
 import { handleAnalyticsRequest } from './analytics.js';
 import { handleStorefrontRequest } from './storefront.js';
+import { commerceEventSchemaReady } from './commerce-events.js';
+import { handleCommerceOperationsRequest } from './commerce-operations.js';
 
 const FEE_RATES = Object.freeze({ direct: 7, marketplace: 8, ai: 9 });
 const ATTRIBUTION_WINDOW_DAYS = 7;
@@ -43,6 +46,7 @@ function headers(origin, env) {
 }
 function reply(data, status, origin, env) { return new Response(JSON.stringify(data), { status, headers: headers(origin, env) }); }
 function parseJson(value, fallback = []) { try { return JSON.parse(value || '') || fallback; } catch { return fallback; } }
+function publicCategory(value) { return ['general','living','book','gift'].includes(String(value || '').trim()) ? String(value).trim() : 'general'; }
 
 export function feeForFirstTouch({ sellerType = 'individual', businessStoreVerified = false, sourceType = 'marketplace' } = {}) {
   if (sellerType === 'business' && businessStoreVerified) return 10;
@@ -52,6 +56,7 @@ export function trustedSource(sourceType = '') { return sourceType === 'direct' 
 
 const PUBLIC_SELECT = `SELECT p.id,p.share_code,p.public_url,p.seller_type,p.seller_display_name,p.sale_type,p.category,p.name,p.audience,p.one_line,p.price,
   p.benefits_json,p.specs_json,p.story,p.fulfillment,p.contact,p.affiliate_url,p.checkout_ready,p.published_at,p.store_id,
+  p.primary_region_id,p.region_ids_json,p.region_label,p.local_relationship,p.region_verified,
   s.name AS store_name,s.slug AS store_slug,s.verification_status AS store_verification_status
   FROM products p LEFT JOIN stores s ON s.id=p.store_id`;
 
@@ -64,7 +69,7 @@ function publicProduct(row) {
     seller: { type: row.seller_type, displayName: row.seller_display_name },
     store: row.store_id ? { name: row.store_name || '', slug: row.store_slug || '', verificationStatus: row.store_verification_status || 'unverified' } : null,
     product: {
-      saleType: row.sale_type, category: row.category, name: row.name, audience: row.audience || '', oneLine: row.one_line || '', price: row.price,
+      saleType: row.sale_type, category: publicCategory(row.category), region: row.primary_region_id ? { primaryRegionId: row.primary_region_id, regionIds: parseJson(row.region_ids_json), label: row.region_label || '', relationship: row.local_relationship || 'seller-declared', verified: Boolean(row.region_verified) } : null, name: row.name, audience: row.audience || '', oneLine: row.one_line || '', price: row.price,
       benefits: parseJson(row.benefits_json), specs: parseJson(row.specs_json), story: row.story || '', fulfillment: row.fulfillment || '',
       contact: row.contact || '', affiliateUrl: row.sale_type === 'affiliate' ? row.affiliate_url || '' : ''
     },
@@ -146,14 +151,17 @@ export default {
       const supplierPilotReady = Boolean(env.DB) && await supplierPilotSchemaReady(env);
       const supplierDiscoveryReady = Boolean(env.DB) && await supplierDiscoverySchemaReady(env);
       const domemaeReady = Boolean(env.DB) && await domemaeConnectorReady(env);
-      const ok = coreResponse.ok && firstTouchReady && sourcingReady && fulfillmentReady && verificationReady && supplierPilotReady && supplierDiscoveryReady && domemaeReady;
+      const commerceEventsReady = Boolean(env.DB) && await commerceEventSchemaReady(env);
+      const ok = coreResponse.ok && firstTouchReady && sourcingReady && fulfillmentReady && verificationReady && supplierPilotReady && supplierDiscoveryReady && domemaeReady && commerceEventsReady;
       return reply({
         ...coreBody, ok, version:3, environment:env.ENVIRONMENT || 'unknown', firstTouchSchemaReady:firstTouchReady,
         sourcingSchemaReady:sourcingReady, fulfillmentSchemaReady:fulfillmentReady, verificationSchemaReady:verificationReady,
         supplierPilotSchemaReady:supplierPilotReady, supplierDiscoverySchemaReady:supplierDiscoveryReady, domemaeConnectorReady:domemaeReady,
+        commerceEventSchemaReady:commerceEventsReady, commerceOsVersion:1,
         domemaeLookupEnabled:String(env.DOMEMAE_LOOKUP_ENABLED || '').toLowerCase() === 'true', domemaeOrderEnabled:false,
         attributionWindowDays:ATTRIBUTION_WINDOW_DAYS,
-        operationsReviewConfigured:Boolean(env.MALL_OPERATIONS_TOKEN), operationsEmailAllowlistConfigured:Boolean(env.MALL_OPERATIONS_EMAILS),
+        operationsReviewConfigured:Boolean(env.MALL_OPERATIONS_TOKEN || env.MALL_OPERATIONS_EMAILS), operationsEmailAllowlistConfigured:Boolean(env.MALL_OPERATIONS_EMAILS),
+        transactionRehearsalEnabled:transactionRehearsalEnabled(env),
         buyerPiiReleaseEnabled:String(env.BUYER_PII_RELEASE_ENABLED || '').toLowerCase() === 'true',
         supplierForwardEnabled:String(env.SUPPLIER_FORWARD_ENABLED || '').toLowerCase() === 'true', supplierPayoutExecutionEnabled:false, refundExecutionEnabled:false
       }, ok ? 200 : 503, origin, env);
@@ -171,6 +179,9 @@ export default {
       const result=await firstTouch(env,body); return reply(result.body,result.status,origin,env);
     }
 
+    const rehearsal = await handleTransactionRehearsal(request, env);
+    if (rehearsal) return reply(rehearsal.body, rehearsal.status, origin, env);
+
     const storefront = await handleStorefrontRequest(request, env);
     if (storefront) return reply(storefront.body, storefront.status, origin, env);
 
@@ -179,6 +190,9 @@ export default {
 
     const verification = await handleVerificationRequest(request, env);
     if (verification) return reply(verification.body, verification.status, origin, env);
+
+    const commerceOperations = await handleCommerceOperationsRequest(request, env);
+    if (commerceOperations) return reply(commerceOperations.body, commerceOperations.status, origin, env);
 
     const domemae = await handleDomemaeRequest(request, env);
     if (domemae) return reply(domemae.body, domemae.status, origin, env);

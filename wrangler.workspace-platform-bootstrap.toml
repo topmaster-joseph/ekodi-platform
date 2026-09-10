@@ -11,7 +11,7 @@ custom_domain = true
 [vars]
 ENVIRONMENT = "production-bootstrap"
 ALLOW_MUTATIONS = "false"
-ALLOWED_ORIGINS = "https://messenger.ekodi.kr,https://invest.ekodi.kr,https://my.ekodi.kr"
+ALLOWED_ORIGINS = "https://ekodi.kr,https://messenger.ekodi.kr,https://invest.ekodi.kr,https://my.ekodi.kr"
 
 [[d1_databases]]
 binding = "DB"

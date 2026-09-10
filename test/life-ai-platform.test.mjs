@@ -65,3 +65,30 @@ test('production release guard only requires markers present in static Life HTML
   assert.ok(root);
   for(const marker of root.expect||[])assert.ok(html.includes(marker),`static Life HTML is missing release marker: ${marker}`);
 });
+
+test('Life AI upstream outage falls back to provider-independent core response',async()=>{
+  const {default:worker}=await import('../life-worker.js');
+  const priorFetch=globalThis.fetch; globalThis.fetch=async()=>{throw new Error('core unavailable')};
+  try{
+    const request=new Request('https://life.ekodi.kr/api/ai',{method:'POST',headers:{authorization:'Bearer test-token','content-type':'application/json'},body:JSON.stringify({message:'앞으로가 걱정돼요',topic:'future'})});
+    const response=await worker.fetch(request,{}); const data=await response.json();
+    assert.equal(response.status,200); assert.equal(data.mode,'core-only'); assert.equal(data.ok,false); assert.ok(data.reply);
+  } finally { globalThis.fetch=priorFetch; }
+});
+
+test('Life AI journey network outage is retryable instead of a Worker exception',async()=>{
+  const {default:worker}=await import('../life-worker.js');
+  const priorFetch=globalThis.fetch; globalThis.fetch=async()=>{throw new Error('supabase unavailable')};
+  try{
+    const env={DATA_ENABLED:'true',SUPABASE_URL:'https://example.supabase.co',SUPABASE_PUBLISHABLE_KEY:'public-key'};
+    const response=await worker.fetch(new Request('https://life.ekodi.kr/api/journey',{headers:{authorization:'Bearer test-token'}}),env);
+    const data=await response.json(); assert.equal(response.status,503); assert.equal(data.code,'LIFE_JOURNEY_UNAVAILABLE');
+  } finally { globalThis.fetch=priorFetch; }
+});
+
+test('Life AI static asset failure becomes controlled 503',async()=>{
+  const {default:worker}=await import('../life-worker.js');
+  const env={ASSETS:{fetch:async()=>{throw new Error('asset unavailable')}}};
+  const response=await worker.fetch(new Request('https://life.ekodi.kr/app.js'),env);
+  assert.equal(response.status,503); assert.equal(response.headers.get('x-ekodi-life-asset-error'),'fetch_failed');
+});

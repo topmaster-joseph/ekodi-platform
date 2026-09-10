@@ -27,7 +27,7 @@ function originAllowed(origin, env={}) {
   if (configured.has(origin)) return true;
   try {
     const host = new URL(origin).hostname.toLowerCase();
-    return host === 'business.ekodi.kr' || host === 'admin.ekodi.kr' || /^[a-z0-9-]+\.ai\.ekodi\.kr$/.test(host);
+    return host === 'ekodi.kr' || host === 'business.ekodi.kr' || host === 'admin.ekodi.kr' || /^[a-z0-9-]+\.ai\.ekodi\.kr$/.test(host);
   } catch { return false; }
 }
 function cors(origin, allowed) {

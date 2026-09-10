@@ -5,15 +5,17 @@ import { fileURLToPath } from 'node:url';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const dist = path.join(root, 'dist');
 const checks = [
-  ['index.html', ['EKODI MALL', 'ALL MARKET', '7·8·9', '상품 하나부터', '무엇을 찾고 계세요?', '추천순위는 제휴수수료와 분리합니다', '/assets/marketplace-live.js', '/assets/context-curator.js']],
-  ['assets/context-curator.js', ['api.ekodi.kr/api/affiliate/public/products', 'diversified', 'groupOffers', '제휴수수료와 분리합니다', 'data-context-prompt']],
-  ['assets/context-curator.css', ['context-hero', 'context-result-grid', 'discover-grid', 'buyer-mobile']],
+  ['index.html', ['EKODI MALL', 'ALL MARKET', '7·8·9', '상품 하나부터', '무엇을 찾고 계세요?', '추천순위는 제휴수수료와 분리합니다', '/assets/marketplace-live.js', '/assets/context-curator.js', '/assets/local-commerce.js', '내 로컬']],
+  ['assets/local-commerce.js', ['ekodiMallLocalRegionV1', 'explicit', 'geolocation', '좌표는 저장하지 않습니다', 'ekodi:local-region-change']],
+  ['assets/context-curator.js', ['api.ekodi.kr/api/affiliate/public/products', 'diversified', 'groupOffers', '제휴수수료와 분리합니다', 'data-context-prompt', 'context-detail-button', 'context-offer-dialog', '어디서 살까요?', '판매처에서 구매']],
+  ['assets/context-curator.css', ['context-hero', 'context-result-grid', 'discover-grid', 'buyer-mobile', 'context-offer-dialog', 'context-detail-offer']],
+  ['assets/styles.css', ['EKODI typography invariant', 'word-break:keep-all', 'overflow-wrap:break-word', 'hyphens:none', '.ekodi-break-anywhere']],
   ['seller/index.html', ['OPEN SELLER STUDIO', 'PERSONAL PRODUCT STUDIO', 'sellerDraftForm', 'Google로 무료 시작', '7%', '8%', '9%', 'STOREFRONT', 'ANALYTICS', '/assets/seller-readiness.js', '/assets/seller-analytics.js', '/assets/seller-storefronts.js', '/assets/analytics.css']],
   ['checkout/index.html', ['INQUIRY BASKET', 'basketItems', '/assets/commerce.js']],
   ['stores/ekodi-select/index.html', ['EKODI Select', 'STORE COLLECTION']],
   ['products/reusable-daily-bottle/index.html', ['리유저블 데일리 보틀', 'PRODUCT PAGE', 'data-add-basket']],
   ['assets/commerce.js', ['ekodiMallInquiryBasketV1', 'data-basket-copy']],
-  ['assets/seller.js', ['ekodiMallSellerStudioDraftV4', 'mall-seller', "plan: 'free'", 'product-link-reservation']],
+  ['assets/seller.js', ['ekodiMallSellerStudioDraftV5', 'mall-seller', "plan: 'free'", 'product-link-reservation']],
   ['assets/seller-server.js', ['mall-api.ekodi.kr', '서버에 저장', '게시 · 링크 활성화', '/api/products', '/share-links', '/api/orders?limit=20', '/api/settlements', '직접링크 복사 · 7%', '일반 상품링크 · 8%']],
   ['assets/seller-readiness.js', ['DIRECT SALE READINESS', '/api/readiness', '/api/verification/seller/submit', '/verification/submit', 'payments-disabled', 'product-checkout-gate']],
   ['assets/seller-analytics.js', ['SELLER ANALYTICS', '/api/analytics/summary', 'PAID GROSS', 'first-touch', 'visitor ID']],
@@ -33,13 +35,16 @@ const checks = [
   ['assets/supplier-ops.html', ['SUPPLIER OPS', 'Supplier Partner', 'SKU → EKODI 상품 매핑', '/assets/supplier-ops.js']],
   ['assets/supplier-ops.js', ['/api/internal/supplier-pilot/context', '/create-source', '/verify-contract', '/products', 'Auto Order OFF']],
   ['assets/supplier-ops.css', ['ops-grid', 'ops-map-form', 'ops-table']],
+  ['assets/verification-ops.html', ['SELLER VERIFICATION OPS', 'COMMERCE OS COCKPIT', 'commerceCockpit', 'PRODUCTION LAUNCH GATE', 'launchReadiness', 'verificationLogin', 'verificationQueue', 'approveVerification', '/assets/verification-ops.js']],
+  ['assets/verification-ops.js', ['/api/internal/verification/queue', '/api/internal/verification/launch-readiness', '/api/internal/operations/cockpit', 'provider-adapter-not-implemented', 'legal-readiness-missing', '/readiness', '/review', '/checkout-gate', 'return_to']],
+  ['assets/verification-ops.css', ['verify-layout', 'verify-queue', 'readiness-grid', 'commerce-cockpit', 'cockpit-summary', 'ops-exceptions']],
   ['assets/supplier-discovery.html', ['SUPPLIER DISCOVERY', '증거 기반 평가', 'PILOT PREFLIGHT', '/assets/supplier-discovery.js']],
   ['assets/supplier-discovery.js', ['/api/internal/supplier-discovery/context', '/assessment', '/evidence', '/outreach-draft', '/api/internal/supplier-preflight', '자동 발송하지 않습니다']],
   ['assets/supplier-connectors.html', ['OFFICIAL SUPPLIER CONNECTORS', '도매매 · 도매꾹 공식 API', 'ORDER DRY-RUN', '/assets/supplier-connectors.js', '코드 없음']],
   ['assets/supplier-connectors.js', ['/api/internal/connectors/domemae/readiness', '/api/internal/connectors/domemae/item-lookup', '/api/internal/connectors/domemae/order-dry-run', '실제 주문 API는 호출하지 않았습니다']],
   ['assets/shared-product.html', ['PUBLIC PRODUCT', '/assets/public-product.js']],
-  ['_redirects', ['/p/* /assets/shared-product.html 200', '/store/* /assets/shared-store.html 200', '/free-ops /assets/free-ops.html 200', '/sourcing /assets/sourcing-lab.html 200', '/fulfillment', '/supplier-ops /assets/supplier-ops.html 200', '/supplier-discovery /assets/supplier-discovery.html 200', '/supplier-connectors /assets/supplier-connectors.html 200']],
-  ['build-meta.json', ['"platformMode": "marketplace-v2"', '"paymentsEnabled": false', '"affiliateExternalRouting": true']]
+  ['_redirects', ['/p/* /assets/shared-product.html 200', '/store/* /assets/shared-store.html 200', '/free-ops /assets/free-ops.html 200', '/sourcing /assets/sourcing-lab.html 200', '/fulfillment', '/supplier-ops /assets/supplier-ops.html 200', '/verification-ops /assets/verification-ops.html 200', '/supplier-discovery /assets/supplier-discovery.html 200', '/supplier-connectors /assets/supplier-connectors.html 200']],
+  ['build-meta.json', ['"platformMode": "marketplace-v2"', '"paymentsEnabled": false', '"commerceOsVersion": 1', '"paymentProviderAuthority": "server-capability-registry"', '"highImpactExecution": "human-gated"', '"affiliateExternalRouting": true']]
 ];
 const errors = [];
 for (const [relative, needles] of checks) {

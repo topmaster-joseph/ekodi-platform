@@ -1,0 +1,19 @@
+{
+  "version": "1.0.1",
+  "repository": "topmaster-joseph/ekodi-platform",
+  "defaultBranch": "main",
+  "branchProtection": {
+    "required": true,
+    "requirePullRequest": true,
+    "requiredApprovingReviewCount": 0,
+    "enforceAdmins": true,
+    "requireBranchesUpToDate": true,
+    "requiredStatusChecks": [
+      "EKODI AI Orchestration Gate",
+      "test"
+    ],
+    "allowForcePushes": false,
+    "allowDeletions": false,
+    "requiredLinearHistory": false
+  }
+}

@@ -21,7 +21,8 @@ const services={
   media:{name:'에코디미디어',tenant:null,role:'member',returnTo:'https://media.ekodi.kr',origins:['https://media.ekodi.kr'],requestable:true},
   social:{name:'EKODI Social',tenant:null,role:'member',returnTo:'https://social.ekodi.kr',origins:['https://social.ekodi.kr'],requestable:false},
   energy:{name:'Energy AI',tenant:null,role:'member',returnTo:'https://energy.ekodi.kr',origins:['https://energy.ekodi.kr'],requestable:false},
-  admin:{name:'EKODI 관리자',tenant:null,role:'platform_admin',returnTo:'https://admin.ekodi.kr',origins:['https://admin.ekodi.kr'],requestable:false},
+  admin:{name:'EKODI 관리자',tenant:null,role:'platform_admin',returnTo:'https://ekodi.kr/admin/',origins:['https://ekodi.kr','https://admin.ekodi.kr'],requestable:false},
+  oauth:{name:'EKODI AI 연결',tenant:null,role:'member',returnTo:'https://ekodi.kr/auth/oauth/consent',origins:['https://ekodi.kr','https://auth.ekodi.kr'],requestable:false},
   portal:{name:'EKODI',tenant:null,role:'member',returnTo:'https://ekodi.kr',origins:['https://ekodi.kr'],requestable:false}
 };
 const PERSON_SCOPED_SITES=new Set(['social','energy']);
@@ -331,6 +332,11 @@ async function renderAccess(s){
         if(workspaces.length===1)show('approvedActions',true);
         return;
       }
+    }
+    if(site==='cgma'&&authorized.length===0){
+      routing=true;showProcessing('청계면상인회 관리자 권한을 확인하고 있습니다.');
+      try{await handoffToService();return;}
+      catch(e){if(e.message!=='site_access_required')console.error('cgma reviewer handoff',e);routing=false;}
     }
     if(marketing){location.assign(marketingFreeTarget());return;}
     showAccessFallback(s,config.requestable?'본인 인증은 완료되었지만 이 서비스의 이용 권한이 없습니다. 권한을 신청하거나 다른 계정으로 다시 시도할 수 있습니다.':'본인 인증은 완료되었지만 이 서비스의 이용 권한이 없습니다. 다른 계정으로 다시 시도하거나 취소해 주세요.','warn');

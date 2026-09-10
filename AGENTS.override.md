@@ -7,6 +7,7 @@ Before modifying source, read and obey:
 1. `CONSTITUTION.md`
 2. `AI_DEVELOPMENT_POLICY.md`
 3. `AGENTS.md`
+4. `config/ai-development-completion-policy.json`
 
 For ChatGPT/GPT, Codex, and any agent that reads AGENTS instructions:
 
@@ -20,6 +21,12 @@ For ChatGPT/GPT, Codex, and any agent that reads AGENTS instructions:
 - never deploy production directly from the task workspace;
 - run applicable validation/tests and submit changes to the central PR/review/merge/deploy pipeline;
 - overlapping open PR files are serialized by `.github/workflows/ai-conflict-guard.yml`; do not bypass the guard by force-updating another task branch;
-- do not use production credentials in the task workspace.
+- do not use production credentials in the task workspace;
+- for production-bound development, a commit, pull request, successful build, or successful deploy command is not completion;
+- after guarded deployment, verify the real production service and the requested functional behavior, not only a preview URL or HTTP status;
+- record production verification evidence including the task ID, branch, commit SHA, deployment result, production hostname, functional checks, observability check, and verification timestamp;
+- if production verification fails, repair, retest, redeploy, and reverify within delegated authority instead of reporting completion;
+- until real production verification passes, the agent must not report the task as complete. Use a non-complete status such as `deployed-awaiting-production-verification`;
+- bounded exceptions are allowed only for the classes declared by `AI-COMPLETE-001`, with the exception class and reason recorded and without any false production-completion claim.
 
-`AI_DEVELOPMENT_POLICY.md` is the provider-neutral development policy. No model/provider-specific instruction may weaken it.
+`AI_DEVELOPMENT_POLICY.md` is the provider-neutral development policy. `config/ai-development-completion-policy.json` is the machine-readable completion contract. No model/provider-specific instruction may weaken either policy.

@@ -1,0 +1,236 @@
+{
+  "version": 2,
+  "name": "EKODI Design Engine",
+  "asOf": "2026-09-09",
+  "principle": "Evidence defines reusable UX rules; EKODI identity, service DNA and EKODIAN character remain first-party layers.",
+  "evidence": {
+    "publicUser": {
+      "awardProgram": "The Webby Awards 2026",
+      "sampleUnit": "award placement; entries may overlap across categories",
+      "categories": [
+        {
+          "id": "best-user-experience",
+          "placements": 15,
+          "weight": 0.35,
+          "source": "https://winners.webbyawards.com/winners/websites-and-mobile-sites/features-design/best-user-experience",
+          "adopt": [
+            "useful functionality is visually legible",
+            "interaction supports the user's goal",
+            "novelty never obscures the task"
+          ]
+        },
+        {
+          "id": "best-navigation-structure",
+          "placements": 9,
+          "weight": 0.3,
+          "source": "https://winners.webbyawards.com/winners/websites-and-mobile-sites/features-design/best-navigationstructure",
+          "adopt": [
+            "information architecture is predictable",
+            "navigation depth stays understandable",
+            "orientation survives responsive layout"
+          ]
+        },
+        {
+          "id": "best-visual-design-aesthetic",
+          "placements": 14,
+          "weight": 0.35,
+          "source": "https://winners.webbyawards.com/winners/websites-and-mobile-sites/features-design/best-visual-design-aesthetic",
+          "adopt": [
+            "visual identity is emotionally distinct",
+            "art direction reinforces service meaning",
+            "aesthetic choices do not break accessibility"
+          ]
+        }
+      ],
+      "placementTotal": 38
+    },
+    "admin": {
+      "reference": "IBM Carbon Design System UI Shell",
+      "source": "https://carbondesignsystem.com/components/UI-shell-left-panel/usage/",
+      "adopt": [
+        "platform products share a persistent shell",
+        "left navigation is fixed to the product frame",
+        "do not build a third navigation tier inside the side navigation",
+        "use page-level tabs for deeper context",
+        "responsive behavior changes placement rather than shrinking controls into illegibility"
+      ]
+    }
+  },
+  "admin": {
+    "primaryAxes": [
+      "home",
+      "operations",
+      "space",
+      "services",
+      "system"
+    ],
+    "primaryAxisLabelsKo": [
+      "홈",
+      "운영",
+      "공간",
+      "서비스",
+      "시스템"
+    ],
+    "layout": "fixed-primary-sidebar + contextual-top-tabs + scrolling-workspace",
+    "desktopPrimarySidebarScroll": false,
+    "workspaceScroll": true,
+    "pageTopOffsetPx": 0,
+    "viewportChecks": [
+      "1366x768",
+      "1366x600",
+      "390x844"
+    ],
+    "character": {
+      "mode": "contextual-assistant",
+      "persistentFloating": false,
+      "contentOverlapForbidden": true,
+      "allowedRoles": [
+        "guide",
+        "empty-state",
+        "error",
+        "onboarding",
+        "completion",
+        "assistant"
+      ],
+      "motion": "respect-prefers-reduced-motion"
+    },
+    "generation": 8,
+    "regions": [
+      {
+        "id": "primary-navigation",
+        "placement": "left",
+        "owner": "global-registry",
+        "persistent": true,
+        "scrollOwner": false
+      },
+      {
+        "id": "context-navigation",
+        "placement": "workspace-top",
+        "owner": "active-primary-axis",
+        "persistent": "within-workspace",
+        "scrollOwner": false
+      },
+      {
+        "id": "workspace-header",
+        "placement": "content-top",
+        "owner": "active-service",
+        "persistent": false,
+        "scrollOwner": false
+      },
+      {
+        "id": "workspace",
+        "placement": "center",
+        "owner": "active-service",
+        "persistent": false,
+        "scrollOwner": true
+      }
+    ],
+    "navigationLevels": [
+      {
+        "level": 1,
+        "owner": "global",
+        "surface": "fixed-left-sidebar",
+        "rule": "exactly-five-primary-axes"
+      },
+      {
+        "level": 2,
+        "owner": "context",
+        "surface": "top-tabs",
+        "rule": "show-only-the-active-axis-children"
+      },
+      {
+        "level": 3,
+        "owner": "service",
+        "surface": "workspace-controls",
+        "rule": "tabs-filters-drawers-and-local-actions-only"
+      }
+    ],
+    "scrollContract": {
+      "body": "locked",
+      "app": "locked",
+      "primarySidebar": "locked",
+      "contextNavigation": "sticky-not-scroll-owner",
+      "workspace": "single-vertical-scroll-owner",
+      "nestedScroll": "tables-and-explicit-data-views-only"
+    },
+    "pageAnatomy": [
+      "context navigation",
+      "workspace header: title + purpose + status + primary actions",
+      "optional KPI/status summary",
+      "primary workbench",
+      "detail drawer or modal only when needed"
+    ],
+    "densityProfiles": {
+      "standard": "readable default",
+      "compact": "high-information workbench without shrinking below readability floor",
+      "lowHeight": "reduce spacing and secondary chrome before hiding required functions",
+      "mobile": "reflow hierarchy; keep touch targets and meaning"
+    },
+    "serviceThemeScope": {
+      "allowed": [
+        "accent token",
+        "service badge",
+        "service-specific data visualization semantics"
+      ],
+      "forbidden": [
+        "replacement global navigation",
+        "replacement shell geometry",
+        "dark/light shell fork",
+        "duplicated layout CSS"
+      ]
+    },
+    "aiInterface": {
+      "role": "contextual coworker",
+      "default": "on-demand",
+      "persistentFloating": false,
+      "contentOverlapForbidden": true,
+      "humanPathRequired": true,
+      "highRiskActions": "existing approval and audit boundaries remain authoritative"
+    }
+  },
+  "user": {
+    "layout": "shared-header + service-owned-content + shared-footer",
+    "sharedSources": [
+      "config/user-ui-dna.json",
+      "config/user-ui-shell.json",
+      "shell/theme.json"
+    ],
+    "serviceIdentityMustVary": [
+      "palette",
+      "headline typography",
+      "geometry",
+      "information density",
+      "hero composition",
+      "motion character",
+      "card language"
+    ],
+    "character": {
+      "mode": "service-opt-in-contextual-guide",
+      "persistentFloating": false,
+      "contentOverlapForbidden": true,
+      "allowedRoles": [
+        "guide",
+        "story",
+        "empty-state",
+        "onboarding",
+        "completion"
+      ],
+      "defaultPlacement": "content-slot",
+      "fallback": "fully-usable-without-character",
+      "motion": "respect-prefers-reduced-motion"
+    }
+  },
+  "defectPromotion": {
+    "repeatThreshold": 2,
+    "promoteToSharedGuardrail": [
+      "top whitespace",
+      "sidebar scroll",
+      "font size",
+      "button size",
+      "card spacing",
+      "mobile clipping",
+      "character overlap",
+      "duplicate shared chrome"
+    ]
+  }
+}

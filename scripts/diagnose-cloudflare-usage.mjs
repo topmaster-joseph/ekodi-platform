@@ -1,0 +1,439 @@
+import fs from 'node:fs/promises';
+import { classifyTrafficUserAgent } from '../traffic-intelligence.js';
+import { serviceForId } from '../ekodi-service-manifest.js';
+
+const cfApi = 'https://api.cloudflare.com/client/v4';
+const prod = {
+  label:'PROD',
+  accountId:String(process.env.CLOUDFLARE_ACCOUNT_ID || '').trim(),
+  token:String(process.env.CLOUDFLARE_API_TOKEN || '').trim(),
+};
+const dev = {
+  label:'DEV',
+  accountId:String(process.env.CLOUDFLARE_DEVELOPMENT_ACCOUNT_ID || '').trim(),
+  token:String(process.env.CLOUDFLARE_DEVELOPMENT_API_TOKEN || '').trim(),
+};
+const outputJson = process.argv[2] || '/tmp/ekodi-cloudflare-usage-diagnose.json';
+const outputMd = process.argv[3] || '/tmp/ekodi-cloudflare-usage-diagnose.md';
+
+function windowUtc() {
+  const end = new Date();
+  const start = new Date(end.getTime() - 24 * 60 * 60 * 1000);
+  return { start:start.toISOString(), end:end.toISOString() };
+}
+function recentWindowUtc(minutes=20){const end=new Date();const start=new Date(end.getTime()-minutes*60*1000);return {start:start.toISOString(),end:end.toISOString(),minutes};}
+function pct(n, d) { return d > 0 ? Math.round((n / d) * 1000) / 10 : 0; }
+function safeRatio(n, d) { return d > 0 ? Math.round((n / d) * 100) / 100 : 0; }
+function severity(value, warn, critical) {
+  if (value >= critical) return 'critical';
+  if (value >= warn) return 'warning';
+  return 'ok';
+}
+async function cf(account, path, init = {}) {
+  const headers = new Headers(init.headers || {});
+  headers.set('authorization', `Bearer ${account.token}`);
+  headers.set('accept', 'application/json');
+  if (init.body) headers.set('content-type', 'application/json');
+  const response = await fetch(`${cfApi}${path}`, { ...init, headers });
+  const payload = await response.json().catch(() => null);
+  if (!response.ok || payload?.success === false) {
+    const detail = payload?.errors?.[0]?.message || `Cloudflare HTTP ${response.status}`;
+    throw new Error(`${account.label}: ${detail}`);
+  }
+  return payload;
+}
+async function gql(account, query, variables) {
+  const payload = await cf(account, '/graphql', {
+    method:'POST',
+    body:JSON.stringify({ query, variables }),
+  });
+  if (payload?.errors?.length) throw new Error(`${account.label}: ${payload.errors[0]?.message || 'GraphQL error'}`);
+  return payload;
+}
+
+async function workerUsage(account, window) {
+  const query = `query Usage($accountTag: string, $start: string, $end: string) {
+    viewer { accounts(filter:{accountTag:$accountTag}) {
+      workersInvocationsAdaptive(limit:10000, filter:{datetime_geq:$start, datetime_leq:$end}) {
+        dimensions { scriptName status }
+        sum { requests subrequests errors }
+        quantiles { cpuTimeP50 cpuTimeP99 }
+      }
+    } }
+  }`;
+  const payload = await gql(account, query, {
+    accountTag:account.accountId, start:window.start, end:window.end,
+  });
+  const rows = payload?.data?.viewer?.accounts?.[0]?.workersInvocationsAdaptive || [];
+  const scripts = new Map();
+  for (const row of rows) {
+    const name = String(row?.dimensions?.scriptName || 'unknown');
+    if (!scripts.has(name)) scripts.set(name, { script:name, requests:0, subrequests:0, errors:0, cpuP99:0, statuses:{} });
+    const item = scripts.get(name);
+    item.requests += Number(row?.sum?.requests || 0);
+    item.subrequests += Number(row?.sum?.subrequests || 0);
+    item.errors += Number(row?.sum?.errors || 0);
+    const status=String(row?.dimensions?.status || 'unknown');
+    item.statuses[status]=(item.statuses[status]||0)+Number(row?.sum?.requests || 0);
+    item.cpuP99 = Math.max(item.cpuP99, Number(row?.quantiles?.cpuTimeP99 || 0));
+  }
+  const list = [...scripts.values()].map(item => ({
+    ...item,
+    subrequestRatio:safeRatio(item.subrequests, item.requests),
+    errorPercent:pct(item.errors, item.requests),
+  })).sort((a,b) => b.requests - a.requests);
+  return {
+    requests:list.reduce((sum, item) => sum + item.requests, 0),
+    subrequests:list.reduce((sum, item) => sum + item.subrequests, 0),
+    errors:list.reduce((sum, item) => sum + item.errors, 0),
+    scripts:list,
+  };
+}
+
+const SHARED_SITE_HOSTS=new Set([
+  'ekodi.kr','www.ekodi.kr','trade.ekodi.kr','trade.biz.ekodi.kr','pay.ekodi.kr','pay.biz.ekodi.kr',
+  'tax.ekodi.kr','messenger.ekodi.kr','invest.ekodi.kr','ai.ekodi.kr','admin.ekodi.kr','admin.biz.ekodi.kr',
+  'admin.church.ekodi.kr','admin.lab.ekodi.kr','admin.trade.ekodi.kr','mail.ekodi.kr','mail.biz.ekodi.kr',
+  'mail.church.ekodi.kr','live.ekodi.kr','live.biz.ekodi.kr','live.church.ekodi.kr','live.lab.ekodi.kr',
+  'cloud.ekodi.kr','auth.ekodi.kr'
+]);
+const SHARED_SITE_WORKER_FIRST_EXACT=new Set([
+  '/','/deployment-probe','/auth/start','/admin','/control-center','/control-center/','/control-center.html',
+  '/workspace-admin.css','/workspace-admin.js','/workspace-trade-admin.js','/workspace-trade-portal.css','/workspace-trade-portal.js',
+  '/auth.js','/auth-router.js','/marketing-auth-hotfix.js','/auth-workspace-target.js','/admin-auth.js','/client-auth.js','/author-auth.js','/business-auth.js',
+  '/marketing-onboarding.js','/membership-ui.js','/control-center.css','/admin-shell.css','/admin-central-handoff.js','/admin-authenticated-shell.js',
+  '/compact-control-center.js','/compact-control-center.css','/admin-compact.js','/admin-compact.css','/admin-menu-layout.js','/admin-menu-registry.js',
+  '/admin-sidebar.js','/admin-menu-runtime.js','/admin-demand-loader.js','/admin-public-site-controls.js','/admin-perf-diagnostics.js',
+  '/device-browser-diagnostics.js','/device-browser-diagnostics.css','/admin-lazy-features.js','/ai-ops-admin.css','/system-health-admin.js','/system-health-admin.css'
+]);
+const SHARED_SITE_WORKER_FIRST_PREFIXES=['/privacy','/terms','/history','/mall','/org/ekodibiz','/ekodibiz','/jadam/marketing','/pizzamaru/marketing','/yogurt/marketing','/cgma/marketing','/_ekodi/space/','/_ekodi/ekodibiz/','/api/'];
+function sharedSiteWorkerFirstPath(value){
+  const path=String(value||'/').toLowerCase();
+  return SHARED_SITE_WORKER_FIRST_EXACT.has(path)||SHARED_SITE_WORKER_FIRST_PREFIXES.some(prefix=>path.startsWith(prefix));
+}
+
+function routeFamily(hostValue,pathValue){
+  const host=String(hostValue||'').toLowerCase();
+  const path=String(pathValue||'/').toLowerCase();
+  if(/(?:^|\/)(health|healthz|ready|readiness|liveness)(?:\/|$)/.test(path))return 'health';
+  if(/\.(?:css|js|mjs|png|jpe?g|gif|svg|webp|ico|woff2?|ttf|map)$/.test(path))return 'static';
+  if(host.startsWith('admin.')||path==='/admin'||path.startsWith('/admin/')||path.startsWith('/control-center'))return 'admin';
+  if(host.startsWith('auth.')||path==='/auth'||path.startsWith('/auth/'))return 'auth';
+  if(host.startsWith('trade.'))return 'trade';
+  if(host.startsWith('invest.'))return 'invest';
+  if(host==='ai.ekodi.kr')return 'ai-hub';
+  if(host.startsWith('cloud.'))return 'cloud';
+  if(host.startsWith('messenger.'))return 'messenger';
+  if(host.startsWith('mail.'))return 'mail';
+  if(host.startsWith('live.'))return 'live';
+  if(host.startsWith('pay.')||path.startsWith('/pay'))return 'pay';
+  if(host.startsWith('tax.')||path.startsWith('/tax'))return 'tax';
+  if(path.startsWith('/_ekodi/'))return 'internal-proxy';
+  if(path==='/deployment-probe')return 'deployment';
+  if(path==='/org/ekodibiz'||path.startsWith('/org/ekodibiz/'))return 'ekodibiz-org';
+  if(path==='/ekodibiz'||path.startsWith('/ekodibiz/'))return 'ekodibiz';
+  if(path==='/api'||path.startsWith('/api/'))return 'api';
+  if(path.includes('/marketing'))return 'marketing';
+  if(path.startsWith('/mall')||path.startsWith('/ekodibiz/mall'))return 'mall';
+  if(path==='/'||path==='/privacy'||path==='/terms'||path.startsWith('/history'))return 'public-root';
+  const first=path.split('/').filter(Boolean)[0]||'';
+  if(host==='ekodi.kr'&&first&&serviceForId(first))return 'service-root';
+  return 'other';
+}
+
+function automationKind(value){
+  const ua=String(value||'').toLowerCase();
+  if(!ua)return 'empty-ua';
+  if(['uptimerobot','statuscake','checkly','synthetic-monitor'].some(v=>ua.includes(v)))return 'synthetic-monitor';
+  if(['headlesschrome','selenium','puppeteer','playwright','phantomjs'].some(v=>ua.includes(v)))return 'browser-automation';
+  if(['zgrab','masscan','nmap','httpx','sqlmap','nikto','censys','securityresearch'].some(v=>ua.includes(v)))return 'security-scanner';
+  if(['curl/','wget/','python-requests','python/','go-http-client','axios/','libwww-perl','okhttp','java/'].some(v=>ua.includes(v)))return 'cli-api-client';
+  if(/\b(bot|crawler|spider|scanner|scraper)\b/i.test(value))return 'generic-bot';
+  return 'other-automation';
+}
+
+async function recentTrafficClassification(account, window) {
+  let zones=[];
+  try{zones=await activeZones(account);}catch{return {label:account.label,requests:0,internal:0,monitor:0,searchBot:0,automation:0,unclassified:0,coverage:0,zones:0,internalHosts:[],automationHosts:[]};}
+  const totals={label:account.label,requests:0,internal:0,monitor:0,searchBot:0,automation:0,unclassified:0,coverage:0,zones:zones.length,internalHosts:[]};
+  const internalHosts=new Map(),automationHosts=new Map();
+  const query=`query RecentUA($zoneTag:string,$start:Time,$end:Time) { viewer { zones(filter:{zoneTag:$zoneTag}) { rows:httpRequestsAdaptiveGroups(limit:5000,filter:{datetime_geq:$start,datetime_lt:$end,requestSource:"eyeball"},orderBy:[count_DESC]) { count dimensions { userAgent clientRequestHTTPHost } } } } }`;
+  for(const zone of zones){
+    try{
+      const payload=await gql(account,query,{zoneTag:zone.id,start:window.start,end:window.end});
+      const rows=payload?.data?.viewer?.zones?.[0]?.rows||[];
+      totals.coverage+=1;
+      for(const row of rows){
+        const count=Number(row?.count||0),ua=String(row?.dimensions?.userAgent||''),host=String(row?.dimensions?.clientRequestHTTPHost||zone.name).trim().toLowerCase();
+        totals.requests+=count;
+        const category=classifyTrafficUserAgent(ua).category;
+        if(category==='ekodi_internal'){totals.internal+=count;if(/^EKODI-github-monitor\//i.test(ua))totals.monitor+=count;if(host)internalHosts.set(host,(internalHosts.get(host)||0)+count);}
+        else if(category==='search_bot')totals.searchBot+=count;
+        else if(category==='other_bot'){totals.automation+=count;const key=host+'|'+automationKind(ua);automationHosts.set(key,(automationHosts.get(key)||0)+count);}
+        else totals.unclassified+=count;
+      }
+    }catch{}
+  }
+  totals.internalHosts=[...internalHosts].map(([host,requests])=>({host,requests})).sort((a,b)=>b.requests-a.requests).slice(0,10);
+  totals.automationHosts=[...automationHosts].map(([key,requests])=>{const cut=key.indexOf('|');return {host:key.slice(0,cut),kind:key.slice(cut+1),requests};}).sort((a,b)=>b.requests-a.requests).slice(0,10);
+  return totals;
+}
+
+async function activeZones(account) {
+  const payload = await cf(account, `/zones?per_page=50&status=active&account.id=${encodeURIComponent(account.accountId)}`);
+  return (payload?.result || []).filter(zone => zone?.id && zone?.name).map(zone => ({ id:String(zone.id), name:String(zone.name) }));
+}
+
+async function zoneTraffic(account, zone, window) {
+  const result = {
+    zone:zone.name, requests:0, botRequests:0, internalRequests:0,
+    healthRequests:0, devToProdSuspectRequests:0, hostRequests:[], botHostRequests:[], searchBotHostRequests:[], otherBotHostRequests:[], automationKindHostRequests:[], routeFamilies:[], sharedSiteFamilies:[], sharedOtherHosts:[], sharedWorkerFirstRequests:0, sharedWorkerFirstFamilies:[], cache:{ available:false, hit:0, miss:0, bypass:0, other:0 }, warnings:[],
+  };
+  const uaQuery = `query ZoneUA($zoneTag:string,$start:Time,$end:Time) { viewer { zones(filter:{zoneTag:$zoneTag}) { rows:httpRequestsAdaptiveGroups(limit:5000,filter:{datetime_geq:$start,datetime_lt:$end,requestSource:"eyeball"},orderBy:[count_DESC]) { count dimensions { userAgent clientRequestHTTPHost } } } } }`;
+  try {
+    const payload = await gql(account, uaQuery, { zoneTag:zone.id, start:window.start, end:window.end });
+    const rows = payload?.data?.viewer?.zones?.[0]?.rows || [];
+    const hostCounts=new Map(),botHostCounts=new Map(),searchBotHostCounts=new Map(),otherBotHostCounts=new Map(),automationKindHostCounts=new Map();
+    for (const row of rows) {
+      const count = Number(row?.count || 0);
+      result.requests += count;
+      const rawUserAgent = String(row?.dimensions?.userAgent || '');
+      const host=String(row?.dimensions?.clientRequestHTTPHost || zone.name).trim().toLowerCase();
+      if(host)hostCounts.set(host,(hostCounts.get(host)||0)+count);
+      const category = classifyTrafficUserAgent(rawUserAgent).category;
+      if (category === 'search_bot' || category === 'other_bot'){result.botRequests += count;if(host){botHostCounts.set(host,(botHostCounts.get(host)||0)+count);if(category==='search_bot')searchBotHostCounts.set(host,(searchBotHostCounts.get(host)||0)+count);else {otherBotHostCounts.set(host,(otherBotHostCounts.get(host)||0)+count);const key=host+'|'+automationKind(rawUserAgent);automationKindHostCounts.set(key,(automationKindHostCounts.get(key)||0)+count);}}}
+      if (category === 'ekodi_internal') {
+        result.internalRequests += count;
+        if (account.label === 'PROD' && /(?:^|[-_/])(dev|development|staging)(?:$|[-_/])/i.test(rawUserAgent)) result.devToProdSuspectRequests += count;
+      }
+    }
+    result.hostRequests=[...hostCounts].map(([host,requests])=>({host,requests})).sort((a,b)=>b.requests-a.requests).slice(0,20);
+    result.botHostRequests=[...botHostCounts].map(([host,requests])=>({host,requests})).sort((a,b)=>b.requests-a.requests).slice(0,20);
+    result.searchBotHostRequests=[...searchBotHostCounts].map(([host,requests])=>({host,requests}));
+    result.otherBotHostRequests=[...otherBotHostCounts].map(([host,requests])=>({host,requests}));
+    result.automationKindHostRequests=[...automationKindHostCounts].map(([key,requests])=>{const cut=key.indexOf('|');return {host:key.slice(0,cut),kind:key.slice(cut+1),requests};});
+  } catch (error) { result.warnings.push(`ua:${String(error.message).slice(0,120)}`); }
+
+  const routeQuery = `query ZoneRoutes($zoneTag:string,$start:Time,$end:Time) { viewer { zones(filter:{zoneTag:$zoneTag}) { rows:httpRequestsAdaptiveGroups(limit:5000,filter:{datetime_geq:$start,datetime_lt:$end,requestSource:"eyeball"},orderBy:[count_DESC]) { count dimensions { clientRequestHTTPHost clientRequestPath } } } } }`;
+  try {
+    const payload=await gql(account,routeQuery,{zoneTag:zone.id,start:window.start,end:window.end});
+    const families=new Map(), sharedFamilies=new Map(), sharedOtherHosts=new Map(), sharedWorkerFirstFamilies=new Map();
+    for(const row of payload?.data?.viewer?.zones?.[0]?.rows||[]){
+      const count=Number(row?.count||0);
+      const host=String(row?.dimensions?.clientRequestHTTPHost||zone.name).trim().toLowerCase();
+      const family=routeFamily(host,row?.dimensions?.clientRequestPath);
+      families.set(family,(families.get(family)||0)+count);
+      if(SHARED_SITE_HOSTS.has(host)){
+        sharedFamilies.set(family,(sharedFamilies.get(family)||0)+count);
+        if(family==='other')sharedOtherHosts.set(host,(sharedOtherHosts.get(host)||0)+count);
+        if(sharedSiteWorkerFirstPath(row?.dimensions?.clientRequestPath)){
+          result.sharedWorkerFirstRequests+=count;
+          sharedWorkerFirstFamilies.set(family,(sharedWorkerFirstFamilies.get(family)||0)+count);
+        }
+      }
+    }
+    result.routeFamilies=[...families].map(([family,requests])=>({family,requests})).sort((a,b)=>b.requests-a.requests);
+    result.sharedSiteFamilies=[...sharedFamilies].map(([family,requests])=>({family,requests})).sort((a,b)=>b.requests-a.requests);
+    result.sharedOtherHosts=[...sharedOtherHosts].map(([host,requests])=>({host,requests})).sort((a,b)=>b.requests-a.requests);
+    result.sharedWorkerFirstFamilies=[...sharedWorkerFirstFamilies].map(([family,requests])=>({family,requests})).sort((a,b)=>b.requests-a.requests);
+  }catch(error){result.warnings.push(`route:${String(error.message).slice(0,120)}`);}
+
+  const healthQuery = `query ZoneHealth($zoneTag:string,$start:Time,$end:Time) { viewer { zones(filter:{zoneTag:$zoneTag}) { rows:httpRequestsAdaptiveGroups(limit:5000,filter:{datetime_geq:$start,datetime_lt:$end,requestSource:"eyeball"},orderBy:[count_DESC]) { count dimensions { clientRequestPath } } } } }`;
+  try {
+    const payload = await gql(account, healthQuery, { zoneTag:zone.id, start:window.start, end:window.end });
+    result.healthRequests = (payload?.data?.viewer?.zones?.[0]?.rows || []).reduce((sum,row) => {
+      const path = String(row?.dimensions?.clientRequestPath || '');
+      return /(?:^|\/)(health|healthz|ready|readiness|live|liveness)(?:\/|$)/i.test(path) ? sum + Number(row?.count || 0) : sum;
+    }, 0);
+  } catch (error) { result.warnings.push(`health:${String(error.message).slice(0,120)}`); }
+
+  const cacheQuery = `query ZoneCache($zoneTag:string,$start:Time,$end:Time) { viewer { zones(filter:{zoneTag:$zoneTag}) { rows:httpRequestsAdaptiveGroups(limit:1000,filter:{datetime_geq:$start,datetime_lt:$end,requestSource:"eyeball"}) { count dimensions { cacheStatus } } } } }`;
+  try {
+    const payload = await gql(account, cacheQuery, { zoneTag:zone.id, start:window.start, end:window.end });
+    const rows = payload?.data?.viewer?.zones?.[0]?.rows || [];
+    result.cache.available = true;
+    for (const row of rows) {
+      const count = Number(row?.count || 0);
+      const status = String(row?.dimensions?.cacheStatus || '').toLowerCase();
+      if (['hit','revalidated','updating','stale'].includes(status)) result.cache.hit += count;
+      else if (['miss','expired'].includes(status)) result.cache.miss += count;
+      else if (['bypass','dynamic'].includes(status)) result.cache.bypass += count;
+      else result.cache.other += count;
+    }
+  } catch (error) { result.warnings.push(`cache:${String(error.message).slice(0,120)}`); }
+  return result;
+}
+
+async function schedulePressure(account, scripts) {
+  const top = scripts.filter(item => item.script !== 'unknown').slice(0, 25);
+  const rows = [];
+  for (const item of top) {
+    try {
+      const payload = await cf(account, `/accounts/${encodeURIComponent(account.accountId)}/workers/scripts/${encodeURIComponent(item.script)}/schedules`);
+      const schedules = payload?.result?.schedules || payload?.result || [];
+      const crons = (Array.isArray(schedules) ? schedules : []).map(value => String(value?.cron || '')).filter(Boolean);
+      if (crons.length) rows.push({ script:item.script, crons, everyMinute:crons.some(cron => /^\*\s+\*\s+\*\s+\*\s+\*$/.test(cron) || /^\*\/1\s/.test(cron)) });
+    } catch {
+      // Read-only diagnosis should not fail if schedule permission is narrower than analytics permission.
+    }
+  }
+  return rows;
+}
+
+function accountSummary(account, usage, zones, traffic, schedules) {
+  const totalZoneRequests = traffic.reduce((sum,row)=>sum+row.requests,0);
+  const botRequests = traffic.reduce((sum,row)=>sum+row.botRequests,0);
+  const internalRequests = traffic.reduce((sum,row)=>sum+row.internalRequests,0);
+  const healthRequests = traffic.reduce((sum,row)=>sum+row.healthRequests,0);
+  const devToProdSuspectRequests = traffic.reduce((sum,row)=>sum+row.devToProdSuspectRequests,0);
+  const cache = traffic.reduce((sum,row) => {
+    if (!row.cache.available) return sum;
+    sum.availableZones += 1;
+    sum.hit += row.cache.hit; sum.miss += row.cache.miss; sum.bypass += row.cache.bypass; sum.other += row.cache.other;
+    return sum;
+  }, { availableZones:0, hit:0, miss:0, bypass:0, other:0 });
+  const cacheKnown = cache.hit + cache.miss + cache.bypass;
+  const uaAvailableZones=traffic.filter(row=>!row.warnings.some(warning=>warning.startsWith('ua:'))).length;
+  const healthAvailableZones=traffic.filter(row=>!row.warnings.some(warning=>warning.startsWith('health:'))).length;
+  const cacheAvailableZones=traffic.filter(row=>row.cache.available&&!row.warnings.some(warning=>warning.startsWith('cache:'))).length;
+  const zoneCoverageTotal=traffic.length;
+  const hostCounts=new Map();
+  for(const row of traffic)for(const item of row.hostRequests||[])hostCounts.set(item.host,(hostCounts.get(item.host)||0)+Number(item.requests||0));
+  const topHosts=[...hostCounts].map(([host,requests])=>({host,requests})).sort((a,b)=>b.requests-a.requests).slice(0,15);
+  const botHostCounts=new Map();
+  for(const row of traffic)for(const item of row.botHostRequests||[])botHostCounts.set(item.host,(botHostCounts.get(item.host)||0)+Number(item.requests||0));
+  const searchBotHostCounts=new Map(),otherBotHostCounts=new Map();
+  for(const row of traffic){
+    for(const item of row.searchBotHostRequests||[])searchBotHostCounts.set(item.host,(searchBotHostCounts.get(item.host)||0)+Number(item.requests||0));
+    for(const item of row.otherBotHostRequests||[])otherBotHostCounts.set(item.host,(otherBotHostCounts.get(item.host)||0)+Number(item.requests||0));
+  }
+  const automationKindHostCounts=new Map();
+  for(const row of traffic)for(const item of row.automationKindHostRequests||[]){const key=item.host+'|'+item.kind;automationKindHostCounts.set(key,(automationKindHostCounts.get(key)||0)+Number(item.requests||0));}
+  const automationKindsByHost=new Map();
+  for(const [key,requests] of automationKindHostCounts){const cut=key.indexOf('|'),host=key.slice(0,cut),kind=key.slice(cut+1);if(!automationKindsByHost.has(host))automationKindsByHost.set(host,[]);automationKindsByHost.get(host).push({kind,requests});}
+  for(const list of automationKindsByHost.values())list.sort((a,b)=>b.requests-a.requests);
+  const topBotHosts=[...botHostCounts].map(([host,requests])=>({host,requests,total:hostCounts.get(host)||0,percent:pct(requests,hostCounts.get(host)||0),search:searchBotHostCounts.get(host)||0,automation:otherBotHostCounts.get(host)||0,automationKinds:automationKindsByHost.get(host)||[]})).sort((a,b)=>b.requests-a.requests).slice(0,15);
+  const routeAvailableZones=traffic.filter(row=>!row.warnings.some(warning=>warning.startsWith('route:'))).length;
+  const sharedFamilyCounts=new Map();
+  for(const row of traffic)for(const item of row.sharedSiteFamilies||[])sharedFamilyCounts.set(item.family,(sharedFamilyCounts.get(item.family)||0)+Number(item.requests||0));
+  const sharedSiteFamilies=[...sharedFamilyCounts].map(([family,requests])=>({family,requests})).sort((a,b)=>b.requests-a.requests);
+  const otherHostCounts=new Map();
+  for(const row of traffic)for(const item of row.sharedOtherHosts||[])otherHostCounts.set(item.host,(otherHostCounts.get(item.host)||0)+Number(item.requests||0));
+  const sharedOtherHosts=[...otherHostCounts].map(([host,requests])=>({host,requests})).sort((a,b)=>b.requests-a.requests).slice(0,15);
+  const sharedWorkerFirstRequests=traffic.reduce((sum,row)=>sum+Number(row.sharedWorkerFirstRequests||0),0);
+  const workerFirstFamilyCounts=new Map();
+  for(const row of traffic)for(const item of row.sharedWorkerFirstFamilies||[])workerFirstFamilyCounts.set(item.family,(workerFirstFamilyCounts.get(item.family)||0)+Number(item.requests||0));
+  const sharedWorkerFirstFamilies=[...workerFirstFamilyCounts].map(([family,requests])=>({family,requests})).sort((a,b)=>b.requests-a.requests);
+  const worstSubrequest = usage.scripts.reduce((best,item)=>item.subrequestRatio > (best?.subrequestRatio || 0) ? item : best, null);
+  const prodResidues = account.label === 'PROD'
+    ? usage.scripts.filter(item => /(?:^|[-_])(staging|development|dev)(?:$|[-_])/i.test(item.script) && item.requests > 0)
+    : [];
+  return {
+    label:account.label,
+    accountIdMasked:account.accountId ? `${account.accountId.slice(0,4)}...${account.accountId.slice(-4)}` : '',
+    workers:{ ...usage, top:usage.scripts.slice(0,15) }, zones:zones.map(zone=>zone.name), topHosts, topBotHosts, sharedSiteFamilies, sharedOtherHosts, sharedWorkerFirstRequests, sharedWorkerFirstFamilies, routeCoverage:`${routeAvailableZones}/${zoneCoverageTotal}`, traffic,
+    signals:{
+      bot:{ available:uaAvailableZones>0, coverage:`${uaAvailableZones}/${zoneCoverageTotal}`, partial:uaAvailableZones>0&&uaAvailableZones<zoneCoverageTotal, requests:botRequests, percent:pct(botRequests,totalZoneRequests), severity:uaAvailableZones>0 ? severity(pct(botRequests,totalZoneRequests),30,60) : 'unknown' },
+      loopRetry:{ maxSubrequestRatio:worstSubrequest?.subrequestRatio || 0, script:worstSubrequest?.script || '', severity:severity(worstSubrequest?.subrequestRatio || 0,3,8) },
+      cache:{ available:cacheAvailableZones>0, coverage:`${cacheAvailableZones}/${zoneCoverageTotal}`, partial:cacheAvailableZones>0&&cacheAvailableZones<zoneCoverageTotal, hit:cache.hit, miss:cache.miss, bypass:cache.bypass, hitPercent:pct(cache.hit,cacheKnown), pressurePercent:pct(cache.miss+cache.bypass,cacheKnown), severity:cacheAvailableZones>0 ? severity(pct(cache.miss+cache.bypass,cacheKnown),60,85) : 'unknown' },
+      cronHealth:{ healthAvailable:healthAvailableZones>0, coverage:`${healthAvailableZones}/${zoneCoverageTotal}`, partial:healthAvailableZones>0&&healthAvailableZones<zoneCoverageTotal, healthRequests, healthPercent:pct(healthRequests,totalZoneRequests), scheduledScripts:schedules.length, everyMinuteScripts:schedules.filter(row=>row.everyMinute).map(row=>row.script), severity:healthAvailableZones>0 ? (schedules.some(row=>row.everyMinute) || pct(healthRequests,totalZoneRequests)>=10 ? 'warning' : 'ok') : 'unknown' },
+      boundary:{ available:uaAvailableZones>0, coverage:`${uaAvailableZones}/${zoneCoverageTotal}`, partial:uaAvailableZones>0&&uaAvailableZones<zoneCoverageTotal, internalRequests, internalPercent:pct(internalRequests,totalZoneRequests), devToProdSuspectRequests, prodStagingResidues:prodResidues.map(item=>item.script), severity:prodResidues.length || devToProdSuspectRequests > 0 ? 'critical' : (uaAvailableZones>0 ? (account.label==='PROD' && pct(internalRequests,totalZoneRequests)>=10 ? 'warning' : 'ok') : 'unknown') },
+    },
+  };
+}
+
+function icon(level) {
+  if (level === 'critical') return '[CRIT]';
+  if (level === 'warning') return '[WARN]';
+  if (level === 'unknown') return '[N/A]';
+  return '[OK]';
+}
+function markdown(report) {
+  const lines = [
+    '# EKODI Cloudflare Usage Root Cause Diagnose',
+    '',
+    `Window: ${report.window.start} -> ${report.window.end}`,
+    '',
+    '| Account | Worker requests | Bot | Max subrequest/request | Cache pressure | Health | Boundary |',
+    '|---|---:|---:|---:|---:|---:|---|',
+  ];
+  for (const row of report.accounts) {
+    const s = row.signals;
+    lines.push(`| ${row.label} | ${row.workers.requests} | ${icon(s.bot.severity)} ${s.bot.available ? `${s.bot.percent}%` : 'N/A'} | ${icon(s.loopRetry.severity)} ${s.loopRetry.maxSubrequestRatio}x | ${icon(s.cache.severity)} ${s.cache.available ? `${s.cache.pressurePercent}%` : 'N/A'} | ${icon(s.cronHealth.severity)} ${s.cronHealth.healthAvailable ? `${s.cronHealth.healthPercent}%` : 'N/A'} | ${icon(s.boundary.severity)} internal ${s.boundary.available ? `${s.boundary.internalPercent}%` : 'N/A'} |`);
+  }
+  lines.push('', '## Recent worker window', `Window: ${report.recentWindow.start} -> ${report.recentWindow.end}`);
+  for(const row of report.recentWorkers){
+    lines.push('', `### ${row.label}`);
+    for(const name of ['ekodi-shell','shy-thunder-39a4','ekodi-marketing-publishing-api','ekodi-auth-api']){
+      const item=row.scripts.find(entry=>entry.script===name);
+      if(item)lines.push(`- ${item.script}: ${item.requests} req | ${item.subrequestRatio}x subreq | ${item.errorPercent}% errors`);
+    }
+  }
+  lines.push('', '## Recent traffic classification');
+  for(const row of report.recentTraffic||[]){
+    lines.push('', `### ${row.label}`);
+    lines.push(`- requests ${row.requests} | internal ${row.internal} (GitHub monitor ${row.monitor}) | search bot ${row.searchBot} | automation ${row.automation} | unclassified ${row.unclassified} | zones ${row.coverage}/${row.zones}`);
+    if(row.internalHosts?.length)lines.push(...row.internalHosts.slice(0,5).map(item=>`- internal ${item.requests} | ${item.host}`));
+    if(row.automationHosts?.length)lines.push(...row.automationHosts.slice(0,8).map(item=>`- automation ${item.requests} | ${item.kind} | ${item.host}`));
+  }
+
+  lines.push('', '## Five checks');
+  for (const row of report.accounts) {
+    const s = row.signals;
+    lines.push('', `### ${row.label}`,
+      `1. Bot: ${icon(s.bot.severity)} ${s.bot.available ? `${s.bot.requests} requests (${s.bot.percent}%)` : 'analytics unavailable'} | zones ${s.bot.coverage}` ,
+      `2. Worker loop/retry: ${icon(s.loopRetry.severity)} max ${s.loopRetry.maxSubrequestRatio} subrequests/request at \`${s.loopRetry.script || 'n/a'}\``,
+      `3. Cache: ${icon(s.cache.severity)} ${s.cache.available ? `hit ${s.cache.hitPercent}%, pressure ${s.cache.pressurePercent}%` : 'analytics field unavailable'} | zones ${s.cache.coverage}`,
+      `4. Cron/Health: ${icon(s.cronHealth.severity)} health ${s.cronHealth.healthAvailable ? `${s.cronHealth.healthRequests} (${s.cronHealth.healthPercent}%)` : 'analytics unavailable'} | zones ${s.cronHealth.coverage}, scheduled top scripts ${s.cronHealth.scheduledScripts}, every-minute ${s.cronHealth.everyMinuteScripts.join(', ') || 'none'}`,
+      `5. DEV->PROD / boundary: ${icon(s.boundary.severity)} suspect ${s.boundary.devToProdSuspectRequests}, internal ${s.boundary.available ? `${s.boundary.internalRequests} (${s.boundary.internalPercent}%)` : 'analytics unavailable'} | zones ${s.boundary.coverage}, PROD staging residue ${s.boundary.prodStagingResidues.join(', ') || 'none'}`,
+      '', 'Top Workers:',
+      ...row.workers.top.slice(0,10).map(item => { const statusSummary=Object.entries(item.statuses||{}).sort((a,b)=>b[1]-a[1]).map(([status,count])=>status+':'+count).join(', ')||'n/a'; return `- ${item.requests} req | ${item.subrequestRatio}x subreq | ${item.errorPercent}% errors | status ${statusSummary} | cpuP99 raw ${item.cpuP99} | \`${item.script}\``; }),
+      '', 'Top Hosts (covered Zone Analytics):',
+      ...(row.topHosts.length ? row.topHosts.slice(0,10).map(item=>'- '+item.requests+' requests | '+item.host+'') : ['- n/a']),
+      '', 'Top Bot Hosts (covered Zone Analytics):',
+      ...(row.topBotHosts.length ? row.topBotHosts.slice(0,10).map(item=>'- '+item.requests+' bot requests / '+item.total+' total ('+item.percent+'%; search '+item.search+', automation '+item.automation+' ['+item.automationKinds.map(kind=>kind.kind+':'+kind.requests).join(', ')+']) | '+item.host) : ['- n/a']),
+      '', 'Shared Site route families (covered Zone Analytics):',
+      '- coverage '+row.routeCoverage,
+      ...(row.sharedSiteFamilies.length ? row.sharedSiteFamilies.map(item=>'- '+item.requests+' requests | '+item.family) : ['- n/a']),
+      '', 'Shared Site OTHER by host:',
+      ...(row.sharedOtherHosts.length ? row.sharedOtherHosts.map(item=>'- '+item.requests+' requests | '+item.host) : ['- n/a']),
+      '', 'Shared Site Worker-first candidates:',
+      '- candidate requests '+row.sharedWorkerFirstRequests,
+      ...(row.sharedWorkerFirstFamilies.length ? row.sharedWorkerFirstFamilies.map(item=>'- '+item.requests+' requests | '+item.family) : ['- n/a'])
+    );
+  }
+  lines.push('', '> This report is read-only. Warning thresholds are diagnostic signals, not automatic blocking rules.');
+  return `${lines.join('\n')}\n`;
+}
+
+async function inspect(account, window) {
+  if (!account.accountId || !account.token) throw new Error(`${account.label}: missing Cloudflare credentials`);
+  const usage = await workerUsage(account, window);
+  let zones = [];
+  try { zones = await activeZones(account); } catch {}
+  const traffic = [];
+  for (const zone of zones) traffic.push(await zoneTraffic(account, zone, window));
+  const schedules = await schedulePressure(account, usage.scripts);
+  return accountSummary(account, usage, zones, traffic, schedules);
+}
+
+async function main() {
+  const window = windowUtc();
+  const accounts = [];
+  for (const account of [prod, dev]) accounts.push(await inspect(account, window));
+  const recentWindow=recentWindowUtc(20),recentWorkers=[],recentTraffic=[];
+  for(const account of [prod,dev]){
+    const usage=await workerUsage(account,recentWindow);
+    recentWorkers.push({label:account.label,requests:usage.requests,scripts:usage.scripts});
+    recentTraffic.push(await recentTrafficClassification(account,recentWindow));
+  }
+  const report = { schemaVersion:3, generatedAt:new Date().toISOString(), window, recentWindow, recentWorkers, recentTraffic, accounts };
+  await fs.writeFile(outputJson, `${JSON.stringify(report, null, 2)}\n`, 'utf8');
+  await fs.writeFile(outputMd, markdown(report), 'utf8');
+  console.log(markdown(report));
+}
+
+main().catch(error => {
+  console.error(error?.stack || error?.message || error);
+  process.exitCode = 1;
+});

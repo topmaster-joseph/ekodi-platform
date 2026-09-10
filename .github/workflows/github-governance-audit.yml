@@ -1,0 +1,84 @@
+name: EKODI GitHub Governance Audit
+
+on:
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: 'Apply desired main branch protection using EKODI_GITHUB_ADMIN_TOKEN'
+        required: true
+        default: false
+        type: boolean
+      confirmation:
+        description: 'Type APPLY_MAIN_PROTECTION to authorize the protected-branch mutation'
+        required: false
+        default: ''
+        type: string
+  schedule:
+    - cron: '17 */6 * * *'
+  push:
+    branches: [main]
+    paths:
+      - 'config/github-governance.json'
+      - 'scripts/github-governance-controller.mjs'
+      - 'test/github-governance-controller.test.mjs'
+      - '.github/workflows/github-governance-audit.yml'
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: ekodi-github-governance
+  cancel-in-progress: true
+jobs:
+  governance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate desired governance contract
+        run: node scripts/github-governance-controller.mjs --contract
+      - name: Confirm protected-branch mutation intent
+        if: github.event_name == 'workflow_dispatch' && inputs.apply
+        shell: bash
+        env:
+          GOVERNANCE_CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          test "$GOVERNANCE_CONFIRMATION" = 'APPLY_MAIN_PROTECTION' || { echo 'Exact confirmation APPLY_MAIN_PROTECTION is required.' >&2; exit 1; }
+      - name: EKODI AI Orchestration Gate
+        if: github.event_name == 'workflow_dispatch' && inputs.apply
+        run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
+      - name: Apply desired protection when explicitly dispatched
+        if: github.event_name == 'workflow_dispatch' && inputs.apply
+        env:
+          EKODI_GITHUB_ADMIN_TOKEN: ${{ secrets.EKODI_GITHUB_ADMIN_TOKEN }}
+        run: node scripts/github-governance-controller.mjs --apply
+      - name: Audit live GitHub governance
+        id: audit
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          EKODI_GITHUB_ADMIN_TOKEN: ${{ secrets.EKODI_GITHUB_ADMIN_TOKEN }}
+        run: node scripts/github-governance-controller.mjs --live --report-only
+      - name: Reconcile governance drift issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DRIFT: ${{ steps.audit.outputs.drift }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          title='[Governance] main branch protection drift'
+          existing=$(gh issue list --state open --search '"[Governance] main branch protection drift" in:title' --json number --jq '.[0].number // empty')
+          if [[ "$DRIFT" == 'true' ]]; then
+            if [[ -z "$existing" ]]; then
+              gh issue create \
+                --title "$title" \
+                --body 'EKODI GitHub Governance Audit detected that the main branch does not match config/github-governance.json. Run this workflow manually with apply=true and confirmation=APPLY_MAIN_PROTECTION after provisioning EKODI_GITHUB_ADMIN_TOKEN, or apply the equivalent repository protection settings in GitHub.'
+            fi
+            exit 0
+          fi
+          if [[ -n "$existing" ]]; then
+            gh issue close "$existing" --comment 'GitHub main branch governance is back in compliance with the EKODI desired-state contract.'
+          fi

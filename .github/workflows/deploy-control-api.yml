@@ -5,16 +5,47 @@ on:
   pull_request:
     paths:
       - 'api-worker.js'
+      - 'preview-public-projection.js'
+      - 'test/preview-public-projection.test.mjs'
+      - 'language-automation.js'
+      - 'test/language-automation.test.mjs'
+      - 'ai-provider-control.js'
       - 'auth-worker.js'
       - 'admin-session-fastpath.js'
       - 'admin-google-auth.js'
       - 'customer-auth.js'
       - 'customer-entry-worker.js'
+      - 'church-reports-control.js'
+      - 'test/church-ministry-reports-contract.test.mjs'
       - 'mission-control-entry-worker.js'
+      - 'external-ai-module-gateway.js'
+      - 'secure-projection.js'
+      - 'config/external-ai-module-contract.json'
+      - 'scripts/validate-storage-ai-contracts.mjs'
+      - 'test/external-ai-module-gateway.test.mjs'
+      - 'traffic-intelligence.js'
+      - 'traffic-intelligence-control.js'
+      - 'test/traffic-intelligence.test.mjs'
       - 'devotional-control.js'
       - 'test/devotional-control.test.mjs'
       - 'user-ai-control.js'
+      - 'personal-ai-bridge.js'
+      - 'sovereign-capability-fabric.js'
+      - 'config/capability-registry.json'
+      - 'ekodi-mcp-gateway.js'
+      - 'test/sovereign-capability-fabric.test.mjs'
+      - 'test/personal-ai-bridge.test.mjs'
+      - 'test/personal-ai-bridge-migration.test.mjs'
+      - 'test/ekodi-mcp-gateway.test.mjs'
+      - 'test/oauth-consent-contract.test.mjs'
+      - 'test/personal-ai-oauth-workflow.test.mjs'
       - 'ai-access-orchestration.js'
+      - 'ai-resource-policy.js'
+      - 'ai-collaboration-settings.js'
+      - 'ai-orchestrator-runtime.js'
+      - 'ai-control-core.js'
+      - 'test/ai-resource-policy.test.mjs'
+      - 'test/ai-collaboration-settings.test.mjs'
       - 'personal-ai-provider-registry.js'
       - 'gemini-provider-adapter.js'
       - 'personal-openai-provider-adapter.js'
@@ -24,8 +55,8 @@ on:
       - 'test/personal-ai-provider-registry.test.mjs'
       - 'universal-membership.js'
       - 'membership-billing.js'
-      - 'generated/user-services.js'
       - 'config/ecosystem-services.json'
+      - 'config/language-registry.js'
       - 'config/universal-membership.json'
       - 'scripts/generate-user-service-registry.mjs'
       - 'scripts/validate-universal-membership.mjs'
@@ -33,6 +64,12 @@ on:
       - 'device-control.js'
       - 'security-edge.js'
       - 'ai-agent-control.js'
+      - 'ai-command-control.js'
+      - 'ekodi-command-ledger.js'
+      - 'ekodi-pulse-runtime.js'
+      - 'ekodi-command-plane.js'
+      - 'ekodi-ai-provider-registry.js'
+      - 'test/ekodi-v8-durable-command-plane.test.mjs'
       - 'ai-governance-runtime.js'
       - 'ai-resilience-runtime.js'
       - 'core-ai-gateway.js'
@@ -59,6 +96,7 @@ on:
       - 'offer-registry-control.js'
       - 'offer-registry-sources.js'
       - 'test/ekodi-coupang-mall.test.mjs'
+      - 'test/coupang-partners-reporting.test.mjs'
       - 'social-registry-api.js'
       - 'mail-control.js'
       - 'mail-credential-vault.js'
@@ -71,6 +109,7 @@ on:
       - 'scripts/validate-additive-migrations.mjs'
       - 'scripts/validate-ai-mission-governance.mjs'
       - 'scripts/validate-security-baseline.mjs'
+      - 'scripts/verify-ai-collaboration-settings-roundtrip.mjs'
       - 'scripts/apply-d1-migrations-with-retry.sh'
       - 'deploy/manifests/control-api.worker.json'
       - '.github/workflows/deploy-control-api.yml'
@@ -78,16 +117,47 @@ on:
     branches: [main]
     paths:
       - 'api-worker.js'
+      - 'preview-public-projection.js'
+      - 'test/preview-public-projection.test.mjs'
+      - 'language-automation.js'
+      - 'test/language-automation.test.mjs'
+      - 'ai-provider-control.js'
       - 'auth-worker.js'
       - 'admin-session-fastpath.js'
       - 'admin-google-auth.js'
       - 'customer-auth.js'
       - 'customer-entry-worker.js'
+      - 'church-reports-control.js'
+      - 'test/church-ministry-reports-contract.test.mjs'
       - 'mission-control-entry-worker.js'
+      - 'external-ai-module-gateway.js'
+      - 'secure-projection.js'
+      - 'config/external-ai-module-contract.json'
+      - 'scripts/validate-storage-ai-contracts.mjs'
+      - 'test/external-ai-module-gateway.test.mjs'
+      - 'traffic-intelligence.js'
+      - 'traffic-intelligence-control.js'
+      - 'test/traffic-intelligence.test.mjs'
       - 'devotional-control.js'
       - 'test/devotional-control.test.mjs'
       - 'user-ai-control.js'
+      - 'personal-ai-bridge.js'
+      - 'sovereign-capability-fabric.js'
+      - 'config/capability-registry.json'
+      - 'ekodi-mcp-gateway.js'
+      - 'test/sovereign-capability-fabric.test.mjs'
+      - 'test/personal-ai-bridge.test.mjs'
+      - 'test/personal-ai-bridge-migration.test.mjs'
+      - 'test/ekodi-mcp-gateway.test.mjs'
+      - 'test/oauth-consent-contract.test.mjs'
+      - 'test/personal-ai-oauth-workflow.test.mjs'
       - 'ai-access-orchestration.js'
+      - 'ai-resource-policy.js'
+      - 'ai-collaboration-settings.js'
+      - 'ai-orchestrator-runtime.js'
+      - 'ai-control-core.js'
+      - 'test/ai-resource-policy.test.mjs'
+      - 'test/ai-collaboration-settings.test.mjs'
       - 'personal-ai-provider-registry.js'
       - 'gemini-provider-adapter.js'
       - 'personal-openai-provider-adapter.js'
@@ -97,8 +167,8 @@ on:
       - 'test/personal-ai-provider-registry.test.mjs'
       - 'universal-membership.js'
       - 'membership-billing.js'
-      - 'generated/user-services.js'
       - 'config/ecosystem-services.json'
+      - 'config/language-registry.js'
       - 'config/universal-membership.json'
       - 'scripts/generate-user-service-registry.mjs'
       - 'scripts/validate-universal-membership.mjs'
@@ -106,6 +176,12 @@ on:
       - 'device-control.js'
       - 'security-edge.js'
       - 'ai-agent-control.js'
+      - 'ai-command-control.js'
+      - 'ekodi-command-ledger.js'
+      - 'ekodi-pulse-runtime.js'
+      - 'ekodi-command-plane.js'
+      - 'ekodi-ai-provider-registry.js'
+      - 'test/ekodi-v8-durable-command-plane.test.mjs'
       - 'ai-governance-runtime.js'
       - 'ai-resilience-runtime.js'
       - 'core-ai-gateway.js'
@@ -132,6 +208,7 @@ on:
       - 'offer-registry-control.js'
       - 'offer-registry-sources.js'
       - 'test/ekodi-coupang-mall.test.mjs'
+      - 'test/coupang-partners-reporting.test.mjs'
       - 'social-registry-api.js'
       - 'mail-control.js'
       - 'mail-credential-vault.js'
@@ -144,6 +221,7 @@ on:
       - 'scripts/validate-additive-migrations.mjs'
       - 'scripts/validate-ai-mission-governance.mjs'
       - 'scripts/validate-security-baseline.mjs'
+      - 'scripts/verify-ai-collaboration-settings-roundtrip.mjs'
       - 'scripts/apply-d1-migrations-with-retry.sh'
       - 'deploy/manifests/control-api.worker.json'
       - '.github/workflows/deploy-control-api.yml'
@@ -155,7 +233,7 @@ permissions:
 # Generic Control-plane release lane. Conversation changes are owned by the
 # Release EKODI Conversation Foundation orchestrator.
 concurrency:
-  group: ekodi-control-api-release
+  group: "ekodi-control-api-release-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || 'production' }}"
   cancel-in-progress: false
 
 env:
@@ -170,12 +248,14 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
+      - name: EKODI AI Orchestration Gate
+        run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
       - name: Generate universal user-service registry
         run: npm run generate:user-services
       - name: Validate control plane, Core AI Gateway and governance
         run: |
           set -euo pipefail
-          for file in api-worker.js auth-worker.js admin-session-fastpath.js admin-google-auth.js customer-auth.js customer-entry-worker.js mission-control-entry-worker.js devotional-control.js user-ai-control.js ai-access-orchestration.js personal-ai-provider-registry.js gemini-provider-adapter.js personal-openai-provider-adapter.js claude-provider-adapter.js user-openai-provider-adapter.js universal-membership.js membership-billing.js generated/user-services.js messenger-operator-control.js ekodi-principal.js messenger-outbox.js messenger-channel-adapters.js device-control.js security-edge.js ai-agent-control.js ai-governance-runtime.js ai-resilience-runtime.js core-ai-gateway.js core-api.js openai-provider-adapter.js api-usage-meter.js api-cost-control.js books-control.js books-finance-control.js books-distribution-control.js books-pipeline-control.js books-royalty-control.js affiliate-control.js affiliate-marketplace.js coupang-partners-automation.js offer-registry.js offer-registry-control.js offer-registry-sources.js social-registry-api.js mail-credential-vault.js mail-google-adapter.js mail-control.js; do
+          for file in api-worker.js preview-public-projection.js auth-worker.js admin-session-fastpath.js admin-google-auth.js customer-auth.js customer-entry-worker.js church-reports-control.js mission-control-entry-worker.js external-ai-module-gateway.js secure-projection.js traffic-intelligence.js traffic-intelligence-control.js devotional-control.js user-ai-control.js personal-ai-bridge.js ekodi-mcp-gateway.js ai-access-orchestration.js personal-ai-provider-registry.js gemini-provider-adapter.js personal-openai-provider-adapter.js claude-provider-adapter.js user-openai-provider-adapter.js universal-membership.js membership-billing.js generated/user-services.js messenger-operator-control.js ekodi-principal.js messenger-outbox.js messenger-channel-adapters.js device-control.js security-edge.js ai-agent-control.js ai-command-control.js ekodi-command-ledger.js ekodi-pulse-runtime.js ekodi-command-plane.js ekodi-ai-provider-registry.js ai-orchestrator-runtime.js anthropic-provider-adapter.js gemini-orchestrator-provider-adapter.js ai-governance-runtime.js ai-resilience-runtime.js core-ai-gateway.js core-api.js openai-provider-adapter.js api-usage-meter.js api-cost-control.js books-control.js books-finance-control.js books-distribution-control.js books-pipeline-control.js books-royalty-control.js affiliate-control.js affiliate-marketplace.js affiliate-provider-feed.js product-identity.js coupang-partners-automation.js offer-registry.js offer-registry-control.js offer-registry-sources.js social-registry-api.js mail-credential-vault.js mail-google-adapter.js mail-control.js language-automation.js ai-provider-control.js config/language-registry.js; do
             node --check "$file"
           done
           node --check scripts/generate-user-service-registry.mjs
@@ -184,14 +264,17 @@ jobs:
           node --check scripts/validate-additive-migrations.mjs
           node --check scripts/validate-ai-mission-governance.mjs
           node --check scripts/validate-security-baseline.mjs
+          node --check scripts/verify-ai-collaboration-settings-roundtrip.mjs
           node scripts/validate-universal-membership.mjs
           node scripts/validate-additive-migrations.mjs migrations
           node scripts/validate-ai-mission-governance.mjs
           node scripts/validate-security-baseline.mjs
-          node --test test/universal-membership-contract.test.mjs test/device-control-contract.test.mjs test/core-ai-gateway.test.mjs test/openai-provider-adapter.test.mjs test/api-cost-control.test.mjs test/user-ai-routing-policy.test.mjs test/personal-ai-provider-registry.test.mjs test/devotional-control.test.mjs test/mail-control.test.mjs test/ekodi-coupang-mall.test.mjs
+          node scripts/validate-storage-ai-contracts.mjs
+          node --test test/universal-membership-contract.test.mjs test/device-control-contract.test.mjs test/core-ai-gateway.test.mjs test/external-ai-module-gateway.test.mjs test/ai-orchestrator-runtime.test.mjs test/ekodi-command-plane.test.mjs test/core-ai-command-plane-gateway.test.mjs test/ekodi-v8-durable-command-plane.test.mjs test/openai-provider-adapter.test.mjs test/api-cost-control.test.mjs test/traffic-intelligence.test.mjs test/user-ai-routing-policy.test.mjs test/personal-ai-provider-registry.test.mjs test/personal-ai-bridge.test.mjs test/personal-ai-bridge-migration.test.mjs test/ekodi-mcp-gateway.test.mjs test/oauth-consent-contract.test.mjs test/devotional-control.test.mjs test/mail-control.test.mjs test/affiliate-provider-feed.test.mjs test/mall-product-identity.test.mjs test/ekodi-coupang-mall.test.mjs test/coupang-partners-reporting.test.mjs test/preview-public-projection.test.mjs test/language-automation.test.mjs
           bash -n scripts/apply-d1-migrations-with-retry.sh
           grep -Fq 'main = "mission-control-entry-worker.js"' wrangler.api.toml
           grep -Fq 'OPENAI_MODEL = "gpt-5.6-terra"' wrangler.api.toml
+          grep -Fq 'AI_MULTI_PROVIDER_ENABLED = "true"' wrangler.api.toml
           ! grep -Fq 'OPENAI_API_KEY' wrangler.api.toml
 
   staging:
@@ -207,6 +290,8 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
+      - name: EKODI AI Orchestration Gate
+        run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
       - name: Generate universal user-service registry
         run: npm run generate:user-services
       - name: Verify Cloudflare credentials
@@ -278,6 +363,12 @@ jobs:
           set -euo pipefail
           npx --yes wrangler@$WRANGLER_VERSION deployments status --config wrangler.api.staging.runtime.toml --json > /tmp/staging-deployments.json
           npx --yes wrangler@$WRANGLER_VERSION d1 migrations apply DB --local --config wrangler.api.staging.runtime.toml >/tmp/local-migrations.log 2>&1
+          e2e_token="ai-settings-staging-$(openssl rand -hex 24)"
+          e2e_token_hash=$(printf '%s' "$e2e_token" | sha256sum | awk '{print $1}')
+          e2e_created=$(date -u +'%Y-%m-%dT%H:%M:%S.000Z')
+          e2e_expires=$(date -u -d '+20 minutes' +'%Y-%m-%dT%H:%M:%S.000Z')
+          e2e_sql="INSERT INTO admins(email,password_hash,password_salt,birth_hash,birth_salt,role,created_at) VALUES ('ai-settings-e2e@ekodi.local','x','x','x','x','super_admin','$e2e_created') ON CONFLICT(email) DO UPDATE SET role='super_admin'; INSERT OR REPLACE INTO sessions(token_hash,admin_id,expires_at,created_at) SELECT '$e2e_token_hash',id,'$e2e_expires','$e2e_created' FROM admins WHERE email='ai-settings-e2e@ekodi.local';"
+          npx --yes wrangler@$WRANGLER_VERSION d1 execute DB --local --config wrangler.api.staging.runtime.toml --command "$e2e_sql" >/tmp/ai-settings-e2e-session.log 2>&1
           npx --yes wrangler@$WRANGLER_VERSION dev --local --config wrangler.api.staging.runtime.toml --ip 127.0.0.1 --port 8791 > /tmp/control-remote-dev.log 2>&1 &
           runtime_pid=$!
           trap 'kill $runtime_pid 2>/dev/null || true' EXIT
@@ -289,8 +380,11 @@ jobs:
             sleep 2
           done
           if [ "$ready" != '1' ]; then cat /tmp/control-remote-dev.log; exit 1; fi
+          node scripts/verify-ai-collaboration-settings-roundtrip.mjs 'http://127.0.0.1:8791' "$e2e_token" > /tmp/ai-settings-roundtrip.json
+          node -e "const j=require('/tmp/ai-settings-roundtrip.json');if(!j.ok||!j.auditVerified||j.productionMutation!==false)process.exit(1);console.log('AI collaboration settings staging roundtrip verified: router='+j.routerScoreVersion+' saved='+j.savedRevision+' restored='+j.restoredRevision)"
           for attempt in $(seq 1 18); do
             health=$(curl -fsS --connect-timeout 5 --max-time 12 'http://127.0.0.1:8791/health' || true)
+            ai_modules=$(curl -fsS --connect-timeout 5 --max-time 12 'http://127.0.0.1:8791/api/ai-modules/v1/health' || true)
             headers=$(curl -fsSI --connect-timeout 5 --max-time 12 'http://127.0.0.1:8791/health' || true)
             devices=$(curl -sS -o /tmp/devices.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'http://127.0.0.1:8791/api/control/devices' || true)
             ai=$(curl -sS -o /tmp/ai.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'http://127.0.0.1:8791/api/control/ai/governance' || true)
@@ -298,7 +392,11 @@ jobs:
             user_ai=$(curl -sS -o /tmp/user-ai.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'http://127.0.0.1:8791/api/user-ai/status' || true)
             membership=$(curl -sS -o /tmp/membership.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'http://127.0.0.1:8791/api/membership/portfolio' || true)
             catalog=$(curl -sS -o /tmp/catalog.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'http://127.0.0.1:8791/api/membership/catalog?site=invest' || true)
+            i18n=$(curl -sS -o /tmp/i18n.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'http://127.0.0.1:8791/api/i18n/v1/status?service=community' || true)
+            language_admin=$(curl -sS -o /tmp/language-admin.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'http://127.0.0.1:8791/api/control/language-status' || true)
             if printf '%s' "$health" | grep -q '"ok":true' \
+              && printf '%s' "$ai_modules" | grep -q '"directProviderStorageAccess":false' \
+              && printf '%s' "$ai_modules" | grep -q '"providerTrainingAllowed":false' \
               && printf '%s' "$headers" | tr '[:upper:]' '[:lower:]' | grep -q '^strict-transport-security:' \
               && [ "$devices" = '401' ] \
               && [ "$ai" = '401' ] \
@@ -306,6 +404,9 @@ jobs:
               && [ "$user_ai" = '401' ] \
               && [ "$membership" = '401' ] \
               && [ "$catalog" = '200' ] \
+              && [ "$i18n" = '200' ] \
+              && [ "$language_admin" = '401' ] \
+              && grep -Fq '"publishedLocales":["ko-KR"]' /tmp/i18n.json \
               && grep -Fq '"inheritedDefault":true' /tmp/catalog.json; then
               exit 0
             fi
@@ -331,6 +432,8 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
+      - name: EKODI AI Orchestration Gate
+        run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
       - name: Generate universal user-service registry
         run: npm run generate:user-services
       - name: Provision isolated Mail OAuth and credential secrets
@@ -349,6 +452,24 @@ jobs:
             node -e "process.stdout.write(require('node:crypto').randomBytes(48).toString('base64url'))" | npx --yes wrangler@${WRANGLER_VERSION} secret put MAIL_CREDENTIAL_KEY --config wrangler.api.toml >/dev/null
             echo 'Generated a persistent Mail credential-encryption key in Cloudflare Worker secrets.' >> "$GITHUB_STEP_SUMMARY"
           fi
+      - name: Record configured AI providers without exposing secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+          names=$(npx --yes wrangler@${WRANGLER_VERSION} secret list --config wrangler.api.toml 2>/dev/null || true)
+          has_secret() { printf '%s' "$names" | grep -Fq "$1"; }
+          openai=0; anthropic=0; gemini=0
+          if has_secret 'OPENAI_API_KEY'; then openai=1; fi
+          if has_secret 'ANTHROPIC_API_KEY'; then anthropic=1; fi
+          if has_secret 'GEMINI_API_KEY' || has_secret 'GOOGLE_AI_API_KEY'; then gemini=1; fi
+          provider_count=$((openai + anthropic + gemini))
+          collaboration_ready=false; sentinel_ready=false
+          if [ "$provider_count" -ge 2 ]; then collaboration_ready=true; fi
+          if [ "$provider_count" -ge 3 ]; then sentinel_ready=true; fi
+          echo "AI_PROVIDER_READY_COUNT=$provider_count" >> "$GITHUB_ENV"
+          echo "AI_PROVIDER_COLLABORATION_READY=$collaboration_ready" >> "$GITHUB_ENV"
+          echo "AI_PROVIDER_SENTINEL_READY=$sentinel_ready" >> "$GITHUB_ENV"
+          echo "AI provider configuration: configured=$provider_count multi_provider_configured=$collaboration_ready independent_sentinel_configured=$sentinel_ready. Runtime health is reported separately. Secret values were not read or printed." >> "$GITHUB_STEP_SUMMARY"
       - name: Capture production D1 recovery bookmark
         id: d1_bookmark
         run: |
@@ -361,24 +482,42 @@ jobs:
         run: bash scripts/apply-d1-migrations-with-retry.sh ekodi-auth wrangler.api.toml "$WRANGLER_VERSION"
       - name: Guarded 0-percent Control candidate then promote
         run: node scripts/guarded-worker-release.mjs --manifest deploy/manifests/control-api.worker.json
+      - name: Deploy production routes and Cron triggers
+        run: npx --yes wrangler@${WRANGLER_VERSION} triggers deploy --config wrangler.api.toml
       - name: Verify production Control and universal membership boundaries
         shell: bash
         run: |
           set -euo pipefail
           health=$(curl -fsS --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/health')
+          ai_modules=$(curl -fsS --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/ai-modules/v1/health')
           devices=$(curl -sS -o /tmp/devices.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/control/devices')
           ai=$(curl -sS -o /tmp/ai.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/control/ai/governance')
+          ai_v8=$(curl -sS -o /tmp/ai-v8.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/control/ai/v8/status')
           provider=$(curl -sS -o /tmp/provider.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/control/ai/provider-status')
           user_ai=$(curl -sS -o /tmp/user-ai.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/user-ai/status')
           membership=$(curl -sS -o /tmp/membership.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/membership/portfolio')
           catalog=$(curl -sS -o /tmp/catalog.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/membership/catalog?site=invest')
+          i18n=$(curl -sS -o /tmp/i18n.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/i18n/v1/status?service=community')
+          language_admin=$(curl -sS -o /tmp/language-admin.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/control/language-status')
+          mcp_tools=$(curl -fsS --connect-timeout 5 --max-time 12 -H 'content-type: application/json' --data-binary '{"jsonrpc":"2.0","id":901,"method":"tools/list","params":{}}' 'https://ekodi.kr/mcp')
+          printf '%s' "$mcp_tools" > /tmp/mcp-tools.json
+          node -e "const b=require('/tmp/mcp-tools.json');const t=b?.result?.tools?.find(x=>x.name==='ekodi_delegate_command');if(!t||t.ekodiCapability!=='ai.command.delegate'||t.securitySchemes?.[0]?.type!=='oauth2'||t.annotations?.destructiveHint!==false)process.exit(1)"
+          mcp_unauth=$(curl -fsS --connect-timeout 5 --max-time 12 -H 'content-type: application/json' --data-binary '{"jsonrpc":"2.0","id":902,"method":"tools/call","params":{"name":"ekodi_delegate_command","arguments":{"goal":"production boundary probe","risk":"normal"}}}' 'https://ekodi.kr/mcp')
+          printf '%s' "$mcp_unauth" > /tmp/mcp-unauth.json
+          node -e "const b=require('/tmp/mcp-unauth.json');const r=b?.result;if(r?.structuredContent?.authenticated!==false||!String(r?._meta?.['mcp/www_authenticate']?.[0]||'').includes('oauth-protected-resource'))process.exit(1)"
           printf '%s' "$health" | grep -q '"ok":true'
+          printf '%s' "$ai_modules" | grep -q '"directProviderStorageAccess":false'
+          printf '%s' "$ai_modules" | grep -q '"providerTrainingAllowed":false'
           [ "$devices" = '401' ]
           [ "$ai" = '401' ]
+          [ "$ai_v8" = '401' ]
           [ "$provider" = '401' ]
           [ "$user_ai" = '401' ]
           [ "$membership" = '401' ]
           [ "$catalog" = '200' ]
+          [ "$i18n" = '200' ]
+          [ "$language_admin" = '401' ]
+          grep -Fq '"publishedLocales":["ko-KR"]' /tmp/i18n.json
           grep -Fq '"inheritedDefault":true' /tmp/catalog.json
       - name: Record recovery point
         env:
@@ -402,7 +541,7 @@ jobs:
           payload=$(jq -n \
             --arg state "$state" \
             --arg context 'ekodi/control-api-production' \
-            --arg description "Control API production deployment: $JOB_STATUS" \
+            --arg description "Control API production deployment: $JOB_STATUS; AI configured=${AI_PROVIDER_READY_COUNT:-0}" \
             --arg target_url "$target_url" \
             '{state:$state,context:$context,description:$description,target_url:$target_url}')
           curl --fail-with-body -sS \
@@ -412,3 +551,5 @@ jobs:
             -H 'X-GitHub-Api-Version: 2022-11-28' \
             "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \
             -d "$payload"
+
+# manual rerun 2026-09-08T00:36+09

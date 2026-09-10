@@ -1,6 +1,6 @@
 import authWorker, { isAllowedOrigin } from './auth-worker.js';
 import { getCoreAiGatewayStatus } from './core-ai-gateway.js';
-import { createOpenAiProvider } from './openai-provider-adapter.js';
+
 import { CORE_PERMISSION_POLICY, evaluateCorePermission } from './core-permission.js';
 import { CORE_WORKFLOW_POLICY } from './core-workflow.js';
 import { CORE_EVIDENCE_POLICY } from './core-evidence.js';
@@ -166,7 +166,7 @@ async function latestRecoveryStatus(env) {
 }
 
 function aiGatewayStatus(env = {}) {
-  return getCoreAiGatewayStatus(env, [createOpenAiProvider(env)]);
+  return getCoreAiGatewayStatus(env, []);
 }
 
 function centralContracts() {

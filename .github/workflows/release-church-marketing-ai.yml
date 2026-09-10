@@ -42,6 +42,8 @@ jobs:
         with:
           node-version: '24'
 
+      - name: EKODI AI Orchestration Gate
+        run: node "$GITHUB_WORKSPACE/controller/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
       - name: Validate My EKODI church entry
         working-directory: controller
         run: |
@@ -50,7 +52,7 @@ jobs:
           grep -Fq '/church-marketing-ai.js?v=20260827-church-marketing-1' my/index.html
           grep -Fq 'MARKETING_URL' my/church-marketing-ai.js
           grep -Fq "url.searchParams.set('workspace', workspaceKey)" my/church-marketing-ai.js
-          grep -Fq 'https://marketing.ekodi.kr/church/' my/church-marketing-ai.js
+          grep -Fq 'https://ekodi.kr/ekodichurch/marketing/' my/church-marketing-ai.js
 
       - name: Build and validate church Marketing AI workspace
         working-directory: source
@@ -96,7 +98,7 @@ jobs:
           for attempt in $(seq 1 24); do
             if verify 'https://marketing.ekodi.kr/church/' 'data-ekodi-church-marketing-ai' /tmp/church.html \
               && verify 'https://marketing.ekodi.kr/church/app.js' 'ekodi-church-marketing-drafts-v1' /tmp/church-app.js \
-              && verify 'https://my.ekodi.kr/' 'church-marketing-ai.js?v=20260827-church-marketing-1' /tmp/my.html \
+              && verify 'https://ekodi.kr/my/' 'church-marketing-ai.js?v=20260827-church-marketing-1' /tmp/my.html \
               && verify 'https://marketing.ekodi.kr/' 'id="freeTrialForm"' /tmp/marketing.html \
               && verify 'https://jadam.ekodi.kr/' 'id="googleCustomerAuth"' /tmp/jadam.html \
               && verify 'https://pizzamaru.ekodi.kr/' 'id="googleCustomerAuth"' /tmp/pizza.html \

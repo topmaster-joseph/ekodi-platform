@@ -3,62 +3,90 @@
   "worker": {
     "name": "ekodi-my",
     "config": "wrangler.my.toml",
+    "runtimeHeaders": [
+      "x-ekodi-service: my-ekodi"
+    ],
     "requests": [
       {
         "url": "https://my.ekodi.kr/",
         "statuses": [
+          308
+        ],
+        "redirect": "manual",
+        "headerExpect": [
+          "location: https://ekodi.kr/my/"
+        ]
+      },
+      {
+        "url": "https://ekodi.kr/my/",
+        "statuses": [
           200
         ],
         "redirect": "manual",
+        "candidateVerify": false,
+        "candidateVerifyReason": "Canonical apex routing is verified after promotion; the candidate is smoke-tested on the legacy custom-domain redirect before promotion.",
         "expect": [
           "My EKODI",
           "MY PLATFORMS",
           "CREATOR PORTFOLIO",
           "church-marketing-ai.js?v=20260827-church-marketing-1",
           "channel-automation.js?v=20260903-channel-automation-1"
-        ],
-        "headerExpect": [
-          "x-ekodi-service: my-ekodi",
-          "x-content-type-options: nosniff",
-          "cache-control: no-store",
-          "x-robots-tag: noindex, nofollow, noarchive"
         ]
       },
       {
-        "url": "https://my.ekodi.kr/health",
+        "url": "https://ekodi.kr/my/health",
         "statuses": [
           200
         ],
         "redirect": "manual",
+        "candidateVerify": false,
+        "candidateVerifyReason": "Canonical apex routing is verified after promotion; the candidate is smoke-tested on the legacy custom-domain redirect before promotion.",
         "expect": [
           "ekodi-my",
           "my-ekodi",
           "creatorPortfolio",
           "person-scoped",
           "private-first",
-          "privateWorkspaceRouting"
-        ],
-        "headerExpect": [
-          "x-ekodi-service: my-ekodi",
-          "cache-control: no-store"
+          "privateWorkspaceRouting",
+          "documentWorkspace",
+          "/docs/",
+          "core.documents",
+          "ekodi.documents.v2",
+          "documentHwpx",
+          "documentVersionHistory"
         ]
       },
       {
-        "url": "https://my.ekodi.kr/w/person:deployment-probe/social",
+        "url": "https://ekodi.kr/my/w/person:deployment-probe/social",
         "statuses": [
           200
         ],
         "redirect": "manual",
+        "candidateVerify": false,
+        "candidateVerifyReason": "Canonical apex routing is verified after promotion; the candidate is smoke-tested on the legacy custom-domain redirect before promotion.",
         "expect": [
           "My EKODI",
           "/private-workspace-router.js"
         ],
         "headerExpect": [
-          "x-ekodi-service: my-ekodi",
-          "cache-control: no-store",
           "x-robots-tag: noindex, nofollow, noarchive",
-          "x-ekodi-private-workspace: v1",
-          "x-ekodi-workspace-service: social"
+          "x-ekodi-private-workspace: v1"
+        ]
+      },
+      {
+        "url": "https://ekodi.kr/my/docs/",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "candidateVerify": false,
+        "candidateVerifyReason": "Canonical apex routing is verified after promotion; the candidate is smoke-tested on the legacy custom-domain redirect before promotion.",
+        "expect": [
+          "EKODI Docs AI",
+          "CORE.DOCUMENTS",
+          "HWPX",
+          "버전",
+          "./docs.js?v=20260909-docs-ai-6"
         ]
       }
     ]

@@ -4,6 +4,8 @@ import { readFile } from 'node:fs/promises';
 import { adminMenuGroups, adminMenuOrder, getAdminMenuItem } from '../admin-menu-registry.js';
 
 const layout = await readFile(new URL('../admin-menu-layout.js', import.meta.url), 'utf8');
+const sidebar = await readFile(new URL('../admin-sidebar.js', import.meta.url), 'utf8');
+const menuRuntime = await readFile(new URL('../admin-menu-runtime.js', import.meta.url), 'utf8');
 
 test('internal technical sections stay out of primary navigation', () => {
   assert.ok(layout.includes("const INTERNAL=new Set(['services','deployments','policies']);"));
@@ -19,7 +21,7 @@ test('internal technical sections stay out of primary navigation', () => {
 test('internal hashes converge into demand-loaded AI Ops', () => {
   assert.ok(layout.includes("function routeInternal(){dc=false;requestedSection='aiops'"));
   assert.ok(layout.includes("requestDemand('aiops')"));
-  assert.ok(layout.includes("history.replaceState(null,'','#ai-ops')"));
+  assert.ok(layout.includes("replaceSectionUrl('aiops')"));
   assert.ok(layout.includes("const explicitHashSection=()=>HASH.get(location.hash.toLowerCase())||''"));
   assert.doesNotMatch(layout, /setInterval\(/);
 });
@@ -36,12 +38,12 @@ test('Campus shortcuts cannot reopen hidden technical panels', () => {
   assert.ok(layout.includes('routeInternal()'));
 });
 
-test('human-facing Admin menu has one canonical order inside eight work areas', () => {
-  assert.deepEqual(adminMenuGroups(), ['home','operations','people','services','ai','business','data','system']);
+test('human-facing Admin menu has one canonical order inside five EKODI axes', () => {
+  assert.deepEqual(adminMenuGroups(), ['home','operations','space','services','system']);
   assert.deepEqual(adminMenuOrder(), [
-    'campus','public-site-controls','work','communication','workspace','organization','cheonggye-members','clients','admins',
-    'life-ai','community','books','social','aiops','devotional','marketing-ai','ai-module-spec','ai-membership',
-    'finance','tax','affiliates','storage','api-cost','health','security','devices','architecture',
+    'campus','work','communication','finance','tax','clients','cmpmyi','organization','workspace',
+    'common-services','life-ai','personal-finance','community','books','social','devotional','marketing-ai','ai-membership','supply-network','insurance',
+    'public-site-controls','language-status','architecture','security','admins','ai-module-spec','storage','capabilities','aiops','ai-settings','openai','devices','health','api-cost',
   ]);
   assert.ok(layout.includes('const ORDER=Object.freeze(adminMenuOrder());'));
   assert.ok(layout.includes('const RANK=new Map(ORDER.map((section,index)=>[section,index+1]));'));
@@ -49,5 +51,14 @@ test('human-facing Admin menu has one canonical order inside eight work areas', 
 });
 
 test('Admin sidebar menu uses compact spacing without shrinking label readability', () => {
-  for (const marker of ['ekodi-admin-menu-density','gap:0!important','min-height:30px!important','padding:4px 9px!important','font-size:12px!important']) assert.ok(layout.includes(marker));
+  for (const marker of ['ekodi-admin-workbench-tabs-style','gap:2px!important','min-height:40px','padding:8px 10px','font-size:14px']) assert.ok(sidebar.includes(marker));
+});
+
+test('administrator access waits for its runtime instead of recursively clicking the hidden source menu', () => {
+  assert.ok(layout.includes("if(section==='admins')return requestAdminAccess();"));
+  assert.ok(layout.includes("window.EKODIAdminMenu?.ensureAdminAccess?.()"));
+  assert.ok(menuRuntime.includes('function loadCurrentSession()'));
+  assert.ok(menuRuntime.includes('async function ensureAdminAccess()'));
+  assert.ok(menuRuntime.includes('refreshAdminAccess: loadAccounts, ensureAdminAccess'));
+  assert.ok(menuRuntime.indexOf("if (currentSession.role === 'super_admin') ensureAdminPanel();") < menuRuntime.indexOf('await installContextControl();'));
 });

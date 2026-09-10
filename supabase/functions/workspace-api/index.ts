@@ -70,9 +70,22 @@ async function tenantSpaces(db:any,userId:string){
     workspace_id:String(row.id),slug:String(row.slug),name:String(row.name),role:roles.get(String(row.id))||"member",status:String(row.status),url:`https://ekodi.kr/${encodeURIComponent(String(row.slug))}`,
   }));
 }
-async function resolveTenantSpace(db:any,userId:string,slug:string){
+async function storeSpaces(db:any){
+  const {data,error}=await db.rpc("current_store_operating_spaces");
+  if(error){
+    if(["42883","PGRST202"].includes(String(error.code||"")))return [];
+    throw error;
+  }
+  return Array.isArray(data)?data:[];
+}
+async function allSpaces(db:any,userId:string){
+  const [stores,tenants]=await Promise.all([storeSpaces(db),tenantSpaces(db,userId)]);
+  const seen=new Set(stores.map((item:any)=>String(item.slug)));
+  return [...stores,...tenants.filter((item:any)=>!seen.has(String(item.slug)))];
+}
+async function resolveOperatingSpace(db:any,userId:string,slug:string){
   if(!validSpaceSlug(slug))return null;
-  const spaces=await tenantSpaces(db,userId);
+  const spaces=await allSpaces(db,userId);
   return spaces.find((item:any)=>item.slug===slug)??null;
 }
 async function personWorkspaces(db:any){
@@ -119,14 +132,21 @@ Deno.serve(async(req)=>{
   try{
     if(req.method==="GET"&&path==="/health")return json(req,{ok:true,service:"workspace-api",scope:"person-space",sites:Object.keys(OPEN_SSO_ORIGINS),spaceRoutes:["/{slug}"]});
     if(req.method==="GET"&&path==="/spaces"){
-      const spaces=await tenantSpaces(auth.db,auth.user.id);
+      const spaces=await allSpaces(auth.db,auth.user.id);
       return json(req,{spaces,user:{id:auth.user.id,email:auth.user.email??null},identityKey:"ekodi_id",workspaceKey:"workspace_id"});
     }
     if(req.method==="GET"&&path==="/spaces/resolve"){
       const slug=clip(url.searchParams.get("slug"),100).toLowerCase();
-      const space=await resolveTenantSpace(auth.db,auth.user.id,slug);
+      const space=await resolveOperatingSpace(auth.db,auth.user.id,slug);
       if(!space)return json(req,{error:"workspace_not_found_or_forbidden"},404);
-      return json(req,{space,route:{slug},authorization:"tenant_members+RLS"});
+      return json(req,{space,route:{slug},authorization:space.kind==="store"?"store_members+RLS":"tenant_members+RLS"});
+    }
+    if(req.method==="GET"&&path==="/spaces/store-dashboard"){
+      const slug=clip(url.searchParams.get("slug"),100).toLowerCase();
+      if(!validSpaceSlug(slug))return json(req,{error:"invalid_workspace_slug"},400);
+      const {data,error}=await auth.db.rpc("store_operating_space_snapshot",{p_operating_slug:slug});
+      if(error){ if(error.code==="22023")return json(req,{error:"workspace_not_found"},404); if(error.code==="42501")return json(req,{error:"workspace_access_required"},403); throw error; }
+      return json(req,{workspace:data,authorization:"store_members+RLS",externalChannelPolicy:"official-contract-only"});
     }
     if(req.method==="GET"&&path==="/trade/context"){
       const workspaceSlug=clip(url.searchParams.get("workspace"),100).toLowerCase()||"ekodi-biz";
@@ -232,8 +252,8 @@ Deno.serve(async(req)=>{
       const site=clip(url.searchParams.get("site"),40);
       if(!OPEN_SSO_ORIGINS[site])return json(req,{error:"site_not_supported"},400);
       if(site==="space"){
-        const spaces=await tenantSpaces(auth.db,auth.user.id);
-        return json(req,{workspaces:spaces,user:{id:auth.user.id,email:auth.user.email??null},scope:"tenant"});
+        const spaces=await allSpaces(auth.db,auth.user.id);
+        return json(req,{workspaces:spaces,user:{id:auth.user.id,email:auth.user.email??null},scope:"workspace"});
       }
       const workspaces=await personWorkspaces(auth.db);
       return json(req,{workspaces,user:{id:auth.user.id,email:auth.user.email??null},scope:"person"});
@@ -245,8 +265,8 @@ Deno.serve(async(req)=>{
       if(!OPEN_SSO_ORIGINS[site]||!workspaceKey||!returnTo)return json(req,{error:"invalid_handoff_target"},400);
       if(site==="space"){
         const separator=workspaceKey.indexOf(":");
-        const type=separator>0?workspaceKey.slice(0,separator):"",slug=separator>0?workspaceKey.slice(separator+1):"";
-        const selected=await resolveTenantSpace(auth.db,auth.user.id,type,slug);
+        const slug=separator>0?workspaceKey.slice(separator+1):workspaceKey;
+        const selected=await resolveOperatingSpace(auth.db,auth.user.id,slug);
         if(!selected)return json(req,{error:"workspace_access_required"},403);
         const proof=await issueIdentityHandoff(auth.authorization);
         return json(req,{ok:true,tokenHash:proof.tokenHash,type:proof.type||"email",returnTo,expiresFor:"single_use",workspace:selected});

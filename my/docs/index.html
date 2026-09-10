@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="ko" data-ekodi-global-nav="off" data-ekodi-character="off" data-ekodi-footer-profile="inherit">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="robots" content="noindex,nofollow,noarchive">
+  <meta name="ekodi-ui-type" content="USER">
+  <meta name="ekodi-docs-release" content="20260910-readability-verified">
+  <title>EKODI Docs AI | My EKODI</title>
+  <link rel="stylesheet" href="./docs.css?v=20260908-docs-ui-4">
+  <link rel="stylesheet" href="./docs-readability.css?v=20260910-readability-verified">
+  <link rel="stylesheet" href="./docs-focus.css?v=20260909-focus-1">
+</head>
+<body data-ekodi-ui="USER" class="docs-focus library-collapsed ai-collapsed">
+  <header class="docs-topbar">
+    <a class="brand" href="../"><span class="brand-mark" aria-hidden="true">E</span><span><strong>EKODI Docs AI</strong><small>문서 작업공간</small></span></a>
+    <div class="top-actions">
+      <button id="toggleLibrary" class="ghost panel-toggle" type="button" aria-pressed="true" aria-controls="docsLibrary" title="문서함 열기">문서함</button>
+      <button id="toggleAi" class="ghost panel-toggle" type="button" aria-pressed="true" aria-controls="docsAiPanel" title="AI 패널 열기">AI</button>
+      <span id="saveState" class="save-state" aria-live="polite">로컬 자동저장</span>
+      <button id="authButton" class="ghost" type="button">Google로 시작</button>
+    </div>
+  </header>
+
+  <main class="workspace-shell">
+    <aside id="docsLibrary" class="library-panel" aria-label="문서 목록">
+      <div class="panel-title">
+        <div><small>MY DOCUMENTS</small><h1>내 문서</h1></div>
+        <button id="newDoc" class="icon-button" type="button" title="새 문서" aria-label="새 문서">＋</button>
+      </div>
+      <div class="library-actions">
+        <label class="file-button">가져오기<input id="fileInput" type="file" accept=".txt,.md,.markdown,.html,.htm,.docx,.hwpx,application/hwp+zip,text/plain,text/markdown,text/html,application/vnd.openxmlformats-officedocument.wordprocessingml.document"></label>
+        <button id="saveCloud" type="button" class="secondary">계정 저장</button>
+        <button id="historyToggle" type="button" class="secondary">버전</button>
+        <label class="file-button source-file-button">원본 연결<input id="sourceFileInput" type="file" accept=".hwp,.hwpx,.pdf,application/hwp+zip,application/x-hwp,application/vnd.hancom.hwp,application/pdf"></label>
+      </div>
+      <p id="libraryHint" class="muted">로그인 전에는 이 브라우저에 안전하게 임시 저장합니다.</p>
+      <section id="versionPanel" class="version-panel" hidden><div class="version-head"><strong>버전 이력</strong><small>복원 후 저장 전까지 원본은 유지됩니다.</small></div><div id="versionList" class="version-list"></div></section>
+      <div id="docList" class="doc-list" aria-live="polite"></div>
+    </aside>
+
+    <section class="editor-shell">
+      <div class="document-head">
+        <input id="titleInput" class="title-input" maxlength="160" value="제목 없는 문서" aria-label="문서 제목">
+        <div class="document-meta">
+          <span id="formatBadge">EKODI DOC</span>
+          <span id="wordCount">0자</span>
+          <span id="updatedAt">지금</span>
+          <span id="sourceStatus" class="source-status">웹 문서</span>
+        </div>
+      </div>
+
+      <div class="toolbar" role="toolbar" aria-label="문서 서식">
+        <button type="button" data-command="undo" title="실행 취소">↶</button>
+        <button type="button" data-command="redo" title="다시 실행">↷</button>
+        <span class="divider" aria-hidden="true"></span>
+        <button type="button" data-command="bold"><strong>B</strong></button>
+        <button type="button" data-command="italic"><em>I</em></button>
+        <button type="button" data-command="underline"><u>U</u></button>
+        <select id="blockType" aria-label="문단 유형">
+          <option value="p">본문</option>
+          <option value="h1">제목 1</option>
+          <option value="h2">제목 2</option>
+          <option value="h3">제목 3</option>
+          <option value="blockquote">인용</option>
+        </select>
+        <button type="button" data-command="insertUnorderedList">• 목록</button>
+        <button type="button" data-command="insertOrderedList">1. 목록</button>
+        <button id="insertTable" type="button">표</button>
+        <button id="insertLink" type="button">링크</button>
+        <span class="spacer"></span>
+        <button id="downloadSource" type="button" class="secondary source-download" hidden>원본 받기</button>
+        <div class="export-menu">
+          <button id="exportToggle" type="button" class="secondary">내보내기 ▾</button>
+          <div id="exportChoices" class="export-choices" hidden>
+            <button type="button" data-export="docx">DOCX</button>
+            <button type="button" data-export="hwpx">HWPX</button>
+            <button type="button" data-export="html">HTML</button>
+            <button type="button" data-export="md">Markdown</button>
+            <button type="button" data-export="txt">TXT</button>
+            <button type="button" data-export="pdf">PDF</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="page-wrap" id="pageWrap">
+        <div id="dropOverlay" class="drop-overlay" hidden aria-hidden="true"><strong>문서를 여기에 놓으세요</strong><span>DOCX · HWPX · TXT · Markdown · HTML</span></div>
+        <article id="editor" class="paper document-ready" contenteditable="true" spellcheck="true" aria-label="문서 편집 영역">
+          <h1>EKODI Docs AI</h1>
+          <p>여기에서 직접 쓰거나 파일을 가져오세요. AI가 필요할 때만 오른쪽 패널을 열어 선택 문장이나 전체 문서의 수정을 요청할 수 있습니다.</p>
+        </article>
+      </div>
+    </section>
+
+    <aside id="docsAiPanel" class="ai-panel" aria-label="AI 편집 도우미">
+      <div class="ai-heading">
+        <div class="ai-orb" aria-hidden="true">AI</div>
+        <div><small>CORE.DOCUMENTS</small><h2>AI 편집 도우미</h2></div>
+      </div>
+      <p class="muted">AI는 바로 덮어쓰지 않습니다. 결과를 먼저 보여주고, 적용은 사용자가 결정합니다.</p>
+      <div class="scope-row">
+        <span>대상</span>
+        <strong id="selectionState">전체 문서</strong>
+      </div>
+      <div class="quick-actions">
+        <button type="button" data-ai-operation="proofread">교정</button>
+        <button type="button" data-ai-operation="rewrite">다듬기</button>
+        <button type="button" data-ai-operation="shorten">줄이기</button>
+        <button type="button" data-ai-operation="expand">확장</button>
+        <button type="button" data-ai-operation="summarize">요약</button>
+      </div>
+      <label class="instruction">
+        <span>추가 요청</span>
+        <textarea id="aiInstruction" maxlength="4000" placeholder="예: 지원사업 평가자가 한눈에 이해하도록 간결하게"></textarea>
+      </label>
+      <button id="runAi" class="primary" type="button">AI 편집 제안 만들기</button>
+      <p id="aiStatus" class="ai-status" aria-live="polite">선택 영역이 없으면 전체 문서를 대상으로 합니다. 긴 문서는 자동 분할해 한 번의 편집 작업으로 처리합니다.</p>
+      <p id="aiQuota" class="ai-quota">AI 사용량은 실행 후 표시됩니다.</p>
+
+      <section id="aiResult" class="ai-result" hidden>
+        <div class="result-head"><strong>AI 제안</strong><span id="aiMode">검토 전</span></div>
+        <textarea id="aiPreview" readonly></textarea>
+        <div class="result-actions">
+          <button id="applyAi" class="primary" type="button">적용</button>
+          <button id="appendAi" class="secondary" type="button">뒤에 추가</button>
+          <button id="dismissAi" class="ghost" type="button">취소</button>
+        </div>
+      </section>
+
+      <details class="compatibility">
+        <summary>파일 호환 범위</summary>
+        <p><strong>가져오기</strong> TXT, Markdown, HTML, DOCX, HWPX</p>
+        <p><strong>원본 연결</strong> HWP, HWPX, PDF는 비공개 원본으로 보존합니다.</p>
+        <p><strong>내보내기</strong> DOCX, HWPX, HTML, Markdown, TXT, PDF</p>
+        <p>HWPX는 원본 패키지를 함께 보존하고 텍스트 편집 시 표·서식 구조를 유지하는 원형 보존 내보내기를 우선합니다. 바이너리 HWP는 원본 그대로 보존·다운로드할 수 있으며 웹 편집은 HWPX 변환본을 사용합니다.</p>
+      </details>
+    </aside>
+  </main>
+
+  <button id="panelBackdrop" class="panel-backdrop" type="button" aria-label="열린 보조 패널 닫기" hidden></button>
+  <script src="../config.js"></script>
+  <script src="./docs-focus.js?v=20260909-focus-1"></script>
+  <script type="module" src="./docs.js?v=20260909-docs-ai-6"></script>
+</body>
+</html>

@@ -19,6 +19,12 @@ test('tenant and service admins use site-local canonical paths', async () => {
   assert.match(js, /marketing-connect-api\.ekodi\.kr/);
   assert.ok(js.includes('Google로 YouTube 연결'));
   assert.match(js, /subject_type=tenant/);
+  assert.ok(js.includes('/auth/v1/verify'));
+  assert.ok(js.includes('/auth/v1/token?grant_type=refresh_token'));
+  assert.ok(js.includes('token_hash'));
+  assert.ok(js.includes('apikey:SUPABASE_KEY'));
+  assert.ok(!js.includes("fetch('/api/auth/exchange'"));
+  assert.ok(!js.includes("fetch('/api/auth/refresh'"));
 });
 
 

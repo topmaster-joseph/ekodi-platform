@@ -108,6 +108,8 @@ jobs:
           ! grep -Fq 'PerformanceObserver' dist/admin-central-handoff.js
           grep -Fq "navLabel.textContent = '시스템 건강'" dist/system-health-admin.js
           grep -Fq "pageTitle.textContent = '시스템 건강'" dist/system-health-admin.js
+          grep -Fq 'data-traffic-intelligence-status' dist/system-health-admin.js
+          grep -Fq '.traffic-intelligence-grid' dist/system-health-admin.css
           grep -Fq '.system-health-overall' dist/system-health-admin.css
           echo "Admin production verification contract ready: version=$version"
 
@@ -128,7 +130,7 @@ jobs:
           set -euo pipefail
 
           verify_root() {
-            code=$(curl -sS --max-redirs 0 -D /tmp/admin-headers -o /tmp/admin-body -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://admin.ekodi.kr/' || true)
+            code=$(curl -sS --max-redirs 0 -D /tmp/admin-headers -o /tmp/admin-body -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/admin/' || true)
             echo "admin root -> $code"
             [ "$code" = '200' ] || return 1
             grep -Fiq 'x-ekodi-route: admin-shell' /tmp/admin-headers || return 1
@@ -147,7 +149,7 @@ jobs:
           verify_asset() {
             asset="$1"
             expected="$2"
-            code=$(curl -sS -D /tmp/asset-headers -o /tmp/admin-asset -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://admin.ekodi.kr/${asset}?v=$LIVE_VERSION" || true)
+            code=$(curl -sS -D /tmp/asset-headers -o /tmp/admin-asset -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/admin/${asset}?v=$LIVE_VERSION" || true)
             echo "$asset?v=$LIVE_VERSION -> $code"
             [ "$code" = '200' ] || return 1
             grep -Fiq 'x-ekodi-route: admin-asset' /tmp/asset-headers || return 1
@@ -156,7 +158,7 @@ jobs:
           }
 
           verify_compact_without_readable_css() {
-            code=$(curl -sS -D /tmp/compact-headers -o /tmp/compact-css -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://admin.ekodi.kr/admin-compact.css?v=$LIVE_VERSION" || true)
+            code=$(curl -sS -D /tmp/compact-headers -o /tmp/compact-css -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/admin/admin-compact.css?v=$LIVE_VERSION" || true)
             [ "$code" = '200' ] || return 1
             grep -Fiq 'cache-control: public, max-age=31536000, immutable' /tmp/compact-headers || return 1
             ! grep -Fq 'admin-readable-command.css' /tmp/compact-css || return 1
@@ -169,6 +171,8 @@ jobs:
               && verify_asset 'admin-demand-loader.js' "scripts: ['system-health-admin.js']" \
               && verify_asset 'system-health-admin.js' "navLabel.textContent = '시스템 건강'" \
               && verify_asset 'system-health-admin.js' "pageTitle.textContent = '시스템 건강'" \
+              && verify_asset 'system-health-admin.js' 'data-traffic-intelligence-status' \
+              && verify_asset 'system-health-admin.css' '.traffic-intelligence-grid' \
               && verify_asset 'system-health-admin.css' '.system-health-overall' \
               && verify_asset 'admin-lazy-features.js' "actionType:'ui.change_request'" \
               && verify_asset 'admin-lazy-features.js' '전문 기능 선택을 관리자에게 넘기지 않습니다' \
@@ -206,7 +210,7 @@ jobs:
           - commit: \`$COMMIT_SHA\`
           - production check: \`$outcome\`
           - upstream canonical shared-site deployment: \`$UPSTREAM_OUTCOME\`
-          - canonical: https://admin.ekodi.kr/
+          - canonical: https://ekodi.kr/admin/
           - contract: fingerprinted thin shell · immutable assets · standalone Health · flat AI Ops · internal specialist routing
           - verification workflow: $RUN_URL
           - upstream workflow: $UPSTREAM_RUN_URL

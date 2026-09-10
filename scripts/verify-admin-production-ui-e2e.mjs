@@ -1,17 +1,14 @@
 import { chromium } from 'playwright';
+import { adminMenuOrder, getAdminMenuGroupForSection } from '../admin-menu-registry.js';
 
-const ADMIN_URL = process.env.ADMIN_URL || 'https://admin.ekodi.kr/';
+const ADMIN_URL = process.env.ADMIN_URL || 'https://ekodi.kr/admin/';
 const SYNTHETIC_TOKEN = 'ekodi-production-ui-e2e';
 const SYNTHETIC_EMAIL = 'production-ui-e2e@local.invalid';
-const menus = [
-  ['campus','home'],['public-site-controls','home'],['work','operations'],['communication','operations'],
-  ['workspace','people'],['organization','people'],['clients','people'],['admins','people'],
-  ['life-ai','services'],['community','services'],['books','services'],['social','services'],
-  ['aiops','ai'],['marketing-ai','ai'],['ai-module-spec','ai'],['ai-membership','ai'],
-  ['finance','business'],['tax','business'],['affiliates','business'],
-  ['storage','data'],['api-cost','data'],
-  ['health','system'],['security','system'],['devices','system'],['architecture','system'],
-];
+const menuIds = adminMenuOrder();
+const menus = menuIds.map(id => [id, getAdminMenuGroupForSection(id)]);
+const workAreas = [...new Set(menus.map(([, group]) => group))];
+
+if (menus.some(([id, group]) => !id || !group)) throw new Error('Admin menu registry contains an ungrouped visible menu');
 
 const browser = await chromium.launch({ headless: true });
 const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
@@ -27,7 +24,8 @@ page.on('console', message => {
   if (message.type() === 'error' && !/cloudflareinsights\.com\/beacon/i.test(message.text())) console.log(`[browser console] ${message.text()}`);
 });
 
-await page.route('https://api.ekodi.kr/api/session', async route => {
+// Admin session validation is canonically served through the apex Core route.
+await page.route('https://ekodi.kr/api/session', async route => {
   await route.fulfill({
     status: 200,
     contentType: 'application/json; charset=utf-8',
@@ -45,8 +43,9 @@ await page.route('https://api.ekodi.kr/api/session', async route => {
 async function waitForAdminShell() {
   await page.waitForFunction(() => document.documentElement.dataset.ekodiAdminReady === 'true', null, { timeout: 30000 });
   await page.waitForFunction(() => window.EKODIAdminPanels && window.EKODIAdminSidebar, null, { timeout: 30000 });
-  await page.waitForFunction(() => document.querySelectorAll('button[data-admin-global-group]').length >= 8, null, { timeout: 30000 });
+  await page.waitForFunction(expected => document.querySelectorAll('button[data-admin-global-group]').length >= expected, workAreas.length, { timeout: 30000 });
   await page.waitForFunction(() => document.querySelectorAll('.admin-context-source .nav').length >= 1, null, { timeout: 30000 });
+  await page.waitForFunction(() => Boolean(document.documentElement.dataset.ekodiDesignEngine) && document.documentElement.dataset.ekodiDesignAudit === 'pass', null, { timeout: 30000 });
 }
 
 const response = await page.goto(ADMIN_URL, { waitUntil: 'domcontentloaded', timeout: 45000 });
@@ -73,6 +72,39 @@ if (shellState.hidden || shellState.display === 'none' || shellState.visibility 
 }
 if (shellState.shell !== 'shared-v2') throw new Error(`Admin shared shell did not install: ${JSON.stringify(shellState)}`);
 
+const workbenchState = await page.evaluate(() => {
+  const body = document.body;
+  const app = document.querySelector('#app');
+  const sidebar = document.querySelector('.sidebar');
+  const nav = sidebar?.querySelector('nav');
+  const workspace = app?.querySelector('main');
+  const contextTabs = workspace?.querySelector(':scope>.admin-context-tabs-shell');
+  const style = node => node ? getComputedStyle(node) : null;
+  const sidebarRect = sidebar?.getBoundingClientRect();
+  return {
+    topOffset: parseFloat(style(body)?.paddingTop || '0'),
+    bodyOverflowY: style(body)?.overflowY || '',
+    appOverflowY: style(app)?.overflowY || '',
+    sidebarOverflowY: style(sidebar)?.overflowY || '',
+    navOverflowY: style(nav)?.overflowY || '',
+    navIndependentScroll: nav?.dataset.ekodiIndependentScroll || '',
+    workspaceOverflowY: style(workspace)?.overflowY || '',
+    workspaceScrollOwner: workspace?.dataset.ekodiScrollOwner || '',
+    contextTabsPosition: style(contextTabs)?.position || '',
+    contextTabsTop: style(contextTabs)?.top || '',
+    sidebarTop: sidebarRect ? Math.round(sidebarRect.top) : null,
+    designAudit: document.documentElement.dataset.ekodiDesignAudit || '',
+    designEngine: document.documentElement.dataset.ekodiDesignEngine || '',
+  };
+});
+if (workbenchState.topOffset > 0.5) throw new Error(`Admin top offset leaked into production: ${JSON.stringify(workbenchState)}`);
+if (workbenchState.bodyOverflowY !== 'hidden' || workbenchState.appOverflowY !== 'hidden') throw new Error(`Admin frame must be scroll-locked: ${JSON.stringify(workbenchState)}`);
+if (workbenchState.sidebarOverflowY !== 'hidden' || workbenchState.navOverflowY !== 'hidden' || workbenchState.navIndependentScroll !== 'false') throw new Error(`Admin primary sidebar scroll contract failed: ${JSON.stringify(workbenchState)}`);
+if (!['auto','scroll'].includes(workbenchState.workspaceOverflowY) || workbenchState.workspaceScrollOwner !== 'workspace') throw new Error(`Admin workspace must be the single vertical scroll owner: ${JSON.stringify(workbenchState)}`);
+if (workbenchState.contextTabsPosition !== 'sticky' || workbenchState.sidebarTop !== 0) throw new Error(`Admin fixed workbench geometry failed: ${JSON.stringify(workbenchState)}`);
+if (!workbenchState.designEngine || workbenchState.designAudit === 'fail') throw new Error(`Admin Design Engine did not activate cleanly: ${JSON.stringify(workbenchState)}`);
+console.log(`ADMIN_WORKBENCH=${JSON.stringify(workbenchState)}`);
+
 const assetVersion = await page.locator('script[src*="admin-authenticated-shell.js?v="]').getAttribute('src').then(src => new URL(src, ADMIN_URL).searchParams.get('v'));
 if (!assetVersion) throw new Error('Production Admin fingerprint is missing');
 for (const asset of ['ekodi-message-ui.js', 'google-admin-auth.js']) {
@@ -82,16 +114,27 @@ for (const asset of ['ekodi-message-ui.js', 'google-admin-auth.js']) {
   if (!/javascript|ecmascript|text\/plain/i.test(contentType)) throw new Error(`${asset} has non-script content type: ${contentType || '(missing)'}`);
 }
 
-const sourceIds = await page.locator('.admin-context-source .nav').evaluateAll(nodes => nodes.map(node => node.dataset.section || node.dataset.lazySection || '').filter(Boolean));
-const missingSources = menus.map(([id]) => id).filter(id => !sourceIds.includes(id));
-if (missingSources.length) throw new Error(`Missing production menu source(s): ${missingSources.join(', ')}`);
+const productionOrder = await page.evaluate(() => window.EKODIAdminPanels?.visibleMenuOrder || []);
+if (productionOrder.length !== menuIds.length) throw new Error(`Production menu count drifted: registry=${menuIds.length}, production=${productionOrder.length}`);
+for (const id of menuIds) if (!productionOrder.includes(id)) throw new Error(`Production menu registry missing ${id}`);
+
+async function dispatchClick(locator, timeout = 10_000) {
+  await locator.waitFor({ state: 'visible', timeout });
+  await locator.evaluate(node => { setTimeout(() => node.click(), 0); return true; });
+}
 
 const results = [];
+let selectedWorkArea = null;
 for (const [id, group] of menus) {
   console.log(`[PROD-E2E] ${id}: begin`);
-  const global = page.locator(`button[data-admin-global-group="${group}"]`);
-  await global.waitFor({ state: 'visible', timeout: 10000 });
-  await global.click({ timeout: 10000 });
+  if (selectedWorkArea !== group) {
+    const global = page.locator(`button[data-admin-global-group="${group}"]`);
+    await global.waitFor({ state: 'visible', timeout: 10000 });
+    const active = await global.evaluate(node => node.getAttribute('aria-current') === 'page' || node.classList.contains('active'));
+    if (!active) await dispatchClick(global);
+    await page.waitForFunction(target => [...document.querySelectorAll('button[data-admin-global-group]')].some(node => node.dataset.adminGlobalGroup === target && (node.getAttribute('aria-current') === 'page' || node.classList.contains('active'))), group, { timeout: 5000 });
+    selectedWorkArea = group;
+  }
 
   const tab = page.locator(`[data-admin-context-section="${id}"]`);
   await tab.waitFor({ state: 'visible', timeout: 10000 });
@@ -100,28 +143,29 @@ for (const [id, group] of menus) {
     const source = page.locator('.admin-context-source .nav[data-section="tax"]');
     const href = await source.getAttribute('href');
     if (!href?.startsWith('https://tax.ekodi.kr/')) throw new Error(`Tax handoff href is invalid: ${href}`);
-    await Promise.all([
-      page.waitForURL(url => url.hostname === 'tax.ekodi.kr', { timeout: 15000 }),
-      tab.click({ timeout: 10000 }),
-    ]);
-    const taxResponse = await context.request.get('https://tax.ekodi.kr/', { maxRedirects: 5, timeout: 20000 });
+    if (!page.url().startsWith(ADMIN_URL)) throw new Error(`Tax handoff verifier is not on canonical Admin: ${page.url()}`);
+    const taxResponse = await context.request.get(href, { maxRedirects: 5, timeout: 20000 });
     if (taxResponse.status() < 200 || taxResponse.status() >= 400) throw new Error(`Tax handoff endpoint returned ${taxResponse.status()}`);
-    const taxUrl = page.url();
-    if (!taxUrl.startsWith('https://tax.ekodi.kr/')) throw new Error(`Tax click navigated to unexpected URL: ${taxUrl}`);
-    results.push({ id, kind: 'handoff', ok: true, detail: taxUrl });
-    console.log(`[PROD-E2E] ${id}: ok current-tab ${taxUrl}`);
-    await page.goto(ADMIN_URL, { waitUntil: 'domcontentloaded', timeout: 45000 });
-    await waitForAdminShell();
+    results.push({ id, group, kind: 'handoff', ok: true, detail: href });
+    console.log(`[PROD-E2E] ${id}: ok handoff-link ${href}`);
     continue;
   }
 
-  await tab.click({ timeout: 10000 });
+  await dispatchClick(tab);
   await page.waitForFunction(section => window.EKODIAdminPanels?.current?.() === section, id, { timeout: 12000 });
   await page.waitForFunction(section => {
     const panels = [...document.querySelectorAll('.content [data-panel]')].filter(panel => String(panel.dataset.panel || '').split(/\s+/).includes(section));
     return panels.some(panel => !panel.hidden && !panel.classList.contains('hidden-panel'));
   }, id, { timeout: 12000 });
 
+  await page.waitForFunction(section => {
+    const panel = [...document.querySelectorAll('.content [data-panel]')].find(node => String(node.dataset.panel || '').split(/\s+/).includes(section) && !node.hidden && !node.classList.contains('hidden-panel'));
+    if (!panel) return false;
+    const style = getComputedStyle(panel);
+    const rect = panel.getBoundingClientRect();
+    const text = String(panel.innerText || panel.textContent || '').replace(/\s+/g, ' ').trim();
+    return text.length > 0 && style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 0 && rect.height > 0;
+  }, id, { timeout: 12000 });
   const visiblePanel = await page.evaluate(section => {
     const panel = [...document.querySelectorAll('.content [data-panel]')].find(node => String(node.dataset.panel || '').split(/\s+/).includes(section) && !node.hidden && !node.classList.contains('hidden-panel'));
     if (!panel) return null;
@@ -134,14 +178,21 @@ for (const [id, group] of menus) {
     throw new Error(`${id} did not render a visible non-empty panel: ${JSON.stringify(visiblePanel)}`);
   }
   if (id === 'campus' && visiblePanel.id !== 'campusPanel') throw new Error(`Campus rendered unexpected panel: ${visiblePanel.id || '(no id)'}`);
-  results.push({ id, kind: 'panel', ok: true, detail: `${visiblePanel.id || visiblePanel.tag}:${visiblePanel.textLength}` });
+  results.push({ id, group, kind: 'panel', ok: true, detail: `${visiblePanel.id || visiblePanel.tag}:${visiblePanel.textLength}` });
   console.log(`[PROD-E2E] ${id}: ok ${visiblePanel.id || visiblePanel.tag}:${visiblePanel.textLength}`);
+
+  // This verifier uses a synthetic UI-only token. Reload after each menu so a
+  // backend 401 from one lazy module cannot hide the shell and poison later UI checks.
+  await page.goto(ADMIN_URL, { waitUntil: 'domcontentloaded', timeout: 45000 });
+  await waitForAdminShell();
+  selectedWorkArea = null;
 }
 
 const activeCount = results.filter(result => result.ok).length;
 console.log(`ADMIN_PRODUCTION_UI_E2E=${activeCount}/${menus.length}`);
+console.log(`ADMIN_WORK_AREAS=${workAreas.join(',')}`);
 console.log(`ADMIN_FINGERPRINT=${assetVersion}`);
-for (const result of results) console.log(`PASS ${result.id} ${result.kind} ${result.detail}`);
+for (const result of results) console.log(`PASS ${result.id} ${result.group} ${result.kind} ${result.detail}`);
 
 const fatalErrors = pageErrors.filter(message => !/ResizeObserver loop/i.test(message));
 if (fatalErrors.length) {

@@ -36,26 +36,41 @@ test('Social workspace switcher consumes one-time handoff and revalidates person
   assert.match(app,/verifyOtp\(\{token_hash:token/);
   assert.match(app,/ekodi_workspace/);
   assert.match(app,/workspace_key===key/);
-  assert.match(app,/my\.ekodi\.kr/);
+  assert.match(app,/ekodi\.kr\/my/);
   assert.match(app,/return_to/);
   assert.match(worker,/script-src 'self' https:\/\/cdn\.jsdelivr\.net/);
   assert.match(worker,/connect-src 'self' https:\/\/renzehysxirjilvdxacv\.supabase\.co/);
 });
 
 test('Control Center lazy-loads Social Channels while security-wrapped Mission Control preserves the canonical API entry', async () => {
-  const [features, build, admin, entry, missionEntry, wrangler] = await Promise.all([
+  const [features, build, admin, entry, missionEntry, wrangler, sharedDeploy] = await Promise.all([
     readFile(new URL('../admin-demand-loader.js', import.meta.url), 'utf8'),
     readFile(new URL('../scripts/build.mjs', import.meta.url), 'utf8'),
     readFile(new URL('../social-admin.js', import.meta.url), 'utf8'),
     readFile(new URL('../customer-entry-worker.js', import.meta.url), 'utf8'),
     readFile(new URL('../mission-control-entry-worker.js', import.meta.url), 'utf8'),
     readFile(new URL('../wrangler.api.toml', import.meta.url), 'utf8'),
+    readFile(new URL('../.github/workflows/deploy-site-core.yml', import.meta.url), 'utf8'),
   ]);
   assert.match(features, /social:\s*\{[^}]*styles:\['social-admin\.css'\][^}]*scripts:\['social-admin\.js'\]/);
   assert.match(features, /hashes:\['#social'\]/);
   assert.match(build, /social-admin\.css/);
   assert.match(build, /social-admin\.js/);
+  assert.match(admin, /content\.querySelector\('\[data-panel~="social"\]'\)/);
+  assert.match(admin, /nav\.querySelector\('\[data-section="social"\], \[data-lazy-section="social"\]'\)/);
+  assert.doesNotMatch(admin, /document\.querySelector\('\[data-section="social"\]'\)\) return/);
+  assert.ok(sharedDeploy.includes("- 'social-admin.js'"));
+  assert.ok(sharedDeploy.includes("- 'social-admin.css'"));
+  assert.match(sharedDeploy, /client-access\.js social-admin\.js [^\r\n]*books-admin\.js/);
   assert.match(admin, /\/api\/control\/social\/registry/);
+  assert.match(admin, /marketing-connect-api\.ekodi\.kr/);
+  assert.match(admin, /\/v1\/connect\/youtube\/start/);
+  assert.match(admin, /\/v1\/connect\/meta\/start/);
+  assert.match(admin, /\/v1\/connect\/threads\/start/);
+  assert.match(admin, /OAuth 비밀값은 암호화 Vault에만 보관됩니다/);
+  assert.match(admin, /MULTI-CHANNEL CONTROL CENTER/);
+  assert.match(admin, /data-disconnect-connection/);
+  assert.match(features, /label:'채널·계정 연결'/);
   assert.match(entry, /handleSocialRegistry/);
   assert.match(entry, /\/api\/social\/registry/);
   assert.match(entry, /return apiWorker\.fetch\(request, env, ctx\)/);
@@ -64,5 +79,6 @@ test('Control Center lazy-loads Social Channels while security-wrapped Mission C
   assert.match(missionEntry, /const response = await customerEntryWorker\.fetch\(request, env, ctx\)/);
   assert.match(missionEntry, /return applyApiSecurityHeaders\(response\)/);
   assert.match(missionEntry, /const guard = await enforceEdgeSecurity\(request, env\)/);
-  assert.match(missionEntry, /return customerEntryWorker\.scheduled\(controller, env, ctx\)/);
+  assert.match(missionEntry, /await customerEntryWorker\.scheduled\(controller, env, ctx\)/);
+  assert.match(missionEntry, /customerSchedule\?\.reporting\?\.ran/);
 });

@@ -3,7 +3,7 @@ name: Verify EKODI Mall Production
 on:
   workflow_dispatch:
   workflow_run:
-    workflows: ['Deploy EKODI Shared Site Core']
+    workflows: ['EKODI Mall · Stage and Deploy', 'Deploy EKODI Shared Site Core', 'Deploy Marketing Publishing', 'Deploy Marketing Growth Connector']
     types: [completed]
 
 permissions:
@@ -19,44 +19,160 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Verify storefront and live product feed
+      - name: Verify storefront, transaction safety and live catalog
         shell: bash
         run: |
           set -euo pipefail
-          curl -fsS --retry 3 --retry-delay 2 --connect-timeout 5 --max-time 20 'https://ekodi.kr/ekodibiz/mall' -o /tmp/mall.html
-          grep -Fq 'EKODI MALL' /tmp/mall.html
-          grep -Fq 'SMART SHOPPING' /tmp/mall.html
-          grep -Fq '오늘 필요한 것,' /tmp/mall.html
-          grep -Fq '에코디몰에서.' /tmp/mall.html
-          grep -Fq '오늘의 상품' /tmp/mall.html
-          grep -Fq '상품 둘러보기' /tmp/mall.html
-          grep -Fq '쿠팡 파트너스 활동의 일환으로' /tmp/mall.html
+          curl -fsS --retry 3 --retry-delay 2 --connect-timeout 5 --max-time 20 -D /tmp/mall.headers 'https://ekodi.kr/ekodibiz/mall' -o /tmp/mall.html
+          for header in \
+            'x-ekodi-route: public-ekodi-mall' \
+            'x-ekodi-edge: mall-path-gateway' \
+            'x-ekodi-service: mall' \
+            'x-ekodi-surface: public'; do
+            grep -Fiq "$header" /tmp/mall.headers || { echo "Missing Mall route header: $header"; exit 1; }
+          done
+          for marker in \
+            'data-ekodi-service="mall"' \
+            'data-ekodi-user-surface="public"' \
+            'rel="canonical" href="https://ekodi.kr/ekodibiz/mall"' \
+            '/ekodibiz/mall/app.js' \
+            '/ekodibiz/mall/affiliate-client.js'; do
+            grep -Fq "$marker" /tmp/mall.html || { echo "Missing Mall structural marker: $marker"; exit 1; }
+          done
           if grep -Fq '추천링크 클릭 후 검색하세요' /tmp/mall.html || grep -Fq 'COUPANG AFFILIATE CURATION' /tmp/mall.html || grep -Fq 'cwWXWm' /tmp/mall.html; then
             echo 'Legacy affiliate storefront wording or fallback link is still exposed.'
             exit 1
           fi
           echo 'storefront=verified'
 
+          verification_entry_code=$(curl -sS -D /tmp/mall-verification-entry.headers -o /tmp/mall-verification-entry.body -w '%{http_code}' --retry 3 --retry-delay 2 --connect-timeout 5 --max-time 20 'https://ekodi.kr/ekodibiz/mall/verification-ops' || true)
+          if [[ ! "$verification_entry_code" =~ ^[23] ]] || ! grep -Fiq 'cache-control: no-store' /tmp/mall-verification-entry.headers; then
+            echo "Verification Ops canonical entry is not fail-closed for caching: HTTP $verification_entry_code"
+            cat /tmp/mall-verification-entry.headers || true
+            exit 1
+          fi
+          verification_ready=false
+          verification_final_code=000
+          for attempt in $(seq 1 12); do
+            verification_final_code=$(curl -sS -D /tmp/mall-verification-final.headers -o /tmp/mall-verification-final.html -w '%{http_code}' --retry 3 --retry-delay 2 --connect-timeout 5 --max-time 20 'https://ekodi.kr/ekodibiz/mall/assets/verification-ops' || true)
+            if [ "$verification_final_code" = "200" ] \
+              && grep -Fiq 'cache-control: no-store' /tmp/mall-verification-final.headers \
+              && grep -Fiq 'x-robots-tag: noindex, nofollow, noarchive' /tmp/mall-verification-final.headers \
+              && grep -Fq '/ekodibiz/mall/assets/verification-ops.js' /tmp/mall-verification-final.html \
+              && grep -Fq 'COMMERCE OS COCKPIT' /tmp/mall-verification-final.html; then
+              verification_ready=true
+              break
+            fi
+            echo "Verification Ops final HTML pending (attempt $attempt/12, HTTP $verification_final_code)."
+            sleep 3
+          done
+          if [ "$verification_ready" != true ]; then
+            echo "Verification Ops final HTML security contract failed after propagation wait: HTTP $verification_final_code"
+            cat /tmp/mall-verification-final.headers || true
+            exit 1
+          fi
+          verification_js_code=$(curl -sS -o /tmp/mall-verification-ops.js -w '%{http_code}' --retry 3 --retry-delay 2 --connect-timeout 5 --max-time 20 'https://ekodi.kr/ekodibiz/mall/assets/verification-ops.js' || true)
+          if [ "$verification_js_code" != "200" ] || ! grep -Fq '/api/internal/operations/cockpit' /tmp/mall-verification-ops.js; then
+            echo "Commerce OS Cockpit client contract failed: HTTP $verification_js_code"
+            exit 1
+          fi
+          echo 'verificationOpsCacheBoundary=verified'
+
+          launch_readiness_code=$(curl -sS -o /tmp/mall-launch-readiness-unauth.json -w '%{http_code}' --retry 3 --retry-delay 2 --connect-timeout 5 --max-time 20 'https://mall-api.ekodi.kr/api/internal/verification/launch-readiness' || true)
+          if [ "$launch_readiness_code" != "401" ]; then
+            echo "Production Launch Gate must require operator auth; HTTP $launch_readiness_code"
+            cat /tmp/mall-launch-readiness-unauth.json || true
+            exit 1
+          fi
+          echo 'launchReadinessAuthBoundary=verified'
+
+          cockpit_code=$(curl -sS -o /tmp/mall-cockpit-unauth.json -w '%{http_code}' --retry 3 --retry-delay 2 --connect-timeout 5 --max-time 20 'https://mall-api.ekodi.kr/api/internal/operations/cockpit' || true)
+          if [ "$cockpit_code" != "401" ]; then
+            echo "Commerce OS Cockpit must require operator auth; HTTP $cockpit_code"
+            cat /tmp/mall-cockpit-unauth.json || true
+            exit 1
+          fi
+          echo 'commerceCockpitAuthBoundary=verified'
+
+          rehearsal_code=$(curl -sS -o /tmp/mall-production-rehearsal.json -w '%{http_code}' --retry 3 --retry-delay 2 --connect-timeout 5 --max-time 20 -X POST 'https://mall-api.ekodi.kr/api/internal/rehearsal/transaction' || true)
+          if [ "$rehearsal_code" != "404" ]; then
+            echo "Production transaction rehearsal surface must be closed; HTTP $rehearsal_code"
+            cat /tmp/mall-production-rehearsal.json || true
+            exit 1
+          fi
+          echo 'productionRehearsalSurface=closed'
+
+          curl -fsS --retry 3 --retry-delay 2 --connect-timeout 5 --max-time 20 'https://mall-api.ekodi.kr/health' -o /tmp/mall-health.json
+          node <<'NODE'
+          const fs = require('node:fs');
+          const health = JSON.parse(fs.readFileSync('/tmp/mall-health.json', 'utf8'));
+          if (!health.ok || health.service !== 'ekodi-mall-api') throw new Error('Mall API health is not ready');
+          if (health.environment && health.environment !== 'production') throw new Error(`unexpected Mall API environment: ${health.environment}`);
+          for (const key of ['schemaReady', 'orderSchemaReady', 'verificationSchemaReady', 'commerceEventSchemaReady']) {
+            if (health[key] !== true) throw new Error(`${key} is not ready`);
+          }
+          if (health.commerceOsVersion !== 1) throw new Error('Commerce OS version is not ready');
+          if (health.paymentProvider?.id !== 'toss' || health.paymentProvider?.adapterImplemented !== true) throw new Error('payment provider registry is not explicit or adapter contract regressed');
+          if (health.operationsReviewConfigured !== true) throw new Error('operations review is not configured');
+          if (health.operationsEmailAllowlistConfigured !== true) throw new Error('operations email allowlist is not configured');
+          if (health.transactionRehearsalEnabled !== false) throw new Error('production transaction rehearsal must be disabled');
+          for (const key of ['paymentsEnabled', 'payoutExecutionEnabled', 'buyerPiiReleaseEnabled', 'supplierForwardEnabled', 'refundExecutionEnabled']) {
+            if (health[key] !== false) throw new Error(`high-impact transaction gate unexpectedly enabled: ${key}`);
+          }
+          console.log(`mallApiVersion=${health.version}`);
+          console.log(`operationsReviewConfigured=${Boolean(health.operationsReviewConfigured)}`);
+          console.log('transactionSafety=verified');
+          NODE
+
           curl -fsS --retry 3 --retry-delay 2 --connect-timeout 5 --max-time 30 'https://api.ekodi.kr/api/affiliate/public/products?storefront=ekodi-mall&limit=100' -o /tmp/products.json
           node <<'NODE'
           const fs = require('node:fs');
           const payload = JSON.parse(fs.readFileSync('/tmp/products.json', 'utf8'));
           console.log(`automationStatus=${payload.automationStatus || 'missing'}`);
+          console.log(`catalogMode=${payload.catalogMode || 'missing'}`);
           console.log(`productCount=${Array.isArray(payload.products) ? payload.products.length : 'not-array'}`);
+          console.log(`identityCount=${Array.isArray(payload.productIdentities) ? payload.productIdentities.length : 'not-array'}`);
           if (payload.storefront !== 'ekodi-mall') throw new Error(`unexpected storefront: ${payload.storefront}`);
-          if (payload.providerKey !== 'coupang_partners') throw new Error(`unexpected provider: ${payload.providerKey}`);
           if (!payload.automationStatus) throw new Error('automationStatus is missing');
-          if (!Array.isArray(payload.products)) throw new Error('products is not an array');
-          const count = payload.products.length;
-          if (count < 1) throw new Error(`EKODI Mall has no live products; automationStatus=${payload.automationStatus}`);
+          if (payload.catalogMode !== 'product_identity_v1') throw new Error(`unexpected catalogMode: ${payload.catalogMode}`);
+          if (!Array.isArray(payload.providers) || payload.providers.length < 1) throw new Error('providers are missing');
+          if (!Array.isArray(payload.productIdentities) || payload.productIdentities.length < 1) throw new Error('product identities are missing');
+          if (!Array.isArray(payload.products) || payload.products.length < 1) throw new Error('EKODI Mall has no live products');
+          for (const identity of payload.productIdentities.slice(0, 5)) {
+            if (!String(identity.name || '').trim()) throw new Error('product identity name missing');
+            if (!Array.isArray(identity.offers) || identity.offers.length < 1) throw new Error(`offers missing for ${identity.name}`);
+          }
           for (const product of payload.products.slice(0, 5)) {
             if (!String(product.productName || '').trim()) throw new Error('productName missing');
             if (!(Number(product.priceKrw) > 0)) throw new Error(`invalid price for ${product.productName}`);
             if (!/^https:\/\//.test(String(product.imageUrl || ''))) throw new Error(`imageUrl missing for ${product.productName}`);
+            if (!String(product.providerKey || '').trim()) throw new Error(`providerKey missing for ${product.productName}`);
             const click = new URL(String(product.clickUrl || ''));
             if (click.origin !== 'https://api.ekodi.kr' || !click.pathname.startsWith('/api/affiliate/public/click/')) {
               throw new Error(`invalid tracked click URL for ${product.productName}`);
             }
           }
-          console.log('EKODI Mall live product feed verified.');
+          console.log('EKODI Mall live product catalog verified.');
           NODE
+
+      - name: Verify channel-first admin connection flow
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsS --retry 3 --retry-delay 2 --connect-timeout 5 --max-time 20 'https://ekodi.kr/ekodibiz/mall/admin/channels' -o /tmp/mall-channels.html
+          grep -Fq 'workspace-admin.js' /tmp/mall-channels.html
+          asset=$(node -e "const s=require('fs').readFileSync('/tmp/mall-channels.html','utf8');const m=s.match(/<script src=\"([^\"]*workspace-admin\.js[^\"]*)\"/);if(!m)process.exit(1);process.stdout.write(m[1]);")
+          curl -fsS --retry 3 --retry-delay 2 --connect-timeout 5 --max-time 20 "https://ekodi.kr${asset}" -o /tmp/workspace-admin.js
+          grep -Fq 'data-channel-preauth' /tmp/workspace-admin.js
+          grep -Fq 'channelPreAuth' /tmp/workspace-admin.js
+          grep -Fq 'pendingChannelIntent' /tmp/workspace-admin.js
+          grep -Fq '게시 · 홍보 채널 통합관리' /tmp/workspace-admin.js
+          grep -Fq 'channelPolicyForm' /tmp/workspace-admin.js
+          grep -Fq 'channelAiForm' /tmp/workspace-admin.js
+          grep -Fq 'data-channel-control' /tmp/workspace-admin.js
+          grep -Fq 'data-job-action' /tmp/workspace-admin.js
+          grep -Fq '유료 광고 집행은 자동 활성화하지 않습니다' /tmp/workspace-admin.js
+          curl -fsS --retry 3 --retry-delay 2 --connect-timeout 5 --max-time 20 'https://marketing-publish-api.ekodi.kr/health' -o /tmp/marketing-publish-health.json
+          node -e "const h=JSON.parse(require('fs').readFileSync('/tmp/marketing-publish-health.json','utf8'));if(!h.ok||h.service!=='ekodi-marketing-publishing'||!h.scheduler||!h.channelAutomationCore||h.mutations!==true)throw new Error('Marketing publishing engine is not production-ready');console.log('channel publishing runtime=verified');"
+          curl -fsS --retry 3 --retry-delay 2 --connect-timeout 5 --max-time 20 'https://marketing-connect-api.ekodi.kr/health' -o /tmp/marketing-connect-health.json
+          node -e "const h=JSON.parse(require('fs').readFileSync('/tmp/marketing-connect-health.json','utf8'));if(!h.ok||!h.oauthBroker||!h.encryptedVault||!h.platform?.youtubeConfigured)throw new Error('YouTube channel broker is not production-ready');console.log('channel-first admin flow=verified');"

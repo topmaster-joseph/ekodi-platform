@@ -35,7 +35,7 @@ test('browser router keeps workspace keys private-first and launches services th
   assert.match(router,/event\.stopImmediatePropagation\(\)/);
   assert.match(router,/dataset\.ekodiServiceTarget/);
   assert.match(router,/service-manifest\.json/);
-  assert.match(router,/https:\/\/auth\.ekodi\.kr\//);
+  assert.match(router,/https:\/\/ekodi\.kr\/auth\//);
   assert.match(router,/target\.searchParams\.set\('site','my'\)/);
   assert.match(router,/target\.searchParams\.set\('return_to',returnTo\.href\)/);
   assert.doesNotMatch(router,/workspace_name|workspace_owner|display_name/);

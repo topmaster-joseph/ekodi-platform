@@ -10,7 +10,7 @@ const siteWorker = await readFile(new URL('../site-worker.js', import.meta.url),
 const accessScript = await readFile(new URL('../scripts/ensure-storage-access.mjs', import.meta.url), 'utf8');
 const migration = await readFile(new URL('../migrations/0038_google_drive_storage.sql', import.meta.url), 'utf8');
 const admin = await readFile(new URL('../storage-admin.js', import.meta.url), 'utf8');
-const cheonggyeAdmin = await readFile(new URL('../cheonggye-members-admin.js', import.meta.url), 'utf8');
+const cheonggyeAdmin = await readFile(new URL('../cgma-member-admin.js', import.meta.url), 'utf8');
 const manifest = await readFile(new URL('../deploy/manifests/storage.worker.json', import.meta.url), 'utf8');
 
 test('Google Drive credentials are encrypted and never committed', () => {
@@ -64,13 +64,15 @@ test('successful Google Drive OAuth returns directly to the exact admin route wi
   assert.ok(control.includes("target.origin !== ADMIN_ORIGIN"));
   assert.doesNotMatch(control, /return html\(`\$\{email\} 계정이 .*연결되었습니다.*`,true\)/s);
 });
-test('Storage exposes a private Google OAuth broker for the Marketing YouTube callback without exposing the client secret', () => {
-  assert.match(control, /MARKETING_YOUTUBE_REDIRECT_URI = 'https:\/\/marketing-connect-api\.ekodi\.kr\/oauth\/youtube\/callback'/);
-  assert.match(control, /GOOGLE_OAUTH_REDIRECT_FORBIDDEN/);
-  assert.match(control, /exchangeGoogleAuthorizationCode/);
+test('Storage brokers Marketing YouTube OAuth through the already-authorized Drive callback without exposing the client secret', () => {
+  assert.match(control, /MARKETING_YOUTUBE_CALLBACK/);
+  assert.match(control, /purpose:'marketing_youtube'/);
+  assert.match(control, /storage_google_oauth_tickets/);
+  assert.match(control, /startMarketingYouTubeOAuth/);
+  assert.match(control, /consumeMarketingYouTubeTicket/);
   assert.match(control, /refreshGoogleAccessToken/);
-  assert.match(worker, /export class GoogleOAuthBroker extends WorkerEntrypoint/);
-  assert.match(worker, /exchangeAuthorizationCode/);
+  assert.match(worker, /startYouTubeOAuth/);
+  assert.match(worker, /consumeYouTubeTicket/);
   assert.match(worker, /refreshAccessToken/);
   assert.doesNotMatch(config, /GOOGLE_DRIVE_CLIENT_SECRET\s*=\s*".+"/);
 });
@@ -179,7 +181,7 @@ test('Google storage automatically reconnects only when Google credentials requi
   assert.match(admin, /AUTO_RECONNECT_COOLDOWN_MS=5\*60\*1000/);
   assert.match(admin, /currentAdminReturnPath/);
   assert.match(admin, /accountHintedAuthorizeUrl/);
-  assert.match(cheonggyeAdmin, /startAutoReconnect/);
+  assert.doesNotMatch(cheonggyeAdmin, /startAutoReconnect|\/oauth\/start/);
   assert.match(cheonggyeAdmin, /GOOGLE_REAUTH_REQUIRED/);
-  assert.match(cheonggyeAdmin, /returnTo:currentAdminReturnPath\(\)/);
+  assert.match(cheonggyeAdmin, /Google Sheet 시스템 연결을 복구해야 합니다/);
 });

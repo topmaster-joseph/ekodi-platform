@@ -8,7 +8,7 @@ const style = fs.readFileSync(new URL('../device-browser-diagnostics.css', impor
 const build = fs.readFileSync(new URL('../scripts/build.mjs', import.meta.url), 'utf8');
 
 test('admin device menu is localized and lazy-loads self diagnostics', () => {
-  assert.match(loader, /label: '원격 작업'/);
+  assert.match(loader, /label: '실행 인프라'/);
   assert.match(loader, /device-browser-diagnostics\.css/);
   assert.match(loader, /device-browser-diagnostics\.js/);
 });

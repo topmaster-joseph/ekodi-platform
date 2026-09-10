@@ -3,7 +3,7 @@
 
   const STYLE_ID='ekodi-illustration-system-style';
   const SERVICE_SCENES={
-    church:'people-gathering',community:'neighborhood-circle',social:'signal-picnic',cafe:'harbor-cafe',biz:'small-business-day',business:'operator-table',mall:'market-street',marketing:'creative-studio',trade:'connected-route',invest:'diligence-table',support:'opportunity-desk',pay:'trust-ledger',books:'reading-room',publishing:'publishing-desk',author:'creator-room',lab:'field-research',edu:'learning-table',my:'personal-journey',work:'project-workbench',energy:'sunny-grid',insurance:'protective-home',messenger:'conversation-bridge',mail:'correspondence-desk',live:'small-stage',cloud:'shared-library',media:'story-studio'
+    church:'people-gathering',community:'neighborhood-circle',social:'signal-picnic',cafe:'harbor-cafe',biz:'small-business-day',business:'operator-table',mall:'market-street',marketing:'creative-studio',trade:'connected-route',invest:'diligence-table',support:'opportunity-desk',pay:'trust-ledger',books:'reading-room',publishing:'publishing-desk',author:'creator-room',lab:'field-research',edu:'learning-table',my:'personal-journey',work:'project-workbench',energy:'sunny-grid',insurance:'protective-home',messenger:'conversation-bridge',mail:'correspondence-desk',live:'small-stage',cloud:'shared-library',media:'story-studio',developer:'field-research',experience:'personal-journey'
   };
 
   const css=`

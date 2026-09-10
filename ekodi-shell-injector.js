@@ -1,10 +1,12 @@
 import { EKODI_SERVICE_MANIFEST, serviceForId, serviceForHost as manifestServiceForHost } from './ekodi-service-manifest.js';
+import { publishedLocalesForService } from './config/language-registry.js';
 import { renderEkodiUserFooter } from './config/user-footer.js';
 
 const SHELL_ORIGIN='https://shell.ekodi.kr';
+const I18N_API_ORIGIN='https://api.ekodi.kr';
 const SHELL_SCRIPT=`${SHELL_ORIGIN}/shell.js`;
 const SHELL_WORKSPACE_STYLE=`${SHELL_ORIGIN}/workspace.css`;
-const SHELL_USER_UI_STYLE=`${SHELL_ORIGIN}/user-ui-shell.css`;
+const SHELL_USER_UI_STYLE=`${SHELL_ORIGIN}/user-ui-shell.css?v=${EKODI_SERVICE_MANIFEST.shellVersion}`;
 const INTERNAL_SURFACES=new Set(['workspace','admin','form','document','data']);
 const USER_SURFACES=new Set(['public','workspace']);
 const SERVICE_OWNED_FOOTER_SERVICES=new Set();
@@ -39,6 +41,7 @@ function shellCsp(csp){
   next=extendDirective(next,'script-src',SHELL_ORIGIN);
   next=extendDirective(next,'style-src',SHELL_ORIGIN);
   next=extendDirective(next,'connect-src',SHELL_ORIGIN);
+  next=extendDirective(next,'connect-src',I18N_API_ORIGIN);
   return next;
 }
 
@@ -51,6 +54,7 @@ function sharedFooterReplacesLocalFooter(serviceId){return SHARED_FOOTER_REPLACE
 function defaultSurface(serviceId){return cleanSurface(serviceForId(serviceId)?.defaultSurface)||'public';}
 function resolvedSurface(serviceId,surface=''){return cleanSurface(surface)||defaultSurface(serviceId);}
 function userSurfaceForService(serviceId){return USER_SURFACES.has(defaultSurface(serviceId));}
+function readyLocalesForService(serviceId){return publishedLocalesForService(cleanServiceId(serviceId)).join(' ');}
 function serviceLabel(serviceId){const service=serviceForId(serviceId);return service?.shortName||service?.name||(serviceId==='ekodi'?'EKODI':'');}
 function surfaceBootStyle(surface){
   if(surface==='admin')return ADMIN_BOOT_STYLE;
@@ -59,7 +63,7 @@ function surfaceBootStyle(surface){
 function fallbackHeader(serviceId){
   const label=escapeHtml(serviceLabel(cleanServiceId(serviceId)));
   const context=label&&label!=='EKODI'?`<span class="ekodi-user-ui-fallback-header__context">${label}</span>`:'<span class="ekodi-user-ui-fallback-header__context" aria-hidden="true"></span>';
-  return `<header class="ekodi-user-ui-fallback-header" data-ekodi-user-header-root="${USER_UI_VERSION}" data-ekodi-user-header-fallback="${USER_UI_VERSION}" role="banner"><div class="ekodi-user-ui-fallback-header__inner"><a class="ekodi-user-ui-fallback-header__brand" href="https://ekodi.kr/" aria-label="EKODI 홈">EKODI</a>${context}<nav class="ekodi-user-ui-fallback-header__nav" aria-label="사용자 계정"><a href="https://my.ekodi.kr/">My EKODI</a></nav></div></header>`;
+  return `<header class="ekodi-user-ui-fallback-header" data-ekodi-user-header-root="${USER_UI_VERSION}" data-ekodi-user-header-fallback="${USER_UI_VERSION}" role="banner"><div class="ekodi-user-ui-fallback-header__inner"><a class="ekodi-user-ui-fallback-header__brand" data-ekodi-header-home href="https://ekodi.kr/" aria-label="EKODI 홈">EKODI</a>${context}<nav class="ekodi-user-ui-fallback-header__nav" aria-label="사용자 계정"><a href="https://ekodi.kr/my/">My EKODI</a></nav></div></header>`;
 }
 
 class ShellHtmlInjector{
@@ -68,14 +72,15 @@ class ShellHtmlInjector{
 }
 
 class ShellHeadInjector{
-  constructor(serviceId,surface){this.serviceId=serviceId;this.surface=surface;}
+  constructor(serviceId,surface,memberGate='shared'){this.serviceId=serviceId;this.surface=surface;this.memberGate=memberGate;}
   element(element){
     const service=cleanServiceId(this.serviceId);
     const surface=resolvedSurface(service,this.surface);
     const sharedStyle=INTERNAL_SURFACES.has(surface)?`<link rel="stylesheet" href="${SHELL_WORKSPACE_STYLE}" data-ekodi-workspace-style>`:'';
     const bootStyle=surfaceBootStyle(surface);
     const visualShellMode=isMyEkodi(service)?'':` data-ekodi-shell="off"`;
-    element.prepend(`${bootStyle}${sharedStyle}<script src="${SHELL_SCRIPT}" data-ekodi-service="${service}" data-ekodi-surface="${surface}"${visualShellMode}></script>`,{html:true});
+    const memberGate=this.memberGate==='service-owned'?'service-owned':'shared';
+    element.prepend(`${bootStyle}${sharedStyle}<script src="${SHELL_SCRIPT}" data-ekodi-service="${service}" data-ekodi-surface="${surface}" data-ekodi-member-gate="${memberGate}"${visualShellMode}></script>`,{html:true});
   }
 }
 
@@ -87,10 +92,11 @@ class UserUiHtmlInjector{
     element.setAttribute('data-ekodi-service',service);
     element.setAttribute('data-ekodi-user-surface',resolvedSurface(this.serviceId,this.surface));
     element.setAttribute('data-ekodi-user-layout',USER_LAYOUT_VERSION);
+    element.setAttribute('data-ekodi-ready-locales',readyLocalesForService(service));
     if(serviceOwnsFooter(service))element.setAttribute('data-ekodi-footer-mode','service');
   }
 }
-class UserUiHeadInjector{element(element){element.append(`<link rel="stylesheet" href="${SHELL_USER_UI_STYLE}" data-ekodi-user-ui-style="${USER_UI_VERSION}">`,{html:true});}}
+class UserUiHeadInjector{element(element){element.append(`<meta name="google" content="notranslate" data-ekodi-browser-translation="native-i18n"><link rel="stylesheet" href="${SHELL_USER_UI_STYLE}" data-ekodi-user-ui-style="${USER_UI_VERSION}">`,{html:true});}}
 class UserHeaderAdopter{
   constructor(){this.seen=false;}
   element(element){
@@ -135,6 +141,7 @@ export function injectEkodiUserUi(response,serviceId='ekodi',surface='public'){
   headers.set('x-ekodi-user-ui',USER_UI_VERSION);
   headers.set('x-ekodi-user-ui-surface',resolved);
   headers.set('x-ekodi-user-layout',USER_LAYOUT_VERSION);
+  headers.set('x-ekodi-ready-locales',readyLocalesForService(serviceId));
   headers.set('x-ekodi-user-footer',serviceOwnsFooter(serviceId)?'service':'shared');
   const headerAdopter=new UserHeaderAdopter();
   const canvasAdopter=new UserCanvasAdopter();
@@ -154,11 +161,12 @@ export function injectEkodiUserUi(response,serviceId='ekodi',surface='public'){
     .transform(new Response(response.body,{status:response.status,statusText:response.statusText,headers}));
 }
 
-export function injectEkodiShell(response,serviceId,surface=''){
+export function injectEkodiShell(response,serviceId,surface='',options={}){
   if(!response||!serviceId)return response;
   const contentType=String(response.headers.get('content-type')||'').toLowerCase();
   if(!contentType.includes('text/html'))return response;
   const resolved=resolvedSurface(serviceId,surface);
+  const memberGate=options?.memberGate==='service-owned'?'service-owned':'shared';
   const headers=new Headers(response.headers);
   headers.set('content-security-policy',shellCsp(headers.get('content-security-policy')));
   headers.set('x-ekodi-shell','v2');
@@ -166,7 +174,7 @@ export function injectEkodiShell(response,serviceId,surface=''){
   headers.set('x-ekodi-user-shortcuts',isMyEkodi(serviceId)?'my-only':'hidden');
   const transformed=new HTMLRewriter()
     .on('html',new ShellHtmlInjector(serviceId))
-    .on('head',new ShellHeadInjector(serviceId,resolved))
+    .on('head',new ShellHeadInjector(serviceId,resolved,memberGate))
     .transform(new Response(response.body,{status:response.status,statusText:response.statusText,headers}));
   return injectEkodiUserUi(transformed,serviceId,resolved);
 }

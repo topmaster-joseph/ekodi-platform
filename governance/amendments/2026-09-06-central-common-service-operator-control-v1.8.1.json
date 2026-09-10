@@ -1,0 +1,32 @@
+{
+  "id": "2026-09-06-central-common-service-operator-control-v1.8.1",
+  "constitutionVersion": "1.8.1",
+  "status": "approved",
+  "approvedBy": "topmaster-joseph",
+  "approvedAt": "2026-09-06",
+  "changeClass": "C2",
+  "taskId": "ekodi-central-common-service-operator-20260906",
+  "pullRequest": 1019,
+  "summary": "Make admin.ekodi.kr the canonical operator surface for EKODI common services while dedicated runtime hosts remain execution/API boundaries rather than separate administrator products.",
+  "approvalBasis": "The platform owner explicitly instructed this common-service centralization to be built through completion and then instructed the work to continue after the implementation, validation and production path were reported.",
+  "adds": [
+    "one canonical Common Services operator surface inside Admin",
+    "central Admin session authority for common-service operations",
+    "Person + Workspace + Role + Capability authorization at runtime boundaries",
+    "runtime-root handoff to Admin instead of per-service operator pages",
+    "minimal unauthenticated runtime health with protected operational detail"
+  ],
+  "preserves": [
+    "dedicated runtime and API deployment boundaries",
+    "least privilege and explicit capability enforcement",
+    "human gates for sovereign high-impact actions",
+    "provider independence and workspace data isolation",
+    "Generation 2 and S0"
+  ],
+  "rollback": "Revert PR 1019 and this policy addition. Existing service data, workspace identity, databases, DNS, provider connections and user-service access remain unchanged.",
+  "approvalEvidence": {
+    "pullRequest": 1019,
+    "requiredLabels": ["constitution-approved", "integration-order-approved"],
+    "ownerInstructionRecorded": true
+  }
+}

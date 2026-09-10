@@ -7,18 +7,20 @@ window.__EKODI_SHELL_BOOTED=true;
 const SHELL_ORIGIN='https://shell.ekodi.kr';
 const MANIFEST_URL=`${SHELL_ORIGIN}/manifest.json`;
 const THEME_URL=`${SHELL_ORIGIN}/theme.json`;
-const AUTH='https://auth.ekodi.kr/';
-const MY='https://my.ekodi.kr/';
+const AUTH='https://ekodi.kr/auth/';
+const MY='https://ekodi.kr/my/';
+const TRAFFIC_TELEMETRY='https://api.ekodi.kr/api/telemetry/visit';
 const explicitService=String(script?.dataset?.ekodiService||'').trim().toLowerCase();
 const hidden=script?.dataset?.ekodiShell==='off';
 const requestedSurface=normalizeSurface(script?.dataset?.ekodiSurface||'workspace');
+const memberGateMode=String(script?.dataset?.ekodiMemberGate||'shared').trim().toLowerCase();
 const fragment=new URLSearchParams(location.hash.startsWith('#')?location.hash.slice(1):'');
 const handedWorkspace=fragment.get('ekodi_workspace')||'';
 const handedTenant=fragment.get('ekodi_tenant')||'';
 const handedStore=fragment.get('ekodi_store')||'';
 
 const FALLBACK_THEME={
-  version:2,
+  version:3,
   workspace:{background:'#071522',surface:'#0B1D2E',surfaceRaised:'#10263A',border:'#24425E',text:'#F4F7FB',muted:'#9FB1C3',focus:'#8EC8FF',radius:'16px'},
   rules:{
     stableSurfaces:['workspace','admin','form','document','data'],
@@ -81,6 +83,21 @@ function inferredWorkspaceName(key){if(!key)return'공간 선택';if(key.startsW
 function isDynamicSurface(value=surface){return (theme.rules?.dynamicSurfaces||[]).includes(value);}
 function isPublicSurface(value=surface){return (theme.rules?.publicSurfaces||['public']).includes(value);}
 function serviceTheme(){return theme.services?.[service?.id]||{};}
+function trafficDailySessionId(){
+  const day=new Date().toISOString().slice(0,10);const key=`ekodi_traffic_daily:${service?.id||explicitService||'site'}:${day}`;
+  for(const storage of [localStorage,sessionStorage]){try{const existing=storage.getItem(key);if(existing)return existing;}catch{}}
+  try{const prefix=`ekodi_traffic_daily:${service?.id||explicitService||'site'}:`;for(let i=localStorage.length-1;i>=0;i--){const oldKey=localStorage.key(i)||'';if(oldKey.startsWith(prefix)&&oldKey!==key)localStorage.removeItem(oldKey);}}catch{}
+  let sid='';try{sid=crypto.randomUUID().replace(/-/g,'_');}catch{const bytes=new Uint8Array(18);crypto.getRandomValues(bytes);sid=[...bytes].map(v=>v.toString(16).padStart(2,'0')).join('');}
+  for(const storage of [localStorage,sessionStorage]){try{storage.setItem(key,sid);break;}catch{}}
+  return sid;
+}
+function sendTrafficBeacon(){
+  if(!service||navigator.globalPrivacyControl===true||navigator.doNotTrack==='1')return;
+  if(surface==='admin'||surface==='data'||surface==='document'||surface==='form')return;
+  const sid=trafficDailySessionId();if(!sid)return;const body=JSON.stringify({sid,site_id:service.id,surface});
+  try{if(navigator.sendBeacon?.(TRAFFIC_TELEMETRY,body))return;}catch{}
+  try{fetch(TRAFFIC_TELEMETRY,{method:'POST',mode:'cors',keepalive:true,headers:{'content-type':'text/plain;charset=UTF-8'},body}).catch(()=>{});}catch{}
+}
 
 function hashText(value){
   let hash=2166136261;
@@ -203,7 +220,7 @@ function myUrl(){const u=new URL(MY);u.searchParams.set('return_to',currentRetur
 
 function memberPolicy(){return service?.userAccessPolicy||null;}
 function guestPublicException(){const p=location.pathname.toLowerCase();return p==='/health'||p.startsWith('/health/')||p.startsWith('/api/')||p.includes('callback')||/(?:^|\/)(?:privacy|terms|legal|policy)(?:[.\/-]|$)/.test(p);}
-function memberGateApplies(){const p=memberPolicy();return Boolean(p&&p.guestMode==='guide-only'&&p.minimumTier==='free'&&!guestPublicException()&&(surface==='public'||surface==='workspace'));}
+function memberGateApplies(){const p=memberPolicy();const explicitWorkspace=location.pathname.toLowerCase().startsWith('/w/')||new URLSearchParams(location.search).has('workspace');return Boolean(memberGateMode!=='service-owned'&&p&&p.guestMode==='guide-only'&&p.minimumTier==='free'&&!guestPublicException()&&surface==='workspace'&&explicitWorkspace);}
 function handoffPending(){try{return new URLSearchParams(location.hash.startsWith('#')?location.hash.slice(1):'').has('ekodi_token');}catch{return false;}}
 function localMemberSession(){
   try{for(let i=0;i<localStorage.length;i++){const key=localStorage.key(i)||'';if(!/^sb-[a-z0-9]+-auth-token(?:\.\d+)?$/i.test(key))continue;let parsed;try{parsed=JSON.parse(localStorage.getItem(key)||'null');}catch{continue;}const s=parsed?.currentSession||parsed?.session||parsed;const token=String(s?.access_token||'');const user=s?.user;const exp=Number(s?.expires_at||0);if(token&&user?.id&&(!exp||exp*1000>Date.now()-60000))return true;}}catch{}return false;
@@ -325,7 +342,7 @@ function buildUi(){
   const suggestions=el('div',undefined,'services');suggestions.setAttribute('aria-live','polite');panel.append(suggestions);renderSuggestionRows(suggestions);
   form.addEventListener('submit',event=>{event.preventDefault();const query=input.value.trim();if(!query){input.focus();return;}renderSuggestionRows(suggestions,query);});
   const catalog=document.createElement('details');catalog.style.cssText='margin-top:8px;padding-top:8px;border-top:1px solid #18344d';const summary=document.createElement('summary');summary.textContent='모든 서비스 보기';summary.style.cssText='cursor:pointer;padding:6px 7px;color:#9fb1c3;font-size:9px;font-weight:800';catalog.append(summary);
-  const allServices=el('div',undefined,'services');for(const item of (manifest.services||[]).filter(s=>s.state!=='planned'&&s.id!=='my').sort((a,b)=>(a.order||999)-(b.order||999))){const row=el('button',undefined,`service${item.id===service.id?' current':''}`);row.type='button';const left=el('span');left.append(el('b',item.shortName||item.name));const hint=el('small',item.id===service.id?'현재 서비스':(item.capabilities||[]).slice(0,2).map(value=>CAPABILITY_LABELS[value]||value).join(' · '));row.append(left,hint);row.addEventListener('click',()=>navigate(item));allServices.append(row);}catalog.append(allServices);panel.append(catalog);
+  const allServices=el('div',undefined,'services');for(const item of (manifest.services||[]).filter(s=>s.state!=='planned'&&s.id!=='my'&&!s.selectorHidden).sort((a,b)=>(a.order||999)-(b.order||999))){const row=el('button',undefined,`service${item.id===service.id?' current':''}`);row.type='button';const left=el('span');left.append(el('b',item.shortName||item.name));const hint=el('small',item.id===service.id?'현재 서비스':(item.capabilities||[]).slice(0,2).map(value=>CAPABILITY_LABELS[value]||value).join(' · '));row.append(left,hint);row.addEventListener('click',()=>navigate(item));allServices.append(row);}catalog.append(allServices);panel.append(catalog);
   const footer=el('div',undefined,'footer');const my=el('a','My EKODI');my.href=myUrl();const rootLink=el('a','EKODI');rootLink.href='https://ekodi.kr/';footer.append(my,rootLink);panel.append(footer);
   button.addEventListener('click',()=>{panel.hidden=!panel.hidden;button.setAttribute('aria-expanded',panel.hidden?'false':'true');});
   document.addEventListener('click',event=>{if(!event.composedPath().includes(host)){closePanel();button.setAttribute('aria-expanded','false');}},{capture:true});
@@ -354,7 +371,7 @@ async function boot(){
   if(handedTenant)state.tenantId=handedTenant.slice(0,120);
   if(handedStore)state.storeId=handedStore.slice(0,120);
   if(!state.workspaceName&&state.workspaceKey)state.workspaceName=inferredWorkspaceName(state.workspaceKey);
-  writeStored();applyHostTokens();buildUi();startCycleRefresh();
+  writeStored();applyHostTokens();buildUi();startCycleRefresh();queueMicrotask(sendTrafficBeacon);
 }
 window.EKODIShell={
   setContext:mergeContext,

@@ -79,3 +79,14 @@ test('public product click and image routes run before administrator authenticat
   assert.match(apiSource, /상품을 찾을 수 없습니다/);
   assert.match(apiSource, /affiliate_storefront_clicks/);
 });
+
+test('affiliate performance ingestion closes product-level sales feedback safely', async () => {
+  const control = await readFile(new URL('../affiliate-control.js', import.meta.url), 'utf8');
+  assert.match(control,/\/performance/);
+  assert.match(control,/affiliate_product_performance_daily/);
+  assert.match(control,/coupang_partner_report/);
+  assert.match(control,/coupang_partner_api/);
+  assert.match(control,/manual_import/);
+  assert.match(control,/affiliate\.performance\.upsert/);
+  assert.doesNotMatch(control,/allowedSources.*ekodi_first_party/);
+});

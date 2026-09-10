@@ -1,6 +1,6 @@
 name: Cloudflare Staging Residue Audit
 
-# Proactive residue audit trigger: 2026-08-28
+# Proactive residue audit trigger: 2026-09-04
 on:
   workflow_dispatch:
   push:

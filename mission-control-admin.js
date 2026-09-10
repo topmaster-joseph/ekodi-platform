@@ -4,6 +4,7 @@
   const API = 'https://api.ekodi.kr';
   const TOKEN_KEY = 'ekodi-auth-token';
   const START_KEY = 'ekodi-governance-cockpit-started-v1';
+  const OVERVIEW_TTL_MS = 5 * 60 * 1000;
   const CORE_DOMAINS = new Set(['admin.ekodi.kr','auth.ekodi.kr','api.ekodi.kr','pay.ekodi.kr']);
   const PRIMARY_ROUTES = [
     { key:'overview', label:'Overview', icon:'◈', focus:'overview' },
@@ -24,6 +25,8 @@
 
   let latestOverview = null;
   let refreshTimer = 0;
+  let lastOverviewAt = 0;
+  let refreshPromise = null;
 
   const $ = selector => document.querySelector(selector);
   const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
@@ -147,13 +150,25 @@
 
   function renderAll() { renderExecutiveBrief(); renderDecisions(); renderTimeline(); renderCouncil(); }
 
+  function cockpitVisible() {
+    const panel = $('#aiOpsPanel');
+    return document.visibilityState === 'visible' && Boolean(panel) && !panel.classList.contains('hidden-panel') && !document.body.classList.contains('governance-system-open');
+  }
+
   async function refreshOverview(force = false) {
-    const response = await fetch(`${API}${force ? '/api/control/check' : '/api/control/overview'}`, {
-      method:force ? 'POST' : 'GET', headers:headers(), cache:'no-store',
-    });
-    if (!response.ok) throw new Error(`Control API ${response.status}`);
-    latestOverview = await response.json();
-    renderAll();
+    if (!force && latestOverview && Date.now() - lastOverviewAt < OVERVIEW_TTL_MS) return latestOverview;
+    if (refreshPromise) return refreshPromise;
+    refreshPromise = (async () => {
+      const response = await fetch(`${API}${force ? '/api/control/check' : '/api/control/overview'}`, { method:force ? 'POST' : 'GET', headers:headers(), cache:'no-store' });
+      if (!response.ok) throw new Error(`Control API ${response.status}`);
+      latestOverview = await response.json(); lastOverviewAt = Date.now(); renderAll(); return latestOverview;
+    })().finally(() => { refreshPromise = null; });
+    return refreshPromise;
+  }
+
+  function refreshVisibleOverview() {
+    if (!cockpitVisible()) return;
+    refreshOverview(false).catch(error => console.warn('Governance overview unavailable', error));
   }
 
   function routeSection(section, fallback = '') {
@@ -188,7 +203,7 @@
   function openFocus(focus = 'overview', domain = '') {
     routeSection('aiops');
     document.body.dataset.missionFocus = focus;
-    window.setTimeout(() => scrollToFocus(focus, domain), 90);
+    window.setTimeout(() => { scrollToFocus(focus, domain); refreshVisibleOverview(); }, 90);
     syncPageTitle();
   }
 
@@ -296,16 +311,17 @@
       const surfaceReady = installMissionSurface() || Boolean($('#aiOpsPanel')?.dataset.missionControlReady);
       markSecondaryNavigation(); installCommandBar();
       if (!primaryReady || !surfaceReady) return false;
-      refreshOverview(false).catch(error => console.warn('Governance overview unavailable', error));
-      window.clearInterval(refreshTimer); refreshTimer = window.setInterval(() => refreshOverview(false).catch(() => {}), 30_000);
+      refreshVisibleOverview();
+      window.clearInterval(refreshTimer); refreshTimer = window.setInterval(refreshVisibleOverview, OVERVIEW_TTL_MS);
       maybeStartOverview(); syncPageTitle(); return true;
     };
     if (!ready()) {
       const observer = new MutationObserver(() => { markSecondaryNavigation(); if (ready()) observer.disconnect(); });
       observer.observe(document.documentElement,{ childList:true, subtree:true });
     }
-    document.addEventListener('click', () => window.setTimeout(syncPageTitle, 0), true);
-    window.addEventListener('hashchange', syncPageTitle);
+    document.addEventListener('click', () => window.setTimeout(() => { syncPageTitle(); refreshVisibleOverview(); }, 0), true);
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') refreshVisibleOverview(); });
+    window.addEventListener('hashchange', () => { syncPageTitle(); refreshVisibleOverview(); });
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, { once:true }); else init();

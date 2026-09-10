@@ -20,9 +20,12 @@ test('canonical public workspace paths use the isolated Space service binding',a
   assert.match(router,/routeDeploymentProbe[\s\S]*workspaceUpstreamRequest\(request,'\/'\)/);
   assert.ok(router.includes('isWorkspaceAdminPath(url.pathname)&&!isEkodiBizInvestAdminPath(url.pathname)'));
   assert.match(wrangler,/binding = "SPACE"[\s\S]*service = "ekodi-space"/);
-  for(const route of ['/deployment-probe','/_ekodi/space/*','/auth/start']){
+  for(const route of ['/deployment-probe','/_ekodi/space/*']){
     assert.ok(wrangler.includes(`"${route}"`),route);
   }
+  const workerFirstRoutes=[...wrangler.matchAll(/"([^"]+)"/g)].map(match=>match[1]);
+  const workerFirstCovers=path=>workerFirstRoutes.some(route=>route===path||(route.endsWith('*')&&path.startsWith(route.slice(0,-1))));
+  assert.ok(workerFirstCovers('/auth/start'),'/auth/start must remain Worker-first directly or through a covering route');
   const manifest=JSON.parse(manifestText);
   assert.ok(!manifest.worker.requests.some(item=>item.url==='https://ekodi.kr/deployment-probe'));
   const spaceConfig=manifest.worker.requests.find(item=>item.url==='https://ekodi.kr/_ekodi/space/config.js');
@@ -43,9 +46,13 @@ test('canonical public workspace paths use the isolated Space service binding',a
   for(const retiredKind of ['personal','o'+'rg','group','project']) assert.ok(!wrangler.includes(`\"/${retiredKind}/*\"`),retiredKind);
 });
 test('workspace shell assets and auth handoff stay inside the apex gateway',async()=>{
-  const router=await read('platform-router-entry-worker.js');
+  const [router,jadam]=await Promise.all([
+    read('platform-router-entry-worker.js'),
+    read('jadam-storefront.js'),
+  ]);
   assert.ok(router.includes("const WORKSPACE_ASSET_PREFIX='/_ekodi/space/'"));
-  assert.ok(router.includes("const WORKSPACE_ASSETS=new Set(['style.css','config.js','app.js'])"));
+  assert.ok(router.includes("const WORKSPACE_ASSETS=new Set(['style.css','config.js','app.js','storefront.json','storefront.css','jadam-storefront.css'])"));
+  assert.ok(jadam.includes('href="/_ekodi/space/jadam-storefront.css'));
   assert.match(router,/rewriteWorkspaceShellAssets/);
   assert.match(router,/workspaceAuthRedirect/);
   assert.ok(router.includes("target.origin!=='https://ekodi.kr'"));

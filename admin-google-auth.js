@@ -1,12 +1,15 @@
 import { isAllowedOrigin } from './auth-worker.js';
+import { adminAuthorityForRole, authorizeEkodiAction } from './ekodi-authorization.js';
 
 const encoder = new TextEncoder();
 const GOOGLE_ISSUERS = new Set(['accounts.google.com', 'https://accounts.google.com']);
 const ADMIN_ROLES = new Set(['super_admin', 'operator', 'viewer']);
 const CHALLENGE_MINUTES = 10;
 const SESSION_HOURS = 8;
+const PRIVILEGED_MINUTES = 15;
 const JWKS_URL = 'https://www.googleapis.com/oauth2/v3/certs';
 let jwksCache = { keys: [], expiresAt: 0 };
+const schemaInitCache = new WeakMap();
 
 function bytesToHex(bytes) {
   return [...new Uint8Array(bytes)].map(byte => byte.toString(16).padStart(2, '0')).join('');
@@ -72,6 +75,24 @@ function workspaceDomain(env) {
   return String(env.ADMIN_WORKSPACE_DOMAIN || '').trim().toLowerCase();
 }
 
+function isD1DailyReadLimit(error) {
+  const code = String(error?.code || error?.cause?.code || '');
+  const message = String(error?.message || error?.cause?.message || error || '');
+  return code === '7500' || /daily row read limit/i.test(message) || /\bcode[:=\s]*7500\b/i.test(message);
+}
+
+function nextD1DailyResetIso(now = new Date()) {
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, 0, 0, 0)).toISOString();
+}
+
+function d1DailyLimitResponse(request, env) {
+  return json({
+    error: '관리자 인증 저장소의 일일 사용량 한도에 도달했습니다. 저장소 한도가 초기화된 뒤 다시 시도해 주세요.',
+    code: 'AUTH_STORE_DAILY_LIMIT',
+    retryAt: nextD1DailyResetIso(),
+  }, 503, request, env);
+}
+
 async function ensureSchema(db, env) {
   await db.batch([
     db.prepare(`CREATE TABLE IF NOT EXISTS admins (
@@ -117,8 +138,16 @@ async function ensureSchema(db, env) {
       expires_at TEXT NOT NULL,
       created_at TEXT NOT NULL
     )`),
+    db.prepare(`CREATE TABLE IF NOT EXISTS admin_privileged_sessions (
+      token_hash TEXT PRIMARY KEY,
+      admin_id INTEGER NOT NULL,
+      expires_at TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      FOREIGN KEY(admin_id) REFERENCES admins(id)
+    )`),
     db.prepare('CREATE INDEX IF NOT EXISTS idx_admin_google_status ON admin_google_accounts(status, role)'),
     db.prepare('CREATE INDEX IF NOT EXISTS idx_google_challenge_expiry ON google_login_challenges(expires_at)'),
+    db.prepare('CREATE INDEX IF NOT EXISTS idx_admin_privileged_expiry ON admin_privileged_sessions(expires_at)'),
   ]);
 
   const columns = await db.prepare('PRAGMA table_info(admins)').all();
@@ -139,20 +168,51 @@ async function ensureSchema(db, env) {
   }
 }
 
+async function ensureSchemaOnce(db, env) {
+  if (!db || (typeof db !== 'object' && typeof db !== 'function')) return ensureSchema(db, env);
+  let pending = schemaInitCache.get(db);
+  if (!pending) {
+    pending = ensureSchema(db, env).catch(error => {
+      schemaInitCache.delete(db);
+      throw error;
+    });
+    schemaInitCache.set(db, pending);
+  }
+  return pending;
+}
+
 async function writeAudit(db, adminId, action, resource, detail = '') {
   await db.prepare(`INSERT INTO audit_logs (admin_id, action, resource, detail, created_at)
     VALUES (?, ?, ?, ?, ?)`)
     .bind(adminId || null, action, resource, String(detail).slice(0, 500), new Date().toISOString()).run();
 }
 
-async function authenticateAdmin(request, db) {
+async function requestTokenHash(request) {
   const authorization = request.headers.get('authorization') || '';
-  if (!authorization.startsWith('Bearer ')) return null;
-  const tokenHash = await sha256(authorization.slice(7));
-  return db.prepare(`SELECT admins.id, admins.email, admins.role, sessions.expires_at
+  if (!authorization.startsWith('Bearer ')) return '';
+  const token = authorization.slice(7).trim();
+  if (!token || token.length > 256) return '';
+  return sha256(token);
+}
+
+async function authenticateAdmin(request, db) {
+  const tokenHash = await requestTokenHash(request);
+  if (!tokenHash) return null;
+  const admin = await db.prepare(`SELECT admins.id, admins.email, admins.role, sessions.expires_at
     FROM sessions JOIN admins ON admins.id = sessions.admin_id
     WHERE sessions.token_hash = ? AND sessions.expires_at > ?`)
     .bind(tokenHash, new Date().toISOString()).first();
+  return admin ? { ...admin, tokenHash } : null;
+}
+
+async function privilegedUntil(db, admin) {
+  if (!admin?.tokenHash) return null;
+  const now = new Date().toISOString();
+  await db.prepare('DELETE FROM admin_privileged_sessions WHERE expires_at <= ?').bind(now).run();
+  const row = await db.prepare(`SELECT expires_at FROM admin_privileged_sessions
+    WHERE token_hash = ? AND admin_id = ? AND expires_at > ?`)
+    .bind(admin.tokenHash, admin.id, now).first();
+  return row?.expires_at || null;
 }
 
 async function issueSession(db, adminId) {
@@ -161,6 +221,7 @@ async function issueSession(db, adminId) {
   const now = new Date();
   const expiresAt = new Date(now.getTime() + SESSION_HOURS * 60 * 60 * 1000);
   await db.prepare('DELETE FROM sessions WHERE expires_at <= ?').bind(now.toISOString()).run();
+  await db.prepare('DELETE FROM admin_privileged_sessions WHERE expires_at <= ?').bind(now.toISOString()).run();
   await db.prepare(`INSERT INTO sessions (token_hash, admin_id, expires_at, created_at)
     VALUES (?, ?, ?, ?)`)
     .bind(tokenHash, adminId, expiresAt.toISOString(), now.toISOString()).run();
@@ -277,18 +338,115 @@ async function handleLogin(request, env) {
   const admin = await ensureAdminRow(env.DB, account);
   const session = await issueSession(env.DB, admin.id);
   await writeAudit(env.DB, admin.id, 'session.google_login', 'platform', `${email}:${payload.sub}`);
-  return json({ ok: true, email, name: payload.name || '', role: account.role, provider: 'google', ...session }, 200, request, env);
+  return json({
+    ok: true,
+    email,
+    name: payload.name || '',
+    role: account.role,
+    provider: 'google',
+    authority: adminAuthorityForRole(account.role),
+    ...session,
+  }, 200, request, env);
 }
 
-async function requireSuperAdmin(request, env) {
+function capabilityError(decision, request, env) {
+  if (decision.code === 'ELEVATION_REQUIRED') {
+    return json({
+      error: '보호된 작업은 추가 Google 인증이 필요합니다.',
+      code: 'ELEVATION_REQUIRED',
+      privilegedSessionMinutes: PRIVILEGED_MINUTES,
+    }, 403, request, env);
+  }
+  if (decision.code === 'CAPABILITY_FORBIDDEN' || decision.code === 'SCOPE_FORBIDDEN') {
+    return json({ error: '이 작업에 필요한 관리자 권한이 없습니다.', code: decision.code }, 403, request, env);
+  }
+  return json({ error: '관리자 인증이 필요합니다.', code: 'AUTH_REQUIRED' }, 401, request, env);
+}
+
+async function requireCapability(request, env, capability) {
   const admin = await authenticateAdmin(request, env.DB);
-  if (!admin) return { error: json({ error: '관리자 인증이 필요합니다.' }, 401, request, env) };
-  if (admin.role !== 'super_admin') return { error: json({ error: '최고관리자 권한이 필요합니다.' }, 403, request, env) };
-  return { admin };
+  if (!admin) return { error: json({ error: '관리자 인증이 필요합니다.', code: 'AUTH_REQUIRED' }, 401, request, env) };
+  const elevatedUntil = await privilegedUntil(env.DB, admin);
+  const authority = adminAuthorityForRole(admin.role, {
+    scope: { type:'platform', id:'global' },
+    elevated: Boolean(elevatedUntil),
+    elevatedUntil,
+  });
+  const decision = authorizeEkodiAction({
+    authority,
+    requiredCapabilities: [capability],
+    resourceScope: { type:'platform', id:'global' },
+  });
+  if (!decision.allowed) return { error: capabilityError(decision, request, env), admin, authority };
+  return { admin, authority };
+}
+
+async function elevationStatus(request, env) {
+  const admin = await authenticateAdmin(request, env.DB);
+  if (!admin) return json({ error: '관리자 인증이 필요합니다.', code: 'AUTH_REQUIRED' }, 401, request, env);
+  const elevatedUntil = await privilegedUntil(env.DB, admin);
+  return json({
+    elevated: Boolean(elevatedUntil),
+    elevatedUntil,
+    privilegedSessionMinutes: PRIVILEGED_MINUTES,
+    authority: adminAuthorityForRole(admin.role, { elevated:Boolean(elevatedUntil), elevatedUntil }),
+  }, 200, request, env);
+}
+
+async function elevateSession(request, env) {
+  const admin = await authenticateAdmin(request, env.DB);
+  if (!admin) return json({ error: '관리자 인증이 필요합니다.', code: 'AUTH_REQUIRED' }, 401, request, env);
+  const clientId = configuredGoogleClientId(env);
+  if (!clientId) return json({ error: 'Google 관리자 인증이 연결되지 않았습니다.', code: 'GOOGLE_CLIENT_ID_REQUIRED' }, 503, request, env);
+  const body = await readJson(request);
+  const nonce = String(body?.nonce || '').trim();
+  if (!await consumeChallenge(env.DB, nonce)) {
+    return json({ error: '추가 인증 요청이 만료되었거나 이미 사용되었습니다.', code: 'ELEVATION_CHALLENGE_INVALID' }, 400, request, env);
+  }
+  const payload = await verifyGoogleIdToken(body?.credential, clientId, nonce);
+  const email = normalizeEmail(payload.email);
+  if (email !== normalizeEmail(admin.email)) {
+    return json({ error: '현재 관리자와 동일한 Google 계정으로 인증해 주세요.', code: 'ELEVATION_ACCOUNT_MISMATCH' }, 403, request, env);
+  }
+  const account = await env.DB.prepare(`SELECT * FROM admin_google_accounts WHERE email = ? AND status = 'active'`).bind(email).first();
+  if (!account) return json({ error: '활성 관리자 Google 계정을 찾을 수 없습니다.', code: 'GOOGLE_ACCOUNT_NOT_ALLOWED' }, 403, request, env);
+  if (account.required_hd && String(payload.hd || '').toLowerCase() !== account.required_hd) {
+    return json({ error: '등록된 Google Workspace 조직 계정으로 인증해 주세요.', code: 'GOOGLE_WORKSPACE_REQUIRED' }, 403, request, env);
+  }
+  if (account.google_sub && account.google_sub !== payload.sub) {
+    return json({ error: '등록된 Google 계정의 고유 ID와 일치하지 않습니다.', code: 'ELEVATION_SUB_MISMATCH' }, 403, request, env);
+  }
+  if (!account.google_sub) {
+    await env.DB.prepare('UPDATE admin_google_accounts SET google_sub = ?, updated_at = ? WHERE id = ?')
+      .bind(payload.sub, new Date().toISOString(), account.id).run();
+  }
+  const now = new Date();
+  const elevatedUntil = new Date(now.getTime() + PRIVILEGED_MINUTES * 60 * 1000).toISOString();
+  await env.DB.prepare(`INSERT INTO admin_privileged_sessions(token_hash, admin_id, expires_at, created_at)
+    VALUES (?, ?, ?, ?)
+    ON CONFLICT(token_hash) DO UPDATE SET admin_id=excluded.admin_id, expires_at=excluded.expires_at, created_at=excluded.created_at`)
+    .bind(admin.tokenHash, admin.id, elevatedUntil, now.toISOString()).run();
+  await writeAudit(env.DB, admin.id, 'session.elevated', 'platform', `google:${elevatedUntil}`);
+  return json({
+    ok: true,
+    elevated: true,
+    elevatedUntil,
+    privilegedSessionMinutes: PRIVILEGED_MINUTES,
+    authority: adminAuthorityForRole(admin.role, { elevated:true, elevatedUntil }),
+  }, 200, request, env);
+}
+
+async function revokeElevation(request, env) {
+  const admin = await authenticateAdmin(request, env.DB);
+  if (!admin) return json({ error: '관리자 인증이 필요합니다.', code: 'AUTH_REQUIRED' }, 401, request, env);
+  await env.DB.prepare('DELETE FROM admin_privileged_sessions WHERE token_hash = ? AND admin_id = ?')
+    .bind(admin.tokenHash, admin.id).run();
+  await writeAudit(env.DB, admin.id, 'session.elevation_revoked', 'platform');
+  return json({ ok:true, elevated:false }, 200, request, env);
 }
 
 async function listAccounts(request, env) {
-  const gate = await requireSuperAdmin(request, env);
+  const gate = await requireCapability(request, env, 'admin:accounts.read');
   if (gate.error) return gate.error;
   const rows = await env.DB.prepare(`SELECT id, email, required_hd, display_name, role, status,
       CASE WHEN google_sub IS NULL THEN 0 ELSE 1 END AS googleBound,
@@ -298,7 +456,7 @@ async function listAccounts(request, env) {
 }
 
 async function addAccount(request, env) {
-  const gate = await requireSuperAdmin(request, env);
+  const gate = await requireCapability(request, env, 'admin:accounts.write');
   if (gate.error) return gate.error;
   const body = await readJson(request);
   const email = normalizeEmail(body?.email);
@@ -321,7 +479,7 @@ async function addAccount(request, env) {
 }
 
 async function updateAccount(request, env, id) {
-  const gate = await requireSuperAdmin(request, env);
+  const gate = await requireCapability(request, env, 'admin:accounts.write');
   if (gate.error) return gate.error;
   const body = await readJson(request);
   const role = String(body?.role || '').trim();
@@ -341,14 +499,17 @@ async function updateAccount(request, env, id) {
   const linkedAdmin = await env.DB.prepare('SELECT id FROM admins WHERE email = ?').bind(target.email).first();
   if (linkedAdmin) {
     await env.DB.prepare('UPDATE admins SET role = ? WHERE id = ?').bind(role, linkedAdmin.id).run();
-    if (status === 'disabled') await env.DB.prepare('DELETE FROM sessions WHERE admin_id = ?').bind(linkedAdmin.id).run();
+    if (status === 'disabled') {
+      await env.DB.prepare('DELETE FROM admin_privileged_sessions WHERE admin_id = ?').bind(linkedAdmin.id).run();
+      await env.DB.prepare('DELETE FROM sessions WHERE admin_id = ?').bind(linkedAdmin.id).run();
+    }
   }
   await writeAudit(env.DB, gate.admin.id, 'admin_google.update', 'admin-access', `${target.email}:${role}:${status}`);
   return json({ ok: true }, 200, request, env);
 }
 
 async function removeAccount(request, env, id) {
-  const gate = await requireSuperAdmin(request, env);
+  const gate = await requireCapability(request, env, 'admin:accounts.write');
   if (gate.error) return gate.error;
   const target = await env.DB.prepare('SELECT * FROM admin_google_accounts WHERE id = ?').bind(id).first();
   if (!target) return json({ error: '관리자 계정을 찾을 수 없습니다.' }, 404, request, env);
@@ -358,7 +519,10 @@ async function removeAccount(request, env, id) {
     if (Number(count.count) < 1) return json({ error: '활성 최고관리자는 최소 1명 이상 유지해야 합니다.' }, 409, request, env);
   }
   const linkedAdmin = await env.DB.prepare('SELECT id FROM admins WHERE email = ?').bind(target.email).first();
-  if (linkedAdmin) await env.DB.prepare('DELETE FROM sessions WHERE admin_id = ?').bind(linkedAdmin.id).run();
+  if (linkedAdmin) {
+    await env.DB.prepare('DELETE FROM admin_privileged_sessions WHERE admin_id = ?').bind(linkedAdmin.id).run();
+    await env.DB.prepare('DELETE FROM sessions WHERE admin_id = ?').bind(linkedAdmin.id).run();
+  }
   await env.DB.prepare('DELETE FROM admin_google_accounts WHERE id = ?').bind(id).run();
   await writeAudit(env.DB, gate.admin.id, 'admin_google.remove', 'admin-access', target.email + ':' + target.role + ':' + target.status);
   return json({ ok: true, removed: { id: target.id, email: target.email } }, 200, request, env);
@@ -368,16 +532,19 @@ export async function handleAdminGoogleAuth(request, env) {
   const origin = request.headers.get('origin');
   if (!isAllowedOrigin(origin, env)) return json({ error: '허용되지 않은 요청입니다.' }, 403, request, env);
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors(origin, env) });
-  if (!env.DB) return json({ error: '데이터베이스 연결이 설정되지 않았습니다.' }, 503, request, env);
-  await ensureSchema(env.DB, env);
   const url = new URL(request.url);
   const path = url.pathname;
 
+  // This route is environment-backed. It must not consume D1 reads just to render the Google sign-in entry.
   if (request.method === 'GET' && path === '/api/google/config') {
     const clientId = configuredGoogleClientId(env);
     return json({ enabled: Boolean(clientId), clientId, mode: clientId ? 'google_allowlist' : 'password_fallback' }, 200, request, env);
   }
-  if (request.method === 'POST' && path === '/api/google/challenge') {
+  if (!env.DB) return json({ error: '데이터베이스 연결이 설정되지 않았습니다.' }, 503, request, env);
+
+  try {
+    await ensureSchemaOnce(env.DB, env);
+    if (request.method === 'POST' && path === '/api/google/challenge') {
     if (!configuredGoogleClientId(env)) return json({ error: 'Google 관리자 로그인이 아직 연결되지 않았습니다.' }, 503, request, env);
     const nonce = bytesToHex(crypto.getRandomValues(new Uint8Array(24)));
     const nonceHash = await sha256(nonce);
@@ -389,10 +556,19 @@ export async function handleAdminGoogleAuth(request, env) {
     return json({ nonce, expiresAt: expiresAt.toISOString() }, 201, request, env);
   }
   if (request.method === 'POST' && path === '/api/google/login') return handleLogin(request, env);
+  if (path === '/api/admin-access/elevation') {
+    if (request.method === 'GET') return elevationStatus(request, env);
+    if (request.method === 'POST') return elevateSession(request, env);
+    if (request.method === 'DELETE') return revokeElevation(request, env);
+  }
   if (request.method === 'GET' && path === '/api/admin-access/google-accounts') return listAccounts(request, env);
   if (request.method === 'POST' && path === '/api/admin-access/google-accounts') return addAccount(request, env);
   const match = path.match(/^\/api\/admin-access\/google-accounts\/(\d+)$/);
   if (request.method === 'PUT' && match) return updateAccount(request, env, Number(match[1]));
   if (request.method === 'DELETE' && match) return removeAccount(request, env, Number(match[1]));
-  return json({ error: 'Google 관리자 인증 경로를 찾을 수 없습니다.' }, 404, request, env);
+    return json({ error: 'Google 관리자 인증 경로를 찾을 수 없습니다.' }, 404, request, env);
+  } catch (error) {
+    if (isD1DailyReadLimit(error)) return d1DailyLimitResponse(request, env);
+    throw error;
+  }
 }

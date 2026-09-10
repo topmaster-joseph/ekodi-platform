@@ -1,4 +1,7 @@
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+import { initBibleReader } from './reader.js';
+
+const BASE_PATH = '/bible';
 
 const cfg = window.EKODI_BIBLE_CONFIG || {};
 const enabled = Boolean(cfg.dataEnabled && cfg.supabaseUrl && cfg.supabasePublishableKey);
@@ -81,7 +84,7 @@ async function authAction() {
 function showView(name, push = true) {
   $$('.view').forEach(view => view.classList.toggle('active', view.id === `view-${name}`));
   $$('[data-view]').forEach(button => button.classList.toggle('active', button.dataset.view === name));
-  if (push) window.history.replaceState({}, '', `/${name}`);
+  if (push) window.history.replaceState({}, '', BASE_PATH + '/' + name);
   if (name === 'journey') loadJourneyArea();
   if (name === 'together') loadTogetherArea();
 }
@@ -133,7 +136,16 @@ async function loadToday() {
 function bubble(role, text) {
   const node = document.createElement('div');
   node.className = `bubble ${role}`;
-  node.innerHTML = `<small>${role === 'user' ? '나' : '말씀대화'}</small>${esc(text).replace(/\n/g, '<br>')}`;
+  node.innerHTML = `<small>${role === 'user' ? '나' : '말씀대화 · AI 해설'}</small>${esc(text).replace(/\n/g, '<br>')}`;
+  $('#chat').append(node);
+  $('#chat').scrollTop = $('#chat').scrollHeight;
+}
+
+function scriptureBubble(scripture) {
+  if (!scripture?.ok || !Array.isArray(scripture.verses)) return;
+  const node = document.createElement('article');
+  node.className = 'scripture-block';
+  node.innerHTML = `<small>성경본문 · 개역한글</small><strong>${esc(scripture.citation || '')}</strong><div>${scripture.verses.map(verse => `<p><sup>${verse.verse}</sup> ${esc(verse.text)}</p>`).join('')}</div><span class="meta">${esc(scripture.attribution || '')} · 원문 그대로</span>`;
   $('#chat').append(node);
   $('#chat').scrollTop = $('#chat').scrollHeight;
 }
@@ -169,13 +181,14 @@ async function sendMessage(message) {
   chatHistory.push({ role: 'user', content: message });
   await saveMessage('user', message);
   const token = session?.access_token || '';
-  const response = await fetch('/api/assist', {
+  const response = await fetch(BASE_PATH + '/api/assist', {
     method: 'POST',
     headers: { 'content-type': 'application/json', ...(token ? { authorization: `Bearer ${token}` } : {}) },
     body: JSON.stringify({ message, topic, history: chatHistory.slice(-8) }),
   });
   const data = await response.json().catch(() => ({}));
   const reply = data.reply || '지금은 AI 보조 기능 없이도 대화를 이어갈 수 있습니다. 이 이야기를 한 문장으로 더 말해 주시겠어요?';
+  scriptureBubble(data.scripture);
   bubble('assistant', reply);
   chatHistory.push({ role: 'assistant', content: reply });
   await saveMessage('assistant', reply, data.scriptureRef || '');
@@ -450,8 +463,11 @@ $('#shareForm').onsubmit = async event => {
 renderTopics();
 applyGuide();
 renderIdentity();
-const initial = location.pathname.split('/')[1];
-showView(['conversation', 'journey', 'together'].includes(initial) ? initial : 'today', false);
+await initBibleReader().catch(error => console.error('Bible reader init', error));
+const pathParts = location.pathname.split('/').filter(Boolean);
+const initial = pathParts[0] === 'bible' ? pathParts[1] : pathParts[0];
+const initialView = initial === 'search' ? 'reader' : initial;
+showView(['reader', 'conversation', 'journey', 'together'].includes(initialView) ? initialView : 'today', false);
 await loadToday();
 if (enabled) {
   try { await handoff(); } catch (error) { console.error('bible auth handoff', error); }

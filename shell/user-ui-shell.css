@@ -4,6 +4,43 @@
  * Served from shell.ekodi.kr so strict service CSPs can keep inline styles disabled.
  */
 
+/* Natural-language word integrity
+ * Korean and other natural-language UI copy wraps at word/eojeol boundaries by default.
+ * Technical identifiers opt in to anywhere wrapping with a utility class or data marker.
+ */
+html[data-ekodi-user-ui] body {
+  word-break: keep-all;
+  overflow-wrap: break-word;
+  line-break: auto;
+  hyphens: none;
+}
+html[data-ekodi-user-ui] :where(button, [role="button"]) {
+  white-space: normal;
+}
+html[data-ekodi-user-ui] :where(code, kbd, samp, .url, .domain, .email, [data-ekodi-break-anywhere]) {
+  word-break: normal;
+  overflow-wrap: anywhere;
+  hyphens: none;
+}
+html[data-ekodi-user-ui] .ekodi-nowrap {
+  white-space: nowrap !important;
+  word-break: normal !important;
+}
+html[data-ekodi-user-ui] .ekodi-break-anywhere {
+  word-break: normal !important;
+  overflow-wrap: anywhere !important;
+  hyphens: none !important;
+}
+
+/* Selective geometry principle: soften interactive comfort surfaces without flattening service identity. */
+html[data-ekodi-user-ui] :where(.btn,.button,.smallbtn,.ekodi-button,.ekodi-cta,[data-ekodi-control],[role="tab"]){border-radius:var(--ekodi-user-control-radius)}
+html[data-ekodi-user-ui] :where(.search,.ekodi-field,[data-ekodi-field]){border-radius:var(--ekodi-user-field-radius)}
+html[data-ekodi-user-ui] :where(.chip,.tag,.ekodi-chip,[data-ekodi-chip]){border-radius:var(--ekodi-user-chip-radius)}
+html[data-ekodi-user-ui] :where(dialog,.modal,.ekodi-dialog,[data-ekodi-dialog]){border-radius:var(--ekodi-user-panel-radius)}
+html[data-ekodi-user-ui][data-ekodi-experience-profile="consumer-commerce"] :where(.card,.context-card,.store-card,.policy,.guide article,.discover-grid button,[data-ekodi-commerce-card]){border-radius:var(--ekodi-user-panel-radius)!important}
+html[data-ekodi-user-ui][data-ekodi-experience-profile="consumer-commerce"] :where(.partner,.local,[data-ekodi-commerce-section]){border-radius:var(--ekodi-user-section-radius);overflow:hidden}
+html[data-ekodi-user-ui][data-ekodi-experience-profile="consumer-commerce"] :where(.thumb,.detail-art,.context-detail-visual,[data-ekodi-commerce-image]){border-radius:var(--ekodi-user-image-radius)}
+
 html[data-ekodi-user-ui] {
   --ekodi-user-chrome-bg: color-mix(in srgb, var(--ekodi-service-paper, #fafaf7) 94%, var(--ekodi-service-accent, #315d48) 6%);
   --ekodi-user-chrome-text: var(--ekodi-service-ink, #18251d);
@@ -13,6 +50,15 @@ html[data-ekodi-user-ui] {
   --ekodi-user-header-fallback-height: 64px;
   --ekodi-user-canvas-max: 1240px;
   --ekodi-user-reading-max: 760px;
+  --ekodi-user-content-inline-size: var(--ekodi-user-canvas-max);
+  --ekodi-user-content-left: max(16px, calc((100vw - var(--ekodi-user-canvas-max)) / 2));
+  --ekodi-user-content-right: var(--ekodi-user-content-left);
+  --ekodi-user-control-radius: var(--ekodi-control-radius, var(--ekodi-service-radius-soft, 12px));
+  --ekodi-user-field-radius: var(--ekodi-field-radius, var(--ekodi-service-radius-soft, 12px));
+  --ekodi-user-chip-radius: var(--ekodi-chip-radius, var(--ekodi-service-radius-soft, 999px));
+  --ekodi-user-panel-radius: var(--ekodi-panel-radius, var(--ekodi-service-radius, 18px));
+  --ekodi-user-image-radius: var(--ekodi-image-radius, var(--ekodi-service-radius, 18px));
+  --ekodi-user-section-radius: var(--ekodi-section-radius, var(--ekodi-service-radius, 18px));
 }
 
 /* Centered Canvas Principle
@@ -39,6 +85,12 @@ html[data-ekodi-user-ui][data-ekodi-user-layout="centered-v1"] [data-ekodi-user-
   margin-inline: auto;
 }
 
+/* Main-aligned Chrome Contract
+ * Header/footer backgrounds stay full bleed. Their inner content follows the actual
+ * adopted main canvas width. Runtime measurement updates --ekodi-user-content-*;
+ * 1240px remains the no-JS/canonical fallback.
+ */
+
 /* Server fallback. It is present from the first HTML response, before JS boots. */
 .ekodi-user-ui-fallback-header {
   position: sticky;
@@ -55,7 +107,7 @@ html[data-ekodi-user-ui][data-ekodi-user-layout="centered-v1"] [data-ekodi-user-
 }
 
 .ekodi-user-ui-fallback-header__inner {
-  width: min(var(--ekodi-user-canvas-max), calc(100% - 32px));
+  width: min(var(--ekodi-user-content-inline-size, var(--ekodi-user-canvas-max)), calc(100% - 32px));
   min-height: var(--ekodi-user-header-fallback-height);
   margin: 0 auto;
   display: grid;
@@ -99,7 +151,7 @@ html[data-ekodi-user-ui][data-ekodi-user-layout="centered-v1"] [data-ekodi-user-
 .ekodi-user-ui-header-fallback a:focus-visible {
   outline: 2px solid currentColor;
   outline-offset: 4px;
-  border-radius: 4px;
+  border-radius: var(--ekodi-user-control-radius);
 }
 
 /* If a service already owns a valid header, adopt it and suppress the fallback. */
@@ -120,6 +172,9 @@ body:has([data-ekodi-user-header-root]:not(.ekodi-user-ui-fallback-header):not(.
   z-index: 2147483000 !important;
   overflow: visible !important;
   box-sizing: border-box !important;
+  --ekodi-user-header-inline-gutter: var(--ekodi-user-content-left, max(16px, calc((100vw - var(--ekodi-user-canvas-max)) / 2)));
+  padding-left: var(--ekodi-user-header-inline-gutter) !important;
+  padding-right: var(--ekodi-user-content-right, var(--ekodi-user-header-inline-gutter)) !important;
   min-height: var(--ekodi-user-header-min-height, var(--ekodi-user-header-fallback-height)) !important;
   padding-top: calc(var(--ekodi-user-header-base-padding-top, 0px) + env(safe-area-inset-top, 0px)) !important;
   transform: none !important;
@@ -147,6 +202,8 @@ body:has([data-ekodi-user-header-root]:not(.ekodi-user-ui-fallback-header):not(.
 }
 
 .ekodi-user-ui-header-fallback {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
   min-height: var(--ekodi-user-header-fallback-height) !important;
   border-bottom: 1px solid var(--ekodi-user-chrome-line) !important;
   background: var(--ekodi-user-chrome-bg) !important;
@@ -157,7 +214,7 @@ body:has([data-ekodi-user-header-root]:not(.ekodi-user-ui-fallback-header):not(.
 }
 
 .ekodi-user-ui-header-fallback .ekodi-user-ui-header-fallback__inner {
-  width: min(var(--ekodi-user-canvas-max), calc(100% - 32px));
+  width: min(var(--ekodi-user-content-inline-size, var(--ekodi-user-canvas-max)), calc(100% - 32px));
   min-height: var(--ekodi-user-header-fallback-height);
   margin: 0 auto;
   display: grid;
@@ -192,6 +249,11 @@ html[data-ekodi-user-ui] {
   scroll-padding-top: calc(var(--ekodi-user-header-height, var(--ekodi-user-header-fallback-height)) + 12px);
 }
 
+/* Shared language control replaces legacy per-service selectors. */
+html[data-ekodi-service="biz"] header .language,
+html[data-ekodi-service="community"] .language-menu {
+  display: none !important;
+}
 /* One language control is inherited by every public/workspace user surface. */
 .ekodi-user-language {
   position: relative;
@@ -223,7 +285,7 @@ html[data-ekodi-user-ui] {
   max-width: 96px;
   box-sizing: border-box;
   border: 1px solid var(--ekodi-user-chrome-line);
-  border-radius: max(8px, calc(var(--ekodi-service-radius-soft, 16px) * .6));
+  border-radius: var(--ekodi-user-control-radius);
   padding: 0 26px 0 9px;
   background: color-mix(in srgb, var(--ekodi-user-chrome-bg) 92%, transparent);
   color: var(--ekodi-user-chrome-text);
@@ -231,6 +293,28 @@ html[data-ekodi-user-ui] {
   cursor: pointer;
 }
 
+.ekodi-user-language[data-ekodi-language-placement="footer"] {
+  margin-inline-start: 0;
+  margin-top: 2px;
+}
+
+.ekodi-language-notice {
+  position: fixed;
+  left: 50%;
+  bottom: max(22px, env(safe-area-inset-bottom));
+  z-index: 2147483600;
+  transform: translateX(-50%);
+  max-width: min(520px, calc(100vw - 28px));
+  padding: 11px 15px;
+  border-radius: 999px;
+  background: #17231d;
+  color: #fff;
+  font: 700 12px/1.45 system-ui, -apple-system, "Noto Sans KR", "Malgun Gothic", sans-serif;
+  text-align: center;
+  box-shadow: 0 12px 36px rgba(0,0,0,.2);
+}
+
+.ekodi-language-notice[hidden] { display: none !important; }
 .ekodi-user-language__select:focus-visible {
   outline: 2px solid var(--ekodi-user-chrome-link);
   outline-offset: 2px;
@@ -255,7 +339,7 @@ html[data-ekodi-user-ui] {
 }
 
 .ekodi-user-ui-footer__inner {
-  width: min(980px, calc(100% - 32px));
+  width: min(var(--ekodi-user-content-inline-size, var(--ekodi-user-canvas-max)), calc(100% - 32px));
   margin: 0 auto;
   padding: 24px 0;
   display: flex;
@@ -335,6 +419,9 @@ html[data-ekodi-user-ui] {
 [data-ekodi-legal-footer]:not(.ekodi-user-ui-footer) {
   display: none !important;
 }
+body > [data-ekodi-user-footer] ~ [data-ekodi-user-footer] {
+  display: none !important;
+}
 
 @media (max-width: 840px) {
   .ekodi-user-ui-header .ekodi-user-ui-header-center {
@@ -349,8 +436,13 @@ html[data-ekodi-user-ui] {
     width: min(var(--ekodi-user-canvas-max), calc(100% - 24px));
   }
 
+  .ekodi-user-ui-fallback-header__inner,
+  .ekodi-user-ui-header-fallback .ekodi-user-ui-header-fallback__inner {
+    width: min(var(--ekodi-user-content-inline-size, var(--ekodi-user-canvas-max)), calc(100% - 24px));
+  }
+
   .ekodi-user-ui-footer__inner {
-    width: min(100% - 24px, 980px);
+    width: min(var(--ekodi-user-content-inline-size, var(--ekodi-user-canvas-max)), calc(100% - 24px));
     padding: 20px 0;
     gap: 10px;
   }
@@ -374,7 +466,7 @@ html[data-ekodi-user-ui] {
 
   .ekodi-user-ui-fallback-header__inner,
   .ekodi-user-ui-header-fallback .ekodi-user-ui-header-fallback__inner {
-    width: min(100% - 20px, var(--ekodi-user-canvas-max));
+    width: min(var(--ekodi-user-content-inline-size, var(--ekodi-user-canvas-max)), calc(100% - 20px));
     gap: 8px;
   }
 
@@ -386,6 +478,10 @@ html[data-ekodi-user-ui] {
   .ekodi-user-ui-fallback-header__nav,
   .ekodi-user-ui-header-fallback__my {
     font-size: 12px;
+  }
+
+  .ekodi-user-ui-footer__inner {
+    width: min(var(--ekodi-user-content-inline-size, var(--ekodi-user-canvas-max)), calc(100% - 20px));
   }
 
   .ekodi-user-language {

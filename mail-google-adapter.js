@@ -104,11 +104,12 @@ function encodeRaw(value) {
   for (const byte of bytes) binary += String.fromCharCode(byte);
   return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
 }
-function sanitizeHeader(value) { return String(value || '').replace(/[\r\n]+/g, ' ').trim(); }export async function sendGoogleMailMessage(accessToken, { to, cc = '', bcc = '', subject = '', body = '' }) {
+function sanitizeHeader(value) { return String(value || '').replace(/[\r\n]+/g, ' ').trim(); }export async function sendGoogleMailMessage(accessToken, { to, cc = '', bcc = '', replyTo = '', subject = '', body = '' }) {
   const lines = [
     `To: ${sanitizeHeader(to)}`,
     ...(cc ? [`Cc: ${sanitizeHeader(cc)}`] : []),
     ...(bcc ? [`Bcc: ${sanitizeHeader(bcc)}`] : []),
+    ...(replyTo ? [`Reply-To: ${sanitizeHeader(replyTo)}`] : []),
     `Subject: ${sanitizeHeader(subject)}`,
     'MIME-Version: 1.0', 'Content-Type: text/plain; charset=UTF-8', 'Content-Transfer-Encoding: 8bit', '', String(body || ''),
   ];

@@ -1,3 +1,5 @@
+import { adminAuthorityForRole } from './ekodi-authorization.js';
+
 const encoder = new TextEncoder();
 
 function bytesToHex(bytes) {
@@ -42,12 +44,31 @@ export async function handleAdminSessionFastPath(request, env) {
   const token = authorization.slice(7);
   if (!token || token.length > 256) return json(request, env, { authenticated:false }, 401);
   const tokenHash = await sha256(token);
-  const admin = await env.DB.prepare(`SELECT admins.email, admins.role, sessions.expires_at
-    FROM sessions JOIN admins ON admins.id = sessions.admin_id
+  const now = new Date().toISOString();
+  const admin = await env.DB.prepare(`SELECT admins.email, admins.role, sessions.expires_at,
+      privileged.expires_at AS elevated_until
+    FROM sessions
+    JOIN admins ON admins.id = sessions.admin_id
+    LEFT JOIN admin_privileged_sessions privileged
+      ON privileged.token_hash = sessions.token_hash AND privileged.expires_at > ?
     WHERE sessions.token_hash = ? AND sessions.expires_at > ?`)
-    .bind(tokenHash, new Date().toISOString()).first();
+    .bind(now, tokenHash, now).first()
+    .catch(async () => env.DB.prepare(`SELECT admins.email, admins.role, sessions.expires_at
+      FROM sessions JOIN admins ON admins.id = sessions.admin_id
+      WHERE sessions.token_hash = ? AND sessions.expires_at > ?`)
+      .bind(tokenHash, now).first());
 
-  return admin
-    ? json(request, env, { authenticated:true, email:admin.email, role:admin.role, expiresAt:admin.expires_at })
-    : json(request, env, { authenticated:false }, 401);
+  if (!admin) return json(request, env, { authenticated:false }, 401);
+  const authority = adminAuthorityForRole(admin.role, {
+    scope: { type:'platform', id:'global' },
+    elevated: Boolean(admin.elevated_until),
+    elevatedUntil: admin.elevated_until || null,
+  });
+  return json(request, env, {
+    authenticated:true,
+    email:admin.email,
+    role:admin.role,
+    expiresAt:admin.expires_at,
+    authority,
+  });
 }

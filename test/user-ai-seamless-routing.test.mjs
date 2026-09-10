@@ -11,7 +11,7 @@ test('FREE can receive a bounded EKODI-sponsored allowance when configured', () 
   assert.equal(policy.sponsoredEligible, true);
 });
 
-test('automatic user routing is seamless when no personal API is connected', () => {
+test('automatic interactive routing prefers personal web before EKODI sponsored API', () => {
   const decision = resolveAiAccessRoute({
     mode: 'auto',
     intent: 'interactive',
@@ -23,17 +23,17 @@ test('automatic user routing is seamless when no personal API is connected', () 
     sponsoredAvailable: true,
     sponsoredRemaining: 20,
   });
-  assert.equal(decision.route, 'ekodi-sponsored');
-  assert.equal(decision.reason, 'membership-supported-seamless');
+  assert.equal(decision.route, 'personal-web');
+  assert.equal(decision.reason, 'personal-web-preferred');
 });
 
-test('personal API stays preferred and AI can still be disabled explicitly', () => {
+test('personal subscription stays preferred for human-present work and AI can still be disabled explicitly', () => {
   const personal = resolveAiAccessRoute({
     mode: 'auto', intent: 'interactive', surface: 'user', aiRequired: true,
     hasPersonalApi: true, personalApiAllowed: true,
     personalWebAvailable: true, sponsoredAvailable: true, sponsoredRemaining: 20,
   });
-  assert.equal(personal.route, 'personal-api');
+  assert.equal(personal.route, 'personal-web');
 
   const off = resolveAiAccessRoute({
     mode: 'off', intent: 'interactive', surface: 'user', aiRequired: true,

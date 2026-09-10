@@ -33,22 +33,21 @@ test('My EKODI reuses central identity and inherits registry-driven one-login ha
   assert.match(app,/ekodi_token/);
   assert.match(app,/verifyOtp/);
   assert.match(auth,/'my':\{name:'My EKODI'/);
-  assert.match(auth,/returnTo:'https:\/\/my\.ekodi\.kr\/'/);
+  assert.match(auth,/returnTo:'https:\/\/ekodi\.kr\/my\/'/);
   assert.match(auth,/\/session\/handoff/);
   assert.match(router,/isRegistryUserService/);
   assert.match(router,/site==='portal'\|\|isRegistryUserService/);
   assert.match(router,/loadClientAuth/);
 });
 
-test('My workspace selection enters a linked workspace instead of only changing local state',async()=>{
+test('My workspace selection updates context without forcing service navigation',async()=>{
   const app=await read('my/app.js');
   assert.match(app,/function workspaceDestination\(workspace\)/);
   assert.match(app,/requires_handoff/);
-  assert.match(app,/function enterWorkspace\(key\)/);
-  assert.match(app,/location\.assign\(serviceRoute\(destination\.id,destination\.url\)\)/);
+  assert.match(app,/function enterWorkspace\(key\)\{\s*setActiveWorkspace\(key\);\s*\}/);
+  assert.doesNotMatch(app,/function enterWorkspace\(key\)\{[\s\S]{0,180}location\.assign/);
   assert.match(app,/data-workspace-key[\s\S]*enterWorkspace/);
-  assert.match(app,/return_to/);
-  assert.match(app,/new URL\(url\)\.origin===target\.origin/);
+  assert.match(app,/action=active/);
 });
 
 test('My keeps the active workspace when opening Social or Energy and when returning from their switchers',async()=>{
@@ -154,7 +153,7 @@ test('Personal users can enter personal-brand Marketing without a tenant or stor
 test('Production rollout migrates legacy My EKODI before future guarded promotions',async()=>{
   const workflow=await read('.github/workflows/deploy-my.yml');
   assert.match(workflow,/has no deployments/);
-  assert.match(workflow,/my\.ekodi\.kr\/health/);
+  assert.match(workflow,/ekodi\.kr\/my\/health/);
   assert.match(workflow,/MY PLATFORMS/);
   assert.match(workflow,/one-time direct migration from staging-validated source/);
   assert.match(workflow,/Existing production .*satisfies.*My EKODI hub contract/);
@@ -187,6 +186,21 @@ test('My EKODI approval hub keeps unified visibility and person-scoped decision 
   assert.doesNotMatch(approvalApp,/service_role|SUPABASE_SERVICE_ROLE_KEY/);
 });
 
+test('My production verification uses the canonical apex path and proves the legacy redirect',async()=>{
+  const workflow=await read('.github/workflows/deploy-my.yml');
+  assert.match(workflow,/legacy_code=.*https:\/\/my\.ekodi\.kr\//);
+  assert.ok(workflow.includes("^location:[[:space:]]*https://ekodi\\.kr/my/?[[:space:]]*$"));
+  assert.match(workflow,/https:\/\/ekodi\.kr\/my\/w\/person:deployment-probe/);
+  assert.match(workflow,/https:\/\/ekodi\.kr\/my\/service-manifest\.json/);
+  assert.doesNotMatch(workflow,/private_code=.*https:\/\/my\.ekodi\.kr\/w\//);
+});
+test('My production dependency gate accepts forward-compatible Shell character renderer versions',async()=>{
+  const workflow=await read('.github/workflows/deploy-my.yml');
+  assert.doesNotMatch(workflow,/userCharacterVersion\":6/);
+  assert.match(workflow,/Number\(h\.characterIdentityRegistryVersion\)!==2/);
+  assert.match(workflow,/Number\(h\.userCharacterVersion\)<6/);
+});
+
 test('My staging verification preserves Cloudflare Access instead of weakening it',async()=>{
   const workflow=await read('.github/workflows/deploy-my.yml');
   assert.match(workflow,/Cloudflare Access/);
@@ -199,4 +213,48 @@ test('My deployment verification derives Trade route from the live service manif
   assert.doesNotMatch(workflow,/https:\/\/trade\.ekodi\.kr\//);
   assert.equal((workflow.match(/m\.services\.find\(v=>v\.id===\"trade\"\)/g)||[]).length,2);
   assert.equal((workflow.match(/JSON\.stringify\(\[s\.id,s\.name,s\.url\]\)/g)||[]).length,2);
+});
+
+test('My EKODI keeps the guest entry sparse and turns the signed-in root into a contextual home',async()=>{
+  const [html,app,css,userAi]=await Promise.all([read('my/index.html'),read('my/app.js'),read('my/comfort-ui.css'),read('my/user-ai-ui.js')]);
+  assert.match(html,/data-auth-state="guest"/);
+  assert.match(html,/id="memberHome"/);
+  assert.match(html,/data-focus-surface="recommendations"/);
+  assert.match(html,/data-focus-surface="workspaces"/);
+  assert.match(app,/FOCUS_HASHES/);
+  assert.match(app,/function syncSurfaceState/);
+  assert.match(app,/function memberHomeUi/);
+  assert.match(app,/document\.body\.dataset\.homeMode/);
+  assert.match(app,/cards\.slice\(0,3\)/);
+  assert.match(css,/body\[data-auth-state="guest"\] main>:not\(\.comfort-hero\)/);
+  assert.match(css,/\.member-focus-grid/);
+  assert.match(css,/body\[data-auth-state="member"\]\[data-home-mode="focus"\]/);
+  assert.match(userAi,/내 에코디,<br>필요한 것만\./);
+});
+
+
+test('My EKODI provides explicit privacy-first personal character selection',async()=>{
+  const [html,app,character,worker,profileApi]=await Promise.all([
+    read('my/index.html'),read('my/app.js'),read('my/character-identity.js'),read('my-worker.js'),read('supabase/functions/profile-api/index.ts')
+  ]);
+  assert.match(html,/id="characterPreview"/);
+  assert.match(html,/id="characterCanonical"/);
+  assert.match(html,/id="characterPersonal"/);
+  assert.match(html,/id="characterPortraitInput"/);
+  assert.match(html,/character-identity\.js/);
+  assert.match(app,/getUserId:\(\)=>String\(session\?\.user\?\.id\|\|''\)/);
+  assert.match(character,/DB_NAME='ekodi-my-character-v1'/);
+  assert.match(character,/indexedDB\.open/);
+  assert.match(character,/canvas\.toBlob/);
+  assert.match(character,/image\/webp/);
+  assert.match(character,/localOnly:Boolean\(portraitUrl\)/);
+  assert.match(character,/functions\/v1\/profile-api/);
+  assert.match(character,/api\('DELETE'\)/);
+  assert.doesNotMatch(character,/storage\.from|face_embedding|data:image/);
+  assert.match(worker,/characterIdentityPersonalization:true/);
+  assert.match(worker,/characterPortraitStorage:'local-device-only'/);
+  assert.match(profileApi,/path==="\/character"/);
+  assert.match(profileApi,/character_biometric_payload_forbidden/);
+  assert.match(profileApi,/\['canonical','personal'\]/);
+  assert.match(profileApi,/admin\.auth\.admin\.updateUserById/);
 });

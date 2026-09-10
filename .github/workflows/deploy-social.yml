@@ -9,6 +9,8 @@ on:
     paths:
       - 'social/**'
       - 'social-worker.js'
+      - 'social-youtube-status.js'
+      - 'test/social-youtube-status.test.mjs'
       - 'wrangler.social.toml'
       - 'wrangler.social-staging.toml'
       - 'scripts/guarded-worker-release.mjs'
@@ -31,10 +33,14 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
+      - name: EKODI AI Orchestration Gate
+        run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
       - name: Validate Social source
         run: |
           set -euo pipefail
           node --check social-worker.js
+          node --check social-youtube-status.js
+          node --test test/social-youtube-status.test.mjs
           node --check social/app.js
           node --check scripts/guarded-worker-release.mjs
           test -f deploy/manifests/social.worker.json
@@ -43,13 +49,14 @@ jobs:
           grep -Fq 'featuredSection' social/index.html
           grep -Fq '커뮤니티' social/channels.json
           grep -Fq 'youtubeRssFallback:true' social-worker.js
+          grep -Fq '/api/media/youtube/status' social-worker.js
           grep -Fq 'pattern = "social.ekodi.kr"' wrangler.social.toml
           grep -Fq 'custom_domain = true' wrangler.social.toml
           if grep -R -Fq '에코디선교회' social; then echo 'Legacy mission label found in social source'; exit 1; fi
 
   deploy-staging:
     environment: development
-    if: github.ref != 'refs/heads/main'
+    if: always() && needs.validate.result == 'success'
     needs: validate
     runs-on: ubuntu-latest
     timeout-minutes: 12
@@ -62,6 +69,8 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
+      - name: EKODI AI Orchestration Gate
+        run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
       - name: Verify staging credentials
         run: |
           test -n "$CLOUDFLARE_API_TOKEN" || (echo 'Missing CLOUDFLARE_API_TOKEN' && exit 1)
@@ -78,14 +87,21 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          access_code=$(curl -sS -D /tmp/social-access.headers -o /tmp/social-access.body -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/health" || true)
+          if [[ "$access_code" == '302' ]] && grep -iq '^Www-Authenticate: Cloudflare-Access' /tmp/social-access.headers; then
+            echo "Social staging deployed and is correctly protected by Cloudflare Access at $STAGING_URL"
+            exit 0
+          fi
           for attempt in $(seq 1 12); do
             root_code=$(curl -L -sS -o /tmp/social.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/" || true)
             health_code=$(curl -sS -o /tmp/social-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/health" || true)
             feed_code=$(curl -sS -o /tmp/social-feed.json -w '%{http_code}' --connect-timeout 5 --max-time 20 "$STAGING_URL/api/feed?org=community" || true)
-            if [[ "$root_code" =~ ^[23] ]] && [[ "$health_code" == "200" ]] && [[ "$feed_code" == "200" ]] \
+            media_code=$(curl -sS -o /tmp/social-media.json -w '%{http_code}' --connect-timeout 5 --max-time 20 "$STAGING_URL/api/media/youtube/status?handle=@cgma4989&channelId=UC001JT9opxVBt9z_h-tsx8A" || true)
+            if [[ "$root_code" =~ ^[23] ]] && [[ "$health_code" == "200" ]] && [[ "$feed_code" == "200" ]] && [[ "$media_code" == "200" ]] \
               && grep -Fq 'EKODI Social' /tmp/social.html \
               && grep -Fq 'ekodi-social' /tmp/social-health.json \
-              && grep -Fq '커뮤니티' /tmp/social-feed.json; then
+              && grep -Fq '커뮤니티' /tmp/social-feed.json \
+              && grep -Fq '"provider":"youtube"' /tmp/social-media.json; then
               echo "EKODI Social staging verified: $STAGING_URL"
               exit 0
             fi
@@ -95,7 +111,7 @@ jobs:
 
   deploy-production:
     if: github.ref == 'refs/heads/main'
-    needs: validate
+    needs: [validate, deploy-staging]
     runs-on: ubuntu-latest
     timeout-minutes: 14
     env:
@@ -107,6 +123,8 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
+      - name: EKODI AI Orchestration Gate
+        run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
       - name: Verify production credentials
         run: |
           test -n "$CLOUDFLARE_API_TOKEN" || (echo 'Missing CLOUDFLARE_API_TOKEN' && exit 1)
@@ -123,10 +141,12 @@ jobs:
             root_code=$(curl -L -sS -o /tmp/social.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://social.ekodi.kr/' || true)
             health_code=$(curl -sS -o /tmp/social-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://social.ekodi.kr/health' || true)
             feed_code=$(curl -sS -o /tmp/social-feed.json -w '%{http_code}' --connect-timeout 5 --max-time 20 'https://social.ekodi.kr/api/feed?org=community' || true)
-            if [[ "$root_code" =~ ^[23] ]] && [[ "$health_code" == "200" ]] && [[ "$feed_code" == "200" ]] \
+            media_code=$(curl -sS -o /tmp/social-media.json -w '%{http_code}' --connect-timeout 5 --max-time 20 'https://social.ekodi.kr/api/media/youtube/status?handle=@cgma4989&channelId=UC001JT9opxVBt9z_h-tsx8A' || true)
+            if [[ "$root_code" =~ ^[23] ]] && [[ "$health_code" == "200" ]] && [[ "$feed_code" == "200" ]] && [[ "$media_code" == "200" ]] \
               && grep -Fq 'EKODI Social' /tmp/social.html \
               && grep -Fq 'ekodi-social' /tmp/social-health.json \
-              && grep -Fq '커뮤니티' /tmp/social-feed.json; then
+              && grep -Fq '커뮤니티' /tmp/social-feed.json \
+              && grep -Fq '"provider":"youtube"' /tmp/social-media.json; then
               echo 'EKODI Social production verified.'
               exit 0
             fi

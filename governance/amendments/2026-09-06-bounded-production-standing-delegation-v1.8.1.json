@@ -1,0 +1,22 @@
+{
+  "id": "2026-09-06-bounded-production-standing-delegation-v1.8.1",
+  "constitutionVersion": "1.8.1",
+  "status": "approved",
+  "approvedBy": "topmaster-joseph",
+  "approvedAt": "2026-09-06",
+  "changeClass": "C2",
+  "taskId": "ekodi-v181-bounded-production-20260906",
+  "issue": 1010,
+  "summary": "Authorize the independent EKODI control plane to consume a standing delegation for bounded verified production promotion inside existing registered boundaries while preserving all sovereign high-impact gates.",
+  "approvalBasis": "The platform owner explicitly instructed EKODI to continue change, build, deployment and operations without repeated intermediate approval while retaining final sovereign authority.",
+  "preserves": [
+    "direct agent production mutation forbidden",
+    "high-impact and Red areas remain human-gated",
+    "production secrets and DNS/topology remain human-gated",
+    "workspace_id authority",
+    "provider independence",
+    "Generation 2 and S0",
+    "no implicit paid budget"
+  ],
+  "rollback": "Revert v1.8.1 policy/runtime changes to v1.8.0. Existing services, workspaces, data, routes and the merged v1.8 architecture remain unchanged."
+}

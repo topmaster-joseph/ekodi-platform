@@ -7,7 +7,8 @@ const $$=(s,r=document)=>[...r.querySelectorAll(s)];
 const LABELS={friend:'친구',colleague:'동료',mentor:'멘토',collaborator:'협력자',marriage:'배우자'};
 const VALUES=['정직','배려','책임','성장','가족','공동체','나눔','유머','안정','도전','신앙 존중','생활 균형'];
 const PRIORITIES=['관계','가족','일과 사명','배움','건강한 생활','지역 공동체','재정 안정','새로운 도전','봉사와 나눔','문화와 여행'];
-const state={session:null,settings:null,communityProfile:null,intent:''};
+const FOCUS_KEY='ekodi.connect.focus';
+const state={session:null,settings:null,communityProfile:null,intent:'',focus:null};
 
 function toast(t){
   const e=$('#toast');
@@ -15,6 +16,21 @@ function toast(t){
   e.classList.add('show');
   clearTimeout(toast.t);
   toast.t=setTimeout(()=>e.classList.remove('show'),2300);
+}
+
+function readFocus(){
+  try{
+    const raw=sessionStorage.getItem(FOCUS_KEY);
+    if(!raw)return null;
+    const item=JSON.parse(raw);
+    if(!/^[0-9a-f-]{36}$/i.test(String(item?.user_id||''))||Number(item?.expires_at||0)<Date.now()){sessionStorage.removeItem(FOCUS_KEY);return null}
+    return {user_id:String(item.user_id),display_name:String(item.display_name||'EKODI 회원').slice(0,80),source:'community'};
+  }catch{sessionStorage.removeItem(FOCUS_KEY);return null}
+}
+function clearFocus(userId=''){
+  if(userId&&state.focus?.user_id!==userId)return;
+  try{sessionStorage.removeItem(FOCUS_KEY)}catch{}
+  state.focus=null;
 }
 
 function login(){
@@ -111,6 +127,8 @@ function updateStatus(){
 function renderCard(p){
   const card=document.createElement('article');
   card.className='person-card';
+  const focused=state.focus?.user_id===p.user_id;
+  if(focused)card.classList.add('focus-card');
   const head=document.createElement('div');
   head.className='person-head';
   const av=document.createElement('span');
@@ -152,7 +170,9 @@ function renderCard(p){
   more.title='신고/차단';
   more.onclick=()=>openReport(p.user_id);
   actions.append(pass,interest,more);
-  card.append(head,bio,tags,why,actions);
+  card.append(head);
+  if(focused){const note=document.createElement('div');note.className='focus-note';note.textContent='Community에서 선택한 사람 · 이 목적의 공개 조건 확인됨';card.append(note)}
+  card.append(bio,tags,why,actions);
   return card;
 }
 
@@ -206,12 +226,16 @@ async function loadRecommendations(){
       return;
     }
     const people=data.people||[];
+    const focusIndex=state.focus?people.findIndex(p=>p.user_id===state.focus.user_id):-1;
+    const ordered=focusIndex>0?[people[focusIndex],...people.filter((_,i)=>i!==focusIndex)]:people;
     if(!people.length){
-      notice.textContent='현재 서로의 공개 조건에 맞는 새 연결이 없습니다. 사람을 채우기 위해 조건을 억지로 넓히지는 않습니다.';
+      notice.textContent=state.focus?'Community에서 선택한 사람은 이 연결 목적의 현재 공개 조건에 맞지 않습니다. 조건을 우회하거나 추측하지 않습니다.':'현재 서로의 공개 조건에 맞는 새 연결이 없습니다. 사람을 채우기 위해 조건을 억지로 넓히지는 않습니다.';
       return;
     }
-    notice.textContent=`${people.length}개의 가능한 연결을 발견했습니다. 점수는 선별 판정이 아니라 공개된 공통점의 정렬 기준입니다.`;
-    people.forEach(p=>$('#peopleGrid').append(renderCard(p)));
+    if(state.focus&&focusIndex>=0)notice.textContent=`Community에서 선택한 ${state.focus.display_name}님을 먼저 표시했습니다. 이 목적에 서로 공개를 허용한 경우에만 보입니다.`;
+    else if(state.focus)notice.textContent='Community에서 선택한 사람은 이 연결 목적의 현재 공개 조건에 맞지 않습니다. 조건을 우회하지 않고 다른 추천만 보여드립니다.';
+    else notice.textContent=`${people.length}개의 가능한 연결을 발견했습니다. 점수는 선별 판정이 아니라 공개된 공통점의 정렬 기준입니다.`;
+    ordered.forEach(p=>$('#peopleGrid').append(renderCard(p)));
   }catch(e){
     console.error(e);
     notice.textContent='추천을 불러오지 못했습니다.';
@@ -222,11 +246,13 @@ async function act(kind,p,card){
   try{
     if(kind==='pass'){
       await api('/pass',{method:'POST',body:JSON.stringify({target_user_id:p.user_id,intent:state.intent})});
+      clearFocus(p.user_id);
       card.remove();
       toast('이번 추천에서 숨겼습니다.');
       return;
     }
     const data=await api('/interest',{method:'POST',body:JSON.stringify({target_user_id:p.user_id,intent:state.intent})});
+    clearFocus(p.user_id);
     card.remove();
     if(data.mutual){
       toast('서로 관심이 닿았습니다 ✨');
@@ -340,6 +366,7 @@ async function sendReport(ev){
   const f=ev.currentTarget;
   try{
     await api('/report',{method:'POST',body:JSON.stringify({target_user_id:f.target_user_id.value,category:f.category.value,detail:f.detail.value,block:f.block.checked})});
+    clearFocus(f.target_user_id.value);
     closeModals();
     toast('신고를 접수하고 해당 연결을 숨겼습니다.');
     if(state.intent)await loadRecommendations();
@@ -384,6 +411,7 @@ async function init(){
   }
   $('#signedOutPanel').hidden=true;
   $('#signedInArea').hidden=false;
+  state.focus=readFocus();
   $('#loginBtn').textContent='로그아웃';
   try{
     const data=await api('/settings');
@@ -392,6 +420,7 @@ async function init(){
     updateStatus();
     await Promise.all([loadMatches(),loadOutgoing()]);
     if(!state.settings)setTimeout(openSettings,250);
+    else if(state.focus)setTimeout(()=>toast(`${state.focus.display_name}님을 이어서 보려면 연결 목적을 선택하세요.`),250);
   }catch(e){
     console.error(e);
     toast('Connect 정보를 불러오지 못했습니다.');

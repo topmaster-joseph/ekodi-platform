@@ -6,9 +6,11 @@ import {
   compareWithLegacy,
   compatibilityDecision,
   evaluatePolicy,
+  policyCovers,
   safeAuditObject,
   secureProjection,
   TRUST_VERSIONS,
+  type PolicyCoverage,
   type PolicyRule,
   type ProjectionProfile,
   type RiskLevel,
@@ -187,12 +189,17 @@ Deno.serve(async (req) => {
     const capabilities = capabilitySet({ roles, service: site, resource, action, legacyAllowed });
     const projectionProfile = profileFor(roles, purpose);
     const rules = Array.isArray(policy?.config?.rules) ? policy.config.rules as PolicyRule[] : [];
-    const decision = rules.length
+    const coverage = Array.isArray(policy?.config?.coverage) ? policy.config.coverage as PolicyCoverage[] : [];
+    const genericEvaluatorCompatible = policy?.config?.generic_evaluator_compatible !== false;
+    const candidateCovered = genericEvaluatorCompatible && rules.length > 0 && policyCovers(context, coverage);
+    const decision = candidateCovered
       ? evaluatePolicy(context, rules)
       : compatibilityDecision(legacyAllowed, {
         capabilities,
         projectionProfile,
-        reason: "Initial Trust Layer shadow policy mirrors current EKODI authorization.",
+        reason: genericEvaluatorCompatible
+          ? "Outside explicit Trust migration coverage; mirrored current EKODI authorization."
+          : "Candidate policy requires an endpoint-specific legacy observer; generic Trust evaluator stayed in compatibility mode.",
       });
     const comparison = compareWithLegacy(legacyAllowed, decision, "shadow");
 
@@ -201,6 +208,8 @@ Deno.serve(async (req) => {
       access_status: access?.status ?? null,
       workspace_selected: Boolean(workspaceId),
       risk,
+      candidate_policy_covered: candidateCovered,
+      generic_evaluator_compatible: genericEvaluatorCompatible,
     });
 
     const { error: auditError } = await admin.from("trust_shadow_decisions").insert({
@@ -235,6 +244,8 @@ Deno.serve(async (req) => {
         rule_id: decision.ruleId,
         capabilities: decision.capabilities,
         projection_profile: decision.projectionProfile,
+        candidate_policy_covered: candidateCovered,
+        generic_evaluator_compatible: genericEvaluatorCompatible,
         versions: {
           policy: policy?.policy_version ?? TRUST_VERSIONS.policy,
           capability_schema: policy?.capability_schema_version ?? TRUST_VERSIONS.capabilitySchema,

@@ -1,43 +1,126 @@
 <!doctype html>
-<html lang="ko">
+<html lang="ko" data-store-page="__SPACE_PAGE_THEME__">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="robots" content="noindex,nofollow,noarchive">
-  <meta name="description" content="개인·기관·단체·프로젝트의 EKODI 운영공간">
-  <title>운영공간 · EKODI</title>
-  <link rel="stylesheet" href="/style.css?v=20260829-space-1">
+  <meta name="robots" content="__SPACE_PAGE_ROBOTS__">
+  <meta name="description" content="__SPACE_PAGE_DESCRIPTION__">
+  <title>__SPACE_PAGE_DOCUMENT_TITLE__</title>
+  <link rel="stylesheet" href="/style.css?v=20260909-yogurt-public-2">
 </head>
 <body>
-  <main class="shell">
-    <header class="top"><a class="brand" href="https://ekodi.kr">EKODI</a><a class="my" href="https://my.ekodi.kr">내 홈</a></header>
-    <section class="hero">
-      <span class="eyebrow">OPERATING SPACE</span>
-      <h1>내가 운영하고 참여하는<br>공간으로 바로 들어갑니다.</h1>
-      <p>개인·기관·단체·프로젝트는 주소가 바뀌어도 내부의 고유 공간 ID와 권한을 그대로 유지합니다.</p>
-    </section>
+  <div id="publicStorefront" class="public-storefront __SPACE_PUBLIC_CLASS__">
+    <header class="yp-top">
+      <a class="yp-brand" href="/yogurt" aria-label="요거트퍼플 목포대점 홈"><span class="yp-mark">YP</span><span>YOGURT PURPLE</span></a>
+      <nav class="yp-nav" aria-label="매장 메뉴"><a href="#menu">메뉴</a><a href="#store">매장안내</a><a href="#delivery">배달주문</a><a href="https://www.yogurtpurple.com/" target="_blank" rel="noopener">브랜드</a></nav>
+      <span class="yp-branch">목포대점</span>
+    </header><div class="yp-local-strip"><span>국립목포대학교 후문 · 요거트퍼플 목포대점</span><div><a id="stripPhone" href="tel:0614538295">전화</a><a href="#delivery">배달주문</a></div></div>
+    <main>
+      <section class="yp-hero">
+        <div class="yp-hero-copy"><span class="yp-kicker">YOGURT PURPLE · MOKPO UNIVERSITY</span><h1>오늘의 달콤함,<br><strong>목포대점</strong>에서.</h1><p>국립목포대학교 후문에서 가까운 요거트퍼플. 메뉴 확인부터 전화, 지도, 배달주문까지 한 번에 연결합니다.</p><div class="yp-hero-actions"><a class="yp-button primary" href="#menu">메뉴 보기</a><a id="heroPhone" class="yp-button" href="tel:0614538295">전화하기</a><a class="yp-text-link" href="#delivery">배달 주문 →</a></div></div>
+        <div class="yp-hero-art" aria-hidden="true"><div class="yp-sun"></div><div class="yp-cup cup-left"><span></span></div><div class="yp-cup cup-main"><span></span></div><div class="yp-fruit fruit-a"></div><div class="yp-fruit fruit-b"></div><div class="yp-fruit fruit-c"></div></div>
+      </section>
+      <section id="store" class="yp-section yp-store"><div class="yp-section-title"><span>매장 안내</span><h2>요거트퍼플 <strong>목포대점</strong></h2><p>브랜드의 즐거움은 그대로, 동네의 정보는 목포대점 기준으로 정확하게.</p></div><div class="yp-info-grid"><article><small>주소</small><strong id="publicAddress">전남 무안군 청계면 승달산길 37-1</strong><a id="mapLink" target="_blank" rel="noopener">지도에서 보기 →</a></article><article><small>전화</small><strong id="publicPhone">061-453-8295</strong><a id="phoneLink" href="tel:0614538295">바로 전화하기 →</a></article><article><small>영업시간</small><strong id="publicHours">11:00–22:00</strong><span id="publicHoursNote">휴무·마감시간은 전화 확인</span></article></div></section>
+      <section id="delivery" class="yp-section yp-delivery"><div class="yp-section-title"><span>배달 주문</span><h2>원하는 앱으로 바로 주문</h2><p>공식 매장 링크가 연결되면 곧바로 매장 주문화면으로 이동하고, 연결 전에는 해당 배달앱을 엽니다.</p></div><div id="publicDeliveryLinks" class="yp-delivery-grid"></div></section>
+      <section id="menu" class="yp-section yp-menu"><div class="yp-section-title"><span>메뉴</span><h2>목포대점 메뉴</h2><p>검증된 메뉴와 가격만 보여드립니다.</p></div><div id="publicMenu" class="yp-menu-grid"></div></section>
+    </main>
+    <footer class="yp-footer"><strong>YOGURT PURPLE · 목포대점</strong><span><a href="https://www.yogurtpurple.com/" target="_blank" rel="noopener">요거트퍼플 브랜드 홈</a> · Powered by EKODI</span></footer><nav class="yp-mobile-dock" aria-label="빠른 매장 연결"><a id="mobilePhone" href="tel:0614538295"><small>전화</small><strong>매장 전화</strong></a><a id="mobileMap" href="#store"><small>위치</small><strong>지도 보기</strong></a><a class="order" href="#delivery"><small>주문</small><strong>배달앱</strong></a></nav>
+  </div>
+  <main id="internalShell" class="shell __SPACE_INTERNAL_CLASS__">
+    <header class="top">
+      <a class="brand" href="https://ekodi.kr">EKODI</a>
+      <div class="top-actions">
+        <label id="spaceSwitcherWrap" class="space-switcher hidden">
+          <span>운영공간</span>
+          <select id="spaceSwitcher" aria-label="운영공간 전환"></select>
+        </label>
+        <a class="my" href="https://ekodi.kr/my">내 홈</a>
+      </div>
+    </header>
     <div id="status" class="status">연결 상태를 확인하고 있습니다.</div>
-    <section id="signedOut" class="panel hidden">
-      <h2>공간은 로그인 후 연결됩니다.</h2>
-      <p>로그인 전에는 안내만 보여주고, 실제 운영정보와 권한은 고유 EKODI ID로 확인합니다.</p>
-      <button id="login" type="button">로그인하고 내 공간 보기</button>
+    <section id="signedOut" class="panel auth-panel hidden">
+      <span class="eyebrow">__SPACE_PAGE_KICKER__</span>
+      <h1>__SPACE_PAGE_NAME__</h1>
+      <p>__SPACE_PAGE_LEAD__</p>
+      <button id="login" type="button">이 운영페이지로 로그인</button>
     </section>
+
     <section id="signedIn" class="hidden">
-      <div class="account-row"><span id="account">EKODI 사용자</span><button id="logout" class="quiet" type="button">로그아웃</button></div>
-      <section id="spaceIndex" class="panel">
-        <div class="panel-head"><div><span class="eyebrow">MY SPACES</span><h2>운영공간</h2></div></div>
+      <div class="account-row">
+        <span id="account">EKODI 사용자</span>
+        <button id="logout" class="quiet" type="button">로그아웃</button>
+      </div>
+      <section id="spaceIndex" class="space-index">
+        <div class="index-copy">
+          <span class="eyebrow">MY OPERATING SPACES</span>
+          <h1>내 운영공간</h1>
+          <p>같은 계정으로 들어오더라도 각 점포의 데이터와 운영 맥락은 서로 섞이지 않습니다.</p>
+        </div>
         <div id="spaceList" class="space-list"></div>
       </section>
-      <section id="workspaceView" class="panel hidden">
-        <span id="workspaceType" class="eyebrow">SPACE</span>
-        <h2 id="workspaceName">공간 확인 중</h2>
-        <p id="workspaceMeta"></p>
-        <div class="actions"><a id="workspaceHome" href="/">다른 공간 보기</a><a id="workspaceMy" href="https://my.ekodi.kr/">내 홈</a></div>
-        <div class="workspace-note">이 URL은 사람이 읽는 경로입니다. 실제 데이터·권한 연결은 URL이나 slug가 아니라 내부의 불변 workspace ID를 기준으로 처리합니다.</div>
+      <section id="workspaceView" class="workspace hidden">
+        <section class="workspace-head">
+          <div>
+            <span id="workspaceType" class="eyebrow">__SPACE_PAGE_KICKER__</span>
+            <h1 id="workspaceName">__SPACE_PAGE_NAME__</h1>
+            <p id="workspaceMeta">__SPACE_PAGE_LEAD__</p>
+          </div>
+          <span id="workspaceRole" class="role-badge"></span>
+        </section>
+
+        <section class="store-page-overview store-data" aria-label="점포 사용자페이지 요약">
+          <div class="store-page-copy">
+            <span class="eyebrow">USER OPERATIONS</span>
+            <h2 id="storePageTitle">__SPACE_PAGE_NAME__ 사용자 운영페이지</h2>
+            <p id="storePageLead">__SPACE_PAGE_LEAD__</p>
+          </div>
+          <div id="storePageStats" class="store-page-stats" aria-live="polite"></div>
+        </section>
+
+        <section class="panel store-profile-panel store-data">
+          <div class="section-head">
+            <div><span class="eyebrow">STORE MASTER</span><h2>매장 기준정보</h2></div>
+            <span class="source-chip">EKODI 기준정보</span>
+          </div>
+          <div id="storeBasics" class="store-basics"></div>
+        </section>
+
+        <section class="panel store-data">
+          <div class="section-head">
+            <div><span class="eyebrow">SALES CHANNELS</span><h2>배달플랫폼 연결</h2></div>
+            <span id="channelCount" class="count-chip">0 / 0 연결</span>
+          </div>
+          <div id="channelList" class="channel-list"></div>
+        </section>
+        <section class="panel menu-panel store-data">
+          <div class="section-head">
+            <div><span class="eyebrow">MENU MASTER</span><h2>메뉴 · 가격 기준정보</h2></div>
+            <div id="menuSummary" class="menu-summary"></div>
+          </div>
+          <div id="menuList" class="menu-list"></div>
+          <div id="unmappedList" class="unmapped-list"></div>
+          <div class="data-boundary">
+            배달앱의 메뉴·가격·옵션은 공식 API, 파트너 제공자료 또는 검증된 파일에서 가져온 값만 표시합니다.
+            연결 전에는 임의의 메뉴나 가격을 만들지 않습니다.
+          </div>
+        </section>
+
+        <section class="ops-grid store-data">
+          <article class="panel compact-panel">
+            <span class="eyebrow">AI OPERATIONS</span>
+            <h2>운영 신호</h2>
+            <div id="agentHints" class="agent-hints"></div>
+          </article>
+          <article class="panel compact-panel">
+            <span class="eyebrow">SERVICES</span>
+            <h2>이 점포의 서비스</h2>
+            <div id="serviceActions" class="service-actions"></div>
+          </article>
+        </section>
       </section>
     </section>
   </main>
   <script src="/config.js"></script>
-  <script type="module" src="/app.js?v=20260829-space-1"></script>
+  <script type="module" src="/app.js?v=20260909-yogurt-public-2"></script>
 </body>
 </html>

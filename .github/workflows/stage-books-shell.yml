@@ -1,6 +1,7 @@
 name: Stage EKODI Books Shell
 
 on:
+  workflow_call:
   pull_request:
     paths:
       - 'books/**'
@@ -13,7 +14,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: books-shell-staging-${{ github.event.pull_request.number }}
+  group: books-shell-staging-${{ github.event.pull_request.number || github.run_id }}
   cancel-in-progress: true
 
 env:
@@ -33,6 +34,8 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
+      - name: EKODI AI Orchestration Gate
+        run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
       - name: Validate Books and Shell adapter
         run: |
           set -euo pipefail

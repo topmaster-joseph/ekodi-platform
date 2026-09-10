@@ -1,4 +1,5 @@
 import authWorker from './auth-worker.js';
+import { projectTapoDeviceForCloud, assertSafeTapoCloudProjection } from './tapo-provider-adapter.js';
 
 const ADMIN_PREFIX = '/api/control/devices';
 const AGENT_PREFIX = '/api/device-agent';
@@ -7,6 +8,7 @@ const DEVICE_ONLINE_MS = 90 * 1000;
 const DEVICE_STALE_MS = 10 * 60 * 1000;
 const COMMAND_CLAIM_TIMEOUT_MS = 60 * 60 * 1000;
 const JOB_ASSIGNMENT_TIMEOUT_MS = 65 * 60 * 1000;
+const STREAM_SESSION_TTL_MS = 3 * 60 * 1000;
 
 const DEVICE_TYPE_POLICIES = Object.freeze({
   pc: Object.freeze({
@@ -32,6 +34,12 @@ const DEVICE_TYPE_POLICIES = Object.freeze({
     remoteCommandLevel: 'observe', autoExecution: 'never',
     description: '휴대형 기기는 자동 작업 노드에서 제외하고 관찰성 진단만 허용합니다.',
     allowedCommands: Object.freeze(['diagnostics.collect', 'network.diagnose', 'updates.scan']),
+  }),
+  gateway: Object.freeze({
+    label: 'IoT 브리지', icon: '◫', managementMode: 'limited', enrollment: 'edge-bridge',
+    remoteCommandLevel: 'observe', autoExecution: 'never',
+    description: '카메라·센서 등 로컬 장치를 공급자 중립 Edge Bridge로 연결하고 관찰 권한만 부여합니다.',
+    allowedCommands: Object.freeze(['camera.live.start']),
   }),
   sensor: Object.freeze({
     label: '센서', icon: '⌁', managementMode: 'observe', enrollment: 'inventory',
@@ -76,6 +84,7 @@ const COMMAND_POLICIES = Object.freeze({
   'remote_desktop.recovery.enable': { risk: 'maintain', confirm: true },
   'remote_desktop.recovery.disable': { risk: 'maintain', confirm: true },
   'remote_desktop.recovery.run': { risk: 'maintain', confirm: true },
+  'camera.live.start': { risk: 'observe', payload: 'camera-stream' },
 });
 
 const DIAGNOSTIC_SECTIONS = Object.freeze({
@@ -95,6 +104,7 @@ const COMMAND_CAPABILITIES = Object.freeze({
   'updates.install': 'windowsUpdate',
   'profile.workstation.apply': 'workstationProfile',
   'profile.workstation.restore': 'workstationProfile',
+  'camera.live.start': 'cameraStreaming',
 });
 
 function corsHeaders(request, env) {
@@ -164,6 +174,19 @@ async function ensureSchema(db) {
       result_json TEXT NOT NULL DEFAULT '{}',
       FOREIGN KEY (device_id) REFERENCES device_registry(id)
     )`),
+    db.prepare(`CREATE TABLE IF NOT EXISTS device_stream_sessions (
+      id TEXT PRIMARY KEY,
+      command_id TEXT NOT NULL UNIQUE,
+      device_id TEXT NOT NULL,
+      external_id TEXT NOT NULL,
+      secret_hash TEXT NOT NULL,
+      public_base TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'queued',
+      created_at TEXT NOT NULL,
+      expires_at TEXT NOT NULL,
+      completed_at TEXT,
+      FOREIGN KEY (device_id) REFERENCES device_registry(id)
+    )`),
     db.prepare(`CREATE TABLE IF NOT EXISTS device_execution_profiles (
       device_id TEXT PRIMARY KEY,
       enabled INTEGER NOT NULL DEFAULT 0,
@@ -222,6 +245,7 @@ async function ensureSchema(db) {
     db.prepare('CREATE INDEX IF NOT EXISTS idx_device_enrollments_expiry ON device_enrollments(expires_at, used_at)'),
     db.prepare('CREATE INDEX IF NOT EXISTS idx_device_registry_last_seen ON device_registry(last_seen_at DESC)'),
     db.prepare('CREATE INDEX IF NOT EXISTS idx_device_commands_queue ON device_commands(device_id, status, issued_at)'),
+    db.prepare('CREATE INDEX IF NOT EXISTS idx_device_stream_sessions_expiry ON device_stream_sessions(status, expires_at)'),
     db.prepare('CREATE INDEX IF NOT EXISTS idx_device_jobs_queue ON device_jobs(status, priority DESC, requested_at)'),
     db.prepare('CREATE INDEX IF NOT EXISTS idx_device_inventory_type ON device_inventory(device_type, archived_at)'),
   ]);
@@ -314,7 +338,35 @@ function sanitizeCommandPayload(type, rawPayload) {
     if (!/^[a-f0-9]{64}$/.test(itemId)) throw new Error('STARTUP_ITEM_INVALID');
     return { itemId };
   }
+  if (policy.payload === 'camera-stream') {
+    const externalId=safeText(rawPayload?.externalId,100).toLowerCase();
+    const sessionId=safeText(rawPayload?.sessionId,80).toLowerCase();
+    const sessionSecret=safeText(rawPayload?.sessionSecret,64).toLowerCase();
+    const expiresAt=safeText(rawPayload?.expiresAt,40);
+    if(!/^[a-z0-9][a-z0-9._-]{0,99}$/.test(externalId)||!/^str_[a-f0-9-]{36}$/.test(sessionId)||!/^[a-f0-9]{48}$/.test(sessionSecret)) throw new Error('CAMERA_STREAM_INVALID');
+    const expiry=new Date(expiresAt).getTime(); if(!Number.isFinite(expiry)||expiry<=Date.now()||expiry>Date.now()+STREAM_SESSION_TTL_MS+5000) throw new Error('CAMERA_STREAM_EXPIRY_INVALID');
+    return {externalId,sessionId,sessionSecret,expiresAt};
+  }
   return {};
+}
+
+
+function sanitizeProviderPublicBase(value, env) {
+  const raw=safeText(value,300); if(!raw)return '';
+  let url; try{url=new URL(raw);}catch{return '';}
+  if(url.protocol!=='https:'||url.username||url.password||url.search||url.hash)return '';
+  const suffixes=String(env.DEVICE_BRIDGE_ALLOWED_HOST_SUFFIXES||'.ekodi.kr').split(',').map(x=>x.trim().toLowerCase()).filter(Boolean);
+  const host=url.hostname.toLowerCase(); if(!suffixes.some(x=>host===x.replace(/^\./,'')||host.endsWith(x)))return '';
+  url.pathname=url.pathname.replace(/\/$/,''); return url.toString().replace(/\/$/,'');
+}
+function sanitizeTapoProviderDevices(rawDevices,bridgeId){
+  if(!Array.isArray(rawDevices))return []; const devices=[];
+  for(const raw of rawDevices.slice(0,32)){try{const p=projectTapoDeviceForCloud(raw,bridgeId);assertSafeTapoCloudProjection(p);devices.push(p);}catch{}}
+  return devices;
+}
+function providerCamera(settings,externalId){
+  const devices=Array.isArray(settings?.providerBridge?.devices)?settings.providerBridge.devices:[];
+  return devices.find(x=>x.externalId===externalId&&x.type==='camera')||null;
 }
 
 function statusFor(lastSeenAt, revokedAt) {
@@ -743,7 +795,7 @@ async function handleAdmin(request, env) {
     const body = await readJson(request) || {};
     const deviceType = normalizeDeviceType(body.deviceType || 'pc');
     const typePolicy = deviceTypePolicy(deviceType);
-    if (typePolicy.enrollment !== 'windows-agent') {
+    if (!['windows-agent','edge-bridge'].includes(typePolicy.enrollment)) {
       return json({ error: `${typePolicy.label} 유형은 현재 관찰 인벤토리로 먼저 등록해야 합니다.`, code: 'DEVICE_ADAPTER_REQUIRED' }, 409, request, env);
     }
     const label = safeText(body.label || `새 ${typePolicy.label}`, 80);
@@ -770,7 +822,38 @@ async function handleAdmin(request, env) {
     await env.DB.prepare('DELETE FROM device_enrollments WHERE used_at IS NOT NULL OR expires_at < ?')
       .bind(new Date(Date.now() - 86400000).toISOString()).run();
     await audit(env, auth.session, 'device.enrollment.create', 'device', `${deviceType}:${label}`);
-    return json({ enrollmentCode, label, deviceType, locationLabel, expiresAt, protocolUrl: `ekodi-device://enroll?code=${encodeURIComponent(enrollmentCode)}` }, 201, request, env);
+    return json({ enrollmentCode, label, deviceType, locationLabel, expiresAt, enrollmentKind: typePolicy.enrollment, protocolUrl: typePolicy.enrollment === 'windows-agent' ? `ekodi-device://enroll?code=${encodeURIComponent(enrollmentCode)}` : '' }, 201, request, env);
+  }
+
+  const streamMatch=path.match(/^\/api\/control\/devices\/([^/]+)\/cameras\/([^/]+)\/stream$/);
+  if(request.method==='POST'&&streamMatch){
+    const deviceId=decodeURIComponent(streamMatch[1]),externalId=safeText(decodeURIComponent(streamMatch[2]),100).toLowerCase();
+    const device=await env.DB.prepare('SELECT * FROM device_registry WHERE id = ? AND revoked_at IS NULL').bind(deviceId).first();
+    if(!device)return json({error:'IoT 브리지를 찾을 수 없습니다.'},404,request,env);
+    const management=await managementProfile(env,deviceId); if(normalizeDeviceType(management?.device_type||'pc')!=='gateway')return json({error:'IoT 브리지에서만 카메라 스트림을 시작할 수 있습니다.'},409,request,env);
+    if(statusFor(device.last_seen_at,device.revoked_at)!=='online')return json({error:'IoT 브리지가 오프라인입니다.',code:'DEVICE_BRIDGE_OFFLINE'},409,request,env);
+    const settings=parseJson(device.settings_json),camera=providerCamera(settings,externalId); if(!camera||!(camera.capabilities||[]).includes('camera.live'))return json({error:'실시간 보기가 가능한 카메라를 찾을 수 없습니다.'},404,request,env);
+    const publicBase=sanitizeProviderPublicBase(settings?.providerBridge?.publicBase,env); if(!publicBase)return json({error:'브리지 공개 주소가 안전하게 설정되지 않았습니다.',code:'DEVICE_BRIDGE_PUBLIC_BASE_REQUIRED'},409,request,env);
+    const actorId=await adminId(env,auth.session),sessionId=`str_${crypto.randomUUID()}`,sessionSecret=randomHex(24),issuedAt=new Date().toISOString(),expiresAt=new Date(Date.now()+STREAM_SESSION_TTL_MS).toISOString();
+    const payload=sanitizeCommandPayload('camera.live.start',{externalId,sessionId,sessionSecret,expiresAt}),commandId=`cmd_${crypto.randomUUID()}`,secretHash=await sha256(sessionSecret);
+    await env.DB.batch([
+      env.DB.prepare(`INSERT INTO device_commands (id, device_id, command_type, payload_json, status, issued_at, issued_by) VALUES (?, ?, 'camera.live.start', ?, 'queued', ?, ?)`).bind(commandId,deviceId,JSON.stringify(payload),issuedAt,actorId),
+      env.DB.prepare(`INSERT INTO device_stream_sessions (id, command_id, device_id, external_id, secret_hash, public_base, status, created_at, expires_at) VALUES (?, ?, ?, ?, ?, ?, 'queued', ?, ?)`).bind(sessionId,commandId,deviceId,externalId,secretHash,publicBase,issuedAt,expiresAt),
+    ]);
+    await env.DB.prepare(`UPDATE device_stream_sessions SET status='expired', completed_at=? WHERE status IN ('queued','claimed','succeeded') AND expires_at < ?`).bind(issuedAt,issuedAt).run();
+    await env.DB.prepare(`UPDATE device_commands SET payload_json='{}' WHERE id IN (SELECT command_id FROM device_stream_sessions WHERE status='expired')`).run();
+    await audit(env,auth.session,'device.camera.stream.start',deviceId,`${device.label}:${externalId}`);
+    return json({stream:{sessionId,commandId,deviceId,externalId,status:'queued',expiresAt,sessionToken:sessionSecret,statusUrl:`${ADMIN_PREFIX}/streams/${encodeURIComponent(sessionId)}`}},202,request,env);
+  }
+
+  const streamStatusMatch=path.match(/^\/api\/control\/devices\/streams\/(str_[a-f0-9-]{36})$/);
+  if(request.method==='GET'&&streamStatusMatch){
+    const now=new Date().toISOString();
+    const session=await env.DB.prepare('SELECT id, command_id, device_id, external_id, public_base, status, created_at, expires_at, completed_at FROM device_stream_sessions WHERE id = ?').bind(streamStatusMatch[1]).first();
+    if(!session)return json({error:'스트림 세션을 찾을 수 없습니다.'},404,request,env);
+    if(new Date(session.expires_at).getTime()<=Date.now()&&session.status!=='expired')await env.DB.prepare("UPDATE device_stream_sessions SET status='expired', completed_at=? WHERE id=?").bind(now,session.id).run();
+    const status=new Date(session.expires_at).getTime()<=Date.now()?'expired':session.status;
+    return json({stream:{sessionId:session.id,commandId:session.command_id,deviceId:session.device_id,externalId:session.external_id,status,createdAt:session.created_at,expiresAt:session.expires_at,completedAt:session.completed_at||null,playbackBase:status==='succeeded'?session.public_base:null}},200,request,env);
   }
 
   const commandMatch = path.match(/^\/api\/control\/devices\/([^/]+)\/commands$/);
@@ -780,6 +863,7 @@ async function handleAdmin(request, env) {
     const commandType = safeText(body.type, 80);
     const policy = COMMAND_POLICIES[commandType];
     if (!policy) return json({ error: '허용되지 않은 기기 명령입니다.', code: 'DEVICE_COMMAND_NOT_ALLOWED' }, 400, request, env);
+    if (commandType === 'camera.live.start') return json({ error: '카메라 스트림은 전용 임시 세션 경로로만 시작할 수 있습니다.', code: 'DEVICE_STREAM_ROUTE_REQUIRED' }, 409, request, env);
     if (policy.confirm && body.confirmed !== true) {
       return json({ error: '이 작업은 관리자 확인이 필요합니다.', code: 'DEVICE_COMMAND_CONFIRM_REQUIRED' }, 409, request, env);
     }
@@ -842,8 +926,9 @@ async function enrollAgent(request, env) {
   const deviceType = normalizeDeviceType(enrollmentProfile?.device_type || 'pc');
   const typePolicy = deviceTypePolicy(deviceType);
 
-  const platform = safeText(body.platform || 'windows', 40).toLowerCase();
-  if (platform !== 'windows') return json({ error: '현재 Agent 등록 경로는 Windows만 지원합니다.' }, 400, request, env);
+  const platform = safeText(body.platform || (typePolicy.enrollment === 'edge-bridge' ? 'edge-bridge' : 'windows'), 40).toLowerCase();
+  if (typePolicy.enrollment === 'windows-agent' && platform !== 'windows') return json({ error: 'Windows Agent 등록 형식이 올바르지 않습니다.' }, 400, request, env);
+  if (typePolicy.enrollment === 'edge-bridge' && platform !== 'edge-bridge') return json({ error: 'Edge Bridge 등록 형식이 올바르지 않습니다.' }, 400, request, env);
   const hostname = safeText(body.hostname, 120);
   const label = safeText(enrollmentProfile?.label || body.label || hostname || typePolicy.label, 80);
   const token = randomHex(32);
@@ -881,12 +966,15 @@ async function enrollAgent(request, env) {
 async function heartbeat(request, env, device) {
   const body = await readJson(request) || {};
   const now = new Date().toISOString();
-  const capabilities = body.capabilities && typeof body.capabilities === 'object'
-    ? safeJsonObject(body.capabilities, 5000, device.capabilities_json)
-    : device.capabilities_json;
-  const settings = body.settings && typeof body.settings === 'object'
-    ? safeJsonObject(body.settings, 10000, device.settings_json)
-    : device.settings_json;
+  const management = await managementProfile(env, device.id);
+  const deviceType = normalizeDeviceType(management?.device_type || 'pc');
+  const capabilities = deviceType === 'gateway' ? JSON.stringify({ providerBridge:true, cameraStreaming:true })
+    : body.capabilities && typeof body.capabilities === 'object' ? safeJsonObject(body.capabilities,5000,device.capabilities_json) : device.capabilities_json;
+  let settings = device.settings_json;
+  if (deviceType === 'gateway') {
+    const bridge=body.settings?.providerBridge||{};
+    settings=JSON.stringify({providerBridge:{providerId:'tp-link.tapo',publicBase:sanitizeProviderPublicBase(bridge.publicBase,env),devices:sanitizeTapoProviderDevices(bridge.devices,device.id),lastSyncAt:now,generatedAt:now}});
+  } else if (body.settings && typeof body.settings === 'object') settings=safeJsonObject(body.settings,10000,device.settings_json);
   const profileName = safeText(body.profileName || parseJson(settings).workstationProfile || device.profile_name, 80);
   await env.DB.prepare(`UPDATE device_registry
     SET hostname = ?, os_version = ?, agent_version = ?, capabilities_json = ?, settings_json = ?, profile_name = ?, last_seen_at = ?
@@ -964,7 +1052,14 @@ async function commandResult(request, env, device, commandId) {
     .bind(status, completedAt, safeJsonObject(result, 24000), commandId, device.id).run();
   if (!update.meta?.changes) return json({ error: '처리 중인 명령을 찾을 수 없습니다.' }, 404, request, env);
 
-  if (success) {
+  if(command.command_type==='camera.live.start'){
+    await env.DB.batch([
+      env.DB.prepare(`UPDATE device_stream_sessions SET status=?, completed_at=? WHERE command_id=? AND device_id=?`).bind(status,completedAt,commandId,device.id),
+      env.DB.prepare(`UPDATE device_commands SET payload_json='{}' WHERE id=? AND device_id=?`).bind(commandId,device.id),
+    ]);
+  }
+
+  if (success && command.command_type !== 'camera.live.start') {
     const diagnostics = mergeDiagnosticResult(device, command.command_type, result);
     const diagnosticsJson = safeJsonObject(diagnostics, 30000, device.diagnostics_json || '{}');
     const settingsJson = result.settings && typeof result.settings === 'object'

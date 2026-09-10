@@ -75,12 +75,12 @@ jobs:
             grep -Fi 'x-ekodi-route:' "/tmp/$label.headers" || true
             grep -Fi 'alt-svc:' "/tmp/$label.headers" || true
             [ "$code" = 200 ]
-            grep -Fq 'EKODI Control Center' "/tmp/$label.body"
+            grep -Fq '<title>EKODI Admin</title>' "/tmp/$label.body"
             grep -Fiq "x-ekodi-route: $route" "/tmp/$label.headers"
           }
           failed=0
-          verify canonical 'https://admin.ekodi.kr/' 'admin-control-center' || failed=1
-          verify canonical_admin 'https://admin.ekodi.kr/admin' 'admin-control-center' || failed=1
+          verify canonical 'https://admin.ekodi.kr/' 'admin-shell' || failed=1
+          verify canonical_admin 'https://admin.ekodi.kr/admin' 'admin-shell' || failed=1
           verify fallback 'https://ekodi.kr/admin' 'admin-fallback' || failed=1
           if [ "$failed" != 0 ]; then
             echo 'Admin verification failed; rolling HTTP3 back to original value.'

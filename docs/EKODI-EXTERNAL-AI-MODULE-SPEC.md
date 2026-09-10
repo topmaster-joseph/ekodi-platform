@@ -26,27 +26,21 @@ EKODI AI Module Gateway
    +----> future provider
    |
    v
-optional EKODI Storage Gateway
+EKODI Storage Gateway
    |
    v
-drive.ekodi.kr
-   |
-   v
-Google Workspace Shared Drive EKODI
+EKODI managed canonical store
+
+(Current EKODI implementation details remain behind the Storage Gateway and are not part of the vendor contract.)
 ```
 
-The vendor is never an EKODI identity provider, database administrator, Drive administrator or storage credential holder.
+The vendor is never an EKODI identity provider, database administrator, canonical-storage administrator or EKODI credential holder.
 
 ## EKODI caller trust
 
-`/execute` is not a browser endpoint. A request is accepted only when both are present:
+`/execute` is not a browser endpoint. EKODI accepts execution only from registered server-side callers authenticated by an internal gateway credential. Internal caller headers, registry names and secret-binding names are implementation details and are not part of the vendor contract.
 
-- valid `x-ekodi-ai-gateway-key` server secret;
-- `x-ekodi-caller-id` registered in `EKODI_AI_MODULE_CALLERS`.
-
-The registered internal caller is responsible for authenticating the end user or agent and resolving the active Space, Role and Capability before invoking the gateway. The gateway adds `attestedBy: ekodi:<caller-id>` before sending context to the external module.
-
-A browser or vendor cannot self-register as an internal caller.
+The registered internal caller authenticates the end user or agent and resolves the active Space, Role and Capability before invoking the gateway. The gateway sends only the resulting attestation, such as `attestedBy: ekodi:<caller-id>`, to the external module. A browser or vendor cannot self-register as an internal caller.
 
 ## Vendor manifest
 
@@ -83,9 +77,9 @@ Every module implements HTTPS endpoints:
   "moduleId": "vendor.marketing-ai",
   "capability": "marketing.campaign",
   "context": {
-    "spaceId": "jadam",
+    "spaceId": "ref_7d91c42a1e7c",
     "serviceId": "marketing",
-    "actorId": "ekodi-user-or-agent-id",
+    "actorId": "ref_6e4b8e2f19ad",
     "role": "owner",
     "capabilities": ["marketing.campaign"],
     "attestedBy": "ekodi:marketing-service"
@@ -97,7 +91,32 @@ Every module implements HTTPS endpoints:
 }
 ```
 
-Only the minimum task context is sent. Google tokens, Drive credentials, D1/Supabase credentials, R2 credentials and unrelated tenant data are prohibited.
+Only the minimum task context is sent. EKODI credentials, canonical storage/database credentials, canonical actor/Space identifiers, source topology and unrelated tenant data are prohibited.
+
+The gateway pseudonymizes canonical identifiers and attaches a short-lived task grant:
+
+```json
+{
+  "capabilityGrant": {
+    "grantId": "same-request-id:1",
+    "audience": "vendor.marketing-ai",
+    "capability": "marketing.campaign",
+    "issuedAt": "ISO-8601",
+    "expiresAt": "ISO-8601 within 60 seconds",
+    "singleUseIntent": true,
+    "ekodiApiToken": false,
+    "attestedBy": "ekodi:marketing-service"
+  },
+  "dataPolicy": {
+    "retention": "transient",
+    "trainingAllowed": false,
+    "secondaryUseAllowed": false,
+    "canonicalStorageOwnedByEkodi": true
+  }
+}
+```
+
+The capability grant is a vendor execution attestation only. It is never an EKODI API token and cannot be used by the provider to query EKODI systems.
 
 ## Execution response
 
@@ -128,7 +147,15 @@ Failure:
 }
 ```
 
-The gateway rejects the wrong contract version, wrong request ID, invalid JSON envelope, disabled modules, unsupported capabilities and provider errors.
+The gateway rejects the wrong contract version, wrong request ID, invalid JSON envelope, disabled modules, unsupported capabilities, oversized responses and provider errors.
+
+## Idempotency, retry and circuit breaking
+
+Every vendor execution carries `x-ekodi-idempotency-key`, equal to the EKODI request ID. Retry is disabled by default. A module is retried only when its server-side manifest opts in with `retrySafe: true`, and never more than two attempts. The same idempotency key is reused across those attempts.
+
+Only transient failures are retryable. Timeouts, HTTP 429, 502, 503 and 504 may be retried. Other 4xx responses and contract violations are not retried.
+
+The gateway maintains a best-effort circuit breaker per module inside the Worker isolate. Repeated provider failures temporarily open the circuit so external failure cannot cascade into EKODI core services.
 
 ## EKODI gateway API
 
@@ -174,7 +201,19 @@ A registered EKODI caller may request persistence:
 }
 ```
 
-The vendor never writes the file. The result returns to EKODI, the API calls the EKODI Storage Gateway, `drive.ekodi.kr` uses the existing encrypted primary OAuth connection and `storage_routes`, and the durable copy is written to Shared Drive `EKODI`.
+The vendor never writes the durable record and never receives canonical storage credentials or topology. The result returns to EKODI and is persisted only through the EKODI Storage Gateway into the EKODI managed canonical store. The concrete storage implementation may change without changing the vendor contract.
+
+## Audit contract
+
+Every execution is auditable by request ID. EKODI records module, capability, Space/service scope, actor and caller, provider model when returned, latency, storage status, guardrail policy version, final status and error code when applicable. Provider secrets and raw projected payloads are not written to the audit row.
+
+## Provider data-use rule
+
+Data supplied to an external AI is task-bound and transient. Model training, unrelated secondary use and unnecessary long-term retention are prohibited. A vendor requiring broader data rights does not conform to this contract.
+
+## Versioning rule
+
+The endpoint and envelope remain contract v1.0.0. Compatible guardrail additions are additive within v1. A breaking envelope, trust or execution change requires a v2 contract and migration window.
 
 ## Replacement rule
 
@@ -189,10 +228,12 @@ External AI is an enhancement layer. Provider failure must not disable the EKODI
 A module is accepted only when:
 
 - it implements the v1 health and execute contract over HTTPS;
-- it never requests direct EKODI Drive/DB/R2 credentials;
-- it accepts only capability-scoped EKODI context;
+- it never requests direct EKODI storage/database credentials or topology;
+- it accepts only capability-scoped EKODI context and treats the capability grant as execution attestation, not an EKODI API token;
 - it echoes `contractVersion` and `requestId` exactly;
-- it returns structured errors;
+- it does not train on, repurpose or unnecessarily retain EKODI task data;
+- it returns structured errors and respects the response-size limit;
 - it passes timeout and unavailable-provider tests;
+- if `retrySafe` is enabled, it safely deduplicates repeated `x-ekodi-idempotency-key` values;
 - durable results are persisted by EKODI, never the vendor;
 - it can be removed or replaced without data migration from the vendor into EKODI.

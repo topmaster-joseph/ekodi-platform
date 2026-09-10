@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const VERSION=3;
+  const VERSION=4;
   const PROFILE_API='https://workspace-api.ekodi.kr/v1/design-profiles/public';
   const PROFILE_CHOICES={tones:new Set(['inherit','warm','calm','vivid','mono','night']),characters:new Set(['auto','off','welcome','guide','read','idea']),seasons:new Set(['auto','off','spring','summer','autumn','winter']),motions:new Set(['inherit','still','gentle'])};
   const SEASON_PRESETS={spring:{warm:'#e0b95f',leaf:'#78a982'},summer:{warm:'#e8c75a',leaf:'#5f9b78'},autumn:{warm:'#c88745',leaf:'#8a7b55'},winter:{warm:'#b9c6d5',leaf:'#6e8790'}};
@@ -38,7 +38,9 @@
     live:{accent:'#ff665d',accent2:'#b2a7df',warm:'#e8ac54',leaf:'#718b78',paper:'#17191c',ink:'#ffffff',radius:'12px',softRadius:'8px',density:'medium',motion:'live',mood:'live-stage'},
     cloud:{accent:'#4f7fa8',accent2:'#a7d5e6',warm:'#c8aa6c',leaf:'#6f9383',paper:'#f7fbfd',ink:'#1d2c3b',radius:'14px',softRadius:'10px',density:'medium-high',motion:'ordered',mood:'cloud-library'},
     money:{accent:'#2f7e5c',accent2:'#7da8c7',warm:'#d5ad57',leaf:'#6c9274',paper:'#fafdf9',ink:'#1f3329',radius:'8px',softRadius:'6px',density:'high',motion:'quiet',mood:'money-ledger'},
-    support:{accent:'#5f8d76',accent2:'#7899bd',warm:'#d7ad5b',leaf:'#709778',paper:'#fbfaf5',ink:'#27352d',radius:'16px',softRadius:'10px',density:'medium',motion:'gentle',mood:'opportunity-desk'}
+    support:{accent:'#5f8d76',accent2:'#7899bd',warm:'#d7ad5b',leaf:'#709778',paper:'#fbfaf5',ink:'#27352d',radius:'16px',softRadius:'10px',density:'medium',motion:'gentle',mood:'opportunity-desk'},
+    developer:{accent:'#86e0c3',accent2:'#74bfff',warm:'#d7b86f',leaf:'#6e9c8f',paper:'#071126',ink:'#eff8ff',radius:'16px',softRadius:'12px',density:'medium-high',motion:'measured',mood:'connection-workbench'},
+    experience:{accent:'#78d7ff',accent2:'#7567ff',warm:'#f2ce7d',leaf:'#78a991',paper:'#071126',ink:'#f4f8ff',radius:'24px',softRadius:'16px',density:'medium',motion:'immersive',mood:'guided-portal'}
   };
   const HOST_ALIAS={'ins':'insurance'};
 
@@ -48,7 +50,17 @@
     const sub=String(location.hostname||'').split('.')[0].toLowerCase();
     return HOST_ALIAS[sub]||sub||'my';
   }
-  function designFor(id=serviceId()){return {...DEFAULT,...(DESIGNS[id]||DESIGNS.my)};}
+  function experienceRegistry(){
+    const registry=globalThis.__EKODI_USER_EXPERIENCE_PROFILES__;
+    return registry&&typeof registry==='object'?registry:{profiles:{},serviceProfiles:{}};
+  }
+  function designFor(id=serviceId()){
+    const base={...DEFAULT,...(DESIGNS[id]||DESIGNS.my)};
+    const registry=experienceRegistry();
+    const experienceProfile=registry.serviceProfiles?.[id]||'service-native';
+    const profile=registry.profiles?.[experienceProfile]?.geometry||{};
+    return {...base,experienceProfile,controlRadius:profile.controlRadius||base.softRadius,fieldRadius:profile.fieldRadius||base.softRadius,chipRadius:profile.chipRadius||base.softRadius,panelRadius:profile.panelRadius||base.radius,imageRadius:profile.imageRadius||base.radius,sectionRadius:profile.sectionRadius||base.radius};
+  }
   function workspaceKey(){
     const explicit=String(document.documentElement.dataset.ekodiWorkspaceSlug||document.body?.dataset?.ekodiWorkspaceSlug||'').trim().toLowerCase();if(explicit)return explicit;
     if(location.hostname==='ekodi.kr'||location.hostname==='www.ekodi.kr'){const first=location.pathname.split('/').filter(Boolean)[0]||'';if(first&&!['privacy','terms','history','mall'].includes(first))return first.toLowerCase();}
@@ -71,6 +83,8 @@
     root.dataset.ekodiDesignMood=d.mood;
     root.dataset.ekodiDesignDensity=d.density;
     root.dataset.ekodiDesignMotion=d.motion;
+    root.dataset.ekodiExperienceProfile=d.experienceProfile;
+    root.dataset.ekodiShapeProfile=d.experienceProfile==='consumer-commerce'?'soft-commerce':'service-native';
     style.setProperty('--ekodi-service-accent',d.accent);
     style.setProperty('--ekodi-service-accent-2',d.accent2);
     style.setProperty('--ekodi-service-warm',d.warm);
@@ -79,6 +93,12 @@
     style.setProperty('--ekodi-service-ink',d.ink);
     style.setProperty('--ekodi-service-radius',d.radius);
     style.setProperty('--ekodi-service-radius-soft',d.softRadius);
+    style.setProperty('--ekodi-control-radius',d.controlRadius);
+    style.setProperty('--ekodi-field-radius',d.fieldRadius);
+    style.setProperty('--ekodi-chip-radius',d.chipRadius);
+    style.setProperty('--ekodi-panel-radius',d.panelRadius);
+    style.setProperty('--ekodi-image-radius',d.imageRadius);
+    style.setProperty('--ekodi-section-radius',d.sectionRadius);
     style.setProperty('--ekodi-service-shadow',d.shadow);
     style.setProperty('--ekodi-service-density',d.density);
     style.setProperty('--ekodi-service-motion',d.motion);
@@ -93,29 +113,18 @@
 
   const css=`
   :root[data-ekodi-design-inheritance]{
-    --ekodi-card-radius:var(--ekodi-service-radius);
-    --ekodi-button-radius:var(--ekodi-service-radius-soft);
+    --ekodi-card-radius:var(--ekodi-panel-radius,var(--ekodi-service-radius));
+    --ekodi-button-radius:var(--ekodi-control-radius,var(--ekodi-service-radius-soft));
     --ekodi-panel-shadow:var(--ekodi-service-shadow);
   }
-  :root[data-ekodi-design-inheritance] .ekodi-card,
-  :root[data-ekodi-design-inheritance] [data-ekodi-card],
-  :root[data-ekodi-design-inheritance] .ekodi-panel{
-    border-radius:var(--ekodi-service-radius)!important;
-  }
-  :root[data-ekodi-design-inheritance] .ekodi-primary,
-  :root[data-ekodi-design-inheritance] [data-ekodi-primary],
-  :root[data-ekodi-design-inheritance] .ekodi-cta{
-    background:var(--ekodi-service-accent)!important;
-  }
-  :root[data-ekodi-design-inheritance] .ekodi-soft-surface,
-  :root[data-ekodi-design-inheritance] [data-ekodi-soft-surface]{
-    background:color-mix(in srgb,var(--ekodi-service-accent) 8%,var(--ekodi-service-paper))!important;
-  }
-  :root[data-ekodi-design-inheritance] .ekodi-friendly-empty,
-  :root[data-ekodi-design-inheritance] .ekodi-friendly-welcome,
-  :root[data-ekodi-design-inheritance] .ekodi-message-ui{
-    --accent:var(--ekodi-service-accent);
-  }
+  :root[data-ekodi-user-ui][data-ekodi-design-inheritance] :where(.ekodi-card,[data-ekodi-card],.ekodi-panel){border-radius:var(--ekodi-panel-radius,var(--ekodi-service-radius))!important}
+  :root[data-ekodi-user-ui][data-ekodi-design-inheritance] :where(.btn,.button,.smallbtn,.ekodi-button,.ekodi-cta,[data-ekodi-control],[role="tab"]){border-radius:var(--ekodi-control-radius,var(--ekodi-service-radius-soft))}
+  :root[data-ekodi-user-ui][data-ekodi-design-inheritance] :where(.search,.ekodi-field,[data-ekodi-field]){border-radius:var(--ekodi-field-radius,var(--ekodi-service-radius-soft))}
+  :root[data-ekodi-user-ui][data-ekodi-design-inheritance] :where(.chip,.tag,.ekodi-chip,[data-ekodi-chip]){border-radius:var(--ekodi-chip-radius,var(--ekodi-service-radius-soft))}
+  :root[data-ekodi-user-ui][data-ekodi-design-inheritance] :where(dialog,.modal,.ekodi-dialog,[data-ekodi-dialog]){border-radius:var(--ekodi-panel-radius,var(--ekodi-service-radius))}
+  :root[data-ekodi-design-inheritance] :where(.ekodi-primary,[data-ekodi-primary],.ekodi-cta){background:var(--ekodi-service-accent)!important}
+  :root[data-ekodi-design-inheritance] :where(.ekodi-soft-surface,[data-ekodi-soft-surface]){background:color-mix(in srgb,var(--ekodi-service-accent) 8%,var(--ekodi-service-paper))!important}
+  :root[data-ekodi-design-inheritance] :where(.ekodi-friendly-empty,.ekodi-friendly-welcome,.ekodi-message-ui){--accent:var(--ekodi-service-accent)}
   [data-ekodi-shell-surface="admin"]{--ekodi-service-shadow:0 10px 30px rgba(0,0,0,.16)}
   [data-ekodi-shell-surface="admin"] .ekodi-illustration{filter:saturate(.72);opacity:.9}
   @media(prefers-reduced-motion:reduce){:root[data-ekodi-design-inheritance]{scroll-behavior:auto!important}}
@@ -123,6 +132,6 @@
   function installStyles(){if(document.getElementById('ekodi-service-design-inheritance-style'))return;const s=document.createElement('style');s.id='ekodi-service-design-inheritance-style';s.textContent=css;document.head.appendChild(s);}
   function boot(){installStyles();apply();void loadProfile();}
 
-  window.EKODIServiceDesign=Object.freeze({version:VERSION,designs:Object.freeze({...DESIGNS}),serviceId,designFor,apply,applyProfile,loadProfile});
+  window.EKODIServiceDesign=Object.freeze({version:VERSION,designs:Object.freeze({...DESIGNS}),experienceRegistry,serviceId,designFor,apply,applyProfile,loadProfile});
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();

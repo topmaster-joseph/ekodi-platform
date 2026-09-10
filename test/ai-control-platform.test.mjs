@@ -3,30 +3,43 @@ import assert from 'node:assert/strict';
 import {AI_CONTROL_POLICY,availableProviderIds,buildExecutionPlan,createTaskId,evaluateTaskMissionPolicy,normalizeTaskInput,rolePrompt,summarizeRuns} from '../ai-control-core.js';
 import {providerCapabilities,providerStatus} from '../ai-control-provider-router.js';
 
-test('coding work requests an isolated branch and stays in development',()=>{
+test('coding work requests an isolated branch and is forced into parallel development',()=>{
   const task=normalizeTaskInput({prompt:'관리자 페이지 코딩을 수정하고 Git 브랜치에서 검증해',mode:'primary-review'});
   assert.equal(task.needsCodeBranch,true);
-  assert.equal(task.mode,'primary-review');
+  assert.equal(task.mode,'parallel');
+  assert.equal(task.requestedMode,'primary-review');
   assert.equal(task.executionEnvironment,'development');
 });
 
-test('free API and account nodes stay ahead of paid API fallbacks',()=>{
-  const task=normalizeTaskInput({prompt:'검토해줘',mode:'parallel'});
+test('parallel plan preserves origin and scores the remaining suppliers dynamically',()=>{
+  const task=normalizeTaskInput({prompt:'review this',mode:'parallel'});
   const plan=buildExecutionPlan(task,{geminiFree:true,nodeProviders:['codex','gemini-cli'],openaiApi:true,anthropicApi:true,workerProviders:['claude']});
-  assert.deepEqual(plan.map(item=>item.providerId),['gemini-free','node:codex','node:gemini-cli']);
-  assert.equal(plan.length,AI_CONTROL_POLICY.maxParallelProviders);
+  assert.deepEqual(plan.map(item=>item.providerId),['node:codex','gemini-free','node:gemini-cli']);
+  assert.equal(plan.length,3);
+  assert.equal(plan[0].role,'origin-primary');
+  assert.ok(plan.every(item=>Number.isFinite(item.routerScore)));
 });
 
-test('primary-review uses Gemini free then ChatGPT account Codex',()=>{
+test('stored collaboration ceiling limits collaborators while preserving origin',()=>{
+  const task=normalizeTaskInput({prompt:'analyze this'});
+  const plan=buildExecutionPlan(task,{geminiFree:true,nodeProviders:['codex','gemini-cli'],openaiApi:true,anthropicApi:true,maxParallelProviders:3});
+  assert.equal(plan.length,3);
+  assert.equal(plan[0].role,'origin-primary');
+});
+
+test('legacy default requests still fan out in parallel instead of primary-review',()=>{
   const task=normalizeTaskInput({prompt:'이 설계를 상호 검토해줘'});
   const plan=buildExecutionPlan(task,{geminiFree:true,nodeProviders:['codex'],openaiApi:true});
-  assert.deepEqual(plan,[{providerId:'gemini-free',role:'primary'},{providerId:'node:codex',role:'reviewer'}]);
+  assert.deepEqual(plan.map(({providerId,role})=>({providerId,role})),[{providerId:'node:codex',role:'origin-primary'},{providerId:'gemini-free',role:'parallel-2'}]);
+  assert.ok(plan.every(item=>Number.isFinite(item.routerScore)));
 });
 
-test('account node can become primary when no free direct API key is configured',()=>{
+test('legacy single requests are upgraded to all available parallel suppliers',()=>{
   const task=normalizeTaskInput({prompt:'분석해줘',mode:'single'});
   const plan=buildExecutionPlan(task,{geminiFree:false,nodeProviders:['codex'],openaiApi:true});
-  assert.deepEqual(plan,[{providerId:'node:codex',role:'primary'}]);
+  assert.equal(task.mode,'parallel');
+  assert.deepEqual(plan.map(({providerId,role})=>({providerId,role})),[{providerId:'node:codex',role:'origin-primary'}]);
+  assert.ok(plan.every(item=>Number.isFinite(item.routerScore)));
 });
 
 test('provider inventory is normalized and unique across classes',()=>{
@@ -39,12 +52,28 @@ test('provider capability status labels plan-included account execution',()=>{
   const status=providerStatus(env,['codex']);
   assert.equal(status.find(item=>item.id==='node:codex')?.costClass,'chatgpt-plan-included');
   assert.equal(status.find(item=>item.id==='openai-api')?.costClass,'paid-opt-in');
+  assert.equal(status.find(item=>item.id==='openai-api')?.automaticEligible,false);
+  assert.equal(status.find(item=>item.id==='node:codex')?.automaticEligible,true);
 });
 
-test('role prompt carries branch, development boundary and immutable promotion context',()=>{
+test('paid API providers enter a plan only with explicit delegated budget',()=>{
+  const task=normalizeTaskInput({prompt:'deep analysis',governance:{paidCommitment:true,explicitDelegatedBudget:true}});
+  const plan=buildExecutionPlan(task,{geminiFree:true,nodeProviders:['codex'],openaiApi:true,anthropicApi:true});
+  assert.ok(plan.some(item=>item.providerId==='openai-api'));
+  assert.ok(plan.some(item=>item.providerId==='anthropic-api'));
+});
+
+test('account-managed worker can be declared zero-marginal-cost without opening paid APIs',()=>{
+  const task=normalizeTaskInput({prompt:'review this'});
+  const plan=buildExecutionPlan(task,{geminiFree:false,nodeProviders:[],openaiApi:true,workerProviders:['claude'],providerProfiles:{'worker:claude':{costClass:'account-managed'}}});
+  assert.deepEqual(plan.map(item=>item.providerId),['worker:claude']);
+});
+
+test('role prompt carries branch, parallel boundary and immutable promotion context',()=>{
   const task=normalizeTaskInput({prompt:'코드를 수정해'});
-  const prompt=rolePrompt(task,'reviewer',{branch:'ai/generic/task-1'});
+  const prompt=rolePrompt(task,'parallel-2',{branch:'ai/generic/task-1'});
   assert.match(prompt,/ai\/generic\/task-1/);
+  assert.match(prompt,/Execution mode: parallel; provider ceiling: 5/);
   assert.match(prompt,/Execution environment: development/);
   assert.match(prompt,/central review, merge, and deployment gate/);
   assert.match(prompt,/Never mutate production directly/);
@@ -52,10 +81,12 @@ test('role prompt carries branch, development boundary and immutable promotion c
 });
 
 test('successful AI work still needs human approval',()=>{
-  const summary=summarizeRuns([{providerId:'gemini-free',ok:true},{providerId:'node:codex',ok:false}]);
+  const summary=summarizeRuns([{providerId:'gemini-free',role:'origin-primary',ok:true},{providerId:'node:codex',role:'parallel-2',ok:false}]);
   assert.equal(summary.successful,1);
   assert.equal(summary.failed,1);
   assert.equal(summary.needsHumanApproval,true);
+  assert.equal(summary.maxParallelProviders,5);
+  assert.equal(summary.parallel,true);
 });
 
 test('task ids are branch-safe identifiers',()=>{
@@ -69,9 +100,20 @@ test('mission governance blocks non-negotiable violations',()=>{
 });
 test('high-impact actions remain analysis-only behind a human gate',()=>{
   const task=normalizeTaskInput({prompt:'change production secret',governance:{agentId:'infrastructure',area:'production_secret_change'}}); const d=evaluateTaskMissionPolicy(task);
-  assert.equal(d.tier,'human_gate'); assert.equal(d.analysisOnly,true); assert.match(rolePrompt({...task,missionDecision:d},'primary',{missionDecision:d}),/analysis, review, and candidate preparation only/);
+  assert.equal(d.tier,'human_gate'); assert.equal(d.analysisOnly,true); assert.match(rolePrompt({...task,missionDecision:d},'origin-primary',{missionDecision:d}),/analysis, review, and candidate preparation only/);
 });
 test('delegated reversible preflighted actions may pass the autonomous gate',()=>{
   const task=normalizeTaskInput({prompt:'update isolated preview',governance:{agentId:'platform',area:'bounded_preview_update',delegated:true,reversible:true,logged:true,preflightVerified:true}}); const d=evaluateTaskMissionPolicy(task);
   assert.equal(d.tier,'execute_reversible'); assert.equal(d.autonomousActionAllowed,true); assert.equal(d.analysisOnly,false);
+});
+
+test('known paid API cost class cannot be relabeled as free by runtime profiles',()=>{
+  const task=normalizeTaskInput({prompt:'review'});
+  const plan=buildExecutionPlan(task,{
+    geminiFree:false,
+    nodeProviders:[],
+    openaiApi:true,
+    providerProfiles:{'openai-api':{costClass:'account-managed'}},
+  });
+  assert.deepEqual(plan,[]);
 });

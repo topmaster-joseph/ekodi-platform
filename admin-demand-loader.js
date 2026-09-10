@@ -5,7 +5,7 @@
   const ASSET_VERSION='__EKODI_ADMIN_ASSET_VERSION__';
   const app=document.querySelector('#app');
   const nav=document.querySelector('.sidebar nav');
-  const loadedScripts=new Map();
+  const loadedScripts=globalThis.__EKODIAdminScriptLoads||(globalThis.__EKODIAdminScriptLoads=new Map());
   const loadedStyles=new Map();
   const pending=new Map();
   const secondaryScheduled=new Set();
@@ -19,6 +19,8 @@
       hashes: ['#campus'],
       insert: 'first',
     },
+    'public-site-controls':{scripts:['admin-public-site-controls.js'],real:'[data-section="public-site-controls"]'},
+    'language-status':{scripts:['admin-language-status.js'],real:'[data-section="language-status"]'},
     aiops: {
       label: 'AI Ops', icon: '✦',
       styles: ['ai-ops-admin.css'],
@@ -28,9 +30,12 @@
       hashes: ['#ai-ops', '#aiops'],
       insert: 'after-campus',
     },
+    'ai-settings':{label:'AI',icon:'⚙',styles:['ai-management-admin.css'],scripts:['ai-management-admin.js'],real:'[data-section="ai-settings"]'},
+    openai:{label:'OpenAI',icon:'O',styles:['openai-workspace-admin.css'],scripts:['openai-workspace-admin.js'],real:'[data-section="openai"]',hashes:['#openai']},
     devotional:{label:'매일묵상',icon:'V',styles:['devotional-admin.css'],scripts:['devotional-admin.js'],real:'[data-section="devotional"]',hashes:['#devotional'],insert:'after-aiops'},
     'ai-module-spec':{label:'A',icon:'A',styles:['ai-module-spec-admin.css'],scripts:['ai-module-spec-admin.js'],real:'[data-section="ai-module-spec"]',hashes:['#ai-module-spec']},
     'life-ai':{label:'인생AI',icon:'Q',styles:['life-ai-admin.css'],scripts:['life-ai-admin.js'],real:'[data-section="life-ai"]',hashes:['#life-ai'],insert:'after-aiops'},
+    'personal-finance':{label:'개인재무',icon:'₩',styles:['personal-finance-admin.css'],scripts:['personal-finance-admin.js'],real:'[data-section="personal-finance"]',hashes:['#personal-finance'],insert:'after-aiops'},
     aimembers: {
       label: 'AI 회원운영', icon: '◈',
       styles: ['ai-ops-admin.css'],
@@ -61,11 +66,10 @@
       insert: 'after-services',
     },
     clients: { label:'고객 사이트', icon:'C', styles:['client-access.css'], scripts:['client-access.js'], real:'[data-section="clients"]', hashes:['#clients'] },
-    community: { label:'커뮤니티', icon:'◎', styles:['community-reports-admin.css'], scripts:['community-reports-admin.js'], real:'[data-section="community"]', hashes:['#community'] },
-    'cheonggye-members': { label:'청계면상인회 정회원', icon:'名', styles:['cheonggye-members-admin.css'], scripts:['cheonggye-members-admin.js'], real:'[data-section="cheonggye-members"]', hashes:['#cheonggye-members'], insert:'after-workspace' },
+    community: { label:'커뮤니티', icon:'◎', styles:['community-admin.css'], scripts:['community-admin.js'], real:'[data-section="community"]', hashes:['#community'] },
     books: { label:'출판 · 도서', icon:'B', styles:['books-admin.css'], scripts:['books-admin.js'], secondaryStyles:['books-finance-admin.css'], secondaryScripts:['books-finance-admin.js'], real:'[data-section="books"]', hashes:['#books'] },
-    social: { label:'소셜', icon:'S', styles:['social-admin.css'], scripts:['social-admin.js'], real:'[data-section="social"]', hashes:['#social'] },
-    affiliates: { label:'제휴', icon:'A', styles:['marketing-funnel-admin.css'], scripts:['marketing-funnel-admin.js'], real:'[data-section="affiliates"]', hashes:['#affiliates'] },
+    social: { label:'채널·계정 연결', icon:'S', styles:['social-admin.css'], scripts:['social-admin.js'], real:'[data-section="social"]', hashes:['#social'] },
+    'supply-network': { label:'판매·공급망', icon:'N', styles:['supply-network-admin.css'], scripts:['supply-network-admin.js'], real:'[data-section="supply-network"]', hashes:['#supply-network'] },
     marketing: {
       label: 'MarketingAI', icon: 'AI',
       styles: ['marketing-ai-admin.css'],
@@ -75,7 +79,7 @@
       insert: 'after-work',
     },
     devices: {
-      label: '원격 작업', icon: '⌁',
+      label: '실행 인프라', icon: '⌁',
       styles: ['device-control-admin.css', 'remote-power-admin.css'],
       scripts: ['device-control-admin.js', 'remote-power-admin.js'],
       secondaryStyles: ['device-browser-diagnostics.css'],
@@ -120,19 +124,14 @@
 
   function loadScript(src) {
     if (loadedScripts.has(src)) return loadedScripts.get(src);
-    const existing = document.querySelector(`script[data-ekodi-demand-script="${src}"]`);
-    if (existing) return Promise.resolve(existing);
     const promise = new Promise((resolve, reject) => {
       const script = document.createElement('script');
       script.src = assetUrl(src);
       script.dataset.ekodiDemandScript = src;
       script.addEventListener('load', () => resolve(script), { once:true });
-      script.addEventListener('error', () => reject(new Error(`${src} 로딩 실패`)), { once:true });
+      script.addEventListener('error', () => reject(new Error(`${src} load failed`)), { once:true });
       document.body.appendChild(script);
-    }).catch(error => {
-      loadedScripts.delete(src);
-      throw error;
-    });
+    }).catch(error => { loadedScripts.delete(src); throw error; });
     loadedScripts.set(src, promise);
     return promise;
   }
@@ -250,9 +249,6 @@
           if (placeholder !== real && placeholder.isConnected) placeholder.remove();
         }
         window.dispatchEvent(new CustomEvent('ekodi-nav-changed', { detail:{ feature:key } }));
-        if (!auto || feature.hashes?.includes(location.hash) || feature.paths?.includes(location.pathname)) {
-          queueMicrotask(() => real.click());
-        }
         mark(`ekodi-feature-${key}-ready`);
         scheduleSecondary(key, feature);
       } catch (error) {
@@ -273,7 +269,7 @@
   }
 
   function placeholder(key, feature) {
-    if (!nav || loadedScripts.has(feature.scripts?.[0]) || nav.querySelector(`[data-demand-feature="${key}"]`)) return false;
+    if (!nav || nav.querySelector(`[data-demand-feature="${key}"]`)) return false;
     let button = nav.querySelector(feature.real);
     let changed = false;
     if (!button) {

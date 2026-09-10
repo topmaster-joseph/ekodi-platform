@@ -3,18 +3,19 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 const read=p=>readFile(new URL(`../${p}`,import.meta.url),'utf8');
 
-test('EKODIBIZ public site stays simple and sends partners to private workspace',async()=>{
-  const html=await read('ekodibiz/index.html');
+test('EKODIBIZ public site keeps partner login inside business-area detail',async()=>{
+  const [html,site]=await Promise.all([read('ekodibiz/index.html'),read('ekodibiz/site.js')]);
   assert.ok(html.includes('WHAT WE DO'));
-  assert.ok(html.includes('관계자 로그인'));
-  assert.ok(html.includes('https://ekodi.kr/ekodibiz/trade'));
+  assert.ok(html.includes('data-i18n="partnerLogin"'));
+  assert.ok(!html.match(/<header[\s\S]*관계자 로그인[\s\S]*<\/header>/));
+  assert.ok(site.includes("if(type==='trade')return 'https://ekodi.kr/ekodibiz/trade'"));
   assert.ok(!html.includes('id="goalForm"'));
   assert.ok(!html.includes('무엇을 이루고 싶으세요?'));
 });
 
 test('trade partner and trade admin routes are apex workspace routes',async()=>{
-  const [router,wrangler,portal,admin]=await Promise.all([
-    read('platform-router-entry-worker.js'),read('wrangler.site.toml'),read('workspace-trade-portal.js'),read('workspace-trade-admin-page.js')
+  const [router,wrangler,portal,admin,manifestText]=await Promise.all([
+    read('platform-router-entry-worker.js'),read('wrangler.site.toml'),read('workspace-trade-portal.js'),read('workspace-trade-admin-page.js'),read('deploy/manifests/shared-site.worker.json')
   ]);
   assert.ok(router.includes("from './workspace-trade-portal.js'"));
   assert.ok(router.includes('isTradePartnerPath(url.pathname)'));
@@ -22,11 +23,17 @@ test('trade partner and trade admin routes are apex workspace routes',async()=>{
   assert.ok(portal.includes('/ekodibiz\\/trade'));
   assert.ok(admin.includes('/trade\\/admin'));
   for(const asset of ['/workspace-trade-admin.js','/workspace-trade-portal.css','/workspace-trade-portal.js'])assert.ok(wrangler.includes(`"${asset}"`),asset);
+  assert.match(wrangler,/pattern = "ekodi\.kr\/ekodibiz\/trade\*"[\s\S]*zone_name = "ekodi\.kr"/);
+  const probe=JSON.parse(manifestText).worker.requests.find(x=>x.url==='https://ekodi.kr/ekodibiz/trade');
+  assert.equal(probe?.candidateVerify,false);
+  assert.match(probe?.candidateVerifyReason||'',/run_worker_first bootstrap/);
+  assert.ok(probe?.expect?.includes('PRIVATE TRADE WORKSPACE'));
+  assert.ok(probe?.headerExpect?.includes('x-ekodi-route: trade-partner-workspace'));
 });
+
 test('trade auth uses EKODIBIZ tenant and canonical apex portal',async()=>{
   const [auth,access]=await Promise.all([read('auth-site/auth.js'),read('supabase/functions/access-api/index.ts')]);
-  assert.ok(auth.includes("trade:{name:'EKODI Global Trading',tenant:'ekodi-biz'"));
-  assert.ok(auth.includes("returnTo:'https://ekodi.kr/ekodibiz/trade'"));
+  assert.ok(auth.includes("trade:{name:'EKODI Global Trading',tenant:'ekodi-biz'"));  assert.ok(auth.includes("returnTo:'https://ekodi.kr/ekodibiz/trade'"));
   assert.ok(auth.includes('requestable:false'));
   assert.ok(access.includes('trade:["https://ekodi.kr","https://trade.biz.ekodi.kr","https://trade.ekodi.kr"]'));
 });
@@ -66,12 +73,38 @@ test('canonical EKODIBIZ URL slug maps to immutable internal tenant slug',async(
   assert.ok(admin.includes("workspaceUrlSlug==='ekodibiz'?'ekodi-biz':workspaceUrlSlug"));
   assert.ok(auth.includes("tenant:'ekodi-biz'"));
 });
+
 test('EKODIBIZ canonical workspace root is backed by the EKODIBIZ service',async()=>{
-  const [router,wrangler,html,manifestText]=await Promise.all([read('platform-router-entry-worker.js'),read('wrangler.site.toml'),read('ekodibiz/index.html'),read('deploy/manifests/shared-site.worker.json')]);
+  const [router,wrangler,html,manifestText,deployWorkflow]=await Promise.all([read('platform-router-entry-worker.js'),read('wrangler.site.toml'),read('ekodibiz/index.html'),read('deploy/manifests/shared-site.worker.json'),read('.github/workflows/deploy-ekodibiz.yml')]);
   assert.ok(router.includes('EKODIBIZ_PUBLIC_ROUTE'));
+  assert.ok(router.includes("EKODIBIZ_API_PREFIX='/ekodibiz/api/'"));
+  assert.ok(router.includes('routeEkodiBizApi(request,env)'));
   assert.ok(router.includes("env?.EKODIBIZ?.fetch"));
   assert.ok(router.includes("x-ekodi-workspace-gateway','ekodibiz-service-binding"));
+  assert.ok(router.includes("const EKODIBIZ_ASSETS=new Set(['style.css','site.js'])"));
+  assert.ok(router.includes("on('script[src]'"));
   assert.match(wrangler,/binding = "EKODIBIZ"[\s\S]*service = "ekodibiz-revenue-os"/);
   assert.ok(html.includes('<link rel="canonical" href="https://ekodi.kr/ekodibiz">'));
-  const manifest=JSON.parse(manifestText);assert.ok(manifest.worker.requests.some(x=>x.url==='https://ekodi.kr/ekodibiz'));
+  const manifest=JSON.parse(manifestText);
+  const rootProbe=manifest.worker.requests.find(x=>x.url==='https://ekodi.kr/ekodibiz');
+  assert.ok(rootProbe);
+  assert.ok(rootProbe.expect.includes('EKODIBIZ'));
+  assert.ok(rootProbe.expect.includes('WHAT WE DO'));
+  assert.equal(rootProbe.expect.length,2);
+  assert.ok(rootProbe.headerExpect.includes('x-ekodi-workspace-gateway: ekodibiz-service-binding'));
+  assert.ok(deployWorkflow.includes("grep -Fq 'WHAT WE DO'"));
+  assert.ok(!deployWorkflow.includes("grep -Fq '프로그램 개발'"));
+});
+
+test('trade admin uses shared two-level UI and canonical apex auth',async()=>{
+  const [workspaceAdmin,tradeAdmin]=await Promise.all([read('workspace-admin-page.js'),read('workspace-trade-admin-page.js')]);
+  assert.ok(workspaceAdmin.includes("tradeAdminRoute=/^\\/[^/]+\\/trade\\/admin"));
+  assert.ok(workspaceAdmin.includes('/workspace-trade-admin.js?v=20260909-admin-ui-v8'));
+  assert.ok(tradeAdmin.includes("b.dataset.adminGroup=key"));
+  assert.ok(tradeAdmin.includes('renderSecondaryNav(key)'));
+  assert.ok(tradeAdmin.includes('id="tradeAdminSearch"'));
+  assert.ok(tradeAdmin.includes('id="roles"'));
+  assert.ok(tradeAdmin.includes("new URL('/auth/',location.origin)"));
+  assert.ok(!tradeAdmin.includes('https://auth.ekodi.kr/'));
+  assert.ok(tradeAdmin.includes("'cache-control':'no-store'"));
 });

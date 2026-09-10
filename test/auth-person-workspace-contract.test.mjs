@@ -59,7 +59,7 @@ test('legacy Mall seller login is normalized back to Seller Studio through the c
   assert.match(authRouter,/'mall-seller':'mall'/);
   assert.match(authRouter,/requestedSite==='mall-seller'/);
   assert.match(authRouter,/https:\/\/ekodi\.kr\/ekodibiz\/mall\/seller\//);
-  assert.match(authHtml,/auth-router\.js\?v=20260826-universal-sso-1/);
+  assert.match(authHtml,/auth-router\.js\?v=20260904-direct-login-1/);
 });
 
 test('stable Google subject cannot be silently replaced by a recycled email account',()=>{
@@ -81,6 +81,12 @@ test('identity api preserves Google subject while persisting a provider-neutral 
   assert.match(identityApi,/\/session\/handoff/);
   assert.match(identityApi,/sessionHandoff/);
   assert.match(identityApi,/link\.user\.id!==user\.id/);
+});
+
+test('identity api accepts the canonical path-based auth origin while retaining the legacy auth bridge',()=>{
+  assert.match(identityApi,/const AUTH_ORIGINS=new Set\(\["https:\/\/ekodi\.kr","https:\/\/auth\.ekodi\.kr"\]\)/);
+  assert.match(identityApi,/origin&&AUTH_ORIGINS\.has\(origin\)\?origin:"null"/);
+  assert.match(identityApi,/if\(!origin\|\|!AUTH_ORIGINS\.has\(origin\)\)return json\(req,\{error:"origin_not_allowed"\},403\)/);
 });
 
 test('access api resolves and revalidates workspace-scoped handoff',()=>{
@@ -115,7 +121,7 @@ test('auth center is workspace-first and hides linked login identities outside a
 
 test('Marketing workspace labels are separated and current routed assets are force-refreshed',()=>{
   assert.match(authHtml,/auth-workspaces\.css\?v=20260817-workspace-label-1/);
-  assert.match(authHtml,/auth-router\.js\?v=20260826-universal-sso-1/);
+  assert.match(authHtml,/auth-router\.js\?v=20260904-direct-login-1/);
   assert.match(authRouter,/marketing-auth-hotfix\.js\?v=20260824-return-origin-1/);
   assert.match(authRouter,/marketing-onboarding\.js\?v=20260817-workspace-label-1/);
   assert.match(marketingOnboarding,/parts\.slice\(0,2\)/);
@@ -141,6 +147,13 @@ test('client auth reuses the central EKODI session instead of forcing Google log
   assert.match(clientAuth,/handoffExistingSession/);
 });
 
+test('direct login mode opens the Google prompt without a second intermediate click',()=>{
+  assert.match(clientAuth,/DIRECT_LOGIN=params\.get\('direct'\)==='1'/);
+  assert.match(clientAuth,/window\.google\.accounts\.id\.prompt/);
+  assert.match(clientAuth,/isNotDisplayed/);
+  assert.match(clientAuth,/isSkippedMoment/);
+});
+
 test('targeted workspace routing is available across shared and person-scoped EKODI services',()=>{
   for(const site of ['marketing','biz','books','church','lab','mall','social','energy'])assert.match(authTarget,new RegExp(`${site}:`));
   assert.match(authRouter,/targetableWorkspaceSites/);
@@ -151,7 +164,7 @@ test('targeted workspace routing is available across shared and person-scoped EK
 });
 
 test('My EKODI is the signed-in workspace home and routes connected platforms through central auth',()=>{
-  assert.match(myHtml,/MY EKODI · USER UI/);
+  assert.match(myHtml,/MY EKODI · PERSONAL AI HOME/);
   assert.match(myHtml,/data-ekodi-ui="USER"/);
   assert.match(myHtml,/id="workspaceList"/);
   assert.doesNotMatch(myHtml,/id="workspaceSwitcher"/);
@@ -159,7 +172,7 @@ test('My EKODI is the signed-in workspace home and routes connected platforms th
   assert.match(myHtml,/user-ai-ui\.js/);
   assert.match(myHtml,/id="recommendationList"/);
   assert.match(myApp,/ekodi_my_active_workspace/);
-  assert.match(myApp,/https:\/\/auth\.ekodi\.kr\//);
+  assert.match(myApp,/https:\/\/ekodi\.kr\/auth\//);
   assert.match(myApp,/searchParams\.set\('workspace'/);
   assert.match(myApp,/setActiveWorkspace/);
   assert.match(myUserAiUi,/function renderSuggestions\(\)/);

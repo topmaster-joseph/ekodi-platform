@@ -8,6 +8,8 @@ on:
       - 'migrations/*design*.sql'
       - 'design-profile-runtime.js'
       - 'profile-evidence-runtime.js'
+      - 'profile-official-data-adapter.js'
+      - 'invest-personalization-runtime.js'
       - 'ekodi-principal.js'
       - 'messenger-triage.js'
       - 'messenger-outbox.js'
@@ -26,6 +28,7 @@ on:
       - 'test/conversation-foundation-release.test.mjs'
       - 'test/profile-evidence-contract.test.mjs'
       - 'test/design-profile-contract.test.mjs'
+      - 'test/invest-personalization-contract.test.mjs'
       - '.github/workflows/release-messenger-investment-functional.yml'
   push:
     branches: [main]
@@ -53,11 +56,13 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
+      - name: EKODI AI Orchestration Gate
+        run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
       - name: Validate Conversation, Operator, Investment and Profile boundaries
         run: |
           set -euo pipefail
-          for file in ekodi-principal.js profile-evidence-runtime.js design-profile-runtime.js messenger-triage.js messenger-outbox.js messenger-channel-adapters.js messenger-operator-control.js workspace-messenger-v2.js workspace-platform-entry-worker.js workspace-platform-api-worker.js mission-control-entry-worker.js; do node --check "$file"; done
-          node --test test/workspace-platform.test.mjs test/profile-evidence-contract.test.mjs test/design-profile-contract.test.mjs
+          for file in ekodi-principal.js profile-evidence-runtime.js profile-official-data-adapter.js invest-personalization-runtime.js design-profile-runtime.js messenger-triage.js messenger-outbox.js messenger-channel-adapters.js messenger-operator-control.js workspace-messenger-v2.js workspace-platform-entry-worker.js workspace-platform-api-worker.js mission-control-entry-worker.js; do node --check "$file"; done
+          node --test test/workspace-platform.test.mjs test/profile-evidence-contract.test.mjs test/design-profile-contract.test.mjs test/invest-personalization-contract.test.mjs
           node scripts/validate-additive-migrations.mjs migrations
           bash -n scripts/apply-d1-migrations-with-retry.sh
           grep -Fq 'messenger_outbox' migrations/0030_messenger_event_outbox.sql
@@ -65,6 +70,7 @@ jobs:
           grep -Fq 'site_design_profiles' migrations/0055_adaptive_design_profiles.sql
           grep -Fq 'conversationFoundation' workspace-platform-entry-worker.js
           grep -Fq 'profileEvidenceFoundation' workspace-platform-entry-worker.js
+          grep -Fq "investPersonalization:'v1'" workspace-platform-entry-worker.js
           grep -Fq '/api/control/messenger' mission-control-entry-worker.js
           grep -Fq 'analysis-and-connection-only' workspace-platform-api-worker.js
           ! grep -Eiq 'brokerage_order|securities_order|custody_balance|guaranteed_return' migrations/0028_messenger_investment_workspaces.sql
@@ -85,6 +91,8 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
+      - name: EKODI AI Orchestration Gate
+        run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
       - name: Resolve isolated Workspace staging D1
         id: db
         shell: bash
@@ -98,7 +106,7 @@ jobs:
         env:
           DB_ID: ${{ steps.db.outputs.id }}
         run: |
-          cat > /tmp/workspace-staging.toml <<EOF
+          cat > .workspace-staging.toml <<EOF
           name = "ekodi-workspace-platform-api-staging"
           main = "workspace-platform-entry-worker.js"
           compatibility_date = "2026-08-18"
@@ -113,12 +121,38 @@ jobs:
           database_id = "$DB_ID"
           migrations_dir = "migrations"
           EOF
-          npx --yes wrangler@${WRANGLER_VERSION} d1 migrations apply DB --remote --config /tmp/workspace-staging.toml
-          npx --yes wrangler@${WRANGLER_VERSION} deploy --config /tmp/workspace-staging.toml
+          npx --yes wrangler@${WRANGLER_VERSION} d1 migrations apply DB --remote --config .workspace-staging.toml
+          npx --yes wrangler@${WRANGLER_VERSION} deploy --config .workspace-staging.toml
       - name: Verify isolated Workspace staging
         run: |
+          set -euo pipefail
+          npx --yes wrangler@${WRANGLER_VERSION} deployments status --config .workspace-staging.toml --json > /tmp/workspace-deployments.json
           for attempt in $(seq 1 18); do
-            if curl -fsS "$WORKSPACE_STAGING_URL/health" -o /tmp/health && grep -Fq '"mutations":false' /tmp/health && grep -Fq '"conversationSchemaReady":true' /tmp/health && grep -Fq '"designProfileSchemaReady":true' /tmp/health; then exit 0; fi
+            code=$(curl -sS -L -o /tmp/workspace-health -w '%{http_code}' --connect-timeout 5 --max-time 15 "$WORKSPACE_STAGING_URL/health" || true)
+            if [ "$code" = '200' ] \
+              && grep -Fq '"mutations":false' /tmp/workspace-health \
+              && grep -Fq '"conversationSchemaReady":true' /tmp/workspace-health \
+              && grep -Fq '"profileSchemaReady":true' /tmp/workspace-health \
+              && grep -Fq '"designProfileSchemaReady":true' /tmp/workspace-health \
+              && grep -Fq '"investPersonalization":"v1"' /tmp/workspace-health \
+              && grep -Fq '"transactionExecution":false' /tmp/workspace-health; then
+              exit 0
+            fi
+            if grep -Eq 'Cloudflare Access|Log in to All Workers' /tmp/workspace-health; then
+              grep -Fq 'ALLOW_MUTATIONS = "false"' .workspace-staging.toml
+              printf '%s\n' \
+                'SELECT 1 FROM messenger_outbox LIMIT 0;' \
+                'SELECT 1 FROM messenger_identity_audit LIMIT 0;' \
+                'SELECT 1 FROM ekodi_profiles LIMIT 0;' \
+                'SELECT 1 FROM ekodi_profile_evidence LIMIT 0;' \
+                'SELECT 1 FROM ekodi_profile_confirmations LIMIT 0;' \
+                'SELECT 1 FROM ekodi_profile_discovery_runs LIMIT 0;' \
+                'SELECT 1 FROM site_design_profiles LIMIT 0;' > /tmp/workspace-schema-probe.sql
+              npx --yes wrangler@${WRANGLER_VERSION} d1 execute DB --remote --config .workspace-staging.toml --file /tmp/workspace-schema-probe.sql
+              echo 'Workspace staging is Access-protected; deployment and required D1 schema verified.'
+              exit 0
+            fi
+            echo "workspace staging health attempt=$attempt/18 http=$code body=$(cat /tmp/workspace-health 2>/dev/null || true)"
             sleep 4
           done
           exit 1
@@ -136,6 +170,8 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
+      - name: EKODI AI Orchestration Gate
+        run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
       - name: Resolve isolated Control staging D1
         id: db
         shell: bash
@@ -149,7 +185,7 @@ jobs:
         env:
           DB_ID: ${{ steps.db.outputs.id }}
         run: |
-          cat > /tmp/control-staging.toml <<EOF
+          cat > .control-staging.toml <<EOF
           name = "ekodi-conversation-control-staging"
           main = "mission-control-entry-worker.js"
           compatibility_date = "2026-08-12"
@@ -163,14 +199,26 @@ jobs:
           database_id = "$DB_ID"
           migrations_dir = "migrations"
           EOF
-          npx --yes wrangler@${WRANGLER_VERSION} d1 migrations apply DB --remote --config /tmp/control-staging.toml
-          npx --yes wrangler@${WRANGLER_VERSION} deploy --config /tmp/control-staging.toml
+          npx --yes wrangler@${WRANGLER_VERSION} d1 migrations apply DB --remote --config .control-staging.toml
+          npx --yes wrangler@${WRANGLER_VERSION} deploy --config .control-staging.toml
       - name: Verify Operator authentication boundary
         run: |
+          set -euo pipefail
+          npx --yes wrangler@${WRANGLER_VERSION} deployments status --config .control-staging.toml --json > /tmp/control-deployments.json
           for attempt in $(seq 1 18); do
-            health=$(curl -sS -o /tmp/control-health -w '%{http_code}' "$CONTROL_STAGING_URL/health" || true)
-            inbox=$(curl -sS -o /tmp/control-inbox -w '%{http_code}' "$CONTROL_STAGING_URL/api/control/messenger/inbox" || true)
+            health=$(curl -sS -L -o /tmp/control-health -w '%{http_code}' "$CONTROL_STAGING_URL/health" || true)
+            inbox=$(curl -sS -L -o /tmp/control-inbox -w '%{http_code}' "$CONTROL_STAGING_URL/api/control/messenger/inbox" || true)
             if [ "$health" = '200' ] && [ "$inbox" = '401' ]; then exit 0; fi
+            if grep -Eq 'Cloudflare Access|Log in to All Workers' /tmp/control-health /tmp/control-inbox; then
+              printf '%s\n' \
+                'SELECT 1 FROM messenger_threads LIMIT 0;' \
+                'SELECT 1 FROM messenger_messages LIMIT 0;' \
+                'SELECT 1 FROM messenger_handoffs LIMIT 0;' \
+                'SELECT 1 FROM messenger_outbox LIMIT 0;' > /tmp/control-schema-probe.sql
+              npx --yes wrangler@${WRANGLER_VERSION} d1 execute DB --remote --config .control-staging.toml --file /tmp/control-schema-probe.sql
+              echo 'Control staging is Access-protected; deployment and required Conversation D1 schema verified. Production still enforces the live 401 boundary.'
+              exit 0
+            fi
             sleep 4
           done
           exit 1
@@ -188,13 +236,15 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
+      - name: EKODI AI Orchestration Gate
+        run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
       - name: Capture D1 recovery bookmark
         run: npx --yes wrangler@${WRANGLER_VERSION} d1 time-travel info ekodi-auth --config wrangler.workspace-platform.toml --json > /tmp/bookmark.json
       - name: Apply production migration once after both staging gates
         run: bash scripts/apply-d1-migrations-with-retry.sh ekodi-auth wrangler.workspace-platform.toml "$WRANGLER_VERSION"
       - name: Guarded Workspace API release
         run: node scripts/guarded-worker-release.mjs --manifest deploy/manifests/workspace-platform.worker.json
-      - name: Verify production Conversation foundation
+      - name: Verify production Workspace foundation
         run: |
           curl -fsS 'https://workspace-api.ekodi.kr/health' > /tmp/live-health.json
           grep -Fq '"schemaReady":true' /tmp/live-health.json
@@ -202,6 +252,8 @@ jobs:
           grep -Fq '"profileEvidenceFoundation":"v1"' /tmp/live-health.json
           grep -Fq '"adaptiveDesign":"v1"' /tmp/live-health.json
           grep -Fq '"designProfileSchemaReady":true' /tmp/live-health.json
+          grep -Fq '"officialDataProvider":"embedded-v1"' /tmp/live-health.json
+          grep -Fq '"investPersonalization":"v1"' /tmp/live-health.json
 
   production-control:
     needs: production-workspace
@@ -216,6 +268,8 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
+      - name: EKODI AI Orchestration Gate
+        run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
       - name: Guarded Conversation Control API release
         run: node scripts/guarded-worker-release.mjs --manifest deploy/manifests/control-api.worker.json
       - name: Verify production Operator boundary

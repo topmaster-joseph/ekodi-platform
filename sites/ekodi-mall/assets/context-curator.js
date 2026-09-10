@@ -12,6 +12,7 @@
 
   const safeUrl = (value) => { try { const url = new URL(String(value || '')); return url.protocol === 'https:' ? url.toString() : ''; } catch { return ''; } };
   const money = (value) => Number(value) > 0 ? `${new Intl.NumberFormat('ko-KR').format(Number(value))}원` : '가격 확인';
+  const offerPriceText = (offer) => offer?.priceKrw > 0 ? money(offer.priceKrw) : (offer?.sourcePriceAmount > 0 && offer?.sourcePriceCurrency ? `${offer.sourcePriceCurrency} ${new Intl.NumberFormat('ko-KR', { maximumFractionDigits: 2 }).format(offer.sourcePriceAmount)}` : '가격 확인');
   const clean = (value) => String(value || '').replace(/\s+/g, ' ').trim();
   const canonical = (value) => clean(value).toLocaleLowerCase('ko-KR').replace(/[^0-9a-z가-힣]/gi, '');
   const tokens = (value) => clean(value).toLocaleLowerCase('ko-KR').split(/[^0-9a-z가-힣]+/i).filter((item) => item.length > 1);
@@ -21,7 +22,7 @@
     const clickUrl = safeUrl(raw?.clickUrl);
     if (!clickUrl) return null;
     const price = Number(raw?.priceKrw || 0);
-    return { id: String(raw?.id || index), name: clean(raw?.productName || '상품'), category: clean(raw?.category || '추천'), providerKey: clean(raw?.providerKey || 'affiliate'), providerName: clean(raw?.providerName || '제휴 판매처'), priceKrw: Number.isFinite(price) && price > 0 ? price : 0, clickUrl, isRocket: Boolean(raw?.isRocket), isFreeShipping: Boolean(raw?.isFreeShipping) };
+    return { id: String(raw?.id || index), name: clean(raw?.productName || '상품'), category: clean(raw?.category || '추천'), providerKey: clean(raw?.providerKey || 'affiliate'), providerName: clean(raw?.providerName || '제휴 판매처'), affiliateMode: clean(raw?.affiliateMode || ''), affiliateNetworkName: clean(raw?.affiliateNetworkName || ''), marketCountry: clean(raw?.marketCountry || ''), sourcePriceAmount: Number(raw?.sourcePriceAmount || 0), sourcePriceCurrency: clean(raw?.sourcePriceCurrency || ''), priceKrw: Number.isFinite(price) && price > 0 ? price : 0, clickUrl, imageUrl: safeUrl(raw?.imageUrl), priceFreshness: clean(raw?.priceFreshness || ''), priceVerifiedAt: clean(raw?.priceVerifiedAt || raw?.selectedAt || ''), isRocket: Boolean(raw?.isRocket), isFreeShipping: Boolean(raw?.isFreeShipping) };
   }
 
   function groupOffers(offers) {
@@ -32,6 +33,19 @@
       groups.get(key).offers.push(offer);
     }
     return [...groups.values()].map((product) => ({ ...product, offers: product.offers.sort((a, b) => (a.priceKrw || Infinity) - (b.priceKrw || Infinity)) }));
+  }
+
+  function normalizeProductIdentity(raw, index) {
+    const offers = Array.isArray(raw?.offers) ? raw.offers.map((offer, offerIndex) => normalizeOffer(offer, offerIndex)).filter(Boolean) : [];
+    if (!offers.length) return null;
+    offers.sort((a, b) => (a.priceKrw || Infinity) - (b.priceKrw || Infinity));
+    return {
+      id: clean(raw?.productIdentityId || raw?.id || String(index)),
+      name: clean(raw?.name || offers[0].name),
+      category: clean(raw?.category || offers[0].category || '??'),
+      identityConfidence: clean(raw?.identityConfidence || ''),
+      offers,
+    };
   }
 
   const RECIPIENTS = [['은사·선생님',['교수님','교수','선생님','스승','은사']],['부모님',['부모님','어머니','아버지','엄마','아빠']],['어르신',['어르신','장로님','권사님']],['거래처',['거래처','협력사','대표님']],['친구',['친구','지인']],['가족',['가족','형제','자매']]];
@@ -79,9 +93,60 @@
   function contextLabel(context) { const parts = [context.recipient, context.occasion, context.budgetMax ? `${new Intl.NumberFormat('ko-KR').format(context.budgetMax)}원 이하` : '', ...context.prefs.slice(0, 2)].filter(Boolean); return parts.length ? parts.join(' · ') : '오늘의 에코디 추천'; }
   function offerLink(offer, compact = false) {
     const link = document.createElement('a'); link.href = offer.clickUrl; link.target = '_blank'; link.rel = 'sponsored noopener';
-    link.textContent = compact ? `${offer.providerName} · ${money(offer.priceKrw)}` : '판매처에서 보기';
+    link.textContent = compact ? `${offer.providerName} · ${offerPriceText(offer)}` : '판매처에서 보기';
     link.addEventListener('click', () => document.dispatchEvent(new CustomEvent('ekodi:context-offer-click', { detail: { providerKey: offer.providerKey, productName: offer.name } })));
     return link;
+  }
+  function detailButton(product, context) {
+    const button = document.createElement('button');
+    button.type = 'button'; button.className = 'context-detail-button'; button.textContent = '상품·판매처 보기';
+    button.addEventListener('click', () => openProductDetail(product, context));
+    return button;
+  }
+  function offerBadges(offer, product) {
+    const badges = []; const lowest = bestPrice(product);
+    if (product.offers.length > 1 && lowest && offer.priceKrw === lowest) badges.push('현재 표시가 최저');
+    if (offer.affiliateMode === 'network' && offer.affiliateNetworkName) badges.push(`${offer.affiliateNetworkName} 경유`);
+    else if (offer.affiliateMode === 'direct') badges.push('직접 제휴');
+    if (offer.marketCountry && offer.marketCountry !== 'KR') badges.push(offer.marketCountry);
+    if (offer.isRocket) badges.push('빠른배송');
+    if (offer.isFreeShipping) badges.push('무료배송');
+    if (offer.priceFreshness === 'stale') badges.push('판매처 최신가 확인');
+    if (!offer.priceKrw && offer.sourcePriceCurrency && offer.sourcePriceCurrency !== 'KRW') badges.push('환율·최신가 확인');
+    return badges;
+  }
+  let offerDialog = null;
+  function ensureOfferDialog() {
+    if (offerDialog) return offerDialog;
+    offerDialog = document.createElement('dialog'); offerDialog.className = 'context-offer-dialog';
+    offerDialog.innerHTML = '<div class="context-offer-shell"><button type="button" class="context-dialog-close" aria-label="닫기">×</button><div data-detail-body></div></div>';
+    offerDialog.querySelector('.context-dialog-close')?.addEventListener('click', () => offerDialog.close());
+    offerDialog.addEventListener('click', (event) => { if (event.target === offerDialog) offerDialog.close(); });
+    document.body.append(offerDialog); return offerDialog;
+  }
+  function openProductDetail(product, context) {
+    const dialog = ensureOfferDialog(); const body = dialog.querySelector('[data-detail-body]');
+    if (!body) return; body.replaceChildren();
+    const header = text('header', 'context-detail-head', '');
+    const meta = text('div', 'context-detail-meta', '');
+    meta.append(text('span', 'context-fit', contextLabel(context)), text('span', 'context-provider', product.offers.length > 1 ? `판매처 ${product.offers.length}곳` : '현재 연결 판매처 1곳'));
+    header.append(meta, text('h2', '', product.name), text('p', 'context-detail-price', bestPrice(product) ? `${money(bestPrice(product))}부터` : '판매처에서 최신 가격 확인'));
+    const visual = text('div', 'context-detail-visual', ''); const image = product.offers.find((offer) => offer.imageUrl)?.imageUrl;
+    if (image) { const img = document.createElement('img'); img.src = image; img.alt = product.name; img.loading = 'lazy'; visual.append(img); } else visual.append(text('span', '', 'EKODI CURATED'));
+    const whySection = text('section', 'context-detail-why', ''); whySection.append(text('h3', '', '왜 이 상품인가'));
+    const why = text('ul', 'context-card-reasons', ''); reasons(product, context).forEach((reason) => why.append(text('li', '', reason))); whySection.append(why);
+    const offerSection = text('section', 'context-detail-offers', '');
+    offerSection.append(text('h3', '', '어디서 살까요?'), text('p', 'context-detail-note', product.offers.length > 1 ? '제휴가 완료된 판매처 안에서 가격·배송·사용자 적합성을 비교합니다. 추천순위와 제휴수수료는 분리합니다.' : '현재 제휴 완료 및 추천 허용된 판매처는 1곳입니다. 다른 판매처도 제휴가 완료되면 함께 비교됩니다.'));
+    const list = text('div', 'context-detail-offer-list', '');
+    product.offers.forEach((offer) => {
+      const row = text('article', 'context-detail-offer', ''); const copy = text('div', 'context-detail-offer-copy', '');
+      copy.append(text('strong', '', offer.providerName), text('span', 'context-detail-offer-price', offerPriceText(offer)));
+      const badges = text('div', 'context-detail-badges', ''); offerBadges(offer, product).forEach((badge) => badges.append(text('span', '', badge))); copy.append(badges);
+      const link = offerLink(offer); link.className = 'context-offer-buy'; link.textContent = '판매처에서 구매'; row.append(copy, link); list.append(row);
+    });
+    offerSection.append(list); body.append(header, visual, whySection, offerSection);
+    document.dispatchEvent(new CustomEvent('ekodi:context-product-open', { detail: { productId: product.id, offerCount: product.offers.length } }));
+    if (typeof dialog.showModal === 'function') { if (!dialog.open) dialog.showModal(); } else dialog.setAttribute('open', '');
   }
   function card(product, context, index) {
     const article = text('article', 'context-card', ''); const top = text('div', 'context-card-top', '');
@@ -89,8 +154,7 @@
     article.append(top, text('h3', '', product.name), text('p', 'context-card-price', bestPrice(product) ? `${money(bestPrice(product))}부터` : '판매처에서 가격 확인'));
     const why = text('ul', 'context-card-reasons', ''); reasons(product, context).forEach((reason) => why.append(text('li', '', reason))); article.append(why);
     const action = text('div', 'context-card-action', '');
-    if (product.offers.length > 1) { const offers = text('div', 'context-offer-list', ''); product.offers.slice(0, 3).forEach((offer) => offers.append(offerLink(offer, true))); article.append(offers); action.append(text('small', '', '판매처별 조건을 확인하세요.')); }
-    else { action.append(text('small', '', `판매처 · ${product.offers[0]?.providerName || '외부 판매처'}`), offerLink(product.offers[0])); }
+    action.append(text('small', '', product.offers.length > 1 ? `판매처 ${product.offers.length}곳 비교 가능` : `현재 판매처 · ${product.offers[0]?.providerName || '외부 판매처'}`), detailButton(product, context));
     article.append(action); return article;
   }
 
@@ -106,7 +170,7 @@
   }
   async function load() {
     if (loading) return loading;
-    loading = fetch(API, { method: 'GET', mode: 'cors', credentials: 'omit', headers: { accept: 'application/json' } }).then(async (response) => { if (!response.ok) throw new Error(`HTTP ${response.status}`); const body = await response.json(); const offers = Array.isArray(body.products) ? body.products.map(normalizeOffer).filter(Boolean) : []; affiliateProducts = groupOffers(offers); if (body.disclosureText && disclosure) disclosure.textContent = `${clean(body.disclosureText)} 추천순위는 제휴수수료와 분리합니다.`; return affiliateProducts; }).catch(() => { affiliateProducts = []; return []; });
+    loading = fetch(API, { method: 'GET', mode: 'cors', credentials: 'omit', headers: { accept: 'application/json' } }).then(async (response) => { if (!response.ok) throw new Error(`HTTP ${response.status}`); const body = await response.json(); const offers = Array.isArray(body.products) ? body.products.map(normalizeOffer).filter(Boolean) : []; const identities = Array.isArray(body.productIdentities) ? body.productIdentities.map(normalizeProductIdentity).filter(Boolean) : []; affiliateProducts = identities.length ? identities : groupOffers(offers); if (body.disclosureText && disclosure) disclosure.textContent = `${clean(body.disclosureText)} 추천순위는 제휴수수료와 분리합니다.`; return affiliateProducts; }).catch(() => { affiliateProducts = []; return []; });
     return loading;
   }
   async function recommend(message, focus = true) {

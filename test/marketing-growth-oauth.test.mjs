@@ -8,12 +8,12 @@ test('EKODI central social connector exposes login-only YouTube OAuth and vault 
     read('marketing-growth-worker.js'), read('marketing-publishing-worker.js'),
     read('marketing-ai-channel-manager.js'), read('wrangler.marketing-growth.toml'),
   ]);
-  assert.match(growth,/accounts\.google\.com\/o\/oauth2\/v2\/auth/);
-  assert.match(growth,/youtube\.upload https:\/\/www\.googleapis\.com\/auth\/youtube\.readonly/);
+  assert.match(growth,/startYouTubeOAuth/);
+  assert.match(growth,/consumeYouTubeTicket/);
   assert.match(growth,/oauth\/youtube\/callback/);
   assert.match(growth,/GOOGLE_OAUTH_BROKER/);
+  assert.match(growth,/host === 'ekodi\.kr'/);
   assert.match(growth,/MARKETING_OAUTH_VAULT_KEY/);
-  assert.match(growth,/exchangeYouTubeAuthorizationCode/);
   assert.match(growth,/refreshYouTubeAccessToken/);
   assert.match(growth,/token_ciphertext/);
   assert.match(growth,/upload\/youtube\/v3\/videos\?uploadType=resumable/);
@@ -21,6 +21,8 @@ test('EKODI central social connector exposes login-only YouTube OAuth and vault 
   assert.match(ui,/data-connect="youtube"/);
   assert.match(ui,/Google로 YouTube 연결/);
   assert.match(ui,/Metricool은 필수가 아닙니다/);
+  assert.doesNotMatch(config,/`r`n/);
+  assert.match(config,/MALL_PROMOTION_AUTOMATION_ENABLED = "true"\r?\nALLOWED_ORIGINS =/);
   assert.match(config,/GOOGLE_CLIENT_ID/);
   assert.match(config,/binding = "GOOGLE_OAUTH_BROKER"/);
   assert.match(config,/service = "ekodi-storage-control"/);

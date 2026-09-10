@@ -9,11 +9,11 @@ const sidebar = await readFile(new URL('../admin-sidebar.js', import.meta.url), 
 const layout = await readFile(new URL('../admin-menu-layout.js', import.meta.url), 'utf8');
 const postbuild = await readFile(new URL('../scripts/admin-performance-postbuild.mjs', import.meta.url), 'utf8');
 
-test('eight stable work areas replace the former many-group admin taxonomy', () => {
-  for (const id of ['home', 'operations', 'people', 'services', 'ai', 'business', 'data', 'system']) {
+test('five canonical axes replace the former many-group admin taxonomy', () => {
+  for (const id of ['home', 'operations', 'space', 'services', 'system']) {
     assert.match(registry, new RegExp(`id: '${id}'`));
   }
-  for (const retired of ['site-management', 'security-audit', 'settings', 'access', 'space']) {
+  for (const retired of ['site-management', 'security-audit', 'settings', 'access']) {
     assert.doesNotMatch(registry, new RegExp(`id: '${retired}'`));
   }
   assert.match(sidebar, /admin-global-navs/);
@@ -22,14 +22,14 @@ test('eight stable work areas replace the former many-group admin taxonomy', () 
   assert.match(sidebar, /getAdminMenuGroupForSection/);
 });
 
-test('every global work area opens its first visible contextual submenu', () => {
+test('every global work area opens its configured visible default submenu', () => {
   const { ADMIN_MENU_GROUPS, ADMIN_MENU_REGISTRY, getAdminMenuGroupDefault } = registryModule;
   for (const group of ADMIN_MENU_GROUPS) {
-    const firstVisibleChild = ADMIN_MENU_REGISTRY.find(item => item.group === group.id && !item.internal);
-    assert.ok(firstVisibleChild, `${group.id} should have a visible child`);
-    assert.equal(getAdminMenuGroupDefault(group.id), firstVisibleChild.id);
+    const configured = ADMIN_MENU_REGISTRY.find(item => item.id === group.defaultSection && item.group === group.id && !item.internal && !item.superAdminOnly);
+    assert.ok(configured, `${group.id} should have a visible configured default`);
+    assert.equal(getAdminMenuGroupDefault(group.id), group.defaultSection);
   }
-  assert.match(registry, /firstVisibleChild/);
+  assert.match(registry, /const explicit = ADMIN_MENU_REGISTRY\.find/);
 });
 
 test('left navigation is a reusable shared module backed only by the registry', () => {
@@ -66,9 +66,27 @@ test('global navigation remains synchronized to the actually active panel', () =
 
 test('global menu labels use readable contrast on the light sidebar', () => {
   assert.match(sidebar, /\.admin-global-nav\{[^}]*color:#40566d!important/);
-  assert.match(sidebar, /\.admin-global-nav\.active\{[^}]*background:#dff3fb[^}]*color:#07344f!important/);
+  assert.match(sidebar, /\.admin-global-nav\.active\{[^}]*background:#edf4ff[^}]*color:#0b4f8a!important/);
   assert.match(sidebar, /\.admin-global-nav span\{color:inherit!important;opacity:1!important\}/);
   assert.match(sidebar, /font-size:14px;font-weight:780/);
+});
+
+test('context tabs keep the same light readable hierarchy as the sidebar', () => {
+  assert.match(sidebar, /\.\$\{TABS_SHELL_CLASS\}\{[^}]*min-height:56px[^}]*background:rgba\(255,255,255,\.98\)/);
+  assert.match(sidebar, /\.admin-context-title\{[^}]*font-size:13px/);
+  assert.match(sidebar, /\.admin-context-tab\{[^}]*min-height:40px[^}]*font-size:14px[^}]*line-height:1\.35/);
+  assert.match(sidebar, /\.admin-context-tab\.active\{[^}]*background:#edf4ff[^}]*color:#0b5cab/);
+  assert.match(sidebar, /\.admin-capability-shortcut\{[^}]*min-height:40px[^}]*font-size:14px/);
+  assert.match(sidebar, /@media\(max-width:760px\)[^`]*\.admin-context-tab\{min-height:42px[^}]*font-size:15px/);
+});
+
+test('site-management workbench keeps operational text above miniature-preview density', () => {
+  assert.match(sidebar, /#campusPanel \.campus-toolbar p:not\(\.kicker\)\{font-size:14px!important/);
+  assert.match(sidebar, /#campusSiteGroups \.campus-group-head h3\{font-size:17px!important/);
+  assert.match(sidebar, /#campusSiteGroups \.campus-site-identity strong\{font-size:15px!important/);
+  assert.match(sidebar, /#campusSiteGroups \.campus-site-domain\{font-size:13px!important/);
+  assert.match(sidebar, /#campusSiteGroups \.campus-row-action\{[^}]*min-height:38px!important[^}]*font-size:13px!important/);
+  assert.match(sidebar, /#campusSiteGroups \.campus-homepage-state small\{[^}]*font-size:11px!important/);
 });
 
 test('menu labels and tab state are repaired when features are installed or sections change', () => {

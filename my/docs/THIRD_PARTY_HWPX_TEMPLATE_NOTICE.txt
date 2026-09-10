@@ -1,0 +1,5 @@
+EKODI Docs AI includes a minimal HWPX skeleton derived from the Apache-2.0 licensed python-hwpx project.
+Source: https://github.com/airmang/python-hwpx
+Asset: examples/Skeleton.hwpx
+License: Apache License 2.0
+The asset is used only as a standards-compatible OWPML package skeleton; EKODI replaces document body content at export time.

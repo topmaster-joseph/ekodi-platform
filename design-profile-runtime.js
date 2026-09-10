@@ -28,6 +28,8 @@ const RECOMMENDATIONS=Object.freeze({
   invest:{tone:'calm',character:'off',season:'off',motion:'still'},
   pay:{tone:'calm',character:'off',season:'off',motion:'still'},
   insurance:{tone:'calm',character:'guide',season:'off',motion:'still'},
+  developer:{tone:'calm',character:'guide',season:'off',motion:'still'},
+  experience:{tone:'night',character:'welcome',season:'off',motion:'gentle'},
 });
 export function recommendedDesignProfile(serviceId=''){return profile({mode:'recommended',footer:'contextual',...(RECOMMENDATIONS[clean(serviceId).toLowerCase()]||{tone:'inherit',character:'auto',season:'auto',motion:'inherit'})});}
 function responseHeaders(cache='no-store'){return {'content-type':'application/json; charset=utf-8','cache-control':cache,'access-control-allow-origin':'*','access-control-allow-methods':'GET,PUT,POST,OPTIONS','access-control-allow-headers':'content-type,authorization','x-content-type-options':'nosniff'}}

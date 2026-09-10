@@ -89,6 +89,20 @@ main{padding:46px 0 72px}
 }
 .hero-actions a span{margin-left:7px;color:#93a19a;font-size:11px;font-weight:650}
 .hero-actions a:hover,.hero-actions a:focus-visible{transform:translateY(-1px);border-color:rgba(75,130,98,.38);outline:0}
+.hero-ekodian-scene{
+  display:grid;grid-template-columns:100px minmax(0,1fr);align-items:center;gap:12px;
+  width:min(450px,100%);margin-top:18px;padding:9px 13px 9px 7px;
+  border:1px solid rgba(72,111,87,.12);border-radius:23px;
+  background:linear-gradient(135deg,rgba(255,255,255,.8),rgba(231,244,229,.66));
+  box-shadow:0 14px 38px rgba(61,94,73,.08);overflow:hidden
+}
+.hero-ekodian-figure{display:block;width:100px;height:auto;filter:drop-shadow(0 8px 14px rgba(40,70,53,.1))}
+.hero-ekodian-bubble{margin:0;padding:10px 12px;border:1px solid rgba(75,111,89,.11);border-radius:15px;background:rgba(255,255,255,.84);color:#607067;font-size:11px;line-height:1.5}
+.hero-ekodian-bubble strong{display:block;color:#2e5945;font-size:12px;letter-spacing:.01em}
+.hero-ekodian-bubble span{display:block;margin-top:3px}
+.hero-ekodian-bubble small{display:block;margin-top:5px;color:#8c9991;font-size:8px;letter-spacing:.06em}
+.ekodian-wave{transform-origin:42px 66px;animation:ekodianHello 5.8s ease-in-out infinite}
+@keyframes ekodianHello{0%,12%,24%,100%{transform:rotate(0)}17%{transform:rotate(-8deg)}21%{transform:rotate(5deg)}}
 .ecosystem-pulse{position:relative;min-height:340px;display:grid;place-items:center;isolation:isolate}
 .pulse-rings{position:absolute;inset:8% 5%;display:grid;place-items:center}
 .pulse-ring{position:absolute;border:1px solid rgba(99,143,117,.15);border-radius:50%;box-shadow:inset 0 0 48px rgba(255,255,255,.56)}
@@ -223,6 +237,8 @@ main{padding:46px 0 72px}
   .nav::-webkit-scrollbar{display:none}.nav a{font-size:12px;white-space:nowrap;flex:0 0 auto}
   .login{padding:8px 11px}.login svg{width:14px;height:14px}main{padding:26px 0 48px}.hero{min-height:0;padding:18px 0 30px}
   .eyebrow{font-size:10px;letter-spacing:.2em}.hero h1{font-size:clamp(42px,13vw,58px)}.hero h1 span{font-size:clamp(19px,6vw,27px)}
+  .hero-ekodian-scene{grid-template-columns:78px minmax(0,1fr);gap:8px;margin-top:15px;padding:7px 9px 7px 5px;border-radius:18px}
+  .hero-ekodian-figure{width:78px}.hero-ekodian-bubble{padding:8px 9px;font-size:10px}.hero-ekodian-bubble strong{font-size:11px}.hero-ekodian-bubble small{font-size:7.5px}
   .ecosystem-pulse{min-height:250px}.pulse-core{width:112px;border-radius:30px}.pulse-core strong{font-size:22px}.pulse-rings{inset:4% 8%}
   .status-satellite{min-width:96px;padding:8px 9px}.status-satellite b{font-size:11px}.status-satellite span{font-size:8px}.status-satellite em{font-size:16px}
   .about-strip{margin-bottom:38px;padding:18px}.about-strip p{font-size:14px}.service-group{padding:11px}
@@ -233,7 +249,7 @@ main{padding:46px 0 72px}
   .footer-note{margin-top:30px}
 }
 @media(max-width:430px){.status-satellite:nth-child(1){left:0}.status-satellite:nth-child(2){right:0}.about-pills{gap:6px}.service-description>span{font-size:11px}}
-@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}.ekodian-wave{animation:none!important}}
 </style>
 </head>
 <body>
@@ -245,7 +261,7 @@ main{padding:46px 0 72px}
       <a href="#services">플랫폼 <span>Platforms</span></a>
       <a href="#connect">연결 <span>Connect</span></a>
       <a href="#contact">문의 <span>Contact</span></a>
-      <a class="login" href="https://auth.ekodi.kr/?site=my&amp;return_to=https%3A%2F%2Fmy.ekodi.kr%2F" aria-label="My EKODI 로그인">
+      <a class="login" href="https://ekodi.kr/auth/?site=my&amp;return_to=https%3A%2F%2Fekodi.kr%2Fmy%2F" aria-label="My EKODI 로그인">
         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"></circle><path d="M4 21c.7-4.3 3.4-6.5 8-6.5S19.3 16.7 20 21"></path></svg>로그인 <span>Sign in</span>
       </a>
     </nav>
@@ -262,8 +278,31 @@ main{padding:46px 0 72px}
   <section class="hero" aria-labelledby="hero-title">
     <div class="hero-copy">
       <p class="eyebrow">EKODI ECOSYSTEM</p>
-      <h1 id="hero-title">에코디의 모든 길을 한눈에<span>One ecosystem. Many ways to connect.</span></h1>
-      <div class="hero-actions"><a href="#services">플랫폼 둘러보기 <span>Explore platforms</span></a><a href="#about">에코디 소개 <span>About EKODI</span></a></div>
+      <h1 id="hero-title">원하는 일, 바로 시작하세요<span>공동체, 사역, 비즈니스, 삶. 필요한 길만 가볍게 연결합니다.</span></h1>
+      <div class="hero-actions"><a href="#start">무료로 시작하기 <span>Start free</span></a><a href="#services">둘러보기 <span>Explore</span></a></div>
+      <aside class="hero-ekodian-scene" data-ekodi-character-village="homepage-guide-v1" aria-label="에코디언 안내">
+        <svg class="hero-ekodian-figure" viewBox="0 0 120 112" role="img" aria-label="에코디 생태계를 안내하는 에코디언">
+          <g aria-hidden="true" opacity=".5" fill="none" stroke="#78a889" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M6 91h108M10 90l12-13 12 13M88 90l11-15 14 15M26 89V78h14v11M92 89V77h15v12"/>
+            <path d="M13 79v-9h10v9M97 76v-10h9v10M18 70l-4-5h8zM103 66l-4-5h8z"/>
+          </g>
+          <ellipse cx="57" cy="103" rx="31" ry="5" fill="#6f977f" opacity=".13"/>
+          <g stroke="#294238" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="57" cy="48" r="18" fill="#f0c19f"/>
+            <path d="M40 46c2-18 28-23 36-3-7-3-12-8-15-14-5 7-12 13-21 17z" fill="#294238" stroke="none"/>
+            <path d="M48 48h1M64 48h1M51 57c4 3 8 3 12 0" fill="none"/>
+            <path d="M39 72c10-11 27-11 36 0l6 28H34z" fill="#78b89b"/>
+            <path d="M45 76c-7 5-11 11-12 18M72 76c6 5 10 11 11 18" fill="none"/>
+            <g class="ekodian-wave">
+              <path d="M43 77c-8-5-13-11-13-19" fill="none"/>
+              <path d="M30 58l-5-6M30 58l1-8M30 58l-8-2" fill="none"/>
+            </g>
+            <path d="M53 76l4 5 4-5" fill="none" opacity=".7"/>
+          </g>
+          <path d="M87 44l3 6 6 3-6 3-3 6-3-6-6-3 6-3z" fill="#d5ad68" opacity=".75" aria-hidden="true"/>
+        </svg>
+        <p class="hero-ekodian-bubble"><strong>에코디언 · EKODIAN</strong><span>반가워요. 필요한 곳부터 둘러보세요. 연결은 선택한 만큼만 이어집니다.</span><small>your guide, not the gate</small></p>
+      </aside>
     </div>
     <div class="ecosystem-pulse" aria-label="현재 사용할 수 있는 EKODI 플랫폼 상태">
       <div class="pulse-rings" aria-hidden="true"><span class="pulse-ring"></span><span class="pulse-ring"></span><span class="pulse-ring"></span></div>

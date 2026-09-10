@@ -36,6 +36,7 @@ body {
   line-break: strict;
   word-break: keep-all;
   overflow-wrap: break-word;
+  hyphens: none;
 }
 
 h1, h2, h3, p {

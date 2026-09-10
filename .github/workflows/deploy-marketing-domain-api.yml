@@ -97,6 +97,8 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
+      - name: EKODI AI Orchestration Gate
+        run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
       - name: Verify Cloudflare credentials
         run: |
           test -n "$CLOUDFLARE_API_TOKEN" || (echo 'Missing CLOUDFLARE_API_TOKEN' && exit 1)
@@ -154,7 +156,8 @@ jobs:
         run: |
           set -euo pipefail
           npx --yes wrangler@$WRANGLER_VERSION deployments status --config wrangler.marketing-domains.staging.toml --json > /tmp/staging-deployments.json
-          npx --yes wrangler@$WRANGLER_VERSION d1 migrations apply DB --local --config wrangler.marketing-domains.staging.toml >/tmp/local-migrations.log 2>&1\n          npx --yes wrangler@$WRANGLER_VERSION dev --local --config wrangler.marketing-domains.staging.toml --ip 127.0.0.1 --port 8793 > /tmp/marketing-domain-remote-dev.log 2>&1 &
+          npx --yes wrangler@$WRANGLER_VERSION d1 migrations apply DB --local --config wrangler.marketing-domains.staging.toml >/tmp/local-migrations.log 2>&1
+          npx --yes wrangler@$WRANGLER_VERSION dev --local --config wrangler.marketing-domains.staging.toml --ip 127.0.0.1 --port 8793 > /tmp/marketing-domain-remote-dev.log 2>&1 &
           runtime_pid=$!
           trap 'kill $runtime_pid 2>/dev/null || true' EXIT
           ready=0
@@ -209,6 +212,8 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
+      - name: EKODI AI Orchestration Gate
+        run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
       - name: Verify production credentials
         run: |
           test -n "$CLOUDFLARE_API_TOKEN" || (echo 'Missing CLOUDFLARE_API_TOKEN' && exit 1)

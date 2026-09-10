@@ -1,6 +1,9 @@
 import { WorkerEntrypoint } from 'cloudflare:workers';
-import { runMallPromotionAutomation } from './mall-promotion-automation.js';
+import { mallPromotionAutomationEnabled, runMallPromotionAutomation } from './mall-promotion-automation.js';
 import { runMallSalesIntelligence } from './mall-sales-intelligence.js';
+import { ensureWeeklyPromotionBoard } from './mall-official-promotion-board.js';
+import { d1SchemaReady } from './d1-schema-readiness.js';
+import { mallGrowthDashboardSnapshot } from './mall-growth-dashboard.js';
 const SUPABASE_URL = 'https://renzehysxirjilvdxacv.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
 const WRITE_ROLES = new Set(['store_owner','hq_manager','client_admin','client_editor','manager','owner']);
@@ -25,7 +28,7 @@ function cors(request, env) {
   if (!allowed) {
     try {
       const host = new URL(origin).hostname;
-      allowed = host === 'admin.ekodi.kr' || host === 'marketing.ekodi.kr' || host === 'my.ekodi.kr' || /^[a-z0-9-]+\.ai\.ekodi\.kr$/i.test(host);
+      allowed = host === 'ekodi.kr' || host === 'admin.ekodi.kr' || host === 'marketing.ekodi.kr' || host === 'my.ekodi.kr' || /^[a-z0-9-]+\.ai\.ekodi\.kr$/i.test(host);
     } catch {}
   }
   const headers = {
@@ -147,16 +150,10 @@ function redirectResult(returnUrl, params) {
   Object.entries(params).forEach(([key,value]) => url.searchParams.set(key,String(value)));
   return Response.redirect(url.href,302);
 }
-async function schemaReady(env) {
-  if (!env.DB) return false;
-  try {
-    const result = await env.DB.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name IN ('marketing_oauth_states','marketing_oauth_connections','marketing_growth_campaigns')").all();
-    return (result.results || []).length === 3;
-  } catch { return false; }
-}
+async function schemaReady(env) { return d1SchemaReady(env?.DB,['marketing_oauth_states','marketing_oauth_connections','marketing_growth_campaigns','marketing_channel_settings']); }
 function metaConfigured(env) { return Boolean(env.META_APP_ID && env.META_APP_SECRET); }
 function threadsConfigured(env) { return Boolean((env.THREADS_APP_ID || env.META_APP_ID) && (env.THREADS_APP_SECRET || env.META_APP_SECRET)); }
-function youtubeConfigured(env) { return Boolean(env.GOOGLE_CLIENT_ID && providerSecret(env,YOUTUBE_PROVIDER) && (env.GOOGLE_CLIENT_SECRET || env.GOOGLE_OAUTH_BROKER)); }
+function youtubeConfigured(env) { return Boolean(env.GOOGLE_CLIENT_ID && providerSecret(env,YOUTUBE_PROVIDER) && env.GOOGLE_OAUTH_BROKER); }
 
 async function createOAuthState(env, provider, mode, identity, subject, returnUrl) {
   const state = randomState();
@@ -206,16 +203,10 @@ async function startYouTube(request, env, identity, subject) {
   if (!youtubeConfigured(env)) return json(request,env,{error:'GOOGLE_APP_NOT_CONFIGURED',setup:'Google OAuth broker + encrypted Marketing vault'},503);
   const body = await readJson(request) || {};
   const state = await createOAuthState(env,YOUTUBE_PROVIDER,'publish',identity,subject,body.returnUrl);
-  const url = new URL('https://accounts.google.com/o/oauth2/v2/auth');
-  url.searchParams.set('client_id',String(env.GOOGLE_CLIENT_ID));
-  url.searchParams.set('redirect_uri',callbackUrl(env,YOUTUBE_PROVIDER));
-  url.searchParams.set('state',state);
-  url.searchParams.set('response_type','code');
-  url.searchParams.set('scope','https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube.readonly');
-  url.searchParams.set('access_type','offline');
-  url.searchParams.set('prompt','consent');
-  url.searchParams.set('include_granted_scopes','true');
-  return json(request,env,{authorizationUrl:url.href,provider:'youtube',mode:'publish'});
+  const requestedHint = clean(body.accountHint,180).trim().toLowerCase();
+  const accountHint = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(requestedHint) ? requestedHint : '';
+  const broker=await env.GOOGLE_OAUTH_BROKER.startYouTubeOAuth({state,accountHint});
+  return json(request,env,{authorizationUrl:String(broker.authorizationUrl||''),provider:'youtube',mode:'publish'});
 }
 async function fetchJson(url, init = {}) {
   const response = await fetch(url,init);
@@ -226,20 +217,7 @@ async function fetchJson(url, init = {}) {
   }
   return data;
 }
-async function exchangeYouTubeAuthorizationCode(env, code) {
-  const redirectUri=callbackUrl(env,YOUTUBE_PROVIDER);
-  if(env.GOOGLE_CLIENT_SECRET){
-    const form=new URLSearchParams({client_id:String(env.GOOGLE_CLIENT_ID),client_secret:String(env.GOOGLE_CLIENT_SECRET),code:String(code||''),redirect_uri:redirectUri,grant_type:'authorization_code'});
-    return fetchJson('https://oauth2.googleapis.com/token',{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded'},body:form});
-  }
-  if(!env.GOOGLE_OAUTH_BROKER?.exchangeAuthorizationCode) throw new Error('GOOGLE_OAUTH_BROKER_NOT_CONFIGURED');
-  return env.GOOGLE_OAUTH_BROKER.exchangeAuthorizationCode({code:String(code||''),redirectUri});
-}
 async function refreshYouTubeAccessToken(env, refreshToken) {
-  if(env.GOOGLE_CLIENT_SECRET){
-    const form=new URLSearchParams({client_id:String(env.GOOGLE_CLIENT_ID),client_secret:String(env.GOOGLE_CLIENT_SECRET),refresh_token:String(refreshToken||''),grant_type:'refresh_token'});
-    return fetchJson('https://oauth2.googleapis.com/token',{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded'},body:form});
-  }
   if(!env.GOOGLE_OAUTH_BROKER?.refreshAccessToken) throw new Error('GOOGLE_OAUTH_BROKER_NOT_CONFIGURED');
   return env.GOOGLE_OAUTH_BROKER.refreshAccessToken({refreshToken:String(refreshToken||'')});
 }
@@ -256,12 +234,18 @@ async function upsertConnection(env, subject, {provider,resourceType,externalId,
     .bind(subject.type,subject.key,provider,resourceType,externalId).first();
 }
 async function upsertPublishChannel(env, subject, {provider,channelType,displayName,externalId,connectionId}) {
-  const now = nowIso();
+  const now=nowIso(),mallSubject=subject.type==='tenant'&&subject.key==='ekodi-biz';
+  const current=await env.DB.prepare('SELECT status,config_json FROM marketing_publish_channels WHERE subject_type=? AND subject_key=? AND provider=? AND channel_type=? AND external_account_id=?').bind(subject.type,subject.key,provider,channelType,externalId).first();
+  const defaults=mallSubject?{autoPublishEnabled:['facebook','instagram','threads'].includes(provider),maxPostsPerDay:1,minHoursBetweenPosts:6,publishWindowStart:'08:00',publishWindowEnd:'22:00',timezone:'Asia/Seoul',maxAttempts:5}:{};
+  const config={...defaults,...safeParse(current?.config_json,{}),credentialMode:'oauth-vault',oauthConnectionId:connectionId};
+  const auto=config.autoPublishEnabled!==false;
+  const status=auto?'active':'paused';
   await env.DB.prepare(`INSERT INTO marketing_publish_channels(subject_type,subject_key,provider,channel_type,display_name,external_account_id,credential_ref,status,config_json,last_check_at,last_error,created_at,updated_at)
-    VALUES(?,?,?,?,?,?,'','active',?,?,'',?,?)
-    ON CONFLICT(subject_type,subject_key,provider,channel_type,external_account_id) DO UPDATE SET display_name=excluded.display_name,credential_ref='',status='active',config_json=excluded.config_json,last_check_at=excluded.last_check_at,last_error='',updated_at=excluded.updated_at`)
-    .bind(subject.type,subject.key,provider,channelType,displayName,externalId,safeJson({credentialMode:'oauth-vault',oauthConnectionId:connectionId}),now,now,now).run();
+    VALUES(?,?,?,?,?,?,'',?,?,?,'',?,?)
+    ON CONFLICT(subject_type,subject_key,provider,channel_type,external_account_id) DO UPDATE SET display_name=excluded.display_name,credential_ref='',status=excluded.status,config_json=excluded.config_json,last_check_at=excluded.last_check_at,last_error='',updated_at=excluded.updated_at`)
+    .bind(subject.type,subject.key,provider,channelType,displayName,externalId,status,safeJson(config),now,now,now).run();
 }
+
 async function metaCallback(request, env) {
   const url = new URL(request.url);
   const state = await consumeOAuthState(env,url.searchParams.get('state') || '',META_PROVIDER);
@@ -368,21 +352,23 @@ async function youtubeCallback(request, env) {
   if (!state) return new Response('Invalid or expired OAuth state',{status:400});
   if (url.searchParams.get('error')) return redirectResult(state.return_url,{ekodi_connect:'error',provider:'youtube',reason:clean(url.searchParams.get('error_description') || url.searchParams.get('error'),160)});
   try {
-    const code = clean(url.searchParams.get('code'),4096);
-    if (!code) throw new Error('AUTHORIZATION_CODE_MISSING');
-    const tokenData = await exchangeYouTubeAuthorizationCode(env,code);
+    const ticket = clean(url.searchParams.get('ticket'),512);
+    if (!ticket) throw new Error('GOOGLE_OAUTH_TICKET_REQUIRED');
+    const tokenData = await env.GOOGLE_OAUTH_BROKER.consumeYouTubeTicket({ticket});
     const accessToken = String(tokenData.access_token || '');
     const refreshToken = String(tokenData.refresh_token || '');
     if (!accessToken || !refreshToken) throw new Error('YOUTUBE_REFRESH_TOKEN_MISSING');
     const channels = await fetchJson('https://www.googleapis.com/youtube/v3/channels?part=snippet&mine=true&maxResults=50',{headers:{authorization:`Bearer ${accessToken}`}});
     const subject = {type:state.subject_type,key:state.subject_key};
+    const discoveredChannels = (channels.items || []).filter(channel => channel?.id);
+    const selectedChannels = discoveredChannels;
+    if (!selectedChannels.length) throw new Error('YOUTUBE_CHANNEL_NOT_FOUND');
     const expiresAt = Number(tokenData.expires_in || 0) > 0 ? new Date(Date.now() + Number(tokenData.expires_in) * 1000).toISOString() : '';
     let count = 0;
-    for (const channel of (channels.items || [])) {
-      if (!channel?.id) continue;
+    for (const channel of selectedChannels) {
       const display = clean(channel.snippet?.title || 'YouTube',120);
       const token = safeJson({accessToken,refreshToken,expiresAt});
-      const row = await upsertConnection(env,subject,{provider:'youtube',resourceType:'channel',externalId:String(channel.id),displayName:display,token,expiresAt,scopes:['youtube.upload','youtube.readonly'],metadata:{source:'google_oauth'}});
+      const row = await upsertConnection(env,subject,{provider:'youtube',resourceType:'channel',externalId:String(channel.id),displayName:display,token,expiresAt,scopes:['youtube.upload','youtube.readonly','youtube'],metadata:{source:'google_oauth'}});
       if (row?.id) { await upsertPublishChannel(env,subject,{provider:'youtube',channelType:'channel',displayName:display,externalId:String(channel.id),connectionId:Number(row.id)}); count += 1; }
     }
     return redirectResult(state.return_url,{ekodi_connect:'success',provider:'youtube',connections:count});
@@ -392,8 +378,38 @@ async function youtubeCallback(request, env) {
 async function listConnections(request, env, subject) {
   const result = await env.DB.prepare(`SELECT id,provider,resource_type,external_id,display_name,token_expires_at,scopes_json,status,metadata_json,last_check_at,last_error,created_at,updated_at
     FROM marketing_oauth_connections WHERE subject_type=? AND subject_key=? ORDER BY provider,display_name`).bind(subject.type,subject.key).all();
-  const connections = (result.results || []).map(row => ({...row,scopes:safeParse(row.scopes_json,[]),metadata:safeParse(row.metadata_json,{})}));
+  const settings=await channelSettingsMap(env,subject);
+  const connections = (result.results || []).map(row => ({...row,scopes:safeParse(row.scopes_json,[]),metadata:safeParse(row.metadata_json,{}),settings:settings.get(row.provider+':'+row.external_id)||null}));
   return json(request,env,{connections,platform:{metaConfigured:metaConfigured(env),threadsConfigured:threadsConfigured(env),youtubeConfigured:youtubeConfigured(env),credentialMode:'central_oauth_vault'}});
+}
+async function disconnectConnection(request, env, identity, subject, connectionId) {
+  const id = Number(connectionId);
+  if (!Number.isInteger(id) || id <= 0) return json(request,env,{error:'CHANNEL_CONNECTION_ID_INVALID'},400);
+  const row = await env.DB.prepare(`SELECT id,provider,external_id,display_name,status FROM marketing_oauth_connections WHERE id=? AND subject_type=? AND subject_key=?`).bind(id,subject.type,subject.key).first();
+  if (!row) return json(request,env,{error:'CHANNEL_CONNECTION_NOT_FOUND'},404);
+  const now = nowIso();
+  await env.DB.prepare(`UPDATE marketing_oauth_connections SET status='revoked',token_ciphertext='',token_expires_at=NULL,last_check_at=?,last_error='disconnected_by_user',updated_at=? WHERE id=? AND subject_type=? AND subject_key=?`).bind(now,now,id,subject.type,subject.key).run();
+  await env.DB.prepare(`UPDATE marketing_publish_channels SET status='credentials_required',credential_ref='',last_check_at=?,last_error='connection_revoked',updated_at=? WHERE subject_type=? AND subject_key=? AND provider=? AND external_account_id=?`).bind(now,now,subject.type,subject.key,row.provider,row.external_id).run();
+  if (row.provider === 'youtube') {
+    await env.DB.prepare(`UPDATE marketing_channel_settings SET sync_status='disconnected',last_sync_error='',updated_by=?,updated_at=? WHERE subject_type=? AND subject_key=? AND provider='youtube' AND external_account_id=?`).bind(identity.email,now,subject.type,subject.key,row.external_id).run();
+  }
+  return json(request,env,{ok:true,connection:{id,provider:row.provider,externalId:row.external_id,displayName:row.display_name,status:'revoked'},reconnectable:true},200);
+}
+async function channelSettingsMap(env, subject) {
+  const result = await env.DB.prepare(`SELECT provider,external_account_id,role,is_default,publish_privacy,category_id,description,keywords,country,default_language,unsubscribed_trailer,sync_status,last_sync_at,last_sync_error,updated_by,updated_at FROM marketing_channel_settings WHERE subject_type=? AND subject_key=?`).bind(subject.type,subject.key).all();
+  return new Map((result.results||[]).map(row=>[`${row.provider}:${row.external_account_id}`,row]));
+}
+async function saveChannelSettings(request, env, identity, subject, connectionId) {
+  const body=await readJson(request)||{};
+  const connection=await env.DB.prepare(`SELECT id,provider,external_id,display_name,status FROM marketing_oauth_connections WHERE id=? AND subject_type=? AND subject_key=?`).bind(Number(connectionId),subject.type,subject.key).first();
+  if(!connection) return json(request,env,{error:'CHANNEL_CONNECTION_NOT_FOUND'},404);
+  if(connection.provider!=='youtube') return json(request,env,{error:'CHANNEL_SETTINGS_PROVIDER_UNSUPPORTED'},409);
+  const role=clean(body.role||'mall',40)||'mall'; const privacy=['private','unlisted','public'].includes(String(body.publishPrivacy||''))?String(body.publishPrivacy):'private';
+  const categoryId=clean(body.categoryId||'22',8)||'22'; const description=clean(body.description,1000); const keywords=clean(body.keywords,500); const country=clean(body.country||'KR',2).toUpperCase(); const defaultLanguage=clean(body.defaultLanguage||'ko',16); const trailer=clean(body.unsubscribedTrailer,32);
+  const now=nowIso(); if(body.isDefault) await env.DB.prepare(`UPDATE marketing_channel_settings SET is_default=0,updated_at=? WHERE subject_type=? AND subject_key=? AND provider='youtube'`).bind(now,subject.type,subject.key).run();
+  await env.DB.prepare(`INSERT INTO marketing_channel_settings(subject_type,subject_key,provider,external_account_id,role,is_default,publish_privacy,category_id,description,keywords,country,default_language,unsubscribed_trailer,sync_status,last_sync_error,updated_by,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,'local','',?,?,?) ON CONFLICT(subject_type,subject_key,provider,external_account_id) DO UPDATE SET role=excluded.role,is_default=excluded.is_default,publish_privacy=excluded.publish_privacy,category_id=excluded.category_id,description=excluded.description,keywords=excluded.keywords,country=excluded.country,default_language=excluded.default_language,unsubscribed_trailer=excluded.unsubscribed_trailer,sync_status='local',last_sync_error='',updated_by=excluded.updated_by,updated_at=excluded.updated_at`).bind(subject.type,subject.key,'youtube',connection.external_id,role,body.isDefault?1:0,privacy,categoryId,description,keywords,country,defaultLanguage,trailer,identity.email,now,now).run();
+  if(body.syncToYouTube){ try{ const full=await connectionWithToken(env,subject,connectionId); const access=await youtubeAccessToken(env,full); const current=await fetchJson(`https://www.googleapis.com/youtube/v3/channels?part=brandingSettings&id=${encodeURIComponent(connection.external_id)}`,{headers:{authorization:`Bearer ${access}`}}); const existing=current.items?.[0]?.brandingSettings?.channel||{}; const channel={}; for(const key of ['description','keywords','trackingAnalyticsAccountId','unsubscribedTrailer','defaultLanguage','country']) if(existing[key]) channel[key]=existing[key]; Object.assign(channel,{description,keywords,country,defaultLanguage}); if(trailer) channel.unsubscribedTrailer=trailer; else delete channel.unsubscribedTrailer; await fetchJson('https://www.googleapis.com/youtube/v3/channels?part=brandingSettings',{method:'PUT',headers:{authorization:`Bearer ${access}`,'content-type':'application/json'},body:JSON.stringify({id:connection.external_id,brandingSettings:{channel}})}); await env.DB.prepare(`UPDATE marketing_channel_settings SET sync_status='synced',last_sync_at=?,last_sync_error='',updated_at=? WHERE subject_type=? AND subject_key=? AND provider='youtube' AND external_account_id=?`).bind(now,now,subject.type,subject.key,connection.external_id).run(); }catch(error){ await env.DB.prepare(`UPDATE marketing_channel_settings SET sync_status='error',last_sync_error=?,updated_at=? WHERE subject_type=? AND subject_key=? AND provider='youtube' AND external_account_id=?`).bind(clean(error.message,500),now,subject.type,subject.key,connection.external_id).run(); return json(request,env,{ok:true,saved:true,synced:false,error:'YOUTUBE_SYNC_FAILED',detail:clean(error.message,300)},207); } }
+  return json(request,env,{ok:true,saved:true,synced:Boolean(body.syncToYouTube)});
 }
 async function connectionWithToken(env, subject, id) {
   const row = await env.DB.prepare(`SELECT id,provider,resource_type,external_id,display_name,token_ciphertext,status,metadata_json
@@ -509,7 +525,10 @@ async function publishYouTube(env, connection, content) {
   const link = trackedUrl(content.linkUrl,'youtube',content.campaignName);
   const title = clean(content.title || content.campaignName || 'EKODI',100);
   const description = [clean(content.caption,4800),link].filter(Boolean).join('\n\n');
-  const metadata = {snippet:{title,description,categoryId:'22'},status:{privacyStatus:'private',selfDeclaredMadeForKids:false}};
+  const setting=await env.DB.prepare("SELECT publish_privacy,category_id FROM marketing_channel_settings WHERE provider='youtube' AND external_account_id=? ORDER BY is_default DESC,updated_at DESC LIMIT 1").bind(connection.external_id).first();
+  const privacy=['private','unlisted','public'].includes(String(setting?.publish_privacy||''))?String(setting.publish_privacy):'private';
+  const categoryId=clean(setting?.category_id||'22',8)||'22';
+  const metadata = {snippet:{title,description,categoryId},status:{privacyStatus:privacy,selfDeclaredMadeForKids:false}};
   const begin = await fetch('https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status',{method:'POST',headers:{authorization:`Bearer ${accessToken}`,'content-type':'application/json; charset=UTF-8','x-upload-content-type':contentType,'x-upload-content-length':String(bytes.byteLength)},body:JSON.stringify(metadata)});
   const beginData = await begin.clone().json().catch(()=>({}));
   const location = begin.headers.get('location');
@@ -621,8 +640,12 @@ export class MarketingGrowthPublisher extends WorkerEntrypoint {
   async runGrowthCycle(input = {}) {
     const reason = clean(input?.reason || 'shared-publishing-cron',80);
     const intelligence = await runMallSalesIntelligence(this.env,{reason});
-    const promotion = await runMallPromotionAutomation(this.env,{reason});
-    return {ok:Boolean(intelligence?.ok || intelligence?.status === 'schema_required') && Boolean(promotion?.ok || promotion?.status === 'schema_required'),intelligence,promotion};
+    const weeklyBoard = await ensureWeeklyPromotionBoard(this.env,{reason,force:false});
+    const promotion = mallPromotionAutomationEnabled(this.env)
+      ? await runMallPromotionAutomation(this.env,{reason})
+      : {ok:true,status:'disabled',reason:'promotion_safety_gate'};
+    const boardReady = Boolean(weeklyBoard?.ok || weeklyBoard?.status === 'schema_required');
+    return {ok:Boolean(intelligence?.ok || intelligence?.status === 'schema_required') && boardReady && Boolean(promotion?.ok || promotion?.status === 'schema_required'),intelligence,weeklyBoard,promotion};
   }
 
   async publishFromVault(input = {}) {
@@ -650,7 +673,7 @@ export default {
     const url = new URL(request.url);
     const { allowed, headers } = cors(request,env);
     if (request.method === 'OPTIONS') return new Response(null,{status:allowed ? 204 : 403,headers});
-    if (url.pathname === '/admin' || url.pathname === '/admin/') return Response.redirect('https://admin.ekodi.kr/?route=marketing-ai&source=marketing-connect-api.ekodi.kr',307);
+    if (url.pathname === '/admin' || url.pathname === '/admin/') return Response.redirect('https://ekodi.kr/admin/services/marketing-ai?source=marketing-connect-api.ekodi.kr',307);
     if (!allowed) return json(request,env,{error:'ORIGIN_FORBIDDEN'},403);
     if (url.pathname === '/health' && request.method === 'GET') {
       const ready = await schemaReady(env);
@@ -666,10 +689,18 @@ export default {
     if (auth.error) return json(request,env,{error:auth.error},auth.status);
     const {identity,subject} = auth;
 
+    if (url.pathname === '/v1/mall/dashboard' && request.method === 'GET') {
+      if (subject.type !== 'tenant' || subject.key !== 'ekodi-biz') return json(request,env,{error:'SUBJECT_FORBIDDEN'},403);
+      return json(request,env,await mallGrowthDashboardSnapshot(env));
+    }
     if (url.pathname === '/v1/connect/meta/start' && request.method === 'POST') return startMeta(request,env,identity,subject);
     if (url.pathname === '/v1/connect/threads/start' && request.method === 'POST') return startThreads(request,env,identity,subject);
     if (url.pathname === '/v1/connect/youtube/start' && request.method === 'POST') return startYouTube(request,env,identity,subject);
     if (url.pathname === '/v1/connections' && request.method === 'GET') return listConnections(request,env,subject);
+    const disconnectRoute=url.pathname.match(/^\/v1\/connections\/(\d+)\/disconnect$/);
+    if(disconnectRoute && request.method==='POST') return disconnectConnection(request,env,identity,subject,disconnectRoute[1]);
+    const channelSettingsRoute=url.pathname.match(/^\/v1\/connections\/(\d+)\/settings$/);
+    if(channelSettingsRoute && request.method==='POST') return saveChannelSettings(request,env,identity,subject,channelSettingsRoute[1]);
     if (url.pathname === '/v1/publish' && request.method === 'POST') {
       const body = await readJson(request);
       if (!body) return json(request,env,{error:'INVALID_JSON'},400);

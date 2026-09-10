@@ -43,14 +43,17 @@
     if (!nav || !content) return;
     installed = true;
 
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'nav';
-    button.dataset.section = 'books';
-    button.innerHTML = '▤ <span>에코디서점</span>';
-    const finance = nav.querySelector('[data-section="finance"]');
-    if (finance) nav.insertBefore(button, finance);
-    else nav.append(button);
+    let button = nav.querySelector('[data-section="books"], [data-lazy-section="books"]');
+    if (!button) {
+      button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'nav';
+      button.dataset.section = 'books';
+      button.innerHTML = 'B <span>Books</span>';
+      const finance = nav.querySelector('[data-section="finance"]');
+      if (finance?.parentElement) finance.parentElement.insertBefore(button, finance);
+      else nav.append(button);
+    }
 
     const section = document.createElement('section');
     section.id = 'booksAdminSection';
@@ -116,7 +119,7 @@
     `;
     content.append(section);
 
-    button.addEventListener('click', () => {
+    if (button.dataset.booksAdminBound !== 'true') button.addEventListener('click', () => {
       document.querySelectorAll('[data-panel]').forEach(panel => {
         const targets = String(panel.dataset.panel || '').split(' ');
         panel.classList.toggle('hidden-panel', !targets.includes('books'));
@@ -128,6 +131,7 @@
       if (location.hash !== '#books') history.replaceState(null, '', '#books');
       if (!loaded) load();
     });
+    button.dataset.booksAdminBound = 'true';
 
     section.querySelectorAll('[data-books-tab]').forEach(tab => tab.addEventListener('click', () => selectTab(tab.dataset.booksTab)));
     section.querySelector('#refreshBooksAdmin').addEventListener('click', load);

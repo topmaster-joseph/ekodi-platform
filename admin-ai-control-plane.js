@@ -79,7 +79,7 @@
     const state=providerState.status;
     const dot=state==='ok'?'':state==='loading'?'loading':state==='warn'?'warn':'error';
     const http=providerState.httpStatus?` · HTTP ${providerState.httpStatus}`:'';
-    return `<div class="ekodi-provider-diagnostic" data-ekodi-provider-diagnostic><div class="ekodi-provider-diagnostic-main"><strong><span class="ekodi-provider-dot ${dot}"></span>${esc(providerState.message)}${http}</strong><small>${esc(providerState.detail||'계정 → Zone → Worker → 권한 순서로 진단합니다.')}</small></div><button type="button" class="ekodi-provider-retry" data-ekodi-provider-retry ${state==='loading'?'disabled':''}>다시 조회</button></div>`;
+    return `<div class="ekodi-provider-diagnostic" data-ekodi-provider-diagnostic><div class="ekodi-provider-diagnostic-main"><strong><span class="ekodi-provider-dot ${dot}" aria-hidden="true"></span>${esc(providerState.message)}${http}</strong><small>${esc(providerState.detail||'계정 → Zone → Worker → 권한 순서로 진단합니다.')}</small></div><button type="button" class="ekodi-provider-retry" data-ekodi-provider-retry ${state==='loading'?'disabled':''}>다시 조회</button></div>`;
   }
   function bindRetry(root){root?.querySelector('[data-ekodi-provider-retry]')?.addEventListener('click',loadProviders)}
   function renderDiagnostics(){
@@ -127,8 +127,8 @@
     const repos=gh.repositories||[];
     const stateClass=providerState.status==='ok'?(cfWarnings?'warn':''):(providerState.status==='loading'?'loading':providerState.status==='warn'?'warn':'error');
     node.innerHTML=`<h3>Infrastructure & Development Control Plane</h3><div class="ekodi-provider-grid">
-      <div class="ekodi-provider-tile"><strong><span class="ekodi-provider-dot ${stateClass}"></span>Cloudflare · ${esc(cf.account?.name||'연결 확인')}</strong><small>${esc((cf.zones||[]).length)} Zones · ${esc((cf.workers||[]).length)} Workers${cfWarnings?' · 일부 읽기권한 제한':''}</small></div>
-      <div class="ekodi-provider-tile"><strong><span class="ekodi-provider-dot ${gh.warning?'warn':''}"></span>GitHub · ${esc(gh.owner||'EKODI')}</strong><small>${repos.length} repositories · ${esc(gh.mode||'inventory')} · 변경은 GitOps/Actions 가드 사용</small></div>
+      <div class="ekodi-provider-tile"><strong><span class="ekodi-provider-dot ${stateClass}" aria-hidden="true"></span>Cloudflare · ${esc(cf.account?.name||'연결 확인')}</strong><small>${esc((cf.zones||[]).length)} Zones · ${esc((cf.workers||[]).length)} Workers${cfWarnings?' · 일부 읽기권한 제한':''}</small></div>
+      <div class="ekodi-provider-tile"><strong><span class="ekodi-provider-dot ${gh.warning?'warn':''}" aria-hidden="true"></span>GitHub · ${esc(gh.owner||'EKODI')}</strong><small>${repos.length} repositories · ${esc(gh.mode||'inventory')} · 변경은 GitOps/Actions 가드 사용</small></div>
       ${diagnosticMarkup()}
     </div><div class="ekodi-provider-note" style="margin-top:10px">총괄 AI가 인증 → API → Cloudflare 계정 → Zone → Worker → 권한 순서로 진단하고, 실패 원인을 숨기지 않습니다. DNS·Production Secret·강제 push·삭제 등 고위험 변경은 관리자 승인 없이 실행하지 않습니다.</div>`;
     bindRetry(node);

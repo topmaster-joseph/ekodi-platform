@@ -32,11 +32,17 @@ jobs:
       GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v7
+      - name: Identify EKODI monitor traffic
+        shell: bash
+        run: |
+          printf '%s\n' 'user-agent = "EKODI-github-monitor/1.0"' > "$HOME/.curlrc"
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
 
-      - name: Inspect canonical Worker and DNS state
+      - name: EKODI AI Orchestration Gate
+        run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
+      - name: Inspect legacy Admin Worker and DNS state
         id: infra
         shell: bash
         run: |
@@ -66,9 +72,9 @@ jobs:
           echo "attached=$attached" >> "$GITHUB_OUTPUT"
           echo "dns_ok=$dns_ok" >> "$GITHUB_OUTPUT"
           echo "needs_repair=$needs_repair" >> "$GITHUB_OUTPUT"
-          echo "Canonical infra: attached=$attached dns_ok=$dns_ok needs_repair=$needs_repair"
+          echo "Legacy Admin infra: attached=$attached dns_ok=$dns_ok needs_repair=$needs_repair"
 
-      - name: Check independent public DNS resolvers
+      - name: Check independent DNS resolvers
         id: resolvers
         shell: bash
         run: |
@@ -85,28 +91,29 @@ jobs:
           echo "google=$google_ok" >> "$GITHUB_OUTPUT"
           echo "Resolver health: cloudflare=$cf_ok google=$google_ok"
 
-      - name: Repair missing canonical attachment only
+      - name: Repair missing legacy Admin attachment only
         if: steps.infra.outputs.needs_repair == 'true'
         shell: bash
         run: |
           set -euo pipefail
-          echo 'Canonical Worker/DNS attachment is incomplete. Running one guarded trigger repair.'
+          echo 'Legacy Admin Worker/DNS attachment is incomplete. Running one guarded trigger repair.'
           npx --yes wrangler@4.119.0 triggers deploy --config wrangler.site.toml
           sleep 15
 
-      - name: Verify canonical and emergency admin paths
+      - name: Verify canonical Admin and legacy compatibility routes
         id: endpoints
         shell: bash
         run: |
           set -euo pipefail
-          probe() {
+          probe_admin() {
             label="$1"; url="$2"; route="$3"; status=000
             for attempt in 1 2 3; do
-              status=$(curl -sS -o /tmp/${label}.body -D /tmp/${label}.headers -w '%{http_code}' \
+              status=$(curl -sS --max-redirs 0 -o /tmp/${label}.body -D /tmp/${label}.headers -w '%{http_code}' \
                 --connect-timeout 5 --max-time 15 "$url" || true)
               if [ "$status" = 200 ] \
                 && grep -Fq '<title>EKODI Admin</title>' /tmp/${label}.body \
-                && grep -Fiq "x-ekodi-route: $route" /tmp/${label}.headers; then
+                && grep -Fiq "x-ekodi-route: $route" /tmp/${label}.headers \
+                && ! grep -Fiq '^location:' /tmp/${label}.headers; then
                 echo "$label=ok" >> "$GITHUB_OUTPUT"
                 echo "$url -> 200 ($route)"
                 return 0
@@ -118,13 +125,32 @@ jobs:
             return 1
           }
 
+          probe_redirect() {
+            label="$1"; url="$2"; target="$3"; status=000
+            for attempt in 1 2 3; do
+              status=$(curl -sS --max-redirs 0 -o /tmp/${label}.body -D /tmp/${label}.headers -w '%{http_code}' \
+                --connect-timeout 5 --max-time 15 "$url" || true)
+              if [ "$status" = 308 ] && grep -Fiq "location: $target" /tmp/${label}.headers; then
+                echo "$label=ok" >> "$GITHUB_OUTPUT"
+                echo "$url -> 308 $target"
+                return 0
+              fi
+              echo "$url attempt $attempt -> $status"
+              sleep 3
+            done
+            echo "$label=fail" >> "$GITHUB_OUTPUT"
+            return 1
+          }
+
           failed=0
-          probe canonical_root 'https://admin.ekodi.kr/' 'admin-shell' || failed=1
-          probe canonical_admin 'https://admin.ekodi.kr/admin' 'admin-shell' || failed=1
-          probe apex_fallback 'https://ekodi.kr/admin' 'admin-fallback' || failed=1
+          probe_admin canonical_admin 'https://ekodi.kr/admin/' 'admin-shell' || failed=1
+          probe_redirect canonical_slash 'https://ekodi.kr/admin' 'https://ekodi.kr/admin/' || failed=1
+          probe_redirect legacy_root 'https://admin.ekodi.kr/' 'https://ekodi.kr/admin/?source=admin.ekodi.kr' || failed=1
+          probe_redirect legacy_admin 'https://admin.ekodi.kr/admin' 'https://ekodi.kr/admin/?source=admin.ekodi.kr' || failed=1
+          probe_redirect legacy_retired 'https://admin.ekodi.kr/control-center.html' 'https://ekodi.kr/admin/?source=admin.ekodi.kr' || failed=1
           exit "$failed"
 
-      - name: Recheck infrastructure after any repair
+      - name: Recheck legacy Admin infrastructure after any repair
         if: always()
         shell: bash
         run: |
@@ -134,28 +160,28 @@ jobs:
             "$api/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/domains?service=shy-thunder-39a4" \
             -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN")
           echo "$domains" | jq -e '.result[] | select(.hostname == "admin.ekodi.kr" and .service == "shy-thunder-39a4" and (.cert_id | length > 0))' >/dev/null
-          echo 'Verified admin.ekodi.kr Worker attachment and certificate reference.'
+          echo 'Verified legacy admin.ekodi.kr Worker attachment and certificate reference.'
 
       - name: Open or update admin incident issue
         if: failure()
         shell: bash
         run: |
           set -euo pipefail
-          title='Admin availability incident: admin.ekodi.kr'
-          fallback_code=$(curl -sS -o /dev/null -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/admin' || true)
-          canonical_code=$(curl -sS -o /dev/null -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://admin.ekodi.kr/' || true)
+          title='Admin availability incident: canonical EKODI Admin'
+          canonical_code=$(curl -sS --max-redirs 0 -o /dev/null -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/admin/' || true)
+          legacy_code=$(curl -sS --max-redirs 0 -o /dev/null -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://admin.ekodi.kr/' || true)
           body=$(cat <<EOF
-          Automated Chief AI availability guard detected a persistent admin access failure after retries and any safe attachment repair.
+          Automated Chief AI availability guard detected a persistent Admin access failure after retries and any safe compatibility-route repair.
 
-          - canonical: https://admin.ekodi.kr/ -> $canonical_code
-          - emergency fallback: https://ekodi.kr/admin -> $fallback_code
+          - canonical: https://ekodi.kr/admin/ -> $canonical_code
+          - legacy compatibility: https://admin.ekodi.kr/ -> $legacy_code
           - workflow: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID
           - observed: $(date -u +'%Y-%m-%dT%H:%M:%SZ')
 
-          Do not delete/recreate DNS records automatically. Preserve the apex fallback while the canonical hostname is investigated.
+          The canonical Admin is ekodi.kr/admin/. Do not delete/recreate DNS records automatically; preserve legacy redirects while the canonical route is investigated.
           EOF
           )
-          existing=$(gh issue list --state open --search 'Admin availability incident: admin.ekodi.kr in:title' --json number --jq '.[0].number // empty')
+          existing=$(gh issue list --state open --search 'Admin availability incident: canonical EKODI Admin in:title' --json number --jq '.[0].number // empty')
           if [ -n "$existing" ]; then
             gh issue comment "$existing" --body "$body"
           else

@@ -1,6 +1,8 @@
 import customerEntryWorker from './customer-entry-worker.js';
 import { handleAdminSessionFastPath } from './admin-session-fastpath.js';
 import { handleAgentMissionControl } from './ai-agent-control.js';
+import { handleEkodiV8CommandControl } from './ai-command-control.js';
+import { runEkodiPulseSchedule } from './ekodi-pulse-runtime.js';
 import { handleUserAiControl } from './user-ai-control.js';
 import { applyUserAiPlanOverrides, handleUserAiAdminControl } from './user-ai-admin-control.js';
 import { AI_ACCESS_POLICY } from './ai-access-orchestration.js';
@@ -18,6 +20,7 @@ import { handleMarketingLedgerControl } from './marketing-ledger-control.js';
 import { handleMarketingOrderConnectors } from './marketing-order-connectors.js';
 import { handleAuthorBillingControl, runAuthorBillingSchedule } from './author-billing-control.js';
 import { handleSystemHealthControl } from './system-health-control.js';
+import { handleTrafficIntelligence } from './traffic-intelligence-control.js';
 import { handleApiCostControl } from './api-cost-control.js';
 import { handleCloudflareSecretControl } from './cloudflare-secret-control.js';
 import { handleBooksNetworkRequest } from './books-network-control.js';
@@ -25,6 +28,8 @@ import { handleUniversalMembership } from './universal-membership.js';
 import { handleHomepagePresentation } from './homepage-presentation-control.js';
 import { handleStorageGateway } from './storage-gateway.js';
 import { handleExternalAiModuleGateway } from './external-ai-module-gateway.js';
+import { runAiProviderHealthSchedule } from './ai-provider-control.js';
+import { handleEkodiMcpGateway, handleEkodiMcpMetadata } from './ekodi-mcp-gateway.js';
 import { handleDevotionalControl } from './devotional-control.js';
 import { applyApiSecurityHeaders, enforceEdgeSecurity } from './security-edge.js';
 
@@ -74,7 +79,7 @@ function handleCloudflareSecretPreflight(request, env = {}) {
 export default {
   async fetch(request, env, ctx) {
     const incoming = new URL(request.url);
-    if (incoming.pathname === '/admin' || incoming.pathname === '/admin/') return Response.redirect('https://admin.ekodi.kr/?source=api.ekodi.kr', 307);
+    if (incoming.pathname === '/admin' || incoming.pathname === '/admin/') return Response.redirect('https://ekodi.kr/admin/?source=api', 307);
     const guard = await enforceEdgeSecurity(request, env);
     if (guard) return guard;
 
@@ -82,6 +87,21 @@ export default {
     if (secretPreflight) return secretPreflight;
 
     const path = incoming.pathname;
+
+    if (path === '/.well-known/oauth-protected-resource') {
+      try { return applyApiSecurityHeaders(handleEkodiMcpMetadata(request)); }
+      catch (error) { console.error('EKODI MCP metadata error', error); return errorResponse('EKODI MCP 인증 메타데이터 처리 중 오류가 발생했습니다.', 'MCP_METADATA_ERROR'); }
+    }
+
+    if (path === '/mcp') {
+      try { return applyApiSecurityHeaders(await handleEkodiMcpGateway(request, env)); }
+      catch (error) { console.error('EKODI MCP gateway error', error); return errorResponse('EKODI MCP 처리 중 오류가 발생했습니다.', 'MCP_GATEWAY_ERROR'); }
+    }
+
+    if (path === '/api/telemetry/visit') {
+      try { const response = await handleTrafficIntelligence(request, env); if (response) return applyApiSecurityHeaders(response); }
+      catch (error) { console.error('Traffic telemetry error', error); return applyApiSecurityHeaders(new Response(null, { status:204 })); }
+    }
 
     if (path.startsWith('/api/storage/v1')) {
       try { const response = await handleStorageGateway(request, env); if (response) return applyApiSecurityHeaders(response); }
@@ -153,6 +173,11 @@ export default {
     if (path.startsWith('/api/control/secrets')) {
       try { const response = await handleCloudflareSecretControl(request, env); if (response) return applyApiSecurityHeaders(response); }
       catch (error) { console.error('Cloudflare secret control error', error); return errorResponse('Cloudflare Secret 처리 중 오류가 발생했습니다.', 'CLOUDFLARE_SECRET_CONTROL_ERROR'); }
+    }
+
+    if (path === '/api/control/traffic-intelligence') {
+      try { const response = await handleTrafficIntelligence(request, env); if (response) return applyApiSecurityHeaders(response); }
+      catch (error) { console.error('Traffic Intelligence control error', error); return errorResponse('Traffic Intelligence 처리 중 오류가 발생했습니다.', 'TRAFFIC_INTELLIGENCE_CONTROL_ERROR'); }
     }
 
     if (path.startsWith('/api/control/system-health')) {
@@ -228,6 +253,11 @@ export default {
       catch (error) { console.error('Device Control error', error); return errorResponse('Device Control 처리 중 오류가 발생했습니다.', 'DEVICE_CONTROL_ERROR'); }
     }
 
+    if (path.startsWith('/api/control/ai/v8')) {
+      try { const response = await handleEkodiV8CommandControl(request, env); if (response) return applyApiSecurityHeaders(response); }
+      catch (error) { console.error('EKODI v8 Command Control error', error); return errorResponse('EKODI v8 Command Control 처리 중 오류가 발생했습니다.', 'V8_COMMAND_CONTROL_ERROR'); }
+    }
+
     if (path.startsWith('/api/control/ai/')) {
       try { const response = await handleAgentMissionControl(request, env); if (response) return applyApiSecurityHeaders(response); }
       catch (error) { console.error('AI Mission Control error', error); return errorResponse('AI Mission Control 처리 중 오류가 발생했습니다.', 'AI_MISSION_CONTROL_ERROR'); }
@@ -238,8 +268,15 @@ export default {
   },
 
   async scheduled(controller, env, ctx) {
+    const customerSchedule = typeof customerEntryWorker.scheduled === 'function'
+      ? await customerEntryWorker.scheduled(controller, env, ctx)
+      : null;
+    // A real Coupang report pass owns the whole Mission Control invocation budget.
+    if (customerSchedule?.reporting?.ran) return customerSchedule;
     const authorBilling = runAuthorBillingSchedule(env).catch(error => { console.error('Author billing schedule error', error); return { processed:0, error:'author_billing_schedule_failed' }; });
     const messengerOutbox = drainMessengerOutbox(env, { limit:20 }).catch(error => { console.error('Messenger outbox schedule error', error); return { processed:0, failed:1, error:'messenger_outbox_schedule_failed' }; });
+    const commandPulse = runEkodiPulseSchedule(env, { limit:1 }).catch(error => { console.error('EKODI v8 Pulse schedule error', error); return { ok:false, error:'ekodi_v8_pulse_failed' }; });
+    const aiProviderHealth = runAiProviderHealthSchedule(env, { scheduledTime:controller?.scheduledTime }).catch(error => { console.error('AI provider health schedule error', error); return { ok:false, checked:0, error:'ai_provider_health_failed' }; });
     const hybridWatchdog = runHybridExecutionMonitor(env).catch(error => { console.error('Hybrid execution watchdog schedule error', error); return { status:'unavailable', error:'hybrid_execution_watchdog_failed' }; });
     const wakeOrchestration = (async () => {
       await disableIneligibleWakeProfiles(env);
@@ -248,11 +285,12 @@ export default {
     if (ctx?.waitUntil) {
       ctx.waitUntil(authorBilling);
       ctx.waitUntil(messengerOutbox);
+      ctx.waitUntil(commandPulse);
+      ctx.waitUntil(aiProviderHealth);
       ctx.waitUntil(hybridWatchdog);
       ctx.waitUntil(wakeOrchestration);
     }
-    if (typeof customerEntryWorker.scheduled === 'function') return customerEntryWorker.scheduled(controller, env, ctx);
-    return Promise.all([authorBilling, messengerOutbox, hybridWatchdog, wakeOrchestration]);
+    return customerSchedule || Promise.all([authorBilling, messengerOutbox, commandPulse, aiProviderHealth, hybridWatchdog, wakeOrchestration]);
   },
 };
 

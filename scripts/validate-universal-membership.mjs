@@ -8,15 +8,15 @@ const fail = (message) => { throw new Error(`[universal-membership] ${message}`)
 
 const registry = JSON.parse(read('config/ecosystem-services.json'));
 const policy = JSON.parse(read('config/universal-membership.json'));
-const services = Array.isArray(registry.services) ? registry.services : [];
+const services = Array.isArray(registry.services) ? registry.services.filter((service) => service?.userVisible !== false) : [];
 const reserved = new Set(policy.excludedInfrastructure || []);
 const expectedIds = services.map((service) => String(service.id || '').trim().toLowerCase());
 
 if (policy.policyId !== 'one-account-free-everywhere-pay-where-needed') fail('canonical policy id changed');
 if (policy.defaultEntitlement?.tier !== 'free') fail('default entitlement must remain FREE');
 if (policy.defaultEntitlement?.scope !== 'all_registry_user_services') fail('FREE must cover all registry user services');
-if (policy.guestAccess?.scope !== 'common_service_user_pages' || policy.guestAccess?.mode !== 'guide_only') fail('guest user pages must stay guide-only');
-if (policy.guestAccess?.minimumTierForContent !== 'free' || policy.guestAccess?.identityProvider !== 'google') fail('common service content must require Google FREE membership');
+if (policy.guestAccess?.scope !== 'common_service_user_pages' || policy.guestAccess?.mode !== 'public_content') fail('guest user pages must keep public content visible');
+if (policy.guestAccess?.minimumTierForContent !== 'guest' || policy.guestAccess?.memberTierForPersonalization !== 'free' || policy.guestAccess?.identityProvider !== 'google') fail('public content must be guest-visible while personalization starts at Google FREE membership');
 if (policy.paidPlans?.scope !== 'service_specific' || policy.paidPlans?.upgradeIndependently !== true) fail('paid plans must remain service-specific');
 if (policy.automaticInheritance?.enabledForFutureRegistryServices !== true) fail('future service inheritance must stay enabled');
 
@@ -42,6 +42,6 @@ if (!runtime.includes('inherited: true')) fail('lazy inherited FREE projection m
 if (!runtime.includes('USER_SERVICE_ORIGINS')) fail('registry-driven CORS missing');
 if (!missionEntry.includes("path.startsWith('/api/membership/')") || !missionEntry.includes('handleUniversalMembership')) fail('Control API does not route membership through universal layer');
 if (!myIndex.includes('/membership-summary.js') || !myIndex.includes('/membership-summary.css')) fail('My EKODI membership summary assets missing');
-if (!mySummary.includes("https://api.ekodi.kr/api/membership/portfolio")) fail('My EKODI is not connected to portfolio endpoint');
+if (!mySummary.includes("https://ekodi.kr/api/membership/portfolio")) fail('My EKODI is not connected to portfolio endpoint');
 
 console.log(`Universal membership contract OK: ${expectedIds.length} user services inherit FREE; paid tiers remain service-specific.`);

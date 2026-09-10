@@ -21,6 +21,8 @@ test('admin shell is separate from user shell and removes the left brand header'
   assert.match(adminShell,/data-ekodi-admin-sidebar-footer/);
   assert.match(adminShell,/ekodiAdminAccountPosition/);
   assert.match(adminShell,/ekodiIndependentScroll/);
+  assert.match(adminShell,/data-ekodi-admin-nav-mode=\"primary\"/);
+  assert.match(adminShell,/primary-fixed/);
 
   assert.match(userHeader,/USER_SURFACES=new Set\(\['public','workspace'\]\)/);
   assert.doesNotMatch(userHeader,/USER_SURFACES=new Set\([^)]*'admin'/);
@@ -37,4 +39,6 @@ test('admin shell is separate from user shell and removes the left brand header'
   assert.match(principles,/관리자 왼쪽 상단 헤더는 삭제가 기본 원칙/);
   assert.match(principles,/User Shell UI/);
   assert.match(principles,/Admin Shell UI/);
+  assert.match(principles,/2단 내비게이션/);
+  assert.match(principles,/좌측 1차 메뉴 고정·무스크롤/);
 });

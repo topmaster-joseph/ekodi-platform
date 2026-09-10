@@ -115,6 +115,7 @@
     hero.append(main, side); root.append(hero);
     const details = el('section', 'product-info-grid');
     details.append(
+      ...(data.product.region?.label ? [infoBlock('LOCAL', data.product.region.label, data.product.region.verified ? '확인된 지역 연결 정보입니다.' : '판매자가 등록한 지역 연결 정보이며 아직 검증 전입니다.')] : []),
       infoBlock('WHO', '누구를 위한 상품인가', data.product.audience || '상품 대상 설명 준비 중'),
       infoBlock('STORY', '상품 이야기', data.product.story || '상품 이야기를 준비 중입니다.'),
       infoBlock('FULFILLMENT', '받는 방법', data.product.fulfillment || '배송·제공 방식 확인 필요')

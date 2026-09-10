@@ -1,6 +1,6 @@
 {
-  "version": "1.6.1",
-  "effectiveDate": "2026-09-04",
+  "version": "1.10.0",
+  "effectiveDate": "2026-09-10",
   "status": "active",
   "title": "EKODI Platform Constitution",
   "principles": [
@@ -20,11 +20,20 @@
     "secure-projection-minimum-disclosure",
     "integrated-responsibility-distributed-execution-standardized-connections",
     "layered-governance-os-core-services-connections-workspaces",
-    "user-surface-engine-separation"
+    "user-surface-engine-separation",
+    "capability-first-reuse",
+    "sustainable-scale-by-evidence",
+    "workspace-over-space",
+    "sovereign-autonomy-with-human-authority",
+    "person-workspace-role-capability-authority",
+    "observe-detect-reason-plan-execute-verify-recover-learn",
+    "generation-10-active-baseline",
+    "open-ended-evidence-driven-generation-evolution"
   ],
   "architectureModel": {
     "registry": "governance/architecture/ekodi-os-architecture.json",
     "platformBoundaryRegistry": "platform-boundaries.json",
+    "evolutionRegistry": "governance/architecture/ekodi-evolution-model.json",
     "deploymentTopology": "modular-monolith-first",
     "layers": [
       "governance",
@@ -38,7 +47,9 @@
       "ekodi-responsible",
       "external-provider-responsible"
     ],
-    "rule": "Modular monolith defines default deployment topology; explicit service responsibility and capability contracts define independent service boundaries."
+    "rule": "Modular monolith defines default deployment topology; explicit service responsibility and capability contracts define independent service boundaries. New independent deployment requires the sustainable boundary-creation gate.",
+    "operatingArchitectureVersion": "1.8.1",
+    "sovereignOperationsRegistry": "governance/architecture/sovereign-autonomous-operations.v1.json"
   },
   "systemBoundaries": {
     "production": [
@@ -48,10 +59,11 @@
       "auth.ekodi.kr",
       "api.ekodi.kr",
       "status.ekodi.kr",
-      "ai.ekodi.kr"
+      "ai.ekodi.kr",
+      "dev.ekodi.kr",
+      "exp.ekodi.kr"
     ],
     "development": [
-      "dev.ekodi.kr",
       "my.dev.ekodi.kr",
       "admin.dev.ekodi.kr",
       "auth.dev.ekodi.kr",
@@ -73,10 +85,10 @@
     "association",
     "institution"
   ],
-  "privateWorkspacePattern": "https://my.ekodi.kr/w/{workspace}",
+  "privateWorkspacePattern": "https://ekodi.kr/my/w/{workspace}",
   "featurePatterns": [
     "https://ekodi.kr/{feature}",
-    "https://my.ekodi.kr/{feature}",
+    "https://ekodi.kr/my/{feature}",
     "https://api.ekodi.kr/v1/{feature}"
   ],
   "workspaceRoutingPolicy": {
@@ -84,18 +96,26 @@
     "identityKey": "workspace_id",
     "slugIsLocatorOnly": true,
     "workspaceSubdomainsForbidden": true,
-    "personalHomeSubdomainException": "my.ekodi.kr",
+    "personalHomeSubdomainException": null,
     "kindEncodedInUrl": false,
-    "reservedRootSlugsManagedBy": "platform_route_registry"
+    "reservedRootSlugsManagedBy": "platform_route_registry",
+    "canonicalOperatingTerm": "Workspace",
+    "legacySpaceIsCompatibilityOnly": true,
+    "personalHomeCanonicalPath": "/my",
+    "administrationCanonicalPath": "/admin",
+    "workspaceAdminCanonical": "/admin/workspaces"
   },
   "domainPolicy": {
     "newFeatureSubdomainsForbidden": true,
     "newTenantSubdomainsForbidden": true,
     "commonOrCoreServiceSubdomainsRequireGovernanceRegistration": true,
+    "sustainableBoundaryGateRequired": true,
     "customDomainsMapToTenantPublicSpace": true,
     "legacyAliasesMayRedirect": true,
     "legacyAliasesMustBeRegistered": true,
-    "userFacingEngineAddressesForbidden": true
+    "userFacingEngineAddressesForbidden": true,
+    "canonicalHumanAndManagementHost": "ekodi.kr",
+    "subdomainUserEntryForbidden": true
   },
   "legacyPathAliases": {
     "https://space.ekodi.kr/{slug}": "https://ekodi.kr/{slug}",
@@ -167,7 +187,9 @@
     "cloudflareRole": "edge_and_system_object_provider",
     "aiProvidersRole": "replaceable_compute_provider",
     "directExternalProviderCallsFromFeatureModulesForbiddenWhenGatewayExists": true,
-    "degradedProviderMustNotCollapseUnrelatedCoreServices": true
+    "degradedProviderMustNotCollapseUnrelatedCoreServices": true,
+    "paidCapacityRequiresMeasuredValueOrRequiredRiskControl": true,
+    "speculativeScaleForbidden": true
   },
   "securityPolicy": {
     "edgeBeforeOrigin": true,
@@ -223,7 +245,16 @@
       "guarded-deployment",
       "production-verification"
     ],
-    "productionCredentialsOutsideAgentWorktrees": true
+    "productionCredentialsOutsideAgentWorktrees": true,
+    "parallelSurfaceTracks": [
+      "ui",
+      "service",
+      "tenant",
+      "knowledge",
+      "content",
+      "agent"
+    ],
+    "sovereignRedAreasRequireCentralGate": true
   },
   "changeControl": {
     "C0": "operational parameter change; no constitutional impact; automated validation allowed",
@@ -234,19 +265,25 @@
       "CONSTITUTION.md",
       "governance/constitution/**",
       "governance/amendments/**",
+      "governance/architecture/ekodi-evolution-model.json",
       "platform-boundaries.json",
       "config/core-data-boundaries.json",
       "config/storage-policy.json",
       "config/service-workspace-policy.json",
       "scripts/validate-constitution.mjs",
-      ".github/workflows/constitution-check.yml"
+      "scripts/validate-ekodi-os-architecture.mjs",
+      ".github/workflows/constitution-check.yml",
+      "governance/architecture/sovereign-autonomous-operations.v1.json",
+      "config/sovereign-surface-policy.json",
+      "sovereign-autonomy-runtime.js",
+      "scripts/validate-sovereign-autonomous-operations.mjs"
     ],
     "owner": "topmaster-joseph",
     "rule": "C2/C3 changes are proposed first and applied only after explicit owner confirmation."
   },
   "legacyDomainTargets": {
-    "shell.ekodi.kr": "https://my.ekodi.kr",
-    "management.ekodi.kr": "https://my.ekodi.kr/management",
+    "shell.ekodi.kr": "https://ekodi.kr/my",
+    "management.ekodi.kr": "https://ekodi.kr/my/management",
     "mall.ekodi.kr": "https://ekodi.kr/ekodibiz/mall",
     "mall.biz.ekodi.kr": "https://ekodi.kr/ekodibiz/mall",
     "cafe.ekodi.kr": "https://ekodi.kr/cafe",
@@ -262,32 +299,40 @@
     "social.ekodi.kr": "https://ekodi.kr/social",
     "energy.ekodi.kr": "https://ekodi.kr/energy",
     "business.ekodi.kr": "https://ekodi.kr/business",
-    "finance-api.ekodi.kr": "https://api.ekodi.kr/v1/finance",
-    "drive.ekodi.kr": "https://my.ekodi.kr/files",
-    "marketing-api.ekodi.kr": "https://api.ekodi.kr/v1/marketing/domains",
-    "marketing-publish-api.ekodi.kr": "https://api.ekodi.kr/v1/marketing/publish",
+    "finance-api.ekodi.kr": "https://ekodi.kr/api/v1/finance",
+    "drive.ekodi.kr": "https://ekodi.kr/my/files",
+    "marketing-api.ekodi.kr": "https://ekodi.kr/api/v1/marketing/domains",
+    "marketing-publish-api.ekodi.kr": "https://ekodi.kr/api/v1/marketing/publish",
     "www.ekodi.kr": "https://ekodi.kr",
     "pay.ekodi.kr": "https://ekodi.kr/pay",
-    "trade.ekodi.kr": "https://ekodi.kr/trade",
-    "mail.ekodi.kr": "https://my.ekodi.kr/mail",
+    "trade.ekodi.kr": "https://ekodi.kr/ekodibiz/trade",
+    "mail.ekodi.kr": "https://ekodi.kr/my/mail",
     "live.ekodi.kr": "https://ekodi.kr/live",
     "biz.ekodi.kr": "https://ekodi.kr/ekodibiz",
-    "church.ekodi.kr": "https://ekodi.kr/ekodi-church",
-    "lab.ekodi.kr": "https://ekodi.kr/ekodi-lab",
-    "mail.*.ekodi.kr": "https://my.ekodi.kr/mail",
+    "church.ekodi.kr": "https://ekodi.kr/ekodichurch",
+    "lab.ekodi.kr": "https://ekodi.kr/ekodilab",
+    "mail.*.ekodi.kr": "https://ekodi.kr/my/mail",
     "cgma.ekodi.kr": "https://ekodi.kr/cgma",
     "cgma.ai.ekodi.kr": "https://ekodi.kr/cgma/marketing",
     "jadam.ai.ekodi.kr": "https://ekodi.kr/jadam/marketing",
     "pizzamaru.ai.ekodi.kr": "https://ekodi.kr/pizzamaru/marketing",
     "yogurt.ai.ekodi.kr": "https://ekodi.kr/yogurt/marketing",
     "space.ekodi.kr": "https://ekodi.kr",
-    "user.ekodi.kr": "https://ekodi.kr"
+    "user.ekodi.kr": "https://ekodi.kr",
+    "my.ekodi.kr": "https://ekodi.kr/my",
+    "admin.ekodi.kr": "https://ekodi.kr/admin",
+    "auth.ekodi.kr": "https://ekodi.kr/auth",
+    "api.ekodi.kr": "https://ekodi.kr/api",
+    "trade.biz.ekodi.kr": "https://ekodi.kr/ekodibiz/trade",
+    "ins.ekodi.kr": "https://ekodi.kr/insurance"
   },
   "registeredCommonServiceBoundaries": [
     "journal.ekodi.kr",
-    "try.ekodi.kr",
     "invest.ekodi.kr",
-    "marketing.ekodi.kr"
+    "marketing.ekodi.kr",
+    "dev.ekodi.kr",
+    "exp.ekodi.kr",
+    "try.ekodi.kr"
   ],
   "evolutionPolicy": {
     "mode": "verification_first_security_native_self_evolving",
@@ -296,6 +341,7 @@
     "evidenceLinksRequiredForPublishedRecommendations": true,
     "unsupportedRecommendationsRemainInternal": true,
     "externalAndInternalEvidenceCombined": true,
+    "noSpeculativeScale": true,
     "observedSignals": [
       "traffic",
       "latency",
@@ -308,7 +354,10 @@
       "network",
       "ai_cost",
       "security_events",
-      "operational_load"
+      "operational_load",
+      "revenue",
+      "funding",
+      "unit_economics"
     ],
     "approvalRequired": [
       "production_change",
@@ -319,7 +368,8 @@
       "destructive_change",
       "security_boundary_change",
       "production_dns_change",
-      "provider_lock_in"
+      "provider_lock_in",
+      "new_independent_deployment"
     ],
     "securityCore": [
       "least_privilege",
@@ -340,12 +390,39 @@
       "backup",
       "disaster_recovery",
       "secure_projection"
-    ]
+    ],
+    "autonomousAuthorityExpansionForbidden": true,
+    "verificationAfterAutonomousExecutionRequired": true,
+    "productionChangeApprovalMode": "explicit_or_preapproved_bounded_standing_delegation",
+    "currentGeneration": 10,
+    "currentGenerationName": "Self-Architecture Optimization",
+    "generationPromotionRequiresEvidence": true,
+    "futureGenerationOpenEnded": true,
+    "futureGenerationNamesPredeclared": false
+  },
+  "sustainableEvolutionModel": {
+    "registry": "governance/architecture/ekodi-evolution-model.json",
+    "currentGeneration": 10,
+    "currentGenerationName": "Self-Architecture Optimization",
+    "nextGeneration": null,
+    "nextGenerationName": "Evidence-defined future generation",
+    "northStarGeneration": null,
+    "northStarName": "Open-Ended Evidence-Driven Evolution",
+    "generationAdvancement": "evidence_driven_not_date_driven",
+    "currentScaleTier": "S0",
+    "defaultEconomics": "minimum-viable-shared-infrastructure",
+    "reuseCapabilityBeforeNewService": true,
+    "sharedBeforeDedicated": true,
+    "existingDeploymentBoundariesGrandfathered": true,
+    "newIndependentDeploymentRequiresEvidence": true,
+    "workspaceConvergenceTarget": "Person + Workspace + Membership + Capability",
+    "historicalNorthStarGeneration": 8,
+    "historicalNorthStarName": "Living Digital Commons",
+    "forwardEvolutionFrameworkReady": true,
+    "futureGenerationNamesPredeclared": false
   },
   "canonicalWorkspaceServicePatterns": [
-    "https://ekodi.kr/{slug}/{service}",
-    "https://ekodi.kr/{slug}/admin",
-    "https://ekodi.kr/{slug}/{service}/admin"
+    "https://ekodi.kr/{slug}/{service}"
   ],
   "customerOwnedDomainMappings": {
     "cgma.or.kr": "https://ekodi.kr/cgma"
@@ -360,5 +437,84 @@
     "aiGateway": "https://ai.ekodi.kr",
     "customerAiSubdomains": "legacy_execution_alias_only",
     "providerTopologyVisibleToOrdinaryUsers": false
+  },
+  "sovereignAutonomousOperations": {
+    "version": "1.8.1",
+    "hierarchy": [
+      "sovereign",
+      "autonomous",
+      "agentic",
+      "services"
+    ],
+    "authorityContext": "Person + Workspace + Role + Capability",
+    "finalHumanAuthority": "ekodi_platform_super_administrator",
+    "autonomyLoop": [
+      "observe",
+      "detect",
+      "reason",
+      "plan",
+      "execute",
+      "verify",
+      "recover",
+      "learn"
+    ],
+    "surfaceTracks": [
+      "ui",
+      "service",
+      "tenant",
+      "knowledge",
+      "content",
+      "agent"
+    ],
+    "executionClasses": [
+      "green",
+      "yellow",
+      "red"
+    ],
+    "autonomousAuthorityExpansionForbidden": true,
+    "productionDirectAgentMutationForbidden": true,
+    "verificationAfterExecutionRequired": true,
+    "failedVerificationRequiresRecoveryOrSafeDegradedState": true,
+    "providerIndependenceRequired": true,
+    "currentGenerationUnchanged": true,
+    "currentScaleTierUnchanged": true,
+    "productionPromotionRequiresIndependentControlPlane": true,
+    "boundedProductionStandingDelegation": true,
+    "standingDelegationScope": "existing_registered_boundary_only",
+    "automaticSafeRecoveryForFailedBoundedPromotion": true,
+    "unbudgetedPaidCommitmentForbidden": true,
+    "generationBaselineAtConstitutionVersion": 10,
+    "futureGenerationOpenEnded": true
+  },
+  "publicPortalPolicy": {
+    "developerPortal": "https://dev.ekodi.kr",
+    "experiencePortal": "https://exp.ekodi.kr",
+    "legacyExperienceAlias": "https://try.ekodi.kr",
+    "developmentMirrorRule": "nested *.dev.ekodi.kr system hosts only; dev.ekodi.kr root is reserved for the public developer portal",
+    "sharedRuntimeAllowedAtS0": true,
+    "experienceDataPolicy": "synthetic-only",
+    "developerDataPolicy": "public-contract-only"
+  },
+  "surfaceRoutingPolicy": {
+    "canonicalHost": "ekodi.kr",
+    "public": "/",
+    "user": "/my",
+    "admin": "/admin",
+    "authentication": "/auth",
+    "api": "/api",
+    "mcp": "/mcp",
+    "webhooks": "/webhooks",
+    "health": "/health",
+    "humanSurfacesUsePaths": true,
+    "systemExecutionUsesDedicatedSecurityRealms": true,
+    "subdomainExecutionBoundariesAreNonCanonical": true,
+    "adminServiceManagement": {
+      "home": "/admin/home/{capability}",
+      "operations": "/admin/operations/{capability}",
+      "workspaces": "/admin/workspaces/{capability}",
+      "services": "/admin/services/{service}",
+      "system": "/admin/system/{capability}"
+    },
+    "rule": "One domain, multiple security realms: human and management surfaces are canonical paths on ekodi.kr; subdomains may remain only as justified internal, protocol, emergency or compatibility execution boundaries."
   }
 }

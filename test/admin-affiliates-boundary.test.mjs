@@ -1,0 +1,56 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import { getAdminMenuItem } from '../admin-menu-registry.js';
+import { isWorkspaceAdminPathShape } from '../workspace-route-policy.js';
+
+const read = path => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
+
+test('sales and supply network separates professional engine health from Mall operating decisions', async () => {
+  const professional = getAdminMenuItem('supply-network');
+  assert.equal(professional?.group, 'services');
+  assert.equal(professional?.managementArea, 'professional-services');
+  assert.equal(professional?.labels?.ko, '판매·공급망');
+  assert.equal(getAdminMenuItem('affiliates'), null);
+  assert.equal(isWorkspaceAdminPathShape('/ekodibiz/mall/admin/sourcing'), true);
+
+  const demand = await read('admin-demand-loader.js');
+  const professionalPanel = await read('supply-network-admin.js');
+  const workspace = await read('workspace-admin-page.js');
+  const layout = await read('admin-menu-layout.js');
+  assert.match(demand, /'supply-network':[\s\S]*supply-network-admin\.js/);
+  assert.match(professionalPanel, /api\('\/providers'\)/);
+  assert.match(professionalPanel, /api\('\/programs'\)/);
+  assert.match(professionalPanel, /outreachStatus/);
+  assert.match(professionalPanel, /data-supply-program-save/);
+  assert.match(professionalPanel, /method:'PUT'/);
+  assert.match(professionalPanel, /https:\/\/api\.ekodi\.kr\/api\/affiliate/);
+  assert.match(professionalPanel, /관리 ↗/);
+  assert.match(professionalPanel, /mallAdminUrl/);
+  assert.match(professionalPanel, /ekodi_admin_token/);
+  assert.doesNotMatch(professionalPanel, /api\('\/routes'\)|api\('\/accounts'\)/);
+  assert.match(workspace, /sourcing:\['제휴·소싱'/);
+  assert.match(workspace, /sourcing:POLICY\.capabilities\.supplyNetwork/);
+  assert.match(workspace, /let platformAdminSessionToken=''/);
+  assert.doesNotMatch(workspace, /sessionStorage\.setItem\(PLATFORM_ADMIN_TOKEN_KEY/);
+  assert.match(workspace, /acceptPlatformAdminHandoff/);
+  assert.match(workspace, /PLATFORM_ADMIN_INTENT_KEY='ekodi-platform-admin-intent'/);
+  assert.match(workspace, /PLATFORM_ADMIN_INTENT_MAX_AGE_MS=10\*60\*1000/);
+  assert.match(workspace, /markPlatformAdminIntent/);
+  assert.match(workspace, /hasPlatformAdminIntent/);
+  assert.match(workspace, /1단계 운영공간 로그인 후 플랫폼 관리자 인증으로 자동 이어집니다/);
+  assert.match(workspace, /location\.assign\(platformAdminAuthUrl\(\)\)/);
+  assert.match(workspace, /site','admin'/);
+  assert.match(workspace, /AFFILIATE_API='https:\/\/api\.ekodi\.kr\/api\/affiliate'/);
+  assert.equal(workspace.includes("affiliateApi('/programs')"), true);
+  assert.equal(workspace.includes("affiliateApi('/automation')"), true);
+  assert.equal(workspace.includes("affiliateApi('/reporting')"), true);
+  assert.equal(workspace.includes('/automation/run'), true);
+  assert.equal(workspace.includes('/reporting/sync'), true);
+  assert.match(workspace, /data-affiliate-provider-sync/);
+  assert.match(workspace, /data-affiliate-program-save/);
+  assert.match(workspace, /플랫폼 관리자 인증 후 여기로 돌아오기/);
+  assert.doesNotMatch(workspace, /\/api\/affiliate\/accounts|affiliateMerchantRouteForm/);
+  assert.match(layout, /LEGACY_MALL_AFFILIATE_HASHES/);
+  assert.match(layout, /\/ekodibiz\/mall\/admin\/sourcing/);
+});

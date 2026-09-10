@@ -1,6 +1,6 @@
-﻿const WORKSPACE_SLUG=/^[a-z0-9](?:[a-z0-9-]{0,98}[a-z0-9])?$/;
+const WORKSPACE_SLUG=/^[a-z0-9](?:[a-z0-9-]{0,98}[a-z0-9])?$/;
 export const RESERVED_WORKSPACE_SLUGS=new Set([
-  'admin','api','auth','bible','books','business','cafe','community','control-center','dev','education','energy','event','experience','give','group','history','invest','journal','lab','life','live','login','logout','mail','mall','marketing','media','messenger','mission','money','org','pay','personal','privacy','project','publish','social','space','status','support','tax','terms','trade','try','user','work','www'
+  'admin','api','auth','bible','books','business','cafe','community','cmpmyi','control-center','dev','education','energy','event','experience','give','group','history','insurance','invest','journal','lab','life','live','login','logout','mail','mall','marketing','media','messenger','mission','money','org','pay','personal','preview','privacy','project','publish','social','space','status','stores','support','tax','terms','trade','try','user','work','www'
 ]);
 export function isWorkspaceSlug(value){
   const slug=String(value||'').trim().toLowerCase();
@@ -16,7 +16,10 @@ export function isPublicWorkspacePath(pathname){
   return Boolean(workspaceSlugFromPublicPath(path));
 }
 export function isWorkspaceAdminPathShape(pathname){
-  const match=/^\/([^/]+)\/(?:admin(?:\/[^/]+)?|[^/]+\/admin(?:\/[^/]+)?)\/?$/i.exec(String(pathname||''));
-  return Boolean(match&&isWorkspaceSlug(match[1]));
+  const path=String(pathname||'');
+  const match=/^\/([^/]+)\/(?:admin(?:\/[^/]+)?|[^/]+\/admin(?:\/[^/]+)?)\/?$/i.exec(path);
+  if(match&&isWorkspaceSlug(match[1]))return true;
+  const mallMarketingChannels=/^\/([^/]+)\/mall\/admin\/marketing\/channels\/?$/i.exec(path);
+  return Boolean(mallMarketingChannels&&isWorkspaceSlug(mallMarketingChannels[1]));
 }
 

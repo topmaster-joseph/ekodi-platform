@@ -1,0 +1,153 @@
+{
+  "version": 1,
+  "status": "active",
+  "policy": "Existing EKODI sites are retained and connected to canonical Workspace/Core identity. New customer user sites are virtual shared-shell surfaces, not copied applications.",
+  "generation": {
+    "signup": "identity_only",
+    "workspaceCreatedWithoutSlug": "no_public_site_yet",
+    "canonicalSlugAssigned": "auto_provision_user_site",
+    "optionalServiceActivated": "jit_service_profile",
+    "legacyUrlAfterVerification": "redirect_or_compatibility_alias"
+  },
+  "identity": {
+    "authorizationKey": "workspace_id",
+    "urlRole": "routing_locator_only",
+    "siteCodeCopying": false,
+    "preserveWorkspaceIdentityAcrossUrlChange": true
+  },
+  "classes": {
+    "workspace_user_site": "Customer or EKODI-owned workspace public surface.",
+    "workspace_service_surface": "Service mounted inside a workspace and activated on demand.",
+    "shared_service": "Platform/common service with its own registered boundary.",
+    "core_system": "Authentication, administration, API, status, or internal engine boundary.",
+    "legacy_alias": "Compatibility URL that must not become identity authority.",
+    "planned_surface": "No production user site until explicitly promoted."
+  },
+  "existingWorkspaceSites": [    {
+      "id": "jadam",
+      "name": "자담치킨 목포대점",
+      "ownerKind": "store",
+      "class": "workspace_user_site",
+      "canonicalUrl": "https://ekodi.kr/jadam",
+      "migrationState": "promoted",
+      "runtime": "store_user_sites",
+      "action": "retain_and_link",
+      "legacyAliases": ["https://jadam.ekodi.kr", "https://marketing.jadam.ekodi.kr", "https://jadam.ai.ekodi.kr"]
+    },
+    {
+      "id": "pizzamaru",
+      "name": "피자마루 목포대점",
+      "ownerKind": "store",
+      "class": "workspace_user_site",
+      "canonicalUrl": "https://ekodi.kr/pizzamaru",
+      "migrationState": "promoted",
+      "runtime": "store_user_sites",
+      "action": "retain_and_link",
+      "legacyAliases": ["https://pizzamaru.ekodi.kr", "https://marketing.pizzamaru.ekodi.kr", "https://pizzamaru.ai.ekodi.kr"]
+    },    {
+      "id": "yogurt",
+      "name": "요거트퍼플 목포대점",
+      "ownerKind": "store",
+      "class": "workspace_user_site",
+      "canonicalUrl": "https://ekodi.kr/yogurt",
+      "migrationState": "promoted",
+      "runtime": "store_user_sites",
+      "action": "retain_and_link",
+      "legacyAliases": ["https://ekodi.kr/yogurtpurple", "https://yogurt.ekodi.kr", "https://marketing.yogurt.ekodi.kr", "https://yogurt.ai.ekodi.kr"]
+    },
+    {
+      "id": "cgma",
+      "name": "청계면상인회",
+      "ownerKind": "organization",
+      "class": "workspace_user_site",
+      "canonicalUrl": "https://ekodi.kr/cgma",
+      "customDomains": ["https://cgma.or.kr"],
+      "migrationState": "retain_existing",
+      "runtime": "site_access_registry+public_site_controls",
+      "action": "retain_and_link_custom_domain",
+      "legacyAliases": ["https://cgma.ekodi.kr", "https://marketing.cheonggye.ekodi.kr", "https://cgma.ai.ekodi.kr"]
+    },    {
+      "id": "ekodi-church",
+      "name": "에코디교회",
+      "ownerKind": "church",
+      "class": "workspace_user_site",
+      "canonicalUrl": "https://ekodi.kr/ekodichurch",
+      "currentServiceUrl": "https://church.ekodi.kr",
+      "migrationState": "retain_existing",
+      "runtime": "tenant_customer_site",
+      "action": "connect_core_preserve_public_surface"
+    },
+    {
+      "id": "ekodi-biz",
+      "name": "에코디비즈",
+      "ownerKind": "business",
+      "class": "workspace_user_site",
+      "canonicalUrl": "https://ekodi.kr/ekodibiz",
+      "currentServiceUrl": "https://biz.ekodi.kr",
+      "migrationState": "retain_existing",
+      "runtime": "tenant_customer_site",
+      "action": "connect_core_preserve_public_surface"
+    },    {
+      "id": "ekodi-lab",
+      "name": "에코디연구소",
+      "ownerKind": "organization",
+      "class": "workspace_user_site",
+      "canonicalUrl": "https://ekodi.kr/ekodilab",
+      "currentServiceUrl": "https://lab.ekodi.kr",
+      "migrationState": "retain_existing",
+      "runtime": "tenant_customer_site",
+      "action": "connect_core_preserve_public_surface"
+    },
+    {
+      "id": "ekodi-trade",
+      "name": "EKODI Global Trading",
+      "ownerKind": "business",
+      "class": "workspace_user_site",
+      "currentUrl": "https://trade.ekodi.kr",
+      "migrationState": "hold_existing_url_pending_canonical_decision",
+      "runtime": "tenant_customer_site",
+      "action": "connect_core_no_url_change"
+    },
+    {
+      "id": "ekodi-cafe",
+      "name": "에코디 카페",
+      "ownerKind": "business",
+      "class": "workspace_user_site",
+      "currentUrl": "https://cafe.ekodi.kr",
+      "migrationState": "preparing_keep_existing",
+      "runtime": "tenant_customer_site",
+      "action": "connect_core_no_launch_claim"
+    }
+  ],  "servicePolicy": {
+    "catalogSource": "config/ecosystem-services.json",
+    "liveOrBeta": "retain_registered_service_boundary",
+    "preparing": "keep_registry_hidden_until_ready",
+    "planned": "do_not_materialize_production_site",
+    "customerWorkspaceMustNotEnterServiceRegistry": true
+  },
+  "workspaceServicePolicy": {
+    "canonicalPattern": "https://ekodi.kr/{slug}/{service}",
+    "activation": "jit",
+    "examples": [
+      "https://ekodi.kr/jadam/marketing",
+      "https://ekodi.kr/pizzamaru/marketing",
+      "https://ekodi.kr/yogurt/marketing",
+      "https://ekodi.kr/cgma/marketing"
+    ]
+  },
+  "legacyPolicy": {
+    "redirectOnlyAfterCanonicalVerified": true,
+    "preserveCustomDomainOwnership": true,
+    "legacyAliasMayAuthorize": false,
+    "deleteExistingSiteBeforeReplacementVerified": false
+  },
+  "migrationOrder": [
+    "inventory",
+    "bind_immutable_workspace_identity",
+    "preserve_current_public_surface",
+    "attach_shared_core_and_permissions",
+    "verify_canonical_surface",
+    "redirect_only_verified_legacy_aliases",
+    "retire_duplicate_runtime_after_observation_window"
+  ]
+}

@@ -7,19 +7,32 @@ const client = read('auth-site/client-auth.js');
 const identity = read('supabase/functions/identity-api/index.ts');
 const manifest = read('ekodi-service-manifest.js');
 const shell = read('shell/shell.js');
+const myWorker = read('my-worker.js');
+const shellInjector = read('ekodi-shell-injector.js');
 const membership = JSON.parse(read('config/universal-membership.json'));
 
-test('common-service public pages stay visible as guide landings before Google FREE membership', () => {
-  assert.equal(membership.guestAccess?.mode, 'guide_only');
-  assert.equal(membership.guestAccess?.minimumTierForContent, 'free');
+test('common-service public pages stay fully visible before Google FREE membership', () => {
+  assert.equal(membership.guestAccess?.mode, 'public_content');
+  assert.equal(membership.guestAccess?.minimumTierForContent, 'guest');
+  assert.equal(membership.guestAccess?.memberTierForPersonalization, 'free');
   assert.match(manifest, /guestMode:'public-guide'/);
   assert.match(manifest, /service\.defaultSurface==='public'\?COMMON_PUBLIC_ACCESS_POLICY:COMMON_USER_ACCESS_POLICY/);
   assert.match(manifest, /operatingModel==='customer-site'\?null:/);
   assert.match(shell, /p\.guestMode==='guide-only'/);
-  assert.match(shell, /surface==='public'\|\|surface==='workspace'/);
+  assert.match(shell, /surface==='workspace'&&explicitWorkspace/);
+  assert.match(shell, /pathname\.toLowerCase\(\)\.startsWith\('\/w\/'\)/);
   assert.match(shell, /Google로 무료 시작/);
   assert.match(shell, /capabilitySummary/);
   assert.match(shell, /guestPublicException/);
+});
+
+test('My EKODI root keeps its service-owned guest guide while private workspace routes stay shared-shell gated', () => {
+  assert.match(shell, /memberGateMode!=='service-owned'/);
+  assert.match(shellInjector, /data-ekodi-member-gate=/);
+  assert.match(shellInjector, /options\?\.memberGate==='service-owned'/);
+  assert.match(myWorker, /const shellSurface=route\?'workspace':'public'/);
+  assert.match(myWorker, /const memberGate=route\?'shared':'service-owned'/);
+  assert.match(myWorker, /injectEkodiShell\([\s\S]*?'my',shellSurface,\{memberGate\}\)/);
 });
 
 test('workspace common services remain member-gated while public services use service-owned guide UI', () => {
@@ -31,7 +44,7 @@ test('workspace common services remain member-gated while public services use se
 
 test('ordinary common-service members land in My EKODI while platform admins keep original return', () => {
   assert.match(client, /const commonServiceEntry=config\.operatingModel==='shared-service'/);
-  assert.match(client, /new URL\('https:\/\/my\.ekodi\.kr\/'\)/);
+  assert.match(client, /new URL\('https:\/\/ekodi\.kr\/my\/'\)/);
   assert.match(client, /commonServiceEntry&&proof\.platformAdmin!==true/);
   assert.match(client, /target\.searchParams\.set\('from',site\)/);
   assert.match(identity, /async function platformAdminForUser/);

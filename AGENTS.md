@@ -176,3 +176,19 @@ The lightweight Constitution Check is different by design: it surfaces likely co
 ## 15. Quality bar
 
 Optimize for an ecosystem people and paying customers can trust. Visual polish matters, but mission fidelity, human dignity and agency, correctness, clarity, speed, security, observability, maintainability, sustainable economics and measurable beneficiary outcomes come first.
+
+## 16. Mandatory EKODI AI change orchestration
+
+All intent that can change EKODI Platform, an EKODI service, customer surface, shared configuration, runtime, data, integration, secret, route or deployment must enter through **EKODI AI** before mutation begins.
+
+The owner normally provides intent, constraints and desired outcome. EKODI AI owns decomposition, role assignment, provider/agent selection, implementation coordination, validation, recovery, guarded release and final result reporting. The owner is not expected to choose GPT, Claude, Gemini or another worker for ordinary work.
+
+External AI systems and human developers are workers under the EKODI AI control plane. They may propose and implement delegated changes, but they do not independently own production mutation authority. A request received through an external AI is treated as EKODI intent and must pass the same orchestration gate before any EKODI mutation.
+
+Direct pushes to `main`, direct local production deploys, direct manual production mutations and un-orchestrated release paths are forbidden. GitHub mutation-capable jobs must run `AI-ORCHESTRATE-001` before their first mutation, and production release controllers must fail closed without an EKODI orchestration context.
+
+Human Gate remains mandatory only where higher authority is genuinely required, including destructive data operations, identity/access recovery, outage-risk credential rotation, domain ownership transfer, financial/legal commitment and weakening of orchestration governance. Human Gate is not a general excuse to push routine technical choices back to the owner.
+
+Default reporting is result-only: what changed, whether validation passed, whether deployment succeeded, whether real production behavior was verified, and any unresolved exception. Intermediate provider chatter and low-level implementation steps are normally omitted unless they materially affect safety or the requested outcome.
+
+Machine-readable authority: `config/ai-change-orchestration-policy.json` (`AI-ORCHESTRATE-001`). Enforcement: `scripts/validate-ekodi-ai-change-orchestration.mjs`, `scripts/validate-workflow-orchestration-gates.mjs`, and the required GitHub check `EKODI AI Orchestration Gate`.

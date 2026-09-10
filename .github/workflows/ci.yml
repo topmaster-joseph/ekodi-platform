@@ -11,6 +11,34 @@ permissions:
   contents: read
 
 jobs:
+  orchestration-gate:
+    name: CI Orchestration Contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: Validate canonical orchestration contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s AI_DEVELOPMENT_POLICY.md
+          test -s config/ai-development-completion-policy.json
+          test -s scripts/validate-ai-development-completion-policy.mjs
+          test -s scripts/ekodi-task-start.mjs
+          node --check scripts/ekodi-task-start.mjs
+          node --check scripts/validate-ai-development-completion-policy.mjs
+          node scripts/validate-ai-development-completion-policy.mjs
+      - name: Enforce guarded production path
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q 'central pipeline' AI_DEVELOPMENT_POLICY.md
+          grep -q 'guarded deployment workflow' AI_DEVELOPMENT_POLICY.md
+          grep -q 'not proof of production completion' AI_DEVELOPMENT_POLICY.md
+
   test:
     runs-on: ubuntu-latest
     timeout-minutes: 8
@@ -34,7 +62,9 @@ jobs:
             .github/workflows/verify-ekodi-core-completion.yml \
             .github/workflows/release-messenger-investment-functional.yml \
             .github/workflows/release-invest-personalization.yml \
-            .github/workflows/cloud-control-workers-builds.yml
+            .github/workflows/cloud-control-workers-builds.yml \
+            .github/workflows/redeploy-control-on-central-core.yml \
+            .github/workflows/github-governance-audit.yml
       - name: Enforce traffic-ready data plane
         run: |
           node --check data-plane.js

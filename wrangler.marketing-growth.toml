@@ -4,8 +4,13 @@ compatibility_date = "2026-08-29"
 workers_dev = false
 route = { pattern = "marketing-connect-api.ekodi.kr", custom_domain = true }
 
+[triggers]
+crons = []
+
+
 [vars]
-ALLOWED_ORIGINS = "https://admin.ekodi.kr,https://marketing.ekodi.kr,https://my.ekodi.kr"
+MALL_PROMOTION_AUTOMATION_ENABLED = "true"
+ALLOWED_ORIGINS = "https://ekodi.kr,https://admin.ekodi.kr,https://marketing.ekodi.kr,https://my.ekodi.kr"
 PUBLIC_BASE_URL = "https://marketing-connect-api.ekodi.kr"
 GOOGLE_CLIENT_ID = "483044030492-4e6231l5glchhtniroinvuq3ev6n5mv5.apps.googleusercontent.com"
 META_GRAPH_VERSION = "v25.0"
@@ -22,3 +27,4 @@ binding = "DB"
 database_name = "ekodi-auth"
 database_id = "e38778f1-b059-4fe7-8816-300f3eec6e19"
 migrations_dir = "migrations"
+

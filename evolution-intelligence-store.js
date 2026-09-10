@@ -1,11 +1,15 @@
 export async function assertEvolutionSchema(db) {
   if (!db) throw new Error('Evolution Intelligence requires a database binding.');
-  const rows = await db.prepare(`SELECT name FROM sqlite_master WHERE type = 'table' AND name IN ('evolution_recommendations','evolution_evidence')`).all();
-  const names = new Set((rows.results || []).map(row => row.name));
-  if (!names.has('evolution_recommendations') || !names.has('evolution_evidence')) {
+  try {
+    await db.batch([
+      db.prepare('SELECT 1 FROM evolution_recommendations LIMIT 0'),
+      db.prepare('SELECT 1 FROM evolution_evidence LIMIT 0')
+    ]);
+  } catch {
     throw new Error('Evolution Intelligence schema is not migrated. Run the guarded additive migration lane first.');
   }
 }
+
 export async function persistEvolutionReport(db, report = {}) {
   await assertEvolutionSchema(db);
   const recommendations = Array.isArray(report.recommendations) ? report.recommendations : [];

@@ -12,7 +12,7 @@ const enabled=Boolean(cfg.dataEnabled&&cfg.supabaseUrl&&cfg.supabasePublishableK
 function esc(value){return String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[ch])}
 function sourceAllowed(){return SERVICE_ID_RE.test(source)}
 function workspaceAllowed(){return !requestedWorkspace||(requestedWorkspace.length<=180&&WORKSPACE_KEY_RE.test(requestedWorkspace))}
-function authUrl(){const target=new URL(cfg.authUrl||'https://auth.ekodi.kr/?site=my');target.searchParams.set('site','my');target.searchParams.set('return_to',location.href.split('#')[0]);return target.href}
+function authUrl(){const target=new URL(cfg.authUrl||'https://ekodi.kr/auth/?site=my');target.searchParams.set('site','my');target.searchParams.set('return_to',location.href.split('#')[0]);return target.href}
 function canonicalWorkspacePath(key){return WORKSPACE_KEY_RE.test(String(key||''))?`/w/${encodeURIComponent(key)}`:'/#workspaces'}
 function rememberWorkspace(key){try{if(WORKSPACE_KEY_RE.test(String(key||'')))localStorage.setItem('ekodi_my_active_workspace',key)}catch{}}
 function planLabel(value){return ({free:'Free',basic:'Basic',standard:'Standard',pro:'Pro',enterprise:'Enterprise'})[String(value||'free').toLowerCase()]||String(value||'Free')}
@@ -20,7 +20,7 @@ function accessStatusLabel(value){return ({active:'이용 가능',pre_registered
 
 async function manifestService(){
   try{
-    const response=await fetch('/service-manifest.json',{cache:'no-store'});
+    const response=await fetch('/my/service-manifest.json',{cache:'no-store'});
     if(!response.ok)return null;
     const manifest=await response.json();
     return (manifest.services||[]).find(item=>item.id===source)||null;
@@ -70,7 +70,7 @@ async function resolve(){
   const sb=createClient(cfg.supabaseUrl,cfg.supabasePublishableKey,{auth:{detectSessionInUrl:true,persistSession:true}});
   const {data,error}=await sb.auth.getSession();
   const session=data?.session||null;
-  if(error||!session){render(section,{state:'로그인 필요',headline:'Google 무료회원 확인 후 이어집니다.',detail:'로그인 전에는 서비스 안내까지만 보이고 개인·공간 데이터는 읽지 않습니다.',copy:`${service.name}의 내 이용범위는 로그인 후 확인합니다.`,primaryLabel:'Google로 무료 시작',primaryHref:authUrl(),secondaryHref:serviceReturn});return}
+  if(error||!session){render(section,{state:'로그인 필요',headline:'Google 무료회원 확인 후 이어집니다.',detail:'공개 콘텐츠는 로그인 없이 계속 볼 수 있고, 개인·공간 데이터와 저장·작성 기능은 로그인 후 열립니다.',copy:`${service.name}의 내 이용범위는 로그인 후 확인합니다.`,primaryLabel:'Google로 무료 시작',primaryHref:authUrl(),secondaryHref:serviceReturn});return}
   const [{data:access,error:accessError},{data:rows,error:workspaceError}]=await Promise.all([
     sb.rpc('current_site_access',{p_site_key:source}),
     sb.rpc('current_site_workspaces',{p_site_key:source})

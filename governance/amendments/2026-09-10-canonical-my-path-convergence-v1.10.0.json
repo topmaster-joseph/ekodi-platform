@@ -1,0 +1,17 @@
+{
+  "id": "2026-09-10-canonical-my-path-convergence-v1.10.0",
+  "constitutionVersion": "1.10.0",
+  "status": "approved",
+  "approvedBy": "topmaster-joseph",
+  "approvedAt": "2026-09-10",
+  "changeClass": "C3",
+  "taskId": "daily-ops-remediation-20260910",
+  "summary": "Complete the already-approved one-domain migration by making ekodi.kr/my the canonical private workspace and My feature path in the constitutional routing patterns while retaining my.ekodi.kr only as a compatibility execution boundary.",
+  "approvalBasis": "The platform owner previously approved the one-domain multiple-security-realms model on 2026-09-08 and in this task explicitly instructed EKODI to continue through implementation, verification and production completion.",
+  "supersedesRuntimeEntry": "https://my.ekodi.kr",
+  "canonicalUserEntry": "https://ekodi.kr/my/",
+  "compatibilityPolicy": "Legacy my.ekodi.kr may remain only where required for redirect, runtime, OAuth/CORS transition or rollback compatibility; new first-party user navigation must use ekodi.kr/my.",
+  "securityImpact": "No security realm or authority is merged. Existing authentication, authorization, CSP, rate-limit and audit boundaries remain enforced behind the canonical path router.",
+  "rollback": "Revert this amendment and the two constitutional canonical path fields through the guarded release path while preserving the legacy My runtime boundary.",
+  "predecessorAmendment": "2026-09-08-one-domain-multiple-security-realms-v1.9.0"
+}

@@ -6,24 +6,55 @@ on:
     paths:
       - 'space/**'
       - 'space-worker.js'
+      - 'storefront-page.js'
+      - 'restaurant-storefront.js'
+      - 'restaurant-storefront-v2.js'
+      - 'jadam-storefront.js'
       - 'workspace-route-policy.js'
       - 'wrangler.space*.toml'
       - 'deploy/manifests/space.worker.json'
       - 'supabase/functions/workspace-api/**'
+      - 'supabase/migrations/20260906001000_store_operating_spaces.sql'
+      - 'supabase/migrations/20260906005000_store_user_site_provisioning.sql'
+      - 'supabase/migrations/20260909003000_storefront_public_snapshot.sql'
+      - 'supabase/migrations/20260906006000_store_admin_routing.sql'
+      - 'supabase/migrations/20260909001000_public_storefront.sql'
+      - 'supabase/tests/store_operating_spaces.test.sql'
+      - 'supabase/tests/store_user_site_provisioning.test.sql'
+      - 'test/store-operating-space.test.mjs'
+      - 'test/store-user-site-admin.test.mjs'
+      - 'test/storefront-public.test.mjs'
+      - 'test/jadam-storefront-brand.test.mjs'
       - '.github/workflows/deploy-space.yml'
   push:
     branches: [main]
     paths:
       - 'space/**'
       - 'space-worker.js'
+      - 'storefront-page.js'
+      - 'restaurant-storefront.js'
+      - 'restaurant-storefront-v2.js'
+      - 'jadam-storefront.js'
       - 'workspace-route-policy.js'
       - 'wrangler.space*.toml'
       - 'deploy/manifests/space.worker.json'
       - 'supabase/functions/workspace-api/**'
+      - 'supabase/migrations/20260906001000_store_operating_spaces.sql'
+      - 'supabase/migrations/20260906005000_store_user_site_provisioning.sql'
+      - 'supabase/migrations/20260909003000_storefront_public_snapshot.sql'
+      - 'supabase/migrations/20260906006000_store_admin_routing.sql'
+      - 'supabase/migrations/20260909001000_public_storefront.sql'
+      - 'supabase/tests/store_operating_spaces.test.sql'
+      - 'supabase/tests/store_user_site_provisioning.test.sql'
+      - 'test/store-operating-space.test.mjs'
+      - 'test/store-user-site-admin.test.mjs'
+      - 'test/storefront-public.test.mjs'
+      - 'test/jadam-storefront-brand.test.mjs'
       - '.github/workflows/deploy-space.yml'
 
 permissions:
   contents: read
+  pull-requests: read
 
 concurrency:
   group: ekodi-space-${{ github.event_name == 'pull_request' && format('staging-pr-{0}', github.event.pull_request.number) || 'production' }}
@@ -46,17 +77,30 @@ jobs:
         run: |
           set -euo pipefail
           node --check space-worker.js
+          node --check storefront-page.js
+          node --check restaurant-storefront.js
+          node --check restaurant-storefront-v2.js
+          node --check jadam-storefront.js
           node --check space/app.js
+          node --test test/store-operating-space.test.mjs test/store-user-site-admin.test.mjs test/storefront-public.test.mjs test/jadam-storefront-brand.test.mjs
           grep -Fq "pattern = \"space.ekodi.kr\"" wrangler.space.toml
           grep -Fq 'DATA_ENABLED = "false"' wrangler.space.staging.toml
           grep -Fq 'DATA_MODE = "isolated-staging"' wrangler.space.staging.toml
           grep -Fq 'ekodi_id -> workspace_id -> role -> capability' space-worker.js
           grep -Fq 'workspace_not_found_or_forbidden' supabase/functions/workspace-api/index.ts
           grep -Fq 'tenant_members+RLS' supabase/functions/workspace-api/index.ts
+          grep -Fq 'store_members+RLS' supabase/functions/workspace-api/index.ts
+          grep -Fq 'current_store_operating_spaces' supabase/functions/workspace-api/index.ts
+          grep -Fq '/spaces/store-dashboard' supabase/functions/workspace-api/index.ts
           grep -Fq 'space:["https://space.ekodi.kr"]' supabase/functions/workspace-api/index.ts
           grep -Fq '/spaces/resolve' space/app.js
           grep -Fq "routeModel:'/{slug}'" space-worker.js
           test -f deploy/manifests/space.worker.json
+          test -f supabase/migrations/20260906006000_store_admin_routing.sql
+          grep -Fq 'store_admin_route_profile' supabase/migrations/20260906006000_store_admin_routing.sql
+          grep -Fq 'store_public_storefront' supabase/migrations/20260909001000_public_storefront.sql
+          grep -Fq 'publicStorefront' space/index.html
+          grep -Fq 'storefront.json' platform-router-entry-worker.js
 
   staging:
     if: github.event_name == 'pull_request'
@@ -73,6 +117,8 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
+      - name: EKODI AI Orchestration Gate
+        run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
       - name: Verify Development boundary
         run: |
           set -euo pipefail
@@ -116,6 +162,8 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
+      - name: EKODI AI Orchestration Gate
+        run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
       - name: Verify production credentials
         run: |
           test -n "$CLOUDFLARE_API_TOKEN"
@@ -133,7 +181,8 @@ jobs:
               root=$(curl -sS -o /tmp/space-live.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://space.ekodi.kr/' || true)
               health=$(curl -sS -o /tmp/space-live-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://space.ekodi.kr/health' || true)
               route=$(curl -sS -D /tmp/space-live-route.headers -o /tmp/space-live-route.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://space.ekodi.kr/deployment-probe' || true)
-              if [[ "$root" == '200' && "$health" == '200' && "$route" == '200' ]] && grep -Fq 'OPERATING SPACE' /tmp/space-live.html && grep -Fq '"service":"ekodi-space"' /tmp/space-live-health.json && grep -Eiq '^x-ekodi-route:[[:space:]]*space-workspace' /tmp/space-live-route.headers; then
+              root_location=$(curl -sSI --connect-timeout 5 --max-time 15 'https://space.ekodi.kr/' | awk 'BEGIN{IGNORECASE=1} /^location:/{sub(/^[^:]+:[[:space:]]*/,""); gsub(/\r/,""); print}' | tail -1)
+              if [[ "$root" == '308' && "$root_location" == 'https://ekodi.kr/my/' && "$health" == '200' && "$route" == '200' ]] && grep -Fq '"service":"ekodi-space"' /tmp/space-live-health.json && grep -Eiq '^x-ekodi-route:[[:space:]]*space-workspace' /tmp/space-live-route.headers; then
                 echo 'Operating Space production bootstrap verified.'
                 exit 0
               fi

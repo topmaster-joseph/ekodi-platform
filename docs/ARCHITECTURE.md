@@ -32,6 +32,8 @@ Normal source changes deploy only the owning platform. Shared edge runtimes requ
 
 The canonical identity model is `Person + Space + Role + Capability`. A person can participate in multiple spaces without maintaining a separate identity for each service.
 
+Public workspace routing follows the Constitution: the canonical address is `ekodi.kr/{slug}`, while workspace kind remains internal metadata bound to immutable `workspace_id`. The `ekodi-space` Worker remains an internal Service Binding engine behind the apex workspace gateway. `space.ekodi.kr` is a legacy compatibility alias only and must redirect workspace paths to the apex; it is not a separate user-facing service.
+
 ### Control plane
 
 `admin.ekodi.kr` is a private operational command center, not a general-user dashboard. It exists for service health, domains, access, deployment observation, AI operations, audit, recovery, and manual fallback.

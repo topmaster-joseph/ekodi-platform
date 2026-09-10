@@ -1,4 +1,4 @@
-name: Release EKODI Invest Personalization API
+name: Validate EKODI Invest Personalization
 
 on:
   pull_request:
@@ -10,7 +10,6 @@ on:
       - 'workspace-platform-entry-worker.js'
       - 'platform-router-entry-worker.js'
       - 'my/user-ai-ui.js'
-      - 'deploy/manifests/workspace-platform.worker.json'
       - 'test/invest-personalization-contract.test.mjs'
       - '.github/workflows/release-invest-personalization.yml'
   push:
@@ -20,10 +19,6 @@ on:
 
 permissions:
   contents: read
-
-env:
-  WRANGLER_VERSION: '4.119.0'
-  API_STAGING_URL: https://ekodi-workspace-platform-api-staging.ekodi-development.workers.dev
 
 jobs:
   validate:
@@ -42,82 +37,8 @@ jobs:
           npm run build
           node scripts/validate-deployment-guardrails.mjs
 
-  workspace-staging:
-    if: github.event_name != 'pull_request'
-    environment: development
-    needs: validate
-    runs-on: ubuntu-latest
-    timeout-minutes: 18
-    env:
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: 46aad4738793fbaca88574832a2ccc0f
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
-        with:
-          node-version: '24'
-      - name: Resolve isolated Workspace staging D1
-        id: staging_d1
-        shell: bash
-        run: |
-          set -euo pipefail
-          list_db() { npx --yes wrangler@${WRANGLER_VERSION} d1 list --json | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{const j=JSON.parse(s);const a=Array.isArray(j)?j:(j.result||[]);const x=a.find(v=>v.name==='ekodi-workspace-staging');if(x)process.stdout.write(x.uuid||x.id||'')})"; }
-          DB_ID=$(list_db)
-          if [ -z "$DB_ID" ]; then npx --yes wrangler@${WRANGLER_VERSION} d1 create ekodi-workspace-staging --location apac; DB_ID=$(list_db); fi
-          test -n "$DB_ID"
-          echo "database_id=$DB_ID" >> "$GITHUB_OUTPUT"
-      - name: Build and deploy isolated Workspace staging
-        env:
-          DB_ID: ${{ steps.staging_d1.outputs.database_id }}
-        run: |
-          cat > wrangler.invest.runtime.toml <<EOF
-          name = "ekodi-workspace-platform-api-staging"
-          main = "workspace-platform-entry-worker.js"
-          compatibility_date = "2026-08-18"
-          workers_dev = true
-          preview_urls = false
-          [vars]
-          ENVIRONMENT = "staging"
-          ALLOW_MUTATIONS = "false"
-          ALLOWED_ORIGINS = "https://messenger.ekodi.kr,https://invest.ekodi.kr,https://my.ekodi.kr"
-          [[d1_databases]]
-          binding = "DB"
-          database_name = "ekodi-workspace-staging"
-          database_id = "$DB_ID"
-          migrations_dir = "migrations"
-          EOF
-          npx --yes wrangler@${WRANGLER_VERSION} d1 migrations apply DB --remote --config wrangler.invest.runtime.toml
-          npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.invest.runtime.toml
-      - name: Verify isolated Workspace staging
-        run: |
-          set -euo pipefail
-          for attempt in $(seq 1 18); do
-            code=$(curl -sS -o /tmp/health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$API_STAGING_URL/health" || true)
-            if [ "$code" = '200' ] && grep -Fq '"investPersonalization":"v1"' /tmp/health.json && grep -Fq '"transactionExecution":false' /tmp/health.json; then exit 0; fi
-            sleep 4
-          done
-          exit 1
-
-  production-workspace:
-    needs: workspace-staging
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    timeout-minutes: 18
-    env:
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
-        with:
-          node-version: '24'
-      - name: Guarded Workspace API candidate then promote
-        run: node scripts/guarded-worker-release.mjs --manifest deploy/manifests/workspace-platform.worker.json
-      - name: Verify production personalized Invest API
-        run: |
-          curl -fsS 'https://workspace-api.ekodi.kr/health' > /tmp/health.json
-          grep -Fq '"officialDataProvider":"embedded-v1"' /tmp/health.json
-          grep -Fq '"investPersonalization":"v1"' /tmp/health.json
-
-# Shared Invest UI is intentionally not deployed here. It is part of the shared
-# ekodi.kr runtime and is promoted only by Deploy EKODI Shared Site Core.
+# Workspace API staging and production are deliberately NOT deployed here.
+# Release EKODI Conversation Foundation APIs is the single owner of
+# deploy/manifests/workspace-platform.worker.json and its staging Worker/D1.
+# Invest source changes are included in that canonical workflow's path filters,
+# so a validated Invest change is promoted through the shared Workspace gates.

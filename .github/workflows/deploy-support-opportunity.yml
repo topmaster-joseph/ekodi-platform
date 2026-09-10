@@ -37,7 +37,7 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
-  WRANGLER_VERSION: '4.119.0'
+  WRANGLER_VERSION: '4.129.0'
 
 jobs:
   validate:
@@ -53,8 +53,7 @@ jobs:
           set -euo pipefail
           node --check support-worker.js
           node --check support/core.js
-          node --check support/sources.js
-          node --check support/need-sensing.js
+          node --check support/sources.js`n          node --check support/need-sensing.js
           node --check support/app.js
           node --check support/service.js
           node --check support/specialists.js
@@ -83,14 +82,15 @@ jobs:
       STAGING_URL: https://ekodi-support-opportunity-staging.ekodi-development.workers.dev
     steps:
       - uses: actions/checkout@v7
+      - name: EKODI AI Orchestration Gate
+        run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
       - name: Verify Cloudflare credentials
         run: |
           test -n "$CLOUDFLARE_API_TOKEN"
           test -n "$CLOUDFLARE_ACCOUNT_ID"
       - name: Deploy isolated staging
         run: npx wrangler@${WRANGLER_VERSION} deploy --config wrangler.support.staging.toml
-      - name: Verify protected staging and runtime contracts
-        shell: bash
+      - name: Verify staging
         run: |
           set -euo pipefail
           remote_protected=0
@@ -100,16 +100,15 @@ jobs:
             if [[ -n "$runtime_pid" ]]; then kill "$runtime_pid" 2>/dev/null || true; fi
           }
           trap cleanup EXIT
-
           access_code=$(curl -sS -D /tmp/support-access.headers -o /tmp/support-access.body -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/health" || true)
-          if [[ "$access_code" == '302' ]] && grep -Eiq '^www-authenticate:[[:space:]]*Cloudflare-Access' /tmp/support-access.headers; then
+          if [[ "$access_code" == '302' ]] && grep -iq '^Www-Authenticate: Cloudflare-Access' /tmp/support-access.headers; then
             remote_protected=1
-            echo 'Support staging is protected by Cloudflare Access. Keeping Access enabled and validating the exact staging configuration locally.'
+            echo 'Support Opportunity staging is protected by Cloudflare Access. Keeping Access enabled and validating the exact staging configuration locally.'
             npx --yes wrangler@${WRANGLER_VERSION} deployments status --config wrangler.support.staging.toml --json > /tmp/support-deployments.json
             test -s /tmp/support-deployments.json
-            npx --yes wrangler@4.129.0 dev --config wrangler.support.staging.toml --local --port 8791 >/tmp/support-local.log 2>&1 &
+            npx --yes wrangler@${WRANGLER_VERSION} dev --config wrangler.support.staging.toml --local --port 8797 >/tmp/support-local.log 2>&1 &
             runtime_pid=$!
-            verify_base='http://127.0.0.1:8791'
+            verify_base='http://127.0.0.1:8797'
             ready=0
             for attempt in $(seq 1 30); do
               if curl -sSf --max-time 5 "$verify_base/health" >/dev/null 2>&1; then ready=1; break; fi
@@ -123,7 +122,6 @@ jobs:
             cat /tmp/support-access.body >&2 || true
             exit 1
           fi
-
           specialist_paths=(grants subsidies scholarships contests welfare private-support sponsorship)
           no_consent='{"profile":{"profileType":"business","region":"Jeonnam","need":"AI marketing support","interests":["AI"]},"needContext":{"consent":{"proactiveBenefits":false,"activityContext":false,"externalData":false,"sensitiveBenefits":false},"signals":[]}}'
           yes_consent='{"profile":{"profileType":"business","region":"Jeonnam","need":"AI marketing support","interests":["AI"]},"needContext":{"consent":{"proactiveBenefits":true,"activityContext":false,"externalData":false,"sensitiveBenefits":false},"signals":[]}}'
@@ -137,7 +135,7 @@ jobs:
             specialist_ok=true
             for path in "${specialist_paths[@]}"; do
               code=$(curl -L -sS -o "/tmp/support-${path}.html" -w '%{http_code}' --connect-timeout 5 --max-time 15 "$verify_base/$path" || true)
-              if [[ "$code" != '200' ]] || ! grep -Fq 'SPECIALIST WORKSPACE' "/tmp/support-${path}.html" || ! grep -Fq 'SHARED OPPORTUNITY CORE' "/tmp/support-${path}.html"; then
+              if [[ "$code" != '200' ]] || ! grep -Fq 'SPECIALIST WORKSPACE · SHARED OPPORTUNITY CORE' "/tmp/support-${path}.html"; then
                 echo "specialist staging route failed path=$path code=$code"
                 specialist_ok=false
               fi
@@ -158,7 +156,7 @@ jobs:
               && grep -Fq '"proactiveEligible":true' /tmp/support-need-yes.json \
               && grep -Eiq '^x-ekodi-shell: v2' /tmp/support-headers; then
               if [[ "$remote_protected" == '1' ]]; then
-                echo 'Support staging deployment exists in Development, Access remains enforced, and exact staging runtime contracts including consent-first Benefit Radar pass locally.'
+                echo 'Support staging deployment exists, Cloudflare Access remains enforced, and exact staging runtime contracts including consent-first Benefit Radar pass locally.'
               else
                 echo 'Support root, APIs, consent-first Benefit Radar and all seven specialist staging routes verified remotely.'
               fi
@@ -188,6 +186,8 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
+      - name: EKODI AI Orchestration Gate
+        run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
       - name: Wait for Shell contract
         run: |
           set -euo pipefail

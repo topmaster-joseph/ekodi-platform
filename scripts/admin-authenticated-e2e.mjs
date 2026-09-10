@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { chromium } from 'playwright';
+import { adminMenuOrder, getAdminMenuGroupForSection } from '../admin-menu-registry.js';
 
 const token = String(process.env.E2E_ADMIN_TOKEN || '').trim();
 if (!token) throw new Error('E2E_ADMIN_TOKEN is required');
@@ -34,17 +35,8 @@ const authenticatedEntryUrl = `${baseUrl}?route=finance#ekodi_admin_token=${toke
 const artifactsDir = path.resolve('artifacts/admin-authenticated-e2e');
 await fs.mkdir(artifactsDir, { recursive: true });
 
-const groups = {
-  campus: 'home', 'public-site-controls': 'home',
-  work: 'operations', communication: 'operations',
-  workspace: 'people', organization: 'people', 'cheonggye-members': 'people', clients: 'people', admins: 'people',
-  'life-ai': 'services', community: 'services', books: 'services', social: 'services',
-  aiops: 'ai', devotional: 'ai', 'marketing-ai': 'ai', 'ai-module-spec': 'ai', 'ai-membership': 'ai',
-  finance: 'business', tax: 'business', affiliates: 'business',
-  storage: 'data', 'api-cost': 'data',
-  health: 'system', security: 'system', devices: 'system', architecture: 'system',
-};
-const menuIds = Object.keys(groups);
+const menuIds = adminMenuOrder();
+const groups = Object.fromEntries(menuIds.map(id => [id, getAdminMenuGroupForSection(id)]));
 const expectedMenuCount = menuIds.length;
 const internalMenuIds = menuIds.filter(id => id !== 'tax');
 const results = [];
@@ -113,9 +105,32 @@ async function waitForVisiblePanel(id) {
       const ids = String(panel.dataset.panel || '').split(/\s+/).filter(Boolean);
       if (!ids.includes(section)) return false;
       const style = getComputedStyle(panel);
-      return !panel.hidden && !panel.classList.contains('hidden-panel') && style.display !== 'none' && style.visibility !== 'hidden';
+      const text = String(panel.innerText || '').replace(/\s+/g, ' ').trim();
+      return !panel.hidden && !panel.classList.contains('hidden-panel') && style.display !== 'none' && style.visibility !== 'hidden' && text.length >= 4;
     });
   }, id, { timeout: 5_000 });
+}
+
+async function waitForSettledPanel(id, timeout = 8_000) {
+  await page.waitForFunction(section => {
+    const panel = [...document.querySelectorAll('[data-panel]')].find(node => {
+      const ids = String(node.dataset.panel || '').split(/\s+/).filter(Boolean);
+      if (!ids.includes(section)) return false;
+      const style = getComputedStyle(node);
+      return !node.hidden && !node.classList.contains('hidden-panel') && style.display !== 'none' && style.visibility !== 'hidden';
+    });
+    if (!panel) return false;
+    const text = String(panel.innerText || '').replace(/\s+/g, ' ').trim();
+    const busy = [panel, ...panel.querySelectorAll('[aria-busy="true"],.loading,.spinner')].some(node => {
+      if (!node.matches('[aria-busy="true"],.loading,.spinner')) return false;
+      const style = getComputedStyle(node);
+      return node.getAttribute('aria-hidden') !== 'true'
+        && !node.hidden
+        && style.display !== 'none'
+        && style.visibility !== 'hidden';
+    });
+    return text.length >= 4 && !busy;
+  }, id, { timeout });
 }
 
 async function menuDiagnostics(id) {
@@ -129,9 +144,13 @@ async function menuDiagnostics(id) {
     });
     const selected = document.querySelector(`button.admin-context-tab[data-admin-context-section="${section}"]`);
     const text = String(panel?.innerText || '').replace(/\s+/g, ' ').trim();
-    const busy = panel ? [...panel.querySelectorAll('[aria-busy="true"],.loading,.spinner')].filter(node => {
+    const busy = panel ? [panel, ...panel.querySelectorAll('[aria-busy="true"],.loading,.spinner')].filter(node => {
+      if (!node.matches('[aria-busy="true"],.loading,.spinner')) return false;
       const style = getComputedStyle(node);
-      return !node.hidden && style.display !== 'none' && style.visibility !== 'hidden';
+      return node.getAttribute('aria-hidden') !== 'true'
+        && !node.hidden
+        && style.display !== 'none'
+        && style.visibility !== 'hidden';
     }).length : 0;
     return {
       panelFound: Boolean(panel),
@@ -145,22 +164,95 @@ async function menuDiagnostics(id) {
   }, id), 5_000, `${id} diagnostics`);
 }
 
+let selectedWorkArea = null;
+
+async function dispatchClick(locator, timeout = 5_000) {
+  await locator.waitFor({ state: 'visible', timeout });
+  await locator.evaluate(node => { setTimeout(() => node.click(), 0); return true; });
+}
+
+async function selectWorkArea(group) {
+  if (selectedWorkArea === group) return;
+  const global = globalButton(group);
+  await global.waitFor({ state: 'visible', timeout: 5_000 });
+  const active = await global.evaluate(node => node.getAttribute('aria-current') === 'page' || node.classList.contains('active'));
+  if (!active) await dispatchClick(global);
+  await page.waitForFunction(target => [...document.querySelectorAll('button[data-admin-global-group]')].some(node => node.dataset.adminGlobalGroup === target && (node.getAttribute('aria-current') === 'page' || node.classList.contains('active'))), group, { timeout: 5_000 });
+  selectedWorkArea = group;
+}
+
+async function storageReauthHandoff(id, group, started, handoffUrl) {
+  const destination = new URL(handoffUrl);
+  if (destination.hostname !== 'accounts.google.com') {
+    throw new Error(`${id}: unexpected external handoff ${destination.hostname}`);
+  }
+  const result = {
+    id,
+    group,
+    ok: true,
+    durationMs: Date.now() - started,
+    reauthHandoff: true,
+    destinationHost: destination.hostname,
+  };
+  results.push(result);
+  console.log(`[E2E] ${id}: Google reauth handoff verified ${result.durationMs}ms`);
+  stage(`menu-${id}-reauth-return`);
+  await page.goto(authenticatedEntryUrl, { waitUntil: 'domcontentloaded', timeout: 15_000 });
+  selectedWorkArea = null;
+  await waitForAdminReady();
+}
+
+function storageExternalNavigationRequest() {
+  return page.waitForRequest(request => {
+    try {
+      const destination = new URL(request.url());
+      return request.isNavigationRequest()
+        && request.frame() === page.mainFrame()
+        && destination.hostname !== 'admin.ekodi.kr';
+    } catch {
+      return false;
+    }
+  }, { timeout: 10_000 }).then(request => request.url()).catch(() => null);
+}
+
 async function clickMenu(id) {
   const started = Date.now();
   const group = groups[id];
   stage(`menu-${id}-global`);
   console.log(`[E2E] ${id}: begin`);
   try {
-    const global = globalButton(group);
-    await global.waitFor({ state: 'visible', timeout: 5_000 });
-    await global.click({ timeout: 5_000 });
+    await selectWorkArea(group);
 
     stage(`menu-${id}-tab`);
     const tab = page.locator(`button.admin-context-tab[data-admin-context-section="${id}"]`);
     await tab.waitFor({ state: 'visible', timeout: 5_000 });
-    await tab.click({ timeout: 5_000 });
+    const storageNavigation = id === 'storage' ? storageExternalNavigationRequest() : null;
+    await dispatchClick(tab);
     stage(`menu-${id}-panel`);
-    await waitForVisiblePanel(id);
+
+    if (id === 'storage') {
+      const panelOutcome = waitForSettledPanel(id)
+        .then(() => ({ kind: 'panel' }))
+        .catch(error => ({ kind: 'panel-error', error }));
+      const first = await Promise.race([
+        panelOutcome,
+        storageNavigation.then(url => url ? { kind: 'handoff', url } : { kind: 'handoff-timeout' }),
+      ]);
+      if (first.kind === 'handoff') {
+        await storageReauthHandoff(id, group, started, first.url);
+        return;
+      }
+      if (first.kind === 'panel-error') {
+        const handoffUrl = await Promise.race([storageNavigation, page.waitForTimeout(1_500).then(() => null)]);
+        if (handoffUrl) {
+          await storageReauthHandoff(id, group, started, handoffUrl);
+          return;
+        }
+        throw first.error;
+      }
+    } else {
+      await waitForVisiblePanel(id);
+    }
 
     let state = await menuDiagnostics(id);
     if (!state.panelFound) throw new Error('visible panel not found');
@@ -169,7 +261,7 @@ async function clickMenu(id) {
 
     if (state.busy) {
       stage(`menu-${id}-loading`);
-      await page.waitForTimeout(2_000);
+      await waitForSettledPanel(id, 8_000);
       state = await menuDiagnostics(id);
       if (state.busy) throw new Error('loading indicator remained active');
     }
@@ -185,11 +277,10 @@ async function clickMenu(id) {
 
 async function clickTaxHandoff() {
   const started = Date.now();
+  const group = groups.tax;
   stage('menu-tax-global');
   console.log('[E2E] tax: begin');
-  const global = globalButton('business');
-  await global.waitFor({ state: 'visible', timeout: 5_000 });
-  await global.click({ timeout: 5_000 });
+  await selectWorkArea(group);
   stage('menu-tax-tab');
   const taxTab = page.locator('button.admin-context-tab[data-admin-context-section="tax"]');
   await taxTab.waitFor({ state: 'visible', timeout: 5_000 });
@@ -197,15 +288,16 @@ async function clickTaxHandoff() {
   const [response] = await Promise.all([
     page.waitForResponse(response => response.request().resourceType() === 'document' && response.url().startsWith('https://tax.ekodi.kr/'), { timeout: 10_000 }).catch(() => null),
     page.waitForURL(url => url.hostname === 'tax.ekodi.kr', { timeout: 10_000 }),
-    taxTab.click({ timeout: 5_000 }),
+    dispatchClick(taxTab),
   ]);
   if (response && !(response.status() >= 200 && response.status() < 400)) throw new Error(`tax: destination returned HTTP ${response.status()}`);
   if (new URL(page.url()).hostname !== 'tax.ekodi.kr') throw new Error(`tax: wrong handoff destination ${page.url()}`);
-  const result = { id: 'tax', group: 'business', ok: true, durationMs: Date.now() - started, destination: 'https://tax.ekodi.kr/' };
+  const result = { id: 'tax', group, ok: true, durationMs: Date.now() - started, destination: 'https://tax.ekodi.kr/' };
   results.push(result);
   console.log(`[E2E] tax: ok ${result.durationMs}ms`);
   stage('tax-return-admin');
   await page.goto(authenticatedEntryUrl, { waitUntil: 'domcontentloaded', timeout: 15_000 });
+  selectedWorkArea = null;
   await waitForAdminReady();
 }
 

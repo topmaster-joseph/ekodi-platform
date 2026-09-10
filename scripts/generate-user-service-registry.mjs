@@ -14,7 +14,7 @@ const AVAILABLE_STATUSES = new Set(['live', 'beta']);
 
 const raw = JSON.parse(fs.readFileSync(sourcePath, 'utf8'));
 const services = Array.isArray(raw.services) ? raw.services : [];
-const normalized = services.map((service) => {
+const normalized = services.filter(service => service.userVisible !== false).map((service) => {
   const id = String(service?.id || '').trim().toLowerCase();
   const sourceUrl = String(service?.url || (service?.domain ? `https://${service.domain}` : '')).trim();
   let parsed = null;

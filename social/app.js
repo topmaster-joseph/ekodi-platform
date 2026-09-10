@@ -6,7 +6,7 @@ let authClientPromise=null;
 
 function workspacePickerHref(){
   const current=new URL(location.href);current.hash='';
-  const target=new URL('https://my.ekodi.kr/');
+  const target=new URL('https://ekodi.kr/my/');
   target.searchParams.set('return_to',current.href);target.hash='workspaces';
   return target.href;
 }

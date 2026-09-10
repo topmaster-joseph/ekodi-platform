@@ -1,0 +1,125 @@
+/* EKODI Design Engine · Admin Surface v1
+ * Five-axis primary navigation, light operational canvas, contained EKODIAN layer.
+ */
+body.admin-compact.ekodi-admin-design-engine{
+  padding-top:0!important;
+  background:#f6f8fb!important;
+  color:#172033!important;
+  --admin-readable:#172033;
+  --admin-secondary:#66768a;
+  --admin-border:#d9e2ec;
+  --admin-soft:#f1f5f9;
+  --admin-active:#edf4ff;
+}
+body.admin-compact.ekodi-admin-design-engine .app{
+  height:100dvh!important;
+  overflow:hidden!important;
+}
+body.admin-compact.ekodi-admin-design-engine .app>main{
+  height:100dvh!important;
+  min-height:0!important;
+  overflow-y:auto!important;
+  overflow-x:hidden!important;
+  overscroll-behavior:contain!important;
+}
+body.admin-compact.ekodi-admin-design-engine .sidebar{
+  background:#fff!important;
+  border-right:1px solid #d9e2ec!important;
+  box-shadow:none!important;
+  overflow:hidden!important;
+}
+body.admin-compact.ekodi-admin-design-engine .sidebar nav{
+  overflow-y:hidden!important;
+  overflow-x:hidden!important;
+  overscroll-behavior:none!important;
+  scrollbar-width:none!important;
+}
+body.admin-compact.ekodi-admin-design-engine .sidebar nav::-webkit-scrollbar{display:none!important}
+body.admin-compact.ekodi-admin-design-engine .admin-global-nav{
+  min-height:42px!important;
+  border-radius:9px!important;
+  color:#40566d!important;
+}
+body.admin-compact.ekodi-admin-design-engine .admin-global-nav:hover{
+  border-color:#d5e6ef!important;
+  background:#eef7fb!important;
+  color:#123c58!important;
+}
+body.admin-compact.ekodi-admin-design-engine .admin-global-nav.active{
+  border-color:#b7d4f6!important;
+  background:#edf4ff!important;
+  color:#0b4f8a!important;
+}
+body.admin-compact.ekodi-admin-design-engine .admin-global-nav b{color:#52738a!important}
+body.admin-compact.ekodi-admin-design-engine .admin-global-nav.active b{color:#155eef!important}
+body.admin-compact.ekodi-admin-design-engine .admin-context-tabs-shell{
+  position:sticky!important;
+  top:0!important;
+  z-index:35!important;
+  min-height:50px!important;
+  border-bottom:1px solid #d9e2ec!important;
+  background:rgba(255,255,255,.98)!important;
+  color:#172033!important;
+  box-shadow:none!important;
+  backdrop-filter:none!important;
+}
+body.admin-compact.ekodi-admin-design-engine .admin-context-title{color:#66768a!important}
+body.admin-compact.ekodi-admin-design-engine .admin-context-tab{
+  color:#52657a!important;
+  background:transparent!important;
+}
+body.admin-compact.ekodi-admin-design-engine .admin-context-tab:hover{
+  background:#f1f5f9!important;
+  color:#172033!important;
+}
+body.admin-compact.ekodi-admin-design-engine .admin-context-tab.active{
+  border-color:#bfd5ee!important;
+  background:#edf4ff!important;
+  color:#0b5cab!important;
+}
+body.admin-compact.ekodi-admin-design-engine .admin-capability-shortcut{
+  border-color:#bfd5ee!important;
+  background:#f3f8ff!important;
+  color:#0b5cab!important;
+}
+body.admin-compact.ekodi-admin-design-engine main,
+body.admin-compact.ekodi-admin-design-engine .content{background:#f6f8fb!important;color:#172033!important}
+body.admin-compact.ekodi-admin-design-engine .content :is(h1,h2,h3,strong){color:#172033!important}
+body.admin-compact.ekodi-admin-design-engine .content :is(p,small,.muted){color:#66768a!important}
+
+/* EKODIAN is a contextual helper, never persistent chrome over operational content. */
+body.admin-compact.ekodi-admin-design-engine [data-ekodian-character]{
+  position:relative!important;
+  inset:auto!important;
+  z-index:auto!important;
+  display:block;
+  max-inline-size:96px;
+  max-block-size:120px;
+  margin:0;
+  contain:layout paint;
+}
+body.admin-compact.ekodi-admin-design-engine [data-ekodian-character][data-ekodian-role="empty-state"],
+body.admin-compact.ekodi-admin-design-engine [data-ekodian-character][data-ekodian-role="onboarding"]{max-inline-size:128px}
+
+/* Generation 10 autonomous-health surfaces inherit the same transparent light control-plane canvas. */
+body.admin-compact.ekodi-admin-design-engine .autonomous-health-panel{
+  --panel:#fff;
+  --line:#d9e2ec;
+  color:#172033;
+}
+body.admin-compact.ekodi-admin-design-engine .autonomous-health-grid article,
+body.admin-compact.ekodi-admin-design-engine .autonomous-health-head{
+  box-shadow:none;
+}
+body.admin-compact.ekodi-admin-design-engine .autonomous-health-actions{
+  color:#52657a;
+  background:#f1f5f9;
+}
+@media(max-width:760px){
+  body.admin-compact.ekodi-admin-design-engine .admin-context-tabs-shell{min-height:46px!important;padding-inline:10px!important}
+  body.admin-compact.ekodi-admin-design-engine [data-ekodian-character]{max-inline-size:76px;max-block-size:96px}
+}
+@media(prefers-reduced-motion:reduce){
+  body.admin-compact.ekodi-admin-design-engine [data-ekodian-character],
+  body.admin-compact.ekodi-admin-design-engine [data-ekodian-character] *{animation:none!important;transition:none!important}
+}

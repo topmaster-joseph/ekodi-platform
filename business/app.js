@@ -53,9 +53,11 @@ async function authedPost(path,body){
   return data;
 }
 
+function canonicalBusinessSurface(){return location.hostname==='ekodi.kr'&&(location.pathname==='/business'||location.pathname.startsWith('/business/'))}
 function routeWorkspaceId(){
   const path=location.pathname.replace(/^\/+|\/+$/g,'').toLowerCase();
-  if(path)return path;
+  if(path.startsWith('business/'))return path.slice('business/'.length).split('/')[0];
+  if(path&&path!=='business')return path;
   const query=new URLSearchParams(location.search).get('workspace');
   return String(query||state.session?.handoffWorkspace||localStorage.getItem('ekodi-business-workspace')||cfg.defaultWorkspace||'ekodibiz').toLowerCase();
 }
@@ -160,7 +162,7 @@ async function checkAction(){
 }
 async function selectWorkspace(id,{push=true}={}){
   const workspace=state.workspaces.find(item=>item.id===id)||state.workspaces[0];if(!workspace)return;
-  if(push&&location.pathname!==`/${workspace.id}`)history.pushState({workspace:workspace.id},'',`/${workspace.id}`);
+  const nextPath=canonicalBusinessSurface()?`/business/${workspace.id}`:`/${workspace.id}`; if(push&&location.pathname!==nextPath)history.pushState({workspace:workspace.id},'',nextPath);
   const response=await fetch(`/api/workspace/${encodeURIComponent(workspace.id)}`,{headers:{accept:'application/json'}});if(!response.ok)throw new Error(`workspace_${response.status}`);
   const payload=await response.json();const live=await loadLiveSnapshot(workspace.id);renderWorkspace(payload,live.snapshot,live.error);
 }

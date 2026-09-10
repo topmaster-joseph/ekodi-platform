@@ -1,7 +1,8 @@
-# Admin site rollout: password recovery interface
+﻿# Admin site rollout: password recovery interface
 # Tax release trigger: serialize Shared Site deployment for NTS business registry
 # Mall canonical release: publish ekodi.kr/ekodibiz/mall disclosures and centered footer
 # CGMA public domain remains externally DNS-managed until the approved cutover stage; ekodi.kr/cgma stays canonical inside EKODI.
+# Domain ownership reconcile 2026-09-08: re-apply declared custom domains after mail.ekodi.kr drifted to an external redirect.
 name = "shy-thunder-39a4"
 main = "platform-router-entry-worker.js"
 compatibility_date = "2026-08-12"
@@ -18,6 +19,21 @@ custom_domain = true
 [[routes]]
 pattern = "www.ekodi.kr"
 custom_domain = true
+
+# Canonical Mail contact and send API must reach the Shared Site Worker before asset fallback.
+[[routes]]
+pattern = "ekodi.kr/mail*"
+zone_name = "ekodi.kr"
+
+# Canonical private EKODIBIZ trade workspace must outrank public/static trade assets.
+[[routes]]
+pattern = "ekodi.kr/ekodibiz/trade*"
+zone_name = "ekodi.kr"
+
+# Canonical Church admin must outrank the public /ekodichurch* path gateway.
+[[routes]]
+pattern = "ekodi.kr/ekodichurch/admin*"
+zone_name = "ekodi.kr"
 
 [[routes]]
 pattern = "trade.ekodi.kr"
@@ -47,9 +63,6 @@ custom_domain = true
 pattern = "invest.ekodi.kr"
 custom_domain = true
 
-[[routes]]
-pattern = "ai.ekodi.kr"
-custom_domain = true
 
 [[routes]]
 pattern = "admin.ekodi.kr"
@@ -73,14 +86,6 @@ custom_domain = true
 
 [[routes]]
 pattern = "mail.ekodi.kr"
-custom_domain = true
-
-[[routes]]
-pattern = "mail.biz.ekodi.kr"
-custom_domain = true
-
-[[routes]]
-pattern = "mail.church.ekodi.kr"
 custom_domain = true
 
 [[routes]]
@@ -123,11 +128,30 @@ service = "ekodi-space"
 binding = "EKODIBIZ"
 service = "ekodibiz-revenue-os"
 
+[[services]]
+binding = "MY"
+service = "ekodi-my"
+
+[[services]]
+binding = "BIBLE"
+service = "ekodi-bible-conversation"
+
+[[services]]
+binding = "CONTROL_API"
+service = "ekodi-auth-api"
+
 [[d1_databases]]
 binding = "DB"
 database_name = "ekodi-auth"
 database_id = "e38778f1-b059-4fe7-8816-300f3eec6e19"
 migrations_dir = "migrations"
+
+[[ratelimits]]
+name = "MAIL_CONTACT_RATE_LIMITER"
+namespace_id = "3901"
+[ratelimits.simple]
+limit = 5
+period = 60
 
 [assets]
 directory = "./dist"
@@ -138,4 +162,4 @@ binding = "ASSETS"
 # fingerprinted shared Admin menu modules, which require Worker cache/security headers.
 # Public legal/history/mall paths use glob matching so extensionless HTML routing
 # cannot bypass the common User UI Shell contract.
-run_worker_first = ["/", "/privacy*", "/terms*", "/history*", "/mall*", "/org/ekodibiz*", "/ekodibiz*", "/deployment-probe", "/_ekodi/space/*", "/_ekodi/ekodibiz/*", "/auth/start", "/workspace-admin.css", "/workspace-admin.js", "/workspace-trade-admin.js", "/workspace-trade-portal.css", "/workspace-trade-portal.js", "/admin", "/control-center", "/control-center/", "/control-center.html", "/api/*", "/auth.js", "/auth-router.js", "/marketing-auth-hotfix.js", "/auth-workspace-target.js", "/admin-auth.js", "/client-auth.js", "/author-auth.js", "/business-auth.js", "/marketing-onboarding.js", "/membership-ui.js", "/control-center.css", "/admin-shell.css", "/admin-central-handoff.js", "/admin-authenticated-shell.js", "/compact-control-center.js", "/compact-control-center.css", "/admin-compact.js", "/admin-compact.css", "/admin-menu-layout.js", "/admin-menu-registry.js", "/admin-sidebar.js", "/admin-menu-runtime.js", "/admin-demand-loader.js", "/admin-public-site-controls.js", "/admin-perf-diagnostics.js", "/device-browser-diagnostics.js", "/device-browser-diagnostics.css", "/admin-lazy-features.js", "/ai-ops-admin.css", "/system-health-admin.js", "/system-health-admin.css"]
+run_worker_first = ["/", "/bible*", "/preview*", "/privacy*", "/terms*", "/history*", "/insurance*", "/mall*", "/org/ekodibiz*", "/ekodibiz*", "/ekodi-church*", "/ekodichurch*", "/jadam/marketing*", "/pizzamaru/marketing*", "/pizzamaru/mokpodae*", "/yogurt/marketing*", "/cgma/marketing*", "/mail*", "/deployment-probe", "/_ekodi/space/*", "/_ekodi/ekodibiz/*", "/auth", "/auth/*", "/workspace-admin.css", "/workspace-admin.js", "/workspace-trade-admin.js", "/church-pastor-admin.js", "/workspace-trade-portal.css", "/workspace-trade-portal.js", "/admin", "/control-center", "/control-center/", "/control-center.html", "/api/*", "/auth.js", "/auth-router.js", "/marketing-auth-hotfix.js", "/auth-workspace-target.js", "/admin-auth.js", "/google-origin-bridge", "/google-origin-bridge.js", "/client-auth.js", "/author-auth.js", "/business-auth.js", "/marketing-onboarding.js", "/membership-ui.js", "/control-center.css", "/admin-shell.css", "/admin-central-handoff.js", "/admin-authenticated-shell.js", "/compact-control-center.js", "/compact-control-center.css", "/admin-compact.js", "/admin-compact.css", "/admin-menu-layout.js", "/admin-menu-registry.js", "/admin-sidebar.js", "/admin-menu-runtime.js", "/admin-demand-loader.js", "/admin-public-site-controls.js", "/admin-perf-diagnostics.js", "/device-browser-diagnostics.js", "/device-browser-diagnostics.css", "/admin-lazy-features.js", "/ai-ops-admin.css", "/system-health-admin.js", "/system-health-admin.css"]

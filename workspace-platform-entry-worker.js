@@ -5,17 +5,11 @@ import { handleProfileEvidenceApi, profileSchemaReady } from './profile-evidence
 import { createOfficialProfileDataBinding, officialDataConnections } from './profile-official-data-adapter.js';
 import { handleInvestPersonalizationApi } from './invest-personalization-runtime.js';
 import { handleDesignProfileApi } from './design-profile-runtime.js';
+import { d1SchemaReady } from './d1-schema-readiness.js';
 
-async function designProfileSchemaReady(env){if(!env?.DB)return false;try{return Boolean(await env.DB.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='site_design_profiles'").first())}catch{return false}}
+async function designProfileSchemaReady(env){ return d1SchemaReady(env?.DB,['site_design_profiles']); }
 
-async function conversationSchemaReady(env){
-  if(!env?.DB)return false;
-  try{
-    const names=['messenger_outbox','messenger_identity_audit'];
-    const rows=await env.DB.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name IN (?,?)").bind(...names).all();
-    return new Set((rows.results||[]).map(row=>row.name)).size===names.length;
-  }catch{return false}
-}
+async function conversationSchemaReady(env){ return d1SchemaReady(env?.DB,['messenger_outbox','messenger_identity_audit']); }
 
 function scheduleOutboxRecovery(env,ctx,limit=8){
   const task=drainMessengerOutbox(env,{limit}).catch(error=>({processed:0,failed:1,error:String(error?.message||error)}));

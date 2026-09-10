@@ -1,6 +1,7 @@
 name: Deploy EKODI Work Staging
 
 on:
+  workflow_call:
   workflow_dispatch:
   pull_request:
     paths:
@@ -31,6 +32,8 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
+      - name: EKODI AI Orchestration Gate
+        run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
       - name: Static validation
         run: |
           set -euo pipefail

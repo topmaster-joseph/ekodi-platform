@@ -73,18 +73,25 @@ test('device browser diagnostics are shipped and stay on the immutable admin wor
   assert.match(smoke, /\.admin-browser-diagnostic/);
 });
 
-test('shared admin navigation exposes eight work areas with top contextual tabs', async () => {
+test('shared admin navigation exposes five canonical axes with top contextual tabs', async () => {
   const registry = await read('admin-menu-registry.js');
   const sidebar = await read('admin-sidebar.js');
   const postbuild = await read('scripts/admin-performance-postbuild.mjs');
   assert.doesNotMatch(registry, /id: 'overview'/);
-  for (const area of ['home', 'operations', 'people', 'services', 'ai', 'business', 'data', 'system']) assert.match(registry, new RegExp(`id: '${area}'`));
-  for (const retired of ['site-management', 'security-audit', 'settings', 'access', 'space']) assert.doesNotMatch(registry, new RegExp(`id: '${retired}'`));
+  for (const area of ['home', 'operations', 'space', 'services', 'system']) assert.match(registry, new RegExp(`id: '${area}'`));
+  for (const retired of ['structure', 'core', 'common', 'vertical', 'tenants', 'operations-center', 'people', 'ai', 'business', 'data', 'site-management', 'security-audit', 'settings', 'access']) assert.doesNotMatch(registry, new RegExp(`id: '${retired}', icon:`));
+  assert.match(registry, /id: 'campus', group: 'home'/);
+  assert.match(registry, /id: 'work', group: 'operations'/);
+  assert.match(registry, /id: 'clients', group: 'space'/);
+  assert.match(registry, /id: 'common-services', group: 'services'/);
+  assert.match(registry, /id: 'capabilities', group: 'system'/);
+  assert.match(registry, /id: 'devices', group: 'system'/);
   assert.match(sidebar, /RETIRED_MENU_SECTIONS = new Set\(\['overview'\]\)/);
   assert.match(sidebar, /admin-global-navs/);
   assert.match(sidebar, /admin-context-tabs-shell/);
   assert.match(sidebar, /admin-context-tabs/);
   assert.match(sidebar, /data-admin-context-section/);
+  assert.match(sidebar, /data-admin-capability-shortcut/);
   assert.match(sidebar, /admin-context-source/);
   assert.match(sidebar, /adminMenuGovernance = 'workbench-tabs-v2'/);
   assert.match(sidebar, /observer\.observe\(nav, \{ childList: true, subtree: false \}\)/);
@@ -93,7 +100,6 @@ test('shared admin navigation exposes eight work areas with top contextual tabs'
   assert.match(postbuild, /admin-menu-registry\.js/);
   assert.match(postbuild, /admin-sidebar\.js/);
 });
-
 test('tax admin subservice reuses the authenticated admin session through an explicit protected handoff', async () => {
   const registry = await read('admin-menu-registry.js');
   const runtime = await read('admin-menu-runtime.js');
@@ -111,9 +117,9 @@ test('tax admin subservice reuses the authenticated admin session through an exp
   assert.match(taxPortal, /history\.replaceState/);
 });
 
-test('AI membership admin presents the Core-first execution policy', async () => {
+test('AI membership admin presents the Core-governed personal-first execution policy', async () => {
   const panel = await read('user-ai-tier-panel.js');
-  assert.match(panel, /Core 우선 · AI 필요 시 자동 선택/);
+  assert.match(panel, /Core 통제 · 개인구독 → 개인 API → 지원 AI/);
   assert.match(panel, /대체 경로 준비됨/);
   assert.doesNotMatch(panel, /개인 API → EKODI → 개인 Web → Core/);
   assert.match(panel, /자동화·백그라운드·관리자·시스템 실행은 소비자 Web 세션에 의존하지 않습니다/);

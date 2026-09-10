@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { scoreOpportunity, seasonalDemandScore, MALL_SALES_INTELLIGENCE_DEFAULTS } from '../mall-sales-intelligence.js';
+import { scoreOpportunity, seasonalDemandScore, conversionFeedState, MALL_SALES_INTELLIGENCE_DEFAULTS } from '../mall-sales-intelligence.js';
 
 const read = path => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 
@@ -51,4 +51,23 @@ test('only bounded actions can be emitted', () => {
     scoreOpportunity({selectionScore:40}).action,
   ];
   for (const action of actions) assert.ok(['scale','test','observe','hold'].includes(action));
+});
+
+test('sales intelligence reports real product performance freshness', async () => {
+  const worker = await read('mall-sales-intelligence.js');
+  assert.match(worker,/productPerformanceStatus/);
+  assert.match(worker,/latestMetricDate/);
+  assert.match(worker,/'empty'/);
+  assert.match(worker,/'stale'/);
+  assert.match(worker,/productPerformance:performanceStatus\.status/);
+  assert.match(worker,/syncFirstPartyProductPerformance/);
+  assert.match(worker,/ekodi_first_party/);
+  assert.match(worker,/engagement_only/);
+  assert.match(worker,/firstPartyClicks30d/);
+});
+
+test('successful Coupang report feed distinguishes zero conversions from an absent feed', () => {
+  const now=new Date('2026-09-08T00:30:00Z');
+  assert.deepEqual(conversionFeedState({conversionRows:0,latestReportStatus:'success',latestReportRunAt:'2026-09-08T00:29:00Z'},now),{status:'ready_zero',feedReady:true});
+  assert.deepEqual(conversionFeedState({conversionRows:0,latestReportStatus:'',latestReportRunAt:null},now),{status:'empty',feedReady:false});
 });

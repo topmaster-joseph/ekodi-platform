@@ -47,6 +47,15 @@ export type PolicyRule = {
   projectionProfile?: ProjectionProfile;
 };
 
+export type PolicyCoverage = {
+  services?: string[];
+  resources?: string[];
+  actions?: string[];
+  rolesAny?: string[];
+  purposes?: string[];
+  maxRisk?: RiskLevel;
+};
+
 export type TrustDecision = {
   allowed: boolean;
   ruleId: string;
@@ -83,6 +92,16 @@ const riskRank: Record<RiskLevel, number> = {
 
 const clean = (value: unknown, max = 160) => String(value ?? "").trim().slice(0, max);
 
+export function canonicalCapability(namespace: string, resource: string, action: string) {
+  const ns = clean(namespace, 80).toLowerCase();
+  const target = clean(resource, 120).toLowerCase();
+  const verb = clean(action, 80).toLowerCase();
+  if (!/^[a-z0-9_-]+$/.test(ns) || !/^[a-z0-9_.-]+$/.test(target) || !/^[a-z0-9_.-]+$/.test(verb)) {
+    throw new Error("invalid_canonical_capability");
+  }
+  return `${ns}:${target}.${verb}`;
+}
+
 export function buildSecurityContext(input: SecurityContextInput): SecurityContext {
   const subjectId = clean(input.subjectId, 128);
   const service = clean(input.service, 80);
@@ -110,14 +129,22 @@ function tokenMatches(value: string, patterns?: string[]) {
   return patterns.some((pattern) => pattern === "*" || pattern === value);
 }
 
-function ruleMatches(ctx: SecurityContext, rule: PolicyRule) {
-  if (!tokenMatches(ctx.service, rule.services)) return false;
-  if (!tokenMatches(ctx.resource, rule.resources)) return false;
-  if (!tokenMatches(ctx.action, rule.actions)) return false;
-  if (rule.rolesAny?.length && !rule.rolesAny.some((role) => ctx.roles.includes(role))) return false;
-  if (rule.purposes?.length && (!ctx.purpose || !rule.purposes.includes(ctx.purpose))) return false;
-  if (rule.maxRisk && riskRank[ctx.risk] > riskRank[rule.maxRisk]) return false;
+function conditionMatches(ctx: SecurityContext, condition: PolicyCoverage) {
+  if (!tokenMatches(ctx.service, condition.services)) return false;
+  if (!tokenMatches(ctx.resource, condition.resources)) return false;
+  if (!tokenMatches(ctx.action, condition.actions)) return false;
+  if (condition.rolesAny?.length && !condition.rolesAny.some((role) => ctx.roles.includes(role))) return false;
+  if (condition.purposes?.length && (!ctx.purpose || !condition.purposes.includes(ctx.purpose))) return false;
+  if (condition.maxRisk && riskRank[ctx.risk] > riskRank[condition.maxRisk]) return false;
   return true;
+}
+
+function ruleMatches(ctx: SecurityContext, rule: PolicyRule) {
+  return conditionMatches(ctx, rule);
+}
+
+export function policyCovers(ctx: SecurityContext, coverage: PolicyCoverage[] = []) {
+  return coverage.length > 0 && coverage.some((condition) => conditionMatches(ctx, condition));
 }
 
 export function evaluatePolicy(ctx: SecurityContext, rules: PolicyRule[]): TrustDecision {
@@ -267,6 +294,11 @@ export function safeAuditObject(input: Record<string, unknown>) {
   return secureProjection(input) as Record<string, unknown>;
 }
 
+/**
+ * Legacy capability derivation retained for compatibility-only Trust surfaces.
+ * New migrations should emit canonical `namespace:resource.action` capabilities
+ * explicitly through canonicalCapability() instead of extending this dotted grammar.
+ */
 export function capabilitySet(params: {
   roles: string[];
   service: string;

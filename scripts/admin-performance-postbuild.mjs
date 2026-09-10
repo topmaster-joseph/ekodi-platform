@@ -46,7 +46,7 @@ for (const [from,to] of [
   ['hashes','h'],
   ['paths','p'],
 ]) demandLoaderSource = demandLoaderSource.replaceAll(from, to);
-for (const [from,to] of [['ASSET_VERSION','AV'],['separator','sep'],['existing','ex'],['promise','pr'],['finish','fin'],['observer','obs'],['content','ct'],['timer','tm'],['callback','cb'],['handler','hd'],['placeholder','ph']]) {
+for (const [from,to] of [['ASSET_VERSION','AV'],['separator','sep'],['existing','ex'],['promise','pr'],['finish','fin'],['observer','obs'],['content','ct'],['timer','tm'],['callback','cb'],['handler','hd'],['placeholder','ph'],['requestedKey','rk'],['selector','sl'],['settled','st'],['deadline','dl'],['index','ix'],['changed','ch']]) {
   demandLoaderSource = demandLoaderSource.replace(new RegExp(`\\b${from}\\b`, 'g'), to);
 }
 const selfInitializingIdentifier = demandLoaderSource.match(/\bconst\s+([A-Za-z_$][\w$]*)\s*=\s*\1\s*\(/);
@@ -132,9 +132,10 @@ await writeFile(menuRuntimePath, menuCompactSource.slice(menuCompactHeader[0].le
 const versionInputs = [
   'admin-central-handoff.js','admin-authenticated-shell.js','admin-demand-loader.js','admin-menu-layout.js',
   ...sharedAdminMenuModules,
+  'admin-design-engine.js','admin-design-engine.css',
   'admin-compact.js','admin-compact.css','admin-shell.css','finance-monitor.js',
   'campus-actions.js','campus-actions.css','device-control-admin.js','device-control-admin.css','remote-power-admin.js','remote-power-admin.css',
-  'ai-ops-admin.js','ai-ops-admin.css','ai-module-spec-admin.js','ai-module-spec-admin.css','life-ai-admin.js','life-ai-admin.css','mission-control-admin.js','mission-control-admin.css',
+  'ai-ops-admin.js','ai-ops-admin.css','ai-management-admin.js','ai-management-admin.css','ai-module-spec-admin.js','ai-module-spec-admin.css','life-ai-admin.js','life-ai-admin.css','mission-control-admin.js','mission-control-admin.css',
   'release-control-admin.js','release-control-admin.css','admin-lazy-features.js',
   'system-health-admin.js','system-health-admin.css','api-cost-admin.js','api-cost-admin.css','work-admin.js','work-admin.css','communication-admin.js','communication-admin.css',
   'marketing-ai-admin.js','marketing-ai-admin.css','author-billing-admin.js','author-billing-admin.css',
@@ -188,6 +189,7 @@ await writeFile(shellPath, compactShell);
 // with a five-minute-old menu registry after a deployment.
 const moduleImportVersions = new Map([
   ['admin-menu-layout.js', ['admin-menu-registry.js', 'admin-sidebar.js', 'admin-menu-runtime.js']],
+  ['admin-menu-registry.js', ['admin-design-engine.js']],
   ['admin-sidebar.js', ['admin-menu-registry.js']],
   ['admin-menu-runtime.js', ['admin-menu-registry.js']],
 ]);

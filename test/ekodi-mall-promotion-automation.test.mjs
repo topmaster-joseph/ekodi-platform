@@ -1,17 +1,24 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { campaignKey, fallbackContent, kstParts, MALL_PROMOTION_DEFAULTS } from '../mall-promotion-automation.js';
+import { campaignKey, fallbackContent, kstParts, mallPromotionAutomationEnabled, MALL_PROMOTION_DEFAULTS } from '../mall-promotion-automation.js';
 
 const read = path => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 
 test('mall promotion stays first-party, organic and bounded', () => {
-  assert.equal(MALL_PROMOTION_DEFAULTS.subjectKey, 'ekodibiz');
+  assert.equal(MALL_PROMOTION_DEFAULTS.subjectKey, 'ekodi-biz');
   assert.equal(MALL_PROMOTION_DEFAULTS.storefront, 'ekodi-mall');
   assert.deepEqual(MALL_PROMOTION_DEFAULTS.providers, ['facebook','instagram','threads']);
   assert.equal(MALL_PROMOTION_DEFAULTS.maxDailyChannels, 3);
-  assert.equal(MALL_PROMOTION_DEFAULTS.strategy, 'opportunity_first');
+  assert.equal(MALL_PROMOTION_DEFAULTS.strategy, 'official_board_profit_learning_loop');
   assert.match(MALL_PROMOTION_DEFAULTS.disclosure, /쿠팡 파트너스/);
+});
+
+test('promotion master gate is fail-closed and shared by every scheduler path', async () => {
+  assert.equal(mallPromotionAutomationEnabled({}), false);
+  assert.equal(mallPromotionAutomationEnabled({MALL_PROMOTION_AUTOMATION_ENABLED:'true'}), true);
+  const publisher = await read('marketing-growth-worker.js');
+  assert.match(publisher,/mallPromotionAutomationEnabled\(this\.env\)[\s\S]*runMallPromotionAutomation/);
 });
 
 test('campaign attribution is deterministic by KST date provider and product', () => {
@@ -53,7 +60,7 @@ test('migration scopes autonomous policy to internal EKODIBIZ and adds no plaint
   assert.doesNotMatch(migration,/(access_token|refresh_token|bearer_token)\s+TEXT/i);
 });
 
-test('growth entry preserves recovery logic while publishing scheduler owns the shared cron', async () => {
+test('growth entry exports its RPC entrypoint and uses only the canonical shared scheduler', async () => {
   const [entry, wrangler, publisher, publishConfig] = await Promise.all([read('marketing-growth-entry.js'), read('wrangler.marketing-growth.toml'), read('marketing-publishing-worker.js'), read('wrangler.marketing-publishing.toml')]);
   const intelligenceIndex = entry.indexOf('runMallSalesIntelligence');
   const promotionIndex = entry.lastIndexOf('runMallPromotionAutomation');
@@ -62,9 +69,32 @@ test('growth entry preserves recovery logic while publishing scheduler owns the 
   assert.match(entry,/mallSalesIntelligence/);
   assert.match(entry,/mallPromotionAutomation/);
   assert.match(entry,/scheduled\(_event, env, ctx\)/);
+  assert.match(entry,/mallPromotionAutomationEnabled\(env\)/);
+  assert.doesNotMatch(entry,/[^A-Za-z]promotionAutomationEnabled\(env\)/);
   assert.match(wrangler,/main = "marketing-growth-entry.js"/);
-  assert.doesNotMatch(wrangler,/crons\s*=/);
+  assert.match(entry,/export \{ MarketingGrowthPublisher \} from '\.\/marketing-growth-worker\.js';/);
+  assert.match(wrangler,/crons = \[\]/);
   assert.match(publishConfig,/crons = \["\* \* \* \* \*"\]/);
   assert.match(publisher,/runGrowthCycle/);
-  assert.match(publisher,/getUTCMinutes\(\) === 5/);
+  assert.match(publisher,/getUTCMinutes\(\) % 20 === 5/);
+});
+
+test('promotion health separates social readiness from YouTube Shorts readiness', async () => {
+  const worker = await read('mall-promotion-automation.js');
+  assert.match(worker,/channelReadiness/);
+  assert.match(worker,/youtubeConnected/);
+  assert.match(worker,/youtubeMallShortsReady:false/);
+  assert.match(worker,/product_short_video_asset_pipeline_required/);
+});
+test('official weekly board selects the product while the profit loop allocates channel intensity', async () => {
+  const worker=await read('mall-promotion-automation.js');
+  const boardIndex=worker.indexOf('ensureWeeklyPromotionBoard');
+  const productIndex=worker.indexOf('const product=board?.todayProduct||null');
+  const policyIndex=worker.indexOf('channelPoliciesForProduct');
+  assert.ok(boardIndex>=0 && productIndex>boardIndex && policyIndex>=0);
+  assert.match(worker,/official_board_profit_learning_loop/);
+  assert.match(worker,/learning\.action==='scale'/);
+  assert.match(worker,/learning\.action==='test'/);
+  assert.match(worker,/affiliate_growth_policy_snapshots/);
+  assert.match(worker,/WHERE run_date=\? AND product_row_id=\?/);
 });
