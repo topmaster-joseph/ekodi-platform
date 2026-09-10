@@ -1,5 +1,5 @@
 {
-  "version": 62,
+  "version": 63,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
@@ -43,8 +43,24 @@
         "url": "https://ekodi.kr/cmpmyi/admin",
         "statuses": [200],
         "redirect": "manual",
-        "expect": ["통합 매장 운영","자담치킨 목포대점","피자마루 목포대점","요거트퍼플 목포대점"],
+        "expect": ["통합 매장 운영","통합 관리자 로그인","id=\"portfolioContent\" class=\"wrap\" hidden","store-portfolio-admin.js?v=20260910-sso-v1"],
         "headerExpect": ["x-ekodi-route: cmpmyi-store-portfolio-admin","cache-control: no-store"],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/store-admin.js",
+        "statuses": [200],
+        "redirect": "manual",
+        "expect": ["치킨 · 사이드 메뉴","피자 · 사이드 메뉴","요거트 · 토핑 메뉴","MENU_PROFILES"],
+        "headerExpect": ["content-type: text/javascript","cache-control: no-store"],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/store-portfolio-admin.js",
+        "statuses": [200],
+        "redirect": "manual",
+        "expect": ["ekodi-store-admin-session","/auth/v1/user","portfolioContent"],
+        "headerExpect": ["content-type: application/javascript","cache-control: no-store"],
         "rollbackVerify": false
       },
       {
