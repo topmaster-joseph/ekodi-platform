@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 3,
+  "schemaVersion": 4,
   "policyId": "AI-ORCHESTRATE-001",
   "status": "enforced",
   "controlPlane": "EKODI AI",
@@ -36,12 +36,23 @@
     "alwaysParallel": true,
     "maxParallelProviders": 5,
     "originPreservation": true,
-    "originEnvelopeFields": ["provider", "requestedProvider", "channel", "requestId"],
+    "originEnvelopeFields": [
+      "provider",
+      "requestedProvider",
+      "channel",
+      "requestId"
+    ],
     "originFamilyPinnedIntoExecutionPlan": true,
     "finalSynthesis": "origin-family-provider",
     "finalResponseRoute": "origin-channel",
     "finalSynthesisAddsNewSupplier": false,
-    "requiredRoles": ["architect", "builder", "reviewer", "release", "sentinel"],
+    "requiredRoles": [
+      "architect",
+      "builder",
+      "reviewer",
+      "release",
+      "sentinel"
+    ],
     "noProviderFallback": "EKODI Core deterministic path",
     "continueAllResolvableWorkBeforeEscalation": true,
     "rootCauseFirst": true,
@@ -51,7 +62,9 @@
     "defaultBranch": "main",
     "directPushToMain": false,
     "pullRequestRequired": true,
-    "allowedChangeBranchPrefixes": ["ai/"],
+    "allowedChangeBranchPrefixes": [
+      "ai/"
+    ],
     "requiredStatusCheck": "EKODI AI Orchestration Gate",
     "forcePush": false,
     "branchDeletion": false
@@ -77,11 +90,24 @@
     ]
   },
   "governance": {
-    "policyOwners": ["topmaster-joseph"],
+    "policyOwners": [
+      "topmaster-joseph"
+    ],
     "policyWeakeningRequiresOwnerIntent": true,
     "auditPlanRequired": true,
     "completionPolicy": "AI-COMPLETE-001",
-    "runtimeMissionPolicy": "AI-MISSION-001"
+    "runtimeMissionPolicy": "AI-MISSION-001",
+    "parallelChangeReview": {
+      "required": true,
+      "policyId": "PARALLEL-RELATED-REVIEW-001",
+      "scopeConfig": "config/parallel-change-review-scopes.json",
+      "detectExactFileOverlap": true,
+      "detectRelatedScopeOverlap": true,
+      "reviewCompleteLabel": "related-change-review-complete",
+      "integrationOrderLabel": "integration-order-approved",
+      "evidenceMarker": "[EKODI RELATED CHANGE REVIEW]",
+      "remainingPrsMustRefreshAfterWinner": true
+    }
   },
   "reporting": {
     "default": "result-only",
