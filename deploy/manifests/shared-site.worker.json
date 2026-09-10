@@ -1,5 +1,5 @@
 {
-  "version": 61,
+  "version": 62,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
@@ -29,20 +29,23 @@
         "statuses": [200],
         "redirect": "manual",
         "expect": ["THREE STORES · ONE GATE","자담치킨","피자마루","요거트퍼플"],
-        "headerExpect": ["x-ekodi-route: store-gateway","x-content-type-options: nosniff"]
+        "headerExpect": ["x-ekodi-route: store-gateway","x-content-type-options: nosniff"],
+        "rollbackVerify": false
       },
       {
         "url": "https://ekodi.kr/stores",
         "statuses": [308],
         "redirect": "manual",
-        "headerExpect": ["location: https://ekodi.kr/cmpmyi","x-ekodi-legacy-surface: stores"]
+        "headerExpect": ["location: https://ekodi.kr/cmpmyi","x-ekodi-legacy-surface: stores"],
+        "rollbackVerify": false
       },
       {
         "url": "https://ekodi.kr/cmpmyi/admin",
         "statuses": [200],
         "redirect": "manual",
         "expect": ["통합 매장 운영","자담치킨 목포대점","피자마루 목포대점","요거트퍼플 목포대점"],
-        "headerExpect": ["x-ekodi-route: cmpmyi-store-admin","cache-control: no-store"]
+        "headerExpect": ["x-ekodi-route: cmpmyi-store-portfolio-admin","cache-control: no-store"],
+        "rollbackVerify": false
       },
       {
         "url": "https://ekodi.kr/",
@@ -115,21 +118,24 @@
         "statuses": [200],
         "redirect": "manual",
         "expect": ["data-ekodi-store-portfolio=\"cmpmyi\"","data-ekodi-authority-scope=\"tenant\""],
-        "headerExpect": ["x-ekodi-route: cmpmyi-jadam-store-admin","cache-control: no-store"]
+        "headerExpect": ["x-ekodi-route: cmpmyi-jadam-store-admin","cache-control: no-store"],
+        "rollbackVerify": false
       },
       {
         "url": "https://ekodi.kr/cmpmyi/admin/pizzamaru",
         "statuses": [200],
         "redirect": "manual",
         "expect": ["data-ekodi-store-portfolio=\"cmpmyi\"","data-ekodi-authority-scope=\"tenant\""],
-        "headerExpect": ["x-ekodi-route: cmpmyi-pizzamaru-store-admin","cache-control: no-store"]
+        "headerExpect": ["x-ekodi-route: cmpmyi-pizzamaru-store-admin","cache-control: no-store"],
+        "rollbackVerify": false
       },
       {
         "url": "https://ekodi.kr/cmpmyi/admin/yogurt",
         "statuses": [200],
         "redirect": "manual",
         "expect": ["data-ekodi-store-portfolio=\"cmpmyi\"","data-ekodi-authority-scope=\"tenant\""],
-        "headerExpect": ["x-ekodi-route: cmpmyi-yogurt-store-admin","cache-control: no-store"]
+        "headerExpect": ["x-ekodi-route: cmpmyi-yogurt-store-admin","cache-control: no-store"],
+        "rollbackVerify": false
       },
       {
         "url": "https://ekodi.kr/jadam/admin",

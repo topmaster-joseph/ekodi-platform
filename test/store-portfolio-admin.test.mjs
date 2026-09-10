@@ -38,9 +38,13 @@ test('super administrator navigation exposes the integrated store hub under Spac
 test('guarded release probes cmpmyi public, compatibility and all three admin routes',()=>{
   const manifest=JSON.parse(readFileSync(new URL('../deploy/manifests/shared-site.worker.json',import.meta.url),'utf8'));
   const byUrl=new Map(manifest.worker.requests.map(row=>[row.url,row]));
-  assert.deepEqual(byUrl.get('https://ekodi.kr/cmpmyi')?.statuses,[200]);
-  assert.deepEqual(byUrl.get('https://ekodi.kr/stores')?.statuses,[308]);
-  assert.deepEqual(byUrl.get('https://ekodi.kr/cmpmyi/admin')?.statuses,[200]);
+  const cmpmyi=byUrl.get('https://ekodi.kr/cmpmyi');
+  const stores=byUrl.get('https://ekodi.kr/stores');
+  const portfolio=byUrl.get('https://ekodi.kr/cmpmyi/admin');
+  assert.deepEqual(cmpmyi?.statuses,[200]);assert.equal(cmpmyi?.rollbackVerify,false);
+  assert.deepEqual(stores?.statuses,[308]);assert.equal(stores?.rollbackVerify,false);
+  assert.deepEqual(portfolio?.statuses,[200]);assert.equal(portfolio?.rollbackVerify,false);
+  assert.ok(portfolio.headerExpect.includes('x-ekodi-route: cmpmyi-store-portfolio-admin'));
   for(const slug of ['jadam','pizzamaru','yogurt']){
     const row=byUrl.get(`https://ekodi.kr/cmpmyi/admin/${slug}`);assert.deepEqual(row?.statuses,[200]);
     assert.ok(row.headerExpect.includes(`x-ekodi-route: cmpmyi-${slug}-store-admin`));
