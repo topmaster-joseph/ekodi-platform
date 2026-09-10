@@ -45,13 +45,13 @@
       <div class="content">
 <section class="section" data-panel="finance" aria-labelledby="financeTitle">
           <div class="section-head">
-            <div><p class="kicker">PAYMENT · ACCOUNTING</p><h2 id="financeTitle">결제 · 회계 관제</h2><p class="operations-copy" id="financeGenerated">finance-api.ekodi.kr에서 결제·회계 상태를 불러오는 중입니다.</p></div>
+            <div><p class="kicker">PAYMENT · ACCOUNTING</p><h2 id="financeTitle">결제 · 회계 관제</h2><p class="operations-copy" id="financeGenerated">에코디 결제·회계 API에서 상태를 불러오는 중입니다.</p></div>
             <button class="secondary" id="refreshFinance" type="button">↻ 결제 · 회계 새로고침</button>
           </div>
           <div class="finance-status">
             <article><small>이번 달 Toss 결제</small><strong id="financeMonthGross">₩0</strong><span id="financePaymentCount">동기화 0건</span></article>
             <article><small>이번 달 회계 손익</small><strong id="financeProfit">₩0</strong><span id="financeProfitDetail">수익 ₩0 · 비용 ₩0</span></article>
-            <article><small>결제 연동</small><strong id="financeTossState">확인 중</strong><span id="financeWebhook">finance-api.ekodi.kr/webhooks/toss</span></article>
+            <article><small>결제 연동</small><strong id="financeTossState">확인 중</strong><span id="financeWebhook">결제 웹훅 연결</span></article>
             <article><small>최근 7일 연동 실패</small><strong id="financeFailures">0</strong><span>결제 웹훅 · 외부 연동</span></article>
           </div>
           <div class="finance-note" id="financeNotice">결제·회계 준비 상태를 점검하고 있습니다.</div>
@@ -72,7 +72,7 @@
         <section class="section" data-panel="workspace"><div class="section-head"><div><p class="kicker">WORKSPACE</p><h2>클라우드 · 운영 도구</h2></div><p>자료와 실행도구를 같은 지도 위에 배치합니다.</p></div><div class="cards">
           <a class="module featured" href="https://cloud.ekodi.kr/" target="_blank" rel="noopener"><span class="icon">▣</span><div><small>CLOUD LOBBY</small><strong>에코디 클라우드</strong><p>Google Drive·Docs 기반 자료 로비</p></div><b>↗</b></a>
           <a class="module" href="https://ekodi.kr/ekodibiz/marketing-ai" target="_blank" rel="noopener"><span class="icon">AI</span><div><small>MARKETING</small><strong>마케팅 AI</strong><p>콘텐츠·마케팅 운영 도구</p></div><b>↗</b></a>
-          <a class="module" href="https://cgma.ekodi.kr/" target="_blank" rel="noopener"><span class="icon">청</span><div><small>LOCAL</small><strong>청계상권</strong><p>지역 상권 운영 공간</p></div><b>↗</b></a>
+          <a class="module" href="https://ekodi.kr/cgma" target="_blank" rel="noopener"><span class="icon">청</span><div><small>LOCAL</small><strong>청계상권</strong><p>지역 상권 운영 공간</p></div><b>↗</b></a>
           <a class="module" href="#ai-ops"><span class="icon">◎</span><div><small>DOMAIN CONTROL</small><strong>도메인 · DNS</strong><p>Cloudflare DNS와 등록대장 관리</p></div><b>→</b></a>
         </div></section>
 
@@ -94,14 +94,14 @@
           <div class="flow" aria-label="에코디 핵심 연결 구조">
             <span>ekodi.kr<br><small>생태계 정문 · 서비스 발견</small></span><b>→</b>
             <span>EKODI Core<br><small>인증 · 권한 · AI · 보안 · 공통정책</small></span><b>→</b>
-            <span>*.ekodi.kr<br><small>고객사이트 · 독립 서비스</small></span><b>→</b>
+            <span>ekodi.kr/{workspace}<br><small>운영공간 · 독립 서비스</small></span><b>→</b>
             <span>api · finance-api<br><small>공통 API · 결제 · 회계</small></span>
           </div>
 
           <div class="cards">
             <article class="module"><span class="icon">C</span><div><small>CORE</small><strong>EKODI Core</strong><p>통합인증, 권한, AI 연결, 보안정책과 공통 운영규칙을 제공하는 기반 계층입니다.</p></div></article>
             <article class="module"><span class="icon">T</span><div><small>TENANTS</small><strong>고객 사이트 · 독립 서비스</strong><p>교회, 비즈, 연구소, 마케팅과 고객별 사이트는 Core를 공유하되 서비스 경계와 데이터 책임을 분리합니다.</p></div></article>
-            <article class="module"><span class="icon">API</span><div><small>INTERFACES</small><strong>공통 API 계층</strong><p>api.ekodi.kr와 finance-api.ekodi.kr가 상태, 운영 데이터, 결제·회계 등 공통 인터페이스를 담당합니다.</p></div></article>
+            <article class="module"><span class="icon">API</span><div><small>INTERFACES</small><strong>공통 API 계층</strong><p>에코디 공통 API와 결제·회계 API가 상태, 운영 데이터와 공통 인터페이스를 담당합니다.</p></div></article>
             <article class="module"><span class="icon">↗</span><div><small>EXTERNAL</small><strong>외부 연동</strong><p>Google 인증·Workspace, AI 공급자, 결제와 메일 등은 교체 가능한 외부 연동으로 Core 경계 밖에 둡니다.</p></div></article>
           </div>
 
@@ -132,6 +132,7 @@
     </main>
   </div>
   <script src="admin-canonical-routes.js"></script>
+  <script src="admin-surface-labels.js"></script>
   <script src="admin-central-handoff.js"></script>
   <script src="admin-authenticated-shell.js?v=20260830-menu-service-audit-2" defer data-ekodi-postauth="admin-compact.js admin-menu-layout.js admin-demand-loader.js"></script>
 </body>
