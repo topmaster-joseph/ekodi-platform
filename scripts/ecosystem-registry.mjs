@@ -107,6 +107,15 @@ export async function loadHomepageServices() {
   return services;
 }
 
+export async function loadHomepageStatusCounts() {
+  const registry = validateRegistry(JSON.parse(await readFile(registryPath, 'utf8')));
+  const counts = Object.fromEntries(Object.keys(STATUS_DEFINITIONS).map(status => [status, 0]));
+  for (const service of registry.services) {
+    if (service.productionVerified === true && service.homepage === true && STATUS_IDS.has(service.status)) counts[service.status] += 1;
+  }
+  return Object.freeze(counts);
+}
+
 function serviceIsClickable(service) {
   return service.productionVerified === true && CLICKABLE_STATUSES.has(service.status);
 }

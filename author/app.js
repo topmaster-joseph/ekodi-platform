@@ -4,7 +4,7 @@ const SUPABASE_URL = 'https://renzehysxirjilvdxacv.supabase.co';
 const PUBLISHABLE_KEY = 'sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
 const LOGIN_URL = 'https://auth.ekodi.kr/?site=author&return_to=https%3A%2F%2Fauthor.ekodi.kr%2F';
 const FUNCTIONS_URL = `${SUPABASE_URL}/functions/v1`;
-const MY_EKODI_URL = 'https://my.ekodi.kr/';
+const MY_EKODI_URL = 'https://ekodi.kr/my/';
 const sb = createClient(SUPABASE_URL, PUBLISHABLE_KEY, { auth: { detectSessionInUrl: true, persistSession: true } });
 const $ = selector => document.querySelector(selector);
 

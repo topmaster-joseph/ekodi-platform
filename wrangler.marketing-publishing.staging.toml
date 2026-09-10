@@ -7,7 +7,7 @@ preview_urls = false
 [vars]
 ENVIRONMENT = "staging"
 ALLOW_MUTATIONS = "false"
-ALLOWED_ORIGINS = "https://ekodi-my-staging.topmaster-joseph.workers.dev,https://marketing.ekodi.kr,https://my.ekodi.kr"
+ALLOWED_ORIGINS = "https://ekodi.kr,https://ekodi-my-staging.topmaster-joseph.workers.dev,https://marketing.ekodi.kr,https://my.ekodi.kr"
 
 [observability.logs]
 enabled = true
