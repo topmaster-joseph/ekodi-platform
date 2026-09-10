@@ -62,6 +62,7 @@ jobs:
           grep -Fq 'const CANONICAL_ORIGIN="https://ekodi.kr"' supabase/functions/document-ai-api/index.ts
           grep -Fq "const RELEASE=\"$DOCS_AI_RELEASE\"" supabase/functions/document-ai-api/index.ts
           grep -Fq 'X-EKODI-Docs-Contract' supabase/functions/document-ai-api/index.ts
+          grep -Fq 'auth.getUser()' supabase/functions/document-ai-api/index.ts
           ! grep -Eiq 'drop[[:space:]]+table|truncate[[:space:]]+table' "$DOCUMENT_MIGRATION" "$DOCUMENT_HEALTH_MIGRATION"
 
   production:
@@ -118,7 +119,8 @@ jobs:
           echo 'Document schema migrations applied.'
       - name: Deploy document AI function
         if: env.SUPABASE_DEPLOY_AVAILABLE == 'true'
-        run: npx --yes supabase@${SUPABASE_CLI_VERSION} functions deploy document-ai-api --project-ref "$PROJECT_REF"
+        # The function validates bearer tokens with Supabase Auth so it can return its own CORS-safe 401 contract.
+        run: npx --yes supabase@${SUPABASE_CLI_VERSION} functions deploy document-ai-api --project-ref "$PROJECT_REF" --no-verify-jwt
       - name: Verify live schema and canonical function contract
         shell: bash
         run: |
