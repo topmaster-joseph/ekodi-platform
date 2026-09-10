@@ -138,6 +138,7 @@ jobs:
               && verify_shell 'invest.ekodi.kr' 'EKODI Investment' \
               && verify_public_path '/cmpmyi' 'THREE STORES · ONE GATE' 'x-ekodi-route: store-gateway' \
               && verify_public_path '/deployment-probe' 'OPERATING SPACE' 'x-ekodi-workspace-gateway: space-service-binding' \
+              && verify_public_path '/_ekodi/space/jadam-storefront.css' '.jd-hero' 'x-ekodi-workspace-gateway: space-service-binding' \
               && verify_public_path '/ekodibiz' 'EKODIBIZ' 'x-ekodi-workspace-gateway: ekodibiz-service-binding' \
               && verify_public_path '/insurance' '보험을 파는 AI가 아니라, 내 보험을 챙겨주는 AI' 'x-ekodi-route: public-insurance' \
               && verify_public_path '/insurance/advisor' 'PERSONAL INSURANCE CARE' 'x-ekodi-route: public-insurance' \

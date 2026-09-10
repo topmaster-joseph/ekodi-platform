@@ -315,6 +315,13 @@
         ]
       },
       {
+        "url": "https://ekodi.kr/_ekodi/space/jadam-storefront.css",
+        "statuses": [200],
+        "redirect": "manual",
+        "expect": ["html[data-store-page=\"jadam\"]", ".jd-hero", ".jd-menu-list"],
+        "headerExpect": ["x-ekodi-workspace-gateway: space-service-binding", "x-ekodi-route: storefront-asset", "content-type: text/css"]
+      },
+      {
         "url": "https://ekodi.kr/history",
         "statuses": [
           200
