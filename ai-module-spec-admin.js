@@ -25,13 +25,15 @@
     moduleId: 'vendor.marketing-ai',
     capability: 'marketing.campaign',
     context: {
-      spaceId: 'jadam',
+      spaceId: 'ref_7d91c42a1e7c',
       serviceId: 'marketing',
-      actorId: 'ekodi-user-or-agent-id',
+      actorId: 'ref_6e4b8e2f19ad',
       role: 'owner',
       capabilities: ['marketing.campaign'],
       attestedBy: 'ekodi:marketing-service',
     },
+    capabilityGrant: { grantId: 'uuid:1', audience: 'vendor.marketing-ai', capability: 'marketing.campaign', expiresAt: 'within 60 seconds', singleUseIntent: true, ekodiApiToken: false },
+    dataPolicy: { retention: 'transient', trainingAllowed: false, secondaryUseAllowed: false, canonicalStorageOwnedByEkodi: true },
     input: { storeId: 'mokpo-univ', goal: 'increase repeat visits' },
   };
 
@@ -44,12 +46,25 @@
     meta: { model: 'vendor-model-name' },
   };
 
+  const guardrails = [
+    ['G1', '최소권한', 'Minimum privilege', '작업별 60초 capability grant만 전달합니다.', 'Only a 60-second task-scoped capability grant is sent.'],
+    ['G2', '최소공개', 'Minimum disclosure', '원본 식별자·비밀·저장소 토폴로지를 외부로 보내지 않습니다.', 'Canonical identifiers, secrets and storage topology stay inside EKODI.'],
+    ['G3', '결과계약', 'Result contract', '업체는 결과만 반환하고 영구 저장은 EKODI가 담당합니다.', 'The provider returns results only; EKODI owns durable persistence.'],
+    ['G4', '감사추적', 'Audit trail', '요청·모듈·capability·모델·지연·저장상태를 추적합니다.', 'Request, module, capability, model, latency and storage status are auditable.'],
+    ['G5', '버전헌법', 'Versioned constitution', 'v1 호환 변경은 누적하고 breaking change만 v2로 올립니다.', 'Compatible v1 changes accumulate; only breaking changes create v2.'],
+    ['G6', '실패격리', 'Failure isolation', 'timeout·안전재시도·멱등키·circuit breaker로 코어를 보호합니다.', 'Timeouts, safe retry, idempotency and circuit breaking protect the core.'],
+    ['G7', '데이터사용금지', 'No secondary data use', '전달 데이터의 학습·2차사용·불필요 보존을 허용하지 않습니다.', 'Training, secondary use and unnecessary retention are not permitted.'],
+  ];
+
   const acceptance = [
     ['HTTPS', 'GET /v1/health와 POST /v1/execute를 HTTPS로 구현'],
     ['계약', 'contractVersion과 requestId를 정확히 되돌려줌'],
     ['권한', 'EKODI가 보낸 capability 범위 밖의 권한을 요구하지 않음'],
-    ['격리', 'Google Drive, D1/Supabase, R2 관리자 자격증명을 요구하지 않음'],
+    ['단기 grant', '작업별 capability grant를 EKODI API 접근권한으로 오용하지 않음'],
+    ['최소공개', 'EKODI 저장소·DB 자격증명, 원본 식별자, 내부 토폴로지를 요구하지 않음'],
+    ['데이터사용', '전달 데이터를 모델 학습·2차 목적·불필요한 장기보존에 사용하지 않음'],
     ['오류', '구조화된 error envelope를 반환하고 timeout 테스트를 통과'],
+    ['재시도', 'retrySafe 모듈은 동일 idempotency key의 중복 실행을 안전하게 처리'],
     ['저장', '영구 결과는 외부업체가 아니라 EKODI Storage Gateway가 저장'],
     ['교체성', '업체 교체 시 EKODI 원본 데이터 이전이 필요하지 않음'],
   ];
@@ -103,7 +118,7 @@
       `공식 규격: ${SPEC_URL}\n` +
       `기계판독 계약: ${CONTRACT_URL}\n\n` +
       `업체가 구현할 엔드포인트\n- GET /v1/health\n- POST /v1/execute\n\n` +
-      `핵심 원칙\n- HTTPS 필수\n- EKODI 사용자인증, Space, Role, Capability는 EKODI가 결정\n- 업체는 Google Drive, D1/Supabase, R2 관리자 자격증명을 받지 않음\n- 업체는 결과를 EKODI로 반환하고, 영구 보존은 EKODI Storage Gateway가 담당\n- 서비스는 업체명이 아니라 capability에 의존하므로 업체를 교체할 수 있어야 함\n\n` +
+      `핵심 원칙\n- HTTPS 필수\n- EKODI 사용자인증, Space, Role, Capability는 EKODI가 결정\n- 업체에는 작업별 단기 capability grant와 최소 context만 전달\n- 업체는 Google Drive, D1/Supabase, R2 관리자 자격증명·원본 식별자·내부 토폴로지를 받지 않음\n- 전달 데이터의 모델 학습·2차 사용·불필요한 장기 보존 금지\n- 업체는 결과를 EKODI로 반환하고, 영구 보존은 EKODI Storage Gateway가 담당\n- retrySafe 모듈은 x-ekodi-idempotency-key의 중복 실행을 안전하게 처리\n- 서비스는 업체명이 아니라 capability에 의존하므로 업체를 교체할 수 있어야 함\n\n` +
       `Manifest 예제\n${pretty(manifestExample)}\n\n` +
       `요청 예제\n${pretty(requestExample)}\n\n` +
       `응답 예제\n${pretty(responseExample)}\n\n` +
@@ -132,7 +147,7 @@
       [t('계약 버전', 'Contract version'), `v${CONTRACT_VERSION}`],
       [t('업체 실행 규격', 'Vendor execution'), 'POST /v1/execute'],
       [t('영구 저장', 'Durable storage'), 'EKODI Storage Gateway'],
-      [t('원본 저장소', 'Canonical store'), 'Shared Drive · EKODI'],
+      [t('원본 저장소', 'Canonical store'), t('EKODI 관리 원본 저장소', 'EKODI managed canonical store')],
     ];
     for (const [label, value] of facts) { const card = el('div', '', 'ai-spec-fact'); card.append(el('span', label), el('strong', value)); status.append(card); }
     section.append(status);
@@ -143,7 +158,7 @@
       flowCard(1, 'EKODI 인증', 'EKODI authenticates', '사용자·Space·Role·Capability를 EKODI가 확정합니다.', 'EKODI resolves user, Space, Role and Capability.'),
       flowCard(2, 'AI Gateway 호출', 'Gateway invocation', `${API_BASE}/execute를 등록된 내부 호출자가 호출합니다.`, 'A registered EKODI internal caller invokes the gateway.'),
       flowCard(3, '외부 AI 실행', 'Vendor execution', '업체는 /v1/execute 계약 안에서 전문 결과만 반환합니다.', 'The vendor returns specialist output only through /v1/execute.'),
-      flowCard(4, 'EKODI 저장', 'EKODI persistence', '보존이 필요한 결과는 EKODI가 Shared Drive에 기록합니다.', 'EKODI persists retained output to the Shared Drive.')
+      flowCard(4, 'EKODI 저장', 'EKODI persistence', '보존이 필요한 결과는 Storage Gateway를 거쳐 EKODI 관리 원본 저장소에 기록합니다.', 'Retained output passes through the Storage Gateway into the EKODI managed canonical store.')
     );
     flow.append(flowGrid); section.append(flow);
 
@@ -158,6 +173,16 @@
     for (const [mark, title, copy] of ruleItems) { const row = el('div', '', 'ai-spec-rule'); row.append(el('span', mark, 'ai-spec-rule-mark'), el('strong', title), el('span', copy)); ruleGrid.append(row); }
     rules.append(ruleGrid); section.append(rules);
 
+    const guardrailSection = el('section', '', 'ai-spec-block');
+    guardrailSection.append(el('h3', t('7대 AI 연동 가드레일', 'Seven AI integration guardrails')));
+    const guardrailGrid = el('div', '', 'ai-spec-guardrail-grid');
+    for (const [id, titleKo, titleEn, copyKo, copyEn] of guardrails) {
+      const card = el('article', '', 'ai-spec-guardrail');
+      card.append(el('b', id), el('strong', t(titleKo, titleEn)), el('span', t(copyKo, copyEn)));
+      guardrailGrid.append(card);
+    }
+    guardrailSection.append(guardrailGrid); section.append(guardrailSection);
+
     const examples = el('section', '', 'ai-spec-block'); examples.append(el('h3', t('개발사 전달 예제', 'Vendor implementation examples')));
     const exampleGrid = el('div', '', 'ai-spec-example-grid');
     exampleGrid.append(codeCard('Module Manifest', 'Module Manifest', manifestExample), codeCard('Execution Request', 'Execution Request', requestExample), codeCard('Execution Response', 'Execution Response', responseExample));
@@ -169,7 +194,7 @@
     checklist.append(list); section.append(checklist);
 
     const note = el('div', '', 'ai-spec-note');
-    note.append(el('strong', t('운영 원칙', 'Operating rule')), el('span', t('외부업체가 바뀌어도 사용자 서비스와 원본 데이터는 EKODI에 남아야 합니다. 서비스는 vendor가 아니라 capability에 의존합니다.', 'User services and canonical data must remain in EKODI when a vendor changes. Services depend on capabilities, not vendor identity.')));
+    note.append(el('strong', t('운영 원칙', 'Operating rule')), el('span', t('외부업체가 바뀌어도 사용자 서비스와 원본 데이터는 EKODI에 남습니다. 서비스는 vendor가 아니라 capability에 의존하며, 실제 저장소 구현은 Storage Gateway 뒤에 숨깁니다.', 'User services and canonical data remain in EKODI when a vendor changes. Services depend on capabilities, not vendor identity, and storage implementation stays hidden behind the Storage Gateway.')));
     section.append(note);
   }
 
