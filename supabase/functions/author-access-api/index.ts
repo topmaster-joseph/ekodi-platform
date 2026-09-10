@@ -8,7 +8,7 @@ const service=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const admin=createClient(url,service,{auth:{persistSession:false}});
 const AUTHOR_ORIGIN="https://author.ekodi.kr";
 const AUTH_ORIGIN="https://auth.ekodi.kr";
-const MY_EKODI_URL="https://my.ekodi.kr/";
+const MY_EKODI_URL="https://ekodi.kr/my/";
 
 function cors(req:Request){const origin=req.headers.get("Origin")||"";const allowed=origin===AUTHOR_ORIGIN||origin===AUTH_ORIGIN?origin:AUTH_ORIGIN;return {"Access-Control-Allow-Origin":allowed,"Vary":"Origin","Access-Control-Allow-Headers":"authorization, x-client-info, apikey, content-type","Access-Control-Allow-Methods":"GET,POST,OPTIONS"};}
 function json(req:Request,body:unknown,status=200){return new Response(JSON.stringify(body),{status,headers:{...cors(req),"content-type":"application/json; charset=utf-8","cache-control":"no-store","x-content-type-options":"nosniff"}})}

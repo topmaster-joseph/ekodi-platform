@@ -68,7 +68,7 @@ jobs:
           grep -Fq 'PRIVATE FIRST' church/index.html
           grep -Fq 'localStorage' church/church-life-hub.js
           grep -Fq '__EKODI_CHURCH_LIFE_HUB_I18N__' church/church-life-hub-i18n.js
-          grep -Fq 'https://my.ekodi.kr/' church/index.html
+          grep -Fq 'https://ekodi.kr/my/' church/index.html
           grep -Fq 'https://ekodi.kr/privacy' church/index.html
           grep -Fq 'https://ekodi.kr/terms' church/index.html
           grep -Fq 'data-ekodi-character-identity="founder-pastor"' church/index.html
@@ -201,7 +201,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for target in 'https://church.ekodi.kr/' 'https://my.ekodi.kr/' 'https://community.ekodi.kr' 'https://ekodi.kr/privacy' 'https://ekodi.kr/terms'; do
+          for target in 'https://church.ekodi.kr/' 'https://ekodi.kr/my/' 'https://community.ekodi.kr' 'https://ekodi.kr/privacy' 'https://ekodi.kr/terms'; do
             code=$(curl -L -sS -o /dev/null -w '%{http_code}' --connect-timeout 5 --max-time 20 "$target" || true)
             case "$code" in 2*|3*) echo "link ok: $code $target" ;; *) echo "link failed: $code $target"; exit 1 ;; esac
           done

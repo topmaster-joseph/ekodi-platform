@@ -26,7 +26,7 @@ must('html', 'Creator AI');
 must('html', 'CREATOR APPROVED');
 must('html', '원고는 기본 비공개');
 must('html', 'FREE는 AI 과금 0원');
-must('html', 'my.ekodi.kr');
+must('html', 'ekodi.kr/my');
 for (const mode of ['writer','video','podcast','lecture','research','visual','mission','ai']) must('app', `${mode}: {`);
 must('app', 'creator_mode: concept.creatorMode');
 must('app', "functionFetch('author-ai-api'");

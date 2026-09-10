@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - '.github/workflows/deploy-admin-staging.yml'
+      - '.github/workflows/admin-authenticated-e2e.yml'
       - 'package.json'
       - 'admin-staging-worker.js'
       - 'wrangler.admin.staging.toml'
@@ -27,6 +28,9 @@ on:
       - 'admin-design-engine.css'
       - 'config/design-engine.json'
       - 'scripts/validate-design-engine.mjs'
+      - 'scripts/admin-authenticated-e2e.mjs'
+      - 'scripts/admin-authenticated-e2e-retry.mjs'
+      - 'scripts/admin-authenticated-e2e-menu-worker.mjs'
       - 'ADMIN_UI_PRINCIPLES.md'
       - 'marketing-funnel-admin.js'
       - 'marketing-funnel-admin.css'
