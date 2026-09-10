@@ -82,7 +82,8 @@
         "commerce.market",
         "commerce.supply-network",
         "finance.stewardship",
-        "core.public-site"
+        "core.public-site",
+        "device.observe"
       ],
       "signals": [
         "가게",
