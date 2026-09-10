@@ -130,7 +130,7 @@ jobs:
           set -euo pipefail
 
           verify_root() {
-            code=$(curl -sS --max-redirs 0 -D /tmp/admin-headers -o /tmp/admin-body -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://admin.ekodi.kr/' || true)
+            code=$(curl -sS --max-redirs 0 -D /tmp/admin-headers -o /tmp/admin-body -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/admin/' || true)
             echo "admin root -> $code"
             [ "$code" = '200' ] || return 1
             grep -Fiq 'x-ekodi-route: admin-shell' /tmp/admin-headers || return 1
@@ -149,7 +149,7 @@ jobs:
           verify_asset() {
             asset="$1"
             expected="$2"
-            code=$(curl -sS -D /tmp/asset-headers -o /tmp/admin-asset -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://admin.ekodi.kr/${asset}?v=$LIVE_VERSION" || true)
+            code=$(curl -sS -D /tmp/asset-headers -o /tmp/admin-asset -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/admin/${asset}?v=$LIVE_VERSION" || true)
             echo "$asset?v=$LIVE_VERSION -> $code"
             [ "$code" = '200' ] || return 1
             grep -Fiq 'x-ekodi-route: admin-asset' /tmp/asset-headers || return 1
@@ -158,7 +158,7 @@ jobs:
           }
 
           verify_compact_without_readable_css() {
-            code=$(curl -sS -D /tmp/compact-headers -o /tmp/compact-css -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://admin.ekodi.kr/admin-compact.css?v=$LIVE_VERSION" || true)
+            code=$(curl -sS -D /tmp/compact-headers -o /tmp/compact-css -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/admin/admin-compact.css?v=$LIVE_VERSION" || true)
             [ "$code" = '200' ] || return 1
             grep -Fiq 'cache-control: public, max-age=31536000, immutable' /tmp/compact-headers || return 1
             ! grep -Fq 'admin-readable-command.css' /tmp/compact-css || return 1
@@ -210,7 +210,7 @@ jobs:
           - commit: \`$COMMIT_SHA\`
           - production check: \`$outcome\`
           - upstream canonical shared-site deployment: \`$UPSTREAM_OUTCOME\`
-          - canonical: https://admin.ekodi.kr/
+          - canonical: https://ekodi.kr/admin/
           - contract: fingerprinted thin shell · immutable assets · standalone Health · flat AI Ops · internal specialist routing
           - verification workflow: $RUN_URL
           - upstream workflow: $UPSTREAM_RUN_URL

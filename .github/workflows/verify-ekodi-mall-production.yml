@@ -51,13 +51,23 @@ jobs:
             cat /tmp/mall-verification-entry.headers || true
             exit 1
           fi
-          verification_final_code=$(curl -sS -D /tmp/mall-verification-final.headers -o /tmp/mall-verification-final.html -w '%{http_code}' --retry 3 --retry-delay 2 --connect-timeout 5 --max-time 20 'https://ekodi.kr/ekodibiz/mall/assets/verification-ops' || true)
-          if [ "$verification_final_code" != "200" ] \
-            || ! grep -Fiq 'cache-control: no-store' /tmp/mall-verification-final.headers \
-            || ! grep -Fiq 'x-robots-tag: noindex, nofollow, noarchive' /tmp/mall-verification-final.headers \
-            || ! grep -Fq '/assets/verification-ops.js' /tmp/mall-verification-final.html \
-            || ! grep -Fq 'COMMERCE OS COCKPIT' /tmp/mall-verification-final.html; then
-            echo "Verification Ops final HTML security contract failed: HTTP $verification_final_code"
+          verification_ready=false
+          verification_final_code=000
+          for attempt in $(seq 1 12); do
+            verification_final_code=$(curl -sS -D /tmp/mall-verification-final.headers -o /tmp/mall-verification-final.html -w '%{http_code}' --retry 3 --retry-delay 2 --connect-timeout 5 --max-time 20 'https://ekodi.kr/ekodibiz/mall/assets/verification-ops' || true)
+            if [ "$verification_final_code" = "200" ] \
+              && grep -Fiq 'cache-control: no-store' /tmp/mall-verification-final.headers \
+              && grep -Fiq 'x-robots-tag: noindex, nofollow, noarchive' /tmp/mall-verification-final.headers \
+              && grep -Fq '/assets/verification-ops.js' /tmp/mall-verification-final.html \
+              && grep -Fq 'COMMERCE OS COCKPIT' /tmp/mall-verification-final.html; then
+              verification_ready=true
+              break
+            fi
+            echo "Verification Ops final HTML pending (attempt $attempt/12, HTTP $verification_final_code)."
+            sleep 3
+          done
+          if [ "$verification_ready" != true ]; then
+            echo "Verification Ops final HTML security contract failed after propagation wait: HTTP $verification_final_code"
             cat /tmp/mall-verification-final.headers || true
             exit 1
           fi
