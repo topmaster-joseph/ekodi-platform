@@ -32,6 +32,8 @@ function normalizeProvider(provider, index) {
     fundingSource: text(provider.fundingSource || 'personal', 40),
     officialPath: provider.officialPath !== false,
     automationAllowed: provider.automationAllowed !== false,
+    costClass: text(provider.costClass || '', 40).toLowerCase(),
+    freeQuotaRemaining: provider.freeQuotaRemaining ?? null,
   });
 }
 
@@ -62,6 +64,7 @@ function publicProvider(provider) {
     trustClass: provider.trustClass,
     resourceClass: provider.resourceClass, fundingSource: provider.fundingSource,
     officialPath: provider.officialPath, automationAllowed: provider.automationAllowed,
+    costClass: provider.costClass, freeQuotaRemaining: provider.freeQuotaRemaining,
   });
 }
 
@@ -76,7 +79,8 @@ export function buildAiOrchestrationPlan(input = {}, providers = []) {
   const normalized = normalizeProviders(providers);
   const eligibleBase = normalized.filter(provider => provider.available && supports(provider, requiredCapabilities));
   const lane = input.lane === 'autonomous' ? 'autonomous' : 'interactive';
-  const ranked = rankAiResourceCandidates(eligibleBase, { lane });
+  const governance = input.governance && typeof input.governance === 'object' ? input.governance : {};
+  const ranked = rankAiResourceCandidates(eligibleBase, { lane, governance });
   const eligible = ranked.map(item => normalized.find(provider => provider.id === item.id)).filter(Boolean);
   const mode = chooseMode(collaboration, risk);
   const primary = eligible[0] || null;
@@ -152,6 +156,7 @@ export function buildEkodiAiOrchestrator(env = {}, providers = []) {
       collaboration = 'auto',
       requiredCapabilities = ['text'],
       lane = 'interactive',
+      governance = {},
     } = {}) {
       const normalizedTaskName = text(taskName, 120);
       if (!normalizedTaskName) throw new TypeError('EKODI AI Orchestrator requires taskName.');
@@ -163,6 +168,7 @@ export function buildEkodiAiOrchestrator(env = {}, providers = []) {
         collaboration,
         requiredCapabilities,
         lane,
+        governance,
       }, normalized);
       const eligibleIds = new Set(plan.eligibleProviders);
       const eligible = normalized.filter(provider => eligibleIds.has(provider.id));

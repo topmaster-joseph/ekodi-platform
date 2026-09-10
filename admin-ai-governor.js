@@ -2,9 +2,9 @@
   'use strict';
   if (window.EKODIAdminAIGovernor) return;
 
-  const VERSION='1.0.0';
+  const VERSION='1.1.0';
   const RISK={LOW:'low',MEDIUM:'medium',HIGH:'high',CRITICAL:'critical'};
-  const HUMAN_GATE=new Set(['production_secret','dns_change','data_delete','permission_change','force_push','repository_delete','production_rollback','high_cost_ai']);
+  const HUMAN_GATE=new Set(['production_secret','dns_change','data_delete','permission_change','force_push','repository_delete','production_rollback','high_cost_ai','paid_ai']);
   const FREE_FIRST=Object.freeze(['deterministic_rule','internal_api','cached_context','free_ai','low_cost_ai','premium_ai']);
 
   function normalize(input){return String(input||'').trim().toLowerCase()}
@@ -48,28 +48,31 @@
     ];
     for(const [candidate,words] of checks){if(containsAny(text,words)){risk=RISK.CRITICAL;gate=candidate;break}}
     if(!gate&&containsAny(text,['deploy','배포','write','update','수정','재실행','rerun']))risk=RISK.MEDIUM;
+    if(action.estimatedCostKrw>0&&!(action.paidCommitment===true&&action.explicitDelegatedBudget===true)){risk=risk===RISK.CRITICAL?risk:RISK.HIGH;gate=gate||'paid_ai'}
     if(action.estimatedCostKrw>=1000){risk=risk===RISK.CRITICAL?risk:RISK.HIGH;gate=gate||'high_cost_ai'}
     return {risk,humanApprovalRequired:Boolean(gate&&HUMAN_GATE.has(gate)),gate};
   }
 
   function chooseExecutionTier(task={}){
     const deterministic=task.deterministic!==false;
+    const paidAuthorized=task.paidCommitment===true&&task.explicitDelegatedBudget===true;
     if(deterministic)return {tier:'deterministic_rule',reason:'AI 호출 없이 규칙/API로 처리 가능'};
     if(task.internalApi)return {tier:'internal_api',reason:'EKODI 내부 API로 처리 가능'};
     if(task.cachedContext)return {tier:'cached_context',reason:'기존 검증 컨텍스트 재사용 가능'};
     if((task.complexity||'low')==='low')return {tier:'free_ai',reason:'무료 AI로 충분한 저복잡도 작업'};
+    if(!paidAuthorized)return {tier:'free_ai',reason:'zero-cost resources only; paid escalation disabled'};
     if((task.complexity||'medium')==='medium')return {tier:'low_cost_ai',reason:'저비용 모델로 충분한 중간 복잡도'};
     return {tier:'premium_ai',reason:'고복잡도 또는 긴급 복구에 고성능 모델 필요'};
   }
 
   function plan(request,options={}){
     const context=expandContext(request);
-    const task={deterministic:options.deterministic,internalApi:options.internalApi,cachedContext:options.cachedContext,complexity:options.complexity};
+    const task={deterministic:options.deterministic,internalApi:options.internalApi,cachedContext:options.cachedContext,complexity:options.complexity,paidCommitment:options.paidCommitment,explicitDelegatedBudget:options.explicitDelegatedBudget};
     const execution=chooseExecutionTier(task);
-    const risk=assessRisk(request,{type:options.actionType,target:options.target,estimatedCostKrw:Number(options.estimatedCostKrw||0)});
+    const risk=assessRisk(request,{type:options.actionType,target:options.target,estimatedCostKrw:Number(options.estimatedCostKrw||0),paidCommitment:options.paidCommitment,explicitDelegatedBudget:options.explicitDelegatedBudget});
     return Object.freeze({
       version:VERSION,request:String(request||''),context,execution,risk,
-      policy:{freeFirst:FREE_FIRST,expandBeyondLiteralRequest:true,minimumNecessaryChange:true,postActionVerification:true,structuredReport:true},
+      policy:{freeFirst:FREE_FIRST,automaticPaidBudgetKrw:0,paidApiAutoEscalation:false,paidApiRequiresExplicitDelegatedBudget:true,expandBeyondLiteralRequest:true,minimumNecessaryChange:true,postActionVerification:true,structuredReport:true},
       next:risk.humanApprovalRequired?'request_human_approval':'execute_then_verify'
     });
   }

@@ -45,3 +45,11 @@ test('AI management unifies resource routing and dynamic provider Router Score',
   assert.match(admin, /\[1,2,3,4\]\.map/);
   assert.match(admin, /Origin AI · LOCK/);
 });
+
+test('AI management exposes locked free-first cost governance', () => {
+  const admin=read('ai-management-admin.js');
+  assert.match(admin, /AI-COST-001/);
+  assert.match(admin, /PAID AUTO ESCALATION/);
+  assert.match(admin, /AUTO PAID BUDGET KRW/);
+  assert.match(admin, /EXPLICIT DELEGATED BUDGET REQUIRED/);
+});

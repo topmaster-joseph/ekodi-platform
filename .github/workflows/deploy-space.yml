@@ -7,6 +7,7 @@ on:
       - 'space/**'
       - 'space-worker.js'
       - 'storefront-page.js'
+      - 'jadam-storefront.js'
       - 'workspace-route-policy.js'
       - 'wrangler.space*.toml'
       - 'deploy/manifests/space.worker.json'
@@ -21,6 +22,7 @@ on:
       - 'test/store-operating-space.test.mjs'
       - 'test/store-user-site-admin.test.mjs'
       - 'test/storefront-public.test.mjs'
+      - 'test/jadam-storefront-brand.test.mjs'
       - '.github/workflows/deploy-space.yml'
   push:
     branches: [main]
@@ -28,6 +30,7 @@ on:
       - 'space/**'
       - 'space-worker.js'
       - 'storefront-page.js'
+      - 'jadam-storefront.js'
       - 'workspace-route-policy.js'
       - 'wrangler.space*.toml'
       - 'deploy/manifests/space.worker.json'
@@ -42,10 +45,12 @@ on:
       - 'test/store-operating-space.test.mjs'
       - 'test/store-user-site-admin.test.mjs'
       - 'test/storefront-public.test.mjs'
+      - 'test/jadam-storefront-brand.test.mjs'
       - '.github/workflows/deploy-space.yml'
 
 permissions:
   contents: read
+  pull-requests: read
 
 concurrency:
   group: ekodi-space-${{ github.event_name == 'pull_request' && format('staging-pr-{0}', github.event.pull_request.number) || 'production' }}
@@ -69,8 +74,9 @@ jobs:
           set -euo pipefail
           node --check space-worker.js
           node --check storefront-page.js
+          node --check jadam-storefront.js
           node --check space/app.js
-          node --test test/store-operating-space.test.mjs test/store-user-site-admin.test.mjs test/storefront-public.test.mjs
+          node --test test/store-operating-space.test.mjs test/store-user-site-admin.test.mjs test/storefront-public.test.mjs test/jadam-storefront-brand.test.mjs
           grep -Fq "pattern = \"space.ekodi.kr\"" wrangler.space.toml
           grep -Fq 'DATA_ENABLED = "false"' wrangler.space.staging.toml
           grep -Fq 'DATA_MODE = "isolated-staging"' wrangler.space.staging.toml

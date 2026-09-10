@@ -138,16 +138,16 @@ for (const rule of requiredConnectionRules) {
 }
 
 // Sustainable evolution and fragmentation guard.
-if (evolution.schemaVersion !== 1) fail('evolution model schemaVersion must be 1');
+if (evolution.schemaVersion !== 2) fail('evolution model schemaVersion must be 2 for Generation 10 open-ended evolution');
 if (evolution.status !== 'active') fail('evolution model must be active');
-if (evolution.currentGeneration !== 2) fail('current EKODI generation must remain Generation 2 until a constitutional promotion');
-if (evolution.northStarGeneration !== 8 || evolution.northStarName !== 'Living Digital Commons') {
-  fail('EKODI north star must remain Generation 8 Living Digital Commons');
+if (evolution.currentGeneration !== 10 || evolution.currentGenerationLabel !== 'Self-Architecture Optimization') fail('current EKODI generation must be Generation 10 Self-Architecture Optimization');
+if (evolution.northStarGeneration !== null || evolution.northStarName !== 'Open-Ended Evidence-Driven Evolution') {
+  fail('EKODI future evolution must remain open-ended beyond Generation 10');
 }
 if (evolution.currentScaleTier !== 'S0') fail('current sustainable scale tier must remain S0 until an approved promotion');
 const generations = evolution.generations || [];
-if (generations.length !== 8) fail('evolution model must define exactly eight generations');
-for (let generation = 1; generation <= 8; generation += 1) {
+if (generations.length !== 10) fail('evolution model must define the verified Generation 1-10 path');
+for (let generation = 1; generation <= 10; generation += 1) {
   if (!generations.some(item => item.generation === generation)) fail(`evolution generation missing: ${generation}`);
 }
 if (evolution.sustainability?.defaultDeploymentTopology !== 'modular-monolith-first') fail('evolution model must preserve modular-monolith-first');
@@ -180,6 +180,8 @@ if (evolution.workspaceConvergence?.canonicalTerm !== 'Workspace') fail('Workspa
 if (!evolution.workspaceConvergence?.legacyTerms?.includes('Space')) fail('legacy Space migration term must remain explicitly tracked');
 if (evolution.workspaceConvergence?.target !== 'Person + Workspace + Membership + Capability') fail('workspace convergence target mismatch');
 if (evolution.promotionRule?.generationAdvancementIsNotDateDriven !== true) fail('generation advancement must be evidence-driven, not date-driven');
+if (evolution.futureGenerationPolicy?.openEnded !== true || evolution.futureGenerationPolicy?.firstCandidateGeneration !== 11 || evolution.futureGenerationPolicy?.predeclareNames !== false) fail('future generations must remain open-ended, beginning at evidence-defined Generation 11');
+if (evolution.futureGenerationPolicy?.generationSkippingForbidden !== true || evolution.futureGenerationPolicy?.authorityExpansionForbidden !== true) fail('future generation promotion must not skip foundations or expand authority');
 
 if (failures.length) {
   console.error(`EKODI OS architecture validation failed (${failures.length})`);
@@ -190,7 +192,7 @@ if (failures.length) {
 console.log('EKODI OS architecture: OK');
 console.log(`- ${platformIds.length} EKODI deployment boundaries classified`);
 console.log(`- ${Object.keys(external).length} external connected service families registered`);
-console.log(`- sustainable evolution: generation ${evolution.currentGeneration} -> north star ${evolution.northStarGeneration}, scale ${evolution.currentScaleTier}`);
+console.log(`- sustainable evolution: generation ${evolution.currentGeneration}, future open-ended from 11+, scale ${evolution.currentScaleTier}`);
 console.log('- existing deployment boundaries frozen as convergence baseline; new boundaries require evidence');
 console.log('- Core, Workspace and capability-provider contracts aligned');
 console.log('- responsibility: integrated; execution: distributed; connections: standardized');

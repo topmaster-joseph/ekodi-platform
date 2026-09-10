@@ -12,10 +12,10 @@ test('coding work requests an isolated branch and is forced into parallel develo
 });
 
 test('parallel plan preserves origin and scores the remaining suppliers dynamically',()=>{
-  const task=normalizeTaskInput({prompt:'검토해줘',mode:'parallel'});
+  const task=normalizeTaskInput({prompt:'review this',mode:'parallel'});
   const plan=buildExecutionPlan(task,{geminiFree:true,nodeProviders:['codex','gemini-cli'],openaiApi:true,anthropicApi:true,workerProviders:['claude']});
-  assert.deepEqual(plan.map(item=>item.providerId),['node:codex','gemini-free','node:gemini-cli','worker:claude','openai-api']);
-  assert.equal(plan.length,AI_CONTROL_POLICY.maxParallelProviders);
+  assert.deepEqual(plan.map(item=>item.providerId),['node:codex','gemini-free','node:gemini-cli']);
+  assert.equal(plan.length,3);
   assert.equal(plan[0].role,'origin-primary');
   assert.ok(plan.every(item=>Number.isFinite(item.routerScore)));
 });
@@ -30,7 +30,7 @@ test('stored collaboration ceiling limits collaborators while preserving origin'
 test('legacy default requests still fan out in parallel instead of primary-review',()=>{
   const task=normalizeTaskInput({prompt:'이 설계를 상호 검토해줘'});
   const plan=buildExecutionPlan(task,{geminiFree:true,nodeProviders:['codex'],openaiApi:true});
-  assert.deepEqual(plan.map(({providerId,role})=>({providerId,role})),[{providerId:'node:codex',role:'origin-primary'},{providerId:'gemini-free',role:'parallel-2'},{providerId:'openai-api',role:'parallel-3'}]);
+  assert.deepEqual(plan.map(({providerId,role})=>({providerId,role})),[{providerId:'node:codex',role:'origin-primary'},{providerId:'gemini-free',role:'parallel-2'}]);
   assert.ok(plan.every(item=>Number.isFinite(item.routerScore)));
 });
 
@@ -38,7 +38,7 @@ test('legacy single requests are upgraded to all available parallel suppliers',(
   const task=normalizeTaskInput({prompt:'분석해줘',mode:'single'});
   const plan=buildExecutionPlan(task,{geminiFree:false,nodeProviders:['codex'],openaiApi:true});
   assert.equal(task.mode,'parallel');
-  assert.deepEqual(plan.map(({providerId,role})=>({providerId,role})),[{providerId:'node:codex',role:'origin-primary'},{providerId:'openai-api',role:'parallel-2'}]);
+  assert.deepEqual(plan.map(({providerId,role})=>({providerId,role})),[{providerId:'node:codex',role:'origin-primary'}]);
   assert.ok(plan.every(item=>Number.isFinite(item.routerScore)));
 });
 
@@ -52,6 +52,21 @@ test('provider capability status labels plan-included account execution',()=>{
   const status=providerStatus(env,['codex']);
   assert.equal(status.find(item=>item.id==='node:codex')?.costClass,'chatgpt-plan-included');
   assert.equal(status.find(item=>item.id==='openai-api')?.costClass,'paid-opt-in');
+  assert.equal(status.find(item=>item.id==='openai-api')?.automaticEligible,false);
+  assert.equal(status.find(item=>item.id==='node:codex')?.automaticEligible,true);
+});
+
+test('paid API providers enter a plan only with explicit delegated budget',()=>{
+  const task=normalizeTaskInput({prompt:'deep analysis',governance:{paidCommitment:true,explicitDelegatedBudget:true}});
+  const plan=buildExecutionPlan(task,{geminiFree:true,nodeProviders:['codex'],openaiApi:true,anthropicApi:true});
+  assert.ok(plan.some(item=>item.providerId==='openai-api'));
+  assert.ok(plan.some(item=>item.providerId==='anthropic-api'));
+});
+
+test('account-managed worker can be declared zero-marginal-cost without opening paid APIs',()=>{
+  const task=normalizeTaskInput({prompt:'review this'});
+  const plan=buildExecutionPlan(task,{geminiFree:false,nodeProviders:[],openaiApi:true,workerProviders:['claude'],providerProfiles:{'worker:claude':{costClass:'account-managed'}}});
+  assert.deepEqual(plan.map(item=>item.providerId),['worker:claude']);
 });
 
 test('role prompt carries branch, parallel boundary and immutable promotion context',()=>{
@@ -90,4 +105,15 @@ test('high-impact actions remain analysis-only behind a human gate',()=>{
 test('delegated reversible preflighted actions may pass the autonomous gate',()=>{
   const task=normalizeTaskInput({prompt:'update isolated preview',governance:{agentId:'platform',area:'bounded_preview_update',delegated:true,reversible:true,logged:true,preflightVerified:true}}); const d=evaluateTaskMissionPolicy(task);
   assert.equal(d.tier,'execute_reversible'); assert.equal(d.autonomousActionAllowed,true); assert.equal(d.analysisOnly,false);
+});
+
+test('known paid API cost class cannot be relabeled as free by runtime profiles',()=>{
+  const task=normalizeTaskInput({prompt:'review'});
+  const plan=buildExecutionPlan(task,{
+    geminiFree:false,
+    nodeProviders:[],
+    openaiApi:true,
+    providerProfiles:{'openai-api':{costClass:'account-managed'}},
+  });
+  assert.deepEqual(plan,[]);
 });

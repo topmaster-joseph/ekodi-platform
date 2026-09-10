@@ -17,3 +17,8 @@ test('AI Ops provider status dots are decorative rather than blocking loaders', 
   assert.match(source, /providerState\.status==='loading'/);
   assert.match(source, /data-ekodi-provider-diagnostic/);
 });
+test('authenticated Admin E2E aggregates every AI settings guard group', async () => {
+  const worker = await read('scripts/admin-authenticated-e2e-menu-worker.mjs');
+  assert.match(worker, /locator\('\.ai-mgmt-guards'\)\.allTextContents\(\)/);
+  assert.doesNotMatch(worker, /locator\('\.ai-mgmt-guards'\)\.textContent\(\)/);
+});

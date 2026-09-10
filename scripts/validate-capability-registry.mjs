@@ -29,8 +29,8 @@ export function validateCapabilityRegistry({ registry = {}, packs = {}, governan
   if (registry.name !== 'EKODI Universal Capability Registry') errors.push('Registry name must be canonical.');
   if (registry.providerContract !== providerContract.contractId) errors.push('Registry provider contract must match the active provider contract.');
   if (providerContract.status !== 'active') errors.push('Capability provider contract must remain active.');
-  if (registry.generation?.capabilityTarget !== 3 || registry.generation?.northStar !== 8) {
-    errors.push('Capability Registry must target Generation 3 while preserving Generation 8 north star.');
+  if (registry.generation?.currentFoundation !== 10 || registry.generation?.capabilityPlatformMilestone !== 3 || registry.generation?.livingCommonsMilestone !== 8 || registry.generation?.selfCapabilityMilestone !== 9 || registry.generation?.architectureOptimizationBaseline !== 10 || registry.generation?.futureMode !== 'open_ended_evidence_driven') {
+    errors.push('Capability Registry generation metadata must reflect the Generation 10 baseline and open-ended future evolution.');
   }
   if (registry.intentPolicy?.router !== 'deterministic_first') errors.push('Intent routing must remain deterministic_first by default.');
   if (registry.intentPolicy?.modelMayInventCapabilities !== false) errors.push('Models must never invent unregistered capabilities.');

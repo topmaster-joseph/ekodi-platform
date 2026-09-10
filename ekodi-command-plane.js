@@ -1,4 +1,5 @@
 import { buildEkodiAiOrchestrator } from './ai-orchestrator-runtime.js';
+import { evaluateAiCostEligibility } from './ai-cost-policy.js';
 
 const RISK_LEVELS = new Set(['low', 'normal', 'high', 'critical']);
 const PULSE_KINDS = new Set(['manual_goal', 'schedule', 'webhook', 'repository', 'monitor', 'service_health', 'system_event']);
@@ -49,6 +50,7 @@ function publicProvider(provider) {
     priority: provider.priority,
     capabilities: provider.capabilities,
     trustClass: provider.trustClass,
+    costClass: provider.costClass || 'unknown',
   });
 }
 
@@ -129,7 +131,9 @@ function chooseAssignments(specialists, providers) {
 export function buildEkodiCommandPlan(input = {}, providers = []) {
   const normalizedProviders = normalizeProviders(providers);
   const specialists = normalizeSpecialists(input.specialists);
-  const assignment = chooseAssignments(specialists, normalizedProviders);
+  const governance = input.governance && typeof input.governance === 'object' ? input.governance : {};
+  const costEligibleProviders = normalizedProviders.filter(provider => evaluateAiCostEligibility(provider, { governance }).eligible);
+  const assignment = chooseAssignments(specialists, costEligibleProviders);
   const risk = RISK_LEVELS.has(text(input.risk, 20).toLowerCase()) ? text(input.risk, 20).toLowerCase() : 'normal';
   const taskId = text(input.taskId || input.taskName || `task_${Date.now()}`, 120) || `task_${Date.now()}`;
 
@@ -184,7 +188,7 @@ function degradedValue(role, reason) {
   });
 }
 
-async function runAssigned({ env, provider, taskName, context, role, objective, timeoutMs }) {
+async function runAssigned({ env, provider, taskName, context, role, objective, timeoutMs, governance = {} }) {
   if (!provider) {
     return Object.freeze({ role, provider: null, mode: 'core_only', ok: false, value: degradedValue(role, 'no_eligible_provider') });
   }
@@ -198,6 +202,7 @@ async function runAssigned({ env, provider, taskName, context, role, objective, 
     collaboration: 'primary',
     risk: 'normal',
     requiredCapabilities: [],
+    governance,
     timeoutMs,
     fallback: reason => degradedValue(role, reason),
   });
@@ -229,6 +234,7 @@ export function buildEkodiCommandPlane(env = {}, providers = []) {
       role: assignment.role,
       objective: assignment.objective,
       timeoutMs: input.timeoutMs,
+      governance: input.governance || {},
     })));
 
     const specialistEvidence = Object.freeze(specialistResults.map(result => Object.freeze({
@@ -251,6 +257,7 @@ export function buildEkodiCommandPlane(env = {}, providers = []) {
       role: 'sentinel',
       objective: 'Independently verify the specialist evidence. Do not merely agree with the specialists.',
       timeoutMs: input.timeoutMs,
+      governance: input.governance || {},
     }) : null;
 
     const successfulProviders = new Set(specialistResults.filter(result => result.ok && result.provider).map(result => result.provider));
