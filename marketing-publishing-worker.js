@@ -92,13 +92,14 @@ async function channelSchemaReady(env) {
 
 async function automationSnapshot(request,env,subject) {
   const entitlement=await automationEntitlement(env,subject);
-  const [profiles,connections,channels,jobs]=await Promise.all([
+  const [profiles,connections,channels,jobs,policy]=await Promise.all([
     listAutomationProfiles(env,subject),
     listManagedConnections(env,subject),
     env.DB.prepare('SELECT id,provider,channel_type,display_name,external_account_id,status,config_json,last_check_at,last_error,created_at,updated_at FROM marketing_publish_channels WHERE subject_type=? AND subject_key=? ORDER BY id DESC').bind(subject.type,subject.key).all(),
-    env.DB.prepare('SELECT id,channel_id,schedule_kind,scheduled_at,recurrence_rule,status,requested_by,external_post_url,last_error,published_at,created_at FROM marketing_publication_jobs WHERE subject_type=? AND subject_key=? ORDER BY created_at DESC LIMIT 50').bind(subject.type,subject.key).all(),
+    env.DB.prepare('SELECT id,channel_id,schedule_kind,scheduled_at,recurrence_rule,status,requested_by,attempt_count,max_attempts,next_attempt_at,external_post_url,last_error,published_at,created_at FROM marketing_publication_jobs WHERE subject_type=? AND subject_key=? ORDER BY created_at DESC LIMIT 50').bind(subject.type,subject.key).all(),
+    getPolicy(env,subject),
   ]);
-  return json(request,env,{subject:{type:subject.type,key:subject.key,workspaceId:subject.workspaceId||'',workspaceSlug:subject.workspaceSlug||''},entitlement,profiles,connections,channels:(channels.results||[]).map(row=>({...row,config:safeParse(row.config_json,{})})),jobs:jobs.results||[],youtubeOAuthAvailable:youtubeConnectionReady(env)});
+  return json(request,env,{subject:{type:subject.type,key:subject.key,workspaceId:subject.workspaceId||'',workspaceSlug:subject.workspaceSlug||''},entitlement,profiles,connections,channels:(channels.results||[]).map(row=>({...row,config:safeParse(row.config_json,{})})),jobs:jobs.results||[],policy:{mode:policy.mode,maxDailyPosts:Number(policy.max_daily_posts||5),allowedProviders:safeParse(policy.allowed_providers_json,[]),quietHours:safeParse(policy.quiet_hours_json,{})},youtubeOAuthAvailable:youtubeConnectionReady(env)});
 }
 
 async function audit(env, subject, jobId, action, detail = '', actor = '') {
@@ -144,6 +145,49 @@ async function upsertPolicy(request, env, identity, subject) {
     .bind(subject.type, subject.key, subject.workspaceId || '', mode, maxDaily, safeJson(providers,[]), safeJson(body.quietHours || {}), now, now).run();
   await audit(env, subject, null, 'publish_policy_updated', `${mode}:${maxDaily}`, identity.email);
   return json(request, env, {ok:true,mode,maxDailyPosts:maxDaily,allowedProviders:providers});
+}
+
+function channelControl(config={}) {
+  const hhmm=value=>/^([01]\d|2[0-3]):[0-5]\d$/.test(String(value||''))?String(value):'';
+  return {
+    autoPublishEnabled:config.autoPublishEnabled!==false,
+    maxPostsPerDay:Math.max(0,Math.min(100,Number(config.maxPostsPerDay||0))),
+    minHoursBetweenPosts:Math.max(0,Math.min(168,Number(config.minHoursBetweenPosts||0))),
+    publishWindowStart:hhmm(config.publishWindowStart),
+    publishWindowEnd:hhmm(config.publishWindowEnd),
+    timezone:clean(config.timezone||'Asia/Seoul',80)||'Asia/Seoul',
+    maxAttempts:Math.max(1,Math.min(20,Number(config.maxAttempts||5))),
+  };
+}
+function timeWindowOpen(start,end,timezone) {
+  if(!start||!end)return true;
+  let parts;try{parts=new Intl.DateTimeFormat('en-GB',{timeZone:timezone||'Asia/Seoul',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(new Date())}catch{return true}
+  const hour=Number(parts.find(x=>x.type==='hour')?.value||0),minute=Number(parts.find(x=>x.type==='minute')?.value||0),now=hour*60+minute,toMin=v=>Number(v.slice(0,2))*60+Number(v.slice(3,5)),a=toMin(start),b=toMin(end);
+  return a===b?true:a<b?(now>=a&&now<b):(now>=a||now<b);
+}
+function policyWindowOpen(policy) {
+  const q=safeParse(policy?.quiet_hours_json,{}),start=String(q.start||''),end=String(q.end||'');
+  if(!/^([01]\d|2[0-3]):[0-5]\d$/.test(start)||!/^([01]\d|2[0-3]):[0-5]\d$/.test(end))return true;
+  return timeWindowOpen(start,end,clean(q.timezone||'Asia/Seoul',80)||'Asia/Seoul');
+}
+async function readPolicy(request,env,subject){
+  const policy=await getPolicy(env,subject);
+  return json(request,env,{policy:{mode:policy.mode,maxDailyPosts:Number(policy.max_daily_posts||5),allowedProviders:safeParse(policy.allowed_providers_json,[]),quietHours:safeParse(policy.quiet_hours_json,{})}});
+}
+async function updateChannelControl(request,env,identity,subject,id){
+  const body=await readJson(request);if(!body)return json(request,env,{error:'INVALID_JSON'},400);
+  const row=await env.DB.prepare('SELECT id,status,credential_ref,config_json,last_error FROM marketing_publish_channels WHERE id=? AND subject_type=? AND subject_key=?').bind(Number(id),subject.type,subject.key).first();
+  if(!row)return json(request,env,{error:'CHANNEL_NOT_FOUND'},404);
+  const existing=safeParse(row.config_json,{}),control=channelControl({...existing,...body}),next={...existing,...control};
+  let status='paused';
+  if(control.autoPublishEnabled){
+    const revoked=String(row.last_error||'')==='connection_revoked';
+    const ready=!revoked&&await channelCredentialConfigured(env,{...row,config_json:safeJson(next)});
+    status=ready?'active':'credentials_required';
+  }
+  await env.DB.prepare('UPDATE marketing_publish_channels SET status=?,config_json=?,updated_at=? WHERE id=? AND subject_type=? AND subject_key=?').bind(status,safeJson(next),nowIso(),Number(id),subject.type,subject.key).run();
+  await audit(env,subject,null,'channel_control_updated',`${id}:${status}:${control.maxPostsPerDay}:${control.minHoursBetweenPosts}`,identity.email);
+  return json(request,env,{ok:true,channelId:Number(id),status,control});
 }
 
 async function listChannels(request, env, subject) {
@@ -213,18 +257,19 @@ async function queuePublish(request, env, identity, subject) {
   const ids = [...new Set(body.channelIds.map(Number).filter(Number.isInteger))].slice(0,20);
   if (ids.length > entitlement.maxChannels) return json(request,env,{error:'CHANNEL_PLAN_LIMIT_REACHED',entitlement},409);
   const placeholders = ids.map(()=>'?').join(',');
-  const channelResult = await env.DB.prepare(`SELECT id,provider,channel_type,status,credential_ref,config_json FROM marketing_publish_channels WHERE subject_type=? AND subject_key=? AND id IN (${placeholders})`)
+  const channelResult = await env.DB.prepare(`SELECT id,provider,channel_type,status,credential_ref,config_json FROM marketing_publish_channels WHERE subject_type=? AND subject_key=? AND status='active' AND id IN (${placeholders})`)
     .bind(subject.type,subject.key,...ids).all();
   const channels = channelResult.results || [];
   const jobs = [];
   for (const channel of channels) {
-    const credentialReady = channel.status === 'active' && await channelCredentialConfigured(env,channel.credential_ref);
-    const initial = credentialReady ? (scheduleKind === 'immediate' ? 'queued' : 'scheduled') : 'credentials_required';
-    const insert = await env.DB.prepare(`INSERT INTO marketing_publication_jobs(subject_type,subject_key,workspace_id,content_id,channel_id,schedule_kind,scheduled_at,recurrence_rule,status,requested_by,attempt_count,max_attempts,created_at,updated_at)
-      VALUES(?,?,?,?,?,?,?,?,?,?,0,5,?,?)`).bind(subject.type,subject.key,subject.workspaceId||'',contentId,channel.id,scheduleKind,scheduledAt,recurrence,initial,requestedBy,now,now).run();
-    const jobId = Number(insert.meta?.last_row_id || 0);
+    const control=channelControl(safeParse(channel.config_json,{}));
+    const credentialReady=channel.status==='active'&&control.autoPublishEnabled&&await channelCredentialConfigured(env,channel);
+    const initial=credentialReady?(scheduleKind==='immediate'?'queued':'scheduled'):'credentials_required';
+    const insert=await env.DB.prepare(`INSERT INTO marketing_publication_jobs(subject_type,subject_key,workspace_id,content_id,channel_id,schedule_kind,scheduled_at,recurrence_rule,status,requested_by,attempt_count,max_attempts,created_at,updated_at)
+      VALUES(?,?,?,?,?,?,?,?,?,?,0,?,?,?)`).bind(subject.type,subject.key,subject.workspaceId||'',contentId,channel.id,scheduleKind,scheduledAt,recurrence,initial,requestedBy,control.maxAttempts,now,now).run();
+    const jobId=Number(insert.meta?.last_row_id||0);
     jobs.push({id:jobId,channelId:Number(channel.id),status:initial});
-    await audit(env, subject, jobId, 'publication_queued', `${channel.provider}:${channel.channel_type}:${scheduledAt}`, identity.email);
+    await audit(env,subject,jobId,'publication_queued',`${channel.provider}:${channel.channel_type}:${scheduledAt}`,identity.email);
   }
   if (!jobs.length) return json(request, env, {error:'NO_OWNED_CHANNELS'}, 400);
   return json(request, env, {ok:true,contentId,scheduleKind,scheduledAt,recurrenceRule:recurrence,jobs,entitlement}, 201);
@@ -256,10 +301,15 @@ async function mutateJob(request, env, identity, subject, id, action) {
   return json(request, env, {error:'UNKNOWN_ACTION'}, 404);
 }
 
-async function channelCredentialConfigured(env, ref) {
-  const value=String(ref||'');
-  if (!value) return false;
-  if (value.startsWith('oauth:')) { try { return Boolean(await managedCredential(env,value)); } catch { return false; } }
+async function channelCredentialConfigured(env, channelOrRef) {
+  const channel=channelOrRef&&typeof channelOrRef==='object'?channelOrRef:null;
+  if(channel){
+    const config=safeParse(channel.config_json,{});
+    if(config.credentialMode==='oauth-vault'&&Number(config.oauthConnectionId)>0)return Boolean(env.MARKETING_GROWTH?.publishFromVault);
+  }
+  const value=String(channel?channel.credential_ref:channelOrRef||'');
+  if(!value)return false;
+  if(value.startsWith('oauth:')){try{return Boolean(await managedCredential(env,value))}catch{return false}}
   return Boolean(env[value]);
 }
 
@@ -426,41 +476,47 @@ function nextRecurrence(value, rule) {
   return d.toISOString();
 }
 
+async function deferJob(env,subject,row,code,message,nextAt){
+  const when=nextAt||new Date(Date.now()+60*60*1000).toISOString();
+  await env.DB.prepare("UPDATE marketing_publication_jobs SET status='retrying',next_attempt_at=?,last_error=?,updated_at=? WHERE id=? AND status IN ('scheduled','queued','retrying')").bind(when,clean(`${code}: ${message}`,1000),nowIso(),row.id).run();
+  await audit(env,subject,row.id,'publication_deferred',`${code}:${when}`,'scheduler');
+}
 async function processJob(env, row) {
-  const subject = {type:row.subject_type,key:row.subject_key,workspaceId:row.workspace_id||''};
-  const claimed = await env.DB.prepare(`UPDATE marketing_publication_jobs SET status='publishing',attempt_count=attempt_count+1,updated_at=?
-    WHERE id=? AND status IN ('scheduled','queued','retrying')`).bind(nowIso(),row.id).run();
-  if (!claimed.meta?.changes) return;
-  const current = await env.DB.prepare('SELECT attempt_count,max_attempts FROM marketing_publication_jobs WHERE id=?').bind(row.id).first();
-  try {
-    const policy = await getPolicy(env, subject);
-    const allowed = safeParse(policy.allowed_providers_json,[]);
-    if (Array.isArray(allowed) && allowed.length && !allowed.includes(row.provider)) throw Object.assign(new Error('게시 정책에서 허용되지 않은 채널입니다.'),{code:'POLICY_PROVIDER_BLOCKED'});
-    const cutoff = new Date(Date.now()-24*60*60*1000).toISOString();
-    const count = await env.DB.prepare("SELECT count(*) AS n FROM marketing_publication_jobs WHERE subject_type=? AND subject_key=? AND status='published' AND published_at>=?").bind(subject.type,subject.key,cutoff).first();
-    if (Number(count?.n || 0) >= Number(policy.max_daily_posts || 5)) throw Object.assign(new Error('일일 자동 게시 한도에 도달했습니다.'),{code:'DAILY_LIMIT'});
-    const result = await executeProvider(env,row,row,row);
-    const publishedAt = nowIso();
-    await env.DB.prepare(`UPDATE marketing_publication_jobs SET status='published',external_post_id=?,external_post_url=?,provider_response_json=?,last_error='',published_at=?,updated_at=? WHERE id=?`)
-      .bind(clean(result.id,240),safeUrl(result.url),safeJson(safeProviderResult(result)),publishedAt,publishedAt,row.id).run();
-    await audit(env,subject,row.id,'publication_published',`${row.provider}:${row.channel_type}:${result.id || 'ok'}`,'scheduler');
-    const nextAt = nextRecurrence(row.scheduled_at,row.recurrence_rule);
-    if (nextAt) {
-      const now = nowIso();
-      await env.DB.prepare(`INSERT INTO marketing_publication_jobs(subject_type,subject_key,workspace_id,content_id,channel_id,schedule_kind,scheduled_at,recurrence_rule,status,requested_by,governance_action_id,attempt_count,max_attempts,created_at,updated_at)
-        VALUES(?,?,?,?,?, 'repeating',?,?, 'scheduled',?,?,0,?,?,?)`)
-        .bind(subject.type,subject.key,subject.workspaceId||'',row.content_id,row.channel_id,nextAt,row.recurrence_rule,row.requested_by,row.governance_action_id || null,row.max_attempts || 5,now,now).run();
+  const subject={type:row.subject_type,key:row.subject_key,workspaceId:row.workspace_id||''};
+  const policy=await getPolicy(env,subject),allowed=safeParse(policy.allowed_providers_json,[]),control=channelControl(safeParse(row.config_json,{}));
+  if(Array.isArray(allowed)&&allowed.length&&!allowed.includes(row.provider))return deferJob(env,subject,row,'POLICY_PROVIDER_BLOCKED','게시 정책에서 허용되지 않은 채널입니다.');
+  if(!policyWindowOpen(policy))return deferJob(env,subject,row,'POLICY_TIME_WINDOW','자동 게시 허용 시간 전입니다.',new Date(Date.now()+30*60*1000).toISOString());
+  if(row.channel_status!=='active'||!control.autoPublishEnabled)return deferJob(env,subject,row,'CHANNEL_PAUSED','채널 자동 게시가 중지되어 있습니다.');
+  if(!timeWindowOpen(control.publishWindowStart,control.publishWindowEnd,control.timezone))return deferJob(env,subject,row,'CHANNEL_TIME_WINDOW','채널 게시 허용 시간 전입니다.',new Date(Date.now()+30*60*1000).toISOString());
+  const cutoff=new Date(Date.now()-24*60*60*1000).toISOString();
+  const total=await env.DB.prepare("SELECT count(*) AS n,MIN(published_at) AS first_at FROM marketing_publication_jobs WHERE subject_type=? AND subject_key=? AND status='published' AND published_at>=?").bind(subject.type,subject.key,cutoff).first();
+  if(Number(total?.n||0)>=Number(policy.max_daily_posts||5))return deferJob(env,subject,row,'DAILY_LIMIT','운영공간 일일 자동 게시 한도에 도달했습니다.',total?.first_at?new Date(Date.parse(total.first_at)+86400000).toISOString():'');
+  if(control.maxPostsPerDay>0){
+    const per=await env.DB.prepare("SELECT count(*) AS n,MIN(published_at) AS first_at FROM marketing_publication_jobs WHERE channel_id=? AND status='published' AND published_at>=?").bind(row.channel_id,cutoff).first();
+    if(Number(per?.n||0)>=control.maxPostsPerDay)return deferJob(env,subject,row,'CHANNEL_DAILY_LIMIT','채널 일일 게시 한도에 도달했습니다.',per?.first_at?new Date(Date.parse(per.first_at)+86400000).toISOString():'');
+  }
+  if(control.minHoursBetweenPosts>0){
+    const last=await env.DB.prepare("SELECT MAX(published_at) AS at FROM marketing_publication_jobs WHERE channel_id=? AND status='published'").bind(row.channel_id).first();
+    const nextAt=last?.at?Date.parse(last.at)+control.minHoursBetweenPosts*3600000:0;
+    if(nextAt>Date.now())return deferJob(env,subject,row,'CHANNEL_COOLDOWN','채널 최소 게시 간격을 기다리는 중입니다.',new Date(nextAt).toISOString());
+  }
+  const claimed=await env.DB.prepare(`UPDATE marketing_publication_jobs SET status='publishing',attempt_count=attempt_count+1,updated_at=? WHERE id=? AND status IN ('scheduled','queued','retrying')`).bind(nowIso(),row.id).run();
+  if(!claimed.meta?.changes)return;
+  const current=await env.DB.prepare('SELECT attempt_count,max_attempts FROM marketing_publication_jobs WHERE id=?').bind(row.id).first();
+  try{
+    const result=await executeProvider(env,row,row,row),publishedAt=nowIso();
+    await env.DB.prepare(`UPDATE marketing_publication_jobs SET status='published',external_post_id=?,external_post_url=?,provider_response_json=?,last_error='',published_at=?,updated_at=? WHERE id=?`).bind(clean(result.id,240),safeUrl(result.url),safeJson(safeProviderResult(result)),publishedAt,publishedAt,row.id).run();
+    await audit(env,subject,row.id,'publication_published',`${row.provider}:${row.channel_type}:${result.id||'ok'}`,'scheduler');
+    const nextAt=nextRecurrence(row.scheduled_at,row.recurrence_rule);
+    if(nextAt){
+      const now=nowIso();
+      await env.DB.prepare(`INSERT INTO marketing_publication_jobs(subject_type,subject_key,workspace_id,content_id,channel_id,schedule_kind,scheduled_at,recurrence_rule,status,requested_by,governance_action_id,attempt_count,max_attempts,created_at,updated_at) VALUES(?,?,?,?,?,'repeating',?,?,'scheduled',?,?,0,?,?,?)`).bind(subject.type,subject.key,subject.workspaceId||'',row.content_id,row.channel_id,nextAt,row.recurrence_rule,row.requested_by,row.governance_action_id||null,row.max_attempts||control.maxAttempts||5,now,now).run();
     }
-  } catch (error) {
-    const code = String(error?.code || 'PUBLISH_FAILED');
-    const attempt = Number(current?.attempt_count || 1);
-    const max = Number(current?.max_attempts || 5);
-    const credential = ['CREDENTIALS_REQUIRED','INVALID_CREDENTIAL_CONFIG'].includes(code);
-    const retryable = !credential && attempt < max && !['PROVIDER_NOT_READY','POLICY_PROVIDER_BLOCKED'].includes(code);
-    const status = credential ? 'credentials_required' : retryable ? 'retrying' : 'failed';
-    const next = retryable ? new Date(Date.now()+backoffMinutes(attempt)*60*1000).toISOString() : null;
-    await env.DB.prepare('UPDATE marketing_publication_jobs SET status=?,next_attempt_at=?,last_error=?,updated_at=? WHERE id=?')
-      .bind(status,next,clean(`${code}: ${error?.message || 'publish failed'}`,1000),nowIso(),row.id).run();
+  }catch(error){
+    const code=String(error?.code||'PUBLISH_FAILED'),attempt=Number(current?.attempt_count||1),max=Number(current?.max_attempts||control.maxAttempts||5);
+    const credential=['CREDENTIALS_REQUIRED','INVALID_CREDENTIAL_CONFIG'].includes(code),retryable=!credential&&attempt<max&&!['PROVIDER_NOT_READY'].includes(code),status=credential?'credentials_required':retryable?'retrying':'failed';
+    const next=retryable?new Date(Date.now()+backoffMinutes(attempt)*60000).toISOString():null;
+    await env.DB.prepare('UPDATE marketing_publication_jobs SET status=?,next_attempt_at=?,last_error=?,updated_at=? WHERE id=?').bind(status,next,clean(`${code}: ${error?.message||'publish failed'}`,1000),nowIso(),row.id).run();
     await audit(env,subject,row.id,'publication_failed',`${code}:${status}`,'scheduler');
   }
 }
@@ -471,7 +527,7 @@ async function runScheduler(env) {
   try {
     result = await env.DB.prepare(`SELECT j.*,c.title,c.content_type,c.caption,c.asset_url,c.link_url,c.content_json,ch.provider,ch.channel_type,ch.display_name,ch.external_account_id,ch.credential_ref,ch.config_json,ch.status AS channel_status
       FROM marketing_publication_jobs j JOIN marketing_content_items c ON c.id=j.content_id JOIN marketing_publish_channels ch ON ch.id=j.channel_id
-      WHERE j.status IN ('scheduled','queued','retrying') AND j.scheduled_at<=? AND (j.next_attempt_at IS NULL OR j.next_attempt_at<=?)
+      WHERE j.status IN ('scheduled','queued','retrying') AND ch.status='active' AND j.scheduled_at<=? AND (j.next_attempt_at IS NULL OR j.next_attempt_at<=?)
       ORDER BY j.scheduled_at ASC LIMIT 25`).bind(now,now).all();
   } catch (error) {
     if (/no such table/i.test(String(error?.message || error))) return { processed:0, schemaReady:false };
@@ -536,7 +592,10 @@ export default {
 
     if (url.pathname === '/v1/brand' && request.method === 'GET') return readBrand(request,env,subject);
     if (url.pathname === '/v1/brand' && request.method === 'PUT') return upsertBrand(request,env,identity,subject);
+    if (url.pathname === '/v1/policy' && request.method === 'GET') return readPolicy(request,env,subject);
     if (url.pathname === '/v1/policy' && request.method === 'PUT') return upsertPolicy(request,env,identity,subject);
+    const channelControlMatch=url.pathname.match(/^\/v1\/channels\/(\d+)\/settings$/);
+    if(channelControlMatch&&request.method==='PUT')return updateChannelControl(request,env,identity,subject,Number(channelControlMatch[1]));
     if (url.pathname === '/v1/channels' && request.method === 'GET') return listChannels(request,env,subject);
     if (url.pathname === '/v1/channels' && request.method === 'POST') return connectChannel(request,env,identity,subject);
     if (url.pathname === '/v1/jobs' && request.method === 'GET') return listJobs(request,env,subject);
