@@ -1,3 +1,5 @@
+import { AI_COST_POLICY, evaluateAiCostEligibility } from './ai-cost-policy.js';
+
 const RESOURCE_CLASSES = Object.freeze([
   'personal-subscription',
   'personal-api',
@@ -12,7 +14,7 @@ const SCORE_WEIGHTS = Object.freeze({
   latency:5, reliability:5, privacy:5, context:5,
 });
 const HARD_GATES = Object.freeze([
-  'officialPath','automationPermission','auth','dataPolicy','permission','budget',
+  'officialPath','automationPermission','auth','dataPolicy','permission','budget','cost',
 ]);
 const CORE_STATES = Object.freeze([
   'REQUEST','ANALYZE','PLAN','EXECUTE','TEST','FIX','RETEST','DEPLOY',
@@ -34,7 +36,7 @@ function normalizePool(value, fallback) {
 }
 
 export const DEFAULT_AI_RESOURCE_POLICY = Object.freeze({
-  version:'1.0.0', strategy:'personal-first',
+  version:'1.1.0', strategy:'personal-first',
   interactiveOrder:INTERACTIVE_ORDER,
   autonomousOrder:AUTONOMOUS_ORDER,
   pools:Object.freeze({
@@ -44,6 +46,7 @@ export const DEFAULT_AI_RESOURCE_POLICY = Object.freeze({
     hostedAi:Object.freeze({enabled:false,mode:'cloud-gpu-on-demand'}),
     coreOnly:Object.freeze({enabled:true,deterministic:true}),
   }),
+  funding:AI_COST_POLICY,
   router:Object.freeze({weights:SCORE_WEIGHTS,hardGates:HARD_GATES}),
   core:Object.freeze({
     learnAfterSuccess:true, promotionMode:'reviewed', productionVerificationRequired:true,
@@ -55,7 +58,7 @@ export function normalizeAiResourcePolicy(value = {}) {
   const pools = source.pools && typeof source.pools === 'object' ? source.pools : {};
   const defaults = DEFAULT_AI_RESOURCE_POLICY;
   return {
-    version:'1.0.0', strategy:'personal-first',
+    version:'1.1.0', strategy:'personal-first',
     interactiveOrder:[...INTERACTIVE_ORDER],
     autonomousOrder:[...AUTONOMOUS_ORDER],
     pools:{
@@ -65,6 +68,7 @@ export function normalizeAiResourcePolicy(value = {}) {
       hostedAi:normalizePool(pools.hostedAi, defaults.pools.hostedAi),
       coreOnly:normalizePool(pools.coreOnly, defaults.pools.coreOnly),
     },
+    funding:{...AI_COST_POLICY,zeroMarginalCostClasses:[...AI_COST_POLICY.zeroMarginalCostClasses],paidCostClasses:[...AI_COST_POLICY.paidCostClasses],freeExhaustedFallback:[...AI_COST_POLICY.freeExhaustedFallback]},
     router:{weights:{...SCORE_WEIGHTS},hardGates:[...HARD_GATES]},
     core:{
       learnAfterSuccess:bool(source.core?.learnAfterSuccess, true),
@@ -88,6 +92,9 @@ function gateCandidate(candidate = {}, context = {}, policy = DEFAULT_AI_RESOURC
   if (lane === 'autonomous' && resourceClass === 'personal-subscription' && candidate.automationAllowed !== true) return 'subscription_not_automation_eligible';
   const poolKey = ({'personal-subscription':'personalSubscription','personal-api':'personalApi','ekodi-shared-api':'ekodiSharedApi','hosted-ai':'hostedAi','core-only':'coreOnly'})[resourceClass];
   if (poolKey && policy.pools?.[poolKey]?.enabled === false) return 'pool_disabled';
+  const defaultCostClass = resourceClass === 'personal-subscription' ? 'account-managed' : resourceClass === 'core-only' ? 'core-only' : 'unknown';
+  const cost = evaluateAiCostEligibility({ ...candidate, costClass:candidate.costClass || defaultCostClass }, context);
+  if (!cost.eligible) return cost.blockedBy;
   return '';
 }
 
@@ -121,4 +128,5 @@ export const AI_RESOURCE_POLICY = Object.freeze({
   scoreWeights:SCORE_WEIGHTS,
   hardGates:HARD_GATES,
   coreStates:CORE_STATES,
+  costPolicyId:AI_COST_POLICY.policyId,
 });
