@@ -157,7 +157,7 @@
   "publicServiceOperators": {
     "readingDialogue": {
       "providerKey": "community",
-      "providerName": "EKODI Community",
+      "providerName": "Community",
       "publicServiceName": "함께읽기",
       "canonicalPath": "https://ekodi.kr/community/reading",
       "operationalAdminOwner": "community-service-admin",
