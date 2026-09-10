@@ -13,10 +13,10 @@ test('external EKODI services use service/site admin surfaces as the operational
   assert.equal(policy.serviceAdministrationPolicy.platformSuperAdministrator.implicitWorkspaceLocalRole, false);
 });
 
-test('Reading & Dialogue is externally provided by EKODI Community', () => {
+test('Reading & Dialogue is externally provided by Community', () => {
   const reading = policy.publicServiceOperators.readingDialogue;
   assert.equal(reading.providerKey, 'community');
-  assert.equal(reading.providerName, 'EKODI Community');
+  assert.equal(reading.providerName, 'Community');
   assert.equal(reading.publicServiceName, '함께읽기');
   assert.equal(reading.canonicalPath, 'https://ekodi.kr/community/reading');
   assert.equal(reading.operationalAdminOwner, 'community-service-admin');
@@ -26,7 +26,8 @@ test('Reading & Dialogue is externally provided by EKODI Community', () => {
 });
 
 test('Community admin projects the registered reading provider and preserves platform/local authority separation', () => {
-  assert.match(communityAdmin, /EKODI Community/);
+  assert.match(communityAdmin, /PUBLIC PROVIDER/);
+  assert.match(communityAdmin, /<strong>Community<\/strong>/);
   assert.match(communityAdmin, /함께읽기/);
   assert.match(communityAdmin, /\/community\/reading/);
   assert.match(communityAdmin, /서비스 로컬 권한을 자동 승계하지 않음/);
