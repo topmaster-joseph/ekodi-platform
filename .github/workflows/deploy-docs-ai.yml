@@ -30,7 +30,7 @@ env:
   DOCUMENT_MIGRATION: supabase/migrations/20260907113000_document_workspace_ai.sql
   DOCUMENT_HEALTH_MIGRATION: supabase/migrations/20260907135500_document_workspace_health.sql
   DOCUMENT_MIGRATION_GLOB: "supabase/migrations/*document_workspace*.sql"
-  DOCS_AI_RELEASE: "20260908-docs-ai-4"
+  DOCS_AI_RELEASE: "20260910-docs-ai-5"
   MY_SUPABASE_PUBLISHABLE_KEY: sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_
 
 jobs:
@@ -59,8 +59,10 @@ jobs:
           grep -Fq 'GEMINI_API_KEY' supabase/functions/document-ai-api/index.ts
           grep -Fq 'OPENAI_API_KEY' supabase/functions/document-ai-api/index.ts
           grep -Fq 'store:false' supabase/functions/document-ai-api/index.ts
+          grep -Fq 'const CANONICAL_ORIGIN="https://ekodi.kr"' supabase/functions/document-ai-api/index.ts
           grep -Fq "const RELEASE=\"$DOCS_AI_RELEASE\"" supabase/functions/document-ai-api/index.ts
           grep -Fq 'X-EKODI-Docs-Contract' supabase/functions/document-ai-api/index.ts
+          grep -Fq 'auth.getUser()' supabase/functions/document-ai-api/index.ts
           ! grep -Eiq 'drop[[:space:]]+table|truncate[[:space:]]+table' "$DOCUMENT_MIGRATION" "$DOCUMENT_HEALTH_MIGRATION"
 
   production:
@@ -117,8 +119,9 @@ jobs:
           echo 'Document schema migrations applied.'
       - name: Deploy document AI function
         if: env.SUPABASE_DEPLOY_AVAILABLE == 'true'
-        run: npx --yes supabase@${SUPABASE_CLI_VERSION} functions deploy document-ai-api --project-ref "$PROJECT_REF"
-      - name: Verify live schema and function contract
+        # The function validates bearer tokens with Supabase Auth so it can return its own CORS-safe 401 contract.
+        run: npx --yes supabase@${SUPABASE_CLI_VERSION} functions deploy document-ai-api --project-ref "$PROJECT_REF" --no-verify-jwt
+      - name: Verify live schema and canonical function contract
         shell: bash
         run: |
           set -euo pipefail
@@ -135,18 +138,27 @@ jobs:
           grep -Fq '"usage": true' /tmp/docs-health.json || grep -Fq '"usage":true' /tmp/docs-health.json
 
           endpoint="https://$PROJECT_REF.supabase.co/functions/v1/document-ai-api"
-          options_code=$(curl -sS -D /tmp/docs-ai.headers -o /dev/null -w '%{http_code}' -X OPTIONS "$endpoint" \
+          canonical_options_code=$(curl -sS -D /tmp/docs-ai-canonical.headers -o /dev/null -w '%{http_code}' -X OPTIONS "$endpoint" \
+            -H 'Origin: https://ekodi.kr' \
+            -H 'Access-Control-Request-Method: POST' \
+            -H 'Access-Control-Request-Headers: authorization,apikey,content-type' || true)
+          [[ "$canonical_options_code" =~ ^(200|204)$ ]]
+          grep -Eiq '^access-control-allow-origin:[[:space:]]*https://ekodi\.kr' /tmp/docs-ai-canonical.headers
+          grep -Eiq '^x-ekodi-docs-contract:[[:space:]]*ekodi\.document-ai\.v2' /tmp/docs-ai-canonical.headers
+          grep -Eiq "^x-ekodi-docs-release:[[:space:]]*$DOCS_AI_RELEASE" /tmp/docs-ai-canonical.headers
+
+          legacy_options_code=$(curl -sS -D /tmp/docs-ai-legacy.headers -o /dev/null -w '%{http_code}' -X OPTIONS "$endpoint" \
             -H 'Origin: https://my.ekodi.kr' \
             -H 'Access-Control-Request-Method: POST' \
             -H 'Access-Control-Request-Headers: authorization,apikey,content-type' || true)
-          [[ "$options_code" =~ ^(200|204)$ ]]
-          grep -Eiq '^access-control-allow-origin:[[:space:]]*https://my\.ekodi\.kr' /tmp/docs-ai.headers
-          grep -Eiq '^x-ekodi-docs-contract:[[:space:]]*ekodi\.document-ai\.v2' /tmp/docs-ai.headers
-          grep -Eiq "^x-ekodi-docs-release:[[:space:]]*$DOCS_AI_RELEASE" /tmp/docs-ai.headers
+          [[ "$legacy_options_code" =~ ^(200|204)$ ]]
+          grep -Eiq '^access-control-allow-origin:[[:space:]]*https://my\.ekodi\.kr' /tmp/docs-ai-legacy.headers
 
-          unauth_code=$(curl -sS -o /tmp/docs-ai-unauth.json -w '%{http_code}' -X POST "$endpoint" \
+          unauth_code=$(curl -sS -D /tmp/docs-ai-unauth.headers -o /tmp/docs-ai-unauth.json -w '%{http_code}' -X POST "$endpoint" \
+            -H 'Origin: https://ekodi.kr' \
             -H 'Content-Type: application/json' \
             --data '{"operation":"proofread","text":"test"}' || true)
           [[ "$unauth_code" == '401' ]]
+          grep -Eiq '^access-control-allow-origin:[[:space:]]*https://ekodi\.kr' /tmp/docs-ai-unauth.headers
           grep -Eq 'UNAUTHORIZED_NO_AUTH_HEADER|authentication_required' /tmp/docs-ai-unauth.json
-          echo "EKODI Docs AI live schema/function verified (deploy_available=${SUPABASE_DEPLOY_AVAILABLE:-false})."
+          echo "EKODI Docs AI canonical live schema/function verified (deploy_available=${SUPABASE_DEPLOY_AVAILABLE:-false})."
