@@ -1,7 +1,7 @@
 import { isPublicWorkspacePath, workspaceSlugFromPublicPath } from './workspace-route-policy.js';
 import { renderStorefrontPage, storefrontCss } from './storefront-page.js';
 import { renderJadamStorefrontPage, jadamStorefrontCss } from './jadam-storefront.js';
-import { renderRestaurantStorefrontPage, restaurantStorefrontCss } from './restaurant-storefront-v2.js';
+import { renderRestaurantStorefrontPage, restaurantStorefrontCss } from './restaurant-storefront.js';
 
 const DEFAULT_PAGE_PROFILE=Object.freeze({
   documentTitle:'운영공간 · EKODI',name:'내 운영공간',kicker:'OPERATING SPACE',
