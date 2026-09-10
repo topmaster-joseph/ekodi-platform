@@ -25,8 +25,8 @@ The intended end-to-end mapping is:
 The two existing free Supabase projects are retained while data is reorganized without destructive cutover.
 
 - Production `ekodi-platform` maps to project ref `renzehysxirjilvdxacv`; its canonical display name is `ekodi-platform` as of 2026-09-06.
-- Development logical target `ekodi-platform-dev` currently maps to project ref `lxcxwbdwwojjkgybbqii`, whose current display name is `ekodi-church`.
-- The second project must not be treated as disposable development data until church production data and dependencies have been safely migrated and verified.
+- Development logical target `ekodi-platform-dev` is intentionally not mapped to any remote Supabase project yet; CI uses an ephemeral local Supabase until a cost-gated development branch/project is explicitly approved.
+- Project ref `lxcxwbdwwojjkgybbqii` (`ekodi-church`) is classified as `ekodi-church-legacy`, is never an allowed development database, and remains online only while legacy Edge Function/runtime dependencies are drained and verified.
 
 Display-name changes and service-data consolidation are separate operations. A rename must never be treated as a data migration.
 
