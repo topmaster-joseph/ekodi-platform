@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="ko" data-ekodi-ui-type="USER">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>EKODI AI | 필요한 AI 기능을 바로 찾기</title>
+  <meta name="description" content="발표자료 만들기, 문서 요약과 다듬기 등 EKODI의 AI 기능을 목적 중심으로 찾고 바로 시작하세요. 기능 소개는 공개되며 AI 실행은 로그인 후 사용할 수 있습니다.">
+  <meta name="robots" content="index,follow">
+  <link rel="canonical" href="https://ekodi.kr/ai">
+  <link rel="stylesheet" href="/ai.css?v=20260910-1">
+</head>
+<body>
+  <header class="ai-topbar">
+    <a class="brand" href="/" aria-label="EKODI 홈">EKODI</a>
+    <nav><a href="/my/">My EKODI</a><a href="/auth/">로그인</a></nav>
+  </header>
+  <main>
+    <section class="hero" aria-labelledby="ai-title">
+      <p class="eyebrow">EKODI AI DISCOVERY</p>
+      <h1 id="ai-title">무엇을 하고 싶으세요?</h1>
+      <p class="hero-copy">AI 이름을 외우지 않아도 됩니다. 하고 싶은 일을 입력하면 EKODI가 사용할 수 있는 기능과 가장 가까운 작업 경로를 보여드립니다.</p>
+      <form id="aiSearchForm" class="intent-box" role="search">
+        <label class="sr-only" for="aiQuery">AI 기능 검색</label>
+        <input id="aiQuery" name="q" autocomplete="off" placeholder="예: 이 문서로 10분 발표자료 만들어줘">
+        <button type="submit">찾기</button>
+      </form>
+      <div id="suggestions" class="suggestions" aria-label="추천 검색어">
+        <button type="button" data-query="발표자료 만들기">발표자료 만들기</button>
+        <button type="button" data-query="긴 문서 요약">긴 문서 요약</button>
+        <button type="button" data-query="문서 다듬기">문서 다듬기</button>
+      </div>
+      <p class="access-note">기능 소개와 예시는 누구나 볼 수 있습니다. AI 실행은 로그인 후 모든 사용자에게 기본 제공됩니다.</p>
+    </section>
+
+    <section class="catalog" aria-labelledby="catalog-title">
+      <div class="section-head"><div><p class="eyebrow">AI FUNCTIONS</p><h2 id="catalog-title">바로 사용할 수 있는 기능</h2></div><p id="resultCount" aria-live="polite"></p></div>
+      <div id="functionGrid" class="function-grid" aria-live="polite"></div>
+      <div id="emptyState" class="empty" hidden><strong>정확히 일치하는 기능을 찾지 못했습니다.</strong><p>입력한 내용을 AI 길찾기로 넘겨 가장 가까운 기능을 찾을 수 있습니다.</p><a id="navigatorLink" class="primary-link" href="/my/">AI 길찾기로 계속</a></div>
+    </section>
+
+    <section class="how-it-works" aria-labelledby="how-title">
+      <p class="eyebrow">ONE ENTRY, MANY CAPABILITIES</p>
+      <h2 id="how-title">기능이 늘어나도 입구는 단순하게</h2>
+      <div class="steps">
+        <article><span>1</span><h3>의도 입력</h3><p>파일이나 현재 업무를 기준으로 하고 싶은 일을 말합니다.</p></article>
+        <article><span>2</span><h3>자동 발견</h3><p>Function Registry와 EKODI Core가 적합한 기능과 실행 경로를 연결합니다.</p></article>
+        <article><span>3</span><h3>로그인 후 실행</h3><p>기본 AI 기능은 로그인 사용자라면 누구나 시작할 수 있습니다.</p></article>
+      </div>
+    </section>
+  </main>
+  <footer><p>EKODI AI · 기능 발견과 실행을 하나의 흐름으로 연결합니다.</p></footer>
+  <script src="/ai.js?v=20260910-1" defer></script>
+</body>
+</html>
