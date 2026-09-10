@@ -40,9 +40,15 @@ test('guarded release probes cmpmyi public, compatibility and all three admin ro
   const byUrl=new Map(manifest.worker.requests.map(row=>[row.url,row]));
   assert.deepEqual(byUrl.get('https://ekodi.kr/cmpmyi')?.statuses,[200]);
   assert.deepEqual(byUrl.get('https://ekodi.kr/stores')?.statuses,[308]);
-  assert.deepEqual(byUrl.get('https://ekodi.kr/cmpmyi/admin')?.statuses,[200]);
+  const adminHome=byUrl.get('https://ekodi.kr/cmpmyi/admin');
+  assert.deepEqual(adminHome?.statuses,[200]);
+  assert.ok(adminHome.headerExpect.includes('x-ekodi-route: cmpmyi-store-portfolio-admin'));
+  for(const url of ['https://ekodi.kr/cmpmyi','https://ekodi.kr/stores','https://ekodi.kr/cmpmyi/admin']){
+    assert.equal(byUrl.get(url)?.rollbackVerify,false, `${url} must not be required from the previous stable version`);
+  }
   for(const slug of ['jadam','pizzamaru','yogurt']){
     const row=byUrl.get(`https://ekodi.kr/cmpmyi/admin/${slug}`);assert.deepEqual(row?.statuses,[200]);
     assert.ok(row.headerExpect.includes(`x-ekodi-route: cmpmyi-${slug}-store-admin`));
+    assert.equal(row.rollbackVerify,false);
   }
 });
