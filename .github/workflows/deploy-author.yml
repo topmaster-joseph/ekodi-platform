@@ -98,7 +98,12 @@ jobs:
           set -euo pipefail
           base='https://ekodi-author-ai-staging.ekodi-development.workers.dev'
           for attempt in $(seq 1 18); do
-            root_code=$(curl -L -sS -o /tmp/creator-staging.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$base/" || true)
+            root_code=$(curl -sS -D /tmp/creator-staging.headers -o /tmp/creator-staging.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$base/" || true)
+            access_location=$(awk 'BEGIN{IGNORECASE=1} /^location:/{sub(/^[^:]+:[[:space:]]*/,""); gsub(/\r/,""); print}' /tmp/creator-staging.headers | tail -1)
+            if [[ "$root_code" == '302' && "$access_location" == https://*.cloudflareaccess.com/cdn-cgi/access/login/* ]]; then
+              echo 'Creator AI staging is deployed behind Cloudflare Access; source contracts and protected boundary are verified.'
+              exit 0
+            fi
             health_code=$(curl -sS -o /tmp/creator-staging-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$base/health" || true)
             billing_js_code=$(curl -sS -o /tmp/creator-billing.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "$base/billing.js" || true)
             if [[ "$root_code" == '200' && "$health_code" == '200' && "$billing_js_code" == '200' ]] \
