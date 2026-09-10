@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "policyId": "PARALLEL-RELATED-REVIEW-001",
+  "integrationOrderLabel": "integration-order-approved",
+  "reviewCompleteLabel": "related-change-review-complete",
+  "reviewEvidenceMarker": "[EKODI RELATED CHANGE REVIEW]",
+  "scopes": [
+    {
+      "id": "admin-navigation",
+      "description": "Shared and service admin navigation, menu shells, and two-level admin UX",
+      "patterns": [
+        "^(admin-shell\\.(html|css)|admin-ui-principles\\.css|admin-authenticated-shell\\.js|admin-central-handoff\\.js|compact-control-center\\.js|admin-menu-(layout(\\.compact)?|registry|runtime)\\.js|admin-sidebar\\.js|workspace-admin-page\\.js|store-admin-engine\\.js|store-portfolio-admin-page\\.js|church-pastor-admin-page\\.js|workspace-trade-admin-page\\.js|mail-admin-page\\.js|personal-finance-admin\\.(js|css))$",
+        "^scripts/admin-readable-command-postbuild\\.mjs$",
+        "^test/(workspace-admin|store-.*admin|admin-.*(shell|menu|navigation|sidebar|readable-command)).*\\.mjs$"
+      ]
+    },
+    {
+      "id": "admin-routing-registry",
+      "description": "Admin route ownership and service registry projection",
+      "patterns": [
+        "^(admin-canonical-routes\\.js|ekodi-service-manifest\\.js|canonical-surface-router\\.js|platform-router-entry-worker\\.js|workspace-route-policy\\.js)$",
+        "^config/ekodi-service-urls\\.json$"
+      ]
+    },
+    {
+      "id": "admin-access-policy",
+      "description": "Tenant and admin capability or access boundaries",
+      "patterns": ["^(tenant-admin-policy\\.js|client-access\\.js)$", "^test/tenant-admin-policy\\.test\\.mjs$"]
+    }
+  ]
+}
