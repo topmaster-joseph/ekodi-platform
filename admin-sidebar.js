@@ -65,51 +65,51 @@ body.admin-compact .admin-global-nav.active{border-color:#b7d4f6;background:#edf
 body.admin-compact .admin-global-nav b{display:inline-grid;place-items:center;min-width:22px;color:#52738a!important;font-size:12px;font-weight:850;letter-spacing:-.03em;opacity:1!important}
 body.admin-compact .admin-global-nav.active b{color:#155eef!important}
 body.admin-compact .${SOURCE_CLASS}{display:none!important}
-body.admin-compact .${TABS_SHELL_CLASS}{position:sticky;top:0;z-index:35;display:flex;align-items:center;gap:12px;min-height:50px;padding:7px 16px;border-bottom:1px solid var(--admin-border);background:rgba(255,255,255,.98);color:#172033;box-shadow:none!important;backdrop-filter:none!important}
-body.admin-compact .admin-context-title{flex:0 0 auto;color:#66768a;font-size:11px;font-weight:820;letter-spacing:.02em;white-space:nowrap}
-body.admin-compact .${TABS_CLASS}{display:flex;align-items:center;gap:3px;min-width:0;overflow-x:auto;scrollbar-width:none}
+body.admin-compact .${TABS_SHELL_CLASS}{position:sticky;top:0;z-index:35;display:flex;align-items:center;gap:12px;min-height:56px;padding:8px 16px;border-bottom:1px solid var(--admin-border);background:rgba(255,255,255,.98);color:#172033;box-shadow:none!important;backdrop-filter:none!important}
+body.admin-compact .admin-context-title{flex:0 0 auto;color:#66768a;font-size:13px;font-weight:820;letter-spacing:.01em;white-space:nowrap}
+body.admin-compact .${TABS_CLASS}{display:flex;align-items:center;gap:5px;min-width:0;overflow-x:auto;scrollbar-width:none}
 body.admin-compact .${TABS_CLASS}::-webkit-scrollbar{display:none}
-body.admin-compact .admin-context-tab{flex:0 0 auto;min-height:34px;padding:0 10px;border:1px solid transparent;border-radius:8px;background:transparent;color:#52657a;font:inherit;font-size:13px;font-weight:760;white-space:nowrap;cursor:pointer;box-shadow:none!important;transition:none!important}
-body.admin-compact .admin-context-tab:hover{background:#f1f5f9;color:#172033}
+body.admin-compact .admin-context-tab{flex:0 0 auto;min-height:40px;padding:0 12px;border:1px solid transparent;border-radius:9px;background:transparent;color:#405269;font:inherit;font-size:14px;font-weight:760;line-height:1.35;white-space:nowrap;cursor:pointer;box-shadow:none!important;transition:none!important}
+body.admin-compact .admin-context-tab:hover{border-color:#d5e6ef;background:#f2f7fb;color:#173b57}
 body.admin-compact .admin-context-tab.active{border-color:#bfd5ee;background:#edf4ff;color:#0b5cab}
-body.admin-compact .admin-capability-shortcut{margin-left:auto;flex:0 0 auto;min-height:32px;padding:0 10px;border:1px solid #bfd5ee;border-radius:8px;background:#f3f8ff;color:#0b5cab;font:inherit;font-size:12px;font-weight:800;cursor:pointer}
+body.admin-compact .admin-capability-shortcut{margin-left:auto;flex:0 0 auto;min-height:40px;padding:0 12px;border:1px solid #bfd5ee;border-radius:9px;background:#f3f8ff;color:#0b5cab;font:inherit;font-size:14px;font-weight:800;cursor:pointer}
 body.admin-compact .content{padding:14px 16px 28px!important}
 body.admin-compact .content .hero{margin-bottom:12px!important;padding:14px 16px!important;box-shadow:none!important;backdrop-filter:none!important}
 body.admin-compact .content .section,body.admin-compact .content .module,body.admin-compact .content .architecture,body.admin-compact .content .arch-zone{box-shadow:none!important;backdrop-filter:none!important}
 body.admin-compact .content button,body.admin-compact .content .btn{box-shadow:none!important;transition:none!important}
 body.admin-compact .content p,body.admin-compact .content small,body.admin-compact .content .muted{color:var(--admin-secondary)}
 body.admin-compact .content h1,body.admin-compact .content h2,body.admin-compact .content h3,body.admin-compact .content strong{color:var(--admin-readable)}
-body.admin-compact #campusPanel .campus-toolbar{padding:13px 15px!important}
-body.admin-compact #campusPanel .campus-toolbar h2{font-size:20px!important}
-body.admin-compact #campusPanel .campus-toolbar p:not(.kicker){font-size:12px!important;line-height:1.45!important}
-body.admin-compact #campusPanel .campus-toolbar-actions{gap:6px!important}
-body.admin-compact #campusPanel .campus-toolbar-actions button,body.admin-compact #campusPanel .campus-toolbar-actions a{min-height:34px!important;padding:7px 10px!important;font-size:12px!important}
+body.admin-compact #campusPanel .campus-toolbar{padding:15px 17px!important}
+body.admin-compact #campusPanel .campus-toolbar h2{font-size:22px!important}
+body.admin-compact #campusPanel .campus-toolbar p:not(.kicker){font-size:14px!important;line-height:1.55!important}
+body.admin-compact #campusPanel .campus-toolbar-actions{gap:8px!important}
+body.admin-compact #campusPanel .campus-toolbar-actions button,body.admin-compact #campusPanel .campus-toolbar-actions a{min-height:40px!important;padding:8px 12px!important;font-size:14px!important}
 body.admin-compact #campusPanel .campus-table-wrap.campus-groups-wrap{padding:10px!important}
 body.admin-compact #campusSiteGroups .campus-groups-grid{gap:10px!important}
 body.admin-compact #campusSiteGroups .campus-group-card{border-radius:11px!important;box-shadow:none!important;backdrop-filter:none!important}
 body.admin-compact #campusSiteGroups .campus-group-head{min-height:48px!important;padding:9px 12px!important;gap:8px!important}
-body.admin-compact #campusSiteGroups .campus-group-head h3{font-size:15px!important;line-height:1.25!important}
-body.admin-compact #campusSiteGroups .campus-group-head p{margin-top:2px!important;font-size:11px!important;line-height:1.3!important}
-body.admin-compact #campusSiteGroups .campus-group-count{min-width:26px!important;height:26px!important;padding:0 7px!important}
-body.admin-compact #campusSiteGroups .campus-site-item{min-height:52px!important;padding:7px 10px!important;gap:7px 10px!important;box-shadow:none!important;backdrop-filter:none!important;transition:none!important}
-body.admin-compact #campusSiteGroups .campus-site-identity{gap:6px!important}
-body.admin-compact #campusSiteGroups .campus-site-identity strong{font-size:13px!important;line-height:1.3!important}
-body.admin-compact #campusSiteGroups .campus-site-type,body.admin-compact #campusSiteGroups .campus-site-stage{min-height:21px!important;padding:3px 6px!important;font-size:10px!important}
-body.admin-compact #campusSiteGroups .campus-site-domain{font-size:11px!important;line-height:1.3!important}
-body.admin-compact #campusSiteGroups .campus-row-actions{gap:4px!important}
-body.admin-compact #campusSiteGroups .campus-row-action{min-width:54px!important;min-height:32px!important;padding:6px 8px!important;border-radius:7px!important;font-size:11px!important}
-body.admin-compact #campusSiteGroups .campus-row-action.primary{min-width:56px!important}
-body.admin-compact #campusSiteGroups .campus-homepage-controls{padding:5px 7px!important;gap:5px 8px!important;border-radius:7px!important}
-body.admin-compact #campusSiteGroups .campus-homepage-check,body.admin-compact #campusSiteGroups .campus-homepage-order,body.admin-compact #campusSiteGroups .campus-homepage-scope{font-size:10px!important}
-body.admin-compact #campusSiteGroups .campus-homepage-check input{width:15px!important;height:15px!important}
-body.admin-compact #campusSiteGroups .campus-homepage-order button{min-width:28px!important;width:28px!important;height:28px!important}
-body.admin-compact #campusSiteGroups .campus-homepage-state b{font-size:10px!important}
-body.admin-compact #campusSiteGroups .campus-homepage-state small{margin-top:1px!important;font-size:9px!important;line-height:1.25!important}
+body.admin-compact #campusSiteGroups .campus-group-head h3{font-size:17px!important;line-height:1.35!important}
+body.admin-compact #campusSiteGroups .campus-group-head p{margin-top:3px!important;font-size:13px!important;line-height:1.45!important}
+body.admin-compact #campusSiteGroups .campus-group-count{min-width:28px!important;height:28px!important;padding:0 8px!important;font-size:12px!important}
+body.admin-compact #campusSiteGroups .campus-site-item{min-height:58px!important;padding:9px 12px!important;gap:9px 12px!important;box-shadow:none!important;backdrop-filter:none!important;transition:none!important}
+body.admin-compact #campusSiteGroups .campus-site-identity{gap:7px!important}
+body.admin-compact #campusSiteGroups .campus-site-identity strong{font-size:15px!important;line-height:1.4!important}
+body.admin-compact #campusSiteGroups .campus-site-type,body.admin-compact #campusSiteGroups .campus-site-stage{min-height:24px!important;padding:4px 7px!important;font-size:12px!important}
+body.admin-compact #campusSiteGroups .campus-site-domain{font-size:13px!important;line-height:1.4!important}
+body.admin-compact #campusSiteGroups .campus-row-actions{gap:6px!important}
+body.admin-compact #campusSiteGroups .campus-row-action{min-width:60px!important;min-height:38px!important;padding:7px 10px!important;border-radius:8px!important;font-size:13px!important}
+body.admin-compact #campusSiteGroups .campus-row-action.primary{min-width:62px!important}
+body.admin-compact #campusSiteGroups .campus-homepage-controls{padding:7px 9px!important;gap:7px 10px!important;border-radius:8px!important}
+body.admin-compact #campusSiteGroups .campus-homepage-check,body.admin-compact #campusSiteGroups .campus-homepage-order,body.admin-compact #campusSiteGroups .campus-homepage-scope{font-size:12px!important}
+body.admin-compact #campusSiteGroups .campus-homepage-check input{width:16px!important;height:16px!important}
+body.admin-compact #campusSiteGroups .campus-homepage-order button{min-width:32px!important;width:32px!important;height:32px!important}
+body.admin-compact #campusSiteGroups .campus-homepage-state b{font-size:12px!important}
+body.admin-compact #campusSiteGroups .campus-homepage-state small{margin-top:2px!important;font-size:11px!important;line-height:1.4!important}
 body.admin-compact #campusPanel .campus-homepage-notice{margin-bottom:9px!important;padding:9px 11px!important;border-radius:9px!important;gap:8px!important}
 body.admin-compact #campusPanel .campus-homepage-notice>span{width:30px!important;height:30px!important;flex-basis:30px!important;font-size:14px!important}
-body.admin-compact #campusPanel .campus-homepage-notice strong{font-size:11px!important}body.admin-compact #campusPanel .campus-homepage-notice small{font-size:10px!important;line-height:1.35!important}
+body.admin-compact #campusPanel .campus-homepage-notice strong{font-size:13px!important}body.admin-compact #campusPanel .campus-homepage-notice small{font-size:12px!important;line-height:1.45!important}
 @media(max-width:1480px){body.admin-compact #campusSiteGroups .campus-groups-grid{grid-template-columns:minmax(0,1fr)!important}}
-@media(max-width:760px){body.admin-compact .admin-global-nav{min-height:42px;font-size:14px}body.admin-compact .${TABS_SHELL_CLASS}{top:0;min-height:46px;padding:6px 10px;gap:7px}body.admin-compact .admin-context-title{display:none}body.admin-compact .admin-context-tab{min-height:34px;padding:0 9px}body.admin-compact .content{padding:10px 10px 24px!important}body.admin-compact #campusPanel .campus-toolbar{padding:11px!important}body.admin-compact #campusSiteGroups .campus-site-item{padding:10px!important}body.admin-compact #campusSiteGroups .campus-row-action{min-height:40px!important;font-size:12px!important}}
+@media(max-width:760px){body.admin-compact .admin-global-nav{min-height:46px;font-size:15px}body.admin-compact .${TABS_SHELL_CLASS}{top:0;min-height:52px;padding:6px 10px;gap:7px}body.admin-compact .admin-context-title{display:none}body.admin-compact .admin-context-tab{min-height:42px;padding:0 10px;font-size:15px}body.admin-compact .admin-capability-shortcut{min-height:42px;font-size:15px}body.admin-compact .content{padding:10px 10px 24px!important}body.admin-compact #campusPanel .campus-toolbar{padding:13px!important}body.admin-compact #campusSiteGroups .campus-site-item{padding:11px!important}body.admin-compact #campusSiteGroups .campus-row-action{min-height:44px!important;font-size:14px!important}}
 `;
   document.head.append(style);
 }
