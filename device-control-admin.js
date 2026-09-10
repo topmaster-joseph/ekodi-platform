@@ -274,7 +274,7 @@
   }
 
   function deviceCard(device) {
-    const card = document.createElement('article'); card.className = 'ekodi-device-card'; card.dataset.status = device.status; card.dataset.deviceType = device.management?.type || 'pc';
+    const card = document.createElement('article'); card.className = 'ekodi-device-card'; card.dataset.status = device.status; card.dataset.deviceType = device.management?.type || 'pc'; card.dataset.deviceId = device.id;
     const type = typeInfo(device);
     const head = document.createElement('div'); head.className = 'ekodi-device-head';
     const identity = document.createElement('div');
@@ -398,6 +398,7 @@
       const data = await request('/api/control/devices');
       if (Array.isArray(data.catalog) && data.catalog.length) deviceCatalog = data.catalog;
       renderDevices(data.devices || []); renderJobs(data.jobs || []);
+      window.dispatchEvent(new CustomEvent('ekodi-device-control-data', { detail:{ devices:data.devices || [], jobs:data.jobs || [], generatedAt:data.generatedAt } }));
       const stamp = document.querySelector('#deviceGeneratedAt'); if (stamp) stamp.textContent = `최근 갱신 ${timeLabel(data.generatedAt)}`;
     } catch (error) { list.innerHTML = '<div class="device-empty error"><strong>Device Control API를 불러오지 못했습니다.</strong><p></p></div>'; list.querySelector('p').textContent = error.message; }
   }
@@ -464,6 +465,7 @@
       <div class="device-security-note"><strong>권한 경계</strong><p>관찰 → 유형정책 → 진단 → 관리자 승인 → 허용 작업 실행 → 결과 검증 → 감사기록 순서로 동작합니다. 물리 동작이 가능한 기기는 전용 안전 어댑터 없이는 실행권한을 받지 않습니다.</p></div>
       <div class="ekodi-device-list" id="ekodiDeviceList"><div class="device-empty"><p>기기 목록을 불러오는 중입니다.</p></div></div>`;
     content.append(panel);
+    globalThis.EKODIAdminDemand?.loadScript('tapo-device-admin.js').catch(error=>console.warn('[EKODI Tapo Admin]',error.message));
 
     button.addEventListener('click', showDevices);
     panel.querySelector('#refreshDevices').addEventListener('click', loadDevices);
