@@ -159,3 +159,10 @@
 - `admin-menu-registry.js`는 정보구조, `admin-sidebar.js`는 1·2차 내비게이션, `admin-design-engine.*`는 Shell·토큰·가드레일, 각 `*-admin.*`은 서비스 작업내용을 소유한다.
 - 서비스 CSS가 Shell의 위치·스크롤·전역 메뉴를 수정하지 못하게 한다.
 - 공통 규칙과 실제 런타임이 충돌하면 문서가 아니라 런타임을 즉시 수정하고 CI가 재발을 막아야 한다.
+
+## 25. 관리자 메뉴 변경은 운영 레지스트리 수렴까지가 배포다
+- `admin-menu-registry.js`에 공개 관리자 메뉴가 추가·변경·삭제되면 Shared Site Core의 운영 배포가 반드시 뒤따라야 한다.
+- 소스의 `adminMenuOrder()`와 운영 `https://ekodi.kr/admin-menu-registry.js`가 일치하지 않으면 배포는 완료가 아니라 `deployed-awaiting-production-verification` 또는 실패 상태로 기록한다.
+- 운영 레지스트리가 소스에 수렴한 뒤 실제 인증된 관리자 E2E에서 등록 메뉴 전체를 클릭·렌더링해 통과해야 `production-verified-complete`로 승격한다.
+- 오래된 운영 자산, 누락 메뉴, legacy redirect의 정상 동작을 장애로 오판하는 감시 규칙은 발견 즉시 현재 canonical 계약으로 고친다.
+- 운영 검증 실패를 피하기 위해 메뉴를 검사 대상에서 제외하거나 테스트 기대치를 낮추는 방식은 금지한다. 실제 배포·라우팅·자산 수렴 문제를 해결한다.
