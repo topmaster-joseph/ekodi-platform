@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 4,
+  "schemaVersion": 5,
   "provider": {
     "legalOperator": "EKODIBIZ",
     "role": "service_provider"
@@ -128,6 +128,44 @@
       "pizzamaruMarketing": "https://ekodi.kr/pizzamaru/marketing",
       "yogurtMarketing": "https://ekodi.kr/yogurt/marketing",
       "cgmaMarketing": "https://ekodi.kr/cgma/marketing"
+    }
+  },
+  "serviceAdministrationPolicy": {
+    "principle": "핵심코어와 내부 운영서비스는 플랫폼 최고관리자가 중앙에서 직접 관리하고, 외부 사용자에게 제공되는 서비스와 사이트의 실제 운영은 해당 서비스·사이트 관리자 페이지를 운영 원장으로 삼는다.",
+    "platformSuperAdministrator": {
+      "directScope": [
+        "ekodi-core",
+        "identity-and-auth-control",
+        "internal-control-services",
+        "constitutional-governance",
+        "platform-routing-and-domain-governance",
+        "cross-service-security-and-privacy",
+        "cross-service-observability-and-guardrails"
+      ],
+      "externalServiceMode": "directory-observe-audit-and-explicit-intervention",
+      "implicitServiceLocalRole": false,
+      "implicitWorkspaceLocalRole": false
+    },
+    "externalServiceAndSite": {
+      "operationalSourceOfTruth": "service-or-site-admin-surface",
+      "defaultOperationalOwner": "service-or-site-administrator",
+      "centralAdminRole": "directory-observability-governance-and-explicit-intervention",
+      "workspaceAdministration": "membership-role-capability-scoped",
+      "crossWorkspacePrivateDataSharing": false
+    }
+  },
+  "publicServiceOperators": {
+    "readingDialogue": {
+      "providerKey": "community",
+      "providerName": "EKODI Community",
+      "publicServiceName": "함께읽기",
+      "canonicalPath": "https://ekodi.kr/community/reading",
+      "operationalAdminOwner": "community-service-admin",
+      "internalCapability": "EKODI Reading & Dialogue Engine",
+      "bookCatalogDependency": "books-public-contract",
+      "groupAndParticipationOwner": "community",
+      "workspaceLocalAdministration": true,
+      "newSubdomain": false
     }
   },
   "commonServiceOperatorAccessRule": {
