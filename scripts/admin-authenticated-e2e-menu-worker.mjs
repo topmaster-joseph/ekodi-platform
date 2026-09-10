@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { chromium } from 'playwright';
-import { adminMenuOrder, getAdminMenuGroupForSection } from '../admin-menu-registry.js';
+import { adminMenuOrder, getAdminMenuGroupForSection, getAdminMenuItem } from '../admin-menu-registry.js';
 import { AI_ROUTER_SCORE_POLICY } from '../ai-router-score.js';
 
 const token = String(process.env.E2E_ADMIN_TOKEN || '').trim();
@@ -253,6 +253,27 @@ async function verifyLanguageStatus(tab, alreadyActive, started) {
   results.push({ id:menuId, group, ok:true, durationMs:Date.now()-started, ...state, apiStatus:response.status, sites:payload.sites.length, languages:payload.languages.length });
 }
 
+async function verifyRegistryHref(tab, started) {
+  const definition = getAdminMenuItem(menuId);
+  if (!definition?.href || definition.adminHandoff) throw new Error(`${menuId}: direct registry href contract missing`);
+  const expected = new URL(definition.href);
+  stage('registry-handoff');
+  const navigation = page.waitForResponse(response => {
+    try {
+      const request = response.request();
+      const destination = new URL(response.url());
+      return request.isNavigationRequest() && request.frame() === page.mainFrame() && destination.origin === expected.origin && destination.pathname.replace(/\/$/, '') === expected.pathname.replace(/\/$/, '');
+    } catch { return false; }
+  }, { timeout: 10_000 });
+  await clickFast(tab);
+  const response = await navigation;
+  if (response.status() < 200 || response.status() >= 400) throw new Error(`${menuId}: destination returned HTTP ${response.status()}`);
+  const html = await response.text();
+  if (html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().length < 4) throw new Error(`${menuId}: destination did not render meaningful content`);
+  if (menuId === 'cmpmyi' && (response.headers()['x-ekodi-route'] !== 'cmpmyi-store-portfolio-admin' || !html.includes('통합 매장 운영'))) throw new Error('cmpmyi: dedicated portfolio admin contract missing');
+  results.push({ id:menuId, group, ok:true, durationMs:Date.now()-started, destination:response.url(), destinationStatus:response.status(), route:response.headers()['x-ekodi-route']||'' });
+}
+
 async function verifyNormal(tab, alreadyActive, started) {
   if (!alreadyActive) await clickFast(tab);
   stage('panel');
@@ -313,6 +334,7 @@ try {
   else if (menuId === 'public-site-controls') await verifyPublicSiteControls(tab, alreadyActive, started);
   else if (menuId === 'language-status') await verifyLanguageStatus(tab, alreadyActive, started);
   else if (menuId === 'ai-settings') await verifyAiSettings(tab, alreadyActive, started);
+  else if (getAdminMenuItem(menuId)?.href && !getAdminMenuItem(menuId)?.adminHandoff) await verifyRegistryHref(tab, started);
   else await verifyNormal(tab, alreadyActive, started);
 
   stage('diagnostics');
