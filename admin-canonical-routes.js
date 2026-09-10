@@ -1,14 +1,24 @@
 (()=>{
 'use strict';
 const SECTION_GROUP=Object.freeze({
-  campus:'system','public-site-controls':'system',architecture:'system',security:'system',admins:'system','ai-module-spec':'system',storage:'system',
-  'common-services':'common',communication:'common',workspace:'common',finance:'common',
-  'life-ai':'professional','personal-finance':'professional',community:'professional',books:'professional',social:'professional',devotional:'professional','marketing-ai':'professional','ai-membership':'professional',tax:'professional',affiliates:'professional','supply-network':'professional',insurance:'professional',
-  work:'workspaces',organization:'workspaces',clients:'workspaces','cheonggye-members':'workspaces',
-  capabilities:'operations',aiops:'operations','ai-settings':'operations',openai:'operations',devices:'operations',health:'operations','api-cost':'operations',services:'operations',deployments:'operations',policies:'operations',
+  campus:'home',
+  work:'operations',communication:'operations',finance:'operations',tax:'operations',
+  clients:'workspaces',organization:'workspaces',workspace:'workspaces','cheonggye-members':'workspaces',
+  'common-services':'services','life-ai':'services','personal-finance':'services',community:'services',books:'services',social:'services',devotional:'services','marketing-ai':'services','ai-membership':'services',affiliates:'services','supply-network':'services',insurance:'services',
+  'public-site-controls':'system','language-status':'system',architecture:'system',security:'system',admins:'system','ai-module-spec':'system',storage:'system',capabilities:'system',aiops:'system','ai-settings':'system',openai:'system',devices:'system',health:'system','api-cost':'system',services:'system',deployments:'system',policies:'system',
 });
 const GROUP_DEFAULT=Object.freeze({
-  system:'campus',common:'common-services',professional:'life-ai',workspaces:'clients',operations:'capabilities',
+  home:'campus',operations:'work',workspaces:'clients',services:'common-services',system:'health',
+});
+const LEGACY_GROUP_DEFAULT=Object.freeze({
+  common:'common-services',professional:'life-ai',space:'clients',spaces:'clients',
+});
+const LEGACY_SECTION_GROUP=Object.freeze({
+  campus:'system',
+  communication:'common',workspace:'common',finance:'common','common-services':'common',
+  'life-ai':'professional','personal-finance':'professional',community:'professional',books:'professional',social:'professional',devotional:'professional','marketing-ai':'professional','ai-membership':'professional',tax:'professional',affiliates:'professional','supply-network':'professional',insurance:'professional',
+  work:'workspaces',
+  capabilities:'operations',aiops:'operations','ai-settings':'operations',openai:'operations',devices:'operations',health:'operations','api-cost':'operations',services:'operations',deployments:'operations',policies:'operations',
 });
 const ALIASES=Object.freeze({
   'ai-ops':'aiops',storige:'storage',release:'deployments','mall-ai-sales':'affiliates',
@@ -30,10 +40,13 @@ function sectionFromPath(pathname){
   if(parts[0]!=='admin')return'';
   if(parts.length===1)return'';
   const group=String(parts[1]||'').toLowerCase();
-  if(parts.length===2)return GROUP_DEFAULT[group]||'';
+  if(parts.length===2)return GROUP_DEFAULT[group]||LEGACY_GROUP_DEFAULT[group]||'';
   const section=normalizeSection(parts[2]);
   if(!section)return'';
-  return SECTION_GROUP[section]===group?section:'';
+  if(SECTION_GROUP[section]===group)return section;
+  if(LEGACY_SECTION_GROUP[section]===group)return section;
+  if((group==='space'||group==='spaces')&&SECTION_GROUP[section]==='workspaces')return section;
+  return'';
 }
 function sectionFromLocation(loc=window.location){
   const pathSection=sectionFromPath(loc.pathname);
@@ -61,7 +74,7 @@ function navigationTarget(section,loc=window.location){
   return isCanonicalHost(loc)?canonicalUrl(section,loc):legacyHashFor(section);
 }
 window.EKODIAdminRoutes=Object.freeze({
-  version:'1.0.0',
+  version:'1.1.0',
   groups:Object.freeze({...GROUP_DEFAULT}),
   normalizeSection,
   sectionFromPath,

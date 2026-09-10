@@ -13,7 +13,7 @@ const coreData = json('config/core-data-boundaries.json');
 const storage = json('config/storage-policy.json');
 const workspace = json('config/service-workspace-policy.json');
 
-if (constitution.version !== '1.9.0') fail('constitution version must be 1.9.0 with the approved one-domain C3 amendment and all prior approved amendments');
+if (constitution.version !== '1.9.1') fail('constitution version must be 1.9.1 with the approved Admin five-area routing amendment and all prior approved amendments');
 if (constitution.status !== 'active') fail('constitution must be active');
 for (const principle of ['free-first-not-free-only','ekodi-core-is-source-of-truth','provider-independent-by-default','secure-by-default','one-domain-grammar','isolated-parallel-development','verification-first-evolution','security-native-intelligence','evidence-linked-recommendations','secure-projection-minimum-disclosure','integrated-responsibility-distributed-execution-standardized-connections','layered-governance-os-core-services-connections-workspaces','user-surface-engine-separation','capability-first-reuse','sustainable-scale-by-evidence','workspace-over-space','living-digital-commons-north-star','sovereign-autonomy-with-human-authority','person-workspace-role-capability-authority','observe-detect-reason-plan-execute-verify-recover-learn']) {
   if (!constitution.principles?.includes(principle)) fail(`missing constitutional principle: ${principle}`);
@@ -190,6 +190,12 @@ if (workspace.publicWorkspaceRouting?.servicePattern !== '/{slug}/{service}') fa
 if (workspace.publicWorkspaceRouting?.adminPattern !== null || workspace.publicWorkspaceRouting?.adminSurface !== '/admin/workspaces') fail('workspace administration must use the centralized /admin/workspaces surface');
 if (workspace.publicWorkspaceRouting?.serviceAdminPattern !== null) fail('workspace service admin must not have a canonical tenant path');
 if (workspace.publicWorkspaceRouting?.kindEncodedInUrl !== false) fail('service workspace kind/type must not be encoded in public URLs');
+const expectedAdminRoutes = { home:'/admin/home/{capability}', operations:'/admin/operations/{capability}', workspaces:'/admin/workspaces/{capability}', services:'/admin/services/{service}', system:'/admin/system/{capability}' };
+for (const [group, pattern] of Object.entries(expectedAdminRoutes)) {
+  if (workspace.managementRouting?.[group] !== pattern) fail(`service workspace Admin route drift: ${group}`);
+  if (constitution.surfaceRoutingPolicy?.adminServiceManagement?.[group] !== pattern) fail(`constitutional Admin route drift: ${group}`);
+}
+if (workspace.commonServiceOperatorAccessRule?.canonicalPath !== '/admin/services/common-services') fail('common-service operator canonical path must use /admin/services');
 if (workspace.subdomainExceptions?.personalHome !== null) fail('service workspace policy must not preserve a personal-home user-entry subdomain');
 if (workspace.subdomainExceptions?.administration !== null) fail('service workspace policy must not preserve an administrator user-entry subdomain');
 if (workspace.subdomainExceptions?.authentication !== null) fail('service workspace policy must not preserve an authentication user-entry subdomain');

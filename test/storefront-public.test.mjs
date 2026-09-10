@@ -25,7 +25,8 @@ test('PizzaMaru storefront renders verified image, app prices, and direct order 
     const response=await renderStorefrontPage(new Request('https://ekodi.kr/pizzamaru'),{SUPABASE_URL:'https://example.supabase.co',SUPABASE_PUBLISHABLE_KEY:'test'},{profile:{name:'피자마루 목포대점',theme:'pizzamaru'}},'pizzamaru');
     const html=await response.text();
     for(const value of ['콤비네이션 피자','12,900원','14,900원','15,900원','16,900원','땡겨요','배달의민족','요기요','먹깨비','앱 최저'])assert.match(html,new RegExp(value));
-    assert.match(html,/<img[^>]+https:\/\/example\.com\/menu\.jpg/);
+    assert.match(html,/<img[^>]+https:\/\/www\.pizzamaru\.co\.kr\/d_fileinfo\/img\/0120221229154437\.jpg/);
+    assert.doesNotMatch(html,/https:\/\/example\.com\/menu\.jpg/);
     assert.match(html,/https:\/\/example\.com\/ddangyo/);
   }finally{globalThis.fetch=originalFetch}
 });
@@ -46,10 +47,17 @@ test('platform-menu migration exposes verified public listings and protected imp
   assert.match(migration,/revoke all on function public\.import_store_platform_menu_snapshot[\s\S]*from public, anon/);
 });
 
-test('admin manages five delivery URLs and verified platform menu snapshots',async()=>{
+test('PizzaMaru official image migration pins HQ product assets',async()=>{
+  const migration=await read('supabase/migrations/20260910002000_pizzamaru_official_menu_images.sql');
+  for(const value of ['www.pizzamaru.co.kr/d_fileinfo/img','brand_official','이탈리안 치즈 피자','페퍼로니 피자','콤비네이션 피자','포테이토 피자','꿀고구마 피자','불고기 피자'])assert.match(migration,new RegExp(value));
+  assert.doesNotMatch(migration,/example\.com|baemin\.com|yogiyo\.co\.kr|coupangeats\.com/);
+});
+
+test('admin manages seven order URLs and verified platform menu snapshots',async()=>{
   const js=await storeAdminScript().text();
-  for(const value of ['고객 공개정보 · 주문 연결','땡겨요 주문 URL','배달의민족 주문 URL','요기요 주문 URL','먹깨비 주문 URL','쿠팡이츠 주문 URL','update_storefront_public_settings_v2','store_user_site_admin_snapshot_v2','배달앱 메뉴 스냅샷 등록','import_store_platform_menu_snapshot'])assert.match(js,new RegExp(value));
+  for(const value of ['고객 공개정보 · 주문 연결','땡겨요 주문 URL','배달의민족 주문 URL','요기요 주문 URL','먹깨비 주문 URL','쿠팡이츠 주문 URL','당근 주문 URL','네이버 주문 URL','update_storefront_public_settings_v3','store_user_site_admin_snapshot_v3','배달앱 메뉴 스냅샷 등록','import_store_platform_menu_snapshot'])assert.match(js,new RegExp(value));
   for(const value of ['배달플랫폼 연결','기준메뉴','가격차이','플랫폼 등록상태','데이터 출처','공식연결 상태'])assert.match(js,new RegExp(value));
+  assert.match(js,/\/admin\/delivery/);
 });
 
 test('platform router does not add member chrome to customer storefronts',async()=>{

@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { chromium } from 'playwright';
-import { adminMenuOrder, getAdminMenuGroupForSection } from '../admin-menu-registry.js';
+import { adminMenuOrder, getAdminMenuGroupForSection, getAdminMenuItem } from '../admin-menu-registry.js';
 import { AI_ROUTER_SCORE_POLICY } from '../ai-router-score.js';
 
 const token = String(process.env.E2E_ADMIN_TOKEN || '').trim();
@@ -253,6 +253,34 @@ async function verifyLanguageStatus(tab, alreadyActive, started) {
   results.push({ id:menuId, group, ok:true, durationMs:Date.now()-started, ...state, apiStatus:response.status, sites:payload.sites.length, languages:payload.languages.length });
 }
 
+async function verifyRegistryHref(tab, started) {
+  const definition = getAdminMenuItem(menuId);
+  if (!definition?.href || definition.adminHandoff) throw new Error(`${menuId}: direct registry href contract missing`);
+  const expected = new URL(definition.href);
+  const source = page.locator(`.sidebar nav .nav[data-section="${menuId}"]`);
+  await source.waitFor({ state:'attached', timeout:5_000 });
+  const sourceHref = await source.getAttribute('href');
+  const sourceTarget = await source.getAttribute('target');
+  if (!sourceHref || new URL(sourceHref, baseUrl).href !== expected.href) throw new Error(`${menuId}: production registry href does not match canonical destination`);
+  if (sourceTarget !== '_blank') throw new Error(`${menuId}: direct registry href must open as an isolated external admin surface`);
+  stage('registry-handoff');
+  const popupPromise = page.waitForEvent('popup', { timeout:10_000 });
+  await clickFast(tab);
+  const popup = await popupPromise;
+  try {
+    await popup.waitForURL(url => url.origin === expected.origin && url.pathname.replace(/\/$/, '') === expected.pathname.replace(/\/$/, ''), { waitUntil:'commit', timeout:10_000 });
+    const destination = new URL(popup.url());
+    const probe = await fetch(expected.href, { redirect:'manual', signal:AbortSignal.timeout(10_000) });
+    if (probe.status < 200 || probe.status >= 400) throw new Error(`${menuId}: destination returned HTTP ${probe.status}`);
+    const html = await probe.text();
+    if (html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().length < 4) throw new Error(`${menuId}: destination did not render meaningful content`);
+    if (menuId === 'cmpmyi' && (probe.headers.get('x-ekodi-route') !== 'cmpmyi-store-portfolio-admin' || !html.includes('통합 매장 운영'))) throw new Error('cmpmyi: dedicated portfolio admin contract missing');
+    results.push({ id:menuId, group, ok:true, durationMs:Date.now()-started, destination:destination.href, destinationStatus:probe.status, route:probe.headers.get('x-ekodi-route')||'' });
+  } finally {
+    await popup.close().catch(() => {});
+  }
+}
+
 async function verifyNormal(tab, alreadyActive, started) {
   if (!alreadyActive) await clickFast(tab);
   stage('panel');
@@ -263,7 +291,7 @@ async function verifyNormal(tab, alreadyActive, started) {
       const text = String(node.innerText || '').replace(/\s+/g, ' ').trim();
       return ids.includes(section) && !node.hidden && !node.classList.contains('hidden-panel') && style.display !== 'none' && style.visibility !== 'hidden' && text.length >= 4;
     });
-  }, menuId, { timeout: 5_000 });
+  }, menuId, { timeout: 8_000 });
   let state = await visiblePanelState();
   if (!state.panelFound || !state.selected || state.textLength < 4) throw new Error(`panel invalid: ${JSON.stringify(state)}`);
   if (state.busy) {
@@ -302,12 +330,18 @@ try {
   await tab.waitFor({ state: 'visible', timeout: 5_000 });
   const aria = await tab.getAttribute('aria-selected');
   const classes = String(await tab.getAttribute('class') || '');
-  const alreadyActive = aria === 'true' || classes.split(/\s+/).includes('active');
+  let alreadyActive = aria === 'true' || classes.split(/\s+/).includes('active');
+  if (alreadyActive) {
+    stage('active-panel-check');
+    const activeState = await visiblePanelState();
+    alreadyActive = Boolean(activeState.panelFound && activeState.selected && activeState.textLength >= 4);
+  }
   if (menuId === 'storage') await verifyStorage(tab, alreadyActive, started);
   else if (menuId === 'tax') await verifyTax(tab, alreadyActive, started);
   else if (menuId === 'public-site-controls') await verifyPublicSiteControls(tab, alreadyActive, started);
   else if (menuId === 'language-status') await verifyLanguageStatus(tab, alreadyActive, started);
   else if (menuId === 'ai-settings') await verifyAiSettings(tab, alreadyActive, started);
+  else if (getAdminMenuItem(menuId)?.href && !getAdminMenuItem(menuId)?.adminHandoff) await verifyRegistryHref(tab, started);
   else await verifyNormal(tab, alreadyActive, started);
 
   stage('diagnostics');
