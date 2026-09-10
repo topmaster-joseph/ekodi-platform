@@ -79,6 +79,7 @@ test('AI settings E2E proves protected policy, Router Score and locked UI withou
   assert.match(source, /AI_ROUTER_SCORE_POLICY\.version/);
   assert.match(source, /Collaboration ON · LOCK/);
   assert.match(source, /Cloud First · LOCK/);
+  assert.match(source, /locator\('\.ai-mgmt-guards'\)\.allTextContents\(\)/);
   assert.match(source, /productionMutation:false/);
   assert.match(source, /menuId === 'ai-settings'/);
 });
