@@ -100,6 +100,21 @@ body.admin-compact.ekodi-admin-design-engine [data-ekodian-character]{
 }
 body.admin-compact.ekodi-admin-design-engine [data-ekodian-character][data-ekodian-role="empty-state"],
 body.admin-compact.ekodi-admin-design-engine [data-ekodian-character][data-ekodian-role="onboarding"]{max-inline-size:128px}
+
+/* Generation 10 autonomous-health surfaces inherit the same transparent light control-plane canvas. */
+body.admin-compact.ekodi-admin-design-engine .autonomous-health-panel{
+  --panel:#fff;
+  --line:#d9e2ec;
+  color:#172033;
+}
+body.admin-compact.ekodi-admin-design-engine .autonomous-health-grid article,
+body.admin-compact.ekodi-admin-design-engine .autonomous-health-head{
+  box-shadow:none;
+}
+body.admin-compact.ekodi-admin-design-engine .autonomous-health-actions{
+  color:#52657a;
+  background:#f1f5f9;
+}
 @media(max-width:760px){
   body.admin-compact.ekodi-admin-design-engine .admin-context-tabs-shell{min-height:46px!important;padding-inline:10px!important}
   body.admin-compact.ekodi-admin-design-engine [data-ekodian-character]{max-inline-size:76px;max-block-size:96px}
