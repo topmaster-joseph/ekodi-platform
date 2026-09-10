@@ -15,6 +15,7 @@ permissions:
   contents: read
 jobs:
   test:
+    name: Auth Hub Contract
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:

@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   orchestration-gate:
-    name: EKODI AI Orchestration Gate
+    name: CI Orchestration Contract
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
