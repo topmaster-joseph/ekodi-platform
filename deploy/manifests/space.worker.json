@@ -11,7 +11,7 @@
         ],
         "redirect": "manual",
         "headerExpect": [
-          "location: https://my.ekodi.kr/",
+          "location: https://ekodi.kr/my/",
           "cache-control: no-store",
           "x-ekodi-legacy-alias: space.ekodi.kr"
         ]

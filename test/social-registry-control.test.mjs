@@ -36,7 +36,7 @@ test('Social workspace switcher consumes one-time handoff and revalidates person
   assert.match(app,/verifyOtp\(\{token_hash:token/);
   assert.match(app,/ekodi_workspace/);
   assert.match(app,/workspace_key===key/);
-  assert.match(app,/my\.ekodi\.kr/);
+  assert.match(app,/ekodi\.kr\/my/);
   assert.match(app,/return_to/);
   assert.match(worker,/script-src 'self' https:\/\/cdn\.jsdelivr\.net/);
   assert.match(worker,/connect-src 'self' https:\/\/renzehysxirjilvdxacv\.supabase\.co/);

@@ -7,7 +7,7 @@ EKODI is designed around a **service-first, AI-enhanced** principle: ordinary us
 ## Product surfaces
 
 - Public front door: https://ekodi.kr
-- Signed-in personal home: https://my.ekodi.kr
+- Signed-in personal home: https://ekodi.kr/my
 - Private control plane: https://admin.ekodi.kr
 - Shared control/data API: https://api.ekodi.kr
 - Shared EKODI Shell: https://shell.ekodi.kr

@@ -169,7 +169,7 @@ function renderAgentHints(workspace){
 function renderServiceActions(slug,role){
   const manager=['store_owner','tenant_admin','platform_admin'].includes(String(role||''));
   const admin=manager?`<a href="/${encodeURIComponent(slug)}/admin">점포 관리자 <span>매출 · 주문 · 메뉴 · 운영 →</span></a>`:'';
-  $('serviceActions').innerHTML=admin+`<a href="/${encodeURIComponent(slug)}/marketing">Marketing AI <span>콘텐츠 · 캠페인 · 채널 →</span></a><a href="/">운영공간 목록 <span>다른 점포로 전환 →</span></a><a href="https://my.ekodi.kr/">내 홈 <span>개인 허브 →</span></a>`;
+  $('serviceActions').innerHTML=admin+`<a href="/${encodeURIComponent(slug)}/marketing">Marketing AI <span>콘텐츠 · 캠페인 · 채널 →</span></a><a href="/">운영공간 목록 <span>다른 점포로 전환 →</span></a><a href="https://ekodi.kr/my/">내 홈 <span>개인 허브 →</span></a>`;
 }
 function showStoreSections(on){document.querySelectorAll('.store-data').forEach(el=>el.classList.toggle('hidden',!on))}
 function renderStoreDashboard(workspace){

@@ -97,14 +97,26 @@ if (finalCompactCss.includes('.ekodi-device-panel') || finalCompactCss.includes(
 if (!finalCompactJs.includes('ekodiAssistBootstrap') || finalCompactJs.includes('/api/control/messenger/inbox')) {
   throw new Error('EKODI Assist bootstrap is not thin or full runtime leaked into first-path JS');
 }
+if (!finalCompactJs.includes('ekodi-assist-bootstrap-form') || !finalCompactJs.includes('에코디 AI에게 물어보세요')) {
+  throw new Error('EKODI Assist centered initial command bar contract is missing from first-path JS');
+}
 if (!finalCompactCss.includes('.ekodi-assist-bootstrap') || finalCompactCss.includes('.ekodi-assist-panel')) {
   throw new Error('EKODI Assist first-path CSS is not launcher-only');
+}
+if (!finalCompactCss.includes('left:var(--ekodi-assist-left,260px)') || !finalCompactCss.includes('top:50%')) {
+  throw new Error('EKODI Assist centered initial command bar layout contract is missing from first-path CSS');
 }
 if (!finalLazyFeatures.includes('ekodiAssistDock') || !finalLazyFeatures.includes('/api/control/messenger/inbox') || !finalLazyFeatures.includes('/api/control/ai/actions')) {
   throw new Error('Full EKODI Assist runtime was not attached to the secured lazy asset');
 }
+if (!finalLazyFeatures.includes('ekodi-admin-command-history-v1') || !finalLazyFeatures.includes('ekodiAssistHistory') || !finalLazyFeatures.includes('ekodiAssistComposer')) {
+  throw new Error('EKODI Assist recent-command history or fixed composer runtime is missing');
+}
 if (!finalAiOpsCss.includes('.ekodi-assist-launcher') || !finalAiOpsCss.includes('.ekodi-assist-panel') || !finalAiOpsCss.includes('@media(max-width:720px)')) {
   throw new Error('Full EKODI Assist responsive styles were not attached to the secured lazy stylesheet');
+}
+if (!finalAiOpsCss.includes('.ekodi-assist-rail{width:286px') || !finalAiOpsCss.includes('.ekodi-assist-chat-scroll') || !finalAiOpsCss.includes('.ekodi-assist-composer-wrap')) {
+  throw new Error('EKODI Assist fixed recent-command rail, scrollable conversation, or bottom composer layout is missing');
 }
 if (!finalAiOpsCss.includes('height:min(500px,60vh)') || !finalAiOpsCss.includes('height:min(58vh,540px)') || !finalAiOpsCss.includes('max-height:calc(100vh - 132px)')) {
   throw new Error('EKODI Assist compact panel height contract was not preserved in the secured lazy stylesheet');
@@ -125,4 +137,4 @@ if (!finalDeviceCss.includes('.ekodi-device-panel') || !finalDeviceCss.includes(
   throw new Error('Standalone Device Control CSS was not materialized');
 }
 
-console.log(`Admin thin-shell postbuild: startup compact runtime=${Buffer.byteLength(finalCompactJs)}B; Assist launcher-only first path; Device Control + Hybrid Execution lazy; Campus reuses shared navigation and homepage editing is user-triggered.`);
+console.log(`Admin thin-shell postbuild: startup compact runtime=${Buffer.byteLength(finalCompactJs)}B; centered Assist command entry + fixed recent-command workbench verified; Device Control + Hybrid Execution lazy; Campus reuses shared navigation and homepage editing is user-triggered.`);
