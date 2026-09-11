@@ -24,16 +24,18 @@
     "resultOnlyReporting": true,
     "technicalInterruptionOnlyWhenHumanGateIsRequired": true,
     "unresolvedResolutionPlanRequired": true,
-    "minimalSpecificHumanActionOnly": true
+    "minimalSpecificHumanActionOnly": true,
+    "consultationStatusVisible": true,
+    "consultationDetailOnDemand": true
   },
   "execution": {
     "cloudFirst": true,
     "localNodeFallback": true,
     "externalAiRole": "worker-under-ekodi-orchestrator",
     "externalAiMayOwnProductionMutation": false,
-    "providerSelection": "ekodi-ai-provider-registry:auto-parallel",
-    "collaborationMode": "parallel",
-    "alwaysParallel": true,
+    "providerSelection": "ekodi-ai-provider-registry:risk-aware",
+    "collaborationMode": "adaptive",
+    "alwaysParallel": false,
     "maxParallelProviders": 5,
     "originPreservation": true,
     "originEnvelopeFields": [
@@ -57,6 +59,60 @@
     "continueAllResolvableWorkBeforeEscalation": true,
     "rootCauseFirst": true,
     "retryRepairRedeployReverify": true
+  },
+  "consultationDecision": {
+    "policyId": "AI-CONSULT-001",
+    "mode": "need-and-risk-based",
+    "decisionOwner": "ekodi-ai-orchestrator",
+    "decisionInputs": [
+      "ekodi-policy",
+      "task-risk",
+      "change-class",
+      "reversibility",
+      "blast-radius",
+      "security-data-financial-impact",
+      "uncertainty",
+      "validation-state",
+      "provider-health",
+      "ai-router-score-when-available"
+    ],
+    "statuses": [
+      "not_required",
+      "single_review",
+      "multi_consult",
+      "reverified",
+      "partial",
+      "failed"
+    ],
+    "forcedMultiConsultCategories": [
+      "authentication",
+      "authorization",
+      "security",
+      "secrets",
+      "payment",
+      "finance",
+      "permission",
+      "data_migration",
+      "destructive_data",
+      "production",
+      "deployment",
+      "dns"
+    ],
+    "reverificationTriggers": [
+      "critical-risk",
+      "material-dissent",
+      "validation-failure",
+      "high-uncertainty",
+      "low-router-confidence"
+    ],
+    "plannedAndActualProvidersMustBeSeparate": true,
+    "completionClaimRequiresActualExecutionEvidence": true,
+    "zeroActualCallsMayNotClaimConsultationCompleted": true,
+    "receiptRequired": true,
+    "receiptDetailPath": "/api/control/ai/v8/tasks/{taskId}/consultation",
+    "privateReasoningExcluded": true,
+    "structuredEvidenceOnly": true,
+    "tamperEvidentHashChain": true
   },
   "sourceControl": {
     "defaultBranch": "main",
@@ -107,7 +163,8 @@
       "integrationOrderLabel": "integration-order-approved",
       "evidenceMarker": "[EKODI RELATED CHANGE REVIEW]",
       "remainingPrsMustRefreshAfterWinner": true
-    }
+    },
+    "consultationPolicy": "AI-CONSULT-001"
   },
   "reporting": {
     "default": "result-only",
@@ -116,13 +173,16 @@
       "validation",
       "deployment",
       "production-verification",
+      "consultation-status",
+      "consultation-detail-link",
       "exceptions",
       "resolution-plan-when-unresolved"
     ],
     "excludeByDefault": [
       "low-level-tool-steps",
       "provider-chatter",
-      "intermediate-implementation-detail"
+      "intermediate-implementation-detail",
+      "private-chain-of-thought"
     ],
     "unresolvedPolicy": {
       "required": true,

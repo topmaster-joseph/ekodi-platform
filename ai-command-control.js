@@ -13,6 +13,7 @@ import {
   ingestEkodiPulse,
   listEkodiCommandTasks,
 } from './ekodi-command-ledger.js';
+import { getEkodiConsultationHistory } from './ekodi-consultation-ledger.js';
 import { getEkodiProviderOperationalReadiness, runEkodiCommandQueue } from './ekodi-pulse-runtime.js';
 
 const PREFIX = '/api/control/ai/v8';
@@ -110,6 +111,21 @@ async function collaborationResponse(request, env, session, url) {
   return null;
 }
 
+function consultationSummary(task, request) {
+  const receipt = task?.result?.consultationReceipt || null;
+  const execution = receipt?.execution || task?.result?.consultation || task?.evidence?.consultation || null;
+  const path = receipt?.links?.detail || task?.plan?.consultationDetailPath || `${PREFIX}/tasks/${encodeURIComponent(task.id)}/consultation`;
+  return Object.freeze({
+    status: execution?.status || (task?.plan?.consultationDecision ? 'pending' : 'not_recorded'),
+    displayLabel: execution?.displayLabel || task?.plan?.consultationDecision?.displayLabel || '협의 기록 없음',
+    actualCallCount: Number(execution?.actualCallCount || 0),
+    actualProviderCount: Number(execution?.actualProviderCount || 0),
+    detailPath: path,
+    detailUrl: new URL(path, request.url).toString(),
+    receiptHash: receipt?.hash || null,
+  });
+}
+
 export async function handleEkodiV8CommandControl(request, env) {
   const url = new URL(request.url);
   if (!url.pathname.startsWith(PREFIX)) return null;
@@ -134,10 +150,14 @@ export async function handleEkodiV8CommandControl(request, env) {
     ]);
     return json(request, env, {
       ok: true,
-      schemaVersion: 1,
+      schemaVersion: 2,
       runtime: 'ekodi-v8-command-plane',
       proactive: true,
-      collaborationByDefault: collaborationSettings.policy.collaborationByDefault,
+      orchestrationByDefault: true,
+      consultationByNeed: true,
+      consultationPolicy: 'AI-CONSULT-001',
+      collaborationByDefault: false,
+      configuredCollaborationPreference: collaborationSettings.policy.collaborationByDefault,
       executionRule: collaborationSettings.executionRule,
       durableTaskLedger: true,
       scheduledDrain: true,
@@ -151,14 +171,32 @@ export async function handleEkodiV8CommandControl(request, env) {
   if (request.method === 'GET' && url.pathname === `${PREFIX}/tasks`) {
     const limit = Math.min(Math.max(Number(url.searchParams.get('limit')) || 30, 1), 100);
     const state = text(url.searchParams.get('state'), 40).toLowerCase();
-    return json(request, env, { ok: true, tasks: await listEkodiCommandTasks(env, { limit, state }) });
+    const tasks = await listEkodiCommandTasks(env, { limit, state });
+    return json(request, env, { ok: true, tasks: tasks.map(task => ({ ...task, consultation: consultationSummary(task, request) })) });
+  }
+
+  const consultationMatch = url.pathname.match(/^\/api\/control\/ai\/v8\/tasks\/([^/]+)\/consultation$/);
+  if (request.method === 'GET' && consultationMatch) {
+    const taskId = decodeURIComponent(consultationMatch[1]);
+    const task = await getEkodiCommandTask(env, taskId, { includeEvent: true });
+    if (!task) return json(request, env, { error: 'Command task를 찾을 수 없습니다.', code: 'COMMAND_TASK_NOT_FOUND' }, 404);
+    const receipt = task.result?.consultationReceipt || null;
+    const history = await getEkodiConsultationHistory(env, taskId, { limit: 20 });
+    return json(request, env, {
+      ok: true,
+      taskId,
+      summary: consultationSummary(task, request),
+      receipt,
+      history,
+      privacy: { privateReasoningExcluded: true, structuredEvidenceOnly: true },
+    }, receipt ? 200 : 202);
   }
 
   const taskMatch = url.pathname.match(/^\/api\/control\/ai\/v8\/tasks\/([^/]+)$/);
   if (request.method === 'GET' && taskMatch) {
     const task = await getEkodiCommandTask(env, decodeURIComponent(taskMatch[1]), { includeEvent: true });
     if (!task) return json(request, env, { error: 'Command task를 찾을 수 없습니다.', code: 'COMMAND_TASK_NOT_FOUND' }, 404);
-    return json(request, env, { ok: true, task });
+    return json(request, env, { ok: true, task: { ...task, consultation: consultationSummary(task, request) } });
   }
 
   if (request.method === 'POST' && url.pathname === `${PREFIX}/pulse`) {
@@ -168,7 +206,13 @@ export async function handleEkodiV8CommandControl(request, env) {
     if (!input.goal && !input.event.summary) return json(request, env, { error: 'goal 또는 summary가 필요합니다.', code: 'PULSE_GOAL_REQUIRED' }, 400);
     const task = await ingestEkodiPulse(env, input);
     const execution = body.executeNow === true ? await runEkodiCommandQueue(env, { limit: 1 }) : null;
-    return json(request, env, { ok: true, queued: Boolean(task), task, execution }, execution ? 200 : 202);
+    const latestTask = task?.id ? await getEkodiCommandTask(env, task.id, { includeEvent: true }) : task;
+    return json(request, env, {
+      ok: true,
+      queued: Boolean(task),
+      task: latestTask ? { ...latestTask, consultation: consultationSummary(latestTask, request) } : null,
+      execution,
+    }, execution ? 200 : 202);
   }
 
   if (request.method === 'POST' && url.pathname === `${PREFIX}/drain`) {
@@ -181,7 +225,7 @@ export async function handleEkodiV8CommandControl(request, env) {
 }
 
 export const EKODI_V8_COMMAND_CONTROL = Object.freeze({
-  version: '1.1.0',
+  version: '1.2.0',
   prefix: PREFIX,
-  surfaces: Object.freeze(['status', 'tasks', 'pulse', 'drain', 'collaboration-settings', 'collaboration-settings/audit']),
+  surfaces: Object.freeze(['status', 'tasks', 'tasks/:taskId/consultation', 'pulse', 'drain', 'collaboration-settings', 'collaboration-settings/audit']),
 });

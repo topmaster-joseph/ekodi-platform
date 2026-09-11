@@ -8,13 +8,16 @@ import { AI_CONTROL_POLICY } from '../ai-control-core.js';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const policy = JSON.parse(fs.readFileSync(path.join(root, 'config', 'ai-change-orchestration-policy.json'), 'utf8'));
 
-test('AI-ORCHESTRATE-001 is locked to origin-preserving five-way parallel execution', () => {
+test('AI-ORCHESTRATE-001 uses need-based consultation while preserving origin and bounded parallel capacity', () => {
   assert.equal(policy.policyId, 'AI-ORCHESTRATE-001');
   assert.equal(policy.status, 'enforced');
   assert.ok(policy.schemaVersion >= 3);
 
-  assert.equal(policy.execution.collaborationMode, 'parallel');
-  assert.equal(policy.execution.alwaysParallel, true);
+  assert.equal(policy.execution.collaborationMode, 'adaptive');
+  assert.equal(policy.execution.alwaysParallel, false);
+  assert.equal(policy.consultationDecision.policyId, 'AI-CONSULT-001');
+  assert.equal(policy.consultationDecision.mode, 'need-and-risk-based');
+  assert.equal(policy.consultationDecision.completionClaimRequiresActualExecutionEvidence, true);
   assert.equal(policy.execution.maxParallelProviders, 5);
   assert.equal(policy.execution.originPreservation, true);
   assert.deepEqual(policy.execution.originEnvelopeFields, ['provider', 'requestedProvider', 'channel', 'requestId']);
