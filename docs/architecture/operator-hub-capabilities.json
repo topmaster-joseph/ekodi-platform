@@ -1,0 +1,20 @@
+{
+  "surface": "https://ekodi.kr/my/",
+  "audience": ["super_admin", "deputy_operator", "service_owner", "site_admin"],
+  "modules": [
+    "today_tasks",
+    "pending_approvals",
+    "important_alerts",
+    "service_health",
+    "authorized_admin_destinations",
+    "recent_operational_activity",
+    "bounded_ai_recommendations"
+  ],
+  "must_not": [
+    "grant_permissions",
+    "elevate_permissions",
+    "force_ordinary_users_through_my",
+    "replace_site_admin_source_of_truth",
+    "expose_ekodi_branding_in_tenant_user_flows"
+  ]
+}
