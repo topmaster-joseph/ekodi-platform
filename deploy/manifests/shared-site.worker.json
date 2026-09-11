@@ -337,12 +337,12 @@
         "expect": [
           "data-ekodi-service=\"mall\"",
           "data-ekodi-user-surface=\"public\"",
-          "/ekodibiz/mall/app.js"
+          "/ekodibiz/mall/assets/app.js"
         ],
         "rollbackExpect": [
           "data-ekodi-service=\"mall\"",
           "data-ekodi-user-surface=\"public\"",
-          "/ekodibiz/mall/app.js"
+          "/ekodibiz/mall/assets/app.js"
         ],
         "headerExpect": [
           "x-content-type-options: nosniff",
@@ -436,6 +436,22 @@
         "statuses": [200],
         "redirect": "follow",
         "expect": [".openai-workspace-policy", "@media(max-width:900px)"],
+        "headerExpect": ["x-content-type-options: nosniff"],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://admin.ekodi.kr/tapo-device-admin.js",
+        "statuses": [200],
+        "redirect": "follow",
+        "expect": ["waitForStream", "sessionToken", "TAPO EDGE BRIDGE"],
+        "headerExpect": ["x-content-type-options: nosniff"],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://admin.ekodi.kr/tapo-device-admin.css",
+        "statuses": [200],
+        "redirect": "follow",
+        "expect": [".tapo-camera-panel", ".tapo-camera-dialog"],
         "headerExpect": ["x-content-type-options: nosniff"],
         "rollbackVerify": false
       },

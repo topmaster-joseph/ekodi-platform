@@ -26,8 +26,8 @@ test('Mall production verifier follows stable route and storefront structure', (
     'data-ekodi-service="mall"',
     'data-ekodi-user-surface="public"',
     'rel="canonical" href="https://ekodi.kr/ekodibiz/mall"',
-    '/ekodibiz/mall/app.js',
-    '/ekodibiz/mall/affiliate-client.js'
+    '/ekodibiz/mall/assets/app.js',
+    '/ekodibiz/mall/assets/commerce.js'
   ]) assert.ok(workflow.includes(marker), `missing structural contract: ${marker}`);
   assert.doesNotMatch(workflow, /GIFT CONTEXT INTELLIGENCE|CONNECTED COMMERCE|OUR PROMISE|EKODI CONTEXT SHOPPING|ALL MARKET/);
 });
@@ -40,8 +40,8 @@ test('shared-site Mall release gate uses the same stable ownership contract', ()
   }
   assert.equal(mallGate.candidateVerify,false);
   assert.match(mallGate.candidateVerifyReason||'',/run_worker_first bootstrap/);
-  assert.ok(mallGate.expect?.includes('/ekodibiz/mall/app.js'));
-  assert.ok(mallGate.rollbackExpect?.includes('/ekodibiz/mall/app.js'));
+  assert.ok(mallGate.expect?.includes('/ekodibiz/mall/assets/app.js'));
+  assert.ok(mallGate.rollbackExpect?.includes('/ekodibiz/mall/assets/app.js'));
   assert.ok(!manifestText.includes('/ekodibiz/mall/assets/marketplace-live.js'));
   assert.ok(mallGate.headerExpect?.includes('x-ekodi-route: public-ekodi-mall'));
   assert.ok(mallGate.headerExpect?.includes('x-ekodi-edge: mall-path-gateway'));
@@ -103,4 +103,14 @@ test('Mall production verifier proves Commerce OS provider, ledger and cockpit b
   assert.match(workflow, /api\/internal\/operations\/cockpit/);
   assert.match(workflow, /commerceCockpitAuthBoundary=verified/);
   assert.match(workflow, /Cockpit must require operator auth/);
+});
+test('shared-site release verifies Tapo admin assets before production completion', () => {
+  const tapoJs = manifest.worker.requests.find(request => request.url === 'https://admin.ekodi.kr/tapo-device-admin.js');
+  const tapoCss = manifest.worker.requests.find(request => request.url === 'https://admin.ekodi.kr/tapo-device-admin.css');
+  assert.ok(tapoJs);
+  assert.ok(tapoCss);
+  assert.ok(tapoJs.expect?.includes('TAPO EDGE BRIDGE'));
+  assert.deepEqual(tapoJs.headerExpect, ['x-content-type-options: nosniff']);
+  assert.ok(tapoCss.expect?.includes('.tapo-camera-panel'));
+  assert.deepEqual(tapoCss.headerExpect, ['x-content-type-options: nosniff']);
 });

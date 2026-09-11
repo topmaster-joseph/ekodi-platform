@@ -71,6 +71,11 @@ test('Storage brokers Marketing YouTube OAuth through the already-authorized Dri
   assert.match(control, /startMarketingYouTubeOAuth/);
   assert.match(control, /consumeMarketingYouTubeTicket/);
   assert.match(control, /refreshGoogleAccessToken/);
+  assert.match(control, /'openid','email'/);
+  assert.match(control, /targetAccount:String\(accountHint/);
+  assert.match(control, /GOOGLE_USERINFO/);
+  assert.match(control, /authorized_email:authorizedEmail/);
+  assert.match(control, /access_token:String\(token\.access_token\)/);
   assert.match(worker, /startYouTubeOAuth/);
   assert.match(worker, /consumeYouTubeTicket/);
   assert.match(worker, /refreshAccessToken/);
