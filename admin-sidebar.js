@@ -4,6 +4,9 @@ import {
   getAdminMenuGroupDefault,
   getAdminMenuGroupForSection,
   getAdminMenuGroupLabel,
+  getAdminMenuCategory,
+  getAdminMenuCategoryLabel,
+  adminMenuCategoryOrder,
   getAdminMenuItem,
   getAdminMenuLabel,
   normalizeAdminLocale,
@@ -17,6 +20,7 @@ const GLOBAL_CLASS = 'admin-global-navs';
 const SOURCE_CLASS = 'admin-context-source';
 const TABS_SHELL_CLASS = 'admin-context-tabs-shell';
 const TABS_CLASS = 'admin-context-tabs';
+const DETAILS_CLASS = 'admin-global-details';
 
 export function adminSidebarSectionOf(item) {
   if (item?.dataset?.deviceControlNav === 'true') return 'devices';
@@ -64,6 +68,17 @@ body.admin-compact .admin-global-nav:hover{border-color:#d5e6ef;background:#eef7
 body.admin-compact .admin-global-nav.active{border-color:#b7d4f6;background:#edf4ff;color:#0b4f8a!important}
 body.admin-compact .admin-global-nav b{display:inline-grid;place-items:center;min-width:22px;color:#52738a!important;font-size:12px;font-weight:850;letter-spacing:-.03em;opacity:1!important}
 body.admin-compact .admin-global-nav.active b{color:#155eef!important}
+body.admin-compact .${DETAILS_CLASS}{display:grid;gap:2px;margin:-1px 0 5px;padding:2px 3px 7px 30px;border-left:1px solid #e1e8ef}
+body.admin-compact .admin-detail-group{margin:0;padding:0}
+body.admin-compact .admin-detail-category{display:flex;align-items:center;justify-content:space-between;min-height:30px;margin:1px 0;padding:4px 7px;border-radius:7px;color:#7a8796;font-size:11px;font-weight:820;letter-spacing:.01em;cursor:pointer;list-style:none}
+body.admin-compact .admin-detail-category::-webkit-details-marker{display:none}
+body.admin-compact .admin-detail-category:hover{background:#f4f7fa;color:#40566d}
+body.admin-compact .admin-detail-category small{font-size:10px;font-weight:700;color:#9aa6b2}
+body.admin-compact .admin-detail-item{display:flex;align-items:center;gap:8px;width:calc(100% - 6px);min-height:34px;margin-left:6px;padding:6px 8px;border:1px solid transparent;border-radius:8px;background:transparent;color:#506174;font:inherit;font-size:13px;font-weight:700;text-align:left;cursor:pointer}
+body.admin-compact .admin-detail-item:hover{border-color:#dbe7ef;background:#f2f7fb;color:#173b57}
+body.admin-compact .admin-detail-item.active{border-color:#bfd5ee;background:#edf4ff;color:#0b5cab}
+body.admin-compact .admin-detail-item b{display:inline-grid;place-items:center;min-width:19px;color:#6d8194;font-size:10px;font-weight:850}
+body.admin-compact .admin-detail-item.active b{color:#155eef}
 body.admin-compact .${SOURCE_CLASS}{display:none!important}
 body.admin-compact .${TABS_SHELL_CLASS}{position:sticky;top:0;z-index:35;display:flex;align-items:center;gap:12px;min-height:56px;padding:8px 16px;border-bottom:1px solid var(--admin-border);background:rgba(255,255,255,.98);color:#172033;box-shadow:none!important;backdrop-filter:none!important}
 body.admin-compact .admin-context-title{flex:0 0 auto;color:#66768a;font-size:13px;font-weight:820;letter-spacing:.01em;white-space:nowrap}
@@ -199,6 +214,30 @@ function globalButtons(globals, locale) {
   for (const button of existing.values()) button.remove();
 }
 
+function renderSidebarDetails(nav, globals, group, section, locale) {
+  let details = globals.querySelector(`:scope>.${DETAILS_CLASS}`);
+  if (!details) { details = document.createElement('div'); details.className = DETAILS_CLASS; details.setAttribute('aria-label', locale === 'en' ? 'Detailed admin menu' : '세부 관리자 메뉴'); }
+  const keepOpen = details.dataset.adminDetailGroup === group ? new Set([...details.querySelectorAll('[data-admin-detail-category][open]')].map(node => node.dataset.adminDetailCategory)) : new Set();
+  const ids = availableIds(nav, group); const grouped = new Map();
+  for (const id of ids) { const category = getAdminMenuCategory(id); if (!grouped.has(category)) grouped.set(category, []); grouped.get(category).push(id); }
+  const baseOrder = adminMenuCategoryOrder(group); const ordered = [...baseOrder, ...[...grouped.keys()].filter(key => !baseOrder.includes(key))];
+  const activeCategory = getAdminMenuCategory(section); const nodes = [];
+  for (const category of ordered) {
+    const categoryIds = grouped.get(category) || []; if (!categoryIds.length) continue;
+    const groupNode = document.createElement('details'); groupNode.className = 'admin-detail-group'; groupNode.dataset.adminDetailCategory = category; groupNode.open = category === activeCategory || keepOpen.has(category);
+    const label = document.createElement('summary'); label.className = 'admin-detail-category'; label.append(document.createTextNode(getAdminMenuCategoryLabel(category, locale)));
+    const count = document.createElement('small'); count.textContent = String(categoryIds.length); label.append(count); groupNode.append(label);
+    for (const id of categoryIds) {
+      const definition = getAdminMenuItem(id); const button = document.createElement('button'); button.type = 'button'; button.className = 'admin-detail-item'; button.dataset.adminDetailSection = id;
+      const icon = document.createElement('b'); icon.setAttribute('aria-hidden', 'true'); icon.textContent = definition?.icon || '·'; const text = document.createElement('span'); text.textContent = getAdminMenuLabel(id, locale);
+      button.append(icon, text); button.classList.toggle('active', id === section); groupNode.append(button);
+    }
+    nodes.push(groupNode);
+  }
+  details.dataset.adminDetailGroup = group; details.replaceChildren(...nodes); details.hidden = nodes.length === 0;
+  const active = [...globals.querySelectorAll('[data-admin-global-group]')].find(button => button.dataset.adminGlobalGroup === group); if (active) active.insertAdjacentElement('afterend', details); else globals.append(details);
+}
+
 function activeSection(nav) {
   const active = [...navItems(nav)].find(item => item.classList.contains('active'));
   const activeId = adminSidebarSectionOf(active);
@@ -264,6 +303,7 @@ function syncWorkbenchState(nav, locale, preferredSection = '') {
     button.setAttribute('aria-current', selected ? 'page' : 'false');
   }
   renderContextTabs(nav, shell, group, section, locale);
+  renderSidebarDetails(nav, globals, group, section, locale);
   nav.dataset.adminGlobalGroup = group;
 }
 
@@ -387,6 +427,8 @@ export function mountAdminSidebar(root = document, options = {}) {
   observer.observe(nav, { childList: true, subtree: false });
 
   nav.addEventListener('click', event => {
+    const detail = event.target.closest('[data-admin-detail-section]');
+    if (detail) { event.preventDefault(); activateSection(nav, detail.dataset.adminDetailSection); schedule(); return; }
     const global = event.target.closest('[data-admin-global-group]');
     if (!global) return;
     event.preventDefault();

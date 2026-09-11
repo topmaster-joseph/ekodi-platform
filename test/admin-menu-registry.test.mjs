@@ -6,6 +6,9 @@ import {
   ADMIN_MENU_GROUPS,
   ADMIN_MENU_REGISTRY,
   adminMenuOrder,
+  adminMenuCategoryOrder,
+  getAdminMenuCategory,
+  getAdminMenuCategoryLabel,
   getAdminMenuGroupDefault,
   getAdminMenuGroupForSection,
   getAdminMenuLabel,
@@ -73,4 +76,13 @@ test('shared admin browser modules pass syntax checks', () => {
   for (const file of ['admin-menu-registry.js', 'admin-sidebar.js', 'admin-menu-runtime.js', 'admin-menu-layout.js']) {
     execFileSync(process.execPath, ['--check', file], { stdio: 'pipe' });
   }
+});
+
+
+test('admin submenus are categorized and unclassified sections fall back to Other last', () => {
+  assert.equal(getAdminMenuCategory('communication'), 'workflow');
+  assert.equal(getAdminMenuCategory('marketing-ai'), 'business');
+  assert.equal(getAdminMenuCategory('unregistered-future-section'), 'other');
+  assert.equal(getAdminMenuCategoryLabel('other', 'ko'), '기타');
+  for (const group of WORK_AREAS) assert.equal(adminMenuCategoryOrder(group).at(-1), 'other');
 });

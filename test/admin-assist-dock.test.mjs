@@ -94,3 +94,14 @@ test('guarded shared-site release verifies bootstrap and full Assist lazy assets
   assert.match(manifest,/ekodi-assist-launcher/);
   assert.match(manifest,/ekodi-assist-panel/);
 });
+
+
+test('command history follows the active admin menu and restores that menu session', async()=>{
+  const js=await read('admin-assist-dock.js');
+  assert.ok(js.includes('function currentSection()'));
+  assert.ok(js.includes('selectSessionForCurrentSection'));
+  assert.ok(js.includes('current?.context?.section===section'));
+  assert.ok(js.includes('sessions.filter(session=>session.context?.section===section)'));
+  assert.ok(js.includes('ekodi-admin-section-changed'));
+  assert.ok(js.includes('ekodiAssistRailTitle'));
+});
