@@ -66,10 +66,15 @@ export async function resolveWorkspaceRoute(pathname,resolveBySlug){
   return Object.freeze({...locator,routeKind:'workspace',workspaceId,identityResolved:true});
 }
 
+function isSiteLocalAdminRoot(value){
+  const root=normalizeWorkspaceSlug(value);
+  return root==='ekodibiz'||isWorkspaceSlug(root);
+}
+
 export function isWorkspaceAdminPathShape(pathname){
   const path=String(pathname||'');
   const match=/^\/([^/]+)\/(?:admin(?:\/[^/]+)?|[^/]+\/admin(?:\/[^/]+)?)\/?$/i.exec(path);
-  if(match&&isWorkspaceSlug(match[1]))return true;
+  if(match&&isSiteLocalAdminRoot(match[1]))return true;
   const mallMarketingChannels=/^\/([^/]+)\/mall\/admin\/marketing\/channels\/?$/i.exec(path);
-  return Boolean(mallMarketingChannels&&isWorkspaceSlug(mallMarketingChannels[1]));
+  return Boolean(mallMarketingChannels&&isSiteLocalAdminRoot(mallMarketingChannels[1]));
 }
