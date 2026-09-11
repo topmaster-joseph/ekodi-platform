@@ -1,7 +1,7 @@
 import { governDiscoveryAction } from './ekodi-autonomous-discovery-engine.js';
 
 export const EKODI_AUTONOMOUS_EVOLUTION_POLICY = Object.freeze({
-  version: '1.0.0',
+  version: '1.1.0',
   principle: 'autonomous_research_human_governed_deployment',
   finalAuthority: 'ekodi_platform_super_administrator',
   currentGeneration: 10,
@@ -11,8 +11,9 @@ export const EKODI_AUTONOMOUS_EVOLUTION_POLICY = Object.freeze({
   researchEvidenceThresholdPct: 70,
   experimentPassThresholdPct: 85,
   postChangeVerificationThresholdPct: 90,
+  operationalRecoveryHealthyRuns: 2,
   loop: Object.freeze([
-    'discover', 'research', 'experiment_design', 'experiment', 'evaluate',
+    'discover', 'research', 'resolution_check', 'experiment_design', 'experiment', 'evaluate',
     'candidate', 'governance_gate', 'deploy', 'verify', 'learn'
   ]),
 });
@@ -61,6 +62,12 @@ export function evaluateResearchEvidence(program = {}, evidence = {}) {
   const verified = failedRuns >= 3
     && evidenceRefs.length > 0
     && confidence >= EKODI_AUTONOMOUS_EVOLUTION_POLICY.researchEvidenceThresholdPct;
+  const recovery = {
+    lastFailureAt: evidence?.recovery?.lastFailureAt || null,
+    healthyRunsAfterLastFailure: Math.max(0, Number(evidence?.recovery?.healthyRunsAfterLastFailure || 0)),
+    consecutiveHealthyRuns: Math.max(0, Number(evidence?.recovery?.consecutiveHealthyRuns || 0)),
+    resolvedOperationally: evidence?.recovery?.resolvedOperationally === true,
+  };
 
   return freeze({
     researchId: program.id || stableId('research', program?.question || program?.signal?.target),
@@ -77,19 +84,51 @@ export function evaluateResearchEvidence(program = {}, evidence = {}) {
       evidenceRefs,
       reproducible: evidence.reproducible === true,
       observations: Math.max(0, Number(evidence.observations || failedRuns + recoveredRuns)),
+      recovery,
     },
     productionMutationPerformed: false,
     authorityExpanded: false,
   });
 }
 
-export function designBoundedExperiment(research = {}) {
+export function evaluateOperationalResolution(research = {}) {
+  const recovery = research?.evidence?.recovery || {};
+  const verified = research?.verified === true
+    && recovery.resolvedOperationally === true
+    && Number(recovery.consecutiveHealthyRuns || 0) >= EKODI_AUTONOMOUS_EVOLUTION_POLICY.operationalRecoveryHealthyRuns;
+  return freeze({
+    researchId: research?.researchId || null,
+    target: research?.target || 'platform',
+    verified,
+    status: verified ? 'operational_resolution_verified' : 'structural_experiment_required_or_recovery_unverified',
+    requiresCodeChange: !verified,
+    consecutiveHealthyRuns: Number(recovery.consecutiveHealthyRuns || 0),
+    healthyRunsAfterLastFailure: Number(recovery.healthyRunsAfterLastFailure || 0),
+    lastFailureAt: recovery.lastFailureAt || null,
+    evidenceRefs: uniq(research?.evidence?.evidenceRefs || []),
+    productionMutationPerformed: false,
+    authorityExpanded: false,
+  });
+}
+
+export function designBoundedExperiment(research = {}, operationalResolution = null) {
   if (research?.verified !== true) {
     return freeze({
       researchId: research?.researchId || null,
       status: 'experiment_blocked_unverified_research',
       executableAutonomously: false,
       reason: 'research_evidence_threshold_not_met',
+      productionMutationAllowed: false,
+      authorityExpansionAllowed: false,
+    });
+  }
+  if (operationalResolution?.verified === true) {
+    return freeze({
+      researchId: research.researchId,
+      target: research.target,
+      status: 'experiment_not_required_operational_resolution_verified',
+      executableAutonomously: false,
+      reason: 'verified_recovery_requires_learning_not_new_change',
       productionMutationAllowed: false,
       authorityExpansionAllowed: false,
     });
@@ -244,7 +283,8 @@ export function verifyEvolutionOutcome(candidate = {}, outcome = {}) {
   });
 }
 
-export function buildLearningRecord({ research, experimentEvaluation, candidate, verification } = {}) {
+export function buildLearningRecord({ research, operationalResolution, experimentEvaluation, candidate, verification } = {}) {
+  const operationallyResolved = operationalResolution?.verified === true;
   const completed = verification?.verified === true;
   const rolledBack = verification?.rollbackRequired === true;
   return freeze({
@@ -252,14 +292,23 @@ export function buildLearningRecord({ research, experimentEvaluation, candidate,
     researchId: research?.researchId || null,
     candidateId: candidate?.id || null,
     target: candidate?.target || research?.target || 'platform',
-    status: completed ? 'learning_loop_closed' : rolledBack ? 'learning_from_rollback' : 'learning_pending',
-    lesson: completed
-      ? 'Verified change met post-deployment objectives without authority expansion.'
-      : rolledBack
-        ? 'Candidate did not sustain verification requirements; preserve rollback evidence and refine the next hypothesis.'
-        : 'Await verified production outcome before treating this evolution as learned capability.',
+    status: operationallyResolved
+      ? 'learning_loop_closed_operational_resolution'
+      : completed
+        ? 'learning_loop_closed'
+        : rolledBack
+          ? 'learning_from_rollback'
+          : 'learning_pending',
+    lesson: operationallyResolved
+      ? 'The recurring issue recovered and sustained consecutive healthy runs; preserve the recovery evidence and avoid an unnecessary change.'
+      : completed
+        ? 'Verified change met post-deployment objectives without authority expansion.'
+        : rolledBack
+          ? 'Candidate did not sustain verification requirements; preserve rollback evidence and refine the next hypothesis.'
+          : 'Await verified production outcome before treating this evolution as learned capability.',
     reusableEvidenceRefs: uniq([
       ...(research?.evidence?.evidenceRefs || []),
+      ...(operationalResolution?.evidenceRefs || []),
       ...(experimentEvaluation?.evidenceRefs || []),
       ...(candidate?.evidenceRefs || []),
       ...(verification?.evidenceRefs || []),
@@ -285,13 +334,16 @@ export function lifecycleFromRecommendation(recommendation = {}) {
       evidenceRefs,
       evidenceGrade: recommendation.evidenceGrade || 'C',
       recommendationId: recommendation.id || null,
+      recovery: { resolvedOperationally: false, consecutiveHealthyRuns: 0, healthyRunsAfterLastFailure: 0, lastFailureAt: null },
     },
     productionMutationPerformed: false,
     authorityExpanded: false,
   });
-  const experiment = designBoundedExperiment(research);
+  const operationalResolution = evaluateOperationalResolution(research);
+  const experiment = designBoundedExperiment(research, operationalResolution);
   return freeze({
     research,
+    operationalResolution,
     experiment,
     experimentEvaluation: null,
     candidate: null,
@@ -310,21 +362,28 @@ export function runAutonomousEvolutionLoop(input = {}) {
 
   for (const program of programs) {
     const research = evaluateResearchEvidence(program, evidenceByResearchId[program.id] || {});
-    const experiment = designBoundedExperiment(research);
-    const outcome = experimentOutcomes[experiment.id] || experimentOutcomes[program.id] || null;
+    const operationalResolution = evaluateOperationalResolution(research);
+    const experiment = designBoundedExperiment(research, operationalResolution);
+    const outcome = experiment.id ? (experimentOutcomes[experiment.id] || experimentOutcomes[program.id] || null) : null;
     const experimentEvaluation = outcome ? evaluateBoundedExperiment(experiment, outcome) : null;
     const candidate = experimentEvaluation ? buildEvolutionCandidate(research, experimentEvaluation) : null;
     const deploymentOutcome = candidate ? deploymentOutcomes[candidate.id] : null;
     const verification = candidate && deploymentOutcome ? verifyEvolutionOutcome(candidate, deploymentOutcome) : null;
-    const learning = candidate ? buildLearningRecord({ research, experimentEvaluation, candidate, verification }) : null;
+    const learning = operationalResolution.verified
+      ? buildLearningRecord({ research, operationalResolution })
+      : candidate
+        ? buildLearningRecord({ research, operationalResolution, experimentEvaluation, candidate, verification })
+        : null;
     records.push(freeze({
       research,
+      operationalResolution,
       experiment,
       experimentEvaluation,
       candidate,
       verification,
       learning,
-      status: verification?.status
+      status: learning?.status
+        || verification?.status
         || candidate?.status
         || experimentEvaluation?.status
         || experiment?.status
@@ -338,12 +397,13 @@ export function runAutonomousEvolutionLoop(input = {}) {
   const summary = {
     total: allRecords.length,
     researchVerified: allRecords.filter(item => item.research?.verified).length,
+    operationalResolutionsVerified: allRecords.filter(item => item.operationalResolution?.verified).length,
     experimentsReady: allRecords.filter(item => item.experiment?.executableAutonomously).length,
     experimentsPassed: allRecords.filter(item => item.experimentEvaluation?.passed).length,
     candidatesReady: allRecords.filter(item => item.candidate?.readyForSuperAdminReview).length,
     postChangeVerified: allRecords.filter(item => item.verification?.verified).length,
     rollbackRequired: allRecords.filter(item => item.verification?.rollbackRequired).length,
-    learningClosed: allRecords.filter(item => item.learning?.status === 'learning_loop_closed').length,
+    learningClosed: allRecords.filter(item => ['learning_loop_closed', 'learning_loop_closed_operational_resolution'].includes(item.learning?.status)).length,
   };
 
   return freeze({
