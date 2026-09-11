@@ -169,8 +169,10 @@ function slugify(value) {
 
 export function buildVerticalLaunchPlan(input = {}) {
   const title = clean(input.title, 160);
-  const requestedSlug = slugify(input.slug || title);
   if (!title) throw new Error('LAUNCH_TITLE_REQUIRED');
+  const explicitSlug = clean(input.slug, 120);
+  const normalizedSlug = slugify(explicitSlug || title);
+  const requestedSlug = normalizedSlug || (!explicitSlug ? `project-${fnv1a(title)}` : '');
   if (!requestedSlug || RESERVED_ROOTS.has(requestedSlug)) throw new Error('LAUNCH_SLUG_INVALID_OR_RESERVED');
   const service = slugify(input.service || 'business');
   const requestedChannels = unique((Array.isArray(input.externalChannels) ? input.externalChannels : [])
