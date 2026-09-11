@@ -162,7 +162,7 @@ async function verifyTax(tab, alreadyActive, started) {
     }, profileId);
   }
   const edit = page.locator('button[data-edit-supplier]').first();
-  await edit.waitFor({ state:'visible', timeout:10_000 });
+  await edit.waitFor({ state:writeVerification ? 'visible' : 'attached', timeout:10_000 });
   const profileId = Number(await edit.getAttribute('data-edit-supplier'));
   if (!Number.isInteger(profileId) || profileId <= 0) throw new Error('tax: invalid supplier profile id');
   const before = await readProfile(profileId);
