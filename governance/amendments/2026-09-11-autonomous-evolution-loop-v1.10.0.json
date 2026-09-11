@@ -28,6 +28,6 @@
     "automaticPromotion": false,
     "promotionRequiresSuperAdministratorConfirmation": true
   },
-  "deploymentImpact": "One additive Control API database migration adds lifecycle audit tables. The existing validated migration -> isolated staging -> guarded production lane is reused; no new deployment boundary or provider is introduced.",
-  "rollback": "Revert the autonomous evolution engine, research-evidence collector, lifecycle runner/store, migration 0079, workflow extension, Evolution Intelligence store integration, documentation and tests. Existing Generation 10 Autonomous Discovery, Self Automation and Evolution Intelligence remain the safe baseline."
+  "deploymentImpact": "One additive Control API database migration adds lifecycle audit tables. The existing validated migration -> isolated staging -> guarded production lane is reused; no new deployment boundary or provider is introduced. The file is numbered 0080 because staging had an existing 0079 migration-name record from parallel work; no existing migration record is overwritten.",
+  "rollback": "Revert the autonomous evolution engine, research-evidence collector, lifecycle runner/store, migration 0080, workflow extension, Evolution Intelligence store integration, documentation and tests. Existing Generation 10 Autonomous Discovery, Self Automation and Evolution Intelligence remain the safe baseline."
 }
