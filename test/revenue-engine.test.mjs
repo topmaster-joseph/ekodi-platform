@@ -92,7 +92,7 @@ test('fitness scoring blocks policy or tenant-isolation uncertainty', () => {
     stopConditions: ['stop'],
   });
   assert.equal(result.eligibleForBoundedExperiment, false);
-  assert.deepEqual(result.hardBlocks.sort(), [
+  assert.deepEqual([...result.hardBlocks].sort(), [
     'legal-or-policy-fit-not-established',
     'tenant-isolation-not-established',
   ]);
