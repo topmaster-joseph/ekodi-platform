@@ -95,7 +95,8 @@ test('Space worker renders PizzaMaru and YogurtPurple as distinct styled user pa
     assert.equal(response.headers.get('x-ekodi-route'),'space-storefront');
     assert.ok(body.includes(name));
     assert.ok(body.includes(`data-store-page="${theme}"`));
-    assert.match(body,/\/_ekodi\/space\/storefront\.css\?v=20260912-yogurt-v3/);
+    const expectedCssVersion=theme==='yogurt'?'20260912-yogurt-v3':'20260911-v2';
+    assert.ok(body.includes(`/_ekodi/space/storefront.css?v=${expectedCssVersion}`));
     assert.doesNotMatch(body,/__SPACE_PAGE_/);
     if(theme==='yogurt'){assert.match(body,/메뉴와 앱별 가격/);assert.match(body,/배달앱에서 바로 주문/);assert.doesNotMatch(body,/USER OPERATIONS|STORE MASTER|로그아웃/);}
   }
