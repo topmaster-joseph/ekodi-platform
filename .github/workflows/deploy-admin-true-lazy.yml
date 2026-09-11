@@ -16,6 +16,8 @@ on:
       - 'marketing-funnel-admin.css'
       - 'platform-boundaries.json'
       - 'site-worker.js'
+      - 'workspace-admin-page.js'
+      - 'test/mall-v83-workspace-admin.test.mjs'
       - 'scripts/build.mjs'
       - 'scripts/validate-admin-source.mjs'
       - 'scripts/admin-*-postbuild.mjs'
@@ -58,7 +60,8 @@ jobs:
               test/admin-preauth-shell.test.mjs \
               test/admin-performance-hardening.test.mjs \
               test/admin-readable-command.test.mjs \
-              test/admin-os-foundation.test.mjs
+              test/admin-os-foundation.test.mjs \
+              test/mall-v83-workspace-admin.test.mjs
             npm run build
 
             for asset in \
