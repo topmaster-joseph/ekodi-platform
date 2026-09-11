@@ -165,12 +165,14 @@ async function verifyTax(tab, alreadyActive, started) {
       return { status:response.status, profile };
     }, profileId);
   }
-  const suppliersTab = page.locator('button[data-tab="suppliers"]');
-  await clickFast(suppliersTab);
-  await page.waitForFunction(() => {
-    const view = document.querySelector('[data-view="suppliers"]');
-    return Boolean(view && !view.classList.contains('hidden'));
-  }, null, { timeout:5_000 });
+  if (writeVerification) {
+    const suppliersTab = page.locator('button[data-tab="suppliers"]');
+    await clickFast(suppliersTab);
+    await page.waitForFunction(() => {
+      const view = document.querySelector('[data-view="suppliers"]');
+      return Boolean(view && !view.classList.contains('hidden'));
+    }, null, { timeout:5_000 });
+  }
   const edit = page.locator('button[data-edit-supplier]').first();
   await edit.waitFor({ state:writeVerification ? 'visible' : 'attached', timeout:10_000 });
   const profileId = Number(await edit.getAttribute('data-edit-supplier'));
