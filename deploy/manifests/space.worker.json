@@ -59,7 +59,7 @@
         "url": "https://ekodi.kr/yogurt",
         "statuses": [200],
         "redirect": "manual",
-        "expect": ["요거트퍼플 목포대점","메뉴·가격 보기","배달앱 주문","/_ekodi/space/storefront.css?v=20260911-v2"],
+        "expect": ["요거트퍼플 목포대점","메뉴·가격 보기","배달앱 주문","/_ekodi/space/storefront.css?v=20260912-yogurt-v3"],
         "headerExpect": ["x-ekodi-route: space-storefront","x-robots-tag: index, follow","cache-control: no-store"]
       },
       {
