@@ -7,6 +7,9 @@ const privacyCss=fs.readFileSync(new URL('./public/privacy.css',import.meta.url)
 const chatCss=fs.readFileSync(new URL('./public/chat.css',import.meta.url),'utf8');
 const adminHtml=fs.readFileSync(new URL('./public/admin.html',import.meta.url),'utf8');
 const adminJs=fs.readFileSync(new URL('./public/admin.js',import.meta.url),'utf8');
+const carGuideHtml=fs.readFileSync(new URL('./public/car-insurance-guide.html',import.meta.url),'utf8');
+const carGuideJs=fs.readFileSync(new URL('./public/car-insurance-guide.js',import.meta.url),'utf8');
+const carGuideCss=fs.readFileSync(new URL('./public/car-insurance-guide.css',import.meta.url),'utf8');
 const centralEntry=fs.readFileSync(new URL('../../customer-entry-worker.js',import.meta.url),'utf8');
 const centralWrangler=fs.readFileSync(new URL('../../wrangler.api.toml',import.meta.url),'utf8');
 for(const required of ['AI 보험점검','내 보험','청구도움','비교 준비','상담','개인정보 보호센터','보험설계사 되어보기']){if(!html.includes(required))throw new Error(`missing UI: ${required}`)}
@@ -31,4 +34,11 @@ if(!worker.includes('ekodi-insurance-api-green.topmaster-joseph.workers.dev'))th
 if(!worker.includes("frame-ancestors 'none'"))throw new Error('CSP missing');
 for(const marker of ['insuranceAdminEnabled','INSURANCE_ADMIN_ENABLED','disabledInsuranceAdminResponse','INSURANCE_ADMIN_NOT_ENABLED'])if(!centralEntry.includes(marker))throw new Error(`central Insurance default-off gate missing: ${marker}`);
 if(!centralWrangler.includes('INSURANCE_ADMIN_ENABLED = "false"'))throw new Error('production central Insurance admin route must remain disabled by default');
+for(const marker of ['__LANG__','__TITLE__','__DESCRIPTION__','data-i18n="liabilityTitle"','data-i18n="roadsideTitle"','이 페이지는 이해를 돕기 위한 일반적인 정보'])if(!carGuideHtml.includes(marker))throw new Error(`multilingual car guide shell missing: ${marker}`);
+for(const marker of ["SUPPORTED_LANGUAGES=['ko','en','zh-CN','vi']",'Liability Insurance','汽车责任保险','Bảo hiểm trách nhiệm','navigator.share','navigator.clipboard.writeText'])if(!carGuideJs.includes(marker))throw new Error(`multilingual car guide behavior missing: ${marker}`);
+for(const marker of ['/guide/car-insurance','multilingualCarGuide:true','CAR_GUIDE_META','injectBridge:false','content-language'])if(!worker.includes(marker))throw new Error(`multilingual car guide route missing: ${marker}`);
+if(!carGuideCss.includes('@media(max-width:720px)')||!carGuideCss.includes('.guide-grid'))throw new Error('responsive car guide styles missing');
+if(/롯데|Lotte/i.test(carGuideHtml+carGuideJs))throw new Error('unapproved insurer brand must not appear in generic car guide');
+if(/최적|best product|추천상품/i.test(carGuideHtml+carGuideJs))throw new Error('car guide must remain general information, not product recommendation');
 console.log('EKODI Insurance free-D1 single-source separate-consent consultation checks passed');
+console.log('EKODI Insurance multilingual car guide checks passed');
