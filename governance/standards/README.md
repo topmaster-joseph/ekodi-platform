@@ -31,8 +31,24 @@ Versions must be checked against official standards publishers before a referenc
 - `ekodi-international-maturity-model.json` — domains, weights, internal maturity scale and governance rules.
 - `ekodi-current-maturity.json` — current evidence, gaps and next actions.
 - `history/YYYY-MM-DD.json` — immutable assessment snapshots.
-- `scripts/assess-international-maturity.mjs` — validates score integrity and generates reports.
+- `history/index.json` — ordered list of historical snapshots used by the administrator dashboard.
+- `scripts/assess-international-maturity.mjs` — validates score integrity, history integrity and generates reports.
 - `.github/workflows/international-maturity-audit.yml` — validates on relevant PRs/pushes and runs a weekly evidence report.
+- `platform-maturity-admin.js` — super-admin dashboard projection of this source of truth. It must never become a second scoring source.
+
+## Administrator dashboard
+
+The central administrator surface exposes **시스템 → 플랫폼 성숙도** to the platform super administrator. The dashboard reads this directory as its source of truth and shows:
+
+- weighted overall maturity and target gap;
+- all maturity domains and reference standards;
+- evidence, gap and improvement-action counts;
+- the three lowest-scoring priority domains;
+- radar/balance visualization;
+- immutable historical snapshot trend;
+- explicit separation between internal maturity and external certification.
+
+Dashboard display logic must not invent or independently persist maturity scores. Assessment changes continue to flow through the protected repository governance process.
 
 ## Required change discipline
 
@@ -41,7 +57,7 @@ A maturity score may increase only when evidence is added or strengthened. Every
 1. cite implementation evidence;
 2. retain at least one explicit gap until the domain is independently demonstrated as fully optimized;
 3. define next actions;
-4. append a dated history snapshot;
+4. append a dated history snapshot and register it in `history/index.json`;
 5. pass the automated maturity audit;
 6. be reviewed through the normal protected-branch process.
 
