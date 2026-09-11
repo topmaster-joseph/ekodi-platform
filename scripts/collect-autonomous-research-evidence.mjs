@@ -17,6 +17,12 @@ function runUrl(run = {}) {
   return String(run.url || run.html_url || '').trim();
 }
 
+function runTime(run = {}) {
+  const value = String(run.createdAt || run.created_at || run.runStartedAt || run.run_started_at || '').trim();
+  const time = Date.parse(value);
+  return Number.isFinite(time) ? time : 0;
+}
+
 function targetWorkflowName(program = {}) {
   const target = String(program?.signal?.target || '');
   return target.startsWith('github-workflow:') ? target.slice('github-workflow:'.length) : '';
@@ -27,6 +33,34 @@ function failedStepNames(job = {}) {
     .filter(step => FAILURE_CONCLUSIONS.has(String(step?.conclusion || '').toLowerCase()))
     .map(step => String(step.name || '').trim())
     .filter(Boolean);
+}
+
+function recoveryWindow(relevant = []) {
+  const chronological = [...relevant].sort((left, right) => runTime(left) - runTime(right));
+  const lastFailureIndex = chronological.map(run => FAILURE_CONCLUSIONS.has(String(run.conclusion || '').toLowerCase())).lastIndexOf(true);
+  if (lastFailureIndex < 0) {
+    return {
+      lastFailureAt: null,
+      healthyRunsAfterLastFailure: chronological.filter(run => SUCCESS_CONCLUSIONS.has(String(run.conclusion || '').toLowerCase())).length,
+      consecutiveHealthyRuns: chronological.slice().reverse().findIndex(run => !SUCCESS_CONCLUSIONS.has(String(run.conclusion || '').toLowerCase())) === -1
+        ? chronological.length
+        : chronological.slice().reverse().findIndex(run => !SUCCESS_CONCLUSIONS.has(String(run.conclusion || '').toLowerCase())),
+      resolvedOperationally: false,
+    };
+  }
+  const afterFailure = chronological.slice(lastFailureIndex + 1);
+  const healthyAfter = afterFailure.filter(run => SUCCESS_CONCLUSIONS.has(String(run.conclusion || '').toLowerCase()));
+  let consecutiveHealthyRuns = 0;
+  for (let index = chronological.length - 1; index >= 0; index -= 1) {
+    if (!SUCCESS_CONCLUSIONS.has(String(chronological[index].conclusion || '').toLowerCase())) break;
+    consecutiveHealthyRuns += 1;
+  }
+  return {
+    lastFailureAt: String(chronological[lastFailureIndex].createdAt || chronological[lastFailureIndex].created_at || '') || null,
+    healthyRunsAfterLastFailure: healthyAfter.length,
+    consecutiveHealthyRuns,
+    resolvedOperationally: healthyAfter.length >= 2 && consecutiveHealthyRuns >= 2,
+  };
 }
 
 export function buildWorkflowResearchEvidence(program = {}, runs = [], jobsByRunId = {}) {
@@ -58,9 +92,11 @@ export function buildWorkflowResearchEvidence(program = {}, runs = [], jobsByRun
 
   const repeatedJob = [...jobFailureFrequency.values()].some(count => count >= 2);
   const repeatedStep = [...stepFailureFrequency.values()].some(count => count >= 2);
+  const recovery = recoveryWindow(relevant);
   const evidenceRefs = [
     ...(program?.signal?.evidenceRefs || []),
     ...failed.map(runUrl),
+    ...recovered.slice(0, 5).map(runUrl),
   ].filter(Boolean);
 
   return {
@@ -79,6 +115,7 @@ export function buildWorkflowResearchEvidence(program = {}, runs = [], jobsByRun
       jobFailureFrequency: Object.fromEntries([...jobFailureFrequency.entries()].sort()),
       stepFailureFrequency: Object.fromEntries([...stepFailureFrequency.entries()].sort()),
     },
+    recovery,
     evidenceRefs: [...new Set(evidenceRefs)].slice(0, 20),
     productionMutationPerformed: false,
     authorityExpanded: false,
@@ -97,7 +134,7 @@ export function collectResearchEvidence(discoveryReport = {}, runs = [], jobsByR
   }
   return {
     generatedAt: new Date().toISOString(),
-    source: 'github_actions_jobs_and_steps',
+    source: 'github_actions_jobs_steps_and_recovery',
     researchPrograms: programs.length,
     evidenceByResearchId,
     productionMutationPerformed: false,
@@ -125,6 +162,7 @@ async function collectJobsForPrograms(discoveryReport, runs, repository, token, 
     const expected = targetWorkflowName(program);
     const matches = runs
       .filter(run => workflowName(run) === expected && FAILURE_CONCLUSIONS.has(String(run.conclusion || '').toLowerCase()))
+      .sort((left, right) => runTime(right) - runTime(left))
       .slice(0, maxRunsPerProgram);
     for (const run of matches) {
       const id = runId(run);
