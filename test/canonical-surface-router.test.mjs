@@ -114,9 +114,8 @@ test('Admin canonical route registry mirrors the five management work areas and 
   assert.equal(routes.sectionFromPath('/admin/common/common-services'),'common-services');
   assert.equal(routes.sectionFromPath('/admin/professional/insurance'),'insurance');
   assert.equal(routes.sectionFromPath('/admin/space/clients'),'clients');
-  const canonicalGroupForWorkArea = workArea => workArea === 'space' ? 'workspaces' : workArea;
   for (const item of ADMIN_MENU_REGISTRY.filter(item => !item.href)) {
-    assert.equal(routes.pathFor(item.id).split('/')[2], canonicalGroupForWorkArea(item.group), `${item.id} route group must match its canonical Admin path area`);
+    assert.equal(routes.pathFor(item.id).split('/')[2], item.group, `${item.id} route group must match its canonical Admin path area`);
   }
 });
 

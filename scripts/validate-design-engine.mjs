@@ -20,7 +20,7 @@ const [policy, userDna, userShell, theme, adminRuntime, adminCss, adminPrinciple
 ]);
 
 const errors = [];
-const expectedAxes = ['home', 'operations', 'space', 'services', 'system'];
+const expectedAxes = ['home', 'operations', 'workspaces', 'services', 'system'];
 const expectedLabels = ['홈', '운영', '공간', '서비스', '시스템'];
 const actualAxes = ADMIN_MENU_GROUPS.map(group => group.id);
 const actualLabels = ADMIN_MENU_GROUPS.map(group => group.labels?.ko);

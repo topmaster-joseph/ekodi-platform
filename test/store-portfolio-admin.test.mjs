@@ -27,9 +27,9 @@ test('integrated deep routes reuse the store admin engine without merging tenant
   assert.match(html,/data-ekodi-store-portfolio="cmpmyi"/);assert.match(html,/\/cmpmyi\/admin\/pizzamaru/);
 });
 
-test('super administrator navigation exposes the integrated store hub under Spaces',()=>{
+test('super administrator navigation exposes the integrated store hub under Workspaces',()=>{
   const item=ADMIN_MENU_REGISTRY.find(row=>row.id==='cmpmyi');
-  assert.ok(item);assert.equal(item.group,'space');assert.equal(item.superAdminOnly,true);
+  assert.ok(item);assert.equal(item.group,'workspaces');assert.equal(item.superAdminOnly,true);
   assert.equal(item.href,'https://ekodi.kr/cmpmyi/admin');
   assert.equal(item.labels.ko,'통합 매장 운영');
   assert.match(router,/storePortfolioAdminPage/);

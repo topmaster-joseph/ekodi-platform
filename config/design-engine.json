@@ -1,7 +1,7 @@
 {
   "version": 2,
   "name": "EKODI Design Engine",
-  "asOf": "2026-09-09",
+  "asOf": "2026-09-10",
   "principle": "Evidence defines reusable UX rules; EKODI identity, service DNA and EKODIAN character remain first-party layers.",
   "evidence": {
     "publicUser": {
@@ -60,7 +60,7 @@
     "primaryAxes": [
       "home",
       "operations",
-      "space",
+      "workspaces",
       "services",
       "system"
     ],

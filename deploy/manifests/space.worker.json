@@ -77,11 +77,27 @@
         "expect": [
           "피자마루 목포대점",
           "메뉴·가격 보기",
-          "배달앱 주문"
+          "배달앱 주문",
+          "피자마루 전체메뉴",
+          "공식 소셜채널",
+          "Instagram",
+          "YouTube"
         ],
         "headerExpect": [
           "x-ekodi-route: space-storefront",
           "x-robots-tag: index, follow",
+          "cache-control: no-store"
+        ]
+      },
+      {
+        "url": "https://ekodi.kr/pizzamaru/mokpodae",
+        "statuses": [
+          308
+        ],
+        "redirect": "manual",
+        "headerExpect": [
+          "location: https://ekodi.kr/pizzamaru",
+          "x-ekodi-workspace-alias: pizzamaru/mokpodae->pizzamaru",
           "cache-control: no-store"
         ]
       },
