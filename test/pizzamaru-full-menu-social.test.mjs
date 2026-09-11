@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { renderRestaurantStorefrontPage } from '../restaurant-storefront.js';
-import { PIZZAMARU_CATEGORIES, PIZZAMARU_SOCIALS, parsePizzamaruCategory } from '../pizzamaru-catalog.js';
+import { PIZZAMARU_CATEGORIES, PIZZAMARU_SOCIALS, parsePizzamaruCategory, loadPizzamaruOfficialCatalog } from '../pizzamaru-catalog.js';
 
 const productHtml=(category)=>`<li><div class="img por"><a href="/product/${encodeURIComponent(category)}"><img src="/d_fileinfo/img/${encodeURIComponent(category)}.jpg" alt=""></a></div><div class="txt_box tac"><p class="t1 lh tov">${category} 테스트 피자</p><p class="t2 c6 tov2">${category} 설명<br>(본 가격은 포장 및 매장 내 취식 기준입니다.)<br>(본 사진은 이미지컷으로 실제와 다를 수 있습니다.)</p><p class="t3 lh">12,900원</p></div></li>`;
 
@@ -14,6 +14,18 @@ test('PizzaMaru official catalog contract covers every HQ category and social ch
   assert.equal(parsed[0].price,12900);
   assert.match(parsed[0].image_url,/^https:\/\/www\.pizzamaru\.co\.kr\/d_fileinfo\/img\//);
   assert.doesNotMatch(parsed[0].description,/포장 및 매장/);
+});
+
+test('PizzaMaru full menu stays complete without runtime access to HQ',async()=>{
+  const originalFetch=globalThis.fetch;
+  globalThis.fetch=async()=>{throw new Error('offline')};
+  try{
+    const catalog=await loadPizzamaruOfficialCatalog();
+    assert.equal(catalog.items.length,78);
+    assert.equal(catalog.complete,true);
+    assert.equal(catalog.source,'hq_verified_snapshot');
+    assert.ok(catalog.items.every(item=>item.image_url.startsWith('https://www.pizzamaru.co.kr/')));
+  }finally{globalThis.fetch=originalFetch}
 });
 
 test('PizzaMaru customer page renders full menu navigation and official social links',async()=>{
