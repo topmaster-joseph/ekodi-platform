@@ -130,7 +130,7 @@ test('versioned admin assets receive immutable cache headers while unversioned r
 
 test('shared admin menu modules use the secured immutable admin asset route', async () => {
   const [worker, wrangler] = await Promise.all([read('site-worker.js'), read('wrangler.site.toml')]);
-  for (const asset of ['admin-menu-registry.js', 'admin-sidebar.js', 'admin-menu-runtime.js']) {
+  for (const asset of ['admin-menu-registry.js', 'admin-sidebar.js', 'admin-menu-runtime.js', 'ekodibiz-admin-registry.js']) {
     assert.match(worker, new RegExp(`/${asset.replaceAll('.', '\\.')}`));
     assert.match(wrangler, new RegExp(`/${asset.replaceAll('.', '\\.')}`));
   }
@@ -155,6 +155,17 @@ test('versioned admin startup graph runs Worker-first so cache policy is not byp
     '/system-health-admin.js',
     '/system-health-admin.css',
   ]) assert.match(wrangler, new RegExp(asset.replaceAll('.', '\\.').replaceAll('/', '\\/')));
+});
+
+test('Admin runtime publishes and versions its EKODIBIZ scope-registry dependency', async () => {
+  const [build, postbuild, runtime, workflow] = await Promise.all([
+    read('scripts/build.mjs'), read('scripts/admin-performance-postbuild.mjs'), read('admin-menu-runtime.js'), read('.github/workflows/deploy-site-core.yml'),
+  ]);
+  assert.match(build, /ekodibiz-admin-registry\.js/);
+  assert.match(postbuild, /sharedAdminMenuModules[^\n]*ekodibiz-admin-registry\.js/);
+  assert.match(postbuild, /admin-menu-runtime\.js'\s*,\s*\['admin-menu-registry\.js', 'ekodibiz-admin-registry\.js'\]/);
+  assert.match(runtime, /from '.\/ekodibiz-admin-registry\.js'/);
+  assert.match(workflow, /dist\/ekodibiz-admin-registry\.js/);
 });
 
 test('build ordering runs readable layer before the final performance guard', async () => {

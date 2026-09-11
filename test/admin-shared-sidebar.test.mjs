@@ -115,7 +115,7 @@ test('internal operational capabilities stay off the global work areas as direct
 });
 
 test('shared menu ES modules are published and cache-busted with the admin release', () => {
-  assert.match(postbuild, /sharedAdminMenuModules = \['admin-menu-registry\.js', 'admin-sidebar\.js', 'admin-menu-runtime\.js'\]/);
+  assert.match(postbuild, /sharedAdminMenuModules = \['admin-menu-registry\.js', 'admin-sidebar\.js', 'admin-menu-runtime\.js', 'ekodibiz-admin-registry\.js'\]/);
   assert.match(postbuild, /copyFile\(`\$\{root\}\$\{asset\}`, `\$\{dist\}\$\{asset\}`\)/);
   assert.match(postbuild, /\.\.\.sharedAdminMenuModules/);
   assert.match(postbuild, /moduleImportVersions = new Map/);
