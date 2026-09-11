@@ -123,12 +123,14 @@ test('shared menu ES modules are published and cache-busted with the admin relea
 });
 
 
-test('active global axis expands categorized detail menu inside the fixed sidebar', () => {
+test('active global axis expands every submenu directly inside the fixed sidebar', () => {
   assert.ok(sidebar.includes("DETAILS_CLASS = 'admin-global-details'"));
   assert.ok(sidebar.includes('function renderSidebarDetails(nav, globals, group, section, locale)'));
   assert.ok(sidebar.includes('data-admin-detail-section'));
-  assert.ok(sidebar.includes('getAdminMenuCategoryLabel(category, locale)'));
+  assert.ok(sidebar.includes('const ids = availableIds(nav, group)'));
+  assert.ok(sidebar.includes('const nodes = ids.map(id =>'));
   assert.ok(sidebar.includes('renderSidebarDetails(nav, globals, group, section, locale)'));
   assert.ok(sidebar.includes('activateSection(nav, detail.dataset.adminDetailSection)'));
-  assert.ok(sidebar.includes("document.createElement('details')"));
+  assert.ok(!sidebar.includes("document.createElement('details')"));
+  assert.ok(!sidebar.includes('getAdminMenuCategoryLabel(category, locale)'));
 });
