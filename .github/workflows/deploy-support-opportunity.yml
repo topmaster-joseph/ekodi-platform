@@ -10,6 +10,9 @@ on:
       - 'platform-boundaries.json'
       - 'test/support-opportunity.test.mjs'
       - 'test/support-need-sensing.test.mjs'
+      - 'config/workspace-packs.json'
+      - 'config/capability-registry.json'
+      - 'test/support-benefit-radar-10g.test.mjs'
       - 'wrangler.support.toml'
       - 'wrangler.support.staging.toml'
       - 'deploy/manifests/support.worker.json'
@@ -23,6 +26,9 @@ on:
       - 'platform-boundaries.json'
       - 'test/support-opportunity.test.mjs'
       - 'test/support-need-sensing.test.mjs'
+      - 'config/workspace-packs.json'
+      - 'config/capability-registry.json'
+      - 'test/support-benefit-radar-10g.test.mjs'
       - 'wrangler.support.toml'
       - 'wrangler.support.staging.toml'
       - 'deploy/manifests/support.worker.json'
@@ -59,7 +65,8 @@ jobs:
           node --check support/service.js
           node --check support/specialists.js
           node --check ekodi-service-manifest.js
-          node --test test/support-opportunity.test.mjs test/support-need-sensing.test.mjs
+          node --test test/support-opportunity.test.mjs test/support-need-sensing.test.mjs test/support-benefit-radar-10g.test.mjs
+          node scripts/validate-capability-registry.mjs
           node scripts/validate-platform-boundaries.mjs
           node scripts/validate-ai-mission-governance.mjs
           node -e "JSON.parse(require('fs').readFileSync('deploy/manifests/support.worker.json','utf8'))"
