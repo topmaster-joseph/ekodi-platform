@@ -112,7 +112,7 @@ export default{
       const data=await publicStorefront(slug,env);
       return data?json(env,data):json(env,{error:'storefront_unavailable'},503);
     }
-    if(url.pathname==='/storefront.css'||url.pathname==='/_ekodi/space/storefront.css')return withHeaders(env,storefrontCss(),'storefront-asset');
+    if(url.pathname==='/storefront.css'||url.pathname==='/_ekodi/space/storefront.css')return withHeaders(env,restaurantStorefrontCss(),'storefront-asset');
     if(url.pathname==='/jadam-storefront.css'||url.pathname==='/_ekodi/space/jadam-storefront.css')return withHeaders(env,jadamStorefrontCss(),'storefront-asset');
     if(url.pathname==='/restaurant-storefront.css'||url.pathname==='/_ekodi/space/restaurant-storefront.css')return withHeaders(env,restaurantStorefrontCss(),'storefront-asset');
     if(url.pathname==='/admin'||url.pathname==='/admin/')return Response.redirect('https://admin.ekodi.kr/?route=workspace&source=space.ekodi.kr',307);
@@ -125,8 +125,7 @@ export default{
       return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-ekodi-workspace-alias':'pizzamaru/mokpodae->pizzamaru'}});
     }
     if(url.pathname==='/yogurtpurple'||url.pathname==='/yogurtpurple/'){
-      const target=new URL('/yogurt'+url.search,'https://ekodi.kr');
-      return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-ekodi-workspace-alias':'yogurtpurple->yogurt'}});
+      return withHeaders(env,new Response('<!doctype html><html lang="ko"><meta charset="utf-8"><title>삭제된 주소</title><body><main><h1>삭제된 주소입니다.</h1></main></body></html>',{status:410,headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store'}}),'space-gone');
     }
     if(legacyAlias&&(url.pathname==='/'||url.pathname===''||url.pathname==='/index.html'))return new Response(null,{status:308,headers:{location:'https://ekodi.kr/my/','cache-control':'no-store','x-ekodi-legacy-alias':'space.ekodi.kr'}});
     if(url.pathname==='/'||url.pathname===''||url.pathname==='/index.html')return appShell(request,env,'space-home');
