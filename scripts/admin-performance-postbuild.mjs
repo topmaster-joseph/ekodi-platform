@@ -13,7 +13,7 @@ await copyFile(`${root}admin-perf-diagnostics.js`, `${dist}admin-perf-diagnostic
 
 // The left navigation is a shared ES-module surface. Publish its registry, renderer and
 // locale/access runtime together so every admin page can import the same menu contract.
-const sharedAdminMenuModules = ['admin-menu-registry.js', 'admin-sidebar.js', 'admin-menu-runtime.js'];
+const sharedAdminMenuModules = ['admin-menu-registry.js', 'admin-sidebar.js', 'admin-menu-runtime.js', 'ekodibiz-admin-registry.js'];
 await Promise.all(sharedAdminMenuModules.map(asset => copyFile(`${root}${asset}`, `${dist}${asset}`)));
 
 // Keep the first-path demand router below its hard byte budget. Source remains readable;
@@ -191,7 +191,7 @@ const moduleImportVersions = new Map([
   ['admin-menu-layout.js', ['admin-menu-registry.js', 'admin-sidebar.js', 'admin-menu-runtime.js']],
   ['admin-menu-registry.js', ['admin-design-engine.js']],
   ['admin-sidebar.js', ['admin-menu-registry.js']],
-  ['admin-menu-runtime.js', ['admin-menu-registry.js']],
+  ['admin-menu-runtime.js', ['admin-menu-registry.js', 'ekodibiz-admin-registry.js']],
 ]);
 for (const [asset, imports] of moduleImportVersions) {
   const assetPath = `${dist}${asset}`;
