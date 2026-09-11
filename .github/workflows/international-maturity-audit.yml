@@ -1,0 +1,46 @@
+name: International Maturity Audit
+
+on:
+  pull_request:
+    paths:
+      - 'governance/standards/**'
+      - 'scripts/assess-international-maturity.mjs'
+      - '.github/workflows/international-maturity-audit.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'governance/standards/**'
+      - 'scripts/assess-international-maturity.mjs'
+      - '.github/workflows/international-maturity-audit.yml'
+  schedule:
+    - cron: '20 21 * * 0'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  maturity-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Validate and generate evidence report
+        run: node scripts/assess-international-maturity.mjs --output .artifacts/international-maturity
+      - name: Publish audit summary
+        if: always()
+        run: |
+          if [ -f .artifacts/international-maturity/maturity-latest.md ]; then
+            cat .artifacts/international-maturity/maturity-latest.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Archive evidence report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ekodi-international-maturity-${{ github.run_number }}
+          path: .artifacts/international-maturity/
+          if-no-files-found: error
+          retention-days: 90

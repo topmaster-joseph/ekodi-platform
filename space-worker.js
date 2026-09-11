@@ -1,4 +1,4 @@
-import { isPublicWorkspacePath, workspaceSlugFromPublicPath } from './workspace-route-policy.js';
+import { isPublicWorkspacePath, workspaceRouteFromPublicPath, workspaceSlugFromPublicPath } from './workspace-route-policy.js';
 import { renderStorefrontPage, storefrontCss } from './storefront-page.js';
 import { renderJadamStorefrontPage, jadamStorefrontCss } from './jadam-storefront.js';
 import { renderRestaurantStorefrontPage, restaurantStorefrontCss } from './restaurant-storefront.js';
@@ -65,7 +65,7 @@ async function publicStorefront(slug,env){
 }
 function runtimeConfig(env){
   const dataEnabled=env.DATA_ENABLED==='true'&&Boolean(env.SUPABASE_URL&&env.SUPABASE_PUBLISHABLE_KEY);
-  return {dataEnabled,dataMode:env.DATA_MODE||'isolated-staging',supabaseUrl:dataEnabled?env.SUPABASE_URL:'',supabasePublishableKey:dataEnabled?env.SUPABASE_PUBLISHABLE_KEY:'',workspaceApi:dataEnabled?`${env.SUPABASE_URL}/functions/v1/workspace-api`:'',authUrl:env.AUTH_URL||'https://auth.ekodi.kr/?site=space',canonicalOrigin:'https://ekodi.kr',routeModel:'/{slug}',identityModel:'ekodi_id -> workspace_id -> role -> capability'};
+  return {dataEnabled,dataMode:env.DATA_MODE||'isolated-staging',supabaseUrl:dataEnabled?env.SUPABASE_URL:'',supabasePublishableKey:dataEnabled?env.SUPABASE_PUBLISHABLE_KEY:'',workspaceApi:dataEnabled?`${env.SUPABASE_URL}/functions/v1/workspace-api`:'',authUrl:env.AUTH_URL||'https://auth.ekodi.kr/?site=space',canonicalOrigin:'https://ekodi.kr',routeModel:['/{slug}','/{slug}/{service}'],memberNamespaceRequired:false,identityModel:'path -> slug(locator) -> workspace_id -> relationship/policy -> role -> capability'};
 }
 function authRedirect(request,env){
   const current=new URL(request.url);current.hash='';
@@ -104,7 +104,7 @@ export default{
       const target=new URL(url.pathname+url.search,'https://ekodi.kr');
       return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-ekodi-legacy-alias':'space.ekodi.kr'}});
     };
-    if(url.pathname==='/health')return json(env,{ok:true,service:'ekodi-space',product:'operating-space',identity:'ekodi-id',workspaceIdentity:'workspace-id',routeModel:['root-slug'],dataEnabled:runtimeConfig(env).dataEnabled,dataMode:runtimeConfig(env).dataMode});
+    if(url.pathname==='/health')return json(env,{ok:true,service:'ekodi-space',product:'operating-space',identity:'ekodi-id',workspaceIdentity:'workspace-id',routeModel:['root-slug','workspace-service'],memberNamespaceRequired:false,dataEnabled:runtimeConfig(env).dataEnabled,dataMode:runtimeConfig(env).dataMode});
     if(url.pathname==='/config.js')return withHeaders(env,new Response(`window.EKODI_SPACE_CONFIG=${JSON.stringify(runtimeConfig(env))};`,{headers:{'content-type':'application/javascript; charset=utf-8','cache-control':'no-store'}}),'config');
     if(url.pathname==='/storefront.json'){
       const slug=String(url.searchParams.get('slug')||'').toLowerCase();
@@ -112,7 +112,7 @@ export default{
       const data=await publicStorefront(slug,env);
       return data?json(env,data):json(env,{error:'storefront_unavailable'},503);
     }
-    if(url.pathname==='/storefront.css'||url.pathname==='/_ekodi/space/storefront.css')return withHeaders(env,storefrontCss(),'storefront-asset');
+    if(url.pathname==='/storefront.css'||url.pathname==='/_ekodi/space/storefront.css')return withHeaders(env,restaurantStorefrontCss(),'storefront-asset');
     if(url.pathname==='/jadam-storefront.css'||url.pathname==='/_ekodi/space/jadam-storefront.css')return withHeaders(env,jadamStorefrontCss(),'storefront-asset');
     if(url.pathname==='/restaurant-storefront.css'||url.pathname==='/_ekodi/space/restaurant-storefront.css')return withHeaders(env,restaurantStorefrontCss(),'storefront-asset');
     if(url.pathname==='/admin'||url.pathname==='/admin/')return Response.redirect('https://admin.ekodi.kr/?route=workspace&source=space.ekodi.kr',307);
@@ -120,22 +120,26 @@ export default{
       if(!['GET','HEAD'].includes(request.method))return json(env,{error:'method_not_allowed'},405);
       return authRedirect(request,env);
     }
+    if(['GET','HEAD'].includes(request.method)&&(url.pathname==='/pizzamaru/mokpodae'||url.pathname==='/pizzamaru/mokpodae/')){
+      const target=new URL('/pizzamaru'+url.search,'https://ekodi.kr');
+      return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-ekodi-workspace-alias':'pizzamaru/mokpodae->pizzamaru'}});
+    }
     if(url.pathname==='/yogurtpurple'||url.pathname==='/yogurtpurple/'){
-      const target=new URL('/yogurt'+url.search,'https://ekodi.kr');
-      return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-ekodi-workspace-alias':'yogurtpurple->yogurt'}});
+      return withHeaders(env,new Response('<!doctype html><html lang="ko"><meta charset="utf-8"><title>삭제된 주소</title><body><main><h1>삭제된 주소입니다.</h1></main></body></html>',{status:410,headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store'}}),'space-gone');
     }
     if(legacyAlias&&(url.pathname==='/'||url.pathname===''||url.pathname==='/index.html'))return new Response(null,{status:308,headers:{location:'https://ekodi.kr/my/','cache-control':'no-store','x-ekodi-legacy-alias':'space.ekodi.kr'}});
     if(url.pathname==='/'||url.pathname===''||url.pathname==='/index.html')return appShell(request,env,'space-home');
     if(isPublicWorkspacePath(url.pathname)){
+      const workspaceRoute=workspaceRouteFromPublicPath(url.pathname);
       if(legacyAlias&&url.pathname!=='/deployment-probe')return canonicalRedirect();
       const resolved=await pageProfile(url.pathname,env);
-      const requested=workspaceSlugFromPublicPath(url.pathname);
+      const requested=workspaceRoute?.slug||workspaceSlugFromPublicPath(url.pathname);
       if(resolved.canonicalSlug&&requested&&resolved.canonicalSlug!==requested){
         const target=new URL(`/${resolved.canonicalSlug}${url.search}`,'https://ekodi.kr');
         return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-ekodi-workspace-alias':`${requested}->${resolved.canonicalSlug}`}});
       }
       if(resolved.status==='paused')return withHeaders(env,new Response('<!doctype html><html lang="ko"><meta charset="utf-8"><title>사용자 사이트 일시중지 · EKODI</title><body><main><h1>사용자 사이트가 일시중지되었습니다.</h1><p>운영공간 관리자 설정에서 다시 활성화할 수 있습니다.</p></main></body></html>',{status:404,headers:{'content-type':'text/html; charset=utf-8'}}),'space-paused');
-      if(resolved.storefront){
+      if(resolved.storefront&&!workspaceRoute?.service){
         const storefront=requested==='jadam'
           ?await renderJadamStorefrontPage(request,env,resolved,requested)
           :['pizzamaru','yogurt'].includes(requested)
@@ -143,7 +147,7 @@ export default{
             :await renderStorefrontPage(request,env,resolved,requested);
         return withHeaders(env,storefront,'space-storefront');
       }
-      return appShell(request,env,'space-workspace',resolved.profile);
+      return appShell(request,env,workspaceRoute?.service?'space-workspace-service':'space-workspace',resolved.profile);
     }
     return withHeaders(env,await env.ASSETS.fetch(request),'space-asset');
   }

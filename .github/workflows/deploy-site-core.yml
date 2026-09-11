@@ -35,6 +35,7 @@ on:
       - 'tenant-admin-policy.js'
       - 'test/tenant-admin-policy.test.mjs'
       - 'test/workspace-admin-two-level-shell.test.mjs'
+      - 'test/mall-v83-workspace-admin.test.mjs'
       - 'store-admin-engine.js'
       - 'test/store-user-site-admin.test.mjs'
       - 'church-pastor-admin-page.js'
@@ -212,7 +213,7 @@ jobs:
             node --check "$f"
           done
           node --test test/discovery-layer.test.mjs test/preview-page.test.mjs test/mail-contact.test.mjs
-          node --test test/store-admin-systems.test.mjs test/store-user-site-admin.test.mjs test/tenant-admin-policy.test.mjs test/workspace-admin-marketing-channels-route.test.mjs test/workspace-admin-two-level-shell.test.mjs test/personal-finance-admin-control.test.mjs test/admin-finance-render-performance.test.mjs test/admin-authenticated-e2e-retry.test.mjs
+          node --test test/store-admin-systems.test.mjs test/store-user-site-admin.test.mjs test/tenant-admin-policy.test.mjs test/workspace-admin-marketing-channels-route.test.mjs test/workspace-admin-two-level-shell.test.mjs test/mall-v83-workspace-admin.test.mjs test/personal-finance-admin-control.test.mjs test/admin-finance-render-performance.test.mjs test/admin-authenticated-e2e-retry.test.mjs
           node --test test/admin-communication.test.mjs test/devotional-admin-readiness.test.mjs test/ekodibiz-invest-business.test.mjs test/ekodibiz-invest-admin.test.mjs test/public-workspace-gateway.test.mjs test/store-public-gateway.test.mjs test/store-portfolio-admin.test.mjs test/marketing-canonical-projection.test.mjs test/church-pastor-admin.test.mjs test/church-route-ownership.test.mjs
           node scripts/validate-admin-source.mjs
           node scripts/validate-user-ui-dna.mjs

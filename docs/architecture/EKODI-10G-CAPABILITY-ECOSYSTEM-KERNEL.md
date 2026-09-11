@@ -25,3 +25,10 @@ The operating loop is:
 - `ekodi-self-automation-engine.js`: scheduled closed-loop analysis and snapshots.
 - `core-ai-gateway.js`: command and Pulse experience capture.
 - `api-worker.js`: authenticated admin inspection and manual analysis trigger.
+
+## Cross-domain service-backed capability example
+
+- `support.benefit-radar` is the canonical Generation 10 capability for consent-first public benefit and support-opportunity discovery.
+- The capability is composed through workspace packs and backed by `support.ekodi.kr`; service/provider identity remains replaceable behind the capability contract.
+- Recommendation and application preparation are assistive. Submission, agreement, payment, settlement and other high-impact actions remain human-gated.
+- Official-source readiness is explicit: live ingestion, approval required, and adapter pending are never presented as equivalent states.

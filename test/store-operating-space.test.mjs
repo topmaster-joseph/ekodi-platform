@@ -61,7 +61,7 @@ test('PizzaMaru and YogurtPurple get dedicated user-page profiles',()=>{
   assert.match(worker,/yogurt:\{documentTitle:'요거트퍼플 목포대점 · 메뉴 · 배달주문'/);
   assert.match(worker,/PIZZA STORE USER PAGE/);
   assert.match(worker,/YOGURT PURPLE · MOKPO UNIVERSITY/);
-  assert.match(worker,/yogurtpurple->yogurt/);
+  assert.doesNotMatch(worker,/yogurtpurple->yogurt/);
   assert.match(worker,/pageProfile\(url\.pathname,env\)/);
   assert.match(html,/__SPACE_PAGE_NAME__/);
   assert.match(html,/storePageStats/);
@@ -70,18 +70,20 @@ test('PizzaMaru and YogurtPurple get dedicated user-page profiles',()=>{
   assert.match(css,/data-store-page="yogurt"/);assert.match(css,/\.yp-mobile-dock/);assert.match(css,/\.yp-local-strip/);assert.match(html,/id="mobilePhone"/);assert.match(html,/www\.yogurtpurple\.com/);
 });
 
-test('production smoke covers each store user page separately',()=>{
+test('production smoke covers each store user page and stylesheet separately',()=>{
   assert.match(manifest,/https:\/\/ekodi\.kr\/jadam/);
   assert.match(manifest,/https:\/\/ekodi\.kr\/pizzamaru/);
   assert.match(manifest,/https:\/\/ekodi\.kr\/yogurt/);
-  assert.match(manifest,/yogurtpurple/);
+  assert.match(manifest,/https:\/\/ekodi\.kr\/_ekodi\/space\/storefront\.css/);
+  assert.match(manifest,/https:\/\/ekodi\.kr\/yogurtpurple/);
+  assert.match(manifest,/"statuses": \[410\]/);
   assert.match(manifest,/피자마루 목포대점/);
   assert.match(manifest,/요거트퍼플 목포대점/);
   assert.match(manifest,/메뉴·가격 보기/);
   assert.match(manifest,/space-storefront/);
 });
 
-test('Space worker renders PizzaMaru and YogurtPurple as distinct user pages',async()=>{
+test('Space worker renders PizzaMaru and YogurtPurple as distinct styled user pages',async()=>{
   const env={DATA_ENABLED:'false',ASSETS:{fetch:async()=>new Response(html,{headers:{'content-type':'text/html; charset=utf-8'}})}};
   for(const [path,name,theme] of [
     ['/pizzamaru','피자마루 목포대점','pizzamaru'],
@@ -93,12 +95,24 @@ test('Space worker renders PizzaMaru and YogurtPurple as distinct user pages',as
     assert.equal(response.headers.get('x-ekodi-route'),'space-storefront');
     assert.ok(body.includes(name));
     assert.ok(body.includes(`data-store-page="${theme}"`));
+    assert.match(body,/\/_ekodi\/space\/storefront\.css\?v=20260911-v2/);
     assert.doesNotMatch(body,/__SPACE_PAGE_/);
     if(theme==='yogurt'){assert.match(body,/메뉴와 앱별 가격/);assert.match(body,/배달앱에서 바로 주문/);assert.doesNotMatch(body,/USER OPERATIONS|STORE MASTER|로그아웃/);}
   }
-  const alias=await spaceWorker.fetch(new Request('https://ekodi.kr/yogurtpurple'),env);
-  assert.equal(alias.status,308);
-  assert.equal(alias.headers.get('location'),'https://ekodi.kr/yogurt');
+  const styleResponse=await spaceWorker.fetch(new Request('https://space.ekodi.kr/storefront.css'),env);
+  const styleBody=await styleResponse.text();
+  assert.equal(styleResponse.status,200);
+  assert.equal(styleResponse.headers.get('x-ekodi-route'),'storefront-asset');
+  assert.match(styleBody,/\.rs-hero/);
+  assert.match(styleBody,/\.rs-menu-card/);
+  const legacyPizza=await spaceWorker.fetch(new Request('https://ekodi.kr/pizzamaru/mokpodae?from=legacy'),env);
+  assert.equal(legacyPizza.status,308);
+  assert.equal(legacyPizza.headers.get('location'),'https://ekodi.kr/pizzamaru?from=legacy');
+  assert.equal(legacyPizza.headers.get('x-ekodi-workspace-alias'),'pizzamaru/mokpodae->pizzamaru');
+  const removed=await spaceWorker.fetch(new Request('https://ekodi.kr/yogurtpurple'),env);
+  assert.equal(removed.status,410);
+  assert.equal(removed.headers.get('location'),null);
+  assert.equal(removed.headers.get('x-ekodi-route'),'space-gone');
 });
 
 test('Yogurt storefront publishes only customer-safe store projection without login',async()=>{

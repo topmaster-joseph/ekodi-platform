@@ -39,8 +39,8 @@ jobs:
             'data-ekodi-service="mall"' \
             'data-ekodi-user-surface="public"' \
             'rel="canonical" href="https://ekodi.kr/ekodibiz/mall"' \
-            '/ekodibiz/mall/assets/app.js' \
-            '/ekodibiz/mall/assets/commerce.js'; do
+            '/ekodibiz/mall/app.js' \
+            '/ekodibiz/mall/affiliate-client.js'; do
             grep -Fq "$marker" /tmp/mall.html || { echo "Missing Mall structural marker: $marker"; exit 1; }
           done
           if grep -Fq '추천링크 클릭 후 검색하세요' /tmp/mall.html || grep -Fq 'COUPANG AFFILIATE CURATION' /tmp/mall.html || grep -Fq 'cwWXWm' /tmp/mall.html; then
