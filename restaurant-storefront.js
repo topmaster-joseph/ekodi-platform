@@ -48,7 +48,8 @@ export async function renderRestaurantStorefrontPage(request,env,resolved,slug){
   const response=await renderV2(request,env,resolved,slug);
   if(!response.headers.get('content-type')?.includes('text/html'))return response;
   let html=await response.text();
-  html=html.replace('/_ekodi/space/restaurant-storefront.css?v=20260911-v1','/_ekodi/space/storefront.css?v=20260912-yogurt-v3');
+  const storefrontCssVersion=slug==='yogurt'?'20260912-yogurt-v3':'20260911-v2';
+  html=html.replace('/_ekodi/space/restaurant-storefront.css?v=20260911-v1',`/_ekodi/space/storefront.css?v=${storefrontCssVersion}`);
   html=html.replace(`<html lang="ko" data-restaurant-theme="${slug==='pizzamaru'?'pizza':'yogurt'}">`,`<html lang="ko" data-store-page="${slug}" data-restaurant-theme="${slug==='pizzamaru'?'pizza':'yogurt'}">`);
   html=html.replace('<div class="rs-actions">',`<div class="rs-actions"><a class="rs-action primary" href="${slug==='pizzamaru'?'#all-menu':'#menu'}">메뉴·가격 보기</a>`);
   html=html.replace('class="rs-action primary" href="tel:','class="rs-action " href="tel:');
