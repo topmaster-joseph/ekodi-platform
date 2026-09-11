@@ -17,7 +17,7 @@ on:
       - 'test/autonomous-evolution-loop.test.mjs'
       - 'test/autonomous-research-evidence.test.mjs'
       - 'governance/architecture/ekodi-autonomous-discovery-engine.json'
-      - 'migrations/0079_autonomous_evolution_lifecycle.sql'
+      - 'migrations/0080_autonomous_evolution_lifecycle.sql'
       - '.github/workflows/autonomous-discovery-cycle.yml'
   push:
     branches: [main]
@@ -29,7 +29,7 @@ on:
       - 'scripts/collect-autonomous-research-evidence.mjs'
       - 'scripts/run-autonomous-evolution-loop.mjs'
       - 'governance/architecture/ekodi-autonomous-discovery-engine.json'
-      - 'migrations/0079_autonomous_evolution_lifecycle.sql'
+      - 'migrations/0080_autonomous_evolution_lifecycle.sql'
       - '.github/workflows/autonomous-discovery-cycle.yml'
 
 permissions:
