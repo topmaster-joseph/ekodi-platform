@@ -45,7 +45,8 @@ test('admin exposes Tapo bridge enrollment and live view without raw RTSP',()=>{
   assert.match(admin,/실시간 보기/);
   assert.match(admin,/deviceType:'gateway'/);
   assert.doesNotMatch(admin,/rtsp:\/\//i);
-  assert.match(deviceAdmin,/loadScript\('tapo-device-admin\.js'\)/);
+  assert.match(deviceAdmin,/loadScript\|\|globalThis\.EKODIAdminDemand\?\.loadJs/);
+  assert.match(deviceAdmin,/loadTapoAdmin\('tapo-device-admin\.js'\)/);
   assert.match(build,/tapo-device-admin\.js/);
 });
 test('device observation is a registered generation-10 capability composition',()=>{

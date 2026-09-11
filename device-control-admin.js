@@ -465,7 +465,7 @@
       <div class="device-security-note"><strong>권한 경계</strong><p>관찰 → 유형정책 → 진단 → 관리자 승인 → 허용 작업 실행 → 결과 검증 → 감사기록 순서로 동작합니다. 물리 동작이 가능한 기기는 전용 안전 어댑터 없이는 실행권한을 받지 않습니다.</p></div>
       <div class="ekodi-device-list" id="ekodiDeviceList"><div class="device-empty"><p>기기 목록을 불러오는 중입니다.</p></div></div>`;
     content.append(panel);
-    globalThis.EKODIAdminDemand?.loadScript('tapo-device-admin.js').catch(error=>console.warn('[EKODI Tapo Admin]',error.message));
+    const loadTapoAdmin=globalThis.EKODIAdminDemand?.loadScript||globalThis.EKODIAdminDemand?.loadJs; if(loadTapoAdmin) loadTapoAdmin('tapo-device-admin.js').catch(error=>console.warn('[EKODI Tapo Admin]',error.message));
 
     button.addEventListener('click', showDevices);
     panel.querySelector('#refreshDevices').addEventListener('click', loadDevices);
