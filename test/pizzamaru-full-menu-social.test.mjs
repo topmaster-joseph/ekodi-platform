@@ -32,5 +32,7 @@ test('PizzaMaru customer page renders full menu navigation and official social l
     for(const category of PIZZAMARU_CATEGORIES)assert.ok(html.includes(category.label.replaceAll('&','&amp;')));
     assert.match(html,/https:\/\/www\.pizzamaru\.co\.kr\/d_fileinfo\/img\//);
     assert.match(html,/본사 가격은 포장 주문·매장 내 취식 기준/);
+    assert.match(html,/정보 확인 기준/);
+    assert.doesNotMatch(html,/Powered by EKODI|EKODI 검증 원칙/);
   }finally{globalThis.fetch=originalFetch}
 });
