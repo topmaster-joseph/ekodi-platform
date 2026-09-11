@@ -90,6 +90,18 @@
         ]
       },
       {
+        "url": "https://ekodi.kr/pizzamaru/mokpodae",
+        "statuses": [
+          308
+        ],
+        "redirect": "manual",
+        "headerExpect": [
+          "location: https://ekodi.kr/pizzamaru",
+          "x-ekodi-workspace-alias: pizzamaru/mokpodae->pizzamaru",
+          "cache-control: no-store"
+        ]
+      },
+      {
         "url": "https://ekodi.kr/yogurt",
         "statuses": [
           200
