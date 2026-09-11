@@ -121,3 +121,14 @@ test('shared menu ES modules are published and cache-busted with the admin relea
   assert.match(postbuild, /moduleImportVersions = new Map/);
   assert.match(postbuild, /`\.\/\$\{imported\}\?v=\$\{assetVersion\}`/);
 });
+
+
+test('active global axis expands categorized detail menu inside the fixed sidebar', () => {
+  assert.ok(sidebar.includes("DETAILS_CLASS = 'admin-global-details'"));
+  assert.ok(sidebar.includes('function renderSidebarDetails(nav, globals, group, section, locale)'));
+  assert.ok(sidebar.includes('data-admin-detail-section'));
+  assert.ok(sidebar.includes('getAdminMenuCategoryLabel(category, locale)'));
+  assert.ok(sidebar.includes('renderSidebarDetails(nav, globals, group, section, locale)'));
+  assert.ok(sidebar.includes('activateSection(nav, detail.dataset.adminDetailSection)'));
+  assert.ok(sidebar.includes("document.createElement('details')"));
+});

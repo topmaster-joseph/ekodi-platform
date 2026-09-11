@@ -57,6 +57,8 @@
     document.documentElement.style.setProperty('--ekodi-assist-left',`${Math.max(0,Math.round(right))}px`);
   }
   function activeSession(){return sessions.find(item=>item.id===state.activeSessionId)||null}
+  function currentSection(){return String(context().section||'overview')}
+  function selectSessionForCurrentSection(){const section=currentSection();const current=activeSession();if(current?.context?.section===section)return false;state.activeSessionId=sessions.find(item=>item.context?.section===section)?.id||null;state.query='';saveState();rebuildHistory();return true}
   function rebuildHistory(){
     const current=activeSession();
     aiHistory=(current?.messages||[]).filter(item=>item.role==='user'||item.role==='assistant').slice(-8).map(item=>({role:item.role,text:item.text}));
@@ -65,7 +67,8 @@
   }
   function ensureSession(firstText){
     let session=activeSession();
-    if(session)return session;
+    if(session?.context?.section===currentSection())return session;
+    state.activeSessionId=null;
     session={id:`cmd-${Date.now()}-${Math.random().toString(36).slice(2,7)}`,title:titleFor(firstText),createdAt:now(),updatedAt:now(),context:context(),status:'active',messages:[]};
     sessions.unshift(session);sessions=sessions.slice(0,MAX_SESSIONS);state.activeSessionId=session.id;saveState();saveSessions();return session;
   }
@@ -83,7 +86,7 @@
     if(document.querySelector('#ekodiAssistDock')||!token())return;
     positionWorkbench();
     root=el('div','ekodi-assist');root.id='ekodiAssistDock';
-    root.innerHTML='<button type="button" class="ekodi-assist-launcher" id="ekodiAssistLauncher" aria-label="EKODI AI 열기" aria-expanded="false">✦<span class="ekodi-assist-badge" id="ekodiAssistBadge" hidden></span></button><section class="ekodi-assist-panel" id="ekodiAssistPanel" hidden aria-label="EKODI AI 명령 워크벤치"><aside class="ekodi-assist-rail" id="ekodiAssistRail"><div class="ekodi-assist-rail-head"><strong>EKODI AI</strong><button type="button" id="ekodiAssistNew" aria-label="새 명령">＋</button></div><div class="ekodi-assist-tabs" role="tablist"><button type="button" class="ekodi-assist-tab" data-assist-tab="ai">AI 명령</button><button type="button" class="ekodi-assist-tab" data-assist-tab="inbox">대화 · 문의</button></div><label class="ekodi-assist-search"><span>⌕</span><input id="ekodiAssistSearch" type="search" placeholder="최근 명령 검색" autocomplete="off"></label><div class="ekodi-assist-history" id="ekodiAssistHistory"></div><div class="ekodi-assist-rail-foot"><small id="ekodiAssistContext">현재 화면을 확인 중입니다.</small><a href="https://api.ekodi.kr/operator" target="_blank" rel="noopener">운영자 전체 화면 ↗</a></div></aside><main class="ekodi-assist-main"><header class="ekodi-assist-head"><button type="button" class="ekodi-assist-rail-toggle" id="ekodiAssistRailToggle" aria-label="최근 명령 보기">☰</button><div class="ekodi-assist-title"><strong id="ekodiAssistTitle">새 명령</strong><small>에코디 헌법 · AI 협업 · 권한 경계를 지키며 실행합니다.</small></div><button type="button" class="ekodi-assist-close" id="ekodiAssistClose" aria-label="관리자 화면으로 돌아가기">×</button></header><div class="ekodi-assist-chat-scroll" id="ekodiAssistChat"></div><footer class="ekodi-assist-composer-wrap" id="ekodiAssistComposer"><form class="ekodi-assist-composer" id="ekodiAssistForm"><button type="button" class="ekodi-assist-plus" id="ekodiAssistComposerNew" aria-label="새 명령">＋</button><textarea class="ekodi-assist-command" id="ekodiAssistCommand" rows="1" maxlength="1800" placeholder="에코디 AI에게 물어보세요"></textarea><button type="submit" class="ekodi-assist-send" aria-label="보내기">↑</button></form><small>Enter 전송 · Shift+Enter 줄바꿈 · 고위험 작업은 사람 승인 경계를 유지합니다.</small></footer></main></section>';
+    root.innerHTML='<button type="button" class="ekodi-assist-launcher" id="ekodiAssistLauncher" aria-label="EKODI AI 열기" aria-expanded="false">✦<span class="ekodi-assist-badge" id="ekodiAssistBadge" hidden></span></button><section class="ekodi-assist-panel" id="ekodiAssistPanel" hidden aria-label="EKODI AI 명령 워크벤치"><aside class="ekodi-assist-rail" id="ekodiAssistRail"><div class="ekodi-assist-rail-head"><strong id="ekodiAssistRailTitle">최근 명령</strong><button type="button" id="ekodiAssistNew" aria-label="새 명령">＋</button></div><div class="ekodi-assist-tabs" role="tablist"><button type="button" class="ekodi-assist-tab" data-assist-tab="ai">AI 명령</button><button type="button" class="ekodi-assist-tab" data-assist-tab="inbox">대화 · 문의</button></div><label class="ekodi-assist-search"><span>⌕</span><input id="ekodiAssistSearch" type="search" placeholder="최근 명령 검색" autocomplete="off"></label><div class="ekodi-assist-history" id="ekodiAssistHistory"></div><div class="ekodi-assist-rail-foot"><small id="ekodiAssistContext">현재 화면을 확인 중입니다.</small><a href="https://api.ekodi.kr/operator" target="_blank" rel="noopener">운영자 전체 화면 ↗</a></div></aside><main class="ekodi-assist-main"><header class="ekodi-assist-head"><button type="button" class="ekodi-assist-rail-toggle" id="ekodiAssistRailToggle" aria-label="최근 명령 보기">☰</button><div class="ekodi-assist-title"><strong id="ekodiAssistTitle">새 명령</strong><small>에코디 헌법 · AI 협업 · 권한 경계를 지키며 실행합니다.</small></div><button type="button" class="ekodi-assist-close" id="ekodiAssistClose" aria-label="관리자 화면으로 돌아가기">×</button></header><div class="ekodi-assist-chat-scroll" id="ekodiAssistChat"></div><footer class="ekodi-assist-composer-wrap" id="ekodiAssistComposer"><form class="ekodi-assist-composer" id="ekodiAssistForm"><button type="button" class="ekodi-assist-plus" id="ekodiAssistComposerNew" aria-label="새 명령">＋</button><textarea class="ekodi-assist-command" id="ekodiAssistCommand" rows="1" maxlength="1800" placeholder="에코디 AI에게 물어보세요"></textarea><button type="submit" class="ekodi-assist-send" aria-label="보내기">↑</button></form><small>Enter 전송 · Shift+Enter 줄바꿈 · 고위험 작업은 사람 승인 경계를 유지합니다.</small></footer></main></section>';
     document.body.appendChild(root);
     root.querySelector('#ekodiAssistLauncher').addEventListener('click',()=>setOpen(true));
     root.querySelector('#ekodiAssistClose').addEventListener('click',()=>setOpen(false));
@@ -99,6 +102,7 @@
     document.addEventListener('keydown',event=>{if(event.key==='Escape'&&state.open)setOpen(false)});
     window.addEventListener('resize',positionWorkbench);
     window.addEventListener('ekodi-nav-changed',updateContext);
+    window.addEventListener('ekodi-admin-section-changed',updateContext);
     window.addEventListener('hashchange',updateContext);
     window.addEventListener('ekodi-admin-capability-requested',event=>{const capability=event.detail?.capability;if(!capability)return;setOpen(true);setTab('ai');submitAi(`${capability.name} (${capability.id}) Capability를 현재 관리자 화면 맥락에서 사용해줘. ${capability.description||''}`)});
     window.addEventListener('ekodi-admin-assist-request',event=>{const text=String(event.detail?.text||'').trim();setOpen(true);setTab('ai');if(text)submitAi(text)});
@@ -107,7 +111,7 @@
     rebuildHistory();setTab(state.tab,false);setOpen(Boolean(state.open),false);updateContext();refreshSummary();
   }
   function resizeInput(input){input.style.height='auto';input.style.height=`${Math.min(132,Math.max(28,input.scrollHeight))}px`}
-  function updateContext(){if(!root)return;positionWorkbench();const c=context();const node=root.querySelector('#ekodiAssistContext');if(node)node.textContent=`현재: ${c.title}`;if(state.tab==='ai')renderAi()}
+  function updateContext(){if(!root)return;positionWorkbench();const c=context();selectSessionForCurrentSection();const node=root.querySelector('#ekodiAssistContext');if(node)node.textContent=`현재: ${c.title}`;const railTitle=root.querySelector('#ekodiAssistRailTitle');if(railTitle)railTitle.textContent=`${c.title} 명령 이력`;const search=root.querySelector('#ekodiAssistSearch');if(search){search.value=state.query||'';search.placeholder=`${c.title} 명령 검색`;}if(state.open){renderRail();renderMain()}}
   function setOpen(open,persist=true){state.open=Boolean(open);const panel=root?.querySelector('#ekodiAssistPanel');const launcher=root?.querySelector('#ekodiAssistLauncher');if(panel)panel.hidden=!state.open;if(launcher){launcher.hidden=state.open;launcher.setAttribute('aria-expanded',String(state.open))}if(persist)saveState();if(state.open){positionWorkbench();renderRail();renderMain();refreshSummary();setTimeout(()=>root?.querySelector('#ekodiAssistCommand')?.focus(),0)}}
   function setTab(tab,persist=true){state.tab=tab==='inbox'?'inbox':'ai';root?.querySelectorAll('[data-assist-tab]').forEach(button=>button.classList.toggle('active',button.dataset.assistTab===state.tab));if(persist)saveState();activeThread=null;renderRail();renderMain()}
   function newCommand(){state.tab='ai';state.activeSessionId=null;state.query='';aiHistory=[];lastAiReply=null;saveState();const search=root?.querySelector('#ekodiAssistSearch');if(search)search.value='';setTab('ai',false);renderRail();renderAi();root?.querySelector('#ekodiAssistCommand')?.focus()}
@@ -118,9 +122,9 @@
   function renderRail(){
     const list=root?.querySelector('#ekodiAssistHistory');if(!list)return;list.replaceChildren();
     if(state.tab==='inbox'){renderInboxList(list);return}
-    const query=String(state.query||'').trim().toLowerCase();
-    const filtered=sessions.filter(session=>!query||session.title.toLowerCase().includes(query)||(session.messages||[]).some(message=>String(message.text||'').toLowerCase().includes(query)));
-    if(!filtered.length){list.append(el('div','ekodi-assist-empty',query?'검색 결과가 없습니다.':'명령을 입력하면 최근 작업이 여기에 쌓입니다.'));return}
+    const query=String(state.query||'').trim().toLowerCase();const section=currentSection();
+    const filtered=sessions.filter(session=>session.context?.section===section).filter(session=>!query||session.title.toLowerCase().includes(query)||(session.messages||[]).some(message=>String(message.text||'').toLowerCase().includes(query)));
+    if(!filtered.length){list.append(el('div','ekodi-assist-empty',query?'현재 메뉴의 검색 결과가 없습니다.':`${context().title}에서 명령을 입력하면 최근 작업이 여기에 쌓입니다.`));return}
     const today=new Date().toDateString();
     for(const session of filtered){
       const button=el('button',`ekodi-assist-history-item${session.id===state.activeSessionId?' active':''}`);button.type='button';
