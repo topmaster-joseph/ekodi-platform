@@ -115,6 +115,8 @@ const ADMIN_ASSETS = new Set([
   '/campus-actions.js',
   '/device-control-admin.css',
   '/device-control-admin.js',
+  '/tapo-device-admin.css',
+  '/tapo-device-admin.js',
   '/device-browser-diagnostics.css',
   '/device-browser-diagnostics.js',
   '/ai-ops-admin.css',

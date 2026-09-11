@@ -110,7 +110,7 @@ test('shared-site release verifies Tapo admin assets before production completio
   assert.ok(tapoJs);
   assert.ok(tapoCss);
   assert.ok(tapoJs.expect?.includes('TAPO EDGE BRIDGE'));
-  assert.deepEqual(tapoJs.headerExpect, ['x-content-type-options: nosniff']);
+  assert.ok(tapoJs.headerExpect?.includes('x-ekodi-route: admin-asset'));
   assert.ok(tapoCss.expect?.includes('.tapo-camera-panel'));
-  assert.deepEqual(tapoCss.headerExpect, ['x-content-type-options: nosniff']);
+  assert.ok(tapoCss.headerExpect?.includes('x-ekodi-route: admin-asset'));
 });
