@@ -10,7 +10,7 @@ const layout = await readFile(new URL('../admin-menu-layout.js', import.meta.url
 const postbuild = await readFile(new URL('../scripts/admin-performance-postbuild.mjs', import.meta.url), 'utf8');
 
 test('five canonical axes replace the former many-group admin taxonomy', () => {
-  for (const id of ['home', 'operations', 'space', 'services', 'system']) {
+  for (const id of ['home', 'operations', 'workspaces', 'services', 'system']) {
     assert.match(registry, new RegExp(`id: '${id}'`));
   }
   for (const retired of ['site-management', 'security-audit', 'settings', 'access']) {
