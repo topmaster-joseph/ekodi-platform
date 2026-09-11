@@ -14,10 +14,26 @@ function officialLawUrl(value){
   return url;
 }
 
+function normalizeLawText(value){
+  return String(value||'')
+    .normalize('NFKC')
+    .replace(/<script[\s\S]*?<\/script>/gi,' ')
+    .replace(/<style[\s\S]*?<\/style>/gi,' ')
+    .replace(/<[^>]+>/g,' ')
+    .replace(/&nbsp;|&#160;|&#xA0;/gi,' ')
+    .replace(/&amp;/gi,'&')
+    .replace(/&lt;/gi,'<')
+    .replace(/&gt;/gi,'>')
+    .replace(/&quot;/gi,'"')
+    .replace(/&#39;|&apos;/gi,"'")
+    .replace(/[\s\u00a0]+/g,'')
+    .trim();
+}
+
 async function fetchOfficialLaw(value,depth=0){
   if(depth>5)throw new Error('too many official-law redirects');
   const url=officialLawUrl(value);
-  const response=await fetch(url,{redirect:'manual',headers:{'user-agent':'EKODI-Insurance-Law-Watch/1.0 (+https://ekodi.kr)'}});
+  const response=await fetch(url,{redirect:'manual',headers:{'user-agent':'EKODI-Insurance-Law-Watch/1.1 (+https://ekodi.kr)'}});
   if(response.status>=300&&response.status<400){
     const location=response.headers.get('location');
     if(!location)throw new Error('official-law redirect missing location');
@@ -34,7 +50,8 @@ for(const [topicKey,topic] of Object.entries(manifest.topics||{})){
       const response=await fetchOfficialLaw(source.url);
       if(!response.ok)throw new Error(`HTTP ${response.status}`);
       const text=await response.text();
-      const missing=(source.markers||[]).filter(marker=>!text.includes(marker));
+      const normalizedText=normalizeLawText(text);
+      const missing=(source.markers||[]).filter(marker=>!normalizedText.includes(normalizeLawText(marker)));
       if(missing.length)failures.push({topic:topicKey,id:source.id,url:source.url,missing});
       else checked.push({topic:topicKey,id:source.id,url:source.url});
     }catch(error){
