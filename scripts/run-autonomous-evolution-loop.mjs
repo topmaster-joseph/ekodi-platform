@@ -37,6 +37,7 @@ export function renderAutonomousEvolutionSummary(report = {}) {
     `- Generation baseline: **${Number(report.currentGeneration || 10)}**`,
     `- Lifecycle records: **${Number(summary.total || 0)}**`,
     `- Research verified: **${Number(summary.researchVerified || 0)}**`,
+    `- Operational recoveries verified: **${Number(summary.operationalResolutionsVerified || 0)}**`,
     `- Bounded experiments ready: **${Number(summary.experimentsReady || 0)}**`,
     `- Experiments passed: **${Number(summary.experimentsPassed || 0)}**`,
     `- Evolution candidates ready for Super Admin: **${Number(summary.candidatesReady || 0)}**`,
@@ -55,18 +56,19 @@ export function renderAutonomousEvolutionSummary(report = {}) {
     return `${lines.join('\n')}\n`;
   }
 
-  lines.push('| Target | Research | Experiment | Candidate | Current state |');
-  lines.push('|---|---|---|---|---|');
+  lines.push('| Target | Research | Resolution | Experiment | Candidate | Current state |');
+  lines.push('|---|---|---|---|---|---|');
   for (const record of records.slice(0, 20)) {
     const target = String(record?.research?.target || 'platform').replaceAll('|', '\\|');
     const research = record?.research?.verified ? `verified ${Math.round(Number(record.research.confidence || 0))}%` : 'evidence required';
+    const resolution = record?.operationalResolution?.verified ? 'recovery verified' : 'change/research path';
     const experiment = record?.experimentEvaluation?.status || record?.experiment?.status || 'not designed';
     const candidate = record?.candidate?.readyForSuperAdminReview ? 'Super Admin review' : 'not ready';
     const state = String(record?.status || 'unknown').replaceAll('|', '\\|');
-    lines.push(`| ${target} | ${research} | ${experiment} | ${candidate} | \`${state}\` |`);
+    lines.push(`| ${target} | ${research} | ${resolution} | ${experiment} | ${candidate} | \`${state}\` |`);
   }
   lines.push('');
-  lines.push('A research record is not an evolution. A candidate is not a deployment. An evolution is only learned after guarded deployment, post-change verification, and learning-loop closure.');
+  lines.push('A research record is not an evolution. A verified recovery closes learning without inventing a change. A candidate is not a deployment. A structural evolution is only learned after guarded deployment, post-change verification, and learning-loop closure.');
   return `${lines.join('\n')}\n`;
 }
 
