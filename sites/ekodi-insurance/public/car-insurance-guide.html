@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="__LANG__">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="description" content="__DESCRIPTION__" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="EKODI Insurance" />
+  <meta property="og:title" content="__TITLE__" />
+  <meta property="og:description" content="__DESCRIPTION__" />
+  <meta property="og:url" content="__URL__" />
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="__TITLE__" />
+  <meta name="twitter:description" content="__DESCRIPTION__" />
+  <title>__TITLE__</title>
+  <link rel="alternate" hreflang="ko" href="https://ins.ekodi.kr/guide/car-insurance/ko" />
+  <link rel="alternate" hreflang="en" href="https://ins.ekodi.kr/guide/car-insurance/en" />
+  <link rel="alternate" hreflang="zh-CN" href="https://ins.ekodi.kr/guide/car-insurance/zh-CN" />
+  <link rel="alternate" hreflang="vi" href="https://ins.ekodi.kr/guide/car-insurance/vi" />
+  <link rel="alternate" hreflang="x-default" href="https://ins.ekodi.kr/guide/car-insurance/ko" />
+  <link rel="stylesheet" href="/car-insurance-guide.css" />
+  <script src="/car-insurance-guide.js" defer></script>
+</head>
+<body>
+  <header class="guide-topbar">
+    <a class="guide-brand" href="/" aria-label="EKODI Insurance">
+      <span class="guide-brand-mark" aria-hidden="true">E</span>
+      <span><strong>EKODI Insurance</strong><small>Simple Insurance Guide</small></span>
+    </a>
+    <label class="language-picker">
+      <span data-i18n="languageLabel">언어</span>
+      <select id="languageSelect" aria-label="Language">
+        <option value="ko">한국어</option>
+        <option value="en">English</option>
+        <option value="zh-CN">简体中文</option>
+        <option value="vi">Tiếng Việt</option>
+      </select>
+    </label>
+  </header>
+
+  <main class="guide-shell">
+    <section class="guide-hero">
+      <p class="eyebrow">EKODI INSURANCE · CAR GUIDE</p>
+      <h1 data-i18n="title">자동차보험 간단 안내</h1>
+      <p class="lead" data-i18n="intro">외국인 고객에게 책임보험과 긴급출동서비스를 쉽고 짧게 설명하기 위한 안내입니다.</p>
+      <div class="share-actions">
+        <button id="shareBtn" class="primary" type="button" data-i18n="share">이 언어로 링크 공유</button>
+        <button id="copyBtn" class="secondary" type="button" data-i18n="copy">링크 복사</button>
+      </div>
+      <p id="shareStatus" class="share-status" aria-live="polite"></p>
+    </section>
+
+    <section class="guide-grid" aria-label="Car insurance guide">
+      <article class="guide-card">
+        <div class="card-number" aria-hidden="true">01</div>
+        <p class="card-kicker" data-i18n="liabilityKicker">기본 의무보험</p>
+        <h2 data-i18n="liabilityTitle">책임보험</h2>
+        <p data-i18n="liabilityBody">대한민국에서 자동차를 운행하기 위해 기본적으로 필요한 의무보험입니다. 사고로 다른 사람에게 입힌 인적·물적 손해를 약관과 가입한도 범위에서 보상합니다.</p>
+        <p class="plain-summary"><strong data-i18n="inShort">한마디로</strong><span data-i18n="liabilityShort">다른 사람에게 입힌 손해를 위한 기본 보험</span></p>
+      </article>
+
+      <article class="guide-card">
+        <div class="card-number" aria-hidden="true">02</div>
+        <p class="card-kicker" data-i18n="roadsideKicker">선택 가능한 부가서비스</p>
+        <h2 data-i18n="roadsideTitle">긴급출동서비스</h2>
+        <p data-i18n="roadsideBody">자동차보험에 선택하여 추가할 수 있는 서비스입니다. 배터리 방전, 견인, 타이어 문제 등 도로 위 긴급상황에서 도움을 받을 수 있습니다. 제공 항목과 횟수·거리 등은 보험상품과 계약에 따라 다릅니다.</p>
+        <p class="plain-summary"><strong data-i18n="inShort">한마디로</strong><span data-i18n="roadsideShort">차가 도로에서 문제가 생겼을 때 받는 긴급 도움</span></p>
+      </article>
+    </section>
+
+    <section class="check-panel">
+      <h2 data-i18n="checkTitle">가입 전 확인하면 좋은 것</h2>
+      <ul>
+        <li data-i18n="check1">책임보험의 보장범위와 가입한도</li>
+        <li data-i18n="check2">긴급출동서비스의 제공 항목, 이용 횟수와 견인 거리</li>
+        <li data-i18n="check3">운전자 범위와 보험 적용 기간</li>
+        <li data-i18n="check4">사고·고장 시 연락할 보험사의 공식 긴급번호</li>
+      </ul>
+    </section>
+
+    <aside class="boundary-note">
+      <strong data-i18n="noticeTitle">안내사항</strong>
+      <p data-i18n="noticeBody">이 페이지는 이해를 돕기 위한 일반적인 정보이며 특정 보험상품의 추천·가입 권유 또는 공식 약관 설명을 대신하지 않습니다. 실제 보장내용과 긴급출동 범위는 가입한 보험계약과 보험사의 공식 안내를 확인해 주세요.</p>
+    </aside>
+  </main>
+
+  <footer class="guide-footer">
+    <span>EKODI Insurance</span>
+    <a href="/" data-i18n="backHome">보험 홈으로</a>
+  </footer>
+</body>
+</html>
