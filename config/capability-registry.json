@@ -221,6 +221,51 @@
       ]
     },
     {
+      "id": "support.benefit-radar",
+      "name": "혜택·지원 기회 레이더",
+      "domain": "support",
+      "ownerAgent": "chief",
+      "actionTier": "assist",
+      "maturity": "service-backed",
+      "description": "명시적 동의와 공식 근거를 바탕으로 지원금·보조금·복지·장학·공모 등 받을 수 있는 기회를 찾고 자격 검토·서류 준비·기한 관리를 돕는다. 최종 자격 판정과 신청·협약 등 고영향 실행은 기관과 사람의 확인을 유지한다.",
+      "surfaces": [
+        "my",
+        "workspace",
+        "showroom"
+      ],
+      "showroom": {
+        "serviceId": "support"
+      },
+      "tags": [
+        "benefit",
+        "support",
+        "grant",
+        "subsidy",
+        "welfare",
+        "scholarship",
+        "contest",
+        "sponsorship",
+        "opportunity",
+        "지원",
+        "혜택",
+        "지원사업",
+        "보조금",
+        "복지",
+        "장학금",
+        "공모"
+      ],
+      "provider": {
+        "id": "support-opportunity",
+        "surface": "https://support.ekodi.kr/",
+        "health": "https://support.ekodi.kr/health",
+        "contract": "ekodi.benefit-radar.v1",
+        "generation": 10,
+        "consent": "consent-first",
+        "execution": "recommendation-and-prep-only",
+        "highImpact": "human-gated"
+      }
+    },
+    {
       "id": "creator.writing",
       "name": "글쓰기 AI",
       "domain": "creator",
