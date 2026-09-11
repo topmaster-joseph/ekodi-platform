@@ -50,6 +50,28 @@ export const ADMIN_MENU_REGISTRY = Object.freeze([
   { id: 'policies', group: 'system', icon: '§', labels: { ko: '정책', en: 'Policies' }, internal: true },
 ]);
 
+export const ADMIN_MENU_CATEGORY_LABELS = Object.freeze({
+  overview: { ko: '개요', en: 'Overview' }, workflow: { ko: '업무·소통', en: 'Work & Communication' },
+  finance: { ko: '재무·증빙', en: 'Finance & Evidence' }, customer: { ko: '고객·매장', en: 'Customers & Stores' },
+  organization: { ko: '조직·자료', en: 'Organization & Files' }, common: { ko: '공통·생활', en: 'Common & Life' },
+  content: { ko: '콘텐츠·커뮤니티', en: 'Content & Community' }, business: { ko: '비즈니스·전문', en: 'Business & Professional' },
+  environment: { ko: '공개·환경', en: 'Public & Environment' }, security: { ko: '보안·권한', en: 'Security & Access' },
+  ai: { ko: 'AI·자동화', en: 'AI & Automation' }, platform: { ko: '인프라·상태', en: 'Platform & Health' }, other: { ko: '기타', en: 'Other' },
+});
+const ADMIN_MENU_CATEGORY_ORDER = Object.freeze({
+  home: ['overview','other'], operations: ['workflow','finance','other'], space: ['customer','organization','other'],
+  services: ['common','content','business','other'], system: ['environment','security','ai','platform','other'],
+});
+const ADMIN_MENU_SECTION_CATEGORY = Object.freeze({
+  campus:'overview', work:'workflow', communication:'workflow', finance:'finance', tax:'finance',
+  clients:'customer', cmpmyi:'customer', organization:'organization', workspace:'organization',
+  'common-services':'common', 'life-ai':'common', community:'content', books:'content', social:'content', devotional:'content',
+  'personal-finance':'business', 'marketing-ai':'business', 'ai-membership':'business', 'supply-network':'business', insurance:'business',
+  'public-site-controls':'environment', 'language-status':'environment', security:'security', admins:'security',
+  'ai-module-spec':'ai', capabilities:'ai', aiops:'ai', 'ai-settings':'ai', openai:'ai', architecture:'platform', storage:'platform', devices:'platform', health:'platform', 'api-cost':'platform',
+  services:'other', deployments:'other', policies:'other',
+});
+
 const BY_ID = new Map(ADMIN_MENU_REGISTRY.map(item => [item.id, item]));
 const GROUP_BY_ID = new Map(ADMIN_MENU_GROUPS.map(group => [group.id, group]));
 
@@ -58,6 +80,9 @@ export function getAdminMenuItem(id) { return BY_ID.get(String(id || '').trim())
 export function getAdminMenuLabel(id, locale = 'ko') { const item = getAdminMenuItem(id); const language = normalizeAdminLocale(locale); return item?.labels?.[language] || item?.labels?.ko || String(id || ''); }
 export function getAdminMenuGroup(id) { return GROUP_BY_ID.get(String(id || '').trim()) || null; }
 export function getAdminMenuGroupLabel(id, locale = 'ko') { const group = getAdminMenuGroup(id); const language = normalizeAdminLocale(locale); return group?.labels?.[language] || group?.labels?.ko || String(id || ''); }
+export function getAdminMenuCategory(section) { return ADMIN_MENU_SECTION_CATEGORY[String(section || '').trim()] || 'other'; }
+export function getAdminMenuCategoryLabel(category, locale = 'ko') { const language = normalizeAdminLocale(locale); const labels = ADMIN_MENU_CATEGORY_LABELS[category] || ADMIN_MENU_CATEGORY_LABELS.other; return labels?.[language] || labels?.ko || category || 'other'; }
+export function adminMenuCategoryOrder(group) { const order = ADMIN_MENU_CATEGORY_ORDER[String(group || '').trim()] || ['other']; return [...order]; }
 export function getAdminMenuGroupForSection(section) { return getAdminMenuItem(section)?.group || 'home'; }
 export function getAdminMenuGroupDefault(id) { const group = getAdminMenuGroup(id); if (!group) return 'campus'; const explicit = ADMIN_MENU_REGISTRY.find(item => item.id === group.defaultSection && item.group === group.id && !item.internal && !item.superAdminOnly); if (explicit) return explicit.id; const firstVisibleChild = ADMIN_MENU_REGISTRY.find(item => item.group === group.id && !item.internal && !item.superAdminOnly); return firstVisibleChild?.id || 'campus'; }
 export function adminMenuGroups() { return ADMIN_MENU_GROUPS.map(group => group.id); }

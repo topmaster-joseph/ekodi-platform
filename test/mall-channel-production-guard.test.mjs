@@ -9,6 +9,12 @@ test('Mall production verifier guards channel-first admin flow', async () => {
   assert.match(workflow, /data-channel-preauth/);
   assert.match(workflow, /channelPreAuth/);
   assert.match(workflow, /pendingChannelIntent/);
+  assert.match(workflow, /automationApi\('\/v1\/policy'/);
+  assert.match(workflow, /channelPolicyForm/);
+  assert.match(workflow, /channelAiForm/);
+  assert.match(workflow, /data-channel-control/);
+  assert.match(workflow, /data-job-action/);
   assert.match(workflow, /marketing-connect-api\.ekodi\.kr\/health/);
   assert.match(workflow, /youtubeConfigured/);
+  assert.match(workflow, /paidActivation!==false/);
 });
