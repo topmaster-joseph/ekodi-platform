@@ -5,6 +5,7 @@ import {
   buildLearningRecord,
   designBoundedExperiment,
   evaluateBoundedExperiment,
+  evaluateOperationalResolution,
   evaluateResearchEvidence,
   lifecycleFromRecommendation,
   runAutonomousEvolutionLoop,
@@ -70,6 +71,35 @@ test('recurrent localized evidence verifies research and designs bounded experim
   assert.equal(experiment.environment, 'isolated_task_branch_or_sandbox');
   assert.equal(experiment.productionMutationAllowed, false);
   assert.equal(experiment.authorityExpansionAllowed, false);
+});
+
+test('verified operational recovery closes learning without inventing a code change', () => {
+  const research = evaluateResearchEvidence(program, {
+    failedRuns: 4,
+    recoveredRuns: 3,
+    failedJobs: ['policy'],
+    failedSteps: ['validate'],
+    reproducible: true,
+    recovery: {
+      lastFailureAt: '2026-09-11T02:00:00Z',
+      healthyRunsAfterLastFailure: 3,
+      consecutiveHealthyRuns: 3,
+      resolvedOperationally: true,
+    },
+    evidenceRefs: [
+      'https://github.com/example/repo/actions/runs/2',
+      'https://github.com/example/repo/actions/runs/3',
+      'https://github.com/example/repo/actions/runs/4',
+    ],
+  });
+  const resolution = evaluateOperationalResolution(research);
+  assert.equal(resolution.verified, true);
+  assert.equal(resolution.requiresCodeChange, false);
+  const experiment = designBoundedExperiment(research, resolution);
+  assert.equal(experiment.executableAutonomously, false);
+  assert.equal(experiment.status, 'experiment_not_required_operational_resolution_verified');
+  const learning = buildLearningRecord({ research, operationalResolution: resolution });
+  assert.equal(learning.status, 'learning_loop_closed_operational_resolution');
 });
 
 test('experiment requires functional, regression, security, reproducibility and rollback proof', () => {
@@ -151,12 +181,40 @@ test('scheduled lifecycle does not pretend a research design is a completed evol
     },
   });
   assert.equal(report.summary.researchVerified, 1);
+  assert.equal(report.summary.operationalResolutionsVerified, 0);
   assert.equal(report.summary.experimentsReady, 1);
   assert.equal(report.summary.experimentsPassed, 0);
   assert.equal(report.summary.candidatesReady, 0);
   assert.equal(report.productionMutationPerformed, false);
   assert.equal(report.authorityExpanded, false);
   assert.equal(report.automaticPromotionPerformed, false);
+});
+
+test('scheduled lifecycle closes a proven recovery as learning without deployment', () => {
+  const report = runAutonomousEvolutionLoop({
+    researchPrograms: [program],
+    evidenceByResearchId: {
+      [program.id]: {
+        failedRuns: 4,
+        recoveredRuns: 3,
+        failedJobs: ['policy'],
+        reproducible: true,
+        recovery: {
+          lastFailureAt: '2026-09-11T02:00:00Z',
+          healthyRunsAfterLastFailure: 3,
+          consecutiveHealthyRuns: 3,
+          resolvedOperationally: true,
+        },
+        evidenceRefs: ['https://github.com/example/repo/actions/runs/2'],
+      },
+    },
+  });
+  assert.equal(report.summary.researchVerified, 1);
+  assert.equal(report.summary.operationalResolutionsVerified, 1);
+  assert.equal(report.summary.experimentsReady, 0);
+  assert.equal(report.summary.candidatesReady, 0);
+  assert.equal(report.summary.learningClosed, 1);
+  assert.equal(report.records[0].status, 'learning_loop_closed_operational_resolution');
 });
 
 test('existing Evolution Intelligence recommendations enter the same lifecycle without bypassing experiment evidence', () => {
@@ -170,6 +228,7 @@ test('existing Evolution Intelligence recommendations enter the same lifecycle w
     references: [{ url: 'https://example.com/evidence' }],
   });
   assert.equal(record.research.verified, true);
+  assert.equal(record.operationalResolution.verified, false);
   assert.equal(record.experiment.executableAutonomously, true);
   assert.equal(record.candidate, null);
   assert.equal(record.status, 'awaiting_bounded_experiment_evidence');
