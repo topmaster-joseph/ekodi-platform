@@ -200,7 +200,7 @@ export default {
     if(host===PUBLIC_HOST){
       const contactResponse=await handleMailContactApi(request,env);if(contactResponse)return contactResponse;
       if(request.method==='GET'&&url.pathname==='/mail/contact')return injectEkodiShell(mailContactPage(),'mail');
-      if(request.method==='GET'&&isLearningPath(url.pathname)){if(url.pathname==='/learn/assets/style.css')return learningStyles();if(url.pathname==='/learn/assets/app.js')return learningScript();return injectEkodiShell(learningPage(),'edu','public');}
+      if(request.method==='GET'&&isLearningPath(url.pathname)){if(url.pathname==='/learn/assets/style.css')return learningStyles();if(url.pathname==='/learn/assets/app.js')return learningScript();return injectEkodiShell(learningPage(),'learn','public');}
       const previewResponse=handlePreviewRequest(request);if(previewResponse)return previewResponse;
       if(['GET','HEAD'].includes(request.method)&&isInsurancePublicPath(url.pathname))return routeInsurancePublic(request,env);
       if(request.method==='GET'){

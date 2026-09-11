@@ -12,14 +12,17 @@ test('production routers expose Learning Fabric paths', () => {
   assert.match(wrangler,/"\/learn\*"/);
 });
 
-test('service registry uses canonical apex learning path', () => {
+test('Learning Fabric is canonical at /learn without replacing Education', () => {
   const manifest=fs.readFileSync(new URL('../ekodi-service-manifest.js',import.meta.url),'utf8');
   const catalog=JSON.parse(fs.readFileSync(new URL('../config/ecosystem-services.json',import.meta.url),'utf8'));
-  assert.match(manifest,/https:\/\/ekodi\.kr\/learn/);
+  assert.match(manifest,/id:'edu'.*https:\/\/edu\.ekodi\.kr\//);
+  assert.match(manifest,/id:'learn'.*https:\/\/ekodi\.kr\/learn/);
   const edu=catalog.services.find(item=>item.id==='edu');
-  assert.equal(edu.url,'https://ekodi.kr/learn');
-  assert.equal(edu.productionVerified,true);
-  assert.equal(edu.status,'live');
+  const learn=catalog.services.find(item=>item.id==='learn');
+  assert.equal(edu.url,'https://edu.ekodi.kr');
+  assert.equal(learn.url,'https://ekodi.kr/learn');
+  assert.equal(learn.productionVerified,true);
+  assert.equal(learn.status,'live');
 });
 test('learning auth alias returns members to canonical /learn', () => {
   const auth=fs.readFileSync(new URL('../auth-site/client-auth.js',import.meta.url),'utf8');
