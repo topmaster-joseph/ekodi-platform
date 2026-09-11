@@ -19,7 +19,7 @@ function provider(id, priority, capabilities, handler) {
   };
 }
 
-test('command plan reserves distinct providers for specialists and independent Sentinel when capacity exists', () => {
+test('command plan reserves distinct providers for specialists and independent Sentinel for high-impact work', () => {
   const providers = [
     provider('openai', 10, ['text', 'reasoning', 'code', 'review']),
     provider('anthropic', 20, ['text', 'reasoning', 'code', 'review']),
@@ -27,9 +27,11 @@ test('command plan reserves distinct providers for specialists and independent S
   ];
   const plan = buildEkodiCommandPlan({
     taskId: 'route-migration',
-    goal: 'Move user and admin entry points to apex paths.',
+    goal: 'Move OAuth authentication and production admin entry points to apex paths.',
+    mutation: true,
   }, providers);
 
+  assert.equal(plan.consultationDecision.status, 'multi_consult');
   assert.deepEqual(plan.assignments.map(item => [item.role, item.provider]), [
     ['planner', 'openai'],
     ['operator', 'anthropic'],
@@ -39,7 +41,7 @@ test('command plan reserves distinct providers for specialists and independent S
   assert.equal(plan.parallel, true);
 });
 
-test('command execution runs specialists in parallel and sends their evidence to an independent Sentinel', async () => {
+test('high-impact command execution runs specialists in parallel and sends evidence to an independent Sentinel', async () => {
   const started = [];
   let sentinelEvidence = null;
   const providers = [
@@ -63,12 +65,14 @@ test('command execution runs specialists in parallel and sends their evidence to
   const plane = buildEkodiCommandPlane({}, providers);
   const result = await plane.execute({
     taskId: 'parallel-proof',
-    goal: 'Prove provider-diverse collaboration.',
+    goal: 'Change authentication controls and prove provider-diverse consultation.',
+    mutation: true,
   });
 
   assert.deepEqual(started.slice(0, 2).sort(), ['operator', 'planner']);
   assert.equal(started[2], 'sentinel');
   assert.equal(result.state, 'verified');
+  assert.equal(result.consultation.status, 'multi_consult');
   assert.equal(result.evidence.providerDiversity, 3);
   assert.equal(result.evidence.sentinelIndependent, true);
   assert.deepEqual(sentinelEvidence.map(item => [item.role, item.provider, item.ok]), [
@@ -77,7 +81,7 @@ test('command execution runs specialists in parallel and sends their evidence to
   ]);
 });
 
-test('Pulse may start delegated reversible work without another chat prompt', async () => {
+test('Pulse may start delegated reversible work without another chat prompt and does not over-consult', async () => {
   let calls = 0;
   const providers = [
     provider('openai', 10, ['text', 'reasoning', 'review'], async () => {
@@ -112,7 +116,8 @@ test('Pulse may start delegated reversible work without another chat prompt', as
 
   assert.equal(result.state, 'verified');
   assert.equal(result.taskId, 'evt-1');
-  assert.equal(calls, 3);
+  assert.equal(result.consultation.status, 'single_review');
+  assert.equal(calls, 2);
 });
 
 test('Pulse stops at a human gate for high-impact or red changes', async () => {

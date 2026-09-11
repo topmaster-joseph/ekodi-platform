@@ -2,6 +2,7 @@
 import { loadAiCollaborationPolicy, recordAiCoreLearningEvent } from './ai-collaboration-settings.js';
 import { getEkodiAiProviderRegistryStatus } from './ekodi-ai-provider-registry.js';
 import { recordAutonomousHealthSnapshot } from './ekodi-autonomous-health-telemetry.js';
+import { attachEkodiConsultationReceipt } from './ekodi-consultation-ledger.js';
 import {
   claimNextEkodiCommandTask,
   getEkodiCommandLedgerStatus,
@@ -136,7 +137,9 @@ export async function runEkodiCommandQueue(env = {}, options = {}) {
         context: Object.freeze({
           ...(task.context || {}),
           aiCollaboration: Object.freeze({
-            byDefault: true,
+            orchestrated: true,
+            byDefault: false,
+            consultationMode: 'need-and-risk-based',
             revision: collaboration.revision,
             source: collaboration.source,
             cloudFirst: true,
@@ -147,25 +150,55 @@ export async function runEkodiCommandQueue(env = {}, options = {}) {
       });
     } catch (error) {
       result = Object.freeze({
-        schemaVersion: 1,
+        schemaVersion: 2,
         taskId: task.id,
         state: 'failed',
         error: text(error?.message || error || 'command_execution_failed', 1000),
         evidence: Object.freeze({ providerDiversity: 0, sentinelIndependent: false, verified: false }),
       });
     }
+
+    try {
+      result = await attachEkodiConsultationReceipt(env, task, result, { createdAt: new Date().toISOString() });
+    } catch (error) {
+      result = Object.freeze({
+        ...result,
+        state: result.state === 'verified' ? 'degraded' : result.state,
+        consultationReceiptError: text(error?.message || error || 'consultation_receipt_failed', 240),
+        evidence: Object.freeze({
+          ...(result.evidence || {}),
+          consultation: Object.freeze({
+            ...((result.evidence?.consultation && typeof result.evidence.consultation === 'object') ? result.evidence.consultation : {}),
+            status: 'failed',
+            receiptRecorded: false,
+          }),
+        }),
+      });
+    }
+
     const settled = await settleEkodiCommandTask(env, task, result, { startedAt });
     const finalState = settled?.state || result.state;
     if (collaboration.policy?.resources?.core?.learnAfterSuccess && ['verified','completed','complete'].includes(String(finalState).toLowerCase())) {
       await recordAiCoreLearningEvent(env, { taskId:task.id, capability:task.target?.capability || task.target?.service || 'general', outcome:finalState, evidence:result.evidence || {} });
     }
-    results.push(Object.freeze({ taskId: task.id, resultState: result.state, state: finalState }));
+    results.push(Object.freeze({
+      taskId: task.id,
+      resultState: result.state,
+      state: finalState,
+      consultation: result.consultationReceipt ? Object.freeze({
+        status: result.consultationReceipt.execution?.status || null,
+        label: result.consultationReceipt.execution?.displayLabel || null,
+        detailPath: result.consultationReceipt.links?.detail || null,
+      }) : null,
+    }));
   }
 
   return Object.freeze({
     ok: true,
     processed: results.length,
-    collaborationByDefault: true,
+    orchestrationByDefault: true,
+    consultationByNeed: true,
+    collaborationByDefault: false,
     collaborationRevision: collaboration.revision,
     results: Object.freeze(results),
   });
@@ -224,11 +257,11 @@ export async function runEkodiPulseSchedule(env = {}, options = {}) {
 }
 
 export const EKODI_PULSE_RUNTIME = Object.freeze({
-  version: '2.0.0',
+  version: '2.1.0',
   schedule: 'existing-control-cron',
   autonomousBatchLimit: 1,
   automaticTriggers: Object.freeze(['telemetry-snapshot', 'queued-command-task', 'degraded-system-health']),
   healthLoop: 'observe-assess-predict-act-verify-learn',
   assessmentAiRequired: false,
-  principle: 'collaboration-by-default-cloud-first-detect-first-standing-delegation',
+  principle: 'orchestration-by-default-consultation-by-need-cloud-first-detect-first-standing-delegation',
 });
