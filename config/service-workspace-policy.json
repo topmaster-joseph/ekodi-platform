@@ -64,12 +64,6 @@
     "adminPattern": null,
     "serviceAdminPattern": null,
     "kindEncodedInUrl": false,
-    "workspaceKindRequiredForRouting": false,
-    "memberNamespaceRequired": false,
-    "memberSegmentRole": "ordinary_workspace_service_when_configured",
-    "membershipAuthorizationSource": "authentication_rbac_policy",
-    "adminSegmentRole": "legacy_management_boundary_only",
-    "relationshipMetadataEncodedInUrl": false,
     "reservedRootSlugsManagedBy": "platform_route_registry",
     "adminSurface": "/admin/workspaces",
     "legacyAdminPatterns": [
