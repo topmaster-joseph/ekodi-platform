@@ -15,7 +15,7 @@ function mustReplace(source, search, replacement, label) {
 }
 
 // Device Control and Hybrid Execution are published only as one standalone demand asset.
-// EKODI Assist keeps only a tiny launcher in the first path; its full panel rides on already secured AI Ops assets.
+// EKODI Assist keeps only a tiny bottom command dock in the first path; its full panel rides on already secured AI Ops assets.
 let compactCss = await text(`${dist}admin-compact.css`);
 const deviceJs = (await text(`${root}device-control-admin.js`)).trim();
 const deviceCss = (await text(`${root}device-control-admin.css`)).trim();
@@ -98,13 +98,13 @@ if (!finalCompactJs.includes('ekodiAssistBootstrap') || finalCompactJs.includes(
   throw new Error('EKODI Assist bootstrap is not thin or full runtime leaked into first-path JS');
 }
 if (!finalCompactJs.includes('ekodi-assist-bootstrap-form') || !finalCompactJs.includes('에코디 AI에게 물어보세요')) {
-  throw new Error('EKODI Assist centered initial command bar contract is missing from first-path JS');
+  throw new Error('EKODI Assist bottom command bar contract is missing from first-path JS');
 }
 if (!finalCompactCss.includes('.ekodi-assist-bootstrap') || finalCompactCss.includes('.ekodi-assist-panel')) {
   throw new Error('EKODI Assist first-path CSS is not launcher-only');
 }
-if (!finalCompactCss.includes('left:var(--ekodi-assist-left,260px)') || !finalCompactCss.includes('top:50%')) {
-  throw new Error('EKODI Assist centered initial command bar layout contract is missing from first-path CSS');
+if (!finalCompactCss.includes('left:var(--ekodi-assist-left,260px)') || !finalCompactCss.includes('bottom:0')) {
+  throw new Error('EKODI Assist bottom command dock layout contract is missing from first-path CSS');
 }
 if (!finalLazyFeatures.includes('ekodiAssistDock') || !finalLazyFeatures.includes('/api/control/messenger/inbox') || !finalLazyFeatures.includes('/api/control/ai/actions')) {
   throw new Error('Full EKODI Assist runtime was not attached to the secured lazy asset');
@@ -137,4 +137,4 @@ if (!finalDeviceCss.includes('.ekodi-device-panel') || !finalDeviceCss.includes(
   throw new Error('Standalone Device Control CSS was not materialized');
 }
 
-console.log(`Admin thin-shell postbuild: startup compact runtime=${Buffer.byteLength(finalCompactJs)}B; centered Assist command entry + fixed recent-command workbench verified; Device Control + Hybrid Execution lazy; Campus reuses shared navigation and homepage editing is user-triggered.`);
+console.log(`Admin thin-shell postbuild: startup compact runtime=${Buffer.byteLength(finalCompactJs)}B; bottom Assist command dock + lazy recent-command workbench verified; Device Control + Hybrid Execution lazy; Campus reuses shared navigation and homepage editing is user-triggered.`);

@@ -1,0 +1,244 @@
+{
+  "schemaVersion": 1,
+  "engineId": "ekodi.revenue",
+  "name": "EKODI Revenue Engine",
+  "status": "active_foundation",
+  "architecture": {
+    "platformRole": "core-engine",
+    "layer": "os",
+    "responsibilityClass": "ekodi-responsible",
+    "role": "platform-wide-revenue-orchestration",
+    "domainOwnership": "business-capabilities-remain-explicit",
+    "principle": "shared-before-dedicated-capability-first",
+    "architectureRegistry": "governance/architecture/ekodi-os-architecture.json",
+    "alignmentRule": "Revenue Engine is a core EKODI engine but remains an OS orchestration capability; EKODI Core continues to own stable identity, authority, audit and service contracts rather than business-domain logic.",
+    "reuses": [
+      "autonomous-discovery-engine",
+      "ekodi-capability-ecosystem",
+      "core.public-site",
+      "core.analytics",
+      "core.automation",
+      "business.marketing",
+      "business.crm",
+      "business.sales",
+      "creator.writing",
+      "creator.visual",
+      "creator.media",
+      "creator.publish"
+    ]
+  },
+  "precedence": [
+    "config/ai-mission-governance.json",
+    "governance/constitution/constitution.json",
+    "config/ai-change-orchestration-policy.json",
+    "config/universal-membership.json",
+    "config/revenue-engine.json"
+  ],
+  "missionRule": "Revenue may improve sustainability but never outranks mission, safety, law, privacy, consent, human agency, tenant isolation or user benefit.",
+  "defaultOperator": {
+    "revenueOwner": "ekodibiz",
+    "operator": "ekodibiz",
+    "technologyProvider": "ekodi",
+    "tenantOrProject": null,
+    "overridable": true,
+    "overrideRule": "A lawful explicitly authorized operator may replace EKODIBIZ without changing the Revenue Engine contract."
+  },
+  "principles": {
+    "assetLight": true,
+    "zeroInventoryPreference": true,
+    "demandFirst": true,
+    "revenueBeforeCostWherePractical": true,
+    "boundedRisk": true,
+    "recurringRevenueFirst": true,
+    "automationFirst": true,
+    "oneToMany": true,
+    "multiTenantReuse": true,
+    "failCheapScaleSuccess": true,
+    "zeroRiskClaimForbidden": true
+  },
+  "closedLoop": [
+    "observe",
+    "discover",
+    "score",
+    "compose",
+    "validate_demand",
+    "productize",
+    "launch",
+    "publish",
+    "market",
+    "acquire",
+    "sell",
+    "measure",
+    "optimize",
+    "scale_or_retire",
+    "learn"
+  ],
+  "fitness": {
+    "scale": 100,
+    "autoExperimentThreshold": 80,
+    "weights": {
+      "demand": 20,
+      "recurringRevenue": 15,
+      "automation": 15,
+      "scalability": 15,
+      "capabilityReuse": 10,
+      "lowInitialCost": 10,
+      "lowOperatingCost": 5,
+      "boundedRisk": 10
+    },
+    "requiredBeforeScale": [
+      "real-demand-evidence",
+      "bounded-downside",
+      "unit-economics-visible",
+      "legal-and-policy-fit",
+      "rollback-or-stop-condition"
+    ]
+  },
+  "revenueCell": {
+    "states": [
+      "idea",
+      "experiment",
+      "validate",
+      "scale",
+      "hold",
+      "retire"
+    ],
+    "initialState": "idea",
+    "requiredFields": [
+      "id",
+      "title",
+      "workspaceId",
+      "operator",
+      "revenueOwner",
+      "riskLimit",
+      "stopConditions",
+      "state"
+    ],
+    "scaleRequiresHumanGateWhen": [
+      "new-paid-commitment",
+      "regulated-activity",
+      "material-price-or-contract-change",
+      "new-external-account-authorization",
+      "sensitive-data-purpose-expansion"
+    ]
+  },
+  "myEkodi": {
+    "mode": "lightweight-opportunity-entry",
+    "freeExperience": {
+      "completeButSmall": true,
+      "includes": [
+        "revenue-idea-discovery",
+        "fitness-explanation",
+        "one-starter-validation-plan",
+        "capability-preview"
+      ],
+      "neverRemovesUserOwnedResultsAfterTrial": true
+    },
+    "subscriptionModel": "capability-opt-in",
+    "pricingAuthority": "human-governed-commercial-policy",
+    "paidCheckoutActivation": "requires-approved-price-catalog"
+  },
+  "capabilitySubscriptions": [
+    {
+      "id": "revenue.opportunity",
+      "label": "수익기회 탐색",
+      "freePreview": true,
+      "billing": "capability"
+    },
+    {
+      "id": "revenue.product",
+      "label": "상품·서비스 만들기",
+      "freePreview": true,
+      "billing": "capability"
+    },
+    {
+      "id": "revenue.content",
+      "label": "콘텐츠 생산",
+      "freePreview": true,
+      "billing": "capability"
+    },
+    {
+      "id": "revenue.site-launch",
+      "label": "전문 홈페이지 자동 구성",
+      "freePreview": false,
+      "billing": "capability"
+    },
+    {
+      "id": "revenue.channel-publish",
+      "label": "채널 게시·배포",
+      "freePreview": false,
+      "billing": "capability"
+    },
+    {
+      "id": "revenue.marketing",
+      "label": "홍보·유입 자동화",
+      "freePreview": false,
+      "billing": "capability"
+    },
+    {
+      "id": "revenue.crm",
+      "label": "고객·재구매 관리",
+      "freePreview": false,
+      "billing": "capability"
+    },
+    {
+      "id": "revenue.analytics",
+      "label": "성과·수익 분석",
+      "freePreview": true,
+      "billing": "capability"
+    },
+    {
+      "id": "revenue.autonomous",
+      "label": "자율 수익 운영",
+      "freePreview": false,
+      "billing": "capability",
+      "humanGatePreserved": true
+    }
+  ],
+  "verticalLaunchFactory": {
+    "internalSite": {
+      "canonicalPattern": "https://ekodi.kr/{slug}",
+      "servicePattern": "https://ekodi.kr/{slug}/{service}",
+      "implementation": "shared-shell-configuration",
+      "copyApplicationCode": false,
+      "activation": "jit-after-validation"
+    },
+    "provisioningCapabilities": [
+      "brand",
+      "menu",
+      "pages",
+      "catalog",
+      "content",
+      "seo",
+      "admin-contract",
+      "analytics-contract"
+    ],
+    "externalChannels": {
+      "youtube": {
+        "planning": "autonomous",
+        "contentPreparation": "autonomous-within-delegated-boundary",
+        "accountConnection": "provider-authorization-required",
+        "channelCreation": "human-or-provider-authorization-gated",
+        "publishing": "connected-account-entitlement-and-policy-gated"
+      }
+    }
+  },
+  "humanGates": [
+    "financial-or-legal-commitment",
+    "regulated-financial-or-insurance-execution",
+    "paid-ad-spend-outside-delegated-budget",
+    "external-account-authorization",
+    "material-price-or-contract-change",
+    "sensitive-data-purpose-expansion",
+    "destructive-operation",
+    "permission-expansion",
+    "production-promotion"
+  ],
+  "privacy": {
+    "tenantIsolation": true,
+    "crossTenantPrivateDataReuse": false,
+    "aggregateOrAnonymizedLearningOnlyAcrossTenants": true,
+    "purposeBoundObservation": true,
+    "minimumRetention": true
+  }
+}

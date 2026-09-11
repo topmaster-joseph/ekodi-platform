@@ -10,6 +10,9 @@ on:
       - 'platform-boundaries.json'
       - 'test/support-opportunity.test.mjs'
       - 'test/support-need-sensing.test.mjs'
+      - 'config/workspace-packs.json'
+      - 'config/capability-registry.json'
+      - 'test/support-benefit-radar-10g.test.mjs'
       - 'wrangler.support.toml'
       - 'wrangler.support.staging.toml'
       - 'deploy/manifests/support.worker.json'
@@ -23,6 +26,9 @@ on:
       - 'platform-boundaries.json'
       - 'test/support-opportunity.test.mjs'
       - 'test/support-need-sensing.test.mjs'
+      - 'config/workspace-packs.json'
+      - 'config/capability-registry.json'
+      - 'test/support-benefit-radar-10g.test.mjs'
       - 'wrangler.support.toml'
       - 'wrangler.support.staging.toml'
       - 'deploy/manifests/support.worker.json'
@@ -59,7 +65,8 @@ jobs:
           node --check support/service.js
           node --check support/specialists.js
           node --check ekodi-service-manifest.js
-          node --test test/support-opportunity.test.mjs test/support-need-sensing.test.mjs
+          node --test test/support-opportunity.test.mjs test/support-need-sensing.test.mjs test/support-benefit-radar-10g.test.mjs
+          node scripts/validate-capability-registry.mjs
           node scripts/validate-platform-boundaries.mjs
           node scripts/validate-ai-mission-governance.mjs
           node -e "JSON.parse(require('fs').readFileSync('deploy/manifests/support.worker.json','utf8'))"
@@ -130,7 +137,14 @@ jobs:
             root=$(curl -L -sS -D /tmp/support-headers -o /tmp/support.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$verify_base/" || true)
             health=$(curl -sS -o /tmp/support-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$verify_base/health" || true)
             sources=$(curl -sS -o /tmp/support-sources.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$verify_base/api/sources/status" || true)
-            notices=$(curl -sS -o /tmp/support-notices.json -w '%{http_code}' --connect-timeout 8 --max-time 25 "$verify_base/api/opportunities?limit=5" || true)
+            feed_ok=true
+            notices='skipped-protected-staging'
+            if [[ "$remote_protected" != '1' ]]; then
+              notices=$(curl -sS -o /tmp/support-notices.json -w '%{http_code}' --connect-timeout 8 --max-time 25 "$verify_base/api/opportunities?limit=5" || true)
+              if [[ "$notices" != '200' ]] || ! grep -Fq '"ok":true' /tmp/support-notices.json || ! grep -Fq '"source":"bizinfo"' /tmp/support-notices.json || ! grep -Fq '"official":true' /tmp/support-notices.json; then
+                feed_ok=false
+              fi
+            fi
             need_no=$(curl -sS -o /tmp/support-need-no.json -w '%{http_code}' -H 'content-type: application/json' -d "$no_consent" --connect-timeout 5 --max-time 15 "$verify_base/api/need-assessment" || true)
             need_yes=$(curl -sS -o /tmp/support-need-yes.json -w '%{http_code}' -H 'content-type: application/json' -d "$yes_consent" --connect-timeout 5 --max-time 15 "$verify_base/api/need-assessment" || true)
             specialist_ok=true
@@ -141,23 +155,23 @@ jobs:
                 specialist_ok=false
               fi
             done
-            if [[ "$root" == '200' && "$health" == '200' && "$sources" == '200' && "$notices" == '200' && "$need_no" == '200' && "$need_yes" == '200' && "$specialist_ok" == 'true' ]] \
+            if [[ "$root" == '200' && "$health" == '200' && "$sources" == '200' && "$need_no" == '200' && "$need_yes" == '200' && "$specialist_ok" == 'true' && "$feed_ok" == 'true' ]] \
               && grep -Fq 'GRANT WORKSPACE' /tmp/support.html \
               && grep -Fq 'OFFICIAL FEED' /tmp/support.html \
               && grep -Fq 'id="proactiveBenefits"' /tmp/support.html \
               && grep -Fq '"service":"ekodi-support-opportunity"' /tmp/support-health.json \
               && grep -Fq '"specialistWorkspace":true' /tmp/support-health.json \
               && grep -Fq '"needSensing":"consent-first"' /tmp/support-health.json \
+              && grep -Fq '"id":"support.benefit-radar"' /tmp/support-health.json \
+              && grep -Fq '"generation":10' /tmp/support-health.json \
+              && grep -Fq '"contract":"ekodi.benefit-radar.v1"' /tmp/support-health.json \
               && grep -Fq '"dataMode":"isolated-staging"' /tmp/support-health.json \
               && grep -Fq '"id":"bizinfo"' /tmp/support-sources.json \
-              && grep -Fq '"ok":true' /tmp/support-notices.json \
-              && grep -Fq '"source":"bizinfo"' /tmp/support-notices.json \
-              && grep -Fq '"official":true' /tmp/support-notices.json \
               && grep -Fq '"proactiveEligible":false' /tmp/support-need-no.json \
               && grep -Fq '"proactiveEligible":true' /tmp/support-need-yes.json \
               && grep -Eiq '^x-ekodi-shell: v2' /tmp/support-headers; then
               if [[ "$remote_protected" == '1' ]]; then
-                echo 'Support staging deployment exists, Cloudflare Access remains enforced, and exact staging runtime contracts including consent-first Benefit Radar pass locally.'
+                echo 'Support staging deployment exists, Cloudflare Access remains enforced, and exact staging runtime contracts including Generation 10 consent-first Benefit Radar pass locally. External official-feed liveness is verified only on a network-capable remote/production path.'
               else
                 echo 'Support root, APIs, consent-first Benefit Radar and all seven specialist staging routes verified remotely.'
               fi

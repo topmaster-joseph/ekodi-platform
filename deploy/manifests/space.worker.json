@@ -6,9 +6,7 @@
     "requests": [
       {
         "url": "https://space.ekodi.kr/",
-        "statuses": [
-          308
-        ],
+        "statuses": [308],
         "redirect": "manual",
         "headerExpect": [
           "location: https://ekodi.kr/my/",
@@ -18,116 +16,58 @@
       },
       {
         "url": "https://space.ekodi.kr/health",
-        "statuses": [
-          200
-        ],
+        "statuses": [200],
         "redirect": "manual",
-        "expect": [
-          "ekodi-space",
-          "operating-space",
-          "workspace-id",
-          "root-slug"
-        ],
-        "headerExpect": [
-          "x-ekodi-service: space",
-          "cache-control: no-store"
-        ]
+        "expect": ["ekodi-space","operating-space","workspace-id","root-slug"],
+        "headerExpect": ["x-ekodi-service: space","cache-control: no-store"]
       },
       {
         "url": "https://space.ekodi.kr/deployment-probe",
-        "statuses": [
-          200
-        ],
+        "statuses": [200],
         "redirect": "manual",
-        "expect": [
-          "OPERATING SPACE",
-          "STORE MASTER",
-          "MENU MASTER"
-        ],
-        "headerExpect": [
-          "x-ekodi-service: space",
-          "x-ekodi-route: space-workspace",
-          "cache-control: no-store"
-        ]
+        "expect": ["OPERATING SPACE","STORE MASTER","MENU MASTER"],
+        "headerExpect": ["x-ekodi-service: space","x-ekodi-route: space-workspace","cache-control: no-store"]
+      },
+      {
+        "url": "https://ekodi.kr/_ekodi/space/storefront.css",
+        "statuses": [200],
+        "redirect": "manual",
+        "expect": [".rs-hero",".rs-menu-card","data-restaurant-theme"],
+        "headerExpect": ["x-ekodi-route: storefront-asset"]
       },
       {
         "url": "https://ekodi.kr/jadam",
-        "statuses": [
-          200
-        ],
+        "statuses": [200],
         "redirect": "manual",
-        "expect": [
-          "자담치킨 목포대점",
-          "대표 메뉴",
-          "본사 공식 제품 이미지",
-          "배달앱 주문"
-        ],
-        "headerExpect": [
-          "x-ekodi-route: space-storefront",
-          "x-robots-tag: index, follow",
-          "cache-control: no-store"
-        ]
+        "expect": ["자담치킨 목포대점","대표 메뉴","본사 공식 제품 이미지","배달앱 주문"],
+        "headerExpect": ["x-ekodi-route: space-storefront","x-robots-tag: index, follow","cache-control: no-store"]
       },
       {
         "url": "https://ekodi.kr/pizzamaru",
-        "statuses": [
-          200
-        ],
+        "statuses": [200],
         "redirect": "manual",
-        "expect": [
-          "피자마루 목포대점",
-          "메뉴·가격 보기",
-          "배달앱 주문",
-          "피자마루 전체메뉴",
-          "공식 소셜채널",
-          "Instagram",
-          "YouTube"
-        ],
-        "headerExpect": [
-          "x-ekodi-route: space-storefront",
-          "x-robots-tag: index, follow",
-          "cache-control: no-store"
-        ]
+        "expect": ["피자마루 목포대점","메뉴·가격 보기","배달앱 주문","피자마루 전체메뉴","공식 소셜채널","Instagram","YouTube","/_ekodi/space/storefront.css?v=20260911-v2"],
+        "headerExpect": ["x-ekodi-route: space-storefront","x-robots-tag: index, follow","cache-control: no-store"]
       },
       {
         "url": "https://ekodi.kr/pizzamaru/mokpodae",
-        "statuses": [
-          308
-        ],
+        "statuses": [308],
         "redirect": "manual",
-        "headerExpect": [
-          "location: https://ekodi.kr/pizzamaru",
-          "x-ekodi-workspace-alias: pizzamaru/mokpodae->pizzamaru",
-          "cache-control: no-store"
-        ]
+        "headerExpect": ["location: https://ekodi.kr/pizzamaru","x-ekodi-workspace-alias: pizzamaru/mokpodae->pizzamaru","cache-control: no-store"]
       },
       {
         "url": "https://ekodi.kr/yogurt",
-        "statuses": [
-          200
-        ],
+        "statuses": [200],
         "redirect": "manual",
-        "expect": [
-          "요거트퍼플 목포대점",
-          "메뉴·가격 보기",
-          "배달앱 주문"
-        ],
-        "headerExpect": [
-          "x-ekodi-route: space-storefront",
-          "x-robots-tag: index, follow",
-          "cache-control: no-store"
-        ]
+        "expect": ["요거트퍼플 목포대점","메뉴·가격 보기","배달앱 주문","/_ekodi/space/storefront.css?v=20260911-v2"],
+        "headerExpect": ["x-ekodi-route: space-storefront","x-robots-tag: index, follow","cache-control: no-store"]
       },
       {
         "url": "https://ekodi.kr/yogurtpurple",
-        "statuses": [
-          308
-        ],
+        "statuses": [410],
         "redirect": "manual",
-        "headerExpect": [
-          "location: https://ekodi.kr/yogurt",
-          "x-ekodi-workspace-alias: yogurtpurple->yogurt"
-        ]
+        "expect": ["삭제된 주소입니다."],
+        "headerExpect": ["x-ekodi-route: space-gone","cache-control: no-store"]
       }
     ]
   }
