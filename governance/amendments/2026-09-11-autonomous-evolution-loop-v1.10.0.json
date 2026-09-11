@@ -1,0 +1,33 @@
+{
+  "id": "2026-09-11-autonomous-evolution-loop-v1.10.0",
+  "constitutionVersion": "1.10.0",
+  "status": "approved",
+  "approvedBy": "topmaster-joseph",
+  "approvedAt": "2026-09-11",
+  "changeClass": "C1",
+  "taskId": "autonomous-evolution-loop-20260911",
+  "summary": "Complete the owner-directed Autonomous Discovery capability into an auditable evolution lifecycle that researches discovered problems, verifies operational recovery, designs bounded experiments when needed, admits evolution candidates only after experiment evidence, preserves Super Administrator production authority, verifies post-change outcomes and closes learning only on evidence.",
+  "approvalBasis": "The EKODI Platform Super Administrator explicitly instructed EKODI to complete the previously approved final direction: within owner-defined values and authority, EKODI should discover, research, evolve and verify its own evolution.",
+  "constitutionalInterpretation": "This remains an implementation of Constitution v1.10.0 Sections 12 and 13. It narrows autonomous behavior with additional evidence gates and does not widen production, constitutional, financial, security or sovereign authority.",
+  "implementedCapabilities": [
+    "Research evidence collection down to failed GitHub Actions jobs and steps",
+    "Reproducibility and recurrence scoring before autonomous experiment design",
+    "Verified operational-recovery closure to avoid unnecessary changes",
+    "Bounded experiment admission requiring isolation, reversibility, delegation, logging, preflight verification and budget bounds",
+    "Evolution-candidate admission only after functional, regression, security, reproducibility and rollback evidence",
+    "Human-governed production deployment and generation promotion",
+    "Post-change verification with rollback-required state on failed verification",
+    "Learning-loop closure only after verified recovery or verified deployed outcome",
+    "Durable autonomous-evolution lifecycle ledger with safe degraded behavior during schema rollout",
+    "Read-only scheduled research workflow with 90-day evidence artifact retention"
+  ],
+  "authorityImpact": "None. Research and bounded experiments remain delegated low-risk activity. Production mutation, authority expansion and generation promotion remain forbidden to the autonomous research loop.",
+  "generationImpact": {
+    "currentGenerationRemains": 10,
+    "generation11OfficialName": null,
+    "automaticPromotion": false,
+    "promotionRequiresSuperAdministratorConfirmation": true
+  },
+  "deploymentImpact": "One additive Control API database migration adds lifecycle audit tables. The existing validated migration -> isolated staging -> guarded production lane is reused; no new deployment boundary or provider is introduced.",
+  "rollback": "Revert the autonomous evolution engine, research-evidence collector, lifecycle runner/store, migration 0079, workflow extension, Evolution Intelligence store integration, documentation and tests. Existing Generation 10 Autonomous Discovery, Self Automation and Evolution Intelligence remain the safe baseline."
+}
