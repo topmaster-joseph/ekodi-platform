@@ -4,7 +4,8 @@ import { handleAdminSessionFastPath } from './admin-session-fastpath.js';
 const BASE = '/api/control/storage/google';
 const REDIRECT_URI = 'https://drive.ekodi.kr/api/control/storage/google/callback';
 const MARKETING_YOUTUBE_CALLBACK = 'https://marketing-connect-api.ekodi.kr/oauth/youtube/callback';
-const YOUTUBE_SCOPES = ['https://www.googleapis.com/auth/youtube.upload','https://www.googleapis.com/auth/youtube.readonly','https://www.googleapis.com/auth/youtube'];
+const YOUTUBE_SCOPES = ['openid','email','https://www.googleapis.com/auth/youtube.upload','https://www.googleapis.com/auth/youtube.readonly','https://www.googleapis.com/auth/youtube'];
+const GOOGLE_USERINFO = 'https://openidconnect.googleapis.com/v1/userinfo';
 const ADMIN_ORIGIN = 'https://admin.ekodi.kr';
 const ADMIN_RETURN_PATH = '/#storage';
 const ADMIN_RETURN = `${ADMIN_ORIGIN}${ADMIN_RETURN_PATH}`;
@@ -245,7 +246,7 @@ export async function refreshGoogleAccessToken(env,{refreshToken}={}) {
 export async function startMarketingYouTubeOAuth(env,{state,accountHint}={}) {
   if(!ready(env)) throw Object.assign(new Error('GOOGLE_OAUTH_BROKER_NOT_CONFIGURED'),{code:'GOOGLE_OAUTH_BROKER_NOT_CONFIGURED'});
   await ensureSchema(env.DB); const marketingState=String(state||'').trim(); if(!marketingState) throw new Error('MARKETING_STATE_REQUIRED');
-  const signed=await signState(env,{purpose:'marketing_youtube',marketingState,exp:Date.now()+10*60*1000});
+  const signed=await signState(env,{purpose:'marketing_youtube',marketingState,targetAccount:String(accountHint||'').trim().toLowerCase(),exp:Date.now()+10*60*1000});
   const params=new URLSearchParams({client_id:googleClientId(env),redirect_uri:REDIRECT_URI,response_type:'code',access_type:'offline',prompt:'consent select_account',include_granted_scopes:'true',scope:YOUTUBE_SCOPES.join(' '),state:signed});
   const hint=String(accountHint||'').trim(); if(hint) params.set('login_hint',hint);
   return {authorizationUrl:`${AUTH_URL}?${params}`};
@@ -457,8 +458,13 @@ export async function handleGoogleDriveStorageControl(request, env) {
       try{
         const token=await tokenRequest(env,{client_id:googleClientId(env),client_secret:String(env.GOOGLE_DRIVE_CLIENT_SECRET),code,grant_type:'authorization_code',redirect_uri:REDIRECT_URI});
         if(!token.access_token||!token.refresh_token)return html('YouTube 장기 연결 토큰을 받지 못했습니다. 다시 연결해 주세요.');
+        const targetAccount=String(payload.targetAccount||'').trim().toLowerCase();
+        const profileResponse=await fetch(GOOGLE_USERINFO,{headers:{authorization:`Bearer ${token.access_token}`}});
+        const profile=await profileResponse.json().catch(()=>({}));
+        const authorizedEmail=profileResponse.ok?String(profile.email||'').trim().toLowerCase():'';
+        if(targetAccount&&authorizedEmail!==targetAccount)return html(`YouTube 연결 대상 계정은 ${targetAccount}입니다. 해당 Google 계정으로 다시 인증해 주세요.`);
         const ticket=b64url(crypto.getRandomValues(new Uint8Array(32)));
-        const encrypted=await encryptCredential(env,{accessToken:String(token.access_token),refreshToken:String(token.refresh_token),expiresIn:Number(token.expires_in||0)});
+        const encrypted=await encryptCredential(env,{access_token:String(token.access_token),refresh_token:String(token.refresh_token),expires_in:Number(token.expires_in||0),authorized_email:authorizedEmail,target_account:targetAccount});
         const now=new Date(), exp=new Date(now.getTime()+5*60*1000);
         await env.DB.prepare('DELETE FROM storage_google_oauth_tickets WHERE expires_at<=?').bind(now.toISOString()).run();
         await env.DB.prepare('INSERT INTO storage_google_oauth_tickets(ticket_hash,credential_ciphertext,credential_iv,expires_at,created_at) VALUES(?,?,?,?,?)').bind(await nonceHash(ticket),encrypted.ciphertext,encrypted.iv,exp.toISOString(),now.toISOString()).run();
