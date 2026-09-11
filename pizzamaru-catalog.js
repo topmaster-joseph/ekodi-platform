@@ -1,3 +1,4 @@
+import { PIZZAMARU_CATALOG_SNAPSHOT } from './pizzamaru-catalog-snapshot.js';
 export const PIZZAMARU_CATALOG_VERIFIED_AT = '2026-09-11';
 
 export const PIZZAMARU_CATEGORIES = Object.freeze([
@@ -111,9 +112,14 @@ async function readCachedCatalog() {
   } catch { return null; }
 }
 
-export async function loadPizzamaruOfficialCatalog() {
+export async function loadPizzamaruOfficialCatalog(options = {}) {
   const cached = await readCachedCatalog();
   if (cached?.items?.length >= 70) return cached;
-  if (!catalogPromise) catalogPromise = fetchCatalog().then(async (catalog) => { if (catalog.items.length >= 70) await cacheCatalog(catalog); return catalog; }).finally(() => { catalogPromise = null; });
+  const snapshot = { items: PIZZAMARU_CATALOG_SNAPSHOT, failed: [], complete: true, verified_at: PIZZAMARU_CATALOG_VERIFIED_AT, source: 'hq_verified_snapshot' };
+  if (!options.refresh) return snapshot;
+  if (!catalogPromise) catalogPromise = fetchCatalog().then(async (catalog) => {
+    if (catalog.items.length >= 70) { await cacheCatalog(catalog); return catalog; }
+    return snapshot;
+  }).catch(() => snapshot).finally(() => { catalogPromise = null; });
   return catalogPromise;
 }
