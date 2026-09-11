@@ -1,6 +1,7 @@
 import { storeEkodiDurableRecord } from './storage-gateway.js';
 import { projectForExternalAi, projectionStamp } from './secure-projection.js';
 import { handleAiProviderControl } from './ai-provider-control.js';
+import { handleExternalAiModuleRegistryControl, loadExternalAiModules } from './external-ai-module-registry-control.js';
 
 const PREFIX = '/api/ai-modules/v1';
 const CONTRACT_VERSION = '1.0.0';
@@ -173,6 +174,18 @@ function makeCapabilityGrant({ requestId, module, capability, caller, attempt })
 }
 
 async function executeProviderAttempt(module, body, env, caller, state) {
+  if (module.reference === true) {
+    const grant = makeCapabilityGrant({ requestId:state.requestId, module, capability:body.capability, caller, attempt:state.attempt });
+    if (grant.ekodiApiToken !== false || grant.audience !== module.id || grant.capability !== body.capability) throw new Error('AI_MODULE_REFERENCE_GUARDRAIL_FAILED');
+    return {
+      contractVersion: CONTRACT_VERSION,
+      requestId: state.requestId,
+      ok: true,
+      output: { reference:true, echoedInput:state.projected.input, capability:body.capability, guardrailsVerified:true },
+      usage: { units:0 },
+      meta: { model:'ekodi-reference-v1' },
+    };
+  }
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort('timeout'), state.timeoutMs);
   try {
@@ -243,7 +256,7 @@ async function invokeModule(module, body, env, caller) {
   }
   if (circuitOpen(module)) throw new Error('AI_MODULE_CIRCUIT_OPEN');
 
-  const secret = String(env[module.secretBinding] || '').trim();
+  const secret = module.reference === true ? '__ekodi_reference__' : String(env[module.secretBinding] || '').trim();
   if (!secret) throw new Error('AI_MODULE_SECRET_MISSING');
 
   const requestId = crypto.randomUUID();
@@ -358,7 +371,17 @@ export async function handleExternalAiModuleGateway(request, env = {}) {
     }
   }
 
-  const modules = registry(env);
+  const registryResponse = await handleExternalAiModuleRegistryControl(request, env, {
+    executeProbe: async (module, session) => invokeModule(module, {
+      moduleId: module.id,
+      capability: module.capabilities[0],
+      context: { spaceId: 'registry-validation', serviceId: 'ai-module-registry', actorId: session?.email || 'admin', role: 'super_admin', capabilities: [module.capabilities[0]] },
+      input: { probe: 'EKODI_REFERENCE_OK', purpose: 'contract-validation' },
+    }, env, 'ai-module-registry'),
+  });
+  if (registryResponse) return registryResponse;
+
+  const modules = await loadExternalAiModules(env);
 
   if (request.method === 'GET' && url.pathname === `${PREFIX}/health`) {
     return json({
