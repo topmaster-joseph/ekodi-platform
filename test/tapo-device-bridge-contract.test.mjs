@@ -3,10 +3,11 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { projectTapoDeviceForCloud, assertSafeTapoCloudProjection, tapoSupports } from '../tapo-provider-adapter.js';
 
-const [control,admin,deviceAdmin,bridge,registryText,packsText,build]=await Promise.all([
+const [control,admin,deviceAdmin,demandLoader,bridge,registryText,packsText,build]=await Promise.all([
   readFile(new URL('../device-control.js',import.meta.url),'utf8'),
   readFile(new URL('../tapo-device-admin.js',import.meta.url),'utf8'),
   readFile(new URL('../device-control-admin.js',import.meta.url),'utf8'),
+  readFile(new URL('../admin-demand-loader.js',import.meta.url),'utf8'),
   readFile(new URL('../tools/ekodi-device-agent/tapo/index.mjs',import.meta.url),'utf8'),
   readFile(new URL('../config/capability-registry.json',import.meta.url),'utf8'),
   readFile(new URL('../config/workspace-packs.json',import.meta.url),'utf8'),
@@ -48,6 +49,15 @@ test('admin exposes Tapo bridge enrollment and live view without raw RTSP',()=>{
   assert.match(deviceAdmin,/loadScript\('tapo-device-admin\.js'\)/);
   assert.match(build,/tapo-device-admin\.js/);
 });
+test('Admin demand loader keeps its public script/style API stable after production compaction',()=>{
+  assert.match(demandLoader,/\['load' \+ 'Script'\]: loadScript/);
+  assert.match(demandLoader,/\['load' \+ 'Style'\]: loadStyle/);
+  const compacted=demandLoader.replaceAll('loadScript','loadJs').replaceAll('loadStyle','loadCss');
+  assert.match(compacted,/\['load' \+ 'Script'\]: loadJs/);
+  assert.match(compacted,/\['load' \+ 'Style'\]: loadCss/);
+  assert.match(deviceAdmin,/EKODIAdminDemand\?\.loadScript\('tapo-device-admin\.js'\)/);
+});
+
 test('device observation is a registered generation-10 capability composition',()=>{
   const capability=registry.capabilities.find(x=>x.id==='device.observe');
   assert.ok(capability);

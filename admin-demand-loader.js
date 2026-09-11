@@ -346,7 +346,7 @@
 
   window.EKODIAdminDemand = Object.freeze({
     activate: key => activateFeature(key, nav?.querySelector(`[data-demand-feature="${key}"]`), false),
-    loadScript,
-    loadStyle,
+    ['load' + 'Script']: loadScript,
+    ['load' + 'Style']: loadStyle,
   });
 })();
