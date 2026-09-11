@@ -290,11 +290,11 @@ export async function handleMallPromotionRequest(request,env){
   if(!match||request.method!=='GET') return null;
   if(!(await schemaReady(env))) return new Response('Not ready',{status:503});
   const key=clean(decodeURIComponent(match[1]),160);
-  const row=await env.DB.prepare('SELECT campaign_key,provider,product_id,status FROM affiliate_promotion_runs WHERE campaign_key=? ORDER BY id DESC LIMIT 1').bind(key).first();
+  const row=await env.DB.prepare('SELECT campaign_key,provider,product_row_id,product_id,status FROM affiliate_promotion_runs WHERE campaign_key=? ORDER BY id DESC LIMIT 1').bind(key).first();
   if(!row||!['published','publishing','planned'].includes(row.status)) return new Response('Not found',{status:404});
   const today=kstParts().date;
   await env.DB.prepare(`INSERT INTO affiliate_promotion_visits(campaign_key,visit_date,visits,updated_at) VALUES(?,?,1,?) ON CONFLICT(campaign_key,visit_date) DO UPDATE SET visits=affiliate_promotion_visits.visits+1,updated_at=excluded.updated_at`).bind(key,today,nowIso()).run().catch(()=>{});
-  const target=new URL('https://ekodi.kr/ekodibiz/mall');
+  const target=new URL(`https://ekodi.kr/ekodibiz/mall/p/${Number(row.product_row_id)}`);
   target.searchParams.set('utm_source',clean(row.provider,30));
   target.searchParams.set('utm_medium','organic_social');
   target.searchParams.set('utm_campaign',key);

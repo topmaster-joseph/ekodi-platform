@@ -1,8 +1,9 @@
-﻿import { injectEkodiShell } from './ekodi-shell-injector.js';
+import { injectEkodiShell } from './ekodi-shell-injector.js';
 import { isWorkspaceAdminPath, workspaceAdminPage, workspaceAdminCss, workspaceAdminScript } from './workspace-admin-page.js';
 import { churchPastorAdminPage, churchPastorAdminScript, isChurchPastorAdminPath } from './church-pastor-admin-page.js';
 import { ekodiBizInvestBusinessPage, isEkodiBizInvestPath } from './ekodibiz-invest-business.js';
 import { ekodiBizInvestAdminPage, isEkodiBizInvestAdminPath } from './ekodibiz-invest-admin-page.js';
+import { handleMallOwnedGeoRequest, isMallOwnedGeoPath } from './mall-owned-geo.js';
 
 // Static Assets canonicalizes *.html URLs to extensionless paths.
 // Always request canonical asset paths internally so edge redirects never escape the Worker.
@@ -328,6 +329,8 @@ function rewriteMallHtmlDocument(html, pathname = MALL_PREFIX) {
   rewritten = canonicalPattern.test(rewritten)
     ? rewritten.replace(canonicalPattern, canonicalTag)
     : rewritten.replace('</head>', `${canonicalTag}\n</head>`);
+  const discoveryTags = `<link rel="alternate" type="application/rss+xml" title="EKODI MALL 주간 추천" href="https://${PUBLIC_HOST}${MALL_PREFIX}/feed.xml">\n<link rel="sitemap" type="application/xml" href="https://${PUBLIC_HOST}${MALL_PREFIX}/sitemap.xml">`;
+  if (!rewritten.includes(`${MALL_PREFIX}/feed.xml`)) rewritten = rewritten.replace('</head>', `${discoveryTags}\n</head>`);
   return rewritten;
 }
 async function proxyMallService(request) {
@@ -567,6 +570,15 @@ export default {
         const response = new Response(null, { status: 308, headers: { Location: canonical.toString() } });
         applyBaseSecurityHeaders(response.headers);
         return response;
+      }
+      if (isMallOwnedGeoPath(url.pathname)) {
+        const geoResponse = await handleMallOwnedGeoRequest(request);
+        if (geoResponse) {
+          const cache = geoResponse.headers.get('cache-control') || 'public, max-age=300';
+          const secured = withHostSecurity(geoResponse, MALL_CSP, cache, 'mall-owned-geo');
+          if ((secured.headers.get('content-type') || '').includes('text/html')) return injectEkodiShell(secured, 'mall', 'public');
+          return secured;
+        }
       }
       if (isMallPath(url.pathname)) return proxyMallService(request);
       if (PUBLIC_ADMIN_ALIASES.has(url.pathname)) {

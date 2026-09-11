@@ -5,6 +5,10 @@ on:
   pull_request:
     paths:
       - 'site-worker.js'
+      - 'mall-owned-geo.js'
+      - 'affiliate-control.js'
+      - 'mall-promotion-automation.js'
+      - 'test/ekodi-mall-owned-geo.test.mjs'
       - 'site-shell-worker.js'
       - 'platform-router-worker.js'
       - 'platform-router-entry-worker.js'
@@ -29,6 +33,7 @@ on:
       - 'scripts/discovery-build.mjs'
       - 'scripts/ccm-mr-postbuild.mjs'
       - 'test/discovery-layer.test.mjs'
+      - 'test/ekodi-mall-owned-geo.test.mjs'
       - 'scripts/build.mjs'
       - '.github/workflows/stage-shared-site-shell.yml'
 
@@ -62,6 +67,9 @@ jobs:
         run: |
           set -euo pipefail
           node --check site-worker.js
+          node --check mall-owned-geo.js
+          node --check affiliate-control.js
+          node --check mall-promotion-automation.js
           node --check site-shell-worker.js
           node --check platform-router-worker.js
           node --check platform-router-entry-worker.js
@@ -74,7 +82,7 @@ jobs:
           node --check ekodi-shell-injector.js
           node --check discovery-layer.js
           node --check scripts/discovery-build.mjs
-          node --test test/marketing-canonical-projection.test.mjs test/insurance-public-route.test.mjs test/public-workspace-gateway.test.mjs test/store-public-gateway.test.mjs test/store-portfolio-admin.test.mjs test/discovery-layer.test.mjs
+          node --test test/marketing-canonical-projection.test.mjs test/insurance-public-route.test.mjs test/public-workspace-gateway.test.mjs test/store-public-gateway.test.mjs test/store-portfolio-admin.test.mjs test/discovery-layer.test.mjs test/ekodi-mall-owned-geo.test.mjs
           npm run build
           test -f dist/insurance/index.html
           test -f dist/insurance/advisor.html
