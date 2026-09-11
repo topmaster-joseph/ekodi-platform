@@ -41,6 +41,7 @@ const EKODIBIZ_PUBLIC_ROUTE=/^\/ekodibiz\/?$/i;
 const EKODIBIZ_API_PREFIX='/ekodibiz/api/';
 const EKODIBIZ_ASSET_PREFIX='/_ekodi/ekodibiz/';
 const EKODIBIZ_ASSETS=new Set(['style.css','site.js']);
+const EKODIBIZ_NAMESPACE_PREFIX='/ekodibiz/';
 const WORKSPACE_ASSET_PREFIX='/_ekodi/space/';
 const DEPLOYMENT_PROBE_PATH='/deployment-probe';
 const STORE_GATEWAY_PATHS=new Set(['/cmpmyi','/cmpmyi/']);
@@ -51,6 +52,11 @@ function resolvedHost(request,env){
   if(env?.ENVIRONMENT!=='staging')return url.hostname.toLowerCase();
   const simulated=String(request.headers.get('x-ekodi-staging-host')||'').trim().toLowerCase();
   return simulated||url.hostname.toLowerCase();
+}
+
+function isEkodiBizOwnedPath(pathname){
+  const path=String(pathname||'').toLowerCase();
+  return path==='/ekodibiz'||path==='/ekodibiz/'||path.startsWith(EKODIBIZ_NAMESPACE_PREFIX);
 }
 
 function workspaceServiceUnavailable(){
@@ -219,7 +225,7 @@ export default {
       if(url.pathname.startsWith(EKODIBIZ_API_PREFIX))return routeEkodiBizApi(request,env);
       if(['GET','HEAD'].includes(request.method)&&url.pathname.startsWith(EKODIBIZ_ASSET_PREFIX))return routeEkodiBizAsset(request,env);
       if(['GET','HEAD'].includes(request.method)&&url.pathname===DEPLOYMENT_PROBE_PATH)return routeDeploymentProbe(request,env);
-      if(['GET','HEAD'].includes(request.method)&&isPublicWorkspacePath(url.pathname))return routePublicWorkspace(request,env);
+      if(['GET','HEAD'].includes(request.method)&&isPublicWorkspacePath(url.pathname)&&!isEkodiBizOwnedPath(url.pathname))return routePublicWorkspace(request,env);
       if(['GET','HEAD'].includes(request.method)&&url.pathname.startsWith(WORKSPACE_ASSET_PREFIX))return routeWorkspaceAsset(request,env);
       if(['GET','HEAD'].includes(request.method)&&url.pathname==='/auth/start'){
         const auth=workspaceAuthRedirect(request);if(auth)return auth;
