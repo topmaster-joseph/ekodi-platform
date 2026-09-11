@@ -14,11 +14,12 @@ const program = {
 };
 
 const runs = [
-  { databaseId: 1, workflowName: 'Example Guard', conclusion: 'failure', url: 'https://github.com/example/repo/actions/runs/1' },
-  { databaseId: 2, workflowName: 'Example Guard', conclusion: 'failure', url: 'https://github.com/example/repo/actions/runs/2' },
-  { databaseId: 3, workflowName: 'Example Guard', conclusion: 'timed_out', url: 'https://github.com/example/repo/actions/runs/3' },
-  { databaseId: 4, workflowName: 'Example Guard', conclusion: 'success', url: 'https://github.com/example/repo/actions/runs/4' },
-  { databaseId: 5, workflowName: 'Other Guard', conclusion: 'failure', url: 'https://github.com/example/repo/actions/runs/5' },
+  { databaseId: 1, workflowName: 'Example Guard', conclusion: 'failure', createdAt: '2026-09-11T00:00:00Z', url: 'https://github.com/example/repo/actions/runs/1' },
+  { databaseId: 2, workflowName: 'Example Guard', conclusion: 'failure', createdAt: '2026-09-11T01:00:00Z', url: 'https://github.com/example/repo/actions/runs/2' },
+  { databaseId: 3, workflowName: 'Example Guard', conclusion: 'timed_out', createdAt: '2026-09-11T02:00:00Z', url: 'https://github.com/example/repo/actions/runs/3' },
+  { databaseId: 4, workflowName: 'Example Guard', conclusion: 'success', createdAt: '2026-09-11T03:00:00Z', url: 'https://github.com/example/repo/actions/runs/4' },
+  { databaseId: 6, workflowName: 'Example Guard', conclusion: 'success', createdAt: '2026-09-11T04:00:00Z', url: 'https://github.com/example/repo/actions/runs/6' },
+  { databaseId: 5, workflowName: 'Other Guard', conclusion: 'failure', createdAt: '2026-09-11T05:00:00Z', url: 'https://github.com/example/repo/actions/runs/5' },
 ];
 
 const jobsByRunId = {
@@ -30,7 +31,7 @@ const jobsByRunId = {
 test('collector localizes repeated failures to workflow jobs and steps', () => {
   const evidence = buildWorkflowResearchEvidence(program, runs, jobsByRunId);
   assert.equal(evidence.failedRuns, 3);
-  assert.equal(evidence.recoveredRuns, 1);
+  assert.equal(evidence.recoveredRuns, 2);
   assert.deepEqual(evidence.failedJobs, ['policy']);
   assert.deepEqual(evidence.failedSteps, ['validate branch']);
   assert.equal(evidence.recurrence.repeatedJob, true);
@@ -40,10 +41,26 @@ test('collector localizes repeated failures to workflow jobs and steps', () => {
   assert.equal(evidence.authorityExpanded, false);
 });
 
+test('collector proves operational recovery only after consecutive healthy runs following the last failure', () => {
+  const evidence = buildWorkflowResearchEvidence(program, runs, jobsByRunId);
+  assert.equal(evidence.recovery.lastFailureAt, '2026-09-11T02:00:00Z');
+  assert.equal(evidence.recovery.healthyRunsAfterLastFailure, 2);
+  assert.equal(evidence.recovery.consecutiveHealthyRuns, 2);
+  assert.equal(evidence.recovery.resolvedOperationally, true);
+});
+
+test('one healthy run is not enough to close a repeated failure as recovered', () => {
+  const partialRuns = runs.filter(run => run.databaseId !== 6);
+  const evidence = buildWorkflowResearchEvidence(program, partialRuns, jobsByRunId);
+  assert.equal(evidence.recovery.healthyRunsAfterLastFailure, 1);
+  assert.equal(evidence.recovery.consecutiveHealthyRuns, 1);
+  assert.equal(evidence.recovery.resolvedOperationally, false);
+});
+
 test('collector keeps evidence scoped to the discovered workflow target', () => {
   const evidence = buildWorkflowResearchEvidence(program, runs, jobsByRunId);
   assert.equal(evidence.workflowName, 'Example Guard');
-  assert.equal(evidence.observations, 4);
+  assert.equal(evidence.observations, 5);
   assert.equal(evidence.evidenceRefs.some(ref => ref.endsWith('/5')), false);
 });
 
@@ -52,6 +69,7 @@ test('research evidence report is keyed by stable discovery research id', () => 
   assert.equal(report.researchPrograms, 1);
   assert.ok(report.evidenceByResearchId.adr_example);
   assert.equal(report.evidenceByResearchId.adr_example.reproducible, true);
+  assert.equal(report.evidenceByResearchId.adr_example.recovery.resolvedOperationally, true);
   assert.equal(report.productionMutationPerformed, false);
   assert.equal(report.authorityExpanded, false);
 });
