@@ -15,6 +15,8 @@ on:
       - 'insurance-public-route.js'
       - 'sites/ekodi-insurance/public/**'
       - 'workspace-route-policy.js'
+      - 'workspace-admin-page.js'
+      - 'test/mall-v83-workspace-admin.test.mjs'
       - 'ekodi-service-manifest.js'
       - 'config/ecosystem-services.json'
       - 'test/insurance-public-route.test.mjs'

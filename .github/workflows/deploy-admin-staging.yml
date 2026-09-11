@@ -9,6 +9,8 @@ on:
       - 'admin-staging-worker.js'
       - 'wrangler.admin.staging.toml'
       - 'site-worker.js'
+      - 'workspace-admin-page.js'
+      - 'test/mall-v83-workspace-admin.test.mjs'
       - 'admin-shell.html'
       - 'admin-shell.css'
       - 'admin-compact.js'
