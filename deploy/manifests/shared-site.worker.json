@@ -563,7 +563,7 @@
         "redirect": "follow",
         "expect": [
           ".ekodi-assist-bootstrap",
-          "@media(max-width:720px)"
+          "@media(max-width:760px)"
         ],
         "headerExpect": [
           "x-content-type-options: nosniff"
