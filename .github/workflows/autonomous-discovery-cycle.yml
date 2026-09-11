@@ -7,17 +7,29 @@ on:
   pull_request:
     paths:
       - 'ekodi-autonomous-discovery-engine.js'
+      - 'ekodi-autonomous-evolution-loop.js'
+      - 'autonomous-evolution-store.js'
       - 'scripts/run-autonomous-discovery-cycle.mjs'
+      - 'scripts/collect-autonomous-research-evidence.mjs'
+      - 'scripts/run-autonomous-evolution-loop.mjs'
       - 'test/autonomous-discovery-engine.test.mjs'
       - 'test/autonomous-discovery-cycle.test.mjs'
+      - 'test/autonomous-evolution-loop.test.mjs'
+      - 'test/autonomous-research-evidence.test.mjs'
       - 'governance/architecture/ekodi-autonomous-discovery-engine.json'
+      - 'migrations/0079_autonomous_evolution_lifecycle.sql'
       - '.github/workflows/autonomous-discovery-cycle.yml'
   push:
     branches: [main]
     paths:
       - 'ekodi-autonomous-discovery-engine.js'
+      - 'ekodi-autonomous-evolution-loop.js'
+      - 'autonomous-evolution-store.js'
       - 'scripts/run-autonomous-discovery-cycle.mjs'
+      - 'scripts/collect-autonomous-research-evidence.mjs'
+      - 'scripts/run-autonomous-evolution-loop.mjs'
       - 'governance/architecture/ekodi-autonomous-discovery-engine.json'
+      - 'migrations/0079_autonomous_evolution_lifecycle.sql'
       - '.github/workflows/autonomous-discovery-cycle.yml'
 
 permissions:
@@ -38,16 +50,24 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
-      - name: Validate discovery engine and evidence adapter
+      - name: Validate discovery, research and evolution lifecycle
         run: |
           node --check ekodi-autonomous-discovery-engine.js
+          node --check ekodi-autonomous-evolution-loop.js
+          node --check autonomous-evolution-store.js
           node --check scripts/run-autonomous-discovery-cycle.mjs
-          node --test test/autonomous-discovery-engine.test.mjs test/autonomous-discovery-cycle.test.mjs
+          node --check scripts/collect-autonomous-research-evidence.mjs
+          node --check scripts/run-autonomous-evolution-loop.mjs
+          node --test \
+            test/autonomous-discovery-engine.test.mjs \
+            test/autonomous-discovery-cycle.test.mjs \
+            test/autonomous-evolution-loop.test.mjs \
+            test/autonomous-research-evidence.test.mjs
 
   discover:
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 12
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
@@ -77,9 +97,59 @@ jobs:
             --summary "$RUNNER_TEMP/ekodi-autonomous-discovery-summary.md"
           cat "$RUNNER_TEMP/ekodi-autonomous-discovery-summary.md" >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Enforce research-only runtime boundary
+      - name: Collect research evidence down to failed jobs and steps
         shell: bash
         run: |
           set -euo pipefail
-          node -e "const fs=require('fs');const p=JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP+'/ekodi-autonomous-discovery-report.json','utf8'));if(p.productionMutationPerformed!==false||p.authorityExpanded!==false||p.cycle?.productionMutationPerformed!==false||p.cycle?.authorityExpanded!==false){throw new Error('Discovery cycle crossed the research-only authority boundary')}"
-          echo 'Verified: discovery cycle is read-only, non-production-mutating, and non-authority-expanding.'
+          node scripts/collect-autonomous-research-evidence.mjs \
+            --discovery "$RUNNER_TEMP/ekodi-autonomous-discovery-report.json" \
+            --runs "$RUNNER_TEMP/ekodi-workflow-runs.json" \
+            --output "$RUNNER_TEMP/ekodi-autonomous-research-evidence.json" \
+            > /dev/null
+
+      - name: Run autonomous evolution lifecycle
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/run-autonomous-evolution-loop.mjs \
+            --discovery "$RUNNER_TEMP/ekodi-autonomous-discovery-report.json" \
+            --evidence "$RUNNER_TEMP/ekodi-autonomous-research-evidence.json" \
+            --output "$RUNNER_TEMP/ekodi-autonomous-evolution-report.json" \
+            --summary "$RUNNER_TEMP/ekodi-autonomous-evolution-summary.md"
+          cat "$RUNNER_TEMP/ekodi-autonomous-evolution-summary.md" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Enforce research and evolution authority boundaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs = require('fs');
+          const root = process.env.RUNNER_TEMP;
+          const discovery = JSON.parse(fs.readFileSync(root + '/ekodi-autonomous-discovery-report.json', 'utf8'));
+          const research = JSON.parse(fs.readFileSync(root + '/ekodi-autonomous-research-evidence.json', 'utf8'));
+          const evolution = JSON.parse(fs.readFileSync(root + '/ekodi-autonomous-evolution-report.json', 'utf8'));
+          const violated = discovery.productionMutationPerformed !== false
+            || discovery.authorityExpanded !== false
+            || discovery.cycle?.productionMutationPerformed !== false
+            || discovery.cycle?.authorityExpanded !== false
+            || research.productionMutationPerformed !== false
+            || research.authorityExpanded !== false
+            || evolution.productionMutationPerformed !== false
+            || evolution.authorityExpanded !== false
+            || evolution.automaticPromotionPerformed !== false;
+          if (violated) throw new Error('Autonomous evolution cycle crossed its delegated authority boundary');
+          NODE
+          echo 'Verified: autonomous research/evolution remains non-production-mutating, non-authority-expanding, and non-self-promoting.'
+
+      - name: Upload autonomous evolution evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: ekodi-autonomous-evolution-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/ekodi-autonomous-discovery-report.json
+            ${{ runner.temp }}/ekodi-autonomous-research-evidence.json
+            ${{ runner.temp }}/ekodi-autonomous-evolution-report.json
+            ${{ runner.temp }}/ekodi-autonomous-discovery-summary.md
+            ${{ runner.temp }}/ekodi-autonomous-evolution-summary.md
+          if-no-files-found: error
+          retention-days: 90
