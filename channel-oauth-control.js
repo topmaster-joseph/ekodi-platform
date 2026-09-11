@@ -34,7 +34,9 @@ export async function startYoutubeConnection(env, identity, subject, body = {}) 
   const returnTo = safeReturnTo(body.returnTo);
   await env.DB.prepare(`INSERT INTO channel_oauth_connections(id,owner_type,owner_key,workspace_slug,provider,status,created_by_email,created_at,updated_at) VALUES(?,?,?,?, 'youtube','pending_oauth',?,?,?)`).bind(connectionId,o.type,o.key,subject.workspaceSlug||'',identity.email,now,now).run();
   await env.DB.prepare(`INSERT INTO channel_oauth_states(nonce_hash,connection_id,actor_user_id,actor_email,return_to,expires_at,created_at) VALUES(?,?,?,?,?,?,?)`).bind(stateHash,connectionId,identity.id,identity.email,returnTo,expiresAt,now).run();
-  return { connectionId, authorizeUrl:youtubeAuthorizeUrl(env,state,identity.email), expiresAt };
+  const requestedHint=clean(body.accountHint,180).trim().toLowerCase();
+  const loginHint=/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(requestedHint)?requestedHint:identity.email;
+  return { connectionId, authorizeUrl:youtubeAuthorizeUrl(env,state,loginHint), targetAccount:loginHint, expiresAt };
 }
 
 function callbackResponse(message, ok = false, returnTo = '', params = {}) {

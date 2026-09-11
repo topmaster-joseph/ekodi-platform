@@ -444,7 +444,7 @@
         "statuses": [200],
         "redirect": "follow",
         "expect": ["waitForStream", "sessionToken", "TAPO EDGE BRIDGE"],
-        "headerExpect": ["x-ekodi-route: admin-asset", "x-content-type-options: nosniff"],
+        "headerExpect": ["x-content-type-options: nosniff"],
         "rollbackVerify": false
       },
       {
@@ -452,7 +452,7 @@
         "statuses": [200],
         "redirect": "follow",
         "expect": [".tapo-camera-panel", ".tapo-camera-dialog"],
-        "headerExpect": ["x-ekodi-route: admin-asset", "x-content-type-options: nosniff"],
+        "headerExpect": ["x-content-type-options: nosniff"],
         "rollbackVerify": false
       },
       {

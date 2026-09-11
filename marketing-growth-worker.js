@@ -154,6 +154,7 @@ async function schemaReady(env) { return d1SchemaReady(env?.DB,['marketing_oauth
 function metaConfigured(env) { return Boolean(env.META_APP_ID && env.META_APP_SECRET); }
 function threadsConfigured(env) { return Boolean((env.THREADS_APP_ID || env.META_APP_ID) && (env.THREADS_APP_SECRET || env.META_APP_SECRET)); }
 function youtubeConfigured(env) { return Boolean(env.GOOGLE_CLIENT_ID && providerSecret(env,YOUTUBE_PROVIDER) && env.GOOGLE_OAUTH_BROKER); }
+function youtubeTargetAccount(subject,requested=''){const key=String(subject?.key||'').trim().toLowerCase();if(subject?.type==='tenant'&&(key==='ekodi-biz'||key==='ekodibiz'))return 'ekodibiz@gmail.com';const hint=clean(requested,180).trim().toLowerCase();return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(hint)?hint:''}
 
 async function createOAuthState(env, provider, mode, identity, subject, returnUrl) {
   const state = randomState();
@@ -204,9 +205,9 @@ async function startYouTube(request, env, identity, subject) {
   const body = await readJson(request) || {};
   const state = await createOAuthState(env,YOUTUBE_PROVIDER,'publish',identity,subject,body.returnUrl);
   const requestedHint = clean(body.accountHint,180).trim().toLowerCase();
-  const accountHint = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(requestedHint) ? requestedHint : '';
+  const accountHint = youtubeTargetAccount(subject,requestedHint);
   const broker=await env.GOOGLE_OAUTH_BROKER.startYouTubeOAuth({state,accountHint});
-  return json(request,env,{authorizationUrl:String(broker.authorizationUrl||''),provider:'youtube',mode:'publish'});
+  return json(request,env,{authorizationUrl:String(broker.authorizationUrl||''),provider:'youtube',mode:'publish',targetAccount:accountHint});
 }
 async function fetchJson(url, init = {}) {
   const response = await fetch(url,init);
@@ -355,9 +356,12 @@ async function youtubeCallback(request, env) {
     const ticket = clean(url.searchParams.get('ticket'),512);
     if (!ticket) throw new Error('GOOGLE_OAUTH_TICKET_REQUIRED');
     const tokenData = await env.GOOGLE_OAUTH_BROKER.consumeYouTubeTicket({ticket});
-    const accessToken = String(tokenData.access_token || '');
-    const refreshToken = String(tokenData.refresh_token || '');
+    const accessToken = String(tokenData.access_token || tokenData.accessToken || '');
+    const refreshToken = String(tokenData.refresh_token || tokenData.refreshToken || '');
+    const authorizedEmail = clean(tokenData.authorized_email || tokenData.authorizedEmail,180).trim().toLowerCase();
+    const targetAccount = clean(tokenData.target_account || tokenData.targetAccount,180).trim().toLowerCase();
     if (!accessToken || !refreshToken) throw new Error('YOUTUBE_REFRESH_TOKEN_MISSING');
+    if (targetAccount && authorizedEmail !== targetAccount) throw new Error('YOUTUBE_TARGET_ACCOUNT_MISMATCH');
     const channels = await fetchJson('https://www.googleapis.com/youtube/v3/channels?part=snippet&mine=true&maxResults=50',{headers:{authorization:`Bearer ${accessToken}`}});
     const subject = {type:state.subject_type,key:state.subject_key};
     const discoveredChannels = (channels.items || []).filter(channel => channel?.id);
@@ -368,7 +372,7 @@ async function youtubeCallback(request, env) {
     for (const channel of selectedChannels) {
       const display = clean(channel.snippet?.title || 'YouTube',120);
       const token = safeJson({accessToken,refreshToken,expiresAt});
-      const row = await upsertConnection(env,subject,{provider:'youtube',resourceType:'channel',externalId:String(channel.id),displayName:display,token,expiresAt,scopes:['youtube.upload','youtube.readonly','youtube'],metadata:{source:'google_oauth'}});
+      const row = await upsertConnection(env,subject,{provider:'youtube',resourceType:'channel',externalId:String(channel.id),displayName:display,token,expiresAt,scopes:['youtube.upload','youtube.readonly','youtube'],metadata:{source:'google_oauth',authorizedEmail,targetAccount}});
       if (row?.id) { await upsertPublishChannel(env,subject,{provider:'youtube',channelType:'channel',displayName:display,externalId:String(channel.id),connectionId:Number(row.id)}); count += 1; }
     }
     return redirectResult(state.return_url,{ekodi_connect:'success',provider:'youtube',connections:count});
