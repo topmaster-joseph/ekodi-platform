@@ -53,7 +53,8 @@ jobs:
           set -euo pipefail
           node --check support-worker.js
           node --check support/core.js
-          node --check support/sources.js`n          node --check support/need-sensing.js
+          node --check support/sources.js
+          node --check support/need-sensing.js
           node --check support/app.js
           node --check support/service.js
           node --check support/specialists.js
