@@ -14,3 +14,7 @@ test('canonical apex control surfaces stay Worker-first before Static Assets', (
     assert.ok(wrangler.includes(`"${path}"`), `${path} must remain in run_worker_first`);
   }
 });
+test('broad EKODIBIZ Worker-first route does not duplicate covered admin module assets', () => {
+  assert.match(wrangler, /"\/ekodibiz\*"/);
+  assert.doesNotMatch(wrangler, /"\/ekodibiz-admin-registry\.js"/);
+});

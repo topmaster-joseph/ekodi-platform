@@ -132,8 +132,12 @@ test('shared admin menu modules use the secured immutable admin asset route', as
   const [worker, wrangler] = await Promise.all([read('site-worker.js'), read('wrangler.site.toml')]);
   for (const asset of ['admin-menu-registry.js', 'admin-sidebar.js', 'admin-menu-runtime.js', 'ekodibiz-admin-registry.js']) {
     assert.match(worker, new RegExp(`/${asset.replaceAll('.', '\\.')}`));
+  }
+  for (const asset of ['admin-menu-registry.js', 'admin-sidebar.js', 'admin-menu-runtime.js']) {
     assert.match(wrangler, new RegExp(`/${asset.replaceAll('.', '\\.')}`));
   }
+  assert.match(wrangler, /"\/ekodibiz\*"/);
+  assert.doesNotMatch(wrangler, /"\/ekodibiz-admin-registry\.js"/);
 });
 
 test('versioned admin startup graph runs Worker-first so cache policy is not bypassed by static asset headers', async () => {
