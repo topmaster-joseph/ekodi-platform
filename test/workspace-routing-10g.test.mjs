@@ -13,7 +13,7 @@ import {
 import { isReservedPlatformRoot, platformRouteRegistrySnapshot } from '../platform-route-registry.js';
 
 test('platform root registry is the single reserved-root boundary',()=>{
-  for(const root of ['admin','my','auth','api','mcp','webhooks','health']){
+  for(const root of ['admin','my','auth','api','mcp','webhooks','health','ekodibiz']){
     assert.equal(isReservedPlatformRoot(root),true,root);
     assert.equal(isWorkspaceSlug(root),false,root);
   }
@@ -31,6 +31,8 @@ test('workspace URLs are type-free locators with optional services',()=>{
   assert.equal(workspaceServiceFromPublicPath('/alpha/member'),'member');
   assert.equal(isPublicWorkspacePath('/alpha/member'),true);
   assert.equal(isPublicWorkspacePath('/alpha/community/posts'),true);
+  assert.equal(isPublicWorkspacePath('/ekodibiz/invest'),false);
+  assert.equal(isPublicWorkspacePath('/ekodibiz/mall'),false);
 
   for(const kindLikeSlug of ['church','company','person','store']){
     assert.equal(isWorkspaceSlug(kindLikeSlug),true,kindLikeSlug);
