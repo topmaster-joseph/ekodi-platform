@@ -11,6 +11,14 @@ const advisorHtml=fs.readFileSync(new URL('./public/advisor.html',import.meta.ur
 const carGuideHtml=fs.readFileSync(new URL('./public/car-insurance-guide.html',import.meta.url),'utf8');
 const carGuideJs=fs.readFileSync(new URL('./public/car-insurance-guide.js',import.meta.url),'utf8');
 const carGuideCss=fs.readFileSync(new URL('./public/car-insurance-guide.css',import.meta.url),'utf8');
+const knowledgeJs=fs.readFileSync(new URL('./public/insurance-knowledge.js',import.meta.url),'utf8');
+const knowledgeCss=fs.readFileSync(new URL('./public/insurance-knowledge.css',import.meta.url),'utf8');
+const detailHtml=fs.readFileSync(new URL('./public/insurance-detail.html',import.meta.url),'utf8');
+const detailJs=fs.readFileSync(new URL('./public/insurance-detail.js',import.meta.url),'utf8');
+const detailCss=fs.readFileSync(new URL('./public/insurance-detail.css',import.meta.url),'utf8');
+const lawManifest=JSON.parse(fs.readFileSync(new URL('./public/insurance-law-sources.json',import.meta.url),'utf8'));
+const lawWatch=fs.readFileSync(new URL('./check-law-sources.mjs',import.meta.url),'utf8');
+const wrangler=fs.readFileSync(new URL('./wrangler.toml',import.meta.url),'utf8');
 const centralEntry=fs.readFileSync(new URL('../../customer-entry-worker.js',import.meta.url),'utf8');
 const centralWrangler=fs.readFileSync(new URL('../../wrangler.api.toml',import.meta.url),'utf8');
 for(const required of ['AI 보험점검','내 보험','청구도움','비교 준비','상담','개인정보 보호센터','보험설계사 되어보기']){if(!html.includes(required))throw new Error(`missing UI: ${required}`)}
@@ -43,5 +51,17 @@ if(!carGuideHtml.includes('id="advisorBackLink"'))throw new Error('advisor guide
 if(!carGuideCss.includes('@media(max-width:720px)')||!carGuideCss.includes('.guide-grid'))throw new Error('responsive car guide styles missing');
 if(/롯데|Lotte/i.test(carGuideHtml+carGuideJs))throw new Error('unapproved insurer brand must not appear in generic guide content');
 if(/최적|best product|추천상품/i.test(carGuideHtml+carGuideJs))throw new Error('car guide must remain general information, not product recommendation');
+for(const marker of ['보험이란?','자동차보험','실손의료보험','건강·질병보험','배상책임보험','연금·저축성보험','/guide/insurance/'])if(!knowledgeJs.includes(marker))throw new Error(`knowledge hub missing: ${marker}`);
+if(!knowledgeCss.includes('.knowledge-topics')||!knowledgeCss.includes('@media(max-width:560px)'))throw new Error('knowledge hub responsive styles missing');
+for(const marker of ['topicTitle','lawPanel','advisorPanel','보험사별 추가 안내'])if(!detailHtml.includes(marker))throw new Error(`insurance detail shell missing: ${marker}`);
+for(const marker of ["auto:{title:'자동차보험'",'1억5천만원','2천만원','긴급출동서비스','/api/advisor/profile','insurance-law-sources.json'])if(!detailJs.includes(marker))throw new Error(`insurance detail content missing: ${marker}`);
+if(!detailCss.includes('.advisor-link')||!detailCss.includes('@media(max-width:720px)'))throw new Error('insurance detail responsive styles missing');
+if(lawManifest.lastVerifiedAt!=='2026-09-11')throw new Error('law manifest verification date missing');
+const autoLaw=lawManifest.topics?.auto;if(!autoLaw||autoLaw.sources?.length<3)throw new Error('automobile law sources incomplete');
+for(const fact of ['1억5천만원','2천만원'])if(!JSON.stringify(autoLaw).includes(fact))throw new Error(`automobile law fact missing: ${fact}`);
+for(const marker of ['law.go.kr','source.markers','process.exit(1)'])if(!lawWatch.includes(marker))throw new Error(`law source watcher missing: ${marker}`);
+for(const marker of ['insuranceKnowledgeHub:true','lawSourceManifest:true','injectKnowledge','/guide/insurance/'])if(!worker.includes(marker))throw new Error(`knowledge hub worker integration missing: ${marker}`);
+if(!wrangler.includes('"/guide/*"')||!wrangler.includes('"/advisor/guide/*"'))throw new Error('guide paths must run worker first');
 console.log('EKODI Insurance free-D1 single-source separate-consent consultation checks passed');
-console.log('EKODI Insurance advisor-scoped multilingual car guide checks passed');
+console.log('EKODI Insurance public knowledge hub and advisor bridge checks passed');
+console.log('EKODI Insurance official law-source governance checks passed');
