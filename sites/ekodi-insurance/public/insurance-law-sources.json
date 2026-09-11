@@ -14,19 +14,22 @@
         {
           "id": "car-act-art5",
           "label": "자동차손해배상 보장법 제5조(보험 등의 가입 의무)",
+          "format": "html",
           "url": "https://www.law.go.kr/LSW/lsLinkCommonInfo.do?chrClsCd=010202&lsJoLnkSeq=1025768537",
           "markers": ["제5조(보험 등의 가입 의무)", "책임보험이나 책임공제", "재물이 멸실되거나 훼손"]
         },
         {
           "id": "car-decree-art3",
           "label": "자동차손해배상 보장법 시행령 제3조(책임보험금 등)",
-          "url": "https://www.law.go.kr/LSW/lsLinkCommonInfo.do?chrClsCd=010202&lsJoLnkSeq=1033440889",
-          "markers": ["제3조(책임보험금 등)", "1억5천만원", "2천만원"]
+          "format": "html",
+          "url": "https://law.go.kr/lsLawLinkInfo.do?chrClsCd=010202&lsJoLnkSeq=1011855833",
+          "markers": ["제3조(책임보험금 등)", "1억5천만원", "2천만원", "별표 1"]
         },
         {
           "id": "car-decree-schedule1",
           "label": "자동차손해배상 보장법 시행령 별표 1(상해급별 책임보험금 한도)",
-          "url": "https://www.law.go.kr/flDownload.do?flNm=%5B%EB%B3%84%ED%91%9C+1%5D+%EC%83%81%ED%95%B4%EC%9D%98+%EA%B5%AC%EB%B6%84%EA%B3%BC+%EC%B1%85%EC%9E%84%EB%B3%B4%ED%97%98%EA%B8%88%EC%9D%98+%ED%95%9C%EB%8F%84%EA%B8%88%EC%95%A1%28%EC%A0%9C3%EC%A1%B0%EC%A0%9C1%ED%95%AD%EC%A0%9C2%ED%98%B8+%EA%B4%80%EB%A0%A8%29%0A&flSeq=58005453",
+          "format": "pdf",
+          "url": "https://law.go.kr/flDownload.do?bylClsCd=110203&flSeq=94834069&gubun=",
           "markers": ["상해의 구분과 책임보험금의 한도금액", "1급", "3천만원"]
         }
       ]
