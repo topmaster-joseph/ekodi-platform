@@ -77,7 +77,11 @@
         "expect": [
           "피자마루 목포대점",
           "메뉴·가격 보기",
-          "배달앱 주문"
+          "배달앱 주문",
+          "피자마루 전체메뉴",
+          "공식 소셜채널",
+          "Instagram",
+          "YouTube"
         ],
         "headerExpect": [
           "x-ekodi-route: space-storefront",
