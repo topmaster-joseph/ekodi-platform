@@ -126,6 +126,8 @@ on:
       - 'ADMIN_UI_PRINCIPLES.md'
       - 'device-control-admin.js'
       - 'device-control-admin.css'
+      - 'tapo-device-admin.js'
+      - 'tapo-device-admin.css'
       - 'hybrid-execution-admin.js'
       - 'mission-control-admin.js'
       - 'mission-control-admin.css'
@@ -288,6 +290,8 @@ jobs:
           for f in dist/index.html dist/robots.txt dist/sitemap.xml dist/llms.txt dist/mall.html dist/mall.css dist/mall.js dist/admin-shell.html dist/admin-shell.css dist/admin-authenticated-shell.js dist/admin-demand-loader.js dist/admin-public-site-controls.js dist/ai-ops-admin.js dist/ai-ops-admin.css dist/devotional-admin.js dist/devotional-admin.css dist/ai-module-spec-admin.js dist/ai-module-spec-admin.css dist/communication-admin.js dist/communication-admin.css dist/openai-workspace-admin.js dist/openai-workspace-admin.css dist/common-services-admin.js dist/common-services-admin.css dist/storage-admin.js dist/storage-admin.css dist/admin-menu-registry.js dist/admin-menu-layout.js dist/admin-sidebar.js dist/admin-design-engine.js dist/admin-design-engine.css dist/campus-actions.js dist/campus-actions.css dist/marketing-ai-admin.js dist/marketing-ai-admin.css dist/ecosystem-services.json dist/auth-workspace-target.js dist/admin-language-status.js; do
             test -f "$f"
           done
+          test -f dist/tapo-device-admin.js
+          test -f dist/tapo-device-admin.css
           grep -Fq 'OAI-SearchBot' dist/robots.txt
           grep -Fq 'User-agent: GPTBot' dist/robots.txt
           grep -Fq '<loc>https://ekodi.kr/</loc>' dist/sitemap.xml
@@ -494,6 +498,8 @@ jobs:
             'https://admin.ekodi.kr/admin-design-engine.css' \
             'https://admin.ekodi.kr/campus-actions.js' \
             'https://admin.ekodi.kr/marketing-ai-admin.js' \
+            'https://admin.ekodi.kr/tapo-device-admin.js' \
+            'https://admin.ekodi.kr/tapo-device-admin.css' \
             'https://admin.ekodi.kr/admin-public-site-controls.js' \
             'https://admin.ekodi.kr/admin-language-status.js' \
             'https://auth.ekodi.kr/auth-workspace-target.js'; do

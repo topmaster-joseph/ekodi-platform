@@ -9,6 +9,7 @@ on:
       - 'ekodi-service-manifest.js'
       - 'platform-boundaries.json'
       - 'test/support-opportunity.test.mjs'
+      - 'test/support-need-sensing.test.mjs'
       - 'wrangler.support.toml'
       - 'wrangler.support.staging.toml'
       - 'deploy/manifests/support.worker.json'
@@ -21,6 +22,7 @@ on:
       - 'ekodi-service-manifest.js'
       - 'platform-boundaries.json'
       - 'test/support-opportunity.test.mjs'
+      - 'test/support-need-sensing.test.mjs'
       - 'wrangler.support.toml'
       - 'wrangler.support.staging.toml'
       - 'deploy/manifests/support.worker.json'
@@ -52,11 +54,12 @@ jobs:
           node --check support-worker.js
           node --check support/core.js
           node --check support/sources.js
+          node --check support/need-sensing.js
           node --check support/app.js
           node --check support/service.js
           node --check support/specialists.js
           node --check ekodi-service-manifest.js
-          node --test test/support-opportunity.test.mjs
+          node --test test/support-opportunity.test.mjs test/support-need-sensing.test.mjs
           node scripts/validate-platform-boundaries.mjs
           node scripts/validate-ai-mission-governance.mjs
           node -e "JSON.parse(require('fs').readFileSync('deploy/manifests/support.worker.json','utf8'))"
@@ -102,6 +105,8 @@ jobs:
           if [[ "$access_code" == '302' ]] && grep -iq '^Www-Authenticate: Cloudflare-Access' /tmp/support-access.headers; then
             remote_protected=1
             echo 'Support Opportunity staging is protected by Cloudflare Access. Keeping Access enabled and validating the exact staging configuration locally.'
+            npx --yes wrangler@${WRANGLER_VERSION} deployments status --config wrangler.support.staging.toml --json > /tmp/support-deployments.json
+            test -s /tmp/support-deployments.json
             npx --yes wrangler@${WRANGLER_VERSION} dev --config wrangler.support.staging.toml --local --port 8797 >/tmp/support-local.log 2>&1 &
             runtime_pid=$!
             verify_base='http://127.0.0.1:8797'
@@ -112,13 +117,22 @@ jobs:
               sleep 2
             done
             if [[ "$ready" != '1' ]]; then cat /tmp/support-local.log; exit 1; fi
+          elif [[ "$access_code" != '200' ]]; then
+            echo "Unexpected Support staging edge response: HTTP $access_code" >&2
+            cat /tmp/support-access.headers >&2 || true
+            cat /tmp/support-access.body >&2 || true
+            exit 1
           fi
           specialist_paths=(grants subsidies scholarships contests welfare private-support sponsorship)
+          no_consent='{"profile":{"profileType":"business","region":"Jeonnam","need":"AI marketing support","interests":["AI"]},"needContext":{"consent":{"proactiveBenefits":false,"activityContext":false,"externalData":false,"sensitiveBenefits":false},"signals":[]}}'
+          yes_consent='{"profile":{"profileType":"business","region":"Jeonnam","need":"AI marketing support","interests":["AI"]},"needContext":{"consent":{"proactiveBenefits":true,"activityContext":false,"externalData":false,"sensitiveBenefits":false},"signals":[]}}'
           for attempt in $(seq 1 18); do
             root=$(curl -L -sS -D /tmp/support-headers -o /tmp/support.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$verify_base/" || true)
             health=$(curl -sS -o /tmp/support-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$verify_base/health" || true)
             sources=$(curl -sS -o /tmp/support-sources.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$verify_base/api/sources/status" || true)
             notices=$(curl -sS -o /tmp/support-notices.json -w '%{http_code}' --connect-timeout 8 --max-time 25 "$verify_base/api/opportunities?limit=5" || true)
+            need_no=$(curl -sS -o /tmp/support-need-no.json -w '%{http_code}' -H 'content-type: application/json' -d "$no_consent" --connect-timeout 5 --max-time 15 "$verify_base/api/need-assessment" || true)
+            need_yes=$(curl -sS -o /tmp/support-need-yes.json -w '%{http_code}' -H 'content-type: application/json' -d "$yes_consent" --connect-timeout 5 --max-time 15 "$verify_base/api/need-assessment" || true)
             specialist_ok=true
             for path in "${specialist_paths[@]}"; do
               code=$(curl -L -sS -o "/tmp/support-${path}.html" -w '%{http_code}' --connect-timeout 5 --max-time 15 "$verify_base/$path" || true)
@@ -127,23 +141,36 @@ jobs:
                 specialist_ok=false
               fi
             done
-            if [[ "$root" == '200' && "$health" == '200' && "$sources" == '200' && "$notices" == '200' && "$specialist_ok" == 'true' ]] \
+            if [[ "$root" == '200' && "$health" == '200' && "$sources" == '200' && "$notices" == '200' && "$need_no" == '200' && "$need_yes" == '200' && "$specialist_ok" == 'true' ]] \
               && grep -Fq 'GRANT WORKSPACE' /tmp/support.html \
               && grep -Fq 'OFFICIAL FEED' /tmp/support.html \
+              && grep -Fq 'id="proactiveBenefits"' /tmp/support.html \
               && grep -Fq '"service":"ekodi-support-opportunity"' /tmp/support-health.json \
               && grep -Fq '"specialistWorkspace":true' /tmp/support-health.json \
+              && grep -Fq '"needSensing":"consent-first"' /tmp/support-health.json \
               && grep -Fq '"dataMode":"isolated-staging"' /tmp/support-health.json \
               && grep -Fq '"id":"bizinfo"' /tmp/support-sources.json \
               && grep -Fq '"ok":true' /tmp/support-notices.json \
               && grep -Fq '"source":"bizinfo"' /tmp/support-notices.json \
               && grep -Fq '"official":true' /tmp/support-notices.json \
+              && grep -Fq '"proactiveEligible":false' /tmp/support-need-no.json \
+              && grep -Fq '"proactiveEligible":true' /tmp/support-need-yes.json \
               && grep -Eiq '^x-ekodi-shell: v2' /tmp/support-headers; then
-              echo 'Support root, APIs and all seven specialist staging routes verified.'
+              if [[ "$remote_protected" == '1' ]]; then
+                echo 'Support staging deployment exists, Cloudflare Access remains enforced, and exact staging runtime contracts including consent-first Benefit Radar pass locally.'
+              else
+                echo 'Support root, APIs, consent-first Benefit Radar and all seven specialist staging routes verified remotely.'
+              fi
               exit 0
             fi
             sleep 4
           done
+          cat /tmp/support-access.headers || true
+          cat /tmp/support-health.json || true
           cat /tmp/support-notices.json || true
+          cat /tmp/support-need-no.json || true
+          cat /tmp/support-need-yes.json || true
+          cat /tmp/support-local.log 2>/dev/null || true
           exit 1
 
   production:
