@@ -19,9 +19,12 @@ async function json(path) {
   return JSON.parse(await readFile(new URL(path, root), 'utf8'));
 }
 
-test('Revenue Engine remains subordinate to mission and forbids zero-risk claims', () => {
+test('Revenue Engine remains subordinate to mission and aligns as an OS-level EKODI core engine', () => {
   const policy = getRevenueEnginePolicy();
   assert.equal(policy.engineId, 'ekodi.revenue');
+  assert.equal(policy.architecture.platformRole, 'core-engine');
+  assert.equal(policy.architecture.layer, 'os');
+  assert.equal(policy.architecture.responsibilityClass, 'ekodi-responsible');
   assert.equal(policy.principles.zeroRiskClaimForbidden, true);
   assert.match(policy.missionRule, /never outranks mission/i);
   assert.equal(policy.privacy.tenantIsolation, true);
@@ -151,6 +154,14 @@ test('Vertical Launch Factory uses canonical EKODI path and shared-shell configu
     authorizedConnections: { youtube: true },
   });
   assert.equal(authorized.externalChannels[0].publishing, 'entitlement-and-policy-gated');
+});
+
+test('Vertical Launch Factory creates a deterministic safe path for Korean-only titles', () => {
+  const first = buildVerticalLaunchPlan({ title: '소상공인 자동마케팅' });
+  const second = buildVerticalLaunchPlan({ title: '소상공인 자동마케팅' });
+  assert.match(first.slug, /^project-[a-z0-9]+$/);
+  assert.equal(first.slug, second.slug);
+  assert.equal(first.internalSite.canonicalUrl, `https://ekodi.kr/${first.slug}`);
 });
 
 test('Vertical Launch Factory rejects reserved platform roots', () => {
