@@ -77,15 +77,17 @@ test('unsafe or ambiguous public paths fail closed',()=>{
   }
 });
 
-
-test('machine workspace policy matches the 10G routing contract',async()=>{
+test('machine workspace policy matches the approved 10G routing contract',async()=>{
   const policy=JSON.parse(await readFile(new URL('../config/service-workspace-policy.json',import.meta.url),'utf8'));
   const routing=policy.publicWorkspaceRouting;
+  assert.equal(routing.canonicalHost,'ekodi.kr');
+  assert.equal(routing.workspaceIdentityKey,'workspace_id');
+  assert.equal(routing.slugRole,'routing_locator_only');
+  assert.equal(routing.canonicalPattern,'/{slug}');
+  assert.equal(routing.servicePattern,'/{slug}/{service}');
   assert.equal(routing.kindEncodedInUrl,false);
-  assert.equal(routing.workspaceKindRequiredForRouting,false);
-  assert.equal(routing.memberNamespaceRequired,false);
-  assert.equal(routing.memberSegmentRole,'ordinary_workspace_service_when_configured');
-  assert.equal(routing.membershipAuthorizationSource,'authentication_rbac_policy');
-  assert.equal(routing.adminSegmentRole,'legacy_management_boundary_only');
-  assert.equal(routing.relationshipMetadataEncodedInUrl,false);
+  assert.equal(routing.adminPattern,null);
+  assert.equal(routing.serviceAdminPattern,null);
+  assert.equal(routing.adminSurface,'/admin/workspaces');
+  assert.equal(routing.reservedRootSlugsManagedBy,'platform_route_registry');
 });
