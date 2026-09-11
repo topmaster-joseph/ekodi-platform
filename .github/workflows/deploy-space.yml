@@ -82,11 +82,11 @@ jobs:
           node --check restaurant-storefront-v2.js
           node --check jadam-storefront.js
           node --check space/app.js
-          node --test test/store-operating-space.test.mjs test/store-user-site-admin.test.mjs test/storefront-public.test.mjs test/jadam-storefront-brand.test.mjs
+          node --test test/workspace-routing-10g.test.mjs test/store-operating-space.test.mjs test/store-user-site-admin.test.mjs test/storefront-public.test.mjs test/jadam-storefront-brand.test.mjs
           grep -Fq "pattern = \"space.ekodi.kr\"" wrangler.space.toml
           grep -Fq 'DATA_ENABLED = "false"' wrangler.space.staging.toml
           grep -Fq 'DATA_MODE = "isolated-staging"' wrangler.space.staging.toml
-          grep -Fq 'ekodi_id -> workspace_id -> role -> capability' space-worker.js
+          grep -Fq 'path -> slug(locator) -> workspace_id -> relationship/policy -> role -> capability' space-worker.js
           grep -Fq 'workspace_not_found_or_forbidden' supabase/functions/workspace-api/index.ts
           grep -Fq 'tenant_members+RLS' supabase/functions/workspace-api/index.ts
           grep -Fq 'store_members+RLS' supabase/functions/workspace-api/index.ts
@@ -94,7 +94,8 @@ jobs:
           grep -Fq '/spaces/store-dashboard' supabase/functions/workspace-api/index.ts
           grep -Fq 'space:["https://space.ekodi.kr"]' supabase/functions/workspace-api/index.ts
           grep -Fq '/spaces/resolve' space/app.js
-          grep -Fq "routeModel:'/{slug}'" space-worker.js
+          grep -Fq "routeModel:['/{slug}','/{slug}/{service}']" space-worker.js
+          grep -Fq 'memberNamespaceRequired:false' space-worker.js
           test -f deploy/manifests/space.worker.json
           test -f supabase/migrations/20260906006000_store_admin_routing.sql
           grep -Fq 'store_admin_route_profile' supabase/migrations/20260906006000_store_admin_routing.sql
