@@ -41,6 +41,11 @@ assert(ai.guardrails?.providerDataUse?.trainingAllowed === false, 'Provider trai
 assert(ai.guardrails?.providerDataUse?.secondaryUseAllowed === false, 'Provider secondary use must be forbidden');
 assert(ai.guardrails?.idempotency?.maxAttempts === 2, 'Retry attempts must remain tightly bounded');
 assert(ai.guardrails?.responseLimits?.maxBytesMax === 2097152, 'Provider response hard limit must be declared');
+assert(ai.registryControl?.adminPath === '/api/ai-modules/v1/admin/registry', 'Managed external AI registry admin path must be declared');
+assert(ai.registryControl?.productionRequiresHealthyValidation === true, 'Production modules must require healthy validation');
+assert(ai.registryControl?.productionRequiresSecretConfigured === true, 'Production modules must require configured runtime secrets');
+assert(ai.registryControl?.referenceModuleProductionAllowed === false, 'Reference module must never be promoted to production');
+assert(ai.registryControl?.secretValuesPersistedInDatabase === false, 'External AI secrets must never be persisted in D1');
 
 const storageRuntime = fs.readFileSync(new URL('../storage-gateway.js', import.meta.url), 'utf8');
 const driveWriter = fs.readFileSync(new URL('../canonical-drive-writer.js', import.meta.url), 'utf8');
@@ -52,6 +57,8 @@ const wranglerApi = fs.readFileSync(new URL('../wrangler.api.toml', import.meta.
 const wranglerStorage = fs.readFileSync(new URL('../wrangler.storage.toml', import.meta.url), 'utf8');
 const migration = fs.readFileSync(new URL('../migrations/0039_storage_ai_gateway.sql', import.meta.url), 'utf8');
 const guardrailMigration = fs.readFileSync(new URL('../migrations/0078_ai_module_guardrails.sql', import.meta.url), 'utf8');
+const registryRuntime = fs.readFileSync(new URL('../external-ai-module-registry-control.js', import.meta.url), 'utf8');
+const registryMigration = fs.readFileSync(new URL('../migrations/0079_external_ai_module_registry.sql', import.meta.url), 'utf8');
 
 assert(storageRuntime.includes('/api/storage/v1'), 'Storage runtime prefix missing');
 assert(storageRuntime.includes('https://drive.ekodi.kr'), 'API storage facade must terminate at drive.ekodi.kr');
@@ -73,6 +80,10 @@ assert(aiRuntime.includes('x-ekodi-idempotency-key'), 'Vendor execution must car
 assert(aiRuntime.includes('trainingAllowed: false'), 'Vendor data-use policy must prohibit training');
 assert(aiRuntime.includes('AI_MODULE_RESPONSE_TOO_LARGE'), 'Gateway must enforce response size limits');
 assert(aiRuntime.includes('AI_MODULE_CIRCUIT_OPEN'), 'Gateway must isolate repeated provider failure');
+assert(aiRuntime.includes('loadExternalAiModules'), 'Gateway must consume the managed external AI registry');
+assert(registryRuntime.includes('draft') && registryRuntime.includes('validating') && registryRuntime.includes('staging') && registryRuntime.includes('production') && registryRuntime.includes('blocked'), 'Managed external AI lifecycle states must be enforced');
+assert((registryRuntime.includes('secretValueReturned:false') || registryRuntime.includes('secretValueReturned: false')) && registryRuntime.includes('secretValuesPersistedInDatabase: false'), 'Registry must not expose or persist provider secret values');
+assert(registryMigration.includes('ekodi.reference-module') && registryMigration.includes('external_ai_module_registry_audit'), 'Reference module and registry audit ledger must be migration-managed');
 assert(migration.includes('storage_audit_logs') && migration.includes('ai_module_audit_logs'), 'Gateway audit tables must be migration-managed');
 for (const field of ['provider_model', 'latency_ms', 'storage_status', 'guardrail_policy_version', 'error_code']) {
   assert(guardrailMigration.includes(field), `AI module guardrail audit field missing: ${field}`);

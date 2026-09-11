@@ -157,5 +157,20 @@
       "secondaryUseAllowed",
       "canonicalStorageOwnedByEkodi"
     ]
+  },
+  "registryControl": {
+    "adminPath": "/api/ai-modules/v1/admin/registry",
+    "statuses": [
+      "draft",
+      "validating",
+      "staging",
+      "production",
+      "blocked"
+    ],
+    "productionRequiresHealthyValidation": true,
+    "productionRequiresSecretConfigured": true,
+    "referenceModuleId": "ekodi.reference-module",
+    "referenceModuleProductionAllowed": false,
+    "secretValuesPersistedInDatabase": false
   }
 }
