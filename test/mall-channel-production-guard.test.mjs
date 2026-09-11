@@ -9,7 +9,7 @@ test('Mall production verifier guards channel-first admin flow', async () => {
   assert.match(workflow, /data-channel-preauth/);
   assert.match(workflow, /channelPreAuth/);
   assert.match(workflow, /pendingChannelIntent/);
-  assert.match(workflow, /automationApi\('\/v1\/policy'/);
+  assert.match(workflow, /grep -Fq '\/v1\/policy'/);
   assert.match(workflow, /channelPolicyForm/);
   assert.match(workflow, /channelAiForm/);
   assert.match(workflow, /data-channel-control/);
@@ -17,4 +17,6 @@ test('Mall production verifier guards channel-first admin flow', async () => {
   assert.match(workflow, /marketing-connect-api\.ekodi\.kr\/health/);
   assert.match(workflow, /youtubeConfigured/);
   assert.match(workflow, /paidActivation!==false/);
+  assert.match(workflow, /github\.event_name == 'push'/);
+  assert.match(workflow, /verify-ekodi-mall-production\.yml/);
 });

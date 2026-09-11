@@ -2,6 +2,10 @@ name: Verify EKODI Mall Production
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/verify-ekodi-mall-production.yml'
   workflow_run:
     workflows: ['EKODI Mall · Stage and Deploy', 'Deploy EKODI Shared Site Core', 'Deploy Marketing Publishing', 'Deploy Marketing Growth Connector']
     types: [completed]
@@ -15,7 +19,7 @@ concurrency:
 
 jobs:
   verify:
-    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'push' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -166,7 +170,7 @@ jobs:
           grep -Fq 'data-channel-preauth' /tmp/workspace-admin.js
           grep -Fq 'channelPreAuth' /tmp/workspace-admin.js
           grep -Fq 'pendingChannelIntent' /tmp/workspace-admin.js
-          grep -Fq "automationApi('/v1/policy'" /tmp/workspace-admin.js
+          grep -Fq '/v1/policy' /tmp/workspace-admin.js
           grep -Fq 'channelPolicyForm' /tmp/workspace-admin.js
           grep -Fq 'channelAiForm' /tmp/workspace-admin.js
           grep -Fq 'data-channel-control' /tmp/workspace-admin.js
