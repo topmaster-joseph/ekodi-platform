@@ -120,6 +120,10 @@ export default{
       if(!['GET','HEAD'].includes(request.method))return json(env,{error:'method_not_allowed'},405);
       return authRedirect(request,env);
     }
+    if(['GET','HEAD'].includes(request.method)&&(url.pathname==='/pizzamaru/mokpodae'||url.pathname==='/pizzamaru/mokpodae/')){
+      const target=new URL('/pizzamaru'+url.search,'https://ekodi.kr');
+      return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-ekodi-workspace-alias':'pizzamaru/mokpodae->pizzamaru'}});
+    }
     if(url.pathname==='/yogurtpurple'||url.pathname==='/yogurtpurple/'){
       const target=new URL('/yogurt'+url.search,'https://ekodi.kr');
       return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-ekodi-workspace-alias':'yogurtpurple->yogurt'}});
