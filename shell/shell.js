@@ -36,6 +36,7 @@ const FALLBACK_THEME={
     books:{accent:'#C99084',public:{motif:'paper',companion:'#8B2742'}},
     trade:{accent:'#58D7F2',public:{motif:'grid',companion:'#80E3FF'}},
     lab:{accent:'#E39463',public:{motif:'paper',companion:'#5C92C8'}},
+    learn:{accent:'#6FBF8F',public:{motif:'flow',companion:'#F1C84B'}},
     my:{accent:'#7CC7FF',public:{motif:'orbit',companion:'#B5A2FF'}}
   },
   publicExperience:{
