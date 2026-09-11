@@ -1,4 +1,5 @@
 import fs from 'node:fs/promises';
+import {spawnSync} from 'node:child_process';
 
 const manifestUrl=new URL('./public/insurance-law-sources.json',import.meta.url);
 const manifest=JSON.parse(await fs.readFile(manifestUrl,'utf8'));
@@ -33,7 +34,7 @@ function normalizeLawText(value){
 async function fetchOfficialLaw(value,depth=0){
   if(depth>5)throw new Error('too many official-law redirects');
   const url=officialLawUrl(value);
-  const response=await fetch(url,{redirect:'manual',headers:{'user-agent':'EKODI-Insurance-Law-Watch/1.1 (+https://ekodi.kr)'}});
+  const response=await fetch(url,{redirect:'manual',headers:{'user-agent':'EKODI-Insurance-Law-Watch/1.2 (+https://ekodi.kr)'}});
   if(response.status>=300&&response.status<400){
     const location=response.headers.get('location');
     if(!location)throw new Error('official-law redirect missing location');
@@ -44,18 +45,34 @@ async function fetchOfficialLaw(value,depth=0){
   return response;
 }
 
+function pdfText(buffer){
+  const result=spawnSync('pdftotext',['-layout','-','-'],{input:buffer,maxBuffer:20*1024*1024,encoding:'utf8'});
+  if(result.error)throw result.error;
+  if(result.status!==0)throw new Error(`pdftotext failed: ${String(result.stderr||'').trim()||`exit ${result.status}`}`);
+  return result.stdout;
+}
+
 for(const [topicKey,topic] of Object.entries(manifest.topics||{})){
   for(const source of topic.sources||[]){
     try{
       const response=await fetchOfficialLaw(source.url);
       if(!response.ok)throw new Error(`HTTP ${response.status}`);
-      const text=await response.text();
+      const format=String(source.format||'html').toLowerCase();
+      let text='';
+      if(format==='pdf'){
+        const bytes=Buffer.from(await response.arrayBuffer());
+        if(bytes.length<1000)throw new Error(`official PDF response too small: ${bytes.length} bytes`);
+        if(bytes.subarray(0,5).toString('ascii')!=='%PDF-')throw new Error(`expected PDF magic, received ${response.headers.get('content-type')||'unknown content-type'}`);
+        text=pdfText(bytes);
+      }else{
+        text=await response.text();
+      }
       const normalizedText=normalizeLawText(text);
       const missing=(source.markers||[]).filter(marker=>!normalizedText.includes(normalizeLawText(marker)));
-      if(missing.length)failures.push({topic:topicKey,id:source.id,url:source.url,missing});
-      else checked.push({topic:topicKey,id:source.id,url:source.url});
+      if(missing.length)failures.push({topic:topicKey,id:source.id,url:source.url,format,missing});
+      else checked.push({topic:topicKey,id:source.id,url:source.url,format});
     }catch(error){
-      failures.push({topic:topicKey,id:source.id,url:source.url,error:String(error?.message||error)});
+      failures.push({topic:topicKey,id:source.id,url:source.url,format:source.format||'html',error:String(error?.message||error)});
     }
   }
 }
