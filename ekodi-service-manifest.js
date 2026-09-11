@@ -41,7 +41,7 @@ const SERVICES = [
   {id:'invest',name:'EKODI Investment',shortName:'Investment',url:'https://invest.ekodi.kr/',group:'finance',defaultSurface:'workspace',workspaceKinds:['person','business','organization','project'],capabilities:['investment','research','due-diligence','ir','opportunities'],sso:true,targetable:true,order:145,shellIntegration:'shared-proxy',authMode:'client',onboardingVersion:1,transactionMode:'analysis-and-connection-only'},
   {id:'money',name:'EKODI Money',shortName:'Money',url:'https://money.ekodi.kr/',group:'finance',defaultSurface:'workspace',workspaceKinds:['person','business','organization','church','community'],capabilities:['financial-cleanup','accounts','autopay','financial-relationships','decision-support','official-handoff'],sso:true,targetable:true,openSso:true,order:147,shellIntegration:'worker-injected',authMode:'client',onboardingVersion:1,transactionMode:'human-confirmed-official-handoff'},
   {id:'pay',name:'EKODI Pay',shortName:'Pay',url:'https://pay.ekodi.kr/',group:'finance',defaultSurface:'public',workspaceKinds:['person','business','organization'],capabilities:['payments','billing'],sso:true,targetable:true,order:150,shellIntegration:'worker-injected'},
-  {id:'edu',name:'EKODI Education',shortName:'Education',url:'https://edu.ekodi.kr/',group:'knowledge',defaultSurface:'public',workspaceKinds:['person','church','community','organization'],capabilities:['education','courses','learning','admission','study','official-sources','planning'],sso:true,targetable:true,openSso:true,order:160,shellIntegration:'worker-injected',authMode:'client',onboardingVersion:1},
+  {id:'edu',name:'EKODI Learning Fabric',shortName:'Learning',url:'https://ekodi.kr/learn',group:'knowledge',defaultSurface:'public',workspaceKinds:['person','church','community','organization'],capabilities:['education','courses','learning','skills','progress','ai-coach'],sso:true,targetable:true,openSso:true,order:160,state:'live',shellIntegration:'worker-injected',authMode:'client',onboardingVersion:1},
   {id:'support',name:'Support Opportunity AI',shortName:'Support',url:'https://support.ekodi.kr/',group:'business',defaultSurface:'workspace',workspaceKinds:['person','business','organization','church','community','project'],capabilities:['government-support','opportunities','grants','official-sources','forms','project-lifecycle'],sso:true,targetable:true,openSso:true,order:165,shellIntegration:'worker-injected',authMode:'client',onboardingVersion:1},
   {id:'media',name:'에코디미디어',shortName:'Media',url:'https://media.ekodi.kr/',group:'creator',defaultSurface:'public',workspaceKinds:['person','church','community','organization'],capabilities:['media','video','live'],sso:true,targetable:true,order:170,state:'planned',shellIntegration:'planned'},
   {id:'insurance',name:'에코디보험',shortName:'Insurance',url:'https://ekodi.kr/insurance',group:'life',defaultSurface:'public',workspaceKinds:['person','business','organization'],capabilities:['insurance','coverage','claims'],sso:true,targetable:true,order:180,state:'live',shellIntegration:'worker-injected'},
@@ -65,8 +65,8 @@ const canonicalKey=value=>{
 };
 
 export const EKODI_SERVICE_MANIFEST = Object.freeze({
-  version: 19,
-  updatedAt: '2026-09-08',
+  version: 20,
+  updatedAt: '2026-09-11',
   identityModel: 'person-space-role',
   authorityModel: 'platform-admin-is-separate-from-tenant-activity',
   shellVersion: 4,

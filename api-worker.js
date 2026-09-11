@@ -7,6 +7,7 @@ import { analyzeServiceFleet, evaluateTechnologyCandidate } from './evolution-in
 import { evolutionStoreSummary, listEvolutionRecommendations, persistEvolutionReport } from './evolution-intelligence-store.js';
 import { analyzeCapabilityEcosystem, capabilityEcosystemSnapshot } from './ekodi-self-automation-engine.js';
 import { buildPublicPreviewProjection } from './preview-public-projection.js';
+import { handleLearningControl } from './learning-control.js';
 
 // Provider service registry only. Customer organizations and their sites are managed as
 // customer tenants/workspaces through the customer directory, never as EKODI services.
@@ -21,7 +22,7 @@ const SERVICE_CATALOG = [
   { id: 'insurance', name: '에코디보험', domain: 'ekodi.kr/insurance', url: 'https://ekodi.kr/insurance', group: 'business', defaultState: 'planned', defaultMonitor: false },
   { id: 'books', name: '에코디북스', domain: 'books.ekodi.kr', url: 'https://books.ekodi.kr', group: 'knowledge', defaultState: 'active', defaultMonitor: true },
   { id: 'lab', name: '에코디연구소', domain: 'lab.ekodi.kr', url: 'https://lab.ekodi.kr', group: 'knowledge', defaultState: 'active', defaultMonitor: true },
-  { id: 'edu', name: '에코디교육', domain: 'edu.ekodi.kr', url: 'https://edu.ekodi.kr', group: 'knowledge', defaultState: 'planned', defaultMonitor: false },
+  { id: 'edu', name: 'EKODI Learning Fabric', domain: 'ekodi.kr/learn', url: 'https://ekodi.kr/learn', group: 'knowledge', defaultState: 'active', defaultMonitor: true },
   { id: 'media', name: '에코디미디어', domain: 'media.ekodi.kr', url: 'https://media.ekodi.kr', group: 'knowledge', defaultState: 'planned', defaultMonitor: false },
   { id: 'church', name: '에코디교회', domain: 'church.ekodi.kr', url: 'https://church.ekodi.kr', group: 'ministry', defaultState: 'active', defaultMonitor: true },
   { id: 'community', name: '커뮤니티', domain: 'community.ekodi.kr', url: 'https://community.ekodi.kr', group: 'ministry', defaultState: 'active', defaultMonitor: true },
@@ -780,9 +781,10 @@ export default {
 
     const publicPreviewResponse = await handlePublicPreview(request, env);
     if (publicPreviewResponse) return publicPreviewResponse;
-
     const languageResponse = await handleLanguageAutomationPublic(request, env);
     if (languageResponse) return languageResponse;
+    const learningResponse = await handleLearningControl(request, env);
+    if (learningResponse) return learningResponse;
     if (url.pathname.startsWith('/api/mail/control')) {
       try {
         const response = await handleMailControl(request, env);
