@@ -190,6 +190,13 @@ if (workspace.publicWorkspaceRouting?.servicePattern !== '/{slug}/{service}') fa
 if (workspace.publicWorkspaceRouting?.adminPattern !== null || workspace.publicWorkspaceRouting?.adminSurface !== '/admin/workspaces') fail('workspace administration must use the centralized /admin/workspaces surface');
 if (workspace.publicWorkspaceRouting?.serviceAdminPattern !== null) fail('workspace service admin must not have a canonical tenant path');
 if (workspace.publicWorkspaceRouting?.kindEncodedInUrl !== false) fail('service workspace kind/type must not be encoded in public URLs');
+if (workspace.publicWorkspaceRouting?.workspaceKindRequiredForRouting !== false) fail('workspace kind/type must not be required for routing');
+if (workspace.publicWorkspaceRouting?.memberNamespaceRequired !== false) fail('member must not be a required workspace namespace');
+if (workspace.publicWorkspaceRouting?.memberSegmentRole !== 'ordinary_workspace_service_when_configured') fail('member segment must remain an ordinary optional workspace service');
+if (workspace.publicWorkspaceRouting?.membershipAuthorizationSource !== 'authentication_rbac_policy') fail('membership access must derive from authentication/RBAC policy, not URL shape');
+if (workspace.publicWorkspaceRouting?.adminSegmentRole !== 'legacy_management_boundary_only') fail('workspace admin child segments must remain legacy-only');
+if (workspace.publicWorkspaceRouting?.relationshipMetadataEncodedInUrl !== false) fail('identity relationship metadata must not be encoded in workspace URLs');
+if (workspace.publicWorkspaceRouting?.reservedRootSlugsManagedBy !== 'platform_route_registry') fail('service workspace root collisions must use platform route registry');
 const expectedAdminRoutes = { home:'/admin/home/{capability}', operations:'/admin/operations/{capability}', workspaces:'/admin/workspaces/{capability}', services:'/admin/services/{service}', system:'/admin/system/{capability}' };
 for (const [group, pattern] of Object.entries(expectedAdminRoutes)) {
   if (workspace.managementRouting?.[group] !== pattern) fail(`service workspace Admin route drift: ${group}`);
