@@ -26,8 +26,9 @@ test('Mall production verifier follows stable route and storefront structure', (
     'data-ekodi-service="mall"',
     'data-ekodi-user-surface="public"',
     'rel="canonical" href="https://ekodi.kr/ekodibiz/mall"',
-    '/ekodibiz/mall/app.js',
-    '/ekodibiz/mall/affiliate-client.js'
+    '/ekodibiz/mall/assets/app.js',
+    '/ekodibiz/mall/assets/marketplace-live.js',
+    '/ekodibiz/mall/assets/commerce.js'
   ]) assert.ok(workflow.includes(marker), `missing structural contract: ${marker}`);
   assert.doesNotMatch(workflow, /GIFT CONTEXT INTELLIGENCE|CONNECTED COMMERCE|OUR PROMISE|EKODI CONTEXT SHOPPING|ALL MARKET/);
 });
@@ -40,9 +41,10 @@ test('shared-site Mall release gate uses the same stable ownership contract', ()
   }
   assert.equal(mallGate.candidateVerify,false);
   assert.match(mallGate.candidateVerifyReason||'',/run_worker_first bootstrap/);
-  assert.ok(mallGate.expect?.includes('/ekodibiz/mall/app.js'));
-  assert.ok(mallGate.rollbackExpect?.includes('/ekodibiz/mall/app.js'));
-  assert.ok(!manifestText.includes('/ekodibiz/mall/assets/marketplace-live.js'));
+  for (const asset of ['/ekodibiz/mall/assets/app.js','/ekodibiz/mall/assets/marketplace-live.js','/ekodibiz/mall/assets/commerce.js']) {
+    assert.ok(mallGate.expect?.includes(asset), 'missing release asset: '+asset);
+    assert.ok(mallGate.rollbackExpect?.includes(asset), 'missing rollback asset: '+asset);
+  }
   assert.ok(mallGate.headerExpect?.includes('x-ekodi-route: public-ekodi-mall'));
   assert.ok(mallGate.headerExpect?.includes('x-ekodi-edge: mall-path-gateway'));
   assert.doesNotMatch(manifestText, /EKODI CONTEXT SHOPPING|GIFT CONTEXT INTELLIGENCE|CONNECTED COMMERCE|OUR PROMISE/);
