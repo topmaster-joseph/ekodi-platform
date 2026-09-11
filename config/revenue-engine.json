@@ -4,9 +4,14 @@
   "name": "EKODI Revenue Engine",
   "status": "active_foundation",
   "architecture": {
-    "role": "shared-core-orchestration-engine",
+    "platformRole": "core-engine",
+    "layer": "os",
+    "responsibilityClass": "ekodi-responsible",
+    "role": "platform-wide-revenue-orchestration",
     "domainOwnership": "business-capabilities-remain-explicit",
     "principle": "shared-before-dedicated-capability-first",
+    "architectureRegistry": "governance/architecture/ekodi-os-architecture.json",
+    "alignmentRule": "Revenue Engine is a core EKODI engine but remains an OS orchestration capability; EKODI Core continues to own stable identity, authority, audit and service contracts rather than business-domain logic.",
     "reuses": [
       "autonomous-discovery-engine",
       "ekodi-capability-ecosystem",
