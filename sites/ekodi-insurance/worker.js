@@ -53,12 +53,13 @@ async function fetchAsset(request,env,pathname){
   return env.ASSETS.fetch(new Request(target.toString(),request));
 }
 function htmlEscape(value){return String(value).replace(/[&<>"']/g,(character)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));}
-function normalizeGuideLanguage(value){
+function supportedGuideLanguage(value){
   const normalized=String(value||'').toLowerCase();
-  if(normalized==='zh'||normalized==='zh-cn')return 'zh-CN';
+  if(normalized==='ko')return 'ko';
   if(normalized==='en')return 'en';
+  if(normalized==='zh'||normalized==='zh-cn')return 'zh-CN';
   if(normalized==='vi')return 'vi';
-  return 'ko';
+  return null;
 }
 function preferredGuideLanguage(request){
   const accepted=String(request.headers.get('accept-language')||'').toLowerCase();
@@ -67,14 +68,12 @@ function preferredGuideLanguage(request){
   if(accepted.includes('en'))return 'en';
   return 'ko';
 }
-async function carGuideResponse(request,env,production,url,language){
-  const lang=normalizeGuideLanguage(language);
+async function carGuideResponse(request,env,production,url,lang){
   const meta=CAR_GUIDE_META[lang];
   const canonical=`${url.origin}/guide/car-insurance/${lang}`;
   const asset=await fetchAsset(request,env,'/car-insurance-guide.html');
   const headers=new Headers(asset.headers);
   headers.set('content-language',lang);
-  headers.set('vary','Accept-Language');
   headers.delete('content-length');
   headers.delete('etag');
   const html=(await asset.text())
@@ -111,7 +110,12 @@ export default {
       return Response.redirect(`${url.origin}/guide/car-insurance/${lang}`,302);
     }
     const carGuideMatch=url.pathname.match(/^\/guide\/car-insurance\/([^/]+)\/?$/i);
-    if(carGuideMatch)return carGuideResponse(request,env,production,url,carGuideMatch[1]);
+    if(carGuideMatch){
+      const lang=supportedGuideLanguage(carGuideMatch[1]);
+      if(!lang)return Response.redirect(`${url.origin}/guide/car-insurance/ko`,302);
+      if(carGuideMatch[1]!==lang)return Response.redirect(`${url.origin}/guide/car-insurance/${lang}`,302);
+      return carGuideResponse(request,env,production,url,lang);
+    }
     if(url.pathname==='/advisor'||url.pathname==='/advisor/')return secureAsset(await fetchAsset(request,env,'/advisor.html'),production);
     if(url.pathname==='/admin'||url.pathname==='/admin/'){
       if(production)return Response.redirect('https://admin.ekodi.kr/',302);
