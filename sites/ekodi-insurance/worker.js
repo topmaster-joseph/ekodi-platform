@@ -4,6 +4,12 @@ const SECURITY_HEADERS={
   'permissions-policy':'camera=(), microphone=(), geolocation=()',
   'content-security-policy':"default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' https://ekodi-insurance-api-staging.ekodi-development.workers.dev https://ekodi-insurance-api-green.topmaster-joseph.workers.dev https://insurance-api.ekodi.kr; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests",
 };
+const CAR_GUIDE_META={
+  ko:{title:'자동차보험 간단 안내 | EKODI Insurance',description:'책임보험과 긴급출동서비스를 쉽고 짧게 설명하는 EKODI Insurance 다국어 안내입니다.'},
+  en:{title:'Simple Car Insurance Guide | EKODI Insurance',description:'A short, easy guide to liability insurance and emergency roadside service for drivers in Korea.'},
+  'zh-CN':{title:'汽车保险简明指南 | EKODI Insurance',description:'面向在韩国驾驶者的汽车责任保险和紧急道路救援服务简明指南。'},
+  vi:{title:'Hướng dẫn ngắn về bảo hiểm ô tô | EKODI Insurance',description:'Hướng dẫn ngắn gọn về bảo hiểm trách nhiệm và dịch vụ cứu hộ khẩn cấp dành cho người lái xe tại Hàn Quốc.'}
+};
 function isProduction(env){return String(env?.ENVIRONMENT||'staging').toLowerCase()==='production';}
 function withHeaders(response){
   const headers=new Headers(response.headers);
@@ -27,11 +33,11 @@ function truthfulHtml(html,production=false){
   }
   return output;
 }
-async function secureAsset(response,production=false){
+async function secureAsset(response,production=false,{injectBridge=true}={}){
   const headers=withHeaders(response);
   if(response.headers.get('content-type')?.includes('text/html')){
     let html=truthfulHtml(await response.text(),production);
-    if(!html.includes('/server-bridge.js')) html=html.replace('</head>','  <script src="/server-bridge.js" defer></script>\n</head>');
+    if(injectBridge&&!html.includes('/server-bridge.js')) html=html.replace('</head>','  <script src="/server-bridge.js" defer></script>\n</head>');
     headers.delete('content-length');
     headers.delete('etag');
     headers.set('cache-control','no-store');
@@ -45,6 +51,38 @@ async function fetchAsset(request,env,pathname){
   target.pathname=pathname;
   target.search='';
   return env.ASSETS.fetch(new Request(target.toString(),request));
+}
+function htmlEscape(value){return String(value).replace(/[&<>"']/g,(character)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));}
+function normalizeGuideLanguage(value){
+  const normalized=String(value||'').toLowerCase();
+  if(normalized==='zh'||normalized==='zh-cn')return 'zh-CN';
+  if(normalized==='en')return 'en';
+  if(normalized==='vi')return 'vi';
+  return 'ko';
+}
+function preferredGuideLanguage(request){
+  const accepted=String(request.headers.get('accept-language')||'').toLowerCase();
+  if(accepted.includes('zh'))return 'zh-CN';
+  if(accepted.includes('vi'))return 'vi';
+  if(accepted.includes('en'))return 'en';
+  return 'ko';
+}
+async function carGuideResponse(request,env,production,url,language){
+  const lang=normalizeGuideLanguage(language);
+  const meta=CAR_GUIDE_META[lang];
+  const canonical=`${url.origin}/guide/car-insurance/${lang}`;
+  const asset=await fetchAsset(request,env,'/car-insurance-guide.html');
+  const headers=new Headers(asset.headers);
+  headers.set('content-language',lang);
+  headers.set('vary','Accept-Language');
+  headers.delete('content-length');
+  headers.delete('etag');
+  const html=(await asset.text())
+    .replaceAll('__LANG__',htmlEscape(lang))
+    .replaceAll('__TITLE__',htmlEscape(meta.title))
+    .replaceAll('__DESCRIPTION__',htmlEscape(meta.description))
+    .replaceAll('__URL__',htmlEscape(canonical));
+  return secureAsset(new Response(html,{status:asset.status,statusText:asset.statusText,headers}),production,{injectBridge:false});
 }
 export default {
   async fetch(request,env){
@@ -62,11 +100,18 @@ export default {
       transcriptDefault:'not-shared',
       privacyCenter:true,
       productRecommendation:false,
+      multilingualCarGuide:true,
       aiChat:true,
       humanHandoffQueue:true,
       adminQueue:true,
       externalAiProvider:false
     }),{headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store',...SECURITY_HEADERS}});
+    if(url.pathname==='/guide/car-insurance'||url.pathname==='/guide/car-insurance/'){
+      const lang=preferredGuideLanguage(request);
+      return Response.redirect(`${url.origin}/guide/car-insurance/${lang}`,302);
+    }
+    const carGuideMatch=url.pathname.match(/^\/guide\/car-insurance\/([^/]+)\/?$/i);
+    if(carGuideMatch)return carGuideResponse(request,env,production,url,carGuideMatch[1]);
     if(url.pathname==='/advisor'||url.pathname==='/advisor/')return secureAsset(await fetchAsset(request,env,'/advisor.html'),production);
     if(url.pathname==='/admin'||url.pathname==='/admin/'){
       if(production)return Response.redirect('https://admin.ekodi.kr/',302);
