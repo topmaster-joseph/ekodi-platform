@@ -63,7 +63,7 @@ test('allocation totals exactly match realized net even with rounding', () => {
 
 test('invalid monetary values and allocations fail closed', () => {
   assert.throws(() => minorAmount(-1), /non-negative/);
-  assert.throws(() => currencyCode('won'), /ISO/);
+  assert.throws(() => currencyCode('kr'), /ISO/);
   assert.throws(() => normalizeRealizedRevenue({ provider: 'x', externalRef: '1', amount: 100, fee: 101 }), /fee/);
   assert.throws(() => allocateRealizedRevenue(100, [{ recipient: 'a', bps: 9999 }]), /10000/);
 });
