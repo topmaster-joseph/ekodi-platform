@@ -3,16 +3,22 @@ name: Discovery Projection Contract
 on:
   pull_request:
     paths:
-      - 'config/discovery-projection-policy.json'
+      - 'discovery-layer.js'
+      - 'DISCOVERY_LAYER.md'
       - 'governance/security/discovery-secure-projection.md'
-      - 'scripts/validate-discovery-projection.mjs'
+      - 'scripts/discovery-build.mjs'
+      - 'test/discovery-layer.test.mjs'
+      - 'site-worker.js'
       - '.github/workflows/discovery-projection-contract.yml'
   push:
     branches: [main]
     paths:
-      - 'config/discovery-projection-policy.json'
+      - 'discovery-layer.js'
+      - 'DISCOVERY_LAYER.md'
       - 'governance/security/discovery-secure-projection.md'
-      - 'scripts/validate-discovery-projection.mjs'
+      - 'scripts/discovery-build.mjs'
+      - 'test/discovery-layer.test.mjs'
+      - 'site-worker.js'
       - '.github/workflows/discovery-projection-contract.yml'
 
 permissions:
@@ -21,11 +27,15 @@ permissions:
 jobs:
   contract:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
-      - name: Validate Discovery Projection policy
-        run: node scripts/validate-discovery-projection.mjs
+      - name: Validate Discovery Secure Projection
+        run: |
+          set -euo pipefail
+          node --check discovery-layer.js
+          node --test test/discovery-layer.test.mjs
+          npm run build
