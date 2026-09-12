@@ -13,22 +13,35 @@ test('bootstrap never silently drops a command while Assist is lazy-loading',asy
   assert.match(js,/#ekodiAssistDock/);
   assert.match(js,/AI 오류/);
   assert.match(js,/b\.disabled=1/);
+  assert.match(js,/setCustomValidity\(''\)/);
   assert.match(js,/setCustomValidity/);
   assert.match(js,/reportValidity/);
   assert.match(js,/ekodi-admin-assist-request/);
   assert.match(js,/finally\{b\.disabled=0\}/);
   assert.doesNotMatch(js,/if\(!d\?\.loadStyle\|\|!d\?\.loadScript\)return/);
+  assert.ok(js.indexOf('await L')<js.indexOf("new CustomEvent('ekodi-admin-assist-request'"),'Assist runtime must resolve before command dispatch');
 });
 
-test('bootstrap keeps demand loading and direct lazy fallbacks for Assist and AI control plane',async()=>{
+test('bootstrap explicitly awaits the dock listener runtime on demand and direct fallback paths',async()=>{
   const js=await read('admin-assist-bootstrap.js');
   assert.match(js,/window\.EKODIAdminDemand/);
   assert.match(js,/d\?\.loadStyle&&d\?\.loadScript/);
   assert.match(js,/d\.loadStyle\('ai-ops-admin\.css'\)/);
+  assert.match(js,/d\.loadStyle\('admin-assist-dock\.css'\)/);
   assert.match(js,/d\.loadScript\('admin-lazy-features\.js'\)/);
+  assert.match(js,/d\.loadScript\('admin-assist-dock\.js'\)/);
   assert.match(js,/d\.loadScript\('admin-ai-control-plane\.js'\)/);
   assert.match(js,/import\('\.\/admin-lazy-features\.js'\)/);
+  assert.match(js,/import\('\.\/admin-assist-dock\.js'\)/);
   assert.match(js,/import\('\.\/admin-ai-control-plane\.js'\)/);
+});
+
+test('shared-site build publishes every lazy asset required by the fixed Admin command dock',async()=>{
+  const postbuild=await read('scripts/admin-readable-command-postbuild.mjs');
+  for(const asset of ['admin-assist-bootstrap.js','admin-assist-bootstrap.css','admin-assist-dock.js','admin-assist-dock.css','admin-ai-control-plane.js']){
+    assert.match(postbuild,new RegExp(`['\"]${asset.replaceAll('.','\\.')}['\"]`));
+  }
+  assert.match(postbuild,/copyFile\(`\$\{root\}\$\{asset\}`, `\$\{output\}\$\{asset\}`\)/);
 });
 
 test('production verification submits the real bottom command on canonical ekodi.kr Admin',async()=>{

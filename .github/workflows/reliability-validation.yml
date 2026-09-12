@@ -1,0 +1,134 @@
+name: EKODI Reliability Validation
+
+on:
+  workflow_call:
+    inputs:
+      suite:
+        description: Reliability suite to execute
+        required: false
+        type: string
+        default: release
+      observed_peak_rps:
+        description: Optional observed peak RPS used to scale the test profile
+        required: false
+        type: string
+        default: '0'
+  workflow_dispatch:
+    inputs:
+      suite:
+        description: Reliability suite
+        required: true
+        type: choice
+        default: release
+        options:
+          - release
+          - synthetic
+          - stress
+          - soak
+      observed_peak_rps:
+        description: Optional observed peak RPS (0 uses policy defaults)
+        required: false
+        type: string
+        default: '0'
+  workflow_run:
+    workflows: ['Deploy EKODI Shared Site Core']
+    types: [completed]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-reliability-${{ github.event.workflow_run.id || github.run_id }}
+  cancel-in-progress: false
+
+env:
+  STAGING_URL: https://ekodi-shared-site-staging.ekodi-development.workers.dev
+
+jobs:
+  contract:
+    if: github.event_name != 'workflow_run'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate reliability policy and guardrails
+        run: |
+          set -euo pipefail
+          node --check scripts/reliability-validation-lib.mjs
+          node --check scripts/run-reliability-validation.mjs
+          node scripts/run-reliability-validation.mjs --validate-only
+          node --test test/reliability-validation.test.mjs
+
+  staging-release:
+    if: github.event_name != 'workflow_run' && inputs.suite == 'release'
+    needs: contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Baseline traffic validation
+        env:
+          OBSERVED_RPS: ${{ inputs.observed_peak_rps || vars.EKODI_OBSERVED_PEAK_RPS || '0' }}
+        run: node scripts/run-reliability-validation.mjs --target="$STAGING_URL" --profile=baseline --observed-rps="$OBSERVED_RPS" --output=reliability-baseline.json
+      - name: Spike traffic validation
+        env:
+          OBSERVED_RPS: ${{ inputs.observed_peak_rps || vars.EKODI_OBSERVED_PEAK_RPS || '0' }}
+        run: node scripts/run-reliability-validation.mjs --target="$STAGING_URL" --profile=spike --observed-rps="$OBSERVED_RPS" --output=reliability-spike.json
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: reliability-release-${{ github.run_id }}
+          path: reliability-*.json
+          if-no-files-found: ignore
+          retention-days: 14
+
+  staging-manual:
+    if: github.event_name == 'workflow_dispatch' && inputs.suite != 'release'
+    needs: contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Run explicitly selected staging profile
+        env:
+          OBSERVED_RPS: ${{ inputs.observed_peak_rps || vars.EKODI_OBSERVED_PEAK_RPS || '0' }}
+        run: node scripts/run-reliability-validation.mjs --target="$STAGING_URL" --profile="${{ inputs.suite }}" --observed-rps="$OBSERVED_RPS" --manual=true --output=reliability-manual.json
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: reliability-manual-${{ github.run_id }}
+          path: reliability-manual.json
+          if-no-files-found: ignore
+          retention-days: 14
+
+  production-synthetic:
+    if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Verify live production with low-impact synthetic traffic
+        env:
+          EKODI_PRODUCTION_RELIABILITY_APPROVED: 'true'
+        run: node scripts/run-reliability-validation.mjs --target=https://ekodi.kr --profile=synthetic --path=/deployment-probe --output=reliability-production.json
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: reliability-production-${{ github.run_id }}
+          path: reliability-production.json
+          if-no-files-found: ignore
+          retention-days: 30
