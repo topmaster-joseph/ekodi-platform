@@ -11,7 +11,7 @@ test('bootstrap never silently drops a command while Assist is lazy-loading',asy
   const parsed=spawnSync(process.execPath,['--check',fileURLToPath(new URL('../admin-assist-bootstrap.js',import.meta.url))],{encoding:'utf8'});
   assert.equal(parsed.status,0,parsed.stderr);
   assert.match(js,/#ekodiAssistDock/);
-  assert.match(js,/AI 준비 실패/);
+  assert.match(js,/AI 오류/);
   assert.match(js,/b\.disabled=1/);
   assert.match(js,/setCustomValidity/);
   assert.match(js,/reportValidity/);
@@ -20,11 +20,13 @@ test('bootstrap never silently drops a command while Assist is lazy-loading',asy
   assert.doesNotMatch(js,/if\(!d\?\.loadStyle\|\|!d\?\.loadScript\)return/);
 });
 
-test('bootstrap keeps the secured demand-loader path and a direct lazy-runtime fallback',async()=>{
+test('bootstrap keeps demand loading and direct lazy fallbacks for Assist and AI control plane',async()=>{
   const js=await read('admin-assist-bootstrap.js');
   assert.match(js,/window\.EKODIAdminDemand/);
   assert.match(js,/d\?\.loadStyle&&d\?\.loadScript/);
   assert.match(js,/d\.loadStyle\('ai-ops-admin\.css'\)/);
   assert.match(js,/d\.loadScript\('admin-lazy-features\.js'\)/);
+  assert.match(js,/d\.loadScript\('admin-ai-control-plane\.js'\)/);
   assert.match(js,/import\('\.\/admin-lazy-features\.js'\)/);
+  assert.match(js,/import\('\.\/admin-ai-control-plane\.js'\)/);
 });
