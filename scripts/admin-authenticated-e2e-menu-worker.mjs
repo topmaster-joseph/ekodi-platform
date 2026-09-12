@@ -340,16 +340,18 @@ async function verifyLanguageStatus(tab, alreadyActive, started) {
   if (payload.sites.some(site => !Array.isArray(site.languages))) throw new Error('language-status: site languages missing');
   stage('language-status-render');
   await page.evaluate(() => window.EKODILanguageStatus.load());
-  const rootCard = page.locator('[data-language-site="ekodi"]');
-  await rootCard.waitFor({ state:'visible', timeout:8_000 });
   const panel = page.locator('#languageStatusPanel');
+  await panel.locator('[data-language-site="ekodi"]').waitFor({ state:'visible', timeout:8_000 });
+  await page.waitForFunction(() => document.querySelector('#languageStatusPanel')?.dataset.languageStatusReady === 'true', null, { timeout:8_000 });
   const state = await visiblePanelState();
   const controls = await panel.locator('form,input[type="checkbox"],button[type="submit"]').count();
-  const text = String(await panel.textContent() || '').replace(/\s+/g,' ').trim();
+  const siteCards = await panel.locator('[data-language-site]').count();
+  const languageRows = await panel.locator('[data-language-locale]').count();
+  const ready = await panel.getAttribute('data-language-status-ready');
   if (!state.panelFound || !state.selected || state.busy) throw new Error(`language-status panel invalid: ${JSON.stringify(state)}`);
   if (controls !== 0) throw new Error('language-status: mutation control exposed');
-  if (!text.includes('사용자 화면에는 준비 완료 언어만 표시됩니다')) throw new Error('language-status: readiness message missing');
-  results.push({ id:menuId, group, ok:true, durationMs:Date.now()-started, ...state, apiStatus:response.status, sites:payload.sites.length, languages:payload.languages.length });
+  if (ready !== 'true' || siteCards < 1 || languageRows < 1) throw new Error(`language-status: semantic readiness contract failed ready=${ready} sites=${siteCards} languages=${languageRows}`);
+  results.push({ id:menuId, group, ok:true, durationMs:Date.now()-started, ...state, apiStatus:response.status, sites:payload.sites.length, languages:payload.languages.length, semanticReady:true });
 }
 
 async function verifyMaturity(tab, alreadyActive, started) {
