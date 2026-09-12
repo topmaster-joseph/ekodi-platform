@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "service": "ekodi-realtime-communication-core",
+  "defaultSecurityProfile": "standard",
+  "roomModes": [
+    "public_broadcast",
+    "webinar",
+    "meeting",
+    "interpretation",
+    "consultation",
+    "education",
+    "worship",
+    "commerce"
+  ],
+  "securityProfiles": {
+    "standard": {
+      "requiresAuthenticationToHost": true,
+      "allowsAnonymousViewers": true,
+      "allowsAi": true,
+      "allowsRecording": true,
+      "requiresRecordingNotice": true
+    },
+    "restricted": {
+      "requiresAuthenticationToHost": true,
+      "allowsAnonymousViewers": false,
+      "allowsAi": true,
+      "allowsRecording": true,
+      "requiresRecordingNotice": true
+    },
+    "e2ee": {
+      "requiresAuthenticationToHost": true,
+      "allowsAnonymousViewers": false,
+      "allowsAi": false,
+      "allowsRecording": false,
+      "requiresRecordingNotice": false
+    }
+  },
+  "roles": ["owner", "cohost", "presenter", "participant", "viewer"],
+  "failOpenMediaOnTranslationFailure": true,
+  "failOpenMediaOnRecordingFailure": true,
+  "providerSecretsBrowserVisible": false,
+  "sessionTokenTtlSeconds": 300,
+  "roomLeaseSeconds": 14400,
+  "healthTargets": {
+    "mediaPlaneAvailability": 0.999,
+    "controlPlaneAvailability": 0.999,
+    "translationP95Ms": 3000,
+    "healthProbeSeconds": 30
+  }
+}
