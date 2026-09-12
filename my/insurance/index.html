@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="ko" data-ekodi-global-nav="off" data-ekodi-character="off">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow,noarchive">
+  <meta name="description" content="My EKODI 개인 보험점검·가입내역·갱신·청구 준비">
+  <title>내 보험관리 | My EKODI</title>
+  <link rel="stylesheet" href="./styles.css">
+  <script src="./app.js" defer></script>
+</head>
+<body>
+  <header class="topbar"><a class="brand" href="/my/"><span>E</span><strong>My EKODI</strong><small>개인 보험관리</small></a><nav><a href="#check">보험점검</a><a href="#policies">내 보험</a><a href="#claims">청구 준비</a><a href="https://ekodi.kr/insurance">보험정보</a></nav></header>
+  <main>
+    <section class="hero"><div><p class="eyebrow">PRIVATE INSURANCE CARE</p><h1>내 보험은 공개 보험정보와<br>분리해서 관리합니다.</h1><p>가입내역·보험료·갱신일·점검 메모·청구 준비기록은 이 브라우저에만 저장합니다. 주민번호·상세 진료기록·보험증권 원본은 받지 않습니다.</p></div><aside><small>저장 방식</small><strong>현재 기기 로컬 저장</strong><span>서버 전송 없음 · 언제든 전체 삭제</span><button id="deleteAll" type="button">내 보험기록 전체 삭제</button></aside></section>
+
+    <section id="check" class="section"><div class="section-head"><div><p class="eyebrow">SELF CHECK</p><h2>간단 보험점검</h2></div><p>상품 추천이나 가입 권유가 아니라, 지금 확인하면 좋은 관리 항목을 정리합니다.</p></div><form id="checkForm" class="panel form-grid"><label>연령대<select name="age" required><option value="">선택</option><option>20대</option><option>30대</option><option>40대</option><option>50대</option><option>60대 이상</option></select></label><label>현재 보험 수<input name="policyCount" type="number" min="0" max="50" value="0" required></label><label>월 보험료<input name="premium" type="number" min="0" step="10000" placeholder="원"></label><label>가장 궁금한 점<select name="focus" required><option value="">선택</option><option>보장 중복·공백</option><option>보험료 부담</option><option>갱신·만기</option><option>청구 준비</option><option>전체 정리</option></select></label><label class="wide">메모<textarea name="memo" rows="3" placeholder="민감정보 없이 간단히 적어 주세요."></textarea></label><button class="primary wide" type="submit">확인할 항목 정리</button></form><div id="checkResult" class="panel result" hidden></div></section>
+
+    <section id="policies" class="section soft"><div class="section-head"><div><p class="eyebrow">MY POLICIES</p><h2>내 보험 기록</h2></div><p>관리 목적의 최소 정보만 직접 기록합니다.</p></div><div class="split"><form id="policyForm" class="panel form-grid"><label>보험사<input name="company" maxlength="80" required></label><label>상품명<input name="product" maxlength="120" required></label><label>월 보험료<input name="premium" type="number" min="0" step="1000"></label><label>종류<select name="category"><option>실손·의료</option><option>건강·질병</option><option>자동차</option><option>운전자</option><option>생명·사망</option><option>상해</option><option>재산·화재</option><option>연금·저축</option><option>기타</option></select></label><label class="wide">다음 점검일<input name="reviewDate" type="date"></label><button class="primary wide" type="submit">보험 기록 추가</button></form><div class="panel"><div class="panel-title"><h3>등록된 보험</h3><span id="policyCount">0건</span></div><div id="policyList" class="empty">아직 기록한 보험이 없습니다.</div></div></div></section>
+
+    <section id="claims" class="section"><div class="section-head"><div><p class="eyebrow">CLAIM PREP</p><h2>보험금 청구 준비기록</h2></div><p>보험금 지급 여부를 판단하지 않고, 실제 보험사 확인 전에 준비사항만 기록합니다.</p></div><div class="split"><form id="claimForm" class="panel form-grid"><label>상황<select name="type" required><option value="">선택</option><option>통원</option><option>입원</option><option>수술</option><option>사고·상해</option><option>기타</option></select></label><label>발생일<input name="date" type="date" required></label><label class="wide">준비 메모<textarea name="memo" maxlength="500" rows="3" required placeholder="민감정보는 적지 마세요. 예: 진료비 영수증과 세부내역서 확인"></textarea></label><button class="primary wide" type="submit">청구 준비기록 추가</button></form><div class="panel"><div class="panel-title"><h3>청구 준비기록</h3><span id="claimCount">0건</span></div><div id="claimList" class="empty">아직 청구 준비기록이 없습니다.</div></div></div></section>
+
+    <section class="section public-info"><div><p class="eyebrow">PUBLIC KNOWLEDGE</p><h2>보험 자체의 공식 설명은 에코디보험에서</h2><p>자동차보험 등 법령·공식자료에 근거한 공통 설명과 보험 종류별 안내는 개인 기록과 분리해 공개 에코디보험에서 확인합니다.</p></div><a class="primary" href="https://ekodi.kr/insurance">에코디보험 열기 →</a></section>
+  </main>
+  <footer><a href="/my/">← My EKODI 홈</a><span>개인 보험기록은 현재 브라우저 로컬에만 저장</span></footer>
+</body>
+</html>
