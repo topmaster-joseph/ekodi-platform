@@ -10,11 +10,26 @@ function safeReturnTo(value) {
   try {
     const url = new URL(String(value || ''));
     if (url.protocol !== 'https:') return '';
-    if (!['my.ekodi.kr','ekodi.kr','marketing.ekodi.kr'].includes(url.hostname)) return '';
+    if (!['admin.ekodi.kr','ekodi.kr','marketing.ekodi.kr'].includes(url.hostname)) return '';
     return url.href;
   } catch { return ''; }
 }
 function owner(subject) { return { type:subject.ownerType || (subject.type === 'person' ? 'person' : 'workspace'), key:subject.ownerKey || subject.workspaceId || subject.key }; }
+function mallAutonomousSubject(subject, maxChannels) {
+  return subject?.type === 'tenant' && String(subject?.key || '').toLowerCase() === 'ekodimall'
+    && Boolean(subject?.workspaceId) && Number(maxChannels || 0) >= 10;
+}
+async function ensureMallProductShortDelegation(env, identity, subject, maxChannels, now) {
+  if (!mallAutonomousSubject(subject,maxChannels)) return false;
+  await env.DB.prepare(`INSERT INTO channel_automation_profiles
+    (owner_type,owner_key,workspace_slug,template_id,enabled,timezone,schedule_json,policy_json,created_by_email,created_at,updated_at)
+    VALUES('workspace',?,?, 'product_short',1,'Asia/Seoul',?,?,?, ?,?)
+    ON CONFLICT(owner_type,owner_key,template_id) DO UPDATE SET workspace_slug=excluded.workspace_slug,enabled=1,timezone=excluded.timezone,schedule_json=excluded.schedule_json,policy_json=excluded.policy_json,updated_at=excluded.updated_at`)
+    .bind(subject.workspaceId,subject.workspaceSlug||subject.key,
+      safeJson({strategy:'profit_loop',publisher:'ekodi-mall'}),
+      safeJson({mode:'autonomous',source:'youtube_channel_selection',paidAds:false}),identity.email,now,now).run();
+  return true;
+}
 
 export function youtubeConnectionReady(env) { return channelCredentialReady(env) && youtubeOAuthConfigured(env); }
 
@@ -47,7 +62,7 @@ function callbackResponse(message, ok = false, returnTo = '', params = {}) {
   }
   const title = ok ? 'YouTube 채널 연결 완료' : 'YouTube 채널 연결 확인 필요';
   const escaped = String(message || '').replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
-  return new Response(`<!doctype html><html lang="ko"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>${title}</title><body style="font-family:system-ui;padding:32px;max-width:680px;margin:auto"><h1>${title}</h1><p>${escaped}</p><p><a href="https://ekodi.kr/my/">My EKODI로 돌아가기</a></p></body></html>`,{status:ok?200:400,headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-frame-options':'DENY'}});
+  return new Response(`<!doctype html><html lang="ko"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>${title}</title><body style="font-family:system-ui;padding:32px;max-width:680px;margin:auto"><h1>${title}</h1><p>${escaped}</p><p><a href="https://admin.ekodi.kr/?route=marketing-ai">에코디 관리자 마케팅으로 돌아가기</a></p></body></html>`,{status:ok?200:400,headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-frame-options':'DENY'}});
 }
 export async function handleYoutubeCallback(request, env) {
   const url = new URL(request.url);
@@ -69,7 +84,7 @@ export async function handleYoutubeCallback(request, env) {
     const channels = await listYoutubeChannels(tokens.access_token);
     if (!channels.length) throw Object.assign(new Error('YOUTUBE_CHANNEL_NOT_FOUND'), { code:'YOUTUBE_CHANNEL_NOT_FOUND' });
     const encrypted = await encryptChannelCredential(env,{refreshToken:String(tokens.refresh_token),tokenType:String(tokens.token_type||'Bearer'),scope:String(tokens.scope||''),connectedAt:nowIso()});
-    const status = channels.length === 1 ? 'selection_required' : 'selection_required';
+    const status = 'selection_required';
     await env.DB.prepare(`UPDATE channel_oauth_connections SET credential_ciphertext=?,credential_iv=?,scopes=?,discovered_channels_json=?,status=?,last_error='',updated_at=? WHERE id=?`).bind(encrypted.ciphertext,encrypted.iv,String(tokens.scope||''),safeJson(channels,[]),status,nowIso(),row.connection_id).run();
     return callbackResponse('Google 연결이 완료되었습니다. 게시할 YouTube 채널을 선택해 주세요.',true,row.return_to,{channel_connection:row.connection_id,status:'selection_required'});
   } catch (error) {
@@ -95,7 +110,8 @@ export async function selectYoutubeConnection(request, env, identity, subject, c
   const now = nowIso();
   await env.DB.prepare(`UPDATE channel_oauth_connections SET external_account_id=?,display_name=?,status='active',last_error='',updated_at=? WHERE id=?`).bind(externalId,clean(selected.title,120),now,connectionId).run();
   await env.DB.prepare(`INSERT INTO marketing_publish_channels(subject_type,subject_key,workspace_id,provider,channel_type,display_name,external_account_id,credential_ref,status,config_json,created_at,updated_at) VALUES(?,?,?,'youtube','youtube_short',?,?,?,'active',?,?,?) ON CONFLICT(subject_type,subject_key,provider,channel_type,external_account_id) DO UPDATE SET workspace_id=excluded.workspace_id,display_name=excluded.display_name,credential_ref=excluded.credential_ref,status='active',updated_at=excluded.updated_at`).bind(subject.type,subject.key,subject.workspaceId||'',clean(selected.title,120),externalId,`oauth:${connectionId}`,safeJson({privacyStatus:'private',shorts:true}),now,now).run();
-  return { ok:true, connectionId, externalAccountId:externalId, displayName:clean(selected.title,120), status:'active' };
+  const productShortDelegated = await ensureMallProductShortDelegation(env,identity,subject,maxChannels,now);
+  return { ok:true, connectionId, externalAccountId:externalId, displayName:clean(selected.title,120), status:'active', productShortDelegated };
 }
 export async function disconnectManagedConnection(env, subject, connectionId) {
   const o = owner(subject);
