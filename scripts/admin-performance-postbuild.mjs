@@ -1,4 +1,4 @@
-﻿import { createHash } from 'node:crypto';
+import { createHash } from 'node:crypto';
 import { copyFile, readFile, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 
@@ -86,7 +86,7 @@ function scheduleFinanceRefresh() {
 }
 financeRefresh.addEventListener('click', () => loadFinance(true));
 financeSectionButton.addEventListener('click', () => {
-  document.querySelector('#pageTitle').textContent = '寃곗젣 쨌 ?뚭퀎';
+  document.querySelector('#pageTitle').textContent = '결제 · 회계';
   loadFinance(false).finally(scheduleFinanceRefresh);
 });
 document.addEventListener('visibilitychange', scheduleFinanceRefresh);
