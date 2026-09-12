@@ -41,7 +41,7 @@ jobs:
           node --check support/service.js
           node --check support/specialists.js
           node --test test/support-opportunity.test.mjs test/support-central-identity.test.mjs
-          grep -Fq 'https://support.ekodi.kr' supabase/functions/profile-api/index.ts
+          grep -Fq 'https://ekodi.kr/support' supabase/functions/profile-api/index.ts
           ! grep -Fq 'ekodi-support-opportunity-staging' supabase/functions/profile-api/index.ts
           grep -Fq 'SUPABASE_URL' wrangler.support.toml
           ! grep -Fq 'SUPABASE_URL' wrangler.support.staging.toml
@@ -58,18 +58,18 @@ jobs:
           set -euo pipefail
           specialist_paths=(grants subsidies scholarships contests welfare private-support sponsorship)
           for attempt in $(seq 1 60); do
-            config_code=$(curl -sS -o /tmp/support-config.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://support.ekodi.kr/config.js' || true)
-            account_code=$(curl -sS -o /tmp/support-account.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://support.ekodi.kr/account.js' || true)
-            health_code=$(curl -sS -o /tmp/support-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://support.ekodi.kr/health' || true)
+            config_code=$(curl -sS -o /tmp/support-config.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/support/config.js' || true)
+            account_code=$(curl -sS -o /tmp/support-account.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/support/account.js' || true)
+            health_code=$(curl -sS -o /tmp/support-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/support/health' || true)
             specialist_ok=true
             for path in "${specialist_paths[@]}"; do
-              code=$(curl -L -sS -o "/tmp/support-${path}.html" -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://support.ekodi.kr/$path" || true)
+              code=$(curl -L -sS -o "/tmp/support-${path}.html" -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/support/$path" || true)
               if [[ "$code" != '200' ]] || ! grep -Fq 'id="ekodiAccount"' "/tmp/support-${path}.html"; then specialist_ok=false; fi
             done
             cors_code=$(curl -sS -o /dev/null -D /tmp/profile-cors.headers -w '%{http_code}' -X OPTIONS \
               --connect-timeout 5 --max-time 15 \
               'https://renzehysxirjilvdxacv.supabase.co/functions/v1/profile-api' \
-              -H 'Origin: https://support.ekodi.kr' \
+              -H 'Origin: https://ekodi.kr' \
               -H 'Access-Control-Request-Method: GET' \
               -H 'Access-Control-Request-Headers: authorization,apikey' || true)
             if [[ "$config_code" == '200' && "$account_code" == '200' && "$health_code" == '200' && "$specialist_ok" == 'true' ]] \

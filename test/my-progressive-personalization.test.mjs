@@ -8,7 +8,7 @@ import {
 } from '../my/progressive-personalization.js';
 
 const SERVICES=[
-  {id:'support',name:'Support',url:'https://support.ekodi.kr/',order:1},
+  {id:'support',name:'Support',url:'https://ekodi.kr/support/',order:1},
   {id:'work',name:'Work',url:'https://work.ekodi.kr/',order:2},
   {id:'marketing',name:'Marketing',url:'https://marketing.ekodi.kr/',order:3},
 ];

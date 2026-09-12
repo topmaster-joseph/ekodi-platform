@@ -256,8 +256,8 @@
       ],
       "provider": {
         "id": "support-opportunity",
-        "surface": "https://support.ekodi.kr/",
-        "health": "https://support.ekodi.kr/health",
+        "surface": "https://ekodi.kr/support/",
+        "health": "https://ekodi.kr/support/health",
         "contract": "ekodi.benefit-radar.v1",
         "generation": 10,
         "consent": "consent-first",

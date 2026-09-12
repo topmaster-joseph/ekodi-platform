@@ -461,8 +461,8 @@
     {
       "id": "support",
       "name": "Support Opportunity AI",
-      "domain": "support.ekodi.kr",
-      "url": "https://support.ekodi.kr/",
+      "domain": "ekodi.kr/support",
+      "url": "https://ekodi.kr/support/",
       "status": "offline",
       "httpStatus": 429,
       "responseTime": 183,

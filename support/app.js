@@ -1,5 +1,6 @@
 import {SUPPORT_STAGES,OPPORTUNITY_SERVICES,getOpportunityService,resolveOpportunityService,analyzeGuidanceChange,fillOfficialForm,buildNextActions} from './core.js';
 
+const SUPPORT_BASE='/support';
 const $=id=>document.getElementById(id);
 const escapeHtml=value=>String(value??'').replace(/[&<>'"]/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch]));
 const stageLabels={discovery:'발굴','fit-review':'적합도 검토','application-prep':'신청 준비',submitted:'신청 완료','document-review':'서류평가',presentation:'발표평가',selected:'선정',agreement:'협약',execution:'수행','mid-review':'중간점검','change-control':'변경관리','final-report':'결과보고',settlement:'정산',completed:'완료','follow-up':'후속사업'};
@@ -15,7 +16,7 @@ const activeService=activeServiceId==='all'?null:getOpportunityService(activeSer
 
 function serviceCard(service){
   const active=service.id===activeServiceId?' active':'';
-  return `<a class="service-card${active}" href="${service.path}" aria-label="${escapeHtml(service.label)} ${escapeHtml(service.title)}"><span class="label">${escapeHtml(service.label)}</span><h3>${escapeHtml(service.title)}</h3><p>${escapeHtml(service.description)}</p><footer><span>${escapeHtml(service.audiences.slice(0,2).join(' · '))}</span><span class="status-dot ${service.sourceStatus}">${escapeHtml(statusLabels[service.sourceStatus])}</span></footer></a>`;
+  return `<a class="service-card${active}" href="${SUPPORT_BASE}${service.path}" aria-label="${escapeHtml(service.label)} ${escapeHtml(service.title)}"><span class="label">${escapeHtml(service.label)}</span><h3>${escapeHtml(service.title)}</h3><p>${escapeHtml(service.description)}</p><footer><span>${escapeHtml(service.audiences.slice(0,2).join(' · '))}</span><span class="status-dot ${service.sourceStatus}">${escapeHtml(statusLabels[service.sourceStatus])}</span></footer></a>`;
 }
 
 function renderServices(){
@@ -68,7 +69,7 @@ function sourceLabel(mode){if(mode==='ready_api')return'공식 API 연결';if(mo
 async function refreshSources(){
   const box=$('sourceStatus');box.textContent='확인 중...';
   try{
-    const response=await fetch('/api/sources/status',{cache:'no-store'});const data=await response.json();
+    const response=await fetch('/support/api/sources/status',{cache:'no-store'});const data=await response.json();
     const upstream=(data.sources||[]).map(source=>`<div class="source-row"><strong>${escapeHtml(source.name)}</strong> · ${escapeHtml(sourceLabel(source.mode))}<br><small>${source.official?'공식 원천':'외부 원천'} · ${escapeHtml((source.capabilities||[]).join(' · '))}</small></div>`).join('');
     const specialist=activeService?`<div class="source-row"><strong>${escapeHtml(activeService.label)}</strong> · ${escapeHtml(statusLabels[activeService.sourceStatus])}<br><small>${activeService.sourceStatus==='live'?'현재 공식 피드에서 관련 공고를 분류·매칭합니다.':'전문 원천 어댑터가 추가될 때 같은 모듈에 연결되도록 분리되어 있습니다.'}</small></div>`:'';
     box.innerHTML=upstream+specialist;
@@ -98,7 +99,7 @@ async function buildBrief(){
     const needContext={consent:{proactiveBenefits:profile.proactiveBenefits,activityContext:false,externalData:false,sensitiveBenefits:false},signals:[]};
     const payload={profile,needContext,projects:[project],hashtags:[profile.region,profile.need,...(profile.interests||[])].filter(Boolean),limit:80,minScore:(profile.need||profile.region)?54:50};
     if(activeService)payload.serviceId=activeService.id;
-    const response=await fetch('/api/proactive-brief',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});
+    const response=await fetch('/support/api/proactive-brief',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});
     const data=await response.json();const brief=data.brief||data;const opportunities=brief.opportunities||[];const actions=brief.projectActions||[];
     const soon=opportunities.filter(o=>o.urgency?.daysLeft!=null&&o.urgency.daysLeft>=0&&o.urgency.daysLeft<=7).length;
     $('matchCount').textContent=opportunities.length;

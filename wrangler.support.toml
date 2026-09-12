@@ -5,9 +5,9 @@ workers_dev = true
 preview_urls = false
 
 [[routes]]
-pattern = "support.ekodi.kr"
+pattern = "ekodi.kr/support*"
 zone_name = "ekodi.kr"
-custom_domain = true
+
 
 [vars]
 DATA_MODE = "production"

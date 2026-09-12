@@ -7,7 +7,6 @@ const ALLOWED_ORIGINS=new Set([
   "https://ekodi.kr",
   "https://my.ekodi.kr",
   "https://ekodi-my-staging.topmaster-joseph.workers.dev",
-  "https://support.ekodi.kr",
 ]);
 const admin=createClient(SUPABASE_URL,SERVICE_ROLE,{auth:{persistSession:false}});
 

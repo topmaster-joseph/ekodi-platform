@@ -25,7 +25,7 @@ const realms={
   work:{name:'EKODI Work',returnTo:'https://work.ekodi.kr/',open:true,kind:'work'},
   messenger:{name:'EKODI Messenger',returnTo:'https://messenger.ekodi.kr/',open:true,kind:'messenger'},
   invest:{name:'EKODI Investment',returnTo:'https://invest.ekodi.kr/',open:true,kind:'invest'},
-  support:{name:'EKODI Support AI',returnTo:'https://support.ekodi.kr/',open:true,kind:'support'},
+  support:{name:'EKODI Support AI',returnTo:'https://ekodi.kr/support/',open:true,kind:'support'},
   publishing:{name:'Publishing',returnTo:'https://publishing.ekodi.kr/',open:true,kind:'publishing'},
   money:{name:'EKODI Money',returnTo:'https://money.ekodi.kr/',open:true,kind:'money'},
   mail:{name:'EKODI Mail',returnTo:'https://mail.ekodi.kr/',open:true,kind:'mail'},

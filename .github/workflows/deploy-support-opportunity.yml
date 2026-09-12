@@ -237,14 +237,14 @@ jobs:
           set -euo pipefail
           specialist_paths=(grants subsidies scholarships contests welfare private-support sponsorship)
           for attempt in $(seq 1 18); do
-            root=$(curl -L -sS -D /tmp/support-headers -o /tmp/support.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://support.ekodi.kr/' || true)
-            health=$(curl -sS -o /tmp/support-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://support.ekodi.kr/health' || true)
-            sources=$(curl -sS -o /tmp/support-sources.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://support.ekodi.kr/api/sources/status' || true)
-            notices=$(curl -sS -o /tmp/support-notices.json -w '%{http_code}' --connect-timeout 8 --max-time 25 'https://support.ekodi.kr/api/opportunities?limit=5' || true)
-            admin=$(curl -sS -o /dev/null -D /tmp/support-admin-headers -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://support.ekodi.kr/admin' || true)
+            root=$(curl -L -sS -D /tmp/support-headers -o /tmp/support.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/support/' || true)
+            health=$(curl -sS -o /tmp/support-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/support/health' || true)
+            sources=$(curl -sS -o /tmp/support-sources.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/support/api/sources/status' || true)
+            notices=$(curl -sS -o /tmp/support-notices.json -w '%{http_code}' --connect-timeout 8 --max-time 25 'https://ekodi.kr/support/api/opportunities?limit=5' || true)
+            admin=$(curl -sS -o /dev/null -D /tmp/support-admin-headers -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/support/admin' || true)
             specialist_ok=true
             for path in "${specialist_paths[@]}"; do
-              code=$(curl -L -sS -o "/tmp/support-${path}.html" -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://support.ekodi.kr/$path" || true)
+              code=$(curl -L -sS -o "/tmp/support-${path}.html" -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/support/$path" || true)
               if [[ "$code" != '200' ]] || ! grep -Fq 'SPECIALIST WORKSPACE · SHARED OPPORTUNITY CORE' "/tmp/support-${path}.html"; then
                 echo "specialist production route failed path=$path code=$code"
                 specialist_ok=false
@@ -283,4 +283,4 @@ jobs:
             -H 'Accept: application/vnd.github+json' \
             -H 'X-GitHub-Api-Version: 2022-11-28' \
             "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \
-            -d "{\"state\":\"${VERIFY_STATE}\",\"context\":\"EKODI Support Production\",\"description\":\"support.ekodi.kr production verification\",\"target_url\":\"${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}\"}"
+            -d "{\"state\":\"${VERIFY_STATE}\",\"context\":\"EKODI Support Production\",\"description\":\"ekodi.kr/support production verification\",\"target_url\":\"${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}\"}"

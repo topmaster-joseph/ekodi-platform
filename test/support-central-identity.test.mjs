@@ -32,7 +32,7 @@ test('staging central identity is isolated while production is configured',()=>{
 
 test('profile api allows production Support origin only through explicit allowlist',()=>{
   const profileApi=read('supabase/functions/profile-api/index.ts');
-  assert.match(profileApi,/"https:\/\/support\.ekodi\.kr"/);
+  assert.match(profileApi,/"https:\/\/ekodi\.kr"/);assert.doesNotMatch(profileApi,/support\.ekodi\.kr/);
   assert.doesNotMatch(profileApi,/ekodi-support-opportunity-staging/);
 });
 
