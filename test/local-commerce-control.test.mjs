@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
 import { handleLocalCommerceControl, LOCAL_COMMERCE_CONTRACT } from '../local-commerce-control.js';
 
-const migration = fs.readFileSync(new URL('../migrations/0079_local_commerce_voucher.sql', import.meta.url), 'utf8');
+const migration = fs.readFileSync(new URL('../migrations/0082_local_commerce_voucher.sql', import.meta.url), 'utf8');
 
 function seededDb(){
   const db=new DatabaseSync(':memory:');
