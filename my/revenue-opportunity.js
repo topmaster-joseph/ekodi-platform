@@ -34,9 +34,8 @@
     }
   ];
   const capabilities = [
-    ['수익기회 탐색','free'],['상품·서비스 만들기','free'],['콘텐츠 생산','free'],
-    ['전문 홈페이지 자동 구성','paid'],['채널 게시·배포','paid'],['홍보·유입 자동화','paid'],
-    ['고객·재구매 관리','paid'],['성과·수익 분석','free'],['자율 수익 운영','paid']
+    ['\uC218\uC775\uAE30\uD68C \uC815\uBCF4','info'],['\uC0AC\uC5C5\uC131 \uBE44\uAD50\u00B7\uC124\uBA85','info'],['\uACF5\uACF5\uC9C0\uC6D0 \uC548\uB0B4','info'],
+    ['\uCC44\uB110\uBCC4 \uC815\uBCF4 \uC81C\uACF5','info'],['EKODIBIZ \uAD00\uB9AC\uD615 \uC11C\uBE44\uC2A4 \uC758\uB8B0','info']
   ];
   const esc = value => String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[ch]);
   const currentText = () => String(document.querySelector('#intentPlanText')?.value || '').trim().toLowerCase();
@@ -44,12 +43,12 @@
   const shell = document.createElement('div');
   shell.id = 'revenueOpportunityShell';
   shell.className = 'revenue-opportunity-shell';
-  shell.innerHTML = '<div class="revenue-opportunity-head"><div><small class="eyebrow">EKODI REVENUE ENGINE · MY ENTRY</small><h3>나에게 맞는 작은 수익기회</h3><p>처음부터 큰 사업을 만들지 않습니다. 내 목표에서 가능한 아이디어를 몇 개만 제안하고, 실제 수요를 작은 범위에서 먼저 검증합니다.</p></div><span class="revenue-opportunity-badge">기본 제안 무료</span></div><div class="revenue-idea-grid" data-revenue-ideas></div><div class="revenue-capability-panel"><div><div><h4>필요한 기능만 확장</h4><p>무료 핵심 경험은 남기고, 자동화 범위는 기능별로 선택합니다.</p></div></div><div class="revenue-capability-list" data-revenue-capabilities></div></div><p class="revenue-recommendation-note" data-revenue-note>제안은 시장 검증 전 아이디어입니다. 결제·계약·광고비·외부계정 연결 같은 중요한 실행은 별도 승인과 권한 확인을 유지합니다.</p>';
+  shell.innerHTML = '<div class="revenue-opportunity-head"><div><small class="eyebrow">EKODI REVENUE ENGINE &middot; INFORMATION</small><h3>\uB098\uC5D0\uAC8C \uB9DE\uB294 \uC218\uC775\uC815\uBCF4\uC640 \uAE30\uD68C</h3><p>\uC77C\uBC18 \uC0AC\uC6A9\uC790\uC5D0\uAC8C\uB294 \uD0D0\uC0C9&middot;\uCD94\uCC9C&middot;\uBE44\uAD50&middot;\uC548\uB0B4 \uC911\uC2EC\uC73C\uB85C \uC81C\uACF5\uD569\uB2C8\uB2E4. EKODI \uD50C\uB7AB\uD3FC\uC758 \uC218\uC775\uC0AC\uC5C5 \uC6B4\uC601&middot;\uACC4\uC57D&middot;\uC218\uB0A9\uC740 EKODIBIZ\uAC00 \uB2F4\uB2F9\uD569\uB2C8\uB2E4.</p></div><span class="revenue-opportunity-badge">\uC815\uBCF4 \uC81C\uACF5</span></div><div class="revenue-idea-grid" data-revenue-ideas></div><div class="revenue-capability-panel"><div><div><h4>\uD544\uC694\uD55C \uC815\uBCF4\uC640 \uC11C\uBE44\uC2A4</h4><p>\uD604\uC7AC \uC0C1\uD669\uC5D0 \uB9DE\uB294 \uC815\uBCF4\uB97C \uBA3C\uC800 \uC81C\uACF5\uD558\uACE0, \uC2E4\uC81C \uC0C1\uC5C5 \uC11C\uBE44\uC2A4\uAC00 \uD544\uC694\uD55C \uACBD\uC6B0 EKODIBIZ\uB85C \uC5F0\uACB0\uD569\uB2C8\uB2E4.</p></div></div><div class="revenue-capability-list" data-revenue-capabilities></div></div><p class="revenue-recommendation-note" data-revenue-note>\uC81C\uC548\uC740 \uC815\uBCF4\uC640 \uAC00\uB2A5\uC131 \uC548\uB0B4\uC785\uB2C8\uB2E4. EKODI \uB0B4 \uC218\uC775\uC0AC\uC5C5\uC758 \uC218\uC775\uC18C\uC720&middot;\uC6B4\uC601&middot;\uACC4\uC57D&middot;\uC218\uB0A9 \uC8FC\uCCB4\uB294 EKODIBIZ\uC774\uBA70, \uC77C\uBC18 \uC0AC\uC6A9\uC790\uC758 \uB3C5\uB9BD\uC801\uC778 \uC678\uBD80 \uC0AC\uC5C5 \uAD8C\uD55C\uC740 \uC81C\uD55C\uD558\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4.</p>';
   hostSection.append(shell);
 
   const ideasHost = shell.querySelector('[data-revenue-ideas]');
   const capabilityHost = shell.querySelector('[data-revenue-capabilities]');
-  capabilityHost.innerHTML = capabilities.map(([label, access]) => `<span class="revenue-capability" data-access="${access}"><span>${esc(label)}</span><b>${access === 'free' ? '기본' : '구독형'}</b></span>`).join('');
+  capabilityHost.innerHTML = capabilities.map(([label, access]) => `<span class="revenue-capability" data-access="${access}"><span>${esc(label)}</span><b>\uC548\uB0B4</b></span>`).join('');
 
   function rankIdeas(text) {
     return ideaLibrary.map(idea => ({
@@ -61,7 +60,7 @@
   function fillIntent(idea) {
     const input = document.querySelector('#intentPlanText');
     if (!input) return;
-    input.value = `${idea.title} 아이디어를 내 상황에 맞게 작게 검증하고, 필요한 기능과 중단 조건까지 계획해줘`;
+    input.value = `${idea.title} \uAD00\uB828 \uC815\uBCF4\uC640 \uACF5\uACF5\uC9C0\uC6D0 \uAE30\uD68C\uB97C \uBE44\uAD50\uD574\uC8FC\uACE0, \uD544\uC694\uD558\uBA74 EKODIBIZ \uAD00\uB9AC\uD615 \uC11C\uBE44\uC2A4\uB85C \uC5F0\uACB0\uD574\uC918`;
     input.focus();
     input.scrollIntoView({ behavior:'smooth', block:'center' });
   }
@@ -69,7 +68,7 @@
   function render() {
     const text = currentText();
     const ideas = rankIdeas(text);
-    ideasHost.innerHTML = ideas.map((idea,index) => `<article class="revenue-idea"><small>${String(index+1).padStart(2,'0')} · 검증 전 아이디어</small><strong>${esc(idea.title)}</strong><p>${esc(idea.summary)}</p><button type="button" data-revenue-idea="${esc(idea.id)}">작게 검증하기</button></article>`).join('');
+    ideasHost.innerHTML = ideas.map((idea,index) => `<article class="revenue-idea"><small>${String(index+1).padStart(2,'0')} &middot; \uC815\uBCF4 \uC81C\uC548</small><strong>${esc(idea.title)}</strong><p>${esc(idea.summary)}</p><button type="button" data-revenue-idea="${esc(idea.id)}">\uC815\uBCF4\uB85C \uBCF4\uAE30</button></article>`).join('');
     ideasHost.querySelectorAll('[data-revenue-idea]').forEach(button => button.addEventListener('click', () => {
       const idea = ideaLibrary.find(item => item.id === button.dataset.revenueIdea);
       if (idea) fillIntent(idea);
