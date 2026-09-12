@@ -3,8 +3,7 @@ name: Watch EKODI Church Source
 on:
   workflow_dispatch:
   push:
-    branches:
-      - main
+    branches: [main]
     paths:
       - '.github/workflows/watch-ekodi-church-source.yml'
   schedule:
@@ -21,20 +20,21 @@ concurrency:
 jobs:
   check:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
-      - name: Compare Church source with production release
+      - name: Compare Church source with canonical production release
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -euo pipefail
           source_sha="$(git ls-remote https://github.com/topmaster-joseph/ekodi-church.git refs/heads/main | awk '{print $1}')"
-          production_sha="$(curl -L -fsS --connect-timeout 5 --max-time 20 "https://church.ekodi.kr/church-release.json?watch=${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" | jq -r '.sourceSha // empty' || true)"
+          production_sha="$(curl -L -fsS --connect-timeout 5 --max-time 20 "https://ekodi.kr/ekodichurch/church-release.json?watch=${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" | jq -r '.sourceSha // empty' || true)"
           echo "Church source SHA: ${source_sha}"
-          echo "Church production SHA: ${production_sha:-missing}"
+          echo "Canonical Church production SHA: ${production_sha:-missing}"
           test -n "$source_sha"
           if [[ "$source_sha" == "$production_sha" ]]; then
-            echo 'Church production is already current.'
+            echo 'Canonical Church production is already current.'
             exit 0
           fi
           status="$(curl -L -sS -o /tmp/church-dispatch.json -w '%{http_code}' \
@@ -43,7 +43,7 @@ jobs:
             -H 'Accept: application/vnd.github+json' \
             -H 'X-GitHub-Api-Version: 2022-11-28' \
             "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/deploy-ekodi-church-homepage.yml/dispatches" \
-            -d '{"ref":"main"}')"
+            -d '{"ref":"main","inputs":{"source_ref":"main"}}')"
           if [[ "$status" != '204' ]]; then
             cat /tmp/church-dispatch.json || true
             echo "Church deployment dispatch failed with HTTP ${status}."
