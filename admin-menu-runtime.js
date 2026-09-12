@@ -218,6 +218,21 @@ function ensureAdminNav() {
   }
   button.querySelector('span').textContent = getAdminMenuLabel('admins', locale);
 }
+function ensureExternalAccountNav() {
+  if (currentContext.type !== 'platform' || currentSession?.role !== 'super_admin') return;
+  const nav = document.querySelector('.sidebar nav');
+  if (!nav) return;
+  let button = nav.querySelector('.nav[data-admin-link="external-accounts"]');
+  if (!button) {
+    button = document.createElement('button');
+    button.type = 'button'; button.className = 'nav'; button.dataset.adminLink = 'external-accounts';
+    button.innerHTML = '↗ <span></span>';
+    button.addEventListener('click', () => import('./external-account-admin.js').catch(console.error));
+    const admins = nav.querySelector('.nav[data-section="admins"]');
+    admins?.insertAdjacentElement('afterend', button) || nav.append(button);
+  }
+  button.querySelector('span').textContent = t('외부계정 통합운영', 'External Account Control');
+}
 function ensureAdminPanel() {
   if (panelInstalled) return document.querySelector('[data-panel~="admins"]');
   const content = document.querySelector('.content');
@@ -239,6 +254,7 @@ async function ensureAdminAccess() {
   const requestedContext = readRequestedContext();
   if (currentContext.type !== 'platform' || (requestedContext && requestedContext !== 'platform:global')) return null;
   ensureAdminNav();
+  ensureExternalAccountNav();
   const panel = ensureAdminPanel();
   applyMenuLabels();
   if (panel) void loadAccounts();
@@ -331,13 +347,14 @@ function contextBadgeLabel(context) {
 }
 function syncPlatformOnlyNavigation() {
   const admins = document.querySelector('.sidebar nav .nav[data-section="admins"]');
+  const externalAccounts = document.querySelector('.sidebar nav .nav[data-admin-link="external-accounts"]');
   if (currentContext.type !== 'platform') {
     const activeAdmins = admins?.classList.contains('active');
-    admins?.remove();
+    admins?.remove(); externalAccounts?.remove();
     if (activeAdmins) window.EKODIAdminPanels?.activate?.(currentContext.type === 'workspace' ? 'workspace' : 'campus');
     return;
   }
-  if (currentSession?.role === 'super_admin') ensureAdminNav();
+  if (currentSession?.role === 'super_admin') { ensureAdminNav(); ensureExternalAccountNav(); }
 }
 function renderContextControl() {
   document.querySelector('[data-ekodi-admin-context-control]')?.remove();
@@ -472,8 +489,8 @@ async function install() {
     installEkodiBizSourceHub();
     if (currentSession.role === 'super_admin') ensureAdminPanel();
     await installContextControl();
-    if (currentSession.role === 'super_admin' && currentContext.type === 'platform') { ensureAdminNav(); ensureAdminPanel(); applyMenuLabels(); }
-    else document.querySelector('.sidebar nav .nav[data-section="admins"]')?.remove();
+    if (currentSession.role === 'super_admin' && currentContext.type === 'platform') { ensureAdminNav(); ensureExternalAccountNav(); ensureAdminPanel(); applyMenuLabels(); }
+    else { document.querySelector('.sidebar nav .nav[data-section="admins"]')?.remove(); document.querySelector('.sidebar nav .nav[data-admin-link="external-accounts"]')?.remove(); }
   } catch (error) { console.warn('[EKODI Admin] Admin OS runtime degraded', error); }
 }
 
