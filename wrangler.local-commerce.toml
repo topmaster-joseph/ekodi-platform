@@ -1,0 +1,25 @@
+name = "ekodi-local-commerce"
+main = "local-commerce-worker.js"
+compatibility_date = "2026-09-04"
+workers_dev = true
+preview_urls = false
+
+[[routes]]
+pattern = "ekodi.kr/local-commerce*"
+zone_name = "ekodi.kr"
+
+[vars]
+DATA_MODE = "production"
+AUTH_URL = "https://auth.ekodi.kr/?site=local-commerce"
+API_BASE = "https://api.ekodi.kr/api/local-commerce"
+SUPABASE_URL = "https://renzehysxirjilvdxacv.supabase.co"
+SUPABASE_PUBLISHABLE_KEY = "sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_"
+
+[assets]
+directory = "./local-commerce"
+binding = "ASSETS"
+run_worker_first = true
+
+[observability.logs]
+enabled = true
+invocation_logs = true
