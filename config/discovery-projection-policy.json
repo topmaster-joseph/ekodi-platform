@@ -1,0 +1,39 @@
+{
+  "version": "1.0.0",
+  "defaultDecision": "deny-undocumented-discovery",
+  "principle": "public-discovery-is-a-purpose-bound-projection",
+  "botIntent": {
+    "search-index": "allow-public-projection",
+    "answer-retrieval": "allow-public-projection",
+    "training": "deny",
+    "agent": "deny-unless-authorized-contract",
+    "unknown-scraper": "challenge-or-deny"
+  },
+  "routeDefaults": {
+    "public": "index-follow",
+    "authenticated": "noindex-nofollow-noarchive",
+    "member": "noindex-nofollow-noarchive",
+    "admin": "noindex-nofollow-noarchive",
+    "api": "noindex-nofollow-noarchive",
+    "raw": "deny-discovery",
+    "export": "deny-discovery",
+    "download": "deny-discovery"
+  },
+  "structuredData": {
+    "source": "public-discovery-projection-only",
+    "allowHiddenPrivateFacts": false
+  },
+  "crawlerPolicy": {
+    "search-index": ["Googlebot", "Bingbot"],
+    "answer-retrieval": ["OAI-SearchBot", "Claude-SearchBot", "PerplexityBot"],
+    "training-deny": ["GPTBot", "ClaudeBot", "Google-Extended"],
+    "verifiedIdentityRequiredAtEdge": true,
+    "trustUserAgentAlone": false
+  },
+  "security": {
+    "robotsIsSecurityBoundary": false,
+    "secureProjectionPrecedesDiscoveryProjection": true,
+    "unknownScraperDefault": "challenge-or-deny",
+    "trainingConsentDefault": false
+  }
+}
