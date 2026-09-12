@@ -164,7 +164,7 @@ jobs:
       - name: EKODI AI Orchestration Gate
         run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
       - name: Download immutable AI Control artifact
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v8
         with:
           name: ekodi-ai-control-release
           path: .release/ai-control
@@ -266,7 +266,7 @@ jobs:
       - name: EKODI AI Orchestration Gate
         run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
       - name: Download the same immutable artifact verified in staging
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v8
         with:
           name: ekodi-ai-control-release
           path: .release/ai-control
