@@ -30,3 +30,26 @@ test('bootstrap keeps demand loading and direct lazy fallbacks for Assist and AI
   assert.match(js,/import\('\.\/admin-lazy-features\.js'\)/);
   assert.match(js,/import\('\.\/admin-ai-control-plane\.js'\)/);
 });
+
+test('production verification submits the real bottom command on canonical ekodi.kr Admin',async()=>{
+  const probePath=new URL('../scripts/admin-assist-canonical-e2e.mjs',import.meta.url);
+  const retryPath=new URL('../scripts/admin-authenticated-e2e-retry.mjs',import.meta.url);
+  const [probe,retry]=await Promise.all([read('scripts/admin-assist-canonical-e2e.mjs'),read('scripts/admin-authenticated-e2e-retry.mjs')]);
+  for(const path of [probePath,retryPath]){
+    const parsed=spawnSync(process.execPath,['--check',fileURLToPath(path)],{encoding:'utf8'});
+    assert.equal(parsed.status,0,parsed.stderr);
+  }
+  assert.match(probe,/https:\/\/ekodi\.kr\/admin\//);
+  assert.match(probe,/https:\/\/ekodi\.kr\/admin\/home\/campus/);
+  assert.match(probe,/https:\/\/api\.ekodi\.kr\/api\/control\/ai\/assist/);
+  assert.match(probe,/#ekodiAssistBootstrap input/);
+  assert.match(probe,/postDataJSON/);
+  assert.match(probe,/ekodi-admin-command-history-v1/);
+  assert.match(probe,/#ekodiAssistPanel:not\(\[hidden\]\)/);
+  assert.match(probe,/ekodi-assist-turn\.assistant/);
+  assert.doesNotMatch(probe,/admin\.ekodi\.kr/);
+  assert.match(retry,/scripts\/admin-assist-canonical-e2e\.mjs/);
+  assert.match(retry,/baseUrl: 'https:\/\/ekodi\.kr\/admin\/'/);
+  assert.match(retry,/canonicalCampusUrl: 'https:\/\/ekodi\.kr\/admin\/home\/campus'/);
+  assert.match(retry,/aggregate\.assistProbe\?\.passed === true/);
+});

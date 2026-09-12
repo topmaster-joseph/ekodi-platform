@@ -6,6 +6,7 @@ import { adminMenuOrder } from '../admin-menu-registry.js';
 
 const maxAttemptsPerMenu = 2;
 const menuTimeoutMs = 30_000;
+const assistTimeoutMs = 60_000;
 const artifactsDir = path.resolve('artifacts/admin-authenticated-e2e');
 const menuIds = adminMenuOrder();
 const productionRegistryUrl = 'https://ekodi.kr/admin-menu-registry.js';
@@ -56,20 +57,20 @@ function terminate(child, signal) {
   } catch {}
 }
 
-function runMenu(menuId, attempt) {
+function runIsolated(script, env, timeoutMs, label) {
   return new Promise(resolve => {
-    const child = spawn(process.execPath, ['scripts/admin-authenticated-e2e-menu-worker.mjs'], {
-      env: { ...process.env, E2E_MENU_ID: menuId, E2E_ATTEMPT: String(attempt) },
+    const child = spawn(process.execPath, [script], {
+      env: { ...process.env, ...env },
       stdio: 'inherit',
       detached: process.platform !== 'win32',
     });
     let timedOut = false;
     const timer = setTimeout(() => {
       timedOut = true;
-      console.error(`[E2E] ${menuId} attempt ${attempt} exceeded ${menuTimeoutMs}ms; terminating isolated renderer`);
+      console.error(`[E2E] ${label} exceeded ${timeoutMs}ms; terminating isolated renderer`);
       terminate(child, 'SIGTERM');
       setTimeout(() => terminate(child, 'SIGKILL'), 2_000).unref?.();
-    }, menuTimeoutMs);
+    }, timeoutMs);
     timer.unref?.();
     child.once('error', error => {
       clearTimeout(timer);
@@ -82,19 +83,39 @@ function runMenu(menuId, attempt) {
   });
 }
 
+function runMenu(menuId, attempt) {
+  return runIsolated(
+    'scripts/admin-authenticated-e2e-menu-worker.mjs',
+    { E2E_MENU_ID: menuId, E2E_ATTEMPT: String(attempt) },
+    menuTimeoutMs,
+    `${menuId} attempt ${attempt}`,
+  );
+}
+
+function runCanonicalAssist() {
+  return runIsolated('scripts/admin-assist-canonical-e2e.mjs', {}, assistTimeoutMs, 'canonical Assist round-trip');
+}
+
 async function readMenuReport(menuId) {
   const file = path.join(artifactsDir, `menu-${menuId.replace(/[^a-z0-9_-]/gi, '_')}.json`);
   try { return JSON.parse(await fs.readFile(file, 'utf8')); } catch { return null; }
 }
 
+async function readAssistReport() {
+  try { return JSON.parse(await fs.readFile(path.join(artifactsDir, 'assist-canonical.json'), 'utf8')); } catch { return null; }
+}
+
 const aggregate = {
   generatedAt: new Date().toISOString(),
-  baseUrl: 'https://admin.ekodi.kr/',
+  baseUrl: 'https://ekodi.kr/admin/',
+  canonicalCampusUrl: 'https://ekodi.kr/admin/home/campus',
+  compatibilityMenuBaseUrl: 'https://admin.ekodi.kr/',
   expectedMenuCount: menuIds.length,
   checkedMenuCount: 0,
   passed: false,
-  mode: 'isolated-menu-renderers',
+  mode: 'isolated-menu-renderers+canonical-assist-roundtrip',
   results: [],
+  assistProbe: null,
   diagnostics: { pageErrors: [], consoleErrors: [], failedAdminAssets: [], attemptFailures: [] },
   error: null,
 };
@@ -127,14 +148,29 @@ for (const menuId of menuIds) {
   }
 }
 
+if (!fatal) {
+  console.log('[E2E] canonical Assist: verifying bottom input → lazy runtime → API → rendered reply');
+  const outcome = await runCanonicalAssist();
+  const assist = await readAssistReport();
+  aggregate.assistProbe = assist;
+  if (!outcome.ok || !assist?.passed) {
+    const reason = assist?.error || outcome.error || `exit=${outcome.code} signal=${outcome.signal || 'none'}`;
+    fatal = new Error(`canonical Assist round-trip failed: ${reason}`);
+  } else {
+    console.log(`[E2E] canonical Assist passed: HTTP ${assist.apiStatus}, replyLength=${assist.replyLength}`);
+  }
+}
+
 aggregate.generatedAt = new Date().toISOString();
-aggregate.passed = !fatal && aggregate.checkedMenuCount === aggregate.expectedMenuCount;
+aggregate.passed = !fatal
+  && aggregate.checkedMenuCount === aggregate.expectedMenuCount
+  && aggregate.assistProbe?.passed === true;
 aggregate.error = fatal ? fatal.message : null;
 aggregate.diagnostics.consoleErrors = aggregate.diagnostics.consoleErrors.slice(-80);
 await fs.writeFile(path.join(artifactsDir, 'report.json'), JSON.stringify(aggregate, null, 2));
 
 if (!aggregate.passed) {
-  console.error(`[E2E] authenticated Admin isolated verification failed: ${aggregate.error}`);
+  console.error(`[E2E] authenticated Admin verification failed: ${aggregate.error}`);
   process.exit(1);
 }
-console.log(`[E2E] authenticated Admin isolated verification passed: ${aggregate.checkedMenuCount}/${aggregate.expectedMenuCount} menus`);
+console.log(`[E2E] authenticated Admin verification passed: ${aggregate.checkedMenuCount}/${aggregate.expectedMenuCount} menus + canonical Assist command round-trip`);
