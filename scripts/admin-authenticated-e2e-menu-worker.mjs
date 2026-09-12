@@ -12,8 +12,10 @@ if (!menuId) throw new Error('E2E_MENU_ID is required');
 const menuIds = adminMenuOrder();
 if (!menuIds.includes(menuId)) throw new Error(`Unknown Admin menu: ${menuId}`);
 const group = getAdminMenuGroupForSection(menuId);
-const baseUrl = 'https://admin.ekodi.kr/';
+const adminOrigin = 'https://ekodi.kr';
+const baseUrl = `${adminOrigin}/admin/`;
 const authenticatedEntryUrl = `${baseUrl}?route=finance#ekodi_admin_token=${token}`;
+const isCanonicalAdminUrl = url => url.hostname === 'ekodi.kr' && (url.pathname === '/admin' || url.pathname.startsWith('/admin/'));
 const artifactsDir = path.resolve('artifacts/admin-authenticated-e2e');
 const reportPath = path.join(artifactsDir, `menu-${menuId.replace(/[^a-z0-9_-]/gi, '_')}.json`);
 await fs.mkdir(artifactsDir, { recursive: true });
@@ -51,8 +53,7 @@ async function waitForAdminNavigationIdle() {
   for (let attempt = 0; attempt < 16; attempt += 1) {
     await page.waitForLoadState('domcontentloaded', { timeout: 3_000 }).catch(() => {});
     const current = page.url();
-    const hostname = new URL(current).hostname;
-    if (!['admin.ekodi.kr', 'ekodi.kr'].includes(hostname)) throw new Error(`Admin navigation left the canonical surface before Tax handoff: ${current}`);
+    if (!isCanonicalAdminUrl(new URL(current))) throw new Error(`Admin navigation left the canonical surface before Tax handoff: ${current}`);
     stableSamples = current === previous ? stableSamples + 1 : 0;
     previous = current;
     if (stableSamples >= 2) return current;
@@ -116,7 +117,7 @@ function externalStorageNavigation() {
   return page.waitForRequest(request => {
     try {
       const url = new URL(request.url());
-      return request.isNavigationRequest() && request.frame() === page.mainFrame() && url.hostname !== 'admin.ekodi.kr';
+      return request.isNavigationRequest() && request.frame() === page.mainFrame() && !isCanonicalAdminUrl(url);
     } catch { return false; }
   }, { timeout: 10_000 }).then(request => request.url()).catch(() => null);
 }
@@ -254,12 +255,12 @@ async function verifyPublicSiteControls(tab, alreadyActive, started) {
 
   stage('public-site-controls-api');
   const response = await fetch('https://api.ekodi.kr/api/control/public-sites', {
-    headers: { accept: 'application/json', authorization: `Bearer ${token}`, origin: 'https://admin.ekodi.kr' },
+    headers: { accept: 'application/json', authorization: `Bearer ${token}`, origin: adminOrigin },
     signal: AbortSignal.timeout(10_000),
   });
   if (response.status !== 200) throw new Error(`public-site-controls: API returned HTTP ${response.status}`);
   const corsOrigin = response.headers.get('access-control-allow-origin') || '';
-  if (corsOrigin !== 'https://admin.ekodi.kr') throw new Error(`public-site-controls: production CORS origin mismatch: ${corsOrigin || 'missing'}`);
+  if (corsOrigin !== adminOrigin) throw new Error(`public-site-controls: production CORS origin mismatch: ${corsOrigin || 'missing'}`);
   const payload = await response.json().catch(() => ({}));
   if (!Array.isArray(payload.sites)) throw new Error('public-site-controls: API payload missing sites array');
 
@@ -290,12 +291,12 @@ async function verifyAiSettings(tab, alreadyActive, started) {
   await page.waitForFunction(() => typeof window.EKODIAIManagement?.load === 'function', null, { timeout: 10_000 });
   stage('ai-settings-api');
   const response = await fetch('https://api.ekodi.kr/api/control/ai/v8/collaboration-settings', {
-    headers: { accept:'application/json', authorization:`Bearer ${token}`, origin:'https://admin.ekodi.kr' },
+    headers: { accept:'application/json', authorization:`Bearer ${token}`, origin:adminOrigin },
     signal: AbortSignal.timeout(10_000),
   });
   if (response.status !== 200) throw new Error(`ai-settings: API returned HTTP ${response.status}`);
   const corsOrigin = response.headers.get('access-control-allow-origin') || '';
-  if (corsOrigin !== 'https://admin.ekodi.kr') throw new Error(`ai-settings: production CORS origin mismatch: ${corsOrigin || 'missing'}`);
+  if (corsOrigin !== adminOrigin) throw new Error(`ai-settings: production CORS origin mismatch: ${corsOrigin || 'missing'}`);
   const payload = await response.json().catch(() => ({}));
   const policy = payload.policy || {};
   const weights = policy.router?.weights || {};
@@ -329,7 +330,7 @@ async function verifyLanguageStatus(tab, alreadyActive, started) {
   await page.waitForFunction(() => typeof window.EKODILanguageStatus?.load === 'function', null, { timeout: 10_000 });
   stage('language-status-api');
   const response = await fetch('https://api.ekodi.kr/api/control/language-status', {
-    headers: { accept:'application/json', authorization:`Bearer ${token}`, origin:'https://admin.ekodi.kr' },
+    headers: { accept:'application/json', authorization:`Bearer ${token}`, origin:adminOrigin },
     signal: AbortSignal.timeout(10_000),
   });
   if (response.status !== 200) throw new Error(`language-status: API returned HTTP ${response.status}`);
@@ -354,7 +355,7 @@ async function verifyLanguageStatus(tab, alreadyActive, started) {
 async function verifyMaturity(tab, alreadyActive, started) {
   stage('maturity-api');
   const endpoint='https://api.ekodi.kr/api/control/platform-maturity';
-  const response=await fetch(endpoint,{headers:{accept:'application/json',authorization:`Bearer ${token}`,origin:'https://admin.ekodi.kr'},signal:AbortSignal.timeout(10_000)});
+  const response=await fetch(endpoint,{headers:{accept:'application/json',authorization:`Bearer ${token}`,origin:adminOrigin},signal:AbortSignal.timeout(10_000)});
   if(response.status!==200)throw new Error(`maturity: API returned HTTP ${response.status}`);
   const payload=await response.json().catch(()=>({}));
   if(payload.certificationStatus!=='not-claimed'||payload.current?.certificationStatus!=='not-claimed')throw new Error('maturity: certification boundary drift');
@@ -436,7 +437,7 @@ try {
   page.on('pageerror', error => pageErrors.push(String(error?.stack || error?.message || error)));
   page.on('console', message => { if (message.type() === 'error') consoleErrors.push(message.text()); });
   page.on('requestfailed', request => {
-    try { const url = new URL(request.url()); if (url.hostname === 'admin.ekodi.kr' && /\.(?:js|css)(?:$|\?)/.test(url.pathname + url.search)) failedAdminAssets.push(`${request.method()} ${request.url()} :: ${request.failure()?.errorText || 'failed'}`); } catch {}
+    try { const url = new URL(request.url()); if (url.hostname === 'ekodi.kr' && /\.(?:js|css)(?:$|\?)/.test(url.pathname + url.search)) failedAdminAssets.push(`${request.method()} ${request.url()} :: ${request.failure()?.errorText || 'failed'}`); } catch {}
   });
 
   stage('navigation');

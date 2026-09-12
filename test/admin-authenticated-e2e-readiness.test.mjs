@@ -22,3 +22,11 @@ test('authenticated Admin E2E aggregates every AI settings guard group', async (
   assert.match(worker, /locator\('\.ai-mgmt-guards'\)\.allTextContents\(\)/);
   assert.doesNotMatch(worker, /locator\('\.ai-mgmt-guards'\)\.textContent\(\)/);
 });
+
+test('authenticated Admin E2E boots the canonical path-hosted Admin surface', async () => {
+  const worker = await read('scripts/admin-authenticated-e2e-menu-worker.mjs');
+  assert.match(worker, /const adminOrigin = 'https:\/\/ekodi\.kr';/);
+  assert.match(worker, /const baseUrl = `\$\{adminOrigin\}\/admin\/`;/);
+  assert.match(worker, /isCanonicalAdminUrl/);
+  assert.doesNotMatch(worker, /https:\/\/admin\.ekodi\.kr/);
+});
