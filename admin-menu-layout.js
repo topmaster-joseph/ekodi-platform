@@ -18,8 +18,8 @@ const DEMAND_KEYS=new Map([
   ['marketing-ai','marketing'],['devices','devices'],['life-ai','life-ai'],['personal-finance','personal-finance']
 ]);
 const pairMap=value=>new Map(value.split(' ').map(pair=>pair.split(':')));
-const HASH=pairMap('#sites:sites #common-services:common-services #capabilities:capabilities #capability-center:capabilities #ai-ops:aiops #aiops:aiops #ai-settings:ai-settings #openai:openai #devotional:devotional #ai-module-spec:ai-module-spec #ai-membership:ai-membership #personal-finance:personal-finance #health:health #api-cost:api-cost #storage:storage #storige:storage #security:security #architecture:architecture #devices:devices #campus:campus #public-site-controls:public-site-controls #language-status:language-status #work:work #communication:communication #marketing-ai:marketing-ai #finance:finance #organization:organization #workspace:workspace #clients:clients #admins:admins #community:community #books:books #social:social #supply-network:supply-network #insurance:insurance #policies:policies #services:services #deployments:deployments #release:deployments');
-const CANON=pairMap('sites:#sites common-services:#common-services capabilities:#capabilities aiops:#ai-ops ai-settings:#ai-settings openai:#openai devotional:#devotional ai-module-spec:#ai-module-spec ai-membership:#ai-membership personal-finance:#personal-finance health:#health api-cost:#api-cost storage:#storage security:#security architecture:#architecture devices:#devices campus:#campus public-site-controls:#public-site-controls language-status:#language-status work:#work communication:#communication marketing-ai:#marketing-ai finance:#finance organization:#organization workspace:#workspace clients:#clients admins:#admins community:#community books:#books social:#social supply-network:#supply-network insurance:#insurance');
+const HASH=pairMap('#sites:sites #common-services:common-services #capabilities:capabilities #capability-center:capabilities #ai-ops:aiops #aiops:aiops #ai-settings:ai-settings #openai:openai #devotional:devotional #ai-module-spec:ai-module-spec #ai-membership:ai-membership #personal-finance:personal-finance #health:health #api-cost:api-cost #storage:storage #storige:storage #security:security #architecture:architecture #devices:devices #campus:campus #public-site-controls:public-site-controls #language-status:language-status #work:work #communication:communication #cheonggye-community:cheonggye-community #marketing-ai:marketing-ai #finance:finance #organization:organization #workspace:workspace #clients:clients #admins:admins #community:community #books:books #social:social #supply-network:supply-network #insurance:insurance #policies:policies #services:services #deployments:deployments #release:deployments');
+const CANON=pairMap('sites:#sites common-services:#common-services capabilities:#capabilities aiops:#ai-ops ai-settings:#ai-settings openai:#openai devotional:#devotional ai-module-spec:#ai-module-spec ai-membership:#ai-membership personal-finance:#personal-finance health:#health api-cost:#api-cost storage:#storage security:#security architecture:#architecture devices:#devices campus:#campus public-site-controls:#public-site-controls language-status:#language-status work:#work communication:#communication cheonggye-community:#cheonggye-community marketing-ai:#marketing-ai finance:#finance organization:#organization workspace:#workspace clients:#clients admins:#admins community:#community books:#books social:#social supply-network:#supply-network insurance:#insurance');
 const adminRoutes=()=>window.EKODIAdminRoutes;
 function replaceSectionUrl(section){const target=adminRoutes()?.navigationTarget?.(section,location)||CANON.get(section);if(!target)return;if(target.startsWith('/')){const current=location.pathname+location.search+location.hash;if(current!==target)history.replaceState(null,'',target)}else if(location.hash!==target)history.replaceState(null,'',target)}
 let requestedSection = '';
@@ -82,6 +82,7 @@ function activatePanel(section){
   if(section === 'architecture'&&!window.EKODISystemMap)import('./system-health-admin.js').catch(console.error);
   if(section === 'public-site-controls')window.EKODIPublicSiteControls?.load?.();
   if(section === 'language-status')window.EKODILanguageStatus?.load?.();
+  if(section === 'cheonggye-community')window.EKODICheonggyeCommunityAdmin?.load?.();
   sidebar.classList.remove('open');
   return true;
 }
@@ -124,6 +125,7 @@ function requestDemand(section){
   if(section==='capabilities')return import('./capability-center-admin.js').then(()=>{if(requestedSection!==section)return;applyOrder();activatePanel(section);syncTitle(section);});
   if(section==='admins')return requestAdminAccess();
   if(section==='insurance')return import('./insurance-admin.js').then(()=>{if(requestedSection!==section)return;applyOrder();activatePanel(section);syncTitle(section);});
+  if(section==='cheonggye-community')return import('./cheonggye-community-admin.js').then(()=>{if(requestedSection!==section)return;applyOrder();activatePanel(section);syncTitle(section);});
   const demandKey=DEMAND_KEYS.get(section);
   if(!demandKey||!window.EKODIAdminDemand?.activate){fallbackDemand(section);return null;}
   if(demandLoading.has(section))return demandLoading.get(section);

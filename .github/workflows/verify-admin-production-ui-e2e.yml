@@ -18,6 +18,9 @@ on:
       - 'admin-sidebar.js'
       - 'admin-menu-runtime.js'
       - 'admin-demand-loader.js'
+      - 'cheonggye-community-admin.js'
+      - 'cheonggye-association-page.js'
+      - 'cheonggye-association-route.js'
       - 'campus-actions.js'
       - 'campus-actions.css'
 

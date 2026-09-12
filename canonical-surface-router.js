@@ -1,5 +1,6 @@
 import { handleMailContactApi, mailContactPage } from './mail-contact.js';
 import { injectEkodiShell } from './ekodi-shell-injector.js';
+import { routeCheonggyeAssociation } from './cheonggye-association-route.js';
 
 const CANONICAL_HOST='ekodi.kr';
 const SURFACE_PREFIXES=Object.freeze({my:'/my',admin:'/admin',auth:'/auth'});
@@ -141,6 +142,7 @@ export async function routeCanonicalSurface(request,env,{legacyFetch,externalFet
   const url=new URL(request.url);
   if(url.hostname.toLowerCase()!==CANONICAL_HOST)return null;
   const path=url.pathname;
+  const cheonggyeResponse=await routeCheonggyeAssociation(request,env);if(cheonggyeResponse)return cheonggyeResponse;
   const contactResponse=await handleMailContactApi(request,env);
   if(contactResponse)return contactResponse;
   if(request.method==='GET'&&path==='/mail/contact'){
