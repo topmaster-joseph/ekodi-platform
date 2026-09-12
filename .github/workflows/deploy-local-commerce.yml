@@ -118,7 +118,7 @@ jobs:
           health=$(curl -sS -o /tmp/local-commerce-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$verify_base/local-commerce/health")
           test "$root" = '200'
           test "$health" = '200'
-          grep -Fq '지역상권 상품권' /tmp/local-commerce.html
+          grep -Fq '지역상권 지갑' /tmp/local-commerce.html
           grep -Fq '"cashCustody":false' /tmp/local-commerce-health.json
           grep -Fq '"automaticMoneyTransfer":false' /tmp/local-commerce-health.json
 
@@ -171,7 +171,7 @@ jobs:
             health=$(curl -sS -o /tmp/local-commerce-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/local-commerce/health' || true)
             api=$(curl -sS -o /tmp/local-commerce-api.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://api.ekodi.kr/api/local-commerce/health' || true)
             if [[ "$root" == '200' && "$health" == '200' && "$api" == '200' ]] \
-              && grep -Fq '지역상권 상품권' /tmp/local-commerce.html \
+              && grep -Fq '지역상권 지갑' /tmp/local-commerce.html \
               && grep -Fq '"cashCustody":false' /tmp/local-commerce-health.json \
               && grep -Fq '"storedValueCash":false' /tmp/local-commerce-api.json \
               && grep -Fq '"automaticMoneyTransfer":false' /tmp/local-commerce-api.json; then
