@@ -6,7 +6,7 @@ const directBridgeRoot=document.documentElement;
 const CANONICAL_AUTH_ORIGIN='https://ekodi.kr';
 const GOOGLE_BRIDGE_ORIGIN='https://auth.ekodi.kr';
 const rawReturn=params.get('return_to')||'https://ekodi.kr/admin/';
-const safeReturn=(()=>{try{const u=new URL(rawReturn);if(u.protocol!=='https:')return'https://ekodi.kr/admin/';if(u.origin==='https://admin.ekodi.kr'||(u.origin==='https://ekodi.kr'&&u.pathname.startsWith('/admin')))return u.href;if(u.origin==='https://ai.ekodi.kr'&&u.pathname==='/')return u.href;if(u.origin==='https://tax.ekodi.kr'&&(u.pathname==='/'||u.pathname==='/index.html'))return u.href;if(u.origin==='https://ekodi.kr'&&(u.pathname==='/ekodibiz/mall/admin'||u.pathname==='/ekodibiz/mall/admin/'||u.pathname.startsWith('/ekodibiz/mall/admin/')))return u.href;return'https://ekodi.kr/admin/'}catch{return'https://ekodi.kr/admin/'}})();
+const safeReturn=(()=>{try{const u=new URL(rawReturn);if(u.protocol!=='https:')return'https://ekodi.kr/admin/';if(u.origin==='https://admin.ekodi.kr'||(u.origin==='https://ekodi.kr'&&u.pathname.startsWith('/admin')))return u.href;if(u.origin==='https://ai.ekodi.kr'&&u.pathname==='/')return u.href;if(u.origin==='https://ekodi.kr'&&(u.pathname==='/tax'||u.pathname==='/tax/'))return u.href;if(u.origin==='https://ekodi.kr'&&(u.pathname==='/ekodibiz/mall/admin'||u.pathname==='/ekodibiz/mall/admin/'||u.pathname.startsWith('/ekodibiz/mall/admin/')))return u.href;return'https://ekodi.kr/admin/'}catch{return'https://ekodi.kr/admin/'}})();
 const $=id=>document.getElementById(id);
 $('serviceName').textContent='EKODI 관리자';
 $('serviceBadge').textContent='관리자 전용';

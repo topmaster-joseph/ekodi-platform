@@ -38,7 +38,7 @@ const CGMA_SITE=Object.freeze({
 });
 const MESSENGER_HOST='messenger.ekodi.kr';
 const INVEST_HOST='invest.ekodi.kr';
-const TAX_HOST='tax.ekodi.kr';
+const TAX_APEX_PREFIX='/tax';
 const EKODIBIZ_PUBLIC_ROUTE=/^\/ekodibiz\/?$/i;
 const EKODIBIZ_API_PREFIX='/ekodibiz/api/';
 const EKODIBIZ_ASSET_PREFIX='/_ekodi/ekodibiz/';
@@ -171,6 +171,19 @@ async function routeTaxFinance(request,env,ctx){
   return fallback;
 }
 
+function taxApexInternalRequest(request,pathname){const target=new URL(request.url);target.pathname=pathname;return new Request(target.toString(),request);}
+async function routeTaxPortalApex(request,env,ctx){
+  const url=new URL(request.url);
+  if(!['GET','HEAD'].includes(request.method))return null;
+  if(!(url.pathname===TAX_APEX_PREFIX||url.pathname===`${TAX_APEX_PREFIX}/`||url.pathname.startsWith(`${TAX_APEX_PREFIX}/`)))return null;
+  const internalPath=(url.pathname===TAX_APEX_PREFIX||url.pathname===`${TAX_APEX_PREFIX}/`)?'/':url.pathname.slice(TAX_APEX_PREFIX.length);
+  const portal=taxPortalWorker.fetch(taxApexInternalRequest(request,internalPath),env,ctx);
+  if(!portal)return null;
+  let routed=portal;
+  if(internalPath==='/tax-portal.js'){const withFallback=await injectTaxLocalFallback(routed);const withLedger=await injectTaxHometaxLedger(withFallback);routed=await injectTaxBusinessRegistry(withLedger);}
+  const response=new Response(routed.body,routed);response.headers.set('x-ekodi-route','tax-apex');return response;
+}
+
 async function withReleaseMarker(response){
   const text=await response.text();
   return new Response(text.replace('</body>','<!-- FUNCTIONAL BETA release compatibility marker; not user-visible --></body>'),{status:response.status,statusText:response.statusText,headers:response.headers});
@@ -193,12 +206,14 @@ export default {
     const host=resolvedHost(request,env);
     const legacySurface=legacySurfaceRedirect(request);if(legacySurface)return legacySurface;
     const legacyStores=legacyStoreGatewayRedirect(request);if(legacyStores)return legacyStores;
+    if(host===PUBLIC_HOST&&url.pathname.startsWith('/api/finance/tax-'))return routeTaxFinance(request,env,ctx);
     const canonical=await routeCanonicalSurface(request,env,{legacyFetch:next=>legacyPlatformRouter.fetch(next,env,ctx)});
     if(canonical)return canonical;
 
     if(CGMA_HOSTS.has(host)&&['GET','HEAD'].includes(request.method))return routeCgmaPublic(request,env);
 
     if(host===PUBLIC_HOST){
+      const taxPortal=await routeTaxPortalApex(request,env,ctx);if(taxPortal)return taxPortal;
       const contactResponse=await handleMailContactApi(request,env);if(contactResponse)return contactResponse;
       if(request.method==='GET'&&url.pathname==='/mail/contact')return injectEkodiShell(mailContactPage(),'mail');
       if(request.method==='GET'&&isLearningPath(url.pathname)){if(url.pathname==='/learn/assets/style.css')return learningStyles();if(url.pathname==='/learn/assets/app.js')return learningScript();return injectEkodiShell(learningPage(),'learn','public');}
@@ -233,20 +248,6 @@ export default {
       if(['GET','HEAD'].includes(request.method)&&url.pathname==='/auth/start'){
         const auth=workspaceAuthRedirect(request);if(auth)return auth;
       }
-    }
-
-    if(host===TAX_HOST){
-      if(url.pathname.startsWith('/api/finance/tax-'))return routeTaxFinance(request,env,ctx);
-      const portal=taxPortalWorker.fetch(request,env,ctx);
-      if(portal){
-        if(url.pathname==='/tax-portal.js'){
-          const withFallback=await injectTaxLocalFallback(portal);
-          const withLedger=await injectTaxHometaxLedger(withFallback);
-          return injectTaxBusinessRegistry(withLedger);
-        }
-        return portal;
-      }
-      return new Response('Not Found',{status:404,headers:{'cache-control':'no-store','x-content-type-options':'nosniff'}});
     }
 
     if(host===MAIL_HOST){
