@@ -1,0 +1,22 @@
+name = "ekodi-integration-core"
+main = "integration-core/worker.js"
+compatibility_date = "2026-09-03"
+workers_dev = true
+preview_urls = false
+
+[[routes]]
+pattern = "dev.ekodi.kr"
+zone_name = "ekodi.kr"
+custom_domain = true
+
+[[routes]]
+pattern = "admin.ekodi.kr/dev*"
+zone_name = "ekodi.kr"
+
+[vars]
+ENVIRONMENT = "production"
+INTEGRATION_CORE_MODE = "profile-first"
+
+[observability.logs]
+enabled = true
+invocation_logs = true

@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "worker": {
+    "name": "ekodi-integration-core",
+    "config": "wrangler.integration-core.release.toml",
+    "allowFirstDeploy": true,
+    "requests": [
+      {
+        "url": "https://dev.ekodi.kr/",
+        "statuses": [200],
+        "redirect": "follow",
+        "expect": ["EKODI Platform", "Developer Center", "Marketing AI Profile v1"]
+      },
+      {
+        "url": "https://dev.ekodi.kr/health",
+        "statuses": [200],
+        "expect": ["\"ok\": true", "ekodi-integration-core"]
+      },
+      {
+        "url": "https://dev.ekodi.kr/api/profiles/marketing-ai/v1",
+        "statuses": [200],
+        "expect": ["\"profile_id\": \"marketing-ai\"", "\"owner\": \"EKODI Integration Core\""]
+      }
+    ]
+  }
+}
