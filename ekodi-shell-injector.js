@@ -49,7 +49,7 @@ function shellCsp(csp){
 
 function cleanSurface(value){const v=String(value||'').trim().toLowerCase();return /^[a-z-]{1,24}$/.test(v)?v:'';}
 function cleanServiceId(value){return String(value||'').trim().toLowerCase().replace(/[^a-z0-9-]/g,'');}
-function escapeHtml(value){return String(value||'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[char]));}
+function escapeHtml(value){return String(value||'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));}
 function isMyEkodi(serviceId){return cleanServiceId(serviceId)===MY_SERVICE_ID;}
 function serviceOwnsFooter(serviceId){return SERVICE_OWNED_FOOTER_SERVICES.has(cleanServiceId(serviceId));}
 function sharedFooterReplacesLocalFooter(serviceId){return SHARED_FOOTER_REPLACES_LOCAL_FOOTER_SERVICES.has(cleanServiceId(serviceId));}
