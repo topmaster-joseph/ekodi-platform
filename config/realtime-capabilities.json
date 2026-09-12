@@ -1,0 +1,119 @@
+{
+    "version":  2,
+    "service":  "ekodi-realtime-communication-core",
+    "defaultSecurityProfile":  "standard",
+    "roomModes":  [
+                      "public_broadcast",
+                      "webinar",
+                      "meeting",
+                      "interpretation",
+                      "consultation",
+                      "education",
+                      "worship",
+                      "commerce"
+                  ],
+    "securityProfiles":  {
+                             "standard":  {
+                                              "requiresAuthenticationToHost":  true,
+                                              "allowsAnonymousViewers":  true,
+                                              "allowsAi":  true,
+                                              "allowsRecording":  true,
+                                              "requiresRecordingNotice":  true
+                                          },
+                             "restricted":  {
+                                                "requiresAuthenticationToHost":  true,
+                                                "allowsAnonymousViewers":  false,
+                                                "allowsAi":  true,
+                                                "allowsRecording":  true,
+                                                "requiresRecordingNotice":  true
+                                            },
+                             "e2ee":  {
+                                          "requiresAuthenticationToHost":  true,
+                                          "allowsAnonymousViewers":  false,
+                                          "allowsAi":  false,
+                                          "allowsRecording":  false,
+                                          "requiresRecordingNotice":  false
+                                      }
+                         },
+    "roles":  [
+                  "owner",
+                  "cohost",
+                  "presenter",
+                  "participant",
+                  "viewer"
+              ],
+    "failOpenMediaOnTranslationFailure":  true,
+    "failOpenMediaOnRecordingFailure":  true,
+    "providerSecretsBrowserVisible":  false,
+    "sessionTokenTtlSeconds":  300,
+    "roomLeaseSeconds":  14400,
+    "healthTargets":  {
+                          "mediaPlaneAvailability":  0.999,
+                          "controlPlaneAvailability":  0.999,
+                          "translationP95Ms":  3000,
+                          "healthProbeSeconds":  30
+                      },
+    "adaptiveMedia":  {
+                          "maxInteractiveParticipants":  12,
+                          "maxInteractiveBroadcastGuests":  6,
+                          "viewerDelivery":  "hls",
+                          "translationIdleSeconds":  120,
+                          "budgetThresholds":  {
+                                                   "warn":  0.7,
+                                                   "conserve":  0.85,
+                                                   "hard":  1
+                                               },
+                          "videoProfiles":  [
+                                                "1080p",
+                                                "720p",
+                                                "480p"
+                                            ],
+                          "recordingDefault":  "program+source+translations",
+                          "providerStrategy":  "health-capability-priority",
+                          "providerEscapeHatch":  [
+                                                      "managed-edge",
+                                                      "self-hosted-sfu",
+                                                      "external-platform"
+                                                  ]
+                      },
+    "entitlements":  {
+                         "subscriptionSite":  "media",
+                         "adminTier":  "organization",
+                         "paidTier":  "pro",
+                         "freeTier":  "free",
+                         "tiers":  {
+                                       "anonymous":  {
+                                                         "canHost":  false,
+                                                         "maxInteractiveParticipants":  0,
+                                                         "maxLanguages":  0,
+                                                         "maxDurationMinutes":  0,
+                                                         "recording":  false,
+                                                         "multistream":  false
+                                                     },
+                                       "free":  {
+                                                    "canHost":  true,
+                                                    "maxInteractiveParticipants":  5,
+                                                    "maxLanguages":  2,
+                                                    "maxDurationMinutes":  60,
+                                                    "recording":  true,
+                                                    "multistream":  false
+                                                },
+                                       "pro":  {
+                                                   "canHost":  true,
+                                                   "maxInteractiveParticipants":  24,
+                                                   "maxLanguages":  10,
+                                                   "maxDurationMinutes":  600,
+                                                   "recording":  true,
+                                                   "multistream":  true
+                                               },
+                                       "organization":  {
+                                                            "canHost":  true,
+                                                            "maxInteractiveParticipants":  100,
+                                                            "maxLanguages":  20,
+                                                            "maxDurationMinutes":  1440,
+                                                            "recording":  true,
+                                                            "multistream":  true
+                                                        }
+                                   }
+                     }
+}
