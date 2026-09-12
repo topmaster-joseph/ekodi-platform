@@ -33,6 +33,7 @@ import { handleEkodiMcpGateway, handleEkodiMcpMetadata } from './ekodi-mcp-gatew
 import { handleDevotionalControl } from './devotional-control.js';
 import { handleLearningControl } from './learning-control.js';
 import { handleLocalCommerceControl } from './local-commerce-control.js';
+import { handleExternalAccountControl } from './external-account-control.js';
 import { applyApiSecurityHeaders, enforceEdgeSecurity } from './security-edge.js';
 
 function errorResponse(message, code) {
@@ -150,6 +151,11 @@ export default {
     if (path.startsWith('/api/local-commerce')) {
       try { const response = await handleLocalCommerceControl(request, env); if (response) return applyApiSecurityHeaders(response); }
       catch (error) { console.error('Local Commerce control error', error); return errorResponse('지역상권 상품권 처리 중 오류가 발생했습니다.', 'LOCAL_COMMERCE_CONTROL_ERROR'); }
+    }
+
+    if (path.startsWith('/api/control/external-accounts')) {
+      try { const response = await handleExternalAccountControl(request, env); if (response) return applyApiSecurityHeaders(response); }
+      catch (error) { console.error('External Account Control error', error); return errorResponse('외부계정 통합운영 처리 중 오류가 발생했습니다.', 'EXTERNAL_ACCOUNT_CONTROL_ERROR'); }
     }
 
     if (path.startsWith('/api/membership/')) {

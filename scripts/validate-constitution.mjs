@@ -1,4 +1,4 @@
-﻿import fs from 'node:fs';
+import fs from 'node:fs';
 import path from 'node:path';
 
 const root = process.cwd();
@@ -13,11 +13,19 @@ const coreData = json('config/core-data-boundaries.json');
 const storage = json('config/storage-policy.json');
 const workspace = json('config/service-workspace-policy.json');
 
-if (constitution.version !== '1.11.0') fail('constitution version must be 1.11.0 with the approved Generation 10 open-ended evolution amendment and all prior approved amendments');
+if (constitution.version !== '1.12.0') fail('constitution version must be 1.12.0 with the approved EKODIBIZ commercial-subject amendment and all prior approved amendments, including the v1.11.0 local-commerce amendment');
 if (constitution.status !== 'active') fail('constitution must be active');
-for (const principle of ['free-first-not-free-only','ekodi-core-is-source-of-truth','provider-independent-by-default','secure-by-default','one-domain-grammar','isolated-parallel-development','verification-first-evolution','security-native-intelligence','evidence-linked-recommendations','secure-projection-minimum-disclosure','integrated-responsibility-distributed-execution-standardized-connections','layered-governance-os-core-services-connections-workspaces','user-surface-engine-separation','capability-first-reuse','sustainable-scale-by-evidence','workspace-over-space','generation-10-active-baseline','open-ended-evidence-driven-generation-evolution','sovereign-autonomy-with-human-authority','person-workspace-role-capability-authority','observe-detect-reason-plan-execute-verify-recover-learn']) {
+for (const principle of ['free-first-not-free-only','ekodi-core-is-source-of-truth','provider-independent-by-default','secure-by-default','one-domain-grammar','isolated-parallel-development','verification-first-evolution','security-native-intelligence','evidence-linked-recommendations','secure-projection-minimum-disclosure','integrated-responsibility-distributed-execution-standardized-connections','layered-governance-os-core-services-connections-workspaces','user-surface-engine-separation','capability-first-reuse','sustainable-scale-by-evidence','workspace-over-space','generation-10-active-baseline','open-ended-evidence-driven-generation-evolution','sovereign-autonomy-with-human-authority','person-workspace-role-capability-authority','observe-detect-reason-plan-execute-verify-recover-learn','ekodibiz-exclusive-commercial-subject','ordinary-user-information-first-commercial-separation']) {
   if (!constitution.principles?.includes(principle)) fail(`missing constitutional principle: ${principle}`);
 }
+
+const commercialSubject = constitution.commercialSubjectPolicy || {};
+if (commercialSubject.id !== 'REV-001') fail('commercial subject policy id must be REV-001');
+if (commercialSubject.subject !== 'ekodibiz' || commercialSubject.exclusiveForEkodiRevenueBusinesses !== true) fail('EKODIBIZ must remain the exclusive commercial subject for EKODI revenue businesses');
+if (commercialSubject.technologyProvider !== 'ekodi') fail('EKODI must remain the technology/platform provider');
+if (commercialSubject.ordinaryUserMode !== 'information-only') fail('ordinary-user revenue surface must remain information-only');
+if (commercialSubject.tenantCommercialExecution !== 'ekodibiz-managed-only') fail('tenant commercial execution must remain EKODIBIZ-managed only');
+if (commercialSubject.externalUserOwnedBusinessUnaffected !== true) fail('external user-owned businesses must remain outside the platform commercial-subject restriction');
 
 const architectureModel = constitution.architectureModel || {};
 if (architectureModel.registry !== 'governance/architecture/ekodi-os-architecture.json') fail('constitutional architecture registry path mismatch');

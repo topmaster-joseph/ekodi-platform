@@ -11,6 +11,7 @@ const FITNESS_KEYS = Object.freeze([
   'boundedRisk',
 ]);
 const REVENUE_STATES = Object.freeze(['idea', 'experiment', 'validate', 'scale', 'hold', 'retire']);
+const COMMERCIAL_SUBJECT = revenuePolicy.commercialSubjectPolicy?.subject || 'ekodibiz';
 const ALLOWED_TRANSITIONS = Object.freeze({
   idea: new Set(['idea', 'experiment', 'hold', 'retire']),
   experiment: new Set(['experiment', 'validate', 'hold', 'retire']),
@@ -84,9 +85,11 @@ export function createRevenueCell(input = {}) {
   const title = clean(input.title, 160);
   if (!workspaceId) throw new Error('REVENUE_WORKSPACE_REQUIRED');
   if (!title) throw new Error('REVENUE_TITLE_REQUIRED');
-  const operator = clean(input.operator, 80) || revenuePolicy.defaultOperator.operator;
-  const revenueOwner = clean(input.revenueOwner, 80) || revenuePolicy.defaultOperator.revenueOwner;
-  const technologyProvider = clean(input.technologyProvider, 80) || revenuePolicy.defaultOperator.technologyProvider;
+  const operator = COMMERCIAL_SUBJECT;
+  const revenueOwner = COMMERCIAL_SUBJECT;
+  const merchantOfRecord = COMMERCIAL_SUBJECT;
+  const contractingEntity = COMMERCIAL_SUBJECT;
+  const technologyProvider = revenuePolicy.defaultOperator.technologyProvider;
   const stopConditions = unique((Array.isArray(input.stopConditions) ? input.stopConditions : [])
     .map(value => clean(value, 180)));
   const riskLimit = Math.max(0, Number(input.riskLimit || 0));
@@ -100,6 +103,8 @@ export function createRevenueCell(input = {}) {
     tenantOrProject: clean(input.tenantOrProject, 120) || null,
     operator,
     revenueOwner,
+    merchantOfRecord,
+    contractingEntity,
     technologyProvider,
     state: 'idea',
     riskLimit,
@@ -135,27 +140,19 @@ export function getRevenueCapabilityCatalog() {
 }
 
 export function resolveRevenueCapabilityAccess(input = {}) {
-  const subscribed = new Set((Array.isArray(input.subscribedCapabilities) ? input.subscribedCapabilities : [])
-    .map(value => clean(value, 80)));
+  const actorClass = clean(input.actorClass, 60) || 'ordinary-user';
+  const operationalActor = actorClass === 'ekodibiz-operator';
+  const subscribed = new Set((Array.isArray(input.subscribedCapabilities) ? input.subscribedCapabilities : []).map(value => clean(value, 80)));
   const approvedPriceCatalog = input.approvedPriceCatalog === true;
   const capabilities = revenuePolicy.capabilitySubscriptions.map(item => freeze({
-    id: item.id,
-    label: item.label,
-    access: item.freePreview || subscribed.has(item.id) ? 'enabled' : 'preview_only',
-    freePreview: Boolean(item.freePreview),
-    subscribed: subscribed.has(item.id),
-    checkoutAvailable: !item.freePreview && !subscribed.has(item.id) && approvedPriceCatalog,
-    checkoutBlockedReason: !item.freePreview && !subscribed.has(item.id) && !approvedPriceCatalog
-      ? 'approved-price-catalog-required'
-      : null,
+    id: item.id, label: item.label,
+    access: operationalActor ? (item.freePreview || subscribed.has(item.id) ? 'enabled' : 'preview_only') : 'information_only',
+    freePreview: Boolean(item.freePreview), subscribed: operationalActor && subscribed.has(item.id),
+    checkoutAvailable: operationalActor && !item.freePreview && !subscribed.has(item.id) && approvedPriceCatalog,
+    checkoutBlockedReason: operationalActor ? (!item.freePreview && !subscribed.has(item.id) && !approvedPriceCatalog ? 'approved-price-catalog-required' : null) : 'ordinary-users-receive-information-only',
+    operationalAccess: item.operationalAccess || 'ekodibiz_only',
   }));
-  return freeze({
-    membershipTier: clean(input.membershipTier, 40) || 'free',
-    model: revenuePolicy.myEkodi.subscriptionModel,
-    capabilities: freeze(capabilities),
-    publicAccessUnaffected: true,
-    userOwnedResultsRetained: revenuePolicy.myEkodi.freeExperience.neverRemovesUserOwnedResultsAfterTrial,
-  });
+  return freeze({membershipTier: clean(input.membershipTier, 40) || 'free',actorClass,model: revenuePolicy.myEkodi.subscriptionModel,ordinaryUserMode: revenuePolicy.myEkodi.ordinaryUserExperience.scope,commercialSubject: COMMERCIAL_SUBJECT,capabilities: freeze(capabilities),publicAccessUnaffected: true,directRevenueOperationAllowed: operationalActor,userOwnedResultsRetained: revenuePolicy.myEkodi.freeExperience.neverRemovesUserOwnedResultsAfterTrial});
 }
 
 function slugify(value) {
@@ -218,6 +215,9 @@ export function buildVerticalLaunchPlan(input = {}) {
       'creator.media',
       ...(requestedChannels.length ? ['creator.publish'] : []),
     ])),
+    commercialSubject: COMMERCIAL_SUBJECT,
+    ordinaryUserMode: 'information-only',
+    commercialExecution: 'ekodibiz-only',
     directProductionMutation: false,
     financialCommitmentAuthorized: false,
   });
@@ -268,7 +268,7 @@ export function recommendRevenueIdeas(input = {}) {
     matchedSignals: freeze(item.matches),
     capabilities: freeze([...item.idea.capabilities]),
     status: 'idea-not-market-validated',
-    nextStep: 'bounded-demand-validation',
+    nextStep: 'ekodibiz-information-or-managed-service-request',
   })));
 }
 
@@ -278,6 +278,8 @@ export function getRevenueEngineSummary() {
     status: revenuePolicy.status,
     defaultRevenueOwner: revenuePolicy.defaultOperator.revenueOwner,
     defaultOperator: revenuePolicy.defaultOperator.operator,
+    commercialSubject: COMMERCIAL_SUBJECT,
+    ordinaryUserMode: revenuePolicy.myEkodi.ordinaryUserExperience.scope,
     capabilitySubscriptionCount: revenuePolicy.capabilitySubscriptions.length,
     closedLoop: freeze([...revenuePolicy.closedLoop]),
     productionAuthority: 'human-governed-guarded-release',

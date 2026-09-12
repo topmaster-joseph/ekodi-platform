@@ -192,3 +192,7 @@ Human Gate remains mandatory only where higher authority is genuinely required, 
 Default reporting is result-only: what changed, whether validation passed, whether deployment succeeded, whether real production behavior was verified, and any unresolved exception. Intermediate provider chatter and low-level implementation steps are normally omitted unless they materially affect safety or the requested outcome.
 
 Machine-readable authority: `config/ai-change-orchestration-policy.json` (`AI-ORCHESTRATE-001`). Enforcement: `scripts/validate-ekodi-ai-change-orchestration.mjs`, `scripts/validate-workflow-orchestration-gates.mjs`, and the required GitHub check `EKODI AI Orchestration Gate`.
+
+## EKODIBIZ commercial-subject invariant
+
+All revenue-generating businesses operated through the EKODI platform use EKODIBIZ as the exclusive revenue owner, operator, merchant of record and contracting entity. EKODI remains the technology/platform provider. Ordinary users and ordinary tenant roles receive information, recommendations, comparisons, reminders and EKODIBIZ-managed-service referral only; they must not be promoted into platform merchant, revenue-collection, contracting or autonomous revenue-operation roles. This does not restrict a user's independently owned external business.

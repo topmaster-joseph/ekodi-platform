@@ -91,6 +91,7 @@ jobs:
           grep -Fq 'mallAutonomousProfitLoop' marketing-growth-entry.js
           grep -Fq 'runMallAutonomousProfitLoop' marketing-growth-worker.js
           grep -Fq "const SUBJECT_KEY = 'ekodimall'" mall-promotion-automation.js
+          grep -Fq "const MALL_SUBJECT_KEY = 'ekodimall'" mall-autonomous-profit-loop.js
           grep -Fq "official_board_profit_learning_loop" mall-promotion-automation.js
           grep -Fq "ensureWeeklyPromotionBoard" mall-promotion-automation.js
           grep -Fq 'affiliate_promotion_runs' migrations/0048_ekodi_mall_promotion_automation.sql

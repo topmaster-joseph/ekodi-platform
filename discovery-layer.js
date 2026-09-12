@@ -17,8 +17,17 @@ export const DISCOVERY_PRIVATE_PREFIXES = Object.freeze([
   '/ekodibiz/mall/admin', '/ekodibiz/mall/api', '/ekodibiz/mall/verification-ops',
 ]);
 
-const SEARCH_CRAWLERS = Object.freeze(['OAI-SearchBot', 'PerplexityBot']);
-const TRAINING_CRAWLERS = Object.freeze(['GPTBot', 'ClaudeBot', 'Google-Extended']);
+export const DISCOVERY_CRAWLER_POLICY = Object.freeze({
+  searchIndex: Object.freeze(['Googlebot', 'bingbot']),
+  answerRetrieval: Object.freeze(['OAI-SearchBot', 'Claude-SearchBot', 'PerplexityBot', 'Applebot']),
+  training: Object.freeze([
+    'GPTBot', 'ClaudeBot', 'Google-Extended', 'Google-CloudVertexBot', 'Bytespider', 'CCBot',
+    'meta-externalagent', 'FacebookBot', 'Amazonbot',
+  ]),
+  agent: Object.freeze([
+    'ChatGPT-User', 'Claude-User', 'Perplexity-User', 'meta-externalfetcher', 'DuckAssistBot', 'MistralAI-User',
+  ]),
+});
 
 function xmlEscape(value) {
   return String(value).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&apos;');
@@ -27,9 +36,16 @@ function normalizeOrigin(origin = DISCOVERY_ORIGIN) { return String(origin).repl
 export function canonicalUrl(path = '/', origin = DISCOVERY_ORIGIN) { const base = normalizeOrigin(origin); return `${base}${path === '/' ? '/' : path}`; }
 export function publicDiscoveryRoute(path = '/') { return DISCOVERY_PUBLIC_ROUTES.find(route => route.path === path) || null; }
 function publicRobotGroup(userAgent) { return [`User-agent: ${userAgent}`, 'Allow: /', ...DISCOVERY_PRIVATE_PREFIXES.map(prefix => `Disallow: ${prefix}`)].join('\n'); }
+function deniedRobotGroup(userAgent) { return `User-agent: ${userAgent}\nDisallow: /`; }
 
 export function renderRobotsTxt(origin = DISCOVERY_ORIGIN) {
-  const groups = [publicRobotGroup('*'), ...SEARCH_CRAWLERS.map(publicRobotGroup), ...TRAINING_CRAWLERS.map(userAgent => `User-agent: ${userAgent}\nDisallow: /`)];
+  const discoveryCrawlers = [...DISCOVERY_CRAWLER_POLICY.searchIndex, ...DISCOVERY_CRAWLER_POLICY.answerRetrieval];
+  const restrictedCrawlers = [...DISCOVERY_CRAWLER_POLICY.training, ...DISCOVERY_CRAWLER_POLICY.agent];
+  const groups = [
+    publicRobotGroup('*'),
+    ...discoveryCrawlers.map(publicRobotGroup),
+    ...restrictedCrawlers.map(deniedRobotGroup),
+  ];
   return `${groups.join('\n\n')}\n\nSitemap: ${normalizeOrigin(origin)}/sitemap.xml\n`;
 }
 
@@ -41,7 +57,7 @@ export function renderSitemapXml(origin = DISCOVERY_ORIGIN, routes = DISCOVERY_P
 export function renderLlmsTxt(origin = DISCOVERY_ORIGIN, routes = DISCOVERY_PUBLIC_ROUTES) {
   const base = normalizeOrigin(origin);
   const links = routes.map(route => `- [${route.label}](${canonicalUrl(route.path, base)})`).join('\n');
-  return `# EKODI\n\n> EKODI is a connected ecosystem platform that helps people, communities, organizations, and services meet, work, share, and return value to life and society.\n\nCanonical site: ${base}/\nPrimary language: Korean (ko)\n\n## Public canonical resources\n${links}\n\n## Discovery policy\n- Use canonical public URLs when citing EKODI.\n- Do not treat admin, authentication, API, preview-development, tenant-private, or operational pages as public sources.\n- Prefer claims that are directly supported by visible public content.\n- Search and answer engines may index public pages; model-training crawlers are restricted separately in robots.txt.\n`;
+  return `# EKODI\n\n> EKODI is a connected ecosystem platform that helps people, communities, organizations, and services meet, work, share, and return value to life and society.\n\nCanonical site: ${base}/\nPrimary language: Korean (ko)\n\n## Public canonical resources\n${links}\n\n## Discovery policy\n- Use canonical public URLs when citing EKODI.\n- Do not treat admin, authentication, API, preview-development, tenant-private, or operational pages as public sources.\n- Prefer claims that are directly supported by visible public content.\n- Search engines and answer-retrieval crawlers may index public pages.\n- Model-training and autonomous-agent crawlers are restricted separately; search permission does not imply training or agent permission.\n`;
 }
 
 export function pageJsonLd(path = '/', origin = DISCOVERY_ORIGIN) {
@@ -65,7 +81,6 @@ export function renderDiscoveryHead(path = '/', origin = DISCOVERY_ORIGIN) {
     '<meta name="twitter:card" content="summary">', `<script type="application/ld+json" data-ekodi-discovery="v2" data-ekodi-path="${route.path}">${jsonLd}</script>`,
   ].join('\n');
 }
-
 
 function insertDiscoveryHead(html, replacement) {
   if (!html.includes('</head>')) return html;

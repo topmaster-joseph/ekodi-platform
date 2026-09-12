@@ -3,6 +3,9 @@ import { ensureWeeklyPromotionBoard } from './mall-official-promotion-board.js';
 import { mallPromotionAutomationEnabled, runMallPromotionAutomation } from './mall-promotion-automation.js';
 import { runMallSalesIntelligence } from './mall-sales-intelligence.js';
 
+const MALL_SUBJECT_TYPE = 'tenant';
+const MALL_SUBJECT_KEY = 'ekodimall';
+
 const TABLES = Object.freeze([
   'affiliate_storefront_products',
   'affiliate_recommendation_runs',
@@ -32,6 +35,7 @@ export const MALL_AUTONOMOUS_PROFIT_LOOP = Object.freeze({
   feedbackFreshHours: 54,
   paidAdsAutonomous: false,
   customerPiiLearning: false,
+  subject: `${MALL_SUBJECT_TYPE}:${MALL_SUBJECT_KEY}`,
 });
 export function classifyMallAutonomousProfitLoop(input = {}) {
   const stages = input.stages || {};
@@ -78,9 +82,9 @@ export async function getMallAutonomousProfitLoopStatus(env) {
     env.DB.prepare(`SELECT run_date,status,candidates,scale_count,test_count,observe_count,hold_count,completed_at,last_error FROM affiliate_growth_strategy_runs ORDER BY run_date DESC LIMIT 1`).first().catch(() => null),
     env.DB.prepare(`SELECT COUNT(*) AS attempts,SUM(CASE WHEN status='published' THEN 1 ELSE 0 END) AS published,SUM(CASE WHEN status='failed' THEN 1 ELSE 0 END) AS failed,SUM(CASE WHEN status='approval_required' THEN 1 ELSE 0 END) AS approval_required,MAX(updated_at) AS updated_at FROM affiliate_promotion_runs WHERE run_date=?`).bind(today).first().catch(() => null),
     env.DB.prepare(`SELECT recommended_action,opportunity_score,product_row_id FROM affiliate_growth_opportunities WHERE run_date=? ORDER BY opportunity_score DESC,id DESC LIMIT 1`).bind(today).first().catch(() => null),
-    env.DB.prepare(`SELECT COUNT(*) AS active_social FROM marketing_oauth_connections WHERE subject_type='tenant' AND subject_key='ekodi-biz' AND status='active' AND provider IN ('facebook','instagram','threads')`).first().catch(() => null),
-    env.DB.prepare(`SELECT mode,max_daily_posts FROM marketing_publish_policies WHERE subject_type='tenant' AND subject_key='ekodi-biz'`).first().catch(() => null),
-    env.DB.prepare(`SELECT plan_id,status FROM service_subscriptions WHERE subject_type='tenant' AND subject_key='ekodi-biz' AND site='marketing'`).first().catch(() => null),
+    env.DB.prepare(`SELECT COUNT(*) AS active_social FROM marketing_oauth_connections WHERE subject_type=? AND subject_key=? AND status='active' AND provider IN ('facebook','instagram','threads')`).bind(MALL_SUBJECT_TYPE,MALL_SUBJECT_KEY).first().catch(() => null),
+    env.DB.prepare(`SELECT mode,max_daily_posts FROM marketing_publish_policies WHERE subject_type=? AND subject_key=?`).bind(MALL_SUBJECT_TYPE,MALL_SUBJECT_KEY).first().catch(() => null),
+    env.DB.prepare(`SELECT plan_id,status FROM service_subscriptions WHERE subject_type=? AND subject_key=? AND site='marketing'`).bind(MALL_SUBJECT_TYPE,MALL_SUBJECT_KEY).first().catch(() => null),
   ]);
 
   const sourceAge = ageHours(source?.finished_at);

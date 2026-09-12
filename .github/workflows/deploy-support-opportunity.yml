@@ -10,6 +10,7 @@ on:
       - 'platform-boundaries.json'
       - 'test/support-opportunity.test.mjs'
       - 'test/support-need-sensing.test.mjs'
+      - 'test/support-institution-sources.test.mjs'
       - 'config/workspace-packs.json'
       - 'config/capability-registry.json'
       - 'test/support-benefit-radar-10g.test.mjs'
@@ -26,6 +27,7 @@ on:
       - 'platform-boundaries.json'
       - 'test/support-opportunity.test.mjs'
       - 'test/support-need-sensing.test.mjs'
+      - 'test/support-institution-sources.test.mjs'
       - 'config/workspace-packs.json'
       - 'config/capability-registry.json'
       - 'test/support-benefit-radar-10g.test.mjs'
@@ -60,12 +62,13 @@ jobs:
           node --check support-worker.js
           node --check support/core.js
           node --check support/sources.js
+          node --check support/institution-sources.js
           node --check support/need-sensing.js
           node --check support/app.js
           node --check support/service.js
           node --check support/specialists.js
           node --check ekodi-service-manifest.js
-          node --test test/support-opportunity.test.mjs test/support-need-sensing.test.mjs test/support-benefit-radar-10g.test.mjs
+          node --test test/support-opportunity.test.mjs test/support-need-sensing.test.mjs test/support-institution-sources.test.mjs test/support-benefit-radar-10g.test.mjs
           node scripts/validate-capability-registry.mjs
           node scripts/validate-platform-boundaries.mjs
           node scripts/validate-ai-mission-governance.mjs
@@ -141,7 +144,7 @@ jobs:
             notices='skipped-protected-staging'
             if [[ "$remote_protected" != '1' ]]; then
               notices=$(curl -sS -o /tmp/support-notices.json -w '%{http_code}' --connect-timeout 8 --max-time 25 "$verify_base/api/opportunities?limit=5" || true)
-              if [[ "$notices" != '200' ]] || ! grep -Fq '"ok":true' /tmp/support-notices.json || ! grep -Fq '"source":"bizinfo"' /tmp/support-notices.json || ! grep -Fq '"official":true' /tmp/support-notices.json; then
+              if [[ "$notices" != '200' ]] || ! grep -Fq '"ok":true' /tmp/support-notices.json || ! grep -Fq '"source":"combined"' /tmp/support-notices.json || ! grep -Fq '"id":"bizinfo"' /tmp/support-notices.json || ! grep -Fq '"official":true' /tmp/support-notices.json; then
                 feed_ok=false
               fi
             fi
@@ -167,6 +170,7 @@ jobs:
               && grep -Fq '"contract":"ekodi.benefit-radar.v1"' /tmp/support-health.json \
               && grep -Fq '"dataMode":"isolated-staging"' /tmp/support-health.json \
               && grep -Fq '"id":"bizinfo"' /tmp/support-sources.json \
+              && grep -Fq '"id":"trusted-institutions"' /tmp/support-sources.json \
               && grep -Fq '"proactiveEligible":false' /tmp/support-need-no.json \
               && grep -Fq '"proactiveEligible":true' /tmp/support-need-yes.json \
               && grep -Eiq '^x-ekodi-shell: v2' /tmp/support-headers; then
@@ -253,8 +257,10 @@ jobs:
               && grep -Fq '"submissionExecution":false' /tmp/support-health.json \
               && grep -Fq '"specialistWorkspace":true' /tmp/support-health.json \
               && grep -Fq '"id":"bizinfo"' /tmp/support-sources.json \
+              && grep -Fq '"id":"trusted-institutions"' /tmp/support-sources.json \
               && grep -Fq '"ok":true' /tmp/support-notices.json \
-              && grep -Fq '"source":"bizinfo"' /tmp/support-notices.json \
+              && grep -Fq '"source":"combined"' /tmp/support-notices.json \
+              && grep -Fq '"id":"bizinfo"' /tmp/support-notices.json \
               && grep -Fq '"official":true' /tmp/support-notices.json \
               && grep -Eiq '^x-ekodi-shell: v2' /tmp/support-headers \
               && grep -Eiq '^location: https://admin\.ekodi\.kr/?' /tmp/support-admin-headers; then

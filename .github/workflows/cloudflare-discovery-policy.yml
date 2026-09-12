@@ -1,0 +1,77 @@
+name: Cloudflare Discovery Policy
+
+on:
+  pull_request:
+    paths:
+      - 'discovery-layer.js'
+      - 'test/discovery-layer.test.mjs'
+      - 'scripts/enforce-cloudflare-discovery-policy.mjs'
+      - 'DISCOVERY_LAYER.md'
+      - 'governance/security/discovery-secure-projection.md'
+      - '.github/workflows/cloudflare-discovery-policy.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'discovery-layer.js'
+      - 'test/discovery-layer.test.mjs'
+      - 'scripts/enforce-cloudflare-discovery-policy.mjs'
+      - 'DISCOVERY_LAYER.md'
+      - 'governance/security/discovery-secure-projection.md'
+      - '.github/workflows/cloudflare-discovery-policy.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cloudflare-discovery-policy-production
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate policy contract and generated discovery outputs
+        run: |
+          set -euo pipefail
+          node --check scripts/enforce-cloudflare-discovery-policy.mjs
+          node scripts/enforce-cloudflare-discovery-policy.mjs --validate-only
+          node --test test/discovery-layer.test.mjs
+          npm run build
+
+  enforce-production:
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      EKODI_ALLOW_CLOUDFLARE_DISCOVERY_MUTATION: MAIN_APPROVED
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: EKODI AI Orchestration Gate
+        run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
+      - name: Enforce purpose-bound Cloudflare AI bot policy
+        run: node scripts/enforce-cloudflare-discovery-policy.mjs
+      - name: Verify public discovery contract remains reachable
+        shell: bash
+        run: |
+          set -euo pipefail
+          robots="$(curl -fsS --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 20 https://ekodi.kr/robots.txt)"
+          printf '%s' "$robots" | grep -Fq 'User-agent: OAI-SearchBot'
+          printf '%s' "$robots" | grep -Fq 'User-agent: Claude-SearchBot'
+          printf '%s' "$robots" | grep -Fq 'User-agent: PerplexityBot'
+          printf '%s' "$robots" | grep -Fq 'User-agent: GPTBot'
+          printf '%s' "$robots" | grep -Fq 'User-agent: ClaudeBot'
+          curl -fsS --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 20 https://ekodi.kr/sitemap.xml | grep -Fq '<loc>https://ekodi.kr/</loc>'
+          curl -fsS --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 20 https://ekodi.kr/llms.txt | grep -Fq 'Canonical site: https://ekodi.kr/'
+          echo 'Live EKODI public discovery endpoints remain reachable after Cloudflare enforcement.'

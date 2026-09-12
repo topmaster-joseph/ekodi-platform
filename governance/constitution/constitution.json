@@ -1,6 +1,6 @@
 {
-  "version": "1.11.0",
-  "effectiveDate": "2026-09-10",
+  "version": "1.12.0",
+  "effectiveDate": "2026-09-12",
   "status": "active",
   "title": "EKODI Platform Constitution",
   "principles": [
@@ -28,7 +28,9 @@
     "person-workspace-role-capability-authority",
     "observe-detect-reason-plan-execute-verify-recover-learn",
     "generation-10-active-baseline",
-    "open-ended-evidence-driven-generation-evolution"
+    "open-ended-evidence-driven-generation-evolution",
+    "ekodibiz-exclusive-commercial-subject",
+    "ordinary-user-information-first-commercial-separation"
   ],
   "architectureModel": {
     "registry": "governance/architecture/ekodi-os-architecture.json",
@@ -516,5 +518,32 @@
       "system": "/admin/system/{capability}"
     },
     "rule": "One domain, multiple security realms: human and management surfaces are canonical paths on ekodi.kr; subdomains may remain only as justified internal, protocol, emergency or compatibility execution boundaries."
+  },
+  "commercialSubjectPolicy": {
+    "id": "REV-001",
+    "status": "active",
+    "subject": "ekodibiz",
+    "exclusiveForEkodiRevenueBusinesses": true,
+    "technologyProvider": "ekodi",
+    "ordinaryUserMode": "information-only",
+    "ordinaryUserAllowed": [
+      "discover",
+      "recommend",
+      "compare",
+      "explain",
+      "save",
+      "remind",
+      "request-managed-service"
+    ],
+    "ordinaryUserBlocked": [
+      "platform-merchant-role",
+      "platform-revenue-collection",
+      "platform-commercial-contracting",
+      "revenue-cell-operation",
+      "autonomous-revenue-operation"
+    ],
+    "tenantCommercialExecution": "ekodibiz-managed-only",
+    "externalUserOwnedBusinessUnaffected": true,
+    "rule": "All EKODI-platform revenue businesses use EKODIBIZ as revenue owner, operator, merchant of record and contracting entity. Ordinary users receive information, recommendation and managed-service referral only unless acting through an explicitly authorized EKODIBIZ operator role."
   }
 }

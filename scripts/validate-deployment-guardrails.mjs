@@ -26,7 +26,7 @@ function forbidPattern(file, patterns) {
 }
 
 const workerGuarded = {
-  '.github/workflows/deploy-site-core.yml': ['guarded-worker-release.mjs', 'shared-site.worker.json'],
+  '.github/workflows/deploy-site-core.yml': ['guarded-worker-release.mjs', 'shared-site.worker.json', 'reliability_gate:', 'reliability-validation.yml', 'needs: reliability_gate'],
   '.github/workflows/deploy-books.yml': ['guarded-worker-release.mjs', 'books.worker.json'],
   '.github/workflows/deploy-community.yml': ['guarded-worker-release.mjs', 'community.worker.json'],
   '.github/workflows/deploy-social.yml': ['guarded-worker-release.mjs', 'social.worker.json'],

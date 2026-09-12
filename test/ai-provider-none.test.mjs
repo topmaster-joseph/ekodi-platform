@@ -73,6 +73,21 @@ test('timeout degrades to free assist quickly', async () => {
   assert.equal(result.value, 'fallback-now');
 });
 
+test('total timeout budget is shared across slow providers before fallback', async () => {
+  resetAiResilienceCircuitsForTest();
+  const slow = id => ({ id, invoke: () => new Promise(resolve => setTimeout(() => resolve(`${id}:late`), 1000)) });
+  const startedAt = Date.now();
+  const result = await runAiEnhancedTask({
+    env: {}, taskName: 'survival.total-budget', timeoutMs: 500, totalTimeoutMs: 120,
+    providers: [slow('provider-a'), slow('provider-b'), slow('provider-c')],
+    fallback: async ({ attemptedProviders }) => ({ attemptedProviders }),
+  });
+  const elapsedMs = Date.now() - startedAt;
+  assert.equal(result.mode, 'free_assist');
+  assert.deepEqual(result.attemptedProviders, ['provider-a', 'provider-b', 'provider-c']);
+  assert.ok(elapsedMs < 350, `total timeout budget exceeded: ${elapsedMs}ms`);
+});
+
 test('fallback failure returns core mode and still does not throw', async () => {
   resetAiResilienceCircuitsForTest();
   const result = await runAiEnhancedTask({

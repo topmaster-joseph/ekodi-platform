@@ -45,4 +45,5 @@ test('apex dynamic routers use the shared discovery response decorator', async (
 test('mall discovery keeps admin embed outside public indexing decoration', async () => {
   const site = await readFile(new URL('../site-worker.js', import.meta.url), 'utf8');
   assert.match(site, /if \(adminSurface \|\| apiSurface \|\| verificationOpsSurface \|\| adminEmbed\) return shelled/);
+  assert.match(site, /if \(adminSurface \|\| apiSurface \|\| verificationOpsSurface \|\| adminEmbed\) response\.headers\.set\('X-Robots-Tag', 'noindex, nofollow, noarchive'\)/);
 });
