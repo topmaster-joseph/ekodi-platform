@@ -24,7 +24,7 @@ test('church meeting ops prepares bulletin, presentation, homepage and live outp
   assert.match(ops,/PptxGenJS/);
   assert.match(ops,/buildHomepage/);
   assert.match(ops,/buildLive/);
-  assert.match(ops,/data-cmo-action=\\"all\\"/);
+  assert.match(ops,/data-cmo-action="all"/);
 });
 
 test('church meeting ops contains no privileged server secret',()=>{
