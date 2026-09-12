@@ -24,6 +24,7 @@ env:
   WRANGLER_VERSION: '4.119.0'
   LEGACY_MY_HOST: my.ekodi.kr
   CANONICAL_ZONE: ekodi.kr
+  CF_ZONE_ID: e39707f426b195d12c67a86f62b52ba7
 
 jobs:
   validate:
@@ -47,6 +48,7 @@ jobs:
           fi
           test "$LEGACY_MY_HOST" = 'my.ekodi.kr'
           test "$CANONICAL_ZONE" = 'ekodi.kr'
+          test "$CF_ZONE_ID" = 'e39707f426b195d12c67a86f62b52ba7'
           npx --yes wrangler@${WRANGLER_VERSION} triggers deploy --dry-run --config wrangler.my.toml
 
   production:
@@ -87,19 +89,26 @@ jobs:
           set -euo pipefail
           api='https://api.cloudflare.com/client/v4'
           auth=(-H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H 'Content-Type: application/json')
-          zones=$(curl --fail-with-body -sS "${auth[@]}" "$api/zones?name=$CANONICAL_ZONE&status=active&per_page=50")
-          test "$(jq -r '.success' <<<"$zones")" = 'true'
-          test "$(jq '[.result[] | select(.name == env.CANONICAL_ZONE)] | length' <<<"$zones")" = '1'
-          zone_id=$(jq -r '.result[] | select(.name == env.CANONICAL_ZONE) | .id' <<<"$zones")
-          records=$(curl --fail-with-body -sS "${auth[@]}" "$api/zones/$zone_id/dns_records?name=$LEGACY_MY_HOST&per_page=100")
-          test "$(jq -r '.success' <<<"$records")" = 'true'
-          mapfile -t record_ids < <(jq -r '.result[] | select(.name == env.LEGACY_MY_HOST) | .id' <<<"$records")
+          record_http=$(curl -sS -o /tmp/my-dns-records.json -w '%{http_code}' "${auth[@]}" "$api/zones/$CF_ZONE_ID/dns_records?name=$LEGACY_MY_HOST&per_page=100")
+          if [[ "$record_http" != '200' ]]; then
+            echo "Exact DNS lookup failed with HTTP $record_http."
+            jq '{success,errors,messages}' /tmp/my-dns-records.json 2>/dev/null || cat /tmp/my-dns-records.json
+            exit 1
+          fi
+          test "$(jq -r '.success' /tmp/my-dns-records.json)" = 'true'
+          mapfile -t record_ids < <(jq -r '.result[] | select(.name == env.LEGACY_MY_HOST) | .id' /tmp/my-dns-records.json)
           for record_id in "${record_ids[@]}"; do
-            deleted=$(curl --fail-with-body -sS -X DELETE "${auth[@]}" "$api/zones/$zone_id/dns_records/$record_id")
-            test "$(jq -r '.success' <<<"$deleted")" = 'true'
+            delete_http=$(curl -sS -o /tmp/my-dns-delete.json -w '%{http_code}' -X DELETE "${auth[@]}" "$api/zones/$CF_ZONE_ID/dns_records/$record_id")
+            if [[ ! "$delete_http" =~ ^20[0-9]$ ]]; then
+              echo "Exact DNS delete failed with HTTP $delete_http."
+              jq '{success,errors,messages}' /tmp/my-dns-delete.json 2>/dev/null || cat /tmp/my-dns-delete.json
+              exit 1
+            fi
+            test "$(jq -r '.success' /tmp/my-dns-delete.json)" = 'true'
           done
-          remaining=$(curl --fail-with-body -sS "${auth[@]}" "$api/zones/$zone_id/dns_records?name=$LEGACY_MY_HOST&per_page=100")
-          test "$(jq '[.result[] | select(.name == env.LEGACY_MY_HOST)] | length' <<<"$remaining")" = '0'
+          remaining_http=$(curl -sS -o /tmp/my-dns-remaining.json -w '%{http_code}' "${auth[@]}" "$api/zones/$CF_ZONE_ID/dns_records?name=$LEGACY_MY_HOST&per_page=100")
+          test "$remaining_http" = '200'
+          test "$(jq '[.result[] | select(.name == env.LEGACY_MY_HOST)] | length' /tmp/my-dns-remaining.json)" = '0'
           echo "Exact retired DNS hostname removed: $LEGACY_MY_HOST"
       - name: Re-verify canonical My after DNS retirement
         shell: bash
