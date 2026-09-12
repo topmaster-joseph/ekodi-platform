@@ -1,0 +1,226 @@
+name: Remove EKODI Service Subdomains
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'wrangler.site.toml'
+      - 'config/ekodi-service-urls.json'
+      - '.github/workflows/remove-ekodi-service-subdomains.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  remove:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      CF_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CF_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      ZONE_NAME: ekodi.kr
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Verify root-only declarations
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, re, pathlib
+          wrangler = pathlib.Path('wrangler.site.toml').read_text()
+          bad = re.findall(r'pattern\s*=\s*"([^"/]*\.ekodi\.kr(?:/[^\"]*)?)"', wrangler)
+          if bad:
+              raise SystemExit('Forbidden subdomain routes remain in wrangler.site.toml: ' + ', '.join(bad))
+          cfg = json.loads(pathlib.Path('config/ekodi-service-urls.json').read_text())
+          if cfg['policy'].get('publicServiceSubdomainsAllowed') is not False:
+              raise SystemExit('publicServiceSubdomainsAllowed must be false')
+          if cfg['policy'].get('compatibilitySubdomainRedirectsAllowed') is not False:
+              raise SystemExit('compatibilitySubdomainRedirectsAllowed must be false')
+          print('Root-only declaration guard passed')
+          PY
+
+      - name: Remove Workers, Pages, route and DNS service subdomains
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CF_API_TOKEN" || (echo 'Missing CLOUDFLARE_API_TOKEN' && exit 1)
+          test -n "$CF_ACCOUNT_ID" || (echo 'Missing CLOUDFLARE_ACCOUNT_ID' && exit 1)
+          api='https://api.cloudflare.com/client/v4'
+          auth=(-H "Authorization: Bearer $CF_API_TOKEN" -H 'Content-Type: application/json')
+
+          cf_get() { curl -fsS "${auth[@]}" "$1"; }
+          cf_delete() {
+            local url="$1"
+            local out
+            out=$(mktemp)
+            code=$(curl -sS -o "$out" -w '%{http_code}' -X DELETE "${auth[@]}" "$url")
+            cat "$out"
+            echo
+            if [ "$code" -lt 200 ] || [ "$code" -ge 300 ]; then
+              echo "Cloudflare DELETE failed HTTP $code: $url"
+              return 1
+            fi
+            python - "$out" <<'PY'
+          import json, sys
+          d=json.load(open(sys.argv[1]))
+          if d.get('success') is not True:
+              raise SystemExit('Cloudflare API returned success=false')
+          PY
+            rm -f "$out"
+          }
+
+          zone_json=$(cf_get "$api/zones?name=$ZONE_NAME&account.id=$CF_ACCOUNT_ID")
+          zone_id=$(printf '%s' "$zone_json" | python -c "import sys,json; d=json.load(sys.stdin); print(d['result'][0]['id'] if d.get('result') else '')")
+          test -n "$zone_id" || (echo "$ZONE_NAME zone not found" && exit 1)
+          echo "Resolved zone: $ZONE_NAME"
+
+          echo '== Workers custom domains =='
+          workers=$(cf_get "$api/accounts/$CF_ACCOUNT_ID/workers/domains")
+          printf '%s' "$workers" > /tmp/workers-domains.json
+          python - /tmp/workers-domains.json "$ZONE_NAME" > /tmp/worker-delete.tsv <<'PY'
+          import json, sys
+          d=json.load(open(sys.argv[1])); apex=sys.argv[2]
+          for x in d.get('result') or []:
+              h=(x.get('hostname') or '').rstrip('.').lower()
+              if h != apex and h.endswith('.'+apex):
+                  print(x['id'], h, sep='\t')
+          PY
+          while IFS=$'\t' read -r id host; do
+            [ -n "${id:-}" ] || continue
+            echo "Detaching Worker domain: $host"
+            cf_delete "$api/accounts/$CF_ACCOUNT_ID/workers/domains/$id" >/dev/null
+          done < /tmp/worker-delete.tsv
+
+          echo '== Pages custom domains =='
+          projects=$(cf_get "$api/accounts/$CF_ACCOUNT_ID/pages/projects?per_page=100")
+          printf '%s' "$projects" | python -c "import sys,json; [print(x['name']) for x in (json.load(sys.stdin).get('result') or [])]" > /tmp/pages-projects.txt
+          while IFS= read -r project; do
+            [ -n "$project" ] || continue
+            domains=$(cf_get "$api/accounts/$CF_ACCOUNT_ID/pages/projects/$project/domains")
+            printf '%s' "$domains" > /tmp/pages-domains.json
+            python - /tmp/pages-domains.json "$ZONE_NAME" > /tmp/pages-delete.txt <<'PY'
+          import json, sys
+          d=json.load(open(sys.argv[1])); apex=sys.argv[2]
+          for x in d.get('result') or []:
+              h=(x.get('name') or '').rstrip('.').lower()
+              if h != apex and h.endswith('.'+apex): print(h)
+          PY
+            while IFS= read -r host; do
+              [ -n "$host" ] || continue
+              echo "Detaching Pages domain: $project -> $host"
+              cf_delete "$api/accounts/$CF_ACCOUNT_ID/pages/projects/$project/domains/$host" >/dev/null
+            done < /tmp/pages-delete.txt
+          done < /tmp/pages-projects.txt
+
+          echo '== Workers zone routes =='
+          routes=$(cf_get "$api/zones/$zone_id/workers/routes")
+          printf '%s' "$routes" > /tmp/worker-routes.json
+          python - /tmp/worker-routes.json "$ZONE_NAME" > /tmp/route-delete.tsv <<'PY'
+          import json, re, sys
+          d=json.load(open(sys.argv[1])); apex=sys.argv[2]
+          for x in d.get('result') or []:
+              p=(x.get('pattern') or '').strip()
+              host=re.sub(r'^https?://','',p).split('/')[0].lstrip('*.').lower()
+              if host != apex and host.endswith('.'+apex): print(x['id'], p, sep='\t')
+          PY
+          while IFS=$'\t' read -r id pattern; do
+            [ -n "${id:-}" ] || continue
+            echo "Deleting Worker zone route: $pattern"
+            cf_delete "$api/zones/$zone_id/workers/routes/$id" >/dev/null
+          done < /tmp/route-delete.tsv
+
+          echo '== Public serving DNS =='
+          page=1
+          : > /tmp/dns-delete.tsv
+          while :; do
+            dns=$(cf_get "$api/zones/$zone_id/dns_records?per_page=100&page=$page")
+            printf '%s' "$dns" > /tmp/dns-page.json
+            python - /tmp/dns-page.json "$ZONE_NAME" >> /tmp/dns-delete.tsv <<'PY'
+          import json, sys
+          d=json.load(open(sys.argv[1])); apex=sys.argv[2]
+          serving={'A','AAAA','CNAME','HTTPS','SVCB'}
+          for x in d.get('result') or []:
+              h=(x.get('name') or '').rstrip('.').lower()
+              if x.get('type') in serving and h != apex and h.endswith('.'+apex):
+                  relative=h[:-(len(apex)+1)]
+                  if not any(part.startswith('_') for part in relative.split('.')):
+                      print(x['id'], x.get('type',''), h, sep='\t')
+          PY
+            pages=$(python -c "import json; d=json.load(open('/tmp/dns-page.json')); print((d.get('result_info') or {}).get('total_pages',1))")
+            [ "$page" -ge "$pages" ] && break
+            page=$((page+1))
+          done
+          while IFS=$'\t' read -r id type host; do
+            [ -n "${id:-}" ] || continue
+            echo "Deleting DNS service record: $type $host"
+            cf_delete "$api/zones/$zone_id/dns_records/$id" >/dev/null
+          done < /tmp/dns-delete.tsv
+
+      - name: Verify no public service subdomains remain
+        shell: bash
+        run: |
+          set -euo pipefail
+          api='https://api.cloudflare.com/client/v4'
+          auth=(-H "Authorization: Bearer $CF_API_TOKEN" -H 'Content-Type: application/json')
+          zone_json=$(curl -fsS "${auth[@]}" "$api/zones?name=$ZONE_NAME&account.id=$CF_ACCOUNT_ID")
+          zone_id=$(printf '%s' "$zone_json" | python -c "import sys,json; d=json.load(sys.stdin); print(d['result'][0]['id'])")
+
+          workers=$(curl -fsS "${auth[@]}" "$api/accounts/$CF_ACCOUNT_ID/workers/domains")
+          printf '%s' "$workers" > /tmp/verify-workers.json
+          python - /tmp/verify-workers.json "$ZONE_NAME" <<'PY'
+          import json, sys
+          d=json.load(open(sys.argv[1])); apex=sys.argv[2]
+          bad=[x.get('hostname') for x in d.get('result') or [] if (x.get('hostname') or '').lower()!=apex and (x.get('hostname') or '').lower().endswith('.'+apex)]
+          if bad: raise SystemExit('Workers subdomains remain: '+', '.join(bad))
+          print('Workers domains: clean')
+          PY
+
+          projects=$(curl -fsS "${auth[@]}" "$api/accounts/$CF_ACCOUNT_ID/pages/projects?per_page=100")
+          printf '%s' "$projects" | python -c "import sys,json; [print(x['name']) for x in (json.load(sys.stdin).get('result') or [])]" > /tmp/verify-projects.txt
+          failed=0
+          while IFS= read -r project; do
+            [ -n "$project" ] || continue
+            domains=$(curl -fsS "${auth[@]}" "$api/accounts/$CF_ACCOUNT_ID/pages/projects/$project/domains")
+            bad=$(printf '%s' "$domains" | python -c "import sys,json; a='ekodi.kr'; print(' '.join((x.get('name') or '') for x in (json.load(sys.stdin).get('result') or []) if (x.get('name') or '').lower()!=a and (x.get('name') or '').lower().endswith('.'+a)))")
+            if [ -n "$bad" ]; then echo "Pages subdomains remain ($project): $bad"; failed=1; fi
+          done < /tmp/verify-projects.txt
+
+          routes=$(curl -fsS "${auth[@]}" "$api/zones/$zone_id/workers/routes")
+          printf '%s' "$routes" > /tmp/verify-routes.json
+          python - /tmp/verify-routes.json "$ZONE_NAME" <<'PY'
+          import json,re,sys
+          d=json.load(open(sys.argv[1])); apex=sys.argv[2]; bad=[]
+          for x in d.get('result') or []:
+              p=(x.get('pattern') or '').strip(); h=re.sub(r'^https?://','',p).split('/')[0].lstrip('*.').lower()
+              if h != apex and h.endswith('.'+apex): bad.append(p)
+          if bad: raise SystemExit('Worker routes remain: '+', '.join(bad))
+          print('Worker zone routes: clean')
+          PY
+
+          dns=$(curl -fsS "${auth[@]}" "$api/zones/$zone_id/dns_records?per_page=5000")
+          printf '%s' "$dns" > /tmp/verify-dns.json
+          python - /tmp/verify-dns.json "$ZONE_NAME" <<'PY'
+          import json,sys
+          d=json.load(open(sys.argv[1])); apex=sys.argv[2]; serving={'A','AAAA','CNAME','HTTPS','SVCB'}; bad=[]
+          for x in d.get('result') or []:
+              h=(x.get('name') or '').rstrip('.').lower(); rel=h[:-(len(apex)+1)] if h.endswith('.'+apex) else ''
+              if x.get('type') in serving and h != apex and h.endswith('.'+apex) and not any(p.startswith('_') for p in rel.split('.')):
+                  bad.append(f"{x.get('type')} {h}")
+          if bad: raise SystemExit('Serving DNS subdomains remain: '+', '.join(bad))
+          print('Serving DNS: clean')
+          PY
+          exit "$failed"
+
+      - name: Verify canonical apex paths
+        shell: bash
+        run: |
+          set -euo pipefail
+          failed=0
+          for path in / /admin/ /auth/ /ekodichurch /ekodilab /ekodibiz /ekodibiz/mall /ekodibiz/trade /insurance; do
+            code=$(curl -L -sS -o /dev/null -w '%{http_code}' --connect-timeout 10 --max-time 30 "https://ekodi.kr$path" || true)
+            echo "https://ekodi.kr$path -> $code"
+            case "$code" in 2*|3*) ;; *) failed=1 ;; esac
+          done
+          exit "$failed"
