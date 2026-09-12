@@ -1,4 +1,6 @@
 (() => {
+  import('/my/church-meeting-ops.js?v=20260913-meeting-ops-1').catch(error => console.warn('[EKODI Church] meeting ops entry', error));
+
   const MARKETING_URL = 'https://ekodi.kr/ekodichurch/marketing/';
   const AUTH_URL = 'https://ekodi.kr/auth/';
   const host = document.querySelector('#platformList');
