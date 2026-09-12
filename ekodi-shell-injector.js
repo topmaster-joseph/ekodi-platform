@@ -7,6 +7,7 @@ const I18N_API_ORIGIN='https://api.ekodi.kr';
 const SHELL_SCRIPT=`${SHELL_ORIGIN}/shell.js`;
 const SHELL_WORKSPACE_STYLE=`${SHELL_ORIGIN}/workspace.css`;
 const SHELL_USER_UI_STYLE=`${SHELL_ORIGIN}/user-ui-shell.css?v=${EKODI_SERVICE_MANIFEST.shellVersion}`;
+const SHELL_CHARACTER_STYLE=`${SHELL_ORIGIN}/user-character.css?v=${EKODI_SERVICE_MANIFEST.shellVersion}`;
 const INTERNAL_SURFACES=new Set(['workspace','admin','form','document','data']);
 const USER_SURFACES=new Set(['public','workspace']);
 const SERVICE_OWNED_FOOTER_SERVICES=new Set();
@@ -96,7 +97,7 @@ class UserUiHtmlInjector{
     if(serviceOwnsFooter(service))element.setAttribute('data-ekodi-footer-mode','service');
   }
 }
-class UserUiHeadInjector{element(element){element.append(`<meta name="google" content="notranslate" data-ekodi-browser-translation="native-i18n"><link rel="stylesheet" href="${SHELL_USER_UI_STYLE}" data-ekodi-user-ui-style="${USER_UI_VERSION}">`,{html:true});}}
+class UserUiHeadInjector{element(element){element.append(`<meta name="google" content="notranslate" data-ekodi-browser-translation="native-i18n"><link rel="stylesheet" href="${SHELL_USER_UI_STYLE}" data-ekodi-user-ui-style="${USER_UI_VERSION}"><link rel="stylesheet" href="${SHELL_CHARACTER_STYLE}" data-ekodi-user-character-style="v1">`,{html:true});}}
 class UserHeaderAdopter{
   constructor(){this.seen=false;}
   element(element){
@@ -197,4 +198,4 @@ export function shellServiceForRootPath(pathname){
   return '';
 }
 
-export { SHELL_ORIGIN, SHELL_SCRIPT, SHELL_WORKSPACE_STYLE, SHELL_USER_UI_STYLE, USER_UI_VERSION, USER_LAYOUT_VERSION, shellCsp };
+export { SHELL_ORIGIN, SHELL_SCRIPT, SHELL_WORKSPACE_STYLE, SHELL_USER_UI_STYLE, SHELL_CHARACTER_STYLE, USER_UI_VERSION, USER_LAYOUT_VERSION, shellCsp };
