@@ -1,5 +1,5 @@
 {
-  "version": 3,
+  "version": 4,
   "canonical": {
     "root": "https://ekodi.kr/",
     "mall": "https://ekodi.kr/ekodibiz/mall",
@@ -23,6 +23,8 @@
     "legacyMallUrlsAllowed": false,
     "sharedSiteProductionOwner": "deploy-site-core.yml",
     "humanSurfaceCanonicalHost": "ekodi.kr",
-    "legacySurfaceSubdomains": "compatibility-or-execution-only"
+    "publicServiceSubdomainsAllowed": false,
+    "legacySurfaceSubdomains": "forbidden",
+    "compatibilitySubdomainRedirectsAllowed": false
   }
 }
