@@ -1,0 +1,20 @@
+{
+  "id": "2026-09-11-my-operator-hub-v2",
+  "title": "My EKODI Operator Hub Boundary",
+  "status": "approved-by-owner",
+  "effective_date": "2026-09-11",
+  "principles": [
+    "https://ekodi.kr/my/ is an operator-personalized hub for EKODI super administrators, deputy operators, service owners, and delegated site administrators; it is not a mandatory destination for ordinary end users.",
+    "Ordinary users remain inside the brand context of the site they are using. EKODI identity may be created and used for authentication, authorization, consent, profile, notifications, billing, AI, and shared-service delivery without forcing navigation through My EKODI.",
+    "My EKODI summarizes operator-specific tasks, approvals, alerts, health, recent activity, and authorized administration destinations. It must not duplicate the source-of-truth management UI of each site.",
+    "My EKODI displays only administration destinations and operational information already authorized to the signed-in person. My EKODI does not grant, infer, or elevate privileges.",
+    "Each tenant or user-operated site keeps its own brand, language, and contextual user experience. EKODI platform branding is not forced into ordinary user flows.",
+    "Legacy my.ekodi.kr remains compatibility-only and must not be reintroduced as a public canonical entry point."
+  ],
+  "routing": {
+    "operator_hub": "https://ekodi.kr/my/",
+    "ordinary_user_flow": "site-local",
+    "identity_boundary": "shared-ekodi-identity",
+    "legacy_my_host": "compatibility-only"
+  }
+}
