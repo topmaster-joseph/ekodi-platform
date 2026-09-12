@@ -1,8 +1,5 @@
-# Admin site rollout: password recovery interface
-# Tax release trigger: serialize Shared Site deployment for NTS business registry
-# Mall canonical release: publish ekodi.kr/ekodibiz/mall disclosures and centered footer
-# CGMA public domain remains externally DNS-managed until the approved cutover stage; ekodi.kr/cgma stays canonical inside EKODI.
-# Domain ownership reconcile 2026-09-08: re-apply declared custom domains after mail.ekodi.kr drifted to an external redirect.
+# EKODI production routing policy: public services are served only from ekodi.kr paths.
+# Public *.ekodi.kr service subdomains are forbidden and are removed by the domain cleanup workflow.
 name = "shy-thunder-39a4"
 main = "platform-router-entry-worker.js"
 compatibility_date = "2026-08-12"
@@ -14,10 +11,6 @@ ENVIRONMENT = "production"
 
 [[routes]]
 pattern = "ekodi.kr"
-custom_domain = true
-
-[[routes]]
-pattern = "www.ekodi.kr"
 custom_domain = true
 
 # Canonical Mail contact and send API must reach the Shared Site Worker before asset fallback.
@@ -34,83 +27,6 @@ zone_name = "ekodi.kr"
 [[routes]]
 pattern = "ekodi.kr/ekodichurch/admin*"
 zone_name = "ekodi.kr"
-
-[[routes]]
-pattern = "trade.ekodi.kr"
-custom_domain = true
-
-[[routes]]
-pattern = "trade.biz.ekodi.kr"
-custom_domain = true
-
-[[routes]]
-pattern = "pay.ekodi.kr"
-custom_domain = true
-
-[[routes]]
-pattern = "pay.biz.ekodi.kr"
-custom_domain = true
-
-[[routes]]
-pattern = "tax.ekodi.kr"
-custom_domain = true
-
-[[routes]]
-pattern = "messenger.ekodi.kr"
-custom_domain = true
-
-[[routes]]
-pattern = "invest.ekodi.kr"
-custom_domain = true
-
-
-[[routes]]
-pattern = "admin.ekodi.kr"
-custom_domain = true
-
-[[routes]]
-pattern = "admin.biz.ekodi.kr"
-custom_domain = true
-
-[[routes]]
-pattern = "admin.church.ekodi.kr"
-custom_domain = true
-
-[[routes]]
-pattern = "admin.lab.ekodi.kr"
-custom_domain = true
-
-[[routes]]
-pattern = "admin.trade.ekodi.kr"
-custom_domain = true
-
-[[routes]]
-pattern = "mail.ekodi.kr"
-custom_domain = true
-
-[[routes]]
-pattern = "live.ekodi.kr"
-custom_domain = true
-
-[[routes]]
-pattern = "live.biz.ekodi.kr"
-custom_domain = true
-
-[[routes]]
-pattern = "live.church.ekodi.kr"
-custom_domain = true
-
-[[routes]]
-pattern = "live.lab.ekodi.kr"
-custom_domain = true
-
-[[routes]]
-pattern = "cloud.ekodi.kr"
-custom_domain = true
-
-[[routes]]
-pattern = "auth.ekodi.kr"
-custom_domain = true
 
 [[services]]
 binding = "FINANCE"
