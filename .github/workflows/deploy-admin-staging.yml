@@ -18,6 +18,12 @@ on:
       - 'admin-central-handoff.js'
       - 'admin-authenticated-shell.js'
       - 'admin-demand-loader.js'
+      - 'admin-assist-bootstrap.js'
+      - 'admin-assist-bootstrap.css'
+      - 'admin-assist-dock.js'
+      - 'admin-assist-dock.css'
+      - 'admin-lazy-features.js'
+      - 'admin-ai-control-plane.js'
       - 'common-services-admin.js'
       - 'common-services-admin.css'
       - 'personal-finance-admin.js'
@@ -43,6 +49,10 @@ on:
       - 'scripts/admin-thin-postbuild.mjs'
       - 'scripts/admin-readable-command-postbuild.mjs'
       - 'scripts/admin-performance-postbuild.mjs'
+      - 'test/admin-assist-command-delivery.test.mjs'
+      - 'test/admin-assist-dock.test.mjs'
+      - 'test/admin-home-command-console.test.mjs'
+      - 'test/admin-ai-control-plane.test.mjs'
       - 'test/admin-readable-command.test.mjs'
       - 'test/admin-true-lazy.test.mjs'
       - 'test/admin-thin-shell.test.mjs'
@@ -88,12 +98,13 @@ jobs:
           node --check admin-central-handoff.js
           node --check admin-authenticated-shell.js
           node --check admin-demand-loader.js
+          node --check admin-assist-bootstrap.js
           node --check common-services-admin.js
           node --check admin-menu-layout.js
           node --check admin-design-engine.js
           node --check scripts/validate-design-engine.mjs
           node --check marketing-funnel-admin.js
-          node --test test/admin-true-lazy.test.mjs test/admin-thin-shell.test.mjs test/admin-health-menu.test.mjs test/admin-preauth-shell.test.mjs test/admin-performance-hardening.test.mjs test/admin-readable-command.test.mjs test/mission-control-admin.test.mjs test/common-service-operator-control.test.mjs test/admin-affiliates-boundary.test.mjs
+          node --test test/admin-assist-command-delivery.test.mjs test/admin-assist-dock.test.mjs test/admin-home-command-console.test.mjs test/admin-ai-control-plane.test.mjs test/admin-true-lazy.test.mjs test/admin-thin-shell.test.mjs test/admin-health-menu.test.mjs test/admin-preauth-shell.test.mjs test/admin-performance-hardening.test.mjs test/admin-readable-command.test.mjs test/mission-control-admin.test.mjs test/common-service-operator-control.test.mjs test/admin-affiliates-boundary.test.mjs
           node scripts/validate-design-engine.mjs
           npm run build
 
