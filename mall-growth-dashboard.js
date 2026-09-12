@@ -1,4 +1,5 @@
 import { d1SchemaReady } from './d1-schema-readiness.js';
+import { getMallAutonomousProfitLoopStatus } from './mall-autonomous-profit-loop.js';
 
 const TABLES = [
   'affiliate_storefront_products',
@@ -20,7 +21,7 @@ export async function mallGrowthDashboardSnapshot(env) {
   if (!(await d1SchemaReady(env?.DB, TABLES))) {
     return { ok:false, schemaReady:false, status:'schema_required' };
   }
-  const [inventory, performance, today, visits, outbound, strategy] = await Promise.all([
+  const [inventory, performance, today, visits, outbound, strategy, autonomousProfitLoop] = await Promise.all([
     env.DB.prepare("SELECT COUNT(*) AS active_products FROM affiliate_storefront_products WHERE status='active'").first(),
     env.DB.prepare(`SELECT COALESCE(SUM(clicks),0) AS clicks,COALESCE(SUM(orders),0) AS orders,
       COALESCE(SUM(cancels),0) AS cancels,COALESCE(SUM(gmv_krw),0) AS gmv_krw,
@@ -35,6 +36,7 @@ export async function mallGrowthDashboardSnapshot(env) {
     env.DB.prepare(`SELECT run_date,status,candidates,scale_count,test_count,observe_count,hold_count,
       top_opportunity_score,source_status_json,completed_at,last_error
       FROM affiliate_growth_strategy_runs ORDER BY run_date DESC LIMIT 1`).first(),
+    getMallAutonomousProfitLoopStatus(env),
   ]);
 
   const latestPolicyDate = await env.DB.prepare('SELECT MAX(run_date) AS run_date FROM affiliate_growth_policy_snapshots').first();
@@ -94,7 +96,7 @@ export async function mallGrowthDashboardSnapshot(env) {
     intelligence:{ date:strategy?.run_date || null, status:strategy?.status || 'not_run', candidates:n(strategy?.candidates),
       scale:n(strategy?.scale_count), test:n(strategy?.test_count), observe:n(strategy?.observe_count), hold:n(strategy?.hold_count),
       topScore:n(strategy?.top_opportunity_score), sources, completedAt:strategy?.completed_at || null, error:clean(strategy?.last_error,300) },
-    policyDate:policyDate || null, decisions, topDecision,
+    policyDate:policyDate || null, decisions, topDecision, autonomousProfitLoop,
     channels:(channelResult.results || []).map(row => ({ provider:row.provider, published30d:n(row.published), failed30d:n(row.failed), lastPublishedAt:row.last_published_at || null })),
     activity,
   };

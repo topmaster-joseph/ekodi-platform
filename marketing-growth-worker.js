@@ -1,7 +1,5 @@
 import { WorkerEntrypoint } from 'cloudflare:workers';
-import { mallPromotionAutomationEnabled, runMallPromotionAutomation } from './mall-promotion-automation.js';
-import { runMallSalesIntelligence } from './mall-sales-intelligence.js';
-import { ensureWeeklyPromotionBoard } from './mall-official-promotion-board.js';
+import { runMallAutonomousProfitLoop } from './mall-autonomous-profit-loop.js';
 import { d1SchemaReady } from './d1-schema-readiness.js';
 import { mallGrowthDashboardSnapshot } from './mall-growth-dashboard.js';
 const SUPABASE_URL = 'https://renzehysxirjilvdxacv.supabase.co';
@@ -645,13 +643,7 @@ async function preparePaidPromotion(request, env, identity, subject, id) {
 export class MarketingGrowthPublisher extends WorkerEntrypoint {
   async runGrowthCycle(input = {}) {
     const reason = clean(input?.reason || 'shared-publishing-cron',80);
-    const intelligence = await runMallSalesIntelligence(this.env,{reason});
-    const weeklyBoard = await ensureWeeklyPromotionBoard(this.env,{reason,force:false});
-    const promotion = mallPromotionAutomationEnabled(this.env)
-      ? await runMallPromotionAutomation(this.env,{reason})
-      : {ok:true,status:'disabled',reason:'promotion_safety_gate'};
-    const boardReady = Boolean(weeklyBoard?.ok || weeklyBoard?.status === 'schema_required');
-    return {ok:Boolean(intelligence?.ok || intelligence?.status === 'schema_required') && boardReady && Boolean(promotion?.ok || promotion?.status === 'schema_required'),intelligence,weeklyBoard,promotion};
+    return runMallAutonomousProfitLoop(this.env,{reason,force:Boolean(input?.force)});
   }
 
   async publishFromVault(input = {}) {
