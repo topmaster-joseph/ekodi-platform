@@ -32,6 +32,8 @@ export function normalizeRealizedRevenue(input = {}) {
     source,
     tenantKey: clean(input.tenantKey, 160),
     siteKey: clean(input.siteKey, 120),
+    subjectType: clean(input.subjectType, 40).toLowerCase(),
+    subjectKey: clean(input.subjectKey, 180),
     currency: currencyCode(input.currency),
     gross,
     fee,
