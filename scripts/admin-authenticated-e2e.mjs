@@ -286,13 +286,13 @@ async function clickTaxHandoff() {
   await taxTab.waitFor({ state: 'visible', timeout: 5_000 });
   stage('menu-tax-navigation');
   const [response] = await Promise.all([
-    page.waitForResponse(response => response.request().resourceType() === 'document' && response.url().startsWith('https://tax.ekodi.kr/'), { timeout: 10_000 }).catch(() => null),
-    page.waitForURL(url => url.hostname === 'tax.ekodi.kr', { timeout: 10_000 }),
+    page.waitForResponse(response => response.request().resourceType() === 'document' && response.url().startsWith('https://ekodi.kr/tax'), { timeout: 10_000 }).catch(() => null),
+    page.waitForURL(url => url.origin === 'https://ekodi.kr' && url.pathname === '/tax', { timeout: 10_000 }),
     dispatchClick(taxTab),
   ]);
   if (response && !(response.status() >= 200 && response.status() < 400)) throw new Error(`tax: destination returned HTTP ${response.status()}`);
-  if (new URL(page.url()).hostname !== 'tax.ekodi.kr') throw new Error(`tax: wrong handoff destination ${page.url()}`);
-  const result = { id: 'tax', group, ok: true, durationMs: Date.now() - started, destination: 'https://tax.ekodi.kr/' };
+  if (new URL(page.url()).origin !== 'https://ekodi.kr' || new URL(page.url()).pathname !== '/tax') throw new Error(`tax: wrong handoff destination ${page.url()}`);
+  const result = { id: 'tax', group, ok: true, durationMs: Date.now() - started, destination: 'https://ekodi.kr/tax' };
   results.push(result);
   console.log(`[E2E] tax: ok ${result.durationMs}ms`);
   stage('tax-return-admin');

@@ -53,9 +53,6 @@ zone_name = "ekodi.kr"
 pattern = "messenger.ekodi.kr/admin*"
 zone_name = "ekodi.kr"
 [[routes]]
-pattern = "tax.ekodi.kr/admin*"
-zone_name = "ekodi.kr"
-[[routes]]
 pattern = "management.ekodi.kr/admin*"
 zone_name = "ekodi.kr"
 [[routes]]

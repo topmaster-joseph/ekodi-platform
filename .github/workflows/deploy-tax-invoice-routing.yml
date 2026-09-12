@@ -65,7 +65,7 @@ jobs:
           grep -Fq 'routeTaxFinance' platform-router-entry-worker.js
           grep -Fq 'binding = "FINANCE"' wrangler.site.toml
           grep -Fq 'service = "ekodi-finance-api"' wrangler.site.toml
-          grep -Fq 'https://tax.ekodi.kr/' admin-menu-registry.js
-          grep -Fq 'pattern = "tax.ekodi.kr"' wrangler.site.toml
+          grep -Fq 'https://ekodi.kr/tax' admin-menu-registry.js
+          ! grep -Fq 'tax.ekodi.kr' wrangler.site.toml
       - name: Verify single production owner policy
         run: node scripts/validate-deployment-guardrails.mjs

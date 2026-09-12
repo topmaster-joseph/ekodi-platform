@@ -41,9 +41,9 @@ try {
   page = await context.newPage();
 
   stage('authenticated-entry');
-  const entry = `https://tax.ekodi.kr/#ekodi_admin_token=${encodeURIComponent(token)}`;
+  const entry = `https://ekodi.kr/tax#ekodi_admin_token=${encodeURIComponent(token)}`;
   await page.goto(entry, { waitUntil: 'domcontentloaded', timeout: 15_000 });
-  if (new URL(page.url()).hostname !== 'tax.ekodi.kr') throw new Error(`tax-surface: wrong destination ${page.url()}`);
+  { const destination = new URL(page.url()); if (destination.origin !== 'https://ekodi.kr' || destination.pathname !== '/tax') throw new Error(`tax-surface: wrong destination ${page.url()}`); }
 
   stage('session-handoff');
   await page.waitForFunction(() => Boolean(sessionStorage.getItem('ekodi-auth-token')) && location.hash === '', null, { timeout: 15_000 });
@@ -70,7 +70,7 @@ try {
 
   if (!writeVerification) {
     result = {
-      id: 'tax', group: 'operations', ok: true, destination: 'https://tax.ekodi.kr/',
+      id: 'tax', group: 'operations', ok: true, destination: 'https://ekodi.kr/tax',
       tokenHandoffVerified: true, authenticatedReadStatus: before.status,
       supplierProfileId: profileId, supplierSaveVerification: 'not-requested',
       isolatedTaxSurfaceVerification: true,
@@ -108,7 +108,7 @@ try {
     if (changed.length) throw new Error(`tax-surface: value-preserving save changed fields: ${changed.join(',')}`);
 
     result = {
-      id: 'tax', group: 'operations', ok: true, destination: 'https://tax.ekodi.kr/',
+      id: 'tax', group: 'operations', ok: true, destination: 'https://ekodi.kr/tax',
       tokenHandoffVerified: true, authenticatedReadStatus: before.status,
       supplierProfileId: profileId, supplierSaveVerification: 'passed',
       writeStatus: response.status(), persistenceReadbackStatus: after.status,
