@@ -61,7 +61,9 @@ test('global navigation remains synchronized to the actually active panel', () =
   const activateEnd = sidebar.indexOf('export function createAdminSidebarItem', activateStart);
   const activateSource = sidebar.slice(activateStart, activateEnd);
   assert.doesNotMatch(activateSource, /syncWorkbenchState/);
-  assert.match(sidebar, /activateSection\(nav, getAdminMenuGroupDefault\(global\.dataset\.adminGlobalGroup\)\)/);
+  assert.doesNotMatch(sidebar, /activateSection\(nav, getAdminMenuGroupDefault\(global\.dataset\.adminGlobalGroup\)\)/);
+  assert.match(sidebar, /nav\.dataset\.adminFocusedGroup = global\.dataset\.adminGlobalGroup \|\| ''/);
+  assert.match(sidebar, /const displayedSection = group === activeGroup \? section : ''/);
 });
 
 test('global menu labels use readable contrast on the light sidebar', () => {
