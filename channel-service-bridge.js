@@ -116,6 +116,16 @@ export function serviceTemplateAllowed(identity, input, templateId) {
   if (identity?.authMode === 'github-oidc') return identity.service===MALL_SERVICE && `${input?.type}:${input?.key}`===MALL_SUBJECT && templateId==='product_short';
   return templateId === 'devotional_daily';
 }
+export function serviceModeAllowed(identity, input, templateId, mode = 'scheduled') {
+  if (!serviceTemplateAllowed(identity,input,templateId)) return false;
+  if (mode === 'scheduled') return true;
+  return mode === 'private_proof'
+    && identity?.authMode === 'github-oidc'
+    && identity?.service === MALL_SERVICE
+    && identity?.claims?.event_name === 'workflow_dispatch'
+    && `${input?.type}:${input?.key}` === MALL_SUBJECT
+    && templateId === 'product_short';
+}
 export function channelServiceBridgeReady(env = {}) {
   const services = values(env.CHANNEL_AUTOMATION_INTERNAL_SERVICES);
   const staticReady = Boolean(services.size && values(env.CHANNEL_AUTOMATION_INTERNAL_SUBJECTS).size
@@ -150,16 +160,21 @@ export async function scheduleServiceYoutube(request, env) {
   if (!meta) return {status:400,body:{error:'CHANNEL_SERVICE_METADATA_REQUIRED'}};
   const channelId = Number(meta.channelId || 0);
   const templateId = clean(meta.templateId,80);
+  const mode = clean(meta.mode || 'scheduled',40);
+  const privateProof = mode === 'private_proof';
   const publishAt = clean(meta.publishAt,80);
   const idempotencyKey = clean(meta.idempotencyKey,160);
-  if (!Number.isInteger(channelId) || channelId < 1 || !serviceTemplateAllowed(identity,input,templateId))
+  if (!Number.isInteger(channelId) || channelId < 1 || !serviceModeAllowed(identity,input,templateId,mode))
     return {status:400,body:{error:'CHANNEL_SERVICE_TARGET_INVALID'}};
   if (!idempotencyKey) return {status:400,body:{error:'IDEMPOTENCY_KEY_REQUIRED'}};
-  if (!publishAt || !Number.isFinite(Date.parse(publishAt)) || Date.parse(publishAt) <= Date.now())
+  if (!privateProof && (!publishAt || !Number.isFinite(Date.parse(publishAt)) || Date.parse(publishAt) <= Date.now()))
     return {status:409,body:{error:'PUBLISH_AT_NOT_FUTURE'}};
-  const existing = await env.DB.prepare(`SELECT id,external_post_id,external_post_url,publish_at,status FROM channel_provider_schedules
+  const existing = await env.DB.prepare(`SELECT id,external_post_id,external_post_url,publish_at,status,provider_response_json FROM channel_provider_schedules
     WHERE service_id=? AND subject_type=? AND subject_key=? AND idempotency_key=?`).bind(identity.service,input.type,input.key,idempotencyKey).first();
-  if (existing) return {status:200,body:{ok:true,idempotent:true,schedule:existing}};
+  if (existing) {
+    const response = safeParse(existing.provider_response_json,{});
+    return {status:200,body:{ok:true,idempotent:true,mode:response.mode || mode,schedule:{...existing,privacyStatus:response.privacyStatus || ''}}};
+  }
   const subject = await resolveWorkspaceSubject(env,input);
   if (!subject) return {status:409,body:{error:'CHANNEL_WORKSPACE_ID_REQUIRED'}};
   const entitlement = await automationEntitlement(env,subject);
@@ -179,25 +194,33 @@ export async function scheduleServiceYoutube(request, env) {
   const bytes = new Uint8Array(await request.arrayBuffer());
   if (!bytes.byteLength || bytes.byteLength > MAX_VIDEO_BYTES) return {status:bytes.byteLength?413:400,body:{error:bytes.byteLength?'CHANNEL_VIDEO_TOO_LARGE':'CHANNEL_VIDEO_REQUIRED'}};
   const config = safeParse(channel.config_json,{});
+  const providerPublishAt = privateProof ? '' : publishAt;
+  const providerPrivacy = privateProof ? 'private' : (config.privacyStatus || 'private');
   const result = await uploadYoutubeVideoBytes({env,refreshToken:secret.refreshToken,bytes,
-    contentType:request.headers.get('content-type') || 'video/mp4',title:clean(meta.title,100),description:clean(meta.description,5000),publishAt,
-    privacyStatus:config.privacyStatus || 'private',categoryId:config.categoryId || '22',expectedChannelId:channel.external_account_id});
+    contentType:request.headers.get('content-type') || 'video/mp4',title:clean(meta.title,100),description:clean(meta.description,5000),publishAt:providerPublishAt,
+    privacyStatus:providerPrivacy,categoryId:config.categoryId || '22',expectedChannelId:channel.external_account_id});
   const now = nowIso();
+  const recordPublishAt = privateProof ? now : new Date(publishAt).toISOString();
+  const recordStatus = privateProof ? 'published' : 'scheduled';
+  const privacyStatus = clean(result.response?.privacyStatus || providerPrivacy,30);
+  const providerResponse = {...(result.response||{}),mode,privateProof,privacyStatus};
   const contentInsert = await env.DB.prepare(`INSERT INTO marketing_content_items
     (subject_type,subject_key,workspace_id,title,content_type,caption,asset_url,link_url,content_json,source,approval_state,created_by,created_at,updated_at)
     VALUES(?,?,?,?, 'short_video',?,'','',?,'ai','auto_approved',?,?,?)`)
     .bind(input.type,input.key,subject.workspaceId||'',clean(meta.title,240),clean(meta.description,12000),
-      safeJson({templateId,service:identity.service,authMode:identity.authMode,idempotencyKey,providerSchedule:true}),`service:${identity.service}`,now,now).run();
+      safeJson({templateId,service:identity.service,authMode:identity.authMode,idempotencyKey,providerSchedule:!privateProof,privateProof,mode}),`service:${identity.service}`,now,now).run();
   const contentId = Number(contentInsert.meta?.last_row_id || 0);
   const scheduleInsert = await env.DB.prepare(`INSERT INTO channel_provider_schedules
     (service_id,idempotency_key,subject_type,subject_key,workspace_id,content_id,channel_id,provider,external_post_id,external_post_url,publish_at,status,provider_response_json,created_at,updated_at)
     VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
     .bind(identity.service,idempotencyKey,input.type,input.key,subject.workspaceId||'',contentId,channelId,'youtube',
-      clean(result.id,240),clean(result.url,2048),new Date(publishAt).toISOString(),'scheduled',safeJson(result.response||{}),now,now).run();
+      clean(result.id,240),clean(result.url,2048),recordPublishAt,recordStatus,safeJson(providerResponse),now,now).run();
   const scheduleId = Number(scheduleInsert.meta?.last_row_id || 0);
   await env.DB.prepare(`UPDATE marketing_publish_channels SET last_check_at=?,last_error='',updated_at=? WHERE id=?`).bind(now,now,channelId).run();
-  await audit(env,subject,'provider_schedule_created',`youtube:${result.id}:${publishAt}`,`service:${identity.service}:${identity.authMode}`);
-  return {status:201,body:{ok:true,idempotent:false,schedule:{id:scheduleId,contentId,channelId,provider:'youtube',externalPostId:result.id,externalPostUrl:result.url,publishAt:new Date(publishAt).toISOString(),status:'scheduled'}}};
+  const auditAction = privateProof ? 'provider_private_proof_uploaded' : 'provider_schedule_created';
+  const auditDetail = privateProof ? `youtube:${result.id}:private` : `youtube:${result.id}:${publishAt}`;
+  await audit(env,subject,auditAction,auditDetail,`service:${identity.service}:${identity.authMode}`);
+  return {status:201,body:{ok:true,idempotent:false,mode,schedule:{id:scheduleId,contentId,channelId,provider:'youtube',externalPostId:result.id,externalPostUrl:result.url,publishAt:recordPublishAt,status:recordStatus,privacyStatus}}};
 }
 export async function channelServiceBridgeSchemaReady(env = {}) {
   if (!env.DB) return false;
