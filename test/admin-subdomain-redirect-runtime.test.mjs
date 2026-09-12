@@ -8,7 +8,6 @@ const siteOwnedHosts = [
   'live.ekodi.kr',
   'pay.ekodi.kr',
   'trade.ekodi.kr',
-  'tax.ekodi.kr',
   'messenger.ekodi.kr',
   'invest.ekodi.kr',
 ];

@@ -2,7 +2,7 @@ import authWorker from './auth-worker.js';
 import freeFirstWorker from './tax-invoice-free-first-worker.js';
 
 const ALLOWED_ORIGINS = new Set([
-  'https://tax.ekodi.kr',
+  'https://ekodi.kr',
   'https://admin.ekodi.kr',
   'https://admin.biz.ekodi.kr',
   'https://admin.church.ekodi.kr',

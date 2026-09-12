@@ -47,7 +47,7 @@ function ensureTaxServiceLink() {
   const copy = document.createElement('span');
   copy.textContent = '세금계산서 상세 업무는 EKODI Tax 전문서비스에서 같은 Finance Core로 처리합니다.';
   const link = document.createElement('a');
-  link.href = 'https://tax.ekodi.kr/';
+  link.href = 'https://ekodi.kr/tax';
   link.target = '_blank';
   link.rel = 'noopener';
   link.className = 'primary compact';

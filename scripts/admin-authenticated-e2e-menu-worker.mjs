@@ -156,17 +156,17 @@ async function verifyTax(tab, alreadyActive, started) {
   const navigation = page.waitForRequest(request => {
     try {
       const destination = new URL(request.url());
-      return request.isNavigationRequest() && request.frame() === page.mainFrame() && destination.hostname === 'tax.ekodi.kr';
+      return request.isNavigationRequest() && request.frame() === page.mainFrame() && destination.origin === 'https://ekodi.kr' && destination.pathname === '/tax';
     } catch { return false; }
   }, { timeout: 10_000 });
   await clickFast(tab);
   const request = await navigation;
   const destination = new URL(request.url());
-  if (destination.hostname !== 'tax.ekodi.kr') throw new Error(`tax: wrong handoff destination ${destination.hostname}`);
+  if (destination.origin !== 'https://ekodi.kr' || destination.pathname !== '/tax') throw new Error(`tax: wrong handoff destination ${destination.hostname}`);
   try {
-    await page.waitForURL(url => url.hostname === 'tax.ekodi.kr', { waitUntil:'commit', timeout:15_000 });
+    await page.waitForURL(url => url.origin === 'https://ekodi.kr' && url.pathname === '/tax', { waitUntil:'commit', timeout:15_000 });
   } catch (error) {
-    if (new URL(page.url()).hostname !== 'tax.ekodi.kr') throw error;
+    if (new URL(page.url()).origin !== 'https://ekodi.kr' || new URL(page.url()).pathname !== '/tax') throw error;
   }
   stage('tax-session-handoff');
   await page.waitForFunction(() => Boolean(sessionStorage.getItem('ekodi-auth-token')) && location.hash === '', null, { timeout:15_000 });
@@ -201,7 +201,7 @@ async function verifyTax(tab, alreadyActive, started) {
   if (!writeVerification) {
     results.push({
       id:menuId, group, ok:true, durationMs:Date.now()-started,
-      destination:'https://tax.ekodi.kr/', tokenHandoffVerified:true,
+      destination:'https://ekodi.kr/tax', tokenHandoffVerified:true,
       authenticatedReadStatus:before.status, supplierProfileId:profileId,
       supplierSaveVerification:'not-requested'
     });
@@ -240,7 +240,7 @@ async function verifyTax(tab, alreadyActive, started) {
 
   results.push({
     id:menuId, group, ok:true, durationMs:Date.now()-started,
-    destination:'https://tax.ekodi.kr/', tokenHandoffVerified:true,
+    destination:'https://ekodi.kr/tax', tokenHandoffVerified:true,
     authenticatedReadStatus:before.status, supplierProfileId:profileId,
     supplierSaveVerification:'passed', writeStatus:response.status(),
     persistenceReadbackStatus:after.status, persistenceVerified:true,
