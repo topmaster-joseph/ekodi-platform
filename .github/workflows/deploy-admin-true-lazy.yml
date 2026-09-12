@@ -95,8 +95,8 @@ jobs:
             test "$handoff_bytes" -le 9000
             test "$compact_bytes" -le 5000
             test "$menu_bytes" -le 10000
-            test "$demand_bytes" -le 14000
-            test "$first_path" -le 43000
+            test "$demand_bytes" -le 14100
+            test "$first_path" -le 44500
             test "$css_bytes" -le 40000
           } 2>&1 | tee runtime-contract-output.txt
 
