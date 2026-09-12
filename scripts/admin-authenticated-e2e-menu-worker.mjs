@@ -44,6 +44,23 @@ async function waitForReady() {
   await page.waitForFunction(() => document.querySelector('#apiState')?.textContent?.includes('정상'), null, { timeout: 15_000 });
 }
 
+async function waitForAdminNavigationIdle() {
+  stage('pre-handoff-idle');
+  let previous = '';
+  let stableSamples = 0;
+  for (let attempt = 0; attempt < 16; attempt += 1) {
+    await page.waitForLoadState('domcontentloaded', { timeout: 3_000 }).catch(() => {});
+    const current = page.url();
+    const hostname = new URL(current).hostname;
+    if (!['admin.ekodi.kr', 'ekodi.kr'].includes(hostname)) throw new Error(`Admin navigation left the canonical surface before Tax handoff: ${current}`);
+    stableSamples = current === previous ? stableSamples + 1 : 0;
+    previous = current;
+    if (stableSamples >= 2) return current;
+    await page.waitForTimeout(250);
+  }
+  throw new Error(`Admin navigation did not settle before Tax handoff: ${page.url()}`);
+}
+
 async function selectWorkArea() {
   stage('global');
   const global = page.locator(`button.admin-global-nav[data-admin-global-group="${group}"]`);
@@ -432,6 +449,7 @@ try {
 
   const started = Date.now();
   await selectWorkArea();
+  if (menuId === 'tax') await waitForAdminNavigationIdle();
   stage('tab');
   const tab = page.locator(`button.admin-context-tab[data-admin-context-section="${menuId}"]`);
   await tab.waitFor({ state: 'visible', timeout: 5_000 });

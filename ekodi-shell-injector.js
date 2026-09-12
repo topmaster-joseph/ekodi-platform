@@ -7,6 +7,7 @@ const I18N_API_ORIGIN='https://api.ekodi.kr';
 const SHELL_SCRIPT=`${SHELL_ORIGIN}/shell.js`;
 const SHELL_WORKSPACE_STYLE=`${SHELL_ORIGIN}/workspace.css`;
 const SHELL_USER_UI_STYLE=`${SHELL_ORIGIN}/user-ui-shell.css?v=${EKODI_SERVICE_MANIFEST.shellVersion}`;
+const SHELL_CHARACTER_STYLE=`${SHELL_ORIGIN}/user-character.css?v=${EKODI_SERVICE_MANIFEST.shellVersion}`;
 const INTERNAL_SURFACES=new Set(['workspace','admin','form','document','data']);
 const USER_SURFACES=new Set(['public','workspace']);
 const SERVICE_OWNED_FOOTER_SERVICES=new Set();
@@ -14,6 +15,7 @@ const SHARED_FOOTER_REPLACES_LOCAL_FOOTER_SERVICES=new Set(['mall']);
 const MY_SERVICE_ID='my';
 const USER_UI_VERSION='v1';
 const USER_LAYOUT_VERSION='centered-v1';
+const USER_CHROME_HEADER='x-ekodi-user-chrome';
 const ADMIN_BOOT_STYLE=`<style data-ekodi-admin-shell-boot>:where(.side-brand,.sidebar-brand,.admin-sidebar-brand,[data-ekodi-admin-sidebar-header],[data-ekodi-admin-brand]){display:none!important}</style>`;
 const SPECIAL_HOST_ALIASES=Object.freeze({
   'mall.ekodi.kr':'mall','mall.biz.ekodi.kr':'mall','trade.biz.ekodi.kr':'trade','pay.biz.ekodi.kr':'pay'
@@ -56,6 +58,7 @@ function resolvedSurface(serviceId,surface=''){return cleanSurface(surface)||def
 function userSurfaceForService(serviceId){return USER_SURFACES.has(defaultSurface(serviceId));}
 function readyLocalesForService(serviceId){return publishedLocalesForService(cleanServiceId(serviceId)).join(' ');}
 function serviceLabel(serviceId){const service=serviceForId(serviceId);return service?.shortName||service?.name||(serviceId==='ekodi'?'EKODI':'');}
+function userChromeAlreadyInjected(headers){return String(headers?.get?.(USER_CHROME_HEADER)||'').trim()===USER_UI_VERSION;}
 function surfaceBootStyle(surface){
   if(surface==='admin')return ADMIN_BOOT_STYLE;
   return '';
@@ -96,7 +99,7 @@ class UserUiHtmlInjector{
     if(serviceOwnsFooter(service))element.setAttribute('data-ekodi-footer-mode','service');
   }
 }
-class UserUiHeadInjector{element(element){element.append(`<meta name="google" content="notranslate" data-ekodi-browser-translation="native-i18n"><link rel="stylesheet" href="${SHELL_USER_UI_STYLE}" data-ekodi-user-ui-style="${USER_UI_VERSION}">`,{html:true});}}
+class UserUiHeadInjector{element(element){element.append(`<meta name="google" content="notranslate" data-ekodi-browser-translation="native-i18n"><link rel="stylesheet" href="${SHELL_USER_UI_STYLE}" data-ekodi-user-ui-style="${USER_UI_VERSION}"><link rel="stylesheet" href="${SHELL_CHARACTER_STYLE}" data-ekodi-user-character-style="v1">`,{html:true});}}
 class UserHeaderAdopter{
   constructor(){this.seen=false;}
   element(element){
@@ -114,12 +117,13 @@ class UserCanvasAdopter{
     element.setAttribute('data-ekodi-user-canvas',USER_LAYOUT_VERSION);
   }
 }
-class LocalFooterDeduplicator{
+class UserFooterCanonicalizer{
   constructor(serviceId){this.serviceId=cleanServiceId(serviceId);}
   element(element){
-    if(!sharedFooterReplacesLocalFooter(this.serviceId))return;
     const classes=String(element.getAttribute('class')||'').split(/\s+/).filter(Boolean);
-    if(!classes.includes('ekodi-user-ui-footer'))element.remove();
+    const shared=classes.includes('ekodi-user-ui-footer');
+    if(shared&&!serviceOwnsFooter(this.serviceId)){element.remove();return;}
+    if(sharedFooterReplacesLocalFooter(this.serviceId))element.remove();
   }
 }
 class UserChromeInjector{
@@ -135,6 +139,7 @@ export function injectEkodiUserUi(response,serviceId='ekodi',surface='public'){
   const contentType=String(response.headers.get('content-type')||'').toLowerCase();
   const resolved=resolvedSurface(serviceId,surface);
   if(!contentType.includes('text/html')||!USER_SURFACES.has(resolved))return response;
+  const alreadyHasChrome=userChromeAlreadyInjected(response.headers);
   const headers=new Headers(response.headers);
   const csp=headers.get('content-security-policy');
   if(csp)headers.set('content-security-policy',extendDirective(csp,'style-src',SHELL_ORIGIN));
@@ -143,9 +148,10 @@ export function injectEkodiUserUi(response,serviceId='ekodi',surface='public'){
   headers.set('x-ekodi-user-layout',USER_LAYOUT_VERSION);
   headers.set('x-ekodi-ready-locales',readyLocalesForService(serviceId));
   headers.set('x-ekodi-user-footer',serviceOwnsFooter(serviceId)?'service':'shared');
+  headers.set(USER_CHROME_HEADER,USER_UI_VERSION);
   const headerAdopter=new UserHeaderAdopter();
   const canvasAdopter=new UserCanvasAdopter();
-  return new HTMLRewriter()
+  let rewriter=new HTMLRewriter()
     .on('html',new UserUiHtmlInjector(serviceId,resolved))
     .on('head',new UserUiHeadInjector())
     .on('main',canvasAdopter)
@@ -155,10 +161,13 @@ export function injectEkodiUserUi(response,serviceId='ekodi',surface='public'){
     .on('.topbar',headerAdopter)
     .on('.app-header',headerAdopter)
     .on('.main-header',headerAdopter)
-    .on('[data-ekodi-fixed-header]',headerAdopter)
-    .on('footer',new LocalFooterDeduplicator(serviceId))
-    .on('body',new UserChromeInjector(serviceId))
-    .transform(new Response(response.body,{status:response.status,statusText:response.statusText,headers}));
+    .on('[data-ekodi-fixed-header]',headerAdopter);
+  if(!alreadyHasChrome){
+    rewriter=rewriter
+      .on('footer',new UserFooterCanonicalizer(serviceId))
+      .on('body',new UserChromeInjector(serviceId));
+  }
+  return rewriter.transform(new Response(response.body,{status:response.status,statusText:response.statusText,headers}));
 }
 
 export function injectEkodiShell(response,serviceId,surface='',options={}){
@@ -197,4 +206,4 @@ export function shellServiceForRootPath(pathname){
   return '';
 }
 
-export { SHELL_ORIGIN, SHELL_SCRIPT, SHELL_WORKSPACE_STYLE, SHELL_USER_UI_STYLE, USER_UI_VERSION, USER_LAYOUT_VERSION, shellCsp };
+export { SHELL_ORIGIN, SHELL_SCRIPT, SHELL_WORKSPACE_STYLE, SHELL_USER_UI_STYLE, SHELL_CHARACTER_STYLE, USER_UI_VERSION, USER_LAYOUT_VERSION, USER_CHROME_HEADER, userChromeAlreadyInjected, shellCsp };
