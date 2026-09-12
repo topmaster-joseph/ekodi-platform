@@ -180,7 +180,7 @@ test('user UI header/footer/language are shared user-surface-only modules',async
   assert.match(principles,/consumer-commerce/);
 
   const strictCsp=shellCsp("default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'");
-  assert.match(strictCsp,/style-src 'self' https:\/\/shell\.ekodi\.kr/);
+  assert.match(strictCsp,/style-src 'self' https:\/\/ekodi\.kr\/shell/);
   assert.doesNotMatch(strictCsp,/style-src[^;]*'unsafe-inline'/);
 
   assert.match(principles,/관리자 화면\(`admin`\)/);

@@ -19,3 +19,98 @@ service = "ekodibiz-revenue-os-staging"
 directory = "./dist"
 binding = "ASSETS"
 run_worker_first = true
+
+[[services]]
+binding = "COMMUNITY"
+service = "ekodi-community-staging"
+
+
+[[services]]
+binding = "WORKSPACE_PLATFORM"
+service = "ekodi-workspace-platform-api-staging"
+
+
+[[services]]
+binding = "LIFE"
+service = "ekodi-life-ai-staging"
+
+
+[[services]]
+binding = "EDUCATION"
+service = "ekodi-education-staging"
+
+
+[[services]]
+binding = "SUPPORT"
+service = "ekodi-support-opportunity-staging"
+
+
+[[services]]
+binding = "EXPERIENCE"
+service = "ekodi-experience-staging"
+
+
+[[services]]
+binding = "AI"
+service = "ekodi-ai-control-staging"
+
+
+[[services]]
+binding = "PUBLISHING"
+service = "ekodi-publishing-staging"
+
+
+[[services]]
+binding = "MONEY"
+service = "ekodi-money-staging"
+
+
+[[services]]
+binding = "JOURNAL"
+service = "ekodi-journal-staging"
+
+
+[[services]]
+binding = "BUSINESS"
+service = "ekodi-business-staging"
+
+
+[[services]]
+binding = "WORK"
+service = "ekodi-work-staging"
+
+
+[[services]]
+binding = "ENERGY"
+service = "ekodi-energy-staging"
+
+
+[[services]]
+binding = "MANAGEMENT"
+service = "ekodi-management-staging"
+
+
+[[services]]
+binding = "AUTHOR"
+service = "ekodi-author-ai-staging"
+
+
+[[services]]
+binding = "BOOKS"
+service = "ekodi-books-staging"
+
+
+[[services]]
+binding = "MARKETING_PUBLISHING"
+service = "ekodi-marketing-publishing-staging"
+
+
+[[services]]
+binding = "SOCIAL"
+service = "ekodi-social-staging"
+
+
+[[services]]
+binding = "SHELL"
+service = "ekodi-shell-staging"
+

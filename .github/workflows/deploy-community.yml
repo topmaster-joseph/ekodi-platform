@@ -128,7 +128,7 @@ jobs:
             if [[ "$root_code" == '200' && "$health_code" == '200' && "$connect_code" == '200' ]] \
               && grep -Fq 'Community' /tmp/community-stage.html \
               && grep -Fq 'EKODI Connect' /tmp/community-stage-connect.html \
-              && grep -Fq 'https://shell.ekodi.kr/shell.js' /tmp/community-stage.html \
+              && grep -Fq 'https://ekodi.kr/shell/shell.js' /tmp/community-stage.html \
               && grep -Fiq 'x-ekodi-shell: v2' /tmp/community-stage.headers \
               && grep -Fq '"ekodiShell":true' /tmp/community-stage-health.json \
               && grep -Fq '"contextModel":"person-space-role"' /tmp/community-stage-health.json; then
@@ -192,7 +192,7 @@ jobs:
             if [[ "$root_code" == '200' && "$social_code" == '200' && "$connect_code" == '200' && "$health_code" == '200' ]] \
               && grep -Fq 'Community' /tmp/community.html \
               && grep -Fq 'EKODI Connect' /tmp/community-connect.html \
-              && grep -Fq 'https://shell.ekodi.kr/shell.js' /tmp/community.html \
+              && grep -Fq 'https://ekodi.kr/shell/shell.js' /tmp/community.html \
               && grep -Fiq 'x-ekodi-shell: v2' /tmp/community.headers \
               && grep -Fq 'api.ekodi.kr/api/social/registry' /tmp/community-social.js \
               && grep -Fq '"socialRegistry":true' /tmp/community-health.json \
