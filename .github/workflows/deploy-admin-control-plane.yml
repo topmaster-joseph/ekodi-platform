@@ -12,6 +12,8 @@ on:
       - 'admin-assist-dock.js'
       - 'admin-assist-dock.css'
       - 'admin-lazy-features.js'
+      - 'scripts/admin-assist-canonical-e2e.mjs'
+      - 'scripts/admin-authenticated-e2e-retry.mjs'
       - 'test/admin-assist-command-delivery.test.mjs'
       - 'test/admin-assist-dock.test.mjs'
       - 'test/admin-home-command-console.test.mjs'
@@ -47,6 +49,8 @@ jobs:
           node --check admin-ai-governor.js
           node --check admin-secret-generator.js
           node --check admin-assist-bootstrap.js
+          node --check scripts/admin-assist-canonical-e2e.mjs
+          node --check scripts/admin-authenticated-e2e-retry.mjs
           node --test test/admin-assist-command-delivery.test.mjs test/admin-assist-dock.test.mjs test/admin-home-command-console.test.mjs test/admin-ai-control-plane.test.mjs
           npm run build
           test -f dist/admin-secret-generator.js

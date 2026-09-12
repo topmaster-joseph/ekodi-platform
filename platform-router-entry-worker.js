@@ -25,6 +25,7 @@ import { handlePreviewRequest } from './preview-page.js';
 import { storeGatewayPage } from './store-gateway-page.js';
 import { storePortfolioAdminPage } from './store-portfolio-admin-page.js';
 import { isLearningPath, learningPage, learningScript, learningStyles } from './learning-page.js';
+import { decorateDiscoveryResponse } from './discovery-layer.js';
 
 const PUBLIC_HOST='ekodi.kr';
 const CGMA_HOSTS=new Set(['cgma.or.kr','www.cgma.or.kr']);
@@ -221,13 +222,13 @@ export default {
         if(isChurchPastorAdminPath(url.pathname))return injectEkodiShell(churchPastorAdminPage(),'church','admin');
         if(isWorkspaceAdminPath(url.pathname)&&!isEkodiBizInvestAdminPath(url.pathname))return injectEkodiShell(workspaceAdminPage(),'space','admin');
       }
-      if(['GET','HEAD'].includes(request.method)&&STORE_GATEWAY_PATHS.has(url.pathname))return injectEkodiShell(storeGatewayPage(),'ekodi','public');
+      if(['GET','HEAD'].includes(request.method)&&STORE_GATEWAY_PATHS.has(url.pathname)){const response=injectEkodiShell(storeGatewayPage(),'ekodi','public');return request.method==='GET'?decorateDiscoveryResponse(response,url.pathname):response;}
       if(marketingProjectionForPath(url.pathname)){const projected=await proxyCanonicalMarketing(request);if(projected)return projected;}
       if(['GET','HEAD'].includes(request.method)&&EKODIBIZ_PUBLIC_ROUTE.test(url.pathname))return routeEkodiBizPublic(request,env);
       if(url.pathname.startsWith(EKODIBIZ_API_PREFIX))return routeEkodiBizApi(request,env);
       if(['GET','HEAD'].includes(request.method)&&url.pathname.startsWith(EKODIBIZ_ASSET_PREFIX))return routeEkodiBizAsset(request,env);
       if(['GET','HEAD'].includes(request.method)&&url.pathname===DEPLOYMENT_PROBE_PATH)return routeDeploymentProbe(request,env);
-      if(['GET','HEAD'].includes(request.method)&&isPublicWorkspacePath(url.pathname)&&!isEkodiBizOwnedPath(url.pathname))return routePublicWorkspace(request,env);
+      if(['GET','HEAD'].includes(request.method)&&isPublicWorkspacePath(url.pathname)&&!isEkodiBizOwnedPath(url.pathname)){const response=await routePublicWorkspace(request,env);return request.method==='GET'?decorateDiscoveryResponse(response,url.pathname):response;}
       if(['GET','HEAD'].includes(request.method)&&url.pathname.startsWith(WORKSPACE_ASSET_PREFIX))return routeWorkspaceAsset(request,env);
       if(['GET','HEAD'].includes(request.method)&&url.pathname==='/auth/start'){
         const auth=workspaceAuthRedirect(request);if(auth)return auth;
