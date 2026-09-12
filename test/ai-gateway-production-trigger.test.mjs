@@ -6,9 +6,14 @@ const workflow = await readFile(new URL('../.github/workflows/verify-ai-gateway-
 
 test('AI Runtime production verification follows the canonical guarded owner', () => {
   assert.match(workflow, /workflows: \['Deploy EKODI AI Control Plane'\]/);
-  assert.match(workflow, /github\.event_name == 'workflow_dispatch'/);
   assert.match(workflow, /github\.event\.workflow_run\.event != 'pull_request'/);
   assert.match(workflow, /github\.event\.workflow_run\.conclusion == 'success'/);
+});
+
+test('AI Runtime verifier self-checks after its main-branch contract changes', () => {
+  assert.match(workflow, /push:\s*\n\s*branches: \[main\]/);
+  assert.match(workflow, /paths: \['\.github\/workflows\/verify-ai-gateway-production\.yml'\]/);
+  assert.match(workflow, /github\.event_name == 'push'/);
 });
 
 test('AI Runtime production verification matches the runtime-only boundary', () => {
