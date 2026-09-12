@@ -13,10 +13,12 @@ test('authenticated Admin E2E isolates every menu in a fresh Chromium process an
   assert.match(source, /const maxAttemptsPerMenu = 2/);
   assert.match(source, /const menuTimeoutMs = 30_000/);
   assert.match(source, /adminMenuOrder\(\)/);
-  assert.match(source, /spawn\(process\.execPath, \['scripts\/admin-authenticated-e2e-menu-worker\.mjs'\]/);
+  assert.match(source, /spawn\(process\.execPath, \[script\]/);
+  assert.match(source, /'scripts\/admin-authenticated-e2e-menu-worker\.mjs'/);
   assert.match(source, /E2E_MENU_ID: menuId/);
   assert.match(source, /brand-new Chromium process/);
-  assert.match(source, /isolated-menu-renderers/);
+  assert.match(source, /isolated-menu-renderers\+canonical-assist-roundtrip/);
+  assert.match(source, /runCanonicalAssist\(\)/);
 });
 
 test('isolated worker skips redundant clicks only when the active context tab has a visible rendered panel', async () => {
