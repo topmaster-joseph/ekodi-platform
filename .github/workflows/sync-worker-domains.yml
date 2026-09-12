@@ -1,4 +1,4 @@
-name: Sync EKODI Worker Domains
+name: Sync EKODI Root Domain
 
 on:
   push:
@@ -13,7 +13,7 @@ permissions:
   issues: write
 
 concurrency:
-  group: ekodi-worker-domain-sync
+  group: ekodi-root-domain-sync
   cancel-in-progress: false
 
 jobs:
@@ -31,6 +31,7 @@ jobs:
 
       - name: EKODI AI Orchestration Gate
         run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
+
       - name: Verify Cloudflare credentials
         run: |
           test -n "$CLOUDFLARE_API_TOKEN" || (echo 'Missing CLOUDFLARE_API_TOKEN' && exit 1)
@@ -39,29 +40,27 @@ jobs:
       - name: Build Worker assets
         run: npm run build
 
-      - name: Apply Worker domains and routes
+      - name: Apply root domain and canonical path routes
         id: routes
         run: |
           set -euo pipefail
           npx --yes wrangler@4.119.0 triggers deploy --config wrangler.site.toml
 
-      - name: Verify AI Gateway hostname is provisioned
+      - name: Verify canonical apex
         id: hostname
         shell: bash
         run: |
           set -euo pipefail
           for attempt in $(seq 1 18); do
-            code=$(curl -sS -o /tmp/ai-root -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://ai.ekodi.kr/' || true)
-            echo "ai.ekodi.kr -> $code (attempt $attempt/18)"
-            if [ "$code" != '000' ] && [ -n "$code" ]; then
-              exit 0
-            fi
+            code=$(curl -L -sS -o /tmp/root -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://ekodi.kr/' || true)
+            echo "ekodi.kr -> $code (attempt $attempt/18)"
+            case "$code" in 2*|3*) exit 0 ;; esac
             sleep 4
           done
-          echo 'ai.ekodi.kr DNS/TLS provisioning was not observable.'
+          echo 'ekodi.kr was not observable after route sync.'
           exit 1
 
-      - name: Publish AI Gateway domain checkpoint
+      - name: Publish root-domain checkpoint
         if: always()
         env:
           GH_TOKEN: ${{ github.token }}
@@ -73,17 +72,18 @@ jobs:
         run: |
           set -euo pipefail
           if [ "$ROUTES_OUTCOME" = 'success' ] && [ "$HOSTNAME_OUTCOME" = 'success' ]; then
-            icon='✅'; summary='DOMAIN SYNC VERIFIED'
+            icon='✅'; summary='ROOT DOMAIN SYNC VERIFIED'
           else
-            icon='❌'; summary='DOMAIN SYNC NOT VERIFIED'
+            icon='❌'; summary='ROOT DOMAIN SYNC NOT VERIFIED'
           fi
           body=$(cat <<EOF
           $icon **$summary**
 
           - commit: \`$COMMIT_SHA\`
-          - Worker routes/domains: \`$ROUTES_OUTCOME\`
-          - ai.ekodi.kr DNS/TLS observable: \`$HOSTNAME_OUTCOME\`
-          - canonical: https://ai.ekodi.kr/
+          - root routes: \`$ROUTES_OUTCOME\`
+          - ekodi.kr observable: \`$HOSTNAME_OUTCOME\`
+          - canonical: https://ekodi.kr/
+          - public service subdomains: forbidden
           - workflow: $RUN_URL
           - checked: $(date -u +'%Y-%m-%dT%H:%M:%SZ')
           EOF
