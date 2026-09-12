@@ -184,8 +184,15 @@ jobs:
     uses: ./.github/workflows/stage-shared-site-shell.yml
     secrets: inherit
 
-  deploy:
+  reliability_gate:
     needs: staging_gate
+    uses: ./.github/workflows/reliability-validation.yml
+    with:
+      suite: release
+    secrets: inherit
+
+  deploy:
+    needs: reliability_gate
     runs-on: ubuntu-latest
     timeout-minutes: 22
     env:
