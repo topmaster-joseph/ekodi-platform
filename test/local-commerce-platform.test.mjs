@@ -25,6 +25,7 @@ test('user surface exposes wallet, merchant, operator and accounting flows',()=>
   const html=fs.readFileSync(new URL('../local-commerce/index.html',import.meta.url),'utf8');
   const app=fs.readFileSync(new URL('../local-commerce/app.js',import.meta.url),'utf8');
   for(const marker of ['내 지역상권 지갑','가맹점 참여 신청','QR 결제 확인','상인 결제요청 만들기','회계·정산'])assert.match(html,new RegExp(marker));
-  for(const route of ['/claim','/merchant-requests','/qr-intents','/redeem','/settlements/draft','/settlements/review'])assert.ok(app.includes(route));
+  for(const route of ['/claim','/merchant-requests','/qr-intents','/redeem','/programs/update','/settlements/draft','/settlements/review'])assert.ok(app.includes(route));
   assert.ok(app.includes('x-ekodi-confirm-impact'));
+  for(const marker of ['value="church"','value="nonprofit"','value="enterprise"','value="public_agency"','value="community"','programPolicyForm','policyMerchants'])assert.ok(html.includes(marker));
 });
