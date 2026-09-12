@@ -22,6 +22,8 @@ concurrency:
 
 env:
   WRANGLER_VERSION: '4.119.0'
+  LEGACY_MY_HOST: my.ekodi.kr
+  CANONICAL_ZONE: ekodi.kr
 
 jobs:
   validate:
@@ -43,6 +45,8 @@ jobs:
             echo 'Retired My EKODI subdomain must not appear in Wrangler routing configuration.'
             exit 1
           fi
+          test "$LEGACY_MY_HOST" = 'my.ekodi.kr'
+          test "$CANONICAL_ZONE" = 'ekodi.kr'
           npx --yes wrangler@${WRANGLER_VERSION} triggers deploy --dry-run --config wrangler.my.toml
 
   production:
@@ -77,18 +81,44 @@ jobs:
           curl --fail-with-body -sS --connect-timeout 5 --max-time 15 https://ekodi.kr/my/health | grep -Fq '"service":"ekodi-my"'
           curl --fail-with-body -sS --connect-timeout 5 --max-time 15 https://ekodi.kr/my/channel-automation.js | grep -Fq 'revenue-opportunity'
           curl --fail-with-body -sS --connect-timeout 5 --max-time 15 'https://ekodi.kr/my/revenue-opportunity.js?v=20260911-revenue-engine-1' | grep -Eiq 'revenue|수익'
+      - name: Remove exact retired My DNS record
+        shell: bash
+        run: |
+          set -euo pipefail
+          api='https://api.cloudflare.com/client/v4'
+          auth=(-H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H 'Content-Type: application/json')
+          zones=$(curl --fail-with-body -sS "${auth[@]}" "$api/zones?name=$CANONICAL_ZONE&status=active&per_page=50")
+          test "$(jq -r '.success' <<<"$zones")" = 'true'
+          test "$(jq '[.result[] | select(.name == env.CANONICAL_ZONE)] | length' <<<"$zones")" = '1'
+          zone_id=$(jq -r '.result[] | select(.name == env.CANONICAL_ZONE) | .id' <<<"$zones")
+          records=$(curl --fail-with-body -sS "${auth[@]}" "$api/zones/$zone_id/dns_records?name=$LEGACY_MY_HOST&per_page=100")
+          test "$(jq -r '.success' <<<"$records")" = 'true'
+          mapfile -t record_ids < <(jq -r '.result[] | select(.name == env.LEGACY_MY_HOST) | .id' <<<"$records")
+          for record_id in "${record_ids[@]}"; do
+            deleted=$(curl --fail-with-body -sS -X DELETE "${auth[@]}" "$api/zones/$zone_id/dns_records/$record_id")
+            test "$(jq -r '.success' <<<"$deleted")" = 'true'
+          done
+          remaining=$(curl --fail-with-body -sS "${auth[@]}" "$api/zones/$zone_id/dns_records?name=$LEGACY_MY_HOST&per_page=100")
+          test "$(jq '[.result[] | select(.name == env.LEGACY_MY_HOST)] | length' <<<"$remaining")" = '0'
+          echo "Exact retired DNS hostname removed: $LEGACY_MY_HOST"
+      - name: Re-verify canonical My after DNS retirement
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail-with-body -sS --connect-timeout 5 --max-time 15 https://ekodi.kr/my/health | grep -Fq '"service":"ekodi-my"'
+          curl --fail-with-body -sS --connect-timeout 5 --max-time 15 'https://ekodi.kr/my/revenue-opportunity.js?v=20260911-revenue-engine-1' | grep -Eiq 'revenue|수익'
       - name: Verify retired My subdomain no longer serves first-party traffic
         shell: bash
         run: |
           set -euo pipefail
-          for attempt in $(seq 1 24); do
-            code=$(curl -sS -o /tmp/legacy-my.out -w '%{http_code}' --connect-timeout 5 --max-time 10 https://my.ekodi.kr/ || true)
+          for attempt in $(seq 1 36); do
+            code=$(curl -sS -o /tmp/legacy-my.out -w '%{http_code}' --connect-timeout 5 --max-time 10 "https://$LEGACY_MY_HOST/" || true)
             if [[ ! "$code" =~ ^[23] ]]; then
               echo "Retired hostname no longer serves first-party traffic (HTTP ${code:-000})."
               exit 0
             fi
-            echo "Legacy hostname still active (HTTP $code), waiting for Cloudflare trigger propagation: attempt $attempt/24"
+            echo "Legacy hostname still active (HTTP $code), waiting for DNS propagation: attempt $attempt/36"
             sleep 5
           done
-          echo 'my.ekodi.kr still serves a 2xx/3xx response after trigger reconciliation.'
+          echo "$LEGACY_MY_HOST still serves a 2xx/3xx response after exact DNS retirement."
           exit 1
