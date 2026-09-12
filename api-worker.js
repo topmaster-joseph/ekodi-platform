@@ -1,7 +1,7 @@
 import authWorker from './auth-worker.js';
 import { handleMailControl } from './mail-control.js';
 import { EKODI_SERVICE_MANIFEST } from './ekodi-service-manifest.js';
-import { handleLanguageAutomationPublic, languageStatusForAdmin, runLanguageAutomation } from './language-automation.js';
+import { handleLanguageAutomationPublic, handleLanguageTenantAdmin, languageStatusForAdmin, runLanguageAutomation, setLanguagePublication } from './language-automation.js';
 import { remotePowerSnapshot, requestRemoteWake } from './remote-power-control.js';
 import { analyzeServiceFleet, evaluateTechnologyCandidate } from './evolution-intelligence-runtime.js';
 import { evolutionStoreSummary, listEvolutionRecommendations, persistEvolutionReport } from './evolution-intelligence-store.js';
@@ -623,6 +623,16 @@ async function handleControl(request, env) {
     return controlJson(await languageStatusForAdmin(env), 200, auth.response.headers);
   }
 
+  const languagePublicationMatch = path.match(/^\/api\/control\/language-status\/([a-z0-9-]+)\/([A-Za-z0-9-]+)$/);
+  if (languagePublicationMatch && request.method === 'PUT') {
+    const body = await readJson(request);
+    if (!body || typeof body !== 'object') return controlJson({ error: '언어 게시 설정 형식을 확인해 주세요.' }, 400, auth.response.headers);
+    const result = await setLanguagePublication(env, { serviceIdValue: languagePublicationMatch[1], localeValue: languagePublicationMatch[2], publicationStatus: body.publicationStatus, actor: auth.session.email || auth.session.role || 'platform-admin', source: 'platform-super-admin' });
+    if (!result.ok) return controlJson({ error: result.error }, result.status || 400, auth.response.headers);
+    await writeAudit(env, auth.session, 'language.publication.update', languagePublicationMatch[1] + ':' + result.locale, JSON.stringify({ publicationStatus: result.publicationStatus }));
+    return controlJson(result, 200, auth.response.headers);
+  }
+
   if (request.method === 'GET' && path === `${CONTROL_PREFIX}/platform-maturity`) {
     if (auth.session.role !== 'super_admin') return controlJson({ error: '최고관리자 권한이 필요합니다.', code: 'PLATFORM_MATURITY_FORBIDDEN' }, 403, auth.response.headers);
     return controlJson(platformMaturityProjection(), 200, auth.response.headers);
@@ -788,6 +798,9 @@ export default {
 
     const publicPreviewResponse = await handlePublicPreview(request, env);
     if (publicPreviewResponse) return publicPreviewResponse;
+    const tenantLanguageResponse = await handleLanguageTenantAdmin(request, env);
+    if (tenantLanguageResponse) return tenantLanguageResponse;
+
     const languageResponse = await handleLanguageAutomationPublic(request, env);
     if (languageResponse) return languageResponse;
     const learningResponse = await handleLearningControl(request, env);

@@ -3,11 +3,7 @@ main = "my-worker.js"
 compatibility_date = "2026-08-16"
 workers_dev = true
 preview_urls = false
-
-[[routes]]
-pattern = "my.ekodi.kr"
-zone_name = "ekodi.kr"
-custom_domain = true
+routes = []
 
 [vars]
 DATA_ENABLED = "true"

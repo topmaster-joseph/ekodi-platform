@@ -277,15 +277,18 @@ function syncWorkbenchState(nav, locale, preferredSection = '') {
     shell.append(shortcut);
   }
   const section = preferredSection || activeSection(nav);
-  const group = getAdminMenuGroupForSection(section);
+  const activeGroup = getAdminMenuGroupForSection(section);
+  const focusedGroup = String(nav.dataset.adminFocusedGroup || '').trim();
+  const group = ADMIN_MENU_GROUPS.some(item => item.id === focusedGroup) ? focusedGroup : activeGroup;
+  const displayedSection = group === activeGroup ? section : '';
   for (const button of globals.querySelectorAll('[data-admin-global-group]')) {
     const selected = button.dataset.adminGlobalGroup === group;
     button.classList.toggle('active', selected);
     button.setAttribute('aria-current', selected ? 'page' : 'false');
     button.setAttribute('aria-expanded', selected ? 'true' : 'false');
   }
-  renderContextTabs(nav, shell, group, section, locale);
-  renderSidebarDetails(nav, globals, group, section, locale);
+  renderContextTabs(nav, shell, group, displayedSection, locale);
+  renderSidebarDetails(nav, globals, group, displayedSection, locale);
   nav.dataset.adminGlobalGroup = group;
 }
 
@@ -410,11 +413,11 @@ export function mountAdminSidebar(root = document, options = {}) {
 
   nav.addEventListener('click', event => {
     const detail = event.target.closest('[data-admin-detail-section]');
-    if (detail) { event.preventDefault(); activateSection(nav, detail.dataset.adminDetailSection); schedule(); return; }
+    if (detail) { event.preventDefault(); delete nav.dataset.adminFocusedGroup; activateSection(nav, detail.dataset.adminDetailSection); schedule(); return; }
     const global = event.target.closest('[data-admin-global-group]');
     if (!global) return;
     event.preventDefault();
-    activateSection(nav, getAdminMenuGroupDefault(global.dataset.adminGlobalGroup));
+    nav.dataset.adminFocusedGroup = global.dataset.adminGlobalGroup || '';
     schedule();
   }, true);
 
@@ -428,6 +431,7 @@ export function mountAdminSidebar(root = document, options = {}) {
       const source = activeSection(nav);
       if (source && source !== 'openai') try { sessionStorage.setItem('ekodi-openai-source-section', source); } catch {}
     }
+    delete nav.dataset.adminFocusedGroup;
     activateSection(nav, tab.dataset.adminContextSection);
     schedule();
   };
@@ -435,7 +439,8 @@ export function mountAdminSidebar(root = document, options = {}) {
 
   window.addEventListener('ekodi-nav-changed', schedule);
   window.addEventListener('ekodi-feature-installed', schedule);
-  window.addEventListener('ekodi-admin-section-changed', schedule);
+  const sectionChanged = () => { delete nav.dataset.adminFocusedGroup; schedule(); };
+  window.addEventListener('ekodi-admin-section-changed', sectionChanged);
 
   const api = Object.freeze({
     sync,
@@ -444,6 +449,7 @@ export function mountAdminSidebar(root = document, options = {}) {
     destroy: () => {
       observer.disconnect();
       root.removeEventListener?.('click', contextClick, true);
+      window.removeEventListener('ekodi-admin-section-changed', sectionChanged);
       mounted.delete(nav);
     },
   });

@@ -95,10 +95,10 @@ test('Space worker renders PizzaMaru and YogurtPurple as distinct styled user pa
     assert.equal(response.headers.get('x-ekodi-route'),'space-storefront');
     assert.ok(body.includes(name));
     assert.ok(body.includes(`data-store-page="${theme}"`));
-    const expectedCssVersion=theme==='yogurt'?'20260912-yogurt-v3':'20260911-v2';
+    const expectedCssVersion=theme==='yogurt'?'20260912-yogurt-v4':'20260911-v2';
     assert.ok(body.includes(`/_ekodi/space/storefront.css?v=${expectedCssVersion}`));
     assert.doesNotMatch(body,/__SPACE_PAGE_/);
-    if(theme==='yogurt'){assert.match(body,/메뉴와 앱별 가격/);assert.match(body,/배달앱에서 바로 주문/);assert.doesNotMatch(body,/USER OPERATIONS|STORE MASTER|로그아웃/);}
+    if(theme==='yogurt'){assert.match(body,/대표메뉴/);assert.match(body,/전체메뉴 자세히 보기/);assert.match(body,/본사 공식 메뉴 166종/);assert.match(body,/new_img58\.png/);assert.match(body,/배달앱에서 바로 주문/);assert.doesNotMatch(body,/USER OPERATIONS|STORE MASTER|로그아웃/);}
   }
   const styleResponse=await spaceWorker.fetch(new Request('https://space.ekodi.kr/storefront.css'),env);
   const styleBody=await styleResponse.text();
@@ -126,14 +126,14 @@ test('Yogurt storefront publishes only customer-safe store projection without lo
   }finally{globalThis.fetch=originalFetch}
 });
 
-test('Yogurt Mokpo storefront exposes five customer order channels and verified-price fallback labeling',async()=>{
-  assert.match(await read('storefront-page.js'),/당근주문/);
-  assert.match(await read('storefront-page.js'),/네이버주문/);
-  assert.match(await read('storefront-page.js'),/본사 공식 메뉴 \+ 공개 등록가 참고/);
+test('Yogurt Mokpo storefront uses HQ imagery, representative menu, full catalog, and priority delivery apps',async()=>{
   const env={DATA_ENABLED:'false',ASSETS:{fetch:async()=>new Response(html,{headers:{'content-type':'text/html; charset=utf-8'}})}};
   const response=await spaceWorker.fetch(new Request('https://ekodi.kr/yogurt'),env);
   const body=await response.text();
-  for(const marker of ['배달의민족','쿠팡이츠','요기요','당근주문','네이버주문'])assert.match(body,new RegExp(marker));
-  for(const marker of ['플레인 요거트아이스크림','딸기 요아츄','그릭요거트 100g','참고가'])assert.match(body,new RegExp(marker));
+  for(const marker of ['땡겨요','배달의민족','요기요','먹깨비'])assert.match(body,new RegExp(marker));
+  for(const marker of ['플레인요거트아이스크림','딸기요아츄','허니그래놀라','플레인 그릭','딸기스무디볼','딸기요거와상'])assert.match(body,new RegExp(marker));
+  assert.match(body,/본사 공식 메뉴 166종/);
+  assert.match(body,/전체메뉴 자세히 보기/);
+  assert.ok(body.includes('https://www.yogurtpurple.com/web/image_new/new_img58.png'));
   assert.match(body,/본사 등록명 ‘무안목포대점’/);
 });

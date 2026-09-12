@@ -713,7 +713,7 @@
           "location.replace(targetHref)",
           "u.origin==='https://ekodi.kr'",
           "u.origin==='https://ai.ekodi.kr'",
-          "u.origin==='https://tax.ekodi.kr'"
+          "u.pathname==='/tax'"
         ],
         "headerExpect": [
           "x-ekodi-route: central-auth-asset",
@@ -911,7 +911,7 @@
         ]
       },
       {
-        "url": "https://tax.ekodi.kr/",
+        "url": "https://ekodi.kr/tax",
         "statuses": [
           200
         ],
@@ -919,11 +919,11 @@
         "expect": [
           "EKODI Tax",
           "FREE-FIRST",
-          "/tax-portal.js"
+          "/tax/tax-portal.js"
         ]
       },
       {
-        "url": "https://tax.ekodi.kr/tax-portal.js",
+        "url": "https://ekodi.kr/tax/tax-portal.js",
         "statuses": [
           200
         ],

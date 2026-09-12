@@ -92,7 +92,7 @@ async function workerUsage(account, window) {
 
 const SHARED_SITE_HOSTS=new Set([
   'ekodi.kr','www.ekodi.kr','trade.ekodi.kr','trade.biz.ekodi.kr','pay.ekodi.kr','pay.biz.ekodi.kr',
-  'tax.ekodi.kr','messenger.ekodi.kr','invest.ekodi.kr','ai.ekodi.kr','admin.ekodi.kr','admin.biz.ekodi.kr',
+  'messenger.ekodi.kr','invest.ekodi.kr','ai.ekodi.kr','admin.ekodi.kr','admin.biz.ekodi.kr',
   'admin.church.ekodi.kr','admin.lab.ekodi.kr','admin.trade.ekodi.kr','mail.ekodi.kr','mail.biz.ekodi.kr',
   'mail.church.ekodi.kr','live.ekodi.kr','live.biz.ekodi.kr','live.church.ekodi.kr','live.lab.ekodi.kr',
   'cloud.ekodi.kr','auth.ekodi.kr'

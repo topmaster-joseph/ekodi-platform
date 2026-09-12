@@ -152,7 +152,7 @@ jobs:
             -H 'Access-Control-Request-Method: POST' \
             -H 'Access-Control-Request-Headers: authorization,apikey,content-type' || true)
           [[ "$legacy_options_code" =~ ^(200|204)$ ]]
-          grep -Eiq '^access-control-allow-origin:[[:space:]]*https://my\.ekodi\.kr' /tmp/docs-ai-legacy.headers
+          ! grep -Eiq '^access-control-allow-origin:[[:space:]]*https://my\.ekodi\.kr' /tmp/docs-ai-legacy.headers
 
           unauth_code=$(curl -sS -D /tmp/docs-ai-unauth.headers -o /tmp/docs-ai-unauth.json -w '%{http_code}' -X POST "$endpoint" \
             -H 'Origin: https://ekodi.kr' \

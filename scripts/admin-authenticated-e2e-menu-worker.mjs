@@ -12,8 +12,10 @@ if (!menuId) throw new Error('E2E_MENU_ID is required');
 const menuIds = adminMenuOrder();
 if (!menuIds.includes(menuId)) throw new Error(`Unknown Admin menu: ${menuId}`);
 const group = getAdminMenuGroupForSection(menuId);
-const baseUrl = 'https://admin.ekodi.kr/';
+const adminOrigin = 'https://ekodi.kr';
+const baseUrl = `${adminOrigin}/admin/`;
 const authenticatedEntryUrl = `${baseUrl}?route=finance#ekodi_admin_token=${token}`;
+const isCanonicalAdminUrl = url => url.hostname === 'ekodi.kr' && (url.pathname === '/admin' || url.pathname.startsWith('/admin/'));
 const artifactsDir = path.resolve('artifacts/admin-authenticated-e2e');
 const reportPath = path.join(artifactsDir, `menu-${menuId.replace(/[^a-z0-9_-]/gi, '_')}.json`);
 await fs.mkdir(artifactsDir, { recursive: true });
@@ -42,6 +44,22 @@ async function waitForReady() {
   await page.waitForFunction(() => window.EKODIAdminPanels && window.EKODIAdminSidebar, null, { timeout: 15_000 });
   stage('ready-session');
   await page.waitForFunction(() => document.querySelector('#apiState')?.textContent?.includes('정상'), null, { timeout: 15_000 });
+}
+
+async function waitForAdminNavigationIdle() {
+  stage('pre-handoff-idle');
+  let previous = '';
+  let stableSamples = 0;
+  for (let attempt = 0; attempt < 16; attempt += 1) {
+    await page.waitForLoadState('domcontentloaded', { timeout: 3_000 }).catch(() => {});
+    const current = page.url();
+    if (!isCanonicalAdminUrl(new URL(current))) throw new Error(`Admin navigation left the canonical surface before Tax handoff: ${current}`);
+    stableSamples = current === previous ? stableSamples + 1 : 0;
+    previous = current;
+    if (stableSamples >= 2) return current;
+    await page.waitForTimeout(250);
+  }
+  throw new Error(`Admin navigation did not settle before Tax handoff: ${page.url()}`);
 }
 
 async function selectWorkArea() {
@@ -99,7 +117,7 @@ function externalStorageNavigation() {
   return page.waitForRequest(request => {
     try {
       const url = new URL(request.url());
-      return request.isNavigationRequest() && request.frame() === page.mainFrame() && url.hostname !== 'admin.ekodi.kr';
+      return request.isNavigationRequest() && request.frame() === page.mainFrame() && !isCanonicalAdminUrl(url);
     } catch { return false; }
   }, { timeout: 10_000 }).then(request => request.url()).catch(() => null);
 }
@@ -138,17 +156,17 @@ async function verifyTax(tab, alreadyActive, started) {
   const navigation = page.waitForRequest(request => {
     try {
       const destination = new URL(request.url());
-      return request.isNavigationRequest() && request.frame() === page.mainFrame() && destination.hostname === 'tax.ekodi.kr';
+      return request.isNavigationRequest() && request.frame() === page.mainFrame() && destination.origin === 'https://ekodi.kr' && destination.pathname === '/tax';
     } catch { return false; }
   }, { timeout: 10_000 });
   await clickFast(tab);
   const request = await navigation;
   const destination = new URL(request.url());
-  if (destination.hostname !== 'tax.ekodi.kr') throw new Error(`tax: wrong handoff destination ${destination.hostname}`);
+  if (destination.origin !== 'https://ekodi.kr' || destination.pathname !== '/tax') throw new Error(`tax: wrong handoff destination ${destination.hostname}`);
   try {
-    await page.waitForURL(url => url.hostname === 'tax.ekodi.kr', { waitUntil:'commit', timeout:15_000 });
+    await page.waitForURL(url => url.origin === 'https://ekodi.kr' && url.pathname === '/tax', { waitUntil:'commit', timeout:15_000 });
   } catch (error) {
-    if (new URL(page.url()).hostname !== 'tax.ekodi.kr') throw error;
+    if (new URL(page.url()).origin !== 'https://ekodi.kr' || new URL(page.url()).pathname !== '/tax') throw error;
   }
   stage('tax-session-handoff');
   await page.waitForFunction(() => Boolean(sessionStorage.getItem('ekodi-auth-token')) && location.hash === '', null, { timeout:15_000 });
@@ -183,7 +201,7 @@ async function verifyTax(tab, alreadyActive, started) {
   if (!writeVerification) {
     results.push({
       id:menuId, group, ok:true, durationMs:Date.now()-started,
-      destination:'https://tax.ekodi.kr/', tokenHandoffVerified:true,
+      destination:'https://ekodi.kr/tax', tokenHandoffVerified:true,
       authenticatedReadStatus:before.status, supplierProfileId:profileId,
       supplierSaveVerification:'not-requested'
     });
@@ -222,7 +240,7 @@ async function verifyTax(tab, alreadyActive, started) {
 
   results.push({
     id:menuId, group, ok:true, durationMs:Date.now()-started,
-    destination:'https://tax.ekodi.kr/', tokenHandoffVerified:true,
+    destination:'https://ekodi.kr/tax', tokenHandoffVerified:true,
     authenticatedReadStatus:before.status, supplierProfileId:profileId,
     supplierSaveVerification:'passed', writeStatus:response.status(),
     persistenceReadbackStatus:after.status, persistenceVerified:true,
@@ -237,12 +255,12 @@ async function verifyPublicSiteControls(tab, alreadyActive, started) {
 
   stage('public-site-controls-api');
   const response = await fetch('https://api.ekodi.kr/api/control/public-sites', {
-    headers: { accept: 'application/json', authorization: `Bearer ${token}`, origin: 'https://admin.ekodi.kr' },
+    headers: { accept: 'application/json', authorization: `Bearer ${token}`, origin: adminOrigin },
     signal: AbortSignal.timeout(10_000),
   });
   if (response.status !== 200) throw new Error(`public-site-controls: API returned HTTP ${response.status}`);
   const corsOrigin = response.headers.get('access-control-allow-origin') || '';
-  if (corsOrigin !== 'https://admin.ekodi.kr') throw new Error(`public-site-controls: production CORS origin mismatch: ${corsOrigin || 'missing'}`);
+  if (corsOrigin !== adminOrigin) throw new Error(`public-site-controls: production CORS origin mismatch: ${corsOrigin || 'missing'}`);
   const payload = await response.json().catch(() => ({}));
   if (!Array.isArray(payload.sites)) throw new Error('public-site-controls: API payload missing sites array');
 
@@ -273,12 +291,12 @@ async function verifyAiSettings(tab, alreadyActive, started) {
   await page.waitForFunction(() => typeof window.EKODIAIManagement?.load === 'function', null, { timeout: 10_000 });
   stage('ai-settings-api');
   const response = await fetch('https://api.ekodi.kr/api/control/ai/v8/collaboration-settings', {
-    headers: { accept:'application/json', authorization:`Bearer ${token}`, origin:'https://admin.ekodi.kr' },
+    headers: { accept:'application/json', authorization:`Bearer ${token}`, origin:adminOrigin },
     signal: AbortSignal.timeout(10_000),
   });
   if (response.status !== 200) throw new Error(`ai-settings: API returned HTTP ${response.status}`);
   const corsOrigin = response.headers.get('access-control-allow-origin') || '';
-  if (corsOrigin !== 'https://admin.ekodi.kr') throw new Error(`ai-settings: production CORS origin mismatch: ${corsOrigin || 'missing'}`);
+  if (corsOrigin !== adminOrigin) throw new Error(`ai-settings: production CORS origin mismatch: ${corsOrigin || 'missing'}`);
   const payload = await response.json().catch(() => ({}));
   const policy = payload.policy || {};
   const weights = policy.router?.weights || {};
@@ -312,7 +330,7 @@ async function verifyLanguageStatus(tab, alreadyActive, started) {
   await page.waitForFunction(() => typeof window.EKODILanguageStatus?.load === 'function', null, { timeout: 10_000 });
   stage('language-status-api');
   const response = await fetch('https://api.ekodi.kr/api/control/language-status', {
-    headers: { accept:'application/json', authorization:`Bearer ${token}`, origin:'https://admin.ekodi.kr' },
+    headers: { accept:'application/json', authorization:`Bearer ${token}`, origin:adminOrigin },
     signal: AbortSignal.timeout(10_000),
   });
   if (response.status !== 200) throw new Error(`language-status: API returned HTTP ${response.status}`);
@@ -337,7 +355,7 @@ async function verifyLanguageStatus(tab, alreadyActive, started) {
 async function verifyMaturity(tab, alreadyActive, started) {
   stage('maturity-api');
   const endpoint='https://api.ekodi.kr/api/control/platform-maturity';
-  const response=await fetch(endpoint,{headers:{accept:'application/json',authorization:`Bearer ${token}`,origin:'https://admin.ekodi.kr'},signal:AbortSignal.timeout(10_000)});
+  const response=await fetch(endpoint,{headers:{accept:'application/json',authorization:`Bearer ${token}`,origin:adminOrigin},signal:AbortSignal.timeout(10_000)});
   if(response.status!==200)throw new Error(`maturity: API returned HTTP ${response.status}`);
   const payload=await response.json().catch(()=>({}));
   if(payload.certificationStatus!=='not-claimed'||payload.current?.certificationStatus!=='not-claimed')throw new Error('maturity: certification boundary drift');
@@ -419,7 +437,7 @@ try {
   page.on('pageerror', error => pageErrors.push(String(error?.stack || error?.message || error)));
   page.on('console', message => { if (message.type() === 'error') consoleErrors.push(message.text()); });
   page.on('requestfailed', request => {
-    try { const url = new URL(request.url()); if (url.hostname === 'admin.ekodi.kr' && /\.(?:js|css)(?:$|\?)/.test(url.pathname + url.search)) failedAdminAssets.push(`${request.method()} ${request.url()} :: ${request.failure()?.errorText || 'failed'}`); } catch {}
+    try { const url = new URL(request.url()); if (url.hostname === 'ekodi.kr' && /\.(?:js|css)(?:$|\?)/.test(url.pathname + url.search)) failedAdminAssets.push(`${request.method()} ${request.url()} :: ${request.failure()?.errorText || 'failed'}`); } catch {}
   });
 
   stage('navigation');
@@ -432,6 +450,7 @@ try {
 
   const started = Date.now();
   await selectWorkArea();
+  if (menuId === 'tax') await waitForAdminNavigationIdle();
   stage('tab');
   const tab = page.locator(`button.admin-context-tab[data-admin-context-section="${menuId}"]`);
   await tab.waitFor({ state: 'visible', timeout: 5_000 });

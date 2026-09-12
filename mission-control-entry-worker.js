@@ -34,6 +34,7 @@ import { handleDevotionalControl } from './devotional-control.js';
 import { handleLearningControl } from './learning-control.js';
 import { handleLocalCommerceControl } from './local-commerce-control.js';
 import { handleExternalAccountControl } from './external-account-control.js';
+import { handleRealtimeControl } from './realtime-control.js';
 import { applyApiSecurityHeaders, enforceEdgeSecurity } from './security-edge.js';
 
 function errorResponse(message, code) {
@@ -156,6 +157,11 @@ export default {
     if (path.startsWith('/api/control/external-accounts')) {
       try { const response = await handleExternalAccountControl(request, env); if (response) return applyApiSecurityHeaders(response); }
       catch (error) { console.error('External Account Control error', error); return errorResponse('외부계정 통합운영 처리 중 오류가 발생했습니다.', 'EXTERNAL_ACCOUNT_CONTROL_ERROR'); }
+    }
+
+    if (path.startsWith('/api/realtime')) {
+      try { const response = await handleRealtimeControl(request, env); if (response) return applyApiSecurityHeaders(response); }
+      catch (error) { console.error('Realtime control error', error); return errorResponse('실시간 방송 처리 중 오류가 발생했습니다.', 'REALTIME_CONTROL_ERROR'); }
     }
 
     if (path.startsWith('/api/membership/')) {
