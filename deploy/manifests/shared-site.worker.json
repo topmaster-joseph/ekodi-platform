@@ -337,12 +337,12 @@
         "expect": [
           "data-ekodi-service=\"mall\"",
           "data-ekodi-user-surface=\"public\"",
-          "/ekodibiz/mall/app.js"
+          "data-ekodi-global-nav=\"off\""
         ],
         "rollbackExpect": [
           "data-ekodi-service=\"mall\"",
           "data-ekodi-user-surface=\"public\"",
-          "/ekodibiz/mall/app.js"
+          "data-ekodi-global-nav=\"off\""
         ],
         "headerExpect": [
           "x-content-type-options: nosniff",
