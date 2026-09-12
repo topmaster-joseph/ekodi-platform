@@ -115,12 +115,13 @@ class UserCanvasAdopter{
     element.setAttribute('data-ekodi-user-canvas',USER_LAYOUT_VERSION);
   }
 }
-class LocalFooterDeduplicator{
+class UserFooterCanonicalizer{
   constructor(serviceId){this.serviceId=cleanServiceId(serviceId);}
   element(element){
-    if(!sharedFooterReplacesLocalFooter(this.serviceId))return;
     const classes=String(element.getAttribute('class')||'').split(/\s+/).filter(Boolean);
-    if(!classes.includes('ekodi-user-ui-footer'))element.remove();
+    const shared=classes.includes('ekodi-user-ui-footer');
+    if(shared&&!serviceOwnsFooter(this.serviceId)){element.remove();return;}
+    if(sharedFooterReplacesLocalFooter(this.serviceId))element.remove();
   }
 }
 class UserChromeInjector{
@@ -157,7 +158,7 @@ export function injectEkodiUserUi(response,serviceId='ekodi',surface='public'){
     .on('.app-header',headerAdopter)
     .on('.main-header',headerAdopter)
     .on('[data-ekodi-fixed-header]',headerAdopter)
-    .on('footer',new LocalFooterDeduplicator(serviceId))
+    .on('footer',new UserFooterCanonicalizer(serviceId))
     .on('body',new UserChromeInjector(serviceId))
     .transform(new Response(response.body,{status:response.status,statusText:response.statusText,headers}));
 }
