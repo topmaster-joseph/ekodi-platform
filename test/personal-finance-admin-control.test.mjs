@@ -24,6 +24,11 @@ test('admin control exposes only service policy and immutable safety metadata',a
   const serialized=JSON.stringify(data);for(const forbidden of ['currentBalance','transactions','accounts','profileId'])assert.equal(serialized.includes(forbidden),false,forbidden);
 });
 
+test('canonical apex Admin origin receives the Personal Finance control CORS grant',async()=>{
+  const DB=fakeDb();const headers={...adminHeaders,origin:'https://ekodi.kr'};const response=await withFetch({},()=>worker.fetch(new Request('https://personal-finance-api.ekodi.kr/api/admin/personal-finance/control',{headers}),env(DB)));
+  assert.equal(response.status,200);assert.equal(response.headers.get('access-control-allow-origin'),'https://ekodi.kr');
+});
+
 test('operator cannot change Personal Finance operating policy',async()=>{
   const DB=fakeDb();const response=await withFetch({role:'operator',elevated:true},()=>worker.fetch(new Request('https://personal-finance-api.ekodi.kr/api/admin/personal-finance/control',{method:'PUT',headers:adminHeaders,body:JSON.stringify({fileImportEnabled:false})}),env(DB)));
   assert.equal(response.status,403);assert.equal((await response.json()).code,'PF_ADMIN_FORBIDDEN');assert.equal(DB.config.file_import_enabled,1);
