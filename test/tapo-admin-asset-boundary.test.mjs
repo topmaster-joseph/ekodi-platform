@@ -2,10 +2,11 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
-const [worker, wrangler, manifestText] = await Promise.all([
+const [worker, wrangler, manifestText, deviceAdmin] = await Promise.all([
   readFile(new URL('../site-worker.js', import.meta.url), 'utf8'),
   readFile(new URL('../wrangler.site.toml', import.meta.url), 'utf8'),
   readFile(new URL('../deploy/manifests/shared-site.worker.json', import.meta.url), 'utf8'),
+  readFile(new URL('../device-control-admin.js', import.meta.url), 'utf8'),
 ]);
 const manifest = JSON.parse(manifestText);
 
@@ -18,4 +19,9 @@ test('Tapo admin assets stay behind the Admin Worker boundary', () => {
     assert.ok(request.headerExpect?.includes('x-ekodi-route: admin-asset'));
     assert.ok(request.headerExpect?.includes('x-content-type-options: nosniff'));
   }
+});
+
+test('Device Control accepts readable and compact demand-loader APIs', () => {
+  assert.match(deviceAdmin, /demandLoader\?\.loadScript\|\|demandLoader\?\.loadJs/);
+  assert.match(deviceAdmin, /loadTapoScript\.call\(demandLoader,'tapo-device-admin\.js'\)/);
 });
