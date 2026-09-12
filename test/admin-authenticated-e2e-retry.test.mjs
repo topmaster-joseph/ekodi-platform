@@ -51,6 +51,9 @@ test('isolated Tax E2E verifies authenticated handoff and value-preserving suppl
   const productionWorkflow = await productionWorkflowSource();
   assert.match(source, /destination\.hostname === 'tax\.ekodi\.kr'/);
   assert.match(source, /page\.waitForURL/);
+  assert.match(source, /async function waitForAdminNavigationIdle\(\)/);
+  assert.match(source, /if \(menuId === 'tax'\) await waitForAdminNavigationIdle\(\)/);
+  assert.match(source, /stableSamples >= 2/);
   assert.match(source, /sessionStorage\.getItem\('ekodi-auth-token'\)/);
   assert.match(source, /button\[data-tab=\"suppliers\"\]/);
   assert.match(source, /if \(writeVerification\) \{\s+const suppliersTab/);
