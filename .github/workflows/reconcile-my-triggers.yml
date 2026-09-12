@@ -1,0 +1,90 @@
+name: Reconcile My EKODI Triggers
+
+on:
+  pull_request:
+    paths:
+      - 'wrangler.my.toml'
+      - '.github/workflows/reconcile-my-triggers.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'wrangler.my.toml'
+      - '.github/workflows/reconcile-my-triggers.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: reconcile-my-ekodi-triggers-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  WRANGLER_VERSION: '4.119.0'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate canonical trigger source of truth
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -Eq '^workers_dev[[:space:]]*=[[:space:]]*true' wrangler.my.toml
+          grep -Eq '^routes[[:space:]]*=[[:space:]]*\[\][[:space:]]*$' wrangler.my.toml
+          if grep -Fqi 'my.ekodi.kr' wrangler.my.toml; then
+            echo 'Retired My EKODI subdomain must not appear in Wrangler routing configuration.'
+            exit 1
+          fi
+          npx --yes wrangler@${WRANGLER_VERSION} triggers deploy --dry-run --config wrangler.my.toml
+
+  production:
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    needs: validate
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Verify Cloudflare credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN" || (echo 'Missing CLOUDFLARE_API_TOKEN' && exit 1)
+          test -n "$CLOUDFLARE_ACCOUNT_ID" || (echo 'Missing CLOUDFLARE_ACCOUNT_ID' && exit 1)
+      - name: Reconcile routes and custom domains from canonical config
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@${WRANGLER_VERSION} triggers deploy --config wrangler.my.toml
+      - name: Verify canonical My EKODI and Revenue Engine remain live
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail-with-body -sS --connect-timeout 5 --max-time 15 https://ekodi.kr/my/health | grep -Fq '"service":"ekodi-my"'
+          curl --fail-with-body -sS --connect-timeout 5 --max-time 15 https://ekodi.kr/my/channel-automation.js | grep -Fq 'revenue-opportunity'
+          curl --fail-with-body -sS --connect-timeout 5 --max-time 15 'https://ekodi.kr/my/revenue-opportunity.js?v=20260911-revenue-engine-1' | grep -Eiq 'revenue|수익'
+      - name: Verify retired My subdomain no longer serves first-party traffic
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 24); do
+            code=$(curl -sS -o /tmp/legacy-my.out -w '%{http_code}' --connect-timeout 5 --max-time 10 https://my.ekodi.kr/ || true)
+            if [[ ! "$code" =~ ^[23] ]]; then
+              echo "Retired hostname no longer serves first-party traffic (HTTP ${code:-000})."
+              exit 0
+            fi
+            echo "Legacy hostname still active (HTTP $code), waiting for Cloudflare trigger propagation: attempt $attempt/24"
+            sleep 5
+          done
+          echo 'my.ekodi.kr still serves a 2xx/3xx response after trigger reconciliation.'
+          exit 1
