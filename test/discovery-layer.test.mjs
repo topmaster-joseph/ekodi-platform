@@ -20,9 +20,14 @@ test('public route contract carries canonical metadata and static asset ownershi
 
 test('crawler policy separates search, answer retrieval, training and agents', () => {
   assert.deepEqual(DISCOVERY_CRAWLER_POLICY.searchIndex, ['Googlebot', 'bingbot']);
-  assert.deepEqual(DISCOVERY_CRAWLER_POLICY.answerRetrieval, ['OAI-SearchBot', 'Claude-SearchBot', 'PerplexityBot']);
-  assert.deepEqual(DISCOVERY_CRAWLER_POLICY.training, ['GPTBot', 'ClaudeBot', 'Google-Extended']);
-  assert.deepEqual(DISCOVERY_CRAWLER_POLICY.agent, ['ChatGPT-User', 'Claude-User', 'Perplexity-User']);
+  assert.deepEqual(DISCOVERY_CRAWLER_POLICY.answerRetrieval, ['OAI-SearchBot', 'Claude-SearchBot', 'PerplexityBot', 'Applebot']);
+  assert.deepEqual(DISCOVERY_CRAWLER_POLICY.training, [
+    'GPTBot', 'ClaudeBot', 'Google-Extended', 'Google-CloudVertexBot', 'Bytespider', 'CCBot',
+    'meta-externalagent', 'FacebookBot', 'Amazonbot',
+  ]);
+  assert.deepEqual(DISCOVERY_CRAWLER_POLICY.agent, [
+    'ChatGPT-User', 'Claude-User', 'Perplexity-User', 'meta-externalfetcher', 'DuckAssistBot', 'MistralAI-User',
+  ]);
 });
 
 test('robots allows public search and answer discovery while blocking training and agents', () => {
