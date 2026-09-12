@@ -65,15 +65,20 @@
   }
 
   function showDevices() {
-    document.querySelectorAll('[data-panel]').forEach(panel => {
-      const targets = String(panel.dataset.panel || '').split(' ');
-      panel.classList.toggle('hidden-panel', !targets.includes('devices'));
-    });
-    document.querySelectorAll('.sidebar .nav').forEach(item => item.classList.remove('active'));
-    document.querySelector('[data-device-control-nav]')?.classList.add('active');
+    const panels = window.EKODIAdminPanels;
+    if (panels?.activate) {
+      panels.activate('devices');
+    } else {
+      document.querySelectorAll('[data-panel]').forEach(panel => {
+        const targets = String(panel.dataset.panel || '').split(' ');
+        panel.classList.toggle('hidden-panel', !targets.includes('devices'));
+      });
+      document.querySelectorAll('.sidebar .nav').forEach(item => item.classList.remove('active'));
+      document.querySelector('[data-device-control-nav]')?.classList.add('active');
+      setPageTitle('원격 작업');
+      if (location.hash !== '#devices') history.replaceState(null, '', '#devices');
+    }
     document.querySelector('.sidebar')?.classList.remove('open');
-    setPageTitle('원격 작업');
-    if (location.hash !== '#devices') history.replaceState(null, '', '#devices');
     loadDevices();
   }
 
