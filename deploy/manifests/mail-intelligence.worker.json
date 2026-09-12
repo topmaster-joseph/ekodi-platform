@@ -1,0 +1,16 @@
+{
+  "version": 2,
+  "worker": {
+    "name": "ekodi-mail-intelligence",
+    "config": "wrangler.mail.toml",
+    "allowFirstDeploy": true,
+    "requests": [
+      {
+        "url": "https://mailops.ekodi.kr/health",
+        "statuses": [200],
+        "expect": ["\"ok\":true", "\"service\":\"ekodi-mail-intelligence\""],
+        "headerExpect": ["cache-control: no-store", "x-content-type-options: nosniff"]
+      }
+    ]
+  }
+}
