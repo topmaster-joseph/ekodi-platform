@@ -5,11 +5,13 @@ on:
   pull_request:
     paths:
       - 'management/**'
+      - 'management-specialists/**'
       - 'management-platform.js'
       - 'management-worker.js'
       - 'config/management-platform.json'
       - 'wrangler.management*.toml'
       - 'test/management-platform-foundation.test.mjs'
+      - 'test/management-specialists-wave1.test.mjs'
       - 'deploy/manifests/management.worker.json'
       - 'ekodi-service-manifest.js'
       - 'ekodi-shell-injector.js'
@@ -19,11 +21,13 @@ on:
     branches: [main]
     paths:
       - 'management/**'
+      - 'management-specialists/**'
       - 'management-platform.js'
       - 'management-worker.js'
       - 'config/management-platform.json'
       - 'wrangler.management*.toml'
       - 'test/management-platform-foundation.test.mjs'
+      - 'test/management-specialists-wave1.test.mjs'
       - 'deploy/manifests/management.worker.json'
       - 'ekodi-service-manifest.js'
       - 'ekodi-shell-injector.js'
@@ -52,7 +56,11 @@ jobs:
           node --check management-platform.js
           node --check management-worker.js
           node --check management/app.js
-          node --test test/management-platform-foundation.test.mjs
+          node --check management-specialists/menu.js
+          node --check management-specialists/order.js
+          node --check management-specialists/review.js
+          node --check management-specialists/index.js
+          node --test test/management-platform-foundation.test.mjs test/management-specialists-wave1.test.mjs
           npm run validate:boundaries
           npm run validate:shell
           npm run validate:mission
