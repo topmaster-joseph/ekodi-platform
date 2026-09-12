@@ -334,6 +334,32 @@ async function verifyLanguageStatus(tab, alreadyActive, started) {
   results.push({ id:menuId, group, ok:true, durationMs:Date.now()-started, ...state, apiStatus:response.status, sites:payload.sites.length, languages:payload.languages.length });
 }
 
+async function verifyMaturity(tab, alreadyActive, started) {
+  stage('maturity-api');
+  const endpoint='https://api.ekodi.kr/api/control/platform-maturity';
+  const response=await fetch(endpoint,{headers:{accept:'application/json',authorization:`Bearer ${token}`,origin:'https://admin.ekodi.kr'},signal:AbortSignal.timeout(10_000)});
+  if(response.status!==200)throw new Error(`maturity: API returned HTTP ${response.status}`);
+  const payload=await response.json().catch(()=>({}));
+  if(payload.certificationStatus!=='not-claimed'||payload.current?.certificationStatus!=='not-claimed')throw new Error('maturity: certification boundary drift');
+  if(!Array.isArray(payload.model?.domains)||payload.model.domains.length<1)throw new Error('maturity: model domains missing');
+  if(!Array.isArray(payload.history)||payload.history.length<1)throw new Error('maturity: history summary missing');
+  if(!alreadyActive)await clickFast(tab);
+  stage('maturity-render');
+  await page.waitForFunction(()=>{
+    const panel=document.querySelector('[data-panel~="maturity"]');
+    const view=panel?.querySelector('[data-maturity-view]');
+    const status=panel?.querySelector('[data-maturity-status]');
+    const text=String(view?.innerText||'').replace(/\s+/g,' ').trim();
+    return Boolean(panel&&view&&!view.hidden&&status?.hidden&&text.includes('종합 내부 성숙도')&&text.includes('/ 5.00'));
+  },null,{timeout:10_000});
+  const state=await visiblePanelState();
+  const text=String(await page.locator('[data-panel~="maturity"] [data-maturity-view]').textContent()||'').replace(/\s+/g,' ').trim();
+  if(!state.panelFound||!state.selected||state.busy)throw new Error(`maturity panel invalid: ${JSON.stringify(state)}`);
+  if(!text.includes('외부 인증 주장 안 함'))throw new Error('maturity: certification status not rendered');
+  if(text.includes('불러오지 못했습니다'))throw new Error('maturity: data load error rendered');
+  results.push({id:menuId,group,ok:true,durationMs:Date.now()-started,...state,apiStatus:response.status,assessmentDate:payload.assessmentDate,historyCount:payload.history.length});
+}
+
 async function verifyRegistryHref(tab, started) {
   const definition = getAdminMenuItem(menuId);
   if (!definition?.href || definition.adminHandoff) throw new Error(`${menuId}: direct registry href contract missing`);
@@ -421,6 +447,7 @@ try {
   else if (menuId === 'tax') await verifyTax(tab, alreadyActive, started);
   else if (menuId === 'public-site-controls') await verifyPublicSiteControls(tab, alreadyActive, started);
   else if (menuId === 'language-status') await verifyLanguageStatus(tab, alreadyActive, started);
+  else if (menuId === 'maturity') await verifyMaturity(tab, alreadyActive, started);
   else if (menuId === 'ai-settings') await verifyAiSettings(tab, alreadyActive, started);
   else if (getAdminMenuItem(menuId)?.href && !getAdminMenuItem(menuId)?.adminHandoff) await verifyRegistryHref(tab, started);
   else await verifyNormal(tab, alreadyActive, started);
