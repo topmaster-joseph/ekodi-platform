@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "product": "EKODI Home Energy AI",
+  "mode": "advisory",
+  "description": "Household energy policy for observation, anomaly detection, recommendations and human-approved control. This policy is not an electrical safety standard.",
+  "autonomousActions": [
+    "telemetry.read",
+    "analysis.anomaly",
+    "recommendation.create"
+  ],
+  "humanGateActions": [
+    "device.power_off",
+    "device.power_on",
+    "thermostat.set",
+    "schedule.change"
+  ],
+  "forbiddenActions": [
+    "main_breaker.toggle",
+    "rcd.disable",
+    "safety_alarm.disable",
+    "medical_device.power_off",
+    "unknown_device.execute"
+  ],
+  "protectedCategories": [
+    "medical",
+    "refrigeration",
+    "fire_safety",
+    "security",
+    "network_core",
+    "electrical_safety"
+  ],
+  "principles": [
+    "AI may observe and recommend without switching mains power.",
+    "Mutating device actions require an explicit human gate in the MVP.",
+    "Protected and unknown devices fail closed.",
+    "Electrical safety protection is never disabled by AI.",
+    "Every future execution path must support verification and audit evidence."
+  ]
+}
