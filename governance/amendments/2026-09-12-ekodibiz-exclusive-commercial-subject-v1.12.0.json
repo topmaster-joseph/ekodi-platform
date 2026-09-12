@@ -1,0 +1,22 @@
+{
+  "id": "2026-09-12-ekodibiz-exclusive-commercial-subject-v1.12.0",
+  "constitutionVersion": "1.12.0",
+  "status": "approved",
+  "approvedBy": "topmaster-joseph",
+  "approvedAt": "2026-09-12",
+  "changeClass": "C2",
+  "taskId": "ekodibiz-exclusive-commercial-subject-20260912",
+  "summary": "Establish EKODIBIZ as the exclusive commercial subject for all revenue businesses operated through the EKODI platform while limiting ordinary-user platform access to information, recommendation, comparison, reminders and managed-service referral.",
+  "approvalBasis": "The EKODI Platform Super Administrator explicitly instructed that all EKODI revenue businesses use EKODIBIZ as the revenue subject and that ordinary users receive limited information-oriented functions across channels.",
+  "evidence": [
+    "Revenue Engine commercial-subject invariant",
+    "ordinary-user information-only capability boundary",
+    "Benefit Radar public/quasi-public institution information expansion",
+    "human-gated financial and legal commitments",
+    "external user-owned business remains unaffected"
+  ],
+  "generationImpact": "None. Generation 10 remains the active baseline.",
+  "scaleImpact": "None. Current scale tier remains unchanged.",
+  "authorityImpact": "Narrows commercial execution authority to explicitly authorized EKODIBIZ operator roles; does not grant AI or ordinary users additional sovereign authority.",
+  "rollback": "Revert Constitution v1.12.0 commercialSubjectPolicy, Revenue Engine exclusive-subject enforcement, ordinary-user information-only surface changes and related tests through the guarded release path. Existing external user-owned businesses and non-commercial platform access remain unaffected."
+}

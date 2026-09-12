@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "engineId": "ekodi.revenue",
   "name": "EKODI Revenue Engine",
   "status": "active_foundation",
@@ -40,8 +40,10 @@
     "operator": "ekodibiz",
     "technologyProvider": "ekodi",
     "tenantOrProject": null,
-    "overridable": true,
-    "overrideRule": "A lawful explicitly authorized operator may replace EKODIBIZ without changing the Revenue Engine contract."
+    "overridable": false,
+    "overrideRule": "EKODIBIZ is the exclusive commercial subject for EKODI revenue businesses. Tenants and ordinary users cannot replace the revenue owner, operator, merchant of record, or contracting entity.",
+    "merchantOfRecord": "ekodibiz",
+    "contractingEntity": "ekodibiz"
   },
   "principles": {
     "assetLight": true,
@@ -123,76 +125,117 @@
     ]
   },
   "myEkodi": {
-    "mode": "lightweight-opportunity-entry",
+    "mode": "information-and-referral-only",
     "freeExperience": {
       "completeButSmall": true,
       "includes": [
-        "revenue-idea-discovery",
-        "fitness-explanation",
-        "one-starter-validation-plan",
-        "capability-preview"
+        "revenue-information-discovery",
+        "opportunity-explanation",
+        "comparison-and-fit-guidance",
+        "public-support-information",
+        "ekodibiz-managed-service-referral"
       ],
       "neverRemovesUserOwnedResultsAfterTrial": true
     },
-    "subscriptionModel": "capability-opt-in",
+    "subscriptionModel": "ekodibiz-managed-service",
     "pricingAuthority": "human-governed-commercial-policy",
-    "paidCheckoutActivation": "requires-approved-price-catalog"
+    "paidCheckoutActivation": "ekodibiz-managed-only",
+    "ordinaryUserExperience": {
+      "scope": "information-only",
+      "allowed": [
+        "discover",
+        "recommend",
+        "compare",
+        "explain",
+        "save",
+        "remind",
+        "public-support-guide",
+        "managed-service-request"
+      ],
+      "blocked": [
+        "create-revenue-cell",
+        "operate-revenue-cell",
+        "sell-as-platform-merchant",
+        "collect-platform-revenue",
+        "contract-as-platform-seller",
+        "autonomous-revenue-operation"
+      ],
+      "commercialSubject": "ekodibiz"
+    }
   },
   "capabilitySubscriptions": [
     {
       "id": "revenue.opportunity",
       "label": "수익기회 탐색",
       "freePreview": true,
-      "billing": "capability"
+      "billing": "ekodibiz-managed-service",
+      "ordinaryUserAccess": "information_only",
+      "operationalAccess": "ekodibiz_only"
     },
     {
       "id": "revenue.product",
       "label": "상품·서비스 만들기",
       "freePreview": true,
-      "billing": "capability"
+      "billing": "ekodibiz-managed-service",
+      "ordinaryUserAccess": "information_only",
+      "operationalAccess": "ekodibiz_only"
     },
     {
       "id": "revenue.content",
       "label": "콘텐츠 생산",
       "freePreview": true,
-      "billing": "capability"
+      "billing": "ekodibiz-managed-service",
+      "ordinaryUserAccess": "information_only",
+      "operationalAccess": "ekodibiz_only"
     },
     {
       "id": "revenue.site-launch",
       "label": "전문 홈페이지 자동 구성",
       "freePreview": false,
-      "billing": "capability"
+      "billing": "ekodibiz-managed-service",
+      "ordinaryUserAccess": "information_only",
+      "operationalAccess": "ekodibiz_only"
     },
     {
       "id": "revenue.channel-publish",
       "label": "채널 게시·배포",
       "freePreview": false,
-      "billing": "capability"
+      "billing": "ekodibiz-managed-service",
+      "ordinaryUserAccess": "information_only",
+      "operationalAccess": "ekodibiz_only"
     },
     {
       "id": "revenue.marketing",
       "label": "홍보·유입 자동화",
       "freePreview": false,
-      "billing": "capability"
+      "billing": "ekodibiz-managed-service",
+      "ordinaryUserAccess": "information_only",
+      "operationalAccess": "ekodibiz_only"
     },
     {
       "id": "revenue.crm",
       "label": "고객·재구매 관리",
       "freePreview": false,
-      "billing": "capability"
+      "billing": "ekodibiz-managed-service",
+      "ordinaryUserAccess": "information_only",
+      "operationalAccess": "ekodibiz_only"
     },
     {
       "id": "revenue.analytics",
       "label": "성과·수익 분석",
       "freePreview": true,
-      "billing": "capability"
+      "billing": "ekodibiz-managed-service",
+      "ordinaryUserAccess": "information_only",
+      "operationalAccess": "ekodibiz_only"
     },
     {
       "id": "revenue.autonomous",
       "label": "자율 수익 운영",
       "freePreview": false,
-      "billing": "capability",
-      "humanGatePreserved": true
+      "billing": "ekodibiz-managed-service",
+      "humanGatePreserved": true,
+      "ordinaryUserAccess": "information_only",
+      "operationalAccess": "ekodibiz_only"
     }
   ],
   "verticalLaunchFactory": {
@@ -240,5 +283,47 @@
     "aggregateOrAnonymizedLearningOnlyAcrossTenants": true,
     "purposeBoundObservation": true,
     "minimumRetention": true
+  },
+  "commercialSubjectPolicy": {
+    "subject": "ekodibiz",
+    "scope": "all-ekodi-revenue-businesses",
+    "exclusive": true,
+    "roles": {
+      "revenueOwner": "ekodibiz",
+      "operator": "ekodibiz",
+      "merchantOfRecord": "ekodibiz",
+      "contractingEntity": "ekodibiz",
+      "technologyProvider": "ekodi"
+    },
+    "ordinaryUserRole": "information-recipient",
+    "tenantRole": "information-and-managed-service-client",
+    "directRevenueOperationByOrdinaryUser": false,
+    "directRevenueOperationByTenant": false,
+    "managedServiceHandoff": "ekodibiz",
+    "externalUserOwnedBusinessUnaffected": true
+  },
+  "channelPolicy": {
+    "appliesTo": [
+      "my-ekodi",
+      "workspace",
+      "community",
+      "support",
+      "mall",
+      "content",
+      "external-connected-channels"
+    ],
+    "ordinaryUserMode": "information-only",
+    "informationFunctions": [
+      "discover",
+      "recommend",
+      "compare",
+      "explain",
+      "save",
+      "remind",
+      "request-managed-service"
+    ],
+    "revenueExecutionSubject": "ekodibiz",
+    "directUserRevenueExecution": false,
+    "directTenantRevenueExecution": false
   }
 }
