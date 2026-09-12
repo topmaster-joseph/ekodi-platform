@@ -38,6 +38,7 @@ export async function runAiEnhancedTask(options = {}) {
     fallback,
     taskName = 'ai_task',
     timeoutMs = AI_RESILIENCE_POLICY.defaultTimeoutMs,
+    totalTimeoutMs = null,
     now = Date.now,
   } = options;
 
@@ -51,13 +52,29 @@ export async function runAiEnhancedTask(options = {}) {
   }
 
   const attemptedProviders = [];
+  const perProviderTimeoutMs = Math.max(1, Number(timeoutMs) || AI_RESILIENCE_POLICY.defaultTimeoutMs);
+  const requestedTotalTimeoutMs = Number(totalTimeoutMs);
+  const totalBudgetMs = Number.isFinite(requestedTotalTimeoutMs) && requestedTotalTimeoutMs > 0
+    ? Math.max(1, requestedTotalTimeoutMs)
+    : null;
+  const startedAt = now();
+  let eligibleProviders = normalized.filter(provider => provider.available !== false && !isCircuitOpen(provider.id, now())).length;
+
   for (const provider of normalized) {
     if (provider.available === false || isCircuitOpen(provider.id, now())) continue;
+    const elapsedMs = Math.max(0, now() - startedAt);
+    const remainingBudgetMs = totalBudgetMs === null ? null : Math.max(0, totalBudgetMs - elapsedMs);
+    if (remainingBudgetMs !== null && remainingBudgetMs <= 0) break;
+    const fairShareMs = remainingBudgetMs === null
+      ? perProviderTimeoutMs
+      : Math.max(1, Math.floor(remainingBudgetMs / Math.max(1, eligibleProviders)));
+    const attemptTimeoutMs = Math.min(perProviderTimeoutMs, fairShareMs);
+    eligibleProviders = Math.max(0, eligibleProviders - 1);
     attemptedProviders.push(provider.id);
     try {
       const value = await withTimeout(
         Promise.resolve().then(() => provider.invoke()),
-        Math.max(1, Number(timeoutMs) || AI_RESILIENCE_POLICY.defaultTimeoutMs),
+        attemptTimeoutMs,
       );
       resetCircuit(provider.id);
       return Object.freeze({
