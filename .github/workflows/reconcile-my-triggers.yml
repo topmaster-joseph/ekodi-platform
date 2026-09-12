@@ -74,6 +74,35 @@ jobs:
         run: |
           set -euo pipefail
           npx --yes wrangler@${WRANGLER_VERSION} triggers deploy --config wrangler.my.toml
+      - name: Detach retired My EKODI custom domain
+        shell: bash
+        run: |
+          set -euo pipefail
+          endpoint="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/domains"
+          domains=$(curl --fail-with-body -sS \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            -H 'Content-Type: application/json' \
+            "$endpoint")
+          echo "$domains" | jq -e '.success == true' >/dev/null
+          domain_id=$(echo "$domains" | jq -r '.result[] | select(.hostname == "my.ekodi.kr") | .id' | head -n1)
+          if [[ -n "$domain_id" ]]; then
+            echo "Detaching retired Workers Custom Domain my.ekodi.kr."
+            curl --fail-with-body -sS -X DELETE \
+              -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+              -H 'Content-Type: application/json' \
+              "$endpoint/$domain_id" | jq -e ".success == true" >/dev/null
+          else
+            echo 'Retired Workers Custom Domain my.ekodi.kr is already detached.'
+          fi
+          remaining=$(curl --fail-with-body -sS \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            -H 'Content-Type: application/json' \
+            "$endpoint")
+          echo "$remaining" | jq -e '.success == true' >/dev/null
+          if echo "$remaining" | jq -e '.result[] | select(.hostname == "my.ekodi.kr")' >/dev/null; then
+            echo 'my.ekodi.kr is still attached as a Workers Custom Domain.'
+            exit 1
+          fi
       - name: Verify canonical My EKODI and Revenue Engine remain live
         shell: bash
         run: |
