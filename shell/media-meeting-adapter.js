@@ -2,7 +2,7 @@
 'use strict';
 if(window.__EKODI_MEDIA_MEETING_ADAPTER_BOOTED)return;
 window.__EKODI_MEDIA_MEETING_ADAPTER_BOOTED=true;
-const VERSION=2;
+const VERSION=3;
 const RESOLVER_DEFAULT='https://social.ekodi.kr/api/media/youtube/status';
 const POLL_MS=60_000;
 const JITSI_LANGUAGE=Object.freeze({'ko-KR':'ko',ko:'ko',en:'en','zh-CN':'zhCN',ja:'ja',vi:'vi',ne:'en'});
@@ -17,7 +17,7 @@ const COPY=Object.freeze({
 const STYLE_ID='ekodi-media-meeting-adapter-style';
 const inflight=new WeakMap();
 function normalizeLocale(value){const lower=String(value||'').trim().toLowerCase();if(lower==='ko'||lower.startsWith('ko-'))return'ko-KR';if(lower==='zh'||lower.startsWith('zh-'))return'zh-CN';if(lower==='ja'||lower.startsWith('ja-'))return'ja';if(lower==='vi'||lower.startsWith('vi-'))return'vi';if(lower==='ne'||lower.startsWith('ne-'))return'ne';return'en';}
-function locale(){return normalizeLocale(window.EKODIUserLanguage?.getLocale?.()||document.documentElement.dataset.ekodiLocale||document.documentElement.lang||navigator.language);}
+function locale(){return normalizeLocale(document.documentElement.dataset.ekodiLocale||window.EKODIUserLanguage?.getLocale?.()||document.documentElement.lang||navigator.language);}
 function installStyle(){if(document.getElementById(STYLE_ID))return;const style=document.createElement('style');style.id=STYLE_ID;style.textContent=`[data-ekodi-media-provider="youtube"] .ekodi-media-state{min-height:220px;display:grid;place-items:center;padding:28px;text-align:center;background:#111;color:#fff}[data-ekodi-media-provider="youtube"] .ekodi-media-state__inner{max-width:460px}[data-ekodi-media-provider="youtube"] .ekodi-media-state__label{display:block;margin-bottom:10px;font-size:11px;font-weight:850;letter-spacing:.12em;opacity:.7}[data-ekodi-media-provider="youtube"] .ekodi-media-state__message{margin:0 0 18px;font-size:clamp(16px,2.5vw,22px);font-weight:800;line-height:1.45}[data-ekodi-media-provider="youtube"] .ekodi-media-state__link{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:9px 16px;border:1px solid rgba(255,255,255,.36);border-radius:999px;color:#fff!important;text-decoration:none;font-weight:750}[data-ekodi-media-provider="youtube"] iframe{width:100%;height:100%;min-height:220px;border:0}`;(document.head||document.documentElement).append(style);}
 function jitsiSrc(frame){const room=String(frame.dataset.ekodiRoom||'').trim();if(!room)return'';const base=String(frame.dataset.ekodiMeetingBase||'https://meet.jit.si').replace(/\/+$/,'');const language=JITSI_LANGUAGE[locale()]||'en';return `${base}/${encodeURIComponent(room)}#config.prejoinConfig.enabled=true&config.defaultLanguage=${encodeURIComponent(language)}`;}
 function syncJitsi(){for(const frame of document.querySelectorAll('iframe[data-ekodi-meeting-provider="jitsi"]')){const next=jitsiSrc(frame);if(next&&frame.src!==next)frame.src=next;frame.lang=locale();}}
