@@ -23,6 +23,7 @@ test('admin keeps one bottom command dock and swaps AI conversation with menu co
   assert.match(bootstrap,/i\.value=''/);
   assert.match(bootstrap,/d\.loadStyle\('ai-ops-admin\.css'\)/);
   assert.match(bootstrap,/d\.loadScript\('admin-lazy-features\.js'\)/);
+  assert.match(bootstrap,/import\('\.\/admin-lazy-features\.js'\)/);
   assert.doesNotMatch(bootstrap,/admin-home-command-only/);
   assert.doesNotMatch(bootstrap,/ekodiAssistBootstrap'\)\?\.remove/);
 
