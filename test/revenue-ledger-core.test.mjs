@@ -17,7 +17,7 @@ test('exposure by itself is never counted as realized revenue', () => {
   });
 });
 
-test('confirmed provider event normalizes gross fee and net in minor units', () => {
+test('confirmed provider event normalizes gross fee, net and operating subject', () => {
   assert.deepEqual(normalizeRealizedRevenue({
     provider: 'ExampleAds',
     externalRef: 'settlement-2026-09-12',
@@ -27,6 +27,8 @@ test('confirmed provider event normalizes gross fee and net in minor units', () 
     currency: 'krw',
     tenantKey: 'tenant-a',
     siteKey: 'site-a',
+    subjectType: 'Tenant',
+    subjectKey: 'tenant-a',
     confirmed: true,
   }), {
     eventKey: 'exampleads:settlement-2026-09-12',
@@ -35,6 +37,8 @@ test('confirmed provider event normalizes gross fee and net in minor units', () 
     source: 'ads',
     tenantKey: 'tenant-a',
     siteKey: 'site-a',
+    subjectType: 'tenant',
+    subjectKey: 'tenant-a',
     currency: 'KRW',
     gross: 12500,
     fee: 500,
@@ -44,12 +48,15 @@ test('confirmed provider event normalizes gross fee and net in minor units', () 
 });
 
 test('provider event is pending until confirmation is explicit', () => {
-  assert.equal(normalizeRealizedRevenue({
+  const event = normalizeRealizedRevenue({
     provider: 'affiliate-network',
     externalRef: 'conversion-1',
     source: 'affiliate',
     amount: 3000,
-  }).status, 'pending');
+  });
+  assert.equal(event.status, 'pending');
+  assert.equal(event.subjectType, '');
+  assert.equal(event.subjectKey, '');
 });
 
 test('allocation totals exactly match realized net even with rounding', () => {
