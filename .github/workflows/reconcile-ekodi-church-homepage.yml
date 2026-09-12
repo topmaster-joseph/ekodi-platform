@@ -2,6 +2,10 @@ name: Reconcile EKODI Church Production
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/reconcile-ekodi-church-homepage.yml'
   schedule:
     - cron: '17 * * * *'
 
@@ -20,25 +24,24 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
-      - name: Compare Church main with production marker
+      - name: Compare Church main with canonical production marker
         id: compare
         shell: bash
         run: |
           set -euo pipefail
           source_sha=$(git ls-remote https://github.com/topmaster-joseph/ekodi-church.git refs/heads/main | awk '{print $1}')
           test "$source_sha"
-          deployed_sha=$(curl -fsS --connect-timeout 5 --max-time 15 'https://church.ekodi.kr/church-release.json?reconcile=1' 2>/dev/null | jq -r '.sourceSha // empty' || true)
+          deployed_sha=$(curl -L -fsS --connect-timeout 5 --max-time 15 'https://ekodi.kr/ekodichurch/church-release.json?reconcile=1' 2>/dev/null | jq -r '.sourceSha // empty' || true)
           echo "source_sha=$source_sha" >> "$GITHUB_OUTPUT"
           echo "deployed_sha=$deployed_sha" >> "$GITHUB_OUTPUT"
           if [[ "$source_sha" == "$deployed_sha" ]]; then
             echo 'needs_deploy=false' >> "$GITHUB_OUTPUT"
-            echo "Church production already converged at $source_sha"
+            echo "Canonical Church production already converged at $source_sha"
           else
             echo 'needs_deploy=true' >> "$GITHUB_OUTPUT"
-            echo "Church drift detected: source=$source_sha production=${deployed_sha:-missing}"
+            echo "Church drift detected: source=$source_sha canonical=${deployed_sha:-missing}"
           fi
-
-      - name: Dispatch central Church production release
+      - name: Dispatch canonical Church production release
         if: steps.compare.outputs.needs_deploy == 'true'
         shell: bash
-        run: gh workflow run deploy-ekodi-church-homepage.yml --repo "$GITHUB_REPOSITORY" --ref main
+        run: gh workflow run deploy-ekodi-church-homepage.yml --repo "$GITHUB_REPOSITORY" --ref main -f source_ref=main
