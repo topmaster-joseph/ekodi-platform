@@ -21,6 +21,6 @@ test('Tax assets stay namespaced under the apex path', async () => {
 });
 
 test('Tax runtime and release contracts contain no tax subdomain dependency',()=>{
-  const files=['admin-menu-registry.js','admin-menu-runtime.js','auth-site/admin-auth.js','finance-monitor.js','platform-router-entry-worker.js','tax-portal-worker.js','wrangler.site.toml','wrangler.finance.toml','wrangler.service-admin-entry.toml','deploy/manifests/shared-site.worker.json','.github/workflows/deploy-site-core.yml','.github/workflows/deploy-finance.yml','scripts/admin-authenticated-e2e-menu-worker.mjs','scripts/admin-authenticated-e2e.mjs'];
+  const files=['admin-menu-registry.js','admin-menu-runtime.js','auth-site/admin-auth.js','finance-monitor.js','platform-router-entry-worker.js','tax-portal-worker.js','wrangler.site.toml','wrangler.finance.toml','wrangler.service-admin-entry.toml','deploy/manifests/shared-site.worker.json','.github/workflows/deploy-site-core.yml','.github/workflows/deploy-finance.yml','scripts/admin-authenticated-e2e-menu-worker.mjs','scripts/admin-authenticated-e2e.mjs','scripts/admin-authenticated-tax-surface-e2e.mjs','test/admin-tax-http2-fallback.test.mjs'];
   for(const file of files)assert.equal(fs.readFileSync(file,'utf8').includes('tax.ekodi.kr'),false,file);
 });
