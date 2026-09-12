@@ -16,7 +16,7 @@ test('EKODI central social connector exposes login-only YouTube OAuth and vault 
   assert.match(growth,/MARKETING_OAUTH_VAULT_KEY/);
   assert.match(growth,/refreshYouTubeAccessToken/);
   assert.match(growth,/youtubeTargetAccount/);
-  assert.match(growth,/ekodibiz@gmail\.com/);
+  assert.match(growth,/topmaster\.joseph@gmail\.com/);
   assert.match(growth,/YOUTUBE_TARGET_ACCOUNT_MISMATCH/);
   assert.match(growth,/authorizedEmail,targetAccount/);
   assert.match(growth,/token_ciphertext/);

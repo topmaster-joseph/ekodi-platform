@@ -3,7 +3,7 @@ import { d1SchemaReady } from './d1-schema-readiness.js';
 import { ensureWeeklyPromotionBoard, getWeeklyPromotionBoardStatus } from './mall-official-promotion-board.js';
 
 const SUBJECT_TYPE = 'tenant';
-const SUBJECT_KEY = 'ekodi-biz';
+const SUBJECT_KEY = 'ekodimall';
 const ACCOUNT_ID = 'coupang-ekodibiz';
 const STOREFRONT = 'ekodi-mall';
 const AFFILIATE_DISCLOSURE = '쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.';
