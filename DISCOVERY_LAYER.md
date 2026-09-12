@@ -2,6 +2,12 @@
 
 EKODI Discovery Layer is the shared public-discovery contract for SEO, AEO, GEO/LLMO, crawler policy, canonical URLs, and machine-readable entity metadata.
 
+Its security model is **Discovery Secure Projection**:
+
+`Canonical Data -> Authorization -> Secure Projection -> Discovery Projection -> Public Web / Search / Answer Engines`
+
+Discovery never widens authorization. Only information already intended for unrestricted public publication may enter the discovery projection.
+
 ## Runtime outputs
 
 The real `npm run build` path invokes `scripts/discovery-build.mjs` through `scripts/ccm-mr-postbuild.mjs` and emits or validates:
@@ -20,16 +26,42 @@ The real `npm run build` path invokes `scripts/discovery-build.mjs` through `scr
 
 Only explicitly declared canonical public routes belong in `DISCOVERY_PUBLIC_ROUTES`. Admin, auth, API, development-preview, tenant-private, and operational surfaces must never be added to the sitemap or LLM discovery source list.
 
-Private prefixes are centralized in `DISCOVERY_PRIVATE_PREFIXES`. Admin and Mall operational routes also receive `X-Robots-Tag: noindex, nofollow, noarchive` at the edge.
+Private prefixes are centralized in `DISCOVERY_PRIVATE_PREFIXES`. Admin, API and Mall operational routes use `X-Robots-Tag: noindex, nofollow, noarchive` where they cross the public edge. Authentication and other private hosts must remain non-discoverable independently of robots.txt.
 
-## AI crawler policy
+`robots.txt` is crawler guidance, not a security boundary. A URL that must remain private requires authorization and/or an explicit noindex response, and restricted fields must be removed before serialization.
 
-EKODI separates search discovery from model training:
+## Purpose-bound crawler policy
 
-- Public search/retrieval crawlers such as `OAI-SearchBot` and `PerplexityBot` may crawl public routes but remain blocked from private operational prefixes.
-- Model-training controls such as `GPTBot`, `ClaudeBot`, and `Google-Extended` are disallowed by default.
+EKODI separates four crawler purposes rather than treating every AI bot alike:
 
-Changing this policy is a governance decision, not a marketing toggle. Review privacy, copyright, citation, and discovery effects before changing crawler classes.
+- **Search index**: `Googlebot`, `bingbot` — allowed on explicitly public routes for SEO.
+- **Answer retrieval**: `OAI-SearchBot`, `Claude-SearchBot`, `PerplexityBot` — allowed on explicitly public routes for AEO/GEO and citation/search retrieval.
+- **Model training**: `GPTBot`, `ClaudeBot`, `Google-Extended` — disallowed by default.
+- **Autonomous/user-agent fetchers**: `ChatGPT-User`, `Claude-User`, `Perplexity-User` — disallowed by default unless EKODI later creates a separately governed agent-access contract.
+
+Search permission never implies training permission or autonomous-agent permission. Changing these classes is a security/governance decision, not a marketing toggle.
+
+## Edge enforcement
+
+Robots rules alone cannot stop spoofed or non-compliant scrapers. At the Cloudflare edge, the intended policy is:
+
+- Search: **Allow**
+- Training: **Block**
+- Agent: **Block by default**
+- known answer-retrieval crawlers: allow only to public discovery surfaces
+- unknown/unverified high-volume automation: challenge or block according to bot confidence and rate policy
+
+Use verified bot identity or provider-managed crawler classification when available. Do not treat a self-declared User-Agent string as sufficient proof of crawler identity.
+
+A broad “block every AI bot” switch must not be allowed to suppress approved AI-search/retrieval crawlers. Edge rules and `robots.txt` must be checked together during release verification.
+
+## Discovery projection data rules
+
+Discovery outputs may contain public titles, summaries, organization/service descriptions, published articles, public product/menu/service facts, public events, canonical URLs, breadcrumbs and Schema.org structured data derived from the same public facts visible to people.
+
+Discovery outputs must not contain secrets, reusable credentials, private contact details, canonical internal identifiers, raw customer records, private files, repository/branch names, infrastructure topology, private API endpoints, prompts, orchestration state, audit payloads or non-public operational metadata.
+
+Structured data must never be used as a hidden channel for facts that are not supported by the human-visible public surface.
 
 ## AEO / GEO rules
 
@@ -41,9 +73,10 @@ Changing this policy is a governance decision, not a marketing toggle. Review pr
 6. Add service-specific Schema.org types only when the corresponding public page and facts exist.
 7. Add FAQ markup only when the same questions and answers are visibly present on the page.
 8. Add `hreflang` only when real translated/localized page pairs exist.
+9. Measure organic search and AI-answer referral traffic separately so discovery benefit can be increased without weakening the security boundary.
 
 ## Validation
 
-`test/discovery-layer.test.mjs` verifies the route allowlist, private-route exclusion, crawler separation, canonical source list, and Organization/WebSite/WebPage graph.
+`test/discovery-layer.test.mjs` verifies the route allowlist, private-route exclusion, crawler-purpose separation, canonical source list, and Organization/WebSite/WebPage graph.
 
 The production build itself fails when canonical, Open Graph, or JSON-LD markers are missing from EKODI-owned public pages. CI runs the same `npm run build`, so a Discovery Layer regression blocks the release path instead of silently shipping.
