@@ -108,6 +108,8 @@ on:
       - 'social-registry-api.js'
       - 'mail-control.js'
       - 'local-commerce-control.js'
+      - 'external-account-control.js'
+      - 'test/external-account-control.test.mjs'
       - 'test/local-commerce-control.test.mjs'
       - 'mail-credential-vault.js'
       - 'mail-google-adapter.js'
@@ -230,6 +232,8 @@ on:
       - 'social-registry-api.js'
       - 'mail-control.js'
       - 'local-commerce-control.js'
+      - 'external-account-control.js'
+      - 'test/external-account-control.test.mjs'
       - 'test/local-commerce-control.test.mjs'
       - 'mail-credential-vault.js'
       - 'mail-google-adapter.js'
@@ -275,7 +279,7 @@ jobs:
       - name: Validate control plane, Core AI Gateway and governance
         run: |
           set -euo pipefail
-          for file in api-worker.js platform-maturity-control.js preview-public-projection.js auth-worker.js admin-session-fastpath.js admin-google-auth.js customer-auth.js customer-entry-worker.js church-reports-control.js mission-control-entry-worker.js external-ai-module-gateway.js secure-projection.js traffic-intelligence.js traffic-intelligence-control.js devotional-control.js user-ai-control.js learning-control.js personal-ai-bridge.js ekodi-mcp-gateway.js ai-access-orchestration.js personal-ai-provider-registry.js gemini-provider-adapter.js personal-openai-provider-adapter.js claude-provider-adapter.js user-openai-provider-adapter.js universal-membership.js membership-billing.js generated/user-services.js messenger-operator-control.js ekodi-principal.js messenger-outbox.js messenger-channel-adapters.js device-control.js security-edge.js ai-agent-control.js ai-command-control.js ekodi-command-ledger.js ekodi-pulse-runtime.js ekodi-command-plane.js ekodi-ai-provider-registry.js ai-orchestrator-runtime.js anthropic-provider-adapter.js gemini-orchestrator-provider-adapter.js ai-governance-runtime.js ai-resilience-runtime.js core-ai-gateway.js core-api.js openai-provider-adapter.js api-usage-meter.js api-cost-control.js books-control.js books-finance-control.js books-distribution-control.js books-pipeline-control.js books-royalty-control.js affiliate-control.js affiliate-marketplace.js affiliate-provider-feed.js product-identity.js coupang-partners-automation.js offer-registry.js offer-registry-control.js offer-registry-sources.js social-registry-api.js mail-credential-vault.js mail-google-adapter.js mail-control.js local-commerce-control.js language-automation.js ai-provider-control.js config/language-registry.js; do
+          for file in api-worker.js platform-maturity-control.js preview-public-projection.js auth-worker.js admin-session-fastpath.js admin-google-auth.js customer-auth.js customer-entry-worker.js church-reports-control.js mission-control-entry-worker.js external-ai-module-gateway.js secure-projection.js traffic-intelligence.js traffic-intelligence-control.js devotional-control.js user-ai-control.js learning-control.js personal-ai-bridge.js ekodi-mcp-gateway.js ai-access-orchestration.js personal-ai-provider-registry.js gemini-provider-adapter.js personal-openai-provider-adapter.js claude-provider-adapter.js user-openai-provider-adapter.js universal-membership.js membership-billing.js generated/user-services.js messenger-operator-control.js ekodi-principal.js messenger-outbox.js messenger-channel-adapters.js device-control.js security-edge.js ai-agent-control.js ai-command-control.js ekodi-command-ledger.js ekodi-pulse-runtime.js ekodi-command-plane.js ekodi-ai-provider-registry.js ai-orchestrator-runtime.js anthropic-provider-adapter.js gemini-orchestrator-provider-adapter.js ai-governance-runtime.js ai-resilience-runtime.js core-ai-gateway.js core-api.js openai-provider-adapter.js api-usage-meter.js api-cost-control.js books-control.js books-finance-control.js books-distribution-control.js books-pipeline-control.js books-royalty-control.js affiliate-control.js affiliate-marketplace.js affiliate-provider-feed.js product-identity.js coupang-partners-automation.js offer-registry.js offer-registry-control.js offer-registry-sources.js social-registry-api.js mail-credential-vault.js mail-google-adapter.js mail-control.js external-account-control.js local-commerce-control.js language-automation.js ai-provider-control.js config/language-registry.js; do
             node --check "$file"
           done
           node --check scripts/generate-user-service-registry.mjs
@@ -346,7 +350,7 @@ jobs:
           [vars]
           ENVIRONMENT = "staging"
           ADMIN_EMAIL = "topmaster.joseph@gmail.com"
-          ADMIN_GOOGLE_BOOTSTRAP_EMAILS = "topmaster.joseph@gmail.com"
+          ADMIN_GOOGLE_BOOTSTRAP_EMAILS = "topmaster.joseph@gmail.com,joseph@ekodi.kr"
           ADMIN_WORKSPACE_DOMAIN = "ekodibiz.kr"
           GOOGLE_CLIENT_ID = "483044030492-4e6231l5glchhtniroinvuq3ev6n5mv5.apps.googleusercontent.com"
           AI_PROVIDER = "NONE"
