@@ -163,3 +163,113 @@ binding = "ASSETS"
 # Public legal/history/mall paths use glob matching so extensionless HTML routing
 # cannot bypass the common User UI Shell contract.
 run_worker_first = ["/", "/bible*", "/preview*", "/learn*", "/privacy*", "/terms*", "/history*", "/insurance*", "/mall*", "/org/ekodibiz*", "/ekodibiz*", "/ekodi-church*", "/ekodichurch*", "/jadam/marketing*", "/pizzamaru/marketing*", "/pizzamaru/mokpodae*", "/yogurt/marketing*", "/cgma/marketing*", "/mail*", "/deployment-probe", "/_ekodi/space/*", "/_ekodi/ekodibiz/*", "/auth", "/auth/*", "/my", "/my/*", "/workspace-admin.css", "/workspace-admin.js", "/workspace-trade-admin.js", "/church-pastor-admin.js", "/workspace-trade-portal.css", "/workspace-trade-portal.js", "/admin", "/admin/*", "/control-center", "/control-center/", "/control-center.html", "/api", "/api/*", "/mcp", "/webhooks/*", "/health", "/.well-known/oauth-protected-resource", "/auth.js", "/auth-router.js", "/marketing-auth-hotfix.js", "/auth-workspace-target.js", "/admin-auth.js", "/google-origin-bridge", "/google-origin-bridge.js", "/client-auth.js", "/author-auth.js", "/business-auth.js", "/marketing-onboarding.js", "/membership-ui.js", "/control-center.css", "/admin-shell.css", "/admin-central-handoff.js", "/admin-authenticated-shell.js", "/compact-control-center.js", "/compact-control-center.css", "/admin-compact.js", "/admin-compact.css", "/admin-menu-layout.js", "/admin-menu-registry.js", "/admin-sidebar.js", "/admin-menu-runtime.js", "/admin-demand-loader.js", "/admin-public-site-controls.js", "/admin-perf-diagnostics.js", "/tapo-device-admin.js", "/tapo-device-admin.css", "/device-browser-diagnostics.js", "/device-browser-diagnostics.css", "/admin-lazy-features.js", "/ai-ops-admin.css", "/system-health-admin.js", "/system-health-admin.css"]
+
+[[services]]
+binding = "WORKSPACE_PLATFORM"
+service = "ekodi-workspace-platform-api"
+
+
+[[services]]
+binding = "AI"
+service = "ekodi-ai-control"
+
+
+[[services]]
+binding = "MONEY"
+service = "ekodi-money"
+
+
+[[services]]
+binding = "WORK"
+service = "ekodi-work"
+
+
+[[services]]
+binding = "MANAGEMENT"
+service = "ekodi-management"
+
+
+[[services]]
+binding = "AUTHOR"
+service = "ekodi-author-ai"
+
+
+[[services]]
+binding = "SHELL"
+service = "ekodi-shell"
+
+
+[[services]]
+binding = "BUSINESS"
+service = "ekodi-business"
+
+
+[[services]]
+binding = "LIFE"
+service = "ekodi-life-ai"
+
+
+[[services]]
+binding = "EXPERIENCE"
+service = "ekodi-experience"
+
+
+[[services]]
+binding = "BOOKS"
+service = "ekodi-books"
+
+
+[[services]]
+binding = "PUBLISHING"
+service = "ekodi-publishing"
+
+
+[[services]]
+binding = "PERSONAL_FINANCE"
+service = "ekodi-personal-finance-api"
+
+
+[[services]]
+binding = "SUPPORT"
+service = "ekodi-support-opportunity"
+
+
+[[services]]
+binding = "MARKETING_GROWTH"
+service = "ekodi-marketing-growth"
+
+
+[[services]]
+binding = "SOCIAL"
+service = "ekodi-social"
+
+
+[[services]]
+binding = "MARKETING_PUBLISHING"
+service = "ekodi-marketing-publishing-api"
+
+
+[[services]]
+binding = "JOURNAL"
+service = "ekodi-journal"
+
+
+[[services]]
+binding = "ENERGY"
+service = "ekodi-energy"
+
+
+[[services]]
+binding = "COMMUNITY"
+service = "ekodi-community"
+
+
+[[services]]
+binding = "EDUCATION"
+service = "ekodi-education"
+
+
+[[services]]
+binding = "MARKETING_DOMAIN"
+service = "ekodi-marketing-domain-api"
+
