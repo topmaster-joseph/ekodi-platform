@@ -13,7 +13,7 @@ export const OPPORTUNITY_SERVICES=Object.freeze([
 const SERVICE_PATHS=new Map(OPPORTUNITY_SERVICES.map(service=>[service.path,service.id]));
 const SERVICE_BY_ID=new Map(OPPORTUNITY_SERVICES.map(service=>[service.id,service]));
 export function getOpportunityService(id='grant'){return SERVICE_BY_ID.get(id)||SERVICE_BY_ID.get('grant')}
-export function resolveOpportunityService(pathname='/',fallback='all'){const clean=String(pathname||'/').replace(/\/$/,'')||'/';return SERVICE_PATHS.get(clean)||fallback}
+export function resolveOpportunityService(pathname='/',fallback='all'){let clean=String(pathname||'/').replace(/\/$/,'')||'/';if(clean==='/support')clean='/';else if(clean.startsWith('/support/'))clean=clean.slice('/support'.length);return SERVICE_PATHS.get(clean)||fallback}
 
 export function nextStage(stage){const i=SUPPORT_STAGES.indexOf(stage);return i<0?SUPPORT_STAGES[0]:SUPPORT_STAGES[Math.min(i+1,SUPPORT_STAGES.length-1)]}
 export function normalizeText(value){return String(value||'').replace(/\s+/g,' ').trim()}

@@ -31,4 +31,4 @@ The first production release provides lifecycle tracking, deterministic opportun
 Persistence begins browser-local-first for non-sensitive planning metadata. Sensitive documents and authoritative application records require a reviewed server-side storage contract before they are enabled.
 
 ## Definition of done
-A release is complete only after source checks, tests, platform-boundary validation, staging verification, production deployment and verification of the real `support.ekodi.kr` hostname.
+A release is complete only after source checks, tests, platform-boundary validation, staging verification, production deployment and verification of the real `ekodi.kr/support` hostname.

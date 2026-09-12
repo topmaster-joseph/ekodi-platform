@@ -1,0 +1,23 @@
+{
+  "id": "2026-09-13-support-canonical-path-v1.13.0",
+  "constitutionVersion": "1.13.0",
+  "status": "approved",
+  "approvedBy": "topmaster-joseph",
+  "approvedAt": "2026-09-13",
+  "changeClass": "C2",
+  "taskId": "support-canonical-path-20260913",
+  "summary": "Make https://ekodi.kr/support the sole canonical and production Support user entry, remove support.ekodi.kr from EKODI legacy-domain registration, and align routing, identity, monitoring and deployment verification with the path-based service boundary.",
+  "approvalBasis": "The EKODI Platform Super Administrator explicitly instructed EKODI to continue and change the Support domain standard to ekodi.kr/support. This also follows the previously established rule that retired EKODI subdomains are not kept as compatibility redirects.",
+  "evidence": [
+    "Cloudflare Worker production route uses ekodi.kr/support*",
+    "service and capability registries use https://ekodi.kr/support",
+    "Support static assets and API calls are path-scoped under /support",
+    "central identity CORS uses the ekodi.kr origin",
+    "support.ekodi.kr removed from legacy allowlist and legacy target map",
+    "production verification probes the real ekodi.kr/support route"
+  ],
+  "generationImpact": "None. Generation 10 Benefit Radar remains active.",
+  "scaleImpact": "None. This changes routing topology, not scale tier.",
+  "authorityImpact": "None. Existing human gates, consent-first behavior and EKODIBIZ commercial-subject policy remain unchanged.",
+  "rollback": "Revert the v1.13.0 routing amendment and path-scoped Support changes through the guarded release path. Do not silently recreate support.ekodi.kr; any future subdomain boundary would require separate governance approval."
+}
