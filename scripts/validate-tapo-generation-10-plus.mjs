@@ -23,7 +23,8 @@ check('edge-local secret/topology boundary',projected.credentialRef.startsWith('
 let unsafeRejected=false; try{assertSafeTapoCloudProjection({...projected,host:'10.0.0.9'});}catch{unsafeRejected=true;} check('unsafe cloud projection rejected',unsafeRejected);
 check('observe-only gateway',/gateway:\s*Object\.freeze\([\s\S]*?remoteCommandLevel:\s*'observe'[\s\S]*?autoExecution:\s*'never'[\s\S]*?allowedCommands:\s*Object\.freeze\(\['camera\.live\.start'\]\)/.test(control));check('ephemeral hashed stream session',/STREAM_SESSION_TTL_MS\s*=\s*3\s*\*\s*60\s*\*\s*1000/.test(control)&&/secret_hash/i.test(control)&&/camera\.live\.start/.test(control));
 check('loopback fixed-process media bridge',/server\.listen\([^\n]*'127\.0\.0\.1'/.test(bridge)&&/spawn\(config\.ffmpegPath\|\|'ffmpeg'/.test(bridge)&&!/shell\s*:\s*true/.test(bridge));
-check('lazy admin extension',/loadScript\('tapo-device-admin\.js'\)/.test(admin)&&!/tapo-device-admin\.js/.test(loader));
+const lazyTapoLoader=/loadScript\('tapo-device-admin\.js'\)/.test(admin)||(/demandLoader\?\.loadScript\|\|demandLoader\?\.loadJs/.test(admin)&&/loadTapoScript\.call\(demandLoader,'tapo-device-admin\.js'\)/.test(admin));
+check('lazy admin extension',lazyTapoLoader&&!/tapo-device-admin\.js/.test(loader));
 check('operational observability',/heartbeatLoop/.test(bridge)&&/lastSyncAt/.test(control)&&/providerBridge/.test(control));
 check('deployable isolated assets',/tapo-device-admin\.js/.test(build)&&/tapo-device-admin\.css/.test(build));
 check('forward provider replaceability',projected.capabilities.includes('camera.live')&&projected.provider==='tp-link.tapo'&&capability?.id==='device.observe');
