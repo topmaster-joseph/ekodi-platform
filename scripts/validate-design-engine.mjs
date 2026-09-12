@@ -59,7 +59,7 @@ for (const asset of ['admin-design-engine.js', 'admin-design-engine.css']) {
   if (!siteWorker.includes(`'/${asset}'`)) errors.push(`site worker ADMIN_ASSETS must expose ${asset}.`);
   if (!postbuild.includes(`'${asset}'`)) errors.push(`admin asset fingerprint must include ${asset}.`);
 }
-if (!postbuild.includes("['admin-menu-registry.js', ['admin-design-engine.js']]")) errors.push('admin registry must version-pin the Design Engine runtime import.');
+if (!postbuild.includes("['admin-menu-registry.js', ['admin-design-engine.js', 'platform-maturity-admin.js']]")) errors.push('admin registry must version-pin both the Design Engine and Platform Maturity runtime imports.');
 if (!adminCss.includes('[data-ekodian-character]')) errors.push('admin design CSS must contain the EKODIAN character layer.');
 if (!adminCss.includes('@media(prefers-reduced-motion:reduce)')) errors.push('admin character layer must respect reduced-motion preferences.');
 
