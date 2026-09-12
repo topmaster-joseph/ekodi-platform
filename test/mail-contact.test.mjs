@@ -18,13 +18,16 @@ async function privateKeyPem(){
   return `-----BEGIN PRIVATE KEY-----\n${Buffer.from(bytes).toString('base64').match(/.{1,64}/g).join('\n')}\n-----END PRIVATE KEY-----`;
 }
 
-test('public contact page fixes the recipient and does not require sign-in', async()=>{
+test('public contact page targets each site administrator without sign-in', async()=>{
   const response=mailContactPage();
   const html=await response.text();
   assert.equal(response.status,200);
-  assert.match(html,/에코디에 문의하기/);
-  assert.match(html,new RegExp(MAIL_CONTACT_RECIPIENT.replace('.','\\.')));
+  assert.match(html,/사이트 관리자에게 문의하기/);
+  assert.match(html,/로그인 없이 누구나 해당 사이트 관리자에게 문의할 수 있습니다/);
+  assert.match(html,/id="recipientLabel" value="EKODI 관리자"/);
+  assert.match(html,/adminLabel=site\?site\+' 관리자':'EKODI 관리자'/);
   assert.match(html,/\/mail\/api\/contact/);
+  assert.doesNotMatch(html,new RegExp(MAIL_CONTACT_RECIPIENT.replace('.','\\.')));
   assert.doesNotMatch(html,/auth\.ekodi\.kr/);
 });
 test('public contact validates reply email before sending', async()=>{
@@ -60,12 +63,15 @@ test('contact delivery ignores client recipient and sends fixed To with user Rep
     const env={ENVIRONMENT:'production',MAIL_CONTACT_RECIPIENT:'attacker@example.net',MAIL_CONTACT_SENDER:'other@example.net',GOOGLE_SERVICE_ACCOUNT_EMAIL:'mailer@example.iam.gserviceaccount.com',GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY:privateKey,MAIL_CONTACT_RATE_LIMITER:{limit:async()=>({success:true})}};
     const response=await handleMailContactApi(contactRequest({name:'문의자',email:'reply@example.com',subject:'연결 문의',message:'테스트 문의입니다.',to:'attacker@example.net',source:'cgma',site:'청계면상인회'}),env);
     assert.equal(response.status,200);
-    assert.equal((await response.json()).ok,true);
+    const result=await response.json();
+    assert.equal(result.ok,true);
+    assert.equal(result.message,'청계면상인회 관리자에게 문의가 전달되었습니다.');
     assert.equal(tokenCalls,1);
     const decoded=decodeRaw(raw);
     assert.match(decoded,/To: joseph@ekodi\.kr/);
     assert.doesNotMatch(decoded,/attacker@example\.net/);
     assert.match(decoded,/Reply-To: reply@example\.com/);
+    assert.match(decoded,/문의 대상: 청계면상인회 관리자/);
     assert.match(decoded,/접수 사이트: 청계면상인회/);
   } finally { globalThis.fetch=original; }
 });
@@ -74,7 +80,7 @@ test('canonical apex owns public contact page and contact API end to end', async
   const page=await platformEntry.fetch(new Request('https://ekodi.kr/mail/contact'),{ENVIRONMENT:'test'},{});
   assert.equal(page.status,200);
   assert.equal(page.headers.get('x-ekodi-route'),'mail-contact');
-  assert.match(await page.text(),/에코디에 문의하기/);
+  assert.match(await page.text(),/사이트 관리자에게 문의하기/);
 
   const api=await platformEntry.fetch(new Request('https://ekodi.kr/mail/api/contact',{
     method:'POST',
@@ -95,7 +101,7 @@ test('public contact release guard is registered', async()=>{
   const manifest=JSON.parse(await readFile(new URL('../deploy/manifests/shared-site.worker.json',import.meta.url),'utf8'));
   const probe=manifest.worker.requests.find(item=>item.url==='https://ekodi.kr/mail/contact');
   assert.deepEqual(probe?.statuses,[200]);
-  assert.ok(probe?.expect?.includes('joseph@ekodi.kr'));
+  assert.ok(probe?.expect?.includes('사이트 관리자에게 문의하기'));
   assert.ok(probe?.headerExpect?.includes('x-ekodi-route: mail-contact'));
   assert.equal(probe?.rollbackVerify,false);
   const wrangler=await readFile(new URL('../wrangler.site.toml',import.meta.url),'utf8');

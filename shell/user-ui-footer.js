@@ -98,15 +98,26 @@ function serviceLabel(){
   const service=serviceId();
   const explicit=String(document.documentElement.dataset.ekodiServiceLabel||document.body?.dataset?.ekodiServiceLabel||'').trim();
   if(explicit)return explicit;
+  const labels={church:'EKODI Church',community:'Community',cafe:'EKODI Cafe',mall:'EKODI Mall',business:'EKODI Biz',biz:'EKODI Biz',marketing:'Marketing AI',trade:'EKODI Trade',invest:'EKODI Invest',books:'EKODI Books',publishing:'Publishing',author:'EKODI Author',lab:'EKODI Lab',edu:'EKODI Education',my:'My EKODI',mail:'EKODI Mail',ekodi:'EKODI'};
+  if(labels[service])return labels[service];
   const title=String(document.title||'').split('|')[0].trim();
-  if(title&&!/^my ekodi$/i.test(title))return title;
-  const labels={church:'EKODI Church',community:'Community',cafe:'EKODI Cafe',mall:'EKODI Mall',business:'EKODI Biz',biz:'EKODI Biz',marketing:'Marketing AI',trade:'EKODI Trade',invest:'EKODI Invest',books:'EKODI Books',publishing:'Publishing',author:'EKODI Author',lab:'EKODI Lab',edu:'EKODI Education',my:'My EKODI'};
-  return labels[service]||'';
+  return title&&!/^my ekodi$/i.test(title)?title:'';
+}
+function siteContactHref(){
+  const url=new URL('https://ekodi.kr/mail/contact');
+  const source=serviceId();
+  const site=serviceLabel();
+  if(source)url.searchParams.set('source',source.slice(0,80));
+  if(site)url.searchParams.set('site',site.slice(0,100));
+  url.searchParams.set('source_url',String(location.href||'').slice(0,1000));
+  return url.toString();
 }
 function applyServiceContext(footer){
   if(!(footer instanceof HTMLElement))return;
   const service=serviceId()||'ekodi';
   footer.dataset.ekodiFooterService=service;
+  const contactHref=siteContactHref();
+  footer.querySelectorAll('[data-ekodi-i18n="contact"],[data-ekodi-contact-link]').forEach(link=>{link.href=contactHref;});
   const label=document.documentElement.dataset.ekodiFooterProfile==='inherit'?'':serviceLabel();
   let context=footer.querySelector('.ekodi-user-ui-footer__service');
   if(!label||/^ekodi$/i.test(label)){if(context)context.remove();return;}
@@ -155,7 +166,8 @@ function createFooter(config){
   appendText(address,'span',config.contact.address);
   appendText(address,'span','·','ekodi-user-ui-footer__separator').setAttribute('aria-hidden','true');
   const email=appendText(address,'a',config.contact.email);
-  email.href=String(config.contact.emailHref||`mailto:${config.contact.email}`);
+  email.href=siteContactHref();
+  email.setAttribute('data-ekodi-contact-link','footer-email');
   appendText(copy,'div',config.copyright,'ekodi-user-ui-footer__copyright');
   appendText(copy,'div',config.precedenceNotice,'ekodi-user-ui-footer__scope');
   const nav=appendText(inner,'nav','','ekodi-user-ui-footer__links');
@@ -163,7 +175,7 @@ function createFooter(config){
   for(const item of config.legalLinks){
     if(!item?.href||!item?.label)continue;
     const link=appendText(nav,'a',item.label);
-    link.href=String(item.href);
+    link.href=item.i18n==='contact'?siteContactHref():String(item.href);
     if(item.i18n)link.setAttribute('data-ekodi-i18n',String(item.i18n));
   }
   return footer;
@@ -187,6 +199,7 @@ async function reconcile(){
   const footer=createFooter(config);
   document.body.append(footer);
   dedupeSharedFooters();
+  applyServiceContext(footer);
   applyReadableFooter(footer);
   window.EKODIUserLanguage?.refresh?.();
   window.dispatchEvent(new CustomEvent('ekodi:user-footer-ready',{detail:{version:VERSION,surface:surface()}}));
