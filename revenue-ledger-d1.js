@@ -11,6 +11,8 @@ export async function ensureRevenueLedger(db) {
       source TEXT NOT NULL,
       tenant_key TEXT NOT NULL DEFAULT '',
       site_key TEXT NOT NULL DEFAULT '',
+      subject_type TEXT NOT NULL DEFAULT '',
+      subject_key TEXT NOT NULL DEFAULT '',
       currency TEXT NOT NULL,
       gross INTEGER NOT NULL,
       fee INTEGER NOT NULL,
@@ -23,10 +25,6 @@ export async function ensureRevenueLedger(db) {
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
     )`),
-    db.prepare(`CREATE UNIQUE INDEX IF NOT EXISTS realized_revenue_provider_ref
-      ON realized_revenue_events(provider, external_ref)`),
-    db.prepare(`CREATE INDEX IF NOT EXISTS realized_revenue_scope_time
-      ON realized_revenue_events(status, tenant_key, site_key, occurred_at)`),
     db.prepare(`CREATE TABLE IF NOT EXISTS realized_revenue_allocations (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       event_id INTEGER NOT NULL,
@@ -37,6 +35,22 @@ export async function ensureRevenueLedger(db) {
       UNIQUE(event_id, recipient),
       FOREIGN KEY(event_id) REFERENCES realized_revenue_events(id) ON DELETE CASCADE
     )`),
+  ]);
+
+  const columns = await db.prepare('PRAGMA table_info(realized_revenue_events)').all();
+  const names = new Set((columns.results || []).map(column => String(column.name)));
+  const upgrades = [];
+  if (!names.has('subject_type')) upgrades.push(db.prepare("ALTER TABLE realized_revenue_events ADD COLUMN subject_type TEXT NOT NULL DEFAULT ''"));
+  if (!names.has('subject_key')) upgrades.push(db.prepare("ALTER TABLE realized_revenue_events ADD COLUMN subject_key TEXT NOT NULL DEFAULT ''"));
+  if (upgrades.length) await db.batch(upgrades);
+
+  await db.batch([
+    db.prepare(`CREATE UNIQUE INDEX IF NOT EXISTS realized_revenue_provider_ref
+      ON realized_revenue_events(provider, external_ref)`),
+    db.prepare(`CREATE INDEX IF NOT EXISTS realized_revenue_scope_time
+      ON realized_revenue_events(status, tenant_key, site_key, occurred_at)`),
+    db.prepare(`CREATE INDEX IF NOT EXISTS realized_revenue_subject_time
+      ON realized_revenue_events(status, subject_type, subject_key, occurred_at)`),
   ]);
 }
 
@@ -49,7 +63,10 @@ function iso(value = Date.now()) {
 function assertSame(existing, event) {
   if (String(existing.provider) !== event.provider
       || String(existing.external_ref) !== event.externalRef
+      || String(existing.source) !== event.source
       || String(existing.currency) !== event.currency
+      || String(existing.subject_type || '') !== event.subjectType
+      || String(existing.subject_key || '') !== event.subjectKey
       || Number(existing.gross) !== event.gross
       || Number(existing.fee) !== event.fee
       || Number(existing.net) !== event.net) {
@@ -64,13 +81,14 @@ export async function recordProviderRevenue(db, input = {}) {
   const occurredAt = iso(input.occurredAt || now);
   const confirmedAt = event.status === 'confirmed' ? now : null;
   await db.prepare(`INSERT OR IGNORE INTO realized_revenue_events
-    (event_key,provider,external_ref,source,tenant_key,site_key,currency,gross,fee,net,status,
+    (event_key,provider,external_ref,source,tenant_key,site_key,subject_type,subject_key,currency,gross,fee,net,status,
       occurred_at,confirmed_at,metadata_json,created_at,updated_at)
-    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
-    .bind(event.eventKey,event.provider,event.externalRef,event.source,event.tenantKey,event.siteKey,event.currency,
-      event.gross,event.fee,event.net,event.status,occurredAt,confirmedAt,
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+    .bind(event.eventKey,event.provider,event.externalRef,event.source,event.tenantKey,event.siteKey,
+      event.subjectType,event.subjectKey,event.currency,event.gross,event.fee,event.net,event.status,occurredAt,confirmedAt,
       JSON.stringify(input.metadata && typeof input.metadata === 'object' ? input.metadata : {}),now,now).run();
-  const row = await db.prepare('SELECT * FROM realized_revenue_events WHERE event_key=?').bind(event.eventKey).first();
+  let row = await db.prepare('SELECT * FROM realized_revenue_events WHERE event_key=?').bind(event.eventKey).first();
+  if (!row) row = await db.prepare('SELECT * FROM realized_revenue_events WHERE provider=? AND external_ref=?').bind(event.provider,event.externalRef).first();
   if (!row) throw new Error('REVENUE_PERSIST_FAILED');
   assertSame(row,event);
   return row;
@@ -130,6 +148,8 @@ export async function realizedRevenueSummary(db, filters = {}) {
   const values = [];
   if (filters.tenantKey) { clauses.push('tenant_key=?'); values.push(String(filters.tenantKey).slice(0,160)); }
   if (filters.siteKey) { clauses.push('site_key=?'); values.push(String(filters.siteKey).slice(0,120)); }
+  if (filters.subjectType) { clauses.push('subject_type=?'); values.push(String(filters.subjectType).toLowerCase().slice(0,40)); }
+  if (filters.subjectKey) { clauses.push('subject_key=?'); values.push(String(filters.subjectKey).slice(0,180)); }
   if (filters.from) { clauses.push('occurred_at>=?'); values.push(iso(filters.from)); }
   if (filters.to) { clauses.push('occurred_at<?'); values.push(iso(filters.to)); }
   const result = await db.prepare(`SELECT currency,source,COUNT(*) event_count,
