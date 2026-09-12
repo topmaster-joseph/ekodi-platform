@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { canonicalUrl, DISCOVERY_PRIVATE_PREFIXES, DISCOVERY_PUBLIC_ROUTES, pageJsonLd, renderDiscoveryHead, renderLlmsTxt, renderRobotsTxt, renderSitemapXml } from '../discovery-layer.js';
+import { canonicalUrl, DISCOVERY_CRAWLER_POLICY, DISCOVERY_PRIVATE_PREFIXES, DISCOVERY_PUBLIC_ROUTES, pageJsonLd, renderDiscoveryHead, renderLlmsTxt, renderRobotsTxt, renderSitemapXml } from '../discovery-layer.js';
 
 test('sitemap contains only declared public canonical routes', () => {
   const sitemap = renderSitemapXml();
@@ -18,21 +18,35 @@ test('public route contract carries canonical metadata and static asset ownershi
   }
 });
 
-test('robots separates search discovery from model training and blocks private prefixes', () => {
+test('crawler policy separates search, answer retrieval, training and agents', () => {
+  assert.deepEqual(DISCOVERY_CRAWLER_POLICY.searchIndex, ['Googlebot', 'bingbot']);
+  assert.deepEqual(DISCOVERY_CRAWLER_POLICY.answerRetrieval, ['OAI-SearchBot', 'Claude-SearchBot', 'PerplexityBot', 'Applebot']);
+  assert.deepEqual(DISCOVERY_CRAWLER_POLICY.training, [
+    'GPTBot', 'ClaudeBot', 'Google-Extended', 'Google-CloudVertexBot', 'Bytespider', 'CCBot',
+    'meta-externalagent', 'FacebookBot', 'Amazonbot',
+  ]);
+  assert.deepEqual(DISCOVERY_CRAWLER_POLICY.agent, [
+    'ChatGPT-User', 'Claude-User', 'Perplexity-User', 'meta-externalfetcher', 'DuckAssistBot', 'MistralAI-User',
+  ]);
+});
+
+test('robots allows public search and answer discovery while blocking training and agents', () => {
   const robots = renderRobotsTxt();
-  assert.match(robots, /User-agent: OAI-SearchBot\nAllow: \//);
-  assert.match(robots, /User-agent: PerplexityBot\nAllow: \//);
-  assert.match(robots, /User-agent: GPTBot\nDisallow: \//);
-  assert.match(robots, /User-agent: ClaudeBot\nDisallow: \//);
-  assert.match(robots, /User-agent: Google-Extended\nDisallow: \//);
+  for (const crawler of [...DISCOVERY_CRAWLER_POLICY.searchIndex, ...DISCOVERY_CRAWLER_POLICY.answerRetrieval]) {
+    assert.match(robots, new RegExp(`User-agent: ${crawler}\\nAllow: /`));
+  }
+  for (const crawler of [...DISCOVERY_CRAWLER_POLICY.training, ...DISCOVERY_CRAWLER_POLICY.agent]) {
+    assert.match(robots, new RegExp(`User-agent: ${crawler}\\nDisallow: /`));
+  }
   for (const prefix of DISCOVERY_PRIVATE_PREFIXES) assert.ok(robots.includes(`Disallow: ${prefix}`));
   assert.match(robots, /Sitemap: https:\/\/ekodi\.kr\/sitemap\.xml/);
 });
 
-test('llms discovery file identifies canonical public sources and privacy boundary', () => {
+test('llms discovery file identifies canonical public sources and purpose separation', () => {
   const llms = renderLlmsTxt();
   assert.match(llms, /Canonical site: https:\/\/ekodi\.kr\//);
   assert.match(llms, /preview-development/);
+  assert.match(llms, /search permission does not imply training or agent permission/i);
   assert.equal(llms.includes('https://admin.ekodi.kr'), false);
 });
 
