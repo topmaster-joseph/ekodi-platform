@@ -41,6 +41,7 @@ for (const [from,to] of [
   ['stylesLoaded','cssReady'],
   ['TOKEN_KEY','TK'],
   ['secondaryStyles','secCss'],
+  ['secondaryScripts','secJs'],
   ['waitFor','wait'],
   ['pending','pnd'],
   ['hashes','h'],
