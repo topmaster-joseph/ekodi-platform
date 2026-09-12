@@ -1,4 +1,4 @@
-﻿import { injectEkodiShell } from './ekodi-shell-injector.js';
+import { injectEkodiShell } from './ekodi-shell-injector.js';
 import { isWorkspaceAdminPath, workspaceAdminPage, workspaceAdminCss, workspaceAdminScript } from './workspace-admin-page.js';
 import { churchPastorAdminPage, churchPastorAdminScript, isChurchPastorAdminPath } from './church-pastor-admin-page.js';
 import { ekodiBizInvestBusinessPage, isEkodiBizInvestPath } from './ekodibiz-invest-business.js';
@@ -9,7 +9,8 @@ import { decorateDiscoveryResponse } from './discovery-layer.js';
 // Always request canonical asset paths internally so edge redirects never escape the Worker.
 const PUBLIC_HOST = 'ekodi.kr';
 const PUBLIC_ALIAS_HOSTS = new Set(['www.ekodi.kr']);
-const MALL_PREFIX = '/ekodibiz/mall';
+const MALL_PREFIX = '/ekodibiz/ekodimall';
+const FORMER_MALL_PREFIX = '/ekodibiz/mall';
 const LEGACY_MALL_PREFIX = '/mall';
 const LEGACY_EKODIBIZ_PREFIX = '/org/ekodibiz';
 const MALL_ORIGIN_HOST = 'ekodi-mall.pages.dev';
@@ -292,6 +293,10 @@ function isLegacyMallPath(pathname) {
   return pathname === LEGACY_MALL_PREFIX || pathname.startsWith(`${LEGACY_MALL_PREFIX}/`);
 }
 
+function isFormerMallPath(pathname) {
+  return pathname === FORMER_MALL_PREFIX || pathname.startsWith(`${FORMER_MALL_PREFIX}/`);
+}
+
 function isLegacyEkodiBizPath(pathname) {
   return pathname === LEGACY_EKODIBIZ_PREFIX || pathname.startsWith(`${LEGACY_EKODIBIZ_PREFIX}/`);
 }
@@ -316,6 +321,16 @@ function redirectLegacyMallPath(request) {
   return response;
 }
 
+function redirectFormerMallPath(request) {
+  const target = new URL(request.url);
+  target.pathname = `${MALL_PREFIX}${target.pathname.slice(FORMER_MALL_PREFIX.length)}`;
+  const response = new Response(null, { status: 308, headers: { Location: target.toString() } });
+  applyBaseSecurityHeaders(response.headers);
+  response.headers.set('Cache-Control', 'no-store');
+  response.headers.set('X-EKODI-Route', 'mall-former-canonical-redirect');
+  return response;
+}
+
 function mallUpstreamPath(pathname) {
   const suffix = pathname.slice(MALL_PREFIX.length);
   return suffix || '/';
@@ -323,7 +338,7 @@ function mallUpstreamPath(pathname) {
 
 function rewriteMallHtmlDocument(html, pathname = MALL_PREFIX) {
   let rewritten = String(html || '').replace(
-    /\b(href|src|action)=("|')\/(?!\/|ekodibiz\/mall(?:\/|["']))([^"']*)\2/gi,
+    /\b(href|src|action)=("|')\/(?!\/|ekodibiz\/ekodimall(?:\/|["']))([^"']*)\2/gi,
     (_, attribute, quote, suffix) => `${attribute}=${quote}${MALL_PREFIX}/${suffix}${quote}`,
   );
   const canonical = `https://${PUBLIC_HOST}${pathname || MALL_PREFIX}`;
@@ -559,6 +574,7 @@ export default {
       }
       if (isLegacyEkodiBizPath(url.pathname)) return redirectLegacyEkodiBizPath(request);
       if (isLegacyMallPath(url.pathname)) return redirectLegacyMallPath(request);
+      if (isFormerMallPath(url.pathname)) return redirectFormerMallPath(request);
       if (['GET','HEAD'].includes(request.method) && (url.pathname === '/ekodi-church' || url.pathname.startsWith('/ekodi-church/'))) { const target=new URL(request.url); target.pathname=url.pathname.replace(/^\/ekodi-church(?=\/|$)/i,'/ekodichurch'); return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-content-type-options':'nosniff'}}); }
       if (['GET','HEAD'].includes(request.method) && isChurchPastorAdminPath(url.pathname)) return injectEkodiShell(churchPastorAdminPage(), 'church', 'admin');
       if (isWorkspaceAdminPath(url.pathname)) return injectEkodiShell(workspaceAdminPage(), 'space', 'admin');

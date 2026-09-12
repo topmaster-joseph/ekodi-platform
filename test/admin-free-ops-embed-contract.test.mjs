@@ -6,7 +6,7 @@ const workflowPath='.github/workflows/verify-admin-free-ops-embed.yml';
 
 test('Admin Free Ops verifier follows the canonical ekodi.kr embed origin',async()=>{
   const workflow=await readFile(workflowPath,'utf8');
-  assert.match(workflow,/https:\/\/ekodi\.kr\/ekodibiz\/mall\/free-ops\?embed=admin/);
+  assert.match(workflow,/https:\/\/ekodi\.kr\/ekodibiz\/ekodimall\/free-ops\?embed=admin/);
   assert.match(workflow,/frame-src\[\^;\]\*https:\/\/ekodi\\\.kr/);
   assert.doesNotMatch(workflow,/frame-src\[\^;\]\*https:\/\/mall\\\.ekodi\\\.kr/);
 });

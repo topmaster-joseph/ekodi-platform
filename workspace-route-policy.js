@@ -70,6 +70,6 @@ export function isWorkspaceAdminPathShape(pathname){
   const path=String(pathname||'');
   const match=/^\/([^/]+)\/(?:admin(?:\/[^/]+)?|[^/]+\/admin(?:\/[^/]+)?)\/?$/i.exec(path);
   if(match&&isWorkspaceSlug(match[1]))return true;
-  const mallMarketingChannels=/^\/([^/]+)\/mall\/admin\/marketing\/channels\/?$/i.exec(path);
+  const mallMarketingChannels=/^\/([^/]+)\/ekodimall\/admin\/marketing\/channels\/?$/i.exec(path);
   return Boolean(mallMarketingChannels&&isWorkspaceSlug(mallMarketingChannels[1]));
 }

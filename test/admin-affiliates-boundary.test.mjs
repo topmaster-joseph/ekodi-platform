@@ -12,7 +12,7 @@ test('sales and supply network separates professional engine health from Mall op
   assert.equal(professional?.managementArea, 'professional-services');
   assert.equal(professional?.labels?.ko, '판매·공급망');
   assert.equal(getAdminMenuItem('affiliates'), null);
-  assert.equal(isWorkspaceAdminPathShape('/ekodibiz/mall/admin/sourcing'), true);
+  assert.equal(isWorkspaceAdminPathShape('/ekodibiz/ekodimall/admin/sourcing'), true);
 
   const demand = await read('admin-demand-loader.js');
   const professionalPanel = await read('supply-network-admin.js');
@@ -52,5 +52,5 @@ test('sales and supply network separates professional engine health from Mall op
   assert.match(workspace, /플랫폼 관리자 인증 후 여기로 돌아오기/);
   assert.doesNotMatch(workspace, /\/api\/affiliate\/accounts|affiliateMerchantRouteForm/);
   assert.match(layout, /LEGACY_MALL_AFFILIATE_HASHES/);
-  assert.match(layout, /\/ekodibiz\/mall\/admin\/sourcing/);
+  assert.match(layout, /\/ekodibiz\/ekodimall\/admin\/sourcing/);
 });
