@@ -2,7 +2,7 @@ const SECTION = 'maturity';
 const MODULE_ID = 'ekodiPlatformMaturity';
 const TOKEN_KEY = 'ekodi-auth-token';
 const SESSION_URL = 'https://ekodi.kr/api/session';
-const DATA_ROOT = 'governance/standards';
+const MATURITY_API = 'https://api.ekodi.kr/api/control/platform-maturity';
 
 if (typeof document !== 'undefined' && !document.getElementById(MODULE_ID)) {
   const content = document.querySelector('.content');
@@ -68,22 +68,14 @@ html:not([data-ekodi-maturity-authorized="true"]) .sidebar [data-section="maturi
     return response.json();
   }
 
-  function sameOriginPath(path) {
-    return `/${String(path || '').replace(/^\/+/, '')}`;
-  }
-
-  async function readJson(path) {
-    const candidates = [sameOriginPath(path)];
-    if (location.hostname !== 'ekodi.kr') candidates.push(`https://ekodi.kr/${String(path).replace(/^\/+/, '')}`);
-    let lastError = null;
-    for (const url of candidates) {
-      try {
-        const response = await fetch(url, { cache:'no-store', credentials:url.startsWith('/') ? 'same-origin' : 'omit' });
-        if (!response.ok) throw new Error(`${url} → ${response.status}`);
-        return await response.json();
-      } catch (error) { lastError = error; }
-    }
-    throw lastError || new Error(`${path}을 불러올 수 없습니다.`);
+  async function readMaturity() {
+    const headers = new Headers({ accept:'application/json' });
+    if (token()) headers.set('authorization', `Bearer ${token()}`);
+    const response = await fetch(MATURITY_API, { headers, cache:'no-store' });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || `성숙도 API 확인 실패 (${response.status})`);
+    if (!data?.model || !data?.current) throw new Error('성숙도 API 응답 형식이 올바르지 않습니다.');
+    return data;
   }
 
   const esc = value => String(value ?? '');
@@ -261,18 +253,8 @@ html:not([data-ekodi-maturity-authorized="true"]) .sidebar [data-section="maturi
     ];
     meta.forEach(([term, value]) => { const wrap = document.createElement('div'); const dt = document.createElement('dt'); const dd = document.createElement('dd'); dt.textContent = term; dd.textContent = value; wrap.append(dt, dd); dl.append(wrap); });
     const note = document.createElement('p'); note.className = 'ekodi-maturity-note'; note.textContent = '이 화면의 0~5 점수는 EKODI 내부 구현 성숙도입니다. ISO/IEC 인증 결과가 아니며, 점수 상승은 증빙 강화와 검증을 동반해야 합니다.';
-    const source = document.createElement('p'); source.className = 'ekodi-maturity-source'; source.textContent = `Source of truth: ${DATA_ROOT}/ekodi-current-maturity.json · ${DATA_ROOT}/ekodi-international-maturity-model.json`;
+    const source = document.createElement('p'); source.className = 'ekodi-maturity-source'; source.textContent = 'Source of truth: protected Control API · governance/standards repository evidence';
     metaPanel.append(dl, note, source); view.append(metaPanel);
-  }
-
-  async function loadHistory(model) {
-    const index = await readJson(`${DATA_ROOT}/history/index.json`);
-    const entries = Array.isArray(index.snapshots) ? index.snapshots : [];
-    const results = await Promise.all(entries.map(async entry => {
-      const snapshot = await readJson(`${DATA_ROOT}/history/${entry.file || `${entry.date}.json`}`);
-      return { date: snapshot.assessmentDate || entry.date, overall: historyScore(model, snapshot), snapshot };
-    }));
-    return results.sort((a, b) => a.date.localeCompare(b.date));
   }
 
   async function loadData(force = false) {
@@ -282,12 +264,11 @@ html:not([data-ekodi-maturity-authorized="true"]) .sidebar [data-section="maturi
     loading = (async () => {
       setStatus('국제표준 성숙도 원본과 평가 이력을 확인하고 있습니다.');
       try {
-        const [model, current] = await Promise.all([
-          readJson(`${DATA_ROOT}/ekodi-international-maturity-model.json`),
-          readJson(`${DATA_ROOT}/ekodi-current-maturity.json`),
-        ]);
-        const history = await loadHistory(model).catch(() => [{ date:current.assessmentDate, overall:weightedScore(model,current), snapshot:current }]);
-        render(model, current, history);
+        const payload = await readMaturity();
+        const history = Array.isArray(payload.history) && payload.history.length
+          ? payload.history
+          : [{ date:payload.current.assessmentDate, overall:weightedScore(payload.model,payload.current) }];
+        render(payload.model, payload.current, history);
         loaded = true;
       } catch (error) {
         setStatus(`성숙도 원본을 불러오지 못했습니다. ${error.message}`, true);
