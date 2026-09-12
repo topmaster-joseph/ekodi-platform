@@ -363,6 +363,21 @@
       "status": "planned"
     },
     {
+      "id": "learn",
+      "name": "EKODI Learning Fabric",
+      "nameEn": "EKODI Learning Fabric",
+      "descriptionKo": "배우고, 해보고, 완료 증거를 남기는 공통 학습 인프라",
+      "descriptionEn": "Shared learning fabric for practice, evidence, and progression",
+      "url": "https://ekodi.kr/learn",
+      "label": "ekodi.kr/learn",
+      "icon": "education",
+      "category": "knowledge-creation",
+      "order": 132,
+      "homepage": false,
+      "productionVerified": true,
+      "status": "live"
+    },
+    {
       "id": "life",
       "name": "오늘의 질문",
       "nameEn": "Life AI",

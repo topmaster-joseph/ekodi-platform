@@ -1,3 +1,5 @@
+import './platform-maturity-admin.js';
+
 export const ADMIN_MENU_GROUPS = Object.freeze([
   { id: 'home', icon: '⌂', defaultSection: 'campus', labels: { ko: '홈', en: 'Home' } },
   { id: 'operations', icon: '✦', defaultSection: 'work', labels: { ko: '운영', en: 'Operations' } },
@@ -34,6 +36,7 @@ export const ADMIN_MENU_REGISTRY = Object.freeze([
   { id: 'public-site-controls', group: 'system', icon: '▤', labels: { ko: '공개·점검 전환', en: 'Public & Maintenance Mode' } },
   { id: 'language-status', group: 'system', icon: '文', labels: { ko: '다국어 지원 현황', en: 'Language Readiness' } },
   { id: 'architecture', group: 'system', icon: '◇', labels: { ko: '시스템 구조', en: 'System Structure' } },
+  { id: 'maturity', group: 'system', icon: 'M5', labels: { ko: '플랫폼 성숙도', en: 'Platform Maturity' }, superAdminOnly: true },
   { id: 'security', group: 'system', icon: 'S', labels: { ko: '보안·Identity', en: 'Security & Identity' } },
   { id: 'admins', group: 'system', icon: '♙', labels: { ko: '관리자·권한', en: 'Administrators & Access' }, superAdminOnly: true },
   { id: 'ai-module-spec', group: 'system', icon: 'API', labels: { ko: 'AI·API 연동규격', en: 'AI & API Contracts' } },
@@ -68,7 +71,7 @@ const ADMIN_MENU_SECTION_CATEGORY = Object.freeze({
   'common-services':'common', 'life-ai':'common', community:'content', books:'content', social:'content', devotional:'content',
   'personal-finance':'business', 'marketing-ai':'business', 'ai-membership':'business', 'supply-network':'business', insurance:'business',
   'public-site-controls':'environment', 'language-status':'environment', security:'security', admins:'security',
-  'ai-module-spec':'ai', capabilities:'ai', aiops:'ai', 'ai-settings':'ai', openai:'ai', architecture:'platform', storage:'platform', devices:'platform', health:'platform', 'api-cost':'platform',
+  'ai-module-spec':'ai', capabilities:'ai', aiops:'ai', 'ai-settings':'ai', openai:'ai', architecture:'platform', maturity:'platform', storage:'platform', devices:'platform', health:'platform', 'api-cost':'platform',
   services:'other', deployments:'other', policies:'other',
 });
 

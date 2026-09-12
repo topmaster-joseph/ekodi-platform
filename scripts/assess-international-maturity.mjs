@@ -30,6 +30,31 @@ for (const row of current.domains) if (!modelById.has(row.id)) fail(`unknown ass
 const historyPath = path.join(root, `governance/standards/history/${current.assessmentDate}.json`);
 if (!fs.existsSync(historyPath)) fail(`immutable history snapshot missing: ${path.relative(root, historyPath)}`);
 
+const historyIndexPath = path.join(root, 'governance/standards/history/index.json');
+let historyIndex = { snapshots: [] };
+if (!fs.existsSync(historyIndexPath)) fail(`history index missing: ${path.relative(root, historyIndexPath)}`);
+else {
+  try { historyIndex = JSON.parse(fs.readFileSync(historyIndexPath, 'utf8')); }
+  catch (error) { fail(`history index is invalid JSON: ${error.message}`); }
+}
+if (!Array.isArray(historyIndex.snapshots) || !historyIndex.snapshots.length) fail('history index snapshots are missing');
+const dates = new Set();
+for (const entry of historyIndex.snapshots || []) {
+  const date = String(entry?.date || '').trim();
+  const file = String(entry?.file || '').trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) { fail(`invalid history date: ${date || '(empty)'}`); continue; }
+  if (dates.has(date)) fail(`duplicate history date: ${date}`);
+  dates.add(date);
+  if (file !== `${date}.json`) fail(`history file must match date for ${date}: ${file}`);
+  const snapshotPath = path.join(root, 'governance/standards/history', file);
+  if (!fs.existsSync(snapshotPath)) { fail(`indexed history snapshot missing: ${file}`); continue; }
+  try {
+    const snapshot = JSON.parse(fs.readFileSync(snapshotPath, 'utf8'));
+    if (snapshot.assessmentDate !== date) fail(`history snapshot date mismatch: ${file}`);
+  } catch (error) { fail(`history snapshot is invalid JSON (${file}): ${error.message}`); }
+}
+if (!dates.has(current.assessmentDate)) fail(`current assessment date is not registered in history index: ${current.assessmentDate}`);
+
 const rows = model.domains.map(domain => {
   const assessment = currentById.get(domain.id);
   const score = Number(assessment?.score || 0);
@@ -50,6 +75,7 @@ const result = {
   maturityBand: levelName,
   targetScore: 5,
   targetGap,
+  historySnapshotCount: historyIndex.snapshots?.length || 0,
   domains: rows,
   lowestDomains: lowest.map(row => ({ id: row.id, score: row.score, gap: row.gap })),
   priorityGaps: current.priorityGaps || []
@@ -66,6 +92,7 @@ if (outputArg >= 0) {
     `- Assessment date: ${current.assessmentDate}`,
     `- Internal maturity score: **${overall.toFixed(2)} / 5.00**`,
     `- Internal maturity band: **${levelName}**`,
+    `- Historical snapshots: **${historyIndex.snapshots?.length || 0}**`,
     '- Certification: **Not claimed** (internal evidence-based assessment only)',
     '',
     '| Domain | Standard | Score | Target | Gap |',
