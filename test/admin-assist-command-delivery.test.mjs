@@ -75,3 +75,17 @@ test('Admin Assist treats AI_ADMIN_TIMEOUT_MS as a bounded total multi-provider 
   assert.match(resilience,/remainingBudgetMs/);
   assert.match(resilience,/fairShareMs/);
 });
+
+test('Shared Site production owner watches and verifies every Assist delivery asset',async()=>{
+  const workflow=await read('.github/workflows/deploy-site-core.yml');
+  for(const path of [
+    'admin-assist-bootstrap.js','admin-assist-bootstrap.css',
+    'admin-assist-dock.js','admin-assist-dock.css',
+    'admin-readable-command.js','admin-readable-command.css',
+    'scripts/admin-assist-canonical-e2e.mjs',
+    'scripts/admin-readable-command-postbuild.mjs',
+    'test/admin-assist-command-delivery.test.mjs',
+  ]) assert.match(workflow,new RegExp(path.replaceAll('.','\\.')));
+  for(const asset of ['admin-assist-bootstrap.js','admin-assist-bootstrap.css','admin-assist-dock.js','admin-assist-dock.css'])
+    assert.match(workflow,new RegExp(`dist/${asset.replaceAll('.','\\.')}`));
+});
