@@ -92,8 +92,9 @@ export async function seedLanguageAutomation(env){
       const stage=language.locale===SOURCE_LOCALE?'source':published.has(language.locale)?'published':'queued';
       const publicationStatus=language.locale===SOURCE_LOCALE||published.has(language.locale)?'published':'hidden';
       await env.DB.prepare(`INSERT OR IGNORE INTO language_site_state
-        (service_id,locale,stage,updated_at,published_at,publication_status,publication_updated_at,publication_source)
-        VALUES (?,?,?,?,?,?,?,?)`).bind(site.id,language.locale,stage,timestamp,stage==='published'?timestamp:null,publicationStatus,timestamp,'registry-seed').run();
+        (service_id,locale,stage,updated_at,published_at) VALUES (?,?,?,?,?)`).bind(site.id,language.locale,stage,timestamp,stage==='published'?timestamp:null).run();
+      await env.DB.prepare(`INSERT OR IGNORE INTO language_publication_state
+        (service_id,locale,publication_status,publication_updated_at,publication_source) VALUES (?,?,?,?,?)`).bind(site.id,language.locale,publicationStatus,timestamp,'registry-seed').run();
     }
   }
   await setMeta(env.DB,REGISTRY_SEED_KEY,seedVersion);
@@ -103,8 +104,8 @@ export async function seedLanguageAutomation(env){
 async function stateRows(env,onlyService=''){
   if(!env.DB?.prepare)return[];
   const query=onlyService
-    ?env.DB.prepare('SELECT * FROM language_site_state WHERE service_id=? ORDER BY locale').bind(onlyService)
-    :env.DB.prepare('SELECT * FROM language_site_state ORDER BY service_id,locale');
+    ?env.DB.prepare(`SELECT s.*,p.publication_status,p.publication_updated_at,p.publication_updated_by,p.publication_source FROM language_site_state s LEFT JOIN language_publication_state p ON p.service_id=s.service_id AND p.locale=s.locale WHERE s.service_id=? ORDER BY s.locale`).bind(onlyService)
+    :env.DB.prepare(`SELECT s.*,p.publication_status,p.publication_updated_at,p.publication_updated_by,p.publication_source FROM language_site_state s LEFT JOIN language_publication_state p ON p.service_id=s.service_id AND p.locale=s.locale ORDER BY s.service_id,s.locale`);
   const result=await query.all();
   return result.results||[];
 }
@@ -164,8 +165,9 @@ export async function probeServiceSource(env,service,{fetchImpl=globalThis.fetch
       await env.DB.prepare(`UPDATE language_site_state SET source_hash=?,stage=CASE
         WHEN stage='published' THEN 'stale'
         WHEN stage IN ('translating','validating','release-ready') THEN 'queued'
-        ELSE stage END,publication_status='hidden',publication_updated_at=?,publication_source='source-change',updated_at=?,last_error=''
-        WHERE service_id=? AND locale<>?`).bind(sourceHash,timestamp,timestamp,service.id,SOURCE_LOCALE).run();
+        ELSE stage END,updated_at=?,last_error=''
+        WHERE service_id=? AND locale<>?`).bind(sourceHash,timestamp,service.id,SOURCE_LOCALE).run();
+      await env.DB.prepare(`UPDATE language_publication_state SET publication_status='hidden',publication_updated_at=?,publication_source='source-change' WHERE service_id=? AND locale<>?`).bind(timestamp,service.id,SOURCE_LOCALE).run();
     }else{
       await env.DB.prepare(`UPDATE language_site_state SET source_hash=?,updated_at=CASE WHEN source_hash='' THEN ? ELSE updated_at END WHERE service_id=? AND locale<>?`)
         .bind(sourceHash,timestamp,service.id,SOURCE_LOCALE).run();
@@ -286,6 +288,7 @@ async function publicServiceStatus(env,id){
   const base=languageStatusSnapshot([...EKODI_SERVICE_MANIFEST.services,...MANAGED_LANGUAGE_SITES]).sites.find(site=>site.id===service.id);
   if(!base)return null;
   if(!env.DB?.prepare)return base;
+  await seedLanguageAutomation(env);
   const rows=await stateRows(env,service.id).catch(()=>[]);
   return rows.length?overlaySiteStatus(base,rows):base;
 }
@@ -301,13 +304,13 @@ export async function setLanguagePublication(env,{serviceIdValue,localeValue,pub
   if(!service)return{ok:false,error:'service_not_found',status:404};
   if(!locale)return{ok:false,error:'language_not_registered',status:400};
   if(!PUBLICATION_STATES.has(next))return{ok:false,error:'publication_status_invalid',status:400};
-  const row=await env.DB.prepare('SELECT stage,publication_status FROM language_site_state WHERE service_id=? AND locale=?').bind(id,locale).first();
+  const row=await env.DB.prepare(`SELECT s.stage,p.publication_status FROM language_site_state s LEFT JOIN language_publication_state p ON p.service_id=s.service_id AND p.locale=s.locale WHERE s.service_id=? AND s.locale=?`).bind(id,locale).first();
   if(!row)return{ok:false,error:'language_state_not_found',status:404};
   if(locale===SOURCE_LOCALE&&next!=='published')return{ok:false,error:'source_locale_must_remain_published',status:409};
   if(next==='published'&&!PUBLIC_STAGES.has(clean(row.stage,40)))return{ok:false,error:'translation_not_ready',status:409};
   const timestamp=now();
-  await env.DB.prepare('UPDATE language_site_state SET publication_status=?,publication_updated_at=?,publication_updated_by=?,publication_source=?,updated_at=? WHERE service_id=? AND locale=?')
-    .bind(next,timestamp,clean(actor,160),clean(source,80),timestamp,id,locale).run();
+  await env.DB.prepare(`INSERT INTO language_publication_state (service_id,locale,publication_status,publication_updated_at,publication_updated_by,publication_source) VALUES (?,?,?,?,?,?) ON CONFLICT(service_id,locale) DO UPDATE SET publication_status=excluded.publication_status,publication_updated_at=excluded.publication_updated_at,publication_updated_by=excluded.publication_updated_by,publication_source=excluded.publication_source`)
+    .bind(id,locale,next,timestamp,clean(actor,160),clean(source,80)).run();
   return{ok:true,status:200,site:await languageSiteStatusForAdmin(env,id),locale,publicationStatus:next};
 }
 function tenantAdminHeaders(request){
@@ -364,7 +367,7 @@ export async function handleLanguageAutomationPublic(request,env={}){
     const locale=normalizePlatformLocale(url.searchParams.get('locale'));
     if(!platformService(id)||!locale||locale===SOURCE_LOCALE)return json({error:'catalog_not_found'},404,'public, max-age=30');
     if(!env.DB?.prepare)return json({error:'catalog_not_found'},404,'public, max-age=30');
-    const state=await env.DB.prepare('SELECT stage,source_hash,catalog_hash,publication_status FROM language_site_state WHERE service_id=? AND locale=?').bind(id,locale).first();
+    const state=await env.DB.prepare(`SELECT s.stage,s.source_hash,s.catalog_hash,p.publication_status FROM language_site_state s LEFT JOIN language_publication_state p ON p.service_id=s.service_id AND p.locale=s.locale WHERE s.service_id=? AND s.locale=?`).bind(id,locale).first();
     if(state?.stage!=='published'||state?.publication_status!=='published')return json({error:'catalog_not_published'},404,'public, max-age=30');
     const catalog=await env.DB.prepare('SELECT catalog_json,source_hash,catalog_hash,updated_at FROM language_catalogs WHERE service_id=? AND locale=?').bind(id,locale).first();
     if(!catalog?.catalog_json||catalog.source_hash!==state.source_hash)return json({error:'native_or_missing_catalog'},404,'public, max-age=30');

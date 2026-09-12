@@ -52,6 +52,12 @@ test('public readiness endpoint exposes only published locales without mutation 
   const blocked=await handleLanguageAutomationPublic(new Request('https://api.ekodi.kr/api/i18n/v1/status?service=community',{method:'POST'}),{});
   assert.equal(blocked.status,405);
 });
+test('publication control uses an idempotent side table so partially applied legacy columns cannot block staging',async()=>{
+  const sql=await readFile(new URL('../migrations/0083_language_publication_control.sql',import.meta.url),'utf8');
+  assert.match(sql,/CREATE TABLE IF NOT EXISTS language_publication_state/);
+  assert.match(sql,/INSERT OR IGNORE INTO language_publication_state/);
+  assert.doesNotMatch(sql,/ALTER TABLE language_site_state ADD COLUMN publication_/);
+});
 test('source changes hide previously published translations until revalidated',async()=>{
   const text=await source();
   assert.match(text,/WHEN stage='published' THEN 'stale'/);
