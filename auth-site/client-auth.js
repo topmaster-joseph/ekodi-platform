@@ -18,6 +18,7 @@ const realms={
   lab:{name:'EKODI Lab',returnTo:'https://lab.ekodi.kr/',open:true,kind:'lab'},
   mission:{name:'EKODI Mission',returnTo:'https://mission.ekodi.kr/',open:true,kind:'mission'},
   edu:{name:'EKODI Education',returnTo:'https://edu.ekodi.kr/',open:true,kind:'edu'},
+  learn:{name:'EKODI Learning Fabric',returnTo:'https://ekodi.kr/learn',origins:['https://ekodi.kr'],open:true,kind:'learn',operatingModel:'public-service'},
   media:{name:'EKODI Media',returnTo:'https://media.ekodi.kr/',open:true,kind:'media'},
   social:{name:'EKODI Social',returnTo:'https://social.ekodi.kr/',open:true,kind:'social'},
   energy:{name:'Energy AI',returnTo:'https://energy.ekodi.kr/',open:true,kind:'energy'},

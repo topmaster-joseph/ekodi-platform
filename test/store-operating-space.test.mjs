@@ -95,7 +95,8 @@ test('Space worker renders PizzaMaru and YogurtPurple as distinct styled user pa
     assert.equal(response.headers.get('x-ekodi-route'),'space-storefront');
     assert.ok(body.includes(name));
     assert.ok(body.includes(`data-store-page="${theme}"`));
-    assert.match(body,/\/_ekodi\/space\/storefront\.css\?v=20260911-v2/);
+    const expectedCssVersion=theme==='yogurt'?'20260912-yogurt-v3':'20260911-v2';
+    assert.ok(body.includes(`/_ekodi/space/storefront.css?v=${expectedCssVersion}`));
     assert.doesNotMatch(body,/__SPACE_PAGE_/);
     if(theme==='yogurt'){assert.match(body,/메뉴와 앱별 가격/);assert.match(body,/배달앱에서 바로 주문/);assert.doesNotMatch(body,/USER OPERATIONS|STORE MASTER|로그아웃/);}
   }
@@ -104,6 +105,7 @@ test('Space worker renders PizzaMaru and YogurtPurple as distinct styled user pa
   assert.equal(styleResponse.status,200);
   assert.equal(styleResponse.headers.get('x-ekodi-route'),'storefront-asset');
   assert.match(styleBody,/\.rs-hero/);
+  assert.match(styleBody,/--yogurt-hero-polish:1/);
   assert.match(styleBody,/\.rs-menu-card/);
   const legacyPizza=await spaceWorker.fetch(new Request('https://ekodi.kr/pizzamaru/mokpodae?from=legacy'),env);
   assert.equal(legacyPizza.status,308);
