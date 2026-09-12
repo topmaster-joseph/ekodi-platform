@@ -23,7 +23,7 @@ test('private document schema is owner-scoped and usage writes stay server-side'
   assert.match(migration,/alter table public\.document_files enable row level security/i);assert.match(migration,/auth\.uid\(\) = owner_user_id/);assert.match(migration,/workspace_key = \('personal:' \|\| auth\.uid\(\)::text\)/);assert.match(migration,/revoke insert, update, delete on public\.document_ai_usage from anon, authenticated/i);assert.match(healthMigration,/document_workspace_health/);assert.match(healthMigration,/ekodi\.documents\.v2/);
 });
 test('document AI is authenticated, canonical-origin aware, common-gateway-first and bounded',()=>{
-  assert.match(ai,/authentication_required/);assert.match(ai,/DAILY_LIMIT/);assert.match(ai,/EKODI_AI_GATEWAY_URL/);assert.match(ai,/api\/ai-modules\/v1\/providers\/generate/);assert.match(ai,/invokeGateway/);assert.match(ai,/GEMINI_API_KEY/);assert.match(ai,/OPENAI_API_KEY/);assert.match(ai,/store:false/);assert.match(ai,/사용자가 제공하지 않은 사실/);assert.match(ai,/MAX_INPUT=120000/);assert.doesNotMatch(ai,/MAX_INPUT=18000|18,000자/);assert.match(ai,/CHUNK_INPUT=14000/);assert.match(ai,/invokeDocument/);assert.match(ai,/chunking:/);assert.match(ai,/const CANONICAL_ORIGIN="https:\/\/ekodi\.kr"/);assert.match(ai,/new Set\(\[CANONICAL_ORIGIN,"https:\/\/my\.ekodi\.kr","https:\/\/auth\.ekodi\.kr"\]\)/);assert.match(ai,/"origin":CANONICAL_ORIGIN/);assert.match(ai,/20260910-docs-ai-5/);assert.match(ai,/ekodi\.document-ai\.v2/);assert.match(ai,/X-EKODI-Docs-Contract/);
+  assert.match(ai,/authentication_required/);assert.match(ai,/DAILY_LIMIT/);assert.match(ai,/EKODI_AI_GATEWAY_URL/);assert.match(ai,/api\/ai-modules\/v1\/providers\/generate/);assert.match(ai,/invokeGateway/);assert.match(ai,/GEMINI_API_KEY/);assert.match(ai,/OPENAI_API_KEY/);assert.match(ai,/store:false/);assert.match(ai,/사용자가 제공하지 않은 사실/);assert.match(ai,/MAX_INPUT=120000/);assert.doesNotMatch(ai,/MAX_INPUT=18000|18,000자/);assert.match(ai,/CHUNK_INPUT=14000/);assert.match(ai,/invokeDocument/);assert.match(ai,/chunking:/);assert.match(ai,/const CANONICAL_ORIGIN="https:\/\/ekodi\.kr"/);assert.match(ai,/new Set\(\[CANONICAL_ORIGIN,"https:\/\/auth\.ekodi\.kr"\]\)/);assert.match(ai,/"origin":CANONICAL_ORIGIN/);assert.match(ai,/20260910-docs-ai-5/);assert.match(ai,/ekodi\.document-ai\.v2/);assert.match(ai,/X-EKODI-Docs-Contract/);
 });
 test('core.documents is service-backed with an observable provider contract',()=>{
   const capability=registry.capabilities.find(item=>item.id==='core.documents');assert.equal(capability?.maturity,'service-backed');assert.equal(capability?.provider?.id,'my-docs');assert.equal(capability?.provider?.contract,'ekodi.documents.v2');assert.equal(capability?.provider?.generation,8);assert.ok(capability?.provider?.formats?.import?.includes('hwpx'));assert.ok(capability?.provider?.formats?.export?.includes('hwpx'));
@@ -33,12 +33,12 @@ test('My EKODI advertises and probes the document workspace on the canonical pro
   const docsProbe=manifest.worker.requests.find(item=>item.url==='https://ekodi.kr/my/docs/');assert.ok(docsProbe);assert.ok(docsProbe.expect.includes('EKODI Docs AI'));assert.equal(docsProbe.candidateVerify,false);
   const docsAssetSrc=html.match(/<script type="module" src="([^"]*docs\.js\?v=[^"]+)"/)?.[1];assert.ok(docsAssetSrc);assert.ok(docsProbe.expect.includes(docsAssetSrc));
 });
-test('My guarded release smoke-tests the legacy redirect and defers canonical content probes until promotion',()=>{
+test('My guarded release smoke-tests the internal Worker candidate and defers canonical content probes until promotion',()=>{
   const requests=manifest.worker.requests;
-  const legacy=requests.find(item=>item.url==='https://my.ekodi.kr/');
-  assert.ok(legacy);assert.deepEqual(legacy.statuses,[308]);assert.equal(legacy.redirect,'manual');assert.ok(legacy.headerExpect.includes('location: https://ekodi.kr/my/'));
+  const candidate=requests.find(item=>item.url==='https://ekodi-my.topmaster-joseph.workers.dev/');
+  assert.ok(candidate);assert.deepEqual(candidate.statuses,[200]);assert.equal(candidate.redirect,'manual');assert.ok(candidate.expect.includes('My EKODI'));
   const canonical=requests.filter(item=>item.url.startsWith('https://ekodi.kr/my/'));
   assert.equal(canonical.length,4);
   for(const probe of canonical){assert.equal(probe.candidateVerify,false);assert.match(probe.candidateVerifyReason,/verified after promotion/);}
-  assert.equal(requests.filter(item=>item.url.startsWith('https://my.ekodi.kr/')).length,1);
+  assert.equal(requests.filter(item=>item.url.startsWith('https://my.ekodi.kr/')).length,0);
 });

@@ -270,7 +270,7 @@ jobs:
           for attempt in $(seq 1 24); do
             code=$(curl -sS -D /tmp/my-character-profile.headers -o /dev/null -w '%{http_code}' -X OPTIONS --connect-timeout 5 --max-time 15 "$endpoint" -H 'Origin: https://ekodi.kr' -H 'Access-Control-Request-Method: PATCH' -H 'Access-Control-Request-Headers: authorization,apikey,content-type' || true)
             if [[ "$code" =~ ^(200|204)$ ]] \
-              && grep -Eiq '^access-control-allow-origin:[[:space:]]*https://my\.ekodi\.kr' /tmp/my-character-profile.headers \
+              && grep -Eiq '^access-control-allow-origin:[[:space:]]*https://ekodi\.kr' /tmp/my-character-profile.headers \
               && grep -Eiq '^access-control-allow-methods:.*DELETE' /tmp/my-character-profile.headers; then
               echo 'Central character profile API is live.'
               break
@@ -314,15 +314,10 @@ jobs:
             cat /tmp/my-deployments.log
             exit 1
           fi
-      - name: Verify canonical My EKODI production surface, legacy redirect, private workspace routes, Life Journey and universal membership
+      - name: Verify canonical My EKODI production surface, private workspace routes, Life Journey and universal membership
         shell: bash
         run: |
           set -euo pipefail
-          legacy_code=$(curl -sS -D /tmp/my-legacy.headers -o /dev/null -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://my.ekodi.kr/' || true)
-          if [[ "$legacy_code" != '308' ]] || ! grep -Eiq '^location:[[:space:]]*https://ekodi\.kr/my/?[[:space:]]*$' /tmp/my-legacy.headers; then
-            echo 'Legacy My EKODI host must redirect permanently to the canonical ekodi.kr/my path.'
-            exit 1
-          fi
           for attempt in $(seq 1 18); do
             root_code=$(curl -L -sS -o /tmp/my.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/my/' || true)
             private_code=$(curl -sS -D /tmp/my-private.headers -o /tmp/my-private.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/my/w/person:deployment-probe' || true)
