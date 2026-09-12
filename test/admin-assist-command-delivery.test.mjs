@@ -66,3 +66,12 @@ test('production verification submits the real bottom command on canonical ekodi
   assert.match(retry,/canonicalCampusUrl: 'https:\/\/ekodi\.kr\/admin\/home\/campus'/);
   assert.match(retry,/aggregate\.assistProbe\?\.passed === true/);
 });
+test('Admin Assist treats AI_ADMIN_TIMEOUT_MS as a bounded total multi-provider budget',async()=>{
+  const [handler,gateway,resilience]=await Promise.all([read('ai-agent-control.js'),read('core-ai-gateway.js'),read('ai-resilience-runtime.js')]);
+  assert.match(handler,/DEFAULT_ADMIN_ASSIST_TOTAL_TIMEOUT_MS = 15_000/);
+  assert.match(handler,/MAX_ADMIN_ASSIST_TOTAL_TIMEOUT_MS = 20_000/);
+  assert.match(handler,/totalTimeoutMs,/);
+  assert.match(gateway,/totalTimeoutMs/);
+  assert.match(resilience,/remainingBudgetMs/);
+  assert.match(resilience,/fairShareMs/);
+});
