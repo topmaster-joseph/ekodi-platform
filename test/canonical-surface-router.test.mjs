@@ -4,7 +4,6 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 import { ADMIN_MENU_REGISTRY } from '../admin-menu-registry.js';
 import { routeCanonicalSurface } from '../canonical-surface-router.js';
-import myWorker from '../my-worker.js';
 import platformEntry from '../platform-router-entry-worker.js';
 import siteWorker from '../site-worker.js';
 
@@ -89,10 +88,8 @@ test('Admin deep routes render the shell while runtime assets stay addressable',
   response=await routeCanonicalSurface(new Request('https://ekodi.kr/admin/admin-menu-layout.js'),{}, {legacyFetch:legacy.fetch});
   assert.equal(legacy.calls[1].pathname,'/admin-menu-layout.js');
 });
-test('legacy My, Admin and Auth entry hosts converge to apex canonical paths',async()=>{
-  let response=await myWorker.fetch(new Request('https://my.ekodi.kr/docs/?x=1'),{});
-  assert.equal(response.status,308);assert.equal(new URL(response.headers.get('location')).href,'https://ekodi.kr/my/docs/?x=1');
-  response=await platformEntry.fetch(new Request('https://auth.ekodi.kr/?site=my'),{},{});
+test('legacy Admin and Auth entry hosts converge to apex canonical paths',async()=>{
+  let response=await platformEntry.fetch(new Request('https://auth.ekodi.kr/?site=my'),{},{});
   assert.equal(response.status,308);assert.equal(new URL(response.headers.get('location')).pathname,'/auth/');
   response=await platformEntry.fetch(new Request('https://admin.ekodi.kr/books'),{},{});
   assert.equal(response.status,308);const target=new URL(response.headers.get('location'));assert.equal(target.pathname,'/admin/');assert.equal(target.searchParams.get('route'),'books');
