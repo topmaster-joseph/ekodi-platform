@@ -1,0 +1,31 @@
+name: Discovery Projection Contract
+
+on:
+  pull_request:
+    paths:
+      - 'config/discovery-projection-policy.json'
+      - 'governance/security/discovery-secure-projection.md'
+      - 'scripts/validate-discovery-projection.mjs'
+      - '.github/workflows/discovery-projection-contract.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'config/discovery-projection-policy.json'
+      - 'governance/security/discovery-secure-projection.md'
+      - 'scripts/validate-discovery-projection.mjs'
+      - '.github/workflows/discovery-projection-contract.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate Discovery Projection policy
+        run: node scripts/validate-discovery-projection.mjs
