@@ -7,6 +7,15 @@ on:
       - 'admin-ai-control-plane.js'
       - 'admin-ai-governor.js'
       - 'admin-secret-generator.js'
+      - 'admin-assist-bootstrap.js'
+      - 'admin-assist-bootstrap.css'
+      - 'admin-assist-dock.js'
+      - 'admin-assist-dock.css'
+      - 'admin-lazy-features.js'
+      - 'test/admin-assist-command-delivery.test.mjs'
+      - 'test/admin-assist-dock.test.mjs'
+      - 'test/admin-home-command-console.test.mjs'
+      - 'test/admin-ai-control-plane.test.mjs'
       - 'scripts/build.mjs'
       - 'site-worker.js'
       - 'wrangler.site.toml'
@@ -30,13 +39,15 @@ jobs:
           node-version: '24'
       - name: EKODI AI Orchestration Gate
         run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
-      - name: Validate Admin AI control plane and build contract
+      - name: Validate Admin AI control plane and Assist command-delivery contract
         shell: bash
         run: |
           set -euo pipefail
           node --check admin-ai-control-plane.js
           node --check admin-ai-governor.js
           node --check admin-secret-generator.js
+          node --check admin-assist-bootstrap.js
+          node --test test/admin-assist-command-delivery.test.mjs test/admin-assist-dock.test.mjs test/admin-home-command-console.test.mjs test/admin-ai-control-plane.test.mjs
           npm run build
           test -f dist/admin-secret-generator.js
           test -f dist/ai-ops-admin.js
