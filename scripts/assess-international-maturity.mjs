@@ -16,6 +16,10 @@ if (current.certificationStatus !== 'not-claimed') fail('internal maturity asses
 
 const modelById = new Map(model.domains.map(row => [row.id, row]));
 const currentById = new Map(current.domains.map(row => [row.id, row]));
+const weightedScoreFor = snapshot => {
+  const byId = new Map((snapshot?.domains || []).map(row => [row.id, row]));
+  return Number((model.domains.reduce((sum, domain) => sum + Number(byId.get(domain.id)?.score || 0) * Number(domain.weight || 0), 0) / 100).toFixed(2));
+};
 for (const domain of model.domains) {
   const row = currentById.get(domain.id);
   if (!row) { fail(`missing assessment for ${domain.id}`); continue; }
@@ -51,6 +55,8 @@ for (const entry of historyIndex.snapshots || []) {
   try {
     const snapshot = JSON.parse(fs.readFileSync(snapshotPath, 'utf8'));
     if (snapshot.assessmentDate !== date) fail(`history snapshot date mismatch: ${file}`);
+    const expectedOverall = weightedScoreFor(snapshot);
+    if (!Number.isFinite(Number(entry.overall)) || Number(entry.overall) !== expectedOverall) fail(`history index overall mismatch for ${date}: expected ${expectedOverall.toFixed(2)}, got ${entry.overall}`);
   } catch (error) { fail(`history snapshot is invalid JSON (${file}): ${error.message}`); }
 }
 if (!dates.has(current.assessmentDate)) fail(`current assessment date is not registered in history index: ${current.assessmentDate}`);

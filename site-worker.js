@@ -3,6 +3,7 @@ import { isWorkspaceAdminPath, workspaceAdminPage, workspaceAdminCss, workspaceA
 import { churchPastorAdminPage, churchPastorAdminScript, isChurchPastorAdminPath } from './church-pastor-admin-page.js';
 import { ekodiBizInvestBusinessPage, isEkodiBizInvestPath } from './ekodibiz-invest-business.js';
 import { ekodiBizInvestAdminPage, isEkodiBizInvestAdminPath } from './ekodibiz-invest-admin-page.js';
+import { decorateDiscoveryResponse } from './discovery-layer.js';
 
 // Static Assets canonicalizes *.html URLs to extensionless paths.
 // Always request canonical asset paths internally so edge redirects never escape the Worker.
@@ -376,7 +377,9 @@ async function proxyMallService(request) {
   const response = withHostSecurity(new Response(responseBody, { status: upstreamResponse.status, statusText: upstreamResponse.statusText, headers }), mallCsp, cacheControl, route);
   if (adminSurface || apiSurface || verificationOpsSurface) response.headers.set('X-Robots-Tag', 'noindex, nofollow, noarchive');
   if (adminEmbed) response.headers.delete('X-Frame-Options');
-  return injectEkodiShell(response, 'mall', adminSurface ? 'admin' : 'public');
+  const shelled = injectEkodiShell(response, 'mall', adminSurface ? 'admin' : 'public');
+  if (adminSurface || apiSurface || verificationOpsSurface || adminEmbed) return shelled;
+  return decorateDiscoveryResponse(shelled, incoming.pathname);
 }
 
 function retiredAdminResponse() {

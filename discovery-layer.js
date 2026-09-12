@@ -65,3 +65,56 @@ export function renderDiscoveryHead(path = '/', origin = DISCOVERY_ORIGIN) {
     '<meta name="twitter:card" content="summary">', `<script type="application/ld+json" data-ekodi-discovery="v2" data-ekodi-path="${route.path}">${jsonLd}</script>`,
   ].join('\n');
 }
+
+
+function insertDiscoveryHead(html, replacement) {
+  if (!html.includes('</head>')) return html;
+  return html.replace('</head>', `${replacement}\n</head>`);
+}
+
+function upsertDiscoveryHeadTag(html, pattern, replacement) {
+  if (pattern.test(html)) return html.replace(pattern, replacement);
+  return insertDiscoveryHead(html, replacement);
+}
+
+export function normalizeDiscoveryPath(pathname = '/') {
+  const value = String(pathname || '/').split('?')[0].split('#')[0] || '/';
+  return value.length > 1 ? value.replace(/\/+$/, '') : '/';
+}
+
+export function decorateDiscoveryHtml(html, pathname = '/', origin = DISCOVERY_ORIGIN) {
+  const path = normalizeDiscoveryPath(pathname);
+  const route = publicDiscoveryRoute(path);
+  let output = String(html || '');
+  if (!route || !output.includes('</head>')) return output;
+
+  const canonical = canonicalUrl(route.path, origin);
+  output = upsertDiscoveryHeadTag(output, /<link\b(?=[^>]*\brel=(['"])canonical\1)[^>]*>/i, `<link rel="canonical" href="${canonical}">`);
+  output = upsertDiscoveryHeadTag(output, /<meta\b(?=[^>]*\bname=(['"])description\1)[^>]*>/i, `<meta name="description" content="${route.description}">`);
+
+  const managed = [
+    /<meta\b(?=[^>]*\bname=(['"])robots\1)[^>]*>\s*/gi,
+    /<meta\b(?=[^>]*\bproperty=(['"])og:(?:type|site_name|title|description|url)\1)[^>]*>\s*/gi,
+    /<meta\b(?=[^>]*\bname=(['"])twitter:card\1)[^>]*>\s*/gi,
+    /<script\b(?=[^>]*\bdata-ekodi-discovery=(['"])v2\1)[^>]*>[\s\S]*?<\/script>\s*/gi,
+  ];
+  for (const pattern of managed) output = output.replace(pattern, '');
+  return insertDiscoveryHead(output, renderDiscoveryHead(route.path, origin));
+}
+
+export async function decorateDiscoveryResponse(response, pathname = '/', origin = DISCOVERY_ORIGIN) {
+  const path = normalizeDiscoveryPath(pathname);
+  if (!publicDiscoveryRoute(path)) return response;
+  const type = String(response?.headers?.get?.('content-type') || '');
+  if (!type.toLowerCase().includes('text/html')) return response;
+  const headers = new Headers(response.headers);
+  const html = await response.text();
+  headers.delete('content-length');
+  headers.delete('content-encoding');
+  headers.delete('etag');
+  return new Response(decorateDiscoveryHtml(html, path, origin), {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
+}
