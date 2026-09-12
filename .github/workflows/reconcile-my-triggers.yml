@@ -87,10 +87,15 @@ jobs:
           domain_id=$(echo "$domains" | jq -r '.result[] | select(.hostname == "my.ekodi.kr") | .id' | head -n1)
           if [[ -n "$domain_id" ]]; then
             echo "Detaching retired Workers Custom Domain my.ekodi.kr."
-            curl --fail-with-body -sS -X DELETE \
+            delete_code=$(curl -sS -o /tmp/my-domain-delete.out -w '%{http_code}' -X DELETE \
               -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
               -H 'Content-Type: application/json' \
-              "$endpoint/$domain_id" | jq -e ".success == true" >/dev/null
+              "$endpoint/$domain_id" || true)
+            if [[ ! "$delete_code" =~ ^2 ]]; then
+              echo "Workers Custom Domain detach failed (HTTP $delete_code)."
+              cat /tmp/my-domain-delete.out || true
+              exit 1
+            fi
           else
             echo 'Retired Workers Custom Domain my.ekodi.kr is already detached.'
           fi
