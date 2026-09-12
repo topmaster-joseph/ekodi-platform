@@ -209,7 +209,7 @@ const ADMIN_CSP = [
   "style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style",
   "script-src 'self' https://accounts.google.com/gsi/client",
   "img-src 'self' data:",
-  "connect-src 'self' https://api.ekodi.kr https://finance-api.ekodi.kr https://personal-finance-api.ekodi.kr https://renzehysxirjilvdxacv.supabase.co https://api.github.com https://ekodi-auth-api.topmaster-joseph.workers.dev https://accounts.google.com/gsi/ https://life.ekodi.kr",
+  "connect-src 'self' https://api.ekodi.kr https://finance-api.ekodi.kr https://personal-finance-api.ekodi.kr https://marketing-connect-api.ekodi.kr https://renzehysxirjilvdxacv.supabase.co https://api.github.com https://ekodi-auth-api.topmaster-joseph.workers.dev https://accounts.google.com/gsi/ https://life.ekodi.kr",
   "frame-src https://accounts.google.com/gsi/ https://ekodi.kr",
   "frame-ancestors 'none'",
   "base-uri 'self'",

@@ -1,5 +1,5 @@
 import { chromium } from 'playwright';
-import { adminMenuOrder, getAdminMenuGroupForSection } from '../admin-menu-registry.js';
+import { adminMenuOrder, getAdminMenuGroupForSection, getAdminMenuItem } from '../admin-menu-registry.js';
 
 const ADMIN_URL = process.env.ADMIN_URL || 'https://ekodi.kr/admin/';
 const SYNTHETIC_TOKEN = 'ekodi-production-ui-e2e';
@@ -138,6 +138,7 @@ for (const [id, group] of menus) {
 
   const tab = page.locator(`[data-admin-context-section="${id}"]`);
   await tab.waitFor({ state: 'visible', timeout: 10000 });
+  const definition = getAdminMenuItem(id);
 
   if (id === 'tax') {
     const source = page.locator('.admin-context-source .nav[data-section="tax"]');
@@ -148,6 +149,33 @@ for (const [id, group] of menus) {
     if (taxResponse.status() < 200 || taxResponse.status() >= 400) throw new Error(`Tax handoff endpoint returned ${taxResponse.status()}`);
     results.push({ id, group, kind: 'handoff', ok: true, detail: href });
     console.log(`[PROD-E2E] ${id}: ok handoff-link ${href}`);
+    continue;
+  }
+
+  if (definition?.href && definition.adminHandoff !== true) {
+    const expected = new URL(definition.href, ADMIN_URL);
+    const source = page.locator(`.admin-context-source .nav[data-section="${id}"]`);
+    const sourceHref = await source.getAttribute('href');
+    if (!sourceHref || new URL(sourceHref, ADMIN_URL).href !== expected.href) throw new Error(`${id} direct href drifted: ${sourceHref || '(missing)'}`);
+    const popupPromise = page.waitForEvent('popup', { timeout: 10000 });
+    await dispatchClick(tab);
+    const popup = await popupPromise;
+    await popup.waitForLoadState('domcontentloaded', { timeout: 20000 });
+    const actual = new URL(popup.url());
+    const normalizedPath = value => value.replace(/\/+$/, '') || '/';
+    if (actual.origin !== expected.origin || normalizedPath(actual.pathname) !== normalizedPath(expected.pathname)) {
+      await popup.close().catch(() => {});
+      throw new Error(`${id} popup navigated to unexpected destination: ${actual.href}`);
+    }
+    const directResponse = await context.request.get(expected.href, { maxRedirects: 5, timeout: 20000 });
+    if (directResponse.status() < 200 || directResponse.status() >= 400) {
+      await popup.close().catch(() => {});
+      throw new Error(`${id} direct href returned ${directResponse.status()}`);
+    }
+    if (!page.url().startsWith(ADMIN_URL)) throw new Error(`${id} direct href moved the canonical Admin page: ${page.url()}`);
+    results.push({ id, group, kind: 'direct-href', ok: true, detail: expected.href });
+    console.log(`[PROD-E2E] ${id}: ok direct-href ${expected.href}`);
+    await popup.close();
     continue;
   }
 
