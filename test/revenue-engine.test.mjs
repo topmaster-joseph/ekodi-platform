@@ -31,27 +31,15 @@ test('Revenue Engine remains subordinate to mission and aligns as an OS-level EK
   assert.equal(policy.privacy.crossTenantPrivateDataReuse, false);
 });
 
-test('EKODIBIZ is the default operator without becoming a hard-coded only operator', () => {
-  const defaultCell = createRevenueCell({
-    workspaceId: 'workspace-1',
-    title: 'AI 콘텐츠 운영',
-    riskLimit: 100000,
-    stopConditions: ['유료 전환이 기준 이하이면 중단'],
-  });
-  assert.equal(defaultCell.operator, 'ekodibiz');
-  assert.equal(defaultCell.revenueOwner, 'ekodibiz');
-  assert.equal(defaultCell.technologyProvider, 'ekodi');
-  assert.equal(defaultCell.authority.financialCommitment, 'human_gate');
-  assert.equal(defaultCell.zeroRiskClaim, false);
-
-  const delegated = createRevenueCell({
-    workspaceId: 'workspace-2',
-    title: '지역 예약 연결',
-    operator: 'cgma',
-    revenueOwner: 'cgma',
-  });
-  assert.equal(delegated.operator, 'cgma');
-  assert.equal(delegated.revenueOwner, 'cgma');
+test('EKODIBIZ is the exclusive commercial subject for Revenue Cells', () => {
+  const cell = createRevenueCell({workspaceId:'workspace-1',title:'AI content operation',operator:'cgma',revenueOwner:'cgma',riskLimit:100000,stopConditions:['stop below conversion threshold']});
+  assert.equal(cell.operator, 'ekodibiz');
+  assert.equal(cell.revenueOwner, 'ekodibiz');
+  assert.equal(cell.merchantOfRecord, 'ekodibiz');
+  assert.equal(cell.contractingEntity, 'ekodibiz');
+  assert.equal(cell.technologyProvider, 'ekodi');
+  assert.equal(cell.authority.financialCommitment, 'human_gate');
+  assert.equal(cell.zeroRiskClaim, false);
 });
 
 test('fitness scoring permits only bounded experiments and never production commitments', () => {
@@ -114,22 +102,21 @@ test('Revenue Cell cannot scale without demand, economics, policy and stop-condi
   }), 'retire');
 });
 
-test('My EKODI keeps a small free path and capability-by-capability opt-in', () => {
+test('ordinary users receive revenue information only while EKODIBIZ operators retain managed capabilities', () => {
   const catalog = getRevenueCapabilityCatalog();
   const access = resolveRevenueCapabilityAccess({ membershipTier: 'free' });
   assert.ok(catalog.length >= 8);
-  assert.equal(access.model, 'capability-opt-in');
+  assert.equal(access.model, 'ekodibiz-managed-service');
+  assert.equal(access.ordinaryUserMode, 'information-only');
+  assert.equal(access.commercialSubject, 'ekodibiz');
+  assert.equal(access.directRevenueOperationAllowed, false);
   assert.equal(access.publicAccessUnaffected, true);
   assert.equal(access.userOwnedResultsRetained, true);
-  assert.equal(access.capabilities.find(item => item.id === 'revenue.opportunity')?.access, 'enabled');
-  assert.equal(access.capabilities.find(item => item.id === 'revenue.site-launch')?.access, 'preview_only');
-  assert.equal(access.capabilities.find(item => item.id === 'revenue.site-launch')?.checkoutAvailable, false);
-
-  const subscribed = resolveRevenueCapabilityAccess({
-    membershipTier: 'paid',
-    subscribedCapabilities: ['revenue.site-launch'],
-  });
-  assert.equal(subscribed.capabilities.find(item => item.id === 'revenue.site-launch')?.access, 'enabled');
+  assert.ok(access.capabilities.every(item => item.access === 'information_only'));
+  assert.ok(access.capabilities.every(item => item.checkoutAvailable === false));
+  const operator = resolveRevenueCapabilityAccess({actorClass:'ekodibiz-operator',membershipTier:'paid',subscribedCapabilities:['revenue.site-launch']});
+  assert.equal(operator.directRevenueOperationAllowed, true);
+  assert.equal(operator.capabilities.find(item => item.id === 'revenue.site-launch')?.access, 'enabled');
 });
 
 test('Vertical Launch Factory uses canonical EKODI path and shared-shell configuration', () => {
@@ -145,6 +132,8 @@ test('Vertical Launch Factory uses canonical EKODI path and shared-shell configu
   assert.equal(plan.internalSite.implementation, 'shared-shell-configuration');
   assert.equal(plan.internalSite.copyApplicationCode, false);
   assert.equal(plan.externalChannels[0].publishing, 'blocked-until-authorized');
+  assert.equal(plan.commercialSubject, 'ekodibiz');
+  assert.equal(plan.ordinaryUserMode, 'information-only');
   assert.equal(plan.directProductionMutation, false);
 
   const authorized = buildVerticalLaunchPlan({
@@ -189,12 +178,14 @@ test('idea recommendations are explicit unvalidated opportunities, not invented 
   const ideas = recommendRevenueIdeas({ goal: '지역 상인들의 홍보와 유튜브 쇼츠 운영을 자동화하고 싶다' });
   assert.equal(ideas.length, 3);
   assert.equal(ideas[0].status, 'idea-not-market-validated');
-  assert.equal(ideas[0].nextStep, 'bounded-demand-validation');
+  assert.equal(ideas[0].nextStep, 'ekodibiz-information-or-managed-service-request');
 });
 
 test('engine summary exposes guarded production authority', () => {
   const summary = getRevenueEngineSummary();
   assert.equal(summary.defaultRevenueOwner, 'ekodibiz');
+  assert.equal(summary.commercialSubject, 'ekodibiz');
+  assert.equal(summary.ordinaryUserMode, 'information-only');
   assert.equal(summary.productionAuthority, 'human-governed-guarded-release');
   assert.equal(summary.zeroRiskClaimForbidden, true);
 });
