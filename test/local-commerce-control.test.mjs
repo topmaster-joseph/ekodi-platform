@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
-import { handleLocalCommerceControl, LOCAL_COMMERCE_CONTRACT } from '../local-commerce-control.js';
+import { handleLocalCommerceControl, LOCAL_COMMERCE_CONTRACT, normalizeLocalCommerceIssuerType, normalizeLocalCommerceProgramRules } from '../local-commerce-control.js';
 
 const migration = fs.readFileSync(new URL('../migrations/0082_local_commerce_voucher.sql', import.meta.url), 'utf8');
 
@@ -43,3 +43,7 @@ test('program budget cannot be over-issued',()=>{
   db.prepare(`UPDATE local_commerce_programs SET issued_minor=100 WHERE id='program1'`).run();
   assert.equal(db.prepare(`SELECT issued_minor FROM local_commerce_programs WHERE id='program1'`).get().issued_minor,100);
 });
+
+test('organization issuer categories stay schema-compatible and distinct',()=>{for(const type of ['church','nonprofit','enterprise','public_agency','community'])assert.deepEqual(normalizeLocalCommerceIssuerType(type),{storageType:'organization',category:type});assert.deepEqual(normalizeLocalCommerceIssuerType('merchant_association'),{storageType:'merchant_association',category:'merchant_association'});assert.equal(normalizeLocalCommerceIssuerType('unknown'),null);});
+
+test('program rules normalize limits and merchant scope',()=>{assert.deepEqual(normalizeLocalCommerceProgramRules({memberOnly:true,maxTransactionMinor:5000,perUserRedemptionLimitMinor:20000,allowedMerchantIds:['m1','m1','m2','']}),{memberOnly:true,maxTransactionMinor:5000,perUserRedemptionLimitMinor:20000,allowedMerchantIds:['m1','m2']});assert.deepEqual(normalizeLocalCommerceProgramRules({maxTransactionMinor:-1,allowedMerchantIds:'m1'}),{memberOnly:false,maxTransactionMinor:0,perUserRedemptionLimitMinor:0,allowedMerchantIds:[]});assert.equal(LOCAL_COMMERCE_CONTRACT.version,'1.1.0');});
