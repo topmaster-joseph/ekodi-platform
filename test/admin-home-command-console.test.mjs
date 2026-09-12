@@ -21,10 +21,9 @@ test('admin keeps one bottom command dock and swaps AI conversation with menu co
   assert.match(bootstrap,/ekodiAssistClose/);
   assert.match(bootstrap,/ekodi-admin-assist-request/);
   assert.match(bootstrap,/i\.value=''/);
-  assert.match(bootstrap,/loadStyle\?\.bind\(d\)\|\|Y/);
-  assert.match(bootstrap,/loadScript\?\.bind\(d\)\|\|J/);
-  assert.match(bootstrap,/style\('ai-ops-admin\.css'\)/);
-  assert.match(bootstrap,/script\('admin-lazy-features\.js'\)/);
+  assert.match(bootstrap,/d\.loadStyle\('ai-ops-admin\.css'\)/);
+  assert.match(bootstrap,/d\.loadScript\('admin-lazy-features\.js'\)/);
+  assert.match(bootstrap,/import\('\.\/admin-lazy-features\.js'\)/);
   assert.doesNotMatch(bootstrap,/admin-home-command-only/);
   assert.doesNotMatch(bootstrap,/ekodiAssistBootstrap'\)\?\.remove/);
 
