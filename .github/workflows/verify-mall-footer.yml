@@ -63,6 +63,6 @@ jobs:
             exit 1
           fi
 
-          grep -Fq '운영주체' /tmp/mall.html
+          grep -Fq 'data-ekodi-legal-footer="user-shell-v2"' /tmp/mall.html
           grep -Fq '에코디비즈' /tmp/mall.html
           echo "Mall footer verified: local=0 shared=1 total=1"
