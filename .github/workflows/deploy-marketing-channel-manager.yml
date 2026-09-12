@@ -31,6 +31,10 @@ jobs:
           grep -Fq '게시 · 홍보 연결센터' marketing-ai-channel-manager.js
           grep -Fq '중앙 OAuth · 암호화 Vault' marketing-ai-channel-manager.js
           grep -Fq 'marketing-connect-api.ekodi.kr' marketing-ai-channel-manager.js
+          grep -Fq 'marketing-publish-api.ekodi.kr' marketing-ai-channel-manager.js
+          grep -Fq "key:'ekodimall'" marketing-ai-channel-manager.js
+          grep -Fq '에코디몰 자동 YouTube' marketing-ai-channel-manager.js
+          grep -Fq 'product_short 자동위임 활성화' marketing-ai-channel-manager.js
           grep -Fq 'Metricool은 필수가 아닙니다' marketing-ai-channel-manager.js
           ! grep -Fq 'META_FACEBOOK_ACCESS_TOKEN' marketing-ai-channel-manager.js
           grep -Fq 'marketing-ai-channel-manager.js' scripts/build.mjs
@@ -40,5 +44,7 @@ jobs:
           grep -Fq "['channels','게시 · 홍보']" dist/marketing-ai-admin.js
           grep -Fq '게시 · 홍보 연결센터' dist/marketing-ai-admin.js
           grep -Fq '중앙 OAuth · 암호화 Vault' dist/marketing-ai-admin.js
+          grep -Fq '에코디몰 자동 YouTube' dist/marketing-ai-admin.js
+          grep -Fq 'marketing-publish-api.ekodi.kr' dist/marketing-ai-admin.js
       - name: Verify single production owner policy
         run: node scripts/validate-deployment-guardrails.mjs

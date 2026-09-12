@@ -3,6 +3,8 @@
 
   const TAB_KEY = 'channels';
   const API = 'https://marketing-connect-api.ekodi.kr';
+  const PUBLISHING_API = 'https://marketing-publish-api.ekodi.kr';
+  const MALL_SUBJECT = { type:'tenant', key:'ekodimall' };
   const STYLE_ID = 'marketingGrowthConnectorStyle';
   let loading = false;
   let installed = false;
@@ -45,6 +47,21 @@
       error.data = data;
       throw error;
     }
+    return data;
+  }
+  function publishingEndpoint(pathname) {
+    const url = new URL(`${PUBLISHING_API}${pathname}`);
+    url.searchParams.set('subject_type',MALL_SUBJECT.type);
+    url.searchParams.set('subject_key',MALL_SUBJECT.key);
+    return url.href;
+  }
+  async function publishingRequest(pathname,{method='GET',body}={}) {
+    const headers = new Headers();
+    if (token()) headers.set('authorization',`Bearer ${token()}`);
+    if (body !== undefined) headers.set('content-type','application/json');
+    const response = await fetch(publishingEndpoint(pathname),{method,headers,body:body === undefined ? undefined : JSON.stringify(body),cache:'no-store'});
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || `에코디몰 YouTube 요청 실패 (${response.status})`);
     return data;
   }
   function currentReturnUrl() {
@@ -92,6 +109,71 @@
     if (node) { node.textContent = message; node.style.color = error ? '#f1a7ad' : '#8db7d3'; }
   }
 
+  function mallReturnUrl() {
+    const url = new URL(location.href);
+    ['channel_connection','status'].forEach(key => url.searchParams.delete(key));
+    if (!url.hash) url.hash = 'marketing-ai';
+    return url.href;
+  }
+  function mallCallbackNotice() {
+    const url = new URL(location.href);
+    const status = url.searchParams.get('status');
+    if (status === 'selection_required') return '<div class="growth-note">Google 승인이 완료되었습니다. 아래에서 에코디몰 자동게시 대상 YouTube 채널을 선택하세요.</div>';
+    if (status === 'error') return '<div class="growth-platform-alert">Google 승인을 완료하지 못했습니다. 다시 연결하거나 Google 권한 상태를 확인하세요.</div>';
+    return '';
+  }
+
+  function mallChannelOptions(connection) {
+    const rows = Array.isArray(connection.discoveredChannels) ? connection.discoveredChannels : [];
+    if (!rows.length) return '<div class="growth-empty">Google 계정에서 게시 가능한 YouTube 채널을 찾지 못했습니다.</div>';
+    return `<div class="growth-list">${rows.map(row => `<article class="growth-row"><div><strong>${esc(row.title || 'YouTube')}</strong><small>${esc(row.id || '')}</small></div><button class="growth-action" type="button" data-mall-select="${esc(connection.id)}" data-channel-id="${esc(row.id)}">자동게시 채널로 선택</button></article>`).join('')}</div>`;
+  }
+
+  async function renderMallYoutube(root) {
+    if (!root) return;
+    root.innerHTML = '<div class="growth-empty">에코디몰 중앙 YouTube 연결상태를 확인하는 중입니다.</div>';
+    try {
+      const data = await publishingRequest('/v1/oauth/connections');
+      const rows = Array.isArray(data.connections) ? data.connections.filter(row => row.provider === 'youtube') : [];
+      const active = rows.filter(row => row.status === 'active');
+      const pending = rows.filter(row => row.status === 'selection_required');
+      const entitlement = data.entitlement || {};
+      const ready = Boolean(data.youtubeOAuthAvailable);
+      root.innerHTML = `${mallCallbackNotice()}<header><div><h4>에코디몰 자동 YouTube</h4><p>tenant:ekodimall 전용 중앙 OAuth · 암호화 Vault입니다. Google 승인과 채널 선택만 연결하며 여기서는 영상을 게시하지 않습니다.</p></div><span class="growth-state ${active.length ? 'active' : ready ? 'ready' : 'draft'}">${active.length ? '연결됨' : ready ? '승인 가능' : '플랫폼 설정 필요'}</span></header>
+        <div class="growth-meta"><span>자동화 채널 한도 ${Number(entitlement.maxChannels || 0)}</span><span>스케줄 ${entitlement.scheduled ? '허용' : '확인 필요'}</span></div>
+        ${active.length ? `<div class="growth-list">${active.map(row => `<article class="growth-row"><div><strong>${esc(row.displayName || 'YouTube')}</strong><div class="growth-meta"><span>AUTOMATION VAULT</span><small>${esc(row.externalAccountId || '')}</small><small>확인 ${esc(dateText(row.updatedAt))}</small></div></div><span class="growth-state active">ACTIVE</span></article>`).join('')}</div>` : ''}
+        ${pending.map(mallChannelOptions).join('')}
+        ${!active.length && !pending.length ? `<button type="button" data-mall-connect ${ready ? '' : 'disabled'}>Google 승인 후 에코디몰 YouTube 연결</button>` : ''}
+        <div class="growth-note">채널 선택이 완료되면 기존 Publishing Worker가 동일 Vault를 사용합니다. Access Token·Refresh Token은 화면이나 GitHub에 노출하지 않습니다.</div>`;
+
+      root.querySelector('[data-mall-connect]')?.addEventListener('click',async event => {
+        event.currentTarget.disabled = true;
+        try {
+          const started = await publishingRequest('/v1/oauth/youtube/start',{method:'POST',body:{returnTo:mallReturnUrl()}});
+          if (!started.authorizeUrl) throw new Error('Google 승인 주소가 없습니다.');
+          location.assign(started.authorizeUrl);
+        } catch (error) {
+          alert(error.message);
+          event.currentTarget.disabled = false;
+        }
+      });
+      root.querySelectorAll('[data-mall-select]').forEach(button => button.addEventListener('click',async () => {
+        button.disabled = true;
+        try {
+          const result = await publishingRequest(`/v1/oauth/connections/${encodeURIComponent(button.dataset.mallSelect)}/select`,{method:'POST',body:{externalAccountId:button.dataset.channelId}});
+          const suffix = result.productShortDelegated ? ' · product_short 자동위임 활성화' : '';
+          alert(`에코디몰 YouTube 연결 완료${suffix}`);
+          await renderMallYoutube(root);
+        } catch (error) {
+          alert(error.message);
+          button.disabled = false;
+        }
+      }));
+    } catch (error) {
+      root.innerHTML = `<div class="growth-platform-alert"><b>에코디몰 자동 YouTube 연결 확인 필요</b><br>${esc(error.message)}</div>`;
+    }
+  }
+
   async function renderManager() {
     const panel = document.querySelector('#marketingAiAdminPanel');
     const tab = panel?.querySelector(`[data-marketing-tab="${TAB_KEY}"]`);
@@ -124,6 +206,7 @@
           <section class="growth-card"><header><h4>유료 홍보 권한</h4><span class="growth-state ${adAccounts ? 'active' : 'draft'}">${adAccounts ? `${adAccounts} 계정` : '선택 연결'}</span></header><p>Meta 광고계정 권한을 연결합니다. 광고 캠페인은 승인 후에도 PAUSED로만 생성해 예기치 않은 과금을 막습니다.</p><button type="button" data-connect-paid ${platform.metaConfigured ? '' : 'disabled'}>Meta 광고계정 연결</button></section>
         </div>
         <section class="growth-card"><h4>연결된 계정</h4>${connectionRows(connections)}</section>
+        <section class="growth-card" data-mall-youtube><div data-mall-youtube-body><div class="growth-empty">에코디몰 자동 YouTube 상태를 준비하는 중입니다.</div></div></section>
         <div class="growth-grid">
           <section class="growth-card"><h4>무료 게시 · 홍보 실행</h4><p>연결 채널을 고르면 UTM을 자동 부착해 실제 게시하고, 성공·실패 URL을 에코디에 기록합니다.</p><form class="growth-form" data-organic-form>${channelChecks(connections)}<div class="growth-form-grid"><label class="growth-full">캠페인 이름<input name="name" required maxlength="120" placeholder="예: 에코디몰 오늘의 발견"></label><label class="growth-full">게시문<textarea name="caption" required maxlength="12000" placeholder="홍보 문구"></textarea></label><label>유입 링크<input name="targetUrl" type="url" placeholder="https://ekodi.kr/ekodibiz/mall"></label><label>미디어 URL<input name="imageUrl" type="url" placeholder="Instagram은 이미지 · YouTube는 MP4 영상"></label></div><div class="growth-note">무료 홍보는 광고비 0원입니다. Facebook·Instagram·Threads·YouTube마다 UTM source를 자동 구분해 유입을 추적합니다.</div><button type="submit" ${activePublish ? '' : 'disabled'}>게시 · 무료 홍보 실행</button><div class="growth-result"></div></form></section>
           <section class="growth-card"><h4>유료 홍보 초안</h4><p>예산·목표만 먼저 기록합니다. 초안 생성만으로는 1원도 집행되지 않습니다.</p><form class="growth-form" data-paid-form><div class="growth-form-grid"><label class="growth-full">광고계정<select name="adAccountConnectionId" required>${adOptions(connections)}</select></label><label class="growth-full">캠페인 이름<input name="name" required maxlength="120" placeholder="예: 에코디몰 유입 캠페인"></label><label class="growth-full">목표 URL<input name="targetUrl" required type="url" placeholder="https://ekodi.kr/ekodibiz/mall"></label><label>일 예산<input name="dailyBudgetKrw" required type="number" min="1000" step="1000" value="5000"></label><label>총 예산<input name="totalBudgetKrw" required type="number" min="1000" step="1000" value="30000"></label><label class="growth-full">광고 문안<textarea name="caption" maxlength="12000" placeholder="광고 소재 문안"></textarea></label></div><div class="growth-note">안전장치: 초안 → 명시적 광고비 승인 → Meta에 PAUSED 캠페인 생성. 현재 자동 활성화는 의도적으로 막아두었습니다.</div><button type="submit" ${adAccounts ? '' : 'disabled'}>유료 홍보 초안 만들기</button><div class="growth-result"></div></form></section>
@@ -131,6 +214,7 @@
         <section class="growth-card"><h4>홍보 활동 내역</h4>${campaignRows(campaigns)}</section>
       </div>`;
 
+      renderMallYoutube(view.querySelector('[data-mall-youtube-body]'));
       view.querySelector('[data-connect="meta"]')?.addEventListener('click',() => connect('meta').catch(error => alert(error.message)));
       view.querySelector('[data-connect="threads"]')?.addEventListener('click',() => connect('threads').catch(error => alert(error.message)));
       view.querySelector('[data-connect="youtube"]')?.addEventListener('click',() => connect('youtube').catch(error => alert(error.message)));
