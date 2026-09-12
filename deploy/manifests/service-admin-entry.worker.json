@@ -20,7 +20,6 @@
       {"url":"https://trade.biz.ekodi.kr/admin","statuses":[307],"redirect":"manual","headerExpect":["location: https://admin.ekodi.kr/"]},
       {"url":"https://invest.ekodi.kr/admin","statuses":[307],"redirect":"manual","headerExpect":["location: https://admin.ekodi.kr/"]},
       {"url":"https://messenger.ekodi.kr/admin","statuses":[307],"redirect":"manual","headerExpect":["location: https://admin.ekodi.kr/"]},
-      {"url":"https://tax.ekodi.kr/admin","statuses":[307],"redirect":"manual","headerExpect":["location: https://admin.ekodi.kr/"]},
       {"url":"https://management.ekodi.kr/admin","statuses":[307],"redirect":"manual","headerExpect":["location: https://admin.ekodi.kr/"]},
       {"url":"https://marketing-api.ekodi.kr/admin","statuses":[307],"redirect":"manual","headerExpect":["location: https://admin.ekodi.kr/"]}
     ]

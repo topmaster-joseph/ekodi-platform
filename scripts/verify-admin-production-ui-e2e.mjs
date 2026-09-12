@@ -143,7 +143,7 @@ for (const [id, group] of menus) {
   if (id === 'tax') {
     const source = page.locator('.admin-context-source .nav[data-section="tax"]');
     const href = await source.getAttribute('href');
-    if (!href?.startsWith('https://tax.ekodi.kr/')) throw new Error(`Tax handoff href is invalid: ${href}`);
+    if (!href?.startsWith('https://ekodi.kr/tax')) throw new Error(`Tax handoff href is invalid: ${href}`);
     if (!page.url().startsWith(ADMIN_URL)) throw new Error(`Tax handoff verifier is not on canonical Admin: ${page.url()}`);
     const taxResponse = await context.request.get(href, { maxRedirects: 5, timeout: 20000 });
     if (taxResponse.status() < 200 || taxResponse.status() >= 400) throw new Error(`Tax handoff endpoint returned ${taxResponse.status()}`);
