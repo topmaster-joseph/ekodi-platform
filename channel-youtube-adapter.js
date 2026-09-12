@@ -7,7 +7,6 @@ const UPLOAD = 'https://www.googleapis.com/upload/youtube/v3/videos';
 export const YOUTUBE_SCOPES = Object.freeze([
   'https://www.googleapis.com/auth/youtube.upload',
   'https://www.googleapis.com/auth/youtube.readonly',
-  'https://www.googleapis.com/auth/youtube',
 ]);
 
 function clientId(env) { return String(env.CHANNEL_GOOGLE_CLIENT_ID || '').trim(); }
