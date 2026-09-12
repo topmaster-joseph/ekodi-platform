@@ -1,11 +1,6 @@
-const DEFAULTS = Object.freeze({
-  maxInteractiveParticipants: 12,
-  maxInteractiveBroadcastGuests: 6,
-  viewerDelivery: 'hls',
-  translationIdleSeconds: 120,
-  budgetThresholds: { warn: 0.7, conserve: 0.85, hard: 1 },
-  videoProfiles: ['1080p', '720p', '480p'],
-});
+import capabilityPolicy from '../../config/realtime-capabilities.json' with { type: 'json' };
+
+const DEFAULTS = Object.freeze({ ...capabilityPolicy.adaptiveMedia });
 
 function clampRatio(spent = 0, limit = 0) {
   if (!Number.isFinite(limit) || limit <= 0) return 0;
@@ -22,7 +17,7 @@ export function budgetMode(budget = {}, thresholds = DEFAULTS.budgetThresholds) 
 
 export function activeTranslationChannels({ requestedLanguages = [], listenerCounts = {}, sourceLanguage = 'ko' } = {}) {
   const source = String(sourceLanguage).toLowerCase();
-  return [...new Set(requestedLanguages.map(v => String(v).toLowerCase()))]
+  return [...new Set(requestedLanguages.map(value => String(value).toLowerCase()))]
     .filter(language => language !== source)
     .filter(language => Number(listenerCounts[language] || 0) > 0);
 }
@@ -46,19 +41,19 @@ export function planAdaptiveMedia(input = {}, options = {}) {
   const interactiveLimit = isBroadcast ? config.maxInteractiveBroadcastGuests : config.maxInteractiveParticipants;
   const cost = budgetMode(input.budget, config.budgetThresholds);
   const languages = activeTranslationChannels(input.translation);
-  let videoProfile = input.videoProfile || '1080p';
-  let recordingMode = input.recordingEnabled ? 'program+source+translations' : 'off';
+  let videoProfile = input.videoProfile || config.videoProfiles?.[0] || '1080p';
+  let recordingMode = input.recordingEnabled ? config.recordingDefault : 'off';
   const actions = [];
 
   if (interactiveUsers > interactiveLimit) actions.push('overflow-to-viewer-delivery');
   if (cost.mode === 'warn') actions.push('surface-budget-warning');
   if (cost.mode === 'conserve') {
-    videoProfile = '720p';
+    videoProfile = config.videoProfiles?.[1] || '720p';
     actions.push('stop-idle-translations', 'prefer-hls-viewers', 'composite-recording-only');
     if (recordingMode !== 'off') recordingMode = 'program-only';
   }
   if (cost.mode === 'hard') {
-    videoProfile = '480p';
+    videoProfile = config.videoProfiles?.[2] || '480p';
     actions.push('stop-idle-translations', 'prefer-hls-viewers', 'program-recording-only', 'block-new-premium-actions');
     if (recordingMode !== 'off') recordingMode = 'program-only';
   }
@@ -72,6 +67,8 @@ export function planAdaptiveMedia(input = {}, options = {}) {
     recordingMode,
     videoProfile,
     budget: cost,
+    providerStrategy: config.providerStrategy,
+    providerEscapeHatch: [...(config.providerEscapeHatch || [])],
     actions: [...new Set(actions)],
   };
 }
