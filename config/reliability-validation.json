@@ -4,6 +4,7 @@
   "guardrails": {
     "maxRequests": 1000,
     "maxConcurrency": 50,
+    "maxTargetRps": 60,
     "maxDurationSeconds": 600,
     "requestTimeoutMs": 8000,
     "productionApprovalEnv": "EKODI_PRODUCTION_RELIABILITY_APPROVED",
