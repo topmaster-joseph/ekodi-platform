@@ -79,7 +79,8 @@ test('My account center edits canonical person name and keeps linked Google iden
   assert.match(profileApi,/admin\.from\("people"\)\.update\(\{display_name:name\}\)/);
   assert.match(profileApi,/admin\.from\("login_identities"\)/);
   assert.match(profileApi,/ALLOWED_ORIGINS/);
-  assert.match(profileApi,/https:\/\/my\.ekodi\.kr/);
+  assert.match(profileApi,/https:\/\/ekodi\.kr/);
+  assert.doesNotMatch(profileApi,/https:\/\/my\.ekodi\.kr/);
   assert.match(profileApi,/SUPABASE_SERVICE_ROLE_KEY/);
   assert.doesNotMatch(app,/SUPABASE_SERVICE_ROLE_KEY/);
 });
@@ -96,7 +97,8 @@ test('profile API accepts only a bounded personal display name and does not edit
 test('My EKODI staging is isolated from production personal data',async()=>{
   const [prod,staging,worker]=await Promise.all([read('wrangler.my.toml'),read('wrangler.my.staging.toml'),read('my-worker.js')]);
   assert.match(prod,/DATA_ENABLED = "true"/);
-  assert.match(prod,/my\.ekodi\.kr/);
+  assert.match(prod,/workers_dev = true/);
+  assert.doesNotMatch(prod,/my\.ekodi\.kr/);
   assert.match(staging,/DATA_ENABLED = "false"/);
   assert.doesNotMatch(staging,/my\.ekodi\.kr/);
   assert.match(worker,/dataEnabled/);
@@ -150,7 +152,7 @@ test('Personal users can enter personal-brand Marketing without a tenant or stor
   assert.match(worker,/mode=personal-brand/);
 });
 
-test('Production rollout migrates legacy My EKODI before future guarded promotions',async()=>{
+test('Production rollout preserves guarded My EKODI promotions',async()=>{
   const workflow=await read('.github/workflows/deploy-my.yml');
   assert.match(workflow,/has no deployments/);
   assert.match(workflow,/ekodi\.kr\/my\/health/);
@@ -186,13 +188,12 @@ test('My EKODI approval hub keeps unified visibility and person-scoped decision 
   assert.doesNotMatch(approvalApp,/service_role|SUPABASE_SERVICE_ROLE_KEY/);
 });
 
-test('My production verification uses the canonical apex path and proves the legacy redirect',async()=>{
+test('My production verification uses only the canonical apex path',async()=>{
   const workflow=await read('.github/workflows/deploy-my.yml');
-  assert.match(workflow,/legacy_code=.*https:\/\/my\.ekodi\.kr\//);
-  assert.ok(workflow.includes("^location:[[:space:]]*https://ekodi\\.kr/my/?[[:space:]]*$"));
+  assert.doesNotMatch(workflow,/https:\/\/my\.ekodi\.kr/);
   assert.match(workflow,/https:\/\/ekodi\.kr\/my\/w\/person:deployment-probe/);
   assert.match(workflow,/https:\/\/ekodi\.kr\/my\/service-manifest\.json/);
-  assert.doesNotMatch(workflow,/private_code=.*https:\/\/my\.ekodi\.kr\/w\//);
+  assert.match(workflow,/access-control-allow-origin:\[\[:space:\]\]\*https:\/\/ekodi/);
 });
 test('My production dependency gate accepts forward-compatible Shell character renderer versions',async()=>{
   const workflow=await read('.github/workflows/deploy-my.yml');
