@@ -30,7 +30,7 @@ jobs:
           set -euo pipefail
           url="https://ekodi.kr/ekodibiz/mall?footer_guard=${VERIFY_SHA}"
           for attempt in $(seq 1 12); do
-            code=$(curl -L -sS --connect-timeout 5 --max-time 20 -o /tmp/mall.html -w '%{http_code}' "$url" || true)
+            code=$(curl -L -sS -D /tmp/mall.headers --connect-timeout 5 --max-time 20 -o /tmp/mall.html -w '%{http_code}' "$url" || true)
             if [ "$code" = "200" ]; then
               break
             fi
@@ -42,15 +42,24 @@ jobs:
           done
 
           local_footer='필요한 상품을 가볍게 발견하고 판매처에서 안전하게 확인하세요.'
-          if grep -Fq "$local_footer" /tmp/mall.html; then
+          local_count=$(grep -Foc "$local_footer" /tmp/mall.html || true)
+          shared_count=$( (grep -o 'data-ekodi-user-footer="v[0-9][0-9]*"' /tmp/mall.html || true) | wc -l | tr -d ' ')
+          footer_count=$( (grep -oi '<footer\b' /tmp/mall.html || true) | wc -l | tr -d ' ')
+          chrome_header=$(grep -i '^x-ekodi-user-chrome:' /tmp/mall.headers | tail -1 | tr -d '\r' || true)
+          footer_header=$(grep -i '^x-ekodi-user-footer:' /tmp/mall.headers | tail -1 | tr -d '\r' || true)
+          route_header=$(grep -i '^x-ekodi-route:' /tmp/mall.headers | tail -1 | tr -d '\r' || true)
+          service_header=$(grep -i '^x-ekodi-service:' /tmp/mall.headers | tail -1 | tr -d '\r' || true)
+          echo "Mall footer diagnostics: local=$local_count shared=$shared_count total=$footer_count"
+          echo "Mall response headers: ${chrome_header:-x-ekodi-user-chrome:none} | ${footer_header:-x-ekodi-user-footer:none} | ${route_header:-x-ekodi-route:none} | ${service_header:-x-ekodi-service:none}"
+          echo 'Footer elements:'
+          grep -oi '<footer\b[^>]*>' /tmp/mall.html || true
+
+          if [ "$local_count" != "0" ]; then
             echo 'Duplicate Mall-local footer is still present in production.' >&2
             exit 1
           fi
-
-          shared_count=$(grep -o 'data-ekodi-user-footer="v[0-9][0-9]*"' /tmp/mall.html | wc -l | tr -d ' ')
-          footer_count=$(grep -oi '<footer\b' /tmp/mall.html | wc -l | tr -d ' ')
           if [ "$shared_count" != "1" ] || [ "$footer_count" != "1" ]; then
-            echo "Expected exactly one shared footer; shared=$shared_count total=$footer_count" >&2
+            echo "Expected exactly one shared footer; local=$local_count shared=$shared_count total=$footer_count" >&2
             exit 1
           fi
 
