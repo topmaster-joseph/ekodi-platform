@@ -82,3 +82,10 @@ test('Control Center lazy-loads Social Channels while security-wrapped Mission C
   assert.match(missionEntry, /await customerEntryWorker\.scheduled\(controller, env, ctx\)/);
   assert.match(missionEntry, /customerSchedule\?\.reporting\?\.ran/);
 });
+test('central Admin CSP permits the Social Marketing Connect API', async () => {
+  const worker=await readFile(new URL('../site-worker.js',import.meta.url),'utf8');
+  const start=worker.indexOf('const ADMIN_CSP = [');
+  assert.ok(start>=0);
+  const adminCsp=worker.slice(start,start+1400);
+  assert.match(adminCsp,/https:\/\/marketing-connect-api\.ekodi\.kr/);
+});
