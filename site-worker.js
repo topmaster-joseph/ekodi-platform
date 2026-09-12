@@ -375,7 +375,7 @@ async function proxyMallService(request) {
   const route = adminSurface ? 'admin-mall-proxy' : apiSurface ? 'mall-api-proxy' : verificationOpsSurface ? 'mall-verification-ops' : 'public-ekodi-mall';
   const mallCsp = adminEmbed ? MALL_ADMIN_EMBED_CSP : MALL_CSP;
   const response = withHostSecurity(new Response(responseBody, { status: upstreamResponse.status, statusText: upstreamResponse.statusText, headers }), mallCsp, cacheControl, route);
-  if (adminSurface || apiSurface || verificationOpsSurface) response.headers.set('X-Robots-Tag', 'noindex, nofollow, noarchive');
+  if (adminSurface || apiSurface || verificationOpsSurface || adminEmbed) response.headers.set('X-Robots-Tag', 'noindex, nofollow, noarchive');
   if (adminEmbed) response.headers.delete('X-Frame-Options');
   const shelled = injectEkodiShell(response, 'mall', adminSurface ? 'admin' : 'public');
   if (adminSurface || apiSurface || verificationOpsSurface || adminEmbed) return shelled;
