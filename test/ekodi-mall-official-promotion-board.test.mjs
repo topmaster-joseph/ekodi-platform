@@ -66,6 +66,7 @@ test('production growth deploy combines the official weekly board with the V8 pr
   assert.match(workflow,/0072_ekodi_mall_growth_learning_loop\.sql/);
   assert.match(workflow,/0073_affiliate_official_signal_promotion\.sql/);
   assert.match(workflow,/0073_ekodibiz_marketing_subject_canonical\.sql/);
+  assert.match(workflow,/0079_channel_tenant_split\.sql/);
   assert.match(workflow,/ekodi-mall-official-promotion-board\.test\.mjs/);
   assert.match(workflow,/official_board_profit_learning_loop/);
   assert.match(workflow,/ensureWeeklyPromotionBoard/);
@@ -73,7 +74,10 @@ test('production growth deploy combines the official weekly board with the V8 pr
   assert.match(workflow,/affiliate_official_market_signals/);
   assert.match(workflow,/affiliate_promotion_weekly_boards/);
   assert.match(workflow,/affiliate_promotion_weekly_products/);
-  assert.match(workflow,/subject_key='ekodi-biz'/);
+  assert.match(workflow,/const SUBJECT_KEY = 'ekodimall'/);
+  assert.match(workflow,/ekodimall:autonomous/);
+  assert.match(workflow,/ekodi-biz:review/);
+  assert.match(workflow,/ekoditrade:review/);
   assert.match(workflow,/\"strategy\":\"official_board_profit_learning_loop\"/);
   assert.match(workflow,/\"weeklyBoard\"/);
 });
