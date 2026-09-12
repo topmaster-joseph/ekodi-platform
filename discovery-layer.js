@@ -19,9 +19,14 @@ export const DISCOVERY_PRIVATE_PREFIXES = Object.freeze([
 
 export const DISCOVERY_CRAWLER_POLICY = Object.freeze({
   searchIndex: Object.freeze(['Googlebot', 'bingbot']),
-  answerRetrieval: Object.freeze(['OAI-SearchBot', 'Claude-SearchBot', 'PerplexityBot']),
-  training: Object.freeze(['GPTBot', 'ClaudeBot', 'Google-Extended']),
-  agent: Object.freeze(['ChatGPT-User', 'Claude-User', 'Perplexity-User']),
+  answerRetrieval: Object.freeze(['OAI-SearchBot', 'Claude-SearchBot', 'PerplexityBot', 'Applebot']),
+  training: Object.freeze([
+    'GPTBot', 'ClaudeBot', 'Google-Extended', 'Google-CloudVertexBot', 'Bytespider', 'CCBot',
+    'meta-externalagent', 'FacebookBot', 'Amazonbot',
+  ]),
+  agent: Object.freeze([
+    'ChatGPT-User', 'Claude-User', 'Perplexity-User', 'meta-externalfetcher', 'DuckAssistBot', 'MistralAI-User',
+  ]),
 });
 
 function xmlEscape(value) {
