@@ -1,7 +1,5 @@
 import { WorkerEntrypoint } from 'cloudflare:workers';
-import { mallPromotionAutomationEnabled, runMallPromotionAutomation } from './mall-promotion-automation.js';
-import { runMallSalesIntelligence } from './mall-sales-intelligence.js';
-import { ensureWeeklyPromotionBoard } from './mall-official-promotion-board.js';
+import { runMallAutonomousProfitLoop } from './mall-autonomous-profit-loop.js';
 import { d1SchemaReady } from './d1-schema-readiness.js';
 import { mallGrowthDashboardSnapshot } from './mall-growth-dashboard.js';
 const SUPABASE_URL = 'https://renzehysxirjilvdxacv.supabase.co';
@@ -61,7 +59,9 @@ async function resolveSubject(env, identity, type, key) {
   const subjectType = SUBJECT_TYPES.has(String(type || '').toLowerCase()) ? String(type).toLowerCase() : 'person';
   if (subjectType === 'person') return { type:'person', key:identity.id, role:'owner', writable:true };
   if (subjectType === 'tenant') {
-    const slug = clean(key,80).toLowerCase();
+    let slug = clean(key,80).toLowerCase();
+    if (slug==='ekodi-trade') slug='ekoditrade';
+    if (slug==='ekodibiz') slug='ekodi-biz';
     if (!slug) return null;
     const tenant = await env.DB.prepare('SELECT id,slug,status FROM customer_tenants WHERE slug=?').bind(slug).first();
     if (!tenant || tenant.status !== 'active') return null;
@@ -154,7 +154,7 @@ async function schemaReady(env) { return d1SchemaReady(env?.DB,['marketing_oauth
 function metaConfigured(env) { return Boolean(env.META_APP_ID && env.META_APP_SECRET); }
 function threadsConfigured(env) { return Boolean((env.THREADS_APP_ID || env.META_APP_ID) && (env.THREADS_APP_SECRET || env.META_APP_SECRET)); }
 function youtubeConfigured(env) { return Boolean(env.GOOGLE_CLIENT_ID && providerSecret(env,YOUTUBE_PROVIDER) && env.GOOGLE_OAUTH_BROKER); }
-function youtubeTargetAccount(subject,requested=''){const key=String(subject?.key||'').trim().toLowerCase();if(subject?.type==='tenant'&&(key==='ekodi-biz'||key==='ekodibiz'))return 'ekodibiz@gmail.com';const hint=clean(requested,180).trim().toLowerCase();return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(hint)?hint:''}
+function youtubeTargetAccount(subject,requested=''){const key=String(subject?.key||'').trim().toLowerCase();if(subject?.type==='tenant'&&key==='ekodimall')return 'topmaster.joseph@gmail.com';const hint=clean(requested,180).trim().toLowerCase();return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(hint)?hint:''}
 
 async function createOAuthState(env, provider, mode, identity, subject, returnUrl) {
   const state = randomState();
@@ -235,7 +235,7 @@ async function upsertConnection(env, subject, {provider,resourceType,externalId,
     .bind(subject.type,subject.key,provider,resourceType,externalId).first();
 }
 async function upsertPublishChannel(env, subject, {provider,channelType,displayName,externalId,connectionId}) {
-  const now=nowIso(),mallSubject=subject.type==='tenant'&&subject.key==='ekodi-biz';
+  const now=nowIso(),mallSubject=subject.type==='tenant'&&subject.key==='ekodimall';
   const current=await env.DB.prepare('SELECT status,config_json FROM marketing_publish_channels WHERE subject_type=? AND subject_key=? AND provider=? AND channel_type=? AND external_account_id=?').bind(subject.type,subject.key,provider,channelType,externalId).first();
   const defaults=mallSubject?{autoPublishEnabled:['facebook','instagram','threads'].includes(provider),maxPostsPerDay:1,minHoursBetweenPosts:6,publishWindowStart:'08:00',publishWindowEnd:'22:00',timezone:'Asia/Seoul',maxAttempts:5}:{};
   const config={...defaults,...safeParse(current?.config_json,{}),credentialMode:'oauth-vault',oauthConnectionId:connectionId};
@@ -643,13 +643,7 @@ async function preparePaidPromotion(request, env, identity, subject, id) {
 export class MarketingGrowthPublisher extends WorkerEntrypoint {
   async runGrowthCycle(input = {}) {
     const reason = clean(input?.reason || 'shared-publishing-cron',80);
-    const intelligence = await runMallSalesIntelligence(this.env,{reason});
-    const weeklyBoard = await ensureWeeklyPromotionBoard(this.env,{reason,force:false});
-    const promotion = mallPromotionAutomationEnabled(this.env)
-      ? await runMallPromotionAutomation(this.env,{reason})
-      : {ok:true,status:'disabled',reason:'promotion_safety_gate'};
-    const boardReady = Boolean(weeklyBoard?.ok || weeklyBoard?.status === 'schema_required');
-    return {ok:Boolean(intelligence?.ok || intelligence?.status === 'schema_required') && boardReady && Boolean(promotion?.ok || promotion?.status === 'schema_required'),intelligence,weeklyBoard,promotion};
+    return runMallAutonomousProfitLoop(this.env,{reason,force:Boolean(input?.force)});
   }
 
   async publishFromVault(input = {}) {
@@ -694,7 +688,7 @@ export default {
     const {identity,subject} = auth;
 
     if (url.pathname === '/v1/mall/dashboard' && request.method === 'GET') {
-      if (subject.type !== 'tenant' || subject.key !== 'ekodi-biz') return json(request,env,{error:'SUBJECT_FORBIDDEN'},403);
+      if (subject.type !== 'tenant' || subject.key !== 'ekodimall') return json(request,env,{error:'SUBJECT_FORBIDDEN'},403);
       return json(request,env,await mallGrowthDashboardSnapshot(env));
     }
     if (url.pathname === '/v1/connect/meta/start' && request.method === 'POST') return startMeta(request,env,identity,subject);

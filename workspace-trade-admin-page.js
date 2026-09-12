@@ -3,7 +3,7 @@ function tradeAdminClient(ADMIN_HUB){
   const route=location.pathname.replace(/\/+$/,'').match(/^\/([^/]+)\/trade\/admin(?:\/([^/]+))?$/i);
   if(!route)return;
   const workspaceUrlSlug=route[1].toLowerCase();
-  const workspace=workspaceUrlSlug==='ekodibiz'?'ekodi-biz':workspaceUrlSlug;
+  const workspace=workspaceUrlSlug==='ekodibiz'?'ekoditrade':workspaceUrlSlug;
   const section=(route[2]||'overview').toLowerCase();
   const API='https://renzehysxirjilvdxacv.supabase.co/functions/v1/workspace-api';
   const SUPABASE_URL='https://renzehysxirjilvdxacv.supabase.co';

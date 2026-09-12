@@ -8,6 +8,7 @@ on:
       - 'marketing-growth-worker.js'
       - 'marketing-growth-entry.js'
       - 'mall-growth-dashboard.js'
+      - 'mall-autonomous-profit-loop.js'
       - 'mall-official-promotion-board.js'
       - 'mall-promotion-automation.js'
       - 'mall-sales-intelligence.js'
@@ -20,9 +21,11 @@ on:
       - 'migrations/0073_ekodibiz_marketing_subject_canonical.sql'
       - 'migrations/0050_ekodibiz_marketing_internal_entitlement.sql'
       - 'migrations/0064_marketing_channel_settings.sql'
+      - 'migrations/0079_channel_tenant_split.sql'
       - 'test/ekodi-mall-promotion-automation.test.mjs'
       - 'test/ekodi-mall-official-promotion-board.test.mjs'
       - 'test/ekodi-mall-growth-learning-loop.test.mjs'
+      - 'test/ekodi-mall-autonomous-profit-loop.test.mjs'
       - 'test/ekodi-mall-v8-dashboard.test.mjs'
       - 'test/marketing-growth-oauth.test.mjs'
       - 'test/ekodimall-channel-settings-admin.test.mjs'
@@ -69,10 +72,11 @@ jobs:
           node --check marketing-growth-worker.js
           node --check marketing-growth-entry.js
           node --check mall-growth-dashboard.js
+          node --check mall-autonomous-profit-loop.js
           node --check mall-official-promotion-board.js
           node --check mall-promotion-automation.js
           node --check mall-sales-intelligence.js
-          node --test test/ekodi-mall-promotion-automation.test.mjs test/ekodi-mall-official-promotion-board.test.mjs test/ekodi-mall-growth-learning-loop.test.mjs test/ekodi-mall-v8-dashboard.test.mjs test/ekodi-mall-active-sales-ai.test.mjs test/marketing-growth-oauth.test.mjs test/ekodimall-channel-settings-admin.test.mjs test/ekodibiz-youtube-channel-selection.test.mjs
+          node --test test/ekodi-mall-promotion-automation.test.mjs test/ekodi-mall-official-promotion-board.test.mjs test/ekodi-mall-growth-learning-loop.test.mjs test/ekodi-mall-autonomous-profit-loop.test.mjs test/ekodi-mall-v8-dashboard.test.mjs test/ekodi-mall-active-sales-ai.test.mjs test/marketing-growth-oauth.test.mjs test/ekodimall-channel-settings-admin.test.mjs test/ekodibiz-youtube-channel-selection.test.mjs
           grep -Fq 'encryptedVault:true' marketing-growth-worker.js
           grep -Fq 'oauthBroker:true' marketing-growth-worker.js
           grep -Fq 'youtubeConfigured' marketing-growth-worker.js
@@ -84,7 +88,9 @@ jobs:
           grep -Fq 'MALL_PROMOTION_AUTOMATION_ENABLED = "true"' wrangler.marketing-growth.toml
           grep -Fq 'mallPromotionAutomation' marketing-growth-entry.js
           grep -Fq 'mallSalesIntelligence' marketing-growth-entry.js
-          grep -Fq "const SUBJECT_KEY = 'ekodi-biz'" mall-promotion-automation.js
+          grep -Fq 'mallAutonomousProfitLoop' marketing-growth-entry.js
+          grep -Fq 'runMallAutonomousProfitLoop' marketing-growth-worker.js
+          grep -Fq "const SUBJECT_KEY = 'ekodimall'" mall-promotion-automation.js
           grep -Fq "official_board_profit_learning_loop" mall-promotion-automation.js
           grep -Fq "ensureWeeklyPromotionBoard" mall-promotion-automation.js
           grep -Fq 'affiliate_promotion_runs' migrations/0048_ekodi_mall_promotion_automation.sql
@@ -98,6 +104,9 @@ jobs:
           grep -Fq "subject_key='ekodi-biz'" migrations/0073_ekodibiz_marketing_subject_canonical.sql
           grep -Fq "WHERE t.slug='ekodi-biz'" migrations/0073_ekodibiz_marketing_subject_canonical.sql
           grep -Fq "'tenant','ekodibiz','marketing','auto','active'" migrations/0050_ekodibiz_marketing_internal_entitlement.sql
+          grep -Fq "'tenant','ekodimall','autonomous',3" migrations/0079_channel_tenant_split.sql
+          grep -Fq "'tenant','ekodi-biz','review',1" migrations/0079_channel_tenant_split.sql
+          grep -Fq "'tenant','ekoditrade','review',1" migrations/0079_channel_tenant_split.sql
           grep -Fq 'token_ciphertext TEXT NOT NULL' migrations/0028_marketing_growth_connectors.sql
           if grep -Eqi '(access_token|refresh_token|bearer_token)[[:space:]]+TEXT' migrations/0028_marketing_growth_connectors.sql migrations/0048_ekodi_mall_promotion_automation.sql migrations/0049_ekodi_mall_active_sales_ai.sql migrations/0050_ekodibiz_marketing_internal_entitlement.sql migrations/0064_marketing_channel_settings.sql migrations/0073_affiliate_official_signal_promotion.sql migrations/0073_ekodibiz_marketing_subject_canonical.sql; then
             echo 'Plain provider token columns are forbidden.'
@@ -122,9 +131,11 @@ jobs:
             grep -Fq "$table" /tmp/growth-schema.json
           done
           npx --yes wrangler@${WRANGLER_VERSION} d1 execute ekodi-auth --remote --config wrangler.marketing-growth.toml \
-            --command "SELECT subject_key FROM marketing_publish_policies WHERE subject_type='tenant' AND subject_key='ekodi-biz' UNION ALL SELECT subject_key FROM service_subscriptions WHERE subject_type='tenant' AND subject_key='ekodi-biz' AND site='marketing';" \
+            --command "SELECT subject_key || ':' || mode AS contract FROM marketing_publish_policies WHERE subject_type='tenant' AND subject_key IN ('ekodi-biz','ekodimall','ekoditrade') ORDER BY subject_key;" \
             --json > /tmp/growth-subject.json
-          grep -Fq 'ekodi-biz' /tmp/growth-subject.json
+          grep -Fq 'ekodi-biz:review' /tmp/growth-subject.json
+          grep -Fq 'ekodimall:autonomous' /tmp/growth-subject.json
+          grep -Fq 'ekoditrade:review' /tmp/growth-subject.json
 
       - name: Deploy growth connector worker
         run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.marketing-growth.toml
@@ -184,6 +195,7 @@ jobs:
               && grep -Fq '"strategy":"official_board_profit_learning_loop"' /tmp/growth-health.json \
               && grep -Fq '"weeklyBoard"' /tmp/growth-health.json \
               && grep -Fq '"mallSalesIntelligence"' /tmp/growth-health.json \
+              && grep -Fq '"mallAutonomousProfitLoop"' /tmp/growth-health.json \
               && grep -Fq '"mode":"active_sales"' /tmp/growth-health.json \
               && grep -Fq '"paidAds":false' /tmp/growth-health.json; then
               cat /tmp/growth-health.json

@@ -66,6 +66,7 @@ test('production growth deploy combines the official weekly board with the V8 pr
   assert.match(workflow,/0072_ekodi_mall_growth_learning_loop\.sql/);
   assert.match(workflow,/0073_affiliate_official_signal_promotion\.sql/);
   assert.match(workflow,/0073_ekodibiz_marketing_subject_canonical\.sql/);
+  assert.match(workflow,/0079_channel_tenant_split\.sql/);
   assert.match(workflow,/ekodi-mall-official-promotion-board\.test\.mjs/);
   assert.match(workflow,/official_board_profit_learning_loop/);
   assert.match(workflow,/ensureWeeklyPromotionBoard/);
@@ -73,17 +74,19 @@ test('production growth deploy combines the official weekly board with the V8 pr
   assert.match(workflow,/affiliate_official_market_signals/);
   assert.match(workflow,/affiliate_promotion_weekly_boards/);
   assert.match(workflow,/affiliate_promotion_weekly_products/);
-  assert.match(workflow,/subject_key='ekodi-biz'/);
+  assert.match(workflow,/const SUBJECT_KEY = 'ekodimall'/);
+  assert.match(workflow,/ekodimall:autonomous/);
+  assert.match(workflow,/ekodi-biz:review/);
+  assert.match(workflow,/ekoditrade:review/);
   assert.match(workflow,/\"strategy\":\"official_board_profit_learning_loop\"/);
   assert.match(workflow,/\"weeklyBoard\"/);
 });
 test('weekly board prepares independently from the external publishing master gate', async () => {
-  const [worker,entry]=await Promise.all([read('marketing-growth-worker.js'),read('marketing-growth-entry.js')]);
-  const workerBoard=worker.indexOf('ensureWeeklyPromotionBoard(this.env');
-  const workerGate=worker.indexOf('mallPromotionAutomationEnabled(this.env)',workerBoard);
-  assert.ok(workerBoard>=0 && workerGate>workerBoard);
-  assert.match(worker,/intelligence,weeklyBoard,promotion/);
-  const entryBoard=entry.indexOf('ensureWeeklyPromotionBoard(env');
-  const entryGate=entry.indexOf('mallPromotionAutomationEnabled(env)',entryBoard);
-  assert.ok(entryBoard>=0 && entryGate>entryBoard);
+  const [worker,entry,loop]=await Promise.all([read('marketing-growth-worker.js'),read('marketing-growth-entry.js'),read('mall-autonomous-profit-loop.js')]);
+  assert.match(worker,/runMallAutonomousProfitLoop/);
+  assert.match(entry,/runMallAutonomousProfitLoop/);
+  const loopBoard=loop.indexOf('ensureWeeklyPromotionBoard(env');
+  const loopGate=loop.indexOf('mallPromotionAutomationEnabled(env)',loopBoard);
+  assert.ok(loopBoard>=0 && loopGate>loopBoard);
+  assert.match(loop,/intelligence, weeklyBoard, promotion/);
 });
