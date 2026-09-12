@@ -77,7 +77,8 @@ test('public-site controls E2E proves the live Control API and CGMA form render'
   const source = await workerSource();
   assert.match(source, /verifyPublicSiteControls/);
   assert.match(source, /fetch\('https:\/\/api\.ekodi\.kr\/api\/control\/public-sites'/);
-  assert.match(source, /origin: 'https:\/\/admin\.ekodi\.kr'/);
+  assert.match(source, /const adminOrigin = 'https:\/\/ekodi\.kr'/);
+  assert.match(source, /origin: adminOrigin/);
   assert.match(source, /authorization: `Bearer \$\{token\}`/);
   assert.match(source, /access-control-allow-origin/);
   assert.match(source, /page\.evaluate\(\(\) => window\.EKODIPublicSiteControls\.load\(\)\)/);
