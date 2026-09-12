@@ -12,6 +12,7 @@ export const ADMIN_MENU_REGISTRY = Object.freeze([
   { id: 'campus', group: 'home', icon: '⌂', labels: { ko: '관리 홈·사이트', en: 'Admin Home & Sites' } },
 
   { id: 'work', group: 'operations', icon: 'W', labels: { ko: '업무', en: 'Work' } },
+  { id: 'store-operations', group: 'operations', icon: '3', labels: { ko: '3매장 통합운영', en: 'Tri-Store Operations' } },
   { id: 'communication', group: 'operations', icon: '✉', labels: { ko: '소통', en: 'Communication' } },
   { id: 'finance', group: 'operations', icon: '₩', labels: { ko: '결제·회계', en: 'Finance & Accounting' } },
   { id: 'tax', group: 'operations', icon: 'T', labels: { ko: '세금·증빙', en: 'Tax & Evidence' }, href: 'https://tax.ekodi.kr/', adminHandoff: true },
@@ -95,4 +96,5 @@ if (typeof document !== 'undefined') {
   import('./admin-design-engine.js').catch(error => console.warn('[EKODI Admin] design engine bootstrap failed', error));
   import('./ai-operations-center-admin.js').catch(error => console.warn('[EKODI Admin] AI operations center bootstrap failed', error));
   import('./devotional-admin.js').catch(error => console.warn('[EKODI Admin] devotional bootstrap failed', error));
+  import('./store-operations-admin.js').catch(error => console.warn('[EKODI Admin] tri-store operations bootstrap failed', error));
 }
