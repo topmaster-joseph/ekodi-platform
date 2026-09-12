@@ -4,8 +4,8 @@ const POLICY=Object.freeze({
   sourceChange:'mark-non-source-locales-stale-and-queue-translation',
   translation:'provider-routed-internal-automation',
   validation:'key-parity-protected-token-content-safety-and-catalog-integrity',
-  release:'publish-when-validation-passes',
-  admin:'read-only-site-language-status'
+  release:'admin-publish-after-validation',
+  admin:'site-scoped-and-platform-aggregate-publication-control'
 });
 
 const LANGUAGES=Object.freeze([
@@ -25,13 +25,19 @@ const STAGES=Object.freeze({
   translating:{labelKo:'번역중',labelEn:'Translating',public:false,order:20},
   validating:{labelKo:'검증중',labelEn:'Validating',public:false,order:30},
   'release-ready':{labelKo:'게시준비',labelEn:'Release ready',public:false,order:40},
-  published:{labelKo:'공개',labelEn:'Published',public:true,order:50},
+  published:{labelKo:'번역완료',labelEn:'Translation ready',public:true,order:50},
   stale:{labelKo:'원문변경',labelEn:'Source changed',public:false,order:60},
   blocked:{labelKo:'보류',labelEn:'Blocked',public:false,order:70}
 });
 
+const PUBLICATION_STATES=Object.freeze({
+  published:Object.freeze({labelKo:'게시',labelEn:'Published',public:true}),
+  hidden:Object.freeze({labelKo:'비게시',labelEn:'Hidden',public:false})
+});
+
 const PUBLISHED=Object.freeze({
   ekodi:Object.freeze(['ko-KR','en','zh-CN','ja']),
+  cgma:Object.freeze(['ko-KR','en']),
   biz:Object.freeze(['ko-KR','en','zh-CN','ja','vi','ne']),
   journal:Object.freeze(['ko-KR','en','zh-CN','ja','vi'])
 });
@@ -60,7 +66,9 @@ export function languageStatesForService(serviceId){
       label:language.label,
       nativeName:language.nativeName,
       status,
+      publicationStatus:STAGES[status].public?'published':'hidden',
       public:STAGES[status].public,
+      publicationLabelKo:PUBLICATION_STATES[STAGES[status].public?'published':'hidden'].labelKo,
       stageLabelKo:STAGES[status].labelKo,
       stageLabelEn:STAGES[status].labelEn
     });
@@ -86,7 +94,7 @@ export function siteLanguageStatus(service){
 export function languageStatusSnapshot(services=[]){
   const root=siteLanguageStatus({id:'ekodi',name:'EKODI',url:'https://ekodi.kr/'});
   const sites=[root,...services.filter(service=>service?.id!=='ekodi').map(siteLanguageStatus)];
-  return Object.freeze({schemaVersion:1,registryVersion:1,sourceLocale:SOURCE_LOCALE,policy:POLICY,languages:LANGUAGES,stages:STAGES,sites:Object.freeze(sites)});
+  return Object.freeze({schemaVersion:2,registryVersion:2,sourceLocale:SOURCE_LOCALE,policy:POLICY,languages:LANGUAGES,stages:STAGES,publicationStates:PUBLICATION_STATES,sites:Object.freeze(sites)});
 }
 
 export function renderLanguageRegistryBootstrap(){
@@ -108,10 +116,11 @@ export function renderLanguageRegistryBootstrap(){
 }
 
 export const EKODI_LANGUAGE_REGISTRY=Object.freeze({
-  version:1,
+  version:2,
   sourceLocale:SOURCE_LOCALE,
   policy:POLICY,
   languages:LANGUAGES,
   stages:STAGES,
+  publicationStates:PUBLICATION_STATES,
   published:PUBLISHED
 });

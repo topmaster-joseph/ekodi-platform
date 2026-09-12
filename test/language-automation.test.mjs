@@ -39,7 +39,8 @@ test('automation probes only public non-planned user content',()=>{
   assert.ok(targets.every(item=>item.defaultSurface==='public'));
   assert.ok(targets.every(item=>item.state!=='planned'));
   assert.equal(LANGUAGE_AUTOMATION_CONTRACT.publicSurfacesOnly,true);
-  assert.equal(LANGUAGE_AUTOMATION_CONTRACT.adminReadOnly,true);
+  assert.equal(LANGUAGE_AUTOMATION_CONTRACT.adminReadOnly,false);
+  assert.equal(LANGUAGE_AUTOMATION_CONTRACT.publicationControl,'site-scoped-and-platform-aggregate');
 });
 
 test('public readiness endpoint exposes only published locales without mutation access',async()=>{
@@ -58,4 +59,7 @@ test('source changes hide previously published translations until revalidated',a
   assert.match(text,/Promise\.all\(selected\.map\(service=>probeServiceSource/);
   assert.ok(text.includes("setJobStage(env,job,'release-ready'"));
   assert.ok(text.includes("setJobStage(env,job,'published'"));
+  assert.match(text,/publication_status='hidden'/);
+  assert.match(text,/setLanguagePublication/);
+  assert.match(text,/handleLanguageTenantAdmin/);
 });
