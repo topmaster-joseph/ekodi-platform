@@ -24,6 +24,7 @@ env:
   WRANGLER_VERSION: '4.119.0'
   LEGACY_MY_HOST: my.ekodi.kr
   CANONICAL_ZONE: ekodi.kr
+  CF_ZONE_ID: e39707f426b195d12c67a86f62b52ba7
 
 jobs:
   validate:
@@ -47,6 +48,7 @@ jobs:
           fi
           test "$LEGACY_MY_HOST" = 'my.ekodi.kr'
           test "$CANONICAL_ZONE" = 'ekodi.kr'
+          test "$CF_ZONE_ID" = 'e39707f426b195d12c67a86f62b52ba7'
           npx --yes wrangler@${WRANGLER_VERSION} triggers deploy --dry-run --config wrangler.my.toml
 
   production:
@@ -74,6 +76,47 @@ jobs:
         run: |
           set -euo pipefail
           npx --yes wrangler@${WRANGLER_VERSION} triggers deploy --config wrangler.my.toml
+      - name: Detach retired My EKODI custom domain
+        shell: bash
+        run: |
+          set -euo pipefail
+          endpoint="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/domains"
+          domains=$(curl --fail-with-body -sS \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            -H 'Content-Type: application/json' \
+            "$endpoint")
+          echo "$domains" | jq -e '.success == true' >/dev/null
+          domain_id=$(echo "$domains" | jq -r '.result[] | select(.hostname == env.LEGACY_MY_HOST) | .id' | head -n1)
+          if [[ -n "$domain_id" ]]; then
+            echo "Detaching retired Workers Custom Domain $LEGACY_MY_HOST."
+            delete_http=$(curl -sS -o /tmp/my-domain-delete.out -w '%{http_code}' -X DELETE \
+              -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+              -H 'Content-Type: application/json' \
+              "$endpoint/$domain_id")
+            if [[ ! "$delete_http" =~ ^20[0-9]$ ]]; then
+              echo "Workers Custom Domain detach failed with HTTP $delete_http."
+              cat /tmp/my-domain-delete.out || true
+              exit 1
+            fi
+          else
+            echo "Retired Workers Custom Domain $LEGACY_MY_HOST is already detached."
+          fi
+          for attempt in $(seq 1 12); do
+            remaining=$(curl --fail-with-body -sS \
+              -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+              -H 'Content-Type: application/json' \
+              "$endpoint")
+            echo "$remaining" | jq -e '.success == true' >/dev/null
+            if ! echo "$remaining" | jq -e '.result[] | select(.hostname == env.LEGACY_MY_HOST)' >/dev/null; then
+              echo "Workers Custom Domain detached: $LEGACY_MY_HOST"
+              break
+            fi
+            if [[ "$attempt" == '12' ]]; then
+              echo "$LEGACY_MY_HOST is still attached as a Workers Custom Domain."
+              exit 1
+            fi
+            sleep 3
+          done
       - name: Verify canonical My EKODI and Revenue Engine remain live
         shell: bash
         run: |
@@ -87,21 +130,34 @@ jobs:
           set -euo pipefail
           api='https://api.cloudflare.com/client/v4'
           auth=(-H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H 'Content-Type: application/json')
-          zones=$(curl --fail-with-body -sS "${auth[@]}" "$api/zones?name=$CANONICAL_ZONE&status=active&per_page=50")
-          test "$(jq -r '.success' <<<"$zones")" = 'true'
-          test "$(jq '[.result[] | select(.name == env.CANONICAL_ZONE)] | length' <<<"$zones")" = '1'
-          zone_id=$(jq -r '.result[] | select(.name == env.CANONICAL_ZONE) | .id' <<<"$zones")
-          records=$(curl --fail-with-body -sS "${auth[@]}" "$api/zones/$zone_id/dns_records?name=$LEGACY_MY_HOST&per_page=100")
-          test "$(jq -r '.success' <<<"$records")" = 'true'
-          mapfile -t record_ids < <(jq -r '.result[] | select(.name == env.LEGACY_MY_HOST) | .id' <<<"$records")
+          lookup_http=$(curl -sS -o /tmp/my-dns-records.json -w '%{http_code}' "${auth[@]}" \
+            "$api/zones/$CF_ZONE_ID/dns_records?name=$LEGACY_MY_HOST&per_page=100")
+          if [[ "$lookup_http" != '200' ]]; then
+            echo "Exact DNS lookup failed with HTTP $lookup_http."
+            jq '{success,errors,messages}' /tmp/my-dns-records.json 2>/dev/null || cat /tmp/my-dns-records.json
+            exit 1
+          fi
+          jq -e '.success == true' /tmp/my-dns-records.json >/dev/null
+          mapfile -t record_ids < <(jq -r '.result[] | select(.name == env.LEGACY_MY_HOST) | .id' /tmp/my-dns-records.json)
+          if [[ "${#record_ids[@]}" == '0' ]]; then
+            echo "No residual DNS record exists for $LEGACY_MY_HOST."
+          fi
           for record_id in "${record_ids[@]}"; do
-            deleted=$(curl --fail-with-body -sS -X DELETE "${auth[@]}" "$api/zones/$zone_id/dns_records/$record_id")
-            test "$(jq -r '.success' <<<"$deleted")" = 'true'
+            delete_http=$(curl -sS -o /tmp/my-dns-delete.out -w '%{http_code}' -X DELETE "${auth[@]}" \
+              "$api/zones/$CF_ZONE_ID/dns_records/$record_id")
+            if [[ ! "$delete_http" =~ ^20[0-9]$ ]]; then
+              echo "Exact DNS delete failed with HTTP $delete_http."
+              cat /tmp/my-dns-delete.out || true
+              exit 1
+            fi
           done
-          remaining=$(curl --fail-with-body -sS "${auth[@]}" "$api/zones/$zone_id/dns_records?name=$LEGACY_MY_HOST&per_page=100")
-          test "$(jq '[.result[] | select(.name == env.LEGACY_MY_HOST)] | length' <<<"$remaining")" = '0'
-          echo "Exact retired DNS hostname removed: $LEGACY_MY_HOST"
-      - name: Re-verify canonical My after DNS retirement
+          remaining_http=$(curl -sS -o /tmp/my-dns-remaining.json -w '%{http_code}' "${auth[@]}" \
+            "$api/zones/$CF_ZONE_ID/dns_records?name=$LEGACY_MY_HOST&per_page=100")
+          test "$remaining_http" = '200'
+          jq -e '.success == true' /tmp/my-dns-remaining.json >/dev/null
+          test "$(jq '[.result[] | select(.name == env.LEGACY_MY_HOST)] | length' /tmp/my-dns-remaining.json)" = '0'
+          echo "Exact retired DNS hostname absent: $LEGACY_MY_HOST"
+      - name: Re-verify canonical My after retirement
         shell: bash
         run: |
           set -euo pipefail
@@ -117,8 +173,8 @@ jobs:
               echo "Retired hostname no longer serves first-party traffic (HTTP ${code:-000})."
               exit 0
             fi
-            echo "Legacy hostname still active (HTTP $code), waiting for DNS propagation: attempt $attempt/36"
+            echo "Legacy hostname still active (HTTP $code), waiting for retirement propagation: attempt $attempt/36"
             sleep 5
           done
-          echo "$LEGACY_MY_HOST still serves a 2xx/3xx response after exact DNS retirement."
+          echo "$LEGACY_MY_HOST still serves a 2xx/3xx response after retirement."
           exit 1
