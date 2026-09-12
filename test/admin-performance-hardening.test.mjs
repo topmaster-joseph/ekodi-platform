@@ -9,7 +9,7 @@ test('central admin handoff reveals a safe static shell once and validates sessi
   assert.match(handoff, /ekodi_admin_token/);
   assert.match(handoff, /const becameVisible = app\.hidden/);
   assert.match(handoff, /if \(!becameVisible\) return/);
-  assert.match(handoff, /showApp\(safeSession\.get\(EMAIL_KEY\), '인증 세션 확인 중'\)/);
+  assert.match(handoff, /showApp\(safeSession\.get\(EK\), '인증 세션 확인 중'\)/);
   assert.match(handoff, /updateSessionState\(result\.email/);
   assert.match(handoff, /AbortController/);
   assert.match(handoff, /\/api\/session/);
