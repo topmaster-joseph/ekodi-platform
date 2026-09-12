@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { channelServiceBridgeReady, githubServiceClaimsAllowed, listServiceChannels, serviceTemplateAllowed } from '../channel-service-bridge.js';
+import { channelServiceBridgeReady, githubServiceClaimsAllowed, listServiceChannels, serviceModeAllowed, serviceTemplateAllowed } from '../channel-service-bridge.js';
 import { uploadYoutubeVideoBytes } from '../channel-youtube-adapter.js';
 const read = path => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 
@@ -30,6 +30,19 @@ test('Mall OIDC is scoped only to product_short and the canonical Mall tenant', 
   assert.equal(serviceTemplateAllowed(mall,{type:'tenant',key:'ekodi-biz'},'product_short'),false);
   assert.equal(serviceTemplateAllowed({service:'devotion',authMode:'static-token'},{type:'tenant',key:'ekodi-church'},'devotional_daily'),true);
   assert.equal(serviceTemplateAllowed({service:'devotion',authMode:'static-token'},{type:'tenant',key:'ekodi-church'},'product_short'),false);
+});
+
+test('private proof is manual-only, Mall-only and product-short-only', () => {
+  const subject={type:'tenant',key:'ekodimall'};
+  const manual={service:'ekodi-mall',authMode:'github-oidc',claims:{event_name:'workflow_dispatch'}};
+  const scheduled={service:'ekodi-mall',authMode:'github-oidc',claims:{event_name:'schedule'}};
+  const pushed={service:'ekodi-mall',authMode:'github-oidc',claims:{event_name:'push'}};
+  assert.equal(serviceModeAllowed(manual,subject,'product_short','private_proof'),true);
+  assert.equal(serviceModeAllowed(scheduled,subject,'product_short','private_proof'),false);
+  assert.equal(serviceModeAllowed(pushed,subject,'product_short','private_proof'),false);
+  assert.equal(serviceModeAllowed(manual,{type:'tenant',key:'ekodi-biz'},'product_short','private_proof'),false);
+  assert.equal(serviceModeAllowed(manual,subject,'devotional_daily','private_proof'),false);
+  assert.equal(serviceModeAllowed(scheduled,subject,'product_short','scheduled'),true);
 });
 
 test('service channel listing never exposes credential_ref', async () => {
@@ -67,6 +80,26 @@ test('YouTube byte adapter schedules through the central OAuth client without an
   } finally { globalThis.fetch=original; }
 });
 
+test('YouTube byte adapter keeps proof uploads private without a publishAt', async () => {
+  const original=globalThis.fetch;
+  const calls=[];
+  globalThis.fetch=async (url,init={})=>{
+    calls.push({url:String(url),init});
+    if(String(url).includes('oauth2.googleapis.com/token')) return new Response(JSON.stringify({access_token:'access'}),{status:200,headers:{'content-type':'application/json'}});
+    if(String(url).includes('/youtube/v3/channels?')) return new Response(JSON.stringify({items:[{id:'UC1',snippet:{title:'Mall'}}]}),{status:200,headers:{'content-type':'application/json'}});
+    if(String(url).includes('uploadType=resumable')) return new Response('',{status:200,headers:{location:'https://upload.example/private'}});
+    if(String(url)==='https://upload.example/private') return new Response(JSON.stringify({id:'private123',status:{privacyStatus:'private'}}),{status:200,headers:{'content-type':'application/json'}});
+    throw new Error(`unexpected fetch ${url}`);
+  };
+  try {
+    const result=await uploadYoutubeVideoBytes({env:{CHANNEL_GOOGLE_CLIENT_ID:'id',CHANNEL_GOOGLE_CLIENT_SECRET:'secret'},refreshToken:'refresh',bytes:new Uint8Array([1,2]),title:'Proof',description:'Private proof',privacyStatus:'private',expectedChannelId:'UC1'});
+    assert.equal(result.id,'private123');
+    const init=JSON.parse(calls.find(call=>call.url.includes('uploadType=resumable')).init.body);
+    assert.equal(init.status.privacyStatus,'private');
+    assert.equal('publishAt' in init.status,false);
+  } finally { globalThis.fetch=original; }
+});
+
 test('bridge persistence is additive, central-vault only, and Mall channel selection delegates product Shorts', async () => {
   const [migration,bridge,worker,oauth]=await Promise.all([
     read('migrations/0062_channel_service_bridge.sql'),read('channel-service-bridge.js'),read('marketing-publishing-worker.js'),read('channel-oauth-control.js')
@@ -77,6 +110,9 @@ test('bridge persistence is additive, central-vault only, and Mall channel selec
   assert.match(bridge,/GITHUB_AUDIENCE = 'ekodi-channel-service'/);
   assert.match(bridge,/MALL_REPOSITORY = 'topmaster-joseph\/ekodi-mall'/);
   assert.match(bridge,/MALL_REPOSITORY_ID = '1309951804'/);
+  assert.match(bridge,/identity\?\.claims\?\.event_name === 'workflow_dispatch'/);
+  assert.match(bridge,/provider_private_proof_uploaded/);
+  assert.match(bridge,/privateProof \? 'private'/);
   assert.match(bridge,/CHANNEL_TEMPLATE_DELEGATION_REQUIRED/);
   assert.match(bridge,/CHANNEL_WORKSPACE_ID_REQUIRED/);
   assert.match(bridge,/YOUTUBE_CHANNEL_BINDING_MISMATCH/);
