@@ -1,0 +1,194 @@
+name: Deploy Local Commerce
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'local-commerce/**'
+      - 'local-commerce-worker.js'
+      - 'local-commerce-control.js'
+      - 'migrations/0079_local_commerce_voucher.sql'
+      - 'ekodi-service-manifest.js'
+      - 'platform-boundaries.json'
+      - 'test/local-commerce-control.test.mjs'
+      - 'test/local-commerce-platform.test.mjs'
+      - 'wrangler.local-commerce.toml'
+      - 'wrangler.local-commerce.staging.toml'
+      - 'deploy/manifests/local-commerce.worker.json'
+      - '.github/workflows/deploy-local-commerce.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'local-commerce/**'
+      - 'local-commerce-worker.js'
+      - 'local-commerce-control.js'
+      - 'migrations/0079_local_commerce_voucher.sql'
+      - 'ekodi-service-manifest.js'
+      - 'platform-boundaries.json'
+      - 'test/local-commerce-control.test.mjs'
+      - 'test/local-commerce-platform.test.mjs'
+      - 'wrangler.local-commerce.toml'
+      - 'wrangler.local-commerce.staging.toml'
+      - 'deploy/manifests/local-commerce.worker.json'
+      - '.github/workflows/deploy-local-commerce.yml'
+
+permissions:
+  contents: read
+  statuses: write
+
+concurrency:
+  group: ekodi-local-commerce-${{ github.event_name == 'pull_request' && format('staging-pr-{0}', github.event.pull_request.number) || 'production' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  WRANGLER_VERSION: '4.127.1'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate Local Commerce contracts
+        run: |
+          set -euo pipefail
+          node --check local-commerce-worker.js
+          node --check local-commerce-control.js
+          node --check local-commerce/app.js
+          node --check local-commerce/account.js
+          node --test test/local-commerce-control.test.mjs test/local-commerce-platform.test.mjs
+          node scripts/validate-additive-migrations.mjs migrations
+          node scripts/validate-platform-boundaries.mjs
+          node scripts/validate-constitution.mjs
+          node scripts/validate-ai-mission-governance.mjs
+          node -e "JSON.parse(require('fs').readFileSync('deploy/manifests/local-commerce.worker.json','utf8'))"
+          grep -Fq 'pattern = "ekodi.kr/local-commerce*"' wrangler.local-commerce.toml
+          grep -Fq 'paymentAdapter:\x27disabled\x27' local-commerce-worker.js || grep -Fq "paymentAdapter:'disabled'" local-commerce-worker.js
+
+  staging:
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: development
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: 46aad4738793fbaca88574832a2ccc0f
+      STAGING_URL: https://ekodi-local-commerce-staging.ekodi-development.workers.dev
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: EKODI AI Orchestration Gate
+        run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
+      - name: Verify Development Cloudflare boundary
+        run: |
+          set -euo pipefail
+          test "$CLOUDFLARE_ACCOUNT_ID" = '46aad4738793fbaca88574832a2ccc0f'
+          test -n "$CLOUDFLARE_API_TOKEN"
+      - name: Deploy isolated staging
+        run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.local-commerce.staging.toml
+      - name: Confirm staging deployment exists
+        run: npx --yes wrangler@${WRANGLER_VERSION} deployments status --config wrangler.local-commerce.staging.toml --json > /tmp/local-commerce-deployments.json
+      - name: Verify staging contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          verify_base="$STAGING_URL"
+          runtime_pid=''
+          cleanup() { if [[ -n "$runtime_pid" ]]; then kill "$runtime_pid" 2>/dev/null || true; fi; }
+          trap cleanup EXIT
+          code=$(curl -sS -o /tmp/lc-access.body -D /tmp/lc-access.headers -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/local-commerce/health" || true)
+          if [[ "$code" == '302' ]] && grep -iq '^Www-Authenticate: Cloudflare-Access' /tmp/lc-access.headers; then
+            npx wrangler@${WRANGLER_VERSION} dev --config wrangler.local-commerce.staging.toml --local --port 8793 >/tmp/local-commerce-local.log 2>&1 &
+            runtime_pid=$!
+            verify_base='http://127.0.0.1:8793'
+            ready=0
+            for attempt in $(seq 1 30); do
+              if curl -sSf --max-time 5 "$verify_base/local-commerce/health" >/dev/null 2>&1; then ready=1; break; fi
+              if ! kill -0 "$runtime_pid" 2>/dev/null; then cat /tmp/local-commerce-local.log; exit 1; fi
+              sleep 2
+            done
+            test "$ready" = '1'
+          fi
+          root=$(curl -L -sS -o /tmp/local-commerce.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$verify_base/local-commerce")
+          health=$(curl -sS -o /tmp/local-commerce-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$verify_base/local-commerce/health")
+          test "$root" = '200'
+          test "$health" = '200'
+          grep -Fq '지역상권 상품권' /tmp/local-commerce.html
+          grep -Fq '"cashCustody":false' /tmp/local-commerce-health.json
+          grep -Fq '"automaticMoneyTransfer":false' /tmp/local-commerce-health.json
+
+  production:
+    if: github.event_name != 'pull_request' && needs.validate.result == 'success' && needs.staging.result == 'success'
+    needs: [validate, staging]
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: EKODI AI Orchestration Gate
+        run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
+      - name: Wait for Control API Local Commerce readiness
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 24); do
+            code=$(curl -sS -o /tmp/local-commerce-api.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://api.ekodi.kr/api/local-commerce/health' || true)
+            if [[ "$code" == '200' ]] && grep -Fq '"paymentAdapter":"disabled"' /tmp/local-commerce-api.json; then exit 0; fi
+            sleep 5
+          done
+          cat /tmp/local-commerce-api.json || true
+          exit 1
+      - name: Bootstrap or guarded release
+        shell: bash
+        run: |
+          set -euo pipefail
+          if npx --yes wrangler@${WRANGLER_VERSION} deployments status --config wrangler.local-commerce.toml --json > /tmp/deployments.log 2>&1; then
+            node scripts/guarded-worker-release.mjs --manifest deploy/manifests/local-commerce.worker.json
+          elif grep -Eq 'This Worker does not exist|has no deployments|code: 10007' /tmp/deployments.log; then
+            npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.local-commerce.toml
+          else
+            cat /tmp/deployments.log
+            exit 1
+          fi
+      - name: Reconcile production route
+        run: npx --yes wrangler@${WRANGLER_VERSION} triggers deploy --config wrangler.local-commerce.toml
+      - name: Verify canonical production path
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 18); do
+            root=$(curl -L -sS -D /tmp/local-commerce-headers -o /tmp/local-commerce.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/local-commerce' || true)
+            health=$(curl -sS -o /tmp/local-commerce-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/local-commerce/health' || true)
+            api=$(curl -sS -o /tmp/local-commerce-api.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://api.ekodi.kr/api/local-commerce/health' || true)
+            if [[ "$root" == '200' && "$health" == '200' && "$api" == '200' ]] \
+              && grep -Fq '지역상권 상품권' /tmp/local-commerce.html \
+              && grep -Fq '"cashCustody":false' /tmp/local-commerce-health.json \
+              && grep -Fq '"storedValueCash":false' /tmp/local-commerce-api.json \
+              && grep -Fq '"automaticMoneyTransfer":false' /tmp/local-commerce-api.json; then
+              echo 'Local Commerce production verified.'
+              exit 0
+            fi
+            sleep 5
+          done
+          cat /tmp/local-commerce-health.json || true
+          cat /tmp/local-commerce-api.json || true
+          exit 1
+      - name: Publish production verification status
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERIFY_STATE: ${{ job.status == 'success' && 'success' || 'failure' }}
+        run: |
+          curl -fsS -X POST -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \
+            -d "{\"state\":\"${VERIFY_STATE}\",\"context\":\"Local Commerce Production\",\"description\":\"ekodi.kr/local-commerce production verification\",\"target_url\":\"${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}\"}"

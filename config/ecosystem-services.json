@@ -168,6 +168,21 @@
       "status": "beta"
     },
     {
+      "id": "local-commerce",
+      "name": "지역상권 상품권",
+      "nameEn": "Local Commerce",
+      "descriptionKo": "상인회·자율상권조합·기관·학교·축제가 독립적으로 쿠폰·포인트·프로모션 상품권을 운영하는 공통 상권 지갑",
+      "descriptionEn": "Multi-tenant local commerce wallet for promotional vouchers, coupons, points, merchant redemption and reviewed settlement",
+      "url": "https://ekodi.kr/local-commerce",
+      "label": "ekodi.kr/local-commerce",
+      "icon": "business",
+      "category": "business-growth",
+      "order": 68,
+      "homepage": false,
+      "productionVerified": false,
+      "status": "beta"
+    },
+    {
       "id": "marketing",
       "name": "마케팅 AI",
       "nameEn": "Marketing AI",
