@@ -35,25 +35,30 @@ Private prefixes are centralized in `DISCOVERY_PRIVATE_PREFIXES`. Admin, API and
 EKODI separates four crawler purposes rather than treating every AI bot alike:
 
 - **Search index**: `Googlebot`, `bingbot` — allowed on explicitly public routes for SEO.
-- **Answer retrieval**: `OAI-SearchBot`, `Claude-SearchBot`, `PerplexityBot` — allowed on explicitly public routes for AEO/GEO and citation/search retrieval.
-- **Model training**: `GPTBot`, `ClaudeBot`, `Google-Extended` — disallowed by default.
-- **Autonomous/user-agent fetchers**: `ChatGPT-User`, `Claude-User`, `Perplexity-User` — disallowed by default unless EKODI later creates a separately governed agent-access contract.
+- **Answer retrieval/search**: `OAI-SearchBot`, `Claude-SearchBot`, `PerplexityBot`, `Applebot` — allowed on explicitly public routes for AEO/GEO and citation/search retrieval.
+- **Model training / AI crawling**: `GPTBot`, `ClaudeBot`, `Google-Extended`, `Google-CloudVertexBot`, `Bytespider`, `CCBot`, `meta-externalagent`, `FacebookBot`, `Amazonbot` — disallowed by default.
+- **Autonomous/user-agent fetchers**: `ChatGPT-User`, `Claude-User`, `Perplexity-User`, `meta-externalfetcher`, `DuckAssistBot`, `MistralAI-User` — disallowed by default unless EKODI later creates a separately governed agent-access contract.
 
 Search permission never implies training permission or autonomous-agent permission. Changing these classes is a security/governance decision, not a marketing toggle.
 
+`Google-Extended` is deliberately denied as a training/grounding control token while ordinary `Googlebot` remains allowed for Google Search. This preserves normal search indexing while taking the stricter position on Gemini model use; Gemini-specific grounding reach may therefore be narrower than Google Search reach.
+
 ## Edge enforcement
 
-Robots rules alone cannot stop spoofed or non-compliant scrapers. At the Cloudflare edge, the intended policy is:
+Robots rules alone cannot stop spoofed or non-compliant scrapers. EKODI therefore keeps the same intent at the Cloudflare edge:
 
-- Search: **Allow**
-- Training: **Block**
-- Agent: **Block by default**
-- known answer-retrieval crawlers: allow only to public discovery surfaces
-- unknown/unverified high-volume automation: challenge or block according to bot confidence and rate policy
+- Search: **Allow** (`ai_search=disabled`, meaning no Cloudflare search-blocking rule)
+- Training: **Block** (`ai_training=block`)
+- Agent/User: **Block by default** (`ai_user=block`)
+- legacy AI crawler protection: **Block** (`ai_bots_protection=block`)
+- Cloudflare-managed robots and Bot Preference Sync: **Off**, because EKODI generates the canonical robots policy itself
+- unknown/unverified high-volume automation: handled independently by bot/WAF/rate controls
 
-Use verified bot identity or provider-managed crawler classification when available. Do not treat a self-declared User-Agent string as sufficient proof of crawler identity.
+`scripts/enforce-cloudflare-discovery-policy.mjs` resolves the production `ekodi.kr` zone, reads the existing Bot Management configuration, refuses to proceed if verified bots are globally blocked, applies only the purpose-bound discovery controls, verifies the resulting state, and attempts rollback of changed fields on verification failure.
 
-A broad “block every AI bot” switch must not be allowed to suppress approved AI-search/retrieval crawlers. Edge rules and `robots.txt` must be checked together during release verification.
+`.github/workflows/cloudflare-discovery-policy.yml` validates the contract on pull requests and enforces it only from `main` using production Cloudflare credentials after the EKODI orchestration gate. The workflow then rechecks the live `robots.txt`, sitemap and `llms.txt` endpoints so an edge-policy change cannot silently erase discovery.
+
+Use Cloudflare verified/provider-managed bot classification where available. Do not treat a self-declared User-Agent string as sufficient proof of crawler identity.
 
 ## Discovery projection data rules
 
