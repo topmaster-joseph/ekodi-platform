@@ -7,6 +7,7 @@ import { analyzeServiceFleet, evaluateTechnologyCandidate } from './evolution-in
 import { evolutionStoreSummary, listEvolutionRecommendations, persistEvolutionReport } from './evolution-intelligence-store.js';
 import { analyzeCapabilityEcosystem, capabilityEcosystemSnapshot } from './ekodi-self-automation-engine.js';
 import { buildPublicPreviewProjection } from './preview-public-projection.js';
+import { platformMaturityProjection } from './platform-maturity-control.js';
 import { handleLearningControl } from './learning-control.js';
 
 // Provider service registry only. Customer organizations and their sites are managed as
@@ -620,6 +621,11 @@ async function handleControl(request, env) {
 
   if (request.method === 'GET' && path === `${CONTROL_PREFIX}/language-status`) {
     return controlJson(await languageStatusForAdmin(env), 200, auth.response.headers);
+  }
+
+  if (request.method === 'GET' && path === `${CONTROL_PREFIX}/platform-maturity`) {
+    if (auth.session.role !== 'super_admin') return controlJson({ error: '최고관리자 권한이 필요합니다.', code: 'PLATFORM_MATURITY_FORBIDDEN' }, 403, auth.response.headers);
+    return controlJson(platformMaturityProjection(), 200, auth.response.headers);
   }
 
   const publicSiteMatch = path.match(/^\/api\/control\/public-sites\/([a-z0-9-]+)$/);
