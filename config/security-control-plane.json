@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "service": "EKODI Security Control Plane",
+  "domain": "security.ekodi.kr",
+  "visibility": "internal-only",
+  "defaultMode": "disabled",
+  "initialAuthority": "read-only",
+  "principles": [
+    "fail-closed-before-authentication",
+    "least-privilege",
+    "no-direct-database-access",
+    "no-client-side-secrets",
+    "human-gate-for-high-risk-actions",
+    "isolated-runtime",
+    "no-public-indexing",
+    "no-store",
+    "minimal-observability-payload"
+  ],
+  "surfaces": {
+    "overview": {"enabled": true, "authority": "read"},
+    "securityEvents": {"enabled": true, "authority": "read"},
+    "sessionStatus": {"enabled": true, "authority": "read"},
+    "serviceHealth": {"enabled": true, "authority": "read"},
+    "policyStatus": {"enabled": true, "authority": "read"},
+    "credentialValues": {"enabled": false},
+    "directDatabaseQuery": {"enabled": false},
+    "userImpersonation": {"enabled": false},
+    "destructiveActions": {"enabled": false}
+  },
+  "riskTiers": {
+    "low": {"examples": ["aggregate-health", "public-service-status"], "requirements": ["authenticated-admin"]},
+    "medium": {"examples": ["audit-summary", "session-summary"], "requirements": ["authenticated-admin", "role-check"]},
+    "high": {"examples": ["session-revoke", "policy-change"], "requirements": ["step-up-auth", "server-side-policy", "audit-log"]},
+    "critical": {"examples": ["credential-rotation", "tenant-security-override", "mass-session-revoke"], "requirements": ["step-up-auth", "explicit-human-approval", "server-side-policy", "audit-log", "reversible-plan"]}
+  },
+  "activationRequirements": [
+    "server-side admin identity verification",
+    "role and tenant boundary verification",
+    "production security headers",
+    "rate limiting for privileged endpoints",
+    "audit evidence for privileged access",
+    "real-hostname verification on security.ekodi.kr",
+    "workers.dev exposure reviewed or disabled"
+  ]
+}

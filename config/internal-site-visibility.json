@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "policy": "EKODI Internal Site Visibility Baseline",
+  "defaultForInternal": "private",
+  "classes": {
+    "public": {
+      "indexing": "allowed",
+      "sitemap": "allowed",
+      "authentication": "service-defined"
+    },
+    "private": {
+      "indexing": "denied",
+      "sitemap": "excluded",
+      "authentication": "required-server-side",
+      "robotsHeader": "noindex, nofollow, noarchive, nosnippet",
+      "robotsMeta": "noindex,nofollow,noarchive,nosnippet",
+      "unauthenticatedResponse": "403-or-auth-handoff",
+      "preAuthMetadata": "minimal"
+    },
+    "system": {
+      "indexing": "denied",
+      "sitemap": "excluded",
+      "authentication": "api-policy-required",
+      "ui": "none-by-default",
+      "robotsHeader": "noindex, nofollow, noarchive, nosnippet"
+    }
+  },
+  "internalHosts": [
+    "admin.ekodi.kr",
+    "security.ekodi.kr"
+  ],
+  "systemHosts": [
+    "api.ekodi.kr",
+    "finance-api.ekodi.kr",
+    "marketing-api.ekodi.kr",
+    "marketing-publish-api.ekodi.kr"
+  ],
+  "requirements": [
+    "internal and system hosts never appear in public sitemap output",
+    "private HTML carries robots meta in addition to response header",
+    "robots.txt is advisory only and never substitutes for authentication",
+    "internal pages expose minimal title and structure before authentication",
+    "new internal hosts must register in this policy before production release"
+  ]
+}
