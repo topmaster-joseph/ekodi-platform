@@ -43,8 +43,8 @@ jobs:
 
           local_footer='필요한 상품을 가볍게 발견하고 판매처에서 안전하게 확인하세요.'
           local_count=$(grep -Foc "$local_footer" /tmp/mall.html || true)
-          shared_count=$(( (grep -o 'data-ekodi-user-footer="v[0-9][0-9]*"' /tmp/mall.html || true) | wc -l | tr -d ' ' ))
-          footer_count=$(( (grep -oi '<footer\b' /tmp/mall.html || true) | wc -l | tr -d ' ' ))
+          shared_count=$( (grep -o 'data-ekodi-user-footer="v[0-9][0-9]*"' /tmp/mall.html || true) | wc -l | tr -d ' ')
+          footer_count=$( (grep -oi '<footer\b' /tmp/mall.html || true) | wc -l | tr -d ' ')
           chrome_header=$(grep -i '^x-ekodi-user-chrome:' /tmp/mall.headers | tail -1 | tr -d '\r' || true)
           footer_header=$(grep -i '^x-ekodi-user-footer:' /tmp/mall.headers | tail -1 | tr -d '\r' || true)
           route_header=$(grep -i '^x-ekodi-route:' /tmp/mall.headers | tail -1 | tr -d '\r' || true)
