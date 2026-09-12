@@ -23,7 +23,7 @@ test('unauthenticated mall channel setup selects provider before EKODI or provid
   assert.match(source, /if\(service==='mall'&&section==='channels'\)return channelPreAuth\(\)/);
   assert.match(source, /pendingChannelIntent\(\)/);
   assert.match(source, /return startChannelConnect\(pendingProvider\)/);
-  assert.match(source, /'ekodi-biz:mall:youtube':'ekodibiz@gmail\.com'/);
+  assert.match(source, /'ekodimall:mall:youtube':'topmaster.joseph@gmail\.com'/);
   assert.match(source, /const accountHint=channelTargetAccount\(provider\)/);
   assert.match(source, /YouTube 연결 대상 계정/);
   assert.match(source, /Google로 YouTube 재인증/);

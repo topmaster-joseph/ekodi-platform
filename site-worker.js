@@ -3,6 +3,7 @@ import { isWorkspaceAdminPath, workspaceAdminPage, workspaceAdminCss, workspaceA
 import { churchPastorAdminPage, churchPastorAdminScript, isChurchPastorAdminPath } from './church-pastor-admin-page.js';
 import { ekodiBizInvestBusinessPage, isEkodiBizInvestPath } from './ekodibiz-invest-business.js';
 import { ekodiBizInvestAdminPage, isEkodiBizInvestAdminPath } from './ekodibiz-invest-admin-page.js';
+import { decorateDiscoveryResponse } from './discovery-layer.js';
 
 // Static Assets canonicalizes *.html URLs to extensionless paths.
 // Always request canonical asset paths internally so edge redirects never escape the Worker.
@@ -208,7 +209,7 @@ const ADMIN_CSP = [
   "style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style",
   "script-src 'self' https://accounts.google.com/gsi/client",
   "img-src 'self' data:",
-  "connect-src 'self' https://api.ekodi.kr https://finance-api.ekodi.kr https://personal-finance-api.ekodi.kr https://renzehysxirjilvdxacv.supabase.co https://api.github.com https://ekodi-auth-api.topmaster-joseph.workers.dev https://accounts.google.com/gsi/ https://life.ekodi.kr",
+  "connect-src 'self' https://api.ekodi.kr https://finance-api.ekodi.kr https://personal-finance-api.ekodi.kr https://marketing-connect-api.ekodi.kr https://renzehysxirjilvdxacv.supabase.co https://api.github.com https://ekodi-auth-api.topmaster-joseph.workers.dev https://accounts.google.com/gsi/ https://life.ekodi.kr",
   "frame-src https://accounts.google.com/gsi/ https://ekodi.kr",
   "frame-ancestors 'none'",
   "base-uri 'self'",
@@ -374,9 +375,11 @@ async function proxyMallService(request) {
   const route = adminSurface ? 'admin-mall-proxy' : apiSurface ? 'mall-api-proxy' : verificationOpsSurface ? 'mall-verification-ops' : 'public-ekodi-mall';
   const mallCsp = adminEmbed ? MALL_ADMIN_EMBED_CSP : MALL_CSP;
   const response = withHostSecurity(new Response(responseBody, { status: upstreamResponse.status, statusText: upstreamResponse.statusText, headers }), mallCsp, cacheControl, route);
-  if (adminSurface || apiSurface || verificationOpsSurface) response.headers.set('X-Robots-Tag', 'noindex, nofollow, noarchive');
+  if (adminSurface || apiSurface || verificationOpsSurface || adminEmbed) response.headers.set('X-Robots-Tag', 'noindex, nofollow, noarchive');
   if (adminEmbed) response.headers.delete('X-Frame-Options');
-  return injectEkodiShell(response, 'mall', adminSurface ? 'admin' : 'public');
+  const shelled = injectEkodiShell(response, 'mall', adminSurface ? 'admin' : 'public');
+  if (adminSurface || apiSurface || verificationOpsSurface || adminEmbed) return shelled;
+  return decorateDiscoveryResponse(shelled, incoming.pathname);
 }
 
 function retiredAdminResponse() {

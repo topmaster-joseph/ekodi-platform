@@ -101,6 +101,8 @@
     const scopeKey = input('', 'text', '운영공간 slug 또는 매장 ID'); scopeKey.disabled=true;
     const scopeApply = el('button','범위 불러오기','secondary'); scopeApply.type='button';
     scopeBar.append(field('관리 범위',scopeType),field('공간 / 매장 키',scopeKey,'wide'),scopeApply);
+    const tenantPresets=el('div','','social-scope-presets');
+    [['ekodi-biz','에코디비즈'],['ekodimall','에코디몰'],['ekoditrade','에코디무역']].forEach(([key,label])=>{const b=el('button',label,'ghost');b.type='button';b.dataset.tenantPreset=key;tenantPresets.append(b)});
     const connectionActions = el('div','','social-connection-actions');
     const youtubeConnect = el('button','＋ YouTube 계정·채널 추가','primary'); youtubeConnect.type='button'; youtubeConnect.dataset.connectProvider='youtube';
     const metaConnect = el('button','＋ Facebook · Instagram 계정 추가','secondary'); metaConnect.type='button'; metaConnect.dataset.connectProvider='meta';
@@ -109,7 +111,7 @@
     const connectionMetrics = el('div','','social-connection-metrics');
     const connectionStatus = el('p','OAuth 연결상태를 확인하지 않았습니다.','social-admin-status'); connectionStatus.setAttribute('role','status');
     const connectionList = el('div','','social-connection-list');
-    connectionPanel.append(connectionHead,scopeBar,connectionActions,connectionMetrics,connectionStatus,connectionList);
+    connectionPanel.append(connectionHead,scopeBar,tenantPresets,connectionActions,connectionMetrics,connectionStatus,connectionList);
     const summary = el('div','','social-admin-summary');
     const status = el('p','Registry를 불러오지 않았습니다.','social-admin-status'); status.setAttribute('role','status');
     const list = el('div','','social-org-list');
@@ -252,6 +254,7 @@
     refresh.addEventListener('click',()=>Promise.all([load(),loadConnections()]));
     save.addEventListener('click',saveChanges);
     scopeType.addEventListener('change',()=>{ scopeKey.disabled=scopeType.value==='person'; if(scopeKey.disabled) scopeKey.value=''; });
+    tenantPresets.addEventListener('click',async event=>{const button=event.target.closest('[data-tenant-preset]');if(!button)return;scopeType.value='tenant';scopeKey.disabled=false;scopeKey.value=button.dataset.tenantPreset;connectionScope={type:'tenant',key:button.dataset.tenantPreset};await loadConnections();});
     scopeApply.addEventListener('click',async()=>{
       const type=scopeType.value; const key=scopeKey.value.trim();
       if(type!=='person'&&!key){connectionStatus.textContent='운영공간 slug 또는 매장 ID를 입력해 주세요.';connectionStatus.dataset.state='error';return;}

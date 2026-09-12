@@ -54,16 +54,17 @@ INSERT INTO affiliate_promotion_outbound_clicks VALUES('c1',date('now'),20);`);
 
 test('Mall admin dashboard contract is authenticated, canonical and operator-facing', async()=>{
   const [worker,workspace,migration]=await Promise.all([
-    read('marketing-growth-worker.js'),read('workspace-admin-page.js'),read('migrations/0073_ekodibiz_marketing_subject_canonical.sql'),
+    read('marketing-growth-worker.js'),read('workspace-admin-page.js'),read('migrations/0079_channel_tenant_split.sql'),
   ]);
   assert.match(worker,/\/v1\/mall\/dashboard/);
-  assert.match(worker,/subject\.key !== 'ekodi-biz'/);
+  assert.match(worker,/subject\.key !== 'ekodimall'/);
   assert.match(workspace,/NEXT BEST ACTION/);
   assert.match(workspace,/관측 수수료 · 30일/);
   assert.match(workspace,/채널별 예상수익은 인과 수익으로 표시하지 않습니다/);
   assert.match(workspace,/if\(section==='analytics'\)return mallAnalytics\(\)/);
-  assert.match(migration,/subject_key='ekodi-biz'/);
-  assert.match(migration,/WHERE t\.slug='ekodi-biz'/);
+  assert.match(migration,/'tenant','ekodimall','marketing','auto'/);
+  assert.match(migration,/'tenant','ekodi-biz','marketing','standard'/);
+  assert.match(migration,/'tenant','ekoditrade','marketing','standard'/);
 });
 
 test('canonical subject migration preserves connected marketing assets while fixing authorization identity', async()=>{

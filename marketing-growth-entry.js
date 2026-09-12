@@ -1,8 +1,8 @@
 import growthWorker from './marketing-growth-worker.js';
 export { MarketingGrowthPublisher } from './marketing-growth-worker.js';
-import { getMallPromotionStatus, handleMallPromotionRequest, mallPromotionAutomationEnabled, runMallPromotionAutomation } from './mall-promotion-automation.js';
-import { getMallSalesIntelligenceStatus, runMallSalesIntelligence } from './mall-sales-intelligence.js';
-import { ensureWeeklyPromotionBoard } from './mall-official-promotion-board.js';
+import { getMallPromotionStatus, handleMallPromotionRequest, mallPromotionAutomationEnabled } from './mall-promotion-automation.js';
+import { getMallSalesIntelligenceStatus } from './mall-sales-intelligence.js';
+import { getMallAutonomousProfitLoopStatus, runMallAutonomousProfitLoop } from './mall-autonomous-profit-loop.js';
 
 function json(data, status = 200, inheritedHeaders = null) {
   const headers = new Headers(inheritedHeaders || undefined);
@@ -21,9 +21,10 @@ export default {
       const baseResponse = await growthWorker.fetch(request, env, ctx);
       let base = {};
       try { base = await baseResponse.clone().json(); } catch {}
-      const [rawMallPromotionAutomation, mallSalesIntelligence] = await Promise.all([
+      const [rawMallPromotionAutomation, mallSalesIntelligence, mallAutonomousProfitLoop] = await Promise.all([
         getMallPromotionStatus(env),
         getMallSalesIntelligenceStatus(env),
+        getMallAutonomousProfitLoopStatus(env),
       ]);
       const enabled = mallPromotionAutomationEnabled(env);
       const mallPromotionAutomation = {
@@ -32,22 +33,14 @@ export default {
         scheduler: enabled && rawMallPromotionAutomation?.scheduler !== false,
         safetyGate: enabled ? 'explicitly_enabled' : 'social_oauth_connection_and_test_publish_required',
       };
-      return json({...base, mallPromotionAutomation, mallSalesIntelligence}, baseResponse.status, baseResponse.headers);
+      return json({...base, mallPromotionAutomation, mallSalesIntelligence, mallAutonomousProfitLoop}, baseResponse.status, baseResponse.headers);
     }
     return growthWorker.fetch(request, env, ctx);
   },
   async scheduled(_event, env, ctx) {
     ctx.waitUntil((async () => {
-      const intelligence = await runMallSalesIntelligence(env, {reason:'cron'});
-      if (!intelligence.ok && intelligence.status !== 'schema_required') {
-        console.error('EKODI Mall sales intelligence failed', intelligence.error || intelligence.status);
-      }
-      const weeklyBoard = await ensureWeeklyPromotionBoard(env, {reason:'cron',force:false});
-      if (!weeklyBoard.ok && weeklyBoard.status !== 'schema_required') {
-        console.error('EKODI Mall weekly promotion board failed', weeklyBoard.error || weeklyBoard.status);
-      }
-      if (!mallPromotionAutomationEnabled(env)) return;
-      await runMallPromotionAutomation(env, {reason:'cron'});
+      const loop = await runMallAutonomousProfitLoop(env,{reason:'cron'});
+      if (!loop.ok) console.error('EKODI Mall autonomous profit loop degraded', loop.after?.state || 'failed');
     })());
   },
 };

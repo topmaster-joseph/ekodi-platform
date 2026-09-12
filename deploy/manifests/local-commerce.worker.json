@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "worker": {
+    "name": "ekodi-local-commerce",
+    "config": "wrangler.local-commerce.toml",
+    "requests": [
+      {"url":"https://ekodi.kr/local-commerce","statuses":[200],"redirect":"follow","expect":["지역상권 지갑","내 지갑","상인 결제요청 만들기","회계·정산","프로그램 운영규칙"]},
+      {"url":"https://ekodi.kr/local-commerce/health","statuses":[200],"expect":["ekodi-local-commerce","\"canonicalPath\":\"/local-commerce\"","\"cashCustody\":false","\"storedValueCash\":false","\"automaticMoneyTransfer\":false","\"paymentAdapter\":\"disabled\""]}
+    ]
+  }
+}

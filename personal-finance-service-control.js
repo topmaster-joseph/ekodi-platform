@@ -1,4 +1,4 @@
-const ADMIN_ORIGIN='https://admin.ekodi.kr';
+const ADMIN_ORIGINS=new Set(['https://ekodi.kr','https://admin.ekodi.kr']);
 const CENTRAL_ADMIN_SESSION='https://api.ekodi.kr/api/session';
 const CENTRAL_ADMIN_ELEVATION='https://api.ekodi.kr/api/admin-access/elevation';
 const MUTABLE_KEYS=Object.freeze(['serviceEnabled','manualEntryEnabled','fileImportEnabled','planningEnabled']);
@@ -7,7 +7,7 @@ const DEFAULTS=Object.freeze({serviceEnabled:true,manualEntryEnabled:true,fileIm
 
 const clean=(value,max=500)=>String(value??'').trim().slice(0,max);
 const bool=(value,fallback=true)=>value===1||value===true||value==='1'?true:value===0||value===false||value==='0'?false:fallback;
-function cors(request){return request.headers.get('origin')===ADMIN_ORIGIN?{'access-control-allow-origin':ADMIN_ORIGIN,'access-control-allow-headers':'authorization,content-type','access-control-allow-methods':'GET,PUT,OPTIONS',vary:'Origin'}:{}}
+function cors(request){const origin=request.headers.get('origin')||'';return ADMIN_ORIGINS.has(origin)?{'access-control-allow-origin':origin,'access-control-allow-headers':'authorization,content-type','access-control-allow-methods':'GET,PUT,OPTIONS',vary:'Origin'}:{}}
 function json(data,status=200,request){return new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff','referrer-policy':'no-referrer',...cors(request)}})}
 async function readBody(request){try{return await request.json()}catch{return null}}
 async function sha256(value){const hash=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(String(value||'')));return[...new Uint8Array(hash)].map(v=>v.toString(16).padStart(2,'0')).join('')}

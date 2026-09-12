@@ -1,6 +1,6 @@
 {
-  "id": "2026-09-12-ekodibiz-exclusive-commercial-subject-v1.11.0",
-  "constitutionVersion": "1.11.0",
+  "id": "2026-09-12-ekodibiz-exclusive-commercial-subject-v1.12.0",
+  "constitutionVersion": "1.12.0",
   "status": "approved",
   "approvedBy": "topmaster-joseph",
   "approvedAt": "2026-09-12",
@@ -18,5 +18,5 @@
   "generationImpact": "None. Generation 10 remains the active baseline.",
   "scaleImpact": "None. Current scale tier remains unchanged.",
   "authorityImpact": "Narrows commercial execution authority to explicitly authorized EKODIBIZ operator roles; does not grant AI or ordinary users additional sovereign authority.",
-  "rollback": "Revert Constitution v1.11.0 commercialSubjectPolicy, Revenue Engine exclusive-subject enforcement, ordinary-user information-only surface changes and related tests through the guarded release path. Existing external user-owned businesses and non-commercial platform access remain unaffected."
+  "rollback": "Revert Constitution v1.12.0 commercialSubjectPolicy, Revenue Engine exclusive-subject enforcement, ordinary-user information-only surface changes and related tests through the guarded release path. Existing external user-owned businesses and non-commercial platform access remain unaffected."
 }
