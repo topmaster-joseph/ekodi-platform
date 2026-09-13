@@ -1,5 +1,5 @@
 {
-  "version": 63,
+  "version": 64,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
@@ -728,7 +728,7 @@
           "궁금한 것을 편하게 말씀해 주세요.",
           "대화 검색",
           "무엇을 도와드릴까요?",
-          "https://shell.ekodi.kr/shell.js"
+          "https://ekodi.kr/shell/shell.js"
         ],
         "headerExpect": [
           "x-ekodi-route: platform-messenger",
@@ -768,7 +768,7 @@
         "expect": [
           "EKODI Hub",
           "EKODI 서비스 허브",
-          "https://shell.ekodi.kr/shell.js"
+          "https://ekodi.kr/shell/shell.js"
         ],
         "headerExpect": [
           "x-ekodi-route: hub",
@@ -784,7 +784,7 @@
         "expect": [
           "EKODI Hub",
           "EKODI 서비스 허브",
-          "https://shell.ekodi.kr/shell.js"
+          "https://ekodi.kr/shell/shell.js"
         ],
         "headerExpect": [
           "x-ekodi-route: hub",
@@ -888,7 +888,7 @@
         "expect": [
           "EKODI Global Trading",
           "TRADING DIVISION · EKODIBIZ",
-          "https://shell.ekodi.kr/shell.js"
+          "https://ekodi.kr/shell/shell.js"
         ],
         "headerExpect": [
           "x-ekodi-route: trade",
