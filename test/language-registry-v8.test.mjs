@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { EKODI_SERVICE_MANIFEST } from '../ekodi-service-manifest.js';
-import { MANAGED_LANGUAGE_SITES } from '../config/managed-language-sites.js';
+import { LANGUAGE_ADMIN_AUTHORITIES, MANAGED_LANGUAGE_SITES } from '../config/managed-language-sites.js';
 import {
   EKODI_LANGUAGE_REGISTRY,
   languageStatesForService,
@@ -47,6 +47,14 @@ test('status snapshot is read-only reporting for root plus every registered serv
   assert.equal(snapshot.sites.find(site=>site.id==='biz')?.multilingual,true);
   assert.equal(snapshot.sites.find(site=>site.id==='ekodi')?.publishedLocales.length,4);
 });
+
+test('every registered service has a site-scoped language admin authority',()=>{
+  const missing=EKODI_SERVICE_MANIFEST.services.map(service=>service.id).filter(id=>!LANGUAGE_ADMIN_AUTHORITIES[id]);
+  assert.deepEqual(missing,[]);
+  assert.equal(LANGUAGE_ADMIN_AUTHORITIES['local-commerce']?.siteKey,'local-commerce');
+  assert.equal(LANGUAGE_ADMIN_AUTHORITIES.cgma?.tenantSlug,'cheonggye');
+});
+
 test('shell and injector consume the registry instead of per-service language arrays',async()=>{
   const [manifest,injector,worker,runtime]=await Promise.all([
     read('ekodi-service-manifest.js'),read('ekodi-shell-injector.js'),read('ekodi-shell-worker.js'),read('shell/user-language.js')

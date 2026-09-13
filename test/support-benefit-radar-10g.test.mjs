@@ -60,7 +60,7 @@ test('official source readiness never presents pending connectors as live ingest
 });
 
 test('Support health exposes the Generation 10 capability while keeping sovereign execution gates', async () => {
-  const response = await supportWorker.fetch(new Request('https://support.ekodi.kr/health'), {});
+  const response = await supportWorker.fetch(new Request('https://ekodi.kr/support/health'), {});
   assert.equal(response.status, 200);
   const health = await response.json();
   assert.equal(health.capability.id, capabilityId);
@@ -72,7 +72,7 @@ test('Support health exposes the Generation 10 capability while keeping sovereig
 });
 
 test('Need assessment returns capability identity and remains consent-gated', async () => {
-  const request = consent => new Request('https://support.ekodi.kr/api/need-assessment', {
+  const request = consent => new Request('https://ekodi.kr/support/api/need-assessment', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({
