@@ -22,8 +22,7 @@ test('admin root is a command-only workspace while Campus remains a child route'
   assert.match(bootstrap,/addEventListener\('hashchange',H\)/);
   assert.match(bootstrap,/section==='command-home'/);
   assert.match(bootstrap,/p==='\/admin'\|\|p==='\/admin\/home'/);
-  assert.doesNotMatch(bootstrap,/section==='campus'/);
-  assert.match(bootstrap,/ekodiAssistClose/);
+  assert.doesNotMatch(bootstrap,/section==='campus'/);  assert.match(bootstrap,/ekodiAssistClose/);
   assert.match(bootstrap,/ekodi-admin-assist-request/);
   assert.match(bootstrap,/d\.loadStyle\('ai-ops-admin\.css'\)/);
   assert.match(bootstrap,/d\.loadScript\('admin-lazy-features\.js'\)/);
@@ -31,13 +30,15 @@ test('admin root is a command-only workspace while Campus remains a child route'
 
   assert.match(bootstrapCss,/html body\.admin-command-home \.ekodi-assist-bootstrap\{display:none!important\}/);
   assert.match(bootstrapCss,/html body\.admin-command-home\.admin-command-active \.content\{[^}]*visibility:hidden!important/);
-  assert.match(bootstrapCss,/html body\.admin-command-home\.admin-command-active \.ekodi-assist\{[^}]*left:var\(--ekodi-assist-left,260px\)!important/);
-  assert.match(bootstrapCss,/html body\.admin-command-home\.admin-command-active \.ekodi-assist\{[^}]*width:auto!important/);
-  assert.match(bootstrapCss,/html body\.admin-command-home\.admin-command-active \.ekodi-assist-rail\{display:flex!important\}/);
-  assert.match(bootstrapCss,/html body\.admin-command-home\.admin-command-active \.ekodi-assist-composer-wrap\{display:block!important\}/);
-  assert.match(bootstrapCss,/@media\(max-width:760px\)/);
+  assert.doesNotMatch(bootstrapCss,/\.ekodi-assist-panel/);
 
+  assert.match(dockCss,/body\.admin-command-home\.admin-command-active \.ekodi-assist\{[^}]*left:var\(--ekodi-assist-left,260px\)!important/);
+  assert.match(dockCss,/body\.admin-command-home\.admin-command-active \.ekodi-assist\{[^}]*width:auto!important/);
+  assert.match(dockCss,/body\.admin-command-home\.admin-command-active \.ekodi-assist-rail\{display:flex!important\}/);
+  assert.match(dockCss,/body\.admin-command-home\.admin-command-active \.ekodi-assist-composer-wrap\{display:block!important\}/);
+  assert.match(dockCss,/@media\(max-width:760px\)/);
   assert.match(dockCss,/\.admin-command-home \.ekodi-assist-bootstrap\{display:none!important\}/);
+
   assert.match(dock,/id=\"ekodiAssistHistory\"/);
   assert.match(dock,/id=\"ekodiAssistChat\"/);
   assert.match(dock,/api\('\/api\/control\/ai\/assist'/);
