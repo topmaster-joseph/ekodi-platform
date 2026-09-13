@@ -11,29 +11,26 @@ const bridgeHtml = await readFile(`${root}auth-site/google-origin-bridge.html`, 
 const authRouter = await readFile(`${root}auth-site/auth-router.js`, 'utf8');
 const authHtml = await readFile(`${root}auth-site/index.html`, 'utf8');
 
-test('central admin login pre-opens the approved Google origin bridge from the first user gesture', () => {
-  assert.match(adminCore, /open\('https:\/\/auth\.ekodi\.kr\/google-origin-bridge\?wait=1','ekodi_google_origin_bridge','popup'\)/);
-  assert.match(adminCore, /e\.preventDefault\(\)/);
-  assert.match(adminCore, /location\.href=loginLink\.href\+'&bridge=preopened'/);
+test('central admin login navigates to canonical auth without pre-opening a cross-origin bridge', () => {
+  assert.match(adminCore, /loginLink\.href=route\?centralAdminAuthUrl\(route\):AUTH_URL/);
+  assert.match(adminCore, /loginLink\.onclick=null/);
+  assert.doesNotMatch(adminCore, /google-origin-bridge\?wait=1/);
+  assert.doesNotMatch(adminCore, /bridge=preopened/);
 });
 
-test('admin auth accepts only the expected bridge origin and hands the challenge to the pre-opened bridge', () => {
+test('admin auth keeps the explicit Google bridge button as the default direct-entry path', () => {
   assert.match(adminAuth, /const preopenedRequested=directEntry&&params\.get\('bridge'\)==='preopened'/);
-  assert.match(adminAuth, /event\.origin!==GOOGLE_BRIDGE_ORIGIN/);
-  assert.match(adminAuth, /data\.type!=='ekodi-google-origin-bridge-ready'/);
-  assert.match(adminAuth, /type:'ekodi-google-origin-bridge-start'/);
-  assert.match(adminAuth, /nonce:challenge\.nonce/);
+  assert.match(adminAuth, /if\(preopenedRequested\)/);
   assert.match(adminAuth, /renderOriginBridgeButton\(host,config,challenge\)/);
+  assert.match(adminAuth, /clearDirectFallback\('등록된 관리자 Google 계정을 선택해 주세요\./);
 });
 
-test('Google origin bridge keeps strict origin and account-selection safety while auto-prompting with fallback', () => {
+test('Google origin bridge keeps strict origin and account-selection safety', () => {
   assert.match(bridge, /const TARGET_ORIGIN='https:\/\/ekodi\.kr'/);
   assert.match(bridge, /event\.origin!==TARGET_ORIGIN\|\|event\.source!==window\.opener/);
   assert.match(bridge, /clientId===EXPECTED_CLIENT/);
   assert.match(bridge, /auto_select:false/);
   assert.match(bridge, /google\.accounts\.id\.renderButton/);
-  assert.match(bridge, /google\.accounts\.id\.prompt/);
-  assert.match(bridge, /type:'ekodi-google-origin-bridge-ready'/);
 });
 
 test('single-handoff keeps the existing no-store auth asset contract', () => {
