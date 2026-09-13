@@ -1,9 +1,9 @@
-import { EKODI_SERVICE_MANIFEST, serviceForId, serviceForHost as manifestServiceForHost } from './ekodi-service-manifest.js';
+﻿import { EKODI_SERVICE_MANIFEST, serviceForId, serviceForHost as manifestServiceForHost } from './ekodi-service-manifest.js';
 import { publishedLocalesForService } from './config/language-registry.js';
 import { renderEkodiUserFooter } from './config/user-footer.js';
 
-const SHELL_ORIGIN='https://shell.ekodi.kr';
-const I18N_API_ORIGIN='https://api.ekodi.kr';
+const SHELL_ORIGIN='https://ekodi.kr/shell';
+const I18N_API_ORIGIN='https://ekodi.kr';
 const SHELL_SCRIPT=`${SHELL_ORIGIN}/shell.js`;
 const SHELL_WORKSPACE_STYLE=`${SHELL_ORIGIN}/workspace.css`;
 const SHELL_USER_UI_STYLE=`${SHELL_ORIGIN}/user-ui-shell.css?v=${EKODI_SERVICE_MANIFEST.shellVersion}`;
@@ -66,7 +66,7 @@ function surfaceBootStyle(surface){
 function fallbackHeader(serviceId){
   const label=escapeHtml(serviceLabel(cleanServiceId(serviceId)));
   const context=label&&label!=='EKODI'?`<span class="ekodi-user-ui-fallback-header__context">${label}</span>`:'<span class="ekodi-user-ui-fallback-header__context" aria-hidden="true"></span>';
-  return `<header class="ekodi-user-ui-fallback-header" data-ekodi-user-header-root="${USER_UI_VERSION}" data-ekodi-user-header-fallback="${USER_UI_VERSION}" role="banner"><div class="ekodi-user-ui-fallback-header__inner"><a class="ekodi-user-ui-fallback-header__brand" data-ekodi-header-home href="https://ekodi.kr/" aria-label="EKODI 홈">EKODI</a>${context}<nav class="ekodi-user-ui-fallback-header__nav" aria-label="사용자 계정"><a href="https://ekodi.kr/my/">My EKODI</a></nav></div></header>`;
+  return `<header class="ekodi-user-ui-fallback-header" data-ekodi-user-header-root="${USER_UI_VERSION}" data-ekodi-user-header-fallback="${USER_UI_VERSION}" role="banner"><div class="ekodi-user-ui-fallback-header__inner"><a class="ekodi-user-ui-fallback-header__brand" data-ekodi-header-home href="https://ekodi.kr/" aria-label="EKODI ??>EKODI</a>${context}<nav class="ekodi-user-ui-fallback-header__nav" aria-label="?ъ슜??怨꾩젙"><a href="https://ekodi.kr/my/">My EKODI</a></nav></div></header>`;
 }
 
 class ShellHtmlInjector{
@@ -207,3 +207,4 @@ export function shellServiceForRootPath(pathname){
 }
 
 export { SHELL_ORIGIN, SHELL_SCRIPT, SHELL_WORKSPACE_STYLE, SHELL_USER_UI_STYLE, SHELL_CHARACTER_STYLE, USER_UI_VERSION, USER_LAYOUT_VERSION, USER_CHROME_HEADER, userChromeAlreadyInjected, shellCsp };
+
