@@ -1,14 +1,7 @@
-﻿name: Deploy EKODI Church Homepage
+name: Deploy EKODI Church Homepage
 
 on:
   workflow_dispatch:
-  workflow_call:
-    secrets:
-      CLOUDFLARE_API_TOKEN:
-        required: true
-      CLOUDFLARE_ACCOUNT_ID:
-        required: true
-  # 2026-09-11: redeploy after church nine-language selector restoration
   push:
     branches: [main]
     paths:
@@ -76,7 +69,7 @@ jobs:
           grep -Fq 'api/realtime/live?tenant=ekodichurch' church/church-online-status.js
           grep -Fq 'AbortController' church/church-online-status.js
           grep -Fq "dataset.liveStatus='stale'" church/church-online-status.js
-          grep -Fq '?먯퐫?붿꽑援먰쉶' church/index.html
+          grep -Fq '에코디선교회' church/index.html
           grep -Fq 'PRIVATE FIRST' church/index.html
           grep -Fq 'localStorage' church/church-life-hub.js
           grep -Fq '__EKODI_CHURCH_LIFE_HUB_I18N__' church/church-life-hub-i18n.js
@@ -147,7 +140,7 @@ jobs:
             marker=$(curl -L -sS -o /tmp/church-release.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/church-release.json?release=${release}" || true)
             if [[ "$root" == 200 && "$life" == 200 && "$life_i18n" == 200 && "$life_css" == 200 && "$online_status" == 200 && "$live_css" == 200 && "$marker" == 200 ]] \
               && grep -Fq 'data-ekodi-life-hub' /tmp/church.html \
-              && grep -Fq '?먯퐫?붿꽑援먰쉶' /tmp/church.html \
+              && grep -Fq '에코디선교회' /tmp/church.html \
               && grep -Fq 'localStorage' /tmp/life.js \
               && grep -Fq '__EKODI_CHURCH_LIFE_HUB_I18N__' /tmp/life-i18n.js \
               && grep -Fq 'api/realtime/live?tenant=ekodichurch' /tmp/church-online-status.js \
@@ -219,10 +212,10 @@ jobs:
               assert.deepEqual(snapshot.options,['ko-KR','en','zh-CN','ja','my','kac','vi','mn','id']);
               assert.ok(snapshot.life.length>200,`${locale} life hub is unexpectedly empty`);
               if(locale==='ko-KR'){
-                assert.match(snapshot.hero,/遺瑜댁떖?먯꽌 援먯젣濡?);
-                assert.match(snapshot.life,/留먯????쇱긽???섍퀬/);
+                assert.match(snapshot.hero,/부르심에서 교제로/);
+                assert.match(snapshot.life,/말씀이 일상이 되고/);
               }else{
-                const match=snapshot.body.match(/.{0,25}[媛-??.{0,25}/);
+                const match=snapshot.body.match(/.{0,25}[가-힣].{0,25}/);
                 if(match) console.error(`${locale} residual Hangul: ${match[0]}`);
                 assert.equal(Boolean(match),false,`${locale} still contains visible Korean outside language control`);
               }
