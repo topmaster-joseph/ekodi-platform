@@ -69,7 +69,7 @@ jobs:
           grep -Fq 'data-ekodi-church-live-entry' church/index.html
           grep -Fq 'api/realtime/live?tenant=ekodichurch' church/church-online-status.js
           grep -Fq 'AbortController' church/church-online-status.js
-          grep -Fq 'data-stale' church/church-online-status.js
+          grep -Fq "dataset.liveStatus='stale'" church/church-online-status.js
           grep -Fq '에코디선교회' church/index.html
           grep -Fq 'PRIVATE FIRST' church/index.html
           grep -Fq 'localStorage' church/church-life-hub.js
@@ -146,6 +146,7 @@ jobs:
               && grep -Fq '__EKODI_CHURCH_LIFE_HUB_I18N__' /tmp/life-i18n.js \
               && grep -Fq 'api/realtime/live?tenant=ekodichurch' /tmp/church-online-status.js \
               && grep -Fq 'AbortController' /tmp/church-online-status.js \
+              && grep -Fq "dataset.liveStatus='stale'" /tmp/church-online-status.js \
               && grep -Fq 'nav-online[data-live="true"]' /tmp/church-live-entry.css \
               && jq -e --arg sha "$CHURCH_SOURCE_SHA" '.contract == "ekodi.church-release.v1" and .sourceSha == $sha' /tmp/church-release.json >/dev/null; then
               echo 'Church production life hub assets and release SHA verified.'
