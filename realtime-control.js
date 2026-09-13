@@ -16,13 +16,21 @@ function cors(request,env){const origin=originAllowed(request,env);const headers
 function json(request,env,data,status=200){return new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff','referrer-policy':'no-referrer',...cors(request,env)}})}
 async function body(request){try{return await request.json()}catch{return null}}
 async function sha256(value){const bytes=new TextEncoder().encode(String(value));const digest=await crypto.subtle.digest('SHA-256',bytes);return [...new Uint8Array(digest)].map(x=>x.toString(16).padStart(2,'0')).join('')}
-async function currentIdentity(request,env){
+async function centralAdminIdentity(token,env){
+  if(!env.DB||!token||token.length>256)return null;
+  const hash=await sha256(token),now=new Date().toISOString();
+  const admin=await env.DB.prepare(`SELECT admins.email,admins.role,sessions.expires_at FROM sessions JOIN admins ON admins.id=sessions.admin_id WHERE sessions.token_hash=? AND sessions.expires_at>?`).bind(hash,now).first().catch(()=>null);
+  if(!admin||clean(admin.role,40).toLowerCase()!=='super_admin')return null;
+  const email=clean(admin.email,254).toLowerCase();if(!email)return null;
+  return {id:`platform-admin:${await sha256(email)}`,authUserId:`platform-admin:${await sha256(email)}`,email,personId:null,ekodiId:null,loginProvider:'ekodi-admin',canonical:false,authorized:true,token,contexts:[],platformAdminRole:'super_admin'};
+}
+export async function currentIdentity(request,env){
   const token=bearer(request);if(!token)return null;
   const base=clean(env.MY_SUPABASE_URL||env.SUPABASE_URL,500).replace(/\/$/,'');
   const key=clean(env.MY_SUPABASE_PUBLISHABLE_KEY||env.SUPABASE_PUBLISHABLE_KEY,1000);
-  if(!base||!key)return null;
-  const auth=await fetch(`${base}/auth/v1/user`,{headers:{apikey:key,authorization:`Bearer ${token}`}});
-  if(!auth.ok)return null;
+  if(!base||!key)return centralAdminIdentity(token,env);
+  const auth=await fetch(`${base}/auth/v1/user`,{headers:{apikey:key,authorization:`Bearer ${token}`}}).catch(()=>null);
+  if(!auth?.ok)return centralAdminIdentity(token,env);
   const user=await auth.json();
   const email=clean(user?.email,254).toLowerCase();
   if(!user?.id||!email||!user?.email_confirmed_at)return null;
@@ -39,8 +47,9 @@ function tenantMatches(context,tenant){
   const aliases=TENANT_ALIASES[tenant]||new Set([tenant]);
   return aliases.has(context?.tenant)||aliases.has(slug(context?.tenantId));
 }
-function authorizationRole(identity,tenant,env){
+export function authorizationRole(identity,tenant,env){
   if(!identity)return '';
+  if(identity.platformAdminRole==='super_admin')return 'owner';
   if(identity.email&&identity.email===clean(env.ADMIN_EMAIL,254).toLowerCase())return 'owner';
   return identity.contexts?.find(context=>tenantMatches(context,tenant))?.authorizationRole||'';
 }
