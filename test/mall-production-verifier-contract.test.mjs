@@ -36,12 +36,11 @@ test('shared-site Mall release gate uses the same stable ownership contract', ()
   const mallGate = manifest.worker.requests.find(request => request.url === 'https://ekodi.kr/ekodibiz/ekodimall');  assert.ok(mallGate);
   for (const marker of ['data-ekodi-service="mall"','data-ekodi-user-surface="public"']) {
     assert.ok(mallGate.expect?.includes(marker), `missing release marker: ${marker}`);
-    assert.ok(mallGate.rollbackExpect?.includes(marker), `missing rollback marker: ${marker}`);
   }
   assert.equal(mallGate.candidateVerify,false);
   assert.match(mallGate.candidateVerifyReason||'',/run_worker_first bootstrap/);
   assert.ok(mallGate.expect?.includes('/ekodibiz/ekodimall/app.js'));
-  assert.ok(mallGate.rollbackExpect?.includes('/ekodibiz/ekodimall/app.js'));
+  assert.equal(mallGate.rollbackVerify,false);
   assert.ok(!manifestText.includes('/ekodibiz/ekodimall/assets/app.js'));
   assert.ok(!workflow.includes('/ekodibiz/ekodimall/assets/commerce.js'));
   assert.ok(!manifestText.includes('/ekodibiz/ekodimall/assets/marketplace-live.js'));
