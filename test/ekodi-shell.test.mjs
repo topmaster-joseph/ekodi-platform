@@ -74,7 +74,7 @@ test('remaining Worker services use thin shared Shell adapters without moving do
 test('canonical root services win before generic workspace slug classification',async()=>{
   const site=await read('site-shell-worker.js');
   const {shellServiceForRootPath}=await import('../ekodi-shell-injector.js');
-  assert.equal(shellServiceForRootPath('/ekodibiz/mall'),'mall');
+  assert.equal(shellServiceForRootPath('/ekodibiz/ekodimall'),'mall');
   assert.equal(shellServiceForRootPath('/ekodibiz/trade'),'trade');
   const service=site.indexOf('const serviceId=rootUserService(pathname);');
   const workspace=site.indexOf('const workspaceSlug=workspaceSlugForPath(pathname);');

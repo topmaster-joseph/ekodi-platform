@@ -1,0 +1,14 @@
+{
+  "id": "2026-09-13-ekodimall-canonical-path-v1.12.0",
+  "constitutionVersion": "1.12.0",
+  "status": "approved",
+  "approvedBy": "topmaster-joseph",
+  "approvedAt": "2026-09-13",
+  "changeClass": "C1",
+  "taskId": "ekodimall-canonical-path-20260913",
+  "summary": "Make https://ekodi.kr/ekodibiz/ekodimall the canonical public and admin hierarchy for EKODI Mall while preserving the internal tenant key ekodimall.",
+  "approvalBasis": "The platform owner explicitly requested EKODI collaboration and production completion of the EKODI Mall path change.",
+  "migrationPolicy": "Update active links, routing, auth returns, discovery metadata, deployment verification and tenant domain metadata; historical migrations and amendments remain immutable. The former /ekodibiz/mall path receives a path-level 308 transition to the new canonical path.",
+  "authorityImpact": "None. EKODI Mall remains an EKODIBIZ-owned operating tenant with the same tenant and capability boundaries.",
+  "rollbackPlan": "Revert the route/config commit and domain metadata migration through the guarded release lane if production verification fails."
+}

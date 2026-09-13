@@ -27,7 +27,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          curl -fsS --retry 3 --retry-delay 2 --connect-timeout 5 --max-time 20 -D /tmp/mall.headers 'https://ekodi.kr/ekodibiz/mall' -o /tmp/mall.html
+          curl -fsS --retry 3 --retry-delay 2 --connect-timeout 5 --max-time 20 -D /tmp/mall.headers 'https://ekodi.kr/ekodibiz/ekodimall' -o /tmp/mall.html
           for header in \
             'x-ekodi-route: public-ekodi-mall' \
             'x-ekodi-edge: mall-path-gateway' \
@@ -38,9 +38,9 @@ jobs:
           for marker in \
             'data-ekodi-service="mall"' \
             'data-ekodi-user-surface="public"' \
-            'rel="canonical" href="https://ekodi.kr/ekodibiz/mall"' \
-            '/ekodibiz/mall/app.js' \
-            '/ekodibiz/mall/affiliate-client.js'; do
+            'rel="canonical" href="https://ekodi.kr/ekodibiz/ekodimall"' \
+            '/ekodibiz/ekodimall/app.js' \
+            '/ekodibiz/ekodimall/affiliate-client.js'; do
             grep -Fq "$marker" /tmp/mall.html || { echo "Missing Mall structural marker: $marker"; exit 1; }
           done
           if grep -Fq '추천링크 클릭 후 검색하세요' /tmp/mall.html || grep -Fq 'COUPANG AFFILIATE CURATION' /tmp/mall.html || grep -Fq 'cwWXWm' /tmp/mall.html; then
@@ -49,7 +49,7 @@ jobs:
           fi
           echo 'storefront=verified'
 
-          verification_entry_code=$(curl -sS -D /tmp/mall-verification-entry.headers -o /tmp/mall-verification-entry.body -w '%{http_code}' --retry 3 --retry-delay 2 --connect-timeout 5 --max-time 20 'https://ekodi.kr/ekodibiz/mall/verification-ops' || true)
+          verification_entry_code=$(curl -sS -D /tmp/mall-verification-entry.headers -o /tmp/mall-verification-entry.body -w '%{http_code}' --retry 3 --retry-delay 2 --connect-timeout 5 --max-time 20 'https://ekodi.kr/ekodibiz/ekodimall/verification-ops' || true)
           if [[ ! "$verification_entry_code" =~ ^[23] ]] || ! grep -Fiq 'cache-control: no-store' /tmp/mall-verification-entry.headers; then
             echo "Verification Ops canonical entry is not fail-closed for caching: HTTP $verification_entry_code"
             cat /tmp/mall-verification-entry.headers || true
@@ -58,11 +58,11 @@ jobs:
           verification_ready=false
           verification_final_code=000
           for attempt in $(seq 1 12); do
-            verification_final_code=$(curl -sS -D /tmp/mall-verification-final.headers -o /tmp/mall-verification-final.html -w '%{http_code}' --retry 3 --retry-delay 2 --connect-timeout 5 --max-time 20 'https://ekodi.kr/ekodibiz/mall/assets/verification-ops' || true)
+            verification_final_code=$(curl -sS -D /tmp/mall-verification-final.headers -o /tmp/mall-verification-final.html -w '%{http_code}' --retry 3 --retry-delay 2 --connect-timeout 5 --max-time 20 'https://ekodi.kr/ekodibiz/ekodimall/assets/verification-ops' || true)
             if [ "$verification_final_code" = "200" ] \
               && grep -Fiq 'cache-control: no-store' /tmp/mall-verification-final.headers \
               && grep -Fiq 'x-robots-tag: noindex, nofollow, noarchive' /tmp/mall-verification-final.headers \
-              && grep -Fq '/ekodibiz/mall/assets/verification-ops.js' /tmp/mall-verification-final.html \
+              && grep -Fq '/ekodibiz/ekodimall/assets/verification-ops.js' /tmp/mall-verification-final.html \
               && grep -Fq 'COMMERCE OS COCKPIT' /tmp/mall-verification-final.html; then
               verification_ready=true
               break
@@ -75,7 +75,7 @@ jobs:
             cat /tmp/mall-verification-final.headers || true
             exit 1
           fi
-          verification_js_code=$(curl -sS -o /tmp/mall-verification-ops.js -w '%{http_code}' --retry 3 --retry-delay 2 --connect-timeout 5 --max-time 20 'https://ekodi.kr/ekodibiz/mall/assets/verification-ops.js' || true)
+          verification_js_code=$(curl -sS -o /tmp/mall-verification-ops.js -w '%{http_code}' --retry 3 --retry-delay 2 --connect-timeout 5 --max-time 20 'https://ekodi.kr/ekodibiz/ekodimall/assets/verification-ops.js' || true)
           if [ "$verification_js_code" != "200" ] || ! grep -Fq '/api/internal/operations/cockpit' /tmp/mall-verification-ops.js; then
             echo "Commerce OS Cockpit client contract failed: HTTP $verification_js_code"
             exit 1
@@ -163,7 +163,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          curl -fsS --retry 3 --retry-delay 2 --connect-timeout 5 --max-time 20 'https://ekodi.kr/ekodibiz/mall/admin/channels' -o /tmp/mall-channels.html
+          curl -fsS --retry 3 --retry-delay 2 --connect-timeout 5 --max-time 20 'https://ekodi.kr/ekodibiz/ekodimall/admin/channels' -o /tmp/mall-channels.html
           grep -Fq 'workspace-admin.js' /tmp/mall-channels.html
           asset=$(node -e "const s=require('fs').readFileSync('/tmp/mall-channels.html','utf8');const m=s.match(/<script src=\"([^\"]*workspace-admin\.js[^\"]*)\"/);if(!m)process.exit(1);process.stdout.write(m[1]);")
           curl -fsS --retry 3 --retry-delay 2 --connect-timeout 5 --max-time 20 "https://ekodi.kr${asset}" -o /tmp/workspace-admin.js

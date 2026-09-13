@@ -8,7 +8,7 @@ import { readFile } from 'node:fs/promises';
 test('EKODIBIZ admin hub registers common and independent service management scopes',()=>{
   assert.deepEqual(EKODIBIZ_ADMIN_SCOPES.map(item=>item.id),['common','mall','trade','books','lab']);
   assert.equal(ekodiBizAdminScopeForPath('/ekodibiz/admin'),'common');
-  assert.equal(ekodiBizAdminScopeForPath('/ekodibiz/mall/admin/channels'),'mall');
+  assert.equal(ekodiBizAdminScopeForPath('/ekodibiz/ekodimall/admin/channels'),'mall');
   assert.equal(ekodiBizAdminScopeForPath('/ekodibiz/trade/admin/access'),'trade');
   assert.equal(ekodiBizAdminScopeForPath('/ekodi-lab/admin'),'lab');
 });

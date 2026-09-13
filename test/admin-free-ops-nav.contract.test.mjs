@@ -22,7 +22,7 @@ ${path}
 }
 
 test('admin sidebar renders canonical Mall Free Ops inside the content panel', () => {
-  assert.ok(adminJs.includes("const MALL_FREE_OPS_URL = 'https://ekodi.kr/ekodibiz/mall/free-ops?embed=admin'"));
+  assert.ok(adminJs.includes("const MALL_FREE_OPS_URL = 'https://ekodi.kr/ekodibiz/ekodimall/free-ops?embed=admin'"));
   for (const marker of ["dataset.section = 'mall-free-ops'","dataset.adminLink = 'mall-free-ops'","section.dataset.panel = 'mall-free-ops'","frame.dataset.mallFreeOpsFrame = 'true'",'allow-popups-to-escape-sandbox']) assert.ok(adminJs.includes(marker));
   assert.doesNotMatch(adminJs, /\/legacy#/);
   assert.ok(adminJs.includes('nav.append(button)'));
@@ -49,7 +49,7 @@ test('Mall keeps global anti-framing but grants Admin narrow Free Ops exceptions
 test('embedded Free Ops opens central auth and returns to the canonical Mall path', () => {
   assert.match(freeOpsJs, /EMBEDDED=.*embed.*admin/);
   assert.ok(freeOpsJs.includes("searchParams.set('site','mall')"));
-  assert.ok(freeOpsJs.includes("searchParams.set('return_to','https://ekodi.kr/ekodibiz/mall/free-ops?embed=admin')"));
+  assert.ok(freeOpsJs.includes("searchParams.set('return_to','https://ekodi.kr/ekodibiz/ekodimall/free-ops?embed=admin')"));
   assert.doesNotMatch(freeOpsJs, /site=mall-seller/);
   assert.ok(freeOpsJs.includes("window.open(AUTH_URL,'ekodiMallAuth'"));
   assert.ok(freeOpsJs.includes('refreshEmbeddedSession'));
