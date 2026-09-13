@@ -355,14 +355,12 @@
         ],
         "redirect": "manual",
         "expect": [
-          "EKODI Workspace Admin",
-          "workspace-admin.js",
-          "data-ekodi-admin-layout=\"two-level\"",
-          "data-ekodi-admin-nav-mode=\"primary\"",
-          "data-ekodi-admin-subnav"
+          "EKODI Admin",
+          "admin-authenticated-shell.js",
+          "admin-menu-layout.js"
         ],
         "headerExpect": [
-          "x-ekodi-route: workspace-admin",
+          "x-ekodi-route: admin-shell",
           "cache-control: no-store",
           "x-content-type-options: nosniff"
         ],
@@ -372,8 +370,8 @@
         "url": "https://ekodi.kr/admin/ekodimall/channel-settings",
         "statuses": [200],
         "redirect": "manual",
-        "expect": ["EKODI Workspace Admin", "workspace-admin.js", "data-ekodi-admin-subnav"],
-        "headerExpect": ["x-ekodi-route: workspace-admin", "cache-control: no-store"],
+        "expect": ["EKODI Admin", "admin-authenticated-shell.js", "admin-menu-layout.js"],
+        "headerExpect": ["x-ekodi-route: admin-shell", "cache-control: no-store", "x-content-type-options: nosniff"],
         "rollbackVerify": false
       },
       {

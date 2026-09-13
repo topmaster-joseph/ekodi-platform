@@ -42,6 +42,12 @@ test('entry gateway redirects legacy Mall admin to the root admin canonical path
   const canonical = manifest.worker.requests.find(item => item.url === 'https://ekodi.kr/admin/ekodimall/');
   assert.ok(canonical);
   assert.deepEqual(canonical.statuses, [200]);
+  assert.deepEqual(canonical.expect, ['EKODI Admin', 'admin-authenticated-shell.js', 'admin-menu-layout.js']);
+  assert.ok(canonical.headerExpect.includes('x-ekodi-route: admin-shell'));
+  const channelSettings = manifest.worker.requests.find(item => item.url === 'https://ekodi.kr/admin/ekodimall/channel-settings');
+  assert.ok(channelSettings);
+  assert.deepEqual(channelSettings.expect, ['EKODI Admin', 'admin-authenticated-shell.js', 'admin-menu-layout.js']);
+  assert.ok(channelSettings.headerExpect.includes('x-ekodi-route: admin-shell'));
   const probe = manifest.worker.requests.find(item => item.url === 'https://ekodi.kr/mall/admin/');
   assert.ok(probe);
   assert.deepEqual(probe.statuses, [308]);
