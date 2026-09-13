@@ -21,7 +21,8 @@ test('Mail page is path-native and apex router owns the root/admin routes',async
 test('Messenger page and assets are path-native',async()=>{
   const html=await messengerUserPage().text();assert.match(html,/\/messenger\/messenger-ui\.js/);assert.match(html,/\/messenger\/app\.js/);assert.match(html,/https:\/\/ekodi\.kr\/auth\//);noPublicSubdomain(html);
   noPublicSubdomain(await messengerUiScript().text());
-  const app=await fetchPath('/messenger/app.js');assert.equal(app.status,200);noPublicSubdomain(await app.text());
+  const app=await fetchPath('/messenger/app.js');assert.equal(app.status,200);const appText=await app.text();assert.match(appText,/https:\/\/ekodi\.kr\/workspace-api/);noPublicSubdomain(appText);
+  const manifest=JSON.parse(await readFile(new URL('../deploy/manifests/shared-site.worker.json',import.meta.url),'utf8'));const probe=manifest.worker.requests.find(item=>item.url==='https://messenger.ekodi.kr/app.js');assert.ok(probe);assert.ok(probe.expect.includes('https://ekodi.kr/workspace-api'));assert.ok(!probe.expect.includes('https://workspace-api.ekodi.kr'));
 });
 
 test('Invest page and assets are path-native',async()=>{
