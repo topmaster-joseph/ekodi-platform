@@ -782,7 +782,7 @@
         ],
         "redirect": "manual",
         "expect": [
-          "https://workspace-api.ekodi.kr",
+          "https://ekodi.kr/workspace-api",
           "/v1/messenger/threads",
           "/handoff"
         ]
