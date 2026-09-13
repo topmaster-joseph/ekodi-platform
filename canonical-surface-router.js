@@ -5,7 +5,7 @@ const CANONICAL_HOST='ekodi.kr';
 const SURFACE_PREFIXES=Object.freeze({my:'/my',admin:'/admin',auth:'/auth'});
 const SYSTEM_PATHS=Object.freeze(['/api','/mcp','/webhooks','/health']);
 const PUBLIC_EXECUTION_SURFACES=Object.freeze([
-  Object.freeze({id:'shell',prefix:'/shell',binding:'SHELL',virtualHost:'shell.ekodi.kr'}),
+  Object.freeze({id:'shell',prefix:'/shell',binding:'SHELL',basePathAware:true}),
   Object.freeze({id:'ai',prefix:'/ai',binding:'AI',virtualHost:'ai.ekodi.kr'}),
   Object.freeze({id:'author',prefix:'/author',binding:'AUTHOR',virtualHost:'author.ekodi.kr'}),
   Object.freeze({id:'bible',prefix:'/bible',binding:'BIBLE',virtualHost:'bible.ekodi.kr',basePathAware:true}),
@@ -38,6 +38,7 @@ const PUBLIC_EXECUTION_SURFACES=Object.freeze([
   Object.freeze({id:'trade',prefix:'/trade',legacyHost:'trade.ekodi.kr'}),
   Object.freeze({id:'lab',prefix:'/ekodilab',host:'ekodilab.pages.dev',canonicalHost:'lab.ekodi.kr'}),
   Object.freeze({id:'cafe',prefix:'/cafe',host:'ekodi-cafe.pages.dev',canonicalHost:'cafe.ekodi.kr'}),
+
 ]);
 const CANONICAL_HOST_PATHS=Object.freeze({
   'admin.ekodi.kr':'/admin','auth.ekodi.kr':'/auth','api.ekodi.kr':'/api','my.ekodi.kr':'/my',
@@ -250,6 +251,7 @@ export const EKODI_CANONICAL_SURFACES=Object.freeze({
   user:'/my',
   admin:'/admin',
   auth:'/auth',
+  shell:'/shell',
   api:'/api',
   mcp:'/mcp',
   webhooks:'/webhooks',

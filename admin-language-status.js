@@ -75,10 +75,11 @@ function render(data){
   panel.querySelector('[data-language-sites]').innerHTML=sites.map(card).join('');
   panel.querySelector('[data-language-state]').textContent=`중앙 원장 ${data.registryVersion||data.schemaVersion||2}세대 · 번역 상태와 게시 여부를 분리 관리합니다.`;
   panel.querySelectorAll('[data-language-action]').forEach(button=>button.addEventListener('click',()=>changePublication(button)));
+  panel.dataset.languageStatusReady='true';
 }
 async function load(){
-  const panel=ensurePanel();if(!panel)return;const state=panel.querySelector('[data-language-state]');state.textContent='다국어 상태를 확인하는 중입니다.';
-  try{render(await request())}catch(error){state.textContent=error.message||'상태 확인에 실패했습니다.'}
+  const panel=ensurePanel();if(!panel)return;panel.dataset.languageStatusReady='false';const state=panel.querySelector('[data-language-state]');state.textContent='다국어 상태를 확인하는 중입니다.';
+  try{render(await request())}catch(error){panel.dataset.languageStatusReady='false';state.textContent=error.message||'상태 확인에 실패했습니다.'}
 }
 function activate(){
   const panel=ensurePanel();if(!panel)return;

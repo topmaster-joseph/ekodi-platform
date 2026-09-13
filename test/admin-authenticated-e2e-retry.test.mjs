@@ -49,7 +49,7 @@ test('Shared Site release uses the same isolated authenticated Admin verifier', 
 test('isolated Tax E2E verifies authenticated handoff and value-preserving supplier save in production verification', async () => {
   const source = await workerSource();
   const productionWorkflow = await productionWorkflowSource();
-  assert.match(source, /destination\.hostname === 'tax\.ekodi\.kr'/);
+  assert.match(source, /destination\.origin === 'https:\/\/ekodi\.kr'[\s\S]*destination\.pathname === '\/tax'/);
   assert.match(source, /page\.waitForURL/);
   assert.match(source, /async function waitForAdminNavigationIdle\(\)/);
   assert.match(source, /if \(menuId === 'tax'\) await waitForAdminNavigationIdle\(\)/);

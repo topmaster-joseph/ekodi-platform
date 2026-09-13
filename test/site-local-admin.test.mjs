@@ -5,11 +5,11 @@ import { isWorkspaceAdminPath, workspaceAdminScript } from '../workspace-admin-p
 
 test('tenant and service admins use site-local canonical paths', async () => {
   assert.equal(isWorkspaceAdminPath('/ekodibiz/admin/'), true);
-  assert.equal(isWorkspaceAdminPath('/ekodibiz/mall/admin/'), true);
+  assert.equal(isWorkspaceAdminPath('/ekodibiz/ekodimall/admin/'), true);
   assert.equal(isWorkspaceAdminPath('/jadam/admin/'), true);
   assert.equal(isWorkspaceAdminPath('/jadam/marketing/admin/channels'), true);
   assert.equal(isWorkspaceAdminPath('/admin/'), false);
-  assert.equal(isWorkspaceAdminPath('/'+'org'+'/ekodibiz/mall/admin/'), false);
+  assert.equal(isWorkspaceAdminPath('/'+'org'+'/ekodibiz/ekodimall/admin/'), false);
   const siteWorker = await fs.readFile(new URL('../site-worker.js', import.meta.url), 'utf8');
   assert.match(siteWorker, /isLegacyMallPath\(url\.pathname\).*redirectLegacyMallPath/s);
   const js = await workspaceAdminScript().text();
@@ -35,6 +35,8 @@ test('entry gateway redirects legacy Mall admin to the canonical site-local admi
   const probe = manifest.worker.requests.find(item => item.url === 'https://ekodi.kr/mall/admin/');
   assert.ok(probe);
   assert.deepEqual(probe.statuses, [308]);
+  assert.equal(probe.candidateVerify, false);
+  assert.match(probe.candidateVerifyReason || '', /promoted run_worker_first routing table/);
   assert.equal(probe.rollbackVerify, false);
-  assert.ok(probe.headerExpect.includes('location: https://ekodi.kr/ekodibiz/mall/admin/'));
+  assert.ok(probe.headerExpect.includes('location: https://ekodi.kr/ekodibiz/ekodimall/admin/'));
 });

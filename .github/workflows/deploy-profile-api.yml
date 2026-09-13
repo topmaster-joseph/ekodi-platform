@@ -66,7 +66,7 @@ jobs:
         run: |
           set -euo pipefail
           endpoint="https://$PROJECT_REF.supabase.co/functions/v1/profile-api/character"
-          for origin in https://ekodi.kr https://my.ekodi.kr; do
+          for origin in https://ekodi.kr; do
             safe_name=$(printf '%s' "$origin" | tr -cd '[:alnum:]')
             code=$(curl -sS -D "/tmp/profile-character-${safe_name}.headers" -o /dev/null -w '%{http_code}' -X OPTIONS "$endpoint" -H "Origin: $origin" -H 'Access-Control-Request-Method: PATCH' -H 'Access-Control-Request-Headers: authorization,apikey,content-type' || true)
             [[ "$code" =~ ^(200|204)$ ]]

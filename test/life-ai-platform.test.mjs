@@ -66,6 +66,19 @@ test('production release guard only requires markers present in static Life HTML
   for(const marker of root.expect||[])assert.ok(html.includes(marker),`static Life HTML is missing release marker: ${marker}`);
 });
 
+test('Life AI canonical handoffs and apex CORS stay valid',async()=>{
+  const {default:worker}=await import('../life-worker.js');
+  const env={ASSETS:{fetch:async()=>new Response('ok')}};
+  const admin=await worker.fetch(new Request('https://life.ekodi.kr/admin'),env);
+  const my=await worker.fetch(new Request('https://life.ekodi.kr/my'),env);
+  const cors=await worker.fetch(new Request('https://life.ekodi.kr/api/today',{headers:{origin:'https://ekodi.kr'}}),env);
+  assert.equal(admin.status,307);
+  assert.equal(admin.headers.get('location'),'https://ekodi.kr/admin/#life-ai');
+  assert.equal(my.status,307);
+  assert.equal(my.headers.get('location'),'https://ekodi.kr/my/journey/?source=life');
+  assert.equal(cors.headers.get('access-control-allow-origin'),'https://ekodi.kr');
+});
+
 test('Life AI upstream outage falls back to provider-independent core response',async()=>{
   const {default:worker}=await import('../life-worker.js');
   const priorFetch=globalThis.fetch; globalThis.fetch=async()=>{throw new Error('core unavailable')};

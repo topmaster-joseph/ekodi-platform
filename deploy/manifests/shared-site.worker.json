@@ -329,7 +329,7 @@
         ]
       },
       {
-        "url": "https://ekodi.kr/ekodibiz/mall",
+        "url": "https://ekodi.kr/ekodibiz/ekodimall",
         "statuses": [
           200
         ],
@@ -337,26 +337,19 @@
         "expect": [
           "data-ekodi-service=\"mall\"",
           "data-ekodi-user-surface=\"public\"",
-          "/ekodibiz/mall/app.js"
-        ],
-        "rollbackExpect": [
-          "data-ekodi-service=\"mall\"",
-          "data-ekodi-user-surface=\"public\"",
-          "/ekodibiz/mall/app.js"
+          "data-ekodi-global-nav=\"off\""
         ],
         "headerExpect": [
           "x-content-type-options: nosniff",
           "x-ekodi-route: public-ekodi-mall",
           "x-ekodi-edge: mall-path-gateway"
         ],
-        "rollbackHeaderExpect": [
-          "x-content-type-options: nosniff"
-        ],
+        "rollbackVerify": false,
         "candidateVerify": false,
-        "candidateVerifyReason": "run_worker_first bootstrap for /ekodibiz/mall can serve the stable static storefront during 0% version-override smoke; verify the marketplace Worker route immediately after promotion"
+        "candidateVerifyReason": "run_worker_first bootstrap for /ekodibiz/ekodimall can serve the stable static storefront during 0% version-override smoke; verify the marketplace Worker route immediately after promotion"
       },
       {
-        "url": "https://ekodi.kr/ekodibiz/mall/admin/",
+        "url": "https://ekodi.kr/ekodibiz/ekodimall/admin/",
         "statuses": [
           200
         ],
@@ -382,9 +375,11 @@
         ],
         "redirect": "manual",
         "headerExpect": [
-          "location: https://ekodi.kr/ekodibiz/mall/admin/",
+          "location: https://ekodi.kr/ekodibiz/ekodimall/admin/",
           "cache-control: no-store"
         ],
+        "candidateVerify": false,
+        "candidateVerifyReason": "legacy Mall admin redirect depends on the promoted run_worker_first routing table; verify the 308 immediately after promotion",
         "rollbackVerify": false
       },
       {
@@ -713,7 +708,7 @@
           "location.replace(targetHref)",
           "u.origin==='https://ekodi.kr'",
           "u.origin==='https://ai.ekodi.kr'",
-          "u.origin==='https://tax.ekodi.kr'"
+          "u.pathname==='/tax'"
         ],
         "headerExpect": [
           "x-ekodi-route: central-auth-asset",
@@ -911,7 +906,7 @@
         ]
       },
       {
-        "url": "https://tax.ekodi.kr/",
+        "url": "https://ekodi.kr/tax",
         "statuses": [
           200
         ],
@@ -919,11 +914,11 @@
         "expect": [
           "EKODI Tax",
           "FREE-FIRST",
-          "/tax-portal.js"
+          "/tax/tax-portal.js"
         ]
       },
       {
-        "url": "https://tax.ekodi.kr/tax-portal.js",
+        "url": "https://ekodi.kr/tax/tax-portal.js",
         "statuses": [
           200
         ],

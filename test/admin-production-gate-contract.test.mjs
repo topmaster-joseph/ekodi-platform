@@ -13,8 +13,8 @@ test('production verification follows the current Admin Shell contract', () => {
   assert.match(production, /<title>EKODI Admin<\/title>/);
   assert.match(production, /verify_admin 'https:\/\/ekodi\.kr\/admin\/' 'admin-shell'/);
   assert.match(production, /verify_redirect 'https:\/\/ekodi\.kr\/admin' 'https:\/\/ekodi\.kr\/admin\/'/);
-  assert.match(production, /verify_redirect 'https:\/\/admin\.ekodi\.kr\/' 'https:\/\/ekodi\.kr\/admin\/\?source=admin\.ekodi\.kr'/);
-  assert.match(production, /verify_redirect 'https:\/\/admin\.ekodi\.kr\/control-center\.html'/);
+  assert.doesNotMatch(production, /admin\.ekodi\.kr/);
+  for (const url of ['https://ekodi.kr/jadam','https://ekodi.kr/pizzamaru','https://ekodi.kr/yogurt','https://ekodi.kr/ekodibiz/marketing-ai']) assert.ok(production.includes(url), url);
   assert.match(production, /admin-shell\.html/);
   assert.match(production, /admin-authenticated-shell\.js/);
   assert.doesNotMatch(production, /admin-fallback/);

@@ -238,7 +238,7 @@ jobs:
           test -f mall.html
           test -f mall.css
           test -f config/ekodi-service-urls.json
-          grep -Fq 'https://ekodi.kr/ekodibiz/mall' config/ekodi-service-urls.json
+          grep -Fq 'https://ekodi.kr/ekodibiz/ekodimall' config/ekodi-service-urls.json
           if grep -Eq 'https://(ekodi-mall\.pages\.dev|mall\.ekodi\.kr)' mall.html mall.js 2>/dev/null; then
             echo 'Legacy Mall public URL detected in shared-site source.'
             exit 1
@@ -290,7 +290,7 @@ jobs:
             echo 'Marketing public UI must not be embedded in the admin CSP.'
             exit 1
           fi
-          for host in ekodi.kr admin.ekodi.kr auth.ekodi.kr tax.ekodi.kr mail.ekodi.kr; do
+          for host in ekodi.kr admin.ekodi.kr auth.ekodi.kr mail.ekodi.kr; do
             grep -Fq "pattern = \"$host\"" wrangler.site.toml
           done
 
@@ -370,7 +370,7 @@ jobs:
           payload=$(read_domains)
           echo "$payload" | jq -e '.success == true' >/dev/null
           needs_sync=false
-          for host in ekodi.kr admin.ekodi.kr auth.ekodi.kr tax.ekodi.kr mail.ekodi.kr; do
+          for host in ekodi.kr admin.ekodi.kr auth.ekodi.kr mail.ekodi.kr; do
             if ! echo "$payload" | jq -e --arg host "$host" --arg service 'shy-thunder-39a4' '.result[] | select(.hostname == $host and .service == $service)' >/dev/null; then
               echo "Cloudflare Worker domain missing: $host"
               needs_sync=true
@@ -385,7 +385,7 @@ jobs:
             npx --yes wrangler@4.119.0 triggers deploy --config wrangler.site.toml
             payload=$(read_domains)
           fi
-          for host in ekodi.kr admin.ekodi.kr auth.ekodi.kr tax.ekodi.kr mail.ekodi.kr; do
+          for host in ekodi.kr admin.ekodi.kr auth.ekodi.kr mail.ekodi.kr; do
             echo "$payload" | jq -e --arg host "$host" --arg service 'shy-thunder-39a4' '.result[] | select(.hostname == $host and .service == $service)' >/dev/null \
               || { echo "Required Cloudflare Worker domain is not attached: $host"; exit 1; }
             echo "Verified Cloudflare Worker domain: $host"
@@ -440,7 +440,7 @@ jobs:
           const urls=new Set([
             'https://ekodi.kr/',
             'https://ekodi.kr/history',
-            'https://ekodi.kr/ekodibiz/mall',
+            'https://ekodi.kr/ekodibiz/ekodimall',
             'https://ekodi.kr/ekodibiz/marketing-ai',
             'https://ekodi.kr/jadam/marketing',
             'https://ekodi.kr/pizzamaru/marketing',
@@ -452,7 +452,7 @@ jobs:
             'https://admin.ekodi.kr/',
             'https://auth.ekodi.kr/',
             'https://ai.ekodi.kr/',
-            'https://tax.ekodi.kr/',
+            'https://ekodi.kr/tax',
             'https://mail.ekodi.kr/',
             'https://live.ekodi.kr/',
             'https://live.church.ekodi.kr/',

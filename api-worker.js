@@ -18,7 +18,7 @@ const SERVICE_CATALOG = [
   { id: 'api', name: 'EKODI API', domain: 'api.ekodi.kr', url: 'https://api.ekodi.kr/health', group: 'platform', defaultState: 'active', defaultMonitor: false },
   { id: 'biz', name: '에코디비즈', domain: 'biz.ekodi.kr', url: 'https://biz.ekodi.kr', group: 'business', defaultState: 'planned', defaultMonitor: false },
   { id: 'trade', name: 'EKODI Global Trading', domain: 'trade.ekodi.kr', url: 'https://trade.ekodi.kr', group: 'business', defaultState: 'planned', defaultMonitor: false },
-  { id: 'mall', name: '에코디몰', domain: 'ekodi.kr/ekodibiz/mall', url: 'https://ekodi.kr/ekodibiz/mall', group: 'business', defaultState: 'active', defaultMonitor: true },
+  { id: 'mall', name: '에코디몰', domain: 'ekodi.kr/ekodibiz/ekodimall', url: 'https://ekodi.kr/ekodibiz/ekodimall', group: 'business', defaultState: 'active', defaultMonitor: true },
   { id: 'pay', name: '에코디결제', domain: 'pay.ekodi.kr', url: 'https://pay.ekodi.kr', group: 'business', defaultState: 'planned', defaultMonitor: false },
   { id: 'insurance', name: '에코디보험', domain: 'ekodi.kr/insurance', url: 'https://ekodi.kr/insurance', group: 'business', defaultState: 'planned', defaultMonitor: false },
   { id: 'books', name: '에코디북스', domain: 'books.ekodi.kr', url: 'https://books.ekodi.kr', group: 'knowledge', defaultState: 'active', defaultMonitor: true },

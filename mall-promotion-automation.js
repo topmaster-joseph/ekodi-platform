@@ -169,7 +169,7 @@ async function aiContent(env,product,provider) {
     'JSON만 반환하세요: {"title":"80자 이내","caption":"700자 이내"}',
   ].join('\n');
   try {
-    const result=await ai.invoke({taskName:'ekodi-mall-active-sales-promotion',context:{message,page:{section:'marketing',title:'EKODI Mall active sales promotion',pathname:'/ekodibiz/mall'}}});
+    const result=await ai.invoke({taskName:'ekodi-mall-active-sales-promotion',context:{message,page:{section:'marketing',title:'EKODI Mall active sales promotion',pathname:'/ekodibiz/ekodimall'}}});
     const parsed=parseJsonObject(result.text);
     const title=clean(parsed?.title,120); const caption=clean(parsed?.caption,900);
     if(!title||!caption) return fallback;
@@ -294,7 +294,7 @@ export async function handleMallPromotionRequest(request,env){
   if(!row||!['published','publishing','planned'].includes(row.status)) return new Response('Not found',{status:404});
   const today=kstParts().date;
   await env.DB.prepare(`INSERT INTO affiliate_promotion_visits(campaign_key,visit_date,visits,updated_at) VALUES(?,?,1,?) ON CONFLICT(campaign_key,visit_date) DO UPDATE SET visits=affiliate_promotion_visits.visits+1,updated_at=excluded.updated_at`).bind(key,today,nowIso()).run().catch(()=>{});
-  const target=new URL('https://ekodi.kr/ekodibiz/mall');
+  const target=new URL('https://ekodi.kr/ekodibiz/ekodimall');
   target.searchParams.set('utm_source',clean(row.provider,30));
   target.searchParams.set('utm_medium','organic_social');
   target.searchParams.set('utm_campaign',key);
