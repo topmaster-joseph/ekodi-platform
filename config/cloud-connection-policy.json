@@ -1,0 +1,39 @@
+{
+  "version": "1.0.0",
+  "strategy": "cloud_first_provider_independent",
+  "scope": {
+    "includeAllEkodiSurfaces": true,
+    "operaBrowserConnectorRequired": false
+  },
+  "priority": [
+    "official_api",
+    "connected_plugin",
+    "oauth_cloud",
+    "workload_identity",
+    "cloud_browser",
+    "remote_desktop",
+    "opera_browser"
+  ],
+  "defaults": {
+    "operaBrowserConnectorEnabled": false,
+    "automaticFailover": true,
+    "automaticRefreshWhenProviderAllows": true,
+    "credentialStorage": "server_only_encrypted_or_managed_secret_store",
+    "browserSecretsAllowed": false
+  },
+  "authentication": {
+    "neverBypass": [
+      "login",
+      "consent",
+      "mfa",
+      "reauthentication"
+    ],
+    "userActionPolicy": "request_minimum_required_action_only_when_no_authorized_alternative_exists"
+  },
+  "states": [
+    "connected",
+    "refreshable",
+    "needs_user_auth",
+    "unavailable"
+  ]
+}
