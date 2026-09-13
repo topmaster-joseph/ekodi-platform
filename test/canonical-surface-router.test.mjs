@@ -48,6 +48,14 @@ test('Shell canonical path uses its service binding and strips the apex prefix',
   assert.equal(response.headers.get('x-ekodi-canonical-surface'),'shell');assert.equal(response.headers.get('x-ekodi-canonical-path'),'/shell');
 });
 
+test('Support canonical binding keeps the apex prefix without a retired execution host',async()=>{
+  const support=binding(JSON.stringify({ok:true,service:'ekodi-support-opportunity'}),'application/json');
+  const response=await routeCanonicalSurface(new Request('https://ekodi.kr/support/health'),{SUPPORT:support});
+  assert.equal(response.status,200);assert.equal(support.calls[0].hostname,'ekodi.kr');assert.equal(support.calls[0].pathname,'/support/health');
+  assert.equal(response.headers.get('x-ekodi-canonical-surface'),'support');assert.equal(response.headers.get('x-ekodi-canonical-path'),'/support');
+  assert.doesNotMatch(fs.readFileSync(new URL('../canonical-surface-router.js',import.meta.url),'utf8'),/support\.ekodi\.kr/);
+});
+
 test('canonical Shell bindings are environment-specific and dependent releases watch the gateway',async()=>{
   const files=['wrangler.site.toml','wrangler.site-staging.toml','.github/workflows/deploy-education.yml','.github/workflows/deploy-bible.yml','.github/workflows/deploy-life-ai.yml'];
   const [prod,stage,...workflows]=await Promise.all(files.map(file=>fs.promises.readFile(new URL('../'+file,import.meta.url),'utf8')));
