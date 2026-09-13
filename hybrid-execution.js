@@ -1,4 +1,5 @@
 import authWorker from './auth-worker.js';
+import { compareLocalExecutionCandidates, localExecutionPolicySnapshot, localExecutionScore, normalizeLocalResource } from './local-execution-policy.js';
 
 const ADMIN_PREFIX = '/api/control/hybrid-execution';
 const AGENT_NEXT_PATH = '/api/device-agent/commands/next';
@@ -89,11 +90,13 @@ function capabilitiesObject(row) {
 
 function currentLoad(row) {
   const settings = parseJson(row?.settings_json, {});
-  const system = settings?.health?.system || {};
-  const cpu = Number(system.cpuLoadPct);
-  const memory = Number(system.memoryUsedPct);
-  const samples = [cpu, memory].filter(Number.isFinite).map(n => Math.max(0, Math.min(100, n)));
-  return samples.length ? Math.round(Math.max(...samples)) : 0;
+  return normalizeLocalResource(settings?.health?.system || {}).currentLoad;
+}
+
+function automaticLocalExecutionEligible(row) {
+  const settings = parseJson(row?.settings_json, {});
+  const resource = normalizeLocalResource(settings?.health?.system || {});
+  return resource.autoExecutionEligible === true && resource.isPortable === false;
 }
 
 function nodeSupports(node, job) {
@@ -271,13 +274,13 @@ async function requeueExpired(env) {
 
 async function readyNodes(env) {
   const cutoff = new Date(Date.now() - ONLINE_MS).toISOString();
-  const rows = await env.DB.prepare(`SELECT n.*, d.label, d.hostname, d.platform, d.revoked_at, d.last_seen_at
+  const rows = await env.DB.prepare(`SELECT n.*, d.label, d.hostname, d.platform, d.revoked_at, d.last_seen_at, d.settings_json
     FROM hybrid_execution_nodes n
     JOIN device_registry d ON d.id = n.device_id
     WHERE n.auto_execute = 1 AND n.enabled = 1 AND d.revoked_at IS NULL
       AND d.last_seen_at IS NOT NULL AND d.last_seen_at >= ?
     ORDER BY n.current_load ASC, d.last_seen_at DESC, n.device_id ASC`).bind(cutoff).all();
-  return rows.results || [];
+  return (rows.results || []).filter(automaticLocalExecutionEligible);
 }
 
 async function activeCounts(env) {
@@ -313,15 +316,10 @@ async function assignPending(env) {
 
     const alternatives = candidates.filter(node => node.device_id !== job.last_device_id);
     if (alternatives.length) candidates = alternatives;
-    candidates.sort((a, b) => {
-      const aActive = counts.get(a.device_id) || 0;
-      const bActive = counts.get(b.device_id) || 0;
-      const aScore = Number(a.current_load || 0) + (aActive / Math.max(1, Number(a.max_concurrency) || 1)) * 100;
-      const bScore = Number(b.current_load || 0) + (bActive / Math.max(1, Number(b.max_concurrency) || 1)) * 100;
-      if (aScore !== bScore) return aScore - bScore;
-      const heartbeat = String(b.last_seen_at || '').localeCompare(String(a.last_seen_at || ''));
-      return heartbeat || String(a.device_id).localeCompare(String(b.device_id));
-    });
+    candidates.sort((a, b) => compareLocalExecutionCandidates(
+      { id:a.device_id, currentLoad:Number(a.current_load ?? 100), activeJobs:counts.get(a.device_id) || 0, maxConcurrency:Number(a.max_concurrency) || 1, lastSeenAt:a.last_seen_at },
+      { id:b.device_id, currentLoad:Number(b.current_load ?? 100), activeJobs:counts.get(b.device_id) || 0, maxConcurrency:Number(b.max_concurrency) || 1, lastSeenAt:b.last_seen_at },
+    ));
 
     const chosen = candidates[0];
     const expires = new Date(Date.now() + ASSIGNMENT_MS).toISOString();
@@ -333,7 +331,9 @@ async function assignPending(env) {
       counts.set(chosen.device_id, (counts.get(chosen.device_id) || 0) + 1);
       await event(env, job.id, chosen.device_id, 'assigned', {
         priority:Number(job.priority) || 0,
-        currentLoad:Number(chosen.current_load) || 0,
+        currentLoad:Number(chosen.current_load ?? 100),
+        selectionScore:localExecutionScore({ currentLoad:Number(chosen.current_load ?? 100), activeJobs:counts.get(chosen.device_id) || 0, maxConcurrency:Number(chosen.max_concurrency) || 1 }),
+        scheduler:'least_loaded_parallel',
         deviceGroup:chosen.device_group,
       });
     }
@@ -666,5 +666,6 @@ export const HYBRID_EXECUTION_POLICY = Object.freeze({
   globalExecutionGate:true,
   pauseKeepsLeasedJobsRunning:true,
   arbitraryShell:false,
+  scheduler:localExecutionPolicySnapshot(),
   taskTypes:Object.keys(TASK_POLICIES),
 });
