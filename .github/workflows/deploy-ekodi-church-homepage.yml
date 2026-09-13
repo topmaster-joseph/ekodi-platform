@@ -17,6 +17,8 @@ concurrency:
 
 env:
   WRANGLER_VERSION: '4.119.0'
+  CHURCH_CANONICAL_BASE: 'https://ekodi.kr/ekodichurch'
+  COMMUNITY_CANONICAL_URL: 'https://ekodi.kr/community/'
 
 jobs:
   deploy:
@@ -132,13 +134,13 @@ jobs:
           set -euo pipefail
           release="$CHURCH_SOURCE_SHA"
           for attempt in $(seq 1 18); do
-            root=$(curl -L -sS -o /tmp/church.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://church.ekodi.kr/?release=${release}" || true)
-            life=$(curl -L -sS -o /tmp/life.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://church.ekodi.kr/church-life-hub.js?release=${release}" || true)
-            life_i18n=$(curl -L -sS -o /tmp/life-i18n.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://church.ekodi.kr/church-life-hub-i18n.js?release=${release}" || true)
-            life_css=$(curl -L -sS -o /tmp/life.css -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://church.ekodi.kr/church-life-hub.css?release=${release}" || true)
-            online_status=$(curl -L -sS -o /tmp/church-online-status.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://church.ekodi.kr/church-online-status.js?release=${release}" || true)
-            live_css=$(curl -L -sS -o /tmp/church-live-entry.css -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://church.ekodi.kr/church-live-entry.css?release=${release}" || true)
-            marker=$(curl -L -sS -o /tmp/church-release.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://church.ekodi.kr/church-release.json?release=${release}" || true)
+            root=$(curl -L -sS -o /tmp/church.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "${CHURCH_CANONICAL_BASE}/?release=${release}" || true)
+            life=$(curl -L -sS -o /tmp/life.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "${CHURCH_CANONICAL_BASE}/church-life-hub.js?release=${release}" || true)
+            life_i18n=$(curl -L -sS -o /tmp/life-i18n.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "${CHURCH_CANONICAL_BASE}/church-life-hub-i18n.js?release=${release}" || true)
+            life_css=$(curl -L -sS -o /tmp/life.css -w '%{http_code}' --connect-timeout 5 --max-time 15 "${CHURCH_CANONICAL_BASE}/church-life-hub.css?release=${release}" || true)
+            online_status=$(curl -L -sS -o /tmp/church-online-status.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "${CHURCH_CANONICAL_BASE}/church-online-status.js?release=${release}" || true)
+            live_css=$(curl -L -sS -o /tmp/church-live-entry.css -w '%{http_code}' --connect-timeout 5 --max-time 15 "${CHURCH_CANONICAL_BASE}/church-live-entry.css?release=${release}" || true)
+            marker=$(curl -L -sS -o /tmp/church-release.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "${CHURCH_CANONICAL_BASE}/church-release.json?release=${release}" || true)
             if [[ "$root" == 200 && "$life" == 200 && "$life_i18n" == 200 && "$life_css" == 200 && "$online_status" == 200 && "$live_css" == 200 && "$marker" == 200 ]] \
               && grep -Fq 'data-ekodi-life-hub' /tmp/church.html \
               && grep -Fq '에코디선교회' /tmp/church.html \
@@ -191,11 +193,13 @@ jobs:
           const locales=['ko-KR','en','zh-CN','ja','my','kac','vi','mn','id'];
           const extended=new Set(['my','kac','vi','mn','id']);
           const release=process.env.CHURCH_SOURCE_SHA;
+          const canonicalBase=process.env.CHURCH_CANONICAL_BASE;
+          assert.ok(canonicalBase?.startsWith('https://ekodi.kr/'));
           try{
             const page=await browser.newPage();
             await page.setViewport({width:1440,height:1100});
             for(const locale of locales){
-              await page.goto(`https://church.ekodi.kr/?lang=${encodeURIComponent(locale)}&release=${release}`,{waitUntil:'domcontentloaded',timeout:30000});
+              await page.goto(`${canonicalBase}/?lang=${encodeURIComponent(locale)}&release=${release}`,{waitUntil:'domcontentloaded',timeout:30000});
               await page.waitForFunction(expected=>document.documentElement.lang===expected&&window.__EKODI_CHURCH_LIFE_HUB_I18N__===true&&document.querySelector('[data-ekodi-life-hub]')&&document.querySelector('#life-reflection-form'),{timeout:25000},locale);
               if(extended.has(locale)) await page.waitForFunction(expected=>window.EKODIChurchExtendedI18n?.getLocale?.()===expected,{timeout:20000},locale);
               const snapshot=await page.evaluate(()=>{
@@ -231,7 +235,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for target in 'https://church.ekodi.kr/' 'https://ekodi.kr/my/' 'https://community.ekodi.kr' 'https://ekodi.kr/privacy' 'https://ekodi.kr/terms'; do
+          for target in "${CHURCH_CANONICAL_BASE}/" 'https://ekodi.kr/my/' "$COMMUNITY_CANONICAL_URL" 'https://ekodi.kr/privacy' 'https://ekodi.kr/terms'; do
             code=$(curl -L -sS -o /dev/null -w '%{http_code}' --connect-timeout 5 --max-time 20 "$target" || true)
             case "$code" in 2*|3*) echo "link ok: $code $target" ;; *) echo "link failed: $code $target"; exit 1 ;; esac
           done
