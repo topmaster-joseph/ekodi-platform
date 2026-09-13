@@ -166,3 +166,12 @@ test('legacy Admin release probes follow canonical redirects while canonical Adm
   assert.ok(legacy.length>1);
   for(const probe of legacy) assert.equal(probe.redirect,'follow',probe.url);
 });
+
+test('shared-site release probes require the canonical apex Shell',async()=>{
+  const text=await fs.promises.readFile(new URL('../deploy/manifests/shared-site.worker.json',import.meta.url),'utf8');
+  assert.doesNotMatch(text,/https:\/\/shell\.ekodi\.kr\/shell\.js/);
+  const manifest=JSON.parse(text);
+  const apexShell='https://ekodi.kr/shell/shell.js';
+  const probes=manifest.worker.requests.filter(item=>Array.isArray(item.expect)&&item.expect.includes(apexShell));
+  assert.ok(probes.length>=4,'expected Messenger, Hub and Trade release probes to require the apex Shell');
+});

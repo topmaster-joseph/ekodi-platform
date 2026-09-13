@@ -1,5 +1,5 @@
 {
-  "version": 63,
+  "version": 64,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
