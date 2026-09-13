@@ -42,10 +42,20 @@ async function waitForReady() {
   await page.waitForSelector('#app:not([hidden])', { timeout: 15_000 });
   stage('ready-runtime');
   await page.waitForFunction(() => window.EKODIAdminPanels && window.EKODIAdminSidebar, null, { timeout: 15_000 });
-  stage('ready-demand');
-  await page.waitForFunction(() => window.EKODIAdminDemand && document.querySelector('[data-demand-feature="devotional"]'), null, { timeout: 15_000 });
   stage('ready-session');
   await page.waitForFunction(() => document.querySelector('#apiState')?.textContent?.includes('정상'), null, { timeout: 15_000 });
+}
+
+async function prepareTargetDemand() {
+  stage('target-demand');
+  const placeholder = page.locator(`.sidebar nav [data-demand-feature][data-section="${menuId}"], .sidebar nav [data-demand-feature][data-lazy-section="${menuId}"]`).first();
+  if (!await placeholder.count()) return;
+  await clickFast(placeholder);
+  await page.waitForFunction(section => {
+    const nodes = [...document.querySelectorAll('.sidebar nav [data-section], .sidebar nav [data-lazy-section]')];
+    const target = nodes.find(node => node.dataset.section === section || node.dataset.lazySection === section);
+    return Boolean(target && !target.hasAttribute('data-demand-feature') && target.getAttribute('aria-busy') !== 'true' && !target.classList.contains('is-loading'));
+  }, menuId, { timeout: 15_000 });
 }
 
 async function waitForAdminNavigationIdle() {
@@ -453,6 +463,7 @@ try {
   for (const id of menuIds) if (!productionOrder.includes(id)) throw new Error(`Production menu registry missing ${id}`);
 
   const started = Date.now();
+  await prepareTargetDemand();
   await selectWorkArea();
   if (menuId === 'tax') await waitForAdminNavigationIdle();
   const directDefinition = getAdminMenuItem(menuId);
