@@ -10,6 +10,9 @@ on:
       - 'supabase/migrations/20260826124000_life_ai_platform.sql'
       - 'ekodi-service-manifest.js'
       - 'platform-boundaries.json'
+      - 'canonical-surface-router.js'
+      - 'wrangler.site.toml'
+      - 'wrangler.site-staging.toml'
       - 'test/life-ai-platform.test.mjs'
       - 'wrangler.life.toml'
       - 'wrangler.life.staging.toml'
@@ -24,6 +27,9 @@ on:
       - 'supabase/migrations/20260826124000_life_ai_platform.sql'
       - 'ekodi-service-manifest.js'
       - 'platform-boundaries.json'
+      - 'canonical-surface-router.js'
+      - 'wrangler.site.toml'
+      - 'wrangler.site-staging.toml'
       - 'test/life-ai-platform.test.mjs'
       - 'wrangler.life.toml'
       - 'wrangler.life.staging.toml'
@@ -156,7 +162,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for attempt in $(seq 1 30); do
+          for attempt in $(seq 1 120); do
             shell_code=$(curl -sS -o /tmp/life-manifest.json -w '%{http_code}' --max-time 15 'https://ekodi.kr/shell/manifest.json' || true)
             auth_code=$(curl -sS -o /tmp/life-auth.js -w '%{http_code}' --max-time 15 'https://ekodi.kr/auth/client-auth.js' || true)
             if [[ "$shell_code" == '200' && "$auth_code" == '200' ]] \

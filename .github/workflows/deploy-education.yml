@@ -8,6 +8,9 @@ on:
       - 'education-worker.js'
       - 'ekodi-service-manifest.js'
       - 'platform-boundaries.json'
+      - 'canonical-surface-router.js'
+      - 'wrangler.site.toml'
+      - 'wrangler.site-staging.toml'
       - 'my/life-journey.js'
       - 'test/education-platform.test.mjs'
       - 'test/my-life-journey.test.mjs'
@@ -22,6 +25,9 @@ on:
       - 'education-worker.js'
       - 'ekodi-service-manifest.js'
       - 'platform-boundaries.json'
+      - 'canonical-surface-router.js'
+      - 'wrangler.site.toml'
+      - 'wrangler.site-staging.toml'
       - 'my/life-journey.js'
       - 'test/education-platform.test.mjs'
       - 'test/my-life-journey.test.mjs'
@@ -137,7 +143,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for attempt in $(seq 1 24); do
+          for attempt in $(seq 1 120); do
             shell_code=$(curl -sS -o /tmp/edu-manifest.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/shell/manifest.json' || true)
             auth_code=$(curl -sS -o /tmp/edu-client-auth.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/auth/client-auth.js' || true)
             if [[ "$shell_code" == '200' && "$auth_code" == '200' ]] \
