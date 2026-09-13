@@ -1,0 +1,13 @@
+{
+  "id": "2026-09-13-church-lab-subdomain-retirement-v1.12.0",
+  "constitutionVersion": "1.12.0",
+  "status": "approved",
+  "approvedBy": "topmaster-joseph",
+  "approvedAt": "2026-09-13",
+  "changeClass": "C3",
+  "taskId": "domain-retirement-wave1-20260913",
+  "summary": "Retire church.ekodi.kr and lab.ekodi.kr as EKODI-owned public/service domains and move all supported public verification to https://ekodi.kr/ekodichurch and https://ekodi.kr/ekodilab.",
+  "approvalBasis": "The platform owner explicitly required all legacy EKODI subdomains to be removed rather than retained as redirects and instructed EKODI collaboration to continue through completion.",
+  "migrationPolicy": "Remove Worker custom-domain routes and Pages custom-domain bindings for church.ekodi.kr and lab.ekodi.kr, stop workflows from recreating them, move deployment/watch/load/core verification to apex paths, and point external legacy-domain redirects directly to apex paths.",
+  "rollbackPlan": "If apex-path production verification fails, restore the previous route/config commit and guarded Worker/Pages bindings from version control before retrying retirement."
+}
