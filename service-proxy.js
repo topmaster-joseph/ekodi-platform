@@ -1,9 +1,6 @@
 import { injectEkodiShell, shellServiceForHost } from './ekodi-shell-injector.js';
 
-const ORIGINS = Object.freeze({
-  'church.ekodi.kr': 'ekodi-church.pages.dev',
-  'lab.ekodi.kr': 'ekodilab.pages.dev'
-});
+const ORIGINS = Object.freeze({});
 
 const MAIL_CANONICAL = 'https://mail.ekodi.kr';
 const MALL_CANONICAL = 'https://ekodi.kr/ekodibiz/ekodimall';
@@ -92,7 +89,7 @@ export default {
     }
 
     if (incoming.pathname === '/admin' || incoming.pathname === '/admin/') {
-      const target = new URL('https://admin.ekodi.kr/');
+      const target = new URL('https://ekodi.kr/admin/');
       target.searchParams.set('source', host);
       return Response.redirect(target.toString(), 307);
     }
