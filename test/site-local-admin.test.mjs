@@ -35,6 +35,8 @@ test('entry gateway redirects legacy Mall admin to the canonical site-local admi
   const probe = manifest.worker.requests.find(item => item.url === 'https://ekodi.kr/mall/admin/');
   assert.ok(probe);
   assert.deepEqual(probe.statuses, [308]);
+  assert.equal(probe.candidateVerify, false);
+  assert.match(probe.candidateVerifyReason || '', /promoted run_worker_first routing table/);
   assert.equal(probe.rollbackVerify, false);
   assert.ok(probe.headerExpect.includes('location: https://ekodi.kr/ekodibiz/ekodimall/admin/'));
 });
