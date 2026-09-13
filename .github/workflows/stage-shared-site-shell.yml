@@ -39,6 +39,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: read
 
 concurrency:
   group: shared-site-shell-staging-${{ github.event.pull_request.number || github.run_id }}
@@ -133,15 +134,24 @@ jobs:
             echo "$host -> $code"
             [[ "$code" == '200' ]]
             grep -Fq "$needle" /tmp/shared-stage.html
-            grep -Fq 'https://ekodi.kr/shell/shell.js' /tmp/shared-stage.html
             grep -Fiq 'x-ekodi-shell: v2' /tmp/shared-stage.headers
           }
+          verify_canonical_shell() {
+            code=$(curl -sS -D /tmp/shared-shell.headers -o /tmp/shared-shell.js -w '%{http_code}' --connect-timeout 5 --max-time 15 -H "x-ekodi-staging-host: ekodi.kr" "$STAGING_URL/shell/shell.js" || true)
+            echo "/shell/shell.js -> $code"
+            [[ "$code" == '200' ]]
+            grep -Fq 'ekodi-mobile-fixed-header-style' /tmp/shared-shell.js
+            grep -Fq 'ResizeObserver' /tmp/shared-shell.js
+          }
           for attempt in $(seq 1 18); do
-            if verify_shell 'trade.biz.ekodi.kr' 'EKODI GLOBAL TRADING' \
+            if verify_canonical_shell \
+              && verify_shell 'trade.biz.ekodi.kr' 'EKODI GLOBAL TRADING' \
               && verify_shell 'pay.ekodi.kr' 'EKODI Pay' \
               && verify_shell 'pay.biz.ekodi.kr' 'EKODI Pay' \
               && verify_shell 'messenger.ekodi.kr' 'EKODI Messenger' \
               && verify_shell 'invest.ekodi.kr' 'EKODI Investment' \
+              && verify_public_path '/messenger' 'EKODI Messenger' 'x-ekodi-shell: v2' \
+              && verify_public_path '/invest' 'EKODI Invest' 'x-ekodi-shell: v2' \
               && verify_public_path '/cmpmyi' 'THREE STORES · ONE GATE' 'x-ekodi-route: store-gateway' \
               && verify_public_path '/deployment-probe' 'OPERATING SPACE' 'x-ekodi-workspace-gateway: space-service-binding' \
               && verify_public_path '/ekodibiz' 'EKODIBIZ' 'x-ekodi-workspace-gateway: ekodibiz-service-binding' \
@@ -153,7 +163,7 @@ jobs:
               && verify_discovery_path '/robots.txt' 'OAI-SearchBot' \
               && verify_discovery_path '/sitemap.xml' '<urlset' \
               && verify_discovery_path '/llms.txt' 'Canonical site: https://ekodi.kr/'; then
-              echo 'Shared-site core, Discovery Layer, Insurance public path, Space binding, EKODIBIZ and Invest staging verified through the production entry contract.'
+              echo 'Shared-site core, canonical Shell, Messenger/Invest apex paths, Discovery Layer, Insurance, Space binding and EKODIBIZ staging verified through the production entry contract.'
               exit 0
             fi
             sleep 4

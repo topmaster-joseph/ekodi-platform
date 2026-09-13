@@ -153,6 +153,7 @@ test('Bible canonical path uses its service binding without double-prefixing ass
   const bible=binding('<html><head><link href="/bible/styles.css"></head><body>Bible</body></html>','text/html');
   const response=await routeCanonicalSurface(new Request('https://ekodi.kr/bible/reader?provider=KRV1961'),{BIBLE:bible});
   assert.equal(response.status,200);assert.equal(bible.calls[0].pathname,'/reader');assert.equal(bible.calls[0].search,'?provider=KRV1961');
+  assert.equal(bible.calls[0].hostname,'ekodi.kr');
   assert.equal(response.headers.get('x-ekodi-canonical-surface'),'bible');assert.equal(response.headers.get('x-ekodi-canonical-path'),'/bible');
   const html=await response.text();assert.match(html,/href="\/bible\/styles\.css"/);assert.doesNotMatch(html,/\/bible\/bible\//);
 });
@@ -170,6 +171,8 @@ test('legacy Admin release probes follow canonical redirects while canonical Adm
 test('shared-site release verifies Shell integration without requiring script URLs in service HTML',async()=>{
   const text=await fs.promises.readFile(new URL('../deploy/manifests/shared-site.worker.json',import.meta.url),'utf8');
   assert.doesNotMatch(text,/https:\/\/shell\.ekodi\.kr\/shell\.js/);
+  assert.doesNotMatch(text,/https:\/\/shell\.ekodi\.kr\//);
+  assert.match(text,/https:\/\/ekodi\.kr\/shell\/manifest\.json/);
   const manifest=JSON.parse(text);
   const apexShell='https://ekodi.kr/shell/shell.js';
   const direct=manifest.worker.requests.find(item=>item.url===apexShell);
