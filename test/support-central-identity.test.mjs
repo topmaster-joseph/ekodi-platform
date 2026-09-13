@@ -38,6 +38,11 @@ test('Support release dependencies use canonical apex gateways',()=>{
   const identity=read('.github/workflows/support-central-identity-ci.yml');
   assert.ok(deploy.includes('https://ekodi.kr/shell/manifest.json'));
   assert.ok(!deploy.includes('https://shell.ekodi.kr/manifest.json'));
+  const triggerBefore=deploy.indexOf('Reconcile production hostname trigger for candidate verification');
+  const guarded=deploy.indexOf('Bootstrap or guarded release');
+  const triggerAfter=deploy.indexOf('Reconcile production hostname trigger',triggerBefore+1);
+  assert.ok(triggerBefore>=0&&guarded>triggerBefore,'Support canonical route must exist before candidate override smoke');
+  assert.ok(triggerAfter>guarded,'Support route must be reconciled again after guarded promotion');
   assert.ok(identity.includes("Origin: https://ekodi.kr"));
   assert.ok(identity.includes('https://ekodi\\.kr'));
   assert.ok(!identity.includes('https://support\\.ekodi\\.kr'));
