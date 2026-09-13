@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import test from 'node:test';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const validator = path.join(root, 'scripts', 'validate-ekodi-ai-change-orchestration.mjs');
@@ -32,6 +32,44 @@ function run(provenance, { message = 'squashed change', lookup = null } = {}) {
       GITHUB_ACTOR: 'topmaster-joseph',
       EKODI_GITHUB_PR_PROVENANCE: provenancePath,
       ...(lookup ? { EKODI_GITHUB_PR_LOOKUP: lookupPath } : {}),
+    },
+  });
+  fs.rmSync(temp, { recursive: true, force: true });
+  return result;
+}
+
+
+function runRestrictedTokenFallback(pr, { message = `Merge PR #${pr.number}: release provenance` } = {}) {
+  const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'ekodi-ai-public-fallback-'));
+  const eventPath = path.join(temp, 'event.json');
+  const preloadPath = path.join(temp, 'fetch-stub.mjs');
+  fs.writeFileSync(eventPath, JSON.stringify({ head_commit: { message } }));
+  fs.writeFileSync(preloadPath, `
+const pr = JSON.parse(Buffer.from(process.env.EKODI_TEST_PR_B64, 'base64').toString('utf8'));
+globalThis.fetch = async (url, options = {}) => {
+  const authorization = options.headers?.Authorization || options.headers?.authorization;
+  if (authorization) return new Response('forbidden', { status: 403 });
+  if (String(url).includes('/pulls/' + pr.number)) return Response.json(pr);
+  return Response.json([pr]);
+};
+`);
+  const result = spawnSync(process.execPath, [validator, '--release'], {
+    cwd: root,
+    encoding: 'utf8',
+    env: {
+      ...process.env,
+      NODE_OPTIONS: `--import=${pathToFileURL(preloadPath).href}`,
+      GITHUB_EVENT_NAME: 'push',
+      GITHUB_REF_NAME: 'main',
+      GITHUB_EVENT_PATH: eventPath,
+      GITHUB_REPOSITORY: 'topmaster-joseph/ekodi-platform',
+      GITHUB_API_URL: 'https://api.github.test',
+      GITHUB_RUN_ID: 'restricted-token-fallback-test',
+      GITHUB_SHA: sha,
+      GITHUB_ACTOR: 'topmaster-joseph',
+      GITHUB_TOKEN: 'contents-read-only-token',
+      EKODI_GITHUB_PROVENANCE_ATTEMPTS: '1',
+      EKODI_TEST_PR_B64: Buffer.from(JSON.stringify(pr)).toString('base64'),
     },
   });
   fs.rmSync(temp, { recursive: true, force: true });
@@ -100,6 +138,19 @@ test('accepts classic Merge PR title only with authoritative matching provenance
     lookup: { 1374: pr },
   });
   assert.equal(result.status, 0, result.stderr);
+});
+
+test('falls back to public PR metadata when a restricted workflow token gets HTTP 403', () => {
+  const result = runRestrictedTokenFallback(validPr({ number: 1650 }));
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stderr, /without expanding token permissions/);
+  assert.match(result.stdout, /source=protected-main-pr-merge/);
+});
+
+test('public metadata fallback remains fail-closed when PR provenance does not match the pushed SHA', () => {
+  const result = runRestrictedTokenFallback(validPr({ number: 1651, merge_commit_sha: '2222222222222222222222222222222222222222' }));
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /direct push to main is forbidden/);
 });
 
 test('rejects a direct main push with no associated PR', () => {

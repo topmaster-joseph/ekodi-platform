@@ -68,20 +68,32 @@ function parseProvenancePayload(raw, sourceLabel) {
     throw error;
   }
 }
-function githubHeaders() {
+function githubHeaders({ authenticated = true } = {}) {
   const headers = {
     Accept: 'application/vnd.github+json',
     'X-GitHub-Api-Version': '2026-03-10',
     'User-Agent': 'ekodi-ai-orchestration-gate',
   };
   const token = text(process.env.GITHUB_TOKEN || process.env.GH_TOKEN);
-  if (token) headers.Authorization = `Bearer ${token}`;
+  if (authenticated && token) headers.Authorization = `Bearer ${token}`;
   return headers;
 }
 async function fetchGithubJson(endpoint, sourceLabel, { allowNotFound = false } = {}) {
+  const token = text(process.env.GITHUB_TOKEN || process.env.GH_TOKEN);
+  const request = authenticated => fetch(endpoint, {
+    headers: githubHeaders({ authenticated }),
+    signal: AbortSignal.timeout(10000),
+  });
   let response;
   try {
-    response = await fetch(endpoint, { headers: githubHeaders(), signal: AbortSignal.timeout(10000) });
+    response = await request(true);
+    if (response.status === 403 && token) {
+      const publicResponse = await request(false);
+      if (publicResponse.ok) {
+        console.warn(`[EKODI][AI-ORCHESTRATE-001] ${sourceLabel} authenticated lookup returned HTTP 403; verified public PR metadata without expanding token permissions.`);
+      }
+      response = publicResponse;
+    }
   } catch (error) {
     throw new Error(`unable to verify PR merge provenance from ${sourceLabel}: ${error?.message || 'network error'}`);
   }
