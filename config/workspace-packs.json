@@ -1,5 +1,5 @@
 {
-  "version": "1.1.0",
+  "version": "1.2.0",
   "name": "EKODI Workspace Packs",
   "defaultPack": "personal-starter",
   "packs": [
@@ -14,6 +14,7 @@
         "core.navigator",
         "core.project",
         "core.documents",
+        "core.presentation",
         "core.communication",
         "core.analytics",
         "support.benefit-radar"
@@ -43,6 +44,7 @@
       "capabilities": [
         "core.navigator",
         "core.project",
+        "core.presentation",
         "knowledge.research",
         "creator.writing",
         "creator.visual",
@@ -79,6 +81,7 @@
       "capabilities": [
         "core.project",
         "core.automation",
+        "core.presentation",
         "core.analytics",
         "business.marketing",
         "business.crm",
@@ -119,6 +122,7 @@
       "capabilities": [
         "core.project",
         "core.documents",
+        "core.presentation",
         "core.automation",
         "core.communication",
         "core.analytics",
@@ -156,6 +160,7 @@
         "core.navigator",
         "core.project",
         "core.documents",
+        "core.presentation",
         "knowledge.research",
         "learning.coach",
         "creator.writing",
@@ -187,6 +192,7 @@
         "core.navigator",
         "core.project",
         "core.documents",
+        "core.presentation",
         "knowledge.research",
         "learning.coach",
         "work.career",
@@ -219,6 +225,7 @@
       "capabilities": [
         "core.project",
         "core.documents",
+        "core.presentation",
         "core.communication",
         "community.membership",
         "community.events",
@@ -248,6 +255,7 @@
       "capabilities": [
         "core.project",
         "core.documents",
+        "core.presentation",
         "core.analytics",
         "business.sales",
         "business.operations",
@@ -277,6 +285,7 @@
       "description": "보험 가입내역·보장·청구 준비와 필요 시 사람 연결, 사후 점검을 안전하게 이어가는 작업공간.",
       "capabilities": [
         "core.documents",
+        "core.presentation",
         "core.analytics",
         "finance.stewardship",
         "insurance.guide",
@@ -303,6 +312,7 @@
       "capabilities": [
         "core.project",
         "core.analytics",
+        "core.presentation",
         "business.crm",
         "business.operations",
         "insurance.handoff",
@@ -331,6 +341,7 @@
       "capabilities": [
         "core.project",
         "core.analytics",
+        "core.presentation",
         "energy.manage"
       ],
       "signals": [

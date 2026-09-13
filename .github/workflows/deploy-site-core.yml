@@ -123,6 +123,8 @@ on:
       - 'storage-admin.js'
       - 'storage-admin.css'
       - 'admin-menu-registry.js'
+      - 'entitlement-admin.js'
+      - 'entitlement-admin.css'
       - 'admin-menu-layout.js'
       - 'admin-sidebar.js'
       - 'admin-menu-runtime.js'

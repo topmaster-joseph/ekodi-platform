@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="robots" content="noindex,nofollow,noarchive">
+  <meta name="description" content="PPTX, PDF, DOCX, HWP, HWPX, Excel, CSV, 문서와 이미지를 브라우저에서 바로 발표합니다.">
+  <title>바로 발표 | EKODI</title>
+  <link rel="stylesheet" href="./presentation.css?v=20260913-1">
+</head>
+<body>
+<header class="topbar">
+  <a class="back" href="/">← 내 홈</a>
+  <div><strong>바로 발표</strong><span>파일은 기본적으로 이 브라우저에서 처리됩니다.</span></div>
+  <span id="tierBadge" class="tier">FREE</span>
+</header>
+<main>
+  <section id="uploadPanel" class="upload-panel">
+    <div class="intro"><p class="eyebrow">EKODI PRESENTATION ENGINE</p><h1>파일을 놓으면 바로 발표합니다.</h1><p>PPTX · PDF · DOCX · HWP/HWPX · XLSX/CSV · TXT/Markdown/HTML · 이미지</p></div>
+    <label id="dropZone" class="drop-zone" for="fileInput" tabindex="0"><strong>파일 선택 또는 끌어놓기</strong><span id="limitText">권한과 파일 한도를 확인하고 있습니다.</span></label>
+    <input id="fileInput" type="file" hidden multiple accept=".pptx,.pdf,.docx,.hwp,.hwpx,.xlsx,.xls,.csv,.txt,.md,.markdown,.html,.htm,image/*">
+    <div id="formatGrid" class="format-grid" aria-label="지원 형식"></div>
+    <p id="uploadStatus" class="status" role="status">원본은 발표를 위해 서버에 업로드하지 않습니다.</p>
+  </section>
+  <section id="presenter" class="presenter" hidden>
+    <div class="presenter-head">
+      <div><small id="formatLabel">FILE</small><strong id="deckTitle">발표</strong></div>
+      <div class="presenter-actions">
+        <button id="newDeck" type="button">다른 파일</button>
+        <button id="fullscreen" type="button">전체화면</button>
+      </div>
+    </div>
+    <div id="stage" class="stage" aria-live="polite"><div id="stageInner" class="stage-inner"></div></div>
+    <div class="controls">
+      <button id="prev" type="button" aria-label="이전">← 이전</button>
+      <strong id="counter">1 / 1</strong>
+      <button id="next" type="button" aria-label="다음">다음 →</button>
+    </div>
+    <details id="notesPanel" class="notes"><summary>발표자 노트</summary><textarea id="speakerNotes" rows="4" placeholder="이 발표에서 기억할 내용을 적어 두세요. 이 브라우저에만 임시 저장됩니다."></textarea></details>
+  </section>
+  <section class="recent"><div><p class="eyebrow">RECENT</p><h2>최근 발표</h2></div><div id="recentList" class="recent-list"><p>아직 기록이 없습니다.</p></div></section>
+</main>
+<div id="busy" class="busy" hidden><div class="spinner"></div><strong>발표를 준비하고 있습니다.</strong><span id="busyText">파일을 읽는 중입니다.</span></div>
+<script src="../config.js"></script>
+<script type="module" src="./presentation.js?v=20260913-1"></script>
+</body>
+</html>

@@ -22,6 +22,7 @@ export const ADMIN_MENU_REGISTRY = Object.freeze([
   { id: 'workspace', group: 'workspaces', icon: '▧', labels: { ko: '공간·자료', en: 'Workspaces & Files' } },
 
   { id: 'common-services', group: 'services', icon: '▦', labels: { ko: '공통서비스', en: 'Common Services' } },
+  { id: 'entitlements', group: 'services', icon: 'E', labels: { ko: '회원·기능 권한', en: 'Membership & Entitlements' } },
   { id: 'life-ai', group: 'services', icon: 'Q', labels: { ko: '인생AI', en: 'Life AI' } },
   { id: 'personal-finance', group: 'services', icon: '₩', managementArea: 'professional-services', labels: { ko: '개인재무', en: 'Personal Finance' } },
   { id: 'community', group: 'services', icon: '◎', labels: { ko: '커뮤니티', en: 'Community' } },
@@ -68,7 +69,7 @@ const ADMIN_MENU_CATEGORY_ORDER = Object.freeze({
 const ADMIN_MENU_SECTION_CATEGORY = Object.freeze({
   campus:'overview', work:'workflow', communication:'workflow', finance:'finance', tax:'finance',
   clients:'customer', cmpmyi:'customer', organization:'organization', workspace:'organization',
-  'common-services':'common', 'life-ai':'common', community:'content', books:'content', social:'content', devotional:'content',
+  'common-services':'common', entitlements:'common', 'life-ai':'common', community:'content', books:'content', social:'content', devotional:'content',
   'personal-finance':'business', 'marketing-ai':'business', 'ai-membership':'business', 'supply-network':'business', insurance:'business',
   'public-site-controls':'environment', 'language-status':'environment', security:'security', admins:'security',
   'ai-module-spec':'ai', capabilities:'ai', aiops:'ai', 'ai-settings':'ai', openai:'ai', architecture:'platform', maturity:'platform', storage:'platform', devices:'platform', health:'platform', 'api-cost':'platform',

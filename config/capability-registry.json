@@ -89,6 +89,48 @@
       }
     },
     {
+      "id": "core.presentation",
+      "name": "바로 발표",
+      "domain": "core",
+      "ownerAgent": "platform",
+      "actionTier": "assist",
+      "maturity": "service-backed",
+      "description": "PPTX·PDF·DOCX·HWP/HWPX·스프레드시트·텍스트·이미지를 브라우저 우선으로 즉시 발표하고 회원등급·운영공간·사용자별 기능 권한을 적용한다.",
+      "surfaces": [
+        "my",
+        "workspace"
+      ],
+      "tags": [
+        "presentation",
+        "slides",
+        "pptx",
+        "pdf",
+        "hwp"
+      ],
+      "provider": {
+        "id": "my-presentation",
+        "surface": "https://ekodi.kr/my/presentation/",
+        "contract": "ekodi.presentation.v1",
+        "generation": 10,
+        "processing": "browser-local-first",
+        "entitlements": "ekodi.entitlements.v1",
+        "formats": [
+          "pptx",
+          "pdf",
+          "docx",
+          "hwp",
+          "hwpx",
+          "xlsx",
+          "xls",
+          "csv",
+          "txt",
+          "markdown",
+          "html",
+          "image"
+        ]
+      }
+    },
+    {
       "id": "core.automation",
       "name": "워크플로 자동화",
       "domain": "core",
