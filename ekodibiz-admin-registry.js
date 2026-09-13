@@ -15,6 +15,11 @@ const EKODIBIZ_ADMIN_SCOPE_DEFINITIONS = [
     adminHref: '/ekodibiz/trade/admin', publicHref: '/ekodibiz/trade', kind: 'module',
   },
   {
+    id: 'invest', label: '에코디투자', shortLabel: '투자',
+    description: '투자 프로젝트·IR·Evidence·투자 연결·프로그램을 관리합니다.',
+    adminHref: '/ekodibiz/invest/admin', publicHref: '/ekodibiz/invest', kind: 'module',
+  },
+  {
     id: 'books', label: '에코디서점', shortLabel: '서점',
     description: '출판물·상담·출판대행·가격·기능 노출을 관리합니다.',
     adminHref: '/admin/services/books?source=ekodibiz', publicHref: '/books', kind: 'service',
@@ -39,6 +44,7 @@ export function ekodiBizAdminScopeForPath(pathname = '') {
   if (/^\/admin\/ekodimall(?:\/|$)/i.test(path)) return 'mall';
   if (/^\/ekodibiz\/(?:ekodimall|mall)\/admin(?:\/|$)/i.test(path)) return 'mall';
   if (/^\/ekodibiz\/trade\/admin(?:\/|$)/i.test(path)) return 'trade';
+  if (/^\/ekodibiz\/invest\/admin(?:\/|$)/i.test(path)) return 'invest';
   if (/^\/admin\/services\/books(?:\/|$)/i.test(path)) return 'books';
   if (/^\/(?:ekodi-lab|ekodilab)\/admin(?:\/|$)/i.test(path)) return 'lab';
   if (/^\/ekodibiz\/admin(?:\/|$)/i.test(path)) return 'common';

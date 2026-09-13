@@ -35,12 +35,13 @@ test('existing first stores are compatibility profiles on one Store Admin Engine
     assert.equal(response.headers.get('x-ekodi-route'),`${store.slug}-store-admin`);
     assert.equal(response.headers.get('x-ekodi-store-scope'),store.id);
     assert.equal(response.headers.get('cache-control'),'no-store');
-    assert.match(html,new RegExp(store.brand));assert.match(html,/\/store-admin\.js\?v=20260910-delivery-v1/);assert.match(html,/data-ekodi-admin-sidebar/);assert.match(html,/data-ekodi-authority-scope="tenant"/);assert.match(html,/data-ekodi-admin-layout="two-level"/);assert.match(html,/id="sectionNav"[^>]*data-ekodi-admin-subnav/);assert.match(html,/data-ekodi-admin-nav-mode="primary"/);
+    assert.match(html,new RegExp(store.brand));assert.match(html,/\/store-admin\.js\?v=20260914-subsite-admin-v1/);assert.match(html,/data-ekodi-admin-sidebar/);assert.match(html,/data-ekodi-authority-scope="tenant"/);assert.match(html,/data-ekodi-admin-layout="two-level"/);assert.match(html,/id="sectionNav"[^>]*data-ekodi-admin-subnav/);assert.match(html,/data-ekodi-admin-nav-mode="primary"/);
   }
   assert.match(router,/injectEkodiShell\(storeAdminPage\(storeRoute\),'business','admin'\)/);
   assert.match(await storeAdminCss().text(),/word-break:keep-all/);
   const script=await storeAdminScript().text();
   assert.match(script,/business_os_store_admin_snapshot/);assert.match(script,/store_operating_space_snapshot/);
+  assert.match(script,/운영 데이터 비공개/);assert.match(script,/관리 영역/);
   assert.match(script,/noRoleSpecificAdminPages/);assert.match(script,/tenant\.marketing\.manage/);
   assert.doesNotMatch(script,/\['store_owner','tenant_admin','platform_admin'\]/);
   assert.match(script,/state\.menu\?\.menu/);assert.match(script,/const GROUPS=\[/);assert.match(script,/function renderSecondaryNav/);assert.doesNotMatch(script,/state\.menu\?\.items/);
