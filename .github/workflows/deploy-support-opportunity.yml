@@ -211,7 +211,7 @@ jobs:
         run: |
           set -euo pipefail
           for attempt in $(seq 1 24); do
-            code=$(curl -sS -o /tmp/manifest.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://shell.ekodi.kr/manifest.json' || true)
+            code=$(curl -sS -o /tmp/manifest.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/shell/manifest.json' || true)
             if [[ "$code" == '200' ]] && grep -Fq '"id":"support"' /tmp/manifest.json; then break; fi
             if [[ "$attempt" == '24' ]]; then exit 1; fi
             sleep 5
