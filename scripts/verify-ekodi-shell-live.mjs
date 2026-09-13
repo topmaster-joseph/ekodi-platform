@@ -1,4 +1,4 @@
-const base=String(process.env.EKODI_SHELL_VERIFY_BASE||'https://shell.ekodi.kr').replace(/\/$/,'');
+const base=String(process.env.EKODI_SHELL_VERIFY_BASE||'https://ekodi.kr/shell').replace(/\/$/,'');
 const release=String(process.env.GITHUB_SHA||Date.now()).slice(0,40);
 const attempts=Math.max(1,Number(process.env.EKODI_SHELL_VERIFY_ATTEMPTS||18));
 const delayMs=Math.max(0,Number(process.env.EKODI_SHELL_VERIFY_DELAY_MS||5000));

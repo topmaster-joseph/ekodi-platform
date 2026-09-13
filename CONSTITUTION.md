@@ -1,4 +1,4 @@
-# EKODI Platform Constitution v1.15.0
+# EKODI Platform Constitution v1.16.0
 
 Effective: 2026-09-13
 

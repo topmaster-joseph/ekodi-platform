@@ -5,7 +5,7 @@ const SECURITY_HEADERS = {
   'x-content-type-options': 'nosniff',
   'referrer-policy': 'strict-origin-when-cross-origin',
   'permissions-policy': 'camera=(), microphone=(), geolocation=()',
-  'content-security-policy': "default-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline'; script-src 'self' https://shell.ekodi.kr; connect-src 'self' https://shell.ekodi.kr; frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
+  'content-security-policy': "default-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline'; script-src 'self' https://ekodi.kr; connect-src 'self' https://ekodi.kr; frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
 };
 
 const PUBLIC_CACHE = 'public, max-age=120, stale-while-revalidate=600';

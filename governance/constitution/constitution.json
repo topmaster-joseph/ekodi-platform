@@ -1,5 +1,5 @@
 {
-  "version": "1.15.0",
+  "version": "1.16.0",
   "effectiveDate": "2026-09-13",
   "status": "active",
   "title": "EKODI Platform Constitution",
@@ -126,7 +126,6 @@
     "https://user.ekodi.kr/{slug}": "https://ekodi.kr/{slug}"
   },
   "legacyDomainAllowlist": [
-    "shell.ekodi.kr",
     "management.ekodi.kr",
     "mall.ekodi.kr",
     "mall.biz.ekodi.kr",
@@ -285,7 +284,6 @@
     "rule": "C2/C3 changes are proposed first and applied only after explicit owner confirmation."
   },
   "legacyDomainTargets": {
-    "shell.ekodi.kr": "https://ekodi.kr/my",
     "management.ekodi.kr": "https://ekodi.kr/my/management",
     "mall.ekodi.kr": "https://ekodi.kr/ekodibiz/ekodimall",
     "mall.biz.ekodi.kr": "https://ekodi.kr/ekodibiz/ekodimall",

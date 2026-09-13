@@ -72,7 +72,7 @@
       "ownerKind": "church",
       "class": "workspace_user_site",
       "canonicalUrl": "https://ekodi.kr/ekodichurch",
-      "currentServiceUrl": "https://church.ekodi.kr",
+      "currentServiceUrl": "https://ekodi.kr/ekodichurch",
       "migrationState": "retain_existing",
       "runtime": "tenant_customer_site",
       "action": "connect_core_preserve_public_surface"
@@ -93,7 +93,7 @@
       "ownerKind": "organization",
       "class": "workspace_user_site",
       "canonicalUrl": "https://ekodi.kr/ekodilab",
-      "currentServiceUrl": "https://lab.ekodi.kr",
+      "currentServiceUrl": "https://ekodi.kr/ekodilab",
       "migrationState": "retain_existing",
       "runtime": "tenant_customer_site",
       "action": "connect_core_preserve_public_surface"
