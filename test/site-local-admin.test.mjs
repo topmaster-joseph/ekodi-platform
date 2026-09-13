@@ -33,6 +33,18 @@ test('tenant admins use the canonical root admin tree while legacy Mall admin re
   assert.ok(!js.includes("fetch('/api/auth/refresh'"));
 });
 
+test('canonical Mall admin reaches Workspace Admin before the general Admin surface', async () => {
+  const entry=await fs.readFile(new URL('../platform-router-entry-worker.js',import.meta.url),'utf8');
+  const tenantRoute=entry.indexOf("/^\\/admin\\/ekodimall(?:\\/|$)/i.test(url.pathname)");
+  const canonicalRoute=entry.indexOf('const canonical=await routeCanonicalSurface');
+  assert.ok(tenantRoute>=0);
+  assert.ok(canonicalRoute>=0);
+  assert.ok(tenantRoute<canonicalRoute);
+  const page=await (await import('../workspace-admin-page.js')).workspaceAdminPage().text();
+  assert.match(page,/EKODI Workspace Admin/);
+  assert.match(page,/workspace-admin\.js/);
+});
+
 test('entry gateway redirects legacy Mall admin to the root admin canonical path', async () => {
   const response = await platformEntry.fetch(new Request('https://ekodi.kr/mall/admin/publishing?ref=legacy'), {}, {});
   assert.equal(response.status, 308);

@@ -214,6 +214,7 @@ export default {
     const legacySurface=legacySurfaceRedirect(request);if(legacySurface)return legacySurface;
     const legacyStores=legacyStoreGatewayRedirect(request);if(legacyStores)return legacyStores;
     if(host===PUBLIC_HOST&&url.pathname.startsWith('/api/finance/tax-'))return routeTaxFinance(request,env,ctx);
+    if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)&&/^\/admin\/ekodimall(?:\/|$)/i.test(url.pathname))return injectEkodiShell(workspaceAdminPage(),'space','admin');
     const canonical=await routeCanonicalSurface(request,env,{legacyFetch:next=>legacyPlatformRouter.fetch(next,env,ctx)});
     if(canonical)return canonical;
 
