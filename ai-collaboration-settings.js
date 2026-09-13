@@ -1,5 +1,6 @@
 import { AI_ROUTER_SCORE_POLICY, normalizeRouterWeights } from './ai-router-score.js';
 import { DEFAULT_AI_RESOURCE_POLICY, normalizeAiResourcePolicy } from './ai-resource-policy.js';
+import { localExecutionPolicySnapshot } from './local-execution-policy.js';
 
 const SCOPE = 'global';
 const MAX_AUDIT_ROWS = 50;
@@ -35,6 +36,7 @@ export const DEFAULT_AI_COLLABORATION_POLICY = Object.freeze({
     cloudFirst: true,
     order: EXECUTION_TARGETS,
     localFallback: Object.freeze({ enabled: true, allowedReasons: LOCAL_REASONS }),
+    localScheduler: Object.freeze(localExecutionPolicySnapshot()),
     requireLiveProductionVerification: true,
   }),
   resources: DEFAULT_AI_RESOURCE_POLICY,
@@ -107,6 +109,7 @@ export function normalizeAiCollaborationPolicy(value = {}) {
         enabled: bool(execution.localFallback?.enabled, true),
         allowedReasons: [...LOCAL_REASONS],
       },
+      localScheduler: localExecutionPolicySnapshot(),
       requireLiveProductionVerification: bool(execution.requireLiveProductionVerification, true),
     },
     resources: normalizeAiResourcePolicy(source.resources),

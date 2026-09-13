@@ -27,6 +27,7 @@ jobs:
           grep -Fq 'character_biometric_payload_forbidden' supabase/functions/profile-api/index.ts
           grep -Fq 'GET,PATCH,DELETE,OPTIONS' supabase/functions/profile-api/index.ts
           grep -Fq '"https://ekodi.kr"' supabase/functions/profile-api/index.ts
+          ! grep -Fq '"https://my.ekodi.kr"' supabase/functions/profile-api/index.ts
 
   production:
     if: github.event_name == 'push'
@@ -41,10 +42,23 @@ jobs:
       PROJECT_REF: renzehysxirjilvdxacv
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 2
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
+      - name: Detect profile source change
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet HEAD^ HEAD -- supabase/functions/profile-api/index.ts; then
+            echo 'PROFILE_SOURCE_CHANGED=false' >> "$GITHUB_ENV"
+          else
+            echo 'PROFILE_SOURCE_CHANGED=true' >> "$GITHUB_ENV"
+          fi
       - name: Select Supabase deployment credential
+        id: credentials
+        continue-on-error: true
         shell: bash
         run: |
           set -euo pipefail
@@ -59,17 +73,25 @@ jobs:
           echo "::add-mask::$token"
           echo "SUPABASE_ACCESS_TOKEN=$token" >> "$GITHUB_ENV"
           echo 'Supabase deployment credential selected.'
+      - name: Require deployment credential for profile source changes
+        if: steps.credentials.outcome != 'success' && env.PROFILE_SOURCE_CHANGED == 'true'
+        shell: bash
+        run: |
+          echo 'Profile source changed but no Supabase deployment credential is available; release blocked.'
+          exit 2
       - name: Deploy profile API
+        if: steps.credentials.outcome == 'success'
         run: npx --yes supabase@2.116.0 functions deploy profile-api --project-ref "$PROJECT_REF"
       - name: Verify canonical My EKODI character CORS
         shell: bash
         run: |
           set -euo pipefail
           endpoint="https://$PROJECT_REF.supabase.co/functions/v1/profile-api/character"
-          for origin in https://ekodi.kr; do
-            safe_name=$(printf '%s' "$origin" | tr -cd '[:alnum:]')
-            code=$(curl -sS -D "/tmp/profile-character-${safe_name}.headers" -o /dev/null -w '%{http_code}' -X OPTIONS "$endpoint" -H "Origin: $origin" -H 'Access-Control-Request-Method: PATCH' -H 'Access-Control-Request-Headers: authorization,apikey,content-type' || true)
-            [[ "$code" =~ ^(200|204)$ ]]
-            grep -Fiq "access-control-allow-origin: $origin" "/tmp/profile-character-${safe_name}.headers"
-            grep -Eiq '^access-control-allow-methods:.*DELETE' "/tmp/profile-character-${safe_name}.headers"
-          done
+          canonical_code=$(curl -sS -D /tmp/profile-character-canonical.headers -o /dev/null -w '%{http_code}' -X OPTIONS "$endpoint" -H 'Origin: https://ekodi.kr' -H 'Access-Control-Request-Method: PATCH' -H 'Access-Control-Request-Headers: authorization,apikey,content-type' || true)
+          [[ "$canonical_code" =~ ^(200|204)$ ]]
+          grep -Eiq '^access-control-allow-origin:[[:space:]]*https://ekodi\.kr[[:space:]]*$' /tmp/profile-character-canonical.headers
+          grep -Eiq '^access-control-allow-methods:.*DELETE' /tmp/profile-character-canonical.headers
+          legacy_code=$(curl -sS -D /tmp/profile-character-legacy.headers -o /dev/null -w '%{http_code}' -X OPTIONS "$endpoint" -H 'Origin: https://my.ekodi.kr' -H 'Access-Control-Request-Method: PATCH' -H 'Access-Control-Request-Headers: authorization,apikey,content-type' || true)
+          [[ "$legacy_code" =~ ^(200|204)$ ]]
+          ! grep -Eiq '^access-control-allow-origin:[[:space:]]*https://my\.ekodi\.kr[[:space:]]*$' /tmp/profile-character-legacy.headers
+          echo 'Central Profile API canonical CORS contract is live.'

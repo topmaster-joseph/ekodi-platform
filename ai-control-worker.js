@@ -2,14 +2,15 @@ import {AI_CONTROL_POLICY,buildExecutionPlan,buildOriginSynthesisPrompt,createTa
 import {invokeProvider,providerCapabilities,providerStatus} from './ai-control-provider-router.js';
 import {AI_ROUTER_SCORE_POLICY} from './ai-router-score.js';
 import {loadAiCollaborationPolicy} from './ai-collaboration-settings.js';
+import { LOCAL_EXECUTION_POLICY, compareLocalExecutionCandidates, localExecutionPolicySnapshot, normalizeLocalResource } from './local-execution-policy.js';
 
 const clean=value=>String(value??'').trim();
 const now=()=>new Date().toISOString();
-const ONLINE_WINDOW_MS=10*60*1000;
+const ONLINE_WINDOW_MS=LOCAL_EXECUTION_POLICY.onlineWindowMs;
 function headers(){return{'x-content-type-options':'nosniff','referrer-policy':'strict-origin-when-cross-origin','permissions-policy':'camera=(), microphone=(), geolocation=(), payment=()','content-security-policy':"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://auth.ekodi.kr https://*.supabase.co; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"}}
 function json(data,status=200){return new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store',...headers()}})}
 async function body(request){try{return await request.json()}catch{return null}}
-function config(env={}){return{platform:'ai-control',architectureVersion:'1.9.0',hierarchy:['sovereign','autonomous','agentic','services'],mode:'parallel',policyVersion:AI_CONTROL_POLICY.version,missionPolicyVersion:AI_CONTROL_POLICY.missionPolicyVersion,maxParallelProviders:AI_CONTROL_POLICY.maxParallelProviders,originPreservation:true,routerScorePolicyVersion:AI_ROUTER_SCORE_POLICY.version,adminUrl:'https://ekodi.kr/admin/services/common-services?service=ai',authUrl:env.AUTH_URL||'https://ekodi.kr/auth/?site=admin&direct=1&return_to=https%3A%2F%2Fekodi.kr%2Fadmin%2Fservices%2Fcommon-services%3Fservice%3Dai',taskExecutionEnabled:env.AI_TASK_EXECUTION_ENABLED==='true',branchAllocationEnabled:env.AI_GITHUB_ORCHESTRATION_ENABLED==='true',humanApprovalRequired:true,nodePairingEnabled:true}}
+function config(env={}){return{platform:'ai-control',architectureVersion:'1.9.0',hierarchy:['sovereign','autonomous','agentic','services'],mode:'parallel',policyVersion:AI_CONTROL_POLICY.version,missionPolicyVersion:AI_CONTROL_POLICY.missionPolicyVersion,maxParallelProviders:AI_CONTROL_POLICY.maxParallelProviders,originPreservation:true,routerScorePolicyVersion:AI_ROUTER_SCORE_POLICY.version,adminUrl:'https://ekodi.kr/admin/services/common-services?service=ai',authUrl:env.AUTH_URL||'https://ekodi.kr/auth/?site=admin&direct=1&return_to=https%3A%2F%2Fekodi.kr%2Fadmin%2Fservices%2Fcommon-services%3Fservice%3Dai',taskExecutionEnabled:env.AI_TASK_EXECUTION_ENABLED==='true',branchAllocationEnabled:env.AI_GITHUB_ORCHESTRATION_ENABLED==='true',humanApprovalRequired:true,nodePairingEnabled:true,localScheduler:localExecutionPolicySnapshot()}}
 function dbReady(env){return Boolean(env.DB&&typeof env.DB.prepare==='function')}
 async function collaborationPolicy(env){return loadAiCollaborationPolicy(env)}
 function applyCollaborationPolicy(capabilities,loaded){const policy=loaded?.policy||{};const collaborators=Math.max(1,Math.min(4,Number(policy.governance?.maxParallelCollaborators)||4));return{...capabilities,openaiApi:capabilities.openaiApi&&policy.openai?.enabled!==false,routerPolicy:policy.router||{},maxParallelProviders:Math.min(AI_CONTROL_POLICY.maxParallelProviders,collaborators+1)}}
@@ -17,6 +18,20 @@ function supabaseReady(env){return Boolean(clean(env.SUPABASE_URL)&&clean(env.SU
 function bearer(request){const value=clean(request.headers.get('authorization'));return value.toLowerCase().startsWith('bearer ')?value.slice(7).trim():''}
 function safeId(value){const id=clean(value).toLowerCase();return /^[a-z0-9][a-z0-9._-]{2,79}$/.test(id)?id:''}
 function safeProviders(values){return [...new Set((Array.isArray(values)?values:[]).map(v=>clean(v).toLowerCase()).filter(v=>['codex','gemini-cli','claude-code'].includes(v)))]}
+function storedProviders(value){try{return safeProviders(JSON.parse(value||'[]'))}catch{return[]}}
+function safeNodeTelemetry(input={}){
+  const resource=normalizeLocalResource(input.system||{});
+  const maxConcurrency=Math.max(1,Math.min(4,Number.parseInt(input.maxConcurrency,10)||1));
+  return{
+    currentLoad:resource.currentLoad,
+    cpuLoadPct:Number.isFinite(resource.cpuLoadPct)?Math.round(resource.cpuLoadPct):100,
+    memoryUsedPct:Number.isFinite(resource.memoryUsedPct)?Math.round(resource.memoryUsedPct):100,
+    maxConcurrency,
+    isPortable:resource.isPortable===true,
+    autoExecutionEligible:resource.autoExecutionEligible===true&&resource.isPortable===false,
+    systemJson:JSON.stringify(resource),
+  };
+}
 async function sha256(value){const bytes=new TextEncoder().encode(value);const digest=await crypto.subtle.digest('SHA-256',bytes);return [...new Uint8Array(digest)].map(v=>v.toString(16).padStart(2,'0')).join('')}
 function randomToken(bytes=32){const data=new Uint8Array(bytes);crypto.getRandomValues(data);return btoa(String.fromCharCode(...data)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'')}
 function randomPairCode(){const alphabet='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';const data=new Uint8Array(10);crypto.getRandomValues(data);return [...data].map(v=>alphabet[v%alphabet.length]).join('')}
@@ -78,7 +93,7 @@ async function requireNode(request,env){
 async function onlineNodeProviders(env){
   if(!dbReady(env))return[];const cutoff=new Date(Date.now()-ONLINE_WINDOW_MS).toISOString();
   const data=await env.DB.prepare("SELECT providers FROM ai_control_nodes WHERE state='online' AND last_seen_at>=?").bind(cutoff).all();
-  return [...new Set((data.results||[]).flatMap(row=>JSON.parse(row.providers||'[]')).map(v=>clean(v).toLowerCase()).filter(Boolean))];
+  return [...new Set((data.results||[]).flatMap(row=>storedProviders(row.providers)).map(v=>clean(v).toLowerCase()).filter(Boolean))];
 }
 async function providerPerformanceMetrics(env){
   if(!dbReady(env))return{};
@@ -91,8 +106,16 @@ async function providerPerformanceMetrics(env){
 }
 async function listNodes(env){
   if(!dbReady(env))throw new Error('state_store_unavailable');const cutoff=Date.now()-ONLINE_WINDOW_MS;
-  const data=await env.DB.prepare('SELECT id,name,providers,state,created_at,updated_at,last_seen_at FROM ai_control_nodes ORDER BY last_seen_at DESC').all();
-  return (data.results||[]).map(row=>({...row,providers:JSON.parse(row.providers||'[]'),online:row.state!=='disabled'&&Date.parse(row.last_seen_at)>=cutoff}));
+  const data=await env.DB.prepare('SELECT id,name,providers,state,current_load,cpu_load_pct,memory_used_pct,max_concurrency,is_portable,auto_execution_eligible,system_json,created_at,updated_at,last_seen_at FROM ai_control_nodes ORDER BY last_seen_at DESC').all();
+  return (data.results||[]).map(row=>({
+    ...row,
+    providers:storedProviders(row.providers),
+    online:row.state!=='disabled'&&Date.parse(row.last_seen_at)>=cutoff,
+    scheduler:{
+      currentLoad:Number(row.current_load??100),cpuLoadPct:Number(row.cpu_load_pct??100),memoryUsedPct:Number(row.memory_used_pct??100),
+      maxConcurrency:Number(row.max_concurrency)||1,isPortable:Number(row.is_portable)===1,autoExecutionEligible:Number(row.auto_execution_eligible)===1,
+    },
+  }));
 }
 async function createPairing(env,email){
   if(!dbReady(env))throw new Error('state_store_unavailable');const code=randomPairCode();const created=now();const expires=new Date(Date.now()+10*60*1000).toISOString();
@@ -161,9 +184,41 @@ async function execute(env,id){
   }catch(error){await patchTask(env,id,{state:'failed',updated_at:now(),error:clean(error?.message||error)});throw error}
 }
 async function leaseNodeJob(request,env,node){
-  const input=await body(request)||{};const detected=safeProviders(input.providers);if(detected.length)await env.DB.prepare('UPDATE ai_control_nodes SET providers=?,updated_at=?,last_seen_at=? WHERE id=?').bind(JSON.stringify(detected),now(),now(),node.id).run();const providers=(detected.length?detected:node.providers).map(v=>`node:${v}`);if(!providers.length)return json({job:null});
-  const placeholders=providers.map(()=>'?').join(',');const stamp=now();const leaseUntil=new Date(Date.now()+3*60*1000).toISOString();const job=await env.DB.prepare(`SELECT * FROM ai_control_jobs WHERE (state='queued' OR (state='leased' AND lease_until<?)) AND provider_id IN (${placeholders}) ORDER BY created_at ASC LIMIT 1`).bind(stamp,...providers).first();if(!job)return json({job:null});
-  const result=await env.DB.prepare("UPDATE ai_control_jobs SET state='leased',lease_owner=?,lease_until=?,updated_at=? WHERE id=? AND (state='queued' OR (state='leased' AND lease_until<?))").bind(node.id,leaseUntil,stamp,job.id,stamp).run();if(!result.meta?.changes)return json({job:null});await env.DB.prepare("UPDATE ai_control_runs SET state='leased' WHERE id=?").bind(job.run_id).run();return json({job:{id:job.id,taskId:job.task_id,runId:job.run_id,providerId:job.provider_id,role:job.role,prompt:job.prompt,branch:job.branch,repository:job.repository,needsCodeBranch:Boolean(job.needs_code_branch),leaseUntil}});
+  const input=await body(request)||{};
+  const detected=safeProviders(input.providers);
+  const telemetry=safeNodeTelemetry(input);
+  const stamp=now();
+  await env.DB.prepare(`UPDATE ai_control_nodes SET providers=?,current_load=?,cpu_load_pct=?,memory_used_pct=?,max_concurrency=?,is_portable=?,auto_execution_eligible=?,system_json=?,state='online',updated_at=?,last_seen_at=? WHERE id=?`).bind(
+    JSON.stringify(detected.length?detected:node.providers),telemetry.currentLoad,telemetry.cpuLoadPct,telemetry.memoryUsedPct,telemetry.maxConcurrency,
+    telemetry.isPortable?1:0,telemetry.autoExecutionEligible?1:0,telemetry.systemJson,stamp,stamp,node.id,
+  ).run();
+  if(!telemetry.autoExecutionEligible)return json({job:null,scheduler:{eligible:false,reason:telemetry.isPortable?'portable_device':'hardware_eligibility_unknown'}});
+  const providers=(detected.length?detected:node.providers).map(v=>`node:${v}`);
+  if(!providers.length)return json({job:null,scheduler:{eligible:true,reason:'no_provider'}});
+  const placeholders=providers.map(()=>'?').join(',');
+  const leaseUntil=new Date(Date.now()+3*60*1000).toISOString();
+  const cutoff=new Date(Date.now()-ONLINE_WINDOW_MS).toISOString();
+  const [jobRows,nodeRows,activeRows]=await Promise.all([
+    env.DB.prepare(`SELECT * FROM ai_control_jobs WHERE (state='queued' OR (state='leased' AND lease_until<?)) AND provider_id IN (${placeholders}) ORDER BY created_at ASC LIMIT 20`).bind(stamp,...providers).all(),
+    env.DB.prepare(`SELECT id,name,providers,current_load,max_concurrency,last_seen_at FROM ai_control_nodes WHERE state='online' AND auto_execution_eligible=1 AND is_portable=0 AND last_seen_at>=? ORDER BY current_load ASC,last_seen_at DESC`).bind(cutoff).all(),
+    env.DB.prepare("SELECT lease_owner AS node_id,COUNT(*) AS active_count FROM ai_control_jobs WHERE state='leased' AND lease_until>=? AND lease_owner!='' GROUP BY lease_owner").bind(stamp).all(),
+  ]);
+  const active=new Map((activeRows.results||[]).map(row=>[row.node_id,Number(row.active_count)||0]));
+  const nodes=(nodeRows.results||[]).map(row=>({
+    id:row.id,name:row.name,providers:storedProviders(row.providers),currentLoad:Number(row.current_load??100),
+    maxConcurrency:Math.max(1,Number(row.max_concurrency)||1),activeJobs:active.get(row.id)||0,lastSeenAt:row.last_seen_at,
+  }));
+  for(const job of jobRows.results||[]){
+    const candidates=nodes.filter(candidate=>candidate.providers.some(provider=>`node:${provider}`===job.provider_id)&&candidate.activeJobs<candidate.maxConcurrency);
+    candidates.sort(compareLocalExecutionCandidates);
+    const chosen=candidates[0];
+    if(!chosen||chosen.id!==node.id)continue;
+    const result=await env.DB.prepare("UPDATE ai_control_jobs SET state='leased',lease_owner=?,lease_until=?,updated_at=? WHERE id=? AND (state='queued' OR (state='leased' AND lease_until<?))").bind(node.id,leaseUntil,stamp,job.id,stamp).run();
+    if(!result.meta?.changes)continue;
+    await env.DB.prepare("UPDATE ai_control_runs SET state='leased' WHERE id=?").bind(job.run_id).run();
+    return json({job:{id:job.id,taskId:job.task_id,runId:job.run_id,providerId:job.provider_id,role:job.role,prompt:job.prompt,branch:job.branch,repository:job.repository,needsCodeBranch:Boolean(job.needs_code_branch),leaseUntil},scheduler:{eligible:true,strategy:'least_loaded_parallel',selectedNodeId:node.id,currentLoad:chosen.currentLoad,activeJobs:chosen.activeJobs,maxConcurrency:chosen.maxConcurrency}});
+  }
+  return json({job:null,scheduler:{eligible:true,strategy:'least_loaded_parallel',reason:'another_node_preferred_or_queue_empty'}});
 }
 async function completeNodeJob(request,env,node,jobId){
   const input=await body(request)||{};const job=await env.DB.prepare('SELECT * FROM ai_control_jobs WHERE id=?').bind(jobId).first();if(!job)return json({error:'job_not_found'},404);if(job.lease_owner!==node.id)return json({error:'job_lease_owner_mismatch'},409);const ok=input.ok===true;const stamp=now();const output=clean(input.output).slice(0,250000);const error=clean(input.error).slice(0,8000);

@@ -5,6 +5,7 @@ const CANONICAL_HOST='ekodi.kr';
 const SURFACE_PREFIXES=Object.freeze({my:'/my',admin:'/admin',auth:'/auth'});
 const SYSTEM_PATHS=Object.freeze(['/api','/mcp','/webhooks','/health']);
 const PUBLIC_EXECUTION_SURFACES=Object.freeze([
+  Object.freeze({id:'shell',prefix:'/shell',binding:'SHELL',basePathAware:true}),
   Object.freeze({id:'bible',prefix:'/bible',binding:'BIBLE',basePathAware:true}),
   Object.freeze({id:'business',prefix:'/business',host:'business.ekodi.kr'}),
 ]);
@@ -173,6 +174,7 @@ export const EKODI_CANONICAL_SURFACES=Object.freeze({
   user:'/my',
   admin:'/admin',
   auth:'/auth',
+  shell:'/shell',
   api:'/api',
   mcp:'/mcp',
   webhooks:'/webhooks',

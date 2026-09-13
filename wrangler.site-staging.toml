@@ -15,6 +15,10 @@ service = "ekodi-space-staging"
 binding = "EKODIBIZ"
 service = "ekodibiz-revenue-os-staging"
 
+[[services]]
+binding = "SHELL"
+service = "ekodi-shell-staging"
+
 [assets]
 directory = "./dist"
 binding = "ASSETS"

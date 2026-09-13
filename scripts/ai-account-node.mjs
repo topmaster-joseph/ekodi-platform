@@ -3,6 +3,7 @@ import {mkdir,readFile,rm,writeFile} from 'node:fs/promises';
 import {homedir,tmpdir} from 'node:os';
 import os from 'node:os';
 import path from 'node:path';
+import { LOCAL_EXECUTION_POLICY } from '../local-execution-policy.js';
 
 const CONTROL=(process.env.EKODI_AI_CONTROL_URL||'https://ai.ekodi.kr').replace(/\/+$/,'');
 const ROOT=path.join(homedir(),'.ekodi-ai');
@@ -11,6 +12,7 @@ const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 const clean=value=>String(value??'').trim();
 const win=process.platform==='win32';
 const bin=name=>win?`${name}.cmd`:name;
+const boundedConcurrency=()=>Math.max(1,Math.min(4,Number.parseInt(process.env.EKODI_AI_NODE_MAX_CONCURRENCY||'1',10)||1));
 
 function arg(name){const index=process.argv.indexOf(name);return index>=0?clean(process.argv[index+1]):''}
 function hasArg(name){return process.argv.includes(name)}
@@ -22,6 +24,36 @@ async function run(command,args,{cwd,stdin='',timeoutMs=10*60*1000}={}){
     child.stdout.on('data',chunk=>stdout+=chunk);child.stderr.on('data',chunk=>stderr+=chunk);child.on('error',error=>{clearTimeout(timer);reject(error)});child.on('close',code=>{clearTimeout(timer);code===0?resolve({stdout,stderr}):reject(new Error(`${command}_exit_${code}: ${stderr||stdout}`))});
     child.stdin.end(stdin);
   });
+}
+
+async function cpuLoadPct(){
+  const sample=()=>os.cpus().reduce((acc,cpu)=>{const total=Object.values(cpu.times).reduce((sum,value)=>sum+value,0);return{idle:acc.idle+cpu.times.idle,total:acc.total+total}},{idle:0,total:0});
+  const before=sample();await sleep(250);const after=sample();const total=after.total-before.total;const idle=after.idle-before.idle;
+  return total>0?Math.round(Math.max(0,Math.min(100,(1-idle/total)*100))*10)/10:100;
+}
+async function portableState(){
+  const override=clean(process.env.EKODI_AI_NODE_PORTABLE).toLowerCase();
+  if(['true','1','yes'].includes(override))return true;if(['false','0','no'].includes(override))return false;
+  try{
+    if(process.platform==='win32'){
+      const script="$b=@(Get-CimInstance Win32_Battery -ErrorAction SilentlyContinue);$c=Get-CimInstance Win32_ComputerSystem -ErrorAction Stop;if($b.Count -gt 0 -or [int]$c.PCSystemType -eq 2){'true'}else{'false'}";
+      const result=await run('powershell.exe',['-NoProfile','-NonInteractive','-Command',script],{timeoutMs:8000});return /true/i.test(result.stdout);
+    }
+    if(process.platform==='darwin'){const result=await run('pmset',['-g','batt'],{timeoutMs:5000});return /InternalBattery/i.test(result.stdout+result.stderr);}
+    if(process.platform==='linux'){try{await run('sh',['-lc','ls /sys/class/power_supply/BAT* >/dev/null 2>&1'],{timeoutMs:3000});return true}catch{return false}}
+  }catch{}
+  return null;
+}
+
+async function systemSnapshot(){
+  const [cpu,isPortable]=await Promise.all([cpuLoadPct(),portableState()]);
+  const total=os.totalmem();const free=os.freemem();const memory=total>0?Math.round(((total-free)/total)*1000/10):100;
+  return{
+    cpuLoadPct:cpu,memoryUsedPct:memory,isPortable,
+    deviceClass:isPortable===true?'portable':isPortable===false?'desktop':'unknown',
+    autoExecutionEligible:isPortable===false,
+    measuredAt:new Date().toISOString(),schedulerPolicy:LOCAL_EXECUTION_POLICY.version,
+  };
 }
 async function loadConfig(){try{return JSON.parse(await readFile(CONFIG_PATH,'utf8'))}catch{return null}}
 async function saveConfig(config){await mkdir(ROOT,{recursive:true});await writeFile(CONFIG_PATH,JSON.stringify(config,null,2),{encoding:'utf8',mode:0o600})}
@@ -76,7 +108,7 @@ async function executeJob(job){
   }catch(error){return{ok:false,error:clean(error?.message||error)}}
 }
 async function loop(config){
-  console.log(`EKODI AI account node ${config.nodeId} connected to ${CONTROL}`);for(;;){try{const providers=await detectProviders();const leased=await api('/api/node/lease',{token:config.nodeToken,node:config.nodeId,body:{providers}});if(!leased.job){await sleep(5000);continue}console.log(`leased ${leased.job.id} ${leased.job.providerId}`);const result=await executeJob(leased.job);await api(`/api/node/jobs/${encodeURIComponent(leased.job.id)}/complete`,{token:config.nodeToken,node:config.nodeId,body:result});console.log(`${leased.job.id} ${result.ok?'completed':'failed'}`)}catch(error){console.error(new Date().toISOString(),clean(error?.message||error));await sleep(10000)}}
+  console.log(`EKODI AI account node ${config.nodeId} connected to ${CONTROL}`);for(;;){try{const providers=await detectProviders();const leased=await api('/api/node/lease',{token:config.nodeToken,node:config.nodeId,body:{providers,system:await systemSnapshot(),maxConcurrency:boundedConcurrency()}});if(!leased.job){await sleep(5000);continue}console.log(`leased ${leased.job.id} ${leased.job.providerId}`);const result=await executeJob(leased.job);await api(`/api/node/jobs/${encodeURIComponent(leased.job.id)}/complete`,{token:config.nodeToken,node:config.nodeId,body:result});console.log(`${leased.job.id} ${result.ok?'completed':'failed'}`)}catch(error){console.error(new Date().toISOString(),clean(error?.message||error));await sleep(10000)}}
 }
 
 await mkdir(ROOT,{recursive:true});const pairCode=arg('--pair');let config=pairCode?await enroll(pairCode):await loadConfig();if(!config?.nodeToken){console.error('Node is not paired. Generate a pairing code in ai.ekodi.kr and run: node scripts/ai-account-node.mjs --pair CODE');process.exit(2)}if(pairCode&&hasArg('--pair-only')){console.log(`EKODI AI account node ${config.nodeId} paired with ${config.providers.join(', ')}`);process.exit(0)}await loop(config);

@@ -41,6 +41,20 @@ test('My and system paths preserve the internal execution boundary',async()=>{
   assert.equal(response.status,200);assert.equal(control.calls[3].pathname,'/api/control/ai/v8/status');
 });
 
+test('Shell canonical path uses its service binding and strips the apex prefix',async()=>{
+  const shell=binding(JSON.stringify({ok:true,service:'ekodi-shell'}),'application/json');
+  const response=await routeCanonicalSurface(new Request('https://ekodi.kr/shell/manifest.json?release=1'),{SHELL:shell});
+  assert.equal(response.status,200);assert.equal(shell.calls[0].pathname,'/manifest.json');assert.equal(shell.calls[0].search,'?release=1');
+  assert.equal(response.headers.get('x-ekodi-canonical-surface'),'shell');assert.equal(response.headers.get('x-ekodi-canonical-path'),'/shell');
+});
+
+test('canonical Shell bindings are environment-specific and dependent releases watch the gateway',async()=>{
+  const files=['wrangler.site.toml','wrangler.site-staging.toml','.github/workflows/deploy-education.yml','.github/workflows/deploy-bible.yml','.github/workflows/deploy-life-ai.yml'];
+  const [prod,stage,...workflows]=await Promise.all(files.map(file=>fs.promises.readFile(new URL('../'+file,import.meta.url),'utf8')));
+  assert.match(prod,/binding = \"SHELL\"\s+service = \"ekodi-shell\"/);assert.match(stage,/binding = \"SHELL\"\s+service = \"ekodi-shell-staging\"/);assert.match(prod,/run_worker_first = \[[^\]]*\"\/shell\*\"/s);
+  for(const workflow of workflows){assert.match(workflow,/canonical-surface-router\.js/);assert.match(workflow,/wrangler\.site\.toml/);assert.match(workflow,/wrangler\.site-staging\.toml/);assert.match(workflow,/seq 1 120[\s\S]*ekodi\.kr\/shell\/manifest\.json/);}
+});
+
 test('v8 control candidate probe does not make rollback depend on a newly introduced endpoint',async()=>{
   const manifest=JSON.parse(await fs.promises.readFile(new URL('../deploy/manifests/shared-site.worker.json',import.meta.url),'utf8'));
   const probe=manifest.worker.requests.find(item=>item.url==='https://ekodi.kr/api/control/ai/v8/status');
