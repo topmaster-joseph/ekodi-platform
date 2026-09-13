@@ -25,7 +25,7 @@ const PUBLIC_CONTRACTS = Object.freeze([
   Object.freeze({ id:'api', name:'EKODI API', kind:'api', url:'https://api.ekodi.kr/' }),
   Object.freeze({ id:'mcp', name:'EKODI MCP', kind:'mcp', url:'https://api.ekodi.kr/mcp' }),
   Object.freeze({ id:'mcp-metadata', name:'OAuth Protected Resource', kind:'metadata', url:'https://api.ekodi.kr/.well-known/oauth-protected-resource' }),
-  Object.freeze({ id:'shell', name:'EKODI Shell', kind:'ui-shell', url:'https://shell.ekodi.kr/' }),
+  Object.freeze({ id:'shell', name:'EKODI Shell', kind:'ui-shell', url:'https://ekodi.kr/shell/' }),
 ]);
 
 function normalizedMode(value) {

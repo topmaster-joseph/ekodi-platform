@@ -234,7 +234,7 @@ jobs:
             grep -Fq '/api/marketing/store-domains' "$file"
             grep -Fq 'STORE MARKETING AI' "$file"
             grep -Fq 'data-ekodi-shell="v1"' "$file"
-            grep -Fq 'https://shell.ekodi.kr/shell.js' "$file"
+            grep -Fq 'https://ekodi.kr/shell/shell.js' "$file"
             grep -Fq 'data-ekodi-service="marketing"' "$file"
           done
           grep -Fq 'data-store-plan-links' dist/marketing-ai/index.html
@@ -325,7 +325,7 @@ jobs:
                  || ! grep -Fq '/api/marketing/store-domains' /tmp/live.html \
                  || ! grep -Fq 'STORE MARKETING AI' /tmp/live.html \
                  || ! grep -Fq 'data-ekodi-shell="v1"' /tmp/live.html \
-                 || ! grep -Fq 'https://shell.ekodi.kr/shell.js' /tmp/live.html \
+                 || ! grep -Fq 'https://ekodi.kr/shell/shell.js' /tmp/live.html \
                  || ! grep -Fq 'data-ekodi-service="marketing"' /tmp/live.html; then
                 ok=0
               fi

@@ -15,8 +15,8 @@ const INFRA_SITES = [
   ['api', 'EKODI API', 'api.ekodi.kr', 'https://api.ekodi.kr/health'],
   ['finance', 'EKODI Finance API', 'finance-api.ekodi.kr', 'https://finance-api.ekodi.kr/health'],
   ['marketing-publish-api', 'Marketing Publishing API', 'marketing-publish-api.ekodi.kr', 'https://marketing-publish-api.ekodi.kr/health'],
-  ['shell-js', 'EKODI Shell JS', 'shell.ekodi.kr', 'https://shell.ekodi.kr/shell.js'],
-  ['shell-workspace', 'EKODI Workspace CSS', 'shell.ekodi.kr', 'https://shell.ekodi.kr/workspace.css']
+  ['shell-js', 'EKODI Shell JS', 'ekodi.kr', 'https://ekodi.kr/shell/shell.js'],
+  ['shell-workspace', 'EKODI Workspace CSS', 'ekodi.kr', 'https://ekodi.kr/shell/workspace.css']
 ];
 
 const COMMUNITY_CONNECT_SITES = [

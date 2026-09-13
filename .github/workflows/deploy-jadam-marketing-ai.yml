@@ -58,7 +58,7 @@ jobs:
           grep -Fq '&plan=auto' dist/marketing-ai/index.html
           while IFS= read -r file; do
             grep -Fq 'data-ekodi-fixed-header' "$file" || { echo "Fixed mobile header marker missing: $file"; exit 1; }
-            grep -Fq 'https://shell.ekodi.kr/shell.js' "$file" || { echo "Shared EKODI Shell missing: $file"; exit 1; }
+            grep -Fq 'https://ekodi.kr/shell/shell.js' "$file" || { echo "Shared EKODI Shell missing: $file"; exit 1; }
           done < <(find dist/marketing-ai -name index.html -type f -print)
           for file in dist/marketing-ai/jadam/index.html dist/marketing-ai/pizzamaru/index.html dist/marketing-ai/yogurtpurple/index.html; do
             grep -Fq 'id="googleCustomerAuth"' "$file"
@@ -94,7 +94,7 @@ jobs:
             [ "$code" = '200' ] || return 1
             grep -Fq "$label" /tmp/customer.html
             grep -Fq 'data-ekodi-fixed-header' /tmp/customer.html
-            grep -Fq 'https://shell.ekodi.kr/shell.js' /tmp/customer.html
+            grep -Fq 'https://ekodi.kr/shell/shell.js' /tmp/customer.html
           }
           verify_customer() {
             url="$1"; label="$2"

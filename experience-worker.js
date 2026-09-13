@@ -10,7 +10,7 @@ const SECURITY_HEADERS={
   'x-content-type-options':'nosniff',
   'referrer-policy':'strict-origin-when-cross-origin',
   'permissions-policy':'camera=(), microphone=(), geolocation=(), payment=(), usb=()',
-  'content-security-policy':"default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline' https://shell.ekodi.kr; script-src 'self' https://shell.ekodi.kr; connect-src 'self' https://shell.ekodi.kr; frame-ancestors 'none'; base-uri 'self'; form-action 'none'; object-src 'none'",
+  'content-security-policy':"default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline' https://ekodi.kr; script-src 'self' https://ekodi.kr; connect-src 'self' https://ekodi.kr; frame-ancestors 'none'; base-uri 'self'; form-action 'none'; object-src 'none'",
 };
 const PUBLIC_CACHE='public, max-age=60, stale-while-revalidate=300';
 const STATIC_CACHE='public, max-age=86400, immutable';

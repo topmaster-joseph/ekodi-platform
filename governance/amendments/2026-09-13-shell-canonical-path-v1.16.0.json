@@ -1,0 +1,22 @@
+{
+  "id": "2026-09-13-shell-canonical-path-v1.16.0",
+  "constitutionVersion": "1.16.0",
+  "status": "approved",
+  "approvedBy": "topmaster-joseph",
+  "approvedAt": "2026-09-13",
+  "changeClass": "C2",
+  "taskId": "shell-canonical-path-20260913",
+  "summary": "Retire shell.ekodi.kr as an EKODI runtime and legacy-domain boundary and make https://ekodi.kr/shell the canonical shared Shell asset, manifest and UI integration path.",
+  "approvalBasis": "The EKODI Platform Super Administrator previously directed EKODI to remove retired EKODI subdomains rather than preserve compatibility redirects and has instructed EKODI collaboration to continue this production completion work.",
+  "evidence": [
+    "shared Shell injector uses https://ekodi.kr/shell",
+    "Messenger and shared user surfaces consume the canonical apex Shell path",
+    "deployment manifests and production verification no longer require shell.ekodi.kr",
+    "platform boundary registry declares ekodi.kr with canonicalPath /shell",
+    "shell.ekodi.kr is removed from the legacy-domain allowlist and target map"
+  ],
+  "generationImpact": "None. Generation 10 remains unchanged.",
+  "scaleImpact": "None. This converges routing topology without creating a new deployment boundary.",
+  "authorityImpact": "None. Existing human authority, authentication, authorization and service ownership remain unchanged.",
+  "rollback": "Revert the v1.16.0 Shell canonical-path amendment and associated runtime/config changes through the guarded pipeline. Do not recreate shell.ekodi.kr as a compatibility redirect without a separate approved constitutional amendment."
+}

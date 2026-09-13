@@ -4,7 +4,7 @@ const script=document.currentScript;
 if(window.__EKODI_SHELL_BOOTED)return;
 window.__EKODI_SHELL_BOOTED=true;
 
-const SHELL_ORIGIN='https://shell.ekodi.kr';
+const SHELL_ORIGIN='https://ekodi.kr/shell';
 const MANIFEST_URL=`${SHELL_ORIGIN}/manifest.json`;
 const THEME_URL=`${SHELL_ORIGIN}/theme.json`;
 const AUTH='https://ekodi.kr/auth/';
