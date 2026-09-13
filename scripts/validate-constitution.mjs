@@ -13,9 +13,9 @@ const coreData = json('config/core-data-boundaries.json');
 const storage = json('config/storage-policy.json');
 const workspace = json('config/service-workspace-policy.json');
 
-if (constitution.version !== '1.12.0') fail('constitution version must be 1.12.0 with the approved EKODIBIZ commercial-subject amendment and all prior approved amendments, including the v1.11.0 local-commerce amendment');
+if (constitution.version !== '1.14.0') fail('constitution version must be 1.14.0 with the approved Completion Continuity amendment and all prior approved amendments');
 if (constitution.status !== 'active') fail('constitution must be active');
-for (const principle of ['free-first-not-free-only','ekodi-core-is-source-of-truth','provider-independent-by-default','secure-by-default','one-domain-grammar','isolated-parallel-development','verification-first-evolution','security-native-intelligence','evidence-linked-recommendations','secure-projection-minimum-disclosure','integrated-responsibility-distributed-execution-standardized-connections','layered-governance-os-core-services-connections-workspaces','user-surface-engine-separation','capability-first-reuse','sustainable-scale-by-evidence','workspace-over-space','generation-10-active-baseline','open-ended-evidence-driven-generation-evolution','sovereign-autonomy-with-human-authority','person-workspace-role-capability-authority','observe-detect-reason-plan-execute-verify-recover-learn','ekodibiz-exclusive-commercial-subject','ordinary-user-information-first-commercial-separation']) {
+for (const principle of ['free-first-not-free-only','ekodi-core-is-source-of-truth','provider-independent-by-default','secure-by-default','one-domain-grammar','isolated-parallel-development','verification-first-evolution','security-native-intelligence','evidence-linked-recommendations','secure-projection-minimum-disclosure','integrated-responsibility-distributed-execution-standardized-connections','layered-governance-os-core-services-connections-workspaces','user-surface-engine-separation','capability-first-reuse','sustainable-scale-by-evidence','workspace-over-space','generation-10-active-baseline','open-ended-evidence-driven-generation-evolution','sovereign-autonomy-with-human-authority','person-workspace-role-capability-authority','observe-detect-reason-plan-execute-verify-recover-learn','ekodibiz-exclusive-commercial-subject','ordinary-user-information-first-commercial-separation','completion-continuity-through-recoverable-interruptions']) {
   if (!constitution.principles?.includes(principle)) fail(`missing constitutional principle: ${principle}`);
 }
 
@@ -51,6 +51,16 @@ if (parallel.independentWorktreeOrSandboxPerTask !== true) fail('parallel develo
 if (parallel.sharedMutableWorkingDirectoryForbidden !== true) fail('concurrent tasks must not share a mutable working directory');
 if (parallel.directProtectedBranchWritesForbidden !== true) fail('direct protected-branch writes must be forbidden');
 if (parallel.directAgentProductionDeploymentForbidden !== true) fail('direct agent production deployment must be forbidden');
+
+
+const completionContinuity = constitution.completionContinuityPolicy || {};
+if (completionContinuity.id !== 'COMPLETE-CONTINUITY-001' || completionContinuity.status !== 'active') fail('Completion Continuity constitutional policy must remain active');
+if (completionContinuity.interruptionDefault !== 'recoverable') fail('execution interruptions must default to recoverable');
+if (completionContinuity.checkpointRequired !== true || completionContinuity.resumeFromCheckpoint !== true) fail('recoverable interruptions must checkpoint and resume');
+if (completionContinuity.alternateAuthorizedPathBeforeEscalation !== true) fail('authorized alternate execution paths must be attempted before escalation');
+if (completionContinuity.blockedReservedForAuthorityOrDependency !== true) fail('blocked state must be reserved for genuine authority/dependency blocks');
+if (completionContinuity.authorityExpansionForbidden !== true || completionContinuity.productionVerificationStillRequired !== true) fail('continuity must not widen authority or weaken production verification');
+for (const interruptionClass of ['session-ended','tool-unavailable','connector-failure','rate-limit','execution-window-ended','transient-infrastructure-failure']) if (!completionContinuity.recoverableInterruptionClasses?.includes(interruptionClass)) fail(`recoverable interruption class missing: ${interruptionClass}`);
 
 const evolution = constitution.evolutionPolicy || {};
 if (evolution.mode !== 'verification_first_security_native_self_evolving') fail('evolution policy must remain verification-first and security-native');

@@ -1,6 +1,6 @@
 {
-  "version": "1.12.0",
-  "effectiveDate": "2026-09-12",
+  "version": "1.14.0",
+  "effectiveDate": "2026-09-13",
   "status": "active",
   "title": "EKODI Platform Constitution",
   "principles": [
@@ -30,7 +30,8 @@
     "generation-10-active-baseline",
     "open-ended-evidence-driven-generation-evolution",
     "ekodibiz-exclusive-commercial-subject",
-    "ordinary-user-information-first-commercial-separation"
+    "ordinary-user-information-first-commercial-separation",
+    "completion-continuity-through-recoverable-interruptions"
   ],
   "architectureModel": {
     "registry": "governance/architecture/ekodi-os-architecture.json",
@@ -136,7 +137,6 @@
     "edu.ekodi.kr",
     "bible.ekodi.kr",
     "life.ekodi.kr",
-    "support.ekodi.kr",
     "money.ekodi.kr",
     "social.ekodi.kr",
     "energy.ekodi.kr",
@@ -296,7 +296,6 @@
     "edu.ekodi.kr": "https://ekodi.kr/education",
     "bible.ekodi.kr": "https://ekodi.kr/bible",
     "life.ekodi.kr": "https://ekodi.kr/life",
-    "support.ekodi.kr": "https://ekodi.kr/support",
     "money.ekodi.kr": "https://ekodi.kr/money",
     "social.ekodi.kr": "https://ekodi.kr/social",
     "energy.ekodi.kr": "https://ekodi.kr/energy",
@@ -545,5 +544,36 @@
     "tenantCommercialExecution": "ekodibiz-managed-only",
     "externalUserOwnedBusinessUnaffected": true,
     "rule": "All EKODI-platform revenue businesses use EKODIBIZ as revenue owner, operator, merchant of record and contracting entity. Ordinary users receive information, recommendation and managed-service referral only unless acting through an explicitly authorized EKODIBIZ operator role."
+  },
+  "completionContinuityPolicy": {
+    "id": "COMPLETE-CONTINUITY-001",
+    "status": "active",
+    "interruptionDefault": "recoverable",
+    "recoverableInterruptionClasses": [
+      "session-ended",
+      "tool-unavailable",
+      "connector-failure",
+      "rate-limit",
+      "execution-window-ended",
+      "transient-infrastructure-failure"
+    ],
+    "checkpointRequired": true,
+    "checkpointFields": [
+      "task_id",
+      "branch",
+      "current_commit_sha",
+      "completed_steps",
+      "pending_steps",
+      "last_validation_result",
+      "deployment_state",
+      "blocking_dependency",
+      "next_executable_step",
+      "resume_timestamp"
+    ],
+    "alternateAuthorizedPathBeforeEscalation": true,
+    "resumeFromCheckpoint": true,
+    "blockedReservedForAuthorityOrDependency": true,
+    "authorityExpansionForbidden": true,
+    "productionVerificationStillRequired": true
   }
 }

@@ -11,6 +11,8 @@ const assistTimeoutMs = 60_000;
 const artifactsDir = path.resolve('artifacts/admin-authenticated-e2e');
 const menuIds = adminMenuOrder();
 const productionRegistryUrl = 'https://ekodi.kr/admin-menu-registry.js';
+const maturityApiUrl = 'https://api.ekodi.kr/api/control/platform-maturity';
+const e2eAdminToken = String(process.env.E2E_ADMIN_TOKEN || '').trim();
 const productionConvergenceAttempts = 36;
 const productionConvergenceDelayMs = 5_000;
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -47,7 +49,30 @@ async function waitForProductionMenuRegistry() {
   throw new Error(`Production Admin registry did not converge to ${menuIds.length} menus; missing: ${lastMissing.join(',') || 'unknown'}`);
 }
 
+async function waitForMaturityApi() {
+  if (!e2eAdminToken) throw new Error('E2E_ADMIN_TOKEN is required for maturity API convergence');
+  let lastStatus = 0;
+  for (let attempt = 1; attempt <= productionConvergenceAttempts; attempt += 1) {
+    try {
+      const response = await fetch(maturityApiUrl, {
+        headers: { accept:'application/json', authorization:`Bearer ${e2eAdminToken}`, 'cache-control':'no-cache' },
+        cache:'no-store', signal:AbortSignal.timeout(10_000),
+      });
+      lastStatus = response.status;
+      const payload = await response.json().catch(() => ({}));
+      if (response.ok && payload.certificationStatus === 'not-claimed' && Array.isArray(payload.model?.domains) && payload.model.domains.length) {
+        console.log(`[E2E] production maturity API converged: HTTP ${response.status}, domains=${payload.model.domains.length}`);
+        return;
+      }
+    } catch (error) { console.warn(`[E2E] maturity API probe ${attempt} failed: ${error?.message || error}`); }
+    console.warn(`[E2E] production maturity API not converged (${attempt}/${productionConvergenceAttempts}); status=${lastStatus || 'network'}`);
+    if (attempt < productionConvergenceAttempts) await sleep(productionConvergenceDelayMs);
+  }
+  throw new Error(`Production maturity API did not converge; last HTTP status: ${lastStatus || 'network'}`);
+}
+
 await waitForProductionMenuRegistry();
+await waitForMaturityApi();
 await fs.rm(artifactsDir, { recursive: true, force: true });
 await fs.mkdir(artifactsDir, { recursive: true });
 

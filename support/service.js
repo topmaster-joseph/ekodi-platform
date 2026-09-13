@@ -1,6 +1,7 @@
 import {SUPPORT_STAGES,OPPORTUNITY_SERVICES,getOpportunityService,resolveOpportunityService,buildNextActions} from './core.js';
 import {getSpecialistWorkspace,buildSpecialistProfile,profileCompleteness,explainOpportunity} from './specialists.js';
 
+const SUPPORT_BASE='/support';
 const $=id=>document.getElementById(id);
 const esc=value=>String(value??'').replace(/[&<>'"]/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch]));
 const safeUrl=value=>{try{const url=new URL(String(value||''),location.origin);return url.protocol==='https:'?url.href:''}catch{return''}};
@@ -64,11 +65,11 @@ function renderActions(){const next=buildNextActions({stage:$('stageSelect').val
 function sourceModeLabel(mode){return mode==='ready_api'?'공식 API':mode==='ready_public'?'공식 공개목록':mode==='ready'?'연결됨':'준비 중'}
 async function loadSources(){
   const host=$('sourceStatus');host.textContent='확인 중...';
-  try{const response=await fetch('/api/sources/status',{cache:'no-store'});const data=await response.json();host.innerHTML=(data.sources||[]).map(source=>`<div class="source-item"><strong>${esc(source.name)} · ${esc(sourceModeLabel(source.mode))}</strong><small>${source.official?'공식 원천':'외부 원천'} · ${esc((source.capabilities||[]).join(' · '))}</small></div>`).join('')+`<div class="source-item"><strong>${esc(service.label)} · ${esc(statusLabels[service.sourceStatus]||'원천 준비')}</strong><small>${esc(workspace.sourceNote)}</small></div>`}catch{host.textContent='공식 원천 연결상태를 확인하지 못했습니다.'}
+  try{const response=await fetch('/support/api/sources/status',{cache:'no-store'});const data=await response.json();host.innerHTML=(data.sources||[]).map(source=>`<div class="source-item"><strong>${esc(source.name)} · ${esc(sourceModeLabel(source.mode))}</strong><small>${source.official?'공식 원천':'외부 원천'} · ${esc((source.capabilities||[]).join(' · '))}</small></div>`).join('')+`<div class="source-item"><strong>${esc(service.label)} · ${esc(statusLabels[service.sourceStatus]||'원천 준비')}</strong><small>${esc(workspace.sourceNote)}</small></div>`}catch{host.textContent='공식 원천 연결상태를 확인하지 못했습니다.'}
 }
 function renderRelated(){
   const related=OPPORTUNITY_SERVICES.filter(item=>item.id!==serviceId).slice(0,6);
-  $('relatedServices').innerHTML=related.map(item=>`<a class="related-service" href="${esc(item.path)}"><strong>${esc(item.label)}</strong><span>${esc(item.title)} →</span></a>`).join('');
+  $('relatedServices').innerHTML=related.map(item=>`<a class="related-service" href="${SUPPORT_BASE}${esc(item.path)}"><strong>${esc(item.label)}</strong><span>${esc(item.title)} →</span></a>`).join('');
 }
 function opportunityHtml(item,profile){
   const href=safeUrl(item.url);const days=item.urgency?.daysLeft;const deadline=days==null?'마감 확인 필요':days<0?'마감':`${days}일 남음`;
@@ -79,7 +80,7 @@ function opportunityHtml(item,profile){
 async function loadMatches(){
   const host=$('matchResult');host.innerHTML='<p>공식 공고를 확인하고 있습니다.</p>';const profile=persistProfile(false);
   try{
-    const response=await fetch('/api/proactive-brief',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({profile,projects:[project],serviceId,limit:100,minScore:50})});
+    const response=await fetch('/support/api/proactive-brief',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({profile,projects:[project],serviceId,limit:100,minScore:50})});
     const data=await response.json();const opportunities=data.opportunities||data.brief?.opportunities||[];
     const soon=opportunities.filter(item=>item.urgency?.daysLeft!=null&&item.urgency.daysLeft>=0&&item.urgency.daysLeft<=7).length;
     const verified=opportunities.filter(item=>item.official).length;$('matchCount').textContent=opportunities.length;$('soonCount').textContent=soon;$('verifiedCount').textContent=verified;

@@ -1,6 +1,6 @@
-# EKODI Platform Constitution v1.11.0
+# EKODI Platform Constitution v1.14.0
 
-Effective: 2026-09-10
+Effective: 2026-09-13
 
 This constitution is the highest architecture and operations rule for EKODI Platform. Existing validators remain authoritative implementation guards; this document unifies their intent and governs future changes.
 
@@ -56,6 +56,7 @@ This constitution is the highest architecture and operations rule for EKODI Plat
 - `marketing.ekodi.kr` is the registered EKODI Marketing Core engine boundary. It is not the ordinary product or customer entry; the product entry is `ekodi.kr/ekodibiz/marketing-ai`, and workspace marketing uses `ekodi.kr/{slug}/marketing`.
 - `ai.ekodi.kr` is the registered provider-independent AI Gateway/Core boundary. Customer-specific `*.ai.ekodi.kr` addresses are compatibility execution aliases only and must not be presented as canonical user URLs.
 - Existing feature subdomains are legacy aliases unless explicitly registered as current system/common/core service boundaries. No new convenience or tenant-specific subdomain may be added without a constitutional amendment and the sustainable boundary-creation gate.
+- `https://ekodi.kr/support` is the sole canonical Support user entry. `support.ekodi.kr` is retired and is not retained as a compatibility redirect.
 - Customer-owned domains map to a workspace public surface and never redefine EKODI internal identity, `workspace_id` or private routing.
 - CGMA uses `https://ekodi.kr/cgma` as its EKODI platform route and `https://cgma.or.kr` as its customer-owned public address; legacy `cgma.ekodi.kr` is compatibility-only.
 
@@ -117,6 +118,14 @@ This constitution is the highest architecture and operations rule for EKODI Plat
 - Secrets remain server-side and credentials are capability-scoped with least privilege.
 - Existing deployment boundaries are preserved as the migration baseline. New independent deployment boundaries are exceptional and require the sustainable boundary-creation gate defined by the evolution model.
 - Capacity expansion follows the order: remove root cause -> optimize cache/query/workload shape -> queue/retry heavy work -> increase shared capacity -> isolate only measured bottlenecks -> add redundancy only when justified.
+
+## 8A. Completion Continuity Constitution
+- A session ending, execution-window limit, temporary tool unavailability, connector failure, rate limit or transient infrastructure failure is a **recoverable interruption**, not evidence of completion and not by itself a blocked state.
+- Recoverable work records a checkpoint containing task/branch/commit identity, completed and pending steps, latest validation and deployment state, blocking dependency, next executable step and resume timestamp.
+- The next authorized worker resumes from the checkpoint instead of restarting completed work or silently abandoning it.
+- Before escalating a recoverable interruption, EKODI attempts an available authorized alternative path under Cloud First and existing provider-independent fallback rules.
+- Continuity never expands authority, bypasses credentials, weakens safety gates or permits direct production mutation. A genuine blocked state is reserved for an authority, safety, credential, human-approval or external dependency that cannot be resolved within delegated authority.
+- Commit, PR, merge, deployment, session termination or tool termination never substitutes for required production verification evidence.
 
 ## 9. Change Constitution
 - **C0**: operational parameter change with no constitutional impact. Automated validation may apply it.

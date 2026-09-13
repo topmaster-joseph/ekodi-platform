@@ -1,4 +1,4 @@
-name: Verify Admin Login Redirect
+name: Verify Admin Canonical Login Flow
 
 on:
   pull_request:
@@ -40,26 +40,25 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 4
     steps:
-      - name: Verify live Work admin entry and central-auth redirect with bounded retries
+      - name: Verify live canonical Work admin and apex auth flow with bounded retries
         shell: bash
         run: |
           set -euo pipefail
+          auth_url='https://ekodi.kr/auth/?site=admin&direct=1&return_to=https%3A%2F%2Fekodi.kr%2Fadmin%2Fwork'
           for attempt in $(seq 1 5); do
-            page_code=$(curl -sS -D /tmp/admin-headers -o /tmp/admin-work.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://admin.ekodi.kr/work' || true)
-            redirect_code=$(curl -sS --max-redirs 0 -D /tmp/login-headers -o /tmp/login-body -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://admin.ekodi.kr/auth/start?return_to=%2Fwork' || true)
-            location=$(awk 'BEGIN{IGNORECASE=1} /^location:/ {sub(/\r$/,""); sub(/^location:[[:space:]]*/,""); print; exit}' /tmp/login-headers || true)
+            page_code=$(curl -sS -D /tmp/admin-headers -o /tmp/admin-work.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/admin/work' || true)
+            auth_code=$(curl -sS -D /tmp/auth-headers -o /tmp/auth.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$auth_url" || true)
             if [[ "$page_code" == "200" ]] \
               && grep -Fq 'id="centralAdminLogin"' /tmp/admin-work.html \
               && grep -Fq 'admin-central-handoff.js' /tmp/admin-work.html \
-              && [[ "$redirect_code" == "302" ]] \
-              && [[ "$location" == https://auth.ekodi.kr/* ]] \
-              && [[ "$location" == *'site=admin'* ]] \
-              && [[ "$location" == *'return_to=https%3A%2F%2Fadmin.ekodi.kr%2Fwork'* ]]; then
-              echo 'Live Work admin login flow verified.'
+              && grep -Fiq 'x-ekodi-route: admin-shell' /tmp/admin-headers \
+              && [[ "$auth_code" == "200" ]] \
+              && grep -Fiq 'x-ekodi-route: central-auth' /tmp/auth-headers; then
+              echo 'Live canonical Work admin login flow verified.'
               exit 0
             fi
-            echo "Waiting for live login flow ($attempt/5): page=$page_code redirect=$redirect_code location=$location"
+            echo "Waiting for live canonical login flow ($attempt/5): page=$page_code auth=$auth_code"
             sleep 4
           done
-          echo 'Live Work admin login flow did not become healthy within the bounded retry window.'
+          echo 'Live canonical Work admin login flow did not become healthy within the bounded retry window.'
           exit 1

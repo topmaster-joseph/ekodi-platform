@@ -3,15 +3,20 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { isWorkspaceAdminPathShape } from '../workspace-route-policy.js';
 
-test('mall marketing channels deep link is handled by workspace admin', async () => {
+test('Mall channel settings canonical deep link is handled by workspace admin', async () => {
+  assert.equal(isWorkspaceAdminPathShape('/admin/ekodimall/'), true);
+  assert.equal(isWorkspaceAdminPathShape('/admin/ekodimall/channel-settings/'), true);
   assert.equal(isWorkspaceAdminPathShape('/ekodibiz/ekodimall/admin/marketing/channels/'), true);
   assert.equal(isWorkspaceAdminPathShape('/ekodibiz/ekodimall/admin/channels/'), true);
+  assert.equal(isWorkspaceAdminPathShape('/ekodibiz/mall/admin/channels/'), true);
   assert.equal(isWorkspaceAdminPathShape('/ekodibiz/ekodimall/admin/sourcing/'), true);
   assert.equal(isWorkspaceAdminPathShape('/ekodibiz/ekodimall/admin/growth/'), true);
   assert.equal(isWorkspaceAdminPathShape('/ekodibiz/ekodimall/admin/marketing/unknown/'), false);
   const source=await readFile(new URL('../workspace-admin-page.js', import.meta.url),'utf8');
-  assert.match(source, /mallMarketingChannels=clean\.match/);
-  assert.match(source, /mallMarketingChannels\?'channels'/);
+  assert.match(source, /canonicalMall=clean\.match/);
+  assert.match(source, /rawSection==='channel-settings'\?'channels':rawSection/);
+  assert.match(source, /adminBase=service\?'\/admin\/ekodimall'/);
+  assert.match(source, /sectionHref=key=>key==='overview'\?adminBase/);
 });
 
 test('unauthenticated mall channel setup selects provider before EKODI or provider login', async () => {
@@ -23,7 +28,7 @@ test('unauthenticated mall channel setup selects provider before EKODI or provid
   assert.match(source, /if\(service==='mall'&&section==='channels'\)return channelPreAuth\(\)/);
   assert.match(source, /pendingChannelIntent\(\)/);
   assert.match(source, /return startChannelConnect\(pendingProvider\)/);
-  assert.match(source, /'ekodimall:mall:youtube':'topmaster.joseph@gmail\.com'/);
+  assert.match(source, /'ekodimall:mall:youtube':'topmaster\.joseph@gmail\.com'/);
   assert.match(source, /const accountHint=channelTargetAccount\(provider\)/);
   assert.match(source, /YouTube 연결 대상 계정/);
   assert.match(source, /Google로 YouTube 재인증/);
