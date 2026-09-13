@@ -1,0 +1,50 @@
+name: Validate Site Operating Status
+
+on:
+  pull_request:
+    paths:
+      - 'site-operating-status.js'
+      - 'site-operating-status-widget.js'
+      - 'site-operating-status-entry-worker.js'
+      - 'test/site-operating-status.test.mjs'
+      - 'wrangler.site.toml'
+      - 'wrangler.site-staging.toml'
+      - '.github/workflows/validate-site-operating-status.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'site-operating-status.js'
+      - 'site-operating-status-widget.js'
+      - 'site-operating-status-entry-worker.js'
+      - 'test/site-operating-status.test.mjs'
+      - 'wrangler.site.toml'
+      - 'wrangler.site-staging.toml'
+      - '.github/workflows/validate-site-operating-status.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: validate-site-operating-status-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: EKODI AI orchestration gate
+        run: node scripts/validate-ekodi-ai-change-orchestration.mjs --release
+      - name: Validate syntax and status contracts
+        run: |
+          set -euo pipefail
+          node --check site-operating-status.js
+          node --check site-operating-status-widget.js
+          node --check site-operating-status-entry-worker.js
+          node --test test/site-operating-status.test.mjs
+      - name: Validate production Worker bundle
+        run: npx --yes wrangler@4.119.0 deploy --dry-run --config wrangler.site.toml --outdir /tmp/ekodi-site-status-worker
