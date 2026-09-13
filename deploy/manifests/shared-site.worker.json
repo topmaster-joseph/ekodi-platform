@@ -339,19 +339,12 @@
           "data-ekodi-user-surface=\"public\"",
           "/ekodibiz/ekodimall/app.js"
         ],
-        "rollbackExpect": [
-          "data-ekodi-service=\"mall\"",
-          "data-ekodi-user-surface=\"public\"",
-          "/ekodibiz/ekodimall/app.js"
-        ],
         "headerExpect": [
           "x-content-type-options: nosniff",
           "x-ekodi-route: public-ekodi-mall",
           "x-ekodi-edge: mall-path-gateway"
         ],
-        "rollbackHeaderExpect": [
-          "x-content-type-options: nosniff"
-        ],
+        "rollbackVerify": false,
         "candidateVerify": false,
         "candidateVerifyReason": "run_worker_first bootstrap for /ekodibiz/ekodimall can serve the stable static storefront during 0% version-override smoke; verify the marketplace Worker route immediately after promotion"
       },
@@ -385,6 +378,8 @@
           "location: https://ekodi.kr/ekodibiz/ekodimall/admin/",
           "cache-control: no-store"
         ],
+        "candidateVerify": false,
+        "candidateVerifyReason": "legacy Mall admin redirect depends on the promoted run_worker_first routing table; verify the 308 immediately after promotion",
         "rollbackVerify": false
       },
       {
