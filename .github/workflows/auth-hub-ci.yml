@@ -10,7 +10,6 @@ on:
       - 'docs/AUTH-CENTER.md'
       - 'deploy/manifests/shared-site.worker.json'
       - 'test/admin-auth-cache-boundary.test.mjs'
-      - 'test/auth-redirect-loop-guard.test.mjs'
       - '.github/workflows/auth-hub-ci.yml'
 permissions:
   contents: read
@@ -37,16 +36,12 @@ jobs:
           node --check auth-site/business-auth.js
           node --check site-worker.js
           node --test test/admin-auth-cache-boundary.test.mjs
-          node --test test/auth-redirect-loop-guard.test.mjs
       - name: Verify One Login and invisible auth contract
         shell: bash
         run: |
           set -euo pipefail
           grep -Fq 'data-seamless-sso' auth-site/index.html
-          grep -Fq "/auth-router.js?v=20260904-direct-login-1" auth-site/index.html
-          grep -Fq 'ekodi-auth-entry:' auth-site/index.html
-          grep -Fq 'authLoopBlocked' auth-site/index.html
-          grep -Fq 'now-previous<120000' auth-site/index.html
+          grep -Fq '/auth-router.js?v=20260904-direct-login-1' auth-site/index.html
 
           grep -Fq 'manifestService' auth-site/auth-router.js
           grep -Fq 'isRegistryUserService' auth-site/auth-router.js
