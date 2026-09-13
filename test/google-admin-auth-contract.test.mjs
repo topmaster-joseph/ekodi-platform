@@ -89,8 +89,8 @@ test('production build and CSP allow only required Google Identity Services reso
   assert.match(site, /Cross-Origin-Opener-Policy/);
 });
 
-test('personal Gmail super administrator and production OAuth client are exact contracts', () => {
-  assert.match(wrangler, /ADMIN_GOOGLE_BOOTSTRAP_EMAILS = "topmaster\.joseph@gmail\.com"/);
+test('designated super administrators and production OAuth client are exact contracts', () => {
+  assert.ok(wrangler.includes('ADMIN_GOOGLE_BOOTSTRAP_EMAILS = "topmaster.joseph@gmail.com,joseph@ekodi.kr"'));
   assert.match(wrangler, /GOOGLE_CLIENT_ID = "483044030492-4e6231l5glchhtniroinvuq3ev6n5mv5\.apps\.googleusercontent\.com"/);
   assert.match(wrangler, /ADMIN_WORKSPACE_DOMAIN = "ekodi\.kr"/);
   assert.match(migration, /admin_google_accounts/);

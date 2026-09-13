@@ -1,7 +1,7 @@
 import authWorker from './auth-worker.js';
 import { handleMailControl } from './mail-control.js';
 import { EKODI_SERVICE_MANIFEST } from './ekodi-service-manifest.js';
-import { handleLanguageAutomationPublic, languageStatusForAdmin, runLanguageAutomation } from './language-automation.js';
+import { handleLanguageAutomationPublic, handleLanguageTenantAdmin, languageStatusForAdmin, runLanguageAutomation, setLanguagePublication } from './language-automation.js';
 import { remotePowerSnapshot, requestRemoteWake } from './remote-power-control.js';
 import { analyzeServiceFleet, evaluateTechnologyCandidate } from './evolution-intelligence-runtime.js';
 import { evolutionStoreSummary, listEvolutionRecommendations, persistEvolutionReport } from './evolution-intelligence-store.js';
@@ -18,7 +18,7 @@ const SERVICE_CATALOG = [
   { id: 'api', name: 'EKODI API', domain: 'api.ekodi.kr', url: 'https://api.ekodi.kr/health', group: 'platform', defaultState: 'active', defaultMonitor: false },
   { id: 'biz', name: '에코디비즈', domain: 'biz.ekodi.kr', url: 'https://biz.ekodi.kr', group: 'business', defaultState: 'planned', defaultMonitor: false },
   { id: 'trade', name: 'EKODI Global Trading', domain: 'trade.ekodi.kr', url: 'https://trade.ekodi.kr', group: 'business', defaultState: 'planned', defaultMonitor: false },
-  { id: 'mall', name: '에코디몰', domain: 'ekodi.kr/ekodibiz/mall', url: 'https://ekodi.kr/ekodibiz/mall', group: 'business', defaultState: 'active', defaultMonitor: true },
+  { id: 'mall', name: '에코디몰', domain: 'ekodi.kr/ekodibiz/ekodimall', url: 'https://ekodi.kr/ekodibiz/ekodimall', group: 'business', defaultState: 'active', defaultMonitor: true },
   { id: 'pay', name: '에코디결제', domain: 'pay.ekodi.kr', url: 'https://pay.ekodi.kr', group: 'business', defaultState: 'planned', defaultMonitor: false },
   { id: 'insurance', name: '에코디보험', domain: 'ekodi.kr/insurance', url: 'https://ekodi.kr/insurance', group: 'business', defaultState: 'planned', defaultMonitor: false },
   { id: 'books', name: '에코디북스', domain: 'books.ekodi.kr', url: 'https://books.ekodi.kr', group: 'knowledge', defaultState: 'active', defaultMonitor: true },
@@ -623,6 +623,16 @@ async function handleControl(request, env) {
     return controlJson(await languageStatusForAdmin(env), 200, auth.response.headers);
   }
 
+  const languagePublicationMatch = path.match(/^\/api\/control\/language-status\/([a-z0-9-]+)\/([A-Za-z0-9-]+)$/);
+  if (languagePublicationMatch && request.method === 'PUT') {
+    const body = await readJson(request);
+    if (!body || typeof body !== 'object') return controlJson({ error: '언어 게시 설정 형식을 확인해 주세요.' }, 400, auth.response.headers);
+    const result = await setLanguagePublication(env, { serviceIdValue: languagePublicationMatch[1], localeValue: languagePublicationMatch[2], publicationStatus: body.publicationStatus, actor: auth.session.email || auth.session.role || 'platform-admin', source: 'platform-super-admin' });
+    if (!result.ok) return controlJson({ error: result.error }, result.status || 400, auth.response.headers);
+    await writeAudit(env, auth.session, 'language.publication.update', languagePublicationMatch[1] + ':' + result.locale, JSON.stringify({ publicationStatus: result.publicationStatus }));
+    return controlJson(result, 200, auth.response.headers);
+  }
+
   if (request.method === 'GET' && path === `${CONTROL_PREFIX}/platform-maturity`) {
     if (auth.session.role !== 'super_admin') return controlJson({ error: '최고관리자 권한이 필요합니다.', code: 'PLATFORM_MATURITY_FORBIDDEN' }, 403, auth.response.headers);
     return controlJson(platformMaturityProjection(), 200, auth.response.headers);
@@ -788,6 +798,9 @@ export default {
 
     const publicPreviewResponse = await handlePublicPreview(request, env);
     if (publicPreviewResponse) return publicPreviewResponse;
+    const tenantLanguageResponse = await handleLanguageTenantAdmin(request, env);
+    if (tenantLanguageResponse) return tenantLanguageResponse;
+
     const languageResponse = await handleLanguageAutomationPublic(request, env);
     if (languageResponse) return languageResponse;
     const learningResponse = await handleLearningControl(request, env);

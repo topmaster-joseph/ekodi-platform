@@ -41,21 +41,21 @@ test('Tax portal is focused, FREE-FIRST and handles core tax workflows', async (
   assert.match(source, /유료 API 자동발행은 비활성화/);
 });
 
-test('Tax host uses same-origin API and explicit central-auth return target', async () => {
+test('Tax apex path uses same-origin API and explicit canonical-auth return target', async () => {
   const router = await read('platform-router-entry-worker.js');
-  assert.match(router, /const TAX_HOST='tax\.ekodi\.kr'/);
+  assert.match(router, /const TAX_APEX_PREFIX='\/tax'/);
   assert.match(router, /url\.pathname\.startsWith\('\/api\/finance\/tax-'\)/);
   assert.match(router, /financeEntryWorker\.fetch\(request,env,ctx\)/);
   const auth = await read('auth-site/admin-auth.js');
-  assert.match(auth, /u\.origin==='https:\/\/tax\.ekodi\.kr'/);
-  assert.match(auth, /u\.pathname==='\/'\|\|u\.pathname==='\/index\.html'/);
+  assert.match(auth, /u\.origin==='https:\/\/ekodi\.kr'/);
+  assert.match(auth, /u\.pathname==='\/tax'/);
   const wrangler = await read('wrangler.site.toml');
-  assert.match(wrangler, /pattern = "tax\.ekodi\.kr"\s+custom_domain = true/);
+  assert.doesNotMatch(wrangler, /tax\.ekodi\.kr/);
 });
 
 test('Finance no longer owns Health polling and links to EKODI Tax', async () => {
   const source = await read('finance-monitor.js');
-  assert.match(source, /https:\/\/tax\.ekodi\.kr\//);
+  assert.match(source, /https:\/\/ekodi\.kr\/tax/);
   assert.match(source, /세금 · 증빙 열기/);
   assert.doesNotMatch(source, /monitor-status\.json/);
   assert.doesNotMatch(source, /setInterval\s*\(/);
@@ -82,7 +82,7 @@ test('Admin registry exposes Tax as an external professional service', async () 
   const registry = await read('admin-menu-registry.js');
   const runtime = await read('admin-menu-runtime.js');
   assert.match(registry, /id: 'tax'/);
-  assert.match(registry, /https:\/\/tax\.ekodi\.kr\//);
+  assert.match(registry, /https:\/\/ekodi\.kr\/tax/);
   assert.match(registry, /세금·증빙/);
   assert.match(registry, /id: 'tax'[^\n]*group: 'operations'/);
   assert.match(registry, /id: 'tax'[^\n]*adminHandoff: true/);
@@ -91,9 +91,9 @@ test('Admin registry exposes Tax as an external professional service', async () 
 
 test('shared deployment manifest verifies Tax portal', async () => {
   const manifest = await read('deploy/manifests/shared-site.worker.json');
-  assert.match(manifest, /https:\/\/tax\.ekodi\.kr\//);
+  assert.match(manifest, /https:\/\/ekodi\.kr\/tax/);
   assert.match(manifest, /EKODI Tax/);
-  assert.match(await read('auth-site/admin-auth.js'), /u\.origin==='https:\/\/tax\.ekodi\.kr'/);
+  assert.match(await read('auth-site/admin-auth.js'), /u\.pathname==='\/tax'/);
 });
 
 test('changed JavaScript sources pass syntax checks', async () => {

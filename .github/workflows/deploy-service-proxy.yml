@@ -60,6 +60,6 @@ jobs:
           for domain in mall.ekodi.kr mall.biz.ekodi.kr; do
             headers=$(curl -sS -o /dev/null -D - --connect-timeout 5 --max-time 15 "https://$domain/" || true)
             echo "$headers" | tr -d '\r' | grep -Fq 'HTTP/2 308' || failed=1
-            echo "$headers" | tr -d '\r' | grep -Fqi 'location: https://ekodi.kr/ekodibiz/mall' || failed=1
+            echo "$headers" | tr -d '\r' | grep -Fqi 'location: https://ekodi.kr/ekodibiz/ekodimall' || failed=1
           done
           exit "$failed"

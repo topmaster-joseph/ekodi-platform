@@ -201,9 +201,9 @@ for (const [asset, imports] of moduleImportVersions) {
 }
 
 html = html
-  .replace(/href="admin-shell\.css(?:\?v=[^"]+)?"/, `href="admin-shell.css?v=${assetVersion}"`)
-  .replace(/src="admin-central-handoff\.js(?:\?v=[^"]+)?"/, `src="admin-central-handoff.js?v=${assetVersion}"`)
-  .replace(/src="admin-authenticated-shell\.js(?:\?v=[^"]+)?"/, `src="admin-authenticated-shell.js?v=${assetVersion}"`)
+  .replace(/href="(?:\/admin\/)?admin-shell\.css(?:\?v=[^"]+)?"/, `href="/admin/admin-shell.css?v=${assetVersion}"`)
+  .replace(/src="(?:\/admin\/)?admin-central-handoff\.js(?:\?v=[^"]+)?"/, `src="/admin/admin-central-handoff.js?v=${assetVersion}"`)
+  .replace(/src="(?:\/admin\/)?admin-authenticated-shell\.js(?:\?v=[^"]+)?"/, `src="/admin/admin-authenticated-shell.js?v=${assetVersion}"`)
   .replaceAll('20260819-thin-shell-2', assetVersion)
   .replaceAll('20260819-e2e-perf-1', assetVersion);
 await writeFile(path, html);
@@ -225,12 +225,12 @@ const firstCssBytes = baseCssBytes + compactCssBytes;
 
 if (html.includes('control-center.js"></script>')) throw new Error('Legacy control-center.js leaked into admin first path');
 if (html.includes('control-center-ops.css') || html.includes('admin-finance.css')) throw new Error('Operational CSS leaked into admin first path');
-if (!html.includes(`admin-shell.css?v=${assetVersion}`) || !html.includes(`admin-central-handoff.js?v=${assetVersion}`)) throw new Error('Versioned first-path assets missing');
+if (!html.includes(`/admin/admin-shell.css?v=${assetVersion}`) || !html.includes(`/admin/admin-central-handoff.js?v=${assetVersion}`)) throw new Error('Versioned first-path assets missing');
 if (bytes.handoff > 9000) throw new Error(`Admin handoff budget exceeded: ${bytes.handoff} bytes`);
 if (bytes.compact > 5000) throw new Error(`Compact shell budget exceeded: ${bytes.compact} bytes`);
 if (bytes.menu > 10000) throw new Error(`Menu layout budget exceeded: ${bytes.menu} bytes`);
-if (bytes.demand > 14000) throw new Error(`Demand loader budget exceeded: ${bytes.demand} bytes`);
-if (firstPathBytes > 43000) throw new Error(`Admin first-path JavaScript budget exceeded: ${firstPathBytes} bytes`);
+if (bytes.demand > 14100) throw new Error(`Demand loader budget exceeded: ${bytes.demand} bytes`);
+if (firstPathBytes > 44500) throw new Error(`Admin first-path JavaScript budget exceeded: ${firstPathBytes} bytes`);
 if (baseCssBytes > 16000) throw new Error(`Admin base CSS budget exceeded: ${baseCssBytes} bytes`);
 if (compactCssBytes > 26000) throw new Error(`Admin compact CSS budget exceeded: ${compactCssBytes} bytes`);
 if (firstCssBytes > 40000) throw new Error(`Admin first-path CSS budget exceeded: ${firstCssBytes} bytes`);

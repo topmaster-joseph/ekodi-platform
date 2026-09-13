@@ -99,8 +99,9 @@
   }
 
   function assetUrl(path) {
-    const separator = path.includes('?') ? '&' : '?';
-    return `${path}${separator}v=${encodeURIComponent(ASSET_VERSION)}`;
+    const base = path.startsWith('/') ? path : `/admin/${path}`;
+    const separator = base.includes('?') ? '&' : '?';
+    return `${base}${separator}v=${encodeURIComponent(ASSET_VERSION)}`;
   }
 
   function mark(name) { try { performance.mark(name); } catch {} }

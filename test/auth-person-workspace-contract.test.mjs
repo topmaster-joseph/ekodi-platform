@@ -58,7 +58,7 @@ test('Mall gives every verified Google member an active free personal seller han
 test('legacy Mall seller login is normalized back to Seller Studio through the current router',()=>{
   assert.match(authRouter,/'mall-seller':'mall'/);
   assert.match(authRouter,/requestedSite==='mall-seller'/);
-  assert.match(authRouter,/https:\/\/ekodi\.kr\/ekodibiz\/mall\/seller\//);
+  assert.match(authRouter,/https:\/\/ekodi\.kr\/ekodibiz\/ekodimall\/seller\//);
   assert.match(authHtml,/auth-router\.js\?v=20260904-direct-login-1/);
 });
 

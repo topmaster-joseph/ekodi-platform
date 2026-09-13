@@ -1,0 +1,77 @@
+{
+  "version": 1,
+  "purpose": "EKODI traffic-aware reliability validation policy",
+  "guardrails": {
+    "maxRequests": 1000,
+    "maxConcurrency": 50,
+    "maxTargetRps": 60,
+    "maxDurationSeconds": 600,
+    "requestTimeoutMs": 8000,
+    "productionApprovalEnv": "EKODI_PRODUCTION_RELIABILITY_APPROVED",
+    "productionAllowedProfiles": ["synthetic"],
+    "stagingHostSuffixes": [".workers.dev"],
+    "productionHostSuffixes": ["ekodi.kr"]
+  },
+  "defaults": {
+    "path": "/deployment-probe",
+    "hostHeader": "ekodi.kr",
+    "expectedStatuses": [200]
+  },
+  "profiles": {
+    "synthetic": {
+      "requests": 3,
+      "concurrency": 1,
+      "targetRps": 1,
+      "trafficMultiplier": 0.01,
+      "manualOnly": false,
+      "thresholds": {
+        "p95Ms": 2000,
+        "errorRate": 0.01
+      }
+    },
+    "baseline": {
+      "requests": 120,
+      "concurrency": 8,
+      "targetRps": 12,
+      "trafficMultiplier": 1,
+      "manualOnly": false,
+      "thresholds": {
+        "p95Ms": 1500,
+        "errorRate": 0.005
+      }
+    },
+    "spike": {
+      "requests": 180,
+      "concurrency": 24,
+      "targetRps": 30,
+      "trafficMultiplier": 3,
+      "manualOnly": false,
+      "thresholds": {
+        "p95Ms": 2500,
+        "errorRate": 0.01
+      }
+    },
+    "stress": {
+      "requests": 300,
+      "concurrency": 40,
+      "targetRps": 50,
+      "trafficMultiplier": 5,
+      "manualOnly": true,
+      "thresholds": {
+        "p95Ms": 3500,
+        "errorRate": 0.02
+      }
+    },
+    "soak": {
+      "requests": 600,
+      "concurrency": 8,
+      "targetRps": 4,
+      "trafficMultiplier": 1,
+      "manualOnly": true,
+      "thresholds": {
+        "p95Ms": 1800,
+        "errorRate": 0.005
+      }
+    }
+  }
+}

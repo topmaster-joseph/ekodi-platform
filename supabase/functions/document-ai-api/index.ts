@@ -12,7 +12,7 @@ const GATEWAY_URL=Deno.env.get("EKODI_AI_GATEWAY_URL")||"https://api.ekodi.kr/ap
 const DAILY_LIMIT=Math.max(1,Math.min(200,Number(Deno.env.get("DOCUMENT_AI_DAILY_LIMIT")||30)));
 const admin=createClient(SUPABASE_URL,SUPABASE_SERVICE_ROLE_KEY,{auth:{persistSession:false}});
 const CANONICAL_ORIGIN="https://ekodi.kr";
-const ORIGINS=new Set([CANONICAL_ORIGIN,"https://my.ekodi.kr","https://auth.ekodi.kr"]);
+const ORIGINS=new Set([CANONICAL_ORIGIN,"https://auth.ekodi.kr"]);
 const OPERATIONS=new Set(["proofread","rewrite","shorten","expand","summarize"]);
 const MAX_INPUT=120000,CHUNK_INPUT=14000,MAX_CHUNKS=10,MAX_INSTRUCTION=4000;
 const RELEASE="20260910-docs-ai-5";

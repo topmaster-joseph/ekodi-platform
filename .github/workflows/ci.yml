@@ -64,12 +64,19 @@ jobs:
             .github/workflows/release-invest-personalization.yml \
             .github/workflows/cloud-control-workers-builds.yml \
             .github/workflows/redeploy-control-on-central-core.yml \
-            .github/workflows/github-governance-audit.yml
+            .github/workflows/github-governance-audit.yml \
+            .github/workflows/reliability-validation.yml
       - name: Enforce traffic-ready data plane
         run: |
           node --check data-plane.js
           node --check data-plane-adapters.js
           node --test test/data-plane.test.mjs
+      - name: Validate traffic-aware reliability gate
+        run: |
+          node --check scripts/reliability-validation-lib.mjs
+          node --check scripts/run-reliability-validation.mjs
+          node scripts/run-reliability-validation.mjs --validate-only
+          node --test test/reliability-validation.test.mjs
       - run: npm run check
       - run: npm run build
       - name: Validate AI provider independence

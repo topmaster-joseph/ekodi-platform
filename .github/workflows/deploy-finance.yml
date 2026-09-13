@@ -171,7 +171,7 @@ jobs:
           preview_urls = false
           [vars]
           ENVIRONMENT = "staging"
-          ALLOWED_ORIGINS = "https://tax.ekodi.kr,https://admin.ekodi.kr"
+          ALLOWED_ORIGINS = "https://ekodi.kr,https://admin.ekodi.kr"
 
           [observability.logs]
           enabled = true
@@ -209,7 +209,7 @@ jobs:
             registry_health=$(curl -fsS --connect-timeout 5 --max-time 12 'http://127.0.0.1:8792/api/finance/tax-business-status-health' || true)
             overview_code=$(curl -sS -o /tmp/finance-stage-overview.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'http://127.0.0.1:8792/api/finance/overview' || true)
             structure_code=$(curl -sS -o /tmp/finance-stage-structure.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'http://127.0.0.1:8792/api/finance/structure' || true)
-            tax_profile_code=$(curl -sS -o /tmp/finance-stage-tax-profile.json -w '%{http_code}' --connect-timeout 5 --max-time 12 -H 'Origin: https://tax.ekodi.kr' 'http://127.0.0.1:8792/api/finance/tax-profiles?organizationId=EKODIBIZ' || true)
+            tax_profile_code=$(curl -sS -o /tmp/finance-stage-tax-profile.json -w '%{http_code}' --connect-timeout 5 --max-time 12 -H 'Origin: https://ekodi.kr' 'http://127.0.0.1:8792/api/finance/tax-profiles?organizationId=EKODIBIZ' || true)
             if printf '%s' "$health" | grep -q '"ok":true' \
               && printf '%s' "$health" | grep -Fq 'ekodi-finance-api' \
               && printf '%s' "$registry_health" | grep -Fq '"service":"ekodi-tax-business-registry"' \
@@ -299,7 +299,7 @@ jobs:
             registry_health=$(curl -fsS --connect-timeout 5 --max-time 12 'https://finance-api.ekodi.kr/api/finance/tax-business-status-health' || true)
             overview_code=$(curl -sS -o /tmp/finance-overview.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://finance-api.ekodi.kr/api/finance/overview' || true)
             structure_code=$(curl -sS -o /tmp/finance-structure.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://finance-api.ekodi.kr/api/finance/structure' || true)
-            tax_profile_code=$(curl -sS -o /tmp/finance-tax-profile.json -w '%{http_code}' --connect-timeout 5 --max-time 12 -H 'Origin: https://tax.ekodi.kr' 'https://finance-api.ekodi.kr/api/finance/tax-profiles?organizationId=EKODIBIZ' || true)
+            tax_profile_code=$(curl -sS -o /tmp/finance-tax-profile.json -w '%{http_code}' --connect-timeout 5 --max-time 12 -H 'Origin: https://ekodi.kr' 'https://finance-api.ekodi.kr/api/finance/tax-profiles?organizationId=EKODIBIZ' || true)
             if printf '%s' "$health" | grep -q '"ok":true' \
               && printf '%s' "$health" | grep -Fq 'ekodi-finance-api' \
               && printf '%s' "$registry_health" | grep -Fq '"service":"ekodi-tax-business-registry"' \

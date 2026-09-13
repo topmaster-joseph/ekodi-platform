@@ -1,6 +1,6 @@
 # EKODI Discovery Secure Projection
 
-Status: proposed common security/discovery boundary
+Status: active common security/discovery boundary
 
 ## Purpose
 
@@ -45,7 +45,20 @@ Where meaningful, public pages should expose schema.org JSON-LD derived only fro
 
 ## Edge enforcement
 
-Cloudflare or the active edge provider should enforce bot-intent policy using verified-bot identity when available. Unknown or unverifiable crawlers must not be trusted solely because of a User-Agent string. Rate limits, anomaly detection and WAF rules remain independent defenses.
+The production Cloudflare policy is guarded and continuously reconcilable from `main`:
+
+- Search behavior remains allowed.
+- Training behavior is blocked.
+- AI assistant/agent behavior is blocked by default.
+- Legacy AI crawler protection remains enabled.
+- Cloudflare-managed robots/Bot Preference Sync remain disabled because EKODI owns the generated robots policy.
+- A global verified-bot block is treated as a conflict and causes the policy enforcer to fail closed instead of falsely claiming SEO/AEO reachability.
+
+`scripts/enforce-cloudflare-discovery-policy.mjs` resolves the canonical production zone, reads the existing configuration, applies only the documented discovery fields, verifies the result and attempts field-level rollback when post-write verification fails.
+
+`.github/workflows/cloudflare-discovery-policy.yml` validates on pull requests and performs the production mutation only from `main` through the release orchestration gate. It re-verifies public discovery endpoints after enforcement.
+
+Unknown or unverifiable crawlers must not be trusted solely because of a User-Agent string. Rate limits, anomaly detection and WAF rules remain independent defenses.
 
 ## Governance
 
@@ -60,3 +73,5 @@ Changes that widen discovery data, permit training crawlers, expose new public r
 5. Training and unknown scraper access are denied by default.
 6. `robots.txt` is never treated as the sole protection for private data.
 7. Public pages remain usable by people when all crawler access is disabled.
+8. Production Cloudflare search policy must remain non-blocking while training and agent policy remains blocking.
+9. Cloudflare policy reconciliation must fail closed on a conflicting global verified-bot block.

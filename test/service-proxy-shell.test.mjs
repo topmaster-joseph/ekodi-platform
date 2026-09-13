@@ -30,7 +30,7 @@ test('production config explicitly disables staging host behavior',async()=>{
 
 test('retired Mall subdomains permanently redirect to the canonical EKODIBIZ path',async()=>{
   const source=await read('service-proxy.js');
-  assert.match(source,/MALL_CANONICAL = 'https:\/\/ekodi\.kr\/ekodibiz\/mall'/);
+  assert.match(source,/MALL_CANONICAL = 'https:\/\/ekodi\.kr\/ekodibiz\/ekodimall'/);
   assert.match(source,/'mall\.ekodi\.kr': MALL_CANONICAL/);
   assert.match(source,/'mall\.biz\.ekodi\.kr': MALL_CANONICAL/);
   assert.match(source,/Response\.redirect\(target\.toString\(\), 308\)/);
@@ -51,7 +51,7 @@ test('mail root is exclusively owned by the shared site core',async()=>{
   assert.match(entry,/mailUserPage\(\)/);
   assert.match(entry,/mailAdminPage\(\)/);
   const workflow=await read('.github/workflows/deploy-site-core.yml');
-  assert.match(workflow,/for host in ekodi\.kr admin\.ekodi\.kr auth\.ekodi\.kr tax\.ekodi\.kr mail\.ekodi\.kr; do/);
+  assert.match(workflow,/for host in ekodi\.kr admin\.ekodi\.kr auth\.ekodi\.kr mail\.ekodi\.kr; do/);
 });
 
 
