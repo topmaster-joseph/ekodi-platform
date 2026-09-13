@@ -55,16 +55,21 @@ jobs:
           set -euo pipefail
           test -n "$CLOUDFLARE_API_TOKEN"
           test -n "$CLOUDFLARE_ACCOUNT_ID"
-          for file in index.html script.js church-character-identity.js church-i18n.js church-i18n-extended.js church-i18n-payment-patch.js church-shell-i18n.js church-header-controls.js church-header-tune.css giving.js church-footer.css community-visual.css church-life-hub.js church-life-hub.css church-life-hub-i18n.js; do
+          for file in index.html script.js church-character-identity.js church-i18n.js church-i18n-extended.js church-i18n-payment-patch.js church-shell-i18n.js church-header-controls.js church-header-tune.css church-online-status.js church-live-entry.css giving.js church-footer.css community-visual.css church-life-hub.js church-life-hub.css church-life-hub-i18n.js; do
             test -s "church/$file"
           done
-          for file in script.js church-character-identity.js church-i18n.js church-i18n-extended.js church-i18n-payment-patch.js church-shell-i18n.js church-header-controls.js giving.js church-life-hub.js church-life-hub-i18n.js; do
+          for file in script.js church-character-identity.js church-i18n.js church-i18n-extended.js church-i18n-payment-patch.js church-shell-i18n.js church-header-controls.js church-online-status.js giving.js church-life-hub.js church-life-hub-i18n.js; do
             node --check "church/$file"
           done
           grep -Fq 'data-ekodi-life-hub' church/index.html
           grep -Fq 'church-life-hub.js' church/index.html
           grep -Fq 'church-life-hub.css' church/index.html
           grep -Fq 'church-life-hub-i18n.js' church/index.html
+          grep -Fq 'church-online-status.js' church/index.html
+          grep -Fq 'data-ekodi-church-live-entry' church/index.html
+          grep -Fq 'api/realtime/live?tenant=ekodichurch' church/church-online-status.js
+          grep -Fq 'AbortController' church/church-online-status.js
+          grep -Fq 'data-stale' church/church-online-status.js
           grep -Fq '에코디선교회' church/index.html
           grep -Fq 'PRIVATE FIRST' church/index.html
           grep -Fq 'localStorage' church/church-life-hub.js
@@ -131,21 +136,44 @@ jobs:
             life=$(curl -L -sS -o /tmp/life.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://church.ekodi.kr/church-life-hub.js?release=${release}" || true)
             life_i18n=$(curl -L -sS -o /tmp/life-i18n.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://church.ekodi.kr/church-life-hub-i18n.js?release=${release}" || true)
             life_css=$(curl -L -sS -o /tmp/life.css -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://church.ekodi.kr/church-life-hub.css?release=${release}" || true)
+            online_status=$(curl -L -sS -o /tmp/church-online-status.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://church.ekodi.kr/church-online-status.js?release=${release}" || true)
+            live_css=$(curl -L -sS -o /tmp/church-live-entry.css -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://church.ekodi.kr/church-live-entry.css?release=${release}" || true)
             marker=$(curl -L -sS -o /tmp/church-release.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://church.ekodi.kr/church-release.json?release=${release}" || true)
-            if [[ "$root" == 200 && "$life" == 200 && "$life_i18n" == 200 && "$life_css" == 200 && "$marker" == 200 ]] \
+            if [[ "$root" == 200 && "$life" == 200 && "$life_i18n" == 200 && "$life_css" == 200 && "$online_status" == 200 && "$live_css" == 200 && "$marker" == 200 ]] \
               && grep -Fq 'data-ekodi-life-hub' /tmp/church.html \
               && grep -Fq '에코디선교회' /tmp/church.html \
               && grep -Fq 'localStorage' /tmp/life.js \
               && grep -Fq '__EKODI_CHURCH_LIFE_HUB_I18N__' /tmp/life-i18n.js \
+              && grep -Fq 'api/realtime/live?tenant=ekodichurch' /tmp/church-online-status.js \
+              && grep -Fq 'AbortController' /tmp/church-online-status.js \
+              && grep -Fq 'nav-online[data-live="true"]' /tmp/church-live-entry.css \
               && jq -e --arg sha "$CHURCH_SOURCE_SHA" '.contract == "ekodi.church-release.v1" and .sourceSha == $sha' /tmp/church-release.json >/dev/null; then
               echo 'Church production life hub assets and release SHA verified.'
               break
             fi
             if [[ "$attempt" == 18 ]]; then
-              echo "Production did not converge: root=$root life=$life life_i18n=$life_i18n life_css=$life_css marker=$marker"
+              echo "Production did not converge: root=$root life=$life life_i18n=$life_i18n life_css=$life_css online_status=$online_status live_css=$live_css marker=$marker"
               exit 1
             fi
             sleep 5
+          done
+
+      - name: Verify Church live-state API contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 5); do
+            code=$(curl -L -sS -o /tmp/church-live-api.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/api/realtime/live?tenant=ekodichurch' || true)
+            if [[ "$code" == 200 ]] && jq -e 'has("live") and (.live|type=="boolean") and ((.room // null) == null or (.room|type=="object"))' /tmp/church-live-api.json >/dev/null; then
+              echo 'Church live-state API contract verified.'
+              break
+            fi
+            if [[ "$attempt" == 5 ]]; then
+              echo "Church live-state API verification failed: HTTP $code"
+              cat /tmp/church-live-api.json || true
+              exit 1
+            fi
+            sleep 3
           done
 
       - name: Verify rendered nine-language church life hub
