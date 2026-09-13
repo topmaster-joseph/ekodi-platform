@@ -6,7 +6,7 @@ const token=process.env.E2E_ADMIN_TOKEN||'';
 const liveUrl=process.env.CHURCH_LIVE_URL||'https://ekodi.kr/ekodichurch/live/';
 const api='https://ekodi.kr/api/realtime';
 const artifactDir='artifacts/church-live-production-e2e';
-const report={passed:false,skipped:false,roomId:null,hostReady:false,hostStatus:'',hostErrors:[],failedRequests:[],viewerTracks:0,ended:false};
+const report={passed:false,skipped:false,roomId:null,hostReady:false,hostStatus:'',hostErrors:[],failedRequests:[],schema:{},viewerTracks:0,ended:false};
 if(!token)throw new Error('e2e_admin_token_missing');
 
 async function call(path,options={}){
@@ -25,6 +25,19 @@ async function publicLive(){
   return response.json();
 }
 await fs.mkdir(artifactDir,{recursive:true});
+async function cfQuery(sql){
+  const account=process.env.CLOUDFLARE_ACCOUNT_ID||'';
+  const apiToken=process.env.CLOUDFLARE_API_TOKEN||'';
+  const db=process.env.E2E_AUTH_DB_ID||'';
+  if(!account||!apiToken||!db)return null;
+  const response=await fetch(`https://api.cloudflare.com/client/v4/accounts/${account}/d1/database/${db}/query`,{method:'POST',headers:{authorization:`Bearer ${apiToken}`,'content-type':'application/json'},body:JSON.stringify({sql})});
+  const data=await response.json().catch(()=>({}));
+  return response.ok&&data.success?data:null;
+}
+for(const table of ['realtime_rooms','realtime_room_members','service_subscriptions']){
+  const data=await cfQuery(`PRAGMA table_info(${table})`);
+  report.schema[table]=data?.result?.[0]?.results?.map(row=>row.name)||[];
+}
 const initial=await publicLive();
 if(initial.live){
   Object.assign(report,{passed:true,skipped:true,reason:'active_church_broadcast'});
