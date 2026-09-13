@@ -5,7 +5,6 @@ const SUPABASE_URL=Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const ALLOWED_ORIGINS=new Set([
   "https://ekodi.kr",
-  "https://my.ekodi.kr",
   "https://ekodi-my-staging.topmaster-joseph.workers.dev",
   "https://support.ekodi.kr",
 ]);

@@ -201,7 +201,7 @@ export function normalizeProductInput(body = {}) {
 }
 
 export function makePublicUrl(baseUrl, shareCode) {
-  return `${String(baseUrl || 'https://ekodi.kr/ekodibiz/mall').replace(/\/$/, '')}/p/${encodeURIComponent(shareCode)}`;
+  return `${String(baseUrl || 'https://ekodi.kr/ekodibiz/ekodimall').replace(/\/$/, '')}/p/${encodeURIComponent(shareCode)}`;
 }
 
 export function makeAttributedUrl(baseUrl, shareCode, refCode) {

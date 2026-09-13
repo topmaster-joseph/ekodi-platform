@@ -46,6 +46,18 @@ async function waitForReady() {
   await page.waitForFunction(() => document.querySelector('#apiState')?.textContent?.includes('정상'), null, { timeout: 15_000 });
 }
 
+async function prepareTargetDemand() {
+  stage('target-demand');
+  const placeholder = page.locator(`.sidebar nav [data-demand-feature][data-section="${menuId}"], .sidebar nav [data-demand-feature][data-lazy-section="${menuId}"]`).first();
+  if (!await placeholder.count()) return;
+  await clickFast(placeholder);
+  await page.waitForFunction(section => {
+    const nodes = [...document.querySelectorAll('.sidebar nav [data-section], .sidebar nav [data-lazy-section]')];
+    const target = nodes.find(node => node.dataset.section === section || node.dataset.lazySection === section);
+    return Boolean(target && !target.hasAttribute('data-demand-feature') && target.getAttribute('aria-busy') !== 'true' && !target.classList.contains('is-loading'));
+  }, menuId, { timeout: 15_000 });
+}
+
 async function waitForAdminNavigationIdle() {
   stage('pre-handoff-idle');
   let previous = '';
@@ -340,16 +352,18 @@ async function verifyLanguageStatus(tab, alreadyActive, started) {
   if (payload.sites.some(site => !Array.isArray(site.languages))) throw new Error('language-status: site languages missing');
   stage('language-status-render');
   await page.evaluate(() => window.EKODILanguageStatus.load());
-  const rootCard = page.locator('[data-language-site="ekodi"]');
-  await rootCard.waitFor({ state:'visible', timeout:8_000 });
   const panel = page.locator('#languageStatusPanel');
+  await panel.locator('[data-language-site="ekodi"]').waitFor({ state:'visible', timeout:8_000 });
+  await page.waitForFunction(() => document.querySelector('#languageStatusPanel')?.dataset.languageStatusReady === 'true', null, { timeout:8_000 });
   const state = await visiblePanelState();
   const controls = await panel.locator('form,input[type="checkbox"],button[type="submit"]').count();
-  const text = String(await panel.textContent() || '').replace(/\s+/g,' ').trim();
+  const siteCards = await panel.locator('[data-language-site]').count();
+  const languageRows = await panel.locator('[data-language-locale]').count();
+  const ready = await panel.getAttribute('data-language-status-ready');
   if (!state.panelFound || !state.selected || state.busy) throw new Error(`language-status panel invalid: ${JSON.stringify(state)}`);
   if (controls !== 0) throw new Error('language-status: mutation control exposed');
-  if (!text.includes('사용자 화면에는 준비 완료 언어만 표시됩니다')) throw new Error('language-status: readiness message missing');
-  results.push({ id:menuId, group, ok:true, durationMs:Date.now()-started, ...state, apiStatus:response.status, sites:payload.sites.length, languages:payload.languages.length });
+  if (ready !== 'true' || siteCards < 1 || languageRows < 1) throw new Error(`language-status: semantic readiness contract failed ready=${ready} sites=${siteCards} languages=${languageRows}`);
+  results.push({ id:menuId, group, ok:true, durationMs:Date.now()-started, ...state, apiStatus:response.status, sites:payload.sites.length, languages:payload.languages.length, semanticReady:true });
 }
 
 async function verifyMaturity(tab, alreadyActive, started) {
@@ -378,7 +392,7 @@ async function verifyMaturity(tab, alreadyActive, started) {
   results.push({id:menuId,group,ok:true,durationMs:Date.now()-started,...state,apiStatus:response.status,assessmentDate:payload.assessmentDate,historyCount:payload.history.length});
 }
 
-async function verifyRegistryHref(tab, started) {
+async function verifyRegistryHref(trigger, started) {
   const definition = getAdminMenuItem(menuId);
   if (!definition?.href || definition.adminHandoff) throw new Error(`${menuId}: direct registry href contract missing`);
   const expected = new URL(definition.href);
@@ -390,7 +404,7 @@ async function verifyRegistryHref(tab, started) {
   if (sourceTarget !== '_blank') throw new Error(`${menuId}: direct registry href must open as an isolated external admin surface`);
   stage('registry-handoff');
   const popupPromise = page.waitForEvent('popup', { timeout:10_000 });
-  await clickFast(tab);
+  await clickFast(trigger);
   const popup = await popupPromise;
   try {
     await popup.waitForURL(url => url.origin === expected.origin && url.pathname.replace(/\/$/, '') === expected.pathname.replace(/\/$/, ''), { waitUntil:'commit', timeout:10_000 });
@@ -449,27 +463,35 @@ try {
   for (const id of menuIds) if (!productionOrder.includes(id)) throw new Error(`Production menu registry missing ${id}`);
 
   const started = Date.now();
+  await prepareTargetDemand();
   await selectWorkArea();
   if (menuId === 'tax') await waitForAdminNavigationIdle();
-  stage('tab');
-  const tab = page.locator(`button.admin-context-tab[data-admin-context-section="${menuId}"]`);
-  await tab.waitFor({ state: 'visible', timeout: 5_000 });
-  const aria = await tab.getAttribute('aria-selected');
-  const classes = String(await tab.getAttribute('class') || '');
-  let alreadyActive = aria === 'true' || classes.split(/\s+/).includes('active');
-  if (alreadyActive) {
-    stage('active-panel-check');
-    const activeState = await visiblePanelState();
-    alreadyActive = Boolean(activeState.panelFound && activeState.selected && activeState.textLength >= 4);
+  const directDefinition = getAdminMenuItem(menuId);
+  if (directDefinition?.href && !directDefinition.adminHandoff) {
+    stage('registry-link');
+    const source = page.locator(`.sidebar nav .nav[data-section="${menuId}"]`);
+    await source.waitFor({ state: 'visible', timeout: 5_000 });
+    await verifyRegistryHref(source, started);
+  } else {
+    stage('tab');
+    const tab = page.locator(`button.admin-context-tab[data-admin-context-section="${menuId}"]`);
+    await tab.waitFor({ state: 'visible', timeout: 5_000 });
+    const aria = await tab.getAttribute('aria-selected');
+    const classes = String(await tab.getAttribute('class') || '');
+    let alreadyActive = aria === 'true' || classes.split(/\s+/).includes('active');
+    if (alreadyActive) {
+      stage('active-panel-check');
+      const activeState = await visiblePanelState();
+      alreadyActive = Boolean(activeState.panelFound && activeState.selected && activeState.textLength >= 4);
+    }
+    if (menuId === 'storage') await verifyStorage(tab, alreadyActive, started);
+    else if (menuId === 'tax') await verifyTax(tab, alreadyActive, started);
+    else if (menuId === 'public-site-controls') await verifyPublicSiteControls(tab, alreadyActive, started);
+    else if (menuId === 'language-status') await verifyLanguageStatus(tab, alreadyActive, started);
+    else if (menuId === 'maturity') await verifyMaturity(tab, alreadyActive, started);
+    else if (menuId === 'ai-settings') await verifyAiSettings(tab, alreadyActive, started);
+    else await verifyNormal(tab, alreadyActive, started);
   }
-  if (menuId === 'storage') await verifyStorage(tab, alreadyActive, started);
-  else if (menuId === 'tax') await verifyTax(tab, alreadyActive, started);
-  else if (menuId === 'public-site-controls') await verifyPublicSiteControls(tab, alreadyActive, started);
-  else if (menuId === 'language-status') await verifyLanguageStatus(tab, alreadyActive, started);
-  else if (menuId === 'maturity') await verifyMaturity(tab, alreadyActive, started);
-  else if (menuId === 'ai-settings') await verifyAiSettings(tab, alreadyActive, started);
-  else if (getAdminMenuItem(menuId)?.href && !getAdminMenuItem(menuId)?.adminHandoff) await verifyRegistryHref(tab, started);
-  else await verifyNormal(tab, alreadyActive, started);
 
   stage('diagnostics');
   if (failedAdminAssets.length) throw new Error(`Admin JS/CSS request failures: ${failedAdminAssets.join(' | ')}`);

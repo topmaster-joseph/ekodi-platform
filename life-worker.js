@@ -10,9 +10,9 @@ const SECURITY_HEADERS={
 };
 function config(env){
   const dataEnabled=env.DATA_ENABLED==='true'&&!!env.SUPABASE_URL&&!!env.SUPABASE_PUBLISHABLE_KEY;
-  return {dataEnabled,dataMode:env.DATA_MODE||'production',supabaseUrl:dataEnabled?env.SUPABASE_URL:'',supabasePublishableKey:dataEnabled?env.SUPABASE_PUBLISHABLE_KEY:'',authUrl:env.AUTH_URL||'https://auth.ekodi.kr/?site=life',coreApiUrl:env.CORE_API_URL||'https://api.ekodi.kr'};
+  return {dataEnabled,dataMode:env.DATA_MODE||'production',supabaseUrl:dataEnabled?env.SUPABASE_URL:'',supabasePublishableKey:dataEnabled?env.SUPABASE_PUBLISHABLE_KEY:'',authUrl:env.AUTH_URL||'https://ekodi.kr/auth/?site=life',coreApiUrl:env.CORE_API_URL||'https://api.ekodi.kr'};
 }
-const CORS_ORIGINS=new Set(['https://life.ekodi.kr','https://admin.ekodi.kr','https://ekodi.kr/my']);
+const CORS_ORIGINS=new Set(['https://life.ekodi.kr','https://ekodi.kr']);
 function corsHeaders(request){const origin=request?.headers?.get?.('origin')||'';return origin&&CORS_ORIGINS.has(origin)?{'access-control-allow-origin':origin,'access-control-allow-headers':'authorization,content-type','access-control-allow-methods':'GET,POST,OPTIONS',vary:'Origin'}:{}}
 function json(data,status=200,request=null){return new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store',...corsHeaders(request),...SECURITY_HEADERS}})}
 function withHeaders(response){const headers=new Headers(response.headers);for(const [k,v] of Object.entries(SECURITY_HEADERS))headers.set(k,v);if(!headers.has('cache-control'))headers.set('cache-control',response.headers.get('content-type')?.includes('text/html')?'no-cache':'public, max-age=300');return new Response(response.body,{status:response.status,statusText:response.statusText,headers})}
@@ -75,7 +75,7 @@ export default{
       return json({ok:true,reflection:buildLifeReflection({message:String(body.message||''),topic:String(body.topic||'')})});
     }
     if(request.method==='POST'&&url.pathname==='/api/ai')return aiReply(request,env);
-    if(url.pathname==='/admin'||url.pathname==='/admin/')return Response.redirect('https://admin.ekodi.kr/#life-ai',307);
+    if(url.pathname==='/admin'||url.pathname==='/admin/')return Response.redirect('https://ekodi.kr/admin/#life-ai',307);
     if(url.pathname==='/my'||url.pathname==='/my/')return Response.redirect('https://ekodi.kr/my/journey/?source=life',307);
     let response=await safeAssetFetch(env,request);
     if(response.status===404&&!url.pathname.includes('.')){const root=new URL(request.url);root.pathname='/';response=await safeAssetFetch(env,new Request(root,request))}
