@@ -48,10 +48,20 @@ function pathForHost(host){
   if(labels.at(-1)==='ai'&&labels.length>1)return `/${labels.slice(0,-1).join('/')}/marketing`;
   return `/${labels[0].replace(/-staging$/,'')}`;
 }
+function normalizeCanonicalUrls(text){
+  let out=text;
+  for(let pass=0;pass<3;pass++)out=out.replace(/(https:\/\/ekodi\.kr\/)([A-Za-z0-9-]+)\/\2(?=[/?#'"`\s<]|$)/g,'$1$2');
+  for(let pass=0;pass<3;pass++)out=out.replace(/(https%3A%2F%2Fekodi\.kr%2F)([A-Za-z0-9-]+)%2F\2(?=%2F|%3F|%23|['"`\s<]|$)/gi,'$1$2');
+  return out;
+}
 function replaceUrls(text){
-  return text.replace(/https?:\/\/([A-Za-z0-9.-]+\.ekodi\.kr)(?=[:/?#'"`\s<]|$)/gi,(full,host)=>{
+  let out=text.replace(/https?:\/\/([A-Za-z0-9.-]+\.ekodi\.kr)(?=[:/?#'"`\s<]|$)/gi,(full,host)=>{
     const p=pathForHost(host);return p===null?full:`https://ekodi.kr${p}`;
   });
+  out=out.replace(/https%3A%2F%2F([A-Za-z0-9.-]+\.ekodi\.kr)(?=%2F|%3F|%23|['"`\s<]|$)/gi,(full,host)=>{
+    const p=pathForHost(host);return p===null?full:`https%3A%2F%2Fekodi.kr${p.replaceAll('/','%2F')}`;
+  });
+  return normalizeCanonicalUrls(out);
 }
 function removeRoutes(text){
   const chunks=text.split(/(?=^\[\[routes\]\]\s*$)/m);
