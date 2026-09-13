@@ -77,6 +77,8 @@ for (const requiredPath of [
   "      - 'ekodi-shell-injector.js'",
   "      - 'site-shell-worker.js'",
   "      - 'config/user-ui-shell.json'",
+  "      - 'scripts/admin-authenticated-e2e-retry.mjs'",
+  "      - 'scripts/admin-authenticated-e2e-menu-worker.mjs'",
 ]) {
   if (!canonicalOwner.includes(requiredPath)) fail(`.github/workflows/${canonicalSharedSiteOwner}`, `missing shared-site ownership path: ${requiredPath.trim()}`);
 }
