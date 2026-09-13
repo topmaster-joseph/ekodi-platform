@@ -13,8 +13,10 @@ test('legacy EKODIBIZ paths are sent through the shared worker', async () => {
 
 test('legacy Mall and EKODIBIZ paths redirect to canonical apex paths', async () => {
   for (const [from,to,route] of [
-    ['https://ekodi.kr/mall?ref=legacy','https://ekodi.kr/ekodibiz/mall?ref=legacy','mall-legacy-canonical-redirect'],
-    ['https://ekodi.kr/mall/admin/publishing','https://ekodi.kr/ekodibiz/mall/admin/publishing','mall-legacy-canonical-redirect'],
+    ['https://ekodi.kr/mall?ref=legacy','https://ekodi.kr/ekodibiz/ekodimall?ref=legacy','mall-legacy-canonical-redirect'],
+    ['https://ekodi.kr/mall/admin/publishing','https://ekodi.kr/ekodibiz/ekodimall/admin/publishing','mall-legacy-canonical-redirect'],
+    ['https://ekodi.kr/ekodibiz/mall?ref=former','https://ekodi.kr/ekodibiz/ekodimall?ref=former','mall-former-canonical-redirect'],
+    ['https://ekodi.kr/ekodibiz/mall/admin/channels','https://ekodi.kr/ekodibiz/ekodimall/admin/channels','mall-former-canonical-redirect'],
     ['https://ekodi.kr/org/ekodibiz','https://ekodi.kr/ekodibiz','ekodibiz-legacy-canonical-redirect'],
     ['https://ekodi.kr/org/ekodibiz/trade?x=1','https://ekodi.kr/ekodibiz/trade?x=1','ekodibiz-legacy-canonical-redirect'],
   ]) {

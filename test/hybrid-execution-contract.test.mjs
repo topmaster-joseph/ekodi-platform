@@ -47,6 +47,9 @@ test('scheduler uses online freshness, capability, group, load and concurrency',
   assert.match(hybrid, /nodeSupports\(node, job\)/);
   assert.match(hybrid, /safeGroup\(node\.device_group\)/);
   assert.match(hybrid, /current_load/);
+  assert.match(hybrid, /compareLocalExecutionCandidates/);
+  assert.match(hybrid, /resource\.autoExecutionEligible === true/);
+  assert.match(hybrid, /resource\.isPortable === false/);
   assert.match(hybrid, /active >= Math\.max\(1, Number\(node\.max_concurrency\)/);
 });
 

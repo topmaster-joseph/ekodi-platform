@@ -7,6 +7,7 @@ on:
       - 'hybrid-execution.js'
       - 'hybrid-execution-admin.js'
       - 'hybrid-execution-monitor.js'
+      - 'local-execution-policy.js'
       - 'mission-control-entry-worker.js'
       - 'tools/ekodi-device-agent/windows/ekodi-device-agent.ps1'
       - 'migrations/0040_hybrid_execution.sql'
@@ -14,6 +15,7 @@ on:
       - 'migrations/0058_execution_fabric_settings.sql'
       - 'test/hybrid-execution-contract.test.mjs'
       - 'test/hybrid-execution-monitor-contract.test.mjs'
+      - 'test/local-execution-policy.test.mjs'
       - 'test/device-control-contract.test.mjs'
       - '.github/workflows/distributed-runtime-release.yml'
   push:
@@ -39,8 +41,9 @@ jobs:
           node --check hybrid-execution.js
           node --check hybrid-execution-admin.js
           node --check hybrid-execution-monitor.js
+          node --check local-execution-policy.js
           node --check mission-control-entry-worker.js
-          node --test test/hybrid-execution-contract.test.mjs test/hybrid-execution-monitor-contract.test.mjs test/device-control-contract.test.mjs
+          node --test test/hybrid-execution-contract.test.mjs test/hybrid-execution-monitor-contract.test.mjs test/local-execution-policy.test.mjs test/device-control-contract.test.mjs
           npm run build
           test -f dist/device-control-admin.js
           grep -Fq 'EKODI HYBRID EXECUTION' dist/device-control-admin.js

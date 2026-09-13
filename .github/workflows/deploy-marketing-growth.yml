@@ -22,6 +22,7 @@ on:
       - 'migrations/0050_ekodibiz_marketing_internal_entitlement.sql'
       - 'migrations/0064_marketing_channel_settings.sql'
       - 'migrations/0079_channel_tenant_split.sql'
+      - 'migrations/0085_ekodimall_canonical_path.sql'
       - 'test/ekodi-mall-promotion-automation.test.mjs'
       - 'test/ekodi-mall-official-promotion-board.test.mjs'
       - 'test/ekodi-mall-growth-learning-loop.test.mjs'
@@ -108,6 +109,7 @@ jobs:
           grep -Fq "'tenant','ekodimall','autonomous',3" migrations/0079_channel_tenant_split.sql
           grep -Fq "'tenant','ekodi-biz','review',1" migrations/0079_channel_tenant_split.sql
           grep -Fq "'tenant','ekoditrade','review',1" migrations/0079_channel_tenant_split.sql
+          grep -Fq "domain='ekodi.kr/ekodibiz/ekodimall'" migrations/0085_ekodimall_canonical_path.sql
           grep -Fq 'token_ciphertext TEXT NOT NULL' migrations/0028_marketing_growth_connectors.sql
           if grep -Eqi '(access_token|refresh_token|bearer_token)[[:space:]]+TEXT' migrations/0028_marketing_growth_connectors.sql migrations/0048_ekodi_mall_promotion_automation.sql migrations/0049_ekodi_mall_active_sales_ai.sql migrations/0050_ekodibiz_marketing_internal_entitlement.sql migrations/0064_marketing_channel_settings.sql migrations/0073_affiliate_official_signal_promotion.sql migrations/0073_ekodibiz_marketing_subject_canonical.sql; then
             echo 'Plain provider token columns are forbidden.'
@@ -137,6 +139,10 @@ jobs:
           grep -Fq 'ekodi-biz:review' /tmp/growth-subject.json
           grep -Fq 'ekodimall:autonomous' /tmp/growth-subject.json
           grep -Fq 'ekoditrade:review' /tmp/growth-subject.json
+          npx --yes wrangler@${WRANGLER_VERSION} d1 execute ekodi-auth --remote --config wrangler.marketing-growth.toml \
+            --command "SELECT domain FROM customer_tenants WHERE slug='ekodimall' LIMIT 1;" \
+            --json > /tmp/mall-domain.json
+          grep -Fq 'ekodi.kr/ekodibiz/ekodimall' /tmp/mall-domain.json
 
       - name: Deploy growth connector worker
         run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.marketing-growth.toml

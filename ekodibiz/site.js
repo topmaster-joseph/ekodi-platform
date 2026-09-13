@@ -148,7 +148,7 @@ function commonLogin(slug){return `https://auth.ekodi.kr/?site=biz&return_to=${e
 function partnerHref(slug){
   const type=BUSINESS[slug]?.login;
   if(type==='trade')return 'https://ekodi.kr/ekodibiz/trade';
-  if(type==='mall')return 'https://ekodi.kr/ekodibiz/mall/admin/';
+  if(type==='mall')return 'https://ekodi.kr/ekodibiz/ekodimall/admin/';
   if(type==='invest')return 'https://ekodi.kr/ekodibiz/invest/admin';
   return commonLogin(slug);
 }
