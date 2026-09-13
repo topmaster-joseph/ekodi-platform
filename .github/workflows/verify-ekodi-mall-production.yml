@@ -39,7 +39,7 @@ jobs:
             'data-ekodi-service="mall"' \
             'data-ekodi-user-surface="public"' \
             'rel="canonical" href="https://ekodi.kr/ekodibiz/ekodimall"' \
-            '/ekodibiz/ekodimall/app.js' \
+            'data-ekodi-global-nav="off"' \
             '/ekodibiz/ekodimall/affiliate-client.js'; do
             grep -Fq "$marker" /tmp/mall.html || { echo "Missing Mall structural marker: $marker"; exit 1; }
           done

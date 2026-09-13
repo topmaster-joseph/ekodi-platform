@@ -26,7 +26,7 @@ test('Mall production verifier follows stable route and storefront structure', (
     'data-ekodi-service="mall"',
     'data-ekodi-user-surface="public"',
     'rel="canonical" href="https://ekodi.kr/ekodibiz/ekodimall"',
-    '/ekodibiz/ekodimall/app.js',
+    'data-ekodi-global-nav="off"',
     '/ekodibiz/ekodimall/affiliate-client.js'
   ]) assert.ok(workflow.includes(marker), `missing structural contract: ${marker}`);
   assert.doesNotMatch(workflow, /GIFT CONTEXT INTELLIGENCE|CONNECTED COMMERCE|OUR PROMISE|EKODI CONTEXT SHOPPING|ALL MARKET/);
@@ -39,7 +39,7 @@ test('shared-site Mall release gate uses the same stable ownership contract', ()
   }
   assert.equal(mallGate.candidateVerify,false);
   assert.match(mallGate.candidateVerifyReason||'',/run_worker_first bootstrap/);
-  assert.ok(mallGate.expect?.includes('/ekodibiz/ekodimall/app.js'));
+  assert.ok(mallGate.expect?.includes('data-ekodi-global-nav="off"'));
   assert.equal(mallGate.rollbackVerify,false);
   assert.ok(!manifestText.includes('/ekodibiz/ekodimall/assets/app.js'));
   assert.ok(!workflow.includes('/ekodibiz/ekodimall/assets/commerce.js'));
