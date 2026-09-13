@@ -337,7 +337,7 @@
         "expect": [
           "data-ekodi-service=\"mall\"",
           "data-ekodi-user-surface=\"public\"",
-          "/ekodibiz/ekodimall/app.js"
+          "data-ekodi-global-nav=\"off\""
         ],
         "headerExpect": [
           "x-content-type-options: nosniff",
