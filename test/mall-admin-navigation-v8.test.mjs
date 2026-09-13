@@ -8,7 +8,8 @@ test('Mall admin exposes an operator-first seven-surface navigation', () => {
   assert.match(source, /\['overview','대시보드'\]/);
   assert.match(source, /\['products','상품관리'\]/);
   assert.match(source, /\['sourcing','제휴·소싱'\]/);
-  assert.match(source, /\['channels','채널·게시'\]/);
+  assert.match(source, /\['channels','채널설정'\]/);
+  assert.match(source, /adminBase=service\?'\/admin\/ekodimall'/);
   assert.match(source, /\['growth','AI 자동영업'\]/);
   assert.match(source, /\['analytics','성과·학습'\]/);
   assert.match(source, /\['design','사이트 스타일'\]/);
@@ -23,5 +24,5 @@ test('Mall admin resolves URL aliases to the authorized tenant subject before se
   assert.match(source, /subject_key=\$\{encodeURIComponent\(canonicalSubjectKey\(\)\)\}/);
   assert.match(source, /subject_type=workspace&subject_key='\+encodeURIComponent\(canonicalSubjectKey\(\)\)/);
   assert.match(source, /if\(section==='sales'\)return location\.replace\(`\$\{adminBase\}\/analytics`\)/);
-  assert.match(source, /if\(\['marketing','automation'\]\.includes\(section\)\)return location\.replace\(`\$\{adminBase\}\/channels`\)/);
+  assert.match(source, /if\(\['marketing','automation'\]\.includes\(section\)\)return location\.replace\(`\$\{adminBase\}\/channel-settings`\)/);
 });

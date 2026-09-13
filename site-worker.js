@@ -311,6 +311,24 @@ function redirectLegacyEkodiBizPath(request) {
   return response;
 }
 
+function isLegacyMallAdminPath(pathname) {
+  return pathname === '/mall/admin' || pathname.startsWith('/mall/admin/') || pathname === `${FORMER_MALL_PREFIX}/admin` || pathname.startsWith(`${FORMER_MALL_PREFIX}/admin/`) || pathname === `${MALL_PREFIX}/admin` || pathname.startsWith(`${MALL_PREFIX}/admin/`);
+}
+
+function redirectLegacyMallAdminPath(request) {
+  const target = new URL(request.url);
+  const path = target.pathname;
+  const prefix = path.startsWith(`${MALL_PREFIX}/admin`) ? `${MALL_PREFIX}/admin` : path.startsWith(`${FORMER_MALL_PREFIX}/admin`) ? `${FORMER_MALL_PREFIX}/admin` : '/mall/admin';
+  let suffix = path.slice(prefix.length).replace(/\/+$/, '');
+  if (suffix === '/channels' || suffix === '/marketing/channels') suffix = '/channel-settings';
+  target.pathname = `/admin/ekodimall${suffix}`;
+  const response = new Response(null, { status: 308, headers: { Location: target.toString() } });
+  applyBaseSecurityHeaders(response.headers);
+  response.headers.set('Cache-Control', 'no-store');
+  response.headers.set('X-EKODI-Route', 'mall-admin-canonical-redirect');
+  return response;
+}
+
 function redirectLegacyMallPath(request) {
   const target = new URL(request.url);
   target.pathname = `${MALL_PREFIX}${target.pathname.slice(LEGACY_MALL_PREFIX.length)}`;
@@ -573,6 +591,7 @@ export default {
         return injectEkodiShell(secured, 'biz', 'admin');
       }
       if (isLegacyEkodiBizPath(url.pathname)) return redirectLegacyEkodiBizPath(request);
+      if (['GET','HEAD'].includes(request.method) && isLegacyMallAdminPath(url.pathname)) return redirectLegacyMallAdminPath(request);
       if (isLegacyMallPath(url.pathname)) return redirectLegacyMallPath(request);
       if (isFormerMallPath(url.pathname)) return redirectFormerMallPath(request);
       if (['GET','HEAD'].includes(request.method) && (url.pathname === '/ekodi-church' || url.pathname.startsWith('/ekodi-church/'))) { const target=new URL(request.url); target.pathname=url.pathname.replace(/^\/ekodi-church(?=\/|$)/i,'/ekodichurch'); return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-content-type-options':'nosniff'}}); }
