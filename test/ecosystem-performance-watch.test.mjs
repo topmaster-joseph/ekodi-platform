@@ -9,8 +9,8 @@ test('performance guard covers canonical public, admin, and Support entry points
     "https://ekodi.kr/",
     "https://admin.ekodi.kr/",
     "https://ekodi.kr/admin",
-    "https://support.ekodi.kr/",
-    "https://support.ekodi.kr/health",
+    "https://ekodi.kr/support/",
+    "https://ekodi.kr/support/health",
   ]) assert.match(workflow, new RegExp(target.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
 });
 
