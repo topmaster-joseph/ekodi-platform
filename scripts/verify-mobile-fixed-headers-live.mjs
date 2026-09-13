@@ -32,8 +32,8 @@ async function audit(){
   const [root,adminCss,shell,liveManifest]=await Promise.all([
     get('https://ekodi.kr/'),
     get('https://admin.ekodi.kr/admin-shell.css'),
-    get('https://shell.ekodi.kr/shell.js'),
-    get('https://shell.ekodi.kr/manifest.json'),
+    get('https://ekodi.kr/shell/shell.js'),
+    get('https://ekodi.kr/shell/manifest.json'),
   ]);
   http(root,'ekodi.kr',errors);
   need(root,'ekodi.kr','.site-header{position:fixed;top:0;left:0;right:0;width:100%',errors);
@@ -41,9 +41,9 @@ async function audit(){
   http(adminCss,'admin.ekodi.kr/admin-shell.css',errors);
   need(adminCss,'admin','position:fixed!important',errors);
   need(adminCss,'admin','.app>main{padding-top:calc(78px + env(safe-area-inset-top,0px))}',errors);
-  http(shell,'shell.ekodi.kr/shell.js',errors);
+  http(shell,'ekodi.kr/shell/shell.js',errors);
   for(const marker of ['ekodi-mobile-fixed-header-style','data-ekodi-mobile-header-spacer','ResizeObserver','position:fixed!important'])need(shell,'shell',marker,errors);
-  http(liveManifest,'shell.ekodi.kr/manifest.json',errors);
+  http(liveManifest,'ekodi.kr/shell/manifest.json',errors);
   let productionManifest=null;
   try{productionManifest=JSON.parse(liveManifest.text)}catch{errors.push('shell-manifest:invalid-json')}
   if(productionManifest?.services?.some(service=>service.shellIntegration==='pending'))errors.push('shell-manifest:pending-integration');
@@ -54,7 +54,7 @@ async function audit(){
     http(result,`service:${service.id}`,errors);
     if(!result.ok)continue;
     const shellHeader=String(result.headers.get('x-ekodi-shell')||'').toLowerCase();
-    const shellInBody=result.text.includes('shell.ekodi.kr/shell.js')||result.text.includes('data-ekodi-shell');
+    const shellInBody=result.text.includes('ekodi.kr/shell/shell.js')||result.text.includes('data-ekodi-shell');
     if(!shellInBody&&shellHeader!=='v2')errors.push(`service:${service.id}:live-shell-not-observed:${service.shellIntegration}`);
   }
 
@@ -68,7 +68,7 @@ async function audit(){
     http(result,`tenant:${id}`,errors);
     need(result,`tenant:${id}`,label,errors);
     need(result,`tenant:${id}`,'data-ekodi-fixed-header',errors);
-    need(result,`tenant:${id}`,'https://shell.ekodi.kr/shell.js',errors);
+    need(result,`tenant:${id}`,'https://ekodi.kr/shell/shell.js',errors);
   }
 
   const [cgmaRoot,cgmaAi,cgmaCss,cgmaAdmin]=await Promise.all([
