@@ -1,10 +1,12 @@
-import { isWorkspaceSlug, workspaceRouteFromPublicPath } from './workspace-route-policy.js';
+import { workspaceRouteFromPublicPath } from './workspace-route-policy.js';
 
 export const SITE_OPERATING_STATUSES = Object.freeze(['public', 'private', 'maintenance', 'development']);
 
 const VALID_STATUSES = new Set(SITE_OPERATING_STATUSES);
 const API_PREFIX = '/api/control/site-status';
 const LEGACY_API_PREFIX = '/api/control/public-sites';
+const SITE_ID = /^[a-z0-9](?:[a-z0-9-]{0,98}[a-z0-9])?$/;
+const NON_SITE_ROOTS = new Set(['api', 'admin', 'auth', 'login', 'logout', 'preview', '__ekodi', 'assets', 'cdn-cgi']);
 const SITE_ADMIN_ROLES = new Set([
   'platform_admin', 'tenant_admin', 'workspace_admin', 'client_admin', 'hq_manager',
   'store_owner', 'owner', 'admin', 'senior_pastor', 'manager'
@@ -53,7 +55,15 @@ function json(data, status = 200) {
 
 function safeSiteId(value) {
   const normalized = normalizeSiteId(value);
-  return isWorkspaceSlug(normalized) ? normalized : '';
+  return SITE_ID.test(normalized) && !NON_SITE_ROOTS.has(normalized) ? normalized : '';
+}
+
+export function siteIdFromPublicPath(pathname) {
+  const route = workspaceRouteFromPublicPath(pathname);
+  if (route?.public) return route.slug;
+  const segments = String(pathname || '').split('/').filter(Boolean);
+  if (!segments.length || segments.some(part => part.toLowerCase() === 'admin')) return '';
+  return safeSiteId(segments[0]);
 }
 
 function statusSnapshot(row = {}) {
@@ -108,8 +118,10 @@ async function ensureSchema(env) {
 
 async function readSite(env, id) {
   if (!env?.DB?.prepare) return null;
+  const normalized = safeSiteId(id);
+  if (!normalized) return null;
   try {
-    return await env.DB.prepare('SELECT * FROM public_site_controls WHERE site_id = ?').bind(safeSiteId(id)).first();
+    return await env.DB.prepare('SELECT * FROM public_site_controls WHERE site_id = ?').bind(normalized).first();
   } catch {
     return null;
   }
@@ -242,8 +254,8 @@ export async function maybeGateSiteOperatingStatus(request, env = {}) {
   const host = url.hostname.toLowerCase();
   let row = null;
   if (host === 'ekodi.kr') {
-    const route = workspaceRouteFromPublicPath(url.pathname);
-    if (route?.public) row = await readSite(env, route.slug);
+    const id = siteIdFromPublicPath(url.pathname);
+    if (id) row = await readSite(env, id);
   } else {
     row = await readDomain(env, host);
   }
