@@ -1,3 +1,14 @@
+export function siteAdminSiteIdFromPath(pathname) {
+  const pathSegments = String(pathname || '').split('/').filter(Boolean);
+  const adminIndex = pathSegments.findIndex(part => part.toLowerCase() === 'admin');
+  if (adminIndex <= 0) return '';
+  const root = String(pathSegments[0] || '').toLowerCase();
+  if (root === 'cmpmyi' && adminIndex === 1 && pathSegments[2]) {
+    return String(pathSegments[2]).toLowerCase();
+  }
+  return root;
+}
+
 function browserSiteOperatingStatusWidget() {
   'use strict';
   if (window.__EKODI_SITE_OPERATING_STATUS_WIDGET__) return;
@@ -10,9 +21,15 @@ function browserSiteOperatingStatusWidget() {
     ['maintenance', '점검중', '방문자에게 점검 안내 화면을 표시합니다.'],
     ['development', '개발중', '방문자에게 개발 중 안내 화면을 표시합니다.']
   ];
-  const pathSegments = location.pathname.split('/').filter(Boolean);
-  const adminIndex = pathSegments.findIndex(part => part.toLowerCase() === 'admin');
-  const localSiteId = adminIndex > 0 ? String(pathSegments[0] || '').toLowerCase() : '';
+  const inferLocalSiteId = pathname => {
+    const pathSegments = String(pathname || '').split('/').filter(Boolean);
+    const adminIndex = pathSegments.findIndex(part => part.toLowerCase() === 'admin');
+    if (adminIndex <= 0) return '';
+    const root = String(pathSegments[0] || '').toLowerCase();
+    if (root === 'cmpmyi' && adminIndex === 1 && pathSegments[2]) return String(pathSegments[2]).toLowerCase();
+    return root;
+  };
+  const localSiteId = inferLocalSiteId(location.pathname);
   const globalMode = !localSiteId;
 
   function token() {
@@ -213,7 +230,14 @@ function browserSiteOperatingStatusWidget() {
   saveButton.addEventListener('click', saveSite);
   siteSelect?.addEventListener('change', () => { if (siteInput) siteInput.value = siteSelect.value; loadSite(); });
 
-  document.querySelectorAll('[data-admin-link="public-site-controls"],[data-section="public-site-controls"],[data-lazy-section="public-site-controls"],#publicSiteControlsPanel').forEach(node => { node.hidden = true; });
+  function hideLegacyControls() {
+    document.querySelectorAll('[data-admin-link="public-site-controls"],[data-section="public-site-controls"],[data-lazy-section="public-site-controls"],#publicSiteControlsPanel').forEach(node => {
+      if (node.id !== 'ekodiSiteStatusLauncher' && !node.hidden) node.hidden = true;
+    });
+  }
+  hideLegacyControls();
+  const legacyObserver = new MutationObserver(hideLegacyControls);
+  legacyObserver.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['hidden'] });
 
   const launcher = make('button', { id: 'ekodiSiteStatusLauncher', type: 'button' }, '사이트 운영상태');
   launcher.addEventListener('click', openModal);
