@@ -167,11 +167,16 @@ test('legacy Admin release probes follow canonical redirects while canonical Adm
   for(const probe of legacy) assert.equal(probe.redirect,'follow',probe.url);
 });
 
-test('shared-site release probes require the canonical apex Shell',async()=>{
+test('shared-site release verifies Shell integration without requiring script URLs in service HTML',async()=>{
   const text=await fs.promises.readFile(new URL('../deploy/manifests/shared-site.worker.json',import.meta.url),'utf8');
   assert.doesNotMatch(text,/https:\/\/shell\.ekodi\.kr\/shell\.js/);
   const manifest=JSON.parse(text);
   const apexShell='https://ekodi.kr/shell/shell.js';
-  const probes=manifest.worker.requests.filter(item=>Array.isArray(item.expect)&&item.expect.includes(apexShell));
-  assert.ok(probes.length>=4,'expected Messenger, Hub and Trade release probes to require the apex Shell');
+  const direct=manifest.worker.requests.find(item=>item.url===apexShell);
+  assert.deepEqual(direct?.statuses,[200]);
+  assert.ok(direct?.expect?.includes('ekodi-mobile-fixed-header-style'));
+  assert.ok(direct?.expect?.includes('ResizeObserver'));
+  const shellIntegrated=manifest.worker.requests.filter(item=>item.headerExpect?.includes('x-ekodi-shell: v2'));
+  assert.ok(shellIntegrated.length>=4,'expected service pages to verify Shell v2 through response headers');
+  for(const probe of shellIntegrated) assert.ok(!probe.expect?.includes(apexShell),`${probe.url} must not require a literal Shell script URL in HTML`);
 });
