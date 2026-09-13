@@ -71,14 +71,27 @@ jobs:
           npx playwright install --with-deps chromium
 
       - name: Run real Church Live publish and anonymous viewer pull
-        run: node scripts/church-live-production-e2e.mjs
+        shell: bash
+        run: |
+          mkdir -p artifacts/church-live-production-e2e
+          (timeout 75s npx wrangler tail ekodi-auth-api --format json > artifacts/church-live-production-e2e/worker-tail.log 2>&1 || true) &
+          tail_pid=$!
+          sleep 4
+          set +e
+          node scripts/church-live-production-e2e.mjs
+          e2e_status=$?
+          set -e
+          sleep 3
+          kill "$tail_pid" 2>/dev/null || true
+          wait "$tail_pid" 2>/dev/null || true
+          exit "$e2e_status"
 
       - name: Upload E2E report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: church-live-production-e2e
-          path: artifacts/church-live-production-e2e/report.json
+          path: artifacts/church-live-production-e2e/
           if-no-files-found: warn
           retention-days: 7
       - name: Revoke short-lived E2E session
