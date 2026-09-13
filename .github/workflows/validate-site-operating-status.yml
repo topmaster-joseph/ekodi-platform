@@ -38,7 +38,7 @@ jobs:
         with:
           node-version: '24'
       - name: EKODI AI Orchestration Gate
-        run: node scripts/validate-ekodi-ai-change-orchestration.mjs --release
+        run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
       - name: Validate syntax and status contracts
         run: |
           set -euo pipefail
