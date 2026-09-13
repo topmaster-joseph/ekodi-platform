@@ -18,7 +18,7 @@ function centralIdentityConfig(env={}){
     enabled,
     modeLabel:production?'EKODI 계정':'격리 스테이징',
     disabledReason:production?'중앙 계정 설정이 준비되지 않았습니다.':'격리 스테이징에서는 실제 EKODI 개인 데이터를 읽지 않습니다.',
-    authUrl:env.AUTH_URL||'https://auth.ekodi.kr/?site=support',
+    authUrl:env.AUTH_URL||'https://ekodi.kr/auth/?site=support',
     supabaseUrl:enabled?supabaseUrl:'',
     publishableKey:enabled?publishableKey:'',
     profileApi:enabled?`${supabaseUrl.replace(/\/$/,'')}/functions/v1/profile-api`:'',
@@ -44,7 +44,7 @@ function securityHeaders(env={}){
 function json(data,status=200,env={}){return new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store',...securityHeaders(env)}})}
 function withHeaders(response,env={}){const headers=new Headers(response.headers);for(const[key,value]of Object.entries(securityHeaders(env)))headers.set(key,value);if(!headers.has('cache-control'))headers.set('cache-control',response.headers.get('content-type')?.includes('text/html')?'no-cache':'public, max-age=300');return new Response(response.body,{status:response.status,statusText:response.statusText,headers})}
 async function body(request){try{return await request.json()}catch{return null}}
-function runtimeConfig(env){const sources=officialSourceStatus(env);return{dataMode:env.DATA_MODE||'isolated-staging',canonicalUrl:'https://ekodi.kr/support',authUrl:env.AUTH_URL||'https://auth.ekodi.kr/?site=support',centralIdentity:centralIdentityConfig(env),officialSourceRequired:true,officialSources:sources.map(({id,name,mode})=>({id,name,mode})),specialistServices:OPPORTUNITY_SERVICES.map(({id,path,label,sourceStatus})=>({id,path,label,sourceStatus})),submissionExecution:false,humanGateRequired:true,persistence:'browser-local-first',proactiveBriefing:true,needSensing:'consent-first',activityContextDefault:false,sensitiveInferenceDefault:false,externalDataDefault:false,sharedOpportunityCore:true,specialistWorkspace:true,capability:BENEFIT_RADAR_CAPABILITY}}
+function runtimeConfig(env){const sources=officialSourceStatus(env);return{dataMode:env.DATA_MODE||'isolated-staging',canonicalUrl:'https://ekodi.kr/support',authUrl:env.AUTH_URL||'https://ekodi.kr/auth/?site=support',centralIdentity:centralIdentityConfig(env),officialSourceRequired:true,officialSources:sources.map(({id,name,mode})=>({id,name,mode})),specialistServices:OPPORTUNITY_SERVICES.map(({id,path,label,sourceStatus})=>({id,path,label,sourceStatus})),submissionExecution:false,humanGateRequired:true,persistence:'browser-local-first',proactiveBriefing:true,needSensing:'consent-first',activityContextDefault:false,sensitiveInferenceDefault:false,externalDataDefault:false,sharedOpportunityCore:true,specialistWorkspace:true,capability:BENEFIT_RADAR_CAPABILITY}}
 async function getOfficialNotices(env,url){const source=url.searchParams.get('source')||'all';const options={limit:url.searchParams.get('limit')||100,category:url.searchParams.get('category')||'',hashtags:url.searchParams.get('hashtags')||'',now:url.searchParams.get('now')||''};if(source==='bizinfo')return fetchBizinfoNotices(env,options);if(source==='trusted-institutions')return fetchVerifiedInstitutionNotices(options);if(source==='all'||source==='combined')return fetchCombinedOpportunityNotices(env,options);return{ok:false,source,reason:'source_not_enabled',items:[]}}
 async function serveOpportunityApp(request,env,assetPath='/index.html'){const assetUrl=new URL(assetPath,request.url);const response=await env.ASSETS.fetch(new Request(assetUrl,{method:'GET',headers:request.headers}));return injectEkodiShell(withHeaders(response,env),'support')}
 async function assetResponse(request,env,pathname){const assetUrl=new URL(request.url);assetUrl.pathname=pathname;return env.ASSETS.fetch(new Request(assetUrl,{method:'GET',headers:request.headers}))}
@@ -67,7 +67,7 @@ export default{async fetch(request,env){
   if(pathname==='/api/form-fill'&&request.method==='POST'){const p=await body(request);if(!p||!Array.isArray(p.schema))return json({error:'invalid_form_schema'},400,env);return json({fields:fillOfficialForm(p.schema,p.profile,p.project)},200,env)}
   if(pathname==='/api/next-actions'&&request.method==='POST'){const p=await body(request);return json({actions:buildNextActions(p||{})},200,env)}
   if(pathname==='/api/action-gate'&&request.method==='POST'){const p=await body(request);const action=p?.action||'';return json({action,humanGateRequired:requiresHumanGate(action),allowedAutonomously:!requiresHumanGate(action)},200,env)}
-  if(pathname==='/admin'||pathname==='/admin/')return Response.redirect('https://admin.ekodi.kr/',307);
+  if(pathname==='/admin'||pathname==='/admin/')return Response.redirect('https://ekodi.kr/admin/',307);
   if(request.method==='GET'&&SPECIALIST_PATHS.has(pathname.replace(/\/$/,'')))return serveOpportunityApp(request,env,'/service.html');
   const response=await assetResponse(request,env,pathname);return injectEkodiShell(withHeaders(response,env),'support');
 }};
