@@ -65,9 +65,9 @@ jobs:
           echo "E2E_TOKEN_HASH=$token_hash" >> "$GITHUB_ENV"
           echo "E2E_AUTH_DB_ID=$auth_db" >> "$GITHUB_ENV"
 
-      - name: Install Chromium harness
+      - name: Install Chromium and Worker diagnostics harness
         run: |
-          npm install --no-save --package-lock=false playwright@1.55.0
+          npm install --no-save --package-lock=false playwright@1.55.0 wrangler@4.31.0
           npx playwright install --with-deps chromium
 
       - name: Run real Church Live publish and anonymous viewer pull
