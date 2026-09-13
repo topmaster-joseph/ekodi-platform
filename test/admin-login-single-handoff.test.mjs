@@ -12,7 +12,7 @@ const authRouter = await readFile(`${root}auth-site/auth-router.js`, 'utf8');
 const authHtml = await readFile(`${root}auth-site/index.html`, 'utf8');
 
 test('central admin login pre-opens the approved Google origin bridge from the first user gesture', () => {
-  assert.match(adminCore, /open\('https:\/\/auth\.ekodi\.kr\/google-origin-bridge\?wait=1','ekodi_google_origin_bridge','popup'\)/);
+  assert.match(adminCore, /open\('https:\/\/ekodi\.kr\/auth\/google-origin-bridge\?wait=1','ekodi_google_origin_bridge','popup'\)/);
   assert.match(adminCore, /e\.preventDefault\(\)/);
   assert.match(adminCore, /location\.href=loginLink\.href\+'&bridge=preopened'/);
 });
@@ -37,7 +37,7 @@ test('Google origin bridge keeps strict origin and account-selection safety whil
 });
 
 test('single-handoff keeps the existing no-store auth asset contract', () => {
-  assert.match(authRouter, /admin-auth\.js\?v=20260909-origin-bridge-1/);
+  assert.match(authRouter, /admin-auth\.js\?v=20260913-canonical-origin-1/);
   assert.match(authHtml, /auth-router\.js\?v=20260904-direct-login-1/);
   assert.match(bridgeHtml, /google-origin-bridge\.js/);
 });

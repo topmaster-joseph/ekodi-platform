@@ -616,7 +616,7 @@
         ],
         "redirect": "manual",
         "expect": [
-          "admin-auth.js?v=20260909-origin-bridge-1",
+          "admin-auth.js?v=20260913-canonical-origin-1",
           "business-auth.js?v=20260826-free-fallback-1",
           "client-auth.js?v=20260904-direct-login-1",
           "isRegistryUserService",
@@ -630,7 +630,7 @@
         "rollbackVerify": false
       },
       {
-        "url": "https://auth.ekodi.kr/google-origin-bridge",
+        "url": "https://ekodi.kr/auth/google-origin-bridge",
         "statuses": [200],
         "redirect": "manual",
         "expect": ["EKODI 관리자 Google 인증", "/google-origin-bridge.js"],
@@ -638,7 +638,7 @@
         "rollbackVerify": false
       },
       {
-        "url": "https://auth.ekodi.kr/google-origin-bridge.js",
+        "url": "https://ekodi.kr/auth/google-origin-bridge.js",
         "statuses": [200],
         "redirect": "manual",
         "expect": ["TARGET_ORIGIN='https://ekodi.kr'", "use_fedcm_for_button:false", "window.opener.postMessage"],
@@ -698,7 +698,7 @@
         ],
         "redirect": "manual",
         "expect": [
-          "GOOGLE_BRIDGE_ORIGIN='https://auth.ekodi.kr'",
+          "GOOGLE_BRIDGE_ORIGIN='https://ekodi.kr'",
           "requestGoogleCredential",
           "renderOriginBridgeButton",
           "event.origin!==GOOGLE_BRIDGE_ORIGIN",
