@@ -87,8 +87,8 @@
     {
       "id": "shell-js",
       "name": "EKODI Shell JS",
-      "domain": "shell.ekodi.kr",
-      "url": "https://shell.ekodi.kr/shell.js",
+      "domain": "ekodi.kr",
+      "url": "https://ekodi.kr/shell/shell.js",
       "status": "offline",
       "httpStatus": 429,
       "responseTime": 266,
@@ -98,8 +98,8 @@
     {
       "id": "shell-workspace",
       "name": "EKODI Workspace CSS",
-      "domain": "shell.ekodi.kr",
-      "url": "https://shell.ekodi.kr/workspace.css",
+      "domain": "ekodi.kr",
+      "url": "https://ekodi.kr/shell/workspace.css",
       "status": "offline",
       "httpStatus": 429,
       "responseTime": 180,

@@ -1,7 +1,7 @@
 /* EKODI shared user layout + chrome
  * Public/workspace pages inherit one centered visual canvas, header and footer.
  * Service body/hero/card styling remains service-owned inside that canvas.
- * Served from shell.ekodi.kr so strict service CSPs can keep inline styles disabled.
+ * Served from ekodi.kr/shell so strict service CSPs can keep inline styles disabled.
  */
 
 /* Natural-language word integrity

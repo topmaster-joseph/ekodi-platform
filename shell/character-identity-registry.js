@@ -20,7 +20,7 @@ const profiles={
     activation:'explicit_only',
     subjectBinding:'founder',
     subjectAuthorization:'recorded',
-    visual:{portraitUrl:'https://shell.ekodi.kr/assets/ekodian/founder-face.webp',portraitMode:'character-face',assetStatus:'approved-production',assetVersion:'20260906-founder-v1'},
+    visual:{portraitUrl:'https://ekodi.kr/shell/assets/ekodian/founder-face.webp',portraitMode:'character-face',assetStatus:'approved-production',assetVersion:'20260906-founder-v1'},
     allowedContexts:['public','workspace','story','education','community'],
     forbiddenContexts:['payment','personal_data','security','high_risk_decision']
   },
@@ -31,7 +31,7 @@ const profiles={
     activation:'explicit_only',
     subjectBinding:'founder',
     subjectAuthorization:'recorded',
-    visual:{portraitUrl:'https://shell.ekodi.kr/assets/ekodian/founder-face.webp',portraitMode:'character-face',assetStatus:'approved-production',assetVersion:'20260906-founder-v1'},
+    visual:{portraitUrl:'https://ekodi.kr/shell/assets/ekodian/founder-face.webp',portraitMode:'character-face',assetStatus:'approved-production',assetVersion:'20260906-founder-v1'},
     allowedContexts:['church','worship','education','care','community'],
     forbiddenContexts:['payment','personal_data','security','high_risk_decision']
   },

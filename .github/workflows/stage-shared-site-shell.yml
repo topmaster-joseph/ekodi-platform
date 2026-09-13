@@ -134,7 +134,7 @@ jobs:
             echo "$host -> $code"
             [[ "$code" == '200' ]]
             grep -Fq "$needle" /tmp/shared-stage.html
-            grep -Fq 'https://shell.ekodi.kr/shell.js' /tmp/shared-stage.html
+            grep -Fq 'https://ekodi.kr/shell/shell.js' /tmp/shared-stage.html
             grep -Fiq 'x-ekodi-shell: v2' /tmp/shared-stage.headers
           }
           for attempt in $(seq 1 18); do

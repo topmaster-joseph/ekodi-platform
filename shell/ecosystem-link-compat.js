@@ -34,7 +34,7 @@ function canonicalize(root,services){
 async function boot(){
   let manifest;
   try{
-    const response=await fetch('https://shell.ekodi.kr/manifest.json',{cache:'no-store',mode:'cors'});
+    const response=await fetch('https://ekodi.kr/shell/manifest.json',{cache:'no-store',mode:'cors'});
     if(!response.ok)return;
     manifest=await response.json();
   }catch{return;}
