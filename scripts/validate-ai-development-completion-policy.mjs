@@ -21,6 +21,8 @@ function requireText(file, needles) {
 const policyFile = 'config/ai-development-completion-policy.json';
 const policy = readJson(policyFile);
 
+if (policy.schemaVersion !== 3) fail(policyFile, 'schemaVersion must be 3 with completion continuity');
+
 if (policy.policyId !== 'AI-COMPLETE-001') fail(policyFile, 'policyId must be AI-COMPLETE-001');
 if (policy.status !== 'active') fail(policyFile, 'policy must remain active');
 if (policy.defaultRule !== 'production-verified-before-complete') fail(policyFile, 'defaultRule must require production verification');
@@ -55,6 +57,13 @@ for (const evidence of [
   }
 }
 
+
+if (policy.completionStates?.interrupted !== 'recoverable-interruption-checkpointed-resume-required') fail(policyFile, 'recoverable interruption state is required');
+for (const field of ['task_id','branch','current_commit_sha','completed_steps','pending_steps','last_validation_result','deployment_state','blocking_dependency','next_executable_step','resume_timestamp']) {
+  if (!policy.requiredCheckpointForRecoverableInterruption?.includes(field)) fail(policyFile, `missing recoverable-interruption checkpoint field: ${field}`);
+}
+if (policy.reporting?.interruptionLabel !== 'recoverable-interruption-resume-required') fail(policyFile, 'interruption reporting label mismatch');
+
 if (!policy.exceptionPolicy?.allowed) fail(policyFile, 'bounded exceptions must remain explicitly modeled');
 for (const exceptionClass of ['read-only-analysis', 'documentation-only', 'non-production-experiment', 'human-gate-required', 'external-authority-blocked']) {
   if (!policy.exceptionPolicy?.allowedClasses?.includes(exceptionClass)) fail(policyFile, `missing allowed exception class: ${exceptionClass}`);
@@ -83,7 +92,7 @@ requireText('AI_DEVELOPMENT_POLICY.md', [
   'not proof of production completion',
   'central release gate',
 ]);
-requireText('.github/copilot-instructions.md', ['production verification evidence', 'must not report completion']);
+requireText('.github/copilot-instructions.md', ['production verification evidence', 'must not report completion', 'recoverable interruption', 'checkpoint']);
 requireText('.github/workflows/production-gate.yml', [
   'production-completion-evidence.json',
   'Upload production completion evidence',

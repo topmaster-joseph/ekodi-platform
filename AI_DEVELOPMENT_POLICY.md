@@ -79,6 +79,10 @@ When two tasks overlap, the central integration stage decides merge order. A los
 
 `.github/workflows/ai-conflict-guard.yml` enforces this at pull-request time. If another open PR targeting the same base modifies any of the same files, the overlapping PR is blocked until central integration chooses the winning order. The guard also rejects a PR when GitHub reports an actual merge conflict with the base branch.
 
+## Completion continuity across interruptions
+
+A session ending, execution-window limit, temporary tool unavailability, connector failure, rate limit, or transient infrastructure failure is a **recoverable interruption**, not completion and not automatically a blocked state. The worker must preserve a checkpoint with task identity, branch/commit, completed and pending steps, latest validation/deployment state, blocking dependency, and next executable step. A subsequent authorized worker resumes from that checkpoint and attempts available authorized fallback paths before escalation. Continuity never expands authority, bypasses credentials or safety gates, or permits direct production mutation.
+
 ## Provider independence
 
 AI vendors are replaceable workers behind this development contract. Provider-specific instruction files may explain how a tool should comply, but they must not weaken or redefine this policy.
