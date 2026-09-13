@@ -28,11 +28,24 @@ test('staging central identity is isolated while production is configured',()=>{
   assert.match(prod,/SUPABASE_PUBLISHABLE_KEY/);
   assert.doesNotMatch(staging,/SUPABASE_URL/);
   assert.doesNotMatch(staging,/SUPABASE_PUBLISHABLE_KEY/);
+  assert.ok(prod.includes('AUTH_URL = "https://ekodi.kr/auth/?site=support"'));
+  assert.ok(staging.includes('AUTH_URL = "https://ekodi.kr/auth/?site=support"'));
+  assert.doesNotMatch(worker,/auth\.ekodi\.kr|admin\.ekodi\.kr/);
+});
+
+test('Support release dependencies use canonical apex gateways',()=>{
+  const deploy=read('.github/workflows/deploy-support-opportunity.yml');
+  const identity=read('.github/workflows/support-central-identity-ci.yml');
+  assert.ok(deploy.includes('https://ekodi.kr/shell/manifest.json'));
+  assert.ok(!deploy.includes('https://shell.ekodi.kr/manifest.json'));
+  assert.ok(identity.includes("Origin: https://ekodi.kr"));
+  assert.ok(identity.includes('https://ekodi\\.kr'));
+  assert.ok(!identity.includes('https://support\\.ekodi\\.kr'));
 });
 
 test('profile api allows production Support origin only through explicit allowlist',()=>{
   const profileApi=read('supabase/functions/profile-api/index.ts');
-  assert.match(profileApi,/"https:\/\/support\.ekodi\.kr"/);
+  assert.match(profileApi,/"https:\/\/ekodi\.kr"/);assert.doesNotMatch(profileApi,/support\.ekodi\.kr/);
   assert.doesNotMatch(profileApi,/ekodi-support-opportunity-staging/);
 });
 

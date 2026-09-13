@@ -14,7 +14,7 @@ const setUi=(label,buttonLabel='',mode='local',message='')=>{
   if(detail){detail.textContent=message;detail.hidden=!message;}
 };
 const cleanReturnUrl=()=>{const url=new URL(location.href);url.hash='';return url.href;};
-const loginUrl=()=>{const target=new URL(config.authUrl||'https://auth.ekodi.kr/?site=support');target.searchParams.set('site','support');target.searchParams.set('return_to',cleanReturnUrl());return target.href;};
+const loginUrl=()=>{const target=new URL(config.authUrl||'https://ekodi.kr/auth/?site=support');target.searchParams.set('site','support');target.searchParams.set('return_to',cleanReturnUrl());return target.href;};
 async function importClient(){
   try{return await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm')}
   catch{return import('https://esm.sh/@supabase/supabase-js@2?bundle')}
