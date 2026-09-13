@@ -46,7 +46,7 @@ jobs:
           test -f sites/ekodi-cafe/deployment.json
           grep -Fq 'EKODI CAFE' sites/ekodi-cafe/index.html
           grep -Fq 'data-ekodi-service="cafe"' sites/ekodi-cafe/index.html
-          grep -Fq 'https://shell.ekodi.kr/shell.js' sites/ekodi-cafe/index.html
+          grep -Fq 'https://ekodi.kr/shell/shell.js' sites/ekodi-cafe/index.html
           grep -Fq 'localStorage' sites/ekodi-cafe/app.js
           grep -Fq 'Content-Security-Policy' sites/ekodi-cafe/_headers
           python3 -m json.tool sites/ekodi-cafe/deployment.json >/dev/null

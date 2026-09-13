@@ -1,5 +1,5 @@
 {
-  "version": 65,
+  "version": 66,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
@@ -674,7 +674,7 @@
         "expect": [
           "EKODI Messenger",
           "EKODI Investment",
-          "https://shell.ekodi.kr/manifest.json",
+          "https://ekodi.kr/shell/manifest.json",
           "/session/handoff",
           "session_timeout",
           "use_fedcm_for_button:true",

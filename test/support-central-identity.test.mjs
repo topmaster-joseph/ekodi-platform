@@ -38,6 +38,9 @@ test('Support release dependencies use canonical apex gateways',()=>{
   const identity=read('.github/workflows/support-central-identity-ci.yml');
   assert.ok(deploy.includes('https://ekodi.kr/shell/manifest.json'));
   assert.ok(!deploy.includes('https://shell.ekodi.kr/manifest.json'));
+  assert.ok(deploy.includes('Detach retired Support subdomain'));
+  assert.ok(deploy.includes('RETIRED_SUPPORT_HOST: support.ekodi.kr'));
+  assert.ok(deploy.includes("location: https://ekodi\\.kr/admin/?"));
   const triggerBefore=deploy.indexOf('Reconcile production hostname trigger for candidate verification');
   const guarded=deploy.indexOf('Bootstrap or guarded release');
   const triggerAfter=deploy.indexOf('Reconcile production hostname trigger',triggerBefore+1);

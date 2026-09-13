@@ -27,7 +27,7 @@ jobs:
           set -euo pipefail
           source_sha=$(git ls-remote https://github.com/topmaster-joseph/ekodi-church.git refs/heads/main | awk '{print $1}')
           test "$source_sha"
-          deployed_sha=$(curl -fsS --connect-timeout 5 --max-time 15 'https://church.ekodi.kr/church-release.json?reconcile=1' 2>/dev/null | jq -r '.sourceSha // empty' || true)
+          deployed_sha=$(curl -fsS --connect-timeout 5 --max-time 15 'https://ekodi.kr/ekodichurch/church-release.json?reconcile=1' 2>/dev/null | jq -r '.sourceSha // empty' || true)
           echo "source_sha=$source_sha" >> "$GITHUB_OUTPUT"
           echo "deployed_sha=$deployed_sha" >> "$GITHUB_OUTPUT"
           if [[ "$source_sha" == "$deployed_sha" ]]; then
