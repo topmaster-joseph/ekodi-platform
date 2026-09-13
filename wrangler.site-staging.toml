@@ -1,5 +1,5 @@
 name = "ekodi-shared-site-staging"
-main = "platform-router-entry-worker.js"
+main = "site-operating-status-entry-worker.js"
 compatibility_date = "2026-08-12"
 workers_dev = true
 preview_urls = false
@@ -98,7 +98,6 @@ service = "ekodi-management-staging"
 binding = "AUTHOR"
 service = "ekodi-author-ai-staging"
 
-
 [[services]]
 binding = "BOOKS"
 service = "ekodi-books-staging"
@@ -112,6 +111,4 @@ service = "ekodi-marketing-publishing-staging"
 [[services]]
 binding = "SOCIAL"
 service = "ekodi-social-staging"
-
-
 
