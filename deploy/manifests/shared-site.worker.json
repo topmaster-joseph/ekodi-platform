@@ -1,5 +1,5 @@
 {
-  "version": 64,
+  "version": 65,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
@@ -718,6 +718,15 @@
         "rollbackVerify": false
       },
       {
+        "url": "https://ekodi.kr/shell/shell.js",
+        "statuses": [200],
+        "redirect": "manual",
+        "expect": [
+          "ekodi-mobile-fixed-header-style",
+          "ResizeObserver"
+        ]
+      },
+      {
         "url": "https://messenger.ekodi.kr/",
         "statuses": [
           200
@@ -727,8 +736,7 @@
           "EKODI Messenger",
           "궁금한 것을 편하게 말씀해 주세요.",
           "대화 검색",
-          "무엇을 도와드릴까요?",
-          "https://ekodi.kr/shell/shell.js"
+          "무엇을 도와드릴까요?"
         ],
         "headerExpect": [
           "x-ekodi-route: platform-messenger",
@@ -767,8 +775,7 @@
         "redirect": "manual",
         "expect": [
           "EKODI Hub",
-          "EKODI 서비스 허브",
-          "https://ekodi.kr/shell/shell.js"
+          "EKODI 서비스 허브"
         ],
         "headerExpect": [
           "x-ekodi-route: hub",
@@ -783,8 +790,7 @@
         "redirect": "manual",
         "expect": [
           "EKODI Hub",
-          "EKODI 서비스 허브",
-          "https://ekodi.kr/shell/shell.js"
+          "EKODI 서비스 허브"
         ],
         "headerExpect": [
           "x-ekodi-route: hub",
@@ -887,8 +893,7 @@
         "redirect": "manual",
         "expect": [
           "EKODI Global Trading",
-          "TRADING DIVISION · EKODIBIZ",
-          "https://ekodi.kr/shell/shell.js"
+          "TRADING DIVISION · EKODIBIZ"
         ],
         "headerExpect": [
           "x-ekodi-route: trade",
