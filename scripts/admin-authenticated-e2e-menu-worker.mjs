@@ -470,8 +470,10 @@ try {
   if (directDefinition?.href && !directDefinition.adminHandoff) {
     stage('registry-link');
     const source = page.locator(`.sidebar nav .nav[data-section="${menuId}"]`);
-    await source.waitFor({ state: 'visible', timeout: 5_000 });
-    await verifyRegistryHref(source, started);
+    await source.waitFor({ state: 'attached', timeout: 5_000 });
+    const trigger = page.locator(`.sidebar nav [data-admin-detail-section="${menuId}"]`);
+    await trigger.waitFor({ state: 'visible', timeout: 5_000 });
+    await verifyRegistryHref(trigger, started);
   } else {
     stage('tab');
     const tab = page.locator(`button.admin-context-tab[data-admin-context-section="${menuId}"]`);
