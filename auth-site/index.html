@@ -141,7 +141,7 @@
       retry?.addEventListener('click',async()=>{
         try{sessionStorage.removeItem(guardKey)}catch{}
         retry.disabled=true;
-        await import('/auth-router.js?v=20260914-loop-guard-1');
+        await import('/auth-router.js?v=20260904-direct-login-1');
       },{once:true});
       cancel?.addEventListener('click',()=>{
         let target='https://ekodi.kr/';
@@ -149,7 +149,7 @@
         location.assign(target);
       },{once:true});
     }else{
-      await import('/auth-router.js?v=20260914-loop-guard-1');
+      await import('/auth-router.js?v=20260904-direct-login-1');
     }
   </script>
 </body>
