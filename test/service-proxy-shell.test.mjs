@@ -10,6 +10,11 @@ test('service proxy uses the shared Shell for user-facing proxied domains',async
   assert.match(source,/shellServiceForHost/);
   for(const host of ['church.ekodi.kr','lab.ekodi.kr'])assert.match(source,new RegExp(host.replaceAll('.','\\.')));
   assert.match(source,/injectEkodiShell\(businessHub\(\), 'biz'\)/);
+  const [proxyConfig,boundaries]=await Promise.all([read('wrangler.service-proxy.toml'),read('platform-boundaries.json')]);
+  assert.doesNotMatch(proxyConfig,/pattern = \"church\.ekodi\.kr\"/);
+  assert.doesNotMatch(proxyConfig,/pattern = \"lab\.ekodi\.kr\"/);
+  assert.doesNotMatch(boundaries,/\"domains\":\[\"biz\.ekodi\.kr\",\"church\.ekodi\.kr/);
+  assert.doesNotMatch(boundaries,/\"domains\":\[\"biz\.ekodi\.kr\",\"lab\.ekodi\.kr/);
 });
 
 test('staging host simulation is impossible in production',async()=>{

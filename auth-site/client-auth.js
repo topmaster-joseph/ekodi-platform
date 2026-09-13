@@ -8,7 +8,7 @@ function fetchTimed(url,options={},ms=10000){const controller=new AbortControlle
 const realms={
   portal:{name:'EKODI',returnTo:'https://ekodi.kr/',open:true,kind:'portal'},
   'my':{name:'My EKODI',returnTo:'https://ekodi.kr/my/',open:true,kind:'my'},
-  community:{name:'Community',returnTo:'https://community.ekodi.kr/',open:true,kind:'community'},
+  community:{name:'Community',returnTo:'https://ekodi.kr/community/',open:true,kind:'community'},
   church:{name:'EKODI Church',returnTo:'https://church.ekodi.kr/',open:true,kind:'church'},
   biz:{name:'EKODI Biz',returnTo:'https://biz.ekodi.kr/',open:true,kind:'biz'},
   trade:{name:'EKODI Trading',returnTo:'https://trade.ekodi.kr/',open:true,kind:'trade'},

@@ -1,0 +1,94 @@
+name: Verify Church Live Production E2E
+
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows: ['Deploy Control API']
+    types: [completed]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-church-live-production-e2e
+  cancel-in-progress: false
+
+jobs:
+  church-live-e2e:
+    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main')
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Issue short-lived super-admin session
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+          cf_query() {
+            local db="$1" sql="$2"
+            curl -fsS --retry 2 -X POST "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/d1/database/$db/query" \
+              -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H 'Content-Type: application/json' \
+              --data "$(jq -nc --arg sql "$sql" '{sql:$sql}')"
+          }
+          databases=$(curl -fsS --retry 2 "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/d1/database?per_page=100" \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN")
+          auth_db=''; admin_id=''
+          while IFS= read -r db; do
+            [ -n "$db" ] || continue
+            schema=$(cf_query "$db" "SELECT name FROM sqlite_master WHERE type='table' AND name IN ('admins','sessions')" || true)
+            echo "$schema" | jq -e '.success == true and ([.result[]?.results[]?.name] | index("admins") != null and index("sessions") != null)' >/dev/null 2>&1 || continue
+            candidate=$(cf_query "$db" "SELECT id FROM admins WHERE role='super_admin' ORDER BY id LIMIT 1" || true)
+            id=$(echo "$candidate" | jq -r '.result[]?.results[0]?.id // empty' | head -1)
+            if [[ "$id" =~ ^[0-9]+$ ]]; then auth_db="$db"; admin_id="$id"; break; fi
+          done < <(echo "$databases" | jq -r '.result[]? | (.uuid // .id // empty)')
+          test -n "$auth_db"; test -n "$admin_id"
+          token=$(openssl rand -hex 32)
+          token_hash=$(printf '%s' "$token" | sha256sum | awk '{print $1}')
+          created=$(date -u +'%Y-%m-%dT%H:%M:%S.000Z')
+          expires=$(date -u -d '+20 minutes' +'%Y-%m-%dT%H:%M:%S.000Z')
+          echo "::add-mask::$token"; echo "::add-mask::$token_hash"
+          result=$(cf_query "$auth_db" "INSERT INTO sessions (token_hash,admin_id,expires_at,created_at) VALUES ('$token_hash',$admin_id,'$expires','$created')")
+          echo "$result" | jq -e '.success == true and ([.result[]?.success] | all)' >/dev/null
+          session=$(curl -fsS --retry 3 'https://ekodi.kr/api/session' -H "Authorization: Bearer $token")
+          echo "$session" | jq -e '.authenticated == true and .role == "super_admin"' >/dev/null
+          echo "E2E_ADMIN_TOKEN=$token" >> "$GITHUB_ENV"
+          echo "E2E_TOKEN_HASH=$token_hash" >> "$GITHUB_ENV"
+          echo "E2E_AUTH_DB_ID=$auth_db" >> "$GITHUB_ENV"
+
+      - name: Install Chromium harness
+        run: |
+          npm install --no-save --package-lock=false playwright@1.55.0
+          npx playwright install --with-deps chromium
+
+      - name: Run real Church Live publish and anonymous viewer pull
+        run: node scripts/church-live-production-e2e.mjs
+
+      - name: Upload E2E report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: church-live-production-e2e
+          path: artifacts/church-live-production-e2e/report.json
+          if-no-files-found: warn
+          retention-days: 7
+      - name: Revoke short-lived E2E session
+        if: always() && env.E2E_AUTH_DB_ID != '' && env.E2E_TOKEN_HASH != ''
+        shell: bash
+        run: |
+          set -euo pipefail
+          sql="DELETE FROM sessions WHERE token_hash = '$E2E_TOKEN_HASH'"
+          curl -fsS --retry 2 -X POST "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/d1/database/$E2E_AUTH_DB_ID/query" \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H 'Content-Type: application/json' \
+            --data "$(jq -nc --arg sql "$sql" '{sql:$sql}')" \
+            | jq -e '.success == true' >/dev/null
+          echo 'Short-lived Church Live E2E session revoked.'

@@ -67,7 +67,7 @@ jobs:
           grep -Fq '<script src="/community-enhancements.js" defer></script>' community/index.html
           grep -Fq 'https://api.ekodi.kr/api/social/registry' community/social-links.js
           grep -Fq "community:{name:'Community'" auth-site/client-auth.js
-          grep -Fq "returnTo:'https://community.ekodi.kr/'" auth-site/client-auth.js
+          grep -Fq "returnTo:'https://ekodi.kr/community/'" auth-site/client-auth.js
           grep -Fq "open:true,kind:'community'" auth-site/client-auth.js
           grep -Fq "'community'" auth-site/auth-router.js
           grep -Fq 'isRegistryUserService' auth-site/auth-router.js
@@ -212,11 +212,11 @@ jobs:
         run: |
           set -euo pipefail
           for attempt in $(seq 1 18); do
-            client_code=$(curl -sS -o /tmp/community-client-auth.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://auth.ekodi.kr/client-auth.js' || true)
-            router_code=$(curl -sS -o /tmp/community-auth-router.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://auth.ekodi.kr/auth-router.js' || true)
+            client_code=$(curl -sS -o /tmp/community-client-auth.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/auth/client-auth.js' || true)
+            router_code=$(curl -sS -o /tmp/community-auth-router.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/auth/auth-router.js' || true)
             if [[ "$client_code" == '200' && "$router_code" == '200' ]] \
               && grep -Fq "community:{name:'Community'" /tmp/community-client-auth.js \
-              && grep -Fq "returnTo:'https://community.ekodi.kr/'" /tmp/community-client-auth.js \
+              && grep -Fq "returnTo:'https://ekodi.kr/community/'" /tmp/community-client-auth.js \
               && grep -Fq "open:true,kind:'community'" /tmp/community-client-auth.js \
               && grep -Fq "'community'" /tmp/community-auth-router.js \
               && grep -Fq 'isRegistryUserService' /tmp/community-auth-router.js \

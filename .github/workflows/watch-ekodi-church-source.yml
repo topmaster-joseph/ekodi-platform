@@ -29,7 +29,7 @@ jobs:
         run: |
           set -euo pipefail
           source_sha="$(git ls-remote https://github.com/topmaster-joseph/ekodi-church.git refs/heads/main | awk '{print $1}')"
-          production_sha="$(curl -L -fsS --connect-timeout 5 --max-time 20 "https://church.ekodi.kr/church-release.json?watch=${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" | jq -r '.sourceSha // empty' || true)"
+          production_sha="$(curl -L -fsS --connect-timeout 5 --max-time 20 "https://ekodi.kr/ekodichurch/church-release.json?watch=${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" | jq -r '.sourceSha // empty' || true)"
           echo "Church source SHA: ${source_sha}"
           echo "Church production SHA: ${production_sha:-missing}"
           test -n "$source_sha"

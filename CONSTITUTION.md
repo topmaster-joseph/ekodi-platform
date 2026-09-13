@@ -1,8 +1,17 @@
-# EKODI Platform Constitution v1.14.0
+# EKODI Platform Constitution v1.16.0
 
 Effective: 2026-09-13
 
 This constitution is the highest architecture and operations rule for EKODI Platform. Existing validators remain authoritative implementation guards; this document unifies their intent and governs future changes.
+
+## 0. Supreme Ecosystem Attributes Constitution
+- The following **21 Supreme Attributes** are the highest non-optional quality constraints of the EKODI ecosystem and bind Generation 10 and every future generation: **Independence, Modularity, Scalability, Standardization, Consistency, Collaboration, Agility, Creativity, Security, Evolvability, Adaptability, Replaceability, Reversibility, Resilience, Observability, Verifiability, Interoperability, Data Sovereignty, Autonomous Operations, Economic Sustainability, Simplicity**.
+- In Korean canonical terms: **독립성 · 모듈성 · 확장성 · 표준성 · 일관성 · 협업성 · 신속성 · 창조성 · 보안성 · 진화가능성 · 적응성 · 교체가능성 · 가역성 · 회복탄력성 · 관측가능성 · 검증가능성 · 상호운용성 · 데이터주권 · 자율운영성 · 경제적 지속가능성 · 단순성**.
+- These attributes apply to governance, architecture, source code, AI/agent behavior, data, security, UX, integrations, infrastructure, operations, cost decisions and future-generation evolution.
+- They are **supreme-mandatory**: no implementation, provider, AI agent, individual service or workspace may silently waive, locally override or regress them. An exception requires an explicit constitutional amendment under C2/C3 authority.
+- The attributes are optimized as one system rather than traded away independently. Tensions must be documented and evidence-based; security, data sovereignty and sovereign human authority are mandatory floors that no tradeoff may reduce.
+- The operating maxim is: **independent yet connected; consistent without uniformity; stable without rigidity; creative without losing control; fast without becoming reckless; extensible without uncontrolled complexity**.
+- Machine-readable authority: `governance/constitution/supreme-attributes.v1.json`. Repository validation and CI must fail when the registry, constitutional binding or required enforcement mappings regress.
 
 ## 1. Architecture Constitution
 - EKODI Core owns identity linkage, tenant/workspace, membership/RBAC, business state, configuration, automation and audit truth.

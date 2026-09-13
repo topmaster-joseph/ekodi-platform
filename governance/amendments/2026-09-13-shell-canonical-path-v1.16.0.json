@@ -1,6 +1,6 @@
 {
-  "id": "2026-09-13-shell-canonical-path-v1.15.0",
-  "constitutionVersion": "1.15.0",
+  "id": "2026-09-13-shell-canonical-path-v1.16.0",
+  "constitutionVersion": "1.16.0",
   "status": "approved",
   "approvedBy": "topmaster-joseph",
   "approvedAt": "2026-09-13",
@@ -18,5 +18,5 @@
   "generationImpact": "None. Generation 10 remains unchanged.",
   "scaleImpact": "None. This converges routing topology without creating a new deployment boundary.",
   "authorityImpact": "None. Existing human authority, authentication, authorization and service ownership remain unchanged.",
-  "rollback": "Revert the v1.15.0 Shell canonical-path amendment and associated runtime/config changes through the guarded pipeline. Do not recreate shell.ekodi.kr as a compatibility redirect without a separate approved constitutional amendment."
+  "rollback": "Revert the v1.16.0 Shell canonical-path amendment and associated runtime/config changes through the guarded pipeline. Do not recreate shell.ekodi.kr as a compatibility redirect without a separate approved constitutional amendment."
 }

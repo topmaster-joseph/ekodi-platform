@@ -1,5 +1,5 @@
 {
-  "version": "1.15.0",
+  "version": "1.16.0",
   "effectiveDate": "2026-09-13",
   "status": "active",
   "title": "EKODI Platform Constitution",
@@ -31,7 +31,8 @@
     "open-ended-evidence-driven-generation-evolution",
     "ekodibiz-exclusive-commercial-subject",
     "ordinary-user-information-first-commercial-separation",
-    "completion-continuity-through-recoverable-interruptions"
+    "completion-continuity-through-recoverable-interruptions",
+    "supreme-attributes-binding"
   ],
   "architectureModel": {
     "registry": "governance/architecture/ekodi-os-architecture.json",
@@ -573,5 +574,19 @@
     "blockedReservedForAuthorityOrDependency": true,
     "authorityExpansionForbidden": true,
     "productionVerificationStillRequired": true
+  },
+  "supremeAttributesPolicy": {
+    "id": "EKODI-SUPREME-ATTRIBUTES-001",
+    "registry": "governance/constitution/supreme-attributes.v1.json",
+    "bindingLevel": "supreme-mandatory",
+    "attributeCount": 21,
+    "allRequired": true,
+    "nonRegressionRequired": true,
+    "appliesToAllPlatformChanges": true,
+    "appliesToFutureGenerations": true,
+    "implementationWaiverForbidden": true,
+    "aiSelfWaiverForbidden": true,
+    "exceptionRequiresConstitutionalAmendment": true,
+    "finalAuthority": "ekodi_platform_super_administrator"
   }
 }
