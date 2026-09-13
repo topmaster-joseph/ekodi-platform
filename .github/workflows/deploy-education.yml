@@ -138,8 +138,8 @@ jobs:
         run: |
           set -euo pipefail
           for attempt in $(seq 1 24); do
-            shell_code=$(curl -sS -o /tmp/edu-manifest.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://shell.ekodi.kr/manifest.json' || true)
-            auth_code=$(curl -sS -o /tmp/edu-client-auth.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://auth.ekodi.kr/client-auth.js' || true)
+            shell_code=$(curl -sS -o /tmp/edu-manifest.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/shell/manifest.json' || true)
+            auth_code=$(curl -sS -o /tmp/edu-client-auth.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/auth/client-auth.js' || true)
             if [[ "$shell_code" == '200' && "$auth_code" == '200' ]] \
               && grep -Fq '"id":"edu"' /tmp/edu-manifest.json \
               && grep -Fq '"authMode":"client"' /tmp/edu-manifest.json \
@@ -191,7 +191,7 @@ jobs:
               && grep -Fq '"submissionExecution":false' /tmp/edu-health.json \
               && grep -Fq '"dataEnabled":true' /tmp/edu-config.js \
               && grep -Eiq '^x-ekodi-shell: v2' /tmp/edu-headers \
-              && grep -Eiq '^location: https://admin\.ekodi\.kr/?' /tmp/edu-admin-headers; then
+              && grep -Eiq '^location: https://ekodi\.kr/admin/?' /tmp/edu-admin-headers; then
               echo 'EKODI Education production verified.'
               exit 0
             fi
