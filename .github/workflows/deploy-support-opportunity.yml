@@ -234,6 +234,25 @@ jobs:
         run: printf '%s' "$BIZINFO_API_KEY" | npx --yes wrangler@${WRANGLER_VERSION} secret put BIZINFO_API_KEY --config wrangler.support.toml
       - name: Reconcile production hostname trigger
         run: npx --yes wrangler@${WRANGLER_VERSION} triggers deploy --config wrangler.support.toml
+      - name: Detach retired Support subdomain
+        env:
+          RETIRED_SUPPORT_HOST: support.ekodi.kr
+        run: |
+          set -euo pipefail
+          api='https://api.cloudflare.com/client/v4'
+          auth=(-H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H 'Content-Type: application/json')
+          domains=$(curl --fail-with-body -sS "${auth[@]}" "$api/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/domains")
+          echo "$domains" | jq -e '.success == true' >/dev/null
+          domain_id=$(echo "$domains" | jq -r '.result[] | select(.hostname == env.RETIRED_SUPPORT_HOST) | .id' | head -n1)
+          if [[ -n "$domain_id" ]]; then curl --fail-with-body -sS -X DELETE "${auth[@]}" "$api/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/domains/$domain_id" >/dev/null; fi
+          zones=$(curl --fail-with-body -sS "${auth[@]}" "$api/zones?name=ekodi.kr&status=active&per_page=10")
+          echo "$zones" | jq -e '.success == true' >/dev/null
+          zone_id=$(echo "$zones" | jq -r '.result[0].id // empty')
+          test -n "$zone_id"
+          records=$(curl --fail-with-body -sS "${auth[@]}" "$api/zones/$zone_id/dns_records?name=$RETIRED_SUPPORT_HOST&per_page=100")
+          mapfile -t record_ids < <(echo "$records" | jq -r '.result[] | select(.name == env.RETIRED_SUPPORT_HOST) | .id')
+          for record_id in "${record_ids[@]}"; do curl --fail-with-body -sS -X DELETE "${auth[@]}" "$api/zones/$zone_id/dns_records/$record_id" >/dev/null; done
+          for attempt in $(seq 1 36); do code=$(curl -sS -o /tmp/retired-support.out -w '%{http_code}' --connect-timeout 5 --max-time 10 "https://$RETIRED_SUPPORT_HOST/" || true); if [[ ! "$code" =~ ^[23] ]]; then echo "Retired Support hostname inactive (HTTP ${code:-000})."; break; fi; if [[ "$attempt" == '36' ]]; then echo 'Retired Support hostname still serves first-party traffic.'; exit 1; fi; sleep 5; done
       - name: Verify real production hostname
         run: |
           set -euo pipefail
@@ -265,7 +284,8 @@ jobs:
               && grep -Fq '"id":"bizinfo"' /tmp/support-notices.json \
               && grep -Fq '"official":true' /tmp/support-notices.json \
               && grep -Eiq '^x-ekodi-shell: v2' /tmp/support-headers \
-              && grep -Eiq '^location: https://admin\.ekodi\.kr/?' /tmp/support-admin-headers; then
+              && [[ "$admin" == '307' ]] \
+              && grep -Eiq '^location: https://ekodi\.kr/admin/?' /tmp/support-admin-headers; then
               echo 'Support root, APIs and all seven specialist production routes verified.'
               exit 0
             fi
