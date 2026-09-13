@@ -25,6 +25,7 @@ import { handleApiCostControl } from './api-cost-control.js';
 import { handleCloudflareSecretControl } from './cloudflare-secret-control.js';
 import { handleBooksNetworkRequest } from './books-network-control.js';
 import { handleUniversalMembership } from './universal-membership.js';
+import { handleEntitlementControl } from './entitlement-control.js';
 import { handleHomepagePresentation } from './homepage-presentation-control.js';
 import { handleStorageGateway } from './storage-gateway.js';
 import { handleExternalAiModuleGateway } from './external-ai-module-gateway.js';
@@ -150,6 +151,11 @@ export default {
     if (path.startsWith('/api/local-commerce')) {
       try { const response = await handleLocalCommerceControl(request, env); if (response) return applyApiSecurityHeaders(response); }
       catch (error) { console.error('Local Commerce control error', error); return errorResponse('지역상권 상품권 처리 중 오류가 발생했습니다.', 'LOCAL_COMMERCE_CONTROL_ERROR'); }
+    }
+
+    if (path.startsWith('/api/entitlements') || path.startsWith('/api/control/entitlements')) {
+      try { const response = await handleEntitlementControl(request, env); if (response) return applyApiSecurityHeaders(response); }
+      catch (error) { console.error('Entitlement control error', error); return errorResponse('EKODI entitlement 처리 중 오류가 발생했습니다.', 'ENTITLEMENT_CONTROL_ERROR'); }
     }
 
     if (path.startsWith('/api/membership/')) {
