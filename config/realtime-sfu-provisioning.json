@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "provider": "cloudflare-realtime",
+  "productionWorker": "ekodi-auth-api",
+  "healthUrl": "https://ekodi.kr/api/realtime/health",
+  "firstTenant": "ekodichurch",
+  "failClosed": true,
+  "preserveExistingCredentials": true,
+  "directSessionProbeBeforeSecretWrite": true,
+  "productionHealthVerificationRequired": true,
+  "credentialValuesMayBeLogged": false
+}
