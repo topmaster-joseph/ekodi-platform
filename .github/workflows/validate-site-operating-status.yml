@@ -46,5 +46,7 @@ jobs:
           node --check site-operating-status-widget.js
           node --check site-operating-status-entry-worker.js
           node --test test/site-operating-status.test.mjs
+      - name: Build shared site assets
+        run: npm run build
       - name: Validate production Worker bundle
         run: npx --yes wrangler@4.119.0 deploy --dry-run --config wrangler.site.toml --outdir /tmp/ekodi-site-status-worker
