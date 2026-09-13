@@ -184,14 +184,21 @@ async function routeTaxPortalApex(request,env,ctx){
   const response=new Response(routed.body,routed);response.headers.set('x-ekodi-route','tax-apex');return response;
 }
 
+function internalHostRequest(request,host,pathname){
+  const target=new URL(request.url);target.hostname=host;target.pathname=pathname;return new Request(target,{method:request.method,headers:request.headers,body:['GET','HEAD'].includes(request.method)?undefined:request.body,redirect:request.redirect});
+}
+async function routeMessengerApex(request,env,ctx){const url=new URL(request.url);if(request.method!=='GET'||!(url.pathname==='/messenger'||url.pathname.startsWith('/messenger/')))return null;const inner=url.pathname==='/messenger'?'/' : url.pathname.slice('/messenger'.length)||'/';if(inner==='/'||inner==='/index.html')return injectEkodiShell(await withReleaseMarker(messengerUserPage()),'messenger');if(inner==='/messenger-ui.js')return messengerUiScript();if(inner==='/app.js')return legacyPlatformRouter.fetch(internalHostRequest(request,MESSENGER_HOST,'/app.js'),env,ctx);return null;}
+async function routeInvestApex(request,env,ctx){const url=new URL(request.url);if(request.method!=='GET'||!(url.pathname==='/invest'||url.pathname.startsWith('/invest/')))return null;const inner=url.pathname==='/invest'?'/' : url.pathname.slice('/invest'.length)||'/';if(inner==='/'||inner==='/index.html')return injectEkodiShell(await withInvestSubjectScript(investUserPage()),'invest');if(inner==='/invest-ui.js')return investUiScript();if(inner==='/invest-subject-ui.js')return investSubjectUiScript();if(inner==='/app.js')return legacyPlatformRouter.fetch(internalHostRequest(request,INVEST_HOST,'/app.js'),env,ctx);return null;}
+function routeMailApex(request){const url=new URL(request.url);if(request.method!=='GET')return null;if(url.pathname==='/mail'||url.pathname==='/mail/')return injectEkodiShell(mailUserPage(),'mail');if(url.pathname==='/mail/admin'||url.pathname==='/mail/admin/')return injectEkodiShell(mailAdminPage(),'mail','admin');return null;}
+
 async function withReleaseMarker(response){
   const text=await response.text();
   return new Response(text.replace('</body>','<!-- FUNCTIONAL BETA release compatibility marker; not user-visible --></body>'),{status:response.status,statusText:response.statusText,headers:response.headers});
 }
 async function withInvestSubjectScript(response){
   const text=await response.text();
-  const marker='<script src="/invest-ui.js" defer></script>';
-  const patched=text.replace(marker,'<script src="/invest-subject-ui.js" defer></script>'+marker);
+  const marker='<script src="/invest/invest-ui.js" defer></script>';
+  const patched=text.replace(marker,'<script src="/invest/invest-subject-ui.js" defer></script>'+marker);
   return new Response(patched,{status:response.status,statusText:response.statusText,headers:response.headers});
 }
 
@@ -213,6 +220,9 @@ export default {
     if(CGMA_HOSTS.has(host)&&['GET','HEAD'].includes(request.method))return routeCgmaPublic(request,env);
 
     if(host===PUBLIC_HOST){
+      const mailApex=routeMailApex(request);if(mailApex)return mailApex;
+      const messengerApex=await routeMessengerApex(request,env,ctx);if(messengerApex)return messengerApex;
+      const investApex=await routeInvestApex(request,env,ctx);if(investApex)return investApex;
       const taxPortal=await routeTaxPortalApex(request,env,ctx);if(taxPortal)return taxPortal;
       const contactResponse=await handleMailContactApi(request,env);if(contactResponse)return contactResponse;
       if(request.method==='GET'&&url.pathname==='/mail/contact')return injectEkodiShell(mailContactPage(),'mail');
