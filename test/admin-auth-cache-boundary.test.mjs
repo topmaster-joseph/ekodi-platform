@@ -18,6 +18,17 @@ test('critical central auth JavaScript cannot remain stale in the browser or edg
   assert.match(authIndex, /auth-router\.js\?v=20260904-direct-login-1/);
 });
 
+test('central auth fails closed instead of looping between auth and a subservice', () => {
+  assert.match(authIndex, /ekodi-auth-entry:/);
+  assert.match(authIndex, /now-previous<120000/);
+  assert.match(authIndex, /navigationType!=='reload'/);
+  assert.match(authIndex, /authLoopBlocked/);
+  assert.match(authIndex, /반복 이동 차단/);
+  assert.match(authIndex, /sessionStorage\.removeItem\(guardKey\)/);
+  assert.doesNotMatch(authIndex, /<script type="module" src="\/auth-router\.js/);
+  assert.match(authIndex, /await import\('\/auth-router\.js\?v=20260904-direct-login-1'\)/);
+});
+
 test('guarded production release verifies current auth entry, bridge and workspace handoff assets', () => {
   const requests = manifest.worker.requests;
   const root = requests.find(item => item.url === 'https://ekodi.kr/auth/');
