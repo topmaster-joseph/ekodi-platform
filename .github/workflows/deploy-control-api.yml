@@ -123,6 +123,7 @@ on:
       - 'scripts/validate-security-baseline.mjs'
       - 'scripts/verify-ai-collaboration-settings-roundtrip.mjs'
       - 'scripts/apply-d1-migrations-with-retry.sh'
+      - 'scripts/provision-realtime-sfu.mjs'
       - 'deploy/manifests/control-api.worker.json'
       - '.github/workflows/deploy-control-api.yml'
   push:
@@ -247,6 +248,7 @@ on:
       - 'scripts/validate-security-baseline.mjs'
       - 'scripts/verify-ai-collaboration-settings-roundtrip.mjs'
       - 'scripts/apply-d1-migrations-with-retry.sh'
+      - 'scripts/provision-realtime-sfu.mjs'
       - 'deploy/manifests/control-api.worker.json'
       - '.github/workflows/deploy-control-api.yml'
 
@@ -289,6 +291,8 @@ jobs:
           node --check scripts/validate-ai-mission-governance.mjs
           node --check scripts/validate-security-baseline.mjs
           node --check scripts/verify-ai-collaboration-settings-roundtrip.mjs
+          node --check scripts/provision-realtime-sfu.mjs
+          node scripts/provision-realtime-sfu.mjs --check
           node scripts/validate-universal-membership.mjs
           node scripts/validate-additive-migrations.mjs migrations
           node scripts/validate-ai-mission-governance.mjs
@@ -504,6 +508,8 @@ jobs:
           echo "AI_PROVIDER_COLLABORATION_READY=$collaboration_ready" >> "$GITHUB_ENV"
           echo "AI_PROVIDER_SENTINEL_READY=$sentinel_ready" >> "$GITHUB_ENV"
           echo "AI provider configuration: configured=$provider_count multi_provider_configured=$collaboration_ready independent_sentinel_configured=$sentinel_ready. Runtime health is reported separately. Secret values were not read or printed." >> "$GITHUB_STEP_SUMMARY"
+      - name: Provision Cloudflare Realtime SFU if needed
+        run: node scripts/provision-realtime-sfu.mjs
       - name: Capture production D1 recovery bookmark
         id: d1_bookmark
         run: |
@@ -558,6 +564,8 @@ jobs:
           [ "$language_admin" = '401' ]
           grep -Fq '"publishedLocales":["ko-KR"]' /tmp/i18n.json
           grep -Fq '"inheritedDefault":true' /tmp/catalog.json
+      - name: Verify Realtime SFU production health
+        run: node scripts/provision-realtime-sfu.mjs --verify
       - name: Record recovery point
         env:
           BOOKMARK: ${{ steps.d1_bookmark.outputs.bookmark }}
