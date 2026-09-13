@@ -39,6 +39,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: read
 
 concurrency:
   group: shared-site-shell-staging-${{ github.event.pull_request.number || github.run_id }}
