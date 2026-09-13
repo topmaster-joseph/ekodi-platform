@@ -8,7 +8,7 @@ const PUBLIC_EXECUTION_SURFACES=Object.freeze([
   Object.freeze({id:'shell',prefix:'/shell',binding:'SHELL',basePathAware:true}),
   Object.freeze({id:'ai',prefix:'/ai',binding:'AI',virtualHost:'ai.ekodi.kr'}),
   Object.freeze({id:'author',prefix:'/author',binding:'AUTHOR',virtualHost:'author.ekodi.kr'}),
-  Object.freeze({id:'bible',prefix:'/bible',binding:'BIBLE',virtualHost:'bible.ekodi.kr',basePathAware:true}),
+  Object.freeze({id:'bible',prefix:'/bible',binding:'BIBLE',basePathAware:true,virtualHost:'bible.ekodi.kr'}),
   Object.freeze({id:'books',prefix:'/books',binding:'BOOKS',virtualHost:'books.ekodi.kr'}),
   Object.freeze({id:'business',prefix:'/business',binding:'BUSINESS',virtualHost:'business.ekodi.kr',host:'business.ekodi.kr'}),
   Object.freeze({id:'community',prefix:'/community',binding:'COMMUNITY',virtualHost:'community.ekodi.kr'}),
@@ -258,6 +258,7 @@ export const EKODI_CANONICAL_SURFACES=Object.freeze({
   health:'/health',
   systemPaths:SYSTEM_PATHS,
 });
+
 
 
 
