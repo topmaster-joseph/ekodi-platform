@@ -109,7 +109,8 @@ test('user UI header/footer/language are shared user-surface-only modules',async
   assert.match(worker,/LANGUAGE_REGISTRY_BOOTSTRAP/);
   assert.match(worker,/language-registry[.]json/);
 
-  assert.match(mediaMeeting,/const VERSION=2/);
+  assert.match(mediaMeeting,/const VERSION=3/);
+  assert.match(mediaMeeting,/dataset\.ekodiLocale\|\|window\.EKODIUserLanguage/);
   assert.match(mediaMeeting,/window\.EKODIMediaMeetingAdapter/);
   assert.match(mediaMeeting,/social\.ekodi\.kr\/api\/media\/youtube\/status/);
   assert.match(mediaMeeting,/POLL_MS=60_000/);
