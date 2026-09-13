@@ -1,0 +1,442 @@
+{
+  "schemaVersion": 1,
+  "id": "EKODI-SUPREME-ATTRIBUTES-001",
+  "status": "active",
+  "effectiveDate": "2026-09-13",
+  "generationBaseline": 10,
+  "bindingLevel": "supreme-mandatory",
+  "title": "EKODI Ecosystem Supreme Attributes",
+  "statement": "These attributes are the highest non-optional quality constraints for EKODI architecture, development, AI, data, security, UX, integrations, operations and future generations.",
+  "appliesTo": [
+    "governance",
+    "architecture",
+    "development",
+    "ai",
+    "data",
+    "security",
+    "ux",
+    "integrations",
+    "operations",
+    "cost",
+    "future-generations"
+  ],
+  "rules": {
+    "allAttributesRequiredTogether": true,
+    "nonRegressionRequired": true,
+    "implementationWaiverForbidden": true,
+    "providerWaiverForbidden": true,
+    "aiSelfWaiverForbidden": true,
+    "serviceLocalOverrideForbidden": true,
+    "exceptionRequiresConstitutionalAmendment": true,
+    "tradeoffsMustBeExplicitAndEvidenceBased": true,
+    "securityDataSovereigntyAndHumanAuthorityFloorsCannotBeReducedByTradeoff": true,
+    "currentAndFutureGenerationsBound": true,
+    "conflictResolution": "Preserve every mandatory floor. Where attributes create tension, choose the simplest evidence-backed design that maximizes the whole set without silently weakening any attribute; unresolved constitutional conflicts escalate to sovereign human authority."
+  },
+  "authority": {
+    "finalHumanAuthority": "ekodi_platform_super_administrator",
+    "automationMayAssess": true,
+    "automationMayRecommend": true,
+    "automationMayEnforceValidators": true,
+    "automationMayChangeConstitution": false,
+    "automationMayExpandOwnAuthority": false
+  },
+  "enforcement": {
+    "machineReadable": true,
+    "constitutionValidatorRequired": true,
+    "ciGateRequired": true,
+    "guardedPromotionRequired": true,
+    "productionVerificationRequiredWhenRuntimeChanges": true,
+    "impactAssessmentRequiredForMaterialChanges": true,
+    "decisionCycle": [
+      "assess",
+      "design",
+      "implement",
+      "test",
+      "verify",
+      "recover",
+      "observe",
+      "improve"
+    ]
+  },
+  "attributes": [
+    {
+      "ordinal": 1,
+      "id": "independence",
+      "nameKo": "독립성",
+      "nameEn": "Independence",
+      "category": "structure",
+      "required": true,
+      "nonRegression": true,
+      "intent": "Core capabilities, data authority and operations must not depend on one replaceable provider, model, device or execution path.",
+      "enforcement": {
+        "validators": [
+          "validate:architecture",
+          "validate:ai-resilience",
+          "validate:responsible-services"
+        ],
+        "evidenceRequired": true
+      }
+    },
+    {
+      "ordinal": 2,
+      "id": "modularity",
+      "nameKo": "모듈성",
+      "nameEn": "Modularity",
+      "category": "structure",
+      "required": true,
+      "nonRegression": true,
+      "intent": "Capabilities must have explicit contracts and boundaries so they can evolve, test and fail independently.",
+      "enforcement": {
+        "validators": [
+          "validate:boundaries",
+          "validate:architecture",
+          "validate:capabilities"
+        ],
+        "evidenceRequired": true
+      }
+    },
+    {
+      "ordinal": 3,
+      "id": "scalability",
+      "nameKo": "확장성",
+      "nameEn": "Scalability",
+      "category": "structure",
+      "required": true,
+      "nonRegression": true,
+      "intent": "Growth must be evidence-driven and support increasing users, workloads and capabilities without architectural collapse.",
+      "enforcement": {
+        "validators": [
+          "validate:generation-readiness",
+          "validate:deployments",
+          "validate:architecture"
+        ],
+        "evidenceRequired": true
+      }
+    },
+    {
+      "ordinal": 4,
+      "id": "standardization",
+      "nameKo": "표준성",
+      "nameEn": "Standardization",
+      "category": "structure",
+      "required": true,
+      "nonRegression": true,
+      "intent": "Shared contracts, routes, identity, authorization, events, data and operational conventions use governed standards.",
+      "enforcement": {
+        "validators": [
+          "validate:constitution",
+          "validate:architecture",
+          "validate:user-surfaces"
+        ],
+        "evidenceRequired": true
+      }
+    },
+    {
+      "ordinal": 5,
+      "id": "consistency",
+      "nameKo": "일관성",
+      "nameEn": "Consistency",
+      "category": "operation",
+      "required": true,
+      "nonRegression": true,
+      "intent": "Common principles and interaction grammar stay consistent while tenant expression and brand remain independently adaptable.",
+      "enforcement": {
+        "validators": [
+          "validate:ui-dna",
+          "validate:user-surfaces",
+          "validate:constitution"
+        ],
+        "evidenceRequired": true
+      }
+    },
+    {
+      "ordinal": 6,
+      "id": "collaboration",
+      "nameKo": "협업성",
+      "nameEn": "Collaboration",
+      "category": "operation",
+      "required": true,
+      "nonRegression": true,
+      "intent": "Humans, AI agents, services and external systems collaborate through explicit roles, ownership, handoffs, audit and merge rules.",
+      "enforcement": {
+        "validators": [
+          "validate:orchestration",
+          "validate:architecture",
+          "validate:mission"
+        ],
+        "evidenceRequired": true
+      }
+    },
+    {
+      "ordinal": 7,
+      "id": "agility",
+      "nameKo": "신속성",
+      "nameEn": "Agility",
+      "category": "operation",
+      "required": true,
+      "nonRegression": true,
+      "intent": "EKODI shortens decision, implementation, verification, recovery and learning loops without weakening safety gates.",
+      "enforcement": {
+        "validators": [
+          "validate:orchestration",
+          "validate:deployments",
+          "validate:constitution"
+        ],
+        "evidenceRequired": true
+      }
+    },
+    {
+      "ordinal": 8,
+      "id": "creativity",
+      "nameKo": "창조성",
+      "nameEn": "Creativity",
+      "category": "evolution",
+      "required": true,
+      "nonRegression": true,
+      "intent": "The platform enables governed experimentation, synthesis and new capability creation within security, authority, cost and verification boundaries.",
+      "enforcement": {
+        "validators": [
+          "validate:capabilities",
+          "validate:generation-readiness",
+          "validate:mission"
+        ],
+        "evidenceRequired": true
+      }
+    },
+    {
+      "ordinal": 9,
+      "id": "security",
+      "nameKo": "보안성",
+      "nameEn": "Security",
+      "category": "trust",
+      "required": true,
+      "nonRegression": true,
+      "intent": "Security is native, least-privilege, zero-trust, auditable, tenant-isolated and enforced across human, AI, data and infrastructure boundaries.",
+      "enforcement": {
+        "validators": [
+          "validate:security",
+          "validate:constitution",
+          "validate:deployments"
+        ],
+        "evidenceRequired": true
+      }
+    },
+    {
+      "ordinal": 10,
+      "id": "evolvability",
+      "nameKo": "진화가능성",
+      "nameEn": "Evolvability",
+      "category": "evolution",
+      "required": true,
+      "nonRegression": true,
+      "intent": "Architecture and capabilities must evolve by verified increments without requiring platform-wide replacement.",
+      "enforcement": {
+        "validators": [
+          "validate:generation-readiness",
+          "validate:architecture",
+          "validate:constitution"
+        ],
+        "evidenceRequired": true
+      }
+    },
+    {
+      "ordinal": 11,
+      "id": "adaptability",
+      "nameKo": "적응성",
+      "nameEn": "Adaptability",
+      "category": "evolution",
+      "required": true,
+      "nonRegression": true,
+      "intent": "Services and policies adapt to changing users, environments, standards and provider conditions within governed authority.",
+      "enforcement": {
+        "validators": [
+          "validate:generation-readiness",
+          "validate:mission",
+          "validate:ai-resilience"
+        ],
+        "evidenceRequired": true
+      }
+    },
+    {
+      "ordinal": 12,
+      "id": "replaceability",
+      "nameKo": "교체가능성",
+      "nameEn": "Replaceability",
+      "category": "evolution",
+      "required": true,
+      "nonRegression": true,
+      "intent": "Replaceable providers, implementations and components must be swappable behind stable contracts without losing canonical EKODI identity or data authority.",
+      "enforcement": {
+        "validators": [
+          "validate:ai-resilience",
+          "validate:architecture",
+          "validate:responsible-services"
+        ],
+        "evidenceRequired": true
+      }
+    },
+    {
+      "ordinal": 13,
+      "id": "reversibility",
+      "nameKo": "가역성",
+      "nameEn": "Reversibility",
+      "category": "evolution",
+      "required": true,
+      "nonRegression": true,
+      "intent": "Material changes require rollback, safe degraded operation or another verified reversal path before promotion.",
+      "enforcement": {
+        "validators": [
+          "validate:deployments",
+          "validate:constitution",
+          "validate:orchestration"
+        ],
+        "evidenceRequired": true
+      }
+    },
+    {
+      "ordinal": 14,
+      "id": "resilience",
+      "nameKo": "회복탄력성",
+      "nameEn": "Resilience",
+      "category": "operation",
+      "required": true,
+      "nonRegression": true,
+      "intent": "Failures are isolated, recoverable and observable; unrelated capabilities continue where practical.",
+      "enforcement": {
+        "validators": [
+          "validate:ai-resilience",
+          "validate:deployments",
+          "validate:security"
+        ],
+        "evidenceRequired": true
+      }
+    },
+    {
+      "ordinal": 15,
+      "id": "observability",
+      "nameKo": "관측가능성",
+      "nameEn": "Observability",
+      "category": "operation",
+      "required": true,
+      "nonRegression": true,
+      "intent": "Health, latency, errors, cost, security, capacity and autonomous execution states must be inspectable and attributable.",
+      "enforcement": {
+        "validators": [
+          "validate:deployments",
+          "validate:core-completion",
+          "validate:constitution"
+        ],
+        "evidenceRequired": true
+      }
+    },
+    {
+      "ordinal": 16,
+      "id": "verifiability",
+      "nameKo": "검증가능성",
+      "nameEn": "Verifiability",
+      "category": "trust",
+      "required": true,
+      "nonRegression": true,
+      "intent": "Claims of implementation, deployment and completion require reproducible evidence and real behavior verification.",
+      "enforcement": {
+        "validators": [
+          "validate:constitution",
+          "validate:deployments",
+          "validate:core-completion"
+        ],
+        "evidenceRequired": true
+      }
+    },
+    {
+      "ordinal": 17,
+      "id": "interoperability",
+      "nameKo": "상호운용성",
+      "nameEn": "Interoperability",
+      "category": "structure",
+      "required": true,
+      "nonRegression": true,
+      "intent": "Internal and external capabilities cooperate through explicit APIs, events, adapters and capability contracts rather than private coupling.",
+      "enforcement": {
+        "validators": [
+          "validate:architecture",
+          "validate:responsible-services",
+          "validate:orchestration"
+        ],
+        "evidenceRequired": true
+      }
+    },
+    {
+      "ordinal": 18,
+      "id": "data-sovereignty",
+      "nameKo": "데이터주권",
+      "nameEn": "Data Sovereignty",
+      "category": "trust",
+      "required": true,
+      "nonRegression": true,
+      "intent": "EKODI preserves canonical ownership, purpose limitation, portability, isolation, auditability and governed disclosure of platform data.",
+      "enforcement": {
+        "validators": [
+          "validate:constitution",
+          "validate:security",
+          "validate:architecture"
+        ],
+        "evidenceRequired": true
+      }
+    },
+    {
+      "ordinal": 19,
+      "id": "autonomous-operations",
+      "nameKo": "자율운영성",
+      "nameEn": "Autonomous Operations",
+      "category": "operation",
+      "required": true,
+      "nonRegression": true,
+      "intent": "Authorized automation observes, reasons, acts, verifies, recovers and learns while sovereign human authority and policy remain final.",
+      "enforcement": {
+        "validators": [
+          "validate:sovereign",
+          "validate:orchestration",
+          "validate:mission"
+        ],
+        "evidenceRequired": true
+      }
+    },
+    {
+      "ordinal": 20,
+      "id": "economic-sustainability",
+      "nameKo": "경제적 지속가능성",
+      "nameEn": "Economic Sustainability",
+      "category": "sustainability",
+      "required": true,
+      "nonRegression": true,
+      "intent": "Architecture and AI operations optimize unit economics, free-first usage and measured capacity without making free quotas an architectural ceiling.",
+      "enforcement": {
+        "validators": [
+          "validate:ai-cost",
+          "validate:generation-readiness",
+          "validate:constitution"
+        ],
+        "evidenceRequired": true
+      }
+    },
+    {
+      "ordinal": 21,
+      "id": "simplicity",
+      "nameKo": "단순성",
+      "nameEn": "Simplicity",
+      "category": "sustainability",
+      "required": true,
+      "nonRegression": true,
+      "intent": "Prefer the smallest coherent architecture, reuse before creation and shared before dedicated; complexity requires evidence.",
+      "enforcement": {
+        "validators": [
+          "validate:architecture",
+          "validate:boundaries",
+          "validate:capabilities"
+        ],
+        "evidenceRequired": true
+      }
+    }
+  ]
+}

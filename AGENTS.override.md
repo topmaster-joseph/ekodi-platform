@@ -5,13 +5,16 @@ This repository uses provider-neutral parallel-development isolation.
 Before modifying source, read and obey:
 
 1. `CONSTITUTION.md`
-2. `AI_DEVELOPMENT_POLICY.md`
-3. `AGENTS.md`
-4. `config/ai-development-completion-policy.json`
+2. `governance/constitution/supreme-attributes.v1.json`
+3. `AI_DEVELOPMENT_POLICY.md`
+4. `AGENTS.md`
+5. `config/ai-development-completion-policy.json`
 
 For ChatGPT/GPT, Codex, and any agent that reads AGENTS instructions:
 
 - every task requires a unique `task_id`;
+- before architecture, implementation, review, deployment or operational change, assess impact against all 21 Supreme Attributes and select a design that preserves every mandatory floor;
+- no agent, provider, service or workspace may waive or locally override a Supreme Attribute; unresolved tension or a required exception is a constitutional C2/C3 matter for sovereign human authority;
 - use an isolated task branch, preferably `ai/<agent>/<task-id>`;
 - use an isolated Git worktree or equivalent sandbox for concurrent work;
 - when operating in a Git checkout and no already-isolated sandbox was provisioned, bootstrap the task with `node scripts/ekodi-task-start.mjs --agent <agent> [--task-id <task-id>] [--base main] <description>` rather than editing the shared checkout;
@@ -32,3 +35,5 @@ For ChatGPT/GPT, Codex, and any agent that reads AGENTS instructions:
 - bounded exceptions are allowed only for the classes declared by `AI-COMPLETE-001`, with the exception class and reason recorded and without any false production-completion claim.
 
 `AI_DEVELOPMENT_POLICY.md` is the provider-neutral development policy. `config/ai-development-completion-policy.json` is the machine-readable completion contract. No model/provider-specific instruction may weaken either policy.
+
+The 21 Supreme Attributes are binding across current and future generations. Agent speed, novelty, local optimization or provider convenience never overrides them.
