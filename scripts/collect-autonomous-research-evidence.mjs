@@ -23,9 +23,26 @@ function runTime(run = {}) {
   return Number.isFinite(time) ? time : 0;
 }
 
+function parseProgramTarget(program = {}) {
+  const target = String(program?.signal?.target || '').trim();
+  const scoped = target.match(/^service:([a-z0-9][a-z0-9-]{0,63}):(.*)$/i);
+  const explicitServiceId = String(program?.signal?.serviceId || '').trim().toLowerCase();
+  return {
+    target,
+    serviceId: scoped?.[1]?.toLowerCase() || explicitServiceId || null,
+    scopedTarget: scoped?.[2] || target,
+  };
+}
+
 function targetWorkflowName(program = {}) {
-  const target = String(program?.signal?.target || '');
-  return target.startsWith('github-workflow:') ? target.slice('github-workflow:'.length) : '';
+  const { scopedTarget } = parseProgramTarget(program);
+  return scopedTarget.startsWith('github-workflow:') ? scopedTarget.slice('github-workflow:'.length) : '';
+}
+
+function runMatchesProgramService(run = {}, serviceId = null) {
+  if (!serviceId) return true;
+  const explicit = String(run.serviceId || run.service?.id || '').trim().toLowerCase();
+  return !explicit || explicit === serviceId;
 }
 
 function failedStepNames(job = {}) {
@@ -64,8 +81,11 @@ function recoveryWindow(relevant = []) {
 }
 
 export function buildWorkflowResearchEvidence(program = {}, runs = [], jobsByRunId = {}) {
+  const scope = parseProgramTarget(program);
   const expectedWorkflow = targetWorkflowName(program);
-  const relevant = (Array.isArray(runs) ? runs : []).filter(run => workflowName(run) === expectedWorkflow);
+  const relevant = (Array.isArray(runs) ? runs : []).filter(run =>
+    workflowName(run) === expectedWorkflow && runMatchesProgramService(run, scope.serviceId)
+  );
   const failed = relevant.filter(run => FAILURE_CONCLUSIONS.has(String(run.conclusion || '').toLowerCase()));
   const recovered = relevant.filter(run => SUCCESS_CONCLUSIONS.has(String(run.conclusion || '').toLowerCase()));
   const failedJobs = [];
@@ -101,7 +121,8 @@ export function buildWorkflowResearchEvidence(program = {}, runs = [], jobsByRun
 
   return {
     researchId: program.id,
-    target: program?.signal?.target || '',
+    serviceId: scope.serviceId,
+    target: scope.target,
     workflowName: expectedWorkflow,
     observations: relevant.length,
     failedRuns: failed.length,
@@ -129,13 +150,31 @@ export function collectResearchEvidence(discoveryReport = {}, runs = [], jobsByR
       ? discoveryReport.researchPrograms
       : [];
   const evidenceByResearchId = {};
+  const serviceEvidence = new Map();
   for (const program of programs) {
-    evidenceByResearchId[program.id] = buildWorkflowResearchEvidence(program, runs, jobsByRunId);
+    const evidence = buildWorkflowResearchEvidence(program, runs, jobsByRunId);
+    evidenceByResearchId[program.id] = evidence;
+    if (!evidence.serviceId) continue;
+    const current = serviceEvidence.get(evidence.serviceId) || {
+      serviceId: evidence.serviceId,
+      researchPrograms: 0,
+      observations: 0,
+      failedRuns: 0,
+      recoveredRuns: 0,
+      reproduciblePrograms: 0,
+    };
+    current.researchPrograms += 1;
+    current.observations += Number(evidence.observations || 0);
+    current.failedRuns += Number(evidence.failedRuns || 0);
+    current.recoveredRuns += Number(evidence.recoveredRuns || 0);
+    current.reproduciblePrograms += evidence.reproducible === true ? 1 : 0;
+    serviceEvidence.set(evidence.serviceId, current);
   }
   return {
     generatedAt: new Date().toISOString(),
-    source: 'github_actions_jobs_steps_and_recovery',
+    source: 'github_actions_jobs_steps_recovery_and_subservice_scope',
     researchPrograms: programs.length,
+    subservices: [...serviceEvidence.values()].sort((a, b) => a.serviceId.localeCompare(b.serviceId)),
     evidenceByResearchId,
     productionMutationPerformed: false,
     authorityExpanded: false,
@@ -160,8 +199,11 @@ async function collectJobsForPrograms(discoveryReport, runs, repository, token, 
   const ids = new Set();
   for (const program of programs) {
     const expected = targetWorkflowName(program);
+    const serviceId = parseProgramTarget(program).serviceId;
     const matches = runs
-      .filter(run => workflowName(run) === expected && FAILURE_CONCLUSIONS.has(String(run.conclusion || '').toLowerCase()))
+      .filter(run => workflowName(run) === expected
+        && runMatchesProgramService(run, serviceId)
+        && FAILURE_CONCLUSIONS.has(String(run.conclusion || '').toLowerCase()))
       .sort((left, right) => runTime(right) - runTime(left))
       .slice(0, maxRunsPerProgram);
     for (const run of matches) {
