@@ -27,6 +27,8 @@ For ChatGPT/GPT, Codex, and any agent that reads AGENTS instructions:
 - record production verification evidence including the task ID, branch, commit SHA, deployment result, production hostname, functional checks, observability check, and verification timestamp;
 - if production verification fails, repair, retest, redeploy, and reverify within delegated authority instead of reporting completion;
 - until real production verification passes, the agent must not report the task as complete. Use a non-complete status such as `deployed-awaiting-production-verification`;
+- treat a session end, execution-window limit, temporary tool/connector failure or rate limit as a recoverable interruption, never as completion;
+- before yielding recoverable work, preserve a checkpoint with task/branch/commit, completed/pending steps, validation/deployment state, blocking dependency and next executable step; resume from that checkpoint and try available authorized fallback paths before escalation;
 - bounded exceptions are allowed only for the classes declared by `AI-COMPLETE-001`, with the exception class and reason recorded and without any false production-completion claim.
 
 `AI_DEVELOPMENT_POLICY.md` is the provider-neutral development policy. `config/ai-development-completion-policy.json` is the machine-readable completion contract. No model/provider-specific instruction may weaken either policy.

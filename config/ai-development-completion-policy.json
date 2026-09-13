@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "policyId": "AI-COMPLETE-001",
   "status": "active",
   "defaultRule": "production-verified-before-complete",
@@ -15,7 +15,8 @@
     "deployed": "guarded-deployment-succeeded-but-production-not-yet-proven",
     "verified": "real-production-service-behavior-confirmed",
     "complete": "verified-and-evidence-recorded",
-    "blocked": "completion-cannot-proceed-with-current-authority-or-dependency-and-resolution-plan-is-required"
+    "blocked": "completion-cannot-proceed-with-current-authority-or-dependency-and-resolution-plan-is-required",
+    "interrupted": "recoverable-interruption-checkpointed-resume-required"
   },
   "requiredEvidenceForProductionChange": [
     "task_id",
@@ -44,7 +45,14 @@
     "humanActionMustBeMinimalAndSpecific": true,
     "workaroundAndRiskMustBeReportedWhenAvailable": true,
     "completionCriteriaMustBeExplicit": true,
-    "nextExecutableStepMustBeExplicit": true
+    "nextExecutableStepMustBeExplicit": true,
+    "sessionOrToolTerminationIsNotCompletion": true,
+    "recoverableInterruptionRequiresCheckpoint": true,
+    "alternateAuthorizedExecutionPathRequiredBeforeEscalation": true,
+    "resumeFromCheckpointBeforeRestartingWork": true,
+    "interruptionMustPreserveEvidenceAndNextStep": true,
+    "rateLimitOrConnectorFailureIsRecoverableByDefault": true,
+    "recoverableInterruptionMustNotBeReportedAsBlockedIfAlternatePathExists": true
   },
   "exceptionPolicy": {
     "allowed": true,
@@ -90,6 +98,19 @@
       "risk-if-left-unresolved",
       "completion-criteria",
       "next-executable-step"
-    ]
-  }
+    ],
+    "interruptionLabel": "recoverable-interruption-resume-required"
+  },
+  "requiredCheckpointForRecoverableInterruption": [
+    "task_id",
+    "branch",
+    "current_commit_sha",
+    "completed_steps",
+    "pending_steps",
+    "last_validation_result",
+    "deployment_state",
+    "blocking_dependency",
+    "next_executable_step",
+    "resume_timestamp"
+  ]
 }
