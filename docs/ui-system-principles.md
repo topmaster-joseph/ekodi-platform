@@ -9,3 +9,5 @@ All surfaces share accessibility, responsive semantics, state language, and reus
 Desktop administrative surfaces keep primary navigation non-scrolling and use the central workspace as the page-level vertical scroll owner. Mobile may reposition the same navigation while preserving meaning and accessible targets.
 
 The machine-readable source of truth is `config/ui-surface-policy.js`; automated checks must verify runtime surface markers and separation between platform, general-user, member, and administrative surfaces.
+
+Canonical surface IDs: `platform-public`, `user-public`, `member-workspace`, `tenant-admin`, `platform-admin`, `service-admin`.

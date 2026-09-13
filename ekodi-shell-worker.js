@@ -40,12 +40,13 @@ async function bundledShell(request,env,ctx){
   const userCharacterUrl=new URL(request.url);userCharacterUrl.pathname='/user-character.js';
   const ccmMrUrl=new URL(request.url);ccmMrUrl.pathname='/ccm-mr-player.js';
   const adminShellUrl=new URL(request.url);adminShellUrl.pathname='/admin-ui-shell.js';
+  const uiGovernorUrl=new URL(request.url);uiGovernorUrl.pathname='/ui-surface-governor.js';
   const headerUrl=new URL(request.url);headerUrl.pathname='/mobile-fixed-header.js';
   const messageUrl=new URL(request.url);messageUrl.pathname='/message-ui.js';
   const illustrationUrl=new URL(request.url);illustrationUrl.pathname='/illustration-system.js';
   const designInheritanceUrl=new URL(request.url);designInheritanceUrl.pathname='/service-design-inheritance.js';
   const linkCompatUrl=new URL(request.url);linkCompatUrl.pathname='/ecosystem-link-compat.js';
-  const [shellResponse,navResponse,contextResponse,userHeaderResponse,userFooterResponse,userLanguageResponse,mediaMeetingResponse,characterRegistryResponse,characterIdentityResponse,userCharacterResponse,ccmMrResponse,adminShellResponse,headerResponse,messageResponse,illustrationResponse,designInheritanceResponse,linkCompatResponse]=await Promise.all([
+  const [shellResponse,navResponse,contextResponse,userHeaderResponse,userFooterResponse,userLanguageResponse,mediaMeetingResponse,characterRegistryResponse,characterIdentityResponse,userCharacterResponse,ccmMrResponse,adminShellResponse,uiGovernorResponse,headerResponse,messageResponse,illustrationResponse,designInheritanceResponse,linkCompatResponse]=await Promise.all([
     safeAssetFetch(env,shellUrl,request),
     safeAssetFetch(env,navUrl,request),
     safeAssetFetch(env,contextUrl,request),
@@ -58,6 +59,7 @@ async function bundledShell(request,env,ctx){
     safeAssetFetch(env,userCharacterUrl,request),
     safeAssetFetch(env,ccmMrUrl,request),
     safeAssetFetch(env,adminShellUrl,request),
+    safeAssetFetch(env,uiGovernorUrl,request),
     safeAssetFetch(env,headerUrl,request),
     safeAssetFetch(env,messageUrl,request),
     safeAssetFetch(env,illustrationUrl,request),
@@ -77,6 +79,7 @@ async function bundledShell(request,env,ctx){
   const userCharacter=userCharacterResponse.ok?await userCharacterResponse.text():'';
   const ccmMrPlayer=ccmMrResponse.ok?await ccmMrResponse.text():'';
   const adminShell=adminShellResponse.ok?await adminShellResponse.text():'';
+  const uiGovernor=uiGovernorResponse.ok?await uiGovernorResponse.text():'';
   const fixedHeader=headerResponse.ok?await headerResponse.text():'';
   const messageUI=messageResponse.ok?await messageResponse.text():'';
   const illustrationSystem=illustrationResponse.ok?await illustrationResponse.text():'';
@@ -95,13 +98,14 @@ async function bundledShell(request,env,ctx){
   headers.set('x-ekodi-user-character',userCharacter?'v6':'missing');
   headers.set('x-ekodi-ccm-mr',ccmMrPlayer?'v1':'missing');
   headers.set('x-ekodi-admin-ui-shell',adminShell?'v1':'missing');
+  headers.set('x-ekodi-ui-surface-governor',uiGovernor?'v1':'missing');
   headers.set('x-ekodi-message-ui',messageUI?'v1':'missing');
   headers.set('x-ekodi-illustration-system',illustrationSystem?'v1':'missing');
   headers.set('x-ekodi-service-design',designInheritance?'v1':'missing');
   headers.set('x-ekodi-link-compat',linkCompat?'v1':'missing');
   headers.set('x-ekodi-user-shortcuts','my-only');
   headers.set('x-ekodi-shell-bundle-cache','miss');
-  const response=withHeaders(new Response(`${USER_SHORTCUT_GUARD}\n${USER_FOOTER_BOOTSTRAP}\n${USER_EXPERIENCE_PROFILES_BOOTSTRAP}\n${LANGUAGE_REGISTRY_BOOTSTRAP}\n${characterRegistry}\n${characterIdentity}\n${shell}\n${globalNav}\n${userContext}\n${userHeader}\n${userFooter}\n${userLanguage}\n${mediaMeeting}\n${userCharacter}\n${ccmMrPlayer}\n${adminShell}\n${fixedHeader}\n${messageUI}\n${illustrationSystem}\n${designInheritance}\n${linkCompat}\n`,{status:200,headers}));
+  const response=withHeaders(new Response(`${USER_SHORTCUT_GUARD}\n${USER_FOOTER_BOOTSTRAP}\n${USER_EXPERIENCE_PROFILES_BOOTSTRAP}\n${LANGUAGE_REGISTRY_BOOTSTRAP}\n${characterRegistry}\n${characterIdentity}\n${shell}\n${globalNav}\n${userContext}\n${userHeader}\n${userFooter}\n${userLanguage}\n${mediaMeeting}\n${userCharacter}\n${ccmMrPlayer}\n${adminShell}\n${fixedHeader}\n${uiGovernor}\n${messageUI}\n${illustrationSystem}\n${designInheritance}\n${linkCompat}\n`,{status:200,headers}));
   if(bundleCache&&bundleCacheKey&&ctx?.waitUntil){
     const stored=response.clone();
     stored.headers.set('cache-control','public, max-age=300');

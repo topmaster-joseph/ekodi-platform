@@ -24,15 +24,19 @@ for(const [input,expected] of cases){
   const actualSurface=resolveEkodiUiSurface(input);
   if(actualSurface!==expected) fail(`${JSON.stringify(input)} resolved ${actualSurface}; expected ${expected}`);
 }
-
-const [injector,adminShell,principles]=await Promise.all([
+const [injector,worker,governor,principles]=await Promise.all([
   readFile(new URL('../ekodi-shell-injector.js',import.meta.url),'utf8'),
-  readFile(new URL('../shell/admin-ui-shell.js',import.meta.url),'utf8'),
+  readFile(new URL('../ekodi-shell-worker.js',import.meta.url),'utf8'),
+  readFile(new URL('../shell/ui-surface-governor.js',import.meta.url),'utf8'),
   readFile(new URL('../docs/ui-system-principles.md',import.meta.url),'utf8'),
 ]);
 if(!injector.includes('x-ekodi-ui-surface')) fail('Shell must expose x-ekodi-ui-surface');
 if(!injector.includes('data-ekodi-ui-surface')) fail('Shell must expose data-ekodi-ui-surface');
-if(!adminShell.includes('ekodiUiSurface')) fail('Admin Shell must expose canonical UI surface runtime state');
+if(!worker.includes('ui-surface-governor.js')) fail('Shell bundle must include UI Surface Governor');
+if(!worker.includes('x-ekodi-ui-surface-governor')) fail('Shell bundle must advertise UI Surface Governor');
+for(const marker of ['tenant-admin','platform-admin','service-admin',"ekodiScrollOwner='workspace'","overflow-y','auto","overflow-y','hidden"]){
+  if(!governor.includes(marker)) fail(`UI Surface Governor missing ${marker}`);
+}
 for(const label of required) if(!principles.includes(label)) fail(`UI system principles missing ${label}`);
 
 if(failures.length){
@@ -40,4 +44,4 @@ if(failures.length){
   for(const failure of failures) console.error(`- ${failure}`);
   process.exit(1);
 }
-console.log(`EKODI UI Surface policy OK: ${required.length} canonical surfaces with shared Core and governed separation.`);
+console.log(`EKODI UI Surface policy OK: ${required.length} canonical surfaces with shared Core, governed identity separation and fixed Admin scroll ownership.`);
