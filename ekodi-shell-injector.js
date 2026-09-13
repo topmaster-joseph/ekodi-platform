@@ -3,6 +3,7 @@ import { publishedLocalesForService } from './config/language-registry.js';
 import { renderEkodiUserFooter } from './config/user-footer.js';
 
 const SHELL_ORIGIN='https://ekodi.kr/shell';
+const SHELL_CSP_ORIGIN='https://ekodi.kr';
 const I18N_API_ORIGIN='https://ekodi.kr';
 const SHELL_SCRIPT=`${SHELL_ORIGIN}/shell.js`;
 const SHELL_WORKSPACE_STYLE=`${SHELL_ORIGIN}/workspace.css`;
@@ -40,9 +41,9 @@ function extendDirective(csp,name,value){
 function shellCsp(csp){
   let next=String(csp||'').trim();
   if(!next)next="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self'; img-src 'self' data: https:; frame-ancestors 'none'; base-uri 'self'";
-  next=extendDirective(next,'script-src',SHELL_ORIGIN);
-  next=extendDirective(next,'style-src',SHELL_ORIGIN);
-  next=extendDirective(next,'connect-src',SHELL_ORIGIN);
+  next=extendDirective(next,'script-src',SHELL_CSP_ORIGIN);
+  next=extendDirective(next,'style-src',SHELL_CSP_ORIGIN);
+  next=extendDirective(next,'connect-src',SHELL_CSP_ORIGIN);
   next=extendDirective(next,'connect-src',I18N_API_ORIGIN);
   return next;
 }

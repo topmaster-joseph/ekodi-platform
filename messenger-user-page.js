@@ -1,10 +1,10 @@
-const SHELL_ORIGIN='https://shell.ekodi.kr';
+const SHELL_CSP_ORIGIN='https://ekodi.kr';
 
 function htmlResponse(body){
   return new Response(body,{status:200,headers:{
     'content-type':'text/html; charset=utf-8',
     'cache-control':'no-store',
-    'content-security-policy':`default-src 'self'; script-src 'self' ${SHELL_ORIGIN}; style-src 'self' 'unsafe-inline'; connect-src 'self' https://workspace-api.ekodi.kr https://renzehysxirjilvdxacv.supabase.co ${SHELL_ORIGIN}; img-src 'self' data: https:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'`,
+    'content-security-policy':`default-src 'self'; script-src 'self' ${SHELL_CSP_ORIGIN}; style-src 'self' 'unsafe-inline'; connect-src 'self' https://workspace-api.ekodi.kr https://renzehysxirjilvdxacv.supabase.co ${SHELL_CSP_ORIGIN}; img-src 'self' data: https:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'`,
     'referrer-policy':'no-referrer',
     'x-content-type-options':'nosniff',
     'x-frame-options':'DENY',

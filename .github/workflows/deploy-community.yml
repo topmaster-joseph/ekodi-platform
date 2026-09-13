@@ -168,7 +168,7 @@ jobs:
       - name: Verify shared Shell production dependency
         run: |
           set -euo pipefail
-          code=$(curl -sS -o /tmp/shell-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://shell.ekodi.kr/health' || true)
+          code=$(curl -sS -o /tmp/shell-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/shell/health' || true)
           [[ "$code" == '200' ]]
           grep -Fq '"service":"ekodi-shell"' /tmp/shell-health.json
           grep -Fq '"identityModel":"person-space-role"' /tmp/shell-health.json

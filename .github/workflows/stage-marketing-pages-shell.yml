@@ -180,7 +180,7 @@ jobs:
               fi
               if [[ "$code" == '200' ]] && grep -Fq "$needle" "$body" \
                 && grep -Fq 'data-ekodi-asset-routing="same-origin"' "$body" \
-                && grep -Fq 'https://shell.ekodi.kr/shell.js' "$body"; then
+                && grep -Fq 'https://ekodi.kr/shell/shell.js' "$body"; then
                 asset_code=$(curl -sS -o /dev/null -w '%{http_code}' --connect-timeout 5 --max-time 15 "$url/$asset" || true)
                 if [[ "$asset_code" == '200' ]]; then return 0; fi
               fi

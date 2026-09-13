@@ -47,7 +47,7 @@ const REQUESTED_WORKSPACE=requestedWorkspaceRaw.length<=180&&WORKSPACE_KEY_RE.te
 async function manifestRealm(id){
   if(!id)return null;
   try{
-    const response=await fetchTimed('https://shell.ekodi.kr/manifest.json',{cache:'no-store'},5000);
+    const response=await fetchTimed('https://ekodi.kr/shell/manifest.json',{cache:'no-store'},5000);
     if(!response.ok)return null;
     const manifest=await response.json();
     const service=manifest?.services?.find(item=>item.id===id);

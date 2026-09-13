@@ -60,9 +60,9 @@ jobs:
         run: |
           set -euo pipefail
           for attempt in $(seq 1 3); do
-            health=$(curl -sS -o /tmp/shell-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://shell.ekodi.kr/health' || true)
-            script=$(curl -sS -o /tmp/shell.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://shell.ekodi.kr/shell.js' || true)
-            theme=$(curl -sS -o /tmp/theme.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://shell.ekodi.kr/theme.json' || true)
+            health=$(curl -sS -o /tmp/shell-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/shell/health' || true)
+            script=$(curl -sS -o /tmp/shell.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/shell/shell.js' || true)
+            theme=$(curl -sS -o /tmp/theme.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/shell/theme.json' || true)
             if [[ "$health" == '200' && "$script" == '200' && "$theme" == '200' ]] \
               && grep -Fq '"identityModel":"person-space-role"' /tmp/shell-health.json \
               && grep -Fq 'window.EKODIShell' /tmp/shell.js \
@@ -98,7 +98,7 @@ jobs:
           echo "$SERVICE_ID $URL -> $code integration=$INTEGRATION"
           body_shell=false
           header_shell=false
-          grep -Fq 'https://shell.ekodi.kr/shell.js' /tmp/service.html && body_shell=true || true
+          grep -Fq 'https://ekodi.kr/shell/shell.js' /tmp/service.html && body_shell=true || true
           grep -Eiq '^x-ekodi-shell:[[:space:]]*v2[[:space:]]*$' /tmp/service.headers && header_shell=true || true
           contract_ok=false
           case "$INTEGRATION" in
