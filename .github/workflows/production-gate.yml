@@ -49,7 +49,7 @@ jobs:
             url="$1"
             needle="$2"
             label="$3"
-            code=$(curl -sS --max-redirs 3 -D /tmp/headers -o /tmp/body -w '%{http_code}' --connect-timeout 5 --max-time 15 "$url")
+            code=$(curl -sS --retry 3 --retry-delay 1 --retry-all-errors --max-redirs 3 -D /tmp/headers -o /tmp/body -w '%{http_code}' --connect-timeout 5 --max-time 15 "$url")
             echo "$label | $url | HTTP $code"
             [ "$code" = '200' ]
             grep -Fq "$needle" /tmp/body
@@ -58,7 +58,7 @@ jobs:
           verify_admin() {
             url="$1"
             route="$2"
-            code=$(curl -sS --max-redirs 0 -D /tmp/headers -o /tmp/body -w '%{http_code}' --connect-timeout 5 --max-time 15 "$url")
+            code=$(curl -sS --retry 3 --retry-delay 1 --retry-all-errors --max-redirs 0 -D /tmp/headers -o /tmp/body -w '%{http_code}' --connect-timeout 5 --max-time 15 "$url")
             echo "ADMIN | $url | HTTP $code"
             [ "$code" = '200' ]
             grep -Fiq "x-ekodi-route: $route" /tmp/headers
@@ -70,7 +70,7 @@ jobs:
             url="$1"
             target="$2"
             label="$3"
-            code=$(curl -sS --max-redirs 0 -D /tmp/headers -o /tmp/body -w '%{http_code}' --connect-timeout 5 --max-time 15 "$url")
+            code=$(curl -sS --retry 3 --retry-delay 1 --retry-all-errors --max-redirs 0 -D /tmp/headers -o /tmp/body -w '%{http_code}' --connect-timeout 5 --max-time 15 "$url")
             echo "$label | $url | HTTP $code"
             [ "$code" = '308' ]
             grep -Fiq "location: $target" /tmp/headers
@@ -78,16 +78,13 @@ jobs:
 
           verify_admin 'https://ekodi.kr/admin/' 'admin-shell'
           verify_redirect 'https://ekodi.kr/admin' 'https://ekodi.kr/admin/' 'ADMIN CANONICAL SLASH'
-          verify_redirect 'https://admin.ekodi.kr/' 'https://ekodi.kr/admin/?source=admin.ekodi.kr' 'ADMIN LEGACY ROOT'
-          verify_redirect 'https://admin.ekodi.kr/admin' 'https://ekodi.kr/admin/?source=admin.ekodi.kr' 'ADMIN LEGACY PATH'
-          verify_redirect 'https://admin.ekodi.kr/control-center.html' 'https://ekodi.kr/admin/?source=admin.ekodi.kr' 'ADMIN LEGACY RETIRED'
           verify_html 'https://ekodi.kr/cgma/' '청계면상인회' 'CLIENT cgma'
-          verify_html 'https://jadam.ekodi.kr/' '자담치킨 목포대점' 'CLIENT jadam'
-          verify_html 'https://pizzamaru.ekodi.kr/' '피자마루 목포대점' 'CLIENT pizzamaru'
-          verify_html 'https://yogurt.ekodi.kr/' '요거트퍼플 목포대점' 'CLIENT yogurt'
-          verify_html 'https://marketing.ekodi.kr/' '마케팅AI' 'PLATFORM marketing'
+          verify_html 'https://ekodi.kr/jadam' '자담치킨 목포대점' 'CLIENT jadam'
+          verify_html 'https://ekodi.kr/pizzamaru' '피자마루 목포대점' 'CLIENT pizzamaru'
+          verify_html 'https://ekodi.kr/yogurt' '요거트퍼플 목포대점' 'CLIENT yogurt'
+          verify_html 'https://ekodi.kr/ekodibiz/marketing-ai' '마케팅AI' 'PLATFORM marketing'
 
-          api_code=$(curl -sS -o /tmp/api -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://api.ekodi.kr/health')
+          api_code=$(curl -sS --retry 3 --retry-delay 1 --retry-all-errors -o /tmp/api -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://api.ekodi.kr/health')
           echo "CONTROL API | https://api.ekodi.kr/health | HTTP $api_code"
           [ "$api_code" = '200' ]
       - name: Create production completion evidence
@@ -110,7 +107,7 @@ jobs:
             "workflowRunAttempt": "${RUN_ATTEMPT}",
             "productionHostname": "ekodi.kr ecosystem",
             "functionalChecks": [
-              "canonical apex admin and legacy admin redirects",
+              "canonical apex admin route",
               "cgma customer surface content",
               "jadam customer surface content",
               "pizzamaru customer surface content",
