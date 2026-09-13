@@ -68,6 +68,7 @@ export async function resolveWorkspaceRoute(pathname,resolveBySlug){
 
 export function isWorkspaceAdminPathShape(pathname){
   const path=String(pathname||'');
+  if(/^\/admin\/ekodimall(?:\/[^/]+)?\/?$/i.test(path))return true;
   const match=/^\/([^/]+)\/(?:admin(?:\/[^/]+)?|[^/]+\/admin(?:\/[^/]+)?)\/?$/i.exec(path);
   if(match&&isWorkspaceSlug(match[1]))return true;
   const mallMarketingChannels=/^\/([^/]+)\/ekodimall\/admin\/marketing\/channels\/?$/i.exec(path);
