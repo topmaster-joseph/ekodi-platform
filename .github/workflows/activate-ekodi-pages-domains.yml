@@ -1,4 +1,4 @@
-﻿name: Retired - Activate EKODI Pages Domains
+name: Retired - Activate EKODI Pages Domains
 on:
   workflow_dispatch:
 permissions:
@@ -8,4 +8,3 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: echo "Retired topology action. EKODI-owned Pages subdomains are no longer activated."
-
