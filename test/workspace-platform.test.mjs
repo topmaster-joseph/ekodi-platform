@@ -141,7 +141,8 @@ test('workspace configs use V2 entrypoint without consuming another Cloudflare c
 test('functional Messenger UI understands asynchronous assistant and human takeover',async()=>{
   const router=await read('platform-router-worker.js');
   assert.match(router,/FUNCTIONAL BETA/);
-  assert.match(router,/workspace-api\.ekodi\.kr/);
+  assert.match(router,/https:\/\/ekodi\.kr\/workspace-api/);
+  assert.doesNotMatch(router,/workspace-api\.ekodi\.kr/);
   assert.match(router,/\/auth\/v1\/verify/);
   assert.match(router,/ekodi_token/);
   assert.match(router,/refresh_token/);
