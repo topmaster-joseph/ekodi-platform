@@ -16,6 +16,9 @@ test('collaboration by default and Cloud First cannot be disabled', () => {
   assert.equal(policy.collaborationByDefault, true);
   assert.equal(policy.execution.cloudFirst, true);
   assert.deepEqual(policy.execution.order, ['cloud', 'remote', 'local']);
+  assert.equal(policy.execution.localScheduler.strategy, 'least_loaded_parallel');
+  assert.equal(policy.execution.localScheduler.parallelDistribution, true);
+  assert.equal(policy.execution.localScheduler.portableAutoExecution, false);
 });
 
 test('unsafe governance controls remain fail-closed', () => {

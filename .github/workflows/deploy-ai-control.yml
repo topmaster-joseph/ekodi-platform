@@ -8,6 +8,7 @@ on:
       - 'ai-control-*.js'
       - 'ai-router-score.js'
       - 'ai-collaboration-settings.js'
+      - 'local-execution-policy.js'
       - 'ai-governance-runtime.js'
       - 'config/ai-mission-governance.json'
       - 'config/ai-change-orchestration-policy.json'
@@ -23,11 +24,14 @@ on:
       - 'test/ai-control-platform.test.mjs'
       - 'test/ai-router-score.test.mjs'
       - 'test/ai-collaboration-settings.test.mjs'
+      - 'test/local-execution-policy.test.mjs'
+      - 'test/ai-account-node-scheduler.test.mjs'
       - 'test/cognitive-control-plane.test.mjs'
       - 'migrations/0050_ai_control_plane.sql'
       - 'migrations/0051_ai_account_nodes.sql'
       - 'migrations/0052_ai_mission_governance.sql'
       - 'migrations/0074_ai_router_score.sql'
+      - 'migrations/0085_ai_account_node_load_scheduler.sql'
       - 'deploy/manifests/ai-control.worker.json'
       - 'scripts/validate-cognitive-control-plane.mjs'
       - 'scripts/validate-additive-migrations.mjs'
@@ -42,6 +46,7 @@ on:
       - 'ai-control-*.js'
       - 'ai-router-score.js'
       - 'ai-collaboration-settings.js'
+      - 'local-execution-policy.js'
       - 'ai-governance-runtime.js'
       - 'config/ai-mission-governance.json'
       - 'config/ai-change-orchestration-policy.json'
@@ -57,11 +62,14 @@ on:
       - 'test/ai-control-platform.test.mjs'
       - 'test/ai-router-score.test.mjs'
       - 'test/ai-collaboration-settings.test.mjs'
+      - 'test/local-execution-policy.test.mjs'
+      - 'test/ai-account-node-scheduler.test.mjs'
       - 'test/cognitive-control-plane.test.mjs'
       - 'migrations/0050_ai_control_plane.sql'
       - 'migrations/0051_ai_account_nodes.sql'
       - 'migrations/0052_ai_mission_governance.sql'
       - 'migrations/0074_ai_router_score.sql'
+      - 'migrations/0085_ai_account_node_load_scheduler.sql'
       - 'deploy/manifests/ai-control.worker.json'
       - 'scripts/validate-cognitive-control-plane.mjs'
       - 'scripts/validate-additive-migrations.mjs'
@@ -101,6 +109,7 @@ jobs:
           node --check ai-control-core.js
           node --check ai-router-score.js
           node --check ai-collaboration-settings.js
+          node --check local-execution-policy.js
           node --check ai-control-provider-router.js
           node --check ai-control-worker.js
           node --check ai-control/app.js
@@ -113,7 +122,7 @@ jobs:
           node scripts/validate-constitution.mjs
           node scripts/validate-ai-mission-governance.mjs
           node scripts/validate-additive-migrations.mjs migrations
-          node --test test/ai-control-platform.test.mjs test/ai-router-score.test.mjs test/ai-collaboration-settings.test.mjs test/cognitive-control-plane.test.mjs test/common-service-operator-control.test.mjs
+          node --test test/ai-control-platform.test.mjs test/ai-router-score.test.mjs test/ai-collaboration-settings.test.mjs test/local-execution-policy.test.mjs test/ai-account-node-scheduler.test.mjs test/cognitive-control-plane.test.mjs test/common-service-operator-control.test.mjs
           bash -n scripts/apply-d1-migrations-with-retry.sh
           grep -Fq 'pattern = "ai.ekodi.kr"' wrangler.ai.release.toml
           grep -Fq 'AI_TASK_EXECUTION_ENABLED = "false"' wrangler.ai.staging.release.toml
@@ -133,6 +142,7 @@ jobs:
           test -f migrations/0051_ai_account_nodes.sql
           test -f migrations/0052_ai_mission_governance.sql
           test -f migrations/0074_ai_router_score.sql
+          test -f migrations/0085_ai_account_node_load_scheduler.sql
           test -f deploy/manifests/ai-control.worker.json
       - name: Build one immutable AI Control application artifact
         id: build_artifact
