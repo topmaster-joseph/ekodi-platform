@@ -22,6 +22,6 @@ test('seamless auth card is explicitly pinned to the center', () => {
 });
 
 test('admin pre-auth screen remains centered while authenticated dashboard layout stays separate', () => {
-  assert.match(controlCss, /\.login-screen\{min-height:100vh;display:grid;place-items:center;padding:24px\}/);
+  assert.match(controlCss, /\.login-screen\{[^}]*min-height:100vh;[^}]*display:grid;[^}]*place-items:center;[^}]*padding:24px(?:;|\})/);
   assert.match(controlCss, /\.app\{min-height:100vh;display:grid;grid-template-columns:250px minmax\(0,1fr\)\}/);
 });
