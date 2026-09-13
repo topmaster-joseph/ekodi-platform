@@ -6,7 +6,7 @@ const token=process.env.E2E_ADMIN_TOKEN||'';
 const liveUrl=process.env.CHURCH_LIVE_URL||'https://ekodi.kr/ekodichurch/live/';
 const api='https://ekodi.kr/api/realtime';
 const artifactDir='artifacts/church-live-production-e2e';
-const report={passed:false,skipped:false,roomId:null,hostReady:false,viewerTracks:0,ended:false};
+const report={passed:false,skipped:false,roomId:null,hostReady:false,hostStatus:'',hostErrors:[],failedRequests:[],viewerTracks:0,ended:false};
 if(!token)throw new Error('e2e_admin_token_missing');
 
 async function call(path,options={}){
@@ -45,8 +45,12 @@ try{
   host=await hostContext.newPage();
   const hostErrors=[];
   host.on('pageerror',error=>hostErrors.push(error.message));
+  host.on('requestfailed',request=>report.failedRequests.push({url:request.url(),error:request.failure()?.errorText||'request_failed'}));
   await host.goto(`${liveUrl}?mode=studio&title=${encodeURIComponent('EKODI Church Production E2E')}`,{waitUntil:'domcontentloaded',timeout:30000});
-  await host.waitForFunction(()=>document.querySelector('#statusLog')?.textContent?.includes('미디어 연결이 완료되었습니다'),{timeout:30000});
+  await host.waitForFunction(()=>{const text=document.querySelector('#statusLog')?.textContent||'';return text.includes('미디어 연결이 완료되었습니다')||text.startsWith('방송 준비 실패:')},{timeout:30000});
+  report.hostStatus=await host.locator('#statusLog').textContent()||'';
+  report.hostErrors=[...hostErrors];
+  if(!report.hostStatus.includes('미디어 연결이 완료되었습니다'))throw new Error(`host_setup_failed:${report.hostStatus}`);
   report.hostReady=true;
   const shareLink=await host.locator('#shareLink').inputValue();
   const roomId=new URL(shareLink).searchParams.get('room');
