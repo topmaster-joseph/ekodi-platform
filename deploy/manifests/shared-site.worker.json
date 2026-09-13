@@ -349,7 +349,7 @@
         "candidateVerifyReason": "run_worker_first bootstrap for /ekodibiz/ekodimall can serve the stable static storefront during 0% version-override smoke; verify the marketplace Worker route immediately after promotion"
       },
       {
-        "url": "https://ekodi.kr/ekodibiz/ekodimall/admin/",
+        "url": "https://ekodi.kr/admin/ekodimall/",
         "statuses": [
           200
         ],
@@ -369,13 +369,33 @@
         "rollbackVerify": false
       },
       {
+        "url": "https://ekodi.kr/admin/ekodimall/channel-settings",
+        "statuses": [200],
+        "redirect": "manual",
+        "expect": ["EKODI Workspace Admin", "workspace-admin.js", "data-ekodi-admin-subnav"],
+        "headerExpect": ["x-ekodi-route: workspace-admin", "cache-control: no-store"],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/ekodibiz/ekodimall/admin/",
+        "statuses": [308],
+        "redirect": "manual",
+        "headerExpect": [
+          "location: https://ekodi.kr/admin/ekodimall/",
+          "cache-control: no-store"
+        ],
+        "candidateVerify": false,
+        "candidateVerifyReason": "legacy Mall admin redirect depends on the promoted run_worker_first routing table; verify the 308 immediately after promotion",
+        "rollbackVerify": false
+      },
+      {
         "url": "https://ekodi.kr/mall/admin/",
         "statuses": [
           308
         ],
         "redirect": "manual",
         "headerExpect": [
-          "location: https://ekodi.kr/ekodibiz/ekodimall/admin/",
+          "location: https://ekodi.kr/admin/ekodimall/",
           "cache-control: no-store"
         ],
         "candidateVerify": false,

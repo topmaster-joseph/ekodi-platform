@@ -4,18 +4,23 @@ import fs from 'node:fs/promises';
 import platformEntry from '../platform-router-entry-worker.js';
 import { isWorkspaceAdminPath, workspaceAdminScript } from '../workspace-admin-page.js';
 
-test('tenant and service admins use site-local canonical paths', async () => {
+test('tenant admins use the canonical root admin tree while legacy Mall admin remains detectable for redirect', async () => {
   assert.equal(isWorkspaceAdminPath('/ekodibiz/admin/'), true);
+  assert.equal(isWorkspaceAdminPath('/admin/ekodimall/'), true);
+  assert.equal(isWorkspaceAdminPath('/admin/ekodimall/channel-settings'), true);
   assert.equal(isWorkspaceAdminPath('/ekodibiz/ekodimall/admin/'), true);
+  assert.equal(isWorkspaceAdminPath('/ekodibiz/mall/admin/'), true);
   assert.equal(isWorkspaceAdminPath('/jadam/admin/'), true);
   assert.equal(isWorkspaceAdminPath('/jadam/marketing/admin/channels'), true);
   assert.equal(isWorkspaceAdminPath('/admin/'), false);
   assert.equal(isWorkspaceAdminPath('/'+'org'+'/ekodibiz/ekodimall/admin/'), false);
   const siteWorker = await fs.readFile(new URL('../site-worker.js', import.meta.url), 'utf8');
-  assert.match(siteWorker, /isLegacyMallPath\(url\.pathname\).*redirectLegacyMallPath/s);
+  assert.match(siteWorker, /isLegacyMallAdminPath\(url\.pathname\).*redirectLegacyMallAdminPath/s);
   const js = await workspaceAdminScript().text();
   assert.ok(!js.includes('/'+'org'+'/'));
-  assert.match(js, /const base=`\/\$\{workspace\}`/);
+  assert.match(js, /const base=service==='mall'\?'\/ekodibiz':`\/\$\{workspace\}`/);
+  assert.ok(js.includes("const adminBase=service?'/admin/ekodimall'"));
+  assert.ok(js.includes("key==='channels'?'channel-settings':key"));
   assert.ok(js.startsWith('const __name=(target)=>target;'));
   assert.match(js, /marketing-connect-api\.ekodi\.kr/);
   assert.ok(js.includes('Google로 YouTube 연결'));
@@ -28,18 +33,20 @@ test('tenant and service admins use site-local canonical paths', async () => {
   assert.ok(!js.includes("fetch('/api/auth/refresh'"));
 });
 
-
-test('entry gateway redirects legacy Mall admin directly to the canonical site-local admin', async () => {
+test('entry gateway redirects legacy Mall admin to the root admin canonical path', async () => {
   const response = await platformEntry.fetch(new Request('https://ekodi.kr/mall/admin/publishing?ref=legacy'), {}, {});
   assert.equal(response.status, 308);
-  assert.equal(response.headers.get('location'), 'https://ekodi.kr/ekodibiz/ekodimall/admin/publishing?ref=legacy');
+  assert.equal(response.headers.get('location'), 'https://ekodi.kr/admin/ekodimall/publishing?ref=legacy');
   assert.equal(response.headers.get('cache-control'), 'no-store');
   const manifest = JSON.parse(await fs.readFile(new URL('../deploy/manifests/shared-site.worker.json', import.meta.url), 'utf8'));
+  const canonical = manifest.worker.requests.find(item => item.url === 'https://ekodi.kr/admin/ekodimall/');
+  assert.ok(canonical);
+  assert.deepEqual(canonical.statuses, [200]);
   const probe = manifest.worker.requests.find(item => item.url === 'https://ekodi.kr/mall/admin/');
   assert.ok(probe);
   assert.deepEqual(probe.statuses, [308]);
   assert.equal(probe.candidateVerify, false);
   assert.match(probe.candidateVerifyReason || '', /promoted run_worker_first routing table/);
   assert.equal(probe.rollbackVerify, false);
-  assert.ok(probe.headerExpect.includes('location: https://ekodi.kr/ekodibiz/ekodimall/admin/'));
+  assert.ok(probe.headerExpect.includes('location: https://ekodi.kr/admin/ekodimall/'));
 });
