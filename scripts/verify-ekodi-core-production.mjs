@@ -7,8 +7,8 @@ const majorHosts = [
   ['auth', 'https://auth.ekodi.kr/'],
   ['biz', 'https://biz.ekodi.kr/'],
   ['marketing', 'https://marketing.ekodi.kr/'],
-  ['church', 'https://church.ekodi.kr/'],
-  ['lab', 'https://lab.ekodi.kr/'],
+  ['church', 'https://ekodi.kr/ekodichurch/'],
+  ['lab', 'https://ekodi.kr/ekodilab/'],
 ];
 
 async function fetchWithRetry(url, options = {}, attempts = 4) {
