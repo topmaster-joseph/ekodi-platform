@@ -42,6 +42,8 @@ async function waitForReady() {
   await page.waitForSelector('#app:not([hidden])', { timeout: 15_000 });
   stage('ready-runtime');
   await page.waitForFunction(() => window.EKODIAdminPanels && window.EKODIAdminSidebar, null, { timeout: 15_000 });
+  stage('ready-demand');
+  await page.waitForFunction(() => window.EKODIAdminDemand && document.querySelector('[data-demand-feature="devotional"]'), null, { timeout: 15_000 });
   stage('ready-session');
   await page.waitForFunction(() => document.querySelector('#apiState')?.textContent?.includes('정상'), null, { timeout: 15_000 });
 }
