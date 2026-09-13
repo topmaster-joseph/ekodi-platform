@@ -23,16 +23,16 @@ const [browserDiagnosticsBaseJs, deviceWakeAdminJs] = await Promise.all([
   readFile(`${output}device-browser-diagnostics.js`, 'utf8'),
   readFile(`${root}device-wake-admin.js`, 'utf8'),
 ]);
-if (!browserDiagnosticsBaseJs.includes('?쒕쾭濡??낅줈?쒗븯吏 ?딆뒿?덈떎')) throw new Error('Browser diagnostics local-only marker missing');
-if (!deviceWakeAdminJs.includes('?먭꺽 ?꾩썝 쨌 ?묒뾽 ?먮룞蹂듦?')) throw new Error('Device Wake admin marker missing');
+if (!browserDiagnosticsBaseJs.includes('서버로 업로드하지 않습니다')) throw new Error('Browser diagnostics local-only marker missing');
+if (!deviceWakeAdminJs.includes('원격 전원 · 작업 자동복귀')) throw new Error('Device Wake admin marker missing');
 await writeFile(`${output}device-browser-diagnostics.js`, `${browserDiagnosticsBaseJs}\n${deviceWakeAdminJs}\n`);
 
 const [aiOpsBaseJs, userAiTierPanelJs] = await Promise.all([
   readFile(`${output}ai-ops-admin.js`, 'utf8'),
   readFile(`${root}user-ai-tier-panel.js`, 'utf8'),
 ]);
-if (!userAiTierPanelJs.includes('Core ?듭젣 쨌 媛쒖씤援щ룆 ??媛쒖씤 API ??吏??AI')) throw new Error('Personal-first User AI membership policy marker missing');
-if (userAiTierPanelJs.includes('媛쒖씤 API ??EKODI ??媛쒖씤 Web ??Core')) throw new Error('Legacy User AI fallback chain returned');
+if (!userAiTierPanelJs.includes('Core 통제 · 개인구독 → 개인 API → 지원 AI')) throw new Error('Personal-first User AI membership policy marker missing');
+if (userAiTierPanelJs.includes('개인 API → EKODI → 개인 Web → Core')) throw new Error('Legacy User AI fallback chain returned');
 await writeFile(`${output}ai-ops-admin.js`, `${aiOpsBaseJs}\n${userAiTierPanelJs}\n`);
 
 const [adminAiControlPlaneJs, adminAiGovernorJs, adminProviderControlJs] = await Promise.all([
@@ -68,8 +68,8 @@ const [marketingAdminCss, marketingAdminJs, marketingLiveCss, marketingLiveJs, m
 if (!marketingPostingStatusJs.includes("TAB_KEY = 'publications'")) throw new Error('Marketing posting status marker missing');
 if (!marketingChannelManagerJs.includes("TAB_KEY = 'channels'")) throw new Error('Marketing channel manager marker missing');
 if (!marketingAdminJs.includes("['channels','Channels']")) throw new Error('Marketing channels tab source marker missing');
-const marketingAdminLocalizedJs = marketingAdminJs.replace("['channels','Channels']", "['channels','寃뚯떆 쨌 ?띾낫']");
-if (!marketingAdminLocalizedJs.includes("['channels','寃뚯떆 쨌 ?띾낫']")) throw new Error('Marketing 寃뚯떆 쨌 ?띾낫 tab label build marker missing');
+const marketingAdminLocalizedJs = marketingAdminJs.replace("['channels','Channels']", "['channels','게시 · 홍보']");
+if (!marketingAdminLocalizedJs.includes("['channels','게시 · 홍보']")) throw new Error('Marketing 게시 · 홍보 tab label build marker missing');
 await writeFile(`${output}marketing-ai-admin.css`, `${marketingAdminCss}\n${marketingLiveCss}\n`);
 await writeFile(`${output}marketing-ai-admin.js`, `${marketingAdminLocalizedJs}\n${marketingLiveJs}\n${marketingPostingStatusJs}\n${marketingChannelManagerJs}\n`);
 
@@ -103,8 +103,8 @@ for (const asset of htmlAssets) {
     if (!serviceGrid.test(html)) throw new Error('EKODI homepage service grid marker not found');
     html = html.replace(serviceGrid, `<div class="service-grid" data-ekodi-service-registry="v1">\n${homepageCards}$1`);
     html = html.replace(/(<em data-status-count="live">)\d+(<\/em>)/, `$1${homepageStatusCounts.live}$2`).replace(/(<em data-status-count="beta">)\d+(<\/em>)/, `$1${homepageStatusCounts.beta}$2`);
-    html = html.replaceAll('EKODI?좉탳??, '而ㅻ??덊떚').replaceAll('?먯퐫?붿꽑援먰쉶', '而ㅻ??덊떚').replaceAll('https://youtube.com/@ekodicommunity', 'https://community.ekodi.kr').replaceAll('https://www.youtube.com/@ekodicommunity', 'https://community.ekodi.kr');
-    if (html.includes('EKODI?좉탳??) || html.includes('?먯퐫?붿꽑援먰쉶')) throw new Error('Legacy EKODI mission brand remains on homepage');
+    html = html.replaceAll('EKODI선교회', '커뮤니티').replaceAll('에코디선교회', '커뮤니티').replaceAll('https://youtube.com/@ekodicommunity', 'https://community.ekodi.kr').replaceAll('https://www.youtube.com/@ekodicommunity', 'https://community.ekodi.kr');
+    if (html.includes('EKODI선교회') || html.includes('에코디선교회')) throw new Error('Legacy EKODI mission brand remains on homepage');
     if (!html.includes('homepage-ambient.css')) html = html.replace('</head>', '<link rel="stylesheet" href="/homepage-ambient.css">\n</head>');
     if (!html.includes('homepage-ambient.js')) html = html.replace('</body>', '<script src="/homepage-ambient.js" defer></script>\n</body>');
   }
