@@ -5,7 +5,7 @@ import {
   alternateStatusResponse,
   siteIdFromPublicPath
 } from '../site-operating-status.js';
-import { siteOperatingStatusWidgetSource } from '../site-operating-status-widget.js';
+import { siteAdminSiteIdFromPath, siteOperatingStatusWidgetSource } from '../site-operating-status-widget.js';
 
 test('site operating statuses expose the four administrator choices', () => {
   assert.deepEqual([...SITE_OPERATING_STATUSES], ['public', 'private', 'maintenance', 'development']);
@@ -44,8 +44,18 @@ test('public path site lookup covers dynamic and specially routed tenant roots b
   assert.equal(siteIdFromPublicPath('/api/control/site-status'), '');
 });
 
+test('site admin path resolves the actual tenant, including integrated store administration', () => {
+  assert.equal(siteAdminSiteIdFromPath('/jadam/admin'), 'jadam');
+  assert.equal(siteAdminSiteIdFromPath('/ekodibiz/invest/admin'), 'ekodibiz');
+  assert.equal(siteAdminSiteIdFromPath('/cmpmyi/admin/jadam'), 'jadam');
+  assert.equal(siteAdminSiteIdFromPath('/cmpmyi/admin/pizzamaru'), 'pizzamaru');
+  assert.equal(siteAdminSiteIdFromPath('/cmpmyi/admin/yogurt'), 'yogurt');
+  assert.equal(siteAdminSiteIdFromPath('/admin'), '');
+});
+
 test('admin widget source contains all four choices without embedding credentials', () => {
   const source = siteOperatingStatusWidgetSource();
   for (const label of ['공개', '비공개', '점검중', '개발중']) assert.match(source, new RegExp(label));
+  assert.match(source, /cmpmyi/);
   assert.doesNotMatch(source, /sb_publishable_|service_role|SUPABASE_PUBLISHABLE_KEY/);
 });
