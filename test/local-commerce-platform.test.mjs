@@ -29,3 +29,14 @@ test('user surface exposes wallet, merchant, operator and accounting flows',()=>
   assert.ok(app.includes('x-ekodi-confirm-impact'));
   for(const marker of ['value="church"','value="nonprofit"','value="enterprise"','value="public_agency"','value="community"','programPolicyForm','policyMerchants'])assert.ok(html.includes(marker));
 });
+
+test('local commerce admin owns site-scoped language publication controls',()=>{
+  const html=fs.readFileSync(new URL('../local-commerce/index.html',import.meta.url),'utf8');
+  const language=fs.readFileSync(new URL('../local-commerce/language-admin.js',import.meta.url),'utf8');
+  for(const marker of ['languageAdminTab','languageAdminPanel','다국어 번역·게시','/local-commerce/language-admin.js'])assert.ok(html.includes(marker));
+  assert.ok(language.includes("SERVICE='local-commerce'"));
+  assert.ok(language.includes('/api/i18n/v1/admin'));
+  assert.ok(language.includes('publicationStatus'));
+  assert.ok(language.includes('EKODILocalCommerceFetch'));
+  assert.ok(language.includes('translation_not_ready'));
+});
