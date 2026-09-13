@@ -23,3 +23,11 @@ export function peakRpsFromMinuteRows(rows = []) {
     sampleMinutes
   };
 }
+
+export function telemetryWindow(now = new Date(), lookbackHours = 24, lagMinutes = 5) {
+  const hours = Math.max(1, Math.min(168, Number(lookbackHours) || 24));
+  const lag = Math.max(0, Math.min(60, Number(lagMinutes) || 0));
+  const end = new Date(now.getTime() - lag * 60000);
+  const start = new Date(end.getTime() - hours * 3600000);
+  return { start: start.toISOString(), end: end.toISOString(), lookbackHours: hours, lagMinutes: lag };
+}
