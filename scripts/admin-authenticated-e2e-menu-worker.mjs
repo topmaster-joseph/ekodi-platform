@@ -375,6 +375,9 @@ async function verifyMaturity(tab, alreadyActive, started) {
   if(payload.certificationStatus!=='not-claimed'||payload.current?.certificationStatus!=='not-claimed')throw new Error('maturity: certification boundary drift');
   if(!Array.isArray(payload.model?.domains)||payload.model.domains.length<1)throw new Error('maturity: model domains missing');
   if(!Array.isArray(payload.history)||payload.history.length<1)throw new Error('maturity: history summary missing');
+  if(!payload.serviceScopes?.summary?.totalScopes||!Array.isArray(payload.serviceScopes.services)||!Array.isArray(payload.serviceScopes.workspaceSites)||!Array.isArray(payload.serviceScopes.systemFunctions))throw new Error('maturity: subordinate service/site/function coverage missing');
+  if([...payload.serviceScopes.services,...payload.serviceScopes.workspaceSites,...payload.serviceScopes.systemFunctions].some(item=>item.localMaturityScore!==null))throw new Error('maturity: unevidenced subordinate score exposed');
+  if(payload.serviceScopes.summary.systemFunctions!==payload.serviceScopes.systemFunctions.length)throw new Error('maturity: system function summary mismatch');
   if(!alreadyActive)await clickFast(tab);
   stage('maturity-render');
   await page.waitForFunction(()=>{
@@ -388,8 +391,10 @@ async function verifyMaturity(tab, alreadyActive, started) {
   const text=String(await page.locator('[data-panel~="maturity"] [data-maturity-view]').textContent()||'').replace(/\s+/g,' ').trim();
   if(!state.panelFound||!state.selected||state.busy)throw new Error(`maturity panel invalid: ${JSON.stringify(state)}`);
   if(!text.includes('외부 인증 주장 안 함'))throw new Error('maturity: certification status not rendered');
+  const scopeRows=await page.locator('[data-panel~=\"maturity\"] [data-maturity-scope-row]').count();
+  if(scopeRows!==payload.serviceScopes.summary.totalScopes)throw new Error(`maturity: subordinate scope render mismatch expected=${payload.serviceScopes.summary.totalScopes} actual=${scopeRows}`);
   if(text.includes('불러오지 못했습니다'))throw new Error('maturity: data load error rendered');
-  results.push({id:menuId,group,ok:true,durationMs:Date.now()-started,...state,apiStatus:response.status,assessmentDate:payload.assessmentDate,historyCount:payload.history.length});
+  results.push({id:menuId,group,ok:true,durationMs:Date.now()-started,...state,apiStatus:response.status,assessmentDate:payload.assessmentDate,historyCount:payload.history.length,subordinateScopeCount:payload.serviceScopes.summary.totalScopes,systemFunctionCount:payload.serviceScopes.summary.systemFunctions});
 }
 
 async function verifyRegistryHref(trigger, started) {
