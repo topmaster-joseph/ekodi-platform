@@ -1,4 +1,4 @@
-name: Ecosystem Bounded Load Test
+﻿name: Ecosystem Bounded Load Test
 
 on:
   workflow_dispatch:
