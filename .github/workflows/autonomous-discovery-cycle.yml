@@ -17,6 +17,7 @@ on:
       - 'test/autonomous-discovery-cycle.test.mjs'
       - 'test/autonomous-discovery-subservices.test.mjs'
       - 'test/autonomous-evolution-loop.test.mjs'
+      - 'test/autonomous-evolution-subservices.test.mjs'
       - 'test/autonomous-research-evidence.test.mjs'
       - 'config/ecosystem-services.json'
       - 'governance/architecture/ekodi-autonomous-discovery-engine.json'
@@ -69,6 +70,7 @@ jobs:
             test/autonomous-discovery-cycle.test.mjs \
             test/autonomous-discovery-subservices.test.mjs \
             test/autonomous-evolution-loop.test.mjs \
+            test/autonomous-evolution-subservices.test.mjs \
             test/autonomous-research-evidence.test.mjs
 
   discover:
@@ -136,18 +138,21 @@ jobs:
           const discovery = JSON.parse(fs.readFileSync(root + '/ekodi-autonomous-discovery-report.json', 'utf8'));
           const research = JSON.parse(fs.readFileSync(root + '/ekodi-autonomous-research-evidence.json', 'utf8'));
           const evolution = JSON.parse(fs.readFileSync(root + '/ekodi-autonomous-evolution-report.json', 'utf8'));
-          const subserviceViolation = Array.isArray(discovery.subservices)
+          const discoverySubserviceViolation = Array.isArray(discovery.subservices)
             && discovery.subservices.some(service => service.productionMutationPerformed !== false || service.authorityExpanded !== false);
+          const evolutionSubserviceViolation = Array.isArray(evolution.subservices)
+            && evolution.subservices.some(service => service.productionMutationPerformed !== false || service.authorityExpanded !== false);
           const violated = discovery.productionMutationPerformed !== false
             || discovery.authorityExpanded !== false
             || discovery.cycle?.productionMutationPerformed !== false
             || discovery.cycle?.authorityExpanded !== false
-            || subserviceViolation
+            || discoverySubserviceViolation
             || research.productionMutationPerformed !== false
             || research.authorityExpanded !== false
             || evolution.productionMutationPerformed !== false
             || evolution.authorityExpanded !== false
-            || evolution.automaticPromotionPerformed !== false;
+            || evolution.automaticPromotionPerformed !== false
+            || evolutionSubserviceViolation;
           if (violated) throw new Error('Autonomous evolution cycle crossed its delegated authority boundary');
           NODE
           echo 'Verified: platform and subservice autonomous research/evolution remain non-production-mutating, non-authority-expanding, and non-self-promoting.'
