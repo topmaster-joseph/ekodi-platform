@@ -113,7 +113,7 @@ export function mailContactPage() {
   });
   })();</script></body></html>`;
   const headers=secureHeaders('text/html; charset=utf-8');
-  headers['content-security-policy']="default-src 'self'; style-src 'self' 'unsafe-inline' https://shell.ekodi.kr; script-src 'self' 'unsafe-inline' https://shell.ekodi.kr; connect-src 'self' https://shell.ekodi.kr; img-src 'self' data:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'";
+  headers['content-security-policy']="default-src 'self'; style-src 'self' 'unsafe-inline' https://ekodi.kr; script-src 'self' 'unsafe-inline' https://ekodi.kr; connect-src 'self' https://ekodi.kr; img-src 'self' data:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'";
   headers['x-ekodi-route']='mail-contact';
   return new Response(html+script,{headers});
 }

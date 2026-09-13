@@ -67,9 +67,9 @@ jobs:
             health_code=$(curl -sS -o /tmp/books-stage-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/health" || true)
             echo "Books staging: root=$root_code publishing=$publishing_code upaper=$upaper_code health=$health_code"
             if [[ "$root_code" == '200' && "$publishing_code" == '200' && "$upaper_code" == '200' && "$health_code" == '200' ]] \
-              && grep -Fq 'https://shell.ekodi.kr/shell.js' /tmp/books-stage.html \
-              && grep -Fq 'https://shell.ekodi.kr/shell.js' /tmp/books-publishing-stage.html \
-              && grep -Fq 'https://shell.ekodi.kr/shell.js' /tmp/books-upaper-stage.html \
+              && grep -Fq 'https://ekodi.kr/shell/shell.js' /tmp/books-stage.html \
+              && grep -Fq 'https://ekodi.kr/shell/shell.js' /tmp/books-publishing-stage.html \
+              && grep -Fq 'https://ekodi.kr/shell/shell.js' /tmp/books-upaper-stage.html \
               && grep -Fq 'UPAPER QUICK PUBLISH' /tmp/books-upaper-stage.html \
               && grep -Fiq 'x-ekodi-shell: v2' /tmp/books-stage.headers \
               && grep -Fq '"service":"ekodi-books"' /tmp/books-stage-health.json; then
