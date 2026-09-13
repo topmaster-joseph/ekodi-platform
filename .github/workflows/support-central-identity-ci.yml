@@ -41,7 +41,8 @@ jobs:
           node --check support/service.js
           node --check support/specialists.js
           node --test test/support-opportunity.test.mjs test/support-central-identity.test.mjs
-          grep -Fq 'https://ekodi.kr/support' supabase/functions/profile-api/index.ts
+          grep -Fq '"https://ekodi.kr"' supabase/functions/profile-api/index.ts
+          ! grep -Fq '"https://support.ekodi.kr"' supabase/functions/profile-api/index.ts
           ! grep -Fq 'ekodi-support-opportunity-staging' supabase/functions/profile-api/index.ts
           grep -Fq 'SUPABASE_URL' wrangler.support.toml
           ! grep -Fq 'SUPABASE_URL' wrangler.support.staging.toml
@@ -77,7 +78,7 @@ jobs:
               && grep -Fq '"centralIdentityEnabled":true' /tmp/support-health.json \
               && grep -Fq 'support central identity unavailable' /tmp/support-account.js \
               && [[ "$cors_code" =~ ^(200|204)$ ]] \
-              && grep -Eiq '^access-control-allow-origin:[[:space:]]*https://ekodi\.kr' /tmp/profile-cors.headers; then
+              && grep -Eiq '^access-control-allow-origin:[[:space:]]*https://ekodi\.kr[[:space:]]*$' /tmp/profile-cors.headers; then
               echo 'Support central identity production contract verified on all seven specialist routes.'
               exit 0
             fi
