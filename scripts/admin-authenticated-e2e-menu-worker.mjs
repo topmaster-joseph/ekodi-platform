@@ -469,9 +469,9 @@ try {
   const directDefinition = getAdminMenuItem(menuId);
   if (directDefinition?.href && !directDefinition.adminHandoff) {
     stage('registry-link');
-    const source = page.locator(`.sidebar nav .nav[data-section="${menuId}"]`);
-    await source.waitFor({ state: 'visible', timeout: 5_000 });
-    await verifyRegistryHref(source, started);
+    const tab = page.locator(`button.admin-context-tab[data-admin-context-section="${menuId}"]`);
+    await tab.waitFor({ state: 'visible', timeout: 5_000 });
+    await verifyRegistryHref(tab, started);
   } else {
     stage('tab');
     const tab = page.locator(`button.admin-context-tab[data-admin-context-section="${menuId}"]`);

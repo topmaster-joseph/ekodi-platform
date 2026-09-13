@@ -12,8 +12,8 @@ test('authenticated Admin E2E verifies direct registry href menus through isolat
   const source = await workerSource();
   assert.match(source, /async function verifyRegistryHref\(trigger, started\)/);
   assert.match(source, /const directDefinition = getAdminMenuItem\(menuId\)/);
-  assert.ok(source.indexOf("stage('registry-link')") < source.indexOf("stage('tab')"), 'direct registry href must branch before context-tab lookup');
-  assert.match(source, /verifyRegistryHref\(source, started\)/);
+  assert.match(source, /button\.admin-context-tab\[data-admin-context-section=/);
+  assert.match(source, /verifyRegistryHref\(tab, started\)/);
   assert.match(source, /page\.waitForEvent\('popup'/);
   assert.match(source, /sourceTarget !== '_blank'/);
   assert.match(source, /popup\.waitForURL/);
