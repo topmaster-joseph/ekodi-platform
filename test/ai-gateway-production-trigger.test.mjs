@@ -11,6 +11,12 @@ test('AI Commons production verification follows the canonical guarded owner', (
   assert.match(workflow, /github\.event\.workflow_run\.conclusion == 'success'/);
 });
 
+test('AI Commons verifier self-checks after its main-branch contract changes', () => {
+  assert.match(workflow, /push:\s*\n\s*branches: \[main\]/);
+  assert.match(workflow, /paths: \['\.github\/workflows\/verify-ai-gateway-production\.yml'\]/);
+  assert.match(workflow, /github\.event_name == 'push'/);
+});
+
 test('AI Commons production verification matches the canonical public and member boundary', () => {
   assert.match(workflow, /canonical_code.*https:\/\/ekodi\.kr\/ai'/);
   assert.match(workflow, /root_code.*https:\/\/ekodi\.kr\/ai\//);
