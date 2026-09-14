@@ -1,0 +1,20 @@
+{
+  "id": "C2-PUBLICATION-2026-09-14",
+  "class": "C2",
+  "status": "approved",
+  "approvedBy": "topmaster-joseph",
+  "approvalSource": "explicit owner instruction",
+  "approvedAt": "2026-09-14",
+  "effectiveDate": "2026-09-14",
+  "summary": "Separate deployment completion from publication and make all newly deployed EKODI public-surface changes private by default until administrator review.",
+  "machineReadableAuthority": "governance/constitution/publication-approval.v1.json",
+  "implementation": [
+    "scripts/publication-approval-policy.mjs",
+    "scripts/guarded-worker-release.mjs",
+    "scripts/guarded-pages-release.mjs",
+    "scripts/validate-deployment-guardrails.mjs"
+  ],
+  "rollback": "Revert this amendment and publication-approval.v1.json, then restore guarded Worker and Pages controllers to automatic post-verification production promotion.",
+  "ownerConfirmationRequired": true,
+  "ownerConfirmationPresent": true
+}
