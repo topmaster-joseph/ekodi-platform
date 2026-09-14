@@ -3,6 +3,7 @@ import { isWorkspaceAdminPath, workspaceAdminPage, workspaceAdminCss, workspaceA
 import { churchPastorAdminPage, churchPastorAdminScript, isChurchPastorAdminPath } from './church-pastor-admin-page.js';
 import { ekodiBizInvestBusinessPage, isEkodiBizInvestPath } from './ekodibiz-invest-business.js';
 import { ekodiBizInvestAdminPage, isEkodiBizInvestAdminPath } from './ekodibiz-invest-admin-page.js';
+import { tenantAdminCommandHomeScript, tenantAdminCommandHomeCss } from './tenant-admin-command-home.js';
 import { decorateDiscoveryResponse } from './discovery-layer.js';
 
 // Static Assets canonicalizes *.html URLs to extensionless paths.
@@ -576,6 +577,8 @@ export default {
         const target=new URL('/pizzamaru',request.url);target.search=url.search;
         return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-content-type-options':'nosniff','x-ekodi-canonical-storefront':'pizzamaru'}});
       }
+      if (url.pathname === '/tenant-admin-command-home.css') return tenantAdminCommandHomeCss();
+      if (url.pathname === '/tenant-admin-command-home.js') return tenantAdminCommandHomeScript();
       if (url.pathname === '/workspace-admin.css') return workspaceAdminCss();
       if (url.pathname === '/workspace-admin.js') return workspaceAdminScript();
       if (url.pathname.startsWith('/api/control/storage/google/cheonggye-members')) return proxyAdminStorage(request, env);
