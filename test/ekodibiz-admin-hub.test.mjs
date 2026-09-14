@@ -6,7 +6,7 @@ import { workspaceTradeAdminScript } from '../workspace-trade-admin-page.js';
 import { readFile } from 'node:fs/promises';
 
 test('EKODIBIZ admin hub registers common and independent service management scopes',()=>{
-  assert.deepEqual(EKODIBIZ_ADMIN_SCOPES.map(item=>item.id),['common','mall','trade','books','lab']);
+  assert.deepEqual(EKODIBIZ_ADMIN_SCOPES.map(item=>item.id),['common','mall','trade','invest','books','lab']);
   assert.equal(ekodiBizAdminScopeForPath('/ekodibiz/admin'),'common');
   assert.equal(EKODIBIZ_ADMIN_SCOPES.find(item=>item.id==='mall')?.adminHref,'/admin/ekodimall');
   assert.equal(EKODIBIZ_ADMIN_SCOPES.find(item=>item.id==='mall')?.publicHref,'/ekodibiz/ekodimall');
@@ -14,6 +14,8 @@ test('EKODIBIZ admin hub registers common and independent service management sco
   assert.equal(ekodiBizAdminScopeForPath('/ekodibiz/ekodimall/admin/channels'),'mall');
   assert.equal(ekodiBizAdminScopeForPath('/ekodibiz/mall/admin/channels'),'mall');
   assert.equal(ekodiBizAdminScopeForPath('/ekodibiz/trade/admin/access'),'trade');
+  assert.equal(ekodiBizAdminScopeForPath('/ekodibiz/invest/admin/ir'),'invest');
+  assert.equal(EKODIBIZ_ADMIN_SCOPES.find(item=>item.id==='invest')?.publicHref,'/ekodibiz/invest');
   assert.equal(ekodiBizAdminScopeForPath('/ekodi-lab/admin'),'lab');
 });
 

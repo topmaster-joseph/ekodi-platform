@@ -14,6 +14,7 @@ test('cmpmyi admin is the three-store operations entry hub',async()=>{
   assert.deepEqual(CMPMYI_STORES.map(x=>x.slug),['jadam','pizzamaru','yogurt']);
   assert.ok(CMPMYI_ADMIN_SECTIONS.some(([section])=>section==='reviews'));
   for(const store of CMPMYI_STORES){assert.ok(html.includes(store.name));assert.ok(html.includes(`/cmpmyi/admin/${store.slug}/menu`));}
+  assert.match(html,/점포별 재확인/);assert.match(html,/공통 Store Admin/);
 });
 
 test('integrated deep routes reuse the store admin engine without merging tenant authority',async()=>{

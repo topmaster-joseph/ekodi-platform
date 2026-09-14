@@ -107,4 +107,6 @@ test('trade admin uses shared two-level UI and canonical apex auth',async()=>{
   assert.ok(tradeAdmin.includes("new URL('/auth/',location.origin)"));
   assert.ok(!tradeAdmin.includes('https://auth.ekodi.kr/'));
   assert.ok(tradeAdmin.includes("'cache-control':'no-store'"));
+  assert.ok(tradeAdmin.includes('거래회사 데이터 비공개'));
+  assert.ok(tradeAdmin.includes('관계자 화면 보기'));
 });
