@@ -155,10 +155,11 @@ test('versioned admin startup graph runs Worker-first so cache policy is not byp
     '/admin-demand-loader.js',
     '/admin-perf-diagnostics.js',
     '/admin-lazy-features.js',
-    '/ai-ops-admin.css',
     '/system-health-admin.js',
     '/system-health-admin.css',
   ]) assert.match(wrangler, new RegExp(asset.replaceAll('.', '\\.').replaceAll('/', '\\/')));
+  assert.match(wrangler, /run_worker_first\s*=\s*\[[\s\S]*"\/ai\*"/);
+  assert.doesNotMatch(wrangler, /"\/ai-ops-admin\.css"/);
 });
 
 test('Admin runtime publishes and versions its EKODIBIZ scope-registry dependency', async () => {
