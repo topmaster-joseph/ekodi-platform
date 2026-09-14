@@ -363,7 +363,10 @@ function canonicalServiceHomeCurrent(){
 }
 function homeSimplicityEnabled(){
   const explicit=document.documentElement.dataset.ekodiHomeSimplicity==='v1';
-  return (explicit||canonicalServiceHomeCurrent())&&service?.id!=='church'&&['public','workspace'].includes(surface);
+  const inferred=canonicalServiceHomeCurrent();
+  const enabled=(explicit||inferred)&&service?.id!=='church'&&['public','workspace'].includes(surface);
+  if(enabled&&inferred&&!explicit)document.documentElement.dataset.ekodiHomeSimplicity='v1';
+  return enabled;
 }
 function homeCandidateElements(root){
   if(!root)return[];

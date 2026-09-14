@@ -26,6 +26,7 @@ test('shared user shell has progressive disclosure with accessible reveal contro
   assert.match(injector,/cleanServiceId\(serviceId\)!=='church'/);
   assert.match(shellSource,/scheduleHomeSimplicity/);
   assert.match(shellSource,/canonicalServiceHomeCurrent/);
+  assert.match(shellSource,/dataset\.ekodiHomeSimplicity='v1'/);
   assert.match(shellSource,/aria-expanded/);
   assert.match(shellSource,/hashchange/);
   assert.match(cssSource,/ekodi-home-secondary/);
