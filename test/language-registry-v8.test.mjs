@@ -64,10 +64,16 @@ test('shell and injector consume the registry instead of per-service language ar
   assert.doesNotMatch(injector,/serviceForId\(id\)\?\.readyLocales/);
   assert.match(worker,/LANGUAGE_REGISTRY_BOOTSTRAP/);
   assert.match(worker,/\/language-registry\.json/);
-  assert.match(runtime,/const VERSION=7/);
+  assert.match(runtime,/const VERSION=8/);
   assert.match(runtime,/visibleLanguages/);
   assert.match(runtime,/languageChoiceAvailable/);
   assert.match(runtime,/select\.replaceChildren/);
+  assert.match(runtime,/border-radius:999px/);
+  assert.match(runtime,/wrap\.append\(textNode,select\)/);
+  assert.doesNotMatch(runtime,/icon\.textContent='🌐'/);
+  assert.doesNotMatch(runtime,/function placeFooterControl/);
+  assert.match(runtime,/removeFooterLanguageControls/);
+  assert.match(runtime,/LEGACY_LANGUAGE_WIDGET_SELECTOR/);
 });
 
 test('admin language page manages publication while keeping translation readiness guarded',async()=>{
