@@ -48,7 +48,8 @@ jobs:
               && [ "$requests_code" = '200' ] \
               && [ "$ideas_code" = '401' ] \
               && grep -Fiq 'location: https://ekodi.kr/ai/' /tmp/ai-canonical-headers \
-              && grep -Fiq 'x-ekodi-ai-entry: commons-v1' /tmp/ai-root-headers \
+              && grep -Fiq 'x-ekodi-canonical-surface: ai' /tmp/ai-root-headers \
+              && grep -Fiq 'x-ekodi-canonical-path: /ai' /tmp/ai-root-headers \
               && grep -Fq 'EKODI 모두의 AI 프로젝트' /tmp/ai-root \
               && grep -Fq '"platform":"ai-control"' /tmp/ai-health \
               && grep -Fq '"surface":"runtime-and-commons"' /tmp/ai-health \
