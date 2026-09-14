@@ -3,6 +3,7 @@ export const TENANT_ADMIN_CAPABILITIES=Object.freeze({
   customers:'tenant.customers.insights',reviews:'tenant.reviews.manage',sales:'tenant.sales.read',inventory:'tenant.inventory.manage',
   marketing:'tenant.marketing.manage',supplyNetwork:'tenant.supply-network.manage',memberRoster:'tenant.member-roster.manage',operations:'tenant.operations.manage',finance:'tenant.finance.read',connections:'tenant.connections.manage',access:'tenant.access.manage',
   people:'tenant.people.read',worship:'tenant.worship.manage',care:'tenant.care.manage',calendar:'tenant.calendar.manage',ministry:'tenant.ministry.manage',reports:'tenant.reports.manage',ai:'tenant.ai.assist',
+  developerInspect:'tenant.developer.inspect',preview:'tenant.preview.read',logs:'tenant.logs.read',tests:'tenant.test.run',pr:'tenant.pr.create',
 });
 const FULL=Object.freeze(['*']);
 export const TENANT_ADMIN_ROLE_CAPABILITIES=Object.freeze({
@@ -16,8 +17,9 @@ export const TENANT_ADMIN_ROLE_CAPABILITIES=Object.freeze({
   accounting_manager:Object.freeze([TENANT_ADMIN_CAPABILITIES.dashboard,TENANT_ADMIN_CAPABILITIES.sales,TENANT_ADMIN_CAPABILITIES.finance]),accountant:Object.freeze([TENANT_ADMIN_CAPABILITIES.dashboard,TENANT_ADMIN_CAPABILITIES.sales,TENANT_ADMIN_CAPABILITIES.finance]),
   store_staff:Object.freeze([TENANT_ADMIN_CAPABILITIES.dashboard,TENANT_ADMIN_CAPABILITIES.catalog,TENANT_ADMIN_CAPABILITIES.orders,TENANT_ADMIN_CAPABILITIES.customers,TENANT_ADMIN_CAPABILITIES.reviews,TENANT_ADMIN_CAPABILITIES.sales,TENANT_ADMIN_CAPABILITIES.inventory,TENANT_ADMIN_CAPABILITIES.operations]),staff:Object.freeze([TENANT_ADMIN_CAPABILITIES.dashboard,TENANT_ADMIN_CAPABILITIES.operations,TENANT_ADMIN_CAPABILITIES.people,TENANT_ADMIN_CAPABILITIES.worship,TENANT_ADMIN_CAPABILITIES.calendar,TENANT_ADMIN_CAPABILITIES.ministry,TENANT_ADMIN_CAPABILITIES.reports]),
   client_viewer:Object.freeze([TENANT_ADMIN_CAPABILITIES.dashboard,TENANT_ADMIN_CAPABILITIES.sales]),viewer:Object.freeze([TENANT_ADMIN_CAPABILITIES.dashboard,TENANT_ADMIN_CAPABILITIES.sales,TENANT_ADMIN_CAPABILITIES.worship,TENANT_ADMIN_CAPABILITIES.calendar]),member:Object.freeze([]),
+  external_developer:Object.freeze([TENANT_ADMIN_CAPABILITIES.dashboard,TENANT_ADMIN_CAPABILITIES.developerInspect,TENANT_ADMIN_CAPABILITIES.preview,TENANT_ADMIN_CAPABILITIES.logs,TENANT_ADMIN_CAPABILITIES.tests,TENANT_ADMIN_CAPABILITIES.pr]),
 });
 export function normalizeTenantAdminRole(role){return String(role||'').trim().toLowerCase();}
 export function tenantAdminCapabilitiesForRole(role){const key=normalizeTenantAdminRole(role);return TENANT_ADMIN_ROLE_CAPABILITIES[key]||Object.freeze([]);}
 export function tenantAdminCan(role,capability){const allowed=tenantAdminCapabilitiesForRole(role);return allowed.includes('*')||allowed.includes(String(capability||''));}
-export function tenantAdminPolicySnapshot(){return{version:1,authorityScope:'tenant',noRoleSpecificAdminPages:true,platformAdminRequiresExplicitTenantContext:true,capabilities:TENANT_ADMIN_CAPABILITIES,roleCapabilities:TENANT_ADMIN_ROLE_CAPABILITIES};}
+export function tenantAdminPolicySnapshot(){return{version:2,authorityScope:'tenant',noRoleSpecificAdminPages:true,platformAdminRequiresExplicitTenantContext:true,externalDeveloperCannotManageAccess:true,externalDeveloperCannotDeployProduction:true,capabilities:TENANT_ADMIN_CAPABILITIES,roleCapabilities:TENANT_ADMIN_ROLE_CAPABILITIES};}
