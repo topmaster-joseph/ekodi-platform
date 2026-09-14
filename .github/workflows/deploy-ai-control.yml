@@ -226,10 +226,16 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          npx --yes wrangler@${WRANGLER_VERSION} --version >/dev/null
           npx --yes wrangler@${WRANGLER_VERSION} dev --local --config wrangler.ai.staging.release.toml --port 8787 > /tmp/ai-staging-local.log 2>&1 &
           worker_pid=$!
           trap 'kill "$worker_pid" 2>/dev/null || true' EXIT
-          for attempt in $(seq 1 24); do
+          for attempt in $(seq 1 60); do
+            if ! kill -0 "$worker_pid" 2>/dev/null; then
+              cat /tmp/ai-staging-local.log || true
+              echo "AI staging Worker exited before readiness." >&2
+              exit 1
+            fi
             root_code=$(curl -sS -D /tmp/ai-local-root-headers.txt -o /tmp/ai-local-root-body.txt -w '%{http_code}' --connect-timeout 2 --max-time 5 http://127.0.0.1:8787/ || true)
             config_code=$(curl -sS -o /tmp/ai-local-config.json -w '%{http_code}' --connect-timeout 2 --max-time 5 http://127.0.0.1:8787/config.js || true)
             exchange_code=$(curl -sS -o /tmp/ai-local-exchange.json -w '%{http_code}' --connect-timeout 2 --max-time 5 -X POST http://127.0.0.1:8787/api/auth/exchange || true)

@@ -13,7 +13,7 @@ await copyFile(`${root}admin-perf-diagnostics.js`, `${dist}admin-perf-diagnostic
 
 // The left navigation is a shared ES-module surface. Publish its registry, renderer and
 // locale/access runtime together so every admin page can import the same menu contract.
-const sharedAdminMenuModules = ['admin-menu-registry.js', 'admin-sidebar.js', 'admin-menu-runtime.js', 'ekodibiz-admin-registry.js', 'platform-maturity-admin.js'];
+const sharedAdminMenuModules = ['admin-menu-registry.js', 'admin-service-handoffs.js', 'admin-service-catalog.js', 'admin-sidebar.js', 'admin-menu-runtime.js', 'ekodibiz-admin-registry.js', 'platform-maturity-admin.js'];
 await Promise.all(sharedAdminMenuModules.map(asset => copyFile(`${root}${asset}`, `${dist}${asset}`)));
 
 // Keep the first-path demand router below its hard byte budget. Source remains readable;
@@ -130,7 +130,7 @@ await writeFile(menuRuntimePath, menuCompactSource.slice(menuCompactHeader[0].le
 // Fingerprint the complete admin runtime. HTML is no-store, while every referenced versioned
 // asset can then be cached immutably without ever mixing two releases in one browser session.
 const versionInputs = [
-  'admin-central-handoff.js','admin-authenticated-shell.js','admin-demand-loader.js','admin-menu-layout.js','admin-site-chrome.js',
+  'admin-central-handoff.js','admin-authenticated-shell.js','admin-demand-loader.js','admin-menu-layout.js',
   ...sharedAdminMenuModules,
   'admin-design-engine.js','admin-design-engine.css',
   'admin-compact.js','admin-compact.css','admin-shell.css','finance-monitor.js',
@@ -189,7 +189,8 @@ await writeFile(shellPath, compactShell);
 // with a five-minute-old menu registry after a deployment.
 const moduleImportVersions = new Map([
   ['admin-menu-layout.js', ['admin-menu-registry.js', 'admin-sidebar.js', 'admin-menu-runtime.js', 'admin-site-chrome.js']],
-  ['admin-menu-registry.js', ['admin-design-engine.js', 'platform-maturity-admin.js']],
+  ['admin-menu-registry.js', ['admin-service-handoffs.js', 'admin-design-engine.js', 'platform-maturity-admin.js']],
+  ['admin-service-handoffs.js', ['admin-service-catalog.js']],
   ['admin-sidebar.js', ['admin-menu-registry.js']],
   ['admin-menu-runtime.js', ['admin-menu-registry.js', 'ekodibiz-admin-registry.js']],
 ]);
