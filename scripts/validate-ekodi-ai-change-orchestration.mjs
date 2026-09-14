@@ -28,6 +28,29 @@ function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+const constitutionalControlValidators = [
+  'scripts/validate-constitution.mjs',
+  'scripts/validate-platform-boundaries.mjs',
+  'scripts/validate-ekodi-os-architecture.mjs',
+  'scripts/validate-security-baseline.mjs',
+  'scripts/validate-deployment-guardrails.mjs',
+  'scripts/validate-workflow-orchestration-gates.mjs',
+];
+function runConstitutionalControls() {
+  for (const script of constitutionalControlValidators) {
+    const absolute = path.join(root, script);
+    if (!fs.existsSync(absolute)) fail(`constitutional control validator is missing: ${script}`);
+    const result = spawnSync(process.execPath, [script], {
+      cwd: root,
+      encoding: 'utf8',
+      env: process.env,
+    });
+    if (result.stdout) process.stdout.write(result.stdout);
+    if (result.stderr) process.stderr.write(result.stderr);
+    if (result.status !== 0) fail(`constitutional control failed: ${script}`);
+  }
+}
+
 if (!fs.existsSync(policyPath)) fail('orchestration policy is missing.');
 const policy = readJson(policyPath);
 if (policy.policyId !== 'AI-ORCHESTRATE-001' || policy.status !== 'enforced') fail('policy must remain enforced.');
@@ -230,6 +253,8 @@ if (changedFiles.some(file => governanceFiles.has(file)) && eventName && !(polic
   fail(`orchestration governance may only be changed from an owner-authorized intent; actor=${actor}`);
 }
 
+if (ciMode) runConstitutionalControls();
+
 function classify(files) {
   const joined = files.join('\n').toLowerCase();
   const classes = [];
@@ -261,6 +286,7 @@ const attestation = {
   externalAiRole: policy.execution.externalAiRole,
   humanGateRecommended,
   directMutationAllowed: false,
+  constitutionalControls: ciMode ? constitutionalControlValidators : [],
   releaseMode,
   timestamp: new Date().toISOString(),
 };
@@ -282,6 +308,7 @@ if (process.env.GITHUB_STEP_SUMMARY) {
     `- Provider selection: ${policy.execution.providerSelection}`,
     `- External AI role: ${policy.execution.externalAiRole}`,
     `- Direct mutation: forbidden`,
+    ciMode ? `- Constitutional controls: ${constitutionalControlValidators.length} passed` : '- Constitutional controls: static policy mode',
     humanGateRecommended ? '- Human Gate: recommended for topology-impacting intent' : '- Human Gate: not required by this classifier',
     '',
   ].join('\n'));
