@@ -4,7 +4,7 @@ import { d1SchemaReady } from './d1-schema-readiness.js';
 import { mallGrowthDashboardSnapshot } from './mall-growth-dashboard.js';
 const SUPABASE_URL = 'https://renzehysxirjilvdxacv.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
-const WRITE_ROLES = new Set(['store_owner','hq_manager','client_admin','client_editor','manager','owner']);
+const WRITE_ROLES = new Set(['tenant_admin','admin','workspace_admin','store_owner','hq_manager','client_admin','client_editor','marketing_manager','marketer','manager','owner']);
 const SUBJECT_TYPES = new Set(['person','tenant','store']);
 const META_PROVIDER = 'meta';
 const THREADS_PROVIDER = 'threads';
@@ -135,7 +135,7 @@ function randomState() {
 function publicBase(env) { return String(env.PUBLIC_BASE_URL || 'https://marketing-connect-api.ekodi.kr').replace(/\/$/,''); }
 function callbackUrl(env, provider) { return `${publicBase(env)}/oauth/${provider}/callback`; }
 function safeReturnUrl(value) {
-  const fallback = 'https://admin.ekodi.kr/';
+  const fallback = 'https://ekodi.kr/admin/';
   const raw = clean(value,2048);
   if (!raw) return fallback;
   try {
@@ -150,22 +150,55 @@ function redirectResult(returnUrl, params) {
   Object.entries(params).forEach(([key,value]) => url.searchParams.set(key,String(value)));
   return Response.redirect(url.href,302);
 }
-async function schemaReady(env) { return d1SchemaReady(env?.DB,['marketing_oauth_states','marketing_oauth_connections','marketing_growth_campaigns','marketing_channel_settings']); }
+async function schemaReady(env) { return d1SchemaReady(env?.DB,['marketing_oauth_states','marketing_oauth_connections','marketing_growth_campaigns','marketing_channel_settings','external_account_connections','external_account_audit']); }
 function metaConfigured(env) { return Boolean(env.META_APP_ID && env.META_APP_SECRET); }
 function threadsConfigured(env) { return Boolean((env.THREADS_APP_ID || env.META_APP_ID) && (env.THREADS_APP_SECRET || env.META_APP_SECRET)); }
 function youtubeConfigured(env) { return Boolean(env.GOOGLE_CLIENT_ID && providerSecret(env,YOUTUBE_PROVIDER) && env.GOOGLE_OAUTH_BROKER); }
-function youtubeTargetAccount(subject,requested=''){const key=String(subject?.key||'').trim().toLowerCase();if(subject?.type==='tenant'&&key==='ekodimall')return 'topmaster.joseph@gmail.com';const hint=clean(requested,180).trim().toLowerCase();return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(hint)?hint:''}
+function youtubeTargetAccount(_subject,requested=''){const hint=clean(requested,180).trim().toLowerCase();return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(hint)?hint:''}
+function registryProviderMatches(row,provider){
+  if(!row)return false;
+  const p=String(provider||'').toLowerCase(),rp=String(row.provider||'').toLowerCase(),service=String(row.service_key||'').toLowerCase();
+  if(p==='youtube')return rp==='google'&&service==='youtube';
+  if(p==='threads')return rp==='meta'&&service==='threads';
+  if(p==='meta')return rp==='meta'&&['facebook','instagram','ads','meta','general'].includes(service);
+  return false;
+}
+async function registryWorkspaceSlug(env,subject){if(subject?.type==='tenant')return clean(subject.key,80).toLowerCase();if(subject?.type==='store'){const row=await env.DB.prepare("SELECT tenant_slug FROM marketing_store_workspaces WHERE store_id=? AND status='active'").bind(clean(subject.key,100)).first();return clean(row?.tenant_slug,80).toLowerCase()}return''}
+async function oauthRegistryRow(env,subject,provider,registryConnectionId){
+  const id=clean(registryConnectionId,120);if(!id)return null;
+  const workspaceSlug=await registryWorkspaceSlug(env,subject);if(!workspaceSlug)throw new Error('CHANNEL_ACCOUNT_REGISTRY_SUBJECT_REQUIRED');
+  const row=await env.DB.prepare('SELECT id,workspace_slug,provider,service_key,provider_account_id,login_hint,display_name,status,metadata_json FROM external_account_connections WHERE id=?').bind(id).first();
+  if(!row||row.workspace_slug!==workspaceSlug)throw new Error('CHANNEL_ACCOUNT_REGISTRY_NOT_FOUND');
+  if(!registryProviderMatches(row,provider))throw new Error('CHANNEL_ACCOUNT_PROVIDER_MISMATCH');
+  return row;
+}
+async function markRegistryActive(env,state,{connectionIds=[],actualIdentity=''}={}){
+  const id=clean(state?.registry_connection_id,120);if(!id)return;
+  const workspaceSlug=await registryWorkspaceSlug(env,{type:state.subject_type,key:state.subject_key});if(!workspaceSlug)return;
+  const row=await env.DB.prepare('SELECT metadata_json FROM external_account_connections WHERE id=? AND workspace_slug=?').bind(id,workspaceSlug).first();if(!row)return;
+  const metadata={...safeParse(row.metadata_json,{}),oauth:{provider:state.provider,connectionIds:connectionIds.map(Number).filter(Number.isFinite),actualIdentity:clean(actualIdentity,180)}};
+  const stamp=nowIso(),credentialRef=`marketing_oauth_vault:${state.provider}:${id}`;
+  await env.DB.prepare("UPDATE external_account_connections SET status='active',credential_ref=?,metadata_json=?,last_verified_at=?,last_error='',updated_at=? WHERE id=? AND workspace_slug=?").bind(credentialRef,safeJson(metadata),stamp,stamp,id,workspaceSlug).run();
+  await env.DB.prepare('INSERT INTO external_account_audit(id,connection_id,workspace_slug,actor_user_id,actor_email,action,detail_json,created_at) VALUES(?,?,?,?,?,?,?,?)').bind(`xaa_${crypto.randomUUID().replaceAll('-','')}`,id,workspaceSlug,state.actor_id,state.actor_email,'oauth.connected',safeJson({provider:state.provider,connectionIds}),stamp).run();
+}
+async function markRegistryFailure(env,state,error){
+  const id=clean(state?.registry_connection_id,120);if(!id)return;
+  const workspaceSlug=await registryWorkspaceSlug(env,{type:state.subject_type,key:state.subject_key});if(!workspaceSlug)return;
+  const stamp=nowIso(),message=clean(error?.message||error,500);
+  await env.DB.prepare("UPDATE external_account_connections SET status=CASE WHEN status='active' THEN 'reconnect_required' ELSE 'error' END,credential_ref='',last_error=?,updated_at=? WHERE id=? AND workspace_slug=?").bind(message,stamp,id,workspaceSlug).run();
+  await env.DB.prepare('INSERT INTO external_account_audit(id,connection_id,workspace_slug,actor_user_id,actor_email,action,detail_json,created_at) VALUES(?,?,?,?,?,?,?,?)').bind(`xaa_${crypto.randomUUID().replaceAll('-','')}`,id,workspaceSlug,state.actor_id,state.actor_email,'oauth.failed',safeJson({provider:state.provider,error:message}),stamp).run();
+}
 
-async function createOAuthState(env, provider, mode, identity, subject, returnUrl) {
+async function createOAuthState(env, provider, mode, identity, subject, returnUrl, registryConnectionId='') {
   const state = randomState();
   const createdAt = nowIso();
   const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
-  await env.DB.prepare(`INSERT INTO marketing_oauth_states(state,provider,mode,subject_type,subject_key,actor_id,actor_email,return_url,created_at,expires_at)
-    VALUES(?,?,?,?,?,?,?,?,?,?)`).bind(state,provider,mode,subject.type,subject.key,identity.id,identity.email,safeReturnUrl(returnUrl),createdAt,expiresAt).run();
+  await env.DB.prepare(`INSERT INTO marketing_oauth_states(state,provider,mode,subject_type,subject_key,actor_id,actor_email,return_url,registry_connection_id,created_at,expires_at)
+    VALUES(?,?,?,?,?,?,?,?,?,?,?)`).bind(state,provider,mode,subject.type,subject.key,identity.id,identity.email,safeReturnUrl(returnUrl),clean(registryConnectionId,120),createdAt,expiresAt).run();
   return state;
 }
 async function consumeOAuthState(env, state, provider) {
-  const row = await env.DB.prepare(`SELECT state,provider,mode,subject_type,subject_key,actor_id,actor_email,return_url,expires_at,used_at
+  const row = await env.DB.prepare(`SELECT state,provider,mode,subject_type,subject_key,actor_id,actor_email,return_url,registry_connection_id,expires_at,used_at
     FROM marketing_oauth_states WHERE state=? AND provider=?`).bind(clean(state,180),provider).first();
   if (!row || row.used_at || Date.parse(row.expires_at) <= Date.now()) return null;
   await env.DB.prepare('UPDATE marketing_oauth_states SET used_at=? WHERE state=? AND used_at IS NULL').bind(nowIso(),row.state).run();
@@ -175,7 +208,8 @@ async function startMeta(request, env, identity, subject) {
   if (!metaConfigured(env)) return json(request,env,{error:'META_APP_NOT_CONFIGURED',setup:'META_APP_ID + META_APP_SECRET'},503);
   const body = await readJson(request) || {};
   const mode = body.mode === 'paid' ? 'paid' : 'publish';
-  const state = await createOAuthState(env,META_PROVIDER,mode,identity,subject,body.returnUrl);
+  const registry=await oauthRegistryRow(env,subject,META_PROVIDER,body.registryConnectionId);
+  const state = await createOAuthState(env,META_PROVIDER,mode,identity,subject,body.returnUrl,registry?.id||'');
   const scopes = ['pages_show_list','pages_read_engagement','pages_manage_posts','instagram_basic','instagram_content_publish'];
   if (mode === 'paid') scopes.push('ads_read','ads_management','business_management');
   const version = clean(env.META_GRAPH_VERSION || 'v25.0',16);
@@ -190,7 +224,8 @@ async function startMeta(request, env, identity, subject) {
 async function startThreads(request, env, identity, subject) {
   if (!threadsConfigured(env)) return json(request,env,{error:'THREADS_APP_NOT_CONFIGURED',setup:'THREADS_APP_ID + THREADS_APP_SECRET'},503);
   const body = await readJson(request) || {};
-  const state = await createOAuthState(env,THREADS_PROVIDER,'publish',identity,subject,body.returnUrl);
+  const registry=await oauthRegistryRow(env,subject,THREADS_PROVIDER,body.registryConnectionId);
+  const state = await createOAuthState(env,THREADS_PROVIDER,'publish',identity,subject,body.returnUrl,registry?.id||'');
   const appId = env.THREADS_APP_ID || env.META_APP_ID;
   const url = new URL('https://threads.net/oauth/authorize');
   url.searchParams.set('client_id',String(appId));
@@ -203,9 +238,11 @@ async function startThreads(request, env, identity, subject) {
 async function startYouTube(request, env, identity, subject) {
   if (!youtubeConfigured(env)) return json(request,env,{error:'GOOGLE_APP_NOT_CONFIGURED',setup:'Google OAuth broker + encrypted Marketing vault'},503);
   const body = await readJson(request) || {};
-  const state = await createOAuthState(env,YOUTUBE_PROVIDER,'publish',identity,subject,body.returnUrl);
-  const requestedHint = clean(body.accountHint,180).trim().toLowerCase();
+  const registry=await oauthRegistryRow(env,subject,YOUTUBE_PROVIDER,body.registryConnectionId);
+  const requestedHint = clean(body.accountHint||registry?.login_hint||registry?.provider_account_id,180).trim().toLowerCase();
   const accountHint = youtubeTargetAccount(subject,requestedHint);
+  if(registry&&!accountHint) return json(request,env,{error:'YOUTUBE_ACCOUNT_EMAIL_REQUIRED'},400);
+  const state = await createOAuthState(env,YOUTUBE_PROVIDER,'publish',identity,subject,body.returnUrl,registry?.id||'');
   const broker=await env.GOOGLE_OAUTH_BROKER.startYouTubeOAuth({state,accountHint});
   return json(request,env,{authorizationUrl:String(broker.authorizationUrl||''),provider:'youtube',mode:'publish',targetAccount:accountHint});
 }
@@ -237,7 +274,7 @@ async function upsertConnection(env, subject, {provider,resourceType,externalId,
 async function upsertPublishChannel(env, subject, {provider,channelType,displayName,externalId,connectionId}) {
   const now=nowIso(),mallSubject=subject.type==='tenant'&&subject.key==='ekodimall';
   const current=await env.DB.prepare('SELECT status,config_json FROM marketing_publish_channels WHERE subject_type=? AND subject_key=? AND provider=? AND channel_type=? AND external_account_id=?').bind(subject.type,subject.key,provider,channelType,externalId).first();
-  const defaults=mallSubject?{autoPublishEnabled:['facebook','instagram','threads'].includes(provider),maxPostsPerDay:1,minHoursBetweenPosts:6,publishWindowStart:'08:00',publishWindowEnd:'22:00',timezone:'Asia/Seoul',maxAttempts:5}:{};
+  const defaults=mallSubject?{autoPublishEnabled:['facebook','instagram','threads'].includes(provider),maxPostsPerDay:1,minHoursBetweenPosts:6,publishWindowStart:'08:00',publishWindowEnd:'22:00',timezone:'Asia/Seoul',maxAttempts:5}:{autoPublishEnabled:false,maxPostsPerDay:0,minHoursBetweenPosts:0,publishWindowStart:'08:00',publishWindowEnd:'22:00',timezone:'Asia/Seoul',maxAttempts:5};
   const config={...defaults,...safeParse(current?.config_json,{}),credentialMode:'oauth-vault',oauthConnectionId:connectionId};
   const auto=config.autoPublishEnabled!==false;
   const status=auto?'active':'paused';
@@ -251,7 +288,7 @@ async function metaCallback(request, env) {
   const url = new URL(request.url);
   const state = await consumeOAuthState(env,url.searchParams.get('state') || '',META_PROVIDER);
   if (!state) return new Response('Invalid or expired OAuth state',{status:400});
-  if (url.searchParams.get('error')) return redirectResult(state.return_url,{ekodi_connect:'error',provider:'meta',reason:clean(url.searchParams.get('error_description') || url.searchParams.get('error'),160)});
+  if (url.searchParams.get('error')) { const error=new Error(clean(url.searchParams.get('error_description') || url.searchParams.get('error'),160)); await markRegistryFailure(env,state,error); return redirectResult(state.return_url,{ekodi_connect:'error',provider:'meta',reason:error.message}); }
   try {
     const code = clean(url.searchParams.get('code'),4096);
     if (!code) throw new Error('AUTHORIZATION_CODE_MISSING');
@@ -278,19 +315,22 @@ async function metaCallback(request, env) {
     pageUrl.searchParams.set('access_token',userToken);
     const pagesData = await fetchJson(pageUrl.href);
     let count = 0;
+    const connectionIds=[];
     for (const page of (pagesData.data || [])) {
       if (!page?.id || !page?.access_token) continue;
-      const fb = await upsertConnection(env,subject,{provider:'facebook',resourceType:'page',externalId:String(page.id),displayName:clean(page.name || 'Facebook Page',120),token:String(page.access_token),expiresAt,scopes:['pages_manage_posts','pages_read_engagement'],metadata:{source:'meta_oauth'}});
+      const fb = await upsertConnection(env,subject,{provider:'facebook',resourceType:'page',externalId:String(page.id),displayName:clean(page.name || 'Facebook Page',120),token:String(page.access_token),expiresAt,scopes:['pages_manage_posts','pages_read_engagement'],metadata:{source:'meta_oauth',registryConnectionId:state.registry_connection_id||''}});
       if (fb?.id) {
         await upsertPublishChannel(env,subject,{provider:'facebook',channelType:'page',displayName:clean(page.name || 'Facebook Page',120),externalId:String(page.id),connectionId:Number(fb.id)});
+        connectionIds.push(Number(fb.id));
         count += 1;
       }
       const ig = page.instagram_business_account;
       if (ig?.id) {
         const display = clean(ig.username ? `@${ig.username}` : ig.name || 'Instagram',120);
-        const igRow = await upsertConnection(env,subject,{provider:'instagram',resourceType:'business',externalId:String(ig.id),displayName:display,token:String(page.access_token),expiresAt,scopes:['instagram_basic','instagram_content_publish'],metadata:{pageId:String(page.id),source:'meta_oauth'}});
+        const igRow = await upsertConnection(env,subject,{provider:'instagram',resourceType:'business',externalId:String(ig.id),displayName:display,token:String(page.access_token),expiresAt,scopes:['instagram_basic','instagram_content_publish'],metadata:{pageId:String(page.id),source:'meta_oauth',registryConnectionId:state.registry_connection_id||''}});
         if (igRow?.id) {
           await upsertPublishChannel(env,subject,{provider:'instagram',channelType:'business',displayName:display,externalId:String(ig.id),connectionId:Number(igRow.id)});
+          connectionIds.push(Number(igRow.id));
           count += 1;
         }
       }
@@ -303,12 +343,15 @@ async function metaCallback(request, env) {
       const ads = await fetchJson(adsUrl.href).catch(() => ({data:[]}));
       for (const account of (ads.data || [])) {
         if (!account?.id) continue;
-        const row = await upsertConnection(env,subject,{provider:'facebook_ads',resourceType:'ad_account',externalId:String(account.id),displayName:clean(account.name || account.id,120),token:userToken,expiresAt,scopes:['ads_read','ads_management'],metadata:{accountId:String(account.account_id || ''),accountStatus:account.account_status,source:'meta_oauth'}});
-        if (row?.id) count += 1;
+        const row = await upsertConnection(env,subject,{provider:'facebook_ads',resourceType:'ad_account',externalId:String(account.id),displayName:clean(account.name || account.id,120),token:userToken,expiresAt,scopes:['ads_read','ads_management'],metadata:{accountId:String(account.account_id || ''),accountStatus:account.account_status,source:'meta_oauth',registryConnectionId:state.registry_connection_id||''}});
+        if (row?.id) { connectionIds.push(Number(row.id)); count += 1; }
       }
     }
+    if (!count) throw new Error('META_PUBLISH_RESOURCE_NOT_FOUND');
+    await markRegistryActive(env,state,{connectionIds});
     return redirectResult(state.return_url,{ekodi_connect:'success',provider:'meta',connections:count});
   } catch (error) {
+    await markRegistryFailure(env,state,error);
     return redirectResult(state.return_url,{ekodi_connect:'error',provider:'meta',reason:clean(error.message,160)});
   }
 }
@@ -316,7 +359,7 @@ async function threadsCallback(request, env) {
   const url = new URL(request.url);
   const state = await consumeOAuthState(env,url.searchParams.get('state') || '',THREADS_PROVIDER);
   if (!state) return new Response('Invalid or expired OAuth state',{status:400});
-  if (url.searchParams.get('error')) return redirectResult(state.return_url,{ekodi_connect:'error',provider:'threads',reason:clean(url.searchParams.get('error_description') || url.searchParams.get('error'),160)});
+  if (url.searchParams.get('error')) { const error=new Error(clean(url.searchParams.get('error_description') || url.searchParams.get('error'),160)); await markRegistryFailure(env,state,error); return redirectResult(state.return_url,{ekodi_connect:'error',provider:'threads',reason:error.message}); }
   try {
     const code = clean(url.searchParams.get('code'),4096);
     if (!code) throw new Error('AUTHORIZATION_CODE_MISSING');
@@ -339,10 +382,13 @@ async function threadsCallback(request, env) {
     const expiresAt = Number(long.expires_in || short.expires_in || 0) > 0 ? new Date(Date.now() + Number(long.expires_in || short.expires_in) * 1000).toISOString() : '';
     const subject = {type:state.subject_type,key:state.subject_key};
     const display = clean(me.username ? `@${me.username}` : me.name || 'Threads',120);
-    const connection = await upsertConnection(env,subject,{provider:'threads',resourceType:'profile',externalId:String(me.id),displayName:display,token,expiresAt,scopes:['threads_basic','threads_content_publish','threads_manage_insights'],metadata:{source:'threads_oauth'}});
+    const connection = await upsertConnection(env,subject,{provider:'threads',resourceType:'profile',externalId:String(me.id),displayName:display,token,expiresAt,scopes:['threads_basic','threads_content_publish','threads_manage_insights'],metadata:{source:'threads_oauth',registryConnectionId:state.registry_connection_id||''}});
     if (connection?.id) await upsertPublishChannel(env,subject,{provider:'threads',channelType:'profile',displayName:display,externalId:String(me.id),connectionId:Number(connection.id)});
-    return redirectResult(state.return_url,{ekodi_connect:'success',provider:'threads',connections:connection?.id ? 1 : 0});
+    if (!connection?.id) throw new Error('THREADS_CONNECTION_NOT_CREATED');
+    await markRegistryActive(env,state,{connectionIds:[Number(connection.id)],actualIdentity:display});
+    return redirectResult(state.return_url,{ekodi_connect:'success',provider:'threads',connections:1});
   } catch (error) {
+    await markRegistryFailure(env,state,error);
     return redirectResult(state.return_url,{ekodi_connect:'error',provider:'threads',reason:clean(error.message,160)});
   }
 }
@@ -351,7 +397,7 @@ async function youtubeCallback(request, env) {
   const url = new URL(request.url);
   const state = await consumeOAuthState(env,url.searchParams.get('state') || '',YOUTUBE_PROVIDER);
   if (!state) return new Response('Invalid or expired OAuth state',{status:400});
-  if (url.searchParams.get('error')) return redirectResult(state.return_url,{ekodi_connect:'error',provider:'youtube',reason:clean(url.searchParams.get('error_description') || url.searchParams.get('error'),160)});
+  if (url.searchParams.get('error')) { const error=new Error(clean(url.searchParams.get('error_description') || url.searchParams.get('error'),160)); await markRegistryFailure(env,state,error); return redirectResult(state.return_url,{ekodi_connect:'error',provider:'youtube',reason:error.message}); }
   try {
     const ticket = clean(url.searchParams.get('ticket'),512);
     if (!ticket) throw new Error('GOOGLE_OAUTH_TICKET_REQUIRED');
@@ -369,14 +415,16 @@ async function youtubeCallback(request, env) {
     if (!selectedChannels.length) throw new Error('YOUTUBE_CHANNEL_NOT_FOUND');
     const expiresAt = Number(tokenData.expires_in || 0) > 0 ? new Date(Date.now() + Number(tokenData.expires_in) * 1000).toISOString() : '';
     let count = 0;
+    const connectionIds=[];
     for (const channel of selectedChannels) {
       const display = clean(channel.snippet?.title || 'YouTube',120);
       const token = safeJson({accessToken,refreshToken,expiresAt});
-      const row = await upsertConnection(env,subject,{provider:'youtube',resourceType:'channel',externalId:String(channel.id),displayName:display,token,expiresAt,scopes:['youtube.upload','youtube.readonly'],metadata:{source:'google_oauth',authorizedEmail,targetAccount}});
-      if (row?.id) { await upsertPublishChannel(env,subject,{provider:'youtube',channelType:'channel',displayName:display,externalId:String(channel.id),connectionId:Number(row.id)}); count += 1; }
+      const row = await upsertConnection(env,subject,{provider:'youtube',resourceType:'channel',externalId:String(channel.id),displayName:display,token,expiresAt,scopes:['youtube.upload','youtube.readonly'],metadata:{source:'google_oauth',authorizedEmail,targetAccount,registryConnectionId:state.registry_connection_id||''}});
+      if (row?.id) { await upsertPublishChannel(env,subject,{provider:'youtube',channelType:'channel',displayName:display,externalId:String(channel.id),connectionId:Number(row.id)}); connectionIds.push(Number(row.id)); count += 1; }
     }
+    await markRegistryActive(env,state,{connectionIds,actualIdentity:authorizedEmail});
     return redirectResult(state.return_url,{ekodi_connect:'success',provider:'youtube',connections:count});
-  } catch (error) { return redirectResult(state.return_url,{ekodi_connect:'error',provider:'youtube',reason:clean(error.message,160)}); }
+  } catch (error) { await markRegistryFailure(env,state,error); return redirectResult(state.return_url,{ekodi_connect:'error',provider:'youtube',reason:clean(error.message,160)}); }
 }
 
 async function listConnections(request, env, subject) {

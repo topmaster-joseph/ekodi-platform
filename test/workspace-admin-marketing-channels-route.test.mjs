@@ -3,34 +3,26 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { isWorkspaceAdminPathShape } from '../workspace-route-policy.js';
 
-test('Mall channel settings canonical deep link is handled by workspace admin', async () => {
+test('Mall and generic service channel routes use the shared workspace admin', async () => {
   assert.equal(isWorkspaceAdminPathShape('/admin/ekodimall/'), true);
   assert.equal(isWorkspaceAdminPathShape('/admin/ekodimall/channel-settings/'), true);
-  assert.equal(isWorkspaceAdminPathShape('/ekodibiz/ekodimall/admin/marketing/channels/'), true);
   assert.equal(isWorkspaceAdminPathShape('/ekodibiz/ekodimall/admin/channels/'), true);
-  assert.equal(isWorkspaceAdminPathShape('/ekodibiz/mall/admin/channels/'), true);
-  assert.equal(isWorkspaceAdminPathShape('/ekodibiz/ekodimall/admin/sourcing/'), true);
-  assert.equal(isWorkspaceAdminPathShape('/ekodibiz/ekodimall/admin/growth/'), true);
-  assert.equal(isWorkspaceAdminPathShape('/ekodibiz/ekodimall/admin/marketing/unknown/'), false);
+  assert.equal(isWorkspaceAdminPathShape('/ekodibiz/trade/admin/publishing/'), true);
+  assert.equal(isWorkspaceAdminPathShape('/cgma/admin/publishing/'), true);
   const source=await readFile(new URL('../workspace-admin-page.js', import.meta.url),'utf8');
   assert.match(source, /canonicalMall=clean\.match/);
-  assert.match(source, /rawSection==='channel-settings'\?'channels':rawSection/);
-  assert.match(source, /adminBase=service\?'\/admin\/ekodimall'/);
-  assert.match(source, /sectionHref=key=>key==='overview'\?adminBase/);
+  assert.match(source, /adminBase=service==='mall'\?'\/admin\/ekodimall'/);
+  assert.match(source, /service\?`\$\{base\}\/\$\{service\}\/admin`/);
+  assert.match(source, /service channel job isolation|visibleChannelIds/);
 });
 
-test('unauthenticated mall channel setup selects provider before EKODI or provider login', async () => {
+test('channel admin is login-first and uses pre-registered account rows', async () => {
   const source=await readFile(new URL('../workspace-admin-page.js', import.meta.url),'utf8');
-  assert.match(source, /CHANNEL_INTENT_KEY='ekodi-workspace-channel-intent'/);
-  assert.match(source, /function channelPreAuth\(\)/);
-  assert.match(source, /연결할 게시 채널을 먼저 선택하세요/);
-  assert.match(source, /data-channel-preauth/);
-  assert.match(source, /if\(service==='mall'&&section==='channels'\)return channelPreAuth\(\)/);
-  assert.match(source, /pendingChannelIntent\(\)/);
-  assert.match(source, /return startChannelConnect\(pendingProvider\)/);
-  assert.match(source, /'ekodimall:mall:youtube':'topmaster\.joseph@gmail\.com'/);
-  assert.match(source, /const accountHint=channelTargetAccount\(provider\)/);
-  assert.match(source, /YouTube 연결 대상 계정/);
-  assert.match(source, /Google로 YouTube 재인증/);
-  assert.match(source, /metadata\?\.authorizedEmail/);
+  assert.match(source, /channelAccountForm/);
+  assert.match(source, /data-account-auth/);
+  assert.match(source, /registryConnectionId/);
+  assert.match(source, /externalAccountApi\('\/accounts'/);
+  assert.match(source, /운영공간 로그인 후 등록된 게시계정별 인증 버튼/);
+  assert.doesNotMatch(source, /ekodimall:mall:youtube/);
+  assert.doesNotMatch(source, /topmaster\.joseph@gmail\.com/);
 });
