@@ -1,3 +1,4 @@
+// EKODI release sync 2026-09-15: promote current validated channel runtime to production.
 import { evaluateMissionAction } from './ai-governance-runtime.js';
 import { CHANNEL_AUTOMATION_TEMPLATES, channelAutomationEntitlement } from './channel-automation-policy.js';
 import { channelCredentialReady, channelStateHash, decryptChannelCredential, encryptChannelCredential, randomChannelId, randomChannelToken } from './channel-credential-vault.js';

@@ -1,3 +1,4 @@
+// EKODI release sync 2026-09-15: promote current validated channel runtime to production.
 import { WorkerEntrypoint } from 'cloudflare:workers';
 import { runMallAutonomousProfitLoop } from './mall-autonomous-profit-loop.js';
 import { d1SchemaReady } from './d1-schema-readiness.js';
