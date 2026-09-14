@@ -293,10 +293,6 @@ html[data-ekodi-service="community"] .language-menu {
   cursor: pointer;
 }
 
-.ekodi-user-language[data-ekodi-language-placement="footer"] {
-  margin-inline-start: 0;
-  margin-top: 2px;
-}
 
 .ekodi-language-notice {
   position: fixed;

@@ -68,6 +68,55 @@
         "redirect": "manual",
         "expect": ["삭제된 주소입니다."],
         "headerExpect": ["x-ekodi-route: space-gone","cache-control: no-store"]
+      },
+      {
+        "url": "https://ekodi.kr/ekodimission",
+        "statuses": [200],
+        "redirect": "manual",
+        "expect": ["EKODI MISSION"],
+        "headerExpect": ["x-ekodi-route: ekodimission-preview","x-ekodi-independent-site: true","x-robots-tag: noindex, nofollow, noarchive","cache-control: no-store"]
+      },
+      {
+        "url": "https://ekodi.kr/ekodimission/activities",
+        "statuses": [200],
+        "redirect": "manual",
+        "expect": ["MISSION ACTIVITIES"],
+        "headerExpect": ["x-ekodi-route: ekodimission-preview","x-ekodi-independent-site: true","x-robots-tag: noindex, nofollow, noarchive","cache-control: no-store"]
+      },
+      {
+        "url": "https://ekodi.kr/ekodimission/activities/2026-chuseok-open-table",
+        "statuses": [200],
+        "redirect": "manual",
+        "expect": ["2026 CHUSEOK OPEN TABLE"],
+        "headerExpect": ["x-ekodi-route: ekodimission-preview","x-ekodi-independent-site: true","x-robots-tag: noindex, nofollow, noarchive","cache-control: no-store"]
+      },
+      {
+        "url": "https://ekodi.kr/ekodimission/participate",
+        "statuses": [200],
+        "redirect": "manual",
+        "expect": ["PARTICIPATE"],
+        "headerExpect": ["x-ekodi-route: ekodimission-preview","x-ekodi-independent-site: true","x-robots-tag: noindex, nofollow, noarchive","cache-control: no-store"]
+      },
+      {
+        "url": "https://ekodi.kr/ekodimission/partners",
+        "statuses": [200],
+        "redirect": "manual",
+        "expect": ["PARTNERSHIP"],
+        "headerExpect": ["x-ekodi-route: ekodimission-preview","x-ekodi-independent-site: true","x-robots-tag: noindex, nofollow, noarchive","cache-control: no-store"]
+      },
+      {
+        "url": "https://ekodi.kr/ekodimission/stories",
+        "statuses": [200],
+        "redirect": "manual",
+        "expect": ["STORIES & NEWS"],
+        "headerExpect": ["x-ekodi-route: ekodimission-preview","x-ekodi-independent-site: true","x-robots-tag: noindex, nofollow, noarchive","cache-control: no-store"]
+      },
+      {
+        "url": "https://ekodi.kr/ekodimission/give",
+        "statuses": [200],
+        "redirect": "manual",
+        "expect": ["GIVE & SHARE"],
+        "headerExpect": ["x-ekodi-route: ekodimission-preview","x-ekodi-independent-site: true","x-robots-tag: noindex, nofollow, noarchive","cache-control: no-store"]
       }
     ]
   }

@@ -1,11 +1,12 @@
 import { canonicalAiSubject, personalAiSubjectCandidates, resolveCanonicalEkodiIdentity } from './personal-ai-bridge.js';
 import { entitlementSnapshot, evaluateRealtimeRequest, resolveRealtimeTier } from './src/realtime/entitlement.mjs';
 import { planAdaptiveMedia } from './src/realtime/adaptive-media.mjs';
+import { realtimeTenant, realtimeTenantAliases, realtimeTenantList } from './realtime-tenant-registry.js';
 
 const PREFIX='/api/realtime';
 const PROVIDER_BASE='https://rtc.live.cloudflare.com/v1';
 const ADMIN_ROLES=new Set(['owner','admin','tenant_admin','manager','operator']);
-const TENANT_ALIASES={ekodichurch:new Set(['ekodichurch','ekodi-church','church'])};
+const ROLE_ALIASES=Object.freeze({store_owner:'owner',hq_manager:'manager',client_admin:'owner',client_editor:'operator',marketing_manager:'operator'});
 
 function clean(value,max=240){return String(value??'').trim().slice(0,max)}
 function slug(value){const v=clean(value,80).toLowerCase();return /^[a-z0-9][a-z0-9-]{0,79}$/.test(v)?v:''}
@@ -43,15 +44,22 @@ export async function currentIdentity(request,env){
   return {...identity,token,email,contexts};
 }
 
+function normalizeRealtimeRole(role=''){const value=clean(role,60).toLowerCase();return ROLE_ALIASES[value]||value}
 function tenantMatches(context,tenant){
-  const aliases=TENANT_ALIASES[tenant]||new Set([tenant]);
+  const aliases=realtimeTenantAliases(tenant);
   return aliases.has(context?.tenant)||aliases.has(slug(context?.tenantId));
 }
 export function authorizationRole(identity,tenant,env){
   if(!identity)return '';
   if(identity.platformAdminRole==='super_admin')return 'owner';
   if(identity.email&&identity.email===clean(env.ADMIN_EMAIL,254).toLowerCase())return 'owner';
-  return identity.contexts?.find(context=>tenantMatches(context,tenant))?.authorizationRole||'';
+  return normalizeRealtimeRole(identity.contexts?.find(context=>tenantMatches(context,tenant))?.authorizationRole||'');
+}
+async function resolveAuthorizationRole(identity,tenant,env){
+  const direct=authorizationRole(identity,tenant,env);if(direct)return direct;
+  const config=realtimeTenant(tenant);if(!identity?.email||!env.DB||!config)return '';
+  const row=await env.DB.prepare(`SELECT g.role FROM customer_tenants t JOIN customer_access_grants g ON g.tenant_id=t.id WHERE t.slug=? AND t.status='active' AND lower(g.email)=? AND g.enabled=1 LIMIT 1`).bind(config.id,identity.email.toLowerCase()).first().catch(()=>null);
+  return normalizeRealtimeRole(row?.role||'');
 }
 async function mediaSubscription(env,identity){
   if(!env.DB||!identity)return null;
@@ -63,7 +71,7 @@ async function mediaSubscription(env,identity){
 }
 async function entitlementFor(request,env,tenant){
   const identity=await currentIdentity(request,env);
-  const role=authorizationRole(identity,tenant,env);
+  const role=await resolveAuthorizationRole(identity,tenant,env);
   const subscription=await mediaSubscription(env,identity);
   const tier=resolveRealtimeTier({authorizationRole:role,subscription,authenticated:Boolean(identity)});
   return {identity,role,subscription,tier,snapshot:entitlementSnapshot({authorizationRole:role,subscription,authenticated:Boolean(identity)})};
@@ -89,12 +97,16 @@ async function publicRoutes(request,env,url){
   if(request.method!=='GET')return null;
   if(url.pathname===`${PREFIX}/health`){
     const providerConfigured=Boolean(clean(env.REALTIME_SFU_APP_ID,80)&&clean(env.REALTIME_SFU_APP_SECRET,200));
-    return json(request,env,{ok:true,service:'ekodi-realtime',provider:'cloudflare-realtime',providerConfigured,adaptiveMedia:true,tenantFirst:'ekodichurch'});
+    return json(request,env,{ok:true,service:'ekodi-realtime',provider:'cloudflare-realtime',providerConfigured,adaptiveMedia:true,multitenant:true,tenantCount:realtimeTenantList().length,tenantFirst:'ekodichurch'});
   }
   if(url.pathname===`${PREFIX}/live`){
-    const tenant=slug(url.searchParams.get('tenant')||'ekodichurch');
-    const row=await env.DB.prepare(`SELECT * FROM realtime_rooms WHERE tenant_id=? AND status='live' ORDER BY updated_at DESC LIMIT 1`).bind(tenant).first();
-    return json(request,env,{ok:true,tenant,live:Boolean(row),room:safeRoom(row)});
+    const config=realtimeTenant(url.searchParams.get('tenant')||'ekodichurch');
+    if(!config)return json(request,env,{ok:false,error:'invalid_tenant'},400);
+    const tenant=config.apiTenant;
+    const aliases=[config.apiTenant,config.id,...config.aliases];
+    const placeholders=aliases.map(()=>'?').join(',');
+    const row=await env.DB.prepare(`SELECT * FROM realtime_rooms WHERE tenant_id IN (${placeholders}) AND status='live' ORDER BY updated_at DESC LIMIT 1`).bind(...aliases).first();
+    return json(request,env,{ok:true,tenant,canonicalTenant:config.id,live:Boolean(row),room:safeRoom(row)});
   }
   const match=url.pathname.match(/^\/api\/realtime\/rooms\/([^/]+)$/);
   if(match){
@@ -111,19 +123,24 @@ async function publicRoutes(request,env,url){
 }
 
 async function createRoom(request,env,tenant,input){
-  const access=await entitlementFor(request,env,tenant);
-  if(!access.identity)return json(request,env,{ok:false,error:'authentication_required',loginUrl:`https://ekodi.kr/auth/?return_to=${encodeURIComponent('https://ekodi.kr/ekodichurch/live/')}`},401);
+  const config=realtimeTenant(tenant);
+  if(!config)return json(request,env,{ok:false,error:'invalid_tenant'},400);
+  const canonicalTenant=config.apiTenant;
+  const access=await entitlementFor(request,env,canonicalTenant);
+  const loginTarget=`https://ekodi.kr${config.path}`;
+  if(!access.identity)return json(request,env,{ok:false,error:'authentication_required',loginUrl:`https://ekodi.kr/auth/?site=${encodeURIComponent(config.authSite)}&return_to=${encodeURIComponent(loginTarget)}`},401);
+  if(!ADMIN_ROLES.has(access.role))return json(request,env,{ok:false,error:'tenant_host_permission_required'},403);
   const wanted={tier:access.tier,interactiveParticipants:Number(input.interactiveParticipants||1),languages:Array.isArray(input.languages)?input.languages.length:Number(input.languages||0),durationMinutes:Number(input.durationMinutes||0),recording:input.recording!==false,multistream:Boolean(input.multistream)};
   const decision=evaluateRealtimeRequest(wanted);
   if(!decision.allowed)return json(request,env,{ok:false,error:'realtime_entitlement_exceeded',decision,subscriptionUrl:'https://ekodi.kr/my/?service=media'},decision.requiresSubscription?402:403);
   const id=uid('room'),stamp=new Date().toISOString(),owner=canonicalAiSubject(access.identity);
-  const mode=clean(input.mode,40)|| (tenant==='ekodichurch'?'worship':'public_broadcast');
+  const mode=clean(input.mode,40)||config.mode;
   const security=clean(input.securityProfile,30)||'standard';
-  const title=clean(input.title,160)|| (tenant==='ekodichurch'?'에코디교회 실시간 예배':'EKODI Live');
+  const title=clean(input.title,160)||config.title;
   const recording=input.recording!==false,notice=recording!==false;
-  await env.DB.prepare(`INSERT INTO realtime_rooms (id,tenant_id,owner_user_id,mode,security_profile,title,status,ai_enabled,recording_enabled,recording_notice_enabled,anonymous_viewers_enabled,created_at,updated_at) VALUES (?,?,?,?,?,?, 'created',?,?,?,?,?,?)`).bind(id,tenant,owner,mode,security,title,input.ai!==false?1:0,recording?1:0,notice?1:0,input.publicViewers===false?0:1,stamp,stamp).run();
-  await env.DB.prepare(`INSERT OR REPLACE INTO realtime_room_members (room_id,tenant_id,user_id,role,joined_at,left_at) VALUES (?,?,?,?,?,NULL)`).bind(id,tenant,owner,'owner',stamp).run();
-  return json(request,env,{ok:true,room:safeRoom(await roomById(env,id)),entitlement:decision,studioUrl:`https://ekodi.kr/ekodichurch/live/?room=${encodeURIComponent(id)}&mode=studio`},201);
+  await env.DB.prepare(`INSERT INTO realtime_rooms (id,tenant_id,owner_user_id,mode,security_profile,title,status,ai_enabled,recording_enabled,recording_notice_enabled,anonymous_viewers_enabled,created_at,updated_at) VALUES (?,?,?,?,?,?, 'created',?,?,?,?,?,?)`).bind(id,canonicalTenant,owner,mode,security,title,input.ai!==false?1:0,recording?1:0,notice?1:0,input.publicViewers===false?0:1,stamp,stamp).run();
+  await env.DB.prepare(`INSERT OR REPLACE INTO realtime_room_members (room_id,tenant_id,user_id,role,joined_at,left_at) VALUES (?,?,?,?,?,NULL)`).bind(id,canonicalTenant,owner,'owner',stamp).run();
+  return json(request,env,{ok:true,room:safeRoom(await roomById(env,id)),entitlement:decision,studioUrl:`https://ekodi.kr${config.path}?room=${encodeURIComponent(id)}&mode=studio`},201);
 }
 async function roomMutation(request,env,url,input){
   const statusMatch=url.pathname.match(/^\/api\/realtime\/rooms\/([^/]+)\/status$/);
@@ -254,9 +271,9 @@ export async function handleRealtimeControl(request,env){
     if(!input)return json(request,env,{ok:false,error:'invalid_json'},400);
   }
   if(url.pathname===`${PREFIX}/rooms`&&request.method==='POST'){
-    const tenant=slug(input?.tenant||'ekodichurch');
-    if(!tenant)return json(request,env,{ok:false,error:'invalid_tenant'},400);
-    return createRoom(request,env,tenant,input||{});
+    const config=realtimeTenant(input?.tenant||'ekodichurch');
+    if(!config)return json(request,env,{ok:false,error:'invalid_tenant'},400);
+    return createRoom(request,env,config.apiTenant,input||{});
   }
   const mutation=await roomMutation(request,env,url,input);if(mutation)return mutation;
   const planned=await planRoute(request,env,url,input);if(planned)return planned;
@@ -266,9 +283,11 @@ export async function handleRealtimeControl(request,env){
 }
 
 export const REALTIME_CONTROL_CONTRACT=Object.freeze({
-  version:'2026-09-12.1',
+  version:'2026-09-14.1',
   prefix:PREFIX,
   canonicalChurchPath:'https://ekodi.kr/ekodichurch/live/',
+  multitenant:true,
+  tenantCount:realtimeTenantList().length,
   provider:'cloudflare-realtime',
   browserSecrets:false,
   adaptiveMedia:true,

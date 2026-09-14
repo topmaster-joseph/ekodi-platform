@@ -108,7 +108,7 @@ for(const [id,requested] of Object.entries(serviceProfiles)){
 }
 const commerceProfile=experienceProfiles['consumer-commerce'];
 if(!commerceProfile?.geometry?.controlRadius || serviceProfiles.mall!=='consumer-commerce') errors.push('Mall must inherit the reusable consumer-commerce experience profile from the central registry.');
-for (const principle of ['subserviceInheritance','fallbackHeaderWhenMissing','legacyCommonFooterSuppressed','rootInternalPathsExcluded','languageChoiceEverywhere','globalUtilitiesInHeader','unavailableLanguageReturnsToKorean','unreadyLanguageHidden','automaticTranslationLifecycle','progressiveHomeDisclosure']) {
+for (const principle of ['subserviceInheritance','fallbackHeaderWhenMissing','legacyCommonFooterSuppressed','rootInternalPathsExcluded','languageChoiceEverywhere','languageChoiceInHeaderOnly','footerLanguageChoiceForbidden','globalUtilitiesInHeader','unavailableLanguageReturnsToKorean','unreadyLanguageHidden','automaticTranslationLifecycle','progressiveHomeDisclosure']) {
   if (shell?.principles?.[principle] !== true) errors.push(`User UI Shell principle must remain enabled: ${principle}.`);
 }
 if (shell?.header?.strategy !== 'adopt-existing-first' || shell?.header?.owner !== 'shared-shell') {
@@ -171,9 +171,17 @@ if(shell?.language?.owner!=='shared-shell'||shell?.language?.runtime!=='shell/us
 if(!expectedLocales.every(locale=>shell?.language?.supported?.includes(locale))){
   errors.push('Shared user language selector must inherit every registered platform locale from the central Language Registry.');
 }
-for(const marker of ['ekodi_locale','data-ekodi-language-control','ekodi:locale-change','document.documentElement.lang','ko-KR','zh-CN','ekodi-user-language-style','appearance:none!important','FALLBACK_LOCALE','placeFooterControl','data-ekodi-language-notice','isLocaleReady','visibleLanguages','refreshRuntimeReadiness','/api/i18n/v1']){
+if(shell?.footer?.languageChoice!=='forbidden'||shell?.language?.placement!=='header-only'){
+  errors.push('Shared language selector must be header-only and forbidden in user footers.');
+}
+if(shell?.language?.controlGeometry!=='pill'||shell?.language?.visibleIcon!==false||shell?.language?.visibleLabel!==false){
+  errors.push('Shared header language control must be pill-shaped with no visible globe icon or Language label.');
+}
+for(const marker of ['ekodi_locale','data-ekodi-language-control','ekodi:locale-change','document.documentElement.lang','ko-KR','zh-CN','ekodi-user-language-style','appearance:none!important','FALLBACK_LOCALE','removeFooterLanguageControls','LEGACY_LANGUAGE_WIDGET_SELECTOR','data-ekodi-language-notice','isLocaleReady','visibleLanguages','refreshRuntimeReadiness','/api/i18n/v1']){
   if(!userLanguageSource.includes(marker))errors.push(`Shared user language runtime lost required marker: ${marker}`);
 }
+if(userLanguageSource.includes('function placeFooterControl'))errors.push('Shared user language runtime must not render a footer language selector.');
+if(userUiStyle.includes('[data-ekodi-language-placement=\"footer\"]'))errors.push('Shared user UI stylesheet must not preserve footer language selector placement.');
 if(shell?.ambientAudio?.owner!=='shared-shell'||shell?.ambientAudio?.runtime!=='shell/ccm-mr-player.js'||shell?.ambientAudio?.contentOverlapForbidden!==true||shell?.ambientAudio?.adminExcluded!==true){
   errors.push('Shared ambient audio control must be Shell-owned, avoid content overlap and exclude admin surfaces.');
 }
