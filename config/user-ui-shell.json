@@ -1,5 +1,5 @@
 {
-  "version": 11,
+  "version": 12,
   "name": "EKODI User UI Shell",
   "parentPolicy": "config/user-ui-dna.json",
   "purpose": "Keep one EKODI user experience while allowing each service to preserve its own visual family, with persistent common chrome limited to one shared header and one shared footer.",
@@ -29,7 +29,8 @@
     "automaticTranslationLifecycle": true,
     "persistentChromeHeaderFooterOnly": true,
     "workspaceSelectionLivesInMyEkodi": true,
-    "globalAmbientAudioForbidden": true
+    "globalAmbientAudioForbidden": true,
+    "progressiveHomeDisclosure": true
   },
   "header": {
     "owner": "shared-shell",

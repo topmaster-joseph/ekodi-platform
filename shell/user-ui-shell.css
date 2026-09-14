@@ -525,3 +525,10 @@ body > [data-ekodi-user-footer] ~ [data-ekodi-user-footer] {
     animation: none !important;
   }
 }
+
+
+/* Progressive home focus v1: service home pages show essential content first. */
+html[data-ekodi-home-focus="v1"] [data-ekodi-progressive-hidden="1"][hidden]{display:none!important}
+html[data-ekodi-home-focus="v1"] [data-ekodi-progressive-reveal="v1"]{display:block;min-height:38px;margin:18px auto;padding:0 16px;border:1px solid var(--ekodi-user-chrome-line);border-radius:var(--ekodi-user-control-radius);background:transparent;color:var(--ekodi-user-chrome-link);font:750 12px/1.2 system-ui,-apple-system,"Noto Sans KR",sans-serif;cursor:pointer}
+html[data-ekodi-home-focus="v1"] [data-ekodi-progressive-reveal="v1"]:focus-visible{outline:2px solid currentColor;outline-offset:3px}
+html[data-ekodi-home-focus="v1"] :where(.hero,.intro,[class*="hero"],[class*="intro"]) :where(p,.description,.subtitle){max-width:62ch}
