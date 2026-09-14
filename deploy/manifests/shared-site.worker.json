@@ -810,7 +810,7 @@
         "url": "https://ekodi.kr/invest/invest-subject-ui.js",
         "statuses": [200],
         "redirect": "manual",
-        "expect": ["https://ekodi.kr/workspace-api", "subject_type", "profile_key"],
+        "expect": ["https://ekodi.kr/workspace-api", "subject_type", "subject_key"],
         "headerExpect": ["x-content-type-options: nosniff"],
         "rollbackVerify": false
       },
