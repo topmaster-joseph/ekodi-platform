@@ -41,13 +41,14 @@ jobs:
             services_code=$(curl -sS -o /tmp/ai-services -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/ai/api/commons/services' || true)
             requests_code=$(curl -sS -o /tmp/ai-requests -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/ai/api/commons/requests' || true)
             ideas_code=$(curl -sS -o /tmp/ai-ideas -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/ai/api/commons/ideas' || true)
-            if [ "$canonical_code" = '308' ] \
+            if [ "$canonical_code" = '200' ] \
               && [ "$root_code" = '200' ] \
               && [ "$health_code" = '200' ] \
               && [ "$services_code" = '200' ] \
               && [ "$requests_code" = '200' ] \
               && [ "$ideas_code" = '401' ] \
-              && grep -Fiq 'location: https://ekodi.kr/ai/' /tmp/ai-canonical-headers \
+              && grep -Fiq 'x-ekodi-canonical-surface: ai' /tmp/ai-canonical-headers \
+              && grep -Fiq 'x-ekodi-canonical-path: /ai' /tmp/ai-canonical-headers \
               && grep -Fiq 'x-ekodi-canonical-surface: ai' /tmp/ai-root-headers \
               && grep -Fiq 'x-ekodi-canonical-path: /ai' /tmp/ai-root-headers \
               && grep -Fq 'EKODI 모두의 AI 프로젝트' /tmp/ai-root \
@@ -64,7 +65,7 @@ jobs:
             sleep 8
           done
           test "$passed" = 'true' || (echo 'AI Commons production verification failed within bounded retries.' && exit 1)
-          echo '✅ ekodi.kr/ai/ production contract verified.'
+          echo '✅ ekodi.kr/ai production contract verified.'
       - name: Publish AI Commons production failure checkpoint
         if: ${{ always() && steps.commons.outcome != 'success' }}
         env:
@@ -81,7 +82,7 @@ jobs:
 
           - commit: \`$commit\`
           - guarded upstream: \`${UPSTREAM_CONCLUSION:-manual}\`
-          - canonical user surface: https://ekodi.kr/ai/
+          - canonical user surface: https://ekodi.kr/ai
           - AI Commons production check: \`$VERIFY_OUTCOME\`
           - security: browsing is public; request/save actions remain authenticated
           - verification workflow: $RUN_URL
