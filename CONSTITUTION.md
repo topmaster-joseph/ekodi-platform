@@ -1,6 +1,6 @@
-# EKODI Platform Constitution v1.16.0
+# EKODI Platform Constitution v1.17.0
 
-Effective: 2026-09-13
+Effective: 2026-09-14
 
 This constitution is the highest architecture and operations rule for EKODI Platform. Existing validators remain authoritative implementation guards; this document unifies their intent and governs future changes.
 
@@ -135,6 +135,17 @@ This constitution is the highest architecture and operations rule for EKODI Plat
 - Before escalating a recoverable interruption, EKODI attempts an available authorized alternative path under Cloud First and existing provider-independent fallback rules.
 - Continuity never expands authority, bypasses credentials, weakens safety gates or permits direct production mutation. A genuine blocked state is reserved for an authority, safety, credential, human-approval or external dependency that cannot be resolved within delegated authority.
 - Commit, PR, merge, deployment, session termination or tool termination never substitutes for required production verification evidence.
+
+## 8B. Private-by-Default Publication Constitution
+- **Deployment completion and public publication are separate states.** Development, implementation, testing, review-environment deployment and verification continue to completion even when public exposure remains withheld.
+- Every newly developed or materially changed EKODI site, service, page, feature, content surface or other public-facing release is **private by default** until administrator review approves publication.
+- Automatic release triggers may create and verify private review artifacts only. Worker candidates remain at `0%` ordinary production traffic and Pages releases remain isolated previews; the currently published stable production version remains unchanged.
+- A first public Worker deployment must not bootstrap automatically. First public exposure requires administrator approval through the guarded publication path.
+- An explicit administrator-reviewed manual guarded release is the publication approval action. Only an approved candidate may be promoted to ordinary public production traffic, followed by production smoke verification.
+- Before approval, new work is excluded by default from canonical public navigation, search indexing, recommendation and automatic external sharing.
+- Emergency immediate publication is limited to security patches, legal notices and incident recovery. It requires an explicit reason and auditable evidence and may not become a general bypass.
+- A public release is complete only after administrator approval, production promotion and production verification all succeed. Merge, private candidate deployment or preview deployment alone is not public completion.
+- Machine-readable authority: `governance/constitution/publication-approval.v1.json`.
 
 ## 9. Change Constitution
 - **C0**: operational parameter change with no constitutional impact. Automated validation may apply it.
