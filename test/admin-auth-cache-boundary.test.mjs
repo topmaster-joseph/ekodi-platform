@@ -28,7 +28,8 @@ test('guarded production release verifies current auth entry, bridge and workspa
   const bridgeDoc = requests.find(item => item.url === 'https://auth.ekodi.kr/google-origin-bridge');
   const bridgeScript = requests.find(item => item.url === 'https://auth.ekodi.kr/google-origin-bridge.js');
   for (const probe of [root, router, client, workspaceTarget, admin, bridgeDoc, bridgeScript]) assert.ok(probe);
-  assert.ok(root.expect.includes('/auth/auth-router.js?v=20260904-direct-login-1'));
+  assert.ok(root.expect.includes('/auth-router.js?v=20260904-direct-login-1'));
+  assert.ok(!root.expect.includes('/auth/auth-router.js?v=20260904-direct-login-1'));
   assert.ok(router.expect.includes('admin-auth.js?v=20260909-origin-bridge-1'));
   assert.ok(router.expect.includes('business-auth.js?v=20260826-free-fallback-1'));
   assert.ok(router.expect.includes('client-auth.js?v=20260904-direct-login-1'));

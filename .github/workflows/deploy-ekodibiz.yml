@@ -173,10 +173,10 @@ jobs:
         run: |
           set -euo pipefail
           for attempt in $(seq 1 18); do
-            root=$(curl -L -sS --max-time 15 'https://biz.ekodi.kr/' || true)
-            health=$(curl -sS --max-time 15 'https://biz.ekodi.kr/api/health' || true)
-            catalog=$(curl -sS --max-time 15 'https://biz.ekodi.kr/api/catalog' || true)
-            ops=$(curl -sS --max-time 15 'https://biz.ekodi.kr/api/ops/status' || true)
+            root=$(curl -L -sS --max-time 15 'https://ekodi.kr/ekodibiz' || true)
+            health=$(curl -sS --max-time 15 'https://ekodi.kr/ekodibiz/api/health' || true)
+            catalog=$(curl -sS --max-time 15 'https://ekodi.kr/ekodibiz/api/catalog' || true)
+            ops=$(curl -sS --max-time 15 'https://ekodi.kr/ekodibiz/api/ops/status' || true)
             if grep -Fq 'WHAT WE DO' <<<"$root" \
               && grep -Fq 'operational-mvp' <<<"$health" \
               && grep -Fq 'approval-gated' <<<"$health" \
