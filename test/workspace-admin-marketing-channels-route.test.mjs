@@ -16,7 +16,7 @@ test('Mall channel settings canonical deep link is handled by workspace admin', 
   assert.match(source, /canonicalMall=clean\.match/);
   assert.match(source, /rawSection==='channel-settings'\?'channels':rawSection/);
   assert.match(source, /adminBase=service\?'\/admin\/ekodimall'/);
-  assert.match(source, /sectionHref=key=>key==='overview'\?adminBase/);
+  assert.match(source, /sectionHref=key=>key==='overview'\?`\${adminBase}\/overview`/);
 });
 
 test('unauthenticated mall channel setup selects provider before EKODI or provider login', async () => {
