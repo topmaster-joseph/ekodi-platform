@@ -5,8 +5,59 @@ export const ADMIN_MENU_GROUPS = Object.freeze([
   { id: 'operations', icon: '✦', defaultSection: 'work', labels: { ko: '운영', en: 'Operations' } },
   { id: 'workspaces', icon: '▣', defaultSection: 'clients', labels: { ko: '공간', en: 'Workspaces' } },
   { id: 'services', icon: '◆', defaultSection: 'common-services', labels: { ko: '서비스', en: 'Services' } },
+  { id: 'service-admins', icon: '▤', defaultSection: 'service-church', labels: { ko: '서비스 관리', en: 'Service Admins' } },
   { id: 'system', icon: '◎', defaultSection: 'health', labels: { ko: '시스템', en: 'System' } },
 ]);
+
+export const ADMIN_SERVICE_REGISTRY = Object.freeze([
+  { id: 'church', icon: 'C', basePath: '/ekodichurch', labels: { ko: '에코디교회', en: 'EKODI Church' } },
+  { id: 'biz', icon: 'B', basePath: '/ekodibiz', labels: { ko: '에코디비즈', en: 'EKODI Biz' } },
+  { id: 'mall', icon: 'M', basePath: '/ekodibiz/ekodimall', labels: { ko: '에코디몰', en: 'EKODI Mall' } },
+  { id: 'marketing', icon: 'M', basePath: '/ekodibiz/marketing-ai', labels: { ko: '마케팅 AI', en: 'Marketing AI' } },
+  { id: 'trade', icon: 'T', basePath: '/ekodibiz/trade', labels: { ko: '에코디 트레이딩', en: 'EKODI Trading' } },
+  { id: 'invest', icon: 'I', basePath: '/ekodibiz/invest', labels: { ko: '에코디 투자', en: 'EKODI Investment' } },
+  { id: 'bible', icon: 'V', basePath: '/bible', labels: { ko: '에코디 말씀대화', en: 'EKODI Bible Conversation' } },
+  { id: 'books', icon: 'B', basePath: '/books', labels: { ko: '에코디서점', en: 'EKODI Bookstore' } },
+  { id: 'publishing', icon: 'P', basePath: '/publishing', labels: { ko: '출판', en: 'Publishing' } },
+  { id: 'author', icon: 'A', basePath: '/author', labels: { ko: '크리에이터 AI', en: 'Creator AI' } },
+  { id: 'journal', icon: 'J', basePath: '/journal', labels: { ko: '에코디 저널', en: 'EKODI Journal' } },
+  { id: 'business', icon: 'B', basePath: '/business', labels: { ko: '비즈니스 OS', en: 'Business OS' } },
+  { id: 'management', icon: 'G', basePath: '/management', labels: { ko: '경영플랫폼', en: 'Management Platform' } },
+  { id: 'support', icon: 'S', basePath: '/support', labels: { ko: '지원사업 AI', en: 'Support Opportunity AI' } },
+  { id: 'money', icon: '₩', basePath: '/money', labels: { ko: '에코디 머니', en: 'EKODI Money' } },
+  { id: 'pay', icon: '₩', basePath: '/pay', labels: { ko: '에코디 페이', en: 'EKODI Pay' } },
+  { id: 'insurance', icon: 'I', basePath: '/insurance', labels: { ko: '보험', en: 'Insurance' } },
+  { id: 'community', icon: '◎', basePath: '/community', labels: { ko: '커뮤니티', en: 'Community' } },
+  { id: 'social', icon: 'S', basePath: '/social', labels: { ko: '에코디 소셜', en: 'EKODI Social' } },
+  { id: 'education', icon: 'E', basePath: '/education', labels: { ko: '교육', en: 'Education' } },
+  { id: 'life', icon: 'L', basePath: '/life', labels: { ko: '인생 AI', en: 'Life AI' } },
+  { id: 'experience', icon: 'X', basePath: '/experience', labels: { ko: '체험서비스', en: 'Experience' } },
+  { id: 'energy', icon: 'E', basePath: '/energy', labels: { ko: '에너지', en: 'Energy' } },
+  { id: 'live', icon: '▶', basePath: '/live', labels: { ko: '에코디 라이브', en: 'EKODI Live' } },
+  { id: 'mail', icon: '✉', basePath: '/mail', labels: { ko: '에코디 메일', en: 'EKODI Mail' } },
+  { id: 'work', icon: 'W', basePath: '/work', labels: { ko: '에코디 워크', en: 'EKODI Work' } },
+  { id: 'lab', icon: 'L', basePath: '/ekodilab', labels: { ko: '에코디연구소', en: 'EKODI Lab' } },
+  { id: 'cafe', icon: 'C', basePath: '/cafe', labels: { ko: '에코디 카페', en: 'EKODI Cafe' } },
+  { id: 'cmpmyi', icon: '3', basePath: '/cmpmyi', labels: { ko: '통합 매장 운영', en: 'Multi-store Operations' } },
+  { id: 'developer', icon: 'D', basePath: '/developer', labels: { ko: '개발자 서비스', en: 'Developer Service' } },
+  { id: 'tax', icon: 'T', basePath: '/tax', labels: { ko: '세금·증빙', en: 'Tax & Evidence' } },
+]);
+
+export function serviceAdminPath(basePath) {
+  const normalized = `/${String(basePath || '').trim().replace(/^\/+|\/+$/g, '')}`.replace(/\/{2,}/g, '/');
+  return `${normalized === '/' ? '' : normalized}/admin` || '/admin';
+}
+
+export const ADMIN_SERVICE_MENU_REGISTRY = Object.freeze(ADMIN_SERVICE_REGISTRY.map(service => Object.freeze({
+  id: `service-${service.id}`,
+  serviceId: service.id,
+  serviceAdmin: true,
+  group: 'service-admins',
+  icon: service.icon || '◆',
+  labels: service.labels,
+  href: `https://ekodi.kr${serviceAdminPath(service.basePath)}`,
+  adminHandoff: true,
+})));
 
 export const ADMIN_MENU_REGISTRY = Object.freeze([
   { id: 'campus', group: 'home', icon: '⌂', labels: { ko: '관리 홈·사이트', en: 'Admin Home & Sites' } },
@@ -33,6 +84,8 @@ export const ADMIN_MENU_REGISTRY = Object.freeze([
   { id: 'supply-network', group: 'services', icon: 'N', managementArea: 'professional-services', labels: { ko: '판매·공급망', en: 'Sales & Supply Network' } },
   { id: 'insurance', group: 'services', icon: 'I', labels: { ko: '보험', en: 'Insurance' } },
 
+  ...ADMIN_SERVICE_MENU_REGISTRY,
+
   { id: 'public-site-controls', group: 'system', icon: '▤', labels: { ko: '공개·점검 전환', en: 'Public & Maintenance Mode' } },
   { id: 'language-status', group: 'system', icon: '文', labels: { ko: '다국어 지원 현황', en: 'Language Readiness' } },
   { id: 'architecture', group: 'system', icon: '◇', labels: { ko: '시스템 구조', en: 'System Structure' } },
@@ -58,12 +111,13 @@ export const ADMIN_MENU_CATEGORY_LABELS = Object.freeze({
   finance: { ko: '재무·증빙', en: 'Finance & Evidence' }, customer: { ko: '고객·매장', en: 'Customers & Stores' },
   organization: { ko: '조직·자료', en: 'Organization & Files' }, common: { ko: '공통·생활', en: 'Common & Life' },
   content: { ko: '콘텐츠·커뮤니티', en: 'Content & Community' }, business: { ko: '비즈니스·전문', en: 'Business & Professional' },
+  'service-admin': { ko: '서비스별 관리자', en: 'Service Admins' },
   environment: { ko: '공개·환경', en: 'Public & Environment' }, security: { ko: '보안·권한', en: 'Security & Access' },
   ai: { ko: 'AI·자동화', en: 'AI & Automation' }, platform: { ko: '인프라·상태', en: 'Platform & Health' }, other: { ko: '기타', en: 'Other' },
 });
 const ADMIN_MENU_CATEGORY_ORDER = Object.freeze({
-  home: ['overview','other'], operations: ['workflow','finance','other'], space: ['customer','organization','other'],
-  services: ['common','content','business','other'], system: ['environment','security','ai','platform','other'],
+  home: ['overview','other'], operations: ['workflow','finance','other'], space: ['customer','organization','other'], workspaces: ['customer','organization','other'],
+  services: ['common','content','business','other'], 'service-admins': ['service-admin','other'], system: ['environment','security','ai','platform','other'],
 });
 const ADMIN_MENU_SECTION_CATEGORY = Object.freeze({
   campus:'overview', work:'workflow', communication:'workflow', finance:'finance', tax:'finance',
@@ -83,11 +137,11 @@ export function getAdminMenuItem(id) { return BY_ID.get(String(id || '').trim())
 export function getAdminMenuLabel(id, locale = 'ko') { const item = getAdminMenuItem(id); const language = normalizeAdminLocale(locale); return item?.labels?.[language] || item?.labels?.ko || String(id || ''); }
 export function getAdminMenuGroup(id) { return GROUP_BY_ID.get(String(id || '').trim()) || null; }
 export function getAdminMenuGroupLabel(id, locale = 'ko') { const group = getAdminMenuGroup(id); const language = normalizeAdminLocale(locale); return group?.labels?.[language] || group?.labels?.ko || String(id || ''); }
-export function getAdminMenuCategory(section) { return ADMIN_MENU_SECTION_CATEGORY[String(section || '').trim()] || 'other'; }
+export function getAdminMenuCategory(section) { const item = getAdminMenuItem(section); if (item?.serviceAdmin) return 'service-admin'; return ADMIN_MENU_SECTION_CATEGORY[String(section || '').trim()] || 'other'; }
 export function getAdminMenuCategoryLabel(category, locale = 'ko') { const language = normalizeAdminLocale(locale); const labels = ADMIN_MENU_CATEGORY_LABELS[category] || ADMIN_MENU_CATEGORY_LABELS.other; return labels?.[language] || labels?.ko || category || 'other'; }
 export function adminMenuCategoryOrder(group) { const order = ADMIN_MENU_CATEGORY_ORDER[String(group || '').trim()] || ['other']; return [...order]; }
 export function getAdminMenuGroupForSection(section) { return getAdminMenuItem(section)?.group || 'home'; }
-export function getAdminMenuGroupDefault(id) { const group = getAdminMenuGroup(id); if (!group) return 'campus'; const explicit = ADMIN_MENU_REGISTRY.find(item => item.id === group.defaultSection && item.group === group.id && !item.internal && !item.superAdminOnly); if (explicit) return explicit.id; const firstVisibleChild = ADMIN_MENU_REGISTRY.find(item => item.group === group.id && !item.internal && !item.superAdminOnly); return firstVisibleChild?.id || 'campus'; }
+export function getAdminMenuGroupDefault(id) { const group = getAdminMenuGroup(id); if (!group) return 'campus'; const explicit = ADMIN_MENU_REGISTRY.find(item => item.id === group.defaultSection && item.group === group.id && !item.internal); if (explicit) return explicit.id; const firstVisibleChild = ADMIN_MENU_REGISTRY.find(item => item.group === group.id && !item.internal); return firstVisibleChild?.id || 'campus'; }
 export function adminMenuGroups() { return ADMIN_MENU_GROUPS.map(group => group.id); }
 export function adminMenuOrder() { return ADMIN_MENU_REGISTRY.filter(item => !item.internal).map(item => item.id); }
 
