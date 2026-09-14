@@ -5,9 +5,10 @@ import spaceWorker from '../space-worker.js';
 
 const spaceRoot=new URL('../space/',import.meta.url);
 const contentType=path=>path.endsWith('.css')?'text/css; charset=utf-8':path.endsWith('.js')?'application/javascript; charset=utf-8':'text/html; charset=utf-8';
+const assetFilePath=path=>path.endsWith('.css')||path.endsWith('.js')||path==='/'?path:`${path}.html`;
 const env={ASSETS:{fetch:async request=>{
   const pathname=new URL(request.url).pathname;
-  try{const body=await readFile(new URL(`.${pathname}`,spaceRoot));return new Response(request.method==='HEAD'?null:body,{status:200,headers:{'content-type':contentType(pathname)}})}catch{return new Response('Not Found',{status:404})}
+  try{const body=await readFile(new URL(`.${assetFilePath(pathname)}`,spaceRoot));return new Response(request.method==='HEAD'?null:body,{status:200,headers:{'content-type':contentType(pathname)}})}catch{return new Response('Not Found',{status:404})}
 }}};
 const pageCases=[
   ['/ekodimission','에코디선교회'],['/ekodimission/activities','MISSION ACTIVITIES'],
@@ -28,10 +29,15 @@ test('platform router preserves tenant-branded independent sites without EKODI s
   assert.match(source,/x-ekodi-independent-site/);assert.match(source,/independent-workspace-site/);
 });
 
+test('mission asset lookup stays extensionless so Cloudflare HTML handling cannot redirect back to the canonical route',async()=>{
+  const source=await readFile(new URL('../space-worker.js',import.meta.url),'utf8');
+  const registryLine=source.split('\n').find(line=>line.includes('EKODIMISSION_PAGES'))||'';
+  assert.doesNotMatch(registryLine,/\.html/);
+});
+
 test('mission is registered but excluded from public root until approval',async()=>{
   const registry=JSON.parse(await readFile(new URL('../config/ecosystem-services.json',import.meta.url),'utf8'));const mission=registry.services.find(service=>service.id==='mission');assert.ok(mission);assert.equal(mission.url,'https://ekodi.kr/ekodimission');assert.equal(mission.homepage,false);assert.equal(mission.productionVerified,false);assert.equal(mission.status,'preparing');
 });
-
 
 test('Open Table uses the approved 16:00-18:00 schedule and mission admin identity',async()=>{
   const [event,admin]=await Promise.all([readFile(new URL('../space/ekodimission-activity.html',import.meta.url),'utf8'),readFile(new URL('../workspace-admin-page.js',import.meta.url),'utf8')]);
