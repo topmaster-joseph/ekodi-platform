@@ -312,16 +312,16 @@ function redirectLegacyEkodiBizPath(request) {
 }
 
 function isLegacyMallAdminPath(pathname) {
-  return pathname === '/mall/admin' || pathname.startsWith('/mall/admin/') || pathname === `${FORMER_MALL_PREFIX}/admin` || pathname.startsWith(`${FORMER_MALL_PREFIX}/admin/`) || pathname === `${MALL_PREFIX}/admin` || pathname.startsWith(`${MALL_PREFIX}/admin/`);
+  return pathname === '/admin/ekodimall' || pathname.startsWith('/admin/ekodimall/') || pathname === `${LEGACY_MALL_PREFIX}/admin` || pathname.startsWith(`${LEGACY_MALL_PREFIX}/admin/`) || pathname === `${FORMER_MALL_PREFIX}/admin` || pathname.startsWith(`${FORMER_MALL_PREFIX}/admin/`) || pathname === `${MALL_PREFIX}/admin/channels` || pathname === `${MALL_PREFIX}/admin/marketing/channels`;
 }
 
 function redirectLegacyMallAdminPath(request) {
   const target = new URL(request.url);
   const path = target.pathname;
-  const prefix = path.startsWith(`${MALL_PREFIX}/admin`) ? `${MALL_PREFIX}/admin` : path.startsWith(`${FORMER_MALL_PREFIX}/admin`) ? `${FORMER_MALL_PREFIX}/admin` : '/mall/admin';
+  const prefix = path.startsWith(`${MALL_PREFIX}/admin`) ? `${MALL_PREFIX}/admin` : path.startsWith('/admin/ekodimall') ? '/admin/ekodimall' : path.startsWith(`${FORMER_MALL_PREFIX}/admin`) ? `${FORMER_MALL_PREFIX}/admin` : `${LEGACY_MALL_PREFIX}/admin`;
   let suffix = path.slice(prefix.length).replace(/\/+$/, '');
   if (suffix === '/channels' || suffix === '/marketing/channels') suffix = '/channel-settings';
-  target.pathname = `/admin/ekodimall${suffix}`;
+  target.pathname = `${MALL_PREFIX}/admin${suffix}`;
   const response = new Response(null, { status: 308, headers: { Location: target.toString() } });
   applyBaseSecurityHeaders(response.headers);
   response.headers.set('Cache-Control', 'no-store');

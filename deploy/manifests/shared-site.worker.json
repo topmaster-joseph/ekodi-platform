@@ -1,5 +1,5 @@
 {
-  "version": 66,
+  "version": 67,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
@@ -350,26 +350,28 @@
       },
       {
         "url": "https://ekodi.kr/admin/ekodimall/",
-        "statuses": [
-          200
-        ],
+        "statuses": [308],
         "redirect": "manual",
-        "expect": [
-          "EKODI Workspace Admin",
-          "workspace-admin.js",
-          "data-ekodi-admin-layout=\"two-level\"",
-          "data-ekodi-admin-nav-mode=\"primary\"",
-          "data-ekodi-admin-subnav"
-        ],
-        "headerExpect": [
-          "x-ekodi-route: workspace-admin",
-          "cache-control: no-store",
-          "x-content-type-options: nosniff"
-        ],
+        "headerExpect": ["location: https://ekodi.kr/ekodibiz/ekodimall/admin/", "cache-control: no-store"],
         "rollbackVerify": false
       },
       {
         "url": "https://ekodi.kr/admin/ekodimall/channel-settings",
+        "statuses": [308],
+        "redirect": "manual",
+        "headerExpect": ["location: https://ekodi.kr/ekodibiz/ekodimall/admin/channel-settings", "cache-control: no-store"],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/ekodibiz/ekodimall/admin/",
+        "statuses": [200],
+        "redirect": "manual",
+        "expect": ["EKODI Workspace Admin", "workspace-admin.js", "data-ekodi-admin-layout=\"two-level\"", "data-ekodi-admin-nav-mode=\"primary\"", "data-ekodi-admin-subnav"],
+        "headerExpect": ["x-ekodi-route: workspace-admin", "cache-control: no-store", "x-content-type-options: nosniff"],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/ekodibiz/ekodimall/admin/channel-settings",
         "statuses": [200],
         "redirect": "manual",
         "expect": ["EKODI Workspace Admin", "workspace-admin.js", "data-ekodi-admin-subnav"],
@@ -377,27 +379,10 @@
         "rollbackVerify": false
       },
       {
-        "url": "https://ekodi.kr/ekodibiz/ekodimall/admin/",
+        "url": "https://ekodi.kr/mall/admin/",
         "statuses": [308],
         "redirect": "manual",
-        "headerExpect": [
-          "location: https://ekodi.kr/admin/ekodimall/",
-          "cache-control: no-store"
-        ],
-        "candidateVerify": false,
-        "candidateVerifyReason": "legacy Mall admin redirect depends on the promoted run_worker_first routing table; verify the 308 immediately after promotion",
-        "rollbackVerify": false
-      },
-      {
-        "url": "https://ekodi.kr/mall/admin/",
-        "statuses": [
-          308
-        ],
-        "redirect": "manual",
-        "headerExpect": [
-          "location: https://ekodi.kr/admin/ekodimall/",
-          "cache-control: no-store"
-        ],
+        "headerExpect": ["location: https://ekodi.kr/ekodibiz/ekodimall/admin/", "cache-control: no-store"],
         "candidateVerify": false,
         "candidateVerifyReason": "legacy Mall admin redirect depends on the promoted run_worker_first routing table; verify the 308 immediately after promotion",
         "rollbackVerify": false
@@ -622,7 +607,7 @@
         "expect": [
           "통합 인증센터",
           "dataset.seamlessSso",
-          "/auth/auth-router.js?v=20260904-direct-login-1"
+          "/auth-router.js?v=20260904-direct-login-1"
         ],
         "headerExpect": [
           "x-ekodi-route: central-auth"
@@ -747,7 +732,7 @@
         ]
       },
       {
-        "url": "https://messenger.ekodi.kr/",
+        "url": "https://ekodi.kr/messenger",
         "statuses": [
           200
         ],
@@ -761,10 +746,11 @@
         "headerExpect": [
           "x-ekodi-route: platform-messenger",
           "x-ekodi-shell: v2"
-        ]
+        ],
+        "rollbackVerify": false
       },
       {
-        "url": "https://messenger.ekodi.kr/messenger-ui.js",
+        "url": "https://ekodi.kr/messenger/messenger-ui.js",
         "statuses": [
           200
         ],
@@ -773,10 +759,11 @@
           "thread-open",
           "conversationSearch",
           "makeTitle"
-        ]
+        ],
+        "rollbackVerify": false
       },
       {
-        "url": "https://messenger.ekodi.kr/app.js",
+        "url": "https://ekodi.kr/messenger/app.js",
         "statuses": [
           200
         ],
@@ -785,7 +772,39 @@
           "https://ekodi.kr/workspace-api",
           "/v1/messenger/threads",
           "/handoff"
-        ]
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/invest",
+        "statuses": [200],
+        "redirect": "manual",
+        "expect": ["EKODI Invest", "data-ekodi-platform=\"invest\"", "/invest/invest-ui.js"],
+        "headerExpect": ["x-ekodi-shell: v2", "x-content-type-options: nosniff"],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/invest/invest-ui.js",
+        "statuses": [200],
+        "redirect": "manual",
+        "expect": ["https://ekodi.kr/workspace-api", "/v1/invest/context", "subject_type"],
+        "headerExpect": ["x-content-type-options: nosniff"],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/invest/invest-subject-ui.js",
+        "statuses": [200],
+        "redirect": "manual",
+        "expect": ["https://ekodi.kr/workspace-api", "subject_type", "profile_key"],
+        "headerExpect": ["x-content-type-options: nosniff"],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/invest/app.js",
+        "statuses": [200],
+        "redirect": "manual",
+        "expect": ["/v1/invest/", "/handoff"],
+        "rollbackVerify": false
       },
       {
         "url": "https://pay.ekodi.kr/",

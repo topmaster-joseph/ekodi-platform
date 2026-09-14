@@ -50,9 +50,9 @@ function tradeAdminClient(ADMIN_HUB){
   }
   function authRequired(){
     sectionTitle('무역거래 관리자','에코디비즈 권한으로 거래회사별 관리 범위를 확인합니다.');
-    $('summaryCards').innerHTML=card('상태','로그인 필요','EKODI 통합 인증');
+    $('summaryCards').innerHTML=[card('운영공간','무역거래','에코디비즈 하위서비스'),card('현재 상태','로그인 전','거래회사 데이터 비공개'),card('권한 범위','역할 + 회사','최소 범위만 투영'),card('관계자 화면','사용 가능','관리화면과 분리')].join('');
     const target=new URL('/auth/',location.origin);target.searchParams.set('site','trade');target.searchParams.set('direct','1');target.searchParams.set('return_to',location.origin+location.pathname);
-    $('mainPanel').innerHTML=`<h2>관리자 인증</h2><p class="empty">로그인 후 에코디비즈 전체 권한 또는 지정된 거래회사 범위만 표시합니다.</p><div class="actions"><a class="button primary" href="${esc(target.href)}">Google 계정으로 계속</a></div>`;
+    $('mainPanel').innerHTML=`<h2>무역거래 관리자 인증</h2><p class="empty">로그인 후 에코디비즈 전체 권한 또는 지정된 거래회사 범위만 표시합니다. 로그인 전에는 거래회사·위임관리자·권한 정보를 노출하지 않습니다.</p><div class="actions"><a class="button primary" href="${esc(target.href)}">Google 계정으로 관리자 확인</a><a class="button" href="/${workspaceUrlSlug}/trade">관계자 화면 보기</a></div>`;
     state('인증 필요');
   }
   function accessSummary(){

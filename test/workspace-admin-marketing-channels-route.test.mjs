@@ -4,14 +4,15 @@ import { readFile } from 'node:fs/promises';
 import { isWorkspaceAdminPathShape } from '../workspace-route-policy.js';
 
 test('Mall and generic service channel routes use the shared workspace admin', async () => {
-  assert.equal(isWorkspaceAdminPathShape('/admin/ekodimall/'), true);
-  assert.equal(isWorkspaceAdminPathShape('/admin/ekodimall/channel-settings/'), true);
+  assert.equal(isWorkspaceAdminPathShape('/admin/ekodimall/'), false);
+  assert.equal(isWorkspaceAdminPathShape('/admin/ekodimall/channel-settings/'), false);
+  assert.equal(isWorkspaceAdminPathShape('/ekodibiz/ekodimall/admin/channel-settings/'), true);
   assert.equal(isWorkspaceAdminPathShape('/ekodibiz/ekodimall/admin/channels/'), true);
   assert.equal(isWorkspaceAdminPathShape('/ekodibiz/trade/admin/publishing/'), true);
   assert.equal(isWorkspaceAdminPathShape('/cgma/admin/publishing/'), true);
   const source=await readFile(new URL('../workspace-admin-page.js', import.meta.url),'utf8');
   assert.match(source, /canonicalMall=clean\.match/);
-  assert.match(source, /adminBase=service==='mall'\?'\/admin\/ekodimall'/);
+  assert.match(source, /adminBase=service==='mall'\?'\/ekodibiz\/ekodimall\/admin'/);
   assert.match(source, /service\?`\$\{base\}\/\$\{service\}\/admin`/);
   assert.match(source, /service channel job isolation|visibleChannelIds/);
 });

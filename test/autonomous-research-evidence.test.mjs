@@ -73,3 +73,32 @@ test('research evidence report is keyed by stable discovery research id', () => 
   assert.equal(report.productionMutationPerformed, false);
   assert.equal(report.authorityExpanded, false);
 });
+
+test('service-scoped discovery target continues into isolated research evidence', () => {
+  const serviceProgram = {
+    id: 'adr_church_deploy',
+    signal: {
+      serviceId: 'church',
+      target: 'service:church:github-workflow:Deploy EKODI Church',
+      evidenceRefs: ['https://github.com/example/repo/actions/runs/10'],
+    },
+  };
+  const serviceRuns = [
+    { databaseId: 10, serviceId: 'church', workflowName: 'Deploy EKODI Church', conclusion: 'failure', createdAt: '2026-09-14T00:00:00Z', url: 'https://github.com/example/repo/actions/runs/10' },
+    { databaseId: 11, serviceId: 'church', workflowName: 'Deploy EKODI Church', conclusion: 'failure', createdAt: '2026-09-14T01:00:00Z', url: 'https://github.com/example/repo/actions/runs/11' },
+    { databaseId: 12, serviceId: 'church', workflowName: 'Deploy EKODI Church', conclusion: 'failure', createdAt: '2026-09-14T02:00:00Z', url: 'https://github.com/example/repo/actions/runs/12' },
+    { databaseId: 13, serviceId: 'biz', workflowName: 'Deploy EKODI Church', conclusion: 'failure', createdAt: '2026-09-14T03:00:00Z', url: 'https://github.com/example/repo/actions/runs/13' },
+  ];
+  const evidence = buildWorkflowResearchEvidence(serviceProgram, serviceRuns, {});
+  assert.equal(evidence.serviceId, 'church');
+  assert.equal(evidence.workflowName, 'Deploy EKODI Church');
+  assert.equal(evidence.target, 'service:church:github-workflow:Deploy EKODI Church');
+  assert.equal(evidence.failedRuns, 3);
+  assert.equal(evidence.evidenceRefs.some(ref => ref.endsWith('/13')), false);
+
+  const report = collectResearchEvidence({ cycle: { researchPrograms: [serviceProgram] } }, serviceRuns, {});
+  assert.equal(report.subservices.length, 1);
+  assert.equal(report.subservices[0].serviceId, 'church');
+  assert.equal(report.subservices[0].researchPrograms, 1);
+  assert.equal(report.subservices[0].failedRuns, 3);
+});

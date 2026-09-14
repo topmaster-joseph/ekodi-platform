@@ -26,7 +26,7 @@ const PUBLIC_EXECUTION_SURFACES=Object.freeze([
   Object.freeze({id:'social',prefix:'/social',binding:'SOCIAL',virtualHost:'social.ekodi.kr'}),
   Object.freeze({id:'space',prefix:'/space',binding:'SPACE',virtualHost:'space.ekodi.kr'}),
   Object.freeze({id:'storage',prefix:'/storage',binding:'STORAGE',virtualHost:'drive.ekodi.kr',basePathAware:true}),
-  Object.freeze({id:'support',prefix:'/support',binding:'SUPPORT',virtualHost:'support.ekodi.kr'}),
+  Object.freeze({id:'support',prefix:'/support',binding:'SUPPORT',preservePrefix:true,basePathAware:true}),
   Object.freeze({id:'work',prefix:'/work',binding:'WORK',virtualHost:'work.ekodi.kr'}),
   Object.freeze({id:'workspace-api',prefix:'/workspace-api',binding:'WORKSPACE_PLATFORM',virtualHost:'workspace-api.ekodi.kr',basePathAware:true}),
   Object.freeze({id:'marketing-api',prefix:'/marketing-api',binding:'MARKETING_DOMAIN',virtualHost:'marketing-api.ekodi.kr',basePathAware:true}),
@@ -47,7 +47,7 @@ const CANONICAL_HOST_PATHS=Object.freeze({
   'energy.ekodi.kr':'/energy','exp.ekodi.kr':'/experience','try.ekodi.kr':'/experience','dev.ekodi.kr':'/developer',
   'finance-api.ekodi.kr':'/finance-api','journal.ekodi.kr':'/journal','life.ekodi.kr':'/life','management.ekodi.kr':'/management',
   'money.ekodi.kr':'/money','personal-finance-api.ekodi.kr':'/personal-finance-api','publishing.ekodi.kr':'/publishing',
-  'social.ekodi.kr':'/social','space.ekodi.kr':'/space','drive.ekodi.kr':'/storage','support.ekodi.kr':'/support',
+  'social.ekodi.kr':'/social','space.ekodi.kr':'/space','drive.ekodi.kr':'/storage',
   'work.ekodi.kr':'/work','workspace-api.ekodi.kr':'/workspace-api','marketing-api.ekodi.kr':'/marketing-api',
   'marketing-connect-api.ekodi.kr':'/marketing-connect-api','marketing-publish-api.ekodi.kr':'/marketing-publish-api',
   'pay.ekodi.kr':'/pay','pay.biz.ekodi.kr':'/ekodibiz/pay','live.ekodi.kr':'/live','live.biz.ekodi.kr':'/live/biz',
@@ -192,7 +192,7 @@ async function proxyExecutionSurface(request,env,spec,legacyFetch,externalFetch)
   if(spec.binding&&env?.[spec.binding]?.fetch){
     const binding=env[spec.binding];
     upstreamUrl.hostname=spec.virtualHost||CANONICAL_HOST;
-    upstreamUrl.pathname=stripPrefix(upstreamUrl.pathname,spec.prefix);
+    upstreamUrl.pathname=spec.preservePrefix?upstreamUrl.pathname:stripPrefix(upstreamUrl.pathname,spec.prefix);
     response=await binding.fetch(cloneRequest(request,upstreamUrl));
   }else if(spec.legacyHost){
     if(typeof legacyFetch!=='function')return serviceUnavailable(spec.id);
