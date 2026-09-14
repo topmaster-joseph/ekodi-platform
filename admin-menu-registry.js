@@ -1,4 +1,5 @@
 import './platform-maturity-admin.js';
+import './admin-service-handoffs.js';
 
 export const ADMIN_MENU_GROUPS = Object.freeze([
   { id: 'home', icon: '⌂', defaultSection: 'campus', labels: { ko: '홈', en: 'Home' } },
