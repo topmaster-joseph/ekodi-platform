@@ -247,7 +247,7 @@ async function similarIdeaFingerprint(env,input,fallback){
   }catch{return fallback;}
 }
 async function commonsPage(request,env){
-  const target=new URL(request.url);target.pathname='/commons.html';target.search='';
+  const target=new URL(request.url);target.pathname='/commons';target.search='';
   const asset=await env.ASSETS.fetch(new Request(target.toString(),request));const out=new Response(asset.body,asset);
   for(const [key,value] of Object.entries(headers()))out.headers.set(key,value);out.headers.set('cache-control','no-store');out.headers.set('x-ekodi-ai-surface','commons');return out;
 }
