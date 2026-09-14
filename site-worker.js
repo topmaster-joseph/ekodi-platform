@@ -106,6 +106,8 @@ const ADMIN_ASSETS = new Set([
   '/admin-lazy-features.js',
   '/admin-menu-layout.js',
   '/admin-menu-registry.js',
+  '/admin-service-handoffs.js',
+  '/admin-service-catalog.js',
   '/admin-sidebar.js',
   '/admin-menu-runtime.js',
   '/ekodibiz-admin-registry.js',
