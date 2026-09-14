@@ -43,6 +43,39 @@ function rootInternalPath(pathname){
   return path==='/admin'||path==='/admin.html'||path.startsWith('/admin/');
 }
 
+export function isUserHomePath(pathname,serviceId='',workspaceSlug=''){
+  const path=normalizedPath(pathname);
+  const workspace=String(workspaceSlug||'').trim().toLowerCase();
+  if(workspace){
+    const segments=path.split('/').filter(Boolean);
+    return segments[0]===workspace&&segments.length<=2;
+  }
+  const id=String(serviceId||'').trim().toLowerCase();
+  if(!id||id==='church'||id==='ekodi')return false;
+  const service=serviceForId(id);
+  if(!service)return false;
+  try{
+    const serviceUrl=new URL(service.url);
+    const servicePath=normalizedPath(serviceUrl.pathname);
+    if(serviceUrl.hostname==='ekodi.kr'&&servicePath!=='/'&&path===servicePath)return true;
+  }catch{}
+  return path===`/${id}`;
+}
+
+function isHostServiceHomePath(pathname,serviceId=''){
+  const id=String(serviceId||'').trim().toLowerCase();
+  if(!id||id==='church'||id==='ekodi')return false;
+  const path=normalizedPath(pathname);
+  return path==='/'||path==='/index.html';
+}
+
+function injectServiceShell(response,serviceId,options={}){
+  if(!options?.homeSimplicity){
+    if(serviceId)return injectEkodiShell(response,serviceId);
+  }
+  return injectEkodiShell(response,serviceId,'',options);
+}
+
 function workspaceVisualStyle(dna){
   const vars=workspaceVisualCssVariables(dna);
   const declarations=Object.entries(vars).map(([key,value])=>`${key}:${value}`).join(';');
@@ -109,16 +142,17 @@ export default {
       const pathname=new URL(effective.request.url).pathname;
       if(rootInternalPath(pathname)||standaloneBrandPlacePath(pathname)||isWorkspaceAdminPathShape(pathname))return response;
       const serviceId=rootUserService(pathname);
-      if(serviceId)return injectEkodiShell(response,serviceId);
+      if(serviceId)return injectServiceShell(response,serviceId,{homeSimplicity:isUserHomePath(pathname,serviceId)});
       const workspaceSlug=workspaceSlugForPath(pathname);
       if(workspaceSlug){
-        const shelled=injectEkodiShell(response,'ekodi','workspace');
+        const shelled=injectEkodiShell(response,'ekodi','workspace',{homeSimplicity:isUserHomePath(pathname,'',workspaceSlug),contextKind:'workspace'});
         return applyWorkspaceVisual(shelled,workspaceSlug);
       }
-      return injectEkodiShell(response,'ekodi','public');
+      return injectEkodiShell(response,'ekodi','public',{homeSimplicity:false});
     }
     const serviceId = shellServiceForHost(effective.host);
     if (!serviceId) return response;
-    return injectEkodiShell(response, serviceId);
+    const pathname=new URL(effective.request.url).pathname;
+    return injectServiceShell(response,serviceId,{homeSimplicity:isHostServiceHomePath(pathname,serviceId)});
   },
 };
