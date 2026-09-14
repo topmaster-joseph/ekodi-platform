@@ -17,8 +17,8 @@ const handoffSource=fs.readFileSync(path.join(root,'admin-service-handoffs.js'),
 const HIERARCHY_TO_CATALOG=Object.freeze({
   ekodibiz:'biz',
   ekodimall:'mall',
-  trade:'trade',
-  church:'church',
+  'ekodibiz-trade':'trade',
+  ekodichurch:'church',
   cgma:'cgma',
   cmpmyi:'cmpmyi',
   jadam:'jadam',
@@ -56,7 +56,7 @@ test('machine site hierarchy is represented in the superadmin handoff catalog',(
     const catalogId=HIERARCHY_TO_CATALOG[site.id]||site.id;
     const item=byId.get(catalogId);
     assert.ok(item,`missing catalog item for hierarchy site ${site.id}`);
-    assert.equal(canonicalServiceAdminPath(item.basePath),site.canonicalAdminPath,`${site.id} canonical admin mismatch`);
+    assert.equal(canonicalServiceAdminPath(item.basePath),site.adminPath,`${site.id} canonical admin mismatch`);
   }
 });
 
@@ -65,5 +65,6 @@ test('campus service names hand off to canonical owner admin instead of duplicat
   assert.match(handoffSource,/location\.assign\(url\)/);
   assert.match(handoffSource,/서비스 관리자/);
   assert.doesNotMatch(handoffSource,/admin\.ekodi\.kr/);
-  assert.doesNotMatch(handoffSource,/my\.ekodi\.kr/);
+  assert.match(handoffSource,/legacy==='my\.ekodi\.kr'\)row\.hidden=true/);
+  assert.doesNotMatch(handoffSource,/(?:href|adminUrl)\s*=\s*['"`]https?:\/\/my\.ekodi\.kr/);
 });
