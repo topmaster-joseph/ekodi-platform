@@ -1,9 +1,13 @@
 import { injectEkodiShell } from './ekodi-shell-injector.js';
 import { isWorkspaceAdminPath, workspaceAdminPage, workspaceAdminCss, workspaceAdminScript } from './workspace-admin-page.js';
+import { legacyAdminAliasTarget } from './admin-address-policy.js';
 import { churchPastorAdminPage, churchPastorAdminScript, isChurchPastorAdminPath } from './church-pastor-admin-page.js';
 import { ekodiBizInvestBusinessPage, isEkodiBizInvestPath } from './ekodibiz-invest-business.js';
 import { ekodiBizInvestAdminPage, isEkodiBizInvestAdminPath } from './ekodibiz-invest-admin-page.js';
+import { tenantAdminCommandHomeScript, tenantAdminCommandHomeCss } from './tenant-admin-command-home.js';
 import { decorateDiscoveryResponse } from './discovery-layer.js';
+import { realtimeTenantFromPath } from './realtime-tenant-registry.js';
+import { tenantLivePage } from './tenant-live-page.js';
 
 // Static Assets canonicalizes *.html URLs to extensionless paths.
 // Always request canonical asset paths internally so edge redirects never escape the Worker.
@@ -19,6 +23,8 @@ const PUBLIC_ASSETS = new Set([
   '/homepage-ambient.css',
   '/homepage-ambient.js',
   '/ekodi-message-ui.js',
+  '/tenant-live.css',
+  '/tenant-live.js',
   '/mall.css',
   '/mall.js',
   '/pizzamaru-mokpodae.css',
@@ -104,6 +110,8 @@ const ADMIN_ASSETS = new Set([
   '/admin-lazy-features.js',
   '/admin-menu-layout.js',
   '/admin-menu-registry.js',
+  '/admin-service-handoffs.js',
+  '/admin-service-catalog.js',
   '/admin-sidebar.js',
   '/admin-menu-runtime.js',
   '/ekodibiz-admin-registry.js',
@@ -188,6 +196,8 @@ const PUBLIC_CSP = [
   "form-action 'self'",
   "object-src 'none'",
 ].join('; ');
+
+const LIVE_CSP = PUBLIC_CSP.replace("connect-src 'self' https://api.ekodi.kr","connect-src 'self' https://renzehysxirjilvdxacv.supabase.co");
 
 const MALL_CSP = [
   "default-src 'self'",
@@ -311,21 +321,15 @@ function redirectLegacyEkodiBizPath(request) {
   return response;
 }
 
-function isLegacyMallAdminPath(pathname) {
-  return pathname === '/mall/admin' || pathname.startsWith('/mall/admin/') || pathname === `${FORMER_MALL_PREFIX}/admin` || pathname.startsWith(`${FORMER_MALL_PREFIX}/admin/`) || pathname === `${MALL_PREFIX}/admin` || pathname.startsWith(`${MALL_PREFIX}/admin/`);
-}
-
-function redirectLegacyMallAdminPath(request) {
+function redirectLegacyAdminAliasPath(request) {
   const target = new URL(request.url);
-  const path = target.pathname;
-  const prefix = path.startsWith(`${MALL_PREFIX}/admin`) ? `${MALL_PREFIX}/admin` : path.startsWith(`${FORMER_MALL_PREFIX}/admin`) ? `${FORMER_MALL_PREFIX}/admin` : '/mall/admin';
-  let suffix = path.slice(prefix.length).replace(/\/+$/, '');
-  if (suffix === '/channels' || suffix === '/marketing/channels') suffix = '/channel-settings';
-  target.pathname = `/admin/ekodimall${suffix}`;
+  const canonical = legacyAdminAliasTarget(target.pathname);
+  if (!canonical) return null;
+  target.pathname = canonical;
   const response = new Response(null, { status: 308, headers: { Location: target.toString() } });
   applyBaseSecurityHeaders(response.headers);
   response.headers.set('Cache-Control', 'no-store');
-  response.headers.set('X-EKODI-Route', 'mall-admin-canonical-redirect');
+  response.headers.set('X-EKODI-Route', 'admin-canonical-handoff');
   return response;
 }
 
@@ -487,6 +491,20 @@ function rewriteAdminApexLogin(response) {
     .transform(response);
 }
 
+async function proxyPublicAi(request, env) {
+  if (!env.AI?.fetch) return new Response('AI service unavailable',{status:503,headers:{'cache-control':'no-store'}});
+  const sourceUrl=new URL(request.url);
+  const target=new URL(request.url);
+  target.pathname=sourceUrl.pathname.replace(/^\/ai(?=\/|$)/,'')||'/';
+  const headers=new Headers(request.headers);
+  headers.set('x-ekodi-public-ai','commons-v1');
+  const body=['GET','HEAD'].includes(request.method)?undefined:await request.arrayBuffer();
+  const upstream=await env.AI.fetch(new Request(target.toString(),{method:request.method,headers,body,redirect:'manual'}));
+  const response=new Response(upstream.body,upstream);
+  response.headers.set('X-EKODI-AI-Entry','commons-v1');
+  return response;
+}
+
 async function proxyAdminStorage(request, env) {
   if (!env.STORAGE?.fetch) {
     return withHostSecurity(new Response(JSON.stringify({error:'Storage service binding unavailable',code:'STORAGE_BINDING_UNAVAILABLE'}), {
@@ -500,24 +518,22 @@ async function proxyAdminStorage(request, env) {
   return withHostSecurity(response, ADMIN_CSP, 'no-store', 'admin-storage-proxy');
 }
 
-async function proxyAdminCommonServiceAi(request) {
+async function proxyAdminCommonServiceAi(request, env) {
   const url = new URL(request.url);
   const suffix = url.pathname.slice(ADMIN_COMMON_SERVICE_AI_PREFIX.length);
   if (!/^(?:status|session|tasks(?:\/[a-z0-9._~-]+(?:\/(?:run|approve))?)?|nodes(?:\/pair)?)$/i.test(suffix)) {
     return withHostSecurity(new Response(JSON.stringify({error:'NOT_FOUND'}), {status:404,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store'}}), ADMIN_CSP, 'no-store', 'admin-common-service-ai-proxy');
   }
-  const target = new URL('https://ai.ekodi.kr');
+  if (!env.AI?.fetch) return withHostSecurity(new Response(JSON.stringify({error:'AI_BINDING_UNAVAILABLE'}), {status:503,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store'}}), ADMIN_CSP, 'no-store', 'admin-common-service-ai-proxy');
+  const target = new URL(request.url);
   target.pathname = '/api/' + suffix;
   target.search = url.search;
   const headers = new Headers(request.headers);
-  headers.delete('host');
-  headers.delete('origin');
-  headers.delete('referer');
-  headers.set('x-ekodi-admin-proxy', 'common-service-v1');
+  headers.set('x-ekodi-admin-proxy', 'common-service-binding-v2');
   const body = ['GET','HEAD'].includes(request.method) ? undefined : await request.arrayBuffer();
-  const upstream = await fetch(target.toString(), {method:request.method,headers,body,redirect:'manual'});
+  const upstream = await env.AI.fetch(new Request(target.toString(), {method:request.method,headers,body,redirect:'manual'}));
   const response = new Response(upstream.body, upstream);
-  response.headers.set('X-EKODI-Common-Service-Proxy', 'ai-runtime-v1');
+  response.headers.set('X-EKODI-Common-Service-Proxy', 'ai-service-binding-v2');
   return withHostSecurity(response, ADMIN_CSP, 'no-store', 'admin-common-service-ai-proxy');
 }
 async function proxyAdminMarketingPublishing(request) {
@@ -568,6 +584,15 @@ export default {
         applyBaseSecurityHeaders(response.headers);
         return response;
       }
+      if (url.pathname === '/ai') {
+        const target = new URL(request.url);
+        target.pathname = '/ai/';
+        const response = new Response(null, {status:308, headers:{location:target.toString(),'cache-control':'no-store'}});
+        applyBaseSecurityHeaders(response.headers);
+        response.headers.set('X-EKODI-AI-Canonical','/ai/');
+        return response;
+      }
+      if (url.pathname.startsWith('/ai/')) return proxyPublicAi(request, env);
       if (url.pathname === '/' || url.pathname === '/index.html') {
         const response = await env.ASSETS.fetch(assetRequest(request, '/'));
         return withHostSecurity(response, PUBLIC_CSP, 'no-store', 'public-home');
@@ -576,6 +601,8 @@ export default {
         const target=new URL('/pizzamaru',request.url);target.search=url.search;
         return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-content-type-options':'nosniff','x-ekodi-canonical-storefront':'pizzamaru'}});
       }
+      if (url.pathname === '/tenant-admin-command-home.css') return tenantAdminCommandHomeCss();
+      if (url.pathname === '/tenant-admin-command-home.js') return tenantAdminCommandHomeScript();
       if (url.pathname === '/workspace-admin.css') return workspaceAdminCss();
       if (url.pathname === '/workspace-admin.js') return workspaceAdminScript();
       if (url.pathname.startsWith('/api/control/storage/google/cheonggye-members')) return proxyAdminStorage(request, env);
@@ -590,8 +617,10 @@ export default {
         const secured=withHostSecurity(page, ADMIN_CSP, 'no-store', 'public-ekodibiz-invest-admin');
         return injectEkodiShell(secured, 'biz', 'admin');
       }
+      const liveTenant = realtimeTenantFromPath(url.pathname);
+      if (['GET','HEAD'].includes(request.method) && liveTenant && !liveTenant.dedicated) return withHostSecurity(tenantLivePage(liveTenant), LIVE_CSP, 'no-store', 'public-'+liveTenant.apiTenant+'-live');
       if (isLegacyEkodiBizPath(url.pathname)) return redirectLegacyEkodiBizPath(request);
-      if (['GET','HEAD'].includes(request.method) && isLegacyMallAdminPath(url.pathname)) return redirectLegacyMallAdminPath(request);
+      if (['GET','HEAD'].includes(request.method)) { const adminAlias=redirectLegacyAdminAliasPath(request); if (adminAlias) return adminAlias; }
       if (isLegacyMallPath(url.pathname)) return redirectLegacyMallPath(request);
       if (isFormerMallPath(url.pathname)) return redirectFormerMallPath(request);
       if (['GET','HEAD'].includes(request.method) && (url.pathname === '/ekodi-church' || url.pathname.startsWith('/ekodi-church/'))) { const target=new URL(request.url); target.pathname=url.pathname.replace(/^\/ekodi-church(?=\/|$)/i,'/ekodichurch'); return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-content-type-options':'nosniff'}}); }
@@ -636,7 +665,7 @@ export default {
       if (RETIRED_ADMIN_PATHS.has(url.pathname)) return retiredAdminResponse();
       if (url.pathname.startsWith(ADMIN_STORAGE_PREFIX)) return proxyAdminStorage(request, env);
       if (url.pathname.startsWith(ADMIN_MARKETING_PUBLISHING_PREFIX)) return proxyAdminMarketingPublishing(request);
-      if (url.pathname.startsWith(ADMIN_COMMON_SERVICE_AI_PREFIX)) return proxyAdminCommonServiceAi(request);
+      if (url.pathname.startsWith(ADMIN_COMMON_SERVICE_AI_PREFIX)) return proxyAdminCommonServiceAi(request, env);
       if (url.pathname === '/auth/start') {
         if (!['GET', 'HEAD'].includes(request.method)) {
           const response = new Response('Method Not Allowed', { status: 405, headers: { 'Allow': 'GET, HEAD' } });

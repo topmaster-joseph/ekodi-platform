@@ -24,7 +24,7 @@ test('common chrome policy retires global audio and workspace selection',async()
     read('shell/ccm-mr-player.js')
   ]);
   const policy=JSON.parse(policyText);
-  assert.equal(policy.version,11);
+  assert.equal(policy.version,13);
   assert.equal(policy.principles.persistentChromeHeaderFooterOnly,true);
   assert.equal(policy.principles.workspaceSelectionLivesInMyEkodi,true);
   assert.equal(policy.principles.globalAmbientAudioForbidden,true);

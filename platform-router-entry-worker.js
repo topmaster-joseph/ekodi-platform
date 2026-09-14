@@ -12,7 +12,8 @@ import { MAIL_HOST, mailUserPage, handleMailApi } from './mail-user-page.js';
 import { handleMailContactApi, mailContactPage } from './mail-contact.js';
 import { mailAdminPage } from './mail-admin-page.js';
 import { isWorkspaceAdminPath, workspaceAdminPage, workspaceAdminCss, workspaceAdminScript } from './workspace-admin-page.js';
-import { isStoreAdminPathShape, resolveStoreAdminRoute, isIntegratedStoreAdminPathShape, resolveIntegratedStoreAdminRoute, storeAdminPage, storeAdminCss, storeAdminScript } from './store-admin-engine.js';
+import { legacyAdminAliasTarget } from './admin-address-policy.js';
+import { isStoreAdminPathShape, resolveStoreAdminRoute, storeAdminPage, storeAdminCss, storeAdminScript } from './store-admin-engine.js';
 import { churchPastorAdminPage, churchPastorAdminScript, isChurchPastorAdminPath } from './church-pastor-admin-page.js';
 import { isEkodiBizInvestAdminPath } from './ekodibiz-invest-admin-page.js';
 import { workspaceTradeAdminScript } from './workspace-trade-admin-page.js';
@@ -24,6 +25,7 @@ import { routeCanonicalSurface } from './canonical-surface-router.js';
 import { handlePreviewRequest } from './preview-page.js';
 import { storeGatewayPage } from './store-gateway-page.js';
 import { storePortfolioAdminPage } from './store-portfolio-admin-page.js';
+import { tenantAdminCommandHomeScript, tenantAdminCommandHomeCss } from './tenant-admin-command-home.js';
 import { isLearningPath, learningPage, learningScript, learningStyles } from './learning-page.js';
 import { decorateDiscoveryResponse } from './discovery-layer.js';
 
@@ -153,6 +155,7 @@ async function routePublicWorkspace(request,env){
   if(!env?.SPACE?.fetch)return workspaceServiceUnavailable();
   const upstream=await env.SPACE.fetch(request);const routed=new Response(upstream.body,upstream);routed.headers.set('x-ekodi-workspace-gateway','space-service-binding');
   if(routed.headers.get('x-ekodi-route')==='space-storefront'){routed.headers.set('x-ekodi-public-surface','customer-storefront');return routed;}
+  if(routed.headers.get('x-ekodi-independent-site')==='true'){routed.headers.set('x-ekodi-public-surface','independent-workspace-site');return routed;}
   return injectEkodiShell(rewriteWorkspaceShellAssets(routed),'space','workspace');
 }
 
@@ -189,7 +192,7 @@ function internalHostRequest(request,host,pathname){
 }
 async function routeMessengerApex(request,env,ctx){const url=new URL(request.url);if(request.method!=='GET'||!(url.pathname==='/messenger'||url.pathname.startsWith('/messenger/')))return null;const inner=url.pathname==='/messenger'?'/' : url.pathname.slice('/messenger'.length)||'/';if(inner==='/'||inner==='/index.html')return injectEkodiShell(await withReleaseMarker(messengerUserPage()),'messenger');if(inner==='/messenger-ui.js')return messengerUiScript();if(inner==='/app.js')return legacyPlatformRouter.fetch(internalHostRequest(request,MESSENGER_HOST,'/app.js'),env,ctx);return null;}
 async function routeInvestApex(request,env,ctx){const url=new URL(request.url);if(request.method!=='GET'||!(url.pathname==='/invest'||url.pathname.startsWith('/invest/')))return null;const inner=url.pathname==='/invest'?'/' : url.pathname.slice('/invest'.length)||'/';if(inner==='/'||inner==='/index.html')return injectEkodiShell(await withInvestSubjectScript(investUserPage()),'invest');if(inner==='/invest-ui.js')return investUiScript();if(inner==='/invest-subject-ui.js')return investSubjectUiScript();if(inner==='/app.js')return legacyPlatformRouter.fetch(internalHostRequest(request,INVEST_HOST,'/app.js'),env,ctx);return null;}
-function routeMailApex(request){const url=new URL(request.url);if(request.method!=='GET')return null;if(url.pathname==='/mail'||url.pathname==='/mail/')return injectEkodiShell(mailUserPage(),'mail');if(url.pathname==='/mail/admin'||url.pathname==='/mail/admin/')return injectEkodiShell(mailAdminPage(),'mail','admin');return null;}
+function routeMailApex(request){const url=new URL(request.url);if(request.method!=='GET')return null;if(url.pathname==='/mail'||url.pathname==='/mail/')return injectEkodiShell(mailUserPage(),'mail');if(url.pathname==='/mail/admin'||url.pathname==='/mail/admin/')return injectEkodiShell(mailAdminPage({commandHome:true}),'mail','admin');if(url.pathname==='/mail/admin/overview'||url.pathname==='/mail/admin/overview/')return injectEkodiShell(mailAdminPage(),'mail','admin');return null;}
 
 async function withReleaseMarker(response){
   const text=await response.text();
@@ -214,7 +217,7 @@ export default {
     const legacySurface=legacySurfaceRedirect(request);if(legacySurface)return legacySurface;
     const legacyStores=legacyStoreGatewayRedirect(request);if(legacyStores)return legacyStores;
     if(host===PUBLIC_HOST&&url.pathname.startsWith('/api/finance/tax-'))return routeTaxFinance(request,env,ctx);
-    if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)&&/^\/admin\/ekodimall(?:\/|$)/i.test(url.pathname))return injectEkodiShell(workspaceAdminPage(),'space','admin');
+    if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)){const adminTarget=legacyAdminAliasTarget(url.pathname);if(adminTarget){const target=new URL(request.url);target.pathname=adminTarget;return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-content-type-options':'nosniff','x-ekodi-route':'admin-canonical-handoff'}})}}
     const canonical=await routeCanonicalSurface(request,env,{legacyFetch:next=>legacyPlatformRouter.fetch(next,env,ctx)});
     if(canonical)return canonical;
 
@@ -231,10 +234,12 @@ export default {
       const previewResponse=handlePreviewRequest(request);if(previewResponse)return previewResponse;
       if(['GET','HEAD'].includes(request.method)&&isInsurancePublicPath(url.pathname))return routeInsurancePublic(request,env);
       if(request.method==='GET'){
+        if(url.pathname==='/tenant-admin-command-home.css')return tenantAdminCommandHomeCss();
+        if(url.pathname==='/tenant-admin-command-home.js')return tenantAdminCommandHomeScript();
         if(['/store-admin.css','/jadam-admin.css','/pizzamaru-admin.css','/yogurt-admin.css'].includes(url.pathname))return storeAdminCss();
         if(['/store-admin.js','/jadam-admin.js','/pizzamaru-admin.js','/yogurt-admin.js'].includes(url.pathname))return storeAdminScript();
-        if(url.pathname==='/cmpmyi/admin'||url.pathname==='/cmpmyi/admin/')return injectEkodiShell(storePortfolioAdminPage(),'business','admin');
-        if(isIntegratedStoreAdminPathShape(url.pathname)){const storeRoute=await resolveIntegratedStoreAdminRoute(url.pathname);if(storeRoute)return injectEkodiShell(storeAdminPage(storeRoute),'business','admin');}
+        if(url.pathname==='/cmpmyi/admin'||url.pathname==='/cmpmyi/admin/')return injectEkodiShell(storePortfolioAdminPage({commandHome:true}),'business','admin');
+        if(url.pathname==='/cmpmyi/admin/overview'||url.pathname==='/cmpmyi/admin/overview/')return injectEkodiShell(storePortfolioAdminPage(),'business','admin');
         if(isStoreAdminPathShape(url.pathname)){const storeRoute=await resolveStoreAdminRoute(url.pathname);if(storeRoute)return injectEkodiShell(storeAdminPage(storeRoute),'business','admin');}
         if(url.pathname==='/workspace-admin.css')return workspaceAdminCss();
         if(url.pathname==='/workspace-admin.js')return workspaceAdminScript();
@@ -243,7 +248,6 @@ export default {
         if(url.pathname==='/workspace-trade-portal.css')return tradePartnerCss();
         if(url.pathname==='/workspace-trade-portal.js')return tradePartnerScript();
         if(isTradePartnerPath(url.pathname))return tradePartnerPage();
-        if(url.pathname==='/mall/admin'||url.pathname.startsWith('/mall/admin/')||url.pathname==='/ekodibiz/mall/admin'||url.pathname.startsWith('/ekodibiz/mall/admin/')||url.pathname==='/ekodibiz/ekodimall/admin'||url.pathname.startsWith('/ekodibiz/ekodimall/admin/')){const target=new URL(request.url);const prefix=url.pathname.startsWith('/ekodibiz/ekodimall/admin')?'/ekodibiz/ekodimall/admin':url.pathname.startsWith('/ekodibiz/mall/admin')?'/ekodibiz/mall/admin':'/mall/admin';let suffix=url.pathname.slice(prefix.length).replace(/\/+$/,'');if(suffix==='/channels'||suffix==='/marketing/channels')suffix='/channel-settings';target.pathname='/admin/ekodimall'+suffix;return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-content-type-options':'nosniff'}});}
         if(url.pathname==='/ekodi-church'||url.pathname.startsWith('/ekodi-church/')){const target=new URL(request.url);target.pathname=url.pathname.replace(/^\/ekodi-church(?=\/|$)/i,'/ekodichurch');return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-content-type-options':'nosniff'}});}
         if(isChurchPastorAdminPath(url.pathname))return injectEkodiShell(churchPastorAdminPage(),'church','admin');
         if(isWorkspaceAdminPath(url.pathname)&&!isEkodiBizInvestAdminPath(url.pathname))return injectEkodiShell(workspaceAdminPage(),'space','admin');

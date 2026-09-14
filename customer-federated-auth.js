@@ -1,4 +1,5 @@
 import { isAllowedOrigin } from './auth-worker.js';
+import { accessGrantIsActive } from './access-governance.js';
 
 const SUPABASE_URL = 'https://renzehysxirjilvdxacv.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
@@ -84,6 +85,14 @@ async function ensureSchema(db) {
       created_at TEXT NOT NULL,
       created_by INTEGER,
       last_verified_at TEXT,
+      principal_type TEXT NOT NULL DEFAULT 'member',
+      github_username TEXT NOT NULL DEFAULT '',
+      capabilities_json TEXT NOT NULL DEFAULT '[]',
+      denied_capabilities_json TEXT NOT NULL DEFAULT '[]',
+      expires_at TEXT,
+      note TEXT NOT NULL DEFAULT '',
+      updated_at TEXT,
+      updated_by INTEGER,
       PRIMARY KEY (tenant_id, email),
       FOREIGN KEY(tenant_id) REFERENCES customer_tenants(id)
     )`),
@@ -133,11 +142,13 @@ async function ensureSchema(db) {
   await db.prepare("UPDATE customer_tenants SET domain = 'yogurt.ekodi.kr' WHERE slug = 'yogurt' AND domain <> 'yogurt.ekodi.kr'").run();
 }
 
-async function issueSession(db, userId, tenantId) {
+async function issueSession(db, userId, tenantId, maxExpiresAt = '') {
   const token = bytesToHex(crypto.getRandomValues(new Uint8Array(32)));
   const tokenHash = await sha256(token);
   const now = new Date();
-  const expiresAt = new Date(now.getTime() + SESSION_HOURS * 60 * 60 * 1000);
+  let expiresAt = new Date(now.getTime() + SESSION_HOURS * 60 * 60 * 1000);
+  const grantExpiry = Date.parse(String(maxExpiresAt || ''));
+  if (Number.isFinite(grantExpiry) && grantExpiry < expiresAt.getTime()) expiresAt = new Date(grantExpiry);
   await db.prepare('DELETE FROM customer_sessions WHERE expires_at <= ?').bind(now.toISOString()).run();
   await db.prepare(`INSERT INTO customer_sessions (token_hash, user_id, tenant_id, expires_at, created_at, last_seen_at)
     VALUES (?, ?, ?, ?, ?, ?)`).bind(tokenHash, userId, tenantId, expiresAt.toISOString(), now.toISOString(), now.toISOString()).run();
@@ -203,18 +214,19 @@ async function federatedLogin(request, env) {
   const tenant = await env.DB.prepare('SELECT id, slug, name, domain, status FROM customer_tenants WHERE slug = ?').bind(tenantSlug).first();
   if (!tenant || tenant.status !== 'active') return json({ error: '등록된 고객사가 아닙니다.' }, 404, request, env);
 
-  const grant = await env.DB.prepare(`SELECT email, role, enabled, last_verified_at
+  const grant = await env.DB.prepare(`SELECT email, role, enabled, last_verified_at, principal_type, github_username,
+      capabilities_json, denied_capabilities_json, expires_at
     FROM customer_access_grants
     WHERE tenant_id = ? AND email = ?`).bind(tenant.id, identity.email).first();
 
-  if (!grant || Number(grant.enabled) !== 1) {
-    return json({ error: '이 Google 계정은 해당 고객 관리공간에 등록되어 있지 않습니다.' }, 403, request, env);
+  if (!accessGrantIsActive(grant)) {
+    return json({ error: grant?.expires_at ? '이 계정의 접근기간이 만료되었거나 권한이 회수되었습니다.' : '이 Google 계정은 해당 고객 관리공간에 등록되어 있지 않습니다.', code: 'ACCESS_GRANT_INACTIVE' }, 403, request, env);
   }
 
   const user = await ensureRuntimeIdentity(env.DB, tenant, identity, grant);
   if (!user) return json({ error: '비활성화된 고객 계정입니다.' }, 403, request, env);
 
-  const session = await issueSession(env.DB, user.id, tenant.id);
+  const session = await issueSession(env.DB, user.id, tenant.id, grant.expires_at || '');
   await env.DB.prepare(`INSERT INTO customer_audit_logs (tenant_id, user_id, action, resource, detail, created_at)
     VALUES (?, ?, 'session.central_login', 'customer-portal', ?, ?)`)
     .bind(tenant.id, user.id, identity.id, user.verifiedAt).run();
@@ -224,6 +236,9 @@ async function federatedLogin(request, env) {
     email: identity.email,
     displayName: user.display_name || identity.displayName,
     role: grant.role,
+    principalType: grant.principal_type || 'member',
+    githubUsername: grant.github_username || '',
+    grantExpiresAt: grant.expires_at || '',
     tenant: { slug: tenant.slug, name: tenant.name, domain: tenant.domain },
     ...session,
   }, 200, request, env);

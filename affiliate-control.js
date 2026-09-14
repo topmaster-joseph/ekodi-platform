@@ -35,6 +35,7 @@ const AFFILIATE_ROUTE_STATUSES = new Set(['candidate', 'pending', 'approved', 'a
 const AFFILIATE_TRACKING_STATUSES = new Set(['not_ready', 'pending', 'ready', 'failed']);
 const AFFILIATE_CATALOG_STATUSES = new Set(['not_ready', 'manual_verified', 'feed_ready', 'stale', 'failed']);
 const RECOMMENDABLE_CATALOG_STATUSES = new Set(['manual_verified', 'feed_ready']);
+const WORKSPACE_MANAGE_ROLES = new Set(['owner','admin','tenant_admin','workspace_admin','manager','store_owner','operator']);
 function marketCountry(value) { const code = cleanText(value || 'KR', 2).toUpperCase(); return /^[A-Z]{2}$/.test(code) ? code : ''; }
 function settlementCurrency(value) { const code = cleanText(value || 'KRW', 3).toUpperCase(); return /^[A-Z]{3}$/.test(code) ? code : ''; }
 function nonNegativeInt(value) {
@@ -51,12 +52,40 @@ function httpsUrl(value, { optional = false } = {}) {
   } catch { return null; }
 }
 
+function bearer(request) { const value = cleanText(request.headers.get('authorization'), 4096); return value.toLowerCase().startsWith('bearer ') ? value.slice(7).trim() : ''; }
+function envSupabase(env) { return { url: cleanText(env.MY_SUPABASE_URL || env.SUPABASE_URL, 500).replace(/\/$/, ''), key: cleanText(env.MY_SUPABASE_PUBLISHABLE_KEY || env.SUPABASE_PUBLISHABLE_KEY, 1000) }; }
+async function supabaseJson(path, token, env, init = {}) {
+  const cfg = envSupabase(env);
+  if (!cfg.url || !cfg.key) throw Object.assign(new Error('central_identity_unavailable'), { status:503 });
+  const response = await fetch(`${cfg.url}${path}`, { ...init, headers:{ apikey:cfg.key, authorization:`Bearer ${token}`, 'content-type':'application/json', ...(init.headers || {}) }, cache:'no-store' });
+  const data = await response.json().catch(() => null);
+  if (!response.ok) throw Object.assign(new Error(data?.message || data?.error || `identity_${response.status}`), { status:response.status });
+  return data;
+}
+async function workspaceActor(request, env) {
+  const token = bearer(request);
+  if (!token) return null;
+  try {
+    const [user, raw] = await Promise.all([
+      supabaseJson('/auth/v1/user', token, env),
+      supabaseJson('/rest/v1/rpc/current_site_activity_contexts', token, env, { method:'POST', body:'{}' }),
+    ]);
+    if (!user?.id || !user?.email) return null;
+    const contexts = (Array.isArray(raw) ? raw : []).map(item => ({
+      workspaceId:cleanText(item?.tenant_id,120), workspaceSlug:safeKey(item?.tenant), role:cleanText(item?.authorization_role,60).toLowerCase(),
+    })).filter(item => item.workspaceId && item.workspaceSlug);
+    return { userId:String(user.id), email:cleanText(user.email,254).toLowerCase(), contexts };
+  } catch (error) { console.error('affiliate workspace identity', error?.message || error); return null; }
+}
 function publicHeaders(request) {
   const headers = new Headers();
   const origin = request.headers.get('origin') || '';
   const allowed = new Set(['https://ekodi.kr', 'https://www.ekodi.kr', 'https://shop.ekodi.kr']);
   if (allowed.has(origin)) {
     headers.set('access-control-allow-origin', origin);
+    headers.set('access-control-allow-headers', 'authorization,content-type');
+    headers.set('access-control-allow-methods', 'GET,PUT,OPTIONS');
+    headers.set('access-control-max-age', '86400');
     headers.set('vary', 'Origin');
   }
   return headers;
@@ -90,7 +119,11 @@ async function ensureSchema(db) {
     db.prepare(`CREATE TABLE IF NOT EXISTS affiliate_daily_metrics (id INTEGER PRIMARY KEY AUTOINCREMENT, account_id TEXT NOT NULL, metric_date TEXT NOT NULL, clicks INTEGER NOT NULL DEFAULT 0, orders INTEGER NOT NULL DEFAULT 0, revenue_krw INTEGER NOT NULL DEFAULT 0, source TEXT NOT NULL DEFAULT 'manual', recorded_by INTEGER, created_at TEXT NOT NULL, updated_at TEXT NOT NULL, UNIQUE(account_id, metric_date, source))`),
     db.prepare(`CREATE TABLE IF NOT EXISTS affiliate_partner_programs (program_key TEXT PRIMARY KEY, program_name TEXT NOT NULL, program_kind TEXT NOT NULL DEFAULT 'network', region TEXT NOT NULL DEFAULT 'KR', home_country TEXT NOT NULL DEFAULT 'KR', coverage_summary TEXT NOT NULL DEFAULT '', application_status TEXT NOT NULL DEFAULT 'candidate', integration_status TEXT NOT NULL DEFAULT 'not_ready', api_capable INTEGER NOT NULL DEFAULT 0, deeplink_capable INTEGER NOT NULL DEFAULT 0, product_feed_capable INTEGER NOT NULL DEFAULT 0, reporting_capable INTEGER NOT NULL DEFAULT 0, external_action_required INTEGER NOT NULL DEFAULT 1, priority INTEGER NOT NULL DEFAULT 0, program_url TEXT NOT NULL DEFAULT '', notes TEXT NOT NULL DEFAULT '', created_at TEXT NOT NULL, updated_at TEXT NOT NULL)`),
     db.prepare(`CREATE TABLE IF NOT EXISTS affiliate_merchant_routes (route_key TEXT PRIMARY KEY, merchant_key TEXT NOT NULL, merchant_name TEXT NOT NULL, market_country TEXT NOT NULL DEFAULT 'KR', settlement_currency TEXT NOT NULL DEFAULT 'KRW', affiliate_mode TEXT NOT NULL DEFAULT 'direct', network_key TEXT NOT NULL DEFAULT '', network_name TEXT NOT NULL DEFAULT '', affiliate_status TEXT NOT NULL DEFAULT 'candidate', tracking_status TEXT NOT NULL DEFAULT 'not_ready', catalog_status TEXT NOT NULL DEFAULT 'not_ready', recommendation_enabled INTEGER NOT NULL DEFAULT 0, recommendation_verified_at TEXT, program_url TEXT NOT NULL DEFAULT '', notes TEXT NOT NULL DEFAULT '', created_at TEXT NOT NULL, updated_at TEXT NOT NULL, UNIQUE(merchant_key, affiliate_mode, network_key))`),
+    db.prepare(`CREATE TABLE IF NOT EXISTS affiliate_workspace_sources (workspace_id TEXT NOT NULL, workspace_slug TEXT NOT NULL, route_key TEXT NOT NULL, enabled INTEGER NOT NULL DEFAULT 0, updated_by_user_id TEXT NOT NULL DEFAULT '', updated_by_email TEXT NOT NULL DEFAULT '', created_at TEXT NOT NULL, updated_at TEXT NOT NULL, PRIMARY KEY(workspace_id, route_key))`),
+    db.prepare(`CREATE TABLE IF NOT EXISTS affiliate_workspace_source_audit (id TEXT PRIMARY KEY, workspace_id TEXT NOT NULL, workspace_slug TEXT NOT NULL, route_key TEXT NOT NULL, enabled INTEGER NOT NULL, actor_user_id TEXT NOT NULL, actor_email TEXT NOT NULL, created_at TEXT NOT NULL)`),
     db.prepare('CREATE INDEX IF NOT EXISTS idx_affiliate_merchant_routes_recommend ON affiliate_merchant_routes(affiliate_status, recommendation_enabled, merchant_key)'),
+    db.prepare('CREATE INDEX IF NOT EXISTS idx_affiliate_workspace_sources_slug ON affiliate_workspace_sources(workspace_slug, enabled, route_key)'),
+    db.prepare('CREATE INDEX IF NOT EXISTS idx_affiliate_workspace_source_audit_time ON affiliate_workspace_source_audit(workspace_id, created_at DESC)'),
     db.prepare('CREATE INDEX IF NOT EXISTS idx_affiliate_links_account_time ON affiliate_links(account_id, created_at DESC)'),
     db.prepare('CREATE INDEX IF NOT EXISTS idx_affiliate_metrics_account_date ON affiliate_daily_metrics(account_id, metric_date DESC)'),
   ]);
@@ -126,6 +159,18 @@ async function ensureSchema(db) {
   for (const [routeKey, merchantKey, merchantName, currency, networkKey, networkName, programUrl] of chinaRouteSeeds) {
     await db.prepare(`INSERT OR IGNORE INTO affiliate_merchant_routes (route_key, merchant_key, merchant_name, market_country, settlement_currency, affiliate_mode, network_key, network_name, affiliate_status, tracking_status, catalog_status, recommendation_enabled, program_url, notes, created_at, updated_at) VALUES (?, ?, ?, 'CN', ?, 'network', ?, ?, 'candidate', 'not_ready', 'not_ready', 0, ?, '중국 쇼핑몰 제휴 후보. 공식 승인·추적링크·상품/가격 공급 확인 전 추천 금지. 직접 계약 시 direct 경로를 별도 등록.', ?, ?)`).bind(routeKey, merchantKey, merchantName, currency, networkKey, networkName, programUrl, now, now).run();
   }
+  const candidateRouteSeeds = [
+    ['amazon-direct-associates','amazon','Amazon','US','USD','direct','','Amazon Associates','https://affiliate-program.amazon.com/','글로벌 직접 제휴 후보. 국가별 승인·추적·상품 Feed 확인 전 추천 금지.'],
+    ['atomy-official-reference','atomy_official','애터미 공식몰','KR','KRW','direct','','공식몰 참조','https://kr.atomy.com/','공식몰 참조 전용. 외부 재판매·자동주문·무단 상품정보 복제 금지.'],
+    ['trip-network-linkprice','trip_com','Trip.com','KR','KRW','network','linkprice','LinkPrice','https://www.linkprice.com/affiliate/2022_index.html','LinkPrice를 통한 여행 제휴 후보. 머천트 승인 확인 전 추천 금지.'],
+    ['hotels-network-linkprice','hotels_com','Hotels.com','US','USD','network','linkprice','LinkPrice','https://www.linkprice.com/affiliate/2022_index.html','LinkPrice를 통한 여행 제휴 후보. 머천트 승인 확인 전 추천 금지.'],
+    ['agoda-network-linkprice','agoda','Agoda','SG','USD','network','linkprice','LinkPrice','https://www.linkprice.com/affiliate/2022_index.html','LinkPrice를 통한 여행 제휴 후보. 머천트 승인 확인 전 추천 금지.'],
+    ['expedia-network-linkprice','expedia','Expedia','US','USD','network','linkprice','LinkPrice','https://www.linkprice.com/affiliate/2022_index.html','LinkPrice를 통한 여행 제휴 후보. 머천트 승인 확인 전 추천 금지.'],
+    ['shein-network-adpick','shein','SHEIN','SG','USD','network','adpick','ADPICK Biz','https://biz.adpick.co.kr/','ADPICK Biz를 통한 글로벌 쇼핑 제휴 후보. 머천트 승인 확인 전 추천 금지.'],
+  ];
+  for (const [routeKey, merchantKey, merchantName, country, currency, mode, networkKey, networkName, programUrl, notes] of candidateRouteSeeds) {
+    await db.prepare(`INSERT OR IGNORE INTO affiliate_merchant_routes (route_key, merchant_key, merchant_name, market_country, settlement_currency, affiliate_mode, network_key, network_name, affiliate_status, tracking_status, catalog_status, recommendation_enabled, program_url, notes, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'candidate', 'not_ready', 'not_ready', 0, ?, ?, ?, ?)`).bind(routeKey, merchantKey, merchantName, country, currency, mode, networkKey, networkName, programUrl, notes, now, now).run();
+  }
   await db.prepare(`UPDATE affiliate_accounts SET disclosure_text = ?, updated_at = ? WHERE id = ? AND TRIM(disclosure_text) = ''`).bind(DEFAULT_DISCLOSURE, now, DEFAULT_ACCOUNT_ID).run();
 }
 
@@ -147,8 +192,17 @@ function routeView(row) {
   return { routeKey: row.route_key, merchantKey: row.merchant_key, merchantName: row.merchant_name, marketCountry: row.market_country, settlementCurrency: row.settlement_currency, affiliateMode: row.affiliate_mode, networkKey: row.network_key || '', networkName: row.network_name || '', affiliateStatus: row.affiliate_status, trackingStatus: row.tracking_status || 'not_ready', catalogStatus: row.catalog_status || 'not_ready', recommendationEnabled: Boolean(row.recommendation_enabled), recommendationReady: routeRecommendationReady(row), recommendationVerifiedAt: row.recommendation_verified_at || null, programUrl: row.program_url || '', notes: row.notes || '', updatedAt: row.updated_at };
 }
 
-async function recommendedMerchantKeys(db) {
-  const rows = await db.prepare(`SELECT merchant_key FROM affiliate_merchant_routes WHERE affiliate_status = 'active' AND tracking_status = 'ready' AND catalog_status IN ('manual_verified','feed_ready') AND recommendation_enabled = 1`).all().catch(() => ({ results: [] }));
+async function recommendedMerchantKeys(db, workspaceSlug = '') {
+  const slug = safeKey(workspaceSlug);
+  let explicit = false;
+  if (slug) {
+    const row = await db.prepare('SELECT COUNT(*) AS count FROM affiliate_workspace_sources WHERE workspace_slug=?').bind(slug).first().catch(() => ({ count:0 }));
+    explicit = Number(row?.count || 0) > 0;
+  }
+  const base = `SELECT r.merchant_key FROM affiliate_merchant_routes r WHERE r.affiliate_status = 'active' AND r.tracking_status = 'ready' AND r.catalog_status IN ('manual_verified','feed_ready') AND r.recommendation_enabled = 1`;
+  const rows = explicit
+    ? await db.prepare(`${base} AND EXISTS (SELECT 1 FROM affiliate_workspace_sources ws WHERE ws.workspace_slug=? AND ws.route_key=r.route_key AND ws.enabled=1)`).bind(slug).all().catch(() => ({ results:[] }))
+    : await db.prepare(base).all().catch(() => ({ results:[] }));
   return new Set((rows.results || []).map(row => row.merchant_key));
 }
 
@@ -213,9 +267,9 @@ async function publicProducts(request, env, url) {
     }
   }
   const rows = await readPublicRows(env, limit);
-  const recommendedMerchants = await recommendedMerchantKeys(env.DB);
+  const recommendedMerchants = await recommendedMerchantKeys(env.DB, 'ekodimall');
   const coupangProducts = automation.configured && recommendedMerchants.has('coupang_partners') ? rows.map(row => ({ ...publicProductView(request, row), recommendationEligible: true, affiliateMode: 'direct', marketCountry: 'KR', settlementCurrency: 'KRW' })) : [];
-  const marketplaceProducts = await listMarketplaceProducts(request, env, limit).catch(() => []);
+  const marketplaceProducts = (await listMarketplaceProducts(request, env, limit).catch(() => [])).filter(item => recommendedMerchants.has(item.providerKey));
   const products = applyProductIdentityAliases(mixProductsByProvider([...coupangProducts, ...marketplaceProducts], limit), env);
   const automationStatus = products.length ? 'ready' : (automation.status || 'warming');
   const providers = [...new Map(products.map(item => [item.providerKey || 'unknown', item.providerName || item.providerKey || '제휴 판매처'])).entries()]
@@ -301,7 +355,7 @@ async function overview(env) {
     env.DB.prepare(`SELECT COALESCE(SUM(clicks), 0) AS clicks FROM affiliate_link_clicks WHERE click_date >= date('now', '-29 day')`).first().catch(() => ({ clicks: 0 })),
     env.DB.prepare(`SELECT COUNT(*) AS count FROM ekodi_offers o WHERE o.offer_type = 'product' AND o.visibility = 'public' AND o.status = 'active' AND o.source_provider <> 'coupang_partners' AND EXISTS (SELECT 1 FROM affiliate_merchant_routes r WHERE r.merchant_key = o.source_provider AND r.affiliate_status = 'active' AND r.recommendation_enabled = 1)`).first().catch(() => ({ count: 0 })),
   ]);
-  const recommendedMerchants = await recommendedMerchantKeys(env.DB);
+  const recommendedMerchants = await recommendedMerchantKeys(env.DB, 'ekodimall');
   return {
     generatedAt: new Date().toISOString(),
     accounts: accounts.results.map(accountView),
@@ -436,6 +490,49 @@ async function handleMerchantRoutes(request, env, auth, path) {
   return json({ route: routeView(row) }, 200, auth.response.headers);
 }
 
+function workspaceSourceView(row, inheritReady = false) {
+  const ready = routeRecommendationReady(row);
+  const selected = row.workspace_enabled === null || row.workspace_enabled === undefined ? (inheritReady && ready) : Boolean(row.workspace_enabled);
+  return { ...routeView(row), selected, effectiveEnabled:selected && ready, connectionState:ready ? (selected ? 'active' : 'available') : (selected ? 'selected_pending' : 'not_ready'), workspaceUpdatedAt:row.workspace_updated_at || null };
+}
+async function handleWorkspaceSources(request, env, url) {
+  const headers = publicHeaders(request);
+  if (request.method === 'OPTIONS') return new Response(null, { status:204, headers });
+  const actor = await workspaceActor(request, env);
+  if (!actor) return json({ error:'authentication_required' }, 401, headers);
+  const requested = safeKey(url.searchParams.get('workspace') || 'ekodimall');
+  const context = actor.contexts.find(item => item.workspaceSlug === requested);
+  if (!context || !WORKSPACE_MANAGE_ROLES.has(context.role)) return json({ error:'workspace_manage_permission_required' }, 403, headers);
+  if (request.method === 'GET' && url.pathname === `${PREFIX}/workspace/sources`) {
+    const rows = await env.DB.prepare(`SELECT r.*,ws.enabled AS workspace_enabled,ws.updated_at AS workspace_updated_at FROM affiliate_merchant_routes r LEFT JOIN affiliate_workspace_sources ws ON ws.workspace_id=? AND ws.route_key=r.route_key ORDER BY CASE WHEN r.market_country='KR' THEN 0 WHEN r.market_country='CN' THEN 2 ELSE 1 END,r.merchant_name,r.network_name`).bind(context.workspaceId).all();
+    const configured = await env.DB.prepare('SELECT COUNT(*) AS count FROM affiliate_workspace_sources WHERE workspace_id=?').bind(context.workspaceId).first().catch(() => ({ count:0 }));
+    const inheritedDefaults = Number(configured?.count || 0) === 0;
+    const sources = (rows.results || []).map(row => workspaceSourceView(row, inheritedDefaults));
+    return json({ workspace:{ id:context.workspaceId, slug:context.workspaceSlug, role:context.role }, sources, summary:{ total:sources.length, selected:sources.filter(item=>item.selected).length, effective:sources.filter(item=>item.effectiveEnabled).length, pending:sources.filter(item=>item.selected&&!item.effectiveEnabled).length }, policy:{ selectionDoesNotBypassGlobalReadiness:true, recommendationRequiresActiveAffiliate:true, externalCheckoutOnly:true, inheritedDefaults } }, 200, headers);
+  }
+  if (request.method !== 'PUT' || url.pathname !== `${PREFIX}/workspace/sources`) return null;
+  const body = await readJson(request);
+  const selections = Array.isArray(body?.selections) ? body.selections.slice(0,100) : [];
+  if (!selections.length) return json({ error:'source_selections_required' }, 400, headers);
+  const keys = [...new Set(selections.map(item=>safeKey(item?.routeKey,180)).filter(Boolean))];
+  const known = new Set();
+  for (const key of keys) { const row = await env.DB.prepare('SELECT route_key FROM affiliate_merchant_routes WHERE route_key=?').bind(key).first(); if (row?.route_key) known.add(row.route_key); }
+  if (known.size !== keys.length) return json({ error:'unknown_affiliate_route' }, 400, headers);
+  const stamp = new Date().toISOString();
+  const statements = [];
+  for (const item of selections) {
+    const routeKey = safeKey(item?.routeKey,180);
+    if (!known.has(routeKey)) continue;
+    const enabled = item?.enabled === true ? 1 : 0;
+    statements.push(env.DB.prepare(`INSERT INTO affiliate_workspace_sources(workspace_id,workspace_slug,route_key,enabled,updated_by_user_id,updated_by_email,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?) ON CONFLICT(workspace_id,route_key) DO UPDATE SET enabled=excluded.enabled,workspace_slug=excluded.workspace_slug,updated_by_user_id=excluded.updated_by_user_id,updated_by_email=excluded.updated_by_email,updated_at=excluded.updated_at`).bind(context.workspaceId,context.workspaceSlug,routeKey,enabled,actor.userId,actor.email,stamp,stamp));
+    statements.push(env.DB.prepare(`INSERT INTO affiliate_workspace_source_audit(id,workspace_id,workspace_slug,route_key,enabled,actor_user_id,actor_email,created_at) VALUES(?,?,?,?,?,?,?,?)`).bind(`awsa_${crypto.randomUUID().replaceAll('-','')}`,context.workspaceId,context.workspaceSlug,routeKey,enabled,actor.userId,actor.email,stamp));
+  }
+  await env.DB.batch(statements);
+  const rows = await env.DB.prepare(`SELECT r.*,ws.enabled AS workspace_enabled,ws.updated_at AS workspace_updated_at FROM affiliate_merchant_routes r LEFT JOIN affiliate_workspace_sources ws ON ws.workspace_id=? AND ws.route_key=r.route_key ORDER BY CASE WHEN r.market_country='KR' THEN 0 WHEN r.market_country='CN' THEN 2 ELSE 1 END,r.merchant_name,r.network_name`).bind(context.workspaceId).all();
+  const sources = (rows.results || []).map(workspaceSourceView);
+  return json({ ok:true, sources, summary:{ total:sources.length, selected:sources.filter(item=>item.selected).length, effective:sources.filter(item=>item.effectiveEnabled).length, pending:sources.filter(item=>item.selected&&!item.effectiveEnabled).length } }, 200, headers);
+}
+
 async function handleAccounts(request, env, auth, path) {
   if (request.method === 'GET' && path === `${PREFIX}/accounts`) {
     const rows = await env.DB.prepare('SELECT * FROM affiliate_accounts ORDER BY provider_key, id').all();
@@ -552,6 +649,7 @@ export async function handleAffiliateRequest(request, env) {
   const url = new URL(request.url);
   if (!url.pathname.startsWith(PREFIX)) return null;
   if (!env.DB) return json({ error: '제휴마케팅 데이터베이스 연결이 설정되지 않았습니다.' }, 503);
+  if (url.pathname.startsWith(`${PREFIX}/workspace/`)) { await ensureSchema(env.DB); const workspaceResponse = await handleWorkspaceSources(request, env, url); if (workspaceResponse) return workspaceResponse; }
   if (request.method === 'GET' && url.pathname === `${PREFIX}/public/products`) return publicProducts(request, env, url);
   const imageResponse = await publicImage(request, env, url);
   if (imageResponse) return imageResponse;

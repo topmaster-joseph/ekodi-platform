@@ -4,26 +4,27 @@ import { readFile } from 'node:fs/promises';
 
 const workflow = await readFile(new URL('../.github/workflows/verify-ai-gateway-production.yml', import.meta.url), 'utf8');
 
-test('AI Runtime production verification follows the canonical guarded owner', () => {
+test('AI Commons production verification follows the canonical guarded owner', () => {
   assert.match(workflow, /workflows: \['Deploy EKODI AI Control Plane'\]/);
   assert.match(workflow, /github\.event_name == 'workflow_dispatch'/);
   assert.match(workflow, /github\.event\.workflow_run\.event != 'pull_request'/);
   assert.match(workflow, /github\.event\.workflow_run\.conclusion == 'success'/);
 });
 
-test('AI Runtime production verification matches the runtime-only boundary', () => {
-  assert.match(workflow, /root_code.*ai\.ekodi\.kr\//);
-  assert.match(workflow, /health_code.*\/__health/);
-  assert.match(workflow, /config_code.*\/config\.js/);
-  assert.match(workflow, /status_code.*\/api\/status/);
-  assert.match(workflow, /exchange_code.*\/api\/auth\/exchange/);
-  assert.match(workflow, /ai-runtime-admin-handoff/);
-  assert.match(workflow, /surface.*runtime-only/);
-  assert.doesNotMatch(workflow, /ai-gateway\.js/);
-  assert.doesNotMatch(workflow, /\/api\/control\/ai\/provider-status/);
+test('AI Commons production verification matches the canonical public and member boundary', () => {
+  assert.match(workflow, /canonical_code.*https:\/\/ekodi\.kr\/ai'/);
+  assert.match(workflow, /root_code.*https:\/\/ekodi\.kr\/ai\//);
+  assert.match(workflow, /health_code.*\/ai\/__health/);
+  assert.match(workflow, /services_code.*\/api\/commons\/services/);
+  assert.match(workflow, /requests_code.*\/api\/commons\/requests/);
+  assert.match(workflow, /ideas_code.*\/api\/commons\/ideas/);
+  assert.match(workflow, /x-ekodi-canonical-surface: ai/);
+  assert.match(workflow, /x-ekodi-canonical-path: \/ai/);
+  assert.match(workflow, /surface.*runtime-and-commons/);
+  assert.match(workflow, /EKODI 모두의 AI 프로젝트/);
 });
 
-test('manual AI Runtime production verification remains available', () => {
+test('manual AI Commons production verification remains available', () => {
   assert.match(workflow, /workflow_dispatch:/);
-  assert.match(workflow, /Verify AI Runtime production contract/);
+  assert.match(workflow, /Verify AI Commons production contract/);
 });

@@ -27,7 +27,7 @@ test('the same Google email can be granted different tenant roles independently'
 test('Google identity is verified first and runtime customer identity is created only at login', () => {
   assert.match(federated, /supabaseUser/);
   assert.match(federated, /FROM customer_access_grants/);
-  assert.match(federated, /Number\(grant\.enabled\) !== 1/);
+  assert.match(federated, /accessGrantIsActive\(grant\)/);
   assert.match(federated, /ensureRuntimeIdentity/);
   assert.match(federated, /INSERT INTO customer_users/);
   assert.match(federated, /UPDATE customer_access_grants[\s\S]*last_verified_at/);

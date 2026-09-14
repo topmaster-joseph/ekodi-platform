@@ -194,7 +194,7 @@ export default {
       }
     }
 
-    if (path.startsWith('/api/affiliate') && request.method !== 'OPTIONS') {
+    if (path.startsWith('/api/affiliate')) {
       try {
         const response = await handleAffiliateRequest(request, env);
         if (response) return response;
