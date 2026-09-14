@@ -18,7 +18,8 @@ test('AI Commons production verification matches the canonical public and member
   assert.match(workflow, /services_code.*\/api\/commons\/services/);
   assert.match(workflow, /requests_code.*\/api\/commons\/requests/);
   assert.match(workflow, /ideas_code.*\/api\/commons\/ideas/);
-  assert.match(workflow, /x-ekodi-ai-entry: commons-v1/);
+  assert.match(workflow, /x-ekodi-canonical-surface: ai/);
+  assert.match(workflow, /x-ekodi-canonical-path: \/ai/);
   assert.match(workflow, /surface.*runtime-and-commons/);
   assert.match(workflow, /EKODI 모두의 AI 프로젝트/);
 });
