@@ -2,6 +2,7 @@ import { isPublicWorkspacePath, workspaceRouteFromPublicPath, workspaceSlugFromP
 import { renderStorefrontPage, storefrontCss } from './storefront-page.js';
 import { renderJadamStorefrontPage, jadamStorefrontCss } from './jadam-storefront.js';
 import { renderRestaurantStorefrontPage, restaurantStorefrontCss } from './restaurant-storefront.js';
+import { isOrganizationWorkspaceSlug, renderOrganizationPublicPage } from './organization-public-page.js';
 
 const DEFAULT_PAGE_PROFILE=Object.freeze({
   documentTitle:'운영공간 · EKODI',name:'내 운영공간',kicker:'OPERATING SPACE',
@@ -49,7 +50,7 @@ function withHeaders(env,response,route='asset'){
   const contentType=headers.get('content-type')||'';
   if(contentType.includes('text/html')){
     headers.set('cache-control','no-store');
-    headers.set('x-robots-tag',route==='space-storefront'?'index, follow':'noindex, nofollow, noarchive');
+    headers.set('x-robots-tag',['space-storefront','space-organization'].includes(route)?'index, follow':'noindex, nofollow, noarchive');
   }else if(!headers.has('cache-control'))headers.set('cache-control','public, max-age=300');
   return new Response(response.body,{status:response.status,statusText:response.statusText,headers});
 }
@@ -139,6 +140,9 @@ export default{
         return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-ekodi-workspace-alias':`${requested}->${resolved.canonicalSlug}`}});
       }
       if(resolved.status==='paused')return withHeaders(env,new Response('<!doctype html><html lang="ko"><meta charset="utf-8"><title>사용자 사이트 일시중지 · EKODI</title><body><main><h1>사용자 사이트가 일시중지되었습니다.</h1><p>운영공간 관리자 설정에서 다시 활성화할 수 있습니다.</p></main></body></html>',{status:404,headers:{'content-type':'text/html; charset=utf-8'}}),'space-paused');
+      if(isOrganizationWorkspaceSlug(requested)&&!workspaceRoute?.service){
+        return withHeaders(env,await renderOrganizationPublicPage(request,env,resolved,requested),'space-organization');
+      }
       if(resolved.storefront&&!workspaceRoute?.service){
         const storefront=requested==='jadam'
           ?await renderJadamStorefrontPage(request,env,resolved,requested)

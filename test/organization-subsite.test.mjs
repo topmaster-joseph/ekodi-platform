@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { isOrganizationWorkspaceSlug, renderOrganizationPublicPage } from '../organization-public-page.js';
-import { isOrganizationAdminPath, organizationAdminPage } from '../organization-admin-page.js';
+import { isOrganizationAdminPath, organizationAdminPage, organizationAdminScript } from '../organization-admin-page.js';
 
 test('Hammu uses reusable organization workspace projection', async () => {
   assert.equal(isOrganizationWorkspaceSlug('hammu'), true);
@@ -11,6 +11,8 @@ test('Hammu uses reusable organization workspace projection', async () => {
   const html = await response.text();
   for (const marker of ['함무시찰회','공지사항','임원','회계보고','출석현황','/hammu/admin']) assert.match(html, new RegExp(marker));
   assert.equal(response.headers.get('content-type'), 'text/html; charset=utf-8');
+  const workerSource = fs.readFileSync(new URL('../space-worker.js', import.meta.url), 'utf8');
+  assert.match(workerSource, /['space-storefront','space-organization']/);
 });
 
 test('organization admin is tenant-local and only enabled for Hammu path', async () => {
@@ -24,6 +26,12 @@ test('organization admin is tenant-local and only enabled for Hammu path', async
   assert.match(html,/회계보고/);
   assert.match(html,/출석체크/);
   assert.equal(response.headers.get('x-ekodi-authority-scope'),'tenant');
+});
+
+test('organization admin browser script receives serialized Supabase public config', async () => {
+  const script = await (await organizationAdminScript()).text();
+  assert.match(script,/https:\/\/renzehysxirjilvdxacv\.supabase\.co/);
+  assert.doesNotMatch(script,/SUPABASE_URL|SUPABASE_KEY/);
 });
 
 test('organization migration separates public aggregate projection from private details', () => {

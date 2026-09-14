@@ -1,5 +1,5 @@
 {
-  "version": 67,
+  "version": 68,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
@@ -1192,6 +1192,14 @@
         "headerExpect": [
           "x-content-type-options: nosniff"
         ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/hammu/admin",
+        "statuses": [200],
+        "redirect": "manual",
+        "expect": ["data-ekodi-organization-admin=\"true\"","data-ekodi-authority-scope=\"tenant\"","/hammu/admin/officers","/hammu/admin/finance","/hammu/admin/attendance"],
+        "headerExpect": ["x-ekodi-route: organization-admin","cache-control: no-store"],
         "rollbackVerify": false
       }
     ]

@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 3,
   "worker": {
     "name": "ekodi-space",
     "config": "wrangler.space.toml",
@@ -68,6 +68,13 @@
         "redirect": "manual",
         "expect": ["삭제된 주소입니다."],
         "headerExpect": ["x-ekodi-route: space-gone","cache-control: no-store"]
+      },
+      {
+        "url": "https://ekodi.kr/hammu",
+        "statuses": [200],
+        "redirect": "manual",
+        "expect": ["data-ekodi-organization=\"hammu\"","MOKPO PRESBYTERY","/hammu/admin"],
+        "headerExpect": ["x-ekodi-route: space-organization","cache-control: no-store"]
       }
     ]
   }
