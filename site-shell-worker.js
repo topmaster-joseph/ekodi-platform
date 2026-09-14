@@ -43,6 +43,32 @@ function rootInternalPath(pathname){
   return path==='/admin'||path==='/admin.html'||path.startsWith('/admin/');
 }
 
+export function isUserHomePath(pathname,serviceId='',workspaceSlug=''){
+  const path=normalizedPath(pathname);
+  const workspace=String(workspaceSlug||'').trim().toLowerCase();
+  if(workspace){
+    const segments=path.split('/').filter(Boolean);
+    return segments[0]===workspace&&segments.length<=2;
+  }
+  const id=String(serviceId||'').trim().toLowerCase();
+  if(!id||id==='church'||id==='ekodi')return false;
+  const service=serviceForId(id);
+  if(!service)return false;
+  try{
+    const serviceUrl=new URL(service.url);
+    const servicePath=normalizedPath(serviceUrl.pathname);
+    if(serviceUrl.hostname==='ekodi.kr'&&servicePath!=='/'&&path===servicePath)return true;
+  }catch{}
+  return path===`/${id}`;
+}
+
+function injectRootServiceShell(response,serviceId,progressiveHome=false){
+  if(!progressiveHome){
+    if(serviceId)return injectEkodiShell(response,serviceId);
+  }
+  return injectEkodiShell(response,serviceId,'',{progressiveHome:true});
+}
+
 function workspaceVisualStyle(dna){
   const vars=workspaceVisualCssVariables(dna);
   const declarations=Object.entries(vars).map(([key,value])=>`${key}:${value}`).join(';');
@@ -109,10 +135,10 @@ export default {
       const pathname=new URL(effective.request.url).pathname;
       if(rootInternalPath(pathname)||standaloneBrandPlacePath(pathname)||isWorkspaceAdminPathShape(pathname))return response;
       const serviceId=rootUserService(pathname);
-      if(serviceId)return injectEkodiShell(response,serviceId);
+      if(serviceId)return injectRootServiceShell(response,serviceId,isUserHomePath(pathname,serviceId));
       const workspaceSlug=workspaceSlugForPath(pathname);
       if(workspaceSlug){
-        const shelled=injectEkodiShell(response,'ekodi','workspace');
+        const shelled=injectEkodiShell(response,'ekodi','workspace',{progressiveHome:isUserHomePath(pathname,'',workspaceSlug),contextKind:'workspace'});
         return applyWorkspaceVisual(shelled,workspaceSlug);
       }
       return injectEkodiShell(response,'ekodi','public');
