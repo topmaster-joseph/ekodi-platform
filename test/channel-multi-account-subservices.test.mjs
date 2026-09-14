@@ -6,7 +6,7 @@ const read=p=>readFile(new URL(`../${p}`,import.meta.url),'utf8');
 test('subservices and store admins inherit the multi-account channel center',async()=>{
   const [workspace,trade,store,growth,migration]=await Promise.all([
     read('workspace-admin-page.js'),read('workspace-trade-admin-page.js'),read('store-admin-engine.js'),
-    read('marketing-growth-worker.js'),read('migrations/0090_channel_multi_account_registry.sql')]);
+    read('marketing-growth-worker.js'),read('migrations/0086_channel_multi_account_registry.sql')]);
   assert.match(workspace,/genericService=clean\.match/);
   assert.match(workspace,/authorityRef:channelRegistryAuthority\(\)/);
   assert.match(workspace,/visibleChannelIds/);
