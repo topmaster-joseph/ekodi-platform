@@ -6,6 +6,15 @@ on:
     paths:
       - 'ai-control/**'
       - 'ai-control-*.js'
+      - 'ai-commons.js'
+      - 'ai-commons-admin.js'
+      - 'config/ai-execution-services.json'
+      - 'shell/user-ai-entry.js'
+      - 'ekodi-shell-worker.js'
+      - 'site-worker.js'
+      - 'platform-route-registry.js'
+      - 'wrangler.site.toml'
+      - 'test/ai-commons*.test.mjs'
       - 'ai-router-score.js'
       - 'ai-collaboration-settings.js'
       - 'local-execution-policy.js'
@@ -32,6 +41,9 @@ on:
       - 'migrations/0052_ai_mission_governance.sql'
       - 'migrations/0074_ai_router_score.sql'
       - 'migrations/0085_ai_account_node_load_scheduler.sql'
+      - 'migrations/0086_ai_commons_ideas.sql'
+      - 'migrations/0087_ai_commons_governance.sql'
+      - 'migrations/0088_ai_commons_sources.sql'
       - 'deploy/manifests/ai-control.worker.json'
       - 'scripts/validate-cognitive-control-plane.mjs'
       - 'scripts/validate-additive-migrations.mjs'
@@ -44,6 +56,15 @@ on:
     paths:
       - 'ai-control/**'
       - 'ai-control-*.js'
+      - 'ai-commons.js'
+      - 'ai-commons-admin.js'
+      - 'config/ai-execution-services.json'
+      - 'shell/user-ai-entry.js'
+      - 'ekodi-shell-worker.js'
+      - 'site-worker.js'
+      - 'platform-route-registry.js'
+      - 'wrangler.site.toml'
+      - 'test/ai-commons*.test.mjs'
       - 'ai-router-score.js'
       - 'ai-collaboration-settings.js'
       - 'local-execution-policy.js'
@@ -70,6 +91,9 @@ on:
       - 'migrations/0052_ai_mission_governance.sql'
       - 'migrations/0074_ai_router_score.sql'
       - 'migrations/0085_ai_account_node_load_scheduler.sql'
+      - 'migrations/0086_ai_commons_ideas.sql'
+      - 'migrations/0087_ai_commons_governance.sql'
+      - 'migrations/0088_ai_commons_sources.sql'
       - 'deploy/manifests/ai-control.worker.json'
       - 'scripts/validate-cognitive-control-plane.mjs'
       - 'scripts/validate-additive-migrations.mjs'
@@ -122,9 +146,16 @@ jobs:
           node scripts/validate-constitution.mjs
           node scripts/validate-ai-mission-governance.mjs
           node scripts/validate-additive-migrations.mjs migrations
-          node --test test/ai-control-platform.test.mjs test/ai-router-score.test.mjs test/ai-collaboration-settings.test.mjs test/local-execution-policy.test.mjs test/ai-account-node-scheduler.test.mjs test/cognitive-control-plane.test.mjs test/common-service-operator-control.test.mjs
+          node --test test/ai-control-platform.test.mjs test/ai-router-score.test.mjs test/ai-collaboration-settings.test.mjs test/local-execution-policy.test.mjs test/ai-account-node-scheduler.test.mjs test/cognitive-control-plane.test.mjs test/common-service-operator-control.test.mjs test/ai-commons.test.mjs test/ai-commons-subservice.test.mjs
+          node --check ai-commons.js
+          node --check ai-commons-admin.js
+          node --check ai-control/commons.js
+          node --check shell/user-ai-entry.js
+          node --check ekodi-shell-worker.js
+          node --check site-worker.js
           bash -n scripts/apply-d1-migrations-with-retry.sh
-          grep -Fq 'pattern = "ai.ekodi.kr"' wrangler.ai.release.toml
+          ! grep -Fq 'pattern = "ai.ekodi.kr"' wrangler.ai.release.toml
+          grep -Fq 'User traffic enters through ekodi.kr/ai via the shared-site service binding.' wrangler.ai.release.toml
           grep -Fq 'AI_TASK_EXECUTION_ENABLED = "false"' wrangler.ai.staging.release.toml
           grep -Fq 'GEMINI_MODEL = "gemini-3.7-flash"' wrangler.ai.staging.release.toml
           grep -Fq 'no_bundle = true' wrangler.ai.release.toml
@@ -135,7 +166,8 @@ jobs:
           grep -Fq 'ai-task-allocator.yml' ai-control-worker.js
           grep -Fq '/api/node/lease' ai-control-worker.js
           grep -Fq "https://ekodi.kr/admin/services/common-services?service=ai" ai-control-worker.js
-          grep -Fq "surface:'runtime-only'" ai-control-worker.js
+          grep -Fq "surface:'runtime-and-commons'" ai-control-worker.js
+          grep -Fq "commons:true" ai-control-worker.js
           grep -Fq "centralAdminSession" ai-control-worker.js
           grep -Fq "['login','status']" scripts/ai-account-node.mjs
           test -f migrations/0050_ai_control_plane.sql
@@ -143,6 +175,9 @@ jobs:
           test -f migrations/0052_ai_mission_governance.sql
           test -f migrations/0074_ai_router_score.sql
           test -f migrations/0085_ai_account_node_load_scheduler.sql
+          test -f migrations/0086_ai_commons_ideas.sql
+          test -f migrations/0087_ai_commons_governance.sql
+          test -f migrations/0088_ai_commons_sources.sql
           test -f deploy/manifests/ai-control.worker.json
       - name: Build one immutable AI Control application artifact
         id: build_artifact
@@ -200,14 +235,18 @@ jobs:
             exchange_code=$(curl -sS -o /tmp/ai-local-exchange.json -w '%{http_code}' --connect-timeout 2 --max-time 5 -X POST http://127.0.0.1:8787/api/auth/exchange || true)
             health_code=$(curl -sS -o /tmp/ai-local-health.json -w '%{http_code}' --connect-timeout 2 --max-time 5 http://127.0.0.1:8787/__health || true)
             status_code=$(curl -sS -o /tmp/ai-local-status.json -w '%{http_code}' --connect-timeout 2 --max-time 5 http://127.0.0.1:8787/api/status || true)
-            if [[ "$root_code" == "307" && "$config_code" == "410" && "$exchange_code" == "410" && "$health_code" == "200" && "$status_code" == "401" ]] \
-              && grep -Fqi 'location: https://ekodi.kr/admin/services/common-services?service=ai' /tmp/ai-local-root-headers.txt \
+            services_code=$(curl -sS -o /tmp/ai-local-services.json -w '%{http_code}' --connect-timeout 2 --max-time 5 http://127.0.0.1:8787/api/commons/services || true)
+            ideas_code=$(curl -sS -o /tmp/ai-local-ideas.json -w '%{http_code}' --connect-timeout 2 --max-time 5 http://127.0.0.1:8787/api/commons/ideas || true)
+            if [[ "$root_code" == "200" && "$config_code" == "410" && "$exchange_code" == "410" && "$health_code" == "200" && "$status_code" == "401" && "$services_code" == "200" && "$ideas_code" == "401" ]] \
+              && grep -Fq 'EKODI 모두의 AI 프로젝트' /tmp/ai-local-root-body.txt \
               && grep -Fq 'operator_surface_moved' /tmp/ai-local-config.json \
               && grep -Fq 'service_local_auth_retired' /tmp/ai-local-exchange.json \
               && grep -Fq '"platform":"ai-control"' /tmp/ai-local-health.json \
-              && grep -Fq '"surface":"runtime-only"' /tmp/ai-local-health.json \
-              && grep -Fq 'authentication_required' /tmp/ai-local-status.json; then
-              echo 'Immutable AI Runtime staging artifact verified: operator root redirects to Admin, health is minimal, detailed status is protected.'
+              && grep -Fq '"surface":"runtime-and-commons"' /tmp/ai-local-health.json \
+              && grep -Fq '"commons":true' /tmp/ai-local-health.json \
+              && grep -Fq '"categories"' /tmp/ai-local-services.json \
+              && grep -Fq 'authentication_required' /tmp/ai-local-ideas.json; then
+              echo 'Immutable AI Commons staging artifact verified: public project surface works, catalog is public, and member/admin boundaries remain protected.'
               exit 0
             fi
             sleep 1
@@ -239,8 +278,8 @@ jobs:
           headers=/tmp/ai-edge-headers.txt
           body=/tmp/ai-edge-body.txt
           code=$(curl -sS -D "$headers" -o "$body" -w '%{http_code}' --connect-timeout 5 --max-time 20 "$STAGING_URL/" || true)
-          if [[ "$code" == "307" ]] && grep -Fqi 'location: https://ekodi.kr/admin/services/common-services?service=ai' "$headers"; then
-            echo "AI Runtime staging redirects operator entry to the central Admin Control Plane."
+          if [[ "$code" == "200" ]] && grep -Fq 'EKODI 모두의 AI 프로젝트' "$body"; then
+            echo "AI Commons staging exposes the public project surface while protected APIs remain gated."
             exit 0
           fi
           if [[ "$code" == "302" ]] && grep -Eqi '^www-authenticate:[[:space:]]*Cloudflare-Access' "$headers"; then
@@ -297,8 +336,12 @@ jobs:
           set -euo pipefail
           node --input-type=module - <<'NODE'
           import fs from 'node:fs';
+          import { isReservedPlatformRoot } from './platform-route-registry.js';
           const c=JSON.parse(fs.readFileSync('governance/constitution/constitution.json','utf8'));
-          if(!c.systemBoundaries?.production?.includes('ai.ekodi.kr')){console.error('Production blocked: ai.ekodi.kr is not registered in EKODI constitutional system boundaries.');process.exit(1)}
+          if(c.domainPolicy?.newFeatureSubdomainsForbidden!==true){console.error('Production blocked: new feature subdomains must remain forbidden.');process.exit(1)}
+          if(!isReservedPlatformRoot('ai')){console.error('Production blocked: /ai is not reserved in the platform route registry.');process.exit(1)}
+          const wrangler=fs.readFileSync('wrangler.ai.release.toml','utf8');
+          if(/pattern\s*=\s*"ai\.ekodi\.kr"/.test(wrangler)){console.error('Production blocked: AI public subdomain route must remain retired.');process.exit(1)}
           NODE
       - name: Capture production D1 recovery bookmark
         id: d1_bookmark

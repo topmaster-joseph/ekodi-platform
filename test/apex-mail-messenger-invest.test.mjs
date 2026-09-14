@@ -16,6 +16,7 @@ test('Mail page is path-native and apex router owns the root/admin routes',async
   assert.match(html,/https:\/\/ekodi\.kr\/api\/mail\/control/);assert.match(html,/https:\/\/ekodi\.kr\/auth\//);noPublicSubdomain(html);
   const entry=await readFile(new URL('../platform-router-entry-worker.js',import.meta.url),'utf8');
   assert.match(entry,/routeMailApex/);assert.match(entry,/url\.pathname==='\/mail'/);assert.match(entry,/url\.pathname==='\/mail\/admin'/);
+  assert.match(entry,/mailAdminPage\(\{commandHome:true\}\)/);assert.match(entry,/\/mail\/admin\/overview/);
 });
 
 test('Messenger page and assets are path-native',async()=>{
@@ -41,6 +42,9 @@ test('Invest page and assets are path-native',async()=>{
   const urls=new Set(manifest.worker.requests.map(item=>item.url));
   for(const url of ['https://ekodi.kr/invest','https://ekodi.kr/invest/invest-ui.js','https://ekodi.kr/invest/invest-subject-ui.js','https://ekodi.kr/invest/app.js'])assert.ok(urls.has(url),url);
   assert.equal([...urls].some(url=>url.startsWith('https://invest.ekodi.kr')),false);
+  const subjectProbe=manifest.worker.requests.find(item=>item.url==='https://ekodi.kr/invest/invest-subject-ui.js');
+  assert.deepEqual(subjectProbe.expect,['https://ekodi.kr/workspace-api','subject_type','subject_key']);
+  assert.equal(subjectProbe.expect.includes('profile_key'),false);
 });
 
 test('production worker-first routing includes all three canonical roots',async()=>{

@@ -322,145 +322,74 @@
     })[locale] || null;
   }
 
+  const RECENT_SERVICES_KEY = 'ekodi.home.recentServices.v1';
+
+  function readRecentServiceIds() {
+    try {
+      const parsed=JSON.parse(localStorage.getItem(RECENT_SERVICES_KEY)||'[]');
+      return Array.isArray(parsed)?parsed.filter(id=>typeof id==='string').slice(0,6):[];
+    } catch { return []; }
+  }
+
+  function rememberService(id) {
+    if(!id)return;
+    try {
+      const next=[id,...readRecentServiceIds().filter(value=>value!==id)].slice(0,6);
+      localStorage.setItem(RECENT_SERVICES_KEY,JSON.stringify(next));
+    } catch {}
+  }
+
   function buildDynamicVisual(locale) {
-    const host = document.querySelector('.ecosystem-pulse');
-    const c = dynamicCopy(locale) || dynamicCopy('ko-KR');
-    if (!host) return;
-    host.className = 'ecosystem-pulse dynamic-ecosystem';
-    host.removeAttribute('id');
-    host.setAttribute('aria-label', c.stage);
+    const host=document.querySelector('.ecosystem-pulse');
+    if(!host)return;
+    host.className='ecosystem-pulse dynamic-ecosystem';
+    host.hidden=true;
     host.replaceChildren();
-
-    const stage = document.createElement('div');
-    stage.className = 'ecosystem-stage';
-    const field = document.createElement('div');
-    field.className = 'orbital-field';
-    field.setAttribute('aria-hidden', 'true');
-    for (let i = 1; i <= 3; i += 1) {
-      const orbit = document.createElement('span');
-      orbit.className = `ecosystem-orbit ecosystem-orbit-${i}`;
-      const node = document.createElement('i');
-      node.className = 'orbit-node';
-      orbit.append(node);
-      field.append(orbit);
-    }
-    const core = document.createElement('div');
-    core.className = 'ecosystem-core';
-    core.innerHTML = '<strong>EKODI</strong><small>ECOSYSTEM</small>';
-    const coreCopy = document.createElement('span');
-    coreCopy.textContent = c.stage;
-    core.append(coreCopy);
-    stage.append(field, core);
-
-    const classes = ['community','ministry','business','life'];
-    c.domains.forEach((item, index) => {
-      const card = document.createElement('article');
-      card.className = `domain-float domain-${classes[index]}`;
-      const mark = document.createElement('i');
-      mark.setAttribute('aria-hidden', 'true');
-      mark.textContent = ['●','✦','↗','♥'][index];
-      const text = document.createElement('div');
-      const strong = document.createElement('strong');
-      strong.textContent = item[0];
-      const small = document.createElement('small');
-      small.textContent = item[1];
-      text.append(strong, small);
-      card.append(mark, text);
-      stage.append(card);
-    });
-    host.append(stage);
   }
 
   function buildQuickLaunch(cards, locale) {
     document.querySelector('.dynamic-start-panel')?.remove();
-    const hero = document.querySelector('.hero');
-    if (!hero) return;
-    const c = dynamicCopy(locale) || dynamicCopy('ko-KR');
-    const section = document.createElement('section');
-    section.id = 'start';
-    section.className = 'dynamic-start-panel section-anchor';
-    section.setAttribute('aria-labelledby', 'dynamic-start-title');
-
-    const intro = document.createElement('div');
-    intro.className = 'dynamic-start-intro';
-    const kicker = document.createElement('p');
-    kicker.className = 'dynamic-start-kicker';
-    kicker.textContent = c.kicker;
-    const title = document.createElement('h2');
-    title.id = 'dynamic-start-title';
-    title.textContent = c.title;
-    const desc = document.createElement('p');
-    desc.textContent = c.desc;
-    intro.append(kicker, title, desc);
-
-    const launcher = document.createElement('div');
-    launcher.className = 'dynamic-service-launchers';
-    const preferred = ['church','biz','books','lab','work'];
-    const byId = new Map(cards.filter(card => !card.hasAttribute('hidden')).map(card => [card.dataset.serviceId, card]));
-    const selected = preferred.map(id => byId.get(id)).filter(Boolean);
-    if (selected.length < 5) {
-      for (const card of cards) {
-        if (selected.length >= 5) break;
-        if (!card.hasAttribute('hidden') && !selected.includes(card)) selected.push(card);
-      }
-    }
-    selected.slice(0, 5).forEach((card, index) => {
-      const item = serviceData(card);
-      const link = document.createElement('a');
-      link.className = 'dynamic-service-card';
-      link.href = item.url;
-      link.dataset.quickService = item.id;
-      const icon = document.createElement('span');
-      icon.className = 'dynamic-service-icon';
-      icon.setAttribute('aria-hidden', 'true');
-      icon.textContent = ['교','비','책','연','일'][index] || '•';
-      const strong = document.createElement('strong');
-      strong.textContent = item.name;
-      const small = document.createElement('small');
-      small.textContent = item.copy;
-      link.append(icon, strong, small);
+    const hero=document.querySelector('.hero');
+    if(!hero)return;
+    const c=dynamicCopy(locale)||dynamicCopy('ko-KR');
+    const section=document.createElement('section');
+    section.id='start';
+    section.className='dynamic-start-panel section-anchor';
+    section.setAttribute('aria-label', locale==='ko-KR'?'빠른 시작':'Quick start');
+    const title=document.createElement('h2');
+    title.className='dynamic-start-title';
+    title.textContent=locale==='ko-KR'?'무엇을 할까요?':c.title;
+    section.append(title);
+    const launcher=document.createElement('div');
+    launcher.className='dynamic-service-launchers';
+    const byId=new Map(cards.filter(card=>!card.hasAttribute('hidden')).map(card=>[card.dataset.serviceId,card]));
+    const orderedIds=[...readRecentServiceIds(),'church','biz','books','work','lab'];
+    const selected=[];
+    for(const id of orderedIds){const card=byId.get(id);if(card&&!selected.includes(card))selected.push(card);if(selected.length>=4)break;}
+    for(const card of cards){if(selected.length>=4)break;if(!card.hasAttribute('hidden')&&!selected.includes(card))selected.push(card);}
+    selected.forEach((card,index)=>{
+      const item=serviceData(card);
+      const link=document.createElement('a');
+      link.className='dynamic-service-card';
+      link.href=item.url;
+      link.dataset.quickService=item.id;
+      link.setAttribute('aria-label',item.name);
+      const icon=document.createElement('span');
+      icon.className='dynamic-service-icon';
+      icon.setAttribute('aria-hidden','true');
+      icon.textContent=['교','비','책','일'][index]||'•';
+      const strong=document.createElement('strong');
+      strong.textContent=item.name;
+      link.append(icon,strong);
+      link.addEventListener('click',()=>rememberService(item.id));
       launcher.append(link);
     });
-
-    const my = document.createElement('a');
-    my.className = 'dynamic-service-card dynamic-service-my';
-    my.href = 'https://ekodi.kr/my/';
-    my.dataset.quickService = 'my';
-    const myIcon = document.createElement('span');
-    myIcon.className = 'dynamic-service-icon';
-    myIcon.setAttribute('aria-hidden', 'true');
-    myIcon.textContent = '나';
-    const myTitle = document.createElement('strong');
-    myTitle.textContent = c.my[0];
-    const myCopy = document.createElement('small');
-    myCopy.textContent = c.my[1];
-    my.append(myIcon, myTitle, myCopy);
-    launcher.append(my);
-
-    const more = document.createElement('a');
-    more.className = 'dynamic-more-link';
-    more.href = '#services';
-    more.textContent = `${c.more} →`;
-
-    const values = document.createElement('div');
-    values.className = 'dynamic-values';
-    c.values.forEach((item, index) => {
-      const value = document.createElement('div');
-      value.className = 'dynamic-value';
-      const badge = document.createElement('span');
-      badge.setAttribute('aria-hidden', 'true');
-      badge.textContent = ['◎','◇','↗'][index];
-      const text = document.createElement('div');
-      const strong = document.createElement('strong');
-      strong.textContent = item[0];
-      const small = document.createElement('small');
-      small.textContent = item[1];
-      text.append(strong, small);
-      value.append(badge, text);
-      values.append(value);
-    });
-
-    section.append(intro, launcher, more, values);
+    section.append(launcher);
+    const more=document.createElement('a');
+    more.className='dynamic-more-link';
+    more.href='#services';
+    more.textContent=locale==='ko-KR'?'전체 서비스 →':c.more+' →';
+    section.append(more);
     hero.after(section);
   }
 
@@ -572,7 +501,7 @@
     keys.forEach((key, index) => root.style.setProperty(key, palette[index]));
     root.dataset.ambientTheme = String((seed % palettes.length) + 1);
     root.dataset.dailyDate = dateKey;
-    document.body.dataset.livingGateway = 'v6-dynamic-ecosystem';
+    document.body.dataset.livingGateway = 'v7-calm-personal';
 
     const allCards = [...document.querySelectorAll('.service-card[data-service-status][data-service-id]')];
     await applyHomepagePresentation(allCards);

@@ -1,20 +1,19 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
+const read=p=>readFile(new URL(`../${p}`,import.meta.url),'utf8');
 
-test('subservices and store admins inherit the multi-account channel center', async () => {
+test('subservices and store admins inherit the multi-account channel center',async()=>{
   const [workspace,trade,store,growth,migration]=await Promise.all([
-    readFile(new URL('../workspace-admin-page.js',import.meta.url),'utf8'),
-    readFile(new URL('../workspace-trade-admin-page.js',import.meta.url),'utf8'),
-    readFile(new URL('../store-admin-engine.js',import.meta.url),'utf8'),
-    readFile(new URL('../marketing-growth-worker.js',import.meta.url),'utf8'),
-    readFile(new URL('../migrations/0086_channel_multi_account_registry.sql',import.meta.url),'utf8'),
-  ]);
-  assert.match(workspace,/workspace==='cgma'.*publishing/s);
+    read('workspace-admin-page.js'),read('workspace-trade-admin-page.js'),read('store-admin-engine.js'),
+    read('marketing-growth-worker.js'),read('migrations/0089_channel_multi_account_registry.sql')]);
+  assert.match(workspace,/genericService=clean\.match/);
   assert.match(workspace,/authorityRef:channelRegistryAuthority\(\)/);
-  assert.match(trade,/\['publishing','채널 · 게시'\]/);
+  assert.match(workspace,/visibleChannelIds/);
   assert.match(trade,/\['publishing','marketing','channels'\]\.includes\(section\)/);
-  assert.match(store,/publishing:\['채널 · 게시'/);
+  assert.match(trade,/\['publishing','channels'/);
+  assert.match(store,/section==='publishing'/);
+  assert.match(store,/STORE_SECTIONS=.*publishing/);
   assert.match(store,/subject_type=store&subject_key=/);
   assert.match(store,/authorityRef:`store:\$\{STORE_ID\}`/);
   assert.match(store,/marketing-connect-api\.ekodi\.kr/);

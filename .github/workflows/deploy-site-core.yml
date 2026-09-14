@@ -12,6 +12,10 @@ on:
     branches: [main]
     paths:
       - 'site-worker.js'
+      - 'platform-route-registry.js'
+      - 'ai-commons-admin.js'
+      - 'common-services-admin.js'
+      - 'test/ai-commons*.test.mjs'
       - 'ekodibiz-invest-business.js'
       - 'ekodibiz-invest-admin-page.js'
       - 'platform-router-entry-worker.js'

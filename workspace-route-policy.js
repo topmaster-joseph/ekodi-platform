@@ -1,4 +1,5 @@
 import { isReservedPlatformRoot, platformRouteRegistrySnapshot } from './platform-route-registry.js';
+import { isForbiddenAdminAggregationPath } from './admin-address-policy.js';
 
 const WORKSPACE_SLUG=/^[a-z0-9](?:[a-z0-9-]{0,98}[a-z0-9])?$/;
 export const RESERVED_WORKSPACE_SLUGS=new Set(platformRouteRegistrySnapshot().reserved);
@@ -68,9 +69,8 @@ export async function resolveWorkspaceRoute(pathname,resolveBySlug){
 
 export function isWorkspaceAdminPathShape(pathname){
   const path=String(pathname||'');
-
+  if(isForbiddenAdminAggregationPath(path))return false;
   const match=/^\/([^/]+)\/(?:admin(?:\/[^/]+)?|[^/]+\/admin(?:\/[^/]+)?)\/?$/i.exec(path);
   if(match&&isWorkspaceSlug(match[1]))return true;
-  const mallMarketingChannels=/^\/([^/]+)\/ekodimall\/admin\/marketing\/channels\/?$/i.exec(path);
-  return Boolean(mallMarketingChannels&&isWorkspaceSlug(mallMarketingChannels[1]));
+  return false;
 }

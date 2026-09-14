@@ -64,6 +64,7 @@ jobs:
           grep -Fq 'church-life-hub.js' church/index.html
           grep -Fq 'church-life-hub.css' church/index.html
           grep -Fq 'church-life-hub-i18n.js' church/index.html
+          grep -Fq 'church-i18n-extended.js' church/index.html
           grep -Fq 'church-online-status.js' church/index.html
           grep -Fq 'data-ekodi-church-live-entry' church/index.html
           grep -Fq "AUTH_ATTEMPT_KEY='ekodi-live-auth-attempt'" church/live/live.js
@@ -147,6 +148,7 @@ jobs:
             if [[ "$root" == 200 && "$life" == 200 && "$life_i18n" == 200 && "$life_css" == 200 && "$online_status" == 200 && "$live_css" == 200 && "$live_js" == 200 && "$live_intent" == 200 && "$marker" == 200 ]] \
               && grep -Fq 'data-ekodi-life-hub' /tmp/church.html \
               && grep -Fq '에코디선교회' /tmp/church.html \
+              && grep -Fq 'church-i18n-extended.js' /tmp/church.html \
               && grep -Fq 'localStorage' /tmp/life.js \
               && grep -Fq '__EKODI_CHURCH_LIFE_HUB_I18N__' /tmp/life-i18n.js \
               && grep -Fq 'api/realtime/live?tenant=ekodichurch' /tmp/church-online-status.js \

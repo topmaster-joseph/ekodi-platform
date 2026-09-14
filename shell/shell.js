@@ -20,7 +20,7 @@ const handedTenant=fragment.get('ekodi_tenant')||'';
 const handedStore=fragment.get('ekodi_store')||'';
 
 const FALLBACK_THEME={
-  version:3,
+  version:5,
   workspace:{background:'#071522',surface:'#0B1D2E',surfaceRaised:'#10263A',border:'#24425E',text:'#F4F7FB',muted:'#9FB1C3',focus:'#8EC8FF',radius:'16px'},
   rules:{
     stableSurfaces:['workspace','admin','form','document','data'],
@@ -350,6 +350,47 @@ function buildUi(){
   wrap.append(button,panel);shadow.append(style,wrap);document.documentElement.append(host);root=shadow;render();
 }
 function refreshThemeCycle(){if(!service)return;applyHostTokens();render();}
+
+function applyProgressiveHomeFocus(){
+  if(!service)return;
+  const requested=document.documentElement.dataset.ekodiHomeFocusRequest==='v1';
+  if(!requested&&(surface!=='public'||['church','ekodi'].includes(service.id)))return;
+  if(requested&&(service.id==='church'||!['public','workspace'].includes(surface)))return;
+  let canonicalPublic=false;
+  if(!requested){
+    try{
+      const home=new URL(service.url);const clean=value=>(value.replace(/\/+$/,'')||'/').toLowerCase();
+      canonicalPublic=location.hostname.toLowerCase()===home.hostname.toLowerCase()&&clean(location.pathname)===clean(home.pathname);
+    }catch{}
+  }
+  if(!requested&&!canonicalPublic)return;
+  const run=()=>{
+    const main=document.querySelector('[data-ekodi-user-canvas],main,[role="main"]');
+    if(!main)return;
+    const direct=[...main.children].filter(node=>node.matches?.('section,article,aside,.section,.panel,.content-section,[data-section]'));
+    const candidates=direct.length>=3?direct:[...main.querySelectorAll(':scope > div > section,:scope > div > article,:scope > div > .section,:scope > div > .panel')].slice(0,12);
+    const operator=/(owner|admin|manager|representative|pastor|director|대표|관리|목사|소장)/i.test(String(state.role||''));
+    const mobile=matchMedia('(max-width:640px)').matches;
+    const visibleCount=mobile?(operator?2:1):2;
+    if(candidates.length<=visibleCount)return;
+    document.documentElement.dataset.ekodiHomeFocus='v1';
+    document.documentElement.dataset.ekodiHomeFocusDensity=visibleCount===1?'focused':'balanced';
+    const defaultHidden=candidates.slice(2);
+    const hidden=visibleCount===2?defaultHidden:candidates.slice(visibleCount);
+    hidden.forEach((node,index)=>{node.dataset.ekodiProgressiveHidden='1';node.hidden=true;if(!node.id)node.id=`ekodi-home-secondary-${index+1}`;});
+    const toggle=document.createElement('button');
+    toggle.type='button';toggle.dataset.ekodiProgressiveReveal='v1';toggle.setAttribute('aria-expanded','false');toggle.setAttribute('aria-controls',hidden.map(node=>node.id).join(' '));
+    const labels=()=>/^ko/i.test(document.documentElement.lang||'ko')?['더보기','간단히']:['More','Less'];
+    const sync=expanded=>{hidden.forEach(node=>{node.hidden=!expanded;});toggle.setAttribute('aria-expanded',expanded?'true':'false');toggle.textContent=labels()[expanded?1:0];};
+    const hashTarget=()=>{if(!location.hash)return null;try{return document.getElementById(decodeURIComponent(location.hash.slice(1)));}catch{return null;}};
+    const revealHashTarget=()=>{const target=hashTarget();if(target&&hidden.some(node=>node===target||node.contains(target)))sync(true);};
+    toggle.addEventListener('click',()=>sync(toggle.getAttribute('aria-expanded')!=='true'));
+    window.addEventListener('hashchange',revealHashTarget);
+    sync(false);revealHashTarget();candidates[visibleCount-1].after(toggle);
+  };
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run,{once:true});else queueMicrotask(run);
+}
+
 function startCycleRefresh(){
   if(cycleTimer)clearInterval(cycleTimer);
   const minutes=Math.max(15,Number(theme.publicExperience?.refreshMinutes)||60);
@@ -372,7 +413,7 @@ async function boot(){
   if(handedTenant)state.tenantId=handedTenant.slice(0,120);
   if(handedStore)state.storeId=handedStore.slice(0,120);
   if(!state.workspaceName&&state.workspaceKey)state.workspaceName=inferredWorkspaceName(state.workspaceKey);
-  writeStored();applyHostTokens();buildUi();startCycleRefresh();queueMicrotask(sendTrafficBeacon);
+  writeStored();applyHostTokens();buildUi();applyProgressiveHomeFocus();startCycleRefresh();queueMicrotask(sendTrafficBeacon);
 }
 window.EKODIShell={
   setContext:mergeContext,
