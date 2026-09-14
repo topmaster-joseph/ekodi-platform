@@ -21,5 +21,9 @@ test('subservices and store admins inherit the multi-account channel center',asy
   assert.match(growth,/registryWorkspaceSlug/);
   assert.match(growth,/subject\?\.type==='store'/);
   assert.match(growth,/autoPublishEnabled:false/);
+  assert.match(growth,/marketing_oauth_state_registry/);
+  assert.match(growth,/env\.DB\.batch\(statements\)/);
+  assert.match(migration,/CREATE TABLE IF NOT EXISTS marketing_oauth_state_registry/);
   assert.match(migration,/registry_connection_id/);
+  assert.doesNotMatch(migration,/ALTER TABLE marketing_oauth_states/);
 });

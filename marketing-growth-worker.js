@@ -150,7 +150,7 @@ function redirectResult(returnUrl, params) {
   Object.entries(params).forEach(([key,value]) => url.searchParams.set(key,String(value)));
   return Response.redirect(url.href,302);
 }
-async function schemaReady(env) { return d1SchemaReady(env?.DB,['marketing_oauth_states','marketing_oauth_connections','marketing_growth_campaigns','marketing_channel_settings','external_account_connections','external_account_audit']); }
+async function schemaReady(env) { return d1SchemaReady(env?.DB,['marketing_oauth_states','marketing_oauth_state_registry','marketing_oauth_connections','marketing_growth_campaigns','marketing_channel_settings','external_account_connections','external_account_audit']); }
 function metaConfigured(env) { return Boolean(env.META_APP_ID && env.META_APP_SECRET); }
 function threadsConfigured(env) { return Boolean((env.THREADS_APP_ID || env.META_APP_ID) && (env.THREADS_APP_SECRET || env.META_APP_SECRET)); }
 function youtubeConfigured(env) { return Boolean(env.GOOGLE_CLIENT_ID && providerSecret(env,YOUTUBE_PROVIDER) && env.GOOGLE_OAUTH_BROKER); }
@@ -193,13 +193,19 @@ async function createOAuthState(env, provider, mode, identity, subject, returnUr
   const state = randomState();
   const createdAt = nowIso();
   const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
-  await env.DB.prepare(`INSERT INTO marketing_oauth_states(state,provider,mode,subject_type,subject_key,actor_id,actor_email,return_url,registry_connection_id,created_at,expires_at)
-    VALUES(?,?,?,?,?,?,?,?,?,?,?)`).bind(state,provider,mode,subject.type,subject.key,identity.id,identity.email,safeReturnUrl(returnUrl),clean(registryConnectionId,120),createdAt,expiresAt).run();
+  const registryId=clean(registryConnectionId,120);
+  const statements=[env.DB.prepare(`INSERT INTO marketing_oauth_states(state,provider,mode,subject_type,subject_key,actor_id,actor_email,return_url,created_at,expires_at)
+    VALUES(?,?,?,?,?,?,?,?,?,?)`).bind(state,provider,mode,subject.type,subject.key,identity.id,identity.email,safeReturnUrl(returnUrl),createdAt,expiresAt)];
+  if(registryId) statements.push(env.DB.prepare('INSERT INTO marketing_oauth_state_registry(state,registry_connection_id,created_at) VALUES(?,?,?)').bind(state,registryId,createdAt));
+  await env.DB.batch(statements);
   return state;
 }
 async function consumeOAuthState(env, state, provider) {
-  const row = await env.DB.prepare(`SELECT state,provider,mode,subject_type,subject_key,actor_id,actor_email,return_url,registry_connection_id,expires_at,used_at
-    FROM marketing_oauth_states WHERE state=? AND provider=?`).bind(clean(state,180),provider).first();
+  const row = await env.DB.prepare(`SELECT s.state,s.provider,s.mode,s.subject_type,s.subject_key,s.actor_id,s.actor_email,s.return_url,
+      COALESCE(r.registry_connection_id,'') AS registry_connection_id,s.expires_at,s.used_at
+    FROM marketing_oauth_states s
+    LEFT JOIN marketing_oauth_state_registry r ON r.state=s.state
+    WHERE s.state=? AND s.provider=?`).bind(clean(state,180),provider).first();
   if (!row || row.used_at || Date.parse(row.expires_at) <= Date.now()) return null;
   await env.DB.prepare('UPDATE marketing_oauth_states SET used_at=? WHERE state=? AND used_at IS NULL').bind(nowIso(),row.state).run();
   return row;
