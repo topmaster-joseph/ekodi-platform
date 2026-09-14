@@ -31,6 +31,8 @@ function actions(item){
 }
 function row(item){
   const finalDecision=decision(item.reviewDecision);
+  const sources=Array.isArray(item.sourceServices)?item.sourceServices.filter(Boolean):[];
+  const sourceText=sources.length?` · 수요: ${sources.map(esc).join(', ')}`:'';
   return `<article class="ai-task-row" data-request="${esc(item.fingerprint)}"><div><strong>${esc(item.title||item.outcome)}</strong><small>AI 진행: ${esc(status(item.status))} · 최고관리자: ${esc(finalDecision)} · ${Number(item.requestCount||1)}명 요청${sourceText}${item.developmentTaskId?` · ${esc(item.developmentTaskId)}`:''}</small></div><div class="common-detail-actions">${actions(item)}</div></article>`;
 }
 async function decide(fingerprint,decision){

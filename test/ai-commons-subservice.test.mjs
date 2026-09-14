@@ -35,3 +35,21 @@ test('request sources are deduplicated separately from requester count',()=>{
   assert.match(migration,/ON ai_commons_idea_sources\(user_id, fingerprint, source_service_id\)/);
   assert.match(migration,/idx_ai_commons_sources_fingerprint/);
 });
+
+test('super-admin governance shows which subservices generated demand',()=>{
+  const admin=read('ai-commons-admin.js');
+  assert.match(admin,/item\.sourceServices/);
+  assert.match(admin,/수요:/);
+});
+
+test('subservice handoff survives login and immediately resolves the original request',()=>{
+  const client=read('ai-control/commons.js');
+  assert.match(client,/loginUrl\.searchParams\.set\('return_to',location\.href/);
+  assert.match(client,/if\(handoff\).*submitWanted\(handoff\)/s);
+});
+
+test('shell bundle fetches the AI entry in the matching response slot',()=>{
+  const worker=read('ekodi-shell-worker.js');
+  assert.match(worker,/safeAssetFetch\(env,userAiEntryUrl,request\)/);
+  assert.match(worker,/userAiEntryResponse/);
+});

@@ -106,12 +106,13 @@ async function boot(){
   const params=new URLSearchParams(location.search);state.sourceServiceId=escText(params.get('source')).toLowerCase().replace(/[^a-z0-9-]/g,'').slice(0,80);const handoff=escText(params.get('q')).slice(0,600);
   const [config,catalog,requests]=await Promise.all([api('/api/commons/config'),api('/api/commons/services'),api('/api/commons/requests')]);
   state.config=config;state.services=catalog.categories||[];renderServices(state.services);renderRequests(requests.requests||[]);
-  $('loginLink').href=config.authUrl||'/auth/?site=ai&return_to=%2Fai%2F';
+  const loginUrl=new URL(config.authUrl||'/auth/?site=ai',location.origin);loginUrl.searchParams.set('return_to',location.href.split('#')[0]);$('loginLink').href=loginUrl.toString();
   if(config.supabaseUrl&&config.supabasePublishableKey){
     state.client=createClient(config.supabaseUrl,config.supabasePublishableKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
     const {data}=await state.client.auth.getSession();setSession(data.session);await refreshMyIdeas();
     state.client.auth.onAuthStateChange((_event,session)=>{setSession(session);void refreshMyIdeas()});
   }else setSession(null);
+  if(handoff){$('wantInput').value=handoff;if(params.get('auto')==='1')await submitWanted(handoff);}
 }
 
 $('wantForm').addEventListener('submit',async event=>{
