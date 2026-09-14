@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-07T04:24:24.007Z",
-  "startedAt": "2026-09-07T04:24:12.913Z",
+  "generatedAt": "2026-09-14T04:44:49.778Z",
+  "startedAt": "2026-09-14T04:44:34.009Z",
   "repository": "topmaster-joseph/ekodi-platform",
   "branch": "main",
-  "head": "cbde913701997665091b12378fe046e0a1e90d9c",
-  "overallScore": 90.1,
-  "status": "healthy",
+  "head": "7fd6354f1f6b4889d3653b7f6cf67cdf4aca3ffe",
+  "overallScore": 86.5,
+  "status": "watch",
   "thresholds": {
     "healthy": 90,
     "watch": 80,
@@ -18,13 +18,13 @@
       "weight": 25,
       "score": 25,
       "status": "ok",
-      "detail": "314개 테스트 파일 · 전체 테스트 통과"
+      "detail": "451개 테스트 파일 · 전체 테스트 통과"
     },
     "duplication": {
       "weight": 15,
-      "score": 5.1,
+      "score": 1.5,
       "status": "error",
-      "detail": "교차 파일 중복 군집 22개 · 겹침 창 51개 정규화"
+      "detail": "교차 파일 중복 군집 30개 · 겹침 창 106개 정규화"
     },
     "complexity": {
       "weight": 15,
@@ -48,7 +48,7 @@
       "weight": 10,
       "score": 10,
       "status": "ok",
-      "detail": "161개 Workflow · 배포 가드 검증 통과"
+      "detail": "178개 Workflow · 배포 가드 검증 통과"
     },
     "documentation": {
       "weight": 5,
@@ -58,15 +58,15 @@
     }
   },
   "metrics": {
-    "runtimeFiles": 518,
-    "runtimeLines": 86311,
-    "testFiles": 314,
-    "workflows": 161,
+    "runtimeFiles": 658,
+    "runtimeLines": 108318,
+    "testFiles": 451,
+    "workflows": 178,
     "largeFiles": 0,
     "veryLargeFiles": 0,
     "todoMarkers": 7,
-    "duplicateGroups": 22,
-    "duplicateWindows": 51
+    "duplicateGroups": 30,
+    "duplicateWindows": 106
   },
   "technicalDebt": [
     {
@@ -115,12 +115,24 @@
       "detail": "2개 파일에서 동일한 코드 블록 후보가 반복됩니다.",
       "recommendation": "공통 Core로 승격 가능한지 영향 범위를 분석한 뒤, 테스트가 있는 경우에만 통합하세요.",
       "evidence": [
-        "ai-agent-control.js:26",
-        "homepage-presentation-control.js:28"
+        "affiliate-control.js:66",
+        "device-control.js:271"
       ]
     },
     {
       "id": "duplicate-4",
+      "severity": "medium",
+      "category": "duplication",
+      "title": "교차 파일 중복 로직 후보",
+      "detail": "2개 파일에서 동일한 코드 블록 후보가 반복됩니다.",
+      "recommendation": "공통 Core로 승격 가능한지 영향 범위를 분석한 뒤, 테스트가 있는 경우에만 통합하세요.",
+      "evidence": [
+        "ai-agent-control.js:28",
+        "homepage-presentation-control.js:28"
+      ]
+    },
+    {
+      "id": "duplicate-5",
       "severity": "medium",
       "category": "duplication",
       "title": "교차 파일 중복 로직 후보",
@@ -132,7 +144,7 @@
       ]
     },
     {
-      "id": "duplicate-5",
+      "id": "duplicate-6",
       "severity": "medium",
       "category": "duplication",
       "title": "교차 파일 중복 로직 후보",
@@ -144,7 +156,7 @@
       ]
     },
     {
-      "id": "duplicate-6",
+      "id": "duplicate-7",
       "severity": "medium",
       "category": "duplication",
       "title": "교차 파일 중복 로직 후보",
@@ -154,18 +166,6 @@
         "books/publishing/studio/app.js:1",
         "publishing/studio/app.js:1"
       ]
-    },
-    {
-      "id": "duplicate-7",
-      "severity": "medium",
-      "category": "duplication",
-      "title": "교차 파일 중복 로직 후보",
-      "detail": "2개 파일에서 동일한 코드 블록 후보가 반복됩니다.",
-      "recommendation": "공통 Core로 승격 가능한지 영향 범위를 분석한 뒤, 테스트가 있는 경우에만 통합하세요.",
-      "evidence": [
-        "channel-credential-vault.js:1",
-        "mail-credential-vault.js:1"
-      ]
     }
   ],
   "checks": {
@@ -173,7 +173,7 @@
       "ok": true,
       "status": 0,
       "timedOut": false,
-      "summary": "✔ Operator uses normalized admin principal, canonical ledger and channel outbox (0.951106ms)\n✔ workspace configs use V2 entrypoint without consuming another Cloudflare cron slot (1.450368ms)\n✔ functional Messenger UI understands asynchronous assistant and human takeover (1.082221ms)\n✔ Conversation release is additive, isolated, ordered and guarded (1.165657ms)\nℹ tests 1489\nℹ suites 0\nℹ pass 1489\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 9982.250873"
+      "summary": "✔ same workspace identity is deterministic (0.925467ms)\n✔ different workspaces receive distinct visual identities while structure remains shared (0.387153ms)\n✔ different ids within the same kind still vary atmosphere (1.043223ms)\n✔ css variables expose only visual tokens, not layout structure (0.326049ms)\nℹ tests 2133\nℹ suites 0\nℹ pass 2133\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 14590.298178"
     },
     "security": {
       "ok": true,
@@ -185,7 +185,7 @@
       "ok": true,
       "status": 0,
       "timedOut": false,
-      "summary": "> ekodi-platform@4.3.1 validate:boundaries\n> node scripts/validate-platform-boundaries.mjs\n\nPlatform boundaries OK: 31 platform/service boundaries"
+      "summary": "> ekodi-platform@4.3.1 validate:boundaries\n> node scripts/validate-platform-boundaries.mjs && node scripts/validate-service-layer-boundaries.mjs\n\nPlatform boundaries OK: 32 platform/service boundaries\nService layer boundaries OK: 1 professional services, 10 workspace kinds"
     },
     "deployment": {
       "ok": true,
