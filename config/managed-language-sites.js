@@ -8,12 +8,13 @@ export const MANAGED_LANGUAGE_SITES=Object.freeze([
 ]);
 
 const SITE_KEYS=Object.freeze([
-  'my','space','management','marketing','community','church','bible','life','business','biz','work','author','books','publishing','journal','lab','social','messenger','energy','cafe','mall','shop','delivery','local-commerce','trade','invest','money','pay','edu','learn','support','media','insurance','mail','live','cloud'
+  'my','space','management','marketing','community','church','mission','bible','life','business','biz','work','author','books','publishing','journal','lab','social','messenger','energy','cafe','mall','shop','delivery','local-commerce','trade','invest','money','pay','edu','learn','support','media','insurance','mail','live','cloud'
 ]);
 export const LANGUAGE_ADMIN_AUTHORITIES=Object.freeze(Object.fromEntries([
   ['cgma',Object.freeze({provider:'supabase-access-api',siteKey:'cgma',tenantSlug:'cheonggye'})],
   ['biz',Object.freeze({provider:'supabase-access-api',siteKey:'biz',tenantSlug:'ekodibiz'})],
-  ...SITE_KEYS.filter(id=>id!=='biz').map(id=>[id,Object.freeze({provider:'supabase-access-api',siteKey:id,tenantSlug:''})])
+  ['mission',Object.freeze({provider:'supabase-access-api',siteKey:'mission',tenantSlug:'ekodimission'})],
+  ...SITE_KEYS.filter(id=>!['biz','mission'].includes(id)).map(id=>[id,Object.freeze({provider:'supabase-access-api',siteKey:id,tenantSlug:''})])
 ]));
 
 const BY_ID=new Map(MANAGED_LANGUAGE_SITES.map(site=>[site.id,site]));
