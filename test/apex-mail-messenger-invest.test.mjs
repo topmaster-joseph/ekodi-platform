@@ -22,7 +22,14 @@ test('Messenger page and assets are path-native',async()=>{
   const html=await messengerUserPage().text();assert.match(html,/\/messenger\/messenger-ui\.js/);assert.match(html,/\/messenger\/app\.js/);assert.match(html,/https:\/\/ekodi\.kr\/auth\//);noPublicSubdomain(html);
   noPublicSubdomain(await messengerUiScript().text());
   const app=await fetchPath('/messenger/app.js');assert.equal(app.status,200);const appText=await app.text();assert.match(appText,/https:\/\/ekodi\.kr\/workspace-api/);noPublicSubdomain(appText);
-  const manifest=JSON.parse(await readFile(new URL('../deploy/manifests/shared-site.worker.json',import.meta.url),'utf8'));const probe=manifest.worker.requests.find(item=>item.url==='https://messenger.ekodi.kr/app.js');assert.ok(probe);assert.ok(probe.expect.includes('https://ekodi.kr/workspace-api'));assert.ok(!probe.expect.includes('https://workspace-api.ekodi.kr'));
+  const manifest=JSON.parse(await readFile(new URL('../deploy/manifests/shared-site.worker.json',import.meta.url),'utf8'));
+  const probes=manifest.worker.requests;
+  const root=probes.find(item=>item.url==='https://ekodi.kr/messenger');
+  const uiProbe=probes.find(item=>item.url==='https://ekodi.kr/messenger/messenger-ui.js');
+  const appProbe=probes.find(item=>item.url==='https://ekodi.kr/messenger/app.js');
+  for(const probe of [root,uiProbe,appProbe]){assert.ok(probe);assert.equal(probe.rollbackVerify,false)}
+  assert.ok(appProbe.expect.includes('https://ekodi.kr/workspace-api'));assert.ok(!appProbe.expect.includes('https://workspace-api.ekodi.kr'));
+  assert.equal(probes.some(item=>item.url.startsWith('https://messenger.ekodi.kr')),false);
 });
 
 test('Invest page and assets are path-native',async()=>{
@@ -30,6 +37,13 @@ test('Invest page and assets are path-native',async()=>{
   const ui=await investUiScript().text();assert.match(ui,/https:\/\/ekodi\.kr\/workspace-api/);noPublicSubdomain(ui);
   const subject=await investSubjectUiScript().text();assert.match(subject,/https:\/\/ekodi\.kr\/workspace-api/);noPublicSubdomain(subject);
   const app=await fetchPath('/invest/app.js');assert.equal(app.status,200);noPublicSubdomain(await app.text());
+  const manifest=JSON.parse(await readFile(new URL('../deploy/manifests/shared-site.worker.json',import.meta.url),'utf8'));
+  const urls=new Set(manifest.worker.requests.map(item=>item.url));
+  for(const url of ['https://ekodi.kr/invest','https://ekodi.kr/invest/invest-ui.js','https://ekodi.kr/invest/invest-subject-ui.js','https://ekodi.kr/invest/app.js'])assert.ok(urls.has(url),url);
+  assert.equal([...urls].some(url=>url.startsWith('https://invest.ekodi.kr')),false);
+  const subjectProbe=manifest.worker.requests.find(item=>item.url==='https://ekodi.kr/invest/invest-subject-ui.js');
+  assert.deepEqual(subjectProbe.expect,['https://ekodi.kr/workspace-api','subject_type','subject_key']);
+  assert.equal(subjectProbe.expect.includes('profile_key'),false);
 });
 
 test('production worker-first routing includes all three canonical roots',async()=>{
