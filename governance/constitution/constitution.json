@@ -1,6 +1,6 @@
 {
-  "version": "1.16.0",
-  "effectiveDate": "2026-09-13",
+  "version": "1.17.0",
+  "effectiveDate": "2026-09-14",
   "status": "active",
   "title": "EKODI Platform Constitution",
   "principles": [
@@ -32,7 +32,8 @@
     "ekodibiz-exclusive-commercial-subject",
     "ordinary-user-information-first-commercial-separation",
     "completion-continuity-through-recoverable-interruptions",
-    "supreme-attributes-binding"
+    "supreme-attributes-binding",
+    "private-by-default-admin-approved-publication"
   ],
   "architectureModel": {
     "registry": "governance/architecture/ekodi-os-architecture.json",
@@ -574,6 +575,24 @@
     "blockedReservedForAuthorityOrDependency": true,
     "authorityExpansionForbidden": true,
     "productionVerificationStillRequired": true
+  },
+  "publicationApprovalPolicy": {
+    "id": "EKODI-PUBLICATION-APPROVAL-001",
+    "registry": "governance/constitution/publication-approval.v1.json",
+    "defaultPublicationState": "private",
+    "separateDeploymentFromPublication": true,
+    "deploymentCompletionRequired": true,
+    "administratorApprovalRequiredBeforePublicPromotion": true,
+    "administratorApprovalTrigger": "workflow_dispatch",
+    "automaticProductionPromotionForbidden": true,
+    "firstPublicBootstrapRequiresAdministratorApproval": true,
+    "unapprovedPublicNavigation": false,
+    "unapprovedSearchIndexing": false,
+    "unapprovedRecommendation": false,
+    "unapprovedAutomaticExternalSharing": false,
+    "productionVerificationRequiredAfterPublication": true,
+    "emergencyReasonRequired": true,
+    "finalAuthority": "ekodi_platform_super_administrator"
   },
   "supremeAttributesPolicy": {
     "id": "EKODI-SUPREME-ATTRIBUTES-001",

@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { publicationDecisionSummary, resolvePublicationDecision } from './publication-approval-policy.mjs';
 
 const args = process.argv.slice(2);
 const readArg = (name, fallback = '') => {
@@ -16,6 +17,7 @@ const manifestPath = manifestArg ? path.resolve(manifestArg) : '';
 const wranglerVersion = readArg('--wrangler-version', '4.119.0');
 const secretsFileArg = readArg('--secrets-file');
 const secretsFilePath = secretsFileArg ? path.resolve(secretsFileArg) : '';
+const publicationDecision = resolvePublicationDecision();
 
 if (!manifestPath || !fs.existsSync(manifestPath)) {
   console.error('Usage: node scripts/guarded-worker-release.mjs --manifest <file> [--root <dir>] [--secrets-file <file>]');
@@ -275,24 +277,39 @@ function isMissingWorker(error) {
 
 async function bootstrapFirstDeploy() {
   if (!allowFirstDeploy) throw new Error(`First deployment is not allowed by manifest for ${worker.name}.`);
-  console.log(`No existing ${worker.name} deployment found. Manifest explicitly allows one first deployment bootstrap.`);
+  if (!publicationDecision.approved) {
+    appendSummary([
+      `## EKODI private first-release review: ${worker.name}`,
+      '',
+      `- Publication decision: ${publicationDecisionSummary(publicationDecision)}`,
+      '- First public bootstrap is blocked by the private-by-default constitution.',
+      '- The staging/review deployment remains the administrator review surface.',
+      '- Run the guarded deployment manually with workflow_dispatch after review to authorize first public exposure.',
+    ]);
+    console.log(`🔒 ${worker.name} first public deployment withheld. Private review deployment is complete; administrator approval is required for public exposure.`);
+    return;
+  }
+  console.log(`No existing ${worker.name} deployment found. Administrator publication approval allows one first deployment bootstrap.`);
   const deployArgs = ['deploy', '--config', worker.config];
   if (secretsFilePath) deployArgs.push('--secrets-file', secretsFilePath);
   command(deployArgs);
   await verifyAll('');
   appendSummary([
-    `## EKODI first Worker deployment: ${worker.name}`,
+    `## EKODI first Worker publication: ${worker.name}`,
     '',
+    `- Publication decision: ${publicationDecisionSummary(publicationDecision)}`,
     '- Manifest explicitly allowed first-deploy bootstrap.',
     '- AI_PROVIDER=NONE resilience gate passed before deployment.',
+    '- Administrator review approval was present before first public exposure.',
     '- The new Worker was deployed once, then production smoke verification passed.',
-    '- Future releases return to the normal 0% candidate, smoke-test, 100% promotion guard.',
+    '- Future automatic releases return to the private 0% candidate review gate.',
   ]);
-  console.log('✅ First Worker deployment bootstrap complete. Future releases will use the normal guarded promotion path.');
+  console.log('✅ First Worker publication complete after administrator approval.');
 }
 
 try {
   console.log(`Worker guarded release: ${worker.name}`);
+  console.log(publicationDecisionSummary(publicationDecision));
   runChangeOrchestrationGate();
   runProviderIndependenceGate();
   if (secretsFilePath) console.log('Candidate will include the supplied secret set without printing secret values.');
@@ -312,27 +329,44 @@ try {
   deployVersions([
     `${previousVersion}@100%`,
     `${candidateVersion}@0%`,
-  ], `EKODI candidate smoke gate ${tag}`);
+  ], `EKODI private candidate review ${tag}`);
   candidateAttached = true;
 
   console.log('Phase 2/3: smoke-test the 0% candidate through Cloudflare version overrides.');
   await verifyAll(candidateVersion);
 
-  console.log('Phase 3/3: candidate passed, promote it to 100% and verify production without overrides.');
-  deployVersions([`${candidateVersion}@100%`], `EKODI guarded promote ${tag}`);
+  if (!publicationDecision.approved) {
+    appendSummary([
+      `## EKODI private Worker deployment: ${worker.name}`,
+      '',
+      `- Previous public stable: \`${previousVersion}\` at 100%`,
+      `- Private review candidate: \`${candidateVersion}\` at 0%`,
+      `- Publication decision: ${publicationDecisionSummary(publicationDecision)}`,
+      `- Candidate secret file: ${secretsFilePath ? 'supplied securely' : 'not supplied; existing Worker secrets preserved by Wrangler'}`,
+      '- AI_PROVIDER=NONE resilience gate passed.',
+      '- Candidate smoke verification passed without exposing it to ordinary production traffic.',
+      '- Administrator review is required before public promotion. A manual workflow_dispatch is the publication approval action.',
+    ]);
+    console.log('🔒 Private deployment complete: candidate verified at 0% and public production remains unchanged pending administrator approval.');
+    process.exit(0);
+  }
+
+  console.log('Phase 3/3: administrator approval present; promote candidate to 100% and verify production without overrides.');
+  deployVersions([`${candidateVersion}@100%`], `EKODI administrator-approved publish ${tag}`);
   await verifyAll('', 'production');
 
   appendSummary([
-    `## EKODI guarded Worker release: ${worker.name}`,
+    `## EKODI guarded Worker publication: ${worker.name}`,
     '',
     `- Previous stable: \`${previousVersion}\``,
-    `- Candidate: \`${candidateVersion}\``,
+    `- Published candidate: \`${candidateVersion}\``,
+    `- Publication decision: ${publicationDecisionSummary(publicationDecision)}`,
     `- Candidate secret file: ${secretsFilePath ? 'supplied securely' : 'not supplied; existing Worker secrets preserved by Wrangler'}`,
     '- AI_PROVIDER=NONE resilience gate passed before any production candidate was attached.',
-    '- Candidate was attached at 0% traffic, verified with version overrides, then promoted to 100%.',
-    '- Production smoke verification passed after promotion.',
+    '- Candidate was attached at 0% traffic, verified with version overrides, then promoted to 100% only after administrator approval.',
+    '- Production smoke verification passed after publication.',
   ]);
-  console.log('✅ Guarded Worker release complete.');
+  console.log('✅ Guarded Worker publication complete after administrator approval.');
 } catch (error) {
   console.error(`❌ Guarded Worker release failed: ${error?.message || error}`);
   if (candidateAttached && previousVersion) {
