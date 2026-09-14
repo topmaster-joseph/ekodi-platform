@@ -41,5 +41,6 @@ test('production verifier follows the AI Commons public/member boundary contract
   assert.equal(requests.find(item => item.url.endsWith('/api/commons/requests'))?.statuses?.[0], 200);
   assert.equal(requests.find(item => item.url.endsWith('/api/commons/ideas'))?.statuses?.[0], 401);
   const rootProbe = requests.find(item => item.url === 'https://ekodi.kr/ai/');
-  assert.ok(rootProbe.headerExpect.includes('x-ekodi-ai-entry: commons-v1'));
+  assert.ok(rootProbe.headerExpect.includes('x-ekodi-canonical-surface: ai'));
+  assert.ok(rootProbe.headerExpect.includes('x-ekodi-canonical-path: /ai'));
 });

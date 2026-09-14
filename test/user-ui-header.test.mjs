@@ -78,7 +78,7 @@ test('user UI header/footer/language are shared user-surface-only modules',async
   assert.doesNotMatch(footerClient,/백련동1길 17-4/);
   assert.doesNotMatch(footerClient,/© 2026 EKODI · EKODIBIZ/);
 
-  assert.match(userLanguage,/const VERSION=7/);
+  assert.match(userLanguage,/const VERSION=8/);
   assert.match(userLanguage,/const COOKIE_KEY='ekodi_locale'/);
   assert.match(userLanguage,/data-ekodi-language-control/);
   assert.match(userLanguage,/document\.documentElement\.lang=next/);
@@ -87,7 +87,10 @@ test('user UI header/footer/language are shared user-surface-only modules',async
   assert.match(userLanguage,/zh-CN/);
   assert.match(userLanguage,/window\.EKODIUserLanguage/);
   assert.match(userLanguage,/FALLBACK_LOCALE='ko-KR'/);
-  assert.match(userLanguage,/placeFooterControl/);
+  assert.doesNotMatch(userLanguage,/function placeFooterControl/);
+  assert.match(userLanguage,/removeFooterLanguageControls/);
+  assert.doesNotMatch(userLanguage,/icon\.textContent='🌐'/);
+  assert.match(userLanguage,/border-radius:999px/);
   assert.match(userLanguage,/data-ekodi-language-notice/);
   assert.match(userLanguage,/isLocaleReady/);
   assert.match(injector,/data-ekodi-ready-locales/);
@@ -160,6 +163,13 @@ test('user UI header/footer/language are shared user-surface-only modules',async
   assert.equal(parsedPolicy.footer.contentSource,'config/user-footer.js');
   assert.equal(parsedPolicy.footer.alignment,'center');
   assert.equal(parsedPolicy.footer.dedupe,'exactly-one-shared-footer');
+  assert.equal(parsedPolicy.footer.languageChoice,'forbidden');
+  assert.equal(parsedPolicy.language.placement,'header-only');
+  assert.equal(parsedPolicy.language.controlGeometry,'pill');
+  assert.equal(parsedPolicy.language.visibleIcon,false);
+  assert.equal(parsedPolicy.language.visibleLabel,false);
+  assert.equal(parsedPolicy.principles.languageChoiceInHeaderOnly,true);
+  assert.equal(parsedPolicy.principles.footerLanguageChoiceForbidden,true);
   assert.equal(parsedPolicy.header.alignment,'centered-canvas');
   assert.equal(parsedPolicy.principles.mainAlignedChrome,true);
   assert.equal(parsedPolicy.header.contentWidth,'match-adopted-main-canvas');

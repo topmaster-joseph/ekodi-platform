@@ -16,7 +16,8 @@
           "무엇을 원하세요?"
         ],
         "headerExpect": [
-          "x-ekodi-ai-entry: commons-v1"
+          "x-ekodi-canonical-surface: ai",
+          "x-ekodi-canonical-path: /ai"
         ]
       },
       {
