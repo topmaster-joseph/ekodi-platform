@@ -1,11 +1,9 @@
 ﻿import { handleMailContactApi, mailContactPage } from './mail-contact.js';
 import { injectEkodiShell } from './ekodi-shell-injector.js';
-import { workspaceAdminPage } from './workspace-admin-page.js';
 
 const CANONICAL_HOST='ekodi.kr';
 const SURFACE_PREFIXES=Object.freeze({my:'/my',admin:'/admin',auth:'/auth'});
 const SYSTEM_PATHS=Object.freeze(['/api','/mcp','/webhooks','/health']);
-const MALL_ADMIN_PREFIX='/ekodibiz/ekodimall/admin';
 const PUBLIC_EXECUTION_SURFACES=Object.freeze([
   Object.freeze({id:'shell',prefix:'/shell',binding:'SHELL',basePathAware:true}),
   Object.freeze({id:'ai',prefix:'/ai',binding:'AI',virtualHost:'ai.ekodi.kr'}),
@@ -132,7 +130,6 @@ function rewriteAdminHtml(html){
   return html.replace(/<head(\s[^>]*)?>/i,match=>`${match}<base href="/admin/">`);
 }
 function executionSurfaceForPath(pathname){return PUBLIC_EXECUTION_SURFACES.find(item=>item.exact?pathname===item.prefix:(pathname===item.prefix||pathname.startsWith(`${item.prefix}/`)))||null}
-function isServiceLocalMallAdminPath(pathname){return pathname===MALL_ADMIN_PREFIX||pathname.startsWith(`${MALL_ADMIN_PREFIX}/`)}
 function canonicalAbsoluteUrl(host,pathname='/',search='',hash=''){
   const prefix=CANONICAL_HOST_PATHS[String(host||'').toLowerCase()];if(!prefix)return '';
   const suffix=pathname==='/'?'':pathname;return `https://${CANONICAL_HOST}${prefix}${suffix}${search||''}${hash||''}`;
@@ -228,13 +225,6 @@ async function proxyExecutionSurface(request,env,spec,legacyFetch,externalFetch)
     const page=mailContactPage();
     return typeof HTMLRewriter==='function'?injectEkodiShell(page,'mail'):page;
   }
-  if(['GET','HEAD'].includes(request.method)&&isServiceLocalMallAdminPath(path)){
-    const routed=injectEkodiShell(workspaceAdminPage(),'space','admin');
-    routed.headers.set('x-ekodi-canonical-surface','mall-admin');
-    routed.headers.set('x-ekodi-canonical-path',MALL_ADMIN_PREFIX);
-    routed.headers.set('x-robots-tag','noindex, nofollow, noarchive');
-    return routed;
-  }
   const executionSurface=executionSurfaceForPath(path);if(executionSurface)return proxyExecutionSurface(request,env,executionSurface,legacyFetch,externalFetch);
   if(path===SURFACE_PREFIXES.my)return canonicalSlashRedirect(request,SURFACE_PREFIXES.my);
   if(path.startsWith(`${SURFACE_PREFIXES.my}/`))return proxyBinding(request,env?.MY,SURFACE_PREFIXES.my,'my');
@@ -268,6 +258,7 @@ export const EKODI_CANONICAL_SURFACES=Object.freeze({
   health:'/health',
   systemPaths:SYSTEM_PATHS,
 });
+
 
 
 

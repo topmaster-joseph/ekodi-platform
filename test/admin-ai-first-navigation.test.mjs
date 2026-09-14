@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { ADMIN_SERVICE_MENU_REGISTRY, adminMenuGroups, adminMenuOrder, getAdminMenuItem } from '../admin-menu-registry.js';
+import { adminMenuGroups, adminMenuOrder, getAdminMenuItem } from '../admin-menu-registry.js';
 
 const layout = await readFile(new URL('../admin-menu-layout.js', import.meta.url), 'utf8');
 const sidebar = await readFile(new URL('../admin-sidebar.js', import.meta.url), 'utf8');
@@ -43,7 +43,6 @@ test('human-facing Admin menu has one canonical order inside five EKODI axes', (
   assert.deepEqual(adminMenuOrder(), [
     'campus','work','communication','finance','tax','clients','cmpmyi','organization','workspace',
     'common-services','life-ai','personal-finance','community','books','social','devotional','marketing-ai','ai-membership','supply-network','insurance',
-    ...ADMIN_SERVICE_MENU_REGISTRY.map(item => item.id),
     'public-site-controls','language-status','architecture','maturity','security','admins','ai-module-spec','storage','capabilities','aiops','ai-settings','openai','devices','health','api-cost',
   ]);
   assert.ok(layout.includes('const ORDER=Object.freeze(adminMenuOrder());'));
