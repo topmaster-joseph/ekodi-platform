@@ -15,7 +15,7 @@ const coreData = json('config/core-data-boundaries.json');
 const storage = json('config/storage-policy.json');
 const workspace = json('config/service-workspace-policy.json');
 
-if (constitution.version !== '1.16.0') fail('constitution version must be 1.16.0 with the approved Supreme Attributes and Shell canonical-path retirement amendments plus all prior approved amendments');
+if (constitution.version !== '1.16.0') fail('constitution version must be 1.16.0 with the approved Supreme Attributes, Shell canonical-path retirement, and site-owned administrator path amendments plus all prior approved amendments');
 if (constitution.status !== 'active') fail('constitution must be active');
 for (const principle of ['free-first-not-free-only','ekodi-core-is-source-of-truth','provider-independent-by-default','secure-by-default','one-domain-grammar','isolated-parallel-development','verification-first-evolution','security-native-intelligence','evidence-linked-recommendations','secure-projection-minimum-disclosure','integrated-responsibility-distributed-execution-standardized-connections','layered-governance-os-core-services-connections-workspaces','user-surface-engine-separation','capability-first-reuse','sustainable-scale-by-evidence','workspace-over-space','generation-10-active-baseline','open-ended-evidence-driven-generation-evolution','sovereign-autonomy-with-human-authority','person-workspace-role-capability-authority','observe-detect-reason-plan-execute-verify-recover-learn','ekodibiz-exclusive-commercial-subject','ordinary-user-information-first-commercial-separation','completion-continuity-through-recoverable-interruptions','supreme-attributes-binding']) {
   if (!constitution.principles?.includes(principle)) fail(`missing constitutional principle: ${principle}`);
@@ -227,7 +227,7 @@ if (!Array.isArray(coreData.protectedTables) || coreData.protectedTables.length 
 for (const table of ['customer_tenants','customer_users','customer_memberships','customer_access_grants']) if (!coreData.protectedTables?.includes(table)) fail(`core source-of-truth table not protected: ${table}`);
 if (!String(coreData.rule || '').includes('must not directly reference EKODI Core protected tables')) fail('core data access rule missing');
 
-if (workspace.schemaVersion !== 4) fail('service workspace policy schemaVersion must be 4');
+if (workspace.schemaVersion !== 5) fail('service workspace policy schemaVersion must be 5');
 if (workspace.identityAuthority !== 'ekodi') fail('service workspace identityAuthority must be ekodi');
 if (workspace.commonServiceUserAccessRule?.memberMinimumTier !== 'free') fail('common services must preserve free-member minimum access');
 if (workspace.customerWorkspaceRule?.preserveCustomerOwnership !== true) fail('customer workspace ownership must remain preserved');
@@ -236,8 +236,9 @@ if (workspace.publicWorkspaceRouting?.workspaceIdentityKey !== 'workspace_id') f
 if (workspace.publicWorkspaceRouting?.workspaceSubdomains !== 'forbidden') fail('service workspace subdomains must be forbidden');
 if (workspace.publicWorkspaceRouting?.canonicalPattern !== '/{slug}') fail('service workspace canonical route must be /{slug}');
 if (workspace.publicWorkspaceRouting?.servicePattern !== '/{slug}/{service}') fail('service workspace child service route must be /{slug}/{service}');
-if (workspace.publicWorkspaceRouting?.adminPattern !== null || workspace.publicWorkspaceRouting?.adminSurface !== '/admin/workspaces') fail('workspace administration must use the centralized /admin/workspaces surface');
-if (workspace.publicWorkspaceRouting?.serviceAdminPattern !== null) fail('workspace service admin must not have a canonical tenant path');
+if (workspace.publicWorkspaceRouting?.adminPattern !== '/{slug}/admin' || workspace.publicWorkspaceRouting?.serviceAdminPattern !== '/{slug}/{service}/admin') fail('workspace and child-site administration must use each managed public path plus /admin');
+if (workspace.publicWorkspaceRouting?.adminSurface !== '/admin/workspaces' || workspace.publicWorkspaceRouting?.adminSurfaceRole !== 'directory-observability-and-handoff-only' || workspace.publicWorkspaceRouting?.higherAdminChildAliases !== 'forbidden') fail('central Admin may aggregate and hand off but must not own alternate child-admin URLs');
+if (constitution.workspaceRoutingPolicy?.workspaceAdminCanonical !== '/{slug}/admin' || constitution.workspaceRoutingPolicy?.workspaceChildAdminCanonical !== '/{slug}/{service}/admin' || constitution.workspaceRoutingPolicy?.centralAdminChildAliasForbidden !== true) fail('constitutional site-owned administrator canonical paths drifted');
 if (workspace.publicWorkspaceRouting?.kindEncodedInUrl !== false) fail('service workspace kind/type must not be encoded in public URLs');
 const expectedAdminRoutes = { home:'/admin/home/{capability}', operations:'/admin/operations/{capability}', workspaces:'/admin/workspaces/{capability}', services:'/admin/services/{service}', system:'/admin/system/{capability}' };
 for (const [group, pattern] of Object.entries(expectedAdminRoutes)) {

@@ -86,8 +86,10 @@ test('machine workspace policy matches the approved 10G routing contract',async(
   assert.equal(routing.canonicalPattern,'/{slug}');
   assert.equal(routing.servicePattern,'/{slug}/{service}');
   assert.equal(routing.kindEncodedInUrl,false);
-  assert.equal(routing.adminPattern,null);
-  assert.equal(routing.serviceAdminPattern,null);
+  assert.equal(routing.adminPattern,'/{slug}/admin');
+  assert.equal(routing.serviceAdminPattern,'/{slug}/{service}/admin');
   assert.equal(routing.adminSurface,'/admin/workspaces');
+  assert.equal(routing.adminSurfaceRole,'directory-observability-and-handoff-only');
+  assert.equal(routing.higherAdminChildAliases,'forbidden');
   assert.equal(routing.reservedRootSlugsManagedBy,'platform_route_registry');
 });

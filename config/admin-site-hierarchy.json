@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "principle": "Every independently managed site uses its own public canonical path plus /admin. Higher-level administrators may list, observe and hand off to child administrators, but must not create alternate child-admin URLs under the higher-level admin path.",
+  "platformAdmin": {
+    "publicPath": "/",
+    "adminPath": "/admin",
+    "role": "platform-super-admin",
+    "ownRouteGroups": ["home", "operations", "workspaces", "services", "system"],
+    "mayAggregateStatus": true,
+    "mayCreateChildAdminAlias": false
+  },
+  "sites": [
+    { "id": "ekodibiz", "publicPath": "/ekodibiz", "adminPath": "/ekodibiz/admin", "parentId": "platform" },
+    { "id": "ekodimall", "publicPath": "/ekodibiz/ekodimall", "adminPath": "/ekodibiz/ekodimall/admin", "parentId": "ekodibiz" },
+    { "id": "ekodibiz-trade", "publicPath": "/ekodibiz/trade", "adminPath": "/ekodibiz/trade/admin", "parentId": "ekodibiz" },
+    { "id": "ekodichurch", "publicPath": "/ekodichurch", "adminPath": "/ekodichurch/admin", "parentId": "platform" },
+    { "id": "cgma", "publicPath": "/cgma", "adminPath": "/cgma/admin", "parentId": "platform" },
+    { "id": "cmpmyi", "publicPath": "/cmpmyi", "adminPath": "/cmpmyi/admin", "parentId": "platform" },
+    { "id": "jadam", "publicPath": "/jadam", "adminPath": "/jadam/admin", "parentId": "cmpmyi" },
+    { "id": "pizzamaru", "publicPath": "/pizzamaru", "adminPath": "/pizzamaru/admin", "parentId": "cmpmyi" },
+    { "id": "yogurt", "publicPath": "/yogurt", "adminPath": "/yogurt/admin", "parentId": "cmpmyi" }
+  ],  "forbiddenAggregationAliases": [
+    { "alias": "/admin/ekodimall", "canonical": "/ekodibiz/ekodimall/admin" },
+    { "alias": "/ekodibiz/admin/ekodimall", "canonical": "/ekodibiz/ekodimall/admin" },
+    { "alias": "/cmpmyi/admin/jadam", "canonical": "/jadam/admin" },
+    { "alias": "/cmpmyi/admin/pizzamaru", "canonical": "/pizzamaru/admin" },
+    { "alias": "/cmpmyi/admin/yogurt", "canonical": "/yogurt/admin" }
+  ],
+  "legacyCompatibilityAliases": [
+    { "alias": "/mall/admin", "canonical": "/ekodibiz/ekodimall/admin" },
+    { "alias": "/ekodibiz/mall/admin", "canonical": "/ekodibiz/ekodimall/admin" }
+  ],
+  "rules": [
+    "The browser-visible operational admin URL is always the managed site's canonical public path plus /admin.",
+    "A parent administrator can show child status, search, summaries and links but cannot own a second child-admin route.",
+    "Platform /admin routes are reserved for platform-owned control-plane capabilities and directory/observability functions.",
+    "A forbidden or legacy aggregate alias may only redirect to the unique canonical site admin during migration; it must never render the child admin UI.",
+    "Authorization continues to resolve from Person + Workspace + Role + Capability and never from URL nesting alone."
+  ]
+}

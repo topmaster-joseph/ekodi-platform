@@ -1,6 +1,6 @@
 {
   "version": "1.16.0",
-  "effectiveDate": "2026-09-13",
+  "effectiveDate": "2026-09-14",
   "status": "active",
   "title": "EKODI Platform Constitution",
   "principles": [
@@ -32,7 +32,8 @@
     "ekodibiz-exclusive-commercial-subject",
     "ordinary-user-information-first-commercial-separation",
     "completion-continuity-through-recoverable-interruptions",
-    "supreme-attributes-binding"
+    "supreme-attributes-binding",
+    "site-owned-admin-canonical-path"
   ],
   "architectureModel": {
     "registry": "governance/architecture/ekodi-os-architecture.json",
@@ -106,8 +107,11 @@
     "canonicalOperatingTerm": "Workspace",
     "legacySpaceIsCompatibilityOnly": true,
     "personalHomeCanonicalPath": "/my",
-    "administrationCanonicalPath": "/admin",
-    "workspaceAdminCanonical": "/admin/workspaces"
+    "workspaceAdminCanonical": "/{slug}/admin",
+    "platformAdministrationCanonicalPath": "/admin",
+    "workspaceChildAdminCanonical": "/{slug}/{service}/admin",
+    "workspaceAdminDirectory": "/admin/workspaces",
+    "centralAdminChildAliasForbidden": true
   },
   "domainPolicy": {
     "newFeatureSubdomainsForbidden": true,
