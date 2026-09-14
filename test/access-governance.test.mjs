@@ -10,6 +10,8 @@ import {
   validateAccessGrantInput,
   canTenantActorAssignRole,
 } from '../access-governance.js';
+import { tenantAdminCan, TENANT_ADMIN_CAPABILITIES } from '../tenant-admin-policy.js';
+import { canonicalCoreRole, buildPrincipal } from '../ekodi-principal.js';
 
 const NOW=new Date('2026-09-15T00:00:00.000Z');
 
@@ -51,4 +53,21 @@ test('tenant role assignment cannot escalate to platform authority',()=>{
   assert.equal(canTenantActorAssignRole('tenant_admin','viewer'),true);
   assert.equal(canTenantActorAssignRole('tenant_admin','super_admin'),false);
   assert.equal(canTenantActorAssignRole('manager','external_developer'),false);
+});
+
+test('external developer gets inspect capabilities but no access management or finance',()=>{
+  assert.equal(tenantAdminCan('external_developer',TENANT_ADMIN_CAPABILITIES.dashboard),true);
+  assert.equal(tenantAdminCan('external_developer',TENANT_ADMIN_CAPABILITIES.preview),true);
+  assert.equal(tenantAdminCan('external_developer',TENANT_ADMIN_CAPABILITIES.logs),true);
+  assert.equal(tenantAdminCan('external_developer',TENANT_ADMIN_CAPABILITIES.access),false);
+  assert.equal(tenantAdminCan('external_developer',TENANT_ADMIN_CAPABILITIES.finance),false);
+  assert.equal(tenantAdminCan('external_developer',TENANT_ADMIN_CAPABILITIES.site),false);
+});
+
+test('external developer can never become platform authority through core role aliasing',()=>{
+  assert.equal(canonicalCoreRole('external_developer'),'viewer');
+  const principal=buildPrincipal({id:'person:test',email:'dev@example.com',role:'external_developer',subjectType:'tenant',subjectKey:'cgma'});
+  assert.equal(principal.authorityScope,'tenant');
+  assert.equal(principal.coreRole,'viewer');
+  assert.equal(principal.capabilities.includes('conversation:write'),false);
 });
