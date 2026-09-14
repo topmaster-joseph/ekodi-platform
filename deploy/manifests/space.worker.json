@@ -75,6 +75,13 @@
         "redirect": "manual",
         "expect": ["EKODI MISSION"],
         "headerExpect": ["x-ekodi-route: ekodimission-preview","x-ekodi-independent-site: true","x-robots-tag: noindex, nofollow, noarchive","cache-control: no-store"]
+      },
+      {
+        "url": "https://ekodi.kr/hammu",
+        "statuses": [200],
+        "redirect": "manual",
+        "expect": ["data-ekodi-organization=\"hammu\"","MOKPO PRESBYTERY","/hammu/admin"],
+        "headerExpect": ["x-ekodi-route: space-organization","cache-control: no-store"]
       }
     ]
   }
