@@ -79,7 +79,7 @@ test('My EKODI keeps Invest inside progressive discovery and passes only an auth
   const worker=await read('my-worker.js');
   const subject=await read('invest-subject-ui.js');
   const invest=EKODI_SERVICE_MANIFEST.services.find(service=>service.id==='invest');
-  assert.equal(invest?.url,'https://invest.ekodi.kr/');
+  assert.equal(invest?.url,'https://ekodi.kr/invest');
   assert.equal(invest?.sso,true);
   assert.equal(invest?.targetable,true);
   assert.match(userAi,/data-personalization-recommended/);

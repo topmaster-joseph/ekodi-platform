@@ -1,6 +1,6 @@
 const PREFIX='/ekodibiz/invest/admin';
 const PUBLIC='/ekodibiz/invest';
-const CORE='https://invest.ekodi.kr/';
+const CORE='https://ekodi.kr/invest';
 const CONTROL='https://admin.ekodi.kr/?route=finance&source=ekodibiz-invest';
 const SECTIONS=Object.freeze({
   overview:['투자사업 관리','프로젝트·IR·투자 연결·프로그램을 한곳에서 운영합니다.'],
