@@ -19,6 +19,9 @@ test('workspace admin uses the shared two-level navigation contract', async()=>{
   assert.match(script,/label:'AI 영업'/);
   assert.match(script,/function renderSecondaryNav/);
   assert.match(script,/로그인 후 세부 메뉴가 표시됩니다/);
+  assert.match(script,/운영 데이터 비공개/);
+  assert.match(script,/Google 계정으로 관리자 확인/);
+  assert.match(css,/\.mall-quick-actions/);
 });
 
 test('mall primary groups keep detail routes in the upper secondary navigation', async()=>{
