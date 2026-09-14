@@ -108,7 +108,7 @@ for(const [id,requested] of Object.entries(serviceProfiles)){
 }
 const commerceProfile=experienceProfiles['consumer-commerce'];
 if(!commerceProfile?.geometry?.controlRadius || serviceProfiles.mall!=='consumer-commerce') errors.push('Mall must inherit the reusable consumer-commerce experience profile from the central registry.');
-for (const principle of ['subserviceInheritance','fallbackHeaderWhenMissing','legacyCommonFooterSuppressed','rootInternalPathsExcluded','languageChoiceEverywhere','globalUtilitiesInHeader','unavailableLanguageReturnsToKorean','unreadyLanguageHidden','automaticTranslationLifecycle']) {
+for (const principle of ['subserviceInheritance','fallbackHeaderWhenMissing','legacyCommonFooterSuppressed','rootInternalPathsExcluded','languageChoiceEverywhere','globalUtilitiesInHeader','unavailableLanguageReturnsToKorean','unreadyLanguageHidden','automaticTranslationLifecycle','progressiveHomeDisclosure']) {
   if (shell?.principles?.[principle] !== true) errors.push(`User UI Shell principle must remain enabled: ${principle}.`);
 }
 if (shell?.header?.strategy !== 'adopt-existing-first' || shell?.header?.owner !== 'shared-shell') {
