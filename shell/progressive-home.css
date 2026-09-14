@@ -1,0 +1,6 @@
+html[data-ekodi-home-focus="v1"] [data-ekodi-progressive-hidden="1"][hidden]{display:none!important}
+[data-ekodi-progressive-reveal="v1"]{display:inline-flex;align-items:center;justify-content:center;min-height:42px;margin:18px auto;padding:9px 16px;border:1px solid rgba(127,127,127,.32);border-radius:999px;background:transparent;color:inherit;font:inherit;font-weight:700;cursor:pointer;touch-action:manipulation}
+[data-ekodi-progressive-reveal="v1"]:hover{background:rgba(127,127,127,.08)}
+[data-ekodi-progressive-reveal="v1"]:focus-visible{outline:3px solid currentColor;outline-offset:3px}
+@media(max-width:640px){[data-ekodi-progressive-reveal="v1"]{width:min(100%,320px);display:flex}}
+@media(prefers-reduced-motion:reduce){[data-ekodi-progressive-reveal="v1"]{scroll-behavior:auto}}
