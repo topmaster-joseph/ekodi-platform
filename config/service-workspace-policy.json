@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 4,
+  "schemaVersion": 5,
   "provider": {
     "legalOperator": "EKODIBIZ",
     "role": "service_provider"
@@ -61,15 +61,15 @@
     },
     "canonicalPattern": "/{slug}",
     "servicePattern": "/{slug}/{service}",
-    "adminPattern": null,
-    "serviceAdminPattern": null,
+    "adminPattern": "/{slug}/admin",
+    "serviceAdminPattern": "/{slug}/{service}/admin",
     "kindEncodedInUrl": false,
     "reservedRootSlugsManagedBy": "platform_route_registry",
     "adminSurface": "/admin/workspaces",
-    "legacyAdminPatterns": [
-      "/{slug}/admin",
-      "/{slug}/{service}/admin"
-    ]
+    "legacyAdminPatterns": [],
+    "adminSurfaceRole": "directory-observability-and-handoff-only",
+    "higherAdminChildAliases": "forbidden",
+    "canonicalAdminRule": "managed-public-path-plus-/admin"
   },
   "serviceImplementationSelection": {
     "workspaceMaySelectCompatibleImplementation": true,
@@ -121,7 +121,7 @@
     "marketingProduct": "https://ekodi.kr/ekodibiz/marketing-ai",
     "workspaceMarketingPattern": "https://ekodi.kr/{slug}/marketing",
     "marketingCore": "https://marketing.ekodi.kr",
-    "aiGateway": "https://ai.ekodi.kr",
+    "aiGateway": "https://ekodi.kr/ai",
     "providerTopologyVisibleToOrdinaryUsers": false,
     "examples": {
       "jadamMarketing": "https://ekodi.kr/jadam/marketing",
@@ -173,6 +173,7 @@
     "canonicalPath": "/admin/services/common-services",
     "runtimeHostsAreOperatorPages": false,
     "directRuntimeRootBehavior": "redirect_to_admin_control_plane",
+    "publicUserSurfaceExceptions": ["ai-commons"],
     "sessionAuthority": "central_admin_session",
     "authorityContext": "Person + Workspace + Role + Capability",
     "internalOperationalInfoBeforeAuthentication": false,
@@ -191,6 +192,7 @@
     "admin": "/admin",
     "auth": "/auth",
     "api": "/api",
+    "ai": "/ai",
     "mcp": "/mcp",
     "webhooks": "/webhooks",
     "health": "/health"

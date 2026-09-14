@@ -1,61 +1,61 @@
 {
-  "version": 1,
+  "version": 2,
   "worker": {
     "name": "ekodi-ai-control",
     "config": "wrangler.ai.release.toml",
     "allowFirstDeploy": true,
     "requests": [
       {
-        "url": "https://ai.ekodi.kr/",
+        "url": "https://ekodi.kr/ai/",
         "statuses": [
-          307
+          200
         ],
         "redirect": "manual",
+        "expect": [
+          "EKODI 모두의 AI 프로젝트",
+          "무엇을 원하세요?"
+        ],
         "headerExpect": [
-          "location: https://ekodi.kr/admin/services/common-services?service=ai",
-          "x-ekodi-route: ai-runtime-admin-handoff",
-          "cache-control: no-store",
-          "x-content-type-options: nosniff"
+          "x-ekodi-ai-entry: commons-v1"
         ]
       },
       {
-        "url": "https://ai.ekodi.kr/__health",
+        "url": "https://ekodi.kr/ai/__health",
         "statuses": [
           200
         ],
         "expect": [
           "\"ok\":true",
           "\"platform\":\"ai-control\"",
-          "\"surface\":\"runtime-only\""
+          "\"commons\":true"
         ]
       },
       {
-        "url": "https://ai.ekodi.kr/config.js",
+        "url": "https://ekodi.kr/ai/api/commons/services",
         "statuses": [
-          410
+          200
         ],
         "expect": [
-          "operator_surface_moved",
-          "common-services"
+          "\"principle\"",
+          "\"categories\""
         ]
       },
       {
-        "url": "https://ai.ekodi.kr/api/status",
+        "url": "https://ekodi.kr/ai/api/commons/requests",
+        "statuses": [
+          200
+        ],
+        "expect": [
+          "\"requests\""
+        ]
+      },
+      {
+        "url": "https://ekodi.kr/ai/api/commons/ideas",
         "statuses": [
           401
         ],
         "expect": [
           "authentication_required"
-        ]
-      },
-      {
-        "url": "https://ai.ekodi.kr/api/auth/exchange",
-        "statuses": [
-          410
-        ],
-        "expect": [
-          "service_local_auth_retired",
-          "common-services"
         ]
       }
     ]
