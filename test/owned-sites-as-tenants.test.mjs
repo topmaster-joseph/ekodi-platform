@@ -40,10 +40,10 @@ test('tenant principal stays in tenant authority scope even when role is admin',
 });
 
 test('EKODI-owned operating organizations are customer sites', () => {
-  for (const id of ['church', 'biz', 'lab', 'trade', 'cafe']) {
+  for (const id of ['church', 'biz', 'lab', 'trade', 'cafe', 'mission']) {
     assert.equal(operatingModelForService(id), 'customer-site');
     assert.equal(serviceForId(id)?.operatingModel, 'customer-site');
-    assert.ok(['ekodi-church','ekodi-biz','ekodi-lab','ekoditrade','ekodi-cafe'].includes(serviceForId(id)?.tenantSlug));
+    assert.ok(['ekodi-church','ekodi-biz','ekodi-lab','ekoditrade','ekodi-cafe','ekodimission'].includes(serviceForId(id)?.tenantSlug));
   }
 });
 
