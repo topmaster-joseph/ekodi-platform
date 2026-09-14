@@ -31,3 +31,10 @@ test('platform router preserves tenant-branded independent sites without EKODI s
 test('mission is registered but excluded from public root until approval',async()=>{
   const registry=JSON.parse(await readFile(new URL('../config/ecosystem-services.json',import.meta.url),'utf8'));const mission=registry.services.find(service=>service.id==='mission');assert.ok(mission);assert.equal(mission.url,'https://ekodi.kr/ekodimission');assert.equal(mission.homepage,false);assert.equal(mission.productionVerified,false);assert.equal(mission.status,'preparing');
 });
+
+
+test('Open Table uses the approved 16:00-18:00 schedule and mission admin identity',async()=>{
+  const [event,admin]=await Promise.all([readFile(new URL('../space/ekodimission-activity.html',import.meta.url),'utf8'),readFile(new URL('../workspace-admin-page.js',import.meta.url),'utf8')]);
+  assert.match(event,/16:00–18:00/);assert.doesNotMatch(event,/12:00–15:00|낮 12시/);
+  assert.match(admin,/'ekodimission':'에코디선교회'/);assert.match(admin,/'ekodimission':'mission'/);
+});
