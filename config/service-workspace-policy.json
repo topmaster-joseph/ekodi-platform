@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 4,
+  "schemaVersion": 5,
   "provider": {
     "legalOperator": "EKODIBIZ",
     "role": "service_provider"
@@ -61,15 +61,15 @@
     },
     "canonicalPattern": "/{slug}",
     "servicePattern": "/{slug}/{service}",
-    "adminPattern": null,
-    "serviceAdminPattern": null,
+    "adminPattern": "/{slug}/admin",
+    "serviceAdminPattern": "/{slug}/{service}/admin",
     "kindEncodedInUrl": false,
     "reservedRootSlugsManagedBy": "platform_route_registry",
     "adminSurface": "/admin/workspaces",
-    "legacyAdminPatterns": [
-      "/{slug}/admin",
-      "/{slug}/{service}/admin"
-    ]
+    "legacyAdminPatterns": [],
+    "adminSurfaceRole": "directory-observability-and-handoff-only",
+    "higherAdminChildAliases": "forbidden",
+    "canonicalAdminRule": "managed-public-path-plus-/admin"
   },
   "serviceImplementationSelection": {
     "workspaceMaySelectCompatibleImplementation": true,
