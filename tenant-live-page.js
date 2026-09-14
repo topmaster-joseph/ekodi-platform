@@ -1,7 +1,7 @@
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 export function tenantLivePage(tenant){
-  const name=esc(tenant.name),title=esc(tenant.title),home=esc(tenant.home),path=esc(tenant.path);
-  const body=`<!doctype html><html lang="ko-KR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="robots" content="index,follow"><title>${title}</title><meta name="description" content="${name} 실시간 방송과 참여"><link rel="stylesheet" href="/tenant-live.css"></head>
+  const name=esc(tenant.name),title=esc(tenant.title),home=esc(tenant.home),path=esc(tenant.path),robots=esc(tenant.robots||'index,follow');
+  const body=`<!doctype html><html lang="ko-KR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="robots" content="${robots}"><title>${title}</title><meta name="description" content="${name} 실시간 방송과 참여"><link rel="stylesheet" href="/tenant-live.css"></head>
 <body data-tenant="${esc(tenant.apiTenant)}" data-room-mode="${esc(tenant.mode)}" data-live-path="${path}" data-auth-site="${esc(tenant.authSite)}" data-name="${name}" data-default-title="${title}">
 <header class="live-header"><a class="brand" href="${home}"><span class="mark">E</span><span><strong>${name}</strong><small>LIVE</small></span></a><div class="header-actions"><span id="liveState">방송 확인 중</span><a href="${home}">홈</a></div></header>
 <main class="live-shell"><section id="entryView" class="live-intro"><p class="eyebrow">EKODI REALTIME</p><h1>${name}<br><em>실시간 방송</em></h1><p>별도 앱 없이 브라우저에서 방송하거나 공개 방송에 참여할 수 있습니다.</p><div class="entry-actions"><button class="primary" id="hostButton">방송하기</button><button id="joinButton">참여하기</button></div><p id="entryNote">공개 방송은 로그인 없이 시청할 수 있습니다.</p></section>

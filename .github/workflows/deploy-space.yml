@@ -6,6 +6,8 @@ on:
     paths:
       - 'space/**'
       - 'space-worker.js'
+      - 'realtime-tenant-registry.js'
+      - 'tenant-live-page.js'
       - 'storefront-page.js'
       - 'restaurant-storefront.js'
       - 'restaurant-storefront-v2.js'
@@ -34,6 +36,8 @@ on:
     paths:
       - 'space/**'
       - 'space-worker.js'
+      - 'realtime-tenant-registry.js'
+      - 'tenant-live-page.js'
       - 'storefront-page.js'
       - 'restaurant-storefront.js'
       - 'restaurant-storefront-v2.js'

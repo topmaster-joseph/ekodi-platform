@@ -117,6 +117,41 @@
         "redirect": "manual",
         "expect": ["GIVE & SHARE"],
         "headerExpect": ["x-ekodi-route: ekodimission-preview","x-ekodi-independent-site: true","x-robots-tag: noindex, nofollow, noarchive","cache-control: no-store"]
+      },
+      {
+        "url": "https://ekodi.kr/ekodimission/vision",
+        "statuses": [200],
+        "redirect": "manual",
+        "expect": ["VISION & VALUES"],
+        "headerExpect": ["x-ekodi-route: ekodimission-preview","x-ekodi-independent-site: true","x-robots-tag: noindex, nofollow, noarchive","cache-control: no-store"]
+      },
+      {
+        "url": "https://ekodi.kr/ekodimission/live",
+        "statuses": [200],
+        "redirect": "manual",
+        "expect": ["EKODI REALTIME"],
+        "headerExpect": ["x-ekodi-route: ekodimission-preview","x-ekodi-independent-site: true","x-robots-tag: noindex, nofollow, noarchive","cache-control: no-store"]
+      },
+      {
+        "url": "https://ekodi.kr/ekodimission/prayer",
+        "statuses": [200],
+        "redirect": "manual",
+        "expect": ["PRAYER"],
+        "headerExpect": ["x-ekodi-route: ekodimission-preview","x-ekodi-independent-site: true","x-robots-tag: noindex, nofollow, noarchive","cache-control: no-store"]
+      },
+      {
+        "url": "https://ekodi.kr/ekodimission/transparency",
+        "statuses": [200],
+        "redirect": "manual",
+        "expect": ["STEWARDSHIP & TRANSPARENCY"],
+        "headerExpect": ["x-ekodi-route: ekodimission-preview","x-ekodi-independent-site: true","x-robots-tag: noindex, nofollow, noarchive","cache-control: no-store"]
+      },
+      {
+        "url": "https://ekodi.kr/ekodimission/contact",
+        "statuses": [200],
+        "redirect": "manual",
+        "expect": ["CONTACT"],
+        "headerExpect": ["x-ekodi-route: ekodimission-preview","x-ekodi-independent-site: true","x-robots-tag: noindex, nofollow, noarchive","cache-control: no-store"]
       }
     ]
   }
