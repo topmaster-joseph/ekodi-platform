@@ -6,7 +6,7 @@ import { campaignKey, fallbackContent, kstParts, mallPromotionAutomationEnabled,
 const read = path => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 
 test('mall promotion stays first-party, organic and bounded', () => {
-  assert.equal(MALL_PROMOTION_DEFAULTS.subjectKey, 'ekodi-biz');
+  assert.equal(MALL_PROMOTION_DEFAULTS.subjectKey, 'ekodimall');
   assert.equal(MALL_PROMOTION_DEFAULTS.storefront, 'ekodi-mall');
   assert.deepEqual(MALL_PROMOTION_DEFAULTS.providers, ['facebook','instagram','threads']);
   assert.equal(MALL_PROMOTION_DEFAULTS.maxDailyChannels, 3);
@@ -17,8 +17,9 @@ test('mall promotion stays first-party, organic and bounded', () => {
 test('promotion master gate is fail-closed and shared by every scheduler path', async () => {
   assert.equal(mallPromotionAutomationEnabled({}), false);
   assert.equal(mallPromotionAutomationEnabled({MALL_PROMOTION_AUTOMATION_ENABLED:'true'}), true);
-  const publisher = await read('marketing-growth-worker.js');
-  assert.match(publisher,/mallPromotionAutomationEnabled\(this\.env\)[\s\S]*runMallPromotionAutomation/);
+  const [publisher,loop] = await Promise.all([read('marketing-growth-worker.js'),read('mall-autonomous-profit-loop.js')]);
+  assert.match(publisher,/runMallAutonomousProfitLoop/);
+  assert.match(loop,/mallPromotionAutomationEnabled\(env\)[\s\S]*runMallPromotionAutomation/);
 });
 
 test('campaign attribution is deterministic by KST date provider and product', () => {
@@ -61,16 +62,12 @@ test('migration scopes autonomous policy to internal EKODIBIZ and adds no plaint
 });
 
 test('growth entry exports its RPC entrypoint and uses only the canonical shared scheduler', async () => {
-  const [entry, wrangler, publisher, publishConfig] = await Promise.all([read('marketing-growth-entry.js'), read('wrangler.marketing-growth.toml'), read('marketing-publishing-worker.js'), read('wrangler.marketing-publishing.toml')]);
-  const intelligenceIndex = entry.indexOf('runMallSalesIntelligence');
-  const promotionIndex = entry.lastIndexOf('runMallPromotionAutomation');
-  assert.ok(intelligenceIndex >= 0);
-  assert.ok(promotionIndex > intelligenceIndex);
-  assert.match(entry,/mallSalesIntelligence/);
-  assert.match(entry,/mallPromotionAutomation/);
+  const [entry, wrangler, publisher, publishConfig, loop] = await Promise.all([read('marketing-growth-entry.js'), read('wrangler.marketing-growth.toml'), read('marketing-publishing-worker.js'), read('wrangler.marketing-publishing.toml'), read('mall-autonomous-profit-loop.js')]);
+  assert.match(entry,/runMallAutonomousProfitLoop/);
+  assert.match(entry,/mallAutonomousProfitLoop/);
   assert.match(entry,/scheduled\(_event, env, ctx\)/);
-  assert.match(entry,/mallPromotionAutomationEnabled\(env\)/);
-  assert.doesNotMatch(entry,/[^A-Za-z]promotionAutomationEnabled\(env\)/);
+  assert.match(loop,/runMallSalesIntelligence[\s\S]*ensureWeeklyPromotionBoard[\s\S]*runMallPromotionAutomation/);
+  assert.match(loop,/mallPromotionAutomationEnabled\(env\)/);
   assert.match(wrangler,/main = "marketing-growth-entry.js"/);
   assert.match(entry,/export \{ MarketingGrowthPublisher \} from '\.\/marketing-growth-worker\.js';/);
   assert.match(wrangler,/crons = \[\]/);

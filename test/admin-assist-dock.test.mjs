@@ -57,7 +57,7 @@ test('Assist is current-screen aware, action-first and high-impact actions map t
   assert.match(js,/운영 큐에 기록하고 Admin AI가 응답했습니다/);
 });
 
-test('Assist first path is command-entry-only and upgrades through existing secured lazy assets',async()=>{
+test('Assist first path is bottom command-entry-only and upgrades through existing secured lazy assets',async()=>{
   const [postbuild,shell,bootstrap,bootstrapCss]=await Promise.all([
     read('scripts/admin-thin-postbuild.mjs'),read('admin-authenticated-shell.js'),read('admin-assist-bootstrap.js'),read('admin-assist-bootstrap.css')
   ]);
@@ -67,16 +67,20 @@ test('Assist first path is command-entry-only and upgrades through existing secu
   assert.match(postbuild,/admin-assist-dock\.css/);
   assert.match(postbuild,/admin-lazy-features\.js/);
   assert.match(postbuild,/ai-ops-admin\.css/);
-  assert.match(postbuild,/centered Assist command entry \+ fixed recent-command workbench verified/);
+  assert.match(postbuild,/bottom Assist command dock \+ lazy recent-command workbench verified/);
   assert.doesNotMatch(bootstrap,/requestIdleCallback/);
   assert.match(bootstrap,/ekodi-assist-bootstrap-form/);
   assert.match(bootstrap,/에코디 AI에게 물어보세요/);
-  assert.match(bootstrap,/button\.addEventListener\('click'/);
-  assert.match(bootstrap,/demand\.loadStyle\('ai-ops-admin\.css'\)/);
-  assert.match(bootstrap,/demand\.loadScript\('admin-lazy-features\.js'\)/);
+  assert.match(bootstrap,/ekodi-admin-assist-request/);
+  assert.match(bootstrap,/loadStyle\('ai-ops-admin\.css'\)/);
+  assert.match(bootstrap,/loadScript\('admin-lazy-features\.js'\)/);
+  assert.match(bootstrap,/ekodi-admin-section-changed',S/);
+  assert.match(bootstrap,/admin-command-home/);
   assert.match(bootstrapCss,/\.ekodi-assist-bootstrap/);
   assert.match(bootstrapCss,/left:var\(--ekodi-assist-left,260px\)/);
-  assert.match(bootstrapCss,/top:50%/);
+  assert.match(bootstrapCss,/bottom:0/);
+  assert.match(bootstrapCss,/\.content\{padding-bottom:calc\(120px/);
+  assert.doesNotMatch(bootstrapCss,/top:50%/);
   assert.doesNotMatch(bootstrap,/\/api\/control\/messenger\/inbox/);
   assert.match(shell,/admin-compact\.js/);
   assert.doesNotMatch(shell,/admin-assist-dock\.js/);
@@ -93,4 +97,19 @@ test('guarded shared-site release verifies bootstrap and full Assist lazy assets
   assert.match(manifest,/admin\.ekodi\.kr\/ai-ops-admin\.css\?assist=v2/);
   assert.match(manifest,/ekodi-assist-launcher/);
   assert.match(manifest,/ekodi-assist-panel/);
+});
+
+
+test('command history is global across admin menus while current screen context keeps updating', async()=>{
+  const [js,css,bootstrap]=await Promise.all([read('admin-assist-dock.js'),read('admin-assist-dock.css'),read('admin-assist-bootstrap.js')]);
+  assert.doesNotMatch(js,/selectSessionForCurrentSection/);
+  assert.doesNotMatch(js,/sessions\.filter\(session=>session\.context\?\.section===section\)/);
+  assert.match(js,/railTitle\.textContent='공통 명령 이력'/);
+  assert.match(js,/placeholder='전체 명령 검색'/);
+  assert.match(js,/classList\.add\('admin-command-history-ready'\)/);
+  assert.match(js,/classList\.toggle\('history-only',!state\.open\)/);
+  assert.match(css,/body\.admin-command-history-ready:not\(\.admin-command-home\) \.content\{margin-left:286px!important\}/);
+  assert.match(css,/\.ekodi-assist\.history-only \.ekodi-assist-main\{display:none!important\}/);
+  assert.match(bootstrap,/A\(0\)\.then\(H\)/);
+  assert.ok(js.includes('ekodi-admin-section-changed'));
 });

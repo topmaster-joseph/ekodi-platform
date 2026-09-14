@@ -4,7 +4,6 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 import { ADMIN_MENU_REGISTRY } from '../admin-menu-registry.js';
 import { routeCanonicalSurface } from '../canonical-surface-router.js';
-import myWorker from '../my-worker.js';
 import platformEntry from '../platform-router-entry-worker.js';
 import siteWorker from '../site-worker.js';
 
@@ -40,6 +39,28 @@ test('My and system paths preserve the internal execution boundary',async()=>{
   assert.equal(response.status,200);assert.equal(control.calls[2].pathname,'/.well-known/oauth-protected-resource');
   response=await routeCanonicalSurface(new Request('https://ekodi.kr/api/control/ai/v8/status'),{CONTROL_API:control});
   assert.equal(response.status,200);assert.equal(control.calls[3].pathname,'/api/control/ai/v8/status');
+});
+
+test('Shell canonical path uses its service binding and strips the apex prefix',async()=>{
+  const shell=binding(JSON.stringify({ok:true,service:'ekodi-shell'}),'application/json');
+  const response=await routeCanonicalSurface(new Request('https://ekodi.kr/shell/manifest.json?release=1'),{SHELL:shell});
+  assert.equal(response.status,200);assert.equal(shell.calls[0].pathname,'/manifest.json');assert.equal(shell.calls[0].search,'?release=1');
+  assert.equal(response.headers.get('x-ekodi-canonical-surface'),'shell');assert.equal(response.headers.get('x-ekodi-canonical-path'),'/shell');
+});
+
+test('Support canonical binding keeps the apex prefix without a retired execution host',async()=>{
+  const support=binding(JSON.stringify({ok:true,service:'ekodi-support-opportunity'}),'application/json');
+  const response=await routeCanonicalSurface(new Request('https://ekodi.kr/support/health'),{SUPPORT:support});
+  assert.equal(response.status,200);assert.equal(support.calls[0].hostname,'ekodi.kr');assert.equal(support.calls[0].pathname,'/support/health');
+  assert.equal(response.headers.get('x-ekodi-canonical-surface'),'support');assert.equal(response.headers.get('x-ekodi-canonical-path'),'/support');
+  assert.doesNotMatch(fs.readFileSync(new URL('../canonical-surface-router.js',import.meta.url),'utf8'),/support\.ekodi\.kr/);
+});
+
+test('canonical Shell bindings are environment-specific and dependent releases watch the gateway',async()=>{
+  const files=['wrangler.site.toml','wrangler.site-staging.toml','.github/workflows/deploy-education.yml','.github/workflows/deploy-bible.yml','.github/workflows/deploy-life-ai.yml'];
+  const [prod,stage,...workflows]=await Promise.all(files.map(file=>fs.promises.readFile(new URL('../'+file,import.meta.url),'utf8')));
+  assert.match(prod,/binding = \"SHELL\"\s+service = \"ekodi-shell\"/);assert.match(stage,/binding = \"SHELL\"\s+service = \"ekodi-shell-staging\"/);assert.match(prod,/run_worker_first = \[[^\]]*\"\/shell\*\"/s);
+  for(const workflow of workflows){assert.match(workflow,/canonical-surface-router\.js/);assert.match(workflow,/wrangler\.site\.toml/);assert.match(workflow,/wrangler\.site-staging\.toml/);assert.match(workflow,/seq 1 120[\s\S]*ekodi\.kr\/shell\/manifest\.json/);}
 });
 
 test('v8 control candidate probe does not make rollback depend on a newly introduced endpoint',async()=>{
@@ -89,10 +110,8 @@ test('Admin deep routes render the shell while runtime assets stay addressable',
   response=await routeCanonicalSurface(new Request('https://ekodi.kr/admin/admin-menu-layout.js'),{}, {legacyFetch:legacy.fetch});
   assert.equal(legacy.calls[1].pathname,'/admin-menu-layout.js');
 });
-test('legacy My, Admin and Auth entry hosts converge to apex canonical paths',async()=>{
-  let response=await myWorker.fetch(new Request('https://my.ekodi.kr/docs/?x=1'),{});
-  assert.equal(response.status,308);assert.equal(new URL(response.headers.get('location')).href,'https://ekodi.kr/my/docs/?x=1');
-  response=await platformEntry.fetch(new Request('https://auth.ekodi.kr/?site=my'),{},{});
+test('legacy Admin and Auth entry hosts converge to apex canonical paths',async()=>{
+  let response=await platformEntry.fetch(new Request('https://auth.ekodi.kr/?site=my'),{},{});
   assert.equal(response.status,308);assert.equal(new URL(response.headers.get('location')).pathname,'/auth/');
   response=await platformEntry.fetch(new Request('https://admin.ekodi.kr/books'),{},{});
   assert.equal(response.status,308);const target=new URL(response.headers.get('location'));assert.equal(target.pathname,'/admin/');assert.equal(target.searchParams.get('route'),'books');
@@ -114,9 +133,8 @@ test('Admin canonical route registry mirrors the five management work areas and 
   assert.equal(routes.sectionFromPath('/admin/common/common-services'),'common-services');
   assert.equal(routes.sectionFromPath('/admin/professional/insurance'),'insurance');
   assert.equal(routes.sectionFromPath('/admin/space/clients'),'clients');
-  const canonicalGroupForWorkArea = workArea => workArea === 'space' ? 'workspaces' : workArea;
   for (const item of ADMIN_MENU_REGISTRY.filter(item => !item.href)) {
-    assert.equal(routes.pathFor(item.id).split('/')[2], canonicalGroupForWorkArea(item.group), `${item.id} route group must match its canonical Admin path area`);
+    assert.equal(routes.pathFor(item.id).split('/')[2], item.group, `${item.id} route group must match its canonical Admin path area`);
   }
 });
 
@@ -143,6 +161,7 @@ test('Bible canonical path uses its service binding without double-prefixing ass
   const bible=binding('<html><head><link href="/bible/styles.css"></head><body>Bible</body></html>','text/html');
   const response=await routeCanonicalSurface(new Request('https://ekodi.kr/bible/reader?provider=KRV1961'),{BIBLE:bible});
   assert.equal(response.status,200);assert.equal(bible.calls[0].pathname,'/reader');assert.equal(bible.calls[0].search,'?provider=KRV1961');
+  assert.equal(bible.calls[0].hostname,'ekodi.kr');
   assert.equal(response.headers.get('x-ekodi-canonical-surface'),'bible');assert.equal(response.headers.get('x-ekodi-canonical-path'),'/bible');
   const html=await response.text();assert.match(html,/href="\/bible\/styles\.css"/);assert.doesNotMatch(html,/\/bible\/bible\//);
 });
@@ -155,4 +174,20 @@ test('legacy Admin release probes follow canonical redirects while canonical Adm
   const legacy=manifest.worker.requests.filter(item=>item.url.startsWith('https://admin.ekodi.kr/'));
   assert.ok(legacy.length>1);
   for(const probe of legacy) assert.equal(probe.redirect,'follow',probe.url);
+});
+
+test('shared-site release verifies Shell integration without requiring script URLs in service HTML',async()=>{
+  const text=await fs.promises.readFile(new URL('../deploy/manifests/shared-site.worker.json',import.meta.url),'utf8');
+  assert.doesNotMatch(text,/https:\/\/shell\.ekodi\.kr\/shell\.js/);
+  assert.doesNotMatch(text,/https:\/\/shell\.ekodi\.kr\//);
+  assert.match(text,/https:\/\/ekodi\.kr\/shell\/manifest\.json/);
+  const manifest=JSON.parse(text);
+  const apexShell='https://ekodi.kr/shell/shell.js';
+  const direct=manifest.worker.requests.find(item=>item.url===apexShell);
+  assert.deepEqual(direct?.statuses,[200]);
+  assert.ok(direct?.expect?.includes('ekodi-mobile-fixed-header-style'));
+  assert.ok(direct?.expect?.includes('ResizeObserver'));
+  const shellIntegrated=manifest.worker.requests.filter(item=>item.headerExpect?.includes('x-ekodi-shell: v2'));
+  assert.ok(shellIntegrated.length>=4,'expected service pages to verify Shell v2 through response headers');
+  for(const probe of shellIntegrated) assert.ok(!probe.expect?.includes(apexShell),`${probe.url} must not require a literal Shell script URL in HTML`);
 });

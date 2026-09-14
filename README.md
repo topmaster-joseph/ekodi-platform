@@ -10,7 +10,7 @@ EKODI is designed around a **service-first, AI-enhanced** principle: ordinary us
 - Signed-in personal home: https://ekodi.kr/my
 - Private control plane: https://admin.ekodi.kr
 - Shared control/data API: https://api.ekodi.kr
-- Shared EKODI Shell: https://shell.ekodi.kr
+- Shared EKODI Shell: https://ekodi.kr/shell
 
 The canonical identity model is `Person + Space + Role + Capability`. A person can participate in personal, business, organization, church, community, or project Workspaces without creating a separate identity for every service.
 

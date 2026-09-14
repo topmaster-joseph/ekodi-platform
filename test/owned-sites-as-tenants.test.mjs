@@ -43,7 +43,7 @@ test('EKODI-owned operating organizations are customer sites', () => {
   for (const id of ['church', 'biz', 'lab', 'trade', 'cafe']) {
     assert.equal(operatingModelForService(id), 'customer-site');
     assert.equal(serviceForId(id)?.operatingModel, 'customer-site');
-    assert.ok(serviceForId(id)?.tenantSlug?.startsWith('ekodi-'));
+    assert.ok(['ekodi-church','ekodi-biz','ekodi-lab','ekoditrade','ekodi-cafe'].includes(serviceForId(id)?.tenantSlug));
   }
 });
 

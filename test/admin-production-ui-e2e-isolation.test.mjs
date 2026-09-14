@@ -38,3 +38,14 @@ test('synthetic production Admin UI verifier validates tax handoff without navig
   assert.match(text, /ok handoff-link/);
   assert.doesNotMatch(text, /taxNavigationPattern|taxRequestPending|taxCommitPending/);
 });
+
+test('synthetic production Admin UI verifier follows direct registry href menus through a popup contract', async () => {
+  const text = await source();
+  assert.match(text, /getAdminMenuItem/);
+  assert.match(text, /definition\?\.href && definition\.adminHandoff !== true/);
+  assert.match(text, /page\.waitForEvent\('popup', \{ timeout: 10000 \}\)/);
+  assert.match(text, /ok direct-href/);
+  const directHrefBranch = text.indexOf('definition?.href && definition.adminHandoff !== true');
+  const panelWait = text.indexOf('window.EKODIAdminPanels?.current?.() === section');
+  assert.ok(directHrefBranch >= 0 && panelWait > directHrefBranch, 'direct href menus must exit before local panel assertions');
+});

@@ -10,6 +10,10 @@ on:
       - 'platform-boundaries.json'
       - 'test/support-opportunity.test.mjs'
       - 'test/support-need-sensing.test.mjs'
+      - 'test/support-institution-sources.test.mjs'
+      - 'config/workspace-packs.json'
+      - 'config/capability-registry.json'
+      - 'test/support-benefit-radar-10g.test.mjs'
       - 'wrangler.support.toml'
       - 'wrangler.support.staging.toml'
       - 'deploy/manifests/support.worker.json'
@@ -23,6 +27,10 @@ on:
       - 'platform-boundaries.json'
       - 'test/support-opportunity.test.mjs'
       - 'test/support-need-sensing.test.mjs'
+      - 'test/support-institution-sources.test.mjs'
+      - 'config/workspace-packs.json'
+      - 'config/capability-registry.json'
+      - 'test/support-benefit-radar-10g.test.mjs'
       - 'wrangler.support.toml'
       - 'wrangler.support.staging.toml'
       - 'deploy/manifests/support.worker.json'
@@ -54,12 +62,14 @@ jobs:
           node --check support-worker.js
           node --check support/core.js
           node --check support/sources.js
+          node --check support/institution-sources.js
           node --check support/need-sensing.js
           node --check support/app.js
           node --check support/service.js
           node --check support/specialists.js
           node --check ekodi-service-manifest.js
-          node --test test/support-opportunity.test.mjs test/support-need-sensing.test.mjs
+          node --test test/support-opportunity.test.mjs test/support-need-sensing.test.mjs test/support-institution-sources.test.mjs test/support-benefit-radar-10g.test.mjs
+          node scripts/validate-capability-registry.mjs
           node scripts/validate-platform-boundaries.mjs
           node scripts/validate-ai-mission-governance.mjs
           node -e "JSON.parse(require('fs').readFileSync('deploy/manifests/support.worker.json','utf8'))"
@@ -130,7 +140,14 @@ jobs:
             root=$(curl -L -sS -D /tmp/support-headers -o /tmp/support.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$verify_base/" || true)
             health=$(curl -sS -o /tmp/support-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$verify_base/health" || true)
             sources=$(curl -sS -o /tmp/support-sources.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$verify_base/api/sources/status" || true)
-            notices=$(curl -sS -o /tmp/support-notices.json -w '%{http_code}' --connect-timeout 8 --max-time 25 "$verify_base/api/opportunities?limit=5" || true)
+            feed_ok=true
+            notices='skipped-protected-staging'
+            if [[ "$remote_protected" != '1' ]]; then
+              notices=$(curl -sS -o /tmp/support-notices.json -w '%{http_code}' --connect-timeout 8 --max-time 25 "$verify_base/api/opportunities?limit=5" || true)
+              if [[ "$notices" != '200' ]] || ! grep -Fq '"ok":true' /tmp/support-notices.json || ! grep -Fq '"source":"combined"' /tmp/support-notices.json || ! grep -Fq '"id":"bizinfo"' /tmp/support-notices.json || ! grep -Fq '"official":true' /tmp/support-notices.json; then
+                feed_ok=false
+              fi
+            fi
             need_no=$(curl -sS -o /tmp/support-need-no.json -w '%{http_code}' -H 'content-type: application/json' -d "$no_consent" --connect-timeout 5 --max-time 15 "$verify_base/api/need-assessment" || true)
             need_yes=$(curl -sS -o /tmp/support-need-yes.json -w '%{http_code}' -H 'content-type: application/json' -d "$yes_consent" --connect-timeout 5 --max-time 15 "$verify_base/api/need-assessment" || true)
             specialist_ok=true
@@ -141,23 +158,24 @@ jobs:
                 specialist_ok=false
               fi
             done
-            if [[ "$root" == '200' && "$health" == '200' && "$sources" == '200' && "$notices" == '200' && "$need_no" == '200' && "$need_yes" == '200' && "$specialist_ok" == 'true' ]] \
+            if [[ "$root" == '200' && "$health" == '200' && "$sources" == '200' && "$need_no" == '200' && "$need_yes" == '200' && "$specialist_ok" == 'true' && "$feed_ok" == 'true' ]] \
               && grep -Fq 'GRANT WORKSPACE' /tmp/support.html \
               && grep -Fq 'OFFICIAL FEED' /tmp/support.html \
               && grep -Fq 'id="proactiveBenefits"' /tmp/support.html \
               && grep -Fq '"service":"ekodi-support-opportunity"' /tmp/support-health.json \
               && grep -Fq '"specialistWorkspace":true' /tmp/support-health.json \
               && grep -Fq '"needSensing":"consent-first"' /tmp/support-health.json \
+              && grep -Fq '"id":"support.benefit-radar"' /tmp/support-health.json \
+              && grep -Fq '"generation":10' /tmp/support-health.json \
+              && grep -Fq '"contract":"ekodi.benefit-radar.v1"' /tmp/support-health.json \
               && grep -Fq '"dataMode":"isolated-staging"' /tmp/support-health.json \
               && grep -Fq '"id":"bizinfo"' /tmp/support-sources.json \
-              && grep -Fq '"ok":true' /tmp/support-notices.json \
-              && grep -Fq '"source":"bizinfo"' /tmp/support-notices.json \
-              && grep -Fq '"official":true' /tmp/support-notices.json \
+              && grep -Fq '"id":"trusted-institutions"' /tmp/support-sources.json \
               && grep -Fq '"proactiveEligible":false' /tmp/support-need-no.json \
               && grep -Fq '"proactiveEligible":true' /tmp/support-need-yes.json \
               && grep -Eiq '^x-ekodi-shell: v2' /tmp/support-headers; then
               if [[ "$remote_protected" == '1' ]]; then
-                echo 'Support staging deployment exists, Cloudflare Access remains enforced, and exact staging runtime contracts including consent-first Benefit Radar pass locally.'
+                echo 'Support staging deployment exists, Cloudflare Access remains enforced, and exact staging runtime contracts including Generation 10 consent-first Benefit Radar pass locally. External official-feed liveness is verified only on a network-capable remote/production path.'
               else
                 echo 'Support root, APIs, consent-first Benefit Radar and all seven specialist staging routes verified remotely.'
               fi
@@ -193,11 +211,13 @@ jobs:
         run: |
           set -euo pipefail
           for attempt in $(seq 1 24); do
-            code=$(curl -sS -o /tmp/manifest.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://shell.ekodi.kr/manifest.json' || true)
+            code=$(curl -sS -o /tmp/manifest.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/shell/manifest.json' || true)
             if [[ "$code" == '200' ]] && grep -Fq '"id":"support"' /tmp/manifest.json; then break; fi
             if [[ "$attempt" == '24' ]]; then exit 1; fi
             sleep 5
           done
+      - name: Reconcile production hostname trigger for candidate verification
+        run: npx --yes wrangler@${WRANGLER_VERSION} triggers deploy --config wrangler.support.toml
       - name: Bootstrap or guarded release
         run: |
           set -euo pipefail
@@ -214,19 +234,38 @@ jobs:
         run: printf '%s' "$BIZINFO_API_KEY" | npx --yes wrangler@${WRANGLER_VERSION} secret put BIZINFO_API_KEY --config wrangler.support.toml
       - name: Reconcile production hostname trigger
         run: npx --yes wrangler@${WRANGLER_VERSION} triggers deploy --config wrangler.support.toml
+      - name: Detach retired Support subdomain
+        env:
+          RETIRED_SUPPORT_HOST: support.ekodi.kr
+        run: |
+          set -euo pipefail
+          api='https://api.cloudflare.com/client/v4'
+          auth=(-H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H 'Content-Type: application/json')
+          domains=$(curl --fail-with-body -sS "${auth[@]}" "$api/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/domains")
+          echo "$domains" | jq -e '.success == true' >/dev/null
+          domain_id=$(echo "$domains" | jq -r '.result[] | select(.hostname == env.RETIRED_SUPPORT_HOST) | .id' | head -n1)
+          if [[ -n "$domain_id" ]]; then curl --fail-with-body -sS -X DELETE "${auth[@]}" "$api/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/domains/$domain_id" >/dev/null; fi
+          zones=$(curl --fail-with-body -sS "${auth[@]}" "$api/zones?name=ekodi.kr&status=active&per_page=10")
+          echo "$zones" | jq -e '.success == true' >/dev/null
+          zone_id=$(echo "$zones" | jq -r '.result[0].id // empty')
+          test -n "$zone_id"
+          records=$(curl --fail-with-body -sS "${auth[@]}" "$api/zones/$zone_id/dns_records?name=$RETIRED_SUPPORT_HOST&per_page=100")
+          mapfile -t record_ids < <(echo "$records" | jq -r '.result[] | select(.name == env.RETIRED_SUPPORT_HOST) | .id')
+          for record_id in "${record_ids[@]}"; do curl --fail-with-body -sS -X DELETE "${auth[@]}" "$api/zones/$zone_id/dns_records/$record_id" >/dev/null; done
+          for attempt in $(seq 1 36); do code=$(curl -sS -o /tmp/retired-support.out -w '%{http_code}' --connect-timeout 5 --max-time 10 "https://$RETIRED_SUPPORT_HOST/" || true); if [[ ! "$code" =~ ^[23] ]]; then echo "Retired Support hostname inactive (HTTP ${code:-000})."; break; fi; if [[ "$attempt" == '36' ]]; then echo 'Retired Support hostname still serves first-party traffic.'; exit 1; fi; sleep 5; done
       - name: Verify real production hostname
         run: |
           set -euo pipefail
           specialist_paths=(grants subsidies scholarships contests welfare private-support sponsorship)
           for attempt in $(seq 1 18); do
-            root=$(curl -L -sS -D /tmp/support-headers -o /tmp/support.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://support.ekodi.kr/' || true)
-            health=$(curl -sS -o /tmp/support-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://support.ekodi.kr/health' || true)
-            sources=$(curl -sS -o /tmp/support-sources.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://support.ekodi.kr/api/sources/status' || true)
-            notices=$(curl -sS -o /tmp/support-notices.json -w '%{http_code}' --connect-timeout 8 --max-time 25 'https://support.ekodi.kr/api/opportunities?limit=5' || true)
-            admin=$(curl -sS -o /dev/null -D /tmp/support-admin-headers -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://support.ekodi.kr/admin' || true)
+            root=$(curl -L -sS -D /tmp/support-headers -o /tmp/support.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/support/' || true)
+            health=$(curl -sS -o /tmp/support-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/support/health' || true)
+            sources=$(curl -sS -o /tmp/support-sources.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/support/api/sources/status' || true)
+            notices=$(curl -sS -o /tmp/support-notices.json -w '%{http_code}' --connect-timeout 8 --max-time 25 'https://ekodi.kr/support/api/opportunities?limit=5' || true)
+            admin=$(curl -sS -o /dev/null -D /tmp/support-admin-headers -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/support/admin' || true)
             specialist_ok=true
             for path in "${specialist_paths[@]}"; do
-              code=$(curl -L -sS -o "/tmp/support-${path}.html" -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://support.ekodi.kr/$path" || true)
+              code=$(curl -L -sS -o "/tmp/support-${path}.html" -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/support/$path" || true)
               if [[ "$code" != '200' ]] || ! grep -Fq 'SPECIALIST WORKSPACE · SHARED OPPORTUNITY CORE' "/tmp/support-${path}.html"; then
                 echo "specialist production route failed path=$path code=$code"
                 specialist_ok=false
@@ -239,11 +278,14 @@ jobs:
               && grep -Fq '"submissionExecution":false' /tmp/support-health.json \
               && grep -Fq '"specialistWorkspace":true' /tmp/support-health.json \
               && grep -Fq '"id":"bizinfo"' /tmp/support-sources.json \
+              && grep -Fq '"id":"trusted-institutions"' /tmp/support-sources.json \
               && grep -Fq '"ok":true' /tmp/support-notices.json \
-              && grep -Fq '"source":"bizinfo"' /tmp/support-notices.json \
+              && grep -Fq '"source":"combined"' /tmp/support-notices.json \
+              && grep -Fq '"id":"bizinfo"' /tmp/support-notices.json \
               && grep -Fq '"official":true' /tmp/support-notices.json \
               && grep -Eiq '^x-ekodi-shell: v2' /tmp/support-headers \
-              && grep -Eiq '^location: https://admin\.ekodi\.kr/?' /tmp/support-admin-headers; then
+              && [[ "$admin" == '307' ]] \
+              && grep -Eiq '^location: https://ekodi\.kr/admin/?' /tmp/support-admin-headers; then
               echo 'Support root, APIs and all seven specialist production routes verified.'
               exit 0
             fi
@@ -263,4 +305,4 @@ jobs:
             -H 'Accept: application/vnd.github+json' \
             -H 'X-GitHub-Api-Version: 2022-11-28' \
             "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \
-            -d "{\"state\":\"${VERIFY_STATE}\",\"context\":\"EKODI Support Production\",\"description\":\"support.ekodi.kr production verification\",\"target_url\":\"${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}\"}"
+            -d "{\"state\":\"${VERIFY_STATE}\",\"context\":\"EKODI Support Production\",\"description\":\"ekodi.kr/support production verification\",\"target_url\":\"${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}\"}"

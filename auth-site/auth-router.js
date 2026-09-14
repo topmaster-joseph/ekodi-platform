@@ -7,7 +7,7 @@ const privateClientSites=new Set(['cgma-client','jadam-client','pizzamaru-client
 let changed=false;
 const requestedSite=params.get('site');
 if(requestedSite==='mall-seller'&&!params.get('return_to')&&!params.get('returnTo')){
-  params.set('return_to','https://ekodi.kr/ekodibiz/mall/seller/');
+  params.set('return_to','https://ekodi.kr/ekodibiz/ekodimall/seller/');
   changed=true;
 }
 if(legacySiteAliases[requestedSite]){
@@ -42,7 +42,7 @@ let manifestPromise;
 async function manifestService(id){
   if(!id)return null;
   try{
-    manifestPromise ||= fetch('https://shell.ekodi.kr/manifest.json',{cache:'no-store'}).then(response=>response.ok?response.json():null).catch(()=>null);
+    manifestPromise ||= fetch('https://ekodi.kr/shell/manifest.json',{cache:'no-store'}).then(response=>response.ok?response.json():null).catch(()=>null);
     const manifest=await manifestPromise;
     return manifest?.services?.find(service=>service.id===id)||null;
   }catch{return null}

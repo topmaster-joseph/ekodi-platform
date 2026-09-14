@@ -12,6 +12,10 @@ on:
     branches: [main]
     paths:
       - 'site-worker.js'
+      - 'platform-route-registry.js'
+      - 'ai-commons-admin.js'
+      - 'common-services-admin.js'
+      - 'test/ai-commons*.test.mjs'
       - 'ekodibiz-invest-business.js'
       - 'ekodibiz-invest-admin-page.js'
       - 'platform-router-entry-worker.js'
@@ -35,6 +39,7 @@ on:
       - 'tenant-admin-policy.js'
       - 'test/tenant-admin-policy.test.mjs'
       - 'test/workspace-admin-two-level-shell.test.mjs'
+      - 'test/mall-v83-workspace-admin.test.mjs'
       - 'store-admin-engine.js'
       - 'test/store-user-site-admin.test.mjs'
       - 'church-pastor-admin-page.js'
@@ -66,6 +71,12 @@ on:
       - 'admin-shell.html'
       - 'admin-shell.css'
       - 'admin-authenticated-shell.js'
+      - 'admin-assist-bootstrap.js'
+      - 'admin-assist-bootstrap.css'
+      - 'admin-assist-dock.js'
+      - 'admin-assist-dock.css'
+      - 'admin-readable-command.js'
+      - 'admin-readable-command.css'
       - 'admin-central-handoff.js'
       - 'compact-control-center.js'
       - 'admin-ai-control-plane.js'
@@ -157,7 +168,12 @@ on:
       - 'scripts/discovery-build.mjs'
       - 'scripts/ccm-mr-postbuild.mjs'
       - 'scripts/admin-authenticated-e2e.mjs'
+      - 'scripts/admin-authenticated-e2e-retry.mjs'
+      - 'scripts/admin-authenticated-e2e-menu-worker.mjs'
+      - 'scripts/admin-assist-canonical-e2e.mjs'
+      - 'scripts/admin-readable-command-postbuild.mjs'
       - 'scripts/admin-thin-postbuild.mjs'
+      - 'test/admin-assist-command-delivery.test.mjs'
       - 'scripts/build.mjs'
       - 'scripts/guarded-worker-release.mjs'
       - 'scripts/ensure-church-route-ownership.mjs'
@@ -173,6 +189,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: read
 
 concurrency:
   group: ekodi-shared-site-worker-production
@@ -183,8 +200,15 @@ jobs:
     uses: ./.github/workflows/stage-shared-site-shell.yml
     secrets: inherit
 
-  deploy:
+  reliability_gate:
     needs: staging_gate
+    uses: ./.github/workflows/reliability-validation.yml
+    with:
+      suite: release
+    secrets: inherit
+
+  deploy:
+    needs: reliability_gate
     runs-on: ubuntu-latest
     timeout-minutes: 22
     env:
@@ -208,11 +232,11 @@ jobs:
       - name: Validate current shared site and admin sources
         run: |
           set -euo pipefail
-          for f in site-worker.js platform-router-entry-worker.js canonical-surface-router.js store-gateway-page.js store-portfolio-admin-page.js preview-page.js insurance-public-route.js sites/ekodi-insurance/public/advisor.js sites/ekodi-insurance/public/server-bridge.js marketing-canonical-projection.js workspace-admin-page.js tenant-admin-policy.js store-admin-engine.js church-pastor-admin-page.js church-reports-admin.js workspace-trade-admin-page.js workspace-trade-portal.js mail-user-page.js mail-contact.js mail-admin-page.js tax-portal-worker.js tax-business-registry.js tax-service-worker.js finance-entry-worker.js script.js homepage-ambient.js mall.js admin-ai-control-plane.js admin-ai-governor.js admin-provider-control.js admin-secret-generator.js ekodi-shell-injector.js site-shell-worker.js auth-site/auth-workspace-target.js marketing-ai-admin.js admin-authenticated-shell.js admin-central-handoff.js finance-monitor.js admin-demand-loader.js admin-public-site-controls.js client-access.js social-admin.js books-admin.js books-finance-admin.js books-distribution-admin.js books-pipeline-admin.js books-pipeline-bridge.js books-royalty-admin.js author-billing-admin.js ai-ops-admin.js devotional-admin.js ai-management-admin.js ai-module-spec-admin.js communication-admin.js openai-workspace-admin.js common-services-admin.js storage-admin.js admin-menu-registry.js admin-menu-layout.js admin-sidebar.js admin-menu-runtime.js admin-design-engine.js campus-actions.js discovery-layer.js scripts/discovery-build.mjs scripts/ecosystem-registry.mjs scripts/admin-thin-postbuild.mjs scripts/build.mjs scripts/guarded-worker-release.mjs scripts/ensure-church-route-ownership.mjs scripts/admin-authenticated-e2e.mjs scripts/admin-authenticated-e2e-retry.mjs scripts/admin-authenticated-e2e-menu-worker.mjs scripts/validate-user-ui-dna.mjs scripts/validate-design-engine.mjs admin-language-status.js; do
+          for f in site-worker.js learning-page.js platform-router-entry-worker.js canonical-surface-router.js store-gateway-page.js store-portfolio-admin-page.js preview-page.js insurance-public-route.js sites/ekodi-insurance/public/advisor.js sites/ekodi-insurance/public/server-bridge.js marketing-canonical-projection.js workspace-admin-page.js tenant-admin-policy.js store-admin-engine.js church-pastor-admin-page.js church-reports-admin.js workspace-trade-admin-page.js workspace-trade-portal.js mail-user-page.js mail-contact.js mail-admin-page.js tax-portal-worker.js tax-business-registry.js tax-service-worker.js finance-entry-worker.js script.js homepage-ambient.js mall.js admin-ai-control-plane.js admin-ai-governor.js admin-provider-control.js admin-secret-generator.js ekodi-shell-injector.js site-shell-worker.js auth-site/auth-workspace-target.js auth-site/client-auth.js marketing-ai-admin.js admin-authenticated-shell.js admin-assist-bootstrap.js admin-assist-dock.js admin-readable-command.js admin-central-handoff.js finance-monitor.js admin-demand-loader.js admin-public-site-controls.js client-access.js social-admin.js books-admin.js books-finance-admin.js books-distribution-admin.js books-pipeline-admin.js books-pipeline-bridge.js books-royalty-admin.js author-billing-admin.js ai-ops-admin.js devotional-admin.js ai-management-admin.js ai-module-spec-admin.js communication-admin.js openai-workspace-admin.js common-services-admin.js storage-admin.js admin-menu-registry.js admin-menu-layout.js admin-sidebar.js admin-menu-runtime.js ekodibiz-admin-registry.js admin-design-engine.js campus-actions.js discovery-layer.js scripts/discovery-build.mjs scripts/ecosystem-registry.mjs scripts/admin-thin-postbuild.mjs scripts/build.mjs scripts/guarded-worker-release.mjs scripts/ensure-church-route-ownership.mjs scripts/admin-authenticated-e2e.mjs scripts/admin-assist-canonical-e2e.mjs scripts/admin-readable-command-postbuild.mjs scripts/admin-authenticated-e2e-retry.mjs scripts/admin-authenticated-e2e-menu-worker.mjs scripts/validate-user-ui-dna.mjs scripts/validate-design-engine.mjs admin-language-status.js; do
             node --check "$f"
           done
-          node --test test/discovery-layer.test.mjs test/preview-page.test.mjs test/mail-contact.test.mjs
-          node --test test/store-admin-systems.test.mjs test/store-user-site-admin.test.mjs test/tenant-admin-policy.test.mjs test/workspace-admin-marketing-channels-route.test.mjs test/workspace-admin-two-level-shell.test.mjs test/personal-finance-admin-control.test.mjs test/admin-finance-render-performance.test.mjs test/admin-authenticated-e2e-retry.test.mjs
+          node --test test/discovery-layer.test.mjs test/preview-page.test.mjs test/mail-contact.test.mjs test/learning-page.test.mjs test/learning-routing-contract.test.mjs
+          node --test test/store-admin-systems.test.mjs test/store-user-site-admin.test.mjs test/tenant-admin-policy.test.mjs test/workspace-admin-marketing-channels-route.test.mjs test/workspace-admin-two-level-shell.test.mjs test/mall-v83-workspace-admin.test.mjs test/personal-finance-admin-control.test.mjs test/admin-finance-render-performance.test.mjs test/admin-authenticated-e2e-retry.test.mjs test/admin-assist-command-delivery.test.mjs
           node --test test/admin-communication.test.mjs test/devotional-admin-readiness.test.mjs test/ekodibiz-invest-business.test.mjs test/ekodibiz-invest-admin.test.mjs test/public-workspace-gateway.test.mjs test/store-public-gateway.test.mjs test/store-portfolio-admin.test.mjs test/marketing-canonical-projection.test.mjs test/church-pastor-admin.test.mjs test/church-route-ownership.test.mjs
           node scripts/validate-admin-source.mjs
           node scripts/validate-user-ui-dna.mjs
@@ -221,7 +245,7 @@ jobs:
           test -f mall.html
           test -f mall.css
           test -f config/ekodi-service-urls.json
-          grep -Fq 'https://ekodi.kr/ekodibiz/mall' config/ekodi-service-urls.json
+          grep -Fq 'https://ekodi.kr/ekodibiz/ekodimall' config/ekodi-service-urls.json
           if grep -Eq 'https://(ekodi-mall\.pages\.dev|mall\.ekodi\.kr)' mall.html mall.js 2>/dev/null; then
             echo 'Legacy Mall public URL detected in shared-site source.'
             exit 1
@@ -273,7 +297,7 @@ jobs:
             echo 'Marketing public UI must not be embedded in the admin CSP.'
             exit 1
           fi
-          for host in ekodi.kr admin.ekodi.kr auth.ekodi.kr tax.ekodi.kr mail.ekodi.kr; do
+          for host in ekodi.kr admin.ekodi.kr auth.ekodi.kr mail.ekodi.kr; do
             grep -Fq "pattern = \"$host\"" wrangler.site.toml
           done
 
@@ -287,7 +311,7 @@ jobs:
           set -euo pipefail
           npm run build
           cp auth-site/auth-workspace-target.js dist/auth-workspace-target.js
-          for f in dist/index.html dist/robots.txt dist/sitemap.xml dist/llms.txt dist/mall.html dist/mall.css dist/mall.js dist/admin-shell.html dist/admin-shell.css dist/admin-authenticated-shell.js dist/admin-demand-loader.js dist/admin-public-site-controls.js dist/ai-ops-admin.js dist/ai-ops-admin.css dist/devotional-admin.js dist/devotional-admin.css dist/ai-module-spec-admin.js dist/ai-module-spec-admin.css dist/communication-admin.js dist/communication-admin.css dist/openai-workspace-admin.js dist/openai-workspace-admin.css dist/common-services-admin.js dist/common-services-admin.css dist/storage-admin.js dist/storage-admin.css dist/admin-menu-registry.js dist/admin-menu-layout.js dist/admin-sidebar.js dist/admin-design-engine.js dist/admin-design-engine.css dist/campus-actions.js dist/campus-actions.css dist/marketing-ai-admin.js dist/marketing-ai-admin.css dist/ecosystem-services.json dist/auth-workspace-target.js dist/admin-language-status.js; do
+          for f in dist/index.html dist/robots.txt dist/sitemap.xml dist/llms.txt dist/mall.html dist/mall.css dist/mall.js dist/admin-shell.html dist/admin-shell.css dist/admin-authenticated-shell.js dist/admin-assist-bootstrap.js dist/admin-assist-bootstrap.css dist/admin-assist-dock.js dist/admin-assist-dock.css dist/admin-demand-loader.js dist/admin-public-site-controls.js dist/ai-ops-admin.js dist/ai-ops-admin.css dist/devotional-admin.js dist/devotional-admin.css dist/ai-module-spec-admin.js dist/ai-module-spec-admin.css dist/communication-admin.js dist/communication-admin.css dist/openai-workspace-admin.js dist/openai-workspace-admin.css dist/common-services-admin.js dist/common-services-admin.css dist/storage-admin.js dist/storage-admin.css dist/admin-menu-registry.js dist/admin-menu-layout.js dist/admin-sidebar.js dist/admin-menu-runtime.js dist/ekodibiz-admin-registry.js dist/admin-design-engine.js dist/admin-design-engine.css dist/campus-actions.js dist/campus-actions.css dist/marketing-ai-admin.js dist/marketing-ai-admin.css dist/ecosystem-services.json dist/auth-workspace-target.js dist/admin-language-status.js; do
             test -f "$f"
           done
           test -f dist/tapo-device-admin.js
@@ -299,6 +323,7 @@ jobs:
           grep -Fq 'data-ekodi-discovery="v2"' dist/index.html
           grep -Fq 'workspace_key:requested' dist/auth-workspace-target.js
           grep -Eq 'admin-design-engine\.js\?v=[a-f0-9]{16}' dist/admin-menu-registry.js
+          grep -Eq 'ekodibiz-admin-registry\.js\?v=[a-f0-9]{16}' dist/admin-menu-runtime.js
           grep -Fq 'overflow-y:hidden!important' dist/admin-design-engine.css
           grep -Fq '/api/control/public-sites' dist/admin-public-site-controls.js
           grep -Fq '/api/control/language-status' dist/admin-language-status.js
@@ -352,7 +377,7 @@ jobs:
           payload=$(read_domains)
           echo "$payload" | jq -e '.success == true' >/dev/null
           needs_sync=false
-          for host in ekodi.kr admin.ekodi.kr auth.ekodi.kr tax.ekodi.kr mail.ekodi.kr; do
+          for host in ekodi.kr admin.ekodi.kr auth.ekodi.kr mail.ekodi.kr; do
             if ! echo "$payload" | jq -e --arg host "$host" --arg service 'shy-thunder-39a4' '.result[] | select(.hostname == $host and .service == $service)' >/dev/null; then
               echo "Cloudflare Worker domain missing: $host"
               needs_sync=true
@@ -367,7 +392,7 @@ jobs:
             npx --yes wrangler@4.119.0 triggers deploy --config wrangler.site.toml
             payload=$(read_domains)
           fi
-          for host in ekodi.kr admin.ekodi.kr auth.ekodi.kr tax.ekodi.kr mail.ekodi.kr; do
+          for host in ekodi.kr admin.ekodi.kr auth.ekodi.kr mail.ekodi.kr; do
             echo "$payload" | jq -e --arg host "$host" --arg service 'shy-thunder-39a4' '.result[] | select(.hostname == $host and .service == $service)' >/dev/null \
               || { echo "Required Cloudflare Worker domain is not attached: $host"; exit 1; }
             echo "Verified Cloudflare Worker domain: $host"
@@ -422,7 +447,7 @@ jobs:
           const urls=new Set([
             'https://ekodi.kr/',
             'https://ekodi.kr/history',
-            'https://ekodi.kr/ekodibiz/mall',
+            'https://ekodi.kr/ekodibiz/ekodimall',
             'https://ekodi.kr/ekodibiz/marketing-ai',
             'https://ekodi.kr/jadam/marketing',
             'https://ekodi.kr/pizzamaru/marketing',
@@ -434,7 +459,7 @@ jobs:
             'https://admin.ekodi.kr/',
             'https://auth.ekodi.kr/',
             'https://ai.ekodi.kr/',
-            'https://tax.ekodi.kr/',
+            'https://ekodi.kr/tax',
             'https://mail.ekodi.kr/',
             'https://live.ekodi.kr/',
             'https://live.church.ekodi.kr/',
@@ -448,8 +473,8 @@ jobs:
             'https://trade.biz.ekodi.kr/',
             'https://pay.ekodi.kr/',
             'https://pay.biz.ekodi.kr/',
-            'https://church.ekodi.kr/',
-            'https://lab.ekodi.kr/'
+            'https://ekodi.kr/ekodichurch/',
+            'https://ekodi.kr/ekodilab/'
           ]);
           for(const service of registry.services||[]) if(service.productionVerified===true && service.url) urls.add(service.url);
           for(const match of shell.matchAll(/href=["'](https:\/\/[^"']+\.ekodi\.kr\/?[^"']*)["']/g)) urls.add(match[1]);

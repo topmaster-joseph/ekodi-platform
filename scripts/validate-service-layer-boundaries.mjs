@@ -53,14 +53,14 @@ requireTrue(!workspace.includes('/api/affiliate/accounts'), 'workspace admin mus
 requireTrue(!workspace.includes('affiliateMerchantRouteForm'), 'workspace admin must not mount the central merchant-route credential form');
 requireTrue(supplyAdmin.includes("api('/providers')") && supplyAdmin.includes("api('/programs')"), 'professional supply admin must expose provider/program health');
 requireTrue(!supplyAdmin.includes("api('/routes')") && !supplyAdmin.includes("api('/accounts')"), 'professional supply admin must not own workspace routes or credentials');
-requireTrue(layout.includes('LEGACY_MALL_AFFILIATE_HASHES') && layout.includes('/ekodibiz/mall/admin/sourcing'), 'legacy affiliate entry must hand off to Mall owner admin');
+requireTrue(layout.includes('LEGACY_MALL_AFFILIATE_HASHES') && layout.includes('/ekodibiz/ekodimall/admin/sourcing'), 'legacy affiliate entry must hand off to Mall owner admin');
 requireTrue(layout.includes('LEGACY_CGMA_MEMBER_HASH') && layout.includes('/cgma/admin/member'), 'legacy association member entry must hand off to CGMA owner admin');
 requireTrue(!layout.includes('openCheonggyeMembers') && !layout.includes("import('./cheonggye-members-admin.js')"), 'central Admin must not load association member CRUD');
 requireTrue(cgmaAdmin.includes('/api/control/storage/google/cheonggye-members'), 'CGMA member admin must use the protected storage projection');
 requireTrue(!cgmaAdmin.includes('/oauth/start'), 'CGMA member admin must not control Google credential OAuth');
 requireTrue(storageControl.includes('cheonggyeWorkspaceSession') && storageControl.includes('current_site_activity_contexts'), 'member API must validate CGMA workspace authority');
 requireTrue(siteWorker.includes("url.pathname.startsWith('/api/control/storage/google/cheonggye-members')") && siteWorker.includes('proxyAdminStorage(request, env)'), 'public workspace route must proxy protected member API through the storage binding');
-requireTrue(boundaries.serviceOwnership?.mall?.adminRoot === '/ekodibiz/mall/admin', 'Mall owner admin root must remain canonical');
+requireTrue(boundaries.serviceOwnership?.mall?.adminRoot === '/ekodibiz/ekodimall/admin', 'Mall owner admin root must remain canonical');
 requireTrue(boundaries.serviceOwnership?.['cheonggye-association']?.adminRoot === '/cgma/admin', 'Cheonggye association owner admin root must be declared');
 
 if (failures.length) {

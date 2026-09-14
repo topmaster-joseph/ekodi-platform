@@ -12,7 +12,8 @@ import { MAIL_HOST, mailUserPage, handleMailApi } from './mail-user-page.js';
 import { handleMailContactApi, mailContactPage } from './mail-contact.js';
 import { mailAdminPage } from './mail-admin-page.js';
 import { isWorkspaceAdminPath, workspaceAdminPage, workspaceAdminCss, workspaceAdminScript } from './workspace-admin-page.js';
-import { isStoreAdminPathShape, resolveStoreAdminRoute, isIntegratedStoreAdminPathShape, resolveIntegratedStoreAdminRoute, storeAdminPage, storeAdminCss, storeAdminScript } from './store-admin-engine.js';
+import { legacyAdminAliasTarget } from './admin-address-policy.js';
+import { isStoreAdminPathShape, resolveStoreAdminRoute, storeAdminPage, storeAdminCss, storeAdminScript } from './store-admin-engine.js';
 import { churchPastorAdminPage, churchPastorAdminScript, isChurchPastorAdminPath } from './church-pastor-admin-page.js';
 import { isEkodiBizInvestAdminPath } from './ekodibiz-invest-admin-page.js';
 import { workspaceTradeAdminScript } from './workspace-trade-admin-page.js';
@@ -24,6 +25,8 @@ import { routeCanonicalSurface } from './canonical-surface-router.js';
 import { handlePreviewRequest } from './preview-page.js';
 import { storeGatewayPage } from './store-gateway-page.js';
 import { storePortfolioAdminPage } from './store-portfolio-admin-page.js';
+import { isLearningPath, learningPage, learningScript, learningStyles } from './learning-page.js';
+import { decorateDiscoveryResponse } from './discovery-layer.js';
 
 const PUBLIC_HOST='ekodi.kr';
 const CGMA_HOSTS=new Set(['cgma.or.kr','www.cgma.or.kr']);
@@ -36,11 +39,12 @@ const CGMA_SITE=Object.freeze({
 });
 const MESSENGER_HOST='messenger.ekodi.kr';
 const INVEST_HOST='invest.ekodi.kr';
-const TAX_HOST='tax.ekodi.kr';
+const TAX_APEX_PREFIX='/tax';
 const EKODIBIZ_PUBLIC_ROUTE=/^\/ekodibiz\/?$/i;
 const EKODIBIZ_API_PREFIX='/ekodibiz/api/';
 const EKODIBIZ_ASSET_PREFIX='/_ekodi/ekodibiz/';
 const EKODIBIZ_ASSETS=new Set(['style.css','site.js']);
+const EKODIBIZ_NAMESPACE_PREFIX='/ekodibiz/';
 const WORKSPACE_ASSET_PREFIX='/_ekodi/space/';
 const DEPLOYMENT_PROBE_PATH='/deployment-probe';
 const STORE_GATEWAY_PATHS=new Set(['/cmpmyi','/cmpmyi/']);
@@ -51,6 +55,11 @@ function resolvedHost(request,env){
   if(env?.ENVIRONMENT!=='staging')return url.hostname.toLowerCase();
   const simulated=String(request.headers.get('x-ekodi-staging-host')||'').trim().toLowerCase();
   return simulated||url.hostname.toLowerCase();
+}
+
+function isEkodiBizOwnedPath(pathname){
+  const path=String(pathname||'').toLowerCase();
+  return path==='/ekodibiz'||path==='/ekodibiz/'||path.startsWith(EKODIBIZ_NAMESPACE_PREFIX);
 }
 
 function workspaceServiceUnavailable(){
@@ -163,14 +172,34 @@ async function routeTaxFinance(request,env,ctx){
   return fallback;
 }
 
+function taxApexInternalRequest(request,pathname){const target=new URL(request.url);target.pathname=pathname;return new Request(target.toString(),request);}
+async function routeTaxPortalApex(request,env,ctx){
+  const url=new URL(request.url);
+  if(!['GET','HEAD'].includes(request.method))return null;
+  if(!(url.pathname===TAX_APEX_PREFIX||url.pathname===`${TAX_APEX_PREFIX}/`||url.pathname.startsWith(`${TAX_APEX_PREFIX}/`)))return null;
+  const internalPath=(url.pathname===TAX_APEX_PREFIX||url.pathname===`${TAX_APEX_PREFIX}/`)?'/':url.pathname.slice(TAX_APEX_PREFIX.length);
+  const portal=taxPortalWorker.fetch(taxApexInternalRequest(request,internalPath),env,ctx);
+  if(!portal)return null;
+  let routed=portal;
+  if(internalPath==='/tax-portal.js'){const withFallback=await injectTaxLocalFallback(routed);const withLedger=await injectTaxHometaxLedger(withFallback);routed=await injectTaxBusinessRegistry(withLedger);}
+  const response=new Response(routed.body,routed);response.headers.set('x-ekodi-route','tax-apex');return response;
+}
+
+function internalHostRequest(request,host,pathname){
+  const target=new URL(request.url);target.hostname=host;target.pathname=pathname;return new Request(target,{method:request.method,headers:request.headers,body:['GET','HEAD'].includes(request.method)?undefined:request.body,redirect:request.redirect});
+}
+async function routeMessengerApex(request,env,ctx){const url=new URL(request.url);if(request.method!=='GET'||!(url.pathname==='/messenger'||url.pathname.startsWith('/messenger/')))return null;const inner=url.pathname==='/messenger'?'/' : url.pathname.slice('/messenger'.length)||'/';if(inner==='/'||inner==='/index.html')return injectEkodiShell(await withReleaseMarker(messengerUserPage()),'messenger');if(inner==='/messenger-ui.js')return messengerUiScript();if(inner==='/app.js')return legacyPlatformRouter.fetch(internalHostRequest(request,MESSENGER_HOST,'/app.js'),env,ctx);return null;}
+async function routeInvestApex(request,env,ctx){const url=new URL(request.url);if(request.method!=='GET'||!(url.pathname==='/invest'||url.pathname.startsWith('/invest/')))return null;const inner=url.pathname==='/invest'?'/' : url.pathname.slice('/invest'.length)||'/';if(inner==='/'||inner==='/index.html')return injectEkodiShell(await withInvestSubjectScript(investUserPage()),'invest');if(inner==='/invest-ui.js')return investUiScript();if(inner==='/invest-subject-ui.js')return investSubjectUiScript();if(inner==='/app.js')return legacyPlatformRouter.fetch(internalHostRequest(request,INVEST_HOST,'/app.js'),env,ctx);return null;}
+function routeMailApex(request){const url=new URL(request.url);if(request.method!=='GET')return null;if(url.pathname==='/mail'||url.pathname==='/mail/')return injectEkodiShell(mailUserPage(),'mail');if(url.pathname==='/mail/admin'||url.pathname==='/mail/admin/')return injectEkodiShell(mailAdminPage(),'mail','admin');return null;}
+
 async function withReleaseMarker(response){
   const text=await response.text();
   return new Response(text.replace('</body>','<!-- FUNCTIONAL BETA release compatibility marker; not user-visible --></body>'),{status:response.status,statusText:response.statusText,headers:response.headers});
 }
 async function withInvestSubjectScript(response){
   const text=await response.text();
-  const marker='<script src="/invest-ui.js" defer></script>';
-  const patched=text.replace(marker,'<script src="/invest-subject-ui.js" defer></script>'+marker);
+  const marker='<script src="/invest/invest-ui.js" defer></script>';
+  const patched=text.replace(marker,'<script src="/invest/invest-subject-ui.js" defer></script>'+marker);
   return new Response(patched,{status:response.status,statusText:response.statusText,headers:response.headers});
 }
 
@@ -185,21 +214,27 @@ export default {
     const host=resolvedHost(request,env);
     const legacySurface=legacySurfaceRedirect(request);if(legacySurface)return legacySurface;
     const legacyStores=legacyStoreGatewayRedirect(request);if(legacyStores)return legacyStores;
+    if(host===PUBLIC_HOST&&url.pathname.startsWith('/api/finance/tax-'))return routeTaxFinance(request,env,ctx);
+    if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)){const adminTarget=legacyAdminAliasTarget(url.pathname);if(adminTarget){const target=new URL(request.url);target.pathname=adminTarget;return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-content-type-options':'nosniff','x-ekodi-route':'admin-canonical-handoff'}})}}
     const canonical=await routeCanonicalSurface(request,env,{legacyFetch:next=>legacyPlatformRouter.fetch(next,env,ctx)});
     if(canonical)return canonical;
 
     if(CGMA_HOSTS.has(host)&&['GET','HEAD'].includes(request.method))return routeCgmaPublic(request,env);
 
     if(host===PUBLIC_HOST){
+      const mailApex=routeMailApex(request);if(mailApex)return mailApex;
+      const messengerApex=await routeMessengerApex(request,env,ctx);if(messengerApex)return messengerApex;
+      const investApex=await routeInvestApex(request,env,ctx);if(investApex)return investApex;
+      const taxPortal=await routeTaxPortalApex(request,env,ctx);if(taxPortal)return taxPortal;
       const contactResponse=await handleMailContactApi(request,env);if(contactResponse)return contactResponse;
       if(request.method==='GET'&&url.pathname==='/mail/contact')return injectEkodiShell(mailContactPage(),'mail');
+      if(request.method==='GET'&&isLearningPath(url.pathname)){if(url.pathname==='/learn/assets/style.css')return learningStyles();if(url.pathname==='/learn/assets/app.js')return learningScript();return injectEkodiShell(learningPage(),'learn','public');}
       const previewResponse=handlePreviewRequest(request);if(previewResponse)return previewResponse;
       if(['GET','HEAD'].includes(request.method)&&isInsurancePublicPath(url.pathname))return routeInsurancePublic(request,env);
       if(request.method==='GET'){
         if(['/store-admin.css','/jadam-admin.css','/pizzamaru-admin.css','/yogurt-admin.css'].includes(url.pathname))return storeAdminCss();
         if(['/store-admin.js','/jadam-admin.js','/pizzamaru-admin.js','/yogurt-admin.js'].includes(url.pathname))return storeAdminScript();
         if(url.pathname==='/cmpmyi/admin'||url.pathname==='/cmpmyi/admin/')return injectEkodiShell(storePortfolioAdminPage(),'business','admin');
-        if(isIntegratedStoreAdminPathShape(url.pathname)){const storeRoute=await resolveIntegratedStoreAdminRoute(url.pathname);if(storeRoute)return injectEkodiShell(storeAdminPage(storeRoute),'business','admin');}
         if(isStoreAdminPathShape(url.pathname)){const storeRoute=await resolveStoreAdminRoute(url.pathname);if(storeRoute)return injectEkodiShell(storeAdminPage(storeRoute),'business','admin');}
         if(url.pathname==='/workspace-admin.css')return workspaceAdminCss();
         if(url.pathname==='/workspace-admin.js')return workspaceAdminScript();
@@ -208,36 +243,21 @@ export default {
         if(url.pathname==='/workspace-trade-portal.css')return tradePartnerCss();
         if(url.pathname==='/workspace-trade-portal.js')return tradePartnerScript();
         if(isTradePartnerPath(url.pathname))return tradePartnerPage();
-        if(url.pathname==='/mall/admin'||url.pathname.startsWith('/mall/admin/')){const target=new URL(request.url);target.pathname=`/ekodibiz${url.pathname}`;return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-content-type-options':'nosniff'}});}
         if(url.pathname==='/ekodi-church'||url.pathname.startsWith('/ekodi-church/')){const target=new URL(request.url);target.pathname=url.pathname.replace(/^\/ekodi-church(?=\/|$)/i,'/ekodichurch');return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-content-type-options':'nosniff'}});}
         if(isChurchPastorAdminPath(url.pathname))return injectEkodiShell(churchPastorAdminPage(),'church','admin');
         if(isWorkspaceAdminPath(url.pathname)&&!isEkodiBizInvestAdminPath(url.pathname))return injectEkodiShell(workspaceAdminPage(),'space','admin');
       }
-      if(['GET','HEAD'].includes(request.method)&&STORE_GATEWAY_PATHS.has(url.pathname))return injectEkodiShell(storeGatewayPage(),'ekodi','public');
+      if(['GET','HEAD'].includes(request.method)&&STORE_GATEWAY_PATHS.has(url.pathname)){const response=injectEkodiShell(storeGatewayPage(),'ekodi','public');return request.method==='GET'?decorateDiscoveryResponse(response,url.pathname):response;}
       if(marketingProjectionForPath(url.pathname)){const projected=await proxyCanonicalMarketing(request);if(projected)return projected;}
       if(['GET','HEAD'].includes(request.method)&&EKODIBIZ_PUBLIC_ROUTE.test(url.pathname))return routeEkodiBizPublic(request,env);
       if(url.pathname.startsWith(EKODIBIZ_API_PREFIX))return routeEkodiBizApi(request,env);
       if(['GET','HEAD'].includes(request.method)&&url.pathname.startsWith(EKODIBIZ_ASSET_PREFIX))return routeEkodiBizAsset(request,env);
       if(['GET','HEAD'].includes(request.method)&&url.pathname===DEPLOYMENT_PROBE_PATH)return routeDeploymentProbe(request,env);
-      if(['GET','HEAD'].includes(request.method)&&isPublicWorkspacePath(url.pathname))return routePublicWorkspace(request,env);
+      if(['GET','HEAD'].includes(request.method)&&isPublicWorkspacePath(url.pathname)&&!isEkodiBizOwnedPath(url.pathname)){const response=await routePublicWorkspace(request,env);return request.method==='GET'?decorateDiscoveryResponse(response,url.pathname):response;}
       if(['GET','HEAD'].includes(request.method)&&url.pathname.startsWith(WORKSPACE_ASSET_PREFIX))return routeWorkspaceAsset(request,env);
       if(['GET','HEAD'].includes(request.method)&&url.pathname==='/auth/start'){
         const auth=workspaceAuthRedirect(request);if(auth)return auth;
       }
-    }
-
-    if(host===TAX_HOST){
-      if(url.pathname.startsWith('/api/finance/tax-'))return routeTaxFinance(request,env,ctx);
-      const portal=taxPortalWorker.fetch(request,env,ctx);
-      if(portal){
-        if(url.pathname==='/tax-portal.js'){
-          const withFallback=await injectTaxLocalFallback(portal);
-          const withLedger=await injectTaxHometaxLedger(withFallback);
-          return injectTaxBusinessRegistry(withLedger);
-        }
-        return portal;
-      }
-      return new Response('Not Found',{status:404,headers:{'cache-control':'no-store','x-content-type-options':'nosniff'}});
     }
 
     if(host===MAIL_HOST){

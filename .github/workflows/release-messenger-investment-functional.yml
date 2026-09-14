@@ -73,7 +73,7 @@ jobs:
           grep -Fq 'messenger_outbox' migrations/0030_messenger_event_outbox.sql
           grep -Fq 'ekodi_profile_evidence' migrations/0032_official_data_profile_evidence.sql
           grep -Fq 'site_design_profiles' migrations/0055_adaptive_design_profiles.sql
-          grep -Fq 'site_chrome_settings' migrations/0079_site_header_footer_settings.sql
+          grep -Fq 'site_chrome_settings' migrations/0089_site_header_footer_settings.sql
           grep -Fq 'siteChromeSchemaReady' workspace-platform-entry-worker.js
           grep -Fq 'conversationFoundation' workspace-platform-entry-worker.js
           grep -Fq 'profileEvidenceFoundation' workspace-platform-entry-worker.js

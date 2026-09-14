@@ -188,8 +188,6 @@ async function routedMyHome(request,env,route=null){
 export default{
   async fetch(request,env){
     const url=new URL(request.url);
-    const rawHost=url.hostname.toLowerCase();
-    if(rawHost==='my.ekodi.kr'&&['GET','HEAD'].includes(request.method)){const target=new URL(request.url);target.hostname='ekodi.kr';target.pathname=url.pathname==='/'?'/my/':`/my${url.pathname}`;return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-content-type-options':'nosniff','x-ekodi-legacy-surface':'my.ekodi.kr'}})}
     if(url.pathname==='/config.js'){
       const cfg=runtimeConfig(env);
       return new Response(`window.EKODI_MY_CONFIG=${JSON.stringify(cfg)};`,{headers:{'content-type':'application/javascript; charset=utf-8','cache-control':'no-store',...securityHeaders(env)}});

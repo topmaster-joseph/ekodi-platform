@@ -1,50 +1,96 @@
 {
-  "version": 62,
+  "version": 67,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
     "requests": [
       {
         "url": "https://ekodi.kr/preview/platform",
-        "statuses": [200],
+        "statuses": [
+          200
+        ],
         "redirect": "manual",
-        "expect": ["EKODI Platform Preview", "data-scope=\"ekodi\"", "LIVE SAFE PROJECTION"],
-        "headerExpect": ["x-ekodi-route: live-preview-ekodi-platform", "x-content-type-options: nosniff"]
+        "expect": [
+          "EKODI Platform Preview",
+          "data-scope=\"ekodi\"",
+          "LIVE SAFE PROJECTION"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: live-preview-ekodi-platform",
+          "x-content-type-options: nosniff"
+        ]
       },
       {
         "url": "https://ekodi.kr/preview/dev",
-        "statuses": [200],
+        "statuses": [
+          200
+        ],
         "redirect": "manual",
-        "expect": ["EKODI Developer Preview", "공개 가능한 기술 계약과 현재 서비스 상태"],
-        "headerExpect": ["x-ekodi-route: live-preview-ekodi-dev"]
+        "expect": [
+          "EKODI Developer Preview",
+          "공개 가능한 기술 계약과 현재 서비스 상태"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: live-preview-ekodi-dev"
+        ]
       },
       {
         "url": "https://ekodi.kr/ekodibiz/preview/platform",
-        "statuses": [200],
+        "statuses": [
+          200
+        ],
         "redirect": "manual",
-        "expect": ["EKODIBIZ Platform Preview", "data-scope=\"ekodibiz\""]
+        "expect": [
+          "EKODIBIZ Platform Preview",
+          "data-scope=\"ekodibiz\""
+        ]
       },
       {
         "url": "https://ekodi.kr/cmpmyi",
-        "statuses": [200],
+        "statuses": [
+          200
+        ],
         "redirect": "manual",
-        "expect": ["THREE STORES · ONE GATE","자담치킨","피자마루","요거트퍼플"],
-        "headerExpect": ["x-ekodi-route: store-gateway","x-content-type-options: nosniff"],
+        "expect": [
+          "THREE STORES · ONE GATE",
+          "자담치킨",
+          "피자마루",
+          "요거트퍼플"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: store-gateway",
+          "x-content-type-options: nosniff"
+        ],
         "rollbackVerify": false
       },
       {
         "url": "https://ekodi.kr/stores",
-        "statuses": [308],
+        "statuses": [
+          308
+        ],
         "redirect": "manual",
-        "headerExpect": ["location: https://ekodi.kr/cmpmyi","x-ekodi-legacy-surface: stores"],
+        "headerExpect": [
+          "location: https://ekodi.kr/cmpmyi",
+          "x-ekodi-legacy-surface: stores"
+        ],
         "rollbackVerify": false
       },
       {
         "url": "https://ekodi.kr/cmpmyi/admin",
-        "statuses": [200],
+        "statuses": [
+          200
+        ],
         "redirect": "manual",
-        "expect": ["통합 매장 운영","자담치킨 목포대점","피자마루 목포대점","요거트퍼플 목포대점"],
-        "headerExpect": ["x-ekodi-route: cmpmyi-store-portfolio-admin","cache-control: no-store"],
+        "expect": [
+          "통합 매장 운영",
+          "자담치킨 목포대점",
+          "피자마루 목포대점",
+          "요거트퍼플 목포대점"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: cmpmyi-store-portfolio-admin",
+          "cache-control: no-store"
+        ],
         "rollbackVerify": false
       },
       {
@@ -60,10 +106,17 @@
       },
       {
         "url": "https://ekodi.kr/my/docs/",
-        "statuses": [200],
+        "statuses": [
+          200
+        ],
         "redirect": "manual",
-        "expect": ["EKODI Docs AI", "docs-focus"],
-        "headerExpect": ["x-ekodi-canonical-surface: my"],
+        "expect": [
+          "EKODI Docs AI",
+          "docs-focus"
+        ],
+        "headerExpect": [
+          "x-ekodi-canonical-surface: my"
+        ],
         "rollbackVerify": false
       },
       {
@@ -115,26 +168,41 @@
       },
       {
         "url": "https://ekodi.kr/cmpmyi/admin/jadam",
-        "statuses": [200],
+        "statuses": [
+          308
+        ],
         "redirect": "manual",
-        "expect": ["data-ekodi-store-portfolio=\"cmpmyi\"","data-ekodi-authority-scope=\"tenant\""],
-        "headerExpect": ["x-ekodi-route: cmpmyi-jadam-store-admin","cache-control: no-store"],
+        "headerExpect": [
+          "location: https://ekodi.kr/jadam/admin",
+          "cache-control: no-store",
+          "x-ekodi-route: admin-canonical-handoff"
+        ],
         "rollbackVerify": false
       },
       {
         "url": "https://ekodi.kr/cmpmyi/admin/pizzamaru",
-        "statuses": [200],
+        "statuses": [
+          308
+        ],
         "redirect": "manual",
-        "expect": ["data-ekodi-store-portfolio=\"cmpmyi\"","data-ekodi-authority-scope=\"tenant\""],
-        "headerExpect": ["x-ekodi-route: cmpmyi-pizzamaru-store-admin","cache-control: no-store"],
+        "headerExpect": [
+          "location: https://ekodi.kr/pizzamaru/admin",
+          "cache-control: no-store",
+          "x-ekodi-route: admin-canonical-handoff"
+        ],
         "rollbackVerify": false
       },
       {
         "url": "https://ekodi.kr/cmpmyi/admin/yogurt",
-        "statuses": [200],
+        "statuses": [
+          308
+        ],
         "redirect": "manual",
-        "expect": ["data-ekodi-store-portfolio=\"cmpmyi\"","data-ekodi-authority-scope=\"tenant\""],
-        "headerExpect": ["x-ekodi-route: cmpmyi-yogurt-store-admin","cache-control: no-store"],
+        "headerExpect": [
+          "location: https://ekodi.kr/yogurt/admin",
+          "cache-control: no-store",
+          "x-ekodi-route: admin-canonical-handoff"
+        ],
         "rollbackVerify": false
       },
       {
@@ -222,10 +290,16 @@
       },
       {
         "url": "https://ekodi.kr/api/control/ai/v8/status",
-        "statuses": [401],
+        "statuses": [
+          401
+        ],
         "redirect": "manual",
-        "expect": ["\"authenticated\":false"],
-        "headerExpect": ["cache-control: no-store"],
+        "expect": [
+          "\"authenticated\":false"
+        ],
+        "headerExpect": [
+          "cache-control: no-store"
+        ],
         "rollbackVerify": false
       },
       {
@@ -329,7 +403,7 @@
         ]
       },
       {
-        "url": "https://ekodi.kr/ekodibiz/mall",
+        "url": "https://ekodi.kr/ekodibiz/ekodimall",
         "statuses": [
           200
         ],
@@ -337,43 +411,82 @@
         "expect": [
           "data-ekodi-service=\"mall\"",
           "data-ekodi-user-surface=\"public\"",
-          "/ekodibiz/mall/assets/app.js"
-        ],
-        "rollbackExpect": [
-          "data-ekodi-service=\"mall\"",
-          "data-ekodi-user-surface=\"public\"",
-          "/ekodibiz/mall/assets/app.js"
+          "data-ekodi-global-nav=\"off\""
         ],
         "headerExpect": [
           "x-content-type-options: nosniff",
           "x-ekodi-route: public-ekodi-mall",
           "x-ekodi-edge: mall-path-gateway"
         ],
-        "rollbackHeaderExpect": [
-          "x-content-type-options: nosniff"
-        ],
+        "rollbackVerify": false,
         "candidateVerify": false,
-        "candidateVerifyReason": "run_worker_first bootstrap for /ekodibiz/mall can serve the stable static storefront during 0% version-override smoke; verify the marketplace Worker route immediately after promotion"
+        "candidateVerifyReason": "run_worker_first bootstrap for /ekodibiz/ekodimall can serve the stable static storefront during 0% version-override smoke; verify the marketplace Worker route immediately after promotion"
       },
       {
-        "url": "https://ekodi.kr/ekodibiz/mall/admin/",
+        "url": "https://ekodi.kr/admin/ekodimall/",
+        "statuses": [
+          308
+        ],
+        "redirect": "manual",
+        "headerExpect": [
+          "location: https://ekodi.kr/ekodibiz/ekodimall/admin",
+          "cache-control: no-store",
+          "x-ekodi-route: admin-canonical-handoff"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/admin/ekodimall/channel-settings",
+        "statuses": [
+          308
+        ],
+        "redirect": "manual",
+        "headerExpect": [
+          "location: https://ekodi.kr/ekodibiz/ekodimall/admin/channel-settings",
+          "cache-control: no-store",
+          "x-ekodi-route: admin-canonical-handoff"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/ekodibiz/ekodimall/admin/",
         "statuses": [
           200
         ],
         "redirect": "manual",
+        "headerExpect": [
+          "x-ekodi-route: workspace-admin",
+          "cache-control: no-store",
+          "x-content-type-options: nosniff"
+        ],
+        "rollbackVerify": false,
         "expect": [
           "EKODI Workspace Admin",
           "workspace-admin.js",
           "data-ekodi-admin-layout=\"two-level\"",
           "data-ekodi-admin-nav-mode=\"primary\"",
           "data-ekodi-admin-subnav"
+        ]
+      },
+      {
+        "url": "https://ekodi.kr/ekodibiz/ekodimall/admin/channel-settings",
+        "statuses": [
+          200
         ],
+        "redirect": "manual",
         "headerExpect": [
           "x-ekodi-route: workspace-admin",
           "cache-control: no-store",
           "x-content-type-options: nosniff"
         ],
-        "rollbackVerify": false
+        "rollbackVerify": false,
+        "expect": [
+          "EKODI Workspace Admin",
+          "workspace-admin.js",
+          "data-ekodi-admin-layout=\"two-level\"",
+          "data-ekodi-admin-nav-mode=\"primary\"",
+          "data-ekodi-admin-subnav"
+        ]
       },
       {
         "url": "https://ekodi.kr/mall/admin/",
@@ -382,9 +495,12 @@
         ],
         "redirect": "manual",
         "headerExpect": [
-          "location: https://ekodi.kr/ekodibiz/mall/admin/",
-          "cache-control: no-store"
+          "location: https://ekodi.kr/ekodibiz/ekodimall/admin",
+          "cache-control: no-store",
+          "x-ekodi-route: admin-canonical-handoff"
         ],
+        "candidateVerify": false,
+        "candidateVerifyReason": "legacy Mall admin redirect depends on the promoted run_worker_first routing table; verify the 308 immediately after promotion",
         "rollbackVerify": false
       },
       {
@@ -425,34 +541,66 @@
       },
       {
         "url": "https://admin.ekodi.kr/openai-workspace-admin.js",
-        "statuses": [200],
+        "statuses": [
+          200
+        ],
         "redirect": "follow",
-        "expect": ["Permission transfer: NONE", "EKODIAdminContext", "ekodi-admin-assist-request"],
-        "headerExpect": ["x-content-type-options: nosniff"],
+        "expect": [
+          "Permission transfer: NONE",
+          "EKODIAdminContext",
+          "ekodi-admin-assist-request"
+        ],
+        "headerExpect": [
+          "x-content-type-options: nosniff"
+        ],
         "rollbackVerify": false
       },
       {
         "url": "https://admin.ekodi.kr/openai-workspace-admin.css",
-        "statuses": [200],
+        "statuses": [
+          200
+        ],
         "redirect": "follow",
-        "expect": [".openai-workspace-policy", "@media(max-width:900px)"],
-        "headerExpect": ["x-content-type-options: nosniff"],
+        "expect": [
+          ".openai-workspace-policy",
+          "@media(max-width:900px)"
+        ],
+        "headerExpect": [
+          "x-content-type-options: nosniff"
+        ],
         "rollbackVerify": false
       },
       {
         "url": "https://admin.ekodi.kr/tapo-device-admin.js",
-        "statuses": [200],
+        "statuses": [
+          200
+        ],
         "redirect": "follow",
-        "expect": ["waitForStream", "sessionToken", "TAPO EDGE BRIDGE"],
-        "headerExpect": ["x-content-type-options: nosniff"],
+        "expect": [
+          "waitForStream",
+          "sessionToken",
+          "TAPO EDGE BRIDGE"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: admin-asset",
+          "x-content-type-options: nosniff"
+        ],
         "rollbackVerify": false
       },
       {
         "url": "https://admin.ekodi.kr/tapo-device-admin.css",
-        "statuses": [200],
+        "statuses": [
+          200
+        ],
         "redirect": "follow",
-        "expect": [".tapo-camera-panel", ".tapo-camera-dialog"],
-        "headerExpect": ["x-content-type-options: nosniff"],
+        "expect": [
+          ".tapo-camera-panel",
+          ".tapo-camera-dialog"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: admin-asset",
+          "x-content-type-options: nosniff"
+        ],
         "rollbackVerify": false
       },
       {
@@ -563,7 +711,7 @@
         "redirect": "follow",
         "expect": [
           ".ekodi-assist-bootstrap",
-          "@media(max-width:720px)"
+          "@media(max-width:760px)"
         ],
         "headerExpect": [
           "x-content-type-options: nosniff"
@@ -607,7 +755,7 @@
         "expect": [
           "통합 인증센터",
           "dataset.seamlessSso",
-          "/auth/auth-router.js?v=20260904-direct-login-1"
+          "/auth-router.js?v=20260904-direct-login-1"
         ],
         "headerExpect": [
           "x-ekodi-route: central-auth"
@@ -636,18 +784,35 @@
       },
       {
         "url": "https://auth.ekodi.kr/google-origin-bridge",
-        "statuses": [200],
+        "statuses": [
+          200
+        ],
         "redirect": "manual",
-        "expect": ["EKODI 관리자 Google 인증", "/google-origin-bridge.js"],
-        "headerExpect": ["x-ekodi-route: google-origin-bridge", "cache-control: no-store"],
+        "expect": [
+          "EKODI 관리자 Google 인증",
+          "/google-origin-bridge.js"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: google-origin-bridge",
+          "cache-control: no-store"
+        ],
         "rollbackVerify": false
       },
       {
         "url": "https://auth.ekodi.kr/google-origin-bridge.js",
-        "statuses": [200],
+        "statuses": [
+          200
+        ],
         "redirect": "manual",
-        "expect": ["TARGET_ORIGIN='https://ekodi.kr'", "use_fedcm_for_button:false", "window.opener.postMessage"],
-        "headerExpect": ["x-ekodi-route: central-auth-asset", "cache-control: no-store"],
+        "expect": [
+          "TARGET_ORIGIN='https://ekodi.kr'",
+          "use_fedcm_for_button:false",
+          "window.opener.postMessage"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: central-auth-asset",
+          "cache-control: no-store"
+        ],
         "rollbackVerify": false
       },
       {
@@ -659,7 +824,7 @@
         "expect": [
           "EKODI Messenger",
           "EKODI Investment",
-          "https://shell.ekodi.kr/manifest.json",
+          "https://ekodi.kr/shell/manifest.json",
           "/session/handoff",
           "session_timeout",
           "use_fedcm_for_button:true",
@@ -713,7 +878,7 @@
           "location.replace(targetHref)",
           "u.origin==='https://ekodi.kr'",
           "u.origin==='https://ai.ekodi.kr'",
-          "u.origin==='https://tax.ekodi.kr'"
+          "u.pathname==='/tax'"
         ],
         "headerExpect": [
           "x-ekodi-route: central-auth-asset",
@@ -723,7 +888,18 @@
         "rollbackVerify": false
       },
       {
-        "url": "https://messenger.ekodi.kr/",
+        "url": "https://ekodi.kr/shell/shell.js",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "ekodi-mobile-fixed-header-style",
+          "ResizeObserver"
+        ]
+      },
+      {
+        "url": "https://ekodi.kr/messenger",
         "statuses": [
           200
         ],
@@ -732,16 +908,16 @@
           "EKODI Messenger",
           "궁금한 것을 편하게 말씀해 주세요.",
           "대화 검색",
-          "무엇을 도와드릴까요?",
-          "https://shell.ekodi.kr/shell.js"
+          "무엇을 도와드릴까요?"
         ],
         "headerExpect": [
           "x-ekodi-route: platform-messenger",
           "x-ekodi-shell: v2"
-        ]
+        ],
+        "rollbackVerify": false
       },
       {
-        "url": "https://messenger.ekodi.kr/messenger-ui.js",
+        "url": "https://ekodi.kr/messenger/messenger-ui.js",
         "statuses": [
           200
         ],
@@ -750,19 +926,82 @@
           "thread-open",
           "conversationSearch",
           "makeTitle"
-        ]
+        ],
+        "rollbackVerify": false
       },
       {
-        "url": "https://messenger.ekodi.kr/app.js",
+        "url": "https://ekodi.kr/messenger/app.js",
         "statuses": [
           200
         ],
         "redirect": "manual",
         "expect": [
-          "https://workspace-api.ekodi.kr",
+          "https://ekodi.kr/workspace-api",
           "/v1/messenger/threads",
           "/handoff"
-        ]
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/invest",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "EKODI Invest",
+          "data-ekodi-platform=\"invest\"",
+          "/invest/invest-ui.js"
+        ],
+        "headerExpect": [
+          "x-ekodi-shell: v2",
+          "x-content-type-options: nosniff"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/invest/invest-ui.js",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "https://ekodi.kr/workspace-api",
+          "/v1/invest/context",
+          "subject_type"
+        ],
+        "headerExpect": [
+          "x-content-type-options: nosniff"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/invest/invest-subject-ui.js",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "https://ekodi.kr/workspace-api",
+          "subject_type",
+          "subject_key"
+        ],
+        "headerExpect": [
+          "x-content-type-options: nosniff"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/invest/app.js",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "/v1/invest/",
+          "/handoff"
+        ],
+        "rollbackVerify": false
       },
       {
         "url": "https://pay.ekodi.kr/",
@@ -772,8 +1011,7 @@
         "redirect": "manual",
         "expect": [
           "EKODI Hub",
-          "EKODI 서비스 허브",
-          "https://shell.ekodi.kr/shell.js"
+          "EKODI 서비스 허브"
         ],
         "headerExpect": [
           "x-ekodi-route: hub",
@@ -788,8 +1026,7 @@
         "redirect": "manual",
         "expect": [
           "EKODI Hub",
-          "EKODI 서비스 허브",
-          "https://shell.ekodi.kr/shell.js"
+          "EKODI 서비스 허브"
         ],
         "headerExpect": [
           "x-ekodi-route: hub",
@@ -892,8 +1129,7 @@
         "redirect": "manual",
         "expect": [
           "EKODI Global Trading",
-          "TRADING DIVISION · EKODIBIZ",
-          "https://shell.ekodi.kr/shell.js"
+          "TRADING DIVISION · EKODIBIZ"
         ],
         "headerExpect": [
           "x-ekodi-route: trade",
@@ -911,7 +1147,7 @@
         ]
       },
       {
-        "url": "https://tax.ekodi.kr/",
+        "url": "https://ekodi.kr/tax",
         "statuses": [
           200
         ],
@@ -919,11 +1155,11 @@
         "expect": [
           "EKODI Tax",
           "FREE-FIRST",
-          "/tax-portal.js"
+          "/tax/tax-portal.js"
         ]
       },
       {
-        "url": "https://tax.ekodi.kr/tax-portal.js",
+        "url": "https://ekodi.kr/tax/tax-portal.js",
         "statuses": [
           200
         ],
@@ -1052,7 +1288,9 @@
       },
       {
         "url": "https://ekodi.kr/insurance",
-        "statuses": [200],
+        "statuses": [
+          200
+        ],
         "redirect": "manual",
         "expect": [
           "EKODI Insurance",
@@ -1069,7 +1307,9 @@
       },
       {
         "url": "https://ekodi.kr/insurance/advisor",
-        "statuses": [200],
+        "statuses": [
+          200
+        ],
         "redirect": "manual",
         "expect": [
           "PERSONAL INSURANCE CARE",
@@ -1085,7 +1325,9 @@
       },
       {
         "url": "https://ekodi.kr/insurance/health",
-        "statuses": [200],
+        "statuses": [
+          200
+        ],
         "redirect": "manual",
         "expect": [
           "ekodi-insurance",
@@ -1099,7 +1341,9 @@
       },
       {
         "url": "https://ekodi.kr/insurance/admin",
-        "statuses": [302],
+        "statuses": [
+          302
+        ],
         "redirect": "manual",
         "headerExpect": [
           "location: https://ekodi.kr/admin/services/insurance",

@@ -113,7 +113,8 @@ test('user UI header/footer/language are shared user-surface-only modules',async
   assert.match(worker,/LANGUAGE_REGISTRY_BOOTSTRAP/);
   assert.match(worker,/language-registry[.]json/);
 
-  assert.match(mediaMeeting,/const VERSION=2/);
+  assert.match(mediaMeeting,/const VERSION=3/);
+  assert.match(mediaMeeting,/dataset\.ekodiLocale\|\|window\.EKODIUserLanguage/);
   assert.match(mediaMeeting,/window\.EKODIMediaMeetingAdapter/);
   assert.match(mediaMeeting,/social\.ekodi\.kr\/api\/media\/youtube\/status/);
   assert.match(mediaMeeting,/POLL_MS=60_000/);
@@ -184,7 +185,7 @@ test('user UI header/footer/language are shared user-surface-only modules',async
   assert.match(principles,/consumer-commerce/);
 
   const strictCsp=shellCsp("default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'");
-  assert.match(strictCsp,/style-src 'self' https:\/\/shell\.ekodi\.kr/);
+  assert.match(strictCsp,/style-src 'self' https:\/\/ekodi\.kr/);
   assert.doesNotMatch(strictCsp,/style-src[^;]*'unsafe-inline'/);
 
   assert.match(principles,/관리자 화면\(`admin`\)/);

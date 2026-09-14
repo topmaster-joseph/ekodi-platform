@@ -28,12 +28,18 @@ test('Core AI Gateway exposes command planning, execution and Pulse handling', a
   assert.equal(typeof gateway.command, 'function');
   assert.equal(typeof gateway.handlePulse, 'function');
 
-  const plan = gateway.commandPlan({ taskId: 'gateway-plan', goal: 'Coordinate specialists.' });
+  const protectedChange = {
+    goal: 'Change OAuth authentication policy with production impact.',
+    mutation: true,
+  };
+  const plan = gateway.commandPlan({ taskId: 'gateway-plan', ...protectedChange });
+  assert.equal(plan.consultationDecision.status, 'multi_consult');
   assert.equal(plan.assignments[0].provider, 'openai');
   assert.equal(plan.assignments[1].provider, 'anthropic');
   assert.equal(plan.sentinelProvider, 'gemini');
 
-  const result = await gateway.command({ taskId: 'gateway-command', goal: 'Coordinate specialists.' });
+  const result = await gateway.command({ taskId: 'gateway-command', ...protectedChange });
   assert.equal(result.state, 'verified');
   assert.equal(result.evidence.providerDiversity, 3);
+  assert.equal(result.consultation.status, 'multi_consult');
 });

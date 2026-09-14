@@ -78,11 +78,11 @@ test('shared admin navigation exposes five canonical axes with top contextual ta
   const sidebar = await read('admin-sidebar.js');
   const postbuild = await read('scripts/admin-performance-postbuild.mjs');
   assert.doesNotMatch(registry, /id: 'overview'/);
-  for (const area of ['home', 'operations', 'space', 'services', 'system']) assert.match(registry, new RegExp(`id: '${area}'`));
+  for (const area of ['home', 'operations', 'workspaces', 'services', 'system']) assert.match(registry, new RegExp(`id: '${area}'`));
   for (const retired of ['structure', 'core', 'common', 'vertical', 'tenants', 'operations-center', 'people', 'ai', 'business', 'data', 'site-management', 'security-audit', 'settings', 'access']) assert.doesNotMatch(registry, new RegExp(`id: '${retired}', icon:`));
   assert.match(registry, /id: 'campus', group: 'home'/);
   assert.match(registry, /id: 'work', group: 'operations'/);
-  assert.match(registry, /id: 'clients', group: 'space'/);
+  assert.match(registry, /id: 'clients', group: 'workspaces'/);
   assert.match(registry, /id: 'common-services', group: 'services'/);
   assert.match(registry, /id: 'capabilities', group: 'system'/);
   assert.match(registry, /id: 'devices', group: 'system'/);
@@ -104,8 +104,8 @@ test('tax admin subservice reuses the authenticated admin session through an exp
   const registry = await read('admin-menu-registry.js');
   const runtime = await read('admin-menu-runtime.js');
   const taxPortal = await read('tax-portal-worker.js');
-  assert.match(registry, /id: 'tax'[\s\S]*href: 'https:\/\/tax\.ekodi\.kr\/'[\s\S]*adminHandoff: true/);
-  assert.match(runtime, /ADMIN_HANDOFF_ALLOWED_TARGETS = new Set\(\['https:\/\/tax\.ekodi\.kr\/'\]\)/);
+  assert.match(registry, /id: 'tax'[\s\S]*href: 'https:\/\/ekodi\.kr\/tax'[\s\S]*adminHandoff: true/);
+  assert.match(runtime, /ADMIN_HANDOFF_ALLOWED_TARGETS = new Set\(\['https:\/\/ekodi\.kr\/tax'\]\)/);
   assert.match(runtime, /definition\.adminHandoff === true/);
   assert.match(runtime, /new URLSearchParams\(\{ ekodi_admin_token: currentToken \}\)/);
   assert.match(runtime, /auth\.searchParams\.set\('direct', '1'\)/);

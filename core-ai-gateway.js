@@ -87,7 +87,7 @@ export function buildCoreAiGateway(env = {}, providers = []) {
     commandPlan(input = {}) {
       return commandPlane.plan(input);
     },
-    async run({ taskName, fallback, timeoutMs, context = {} } = {}) {
+    async run({ taskName, fallback, timeoutMs, totalTimeoutMs, context = {} } = {}) {
       const normalizedTask = String(taskName || '').trim().slice(0, 120);
       if (!normalizedTask) throw new TypeError('EKODI Core AI Gateway requires taskName.');
       if (typeof fallback !== 'function') {
@@ -103,6 +103,7 @@ export function buildCoreAiGateway(env = {}, providers = []) {
         fallback: reason => fallback(Object.freeze({ ...reason, context })),
         taskName: normalizedTask,
         timeoutMs,
+        totalTimeoutMs,
       });
     },
     async collaborate(options = {}) {

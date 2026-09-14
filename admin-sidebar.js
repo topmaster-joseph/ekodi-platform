@@ -17,6 +17,7 @@ const GLOBAL_CLASS = 'admin-global-navs';
 const SOURCE_CLASS = 'admin-context-source';
 const TABS_SHELL_CLASS = 'admin-context-tabs-shell';
 const TABS_CLASS = 'admin-context-tabs';
+const DETAILS_CLASS = 'admin-global-details';
 
 export function adminSidebarSectionOf(item) {
   if (item?.dataset?.deviceControlNav === 'true') return 'devices';
@@ -64,6 +65,12 @@ body.admin-compact .admin-global-nav:hover{border-color:#d5e6ef;background:#eef7
 body.admin-compact .admin-global-nav.active{border-color:#b7d4f6;background:#edf4ff;color:#0b4f8a!important}
 body.admin-compact .admin-global-nav b{display:inline-grid;place-items:center;min-width:22px;color:#52738a!important;font-size:12px;font-weight:850;letter-spacing:-.03em;opacity:1!important}
 body.admin-compact .admin-global-nav.active b{color:#155eef!important}
+body.admin-compact .${DETAILS_CLASS}{display:grid;gap:2px;margin:-1px 0 5px;padding:2px 3px 7px 30px;border-left:1px solid #e1e8ef}
+body.admin-compact .admin-detail-item{display:flex;align-items:center;gap:8px;width:100%;min-height:34px;margin:0;padding:6px 8px;border:1px solid transparent;border-radius:8px;background:transparent;color:#506174;font:inherit;font-size:13px;font-weight:700;text-align:left;cursor:pointer}
+body.admin-compact .admin-detail-item:hover{border-color:#dbe7ef;background:#f2f7fb;color:#173b57}
+body.admin-compact .admin-detail-item.active{border-color:#bfd5ee;background:#edf4ff;color:#0b5cab}
+body.admin-compact .admin-detail-item b{display:inline-grid;place-items:center;min-width:19px;color:#6d8194;font-size:10px;font-weight:850}
+body.admin-compact .admin-detail-item.active b{color:#155eef}
 body.admin-compact .${SOURCE_CLASS}{display:none!important}
 body.admin-compact .${TABS_SHELL_CLASS}{position:sticky;top:0;z-index:35;display:flex;align-items:center;gap:12px;min-height:56px;padding:8px 16px;border-bottom:1px solid var(--admin-border);background:rgba(255,255,255,.98);color:#172033;box-shadow:none!important;backdrop-filter:none!important}
 body.admin-compact .admin-context-title{flex:0 0 auto;color:#66768a;font-size:13px;font-weight:820;letter-spacing:.01em;white-space:nowrap}
@@ -199,6 +206,19 @@ function globalButtons(globals, locale) {
   for (const button of existing.values()) button.remove();
 }
 
+function renderSidebarDetails(nav, globals, group, section, locale) {
+  let details = globals.querySelector(`:scope>.${DETAILS_CLASS}`);
+  if (!details) { details = document.createElement('div'); details.className = DETAILS_CLASS; details.setAttribute('aria-label', locale === 'en' ? 'Admin submenu' : '관리자 하위 메뉴'); }
+  const ids = availableIds(nav, group);
+  const nodes = ids.map(id => {
+    const definition = getAdminMenuItem(id); const button = document.createElement('button'); button.type = 'button'; button.className = 'admin-detail-item'; button.dataset.adminDetailSection = id;
+    const icon = document.createElement('b'); icon.setAttribute('aria-hidden', 'true'); icon.textContent = definition?.icon || '·'; const text = document.createElement('span'); text.textContent = getAdminMenuLabel(id, locale);
+    button.append(icon, text); button.classList.toggle('active', id === section); return button;
+  });
+  details.dataset.adminDetailGroup = group; details.replaceChildren(...nodes); details.hidden = nodes.length === 0;
+  const active = [...globals.querySelectorAll('[data-admin-global-group]')].find(button => button.dataset.adminGlobalGroup === group); if (active) active.insertAdjacentElement('afterend', details); else globals.append(details);
+}
+
 function activeSection(nav) {
   const active = [...navItems(nav)].find(item => item.classList.contains('active'));
   const activeId = adminSidebarSectionOf(active);
@@ -257,13 +277,18 @@ function syncWorkbenchState(nav, locale, preferredSection = '') {
     shell.append(shortcut);
   }
   const section = preferredSection || activeSection(nav);
-  const group = getAdminMenuGroupForSection(section);
+  const activeGroup = getAdminMenuGroupForSection(section);
+  const focusedGroup = String(nav.dataset.adminFocusedGroup || '').trim();
+  const group = ADMIN_MENU_GROUPS.some(item => item.id === focusedGroup) ? focusedGroup : activeGroup;
+  const displayedSection = group === activeGroup ? section : '';
   for (const button of globals.querySelectorAll('[data-admin-global-group]')) {
     const selected = button.dataset.adminGlobalGroup === group;
     button.classList.toggle('active', selected);
     button.setAttribute('aria-current', selected ? 'page' : 'false');
+    button.setAttribute('aria-expanded', selected ? 'true' : 'false');
   }
-  renderContextTabs(nav, shell, group, section, locale);
+  renderContextTabs(nav, shell, group, displayedSection, locale);
+  renderSidebarDetails(nav, globals, group, displayedSection, locale);
   nav.dataset.adminGlobalGroup = group;
 }
 
@@ -387,10 +412,12 @@ export function mountAdminSidebar(root = document, options = {}) {
   observer.observe(nav, { childList: true, subtree: false });
 
   nav.addEventListener('click', event => {
+    const detail = event.target.closest('[data-admin-detail-section]');
+    if (detail) { event.preventDefault(); delete nav.dataset.adminFocusedGroup; activateSection(nav, detail.dataset.adminDetailSection); schedule(); return; }
     const global = event.target.closest('[data-admin-global-group]');
     if (!global) return;
     event.preventDefault();
-    activateSection(nav, getAdminMenuGroupDefault(global.dataset.adminGlobalGroup));
+    nav.dataset.adminFocusedGroup = global.dataset.adminGlobalGroup || '';
     schedule();
   }, true);
 
@@ -404,6 +431,7 @@ export function mountAdminSidebar(root = document, options = {}) {
       const source = activeSection(nav);
       if (source && source !== 'openai') try { sessionStorage.setItem('ekodi-openai-source-section', source); } catch {}
     }
+    delete nav.dataset.adminFocusedGroup;
     activateSection(nav, tab.dataset.adminContextSection);
     schedule();
   };
@@ -411,7 +439,8 @@ export function mountAdminSidebar(root = document, options = {}) {
 
   window.addEventListener('ekodi-nav-changed', schedule);
   window.addEventListener('ekodi-feature-installed', schedule);
-  window.addEventListener('ekodi-admin-section-changed', schedule);
+  const sectionChanged = () => { delete nav.dataset.adminFocusedGroup; schedule(); };
+  window.addEventListener('ekodi-admin-section-changed', sectionChanged);
 
   const api = Object.freeze({
     sync,
@@ -420,6 +449,7 @@ export function mountAdminSidebar(root = document, options = {}) {
     destroy: () => {
       observer.disconnect();
       root.removeEventListener?.('click', contextClick, true);
+      window.removeEventListener('ekodi-admin-section-changed', sectionChanged);
       mounted.delete(nav);
     },
   });

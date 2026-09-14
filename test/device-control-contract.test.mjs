@@ -121,6 +121,12 @@ test('agent self-update validates actual PowerShell command AST instead of raw g
   assert.match(agent, /\('Invoke-' \+ 'Expression'\)/);
 });
 
+test('Device Control activation stays synchronized with the canonical Admin panel controller', () => {
+  assert.match(admin, /const panels = window\.EKODIAdminPanels/);
+  assert.match(admin, /panels\?\.activate/);
+  assert.match(admin, /panels\.activate\('devices'\)/);
+});
+
 test('admin Device Control is lazy-loaded from authenticated production assets', () => {
   const assets = build.match(/const assets = \[[\s\S]*?\];/)?.[0] || '';
   assert.match(assets, /device-control-admin\.css/);

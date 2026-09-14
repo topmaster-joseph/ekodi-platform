@@ -220,7 +220,17 @@
       "service-proxy",
       "marketing-ai"
     ],
-    "approvedExpansionExceptions": [],
+    "approvedExpansionExceptions": [
+      {
+        "id": "local-commerce",
+        "reason": "Financial-adjacent voucher, tenant-isolated ledger, QR redemption and accounting workflows require a path-scoped failure boundary while reusing the shared Control API and central identity.",
+        "expectedBenefit": "One reusable local-commerce engine serves merchant associations, autonomous districts, institutions, schools and events without duplicating payment-adjacent logic per tenant.",
+        "incrementalMonthlyCost": "S0 target: zero fixed incremental infrastructure cost beyond usage-based Cloudflare Worker/D1 consumption.",
+        "rollbackPath": "Remove the ekodi.kr/local-commerce Worker route and service registry entry; shared Control API tables remain additive and inert until a later reviewed cleanup.",
+        "owner": "EKODI 최고관리자",
+        "observabilityPlan": "Worker health endpoint, Control API health endpoint, Cloudflare invocation logs, guarded release manifest and production verification status."
+      }
+    ],
     "existingBoundaryAction": "review for convergence before expansion; do not split further without passing the gate"
   },
   "workspaceConvergence": {

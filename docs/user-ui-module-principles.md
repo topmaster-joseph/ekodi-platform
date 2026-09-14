@@ -52,7 +52,7 @@ EKODI의 사용자 화면은 공통 상단 헤더와 공통 하단 푸터를 하
 ### 2A. 보안·CSP 계약
 
 - 공통 헤더·푸터의 **필수 스타일은 외부 자산 `shell/user-ui-shell.css`로 제공**한다.
-- 서비스가 `style-src 'self'`처럼 엄격한 CSP를 사용하더라도 공통 Shell origin(`https://shell.ekodi.kr`)만 허용하면 사용자 chrome이 정상 동작해야 한다.
+- 서비스가 `style-src 'self'`처럼 엄격한 CSP를 사용하더라도 공통 Shell origin(`https://ekodi.kr`)과 `/shell` 경로만 허용하면 사용자 chrome이 정상 동작해야 한다.
 - 공통 사용자 UI 때문에 기존의 엄격한 서비스 CSP에 `'unsafe-inline'`을 추가하도록 요구하지 않는다.
 - 이미 CSP가 없는 레거시 서비스에 Shell이 기본 CSP를 생성할 때는 기존 인라인 스타일 호환성을 깨뜨리지 않도록 단계적으로 이전한다.
 - 보안 강화와 UI 일관성 중 하나를 희생하는 방식으로 해결하지 않는다. 공통 UI는 엄격한 CSP에서도 동작하는 구조를 기본값으로 삼는다.

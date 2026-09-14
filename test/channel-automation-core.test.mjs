@@ -43,6 +43,7 @@ test('YouTube adapter uses OAuth, channel discovery and resumable upload', async
   const adapter = await read('channel-youtube-adapter.js');
   assert.match(adapter, /youtube\.upload/);
   assert.match(adapter, /youtube\.readonly/);
+  assert.doesNotMatch(adapter, /auth\/youtube'[,\s]/, 'YouTube OAuth must not request full account-management scope');
   assert.match(adapter, /access_type.*offline/);
   assert.match(adapter, /uploadType=resumable/);
   assert.match(adapter, /channels\?part=id,snippet&mine=true/);

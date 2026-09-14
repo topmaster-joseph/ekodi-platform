@@ -5,7 +5,7 @@ window.__EKODI_USER_UI_FOOTER_BOOTED=true;
 
 const VERSION=7;
 const STYLE_ID='ekodi-user-ui-footer-style';
-const CONFIG_URL='https://shell.ekodi.kr/user-footer.json';
+const CONFIG_URL='https://ekodi.kr/shell/user-footer.json';
 const SITE_CHROME_URL='https://workspace-api.ekodi.kr/v1/site-chrome/public';
 const USER_SURFACES=new Set(['public','workspace']);
 const SERVICE_OWNED_FOOTER_SERVICES=new Set();

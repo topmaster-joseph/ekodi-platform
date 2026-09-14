@@ -11,6 +11,8 @@ const MAX_LIST = 100;
 const MAX_PAYLOAD_BYTES = 16_384;
 const MAX_ASSIST_MESSAGE_CHARS = 4_000;
 const MAX_ASSIST_HISTORY_ITEMS = 8;
+const DEFAULT_ADMIN_ASSIST_TOTAL_TIMEOUT_MS = 15_000;
+const MAX_ADMIN_ASSIST_TOTAL_TIMEOUT_MS = 20_000;
 const SAFE_EXECUTORS = new Set(['service.health_check']);
 
 function json(data, status = 200, request = null, env = {}) {
@@ -282,11 +284,15 @@ async function handleAdminAssist(request, env, session) {
   const decision = evaluateMissionAction(auditAction);
   const stored = await insertAction(env, session, auditAction, decision);
   const gateway = buildCoreAiGateway(env, []);
-  const configuredTimeout = Number(env.AI_ADMIN_TIMEOUT_MS || 15_000);
-  const timeoutMs = Math.min(Math.max(Number.isFinite(configuredTimeout) ? configuredTimeout : 15_000, 2_500), 30_000);
+  const configuredTimeout = Number(env.AI_ADMIN_TIMEOUT_MS || DEFAULT_ADMIN_ASSIST_TOTAL_TIMEOUT_MS);
+  const totalTimeoutMs = Math.min(
+    Math.max(Number.isFinite(configuredTimeout) ? configuredTimeout : DEFAULT_ADMIN_ASSIST_TOTAL_TIMEOUT_MS, 2_500),
+    MAX_ADMIN_ASSIST_TOTAL_TIMEOUT_MS,
+  );
   const result = await gateway.run({
     taskName: 'admin-assist',
-    timeoutMs,
+    timeoutMs: totalTimeoutMs,
+    totalTimeoutMs,
     context: {
       message,
       page,

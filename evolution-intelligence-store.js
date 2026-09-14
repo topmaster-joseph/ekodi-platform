@@ -1,3 +1,12 @@
+import {
+  lifecycleFromRecommendation,
+  runAutonomousEvolutionLoop,
+} from './ekodi-autonomous-evolution-loop.js';
+import {
+  autonomousEvolutionStoreSummary,
+  persistAutonomousEvolutionCycle,
+} from './autonomous-evolution-store.js';
+
 export async function assertEvolutionSchema(db) {
   if (!db) throw new Error('Evolution Intelligence requires a database binding.');
   try {
@@ -10,11 +19,36 @@ export async function assertEvolutionSchema(db) {
   }
 }
 
+async function persistAutonomousLifecycleBestEffort(db, recommendations, generatedAt) {
+  const lifecycle = runAutonomousEvolutionLoop({
+    generatedAt,
+    recommendations,
+  });
+  const report = {
+    ...lifecycle,
+    source: 'platform_evolution_intelligence',
+  };
+  try {
+    const persistence = await persistAutonomousEvolutionCycle(db, report);
+    return { status: 'persisted', report, persistence };
+  } catch (error) {
+    return {
+      status: 'degraded_schema_unavailable',
+      report,
+      persistence: null,
+      error: String(error?.message || error),
+    };
+  }
+}
+
 export async function persistEvolutionReport(db, report = {}) {
   await assertEvolutionSchema(db);
   const recommendations = Array.isArray(report.recommendations) ? report.recommendations : [];
-  if (!recommendations.length) return { persisted: 0, evidence: 0 };
   const seenAt = report.generatedAt || new Date().toISOString();
+  if (!recommendations.length) {
+    const autonomous = await persistAutonomousLifecycleBestEffort(db, [], seenAt);
+    return { persisted: 0, evidence: 0, autonomous };
+  }
   const upsertRecommendation = db.prepare(`INSERT INTO evolution_recommendations
     (id, type, title, target, score, priority, confidence, evidence_grade,
      status, approval_required, payload_json, first_seen_at, last_seen_at)
@@ -56,7 +90,12 @@ export async function persistEvolutionReport(db, report = {}) {
     }
   }
   if (evidenceStatements.length) await db.batch(evidenceStatements);
-  return { persisted: recommendationStatements.length, evidence: evidenceStatements.length };
+  const autonomous = await persistAutonomousLifecycleBestEffort(db, recommendations, seenAt);
+  return {
+    persisted: recommendationStatements.length,
+    evidence: evidenceStatements.length,
+    autonomous,
+  };
 }
 
 export async function listEvolutionRecommendations(db, options = {}) {
@@ -68,9 +107,15 @@ export async function listEvolutionRecommendations(db, options = {}) {
     LIMIT ?`).bind(limit).all();
   return rows.results.map(row => {
     const payload = JSON.parse(row.payload_json);
-    return { ...payload, firstSeenAt: row.first_seen_at, lastSeenAt: row.last_seen_at };
+    return {
+      ...payload,
+      autonomousLifecycle: lifecycleFromRecommendation(payload),
+      firstSeenAt: row.first_seen_at,
+      lastSeenAt: row.last_seen_at,
+    };
   });
 }
+
 export async function evolutionStoreSummary(db) {
   await assertEvolutionSchema(db);
   const row = await db.prepare(`SELECT
@@ -83,6 +128,12 @@ export async function evolutionStoreSummary(db) {
       SUM(CASE WHEN status = 'evidence_required' THEN 1 ELSE 0 END) AS evidence_required,
       MAX(last_seen_at) AS last_seen_at
     FROM evolution_recommendations`).first();
+  let autonomous = null;
+  try {
+    autonomous = await autonomousEvolutionStoreSummary(db);
+  } catch {
+    autonomous = { status: 'schema_unavailable' };
+  }
   return {
     total: Number(row?.total || 0),
     critical: Number(row?.critical || 0),
@@ -92,5 +143,6 @@ export async function evolutionStoreSummary(db) {
     approvalRequired: Number(row?.approval_required || 0),
     evidenceRequired: Number(row?.evidence_required || 0),
     lastSeenAt: row?.last_seen_at || null,
+    autonomous,
   };
 }

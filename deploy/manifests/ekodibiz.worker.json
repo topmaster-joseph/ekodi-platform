@@ -1,11 +1,11 @@
 {
-  "version": 2,
+  "version": 3,
   "worker": {
     "name": "ekodibiz-revenue-os",
     "config": "wrangler.ekodibiz.toml",
     "requests": [
       {
-        "url": "https://biz.ekodi.kr/",
+        "url": "https://ekodi.kr/ekodibiz",
         "statuses": [
           200
         ],
@@ -16,14 +16,13 @@
         ],
         "rollbackExpect": [
           "EKODIBIZ",
-          "data-ekodi-service=\"biz\"",
-          "data-ekodi-user-surface=\"public\""
+          "WHAT WE DO"
         ],
         "candidateVerify": false,
-        "candidateVerifyReason": "run_worker_first bootstrap for biz.ekodi.kr can serve the stable static Business Hub during 0% version-override smoke; verify the EKODIBIZ WHAT WE DO asset immediately after promotion"
+        "candidateVerifyReason": "the canonical ekodi.kr gateway remains bound to the stable EKODIBIZ service during a 0% candidate smoke; verify the canonical service-binding path immediately after promotion"
       },
       {
-        "url": "https://biz.ekodi.kr/api/health",
+        "url": "https://ekodi.kr/ekodibiz/api/health",
         "statuses": [
           200
         ],
@@ -36,11 +35,11 @@
           "https://pay.ekodi.kr"
         ],
         "candidateVerify": false,
-        "candidateVerifyReason": "run_worker_first bootstrap on biz.ekodi.kr can keep stable routing active during 0% version-override smoke; verify this API immediately after promotion",
+        "candidateVerifyReason": "the canonical ekodi.kr gateway remains bound to the stable EKODIBIZ service during a 0% candidate smoke; verify this API immediately after promotion",
         "rollbackVerify": false
       },
       {
-        "url": "https://biz.ekodi.kr/api/catalog",
+        "url": "https://ekodi.kr/ekodibiz/api/catalog",
         "statuses": [
           200
         ],
@@ -50,11 +49,11 @@
           "행사 완성팩"
         ],
         "candidateVerify": false,
-        "candidateVerifyReason": "run_worker_first bootstrap on biz.ekodi.kr can keep stable routing active during 0% version-override smoke; verify this API immediately after promotion",
+        "candidateVerifyReason": "the canonical ekodi.kr gateway remains bound to the stable EKODIBIZ service during a 0% candidate smoke; verify this API immediately after promotion",
         "rollbackVerify": false
       },
       {
-        "url": "https://biz.ekodi.kr/api/runtime",
+        "url": "https://ekodi.kr/ekodibiz/api/runtime",
         "statuses": [
           200
         ],
@@ -69,11 +68,11 @@
           "anonymous-goal-only"
         ],
         "candidateVerify": false,
-        "candidateVerifyReason": "run_worker_first bootstrap on biz.ekodi.kr can keep stable routing active during 0% version-override smoke; verify this API immediately after promotion",
+        "candidateVerifyReason": "the canonical ekodi.kr gateway remains bound to the stable EKODIBIZ service during a 0% candidate smoke; verify this API immediately after promotion",
         "rollbackVerify": false
       },
       {
-        "url": "https://biz.ekodi.kr/api/ops/status",
+        "url": "https://ekodi.kr/ekodibiz/api/ops/status",
         "statuses": [
           200
         ],
@@ -85,7 +84,7 @@
           "rules-first"
         ],
         "candidateVerify": false,
-        "candidateVerifyReason": "run_worker_first bootstrap on biz.ekodi.kr can keep stable routing active during 0% version-override smoke; verify this API immediately after promotion",
+        "candidateVerifyReason": "the canonical ekodi.kr gateway remains bound to the stable EKODIBIZ service during a 0% candidate smoke; verify this API immediately after promotion",
         "rollbackVerify": false
       }
     ]

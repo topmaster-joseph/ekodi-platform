@@ -6,17 +6,20 @@ import {
   ADMIN_MENU_GROUPS,
   ADMIN_MENU_REGISTRY,
   adminMenuOrder,
+  adminMenuCategoryOrder,
+  getAdminMenuCategory,
+  getAdminMenuCategoryLabel,
   getAdminMenuGroupDefault,
   getAdminMenuGroupForSection,
   getAdminMenuLabel,
   normalizeAdminLocale,
 } from '../admin-menu-registry.js';
 
-const WORK_AREAS = ['home', 'operations', 'space', 'services', 'system'];
+const WORK_AREAS = ['home', 'operations', 'workspaces', 'services', 'system'];
 
 test('admin navigation has exactly five canonical EKODI axes', () => {
   assert.deepEqual(ADMIN_MENU_GROUPS.map(group => group.id), WORK_AREAS);
-  assert.deepEqual(ADMIN_MENU_GROUPS.map(group => group.labels.en), ['Home','Operations','Spaces','Services','System']);
+  assert.deepEqual(ADMIN_MENU_GROUPS.map(group => group.labels.en), ['Home','Operations','Workspaces','Services','System']);
   for (const group of ADMIN_MENU_GROUPS) {
     assert.ok(group.defaultSection, `${group.id} missing defaultSection`);
     assert.equal(getAdminMenuGroupForSection(group.defaultSection), group.id);
@@ -40,7 +43,7 @@ test('every public admin subservice belongs to one work area', () => {
   assert.ok(adminMenuOrder().includes('admins'));
   assert.equal(getAdminMenuGroupForSection('marketing-ai'), 'services');
   assert.equal(getAdminMenuGroupForSection('finance'), 'operations');
-  assert.equal(getAdminMenuGroupForSection('workspace'), 'space');
+  assert.equal(getAdminMenuGroupForSection('workspace'), 'workspaces');
   assert.equal(getAdminMenuGroupForSection('storage'), 'system');
   assert.equal(getAdminMenuLabel('devices', 'ko'), '실행 인프라');
   assert.equal(getAdminMenuLabel('devices', 'en'), 'Execution Infrastructure');
@@ -73,4 +76,13 @@ test('shared admin browser modules pass syntax checks', () => {
   for (const file of ['admin-menu-registry.js', 'admin-sidebar.js', 'admin-menu-runtime.js', 'admin-menu-layout.js']) {
     execFileSync(process.execPath, ['--check', file], { stdio: 'pipe' });
   }
+});
+
+
+test('admin submenus are categorized and unclassified sections fall back to Other last', () => {
+  assert.equal(getAdminMenuCategory('communication'), 'workflow');
+  assert.equal(getAdminMenuCategory('marketing-ai'), 'business');
+  assert.equal(getAdminMenuCategory('unregistered-future-section'), 'other');
+  assert.equal(getAdminMenuCategoryLabel('other', 'ko'), '기타');
+  for (const group of WORK_AREAS) assert.equal(adminMenuCategoryOrder(group).at(-1), 'other');
 });

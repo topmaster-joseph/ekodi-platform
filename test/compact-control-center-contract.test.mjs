@@ -10,7 +10,7 @@ const [registry, layout, css, build] = await Promise.all([
 ]);
 
 test('Admin navigation is grouped into five canonical EKODI axes', () => {
-  for (const id of ['home','operations','space','services','system']) {
+  for (const id of ['home','operations','workspaces','services','system']) {
     assert.match(registry, new RegExp(`id: '${id}'`));
   }
   assert.match(registry, /id: 'campus'[\s\S]*en: 'Admin Home & Sites'/);

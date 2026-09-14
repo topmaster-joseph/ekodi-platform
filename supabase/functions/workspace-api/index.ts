@@ -149,13 +149,13 @@ Deno.serve(async(req)=>{
       return json(req,{workspace:data,authorization:"store_members+RLS",externalChannelPolicy:"official-contract-only"});
     }
     if(req.method==="GET"&&path==="/trade/context"){
-      const workspaceSlug=clip(url.searchParams.get("workspace"),100).toLowerCase()||"ekodi-biz";
+      const workspaceSlug=clip(url.searchParams.get("workspace"),100).toLowerCase()||"ekoditrade";
       const {data,error}=await auth.db.rpc("trade_current_access",{p_workspace_slug:workspaceSlug});
       if(error)throw error;
       return json(req,{access:data,workspace:workspaceSlug});
     }
     if(req.method==="GET"&&path==="/trade/companies"){
-      const workspaceSlug=clip(url.searchParams.get("workspace"),100).toLowerCase()||"ekodi-biz";
+      const workspaceSlug=clip(url.searchParams.get("workspace"),100).toLowerCase()||"ekoditrade";
       const {data:access,error:accessError}=await auth.db.rpc("trade_current_access",{p_workspace_slug:workspaceSlug});
       if(accessError)throw accessError;
       if(!access?.allowed)return json(req,{error:access?.reason||"trade_access_required"},403);
@@ -165,7 +165,7 @@ Deno.serve(async(req)=>{
     }
     if(req.method==="POST"&&path==="/trade/companies"){
       const payload=await req.json().catch(()=>null);if(!payload)return json(req,{error:"invalid_json"},400);
-      const workspaceSlug=clip(payload.workspace,100).toLowerCase()||"ekodi-biz";
+      const workspaceSlug=clip(payload.workspace,100).toLowerCase()||"ekoditrade";
       const {data,error}=await auth.db.rpc("trade_upsert_counterparty",{
         p_workspace_slug:workspaceSlug,p_id:payload.id||null,p_slug:clip(payload.slug,100).toLowerCase(),
         p_display_name:clip(payload.displayName,180),p_legal_name:clip(payload.legalName,240),
@@ -177,7 +177,7 @@ Deno.serve(async(req)=>{
       return json(req,{result:data,workspace:workspaceSlug},payload.id?200:201);
     }
     if(req.method==="GET"&&path==="/trade/admins"){
-      const workspaceSlug=clip(url.searchParams.get("workspace"),100).toLowerCase()||"ekodi-biz";
+      const workspaceSlug=clip(url.searchParams.get("workspace"),100).toLowerCase()||"ekoditrade";
       const {data,error}=await auth.db.rpc("trade_list_admin_grants",{p_workspace_slug:workspaceSlug});
       if(error)throw error;
       if(data?.error)return json(req,{error:data.error},403);
@@ -185,7 +185,7 @@ Deno.serve(async(req)=>{
     }
     if(req.method==="POST"&&path==="/trade/admins"){
       const payload=await req.json().catch(()=>null);if(!payload)return json(req,{error:"invalid_json"},400);
-      const workspaceSlug=clip(payload.workspace,100).toLowerCase()||"ekodi-biz";
+      const workspaceSlug=clip(payload.workspace,100).toLowerCase()||"ekoditrade";
       const companyIds=Array.isArray(payload.companyIds)?payload.companyIds.filter((value)=>typeof value==="string").slice(0,200):[];
       const {data,error}=await auth.db.rpc("trade_upsert_admin_grant",{
         p_workspace_slug:workspaceSlug,p_email:clip(payload.email,254).toLowerCase(),
@@ -197,12 +197,12 @@ Deno.serve(async(req)=>{
       return json(req,{result:data,workspace:workspaceSlug},200);
     }
     if(req.method==="POST"&&path==="/trade/partner/claim"){
-      const payload=await req.json().catch(()=>({}));const workspaceSlug=clip(payload.workspace,100).toLowerCase()||"ekodi-biz";
+      const payload=await req.json().catch(()=>({}));const workspaceSlug=clip(payload.workspace,100).toLowerCase()||"ekoditrade";
       const {data,error}=await auth.db.rpc("trade_claim_company_memberships",{p_workspace_slug:workspaceSlug});
       if(error)throw error;if(data?.error)return json(req,{error:data.error},403);return json(req,{result:data});
     }
     if(req.method==="GET"&&path==="/trade/partner/companies"){
-      const workspaceSlug=clip(url.searchParams.get("workspace"),100).toLowerCase()||"ekodi-biz";
+      const workspaceSlug=clip(url.searchParams.get("workspace"),100).toLowerCase()||"ekoditrade";
       const {data,error}=await auth.db.rpc("trade_partner_companies",{p_workspace_slug:workspaceSlug});
       if(error)throw error;
       return json(req,{companies:Array.isArray(data)?data:[],workspace:workspaceSlug});

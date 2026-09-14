@@ -8,13 +8,14 @@
     ],
     "requests": [
       {
-        "url": "https://my.ekodi.kr/",
+        "url": "https://ekodi-my.topmaster-joseph.workers.dev/",
         "statuses": [
-          308
+          200
         ],
         "redirect": "manual",
-        "headerExpect": [
-          "location: https://ekodi.kr/my/"
+        "expect": [
+          "My EKODI",
+          "MY PLATFORMS"
         ]
       },
       {
@@ -24,7 +25,7 @@
         ],
         "redirect": "manual",
         "candidateVerify": false,
-        "candidateVerifyReason": "Canonical apex routing is verified after promotion; the candidate is smoke-tested on the legacy custom-domain redirect before promotion.",
+        "candidateVerifyReason": "Canonical apex routing is verified after promotion; the candidate is smoke-tested on the internal Workers execution URL before promotion.",
         "expect": [
           "My EKODI",
           "MY PLATFORMS",
@@ -40,7 +41,7 @@
         ],
         "redirect": "manual",
         "candidateVerify": false,
-        "candidateVerifyReason": "Canonical apex routing is verified after promotion; the candidate is smoke-tested on the legacy custom-domain redirect before promotion.",
+        "candidateVerifyReason": "Canonical apex routing is verified after promotion; the candidate is smoke-tested on the internal Workers execution URL before promotion.",
         "expect": [
           "ekodi-my",
           "my-ekodi",
@@ -63,7 +64,7 @@
         ],
         "redirect": "manual",
         "candidateVerify": false,
-        "candidateVerifyReason": "Canonical apex routing is verified after promotion; the candidate is smoke-tested on the legacy custom-domain redirect before promotion.",
+        "candidateVerifyReason": "Canonical apex routing is verified after promotion; the candidate is smoke-tested on the internal Workers execution URL before promotion.",
         "expect": [
           "My EKODI",
           "/private-workspace-router.js"
@@ -80,7 +81,7 @@
         ],
         "redirect": "manual",
         "candidateVerify": false,
-        "candidateVerifyReason": "Canonical apex routing is verified after promotion; the candidate is smoke-tested on the legacy custom-domain redirect before promotion.",
+        "candidateVerifyReason": "Canonical apex routing is verified after promotion; the candidate is smoke-tested on the internal Workers execution URL before promotion.",
         "expect": [
           "EKODI Docs AI",
           "CORE.DOCUMENTS",

@@ -93,6 +93,7 @@
     "social": {"layer":"responsible-independent-service","responsibilityClass":"ekodi-responsible","capability":"social"},
     "energy": {"layer":"responsible-independent-service","responsibilityClass":"ekodi-responsible","capability":"energy"},
     "delivery": {"layer":"responsible-independent-service","responsibilityClass":"ekodi-responsible","capability":"delivery"},
+    "local-commerce": {"layer":"responsible-independent-service","responsibilityClass":"ekodi-responsible","capability":"local-commerce-voucher-wallet"},
     "business": {"layer":"responsible-independent-service","responsibilityClass":"ekodi-responsible","capability":"business"},
     "finance": {"layer":"responsible-independent-service","responsibilityClass":"ekodi-responsible","capability":"finance"},
     "control-api": {"layer":"core","responsibilityClass":"ekodi-responsible","capability":"core-control-plane"},

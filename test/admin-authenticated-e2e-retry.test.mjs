@@ -13,10 +13,12 @@ test('authenticated Admin E2E isolates every menu in a fresh Chromium process an
   assert.match(source, /const maxAttemptsPerMenu = 2/);
   assert.match(source, /const menuTimeoutMs = 30_000/);
   assert.match(source, /adminMenuOrder\(\)/);
-  assert.match(source, /spawn\(process\.execPath, \['scripts\/admin-authenticated-e2e-menu-worker\.mjs'\]/);
+  assert.match(source, /spawn\(process\.execPath, \[script\]/);
+  assert.match(source, /'scripts\/admin-authenticated-e2e-menu-worker\.mjs'/);
   assert.match(source, /E2E_MENU_ID: menuId/);
   assert.match(source, /brand-new Chromium process/);
-  assert.match(source, /isolated-menu-renderers/);
+  assert.match(source, /isolated-menu-renderers\+canonical-assist-roundtrip/);
+  assert.match(source, /runCanonicalAssist\(\)/);
 });
 
 test('isolated worker skips redundant clicks only when the active context tab has a visible rendered panel', async () => {
@@ -47,10 +49,16 @@ test('Shared Site release uses the same isolated authenticated Admin verifier', 
 test('isolated Tax E2E verifies authenticated handoff and value-preserving supplier save in production verification', async () => {
   const source = await workerSource();
   const productionWorkflow = await productionWorkflowSource();
-  assert.match(source, /destination\.hostname === 'tax\.ekodi\.kr'/);
+  assert.match(source, /destination\.origin === 'https:\/\/ekodi\.kr'[\s\S]*destination\.pathname === '\/tax'/);
   assert.match(source, /page\.waitForURL/);
+  assert.match(source, /async function waitForAdminNavigationIdle\(\)/);
+  assert.match(source, /if \(menuId === 'tax'\) await waitForAdminNavigationIdle\(\)/);
+  assert.match(source, /stableSamples >= 2/);
   assert.match(source, /sessionStorage\.getItem\('ekodi-auth-token'\)/);
+  assert.match(source, /button\[data-tab=\"suppliers\"\]/);
+  assert.match(source, /if \(writeVerification\) \{\s+const suppliersTab/);
   assert.match(source, /authenticated supplier read failed HTTP/);
+  assert.match(source, /state:writeVerification \? 'visible' : 'attached'/);
   assert.match(source, /response\.request\(\)\.method\(\) === 'PUT'/);
   assert.match(source, /supplier UI save returned HTTP/);
   assert.match(source, /value-preserving save changed fields/);
@@ -69,7 +77,8 @@ test('public-site controls E2E proves the live Control API and CGMA form render'
   const source = await workerSource();
   assert.match(source, /verifyPublicSiteControls/);
   assert.match(source, /fetch\('https:\/\/api\.ekodi\.kr\/api\/control\/public-sites'/);
-  assert.match(source, /origin: 'https:\/\/admin\.ekodi\.kr'/);
+  assert.match(source, /const adminOrigin = 'https:\/\/ekodi\.kr'/);
+  assert.match(source, /origin: adminOrigin/);
   assert.match(source, /authorization: `Bearer \$\{token\}`/);
   assert.match(source, /access-control-allow-origin/);
   assert.match(source, /page\.evaluate\(\(\) => window\.EKODIPublicSiteControls\.load\(\)\)/);

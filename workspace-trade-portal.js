@@ -4,7 +4,7 @@ function client(){
   const SUPABASE_URL='https://renzehysxirjilvdxacv.supabase.co';
   const KEY='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
   const API=`${SUPABASE_URL}/functions/v1/workspace-api`;
-  const WORKSPACE='ekodi-biz';
+  const WORKSPACE='ekoditrade';
   const $=id=>document.getElementById(id);
   const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const roleLabel=r=>({workspace_admin:'에코디비즈 전체관리자',trade_admin:'무역 전체관리자',trade_manager:'거래 운영관리자',trade_viewer:'조회 관리자',counterparty_admin:'상대회사 관리자',counterparty_member:'상대회사 관계자'}[r]||r||'-');

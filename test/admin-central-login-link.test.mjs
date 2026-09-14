@@ -9,10 +9,19 @@ test('current admin shell ships the central-admin link before JavaScript runs', 
   assert.match(html, /id="centralAdminLogin"/);
   assert.match(html, /href="https:\/\/ekodi\.kr\/auth\/\?site=admin&amp;direct=1&amp;return_to=https%3A%2F%2Fekodi\.kr%2Fadmin%2F"/);
   assert.match(html, /<form id="loginForm" hidden>/);
-  assert.match(html, /<script src="admin-central-handoff\.js"><\/script>/);
-  assert.match(html, /<script src="admin-authenticated-shell\.js(?:\?v=[^"]+)?"[^>]*><\/script>/);
+  assert.match(html, /<script src="\/admin\/admin-central-handoff\.js"><\/script>/);
+  assert.match(html, /<script src="\/admin\/admin-authenticated-shell\.js(?:\?v=[^"]+)?"[^>]*><\/script>/);
   assert.match(html, /data-ekodi-postauth="admin-compact\.js admin-menu-layout\.js admin-demand-loader\.js"/);
   assert.doesNotMatch(html, /control-center-features\.js|control-center\.js/);
+});
+
+test('production Admin login workflow is apex-native', async () => {
+  const workflow = await read('.github/workflows/verify-admin-login.yml');
+  assert.match(workflow, /https:\/\/ekodi\.kr\/admin\/work/);
+  assert.match(workflow, /https:\/\/ekodi\.kr\/auth\/\?site=admin&direct=1&return_to=https%3A%2F%2Fekodi\.kr%2Fadmin%2Fwork/);
+  assert.match(workflow, /x-ekodi-route: admin-shell/i);
+  assert.match(workflow, /x-ekodi-route: central-auth/i);
+  assert.doesNotMatch(workflow, /https:\/\/admin\.ekodi\.kr/);
 });
 
 test('canonical admin edge explicitly rejects retired admin entry paths', async () => {

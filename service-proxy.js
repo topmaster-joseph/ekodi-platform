@@ -1,12 +1,9 @@
 import { injectEkodiShell, shellServiceForHost } from './ekodi-shell-injector.js';
 
-const ORIGINS = Object.freeze({
-  'church.ekodi.kr': 'ekodi-church.pages.dev',
-  'lab.ekodi.kr': 'ekodilab.pages.dev'
-});
+const ORIGINS = Object.freeze({});
 
 const MAIL_CANONICAL = 'https://mail.ekodi.kr';
-const MALL_CANONICAL = 'https://ekodi.kr/ekodibiz/mall';
+const MALL_CANONICAL = 'https://ekodi.kr/ekodibiz/ekodimall';
 const CANONICAL_REDIRECTS = Object.freeze({
   'mall.ekodi.kr': MALL_CANONICAL,
   'mall.biz.ekodi.kr': MALL_CANONICAL,
@@ -56,7 +53,7 @@ function businessHub() {
 <section class="hero"><div class="eyebrow">BUSINESS LOBBY</div><h1>EKODI BIZ</h1><p>에코디비즈의 사업 서비스를 한곳에서 연결하는 독립 비즈니스 로비입니다. 무역, 쇼핑, 결제, 메일, 라이브를 하나의 계층형 도메인 체계로 운영합니다.</p><span class="context">biz.ekodi.kr · EKODI → BIZ → SERVICE</span></section>
 <section class="grid" aria-label="EKODI BIZ 서비스">
 <a class="card" href="https://ekodi.kr/ekodibiz/trade"><div><span class="icon">T</span><strong>Global Trading</strong><small>글로벌 B2B 무역 · GPU · AI Server · Components</small></div><span class="arrow">↗</span></a>
-<a class="card" href="https://ekodi.kr/ekodibiz/mall"><div><span class="icon">M</span><strong>EKODI Mall</strong><small>상품과 서비스의 비즈니스 커머스 허브</small></div><span class="arrow">↗</span></a>
+<a class="card" href="https://ekodi.kr/ekodibiz/ekodimall"><div><span class="icon">M</span><strong>EKODI Mall</strong><small>상품과 서비스의 비즈니스 커머스 허브</small></div><span class="arrow">↗</span></a>
 <a class="card" href="https://pay.biz.ekodi.kr"><div><span class="icon">P</span><strong>EKODI Pay</strong><small>결제와 사업부별 회계 관제 진입점</small></div><span class="arrow">↗</span></a>
 <a class="card" href="https://mail.ekodi.kr"><div><span class="icon">@</span><strong>Business Mail</strong><small>EKODI 공통 Mail 서비스</small></div><span class="arrow">↗</span></a>
 <a class="card" href="https://live.biz.ekodi.kr"><div><span class="icon">▶</span><strong>Business Live</strong><small>비즈니스 방송과 라이브 콘텐츠 로비</small></div><span class="arrow">↗</span></a>
@@ -92,7 +89,7 @@ export default {
     }
 
     if (incoming.pathname === '/admin' || incoming.pathname === '/admin/') {
-      const target = new URL('https://admin.ekodi.kr/');
+      const target = new URL('https://ekodi.kr/admin/');
       target.searchParams.set('source', host);
       return Response.redirect(target.toString(), 307);
     }

@@ -8,23 +8,24 @@ function fetchTimed(url,options={},ms=10000){const controller=new AbortControlle
 const realms={
   portal:{name:'EKODI',returnTo:'https://ekodi.kr/',open:true,kind:'portal'},
   'my':{name:'My EKODI',returnTo:'https://ekodi.kr/my/',open:true,kind:'my'},
-  community:{name:'Community',returnTo:'https://community.ekodi.kr/',open:true,kind:'community'},
+  community:{name:'Community',returnTo:'https://ekodi.kr/community/',open:true,kind:'community'},
   church:{name:'EKODI Church',returnTo:'https://church.ekodi.kr/',open:true,kind:'church'},
   biz:{name:'EKODI Biz',returnTo:'https://biz.ekodi.kr/',open:true,kind:'biz'},
   trade:{name:'EKODI Trading',returnTo:'https://trade.ekodi.kr/',open:true,kind:'trade'},
-  mall:{name:'EKODI Mall',returnTo:'https://ekodi.kr/ekodibiz/mall',origins:['https://ekodi.kr'],open:true,kind:'mall'},
+  mall:{name:'EKODI Mall',returnTo:'https://ekodi.kr/ekodibiz/ekodimall',origins:['https://ekodi.kr'],open:true,kind:'mall'},
   pay:{name:'EKODI Pay',returnTo:'https://pay.ekodi.kr/',open:true,kind:'pay'},
   books:{name:'EKODI Books',returnTo:'https://books.ekodi.kr/',open:true,kind:'books'},
   lab:{name:'EKODI Lab',returnTo:'https://lab.ekodi.kr/',open:true,kind:'lab'},
   mission:{name:'EKODI Mission',returnTo:'https://mission.ekodi.kr/',open:true,kind:'mission'},
   edu:{name:'EKODI Education',returnTo:'https://edu.ekodi.kr/',open:true,kind:'edu'},
+  learn:{name:'EKODI Learning Fabric',returnTo:'https://ekodi.kr/learn',origins:['https://ekodi.kr'],open:true,kind:'learn',operatingModel:'public-service'},
   media:{name:'EKODI Media',returnTo:'https://media.ekodi.kr/',open:true,kind:'media'},
   social:{name:'EKODI Social',returnTo:'https://social.ekodi.kr/',open:true,kind:'social'},
   energy:{name:'Energy AI',returnTo:'https://energy.ekodi.kr/',open:true,kind:'energy'},
   work:{name:'EKODI Work',returnTo:'https://work.ekodi.kr/',open:true,kind:'work'},
   messenger:{name:'EKODI Messenger',returnTo:'https://messenger.ekodi.kr/',open:true,kind:'messenger'},
   invest:{name:'EKODI Investment',returnTo:'https://invest.ekodi.kr/',open:true,kind:'invest'},
-  support:{name:'EKODI Support AI',returnTo:'https://support.ekodi.kr/',open:true,kind:'support'},
+  support:{name:'EKODI Support AI',returnTo:'https://ekodi.kr/support/',open:true,kind:'support'},
   publishing:{name:'Publishing',returnTo:'https://publishing.ekodi.kr/',open:true,kind:'publishing'},
   money:{name:'EKODI Money',returnTo:'https://money.ekodi.kr/',open:true,kind:'money'},
   mail:{name:'EKODI Mail',returnTo:'https://mail.ekodi.kr/',open:true,kind:'mail'},
@@ -46,7 +47,7 @@ const REQUESTED_WORKSPACE=requestedWorkspaceRaw.length<=180&&WORKSPACE_KEY_RE.te
 async function manifestRealm(id){
   if(!id)return null;
   try{
-    const response=await fetchTimed('https://shell.ekodi.kr/manifest.json',{cache:'no-store'},5000);
+    const response=await fetchTimed('https://ekodi.kr/shell/manifest.json',{cache:'no-store'},5000);
     if(!response.ok)return null;
     const manifest=await response.json();
     const service=manifest?.services?.find(item=>item.id===id);

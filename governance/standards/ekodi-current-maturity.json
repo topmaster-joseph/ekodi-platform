@@ -1,0 +1,99 @@
+{
+  "schemaVersion": "1.0.0",
+  "assessmentId": "ekodi-maturity-2026-09-11",
+  "assessmentDate": "2026-09-11",
+  "assessor": "EKODI internal evidence review",
+  "scope": "EKODI platform repository and currently documented operating controls",
+  "certificationStatus": "not-claimed",
+  "note": "This is an internal maturity baseline, not an ISO/IEC certification audit.",
+  "domains": [
+    {
+      "id": "ai-management",
+      "score": 4.0,
+      "confidence": "high",
+      "evidence": ["CONSTITUTION.md#7-ai-constitution", "ai-governance-runtime.js", "ai-management-admin.js", "scripts/validate-ai-mission-governance.mjs", "scripts/validate-ai-provider-independence.mjs"],
+      "strengths": ["provider-independent governance", "human sovereign authority", "guarded execution", "AI resilience validation"],
+      "gaps": ["formal AIMS objective register", "periodic management-review evidence package", "complete AI system inventory mapped to owners and risk classes"],
+      "nextActions": ["establish AIMS objectives and measurable KPIs", "create AI system register with owner/risk/use-purpose fields", "record quarterly management review"]
+    },
+    {
+      "id": "ai-risk",
+      "score": 3.6,
+      "confidence": "medium-high",
+      "evidence": ["CONSTITUTION.md#1b-sovereign-autonomous-operations-constitution", "ai-resilience-runtime.js", "ai-resource-policy.js", "scripts/validate-ai-provider-independence.mjs"],
+      "strengths": ["authority boundaries", "fallback behavior", "cost and provider controls", "verification and recovery loop"],
+      "gaps": ["single AI risk register", "explicit likelihood-impact scoring", "residual-risk acceptance records"],
+      "nextActions": ["create unified AI risk register", "define risk appetite and acceptance authority", "link incidents and model/provider changes to risk reassessment"]
+    },
+    {
+      "id": "information-security",
+      "score": 3.8,
+      "confidence": "high",
+      "evidence": ["CONSTITUTION.md#6-security-and-traffic-constitution", "security-edge.js", "scripts/validate-security-baseline.mjs", ".github/workflows/cloudflare-boundary-audit.yml", ".github/workflows/backup-ekodi-core.yml"],
+      "strengths": ["least privilege policy", "edge security boundary", "secret separation", "security validation and audit workflows"],
+      "gaps": ["formal ISMS statement of applicability", "central control-owner register", "scheduled internal audit and management-review evidence"],
+      "nextActions": ["create ISMS control register and SoA", "assign control owners and review frequency", "run recurring internal security audit with corrective-action tracking"]
+    },
+    {
+      "id": "cloud-security",
+      "score": 3.6,
+      "confidence": "medium-high",
+      "evidence": ["CONSTITUTION.md#5-provider-constitution", "CONSTITUTION.md#6-security-and-traffic-constitution", ".github/workflows/cloudflare-boundary-audit.yml", ".github/workflows/cloudflare-account-hygiene.yml", "EKODI_ENVIRONMENT_CONTRACT.md"],
+      "strengths": ["Cloud First with provider independence", "edge boundary audits", "environment separation", "shared-before-dedicated topology policy"],
+      "gaps": ["formal cloud shared-responsibility matrix", "cloud control mapping against ISO/IEC 27017:2026", "privileged cloud access recertification evidence"],
+      "nextActions": ["build provider-by-provider responsibility matrix", "map cloud controls to evidence", "add periodic privileged-access review"]
+    },
+    {
+      "id": "privacy",
+      "score": 2.9,
+      "confidence": "medium",
+      "evidence": ["CONSTITUTION.md#4-data-and-storage-constitution", "CONSTITUTION.md#6-security-and-traffic-constitution", "CONSTITUTION.md#7-ai-constitution"],
+      "strengths": ["minimum projection principle", "tenant isolation intent", "purpose-bound AI context", "provider export requirement"],
+      "gaps": ["complete PII processing inventory", "retention/deletion schedule", "controller/processor responsibility matrix", "data subject request evidence", "privacy impact assessment workflow"],
+      "nextActions": ["create PII and processing-activity register", "define retention and deletion policies", "implement DPIA/PIA workflow and DSAR audit trail"]
+    },
+    {
+      "id": "service-management",
+      "score": 3.4,
+      "confidence": "medium-high",
+      "evidence": ["CONSTITUTION.md#8-deployment-and-operations-constitution", "scripts/monitor.mjs", "scripts/verify-ekodi-core-production.mjs", "scripts/validate-deployment-guardrails.mjs", "admin-perf-diagnostics.js"],
+      "strengths": ["guarded releases", "health and smoke verification", "monitoring", "rollback-oriented operations"],
+      "gaps": ["formal service catalog with SLO/SLA owners", "unified incident/problem records", "service review cadence", "customer-facing service-level reporting"],
+      "nextActions": ["establish service catalog and SLOs", "link incidents to problem/root-cause records", "create monthly service review scorecard"]
+    },
+    {
+      "id": "business-continuity",
+      "score": 3.3,
+      "confidence": "medium-high",
+      "evidence": ["CONSTITUTION.md#8-deployment-and-operations-constitution", ".github/workflows/backup-ekodi-core.yml", "ai-resilience-runtime.js", "scripts/verify-ekodi-core-production.mjs"],
+      "strengths": ["backup workflow", "provider fallback", "rollback expectation", "production verification"],
+      "gaps": ["formal BIA", "service-specific RTO/RPO register", "documented continuity exercises", "restore drill evidence"],
+      "nextActions": ["define critical-service BIA", "set and measure RTO/RPO", "schedule recovery drills and retain evidence"]
+    },
+    {
+      "id": "process-capability",
+      "score": 3.8,
+      "confidence": "high",
+      "evidence": ["CONSTITUTION.md#9-change-constitution", "AI_DEVELOPMENT_POLICY.md", "AGENTS.md", "scripts/validate-constitution.mjs", "scripts/validate-ekodi-ai-change-orchestration.mjs", ".github/workflows/ci.yml"],
+      "strengths": ["defined change classes", "central validation", "isolated AI development", "repeatable CI and governance"],
+      "gaps": ["cross-process KPI baseline", "statistical process performance tracking", "formal innovation effectiveness review"],
+      "nextActions": ["define process KPIs", "capture cycle time/failure/rework trends", "tie improvement experiments to measured outcomes"]
+    },
+    {
+      "id": "software-quality",
+      "score": 3.9,
+      "confidence": "high",
+      "evidence": ["package.json", "scripts/validate-platform-boundaries.mjs", "scripts/validate-ekodi-os-architecture.mjs", "scripts/validate-security-baseline.mjs", "scripts/monitor.mjs", "test/"],
+      "strengths": ["broad automated validation", "architecture boundaries", "security checks", "runtime monitoring", "test automation"],
+      "gaps": ["quality characteristics not yet mapped to measurable acceptance thresholds", "accessibility/usability evidence incomplete", "reliability and maintainability trends not unified"],
+      "nextActions": ["map ISO/IEC 25010 characteristics to product KPIs", "set acceptance thresholds", "trend reliability/performance/maintainability in one quality scorecard"]
+    }
+  ],
+  "priorityGaps": [
+    "privacy management evidence and processing inventory",
+    "formal service catalog and SLO/SLA governance",
+    "business impact analysis with RTO/RPO and recovery drills",
+    "formal ISMS/AIMS control-owner and management-review records",
+    "unified measurable quality and process KPI scorecards"
+  ]
+}

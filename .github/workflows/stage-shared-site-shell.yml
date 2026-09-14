@@ -5,6 +5,9 @@ on:
   pull_request:
     paths:
       - 'site-worker.js'
+      - 'learning-page.js'
+      - 'test/learning-page.test.mjs'
+      - 'test/learning-routing-contract.test.mjs'
       - 'site-shell-worker.js'
       - 'platform-router-worker.js'
       - 'platform-router-entry-worker.js'
@@ -15,6 +18,8 @@ on:
       - 'insurance-public-route.js'
       - 'sites/ekodi-insurance/public/**'
       - 'workspace-route-policy.js'
+      - 'workspace-admin-page.js'
+      - 'test/mall-v83-workspace-admin.test.mjs'
       - 'ekodi-service-manifest.js'
       - 'config/ecosystem-services.json'
       - 'test/insurance-public-route.test.mjs'
@@ -34,6 +39,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: read
 
 concurrency:
   group: shared-site-shell-staging-${{ github.event.pull_request.number || github.run_id }}
@@ -62,6 +68,7 @@ jobs:
         run: |
           set -euo pipefail
           node --check site-worker.js
+          node --check learning-page.js
           node --check site-shell-worker.js
           node --check platform-router-worker.js
           node --check platform-router-entry-worker.js
@@ -74,7 +81,7 @@ jobs:
           node --check ekodi-shell-injector.js
           node --check discovery-layer.js
           node --check scripts/discovery-build.mjs
-          node --test test/marketing-canonical-projection.test.mjs test/insurance-public-route.test.mjs test/public-workspace-gateway.test.mjs test/store-public-gateway.test.mjs test/store-portfolio-admin.test.mjs test/discovery-layer.test.mjs
+          node --test test/marketing-canonical-projection.test.mjs test/insurance-public-route.test.mjs test/public-workspace-gateway.test.mjs test/store-public-gateway.test.mjs test/store-portfolio-admin.test.mjs test/discovery-layer.test.mjs test/learning-page.test.mjs test/learning-routing-contract.test.mjs
           npm run build
           test -f dist/insurance/index.html
           test -f dist/insurance/advisor.html
@@ -127,26 +134,36 @@ jobs:
             echo "$host -> $code"
             [[ "$code" == '200' ]]
             grep -Fq "$needle" /tmp/shared-stage.html
-            grep -Fq 'https://shell.ekodi.kr/shell.js' /tmp/shared-stage.html
             grep -Fiq 'x-ekodi-shell: v2' /tmp/shared-stage.headers
           }
+          verify_canonical_shell() {
+            code=$(curl -sS -D /tmp/shared-shell.headers -o /tmp/shared-shell.js -w '%{http_code}' --connect-timeout 5 --max-time 15 -H "x-ekodi-staging-host: ekodi.kr" "$STAGING_URL/shell/shell.js" || true)
+            echo "/shell/shell.js -> $code"
+            [[ "$code" == '200' ]]
+            grep -Fq 'ekodi-mobile-fixed-header-style' /tmp/shared-shell.js
+            grep -Fq 'ResizeObserver' /tmp/shared-shell.js
+          }
           for attempt in $(seq 1 18); do
-            if verify_shell 'trade.biz.ekodi.kr' 'EKODI GLOBAL TRADING' \
+            if verify_canonical_shell \
+              && verify_shell 'trade.biz.ekodi.kr' 'EKODI GLOBAL TRADING' \
               && verify_shell 'pay.ekodi.kr' 'EKODI Pay' \
               && verify_shell 'pay.biz.ekodi.kr' 'EKODI Pay' \
               && verify_shell 'messenger.ekodi.kr' 'EKODI Messenger' \
               && verify_shell 'invest.ekodi.kr' 'EKODI Investment' \
+              && verify_public_path '/messenger' 'EKODI Messenger' 'x-ekodi-shell: v2' \
+              && verify_public_path '/invest' 'EKODI Invest' 'x-ekodi-shell: v2' \
               && verify_public_path '/cmpmyi' 'THREE STORES · ONE GATE' 'x-ekodi-route: store-gateway' \
               && verify_public_path '/deployment-probe' 'OPERATING SPACE' 'x-ekodi-workspace-gateway: space-service-binding' \
               && verify_public_path '/ekodibiz' 'EKODIBIZ' 'x-ekodi-workspace-gateway: ekodibiz-service-binding' \
               && verify_public_path '/insurance' '보험을 파는 AI가 아니라, 내 보험을 챙겨주는 AI' 'x-ekodi-route: public-insurance' \
+              && verify_public_path '/learn' 'EKODI LEARNING FABRIC' 'x-ekodi-shell: v2' \
               && verify_public_path '/insurance/advisor' 'PERSONAL INSURANCE CARE' 'x-ekodi-route: public-insurance' \
               && verify_public_path '/ekodibiz/invest' 'EKODIBIZ · INVESTMENT BUSINESS' 'x-ekodi-route: public-ekodibiz-invest' \
               && verify_public_path '/ekodibiz/invest/admin' 'WORKSPACE-LOCAL ADMIN' 'x-ekodi-route: public-ekodibiz-invest-admin' \
               && verify_discovery_path '/robots.txt' 'OAI-SearchBot' \
               && verify_discovery_path '/sitemap.xml' '<urlset' \
               && verify_discovery_path '/llms.txt' 'Canonical site: https://ekodi.kr/'; then
-              echo 'Shared-site core, Discovery Layer, Insurance public path, Space binding, EKODIBIZ and Invest staging verified through the production entry contract.'
+              echo 'Shared-site core, canonical Shell, Messenger/Invest apex paths, Discovery Layer, Insurance, Space binding and EKODIBIZ staging verified through the production entry contract.'
               exit 0
             fi
             sleep 4

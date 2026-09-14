@@ -34,7 +34,7 @@ const OWNED_CUSTOMER_SITE_DEFINITIONS = [
   },
   {
     id: 'trade',
-    slug: 'ekodi-trade',
+    slug: 'ekoditrade',
     name: 'EKODI Global Trading',
     domain: 'trade.ekodi.kr',
     workspaceKind: 'business',

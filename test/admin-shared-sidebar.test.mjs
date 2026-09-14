@@ -10,7 +10,7 @@ const layout = await readFile(new URL('../admin-menu-layout.js', import.meta.url
 const postbuild = await readFile(new URL('../scripts/admin-performance-postbuild.mjs', import.meta.url), 'utf8');
 
 test('five canonical axes replace the former many-group admin taxonomy', () => {
-  for (const id of ['home', 'operations', 'space', 'services', 'system']) {
+  for (const id of ['home', 'operations', 'workspaces', 'services', 'system']) {
     assert.match(registry, new RegExp(`id: '${id}'`));
   }
   for (const retired of ['site-management', 'security-audit', 'settings', 'access']) {
@@ -61,7 +61,9 @@ test('global navigation remains synchronized to the actually active panel', () =
   const activateEnd = sidebar.indexOf('export function createAdminSidebarItem', activateStart);
   const activateSource = sidebar.slice(activateStart, activateEnd);
   assert.doesNotMatch(activateSource, /syncWorkbenchState/);
-  assert.match(sidebar, /activateSection\(nav, getAdminMenuGroupDefault\(global\.dataset\.adminGlobalGroup\)\)/);
+  assert.doesNotMatch(sidebar, /activateSection\(nav, getAdminMenuGroupDefault\(global\.dataset\.adminGlobalGroup\)\)/);
+  assert.match(sidebar, /nav\.dataset\.adminFocusedGroup = global\.dataset\.adminGlobalGroup \|\| ''/);
+  assert.match(sidebar, /const displayedSection = group === activeGroup \? section : ''/);
 });
 
 test('global menu labels use readable contrast on the light sidebar', () => {
@@ -115,9 +117,23 @@ test('internal operational capabilities stay off the global work areas as direct
 });
 
 test('shared menu ES modules are published and cache-busted with the admin release', () => {
-  assert.match(postbuild, /sharedAdminMenuModules = \['admin-menu-registry\.js', 'admin-sidebar\.js', 'admin-menu-runtime\.js'\]/);
+  assert.match(postbuild, /sharedAdminMenuModules = \['admin-menu-registry\.js', 'admin-sidebar\.js', 'admin-menu-runtime\.js', 'ekodibiz-admin-registry\.js', 'platform-maturity-admin\.js'\]/);
   assert.match(postbuild, /copyFile\(`\$\{root\}\$\{asset\}`, `\$\{dist\}\$\{asset\}`\)/);
   assert.match(postbuild, /\.\.\.sharedAdminMenuModules/);
   assert.match(postbuild, /moduleImportVersions = new Map/);
+  assert.match(postbuild, /\['admin-menu-registry\.js', \['admin-design-engine\.js', 'platform-maturity-admin\.js'\]\]/);
   assert.match(postbuild, /`\.\/\$\{imported\}\?v=\$\{assetVersion\}`/);
+});
+
+
+test('active global axis expands every submenu directly inside the fixed sidebar', () => {
+  assert.ok(sidebar.includes("DETAILS_CLASS = 'admin-global-details'"));
+  assert.ok(sidebar.includes('function renderSidebarDetails(nav, globals, group, section, locale)'));
+  assert.ok(sidebar.includes('data-admin-detail-section'));
+  assert.ok(sidebar.includes('const ids = availableIds(nav, group)'));
+  assert.ok(sidebar.includes('const nodes = ids.map(id =>'));
+  assert.ok(sidebar.includes('renderSidebarDetails(nav, globals, group, section, locale)'));
+  assert.ok(sidebar.includes('activateSection(nav, detail.dataset.adminDetailSection)'));
+  assert.ok(!sidebar.includes("document.createElement('details')"));
+  assert.ok(!sidebar.includes('getAdminMenuCategoryLabel(category, locale)'));
 });

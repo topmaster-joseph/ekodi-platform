@@ -15,7 +15,8 @@
         "core.project",
         "core.documents",
         "core.communication",
-        "core.analytics"
+        "core.analytics",
+        "support.benefit-radar"
       ],
       "signals": [
         "시작",
@@ -24,7 +25,11 @@
         "계획",
         "무엇을",
         "모르겠",
-        "하고 싶"
+        "하고 싶",
+        "지원",
+        "혜택",
+        "복지",
+        "보조금"
       ]
     },
     {
@@ -83,7 +88,8 @@
         "commerce.supply-network",
         "finance.stewardship",
         "core.public-site",
-        "device.observe"
+        "device.observe",
+        "support.benefit-radar"
       ],
       "signals": [
         "가게",
@@ -95,7 +101,10 @@
         "마케팅",
         "매출",
         "판매",
-        "창업"
+        "창업",
+        "지원사업",
+        "정부지원",
+        "보조금"
       ]
     },
     {
@@ -116,7 +125,8 @@
         "community.membership",
         "community.events",
         "finance.stewardship",
-        "core.public-site"
+        "core.public-site",
+        "support.benefit-radar"
       ],
       "signals": [
         "기관",
@@ -127,7 +137,10 @@
         "조직",
         "행사",
         "위원회",
-        "공동체"
+        "공동체",
+        "지원사업",
+        "공모",
+        "보조금"
       ]
     },
     {
@@ -146,7 +159,8 @@
         "knowledge.research",
         "learning.coach",
         "creator.writing",
-        "core.analytics"
+        "core.analytics",
+        "support.benefit-radar"
       ],
       "signals": [
         "공부",
@@ -157,7 +171,9 @@
         "자료",
         "강의",
         "교육",
-        "리서치"
+        "리서치",
+        "장학금",
+        "연구지원"
       ]
     },
     {
@@ -173,7 +189,8 @@
         "core.documents",
         "knowledge.research",
         "learning.coach",
-        "work.career"
+        "work.career",
+        "support.benefit-radar"
       ],
       "signals": [
         "취업",
@@ -183,7 +200,10 @@
         "진로",
         "이력서",
         "면접",
-        "일자리"
+        "일자리",
+        "취업지원",
+        "직업훈련",
+        "내일배움"
       ]
     },
     {

@@ -74,7 +74,7 @@ test('remaining Worker services use thin shared Shell adapters without moving do
 test('canonical root services win before generic workspace slug classification',async()=>{
   const site=await read('site-shell-worker.js');
   const {shellServiceForRootPath}=await import('../ekodi-shell-injector.js');
-  assert.equal(shellServiceForRootPath('/ekodibiz/mall'),'mall');
+  assert.equal(shellServiceForRootPath('/ekodibiz/ekodimall'),'mall');
   assert.equal(shellServiceForRootPath('/ekodibiz/trade'),'trade');
   const service=site.indexOf('const serviceId=rootUserService(pathname);');
   const workspace=site.indexOf('const workspaceSlug=workspaceSlugForPath(pathname);');
@@ -110,7 +110,7 @@ test('bundled shell isolates an optional asset fetch rejection',async()=>{
     if(path==='/user-character.js')throw new Error('transient asset failure');
     return new Response(path==='/shell.js'?'window.shellCore=true;':`// ${path}`,{status:200});
   }}};
-  const response=await worker.fetch(new Request('https://shell.ekodi.kr/shell.js'),env,{waitUntil(){}});
+  const response=await worker.fetch(new Request('https://ekodi-shell.internal/shell.js'),env,{waitUntil(){}});
   assert.equal(response.status,200);
   assert.equal(response.headers.get('x-ekodi-user-character'),'missing');
   assert.match(await response.text(),/window\.shellCore=true/);
@@ -122,7 +122,7 @@ test('bundled shell converts core asset rejection into controlled 503',async()=>
     if(new URL(request.url).pathname==='/shell.js')throw new Error('core asset failure');
     return new Response('// optional',{status:200});
   }}};
-  const response=await worker.fetch(new Request('https://shell.ekodi.kr/shell.js'),env,{waitUntil(){}});
+  const response=await worker.fetch(new Request('https://ekodi-shell.internal/shell.js'),env,{waitUntil(){}});
   assert.equal(response.status,503);
   assert.equal(response.headers.get('x-ekodi-shell-asset-error'),'fetch_failed');
 });
@@ -134,7 +134,7 @@ test('bundled shell cache key is normalized by shellVersion instead of caller qu
   globalThis.caches={default:{match:async request=>{seen=request.url;return new Response('cached-shell',{status:200});},put:async()=>{}}};
   try{
     const env={ASSETS:{fetch:async()=>{assetFetches+=1;return new Response('unexpected');}}};
-    const response=await worker.fetch(new Request('https://shell.ekodi.kr/shell.js?v=admin-fingerprint&site=admin'),env,{waitUntil(){}});
+    const response=await worker.fetch(new Request('https://ekodi-shell.internal/shell.js?v=admin-fingerprint&site=admin'),env,{waitUntil(){}});
     assert.equal(response.status,200); assert.equal(assetFetches,0);
     assert.match(seen,/\/shell\.js\?bundle=/); assert.doesNotMatch(seen,/admin-fingerprint|site=admin/);
   } finally { if(priorCaches===undefined)delete globalThis.caches;else globalThis.caches=priorCaches; }
@@ -143,7 +143,7 @@ test('bundled shell cache key is normalized by shellVersion instead of caller qu
 test('non-bundle asset rejection becomes controlled 503 instead of Worker exception',async()=>{
   const {default:worker}=await import('../ekodi-shell-worker.js');
   const env={ASSETS:{fetch:async()=>{throw new Error('asset binding failure');}}};
-  const response=await worker.fetch(new Request('https://shell.ekodi.kr/missing-static.js'),env,{});
+  const response=await worker.fetch(new Request('https://ekodi-shell.internal/missing-static.js'),env,{});
   assert.equal(response.status,503);
   assert.equal(response.headers.get('x-ekodi-shell-asset-error'),'fetch_failed');
 });

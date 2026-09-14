@@ -12,8 +12,10 @@ if (!menuId) throw new Error('E2E_MENU_ID is required');
 const menuIds = adminMenuOrder();
 if (!menuIds.includes(menuId)) throw new Error(`Unknown Admin menu: ${menuId}`);
 const group = getAdminMenuGroupForSection(menuId);
-const baseUrl = 'https://admin.ekodi.kr/';
+const adminOrigin = 'https://ekodi.kr';
+const baseUrl = `${adminOrigin}/admin/`;
 const authenticatedEntryUrl = `${baseUrl}?route=finance#ekodi_admin_token=${token}`;
+const isCanonicalAdminUrl = url => url.hostname === 'ekodi.kr' && (url.pathname === '/admin' || url.pathname.startsWith('/admin/'));
 const artifactsDir = path.resolve('artifacts/admin-authenticated-e2e');
 const reportPath = path.join(artifactsDir, `menu-${menuId.replace(/[^a-z0-9_-]/gi, '_')}.json`);
 await fs.mkdir(artifactsDir, { recursive: true });
@@ -42,6 +44,34 @@ async function waitForReady() {
   await page.waitForFunction(() => window.EKODIAdminPanels && window.EKODIAdminSidebar, null, { timeout: 15_000 });
   stage('ready-session');
   await page.waitForFunction(() => document.querySelector('#apiState')?.textContent?.includes('정상'), null, { timeout: 15_000 });
+}
+
+async function prepareTargetDemand() {
+  stage('target-demand');
+  const placeholder = page.locator(`.sidebar nav [data-demand-feature][data-section="${menuId}"], .sidebar nav [data-demand-feature][data-lazy-section="${menuId}"]`).first();
+  if (!await placeholder.count()) return;
+  await clickFast(placeholder);
+  await page.waitForFunction(section => {
+    const nodes = [...document.querySelectorAll('.sidebar nav [data-section], .sidebar nav [data-lazy-section]')];
+    const target = nodes.find(node => node.dataset.section === section || node.dataset.lazySection === section);
+    return Boolean(target && !target.hasAttribute('data-demand-feature') && target.getAttribute('aria-busy') !== 'true' && !target.classList.contains('is-loading'));
+  }, menuId, { timeout: 15_000 });
+}
+
+async function waitForAdminNavigationIdle() {
+  stage('pre-handoff-idle');
+  let previous = '';
+  let stableSamples = 0;
+  for (let attempt = 0; attempt < 16; attempt += 1) {
+    await page.waitForLoadState('domcontentloaded', { timeout: 3_000 }).catch(() => {});
+    const current = page.url();
+    if (!isCanonicalAdminUrl(new URL(current))) throw new Error(`Admin navigation left the canonical surface before Tax handoff: ${current}`);
+    stableSamples = current === previous ? stableSamples + 1 : 0;
+    previous = current;
+    if (stableSamples >= 2) return current;
+    await page.waitForTimeout(250);
+  }
+  throw new Error(`Admin navigation did not settle before Tax handoff: ${page.url()}`);
 }
 
 async function selectWorkArea() {
@@ -99,7 +129,7 @@ function externalStorageNavigation() {
   return page.waitForRequest(request => {
     try {
       const url = new URL(request.url());
-      return request.isNavigationRequest() && request.frame() === page.mainFrame() && url.hostname !== 'admin.ekodi.kr';
+      return request.isNavigationRequest() && request.frame() === page.mainFrame() && !isCanonicalAdminUrl(url);
     } catch { return false; }
   }, { timeout: 10_000 }).then(request => request.url()).catch(() => null);
 }
@@ -138,14 +168,18 @@ async function verifyTax(tab, alreadyActive, started) {
   const navigation = page.waitForRequest(request => {
     try {
       const destination = new URL(request.url());
-      return request.isNavigationRequest() && request.frame() === page.mainFrame() && destination.hostname === 'tax.ekodi.kr';
+      return request.isNavigationRequest() && request.frame() === page.mainFrame() && destination.origin === 'https://ekodi.kr' && destination.pathname === '/tax';
     } catch { return false; }
   }, { timeout: 10_000 });
   await clickFast(tab);
   const request = await navigation;
   const destination = new URL(request.url());
-  if (destination.hostname !== 'tax.ekodi.kr') throw new Error(`tax: wrong handoff destination ${destination.hostname}`);
-  await page.waitForURL(url => url.hostname === 'tax.ekodi.kr', { waitUntil:'domcontentloaded', timeout:15_000 });
+  if (destination.origin !== 'https://ekodi.kr' || destination.pathname !== '/tax') throw new Error(`tax: wrong handoff destination ${destination.hostname}`);
+  try {
+    await page.waitForURL(url => url.origin === 'https://ekodi.kr' && url.pathname === '/tax', { waitUntil:'commit', timeout:15_000 });
+  } catch (error) {
+    if (new URL(page.url()).origin !== 'https://ekodi.kr' || new URL(page.url()).pathname !== '/tax') throw error;
+  }
   stage('tax-session-handoff');
   await page.waitForFunction(() => Boolean(sessionStorage.getItem('ekodi-auth-token')) && location.hash === '', null, { timeout:15_000 });
   await page.waitForFunction(() => document.querySelector('#notice')?.classList.contains('good'), null, { timeout:15_000 });
@@ -161,8 +195,16 @@ async function verifyTax(tab, alreadyActive, started) {
       return { status:response.status, profile };
     }, profileId);
   }
+  if (writeVerification) {
+    const suppliersTab = page.locator('button[data-tab="suppliers"]');
+    await clickFast(suppliersTab);
+    await page.waitForFunction(() => {
+      const view = document.querySelector('[data-view="suppliers"]');
+      return Boolean(view && !view.classList.contains('hidden'));
+    }, null, { timeout:5_000 });
+  }
   const edit = page.locator('button[data-edit-supplier]').first();
-  await edit.waitFor({ state:'visible', timeout:10_000 });
+  await edit.waitFor({ state:writeVerification ? 'visible' : 'attached', timeout:10_000 });
   const profileId = Number(await edit.getAttribute('data-edit-supplier'));
   if (!Number.isInteger(profileId) || profileId <= 0) throw new Error('tax: invalid supplier profile id');
   const before = await readProfile(profileId);
@@ -171,7 +213,7 @@ async function verifyTax(tab, alreadyActive, started) {
   if (!writeVerification) {
     results.push({
       id:menuId, group, ok:true, durationMs:Date.now()-started,
-      destination:'https://tax.ekodi.kr/', tokenHandoffVerified:true,
+      destination:'https://ekodi.kr/tax', tokenHandoffVerified:true,
       authenticatedReadStatus:before.status, supplierProfileId:profileId,
       supplierSaveVerification:'not-requested'
     });
@@ -210,7 +252,7 @@ async function verifyTax(tab, alreadyActive, started) {
 
   results.push({
     id:menuId, group, ok:true, durationMs:Date.now()-started,
-    destination:'https://tax.ekodi.kr/', tokenHandoffVerified:true,
+    destination:'https://ekodi.kr/tax', tokenHandoffVerified:true,
     authenticatedReadStatus:before.status, supplierProfileId:profileId,
     supplierSaveVerification:'passed', writeStatus:response.status(),
     persistenceReadbackStatus:after.status, persistenceVerified:true,
@@ -225,12 +267,12 @@ async function verifyPublicSiteControls(tab, alreadyActive, started) {
 
   stage('public-site-controls-api');
   const response = await fetch('https://api.ekodi.kr/api/control/public-sites', {
-    headers: { accept: 'application/json', authorization: `Bearer ${token}`, origin: 'https://admin.ekodi.kr' },
+    headers: { accept: 'application/json', authorization: `Bearer ${token}`, origin: adminOrigin },
     signal: AbortSignal.timeout(10_000),
   });
   if (response.status !== 200) throw new Error(`public-site-controls: API returned HTTP ${response.status}`);
   const corsOrigin = response.headers.get('access-control-allow-origin') || '';
-  if (corsOrigin !== 'https://admin.ekodi.kr') throw new Error(`public-site-controls: production CORS origin mismatch: ${corsOrigin || 'missing'}`);
+  if (corsOrigin !== adminOrigin) throw new Error(`public-site-controls: production CORS origin mismatch: ${corsOrigin || 'missing'}`);
   const payload = await response.json().catch(() => ({}));
   if (!Array.isArray(payload.sites)) throw new Error('public-site-controls: API payload missing sites array');
 
@@ -261,12 +303,12 @@ async function verifyAiSettings(tab, alreadyActive, started) {
   await page.waitForFunction(() => typeof window.EKODIAIManagement?.load === 'function', null, { timeout: 10_000 });
   stage('ai-settings-api');
   const response = await fetch('https://api.ekodi.kr/api/control/ai/v8/collaboration-settings', {
-    headers: { accept:'application/json', authorization:`Bearer ${token}`, origin:'https://admin.ekodi.kr' },
+    headers: { accept:'application/json', authorization:`Bearer ${token}`, origin:adminOrigin },
     signal: AbortSignal.timeout(10_000),
   });
   if (response.status !== 200) throw new Error(`ai-settings: API returned HTTP ${response.status}`);
   const corsOrigin = response.headers.get('access-control-allow-origin') || '';
-  if (corsOrigin !== 'https://admin.ekodi.kr') throw new Error(`ai-settings: production CORS origin mismatch: ${corsOrigin || 'missing'}`);
+  if (corsOrigin !== adminOrigin) throw new Error(`ai-settings: production CORS origin mismatch: ${corsOrigin || 'missing'}`);
   const payload = await response.json().catch(() => ({}));
   const policy = payload.policy || {};
   const weights = policy.router?.weights || {};
@@ -300,7 +342,7 @@ async function verifyLanguageStatus(tab, alreadyActive, started) {
   await page.waitForFunction(() => typeof window.EKODILanguageStatus?.load === 'function', null, { timeout: 10_000 });
   stage('language-status-api');
   const response = await fetch('https://api.ekodi.kr/api/control/language-status', {
-    headers: { accept:'application/json', authorization:`Bearer ${token}`, origin:'https://admin.ekodi.kr' },
+    headers: { accept:'application/json', authorization:`Bearer ${token}`, origin:adminOrigin },
     signal: AbortSignal.timeout(10_000),
   });
   if (response.status !== 200) throw new Error(`language-status: API returned HTTP ${response.status}`);
@@ -310,19 +352,52 @@ async function verifyLanguageStatus(tab, alreadyActive, started) {
   if (payload.sites.some(site => !Array.isArray(site.languages))) throw new Error('language-status: site languages missing');
   stage('language-status-render');
   await page.evaluate(() => window.EKODILanguageStatus.load());
-  const rootCard = page.locator('[data-language-site="ekodi"]');
-  await rootCard.waitFor({ state:'visible', timeout:8_000 });
   const panel = page.locator('#languageStatusPanel');
+  await panel.locator('[data-language-site="ekodi"]').waitFor({ state:'visible', timeout:8_000 });
+  await page.waitForFunction(() => document.querySelector('#languageStatusPanel')?.dataset.languageStatusReady === 'true', null, { timeout:8_000 });
   const state = await visiblePanelState();
   const controls = await panel.locator('form,input[type="checkbox"],button[type="submit"]').count();
-  const text = String(await panel.textContent() || '').replace(/\s+/g,' ').trim();
+  const siteCards = await panel.locator('[data-language-site]').count();
+  const languageRows = await panel.locator('[data-language-locale]').count();
+  const ready = await panel.getAttribute('data-language-status-ready');
   if (!state.panelFound || !state.selected || state.busy) throw new Error(`language-status panel invalid: ${JSON.stringify(state)}`);
   if (controls !== 0) throw new Error('language-status: mutation control exposed');
-  if (!text.includes('사용자 화면에는 준비 완료 언어만 표시됩니다')) throw new Error('language-status: readiness message missing');
-  results.push({ id:menuId, group, ok:true, durationMs:Date.now()-started, ...state, apiStatus:response.status, sites:payload.sites.length, languages:payload.languages.length });
+  if (ready !== 'true' || siteCards < 1 || languageRows < 1) throw new Error(`language-status: semantic readiness contract failed ready=${ready} sites=${siteCards} languages=${languageRows}`);
+  results.push({ id:menuId, group, ok:true, durationMs:Date.now()-started, ...state, apiStatus:response.status, sites:payload.sites.length, languages:payload.languages.length, semanticReady:true });
 }
 
-async function verifyRegistryHref(tab, started) {
+async function verifyMaturity(tab, alreadyActive, started) {
+  stage('maturity-api');
+  const endpoint='https://api.ekodi.kr/api/control/platform-maturity';
+  const response=await fetch(endpoint,{headers:{accept:'application/json',authorization:`Bearer ${token}`,origin:adminOrigin},signal:AbortSignal.timeout(10_000)});
+  if(response.status!==200)throw new Error(`maturity: API returned HTTP ${response.status}`);
+  const payload=await response.json().catch(()=>({}));
+  if(payload.certificationStatus!=='not-claimed'||payload.current?.certificationStatus!=='not-claimed')throw new Error('maturity: certification boundary drift');
+  if(!Array.isArray(payload.model?.domains)||payload.model.domains.length<1)throw new Error('maturity: model domains missing');
+  if(!Array.isArray(payload.history)||payload.history.length<1)throw new Error('maturity: history summary missing');
+  if(!payload.serviceScopes?.summary?.totalScopes||!Array.isArray(payload.serviceScopes.services)||!Array.isArray(payload.serviceScopes.workspaceSites)||!Array.isArray(payload.serviceScopes.systemFunctions))throw new Error('maturity: subordinate service/site/function coverage missing');
+  if([...payload.serviceScopes.services,...payload.serviceScopes.workspaceSites,...payload.serviceScopes.systemFunctions].some(item=>item.localMaturityScore!==null))throw new Error('maturity: unevidenced subordinate score exposed');
+  if(payload.serviceScopes.summary.systemFunctions!==payload.serviceScopes.systemFunctions.length)throw new Error('maturity: system function summary mismatch');
+  if(!alreadyActive)await clickFast(tab);
+  stage('maturity-render');
+  await page.waitForFunction(()=>{
+    const panel=document.querySelector('[data-panel~="maturity"]');
+    const view=panel?.querySelector('[data-maturity-view]');
+    const status=panel?.querySelector('[data-maturity-status]');
+    const text=String(view?.innerText||'').replace(/\s+/g,' ').trim();
+    return Boolean(panel&&view&&!view.hidden&&status?.hidden&&text.includes('종합 내부 성숙도')&&text.includes('/ 5.00'));
+  },null,{timeout:10_000});
+  const state=await visiblePanelState();
+  const text=String(await page.locator('[data-panel~="maturity"] [data-maturity-view]').textContent()||'').replace(/\s+/g,' ').trim();
+  if(!state.panelFound||!state.selected||state.busy)throw new Error(`maturity panel invalid: ${JSON.stringify(state)}`);
+  if(!text.includes('외부 인증 주장 안 함'))throw new Error('maturity: certification status not rendered');
+  const scopeRows=await page.locator('[data-panel~=\"maturity\"] [data-maturity-scope-row]').count();
+  if(scopeRows!==payload.serviceScopes.summary.totalScopes)throw new Error(`maturity: subordinate scope render mismatch expected=${payload.serviceScopes.summary.totalScopes} actual=${scopeRows}`);
+  if(text.includes('불러오지 못했습니다'))throw new Error('maturity: data load error rendered');
+  results.push({id:menuId,group,ok:true,durationMs:Date.now()-started,...state,apiStatus:response.status,assessmentDate:payload.assessmentDate,historyCount:payload.history.length,subordinateScopeCount:payload.serviceScopes.summary.totalScopes,systemFunctionCount:payload.serviceScopes.summary.systemFunctions});
+}
+
+async function verifyRegistryHref(trigger, started) {
   const definition = getAdminMenuItem(menuId);
   if (!definition?.href || definition.adminHandoff) throw new Error(`${menuId}: direct registry href contract missing`);
   const expected = new URL(definition.href);
@@ -334,7 +409,7 @@ async function verifyRegistryHref(tab, started) {
   if (sourceTarget !== '_blank') throw new Error(`${menuId}: direct registry href must open as an isolated external admin surface`);
   stage('registry-handoff');
   const popupPromise = page.waitForEvent('popup', { timeout:10_000 });
-  await clickFast(tab);
+  await clickFast(trigger);
   const popup = await popupPromise;
   try {
     await popup.waitForURL(url => url.origin === expected.origin && url.pathname.replace(/\/$/, '') === expected.pathname.replace(/\/$/, ''), { waitUntil:'commit', timeout:10_000 });
@@ -381,7 +456,7 @@ try {
   page.on('pageerror', error => pageErrors.push(String(error?.stack || error?.message || error)));
   page.on('console', message => { if (message.type() === 'error') consoleErrors.push(message.text()); });
   page.on('requestfailed', request => {
-    try { const url = new URL(request.url()); if (url.hostname === 'admin.ekodi.kr' && /\.(?:js|css)(?:$|\?)/.test(url.pathname + url.search)) failedAdminAssets.push(`${request.method()} ${request.url()} :: ${request.failure()?.errorText || 'failed'}`); } catch {}
+    try { const url = new URL(request.url()); if (url.hostname === 'ekodi.kr' && /\.(?:js|css)(?:$|\?)/.test(url.pathname + url.search)) failedAdminAssets.push(`${request.method()} ${request.url()} :: ${request.failure()?.errorText || 'failed'}`); } catch {}
   });
 
   stage('navigation');
@@ -393,25 +468,35 @@ try {
   for (const id of menuIds) if (!productionOrder.includes(id)) throw new Error(`Production menu registry missing ${id}`);
 
   const started = Date.now();
+  await prepareTargetDemand();
   await selectWorkArea();
-  stage('tab');
-  const tab = page.locator(`button.admin-context-tab[data-admin-context-section="${menuId}"]`);
-  await tab.waitFor({ state: 'visible', timeout: 5_000 });
-  const aria = await tab.getAttribute('aria-selected');
-  const classes = String(await tab.getAttribute('class') || '');
-  let alreadyActive = aria === 'true' || classes.split(/\s+/).includes('active');
-  if (alreadyActive) {
-    stage('active-panel-check');
-    const activeState = await visiblePanelState();
-    alreadyActive = Boolean(activeState.panelFound && activeState.selected && activeState.textLength >= 4);
+  if (menuId === 'tax') await waitForAdminNavigationIdle();
+  const directDefinition = getAdminMenuItem(menuId);
+  if (directDefinition?.href && !directDefinition.adminHandoff) {
+    stage('registry-link');
+    const tab = page.locator(`button.admin-context-tab[data-admin-context-section="${menuId}"]`);
+    await tab.waitFor({ state: 'visible', timeout: 5_000 });
+    await verifyRegistryHref(tab, started);
+  } else {
+    stage('tab');
+    const tab = page.locator(`button.admin-context-tab[data-admin-context-section="${menuId}"]`);
+    await tab.waitFor({ state: 'visible', timeout: 5_000 });
+    const aria = await tab.getAttribute('aria-selected');
+    const classes = String(await tab.getAttribute('class') || '');
+    let alreadyActive = aria === 'true' || classes.split(/\s+/).includes('active');
+    if (alreadyActive) {
+      stage('active-panel-check');
+      const activeState = await visiblePanelState();
+      alreadyActive = Boolean(activeState.panelFound && activeState.selected && activeState.textLength >= 4);
+    }
+    if (menuId === 'storage') await verifyStorage(tab, alreadyActive, started);
+    else if (menuId === 'tax') await verifyTax(tab, alreadyActive, started);
+    else if (menuId === 'public-site-controls') await verifyPublicSiteControls(tab, alreadyActive, started);
+    else if (menuId === 'language-status') await verifyLanguageStatus(tab, alreadyActive, started);
+    else if (menuId === 'maturity') await verifyMaturity(tab, alreadyActive, started);
+    else if (menuId === 'ai-settings') await verifyAiSettings(tab, alreadyActive, started);
+    else await verifyNormal(tab, alreadyActive, started);
   }
-  if (menuId === 'storage') await verifyStorage(tab, alreadyActive, started);
-  else if (menuId === 'tax') await verifyTax(tab, alreadyActive, started);
-  else if (menuId === 'public-site-controls') await verifyPublicSiteControls(tab, alreadyActive, started);
-  else if (menuId === 'language-status') await verifyLanguageStatus(tab, alreadyActive, started);
-  else if (menuId === 'ai-settings') await verifyAiSettings(tab, alreadyActive, started);
-  else if (getAdminMenuItem(menuId)?.href && !getAdminMenuItem(menuId)?.adminHandoff) await verifyRegistryHref(tab, started);
-  else await verifyNormal(tab, alreadyActive, started);
 
   stage('diagnostics');
   if (failedAdminAssets.length) throw new Error(`Admin JS/CSS request failures: ${failedAdminAssets.join(' | ')}`);

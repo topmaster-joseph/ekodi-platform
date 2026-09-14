@@ -33,5 +33,5 @@ test('Mall campaign survives landing to outbound click without storing customer 
   assert.match(migration,/affiliate_growth_policy_snapshots/);
   assert.match(migration,/expected_commission_per_visit_krw/);
   assert.doesNotMatch(migration,/(email|phone|address)\s+TEXT/i);
-  assert.match(entry,/if \(!mallPromotionAutomationEnabled\(env\)\) return;/);
+  assert.match(entry,/runMallAutonomousProfitLoop/);
 });

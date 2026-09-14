@@ -52,7 +52,7 @@
 
   async function installGoogleLogin() {
     const card = document.querySelector('#loginScreen .login-card');
-    if (!card || token()) return;
+    if (!card || token() || document.querySelector('#centralAdminLogin')) return;
 
     const panel = element('section', '', 'google-auth-panel');
     panel.id = 'googleAdminLogin';

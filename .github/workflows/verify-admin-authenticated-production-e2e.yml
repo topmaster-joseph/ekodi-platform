@@ -121,6 +121,7 @@ jobs:
             echo '## Authenticated admin browser E2E' >> "$GITHUB_STEP_SUMMARY"
             echo '' >> "$GITHUB_STEP_SUMMARY"
             jq -r '"- Passed: \(.passed)\n- Menus checked: \(.checkedMenuCount)/\(.expectedMenuCount)\n- Page errors: \(.diagnostics.pageErrors|length)\n- Admin asset failures: \(.diagnostics.failedAdminAssets|length)"' artifacts/admin-authenticated-e2e/report.json >> "$GITHUB_STEP_SUMMARY"
+            jq -r '.results[] | select(.id == "tax") | "- Tax authenticated handoff: \(.tokenHandoffVerified)\n- Tax supplier save: \(.supplierSaveVerification)\n- Tax PUT status: \(.writeStatus // "n/a")\n- Tax persistence readback: \(.persistenceReadbackStatus // "n/a")\n- Tax persistence verified: \(.persistenceVerified // false)\n- Tax compared fields: \(.comparedFieldCount // 0)"' artifacts/admin-authenticated-e2e/report.json >> "$GITHUB_STEP_SUMMARY"
           fi
 
       - name: Revoke short-lived E2E session

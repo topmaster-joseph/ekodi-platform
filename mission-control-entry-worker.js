@@ -31,6 +31,10 @@ import { handleExternalAiModuleGateway } from './external-ai-module-gateway.js';
 import { runAiProviderHealthSchedule } from './ai-provider-control.js';
 import { handleEkodiMcpGateway, handleEkodiMcpMetadata } from './ekodi-mcp-gateway.js';
 import { handleDevotionalControl } from './devotional-control.js';
+import { handleLearningControl } from './learning-control.js';
+import { handleLocalCommerceControl } from './local-commerce-control.js';
+import { handleExternalAccountControl } from './external-account-control.js';
+import { handleRealtimeControl } from './realtime-control.js';
 import { applyApiSecurityHeaders, enforceEdgeSecurity } from './security-edge.js';
 
 function errorResponse(message, code) {
@@ -138,6 +142,26 @@ export default {
         if (response) return userAiResponse(response);
       }
       catch (error) { console.error('User AI control error', error); return errorResponse('개인 AI 연결 처리 중 오류가 발생했습니다.', 'USER_AI_CONTROL_ERROR'); }
+    }
+
+    if (path.startsWith('/api/learning/')) {
+      try { const response = await handleLearningControl(request, env); if (response) return applyApiSecurityHeaders(response); }
+      catch (error) { console.error('Learning Fabric control error', error); return errorResponse('학습 운영 API 처리 중 오류가 발생했습니다.', 'LEARNING_CONTROL_ERROR'); }
+    }
+
+    if (path.startsWith('/api/local-commerce')) {
+      try { const response = await handleLocalCommerceControl(request, env); if (response) return applyApiSecurityHeaders(response); }
+      catch (error) { console.error('Local Commerce control error', error); return errorResponse('지역상권 상품권 처리 중 오류가 발생했습니다.', 'LOCAL_COMMERCE_CONTROL_ERROR'); }
+    }
+
+    if (path.startsWith('/api/control/external-accounts')) {
+      try { const response = await handleExternalAccountControl(request, env); if (response) return applyApiSecurityHeaders(response); }
+      catch (error) { console.error('External Account Control error', error); return errorResponse('외부계정 통합운영 처리 중 오류가 발생했습니다.', 'EXTERNAL_ACCOUNT_CONTROL_ERROR'); }
+    }
+
+    if (path.startsWith('/api/realtime')) {
+      try { const response = await handleRealtimeControl(request, env); if (response) return applyApiSecurityHeaders(response); }
+      catch (error) { console.error('Realtime control error', error); return errorResponse('실시간 방송 처리 중 오류가 발생했습니다.', 'REALTIME_CONTROL_ERROR'); }
     }
 
     if (path.startsWith('/api/membership/')) {

@@ -33,7 +33,7 @@ test('trade partner and trade admin routes are apex workspace routes',async()=>{
 
 test('trade auth uses EKODIBIZ tenant and canonical apex portal',async()=>{
   const [auth,access]=await Promise.all([read('auth-site/auth.js'),read('supabase/functions/access-api/index.ts')]);
-  assert.ok(auth.includes("trade:{name:'EKODI Global Trading',tenant:'ekodi-biz'"));  assert.ok(auth.includes("returnTo:'https://ekodi.kr/ekodibiz/trade'"));
+  assert.ok(auth.includes("trade:{name:'EKODI Global Trading',tenant:'ekoditrade'"));  assert.ok(auth.includes("returnTo:'https://ekodi.kr/ekodibiz/trade'"));
   assert.ok(auth.includes('requestable:false'));
   assert.ok(access.includes('trade:["https://ekodi.kr","https://trade.biz.ekodi.kr","https://trade.ekodi.kr"]'));
 });
@@ -69,9 +69,9 @@ test('workspace API exposes authenticated trade partner operations',async()=>{
 
 test('canonical EKODIBIZ URL slug maps to immutable internal tenant slug',async()=>{
   const [portal,admin,auth]=await Promise.all([read('workspace-trade-portal.js'),read('workspace-trade-admin-page.js'),read('auth-site/auth.js')]);
-  assert.ok(portal.includes("const WORKSPACE='ekodi-biz'"));
-  assert.ok(admin.includes("workspaceUrlSlug==='ekodibiz'?'ekodi-biz':workspaceUrlSlug"));
-  assert.ok(auth.includes("tenant:'ekodi-biz'"));
+  assert.ok(portal.includes("const WORKSPACE='ekoditrade'"));
+  assert.ok(admin.includes("workspaceUrlSlug==='ekodibiz'?'ekoditrade':workspaceUrlSlug"));
+  assert.ok(auth.includes("tenant:'ekoditrade'"));
 });
 
 test('EKODIBIZ canonical workspace root is backed by the EKODIBIZ service',async()=>{
@@ -107,4 +107,6 @@ test('trade admin uses shared two-level UI and canonical apex auth',async()=>{
   assert.ok(tradeAdmin.includes("new URL('/auth/',location.origin)"));
   assert.ok(!tradeAdmin.includes('https://auth.ekodi.kr/'));
   assert.ok(tradeAdmin.includes("'cache-control':'no-store'"));
+  assert.ok(tradeAdmin.includes('거래회사 데이터 비공개'));
+  assert.ok(tradeAdmin.includes('관계자 화면 보기'));
 });

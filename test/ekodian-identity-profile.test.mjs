@@ -28,8 +28,8 @@ test('EKODIAN identity registry is explicit, privacy-preserving and Generation 8
   assert.equal(registry.governance.faceEmbeddings,'forbidden');
   assert.equal(registry.assetPolicy.noEmbeddedBase64Portraits,true);
   assert.equal(registry.schemaVersion,2);
-  assert.equal(registry.resolve('founder').visual.portraitUrl,'https://shell.ekodi.kr/assets/ekodian/founder-face.webp');
-  assert.equal(registry.resolve('founder-pastor').visual.portraitUrl,'https://shell.ekodi.kr/assets/ekodian/founder-face.webp');
+  assert.equal(registry.resolve('founder').visual.portraitUrl,'https://ekodi.kr/shell/assets/ekodian/founder-face.webp');
+  assert.equal(registry.resolve('founder-pastor').visual.portraitUrl,'https://ekodi.kr/shell/assets/ekodian/founder-face.webp');
   assert.equal(registry.assetPolicy.localPersonalPortraitProtocol,'blob:');
   assert.ok(Object.isFrozen(registry));
   assert.equal(events.at(-1)?.type,'ekodi:character-identity-registry-ready');

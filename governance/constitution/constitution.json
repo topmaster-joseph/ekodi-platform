@@ -1,6 +1,6 @@
 {
-  "version": "1.10.0",
-  "effectiveDate": "2026-09-10",
+  "version": "1.16.0",
+  "effectiveDate": "2026-09-14",
   "status": "active",
   "title": "EKODI Platform Constitution",
   "principles": [
@@ -28,7 +28,12 @@
     "person-workspace-role-capability-authority",
     "observe-detect-reason-plan-execute-verify-recover-learn",
     "generation-10-active-baseline",
-    "open-ended-evidence-driven-generation-evolution"
+    "open-ended-evidence-driven-generation-evolution",
+    "ekodibiz-exclusive-commercial-subject",
+    "ordinary-user-information-first-commercial-separation",
+    "completion-continuity-through-recoverable-interruptions",
+    "supreme-attributes-binding",
+    "site-owned-admin-canonical-path"
   ],
   "architectureModel": {
     "registry": "governance/architecture/ekodi-os-architecture.json",
@@ -102,8 +107,11 @@
     "canonicalOperatingTerm": "Workspace",
     "legacySpaceIsCompatibilityOnly": true,
     "personalHomeCanonicalPath": "/my",
-    "administrationCanonicalPath": "/admin",
-    "workspaceAdminCanonical": "/admin/workspaces"
+    "workspaceAdminCanonical": "/{slug}/admin",
+    "platformAdministrationCanonicalPath": "/admin",
+    "workspaceChildAdminCanonical": "/{slug}/{service}/admin",
+    "workspaceAdminDirectory": "/admin/workspaces",
+    "centralAdminChildAliasForbidden": true
   },
   "domainPolicy": {
     "newFeatureSubdomainsForbidden": true,
@@ -122,7 +130,6 @@
     "https://user.ekodi.kr/{slug}": "https://ekodi.kr/{slug}"
   },
   "legacyDomainAllowlist": [
-    "shell.ekodi.kr",
     "management.ekodi.kr",
     "mall.ekodi.kr",
     "mall.biz.ekodi.kr",
@@ -134,7 +141,6 @@
     "edu.ekodi.kr",
     "bible.ekodi.kr",
     "life.ekodi.kr",
-    "support.ekodi.kr",
     "money.ekodi.kr",
     "social.ekodi.kr",
     "energy.ekodi.kr",
@@ -282,10 +288,9 @@
     "rule": "C2/C3 changes are proposed first and applied only after explicit owner confirmation."
   },
   "legacyDomainTargets": {
-    "shell.ekodi.kr": "https://ekodi.kr/my",
     "management.ekodi.kr": "https://ekodi.kr/my/management",
-    "mall.ekodi.kr": "https://ekodi.kr/ekodibiz/mall",
-    "mall.biz.ekodi.kr": "https://ekodi.kr/ekodibiz/mall",
+    "mall.ekodi.kr": "https://ekodi.kr/ekodibiz/ekodimall",
+    "mall.biz.ekodi.kr": "https://ekodi.kr/ekodibiz/ekodimall",
     "cafe.ekodi.kr": "https://ekodi.kr/cafe",
     "books.ekodi.kr": "https://ekodi.kr/books",
     "publishing.ekodi.kr": "https://ekodi.kr/publish",
@@ -294,7 +299,6 @@
     "edu.ekodi.kr": "https://ekodi.kr/education",
     "bible.ekodi.kr": "https://ekodi.kr/bible",
     "life.ekodi.kr": "https://ekodi.kr/life",
-    "support.ekodi.kr": "https://ekodi.kr/support",
     "money.ekodi.kr": "https://ekodi.kr/money",
     "social.ekodi.kr": "https://ekodi.kr/social",
     "energy.ekodi.kr": "https://ekodi.kr/energy",
@@ -516,5 +520,77 @@
       "system": "/admin/system/{capability}"
     },
     "rule": "One domain, multiple security realms: human and management surfaces are canonical paths on ekodi.kr; subdomains may remain only as justified internal, protocol, emergency or compatibility execution boundaries."
+  },
+  "commercialSubjectPolicy": {
+    "id": "REV-001",
+    "status": "active",
+    "subject": "ekodibiz",
+    "exclusiveForEkodiRevenueBusinesses": true,
+    "technologyProvider": "ekodi",
+    "ordinaryUserMode": "information-only",
+    "ordinaryUserAllowed": [
+      "discover",
+      "recommend",
+      "compare",
+      "explain",
+      "save",
+      "remind",
+      "request-managed-service"
+    ],
+    "ordinaryUserBlocked": [
+      "platform-merchant-role",
+      "platform-revenue-collection",
+      "platform-commercial-contracting",
+      "revenue-cell-operation",
+      "autonomous-revenue-operation"
+    ],
+    "tenantCommercialExecution": "ekodibiz-managed-only",
+    "externalUserOwnedBusinessUnaffected": true,
+    "rule": "All EKODI-platform revenue businesses use EKODIBIZ as revenue owner, operator, merchant of record and contracting entity. Ordinary users receive information, recommendation and managed-service referral only unless acting through an explicitly authorized EKODIBIZ operator role."
+  },
+  "completionContinuityPolicy": {
+    "id": "COMPLETE-CONTINUITY-001",
+    "status": "active",
+    "interruptionDefault": "recoverable",
+    "recoverableInterruptionClasses": [
+      "session-ended",
+      "tool-unavailable",
+      "connector-failure",
+      "rate-limit",
+      "execution-window-ended",
+      "transient-infrastructure-failure"
+    ],
+    "checkpointRequired": true,
+    "checkpointFields": [
+      "task_id",
+      "branch",
+      "current_commit_sha",
+      "completed_steps",
+      "pending_steps",
+      "last_validation_result",
+      "deployment_state",
+      "blocking_dependency",
+      "next_executable_step",
+      "resume_timestamp"
+    ],
+    "alternateAuthorizedPathBeforeEscalation": true,
+    "resumeFromCheckpoint": true,
+    "blockedReservedForAuthorityOrDependency": true,
+    "authorityExpansionForbidden": true,
+    "productionVerificationStillRequired": true
+  },
+  "supremeAttributesPolicy": {
+    "id": "EKODI-SUPREME-ATTRIBUTES-001",
+    "registry": "governance/constitution/supreme-attributes.v1.json",
+    "bindingLevel": "supreme-mandatory",
+    "attributeCount": 21,
+    "allRequired": true,
+    "nonRegressionRequired": true,
+    "appliesToAllPlatformChanges": true,
+    "appliesToFutureGenerations": true,
+    "implementationWaiverForbidden": true,
+    "aiSelfWaiverForbidden": true,
+    "exceptionRequiresConstitutionalAmendment": true,
+    "finalAuthority": "ekodi_platform_super_administrator"
   }
 }

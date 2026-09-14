@@ -90,7 +90,7 @@ function trustedPortraitUrl(identity=identityProfile()){
   if(!raw||raw.startsWith('data:'))return '';
   if(raw.startsWith('blob:'))return identity?.id==='personal'&&identity?.subjectAuthorized===true&&identity?.visual?.localOnly===true?raw:'';
   try{
-    const scriptBase=document.currentScript?.src?new URL('.',document.currentScript.src):new URL('https://shell.ekodi.kr/');
+    const scriptBase=document.currentScript?.src?new URL('.',document.currentScript.src):new URL('https://ekodi.kr/shell/');
     const url=new URL(raw,scriptBase);
     const host=url.hostname.toLowerCase();
     const allowed=host==='ekodi.kr'||host.endsWith('.ekodi.kr');
@@ -332,7 +332,7 @@ function clearOperation(){
 }
 function registryUrl(){
   try{const src=document.currentScript?.src;if(src)return new URL(REGISTRY_ASSET,src).href;}catch{}
-  return `https://shell.ekodi.kr/${REGISTRY_ASSET}`;
+  return `https://ekodi.kr/shell/${REGISTRY_ASSET}`;
 }
 function ensureRegistry(){
   if(registry()||document.querySelector(`script[${REGISTRY_ATTR}]`))return;
@@ -340,7 +340,7 @@ function ensureRegistry(){
 }
 function identityRegistryUrl(){
   try{const src=document.currentScript?.src;if(src)return new URL(IDENTITY_REGISTRY_ASSET,src).href;}catch{}
-  return `https://shell.ekodi.kr/${IDENTITY_REGISTRY_ASSET}`;
+  return `https://ekodi.kr/shell/${IDENTITY_REGISTRY_ASSET}`;
 }
 function ensureIdentityRegistry(){
   if(identityRegistry()||document.querySelector(`script[${IDENTITY_REGISTRY_ATTR}]`))return;

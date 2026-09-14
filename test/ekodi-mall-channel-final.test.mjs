@@ -5,7 +5,9 @@ const read = path => readFile(new URL(`../${path}`, import.meta.url),'utf8');
 
 test('Mall channel console unifies connection policy AI allocation and job recovery', async()=>{
   const ui=await read('workspace-admin-page.js');
-  assert.match(ui,/게시 · 홍보 채널 통합관리/);
+  assert.match(ui,/채널설정/);
+  assert.match(ui,/adminBase=service\?`\$\{base\}\/ekodimall\/admin`/);
+  assert.match(ui,/channel-settings/);
   assert.match(ui,/channelPolicyForm/);
   assert.match(ui,/channelAiForm/);
   assert.match(ui,/data-channel-control/);
@@ -30,7 +32,7 @@ test('publishing engine enforces channel controls before provider execution', as
 
 test('Mall OAuth projection preserves explicit control while applying safe defaults', async()=>{
   const growth=await read('marketing-growth-worker.js');
-  assert.match(growth,/mallSubject=subject\.type==='tenant'&&subject\.key==='ekodi-biz'/);
+  assert.match(growth,/mallSubject=subject\.type==='tenant'&&subject\.key==='ekodimall'/);
   assert.match(growth,/\['facebook','instagram','threads'\]\.includes\(provider\)/);
   assert.match(growth,/maxPostsPerDay:1/);
   assert.match(growth,/minHoursBetweenPosts:6/);

@@ -119,7 +119,7 @@ test('admin menu governance uses five canonical EKODI axes with contextual top t
   const registry = await read('admin-menu-registry.js');
   const sidebar = await read('admin-sidebar.js');
   assert.match(registry, /ADMIN_MENU_GROUPS/);
-  for (const group of ['home', 'operations', 'space', 'services', 'system']) {
+  for (const group of ['home', 'operations', 'workspaces', 'services', 'system']) {
     assert.match(registry, new RegExp(`id: '${group}'`));
   }
   for (const retired of ['structure', 'core', 'common', 'vertical', 'tenants', 'operations-center', 'people', 'ai', 'business', 'data', 'site-management', 'access', 'security-audit', 'settings']) {
@@ -127,7 +127,7 @@ test('admin menu governance uses five canonical EKODI axes with contextual top t
   }
   assert.match(registry, /id: 'campus', group: 'home'/);
   assert.match(registry, /id: 'work', group: 'operations'/);
-  assert.match(registry, /id: 'clients', group: 'space'/);
+  assert.match(registry, /id: 'clients', group: 'workspaces'/);
   assert.match(registry, /id: 'common-services', group: 'services'/);
   assert.match(registry, /id: 'life-ai', group: 'services'/);
   assert.match(registry, /id: 'security', group: 'system'/);

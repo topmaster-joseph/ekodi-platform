@@ -1,8 +1,17 @@
-# EKODI Platform Constitution v1.10.0
+# EKODI Platform Constitution v1.16.0
 
-Effective: 2026-09-10
+Effective: 2026-09-14
 
 This constitution is the highest architecture and operations rule for EKODI Platform. Existing validators remain authoritative implementation guards; this document unifies their intent and governs future changes.
+
+## 0. Supreme Ecosystem Attributes Constitution
+- The following **21 Supreme Attributes** are the highest non-optional quality constraints of the EKODI ecosystem and bind Generation 10 and every future generation: **Independence, Modularity, Scalability, Standardization, Consistency, Collaboration, Agility, Creativity, Security, Evolvability, Adaptability, Replaceability, Reversibility, Resilience, Observability, Verifiability, Interoperability, Data Sovereignty, Autonomous Operations, Economic Sustainability, Simplicity**.
+- In Korean canonical terms: **독립성 · 모듈성 · 확장성 · 표준성 · 일관성 · 협업성 · 신속성 · 창조성 · 보안성 · 진화가능성 · 적응성 · 교체가능성 · 가역성 · 회복탄력성 · 관측가능성 · 검증가능성 · 상호운용성 · 데이터주권 · 자율운영성 · 경제적 지속가능성 · 단순성**.
+- These attributes apply to governance, architecture, source code, AI/agent behavior, data, security, UX, integrations, infrastructure, operations, cost decisions and future-generation evolution.
+- They are **supreme-mandatory**: no implementation, provider, AI agent, individual service or workspace may silently waive, locally override or regress them. An exception requires an explicit constitutional amendment under C2/C3 authority.
+- The attributes are optimized as one system rather than traded away independently. Tensions must be documented and evidence-based; security, data sovereignty and sovereign human authority are mandatory floors that no tradeoff may reduce.
+- The operating maxim is: **independent yet connected; consistent without uniformity; stable without rigidity; creative without losing control; fast without becoming reckless; extensible without uncontrolled complexity**.
+- Machine-readable authority: `governance/constitution/supreme-attributes.v1.json`. Repository validation and CI must fail when the registry, constitutional binding or required enforcement mappings regress.
 
 ## 1. Architecture Constitution
 - EKODI Core owns identity linkage, tenant/workspace, membership/RBAC, business state, configuration, automation and audit truth.
@@ -43,8 +52,9 @@ This constitution is the highest architecture and operations rule for EKODI Plat
 - Development mirrors production system boundaries on nested `*.dev.ekodi.kr` hosts such as `my.dev.ekodi.kr`, `admin.dev.ekodi.kr`, `auth.dev.ekodi.kr` and `api.dev.ekodi.kr`; the root `dev.ekodi.kr` is reserved for the public EKODI Developer portal.
 - Subdomains represent justified system, security, protocol, common-service or core-service boundaries. They must not represent person, organization, group or project identity.
 - Canonical public user-space addresses use the universal root pattern `ekodi.kr/{slug}`. Workspace kind is internal metadata and is never encoded into the public URL.
-- Workspace child services use `ekodi.kr/{slug}/{service}`. Administration is centralized under `ekodi.kr/admin`, with Workspace context carried by authorization and operating context rather than customer identity encoded in the canonical management URL.
-- Administrator internal navigation and its canonical subpaths use the same five management work areas: `/admin/home/*`, `/admin/operations/*`, `/admin/workspaces/*`, `/admin/services/*`, and `/admin/system/*`. Legacy `/admin/common/*`, `/admin/professional/*`, `/admin/space/*`, and earlier mismatched group/section combinations are compatibility inputs only and must converge to the five-area canonical path without changing authorization authority.
+- Workspace child services use `ekodi.kr/{slug}/{service}`. Every independently managed site uses its own public canonical path plus `/admin`: a Workspace uses `ekodi.kr/{slug}/admin`, and a child site or service uses `ekodi.kr/{slug}/{service}/admin`. The URL is a routing locator only; authorization still resolves from immutable identity and Person + Workspace + Role + Capability.
+- `ekodi.kr/admin` is the EKODI Platform Super Administrator control plane. It may aggregate directory, status, observability, search and explicit handoff to lower administrators, but it must not create an alternate lower-site administrator URL such as `/admin/{site}` or `/{parent}/admin/{child-site}`. Parent administrators follow the same rule.
+- Platform-owned administrator internal navigation keeps the five management work areas `/admin/home/*`, `/admin/operations/*`, `/admin/workspaces/*`, `/admin/services/*`, and `/admin/system/*`. These paths govern platform-owned capabilities and are not substitute operational admin URLs for independently managed sites. Legacy or aggregate lower-admin aliases may redirect during migration but must never render the lower administrator UI.
 - `space.ekodi.kr`, `user.ekodi.kr` and per-tenant subdomains are not canonical workspace addresses. If such aliases exist, they must redirect to the corresponding `ekodi.kr` path while preserving the remaining path where practical.
 - `ekodi.kr/my` is the canonical personal authenticated home. `my.ekodi.kr` may remain temporarily as a compatibility or internal execution boundary only.
 - Public and private routing resolve tenant/workspace authorization from immutable `workspace_id`; URL host, path and slug are routing locators, not identity or authorization truth.
@@ -56,6 +66,7 @@ This constitution is the highest architecture and operations rule for EKODI Plat
 - `marketing.ekodi.kr` is the registered EKODI Marketing Core engine boundary. It is not the ordinary product or customer entry; the product entry is `ekodi.kr/ekodibiz/marketing-ai`, and workspace marketing uses `ekodi.kr/{slug}/marketing`.
 - `ai.ekodi.kr` is the registered provider-independent AI Gateway/Core boundary. Customer-specific `*.ai.ekodi.kr` addresses are compatibility execution aliases only and must not be presented as canonical user URLs.
 - Existing feature subdomains are legacy aliases unless explicitly registered as current system/common/core service boundaries. No new convenience or tenant-specific subdomain may be added without a constitutional amendment and the sustainable boundary-creation gate.
+- `https://ekodi.kr/support` is the sole canonical Support user entry. `support.ekodi.kr` is retired and is not retained as a compatibility redirect.
 - Customer-owned domains map to a workspace public surface and never redefine EKODI internal identity, `workspace_id` or private routing.
 - CGMA uses `https://ekodi.kr/cgma` as its EKODI platform route and `https://cgma.or.kr` as its customer-owned public address; legacy `cgma.ekodi.kr` is compatibility-only.
 
@@ -117,6 +128,14 @@ This constitution is the highest architecture and operations rule for EKODI Plat
 - Secrets remain server-side and credentials are capability-scoped with least privilege.
 - Existing deployment boundaries are preserved as the migration baseline. New independent deployment boundaries are exceptional and require the sustainable boundary-creation gate defined by the evolution model.
 - Capacity expansion follows the order: remove root cause -> optimize cache/query/workload shape -> queue/retry heavy work -> increase shared capacity -> isolate only measured bottlenecks -> add redundancy only when justified.
+
+## 8A. Completion Continuity Constitution
+- A session ending, execution-window limit, temporary tool unavailability, connector failure, rate limit or transient infrastructure failure is a **recoverable interruption**, not evidence of completion and not by itself a blocked state.
+- Recoverable work records a checkpoint containing task/branch/commit identity, completed and pending steps, latest validation and deployment state, blocking dependency, next executable step and resume timestamp.
+- The next authorized worker resumes from the checkpoint instead of restarting completed work or silently abandoning it.
+- Before escalating a recoverable interruption, EKODI attempts an available authorized alternative path under Cloud First and existing provider-independent fallback rules.
+- Continuity never expands authority, bypasses credentials, weakens safety gates or permits direct production mutation. A genuine blocked state is reserved for an authority, safety, credential, human-approval or external dependency that cannot be resolved within delegated authority.
+- Commit, PR, merge, deployment, session termination or tool termination never substitutes for required production verification evidence.
 
 ## 9. Change Constitution
 - **C0**: operational parameter change with no constitutional impact. Automated validation may apply it.

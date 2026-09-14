@@ -51,7 +51,7 @@ jobs:
         run: |
           set -u
           failed=0
-          for domain in biz.ekodi.kr church.ekodi.kr live.church.ekodi.kr lab.ekodi.kr mall.ekodi.kr mall.biz.ekodi.kr mail.biz.ekodi.kr mail.church.ekodi.kr mail.lab.ekodi.kr mail.books.ekodi.kr mail.trade.ekodi.kr; do
+          for domain in biz.ekodi.kr live.church.ekodi.kr mall.ekodi.kr mall.biz.ekodi.kr mail.biz.ekodi.kr mail.church.ekodi.kr mail.lab.ekodi.kr mail.books.ekodi.kr mail.trade.ekodi.kr; do
             code=000
             for attempt in $(seq 1 20); do code=$(curl -sS -o /tmp/site.html -w '%{http_code}' --connect-timeout 5 --max-time 10 "https://$domain/" || true); case "$code" in 2*|3*) break ;; esac; sleep 3; done
             echo "$domain edge_http=$code"; case "$code" in 2*|3*) ;; *) failed=1 ;; esac
@@ -60,6 +60,6 @@ jobs:
           for domain in mall.ekodi.kr mall.biz.ekodi.kr; do
             headers=$(curl -sS -o /dev/null -D - --connect-timeout 5 --max-time 15 "https://$domain/" || true)
             echo "$headers" | tr -d '\r' | grep -Fq 'HTTP/2 308' || failed=1
-            echo "$headers" | tr -d '\r' | grep -Fqi 'location: https://ekodi.kr/ekodibiz/mall' || failed=1
+            echo "$headers" | tr -d '\r' | grep -Fqi 'location: https://ekodi.kr/ekodibiz/ekodimall' || failed=1
           done
           exit "$failed"

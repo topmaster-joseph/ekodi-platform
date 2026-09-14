@@ -4,7 +4,7 @@ const script=document.currentScript;
 if(window.__EKODI_SHELL_BOOTED)return;
 window.__EKODI_SHELL_BOOTED=true;
 
-const SHELL_ORIGIN='https://shell.ekodi.kr';
+const SHELL_ORIGIN='https://ekodi.kr/shell';
 const MANIFEST_URL=`${SHELL_ORIGIN}/manifest.json`;
 const THEME_URL=`${SHELL_ORIGIN}/theme.json`;
 const AUTH='https://ekodi.kr/auth/';
@@ -20,7 +20,7 @@ const handedTenant=fragment.get('ekodi_tenant')||'';
 const handedStore=fragment.get('ekodi_store')||'';
 
 const FALLBACK_THEME={
-  version:3,
+  version:5,
   workspace:{background:'#071522',surface:'#0B1D2E',surfaceRaised:'#10263A',border:'#24425E',text:'#F4F7FB',muted:'#9FB1C3',focus:'#8EC8FF',radius:'16px'},
   rules:{
     stableSurfaces:['workspace','admin','form','document','data'],
@@ -36,6 +36,7 @@ const FALLBACK_THEME={
     books:{accent:'#C99084',public:{motif:'paper',companion:'#8B2742'}},
     trade:{accent:'#58D7F2',public:{motif:'grid',companion:'#80E3FF'}},
     lab:{accent:'#E39463',public:{motif:'paper',companion:'#5C92C8'}},
+    learn:{accent:'#6FBF8F',public:{motif:'flow',companion:'#F1C84B'}},
     my:{accent:'#7CC7FF',public:{motif:'orbit',companion:'#B5A2FF'}}
   },
   publicExperience:{
@@ -349,6 +350,35 @@ function buildUi(){
   wrap.append(button,panel);shadow.append(style,wrap);document.documentElement.append(host);root=shadow;render();
 }
 function refreshThemeCycle(){if(!service)return;applyHostTokens();render();}
+
+function applyProgressiveHomeFocus(){
+  if(!service||surface!=='public'||['church','ekodi'].includes(service.id))return;
+  let home;try{home=new URL(service.url);}catch{return;}
+  const clean=p=>(p.replace(/\/+$/,'')||'/').toLowerCase();
+  if(location.hostname.toLowerCase()!==home.hostname.toLowerCase()||clean(location.pathname)!==clean(home.pathname))return;
+  const run=()=>{
+    const main=document.querySelector('[data-ekodi-user-canvas],main,[role="main"]');
+    if(!main)return;
+    const direct=[...main.children].filter(node=>node.matches?.('section,article,aside,.section,.panel,.content-section,[data-section]'));
+    const candidates=direct.length>=3?direct:[...main.querySelectorAll(':scope > div > section,:scope > div > article,:scope > div > .section,:scope > div > .panel')].slice(0,12);
+    if(candidates.length<3)return;
+    document.documentElement.dataset.ekodiHomeFocus='v1';
+    const hidden=candidates.slice(2);
+    hidden.forEach(node=>{node.dataset.ekodiProgressiveHidden='1';node.hidden=true;});
+    const toggle=document.createElement('button');
+    toggle.type='button';
+    toggle.dataset.ekodiProgressiveReveal='v1';
+    toggle.setAttribute('aria-expanded','false');
+    const labels=()=>/^ko/i.test(document.documentElement.lang||'ko')?['더보기','간단히']:['More','Less'];
+    const sync=expanded=>{hidden.forEach(node=>{node.hidden=!expanded;});toggle.setAttribute('aria-expanded',expanded?'true':'false');toggle.textContent=labels()[expanded?1:0];};
+    toggle.addEventListener('click',()=>sync(toggle.getAttribute('aria-expanded')!=='true'));
+    const target=location.hash?document.querySelector(location.hash):null;
+    if(target&&hidden.some(node=>node===target||node.contains(target)))sync(true);else sync(false);
+    candidates[1].after(toggle);
+  };
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run,{once:true});else queueMicrotask(run);
+}
+
 function startCycleRefresh(){
   if(cycleTimer)clearInterval(cycleTimer);
   const minutes=Math.max(15,Number(theme.publicExperience?.refreshMinutes)||60);
@@ -371,7 +401,7 @@ async function boot(){
   if(handedTenant)state.tenantId=handedTenant.slice(0,120);
   if(handedStore)state.storeId=handedStore.slice(0,120);
   if(!state.workspaceName&&state.workspaceKey)state.workspaceName=inferredWorkspaceName(state.workspaceKey);
-  writeStored();applyHostTokens();buildUi();startCycleRefresh();queueMicrotask(sendTrafficBeacon);
+  writeStored();applyHostTokens();buildUi();applyProgressiveHomeFocus();startCycleRefresh();queueMicrotask(sendTrafficBeacon);
 }
 window.EKODIShell={
   setContext:mergeContext,
