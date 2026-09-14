@@ -42,6 +42,15 @@ const OWNED_CUSTOMER_SITE_DEFINITIONS = [
     defaultActivityRoleLabel: '대표',
   },
   {
+    id: 'mission',
+    slug: 'ekodimission',
+    name: '에코디선교회',
+    domain: 'ekodi.kr/ekodimission',
+    workspaceKind: 'organization',
+    defaultActivityRole: 'steward',
+    defaultActivityRoleLabel: '운영책임자',
+  },
+  {
     id: 'cafe',
     slug: 'ekodi-cafe',
     name: '에코디 카페',

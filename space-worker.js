@@ -3,6 +3,12 @@ import { renderStorefrontPage, storefrontCss } from './storefront-page.js';
 import { renderJadamStorefrontPage, jadamStorefrontCss } from './jadam-storefront.js';
 import { renderRestaurantStorefrontPage, restaurantStorefrontCss } from './restaurant-storefront.js';
 
+const EKODIMISSION_PREFIX='/ekodimission';
+const EKODIMISSION_PAGES=new Map([['/ekodimission','/ekodimission.html'],['/ekodimission/activities','/ekodimission-activities.html'],['/ekodimission/activities/2026-chuseok-open-table','/ekodimission-activity.html'],['/ekodimission/participate','/ekodimission-participate.html'],['/ekodimission/partners','/ekodimission-partners.html'],['/ekodimission/stories','/ekodimission-stories.html'],['/ekodimission/give','/ekodimission-give.html']]);
+const EKODIMISSION_ASSETS=new Map([['/ekodimission/assets/site.css','/ekodimission.css'],['/ekodimission/assets/site.js','/ekodimission.js']]);
+function normalizedMissionPath(pathname){const clean=String(pathname||'').replace(/\/+$/,'');return clean||'/'}
+async function routeEkodiMission(request,env){const pathname=normalizedMissionPath(new URL(request.url).pathname);const assetPath=EKODIMISSION_PAGES.get(pathname)||EKODIMISSION_ASSETS.get(pathname);if(!assetPath)return withHeaders(env,new Response('Not Found',{status:404,headers:{'content-type':'text/plain; charset=utf-8'}}),'ekodimission-not-found');const target=new URL(request.url);target.pathname=assetPath;target.search='';const asset=await env.ASSETS.fetch(new Request(target.toString(),request));const routed=withHeaders(env,asset,EKODIMISSION_ASSETS.has(pathname)?'ekodimission-asset':'ekodimission-preview');routed.headers.set('x-ekodi-independent-site','true');routed.headers.set('x-ekodi-workspace','ekodimission');return routed;}
+
 const DEFAULT_PAGE_PROFILE=Object.freeze({
   documentTitle:'운영공간 · EKODI',name:'내 운영공간',kicker:'OPERATING SPACE',
   lead:'로그인 후 내가 운영하거나 참여하는 점포와 조직만 표시합니다.',theme:'default',
@@ -104,6 +110,7 @@ export default{
       const target=new URL(url.pathname+url.search,'https://ekodi.kr');
       return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-ekodi-legacy-alias':'space.ekodi.kr'}});
     };
+    if(['GET','HEAD'].includes(request.method)&&(normalizedMissionPath(url.pathname)===EKODIMISSION_PREFIX||normalizedMissionPath(url.pathname).startsWith(EKODIMISSION_PREFIX+'/')))return routeEkodiMission(request,env);
     if(url.pathname==='/health')return json(env,{ok:true,service:'ekodi-space',product:'operating-space',identity:'ekodi-id',workspaceIdentity:'workspace-id',routeModel:['root-slug','workspace-service'],memberNamespaceRequired:false,dataEnabled:runtimeConfig(env).dataEnabled,dataMode:runtimeConfig(env).dataMode});
     if(url.pathname==='/config.js')return withHeaders(env,new Response(`window.EKODI_SPACE_CONFIG=${JSON.stringify(runtimeConfig(env))};`,{headers:{'content-type':'application/javascript; charset=utf-8','cache-control':'no-store'}}),'config');
     if(url.pathname==='/storefront.json'){
