@@ -18,6 +18,21 @@
       "status": "live"
     },
     {
+      "id": "mission",
+      "name": "에코디선교회",
+      "nameEn": "EKODI Mission",
+      "descriptionKo": "곁을 내어주는 선교, 함께 먹는 복음",
+      "descriptionEn": "Mission through open tables, hospitality, care, and connection",
+      "url": "https://ekodi.kr/ekodimission",
+      "label": "ekodi.kr/ekodimission",
+      "icon": "church",
+      "category": "community-ministry",
+      "order": 12,
+      "homepage": false,
+      "productionVerified": false,
+      "status": "preparing"
+    },
+    {
       "id": "bible",
       "name": "에코디 말씀대화",
       "nameEn": "EKODI Bible Conversation",
