@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { isUserHomePath } from '../site-shell-worker.js';
 
-test('home simplicity targets user home roots but excludes EKODI main and church',()=>{
+test('home focus targets user and first-level subservice roots but excludes EKODI main and church',()=>{
   assert.equal(isUserHomePath('/', 'ekodi'), false);
   assert.equal(isUserHomePath('/ekodichurch', 'church'), false);
   assert.equal(isUserHomePath('/ekodibiz', 'biz'), true);
@@ -16,18 +16,18 @@ test('home simplicity targets user home roots but excludes EKODI main and church
   assert.equal(isUserHomePath('/jadam/marketing/campaign', '', 'jadam'), false);
 });
 
-test('shared user shell has progressive disclosure with accessible reveal control',async()=>{
-  const [injector,shellSource,cssSource]=await Promise.all([
+test('shared progressive-home core is reused for workspace and subservice home focus',async()=>{
+  const [injector,shell,css]=await Promise.all([
     readFile(new URL('../ekodi-shell-injector.js',import.meta.url),'utf8'),
     readFile(new URL('../shell/shell.js',import.meta.url),'utf8'),
     readFile(new URL('../shell/user-ui-shell.css',import.meta.url),'utf8'),
   ]);
-  assert.match(injector,/data-ekodi-home-simplicity/);
+  assert.match(injector,/data-ekodi-home-focus-request/);
   assert.match(injector,/cleanServiceId\(serviceId\)!=='church'/);
-  assert.match(shellSource,/scheduleHomeSimplicity/);
-  assert.match(shellSource,/canonicalServiceHomeCurrent/);
-  assert.match(shellSource,/aria-expanded/);
-  assert.match(shellSource,/hashchange/);
-  assert.match(cssSource,/ekodi-home-secondary/);
-  assert.match(cssSource,/ekodi-home-more__button:focus-visible/);
+  assert.match(shell,/function applyProgressiveHomeFocus/);
+  assert.match(shell,/ekodiHomeFocusRequest/);
+  assert.match(shell,/ekodiHomeFocusDensity/);
+  assert.match(shell,/hashchange/);
+  assert.match(shell,/aria-controls/);
+  assert.match(css,/data-ekodi-progressive-reveal/);
 });

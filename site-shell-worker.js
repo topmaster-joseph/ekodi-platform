@@ -62,18 +62,11 @@ export function isUserHomePath(pathname,serviceId='',workspaceSlug=''){
   return path===`/${id}`;
 }
 
-function isHostServiceHomePath(pathname,serviceId=''){
-  const id=String(serviceId||'').trim().toLowerCase();
-  if(!id||id==='church'||id==='ekodi')return false;
-  const path=normalizedPath(pathname);
-  return path==='/'||path==='/index.html';
-}
-
-function injectServiceShell(response,serviceId,options={}){
-  if(!options?.homeSimplicity){
+function injectRootServiceShell(response,serviceId,progressiveHome=false){
+  if(!progressiveHome){
     if(serviceId)return injectEkodiShell(response,serviceId);
   }
-  return injectEkodiShell(response,serviceId,'',options);
+  return injectEkodiShell(response,serviceId,'',{progressiveHome:true});
 }
 
 function workspaceVisualStyle(dna){
@@ -142,17 +135,16 @@ export default {
       const pathname=new URL(effective.request.url).pathname;
       if(rootInternalPath(pathname)||standaloneBrandPlacePath(pathname)||isWorkspaceAdminPathShape(pathname))return response;
       const serviceId=rootUserService(pathname);
-      if(serviceId)return injectServiceShell(response,serviceId,{homeSimplicity:isUserHomePath(pathname,serviceId)});
+      if(serviceId)return injectRootServiceShell(response,serviceId,isUserHomePath(pathname,serviceId));
       const workspaceSlug=workspaceSlugForPath(pathname);
       if(workspaceSlug){
-        const shelled=injectEkodiShell(response,'ekodi','workspace',{homeSimplicity:isUserHomePath(pathname,'',workspaceSlug),contextKind:'workspace'});
+        const shelled=injectEkodiShell(response,'ekodi','workspace',{progressiveHome:isUserHomePath(pathname,'',workspaceSlug),contextKind:'workspace'});
         return applyWorkspaceVisual(shelled,workspaceSlug);
       }
-      return injectEkodiShell(response,'ekodi','public',{homeSimplicity:false});
+      return injectEkodiShell(response,'ekodi','public');
     }
     const serviceId = shellServiceForHost(effective.host);
     if (!serviceId) return response;
-    const pathname=new URL(effective.request.url).pathname;
-    return injectServiceShell(response,serviceId,{homeSimplicity:isHostServiceHomePath(pathname,serviceId)});
+    return injectEkodiShell(response, serviceId);
   },
 };

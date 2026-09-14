@@ -98,14 +98,14 @@ class ShellHeadInjector{
 }
 
 class UserUiHtmlInjector{
-  constructor(serviceId,surface,uiSurface,homeSimplicity=false){this.serviceId=serviceId;this.surface=surface;this.uiSurface=uiSurface;this.homeSimplicity=homeSimplicity;}
+  constructor(serviceId,surface,uiSurface,progressiveHome=false){this.serviceId=serviceId;this.surface=surface;this.uiSurface=uiSurface;this.progressiveHome=progressiveHome;}
   element(element){
     const service=cleanServiceId(this.serviceId)||'ekodi';
     element.setAttribute('data-ekodi-user-ui',USER_UI_VERSION);
     element.setAttribute('data-ekodi-service',service);
     element.setAttribute('data-ekodi-user-surface',resolvedSurface(this.serviceId,this.surface));
     element.setAttribute('data-ekodi-ui-surface',this.uiSurface||uiSurfaceFor(service,this.surface));
-    if(this.homeSimplicity)element.setAttribute('data-ekodi-home-simplicity','v1');
+    if(this.progressiveHome)element.setAttribute('data-ekodi-home-focus-request','v1');
     element.setAttribute('data-ekodi-user-layout',USER_LAYOUT_VERSION);
     element.setAttribute('data-ekodi-ready-locales',readyLocalesForService(service));
     if(serviceOwnsFooter(service))element.setAttribute('data-ekodi-footer-mode','service');
@@ -153,7 +153,7 @@ export function injectEkodiUserUi(response,serviceId='ekodi',surface='public',op
   if(!contentType.includes('text/html')||!USER_SURFACES.has(resolved))return response;
   const alreadyHasChrome=userChromeAlreadyInjected(response.headers);
   const uiSurface=cleanSurface(options?.uiSurface)||uiSurfaceFor(serviceId,resolved,options?.authorityScope,options?.contextKind);
-  const homeSimplicity=Boolean(options?.homeSimplicity)&&uiSurface!=='platform-public'&&cleanServiceId(serviceId)!=='church';
+  const progressiveHome=Boolean(options?.progressiveHome)&&uiSurface!=='platform-public'&&cleanServiceId(serviceId)!=='church';
   const headers=new Headers(response.headers);
   const csp=headers.get('content-security-policy');
   if(csp)headers.set('content-security-policy',extendDirective(csp,'style-src',SHELL_ORIGIN));
@@ -161,14 +161,14 @@ export function injectEkodiUserUi(response,serviceId='ekodi',surface='public',op
   headers.set('x-ekodi-user-ui-surface',resolved);
   headers.set('x-ekodi-ui-surface',uiSurface);
   headers.set('x-ekodi-user-layout',USER_LAYOUT_VERSION);
-  if(homeSimplicity)headers.set('x-ekodi-home-simplicity','v1');else headers.delete('x-ekodi-home-simplicity');
+  if(progressiveHome)headers.set('x-ekodi-home-focus-request','v1');else headers.delete('x-ekodi-home-focus-request');
   headers.set('x-ekodi-ready-locales',readyLocalesForService(serviceId));
   headers.set('x-ekodi-user-footer',serviceOwnsFooter(serviceId)?'service':'shared');
   headers.set(USER_CHROME_HEADER,USER_UI_VERSION);
   const headerAdopter=new UserHeaderAdopter();
   const canvasAdopter=new UserCanvasAdopter();
   let rewriter=new HTMLRewriter()
-    .on('html',new UserUiHtmlInjector(serviceId,resolved,uiSurface,homeSimplicity))
+    .on('html',new UserUiHtmlInjector(serviceId,resolved,uiSurface,progressiveHome))
     .on('head',new UserUiHeadInjector())
     .on('main',canvasAdopter)
     .on('[role="main"]',canvasAdopter)
