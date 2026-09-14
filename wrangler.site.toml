@@ -1,4 +1,4 @@
-# Admin site rollout: password recovery interface
+﻿# Admin site rollout: password recovery interface
 # Tax release trigger: serialize Shared Site deployment for NTS business registry
 # Mall canonical release: publish ekodi.kr/ekodibiz/ekodimall disclosures and centered footer
 # CGMA public domain remains externally DNS-managed until the approved cutover stage; ekodi.kr/cgma stays canonical inside EKODI.
@@ -58,6 +58,7 @@ custom_domain = true
 [[routes]]
 pattern = "invest.ekodi.kr"
 custom_domain = true
+
 
 [[routes]]
 pattern = "admin.ekodi.kr"
@@ -167,81 +168,103 @@ run_worker_first = ["/ai*", "/", "/shell*", "/bible*", "/preview*", "/learn*", "
 binding = "WORKSPACE_PLATFORM"
 service = "ekodi-workspace-platform-api"
 
+
 [[services]]
 binding = "AI"
 service = "ekodi-ai-control"
+
 
 [[services]]
 binding = "MONEY"
 service = "ekodi-money"
 
+
 [[services]]
 binding = "WORK"
 service = "ekodi-work"
+
 
 [[services]]
 binding = "MANAGEMENT"
 service = "ekodi-management"
 
+
 [[services]]
 binding = "AUTHOR"
 service = "ekodi-author-ai"
+
+
+
 
 [[services]]
 binding = "BUSINESS"
 service = "ekodi-business"
 
+
 [[services]]
 binding = "LIFE"
 service = "ekodi-life-ai"
+
 
 [[services]]
 binding = "EXPERIENCE"
 service = "ekodi-experience"
 
+
 [[services]]
 binding = "BOOKS"
 service = "ekodi-books"
+
 
 [[services]]
 binding = "PUBLISHING"
 service = "ekodi-publishing"
 
+
 [[services]]
 binding = "PERSONAL_FINANCE"
 service = "ekodi-personal-finance-api"
+
 
 [[services]]
 binding = "SUPPORT"
 service = "ekodi-support-opportunity"
 
+
 [[services]]
 binding = "MARKETING_GROWTH"
 service = "ekodi-marketing-growth"
+
 
 [[services]]
 binding = "SOCIAL"
 service = "ekodi-social"
 
+
 [[services]]
 binding = "MARKETING_PUBLISHING"
 service = "ekodi-marketing-publishing-api"
+
 
 [[services]]
 binding = "JOURNAL"
 service = "ekodi-journal"
 
+
 [[services]]
 binding = "ENERGY"
 service = "ekodi-energy"
+
 
 [[services]]
 binding = "COMMUNITY"
 service = "ekodi-community"
 
+
 [[services]]
 binding = "EDUCATION"
 service = "ekodi-education"
+
 
 [[services]]
 binding = "MARKETING_DOMAIN"
