@@ -17,6 +17,7 @@ export const AFFILIATE_PARTNER_PROGRAMS = [
   { key:'taobao_alliance', name:'淘宝联盟 / Alimama', kind:'network', region:'CN', country:'CN', coverage:'淘宝·天猫', status:'prepared', integration:'not_ready', api:1, deeplink:1, feed:1, reporting:1, external:1, priority:78, url:'https://pub.alimama.com/' },
   { key:'jd_union', name:'京东联盟', kind:'network', region:'CN', country:'CN', coverage:'京东', status:'prepared', integration:'not_ready', api:1, deeplink:1, feed:1, reporting:1, external:1, priority:76, url:'https://jos.jd.com/jdunion' },
   { key:'aliexpress_affiliate', name:'AliExpress Affiliate', kind:'direct', region:'GLOBAL/CN', country:'CN', coverage:'AliExpress', status:'prepared', integration:'not_ready', api:1, deeplink:1, feed:1, reporting:1, external:1, priority:84, url:'https://portals.aliexpress.com/' },
+  { key:'atomy_official_reference', name:'Atomy Official Mall', kind:'reference', region:'KR', country:'KR', coverage:'공식몰 참조 전용 · 외부 재판매·자동주문 금지', status:'prepared', integration:'manual', api:0, deeplink:0, feed:0, reporting:0, external:1, priority:70, url:'https://kr.atomy.com/' },
   { key:'duoduo_jinbao', name:'多多进宝', kind:'network', region:'CN', country:'CN', coverage:'拼多多', status:'candidate', integration:'not_ready', api:1, deeplink:1, feed:1, reporting:1, external:1, priority:60, url:'' },
 ];
 
@@ -35,6 +36,7 @@ const PLAYBOOKS = {
   taobao_alliance:{ requirements:['운영 주체 자격','联盟 계정','API 권한','정산 수단'] },
   jd_union:{ requirements:['운영 주체 자격','联盟 계정','JOS/API 권한','정산 수단'] },
   aliexpress_affiliate:{ requirements:['Affiliate 계정','운영 매체','API/Feed 권한','정산 수단'] },
+  atomy_official_reference:{ requirements:['공식몰 정책 확인','공식 링크만 사용','외부 재판매·자동주문 금지'] },
   duoduo_jinbao:{ requirements:['한국 운영 주체 참여 가능 여부','联盟 계정','API 권한','정산 수단'] },
 };
 
