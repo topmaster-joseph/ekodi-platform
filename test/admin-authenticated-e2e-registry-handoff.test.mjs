@@ -19,6 +19,7 @@ test('authenticated Admin E2E verifies direct registry href menus through isolat
   assert.match(source, /popup\.waitForURL/);
   const sidebar = await readFile(new URL('../admin-sidebar.js', import.meta.url), 'utf8');
   assert.match(sidebar, /definition\?\.href && definition\.adminHandoff !== true/);
+  assert.match(sidebar, /item\.target = definition\.adminHandoff === true \? '_self' : '_blank'/);
   assert.match(sidebar, /window\.open\(destination\.href, '_blank', 'noopener'\)/);
   assert.match(source, /fetch\(expected\.href, \{ redirect:'manual'/);
   assert.match(source, /x-ekodi-route.*cmpmyi-store-portfolio-admin/);
