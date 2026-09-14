@@ -1,5 +1,5 @@
 {
-  "version": 12,
+  "version": 13,
   "name": "EKODI User UI Shell",
   "parentPolicy": "config/user-ui-dna.json",
   "purpose": "Keep one EKODI user experience while allowing each service to preserve its own visual family, with persistent common chrome limited to one shared header and one shared footer.",
@@ -30,7 +30,9 @@
     "persistentChromeHeaderFooterOnly": true,
     "workspaceSelectionLivesInMyEkodi": true,
     "globalAmbientAudioForbidden": true,
-    "progressiveHomeDisclosure": true
+    "progressiveHomeDisclosure": true,
+    "languageChoiceInHeaderOnly": true,
+    "footerLanguageChoiceForbidden": true
   },
   "header": {
     "owner": "shared-shell",
@@ -81,13 +83,13 @@
     "serviceExtension": "append-only",
     "separatePolicyPrecedence": true,
     "dedupe": "exactly-one-shared-footer",
-    "languageChoice": "same shared selector and locale state as header",
+    "languageChoice": "forbidden",
     "contentWidth": "match-adopted-main-canvas"
   },
   "language": {
     "owner": "shared-shell",
     "runtime": "shell/user-language.js",
-    "placement": "inside both adopted/fallback user header and shared user footer",
+    "placement": "header-only",
     "supported": [
       "ko-KR",
       "en",
@@ -109,7 +111,10 @@
     "registry": "config/language-registry.js",
     "visibility": "published-only",
     "automation": "public source change detection -> queued/stale -> translating -> validating -> release-ready -> published",
-    "adminView": "read-only per-site language readiness status; no manual publish toggles"
+    "adminView": "read-only per-site language readiness status; no manual publish toggles",
+    "controlGeometry": "pill",
+    "visibleIcon": false,
+    "visibleLabel": false
   },
   "mediaMeetingAdapter": {
     "owner": "shared-shell",
