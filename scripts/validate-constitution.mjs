@@ -7,6 +7,7 @@ const failures = [];
 const fail = message => failures.push(message);
 const constitution = json('governance/constitution/constitution.json');
 const supremeAttributes = json('governance/constitution/supreme-attributes.v1.json');
+const publicationApprovalRegistry = json('governance/constitution/publication-approval.v1.json');
 const packageJson = json('package.json');
 const architecture = json('governance/architecture/ekodi-os-architecture.json');
 const evolutionModel = json('governance/architecture/ekodi-evolution-model.json');
@@ -15,9 +16,9 @@ const coreData = json('config/core-data-boundaries.json');
 const storage = json('config/storage-policy.json');
 const workspace = json('config/service-workspace-policy.json');
 
-if (constitution.version !== '1.16.0') fail('constitution version must be 1.16.0 with the approved Supreme Attributes and Shell canonical-path retirement amendments plus all prior approved amendments');
+if (constitution.version !== '1.17.0') fail('constitution version must be 1.17.0 with private-by-default administrator-approved publication plus all prior approved amendments');
 if (constitution.status !== 'active') fail('constitution must be active');
-for (const principle of ['free-first-not-free-only','ekodi-core-is-source-of-truth','provider-independent-by-default','secure-by-default','one-domain-grammar','isolated-parallel-development','verification-first-evolution','security-native-intelligence','evidence-linked-recommendations','secure-projection-minimum-disclosure','integrated-responsibility-distributed-execution-standardized-connections','layered-governance-os-core-services-connections-workspaces','user-surface-engine-separation','capability-first-reuse','sustainable-scale-by-evidence','workspace-over-space','generation-10-active-baseline','open-ended-evidence-driven-generation-evolution','sovereign-autonomy-with-human-authority','person-workspace-role-capability-authority','observe-detect-reason-plan-execute-verify-recover-learn','ekodibiz-exclusive-commercial-subject','ordinary-user-information-first-commercial-separation','completion-continuity-through-recoverable-interruptions','supreme-attributes-binding']) {
+for (const principle of ['free-first-not-free-only','ekodi-core-is-source-of-truth','provider-independent-by-default','secure-by-default','one-domain-grammar','isolated-parallel-development','verification-first-evolution','security-native-intelligence','evidence-linked-recommendations','secure-projection-minimum-disclosure','integrated-responsibility-distributed-execution-standardized-connections','layered-governance-os-core-services-connections-workspaces','user-surface-engine-separation','capability-first-reuse','sustainable-scale-by-evidence','workspace-over-space','generation-10-active-baseline','open-ended-evidence-driven-generation-evolution','sovereign-autonomy-with-human-authority','person-workspace-role-capability-authority','observe-detect-reason-plan-execute-verify-recover-learn','ekodibiz-exclusive-commercial-subject','ordinary-user-information-first-commercial-separation','completion-continuity-through-recoverable-interruptions','supreme-attributes-binding','private-by-default-admin-approved-publication']) {
   if (!constitution.principles?.includes(principle)) fail(`missing constitutional principle: ${principle}`);
 }
 
@@ -83,7 +84,6 @@ if (parallel.sharedMutableWorkingDirectoryForbidden !== true) fail('concurrent t
 if (parallel.directProtectedBranchWritesForbidden !== true) fail('direct protected-branch writes must be forbidden');
 if (parallel.directAgentProductionDeploymentForbidden !== true) fail('direct agent production deployment must be forbidden');
 
-
 const completionContinuity = constitution.completionContinuityPolicy || {};
 if (completionContinuity.id !== 'COMPLETE-CONTINUITY-001' || completionContinuity.status !== 'active') fail('Completion Continuity constitutional policy must remain active');
 if (completionContinuity.interruptionDefault !== 'recoverable') fail('execution interruptions must default to recoverable');
@@ -92,6 +92,21 @@ if (completionContinuity.alternateAuthorizedPathBeforeEscalation !== true) fail(
 if (completionContinuity.blockedReservedForAuthorityOrDependency !== true) fail('blocked state must be reserved for genuine authority/dependency blocks');
 if (completionContinuity.authorityExpansionForbidden !== true || completionContinuity.productionVerificationStillRequired !== true) fail('continuity must not widen authority or weaken production verification');
 for (const interruptionClass of ['session-ended','tool-unavailable','connector-failure','rate-limit','execution-window-ended','transient-infrastructure-failure']) if (!completionContinuity.recoverableInterruptionClasses?.includes(interruptionClass)) fail(`recoverable interruption class missing: ${interruptionClass}`);
+
+const publication = constitution.publicationApprovalPolicy || {};
+if (publication.id !== 'EKODI-PUBLICATION-APPROVAL-001') fail('publication approval constitutional policy id mismatch');
+if (publication.registry !== 'governance/constitution/publication-approval.v1.json') fail('publication approval registry path mismatch');
+if (publication.defaultPublicationState !== 'private') fail('new publication must remain private by default');
+if (publication.separateDeploymentFromPublication !== true || publication.deploymentCompletionRequired !== true) fail('deployment completion must remain separate from publication approval');
+if (publication.administratorApprovalRequiredBeforePublicPromotion !== true || publication.administratorApprovalTrigger !== 'workflow_dispatch') fail('administrator review/manual guarded release must remain mandatory before public promotion');
+if (publication.automaticProductionPromotionForbidden !== true || publication.firstPublicBootstrapRequiresAdministratorApproval !== true) fail('automatic public promotion/first public bootstrap must remain forbidden');
+if (publication.productionVerificationRequiredAfterPublication !== true || publication.emergencyReasonRequired !== true) fail('published releases require production verification and emergency reason evidence');
+if (publication.finalAuthority !== 'ekodi_platform_super_administrator') fail('publication final authority must remain EKODI Platform Super Administrator');
+if (publicationApprovalRegistry.id !== publication.id || publicationApprovalRegistry.status !== 'active') fail('publication approval registry identity/status mismatch');
+if (publicationApprovalRegistry.defaultPublicationState !== 'private' || publicationApprovalRegistry.reviewBeforePublicPromotionRequired !== true) fail('publication approval registry must remain private-by-default with review before public promotion');
+if (publicationApprovalRegistry.administratorApprovalTrigger !== 'workflow_dispatch') fail('publication approval registry manual trigger drifted');
+if (publicationApprovalRegistry.firstDeployment?.automaticPublicBootstrapForbidden !== true) fail('publication registry must forbid automatic first public bootstrap');
+if (publicationApprovalRegistry.publicPromotion?.productionVerificationRequired !== true) fail('publication registry must require production verification');
 
 const evolution = constitution.evolutionPolicy || {};
 if (evolution.mode !== 'verification_first_security_native_self_evolving') fail('evolution policy must remain verification-first and security-native');
@@ -275,6 +290,7 @@ if (failures.length) {
 }
 console.log(`EKODI Constitution ${constitution.version}: OK`);
 console.log('- 21 supreme ecosystem attributes: mandatory, non-regressive and CI-bound');
+console.log('- private-by-default publication: automatic releases remain review-only until administrator approval');
 console.log(`- ${Object.keys(boundaries.platforms || {}).length} platform/service boundaries checked`);
 console.log(`- ${legacy.size} legacy domains registered with canonical migration targets`);
 console.log(`- ${registeredCommon.size} registered common-service boundaries checked`);
