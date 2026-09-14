@@ -525,3 +525,13 @@ body > [data-ekodi-user-footer] ~ [data-ekodi-user-footer] {
     animation: none !important;
   }
 }
+
+/* User-home simplicity v1: keep the first screen quiet and reveal secondary content on demand. */
+html[data-ekodi-home-simplicity="v1"] .ekodi-home-secondary{display:none!important}
+html[data-ekodi-home-simplicity="v1"] .ekodi-home-more{width:100%;display:flex;justify-content:center;align-items:center;padding:14px 0 24px;margin:0 auto}
+html[data-ekodi-home-simplicity="v1"] .ekodi-home-more__button{min-height:42px;padding:0 16px;border:1px solid var(--ekodi-user-chrome-line);border-radius:999px;background:var(--ekodi-user-chrome-bg);color:var(--ekodi-user-chrome-text);display:inline-flex;align-items:center;justify-content:center;gap:7px;font:800 13px/1.2 system-ui,-apple-system,"Noto Sans KR","Malgun Gothic",sans-serif;cursor:pointer;box-shadow:0 8px 22px rgba(0,0,0,.06)}
+html[data-ekodi-home-simplicity="v1"] .ekodi-home-more__button b{font-size:15px;line-height:1;font-weight:800}
+html[data-ekodi-home-simplicity="v1"] .ekodi-home-more__button:focus-visible{outline:2px solid var(--ekodi-user-chrome-link);outline-offset:3px}
+html[data-ekodi-home-simplicity="v1"] :where(.lead,.intro,.hero-copy p,.hero p,.description,[data-ekodi-home-copy]){max-width:62ch}
+@media(max-width:640px){html[data-ekodi-home-simplicity="v1"] .ekodi-home-more{padding:10px 0 18px}html[data-ekodi-home-simplicity="v1"] .ekodi-home-more__button{min-height:40px;font-size:12px}}
+@media(prefers-reduced-motion:reduce){html[data-ekodi-home-simplicity="v1"] .ekodi-home-more__button{transition:none!important}}

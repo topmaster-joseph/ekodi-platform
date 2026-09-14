@@ -20,7 +20,7 @@ const handedTenant=fragment.get('ekodi_tenant')||'';
 const handedStore=fragment.get('ekodi_store')||'';
 
 const FALLBACK_THEME={
-  version:3,
+  version:5,
   workspace:{background:'#071522',surface:'#0B1D2E',surfaceRaised:'#10263A',border:'#24425E',text:'#F4F7FB',muted:'#9FB1C3',focus:'#8EC8FF',radius:'16px'},
   rules:{
     stableSurfaces:['workspace','admin','form','document','data'],
@@ -74,6 +74,9 @@ let memberGateTimer=null;
 let memberGateRoot=null;
 let memberGateOwnedInert=false;
 let state={workspaceKey:'',workspaceName:'',role:'',personName:'',tenantId:'',storeId:''};
+let homeSimplicityButton=null;
+let homeSimplicityHidden=[];
+let homeSimplicityRevealed=false;
 
 function normalizeSurface(value){const v=String(value||'workspace').trim().toLowerCase();return /^[a-z-]{1,24}$/.test(v)?v:'workspace';}
 function safeWorkspace(value){const v=String(value||'').trim();return /^[a-z]+:[a-zA-Z0-9:_-]{1,170}$/.test(v)?v:'';}
@@ -349,6 +352,70 @@ function buildUi(){
   document.addEventListener('click',event=>{if(!event.composedPath().includes(host)){closePanel();button.setAttribute('aria-expanded','false');}},{capture:true});
   wrap.append(button,panel);shadow.append(style,wrap);document.documentElement.append(host);root=shadow;render();
 }
+function canonicalServiceHomeCurrent(){
+  if(!service?.url||service.id==='church')return false;
+  const currentPath=(location.pathname.replace(/\/+$/,'')||'/').toLowerCase();
+  if(location.hostname.toLowerCase()==='ekodi.kr'&&currentPath==='/')return false;
+  try{
+    const home=new URL(service.url);const homePath=(home.pathname.replace(/\/+$/,'')||'/').toLowerCase();
+    return location.hostname.toLowerCase()===home.hostname.toLowerCase()&&currentPath===homePath;
+  }catch{return false;}
+}
+function homeSimplicityEnabled(){
+  const explicit=document.documentElement.dataset.ekodiHomeSimplicity==='v1';
+  return (explicit||canonicalServiceHomeCurrent())&&service?.id!=='church'&&['public','workspace'].includes(surface);
+}
+function homeCandidateElements(root){
+  if(!root)return[];
+  return [...root.children].filter(element=>{
+    const tag=element.tagName?.toLowerCase()||'';
+    if(!['section','article','aside','div'].includes(tag))return false;
+    if(element.matches('[hidden],[aria-hidden="true"],[data-ekodi-home-more],.mobile,.jd-mobile,.rs-mobile,.yp-mobile'))return false;
+    return true;
+  });
+}
+function homeContentRoot(){
+  const main=document.querySelector('[data-ekodi-user-canvas],main,[role="main"]');
+  if(!main)return{root:null,items:[]};
+  const direct=homeCandidateElements(main);if(direct.length>=3)return{root:main,items:direct};
+  for(const child of [...main.children]){const nested=homeCandidateElements(child);if(nested.length>=3)return{root:child,items:nested};}
+  return{root:main,items:direct};
+}
+function homeVisibleLimit(){
+  const role=String(state.role||'').toLowerCase();
+  const operator=/(owner|admin|manager|representative|pastor|director|대표|관리|목사|소장)/.test(role);
+  return matchMedia('(max-width:640px)').matches?(operator?2:1):2;
+}
+function revealHomeSecondary(target=null){
+  if(homeSimplicityRevealed)return;homeSimplicityRevealed=true;
+  for(const element of homeSimplicityHidden)element.classList.remove('ekodi-home-secondary');
+  homeSimplicityButton?.remove();homeSimplicityButton=null;
+  document.documentElement.dataset.ekodiHomeExpanded='true';
+  if(target)requestAnimationFrame(()=>target.scrollIntoView({block:'start'}));
+}
+function activateHomeSimplicity(){
+  if(!homeSimplicityEnabled()||homeSimplicityRevealed)return;
+  const {root:contentRoot,items}=homeContentRoot();const limit=homeVisibleLimit();
+  if(!contentRoot||items.length<=limit)return;
+  const visible=new Set(items.filter(item=>item.dataset.ekodiHomePriority==='primary').slice(0,limit));
+  for(const item of items){if(visible.size>=limit)break;visible.add(item);}
+  homeSimplicityHidden=items.filter(item=>!visible.has(item));if(!homeSimplicityHidden.length)return;
+  for(const item of homeSimplicityHidden)item.classList.add('ekodi-home-secondary');
+  const wrap=document.createElement('div');wrap.dataset.ekodiHomeMore='v1';wrap.className='ekodi-home-more';
+  const button=document.createElement('button');button.type='button';button.className='ekodi-home-more__button';button.setAttribute('aria-expanded','false');button.innerHTML='<span>더보기</span><b aria-hidden="true">⌄</b>';
+  button.addEventListener('click',()=>revealHomeSecondary());wrap.append(button);homeSimplicityButton=wrap;
+  contentRoot.insertBefore(wrap,homeSimplicityHidden[0]);
+  document.documentElement.dataset.ekodiHomeDensity=limit===1?'focused':'balanced';
+  const revealForHash=()=>{if(!location.hash)return;let target=null;try{target=document.getElementById(decodeURIComponent(location.hash.slice(1)));}catch{}if(target&&homeSimplicityHidden.some(section=>section.contains(target)||section===target))revealHomeSecondary(target);};
+  document.addEventListener('click',event=>{const link=event.target.closest?.('a[href*="#"]');if(!link)return;let target=null;try{const url=new URL(link.href,location.href);if(url.origin!==location.origin||url.pathname!==location.pathname||!url.hash)return;target=document.getElementById(decodeURIComponent(url.hash.slice(1)));}catch{return;}if(target&&homeSimplicityHidden.some(section=>section.contains(target)||section===target))revealHomeSecondary(target);},{capture:true});
+  window.addEventListener('hashchange',revealForHash);document.addEventListener('beforematch',()=>revealHomeSecondary());revealForHash();
+}
+function scheduleHomeSimplicity(){
+  if(!homeSimplicityEnabled())return;
+  const run=()=>requestAnimationFrame(activateHomeSimplicity);
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run,{once:true});else run();
+}
+
 function refreshThemeCycle(){if(!service)return;applyHostTokens();render();}
 function startCycleRefresh(){
   if(cycleTimer)clearInterval(cycleTimer);
@@ -372,7 +439,7 @@ async function boot(){
   if(handedTenant)state.tenantId=handedTenant.slice(0,120);
   if(handedStore)state.storeId=handedStore.slice(0,120);
   if(!state.workspaceName&&state.workspaceKey)state.workspaceName=inferredWorkspaceName(state.workspaceKey);
-  writeStored();applyHostTokens();buildUi();startCycleRefresh();queueMicrotask(sendTrafficBeacon);
+  writeStored();applyHostTokens();buildUi();scheduleHomeSimplicity();startCycleRefresh();queueMicrotask(sendTrafficBeacon);
 }
 window.EKODIShell={
   setContext:mergeContext,
