@@ -100,12 +100,16 @@ test('guarded shared-site release verifies bootstrap and full Assist lazy assets
 });
 
 
-test('command history follows the active admin menu and restores that menu session', async()=>{
-  const js=await read('admin-assist-dock.js');
-  assert.ok(js.includes('function currentSection()'));
-  assert.ok(js.includes('selectSessionForCurrentSection'));
-  assert.ok(js.includes('current?.context?.section===section'));
-  assert.ok(js.includes('sessions.filter(session=>session.context?.section===section)'));
+test('command history is global across admin menus while current screen context keeps updating', async()=>{
+  const [js,css,bootstrap]=await Promise.all([read('admin-assist-dock.js'),read('admin-assist-dock.css'),read('admin-assist-bootstrap.js')]);
+  assert.doesNotMatch(js,/selectSessionForCurrentSection/);
+  assert.doesNotMatch(js,/sessions\.filter\(session=>session\.context\?\.section===section\)/);
+  assert.match(js,/railTitle\.textContent='공통 명령 이력'/);
+  assert.match(js,/placeholder='전체 명령 검색'/);
+  assert.match(js,/classList\.add\('admin-command-history-ready'\)/);
+  assert.match(js,/classList\.toggle\('history-only',!state\.open\)/);
+  assert.match(css,/body\.admin-command-history-ready:not\(\.admin-command-home\) \.content\{margin-left:286px!important\}/);
+  assert.match(css,/\.ekodi-assist\.history-only \.ekodi-assist-main\{display:none!important\}/);
+  assert.match(bootstrap,/A\(0\)\.then\(H\)/);
   assert.ok(js.includes('ekodi-admin-section-changed'));
-  assert.ok(js.includes('ekodiAssistRailTitle'));
 });
