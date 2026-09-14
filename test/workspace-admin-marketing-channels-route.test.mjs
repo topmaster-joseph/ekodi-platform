@@ -17,7 +17,7 @@ test('Mall channel settings has one canonical site-owned admin deep link', async
   assert.match(source,/canonicalMall=clean\.match/);
   assert.match(source,/rawSection==='channel-settings'\?'channels':rawSection/);
   assert.match(source,/adminBase=service\?`\$\{base\}\/ekodimall\/admin`/);
-  assert.match(source,/sectionHref=key=>key==='overview'\?adminBase/);
+  assert.match(source,/sectionHref=key=>key==='overview'\?`\$\{adminBase\}\/overview`/);
 });
 
 test('unauthenticated Mall channel setup still selects provider before provider login', async () => {

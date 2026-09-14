@@ -25,6 +25,7 @@ import { routeCanonicalSurface } from './canonical-surface-router.js';
 import { handlePreviewRequest } from './preview-page.js';
 import { storeGatewayPage } from './store-gateway-page.js';
 import { storePortfolioAdminPage } from './store-portfolio-admin-page.js';
+import { tenantAdminCommandHomeScript, tenantAdminCommandHomeCss } from './tenant-admin-command-home.js';
 import { isLearningPath, learningPage, learningScript, learningStyles } from './learning-page.js';
 import { decorateDiscoveryResponse } from './discovery-layer.js';
 
@@ -190,7 +191,7 @@ function internalHostRequest(request,host,pathname){
 }
 async function routeMessengerApex(request,env,ctx){const url=new URL(request.url);if(request.method!=='GET'||!(url.pathname==='/messenger'||url.pathname.startsWith('/messenger/')))return null;const inner=url.pathname==='/messenger'?'/' : url.pathname.slice('/messenger'.length)||'/';if(inner==='/'||inner==='/index.html')return injectEkodiShell(await withReleaseMarker(messengerUserPage()),'messenger');if(inner==='/messenger-ui.js')return messengerUiScript();if(inner==='/app.js')return legacyPlatformRouter.fetch(internalHostRequest(request,MESSENGER_HOST,'/app.js'),env,ctx);return null;}
 async function routeInvestApex(request,env,ctx){const url=new URL(request.url);if(request.method!=='GET'||!(url.pathname==='/invest'||url.pathname.startsWith('/invest/')))return null;const inner=url.pathname==='/invest'?'/' : url.pathname.slice('/invest'.length)||'/';if(inner==='/'||inner==='/index.html')return injectEkodiShell(await withInvestSubjectScript(investUserPage()),'invest');if(inner==='/invest-ui.js')return investUiScript();if(inner==='/invest-subject-ui.js')return investSubjectUiScript();if(inner==='/app.js')return legacyPlatformRouter.fetch(internalHostRequest(request,INVEST_HOST,'/app.js'),env,ctx);return null;}
-function routeMailApex(request){const url=new URL(request.url);if(request.method!=='GET')return null;if(url.pathname==='/mail'||url.pathname==='/mail/')return injectEkodiShell(mailUserPage(),'mail');if(url.pathname==='/mail/admin'||url.pathname==='/mail/admin/')return injectEkodiShell(mailAdminPage(),'mail','admin');return null;}
+function routeMailApex(request){const url=new URL(request.url);if(request.method!=='GET')return null;if(url.pathname==='/mail'||url.pathname==='/mail/')return injectEkodiShell(mailUserPage(),'mail');if(url.pathname==='/mail/admin'||url.pathname==='/mail/admin/')return injectEkodiShell(mailAdminPage({commandHome:true}),'mail','admin');if(url.pathname==='/mail/admin/overview'||url.pathname==='/mail/admin/overview/')return injectEkodiShell(mailAdminPage(),'mail','admin');return null;}
 
 async function withReleaseMarker(response){
   const text=await response.text();
@@ -232,9 +233,12 @@ export default {
       const previewResponse=handlePreviewRequest(request);if(previewResponse)return previewResponse;
       if(['GET','HEAD'].includes(request.method)&&isInsurancePublicPath(url.pathname))return routeInsurancePublic(request,env);
       if(request.method==='GET'){
+        if(url.pathname==='/tenant-admin-command-home.css')return tenantAdminCommandHomeCss();
+        if(url.pathname==='/tenant-admin-command-home.js')return tenantAdminCommandHomeScript();
         if(['/store-admin.css','/jadam-admin.css','/pizzamaru-admin.css','/yogurt-admin.css'].includes(url.pathname))return storeAdminCss();
         if(['/store-admin.js','/jadam-admin.js','/pizzamaru-admin.js','/yogurt-admin.js'].includes(url.pathname))return storeAdminScript();
-        if(url.pathname==='/cmpmyi/admin'||url.pathname==='/cmpmyi/admin/')return injectEkodiShell(storePortfolioAdminPage(),'business','admin');
+        if(url.pathname==='/cmpmyi/admin'||url.pathname==='/cmpmyi/admin/')return injectEkodiShell(storePortfolioAdminPage({commandHome:true}),'business','admin');
+        if(url.pathname==='/cmpmyi/admin/overview'||url.pathname==='/cmpmyi/admin/overview/')return injectEkodiShell(storePortfolioAdminPage(),'business','admin');
         if(isStoreAdminPathShape(url.pathname)){const storeRoute=await resolveStoreAdminRoute(url.pathname);if(storeRoute)return injectEkodiShell(storeAdminPage(storeRoute),'business','admin');}
         if(url.pathname==='/workspace-admin.css')return workspaceAdminCss();
         if(url.pathname==='/workspace-admin.js')return workspaceAdminScript();
