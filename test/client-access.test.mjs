@@ -41,7 +41,7 @@ test('Clients UI separates all members, site memberships, pending Google auth an
 });
 
 test('customer onboarding remains Google preregistration without invite URLs or local secrets', () => {
-  assert.match(source, /Google 고객 사전등록/);
+  assert.match(source, /Google 인증 대기/);
   assert.match(source, /pre_registered/);
   assert.doesNotMatch(source, /invite\.inviteUrl/);
   assert.doesNotMatch(source, /\/invites/);
