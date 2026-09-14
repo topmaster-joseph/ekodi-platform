@@ -121,7 +121,7 @@
     "marketingProduct": "https://ekodi.kr/ekodibiz/marketing-ai",
     "workspaceMarketingPattern": "https://ekodi.kr/{slug}/marketing",
     "marketingCore": "https://marketing.ekodi.kr",
-    "aiGateway": "https://ai.ekodi.kr",
+    "aiGateway": "https://ekodi.kr/ai",
     "providerTopologyVisibleToOrdinaryUsers": false,
     "examples": {
       "jadamMarketing": "https://ekodi.kr/jadam/marketing",
