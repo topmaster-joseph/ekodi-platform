@@ -173,6 +173,7 @@
     "canonicalPath": "/admin/services/common-services",
     "runtimeHostsAreOperatorPages": false,
     "directRuntimeRootBehavior": "redirect_to_admin_control_plane",
+    "publicUserSurfaceExceptions": ["ai-commons"],
     "sessionAuthority": "central_admin_session",
     "authorityContext": "Person + Workspace + Role + Capability",
     "internalOperationalInfoBeforeAuthentication": false,
@@ -191,6 +192,7 @@
     "admin": "/admin",
     "auth": "/auth",
     "api": "/api",
+    "ai": "/ai",
     "mcp": "/mcp",
     "webhooks": "/webhooks",
     "health": "/health"

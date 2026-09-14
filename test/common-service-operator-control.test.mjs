@@ -11,6 +11,8 @@ test('common services have one operator surface in central Admin', () => {
   assert.equal(rule.surface, 'https://ekodi.kr/admin');
   assert.equal(rule.runtimeHostsAreOperatorPages, false);
   assert.equal(rule.directRuntimeRootBehavior, 'redirect_to_admin_control_plane');
+  assert.deepEqual(rule.publicUserSurfaceExceptions, ['ai-commons']);
+  assert.equal(policy.canonicalSurfaces.ai, '/ai');
   assert.equal(rule.sessionAuthority, 'central_admin_session');
   assert.equal(rule.authorityContext, 'Person + Workspace + Role + Capability');
   assert.equal(rule.internalOperationalInfoBeforeAuthentication, false);
@@ -50,28 +52,37 @@ test('common-service Admin UI consumes the central admin session and has no serv
   assert.doesNotMatch(source, /Google 로그인|ekodi-ai-control-session|site=ai/);
 });
 
-test('AI runtime root is an operator handoff, not a standalone admin page', async () => {
-  const response = await aiWorker.fetch(new Request('https://ai.ekodi.kr/'), {}, { waitUntil() {} });
-  assert.equal(response.status, 307);
-  assert.equal(response.headers.get('location'), 'https://ekodi.kr/admin/services/common-services?service=ai');
-  assert.equal(response.headers.get('x-ekodi-route'), 'ai-runtime-admin-handoff');
-  assert.equal(response.headers.get('x-content-type-options'), 'nosniff');
+test('AI runtime root serves the public Commons surface while operator admin stays centralized', async () => {
+  const env = { ASSETS:{ fetch:async()=>new Response('<title>EKODI 모두의 AI 프로젝트</title>', {status:200,headers:{'content-type':'text/html'}}) } };
+  const publicResponse = await aiWorker.fetch(new Request('https://ai.internal/'), env, { waitUntil() {} });
+  assert.equal(publicResponse.status, 200);
+  assert.match(await publicResponse.text(), /EKODI 모두의 AI 프로젝트/);
+  const adminResponse = await aiWorker.fetch(new Request('https://ai.internal/admin'), env, { waitUntil() {} });
+  assert.equal(adminResponse.status, 307);
+  assert.equal(adminResponse.headers.get('location'), 'https://ekodi.kr/admin/services/common-services?service=ai');
+  assert.equal(adminResponse.headers.get('x-ekodi-route'), 'ai-runtime-admin-handoff');
 });
 
 test('AI runtime service-local login and public config are retired', async () => {
-  const config = await aiWorker.fetch(new Request('https://ai.ekodi.kr/config.js'), {}, { waitUntil() {} });
+  const config = await aiWorker.fetch(new Request('https://ai.internal/config.js'), {}, { waitUntil() {} });
   assert.equal(config.status, 410);
   assert.equal((await config.json()).error, 'operator_surface_moved');
-  const exchange = await aiWorker.fetch(new Request('https://ai.ekodi.kr/api/auth/exchange'), {}, { waitUntil() {} });
+  const exchange = await aiWorker.fetch(new Request('https://ai.internal/api/auth/exchange'), {}, { waitUntil() {} });
   assert.equal(exchange.status, 410);
   assert.equal((await exchange.json()).error, 'service_local_auth_retired');
 });
 
-test('AI runtime exposes only minimal unauthenticated health and protects detailed status', async () => {
-  const health = await aiWorker.fetch(new Request('https://ai.ekodi.kr/__health'), {}, { waitUntil() {} });
+test('AI runtime exposes public Commons health and protects detailed operator status', async () => {
+  const health = await aiWorker.fetch(new Request('https://ai.internal/__health'), {}, { waitUntil() {} });
   assert.equal(health.status, 200);
-  assert.deepEqual(await health.json(), { ok:true, platform:'ai-control', architectureVersion:'1.9.0', surface:'runtime-only' });
-  const status = await aiWorker.fetch(new Request('https://ai.ekodi.kr/api/status'), {}, { waitUntil() {} });
+  const data = await health.json();
+  assert.equal(data.ok, true);
+  assert.equal(data.platform, 'ai-control');
+  assert.equal(data.architectureVersion, '1.9.0');
+  assert.equal(data.surface, 'runtime-and-commons');
+  assert.equal(data.commons, true);
+  assert.match(data.commonsPolicy, /^1\./);
+  const status = await aiWorker.fetch(new Request('https://ai.internal/api/status'), {}, { waitUntil() {} });
   assert.equal(status.status, 401);
   assert.equal((await status.json()).error, 'authentication_required');
 });
@@ -88,7 +99,7 @@ test('AI runtime accepts central Admin authority with ai:read without a service-
     }), {status:200,headers:{'content-type':'application/json'}});
   };
   try {
-    const response = await aiWorker.fetch(new Request('https://ai.ekodi.kr/api/session', {headers:{authorization:'Bearer central-admin-token'}}), {}, { waitUntil() {} });
+    const response = await aiWorker.fetch(new Request('https://ai.internal/api/session', {headers:{authorization:'Bearer central-admin-token'}}), {}, { waitUntil() {} });
     assert.equal(response.status, 200);
     const data = await response.json();
     assert.equal(data.authoritySource, 'central-admin');
@@ -108,7 +119,7 @@ test('read-only central Admin authority cannot perform AI operator mutations', a
     authority:{kind:'admin',role:'viewer',capabilities:['ai:read'],deniedCapabilities:[]},
   }), {status:200,headers:{'content-type':'application/json'}});
   try {
-    const response = await aiWorker.fetch(new Request('https://ai.ekodi.kr/api/nodes/pair', {method:'POST',headers:{authorization:'Bearer central-admin-token','content-type':'application/json'},body:'{}'}), {}, { waitUntil() {} });
+    const response = await aiWorker.fetch(new Request('https://ai.internal/api/nodes/pair', {method:'POST',headers:{authorization:'Bearer central-admin-token','content-type':'application/json'},body:'{}'}), {}, { waitUntil() {} });
     assert.equal(response.status, 403);
     assert.deepEqual(await response.json(), { error:'capability_required', capability:'ai:operate' });
   } finally {
