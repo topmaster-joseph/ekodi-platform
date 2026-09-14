@@ -13,17 +13,7 @@ zone_name = "ekodi.kr"
 custom_domain = true
 
 [[routes]]
-pattern = "church.ekodi.kr"
-zone_name = "ekodi.kr"
-custom_domain = true
-
-[[routes]]
 pattern = "live.church.ekodi.kr"
-zone_name = "ekodi.kr"
-custom_domain = true
-
-[[routes]]
-pattern = "lab.ekodi.kr"
 zone_name = "ekodi.kr"
 custom_domain = true
 

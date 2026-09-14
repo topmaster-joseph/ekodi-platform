@@ -20,7 +20,9 @@ function tradeAdminClient(ADMIN_HUB){
   function renderAdminScopeSwitcher(){const host=$('adminScopeSwitcher');if(!host)return;host.replaceChildren();if(access?.role!=='workspace_admin'||!adminHubScopes.length){host.hidden=true;return}host.hidden=false;const label=document.createElement('span');label.className='admin-scope-label';label.textContent='관리 영역';host.append(label);for(const scope of adminHubScopes){const a=document.createElement('a');a.href=scope.adminHref;a.textContent=scope.label;a.dataset.adminScope=scope.id;a.title=scope.description||scope.label;if(scope.id==='trade'){a.classList.add('active');a.setAttribute('aria-current','page')}host.append(a)}}
   function card(label,value,small=''){return `<article class="card"><span>${esc(label)}</span><strong>${esc(value)}</strong><small>${esc(small)}</small></article>`;}
   function sectionTitle(title,copy){$('pageTitle').textContent=title;$('pageCopy').textContent=copy;document.title=`${title} · 에코디비즈`;}
-  function sectionHref(key){return key==='overview'?base:`${base}/${key}`;}
+  function sectionHref(key){return key==='overview'?`${base}/overview`:`${base}/${key}`;}
+  function commandRoutes(){const routes=[{id:'overview',label:'운영 홈',path:base+'/overview',keywords:['대시보드','홈']},{id:'companies',label:'거래회사',path:base+'/companies',keywords:['회사','거래관리']}];if(access?.can_manage_access)routes.push({id:'access',label:'사용자 · 관리자',path:base+'/access',keywords:['관리자','권한','사용자']});return routes}
+  function mountCommandHome(){if(location.pathname.replace(/\/+$/,'')!==base)return false;window.EKODITenantCommandHome?.mount({rootPath:base,siteName:'에코디비즈 무역거래',publicPath:`/${workspaceUrlSlug}/trade`,routes:commandRoutes()});return true}
   function renderSecondaryNav(group=section){
     const sub=$('sectionNav');if(!sub)return;sub.replaceChildren();
     const items=group==='access'?[['access','admins','관리자'],['access','roles','역할 · 권한']]:group==='companies'?[['companies','list','거래회사'],['companies','editor','등록 · 수정']]:[['overview','scope','대시보드']];
@@ -49,9 +51,9 @@ function tradeAdminClient(ADMIN_HUB){
   }
   function authRequired(){
     sectionTitle('무역거래 관리자','에코디비즈 권한으로 거래회사별 관리 범위를 확인합니다.');
-    $('summaryCards').innerHTML=card('상태','로그인 필요','EKODI 통합 인증');
+    $('summaryCards').innerHTML=[card('운영공간','무역거래','에코디비즈 하위서비스'),card('현재 상태','로그인 전','거래회사 데이터 비공개'),card('권한 범위','역할 + 회사','최소 범위만 투영'),card('관계자 화면','사용 가능','관리화면과 분리')].join('');
     const target=new URL('/auth/',location.origin);target.searchParams.set('site','trade');target.searchParams.set('direct','1');target.searchParams.set('return_to',location.origin+location.pathname);
-    $('mainPanel').innerHTML=`<h2>관리자 인증</h2><p class="empty">로그인 후 에코디비즈 전체 권한 또는 지정된 거래회사 범위만 표시합니다.</p><div class="actions"><a class="button primary" href="${esc(target.href)}">Google 계정으로 계속</a></div>`;
+    $('mainPanel').innerHTML=`<h2>무역거래 관리자 인증</h2><p class="empty">로그인 후 에코디비즈 전체 권한 또는 지정된 거래회사 범위만 표시합니다. 로그인 전에는 거래회사·위임관리자·권한 정보를 노출하지 않습니다.</p><div class="actions"><a class="button primary" href="${esc(target.href)}">Google 계정으로 관리자 확인</a><a class="button" href="/${workspaceUrlSlug}/trade">관계자 화면 보기</a></div>`;
     state('인증 필요');
   }
   function accessSummary(){
@@ -123,7 +125,7 @@ function tradeAdminClient(ADMIN_HUB){
       sb=mod.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{detectSessionInUrl:false,persistSession:true}});
       $('workspaceLogout')?.addEventListener('click',async()=>{try{await sb.auth.signOut();}finally{location.assign(base);}});
       await consumeHandoff();const session=await currentSession();if(!session){authRequired();return;}
-      await loadContext();renderAdminScopeSwitcher();await loadCompanies();if(section==='access')await loadAdmins();
+      await loadContext();renderAdminScopeSwitcher();if(mountCommandHome())return;await loadCompanies();if(section==='access')await loadAdmins();
       if(section==='companies')renderCompanies();else if(section==='access')renderAccess();else renderOverview();
     }catch(error){
       console.error('trade admin bootstrap',error);if(error.status===401||error.message==='login_required'){authRequired();return;}

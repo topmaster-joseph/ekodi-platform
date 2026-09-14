@@ -12,6 +12,10 @@ on:
     branches: [main]
     paths:
       - 'site-worker.js'
+      - 'platform-route-registry.js'
+      - 'ai-commons-admin.js'
+      - 'common-services-admin.js'
+      - 'test/ai-commons*.test.mjs'
       - 'ekodibiz-invest-business.js'
       - 'ekodibiz-invest-admin-page.js'
       - 'invest-site-system.js'
@@ -194,6 +198,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: read
 
 concurrency:
   group: ekodi-shared-site-worker-production
@@ -483,8 +488,8 @@ jobs:
             'https://trade.biz.ekodi.kr/',
             'https://pay.ekodi.kr/',
             'https://pay.biz.ekodi.kr/',
-            'https://church.ekodi.kr/',
-            'https://lab.ekodi.kr/'
+            'https://ekodi.kr/ekodichurch/',
+            'https://ekodi.kr/ekodilab/'
           ]);
           for(const service of registry.services||[]) if(service.productionVerified===true && service.url) urls.add(service.url);
           for(const match of shell.matchAll(/href=["'](https:\/\/[^"']+\.ekodi\.kr\/?[^"']*)["']/g)) urls.add(match[1]);

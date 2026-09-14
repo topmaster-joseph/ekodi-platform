@@ -4,6 +4,7 @@ import { renderEkodiUserFooter } from './config/user-footer.js';
 import { resolveEkodiUiSurface } from './config/ui-surface-policy.js';
 
 const SHELL_ORIGIN='https://ekodi.kr/shell';
+const SHELL_CSP_ORIGIN='https://ekodi.kr';
 const I18N_API_ORIGIN='https://ekodi.kr';
 const SHELL_SCRIPT=`${SHELL_ORIGIN}/shell.js`;
 const SHELL_WORKSPACE_STYLE=`${SHELL_ORIGIN}/workspace.css`;
@@ -41,9 +42,9 @@ function extendDirective(csp,name,value){
 function shellCsp(csp){
   let next=String(csp||'').trim();
   if(!next)next="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self'; img-src 'self' data: https:; frame-ancestors 'none'; base-uri 'self'";
-  next=extendDirective(next,'script-src',SHELL_ORIGIN);
-  next=extendDirective(next,'style-src',SHELL_ORIGIN);
-  next=extendDirective(next,'connect-src',SHELL_ORIGIN);
+  next=extendDirective(next,'script-src',SHELL_CSP_ORIGIN);
+  next=extendDirective(next,'style-src',SHELL_CSP_ORIGIN);
+  next=extendDirective(next,'connect-src',SHELL_CSP_ORIGIN);
   next=extendDirective(next,'connect-src',I18N_API_ORIGIN);
   return next;
 }
@@ -97,13 +98,14 @@ class ShellHeadInjector{
 }
 
 class UserUiHtmlInjector{
-  constructor(serviceId,surface,uiSurface){this.serviceId=serviceId;this.surface=surface;this.uiSurface=uiSurface;}
+  constructor(serviceId,surface,uiSurface,progressiveHome=false){this.serviceId=serviceId;this.surface=surface;this.uiSurface=uiSurface;this.progressiveHome=progressiveHome;}
   element(element){
     const service=cleanServiceId(this.serviceId)||'ekodi';
     element.setAttribute('data-ekodi-user-ui',USER_UI_VERSION);
     element.setAttribute('data-ekodi-service',service);
     element.setAttribute('data-ekodi-user-surface',resolvedSurface(this.serviceId,this.surface));
     element.setAttribute('data-ekodi-ui-surface',this.uiSurface||uiSurfaceFor(service,this.surface));
+    if(this.progressiveHome)element.setAttribute('data-ekodi-home-focus-request','v1');
     element.setAttribute('data-ekodi-user-layout',USER_LAYOUT_VERSION);
     element.setAttribute('data-ekodi-ready-locales',readyLocalesForService(service));
     if(serviceOwnsFooter(service))element.setAttribute('data-ekodi-footer-mode','service');
@@ -151,6 +153,7 @@ export function injectEkodiUserUi(response,serviceId='ekodi',surface='public',op
   if(!contentType.includes('text/html')||!USER_SURFACES.has(resolved))return response;
   const alreadyHasChrome=userChromeAlreadyInjected(response.headers);
   const uiSurface=cleanSurface(options?.uiSurface)||uiSurfaceFor(serviceId,resolved,options?.authorityScope,options?.contextKind);
+  const progressiveHome=Boolean(options?.progressiveHome)&&uiSurface!=='platform-public'&&cleanServiceId(serviceId)!=='church';
   const headers=new Headers(response.headers);
   const csp=headers.get('content-security-policy');
   if(csp)headers.set('content-security-policy',extendDirective(csp,'style-src',SHELL_ORIGIN));
@@ -158,13 +161,14 @@ export function injectEkodiUserUi(response,serviceId='ekodi',surface='public',op
   headers.set('x-ekodi-user-ui-surface',resolved);
   headers.set('x-ekodi-ui-surface',uiSurface);
   headers.set('x-ekodi-user-layout',USER_LAYOUT_VERSION);
+  if(progressiveHome)headers.set('x-ekodi-home-focus-request','v1');else headers.delete('x-ekodi-home-focus-request');
   headers.set('x-ekodi-ready-locales',readyLocalesForService(serviceId));
   headers.set('x-ekodi-user-footer',serviceOwnsFooter(serviceId)?'service':'shared');
   headers.set(USER_CHROME_HEADER,USER_UI_VERSION);
   const headerAdopter=new UserHeaderAdopter();
   const canvasAdopter=new UserCanvasAdopter();
   let rewriter=new HTMLRewriter()
-    .on('html',new UserUiHtmlInjector(serviceId,resolved,uiSurface))
+    .on('html',new UserUiHtmlInjector(serviceId,resolved,uiSurface,progressiveHome))
     .on('head',new UserUiHeadInjector())
     .on('main',canvasAdopter)
     .on('[role="main"]',canvasAdopter)

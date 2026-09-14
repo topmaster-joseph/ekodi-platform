@@ -2,7 +2,6 @@ name: Deploy EKODI Church Homepage
 
 on:
   workflow_dispatch:
-  # 2026-09-11: redeploy after church nine-language selector restoration
   push:
     branches: [main]
     paths:
@@ -55,16 +54,26 @@ jobs:
           set -euo pipefail
           test -n "$CLOUDFLARE_API_TOKEN"
           test -n "$CLOUDFLARE_ACCOUNT_ID"
-          for file in index.html script.js church-character-identity.js church-i18n.js church-i18n-extended.js church-i18n-payment-patch.js church-shell-i18n.js church-header-controls.js church-header-tune.css giving.js church-footer.css community-visual.css church-life-hub.js church-life-hub.css church-life-hub-i18n.js; do
+          for file in index.html script.js live/index.html live/live.js live/host-intent.js live/live.css church-character-identity.js church-i18n.js church-i18n-extended.js church-i18n-payment-patch.js church-shell-i18n.js church-header-controls.js church-header-tune.css church-online-status.js church-live-entry.css giving.js church-footer.css community-visual.css church-life-hub.js church-life-hub.css church-life-hub-i18n.js; do
             test -s "church/$file"
           done
-          for file in script.js church-character-identity.js church-i18n.js church-i18n-extended.js church-i18n-payment-patch.js church-shell-i18n.js church-header-controls.js giving.js church-life-hub.js church-life-hub-i18n.js; do
+          for file in script.js live/live.js live/host-intent.js church-character-identity.js church-i18n.js church-i18n-extended.js church-i18n-payment-patch.js church-shell-i18n.js church-header-controls.js church-online-status.js giving.js church-life-hub.js church-life-hub-i18n.js; do
             node --check "church/$file"
           done
           grep -Fq 'data-ekodi-life-hub' church/index.html
           grep -Fq 'church-life-hub.js' church/index.html
           grep -Fq 'church-life-hub.css' church/index.html
           grep -Fq 'church-life-hub-i18n.js' church/index.html
+          grep -Fq 'church-i18n-extended.js' church/index.html
+          grep -Fq 'church-online-status.js' church/index.html
+          grep -Fq 'data-ekodi-church-live-entry' church/index.html
+          grep -Fq "AUTH_ATTEMPT_KEY='ekodi-live-auth-attempt'" church/live/live.js
+          grep -Fq 'refreshAuthToken' church/live/live.js
+          grep -Fq "searchParams.set('mode','studio')" church/live/host-intent.js
+          if grep -Fq 'location.replace(next.href)' church/live/host-intent.js; then echo 'LIVE host intent must not force a reload loop.'; exit 1; fi
+          grep -Fq 'api/realtime/live?tenant=ekodichurch' church/church-online-status.js
+          grep -Fq 'AbortController' church/church-online-status.js
+          grep -Fq "dataset.liveStatus='stale'" church/church-online-status.js
           grep -Fq '에코디선교회' church/index.html
           grep -Fq 'PRIVATE FIRST' church/index.html
           grep -Fq 'localStorage' church/church-life-hub.js
@@ -127,25 +136,56 @@ jobs:
           set -euo pipefail
           release="$CHURCH_SOURCE_SHA"
           for attempt in $(seq 1 18); do
-            root=$(curl -L -sS -o /tmp/church.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://church.ekodi.kr/?release=${release}" || true)
-            life=$(curl -L -sS -o /tmp/life.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://church.ekodi.kr/church-life-hub.js?release=${release}" || true)
-            life_i18n=$(curl -L -sS -o /tmp/life-i18n.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://church.ekodi.kr/church-life-hub-i18n.js?release=${release}" || true)
-            life_css=$(curl -L -sS -o /tmp/life.css -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://church.ekodi.kr/church-life-hub.css?release=${release}" || true)
-            marker=$(curl -L -sS -o /tmp/church-release.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://church.ekodi.kr/church-release.json?release=${release}" || true)
-            if [[ "$root" == 200 && "$life" == 200 && "$life_i18n" == 200 && "$life_css" == 200 && "$marker" == 200 ]] \
+            root=$(curl -L -sS -o /tmp/church.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/?release=${release}" || true)
+            life=$(curl -L -sS -o /tmp/life.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/church-life-hub.js?release=${release}" || true)
+            life_i18n=$(curl -L -sS -o /tmp/life-i18n.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/church-life-hub-i18n.js?release=${release}" || true)
+            life_css=$(curl -L -sS -o /tmp/life.css -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/church-life-hub.css?release=${release}" || true)
+            online_status=$(curl -L -sS -o /tmp/church-online-status.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/church-online-status.js?release=${release}" || true)
+            live_css=$(curl -L -sS -o /tmp/church-live-entry.css -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/church-live-entry.css?release=${release}" || true)
+            live_js=$(curl -L -sS -o /tmp/church-live.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/live/live.js?release=${release}" || true)
+            live_intent=$(curl -L -sS -o /tmp/church-live-host-intent.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/live/host-intent.js?release=${release}" || true)
+            marker=$(curl -L -sS -o /tmp/church-release.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/church-release.json?release=${release}" || true)
+            if [[ "$root" == 200 && "$life" == 200 && "$life_i18n" == 200 && "$life_css" == 200 && "$online_status" == 200 && "$live_css" == 200 && "$live_js" == 200 && "$live_intent" == 200 && "$marker" == 200 ]] \
               && grep -Fq 'data-ekodi-life-hub' /tmp/church.html \
               && grep -Fq '에코디선교회' /tmp/church.html \
+              && grep -Fq 'church-i18n-extended.js' /tmp/church.html \
               && grep -Fq 'localStorage' /tmp/life.js \
               && grep -Fq '__EKODI_CHURCH_LIFE_HUB_I18N__' /tmp/life-i18n.js \
+              && grep -Fq 'api/realtime/live?tenant=ekodichurch' /tmp/church-online-status.js \
+              && grep -Fq 'AbortController' /tmp/church-online-status.js \
+              && grep -Fq "dataset.liveStatus='stale'" /tmp/church-online-status.js \
+              && grep -Fq 'nav-online[data-live="true"]' /tmp/church-live-entry.css \
+              && grep -Fq "AUTH_ATTEMPT_KEY='ekodi-live-auth-attempt'" /tmp/church-live.js \
+              && grep -Fq 'refreshAuthToken' /tmp/church-live.js \
+              && grep -Fq "searchParams.set('mode','studio')" /tmp/church-live-host-intent.js \
+              && ! grep -Fq 'location.replace(next.href)' /tmp/church-live-host-intent.js \
               && jq -e --arg sha "$CHURCH_SOURCE_SHA" '.contract == "ekodi.church-release.v1" and .sourceSha == $sha' /tmp/church-release.json >/dev/null; then
               echo 'Church production life hub assets and release SHA verified.'
               break
             fi
             if [[ "$attempt" == 18 ]]; then
-              echo "Production did not converge: root=$root life=$life life_i18n=$life_i18n life_css=$life_css marker=$marker"
+              echo "Production did not converge: root=$root life=$life life_i18n=$life_i18n life_css=$life_css online_status=$online_status live_css=$live_css live_js=$live_js live_intent=$live_intent marker=$marker"
               exit 1
             fi
             sleep 5
+          done
+
+      - name: Verify Church live-state API contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 5); do
+            code=$(curl -L -sS -o /tmp/church-live-api.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/api/realtime/live?tenant=ekodichurch' || true)
+            if [[ "$code" == 200 ]] && jq -e 'has("live") and (.live|type=="boolean") and ((.room // null) == null or (.room|type=="object"))' /tmp/church-live-api.json >/dev/null; then
+              echo 'Church live-state API contract verified.'
+              break
+            fi
+            if [[ "$attempt" == 5 ]]; then
+              echo "Church live-state API verification failed: HTTP $code"
+              cat /tmp/church-live-api.json || true
+              exit 1
+            fi
+            sleep 3
           done
 
       - name: Verify rendered nine-language church life hub
@@ -166,7 +206,7 @@ jobs:
             const page=await browser.newPage();
             await page.setViewport({width:1440,height:1100});
             for(const locale of locales){
-              await page.goto(`https://church.ekodi.kr/?lang=${encodeURIComponent(locale)}&release=${release}`,{waitUntil:'domcontentloaded',timeout:30000});
+              await page.goto(`https://ekodi.kr/ekodichurch/?lang=${encodeURIComponent(locale)}&release=${release}`,{waitUntil:'domcontentloaded',timeout:30000});
               await page.waitForFunction(expected=>document.documentElement.lang===expected&&window.__EKODI_CHURCH_LIFE_HUB_I18N__===true&&document.querySelector('[data-ekodi-life-hub]')&&document.querySelector('#life-reflection-form'),{timeout:25000},locale);
               if(extended.has(locale)) await page.waitForFunction(expected=>window.EKODIChurchExtendedI18n?.getLocale?.()===expected,{timeout:20000},locale);
               const snapshot=await page.evaluate(()=>{
@@ -202,7 +242,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for target in 'https://church.ekodi.kr/' 'https://ekodi.kr/my/' 'https://community.ekodi.kr' 'https://ekodi.kr/privacy' 'https://ekodi.kr/terms'; do
+          for target in 'https://ekodi.kr/ekodichurch/' 'https://ekodi.kr/my/' 'https://community.ekodi.kr' 'https://ekodi.kr/privacy' 'https://ekodi.kr/terms'; do
             code=$(curl -L -sS -o /dev/null -w '%{http_code}' --connect-timeout 5 --max-time 20 "$target" || true)
             case "$code" in 2*|3*) echo "link ok: $code $target" ;; *) echo "link failed: $code $target"; exit 1 ;; esac
           done

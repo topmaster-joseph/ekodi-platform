@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 2,
+  "id": "2026-09-14-ai-commons-public-surface",
+  "title": "Adopt EKODI 모두의 AI 프로젝트 as the canonical public AI surface",
+  "proposer": "topmaster-joseph",
+  "status": "accepted",
+  "approvedAt": "2026-09-14",
+  "approvalRef": "Owner confirmation in ChatGPT conversation on 2026-09-14 directing EKODI collaboration to deploy and operate the AI Commons through all subordinate service sites.",
+  "approvalMechanism": "constitution-approved label on PR #1669 after explicit owner confirmation",
+  "reason": "Expose the reusable AI Commons at the canonical apex path while keeping provider, runtime and capability topology internal. User-facing subordinate sites inherit a shared AI entry and the Super Administrator retains the final publish/hold/reject gate.",
+  "targetVersion": "1.16.0",
+  "previousVersion": "1.16.0",
+  "touches": [
+    {
+      "constitution": "C2",
+      "version": "1.16.0",
+      "path": "config/service-workspace-policy.json"
+    }
+  ],
+  "diff": [
+    {
+      "path": "config/service-workspace-policy.json",
+      "summary": "Register ai-commons as a public-user exception, reserve /ai as a canonical surface and replace the retired ai.ekodi.kr user gateway with https://ekodi.kr/ai."
+    }
+  ],  "risks": [
+    "A public AI entry could accidentally expose internal provider or capability topology if projection boundaries regress.",
+    "Cross-site request aggregation could reveal tenant-private requester data if public projections are widened.",
+    "Automatic AI build progression could bypass human authority if the staged/public-review gate is weakened."
+  ],
+  "rollback": "Revert the AI Commons public-surface policy and related runtime/config changes through the guarded pipeline. Preserve request data and audit history; do not recreate ai.ekodi.kr as a public compatibility route without a separate approved amendment.",
+  "approvals": [
+    {
+      "role": "owner",
+      "by": "topmaster-joseph"
+    }
+  ],
+  "evidence": [
+    "public user entry is https://ekodi.kr/ai/",
+    "36 user services inherit the shared AI entry through the User UI Shell",
+    "AI detailed lifecycle progresses automatically but public release requires Super Administrator decision",
+    "internal capability/provider identifiers remain server-side",
+    "staging validates the AI Commons project page and authenticated request boundary"
+  ],
+  "proposedAt": "2026-09-14T08:20:00Z"
+}

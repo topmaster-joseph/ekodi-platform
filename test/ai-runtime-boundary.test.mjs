@@ -4,44 +4,42 @@ import fs from 'node:fs';
 
 const read = path => fs.readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 
-test('ai.ekodi.kr has one runtime owner and no Shared Site ownership', () => {
-  const constitution = read('CONSTITUTION.md');
+test('AI Commons has one canonical public path and a private runtime owner', () => {
   const production = read('wrangler.ai.release.toml');
   const shared = read('wrangler.site.toml');
   const worker = read('ai-control-worker.js');
-  const router = read('platform-router-entry-worker.js');
+  const site = read('site-worker.js');
+  const routes = read('platform-route-registry.js');
 
-  assert.match(constitution, /`ai\.ekodi\.kr` is the registered provider-independent AI Gateway\/Core boundary/);
-  assert.match(production, /pattern = "ai\.ekodi\.kr"/);
-  assert.doesNotMatch(shared, /pattern = "ai\.ekodi\.kr"/);
-  assert.match(worker, /function adminControlRedirect\(\)/);
-  assert.match(worker, /surface:'runtime-only'/);
-  assert.match(worker, /operator_surface_moved/);
-  assert.match(worker, /service_local_auth_retired/);
-  assert.doesNotMatch(router, /AI_GATEWAY_HOST|ai-gateway-page\.js/);
-  assert.equal(fs.existsSync(new URL('../ai-gateway-page.js', import.meta.url)), false);
+  assert.doesNotMatch(production, /pattern = "ai\.ekodi\.kr"/);
+  assert.match(production, /User traffic enters through ekodi\.kr\/ai via the shared-site service binding/);
+  assert.match(shared, /binding = "AI"[\s\S]*service = "ekodi-ai-control"/);
+  assert.match(shared, /"\/ai\*"/);
+  assert.match(site, /url\.pathname === '\/ai'/);
+  assert.match(site, /url\.pathname\.startsWith\('\/ai\/'\)/);
+  assert.match(site, /env\.AI\.fetch/);
+  assert.match(routes, /'ai','bible'/);
+  assert.match(worker, /surface:'runtime-and-commons'/);
+  assert.match(worker, /commons:true/);
+  assert.doesNotMatch(read('platform-router-entry-worker.js'), /AI_GATEWAY_HOST|ai-gateway-page\.js/);
 });
-
-test('production verifier follows the AI Control runtime-only contract', () => {
+test('production verifier follows the AI Commons public/member boundary contract', () => {
   const workflow = read('.github/workflows/verify-ai-gateway-production.yml');
   const manifest = JSON.parse(read('deploy/manifests/ai-control.worker.json'));
 
-  assert.match(workflow, /Deploy EKODI AI Control Plane/);
-  assert.match(workflow, /root_code.*ai\.ekodi\.kr\//s);
-  assert.match(workflow, /health_code.*\/__health/s);
-  assert.match(workflow, /config_code.*\/config\.js/s);
-  assert.match(workflow, /exchange_code.*\/api\/auth\/exchange/s);
-  assert.match(workflow, /status_code.*\/api\/status/s);
-  assert.match(workflow, /\[ "\$root_code" = '307' \]/);
-  assert.doesNotMatch(workflow, /ai-gateway\.js|AI COMMAND CONSOLE|memoryToken/);
+  assert.match(workflow, /https:\/\/ekodi\.kr\/ai\//);
+  assert.match(workflow, /api\/commons\/services/);
+  assert.match(workflow, /api\/commons\/requests/);
+  assert.match(workflow, /api\/commons\/ideas/);
+  assert.match(workflow, /EKODI 모두의 AI 프로젝트/);
+  assert.doesNotMatch(workflow, /https:\/\/ai\.ekodi\.kr/);
 
   const requests = manifest.worker.requests;
-  assert.equal(requests.find(item => item.url === 'https://ai.ekodi.kr/')?.statuses?.[0], 307);
-  const rootProbe = requests.find(item => item.url === 'https://ai.ekodi.kr/');
-  assert.ok(rootProbe.headerExpect.includes('location: https://ekodi.kr/admin/services/common-services?service=ai'));
-  assert.ok(rootProbe.headerExpect.includes('x-content-type-options: nosniff'));
+  assert.equal(requests.find(item => item.url === 'https://ekodi.kr/ai/')?.statuses?.[0], 200);
   assert.equal(requests.find(item => item.url.endsWith('/__health'))?.statuses?.[0], 200);
-  assert.equal(requests.find(item => item.url.endsWith('/config.js'))?.statuses?.[0], 410);
-  assert.equal(requests.find(item => item.url.endsWith('/api/status'))?.statuses?.[0], 401);
-  assert.equal(requests.find(item => item.url.endsWith('/api/auth/exchange'))?.statuses?.[0], 410);
+  assert.equal(requests.find(item => item.url.endsWith('/api/commons/services'))?.statuses?.[0], 200);
+  assert.equal(requests.find(item => item.url.endsWith('/api/commons/requests'))?.statuses?.[0], 200);
+  assert.equal(requests.find(item => item.url.endsWith('/api/commons/ideas'))?.statuses?.[0], 401);
+  const rootProbe = requests.find(item => item.url === 'https://ekodi.kr/ai/');
+  assert.ok(rootProbe.headerExpect.includes('x-ekodi-ai-entry: commons-v1'));
 });

@@ -1,5 +1,5 @@
 /* EKODI Character Engine — CSP-safe shared presentation.
- * Served from shell.ekodi.kr so strict user surfaces do not need inline style-src.
+ * Served from ekodi.kr/shell so strict user surfaces do not need inline style-src.
  */
 .ekodi-main-ekodian-host{position:relative!important;isolation:isolate}
 .ekodi-main-ekodian{--ekodi-character-width:clamp(108px,13vw,176px);position:absolute;z-index:3;width:var(--ekodi-character-width)!important;max-width:176px!important;max-height:180px;box-sizing:border-box;line-height:0;pointer-events:none;opacity:.96;filter:drop-shadow(0 10px 18px rgba(22,43,31,.10));color:var(--ekodi-service-accent,var(--accent,#78b89b));transition:opacity .18s ease}

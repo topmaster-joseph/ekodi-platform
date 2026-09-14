@@ -17,7 +17,7 @@
     <section class="safety" aria-label="안전 원칙"><strong>현재 운영 모드</strong><span>쿠폰·지원포인트·프로모션 상품권</span><span>현금 보관 없음</span><span>자동 송금 없음</span><span>실물 결제사업자 연동 잠금</span></section>
 
     <nav class="tabs" aria-label="지역상권 메뉴">
-      <button class="tab active" data-view="wallet">내 지갑</button><button class="tab" data-view="receive">받기</button><button class="tab" data-view="pay">결제</button><button class="tab" data-view="merchant">상인</button><button class="tab" data-view="operate">운영</button><button class="tab" data-view="settlement">회계·정산</button>
+      <button class="tab active" data-view="wallet">내 지갑</button><button class="tab" data-view="receive">받기</button><button class="tab" data-view="pay">결제</button><button class="tab" data-view="merchant">상인</button><button class="tab" data-view="operate">운영</button><button class="tab" data-view="settlement">회계·정산</button><button class="tab hidden" data-view="language" id="languageAdminTab">언어·게시</button>
     </nav>
 
     <section class="view active" data-panel="wallet">
@@ -51,6 +51,15 @@
       </div>
     </section>
 
+    <section class="view hidden" data-panel="language" id="languageAdminPanel">
+      <div class="section-head"><div><p class="eyebrow">LANGUAGE CONTROL · SHARED LEDGER</p><h2>다국어 번역·게시</h2></div><button id="languageAdminRefresh" type="button">새로고침</button></div>
+      <p class="lead">이 사이트의 번역 진행 상태와 실제 게시 여부를 관리합니다. EKODI 최고관리자 화면과 같은 중앙 원장을 사용합니다.</p>
+      <div id="languageAdminSummary" class="cards"></div>
+      <p id="languageAdminStatus" class="result" role="status">관리자 권한을 확인합니다.</p>
+      <div id="languageAdminList" class="list"></div>
+      <p class="empty">한국어 원문은 항상 공개됩니다. 번역 검증이 끝나지 않은 언어는 게시할 수 없으며, 원문 변경 시 기존 번역은 자동 비게시됩니다.</p>
+    </section>
+
     <section class="view" data-panel="settlement">
       <div id="settlementGate" class="card muted">회계 또는 운영관리 권한이 있는 운영주체만 정산을 검토할 수 있습니다.</div>
       <div id="settlementTools" class="hidden"><div class="section-head"><div><p class="eyebrow">HUMAN-GOVERNED SETTLEMENT</p><h2>회계·정산</h2></div><select id="settlementIssuer" class="issuer-select"></select></div><div id="settlementSummary" class="cards"></div>
@@ -59,6 +68,6 @@
 
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
   </main>
-  <script src="/local-commerce/config.js"></script><script type="module" src="/local-commerce/account.js"></script><script type="module" src="/local-commerce/app.js"></script>
+  <script src="/local-commerce/config.js"></script><script type="module" src="/local-commerce/account.js"></script><script type="module" src="/local-commerce/app.js"></script><script type="module" src="/local-commerce/language-admin.js"></script>
 </body>
 </html>

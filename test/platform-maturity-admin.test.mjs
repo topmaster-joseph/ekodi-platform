@@ -22,6 +22,9 @@ test('protected maturity projection exposes current evidence and summary-only hi
   assert.equal(payload.current.certificationStatus, 'not-claimed');
   assert.ok(Array.isArray(payload.model.domains) && payload.model.domains.length > 0);
   assert.ok(Array.isArray(payload.history) && payload.history.length > 0);
+  assert.ok(payload.serviceScopes?.summary?.totalScopes > 0);
+  assert.ok(Array.isArray(payload.serviceScopes?.services) && payload.serviceScopes.services.length > 0);
+  assert.ok(Array.isArray(payload.serviceScopes?.workspaceSites) && payload.serviceScopes.workspaceSites.length > 0);
   for (const item of payload.history) {
     assert.deepEqual(Object.keys(item).sort(), ['date', 'overall']);
     assert.ok(Number.isFinite(item.overall));
@@ -53,4 +56,44 @@ test('maturity dashboard registry entry stays in system platform category', () =
   assert.match(registry, /id: 'maturity'.*group: 'system'/s);
   assert.match(registry, /maturity:'platform'/);
   assert.match(registry, /platform-maturity-admin\.js/);
+});
+
+
+test('subservice maturity coverage includes every registered service and workspace site without invented local scores', () => {
+  const payload = platformMaturityProjection();
+  const services = json('config/ecosystem-services.json').services;
+  const sites = json('config/site-lifecycle-registry.json').existingWorkspaceSites;
+  assert.equal(payload.serviceScopes.summary.services, services.length);
+  assert.equal(payload.serviceScopes.summary.workspaceSites, sites.length);
+  const capabilities = json('config/capability-registry.json').capabilities;
+  assert.equal(payload.serviceScopes.summary.systemFunctions, capabilities.length);
+  assert.equal(payload.serviceScopes.summary.totalScopes, services.length + sites.length + capabilities.length);
+  assert.equal(payload.serviceScopes.policy.numericScorePolicy, 'no-local-score-without-evidence');
+  for (const item of [...payload.serviceScopes.services, ...payload.serviceScopes.workspaceSites, ...payload.serviceScopes.systemFunctions]) {
+    assert.equal(item.localAssessmentState, 'not-assessed');
+    assert.equal(item.localMaturityScore, null);
+  }
+});
+
+test('maturity dashboard renders subordinate service and workspace coverage', () => {
+  const source = read('platform-maturity-admin.js');
+  assert.match(source, /하위서비스·사이트 적용범위/);
+  assert.match(source, /dataset\.maturityScope/);
+  assert.match(source, /미평가 · 로컬 증빙 필요/);
+  assert.match(source, /payload\.serviceScopes/);
+  assert.match(source, /시스템 기능/);
+});
+
+
+test('system function maturity coverage mirrors the universal capability registry', () => {
+  const payload = platformMaturityProjection();
+  const capabilities = json('config/capability-registry.json').capabilities;
+  assert.equal(payload.serviceScopes.systemFunctions.length, capabilities.length);
+  const expected = new Set(capabilities.map(item => item.id));
+  for (const item of payload.serviceScopes.systemFunctions) {
+    assert.ok(expected.has(item.id));
+    assert.equal(item.scopeType, 'system-function');
+    assert.equal(item.localMaturityScore, null);
+    assert.equal(item.localAssessmentState, 'not-assessed');
+  }
 });

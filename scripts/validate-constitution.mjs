@@ -6,6 +6,8 @@ const json = file => JSON.parse(fs.readFileSync(path.join(root, file), 'utf8').r
 const failures = [];
 const fail = message => failures.push(message);
 const constitution = json('governance/constitution/constitution.json');
+const supremeAttributes = json('governance/constitution/supreme-attributes.v1.json');
+const packageJson = json('package.json');
 const architecture = json('governance/architecture/ekodi-os-architecture.json');
 const evolutionModel = json('governance/architecture/ekodi-evolution-model.json');
 const boundaries = json('platform-boundaries.json');
@@ -13,10 +15,39 @@ const coreData = json('config/core-data-boundaries.json');
 const storage = json('config/storage-policy.json');
 const workspace = json('config/service-workspace-policy.json');
 
-if (constitution.version !== '1.14.0') fail('constitution version must be 1.14.0 with the approved Completion Continuity amendment and all prior approved amendments');
+if (constitution.version !== '1.16.0') fail('constitution version must be 1.16.0 with the approved Supreme Attributes, Shell canonical-path retirement, and site-owned administrator path amendments plus all prior approved amendments');
 if (constitution.status !== 'active') fail('constitution must be active');
-for (const principle of ['free-first-not-free-only','ekodi-core-is-source-of-truth','provider-independent-by-default','secure-by-default','one-domain-grammar','isolated-parallel-development','verification-first-evolution','security-native-intelligence','evidence-linked-recommendations','secure-projection-minimum-disclosure','integrated-responsibility-distributed-execution-standardized-connections','layered-governance-os-core-services-connections-workspaces','user-surface-engine-separation','capability-first-reuse','sustainable-scale-by-evidence','workspace-over-space','generation-10-active-baseline','open-ended-evidence-driven-generation-evolution','sovereign-autonomy-with-human-authority','person-workspace-role-capability-authority','observe-detect-reason-plan-execute-verify-recover-learn','ekodibiz-exclusive-commercial-subject','ordinary-user-information-first-commercial-separation','completion-continuity-through-recoverable-interruptions']) {
+for (const principle of ['free-first-not-free-only','ekodi-core-is-source-of-truth','provider-independent-by-default','secure-by-default','one-domain-grammar','isolated-parallel-development','verification-first-evolution','security-native-intelligence','evidence-linked-recommendations','secure-projection-minimum-disclosure','integrated-responsibility-distributed-execution-standardized-connections','layered-governance-os-core-services-connections-workspaces','user-surface-engine-separation','capability-first-reuse','sustainable-scale-by-evidence','workspace-over-space','generation-10-active-baseline','open-ended-evidence-driven-generation-evolution','sovereign-autonomy-with-human-authority','person-workspace-role-capability-authority','observe-detect-reason-plan-execute-verify-recover-learn','ekodibiz-exclusive-commercial-subject','ordinary-user-information-first-commercial-separation','completion-continuity-through-recoverable-interruptions','supreme-attributes-binding']) {
   if (!constitution.principles?.includes(principle)) fail(`missing constitutional principle: ${principle}`);
+}
+
+const supremePolicy = constitution.supremeAttributesPolicy || {};
+if (supremePolicy.id !== 'EKODI-SUPREME-ATTRIBUTES-001') fail('supreme attributes constitutional policy id mismatch');
+if (supremePolicy.registry !== 'governance/constitution/supreme-attributes.v1.json') fail('supreme attributes registry path mismatch');
+if (supremePolicy.bindingLevel !== 'supreme-mandatory') fail('supreme attributes must remain supreme-mandatory');
+if (supremePolicy.attributeCount !== 21 || supremePolicy.allRequired !== true) fail('all 21 supreme attributes must remain mandatory');
+if (supremePolicy.nonRegressionRequired !== true || supremePolicy.appliesToAllPlatformChanges !== true || supremePolicy.appliesToFutureGenerations !== true) fail('supreme attributes non-regression/future-generation binding missing');
+if (supremePolicy.implementationWaiverForbidden !== true || supremePolicy.aiSelfWaiverForbidden !== true || supremePolicy.exceptionRequiresConstitutionalAmendment !== true) fail('supreme attribute waiver protection missing');
+if (supremePolicy.finalAuthority !== 'ekodi_platform_super_administrator') fail('supreme attributes final authority must remain EKODI Platform Super Administrator');
+
+const expectedSupremeAttributeIds = ["independence","modularity","scalability","standardization","consistency","collaboration","agility","creativity","security","evolvability","adaptability","replaceability","reversibility","resilience","observability","verifiability","interoperability","data-sovereignty","autonomous-operations","economic-sustainability","simplicity"];
+if (supremeAttributes.schemaVersion !== 1 || supremeAttributes.id !== 'EKODI-SUPREME-ATTRIBUTES-001' || supremeAttributes.status !== 'active') fail('supreme attributes registry identity/status mismatch');
+if (supremeAttributes.bindingLevel !== 'supreme-mandatory') fail('supreme attributes registry binding level mismatch');
+if (supremeAttributes.generationBaseline !== 10) fail('supreme attributes registry must preserve Generation 10 baseline');
+if (supremeAttributes.rules?.allAttributesRequiredTogether !== true || supremeAttributes.rules?.nonRegressionRequired !== true) fail('supreme attributes must be enforced together with non-regression');
+if (supremeAttributes.rules?.implementationWaiverForbidden !== true || supremeAttributes.rules?.providerWaiverForbidden !== true || supremeAttributes.rules?.aiSelfWaiverForbidden !== true || supremeAttributes.rules?.serviceLocalOverrideForbidden !== true) fail('supreme attributes waiver rules are incomplete');
+if (supremeAttributes.rules?.exceptionRequiresConstitutionalAmendment !== true) fail('supreme attribute exceptions must require constitutional amendment');
+if (supremeAttributes.rules?.securityDataSovereigntyAndHumanAuthorityFloorsCannotBeReducedByTradeoff !== true) fail('security/data-sovereignty/human-authority floors must be non-reducible');
+if (supremeAttributes.authority?.finalHumanAuthority !== 'ekodi_platform_super_administrator' || supremeAttributes.authority?.automationMayChangeConstitution !== false || supremeAttributes.authority?.automationMayExpandOwnAuthority !== false) fail('supreme attribute sovereign authority contract mismatch');
+if (supremeAttributes.enforcement?.constitutionValidatorRequired !== true || supremeAttributes.enforcement?.ciGateRequired !== true || supremeAttributes.enforcement?.guardedPromotionRequired !== true) fail('supreme attribute enforcement gates must remain enabled');
+const actualSupremeAttributeIds = (supremeAttributes.attributes || []).map(item => item.id);
+if (JSON.stringify(actualSupremeAttributeIds) !== JSON.stringify(expectedSupremeAttributeIds)) fail('supreme attribute set/order drifted from the approved 21 attributes');
+for (const attribute of supremeAttributes.attributes || []) {
+  if (attribute.required !== true || attribute.nonRegression !== true) fail(`supreme attribute must remain mandatory/non-regressive: ${attribute.id}`);
+  if (!attribute.nameKo || !attribute.nameEn || !attribute.intent) fail(`supreme attribute metadata incomplete: ${attribute.id}`);
+  const validators = attribute.enforcement?.validators || [];
+  if (!validators.length || attribute.enforcement?.evidenceRequired !== true) fail(`supreme attribute enforcement evidence missing: ${attribute.id}`);
+  for (const validatorName of validators) if (!packageJson.scripts?.[validatorName]) fail(`supreme attribute validator command missing for ${attribute.id}: ${validatorName}`);
 }
 
 const commercialSubject = constitution.commercialSubjectPolicy || {};
@@ -197,7 +228,7 @@ if (!Array.isArray(coreData.protectedTables) || coreData.protectedTables.length 
 for (const table of ['customer_tenants','customer_users','customer_memberships','customer_access_grants']) if (!coreData.protectedTables?.includes(table)) fail(`core source-of-truth table not protected: ${table}`);
 if (!String(coreData.rule || '').includes('must not directly reference EKODI Core protected tables')) fail('core data access rule missing');
 
-if (workspace.schemaVersion !== 4) fail('service workspace policy schemaVersion must be 4');
+if (workspace.schemaVersion !== 5) fail('service workspace policy schemaVersion must be 5');
 if (workspace.identityAuthority !== 'ekodi') fail('service workspace identityAuthority must be ekodi');
 if (workspace.commonServiceUserAccessRule?.memberMinimumTier !== 'free') fail('common services must preserve free-member minimum access');
 if (workspace.customerWorkspaceRule?.preserveCustomerOwnership !== true) fail('customer workspace ownership must remain preserved');
@@ -206,8 +237,9 @@ if (workspace.publicWorkspaceRouting?.workspaceIdentityKey !== 'workspace_id') f
 if (workspace.publicWorkspaceRouting?.workspaceSubdomains !== 'forbidden') fail('service workspace subdomains must be forbidden');
 if (workspace.publicWorkspaceRouting?.canonicalPattern !== '/{slug}') fail('service workspace canonical route must be /{slug}');
 if (workspace.publicWorkspaceRouting?.servicePattern !== '/{slug}/{service}') fail('service workspace child service route must be /{slug}/{service}');
-if (workspace.publicWorkspaceRouting?.adminPattern !== null || workspace.publicWorkspaceRouting?.adminSurface !== '/admin/workspaces') fail('workspace administration must use the centralized /admin/workspaces surface');
-if (workspace.publicWorkspaceRouting?.serviceAdminPattern !== null) fail('workspace service admin must not have a canonical tenant path');
+if (workspace.publicWorkspaceRouting?.adminPattern !== '/{slug}/admin' || workspace.publicWorkspaceRouting?.serviceAdminPattern !== '/{slug}/{service}/admin') fail('workspace and child-site administration must use each managed public path plus /admin');
+if (workspace.publicWorkspaceRouting?.adminSurface !== '/admin/workspaces' || workspace.publicWorkspaceRouting?.adminSurfaceRole !== 'directory-observability-and-handoff-only' || workspace.publicWorkspaceRouting?.higherAdminChildAliases !== 'forbidden') fail('central Admin may aggregate and hand off but must not own alternate child-admin URLs');
+if (constitution.workspaceRoutingPolicy?.workspaceAdminCanonical !== '/{slug}/admin' || constitution.workspaceRoutingPolicy?.workspaceChildAdminCanonical !== '/{slug}/{service}/admin' || constitution.workspaceRoutingPolicy?.centralAdminChildAliasForbidden !== true) fail('constitutional site-owned administrator canonical paths drifted');
 if (workspace.publicWorkspaceRouting?.kindEncodedInUrl !== false) fail('service workspace kind/type must not be encoded in public URLs');
 const expectedAdminRoutes = { home:'/admin/home/{capability}', operations:'/admin/operations/{capability}', workspaces:'/admin/workspaces/{capability}', services:'/admin/services/{service}', system:'/admin/system/{capability}' };
 for (const [group, pattern] of Object.entries(expectedAdminRoutes)) {
@@ -244,6 +276,7 @@ if (failures.length) {
   process.exit(1);
 }
 console.log(`EKODI Constitution ${constitution.version}: OK`);
+console.log('- 21 supreme ecosystem attributes: mandatory, non-regressive and CI-bound');
 console.log(`- ${Object.keys(boundaries.platforms || {}).length} platform/service boundaries checked`);
 console.log(`- ${legacy.size} legacy domains registered with canonical migration targets`);
 console.log(`- ${registeredCommon.size} registered common-service boundaries checked`);

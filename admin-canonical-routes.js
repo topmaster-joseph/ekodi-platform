@@ -23,7 +23,8 @@ const LEGACY_SECTION_GROUP=Object.freeze({
 const ALIASES=Object.freeze({
   'ai-ops':'aiops',storige:'storage',release:'deployments','mall-ai-sales':'affiliates',
 });
-const SECTION_SET=new Set(Object.keys(SECTION_GROUP));
+const COMMAND_HOME='command-home';
+const SECTION_SET=new Set([COMMAND_HOME,...Object.keys(SECTION_GROUP)]);
 function normalizeSection(value){
   const raw=String(value||'').replace(/^#/,'').trim().toLowerCase();
   if(!raw||raw.includes('=')||raw.includes('&'))return'';
@@ -32,15 +33,15 @@ function normalizeSection(value){
 }
 function pathFor(section){
   const normalized=normalizeSection(section);
-  if(!normalized)return'/admin/';
+  if(!normalized||normalized===COMMAND_HOME)return'/admin/';
   return `/admin/${SECTION_GROUP[normalized]}/${normalized}`;
 }
 function sectionFromPath(pathname){
   const parts=String(pathname||'').split('/').filter(Boolean);
   if(parts[0]!=='admin')return'';
-  if(parts.length===1)return'';
+  if(parts.length===1)return COMMAND_HOME;
   const group=String(parts[1]||'').toLowerCase();
-  if(parts.length===2)return GROUP_DEFAULT[group]||LEGACY_GROUP_DEFAULT[group]||'';
+  if(parts.length===2)return group==='home'?COMMAND_HOME:(GROUP_DEFAULT[group]||LEGACY_GROUP_DEFAULT[group]||'');
   const section=normalizeSection(parts[2]);
   if(!section)return'';
   if(SECTION_GROUP[section]===group)return section;
@@ -50,14 +51,16 @@ function sectionFromPath(pathname){
 }
 function sectionFromLocation(loc=window.location){
   const pathSection=sectionFromPath(loc.pathname);
-  if(pathSection)return pathSection;
+  if(pathSection&&pathSection!==COMMAND_HOME)return pathSection;
   const query=normalizeSection(new URLSearchParams(loc.search).get('route'));
   if(query)return query;
-  return normalizeSection(loc.hash);
+  const hash=normalizeSection(loc.hash);
+  if(hash)return hash;
+  return pathSection;
 }
 function legacyHashFor(section){
   const normalized=normalizeSection(section);
-  if(!normalized)return'';
+  if(!normalized||normalized===COMMAND_HOME)return'';
   if(normalized==='aiops')return'#ai-ops';
   if(normalized==='affiliates')return'#mall-ai-sales';
   return `#${normalized}`;
@@ -74,7 +77,7 @@ function navigationTarget(section,loc=window.location){
   return isCanonicalHost(loc)?canonicalUrl(section,loc):legacyHashFor(section);
 }
 window.EKODIAdminRoutes=Object.freeze({
-  version:'1.1.0',
+  version:'1.2.0',
   groups:Object.freeze({...GROUP_DEFAULT}),
   normalizeSection,
   sectionFromPath,

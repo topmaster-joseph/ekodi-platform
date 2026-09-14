@@ -121,9 +121,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          curl --fail-with-body -sS --connect-timeout 5 --max-time 15 https://ekodi.kr/my/health | grep -Fq '"service":"ekodi-my"'
-          curl --fail-with-body -sS --connect-timeout 5 --max-time 15 https://ekodi.kr/my/channel-automation.js | grep -Fq 'revenue-opportunity'
-          curl --fail-with-body -sS --connect-timeout 5 --max-time 15 'https://ekodi.kr/my/revenue-opportunity.js?v=20260911-revenue-engine-1' | grep -Eiq 'revenue|수익'
+          curl --fail-with-body -sS --connect-timeout 5 --max-time 15 -o /tmp/my-health.json https://ekodi.kr/my/health
+          curl --fail-with-body -sS --connect-timeout 5 --max-time 15 -o /tmp/my-channel-automation.js https://ekodi.kr/my/channel-automation.js
+          curl --fail-with-body -sS --connect-timeout 5 --max-time 15 -o /tmp/my-revenue-opportunity.js 'https://ekodi.kr/my/revenue-opportunity.js?v=20260911-revenue-engine-1'
+          grep -Fq '"service":"ekodi-my"' /tmp/my-health.json
+          grep -Fq 'revenue-opportunity' /tmp/my-channel-automation.js
+          grep -Eiq 'revenue|수익' /tmp/my-revenue-opportunity.js
       - name: Remove exact retired My DNS record
         shell: bash
         run: |
@@ -161,8 +164,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          curl --fail-with-body -sS --connect-timeout 5 --max-time 15 https://ekodi.kr/my/health | grep -Fq '"service":"ekodi-my"'
-          curl --fail-with-body -sS --connect-timeout 5 --max-time 15 'https://ekodi.kr/my/revenue-opportunity.js?v=20260911-revenue-engine-1' | grep -Eiq 'revenue|수익'
+          curl --fail-with-body -sS --connect-timeout 5 --max-time 15 -o /tmp/my-health-after.json https://ekodi.kr/my/health
+          curl --fail-with-body -sS --connect-timeout 5 --max-time 15 -o /tmp/my-revenue-after.js 'https://ekodi.kr/my/revenue-opportunity.js?v=20260911-revenue-engine-1'
+          grep -Fq '"service":"ekodi-my"' /tmp/my-health-after.json
+          grep -Eiq 'revenue|수익' /tmp/my-revenue-after.js
       - name: Verify retired My subdomain no longer serves first-party traffic
         shell: bash
         run: |

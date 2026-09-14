@@ -23,32 +23,28 @@ test('homepage keeps a translucent daily Seoul-date ambient scene', () => {
   assert.match(deploySiteCore, /npm run build/);
 });
 
-test('public homepage leads with the dynamic EKODI ecosystem experience', () => {
+test('public homepage leads with a calm personalized first view', () => {
   assert.match(js, /원하는 일, 바로 시작하세요/);
   assert.match(js, /function buildDynamicVisual/);
   assert.match(js, /function buildQuickLaunch/);
-  assert.match(js, /dataset\.livingGateway = 'v6-dynamic-ecosystem'/);
-  assert.match(js, /ecosystem-orbit ecosystem-orbit-/);
-  assert.match(js, /domain-float domain-/);
-  assert.match(js, /dynamic-service-launchers/);
-  assert.match(css, /EKODI dynamic ecosystem landing v6/);
-  assert.match(css, /\.ecosystem-core\{/);
-  assert.match(css, /\.ecosystem-orbit\{/);
-  assert.match(css, /\.dynamic-start-panel\{/);
-  assert.match(css, /body\[data-living-gateway="v6-dynamic-ecosystem"\] #ecosystem\{display:block!important/);
-  assert.match(css, /grid-template-columns:minmax\(0,\.92fr\) minmax\(460px,1\.08fr\)/);
+  assert.match(js, /ekodi\.home\.recentServices\.v1/);
+  assert.match(js, /dataset\.livingGateway = 'v7-calm-personal'/);
+  assert.match(js, /selected\.length>=4/);
+  assert.match(css, /EKODI calm personalized landing v7/);
+  assert.match(css, /v7-calm-personal/);
+  assert.match(css, /#ecosystem:has\(#services:target\)/);
 });
 
 test('quick launch respects homepage presentation and links only to verified live launch choices', () => {
   assert.match(js, /applyHomepagePresentation/);
-  assert.match(js, /cards\.filter\(card => !card\.hasAttribute\('hidden'\)\)/);
-  assert.match(js, /\['church','biz','books','lab','work'\]/);
-  assert.match(js, /https:\/\/ekodi\.kr\/my\//);
+  assert.match(js, /cards\.filter\(card=>!card\.hasAttribute\('hidden'\)\)/);
+  assert.match(js, /'church','biz','books','work','lab'/);
+  assert.match(js, /rememberService\(item\.id\)/);
   assert.match(js, /dynamic-more-link/);
   assert.match(js, /무료로 시작하기/);
   assert.doesNotMatch(js, /dataset\.quickService = 'mail'/);
   assert.doesNotMatch(js, /dataset\.quickService = 'live'/);
-  assert.doesNotMatch(js, /data-status-filter/);
+  assert.doesNotMatch(js, /data-status-filter=/);
   assert.doesNotMatch(js, /function applyFilter/);
 });
 

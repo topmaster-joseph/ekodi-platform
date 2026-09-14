@@ -19,13 +19,16 @@ test('workspace admin uses the shared two-level navigation contract', async()=>{
   assert.match(script,/label:'AI 영업'/);
   assert.match(script,/function renderSecondaryNav/);
   assert.match(script,/로그인 후 세부 메뉴가 표시됩니다/);
+  assert.match(script,/운영 데이터 비공개/);
+  assert.match(script,/Google 계정으로 관리자 확인/);
+  assert.match(css,/\.mall-quick-actions/);
 });
 
 test('mall primary groups keep detail routes in the upper secondary navigation', async()=>{
   const script=await (await workspaceAdminScript()).text();
   assert.match(script,/id:'catalog'.*\['products','상품관리'\].*\['sourcing','제휴·소싱'\]/s);
   assert.match(script,/id:'marketing'.*\['channels','채널설정'\]/s);
-  assert.match(script,/sectionHref=key=>key==='overview'\?adminBase:.*channel-settings/s);
+  assert.match(script,/sectionHref=key=>key==='overview'\?`\$\{adminBase\}\/overview`:.*channel-settings/s);
   assert.match(script,/id:'ai-sales'.*\['growth','AI 자동영업'\].*\['analytics','성과·학습'\]/s);
   assert.doesNotMatch(script,/\[null,'상품'\]/);
 });

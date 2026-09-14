@@ -245,8 +245,8 @@ jobs:
           for attempt in $(seq 1 24); do
             client_code=$(curl -sS -o /tmp/my-client-auth.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/auth/client-auth.js' || true)
             router_code=$(curl -sS -o /tmp/my-auth-router.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/auth/auth-router.js' || true)
-            manifest_code=$(curl -sS -o /tmp/my-shell-manifest.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://shell.ekodi.kr/manifest.json' || true)
-            shell_health_code=$(curl -sS -o /tmp/my-shell-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://shell.ekodi.kr/health' || true)
+            manifest_code=$(curl -sS -o /tmp/my-shell-manifest.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/shell/manifest.json' || true)
+            shell_health_code=$(curl -sS -o /tmp/my-shell-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/shell/health' || true)
             if [[ "$client_code" == '200' && "$router_code" == '200' && "$manifest_code" == '200' && "$shell_health_code" == '200' ]] \
               && grep -Fq "'my':{name:'My EKODI'" /tmp/my-client-auth.js \
               && grep -Fq "returnTo:'https://ekodi.kr/my/'" /tmp/my-client-auth.js \

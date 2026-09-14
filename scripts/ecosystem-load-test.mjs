@@ -7,8 +7,8 @@ const DEFAULT_TARGETS = [
   { label: 'api-health', url: 'https://api.ekodi.kr/health' },
   { label: 'biz', url: 'https://biz.ekodi.kr/' },
   { label: 'marketing', url: 'https://marketing.ekodi.kr/' },
-  { label: 'church', url: 'https://church.ekodi.kr/' },
-  { label: 'lab', url: 'https://lab.ekodi.kr/' },
+  { label: 'church', url: 'https://ekodi.kr/ekodichurch/' },
+  { label: 'lab', url: 'https://ekodi.kr/ekodilab/' },
 ];
 
 const targets = process.env.LOAD_TARGETS_JSON

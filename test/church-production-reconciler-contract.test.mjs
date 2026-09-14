@@ -18,7 +18,7 @@ test('Church reconciler stays central and uses no cross-repository secret',async
   assert.match(workflow,/cron: '17 \* \* \* \*'/);
   assert.match(workflow,/actions: write/);
   assert.match(workflow,/git ls-remote https:\/\/github\.com\/topmaster-joseph\/ekodi-church\.git refs\/heads\/main/);
-  assert.match(workflow,/https:\/\/church\.ekodi\.kr\/church-release\.json/);
+  assert.match(workflow,/https:\/\/ekodi\.kr\/ekodichurch\/church-release\.json/);
   assert.match(workflow,/gh workflow run deploy-ekodi-church-homepage\.yml/);
   assert.match(workflow,/GH_TOKEN: \$\{\{ github\.token \}\}/);
   assert.doesNotMatch(workflow,/PAT|PERSONAL_ACCESS|CLOUDFLARE_API_TOKEN/);

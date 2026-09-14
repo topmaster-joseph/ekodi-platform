@@ -1,5 +1,6 @@
 import capabilityRegistry from './config/capability-registry.json' with { type:'json' };
 import { evaluateAutonomousOperation } from './sovereign-autonomy-runtime.js';
+import { CLOUD_CONNECTION_POLICY, getCloudConnectionStatus, runCloudConnectedTask } from './cloud-connection-runtime.js';
 
 const clean=value=>String(value??'').trim();
 const bool=value=>value===true;
@@ -16,12 +17,24 @@ function mergedExposure(base={},override={}){
 }
 
 export const SOVEREIGN_CAPABILITY_FABRIC=freeze({
-  version:'1.0.0',
+  version:'1.1.0',
   registryVersion:capabilityRegistry.version,
   contract:capabilityRegistry.fabricPolicy?.contract||'ekodi.sovereign-capability.v1',
   identityAuthority:'ekodi-person',
   principle:'one capability contract, many replaceable adapters',
+  connectionStrategy:CLOUD_CONNECTION_POLICY.strategy,
+  operaBrowserConnectorRequired:CLOUD_CONNECTION_POLICY.operaRequired,
+  automaticConnectionFailover:CLOUD_CONNECTION_POLICY.automaticFailover,
 });
+
+export function capabilityConnectionStatus(env={},providers=[]){
+  return getCloudConnectionStatus(env,providers);
+}
+
+export async function invokeCapabilityThroughAvailableConnection(options={}){
+  return runCloudConnectedTask(options);
+}
+
 function allFabricCapabilities(){
   return [...(capabilityRegistry.capabilities||[]),...(capabilityRegistry.fabricCapabilities||[])];
 }
