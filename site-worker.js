@@ -6,6 +6,8 @@ import { ekodiBizInvestBusinessPage, isEkodiBizInvestPath } from './ekodibiz-inv
 import { ekodiBizInvestAdminPage, isEkodiBizInvestAdminPath } from './ekodibiz-invest-admin-page.js';
 import { tenantAdminCommandHomeScript, tenantAdminCommandHomeCss } from './tenant-admin-command-home.js';
 import { decorateDiscoveryResponse } from './discovery-layer.js';
+import { realtimeTenantFromPath } from './realtime-tenant-registry.js';
+import { tenantLivePage } from './tenant-live-page.js';
 
 // Static Assets canonicalizes *.html URLs to extensionless paths.
 // Always request canonical asset paths internally so edge redirects never escape the Worker.
@@ -21,6 +23,8 @@ const PUBLIC_ASSETS = new Set([
   '/homepage-ambient.css',
   '/homepage-ambient.js',
   '/ekodi-message-ui.js',
+  '/tenant-live.css',
+  '/tenant-live.js',
   '/mall.css',
   '/mall.js',
   '/pizzamaru-mokpodae.css',
@@ -192,6 +196,8 @@ const PUBLIC_CSP = [
   "form-action 'self'",
   "object-src 'none'",
 ].join('; ');
+
+const LIVE_CSP = PUBLIC_CSP.replace("connect-src 'self' https://api.ekodi.kr","connect-src 'self' https://renzehysxirjilvdxacv.supabase.co");
 
 const MALL_CSP = [
   "default-src 'self'",
@@ -611,6 +617,8 @@ export default {
         const secured=withHostSecurity(page, ADMIN_CSP, 'no-store', 'public-ekodibiz-invest-admin');
         return injectEkodiShell(secured, 'biz', 'admin');
       }
+      const liveTenant = realtimeTenantFromPath(url.pathname);
+      if (['GET','HEAD'].includes(request.method) && liveTenant && !liveTenant.dedicated) return withHostSecurity(tenantLivePage(liveTenant), LIVE_CSP, 'no-store', 'public-'+liveTenant.apiTenant+'-live');
       if (isLegacyEkodiBizPath(url.pathname)) return redirectLegacyEkodiBizPath(request);
       if (['GET','HEAD'].includes(request.method)) { const adminAlias=redirectLegacyAdminAliasPath(request); if (adminAlias) return adminAlias; }
       if (isLegacyMallPath(url.pathname)) return redirectLegacyMallPath(request);
