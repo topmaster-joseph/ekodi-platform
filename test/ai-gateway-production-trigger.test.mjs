@@ -7,7 +7,7 @@ const workflow = await readFile(new URL('../.github/workflows/verify-ai-gateway-
 test('AI Commons production verification follows the canonical guarded owner', () => {
   assert.match(workflow, /workflows: \['Deploy EKODI AI Control Plane'\]/);
   assert.match(workflow, /github\.event_name == 'workflow_dispatch'/);
-  assert.match(workflow, /github\.event\.workflow_run\.event != 'pull_request'/);
+  assert.match(workflow, /github\.event\.workflow_run\.head_branch == 'main'/);
   assert.match(workflow, /github\.event\.workflow_run\.conclusion == 'success'/);
 });
 
