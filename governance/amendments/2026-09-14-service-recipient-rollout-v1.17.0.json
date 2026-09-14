@@ -1,0 +1,20 @@
+{
+  "id": "C2-2026-09-14-SERVICE-RECIPIENT-ROLLOUT",
+  "status": "approved",
+  "changeClass": "C2",
+  "constitutionVersion": "1.17.0",
+  "effectiveDate": "2026-09-14",
+  "approvedBy": "topmaster-joseph",
+  "approvalBasis": "Explicit owner instruction on 2026-09-14 to make recipient priority and progressive evidence-gated rollout a platform-wide rule.",
+  "summary": "Establish primary sovereign user -> relational users -> third-party users, prioritizing need/access-vulnerable third parties, with four rollout stages and six mandatory evidence gates.",
+  "files": [
+    "CONSTITUTION.md",
+    "governance/constitution/constitution.json",
+    "governance/constitution/service-recipient-rollout.v1.json",
+    "scripts/validate-constitution.mjs"
+  ],
+  "rollback": {
+    "method": "Revert this amendment commit and restore constitution 1.16.0 after constitutional approval.",
+    "audienceSafety": "A rollback must not broaden audience exposure; current rollout stage is preserved or narrowed until reverified."
+  }
+}

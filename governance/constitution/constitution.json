@@ -1,6 +1,6 @@
 {
-  "version": "1.16.0",
-  "effectiveDate": "2026-09-13",
+  "version": "1.17.0",
+  "effectiveDate": "2026-09-14",
   "status": "active",
   "title": "EKODI Platform Constitution",
   "principles": [
@@ -32,7 +32,10 @@
     "ekodibiz-exclusive-commercial-subject",
     "ordinary-user-information-first-commercial-separation",
     "completion-continuity-through-recoverable-interruptions",
-    "supreme-attributes-binding"
+    "supreme-attributes-binding",
+    "primary-user-first-verification",
+    "progressive-recipient-rollout",
+    "vulnerability-prioritized-third-party-expansion"
   ],
   "architectureModel": {
     "registry": "governance/architecture/ekodi-os-architecture.json",
@@ -588,5 +591,48 @@
     "aiSelfWaiverForbidden": true,
     "exceptionRequiresConstitutionalAmendment": true,
     "finalAuthority": "ekodi_platform_super_administrator"
+  },
+  "serviceRecipientRolloutPolicy": {
+    "id": "SERVICE-RECIPIENT-ROLLOUT-001",
+    "status": "active",
+    "registry": "governance/constitution/service-recipient-rollout.v1.json",
+    "appliesTo": [
+      "services",
+      "features",
+      "content",
+      "recommendations",
+      "automations",
+      "ai-capabilities",
+      "user-surfaces"
+    ],
+    "recipientPriority": [
+      "primary-sovereign-user",
+      "relational-users",
+      "third-party-users"
+    ],
+    "thirdPartyPriority": "need-and-access-vulnerability-first",
+    "sensitiveIdentityAsSolePriorityCriterionForbidden": true,
+    "rolloutStages": [
+      "primary-user-verification",
+      "relational-user-limited-rollout",
+      "vulnerable-third-party-pilot",
+      "general-public-rollout"
+    ],
+    "requiredGates": [
+      "satisfaction",
+      "usefulness",
+      "effectiveness",
+      "accessibility",
+      "safety",
+      "reliability"
+    ],
+    "nextStageRequiresAllGatesPass": true,
+    "defaultNewItemVisibility": "private-or-admin-review",
+    "stageScopeCannotBeExceeded": true,
+    "failedGateAction": "pause-improve-reverify",
+    "evidenceRequired": true,
+    "auditRequired": true,
+    "equalityFloor": "same-safety-privacy-security-and-dignity-floor-for-every-recipient",
+    "rule": "Validate first with the primary sovereign user, then relational users, then third-party users with need/access vulnerability priority, and expand to the general public only after evidence shows satisfaction, usefulness, effectiveness, accessibility, safety and reliability."
   }
 }

@@ -1,0 +1,94 @@
+{
+  "schemaVersion": 1,
+  "id": "SERVICE-RECIPIENT-ROLLOUT-001",
+  "status": "active",
+  "effectiveDate": "2026-09-14",
+  "constitutionVersion": "1.17.0",
+  "bindingLevel": "constitutional",
+  "scope": {
+    "appliesToAllServices": true,
+    "appliesToAllFeatures": true,
+    "appliesToContent": true,
+    "appliesToRecommendations": true,
+    "appliesToAutomations": true,
+    "appliesToAiCapabilities": true
+  },
+  "recipientModel": {
+    "priorityOrder": [
+      {
+        "stage": 1,
+        "id": "primary-sovereign-user",
+        "intent": "The ecosystem is first proven through the primary sovereign user’s real use and outcomes."
+      },
+      {
+        "stage": 2,
+        "id": "relational-users",
+        "intent": "Expand to people, organizations, institutions, businesses and projects with a real relationship to the primary user."
+      },
+      {
+        "stage": 3,
+        "id": "third-party-users",
+        "intent": "Expand beyond existing relationships only after earlier evidence is sufficient."
+      }
+    ],
+    "thirdPartyPriority": {
+      "mode": "need-and-access-vulnerability-first",
+      "examples": [
+        "accessibility barriers",
+        "digital exclusion",
+        "economic or service-access disadvantage",
+        "care or support need"
+      ],
+      "sensitiveIdentityAsSoleCriterionForbidden": true,
+      "nonExclusionary": true
+    }
+  },
+  "rollout": {
+    "defaultNewItemVisibility": "private-or-admin-review",
+    "stages": [
+      {
+        "id": "primary-user-verification",
+        "audience": "primary-sovereign-user"
+      },
+      {
+        "id": "relational-user-limited-rollout",
+        "audience": "relational-users"
+      },
+      {
+        "id": "vulnerable-third-party-pilot",
+        "audience": "third-party-users-with-higher-need-or-access-vulnerability"
+      },
+      {
+        "id": "general-public-rollout",
+        "audience": "general-public"
+      }
+    ],
+    "stageScopeCannotBeExceeded": true,
+    "nextStageRequiresAllGatesPass": true,
+    "failedGateAction": "pause-improve-reverify"
+  },
+  "verification": {
+    "requiredGates": [
+      "satisfaction",
+      "usefulness",
+      "effectiveness",
+      "accessibility",
+      "safety",
+      "reliability"
+    ],
+    "evidenceRequired": true,
+    "auditRequired": true,
+    "metricsMayBeConfiguredPerService": true,
+    "gateRemovalRequiresConstitutionalAmendment": true
+  },
+  "floors": {
+    "sameSafetyPrivacySecurityAndDignityForAll": true,
+    "noLowerStandardForVulnerableUsers": true,
+    "authorizationAndLegalRequirementsUnchanged": true
+  },
+  "authority": {
+    "finalHumanAuthority": "ekodi_platform_super_administrator",
+    "automationMayExpandAudienceWithoutPassedGates": false,
+    "automationMaySelfWaive": false
+  }
+}

@@ -7,6 +7,7 @@ const failures = [];
 const fail = message => failures.push(message);
 const constitution = json('governance/constitution/constitution.json');
 const supremeAttributes = json('governance/constitution/supreme-attributes.v1.json');
+const recipientRollout = json('governance/constitution/service-recipient-rollout.v1.json');
 const packageJson = json('package.json');
 const architecture = json('governance/architecture/ekodi-os-architecture.json');
 const evolutionModel = json('governance/architecture/ekodi-evolution-model.json');
@@ -15,9 +16,9 @@ const coreData = json('config/core-data-boundaries.json');
 const storage = json('config/storage-policy.json');
 const workspace = json('config/service-workspace-policy.json');
 
-if (constitution.version !== '1.16.0') fail('constitution version must be 1.16.0 with the approved Supreme Attributes and Shell canonical-path retirement amendments plus all prior approved amendments');
+if (constitution.version !== '1.17.0') fail('constitution version must be 1.17.0 with the approved recipient-priority progressive-rollout amendment plus all prior approved amendments');
 if (constitution.status !== 'active') fail('constitution must be active');
-for (const principle of ['free-first-not-free-only','ekodi-core-is-source-of-truth','provider-independent-by-default','secure-by-default','one-domain-grammar','isolated-parallel-development','verification-first-evolution','security-native-intelligence','evidence-linked-recommendations','secure-projection-minimum-disclosure','integrated-responsibility-distributed-execution-standardized-connections','layered-governance-os-core-services-connections-workspaces','user-surface-engine-separation','capability-first-reuse','sustainable-scale-by-evidence','workspace-over-space','generation-10-active-baseline','open-ended-evidence-driven-generation-evolution','sovereign-autonomy-with-human-authority','person-workspace-role-capability-authority','observe-detect-reason-plan-execute-verify-recover-learn','ekodibiz-exclusive-commercial-subject','ordinary-user-information-first-commercial-separation','completion-continuity-through-recoverable-interruptions','supreme-attributes-binding']) {
+for (const principle of ['free-first-not-free-only','ekodi-core-is-source-of-truth','provider-independent-by-default','secure-by-default','one-domain-grammar','isolated-parallel-development','verification-first-evolution','security-native-intelligence','evidence-linked-recommendations','secure-projection-minimum-disclosure','integrated-responsibility-distributed-execution-standardized-connections','layered-governance-os-core-services-connections-workspaces','user-surface-engine-separation','capability-first-reuse','sustainable-scale-by-evidence','workspace-over-space','generation-10-active-baseline','open-ended-evidence-driven-generation-evolution','sovereign-autonomy-with-human-authority','person-workspace-role-capability-authority','observe-detect-reason-plan-execute-verify-recover-learn','ekodibiz-exclusive-commercial-subject','ordinary-user-information-first-commercial-separation','completion-continuity-through-recoverable-interruptions','supreme-attributes-binding','primary-user-first-verification','progressive-recipient-rollout','vulnerability-prioritized-third-party-expansion']) {
   if (!constitution.principles?.includes(principle)) fail(`missing constitutional principle: ${principle}`);
 }
 
@@ -49,6 +50,22 @@ for (const attribute of supremeAttributes.attributes || []) {
   if (!validators.length || attribute.enforcement?.evidenceRequired !== true) fail(`supreme attribute enforcement evidence missing: ${attribute.id}`);
   for (const validatorName of validators) if (!packageJson.scripts?.[validatorName]) fail(`supreme attribute validator command missing for ${attribute.id}: ${validatorName}`);
 }
+
+const recipientPolicy = constitution.serviceRecipientRolloutPolicy || {};
+if (recipientPolicy.id !== 'SERVICE-RECIPIENT-ROLLOUT-001' || recipientPolicy.status !== 'active') fail('service recipient rollout constitutional policy must remain active');
+if (recipientPolicy.registry !== 'governance/constitution/service-recipient-rollout.v1.json') fail('service recipient rollout registry path mismatch');
+if (JSON.stringify(recipientPolicy.recipientPriority || []) !== JSON.stringify(['primary-sovereign-user','relational-users','third-party-users'])) fail('recipient priority order must remain primary -> relational -> third-party');
+if (recipientPolicy.thirdPartyPriority !== 'need-and-access-vulnerability-first' || recipientPolicy.sensitiveIdentityAsSolePriorityCriterionForbidden !== true) fail('third-party priority must remain need/access-vulnerability based and must not rely solely on sensitive identity');
+if (JSON.stringify(recipientPolicy.rolloutStages || []) !== JSON.stringify(['primary-user-verification','relational-user-limited-rollout','vulnerable-third-party-pilot','general-public-rollout'])) fail('recipient rollout stages drifted');
+const requiredRecipientGates=['satisfaction','usefulness','effectiveness','accessibility','safety','reliability'];
+if (JSON.stringify(recipientPolicy.requiredGates || []) !== JSON.stringify(requiredRecipientGates)) fail('recipient rollout verification gates drifted');
+if (recipientPolicy.nextStageRequiresAllGatesPass !== true || recipientPolicy.stageScopeCannotBeExceeded !== true || recipientPolicy.failedGateAction !== 'pause-improve-reverify') fail('recipient rollout stage gate protections missing');
+if (recipientPolicy.defaultNewItemVisibility !== 'private-or-admin-review' || recipientPolicy.evidenceRequired !== true || recipientPolicy.auditRequired !== true) fail('recipient rollout default visibility/evidence/audit protections missing');
+if (recipientRollout.id !== recipientPolicy.id || recipientRollout.status !== 'active' || recipientRollout.constitutionVersion !== constitution.version) fail('service recipient rollout registry identity/version mismatch');
+if (JSON.stringify(recipientRollout.rollout?.stages?.map(x=>x.id) || []) !== JSON.stringify(recipientPolicy.rolloutStages || [])) fail('service recipient rollout registry stages mismatch');
+if (JSON.stringify(recipientRollout.verification?.requiredGates || []) !== JSON.stringify(requiredRecipientGates)) fail('service recipient rollout registry verification gates mismatch');
+if (recipientRollout.rollout?.nextStageRequiresAllGatesPass !== true || recipientRollout.rollout?.stageScopeCannotBeExceeded !== true || recipientRollout.authority?.automationMayExpandAudienceWithoutPassedGates !== false || recipientRollout.authority?.automationMaySelfWaive !== false) fail('service recipient rollout anti-bypass protections missing');
+if (recipientRollout.floors?.sameSafetyPrivacySecurityAndDignityForAll !== true || recipientRollout.floors?.noLowerStandardForVulnerableUsers !== true) fail('service recipient rollout equality/safety floor missing');
 
 const commercialSubject = constitution.commercialSubjectPolicy || {};
 if (commercialSubject.id !== 'REV-001') fail('commercial subject policy id must be REV-001');
@@ -275,6 +292,7 @@ if (failures.length) {
 }
 console.log(`EKODI Constitution ${constitution.version}: OK`);
 console.log('- 21 supreme ecosystem attributes: mandatory, non-regressive and CI-bound');
+console.log('- recipient rollout: primary -> relational -> vulnerable-third-party pilot -> general public, gated by satisfaction/usefulness/effectiveness/accessibility/safety/reliability');
 console.log(`- ${Object.keys(boundaries.platforms || {}).length} platform/service boundaries checked`);
 console.log(`- ${legacy.size} legacy domains registered with canonical migration targets`);
 console.log(`- ${registeredCommon.size} registered common-service boundaries checked`);

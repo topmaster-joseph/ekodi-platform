@@ -1,6 +1,6 @@
-# EKODI Platform Constitution v1.16.0
+# EKODI Platform Constitution v1.17.0
 
-Effective: 2026-09-13
+Effective: 2026-09-14
 
 This constitution is the highest architecture and operations rule for EKODI Platform. Existing validators remain authoritative implementation guards; this document unifies their intent and governs future changes.
 
@@ -180,3 +180,13 @@ Machine-readable sustainable evolution authority: `governance/architecture/ekodi
 - The canonical operating-context target remains **Person + Workspace + Membership + Capability**, with authority resolved through **Person + Workspace + Role + Capability**.
 - Future-generation promotion requires an explicit C2/C3 constitutional amendment, EKODI Platform Super Administrator confirmation, repository validation, guarded merge, and production verification whenever runtime behavior changes.
 - Machine-readable generation definitions, scale tiers, forward-evolution gates and boundary rules are maintained in `governance/architecture/ekodi-evolution-model.json` and enforced by repository validators.
+
+## 14. Service Recipient Priority and Progressive Rollout Constitution
+- Every EKODI service, feature, content surface, recommendation, automation and AI capability follows the same recipient priority: **(1) primary sovereign user -> (2) relational users -> (3) third-party users**.
+- The primary sovereign user is the first real-use verification subject. Relational users are people, organizations, institutions, businesses or projects with an actual relationship to that user. Third-party users are users outside that relationship graph.
+- Third-party expansion prioritizes people with greater **need or access vulnerability**, including accessibility barriers, digital exclusion and service-access disadvantage. Sensitive identity alone must not be used as the sole prioritization criterion, and priority is non-exclusionary.
+- New services and features default to **private or administrator-review visibility** and progress through four stages: **primary-user verification -> relational-user limited rollout -> vulnerable-third-party pilot -> general-public rollout**.
+- The same six evidence gates govern satisfaction and provision at every stage: **satisfaction, usefulness, effectiveness, accessibility, safety and reliability**. A service may advance only when all required gates pass with auditable evidence.
+- If any gate fails, audience expansion pauses; the service is improved and reverified before promotion. No AI, operator or individual service may self-waive a gate or expose a service beyond its approved stage.
+- Vulnerable users never receive a lower safety, privacy, security or dignity standard. Authorization, legal and data-protection requirements remain unchanged at every stage.
+- Machine-readable authority: `governance/constitution/service-recipient-rollout.v1.json`. Repository validation and CI must fail if recipient order, rollout stages, mandatory verification gates or non-regression floors are weakened.
