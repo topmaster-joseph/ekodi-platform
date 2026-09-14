@@ -54,6 +54,9 @@ function withHeaders(env,response,route='asset'){
   return new Response(response.body,{status:response.status,statusText:response.statusText,headers});
 }
 function json(env,data,status=200){return withHeaders(env,new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store'}}),'api')}
+async function publicSiteChrome(slug){
+  try{const r=await fetch(`https://workspace-api.ekodi.kr/v1/site-chrome/public?subject_key=${encodeURIComponent(slug)}`,{headers:{accept:'application/json'},signal:AbortSignal.timeout(5000)});if(!r.ok)return null;const data=await r.json().catch(()=>null);return data&&typeof data==='object'?data:null}catch{return null}
+}
 async function publicStorefront(slug,env){
   if(env.DATA_ENABLED!=='true'||!env.SUPABASE_URL||!env.SUPABASE_PUBLISHABLE_KEY)return null;
   try{
@@ -136,6 +139,7 @@ export default{
       }
       if(resolved.status==='paused')return withHeaders(env,new Response('<!doctype html><html lang="ko"><meta charset="utf-8"><title>사용자 사이트 일시중지 · EKODI</title><body><main><h1>사용자 사이트가 일시중지되었습니다.</h1><p>운영공간 관리자 설정에서 다시 활성화할 수 있습니다.</p></main></body></html>',{status:404,headers:{'content-type':'text/html; charset=utf-8'}}),'space-paused');
       if(resolved.storefront){
+        resolved.chrome=await publicSiteChrome(requested);
         const storefront=requested==='jadam'
           ?await renderJadamStorefrontPage(request,env,resolved,requested)
           :['pizzamaru','yogurt'].includes(requested)

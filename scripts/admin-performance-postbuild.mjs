@@ -130,7 +130,7 @@ await writeFile(menuRuntimePath, menuCompactSource.slice(menuCompactHeader[0].le
 // Fingerprint the complete admin runtime. HTML is no-store, while every referenced versioned
 // asset can then be cached immutably without ever mixing two releases in one browser session.
 const versionInputs = [
-  'admin-central-handoff.js','admin-authenticated-shell.js','admin-demand-loader.js','admin-menu-layout.js',
+  'admin-central-handoff.js','admin-authenticated-shell.js','admin-demand-loader.js','admin-menu-layout.js','admin-site-chrome.js',
   ...sharedAdminMenuModules,
   'admin-design-engine.js','admin-design-engine.css',
   'admin-compact.js','admin-compact.css','admin-shell.css','finance-monitor.js',
@@ -188,7 +188,7 @@ await writeFile(shellPath, compactShell);
 // ES-module imports are versioned too. This prevents a browser from combining a new layout
 // with a five-minute-old menu registry after a deployment.
 const moduleImportVersions = new Map([
-  ['admin-menu-layout.js', ['admin-menu-registry.js', 'admin-sidebar.js', 'admin-menu-runtime.js']],
+  ['admin-menu-layout.js', ['admin-menu-registry.js', 'admin-sidebar.js', 'admin-menu-runtime.js', 'admin-site-chrome.js']],
   ['admin-menu-registry.js', ['admin-design-engine.js']],
   ['admin-sidebar.js', ['admin-menu-registry.js']],
   ['admin-menu-runtime.js', ['admin-menu-registry.js']],

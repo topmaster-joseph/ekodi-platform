@@ -6,7 +6,11 @@ on:
       - 'migrations/*messenger*.sql'
       - 'migrations/*profile*.sql'
       - 'migrations/*design*.sql'
+      - 'migrations/*site_header_footer*.sql'
       - 'design-profile-runtime.js'
+      - 'site-chrome-runtime.js'
+      - 'config/site-chrome-defaults.js'
+      - 'api-worker.js'
       - 'profile-evidence-runtime.js'
       - 'profile-official-data-adapter.js'
       - 'invest-personalization-runtime.js'
@@ -28,6 +32,7 @@ on:
       - 'test/conversation-foundation-release.test.mjs'
       - 'test/profile-evidence-contract.test.mjs'
       - 'test/design-profile-contract.test.mjs'
+      - 'test/site-chrome-runtime.test.mjs'
       - 'test/invest-personalization-contract.test.mjs'
       - '.github/workflows/release-messenger-investment-functional.yml'
   push:
@@ -61,13 +66,15 @@ jobs:
       - name: Validate Conversation, Operator, Investment and Profile boundaries
         run: |
           set -euo pipefail
-          for file in ekodi-principal.js profile-evidence-runtime.js profile-official-data-adapter.js invest-personalization-runtime.js design-profile-runtime.js messenger-triage.js messenger-outbox.js messenger-channel-adapters.js messenger-operator-control.js workspace-messenger-v2.js workspace-platform-entry-worker.js workspace-platform-api-worker.js mission-control-entry-worker.js; do node --check "$file"; done
-          node --test test/workspace-platform.test.mjs test/profile-evidence-contract.test.mjs test/design-profile-contract.test.mjs test/invest-personalization-contract.test.mjs
+          for file in ekodi-principal.js profile-evidence-runtime.js profile-official-data-adapter.js invest-personalization-runtime.js design-profile-runtime.js site-chrome-runtime.js config/site-chrome-defaults.js api-worker.js messenger-triage.js messenger-outbox.js messenger-channel-adapters.js messenger-operator-control.js workspace-messenger-v2.js workspace-platform-entry-worker.js workspace-platform-api-worker.js mission-control-entry-worker.js; do node --check "$file"; done
+          node --test test/workspace-platform.test.mjs test/profile-evidence-contract.test.mjs test/design-profile-contract.test.mjs test/site-chrome-runtime.test.mjs test/invest-personalization-contract.test.mjs
           node scripts/validate-additive-migrations.mjs migrations
           bash -n scripts/apply-d1-migrations-with-retry.sh
           grep -Fq 'messenger_outbox' migrations/0030_messenger_event_outbox.sql
           grep -Fq 'ekodi_profile_evidence' migrations/0032_official_data_profile_evidence.sql
           grep -Fq 'site_design_profiles' migrations/0055_adaptive_design_profiles.sql
+          grep -Fq 'site_chrome_settings' migrations/0079_site_header_footer_settings.sql
+          grep -Fq 'siteChromeSchemaReady' workspace-platform-entry-worker.js
           grep -Fq 'conversationFoundation' workspace-platform-entry-worker.js
           grep -Fq 'profileEvidenceFoundation' workspace-platform-entry-worker.js
           grep -Fq "investPersonalization:'v1'" workspace-platform-entry-worker.js
@@ -134,6 +141,8 @@ jobs:
               && grep -Fq '"conversationSchemaReady":true' /tmp/workspace-health \
               && grep -Fq '"profileSchemaReady":true' /tmp/workspace-health \
               && grep -Fq '"designProfileSchemaReady":true' /tmp/workspace-health \
+              && grep -Fq '"siteChrome":"v1"' /tmp/workspace-health \
+              && grep -Fq '"siteChromeSchemaReady":true' /tmp/workspace-health \
               && grep -Fq '"investPersonalization":"v1"' /tmp/workspace-health \
               && grep -Fq '"transactionExecution":false' /tmp/workspace-health; then
               exit 0
@@ -147,7 +156,8 @@ jobs:
                 'SELECT 1 FROM ekodi_profile_evidence LIMIT 0;' \
                 'SELECT 1 FROM ekodi_profile_confirmations LIMIT 0;' \
                 'SELECT 1 FROM ekodi_profile_discovery_runs LIMIT 0;' \
-                'SELECT 1 FROM site_design_profiles LIMIT 0;' > /tmp/workspace-schema-probe.sql
+                'SELECT 1 FROM site_design_profiles LIMIT 0;' \
+                'SELECT 1 FROM site_chrome_settings LIMIT 0;' > /tmp/workspace-schema-probe.sql
               npx --yes wrangler@${WRANGLER_VERSION} d1 execute DB --remote --config .workspace-staging.toml --file /tmp/workspace-schema-probe.sql
               echo 'Workspace staging is Access-protected; deployment and required D1 schema verified.'
               exit 0
@@ -208,13 +218,15 @@ jobs:
           for attempt in $(seq 1 18); do
             health=$(curl -sS -L -o /tmp/control-health -w '%{http_code}' "$CONTROL_STAGING_URL/health" || true)
             inbox=$(curl -sS -L -o /tmp/control-inbox -w '%{http_code}' "$CONTROL_STAGING_URL/api/control/messenger/inbox" || true)
-            if [ "$health" = '200' ] && [ "$inbox" = '401' ]; then exit 0; fi
-            if grep -Eq 'Cloudflare Access|Log in to All Workers' /tmp/control-health /tmp/control-inbox; then
+            chrome=$(curl -sS -L -o /tmp/control-chrome -w '%{http_code}' "$CONTROL_STAGING_URL/api/control/site-chrome" || true)
+            if [ "$health" = '200' ] && [ "$inbox" = '401' ] && [ "$chrome" = '401' ]; then exit 0; fi
+            if grep -Eq 'Cloudflare Access|Log in to All Workers' /tmp/control-health /tmp/control-inbox /tmp/control-chrome; then
               printf '%s\n' \
                 'SELECT 1 FROM messenger_threads LIMIT 0;' \
                 'SELECT 1 FROM messenger_messages LIMIT 0;' \
                 'SELECT 1 FROM messenger_handoffs LIMIT 0;' \
-                'SELECT 1 FROM messenger_outbox LIMIT 0;' > /tmp/control-schema-probe.sql
+                'SELECT 1 FROM messenger_outbox LIMIT 0;' \
+                'SELECT 1 FROM site_chrome_settings LIMIT 0;' > /tmp/control-schema-probe.sql
               npx --yes wrangler@${WRANGLER_VERSION} d1 execute DB --remote --config .control-staging.toml --file /tmp/control-schema-probe.sql
               echo 'Control staging is Access-protected; deployment and required Conversation D1 schema verified. Production still enforces the live 401 boundary.'
               exit 0
@@ -252,6 +264,8 @@ jobs:
           grep -Fq '"profileEvidenceFoundation":"v1"' /tmp/live-health.json
           grep -Fq '"adaptiveDesign":"v1"' /tmp/live-health.json
           grep -Fq '"designProfileSchemaReady":true' /tmp/live-health.json
+          grep -Fq '"siteChrome":"v1"' /tmp/live-health.json
+          grep -Fq '"siteChromeSchemaReady":true' /tmp/live-health.json
           grep -Fq '"officialDataProvider":"embedded-v1"' /tmp/live-health.json
           grep -Fq '"investPersonalization":"v1"' /tmp/live-health.json
 
@@ -275,7 +289,9 @@ jobs:
       - name: Verify production Operator boundary
         run: |
           code=$(curl -sS -o /tmp/inbox -w '%{http_code}' https://api.ekodi.kr/api/control/messenger/inbox || true)
+          chrome=$(curl -sS -o /tmp/site-chrome -w '%{http_code}' https://api.ekodi.kr/api/control/site-chrome || true)
           test "$code" = '401'
+          test "$chrome" = '401'
 
 # Shared Messenger/Invest UI is not owned here. Deploy EKODI Shared Site Core is
 # the only workflow allowed to write deploy/manifests/shared-site.worker.json.

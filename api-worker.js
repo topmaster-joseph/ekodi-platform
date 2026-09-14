@@ -7,6 +7,7 @@ import { analyzeServiceFleet, evaluateTechnologyCandidate } from './evolution-in
 import { evolutionStoreSummary, listEvolutionRecommendations, persistEvolutionReport } from './evolution-intelligence-store.js';
 import { analyzeCapabilityEcosystem, capabilityEcosystemSnapshot } from './ekodi-self-automation-engine.js';
 import { buildPublicPreviewProjection } from './preview-public-projection.js';
+import { listSiteChromeSettings, putSiteChromeSettings } from './site-chrome-runtime.js';
 
 // Provider service registry only. Customer organizations and their sites are managed as
 // customer tenants/workspaces through the customer directory, never as EKODI services.
@@ -32,7 +33,7 @@ const PUBLIC_SITE_CATALOG = [
   {
     id: 'cgma',
     workspaceId: 'cgma',
-    name: 'CGMA',
+    name: '청계면상인회',
     domain: 'cgma.or.kr',
     defaultPublicStatus: 'maintenance',
     defaultMaintenanceDisplayType: 'default',
@@ -130,7 +131,7 @@ function maintenancePage(site) {
 </head>
 <body>
   <main>
-    <div class="eyebrow">CGMA</div>
+    <div class="eyebrow">청계면상인회 · CGMA</div>
     <h1>${title}</h1>
     <p>${message}</p>
     ${showButton ? `<a href="${escapeHtml(redirectUrl)}" rel="noopener noreferrer">임시 안내 페이지 보기</a>` : ''}
@@ -610,6 +611,22 @@ async function handleControl(request, env) {
 
   if (request.method === 'GET' && path === `${CONTROL_PREFIX}/overview`) {
     return controlJson(await overview(env), 200, auth.response.headers);
+  }
+
+  if (path === `${CONTROL_PREFIX}/site-chrome`) {
+    if (String(auth.session.role || '') !== 'super_admin') return controlJson({ error: '최고관리자 권한이 필요합니다.' }, 403, auth.response.headers);
+    if (request.method === 'GET') return controlJson({ sites: await listSiteChromeSettings(env) }, 200, auth.response.headers);
+  }
+
+  const siteChromeMatch = path.match(/^\/api\/control\/site-chrome\/([a-z0-9-]+)$/);
+  if (siteChromeMatch && request.method === 'PUT') {
+    if (String(auth.session.role || '') !== 'super_admin') return controlJson({ error: '최고관리자 권한이 필요합니다.' }, 403, auth.response.headers);
+    const body = await readJson(request);
+    if (!body || typeof body !== 'object') return controlJson({ error: '헤더·푸터 설정 형식을 확인해 주세요.' }, 400, auth.response.headers);
+    const site = await putSiteChromeSettings(env, siteChromeMatch[1], body, auth.session.email);
+    if (!site) return controlJson({ error: '관리 대상 사이트를 찾을 수 없습니다.' }, 404, auth.response.headers);
+    await writeAudit(env, auth.session, 'site_chrome.update', site.subjectKey, JSON.stringify({ siteName: site.siteName, version: site.version }));
+    return controlJson({ site }, 200, auth.response.headers);
   }
 
   if (request.method === 'GET' && path === PUBLIC_SITE_PREFIX) {

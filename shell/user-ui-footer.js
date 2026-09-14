@@ -3,19 +3,22 @@
 if(window.__EKODI_USER_UI_FOOTER_BOOTED)return;
 window.__EKODI_USER_UI_FOOTER_BOOTED=true;
 
-const VERSION=6;
+const VERSION=7;
 const STYLE_ID='ekodi-user-ui-footer-style';
 const CONFIG_URL='https://shell.ekodi.kr/user-footer.json';
+const SITE_CHROME_URL='https://workspace-api.ekodi.kr/v1/site-chrome/public';
 const USER_SURFACES=new Set(['public','workspace']);
 const SERVICE_OWNED_FOOTER_SERVICES=new Set();
 const FOOTER_ATTR='data-ekodi-user-footer';
 const LEGACY_HIDDEN_ATTR='data-ekodi-legacy-common-footer-hidden';
 let configPromise=null;
+let siteConfigPromise=null;
 let footerObserver=null;
 let reconcileQueued=false;
 
 function surface(){return String(document.documentElement.dataset.ekodiShellSurface||document.documentElement.dataset.ekodiUserSurface||'').toLowerCase();}
 function serviceId(){return String(document.documentElement.dataset.ekodiService||'').trim().toLowerCase();}
+function siteSubject(){const explicit=String(document.documentElement.dataset.ekodiSiteSubject||document.body?.dataset?.ekodiSiteSubject||'').trim().toLowerCase();if(explicit)return explicit;const service=serviceId();const owned={church:'ekodi-church',biz:'ekodi-biz',lab:'ekodi-lab',trade:'ekodi-trade',cafe:'ekodi-cafe'};if(owned[service])return owned[service];const first=location.pathname.split('/').filter(Boolean)[0]||'';const aliases={ekodibiz:'ekodi-biz',biz:'ekodi-biz',ekodichurch:'ekodi-church',church:'ekodi-church',ekodilab:'ekodi-lab',lab:'ekodi-lab',cheonggye:'cgma','cheonggye-merchants':'cgma','cheonggye-merchant-association':'cgma'};return aliases[first]||first}
 function footerMode(){return String(document.body?.dataset.ekodiFooterMode||document.documentElement.dataset.ekodiFooterMode||'').trim().toLowerCase();}
 function serviceOwnsFooter(){return SERVICE_OWNED_FOOTER_SERVICES.has(serviceId())||['service','custom','off'].includes(footerMode())||Boolean(document.querySelector('[data-ekodi-service-footer]'));}
 function enabled(){return USER_SURFACES.has(surface())&&!serviceOwnsFooter();}
@@ -119,18 +122,14 @@ function applyServiceContext(footer){
   context.textContent=label;
 }
 function validConfig(value){return Boolean(value&&typeof value==='object'&&Number(value.version)>=3&&value.operator&&value.contact&&Array.isArray(value.legalLinks));}
-async function loadConfig(){
-  const embedded=window.__EKODI_USER_FOOTER_CONFIG__;
-  if(validConfig(embedded))return embedded;
-  if(!configPromise)configPromise=fetch(CONFIG_URL,{credentials:'omit',cache:'force-cache'}).then(async response=>{
-    if(!response.ok)throw new Error(`footer-config-http-${response.status}`);
-    const config=await response.json();
-    if(!validConfig(config))throw new Error('footer-config-invalid');
-    window.__EKODI_USER_FOOTER_CONFIG__=config;
-    return config;
-  }).catch(()=>null);
-  return configPromise;
+async function loadSiteConfig(){
+  const subject=siteSubject();
+  if(!subject||['admin','auth','privacy','terms','api'].includes(subject))return null;
+  if(!siteConfigPromise)siteConfigPromise=fetch(`${SITE_CHROME_URL}?subject_key=${encodeURIComponent(subject)}`,{credentials:'omit',cache:'no-store'}).then(async response=>{if(!response.ok)return null;const data=await response.json();return data?.footer||null}).catch(()=>null);
+  return siteConfigPromise;
 }
+async function loadBaseConfig(){const embedded=window.__EKODI_USER_FOOTER_CONFIG__;if(validConfig(embedded))return embedded;if(!configPromise)configPromise=fetch(CONFIG_URL,{credentials:'omit',cache:'force-cache'}).then(async response=>{if(!response.ok)throw new Error('footer-config-http-'+response.status);const config=await response.json();if(!validConfig(config))throw new Error('footer-config-invalid');window.__EKODI_USER_FOOTER_CONFIG__=config;return config}).catch(()=>null);return configPromise}
+async function loadConfig(){const base=await loadBaseConfig();if(!base)return null;const site=await loadSiteConfig();if(!site)return base;return {...base,...site,operator:{...base.operator,...(site.operator||{})},contact:{...base.contact,...(site.contact||{})},legalLinks:Array.isArray(site.legalLinks)&&site.legalLinks.length?site.legalLinks:base.legalLinks}}
 function appendText(parent,tag,text,className=''){
   const node=document.createElement(tag);
   if(className)node.className=className;

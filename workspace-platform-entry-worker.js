@@ -5,9 +5,11 @@ import { handleProfileEvidenceApi, profileSchemaReady } from './profile-evidence
 import { createOfficialProfileDataBinding, officialDataConnections } from './profile-official-data-adapter.js';
 import { handleInvestPersonalizationApi } from './invest-personalization-runtime.js';
 import { handleDesignProfileApi } from './design-profile-runtime.js';
+import { handleSiteChromeApi } from './site-chrome-runtime.js';
 import { d1SchemaReady } from './d1-schema-readiness.js';
 
 async function designProfileSchemaReady(env){ return d1SchemaReady(env?.DB,['site_design_profiles']); }
+async function siteChromeSchemaReady(env){ return d1SchemaReady(env?.DB,['site_chrome_settings']); }
 
 async function conversationSchemaReady(env){ return d1SchemaReady(env?.DB,['messenger_outbox','messenger_identity_audit']); }
 
@@ -34,6 +36,10 @@ export default {
       const response=await handleInvestPersonalizationApi(request,env);
       if(response)return response;
     }
+    if(url.pathname.startsWith('/v1/site-chrome')){
+      const response=await handleSiteChromeApi(request,env);
+      if(response)return response;
+    }
     if(url.pathname.startsWith('/v1/design-profiles')){
       const response=await handleDesignProfileApi(request,env);
       if(response)return response;
@@ -47,9 +53,9 @@ export default {
       const response=await legacyWorkspaceWorker.fetch(request,env,ctx);
       try{
         const data=await response.clone().json();
-        const [foundationReady,profileReady,designReady]=await Promise.all([conversationSchemaReady(env),profileSchemaReady(env),designProfileSchemaReady(env)]);
+        const [foundationReady,profileReady,designReady,chromeReady]=await Promise.all([conversationSchemaReady(env),profileSchemaReady(env),designProfileSchemaReady(env),siteChromeSchemaReady(env)]);
         const connections=officialDataConnections(env).map(({id,status})=>({id,status}));
-        return new Response(JSON.stringify({...data,conversationFoundation:'v2',eventOutbox:true,conversationSchemaReady:foundationReady,profileEvidenceFoundation:'v1',profileSchemaReady:profileReady,officialDataFirst:true,officialDataProvider:'embedded-v1',investPersonalization:'v1',investDataConnections:connections,adaptiveDesign:'v1',designProfileSchemaReady:designReady}),{status:response.status,headers:response.headers});
+        return new Response(JSON.stringify({...data,conversationFoundation:'v2',eventOutbox:true,conversationSchemaReady:foundationReady,profileEvidenceFoundation:'v1',profileSchemaReady:profileReady,officialDataFirst:true,officialDataProvider:'embedded-v1',investPersonalization:'v1',investDataConnections:connections,adaptiveDesign:'v1',designProfileSchemaReady:designReady,siteChrome:'v1',siteChromeSchemaReady:chromeReady}),{status:response.status,headers:response.headers});
       }catch{return response}
     }
     return legacyWorkspaceWorker.fetch(request,env,ctx);
