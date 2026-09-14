@@ -27,9 +27,19 @@ test('EKODI AI is the mandatory change control plane', () => {
   assert.equal(policy.ownerExperience.resultOnlyReporting, true);
 });
 
-test('main and production releases are fail-closed around orchestration', () => {
+test('main and production releases are fail-closed around orchestration and constitution', () => {
   assert.match(validator, /direct push to \$\{defaultBranch\} is forbidden/);
   assert.match(validator, /direct local production mutation is forbidden/);
+  assert.match(validator, /if \(ciMode\) runConstitutionalControls\(\)/);
+  for (const control of [
+    'validate-constitution.mjs',
+    'validate-platform-boundaries.mjs',
+    'validate-ekodi-os-architecture.mjs',
+    'validate-security-baseline.mjs',
+    'validate-deployment-guardrails.mjs',
+    'validate-workflow-orchestration-gates.mjs',
+  ]) assert.match(validator, new RegExp(control.replaceAll('.', '\\.')));
+  assert.match(validator, /constitutionalControls: ciMode \? constitutionalControlValidators : \[\]/);
   assert.match(workflow, /name: EKODI AI Orchestration Gate/);
   assert.match(workflow, /validate-ekodi-ai-change-orchestration\.mjs --ci/);
   assert.match(workflow, /validate-workflow-orchestration-gates\.mjs/);
