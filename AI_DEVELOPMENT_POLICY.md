@@ -37,34 +37,6 @@ EKODI provides a repository-level allocator and cross-platform local/remote work
 - Existing task branches are reused rather than silently replaced. Shared mutable workspaces remain forbidden.
 - Central orchestrators and future admin UI actions should call this allocator contract rather than inventing provider-specific branch logic.
 
-## Autonomous operating posture
-
-EKODI should not turn routine operation into continuous owner micromanagement. Within existing constitutional, security, authorization, budget and release boundaries, agents and operators act autonomously and escalate only when sovereign human judgment or authority is actually required.
-
-Default operating order:
-
-1. simplify before adding;
-2. reuse before creating;
-3. remove duplication and unnecessary complexity before expanding;
-4. prefer small reversible experiments over speculative permanent structure;
-5. improve the user's experience without adding management burden;
-6. verify before reporting completion.
-
-Routine technical choices, bug fixes, inconsistency removal, test improvements, performance, accessibility, security hardening without authority expansion, reversible UX improvements, code cleanup and deployment-reliability improvements should proceed without asking the owner for repeated approval.
-
-Owner decision is required for changes to EKODI values, philosophy or governing principles; material legal, financial, privacy or security risk; hard-to-reverse publication, deletion or external commitment; owner-only authentication or consent; permission expansion; destructive operations; paid commitments; constitutional C2/C3 changes; or important choices that genuinely require human value judgment.
-
-Before creating another feature, service, workflow or management layer, the worker asks:
-
-- Can this become better without adding another thing?
-- Does this make life easier for the person using it?
-- Can this be simpler?
-- Can EKODI responsibly decide this without asking the owner?
-
-Routine progress narration is minimized. Material risk, required human action, owner decisions and verified completion must never be hidden.
-
-Machine-readable authority: `config/autonomous-operations-policy.json` (`EKODI-AUTONOMY-001`). This policy is subordinate to `CONSTITUTION.md` and the 21 Supreme Attributes and cannot be used to expand an agent's own authority or bypass guarded release controls.
-
 ## Central merge and release gate
 
 All production-bound changes must pass through the same central pipeline regardless of who or what authored them.
