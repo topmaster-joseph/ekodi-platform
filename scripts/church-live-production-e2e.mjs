@@ -74,7 +74,12 @@ try{
   observePage(host,'host');
   await host.goto(`${liveUrl}?mode=studio&title=${encodeURIComponent('EKODI Church Production E2E')}`,{waitUntil:'domcontentloaded',timeout:30000});
   try{
-    await host.waitForFunction(()=>document.querySelector('#statusLog')?.textContent?.includes('미디어 연결이 완료되었습니다'),{timeout:30000});
+    await host.waitForFunction(()=>{
+      const liveState=document.querySelector('#liveState');
+      const programBadge=document.querySelector('#programBadge');
+      const goLive=document.querySelector('#goLiveButton');
+      return Boolean(goLive&&!goLive.disabled&&(liveState?.dataset.phase==='ready'||programBadge?.dataset.phase==='ready'));
+    },null,{timeout:30000});
   }catch(error){
     report.hostStatus=await text(host,'#statusLog');
     report.hostUrl=host.url();
@@ -88,7 +93,12 @@ try{
   assert.ok(roomId,'room_id_missing');
   report.roomId=roomId;
   await host.locator('#goLiveButton').click();
-  await host.waitForFunction(()=>document.querySelector('#liveState')?.textContent==='방송 중',{timeout:15000});
+  await host.waitForFunction(()=>{
+    const liveState=document.querySelector('#liveState');
+    const programBadge=document.querySelector('#programBadge');
+    const endLive=document.querySelector('#endLiveButton');
+    return Boolean(endLive&&!endLive.disabled&&(liveState?.dataset.phase==='live'||programBadge?.dataset.phase==='live'));
+  },null,{timeout:15000});
   const live=await publicLive();
   assert.equal(live.live,true);
   assert.equal(live.room?.id,roomId);
@@ -98,7 +108,7 @@ try{
   observePage(viewer,'viewer');
   await viewer.goto(`${liveUrl}?room=${encodeURIComponent(roomId)}`,{waitUntil:'domcontentloaded',timeout:30000});
   try{
-    await viewer.waitForFunction(()=>document.querySelector('#viewerStatus')?.textContent?.includes('실시간 방송에 연결되었습니다'),{timeout:30000});
+    await viewer.waitForFunction(()=>document.querySelector('#viewerStatus')?.textContent?.includes('실시간 방송에 연결되었습니다'),null,{timeout:30000});
   }catch(error){
     report.viewerStatus=await text(viewer,'#viewerStatus');
     throw new Error(`viewer_not_ready:${report.viewerStatus||error.message}`);
@@ -109,7 +119,7 @@ try{
   assert.equal(report.pageErrors.length,0,'browser_page_errors');
 
   await host.locator('#endLiveButton').click();
-  await host.waitForFunction(()=>document.querySelector('#programBadge')?.textContent==='종료',{timeout:15000});
+  await host.waitForFunction(()=>document.querySelector('#programBadge')?.dataset.phase==='ended',null,{timeout:15000});
   const ended=await publicLive();
   assert.equal(ended.live,false);
   report.ended=true;
