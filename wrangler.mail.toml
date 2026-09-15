@@ -1,0 +1,38 @@
+name = "ekodi-mail-intelligence"
+main = "mail-intelligence-worker.js"
+compatibility_date = "2026-08-12"
+workers_dev = true
+preview_urls = false
+
+[[routes]]
+pattern = "mailops.ekodi.kr"
+custom_domain = true
+
+[triggers]
+crons = ["*/10 * * * *"]
+
+[vars]
+ENVIRONMENT = "production"
+ADMIN_EMAIL = "topmaster.joseph@gmail.com"
+MAIL_ALERT_TO = "topmaster.joseph@gmail.com"
+MAIL_EKODI_ADDRESSES = "admin@ekodibiz.kr,joseph@ekodibiz.kr,topmaster.joseph@gmail.com"
+MAIL_GMAIL_QUERY = "newer_than:2d -in:spam -in:trash"
+MAIL_BATCH_SIZE = "30"
+MAIL_DAILY_DIGEST = "true"
+MAIL_DIGEST_HOUR_KST = "8"
+
+[observability.logs]
+enabled = true
+invocation_logs = true
+
+[[d1_databases]]
+binding = "DB"
+database_name = "ekodi-auth"
+database_id = "e38778f1-b059-4fe7-8816-300f3eec6e19"
+migrations_dir = "migrations"
+
+# Required production secrets (never commit values):
+# GMAIL_CLIENT_ID
+# GMAIL_CLIENT_SECRET
+# GMAIL_REFRESH_TOKEN
+# Gmail OAuth scopes: gmail.readonly + gmail.send
