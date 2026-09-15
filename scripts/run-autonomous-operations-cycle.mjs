@@ -2,188 +2,75 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-const FAILURE_CONCLUSIONS = new Set(['failure', 'timed_out']);
-const SAFE_RETRY_WORKFLOW_PATHS = new Set([
-  '.github/workflows/monitor.yml',
-  '.github/workflows/ekodi-ai-orchestration-gate.yml',
-]);
-const MAX_SAFE_RETRY_AGE_MS = 6 * 60 * 60 * 1000;
-const ATTENTION_WINDOW_MS = 24 * 60 * 60 * 1000;
-const PERSISTENT_FAILURE_THRESHOLD = 3;
+const FAIL = new Set(['failure', 'timed_out']);
+const SAFE = new Set(['.github/workflows/monitor.yml', '.github/workflows/ekodi-ai-orchestration-gate.yml']);
+const HOUR = 60 * 60 * 1000;
+const WINDOW = 24 * HOUR;
 
-function workflowPath(run = {}) {
-  return String(run.workflowPath || run.path || '').trim();
+const wpath = r => String(r.workflowPath || r.path || '').trim();
+const wkey = r => wpath(r) || String(r.workflowName || r.name || 'unknown-workflow');
+const rid = r => Number(r.databaseId || r.id || 0);
+const attempt = r => Math.max(1, Number(r.runAttempt || r.run_attempt || 1) || 1);
+const created = r => Date.parse(String(r.createdAt || r.created_at || '')) || 0;
+const done = r => String(r.status || '').toLowerCase() === 'completed';
+const failure = r => done(r) && FAIL.has(String(r.conclusion || '').toLowerCase());
+const success = r => done(r) && String(r.conclusion || '').toLowerCase() === 'success';
+const recent = (r, now, ms = WINDOW) => created(r) > 0 && now - created(r) >= 0 && now - created(r) <= ms;
+const latest = (runs, key) => [...runs].filter(r => wkey(r) === key).sort((a, b) => created(b) - created(a))[0] || null;
+
+function safeRetry(r, runs, now) {
+  if (!failure(r) || String(r.event || '').toLowerCase() !== 'schedule' || !SAFE.has(wpath(r)) || attempt(r) !== 1 || !recent(r, now, 6 * HOUR)) return false;
+  return !runs.some(x => wkey(x) === wkey(r) && success(x) && created(x) > created(r));
 }
 
-function runId(run = {}) {
-  return Number(run.databaseId || run.id || 0);
+function recoveryLearning(runs, now) {
+  const scope = runs.filter(r => recent(r, now));
+  const reruns = scope.filter(r => SAFE.has(wpath(r)) && attempt(r) > 1 && done(r));
+  const ok = reruns.filter(success).length;
+  const bad = reruns.filter(failure).length;
+  const recoveredPatterns = [];
+  for (const key of new Set(scope.map(wkey))) {
+    const group = scope.filter(r => wkey(r) === key);
+    const last = latest(group, key);
+    if (last && success(last) && group.some(failure)) recoveredPatterns.push({
+      workflowName: String(last.workflowName || last.name || key), workflowPath: wpath(last), latestRunId: rid(last), latestUrl: String(last.url || last.html_url || ''), status: 'verified-recovered-from-recent-failure',
+    });
+  }
+  return { windowHours: 24, boundedRecoveryAttempts24h: ok + bad, boundedRecoverySuccesses24h: ok, boundedRecoveryFailures24h: bad, boundedRecoveryEffectiveness: ok + bad ? Number((ok / (ok + bad)).toFixed(3)) : null, recoveredPatterns };
 }
 
-function runAttempt(run = {}) {
-  const value = Number(run.runAttempt || run.run_attempt || 1);
-  return Number.isFinite(value) && value > 0 ? value : 1;
+function evolutionLearning(e = {}) {
+  const s = e.summary || {};
+  return { currentGeneration: Number(e.currentGeneration || 10), lifecycleRecords: Number(s.total || 0), researchVerified: Number(s.researchVerified || 0), operationalResolutionsVerified: Number(s.operationalResolutionsVerified || 0), experimentsReady: Number(s.experimentsReady || 0), experimentsPassed: Number(s.experimentsPassed || 0), candidatesReadyForSuperAdminReview: Number(s.candidatesReady || 0), postChangeVerified: Number(s.postChangeVerified || 0), rollbackRequired: Number(s.rollbackRequired || 0), learningLoopsClosed: Number(s.learningClosed || 0), automaticPromotionPerformed: false, authorityExpanded: false };
 }
 
-function createdAtMs(run = {}) {
-  const value = Date.parse(String(run.createdAt || run.created_at || ''));
-  return Number.isFinite(value) ? value : 0;
-}
-
-function isFailure(run = {}) {
-  return String(run.status || '').toLowerCase() === 'completed'
-    && FAILURE_CONCLUSIONS.has(String(run.conclusion || '').toLowerCase());
-}
-
-function isDelegatedSafeRetry(run = {}, nowMs = Date.now()) {
-  if (!isFailure(run)) return false;
-  if (String(run.event || '').toLowerCase() !== 'schedule') return false;
-  if (!SAFE_RETRY_WORKFLOW_PATHS.has(workflowPath(run))) return false;
-  if (runAttempt(run) !== 1) return false;
-  const created = createdAtMs(run);
-  return created > 0 && nowMs - created >= 0 && nowMs - created <= MAX_SAFE_RETRY_AGE_MS;
-}
-
-export function buildAutonomousOperationsPlan(runs = [], policy = {}, now = new Date()) {
+export function buildAutonomousOperationsPlan(runs = [], policy = {}, now = new Date(), evolution = {}) {
   const nowMs = now instanceof Date ? now.getTime() : new Date(now).getTime();
   if (!Number.isFinite(nowMs)) throw new Error('Invalid autonomous operations clock');
-
-  const safeRetries = [];
-  for (const run of Array.isArray(runs) ? runs : []) {
-    if (!isDelegatedSafeRetry(run, nowMs)) continue;
-    safeRetries.push({
-      runId: runId(run),
-      workflowName: String(run.workflowName || run.name || 'unknown-workflow'),
-      workflowPath: workflowPath(run),
-      runAttempt: runAttempt(run),
-      createdAt: String(run.createdAt || run.created_at || ''),
-      url: String(run.url || run.html_url || ''),
-      action: 'rerun-failed-jobs-once',
-      reversible: true,
-      delegated: true,
-    });
-  }
-
-  const recentFailures = (Array.isArray(runs) ? runs : [])
-    .filter(isFailure)
-    .filter((run) => {
-      const created = createdAtMs(run);
-      return created > 0 && nowMs - created >= 0 && nowMs - created <= ATTENTION_WINDOW_MS;
-    });
-
-  const grouped = new Map();
-  for (const run of recentFailures) {
-    const key = workflowPath(run) || String(run.workflowName || run.name || 'unknown-workflow');
-    const group = grouped.get(key) || { key, workflowName: String(run.workflowName || run.name || key), workflowPath: workflowPath(run), failures: [] };
-    group.failures.push(run);
-    grouped.set(key, group);
-  }
-
-  const attention = [...grouped.values()]
-    .filter(group => group.failures.length >= PERSISTENT_FAILURE_THRESHOLD)
-    .map(group => ({
-      workflowName: group.workflowName,
-      workflowPath: group.workflowPath,
-      failureCount24h: group.failures.length,
-      latestUrl: String(group.failures.sort((a, b) => createdAtMs(b) - createdAtMs(a))[0]?.url || ''),
-      reason: SAFE_RETRY_WORKFLOW_PATHS.has(group.workflowPath)
-        ? 'persistent-failure-after-bounded-self-recovery'
-        : 'persistent-failure-outside-delegated-auto-retry-allowlist',
-      ownerDecisionRequired: false,
-      autonomousEngineeringWorkerRequired: true,
-    }))
-    .sort((a, b) => b.failureCount24h - a.failureCount24h || a.workflowName.localeCompare(b.workflowName));
-
-  const policyId = String(policy.policyId || 'EKODI-AUTONOMY-001');
-  return {
-    generatedAt: new Date(nowMs).toISOString(),
-    policyId,
-    mode: 'internal-autonomous-operations-within-delegated-authority',
-    triggerOwner: 'ekodi-internal-scheduler',
-    chatgptTriggerRequired: false,
-    safeRetries,
-    attention,
-    counts: {
-      sampledRuns: Array.isArray(runs) ? runs.length : 0,
-      failedRuns24h: recentFailures.length,
-      safeRetries: safeRetries.length,
-      attention: attention.length,
-    },
-    authority: {
-      expanded: false,
-      directProductionMutation: false,
-      constitutionBypassed: false,
-      ownerGatesPreserved: true,
-    },
-  };
+  runs = Array.isArray(runs) ? runs : [];
+  const safeRetries = runs.filter(r => safeRetry(r, runs, nowMs)).map(r => ({ runId: rid(r), workflowName: String(r.workflowName || r.name || 'unknown-workflow'), workflowPath: wpath(r), runAttempt: attempt(r), createdAt: String(r.createdAt || r.created_at || ''), url: String(r.url || r.html_url || ''), action: 'rerun-failed-jobs-once', reversible: true, delegated: true }));
+  const scope = runs.filter(r => recent(r, nowMs));
+  const failures = scope.filter(failure);
+  const groups = new Map();
+  for (const r of failures) { const key = wkey(r); const g = groups.get(key) || { key, workflowName: String(r.workflowName || r.name || key), workflowPath: wpath(r), failures: [] }; g.failures.push(r); groups.set(key, g); }
+  const attention = [...groups.values()].filter(g => g.failures.length >= 3 && failure(latest(scope, g.key) || {})).map(g => ({ taskKey: `autonomous-repair:${g.key}`, workflowName: g.workflowName, workflowPath: g.workflowPath, failureCount24h: g.failures.length, latestUrl: String(g.failures.sort((a, b) => created(b) - created(a))[0]?.url || ''), reason: SAFE.has(g.workflowPath) ? 'persistent-failure-after-bounded-self-recovery' : 'persistent-failure-outside-delegated-auto-retry-allowlist', ownerDecisionRequired: false, autonomousEngineeringWorkerRequired: true, isolatedEngineeringHandoffRequired: true })).sort((a, b) => b.failureCount24h - a.failureCount24h || a.workflowName.localeCompare(b.workflowName));
+  const recovery = recoveryLearning(runs, nowMs);
+  const evo = evolutionLearning(evolution);
+  return { generatedAt: new Date(nowMs).toISOString(), policyId: String(policy.policyId || 'EKODI-AUTONOMY-001'), mode: 'internal-evolutionary-autonomous-operations-within-delegated-authority', triggerOwner: 'ekodi-internal-scheduler', chatgptTriggerRequired: false, cycle: ['observe','detect','reason','plan','execute','verify','recover','learn'], safeRetries, attention, learning: { recovery, evolution: evo, nextCycleUsesObservedOutcomes: true, staleFailureRetrySuppressedAfterVerifiedRecovery: true, persistentAttentionClearsAfterVerifiedRecovery: true }, counts: { sampledRuns: runs.length, failedRuns24h: failures.length, safeRetries: safeRetries.length, attention: attention.length, recoveredPatterns24h: recovery.recoveredPatterns.length, learningLoopsClosed: evo.learningLoopsClosed }, authority: { expanded: false, directProductionMutation: false, automaticPromotion: false, constitutionBypassed: false, ownerGatesPreserved: true } };
 }
 
-export function renderAutonomousOperationsSummary(plan = {}) {
-  const lines = [
-    '## EKODI Internal Autonomous Operations',
-    '',
-    `- Mode: **${plan.mode || 'unknown'}**`,
-    `- Trigger: **${plan.triggerOwner || 'unknown'}**`,
-    `- ChatGPT trigger required: **${plan.chatgptTriggerRequired ? 'YES' : 'NO'}**`,
-    `- Safe bounded retries planned: **${Number(plan.counts?.safeRetries || 0)}**`,
-    `- Persistent items requiring autonomous engineering attention: **${Number(plan.counts?.attention || 0)}**`,
-    '- Authority expansion: **NO**',
-    '- Direct production mutation from scheduler: **NO**',
-    '',
-  ];
-
-  if (Array.isArray(plan.safeRetries) && plan.safeRetries.length) {
-    lines.push('### Bounded self-recovery');
-    for (const item of plan.safeRetries) {
-      lines.push(`- retry once: \`${item.workflowName}\` · run ${item.runId}`);
-    }
-    lines.push('');
-  }
-
-  if (Array.isArray(plan.attention) && plan.attention.length) {
-    lines.push('### Persistent attention');
-    for (const item of plan.attention.slice(0, 20)) {
-      lines.push(`- \`${item.workflowName}\`: ${item.failureCount24h} failures / 24h · ${item.reason}`);
-    }
-    lines.push('');
-  }
-
-  if (!Number(plan.counts?.safeRetries || 0) && !Number(plan.counts?.attention || 0)) {
-    lines.push('No delegated recovery action or persistent attention item is required in the sampled evidence.');
-  }
-
+export function renderAutonomousOperationsSummary(p = {}) {
+  const r = p.learning?.recovery || {}, e = p.learning?.evolution || {};
+  const lines = ['## EKODI Internal Evolutionary Autonomous Operations','',`- Mode: **${p.mode || 'unknown'}**`,`- Trigger: **${p.triggerOwner || 'unknown'}**`,`- ChatGPT trigger required: **${p.chatgptTriggerRequired ? 'YES' : 'NO'}**`,`- Safe bounded retries planned: **${Number(p.counts?.safeRetries || 0)}**`,`- Verified recovered patterns / 24h: **${Number(p.counts?.recoveredPatterns24h || 0)}**`,`- Persistent autonomous engineering attention: **${Number(p.counts?.attention || 0)}**`,`- Evolution learning loops closed: **${Number(e.learningLoopsClosed || 0)}**`,'- Authority expansion: **NO**','- Direct production mutation from scheduler: **NO**','- Automatic promotion: **NO**',''];
+  if (p.safeRetries?.length) { lines.push('### Bounded self-recovery', ...p.safeRetries.map(x => `- retry once: \`${x.workflowName}\` · run ${x.runId}`), ''); }
+  if (r.recoveredPatterns?.length) { lines.push('### Verified recovery learning', ...r.recoveredPatterns.slice(0,20).map(x => `- \`${x.workflowName}\`: ${x.status}`), ''); }
+  if (p.attention?.length) { lines.push('### Persistent attention', ...p.attention.slice(0,20).map(x => `- \`${x.workflowName}\`: ${x.failureCount24h} failures / 24h · ${x.reason}`), ''); }
+  if (!p.safeRetries?.length && !p.attention?.length) lines.push('No delegated recovery action or persistent attention item is required in the sampled evidence.');
+  if (r.boundedRecoveryEffectiveness != null) lines.push('', `Bounded recovery effectiveness / 24h: **${Math.round(Number(r.boundedRecoveryEffectiveness) * 100)}%**.`);
   return `${lines.join('\n')}\n`;
 }
 
-function parseArgs(argv = []) {
-  const args = { runs: '', policy: '', output: '', summary: '' };
-  for (let index = 0; index < argv.length; index += 1) {
-    const token = argv[index];
-    if (token === '--runs') args.runs = argv[++index] || '';
-    else if (token === '--policy') args.policy = argv[++index] || '';
-    else if (token === '--output') args.output = argv[++index] || '';
-    else if (token === '--summary') args.summary = argv[++index] || '';
-  }
-  return args;
-}
-
-async function main() {
-  const args = parseArgs(process.argv.slice(2));
-  if (!args.runs) throw new Error('Usage: node scripts/run-autonomous-operations-cycle.mjs --runs <workflow-runs.json> [--policy config/autonomous-operations-policy.json] [--output report.json] [--summary summary.md]');
-  const runs = JSON.parse(await fs.readFile(path.resolve(args.runs), 'utf8'));
-  const policy = args.policy ? JSON.parse(await fs.readFile(path.resolve(args.policy), 'utf8')) : {};
-  const plan = buildAutonomousOperationsPlan(runs, policy);
-  const summary = renderAutonomousOperationsSummary(plan);
-  if (args.output) await fs.writeFile(path.resolve(args.output), `${JSON.stringify(plan, null, 2)}\n`, 'utf8');
-  if (args.summary) await fs.writeFile(path.resolve(args.summary), summary, 'utf8');
-  process.stdout.write(summary);
-}
-
-const executedDirectly = process.argv[1]
-  && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href;
-
-if (executedDirectly) {
-  main().catch(error => {
-    console.error(error instanceof Error ? error.stack || error.message : String(error));
-    process.exitCode = 1;
-  });
-}
+function args(argv) { const a = { runs:'', policy:'', evolution:'', output:'', summary:'' }; for (let i=0;i<argv.length;i++) { if (argv[i]==='--runs') a.runs=argv[++i]||''; else if (argv[i]==='--policy') a.policy=argv[++i]||''; else if (argv[i]==='--evolution') a.evolution=argv[++i]||''; else if (argv[i]==='--output') a.output=argv[++i]||''; else if (argv[i]==='--summary') a.summary=argv[++i]||''; } return a; }
+const read = async f => f ? JSON.parse(await fs.readFile(path.resolve(f),'utf8')) : {};
+async function main() { const a=args(process.argv.slice(2)); if(!a.runs) throw new Error('Missing --runs'); const plan=buildAutonomousOperationsPlan(await read(a.runs),await read(a.policy),new Date(),await read(a.evolution)); const summary=renderAutonomousOperationsSummary(plan); if(a.output) await fs.writeFile(path.resolve(a.output),`${JSON.stringify(plan,null,2)}\n`); if(a.summary) await fs.writeFile(path.resolve(a.summary),summary); process.stdout.write(summary); }
+if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) main().catch(e => { console.error(e?.stack || String(e)); process.exitCode=1; });
