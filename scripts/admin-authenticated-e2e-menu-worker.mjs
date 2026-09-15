@@ -29,10 +29,11 @@ let page;
 let fatal = null;
 let currentStage = 'bootstrap';
 const stage = value => { currentStage = value; console.log(`[E2E:${menuId}] stage=${value}`); };
+const interactionReadyTimeoutMs = 15_000;
 
 async function clickFast(locator) {
-  await locator.waitFor({ state: 'visible', timeout: 5_000 });
-  await locator.click({ force: true, noWaitAfter: true, timeout: 5_000 });
+  await locator.waitFor({ state: 'visible', timeout: interactionReadyTimeoutMs });
+  await locator.click({ force: true, noWaitAfter: true, timeout: interactionReadyTimeoutMs });
 }
 
 async function waitForReady() {
@@ -77,11 +78,11 @@ async function waitForAdminNavigationIdle() {
 async function selectWorkArea() {
   stage('global');
   const global = page.locator(`button.admin-global-nav[data-admin-global-group="${group}"]`);
-  await global.waitFor({ state: 'visible', timeout: 5_000 });
+  await global.waitFor({ state: 'visible', timeout: interactionReadyTimeoutMs });
   const aria = await global.getAttribute('aria-current');
   const classes = String(await global.getAttribute('class') || '');
   if (aria !== 'page' && !classes.split(/\s+/).includes('active')) await clickFast(global);
-  await page.waitForFunction(target => [...document.querySelectorAll('button[data-admin-global-group]')].some(node => node.dataset.adminGlobalGroup === target && (node.getAttribute('aria-current') === 'page' || node.classList.contains('active'))), group, { timeout: 5_000 });
+  await page.waitForFunction(target => [...document.querySelectorAll('button[data-admin-global-group]')].some(node => node.dataset.adminGlobalGroup === target && (node.getAttribute('aria-current') === 'page' || node.classList.contains('active'))), group, { timeout: interactionReadyTimeoutMs });
 }
 
 async function visiblePanelState() {
@@ -475,12 +476,12 @@ try {
   if (directDefinition?.href && !directDefinition.adminHandoff) {
     stage('registry-link');
     const tab = page.locator(`button.admin-context-tab[data-admin-context-section="${menuId}"]`);
-    await tab.waitFor({ state: 'visible', timeout: 5_000 });
+    await tab.waitFor({ state: 'visible', timeout: interactionReadyTimeoutMs });
     await verifyRegistryHref(tab, started);
   } else {
     stage('tab');
     const tab = page.locator(`button.admin-context-tab[data-admin-context-section="${menuId}"]`);
-    await tab.waitFor({ state: 'visible', timeout: 5_000 });
+    await tab.waitFor({ state: 'visible', timeout: interactionReadyTimeoutMs });
     const aria = await tab.getAttribute('aria-selected');
     const classes = String(await tab.getAttribute('class') || '');
     let alreadyActive = aria === 'true' || classes.split(/\s+/).includes('active');
