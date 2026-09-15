@@ -7,12 +7,21 @@ const USER_SHORTCUT_GUARD=`(()=>{try{if(typeof document==='undefined')return;con
 const USER_FOOTER_BOOTSTRAP=`window.__EKODI_USER_FOOTER_CONFIG__=${JSON.stringify(EKODI_USER_FOOTER).replace(/</g,'\\u003c')};`;
 const USER_EXPERIENCE_PROFILES_BOOTSTRAP=renderUserExperienceProfilesBootstrap();
 const LANGUAGE_REGISTRY_BOOTSTRAP=renderLanguageRegistryBootstrap();
+const CANONICAL_BUNDLED_SERVICE_URLS=Object.freeze([
+  Object.freeze(['https://api.ekodi.kr/api/i18n/v1','https://ekodi.kr/api/i18n/v1']),
+  Object.freeze(['https://social.ekodi.kr/api/media/youtube/status','https://ekodi.kr/social/api/media/youtube/status']),
+]);
 
 function corsHeaders(){return {'access-control-allow-origin':'*','access-control-allow-methods':'GET,HEAD,OPTIONS','access-control-allow-headers':'content-type','access-control-max-age':'86400','x-content-type-options':'nosniff'};}
 function json(data,status=200,cache='public, max-age=60, stale-while-revalidate=300'){return new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':cache,...corsHeaders()}});}
 function withHeaders(response){const headers=new Headers(response.headers);headers.set('access-control-allow-origin','*');headers.set('x-content-type-options','nosniff');headers.set('referrer-policy','no-referrer');headers.set('cross-origin-resource-policy','cross-origin');if(!headers.has('cache-control'))headers.set('cache-control','public, max-age=300');return new Response(response.body,{status:response.status,statusText:response.statusText,headers});}
 async function safeAssetFetch(env,url,request){try{return await env.ASSETS.fetch(new Request(url,request));}catch{return new Response('',{status:503,headers:{'cache-control':'no-store','x-ekodi-shell-asset-error':'fetch_failed'}});}}
 function bundleCacheRequest(request){const url=new URL(request.url);url.pathname='/shell.js';url.search='';url.searchParams.set('bundle',String(EKODI_SERVICE_MANIFEST.shellVersion||'1'));return new Request(url,{method:'GET'});}
+function canonicalizeBundledServiceUrls(text){
+  let output=String(text||'');
+  for(const [source,target] of CANONICAL_BUNDLED_SERVICE_URLS)output=output.replaceAll(source,target);
+  return output;
+}
 async function bundledShell(request,env,ctx){
   let bundleCache=null,bundleCacheKey=null;
   const releaseRefresh=new URL(request.url).searchParams.has('release');
@@ -112,7 +121,8 @@ async function bundledShell(request,env,ctx){
   headers.set('x-ekodi-link-compat',linkCompat?'v1':'missing');
   headers.set('x-ekodi-user-shortcuts','my-only');
   headers.set('x-ekodi-shell-bundle-cache',releaseRefresh?'refresh':'miss');
-  const response=withHeaders(new Response(`${USER_SHORTCUT_GUARD}\n${USER_FOOTER_BOOTSTRAP}\n${USER_EXPERIENCE_PROFILES_BOOTSTRAP}\n${LANGUAGE_REGISTRY_BOOTSTRAP}\n${characterRegistry}\n${characterIdentity}\n${shell}\n${globalNav}\n${userContext}\n${userHeader}\n${userFooter}\n${userLanguage}\n${mediaMeeting}\n${userCharacter}\n${ccmMrPlayer}\n${adminShell}\n${fixedHeader}\n${userAiEntry}\n${uiGovernor}\n${messageUI}\n${illustrationSystem}\n${designInheritance}\n${linkCompat}\n`,{status:200,headers}));
+  const bundle=canonicalizeBundledServiceUrls(`${USER_SHORTCUT_GUARD}\n${USER_FOOTER_BOOTSTRAP}\n${USER_EXPERIENCE_PROFILES_BOOTSTRAP}\n${LANGUAGE_REGISTRY_BOOTSTRAP}\n${characterRegistry}\n${characterIdentity}\n${shell}\n${globalNav}\n${userContext}\n${userHeader}\n${userFooter}\n${userLanguage}\n${mediaMeeting}\n${userCharacter}\n${ccmMrPlayer}\n${adminShell}\n${fixedHeader}\n${userAiEntry}\n${uiGovernor}\n${messageUI}\n${illustrationSystem}\n${designInheritance}\n${linkCompat}\n`);
+  const response=withHeaders(new Response(bundle,{status:200,headers}));
   if(bundleCache&&bundleCacheKey&&ctx?.waitUntil){
     const stored=response.clone();
     stored.headers.set('cache-control','public, max-age=300');
