@@ -1,5 +1,5 @@
 import { adminAuthorityForRole, normalizeEkodiScope } from './ekodi-authorization.js';
-import { accessGrantExpired, normalizeCapabilityList, validGithubUsername } from './access-governance.js';
+import { accessGrantExpired, normalizeGithubUsername, parseCapabilityList } from './access-governance.js';
 import { normalizeAccessScope } from './access-scope-registry.js';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -46,7 +46,9 @@ export function universalRolePreset(role = '') {
 
 export function universalGrantActive(grant, now = Date.now()) {
   if (!grant || Number(grant.enabled) !== 1) return false;
-  return !accessGrantExpired(grant, now);
+  const nowDate = now instanceof Date ? now : new Date(now);
+  if (!Number.isFinite(nowDate.getTime())) return false;
+  return !accessGrantExpired(grant, nowDate);
 }
 
 export function validateUniversalGrant(input = {}, { now = Date.now() } = {}) {
@@ -61,7 +63,7 @@ export function validateUniversalGrant(input = {}, { now = Date.now() } = {}) {
   if (!preset) errors.push('VALID_ROLE_REQUIRED');
   if (!scope) errors.push('VALID_SCOPE_REQUIRED');
   if (preset && scope && !preset.scopeTypes.includes(scope.type)) errors.push('ROLE_SCOPE_MISMATCH');
-  if (preset?.requiresGithub && !validGithubUsername(githubUsername)) errors.push('GITHUB_USERNAME_REQUIRED');
+  if (preset?.requiresGithub && !normalizeGithubUsername(githubUsername)) errors.push('GITHUB_USERNAME_REQUIRED');
   let expiryMs = Number.NaN;
   if (expiresAt) expiryMs = Date.parse(expiresAt);
   if (preset?.requiresExpiry && !Number.isFinite(expiryMs)) errors.push('EXPIRY_REQUIRED');
@@ -70,8 +72,8 @@ export function validateUniversalGrant(input = {}, { now = Date.now() } = {}) {
     if (preset?.maxDays && expiryMs - now > preset.maxDays * DAY_MS) errors.push('EXPIRY_TOO_LONG');
   }
   const principalType = preset?.principalType || lower(input.principalType ?? input.principal_type, 40) || 'member';
-  const capabilities = normalizeCapabilityList(input.capabilities ?? input.capabilities_json);
-  const deniedCapabilities = normalizeCapabilityList(input.deniedCapabilities ?? input.denied_capabilities_json);
+  const capabilities = parseCapabilityList(input.capabilities ?? input.capabilities_json);
+  const deniedCapabilities = parseCapabilityList(input.deniedCapabilities ?? input.denied_capabilities_json);
   return Object.freeze({
     ok: errors.length === 0,
     errors: Object.freeze(errors),
@@ -86,8 +88,8 @@ export function universalGrantAuthority(grant, { now = Date.now() } = {}) {
   if (!preset || !scope || !preset.scopeTypes.includes(scope.type)) return null;
   const base = adminAuthorityForRole(preset.authorityRole, {
     scope: normalizeEkodiScope(scope),
-    extraCapabilities: [...(preset.capabilities || []), ...normalizeCapabilityList(grant.capabilities_json ?? grant.capabilities)],
-    deniedCapabilities: [...(preset.denied || []), ...normalizeCapabilityList(grant.denied_capabilities_json ?? grant.deniedCapabilities)],
+    extraCapabilities: [...(preset.capabilities || []), ...parseCapabilityList(grant.capabilities_json ?? grant.capabilities)],
+    deniedCapabilities: [...(preset.denied || []), ...parseCapabilityList(grant.denied_capabilities_json ?? grant.deniedCapabilities)],
   });
   return Object.freeze({
     ...base,
