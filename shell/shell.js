@@ -365,6 +365,7 @@ function applyProgressiveHomeFocus(){
   }
   if(!requested&&!canonicalPublic)return;
   const run=()=>{
+    if(document.documentElement.dataset.ekodiProgressiveHomeApplied==='v1'||document.querySelector('[data-ekodi-progressive-reveal="v1"]'))return;
     const main=document.querySelector('[data-ekodi-user-canvas],main,[role="main"]');
     if(!main)return;
     const direct=[...main.children].filter(node=>node.matches?.('section,article,aside,.section,.panel,.content-section,[data-section]'));
@@ -373,6 +374,7 @@ function applyProgressiveHomeFocus(){
     const mobile=matchMedia('(max-width:640px)').matches;
     const visibleCount=mobile?(operator?2:1):2;
     if(candidates.length<=visibleCount)return;
+    document.documentElement.dataset.ekodiProgressiveHomeApplied='v1';
     document.documentElement.dataset.ekodiHomeFocus='v1';
     document.documentElement.dataset.ekodiHomeFocusDensity=visibleCount===1?'focused':'balanced';
     const defaultHidden=candidates.slice(2);

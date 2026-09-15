@@ -10,6 +10,8 @@ const SHELL_SCRIPT=`${SHELL_ORIGIN}/shell.js`;
 const SHELL_WORKSPACE_STYLE=`${SHELL_ORIGIN}/workspace.css`;
 const SHELL_USER_UI_STYLE=`${SHELL_ORIGIN}/user-ui-shell.css?v=${EKODI_SERVICE_MANIFEST.shellVersion}`;
 const SHELL_CHARACTER_STYLE=`${SHELL_ORIGIN}/user-character.css?v=${EKODI_SERVICE_MANIFEST.shellVersion}`;
+const PROGRESSIVE_HOME_SCRIPT=`${SHELL_ORIGIN}/progressive-home.js?v=${EKODI_SERVICE_MANIFEST.shellVersion}`;
+const PROGRESSIVE_HOME_STYLE=`${SHELL_ORIGIN}/progressive-home.css?v=${EKODI_SERVICE_MANIFEST.shellVersion}`;
 const INTERNAL_SURFACES=new Set(['workspace','admin','form','document','data']);
 const USER_SURFACES=new Set(['public','workspace']);
 const SERVICE_OWNED_FOOTER_SERVICES=new Set();
@@ -144,6 +146,26 @@ class UserChromeInjector{
     element.prepend(fallbackHeader(this.serviceId),{html:true});
     if(!serviceOwnsFooter(this.serviceId))element.append(renderEkodiUserFooter(),{html:true});
   }
+}
+
+
+class ProgressiveHomeHtmlInjector{element(element){element.setAttribute('data-ekodi-home-focus-request','v1');element.setAttribute('data-ekodi-progressive-home-engine','v1');}}
+class ProgressiveHomeHeadInjector{element(element){element.append(`<link rel="stylesheet" href="${PROGRESSIVE_HOME_STYLE}" data-ekodi-progressive-home-style="v1"><script src="${PROGRESSIVE_HOME_SCRIPT}" defer data-ekodi-progressive-home-script="v1"></script>`,{html:true});}}
+
+export function injectEkodiProgressiveHome(response){
+  if(!response)return response;
+  const contentType=String(response.headers.get('content-type')||'').toLowerCase();
+  if(!contentType.includes('text/html'))return response;
+  if(String(response.headers.get('x-ekodi-home-focus-request')||'')==='v1')return response;
+  const headers=new Headers(response.headers);
+  const csp=headers.get('content-security-policy');
+  if(csp){headers.set('content-security-policy',extendDirective(extendDirective(csp,'script-src',SHELL_CSP_ORIGIN),'style-src',SHELL_CSP_ORIGIN));}
+  headers.set('x-ekodi-home-focus-request','v1');
+  headers.set('x-ekodi-progressive-home-engine','v1');
+  return new HTMLRewriter()
+    .on('html',new ProgressiveHomeHtmlInjector())
+    .on('head',new ProgressiveHomeHeadInjector())
+    .transform(new Response(response.body,{status:response.status,statusText:response.statusText,headers}));
 }
 
 export function injectEkodiUserUi(response,serviceId='ekodi',surface='public',options={}){
