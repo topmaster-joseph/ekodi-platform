@@ -21,9 +21,13 @@ test('company Mall and Trade use independent channel tenants',async()=>{
   assert.match(pg,/slug='ekodimall'/);
 });
 
-test('Mall YouTube is pinned to the verified operating account',async()=>{
+test('Mall YouTube publishing identity is row-selected and tenant isolated',async()=>{
   const ui=await read('workspace-admin-page.js');
   const growth=await read('marketing-growth-worker.js');
-  assert.match(ui,/'ekodimall:mall:youtube':'topmaster\.joseph@gmail\.com'/);
-  assert.match(growth,/key==='ekodimall'\)return 'topmaster\.joseph@gmail\.com'/);
+  assert.doesNotMatch(ui,/topmaster\.joseph@gmail\.com/);
+  assert.doesNotMatch(growth,/key==='ekodimall'\)return 'topmaster\.joseph@gmail\.com'/);
+  assert.match(ui,/channelAccountForm/);
+  assert.match(ui,/data-account-auth/);
+  assert.match(growth,/registryConnectionId/);
+  assert.match(growth,/YOUTUBE_TARGET_ACCOUNT_MISMATCH/);
 });

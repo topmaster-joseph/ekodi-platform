@@ -15,7 +15,11 @@ test('site admins use each managed site canonical path plus /admin', async () =>
   assert.equal(isWorkspaceAdminPath('/admin/'), false);
   const js = await workspaceAdminScript().text();
   assert.match(js, /const base=`\/\$\{workspace\}`/);
-  assert.match(js, /const adminBase=service\?`\$\{base\}\/ekodimall\/admin`/);
+  assert.match(js, /adminBase=service==='mall'\?`\$\{base\}\/ekodimall\/admin`/);
+  assert.match(js,/service\?`\$\{base\}\/\$\{service\}\/admin`/);
+  assert.ok(js.includes('channelAccountForm'));
+  assert.ok(js.includes('data-account-auth'));
+  assert.ok(js.includes('registryConnectionId'));
   assert.ok(js.includes("key==='channels'?'channel-settings':key"));
 });
 
