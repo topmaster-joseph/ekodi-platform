@@ -1,5 +1,5 @@
 {
-  "version": "1.0.0",
+  "version": "1.1.0",
   "strategy": "cloud_first_provider_independent",
   "scope": {
     "includeAllEkodiSurfaces": true,
@@ -17,10 +17,23 @@
   "defaults": {
     "operaBrowserConnectorEnabled": false,
     "automaticFailover": true,
+    "usageAwareFailover": true,
     "automaticRefreshWhenProviderAllows": true,
     "credentialStorage": "server_only_encrypted_or_managed_secret_store",
     "browserSecretsAllowed": false
   },
+  "remoteDesktop": {
+    "role": "local_only_secondary_adapter",
+    "preferBundledOperations": true,
+    "skipWhenQuotaRemainingPercentAtOrBelow": 0,
+    "doNotEvadeAccountQuotaWithAnotherDevice": true
+  },
+  "recoverableProviderReasons": [
+    "quota_exhausted",
+    "rate_limited",
+    "provider_error",
+    "temporarily_unavailable"
+  ],
   "authentication": {
     "neverBypass": [
       "login",
