@@ -1,12 +1,13 @@
 {
-  "version": 2,
+  "version": 3,
   "worker": {
     "name": "ekodi-money",
     "config": "wrangler.money.toml",
     "requests": [
-      {"url":"https://money.ekodi.kr/","statuses":[200],"redirect":"follow","expect":["EKODI MONEY · FINANCIAL CLEANUP","V2 · 금융연동 준비층","금융행위는 반드시 사람이 결정합니다."],"headerExpect":["x-ekodi-shell: v2"]},
+      {"url":"https://money.ekodi.kr/","statuses":[200],"redirect":"follow","expect":["EKODI MONEY · FINANCIAL CLEANUP","V2 · 금융?�동 준비층","금융?�위??반드???�람??결정?�니??"],"headerExpect":["x-ekodi-shell: v2"]},
       {"url":"https://money.ekodi.kr/health","statuses":[200],"expect":["ekodi-money","\"financialExecution\":false","\"autonomousFinancialExecution\":false","\"humanGateRequired\":true","\"sensitiveCredentialCollection\":false","\"apiStatus\":\"integration-readiness\"","\"integrationVersion\":2","\"ekodiShell\":true"]},
-      {"url":"https://money.ekodi.kr/api/integrations","statuses":[200],"expect":["\"stage\":\"integration-readiness\"","\"id\":\"accountinfo\"","\"id\":\"kftc-openbanking\"","\"financialExecution\":false"]}
+      {"url":"https://money.ekodi.kr/api/integrations","statuses":[200],"expect":["\"stage\":\"integration-readiness\"","\"id\":\"accountinfo\"","\"id\":\"kftc-openbanking\"","\"financialExecution\":false"]},
+      {"url":"https://money.ekodi.kr/api/refunds/sources","statuses":[200],"expect":["\"id\":\"national-tax\"","\"id\":\"health-refund\"","\"id\":\"dormant-money\"","\"sensitiveCredentialCollection\":false","\"financialExecution\":false"]}
     ]
   }
 }
