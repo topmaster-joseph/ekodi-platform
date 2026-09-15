@@ -63,6 +63,9 @@ function withHeaders(env,response,route='asset'){
   return new Response(response.body,{status:response.status,statusText:response.statusText,headers});
 }
 function json(env,data,status=200){return withHeaders(env,new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store'}}),'api')}
+async function publicSiteChrome(slug){
+  try{const r=await fetch(`https://workspace-api.ekodi.kr/v1/site-chrome/public?subject_key=${encodeURIComponent(slug)}`,{headers:{accept:'application/json'},signal:AbortSignal.timeout(5000)});if(!r.ok)return null;const data=await r.json().catch(()=>null);return data&&typeof data==='object'?data:null}catch{return null}
+}
 async function publicStorefront(slug,env){
   if(env.DATA_ENABLED!=='true'||!env.SUPABASE_URL||!env.SUPABASE_PUBLISHABLE_KEY)return null;
   try{
@@ -153,6 +156,7 @@ export default{
         return withHeaders(env,await renderOrganizationPublicPage(request,env,resolved,requested),'space-organization');
       }
       if(resolved.storefront&&!workspaceRoute?.service){
+        resolved.chrome=await publicSiteChrome(requested);
         const storefront=requested==='jadam'
           ?await renderJadamStorefrontPage(request,env,resolved,requested)
           :['pizzamaru','yogurt'].includes(requested)

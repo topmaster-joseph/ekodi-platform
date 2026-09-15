@@ -3,7 +3,7 @@
 const SECTION_GROUP=Object.freeze({
   campus:'home',
   work:'operations',communication:'operations',finance:'operations',tax:'operations',
-  clients:'workspaces',organization:'workspaces',workspace:'workspaces','cheonggye-members':'workspaces',
+  clients:'workspaces','site-chrome':'workspaces',organization:'workspaces',workspace:'workspaces','cheonggye-members':'workspaces',
   'common-services':'services','life-ai':'services','personal-finance':'services',invest:'services',community:'services',books:'services',social:'services',devotional:'services','marketing-ai':'services','ai-membership':'services',affiliates:'services','supply-network':'services',insurance:'services',
   'public-site-controls':'system','language-status':'system',architecture:'system',maturity:'system',security:'system',admins:'system','ai-module-spec':'system',storage:'system',capabilities:'system',aiops:'system','ai-settings':'system',openai:'system',devices:'system',health:'system','api-cost':'system',services:'system',deployments:'system',policies:'system',
 });

@@ -188,7 +188,7 @@ await writeFile(shellPath, compactShell);
 // ES-module imports are versioned too. This prevents a browser from combining a new layout
 // with a five-minute-old menu registry after a deployment.
 const moduleImportVersions = new Map([
-  ['admin-menu-layout.js', ['admin-menu-registry.js', 'admin-sidebar.js', 'admin-menu-runtime.js']],
+  ['admin-menu-layout.js', ['admin-menu-registry.js', 'admin-sidebar.js', 'admin-menu-runtime.js', 'admin-site-chrome.js']],
   ['admin-menu-registry.js', ['admin-service-handoffs.js', 'admin-design-engine.js', 'platform-maturity-admin.js']],
   ['admin-service-handoffs.js', ['admin-service-catalog.js']],
   ['admin-sidebar.js', ['admin-menu-registry.js']],
