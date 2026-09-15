@@ -27,10 +27,14 @@ test('release verification bypasses stale Shell bundle cache and refreshes the c
     assert.equal(response.headers.get('x-ekodi-shell-bundle-cache'),'refresh');
     assert.equal(matchCalls,0,'release verification must not serve a stale cached bundle');
     assert.equal(putCalls,1,'fresh release bundle must replace the canonical cache entry');
-    assert.match(body,/api\.ekodi\.kr\/api\/i18n\/v1/);
-    assert.match(body,/social\.ekodi\.kr\/api\/media\/youtube\/status/);
-    assert.match(storedBody,/api\.ekodi\.kr\/api\/i18n\/v1/);
-    assert.match(storedBody,/social\.ekodi\.kr\/api\/media\/youtube\/status/);
+    assert.match(body,/https:\/\/ekodi\.kr\/api\/i18n\/v1/);
+    assert.match(body,/https:\/\/ekodi\.kr\/social\/api\/media\/youtube\/status/);
+    assert.match(storedBody,/https:\/\/ekodi\.kr\/api\/i18n\/v1/);
+    assert.match(storedBody,/https:\/\/ekodi\.kr\/social\/api\/media\/youtube\/status/);
+    assert.doesNotMatch(body,/https:\/\/api\.ekodi\.kr\/api\/i18n\/v1/);
+    assert.doesNotMatch(body,/https:\/\/social\.ekodi\.kr\/api\/media\/youtube\/status/);
+    assert.doesNotMatch(storedBody,/https:\/\/api\.ekodi\.kr\/api\/i18n\/v1/);
+    assert.doesNotMatch(storedBody,/https:\/\/social\.ekodi\.kr\/api\/media\/youtube\/status/);
   } finally {
     if(priorCaches===undefined)delete globalThis.caches;else globalThis.caches=priorCaches;
   }
