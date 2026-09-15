@@ -23,7 +23,8 @@ test('tenant Live renders multilingual host, interpreter and viewer controls',as
 
 test('multilingual studio enforces language entitlement and publishes tagged human interpretation audio',()=>{
   assert.doesNotThrow(()=>new Function(liveJs));
-  assert.match(liveJs,/languages:selectedInterpretationLanguages\(\)/);
+  assert.match(liveJs,/const languages=selectedInterpretationLanguages\(\)/);
+  assert.match(liveJs,/languages,durationMinutes/);
   assert.match(liveJs,/ai:false/);
   assert.match(liveJs,/createSession\(roomId,'presenter'\)/);
   assert.match(liveJs,/publishStream\(stream,'translation',language\)/);
