@@ -200,7 +200,12 @@ window.addEventListener('hashchange',()=>{
   if(section==='sites')return openSites();
   requestedSection=section;if(!activatePanel(section))requestDemand(section);
 });
-mountAdminSidebar(document);enforcePolicy();
+const sharedSidebar=mountAdminSidebar(document);
+nav.addEventListener('click',event=>{
+  if(!event.target.closest('[data-admin-global-group]'))return;
+  sharedSidebar?.sync?.();
+},true);
+enforcePolicy();
 const initialSection=explicitAdminSection();
 if(initialSection&&isInternal(initialSection))routeInternal();
 else if(initialSection==='sites')openSites();
