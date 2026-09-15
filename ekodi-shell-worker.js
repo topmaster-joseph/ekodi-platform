@@ -15,16 +15,19 @@ async function safeAssetFetch(env,url,request){try{return await env.ASSETS.fetch
 function bundleCacheRequest(request){const url=new URL(request.url);url.pathname='/shell.js';url.search='';url.searchParams.set('bundle',String(EKODI_SERVICE_MANIFEST.shellVersion||'1'));return new Request(url,{method:'GET'});}
 async function bundledShell(request,env,ctx){
   let bundleCache=null,bundleCacheKey=null;
+  const releaseRefresh=new URL(request.url).searchParams.has('release');
   if(request.method==='GET'&&typeof caches!=='undefined'){
     try{
       bundleCache=caches.default;
       bundleCacheKey=bundleCacheRequest(request);
-      const cached=await bundleCache.match(bundleCacheKey);
-      if(cached){
-        const headers=new Headers(cached.headers);
-        headers.set('cache-control','public, max-age=60, stale-while-revalidate=300');
-        headers.set('x-ekodi-shell-bundle-cache','hit');
-        return withHeaders(new Response(cached.body,{status:cached.status,statusText:cached.statusText,headers}));
+      if(!releaseRefresh){
+        const cached=await bundleCache.match(bundleCacheKey);
+        if(cached){
+          const headers=new Headers(cached.headers);
+          headers.set('cache-control','public, max-age=60, stale-while-revalidate=300');
+          headers.set('x-ekodi-shell-bundle-cache','hit');
+          return withHeaders(new Response(cached.body,{status:cached.status,statusText:cached.statusText,headers}));
+        }
       }
     }catch{}
   }
@@ -108,7 +111,7 @@ async function bundledShell(request,env,ctx){
   headers.set('x-ekodi-service-design',designInheritance?'v1':'missing');
   headers.set('x-ekodi-link-compat',linkCompat?'v1':'missing');
   headers.set('x-ekodi-user-shortcuts','my-only');
-  headers.set('x-ekodi-shell-bundle-cache','miss');
+  headers.set('x-ekodi-shell-bundle-cache',releaseRefresh?'refresh':'miss');
   const response=withHeaders(new Response(`${USER_SHORTCUT_GUARD}\n${USER_FOOTER_BOOTSTRAP}\n${USER_EXPERIENCE_PROFILES_BOOTSTRAP}\n${LANGUAGE_REGISTRY_BOOTSTRAP}\n${characterRegistry}\n${characterIdentity}\n${shell}\n${globalNav}\n${userContext}\n${userHeader}\n${userFooter}\n${userLanguage}\n${mediaMeeting}\n${userCharacter}\n${ccmMrPlayer}\n${adminShell}\n${fixedHeader}\n${userAiEntry}\n${uiGovernor}\n${messageUI}\n${illustrationSystem}\n${designInheritance}\n${linkCompat}\n`,{status:200,headers}));
   if(bundleCache&&bundleCacheKey&&ctx?.waitUntil){
     const stored=response.clone();

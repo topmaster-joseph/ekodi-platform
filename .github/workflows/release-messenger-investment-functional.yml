@@ -34,6 +34,7 @@ on:
       - 'test/workspace-platform.test.mjs'
       - 'test/conversation-foundation-release.test.mjs'
       - 'test/conversation-release-registry.test.mjs'
+      - 'test/conversation-production-health-retry.test.mjs'
       - 'test/profile-evidence-contract.test.mjs'
       - 'test/design-profile-contract.test.mjs'
       - 'test/site-chrome-runtime.test.mjs'
@@ -73,7 +74,7 @@ jobs:
         run: |
           set -euo pipefail
           for file in ekodi-principal.js profile-evidence-runtime.js profile-official-data-adapter.js invest-personalization-runtime.js invest-market-core.js invest-automation-runtime.js design-profile-runtime.js site-chrome-runtime.js config/site-chrome-defaults.js api-worker.js messenger-triage.js messenger-outbox.js messenger-channel-adapters.js messenger-operator-control.js workspace-messenger-v2.js workspace-platform-entry-worker.js workspace-platform-api-worker.js mission-control-entry-worker.js; do node --check "$file"; done
-          node --test test/workspace-platform.test.mjs test/conversation-release-registry.test.mjs test/profile-evidence-contract.test.mjs test/design-profile-contract.test.mjs test/site-chrome-runtime.test.mjs test/invest-personalization-contract.test.mjs test/invest-market-core.test.mjs test/invest-site-system.test.mjs
+          node --test test/workspace-platform.test.mjs test/conversation-release-registry.test.mjs test/conversation-production-health-retry.test.mjs test/profile-evidence-contract.test.mjs test/design-profile-contract.test.mjs test/site-chrome-runtime.test.mjs test/invest-personalization-contract.test.mjs test/invest-market-core.test.mjs test/invest-site-system.test.mjs
           node scripts/validate-additive-migrations.mjs migrations
           bash -n scripts/apply-d1-migrations-with-retry.sh
           grep -Fq 'messenger_outbox' migrations/0030_messenger_event_outbox.sql
@@ -274,18 +275,35 @@ jobs:
         run: node scripts/guarded-worker-release.mjs --manifest deploy/manifests/workspace-platform.worker.json
       - name: Verify production Workspace foundation
         run: |
-          curl -fsS 'https://workspace-api.ekodi.kr/health' > /tmp/live-health.json
-          grep -Fq '"schemaReady":true' /tmp/live-health.json
-          grep -Fq '"conversationSchemaReady":true' /tmp/live-health.json
-          grep -Fq '"profileEvidenceFoundation":"v1"' /tmp/live-health.json
-          grep -Fq '"adaptiveDesign":"v1"' /tmp/live-health.json
-          grep -Fq '"designProfileSchemaReady":true' /tmp/live-health.json
-          grep -Fq '"siteChrome":"v1"' /tmp/live-health.json
-          grep -Fq '"siteChromeSchemaReady":true' /tmp/live-health.json
-          grep -Fq '"officialDataProvider":"embedded-v1"' /tmp/live-health.json
-          grep -Fq '"investPersonalization":"v1"' /tmp/live-health.json
-          grep -Fq '"investAutomation":"v1"' /tmp/live-health.json
-          grep -Fq '"investAutomationSchemaReady":true' /tmp/live-health.json
+          set -euo pipefail
+          health_ok() {
+            local file="$1"
+            grep -Fq '"schemaReady":true' "$file" \
+              && grep -Fq '"conversationSchemaReady":true' "$file" \
+              && grep -Fq '"profileEvidenceFoundation":"v1"' "$file" \
+              && grep -Fq '"adaptiveDesign":"v1"' "$file" \
+              && grep -Fq '"designProfileSchemaReady":true' "$file" \
+              && grep -Fq '"siteChrome":"v1"' "$file" \
+              && grep -Fq '"siteChromeSchemaReady":true' "$file" \
+              && grep -Fq '"officialDataProvider":"embedded-v1"' "$file" \
+              && grep -Fq '"investPersonalization":"v1"' "$file" \
+              && grep -Fq '"investAutomation":"v1"' "$file" \
+              && grep -Fq '"investAutomationSchemaReady":true' "$file"
+          }
+          for attempt in $(seq 1 18); do
+            canonical_code=$(curl -sS -L -o /tmp/live-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://workspace-api.ekodi.kr/health' || true)
+            apex_code=$(curl -sS -L -o /tmp/apex-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/workspace-api/health' || true)
+            if [ "$canonical_code" = '200' ] && [ "$apex_code" = '200' ] \
+              && health_ok /tmp/live-health.json \
+              && health_ok /tmp/apex-health.json; then
+              echo "Workspace production health verified on canonical and apex projection at attempt=$attempt."
+              exit 0
+            fi
+            echo "Workspace production health attempt=$attempt/18 canonical_http=$canonical_code canonical_body=$(cat /tmp/live-health.json 2>/dev/null || true)"
+            echo "Workspace production health attempt=$attempt/18 apex_http=$apex_code apex_body=$(cat /tmp/apex-health.json 2>/dev/null || true)"
+            sleep 4
+          done
+          exit 1
 
   production-control:
     needs: production-workspace
@@ -308,8 +326,17 @@ jobs:
         run: node scripts/guarded-worker-release.mjs --manifest deploy/manifests/control-api.worker.json
       - name: Verify production Operator boundary
         run: |
-          code=$(curl -sS -o /tmp/inbox -w '%{http_code}' https://api.ekodi.kr/api/control/messenger/inbox || true)
-          test "$code" = '401'
+          set -euo pipefail
+          for attempt in $(seq 1 18); do
+            code=$(curl -sS -o /tmp/inbox -w '%{http_code}' --connect-timeout 5 --max-time 15 https://api.ekodi.kr/api/control/messenger/inbox || true)
+            if [ "$code" = '401' ]; then
+              echo "Production Operator boundary verified at attempt=$attempt."
+              exit 0
+            fi
+            echo "Production Operator boundary attempt=$attempt/18 http=$code body=$(cat /tmp/inbox 2>/dev/null || true)"
+            sleep 4
+          done
+          exit 1
 
 # Shared Messenger/Invest UI is not owned here. Deploy EKODI Shared Site Core is
 # the only workflow allowed to write deploy/manifests/shared-site.worker.json.
