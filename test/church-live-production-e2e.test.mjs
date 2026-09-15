@@ -12,6 +12,16 @@ test('Church Live production E2E is safe around real broadcasts and proves remot
   assert.match(script,/status:'ended'/);
 });
 
+test('Church Live host flow follows the current ready-live-ended phase contract instead of retired copy',()=>{
+  assert.match(script,/dataset\.phase==='ready'/);
+  assert.match(script,/dataset\.phase==='live'/);
+  assert.match(script,/dataset\.phase==='ended'/);
+  assert.match(script,/goLive&&!goLive\.disabled/);
+  assert.match(script,/endLive&&!endLive\.disabled/);
+  assert.doesNotMatch(script,/미디어 연결이 완료되었습니다/);
+  assert.doesNotMatch(script,/textContent==='방송 중'/);
+});
+
 test('Church Live E2E uses short-lived central admin auth and always revokes it',()=>{
   assert.match(workflow,/\+20 minutes/);
   assert.match(workflow,/https:\/\/ekodi\.kr\/api\/session/);
