@@ -41,7 +41,7 @@ const SERVICES = [
   {id:'local-commerce',name:'지역상권 상품권',shortName:'상권상품권',url:'https://ekodi.kr/local-commerce',group:'business',defaultSurface:'workspace',workspaceKinds:['person','business','organization','community','project'],capabilities:['local-commerce-wallet','voucher','coupon','points','merchant-redemption','settlement-review'],sso:true,targetable:true,openSso:true,order:138,state:'preparing',shellIntegration:'worker-injected',authMode:'client',onboardingVersion:1,transactionMode:'promotional-value-only-external-settlement-recording'},
   {id:'trade',name:'EKODI Global Trading',shortName:'Trade',url:'https://ekodi.kr/ekodibiz/trade',group:'business',defaultSurface:'public',workspaceKinds:['business','organization'],capabilities:['trade','buyers','suppliers'],sso:true,targetable:true,order:140,shellIntegration:'worker-injected'},
   {id:'invest',name:'EKODI Investment',shortName:'Investment',url:'https://ekodi.kr/invest',group:'finance',defaultSurface:'workspace',workspaceKinds:['person','business','organization','project'],capabilities:['investment','research','due-diligence','ir','opportunities','portfolio-analysis','multi-broker-simulation'],sso:true,targetable:true,order:145,shellIntegration:'worker-injected',authMode:'client',onboardingVersion:1,transactionMode:'analysis-and-connection-only'},
-  {id:'money',name:'EKODI Money',shortName:'Money',url:'https://money.ekodi.kr/',group:'finance',defaultSurface:'workspace',workspaceKinds:['person','business','organization','church','community'],capabilities:['financial-cleanup','accounts','autopay','financial-relationships','decision-support','official-handoff'],sso:true,targetable:true,openSso:true,order:147,shellIntegration:'worker-injected',authMode:'client',onboardingVersion:1,transactionMode:'human-confirmed-official-handoff'},
+  {id:'money',name:'EKODI Money',shortName:'Money',url:'https://money.ekodi.kr/',group:'finance',defaultSurface:'workspace',workspaceKinds:['person','business','organization','church','community'],capabilities:['financial-cleanup','accounts','autopay','financial-relationships','decision-support','public-refunds','official-handoff'],sso:true,targetable:true,openSso:true,order:147,shellIntegration:'worker-injected',authMode:'client',onboardingVersion:1,transactionMode:'human-confirmed-official-handoff'},
   {id:'pay',name:'EKODI Pay',shortName:'Pay',url:'https://pay.ekodi.kr/',group:'finance',defaultSurface:'public',workspaceKinds:['person','business','organization'],capabilities:['payments','billing'],sso:true,targetable:true,order:150,shellIntegration:'worker-injected'},
   {id:'edu',name:'EKODI Education',shortName:'Education',url:'https://edu.ekodi.kr/',group:'knowledge',defaultSurface:'public',workspaceKinds:['person','church','community','organization'],capabilities:['education','courses','learning','admission','study','official-sources','planning'],sso:true,targetable:true,openSso:true,order:160,shellIntegration:'worker-injected',authMode:'client',onboardingVersion:1},
   {id:'learn',name:'EKODI Learning Fabric',shortName:'Learning',url:'https://ekodi.kr/learn',group:'knowledge',defaultSurface:'public',workspaceKinds:['person','church','community','organization','project'],capabilities:['learning-fabric','skills','progress','practice','assessment','evidence','ai-coach'],sso:true,targetable:true,openSso:true,order:162,state:'live',shellIntegration:'worker-injected',authMode:'client',onboardingVersion:1},
@@ -68,8 +68,8 @@ const canonicalKey=value=>{
 };
 
 export const EKODI_SERVICE_MANIFEST = Object.freeze({
-  version: 21,
-  updatedAt: '2026-09-14',
+  version: 22,
+  updatedAt: '2026-09-15',
   identityModel: 'person-space-role',
   authorityModel: 'platform-admin-is-separate-from-tenant-activity',
   shellVersion: 5,

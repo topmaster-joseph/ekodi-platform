@@ -1,6 +1,7 @@
 import { injectEkodiShell } from './ekodi-shell-injector.js';
 import { buildFinancialCleanupBrief, requiresHumanGate } from './money/core.js';
 import { buildConsentPreview, buildIntegrationReadiness, providerFor, securityEvent } from './money/integrations.js';
+import { buildRefundSweep, PUBLIC_BENEFIT_SOURCE, PUBLIC_REFUND_SOURCES } from './money/public-refunds.js';
 
 const SECURITY_HEADERS={
   'x-content-type-options':'nosniff',
@@ -8,7 +9,7 @@ const SECURITY_HEADERS={
   'permissions-policy':'camera=(), microphone=(), geolocation=(), payment=()',
   'content-security-policy':"default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: https:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests"
 };
-const SENSITIVE_KEYS=new Set(['accountnumber','account_number','residentnumber','rrn','ssn','password','pin','cardnumber','card_number','cvc','cvv','access_token','refresh_token','client_secret']);
+const SENSITIVE_KEYS=new Set(['accountnumber','account_number','residentnumber','rrn','ssn','password','pin','cardnumber','card_number','cvc','cvv','access_token','refresh_token','client_secret','otp','authcode','auth_code','certificatepassword','certificate_password']);
 function json(data,status=200){return new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store',...SECURITY_HEADERS}})}
 function withHeaders(response){const headers=new Headers(response.headers);for(const[key,value]of Object.entries(SECURITY_HEADERS))headers.set(key,value);if(!headers.has('cache-control'))headers.set('cache-control',response.headers.get('content-type')?.includes('text/html')?'no-cache':'public, max-age=300');return new Response(response.body,{status:response.status,statusText:response.statusText,headers})}
 async function body(request){try{return await request.json()}catch{return null}}
@@ -32,6 +33,18 @@ export default{async fetch(request,env){
   const url=new URL(request.url);
   if(url.pathname==='/health')return json({ok:true,service:'ekodi-money',surface:'money-platform',...runtimeConfig(env),ekodiShell:true});
   if(url.pathname==='/config.js')return new Response(`window.EKODI_MONEY_CONFIG=${JSON.stringify(runtimeConfig(env))};`,{headers:{'content-type':'application/javascript; charset=utf-8','cache-control':'no-store',...SECURITY_HEADERS}});
+  if(url.pathname==='/api/refunds/sources'&&request.method==='GET')return json({ok:true,mode:'official-handoff',verifiedAt:'2026-09-15',sources:PUBLIC_REFUND_SOURCES,benefit:PUBLIC_BENEFIT_SOURCE,financialExecution:false,sensitiveCredentialCollection:false});
+  if(url.pathname==='/api/refunds/triage'&&request.method==='POST'){
+    const p=await body(request);if(!p||hasSensitiveKeys(p))return json({error:'invalid_or_sensitive_refund_payload'},400);
+    const allowed=new Set(['tax','health','pension','employment','telecom','dormant']);
+    const signals=Array.isArray(p.signals)?p.signals.map(String).filter(x=>allowed.has(x)):[];
+    return json({ok:true,...buildRefundSweep({signals,fullSweep:p.fullSweep!==false}),financialExecution:false,humanGateRequired:true});
+  }
+  if(url.pathname==='/api/refunds/handoff'&&request.method==='POST'){
+    const p=await body(request);if(!p||hasSensitiveKeys(p))return json({error:'invalid_or_sensitive_refund_payload'},400);
+    const source=PUBLIC_REFUND_SOURCES.find(item=>item.id===String(p.sourceId||''));if(!source)return json({error:'refund_source_not_found'},404);
+    return json({ok:true,mode:'official-handoff',sourceId:source.id,url:source.url,humanGateRequired:true,financialExecution:false});
+  }
   if(url.pathname==='/api/integrations'&&request.method==='GET')return json(buildIntegrationReadiness(env));
   if(url.pathname==='/api/consent/preview'&&request.method==='POST'){
     const p=await body(request);if(!p||hasSensitiveKeys(p))return json({error:'invalid_or_sensitive_consent_payload'},400);
