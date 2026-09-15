@@ -5,8 +5,8 @@ import { normalizeAccessScope } from './access-scope-registry.js';
 const DAY_MS = 24 * 60 * 60 * 1000;
 export const UNIVERSAL_ACCESS_ROLES = Object.freeze({
   platform_admin: Object.freeze({ authorityRole: 'super_admin', scopeTypes: Object.freeze(['platform']) }),
-  service_admin: Object.freeze({ authorityRole: 'operator', scopeTypes: Object.freeze(['service']) }),
-  workspace_admin: Object.freeze({ authorityRole: 'operator', scopeTypes: Object.freeze(['workspace']) }),
+  service_admin: Object.freeze({ authorityRole: 'operator', scopeTypes: Object.freeze(['service']), capabilities: Object.freeze(['service:access.read', 'service:access.review']) }),
+  workspace_admin: Object.freeze({ authorityRole: 'operator', scopeTypes: Object.freeze(['workspace']), capabilities: Object.freeze(['workspace:access.read', 'workspace:access.review']) }),
   manager: Object.freeze({ authorityRole: 'operator', scopeTypes: Object.freeze(['service', 'workspace']) }),
   ai_manager: Object.freeze({ authorityRole: 'viewer', scopeTypes: Object.freeze(['service', 'workspace']), capabilities: Object.freeze(['ai:read', 'ai:operate']) }),
   external_developer: Object.freeze({
@@ -17,7 +17,7 @@ export const UNIVERSAL_ACCESS_ROLES = Object.freeze({
     requiresGithub: true,
     requiresExpiry: true,
     capabilities: Object.freeze(['service:read', 'service:source.read', 'service:preview.read', 'service:logs.read', 'service:tests.run', 'service:pr.create']),
-    denied: Object.freeze(['admin:accounts.write', 'security:policy.write', 'secrets:*', 'data:private.*', 'data:finance.*', 'deploy:production', 'deploy:rollback', 'platform:emergency']),
+    denied: Object.freeze(['admin:accounts.write', 'security:policy.write', 'secrets:*', 'data:private.*', 'data:finance.*', 'deploy:production', 'deploy:rollback', 'platform:emergency', 'service:access.review', 'workspace:access.review']),
   }),
   staff: Object.freeze({ authorityRole: 'viewer', scopeTypes: Object.freeze(['service', 'workspace']), capabilities: Object.freeze(['service:read']) }),
   viewer: Object.freeze({ authorityRole: 'viewer', scopeTypes: Object.freeze(['platform', 'service', 'workspace', 'person']) }),
@@ -81,17 +81,14 @@ export function universalGrantAuthority(grant, { now = Date.now() } = {}) {
   const preset = universalRolePreset(grant.role);
   const scope = normalizeAccessScope({ type: grant.scope_type ?? grant.scopeType, key: grant.scope_key ?? grant.scopeKey });
   if (!preset || !scope || !preset.scopeTypes.includes(scope.type)) return null;
-  const base = adminAuthorityForRole(preset.authorityRole, { scope: normalizeEkodiScope(scope) });
-  const hardDenied = normalizeCapabilityList(preset.denied || []);
-  const granted = new Set([...base.capabilities, ...(preset.capabilities || []), ...normalizeCapabilityList(grant.capabilities_json ?? grant.capabilities)]);
-  const denied = new Set([...base.deniedCapabilities, ...hardDenied, ...normalizeCapabilityList(grant.denied_capabilities_json ?? grant.deniedCapabilities)]);
-  for (const capability of denied) granted.delete(capability);
+  const base = adminAuthorityForRole(preset.authorityRole, {
+    scope: normalizeEkodiScope(scope),
+    extraCapabilities: [...(preset.capabilities || []), ...normalizeCapabilityList(grant.capabilities_json ?? grant.capabilities)],
+    deniedCapabilities: [...(preset.denied || []), ...normalizeCapabilityList(grant.denied_capabilities_json ?? grant.deniedCapabilities)],
+  });
   return Object.freeze({
     ...base,
     role: String(grant.role || 'viewer'),
-    scope: Object.freeze(scope),
-    capabilities: Object.freeze([...granted]),
-    deniedCapabilities: Object.freeze([...denied]),
     grantId: clean(grant.id, 240),
     principalType: clean(grant.principal_type ?? grant.principalType, 40) || 'member',
     expiresAt: clean(grant.expires_at ?? grant.expiresAt, 64) || null,
