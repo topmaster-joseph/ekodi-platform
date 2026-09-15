@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>EKODI Home Energy AI</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <main class="shell">
+    <header class="hero">
+      <div>
+        <p class="eyebrow">EKODI · HOME</p>
+        <h1>Home Energy AI</h1>
+        <p class="lead">집의 전기를 관찰하고, 이상을 찾고, 절감 행동을 제안합니다. MVP에서는 전원 변경을 자동 실행하지 않습니다.</p>
+      </div>
+      <span class="badge">ADVISORY MODE</span>
+    </header>
+
+    <section class="status-grid" aria-label="운영 상태">
+      <article class="status-card"><span>Telemetry</span><strong id="telemetryStatus">연결 대기</strong></article>
+      <article class="status-card"><span>AI 권한</span><strong>분석 · 제안</strong></article>
+      <article class="status-card"><span>자동 제어</span><strong>OFF</strong></article>
+      <article class="status-card"><span>안전 경계</span><strong>보호기기 차단</strong></article>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <div>
+          <p class="eyebrow">FIRST READ</p>
+          <h2>현재 전력 상태 분석</h2>
+        </div>
+        <p class="muted">Home Assistant 연결 전에는 실제 계측값을 직접 넣어 정책 엔진을 검증할 수 있습니다.</p>
+      </div>
+
+      <form id="energyForm" class="form-grid">
+        <label>현재 총사용전력 (W)<input id="totalPowerW" type="number" min="0" step="1" inputmode="decimal" placeholder="계측값"></label>
+        <label>평상시 기준전력 (W)<input id="baselinePowerW" type="number" min="0" step="1" inputmode="decimal" placeholder="선택"></label>
+        <label>전력단가 (원/kWh)<input id="pricePerKwh" type="number" min="0" step="1" inputmode="decimal" placeholder="절감액 계산 시 선택"></label>
+        <label class="wide">기기 데이터 JSON<textarea id="devices" rows="6" placeholder="선택: 연결된 기기의 실제 측정 데이터를 입력"></textarea></label>
+        <div class="actions wide"><button type="submit">AI 분석</button><button type="button" class="secondary" id="clearButton">초기화</button></div>
+      </form>
+    </section>
+
+    <section class="panel" aria-live="polite">
+      <div class="panel-head">
+        <div><p class="eyebrow">AI REPORT</p><h2>제안</h2></div>
+        <span id="recommendationCount" class="count">0</span>
+      </div>
+      <div id="results" class="results empty">아직 분석한 실제 전력 데이터가 없습니다.</div>
+    </section>
+
+    <section class="guardrail">
+      <strong>AI가 하지 않는 일</strong>
+      <p>메인 차단기 조작, 누전차단기 기능 해제, 화재·보안·의료·냉장 필수기기 임의 차단은 허용하지 않습니다.</p>
+    </section>
+  </main>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
