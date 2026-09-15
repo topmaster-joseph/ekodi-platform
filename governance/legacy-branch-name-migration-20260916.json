@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "migrationId": "legacy-branch-names-20260916",
+  "repository": "topmaster-joseph/ekodi-platform",
+  "rule": "ai/<agent>/<task-id>",
+  "safety": {
+    "requireOpenPullRequest": true,
+    "requireExactHeadSha": true,
+    "requireTargetBranchAbsent": true,
+    "preservePullRequest": true,
+    "closePullRequests": false,
+    "modifyTests": false,
+    "applyIntegrationOrderApproved": false
+  },
+  "renames": [
+    {
+      "prNumber": 920,
+      "oldName": "chatgpt/device-safe-optimizer",
+      "newName": "ai/chatgpt/device-safe-optimizer",
+      "expectedHeadSha": "efb3cf16ea8ddc0194188c9d716ad5584d13d6f7",
+      "agent": "chatgpt",
+      "agentEvidence": "existing branch prefix is chatgpt/"
+    },
+    {
+      "prNumber": 893,
+      "oldName": "chatgpt/portable-cloud-20260904",
+      "newName": "ai/chatgpt/portable-cloud-20260904",
+      "expectedHeadSha": "dd91925f0389e0a2cdd686cd736aee965c5de2bb",
+      "agent": "chatgpt",
+      "agentEvidence": "existing branch prefix is chatgpt/"
+    },
+    {
+      "prNumber": 817,
+      "oldName": "chatgpt/church-central-deploy-20260903",
+      "newName": "ai/chatgpt/church-central-deploy-20260903",
+      "expectedHeadSha": "871d2fe48a67b9916e47cf29a66d7e993c9446ff",
+      "agent": "chatgpt",
+      "agentEvidence": "existing branch prefix is chatgpt/"
+    },
+    {
+      "prNumber": 746,
+      "oldName": "claude/devotion-pipeline-v2",
+      "newName": "ai/claude/devotion-pipeline-v2",
+      "expectedHeadSha": "ed88450a3ce1fe412927350b52c01999b267948c",
+      "agent": "claude",
+      "agentEvidence": "existing branch prefix is claude/"
+    },
+    {
+      "prNumber": 720,
+      "oldName": "codex/mail-intelligence-system",
+      "newName": "ai/codex/mail-intelligence-system",
+      "expectedHeadSha": "42f50bf5c05607b246f754e3b704e70181b8fb4d",
+      "agent": "codex",
+      "agentEvidence": "existing branch prefix is codex/"
+    },
+    {
+      "prNumber": 1741,
+      "oldName": "ai/conflict-guard-exclude-drafts-20260915",
+      "newName": "ai/claude/conflict-guard-exclude-drafts-20260915",
+      "expectedHeadSha": "143695f31b2c23fa2b70cba12fec465af513ac42",
+      "agent": "claude",
+      "agentEvidence": "PR body explicitly states Generated with Claude Code"
+    }
+  ]
+}
