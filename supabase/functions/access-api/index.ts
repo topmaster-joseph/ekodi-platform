@@ -182,7 +182,7 @@ function validHandoff(site:string,raw:string){
     books:["https://books.ekodi.kr"],
     church:["https://church.ekodi.kr"],
     lab:["https://lab.ekodi.kr"],
-    mission:["https://mission.ekodi.kr"],
+    mission:["https://ekodi.kr"],
     community:["https://community.ekodi.kr"],
     edu:["https://edu.ekodi.kr"],
     media:["https://media.ekodi.kr"],
@@ -193,8 +193,8 @@ function validHandoff(site:string,raw:string){
     const target=new URL(raw);
     if(target.protocol!=="https:"||target.username||target.password)return null;
     if(site==="marketing"&&validMarketingOrigin(target.origin))return target.href;
-    const cgmaPlatform=site==="cgma"&&target.origin==="https://ekodi.kr"&&(target.pathname==="/cgma"||target.pathname.startsWith("/cgma/"));
-    return (((origins[site]||[]).includes(target.origin)&&target.origin!=="https://ekodi.kr")||cgmaPlatform)?target.href:null;
+    const platformPath=target.origin==="https://ekodi.kr"&&((site==="cgma"&&(target.pathname==="/cgma"||target.pathname.startsWith("/cgma/")))||(site==="mission"&&(target.pathname==="/ekodimission"||target.pathname.startsWith("/ekodimission/"))));
+    return (((origins[site]||[]).includes(target.origin)&&target.origin!=="https://ekodi.kr")||platformPath)?target.href:null;
   }catch{return null}
 }
 function tenantSlugBase(name:string,email:string){

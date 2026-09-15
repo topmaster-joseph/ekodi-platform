@@ -1,13 +1,16 @@
+import { realtimeTenant } from './realtime-tenant-registry.js';
+import { tenantLivePage } from './tenant-live-page.js';
 import { isPublicWorkspacePath, workspaceRouteFromPublicPath, workspaceSlugFromPublicPath } from './workspace-route-policy.js';
 import { renderStorefrontPage, storefrontCss } from './storefront-page.js';
 import { renderJadamStorefrontPage, jadamStorefrontCss } from './jadam-storefront.js';
 import { renderRestaurantStorefrontPage, restaurantStorefrontCss } from './restaurant-storefront.js';
+import { isOrganizationWorkspaceSlug, renderOrganizationPublicPage } from './organization-public-page.js';
 
 const EKODIMISSION_PREFIX='/ekodimission';
-const EKODIMISSION_PAGES=new Map([['/ekodimission','/ekodimission.page'],['/ekodimission/activities','/ekodimission-activities.page'],['/ekodimission/activities/2026-chuseok-open-table','/ekodimission-activity.page'],['/ekodimission/participate','/ekodimission-participate.page'],['/ekodimission/partners','/ekodimission-partners.page'],['/ekodimission/stories','/ekodimission-stories.page'],['/ekodimission/give','/ekodimission-give.page']]);
+const EKODIMISSION_PAGES=new Map([['/ekodimission','/ekodimission.page'],['/ekodimission/vision','/ekodimission-vision.page'],['/ekodimission/activities','/ekodimission-activities.page'],['/ekodimission/activities/2026-chuseok-open-table','/ekodimission-activity.page'],['/ekodimission/prayer','/ekodimission-prayer.page'],['/ekodimission/participate','/ekodimission-participate.page'],['/ekodimission/partners','/ekodimission-partners.page'],['/ekodimission/stories','/ekodimission-stories.page'],['/ekodimission/give','/ekodimission-give.page'],['/ekodimission/transparency','/ekodimission-transparency.page'],['/ekodimission/contact','/ekodimission-contact.page']]);
 const EKODIMISSION_ASSETS=new Map([['/ekodimission/assets/site.css','/ekodimission.css'],['/ekodimission/assets/site.js','/ekodimission.js']]);
 function normalizedMissionPath(pathname){const clean=String(pathname||'').replace(/\/+$/,'');return clean||'/'}
-async function routeEkodiMission(request,env){const pathname=normalizedMissionPath(new URL(request.url).pathname);const assetPath=EKODIMISSION_PAGES.get(pathname)||EKODIMISSION_ASSETS.get(pathname);if(!assetPath)return withHeaders(env,new Response('Not Found',{status:404,headers:{'content-type':'text/plain; charset=utf-8'}}),'ekodimission-not-found');const target=new URL(request.url);target.pathname=assetPath;target.search='';const asset=await env.ASSETS.fetch(new Request(target.toString(),request));const isPage=EKODIMISSION_PAGES.has(pathname);let served=asset;if(isPage){const headers=new Headers(asset.headers);headers.set('content-type','text/html; charset=utf-8');headers.delete('content-length');served=new Response(asset.body,{status:asset.status,statusText:asset.statusText,headers})}const routed=withHeaders(env,served,EKODIMISSION_ASSETS.has(pathname)?'ekodimission-asset':'ekodimission-preview');routed.headers.set('x-ekodi-independent-site','true');routed.headers.set('x-ekodi-workspace','ekodimission');return routed;}
+async function routeEkodiMission(request,env){const pathname=normalizedMissionPath(new URL(request.url).pathname);if(pathname==='/ekodimission/live'){const tenant=realtimeTenant('ekodimission');if(!tenant)return withHeaders(env,new Response('Not Found',{status:404}),'ekodimission-not-found');const live=tenantLivePage(tenant);const routed=withHeaders(env,live,'ekodimission-preview');routed.headers.set('x-ekodi-independent-site','true');routed.headers.set('x-ekodi-workspace','ekodimission');return routed}const assetPath=EKODIMISSION_PAGES.get(pathname)||EKODIMISSION_ASSETS.get(pathname);if(!assetPath)return withHeaders(env,new Response('Not Found',{status:404,headers:{'content-type':'text/plain; charset=utf-8'}}),'ekodimission-not-found');const target=new URL(request.url);target.pathname=assetPath;target.search='';const asset=await env.ASSETS.fetch(new Request(target.toString(),request));const isPage=EKODIMISSION_PAGES.has(pathname);let served=asset;if(isPage){const headers=new Headers(asset.headers);headers.set('content-type','text/html; charset=utf-8');headers.delete('content-length');served=new Response(asset.body,{status:asset.status,statusText:asset.statusText,headers})}const routed=withHeaders(env,served,EKODIMISSION_ASSETS.has(pathname)?'ekodimission-asset':'ekodimission-preview');routed.headers.set('x-ekodi-independent-site','true');routed.headers.set('x-ekodi-workspace','ekodimission');return routed;}
 
 const DEFAULT_PAGE_PROFILE=Object.freeze({
   documentTitle:'운영공간 · EKODI',name:'내 운영공간',kicker:'OPERATING SPACE',
@@ -55,7 +58,7 @@ function withHeaders(env,response,route='asset'){
   const contentType=headers.get('content-type')||'';
   if(contentType.includes('text/html')){
     headers.set('cache-control','no-store');
-    headers.set('x-robots-tag',route==='space-storefront'?'index, follow':'noindex, nofollow, noarchive');
+    headers.set('x-robots-tag',['space-storefront','space-organization'].includes(route)?'index, follow':'noindex, nofollow, noarchive');
   }else if(!headers.has('cache-control'))headers.set('cache-control','public, max-age=300');
   return new Response(response.body,{status:response.status,statusText:response.statusText,headers});
 }
@@ -149,6 +152,9 @@ export default{
         return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-ekodi-workspace-alias':`${requested}->${resolved.canonicalSlug}`}});
       }
       if(resolved.status==='paused')return withHeaders(env,new Response('<!doctype html><html lang="ko"><meta charset="utf-8"><title>사용자 사이트 일시중지 · EKODI</title><body><main><h1>사용자 사이트가 일시중지되었습니다.</h1><p>운영공간 관리자 설정에서 다시 활성화할 수 있습니다.</p></main></body></html>',{status:404,headers:{'content-type':'text/html; charset=utf-8'}}),'space-paused');
+      if(isOrganizationWorkspaceSlug(requested)&&!workspaceRoute?.service){
+        return withHeaders(env,await renderOrganizationPublicPage(request,env,resolved,requested),'space-organization');
+      }
       if(resolved.storefront&&!workspaceRoute?.service){
         resolved.chrome=await publicSiteChrome(requested);
         const storefront=requested==='jadam'

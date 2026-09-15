@@ -8,10 +8,12 @@ import { injectEkodiShell } from './ekodi-shell-injector.js';
 import { messengerUserPage, messengerUiScript } from './messenger-user-page.js';
 import { investUserPage, investUiScript } from './invest-user-page.js';
 import { investSubjectUiScript } from './invest-subject-ui.js';
+import { routeInvestSite } from './invest-site-system.js';
 import { MAIL_HOST, mailUserPage, handleMailApi } from './mail-user-page.js';
 import { handleMailContactApi, mailContactPage } from './mail-contact.js';
 import { mailAdminPage } from './mail-admin-page.js';
 import { isWorkspaceAdminPath, workspaceAdminPage, workspaceAdminCss, workspaceAdminScript } from './workspace-admin-page.js';
+import { isOrganizationAdminPath, organizationAdminPage, organizationAdminCss, organizationAdminScript } from './organization-admin-page.js';
 import { legacyAdminAliasTarget } from './admin-address-policy.js';
 import { isStoreAdminPathShape, resolveStoreAdminRoute, storeAdminPage, storeAdminCss, storeAdminScript } from './store-admin-engine.js';
 import { churchPastorAdminPage, churchPastorAdminScript, isChurchPastorAdminPath } from './church-pastor-admin-page.js';
@@ -28,6 +30,8 @@ import { storePortfolioAdminPage } from './store-portfolio-admin-page.js';
 import { tenantAdminCommandHomeScript, tenantAdminCommandHomeCss } from './tenant-admin-command-home.js';
 import { isLearningPath, learningPage, learningScript, learningStyles } from './learning-page.js';
 import { decorateDiscoveryResponse } from './discovery-layer.js';
+import { realtimeTenantFromPath } from './realtime-tenant-registry.js';
+import { tenantLivePage } from './tenant-live-page.js';
 
 const PUBLIC_HOST='ekodi.kr';
 const CGMA_HOSTS=new Set(['cgma.or.kr','www.cgma.or.kr']);
@@ -218,6 +222,10 @@ export default {
     const legacyStores=legacyStoreGatewayRedirect(request);if(legacyStores)return legacyStores;
     if(host===PUBLIC_HOST&&url.pathname.startsWith('/api/finance/tax-'))return routeTaxFinance(request,env,ctx);
     if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)){const adminTarget=legacyAdminAliasTarget(url.pathname);if(adminTarget){const target=new URL(request.url);target.pathname=adminTarget;return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-content-type-options':'nosniff','x-ekodi-route':'admin-canonical-handoff'}})}}
+    if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)){
+      const liveTenant=realtimeTenantFromPath(url.pathname);
+      if(liveTenant&&!liveTenant.dedicated)return tenantLivePage(liveTenant);
+    }
     const canonical=await routeCanonicalSurface(request,env,{legacyFetch:next=>legacyPlatformRouter.fetch(next,env,ctx)});
     if(canonical)return canonical;
 
@@ -227,6 +235,7 @@ export default {
       const mailApex=routeMailApex(request);if(mailApex)return mailApex;
       const messengerApex=await routeMessengerApex(request,env,ctx);if(messengerApex)return messengerApex;
       const investApex=await routeInvestApex(request,env,ctx);if(investApex)return investApex;
+      const investSite=routeInvestSite(request);if(investSite)return injectEkodiShell(investSite,'invest');
       const taxPortal=await routeTaxPortalApex(request,env,ctx);if(taxPortal)return taxPortal;
       const contactResponse=await handleMailContactApi(request,env);if(contactResponse)return contactResponse;
       if(request.method==='GET'&&url.pathname==='/mail/contact')return injectEkodiShell(mailContactPage(),'mail');
@@ -241,6 +250,9 @@ export default {
         if(url.pathname==='/cmpmyi/admin'||url.pathname==='/cmpmyi/admin/')return injectEkodiShell(storePortfolioAdminPage({commandHome:true}),'business','admin');
         if(url.pathname==='/cmpmyi/admin/overview'||url.pathname==='/cmpmyi/admin/overview/')return injectEkodiShell(storePortfolioAdminPage(),'business','admin');
         if(isStoreAdminPathShape(url.pathname)){const storeRoute=await resolveStoreAdminRoute(url.pathname);if(storeRoute)return injectEkodiShell(storeAdminPage(storeRoute),'business','admin');}
+        if(url.pathname==='/organization-admin.css')return organizationAdminCss();
+        if(url.pathname==='/organization-admin.js')return organizationAdminScript();
+        if(isOrganizationAdminPath(url.pathname))return injectEkodiShell(organizationAdminPage(url.pathname),'space','admin');
         if(url.pathname==='/workspace-admin.css')return workspaceAdminCss();
         if(url.pathname==='/workspace-admin.js')return workspaceAdminScript();
         if(url.pathname==='/workspace-trade-admin.js')return workspaceTradeAdminScript();
