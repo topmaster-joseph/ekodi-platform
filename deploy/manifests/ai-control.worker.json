@@ -7,18 +7,18 @@
     "requests": [
       {
         "url": "https://ekodi.kr/ai/",
-        "statuses": [
-          200
-        ],
+        "statuses": [200],
         "redirect": "manual",
-        "expect": [
-          "EKODI 모두의 AI 프로젝트",
-          "무엇을 원하세요?"
-        ],
-        "headerExpect": [
-          "x-ekodi-canonical-surface: ai",
-          "x-ekodi-canonical-path: /ai"
-        ]
+        "expect": ["EKODI 모두의 AI 프로젝트", "무엇을 원하세요?"],
+        "headerExpect": ["x-ekodi-canonical-surface: ai", "x-ekodi-canonical-path: /ai"],
+        "candidateUrl": "https://ekodi-ai-control.topmaster-joseph.workers.dev/",
+        "candidateStatuses": [200],
+        "candidateExpect": ["EKODI 모두의 AI 프로젝트", "무엇을 원하세요?"],
+        "candidateHeaderExpect": [],
+        "candidateForbid": [],
+        "rollbackStatuses": [200, 307],
+        "rollbackExpect": [],
+        "rollbackHeaderExpect": []
       },
       {
         "url": "https://ekodi.kr/ai/__health",
@@ -29,7 +29,25 @@
           "\"ok\":true",
           "\"platform\":\"ai-control\"",
           "\"commons\":true"
-        ]
+        ],
+        "candidateUrl": "https://ekodi-ai-control.topmaster-joseph.workers.dev/__health",
+        "candidateStatuses": [
+          200
+        ],
+        "candidateExpect": [
+          "\"ok\":true",
+          "\"platform\":\"ai-control\"",
+          "\"commons\":true"
+        ],
+        "candidateHeaderExpect": [],
+        "rollbackStatuses": [
+          200
+        ],
+        "rollbackExpect": [
+          "\"platform\":\"ai-control\""
+        ],
+        "rollbackHeaderExpect": [],
+        "candidateForbid": []
       },
       {
         "url": "https://ekodi.kr/ai/api/commons/services",
@@ -39,7 +57,23 @@
         "expect": [
           "\"principle\"",
           "\"categories\""
-        ]
+        ],
+        "candidateUrl": "https://ekodi-ai-control.topmaster-joseph.workers.dev/api/commons/services",
+        "candidateStatuses": [
+          200
+        ],
+        "candidateExpect": [
+          "\"principle\"",
+          "\"categories\""
+        ],
+        "candidateHeaderExpect": [],
+        "rollbackStatuses": [
+          200,
+          404
+        ],
+        "rollbackExpect": [],
+        "rollbackHeaderExpect": [],
+        "candidateForbid": []
       },
       {
         "url": "https://ekodi.kr/ai/api/commons/requests",
@@ -48,7 +82,22 @@
         ],
         "expect": [
           "\"requests\""
-        ]
+        ],
+        "candidateUrl": "https://ekodi-ai-control.topmaster-joseph.workers.dev/api/commons/requests",
+        "candidateStatuses": [
+          200
+        ],
+        "candidateExpect": [
+          "\"requests\""
+        ],
+        "candidateHeaderExpect": [],
+        "rollbackStatuses": [
+          200,
+          404
+        ],
+        "rollbackExpect": [],
+        "rollbackHeaderExpect": [],
+        "candidateForbid": []
       },
       {
         "url": "https://ekodi.kr/ai/api/commons/ideas",
@@ -57,7 +106,22 @@
         ],
         "expect": [
           "authentication_required"
-        ]
+        ],
+        "candidateUrl": "https://ekodi-ai-control.topmaster-joseph.workers.dev/api/commons/ideas",
+        "candidateStatuses": [
+          401
+        ],
+        "candidateExpect": [
+          "authentication_required"
+        ],
+        "candidateHeaderExpect": [],
+        "rollbackStatuses": [
+          401,
+          404
+        ],
+        "rollbackExpect": [],
+        "rollbackHeaderExpect": [],
+        "candidateForbid": []
       }
     ]
   }

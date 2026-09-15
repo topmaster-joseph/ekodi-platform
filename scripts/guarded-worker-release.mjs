@@ -212,10 +212,12 @@ async function fetchCheck(request, overrideVersion = '', phase = 'standard') {
     console.log(`↩️ rollback verification skipped for candidate-only request: ${request.url}`);
     return;
   }
-  const statuses = Array.isArray(request.statuses) && request.statuses.length ? request.statuses : [200];
-  const bodyExpect = phase === 'rollback' && Array.isArray(request.rollbackExpect) ? request.rollbackExpect : (request.expect || []);
-  const bodyForbid = phase === 'rollback' && Array.isArray(request.rollbackForbid) ? request.rollbackForbid : (request.forbid || []);
-  const headerExpect = phase === 'rollback' && Array.isArray(request.rollbackHeaderExpect) ? request.rollbackHeaderExpect : (request.headerExpect || []);
+  const candidate = phase === 'standard' && Boolean(overrideVersion);
+  const targetUrl = candidate && request.candidateUrl ? request.candidateUrl : request.url;
+  const statuses = candidate && Array.isArray(request.candidateStatuses) ? request.candidateStatuses : phase === 'rollback' && Array.isArray(request.rollbackStatuses) ? request.rollbackStatuses : (request.statuses || [200]);
+  const bodyExpect = candidate && Array.isArray(request.candidateExpect) ? request.candidateExpect : phase === 'rollback' && Array.isArray(request.rollbackExpect) ? request.rollbackExpect : (request.expect || []);
+  const bodyForbid = candidate && Array.isArray(request.candidateForbid) ? request.candidateForbid : phase === 'rollback' && Array.isArray(request.rollbackForbid) ? request.rollbackForbid : (request.forbid || []);
+  const headerExpect = candidate && Array.isArray(request.candidateHeaderExpect) ? request.candidateHeaderExpect : phase === 'rollback' && Array.isArray(request.rollbackHeaderExpect) ? request.rollbackHeaderExpect : (request.headerExpect || []);
   const headers = {
     'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36',
     'accept': 'text/html,application/xhtml+xml,application/json;q=0.9,*/*;q=0.8',
@@ -227,7 +229,7 @@ async function fetchCheck(request, overrideVersion = '', phase = 'standard') {
   const attemptLimit = phase === 'production' && !overrideVersion ? PROMOTION_VERIFY_ATTEMPTS : STANDARD_VERIFY_ATTEMPTS;
   for (let attemptIndex = 1; attemptIndex <= attemptLimit; attemptIndex += 1) {
     try {
-      const response = await fetch(request.url, {
+      const response = await fetch(targetUrl, {
         redirect: request.redirect || 'manual',
         headers,
         signal: AbortSignal.timeout(12000),
@@ -246,7 +248,7 @@ async function fetchCheck(request, overrideVersion = '', phase = 'standard') {
         const normalized = [...response.headers.entries()].map(([key, value]) => `${key}: ${value}`).join('\n').toLowerCase();
         if (!normalized.includes(String(marker).toLowerCase())) throw new Error(`missing header marker: ${marker}; ${diagnostic}`);
       }
-      console.log(`✅ ${overrideVersion ? 'candidate' : 'production'} verified: ${request.url}`);
+      console.log(`✅ ${overrideVersion ? 'candidate' : 'production'} verified: ${targetUrl}`);
       return;
     } catch (error) {
       last = error?.message || String(error);
@@ -256,7 +258,7 @@ async function fetchCheck(request, overrideVersion = '', phase = 'standard') {
       if (attemptIndex < attemptLimit) await new Promise(resolve => setTimeout(resolve, VERIFY_RETRY_DELAY_MS));
     }
   }
-  throw new Error(`${request.url} verification failed: ${last}`);
+  throw new Error(`${targetUrl} verification failed: ${last}`);
 }
 
 async function verifyAll(overrideVersion = '', phase = 'standard') {
