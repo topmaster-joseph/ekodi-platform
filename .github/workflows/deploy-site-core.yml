@@ -365,8 +365,8 @@ jobs:
           fi
           grep -Fq "styles: ['marketing-ai-admin.css']" dist/admin-demand-loader.js
           grep -Fq "scripts: ['marketing-ai-admin.js']" dist/admin-demand-loader.js
-          grep -Fq "styles:['invest-admin.css']" dist/admin-demand-loader.js
-          grep -Fq "scripts:['invest-admin.js']" dist/admin-demand-loader.js
+          grep -Fq "section==='invest')return import('./invest-admin.js')" dist/admin-menu-layout.js
+          grep -Fq "l.href='/admin/invest-admin.css'" dist/invest-admin.js
           if grep -Fq '<script src="marketing-ai-admin.js"' dist/admin-shell.html || grep -Fq '<link rel="stylesheet" href="marketing-ai-admin.css"' dist/admin-shell.html; then
             echo 'Marketing AI must remain demand-loaded, not part of the admin first path.'
             exit 1
