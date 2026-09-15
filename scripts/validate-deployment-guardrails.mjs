@@ -154,6 +154,36 @@ if (new Set(secrets).size !== secrets.length) fail(accessFile, 'Cloudflare acces
 requireText('release-control-admin.js', ['automaticProductionBypass: false','topologyMutation: \'manual-only\'','prepared-for-split-token']);
 forbidText('release-control-admin.js', ['credentialIsolation: \'enforced\'','CLOUDFLARE_API_TOKEN','CLOUDFLARE_TOPOLOGY_TOKEN']);
 
+// Publication and deployment are separate states. Automatic runs may finish a
+// private candidate/preview, but only explicit administrator review may promote
+// that candidate to ordinary public production traffic.
+const publicationPolicyFile = 'governance/constitution/publication-approval.v1.json';
+const publicationPolicy = JSON.parse(read(publicationPolicyFile));
+if (publicationPolicy.defaultPublicationState !== 'private') fail(publicationPolicyFile, 'default publication state must be private');
+if (publicationPolicy.deploymentCompletionRequired !== true) fail(publicationPolicyFile, 'development/deployment completion must remain required');
+if (publicationPolicy.reviewBeforePublicPromotionRequired !== true) fail(publicationPolicyFile, 'administrator review must be required before public promotion');
+if (publicationPolicy.administratorApprovalTrigger !== 'workflow_dispatch') fail(publicationPolicyFile, 'administrator publication approval must remain an explicit manual workflow dispatch');
+if (publicationPolicy.firstDeployment?.automaticPublicBootstrapForbidden !== true) fail(publicationPolicyFile, 'first public deployment must fail closed until administrator approval');
+requireText('scripts/publication-approval-policy.mjs', [
+  "eventName === 'workflow_dispatch'",
+  "state: 'private'",
+  "mode: 'private-by-default'",
+  'EKODI_EMERGENCY_PUBLISH',
+  'EKODI_EMERGENCY_REASON',
+]);
+requireText('scripts/guarded-worker-release.mjs', [
+  'resolvePublicationDecision',
+  'Private deployment complete',
+  'candidate verified at 0%',
+  'administrator approval',
+  'first public deployment withheld',
+]);
+requireText('scripts/guarded-pages-release.mjs', [
+  'resolvePublicationDecision',
+  'Private Pages deployment complete',
+  'production remains unchanged pending administrator approval',
+]);
+
 const packageJson = JSON.parse(read('package.json'));
 for (const name of ['deploy:api', 'deploy:finance']) {
   const value = String(packageJson.scripts?.[name] || '');
@@ -165,7 +195,7 @@ for (const name of ['deploy:site', 'deploy:books', 'deploy:community']) {
 }
 
 if (failed) {
-  console.error('Deployment policy audit failed. Production must have one owner per artifact and no redeploy ping-pong.');
+  console.error('Deployment policy audit failed. Production must have one owner per artifact, no redeploy ping-pong, and private-by-default publication approval.');
   process.exit(1);
 }
-console.log('✅ Deployment policy audit passed: shared-site has one production owner, no redispatch loops, and independent services remain behind their own guarded release boundaries.');
+console.log('✅ Deployment policy audit passed: shared-site has one production owner, independent services remain guarded, and automatic releases stay private until administrator publication approval.');
