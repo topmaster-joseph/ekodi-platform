@@ -28,6 +28,32 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
+      - name: Enforce change branch identity
+        if: github.event_name == 'pull_request'
+        env:
+          EKODI_CHANGE_BRANCH: ${{ github.event.pull_request.head.ref }}
+          EKODI_CHANGE_ACTOR: ${{ github.event.pull_request.user.login }}
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+
+          const policy = JSON.parse(fs.readFileSync('config/ai-change-orchestration-policy.json', 'utf8'));
+          const naming = policy.sourceControl?.branchNaming || {};
+          const branch = String(process.env.EKODI_CHANGE_BRANCH || '').trim();
+          const actor = String(process.env.EKODI_CHANGE_ACTOR || '').trim();
+          const requiredPattern = new RegExp(naming.requiredPattern || '^$');
+          const botAllowed = (naming.automatedBotExceptions || []).some(rule =>
+            actor === String(rule.actor || '').trim()
+            && branch.startsWith(String(rule.branchPrefix || '').trim())
+          );
+
+          if (!requiredPattern.test(branch) && !botAllowed) {
+            console.error(`[EKODI][AI-BRANCH-001] branch must match ${naming.format || 'ai/<agent>/<task-id>'}: ${branch || 'missing'} (actor=${actor || 'missing'})`);
+            process.exit(1);
+          }
+
+          console.log(`[EKODI][AI-BRANCH-001] branch identity verified: ${branch} (actor=${actor})`);
+          NODE
       - name: Route change intent through EKODI AI
         id: ekodi_ai
         env:
