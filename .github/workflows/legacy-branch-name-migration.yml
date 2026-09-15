@@ -1,0 +1,45 @@
+name: EKODI Legacy Branch Name Migration
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'governance/legacy-branch-name-migration-20260916.json'
+      - 'scripts/migrate-legacy-branch-names.mjs'
+      - 'test/legacy-branch-name-migration.test.mjs'
+      - '.github/workflows/legacy-branch-name-migration.yml'
+
+permissions:
+  contents: write
+  pull-requests: read
+
+concurrency:
+  group: ekodi-legacy-branch-name-migration-20260916
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    name: Preserve PRs while renaming verified legacy branches
+    if: github.repository == 'topmaster-joseph/ekodi-platform' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate immutable migration plan
+        run: |
+          node scripts/migrate-legacy-branch-names.mjs
+          node --test test/legacy-branch-name-migration.test.mjs
+      - name: Rename only preflight-verified branches
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/migrate-legacy-branch-names.mjs --execute
+      - name: Upload migration evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: legacy-branch-name-migration-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/legacy-branch-name-migration-20260916.json
+          if-no-files-found: error
+          retention-days: 30
