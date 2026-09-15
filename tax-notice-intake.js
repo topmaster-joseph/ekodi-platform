@@ -72,7 +72,8 @@ export function parseTaxInvoiceNotice(input) {
   const targetPeriod = periodValue(field(text, '대상연월'));
   const plantName = field(text, '발전소명');
   const customerMaskedName = field(text, '고 객 명') || field(text, '고객명');
-  const buyerTaxRegId = String(integerValue(field(text, '종사업장번호')) ?? '').padStart(3, '0');
+  const rawTaxRegId = integerValue(field(text, '종사업장번호'));
+  const buyerTaxRegId = rawTaxRegId === null ? '' : String(rawTaxRegId).padStart(3, '0');
   const supplyAmount = requiredNumber(text, '공급가액', errors);
   const taxAmount = requiredNumber(text, '부가세액', errors);
   const totalAmount = requiredNumber(text, '총구입금액', errors);
