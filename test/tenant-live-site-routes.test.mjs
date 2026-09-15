@@ -18,6 +18,10 @@ test('shared tenant Live paths render on ekodi.kr with isolated tenant identity'
     const apexHtml=await apex.text();
     assert.match(apexHtml,new RegExp(`data-tenant=\"${tenant.apiTenant}\"`),`apex ${tenant.id}`);
     assert.match(apexHtml,/\/tenant-live\.js/,`apex ${tenant.id}`);
+    if(tenant.robots)assert.equal(apex.headers.get('x-robots-tag'),tenant.robots,`robots ${tenant.id}`);
+    if(tenant.route)assert.equal(apex.headers.get('x-ekodi-route'),tenant.route,`route ${tenant.id}`);
+    if(tenant.independentSite)assert.equal(apex.headers.get('x-ekodi-independent-site'),'true',`independent ${tenant.id}`);
+    if(tenant.workspace)assert.equal(apex.headers.get('x-ekodi-workspace'),tenant.workspace,`workspace ${tenant.id}`);
   }
 });
 
