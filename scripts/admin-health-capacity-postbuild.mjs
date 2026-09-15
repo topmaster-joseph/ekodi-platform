@@ -1,5 +1,6 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
+import { emitOpsHealthAsset } from './ops-health-build.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const dist = fileURLToPath(new URL('../dist/', import.meta.url));
@@ -36,5 +37,6 @@ await Promise.all([
   writeFile(`${dist}system-health-admin.js`, `${healthJs.trim()}\n${capacityJs.trim()}\n${autonomousJs.trim()}\n`),
   writeFile(`${dist}system-health-admin.css`, `${healthCss.trim()}\n${capacityCss.trim()}\n${autonomousCss.trim()}\n`),
 ]);
+await emitOpsHealthAsset(dist);
 
-console.log('Admin Health capacity evidence and Generation 10 autonomous health panel appended to the existing demand-loaded Health assets.');
+console.log('Admin Health capacity evidence, Generation 10 autonomous health panel, and public operations health artifact emitted.');
