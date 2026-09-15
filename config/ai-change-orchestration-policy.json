@@ -119,8 +119,19 @@
     "directPushToMain": false,
     "pullRequestRequired": true,
     "allowedChangeBranchPrefixes": [
-      "ai/"
+      "ai/",
+      "dependabot/"
     ],
+    "branchNaming": {
+      "format": "ai/<agent>/<task-id>",
+      "requiredPattern": "^ai/[a-z0-9][a-z0-9._-]*/[a-z0-9][a-z0-9._-]*$",
+      "automatedBotExceptions": [
+        {
+          "actor": "dependabot[bot]",
+          "branchPrefix": "dependabot/"
+        }
+      ]
+    },
     "requiredStatusCheck": "EKODI AI Orchestration Gate",
     "forcePush": false,
     "branchDeletion": false
