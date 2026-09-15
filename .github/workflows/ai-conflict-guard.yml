@@ -76,7 +76,7 @@ jobs:
           done < <(
             gh api --paginate \
               "repos/${REPOSITORY}/pulls?state=open&base=${BASE_REF}&per_page=100" \
-              --jq '.[] | [.number, .head.ref] | @tsv'
+              --jq '.[] | select(.draft == false) | [.number, .head.ref] | @tsv'
           )
 
           {
