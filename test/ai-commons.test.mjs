@@ -42,7 +42,9 @@ test('public route is wired through the AI service binding',()=>{
   assert.match(worker,/url\.pathname === '\/ai'/);
   assert.match(worker,/env\.AI\?\.fetch/);
   const wrangler=fs.readFileSync(new URL('../wrangler.site.toml',import.meta.url),'utf8');
-  assert.match(wrangler,/"\/ai\*"/);
+  assert.match(wrangler,/"\/ai"/);
+  assert.match(wrangler,/"\/ai\/\*"/);
+  assert.doesNotMatch(wrangler,/"\/ai\*"/);
 });
 test('admin build publishes the AI Commons governance module',()=>{
   const build=fs.readFileSync(new URL('../scripts/build.mjs',import.meta.url),'utf8');

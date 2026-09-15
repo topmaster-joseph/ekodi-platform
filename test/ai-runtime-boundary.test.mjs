@@ -14,7 +14,9 @@ test('AI Commons has one canonical public path and a private runtime owner', () 
   assert.doesNotMatch(production, /pattern = "ai\.ekodi\.kr"/);
   assert.match(production, /User traffic enters through ekodi\.kr\/ai via the shared-site service binding/);
   assert.match(shared, /binding = "AI"[\s\S]*service = "ekodi-ai-control"/);
-  assert.match(shared, /"\/ai\*"/);
+  assert.match(shared, /"\/ai"/);
+  assert.match(shared, /"\/ai\/\*"/);
+  assert.doesNotMatch(shared, /"\/ai\*"/);
   assert.match(site, /url\.pathname === '\/ai'/);
   assert.match(site, /url\.pathname\.startsWith\('\/ai\/'\)/);
   assert.match(site, /env\.AI\.fetch/);
@@ -43,4 +45,6 @@ test('production verifier follows the AI Commons public/member boundary contract
   const rootProbe = requests.find(item => item.url === 'https://ekodi.kr/ai/');
   assert.ok(rootProbe.headerExpect.includes('x-ekodi-canonical-surface: ai'));
   assert.ok(rootProbe.headerExpect.includes('x-ekodi-canonical-path: /ai'));
+  assert.equal(rootProbe.candidateUrl, 'https://ekodi-ai-control.topmaster-joseph.workers.dev/');
+  assert.equal(requests.find(item => item.url.endsWith('/__health'))?.candidateUrl, 'https://ekodi-ai-control.topmaster-joseph.workers.dev/__health');
 });
