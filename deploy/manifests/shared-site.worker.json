@@ -1,5 +1,5 @@
 {
-  "version": 68,
+  "version": 69,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
@@ -1210,7 +1210,6 @@
         "expect": [
           "EKODIBIZ",
           "EKODIBIZ · INVESTMENT BUSINESS",
-          "invest.ekodi.kr",
           "data-ekodi-business-unit=\"invest\""
         ],
         "headerExpect": [
