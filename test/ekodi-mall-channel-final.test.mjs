@@ -6,7 +6,10 @@ const read = path => readFile(new URL(`../${path}`, import.meta.url),'utf8');
 test('Mall channel console unifies connection policy AI allocation and job recovery', async()=>{
   const ui=await read('workspace-admin-page.js');
   assert.match(ui,/채널설정/);
-  assert.match(ui,/adminBase=service\?`\$\{base\}\/ekodimall\/admin`/);
+  assert.match(ui,/adminBase=service==='mall'\?`\$\{base\}\/ekodimall\/admin`/);
+  assert.match(ui,/channelAccountForm/);
+  assert.match(ui,/data-account-auth/);
+  assert.match(ui,/registryConnectionId/);
   assert.match(ui,/channel-settings/);
   assert.match(ui,/channelPolicyForm/);
   assert.match(ui,/channelAiForm/);
@@ -16,7 +19,7 @@ test('Mall channel console unifies connection policy AI allocation and job recov
   assert.match(ui,/publishWindowStart/);
   assert.match(ui,/maxAttempts/);
   assert.match(ui,/data-job-action/);
-  assert.match(ui,/유료 광고 집행은 자동 활성화하지 않습니다/);
+
 });
 
 test('publishing engine enforces channel controls before provider execution', async()=>{

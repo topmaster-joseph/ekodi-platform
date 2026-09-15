@@ -40,3 +40,14 @@ test('admin UI and mission control expose the central account center', () => {
   assert.match(read('external-account-admin.js'), /외부계정 통합운영센터/);
   assert.doesNotMatch(read('external-account-admin.js'), /name="password"/);
 });
+
+test('external account control allows only configured browser origins with credential-safe CORS', () => {
+  const source=read('mission-control-entry-worker.js');
+  assert.match(source,/handleExternalAccountPreflight/);
+  assert.match(source,/GET, POST, PATCH, OPTIONS/);
+  assert.match(source,/externalAccountCorsResponse\(response, request, env\)/);
+  assert.match(source,/allowedControlOrigin\(request, env\)/);
+  assert.doesNotMatch(source,/external-accounts[\s\S]{0,1000}access-control-allow-origin['"]?:['"]?\*/);
+  const wrangler=read('wrangler.api.toml');
+  assert.match(wrangler,/ALLOWED_ORIGINS = .*https:\/\/ekodi\.kr/);
+});

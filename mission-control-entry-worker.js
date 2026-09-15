@@ -80,6 +80,24 @@ function handleCloudflareSecretPreflight(request, env = {}) {
   return applyApiSecurityHeaders(new Response(null, { status:204, headers }));
 }
 
+function handleExternalAccountPreflight(request, env = {}) {
+  if (request.method !== 'OPTIONS') return null;
+  const path = new URL(request.url).pathname;
+  if (!path.startsWith('/api/control/external-accounts')) return null;
+  const origin = allowedControlOrigin(request, env);
+  if (!origin) return applyApiSecurityHeaders(new Response(JSON.stringify({ error:'허용되지 않은 Origin입니다.', code:'ORIGIN_FORBIDDEN' }), { status:403, headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','vary':'Origin'} }));
+  return applyApiSecurityHeaders(new Response(null, { status:204, headers:{'access-control-allow-origin':origin,'access-control-allow-methods':'GET, POST, PATCH, OPTIONS','access-control-allow-headers':'authorization, content-type','access-control-max-age':'86400','cache-control':'no-store','vary':'Origin'} }));
+}
+
+function externalAccountCorsResponse(response, request, env = {}) {
+  const origin = allowedControlOrigin(request, env);
+  if (!origin) return applyApiSecurityHeaders(response);
+  const headers = new Headers(response.headers);
+  headers.set('access-control-allow-origin', origin);
+  headers.set('vary', 'Origin');
+  return applyApiSecurityHeaders(new Response(response.body, { status:response.status, statusText:response.statusText, headers }));
+}
+
 export default {
   async fetch(request, env, ctx) {
     const incoming = new URL(request.url);
@@ -89,6 +107,9 @@ export default {
 
     const secretPreflight = handleCloudflareSecretPreflight(request, env);
     if (secretPreflight) return secretPreflight;
+
+    const externalAccountPreflight = handleExternalAccountPreflight(request, env);
+    if (externalAccountPreflight) return externalAccountPreflight;
 
     const path = incoming.pathname;
 
@@ -155,7 +176,7 @@ export default {
     }
 
     if (path.startsWith('/api/control/external-accounts')) {
-      try { const response = await handleExternalAccountControl(request, env); if (response) return applyApiSecurityHeaders(response); }
+      try { const response = await handleExternalAccountControl(request, env); if (response) return externalAccountCorsResponse(response, request, env); }
       catch (error) { console.error('External Account Control error', error); return errorResponse('외부계정 통합운영 처리 중 오류가 발생했습니다.', 'EXTERNAL_ACCOUNT_CONTROL_ERROR'); }
     }
 

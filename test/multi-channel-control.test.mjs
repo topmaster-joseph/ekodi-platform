@@ -12,7 +12,8 @@ const [worker, admin, broker, registry, loader] = await Promise.all([
 
 test('YouTube OAuth supports repeated account selection and does not hard-lock EKODIBIZ to one named channel', () => {
   assert.match(broker, /prompt:'consent select_account'/);
-  assert.match(worker, /const requestedHint = clean\(body\.accountHint,180\)/);
+  assert.ok(worker.includes("const requestedHint = clean(body.accountHint||registry?.login_hint||registry?.provider_account_id,180)"));
+  assert.match(worker,/registryConnectionId/);
   assert.match(worker, /const selectedChannels = discoveredChannels/);
   assert.match(worker, /YOUTUBE_CHANNEL_NOT_FOUND/);
   assert.doesNotMatch(worker, /EKODIMALL_YOUTUBE_CHANNEL_NOT_FOUND/);

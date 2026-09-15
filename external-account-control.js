@@ -1,5 +1,5 @@
 const PREFIX='/api/control/external-accounts';
-const MANAGE_ROLES=new Set(['owner','admin','tenant_admin','manager','store_owner','operator']);
+const MANAGE_ROLES=new Set(['owner','admin','tenant_admin','workspace_admin','manager','store_owner','hq_manager','client_admin','client_editor','marketing_manager','marketer','operator']);
 const MODES=new Set(['oauth','delegated','official_handoff','service_account_ref','manual']);
 const STATES=new Set(['pending_authorization','active','paused','reconnect_required','revoked','error']);
 const PROVIDERS=Object.freeze([

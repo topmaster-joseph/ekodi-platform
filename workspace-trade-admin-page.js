@@ -5,6 +5,7 @@ function tradeAdminClient(ADMIN_HUB){
   const workspaceUrlSlug=route[1].toLowerCase();
   const workspace=workspaceUrlSlug==='ekodibiz'?'ekoditrade':workspaceUrlSlug;
   const section=(route[2]||'overview').toLowerCase();
+  if(['publishing','marketing','channels'].includes(section))return;
   const API='https://renzehysxirjilvdxacv.supabase.co/functions/v1/workspace-api';
   const SUPABASE_URL='https://renzehysxirjilvdxacv.supabase.co';
   const SUPABASE_KEY='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
@@ -25,13 +26,13 @@ function tradeAdminClient(ADMIN_HUB){
   function mountCommandHome(){if(location.pathname.replace(/\/+$/,'')!==base)return false;window.EKODITenantCommandHome?.mount({rootPath:base,siteName:'에코디비즈 무역거래',publicPath:`/${workspaceUrlSlug}/trade`,routes:commandRoutes()});return true}
   function renderSecondaryNav(group=section){
     const sub=$('sectionNav');if(!sub)return;sub.replaceChildren();
-    const items=group==='access'?[['access','admins','관리자'],['access','roles','역할 · 권한']]:group==='companies'?[['companies','list','거래회사'],['companies','editor','등록 · 수정']]:[['overview','scope','대시보드']];
+    const items=group==='access'?[['access','admins','관리자'],['access','roles','역할 · 권한']]:group==='companies'?[['companies','list','거래회사'],['companies','editor','등록 · 수정']]:group==='publishing'?[['publishing','channels','채널 · 게시']]:[['overview','scope','대시보드']];
     items.forEach(([routeKey,anchor,label],index)=>{const a=document.createElement('a');a.href=`${sectionHref(routeKey)}#${anchor}`;a.textContent=label;if(routeKey===section&&index===0)a.classList.add('active');sub.append(a);});
   }
   function setHeader(){
     $('workspaceName').textContent='에코디비즈';$('scopeLabel').textContent='에코디비즈';$('serviceName').textContent='무역거래 관리';
     $('breadcrumb').textContent='에코디비즈 / 무역거래 / ADMIN';$('publicLink').href=`/${workspaceUrlSlug}/trade`;$('publicLink').textContent='관계자 화면';    const nav=$('adminNav');nav.replaceChildren();
-    [['overview','운영'],['companies','거래관리'],['access','사용자 · 관리자']].forEach(([key,label])=>{
+    [['overview','운영'],['companies','거래관리'],['publishing','채널 · 게시'],['access','사용자 · 관리자']].forEach(([key,label])=>{
       const b=document.createElement('button');b.type='button';b.dataset.adminGroup=key;b.textContent=label;
       if(key===section)b.classList.add('active');b.onclick=()=>{nav.querySelectorAll('[data-admin-group]').forEach(node=>node.classList.toggle('active',node===b));renderSecondaryNav(key);};nav.append(b);
     });

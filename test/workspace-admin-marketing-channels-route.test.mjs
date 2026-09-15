@@ -2,33 +2,27 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { isWorkspaceAdminPathShape } from '../workspace-route-policy.js';
+const read=path=>readFile(new URL(`../${path}`,import.meta.url),'utf8');
 
-test('Mall channel settings has one canonical site-owned admin deep link', async () => {
-  assert.equal(isWorkspaceAdminPathShape('/ekodibiz/ekodimall/admin/'), true);
-  assert.equal(isWorkspaceAdminPathShape('/ekodibiz/ekodimall/admin/channel-settings/'), true);
-  assert.equal(isWorkspaceAdminPathShape('/admin/ekodimall/'), false);
-  assert.equal(isWorkspaceAdminPathShape('/admin/ekodimall/channel-settings/'), false);
-  assert.equal(isWorkspaceAdminPathShape('/ekodibiz/ekodimall/admin/marketing/channels/'), false);
-  assert.equal(isWorkspaceAdminPathShape('/ekodibiz/ekodimall/admin/channels/'), false);
-  assert.equal(isWorkspaceAdminPathShape('/ekodibiz/mall/admin/channels/'), false);
-  assert.equal(isWorkspaceAdminPathShape('/ekodibiz/ekodimall/admin/sourcing/'), true);
-  assert.equal(isWorkspaceAdminPathShape('/ekodibiz/ekodimall/admin/growth/'), true);
-  const source=await readFile(new URL('../workspace-admin-page.js', import.meta.url),'utf8');
-  assert.match(source,/canonicalMall=clean\.match/);
-  assert.match(source,/rawSection==='channel-settings'\?'channels':rawSection/);
-  assert.match(source,/adminBase=service\?`\$\{base\}\/ekodimall\/admin`/);
-  assert.match(source,/sectionHref=key=>key==='overview'\?`\$\{adminBase\}\/overview`/);
+test('canonical Mall and child-service publishing routes use site-owned admins', async()=>{
+  assert.equal(isWorkspaceAdminPathShape('/ekodibiz/ekodimall/admin/'),true);
+  assert.equal(isWorkspaceAdminPathShape('/ekodibiz/ekodimall/admin/channel-settings/'),true);
+  assert.equal(isWorkspaceAdminPathShape('/admin/ekodimall/channel-settings/'),false);
+  assert.equal(isWorkspaceAdminPathShape('/ekodibiz/ekodimall/admin/channels/'),false);
+  assert.equal(isWorkspaceAdminPathShape('/ekodibiz/trade/admin/publishing/'),true);
+  assert.equal(isWorkspaceAdminPathShape('/cgma/admin/publishing/'),true);
+  const source=await read('workspace-admin-page.js');
+  assert.match(source,/genericService=clean\.match/);
+  assert.match(source,/service==='mall'\?`\$\{base\}\/ekodimall\/admin`/);
+  assert.match(source,/service\?`\$\{base\}\/\$\{service\}\/admin`/);
+  assert.match(source,/visibleChannelIds/);
 });
 
-test('unauthenticated Mall channel setup still selects provider before provider login', async () => {
-  const source=await readFile(new URL('../workspace-admin-page.js', import.meta.url),'utf8');
-  assert.match(source,/CHANNEL_INTENT_KEY='ekodi-workspace-channel-intent'/);
-  assert.match(source,/function channelPreAuth\(\)/);
-  assert.match(source,/data-channel-preauth/);
-  assert.match(source,/if\(service==='mall'&&section==='channels'\)return channelPreAuth\(\)/);
-  assert.match(source,/pendingChannelIntent\(\)/);
-  assert.match(source,/return startChannelConnect\(pendingProvider\)/);
-  assert.match(source,/'ekodimall:mall:youtube':'topmaster\.joseph@gmail\.com'/);
-  assert.match(source,/const accountHint=channelTargetAccount\(provider\)/);
-  assert.match(source,/metadata\?\.authorizedEmail/);
+test('channel admin is login-first and authenticates pre-registered account rows',async()=>{
+  const source=await read('workspace-admin-page.js');
+  for(const marker of ['channelAccountForm','data-account-auth','registryConnectionId','EXTERNAL_ACCOUNT_CONTROL']) assert.ok(source.includes(marker),marker);
+  assert.match(source,/externalAccountApi\('\/accounts'/);
+  assert.match(source,/channelPreAuth\(\).*loginPanel/s);
+  assert.doesNotMatch(source,/CHANNEL_INTENT_KEY|pendingChannelIntent|CHANNEL_TARGET_ACCOUNTS/);
+  assert.doesNotMatch(source,/topmaster\.joseph@gmail\.com/);
 });
