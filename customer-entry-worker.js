@@ -4,6 +4,7 @@ import { handleCustomerAuth } from './customer-auth.js';
 import { handleFederatedCustomerAuth } from './customer-federated-auth.js';
 import { handleGoogleCustomerPreregistration } from './customer-google-prereg.js';
 import { handleCustomerMemberDirectory } from './customer-member-directory.js';
+import { handleUniversalAccessControl } from './universal-access-control.js';
 import { handleMembershipBilling, runMembershipBillingSchedule } from './membership-billing.js';
 import { handleAdminGoogleAuth } from './admin-google-auth.js';
 import { handleBooksRequest } from './books-control.js';
@@ -62,6 +63,19 @@ function disabledPasswordResponse(kind = 'admin') {
 export default {
   async fetch(request, env, ctx) {
     const path = new URL(request.url).pathname;
+
+    if (path.startsWith('/api/access-governance')) {
+      try {
+        const response = await handleUniversalAccessControl(request, env);
+        if (response) return response;
+      } catch (error) {
+        console.error('Universal access governance API error', error);
+        return new Response(JSON.stringify({ error:'EKODI 권한관리 API 처리 중 오류가 발생했습니다.', code:'ACCESS_GOVERNANCE_API_ERROR' }), {
+          status:500,
+          headers:{ 'content-type':'application/json; charset=utf-8', 'cache-control':'no-store', 'x-content-type-options':'nosniff' },
+        });
+      }
+    }
 
     if (path.startsWith('/api/insurance/admin')) {
       if (!insuranceAdminEnabled(env)) return disabledInsuranceAdminResponse();
@@ -305,8 +319,6 @@ export default {
         console.error('EKODI Mall Coupang report schedule failed', error);
         return { ok:false, status:'failed', ran:true };
       });
-    // A real Coupang report pass owns this invocation's subrequest budget.
-    // The other recurring jobs defer only this single ten-minute cycle.
     if (reporting?.ran) return { reporting };
     ctx.waitUntil(runChurchReportSchedule(env).catch(error => console.error('Church report schedule failed', error)));
     ctx.waitUntil(runMembershipBillingSchedule(env).catch(error => console.error('Membership billing schedule failed', error)));
