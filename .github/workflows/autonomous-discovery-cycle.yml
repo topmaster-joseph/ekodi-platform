@@ -3,7 +3,7 @@ name: EKODI Autonomous Discovery Cycle
 on:
   workflow_dispatch:
   schedule:
-    - cron: '17 */6 * * *'
+    - cron: '17 * * * *'
   pull_request:
     paths:
       - 'ekodi-autonomous-discovery-engine.js'
@@ -13,16 +13,20 @@ on:
       - 'scripts/run-autonomous-discovery-cycle.mjs'
       - 'scripts/collect-autonomous-research-evidence.mjs'
       - 'scripts/run-autonomous-evolution-loop.mjs'
+      - 'scripts/run-autonomous-operations-cycle.mjs'
       - 'test/autonomous-discovery-engine.test.mjs'
       - 'test/autonomous-discovery-cycle.test.mjs'
       - 'test/autonomous-discovery-subservices.test.mjs'
       - 'test/autonomous-evolution-loop.test.mjs'
       - 'test/autonomous-evolution-subservices.test.mjs'
       - 'test/autonomous-research-evidence.test.mjs'
+      - 'test/autonomous-operations-cycle.test.mjs'
       - 'config/ecosystem-services.json'
+      - 'config/autonomous-operations-policy.json'
       - 'governance/architecture/ekodi-autonomous-discovery-engine.json'
       - 'migrations/0080_autonomous_evolution_lifecycle.sql'
       - '.github/workflows/autonomous-discovery-cycle.yml'
+      - '.github/workflows/monitor.yml'
   push:
     branches: [main]
     paths:
@@ -33,14 +37,19 @@ on:
       - 'scripts/run-autonomous-discovery-cycle.mjs'
       - 'scripts/collect-autonomous-research-evidence.mjs'
       - 'scripts/run-autonomous-evolution-loop.mjs'
+      - 'scripts/run-autonomous-operations-cycle.mjs'
+      - 'test/autonomous-operations-cycle.test.mjs'
       - 'config/ecosystem-services.json'
+      - 'config/autonomous-operations-policy.json'
       - 'governance/architecture/ekodi-autonomous-discovery-engine.json'
       - 'migrations/0080_autonomous_evolution_lifecycle.sql'
       - '.github/workflows/autonomous-discovery-cycle.yml'
+      - '.github/workflows/monitor.yml'
 
 permissions:
   contents: read
-  actions: read
+  actions: write
+  issues: write
 
 concurrency:
   group: ekodi-autonomous-discovery-${{ github.ref }}
@@ -56,7 +65,7 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
-      - name: Validate discovery, research and evolution lifecycle
+      - name: Validate discovery, research, evolution and delegated operations lifecycle
         run: |
           node --check ekodi-autonomous-discovery-engine.js
           node --check autonomous-discovery-service-registry.js
@@ -65,13 +74,15 @@ jobs:
           node --check scripts/run-autonomous-discovery-cycle.mjs
           node --check scripts/collect-autonomous-research-evidence.mjs
           node --check scripts/run-autonomous-evolution-loop.mjs
+          node --check scripts/run-autonomous-operations-cycle.mjs
           node --test \
             test/autonomous-discovery-engine.test.mjs \
             test/autonomous-discovery-cycle.test.mjs \
             test/autonomous-discovery-subservices.test.mjs \
             test/autonomous-evolution-loop.test.mjs \
             test/autonomous-evolution-subservices.test.mjs \
-            test/autonomous-research-evidence.test.mjs
+            test/autonomous-research-evidence.test.mjs \
+            test/autonomous-operations-cycle.test.mjs
 
   discover:
     if: github.event_name != 'pull_request'
@@ -93,7 +104,7 @@ jobs:
             -H 'Accept: application/vnd.github+json' \
             -H 'X-GitHub-Api-Version: 2022-11-28' \
             "repos/${GITHUB_REPOSITORY}/actions/runs?per_page=100" \
-            --jq '[.workflow_runs[] | {databaseId: .id, workflowName: .name, workflowPath: .path, status: .status, conclusion: .conclusion, createdAt: .created_at, url: .html_url, event: .event}]' \
+            --jq '[.workflow_runs[] | {databaseId: .id, workflowName: .name, workflowPath: .path, status: .status, conclusion: .conclusion, createdAt: .created_at, url: .html_url, event: .event, runAttempt: .run_attempt}]' \
             > "$RUNNER_TEMP/ekodi-workflow-runs.json"
 
       - name: Run read-only discovery cycle across registered subservices
@@ -157,7 +168,68 @@ jobs:
           NODE
           echo 'Verified: platform and subservice autonomous research/evolution remain non-production-mutating, non-authority-expanding, and non-self-promoting.'
 
-      - name: Upload autonomous evolution evidence
+      - name: Plan evolutionary internal autonomous operations
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/run-autonomous-operations-cycle.mjs \
+            --runs "$RUNNER_TEMP/ekodi-workflow-runs.json" \
+            --policy config/autonomous-operations-policy.json \
+            --evolution "$RUNNER_TEMP/ekodi-autonomous-evolution-report.json" \
+            --output "$RUNNER_TEMP/ekodi-autonomous-operations-report.json" \
+            --summary "$RUNNER_TEMP/ekodi-autonomous-operations-summary.md"
+          cat "$RUNNER_TEMP/ekodi-autonomous-operations-summary.md" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Execute bounded self-recovery for delegated read-only checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          count=$(jq '.safeRetries | length' "$RUNNER_TEMP/ekodi-autonomous-operations-report.json")
+          if [ "$count" -eq 0 ]; then
+            echo 'No bounded self-recovery retry is required.'
+            exit 0
+          fi
+          jq -r '.safeRetries[].runId' "$RUNNER_TEMP/ekodi-autonomous-operations-report.json" | while read -r run_id; do
+            test -n "$run_id"
+            echo "Re-running failed jobs once for delegated read-only workflow run $run_id"
+            gh api --method POST \
+              -H 'Accept: application/vnd.github+json' \
+              -H 'X-GitHub-Api-Version: 2022-11-28' \
+              "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/rerun-failed-jobs"
+          done
+
+      - name: Maintain persistent autonomous-engineering attention lifecycle
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          report="$RUNNER_TEMP/ekodi-autonomous-operations-report.json"
+          summary="$RUNNER_TEMP/ekodi-autonomous-operations-summary.md"
+          test -s "$report" || exit 0
+          title='EKODI autonomous operations: persistent engineering attention'
+          existing=$(gh issue list --state open --search "$title in:title" --json number --jq '.[0].number // empty')
+          count=$(jq '.attention | length' "$report")
+          if [ "$count" -eq 0 ]; then
+            if [ -n "$existing" ]; then
+              gh issue comment "$existing" --body 'EKODI internal autonomy verified that the persistent failure condition has cleared in the latest evidence window. Closing this attention item; future recurrence will be detected independently.'
+              gh issue close "$existing" --reason completed
+            fi
+            exit 0
+          fi
+          run_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          body=$(cat "$summary")
+          body="$body
+
+Workflow evidence: $run_url
+
+This issue is generated by EKODI internal autonomy. It is an isolated-engineering handoff signal only and does not authorize permission expansion, destructive work, paid commitments, constitutional changes, automatic promotion, or direct production mutation."
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body "$body"
+          else
+            gh issue create --title "$title" --body "$body"
+          fi
+
+      - name: Upload autonomous evolution and operations evidence
         uses: actions/upload-artifact@v4
         with:
           name: ekodi-autonomous-evolution-${{ github.run_id }}-${{ github.run_attempt }}
@@ -165,7 +237,9 @@ jobs:
             ${{ runner.temp }}/ekodi-autonomous-discovery-report.json
             ${{ runner.temp }}/ekodi-autonomous-research-evidence.json
             ${{ runner.temp }}/ekodi-autonomous-evolution-report.json
+            ${{ runner.temp }}/ekodi-autonomous-operations-report.json
             ${{ runner.temp }}/ekodi-autonomous-discovery-summary.md
             ${{ runner.temp }}/ekodi-autonomous-evolution-summary.md
+            ${{ runner.temp }}/ekodi-autonomous-operations-summary.md
           if-no-files-found: error
           retention-days: 90

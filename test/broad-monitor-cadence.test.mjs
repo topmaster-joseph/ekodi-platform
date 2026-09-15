@@ -2,10 +2,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
-test('broad registry monitor runs every four hours', async () => {
+test('broad registry monitor runs hourly on the delegated autonomy cadence', async () => {
   const text = await readFile('.github/workflows/monitor.yml', 'utf8');
-  assert.match(text, /cron:\s*["']17 \*\/4 \* \* \*["']/);
-  assert.doesNotMatch(text, /cron:\s*["']17 \* \* \* \*["']/);
+  assert.match(text, /cron:\s*["']7 \* \* \* \*["']/);
+  assert.doesNotMatch(text, /cron:\s*["']17 \*\/4 \* \* \*["']/);
 });
 
 test('critical availability monitors remain more frequent', async () => {
