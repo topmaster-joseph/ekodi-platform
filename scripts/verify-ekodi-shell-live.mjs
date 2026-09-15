@@ -104,12 +104,14 @@ for(let attempt=1;attempt<=attempts;attempt++){
   }
   includesAll(shellResult.text,'shell',[
     'window.EKODIShell','내 공간 · My EKODI','EKODI 다음 행동','suggestedServices','모든 서비스 보기','ekodi:public-experience',
-    'window.EKODIUserUIHeader','window.EKODIUserUIFooter','__EKODI_USER_AI_ENTRY__','AI로 하기','window.EKODIMediaMeetingAdapter','social.ekodi.kr/api/media/youtube/status','window.__EKODI_USER_FOOTER_CONFIG__','user-footer.json','window.EKODICharacterRegistry','window.EKODICharacterIdentityRegistry','ekodi.ekodian-identity.v1','window.EKODIUserCharacter',
+    'window.EKODIUserUIHeader','window.EKODIUserUIFooter','__EKODI_USER_AI_ENTRY__','AI로 하기','window.EKODIMediaMeetingAdapter','https://ekodi.kr/social/api/media/youtube/status','window.__EKODI_USER_FOOTER_CONFIG__','user-footer.json','window.EKODICharacterRegistry','window.EKODICharacterIdentityRegistry','ekodi.ekodian-identity.v1','window.EKODIUserCharacter',
     'window.EKODIAdminUIShell','ekodi-admin-ui-shell-style','.side-brand','ekodi:admin-shell-ready',
     'ekodi-mobile-fixed-header-style','data-ekodi-mobile-header-spacer','ResizeObserver','position:fixed!important',
     'window.EKODIMessage','window.EKODIIllustration','ekodiIllustrationSystem','window.EKODIServiceDesign','ekodiDesignInheritance','--ekodi-service-accent',
-    '__EKODI_ECOSYSTEM_LINK_COMPAT',"'ekodibiz.kr':'biz'",'window.__EKODI_LANGUAGE_REGISTRY__','api.ekodi.kr/api/i18n/v1','visibleLanguages','removeFooterLanguageControls','TRAFFIC_TELEMETRY','globalPrivacyControl','sendTrafficBeacon'
+    '__EKODI_ECOSYSTEM_LINK_COMPAT',"'ekodibiz.kr':'biz'",'window.__EKODI_LANGUAGE_REGISTRY__','https://ekodi.kr/api/i18n/v1','visibleLanguages','removeFooterLanguageControls','TRAFFIC_TELEMETRY','globalPrivacyControl','sendTrafficBeacon'
   ],failures);
+  if(shellResult.text.includes('https://api.ekodi.kr/api/i18n/v1'))failures.push('shell:legacy-i18n-origin-present');
+  if(shellResult.text.includes('https://social.ekodi.kr/api/media/youtube/status'))failures.push('shell:legacy-social-origin-present');
   if(shellResult.headers?.get?.('x-ekodi-media-meeting')!=='v2')failures.push(`shell:media-meeting:${shellResult.headers?.get?.('x-ekodi-media-meeting')||'missing'}`);
   if(shellResult.headers?.get?.('x-ekodi-character-registry')!=='v3')failures.push(`shell:character-registry:${shellResult.headers?.get?.('x-ekodi-character-registry')||'missing'}`);
   if(shellResult.headers?.get?.('x-ekodi-character-identity')!=='v2')failures.push(`shell:character-identity:${shellResult.headers?.get?.('x-ekodi-character-identity')||'missing'}`);
