@@ -1,0 +1,13 @@
+{
+  "id": "2026-09-15-invest-apex-path-v1.16.0",
+  "constitutionVersion": "1.16.0",
+  "status": "approved",
+  "approvedBy": "topmaster-joseph",
+  "approvedAt": "2026-09-15",
+  "changeClass": "C3",
+  "taskId": "issue-1641-ekodi-invest-ai",
+  "summary": "Retire invest.ekodi.kr as an EKODI common-service domain boundary and make https://ekodi.kr/invest the canonical Invest common-service path, including its specialized child services.",
+  "approvalBasis": "The platform owner explicitly required EKODI subdomains to be removed rather than retained as compatibility redirects, approved the canonical ekodi.kr path architecture, and instructed EKODI collaboration to complete the Invest subservice system through production operation.",
+  "migrationPolicy": "Remove Shared Site ownership of invest.ekodi.kr, register /invest as the common-service path boundary, preserve the existing canonical /invest experience, and route personal, stock, bond, real-estate, fund, alternative, portfolio and automation child services under the apex path without enabling live trading.",
+  "rollbackPlan": "If canonical Invest production verification fails, roll back the application release to the last verified guarded artifact while keeping live trading disabled; restore only source-controlled routing needed for service recovery and do not recreate the retired invest.ekodi.kr public domain without a new constitutional approval."
+}

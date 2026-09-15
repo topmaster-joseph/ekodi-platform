@@ -156,6 +156,7 @@ if (surfaces.humanSurfacesUsePaths !== true || surfaces.subdomainExecutionBounda
 const systemDomains = new Set(constitution.systemBoundaries?.production || []);
 const legacy = new Set(constitution.legacyDomainAllowlist || []);
 const registeredCommon = new Set(constitution.registeredCommonServiceBoundaries || []);
+const registeredCommonPaths = new Set(constitution.registeredCommonServicePaths || []);
 const registeredCore = new Set(constitution.registeredCoreServiceBoundaries || []);
 const targets = constitution.legacyDomainTargets || {};
 const customerOwned = constitution.customerOwnedDomainMappings || {};
@@ -167,7 +168,7 @@ if (!registeredCommon.has('journal.ekodi.kr')) fail('registered common-service b
 if (!registeredCommon.has('dev.ekodi.kr')) fail('registered public developer boundary missing: dev.ekodi.kr');
 if (!registeredCommon.has('exp.ekodi.kr')) fail('registered experience boundary missing: exp.ekodi.kr');
 if (!registeredCommon.has('try.ekodi.kr')) fail('registered Experience compatibility boundary missing: try.ekodi.kr');
-if (!registeredCommon.has('invest.ekodi.kr')) fail('registered common-service boundary missing: invest.ekodi.kr');
+if (!registeredCommonPaths.has('/invest')) fail('registered common-service path missing: /invest');
 if (!registeredCommon.has('marketing.ekodi.kr')) fail('registered common-service boundary missing: marketing.ekodi.kr');
 if (!registeredCore.has('ai.ekodi.kr')) fail('registered core-service boundary missing: ai.ekodi.kr');
 if (!systemDomains.has('dev.ekodi.kr') || !systemDomains.has('exp.ekodi.kr')) fail('public Developer/Experience production boundaries are incomplete');

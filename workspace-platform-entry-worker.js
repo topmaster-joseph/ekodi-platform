@@ -4,12 +4,14 @@ import { drainMessengerOutbox } from './messenger-outbox.js';
 import { handleProfileEvidenceApi, profileSchemaReady } from './profile-evidence-runtime.js';
 import { createOfficialProfileDataBinding, officialDataConnections } from './profile-official-data-adapter.js';
 import { handleInvestPersonalizationApi } from './invest-personalization-runtime.js';
+import { handleInvestAutomationApi } from './invest-automation-runtime.js';
 import { handleDesignProfileApi } from './design-profile-runtime.js';
 import { d1SchemaReady } from './d1-schema-readiness.js';
 
 async function designProfileSchemaReady(env){ return d1SchemaReady(env?.DB,['site_design_profiles']); }
 
 async function conversationSchemaReady(env){ return d1SchemaReady(env?.DB,['messenger_outbox','messenger_identity_audit']); }
+async function investAutomationSchemaReady(env){ return d1SchemaReady(env?.DB,['investment_policies','investment_strategies','investment_broker_connections','investment_cycles']); }
 
 function scheduleOutboxRecovery(env,ctx,limit=8){
   const task=drainMessengerOutbox(env,{limit}).catch(error=>({processed:0,failed:1,error:String(error?.message||error)}));
@@ -30,6 +32,10 @@ export default {
       const response=await handleProfileEvidenceApi(request,profileEnv(env));
       if(response)return response;
     }
+    if(url.pathname.startsWith('/v1/invest/automation/')){
+      const response=await handleInvestAutomationApi(request,env);
+      if(response)return response;
+    }
     if(['/v1/invest/context','/v1/invest/data-connections','/v1/invest/subjects'].includes(url.pathname)){
       const response=await handleInvestPersonalizationApi(request,env);
       if(response)return response;
@@ -47,9 +53,9 @@ export default {
       const response=await legacyWorkspaceWorker.fetch(request,env,ctx);
       try{
         const data=await response.clone().json();
-        const [foundationReady,profileReady,designReady]=await Promise.all([conversationSchemaReady(env),profileSchemaReady(env),designProfileSchemaReady(env)]);
+        const [foundationReady,profileReady,designReady,investAutomationReady]=await Promise.all([conversationSchemaReady(env),profileSchemaReady(env),designProfileSchemaReady(env),investAutomationSchemaReady(env)]);
         const connections=officialDataConnections(env).map(({id,status})=>({id,status}));
-        return new Response(JSON.stringify({...data,conversationFoundation:'v2',eventOutbox:true,conversationSchemaReady:foundationReady,profileEvidenceFoundation:'v1',profileSchemaReady:profileReady,officialDataFirst:true,officialDataProvider:'embedded-v1',investPersonalization:'v1',investDataConnections:connections,adaptiveDesign:'v1',designProfileSchemaReady:designReady}),{status:response.status,headers:response.headers});
+        return new Response(JSON.stringify({...data,conversationFoundation:'v2',eventOutbox:true,conversationSchemaReady:foundationReady,profileEvidenceFoundation:'v1',profileSchemaReady:profileReady,officialDataFirst:true,officialDataProvider:'embedded-v1',investPersonalization:'v1',investAutomation:'v1',investAutomationSchemaReady:investAutomationReady,investDataConnections:connections,adaptiveDesign:'v1',designProfileSchemaReady:designReady}),{status:response.status,headers:response.headers});
       }catch{return response}
     }
     return legacyWorkspaceWorker.fetch(request,env,ctx);

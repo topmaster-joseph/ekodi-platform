@@ -55,9 +55,6 @@ custom_domain = true
 pattern = "messenger.ekodi.kr"
 custom_domain = true
 
-[[routes]]
-pattern = "invest.ekodi.kr"
-custom_domain = true
 
 
 [[routes]]

@@ -8,6 +8,7 @@ import { injectEkodiShell } from './ekodi-shell-injector.js';
 import { messengerUserPage, messengerUiScript } from './messenger-user-page.js';
 import { investUserPage, investUiScript } from './invest-user-page.js';
 import { investSubjectUiScript } from './invest-subject-ui.js';
+import { routeInvestSite } from './invest-site-system.js';
 import { MAIL_HOST, mailUserPage, handleMailApi } from './mail-user-page.js';
 import { handleMailContactApi, mailContactPage } from './mail-contact.js';
 import { mailAdminPage } from './mail-admin-page.js';
@@ -234,6 +235,7 @@ export default {
       const mailApex=routeMailApex(request);if(mailApex)return mailApex;
       const messengerApex=await routeMessengerApex(request,env,ctx);if(messengerApex)return messengerApex;
       const investApex=await routeInvestApex(request,env,ctx);if(investApex)return investApex;
+      const investSite=routeInvestSite(request);if(investSite)return injectEkodiShell(investSite,'invest');
       const taxPortal=await routeTaxPortalApex(request,env,ctx);if(taxPortal)return taxPortal;
       const contactResponse=await handleMailContactApi(request,env);if(contactResponse)return contactResponse;
       if(request.method==='GET'&&url.pathname==='/mail/contact')return injectEkodiShell(mailContactPage(),'mail');
