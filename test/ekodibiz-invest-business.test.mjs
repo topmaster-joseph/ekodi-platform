@@ -42,6 +42,16 @@ test('shared-site router owns the business path before the final static fallback
   assert.match(source, /injectEkodiShell\(secured, 'biz', 'public'\)/);
 });
 
+test('shared-site release probe follows the canonical Invest boundary and rejects the retired subdomain marker', async () => {
+  const manifest = JSON.parse(await readFile(new URL('../deploy/manifests/shared-site.worker.json', import.meta.url), 'utf8'));
+  const probe = manifest.worker.requests.find(item => item.url === 'https://ekodi.kr/ekodibiz/invest');
+  assert.ok(probe, 'EKODIBIZ Invest release probe must exist');
+  assert.ok(probe.expect.includes('ekodi.kr/invest'));
+  assert.ok(probe.expect.includes('data-ekodi-business-unit="invest"'));
+  assert.equal(probe.expect.includes('invest.ekodi.kr'), false);
+  assert.ok(probe.headerExpect.includes('x-ekodi-route: public-ekodibiz-invest'));
+});
+
 test('Invest remains a registered common-service boundary outside EKODIBIZ business ownership', async () => {
   const constitution = JSON.parse(await readFile(new URL('../governance/constitution/constitution.json', import.meta.url), 'utf8'));
   const boundaries = JSON.parse(await readFile(new URL('../platform-boundaries.json', import.meta.url), 'utf8'));
