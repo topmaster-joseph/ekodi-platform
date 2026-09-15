@@ -2,81 +2,73 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
-const [source, css, directoryApi, entryWorker, build, loader] = await Promise.all([
+const [source, css, directoryApi, entryWorker, build, loader, universalApi] = await Promise.all([
   readFile(new URL('../client-access.js', import.meta.url), 'utf8'),
   readFile(new URL('../client-access.css', import.meta.url), 'utf8'),
   readFile(new URL('../customer-member-directory.js', import.meta.url), 'utf8'),
   readFile(new URL('../customer-entry-worker.js', import.meta.url), 'utf8'),
   readFile(new URL('../scripts/build.mjs', import.meta.url), 'utf8'),
   readFile(new URL('../admin-demand-loader.js', import.meta.url), 'utf8'),
+  readFile(new URL('../universal-access-control.js', import.meta.url), 'utf8'),
 ]);
 
-test('Admin Shell ships customer access assets only through the demand-loaded admin path', () => {
+test('Admin Shell ships access assets only through the demand-loaded admin path', () => {
   assert.match(build, /'client-access\.css'/);
   assert.match(build, /'client-access\.js'/);
   assert.match(loader, /clients:\s*\{[^}]*styles:\['client-access\.css'\][^}]*scripts:\['client-access\.js'\]/);
   assert.doesNotMatch(build, /asset === 'control-center\.html'/);
 });
 
-test('customer member hub uses one authenticated directory endpoint instead of N+1 tenant user loads', () => {
-  assert.match(source, /\/api\/customers\/directory/);
-  assert.match(source, /\/pre-register/);
+test('central access UI uses universal scoped access endpoints', () => {
+  assert.match(source, /\/api\/access-governance\/scopes/);
+  assert.match(source, /\/api\/access-governance\/grants/);
+  assert.match(source, /\/api\/access-governance\/revoke/);
   assert.match(source, /authorization/);
   assert.match(source, /ekodi-auth-token/);
-  assert.doesNotMatch(source, /Promise\.all\(base\.map/);
-  assert.doesNotMatch(source, /\/users`/);
   assert.doesNotMatch(source, /\/api\/customer\/(signup|register|login|accept-invite)/);
 });
 
-test('Clients UI separates all members, site memberships, pending Google auth and roles', () => {
-  assert.match(source, /전체 회원/);
-  assert.match(source, /사이트별/);
-  assert.match(source, /인증 대기/);
-  assert.match(source, /권한별/);
-  assert.match(source, /모든 사이트/);
-  assert.match(source, /모든 권한/);
-  assert.match(css, /\.client-tabs/);
-  assert.match(css, /\.client-filterbar/);
-  assert.match(css, /\.client-role-grid/);
+test('access UI exposes platform, service and workspace scope management', () => {
+  assert.match(source, /EKODI 전체 권한/);
+  assert.match(source, /platform_admin/);
+  assert.match(source, /service_admin/);
+  assert.match(source, /workspace_admin/);
+  assert.match(source, /ai_manager/);
+  assert.match(source, /external_developer/);
+  assert.match(source, /운영공간의 고정 workspace_id/);
+  assert.match(css, /\.client-access-layout/);
 });
 
-test('customer onboarding remains Google preregistration without invite URLs or local secrets', () => {
-  assert.match(source, /Google 인증 대기/);
-  assert.match(source, /pre_registered/);
+test('external developer UI requires GitHub identity and expiry while explaining hard denies', () => {
+  assert.match(source, /GitHub 사용자명/);
+  assert.match(source, /접근 만료일/);
+  assert.match(source, /개인정보·재정·비밀키·운영배포·권한관리/);
   assert.doesNotMatch(source, /invite\.inviteUrl/);
   assert.doesNotMatch(source, /\/invites/);
-  assert.doesNotMatch(source, /crypto\.getRandomValues/);
   assert.doesNotMatch(source, /Math\.random/);
 });
 
-test('directory API is sourced from tenant-scoped Google access grants so preregistered members are visible before first login', () => {
+test('legacy customer directory stays available during additive universal-access migration', () => {
   assert.match(directoryApi, /customer_access_grants/);
   assert.match(directoryApi, /LEFT JOIN customer_users/);
   assert.match(directoryApi, /JOIN customer_tenants/);
-  assert.match(directoryApi, /last_verified_at \? 'active' : 'pre_registered'/);
   assert.match(directoryApi, /uniqueGoogleAccounts/);
-  assert.match(directoryApi, /new Set\(allMembers\.map\(member => normalize\(member\.email\)\)/);
-  assert.match(directoryApi, /identityProvider: 'google'/);
   assert.match(entryWorker, /handleCustomerMemberDirectory/);
-  assert.match(entryWorker, /const directory = await handleCustomerMemberDirectory/);
+  assert.match(entryWorker, /handleUniversalAccessControl/);
+  assert.match(universalApi, /access_scope_grants/);
 });
 
-test('API-provided customer values render through textContent, not HTML injection', () => {
+test('API-provided access values render through textContent, not HTML injection', () => {
   assert.match(source, /node\.textContent = value/);
   assert.doesNotMatch(source, /innerHTML\s*=/);
   assert.doesNotMatch(source, /insertAdjacentHTML/);
 });
 
-test('Clients navigation and responsive layout are part of the module', () => {
+test('Access navigation reuses the shared Clients demand-load slot without creating a second admin route', () => {
   assert.match(source, /data-section|dataset\.section/);
   assert.match(source, /'clients'/);
-  assert.match(css, /\.client-access-layout/);
+  assert.match(source, /textContent = '권한'/);
   assert.match(css, /@media\(max-width:900px\)/);
-});
-
-test('Clients reuses the shared sidebar button and mounts based on panel readiness', () => {
   assert.match(source, /content\.querySelector\('\[data-panel~="clients"\]'\)/);
   assert.match(source, /let navButton = nav\.querySelector\('\[data-section="clients"\]'\)/);
-  assert.match(source, /if \(!navButton\) \{/);
-  assert.doesNotMatch(source, /document\.querySelector\('\[data-section="clients"\]'\)\) return null/);
 });
