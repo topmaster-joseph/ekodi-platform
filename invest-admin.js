@@ -28,6 +28,7 @@ function install(){
   button.dataset.section=SECTION;delete button.dataset.lazySection;delete button.dataset.demandFeature;
   let section=document.querySelector('#investAdminPanel');if(!section){section=document.createElement('section');section.id='investAdminPanel';section.className='section invest-admin hidden-panel';section.dataset.panel=SECTION;section.hidden=true;content.append(section)}
   if(button.dataset.investBound!=='true'){button.dataset.investBound='true';button.addEventListener('click',()=>activate(button))}
+  render();
   window.dispatchEvent(new CustomEvent('ekodi-nav-changed',{detail:{feature:SECTION}}));
   const route=new URLSearchParams(location.search).get('route');if(location.hash==='#invest'||route==='invest')queueMicrotask(()=>activate(button));
 }
