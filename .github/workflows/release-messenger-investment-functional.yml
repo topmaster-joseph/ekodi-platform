@@ -33,6 +33,7 @@ on:
       - 'scripts/apply-d1-migrations-with-retry.sh'
       - 'test/workspace-platform.test.mjs'
       - 'test/conversation-foundation-release.test.mjs'
+      - 'test/conversation-release-registry.test.mjs'
       - 'test/profile-evidence-contract.test.mjs'
       - 'test/design-profile-contract.test.mjs'
       - 'test/site-chrome-runtime.test.mjs'
@@ -72,7 +73,7 @@ jobs:
         run: |
           set -euo pipefail
           for file in ekodi-principal.js profile-evidence-runtime.js profile-official-data-adapter.js invest-personalization-runtime.js invest-market-core.js invest-automation-runtime.js design-profile-runtime.js site-chrome-runtime.js config/site-chrome-defaults.js api-worker.js messenger-triage.js messenger-outbox.js messenger-channel-adapters.js messenger-operator-control.js workspace-messenger-v2.js workspace-platform-entry-worker.js workspace-platform-api-worker.js mission-control-entry-worker.js; do node --check "$file"; done
-          node --test test/workspace-platform.test.mjs test/profile-evidence-contract.test.mjs test/design-profile-contract.test.mjs test/site-chrome-runtime.test.mjs test/invest-personalization-contract.test.mjs test/invest-market-core.test.mjs test/invest-site-system.test.mjs
+          node --test test/workspace-platform.test.mjs test/conversation-release-registry.test.mjs test/profile-evidence-contract.test.mjs test/design-profile-contract.test.mjs test/site-chrome-runtime.test.mjs test/invest-personalization-contract.test.mjs test/invest-market-core.test.mjs test/invest-site-system.test.mjs
           node scripts/validate-additive-migrations.mjs migrations
           bash -n scripts/apply-d1-migrations-with-retry.sh
           grep -Fq 'messenger_outbox' migrations/0030_messenger_event_outbox.sql
@@ -105,6 +106,8 @@ jobs:
           node-version: '24'
       - name: EKODI AI Orchestration Gate
         run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
+      - name: Generate user-service registry
+        run: npm run generate:user-services
       - name: Resolve isolated Workspace staging D1
         id: db
         shell: bash
@@ -193,6 +196,8 @@ jobs:
           node-version: '24'
       - name: EKODI AI Orchestration Gate
         run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
+      - name: Generate user-service registry
+        run: npm run generate:user-services
       - name: Resolve isolated Control staging D1
         id: db
         shell: bash
@@ -259,6 +264,8 @@ jobs:
           node-version: '24'
       - name: EKODI AI Orchestration Gate
         run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
+      - name: Generate user-service registry
+        run: npm run generate:user-services
       - name: Capture D1 recovery bookmark
         run: npx --yes wrangler@${WRANGLER_VERSION} d1 time-travel info ekodi-auth --config wrangler.workspace-platform.toml --json > /tmp/bookmark.json
       - name: Apply production migration once after both staging gates
@@ -295,6 +302,8 @@ jobs:
           node-version: '24'
       - name: EKODI AI Orchestration Gate
         run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
+      - name: Generate user-service registry
+        run: npm run generate:user-services
       - name: Guarded Conversation Control API release
         run: node scripts/guarded-worker-release.mjs --manifest deploy/manifests/control-api.worker.json
       - name: Verify production Operator boundary
