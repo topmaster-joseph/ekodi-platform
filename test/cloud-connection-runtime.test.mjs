@@ -89,3 +89,108 @@ test('Opera can be an explicit last-resort provider without becoming a dependenc
   assert.equal(result.ok, true);
   assert.equal(result.provider, 'opera');
 });
+
+test('remote desktop with zero remaining quota is skipped before invocation', async () => {
+  let remoteInvoked = false;
+  const status = getCloudConnectionStatus({}, [
+    {
+      id: 'remote',
+      kind: 'remote_desktop',
+      state: 'connected',
+      quotaRemainingPercent: '0%',
+      invoke: async () => { remoteInvoked = true; return 'remote'; },
+    },
+  ]);
+  assert.deepEqual(status.usableProviders, []);
+  assert.equal(status.skippedProviders[0].reason, 'quota_exhausted');
+  assert.equal(status.skippedProviders[0].quotaRemainingPercent, 0);
+
+  const result = await runCloudConnectedTask({
+    providers: [
+      {
+        id: 'remote',
+        kind: 'remote_desktop',
+        state: 'connected',
+        quotaRemainingPercent: 0,
+        invoke: async () => { remoteInvoked = true; return 'remote'; },
+      },
+    ],
+  });
+  assert.equal(remoteInvoked, false);
+  assert.equal(result.ok, false);
+  assert.equal(result.skippedProviders[0].reason, 'quota_exhausted');
+});
+
+test('cloud provider is used while exhausted remote desktop remains skipped', async () => {
+  let remoteInvoked = false;
+  const result = await runCloudConnectedTask({
+    providers: [
+      {
+        id: 'remote',
+        kind: 'remote_desktop',
+        state: 'connected',
+        quotaRemainingPercent: 0,
+        invoke: async () => { remoteInvoked = true; return 'remote'; },
+      },
+      {
+        id: 'github',
+        kind: 'connected_plugin',
+        state: 'connected',
+        invoke: async () => 'github-api',
+      },
+    ],
+  });
+  assert.equal(result.ok, true);
+  assert.equal(result.provider, 'github');
+  assert.equal(result.value, 'github-api');
+  assert.equal(remoteInvoked, false);
+  assert.equal(result.skippedProviders[0].reason, 'quota_exhausted');
+});
+
+test('runtime classifies a quota failure and continues to the next authorized path', async () => {
+  const result = await runCloudConnectedTask({
+    providers: [
+      {
+        id: 'api-primary',
+        kind: 'official_api',
+        state: 'connected',
+        invoke: async () => {
+          const error = new Error('monthly quota exhausted');
+          error.code = 'MONTHLY_QUOTA_EXHAUSTED';
+          throw error;
+        },
+      },
+      {
+        id: 'github',
+        kind: 'connected_plugin',
+        state: 'connected',
+        invoke: async () => 'continued',
+      },
+    ],
+  });
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.attemptedProviders, ['api-primary', 'github']);
+  assert.equal(result.skippedProviders[0].id, 'api-primary');
+  assert.equal(result.skippedProviders[0].reason, 'quota_exhausted');
+});
+
+test('HTTP 429 is recorded as rate limited and does not become a user-auth request', async () => {
+  const result = await runCloudConnectedTask({
+    providers: [
+      {
+        id: 'api',
+        kind: 'official_api',
+        state: 'connected',
+        invoke: async () => {
+          const error = new Error('Too many requests');
+          error.status = 429;
+          throw error;
+        },
+      },
+      { id: 'plugin', kind: 'connected_plugin', state: 'connected', invoke: async () => 'ok' },
+    ],
+  });
+  assert.equal(result.ok, true);
+  assert.equal(result.requiresUserAction, false);
+  assert.equal(result.skippedProviders[0].reason, 'rate_limited');
+});
