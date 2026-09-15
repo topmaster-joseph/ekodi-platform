@@ -1,6 +1,6 @@
 const SUPABASE_URL = 'https://renzehysxirjilvdxacv.supabase.co';
 const DEFAULT_PUBLISHABLE_KEY = 'sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
-const WRITE_ROLES = new Set(['tenant_admin','admin','store_owner','hq_manager','client_admin','client_editor','manager','owner']);
+const WRITE_ROLES = new Set(['tenant_admin','admin','workspace_admin','store_owner','hq_manager','client_admin','client_editor','marketing_manager','marketer','manager','owner']);
 
 function bearer(request) {
   const value = String(request.headers.get('authorization') || '');
