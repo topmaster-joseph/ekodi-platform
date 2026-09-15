@@ -4,14 +4,16 @@ import taxPortalWorker from './tax-portal-worker.js';
 import { injectTaxLocalFallback } from './tax-local-fallback.js';
 import { injectTaxHometaxLedger } from './tax-hometax-ledger.js';
 import { injectTaxBusinessRegistry } from './tax-business-registry.js';
-import { injectEkodiShell } from './ekodi-shell-injector.js';
+import { injectEkodiProgressiveHome, injectEkodiShell } from './ekodi-shell-injector.js';
 import { messengerUserPage, messengerUiScript } from './messenger-user-page.js';
 import { investUserPage, investUiScript } from './invest-user-page.js';
 import { investSubjectUiScript } from './invest-subject-ui.js';
+import { routeInvestSite } from './invest-site-system.js';
 import { MAIL_HOST, mailUserPage, handleMailApi } from './mail-user-page.js';
 import { handleMailContactApi, mailContactPage } from './mail-contact.js';
 import { mailAdminPage } from './mail-admin-page.js';
 import { isWorkspaceAdminPath, workspaceAdminPage, workspaceAdminCss, workspaceAdminScript } from './workspace-admin-page.js';
+import { isOrganizationAdminPath, organizationAdminPage, organizationAdminCss, organizationAdminScript } from './organization-admin-page.js';
 import { legacyAdminAliasTarget } from './admin-address-policy.js';
 import { isStoreAdminPathShape, resolveStoreAdminRoute, storeAdminPage, storeAdminCss, storeAdminScript } from './store-admin-engine.js';
 import { churchPastorAdminPage, churchPastorAdminScript, isChurchPastorAdminPath } from './church-pastor-admin-page.js';
@@ -19,6 +21,7 @@ import { isEkodiBizInvestAdminPath } from './ekodibiz-invest-admin-page.js';
 import { workspaceTradeAdminScript } from './workspace-trade-admin-page.js';
 import { isTradePartnerPath, tradePartnerPage, tradePartnerCss, tradePartnerScript } from './workspace-trade-portal.js';
 import { isPublicWorkspacePath } from './workspace-route-policy.js';
+import { workspaceRouteFromPublicPath } from './workspace-route-policy.js';
 import { isInsurancePublicPath, routeInsurancePublic } from './insurance-public-route.js';
 import { marketingProjectionForPath, proxyCanonicalMarketing } from './marketing-canonical-projection.js';
 import { routeCanonicalSurface } from './canonical-surface-router.js';
@@ -28,6 +31,8 @@ import { storePortfolioAdminPage } from './store-portfolio-admin-page.js';
 import { tenantAdminCommandHomeScript, tenantAdminCommandHomeCss } from './tenant-admin-command-home.js';
 import { isLearningPath, learningPage, learningScript, learningStyles } from './learning-page.js';
 import { decorateDiscoveryResponse } from './discovery-layer.js';
+import { realtimeTenantFromPath } from './realtime-tenant-registry.js';
+import { tenantLivePage } from './tenant-live-page.js';
 
 const PUBLIC_HOST='ekodi.kr';
 const CGMA_HOSTS=new Set(['cgma.or.kr','www.cgma.or.kr']);
@@ -62,6 +67,9 @@ function isEkodiBizOwnedPath(pathname){
   const path=String(pathname||'').toLowerCase();
   return path==='/ekodibiz'||path==='/ekodibiz/'||path.startsWith(EKODIBIZ_NAMESPACE_PREFIX);
 }
+function isWorkspaceProgressiveHome(pathname){const route=workspaceRouteFromPublicPath(pathname);return Boolean(route?.public&&route.serviceSegments.length<=1);}
+function isProjectionHome(pathname,projection){const path=String(pathname||'').replace(/\/+$/,'');return Boolean(projection&&path===projection.prefix);}
+function isCgmaRoot(pathname){return /^\/cgma\/?$/i.test(String(pathname||''));}
 
 function workspaceServiceUnavailable(){
   return new Response('Workspace service unavailable',{status:503,headers:{'cache-control':'no-store','x-content-type-options':'nosniff','x-ekodi-workspace-gateway':'space-binding-unavailable'}});
@@ -139,7 +147,7 @@ async function routeEkodiBizAsset(request,env){
 }
 async function routeEkodiBizPublic(request,env){
   if(!env?.EKODIBIZ?.fetch)return workspaceServiceUnavailable();const upstream=await env.EKODIBIZ.fetch(workspaceUpstreamRequest(request,'/'));const routed=new Response(upstream.body,upstream);routed.headers.set('x-ekodi-workspace-gateway','ekodibiz-service-binding');
-  const rewrite=(element,name)=>{const v=element.getAttribute(name)||'';for(const asset of EKODIBIZ_ASSETS){const rootPath=`/${asset}`;if(v===rootPath||v.startsWith(`${rootPath}?`)){element.setAttribute(name,EKODIBIZ_ASSET_PREFIX+asset+v.slice(rootPath.length));break}}};return new HTMLRewriter().on('link[href]',{element:e=>rewrite(e,'href')}).on('script[src]',{element:e=>rewrite(e,'src')}).transform(routed);
+  const rewrite=(element,name)=>{const v=element.getAttribute(name)||'';for(const asset of EKODIBIZ_ASSETS){const rootPath=`/${asset}`;if(v===rootPath||v.startsWith(`${rootPath}?`)){element.setAttribute(name,EKODIBIZ_ASSET_PREFIX+asset+v.slice(rootPath.length));break}}};const rewritten=new HTMLRewriter().on('link[href]',{element:e=>rewrite(e,'href')}).on('script[src]',{element:e=>rewrite(e,'src')}).transform(routed);return injectEkodiProgressiveHome(rewritten);
 }
 async function routeEkodiBizApi(request,env){
   if(!env?.EKODIBIZ?.fetch)return workspaceServiceUnavailable();
@@ -153,10 +161,11 @@ async function routeDeploymentProbe(request,env){
 }
 async function routePublicWorkspace(request,env){
   if(!env?.SPACE?.fetch)return workspaceServiceUnavailable();
+  const progressiveHome=isWorkspaceProgressiveHome(new URL(request.url).pathname);
   const upstream=await env.SPACE.fetch(request);const routed=new Response(upstream.body,upstream);routed.headers.set('x-ekodi-workspace-gateway','space-service-binding');
-  if(routed.headers.get('x-ekodi-route')==='space-storefront'){routed.headers.set('x-ekodi-public-surface','customer-storefront');return routed;}
-  if(routed.headers.get('x-ekodi-independent-site')==='true'){routed.headers.set('x-ekodi-public-surface','independent-workspace-site');return routed;}
-  return injectEkodiShell(rewriteWorkspaceShellAssets(routed),'space','workspace');
+  if(routed.headers.get('x-ekodi-route')==='space-storefront'){routed.headers.set('x-ekodi-public-surface','customer-storefront');return progressiveHome?injectEkodiProgressiveHome(routed):routed;}
+  if(routed.headers.get('x-ekodi-independent-site')==='true'){routed.headers.set('x-ekodi-public-surface','independent-workspace-site');return progressiveHome?injectEkodiProgressiveHome(routed):routed;}
+  return injectEkodiShell(rewriteWorkspaceShellAssets(routed),'space','workspace',{progressiveHome,contextKind:'workspace'});
 }
 
 async function routeTaxFinance(request,env,ctx){
@@ -218,15 +227,21 @@ export default {
     const legacyStores=legacyStoreGatewayRedirect(request);if(legacyStores)return legacyStores;
     if(host===PUBLIC_HOST&&url.pathname.startsWith('/api/finance/tax-'))return routeTaxFinance(request,env,ctx);
     if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)){const adminTarget=legacyAdminAliasTarget(url.pathname);if(adminTarget){const target=new URL(request.url);target.pathname=adminTarget;return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-content-type-options':'nosniff','x-ekodi-route':'admin-canonical-handoff'}})}}
+    if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)){
+      const liveTenant=realtimeTenantFromPath(url.pathname);
+      if(liveTenant&&!liveTenant.dedicated)return tenantLivePage(liveTenant);
+    }
     const canonical=await routeCanonicalSurface(request,env,{legacyFetch:next=>legacyPlatformRouter.fetch(next,env,ctx)});
     if(canonical)return canonical;
 
     if(CGMA_HOSTS.has(host)&&['GET','HEAD'].includes(request.method))return routeCgmaPublic(request,env);
 
     if(host===PUBLIC_HOST){
+      if(['GET','HEAD'].includes(request.method)&&isCgmaRoot(url.pathname)){const legacyResponse=await legacyPlatformRouter.fetch(request,env,ctx);return injectEkodiProgressiveHome(legacyResponse);}
       const mailApex=routeMailApex(request);if(mailApex)return mailApex;
       const messengerApex=await routeMessengerApex(request,env,ctx);if(messengerApex)return messengerApex;
       const investApex=await routeInvestApex(request,env,ctx);if(investApex)return investApex;
+      const investSite=routeInvestSite(request);if(investSite)return injectEkodiShell(investSite,'invest');
       const taxPortal=await routeTaxPortalApex(request,env,ctx);if(taxPortal)return taxPortal;
       const contactResponse=await handleMailContactApi(request,env);if(contactResponse)return contactResponse;
       if(request.method==='GET'&&url.pathname==='/mail/contact')return injectEkodiShell(mailContactPage(),'mail');
@@ -241,6 +256,9 @@ export default {
         if(url.pathname==='/cmpmyi/admin'||url.pathname==='/cmpmyi/admin/')return injectEkodiShell(storePortfolioAdminPage({commandHome:true}),'business','admin');
         if(url.pathname==='/cmpmyi/admin/overview'||url.pathname==='/cmpmyi/admin/overview/')return injectEkodiShell(storePortfolioAdminPage(),'business','admin');
         if(isStoreAdminPathShape(url.pathname)){const storeRoute=await resolveStoreAdminRoute(url.pathname);if(storeRoute)return injectEkodiShell(storeAdminPage(storeRoute),'business','admin');}
+        if(url.pathname==='/organization-admin.css')return organizationAdminCss();
+        if(url.pathname==='/organization-admin.js')return organizationAdminScript();
+        if(isOrganizationAdminPath(url.pathname))return injectEkodiShell(organizationAdminPage(url.pathname),'space','admin');
         if(url.pathname==='/workspace-admin.css')return workspaceAdminCss();
         if(url.pathname==='/workspace-admin.js')return workspaceAdminScript();
         if(url.pathname==='/workspace-trade-admin.js')return workspaceTradeAdminScript();
@@ -253,7 +271,7 @@ export default {
         if(isWorkspaceAdminPath(url.pathname)&&!isEkodiBizInvestAdminPath(url.pathname))return injectEkodiShell(workspaceAdminPage(),'space','admin');
       }
       if(['GET','HEAD'].includes(request.method)&&STORE_GATEWAY_PATHS.has(url.pathname)){const response=injectEkodiShell(storeGatewayPage(),'ekodi','public');return request.method==='GET'?decorateDiscoveryResponse(response,url.pathname):response;}
-      if(marketingProjectionForPath(url.pathname)){const projected=await proxyCanonicalMarketing(request);if(projected)return projected;}
+      {const marketingProjection=marketingProjectionForPath(url.pathname);if(marketingProjection){const projected=await proxyCanonicalMarketing(request);if(projected)return isProjectionHome(url.pathname,marketingProjection)?injectEkodiProgressiveHome(projected):projected;}}
       if(['GET','HEAD'].includes(request.method)&&EKODIBIZ_PUBLIC_ROUTE.test(url.pathname))return routeEkodiBizPublic(request,env);
       if(url.pathname.startsWith(EKODIBIZ_API_PREFIX))return routeEkodiBizApi(request,env);
       if(['GET','HEAD'].includes(request.method)&&url.pathname.startsWith(EKODIBIZ_ASSET_PREFIX))return routeEkodiBizAsset(request,env);

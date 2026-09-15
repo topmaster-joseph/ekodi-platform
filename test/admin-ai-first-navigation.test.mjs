@@ -41,8 +41,8 @@ test('Campus shortcuts cannot reopen hidden technical panels', () => {
 test('human-facing Admin menu has one canonical order inside five EKODI axes', () => {
   assert.deepEqual(adminMenuGroups(), ['home','operations','workspaces','services','system']);
   assert.deepEqual(adminMenuOrder(), [
-    'campus','work','communication','finance','tax','clients','cmpmyi','organization','workspace',
-    'common-services','life-ai','personal-finance','community','books','social','devotional','marketing-ai','ai-membership','supply-network','insurance',
+    'campus','work','communication','finance','tax','clients','site-chrome','cmpmyi','organization','workspace',
+    'common-services','life-ai','personal-finance','invest','community','books','social','devotional','marketing-ai','ai-membership','supply-network','insurance',
     'public-site-controls','language-status','architecture','maturity','security','admins','ai-module-spec','storage','capabilities','aiops','ai-settings','openai','devices','health','api-cost',
   ]);
   assert.ok(layout.includes('const ORDER=Object.freeze(adminMenuOrder());'));

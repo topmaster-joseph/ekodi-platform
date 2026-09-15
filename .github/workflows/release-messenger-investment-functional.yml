@@ -6,10 +6,17 @@ on:
       - 'migrations/*messenger*.sql'
       - 'migrations/*profile*.sql'
       - 'migrations/*design*.sql'
+      - 'migrations/*site_header_footer*.sql'
+      - 'migrations/*invest*.sql'
       - 'design-profile-runtime.js'
+      - 'site-chrome-runtime.js'
+      - 'config/site-chrome-defaults.js'
+      - 'api-worker.js'
       - 'profile-evidence-runtime.js'
       - 'profile-official-data-adapter.js'
       - 'invest-personalization-runtime.js'
+      - 'invest-market-core.js'
+      - 'invest-automation-runtime.js'
       - 'ekodi-principal.js'
       - 'messenger-triage.js'
       - 'messenger-outbox.js'
@@ -28,7 +35,10 @@ on:
       - 'test/conversation-foundation-release.test.mjs'
       - 'test/profile-evidence-contract.test.mjs'
       - 'test/design-profile-contract.test.mjs'
+      - 'test/site-chrome-runtime.test.mjs'
       - 'test/invest-personalization-contract.test.mjs'
+      - 'test/invest-market-core.test.mjs'
+      - 'test/invest-site-system.test.mjs'
       - '.github/workflows/release-messenger-investment-functional.yml'
   push:
     branches: [main]
@@ -61,8 +71,8 @@ jobs:
       - name: Validate Conversation, Operator, Investment and Profile boundaries
         run: |
           set -euo pipefail
-          for file in ekodi-principal.js profile-evidence-runtime.js profile-official-data-adapter.js invest-personalization-runtime.js design-profile-runtime.js messenger-triage.js messenger-outbox.js messenger-channel-adapters.js messenger-operator-control.js workspace-messenger-v2.js workspace-platform-entry-worker.js workspace-platform-api-worker.js mission-control-entry-worker.js; do node --check "$file"; done
-          node --test test/workspace-platform.test.mjs test/profile-evidence-contract.test.mjs test/design-profile-contract.test.mjs test/invest-personalization-contract.test.mjs
+          for file in ekodi-principal.js profile-evidence-runtime.js profile-official-data-adapter.js invest-personalization-runtime.js invest-market-core.js invest-automation-runtime.js design-profile-runtime.js site-chrome-runtime.js config/site-chrome-defaults.js api-worker.js messenger-triage.js messenger-outbox.js messenger-channel-adapters.js messenger-operator-control.js workspace-messenger-v2.js workspace-platform-entry-worker.js workspace-platform-api-worker.js mission-control-entry-worker.js; do node --check "$file"; done
+          node --test test/workspace-platform.test.mjs test/profile-evidence-contract.test.mjs test/design-profile-contract.test.mjs test/site-chrome-runtime.test.mjs test/invest-personalization-contract.test.mjs test/invest-market-core.test.mjs test/invest-site-system.test.mjs
           node scripts/validate-additive-migrations.mjs migrations
           bash -n scripts/apply-d1-migrations-with-retry.sh
           grep -Fq 'messenger_outbox' migrations/0030_messenger_event_outbox.sql
@@ -71,6 +81,8 @@ jobs:
           grep -Fq 'conversationFoundation' workspace-platform-entry-worker.js
           grep -Fq 'profileEvidenceFoundation' workspace-platform-entry-worker.js
           grep -Fq "investPersonalization:'v1'" workspace-platform-entry-worker.js
+          grep -Fq "investAutomation:'v1'" workspace-platform-entry-worker.js
+          grep -Fq 'investment_policies' migrations/0086_invest_autonomous_loop.sql
           grep -Fq '/api/control/messenger' mission-control-entry-worker.js
           grep -Fq 'analysis-and-connection-only' workspace-platform-api-worker.js
           ! grep -Eiq 'brokerage_order|securities_order|custody_balance|guaranteed_return' migrations/0028_messenger_investment_workspaces.sql
@@ -134,7 +146,11 @@ jobs:
               && grep -Fq '"conversationSchemaReady":true' /tmp/workspace-health \
               && grep -Fq '"profileSchemaReady":true' /tmp/workspace-health \
               && grep -Fq '"designProfileSchemaReady":true' /tmp/workspace-health \
+              && grep -Fq '"siteChrome":"v1"' /tmp/workspace-health \
+              && grep -Fq '"siteChromeSchemaReady":true' /tmp/workspace-health \
               && grep -Fq '"investPersonalization":"v1"' /tmp/workspace-health \
+              && grep -Fq '"investAutomation":"v1"' /tmp/workspace-health \
+              && grep -Fq '"investAutomationSchemaReady":true' /tmp/workspace-health \
               && grep -Fq '"transactionExecution":false' /tmp/workspace-health; then
               exit 0
             fi
@@ -147,7 +163,12 @@ jobs:
                 'SELECT 1 FROM ekodi_profile_evidence LIMIT 0;' \
                 'SELECT 1 FROM ekodi_profile_confirmations LIMIT 0;' \
                 'SELECT 1 FROM ekodi_profile_discovery_runs LIMIT 0;' \
-                'SELECT 1 FROM site_design_profiles LIMIT 0;' > /tmp/workspace-schema-probe.sql
+                'SELECT 1 FROM site_design_profiles LIMIT 0;' \
+                'SELECT 1 FROM site_chrome_settings LIMIT 0;' \
+                'SELECT 1 FROM investment_policies LIMIT 0;' \
+                'SELECT 1 FROM investment_strategies LIMIT 0;' \
+                'SELECT 1 FROM investment_broker_connections LIMIT 0;' \
+                'SELECT 1 FROM investment_cycles LIMIT 0;' > /tmp/workspace-schema-probe.sql
               npx --yes wrangler@${WRANGLER_VERSION} d1 execute DB --remote --config .workspace-staging.toml --file /tmp/workspace-schema-probe.sql
               echo 'Workspace staging is Access-protected; deployment and required D1 schema verified.'
               exit 0
@@ -252,8 +273,12 @@ jobs:
           grep -Fq '"profileEvidenceFoundation":"v1"' /tmp/live-health.json
           grep -Fq '"adaptiveDesign":"v1"' /tmp/live-health.json
           grep -Fq '"designProfileSchemaReady":true' /tmp/live-health.json
+          grep -Fq '"siteChrome":"v1"' /tmp/live-health.json
+          grep -Fq '"siteChromeSchemaReady":true' /tmp/live-health.json
           grep -Fq '"officialDataProvider":"embedded-v1"' /tmp/live-health.json
           grep -Fq '"investPersonalization":"v1"' /tmp/live-health.json
+          grep -Fq '"investAutomation":"v1"' /tmp/live-health.json
+          grep -Fq '"investAutomationSchemaReady":true' /tmp/live-health.json
 
   production-control:
     needs: production-workspace

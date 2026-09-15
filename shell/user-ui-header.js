@@ -3,7 +3,8 @@
 if(window.__EKODI_USER_UI_HEADER_BOOTED)return;
 window.__EKODI_USER_UI_HEADER_BOOTED=true;
 
-const VERSION=3;
+const VERSION=5;
+const SITE_CHROME_URL='https://workspace-api.ekodi.kr/v1/site-chrome/public';
 const STYLE_ID='ekodi-user-ui-header-style';
 const USER_SURFACES=new Set(['public','workspace']);
 const DISABLED_MODES=new Set(['off','hidden','immersive']);
@@ -48,6 +49,7 @@ let activeCanvas=null;
 let contentFrameSignature='';
 let mutationObserver=null;
 let scheduled=false;
+let siteChromePromise=null;
 
 function installStyle(){
   if(document.getElementById(STYLE_ID))return;
@@ -143,6 +145,8 @@ function updateContentFrame(){
   document.documentElement.style.setProperty('--ekodi-user-content-inline-size',inline+'px');document.documentElement.style.setProperty('--ekodi-user-content-left',left+'px');document.documentElement.style.setProperty('--ekodi-user-content-right',right+'px');document.documentElement.dataset.ekodiContentFrame='main-aligned-v1';
 }
 function surface(){return String(document.documentElement.dataset.ekodiShellSurface||'').toLowerCase();}
+function siteSubject(){const explicit=String(document.documentElement.dataset.ekodiSiteSubject||document.body?.dataset?.ekodiSiteSubject||'').trim().toLowerCase();if(explicit)return explicit;const service=serviceId();const owned={church:'ekodi-church',biz:'ekodi-biz',lab:'ekodi-lab',trade:'ekodi-trade',cafe:'ekodi-cafe'};if(owned[service])return owned[service];const first=location.pathname.split('/').filter(Boolean)[0]||'';const aliases={ekodibiz:'ekodi-biz',biz:'ekodi-biz',ekodichurch:'ekodi-church',church:'ekodi-church',ekodilab:'ekodi-lab',lab:'ekodi-lab',cheonggye:'cgma','cheonggye-merchants':'cgma','cheonggye-merchant-association':'cgma'};return aliases[first]||first}
+async function siteChrome(){const subject=siteSubject();if(!subject||['admin','auth','privacy','terms','api'].includes(subject))return null;if(!siteChromePromise)siteChromePromise=fetch(`${SITE_CHROME_URL}?subject_key=${encodeURIComponent(subject)}`,{credentials:'omit',cache:'no-store'}).then(async r=>r.ok?r.json():null).catch(()=>null);return siteChromePromise}
 function mode(){
   const htmlMode=String(document.documentElement.dataset.ekodiUserHeader||'').toLowerCase();
   const bodyMode=String(document.body?.dataset?.ekodiUserHeader||'').toLowerCase();
@@ -215,6 +219,7 @@ function findHomeAnchor(header){
   for(const selector of selectors){const node=header?.querySelector(selector);if(node instanceof HTMLAnchorElement)return node;}
   return null;
 }
+function applySiteChromeHeader(header,chrome){const cfg=chrome?.header;if(!header||!cfg)return;const home=findHomeAnchor(header);if(home&&cfg.homeUrl)home.setAttribute('href',String(cfg.homeUrl));const fallback=header.hasAttribute(FALLBACK_ATTR);const siteNode=fallback?header.querySelector('.ekodi-user-ui-header-fallback__brand'):header.querySelector('[data-ekodi-header-site-name],[data-ekodi-site-name],.brand-title,.site-title');if(siteNode&&cfg.siteName)siteNode.textContent=String(cfg.siteName);const taglineNode=fallback?header.querySelector('.ekodi-user-ui-header-fallback__context'):header.querySelector('[data-ekodi-header-tagline]');if(taglineNode)taglineNode.textContent=String(cfg.tagline||cfg.siteName||serviceLabel());header.dataset.ekodiSiteChrome='v1';window.dispatchEvent(new CustomEvent('ekodi:site-chrome',{detail:{subjectKey:chrome.subjectKey||siteSubject(),header:cfg}}))}
 function bindHomeAnchor(header){
   const anchor=findHomeAnchor(header);if(!anchor)return;
   const localAnchor=serviceHomeAnchor();
@@ -269,6 +274,7 @@ function detach(){
 function attach(header){
   if(!header||!shouldEnable())return;
   bindHomeAnchor(header);
+  void siteChrome().then(chrome=>applySiteChromeHeader(header,chrome));
   if(activeHeader===header&&spacer?.isConnected){
     const nextCenter=findCenter(header);
     if(nextCenter!==activeCenter){

@@ -1,5 +1,6 @@
 import authWorker, { isAllowedOrigin } from './auth-worker.js';
 import { canonicalCoreRole } from './ekodi-principal.js';
+import { accessGrantExpired } from './access-governance.js';
 
 const ROLE_LABELS = Object.freeze({
   owner: '점주/책임자',
@@ -14,6 +15,7 @@ const ROLE_LABELS = Object.freeze({
   marketing_manager: '마케팅담당자',
   hq_manager: '본사담당자',
   accounting_manager: '회계담당자',
+  external_developer: '외부개발자',
   client_admin: '점주/책임자 · 기존',
   client_editor: '마케팅담당자 · 기존',
   client_viewer: '조회·검수자 · 기존',
@@ -57,6 +59,7 @@ function normalize(value) {
 
 function accessStatus(row) {
   if (Number(row.enabled) !== 1) return 'disabled';
+  if (accessGrantExpired(row)) return 'expired';
   return row.last_verified_at ? 'active' : 'pre_registered';
 }
 
@@ -67,11 +70,14 @@ function publicMember(row) {
     userId: row.user_id == null ? null : Number(row.user_id),
     email: row.email,
     displayName: row.display_name || '',
-    userStatus: status === 'disabled' ? 'disabled' : (row.user_status || 'active'),
+    userStatus: status === 'disabled' || status === 'expired' ? 'disabled' : (row.user_status || 'active'),
     role: row.role,
     roleLabel: ROLE_LABELS[row.role] || row.role,
     coreRole,
     coreRoleLabel: ROLE_LABELS[coreRole] || coreRole,
+    principalType: row.principal_type || 'member',
+    githubUsername: row.github_username || '',
+    expiresAt: row.expires_at || '',
     status,
     joinedAt: row.grant_created_at,
     lastLoginAt: row.last_verified_at || row.last_login_at || '',
@@ -95,7 +101,7 @@ function filterMembers(members, url) {
     if (status && member.status !== status) return false;
     if (role && member.role !== role && member.coreRole !== role) return false;
     if (q) {
-      const haystack = normalize(`${member.displayName} ${member.email} ${member.tenant.name} ${member.tenant.domain} ${member.roleLabel} ${member.coreRoleLabel}`);
+      const haystack = normalize(`${member.displayName} ${member.email} ${member.githubUsername} ${member.tenant.name} ${member.tenant.domain} ${member.roleLabel} ${member.coreRoleLabel}`);
       if (!haystack.includes(q)) return false;
     }
     return true;
@@ -107,6 +113,8 @@ function directorySummary(allMembers, tenants) {
   const active = allMembers.filter(member => member.status === 'active').length;
   const pending = allMembers.filter(member => member.status === 'pre_registered').length;
   const disabled = allMembers.filter(member => member.status === 'disabled').length;
+  const expired = allMembers.filter(member => member.status === 'expired').length;
+  const externalCollaborators = allMembers.filter(member => member.principalType === 'external_collaborator').length;
   return {
     tenants: tenants.length,
     memberships: allMembers.length,
@@ -114,6 +122,8 @@ function directorySummary(allMembers, tenants) {
     active,
     pending,
     disabled,
+    expired,
+    externalCollaborators,
   };
 }
 
@@ -128,6 +138,7 @@ function tenantDirectory(rows, members) {
       members: siteMembers.length,
       activeUsers: siteMembers.filter(member => member.status === 'active').length,
       googlePending: siteMembers.filter(member => member.status === 'pre_registered').length,
+      externalCollaborators: siteMembers.filter(member => member.principalType === 'external_collaborator').length,
     };
   });
 }
@@ -168,6 +179,9 @@ export async function handleCustomerMemberDirectory(request, env) {
         a.enabled,
         a.created_at AS grant_created_at,
         a.last_verified_at,
+        a.principal_type,
+        a.github_username,
+        a.expires_at,
         u.id AS user_id,
         COALESCE(u.display_name, '') AS display_name,
         u.status AS user_status,
@@ -187,7 +201,7 @@ export async function handleCustomerMemberDirectory(request, env) {
   const members = filterMembers(allMembers, url);
 
   return json({
-    schemaVersion: 2,
+    schemaVersion: 3,
     generatedAt: new Date().toISOString(),
     summary: directorySummary(allMembers, tenants),
     tenants,

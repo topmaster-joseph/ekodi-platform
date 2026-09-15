@@ -21,6 +21,13 @@ test('authenticated Admin E2E waits for protected maturity API convergence befor
   assert.match(source, /authorization:`Bearer \$\{e2eAdminToken\}`/);
   assert.match(source, /certificationStatus === 'not-claimed'/);
   assert.match(source, /Array\.isArray\(payload\.model\?\.domains\)/);
+  assert.match(source, /ecosystem-services\.json/);
+  assert.match(source, /site-lifecycle-registry\.json/);
+  assert.match(source, /capability-registry\.json/);
+  assert.match(source, /scope\.services === expectedMaturityScope\.services/);
+  assert.match(source, /scope\.workspaceSites === expectedMaturityScope\.workspaceSites/);
+  assert.match(source, /scope\.systemFunctions === expectedMaturityScope\.systemFunctions/);
+  assert.match(source, /scope\.totalScopes === expectedMaturityScope\.totalScopes/);
   assert.match(source, /await waitForMaturityApi\(\)/);
   assert.match(source, /production maturity API converged/);
 });

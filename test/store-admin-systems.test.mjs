@@ -29,6 +29,7 @@ test('existing first stores are compatibility profiles on one Store Admin Engine
   for(const store of stores){
     assert.equal(isStoreAdminPathShape(`/${store.slug}/admin`),true);
     assert.equal(isStoreAdminPathShape(`/${store.slug}/admin/menu`),true);
+    assert.equal(isStoreAdminPathShape(`/${store.slug}/admin/chrome`),true);
     const profile=await resolveStoreAdminRoute(`/${store.slug}/admin`,()=>{throw new Error('bootstrap profile must not fetch')});
     assert.equal(profile.slug,store.slug);assert.equal(profile.name,store.brand);assert.equal(profile.id,store.id);
     const response=storeAdminPage(profile);const html=await response.text();
@@ -50,7 +51,7 @@ test('existing first stores are compatibility profiles on one Store Admin Engine
 
 test('one Store Admin page projects sections from tenant role capabilities',()=>{
   const all=storeAdminSectionsForRole('store_owner');
-  assert.equal(all.length,13);assert.ok(all.includes('site'));assert.ok(all.includes('delivery'));assert.ok(all.includes('finance'));
+  assert.equal(all.length,14);assert.ok(all.includes('site'));assert.ok(all.includes('chrome'));assert.ok(all.includes('delivery'));assert.ok(all.includes('finance'));
   assert.deepEqual(storeAdminSectionsForRole('marketing_manager'),['overview','customers','reviews','sales','marketing']);
   assert.deepEqual(storeAdminSectionsForRole('accounting_manager'),['overview','sales','finance']);
   assert.equal(storeAdminCanAccess('hq_manager','connections'),true);assert.equal(storeAdminCanAccess('hq_manager','site'),false);

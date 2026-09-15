@@ -1,4 +1,5 @@
 import { activityRoleFor, ownedCustomerSiteFor } from './ekodi-site-policy.js';
+import { accessGrantIsActive, effectiveAccessCapabilities } from './access-governance.js';
 
 const SUPABASE_URL='https://renzehysxirjilvdxacv.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
@@ -22,6 +23,7 @@ const CORE_ROLE_ALIASES=Object.freeze({
   client_admin:'owner',
   client_editor:'marketer',
   client_viewer:'viewer',
+  external_developer:'viewer',
   marketer:'marketer',
   accountant:'accountant',
   staff:'staff',
@@ -59,13 +61,14 @@ export function principalCapabilities(role='',kind='user'){
   return [...set];
 }
 
-export function buildPrincipal({id,email='',kind='user',provider='unknown',role='member',subjectType='person',subjectKey='',activityRole='',activityRoleLabel=''}){
+export function buildPrincipal({id,email='',kind='user',provider='unknown',role='member',subjectType='person',subjectKey='',activityRole='',activityRoleLabel='',capabilities=[]}){
   const principalId=clean(id,240);
   if(!principalId)return null;
   const normalizedKind=kind==='admin'?'admin':'user';
   const normalizedRole=clean(role,80)||'member';
   const normalizedSubjectType=SUBJECT_TYPES.has(subjectType)?subjectType:'person';
   const authorityScope=normalizedKind==='admin'?'platform':normalizedSubjectType==='tenant'?'tenant':'person';
+  const effectiveCapabilities=[...new Set([...principalCapabilities(normalizedRole,normalizedKind),...(Array.isArray(capabilities)?capabilities:[])].map(value=>clean(value,160)).filter(Boolean))];
   return Object.freeze({
     id:principalId,
     email:clean(email,320).toLowerCase(),
@@ -77,7 +80,7 @@ export function buildPrincipal({id,email='',kind='user',provider='unknown',role=
     activityRoleLabel:clean(activityRoleLabel,120)||null,
     authorityScope,
     subject:Object.freeze({type:normalizedSubjectType,key:clean(subjectKey,240)||principalId}),
-    capabilities:Object.freeze(principalCapabilities(normalizedRole,normalizedKind)),
+    capabilities:Object.freeze(effectiveCapabilities),
   });
 }
 
@@ -142,13 +145,15 @@ export async function resolveWorkspacePrincipal(request,env,{write=false}={}){
   if(!tenantKey)return {error:'SUBJECT_FORBIDDEN',status:403};
   const tenant=await env.DB.prepare('SELECT id,slug,status FROM customer_tenants WHERE slug=?').bind(tenantKey).first();
   if(!tenant||tenant.status!=='active')return {error:'SUBJECT_FORBIDDEN',status:403};
-  const grant=await env.DB.prepare('SELECT role,enabled FROM customer_access_grants WHERE tenant_id=? AND email=?').bind(tenant.id,base.email).first();
-  if(!grant||Number(grant.enabled)!==1)return {error:'SUBJECT_FORBIDDEN',status:403};
+  const grant=await env.DB.prepare(`SELECT role,enabled,principal_type,github_username,capabilities_json,denied_capabilities_json,expires_at
+    FROM customer_access_grants WHERE tenant_id=? AND email=?`).bind(tenant.id,base.email).first();
+  if(!accessGrantIsActive(grant))return {error:'SUBJECT_FORBIDDEN',status:403};
   const site=ownedCustomerSiteFor(tenant.slug);
   const activity=activityRoleFor(site?.id||tenant.slug,String(grant.role||'member'));
   const principal=buildPrincipal({
     id:base.id,email:base.email,kind:'user',provider:base.provider,role:String(grant.role||'member'),
     subjectType:'tenant',subjectKey:String(tenant.slug),activityRole:activity.role,activityRoleLabel:activity.label,
+    capabilities:effectiveAccessCapabilities(grant),
   });
   if(write&&!principal.capabilities.includes('conversation:write'))return {error:'SUBJECT_READ_ONLY',status:403};
   if(write&&String(env.ALLOW_MUTATIONS)!=='true')return {error:'MUTATIONS_DISABLED',status:503};

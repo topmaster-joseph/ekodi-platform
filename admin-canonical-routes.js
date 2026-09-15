@@ -3,8 +3,8 @@
 const SECTION_GROUP=Object.freeze({
   campus:'home',
   work:'operations',communication:'operations',finance:'operations',tax:'operations',
-  clients:'workspaces',organization:'workspaces',workspace:'workspaces','cheonggye-members':'workspaces',
-  'common-services':'services','life-ai':'services','personal-finance':'services',community:'services',books:'services',social:'services',devotional:'services','marketing-ai':'services','ai-membership':'services',affiliates:'services','supply-network':'services',insurance:'services',
+  clients:'workspaces','site-chrome':'workspaces',organization:'workspaces',workspace:'workspaces','cheonggye-members':'workspaces',
+  'common-services':'services','life-ai':'services','personal-finance':'services',invest:'services',community:'services',books:'services',social:'services',devotional:'services','marketing-ai':'services','ai-membership':'services',affiliates:'services','supply-network':'services',insurance:'services',
   'public-site-controls':'system','language-status':'system',architecture:'system',maturity:'system',security:'system',admins:'system','ai-module-spec':'system',storage:'system',capabilities:'system',aiops:'system','ai-settings':'system',openai:'system',devices:'system',health:'system','api-cost':'system',services:'system',deployments:'system',policies:'system',
 });
 const GROUP_DEFAULT=Object.freeze({
@@ -16,7 +16,7 @@ const LEGACY_GROUP_DEFAULT=Object.freeze({
 const LEGACY_SECTION_GROUP=Object.freeze({
   campus:'system',
   communication:'common',workspace:'common',finance:'common','common-services':'common',
-  'life-ai':'professional','personal-finance':'professional',community:'professional',books:'professional',social:'professional',devotional:'professional','marketing-ai':'professional','ai-membership':'professional',tax:'professional',affiliates:'professional','supply-network':'professional',insurance:'professional',
+  'life-ai':'professional','personal-finance':'professional',invest:'professional',community:'professional',books:'professional',social:'professional',devotional:'professional','marketing-ai':'professional','ai-membership':'professional',tax:'professional',affiliates:'professional','supply-network':'professional',insurance:'professional',
   work:'workspaces',
   capabilities:'operations',aiops:'operations','ai-settings':'operations',openai:'operations',devices:'operations',health:'operations','api-cost':'operations',services:'operations',deployments:'operations',policies:'operations',
 });
