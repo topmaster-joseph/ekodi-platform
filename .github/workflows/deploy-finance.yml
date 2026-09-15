@@ -15,6 +15,8 @@ on:
       - 'finance-worker.js'
       - 'finance-entry-worker.js'
       - 'tax-service-worker.js'
+      - 'tax-notice-intake.js'
+      - 'tax-notice-intake-service.js'
       - 'tax-invoice-free-first-worker.js'
       - 'tax-invoice-worker.js'
       - 'tax-hometax-ledger-service.js'
@@ -23,6 +25,7 @@ on:
       - 'tax-business-registry-service.js'
       - 'wrangler.finance.toml'
       - 'test/tax-finance-service-binding.test.mjs'
+      - 'test/tax-invoice-notice-intake.test.mjs'
       - 'migrations/**'
       - 'scripts/apply-d1-migrations-with-retry.sh'
       - 'scripts/guarded-worker-release.mjs'
@@ -35,6 +38,8 @@ on:
       - 'finance-worker.js'
       - 'finance-entry-worker.js'
       - 'tax-service-worker.js'
+      - 'tax-notice-intake.js'
+      - 'tax-notice-intake-service.js'
       - 'tax-invoice-free-first-worker.js'
       - 'tax-invoice-worker.js'
       - 'tax-hometax-ledger-service.js'
@@ -43,6 +48,7 @@ on:
       - 'tax-business-registry-service.js'
       - 'wrangler.finance.toml'
       - 'test/tax-finance-service-binding.test.mjs'
+      - 'test/tax-invoice-notice-intake.test.mjs'
       - 'migrations/**'
       - 'scripts/apply-d1-migrations-with-retry.sh'
       - 'scripts/guarded-worker-release.mjs'
@@ -93,8 +99,11 @@ jobs:
           node --check finance-worker.js
           node --check finance-entry-worker.js
           node --check tax-service-worker.js
+          node --check tax-notice-intake.js
+          node --check tax-notice-intake-service.js
           node --check tax-invoice-free-first-worker.js
           node --check tax-invoice-worker.js
+          node --test test/tax-invoice-notice-intake.test.mjs
           node --check tax-hometax-ledger-service.js
           node --check tax-business-registry-service.js
           node --check auth-worker.js
