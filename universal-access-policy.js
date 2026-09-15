@@ -16,10 +16,13 @@ export const UNIVERSAL_ACCESS_ROLES = Object.freeze({
     maxDays: 180,
     requiresGithub: true,
     requiresExpiry: true,
-    capabilities: Object.freeze(['service:read', 'service:source.read', 'service:preview.read', 'service:logs.read', 'service:tests.run', 'service:pr.create']),
+    capabilities: Object.freeze([
+      'service:read', 'service:source.read', 'service:preview.read', 'service:logs.read', 'service:tests.run', 'service:pr.create',
+      'workspace:read', 'workspace:source.read', 'workspace:preview.read', 'workspace:logs.read', 'workspace:tests.run', 'workspace:pr.create',
+    ]),
     denied: Object.freeze(['admin:accounts.write', 'security:policy.write', 'secrets:*', 'data:private.*', 'data:finance.*', 'deploy:production', 'deploy:rollback', 'platform:emergency', 'service:access.review', 'workspace:access.review']),
   }),
-  staff: Object.freeze({ authorityRole: 'viewer', scopeTypes: Object.freeze(['service', 'workspace']), capabilities: Object.freeze(['service:read']) }),
+  staff: Object.freeze({ authorityRole: 'viewer', scopeTypes: Object.freeze(['service', 'workspace']), capabilities: Object.freeze(['service:read', 'workspace:read']) }),
   viewer: Object.freeze({ authorityRole: 'viewer', scopeTypes: Object.freeze(['platform', 'service', 'workspace', 'person']) }),
 });
 
