@@ -178,7 +178,14 @@ async function createDraft(request, env, ctx, auth, origin) {
   const channel = body.issuanceChannel === 'other' ? 'other' : 'hometax';
   const recipientEmail = channel === 'other' ? parsed.emails.other : parsed.emails.homeTax;
   const writeDate = /^\d{8}$/.test(digits(body.writeDate, 8)) ? digits(body.writeDate, 8) : parsed.suggestedWriteDate;
-  const sourceHash = await sha256Hex(`${parsed.provider}\n${clean(body.message, 12000)}`);
+  const sourceHash = await sha256Hex([
+    parsed.provider,
+    supplier.corpNum,
+    parsed.supplierHint,
+    parsed.targetPeriod,
+    parsed.buyerTaxRegId,
+    parsed.totalAmount
+  ].join('|'));
   const duplicate = await env.DB.prepare('SELECT id,document_no,status FROM tax_invoices WHERE source_hash=? LIMIT 1').bind(sourceHash).first();
   if (duplicate) {
     return json({ error:'같은 안내문으로 이미 만든 세금계산서가 있습니다.', code:'TAX_NOTICE_DUPLICATE',
