@@ -105,6 +105,8 @@ class UserUiHtmlInjector{
     const service=cleanServiceId(this.serviceId)||'ekodi';
     element.setAttribute('data-ekodi-user-ui',USER_UI_VERSION);
     element.setAttribute('data-ekodi-service',service);
+    const label=serviceLabel(service);
+    if(label)element.setAttribute('data-ekodi-service-label',label);
     element.setAttribute('data-ekodi-user-surface',resolvedSurface(this.serviceId,this.surface));
     element.setAttribute('data-ekodi-ui-surface',this.uiSurface||uiSurfaceFor(service,this.surface));
     if(this.progressiveHome)element.setAttribute('data-ekodi-home-focus-request','v1');
@@ -144,7 +146,7 @@ class UserChromeInjector{
   constructor(serviceId){this.serviceId=serviceId;}
   element(element){
     element.prepend(fallbackHeader(this.serviceId),{html:true});
-    if(!serviceOwnsFooter(this.serviceId))element.append(renderEkodiUserFooter(),{html:true});
+    if(!serviceOwnsFooter(this.serviceId))element.append(renderEkodiUserFooter(undefined,{serviceId:cleanServiceId(this.serviceId),siteLabel:serviceLabel(this.serviceId)}),{html:true});
   }
 }
 

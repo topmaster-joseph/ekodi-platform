@@ -139,8 +139,8 @@ const footerLinks = new Map((EKODI_USER_FOOTER.legalLinks||[]).map(item=>[item.l
 if (footerLinks.get('개인정보처리방침') !== 'https://ekodi.kr/privacy' || footerLinks.get('이용약관') !== 'https://ekodi.kr/terms') {
   errors.push('Central user footer legal links must use the canonical EKODI public policies.');
 }
-if (footerLinks.get('문의') !== 'mailto:ekodibiz@gmail.com' || EKODI_USER_FOOTER.contact?.email !== 'ekodibiz@gmail.com') {
-  errors.push('Central user footer contact must use the canonical operator email.');
+if (footerLinks.get('문의') !== 'https://ekodi.kr/mail/contact' || EKODI_USER_FOOTER.contact?.email !== 'joseph@ekodi.kr' || EKODI_USER_FOOTER.contact?.emailHref !== 'https://ekodi.kr/mail/contact') {
+  errors.push('Central user footer contact must use the canonical site-admin inquiry flow with joseph@ekodi.kr as the operational mailbox.');
 }
 if (EKODI_USER_FOOTER.operator?.businessRegistrationNumber !== '213-13-01959') {
   errors.push('Central user footer operator registration number must match the public EKODI operator record.');
