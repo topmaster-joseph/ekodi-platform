@@ -21,7 +21,7 @@ concurrency:
 env:
   WRANGLER_VERSION: '4.119.0'
   CGMA_SOURCE_REPO: topmaster-joseph/cheonggye-market
-  CGMA_SOURCE_REF: '4c7c2173cb9877b9a28170e8e07da23beda91f8f'
+  CGMA_SOURCE_REF: 'e092c20ce9a8811a282979512d3823a141daa8a3'
 
 jobs:
   validate:
@@ -164,6 +164,7 @@ jobs:
           check_cgma '/cgma/admin' 'id="memberReview"' 'cgma-root-gateway'
           check_cgma '/cgma/api/resources' '"items"' 'cgma-root-gateway'
           check_cgma '/cgma/admin/member' 'EKODI Workspace Admin' 'workspace-admin'
+          check_cgma '/cgma/admin/publishing' 'EKODI Workspace Admin' 'workspace-admin'
           check_cgma '/cgma/admin/assets/cgma-member-admin.js' 'mountCgmaMemberAdmin' 'admin-workspace-asset'
           check_cgma '/cgma/admin/assets/cgma-member-admin.css' '.cgma-member-head' 'admin-workspace-asset'
           check_redirect '/cgma/member-admin' 'https://ekodi.kr/cgma/admin/member?edge_release='
