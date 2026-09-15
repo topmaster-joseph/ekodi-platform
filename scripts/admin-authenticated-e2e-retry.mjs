@@ -3,6 +3,9 @@ import { spawn } from 'node:child_process';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { adminMenuOrder } from '../admin-menu-registry.js';
+import ecosystemServices from '../config/ecosystem-services.json' with { type: 'json' };
+import siteLifecycleRegistry from '../config/site-lifecycle-registry.json' with { type: 'json' };
+import capabilityRegistry from '../config/capability-registry.json' with { type: 'json' };
 
 const maxAttemptsPerMenu = 2;
 const menuTimeoutMs = 30_000;
@@ -16,6 +19,12 @@ const e2eAdminToken = String(process.env.E2E_ADMIN_TOKEN || '').trim();
 const productionConvergenceAttempts = 36;
 const productionConvergenceDelayMs = 5_000;
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+const expectedMaturityScope = Object.freeze({
+  services: (ecosystemServices.services || []).length,
+  workspaceSites: (siteLifecycleRegistry.existingWorkspaceSites || []).length,
+  systemFunctions: (capabilityRegistry.capabilities || []).length,
+  totalScopes: (ecosystemServices.services || []).length + (siteLifecycleRegistry.existingWorkspaceSites || []).length + (capabilityRegistry.capabilities || []).length,
+});
 
 function missingProductionMenus(source) {
   return menuIds.filter(id => !source.includes(`id: '${id}'`));
@@ -60,8 +69,13 @@ async function waitForMaturityApi() {
       });
       lastStatus = response.status;
       const payload = await response.json().catch(() => ({}));
-      if (response.ok && payload.certificationStatus === 'not-claimed' && Array.isArray(payload.model?.domains) && payload.model.domains.length) {
-        console.log(`[E2E] production maturity API converged: HTTP ${response.status}, domains=${payload.model.domains.length}`);
+      const scope = payload.serviceScopes?.summary || {};
+      const scopeConverged = scope.services === expectedMaturityScope.services
+        && scope.workspaceSites === expectedMaturityScope.workspaceSites
+        && scope.systemFunctions === expectedMaturityScope.systemFunctions
+        && scope.totalScopes === expectedMaturityScope.totalScopes;
+      if (response.ok && payload.certificationStatus === 'not-claimed' && Array.isArray(payload.model?.domains) && payload.model.domains.length && scopeConverged) {
+        console.log(`[E2E] production maturity API converged: HTTP ${response.status}, domains=${payload.model.domains.length}, scopes=${scope.totalScopes} (${scope.services}+${scope.workspaceSites}+${scope.systemFunctions})`);
         return;
       }
     } catch (error) { console.warn(`[E2E] maturity API probe ${attempt} failed: ${error?.message || error}`); }

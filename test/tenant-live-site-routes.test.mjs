@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import siteWorker from '../site-worker.js';
+import platformRouter from '../platform-router-entry-worker.js';
 import { realtimeTenantList } from '../realtime-tenant-registry.js';
 
 test('shared tenant Live paths render on ekodi.kr with isolated tenant identity',async()=>{
@@ -12,6 +13,11 @@ test('shared tenant Live paths render on ekodi.kr with isolated tenant identity'
     assert.match(html,new RegExp(`data-tenant="${tenant.apiTenant}"`),tenant.id);
     assert.match(html,/\/tenant-live\.js/,tenant.id);
     assert.match(html,/공개 방송은 로그인 없이 시청/,tenant.id);
+    const apex=await platformRouter.fetch(new Request(`https://ekodi.kr${tenant.path}`),{});
+    assert.equal(apex.status,200,`apex ${tenant.id}`);
+    const apexHtml=await apex.text();
+    assert.match(apexHtml,new RegExp(`data-tenant=\"${tenant.apiTenant}\"`),`apex ${tenant.id}`);
+    assert.match(apexHtml,/\/tenant-live\.js/,`apex ${tenant.id}`);
   }
 });
 

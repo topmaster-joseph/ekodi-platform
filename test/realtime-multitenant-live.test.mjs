@@ -25,7 +25,7 @@ function fakeDb(){
 }
 test('Realtime tenant registry exposes canonical Live paths',()=>{
   const tenants=realtimeTenantList();
-  assert.equal(tenants.length,10);
+  assert.equal(tenants.length,11);
   for(const tenant of tenants){
     assert.equal(realtimeTenantFromPath(tenant.path)?.id,tenant.id);
     assert.match(tenant.path,/^\/.+\/live\/$/);
