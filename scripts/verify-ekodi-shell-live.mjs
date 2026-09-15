@@ -7,7 +7,7 @@ const allowAccessGate=String(process.env.EKODI_SHELL_ALLOW_ACCESS_GATE||'')==='1
 const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 
 async function read(path,attempt){
-  const url=new URL(path,`${base}/`);
+  const url=new URL(String(path).replace(/^\/+/,''),`${base}/`);
   url.searchParams.set('release',release);
   url.searchParams.set('attempt',String(attempt));
   try{
@@ -52,7 +52,7 @@ for(let attempt=1;attempt<=attempts;attempt++){
   if(!shellResult.ok)failures.push(`shell:http-${shellResult.status||'network'}`);
   if(!userLanguageResult.ok)failures.push(`user-language:http-${userLanguageResult.status||'network'}`);
   if(!characterRegistryResult.ok)failures.push(`character-registry:http-${characterRegistryResult.status||'network'}`);
-  if(!identityRegistryResult.ok)failures.push(`identity-registry:http-${identityRegistryResult.status||'network'}`);
+  if(!identityRegistryResult.ok)failures.push(`character-identity:http-${identityRegistryResult.status||'network'}`);
   if(!founderAssetResult.ok)failures.push(`founder-asset:http-${founderAssetResult.status||'network'}`);
   else if(!String(founderAssetResult.headers?.get?.('content-type')||'').includes('image/webp'))failures.push('founder-asset:content-type');
   if(!styleResult.ok)failures.push(`workspace:http-${styleResult.status||'network'}`);
