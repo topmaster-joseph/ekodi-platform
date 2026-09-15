@@ -7,7 +7,8 @@ on:
       - '.github/workflows/remote-agent-watchdog-check.yml'
   push:
     branches:
-      - 'feat/remote-agent-watchdog'
+      - 'main'
+      - 'fix/remote-agent-watchdog-v2'
     paths:
       - 'tools/remote-agent-watchdog/**'
       - '.github/workflows/remote-agent-watchdog-check.yml'
@@ -16,7 +17,7 @@ permissions:
   contents: read
 
 jobs:
-  powershell-parse:
+  powershell-contract:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -34,4 +35,30 @@ jobs:
             $errors | Format-List | Out-String | Write-Error
             exit 1
           }
-          Write-Host 'Remote Agent Watchdog PowerShell syntax: OK'
+          Write-Host 'PowerShell syntax: OK'
+
+      - name: Validate Windows Task Scheduler contract
+        shell: pwsh
+        run: |
+          $settings = Get-Command New-ScheduledTaskSettingsSet
+          foreach ($required in @('ExecutionTimeLimit','RestartCount','RestartInterval','MultipleInstances')) {
+            if (!$settings.Parameters.ContainsKey($required)) {
+              throw "New-ScheduledTaskSettingsSet does not support -$required"
+            }
+          }
+          $principal = Get-Command New-ScheduledTaskPrincipal
+          if (!$principal.Parameters.ContainsKey('LogonType')) {
+            throw 'New-ScheduledTaskPrincipal does not support -LogonType'
+          }
+          Write-Host 'Scheduled Tasks contract: OK'
+
+      - name: Validate remote-agent implementation contract
+        shell: pwsh
+        run: |
+          $watchdog = Get-Content tools/remote-agent-watchdog/watchdog.ps1 -Raw
+          $installer = Get-Content tools/remote-agent-watchdog/install-watchdog.ps1 -Raw
+          if ($watchdog -notmatch "'remote'") { throw 'watchdog does not launch the remote agent' }
+          if ($watchdog -notmatch 'desktop-commander-device') { throw 'watchdog does not validate paired device config' }
+          if ($installer -notmatch 'LogonType S4U') { throw 'installer is not running as the paired user via S4U' }
+          if ($installer -match "UserId 'SYSTEM'") { throw 'SYSTEM principal regression detected' }
+          Write-Host 'Remote agent implementation contract: OK'
