@@ -11,18 +11,21 @@ const bridgeHtml = await readFile(`${root}auth-site/google-origin-bridge.html`, 
 const authRouter = await readFile(`${root}auth-site/auth-router.js`, 'utf8');
 const authHtml = await readFile(`${root}auth-site/index.html`, 'utf8');
 
-test('central admin login navigates to canonical auth without pre-opening a cross-origin bridge', () => {
-  assert.match(adminCore, /loginLink\.href=route\?centralAdminAuthUrl\(route\):AUTH_URL/);
-  assert.match(adminCore, /loginLink\.onclick=null/);
-  assert.doesNotMatch(adminCore, /google-origin-bridge\?wait=1/);
-  assert.doesNotMatch(adminCore, /bridge=preopened/);
+test('central admin login pre-opens the Google bridge and keeps canonical admin root return', () => {
+  assert.match(adminCore, /return_to=https%3A%2F%2Fekodi\.kr%2Fadmin%2F/);
+  assert.match(adminCore, /open\('https:\/\/auth\.ekodi\.kr\/google-origin-bridge\?wait=1','ekodi_google_origin_bridge','popup'\)/);
+  assert.match(adminCore, /u\.searchParams\.set\('bridge','preopened'\)/);
+  assert.match(adminCore, /location\.assign\(u\)/);
+  assert.match(adminCore, /loginLink\.onclick=e=>/);
+  assert.doesNotMatch(adminCore, /loginLink\.onclick=null/);
 });
 
-test('admin auth keeps the explicit Google bridge button as the default direct-entry path', () => {
+test('admin auth consumes a pre-opened bridge before rendering any fallback button', () => {
   assert.match(adminAuth, /const preopenedRequested=directEntry&&params\.get\('bridge'\)==='preopened'/);
-  assert.match(adminAuth, /if\(preopenedRequested\)/);
+  assert.match(adminAuth, /requestPreopenedGoogleCredential\(config,challenge\)/);
+  assert.match(adminAuth, /popup\.postMessage\(\{type:'ekodi-google-origin-bridge-start'/);
   assert.match(adminAuth, /renderOriginBridgeButton\(host,config,challenge\)/);
-  assert.match(adminAuth, /clearDirectFallback\('등록된 관리자 Google 계정을 선택해 주세요\./);
+  assert.match(adminAuth, /revealDirectFallback\(/);
 });
 
 test('Google origin bridge keeps strict origin and account-selection safety', () => {
@@ -31,6 +34,7 @@ test('Google origin bridge keeps strict origin and account-selection safety', ()
   assert.match(bridge, /clientId===EXPECTED_CLIENT/);
   assert.match(bridge, /auto_select:false/);
   assert.match(bridge, /google\.accounts\.id\.renderButton/);
+  assert.match(bridge, /google\.accounts\.id\.prompt/);
 });
 
 test('single-handoff keeps the existing no-store auth asset contract', () => {
