@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "policyId": "AUTO-MERGE-001",
+  "status": "active",
+  "scope": ["platform-change", "deployment", "release"],
+  "defaultRule": "continue-through-production-while-publication-remains-independent",
+  "rules": {
+    "allRequiredChecksMustPassBeforeMerge": true,
+    "ekodiGuardrailsMustPassBeforeMerge": true,
+    "mergeabilityMustBeConfirmed": true,
+    "expectedHeadShaMustMatchBeforeMerge": true,
+    "failedOrPendingChecksMustNeverBeBypassed": true,
+    "mergeAutomaticallyWhenAllRequiredConditionsPass": true,
+    "continueToDeploymentAfterMerge": true,
+    "verifyRealProductionUrlAfterDeployment": true,
+    "recordDeploymentAndProductionVerificationEvidence": true,
+    "publicationStateIsIndependentFromDeploymentState": true,
+    "newSitesDefaultToPrivateReview": true,
+    "privateReviewDoesNotBlockProductionDeployment": true,
+    "privateReviewExcludesPublicNavigationAndDiscovery": true,
+    "privateReviewUsesNoindexNofollow": true,
+    "publicationRequiresAuthorizedAdministratorApproval": true,
+    "notifyOwnerAfterVerifiedMergeAndDeployment": true
+  },
+  "prohibited": [
+    "force-merge-around-required-checks",
+    "treat-private-as-not-deployed",
+    "claim-complete-before-production-verification",
+    "publish-new-site-without-authorized-approval"
+  ],
+  "requiredEvidence": [
+    "pr_number",
+    "head_sha",
+    "required_checks",
+    "guardrail_result",
+    "merge_sha",
+    "deployment_result",
+    "production_url",
+    "production_functional_check",
+    "publication_state",
+    "verification_timestamp"
+  ]
+}
