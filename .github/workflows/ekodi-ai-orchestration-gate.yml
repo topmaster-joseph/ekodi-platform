@@ -54,6 +54,12 @@ jobs:
 
           console.log(`[EKODI][AI-BRANCH-001] branch identity verified: ${branch} (actor=${actor})`);
           NODE
+      - name: Enforce apex-path-only domain policy
+        env:
+          ZERO_SUBDOMAIN_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          node --check scripts/zero-subdomain-guard.mjs
+          node scripts/zero-subdomain-guard.mjs
       - name: Route change intent through EKODI AI
         id: ekodi_ai
         env:
