@@ -251,7 +251,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for target in 'https://ekodi.kr/ekodichurch/' 'https://ekodi.kr/my/' 'https://community.ekodi.kr' 'https://ekodi.kr/privacy' 'https://ekodi.kr/terms'; do
+          for target in 'https://ekodi.kr/ekodichurch/' 'https://ekodi.kr/my/' 'https://ekodi.kr/community/' 'https://ekodi.kr/privacy' 'https://ekodi.kr/terms'; do
             code=$(curl -L -sS -o /dev/null -w '%{http_code}' --connect-timeout 5 --max-time 20 "$target" || true)
             case "$code" in 2*|3*) echo "link ok: $code $target" ;; *) echo "link failed: $code $target"; exit 1 ;; esac
           done
