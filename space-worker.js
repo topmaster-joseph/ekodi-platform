@@ -7,10 +7,28 @@ import { renderRestaurantStorefrontPage, restaurantStorefrontCss } from './resta
 import { isOrganizationWorkspaceSlug, renderOrganizationPublicPage } from './organization-public-page.js';
 
 const EKODIMISSION_PREFIX='/ekodimission';
-const EKODIMISSION_PAGES=new Map([['/ekodimission','/ekodimission.page'],['/ekodimission/vision','/ekodimission-vision.page'],['/ekodimission/activities','/ekodimission-activities.page'],['/ekodimission/activities/2026-chuseok-open-table','/ekodimission-activity.page'],['/ekodimission/prayer','/ekodimission-prayer.page'],['/ekodimission/participate','/ekodimission-participate.page'],['/ekodimission/partners','/ekodimission-partners.page'],['/ekodimission/stories','/ekodimission-stories.page'],['/ekodimission/give','/ekodimission-give.page'],['/ekodimission/transparency','/ekodimission-transparency.page'],['/ekodimission/contact','/ekodimission-contact.page']]);
-const EKODIMISSION_ASSETS=new Map([['/ekodimission/assets/site.css','/ekodimission.css'],['/ekodimission/assets/site.js','/ekodimission.js']]);
+const MISSION_EVENT_KEY='260925-chuseok-open-table';
+const MISSION_EVENT_PATH=`/ekodimission/activities/${MISSION_EVENT_KEY}`;
+const MISSION_EVENT_LEGACY_PATH='/ekodimission/activities/2026-chuseok-open-table';
+const MISSION_EVENT_APPLICATION_API=`/ekodimission/api/activities/${MISSION_EVENT_KEY}/applications`;
+const EKODIMISSION_PAGES=new Map([['/ekodimission','/ekodimission.page'],['/ekodimission/vision','/ekodimission-vision.page'],['/ekodimission/activities','/ekodimission-activities.page'],[MISSION_EVENT_PATH,'/ekodimission-activity.page'],['/ekodimission/prayer','/ekodimission-prayer.page'],['/ekodimission/participate','/ekodimission-participate.page'],['/ekodimission/partners','/ekodimission-partners.page'],['/ekodimission/stories','/ekodimission-stories.page'],['/ekodimission/give','/ekodimission-give.page'],['/ekodimission/transparency','/ekodimission-transparency.page'],['/ekodimission/contact','/ekodimission-contact.page']]);
+const EKODIMISSION_ASSETS=new Map([['/ekodimission/assets/site.css','/ekodimission.css'],['/ekodimission/assets/site.js','/ekodimission.js'],['/ekodimission/assets/open-table-meal-260925.jpg','/open-table-meal-260925.jpg']]);
 function normalizedMissionPath(pathname){const clean=String(pathname||'').replace(/\/+$/,'');return clean||'/'}
-async function routeEkodiMission(request,env){const pathname=normalizedMissionPath(new URL(request.url).pathname);if(pathname==='/ekodimission/live'){const tenant=realtimeTenant('ekodimission');if(!tenant)return withHeaders(env,new Response('Not Found',{status:404}),'ekodimission-not-found');const live=tenantLivePage(tenant);const routed=withHeaders(env,live,'ekodimission-preview');routed.headers.set('x-ekodi-independent-site','true');routed.headers.set('x-ekodi-workspace','ekodimission');return routed}const assetPath=EKODIMISSION_PAGES.get(pathname)||EKODIMISSION_ASSETS.get(pathname);if(!assetPath)return withHeaders(env,new Response('Not Found',{status:404,headers:{'content-type':'text/plain; charset=utf-8'}}),'ekodimission-not-found');const target=new URL(request.url);target.pathname=assetPath;target.search='';const asset=await env.ASSETS.fetch(new Request(target.toString(),request));const isPage=EKODIMISSION_PAGES.has(pathname);let served=asset;if(isPage){const headers=new Headers(asset.headers);headers.set('content-type','text/html; charset=utf-8');headers.delete('content-length');served=new Response(asset.body,{status:asset.status,statusText:asset.statusText,headers})}const routed=withHeaders(env,served,EKODIMISSION_ASSETS.has(pathname)?'ekodimission-asset':'ekodimission-preview');routed.headers.set('x-ekodi-independent-site','true');routed.headers.set('x-ekodi-workspace','ekodimission');return routed;}
+function brandSiteResponse(response){response.headers.set('x-ekodi-independent-site','true');response.headers.set('x-ekodi-site-class','brand-site');response.headers.set('x-ekodi-workspace','ekodimission');return response;}
+async function routeEkodiMission(request,env){
+  const url=new URL(request.url);const pathname=normalizedMissionPath(url.pathname);
+  if(pathname===MISSION_EVENT_LEGACY_PATH){const target=new URL(MISSION_EVENT_PATH+url.search,'https://ekodi.kr');return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-ekodi-route':'ekodimission-event-canonical'}});}
+  if(pathname==='/ekodimission/live'){
+    const tenant=realtimeTenant('ekodimission');if(!tenant)return withHeaders(env,new Response('Not Found',{status:404}),'ekodimission-not-found');
+    return brandSiteResponse(withHeaders(env,tenantLivePage(tenant),'ekodimission-preview'));
+  }
+  const assetPath=EKODIMISSION_PAGES.get(pathname)||EKODIMISSION_ASSETS.get(pathname);
+  if(!assetPath)return brandSiteResponse(withHeaders(env,new Response('Not Found',{status:404,headers:{'content-type':'text/plain; charset=utf-8'}}),'ekodimission-not-found'));
+  const target=new URL(request.url);target.pathname=assetPath;target.search='';const asset=await env.ASSETS.fetch(new Request(target.toString(),request));
+  const isPage=EKODIMISSION_PAGES.has(pathname);let served=asset;
+  if(isPage){const headers=new Headers(asset.headers);headers.set('content-type','text/html; charset=utf-8');headers.delete('content-length');served=new Response(asset.body,{status:asset.status,statusText:asset.statusText,headers});}
+  return brandSiteResponse(withHeaders(env,served,EKODIMISSION_ASSETS.has(pathname)?'ekodimission-asset':'ekodimission-preview'));
+}
 
 const DEFAULT_PAGE_PROFILE=Object.freeze({
   documentTitle:'운영공간 · EKODI',name:'내 운영공간',kicker:'OPERATING SPACE',
@@ -63,6 +81,37 @@ function withHeaders(env,response,route='asset'){
   return new Response(response.body,{status:response.status,statusText:response.statusText,headers});
 }
 function json(env,data,status=200){return withHeaders(env,new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store'}}),'api')}
+function missionApplicationError(message=''){
+  const text=String(message||'');
+  if(text.includes('APPLICATION_CLOSED'))return ['application_closed','신청이 마감되었습니다.',409];
+  if(text.includes('PRIVACY_CONSENT_REQUIRED'))return ['privacy_consent_required','개인정보 수집·이용 동의가 필요합니다.',400];
+  if(text.includes('INVALID_NAME'))return ['invalid_name','이름을 확인해 주세요.',400];
+  if(text.includes('INVALID_PHONE'))return ['invalid_phone','연락처를 확인해 주세요.',400];
+  if(text.includes('INVALID_EMAIL'))return ['invalid_email','이메일 주소를 확인해 주세요.',400];
+  if(text.includes('INVALID_PARTY_SIZE'))return ['invalid_party_size','참여 인원을 확인해 주세요.',400];
+  return ['application_unavailable','신청을 저장하지 못했습니다. 잠시 후 다시 시도해 주세요.',503];
+}
+async function submitMissionEventApplication(request,env){
+  if(request.method==='OPTIONS')return withHeaders(env,new Response(null,{status:204,headers:{allow:'POST, OPTIONS','cache-control':'no-store'}}),'ekodimission-application-api');
+  if(request.method!=='POST')return json(env,{ok:false,error:'method_not_allowed'},405);
+  const url=new URL(request.url);const origin=String(request.headers.get('origin')||'');
+  if(url.hostname==='ekodi.kr'&&origin&&origin!=='https://ekodi.kr')return json(env,{ok:false,error:'origin_not_allowed'},403);
+  const length=Number(request.headers.get('content-length')||0);if(length>16384)return json(env,{ok:false,error:'payload_too_large'},413);
+  if(env.DATA_ENABLED!=='true'||!env.SUPABASE_URL||!env.SUPABASE_PUBLISHABLE_KEY)return json(env,{ok:false,error:'application_storage_unavailable'},503);
+  let body;try{body=await request.json();}catch{return json(env,{ok:false,error:'invalid_json'},400)}
+  const name=String(body?.name||'').trim();const phone=String(body?.phone||'').trim();const email=String(body?.email||'').trim();const partySize=Number(body?.partySize||1);
+  if(!name||name.length>80)return json(env,{ok:false,error:'invalid_name',message:'이름을 확인해 주세요.'},400);
+  if(phone.replace(/[^0-9+]/g,'').length<8||phone.length>40)return json(env,{ok:false,error:'invalid_phone',message:'연락처를 확인해 주세요.'},400);
+  if(!Number.isInteger(partySize)||partySize<1||partySize>20)return json(env,{ok:false,error:'invalid_party_size',message:'참여 인원을 확인해 주세요.'},400);
+  if(body?.privacyConsent!==true)return json(env,{ok:false,error:'privacy_consent_required',message:'개인정보 수집·이용 동의가 필요합니다.'},400);
+  const rpcBody={p_event_key:MISSION_EVENT_KEY,p_name:name,p_phone:phone,p_email:email,p_party_size:partySize,p_language:String(body?.language||'ko').slice(0,24),p_dietary:String(body?.dietary||'').slice(0,500),p_note:String(body?.note||'').slice(0,2000),p_photo_consent:body?.photoConsent===true,p_privacy_consent:true,p_website:String(body?.website||'').slice(0,200)};
+  try{
+    const upstream=await fetch(`${env.SUPABASE_URL}/rest/v1/rpc/mission_submit_event_application`,{method:'POST',headers:{apikey:env.SUPABASE_PUBLISHABLE_KEY,'content-type':'application/json','cache-control':'no-store'},body:JSON.stringify(rpcBody)});
+    const data=await upstream.json().catch(()=>null);
+    if(!upstream.ok){const [error,message,status]=missionApplicationError(data?.message||data?.details||'');return json(env,{ok:false,error,message},status);}
+    return json(env,{ok:true,eventKey:MISSION_EVENT_KEY,applicationId:data?.application_id||null,message:'신청이 접수되었습니다.'},200);
+  }catch{return json(env,{ok:false,error:'application_unavailable',message:'신청을 저장하지 못했습니다. 잠시 후 다시 시도해 주세요.'},503)}
+}
 async function publicSiteChrome(slug){
   try{const r=await fetch(`https://workspace-api.ekodi.kr/v1/site-chrome/public?subject_key=${encodeURIComponent(slug)}`,{headers:{accept:'application/json'},signal:AbortSignal.timeout(5000)});if(!r.ok)return null;const data=await r.json().catch(()=>null);return data&&typeof data==='object'?data:null}catch{return null}
 }
@@ -116,6 +165,7 @@ export default{
       const target=new URL(url.pathname+url.search,'https://ekodi.kr');
       return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-ekodi-legacy-alias':'space.ekodi.kr'}});
     };
+    if(normalizedMissionPath(url.pathname)===MISSION_EVENT_APPLICATION_API)return submitMissionEventApplication(request,env);
     if(['GET','HEAD'].includes(request.method)&&(normalizedMissionPath(url.pathname)===EKODIMISSION_PREFIX||normalizedMissionPath(url.pathname).startsWith(EKODIMISSION_PREFIX+'/')))return routeEkodiMission(request,env);
     if(url.pathname==='/health')return json(env,{ok:true,service:'ekodi-space',product:'operating-space',identity:'ekodi-id',workspaceIdentity:'workspace-id',routeModel:['root-slug','workspace-service'],memberNamespaceRequired:false,dataEnabled:runtimeConfig(env).dataEnabled,dataMode:runtimeConfig(env).dataMode});
     if(url.pathname==='/config.js')return withHeaders(env,new Response(`window.EKODI_SPACE_CONFIG=${JSON.stringify(runtimeConfig(env))};`,{headers:{'content-type':'application/javascript; charset=utf-8','cache-control':'no-store'}}),'config');
