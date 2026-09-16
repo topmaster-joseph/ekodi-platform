@@ -27,7 +27,7 @@ jobs:
         with:
           node-version: '24'
       - name: EKODI AI Orchestration Gate
-        run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --ci
+        run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
       - name: Read non-secret production growth contracts
         shell: bash
         run: |
