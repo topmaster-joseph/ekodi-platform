@@ -7,6 +7,7 @@ import { renderRestaurantStorefrontPage, restaurantStorefrontCss } from './resta
 import { isOrganizationWorkspaceSlug, renderOrganizationPublicPage } from './organization-public-page.js';
 
 const EKODIMISSION_PREFIX='/ekodimission';
+const EKODIMISSION_PUBLIC_ROUTE='ekodimission-public';
 const MISSION_EVENT_KEY='260925-chuseok-open-table';
 const MISSION_EVENT_PATH=`/ekodimission/activities/${MISSION_EVENT_KEY}`;
 const MISSION_EVENT_LEGACY_PATH='/ekodimission/activities/2026-chuseok-open-table';
@@ -14,20 +15,21 @@ const MISSION_EVENT_APPLICATION_API=`/ekodimission/api/activities/${MISSION_EVEN
 const EKODIMISSION_PAGES=new Map([['/ekodimission','/ekodimission.page'],['/ekodimission/vision','/ekodimission-vision.page'],['/ekodimission/activities','/ekodimission-activities.page'],[MISSION_EVENT_PATH,'/ekodimission-activity.page'],['/ekodimission/prayer','/ekodimission-prayer.page'],['/ekodimission/participate','/ekodimission-participate.page'],['/ekodimission/partners','/ekodimission-partners.page'],['/ekodimission/stories','/ekodimission-stories.page'],['/ekodimission/give','/ekodimission-give.page'],['/ekodimission/transparency','/ekodimission-transparency.page'],['/ekodimission/contact','/ekodimission-contact.page']]);
 const EKODIMISSION_ASSETS=new Map([['/ekodimission/assets/site.css','/ekodimission.css'],['/ekodimission/assets/site.js','/ekodimission.js'],['/ekodimission/assets/open-table-meal-260925.jpg','/open-table-meal-260925.jpg']]);
 function normalizedMissionPath(pathname){const clean=String(pathname||'').replace(/\/+$/,'');return clean||'/'}
-function brandSiteResponse(response){response.headers.set('x-ekodi-independent-site','true');response.headers.set('x-ekodi-site-class','brand-site');response.headers.set('x-ekodi-workspace','ekodimission');return response;}
+function publishMissionHtml(html){return String(html||'').replace(/<meta name="robots" content="noindex,nofollow,noarchive">/gi,'<meta name="robots" content="index,follow">').replace(/<div class="review-banner">[\s\S]*?<\/div>/i,'')}
+function brandSiteResponse(response){response.headers.set('x-ekodi-independent-site','true');response.headers.set('x-ekodi-site-class','brand-site');response.headers.set('x-ekodi-workspace','ekodimission');response.headers.set('x-ekodi-publication-status','published');return response;}
 async function routeEkodiMission(request,env){
   const url=new URL(request.url);const pathname=normalizedMissionPath(url.pathname);
-  if(pathname===MISSION_EVENT_LEGACY_PATH){const target=new URL(MISSION_EVENT_PATH+url.search,'https://ekodi.kr');return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-ekodi-route':'ekodimission-event-canonical'}});}
+  if(pathname===MISSION_EVENT_LEGACY_PATH){const target=new URL(MISSION_EVENT_PATH+url.search,'https://ekodi.kr');return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-ekodi-route':'ekodimission-event-canonical','x-ekodi-publication-status':'published'}});}
   if(pathname==='/ekodimission/live'){
     const tenant=realtimeTenant('ekodimission');if(!tenant)return withHeaders(env,new Response('Not Found',{status:404}),'ekodimission-not-found');
-    return brandSiteResponse(withHeaders(env,tenantLivePage(tenant),'ekodimission-preview'));
+    return brandSiteResponse(withHeaders(env,tenantLivePage(tenant),EKODIMISSION_PUBLIC_ROUTE));
   }
   const assetPath=EKODIMISSION_PAGES.get(pathname)||EKODIMISSION_ASSETS.get(pathname);
   if(!assetPath)return brandSiteResponse(withHeaders(env,new Response('Not Found',{status:404,headers:{'content-type':'text/plain; charset=utf-8'}}),'ekodimission-not-found'));
   const target=new URL(request.url);target.pathname=assetPath;target.search='';const asset=await env.ASSETS.fetch(new Request(target.toString(),request));
   const isPage=EKODIMISSION_PAGES.has(pathname);let served=asset;
-  if(isPage){const headers=new Headers(asset.headers);headers.set('content-type','text/html; charset=utf-8');headers.delete('content-length');served=new Response(asset.body,{status:asset.status,statusText:asset.statusText,headers});}
-  return brandSiteResponse(withHeaders(env,served,EKODIMISSION_ASSETS.has(pathname)?'ekodimission-asset':'ekodimission-preview'));
+  if(isPage){const headers=new Headers(asset.headers);headers.set('content-type','text/html; charset=utf-8');headers.delete('content-length');const html=publishMissionHtml(await asset.text());served=new Response(request.method==='HEAD'?null:html,{status:asset.status,statusText:asset.statusText,headers});}
+  return brandSiteResponse(withHeaders(env,served,EKODIMISSION_ASSETS.has(pathname)?'ekodimission-asset':EKODIMISSION_PUBLIC_ROUTE));
 }
 
 const DEFAULT_PAGE_PROFILE=Object.freeze({
@@ -76,7 +78,7 @@ function withHeaders(env,response,route='asset'){
   const contentType=headers.get('content-type')||'';
   if(contentType.includes('text/html')){
     headers.set('cache-control','no-store');
-    headers.set('x-robots-tag',['space-storefront','space-organization'].includes(route)?'index, follow':'noindex, nofollow, noarchive');
+    headers.set('x-robots-tag',['space-storefront','space-organization',EKODIMISSION_PUBLIC_ROUTE].includes(route)?'index, follow':'noindex, nofollow, noarchive');
   }else if(!headers.has('cache-control'))headers.set('cache-control','public, max-age=300');
   return new Response(response.body,{status:response.status,statusText:response.statusText,headers});
 }
