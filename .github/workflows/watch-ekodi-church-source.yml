@@ -18,7 +18,7 @@ concurrency:
   group: ekodi-church-source-watch
   cancel-in-progress: true
 
-# Release reconciliation marker: church-live-explicit-start-auth-20260916
+# Release reconciliation marker: church-live-auth-return-resume-20260917
 jobs:
   check:
     runs-on: ubuntu-latest
