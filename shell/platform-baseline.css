@@ -1,0 +1,14 @@
+/* EKODI Platform UI Baseline v1
+ * Mandatory for every user-facing surface, including independent tenant sites.
+ * Brand chrome may vary or be absent; these operating invariants may not.
+ */
+:where(html,body){max-width:100%;overflow-x:hidden}
+:where(body){word-break:keep-all;overflow-wrap:break-word;line-break:auto;hyphens:none}
+:where(h1,h2,h3,h4,h5,h6,p,li,dt,dd,figcaption,blockquote,label,button,[role="button"],a,strong,small,span){word-break:keep-all;overflow-wrap:break-word;hyphens:none}
+:where(button,[role="button"]){white-space:normal}
+:where(code,kbd,samp,.url,.domain,.email,[data-ekodi-break-anywhere]){word-break:normal;overflow-wrap:anywhere;hyphens:none}
+:where(pre){max-width:100%;overflow-x:auto;word-break:normal}
+:where(main,section,article,aside,header,footer,nav,div,li,td,th){min-width:0}
+:where(img,video,canvas,iframe,svg){max-width:100%;height:auto}
+.ekodi-nowrap{white-space:nowrap!important;word-break:normal!important}
+.ekodi-break-anywhere{word-break:normal!important;overflow-wrap:anywhere!important;hyphens:none!important}
