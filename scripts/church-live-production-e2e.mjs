@@ -74,7 +74,11 @@ try{
   observePage(host,'host');
   await host.goto(`${liveUrl}?mode=studio&title=${encodeURIComponent('EKODI Church Production E2E')}`,{waitUntil:'domcontentloaded',timeout:30000});
   try{
-    await host.waitForFunction(()=>document.querySelector('#programBadge')?.dataset?.phase==='ready',{timeout:30000});
+    await host.waitForFunction(()=>{
+      const button=document.querySelector('#goLiveButton');
+      const phase=document.querySelector('#programBadge')?.dataset?.phase;
+      return button&&!button.disabled&&(phase==='ready'||phase==='idle');
+    },{timeout:30000});
   }catch(error){
     report.hostStatus=await text(host,'#statusLog');
     report.hostUrl=host.url();
@@ -83,12 +87,12 @@ try{
   report.hostReady=true;
   report.hostStatus=await text(host,'#statusLog');
   report.hostUrl=host.url();
+  await host.locator('#goLiveButton').click();
+  await host.waitForFunction(()=>document.querySelector('#programBadge')?.dataset?.phase==='live',{timeout:30000});
   const shareLink=await host.locator('#shareLink').inputValue();
   const roomId=new URL(shareLink).searchParams.get('room');
   assert.ok(roomId,'room_id_missing');
   report.roomId=roomId;
-  await host.locator('#goLiveButton').click();
-  await host.waitForFunction(()=>document.querySelector('#programBadge')?.dataset?.phase==='live',{timeout:15000});
   const live=await publicLive();
   assert.equal(live.live,true);
   assert.equal(live.room?.id,roomId);
