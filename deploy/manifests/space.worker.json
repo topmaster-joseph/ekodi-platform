@@ -8,7 +8,11 @@
         "url": "https://space.ekodi.kr/",
         "statuses": [308],
         "redirect": "manual",
-        "headerExpect": ["location: https://ekodi.kr/my/","cache-control: no-store","x-ekodi-legacy-alias: space.ekodi.kr"]
+        "headerExpect": [
+          "location: https://ekodi.kr/my/",
+          "cache-control: no-store",
+          "x-ekodi-legacy-alias: space.ekodi.kr"
+        ]
       },
       {
         "url": "https://space.ekodi.kr/health",
