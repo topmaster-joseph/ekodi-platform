@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "canonicalHost": "ekodi.kr",
+  "publicAddressPolicy": "apex-path-only",
+  "subdomainPolicy": "forbidden",
+  "legacySubdomainRedirects": false,
+  "internalServiceRouting": "service-binding-or-private-worker",
+  "marketing": {
+    "productPublic": "https://ekodi.kr/marketing",
+    "platformAdmin": "https://ekodi.kr/admin/marketing",
+    "tenants": {
+      "ekodibiz": {
+        "user": "https://ekodi.kr/ekodibiz/marketing",
+        "admin": "https://ekodi.kr/ekodibiz/marketing/admin"
+      }
+    }
+  }
+}
