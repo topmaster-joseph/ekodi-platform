@@ -34,7 +34,7 @@ jobs:
           set -euo pipefail
           echo '=== publish policies ==='
           npx --yes wrangler@${WRANGLER_VERSION} d1 execute ekodi-auth --remote --config wrangler.marketing-growth.toml \
-            --command "SELECT subject_type,subject_key,mode,enabled,max_posts_per_day FROM marketing_publish_policies WHERE subject_key IN ('ekodi-biz','ekodibiz','ekodimall','ekoditrade') ORDER BY subject_key;" --json
+            --command "SELECT subject_type,subject_key,mode,max_daily_posts,allowed_providers_json FROM marketing_publish_policies WHERE subject_key IN ('ekodi-biz','ekodibiz','ekodimall','ekoditrade') ORDER BY subject_key;" --json
           echo '=== tenant domains ==='
           npx --yes wrangler@${WRANGLER_VERSION} d1 execute ekodi-auth --remote --config wrangler.marketing-growth.toml \
             --command "SELECT slug,domain,status FROM customer_tenants WHERE slug IN ('ekodi-biz','ekodibiz','ekodimall','ekoditrade') ORDER BY slug;" --json
