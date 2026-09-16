@@ -4,18 +4,10 @@ on:
   workflow_dispatch:
     inputs:
       agent:
-        description: 'Worker identity'
+        description: 'Worker identity (for example chatgpt, claude, codex, gemini, copilot, or a registered future agent)'
         required: true
-        type: choice
+        type: string
         default: chatgpt
-        options:
-          - chatgpt
-          - claude
-          - codex
-          - gemini
-          - copilot
-          - human
-          - generic
       task_id:
         description: 'Unique task id or short task name'
         required: true
@@ -67,13 +59,8 @@ jobs:
             base_ref="${DISPATCH_BASE_REF:-main}"
           else
             labels=$(jq -r '.issue.labels[].name' "$GITHUB_EVENT_PATH")
-            agent='generic'
-            for candidate in chatgpt claude codex gemini copilot human; do
-              if grep -Fxq "agent:${candidate}" <<<"$labels"; then
-                agent="$candidate"
-                break
-              fi
-            done
+            agent_label=$(sed -nE 's/^agent:([A-Za-z0-9][A-Za-z0-9._-]{0,63})$/\1/p' <<<"$labels" | head -n 1)
+            agent=$(slugify "${agent_label:-generic}")
             issue_number=$(jq -r '.issue.number' "$GITHUB_EVENT_PATH")
             issue_title=$(jq -r '.issue.title' "$GITHUB_EVENT_PATH")
             task=$(slugify "issue-${issue_number}-${issue_title}")
