@@ -80,15 +80,27 @@
         "url": "https://ekodi.kr/ekodimission/activities",
         "statuses": [200],
         "redirect": "manual",
-        "expect": ["MISSION ACTIVITIES"],
+        "expect": ["MISSION ACTIVITIES","260925-chuseok-open-table"],
         "headerExpect": ["x-ekodi-route: ekodimission-preview","x-ekodi-independent-site: true","x-robots-tag: noindex, nofollow, noarchive","cache-control: no-store"]
       },
       {
-        "url": "https://ekodi.kr/ekodimission/activities/2026-chuseok-open-table",
+        "url": "https://ekodi.kr/ekodimission/activities/260925-chuseok-open-table",
         "statuses": [200],
         "redirect": "manual",
-        "expect": ["2026 CHUSEOK OPEN TABLE"],
-        "headerExpect": ["x-ekodi-route: ekodimission-preview","x-ekodi-independent-site: true","x-robots-tag: noindex, nofollow, noarchive","cache-control: no-store"]
+        "expect": ["260925 · OPEN TABLE","JOIN THE TABLE","data-event-application"],
+        "headerExpect": ["x-ekodi-route: ekodimission-preview","x-ekodi-independent-site: true","x-ekodi-site-class: brand-site","x-robots-tag: noindex, nofollow, noarchive","cache-control: no-store"]
+      },
+      {
+        "url": "https://ekodi.kr/ekodimission/activities/2026-chuseok-open-table",
+        "statuses": [308],
+        "redirect": "manual",
+        "headerExpect": ["location: https://ekodi.kr/ekodimission/activities/260925-chuseok-open-table","x-ekodi-route: ekodimission-event-canonical","cache-control: no-store"]
+      },
+      {
+        "url": "https://ekodi.kr/ekodimission/assets/open-table-meal-260925.jpg",
+        "statuses": [200],
+        "redirect": "manual",
+        "headerExpect": ["x-ekodi-route: ekodimission-asset"]
       },
       {
         "url": "https://ekodi.kr/ekodimission/participate",
