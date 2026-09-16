@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "name": "EKODI Platform UI Baseline",
+  "policy": "Every EKODI user-facing site inherits platform operating invariants regardless of whether the site adopts shared EKODI brand chrome.",
+  "scope": ["public", "workspace", "independent-site"],
+  "layers": {
+    "baseline": {
+      "mandatory": true,
+      "includes": ["natural-language-word-integrity", "responsive-safety", "accessibility-basics"],
+      "asset": "https://ekodi.kr/shell/platform-baseline.css"
+    },
+    "brandShell": {
+      "mandatory": false,
+      "mayBeDisabledFor": ["independent-site"],
+      "includes": ["shared-header", "shared-footer", "global-navigation", "platform-character"]
+    }
+  },
+  "independenceRule": "Independent means brand/chrome independence only. It never exempts a site from platform baseline invariants."
+}
