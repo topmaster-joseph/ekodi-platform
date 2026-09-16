@@ -12,6 +12,13 @@ test('Church Live production E2E is safe around real broadcasts and proves remot
   assert.match(script,/status:'ended'/);
 });
 
+test('Church Live production E2E follows the explicit broadcast-start interaction',()=>{
+  assert.match(script,/goLiveButton/);
+  assert.match(script,/\.click\(\)/);
+  assert.match(script,/dataset\?\.phase==='live'/);
+  assert.match(script,/room_id_missing/);
+});
+
 test('Church Live E2E uses short-lived central admin auth and always revokes it',()=>{
   assert.match(workflow,/\+20 minutes/);
   assert.match(workflow,/https:\/\/ekodi\.kr\/api\/session/);
