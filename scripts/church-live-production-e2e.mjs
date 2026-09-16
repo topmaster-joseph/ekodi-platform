@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import { chromium } from 'playwright';
 
+// Verification marker: church-live-explicit-start-auth-20260916
 const token=process.env.E2E_ADMIN_TOKEN||'';
 const liveUrl=process.env.CHURCH_LIVE_URL||'https://ekodi.kr/ekodichurch/live/';
 const api='https://ekodi.kr/api/realtime';
