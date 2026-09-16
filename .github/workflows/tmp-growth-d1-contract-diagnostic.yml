@@ -8,7 +8,7 @@ on:
       - .github/workflows/tmp-growth-d1-contract-diagnostic.yml
 
 permissions:
-  contents: write
+  contents: read
 
 env:
   WRANGLER_VERSION: '4.119.0'
@@ -38,13 +38,3 @@ jobs:
           echo '=== tenant domains ==='
           npx --yes wrangler@${WRANGLER_VERSION} d1 execute ekodi-auth --remote --config wrangler.marketing-growth.toml \
             --command "SELECT slug,domain,status FROM customer_tenants WHERE slug IN ('ekodi-biz','ekodibiz','ekodimall','ekoditrade') ORDER BY slug;" --json
-      - name: Remove temporary workflow from diagnostic branch
-        shell: bash
-        run: |
-          set -euo pipefail
-          rm .github/workflows/tmp-growth-d1-contract-diagnostic.yml
-          git config user.name 'EKODI AI'
-          git config user.email 'actions@users.noreply.github.com'
-          git add .github/workflows/tmp-growth-d1-contract-diagnostic.yml
-          git commit -m 'chore: remove temporary growth D1 diagnostic'
-          git push origin HEAD:ai/chatgpt/diagnose-growth-d1-contract-20260916
