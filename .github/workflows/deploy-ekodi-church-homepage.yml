@@ -209,6 +209,15 @@ jobs:
               await page.goto(`https://ekodi.kr/ekodichurch/?lang=${encodeURIComponent(locale)}&release=${release}`,{waitUntil:'domcontentloaded',timeout:30000});
               await page.waitForFunction(expected=>document.documentElement.lang===expected&&window.__EKODI_CHURCH_LIFE_HUB_I18N__===true&&document.querySelector('[data-ekodi-life-hub]')&&document.querySelector('#life-reflection-form'),{timeout:25000},locale);
               if(extended.has(locale)) await page.waitForFunction(expected=>window.EKODIChurchExtendedI18n?.getLocale?.()===expected,{timeout:20000},locale);
+              if(locale!=='ko-KR'){
+                await page.waitForFunction(expected=>{
+                  if(document.documentElement.lang!==expected)return false;
+                  const clone=document.body.cloneNode(true);
+                  clone.querySelectorAll('[data-ekodi-language-control]').forEach(node=>node.remove());
+                  return !/[가-힣]/.test(clone.innerText);
+                },{timeout:20000,polling:'raf'},locale);
+                await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+              }
               const snapshot=await page.evaluate(()=>{
                 const clone=document.body.cloneNode(true);
                 clone.querySelectorAll('[data-ekodi-language-control]').forEach(node=>node.remove());
