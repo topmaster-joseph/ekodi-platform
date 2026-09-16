@@ -2,13 +2,14 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import { chromium } from 'playwright';
 
-// Verification marker: church-live-explicit-start-auth-20260916
+// Verification marker: church-live-auth-return-resume-20260917
 const token=process.env.E2E_ADMIN_TOKEN||'';
 const liveUrl=process.env.CHURCH_LIVE_URL||'https://ekodi.kr/ekodichurch/live/';
 const api='https://ekodi.kr/api/realtime';
 const artifactDir='artifacts/church-live-production-e2e';
 const report={
   passed:false,skipped:false,roomId:null,hostReady:false,viewerTracks:0,ended:false,
+  authResume:false,pendingCleared:false,
   hostStatus:null,hostUrl:null,viewerStatus:null,pageErrors:[],requestFailures:[],realtime:[]
 };
 if(!token)throw new Error('e2e_admin_token_missing');
@@ -70,26 +71,28 @@ let hostContext,viewerContext,host,viewer;
 try{
   hostContext=await browser.newContext();
   await hostContext.grantPermissions(['camera','microphone'],{origin:'https://ekodi.kr'});
-  await hostContext.addInitScript(value=>sessionStorage.setItem('ekodi-auth-token',value),token);
+  await hostContext.addInitScript(value=>{
+    sessionStorage.setItem('ekodi-auth-token',value);
+    sessionStorage.setItem('ekodi-live-pending-start','1');
+  },token);
   host=await hostContext.newPage();
-  observePage(host,'host');
-  await host.goto(`${liveUrl}?mode=studio&title=${encodeURIComponent('EKODI Church Production E2E')}`,{waitUntil:'domcontentloaded',timeout:30000});
+  observePage(host,'host-auth-return');
+  await host.goto(`${liveUrl}?mode=studio&title=${encodeURIComponent('EKODI Church Auth Resume Production E2E')}`,{waitUntil:'domcontentloaded',timeout:30000});
   try{
-    await host.waitForFunction(()=>{
-      const button=document.querySelector('#goLiveButton');
-      const phase=document.querySelector('#programBadge')?.dataset?.phase;
-      return button&&!button.disabled&&(phase==='ready'||phase==='idle');
-    },{timeout:30000});
+    await host.waitForFunction(()=>document.querySelector('#programBadge')?.dataset?.phase==='live',{timeout:45000});
   }catch(error){
     report.hostStatus=await text(host,'#statusLog');
     report.hostUrl=host.url();
-    throw new Error(`host_not_ready:${report.hostStatus||error.message}`);
+    throw new Error(`auth_resume_not_live:${report.hostStatus||error.message}`);
   }
   report.hostReady=true;
+  report.authResume=true;
   report.hostStatus=await text(host,'#statusLog');
   report.hostUrl=host.url();
-  await host.locator('#goLiveButton').click();
-  await host.waitForFunction(()=>document.querySelector('#programBadge')?.dataset?.phase==='live',{timeout:30000});
+  assert.equal(new URL(report.hostUrl).pathname,'/ekodichurch/live/','auth_return_left_live_studio');
+  report.pendingCleared=await host.evaluate(()=>sessionStorage.getItem('ekodi-live-pending-start')===null);
+  assert.equal(report.pendingCleared,true,'pending_start_not_cleared_after_live');
+
   const shareLink=await host.locator('#shareLink').inputValue();
   const roomId=new URL(shareLink).searchParams.get('room');
   assert.ok(roomId,'room_id_missing');
@@ -137,4 +140,4 @@ try{
 }
 
 assert.equal(report.passed,true);
-console.log(`Church Live production E2E passed: room=${report.roomId}, viewerTracks=${report.viewerTracks}`);
+console.log(`Church Live auth-resume production E2E passed: room=${report.roomId}, viewerTracks=${report.viewerTracks}, pendingCleared=${report.pendingCleared}`);
