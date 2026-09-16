@@ -11,3 +11,5 @@ Allowed event types: `production_verified`, `incident`, `decision_required`, `re
 Each event is stored as a separate JSON file under `ops/events/YYYY/MM/` so ChatGPT, Claude, GitHub-connected agents, and future subscribers can consume the same provider-neutral Source of Truth. Event files MUST NOT contain secrets, tokens, credentials, cookies, raw authorization headers, or personal data.
 
 Required fields: schema, event_id, event_type, occurred_at, service, summary, environment, source, verification, severity, requires_human. `event_id` is the idempotency key and MUST be unique/stable for the underlying event.
+
+The GitHub transport is a subscriber/wake-up bridge only; EKODI Orchestrator remains the completion authority.
