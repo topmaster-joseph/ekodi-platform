@@ -10,6 +10,7 @@ export function tenantLivePage(tenant){
   const headers={'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'};
   if(tenant.robots)headers['x-robots-tag']=String(tenant.robots);
   if(tenant.route)headers['x-ekodi-route']=String(tenant.route);
+  if(tenant.publicationStatus)headers['x-ekodi-publication-status']=String(tenant.publicationStatus);
   if(tenant.independentSite)headers['x-ekodi-independent-site']='true';
   if(tenant.workspace)headers['x-ekodi-workspace']=String(tenant.workspace);
   return new Response(body,{status:200,headers});
