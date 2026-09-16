@@ -6,7 +6,7 @@ import {AI_ROUTER_SCORE_POLICY,providerCostClass,rankProviders,scoreProvider} fr
 import {AI_COST_POLICY,evaluateAiCostEligibility} from './ai-cost-policy.js';
 
 export const AI_CONTROL_POLICY = Object.freeze({
-  version: '0.6.0',
+  version: '0.7.0',
   defaultMode: 'parallel',
   modes: Object.freeze(['parallel']),
   providerOrder: Object.freeze([
@@ -37,6 +37,9 @@ export const AI_CONTROL_POLICY = Object.freeze({
 const clean = value => String(value ?? '').trim();
 const unique = values => [...new Set(values.filter(Boolean))];
 const clip = (value, max=4000) => clean(value).slice(0,max);
+const PROVIDER_TOKEN=/^[a-z0-9][a-z0-9._-]{0,79}$/;
+function providerToken(value){const id=clean(value).toLowerCase();return PROVIDER_TOKEN.test(id)?id:''}
+function providerId(value){const id=clean(value).toLowerCase();if(['gemini-free','openai-api','anthropic-api'].includes(id))return id;const match=id.match(/^(node|worker):(.+)$/);if(!match)return'';const token=providerToken(match[2]);return token?`${match[1]}:${token}`:''}
 
 const ORIGIN_ALIASES = Object.freeze({
   chatgpt:'chatgpt',gpt:'chatgpt',openai:'chatgpt','openai-api':'chatgpt','worker:chatgpt':'chatgpt',codex:'codex','node:codex':'codex',
@@ -74,12 +77,20 @@ export function taskOrigin(task = {}) {
   return normalizeOrigin({origin:raw});
 }
 
+function providerOriginIdentity(providerId = '') {
+  const id=clean(providerId).toLowerCase();
+  if(ORIGIN_ALIASES[id])return ORIGIN_ALIASES[id];
+  if(id.startsWith('worker:')||id.startsWith('node:'))return id.slice(id.indexOf(':')+1);
+  return id;
+}
+
 export function providerFamily(providerId = '') {
   const id=clean(providerId).toLowerCase();
   if(['openai-api','worker:chatgpt','node:codex'].includes(id))return'openai';
   if(['anthropic-api','worker:claude','node:claude-code'].includes(id))return'anthropic';
   if(['gemini-free','worker:gemini','node:gemini-cli'].includes(id))return'google';
-  return id.startsWith('worker:')?'worker':id.startsWith('node:')?'node':id||'unknown';
+  if(id.startsWith('worker:')||id.startsWith('node:'))return providerOriginIdentity(id)||'unknown';
+  return id||'unknown';
 }
 
 function originFamily(origin = {}) {
@@ -96,7 +107,7 @@ export function normalizeTaskInput(input = {}) {
   const requestedMode = clean(input.mode).toLowerCase();
   const mode = AI_CONTROL_POLICY.defaultMode;
   const title = clean(input.title).slice(0, 160) || prompt.replace(/\s+/g, ' ').slice(0, 80);
-  const requestedProviders = unique(Array.isArray(input.providers) ? input.providers.map(v=>clean(v).toLowerCase()) : []);
+  const requestedProviders = unique(Array.isArray(input.providers) ? input.providers.map(providerId).filter(Boolean) : []);
   const needsCodeBranch = input.needsCodeBranch === true || /\b(code|coding|git|github|branch|deploy|worker|repository|repo)\b/i.test(prompt) || /코드|코딩|깃|브랜치|배포|저장소/.test(prompt);
   const origin=normalizeOrigin(input);
   const g = input.governance && typeof input.governance === 'object' ? input.governance : {};
@@ -131,10 +142,10 @@ function providerAllowedForTask(providerId, task = {}, capabilities = {}) {
 export function availableProviderIds(capabilities = {}, task = null) {
   const ids = [];
   if (capabilities.geminiFree) ids.push('gemini-free');
-  for (const id of capabilities.nodeProviders || []) ids.push(`node:${clean(id).toLowerCase()}`);
+  for (const raw of capabilities.nodeProviders || []) {const id=providerToken(raw);if(id)ids.push(`node:${id}`);}
   if (capabilities.openaiApi) ids.push('openai-api');
   if (capabilities.anthropicApi) ids.push('anthropic-api');
-  for (const id of capabilities.workerProviders || []) ids.push(`worker:${clean(id).toLowerCase()}`);
+  for (const raw of capabilities.workerProviders || []) {const id=providerToken(raw);if(id)ids.push(`worker:${id}`);}
   const inventory = unique(ids);
   return task ? inventory.filter(id => providerAllowedForTask(id, task, capabilities)) : inventory;
 }
@@ -144,7 +155,10 @@ export function resolveOriginResponseProvider(task, capabilities = {}) {
   if(!available.length)return'';
   const origin=taskOrigin(task);
   const preferences=ORIGIN_PROVIDER_PREFERENCES[origin.provider]||[];
-  const exact=preferences.find(id=>available.includes(id));
+  const preferred=preferences.find(id=>available.includes(id));
+  if(preferred)return preferred;
+  const requestedIdentity=ORIGIN_ALIASES[origin.requestedProvider]||origin.requestedProvider;
+  const exact=available.find(id=>providerOriginIdentity(id)===origin.provider||providerOriginIdentity(id)===requestedIdentity);
   if(exact)return exact;
   const family=originFamily(origin);
   const sameFamily=available.find(id=>providerFamily(id)===family);
@@ -155,6 +169,9 @@ export function resolveOriginResponseProvider(task, capabilities = {}) {
 export function isOriginPreserved(task, providerId) {
   const origin=taskOrigin(task);
   if(origin.provider==='ekodi')return true;
+  const requestedIdentity=ORIGIN_ALIASES[origin.requestedProvider]||origin.requestedProvider;
+  const identity=providerOriginIdentity(providerId);
+  if(identity===origin.provider||identity===requestedIdentity)return true;
   return providerFamily(providerId)===originFamily(origin);
 }
 
@@ -170,7 +187,8 @@ function rankedForRole(providerIds,task,capabilities,role,preserveOrder=false){
 export function buildExecutionPlan(task, capabilities = {}) {
   const available=availableProviderIds(capabilities, task);
   const requested=task.requestedProviders?.length?task.requestedProviders.filter(id=>available.includes(id)):[];
-  const base=requested.length?requested:AI_CONTROL_POLICY.providerOrder.filter(id=>available.includes(id));
+  const defaults=unique([...AI_CONTROL_POLICY.providerOrder.filter(id=>available.includes(id)),...available]);
+  const base=requested.length?requested:defaults;
   const originProvider=resolveOriginResponseProvider(task,capabilities);
   const collaborators=unique(base.filter(id=>id!==originProvider));
   const preserveRequestedOrder=requested.length>0;

@@ -1,10 +1,48 @@
 {
-  "version": 1,
+  "version": 2,
   "canonicalHost": "ekodi.kr",
   "publicAddressPolicy": "apex-path-only",
   "subdomainPolicy": "forbidden",
   "legacySubdomainRedirects": false,
   "internalServiceRouting": "service-binding-or-private-worker",
+  "siteBoundaryPolicy": {
+    "registrationRequired": true,
+    "independentSitesOwnTopLevelPath": true,
+    "nestedIndependentSites": false,
+    "appliesTo": [
+      "business-unit",
+      "tenant",
+      "user-site",
+      "organization",
+      "project"
+    ],
+    "siteRootPattern": "https://ekodi.kr/{site}",
+    "siteAdminPattern": "https://ekodi.kr/{site}/admin",
+    "serviceUserPattern": "https://ekodi.kr/{site}/{service}",
+    "serviceAdminPattern": "https://ekodi.kr/{site}/{service}/admin",
+    "platformAdminRoot": "https://ekodi.kr/admin",
+    "platformServiceAdminPattern": "https://ekodi.kr/admin/{service}",
+    "reservedTopLevelPaths": [
+      "admin",
+      "marketing"
+    ],
+    "requiredIndependentSites": [
+      "ekodibiz",
+      "ekodimall"
+    ]
+  },
+  "sites": {
+    "ekodibiz": {
+      "kind": "business-unit",
+      "root": "https://ekodi.kr/ekodibiz",
+      "admin": "https://ekodi.kr/ekodibiz/admin"
+    },
+    "ekodimall": {
+      "kind": "business-unit",
+      "root": "https://ekodi.kr/ekodimall",
+      "admin": "https://ekodi.kr/ekodimall/admin"
+    }
+  },
   "marketing": {
     "productPublic": "https://ekodi.kr/marketing",
     "platformAdmin": "https://ekodi.kr/admin/marketing",
