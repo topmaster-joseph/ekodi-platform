@@ -2,6 +2,7 @@ import { WorkerEntrypoint } from 'cloudflare:workers';
 import { runMallAutonomousProfitLoop } from './mall-autonomous-profit-loop.js';
 import { d1SchemaReady } from './d1-schema-readiness.js';
 import { mallGrowthDashboardSnapshot } from './mall-growth-dashboard.js';
+import { channelCatalogSnapshot } from './channel-publishing-catalog.js';
 const SUPABASE_URL = 'https://renzehysxirjilvdxacv.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
 const WRITE_ROLES = new Set(['tenant_admin','admin','workspace_admin','store_owner','hq_manager','client_admin','client_editor','marketing_manager','marketer','manager','owner']);
@@ -154,6 +155,10 @@ async function schemaReady(env) { return d1SchemaReady(env?.DB,['marketing_oauth
 function metaConfigured(env) { return Boolean(env.META_APP_ID && env.META_APP_SECRET); }
 function threadsConfigured(env) { return Boolean((env.THREADS_APP_ID || env.META_APP_ID) && (env.THREADS_APP_SECRET || env.META_APP_SECRET)); }
 function youtubeConfigured(env) { return Boolean(env.GOOGLE_CLIENT_ID && providerSecret(env,YOUTUBE_PROVIDER) && env.GOOGLE_OAUTH_BROKER); }
+function naverConfigured(env) { return Boolean(env.NAVER_CLIENT_ID && env.NAVER_CLIENT_SECRET); }
+function tiktokConfigured(env) { return Boolean(env.TIKTOK_CLIENT_KEY && env.TIKTOK_CLIENT_SECRET); }
+function kakaoConfigured(env) { return Boolean(env.KAKAO_REST_API_KEY); }
+function platformReadiness(env) { return {metaConfigured:metaConfigured(env),threadsConfigured:threadsConfigured(env),youtubeConfigured:youtubeConfigured(env),naverConfigured:naverConfigured(env),tiktokConfigured:tiktokConfigured(env),kakaoConfigured:kakaoConfigured(env)}; }
 function youtubeTargetAccount(_subject,requested=''){const hint=clean(requested,180).trim().toLowerCase();return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(hint)?hint:''}
 function registryProviderMatches(row,provider){
   if(!row)return false;
@@ -438,7 +443,8 @@ async function listConnections(request, env, subject) {
     FROM marketing_oauth_connections WHERE subject_type=? AND subject_key=? ORDER BY provider,display_name`).bind(subject.type,subject.key).all();
   const settings=await channelSettingsMap(env,subject);
   const connections = (result.results || []).map(row => ({...row,scopes:safeParse(row.scopes_json,[]),metadata:safeParse(row.metadata_json,{}),settings:settings.get(row.provider+':'+row.external_id)||null}));
-  return json(request,env,{connections,platform:{metaConfigured:metaConfigured(env),threadsConfigured:threadsConfigured(env),youtubeConfigured:youtubeConfigured(env),credentialMode:'central_oauth_vault'}});
+  const platform=platformReadiness(env);
+  return json(request,env,{connections,platform:{...platform,credentialMode:'central_oauth_vault'},catalog:channelCatalogSnapshot(platform)});
 }
 async function disconnectConnection(request, env, identity, subject, connectionId) {
   const id = Number(connectionId);
@@ -729,7 +735,8 @@ export default {
     if (!allowed) return json(request,env,{error:'ORIGIN_FORBIDDEN'},403);
     if (url.pathname === '/health' && request.method === 'GET') {
       const ready = await schemaReady(env);
-      return json(request,env,{service:'ekodi-marketing-growth',ok:ready,schemaReady:ready,oauthBroker:true,encryptedVault:true,organicPublishing:true,paidPromotionDrafts:true,paidActivation:false,platform:{metaConfigured:metaConfigured(env),threadsConfigured:threadsConfigured(env),youtubeConfigured:youtubeConfigured(env)},graphVersion:clean(env.META_GRAPH_VERSION || 'v25.0',16)},ready ? 200 : 503);
+      const platform=platformReadiness(env);
+      return json(request,env,{service:'ekodi-marketing-growth',ok:ready,schemaReady:ready,oauthBroker:true,encryptedVault:true,organicPublishing:true,paidPromotionDrafts:true,paidActivation:false,platform,catalog:channelCatalogSnapshot(platform),graphVersion:clean(env.META_GRAPH_VERSION || 'v25.0',16)},ready ? 200 : 503);
     }
     if (url.pathname === '/oauth/meta/callback' && request.method === 'GET') return metaCallback(request,env);
     if (url.pathname === '/oauth/threads/callback' && request.method === 'GET') return threadsCallback(request,env);
