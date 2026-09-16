@@ -8,7 +8,7 @@ import { spawnSync } from 'node:child_process';
 const writer = path.resolve('scripts/write-operation-event.mjs');
 function eventFile(event) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ekodi-event-'));
-  const file = path.join(dir, 'event.json');
+  const file = path.resolve(dir, 'event.json');
   fs.writeFileSync(file, JSON.stringify(event));
   return {dir,file};
 }
