@@ -1,0 +1,27 @@
+name: EKODI Zero-Subdomain Guard
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  zero-subdomain:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Validate apex-path-only domain policy
+        env:
+          ZERO_SUBDOMAIN_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          node --check scripts/zero-subdomain-guard.mjs
+          node scripts/zero-subdomain-guard.mjs
