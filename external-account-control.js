@@ -7,6 +7,7 @@ const PROVIDERS=Object.freeze([
   {id:'meta',label:'Meta',services:['facebook','instagram','threads','ads'],connection:'oauth',adminTargets:{facebook:'#social',instagram:'#social',threads:'#social',ads:'#marketing-ai'}},
   {id:'kakao',label:'Kakao',services:['channel','business','message'],connection:'delegated_or_official_handoff',adminTargets:{}},
   {id:'naver',label:'Naver',services:['business','blog','search-ad'],connection:'delegated_or_official_handoff',adminTargets:{}},
+  {id:'tiktok',label:'TikTok',services:['content','creator'],connection:'oauth',adminTargets:{content:'#social'}},
   {id:'microsoft',label:'Microsoft',services:['microsoft365','outlook','onedrive'],connection:'oauth_or_delegated',adminTargets:{}},
   {id:'other',label:'Other',services:['general'],connection:'delegated_or_manual',adminTargets:{}}
 ]);
