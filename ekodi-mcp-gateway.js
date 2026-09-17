@@ -3,6 +3,7 @@ import { membershipPortfolioForIdentity } from './universal-membership.js';
 import { buildPersonalAiBridgeSnapshot, resolveCanonicalEkodiIdentity } from './personal-ai-bridge.js';
 import { authorizeCapabilityInvocation, SOVEREIGN_CAPABILITY_FABRIC } from './sovereign-capability-fabric.js';
 import { buildCoreAiGateway } from './core-ai-gateway.js';
+import { EKODI_MCP_EXTENSION_TOOLS, callAuthorizedEkodiMcpExtensionTool, callPublicEkodiMcpExtensionTool } from './ekodi-mcp-external-tools.js';
 
 const SUPABASE_URL='https://renzehysxirjilvdxacv.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
@@ -14,6 +15,10 @@ export const EKODI_MCP_METADATA_URL='https://ekodi.kr/.well-known/oauth-protecte
 const PROTOCOL_VERSION='2026-07-28';
 const OAUTH_SCHEME=Object.freeze({type:'oauth2',scopes:['openid','email','profile']});
 const TOOL_CAPABILITIES=Object.freeze({
+  account_status:'identity.self.read',
+  submit_task:'ai.command.delegate',
+  get_task_status:'ai.command.delegate',
+  cancel_task:'ai.command.delegate',
   ekodi_my_identity:'identity.self.read',
   ekodi_my_ai_status:'ai.personal.status.read',
   ekodi_my_services:'services.membership.read',
@@ -74,6 +79,7 @@ export async function validateMcpBearer(request,{fetchImpl=fetch}={}){
   return {ok:true,token,user,claims,resourceAudience,legacyAudience:resourceAudience!==EKODI_MCP_RESOURCE};
 }
 export const EKODI_MCP_TOOLS=Object.freeze([
+  ...EKODI_MCP_EXTENSION_TOOLS,
   Object.freeze({
     name:'ekodi_bridge_status',
     title:'EKODI Personal AI Bridge 상태',
@@ -160,10 +166,6 @@ async function requireMcpIdentity(request,dependencies={}){
   return {auth,identity};
 }
 
-function bearerRequest(url,token,options={}){
-  const headers=new Headers(options.headers||{});headers.set('authorization',`Bearer ${token}`);
-  return new Request(url,{...options,headers});
-}
 function sanitizeAiStatus(data={}){
   const {account,...rest}=data||{};
   return {...rest,account:{ekodiId:account?.ekodiId||null}};
@@ -182,9 +184,11 @@ export async function callEkodiMcpTool(name,args,request,env,dependencies={}){
     reverse:'ekodi-mcp-adapter',
     firstExternalConnectionRequiresConsent:true,
   });
+  const publicExtended=callPublicEkodiMcpExtensionTool(name,args);
+  if(publicExtended)return publicExtended;
   const resolved=await requireMcpIdentity(request,dependencies);
   if(resolved.error)return resolved.error;
-  const {auth,identity}=resolved;
+  const {identity}=resolved;
   const capabilityId=TOOL_CAPABILITIES[name];
   if(!capabilityId)return textResult('등록되지 않은 EKODI 도구입니다.',{error:'TOOL_NOT_FOUND'});
   const authorization=authorizeCapabilityInvocation({
@@ -196,6 +200,8 @@ export async function callEkodiMcpTool(name,args,request,env,dependencies={}){
     role:'member',
   });
   if(!authorization.allowed)return textResult('이 EKODI 기능은 현재 MCP에서 사용할 수 없습니다.',{error:'CAPABILITY_DENIED',reason:authorization.reason,capabilityId});
+  const authorizedExtended=await callAuthorizedEkodiMcpExtensionTool(name,args,identity,env);
+  if(authorizedExtended)return authorizedExtended;
   if(name==='ekodi_delegate_command'){
     const goal=String(args?.goal||'').trim().slice(0,1200);
     if(!goal)return textResult('EKODI AI command goal is required.',{error:'GOAL_REQUIRED'});
@@ -250,17 +256,18 @@ async function handleRpc(message,request,env,dependencies={}){
   if(method==='server/discover')return rpcResult(id,{
     supportedVersions:[PROTOCOL_VERSION],
     capabilities:{tools:{listChanged:false}},
-    instructions:'Use EKODI capabilities only for the signed-in user and within the declared Capability Fabric contract.',
+    instructions:'Use EKODI capabilities only for the signed-in user and within the declared Capability Fabric contract. Public identity discovery never grants authorization; submitted tasks are owned by EKODI Orchestrator.',
     ttlMs:300000,
     cacheScope:'public',
     resource:EKODI_MCP_RESOURCE,
+    discovery:'https://ekodi.kr/.well-known/ekodi.json',
     fabric:SOVEREIGN_CAPABILITY_FABRIC,
-    _meta:{'io.modelcontextprotocol/serverInfo':{name:'ekodi-sovereign-capability-fabric',version:'2026-09-09.1'}},
+    _meta:{'io.modelcontextprotocol/serverInfo':{name:'ekodi-sovereign-capability-fabric',version:'2026-09-17.1'}},
   });
   if(method==='initialize')return rpcResult(id,{
     protocolVersion:'2025-06-18',
     capabilities:{tools:{listChanged:false}},
-    serverInfo:{name:'ekodi-sovereign-capability-fabric',version:'2026-09-09.1'},
+    serverInfo:{name:'ekodi-sovereign-capability-fabric',version:'2026-09-17.1'},
     instructions:'Legacy compatibility. Modern clients should use MCP 2026-07-28 server/discover.',
   });
   if(method==='ping')return rpcResult(id,{});
