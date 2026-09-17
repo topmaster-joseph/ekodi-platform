@@ -225,16 +225,16 @@ jobs:
           EXPECTED_DIGEST: ${{ steps.release_artifact.outputs.digest }}
         run: |
           set -euo pipefail
-          rm -rf dist .ekodi-release-bundle-rebuilt
+          rm -rf dist .ekodi-release-bundle
           npm run build
           cp auth-site/auth-workspace-target.js dist/auth-workspace-target.js
-          mkdir -p .ekodi-release-bundle-rebuilt artifacts
+          mkdir -p .ekodi-release-bundle artifacts
           npx --yes wrangler@${WRANGLER_VERSION} versions upload \
             --config wrangler.site.toml \
             --dry-run \
-            --outdir .ekodi-release-bundle-rebuilt
+            --outdir .ekodi-release-bundle
           node scripts/attest-worker-release-artifact.mjs \
-            --bundle .ekodi-release-bundle-rebuilt \
+            --bundle .ekodi-release-bundle \
             --assets dist \
             --file config=wrangler.site.toml \
             --file manifest=deploy/manifests/shared-site.worker.json \
