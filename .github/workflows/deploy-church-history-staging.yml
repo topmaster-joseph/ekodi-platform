@@ -40,6 +40,15 @@ jobs:
           grep -Fq "x-ekodi-data-mode': 'isolated-staging'" church-history-staging-worker.js
           test "$CLOUDFLARE_ACCOUNT_ID" = '46aad4738793fbaca88574832a2ccc0f'
           test -n "$CLOUDFLARE_API_TOKEN"
+          node --input-type=module <<'NODE'
+          import worker from './church-history-staging-worker.js';
+          const response = await worker.fetch(new Request('https://staging.invalid/api/church/admin/history'));
+          if (response.status !== 401) throw new Error(`staging API must fail closed with 401, got ${response.status}`);
+          const payload = await response.json();
+          if (payload?.error !== 'staging_auth_required' || payload?.dataMode !== 'isolated-staging') {
+            throw new Error('staging API fail-closed payload contract mismatch');
+          }
+          NODE
       - name: Deploy isolated Development staging Worker
         shell: bash
         run: |
@@ -52,19 +61,33 @@ jobs:
           for attempt in $(seq 1 12); do
             public_code=$(curl -L -sS -D /tmp/history-stage.headers -o /tmp/history-stage.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/ekodichurch/history" || true)
             admin_code=$(curl -L -sS -o /tmp/history-stage-admin.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/ekodichurch/admin/history" || true)
-            api_code=$(curl -L -sS -o /tmp/history-stage-api.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/api/church/admin/history" || true)
-            if [[ "$public_code" == 200 && "$admin_code" == 200 && "$api_code" == 401 ]] \
+            api_code=$(curl -sS -D /tmp/history-stage-api.headers -o /tmp/history-stage-api.body -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/api/church/admin/history" || true)
+            api_boundary=0
+            if [[ "$api_code" == 401 ]] \
+              && grep -Fq '"error":"staging_auth_required"' /tmp/history-stage-api.body \
+              && grep -Fq '"dataMode":"isolated-staging"' /tmp/history-stage-api.body; then
+              api_boundary=1
+            elif [[ "$api_code" =~ ^(302|303|307|308|403)$ ]]; then
+              api_boundary=1
+            fi
+            if [[ "$public_code" == 200 && "$admin_code" == 200 && "$api_boundary" == 1 ]] \
               && grep -iq '^x-ekodi-data-mode: isolated-staging' /tmp/history-stage.headers \
               && grep -Fq '지나온 길' /tmp/history-stage.html \
               && grep -Fq '2018년 3월 14일' /tmp/history-stage.html \
               && grep -Fq '2018년 8월 13일' /tmp/history-stage.html \
               && grep -Fq '운영 D1이나 실제 교회 개인정보를 읽지 않습니다' /tmp/history-stage.html \
               && grep -Fq '지나온 길 기록관리' /tmp/history-stage-admin.html \
-              && grep -Fq '"dataMode":"isolated-staging"' /tmp/history-stage-api.json; then
-              echo 'Church history Development staging verified with production data isolation.'
+              && ! grep -Fq 'source_ref' /tmp/history-stage.html \
+              && ! grep -Fq 'verification_notes' /tmp/history-stage.html; then
+              echo "Church history Development staging verified with production data isolation; remote API boundary=$api_code."
               exit 0
             fi
             sleep 3
           done
           echo "Staging verification failed: public=$public_code admin=$admin_code api=$api_code"
+          echo '--- API headers ---'
+          cat /tmp/history-stage-api.headers || true
+          echo '--- API body (first 800 bytes) ---'
+          head -c 800 /tmp/history-stage-api.body || true
+          echo
           exit 1
