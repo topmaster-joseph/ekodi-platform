@@ -39,7 +39,7 @@ test('published EKODI Mission live route is indexable and independently branded'
   assert.equal(response.headers.get('x-ekodi-independent-site'),'true');
   assert.equal(response.headers.get('x-ekodi-publication-status'),'published');
   assert.equal(response.headers.get('x-robots-tag'),'index, follow');
-  const body=await response.text();assert.match(body,/EKODI REALTIME/);assert.match(body,/meta name="robots" content="index,follow"/i);
+  const body=await response.text();assert.match(body,/EKODI REALTIME/);assert.match(body,/meta name="robots" content="index, follow"/i);
 });
 
 test('legacy Open Table URL permanently redirects to the dated activity URL',async()=>{
