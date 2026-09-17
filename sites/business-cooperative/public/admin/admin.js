@@ -1,0 +1,1 @@
+$('#saveAll').addEventListener('click', () => { persist(); const original = $('#saveAll').textContent; $('#saveAll').textContent = '저장됨'; setTimeout(() => $('#saveAll').textContent = original, 900); });
