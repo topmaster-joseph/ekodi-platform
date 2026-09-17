@@ -1,38 +1,94 @@
 {
-  "schemaVersion": 1,
-  "status": "proposed",
+  "schemaVersion": 2,
+  "status": "enforced",
   "generation": 10,
   "defaultChangeClass": "yellow",
+  "virtualizationFirst": {
+    "required": true,
+    "failClosedWhenUnavailable": true,
+    "persistentHostExecutionForbiddenForRepositoryCode": true,
+    "controlPlaneMetadataOperationsMayRunOutsideSandbox": true,
+    "controlPlaneMayNotExecuteRepositoryOrUntrustedCode": true,
+    "strongerIsolationMaySatisfyWeakerRequirement": true
+  },
   "sandbox": {
-    "runtime": "rootless-container",
+    "defaultProfile": "standard",
     "ephemeral": true,
     "maxConcurrentAtS0": 1,
     "maxLifetimeMinutes": 45,
+    "profiles": {
+      "standard": {
+        "technologyClass": "rootless-oci-container",
+        "minimumFor": [
+          "trusted_repository_code",
+          "build",
+          "test",
+          "lint",
+          "static_analysis",
+          "migration_dry_run",
+          "local_service",
+          "browser_e2e",
+          "packaging"
+        ]
+      },
+      "hardened": {
+        "technologyClass": "gvisor-or-equivalent-application-kernel",
+        "minimumFor": [
+          "untrusted_executable",
+          "third_party_tooling_high_uncertainty",
+          "host_kernel_attack_surface_reduction_required"
+        ]
+      },
+      "microvm": {
+        "technologyClass": "firecracker-or-equivalent-microvm",
+        "minimumFor": [
+          "kernel_sensitive_tooling",
+          "strong_tenant_separation",
+          "vm_grade_isolation_required"
+        ]
+      }
+    },
     "network": {
       "default": "deny",
       "declaredEgressOnly": true
     },
     "filesystem": {
       "workspaceOnly": true,
+      "rootFilesystemReadOnly": true,
       "hostMountsForbidden": true,
-      "dockerSocketForbidden": true
+      "hostContainerSocketForbidden": true
+    },
+    "process": {
+      "privilegedForbidden": true,
+      "dropCapabilities": true,
+      "noNewPrivileges": true,
+      "resourceLimitsRequired": true
     },
     "secrets": {
       "productionSecretsForbidden": true,
-      "shortLivedScopedCredentialsOnly": true
+      "shortLivedScopedCredentialsOnly": true,
+      "oidcPreferredWhenProviderSupportsIt": true
     }
+  },
+  "isolationEscalation": {
+    "untrustedExecution": "hardened",
+    "thirdPartyExecutable": "hardened",
+    "kernelSensitive": "microvm",
+    "strongTenantIsolation": "microvm"
   },
   "risk": {
     "green": {
       "mayImplement": true,
       "mayTest": true,
       "mayOpenPullRequest": true,
+      "minimumIsolationProfile": "standard",
       "mayPromoteToProduction": false
     },
     "yellow": {
       "mayImplement": true,
       "mayTest": true,
       "mayOpenPullRequest": true,
+      "minimumIsolationProfile": "standard",
       "requiresRollbackDefinition": true,
       "requiresVerificationDefinition": true,
       "mayPromoteToProduction": false
@@ -53,12 +109,23 @@
     "postProductionVerificationRequired": true,
     "automaticRecoveryRequiredOnFailedVerification": true
   },
+  "supplyChain": {
+    "immutableActionReferencesRequiredForExecutionFabricWorkflows": true,
+    "buildProvenanceTarget": "SLSA-compatible",
+    "artifactDigestRequired": true,
+    "providerIndependent": true
+  },
   "evidence": {
+    "executionReceiptRequired": true,
     "persist": [
       "request",
       "authority_context",
       "risk_classification",
       "base_commit",
+      "branch",
+      "isolation_profile",
+      "execution_technology",
+      "sandbox_posture",
       "patch_or_commit",
       "build_result",
       "test_result",
