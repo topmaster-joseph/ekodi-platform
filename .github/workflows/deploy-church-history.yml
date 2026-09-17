@@ -1,0 +1,133 @@
+name: Deploy Church History Archive
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths: &history_paths
+      - 'church-history-worker.js'
+      - 'migrations/0093_church_history_archive.sql'
+      - 'wrangler.church-history.toml'
+      - 'wrangler.church-history.staging.toml'
+      - 'test/church-history-archive.test.mjs'
+      - '.github/workflows/deploy-church-history.yml'
+  push:
+    branches: [main]
+    paths: *history_paths
+
+permissions:
+  contents: read
+
+concurrency:
+  group: church-history-archive-production
+  cancel-in-progress: false
+
+env:
+  WRANGLER_VERSION: '4.119.0'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate history archive contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check church-history-worker.js
+          node --test test/church-history-archive.test.mjs
+          grep -Fq 'visibility TEXT NOT NULL DEFAULT '\''private'\''' migrations/0093_church_history_archive.sql
+          grep -Fq '2018-03-14' migrations/0093_church_history_archive.sql
+          grep -Fq '2018-08-13' migrations/0093_church_history_archive.sql
+          grep -Fq 'ekodi.kr/ekodichurch/history*' wrangler.church-history.toml
+          grep -Fq 'ekodi.kr/ekodichurch/admin/history*' wrangler.church-history.toml
+          grep -Fq 'ekodi.kr/api/church/admin/history*' wrangler.church-history.toml
+      - name: Verify platform guardrails
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/validate-deployment-guardrails.mjs
+          if [[ -f scripts/validate-zero-subdomain.mjs ]]; then node scripts/validate-zero-subdomain.mjs; fi
+
+  release:
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Verify Cloudflare credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+      - name: Apply additive history archive schema
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@${WRANGLER_VERSION} d1 execute ekodi-auth --remote --config wrangler.church-history.toml --file migrations/0093_church_history_archive.sql
+      - name: Deploy and verify staging worker
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.church-history.staging.toml 2>&1 | tee /tmp/church-history-staging.log
+          STAGING_URL="$(grep -Eo 'https://[^[:space:]]+\.workers\.dev' /tmp/church-history-staging.log | tail -1 || true)"
+          test -n "$STAGING_URL"
+          echo "Staging: $STAGING_URL"
+          for attempt in $(seq 1 12); do
+            public_code=$(curl -L -sS -o /tmp/history-stage.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/ekodichurch/history" || true)
+            admin_code=$(curl -L -sS -o /tmp/history-stage-admin.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/ekodichurch/admin/history" || true)
+            api_code=$(curl -L -sS -o /tmp/history-stage-api.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/api/church/admin/history" || true)
+            if [[ "$public_code" == 200 && "$admin_code" == 200 && "$api_code" == 401 ]] \
+              && grep -Fq '지나온 길' /tmp/history-stage.html \
+              && grep -Fq '2018년 3월 14일' /tmp/history-stage.html \
+              && grep -Fq '2018년 8월 13일' /tmp/history-stage.html \
+              && grep -Fq '역사 아카이브' /tmp/history-stage-admin.html; then
+              echo 'Church history staging verified.'
+              break
+            fi
+            if [[ "$attempt" == 12 ]]; then
+              echo "Staging verification failed: public=$public_code admin=$admin_code api=$api_code"
+              exit 1
+            fi
+            sleep 4
+          done
+      - name: Deploy production worker
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.church-history.toml
+      - name: Verify production public, admin and auth boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 18); do
+            public_code=$(curl -L -sS -o /tmp/history-prod.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/ekodichurch/history' || true)
+            admin_code=$(curl -L -sS -o /tmp/history-prod-admin.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/ekodichurch/admin/history' || true)
+            api_code=$(curl -L -sS -o /tmp/history-prod-api.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/api/church/admin/history' || true)
+            if [[ "$public_code" == 200 && "$admin_code" == 200 && "$api_code" == 401 ]] \
+              && grep -Fq '지나온 길' /tmp/history-prod.html \
+              && grep -Fq '교회의 이름이 생긴 날보다 먼저' /tmp/history-prod.html \
+              && grep -Fq '2018년 3월 14일' /tmp/history-prod.html \
+              && grep -Fq '2018년 8월 13일' /tmp/history-prod.html \
+              && ! grep -Fq 'source_ref' /tmp/history-prod.html \
+              && grep -Fq '지나온 길 기록관리' /tmp/history-prod-admin.html; then
+              echo 'Church history production verified.'
+              break
+            fi
+            if [[ "$attempt" == 18 ]]; then
+              echo "Production verification failed: public=$public_code admin=$admin_code api=$api_code"
+              exit 1
+            fi
+            sleep 5
+          done
