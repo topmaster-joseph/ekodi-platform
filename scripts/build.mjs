@@ -123,6 +123,6 @@ const [releaseCss, releaseJs, timelineCss, timelineJs] = await Promise.all([
   readFile(`${root}system-timeline-admin.css`, 'utf8'), readFile(`${root}system-timeline-admin.js`, 'utf8'),
 ]);
 await writeFile(`${output}release-control-admin.css`, `${releaseCss}\n${timelineCss}\n`);
-await writeFile(`${output}release-control-admin.js`, `${releaseJs}\n${timelineJs}\n${timelineJs}\n`);
+await writeFile(`${output}release-control-admin.js`, `${releaseJs}\n${timelineJs}\n`);
 
 console.log(`Built EKODI root with ${homepageServices.length} registry-driven homepage services, minimal pre-auth Admin Shell, true on-demand AI Ops/External AI Spec/Deployments/Work/MarketingAI/Creator billing/System Health/Security, Admin AI Governor, unified Provider Control, authenticated Campus/Device Control, GitHub-backed System Timeline, MarketingAI live ops, posting status and channel connection console, device bootstrap, auth hub, service hubs and trade assets: ${assets.join(', ')}`);
