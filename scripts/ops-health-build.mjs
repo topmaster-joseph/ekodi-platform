@@ -11,6 +11,19 @@ function clean(value, fallback = null) {
   return text || fallback;
 }
 
+function resolveGeneratedAt(env, now) {
+  const sourceDateEpoch = clean(env.SOURCE_DATE_EPOCH);
+  if (!sourceDateEpoch) return now;
+  if (!/^\d+$/.test(sourceDateEpoch)) {
+    throw new Error('SOURCE_DATE_EPOCH must be an integer Unix timestamp in seconds');
+  }
+  const generatedAt = new Date(Number(sourceDateEpoch) * 1000);
+  if (Number.isNaN(generatedAt.getTime())) {
+    throw new Error('SOURCE_DATE_EPOCH is outside the supported date range');
+  }
+  return generatedAt;
+}
+
 export function buildOpsHealthDocument(env = process.env, now = new Date()) {
   const repository = clean(env.GITHUB_REPOSITORY, DEFAULT_REPOSITORY);
   const commitSha = clean(env.GITHUB_SHA, 'local');
@@ -18,6 +31,7 @@ export function buildOpsHealthDocument(env = process.env, now = new Date()) {
   const runAttempt = clean(env.GITHUB_RUN_ATTEMPT);
   const workflow = clean(env.GITHUB_WORKFLOW, 'local-build');
   const ref = clean(env.GITHUB_REF_NAME, clean(env.GITHUB_REF, 'local'));
+  const generatedAt = resolveGeneratedAt(env, now);
   const githubBase = `https://github.com/${repository}`;
 
   return Object.freeze({
@@ -25,7 +39,7 @@ export function buildOpsHealthDocument(env = process.env, now = new Date()) {
     service: 'ekodi',
     surface: 'public-operations-health',
     status: 'ok',
-    generated_at: now.toISOString(),
+    generated_at: generatedAt.toISOString(),
     source: 'deployment-artifact',
     deploy: Object.freeze({
       repository,
