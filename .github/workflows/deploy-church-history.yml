@@ -5,6 +5,7 @@ on:
   pull_request:
     paths: &history_paths
       - 'church-history-worker.js'
+      - 'church-history-staging-worker.js'
       - 'migrations/0093_church_history_archive.sql'
       - 'wrangler.church-history.toml'
       - 'wrangler.church-history.staging.toml'
@@ -18,7 +19,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: church-history-archive-production
+  group: church-history-archive-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: false
 
 env:
@@ -38,6 +39,7 @@ jobs:
         run: |
           set -euo pipefail
           node --check church-history-worker.js
+          node --check church-history-staging-worker.js
           node --test test/church-history-archive.test.mjs
           grep -Fq 'visibility TEXT NOT NULL DEFAULT '\''private'\''' migrations/0093_church_history_archive.sql
           grep -Fq '2018-03-14' migrations/0093_church_history_archive.sql
@@ -52,11 +54,60 @@ jobs:
           node scripts/validate-deployment-guardrails.mjs
           if [[ -f scripts/validate-zero-subdomain.mjs ]]; then node scripts/validate-zero-subdomain.mjs; fi
 
-  release:
-    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+  staging:
     needs: validate
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: development
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: 46aad4738793fbaca88574832a2ccc0f
+      STAGING_URL: https://ekodi-church-history-staging.ekodi-development.workers.dev
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: EKODI AI Orchestration Gate
+        run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
+      - name: Enforce Development account boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$CLOUDFLARE_ACCOUNT_ID" = '46aad4738793fbaca88574832a2ccc0f'
+          test -n "$CLOUDFLARE_API_TOKEN"
+      - name: Deploy isolated staging worker
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.church-history.staging.toml
+      - name: Verify staging worker
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 12); do
+            public_code=$(curl -L -sS -o /tmp/history-stage.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/ekodichurch/history" || true)
+            admin_code=$(curl -L -sS -o /tmp/history-stage-admin.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/ekodichurch/admin/history" || true)
+            api_code=$(curl -L -sS -o /tmp/history-stage-api.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/api/church/admin/history" || true)
+            if [[ "$public_code" == 200 && "$admin_code" == 200 && "$api_code" == 401 ]] \
+              && grep -Fq '지나온 길' /tmp/history-stage.html \
+              && grep -Fq '2018년 3월 14일' /tmp/history-stage.html \
+              && grep -Fq '2018년 8월 13일' /tmp/history-stage.html \
+              && grep -Fq '역사 아카이브' /tmp/history-stage-admin.html; then
+              echo 'Church history staging verified in EKODI Development.'
+              exit 0
+            fi
+            sleep 4
+          done
+          echo "Staging verification failed: public=$public_code admin=$admin_code api=$api_code"
+          exit 1
+
+  release:
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: staging
+    runs-on: ubuntu-latest
     timeout-minutes: 20
+    environment: production
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -78,32 +129,6 @@ jobs:
         run: |
           set -euo pipefail
           npx --yes wrangler@${WRANGLER_VERSION} d1 execute ekodi-auth --remote --config wrangler.church-history.toml --file migrations/0093_church_history_archive.sql
-      - name: Deploy and verify staging worker
-        shell: bash
-        run: |
-          set -euo pipefail
-          npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.church-history.staging.toml 2>&1 | tee /tmp/church-history-staging.log
-          STAGING_URL="$(grep -Eo 'https://[^[:space:]]+\.workers\.dev' /tmp/church-history-staging.log | tail -1 || true)"
-          test -n "$STAGING_URL"
-          echo "Staging: $STAGING_URL"
-          for attempt in $(seq 1 12); do
-            public_code=$(curl -L -sS -o /tmp/history-stage.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/ekodichurch/history" || true)
-            admin_code=$(curl -L -sS -o /tmp/history-stage-admin.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/ekodichurch/admin/history" || true)
-            api_code=$(curl -L -sS -o /tmp/history-stage-api.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/api/church/admin/history" || true)
-            if [[ "$public_code" == 200 && "$admin_code" == 200 && "$api_code" == 401 ]] \
-              && grep -Fq '지나온 길' /tmp/history-stage.html \
-              && grep -Fq '2018년 3월 14일' /tmp/history-stage.html \
-              && grep -Fq '2018년 8월 13일' /tmp/history-stage.html \
-              && grep -Fq '역사 아카이브' /tmp/history-stage-admin.html; then
-              echo 'Church history staging verified.'
-              break
-            fi
-            if [[ "$attempt" == 12 ]]; then
-              echo "Staging verification failed: public=$public_code admin=$admin_code api=$api_code"
-              exit 1
-            fi
-            sleep 4
-          done
       - name: Deploy production worker
         shell: bash
         run: |
@@ -125,11 +150,9 @@ jobs:
               && ! grep -Fq 'source_ref' /tmp/history-prod.html \
               && grep -Fq '지나온 길 기록관리' /tmp/history-prod-admin.html; then
               echo 'Church history production verified.'
-              break
-            fi
-            if [[ "$attempt" == 18 ]]; then
-              echo "Production verification failed: public=$public_code admin=$admin_code api=$api_code"
-              exit 1
+              exit 0
             fi
             sleep 5
           done
+          echo "Production verification failed: public=$public_code admin=$admin_code api=$api_code"
+          exit 1
