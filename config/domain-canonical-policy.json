@@ -28,7 +28,8 @@
     ],
     "requiredIndependentSites": [
       "ekodibiz",
-      "ekodimall"
+      "ekodimall",
+      "ekodichurch"
     ]
   },
   "sites": {
@@ -41,6 +42,11 @@
       "kind": "business-unit",
       "root": "https://ekodi.kr/ekodimall",
       "admin": "https://ekodi.kr/ekodimall/admin"
+    },
+    "ekodichurch": {
+      "kind": "organization",
+      "root": "https://ekodi.kr/ekodichurch",
+      "admin": "https://ekodi.kr/ekodichurch/admin"
     }
   },
   "marketing": {
