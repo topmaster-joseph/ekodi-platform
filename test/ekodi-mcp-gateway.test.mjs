@@ -14,6 +14,7 @@ function tokenFor(claims){
   const part=value=>Buffer.from(JSON.stringify(value)).toString('base64url');
   return `${part({alg:'RS256',typ:'JWT'})}.${part(claims)}.signature`;
 }
+function tool(name){return EKODI_MCP_TOOLS.find(item=>item.name===name)}
 
 test('protected resource metadata points MCP at EKODI Supabase OAuth',()=>{
   const metadata=mcpProtectedResourceMetadata();
@@ -23,13 +24,39 @@ test('protected resource metadata points MCP at EKODI Supabase OAuth',()=>{
   assert.deepEqual(metadata.scopes_supported,['openid','email','profile']);
 });
 
-test('MCP tool surface keeps status reads safe and exposes bounded command delegation',()=>{
-  assert.ok(EKODI_MCP_TOOLS.length>=5);
-  const statusTools=EKODI_MCP_TOOLS.filter(tool=>tool.name!=='ekodi_delegate_command');
-  for(const tool of statusTools) assert.equal(tool.annotations.readOnlyHint,true);
-  assert.equal(EKODI_MCP_TOOLS.find(tool=>tool.name==='ekodi_bridge_status').securitySchemes[0].type,'noauth');
-  assert.equal(EKODI_MCP_TOOLS.find(tool=>tool.name==='ekodi_my_identity').securitySchemes[0].type,'oauth2');
-  const command=EKODI_MCP_TOOLS.find(tool=>tool.name==='ekodi_delegate_command');
+test('MCP tool surface keeps reads safe and exposes bounded authenticated mutations',()=>{
+  assert.ok(EKODI_MCP_TOOLS.length>=11);
+  for(const name of ['identify_ekodi','discover_public_services','ekodi_bridge_status','account_status','get_task_status','ekodi_my_identity','ekodi_my_ai_status','ekodi_my_services']){
+    assert.equal(tool(name)?.annotations?.readOnlyHint,true,`${name} must remain read-only`);
+    assert.equal(tool(name)?.annotations?.destructiveHint,false,`${name} must remain non-destructive`);
+  }
+  assert.equal(tool('identify_ekodi').securitySchemes[0].type,'noauth');
+  assert.equal(tool('discover_public_services').securitySchemes[0].type,'noauth');
+  assert.equal(tool('ekodi_bridge_status').securitySchemes[0].type,'noauth');
+  assert.equal(tool('account_status').securitySchemes[0].type,'oauth2');
+  assert.equal(tool('account_status').ekodiCapability,'identity.self.read');
+  assert.equal(tool('ekodi_my_identity').securitySchemes[0].type,'oauth2');
+
+  const submit=tool('submit_task');
+  assert.equal(submit.securitySchemes[0].type,'oauth2');
+  assert.equal(submit.ekodiCapability,'ai.command.delegate');
+  assert.equal(submit.annotations.readOnlyHint,false);
+  assert.equal(submit.annotations.destructiveHint,false);
+  assert.deepEqual(submit.inputSchema.required,['intent']);
+
+  const status=tool('get_task_status');
+  assert.equal(status.securitySchemes[0].type,'oauth2');
+  assert.equal(status.ekodiCapability,'ai.command.delegate');
+  assert.deepEqual(status.inputSchema.required,['taskId']);
+
+  const cancel=tool('cancel_task');
+  assert.equal(cancel.securitySchemes[0].type,'oauth2');
+  assert.equal(cancel.ekodiCapability,'ai.command.delegate');
+  assert.equal(cancel.annotations.readOnlyHint,false);
+  assert.equal(cancel.annotations.destructiveHint,true);
+  assert.deepEqual(cancel.inputSchema.required,['taskId']);
+
+  const command=tool('ekodi_delegate_command');
   assert.equal(command.securitySchemes[0].type,'oauth2');
   assert.equal(command.ekodiCapability,'ai.command.delegate');
   assert.equal(command.annotations.readOnlyHint,false);
@@ -130,6 +157,7 @@ test('stateless MCP 2026-07-28 discovers and lists Fabric-backed tools',async()=
   const listBody=await listed.json();
   assert.equal(listBody.result.cacheScope,'public');
   assert.ok(listBody.result.tools.some(tool=>tool.name==='ekodi_my_services'));
+  assert.ok(listBody.result.tools.some(tool=>tool.name==='submit_task'));
   assert.ok(listBody.result.tools.filter(tool=>tool.securitySchemes[0].type==='oauth2').every(tool=>tool.ekodiCapability));
   assert.ok(listBody.result.tools.every(tool=>!JSON.stringify(tool).includes('apiKey')));
 });
