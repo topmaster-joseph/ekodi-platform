@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ekodi.kr/ops/events/schema.v1.json",
+  "title": "EKODI Operation Event v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema","event_id","event_type","occurred_at","service","summary","environment","source","verification","severity","requires_human"],
+  "properties": {
+    "schema": {"const": "ekodi.operation-event/v1"},
+    "event_id": {"type":"string","minLength":8,"maxLength":160},
+    "event_type": {"enum":["production_verified","incident","decision_required","recovered"]},
+    "occurred_at": {"type":"string","format":"date-time"},
+    "service": {"type":"string","minLength":1,"maxLength":240},
+    "summary": {"type":"string","minLength":1,"maxLength":500},
+    "environment": {"const":"production"},
+    "source": {"const":"ekodi-orchestrator"},
+    "commit_sha": {"type":["string","null"],"pattern":"^[0-9a-f]{40}$"},
+    "pr_number": {"type":["integer","null"],"minimum":1},
+    "verification": {"type":"object","additionalProperties":false,"required":["status","checks","evidence"],"properties":{"status":{"enum":["passed","failed","blocked"]},"checks":{"type":"array","items":{"type":"string","maxLength":300},"maxItems":50},"evidence":{"type":"array","items":{"type":"string","maxLength":500},"maxItems":50}}},
+    "severity":{"enum":["info","warning","critical"]},
+    "requires_human":{"type":"boolean"}
+  },
+  "allOf":[{"if":{"properties":{"event_type":{"const":"production_verified"}}},"then":{"properties":{"verification":{"properties":{"status":{"const":"passed"}},"required":["status"]},"requires_human":{"const":false}}}}]
+}
