@@ -2,6 +2,10 @@ name: Stage Shared Site Shell
 
 on:
   workflow_call:
+    outputs:
+      release_digest:
+        description: 'Immutable digest of the production Worker bundle, static assets, config and release contract verified by staging'
+        value: ${{ jobs.staging.outputs.release_digest }}
   pull_request:
     paths:
       - 'site-worker.js'
@@ -33,6 +37,8 @@ on:
       - 'discovery-layer.js'
       - 'scripts/discovery-build.mjs'
       - 'scripts/ccm-mr-postbuild.mjs'
+      - 'scripts/attest-worker-release-artifact.mjs'
+      - 'test/worker-release-artifact-attestation.test.mjs'
       - 'test/discovery-layer.test.mjs'
       - 'scripts/build.mjs'
       - '.github/workflows/stage-shared-site-shell.yml'
@@ -52,8 +58,10 @@ env:
 jobs:
   staging:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 18
     environment: development
+    outputs:
+      release_digest: ${{ steps.release_artifact.outputs.digest }}
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: 46aad4738793fbaca88574832a2ccc0f
@@ -62,6 +70,7 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
+
       - name: EKODI AI Orchestration Gate
         run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
       - name: Validate shared router and build
@@ -81,8 +90,11 @@ jobs:
           node --check ekodi-shell-injector.js
           node --check discovery-layer.js
           node --check scripts/discovery-build.mjs
+          node --check scripts/attest-worker-release-artifact.mjs
+          node --test test/worker-release-artifact-attestation.test.mjs
           node --test test/marketing-canonical-projection.test.mjs test/insurance-public-route.test.mjs test/public-workspace-gateway.test.mjs test/store-public-gateway.test.mjs test/store-portfolio-admin.test.mjs test/discovery-layer.test.mjs test/learning-page.test.mjs test/learning-routing-contract.test.mjs
           npm run build
+          cp auth-site/auth-workspace-target.js dist/auth-workspace-target.js
           test -f dist/insurance/index.html
           test -f dist/insurance/advisor.html
           test -f dist/trade.html
@@ -90,12 +102,38 @@ jobs:
           test -f dist/robots.txt
           test -f dist/sitemap.xml
           test -f dist/llms.txt
+          test -f dist/auth-workspace-target.js
           grep -Fq 'OAI-SearchBot' dist/robots.txt
           grep -Fq 'User-agent: GPTBot' dist/robots.txt
           grep -Fq 'Disallow: /' dist/robots.txt
           grep -Fq '<loc>https://ekodi.kr/</loc>' dist/sitemap.xml
           grep -Fq 'Canonical site: https://ekodi.kr/' dist/llms.txt
           grep -Fq 'data-ekodi-discovery="v2"' dist/index.html
+
+      - name: Materialize immutable production release artifact
+        id: release_artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf .ekodi-release-bundle
+          mkdir -p .ekodi-release-bundle artifacts
+          npx --yes wrangler@${WRANGLER_VERSION} versions upload \
+            --config wrangler.site.toml \
+            --dry-run \
+            --outdir .ekodi-release-bundle
+          node scripts/attest-worker-release-artifact.mjs \
+            --bundle .ekodi-release-bundle \
+            --assets dist \
+            --file config=wrangler.site.toml \
+            --file manifest=deploy/manifests/shared-site.worker.json \
+            --output artifacts/shared-site-release-artifact.json \
+            --source-sha "$GITHUB_SHA" \
+            --wrangler-version "$WRANGLER_VERSION"
+          digest=$(node -p "JSON.parse(require('fs').readFileSync('artifacts/shared-site-release-artifact.json','utf8')).artifactDigest")
+          test -n "$digest"
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+          echo "Shared-site immutable release artifact: $digest"
+
       - name: Enforce Development account boundary
         shell: bash
         run: |
@@ -169,3 +207,35 @@ jobs:
             sleep 4
           done
           exit 1
+
+      - name: Confirm immutable release artifact after staging verification
+        shell: bash
+        env:
+          EXPECTED_DIGEST: ${{ steps.release_artifact.outputs.digest }}
+        run: |
+          set -euo pipefail
+          node scripts/attest-worker-release-artifact.mjs \
+            --bundle .ekodi-release-bundle \
+            --assets dist \
+            --file config=wrangler.site.toml \
+            --file manifest=deploy/manifests/shared-site.worker.json \
+            --output artifacts/shared-site-release-artifact-after-staging.json \
+            --source-sha "$GITHUB_SHA" \
+            --wrangler-version "$WRANGLER_VERSION"
+          actual=$(node -p "JSON.parse(require('fs').readFileSync('artifacts/shared-site-release-artifact-after-staging.json','utf8')).artifactDigest")
+          test "$actual" = "$EXPECTED_DIGEST" || {
+            echo "::error::Release artifact mutated during staging verification: expected=$EXPECTED_DIGEST actual=$actual"
+            exit 1
+          }
+          echo "Immutable release artifact preserved through staging verification: $actual"
+
+      - name: Persist staging release evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: shared-site-release-evidence-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            artifacts/shared-site-release-artifact.json
+            artifacts/shared-site-release-artifact-after-staging.json
+          if-no-files-found: warn
+          retention-days: 30
