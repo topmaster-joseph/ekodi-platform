@@ -1,0 +1,88 @@
+{
+  "schemaVersion": 1,
+  "architectureVersion": "1.0.0",
+  "status": "active-nonproduction",
+  "name": "EKODI Cloud Fabric Worker Plane",
+  "generation": 10,
+  "purpose": "Unify ephemeral cloud, managed sandbox and equivalently isolated local execution nodes behind one capability-matched, cloud-first worker contract without creating a new public service boundary.",
+  "parentArchitecture": "governance/architecture/ekodi-autonomous-execution-fabric.v1.json",
+  "boundary": {
+    "newIndependentDeployment": false,
+    "newPublicHostname": false,
+    "newSubdomain": false,
+    "sharedControlPlane": true,
+    "providerIndependent": true
+  },
+  "workerKinds": [
+    "ephemeral_cloud_vm",
+    "cloud_worker",
+    "managed_sandbox",
+    "local_worker"
+  ],
+  "selection": {
+    "strategy": "cloud_first_capability_matched_failover",
+    "cloudPreferred": true,
+    "localFallbackOnly": true,
+    "leastLoadedWithinClass": true,
+    "capabilityMatchRequired": true,
+    "automaticFailover": true
+  },
+  "workerContract": {
+    "registrationRequires": [
+      "stable_worker_id",
+      "declared_worker_kind",
+      "declared_capabilities",
+      "health_or_state",
+      "load_and_concurrency",
+      "bounded_invoke_adapter"
+    ],
+    "executionReceiptRequires": [
+      "ephemeral=true",
+      "workspaceIsolation=true",
+      "productionMutationPerformed=false",
+      "authorityExpanded=false",
+      "productionSecretExposed=false",
+      "evidence"
+    ],
+    "leaseRequired": true,
+    "leaseProductionAllowed": false
+  },
+  "localWorker": {
+    "role": "fallback_execution_node",
+    "connection": "outbound_only",
+    "publicInbound": false,
+    "virtualizedIsolationEquivalentOrStrongerThanCloudProfileRequired": true,
+    "portableDeviceAutomaticExecution": false,
+    "existingAdapter": "hybrid-execution.js",
+    "existingPolicy": "local-execution-policy.js",
+    "hostDirectMutation": false
+  },
+  "security": {
+    "directProductionMutationForbidden": true,
+    "productionSecretsForbidden": true,
+    "persistentAgentShellForbidden": true,
+    "authorityExpansionForbidden": true,
+    "redChangeRequiresSovereignHumanGate": true,
+    "defaultNetwork": "deny-by-default-except-declared-egress",
+    "auditEvidenceRequired": true
+  },
+  "integration": {
+    "orchestrator": "EKODI Orchestrator retains task authority",
+    "executionFabric": "Worker Plane supplies bounded execution nodes to the existing Autonomous Execution Fabric",
+    "cloudConnectionRuntime": "Provider connections remain available for external cloud/API capabilities and are not replaced",
+    "hybridExecution": "Existing local device queue, heartbeat, capability and lease implementation becomes the local-worker adapter rather than a parallel authority"
+  },
+  "activation": {
+    "currentState": "runtime-contract-and-selection-stage",
+    "productionReadinessClaimed": false,
+    "requiresBeforeProductionActivation": [
+      "cloud_worker_runtime_evidence",
+      "local_worker_outbound_transport_evidence",
+      "cloud_to_local_failover_evidence",
+      "lease_expiry_and_requeue_evidence",
+      "credential_scope_evidence",
+      "audit_trail_evidence",
+      "release_gateway_verification"
+    ]
+  }
+}
