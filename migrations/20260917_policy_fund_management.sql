@@ -127,6 +127,39 @@ CREATE INDEX IF NOT EXISTS idx_finance_policy_documents_application
 CREATE INDEX IF NOT EXISTS idx_finance_policy_tasks_org_due
   ON finance_policy_tasks(organization_id, status, due_on);
 
+CREATE TRIGGER IF NOT EXISTS trg_finance_policy_loan_maturity_insert
+AFTER INSERT ON finance_policy_loans
+WHEN NEW.maturity_on IS NOT NULL
+BEGIN
+  INSERT OR IGNORE INTO finance_policy_tasks
+    (id,organization_id,loan_id,task_type,title,due_on,status,priority,notes,created_at,updated_at)
+  VALUES
+    (NEW.id || ':d90',NEW.organization_id,NEW.id,'maturity','정책자금 만기 D-90 · 연장·대환 가능성 사전점검',date(NEW.maturity_on,'-90 day'),'open','normal','자동 생성',NEW.created_at,NEW.updated_at),
+    (NEW.id || ':d60',NEW.organization_id,NEW.id,'maturity','정책자금 만기 D-60 · 연장·대환 요건 및 서류 확인',date(NEW.maturity_on,'-60 day'),'open','high','자동 생성',NEW.created_at,NEW.updated_at),
+    (NEW.id || ':d30',NEW.organization_id,NEW.id,'maturity','정책자금 만기 D-30 · 신청 또는 상환계획 확정',date(NEW.maturity_on,'-30 day'),'open','high','자동 생성',NEW.created_at,NEW.updated_at),
+    (NEW.id || ':d14',NEW.organization_id,NEW.id,'maturity','정책자금 만기 D-14 · 접수·보완 상태 최종 확인',date(NEW.maturity_on,'-14 day'),'open','urgent','자동 생성',NEW.created_at,NEW.updated_at),
+    (NEW.id || ':d7',NEW.organization_id,NEW.id,'maturity','정책자금 만기 D-7 · 실행·상환 일정 최종 확인',date(NEW.maturity_on,'-7 day'),'open','urgent','자동 생성',NEW.created_at,NEW.updated_at);
+END;
+
+CREATE TRIGGER IF NOT EXISTS trg_finance_policy_loan_maturity_update
+AFTER UPDATE OF maturity_on,organization_id ON finance_policy_loans
+WHEN NEW.maturity_on IS NOT NULL
+BEGIN
+  INSERT INTO finance_policy_tasks
+    (id,organization_id,loan_id,task_type,title,due_on,status,priority,notes,created_at,updated_at)
+  VALUES
+    (NEW.id || ':d90',NEW.organization_id,NEW.id,'maturity','정책자금 만기 D-90 · 연장·대환 가능성 사전점검',date(NEW.maturity_on,'-90 day'),'open','normal','자동 생성',NEW.created_at,NEW.updated_at),
+    (NEW.id || ':d60',NEW.organization_id,NEW.id,'maturity','정책자금 만기 D-60 · 연장·대환 요건 및 서류 확인',date(NEW.maturity_on,'-60 day'),'open','high','자동 생성',NEW.created_at,NEW.updated_at),
+    (NEW.id || ':d30',NEW.organization_id,NEW.id,'maturity','정책자금 만기 D-30 · 신청 또는 상환계획 확정',date(NEW.maturity_on,'-30 day'),'open','high','자동 생성',NEW.created_at,NEW.updated_at),
+    (NEW.id || ':d14',NEW.organization_id,NEW.id,'maturity','정책자금 만기 D-14 · 접수·보완 상태 최종 확인',date(NEW.maturity_on,'-14 day'),'open','urgent','자동 생성',NEW.created_at,NEW.updated_at),
+    (NEW.id || ':d7',NEW.organization_id,NEW.id,'maturity','정책자금 만기 D-7 · 실행·상환 일정 최종 확인',date(NEW.maturity_on,'-7 day'),'open','urgent','자동 생성',NEW.created_at,NEW.updated_at)
+  ON CONFLICT(id) DO UPDATE SET
+    organization_id=excluded.organization_id,
+    due_on=excluded.due_on,
+    priority=excluded.priority,
+    updated_at=excluded.updated_at;
+END;
+
 INSERT OR IGNORE INTO finance_policy_programs
   (id,title,agency,program_year,notice_number,revision_label,published_on,source_url,source_checked_at,terms_json,active,created_at,updated_at)
 VALUES
@@ -138,8 +171,8 @@ VALUES
    '변경4차',
    '2026-07-30',
    'https://www.mss.go.kr/site/smba/ex/bbs/View.do?bcIdx=1070197&cbIdx=310',
-   '2026-09-17T05:30:00Z',
+   '2026-09-17T05:24:00Z',
    '{"sourcePolicy":"official-source-of-truth","notice":"조건·접수기간·예산소진 여부는 신청 직전 공식 공고 재확인"}',
    1,
-   '2026-09-17T05:30:00Z',
-   '2026-09-17T05:30:00Z');
+   '2026-09-17T05:24:00Z',
+   '2026-09-17T05:24:00Z');
