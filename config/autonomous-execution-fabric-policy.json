@@ -1,0 +1,73 @@
+{
+  "schemaVersion": 1,
+  "status": "proposed",
+  "generation": 10,
+  "defaultChangeClass": "yellow",
+  "sandbox": {
+    "runtime": "rootless-container",
+    "ephemeral": true,
+    "maxConcurrentAtS0": 1,
+    "maxLifetimeMinutes": 45,
+    "network": {
+      "default": "deny",
+      "declaredEgressOnly": true
+    },
+    "filesystem": {
+      "workspaceOnly": true,
+      "hostMountsForbidden": true,
+      "dockerSocketForbidden": true
+    },
+    "secrets": {
+      "productionSecretsForbidden": true,
+      "shortLivedScopedCredentialsOnly": true
+    }
+  },
+  "risk": {
+    "green": {
+      "mayImplement": true,
+      "mayTest": true,
+      "mayOpenPullRequest": true,
+      "mayPromoteToProduction": false
+    },
+    "yellow": {
+      "mayImplement": true,
+      "mayTest": true,
+      "mayOpenPullRequest": true,
+      "requiresRollbackDefinition": true,
+      "requiresVerificationDefinition": true,
+      "mayPromoteToProduction": false
+    },
+    "red": {
+      "mayImplement": false,
+      "mayPreparePlanAndPatch": true,
+      "requiresExplicitSovereignGateBeforeExecution": true,
+      "mayPromoteToProduction": false
+    }
+  },
+  "promotion": {
+    "directProductionMutationForbidden": true,
+    "immutableVerifiedArtifactRequired": true,
+    "stagingRequired": true,
+    "postStagingVerificationRequired": true,
+    "releaseAuthorizationRequired": true,
+    "postProductionVerificationRequired": true,
+    "automaticRecoveryRequiredOnFailedVerification": true
+  },
+  "evidence": {
+    "persist": [
+      "request",
+      "authority_context",
+      "risk_classification",
+      "base_commit",
+      "patch_or_commit",
+      "build_result",
+      "test_result",
+      "verification_result",
+      "artifact_digest",
+      "staging_result",
+      "release_authorization",
+      "production_result",
+      "recovery_result"
+    ]
+  }
+}
