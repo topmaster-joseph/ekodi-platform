@@ -8,34 +8,29 @@ on:
       - '.github/workflows/autonomous-execution-fabric-runtime-proof.yml'
       - 'config/autonomous-execution-fabric-policy.json'
       - 'governance/architecture/ekodi-autonomous-execution-fabric.v1.json'
+      - 'scripts/validate-autonomous-execution-fabric.mjs'
+      - 'AI_DEVELOPMENT_POLICY.md'
   push:
     branches: [main]
     paths:
       - 'autonomous-execution-fabric-runtime.js'
       - 'test/autonomous-execution-fabric-runtime.test.mjs'
       - '.github/workflows/autonomous-execution-fabric-runtime-proof.yml'
+      - 'config/autonomous-execution-fabric-policy.json'
+      - 'governance/architecture/ekodi-autonomous-execution-fabric.v1.json'
+      - 'scripts/validate-autonomous-execution-fabric.mjs'
+      - 'AI_DEVELOPMENT_POLICY.md'
   workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  runtime-contract:
+  virtualization-proof:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
-        with:
-          node-version: '24'
-      - name: Verify execution runtime authority and provider boundaries
-        run: node --test test/autonomous-execution-fabric-runtime.test.mjs
-
-  rootless-sandbox-proof:
-    runs-on: ubuntu-latest
-    timeout-minutes: 12
-    steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Install rootless container prerequisites
         shell: bash
@@ -49,6 +44,27 @@ jobs:
           if ! grep -q "^${USER}:" /etc/subgid; then
             sudo usermod --add-subgids 100000-165535 "$USER"
           fi
+          test "$(id -u)" -ne 0
+          test "$(podman info --format '{{.Host.Security.Rootless}}')" = 'true'
+
+      - name: Validate architecture and runtime contract inside virtualized execution
+        shell: bash
+        run: |
+          set -euo pipefail
+          podman run --rm \
+            --network=none \
+            --read-only \
+            --cap-drop=ALL \
+            --security-opt=no-new-privileges \
+            --pids-limit=128 \
+            --memory=512m \
+            --cpus=2 \
+            --userns=keep-id \
+            --tmpfs /tmp:rw,nosuid,nodev,size=128m \
+            -v "$GITHUB_WORKSPACE:/src:ro" \
+            -w /src \
+            docker.io/library/node:24-alpine \
+            sh -eu -c 'node scripts/validate-autonomous-execution-fabric.mjs && node --test test/autonomous-execution-fabric-runtime.test.mjs'
 
       - name: Prove rootless isolated execution boundary
         shell: bash
@@ -56,10 +72,6 @@ jobs:
           EKODI_PRODUCTION_SECRET_SENTINEL: must-not-enter-sandbox
         run: |
           set -euo pipefail
-          test "$(id -u)" -ne 0
-          rootless=$(podman info --format '{{.Host.Security.Rootless}}')
-          test "$rootless" = 'true'
-
           workspace="$RUNNER_TEMP/ekodi-execution-proof"
           evidence="$RUNNER_TEMP/ekodi-execution-proof.json"
           mkdir -p "$workspace"
@@ -93,30 +105,45 @@ jobs:
           test "$(cat "$workspace/proof.txt")" = 'isolated'
           digest=$(sha256sum "$workspace/proof.txt" | awk '{print $1}')
           jq -n \
-            --arg runner_uid "$(id -u)" \
-            --arg artifact_digest "$digest" \
+            --arg task_id "github-run-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" \
+            --arg branch "${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}" \
+            --arg base_commit "${GITHUB_SHA}" \
+            --arg artifact_digest "sha256:${digest}" \
             '{
-              schemaVersion: 1,
+              schemaVersion: 2,
               generation: 10,
+              taskId: $task_id,
+              branch: $branch,
+              baseCommit: $base_commit,
               provider: "github-hosted-runner-rootless-podman",
+              isolationProfile: "standard",
+              executionTechnology: "rootless-podman-oci",
+              virtualizationProven: true,
               ephemeral: true,
               workspaceIsolation: true,
-              rootless: true,
-              runnerUid: $runner_uid,
-              networkDefault: "none",
-              rootFilesystem: "read-only",
-              capabilities: "dropped-all",
+              networkDefaultDenied: true,
+              rootFilesystemReadOnly: true,
+              capabilitiesDropped: true,
               noNewPrivileges: true,
+              privileged: false,
+              hostContainerSocketMounted: false,
               productionSecretExposed: false,
               productionMutationPerformed: false,
               authorityExpanded: false,
-              workspaceArtifactSha256: $artifact_digest,
+              artifactDigest: $artifact_digest,
+              evidence: {
+                rootless: true,
+                network: "none",
+                rootFilesystem: "read-only",
+                capabilities: "dropped-all",
+                workspaceArtifact: "proof.txt"
+              },
               runtimeProductionReadinessClaimed: false
             }' > "$evidence"
           cat "$evidence"
 
       - name: Upload sandbox runtime evidence
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: ekodi-gen10-rootless-sandbox-proof-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/ekodi-execution-proof.json
