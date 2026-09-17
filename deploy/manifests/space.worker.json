@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 3,
   "worker": {
     "name": "ekodi-space",
     "config": "wrangler.space.toml",
@@ -8,110 +8,106 @@
         "url": "https://space.ekodi.kr/",
         "statuses": [308],
         "redirect": "manual",
-        "headerExpect": [
-          "location: https://ekodi.kr/my/",
-          "cache-control: no-store",
-          "x-ekodi-legacy-alias: space.ekodi.kr"
-        ]
+        "headerExpect": ["location: https://ekodi.kr/my/", "cache-control: no-store", "x-ekodi-legacy-alias: space.ekodi.kr"]
       },
       {
         "url": "https://space.ekodi.kr/health",
         "statuses": [200],
         "redirect": "manual",
-        "expect": ["ekodi-space","operating-space","workspace-id","root-slug"],
-        "headerExpect": ["x-ekodi-service: space","cache-control: no-store"]
+        "expect": ["ekodi-space", "operating-space", "workspace-id", "root-slug"],
+        "headerExpect": ["x-ekodi-service: space", "cache-control: no-store"]
       },
       {
         "url": "https://space.ekodi.kr/deployment-probe",
         "statuses": [200],
         "redirect": "manual",
-        "expect": ["OPERATING SPACE","STORE MASTER","MENU MASTER"],
-        "headerExpect": ["x-ekodi-service: space","x-ekodi-route: space-workspace","cache-control: no-store"]
+        "expect": ["OPERATING SPACE", "STORE MASTER", "MENU MASTER"],
+        "headerExpect": ["x-ekodi-service: space", "x-ekodi-route: space-workspace", "cache-control: no-store"]
       },
       {
         "url": "https://ekodi.kr/_ekodi/space/storefront.css",
         "statuses": [200],
         "redirect": "manual",
-        "expect": [".rs-hero",".rs-menu-card","data-restaurant-theme"],
+        "expect": [".rs-hero", ".rs-menu-card", "data-restaurant-theme"],
         "headerExpect": ["x-ekodi-route: storefront-asset"]
       },
       {
         "url": "https://ekodi.kr/jadam",
         "statuses": [200],
         "redirect": "manual",
-        "expect": ["자담치킨 목포대점","대표 메뉴","본사 공식 제품 이미지","배달앱 주문"],
-        "headerExpect": ["x-ekodi-route: space-storefront","x-robots-tag: index, follow","cache-control: no-store"]
+        "expect": ["자담치킨 목포대점", "대표 메뉴", "본사 공식 제품 이미지", "배달앱 주문"],
+        "headerExpect": ["x-ekodi-route: space-storefront", "x-robots-tag: index, follow", "cache-control: no-store"]
       },
       {
         "url": "https://ekodi.kr/pizzamaru",
         "statuses": [200],
         "redirect": "manual",
-        "expect": ["피자마루 목포대점","메뉴·가격 보기","배달앱 주문","피자마루 전체메뉴","공식 소셜채널","Instagram","YouTube","/_ekodi/space/storefront.css?v=20260911-v2"],
-        "headerExpect": ["x-ekodi-route: space-storefront","x-robots-tag: index, follow","cache-control: no-store"]
+        "expect": ["피자마루 목포대점", "메뉴·가격 보기", "배달앱 주문", "피자마루 전체메뉴", "공식 소셜채널", "Instagram", "YouTube", "/_ekodi/space/storefront.css?v=20260911-v2"],
+        "headerExpect": ["x-ekodi-route: space-storefront", "x-robots-tag: index, follow", "cache-control: no-store"]
       },
       {
         "url": "https://ekodi.kr/pizzamaru/mokpodae",
         "statuses": [308],
         "redirect": "manual",
-        "headerExpect": ["location: https://ekodi.kr/pizzamaru","x-ekodi-workspace-alias: pizzamaru/mokpodae->pizzamaru","cache-control: no-store"]
+        "headerExpect": ["location: https://ekodi.kr/pizzamaru", "x-ekodi-workspace-alias: pizzamaru/mokpodae->pizzamaru", "cache-control: no-store"]
       },
       {
         "url": "https://ekodi.kr/yogurt",
         "statuses": [200],
         "redirect": "manual",
-        "expect": ["요거트퍼플 목포대점","대표메뉴","전체메뉴 자세히 보기","본사 공식 메뉴 166종","new_img58.png","땡겨요","먹깨비","/_ekodi/space/storefront.css?v=20260912-yogurt-v4"],
-        "headerExpect": ["x-ekodi-route: space-storefront","x-robots-tag: index, follow","cache-control: no-store"]
+        "expect": ["요거트퍼플 목포대점", "대표메뉴", "전체메뉴 자세히 보기", "본사 공식 메뉴 166종", "new_img58.png", "땡겨요", "먹깨비", "/_ekodi/space/storefront.css?v=20260912-yogurt-v4"],
+        "headerExpect": ["x-ekodi-route: space-storefront", "x-robots-tag: index, follow", "cache-control: no-store"]
       },
       {
         "url": "https://ekodi.kr/yogurtpurple",
         "statuses": [410],
         "redirect": "manual",
         "expect": ["삭제된 주소입니다."],
-        "headerExpect": ["x-ekodi-route: space-gone","cache-control: no-store"]
+        "headerExpect": ["x-ekodi-route: space-gone", "cache-control: no-store"]
       },
       {
         "url": "https://ekodi.kr/ekodimission",
         "statuses": [200],
         "redirect": "manual",
         "expect": ["EKODI MISSION"],
-        "headerExpect": ["x-ekodi-route: ekodimission-public","x-ekodi-independent-site: true","x-ekodi-publication-status: published","x-robots-tag: index, follow","cache-control: no-store"],
+        "headerExpect": ["x-ekodi-route: ekodimission-public", "x-ekodi-independent-site: true", "x-ekodi-publication-status: published", "x-robots-tag: index, follow", "cache-control: no-store"],
         "rollbackVerify": false
       },
       {
         "url": "https://ekodi.kr/ekodimission/activities",
         "statuses": [200],
         "redirect": "manual",
-        "expect": ["MISSION ACTIVITIES","260926-chuseok-open-table","15:00–17:00"],
-        "headerExpect": ["x-ekodi-route: ekodimission-public","x-ekodi-independent-site: true","x-ekodi-publication-status: published","x-robots-tag: index, follow","cache-control: no-store"],
+        "expect": ["MISSION ACTIVITIES", "260926-chuseok-open-table", "15:00–17:00"],
+        "headerExpect": ["x-ekodi-route: ekodimission-public", "x-ekodi-independent-site: true", "x-ekodi-publication-status: published", "x-robots-tag: index, follow", "cache-control: no-store"],
         "rollbackVerify": false
       },
       {
         "url": "https://ekodi.kr/ekodimission/activities/260926-chuseok-open-table",
         "statuses": [200],
         "redirect": "manual",
-        "expect": ["260926 · OPEN TABLE","15:00–17:00","JOIN THE TABLE","data-event-application"],
-        "headerExpect": ["x-ekodi-route: ekodimission-public","x-ekodi-independent-site: true","x-ekodi-site-class: brand-site","x-ekodi-publication-status: published","x-robots-tag: index, follow","cache-control: no-store"],
+        "expect": ["260926 · OPEN TABLE", "15:00–17:00", "JOIN THE TABLE", "data-event-application"],
+        "headerExpect": ["x-ekodi-route: ekodimission-public", "x-ekodi-independent-site: true", "x-ekodi-site-class: brand-site", "x-ekodi-publication-status: published", "x-robots-tag: index, follow", "cache-control: no-store"],
         "rollbackVerify": false
       },
       {
         "url": "https://ekodi.kr/ekodimission/activities/260925-chuseok-open-table",
         "statuses": [308],
         "redirect": "manual",
-        "headerExpect": ["location: https://ekodi.kr/ekodimission/activities/260926-chuseok-open-table","x-ekodi-route: ekodimission-event-canonical","x-ekodi-publication-status: published","cache-control: no-store"],
+        "headerExpect": ["location: https://ekodi.kr/ekodimission/activities/260926-chuseok-open-table", "x-ekodi-route: ekodimission-event-canonical", "x-ekodi-publication-status: published", "cache-control: no-store"],
         "rollbackVerify": false
       },
       {
         "url": "https://ekodi.kr/ekodimission/activities/2026-chuseok-open-table",
         "statuses": [308],
         "redirect": "manual",
-        "headerExpect": ["location: https://ekodi.kr/ekodimission/activities/260926-chuseok-open-table","x-ekodi-route: ekodimission-event-canonical","x-ekodi-publication-status: published","cache-control: no-store"],
+        "headerExpect": ["location: https://ekodi.kr/ekodimission/activities/260926-chuseok-open-table", "x-ekodi-route: ekodimission-event-canonical", "x-ekodi-publication-status: published", "cache-control: no-store"],
         "rollbackVerify": false
       },
       {
         "url": "https://ekodi.kr/ekodimission/assets/open-table-meal-260925.jpg",
         "statuses": [200],
         "redirect": "manual",
-        "headerExpect": ["x-ekodi-route: ekodimission-asset","x-ekodi-publication-status: published"],
+        "headerExpect": ["x-ekodi-route: ekodimission-asset", "x-ekodi-publication-status: published"],
         "rollbackVerify": false
       },
       {
@@ -119,7 +115,7 @@
         "statuses": [200],
         "redirect": "manual",
         "expect": ["PARTICIPATE"],
-        "headerExpect": ["x-ekodi-route: ekodimission-public","x-ekodi-independent-site: true","x-ekodi-publication-status: published","x-robots-tag: index, follow","cache-control: no-store"],
+        "headerExpect": ["x-ekodi-route: ekodimission-public", "x-ekodi-independent-site: true", "x-ekodi-publication-status: published", "x-robots-tag: index, follow", "cache-control: no-store"],
         "rollbackVerify": false
       },
       {
@@ -127,7 +123,7 @@
         "statuses": [200],
         "redirect": "manual",
         "expect": ["PARTNERSHIP"],
-        "headerExpect": ["x-ekodi-route: ekodimission-public","x-ekodi-independent-site: true","x-ekodi-publication-status: published","x-robots-tag: index, follow","cache-control: no-store"],
+        "headerExpect": ["x-ekodi-route: ekodimission-public", "x-ekodi-independent-site: true", "x-ekodi-publication-status: published", "x-robots-tag: index, follow", "cache-control: no-store"],
         "rollbackVerify": false
       },
       {
@@ -135,7 +131,7 @@
         "statuses": [200],
         "redirect": "manual",
         "expect": ["STORIES & NEWS"],
-        "headerExpect": ["x-ekodi-route: ekodimission-public","x-ekodi-independent-site: true","x-ekodi-publication-status: published","x-robots-tag: index, follow","cache-control: no-store"],
+        "headerExpect": ["x-ekodi-route: ekodimission-public", "x-ekodi-independent-site: true", "x-ekodi-publication-status: published", "x-robots-tag: index, follow", "cache-control: no-store"],
         "rollbackVerify": false
       },
       {
@@ -143,7 +139,7 @@
         "statuses": [200],
         "redirect": "manual",
         "expect": ["GIVE & SHARE"],
-        "headerExpect": ["x-ekodi-route: ekodimission-public","x-ekodi-independent-site: true","x-ekodi-publication-status: published","x-robots-tag: index, follow","cache-control: no-store"],
+        "headerExpect": ["x-ekodi-route: ekodimission-public", "x-ekodi-independent-site: true", "x-ekodi-publication-status: published", "x-robots-tag: index, follow", "cache-control: no-store"],
         "rollbackVerify": false
       },
       {
@@ -151,15 +147,7 @@
         "statuses": [200],
         "redirect": "manual",
         "expect": ["VISION & VALUES"],
-        "headerExpect": ["x-ekodi-route: ekodimission-public","x-ekodi-independent-site: true","x-ekodi-publication-status: published","x-robots-tag: index, follow","cache-control: no-store"],
-        "rollbackVerify": false
-      },
-      {
-        "url": "https://ekodi.kr/ekodimission/live",
-        "statuses": [200],
-        "redirect": "manual",
-        "expect": ["EKODI REALTIME"],
-        "headerExpect": ["x-ekodi-route: ekodimission-public","x-ekodi-independent-site: true","x-ekodi-publication-status: published","x-robots-tag: index, follow","cache-control: no-store"],
+        "headerExpect": ["x-ekodi-route: ekodimission-public", "x-ekodi-independent-site: true", "x-ekodi-publication-status: published", "x-robots-tag: index, follow", "cache-control: no-store"],
         "rollbackVerify": false
       },
       {
@@ -167,7 +155,7 @@
         "statuses": [200],
         "redirect": "manual",
         "expect": ["PRAYER"],
-        "headerExpect": ["x-ekodi-route: ekodimission-public","x-ekodi-independent-site: true","x-ekodi-publication-status: published","x-robots-tag: index, follow","cache-control: no-store"],
+        "headerExpect": ["x-ekodi-route: ekodimission-public", "x-ekodi-independent-site: true", "x-ekodi-publication-status: published", "x-robots-tag: index, follow", "cache-control: no-store"],
         "rollbackVerify": false
       },
       {
@@ -175,7 +163,7 @@
         "statuses": [200],
         "redirect": "manual",
         "expect": ["STEWARDSHIP & TRANSPARENCY"],
-        "headerExpect": ["x-ekodi-route: ekodimission-public","x-ekodi-independent-site: true","x-ekodi-publication-status: published","x-robots-tag: index, follow","cache-control: no-store"],
+        "headerExpect": ["x-ekodi-route: ekodimission-public", "x-ekodi-independent-site: true", "x-ekodi-publication-status: published", "x-robots-tag: index, follow", "cache-control: no-store"],
         "rollbackVerify": false
       },
       {
@@ -183,15 +171,15 @@
         "statuses": [200],
         "redirect": "manual",
         "expect": ["CONTACT"],
-        "headerExpect": ["x-ekodi-route: ekodimission-public","x-ekodi-independent-site: true","x-ekodi-publication-status: published","x-robots-tag: index, follow","cache-control: no-store"],
+        "headerExpect": ["x-ekodi-route: ekodimission-public", "x-ekodi-independent-site: true", "x-ekodi-publication-status: published", "x-robots-tag: index, follow", "cache-control: no-store"],
         "rollbackVerify": false
       },
       {
         "url": "https://ekodi.kr/hammu",
         "statuses": [200],
         "redirect": "manual",
-        "expect": ["data-ekodi-organization=\"hammu\"","MOKPO PRESBYTERY","/hammu/admin"],
-        "headerExpect": ["x-ekodi-route: space-organization","cache-control: no-store"],
+        "expect": ["data-ekodi-organization=\"hammu\"", "MOKPO PRESBYTERY", "/hammu/admin"],
+        "headerExpect": ["x-ekodi-route: space-organization", "cache-control: no-store"],
         "rollbackVerify": false
       }
     ]
