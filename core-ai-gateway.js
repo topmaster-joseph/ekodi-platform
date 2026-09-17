@@ -6,6 +6,11 @@ import {
 import { buildEkodiAiOrchestrator } from './ai-orchestrator-runtime.js';
 import { createEkodiAiProviderRegistry } from './ekodi-ai-provider-registry.js';
 import { buildEkodiCommandPlane } from './ekodi-command-plane.js';
+import {
+  buildEkodiCapabilityExecutor,
+  capabilityRequiresExecution,
+  executionEvidenceSatisfied,
+} from './ekodi-capability-executor.js';
 import { buildExperienceRecord } from './ekodi-capability-ecosystem.js';
 import { appendCapabilityExperience } from './ekodi-capability-ecosystem-store.js';
 
@@ -53,10 +58,79 @@ function buildProviderPool(env = {}, providers = []) {
   return Object.freeze([...unique.values()]);
 }
 
+function capabilityAdaptersFromEnv(env = {}) {
+  const adapters = env.EKODI_CAPABILITY_ADAPTERS;
+  return adapters && typeof adapters === 'object' ? adapters : {};
+}
+
+function mergeExecutionResult(result = {}, execution = {}) {
+  const state = execution.state === 'not_required' ? result.state : execution.state;
+  const evidence = Object.freeze({
+    ...(result.evidence || {}),
+    executionReceipt: execution.executionReceipt || result.evidence?.executionReceipt || null,
+    verificationEvidence: execution.verificationEvidence || result.evidence?.verificationEvidence || null,
+    recoveryEvidence: execution.recoveryEvidence || result.evidence?.recoveryEvidence || null,
+    executionRequired: execution.executionRequired === true,
+    executionState: execution.state || null,
+    verified: state === 'verified',
+  });
+  return Object.freeze({
+    ...result,
+    state,
+    execution: Object.freeze({
+      state: execution.state || 'not_required',
+      reason: execution.reason || null,
+      capabilityId: execution.capabilityId || null,
+    }),
+    evidence,
+  });
+}
+
 export function buildCoreAiGateway(env = {}, providers = []) {
   const adapters = buildProviderPool(env, providers);
   const orchestrator = buildEkodiAiOrchestrator(env, adapters);
   const commandPlane = buildEkodiCommandPlane(env, adapters);
+  const capabilityExecutor = buildEkodiCapabilityExecutor({ adapters: capabilityAdaptersFromEnv(env) });
+
+  async function enforceCapabilityExecution(options, result) {
+    const capabilityId = String(options?.target?.capability || result?.plan?.target?.capability || '').trim().toLowerCase();
+    if (!capabilityRequiresExecution(capabilityId)) return result;
+
+    if (result?.state !== 'verified') {
+      return Object.freeze({
+        ...result,
+        evidence: Object.freeze({
+          ...(result?.evidence || {}),
+          executionRequired: true,
+          executionState: 'blocked_by_command_verification',
+          verified: false,
+        }),
+      });
+    }
+
+    const execution = await capabilityExecutor.execute({
+      taskId: result.taskId || options.taskId,
+      capabilityId,
+      goal: options.goal || options.taskName,
+      target: options.target || result.plan?.target || {},
+      authority: options.authority || options.context?.authority || {},
+      delegation: options.delegation || {},
+      risk: options.risk,
+      event: options.event || {},
+      payload: options.executionPayload ?? options.context?.executionPayload ?? null,
+      context: options.context || {},
+    });
+    const merged = mergeExecutionResult(result, execution);
+    const completion = executionEvidenceSatisfied({ target: { capability: capabilityId } }, merged);
+    if (completion.required && !completion.satisfied && merged.state === 'verified') {
+      return Object.freeze({
+        ...merged,
+        state: 'degraded',
+        evidence: Object.freeze({ ...merged.evidence, verified: false, executionState: 'evidence_incomplete' }),
+      });
+    }
+    return merged;
+  }
 
   async function recordExperience(options, result, startedAt, fallbackSource) {
     if (!env.DB || !result?.taskId) return;
@@ -79,6 +153,11 @@ export function buildCoreAiGateway(env = {}, providers = []) {
         multiProviderEnabled: isMultiProviderEnabled(env),
         orchestration: orchestrator.status(),
         commandPlane: commandPlane.status(),
+        capabilityExecution: Object.freeze({
+          executor: 'ekodi-capability-executor',
+          executionEvidenceRequired: true,
+          adapterCount: Object.keys(capabilityAdaptersFromEnv(env)).length,
+        }),
       });
     },
     plan(input = {}) {
@@ -111,13 +190,15 @@ export function buildCoreAiGateway(env = {}, providers = []) {
     },
     async command(options = {}) {
       const startedAt = Date.now();
-      const result = await commandPlane.execute(options);
+      const planned = await commandPlane.execute(options);
+      const result = await enforceCapabilityExecution(options, planned);
       await recordExperience(options, result, startedAt, 'core-ai-command');
       return result;
     },
     async handlePulse(options = {}) {
       const startedAt = Date.now();
-      const result = await commandPlane.handlePulse(options);
+      const planned = await commandPlane.handlePulse(options);
+      const result = await enforceCapabilityExecution(options, planned);
       await recordExperience(options, result, startedAt, 'core-ai-pulse');
       return result;
     },

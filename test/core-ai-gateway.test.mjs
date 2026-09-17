@@ -3,6 +3,34 @@ import assert from 'node:assert/strict';
 import { buildCoreAiGateway, getCoreAiGatewayStatus } from '../core-ai-gateway.js';
 import { resetAiResilienceCircuitsForTest } from '../ai-resilience-runtime.js';
 
+function reviewProvider(id, priority = 10) {
+  return {
+    id,
+    priority,
+    capabilities: ['text', 'reasoning', 'review'],
+    available: true,
+    costClass: 'account-managed',
+    async invoke({ context }) {
+      return { text: `${id}:${context?.commandPlane?.role || 'unknown'}` };
+    },
+  };
+}
+
+const reversibleDelegation = Object.freeze({
+  allowed: true,
+  reversible: true,
+  audited: true,
+  preflightVerified: true,
+  verificationDefined: true,
+});
+
+const automationAuthority = Object.freeze({
+  personId: 'person-test',
+  workspaceId: 'workspace-test',
+  role: 'owner',
+  capabilityGrants: ['core.automation'],
+});
+
 test('Core AI Gateway degrades to non-AI fallback when providers are disabled', async () => {
   const gateway = buildCoreAiGateway({ AI_PROVIDER: 'NONE' }, [{
     id: 'example-ai',
@@ -63,4 +91,63 @@ test('Core AI Gateway rejects incomplete execution contracts before provider inv
     /requires a non-AI fallback/,
   );
   assert.equal(invoked, false);
+});
+
+test('execution capability cannot be verified from AI consultation alone when no execution adapter exists', async () => {
+  const gateway = buildCoreAiGateway({}, [reviewProvider('provider-a', 10), reviewProvider('provider-b', 20)]);
+  const result = await gateway.command({
+    taskId: 'execution-without-adapter',
+    goal: 'Update a delegated workflow safely.',
+    mutation: true,
+    target: { workspaceId: 'workspace-test', capability: 'core.automation' },
+    authority: automationAuthority,
+    delegation: reversibleDelegation,
+  });
+
+  assert.equal(result.state, 'degraded');
+  assert.equal(result.execution.state, 'degraded');
+  assert.equal(result.execution.reason, 'execution_adapter_unavailable');
+  assert.equal(result.evidence.executionRequired, true);
+  assert.equal(result.evidence.verified, false);
+  assert.equal(result.evidence.executionReceipt, null);
+});
+
+test('execution capability becomes verified only after adapter effect and post-execution verification evidence', async () => {
+  const effects = [];
+  const adapter = {
+    id: 'test-core-automation-adapter',
+    async execute(context) {
+      effects.push(['execute', context.capabilityId, context.executionId]);
+      return { effectPerformed: true, rollbackTarget: 'workflow:v1', revision: 'workflow:v2' };
+    },
+    async verify(context) {
+      effects.push(['verify', context.capabilityId, context.executionId]);
+      return { passed: true, method: 'deterministic-test-observation', observedRevision: 'workflow:v2' };
+    },
+    async rollback() {
+      return { succeeded: true, rollbackId: 'rollback-test' };
+    },
+  };
+  const gateway = buildCoreAiGateway({
+    EKODI_CAPABILITY_ADAPTERS: { 'core.automation': adapter },
+  }, [reviewProvider('provider-a', 10), reviewProvider('provider-b', 20)]);
+
+  const result = await gateway.command({
+    taskId: 'execution-with-adapter',
+    goal: 'Update a delegated workflow safely.',
+    mutation: true,
+    target: { workspaceId: 'workspace-test', capability: 'core.automation' },
+    authority: automationAuthority,
+    delegation: reversibleDelegation,
+    executionPayload: { workflow: 'test' },
+  });
+
+  assert.equal(result.state, 'verified');
+  assert.equal(result.execution.state, 'verified');
+  assert.equal(result.evidence.executionRequired, true);
+  assert.equal(result.evidence.executionReceipt.effectPerformed, true);
+  assert.equal(result.evidence.executionReceipt.capabilityId, 'core.automation');
+  assert.equal(result.evidence.verificationEvidence.passed, true);
+  assert.equal(result.evidence.verificationEvidence.executionId, result.evidence.executionReceipt.executionId);
+  assert.deepEqual(effects.map(item => item[0]), ['execute', 'verify']);
 });

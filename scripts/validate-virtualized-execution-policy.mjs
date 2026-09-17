@@ -47,15 +47,36 @@ if (failures.length === 0) {
   expect(fabric.status === 'enforced', 'autonomous execution fabric policy must remain enforced');
   expect(fabric.executionBoundary?.allMutatingWorkRequiresFabric === true, 'fabric policy must enforce all mutations through the fabric');
   expect(fabric.executionBoundary?.providerIndependent === true, 'fabric policy must remain provider independent');
+  expect(fabric.executionBoundary?.singleExecutorMayNotOwnControlAuthority === true, 'single executor must not own control authority');
+  expect(fabric.orchestration?.owner === 'ekodi-orchestrator', 'EKODI Orchestrator must own execution coordination');
+  expect(fabric.orchestration?.mode === 'parallel-multi-method-independent-evidence-convergence', 'fabric must use parallel multi-method convergence');
+  expect(fabric.orchestration?.virtualizationOnly === false, 'execution fabric must not be virtualization-only');
+  expect(fabric.orchestration?.virtualizedIsolationLaneRequiredForMutatingEngineeringWork === true, 'mutating engineering work must retain a virtualized isolation lane');
+  expect(Number(fabric.orchestration?.minimumIndependentLanes) >= 2, 'fabric must require at least two independent lanes');
+  expect(Number(fabric.orchestration?.minimumIndependentMethodClasses) >= 2, 'fabric must require at least two independent method classes');
+  expect(Number(fabric.orchestration?.maxConcurrentAtS0) >= 2, 'S0 must support at least two concurrent evidence lanes');
+  const provenMethods = (fabric.orchestration?.methodCatalog || []).filter(item => item.state === 'runtime-proven');
+  expect(provenMethods.length >= 2, 'at least two method catalog entries must be runtime-proven');
+  expect(new Set(provenMethods.map(item => item.methodClass)).size >= 2, 'runtime-proven methods must represent distinct method classes');
+  expect(fabric.orchestration?.convergence?.requireComparableEvidenceDigest === true, 'parallel convergence must compare evidence digests');
+  expect(fabric.orchestration?.convergence?.productionPromotion === 'central-release-gateway-only', 'execution lanes must not own production promotion');
   expect(fabric.sandbox?.process?.nonRootRequired === true, 'fabric sandbox must require non-root execution');
   expect(fabric.sandbox?.process?.dropAllCapabilities === true, 'fabric sandbox must drop all capabilities');
   expect(fabric.sandbox?.process?.noNewPrivileges === true, 'fabric sandbox must set no-new-privileges');
+  expect(Number(fabric.sandbox?.maxConcurrentAtS0) >= 2, 'fabric sandbox capacity must permit the S0 two-lane proof');
+  expect(fabric.promotion?.parallelIndependentEvidenceRequired === true, 'promotion must require parallel independent evidence');
+  expect(Number(fabric.promotion?.minimumIndependentEvidenceSources) >= 2, 'promotion requires at least two evidence sources');
 
   expect(architecture.generation === 10, 'architecture must remain Generation 10');
   expect(architecture.mandatoryExecutionBoundary?.allMutatingEngineeringWorkRequiresExecutionFabric === true, 'architecture must mandate the execution fabric for mutations');
-  expect(architecture.mandatoryExecutionBoundary?.mergeRequiresVirtualizedExecutionGate === true, 'merge must require a virtualized execution gate');
+  expect(architecture.mandatoryExecutionBoundary?.mergeRequiresVirtualizedExecutionGate === true, 'merge must retain a virtualized isolation gate');
+  expect(architecture.mandatoryExecutionBoundary?.mergeRequiresParallelIndependentEvidenceGate === true, 'merge must also require parallel independent evidence');
   expect(architecture.operatingModel?.providerIndependent === true, 'architecture must remain provider independent');
+  expect(architecture.operatingModel?.virtualizationOnly === false, 'architecture must not be virtualization-only');
+  expect(architecture.parallelExecution?.orchestrationOwner === 'ekodi-orchestrator', 'architecture must assign orchestration to EKODI Orchestrator');
+  expect(architecture.parallelExecution?.virtualizationIsOneMethodNotTheArchitecture === true, 'architecture must define virtualization as one method');
   expect(architecture.runtimeEvidence?.nonProductionIsolatedExecutionProven === true, 'initial non-production isolated execution evidence must be recorded');
+  expect(architecture.runtimeEvidence?.parallelMultiMethodRuntimeProofRequired === true, 'parallel multi-method runtime evidence must be required');
   expect(architecture.runtimeEvidence?.autonomousProductionReadinessProven === false, 'production readiness must not be claimed prematurely');
   expect(architecture.activation?.currentState === 'nonproduction_runtime_proven_activation_incomplete', 'activation state must reflect partial runtime proof only');
 
@@ -66,11 +87,11 @@ if (failures.length === 0) {
 }
 
 if (failures.length) {
-  console.error('[EKODI][EXEC-FABRIC-001] virtualized execution policy validation failed:');
+  console.error('[EKODI][EXEC-FABRIC-001] execution fabric isolation and parallel-orchestration policy validation failed:');
   for (const failure of failures) console.error(`- ${failure}`);
   process.exit(1);
 }
 
-console.log('[EKODI][EXEC-FABRIC-001] virtualized execution policy validated.');
-console.log('[EKODI][EXEC-FABRIC-001] all mutating engineering work is required to pass the provider-independent execution fabric.');
+console.log('[EKODI][EXEC-FABRIC-001] virtualized isolation policy validated as a mandatory safety lane.');
+console.log('[EKODI][EXEC-FABRIC-001] EKODI Orchestrator requires parallel independent execution methods; the architecture is not virtualization-only.');
 console.log('[EKODI][EXEC-FABRIC-001] autonomous production readiness remains intentionally unclaimed.');

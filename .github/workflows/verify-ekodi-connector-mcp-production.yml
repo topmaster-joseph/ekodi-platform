@@ -1,0 +1,89 @@
+name: Verify EKODI Connector MCP Production
+
+on:
+  workflow_run:
+    workflows:
+      - 'Deploy EKODI Shared Site Core'
+      - 'Deploy Control API'
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: verify-ekodi-connector-mcp-production
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main')
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Verify canonical discovery, MCP and OAuth contract
+        id: verify
+        shell: bash
+        run: |
+          set -euo pipefail
+          passed=false
+          for attempt in $(seq 1 8); do
+            discovery_code=$(curl -sS -o /tmp/ekodi-discovery.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/.well-known/ekodi.json' || true)
+            oauth_code=$(curl -sS -o /tmp/ekodi-oauth.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/.well-known/oauth-protected-resource' || true)
+            tools_code=$(curl -sS -o /tmp/ekodi-tools.json -w '%{http_code}' --connect-timeout 5 --max-time 15 -H 'content-type: application/json' --data-binary '{"jsonrpc":"2.0","id":1848,"method":"tools/list","params":{}}' 'https://ekodi.kr/mcp' || true)
+            identify_code=$(curl -sS -o /tmp/ekodi-identify.json -w '%{http_code}' --connect-timeout 5 --max-time 15 -H 'content-type: application/json' --data-binary '{"jsonrpc":"2.0","id":1849,"method":"tools/call","params":{"name":"identify_ekodi","arguments":{}}}' 'https://ekodi.kr/mcp' || true)
+            unauth_code=$(curl -sS -o /tmp/ekodi-unauth.json -w '%{http_code}' --connect-timeout 5 --max-time 15 -H 'content-type: application/json' --data-binary '{"jsonrpc":"2.0","id":1850,"method":"tools/call","params":{"name":"submit_task","arguments":{"intent":"production auth-boundary probe"}}}' 'https://ekodi.kr/mcp' || true)
+            if [ "$discovery_code" = 200 ] && [ "$oauth_code" = 200 ] && [ "$tools_code" = 200 ] && [ "$identify_code" = 200 ] && [ "$unauth_code" = 200 ]; then
+              if node <<'NODE'
+          const fs=require('fs');
+          const discovery=JSON.parse(fs.readFileSync('/tmp/ekodi-discovery.json','utf8'));
+          const oauth=JSON.parse(fs.readFileSync('/tmp/ekodi-oauth.json','utf8'));
+          const tools=JSON.parse(fs.readFileSync('/tmp/ekodi-tools.json','utf8'))?.result?.tools||[];
+          const identify=JSON.parse(fs.readFileSync('/tmp/ekodi-identify.json','utf8'))?.result?.structuredContent||{};
+          const unauth=JSON.parse(fs.readFileSync('/tmp/ekodi-unauth.json','utf8'))?.result||{};
+          const required=['identify_ekodi','discover_public_services','account_status','submit_task','get_task_status','cancel_task','ekodi_delegate_command'];
+          const byName=new Map(tools.map(tool=>[tool.name,tool]));
+          if(discovery?.canonical_origin!=='https://ekodi.kr')process.exit(1);
+          if(!discovery?.aliases?.includes('EKODI')||!discovery?.aliases?.includes('에코디'))process.exit(1);
+          if(discovery?.ai?.mcp!=='https://ekodi.kr/mcp'||discovery?.security?.orchestrator_is_execution_authority!==true||discovery?.discovery?.name_recognition_is_authorization!==false)process.exit(1);
+          if(oauth?.resource!=='https://ekodi.kr/mcp')process.exit(1);
+          if(required.some(name=>!byName.has(name)))process.exit(1);
+          if(byName.get('identify_ekodi')?.securitySchemes?.[0]?.type!=='noauth')process.exit(1);
+          if(byName.get('submit_task')?.securitySchemes?.[0]?.type!=='oauth2')process.exit(1);
+          if(byName.get('cancel_task')?.annotations?.destructiveHint!==true)process.exit(1);
+          if(identify?.canonicalOrigin!=='https://ekodi.kr'||identify?.recognitionIsAuthorization!==false||identify?.orchestratorIsExecutionAuthority!==true)process.exit(1);
+          if(unauth?.structuredContent?.authenticated!==false)process.exit(1);
+          if(!String(unauth?._meta?.['mcp/www_authenticate']?.[0]||'').includes('oauth-protected-resource'))process.exit(1);
+          NODE
+              then
+                passed=true
+                break
+              fi
+            fi
+            echo "Connector/MCP production verification pending ($attempt/8 discovery=$discovery_code oauth=$oauth_code tools=$tools_code identify=$identify_code unauth=$unauth_code)"
+            sleep 8
+          done
+          test "$passed" = true
+          echo 'EKODI Connector/MCP production contract verified.'
+      - name: Publish verification evidence
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          OUTCOME: ${{ steps.verify.outcome }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "$OUTCOME" = success ]; then
+            status='✅ EKODI Connector/MCP production verified'
+          else
+            status='❌ EKODI Connector/MCP production verification failed'
+          fi
+          gh issue comment 1848 --repo "$GITHUB_REPOSITORY" --body "$status
+
+          - discovery: https://ekodi.kr/.well-known/ekodi.json
+          - MCP: https://ekodi.kr/mcp
+          - OAuth metadata: https://ekodi.kr/.well-known/oauth-protected-resource
+          - checks: aliases + canonical identity + tools/list + public identify + unauthenticated submit rejection
+          - workflow: $RUN_URL"

@@ -94,6 +94,24 @@ test('My EKODI keeps Invest inside progressive discovery and passes only an auth
   assert.match(subject,/location\.replace/);
 });
 
+test('Broker Readiness Gate is non-executing, secret-free and visible to central Invest admin',async()=>{
+  const core=await read('invest-market-core.js');
+  const runtime=await read('invest-automation-runtime.js');
+  const admin=await read('invest-admin.js');
+  assert.match(core,/ekodi\.invest\.broker-readiness\.v1/);
+  assert.match(core,/autonomousLiveTrading:false/);
+  assert.match(core,/managedInvestmentServiceEnabled:false/);
+  assert.match(core,/credentialsIncluded:false/);
+  assert.match(runtime,/\/v1\/invest\/automation\/readiness/);
+  assert.match(runtime,/CASE WHEN credential_ref<>'' THEN 1 ELSE 0 END AS authorization_evidence_present/);
+  assert.match(runtime,/marketDataFresh:false/);
+  assert.match(runtime,/READINESS_ONLY_LIVE_EXECUTION_DISABLED/);
+  assert.doesNotMatch(runtime,/SELECT[^\n]*credential_ref[^\n]*account_ref[^\n]*FROM/i,'raw broker references must not be returned as selected values');
+  assert.match(admin,/BROKER READINESS GATE/);
+  assert.match(admin,/\/v1\/invest\/automation\/readiness/);
+  assert.match(admin,/실거래는 계속 OFF/);
+});
+
 test('workspace and site entry workers route the new services and health markers',async()=>{
   const workspace=await read('workspace-platform-entry-worker.js');
   const site=await read('platform-router-entry-worker.js');

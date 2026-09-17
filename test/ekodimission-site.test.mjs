@@ -9,8 +9,8 @@ const env={ASSETS:{fetch:async request=>{
   const pathname=new URL(request.url).pathname;
   try{const body=await readFile(new URL(`.${pathname}`,spaceRoot));return new Response(request.method==='HEAD'?null:body,{status:200,headers:{'content-type':contentType(pathname)}})}catch{return new Response('Not Found',{status:404})}
 }}};
-const eventPath='/ekodimission/activities/260925-chuseok-open-table';
-const applicationApi=`/ekodimission/api/activities/260925-chuseok-open-table/applications`;
+const eventPath='/ekodimission/activities/260926-chuseok-open-table';
+const applicationApi='/ekodimission/api/activities/260925-chuseok-open-table/applications';
 const pageCases=[
   ['/ekodimission','에코디선교회'],['/ekodimission/activities','MISSION ACTIVITIES'],
   [eventPath,'JOIN THE TABLE'],['/ekodimission/participate','PARTICIPATE'],
@@ -42,9 +42,11 @@ test('published EKODI Mission live route is indexable and independently branded'
   const body=await response.text();assert.match(body,/EKODI REALTIME/);assert.match(body,/meta name="robots" content="index, follow"/i);
 });
 
-test('legacy Open Table URL permanently redirects to the dated activity URL',async()=>{
-  const response=await spaceWorker.fetch(new Request('https://ekodi.kr/ekodimission/activities/2026-chuseok-open-table?from=old'),env);
-  assert.equal(response.status,308);assert.equal(response.headers.get('location'),'https://ekodi.kr/ekodimission/activities/260925-chuseok-open-table?from=old');assert.equal(response.headers.get('x-ekodi-publication-status'),'published');
+test('legacy Open Table URLs permanently redirect to the corrected dated activity URL',async()=>{
+  for(const legacy of ['/ekodimission/activities/260925-chuseok-open-table','/ekodimission/activities/2026-chuseok-open-table']){
+    const response=await spaceWorker.fetch(new Request(`https://ekodi.kr${legacy}?from=old`),env);
+    assert.equal(response.status,308,legacy);assert.equal(response.headers.get('location'),'https://ekodi.kr/ekodimission/activities/260926-chuseok-open-table?from=old',legacy);assert.equal(response.headers.get('x-ekodi-publication-status'),'published',legacy);
+  }
 });
 
 test('EKODI Mission shared assets and unknown child routes are guarded',async()=>{
@@ -52,20 +54,21 @@ test('EKODI Mission shared assets and unknown child routes are guarded',async()=
   const missing=await spaceWorker.fetch(new Request('https://ekodi.kr/ekodimission/not-published'),env);assert.equal(missing.status,404);assert.equal(missing.headers.get('x-ekodi-route'),'ekodimission-not-found');
 });
 
-test('Open Table is first-party EKODI application UI with approved schedule',async()=>{
-  const [event,script,css,admin]=await Promise.all([readFile(new URL('../space/ekodimission-activity.page',import.meta.url),'utf8'),readFile(new URL('../space/ekodimission.js',import.meta.url),'utf8'),readFile(new URL('../space/ekodimission.css',import.meta.url),'utf8'),readFile(new URL('../workspace-admin-page.js',import.meta.url),'utf8')]);
-  assert.match(event,/16:00–18:00/);assert.match(event,/id="apply"/);assert.match(event,/data-event-application/);assert.match(event,/260925-chuseok-open-table/);assert.doesNotMatch(event,/docs\.google\.com|forms\/d\//i);assert.doesNotMatch(script,/docs\.google\.com|forms\/d\//i);
-  assert.match(script,/mission-event-apply|applications/);assert.match(css,/word-break:keep-all/);assert.match(css,/overflow-wrap:break-word/);assert.match(css,/hyphens:none/);
+test('Open Table is first-party EKODI application UI with corrected Sep 26 schedule',async()=>{
+  const [event,activities,script,css,admin]=await Promise.all([readFile(new URL('../space/ekodimission-activity.page',import.meta.url),'utf8'),readFile(new URL('../space/ekodimission-activities.page',import.meta.url),'utf8'),readFile(new URL('../space/ekodimission.js',import.meta.url),'utf8'),readFile(new URL('../space/ekodimission.css',import.meta.url),'utf8'),readFile(new URL('../workspace-admin-page.js',import.meta.url),'utf8')]);
+  assert.match(event,/260926-chuseok-open-table/);assert.match(event,/9\.26 토/);assert.match(event,/15:00–17:00/);assert.doesNotMatch(event,/16:00–18:00/);assert.match(event,/id="apply"/);assert.match(event,/data-event-application/);assert.doesNotMatch(event,/docs\.google\.com|forms\/d\//i);
+  assert.match(activities,/260926-chuseok-open-table/);assert.match(activities,/9월 26일 토요일 15:00–17:00/);assert.doesNotMatch(script,/docs\.google\.com|forms\/d\//i);assert.match(script,/260926-chuseok-open-table/);assert.match(script,/2026년 9월 26일 토요일 오후 3시/);
+  assert.match(script,/applications/);assert.match(css,/word-break:keep-all/);assert.match(css,/overflow-wrap:break-word/);assert.match(css,/hyphens:none/);
   assert.match(admin,/'ekodimission':'에코디선교회'/);assert.match(admin,/'ekodimission':'mission'/);
 });
 
-test('first-party application API validates consent and calls the mission Supabase RPC',async()=>{
+test('first-party application API preserves existing application record identity while exposing corrected public slug',async()=>{
   const dataEnv={...env,DATA_ENABLED:'true',SUPABASE_URL:'https://example.supabase.co',SUPABASE_PUBLISHABLE_KEY:'publishable-test'};
   const originalFetch=globalThis.fetch;let called=false;
   globalThis.fetch=async(input,init)=>{called=true;assert.equal(String(input),'https://example.supabase.co/rest/v1/rpc/mission_submit_event_application');const payload=JSON.parse(init.body);assert.equal(payload.p_event_key,'260925-chuseok-open-table');assert.equal(payload.p_name,'홍길동');return new Response(JSON.stringify({ok:true,application_id:'00000000-0000-0000-0000-000000000001'}),{status:200,headers:{'content-type':'application/json'}})};
   try{
     const response=await spaceWorker.fetch(new Request(`https://ekodi.kr${applicationApi}`,{method:'POST',headers:{origin:'https://ekodi.kr','content-type':'application/json'},body:JSON.stringify({name:'홍길동',phone:'010-1234-5678',partySize:2,language:'ko',privacyConsent:true,photoConsent:false})}),dataEnv);
-    assert.equal(response.status,200);const body=await response.json();assert.equal(body.ok,true);assert.equal(body.eventKey,'260925-chuseok-open-table');assert.equal(called,true);
+    assert.equal(response.status,200);const body=await response.json();assert.equal(body.ok,true);assert.equal(body.eventKey,'260926-chuseok-open-table');assert.equal(called,true);
   }finally{globalThis.fetch=originalFetch}
   const denied=await spaceWorker.fetch(new Request(`https://ekodi.kr${applicationApi}`,{method:'POST',headers:{origin:'https://ekodi.kr','content-type':'application/json'},body:JSON.stringify({name:'홍길동',phone:'010-1234-5678',partySize:1,privacyConsent:false})}),dataEnv);
   assert.equal(denied.status,400);
