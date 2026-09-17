@@ -180,7 +180,7 @@ function validHandoff(site:string,raw:string){
     mall:["https://ekodi.kr"],
     pay:["https://pay.ekodi.kr"],
     books:["https://books.ekodi.kr"],
-    church:["https://church.ekodi.kr"],
+    church:[],
     lab:["https://lab.ekodi.kr"],
     mission:["https://ekodi.kr"],
     community:["https://community.ekodi.kr"],
@@ -193,7 +193,7 @@ function validHandoff(site:string,raw:string){
     const target=new URL(raw);
     if(target.protocol!=="https:"||target.username||target.password)return null;
     if(site==="marketing"&&validMarketingOrigin(target.origin))return target.href;
-    const platformPath=target.origin==="https://ekodi.kr"&&((site==="cgma"&&(target.pathname==="/cgma"||target.pathname.startsWith("/cgma/")))||(site==="mission"&&(target.pathname==="/ekodimission"||target.pathname.startsWith("/ekodimission/"))));
+    const platformPath=target.origin==="https://ekodi.kr"&&((site==="cgma"&&(target.pathname==="/cgma"||target.pathname.startsWith("/cgma/")))||(site==="mission"&&(target.pathname==="/ekodimission"||target.pathname.startsWith("/ekodimission/")))||(site==="church"&&(target.pathname==="/ekodichurch"||target.pathname.startsWith("/ekodichurch/"))));
     return (((origins[site]||[]).includes(target.origin)&&target.origin!=="https://ekodi.kr")||platformPath)?target.href:null;
   }catch{return null}
 }
