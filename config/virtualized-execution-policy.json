@@ -1,0 +1,105 @@
+{
+  "schemaVersion": 1,
+  "policyId": "EXEC-FABRIC-001",
+  "status": "enforced",
+  "generation": 10,
+  "purpose": "Require all mutating EKODI engineering work to pass through a sovereign, provider-independent, isolated execution fabric before merge or release.",
+  "scope": {
+    "mutationKinds": [
+      "repository-code",
+      "configuration",
+      "database-schema-or-migration",
+      "build",
+      "infrastructure",
+      "deployment",
+      "release",
+      "automation",
+      "generated-artifact"
+    ],
+    "readOnlyObservationMayBypassFabric": true,
+    "allMutatingWorkRequiresFabric": true,
+    "directHostMutationForbidden": true,
+    "directProductionMutationForbidden": true
+  },
+  "providerStrategy": {
+    "providerIndependent": true,
+    "providerLockInForbidden": true,
+    "defaultAtS0": "github-hosted-ephemeral-vm-plus-rootless-podman",
+    "selection": "risk-cost-capability-aware",
+    "fallbackMustPreserveOrIncreaseIsolation": true,
+    "paidProviderActivationRequiresExistingEntitlementOrSovereignBudgetApproval": true
+  },
+  "isolationProfiles": {
+    "s0-default": {
+      "outerBoundary": "ephemeral-cloud-vm",
+      "innerBoundary": "rootless-container",
+      "runtime": "podman",
+      "nonRoot": true,
+      "ephemeral": true,
+      "networkDefault": "deny",
+      "declaredEgressOnly": true,
+      "readOnlyRootFilesystem": true,
+      "capabilities": "drop-all",
+      "noNewPrivileges": true,
+      "workspaceMount": "explicit-only",
+      "hostDockerSocket": "forbidden",
+      "productionSecrets": "forbidden"
+    },
+    "strong-vm": {
+      "outerBoundary": "dedicated-per-task-vm",
+      "innerBoundary": "sandbox-container-or-process",
+      "candidateProviders": [
+        "cloudflare-sandbox"
+      ],
+      "activation": "only-after-account-entitlement-cost-and-runtime-evidence",
+      "productionSecrets": "forbidden"
+    },
+    "high-isolation": {
+      "outerBoundary": "microvm-or-application-kernel-sandbox",
+      "candidateTechnologies": [
+        "firecracker",
+        "gvisor"
+      ],
+      "activation": "only-when-threat-model-or-scale-justifies-dedicated-capacity",
+      "productionSecrets": "forbidden"
+    }
+  },
+  "executionContract": {
+    "immutableBaseCommitRequired": true,
+    "governedBranchRequired": true,
+    "structuredReceiptRequired": true,
+    "receiptMustAssert": [
+      "ephemeral",
+      "workspaceIsolation",
+      "productionMutationPerformed=false",
+      "authorityExpanded=false",
+      "productionSecretExposed=false"
+    ],
+    "buildAndTestEvidenceRequired": true,
+    "verificationRequired": true,
+    "failedVerificationMustRecoverOrBlock": true
+  },
+  "releaseBoundary": {
+    "pullRequestRequired": true,
+    "independentReleasePlaneRequired": true,
+    "immutableVerifiedArtifactRequired": true,
+    "stagingRequired": true,
+    "postStagingVerificationRequired": true,
+    "productionPromotionOnlyThroughReleaseGateway": true,
+    "postProductionVerificationRequired": true,
+    "automaticRecoveryRequiredOnFailedVerification": true
+  },
+  "localFallback": {
+    "allowed": true,
+    "condition": "only-inside-equivalent-or-stronger-ephemeral-virtualized-isolation",
+    "persistent-host-shellAsExecutionPlane": false,
+    "directLocalProductionDeploy": false
+  },
+  "evidence": {
+    "initialProofRunId": 35168240417,
+    "initialProofArtifactId": 10475876465,
+    "initialProofArtifactDigest": "sha256:af3195ee3ff43c5187e38e1374cf7aa8c01d9217861fae05ece31efbc2775d87",
+    "initialProofCommit": "1832c49937d4053de6962a64098b0d52e9316842",
+    "mergedBaselineCommit": "8ef407c7b96805cb7392db1aef895b9df34dcf4c"
+  }
+}

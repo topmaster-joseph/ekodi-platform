@@ -1,0 +1,121 @@
+{
+  "schemaVersion": 2,
+  "status": "enforced",
+  "generation": 10,
+  "defaultChangeClass": "yellow",
+  "executionBoundary": {
+    "allMutatingWorkRequiresFabric": true,
+    "readOnlyObservationMayBypassFabric": true,
+    "directHostMutationForbidden": true,
+    "providerIndependent": true,
+    "providerLockInForbidden": true
+  },
+  "sandbox": {
+    "runtime": "ephemeral-vm-plus-rootless-container",
+    "defaultProviderProfile": "s0-default",
+    "ephemeral": true,
+    "maxConcurrentAtS0": 1,
+    "maxLifetimeMinutes": 45,
+    "network": {
+      "default": "deny",
+      "declaredEgressOnly": true
+    },
+    "filesystem": {
+      "workspaceOnly": true,
+      "rootFilesystemReadOnly": true,
+      "hostMountsForbidden": true,
+      "dockerSocketForbidden": true
+    },
+    "process": {
+      "nonRootRequired": true,
+      "dropAllCapabilities": true,
+      "noNewPrivileges": true
+    },
+    "secrets": {
+      "productionSecretsForbidden": true,
+      "shortLivedScopedCredentialsOnly": true
+    }
+  },
+  "providers": {
+    "selection": "risk-cost-capability-aware",
+    "fallbackMustPreserveOrIncreaseIsolation": true,
+    "profiles": {
+      "s0-default": {
+        "provider": "github-hosted-ephemeral-vm",
+        "innerRuntime": "rootless-podman",
+        "status": "runtime-proven",
+        "paidCommitmentRequired": false
+      },
+      "strong-vm": {
+        "provider": "cloudflare-sandbox",
+        "status": "candidate-not-activated",
+        "activationRequires": [
+          "existing-paid-entitlement-or-sovereign-budget-approval",
+          "provider-adapter-runtime-proof",
+          "cost-budget-evidence"
+        ]
+      },
+      "high-isolation": {
+        "provider": "gvisor-or-firecracker-compatible-runtime",
+        "status": "future-conditional",
+        "activationRequires": [
+          "documented-threat-model",
+          "dedicated-capacity-justification",
+          "runtime-proof",
+          "cost-budget-evidence"
+        ]
+      }
+    }
+  },
+  "risk": {
+    "green": {
+      "mayImplement": true,
+      "mayTest": true,
+      "mayOpenPullRequest": true,
+      "mayPromoteToProduction": false
+    },
+    "yellow": {
+      "mayImplement": true,
+      "mayTest": true,
+      "mayOpenPullRequest": true,
+      "requiresRollbackDefinition": true,
+      "requiresVerificationDefinition": true,
+      "mayPromoteToProduction": false
+    },
+    "red": {
+      "mayImplement": false,
+      "mayPreparePlanAndPatch": true,
+      "requiresExplicitSovereignGateBeforeExecution": true,
+      "mayPromoteToProduction": false
+    }
+  },
+  "promotion": {
+    "directProductionMutationForbidden": true,
+    "immutableVerifiedArtifactRequired": true,
+    "stagingRequired": true,
+    "postStagingVerificationRequired": true,
+    "releaseAuthorizationRequired": true,
+    "postProductionVerificationRequired": true,
+    "automaticRecoveryRequiredOnFailedVerification": true
+  },
+  "evidence": {
+    "initialRuntimeProof": "evidence/runtime/autonomous-execution-fabric/2026-09-17-initial-proof.json",
+    "persist": [
+      "request",
+      "authority_context",
+      "risk_classification",
+      "base_commit",
+      "patch_or_commit",
+      "execution_provider",
+      "isolation_profile",
+      "build_result",
+      "test_result",
+      "verification_result",
+      "artifact_digest",
+      "staging_result",
+      "release_authorization",
+      "production_result",
+      "recovery_result"
+    ]
+  }
+}

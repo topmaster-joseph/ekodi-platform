@@ -1,0 +1,204 @@
+{
+  "schemaVersion": 1,
+  "architectureVersion": "1.1.0",
+  "status": "active-nonproduction",
+  "name": "EKODI Autonomous Execution Fabric",
+  "generation": 10,
+  "generationLabel": "Self-Architecture Optimization",
+  "purpose": "Provide a sovereign, isolated and auditable execution environment in which EKODI can implement, test, verify, recover and package code or service changes without depending on a single external AI session, remote desktop session, host machine, or cloud provider.",
+  "constitutionalAlignment": {
+    "authorityModel": "Person + Workspace + Role + Capability",
+    "directProductionMutationForbidden": true,
+    "humanGateRequiredForRedClass": true,
+    "immutablePromotionRequired": true,
+    "rollbackRequired": true,
+    "auditRequired": true,
+    "providerMayNotOwnCanonicalAuthority": true
+  },
+  "operatingModel": {
+    "controlPlane": "persistent-low-cost",
+    "executionPlane": "ephemeral-isolated-sandbox",
+    "defaultRuntime": "ephemeral-cloud-vm-plus-rootless-container",
+    "defaultProviderProfile": "s0-default",
+    "vmEscalation": "dedicated-per-task-vm-or-kernel-sandbox-when-threat-model-requires-stronger-isolation",
+    "sharedBeforeDedicated": true,
+    "modularMonolithFirst": true,
+    "scaleTier": "S0",
+    "noAlwaysOnPerAgentRuntime": true,
+    "providerIndependent": true,
+    "providerLockInForbidden": true,
+    "fallbackMustPreserveOrIncreaseIsolation": true
+  },
+  "mandatoryExecutionBoundary": {
+    "allMutatingEngineeringWorkRequiresExecutionFabric": true,
+    "readOnlyObservationMayBypassFabric": true,
+    "directHostMutationForbidden": true,
+    "externalAiMayPrepareIntentOrCandidatePatchButMayNotOwnProductionMutation": true,
+    "mergeRequiresVirtualizedExecutionGate": true,
+    "localFallbackAllowedOnlyInsideEquivalentOrStrongerVirtualizedIsolation": true
+  },
+  "technologyBaseline": {
+    "defaultS0": {
+      "outerIsolation": "ephemeral-cloud-vm",
+      "innerIsolation": "rootless-container",
+      "nonRoot": true,
+      "network": "deny-by-default",
+      "rootFilesystem": "read-only",
+      "capabilities": "drop-all",
+      "noNewPrivileges": true,
+      "hostDockerSocket": "forbidden",
+      "productionSecrets": "forbidden"
+    },
+    "strongerIsolationCandidates": [
+      "dedicated-per-task-vm",
+      "gvisor-application-kernel-sandbox",
+      "firecracker-compatible-microvm"
+    ],
+    "managedSandboxCandidate": "cloudflare-sandbox",
+    "selectionRule": "choose the least costly profile that satisfies the task threat model, while preserving provider portability and constitutional controls"
+  },
+  "components": [
+    {
+      "id": "execution-control-plane",
+      "responsibilities": [
+        "receive_authorized_work",
+        "classify_change_risk",
+        "select_isolation_profile",
+        "allocate_sandbox",
+        "issue_scoped_credentials",
+        "track_state",
+        "record_evidence",
+        "request_release_authorization"
+      ]
+    },
+    {
+      "id": "ephemeral-sandbox",
+      "responsibilities": [
+        "checkout_immutable_base",
+        "create_isolated_worktree_or_branch",
+        "run_build",
+        "run_tests",
+        "run_local_services",
+        "run_browser_e2e_when_available",
+        "collect_artifacts",
+        "destroy_after_completion"
+      ]
+    },
+    {
+      "id": "credential-broker",
+      "responsibilities": [
+        "provide_short_lived_scoped_credentials",
+        "deny_secret_export",
+        "revoke_on_completion_or_failure"
+      ]
+    },
+    {
+      "id": "evidence-store",
+      "responsibilities": [
+        "persist_test_results",
+        "persist_logs",
+        "persist_build_metadata",
+        "persist_verification_results",
+        "persist_release_and_rollback_evidence"
+      ]
+    },
+    {
+      "id": "release-gateway",
+      "responsibilities": [
+        "accept_only_verified_artifacts",
+        "enforce_change_class_gate",
+        "promote_to_staging",
+        "verify_staging",
+        "request_or_consume_release_authorization",
+        "promote_to_production",
+        "verify_production",
+        "trigger_safe_recovery_on_failed_verification"
+      ]
+    }
+  ],
+  "changeClasses": {
+    "green": {
+      "defaultAutonomy": "delegated",
+      "productionPromotion": "through-release-gateway"
+    },
+    "yellow": {
+      "defaultAutonomy": "delegated-with-contract-and-rollback",
+      "productionPromotion": "through-release-gateway"
+    },
+    "red": {
+      "defaultAutonomy": "prepare-only",
+      "productionPromotion": "explicit-sovereign-human-gate"
+    }
+  },
+  "executionLifecycle": [
+    "observe",
+    "classify",
+    "authorize",
+    "select_isolation_profile",
+    "allocate",
+    "checkout",
+    "implement",
+    "test",
+    "verify",
+    "repair_if_needed",
+    "reverify",
+    "package_immutable_artifact",
+    "open_or_update_pull_request",
+    "ci_guard",
+    "staging_promotion",
+    "staging_verification",
+    "release_authorization",
+    "production_promotion",
+    "production_verification",
+    "recover_if_needed",
+    "record_evidence",
+    "learn"
+  ],
+  "safety": {
+    "networkDefault": "deny-by-default-except-declared-egress",
+    "filesystemDefault": "ephemeral-workspace-only",
+    "rootFilesystemReadOnlyByDefault": true,
+    "nonRootRequired": true,
+    "dropAllCapabilitiesByDefault": true,
+    "noNewPrivilegesRequired": true,
+    "privilegedContainerForbidden": true,
+    "hostDockerSocketForbidden": true,
+    "productionSecretsInSandboxForbidden": true,
+    "persistentAgentShellForbidden": true,
+    "destructiveProductionDataOperationsForbidden": true,
+    "authorityExpansionForbidden": true
+  },
+  "costPolicy": {
+    "target": "zero-or-low-fixed-cost-at-S0",
+    "strategy": [
+      "reuse-existing-github-and-cloud-capabilities",
+      "prefer-single-small-control-plane",
+      "prefer-ephemeral-compute",
+      "shut-down-idle-workers",
+      "measure-before-dedicated-capacity",
+      "do-not-activate-paid-sandbox-provider-without-existing-entitlement-or-sovereign-budget-approval"
+    ]
+  },
+  "runtimeEvidence": {
+    "initialProof": "evidence/runtime/autonomous-execution-fabric/2026-09-17-initial-proof.json",
+    "nonProductionIsolatedExecutionProven": true,
+    "autonomousProductionReadinessProven": false
+  },
+  "evidenceRequiredBeforeActivation": [
+    "sandbox_isolation_test",
+    "credential_scope_test",
+    "green_change_end_to_end_test",
+    "yellow_change_rollback_test",
+    "red_change_human_gate_test",
+    "staging_verification_test",
+    "production_verification_test",
+    "automatic_recovery_test",
+    "audit_trail_test",
+    "cost_budget_test"
+  ],
+  "activation": {
+    "currentState": "nonproduction_runtime_proven_activation_incomplete",
+    "rule": "All mutating engineering work must pass the execution fabric, but do not claim autonomous production readiness until the complete activation evidence set is satisfied with runtime evidence.",
+    "owner": "EKODI Platform Super Administrator"
+  }
+}
