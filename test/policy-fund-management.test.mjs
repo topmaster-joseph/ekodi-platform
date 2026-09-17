@@ -73,3 +73,18 @@ test('migration creates automatic maturity tasks against borrower ownership', as
   assert.match(sql, /NEW\.borrower_id/);
   assert.match(sql, /연장·대환 가능성 사전점검/);
 });
+
+test('admin UI manages current loans by borrower rather than requiring organization ids', async () => {
+  const source = await readFile(new URL('../finance-monitor.js', import.meta.url), 'utf8');
+  assert.match(source, /policyFundRequest\('\/borrowers'\)/);
+  assert.match(source, /name="borrowerId" data-policy-borrower-select/);
+  assert.match(source, /id="policyBorrowerFilter"/);
+  assert.match(source, /name="productName"/);
+  assert.match(source, /name="guaranteeAgency"/);
+  assert.match(source, /name="repaymentMethod"/);
+  assert.match(source, /name="monthlyPayment"/);
+  assert.match(source, /name="paymentDay"/);
+  assert.match(source, /name="startedOn"/);
+  assert.match(source, /name="graceEndOn"/);
+  assert.doesNotMatch(source, /name="accountNumber"|name="bankAccount"|계좌번호/);
+});
