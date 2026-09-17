@@ -1,4 +1,6 @@
-﻿const TASK_STATES = new Set(['queued', 'running', 'retry', 'human_gate', 'verified', 'degraded', 'core_only', 'ignored', 'failed']);
+import { executionEvidenceSatisfied } from './ekodi-capability-executor.js';
+
+const TASK_STATES = new Set(['queued', 'running', 'retry', 'human_gate', 'verified', 'degraded', 'core_only', 'ignored', 'failed']);
 
 function text(value, max = 1200) {
   return String(value ?? '').trim().slice(0, max);
@@ -82,6 +84,15 @@ export async function ensureEkodiCommandLedger(input) {
       completed_at TEXT NOT NULL
     )`),
     db.prepare('CREATE INDEX IF NOT EXISTS idx_ai_command_runs_task ON ai_command_runs(task_id, id DESC)'),
+    db.prepare(`CREATE TABLE IF NOT EXISTS ai_command_evidence (
+      id TEXT PRIMARY KEY,
+      task_id TEXT NOT NULL,
+      attempt INTEGER NOT NULL,
+      kind TEXT NOT NULL,
+      evidence_json TEXT NOT NULL DEFAULT '{}',
+      recorded_at TEXT NOT NULL
+    )`),
+    db.prepare('CREATE INDEX IF NOT EXISTS idx_ai_command_evidence_task ON ai_command_evidence(task_id, id)'),
   ]);
   return db;
 }
@@ -132,7 +143,7 @@ export async function ingestEkodiPulse(input, payload = {}) {
 
 export async function getEkodiCommandTask(input, taskId, options = {}) {
   const db = await ensureEkodiCommandLedger(input);
-  const row = await db.prepare(`SELECT * FROM ai_command_tasks WHERE id = ?`).bind(text(taskId, 120)).first();
+  const row = await db.prepare('SELECT * FROM ai_command_tasks WHERE id = ?').bind(text(taskId, 120)).first();
   if (!row) return null;
   const task = hydrateTask(row);
   if (!options.includeEvent || !task.pulseEventId) return task;
@@ -150,19 +161,37 @@ export async function listEkodiCommandTasks(input, options = {}) {
   return (rows.results || []).map(hydrateTask);
 }
 
+export async function listEkodiCommandEvidence(input, taskId, options = {}) {
+  const db = await ensureEkodiCommandLedger(input);
+  const limit = Math.min(Math.max(Number(options.limit) || 50, 1), 200);
+  const rows = await db.prepare('SELECT * FROM ai_command_evidence WHERE task_id = ? ORDER BY id ASC LIMIT ?')
+    .bind(text(taskId, 120), limit).all();
+  return (rows.results || []).map(row => Object.freeze({
+    id: row.id,
+    taskId: row.task_id,
+    attempt: Number(row.attempt || 0),
+    kind: row.kind,
+    evidence: parseJson(row.evidence_json),
+    recordedAt: row.recorded_at,
+  }));
+}
+
 export async function getEkodiCommandLedgerStatus(input) {
   const db = await ensureEkodiCommandLedger(input);
-  const [tasks, pulses, runs] = await Promise.all([
-    db.prepare(`SELECT state, COUNT(*) AS count FROM ai_command_tasks GROUP BY state`).all(),
-    db.prepare(`SELECT state, COUNT(*) AS count FROM ai_pulse_events GROUP BY state`).all(),
+  const [tasks, pulses, runs, evidence] = await Promise.all([
+    db.prepare('SELECT state, COUNT(*) AS count FROM ai_command_tasks GROUP BY state').all(),
+    db.prepare('SELECT state, COUNT(*) AS count FROM ai_pulse_events GROUP BY state').all(),
     db.prepare('SELECT COUNT(*) AS count FROM ai_command_runs').first(),
+    db.prepare('SELECT COUNT(*) AS count FROM ai_command_evidence').first(),
   ]);
   return Object.freeze({
-    schemaVersion: 1,
+    schemaVersion: 2,
     durable: true,
+    evidenceLedger: 'append-only-d1',
     taskStates: Object.fromEntries((tasks.results || []).map(row => [row.state, Number(row.count || 0)])),
     pulseStates: Object.fromEntries((pulses.results || []).map(row => [row.state, Number(row.count || 0)])),
     runCount: Number(runs?.count || 0),
+    evidenceCount: Number(evidence?.count || 0),
   });
 }
 
@@ -185,11 +214,34 @@ export async function claimNextEkodiCommandTask(input, options = {}) {
   return getEkodiCommandTask(db, row.id, { includeEvent: true });
 }
 
+async function appendEvidence(db, taskId, attempt, kind, value, now) {
+  if (!value) return;
+  const id = normalizeId(null, `evidence_${taskId}_${attempt}_${kind}`);
+  await db.prepare(`INSERT INTO ai_command_evidence
+      (id, task_id, attempt, kind, evidence_json, recorded_at) VALUES (?, ?, ?, ?, ?, ?)`)
+    .bind(id, taskId, attempt, kind, safeJson(value), now).run();
+}
+
 export async function settleEkodiCommandTask(input, task, result, options = {}) {
   const db = await ensureEkodiCommandLedger(input);
   const nowMs = options.now || Date.now();
   const now = iso(nowMs);
-  const resultState = TASK_STATES.has(text(result?.state, 40).toLowerCase()) ? text(result.state, 40).toLowerCase() : 'failed';
+  const requestedState = TASK_STATES.has(text(result?.state, 40).toLowerCase()) ? text(result.state, 40).toLowerCase() : 'failed';
+  const executionGuard = executionEvidenceSatisfied(task, result);
+  const guardRejected = requestedState === 'verified' && executionGuard.required && !executionGuard.satisfied;
+  const guardedResult = guardRejected
+    ? {
+        ...result,
+        state: 'failed',
+        reason: 'execution_evidence_required',
+        evidence: {
+          ...(result?.evidence || {}),
+          verified: false,
+          completionGuard: executionGuard,
+        },
+      }
+    : result;
+  const resultState = guardRejected ? 'failed' : requestedState;
   const attempt = Math.max(1, Number(task?.attemptCount || task?.attempt_count || 1));
   const maxAttempts = Math.max(1, Number(task?.maxAttempts || task?.max_attempts || 2));
   let state = resultState;
@@ -204,17 +256,17 @@ export async function settleEkodiCommandTask(input, task, result, options = {}) 
   else if (resultState === 'degraded') state = 'degraded';
   else state = 'failed';
 
-  const evidence = result?.evidence || {};
+  const evidence = guardedResult?.evidence || {};
   await db.prepare(`UPDATE ai_command_tasks SET
       state = ?, next_attempt_at = ?, lease_until = NULL, plan_json = ?, result_json = ?, evidence_json = ?,
       last_error = ?, updated_at = ?, closed_at = ? WHERE id = ?`)
     .bind(
       state,
       nextAttemptAt,
-      safeJson(result?.plan || {}),
-      safeJson(result || {}),
+      safeJson(guardedResult?.plan || {}),
+      safeJson(guardedResult || {}),
       safeJson(evidence),
-      text(result?.error || result?.reason || '', 1000),
+      text(guardedResult?.error || guardedResult?.reason || '', 1000),
       now,
       closedAt,
       task.id,
@@ -229,10 +281,15 @@ export async function settleEkodiCommandTask(input, task, result, options = {}) 
       resultState,
       Math.max(0, Number(evidence?.providerDiversity) || 0),
       evidence?.sentinelIndependent ? 1 : 0,
-      safeJson(result || {}),
+      safeJson(guardedResult || {}),
       text(options.startedAt || now, 40),
       now,
     ).run();
+
+  await appendEvidence(db, task.id, attempt, 'execution_receipt', evidence.executionReceipt, now);
+  await appendEvidence(db, task.id, attempt, 'verification', evidence.verificationEvidence, now);
+  await appendEvidence(db, task.id, attempt, 'recovery', evidence.recoveryEvidence, now);
+  if (guardRejected) await appendEvidence(db, task.id, attempt, 'completion_guard', executionGuard, now);
 
   if (task.pulseEventId) {
     const pulseState = state === 'retry' ? 'queued' : state === 'human_gate' ? 'human_gate' : state;
@@ -286,8 +343,10 @@ function hydrateEvent(row) {
 }
 
 export const EKODI_COMMAND_LEDGER = Object.freeze({
-  version: '1.0.0',
+  version: '2.0.0',
   durableStore: 'cloudflare-d1',
+  evidenceStore: 'append-only-cloudflare-d1',
   maxAutomaticAttempts: 3,
+  verifiedMutationRequiresExecutionEvidence: true,
   states: Object.freeze([...TASK_STATES]),
 });
