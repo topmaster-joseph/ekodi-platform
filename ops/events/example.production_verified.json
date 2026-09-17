@@ -1,0 +1,15 @@
+{
+  "schema":"ekodi.operation-event/v1",
+  "event_id":"example-production-verified-not-a-live-event",
+  "event_type":"production_verified",
+  "occurred_at":"2026-09-16T00:00:00Z",
+  "service":"/example",
+  "summary":"Schema example only; not an EKODI production completion claim.",
+  "environment":"production",
+  "source":"ekodi-orchestrator",
+  "commit_sha":null,
+  "pr_number":null,
+  "verification":{"status":"passed","checks":["example check"],"evidence":["example evidence only"]},
+  "severity":"info",
+  "requires_human":false
+}

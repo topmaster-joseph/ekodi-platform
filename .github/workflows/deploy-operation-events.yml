@@ -1,0 +1,61 @@
+name: Release EKODI Operation Events
+
+on:
+  pull_request:
+    paths:
+      - 'ops/events/**'
+      - 'scripts/validate-operation-event.mjs'
+      - 'scripts/write-operation-event.mjs'
+      - 'test/operation-event-ledger.test.mjs'
+      - '.github/workflows/deploy-operation-events.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/events/**'
+      - 'scripts/validate-operation-event.mjs'
+      - 'scripts/write-operation-event.mjs'
+      - 'test/operation-event-ledger.test.mjs'
+      - '.github/workflows/deploy-operation-events.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: operation-events-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  staging:
+    name: staging
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate event schema example
+        run: node scripts/validate-operation-event.mjs ops/events/example.production_verified.json
+      - name: Run ledger contract tests
+        run: node --test test/operation-event-ledger.test.mjs
+      - name: Confirm provider-neutral contract
+        run: |
+          grep -q 'ekodi.operation-event/v1' ops/events/schema.v1.json
+          grep -q 'ekodi-orchestrator' ops/events/schema.v1.json
+
+  production:
+    name: production
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: staging
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Verify main operation-event contract
+        run: |
+          node scripts/validate-operation-event.mjs ops/events/example.production_verified.json
+          node --test test/operation-event-ledger.test.mjs
+          test -s ops/events/schema.v1.json
