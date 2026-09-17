@@ -1,0 +1,10 @@
+name = "ekodi-church-history-staging"
+main = "church-history-staging-worker.js"
+compatibility_date = "2026-09-15"
+workers_dev = true
+preview_urls = true
+
+[vars]
+ENVIRONMENT = "staging"
+DATA_MODE = "isolated-staging"
+ALLOWED_ORIGINS = "https://ekodi.kr"
