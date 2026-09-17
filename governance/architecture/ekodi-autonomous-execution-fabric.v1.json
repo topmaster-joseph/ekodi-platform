@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
-  "architectureVersion": "1.0.0",
-  "status": "proposed",
+  "architectureVersion": "1.1.0",
+  "status": "active-nonproduction",
   "name": "EKODI Autonomous Execution Fabric",
   "generation": 10,
   "generationLabel": "Self-Architecture Optimization",
-  "purpose": "Provide a sovereign, isolated and auditable execution environment in which EKODI can implement, test, verify, recover and package code or service changes without depending on a single external AI session, remote desktop session, or production runtime.",
+  "purpose": "Provide a sovereign, isolated and auditable execution environment in which EKODI can implement, test, verify, recover and package code or service changes without depending on a single external AI session, remote desktop session, host machine, or cloud provider.",
   "constitutionalAlignment": {
     "authorityModel": "Person + Workspace + Role + Capability",
     "directProductionMutationForbidden": true,
@@ -18,12 +18,44 @@
   "operatingModel": {
     "controlPlane": "persistent-low-cost",
     "executionPlane": "ephemeral-isolated-sandbox",
-    "defaultRuntime": "rootless-container",
-    "vmEscalation": "only-when-container-isolation-is-insufficient",
+    "defaultRuntime": "ephemeral-cloud-vm-plus-rootless-container",
+    "defaultProviderProfile": "s0-default",
+    "vmEscalation": "dedicated-per-task-vm-or-kernel-sandbox-when-threat-model-requires-stronger-isolation",
     "sharedBeforeDedicated": true,
     "modularMonolithFirst": true,
     "scaleTier": "S0",
-    "noAlwaysOnPerAgentRuntime": true
+    "noAlwaysOnPerAgentRuntime": true,
+    "providerIndependent": true,
+    "providerLockInForbidden": true,
+    "fallbackMustPreserveOrIncreaseIsolation": true
+  },
+  "mandatoryExecutionBoundary": {
+    "allMutatingEngineeringWorkRequiresExecutionFabric": true,
+    "readOnlyObservationMayBypassFabric": true,
+    "directHostMutationForbidden": true,
+    "externalAiMayPrepareIntentOrCandidatePatchButMayNotOwnProductionMutation": true,
+    "mergeRequiresVirtualizedExecutionGate": true,
+    "localFallbackAllowedOnlyInsideEquivalentOrStrongerVirtualizedIsolation": true
+  },
+  "technologyBaseline": {
+    "defaultS0": {
+      "outerIsolation": "ephemeral-cloud-vm",
+      "innerIsolation": "rootless-container",
+      "nonRoot": true,
+      "network": "deny-by-default",
+      "rootFilesystem": "read-only",
+      "capabilities": "drop-all",
+      "noNewPrivileges": true,
+      "hostDockerSocket": "forbidden",
+      "productionSecrets": "forbidden"
+    },
+    "strongerIsolationCandidates": [
+      "dedicated-per-task-vm",
+      "gvisor-application-kernel-sandbox",
+      "firecracker-compatible-microvm"
+    ],
+    "managedSandboxCandidate": "cloudflare-sandbox",
+    "selectionRule": "choose the least costly profile that satisfies the task threat model, while preserving provider portability and constitutional controls"
   },
   "components": [
     {
@@ -31,6 +63,7 @@
       "responsibilities": [
         "receive_authorized_work",
         "classify_change_risk",
+        "select_isolation_profile",
         "allocate_sandbox",
         "issue_scoped_credentials",
         "track_state",
@@ -101,6 +134,7 @@
     "observe",
     "classify",
     "authorize",
+    "select_isolation_profile",
     "allocate",
     "checkout",
     "implement",
@@ -123,6 +157,10 @@
   "safety": {
     "networkDefault": "deny-by-default-except-declared-egress",
     "filesystemDefault": "ephemeral-workspace-only",
+    "rootFilesystemReadOnlyByDefault": true,
+    "nonRootRequired": true,
+    "dropAllCapabilitiesByDefault": true,
+    "noNewPrivilegesRequired": true,
     "privilegedContainerForbidden": true,
     "hostDockerSocketForbidden": true,
     "productionSecretsInSandboxForbidden": true,
@@ -137,8 +175,14 @@
       "prefer-single-small-control-plane",
       "prefer-ephemeral-compute",
       "shut-down-idle-workers",
-      "measure-before-dedicated-capacity"
+      "measure-before-dedicated-capacity",
+      "do-not-activate-paid-sandbox-provider-without-existing-entitlement-or-sovereign-budget-approval"
     ]
+  },
+  "runtimeEvidence": {
+    "initialProof": "evidence/runtime/autonomous-execution-fabric/2026-09-17-initial-proof.json",
+    "nonProductionIsolatedExecutionProven": true,
+    "autonomousProductionReadinessProven": false
   },
   "evidenceRequiredBeforeActivation": [
     "sandbox_isolation_test",
@@ -153,8 +197,8 @@
     "cost_budget_test"
   ],
   "activation": {
-    "currentState": "architecture_registered_not_yet_runtime_proven",
-    "rule": "Do not claim autonomous production readiness until evidenceRequiredBeforeActivation is satisfied with runtime evidence.",
+    "currentState": "nonproduction_runtime_proven_activation_incomplete",
+    "rule": "All mutating engineering work must pass the execution fabric, but do not claim autonomous production readiness until the complete activation evidence set is satisfied with runtime evidence.",
     "owner": "EKODI Platform Super Administrator"
   }
 }

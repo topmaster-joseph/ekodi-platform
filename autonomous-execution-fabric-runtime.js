@@ -59,9 +59,16 @@ export function getAutonomousExecutionFabricStatus() {
   return Object.freeze({
     generation: 10,
     mode: 'provider_independent_ephemeral_execution',
+    policyId: 'EXEC-FABRIC-001',
+    defaultIsolationProfile: 's0-default',
+    mutatingWorkRequiresFabric: true,
+    readOnlyObservationMayBypassFabric: true,
+    providerIndependent: true,
+    directHostMutationForbidden: true,
     directProductionMutationForbidden: true,
-    branchPattern: BRANCH_PATTERN.source,
+    nonProductionRuntimeProven: true,
     runtimeProductionReadinessClaimed: false,
+    branchPattern: BRANCH_PATTERN.source,
   });
 }
 
@@ -89,6 +96,7 @@ export async function runAutonomousExecutionTask(input = {}) {
     ...envelope,
     executionClass: decision.executionClass,
     authorityContext: decision.context,
+    isolationProfile: clean(input.isolationProfile || input.isolation_profile) || 's0-default',
     productionAllowed: false,
   }));
 
