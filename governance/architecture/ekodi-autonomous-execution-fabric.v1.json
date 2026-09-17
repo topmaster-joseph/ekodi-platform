@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
-  "architectureVersion": "1.1.0",
+  "architectureVersion": "1.2.0",
   "status": "active-nonproduction",
   "name": "EKODI Autonomous Execution Fabric",
   "generation": 10,
   "generationLabel": "Self-Architecture Optimization",
-  "purpose": "Provide a sovereign, isolated and auditable execution environment in which EKODI can implement, test, verify, recover and package code or service changes without depending on a single external AI session, remote desktop session, host machine, or cloud provider.",
+  "purpose": "Provide a sovereign, isolated, auditable and orchestrator-led multi-method execution environment in which EKODI can implement, test, verify, recover and package code or service changes without depending on a single external AI session, remote desktop session, host machine, virtualization method or cloud provider.",
   "constitutionalAlignment": {
     "authorityModel": "Person + Workspace + Role + Capability",
     "directProductionMutationForbidden": true,
@@ -18,6 +18,7 @@
   "operatingModel": {
     "controlPlane": "persistent-low-cost",
     "executionPlane": "ephemeral-isolated-sandbox",
+    "executionCoordination": "ekodi-orchestrator-parallel-multi-method",
     "defaultRuntime": "ephemeral-cloud-vm-plus-rootless-container",
     "defaultProviderProfile": "s0-default",
     "vmEscalation": "dedicated-per-task-vm-or-kernel-sandbox-when-threat-model-requires-stronger-isolation",
@@ -27,7 +28,51 @@
     "noAlwaysOnPerAgentRuntime": true,
     "providerIndependent": true,
     "providerLockInForbidden": true,
-    "fallbackMustPreserveOrIncreaseIsolation": true
+    "fallbackMustPreserveOrIncreaseIsolation": true,
+    "virtualizationOnly": false
+  },
+  "parallelExecution": {
+    "orchestrationOwner": "ekodi-orchestrator",
+    "strategy": "fan-out-independent-execute-verify-converge",
+    "minimumIndependentLanes": 2,
+    "minimumIndependentMethodClasses": 2,
+    "preferredIndependentLanes": 4,
+    "s0ConcurrentLaneLimit": 2,
+    "virtualizedIsolationLaneRequiredForMutatingEngineeringWork": true,
+    "virtualizationIsOneMethodNotTheArchitecture": true,
+    "methodClasses": [
+      "cloud-ci-native",
+      "container-sandbox",
+      "serverless-cloud",
+      "data-sandbox",
+      "browser-e2e",
+      "remote-node",
+      "external-ai-tool"
+    ],
+    "runtimeProvenMethodClasses": [
+      "cloud-ci-native",
+      "container-sandbox"
+    ],
+    "conditionalMethodClasses": [
+      "serverless-cloud",
+      "data-sandbox",
+      "browser-e2e",
+      "remote-node",
+      "external-ai-tool"
+    ],
+    "convergence": {
+      "comparableEvidenceDigestRequired": true,
+      "independentVerificationRequired": true,
+      "disagreement": "hold-and-collect-more-evidence",
+      "singleLaneFailure": "continue-other-safe-lanes-and-record-degraded-capacity",
+      "insufficientIndependentEvidence": "no-promotion",
+      "productionPromotion": "central-release-gateway-only"
+    },
+    "claimBoundary": {
+      "multiMethodRuntimeProofMayUseSameOuterCloudProviderFamily": true,
+      "multiProviderFailureDomainIndependenceProven": false,
+      "autonomousProductionReadinessProven": false
+    }
   },
   "mandatoryExecutionBoundary": {
     "allMutatingEngineeringWorkRequiresExecutionFabric": true,
@@ -35,6 +80,7 @@
     "directHostMutationForbidden": true,
     "externalAiMayPrepareIntentOrCandidatePatchButMayNotOwnProductionMutation": true,
     "mergeRequiresVirtualizedExecutionGate": true,
+    "mergeRequiresParallelIndependentEvidenceGate": true,
     "localFallbackAllowedOnlyInsideEquivalentOrStrongerVirtualizedIsolation": true
   },
   "technologyBaseline": {
@@ -49,13 +95,25 @@
       "hostDockerSocket": "forbidden",
       "productionSecrets": "forbidden"
     },
+    "parallelS0": {
+      "primaryNativeLane": "github-hosted-native",
+      "mandatoryIsolationLane": "rootless-container-sandbox",
+      "maxConcurrent": 2,
+      "additionalConditionalLanes": [
+        "serverless-staging",
+        "database-sandbox",
+        "browser-e2e",
+        "authorized-remote-node",
+        "external-ai-tool-worker"
+      ]
+    },
     "strongerIsolationCandidates": [
       "dedicated-per-task-vm",
       "gvisor-application-kernel-sandbox",
       "firecracker-compatible-microvm"
     ],
     "managedSandboxCandidate": "cloudflare-sandbox",
-    "selectionRule": "choose the least costly profile that satisfies the task threat model, while preserving provider portability and constitutional controls"
+    "selectionRule": "choose the least costly set of independent execution methods that satisfies the task threat model and evidence requirement, while preserving provider portability and constitutional controls"
   },
   "components": [
     {
@@ -63,12 +121,26 @@
       "responsibilities": [
         "receive_authorized_work",
         "classify_change_risk",
+        "select_parallel_execution_methods",
         "select_isolation_profile",
-        "allocate_sandbox",
+        "allocate_execution_lanes",
         "issue_scoped_credentials",
         "track_state",
         "record_evidence",
         "request_release_authorization"
+      ]
+    },
+    {
+      "id": "parallel-execution-orchestrator",
+      "responsibilities": [
+        "fan_out_authorized_task",
+        "preserve_task_and_authority_envelope_across_lanes",
+        "prefer_distinct_method_classes",
+        "continue_healthy_lanes_when_one_lane_fails",
+        "compare_evidence_digests",
+        "hold_on_disagreement",
+        "converge_only_verified_independent_evidence",
+        "prevent_executor_self_promotion"
       ]
     },
     {
@@ -95,6 +167,8 @@
     {
       "id": "evidence-store",
       "responsibilities": [
+        "persist_parallel_lane_results",
+        "persist_convergence_result",
         "persist_test_results",
         "persist_logs",
         "persist_build_metadata",
@@ -106,6 +180,7 @@
       "id": "release-gateway",
       "responsibilities": [
         "accept_only_verified_artifacts",
+        "require_parallel_independent_evidence",
         "enforce_change_class_gate",
         "promote_to_staging",
         "verify_staging",
@@ -134,12 +209,16 @@
     "observe",
     "classify",
     "authorize",
+    "select_parallel_execution_methods",
     "select_isolation_profile",
     "allocate",
+    "fan_out",
     "checkout",
     "implement",
     "test",
     "verify",
+    "compare_independent_evidence",
+    "converge",
     "repair_if_needed",
     "reverify",
     "package_immutable_artifact",
@@ -166,12 +245,15 @@
     "productionSecretsInSandboxForbidden": true,
     "persistentAgentShellForbidden": true,
     "destructiveProductionDataOperationsForbidden": true,
-    "authorityExpansionForbidden": true
+    "authorityExpansionForbidden": true,
+    "executorSelfPromotionForbidden": true,
+    "singleExecutorControlAuthorityForbidden": true
   },
   "costPolicy": {
     "target": "zero-or-low-fixed-cost-at-S0",
     "strategy": [
       "reuse-existing-github-and-cloud-capabilities",
+      "parallelize-only-when-independent-evidence-adds-value",
       "prefer-single-small-control-plane",
       "prefer-ephemeral-compute",
       "shut-down-idle-workers",
@@ -182,10 +264,14 @@
   "runtimeEvidence": {
     "initialProof": "evidence/runtime/autonomous-execution-fabric/2026-09-17-initial-proof.json",
     "nonProductionIsolatedExecutionProven": true,
+    "parallelMultiMethodRuntimeProofWorkflow": ".github/workflows/autonomous-execution-fabric-runtime-proof.yml",
+    "parallelMultiMethodRuntimeProofRequired": true,
     "autonomousProductionReadinessProven": false
   },
   "evidenceRequiredBeforeActivation": [
     "sandbox_isolation_test",
+    "parallel_multi_method_execution_test",
+    "independent_evidence_convergence_test",
     "credential_scope_test",
     "green_change_end_to_end_test",
     "yellow_change_rollback_test",
@@ -198,7 +284,7 @@
   ],
   "activation": {
     "currentState": "nonproduction_runtime_proven_activation_incomplete",
-    "rule": "All mutating engineering work must pass the execution fabric, but do not claim autonomous production readiness until the complete activation evidence set is satisfied with runtime evidence.",
+    "rule": "All mutating engineering work must pass the execution fabric, including a virtualized isolation lane plus independent parallel evidence where required; do not claim autonomous production readiness until the complete activation evidence set is satisfied with runtime evidence.",
     "owner": "EKODI Platform Super Administrator"
   }
 }

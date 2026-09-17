@@ -24,24 +24,48 @@ function attest(root, output = 'artifacts/evidence.json') {
   return JSON.parse(fs.readFileSync(path.join(root, output), 'utf8'));
 }
 
+function seedRelease(root) {
+  fs.mkdirSync(path.join(root, 'bundle'), { recursive: true });
+  fs.mkdirSync(path.join(root, 'dist', 'nested'), { recursive: true });
+  fs.writeFileSync(path.join(root, 'bundle', 'worker.js'), 'export default { fetch() { return new Response("ok"); } };\n');
+  fs.writeFileSync(path.join(root, 'bundle', 'worker.js.map'), '{"version":3,"sources":["worker.js"]}\n');
+  fs.writeFileSync(path.join(root, 'dist', 'index.html'), '<!doctype html><title>EKODI</title>\n');
+  fs.writeFileSync(path.join(root, 'dist', 'nested', 'app.js'), 'console.log("stable");\n');
+  fs.writeFileSync(path.join(root, 'wrangler.toml'), 'name = "ekodi-proof"\n');
+  fs.writeFileSync(path.join(root, 'manifest.json'), '{"worker":{"name":"ekodi-proof"}}\n');
+}
+
 test('release artifact digest is deterministic and changes when any covered byte changes', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ekodi-release-artifact-'));
   try {
-    fs.mkdirSync(path.join(root, 'bundle'), { recursive: true });
-    fs.mkdirSync(path.join(root, 'dist', 'nested'), { recursive: true });
-    fs.writeFileSync(path.join(root, 'bundle', 'worker.js'), 'export default { fetch() { return new Response("ok"); } };\n');
-    fs.writeFileSync(path.join(root, 'dist', 'index.html'), '<!doctype html><title>EKODI</title>\n');
-    fs.writeFileSync(path.join(root, 'dist', 'nested', 'app.js'), 'console.log("stable");\n');
-    fs.writeFileSync(path.join(root, 'wrangler.toml'), 'name = "ekodi-proof"\n');
-    fs.writeFileSync(path.join(root, 'manifest.json'), '{"worker":{"name":"ekodi-proof"}}\n');
-
+    seedRelease(root);
     const first = attest(root, 'artifacts/first.json');
     const second = attest(root, 'artifacts/second.json');
     assert.equal(first.artifactDigest, second.artifactDigest);
-    assert.equal(first.entryCount, 5);
+    assert.equal(first.entryCount, 6);
     assert.equal(first.claimBoundary.digestDoesNotIncludeSecrets, true);
 
     fs.writeFileSync(path.join(root, 'dist', 'nested', 'app.js'), 'console.log("changed");\n');
+    const changed = attest(root, 'artifacts/changed.json');
+    assert.notEqual(changed.artifactDigest, first.artifactDigest);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('Wrangler generated README timestamp does not change the release digest', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ekodi-release-readme-'));
+  try {
+    seedRelease(root);
+    fs.writeFileSync(path.join(root, 'bundle', 'README.md'), 'This folder contains the built output assets generated at 2026-09-17T03:40:03.000Z.\n');
+    const first = attest(root, 'artifacts/first.json');
+    fs.writeFileSync(path.join(root, 'bundle', 'README.md'), 'This folder contains the built output assets generated at 2026-09-17T03:40:57.000Z.\n');
+    const second = attest(root, 'artifacts/second.json');
+    assert.equal(first.artifactDigest, second.artifactDigest);
+    assert.equal(first.claimBoundary.digestExcludesWranglerGeneratedOutdirReadme, true);
+    assert.equal(first.entries.some(entry => entry.path === 'bundle/README.md'), false);
+
+    fs.writeFileSync(path.join(root, 'bundle', 'worker.js'), 'export default { fetch() { return new Response("changed"); } };\n');
     const changed = attest(root, 'artifacts/changed.json');
     assert.notEqual(changed.artifactDigest, first.artifactDigest);
   } finally {

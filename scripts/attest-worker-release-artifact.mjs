@@ -28,6 +28,7 @@ if (!options.bundle || !options.output) {
 const root = process.cwd();
 const sha256 = value => crypto.createHash('sha256').update(value).digest('hex');
 const normalize = value => value.split(path.sep).join('/');
+const WRANGLER_GENERATED_METADATA = new Set(['README.md']);
 
 function assertInsideWorkspace(targetPath, label) {
   const resolved = path.resolve(root, targetPath);
@@ -38,7 +39,7 @@ function assertInsideWorkspace(targetPath, label) {
   return resolved;
 }
 
-function collectDirectory(directory, prefix) {
+function collectDirectory(directory, prefix, { excludeRootFiles = new Set() } = {}) {
   const resolved = assertInsideWorkspace(directory, prefix);
   if (!fs.existsSync(resolved) || !fs.statSync(resolved).isDirectory()) {
     throw new Error(`${prefix} directory missing: ${directory}`);
@@ -47,6 +48,7 @@ function collectDirectory(directory, prefix) {
   const walk = (current, relativeBase = '') => {
     const names = fs.readdirSync(current).sort((a, b) => a.localeCompare(b, 'en'));
     for (const name of names) {
+      if (!relativeBase && excludeRootFiles.has(name)) continue;
       const absolute = path.join(current, name);
       const relative = path.join(relativeBase, name);
       const stat = fs.lstatSync(absolute);
@@ -80,7 +82,7 @@ function collectFile(spec) {
 
 try {
   const entries = [
-    ...collectDirectory(options.bundle, 'bundle'),
+    ...collectDirectory(options.bundle, 'bundle', { excludeRootFiles: WRANGLER_GENERATED_METADATA }),
     ...(options.assets ? collectDirectory(options.assets, 'assets') : []),
     ...options.files.map(collectFile),
   ].sort((a, b) => a.path.localeCompare(b.path, 'en'));
@@ -102,6 +104,8 @@ try {
       digestCoversWranglerDryRunBundle: true,
       digestCoversStaticAssets: Boolean(options.assets),
       digestCoversDeclaredMetadataFiles: options.files.length > 0,
+      digestExcludesWranglerGeneratedOutdirReadme: true,
+      wranglerGeneratedOutdirReadmeReason: 'Wrangler writes README.md with new Date().toISOString(); it is tool metadata and not part of the deployed Worker payload.',
       digestDoesNotIncludeSecrets: true,
       providerUploadPerformedByThisScript: false,
     },
