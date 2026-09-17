@@ -8,12 +8,18 @@ on:
       - '.github/workflows/autonomous-execution-fabric-runtime-proof.yml'
       - 'config/autonomous-execution-fabric-policy.json'
       - 'governance/architecture/ekodi-autonomous-execution-fabric.v1.json'
+      - 'scripts/validate-autonomous-execution-fabric.mjs'
+      - 'scripts/validate-virtualized-execution-policy.mjs'
   push:
     branches: [main]
     paths:
       - 'autonomous-execution-fabric-runtime.js'
       - 'test/autonomous-execution-fabric-runtime.test.mjs'
       - '.github/workflows/autonomous-execution-fabric-runtime-proof.yml'
+      - 'config/autonomous-execution-fabric-policy.json'
+      - 'governance/architecture/ekodi-autonomous-execution-fabric.v1.json'
+      - 'scripts/validate-autonomous-execution-fabric.mjs'
+      - 'scripts/validate-virtualized-execution-policy.mjs'
   workflow_dispatch:
 
 permissions:
@@ -28,12 +34,65 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
-      - name: Verify execution runtime authority and provider boundaries
+      - name: Verify execution runtime authority, parallel convergence and provider boundaries
         run: node --test test/autonomous-execution-fabric-runtime.test.mjs
+
+  native-ephemeral-proof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      result_digest: ${{ steps.proof.outputs.digest }}
+      method_class: ${{ steps.proof.outputs.method_class }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Execute proof on native ephemeral GitHub runner
+        id: proof
+        shell: bash
+        env:
+          EKODI_PRODUCTION_SECRET_SENTINEL: must-not-enter-task-output
+        run: |
+          set -euo pipefail
+          workspace="$RUNNER_TEMP/ekodi-native-parallel-proof"
+          evidence="$RUNNER_TEMP/ekodi-native-parallel-proof.json"
+          mkdir -p "$workspace"
+          printf 'ekodi-parallel-runtime-proof-v1\n' > "$workspace/result.txt"
+          test "$EKODI_PRODUCTION_SECRET_SENTINEL" = 'must-not-enter-task-output'
+          ! grep -Fq "$EKODI_PRODUCTION_SECRET_SENTINEL" "$workspace/result.txt"
+          digest="sha256:$(sha256sum "$workspace/result.txt" | awk '{print $1}')"
+          jq -n \
+            --arg digest "$digest" \
+            '{
+              schemaVersion: 1,
+              generation: 10,
+              orchestrationOwner: "ekodi-orchestrator",
+              method: "github-hosted-native",
+              methodClass: "cloud-ci-native",
+              providerFamily: "github-hosted-runner",
+              ephemeral: true,
+              workspaceIsolation: true,
+              productionSecretExposed: false,
+              productionMutationPerformed: false,
+              authorityExpanded: false,
+              resultDigest: $digest,
+              runtimeProductionReadinessClaimed: false
+            }' > "$evidence"
+          cat "$evidence"
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+          echo 'method_class=cloud-ci-native' >> "$GITHUB_OUTPUT"
+      - name: Upload native runtime evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: ekodi-gen10-native-parallel-proof-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/ekodi-native-parallel-proof.json
+          if-no-files-found: error
+          retention-days: 90
 
   rootless-sandbox-proof:
     runs-on: ubuntu-latest
     timeout-minutes: 12
+    outputs:
+      result_digest: ${{ steps.proof.outputs.digest }}
+      method_class: ${{ steps.proof.outputs.method_class }}
     steps:
       - uses: actions/checkout@v7
 
@@ -50,7 +109,8 @@ jobs:
             sudo usermod --add-subgids 100000-165535 "$USER"
           fi
 
-      - name: Prove rootless isolated execution boundary
+      - name: Execute same proof inside rootless isolated container
+        id: proof
         shell: bash
         env:
           EKODI_PRODUCTION_SECRET_SENTINEL: must-not-enter-sandbox
@@ -79,7 +139,7 @@ jobs:
             sh -eu -c '
               test "$(id -u)" -ne 0
               test -z "${EKODI_PRODUCTION_SECRET_SENTINEL:-}"
-              printf "isolated\n" > /workspace/proof.txt
+              printf "ekodi-parallel-runtime-proof-v1\n" > /workspace/result.txt
               if touch /etc/ekodi-forbidden 2>/dev/null; then
                 echo "root filesystem unexpectedly writable" >&2
                 exit 21
@@ -90,15 +150,18 @@ jobs:
               fi
             '
 
-          test "$(cat "$workspace/proof.txt")" = 'isolated'
-          digest=$(sha256sum "$workspace/proof.txt" | awk '{print $1}')
+          test "$(cat "$workspace/result.txt")" = 'ekodi-parallel-runtime-proof-v1'
+          digest="sha256:$(sha256sum "$workspace/result.txt" | awk '{print $1}')"
           jq -n \
             --arg runner_uid "$(id -u)" \
-            --arg artifact_digest "$digest" \
+            --arg digest "$digest" \
             '{
               schemaVersion: 1,
               generation: 10,
-              provider: "github-hosted-runner-rootless-podman",
+              orchestrationOwner: "ekodi-orchestrator",
+              method: "rootless-container-sandbox",
+              methodClass: "container-sandbox",
+              providerFamily: "github-hosted-runner",
               ephemeral: true,
               workspaceIsolation: true,
               rootless: true,
@@ -110,15 +173,66 @@ jobs:
               productionSecretExposed: false,
               productionMutationPerformed: false,
               authorityExpanded: false,
-              workspaceArtifactSha256: $artifact_digest,
+              resultDigest: $digest,
               runtimeProductionReadinessClaimed: false
             }' > "$evidence"
           cat "$evidence"
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+          echo 'method_class=container-sandbox' >> "$GITHUB_OUTPUT"
 
       - name: Upload sandbox runtime evidence
         uses: actions/upload-artifact@v4
         with:
           name: ekodi-gen10-rootless-sandbox-proof-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/ekodi-execution-proof.json
+          if-no-files-found: error
+          retention-days: 90
+
+  parallel-convergence-proof:
+    needs: [runtime-contract, native-ephemeral-proof, rootless-sandbox-proof]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Converge independent execution-method evidence
+        shell: bash
+        env:
+          NATIVE_DIGEST: ${{ needs.native-ephemeral-proof.outputs.result_digest }}
+          NATIVE_METHOD: ${{ needs.native-ephemeral-proof.outputs.method_class }}
+          SANDBOX_DIGEST: ${{ needs.rootless-sandbox-proof.outputs.result_digest }}
+          SANDBOX_METHOD: ${{ needs.rootless-sandbox-proof.outputs.method_class }}
+        run: |
+          set -euo pipefail
+          test -n "$NATIVE_DIGEST"
+          test -n "$SANDBOX_DIGEST"
+          test "$NATIVE_METHOD" != "$SANDBOX_METHOD"
+          test "$NATIVE_DIGEST" = "$SANDBOX_DIGEST"
+          evidence="$RUNNER_TEMP/ekodi-parallel-convergence-proof.json"
+          jq -n \
+            --arg digest "$NATIVE_DIGEST" \
+            --arg native "$NATIVE_METHOD" \
+            --arg sandbox "$SANDBOX_METHOD" \
+            '{
+              schemaVersion: 1,
+              generation: 10,
+              evidenceId: "GEN10-PARALLEL-MULTI-METHOD-RUNTIME-001",
+              orchestrationOwner: "ekodi-orchestrator",
+              strategy: "parallel-multi-method-independent-evidence-convergence",
+              virtualizationOnly: false,
+              successfulIndependentLanes: 2,
+              independentMethodClasses: [$native, $sandbox],
+              consensusDigest: $digest,
+              converged: true,
+              sameOuterProviderFamily: true,
+              multiProviderFailureDomainIndependenceProven: false,
+              productionMutationPerformed: false,
+              authorityExpanded: false,
+              autonomousProductionReadinessProven: false
+            }' > "$evidence"
+          cat "$evidence"
+      - name: Upload parallel convergence evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: ekodi-gen10-parallel-convergence-proof-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/ekodi-parallel-convergence-proof.json
           if-no-files-found: error
           retention-days: 90

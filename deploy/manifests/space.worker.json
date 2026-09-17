@@ -81,23 +81,30 @@
         "url": "https://ekodi.kr/ekodimission/activities",
         "statuses": [200],
         "redirect": "manual",
-        "expect": ["MISSION ACTIVITIES","260925-chuseok-open-table"],
+        "expect": ["MISSION ACTIVITIES","260926-chuseok-open-table","15:00–17:00"],
         "headerExpect": ["x-ekodi-route: ekodimission-public","x-ekodi-independent-site: true","x-ekodi-publication-status: published","x-robots-tag: index, follow","cache-control: no-store"],
         "rollbackVerify": false
       },
       {
-        "url": "https://ekodi.kr/ekodimission/activities/260925-chuseok-open-table",
+        "url": "https://ekodi.kr/ekodimission/activities/260926-chuseok-open-table",
         "statuses": [200],
         "redirect": "manual",
-        "expect": ["260925 · OPEN TABLE","JOIN THE TABLE","data-event-application"],
+        "expect": ["260926 · OPEN TABLE","15:00–17:00","JOIN THE TABLE","data-event-application"],
         "headerExpect": ["x-ekodi-route: ekodimission-public","x-ekodi-independent-site: true","x-ekodi-site-class: brand-site","x-ekodi-publication-status: published","x-robots-tag: index, follow","cache-control: no-store"],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/ekodimission/activities/260925-chuseok-open-table",
+        "statuses": [308],
+        "redirect": "manual",
+        "headerExpect": ["location: https://ekodi.kr/ekodimission/activities/260926-chuseok-open-table","x-ekodi-route: ekodimission-event-canonical","x-ekodi-publication-status: published","cache-control: no-store"],
         "rollbackVerify": false
       },
       {
         "url": "https://ekodi.kr/ekodimission/activities/2026-chuseok-open-table",
         "statuses": [308],
         "redirect": "manual",
-        "headerExpect": ["location: https://ekodi.kr/ekodimission/activities/260925-chuseok-open-table","x-ekodi-route: ekodimission-event-canonical","x-ekodi-publication-status: published","cache-control: no-store"],
+        "headerExpect": ["location: https://ekodi.kr/ekodimission/activities/260926-chuseok-open-table","x-ekodi-route: ekodimission-event-canonical","x-ekodi-publication-status: published","cache-control: no-store"],
         "rollbackVerify": false
       },
       {

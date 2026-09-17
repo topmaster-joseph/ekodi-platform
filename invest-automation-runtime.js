@@ -1,5 +1,5 @@
 import { resolveWorkspacePrincipal, auditPrincipal } from './ekodi-principal.js';
-import { AI_CIO_POLICY, BROKER_ADAPTERS, INVEST_PERMISSION, evaluateInvestmentOrder } from './invest-market-core.js';
+import { AI_CIO_POLICY, BROKER_ADAPTERS, INVEST_MARKET_POLICY, INVEST_PERMISSION, evaluateBrokerReadiness, evaluateInvestmentOrder } from './invest-market-core.js';
 
 const MODES=new Set(['shadow','simulation']);
 const ASSET_CLASSES=new Set(['stock','bond','real_estate','fund','alternative','portfolio']);
@@ -26,14 +26,58 @@ function publicPolicy(row,env){
   const approved=String(env.INVEST_LIVE_TRADING_APPROVED||'').toLowerCase()==='true';
   return {mode:row?.mode||'shadow',state:row?.state||'ready',maxPositionPct:Number(row?.max_position_pct??10),maxDailyLossPct:Number(row?.max_daily_loss_pct??2),maxLeverage:Number(row?.max_leverage??1),minCashPct:Number(row?.min_cash_pct??10),liveTradingEnabled:Boolean(Number(row?.live_trading_enabled||0)&&approved)};
 }
+async function brokerConnectionRows(env,ctx){
+  const result=await env.DB.prepare(`SELECT id,broker_id,permission_mode,status,updated_at,CASE WHEN account_ref<>'' THEN 1 ELSE 0 END AS account_ref_present,CASE WHEN credential_ref<>'' THEN 1 ELSE 0 END AS authorization_evidence_present FROM investment_broker_connections WHERE subject_type=? AND subject_key=? ORDER BY broker_id,id`).bind(ctx.subject.type,ctx.subject.key).all();
+  return result.results||[];
+}
+function publicBrokerRows(rows=[]){
+  return rows.map(row=>({connectionId:Number(row.id||0),brokerId:String(row.broker_id||''),permissionMode:String(row.permission_mode||INVEST_PERMISSION.READ_ONLY),status:String(row.status||'disconnected'),accountReferencePresent:Boolean(Number(row.account_ref_present||0)),authorizationEvidencePresent:Boolean(Number(row.authorization_evidence_present||0)),updatedAt:row.updated_at||null}));
+}
+function brokerReadinessRows(policy,rows,env){
+  const publicRows=publicBrokerRows(rows),results=[];
+  const seen=new Set();
+  const add=(brokerId,row=null)=>{
+    seen.add(brokerId);
+    const status=row?.status||'disconnected';
+    const readiness=evaluateBrokerReadiness({
+      brokerId,
+      connectionStatus:status,
+      accountReferencePresent:row?.accountReferencePresent===true,
+      authorizationEvidencePresent:row?.authorizationEvidencePresent===true,
+      permission:row?.permissionMode||INVEST_PERMISSION.READ_ONLY,
+      marketDataReady:status==='connected',
+      marketDataFresh:false,
+      riskPolicyReady:['ready','caution'].includes(String(policy.state||'')),
+      killSwitchReady:true,
+      auditReady:Boolean(env?.DB),
+      managedInvestmentServiceEnabled:INVEST_MARKET_POLICY.managedInvestmentServiceEnabled,
+      globalLiveTradingEnabled:policy.liveTradingEnabled===true,
+      brokerLiveTradingEnabled:BROKER_ADAPTERS[brokerId]?.liveTradingEnabled===true
+    });
+    results.push({...readiness,connectionId:row?.connectionId||null,connectionStatus:status,updatedAt:row?.updatedAt||null,evidence:{accountReferencePresent:row?.accountReferencePresent===true,authorizationEvidencePresent:row?.authorizationEvidencePresent===true,marketDataFreshness:'probe_required',rawCredentialsExposed:false}});
+  };
+  for(const row of publicRows)add(row.brokerId,row);
+  for(const brokerId of Object.keys(BROKER_ADAPTERS))if(!seen.has(brokerId))add(brokerId);
+  return results;
+}
+async function readinessPayload(env,ctx){
+  const policy=publicPolicy(await ensurePolicy(env,ctx),env);
+  const rows=await brokerConnectionRows(env,ctx);
+  return {policy,brokers:publicBrokerRows(rows),readiness:brokerReadinessRows(policy,rows,env)};
+}
 async function automationStatus(request,env,ctx){
   const policy=await ensurePolicy(env,ctx);
   const strategies=await env.DB.prepare(`SELECT id,name,asset_class,status,updated_at FROM investment_strategies WHERE subject_type=? AND subject_key=? ORDER BY updated_at DESC LIMIT 100`).bind(ctx.subject.type,ctx.subject.key).all();
-  const brokers=await env.DB.prepare(`SELECT broker_id,permission_mode,status,updated_at FROM investment_broker_connections WHERE subject_type=? AND subject_key=? ORDER BY broker_id`).bind(ctx.subject.type,ctx.subject.key).all();
+  const brokerRows=await brokerConnectionRows(env,ctx);
   const lastCycle=await env.DB.prepare(`SELECT id,mode,status,started_at,completed_at FROM investment_cycles WHERE subject_type=? AND subject_key=? ORDER BY id DESC LIMIT 1`).bind(ctx.subject.type,ctx.subject.key).first();
   await auditPrincipal(env,ctx.principal,'invest:automation-status');
-  const strategyRows=strategies.results||[];
-  return json(request,env,{subject:ctx.subject,policy:publicPolicy(policy,env),strategyCount:strategyRows.length,stockStrategyCount:strategyRows.filter(item=>item.asset_class==='stock').length,strategies:strategyRows,brokers:brokers.results||[],lastCycle:lastCycle||null,loop:INVEST_AUTOMATION_LOOP,aiCio:{role:AI_CIO_POLICY.role,scope:AI_CIO_POLICY.scope,authorityOrder:AI_CIO_POLICY.authorityOrder,liveExecutionAuthority:AI_CIO_POLICY.liveExecutionAuthority,objectives:AI_CIO_POLICY.objectives},execution:{liveOrders:false,reason:'LIVE_EXECUTION_REQUIRES_SEPARATE_APPROVAL_AND_BROKER_AUTHORIZATION'}});
+  const strategyRows=strategies.results||[],safePolicy=publicPolicy(policy,env),brokers=publicBrokerRows(brokerRows);
+  return json(request,env,{subject:ctx.subject,policy:safePolicy,strategyCount:strategyRows.length,stockStrategyCount:strategyRows.filter(item=>item.asset_class==='stock').length,strategies:strategyRows,brokers,brokerReadiness:brokerReadinessRows(safePolicy,brokerRows,env),lastCycle:lastCycle||null,loop:INVEST_AUTOMATION_LOOP,aiCio:{role:AI_CIO_POLICY.role,scope:AI_CIO_POLICY.scope,authorityOrder:AI_CIO_POLICY.authorityOrder,liveExecutionAuthority:AI_CIO_POLICY.liveExecutionAuthority,objectives:AI_CIO_POLICY.objectives},execution:{liveOrders:false,reason:'LIVE_EXECUTION_REQUIRES_SEPARATE_APPROVAL_AND_BROKER_AUTHORIZATION'}});
+}
+async function brokerReadinessStatus(request,env,ctx){
+  const payload=await readinessPayload(env,ctx);
+  await auditPrincipal(env,ctx.principal,'invest:broker-readiness');
+  return json(request,env,{subject:ctx.subject,...payload,execution:{performed:false,liveOrders:false,reason:'READINESS_ONLY_LIVE_EXECUTION_DISABLED'}});
 }
 
 async function updatePolicy(request,env,ctx){
@@ -90,6 +134,7 @@ export async function handleInvestAutomationApi(request,env){
   const write=!['GET','HEAD'].includes(request.method);
   const ctx=await resolveWorkspacePrincipal(request,env,{write});if(ctx.error)return json(request,env,{error:ctx.error},ctx.status);
   if(path==='/v1/invest/automation/status'&&request.method==='GET')return automationStatus(request,env,ctx);
+  if(path==='/v1/invest/automation/readiness'&&request.method==='GET')return brokerReadinessStatus(request,env,ctx);
   if(path==='/v1/invest/automation/policy'&&request.method==='PUT')return updatePolicy(request,env,ctx);
   if(path==='/v1/invest/automation/halt'&&request.method==='POST')return setAutomationState(request,env,ctx,'halt');
   if(path==='/v1/invest/automation/resume'&&request.method==='POST')return setAutomationState(request,env,ctx,'ready');
