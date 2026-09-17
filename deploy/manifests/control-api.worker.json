@@ -1,5 +1,11 @@
 {
-  "version": 3,
+  "version": 4,
+  "evidence": {
+    "generation": 10,
+    "ledger": "ai_production_evidence",
+    "sourceWorkflow": "Deploy Control API",
+    "appendOnly": true
+  },
   "worker": {
     "name": "ekodi-auth-api",
     "config": "wrangler.api.toml",
