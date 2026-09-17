@@ -184,7 +184,8 @@
         "statuses": [200],
         "redirect": "manual",
         "expect": ["data-ekodi-organization=\"hammu\"","MOKPO PRESBYTERY","/hammu/admin"],
-        "headerExpect": ["x-ekodi-route: space-organization","cache-control: no-store"]
+        "headerExpect": ["x-ekodi-route: space-organization","cache-control: no-store"],
+        "rollbackVerify": false
       }
     ]
   }
