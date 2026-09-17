@@ -1,0 +1,37 @@
+name: EKODI Autonomous Execution Fabric Contract
+
+on:
+  pull_request:
+    paths:
+      - 'governance/architecture/ekodi-autonomous-execution-fabric.v1.json'
+      - 'scripts/validate-autonomous-execution-fabric.mjs'
+      - '.github/workflows/autonomous-execution-fabric-contract.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'governance/architecture/ekodi-autonomous-execution-fabric.v1.json'
+      - 'scripts/validate-autonomous-execution-fabric.mjs'
+      - '.github/workflows/autonomous-execution-fabric-contract.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate constitutional execution-fabric contract
+        run: node scripts/validate-autonomous-execution-fabric.mjs
+      - name: Assert runtime readiness is not claimed by contract validation
+        shell: bash
+        run: |
+          set -euo pipefail
+          state=$(jq -r '.activation.currentState' governance/architecture/ekodi-autonomous-execution-fabric.v1.json)
+          test "$state" = 'architecture_registered_not_yet_runtime_proven'
+          echo 'Contract validated without claiming runtime production readiness.'
