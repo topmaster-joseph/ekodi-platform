@@ -1,11 +1,11 @@
 {
-  "schemaVersion": 1,
-  "architectureVersion": "1.0.0",
-  "status": "proposed",
+  "schemaVersion": 2,
+  "architectureVersion": "1.1.0",
+  "status": "active-phase1",
   "name": "EKODI Autonomous Execution Fabric",
   "generation": 10,
   "generationLabel": "Self-Architecture Optimization",
-  "purpose": "Provide a sovereign, isolated and auditable execution environment in which EKODI can implement, test, verify, recover and package code or service changes without depending on a single external AI session, remote desktop session, or production runtime.",
+  "purpose": "Provide a sovereign, isolated, provider-independent and auditable execution environment in which EKODI can implement, test, verify, recover and package code or service changes without depending on a single external AI session, operator workstation, remote desktop session, cloud vendor or production runtime.",
   "constitutionalAlignment": {
     "authorityModel": "Person + Workspace + Role + Capability",
     "directProductionMutationForbidden": true,
@@ -13,17 +13,64 @@
     "immutablePromotionRequired": true,
     "rollbackRequired": true,
     "auditRequired": true,
-    "providerMayNotOwnCanonicalAuthority": true
+    "providerMayNotOwnCanonicalAuthority": true,
+    "virtualizationFirst": true,
+    "failClosedWhenIsolationUnavailable": true
   },
   "operatingModel": {
     "controlPlane": "persistent-low-cost",
-    "executionPlane": "ephemeral-isolated-sandbox",
-    "defaultRuntime": "rootless-container",
-    "vmEscalation": "only-when-container-isolation-is-insufficient",
+    "executionPlane": "ephemeral-virtualized-isolated-sandbox",
+    "defaultIsolationProfile": "standard",
+    "isolationEscalation": "standard-to-hardened-to-microvm",
     "sharedBeforeDedicated": true,
     "modularMonolithFirst": true,
     "scaleTier": "S0",
-    "noAlwaysOnPerAgentRuntime": true
+    "noAlwaysOnPerAgentRuntime": true,
+    "persistentOperatorHostMayExecuteRepositoryCode": false,
+    "controlPlaneMayCoordinateWithoutExecutingRepositoryCode": true
+  },
+  "isolationProfiles": {
+    "standard": {
+      "technologyClass": "rootless-oci-container",
+      "purpose": "Normal trusted repository code, builds, tests, validation and packaging.",
+      "requiredProperties": [
+        "ephemeral",
+        "workspace_isolation",
+        "read_only_root_filesystem",
+        "network_deny_by_default",
+        "capabilities_dropped",
+        "no_new_privileges",
+        "resource_limits",
+        "no_host_container_socket",
+        "no_production_secrets"
+      ]
+    },
+    "hardened": {
+      "technologyClass": "gvisor-or-equivalent-application-kernel",
+      "purpose": "Untrusted executables or workloads where direct host-kernel attack surface should be reduced.",
+      "inherits": "standard",
+      "requiredProperties": [
+        "separate_application_kernel_or_equivalent_strong_sandbox"
+      ]
+    },
+    "microvm": {
+      "technologyClass": "firecracker-or-equivalent-microvm",
+      "purpose": "Kernel-sensitive tooling, stronger tenant separation or VM-grade isolation.",
+      "inherits": "hardened",
+      "requiredProperties": [
+        "hardware_virtualization_boundary_or_equivalent",
+        "dedicated_unprivileged_runtime_identity",
+        "jailer_or_equivalent_process_confinement"
+      ]
+    }
+  },
+  "technologyBaseline": {
+    "rootlessContainers": "Podman-compatible rootless OCI execution with user namespaces",
+    "hardenedSandbox": "gVisor runsc or equivalent application-kernel isolation",
+    "microvm": "Firecracker with jailer or equivalent microVM isolation",
+    "cloudAuthentication": "OIDC or equivalent short-lived federated credentials when supported",
+    "supplyChain": "SLSA-compatible provenance and immutable artifact digests",
+    "workflowDependencies": "third-party GitHub Actions pinned to immutable full commit SHAs in execution-fabric workflows"
   },
   "components": [
     {
@@ -31,6 +78,7 @@
       "responsibilities": [
         "receive_authorized_work",
         "classify_change_risk",
+        "select_minimum_isolation_profile",
         "allocate_sandbox",
         "issue_scoped_credentials",
         "track_state",
@@ -48,12 +96,14 @@
         "run_local_services",
         "run_browser_e2e_when_available",
         "collect_artifacts",
+        "emit_execution_receipt",
         "destroy_after_completion"
       ]
     },
     {
       "id": "credential-broker",
       "responsibilities": [
+        "prefer_short_lived_federated_identity",
         "provide_short_lived_scoped_credentials",
         "deny_secret_export",
         "revoke_on_completion_or_failure"
@@ -62,10 +112,12 @@
     {
       "id": "evidence-store",
       "responsibilities": [
+        "persist_execution_receipts",
         "persist_test_results",
         "persist_logs",
         "persist_build_metadata",
         "persist_verification_results",
+        "persist_artifact_digests_and_provenance",
         "persist_release_and_rollback_evidence"
       ]
     },
@@ -74,6 +126,7 @@
       "responsibilities": [
         "accept_only_verified_artifacts",
         "enforce_change_class_gate",
+        "enforce_virtualization_receipt_gate",
         "promote_to_staging",
         "verify_staging",
         "request_or_consume_release_authorization",
@@ -86,14 +139,18 @@
   "changeClasses": {
     "green": {
       "defaultAutonomy": "delegated",
+      "minimumIsolationProfile": "standard",
       "productionPromotion": "through-release-gateway"
     },
     "yellow": {
       "defaultAutonomy": "delegated-with-contract-and-rollback",
+      "minimumIsolationProfile": "standard",
+      "escalateIsolationWhenUntrusted": "hardened",
       "productionPromotion": "through-release-gateway"
     },
     "red": {
       "defaultAutonomy": "prepare-only",
+      "execution": "explicit-sovereign-human-gate-before-any-mutating-execution",
       "productionPromotion": "explicit-sovereign-human-gate"
     }
   },
@@ -101,6 +158,7 @@
     "observe",
     "classify",
     "authorize",
+    "select_isolation_profile",
     "allocate",
     "checkout",
     "implement",
@@ -109,6 +167,7 @@
     "repair_if_needed",
     "reverify",
     "package_immutable_artifact",
+    "emit_execution_receipt",
     "open_or_update_pull_request",
     "ci_guard",
     "staging_promotion",
@@ -123,12 +182,18 @@
   "safety": {
     "networkDefault": "deny-by-default-except-declared-egress",
     "filesystemDefault": "ephemeral-workspace-only",
+    "rootFilesystemReadOnly": true,
     "privilegedContainerForbidden": true,
     "hostDockerSocketForbidden": true,
+    "hostContainerSocketForbidden": true,
     "productionSecretsInSandboxForbidden": true,
     "persistentAgentShellForbidden": true,
+    "persistentHostRepositoryExecutionForbidden": true,
     "destructiveProductionDataOperationsForbidden": true,
-    "authorityExpansionForbidden": true
+    "authorityExpansionForbidden": true,
+    "noNewPrivilegesRequired": true,
+    "capabilitiesDroppedByDefault": true,
+    "resourceLimitsRequired": true
   },
   "costPolicy": {
     "target": "zero-or-low-fixed-cost-at-S0",
@@ -137,7 +202,8 @@
       "prefer-single-small-control-plane",
       "prefer-ephemeral-compute",
       "shut-down-idle-workers",
-      "measure-before-dedicated-capacity"
+      "measure-before-dedicated-capacity",
+      "do-not-require-dedicated-microvm-infrastructure-until-risk-or-load-justifies-it"
     ]
   },
   "evidenceRequiredBeforeActivation": [
@@ -152,9 +218,21 @@
     "audit_trail_test",
     "cost_budget_test"
   ],
+  "evidenceProgress": {
+    "sandbox_isolation_test": "proven_phase1_rootless_provider",
+    "red_change_human_gate_test": "proven_in_runtime_contract",
+    "credential_scope_test": "pending_runtime_provider_evidence",
+    "green_change_end_to_end_test": "pending_full_change_to_pr_evidence",
+    "yellow_change_rollback_test": "pending_runtime_rollback_evidence",
+    "staging_verification_test": "pending",
+    "production_verification_test": "pending",
+    "automatic_recovery_test": "pending",
+    "audit_trail_test": "partial_execution_receipt_contract",
+    "cost_budget_test": "pending_measured_evidence"
+  },
   "activation": {
-    "currentState": "architecture_registered_not_yet_runtime_proven",
-    "rule": "Do not claim autonomous production readiness until evidenceRequiredBeforeActivation is satisfied with runtime evidence.",
+    "currentState": "execution_runtime_phase1_proven_production_not_ready",
+    "rule": "Do not claim autonomous production readiness until every required activation evidence item is satisfied with runtime evidence.",
     "owner": "EKODI Platform Super Administrator"
   }
 }
