@@ -4,13 +4,21 @@ on:
   pull_request:
     paths:
       - 'governance/architecture/ekodi-autonomous-execution-fabric.v1.json'
+      - 'config/autonomous-execution-fabric-policy.json'
+      - 'config/virtualized-execution-policy.json'
+      - 'evidence/runtime/autonomous-execution-fabric/**'
       - 'scripts/validate-autonomous-execution-fabric.mjs'
+      - 'scripts/validate-virtualized-execution-policy.mjs'
       - '.github/workflows/autonomous-execution-fabric-contract.yml'
   push:
     branches: [main]
     paths:
       - 'governance/architecture/ekodi-autonomous-execution-fabric.v1.json'
+      - 'config/autonomous-execution-fabric-policy.json'
+      - 'config/virtualized-execution-policy.json'
+      - 'evidence/runtime/autonomous-execution-fabric/**'
       - 'scripts/validate-autonomous-execution-fabric.mjs'
+      - 'scripts/validate-virtualized-execution-policy.mjs'
       - '.github/workflows/autonomous-execution-fabric-contract.yml'
   workflow_dispatch:
 
@@ -27,11 +35,15 @@ jobs:
         with:
           node-version: '24'
       - name: Validate constitutional execution-fabric contract
-        run: node scripts/validate-autonomous-execution-fabric.mjs
-      - name: Assert runtime readiness is not claimed by contract validation
+        run: |
+          node scripts/validate-autonomous-execution-fabric.mjs
+          node scripts/validate-virtualized-execution-policy.mjs
+      - name: Assert production readiness is not claimed by partial runtime proof
         shell: bash
         run: |
           set -euo pipefail
           state=$(jq -r '.activation.currentState' governance/architecture/ekodi-autonomous-execution-fabric.v1.json)
-          test "$state" = 'architecture_registered_not_yet_runtime_proven'
-          echo 'Contract validated without claiming runtime production readiness.'
+          production=$(jq -r '.runtimeEvidence.autonomousProductionReadinessProven' governance/architecture/ekodi-autonomous-execution-fabric.v1.json)
+          test "$state" = 'nonproduction_runtime_proven_activation_incomplete'
+          test "$production" = 'false'
+          echo 'Contract validated: non-production isolation is proven, production autonomy remains gated.'
