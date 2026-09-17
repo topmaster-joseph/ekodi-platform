@@ -37,10 +37,16 @@ const baseTask = overrides => ({
   ...overrides,
 });
 
-test('runtime advertises Gen10 without claiming production readiness', () => {
+test('runtime advertises enforced Gen10 execution fabric without claiming production readiness', () => {
   const status = getAutonomousExecutionFabricStatus();
   assert.equal(status.generation, 10);
+  assert.equal(status.policyId, 'EXEC-FABRIC-001');
+  assert.equal(status.defaultIsolationProfile, 's0-default');
+  assert.equal(status.mutatingWorkRequiresFabric, true);
+  assert.equal(status.providerIndependent, true);
+  assert.equal(status.directHostMutationForbidden, true);
   assert.equal(status.directProductionMutationForbidden, true);
+  assert.equal(status.nonProductionRuntimeProven, true);
   assert.equal(status.runtimeProductionReadinessClaimed, false);
 });
 
@@ -64,8 +70,28 @@ test('delegated green work executes through a compliant ephemeral provider', asy
   assert.equal(result.productionPromotionAuthorized, false);
   assert.equal(result.nextStage, 'verify');
   assert.equal(seenEnvelope.productionAllowed, false);
+  assert.equal(seenEnvelope.isolationProfile, 's0-default');
   assert.equal(seenEnvelope.taskId, 'gen10-runtime-test');
   assert.equal(result.receipt.workspaceIsolation, true);
+});
+
+test('explicit isolation profile is pinned into the provider execution envelope', async () => {
+  let seenEnvelope;
+  const result = await runAutonomousExecutionTask(baseTask({
+    isolationProfile: 'strong-vm',
+    providers: [{
+      id: 'strong-provider',
+      kind: 'connected_plugin',
+      state: 'connected',
+      invoke: async envelope => {
+        seenEnvelope = envelope;
+        return receipt();
+      },
+    }],
+  }));
+
+  assert.equal(result.ok, true);
+  assert.equal(seenEnvelope.isolationProfile, 'strong-vm');
 });
 
 test('red-class work is human gated and provider is never invoked', async () => {
