@@ -2,7 +2,7 @@
   const eventKey='260925-chuseok-open-table';
   const url=`https://ekodi.kr/ekodimission/activities/${eventKey}`;
   const api=`/ekodimission/api/activities/${eventKey}/applications`;
-  const invite=`이번 추석, 함께 밥 먹을 사람이 필요하다면 에코디 열린식탁으로 오세요. 국적과 나이, 신앙과 관계없이 누구나 환영합니다. 2026년 9월 25일 금요일 오후 4시, 목포대 후문에서 기다리겠습니다. ${url}`;
+  const invite=`이번 추석, 함께 밥 먹을 사람이 필요하다면 에코디 열린식탁으로 오세요. 국적과 나이, 신앙과 관계없이 누구나 환영합니다. 2026년 9월 26일 토요일 오후 3시, 목포대 후문에서 기다리겠습니다. ${url}`;
   const shareStatus=m=>document.querySelectorAll('[data-share-status]').forEach(el=>el.textContent=m);
   async function copy(v,m){try{await navigator.clipboard.writeText(v)}catch{const t=document.createElement('textarea');t.value=v;document.body.append(t);t.select();document.execCommand('copy');t.remove()}shareStatus(m)}
   document.addEventListener('click',async e=>{
