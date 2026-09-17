@@ -52,7 +52,7 @@ function normalizeHeader(value,tenant){
 }
 function normalizeFooter(value,tenant){
   const defaults=siteChromeDefaults(siteName(tenant),canonicalUrl(tenant.slug)).footer;
-  const input=value&&typeof input==='object'?input:{};
+  const input=value&&typeof input==='object'?value:{};
   const operator=input.operator&&typeof input.operator==='object'?input.operator:{};
   const contact=input.contact&&typeof input.contact==='object'?input.contact:{};
   const links=Array.isArray(input.legalLinks)?input.legalLinks:defaults.legalLinks;
