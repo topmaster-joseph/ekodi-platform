@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 3,
   "worker": {
     "name": "ekodi-space",
     "config": "wrangler.space.toml",
@@ -151,14 +151,6 @@
         "statuses": [200],
         "redirect": "manual",
         "expect": ["VISION & VALUES"],
-        "headerExpect": ["x-ekodi-route: ekodimission-public","x-ekodi-independent-site: true","x-ekodi-publication-status: published","x-robots-tag: index, follow","cache-control: no-store"],
-        "rollbackVerify": false
-      },
-      {
-        "url": "https://ekodi.kr/ekodimission/live",
-        "statuses": [200],
-        "redirect": "manual",
-        "expect": ["EKODI REALTIME"],
         "headerExpect": ["x-ekodi-route: ekodimission-public","x-ekodi-independent-site: true","x-ekodi-publication-status: published","x-robots-tag: index, follow","cache-control: no-store"],
         "rollbackVerify": false
       },
