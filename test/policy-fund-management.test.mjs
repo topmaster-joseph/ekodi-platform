@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import policyFundWorker from '../policy-fund-worker.js';
 import financeEntryWorker from '../finance-entry-worker.js';
@@ -15,7 +16,7 @@ test('policy fund official source recognises MSS and SEMAS only', () => {
   assert.equal(officialSource('javascript:alert(1)'), false);
 });
 
-test('policy fund maturity creates D-90 through D-7 operating milestones', () => {
+test('loan maturity creates D-90 through D-7 operating milestones', () => {
   assert.deepEqual(nextPolicyMilestones('2027-01-01'), [
     { daysBefore: 90, on: '2026-10-03' },
     { daysBefore: 60, on: '2026-11-02' },
@@ -26,11 +27,11 @@ test('policy fund maturity creates D-90 through D-7 operating milestones', () =>
   assert.deepEqual(deadlineState('2026-09-24', new Date('2026-09-17T12:00:00Z')), { band:'d7', days:7 });
 });
 
-test('policy fund API health is public and independent from D1', async () => {
+test('policy fund and loan API health is public and independent from D1', async () => {
   const response = await policyFundWorker.fetch(new Request('https://finance-api.ekodi.kr/api/finance/policy-funds/health'), {});
   assert.equal(response.status, 200);
   const data = await response.json();
-  assert.deepEqual(data, { ok:true, service:'ekodi-policy-fund-management', version:1 });
+  assert.deepEqual(data, { ok:true, service:'ekodi-policy-fund-management', version:2 });
 });
 
 test('finance entry routes policy fund health to the isolated module', async () => {
@@ -52,4 +53,23 @@ test('policy fund API fails closed without its D1 binding', async () => {
   assert.equal(response.status, 503);
   const data = await response.json();
   assert.match(data.error, /D1/);
+});
+
+test('migration seeds EKODIBIZ and Jadam as borrower profiles without inventing loan terms', async () => {
+  const sql = await readFile(new URL('../migrations/20260917_policy_fund_management.sql', import.meta.url), 'utf8');
+  assert.match(sql, /finance_policy_borrowers/);
+  assert.match(sql, /'borrower-ekodibiz','에코디비즈'/);
+  assert.match(sql, /'borrower-jadam-chicken','자담치킨'/);
+  assert.match(sql, /product_name TEXT/);
+  assert.match(sql, /repayment_method TEXT/);
+  assert.match(sql, /monthly_payment INTEGER/);
+  assert.doesNotMatch(sql, /account_number|계좌번호/i);
+  assert.match(sql, /실제 대출 조건은 확인 후 등록/);
+});
+
+test('migration creates automatic maturity tasks against borrower ownership', async () => {
+  const sql = await readFile(new URL('../migrations/20260917_policy_fund_management.sql', import.meta.url), 'utf8');
+  for (const marker of ['d90','d60','d30','d14','d7']) assert.match(sql, new RegExp(`NEW\\.id \\|\\| ':${marker}'`));
+  assert.match(sql, /NEW\.borrower_id/);
+  assert.match(sql, /연장·대환 가능성 사전점검/);
 });
