@@ -1,0 +1,137 @@
+name: Deploy Church History Staging
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: church-history-staging-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  WRANGLER_VERSION: '4.119.0'
+
+jobs:
+  staging:
+    runs-on: ubuntu-latest
+    environment: development
+    timeout-minutes: 15
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: 46aad4738793fbaca88574832a2ccc0f
+      STAGING_URL: https://ekodi-church-history-staging.ekodi-development.workers.dev
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: EKODI AI Orchestration Gate
+        run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
+      - name: Validate isolated staging contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check church-history-staging-worker.js
+          grep -Fq 'DATA_MODE = "isolated-staging"' wrangler.church-history.staging.toml
+          ! grep -Fq '[[d1_databases]]' wrangler.church-history.staging.toml
+          grep -Fq "x-ekodi-data-mode': 'isolated-staging'" church-history-staging-worker.js
+          test "$CLOUDFLARE_ACCOUNT_ID" = '46aad4738793fbaca88574832a2ccc0f'
+          test -n "$CLOUDFLARE_API_TOKEN"
+          node --input-type=module <<'NODE'
+          import worker from './church-history-staging-worker.js';
+
+          const publicResponse = await worker.fetch(new Request('https://staging.invalid/ekodichurch/history'));
+          const publicBody = await publicResponse.text();
+          if (publicResponse.status !== 200 || publicResponse.headers.get('x-ekodi-data-mode') !== 'isolated-staging') {
+            throw new Error('staging public route contract mismatch');
+          }
+          for (const needle of ['지나온 길', '2018년 3월 14일', '2018년 8월 13일', '운영 D1이나 실제 교회 개인정보를 읽지 않습니다']) {
+            if (!publicBody.includes(needle)) throw new Error(`staging public content missing: ${needle}`);
+          }
+          if (publicBody.includes('source_ref') || publicBody.includes('verification_notes')) {
+            throw new Error('staging public route exposed internal evidence fields');
+          }
+
+          const adminResponse = await worker.fetch(new Request('https://staging.invalid/ekodichurch/admin/history'));
+          const adminBody = await adminResponse.text();
+          if (adminResponse.status !== 200 || !adminBody.includes('지나온 길 기록관리')) {
+            throw new Error('staging admin route contract mismatch');
+          }
+
+          const apiResponse = await worker.fetch(new Request('https://staging.invalid/api/church/admin/history'));
+          if (apiResponse.status !== 401) throw new Error(`staging API must fail closed with 401, got ${apiResponse.status}`);
+          const apiPayload = await apiResponse.json();
+          if (apiPayload?.error !== 'staging_auth_required' || apiPayload?.dataMode !== 'isolated-staging') {
+            throw new Error('staging API fail-closed payload contract mismatch');
+          }
+          NODE
+      - name: Deploy isolated Development staging Worker
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.church-history.staging.toml 2>&1 | tee /tmp/church-history-development-deploy.log
+          grep -Fq "$STAGING_URL" /tmp/church-history-development-deploy.log
+      - name: Verify isolated Development staging boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          access_gate() {
+            local code="$1"
+            local headers="$2"
+            [[ "$code" =~ ^(302|303|307|308|403)$ ]] \
+              && { grep -Eiq '^www-authenticate: Cloudflare-Access' "$headers" \
+                || grep -Eiq '^location: https://[^/]+\.cloudflareaccess\.com/' "$headers"; }
+          }
+
+          for attempt in $(seq 1 12); do
+            public_code=$(curl -sS -D /tmp/history-stage-public.headers -o /tmp/history-stage-public.body -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/ekodichurch/history" || true)
+            admin_code=$(curl -sS -D /tmp/history-stage-admin.headers -o /tmp/history-stage-admin.body -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/ekodichurch/admin/history" || true)
+            api_code=$(curl -sS -D /tmp/history-stage-api.headers -o /tmp/history-stage-api.body -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/api/church/admin/history" || true)
+
+            public_boundary=0
+            if [[ "$public_code" == 200 ]] \
+              && grep -Eiq '^x-ekodi-data-mode: isolated-staging' /tmp/history-stage-public.headers \
+              && grep -Fq '지나온 길' /tmp/history-stage-public.body; then
+              public_boundary=1
+            elif access_gate "$public_code" /tmp/history-stage-public.headers; then
+              public_boundary=1
+            fi
+
+            admin_boundary=0
+            if [[ "$admin_code" == 200 ]] \
+              && grep -Eiq '^x-ekodi-data-mode: isolated-staging' /tmp/history-stage-admin.headers \
+              && grep -Fq '지나온 길 기록관리' /tmp/history-stage-admin.body; then
+              admin_boundary=1
+            elif access_gate "$admin_code" /tmp/history-stage-admin.headers; then
+              admin_boundary=1
+            fi
+
+            api_boundary=0
+            if [[ "$api_code" == 401 ]] \
+              && grep -Fq '"error":"staging_auth_required"' /tmp/history-stage-api.body \
+              && grep -Fq '"dataMode":"isolated-staging"' /tmp/history-stage-api.body; then
+              api_boundary=1
+            elif access_gate "$api_code" /tmp/history-stage-api.headers; then
+              api_boundary=1
+            fi
+
+            if [[ "$public_boundary" == 1 && "$admin_boundary" == 1 && "$api_boundary" == 1 ]]; then
+              echo "Church history Development staging boundary verified: public=$public_code admin=$admin_code api=$api_code."
+              exit 0
+            fi
+            sleep 3
+          done
+
+          echo "Staging boundary verification failed: public=$public_code admin=$admin_code api=$api_code"
+          for kind in public admin api; do
+            echo "--- $kind headers ---"
+            cat "/tmp/history-stage-$kind.headers" || true
+            echo "--- $kind body (first 800 bytes) ---"
+            head -c 800 "/tmp/history-stage-$kind.body" || true
+            echo
+          done
+          exit 1
