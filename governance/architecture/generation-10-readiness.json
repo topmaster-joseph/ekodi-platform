@@ -1,6 +1,6 @@
 {
-  "schemaVersion": 1,
-  "effectiveDate": "2026-09-10",
+  "schemaVersion": 2,
+  "effectiveDate": "2026-09-17",
   "status": "active",
   "currentGeneration": 10,
   "currentGenerationName": "Self-Architecture Optimization",
@@ -17,10 +17,22 @@
     "autonomousHealthRuntime": "ekodi-autonomous-health.js",
     "autonomousHealthTests": "test/ekodi-autonomous-health.test.mjs",
     "guardedReleasePolicy": "AI_DEVELOPMENT_POLICY.md",
-    "canonicalEvolutionModel": "governance/architecture/ekodi-evolution-model.json"
+    "canonicalEvolutionModel": "governance/architecture/ekodi-evolution-model.json",
+    "autonomousExecutionArchitecture": "governance/architecture/ekodi-autonomous-execution-fabric.v1.json",
+    "autonomousExecutionPolicy": "config/autonomous-execution-fabric-policy.json",
+    "autonomousExecutionRuntime": "autonomous-execution-fabric-runtime.js",
+    "autonomousExecutionTests": "test/autonomous-execution-fabric-runtime.test.mjs",
+    "autonomousExecutionProofWorkflow": ".github/workflows/autonomous-execution-fabric-runtime-proof.yml"
+  },
+  "resolvedEvidence": {
+    "functional_sandbox_or_equivalent_safe_evaluation_evidence": {
+      "status": "resolved-phase1",
+      "mergedBaselineCommit": "8ef407c7b96805cb7392db1aef895b9df34dcf4c",
+      "proof": "Rootless Podman execution ran on a GitHub-hosted ephemeral runner with network disabled, read-only root filesystem, all Linux capabilities dropped, no-new-privileges, resource limits, workspace-only output and no inherited production-secret sentinel. Runtime contract tests also proved human-gating, control-plane routing and unsafe-provider failover.",
+      "scope": "functional isolated evaluation provider; autonomous production readiness remains unproven"
+    }
   },
   "promotionBlockersUntilEvidence": [
-    "functional_sandbox_or_equivalent_safe_evaluation_evidence",
     "architecture_candidate_benchmark_evidence",
     "security_and_authorization_regression_evidence",
     "rollback_and_degraded_operation_evidence",
