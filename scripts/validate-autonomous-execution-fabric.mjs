@@ -15,12 +15,23 @@ expect(doc.constitutionalAlignment?.directProductionMutationForbidden === true, 
 expect(doc.constitutionalAlignment?.humanGateRequiredForRedClass === true, 'red-class work must require a human gate');
 expect(doc.constitutionalAlignment?.rollbackRequired === true, 'rollback must be required');
 expect(doc.operatingModel?.executionPlane === 'ephemeral-isolated-sandbox', 'execution plane must remain ephemeral and isolated');
+expect(doc.operatingModel?.executionCoordination === 'ekodi-orchestrator-parallel-multi-method', 'execution must be coordinated by EKODI Orchestrator across multiple methods');
+expect(doc.operatingModel?.virtualizationOnly === false, 'execution fabric must not be virtualization-only');
 expect(doc.operatingModel?.noAlwaysOnPerAgentRuntime === true, 'per-agent always-on runtimes are forbidden at S0');
 expect(doc.operatingModel?.providerIndependent === true, 'execution fabric must remain provider independent');
 expect(doc.operatingModel?.providerLockInForbidden === true, 'provider lock-in must remain forbidden');
+expect(doc.parallelExecution?.orchestrationOwner === 'ekodi-orchestrator', 'parallel execution owner must be EKODI Orchestrator');
+expect(Number(doc.parallelExecution?.minimumIndependentLanes) >= 2, 'parallel execution must require at least two independent lanes');
+expect(Number(doc.parallelExecution?.minimumIndependentMethodClasses) >= 2, 'parallel execution must require at least two method classes');
+expect(doc.parallelExecution?.virtualizationIsOneMethodNotTheArchitecture === true, 'virtualization must remain one method rather than the whole architecture');
+expect(doc.parallelExecution?.convergence?.comparableEvidenceDigestRequired === true, 'parallel convergence must require comparable evidence digests');
+expect(doc.parallelExecution?.convergence?.productionPromotion === 'central-release-gateway-only', 'parallel executors may not own production promotion');
+expect(Array.isArray(doc.parallelExecution?.runtimeProvenMethodClasses) && doc.parallelExecution.runtimeProvenMethodClasses.length >= 2, 'at least two execution method classes must be runtime-proven');
+expect(doc.parallelExecution?.claimBoundary?.multiProviderFailureDomainIndependenceProven === false, 'multi-provider failure-domain independence must not be overclaimed');
 expect(doc.mandatoryExecutionBoundary?.allMutatingEngineeringWorkRequiresExecutionFabric === true, 'all mutating engineering work must use the execution fabric');
 expect(doc.mandatoryExecutionBoundary?.directHostMutationForbidden === true, 'direct host mutation must remain forbidden');
-expect(doc.mandatoryExecutionBoundary?.mergeRequiresVirtualizedExecutionGate === true, 'merge must require a virtualized execution gate');
+expect(doc.mandatoryExecutionBoundary?.mergeRequiresVirtualizedExecutionGate === true, 'merge must retain a virtualized isolation gate');
+expect(doc.mandatoryExecutionBoundary?.mergeRequiresParallelIndependentEvidenceGate === true, 'merge must require parallel independent evidence');
 expect(doc.safety?.privilegedContainerForbidden === true, 'privileged containers must be forbidden');
 expect(doc.safety?.hostDockerSocketForbidden === true, 'host Docker socket exposure must be forbidden');
 expect(doc.safety?.productionSecretsInSandboxForbidden === true, 'production secrets must not enter sandboxes');
@@ -28,13 +39,16 @@ expect(doc.safety?.nonRootRequired === true, 'sandbox execution must be non-root
 expect(doc.safety?.dropAllCapabilitiesByDefault === true, 'sandbox capabilities must be dropped by default');
 expect(doc.safety?.noNewPrivilegesRequired === true, 'sandbox must require no-new-privileges');
 expect(doc.safety?.authorityExpansionForbidden === true, 'execution fabric must not expand authority');
+expect(doc.safety?.executorSelfPromotionForbidden === true, 'executors must not self-promote');
+expect(doc.safety?.singleExecutorControlAuthorityForbidden === true, 'a single executor must not become control authority');
 expect(doc.runtimeEvidence?.nonProductionIsolatedExecutionProven === true, 'non-production isolated runtime proof must be recorded');
+expect(doc.runtimeEvidence?.parallelMultiMethodRuntimeProofRequired === true, 'parallel multi-method runtime proof must be required');
 expect(doc.runtimeEvidence?.autonomousProductionReadinessProven === false, 'production readiness must remain unclaimed until complete evidence exists');
 expect(doc.activation?.currentState === 'nonproduction_runtime_proven_activation_incomplete', 'activation state must remain partial until full runtime proof exists');
-expect(Array.isArray(doc.evidenceRequiredBeforeActivation) && doc.evidenceRequiredBeforeActivation.length >= 8, 'activation evidence set is incomplete');
+expect(Array.isArray(doc.evidenceRequiredBeforeActivation) && doc.evidenceRequiredBeforeActivation.length >= 10, 'activation evidence set is incomplete');
 
 const lifecycle = new Set(doc.executionLifecycle || []);
-for (const stage of ['authorize','select_isolation_profile','allocate','implement','test','verify','reverify','staging_verification','production_verification','recover_if_needed','record_evidence']) {
+for (const stage of ['authorize','select_parallel_execution_methods','select_isolation_profile','allocate','fan_out','implement','test','verify','compare_independent_evidence','converge','reverify','staging_verification','production_verification','recover_if_needed','record_evidence']) {
   expect(lifecycle.has(stage), `missing lifecycle stage: ${stage}`);
 }
 
@@ -45,4 +59,5 @@ if (failures.length) {
 }
 
 console.log('EKODI Autonomous Execution Fabric architecture contract validated.');
-console.log('Non-production isolated execution is proven; autonomous production readiness is intentionally NOT asserted.');
+console.log('Orchestrator-led parallel multi-method non-production execution is required; virtualization is one safety method, not the whole architecture.');
+console.log('Autonomous production readiness remains intentionally NOT asserted.');
