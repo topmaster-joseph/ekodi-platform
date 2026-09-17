@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "status": "enforced",
   "generation": 10,
   "defaultChangeClass": "yellow",
@@ -8,13 +8,93 @@
     "readOnlyObservationMayBypassFabric": true,
     "directHostMutationForbidden": true,
     "providerIndependent": true,
-    "providerLockInForbidden": true
+    "providerLockInForbidden": true,
+    "singleExecutorMayNotOwnControlAuthority": true
+  },
+  "orchestration": {
+    "owner": "ekodi-orchestrator",
+    "mode": "parallel-multi-method-independent-evidence-convergence",
+    "virtualizationOnly": false,
+    "virtualizedIsolationLaneRequiredForMutatingEngineeringWork": true,
+    "minimumIndependentLanes": 2,
+    "minimumIndependentMethodClasses": 2,
+    "preferredIndependentLanes": 4,
+    "maxConcurrentAtS0": 2,
+    "selection": {
+      "cloudFirst": true,
+      "cloudOnly": false,
+      "preferReadyBeforeConditional": true,
+      "preferIndependentFailureDomains": true,
+      "preferDistinctMethodClasses": true,
+      "continueHealthyLanesWhenOneLaneFails": true,
+      "doNotDuplicateWorkWithoutVerificationValue": true
+    },
+    "convergence": {
+      "requireComparableEvidenceDigest": true,
+      "requireIndependentVerification": true,
+      "disagreement": "hold-and-collect-more-evidence",
+      "insufficientLanes": "degraded-no-promotion",
+      "productionPromotion": "central-release-gateway-only",
+      "redClass": "explicit-sovereign-human-gate"
+    },
+    "methodCatalog": [
+      {
+        "id": "github-hosted-native",
+        "methodClass": "cloud-ci-native",
+        "state": "runtime-proven",
+        "roles": ["build", "test", "contract-validation", "evidence-collection"],
+        "mutationBoundary": "ephemeral-workspace-only"
+      },
+      {
+        "id": "rootless-container-sandbox",
+        "methodClass": "container-sandbox",
+        "state": "runtime-proven",
+        "roles": ["isolated-build", "isolated-test", "failure-injection", "dependency-isolation"],
+        "mutationBoundary": "rootless-ephemeral-workspace-only"
+      },
+      {
+        "id": "serverless-staging",
+        "methodClass": "serverless-cloud",
+        "state": "conditional",
+        "roles": ["staging-probe", "edge-runtime-verification", "service-contract-test"],
+        "requires": ["registered-boundary", "delegated-provider-credential"]
+      },
+      {
+        "id": "database-sandbox",
+        "methodClass": "data-sandbox",
+        "state": "conditional",
+        "roles": ["schema-test", "rls-test", "migration-dry-run", "integration-test"],
+        "requires": ["task-needs-data-plane"]
+      },
+      {
+        "id": "browser-e2e",
+        "methodClass": "browser-e2e",
+        "state": "conditional",
+        "roles": ["ui-reproduction", "login-flow-test", "route-test", "post-deploy-verification"],
+        "requires": ["browser-capability-available"]
+      },
+      {
+        "id": "authorized-remote-node",
+        "methodClass": "remote-node",
+        "state": "conditional",
+        "roles": ["os-specific-test", "long-running-task", "special-device-test", "local-network-integration"],
+        "requires": ["registered-node", "fresh-heartbeat", "task-scoped-delegation"]
+      },
+      {
+        "id": "external-ai-tool-worker",
+        "methodClass": "external-ai-tool",
+        "state": "conditional",
+        "roles": ["independent-analysis", "alternate-implementation", "review", "research", "diagnosis"],
+        "requires": ["approved-provider", "task-scoped-capability"],
+        "mutationBoundary": "proposal-or-isolated-branch-only"
+      }
+    ]
   },
   "sandbox": {
     "runtime": "ephemeral-vm-plus-rootless-container",
     "defaultProviderProfile": "s0-default",
     "ephemeral": true,
-    "maxConcurrentAtS0": 1,
+    "maxConcurrentAtS0": 2,
     "maxLifetimeMinutes": 45,
     "network": {
       "default": "deny",
@@ -92,6 +172,8 @@
   "promotion": {
     "directProductionMutationForbidden": true,
     "immutableVerifiedArtifactRequired": true,
+    "parallelIndependentEvidenceRequired": true,
+    "minimumIndependentEvidenceSources": 2,
     "stagingRequired": true,
     "postStagingVerificationRequired": true,
     "releaseAuthorizationRequired": true,
@@ -107,6 +189,9 @@
       "base_commit",
       "patch_or_commit",
       "execution_provider",
+      "execution_method_class",
+      "parallel_lane_results",
+      "convergence_result",
       "isolation_profile",
       "build_result",
       "test_result",
