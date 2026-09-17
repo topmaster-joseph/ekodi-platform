@@ -28,28 +28,28 @@ test('loan maturity creates D-90 through D-7 operating milestones', () => {
 });
 
 test('policy fund and loan API health is public and independent from D1', async () => {
-  const response = await policyFundWorker.fetch(new Request('https://finance-api.ekodi.kr/api/finance/policy-funds/health'), {});
+  const response = await policyFundWorker.fetch(new Request('https://ekodi.kr/api/finance/policy-funds/health'), {});
   assert.equal(response.status, 200);
   const data = await response.json();
   assert.deepEqual(data, { ok:true, service:'ekodi-policy-fund-management', version:2 });
 });
 
 test('finance entry routes policy fund health to the isolated module', async () => {
-  const response = await financeEntryWorker.fetch(new Request('https://finance-api.ekodi.kr/api/finance/policy-funds/health'), {});
+  const response = await financeEntryWorker.fetch(new Request('https://ekodi.kr/api/finance/policy-funds/health'), {});
   assert.equal(response.status, 200);
   const data = await response.json();
   assert.equal(data.service, 'ekodi-policy-fund-management');
 });
 
 test('policy fund API rejects untrusted browser origins', async () => {
-  const response = await policyFundWorker.fetch(new Request('https://finance-api.ekodi.kr/api/finance/policy-funds/overview', {
+  const response = await policyFundWorker.fetch(new Request('https://ekodi.kr/api/finance/policy-funds/overview', {
     headers: { origin:'https://example.com' },
   }), {});
   assert.equal(response.status, 403);
 });
 
 test('policy fund API fails closed without its D1 binding', async () => {
-  const response = await policyFundWorker.fetch(new Request('https://finance-api.ekodi.kr/api/finance/policy-funds/overview'), {});
+  const response = await policyFundWorker.fetch(new Request('https://ekodi.kr/api/finance/policy-funds/overview'), {});
   assert.equal(response.status, 503);
   const data = await response.json();
   assert.match(data.error, /D1/);
