@@ -71,3 +71,13 @@ test('successful Coupang report feed distinguishes zero conversions from an abse
   assert.deepEqual(conversionFeedState({conversionRows:0,latestReportStatus:'success',latestReportRunAt:'2026-09-08T00:29:00Z'},now),{status:'ready_zero',feedReady:true});
   assert.deepEqual(conversionFeedState({conversionRows:0,latestReportStatus:'',latestReportRunAt:null},now),{status:'empty',feedReady:false});
 });
+
+test('Mall autonomous policy drift repair stays bounded to the active internal auto plan', async () => {
+  const repair = await read('migrations/0092_restore_ekodimall_autonomous_publish_policy.sql');
+  assert.match(repair,/subject_key\s*=\s*'ekodimall'/);
+  assert.match(repair,/mode\s*=\s*'autonomous'/);
+  assert.match(repair,/max_daily_posts\s*=\s*3/);
+  assert.match(repair,/plan_id\s*=\s*'auto'/);
+  assert.match(repair,/status\s*=\s*'active'/);
+  assert.doesNotMatch(repair,/subject_key\s*=\s*'(ekodi-biz|ekoditrade)'/);
+});

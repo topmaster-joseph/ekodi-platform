@@ -62,6 +62,59 @@ export function evaluateInvestmentOrder(input={}){
   return {allowed:violations.length===0,mode,violations};
 }
 
+const READ_PERMISSIONS=new Set(Object.values(INVEST_PERMISSION));
+const ORDER_PERMISSIONS=new Set([INVEST_PERMISSION.USER_APPROVED_ORDER,INVEST_PERMISSION.CONDITIONAL_AUTOMATION]);
+const missing=(checks,ids)=>ids.filter(id=>checks[id]!==true).map(id=>`READINESS_${id.replace(/([a-z])([A-Z])/g,'$1_$2').toUpperCase()}`);
+
+export function evaluateBrokerReadiness(input={}){
+  const brokerId=String(input.brokerId||'').trim();
+  const adapter=BROKER_ADAPTERS[brokerId]||null;
+  const permission=String(input.permission||INVEST_PERMISSION.READ_ONLY);
+  const checks={
+    adapterRegistered:Boolean(adapter),
+    connectionConnected:String(input.connectionStatus||'')==='connected',
+    accountReferencePresent:input.accountReferencePresent===true,
+    authorizationEvidencePresent:input.authorizationEvidencePresent===true,
+    readPermissionReady:READ_PERMISSIONS.has(permission),
+    orderPermissionReady:ORDER_PERMISSIONS.has(permission),
+    quoteCapabilityReady:Boolean(adapter?.capabilities?.includes('quotes')),
+    orderCapabilityReady:Boolean(adapter?.capabilities?.includes('orders')),
+    marketDataReady:input.marketDataReady===true,
+    marketDataFresh:input.marketDataFresh===true,
+    riskPolicyReady:input.riskPolicyReady===true,
+    killSwitchReady:input.killSwitchReady===true,
+    auditReady:input.auditReady===true,
+    selfInvestmentBoundary:input.managedInvestmentServiceEnabled!==true,
+    globalLivePolicyEnabled:INVEST_MARKET_POLICY.autonomousLiveTrading===true&&input.globalLiveTradingEnabled===true,
+    brokerLivePolicyEnabled:adapter?.liveTradingEnabled===true&&input.brokerLiveTradingEnabled===true
+  };
+  const simulationIds=['adapterRegistered','connectionConnected','accountReferencePresent','authorizationEvidencePresent','readPermissionReady','quoteCapabilityReady','marketDataReady','riskPolicyReady','killSwitchReady','auditReady','selfInvestmentBoundary'];
+  const limitedLiveIds=[...simulationIds,'orderPermissionReady','orderCapabilityReady','marketDataFresh'];
+  const liveIds=[...limitedLiveIds,'globalLivePolicyEnabled','brokerLivePolicyEnabled'];
+  const simulationBlockers=missing(checks,simulationIds);
+  const limitedLiveBlockers=missing(checks,limitedLiveIds);
+  const liveBlockers=missing(checks,liveIds);
+  const simulationReady=simulationBlockers.length===0;
+  const limitedLivePrerequisitesReady=limitedLiveBlockers.length===0;
+  const liveEligible=liveBlockers.length===0;
+  return {
+    schema:'ekodi.invest.broker-readiness.v1',
+    brokerId,
+    brokerName:adapter?.name||brokerId||'unknown',
+    permission,
+    simulationReady,
+    limitedLivePrerequisitesReady,
+    liveEligible,
+    requiredMode:liveEligible?'limited_live':simulationReady?'simulation':'shadow',
+    checks,
+    blockers:liveBlockers,
+    simulationBlockers,
+    limitedLiveBlockers,
+    liveBlockers,
+    credentialsIncluded:false
+  };
+}
+
 export function investmentCommitteeDecision(votes=[]){
   const normalized=votes.filter(v=>v&&typeof v==='object'&&v.role);
   const score=normalized.reduce((sum,v)=>sum+Number(v.score||0),0);
@@ -117,6 +170,7 @@ export const INVEST_MARKET_POLICY=Object.freeze({
   canonicalPath:'/invest',
   defaultMode:'simulation',
   autonomousLiveTrading:false,
+  managedInvestmentServiceEnabled:false,
   credentialsPersistedByCore:false,
   humanApprovalRequiredForLiveOrders:true
 });

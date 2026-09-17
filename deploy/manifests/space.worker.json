@@ -74,103 +74,125 @@
         "statuses": [200],
         "redirect": "manual",
         "expect": ["EKODI MISSION"],
-        "headerExpect": ["x-ekodi-route: ekodimission-preview","x-ekodi-independent-site: true","x-robots-tag: noindex, nofollow, noarchive","cache-control: no-store"]
+        "headerExpect": ["x-ekodi-route: ekodimission-public","x-ekodi-independent-site: true","x-ekodi-publication-status: published","x-robots-tag: index, follow","cache-control: no-store"],
+        "rollbackVerify": false
       },
       {
         "url": "https://ekodi.kr/ekodimission/activities",
         "statuses": [200],
         "redirect": "manual",
-        "expect": ["MISSION ACTIVITIES","260925-chuseok-open-table"],
-        "headerExpect": ["x-ekodi-route: ekodimission-preview","x-ekodi-independent-site: true","x-robots-tag: noindex, nofollow, noarchive","cache-control: no-store"]
+        "expect": ["MISSION ACTIVITIES","260926-chuseok-open-table","15:00–17:00"],
+        "headerExpect": ["x-ekodi-route: ekodimission-public","x-ekodi-independent-site: true","x-ekodi-publication-status: published","x-robots-tag: index, follow","cache-control: no-store"],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/ekodimission/activities/260926-chuseok-open-table",
+        "statuses": [200],
+        "redirect": "manual",
+        "expect": ["260926 · OPEN TABLE","15:00–17:00","JOIN THE TABLE","data-event-application"],
+        "headerExpect": ["x-ekodi-route: ekodimission-public","x-ekodi-independent-site: true","x-ekodi-site-class: brand-site","x-ekodi-publication-status: published","x-robots-tag: index, follow","cache-control: no-store"],
+        "rollbackVerify": false
       },
       {
         "url": "https://ekodi.kr/ekodimission/activities/260925-chuseok-open-table",
-        "statuses": [200],
+        "statuses": [308],
         "redirect": "manual",
-        "expect": ["260925 · OPEN TABLE","JOIN THE TABLE","data-event-application"],
-        "headerExpect": ["x-ekodi-route: ekodimission-preview","x-ekodi-independent-site: true","x-ekodi-site-class: brand-site","x-robots-tag: noindex, nofollow, noarchive","cache-control: no-store"]
+        "headerExpect": ["location: https://ekodi.kr/ekodimission/activities/260926-chuseok-open-table","x-ekodi-route: ekodimission-event-canonical","x-ekodi-publication-status: published","cache-control: no-store"],
+        "rollbackVerify": false
       },
       {
         "url": "https://ekodi.kr/ekodimission/activities/2026-chuseok-open-table",
         "statuses": [308],
         "redirect": "manual",
-        "headerExpect": ["location: https://ekodi.kr/ekodimission/activities/260925-chuseok-open-table","x-ekodi-route: ekodimission-event-canonical","cache-control: no-store"]
+        "headerExpect": ["location: https://ekodi.kr/ekodimission/activities/260926-chuseok-open-table","x-ekodi-route: ekodimission-event-canonical","x-ekodi-publication-status: published","cache-control: no-store"],
+        "rollbackVerify": false
       },
       {
         "url": "https://ekodi.kr/ekodimission/assets/open-table-meal-260925.jpg",
         "statuses": [200],
         "redirect": "manual",
-        "headerExpect": ["x-ekodi-route: ekodimission-asset"]
+        "headerExpect": ["x-ekodi-route: ekodimission-asset","x-ekodi-publication-status: published"],
+        "rollbackVerify": false
       },
       {
         "url": "https://ekodi.kr/ekodimission/participate",
         "statuses": [200],
         "redirect": "manual",
         "expect": ["PARTICIPATE"],
-        "headerExpect": ["x-ekodi-route: ekodimission-preview","x-ekodi-independent-site: true","x-robots-tag: noindex, nofollow, noarchive","cache-control: no-store"]
+        "headerExpect": ["x-ekodi-route: ekodimission-public","x-ekodi-independent-site: true","x-ekodi-publication-status: published","x-robots-tag: index, follow","cache-control: no-store"],
+        "rollbackVerify": false
       },
       {
         "url": "https://ekodi.kr/ekodimission/partners",
         "statuses": [200],
         "redirect": "manual",
         "expect": ["PARTNERSHIP"],
-        "headerExpect": ["x-ekodi-route: ekodimission-preview","x-ekodi-independent-site: true","x-robots-tag: noindex, nofollow, noarchive","cache-control: no-store"]
+        "headerExpect": ["x-ekodi-route: ekodimission-public","x-ekodi-independent-site: true","x-ekodi-publication-status: published","x-robots-tag: index, follow","cache-control: no-store"],
+        "rollbackVerify": false
       },
       {
         "url": "https://ekodi.kr/ekodimission/stories",
         "statuses": [200],
         "redirect": "manual",
         "expect": ["STORIES & NEWS"],
-        "headerExpect": ["x-ekodi-route: ekodimission-preview","x-ekodi-independent-site: true","x-robots-tag: noindex, nofollow, noarchive","cache-control: no-store"]
+        "headerExpect": ["x-ekodi-route: ekodimission-public","x-ekodi-independent-site: true","x-ekodi-publication-status: published","x-robots-tag: index, follow","cache-control: no-store"],
+        "rollbackVerify": false
       },
       {
         "url": "https://ekodi.kr/ekodimission/give",
         "statuses": [200],
         "redirect": "manual",
         "expect": ["GIVE & SHARE"],
-        "headerExpect": ["x-ekodi-route: ekodimission-preview","x-ekodi-independent-site: true","x-robots-tag: noindex, nofollow, noarchive","cache-control: no-store"]
+        "headerExpect": ["x-ekodi-route: ekodimission-public","x-ekodi-independent-site: true","x-ekodi-publication-status: published","x-robots-tag: index, follow","cache-control: no-store"],
+        "rollbackVerify": false
       },
       {
         "url": "https://ekodi.kr/ekodimission/vision",
         "statuses": [200],
         "redirect": "manual",
         "expect": ["VISION & VALUES"],
-        "headerExpect": ["x-ekodi-route: ekodimission-preview","x-ekodi-independent-site: true","x-robots-tag: noindex, nofollow, noarchive","cache-control: no-store"]
+        "headerExpect": ["x-ekodi-route: ekodimission-public","x-ekodi-independent-site: true","x-ekodi-publication-status: published","x-robots-tag: index, follow","cache-control: no-store"],
+        "rollbackVerify": false
       },
       {
         "url": "https://ekodi.kr/ekodimission/live",
         "statuses": [200],
         "redirect": "manual",
         "expect": ["EKODI REALTIME"],
-        "headerExpect": ["x-ekodi-route: ekodimission-preview","x-ekodi-independent-site: true","x-robots-tag: noindex, nofollow, noarchive","cache-control: no-store"]
+        "headerExpect": ["x-ekodi-route: ekodimission-public","x-ekodi-independent-site: true","x-ekodi-publication-status: published","x-robots-tag: index, follow","cache-control: no-store"],
+        "rollbackVerify": false
       },
       {
         "url": "https://ekodi.kr/ekodimission/prayer",
         "statuses": [200],
         "redirect": "manual",
         "expect": ["PRAYER"],
-        "headerExpect": ["x-ekodi-route: ekodimission-preview","x-ekodi-independent-site: true","x-robots-tag: noindex, nofollow, noarchive","cache-control: no-store"]
+        "headerExpect": ["x-ekodi-route: ekodimission-public","x-ekodi-independent-site: true","x-ekodi-publication-status: published","x-robots-tag: index, follow","cache-control: no-store"],
+        "rollbackVerify": false
       },
       {
         "url": "https://ekodi.kr/ekodimission/transparency",
         "statuses": [200],
         "redirect": "manual",
         "expect": ["STEWARDSHIP & TRANSPARENCY"],
-        "headerExpect": ["x-ekodi-route: ekodimission-preview","x-ekodi-independent-site: true","x-robots-tag: noindex, nofollow, noarchive","cache-control: no-store"]
+        "headerExpect": ["x-ekodi-route: ekodimission-public","x-ekodi-independent-site: true","x-ekodi-publication-status: published","x-robots-tag: index, follow","cache-control: no-store"],
+        "rollbackVerify": false
       },
       {
         "url": "https://ekodi.kr/ekodimission/contact",
         "statuses": [200],
         "redirect": "manual",
         "expect": ["CONTACT"],
-        "headerExpect": ["x-ekodi-route: ekodimission-preview","x-ekodi-independent-site: true","x-robots-tag: noindex, nofollow, noarchive","cache-control: no-store"]
+        "headerExpect": ["x-ekodi-route: ekodimission-public","x-ekodi-independent-site: true","x-ekodi-publication-status: published","x-robots-tag: index, follow","cache-control: no-store"],
+        "rollbackVerify": false
       },
       {
         "url": "https://ekodi.kr/hammu",
         "statuses": [200],
         "redirect": "manual",
         "expect": ["data-ekodi-organization=\"hammu\"","MOKPO PRESBYTERY","/hammu/admin"],
-        "headerExpect": ["x-ekodi-route: space-organization","cache-control: no-store"]
+        "headerExpect": ["x-ekodi-route: space-organization","cache-control: no-store"],
+        "rollbackVerify": false
       }
     ]
   }

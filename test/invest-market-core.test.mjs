@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   INVEST_PERMISSION,BROKER_ADAPTERS,INVEST_MARKET_POLICY,AI_CIO_POLICY,
-  aggregatePortfolio,evaluateInvestmentOrder,
+  aggregatePortfolio,evaluateInvestmentOrder,evaluateBrokerReadiness,
   investmentCommitteeDecision,aiCioDecision,createInvestmentAuditEvent
 } from '../invest-market-core.js';
 
@@ -10,6 +10,7 @@ test('market layer is simulation-first and live trading is disabled by default',
   assert.equal(INVEST_MARKET_POLICY.canonicalPath,'/invest');
   assert.equal(INVEST_MARKET_POLICY.defaultMode,'simulation');
   assert.equal(INVEST_MARKET_POLICY.autonomousLiveTrading,false);
+  assert.equal(INVEST_MARKET_POLICY.managedInvestmentServiceEnabled,false);
   assert.equal(BROKER_ADAPTERS.toss.liveTradingEnabled,false);
   assert.equal(BROKER_ADAPTERS.ibkr.liveTradingEnabled,false);
 });
@@ -29,6 +30,41 @@ test('live order is blocked until approval broker capability and authorization e
 test('risk governor enforces concentration loss leverage and stale quote limits',()=>{
   const result=evaluateInvestmentOrder({mode:'simulation',limits:{maxPositionPct:20,maxDailyLossPct:3,maxLeverage:1,maxQuoteAgeSeconds:30},metrics:{projectedPositionPct:31,dailyLossPct:4,projectedLeverage:1.2,quoteAgeSeconds:60}});
   assert.deepEqual(new Set(result.violations),new Set(['STALE_QUOTE','POSITION_CONCENTRATION_LIMIT','DAILY_LOSS_LIMIT','LEVERAGE_LIMIT']));
+});
+
+test('broker readiness fails closed for an unknown adapter and never echoes credentials',()=>{
+  const result=evaluateBrokerReadiness({brokerId:'unknown',connectionStatus:'connected',accountReferencePresent:true,authorizationEvidencePresent:true,permission:INVEST_PERMISSION.USER_APPROVED_ORDER,marketDataReady:true,marketDataFresh:true,riskPolicyReady:true,killSwitchReady:true,auditReady:true,credentialSecret:'must-not-appear'});
+  assert.equal(result.simulationReady,false);
+  assert.equal(result.liveEligible,false);
+  assert.ok(result.blockers.includes('READINESS_ADAPTER_REGISTERED'));
+  assert.equal(result.credentialsIncluded,false);
+  assert.equal(JSON.stringify(result).includes('must-not-appear'),false);
+});
+
+test('broker readiness distinguishes simulation from limited-live prerequisites',()=>{
+  const result=evaluateBrokerReadiness({brokerId:'toss',connectionStatus:'connected',accountReferencePresent:true,authorizationEvidencePresent:true,permission:INVEST_PERMISSION.READ_ONLY,marketDataReady:true,marketDataFresh:false,riskPolicyReady:true,killSwitchReady:true,auditReady:true});
+  assert.equal(result.simulationReady,true);
+  assert.equal(result.limitedLivePrerequisitesReady,false);
+  assert.equal(result.liveEligible,false);
+  assert.equal(result.requiredMode,'simulation');
+  assert.ok(result.limitedLiveBlockers.includes('READINESS_ORDER_PERMISSION_READY'));
+  assert.ok(result.limitedLiveBlockers.includes('READINESS_MARKET_DATA_FRESH'));
+});
+
+test('technical limited-live prerequisites do not override global and broker live locks',()=>{
+  const result=evaluateBrokerReadiness({brokerId:'toss',connectionStatus:'connected',accountReferencePresent:true,authorizationEvidencePresent:true,permission:INVEST_PERMISSION.USER_APPROVED_ORDER,marketDataReady:true,marketDataFresh:true,riskPolicyReady:true,killSwitchReady:true,auditReady:true,globalLiveTradingEnabled:true,brokerLiveTradingEnabled:true});
+  assert.equal(result.simulationReady,true);
+  assert.equal(result.limitedLivePrerequisitesReady,true);
+  assert.equal(result.liveEligible,false);
+  assert.equal(result.requiredMode,'simulation');
+  assert.ok(result.liveBlockers.includes('READINESS_GLOBAL_LIVE_POLICY_ENABLED'));
+  assert.ok(result.liveBlockers.includes('READINESS_BROKER_LIVE_POLICY_ENABLED'));
+});
+
+test('managed investment service boundary blocks readiness even when technical evidence exists',()=>{
+  const result=evaluateBrokerReadiness({brokerId:'ibkr',connectionStatus:'connected',accountReferencePresent:true,authorizationEvidencePresent:true,permission:INVEST_PERMISSION.USER_APPROVED_ORDER,marketDataReady:true,marketDataFresh:true,riskPolicyReady:true,killSwitchReady:true,auditReady:true,managedInvestmentServiceEnabled:true});
+  assert.equal(result.simulationReady,false);
+  assert.ok(result.simulationBlockers.includes('READINESS_SELF_INVESTMENT_BOUNDARY'));
 });
 
 test('multi broker portfolio is aggregated without merging account authority',()=>{

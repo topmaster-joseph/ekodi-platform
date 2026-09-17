@@ -1,8 +1,8 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "policyId": "EKODI-AUTONOMY-001",
   "status": "active",
-  "effectiveDate": "2026-09-15",
+  "effectiveDate": "2026-09-17",
   "purpose": "Keep EKODI autonomous, communicative, lightweight, creative, safe, and human-sovereign without turning routine operation into continuous owner micromanagement.",
   "scope": [
     "platform",
@@ -20,7 +20,98 @@
     "reuseBeforeCreating": true,
     "removeDuplicationBeforeExpansion": true,
     "preferReversibleExperiments": true,
-    "humanSovereigntyRemainsFinal": true
+    "humanSovereigntyRemainsFinal": true,
+    "orchestratorOwnsExecutionCoordination": true,
+    "singleExecutionNodeMustNotBecomeControlAuthority": true
+  },
+  "parallelExecutionFabric": {
+    "fabricId": "EKODI-PARALLEL-EXECUTION-FABRIC-001",
+    "generation": 10,
+    "orchestrator": "ekodi-orchestrator",
+    "strategy": "parallel-fan-out-independent-verify-converge",
+    "minimumReadyLanes": 2,
+    "preferredLanes": 4,
+    "principles": [
+      "virtualization-is-one-execution-method-not-the-architecture",
+      "diversify-execution-methods-before-adding-dedicated-infrastructure",
+      "cloud-first-but-not-cloud-only",
+      "use-authorized-remote-or-local-nodes-as-replaceable-capacity",
+      "external-ai-and-tools-are-bounded-workers-not-authority-owners",
+      "all-results-return-to-ekodi-orchestrator-for-verification-and-convergence",
+      "no-single-executor-may-promote-or-mutate-production-directly"
+    ],
+    "methods": [
+      {
+        "id": "github-actions-ephemeral",
+        "class": "cloud-ci",
+        "availability": "ready",
+        "roles": ["reproduce", "test", "build", "workflow-evidence", "bounded-rerun"],
+        "mutationBoundary": "ephemeral-workspace-only"
+      },
+      {
+        "id": "isolated-container-sandbox",
+        "class": "container-sandbox",
+        "availability": "ready",
+        "roles": ["reproduce", "test", "build", "dependency-isolation", "failure-injection"],
+        "mutationBoundary": "isolated-sandbox-only"
+      },
+      {
+        "id": "serverless-staging-executor",
+        "class": "serverless-cloud",
+        "availability": "conditional",
+        "roles": ["staging-probe", "edge-runtime-verification", "service-contract-test"],
+        "requires": ["registered-boundary", "delegated-provider-credential"],
+        "mutationBoundary": "registered-staging-boundary-only"
+      },
+      {
+        "id": "database-local-sandbox",
+        "class": "data-sandbox",
+        "availability": "conditional",
+        "roles": ["schema-test", "rls-test", "migration-dry-run", "integration-test"],
+        "requires": ["task-needs-data-plane"],
+        "mutationBoundary": "ephemeral-database-only"
+      },
+      {
+        "id": "browser-e2e-executor",
+        "class": "browser-e2e",
+        "availability": "conditional",
+        "roles": ["ui-reproduction", "login-flow-test", "route-test", "post-deploy-verification"],
+        "requires": ["browser-capability-available"],
+        "mutationBoundary": "test-session-only"
+      },
+      {
+        "id": "authorized-remote-execution-node",
+        "class": "remote-node",
+        "availability": "conditional",
+        "roles": ["os-specific-test", "long-running-task", "special-device-test", "local-network-integration"],
+        "requires": ["registered-node", "fresh-heartbeat", "task-scoped-delegation"],
+        "mutationBoundary": "registered-task-workspace-only"
+      },
+      {
+        "id": "external-ai-tool-worker",
+        "class": "external-ai-tool",
+        "availability": "conditional",
+        "roles": ["independent-analysis", "alternate-implementation", "review", "research", "diagnosis"],
+        "requires": ["approved-provider", "task-scoped-capability"],
+        "mutationBoundary": "proposal-or-isolated-branch-only"
+      }
+    ],
+    "selection": {
+      "diversifyMethodClasses": true,
+      "readyBeforeConditional": true,
+      "preferIndependentFailureDomains": true,
+      "avoidDuplicateWorkWithoutVerificationValue": true,
+      "allowConditionalLanesToJoinWhenCapabilityBecomesAvailable": true
+    },
+    "convergence": {
+      "minimumIndependentEvidenceSources": 2,
+      "requireAtLeastOneReadyLane": true,
+      "requireIndependentVerification": true,
+      "disagreementPolicy": "hold-convergence-and-collect-more-evidence",
+      "failedLanePolicy": "continue-other-lanes-when-safe-and-record-degraded-capacity",
+      "productionPromotion": "central-release-gate-only",
+      "redClassChange": "human-sovereign-gate-required"
+    }
   },
   "autonomousWithoutOwnerPrompt": [
     "technical-choice-within-existing-constitution-and-policy",
@@ -35,7 +126,8 @@
     "small-reversible-ux-improvement",
     "code-and-configuration-cleanup",
     "deployment-reliability-improvement",
-    "cross-subservice-consistency-maintenance"
+    "cross-subservice-consistency-maintenance",
+    "parallel-execution-method-selection-within-registered-authority"
   ],
   "ownerDecisionRequired": [
     "change-to-ekodi-values-philosophy-or-operating-principles",
@@ -46,13 +138,15 @@
     "constitutional-c2-or-c3-change",
     "permission-expansion",
     "paid-commitment",
-    "destructive-data-operation"
+    "destructive-data-operation",
+    "new-independent-deployment-boundary"
   ],
   "selfQuestions": [
     "Can this become better without adding another thing?",
     "Does this make life easier for the person using it?",
     "Can this be simpler?",
-    "Can EKODI responsibly decide this without asking the owner?"
+    "Can EKODI responsibly decide this without asking the owner?",
+    "Can this task use more than one independent execution method so one provider or node is not a single point of failure?"
   ],
   "reporting": {
     "default": "report-only-what-matters",
@@ -62,13 +156,17 @@
       "attention-required"
     ],
     "suppressRoutineProcessNarration": true,
-    "neverHideMaterialRiskOrRequiredHumanAction": true
+    "neverHideMaterialRiskOrRequiredHumanAction": true,
+    "reportDegradedExecutionLanesOnlyWhenTheyReduceRequiredEvidenceOrNeedOwnerAction": true
   },
   "safety": {
     "neverExpandOwnAuthority": true,
     "neverBypassConstitutionOrGuardrails": true,
     "neverTreatAutonomyAsPermissionForDirectProductionMutation": true,
     "guardedReleaseAndProductionVerificationRemainRequired": true,
-    "ownerMayOverrideWithinSovereignAuthority": true
+    "ownerMayOverrideWithinSovereignAuthority": true,
+    "executorCannotSelfPromote": true,
+    "executorCannotCreateNewAuthority": true,
+    "orchestratorMustRecordExecutionEvidence": true
   }
 }

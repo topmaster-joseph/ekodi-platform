@@ -20,7 +20,7 @@ jobs:
   orchestration:
     name: EKODI AI Orchestration Gate
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 12
     steps:
       - uses: actions/checkout@v7
         with:
@@ -54,6 +54,54 @@ jobs:
 
           console.log(`[EKODI][AI-BRANCH-001] branch identity verified: ${branch} (actor=${actor})`);
           NODE
+      - name: Install rootless execution prerequisites
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq podman uidmap slirp4netns fuse-overlayfs
+          if ! grep -q "^${USER}:" /etc/subuid; then
+            sudo usermod --add-subuids 100000-165535 "$USER"
+          fi
+          if ! grep -q "^${USER}:" /etc/subgid; then
+            sudo usermod --add-subgids 100000-165535 "$USER"
+          fi
+          test "$(podman info --format '{{.Host.Security.Rootless}}')" = 'true'
+      - name: Enforce virtualized execution boundary
+        shell: bash
+        env:
+          EKODI_PRODUCTION_SECRET_SENTINEL: must-not-enter-sandbox
+        run: |
+          set -euo pipefail
+          podman pull --quiet docker.io/library/node:24-alpine >/dev/null
+          podman run --rm \
+            --network=none \
+            --read-only \
+            --cap-drop=ALL \
+            --security-opt=no-new-privileges \
+            --pids-limit=96 \
+            --memory=384m \
+            --cpus=1 \
+            --userns=keep-id \
+            --tmpfs /tmp:rw,nosuid,nodev,size=64m \
+            -v "$GITHUB_WORKSPACE:/src:ro" \
+            -w /src \
+            docker.io/library/node:24-alpine \
+            sh -eu -c '
+              test "$(id -u)" -ne 0
+              test -z "${EKODI_PRODUCTION_SECRET_SENTINEL:-}"
+              node scripts/validate-virtualized-execution-policy.mjs
+              node scripts/validate-deployment-credential-boundary.mjs
+            '
+          echo '[EKODI][EXEC-FABRIC-001] required virtualized execution boundary passed.'
+          echo '[EKODI][EXEC-CRED-001] production credential exclusion passed inside the sandbox.'
+      - name: Prove guarded rollback recovery
+        env:
+          EKODI_ROLLBACK_PROOF_OUTPUT: artifacts/guarded-release-rollback-proof.json
+        run: |
+          set -euo pipefail
+          node --check scripts/validate-deployment-credential-boundary.mjs
+          node --test test/guarded-worker-release-rollback.test.mjs
       - name: Enforce apex-path-only domain policy
         env:
           ZERO_SUBDOMAIN_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
@@ -71,6 +119,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ekodi-ai-orchestration-${{ github.run_id }}-${{ github.run_attempt }}
-          path: artifacts/ekodi-ai-orchestration-attestation.json
+          path: |
+            artifacts/ekodi-ai-orchestration-attestation.json
+            artifacts/guarded-release-rollback-proof.json
           if-no-files-found: error
           retention-days: 30
