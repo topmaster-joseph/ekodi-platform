@@ -4,14 +4,18 @@ on:
   pull_request:
     paths:
       - 'governance/architecture/ekodi-autonomous-execution-fabric.v1.json'
+      - 'config/autonomous-execution-fabric-policy.json'
       - 'scripts/validate-autonomous-execution-fabric.mjs'
       - '.github/workflows/autonomous-execution-fabric-contract.yml'
+      - 'AI_DEVELOPMENT_POLICY.md'
   push:
     branches: [main]
     paths:
       - 'governance/architecture/ekodi-autonomous-execution-fabric.v1.json'
+      - 'config/autonomous-execution-fabric-policy.json'
       - 'scripts/validate-autonomous-execution-fabric.mjs'
       - '.github/workflows/autonomous-execution-fabric-contract.yml'
+      - 'AI_DEVELOPMENT_POLICY.md'
   workflow_dispatch:
 
 permissions:
@@ -20,18 +24,47 @@ permissions:
 jobs:
   contract:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
-        with:
-          node-version: '24'
-      - name: Validate constitutional execution-fabric contract
-        run: node scripts/validate-autonomous-execution-fabric.mjs
-      - name: Assert runtime readiness is not claimed by contract validation
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Install rootless execution prerequisites
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq podman uidmap slirp4netns fuse-overlayfs
+          if ! grep -q "^${USER}:" /etc/subuid; then
+            sudo usermod --add-subuids 100000-165535 "$USER"
+          fi
+          if ! grep -q "^${USER}:" /etc/subgid; then
+            sudo usermod --add-subgids 100000-165535 "$USER"
+          fi
+          test "$(podman info --format '{{.Host.Security.Rootless}}')" = 'true'
+
+      - name: Validate constitutional execution-fabric contract inside virtualization
+        shell: bash
+        run: |
+          set -euo pipefail
+          podman run --rm \
+            --network=none \
+            --read-only \
+            --cap-drop=ALL \
+            --security-opt=no-new-privileges \
+            --pids-limit=96 \
+            --memory=384m \
+            --cpus=1 \
+            --userns=keep-id \
+            --tmpfs /tmp:rw,nosuid,nodev,size=64m \
+            -v "$GITHUB_WORKSPACE:/src:ro" \
+            -w /src \
+            docker.io/library/node:24-alpine \
+            node scripts/validate-autonomous-execution-fabric.mjs
+
+      - name: Assert phase-1 proof does not claim autonomous production readiness
         shell: bash
         run: |
           set -euo pipefail
           state=$(jq -r '.activation.currentState' governance/architecture/ekodi-autonomous-execution-fabric.v1.json)
-          test "$state" = 'architecture_registered_not_yet_runtime_proven'
-          echo 'Contract validated without claiming runtime production readiness.'
+          test "$state" = 'execution_runtime_phase1_proven_production_not_ready'
+          echo 'Execution runtime phase 1 is proven; autonomous production readiness remains unclaimed.'
