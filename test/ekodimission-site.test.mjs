@@ -52,10 +52,10 @@ test('EKODI Mission shared assets and unknown child routes are guarded',async()=
   const missing=await spaceWorker.fetch(new Request('https://ekodi.kr/ekodimission/not-published'),env);assert.equal(missing.status,404);assert.equal(missing.headers.get('x-ekodi-route'),'ekodimission-not-found');
 });
 
-test('Open Table is first-party EKODI application UI with approved schedule',async()=>{
+test('Open Table is first-party EKODI visual application UI with approved schedule',async()=>{
   const [event,script,css,admin]=await Promise.all([readFile(new URL('../space/ekodimission-activity.page',import.meta.url),'utf8'),readFile(new URL('../space/ekodimission.js',import.meta.url),'utf8'),readFile(new URL('../space/ekodimission.css',import.meta.url),'utf8'),readFile(new URL('../workspace-admin-page.js',import.meta.url),'utf8')]);
-  assert.match(event,/16:00–18:00/);assert.match(event,/id="apply"/);assert.match(event,/data-event-application/);assert.match(event,/260925-chuseok-open-table/);assert.doesNotMatch(event,/docs\.google\.com|forms\/d\//i);assert.doesNotMatch(script,/docs\.google\.com|forms\/d\//i);
-  assert.match(script,/mission-event-apply|applications/);assert.match(css,/word-break:keep-all/);assert.match(css,/overflow-wrap:break-word/);assert.match(css,/hyphens:none/);
+  assert.match(event,/9월 26일 토요일/);assert.match(event,/15:00–17:00/);assert.match(event,/class="visual-art"/);assert.match(event,/class="visual-signs"/);assert.match(event,/class="three-signs"/);assert.doesNotMatch(event,/open-table-meal-260925\.jpg/);assert.match(event,/id="apply"/);assert.match(event,/data-event-application/);assert.match(event,/260925-chuseok-open-table/);assert.doesNotMatch(event,/docs\.google\.com|forms\/d\//i);assert.doesNotMatch(script,/docs\.google\.com|forms\/d\//i);
+  assert.match(script,/mission-event-apply|applications/);assert.match(css,/word-break:keep-all/);assert.match(css,/overflow-wrap:break-word/);assert.match(css,/hyphens:none/);assert.match(css,/\.visual-hero/);assert.match(css,/\.visual-signs/);
   assert.match(admin,/'ekodimission':'에코디선교회'/);assert.match(admin,/'ekodimission':'mission'/);
 });
 
