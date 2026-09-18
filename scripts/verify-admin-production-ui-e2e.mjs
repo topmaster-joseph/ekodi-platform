@@ -40,6 +40,37 @@ await page.route('https://ekodi.kr/api/session', async route => {
   });
 });
 
+const syntheticJson = body => ({
+  status: 200,
+  contentType: 'application/json; charset=utf-8',
+  headers: {
+    'access-control-allow-origin': 'https://ekodi.kr',
+    'access-control-allow-methods': 'GET, POST, OPTIONS',
+    'access-control-allow-headers': 'authorization, content-type',
+    'cache-control': 'no-store',
+  },
+  body: JSON.stringify(body),
+});
+
+await page.route('**/api/control/overview', async route => {
+  if (route.request().method() === 'OPTIONS') return route.fulfill(syntheticJson({ ok:true }));
+  await route.fulfill(syntheticJson({ ok:true, services:[] }));
+});
+await page.route('https://ekodi.kr/api/control/common-services/ai/status', async route => {
+  await route.fulfill(syntheticJson({
+    ok:true,
+    config:{ architectureVersion:'1.10.0', taskExecutionEnabled:false, branchAllocationEnabled:false },
+    stateStore:'ready',
+    providers:[],
+  }));
+});
+await page.route('https://ekodi.kr/api/control/common-services/ai/tasks', async route => {
+  await route.fulfill(syntheticJson({ tasks:[] }));
+});
+await page.route('https://ekodi.kr/api/control/common-services/ai/nodes', async route => {
+  await route.fulfill(syntheticJson({ nodes:[] }));
+});
+
 async function waitForAdminShell() {
   await page.waitForFunction(() => document.documentElement.dataset.ekodiAdminReady === 'true', null, { timeout: 30000 });
   await page.waitForFunction(() => window.EKODIAdminPanels && window.EKODIAdminSidebar, null, { timeout: 30000 });
