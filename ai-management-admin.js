@@ -15,8 +15,10 @@ const $=s=>document.querySelector(s);
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const t=(ko,en)=>window.EKODIAdminMenu?.locale?.()==='en'?en:ko;
 let snapshot=null,runtime=null,audit=[];
+const COMMON_SERVICE_PREFIX='/api/control/common-services/';
+function needsApexServiceBinding(path){return String(path||'').startsWith(COMMON_SERVICE_PREFIX)}
 async function request(path,options={}){
-  if(typeof window.EKODIAdminCore?.request==='function')return window.EKODIAdminCore.request(path,options);
+  if(!needsApexServiceBinding(path)&&typeof window.EKODIAdminCore?.request==='function')return window.EKODIAdminCore.request(path,options);
   const token=sessionStorage.getItem('ekodi-auth-token')||'';
   const headers={...(options.headers||{}),...(token?{authorization:`Bearer ${token}`}:{})};
   const response=await fetch(`https://ekodi.kr${path}`,{...options,headers,cache:'no-store'});
