@@ -4,12 +4,14 @@ import { readFile } from 'node:fs/promises';
 
 const read = path => readFile(new URL('../' + path, import.meta.url), 'utf8');
 
-test('admin navigation names the device surface by the information administrators look for', async () => {
+test('admin navigation preserves the governed device label while the page uses readable local-computer language', async () => {
   const registry = await read('admin-menu-registry.js');
   const demand = await read('admin-demand-loader.js');
-  assert.match(registry, /컴퓨터·기기/);
-  assert.match(registry, /Computer Devices/);
-  assert.match(demand, /label: '기기 관리'/);
+  const device = await read('device-control-admin.js');
+  assert.match(registry, /실행 인프라/);
+  assert.match(registry, /Execution Infrastructure/);
+  assert.match(demand, /label: '실행 인프라'/);
+  assert.match(device, /로컬컴퓨터·기기/);
 });
 
 test('device admin shows status and attention before setup controls', async () => {
