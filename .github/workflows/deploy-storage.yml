@@ -6,6 +6,8 @@ on:
       - 'google-drive-storage-control.js'
       - 'r2-storage-control.js'
       - 'storage-worker.js'
+      - 'storage-gateway.js'
+      - 'canonical-drive-writer.js'
       - 'storage-admin.js'
       - 'storage-admin.css'
       - 'wrangler.storage.toml'
@@ -23,6 +25,8 @@ on:
       - 'google-drive-storage-control.js'
       - 'r2-storage-control.js'
       - 'storage-worker.js'
+      - 'storage-gateway.js'
+      - 'canonical-drive-writer.js'
       - 'storage-admin.js'
       - 'storage-admin.css'
       - 'wrangler.storage.toml'
@@ -57,6 +61,8 @@ jobs:
           node --check google-drive-storage-control.js
           node --check r2-storage-control.js
           node --check storage-worker.js
+          node --check storage-gateway.js
+          node --check canonical-drive-writer.js
           node --check storage-admin.js
           node --check site-worker.js
           node --check scripts/ensure-storage-access.mjs
