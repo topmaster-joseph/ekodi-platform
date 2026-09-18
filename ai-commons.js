@@ -63,6 +63,13 @@ export function rankExecutionServices(query,registry={},limit=5){
     for(const token of tokens){if(normalize(service.label).includes(token))score+=15;if(haystack.includes(token))score+=4;}if(score>0)services.push({...service,categoryLabel:category.label,score});}
   return services.sort((a,b)=>b.score-a.score||a.label.localeCompare(b.label,'ko')).slice(0,Math.max(1,Math.min(10,Number(limit)||5)));
 }
+export function publicExecutionServiceView(service={}){
+  return Object.freeze({id:String(service.id||''),category:String(service.category||''),label:String(service.label||''),launchUrl:String(service.launchUrl||''),
+    description:String(service.description||''),usableNow:Boolean(service.usableNow),...(service.categoryLabel?{categoryLabel:String(service.categoryLabel)}:{})});
+}
+export function rankPublicExecutionServices(query,registry={},limit=5){
+  return Object.freeze(rankExecutionServices(query,registry,limit).map(publicExecutionServiceView));
+}
 function bounded(value,key,required=false){const text=compact(value);const max=LIMITS[key];if(required&&!text)throw new Error(`${key}_required`);if(text.length>max)throw new Error(`${key}_too_long`);return text;}
 
 export function normalizeAiIdeaInput(input={}){
@@ -85,14 +92,23 @@ export function userIdeaStatus(status){
     rejected:'거절',
   })[String(status||'submitted')]||'검토중';
 }
-export function publicIdeaView(row={}){
+function ideaDisplayBase(row={}){
   const requestCount=Math.max(1,Number(row.request_count||row.requestCount)||1);const status=String(row.status||'submitted');
-  return Object.freeze({id:String(row.id||row.fingerprint||''),fingerprint:String(row.fingerprint||''),title:String(row.outcome||row.title||''),problem:String(row.problem||''),
-    outcome:String(row.outcome||''),audience:String(row.audience||''),currentWay:String(row.current_way||row.currentWay||''),status,userStatus:userIdeaStatus(status),
-    requestCount,recommended:Boolean(row.recommended)||requestCount>=3,matchedCapabilityId:row.matched_capability_id||row.matchedCapabilityId||null,
-    sourceServiceId:String(row.source_service_id||row.sourceServiceId||''),sourceServices:String(row.source_services||row.sourceServices||'').split(',').map(v=>v.trim()).filter(Boolean),
-    developmentTaskId:row.development_task_id||row.developmentTaskId||null,reviewDecision:row.review_decision||row.reviewDecision||null,
-    createdAt:row.created_at||row.createdAt||null,updatedAt:row.updated_at||row.updatedAt||null});
+  return {id:String(row.id||''),title:String(row.outcome||row.title||''),status,userStatus:userIdeaStatus(status),requestCount,
+    recommended:Boolean(row.recommended)||requestCount>=3,createdAt:row.created_at||row.createdAt||null,updatedAt:row.updated_at||row.updatedAt||null};
+}
+export function publicRequestView(row={}){
+  const view=ideaDisplayBase(row);return Object.freeze({title:view.title,status:view.status,userStatus:view.userStatus,requestCount:view.requestCount,
+    recommended:view.recommended,createdAt:view.createdAt,updatedAt:view.updatedAt});
+}
+export function memberIdeaView(row={}){
+  return Object.freeze({...ideaDisplayBase(row),problem:String(row.problem||''),outcome:String(row.outcome||''),audience:String(row.audience||''),
+    currentWay:String(row.current_way||row.currentWay||''),sourceServiceId:String(row.source_service_id||row.sourceServiceId||'')});
+}
+export function adminIdeaView(row={}){
+  return Object.freeze({...memberIdeaView(row),fingerprint:String(row.fingerprint||''),matchedCapabilityId:row.matched_capability_id||row.matchedCapabilityId||null,
+    sourceServices:String(row.source_services||row.sourceServices||'').split(',').map(v=>v.trim()).filter(Boolean),
+    developmentTaskId:row.development_task_id||row.developmentTaskId||null,reviewDecision:row.review_decision||row.reviewDecision||null});
 }
 export function canPromoteIdeaStatus(from,to){
   const allowed=new Map([['submitted',new Set(['reuse_suggested','triaged','rejected'])],['reuse_suggested',new Set(['triaged','shared','rejected'])],
@@ -100,7 +116,11 @@ export function canPromoteIdeaStatus(from,to){
     ['verified',new Set(['staged','rejected'])],['staged',new Set(['shared','rejected'])]]);return allowed.get(String(from||''))?.has(String(to||''))===true;
 }
 export function canFinalPublish(status){return status==='staged';}
-export function executionCatalogSnapshot(registry={}){return Object.freeze({version:executionCatalog.version,principle:executionCatalog.principle,categories:listExecutionServices(registry)});}
+export function executionCatalogSnapshot(registry={}){
+  const categories=listExecutionServices(registry).map(category=>Object.freeze({id:String(category.id||''),label:String(category.label||''),order:Number(category.order)||0,
+    services:Object.freeze((category.services||[]).map(publicExecutionServiceView))}));
+  return Object.freeze({version:executionCatalog.version,principle:executionCatalog.principle,categories:Object.freeze(categories)});
+}
 const REQUEST_STOP_WORDS=new Set(['해줘','해주세요','만들어줘','만들기','서비스','에코디','사용자','자동','자동으로','기능','필요','원해요']);
 function requestToken(value){
   return normalize(value).replace(/(으로|에서|에게|까지|부터|처럼|하고|해서|하며|하는|은|는|이|가|을|를|의|에|도|만)$/u,'');
