@@ -127,3 +127,11 @@ test('Personal Finance Admin control proxy stays on the apex and fails closed wi
   assert.match(workerSource,/url\.pathname === ADMIN_PERSONAL_FINANCE_PATH\) return proxyAdminPersonalFinance\(request, env\)/);
   assert.match(workerSource,/withHostSecurity\(response, ADMIN_CSP, 'no-store', 'admin-personal-finance-proxy'\)/);
 });
+
+
+test('Personal Finance production promotion requires an explicit protected-main release signal',()=>{
+  const workflow=fs.readFileSync(new URL('../.github/workflows/deploy-personal-finance.yml',import.meta.url),'utf8');
+  assert.match(workflow,/github\.ref == 'refs\/heads\/main'/);
+  assert.match(workflow,/github\.event_name == 'workflow_dispatch' && inputs\.promote_production == true/);
+  assert.match(workflow,/github\.event_name == 'push' && contains\(github\.event\.head_commit\.message, '\[promote-personal-finance\]'\)/);
+});
