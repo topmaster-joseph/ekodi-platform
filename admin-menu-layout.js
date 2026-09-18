@@ -8,6 +8,7 @@ const nav=sidebar?.querySelector('nav');
 const content=document.querySelector('.content');
 if(!sidebar||!nav||!content)return;
 renderAdminSidebar(nav);
+const COMMAND_HOME='command-home';
 const INTERNAL=new Set(['services','deployments','policies']);
 const ORDER=Object.freeze(adminMenuOrder());
 const RANK=new Map(ORDER.map((section,index)=>[section,index+1]));
@@ -67,6 +68,15 @@ function syncTitle(section){
   if(last===section)return;
   last=section;
   window.dispatchEvent(new CustomEvent('ekodi-admin-section-changed',{detail:{section}}));
+}
+function activateCommandHome(){
+  dc=false;requestedSection=COMMAND_HOME;
+  for(const panel of content.querySelectorAll('[data-panel]')){panel.classList.add('hidden-panel');panel.hidden=true}
+  for(const item of allNav())item.classList.toggle('active',!isInternalNav(item)&&sectionOf(item)===COMMAND_HOME);
+  syncTitle(COMMAND_HOME);
+  replaceSectionUrl(COMMAND_HOME);
+  sidebar.classList.remove('open');
+  return true;
 }
 function activatePanel(section){
   if(!section||!hasPanel(section))return false;
@@ -158,7 +168,8 @@ function reconcileNavigation(){
   try{
     enforcePolicy();
     if(!requestedSection||dc)return;
-    if(requestedSection==='sites'&&!hasPanel('sites'))openSites();
+    if(requestedSection===COMMAND_HOME)activateCommandHome();
+    else if(requestedSection==='sites'&&!hasPanel('sites'))openSites();
     else if(!activatePanel(requestedSection))requestDemand(requestedSection);
   }finally{running=false;if(again){again=false;scheduleNav();}}
 }
@@ -182,13 +193,15 @@ window.addEventListener('ekodi-feature-installed',scheduleNav);
 window.addEventListener('ekodi-session-validated',afterAuth,{once:true});
 window.addEventListener('ekodi-admin-ready',()=>{
   enforcePolicy();const section=explicitAdminSection();
+  if(section===COMMAND_HOME)return activateCommandHome();
   if(section&&isInternal(section))return routeInternal();
   if(section==='sites')return openSites();
   if(section){dc=false;requestedSection=section;if(!activatePanel(section))requestDemand(section);}
-  else{requestedSection='campus';dc=true;}
+  else return activateCommandHome();
 });
 window.addEventListener('popstate',()=>{
   const section=explicitPathSection();if(!section)return;dc=false;
+  if(section===COMMAND_HOME)return activateCommandHome();
   if(isInternal(section))return routeInternal();
   if(section==='sites')return openSites();
   requestedSection=section;if(!activatePanel(section))requestDemand(section);
@@ -207,13 +220,15 @@ nav.addEventListener('click',event=>{
 },true);
 enforcePolicy();
 const initialSection=explicitAdminSection();
-if(initialSection&&isInternal(initialSection))routeInternal();
+if(initialSection===COMMAND_HOME)activateCommandHome();
+else if(initialSection&&isInternal(initialSection))routeInternal();
 else if(initialSection==='sites')openSites();
 else if(initialSection)requestedSection=initialSection;
-else{requestedSection = 'campus';dc=true;requestDemand('campus');}
+else activateCommandHome();
 window.EKODIAdminPanels=Object.freeze({
   activate:section=>{
     dc=false;
+    if(section===COMMAND_HOME)return activateCommandHome();
     if(isInternal(section))return routeInternal();
     if(section==='sites')return openSites();
     requestedSection=section;return activatePanel(section)||requestDemand(section);
