@@ -12,6 +12,7 @@ on:
     branches: [main]
     paths:
       - 'site-worker.js'
+      - 'cgmurrc.html'
       - 'test/ekodi-connect-route.test.mjs'
       - 'platform-route-registry.js'
       - 'ai-commons-admin.js'
