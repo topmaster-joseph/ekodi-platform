@@ -26,35 +26,93 @@ jobs:
       HEAD_REF: ${{ github.event.pull_request.head.ref }}
     steps:
       - uses: actions/checkout@v7
+
       - name: Detect exact and related changes, review, and integration order
         shell: bash
         run: |
           set -euo pipefail
           current_files=$(mktemp)
+          open_pr_snapshot=$(mktemp)
           exact_conflicts=$(mktemp)
           semantic_conflicts=$(mktemp)
-          trap 'rm -f "$current_files" "$exact_conflicts" "$semantic_conflicts"' EXIT
+          governance_snapshot="${RUNNER_TEMP}/ekodi-pr-governance-${PR_NUMBER}.json"
+          trap 'rm -f "$current_files" "$open_pr_snapshot" "$exact_conflicts" "$semantic_conflicts"' EXIT
 
-          gh api --paginate \
-            "repos/${REPOSITORY}/pulls/${PR_NUMBER}/files?per_page=100" \
-            --jq '.[].filename' \
-            | sort -u > "$current_files"
+          gh_retry() {
+            local attempt=1 output status
+            while true; do
+              set +e
+              output=$(gh "$@" 2>&1)
+              status=$?
+              set -e
+              if [[ "$status" -eq 0 ]]; then
+                printf '%s\n' "$output"
+                return 0
+              fi
+              if [[ "$attempt" -ge 4 ]] || ! grep -Eqi 'rate limit|secondary rate|abuse detection' <<< "$output"; then
+                printf '%s\n' "$output" >&2
+                return "$status"
+              fi
+              echo "GitHub API rate limit encountered; retrying guard query (attempt $attempt/4)." >&2
+              sleep $((attempt * 20))
+              attempt=$((attempt + 1))
+            done
+          }
+
+          # Snapshot open PR metadata through GitHub CLI GraphQL instead of issuing
+          # one REST file-list request for every open PR. Only non-draft PRs
+          # based on the same current base commit participate in integration
+          # ordering; stale PRs must refresh/rebase before they can block newer
+          # work. Large current-base PRs fall back to REST file pagination only
+          # when the GraphQL file snapshot is incomplete.
+          gh_retry pr list --repo "$REPOSITORY" --state open --base "$BASE_REF" --limit 500 \
+            --json number,headRefName,isDraft,baseRefOid,changedFiles,files,labels > "$open_pr_snapshot"
+          gh_retry pr view "$PR_NUMBER" --repo "$REPOSITORY" \
+            --json number,baseRefOid,changedFiles,files,labels,comments,reviews,mergeable,mergeStateStatus > "$governance_snapshot"
+
+          current_base_oid=$(jq -r '.baseRefOid // empty' "$governance_snapshot")
+          if [[ -z "$current_base_oid" ]]; then
+            echo "Current PR base commit evidence is missing; refusing to infer active parallel work." >&2
+            exit 1
+          fi
+          current_changed=$(jq -r '.changedFiles // 0' "$governance_snapshot")
+          current_listed=$(jq -r '(.files // []) | length' "$governance_snapshot")
+          if [[ "$current_changed" -gt "$current_listed" ]]; then
+            gh_retry api --paginate "repos/${REPOSITORY}/pulls/${PR_NUMBER}/files?per_page=100" --jq '.[].filename' \
+              | sort -u > "$current_files"
+          else
+            jq -r '.files[]?.path' "$governance_snapshot" | sort -u > "$current_files"
+          fi
+          if [[ ! -s "$current_files" ]]; then
+            echo "Current PR file evidence is missing; refusing to infer independence." >&2
+            exit 1
+          fi
 
           : > "$exact_conflicts"
           : > "$semantic_conflicts"
           while IFS=$'\t' read -r other_pr other_branch; do
             [[ -n "$other_pr" ]] || continue
-            [[ "$other_pr" != "$PR_NUMBER" ]] || continue
-
             other_files=$(mktemp)
             exact_overlap=$(mktemp)
             semantic_overlap=$(mktemp)
-            gh api --paginate \
-              "repos/${REPOSITORY}/pulls/${other_pr}/files?per_page=100" \
-              --jq '.[].filename' \
-              | sort -u > "$other_files"
-            comm -12 "$current_files" "$other_files" > "$exact_overlap"
 
+            changed=$(jq -r --argjson candidate "$other_pr" '.[] | select(.number == $candidate) | .changedFiles // 0' "$open_pr_snapshot")
+            listed=$(jq -r --argjson candidate "$other_pr" '.[] | select(.number == $candidate) | (.files // []) | length' "$open_pr_snapshot")
+            if [[ "$changed" -gt "$listed" ]]; then
+              gh_retry api --paginate "repos/${REPOSITORY}/pulls/${other_pr}/files?per_page=100" --jq '.[].filename' \
+                | sort -u > "$other_files"
+            else
+              jq -r --argjson candidate "$other_pr" '.[] | select(.number == $candidate) | .files[]?.path' "$open_pr_snapshot" \
+                | sort -u > "$other_files"
+            fi
+
+            if [[ ! -s "$other_files" ]]; then
+              echo "PR #${other_pr} file evidence is missing; refusing to infer independence." >&2
+              rm -f "$other_files" "$exact_overlap" "$semantic_overlap"
+              exit 1
+            fi
+
+            comm -12 "$current_files" "$other_files" > "$exact_overlap"
             if [[ -s "$exact_overlap" ]]; then
               while IFS= read -r file; do
                 printf '%s\t%s\t%s\n' "$other_pr" "$other_branch" "$file" >> "$exact_conflicts"
@@ -74,9 +132,9 @@ jobs:
             fi
             rm -f "$other_files" "$exact_overlap" "$semantic_overlap"
           done < <(
-            gh api --paginate \
-              "repos/${REPOSITORY}/pulls?state=open&base=${BASE_REF}&per_page=100" \
-              --jq '.[] | [.number, .head.ref] | @tsv'
+            jq -r --argjson current "$PR_NUMBER" --arg base "$current_base_oid" \
+              '.[] | select(.number != $current and .isDraft == false and .baseRefOid == $base) | [.number, .headRefName] | @tsv' \
+              "$open_pr_snapshot"
           )
 
           {
@@ -87,7 +145,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
           if [[ ! -s "$exact_conflicts" && ! -s "$semantic_conflicts" ]]; then
-            echo '- Result: no exact-file or configured related-change overlap with other open PRs.' >> "$GITHUB_STEP_SUMMARY"
+            echo '- Result: no exact-file or configured related-change overlap with other current-base ready PRs.' >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
 
@@ -124,24 +182,25 @@ jobs:
               | sed '/^$/d' | sort -nu
           )
           echo "- Related PRs: $(tr '\n' ',' <<< "$related_prs" | sed 's/,$//')" | tee -a "$GITHUB_STEP_SUMMARY"
+
           approved_count=0
           approved_winner=''
           while IFS= read -r candidate_pr; do
             [[ -n "$candidate_pr" ]] || continue
-            has_priority=$(gh api "repos/${REPOSITORY}/pulls/${candidate_pr}" \
-              --jq "[.labels[].name] | index(\"${priority_label}\") != null")
+            if [[ "$candidate_pr" == "$PR_NUMBER" ]]; then
+              has_priority=$(jq -r --arg label "$priority_label" '[.labels[]?.name] | index($label) != null' "$governance_snapshot")
+            else
+              has_priority=$(jq -r --argjson candidate "$candidate_pr" --arg label "$priority_label" \
+                '[.[] | select(.number == $candidate) | .labels[]?.name] | index($label) != null' "$open_pr_snapshot")
+            fi
             if [[ "$has_priority" == 'true' ]]; then
               approved_count=$((approved_count + 1))
               approved_winner="$candidate_pr"
             fi
           done <<< "$related_prs"
 
-          current_has_review=$(gh api "repos/${REPOSITORY}/pulls/${PR_NUMBER}" \
-            --jq "[.labels[].name] | index(\"${review_label}\") != null")
-          review_evidence="$(
-            gh api --paginate "repos/${REPOSITORY}/issues/${PR_NUMBER}/comments?per_page=100" --jq '.[] | .body // empty'
-            gh api --paginate "repos/${REPOSITORY}/pulls/${PR_NUMBER}/reviews?per_page=100" --jq '.[] | .body // empty'
-          )"
+          current_has_review=$(jq -r --arg label "$review_label" '[.labels[]?.name] | index($label) != null' "$governance_snapshot")
+          review_evidence="$(jq -r '(.comments[]?.body // empty), (.reviews[]?.body // empty)' "$governance_snapshot")"
           evidence_ok=true
           if ! grep -Fq "$evidence_marker" <<< "$review_evidence"; then evidence_ok=false; fi
           while IFS= read -r related_pr; do
@@ -151,24 +210,24 @@ jobs:
 
           if [[ "$approved_count" -eq 1 && "$approved_winner" == "$PR_NUMBER" \
                 && "$current_has_review" == 'true' && "$evidence_ok" == 'true' ]]; then
-            echo "- Mutual review: verified via \`${review_label}\` and ${evidence_marker} evidence covering every related PR." | tee -a "$GITHUB_STEP_SUMMARY"
-            echo "- Integration order: current PR is the single centrally approved winner via \`${priority_label}\`." | tee -a "$GITHUB_STEP_SUMMARY"
+            echo "- Mutual review: verified via \`$review_label\` and $evidence_marker evidence covering every detected related PR." | tee -a "$GITHUB_STEP_SUMMARY"
+            echo "- Integration order: current PR is the single centrally approved winner via \`$priority_label\`." | tee -a "$GITHUB_STEP_SUMMARY"
             echo '- Result: ALLOWED to merge first. Every overlapping or related open PR must refresh/rebase on main after this winner merges and rerun validation.' | tee -a "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
 
           if [[ "$approved_count" -gt 1 ]]; then
-            echo "Multiple related PRs carry \`${priority_label}\`; central integration order is ambiguous." | tee -a "$GITHUB_STEP_SUMMARY" >&2
+            echo "Multiple related PRs carry \`$priority_label\`; central integration order is ambiguous." | tee -a "$GITHUB_STEP_SUMMARY" >&2
           elif [[ "$approved_count" -eq 1 && "$approved_winner" != "$PR_NUMBER" ]]; then
             echo "Central integration winner is PR #${approved_winner}; current PR #${PR_NUMBER} must wait and refresh after the winner merges." | tee -a "$GITHUB_STEP_SUMMARY" >&2
           elif [[ "$approved_count" -eq 0 ]]; then
-            echo "No related PR has the \`${priority_label}\` central integration approval." | tee -a "$GITHUB_STEP_SUMMARY" >&2
+            echo "No related PR has the \`$priority_label\` central integration approval." | tee -a "$GITHUB_STEP_SUMMARY" >&2
           fi
           if [[ "$current_has_review" != 'true' ]]; then
-            echo "Current PR must carry \`${review_label}\` after EKODI cross-reviews all detected related work." | tee -a "$GITHUB_STEP_SUMMARY" >&2
+            echo "Current PR must carry \`$review_label\` after EKODI cross-reviews all detected related work." | tee -a "$GITHUB_STEP_SUMMARY" >&2
           fi
           if [[ "$evidence_ok" != 'true' ]]; then
-            echo "Current PR must contain ${evidence_marker} review evidence naming every detected related PR." | tee -a "$GITHUB_STEP_SUMMARY" >&2
+            echo "Current PR must contain $evidence_marker review evidence naming every detected related PR." | tee -a "$GITHUB_STEP_SUMMARY" >&2
           fi
           echo 'Parallel related change remains blocked until EKODI completes cross-review, chooses exactly one integration winner, then refreshes remaining PRs.' | tee -a "$GITHUB_STEP_SUMMARY" >&2
           exit 1
@@ -178,13 +237,20 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          mergeable=$(gh api "repos/${REPOSITORY}/pulls/${PR_NUMBER}" --jq '.mergeable')
-          mergeable_state=$(gh api "repos/${REPOSITORY}/pulls/${PR_NUMBER}" --jq '.mergeable_state')
+          governance_snapshot="${RUNNER_TEMP}/ekodi-pr-governance-${PR_NUMBER}.json"
+          if [[ ! -s "$governance_snapshot" ]]; then
+            echo 'Current PR governance snapshot is unavailable; refusing to infer mergeability.' >&2
+            exit 1
+          fi
+          mergeable_raw=$(jq -r '.mergeable // "UNKNOWN"' "$governance_snapshot")
+          mergeable_state=$(jq -r '.mergeStateStatus // "UNKNOWN"' "$governance_snapshot")
+          mergeable='true'
+          if [[ "$mergeable_raw" == 'CONFLICTING' ]]; then mergeable='false'; fi
           {
             echo ''
             echo '### GitHub merge signal'
-            echo "- mergeable: \`${mergeable}\`"
-            echo "- mergeable_state: \`${mergeable_state}\`"
+            echo "- mergeable: \`$mergeable\`"
+            echo "- mergeable_state: \`$mergeable_state\`"
           } >> "$GITHUB_STEP_SUMMARY"
 
           if [[ "$mergeable" == 'false' ]]; then
