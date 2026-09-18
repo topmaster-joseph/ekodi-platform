@@ -106,6 +106,43 @@ function safeName(value) {
   return (cleaned || 'record').slice(0, 180);
 }
 
+function driveQueryValue(value) {
+  return String(value || '').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+}
+async function driveJson(token, path, init = {}) {
+  const headers = new Headers(init.headers || {});
+  headers.set('authorization', `Bearer ${token}`);
+  if (init.body && !headers.has('content-type')) headers.set('content-type','application/json');
+  const response = await fetch(`https://www.googleapis.com/drive/v3${path}`,{...init,headers});
+  const data = await response.json().catch(()=>({}));
+  if (!response.ok) throw new Error(`CANONICAL_STORAGE_DRIVE_${response.status}`);
+  return data;
+}
+async function ensureSubfolderPath(token, parentId, path = '') {
+  const segments = String(path || '').split('/').map(value=>safeName(value)).filter(Boolean).slice(0,8);
+  let parent = parentId;
+  for (const segment of segments) {
+    const params = new URLSearchParams({
+      q:`'${driveQueryValue(parent)}' in parents and name = '${driveQueryValue(segment)}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
+      spaces:'drive',
+      pageSize:'1',
+      supportsAllDrives:'true',
+      includeItemsFromAllDrives:'true',
+      fields:'files(id,name)',
+    });
+    const found = await driveJson(token,`/files?${params.toString()}`);
+    const existing = found.files?.[0];
+    if (existing?.id) { parent = existing.id; continue; }
+    const created = await driveJson(token,'/files?supportsAllDrives=true&fields=id,name,parents',{
+      method:'POST',
+      body:JSON.stringify({name:segment,mimeType:'application/vnd.google-apps.folder',parents:[parent]}),
+    });
+    if (!created?.id) throw new Error('CANONICAL_STORAGE_FOLDER_CREATE_FAILED');
+    parent = created.id;
+  }
+  return parent;
+}
+
 function concatBytes(...parts) {
   const total = parts.reduce((sum, part) => sum + part.length, 0);
   const out = new Uint8Array(total);
@@ -148,9 +185,10 @@ export async function writeCanonicalDriveFile(env, options = {}) {
   ]);
   const token = await accessToken(env, connection);
   const mimeType = String(options.mimeType || 'application/octet-stream').slice(0, 120);
+  const parentId = await ensureSubfolderPath(token, folder.folder_id, options.subfolderPath || '');
   const metadata = {
     name: safeName(options.title || `record-${Date.now()}`),
-    parents: [folder.folder_id],
+    parents: [parentId],
     appProperties: {
       ekodiSpaceId: String(options.spaceId || '').slice(0, 120),
       ekodiServiceId: String(options.serviceId || '').slice(0, 120),
@@ -198,9 +236,10 @@ export async function writeCanonicalDriveStream(env, options = {}) {
   ]);
   const token = await accessToken(env, connection);
   const mimeType = String(options.mimeType || 'application/octet-stream').slice(0, 120);
+  const parentId = await ensureSubfolderPath(token, folder.folder_id, options.subfolderPath || '');
   const metadata = {
     name: safeName(options.title || `record-${Date.now()}`),
-    parents: [folder.folder_id],
+    parents: [parentId],
     appProperties: {
       ekodiSpaceId: String(options.spaceId || '').slice(0, 120),
       ekodiServiceId: String(options.serviceId || '').slice(0, 120),
