@@ -93,112 +93,37 @@ jobs:
         run: npm test
 
 
-  probe-existing-ai-providers:
-    name: Probe existing AI providers
+  probe-cloudflare-workers-ai:
+    name: Probe Cloudflare Workers AI
     if: github.event_name == 'pull_request' && github.head_ref == 'ai/chatgpt/dispatch-live-proof-20260918'
     permissions:
       contents: read
     runs-on: ubuntu-latest
-    timeout-minutes: 4
+    timeout-minutes: 3
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-      EKODI_ORIGIN: https://ekodi.kr
     steps:
-      - name: Issue short-lived admin session and inspect provider snapshot
+      - name: Run one read-only free-allocation model inference
         shell: bash
         run: |
           set -euo pipefail
-          cf_query() {
-            local db="$1" sql="$2"
-            curl -fsS --retry 2 --retry-delay 1 \
-              -X POST "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/d1/database/$db/query" \
-              -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
-              -H 'Content-Type: application/json' \
-              --data "$(jq -nc --arg sql "$sql" '{sql:$sql}')"
-          }
-          databases=$(curl -fsS --retry 2 --retry-delay 1 \
-            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/d1/database?per_page=100" \
-            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN")
-          auth_db=''
-          admin_id=''
-          while IFS= read -r db; do
-            [ -n "$db" ] || continue
-            schema=$(cf_query "$db" "SELECT name FROM sqlite_master WHERE type='table' AND name IN ('admins','sessions')" || true)
-            if ! echo "$schema" | jq -e '.success == true and ([.result[]?.results[]?.name] | index("admins") != null and index("sessions") != null)' >/dev/null 2>&1; then continue; fi
-            candidate=$(cf_query "$db" "SELECT id FROM admins WHERE role='super_admin' ORDER BY id LIMIT 1" || true)
-            id=$(echo "$candidate" | jq -r '.result[]?.results[0]?.id // empty' | head -1)
-            if [[ "$id" =~ ^[0-9]+$ ]]; then auth_db="$db"; admin_id="$id"; break; fi
-          done < <(echo "$databases" | jq -r '.result[]? | (.uuid // .id // empty)')
-          test -n "$auth_db"
-          test -n "$admin_id"
+          model='@cf/meta/llama-3.1-8b-instruct'
+          code=$(curl -sS -o "$RUNNER_TEMP/workers-ai.json" -w '%{http_code}' \
+            -X POST "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/ai/run/$model" \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            -H 'Content-Type: application/json' \
+            --data '{"prompt":"Return exactly EKODI_WORKERS_AI_OK."}')
+          echo "Workers AI HTTP: $code"
+          jq '{success,errors,messages,result:{response:(.result.response // "")}}' "$RUNNER_TEMP/workers-ai.json"
+          test "$code" = "200"
+          jq -e '.success == true and (.result.response // "" | length) > 0' "$RUNNER_TEMP/workers-ai.json" >/dev/null
 
-          token=$(openssl rand -hex 32)
-          token_hash=$(printf '%s' "$token" | sha256sum | awk '{print $1}')
-          created=$(date -u +'%Y-%m-%dT%H:%M:%S.000Z')
-          expires=$(date -u -d '+20 minutes' +'%Y-%m-%dT%H:%M:%S.000Z')
-          echo "::add-mask::$token"
-          echo "::add-mask::$token_hash"
-          cf_query "$auth_db" "INSERT INTO sessions (token_hash, admin_id, expires_at, created_at) VALUES ('$token_hash', $admin_id, '$expires', '$created')" \
-            | jq -e '.success == true' >/dev/null
-
-          session=$(curl -fsS "$EKODI_ORIGIN/api/session" -H "Authorization: Bearer $token")
-          echo "$session" | jq -e '.authenticated == true and .role == "super_admin"' >/dev/null
-
-          snapshot=$(curl -fsS "$EKODI_ORIGIN/api/ai-modules/v1/providers/admin" \
-            -H "Authorization: Bearer $token")
-          echo "$snapshot" | jq '{
-            control,
-            providers:[.providers[] | {
-              id,
-              enabled,
-              configured,
-              health,
-              lastCheckedAt,
-              lastError,
-              costClass,
-              runtime,
-              inSync
-            }],
-            routes
-          }' | tee "$RUNNER_TEMP/provider-snapshot.json"
-
-          gemini_configured=$(echo "$snapshot" | jq -r '.providers[] | select(.id=="gemini") | .configured')
-          if [ "$gemini_configured" = "true" ]; then
-            code=$(curl -sS -o "$RUNNER_TEMP/gemini-check.json" -w '%{http_code}' \
-              -X POST "$EKODI_ORIGIN/api/ai-modules/v1/providers/admin/gemini/check" \
-              -H "Authorization: Bearer $token" \
-              -H 'Content-Type: application/json' \
-              --data '{}')
-            echo "Gemini health HTTP: $code"
-            jq '{ok,provider,status,code,model,responseMs}' "$RUNNER_TEMP/gemini-check.json"
-          else
-            echo '{"ok":false,"provider":"gemini","status":"unconfigured","skipped":true}' | tee "$RUNNER_TEMP/gemini-check.json"
-          fi
-
-          echo "E2E_AUTH_DB_ID=$auth_db" >> "$GITHUB_ENV"
-          echo "E2E_TOKEN_HASH=$token_hash" >> "$GITHUB_ENV"
-
-      - name: Upload sanitized provider probe
+      - name: Upload sanitized probe
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ekodi-provider-probe-${{ github.run_id }}-${{ github.run_attempt }}
-          path: |
-            ${{ runner.temp }}/provider-snapshot.json
-            ${{ runner.temp }}/gemini-check.json
+          name: cloudflare-workers-ai-probe-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/workers-ai.json
           if-no-files-found: warn
-          retention-days: 30
-
-      - name: Revoke short-lived session
-        if: always() && env.E2E_AUTH_DB_ID != '' && env.E2E_TOKEN_HASH != ''
-        shell: bash
-        run: |
-          set -euo pipefail
-          sql="DELETE FROM sessions WHERE token_hash = '$E2E_TOKEN_HASH'"
-          curl -fsS \
-            -X POST "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/d1/database/$E2E_AUTH_DB_ID/query" \
-            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
-            -H 'Content-Type: application/json' \
-            --data "$(jq -nc --arg sql "$sql" '{sql:$sql}')" \
-            | jq -e '.success == true' >/dev/null
+          retention-days: 7
