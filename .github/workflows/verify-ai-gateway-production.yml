@@ -39,7 +39,7 @@ jobs:
             root_code=$(curl -sS -D /tmp/ai-root-headers -o /tmp/ai-root -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/ai/' || true)
             health_code=$(curl -sS -o /tmp/ai-health -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/ai/__health' || true)
             services_code=$(curl -sS -o /tmp/ai-services -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/ai/api/commons/services' || true)
-            client_code=$(curl -sS -D /tmp/ai-client-headers -o /tmp/ai-client -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/ai/api/commons/client.js' || true)
+            client_code=$(curl -sS -D /tmp/ai-client-headers -o /tmp/ai-client -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/ai/api/commons/client' || true)
             capabilities_code=$(curl -sS -o /tmp/ai-capabilities -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/ai/api/commons/capabilities' || true)
             requests_code=$(curl -sS -o /tmp/ai-requests -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/ai/api/commons/requests' || true)
             ideas_code=$(curl -sS -o /tmp/ai-ideas -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/ai/api/commons/ideas' || true)
