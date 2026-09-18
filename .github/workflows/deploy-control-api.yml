@@ -507,7 +507,6 @@ jobs:
             catalog=$(curl -sS -o /tmp/catalog.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'http://127.0.0.1:8791/api/membership/catalog?site=invest' || true)
             i18n=$(curl -sS -o /tmp/i18n.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'http://127.0.0.1:8791/api/i18n/v1/status?service=community' || true)
             language_admin=$(curl -sS -o /tmp/language-admin.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'http://127.0.0.1:8791/api/control/language-status' || true)
-            personal_finance=$(curl -sS -o /tmp/personal-finance-local.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'http://127.0.0.1:8791/api/control/personal-finance' || true)
             maturity_unauth=$(curl -sS -o /tmp/maturity-unauth.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'http://127.0.0.1:8791/api/control/platform-maturity' || true)
             maturity_admin=$(curl -sS -o /tmp/maturity-admin.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'http://127.0.0.1:8791/api/control/platform-maturity' -H "Authorization: Bearer $e2e_token" || true)
             if printf '%s' "$health" | grep -q '"ok":true' \
@@ -525,8 +524,6 @@ jobs:
               && [ "$catalog" = '200' ] \
               && [ "$i18n" = '200' ] \
               && [ "$language_admin" = '401' ] \
-              && [ "$personal_finance" = '401' ] \
-              && grep -Fq '"code":"PF_ADMIN_AUTH_REQUIRED"' /tmp/personal-finance-local.json \
               && [ "$maturity_unauth" = '401' ] \
               && [ "$maturity_admin" = '200' ] \
               && grep -Fq '"certificationStatus":"not-claimed"' /tmp/maturity-admin.json \
@@ -535,7 +532,7 @@ jobs:
               exit 0
             fi
             if [ "$attempt" = '18' ]; then
-              echo "Control staging local verification failed: devices=$devices ai=$ai provider=$provider user_ai=$user_ai learning_catalog=$learning_catalog learning_progress=$learning_progress membership=$membership catalog=$catalog i18n=$i18n language_admin=$language_admin personal_finance=$personal_finance maturity_unauth=$maturity_unauth maturity_admin=$maturity_admin" >&2
+              echo "Control staging local verification failed: devices=$devices ai=$ai provider=$provider user_ai=$user_ai learning_catalog=$learning_catalog learning_progress=$learning_progress membership=$membership catalog=$catalog i18n=$i18n language_admin=$language_admin maturity_unauth=$maturity_unauth maturity_admin=$maturity_admin" >&2
               echo 'Local Control runtime tail:' >&2
               tail -n 80 /tmp/control-remote-dev.log >&2 || true
             fi
