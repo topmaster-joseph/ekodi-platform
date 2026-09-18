@@ -1,21 +1,27 @@
 {
-  "version": 1,
+  "version": 2,
   "worker": {
     "name": "ekodi-finance-api",
     "config": "wrangler.finance.toml",
     "requests": [
       {
-        "url": "https://finance-api.ekodi.kr/health",
+        "url": "https://ekodi.kr/api/finance/policy-funds/health",
         "statuses": [200],
-        "expect": ["\"ok\":true", "ekodi-finance-api", "\"version\":4"]
+        "expect": ["\"ok\":true", "\"service\":\"ekodi-policy-fund-management\"", "\"version\":2"],
+        "candidateVerify": false,
+        "candidateVerifyReason": "The canonical apex reaches Finance through the shared-site FINANCE service binding; the isolated staging Worker already validates the candidate before production promotion."
       },
       {
-        "url": "https://finance-api.ekodi.kr/api/finance/overview",
-        "statuses": [401]
+        "url": "https://ekodi.kr/api/finance/overview",
+        "statuses": [401],
+        "candidateVerify": false,
+        "candidateVerifyReason": "The canonical apex reaches Finance through the shared-site FINANCE service binding; verify this auth boundary immediately after promotion."
       },
       {
-        "url": "https://finance-api.ekodi.kr/api/finance/structure",
-        "statuses": [401]
+        "url": "https://ekodi.kr/api/finance/structure",
+        "statuses": [401],
+        "candidateVerify": false,
+        "candidateVerifyReason": "The canonical apex reaches Finance through the shared-site FINANCE service binding; verify this auth boundary immediately after promotion."
       }
     ]
   }

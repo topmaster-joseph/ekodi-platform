@@ -100,6 +100,7 @@ jobs:
           node --check auth-worker.js
           node --check auth-worker-core.js
           node --test test/tax-finance-service-binding.test.mjs
+          node --test test/finance-canonical-release.test.mjs
           node --check scripts/guarded-worker-release.mjs
           node --check scripts/validate-additive-migrations.mjs
           bash -n scripts/apply-d1-migrations-with-retry.sh
@@ -290,7 +291,35 @@ jobs:
           NODE
           trap 'rm -f /tmp/finance-secrets.json' EXIT
           node scripts/guarded-worker-release.mjs --manifest deploy/manifests/finance-api.worker.json --secrets-file /tmp/finance-secrets.json
-      - name: Deep verify Finance production hostname and auth boundary
+      - name: Retire Finance EKODI custom-domain attachments
+        shell: bash
+        run: |
+          set -euo pipefail
+          api="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/domains"
+          auth=(-H "Authorization: Bearer $CLOUDFLARE_API_TOKEN")
+          payload=$(curl -fsS --retry 3 --retry-delay 2 "$api?service=ekodi-finance-api" "${auth[@]}")
+          echo "$payload" | jq -e '.success == true' >/dev/null
+          mapfile -t domain_ids < <(echo "$payload" | jq -r '.result[] | select(.hostname | endswith(".ekodi.kr")) | .id')
+          for domain_id in "${domain_ids[@]}"; do
+            response=$(curl -fsS --retry 3 --retry-delay 2 -X DELETE "$api/$domain_id" "${auth[@]}")
+            echo "$response" | jq -e '.success == true' >/dev/null
+          done
+          payload=$(curl -fsS --retry 3 --retry-delay 2 "$api?service=ekodi-finance-api" "${auth[@]}")
+          echo "$payload" | jq -e '.success == true' >/dev/null
+          if echo "$payload" | jq -e '.result[] | select(.hostname | endswith(".ekodi.kr"))' >/dev/null; then
+            echo 'Finance Worker still owns an EKODI subdomain after deletion.'
+            echo "$payload" | jq -r '.result[].hostname'
+            exit 1
+          fi
+          legacy_host="$(printf '%s.%s' 'finance-api' 'ekodi.kr')"
+          legacy_code=$(curl -sS -o /dev/null -w '%{http_code}' --connect-timeout 5 --max-time 12 "https://$legacy_host/health" || true)
+          if [ "$legacy_code" != '000' ]; then
+            echo "Retired Finance hostname still answers HTTP $legacy_code"
+            exit 1
+          fi
+          echo 'Finance custom-domain retirement verified: no EKODI subdomain attachment remains.'
+
+      - name: Deep verify Finance canonical apex and auth boundary
         shell: bash
         run: |
           set -euo pipefail
