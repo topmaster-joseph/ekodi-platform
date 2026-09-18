@@ -107,7 +107,7 @@ test('one-click device protocol is bounded to EKODI enrollment and official API'
 });
 
 test('existing registered devices upgrade transactionally and preserve registration', () => {
-  assert.match(agent, /\$AgentVersion = '2\.2\.0'/);
+  assert.match(agent, /\$AgentVersion = '2\.2\.1'/);
   assert.match(agent, /Invoke-AgentUpgradeTransaction/);
   assert.match(agent, /Assert-AgentCandidate/);
   assert.match(agent, /New-AgentUpgradeSnapshot/);
