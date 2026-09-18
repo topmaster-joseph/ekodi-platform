@@ -31,12 +31,12 @@ function clientMain(POLICY,CHANNEL_CATALOG){
   const SUPABASE_URL='https://renzehysxirjilvdxacv.supabase.co';
   const SUPABASE_KEY='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
   const API='https://api.ekodi.kr';
-  const WORKSPACE_API='https://workspace-api.ekodi.kr';
+  const WORKSPACE_API='https://ekodi.kr';
   const GROWTH_API='https://marketing-connect-api.ekodi.kr';
   const PUBLISH_API='https://marketing-publish-api.ekodi.kr';
   const CHANNEL_TARGETS=new Map((CHANNEL_CATALOG||[]).map(target=>[target.id,target]));
   const CHANNEL_AUTH_PATHS=Object.freeze({youtube:'/v1/connect/youtube/start',meta:'/v1/connect/meta/start',threads:'/v1/connect/threads/start'});
-  const SITE_CHROME_API='https://workspace-api.ekodi.kr/v1/site-chrome';
+  const SITE_CHROME_API='https://ekodi.kr/workspace-api/v1/site-chrome';
   const SESSION_KEY=IS_PORTFOLIO?'ekodi-cmpmyi-admin-session':'ekodi-store-admin-session:'+SLUG;
   const LEGACY_SESSION_KEYS={jadam:'ekodi-jadam-admin-session',pizzamaru:'ekodi-pizzamaru-admin-session',yogurt:'ekodi-yogurt-admin-session'};
   const GROUPS=[{id:'home',label:'홈',items:[['overview','운영 홈']]},{id:'site',label:'사이트',items:[['site','사용자 사이트'],['chrome','헤더 · 푸터']]},{id:'sales',label:'판매',items:[['delivery','배달플랫폼'],['orders','주문 · 채널'],['menu','메뉴 · 가격'],['sales','매출'],['inventory','재고']]},{id:'customers',label:'고객',items:[['customers','고객'],['reviews','리뷰']]},{id:'marketing',label:'마케팅',items:[['marketing','Marketing AI'],['publishing','채널 · 게시']]},{id:'operations',label:'운영',items:[['work','매장업무'],['connections','연결관리']]},{id:'management',label:'경영',items:[['finance','비용 · 정산']]}];
@@ -92,7 +92,7 @@ function clientMain(POLICY,CHANNEL_CATALOG){
   async function accessToken(){let s=state.session||storedSession();state.session=s;if(!s?.accessToken)return'';const now=Math.floor(Date.now()/1000);if(Number(s.expiresAt||0)>now+60)return s.accessToken;if(!s.refreshToken){clearSession();return''}try{const d=await supabaseAuth('/auth/v1/token?grant_type=refresh_token',{refresh_token:s.refreshToken});const next=normalizeSession(d,s);saveSession(next);return next.accessToken}catch{clearSession();return''}}
   async function rpc(name,body){const token=await accessToken();if(!token)throw Object.assign(new Error('AUTH_REQUIRED'),{status:401});const r=await fetch(`${SUPABASE_URL}/rest/v1/rpc/${name}`,{method:'POST',headers:{apikey:SUPABASE_KEY,authorization:`Bearer ${token}`,'content-type':'application/json'},body:JSON.stringify(body),cache:'no-store'});const d=await r.json().catch(()=>({}));if(!r.ok)throw Object.assign(new Error(d.message||d.error||`rpc_${r.status}`),{status:r.status});return d}
   async function control(path,options={}){const token=await accessToken();if(!token)throw Object.assign(new Error('AUTH_REQUIRED'),{status:401});const r=await fetch(API+path,{...options,headers:{authorization:`Bearer ${token}`,'content-type':'application/json',...(options.headers||{})},cache:'no-store'});const d=await r.json().catch(()=>({}));if(!r.ok)throw Object.assign(new Error(d.error||`api_${r.status}`),{status:r.status,data:d});return d}
-  async function workspace(path,options={}){const token=await accessToken();if(!token)throw Object.assign(new Error('AUTH_REQUIRED'),{status:401});const u=new URL(path,WORKSPACE_API);u.searchParams.set('subject_type','tenant');u.searchParams.set('subject_key',workspaceSlug);const r=await fetch(u.href,{...options,headers:{authorization:`Bearer ${token}`,'content-type':'application/json',...(options.headers||{})},cache:'no-store'});const d=await r.json().catch(()=>({}));if(!r.ok)throw Object.assign(new Error(d.error||`workspace_${r.status}`),{status:r.status,data:d});return d}
+  async function workspace(path,options={}){const token=await accessToken();if(!token)throw Object.assign(new Error('AUTH_REQUIRED'),{status:401});const u=new URL('/workspace-api'+path,WORKSPACE_API);u.searchParams.set('subject_type','tenant');u.searchParams.set('subject_key',workspaceSlug);const r=await fetch(u.href,{...options,headers:{authorization:`Bearer ${token}`,'content-type':'application/json',...(options.headers||{})},cache:'no-store'});const d=await r.json().catch(()=>({}));if(!r.ok)throw Object.assign(new Error(d.error||`workspace_${r.status}`),{status:r.status,data:d});return d}
   async function optionalWorkspace(path,options={}){try{return await workspace(path,options)}catch(e){if([404,502,503].includes(Number(e.status)))return null;throw e}}
   function loginPanel(message=STORE_NAME+' 운영 권한으로 로그인해야 합니다.'){
     $('summaryCards').innerHTML=[card('운영공간',STORE_NAME,'store-scoped'),card('현재 상태','로그인 전','운영 데이터 비공개'),card('관리 영역','7개','홈 · 사이트 · 판매 · 고객 · 마케팅 · 운영 · 경영'),card('데이터 경계','점포 전용','다른 매장과 분리')].join('');
