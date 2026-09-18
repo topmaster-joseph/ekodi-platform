@@ -342,12 +342,22 @@ export function createAdminSidebarItem(id, locale = readAdminSidebarLocale()) {
 
 export function renderAdminSidebar(nav, { locale = readAdminSidebarLocale(), ids = adminMenuOrder() } = {}) {
   if (!nav) return [];
-  const items = ids.map(id => createAdminSidebarItem(id, locale)).filter(Boolean);
-  nav.replaceChildren(...items);
-  nav.dataset.adminSidebarShared = 'true';
-  nav.dataset.adminMenuGovernance = 'workbench-tabs-v2';
-  syncAdminSidebar(nav.ownerDocument || document, { locale });
-  return items;
+  const previousVisibility = nav.style.getPropertyValue('visibility');
+  const previousPriority = nav.style.getPropertyPriority('visibility');
+  nav.dataset.adminSidebarHydrating = 'true';
+  nav.style.setProperty('visibility', 'hidden', 'important');
+  try {
+    const items = ids.map(id => createAdminSidebarItem(id, locale)).filter(Boolean);
+    nav.replaceChildren(...items);
+    nav.dataset.adminSidebarShared = 'true';
+    nav.dataset.adminMenuGovernance = 'workbench-tabs-v2';
+    syncAdminSidebar(nav.ownerDocument || document, { locale });
+    return items;
+  } finally {
+    delete nav.dataset.adminSidebarHydrating;
+    if (previousVisibility) nav.style.setProperty('visibility', previousVisibility, previousPriority);
+    else nav.style.removeProperty('visibility');
+  }
 }
 
 export function syncAdminSidebar(root = document, options = {}) {

@@ -134,6 +134,10 @@ test('Admin canonical route registry mirrors the five management work areas and 
   assert.equal(routes.sectionFromPath('/admin/professional/insurance'),'insurance');
   assert.equal(routes.sectionFromPath('/admin/space/clients'),'clients');
   for (const item of ADMIN_MENU_REGISTRY.filter(item => !item.href)) {
+    if (item.id === 'command-home') {
+      assert.equal(routes.pathFor(item.id), '/admin/');
+      continue;
+    }
     assert.equal(routes.pathFor(item.id).split('/')[2], item.group, `${item.id} route group must match its canonical Admin path area`);
   }
 });

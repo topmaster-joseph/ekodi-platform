@@ -1,4 +1,4 @@
-(async()=>{
+window.__EKODIAdminMenuLayoutReady=(async()=>{
 'use strict';
 const [{adminMenuOrder},{mountAdminSidebar,renderAdminSidebar}]=await Promise.all([
   import('./admin-menu-registry.js'),import('./admin-sidebar.js')

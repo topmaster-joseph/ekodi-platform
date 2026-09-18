@@ -39,6 +39,10 @@ test('left navigation is a reusable shared module backed only by the registry', 
   assert.match(sidebar, /adminMenuOrder\(\)/);
   assert.match(sidebar, /getAdminMenuLabel\(id, locale\)/);
   assert.match(sidebar, /window\.EKODIAdminSidebar/);
+  assert.match(sidebar, /adminSidebarHydrating/);
+  assert.match(sidebar, /nav\.style\.setProperty\('visibility', 'hidden', 'important'\)/);
+  assert.ok(sidebar.indexOf("nav.style.setProperty('visibility', 'hidden', 'important')") < sidebar.indexOf('nav.replaceChildren(...items)'), 'sidebar must stay hidden while the detailed source menu is replaced');
+  assert.ok(sidebar.indexOf('syncAdminSidebar(nav.ownerDocument || document, { locale })') < sidebar.indexOf('delete nav.dataset.adminSidebarHydrating'), 'canonical workbench menu must be synchronized before visibility is restored');
   assert.match(layout, /import\('\.\/admin-sidebar\.js'\)/);
   assert.match(layout, /const ORDER=Object\.freeze\(adminMenuOrder\(\)\)/);
 });

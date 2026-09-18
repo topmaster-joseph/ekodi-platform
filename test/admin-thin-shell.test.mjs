@@ -19,6 +19,9 @@ test('post-auth startup contains only the minimal shell/navigation/demand loader
   assert.match(deferredBlock, /'ekodi-message-ui\.js'/);
   assert.match(shell, /__EKODI_ADMIN_ASSET_VERSION__/);
   assert.match(shell, /assetUrl\(src\)/);
+  assert.match(shell, /async function waitForNavigationRuntime\(\)/);
+  assert.match(shell, /window\.__EKODIAdminMenuLayoutReady/);
+  assert.match(shell, /await waitForNavigationRuntime\(\)/);
   assert.doesNotMatch(shell, /'campus-actions\.js'/);
   assert.doesNotMatch(shell, /'campus-actions\.css'/);
   assert.doesNotMatch(shell, /'control-center-features\.js'/);
@@ -99,6 +102,7 @@ test('secondary hydration never has a forced requestIdleCallback deadline', asyn
 test('normal login opens EKODI command console without auto-opening Campus or internal workspaces', async () => {
   const menu = await read('admin-menu-layout.js');
   const registry = await read('admin-menu-registry.js');
+  assert.match(menu, /window\.__EKODIAdminMenuLayoutReady=\(async\(\)=>\{/);
   assert.match(menu, /let requestedSection = ''/);
   assert.match(menu, /const initialSection\s*=\s*explicitAdminSection\(\)/);
   assert.match(menu, /const explicitPathSection=\(\)=>adminRoutes\(\)\?\.sectionFromPath/);
