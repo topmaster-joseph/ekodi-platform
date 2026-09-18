@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
-const [api, agent, admin, build, entry, security, bootstrap] = await Promise.all([
+const [api, agent, admin, build, entry, security, bootstrap, startup] = await Promise.all([
   readFile(new URL('../device-control.js', import.meta.url), 'utf8'),
   readFile(new URL('../tools/ekodi-device-agent/windows/ekodi-device-agent.ps1', import.meta.url), 'utf8'),
   readFile(new URL('../device-control-admin.js', import.meta.url), 'utf8'),
@@ -10,6 +10,7 @@ const [api, agent, admin, build, entry, security, bootstrap] = await Promise.all
   readFile(new URL('../mission-control-entry-worker.js', import.meta.url), 'utf8'),
   readFile(new URL('../security-edge.js', import.meta.url), 'utf8'),
   readFile(new URL('../ekodi-device-bootstrap.cmd', import.meta.url), 'utf8'),
+  readFile(new URL('../tools/ekodi-device-agent/windows/ekodi-device-startup.ps1', import.meta.url), 'utf8'),
 ]);
 
 const commands = [
@@ -105,13 +106,21 @@ test('one-click device protocol is bounded to EKODI enrollment and official API'
   assert.doesNotMatch(bootstrap, /EnrollmentCode/);
 });
 
-test('existing registered devices upgrade in place instead of creating duplicate enrollment', () => {
-  assert.match(agent, /\$AgentVersion = '2\.1\.0'/);
-  assert.match(agent, /Stop-ExistingAgentProcesses/);
-  assert.match(agent, /Stop-ScheduledTask/);
-  assert.match(agent, /Get-CimInstance Win32_Process/);
-  assert.match(agent, /\$hadConfig = Test-Path \$ConfigPath/);
+test('existing registered devices upgrade transactionally and preserve registration', () => {
+  assert.match(agent, /\$AgentVersion = '2\.2\.0'/);
+  assert.match(agent, /Invoke-AgentUpgradeTransaction/);
+  assert.match(agent, /Assert-AgentCandidate/);
+  assert.match(agent, /New-AgentUpgradeSnapshot/);
+  assert.match(agent, /Restore-AgentUpgradeSnapshot/);
+  assert.match(agent, /Replace-AgentFileAtomically/);
+  assert.match(agent, /Test-AgentHeartbeatResume/);
+  assert.match(agent, /EKA-170/);
   assert.match(agent, /기존 EKODI 기기 등록과 토큰을 유지/);
+  const transaction = agent.match(/function Invoke-AgentUpgradeTransaction[\s\S]*?function Update-AgentFromOfficialSource/)?.[0] || '';
+  assert.ok(transaction, 'transactional upgrade function must exist');
+  assert.ok(transaction.indexOf('Assert-AgentCandidate') < transaction.indexOf('Stop-ExistingAgentProcesses'), 'candidate must be validated before the existing Agent is stopped');
+  assert.match(transaction, /Restore-AgentUpgradeSnapshot/);
+  assert.match(transaction, /heartbeat_verify/);
 });
 
 test('agent self-update validates actual PowerShell command AST instead of raw guard text', () => {
@@ -119,6 +128,32 @@ test('agent self-update validates actual PowerShell command AST instead of raw g
   assert.match(agent, /CommandAst/);
   assert.match(agent, /ParseInput/);
   assert.match(agent, /\('Invoke-' \+ 'Expression'\)/);
+});
+
+test('bootstrap elevates only when needed and keeps Boot/WOL separate', () => {
+  assert.match(bootstrap, /\$isAdmin=/);
+  assert.match(bootstrap, /if\(\$isAdmin\)/);
+  assert.match(bootstrap, /-Verb RunAs/);
+  assert.match(bootstrap, /EKB-130/);
+  assert.match(bootstrap, /부팅 자동복귀\/WOL 설정은 Agent 설치와 분리/);
+  assert.doesNotMatch(bootstrap, /ekodi-device-startup-bootstrap\.ps1/);
+  assert.doesNotMatch(bootstrap, /'-Install','-RunNow'/);
+  assert.match(startup, /EKBW-410/);
+  assert.match(startup, /EKBW-420/);
+});
+
+test('upgrade failure reports stage codes and rolls back Agent, task and protocol state', () => {
+  assert.match(agent, /EKA-100/);
+  assert.match(agent, /EKA-140/);
+  assert.match(agent, /EKA-190/);
+  assert.match(agent, /Get-AgentTaskSnapshot/);
+  assert.match(agent, /Get-ProtocolSnapshot/);
+  assert.match(agent, /Restore-AgentTaskSnapshot/);
+  assert.match(agent, /Restore-ProtocolSnapshot/);
+  assert.match(agent, /EKODI_AGENT_TEST_FAIL_STAGE/);
+  assert.match(agent, /agent_replaced/);
+  assert.match(agent, /protocol_registered/);
+  assert.match(agent, /heartbeat_verified/);
 });
 
 test('Device Control activation stays synchronized with the canonical Admin panel controller', () => {

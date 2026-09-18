@@ -45,14 +45,17 @@ test('fully-off wake uses isolated gateway, not arbitrary shell', () => {
   assert.doesNotMatch(gateway, /Invoke-Expression|\biex\b/i);
 });
 
-test('device agent boot recovery starts before interactive login', () => {
+test('device agent boot recovery is desktop-only and explicitly separate from Agent bootstrap', () => {
   assert.match(startup, /EKODI Device Agent Boot/);
   assert.match(startup, /New-ScheduledTaskTrigger -AtStartup/);
   assert.match(startup, /-UserId 'SYSTEM'/);
   assert.match(startup, /WakeOnMagicPacket Enabled/);
   assert.match(startup, /Test-IsPortable/);
-  assert.match(bootstrap, /ekodi-device-startup\.ps1/);
-  assert.match(bootstrap, /-Install','-RunNow/);
+  assert.match(startup, /EKBW-410/);
+  assert.match(startup, /EKBW-420/);
+  assert.doesNotMatch(bootstrap, /ekodi-device-startup\.ps1/);
+  assert.doesNotMatch(bootstrap, /'-Install','-RunNow'/);
+  assert.match(bootstrap, /부팅 자동복귀\/WOL 설정은 Agent 설치와 분리/);
 });
 
 test('queued work may auto-wake only persistently authorized devices', () => {
