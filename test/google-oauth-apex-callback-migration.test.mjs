@@ -18,12 +18,12 @@ test('Google OAuth callback migration keeps legacy active until canonical activa
   const source = await fs.promises.readFile(new URL('../google-drive-storage-control.js', import.meta.url), 'utf8');
   assert.match(source, /const CANONICAL_REDIRECT_URI = 'https:\/\/ekodi\.kr\/storage\/api\/control\/storage\/google\/callback';/);
   assert.match(source, /const MARKETING_YOUTUBE_CALLBACK = 'https:\/\/ekodi\.kr\/marketing-connect-api\/oauth\/youtube\/callback';/);
-  assert.match(source, /GOOGLE_DRIVE_OAUTH_REDIRECT_URI \|\| LEGACY_REDIRECT_URI/);
+  assert.match(source, /GOOGLE_DRIVE_OAUTH_REDIRECT_URI \|\| REDIRECT_URI/);
   assert.match(source, /redirectUri,exp:/);
   assert.match(source, /stateGoogleOAuthRedirectUri\(payload,env\)/);
   assert.match(source, /redirect_uri:redirectUri/);
   assert.match(source, /canonicalRedirectUri:CANONICAL_REDIRECT_URI/);
-  assert.match(source, /legacyRedirectUri:LEGACY_REDIRECT_URI/);
+  assert.match(source, /legacyRedirectUri:REDIRECT_URI/);
 });
 
 test('canonical apex edge routes reach Storage and Marketing callback workers with prefixes stripped', async () => {
