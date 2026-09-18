@@ -33,12 +33,67 @@ jobs:
           current_files=$(mktemp)
           exact_conflicts=$(mktemp)
           semantic_conflicts=$(mktemp)
-          trap 'rm -f "$current_files" "$exact_conflicts" "$semantic_conflicts"' EXIT
+          open_prs_json=$(mktemp)
+          current_pr_json="$RUNNER_TEMP/ekodi-current-pr-guard.json"
+          trap 'rm -f "$current_files" "$exact_conflicts" "$semantic_conflicts" "$open_prs_json"' EXIT
 
-          gh api --paginate \
-            "repos/${REPOSITORY}/pulls/${PR_NUMBER}/files?per_page=100" \
-            --jq '.[].filename' \
-            | sort -u > "$current_files"
+          gh_retry() {
+            local attempt=1 output status
+            while true; do
+              set +e
+              output=$(gh "$@" 2>&1)
+              status=$?
+              set -e
+              if [[ "$status" -eq 0 ]]; then
+                printf '%s\n' "$output"
+                return 0
+              fi
+              if [[ "$attempt" -ge 4 ]] || ! grep -Eqi 'rate limit|secondary rate|abuse detection' <<< "$output"; then
+                printf '%s\n' "$output" >&2
+                return "$status"
+              fi
+              echo "GitHub API rate limit encountered; retrying guard query (attempt $attempt/4)." >&2
+              sleep $((attempt * 20))
+              attempt=$((attempt + 1))
+            done
+          }
+
+          # Batch open PR metadata, labels, and files through GitHub CLI's
+          # GraphQL-backed PR surface instead of issuing one REST request per PR.
+          # Large PRs keep complete file coverage through the guarded REST fallback.
+          gh_retry pr list \
+            --repo "$REPOSITORY" \
+            --state open \
+            --base "$BASE_REF" \
+            --limit 1000 \
+            --json number,headRefName,changedFiles,files,labels \
+            > "$open_prs_json"
+
+          gh_retry pr view "$PR_NUMBER" \
+            --repo "$REPOSITORY" \
+            --json comments,reviews,mergeable,mergeStateStatus \
+            > "$current_pr_json"
+
+          extract_files() {
+            local pr_number="$1"
+            local changed listed
+            changed=$(jq -r --argjson n "$pr_number" '.[] | select(.number==$n) | (.changedFiles // 0)' "$open_prs_json" | head -1)
+            listed=$(jq -r --argjson n "$pr_number" '.[] | select(.number==$n) | (.files | length)' "$open_prs_json" | head -1)
+            [[ "$changed" =~ ^[0-9]+$ && "$listed" =~ ^[0-9]+$ ]] || {
+              echo "Could not resolve PR #$pr_number from the batched open-PR snapshot." >&2
+              return 1
+            }
+            if (( changed > listed )); then
+              echo "PR #$pr_number has $changed files; using paginated fallback beyond the batched $listed-file snapshot." >&2
+              gh_retry api --paginate \
+                "repos/${REPOSITORY}/pulls/${pr_number}/files?per_page=100" \
+                --jq '.[].filename'
+            else
+              jq -r --argjson n "$pr_number" '.[] | select(.number==$n) | .files[].path' "$open_prs_json"
+            fi
+          }
+
+          extract_files "$PR_NUMBER" | sort -u > "$current_files"
 
           : > "$exact_conflicts"
           : > "$semantic_conflicts"
@@ -49,10 +104,7 @@ jobs:
             other_files=$(mktemp)
             exact_overlap=$(mktemp)
             semantic_overlap=$(mktemp)
-            gh api --paginate \
-              "repos/${REPOSITORY}/pulls/${other_pr}/files?per_page=100" \
-              --jq '.[].filename' \
-              | sort -u > "$other_files"
+            extract_files "$other_pr" | sort -u > "$other_files"
             comm -12 "$current_files" "$other_files" > "$exact_overlap"
 
             if [[ -s "$exact_overlap" ]]; then
@@ -74,9 +126,7 @@ jobs:
             fi
             rm -f "$other_files" "$exact_overlap" "$semantic_overlap"
           done < <(
-            gh api --paginate \
-              "repos/${REPOSITORY}/pulls?state=open&base=${BASE_REF}&per_page=100" \
-              --jq '.[] | [.number, .head.ref] | @tsv'
+            jq -r '.[] | [.number, .headRefName] | @tsv' "$open_prs_json"
           )
 
           {
@@ -128,20 +178,17 @@ jobs:
           approved_winner=''
           while IFS= read -r candidate_pr; do
             [[ -n "$candidate_pr" ]] || continue
-            has_priority=$(gh api "repos/${REPOSITORY}/pulls/${candidate_pr}" \
-              --jq "[.labels[].name] | index(\"${priority_label}\") != null")
+            has_priority=$(jq -r --argjson n "$candidate_pr" --arg label "$priority_label" \
+              '[.[] | select(.number==$n) | .labels[].name] | index($label) != null' "$open_prs_json")
             if [[ "$has_priority" == 'true' ]]; then
               approved_count=$((approved_count + 1))
               approved_winner="$candidate_pr"
             fi
           done <<< "$related_prs"
 
-          current_has_review=$(gh api "repos/${REPOSITORY}/pulls/${PR_NUMBER}" \
-            --jq "[.labels[].name] | index(\"${review_label}\") != null")
-          review_evidence="$(
-            gh api --paginate "repos/${REPOSITORY}/issues/${PR_NUMBER}/comments?per_page=100" --jq '.[] | .body // empty'
-            gh api --paginate "repos/${REPOSITORY}/pulls/${PR_NUMBER}/reviews?per_page=100" --jq '.[] | .body // empty'
-          )"
+          current_has_review=$(jq -r --argjson n "$PR_NUMBER" --arg label "$review_label" \
+            '[.[] | select(.number==$n) | .labels[].name] | index($label) != null' "$open_prs_json")
+          review_evidence="$(jq -r '(.comments[]?.body // empty), (.reviews[]?.body // empty)' "$current_pr_json")"
           evidence_ok=true
           if ! grep -Fq "$evidence_marker" <<< "$review_evidence"; then evidence_ok=false; fi
           while IFS= read -r related_pr; do
@@ -178,8 +225,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          mergeable=$(gh api "repos/${REPOSITORY}/pulls/${PR_NUMBER}" --jq '.mergeable')
-          mergeable_state=$(gh api "repos/${REPOSITORY}/pulls/${PR_NUMBER}" --jq '.mergeable_state')
+          current_pr_json="$RUNNER_TEMP/ekodi-current-pr-guard.json"
+          test -s "$current_pr_json"
+          mergeable=$(jq -r '.mergeable // "UNKNOWN"' "$current_pr_json")
+          mergeable_state=$(jq -r '.mergeStateStatus // "UNKNOWN"' "$current_pr_json")
           {
             echo ''
             echo '### GitHub merge signal'
@@ -187,7 +236,7 @@ jobs:
             echo "- mergeable_state: \`${mergeable_state}\`"
           } >> "$GITHUB_STEP_SUMMARY"
 
-          if [[ "$mergeable" == 'false' ]]; then
+          if [[ "$mergeable" == 'CONFLICTING' ]]; then
             echo 'GitHub reports an actual merge conflict with the base branch.' >&2
             exit 1
           fi
