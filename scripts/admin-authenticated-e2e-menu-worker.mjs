@@ -36,6 +36,17 @@ async function clickFast(locator) {
   await locator.click({ force: true, noWaitAfter: true, timeout: interactionReadyTimeoutMs });
 }
 
+async function activateContextTab(tab) {
+  await tab.waitFor({ state: 'attached', timeout: interactionReadyTimeoutMs });
+  if (await tab.isVisible()) return clickFast(tab);
+  const section = String(await tab.getAttribute('data-admin-context-section') || '').trim();
+  if (section) {
+    const detail = page.locator(`button.admin-detail-item[data-admin-detail-section="${section}"]`).first();
+    if (await detail.count() && await detail.isVisible()) return clickFast(detail);
+  }
+  await tab.evaluate(node => node.click());
+}
+
 async function waitForReady() {
   stage('ready-token');
   await page.waitForFunction(() => sessionStorage.getItem('ekodi-auth-token'), null, { timeout: 15_000 });
@@ -140,7 +151,7 @@ function externalStorageNavigation() {
 
 async function verifyStorage(tab, alreadyActive, started) {
   const navigation = externalStorageNavigation();
-  if (!alreadyActive) await clickFast(tab);
+  if (!alreadyActive) await activateContextTab(tab);
   stage('storage-outcome');
   const panel = page.waitForFunction(section => {
     const node = [...document.querySelectorAll('[data-panel]')].find(el => String(el.dataset.panel || '').split(/\s+/).includes(section));
@@ -266,7 +277,7 @@ async function verifyTax(tab, alreadyActive, started) {
 
 async function verifyPublicSiteControls(tab, alreadyActive, started) {
   stage('public-site-controls-ready');
-  if (!alreadyActive) await clickFast(tab);
+  if (!alreadyActive) await activateContextTab(tab);
   await page.waitForFunction(() => typeof window.EKODIPublicSiteControls?.load === 'function', null, { timeout: 10_000 });
 
   stage('public-site-controls-api');
@@ -303,7 +314,7 @@ async function verifyPublicSiteControls(tab, alreadyActive, started) {
 
 async function verifyAiSettings(tab, alreadyActive, started) {
   stage('ai-settings-ready');
-  if (!alreadyActive) await clickFast(tab);
+  if (!alreadyActive) await activateContextTab(tab);
   await page.waitForFunction(() => typeof window.EKODIAIManagement?.load === 'function', null, { timeout: 10_000 });
   stage('ai-settings-api');
   const response = await fetch('https://api.ekodi.kr/api/control/ai/v8/collaboration-settings', {
@@ -342,7 +353,7 @@ async function verifyAiSettings(tab, alreadyActive, started) {
 
 async function verifyLanguageStatus(tab, alreadyActive, started) {
   stage('language-status-ready');
-  if (!alreadyActive) await clickFast(tab);
+  if (!alreadyActive) await activateContextTab(tab);
   await page.waitForFunction(() => typeof window.EKODILanguageStatus?.load === 'function', null, { timeout: 10_000 });
   stage('language-status-api');
   const response = await fetch('https://api.ekodi.kr/api/control/language-status', {
@@ -413,7 +424,7 @@ async function verifyRegistryHref(trigger, started) {
   if (sourceTarget !== '_blank') throw new Error(`${menuId}: direct registry href must open as an isolated external admin surface`);
   stage('registry-handoff');
   const popupPromise = page.waitForEvent('popup', { timeout:10_000 });
-  await clickFast(trigger);
+  await activateContextTab(trigger);
   const popup = await popupPromise;
   try {
     await popup.waitForURL(url => url.origin === expected.origin && url.pathname.replace(/\/$/, '') === expected.pathname.replace(/\/$/, ''), { waitUntil:'commit', timeout:10_000 });
@@ -469,7 +480,7 @@ async function verifyCommandWorkbench(started) {
 }
 
 async function verifyNormal(tab, alreadyActive, started) {
-  if (!alreadyActive) await clickFast(tab);
+  if (!alreadyActive) await activateContextTab(tab);
   stage('panel');
   await page.waitForFunction(section => {
     return [...document.querySelectorAll('[data-panel]')].some(node => {
@@ -518,7 +529,7 @@ try {
   if (directDefinition?.href && !directDefinition.adminHandoff) {
     stage('registry-link');
     const tab = page.locator(`button.admin-context-tab[data-admin-context-section="${menuId}"]`);
-    await tab.waitFor({ state: 'visible', timeout: interactionReadyTimeoutMs });
+    await tab.waitFor({ state: 'attached', timeout: interactionReadyTimeoutMs });
     await verifyRegistryHref(tab, started);
   } else {
     stage('tab');
@@ -527,7 +538,7 @@ try {
       await tab.waitFor({ state: 'attached', timeout: interactionReadyTimeoutMs });
       await verifyCommandWorkbench(started);
     } else {
-      await tab.waitFor({ state: 'visible', timeout: interactionReadyTimeoutMs });
+      await tab.waitFor({ state: 'attached', timeout: interactionReadyTimeoutMs });
       const aria = await tab.getAttribute('aria-selected');
       const classes = String(await tab.getAttribute('class') || '');
       let alreadyActive = aria === 'true' || classes.split(/\s+/).includes('active');
