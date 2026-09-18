@@ -44,9 +44,9 @@ function Invoke-TestFailure([string]$Stage) {
 function Invoke-ElevatedSelf([string[]]$Arguments) {
   if (Test-IsAdministrator) { return $null }
   try {
-    $process = Start-Process powershell.exe -Verb RunAs -Wait -PassThru -ArgumentList @(
+    $process = Start-Process powershell.exe -Verb RunAs -Wait -PassThru -ArgumentList (@(
       '-NoProfile','-ExecutionPolicy','Bypass','-File',("`"$PSCommandPath`"")
-    ) + $Arguments
+    ) + $Arguments)
     if ($process.ExitCode -ne 0) {
       Throw-AgentStageError 'EKA-091' 'elevation' "관리자 프로세스가 종료 코드 $($process.ExitCode)로 실패했습니다."
     }
@@ -511,12 +511,12 @@ function Assert-AgentCandidate([string]$CandidatePath) {
     if (-not (Test-AgentSourceSafety $content)) {
       Throw-AgentStageError 'EKA-101' 'candidate_validation' '업그레이드 후보 Agent의 PowerShell 안전성 검증에 실패했습니다.'
     }
-    if ($content -notmatch "\\$AgentVersion\\s*=\\s*'([^']+)'") {
+    if ($content -notmatch '\$AgentVersion\s*=\s*''([^'']+)''') {
       Throw-AgentStageError 'EKA-102' 'candidate_validation' '업그레이드 후보 Agent 버전을 확인하지 못했습니다.'
     }
     return [string]$Matches[1]
   } catch {
-    if ($_.Exception.Message -like '[EKODI:*') { throw }
+    if ($_.Exception.Message.StartsWith('[EKODI:')) { throw }
     Throw-AgentStageError 'EKA-103' 'candidate_validation' '업그레이드 후보 Agent 검증 중 오류가 발생했습니다.' $_
   }
 }
@@ -526,7 +526,7 @@ function Test-AgentRunProcess {
     foreach ($process in @(Get-CimInstance Win32_Process -ErrorAction SilentlyContinue)) {
       if ([string]$process.Name -notin @('powershell.exe', 'pwsh.exe')) { continue }
       $line = [string]$process.CommandLine
-      if ($line -and $line.Contains($AgentPath) -and $line -match '(?i)(?:^|\\s|\")-Run(?:\\s|\"|$)') { return $true }
+      if ($line -and $line.Contains($AgentPath) -and $line -match '(?i)(?:^|\s|")-Run(?:\s|"|$)') { return $true }
     }
   } catch { }
   return $false
