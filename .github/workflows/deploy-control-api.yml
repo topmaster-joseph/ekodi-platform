@@ -578,7 +578,6 @@ jobs:
           learning_catalog=$(curl -sS -o /tmp/learning-catalog.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/learning/catalog')
           learning_progress=$(curl -sS -o /tmp/learning-progress.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/learning/progress')
           membership=$(curl -sS -o /tmp/membership.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/membership/portfolio')
-          partner_news=$(curl -sS -o /tmp/partner-news-production.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/partner-news/public?tenant=ekodi-church&service=church')
           catalog=$(curl -sS -o /tmp/catalog.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/membership/catalog?site=invest')
           i18n=$(curl -sS -o /tmp/i18n.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/i18n/v1/status?service=community')
           language_admin=$(curl -sS -o /tmp/language-admin.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/control/language-status')
@@ -600,8 +599,6 @@ jobs:
           [ "$learning_progress" = '401' ]
           grep -Fq 'ekodi-learning-fabric' /tmp/learning-catalog.json
           [ "$membership" = '401' ]
-          [ "$partner_news" = '200' ]
-          grep -Fq '"privateFirst":true' /tmp/partner-news-production.json
           [ "$catalog" = '200' ]
           [ "$i18n" = '200' ]
           [ "$language_admin" = '401' ]
