@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { workspaceAdminPage, workspaceAdminCss, workspaceAdminScript } from '../workspace-admin-page.js';
 
-test('workspace admin uses the shared two-level navigation contract', async()=>{
+test('workspace admin keeps the shared shell while Mall uses a direct menu', async()=>{
   const responses=[workspaceAdminPage(),workspaceAdminCss(),workspaceAdminScript()];
   const [html,css,script]=await Promise.all(responses.map(response=>response.text()));
 
@@ -13,10 +13,9 @@ test('workspace admin uses the shared two-level navigation contract', async()=>{
   assert.match(css,/\.sidebar\{position:sticky;top:58px;height:calc\(100dvh - 58px\)[^}]*overflow:hidden/);
   assert.match(css,/\.ekodi-admin-shell-nav\[data-ekodi-admin-nav-mode="primary"\][^{]*\{[^}]*overflow:hidden!important/);
   assert.match(css,/main\{[^}]*max-width:none/);
-  assert.match(script,/const mallGroups=\[/);
-  assert.match(script,/label:'상품'/);
-  assert.match(script,/label:'판매 · 마케팅'/);
-  assert.match(script,/label:'AI 영업'/);
+  assert.match(script,/const mallDirectSections=\[\['overview','홈'\],\['products','상품'\],\['sourcing','공급·제휴'\],\['channels','판매채널'\],\['growth','AI 영업'\],\['analytics','성과'\],\['design','설정'\]\]/);
+  assert.match(script,/if\(service==='mall'\)\{h\.hidden=true;return\}/);
+  assert.match(script,/dataset\.adminSection=key/);
   assert.match(script,/function renderSecondaryNav/);
   assert.match(script,/로그인 후 세부 메뉴가 표시됩니다/);
   assert.match(script,/운영 데이터 비공개/);
@@ -24,13 +23,20 @@ test('workspace admin uses the shared two-level navigation contract', async()=>{
   assert.match(css,/\.mall-quick-actions/);
 });
 
-test('mall primary groups keep detail routes in the upper secondary navigation', async()=>{
+test('Mall navigation is one level and routes directly to each operating screen', async()=>{
   const script=await (await workspaceAdminScript()).text();
-  assert.match(script,/id:'catalog'.*\['products','상품관리'\].*\['sourcing','제휴·소싱'\]/s);
-  assert.match(script,/id:'marketing'.*\['channels','채널설정'\]/s);
-  assert.match(script,/sectionHref=key=>key==='overview'\?`\$\{adminBase\}\/overview`:.*channel-settings/s);
-  assert.match(script,/id:'ai-sales'.*\['growth','AI 자동영업'\].*\['analytics','성과·학습'\]/s);
-  assert.doesNotMatch(script,/\[null,'상품'\]/);
+  assert.match(script,/mallDirectSections/);
+  assert.match(script,/\['overview','홈'\]/);
+  assert.match(script,/\['products','상품'\]/);
+  assert.match(script,/\['sourcing','공급·제휴'\]/);
+  assert.match(script,/\['channels','판매채널'\]/);
+  assert.match(script,/\['growth','AI 영업'\]/);
+  assert.match(script,/\['analytics','성과'\]/);
+  assert.match(script,/\['design','설정'\]/);
+  assert.match(script,/sectionHref=key=>key==='overview'\?\`\$\{adminBase\}\/overview\`:.*channel-settings/s);
+  assert.match(script,/a\.href=sectionHref\(key\)/);
+  assert.match(script,/key==='design'&&section==='languages'/);
+  assert.doesNotMatch(script,/label:'판매 · 마케팅'/);
 });
 
 test('workspace admin keeps the desktop secondary menu at the upper right', async()=>{
