@@ -12,6 +12,7 @@ import { handleBooksDistributionRequest } from './books-distribution-control.js'
 import { handleBooksPipelineRequest } from './books-pipeline-control.js';
 import { handleBooksRoyaltyRequest } from './books-royalty-control.js';
 import { handleChurchReportsRequest, runChurchReportSchedule } from './church-reports-control.js';
+import { handlePartnerNewsRequest } from './partner-news-control.js';
 import { handleAffiliateRequest } from './affiliate-control.js';
 import { handleOfferRegistryRequest } from './offer-registry-control.js';
 import { handleMallAdminRequest } from './mall-admin-control.js';
@@ -136,6 +137,24 @@ export default {
     }
     if (request.method === 'POST' && LEGACY_CUSTOMER_PASSWORD_PATHS.has(path)) {
       return disabledPasswordResponse('customer');
+    }
+
+    if (path === '/api/partner-news/public' || path.startsWith('/api/church/admin/partner-news')) {
+      try {
+        const response = await handlePartnerNewsRequest(request, env);
+        if (response) return response;
+      } catch (error) {
+        console.error('Partner News API error', error);
+        return new Response(JSON.stringify({ error:'협력 소식 API 처리 중 오류가 발생했습니다.', code:'PARTNER_NEWS_API_ERROR' }), {
+          status:500,
+          headers:{
+            'content-type':'application/json; charset=utf-8',
+            'cache-control':'no-store',
+            'x-content-type-options':'nosniff',
+            ...(request.headers.get('origin') && String(env.ALLOWED_ORIGINS || '').split(',').map(value => value.trim()).includes(request.headers.get('origin')) ? { 'access-control-allow-origin':request.headers.get('origin'), vary:'Origin' } : {}),
+          },
+        });
+      }
     }
 
     if (path.startsWith('/api/church/admin/reports')) {
