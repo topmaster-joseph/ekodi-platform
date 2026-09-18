@@ -1,4 +1,5 @@
 import { reserveFreeDailyRequest } from './ai-free-quota.js';
+import { projectForExternalAi } from './secure-projection.js';
 
 const DEFAULT_MODEL='openrouter/free';
 const DEFAULT_DAILY_LIMIT=45;
@@ -25,7 +26,9 @@ export function createOpenRouterFreeProvider(env={},options={}){
     async invoke({prompt='' }={}){
       if(!available)throw new Error('openrouter_free_not_configured');
       const reservation=await reserveFreeDailyRequest(env,'openrouter-free',dailyLimit(env));
-      const response=await fetchImpl('https://openrouter.ai/api/v1/chat/completions',{method:'POST',headers:{authorization:`Bearer ${key}`,'content-type':'application/json','HTTP-Referer':'https://ekodi.kr','X-OpenRouter-Title':'EKODI AI Control'},body:JSON.stringify({model,messages:[{role:'user',content:clean(prompt,24000)}],temperature:0.2,max_tokens:1024}),signal:AbortSignal.timeout(60000)});
+      const projected=await projectForExternalAi({prompt:clean(prompt,24000)},{profile:'ai_minimum',purpose:'ekodi-free-provider',salt:crypto.randomUUID()});
+      const safePrompt=clean(projected?.prompt||JSON.stringify(projected),24000);
+      const response=await fetchImpl('https://openrouter.ai/api/v1/chat/completions',{method:'POST',headers:{authorization:`Bearer ${key}`,'content-type':'application/json','HTTP-Referer':'https://ekodi.kr','X-OpenRouter-Title':'EKODI AI Control'},body:JSON.stringify({model,messages:[{role:'user',content:safePrompt}],temperature:0.2,max_tokens:1024}),signal:AbortSignal.timeout(60000)});
       const data=await response.json().catch(()=>({}));
       if(!response.ok)throw errorFromResponse(response,data);
       const output=clean(data?.choices?.[0]?.message?.content,40000);if(!output)throw new Error('openrouter_free_empty_response');
