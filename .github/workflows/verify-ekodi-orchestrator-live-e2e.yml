@@ -2,6 +2,9 @@ name: Verify EKODI Orchestrator Live Production E2E
 
 on:
   workflow_dispatch:
+  workflow_run:
+    workflows: ["Deploy EKODI AI Control Plane"]
+    types: [completed]
   push:
     branches: [main]
     paths:
@@ -21,6 +24,7 @@ env:
 
 jobs:
   live-orchestration-proof:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -172,10 +176,13 @@ jobs:
               .task.result.sentinel?.provider,
               .task.result.reverifier?.provider
             ] | map(select(. != null and . != "")) | unique' "$RUNNER_TEMP/ekodi-orchestrator-task.json")
+          official_provider_count=$(printf '%s' "$actual_providers" | jq '[.[] | select(. == "gemini-free" or . == "openai-api" or . == "anthropic-api")] | length')
+          official_providers=$(printf '%s' "$actual_providers" | jq -c '[.[] | select(. == "gemini-free" or . == "openai-api" or . == "anthropic-api")]')
+          gemini_executed=$(printf '%s' "$actual_providers" | jq 'index("gemini-free") != null')
           sentinel_independent=$(jq -r '.task.evidence.sentinelIndependent // false' "$RUNNER_TEMP/ekodi-orchestrator-task.json")
           consultation_status=$(jq -r '.task.consultation.status // .task.result.consultation.status // "unknown"' "$RUNNER_TEMP/ekodi-orchestrator-task.json")
 
-          jq -n             --arg taskId "$TASK_ID"             --arg state "$terminal"             --arg canonicalIngress "$EKODI_ORIGIN/api/control/ai/v8/pulse"             --argjson providerDiversity "$provider_diversity"             --argjson actualProviderCount "$actual_provider_count"             --argjson actualProviders "$actual_providers"             --argjson sentinelIndependent "$sentinel_independent"             --arg consultationStatus "$consultation_status"             '{
+          jq -n             --arg taskId "$TASK_ID"             --arg state "$terminal"             --arg canonicalIngress "$EKODI_ORIGIN/api/control/ai/v8/pulse"             --argjson providerDiversity "$provider_diversity"             --argjson actualProviderCount "$actual_provider_count"             --argjson actualProviders "$actual_providers"             --argjson officialProviderCount "$official_provider_count"             --argjson officialProviders "$official_providers"             --argjson geminiExecuted "$gemini_executed"             --argjson sentinelIndependent "$sentinel_independent"             --arg consultationStatus "$consultation_status"             '{
               schemaVersion:1,
               proof:"ekodi-orchestrator-live-production-e2e",
               externalTestClient:"github-actions",
@@ -185,6 +192,9 @@ jobs:
               providerDiversity:$providerDiversity,
               actualProviderCount:$actualProviderCount,
               actualProviders:$actualProviders,
+              officialProviderCount:$officialProviderCount,
+              officialProviders:$officialProviders,
+              geminiExecuted:$geminiExecuted,
               sentinelIndependent:$sentinelIndependent,
               consultationStatus:$consultationStatus,
               productionMutationPerformed:false
@@ -193,6 +203,8 @@ jobs:
           # The user's claim requires real external-provider execution, not a structural/core-only pass.
           test "$provider_diversity" -ge 1
           test "$actual_provider_count" -ge 1
+          test "$official_provider_count" -ge 1
+          test "$gemini_executed" = 'true'
           case "$terminal" in
             verified|degraded) ;;
             *) echo "External orchestration proof not satisfied: terminal=$terminal"; exit 1 ;;
@@ -254,6 +266,8 @@ jobs:
 - Terminal state: \(.terminalState)
 - External test client: \(.externalTestClient)
 - Actual providers: \(.actualProviders | join(", "))
+- Official providers: \(.officialProviders | join(", "))
+- Gemini executed: \(.geminiExecuted)
 - Provider diversity: \(.providerDiversity)
 - Sentinel independent: \(.sentinelIndependent)
 - Durable D1 run evidence: \(.durableLedgerVerified)
