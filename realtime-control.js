@@ -466,6 +466,100 @@ async function planRoute(request,env,url,input){
   return json(request,env,{ok:true,roomId:room.id,plan});
 }
 
+
+function safeChat(row){return row?{id:row.id,roomId:row.room_id,displayName:row.display_name||'참여자',role:row.role||'viewer',message:row.message||'',createdAt:row.created_at}:null}
+function safeParticipation(row){return row?{id:row.id,roomId:row.room_id,displayName:row.display_name||'참여자',status:row.status,requestedAt:row.requested_at,decidedAt:row.decided_at||null}:null}
+async function requestActorKey(request,env,room,{allowAnonymous=false}={}){
+  const access=await entitlementFor(request,env,slug(room.tenant_id));
+  if(access.identity)return {access,actorKey:canonicalAiSubject(access.identity),authenticated:true};
+  if(!allowAnonymous)return {access,actorKey:'',authenticated:false};
+  const ip=clean(request.headers.get('cf-connecting-ip'),80)||'unknown';
+  const agent=clean(request.headers.get('user-agent'),180)||'unknown';
+  return {access,actorKey:`anon:${(await sha256(`${room.id}|${ip}|${agent}`)).slice(0,32)}`,authenticated:false};
+}
+async function collaborationRoute(request,env,url,input){
+  const chat=url.pathname.match(/^\/api\/realtime\/rooms\/([^/]+)\/chat$/);
+  if(chat){
+    const room=await roomById(env,decodeURIComponent(chat[1]));if(!room)return json(request,env,{ok:false,error:'room_not_found'},404);
+    if(request.method==='GET'){
+      const since=clean(url.searchParams.get('after'),40);
+      const query=since
+        ? env.DB.prepare(`SELECT * FROM realtime_chat_messages WHERE room_id=? AND deleted_at IS NULL AND created_at>? ORDER BY created_at,id LIMIT 100`).bind(room.id,since)
+        : env.DB.prepare(`SELECT * FROM realtime_chat_messages WHERE room_id=? AND deleted_at IS NULL ORDER BY created_at DESC,id DESC LIMIT 100`).bind(room.id);
+      const rows=await query.all(),messages=(rows.results||[]).map(safeChat);
+      if(!since)messages.reverse();
+      return json(request,env,{ok:true,roomId:room.id,messages});
+    }
+    if(request.method==='POST'){
+      if(!['starting','live'].includes(room.status))return json(request,env,{ok:false,error:'room_chat_not_open'},409);
+      const actor=await requestActorKey(request,env,room,{allowAnonymous:room.anonymous_viewers_enabled});
+      if(!actor.actorKey)return json(request,env,{ok:false,error:'authentication_required'},401);
+      const message=clean(input?.message,500),displayName=clean(input?.displayName,40)||(actor.authenticated?(clean(actor.access.identity?.email,80).split('@')[0]||'참여자'):'참여자');
+      if(!message)return json(request,env,{ok:false,error:'chat_message_required'},400);
+      const last=await env.DB.prepare(`SELECT created_at FROM realtime_chat_messages WHERE room_id=? AND actor_key=? ORDER BY created_at DESC LIMIT 1`).bind(room.id,actor.actorKey).first();
+      if(last?.created_at&&Date.now()-Date.parse(last.created_at)<1800)return json(request,env,{ok:false,error:'chat_rate_limited'},429);
+      const id=uid('chat'),stamp=new Date().toISOString(),role=actor.authenticated?(normalizeRealtimeRole(actor.access.role)||'viewer'):'viewer';
+      await env.DB.prepare(`INSERT INTO realtime_chat_messages(id,room_id,tenant_id,actor_key,display_name,role,message,created_at,deleted_at) VALUES(?,?,?,?,?,?,?,?,NULL)`).bind(id,room.id,room.tenant_id,actor.actorKey,displayName,role,message,stamp).run();
+      return json(request,env,{ok:true,message:safeChat(await env.DB.prepare('SELECT * FROM realtime_chat_messages WHERE id=?').bind(id).first())},201);
+    }
+  }
+  const requestMe=url.pathname.match(/^\/api\/realtime\/rooms\/([^/]+)\/participation-request\/me$/);
+  if(requestMe&&request.method==='GET'){
+    const room=await roomById(env,decodeURIComponent(requestMe[1]));if(!room)return json(request,env,{ok:false,error:'room_not_found'},404);
+    const actor=await requestActorKey(request,env,room);if(!actor.authenticated)return json(request,env,{ok:false,error:'authentication_required'},401);
+    const row=await env.DB.prepare('SELECT * FROM realtime_participation_requests WHERE room_id=? AND actor_key=?').bind(room.id,actor.actorKey).first();
+    return json(request,env,{ok:true,request:safeParticipation(row)});
+  }
+  const requestList=url.pathname.match(/^\/api\/realtime\/rooms\/([^/]+)\/participation-requests$/);
+  if(requestList){
+    const room=await roomById(env,decodeURIComponent(requestList[1]));if(!room)return json(request,env,{ok:false,error:'room_not_found'},404);
+    if(request.method==='POST'){
+      const actor=await requestActorKey(request,env,room);if(!actor.authenticated)return json(request,env,{ok:false,error:'authentication_required'},401);
+      const displayName=clean(input?.displayName,40)||(clean(actor.access.identity?.email,80).split('@')[0]||'참여자'),stamp=new Date().toISOString();
+      const existing=await env.DB.prepare('SELECT id FROM realtime_participation_requests WHERE room_id=? AND actor_key=?').bind(room.id,actor.actorKey).first();
+      const id=existing?.id||uid('join');
+      await env.DB.prepare(`INSERT INTO realtime_participation_requests(id,room_id,tenant_id,actor_key,display_name,status,requested_at,decided_at,decided_by)
+        VALUES(?,?,?,?,?,'pending',?,NULL,NULL)
+        ON CONFLICT(room_id,actor_key) DO UPDATE SET display_name=excluded.display_name,status='pending',requested_at=excluded.requested_at,decided_at=NULL,decided_by=NULL`)
+        .bind(id,room.id,room.tenant_id,actor.actorKey,displayName,stamp).run();
+      return json(request,env,{ok:true,request:safeParticipation(await env.DB.prepare('SELECT * FROM realtime_participation_requests WHERE room_id=? AND actor_key=?').bind(room.id,actor.actorKey).first())},201);
+    }
+    if(request.method==='GET'){
+      const auth=await ownerAllowed(request,env,room);if(!auth.allowed)return json(request,env,{ok:false,error:'room_owner_permission_required'},403);
+      const rows=await env.DB.prepare(`SELECT * FROM realtime_participation_requests WHERE room_id=? ORDER BY CASE status WHEN 'pending' THEN 0 WHEN 'approved' THEN 1 ELSE 2 END, requested_at DESC LIMIT 100`).bind(room.id).all();
+      return json(request,env,{ok:true,requests:(rows.results||[]).map(safeParticipation)});
+    }
+  }
+  const decide=url.pathname.match(/^\/api\/realtime\/rooms\/([^/]+)\/participation-requests\/([^/]+)$/);
+  if(decide&&request.method==='PATCH'){
+    const room=await roomById(env,decodeURIComponent(decide[1]));if(!room)return json(request,env,{ok:false,error:'room_not_found'},404);
+    const auth=await ownerAllowed(request,env,room);if(!auth.allowed)return json(request,env,{ok:false,error:'room_owner_permission_required'},403);
+    const status=clean(input?.status,20);if(!['approved','rejected'].includes(status))return json(request,env,{ok:false,error:'invalid_participation_status'},400);
+    const row=await env.DB.prepare('SELECT * FROM realtime_participation_requests WHERE room_id=? AND id=?').bind(room.id,decodeURIComponent(decide[2])).first();
+    if(!row)return json(request,env,{ok:false,error:'participation_request_not_found'},404);
+    const stamp=new Date().toISOString(),decider=auth.access.identity?canonicalAiSubject(auth.access.identity):room.owner_user_id;
+    await env.DB.prepare('UPDATE realtime_participation_requests SET status=?,decided_at=?,decided_by=? WHERE id=?').bind(status,stamp,decider,row.id).run();
+    if(status==='approved')await env.DB.prepare(`INSERT OR REPLACE INTO realtime_room_members(room_id,tenant_id,user_id,role,joined_at,left_at) VALUES(?,?,?,?,?,NULL)`).bind(room.id,room.tenant_id,row.actor_key,'presenter',stamp).run();
+    else await env.DB.prepare(`DELETE FROM realtime_room_members WHERE room_id=? AND user_id=? AND role='presenter'`).bind(room.id,row.actor_key).run();
+    return json(request,env,{ok:true,request:safeParticipation(await env.DB.prepare('SELECT * FROM realtime_participation_requests WHERE id=?').bind(row.id).first())});
+  }
+  const sources=url.pathname.match(/^\/api\/realtime\/rooms\/([^/]+)\/participant-sources$/);
+  if(sources&&request.method==='GET'){
+    const room=await roomById(env,decodeURIComponent(sources[1]));if(!room)return json(request,env,{ok:false,error:'room_not_found'},404);
+    const auth=await ownerAllowed(request,env,room);if(!auth.allowed)return json(request,env,{ok:false,error:'room_owner_permission_required'},403);
+    const rows=await env.DB.prepare(`SELECT s.actor_key,COALESCE(p.display_name,'참여자') display_name,t.track_name,t.media_kind,t.source_type
+      FROM realtime_media_sessions s
+      JOIN realtime_media_tracks t ON t.publisher_session_id=s.provider_session_id AND t.room_id=s.room_id AND t.status='active'
+      LEFT JOIN realtime_participation_requests p ON p.room_id=s.room_id AND p.actor_key=s.actor_key
+      WHERE s.room_id=? AND s.role='presenter' AND s.status='active'
+      ORDER BY s.created_at,t.created_at`).bind(room.id).all();
+    const map=new Map();
+    for(const row of rows.results||[]){if(!map.has(row.actor_key))map.set(row.actor_key,{actorKey:row.actor_key,displayName:row.display_name||'참여자',tracks:[]});map.get(row.actor_key).tracks.push({trackName:row.track_name,kind:row.media_kind,sourceType:row.source_type});}
+    return json(request,env,{ok:true,sources:[...map.values()]});
+  }
+  return null;
+}
+
 async function createMediaSession(request,env,room,requestedRole){
   const role=clean(requestedRole,30)||'viewer';
   let actorKey=`anon:${crypto.randomUUID()}`;
@@ -473,7 +567,10 @@ async function createMediaSession(request,env,room,requestedRole){
     const access=await entitlementFor(request,env,slug(room.tenant_id));
     if(!access.identity)return json(request,env,{ok:false,error:'authentication_required'},401);
     actorKey=canonicalAiSubject(access.identity);
-    if(['owner','cohost','presenter'].includes(role)&&room.owner_user_id!==actorKey&&!ADMIN_ROLES.has(access.role))return json(request,env,{ok:false,error:'publish_permission_required'},403);
+    if(['owner','cohost','presenter'].includes(role)&&room.owner_user_id!==actorKey&&!ADMIN_ROLES.has(access.role)){
+      const membership=await env.DB.prepare(`SELECT role FROM realtime_room_members WHERE room_id=? AND user_id=? AND left_at IS NULL LIMIT 1`).bind(room.id,actorKey).first();
+      if(!membership||!['owner','cohost','presenter'].includes(String(membership.role||'')))return json(request,env,{ok:false,error:'publish_permission_required'},403);
+    }
   }
   const provider=await providerCall(env,'/sessions/new',{method:'POST'});
   const accessKey=`rts_${crypto.randomUUID().replaceAll('-','')}${crypto.randomUUID().replaceAll('-','')}`;
@@ -579,6 +676,7 @@ export async function handleRealtimeControl(request,env){
   }
   const recordings=await recordingRoutes(request,env,url,input);if(recordings)return recordings;
   const destinations=await destinationRoute(request,env,url);if(destinations)return destinations;
+  const collaboration=await collaborationRoute(request,env,url,input);if(collaboration)return collaboration;
   const mutation=await roomMutation(request,env,url,input);if(mutation)return mutation;
   const planned=await planRoute(request,env,url,input);if(planned)return planned;
   const session=await sessionRoute(request,env,url,input);if(session)return session;
@@ -630,4 +728,7 @@ export const REALTIME_CONTROL_CONTRACT=Object.freeze({
   internalRecordingDefault:true,
   externalChannelSelection:true,
   externalDistributionFailIsolated:true,
+  liveChat:true,
+  participantCameraRequests:true,
+  draggableProgramSources:true,
 });
