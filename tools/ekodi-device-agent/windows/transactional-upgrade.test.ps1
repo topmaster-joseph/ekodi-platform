@@ -68,6 +68,60 @@ try {
   if ((Get-Content $script:AgentPath -Raw -Encoding UTF8) -ne $candidateText) { throw 'Re-upgrade did not promote the candidate.' }
   if ($script:heartbeatCalls -lt 3) { throw 'Upgrade/rollback/re-upgrade did not exercise heartbeat verification and recovery.' }
 
+  $script:elevationMockMode = 'admin'
+  $script:elevationStartCalls = 0
+  function Test-IsAdministrator { return $script:elevationMockMode -eq 'admin' }
+  function Start-Process {
+    param(
+      [Parameter(Position=0)][string]$FilePath,
+      [string]$Verb,
+      [switch]$Wait,
+      [switch]$PassThru,
+      [object[]]$ArgumentList
+    )
+    $script:elevationStartCalls++
+    if ($script:elevationMockMode -eq 'cancel') {
+      throw [ComponentModel.Win32Exception]::new(1223)
+    }
+    $index = [Array]::IndexOf($ArgumentList, '-ElevationResultPath')
+    if ($index -lt 0 -or $index + 1 -ge $ArgumentList.Count) { throw 'Elevation result path argument missing.' }
+    $recordPath = ([string]$ArgumentList[$index + 1]).Trim('"')
+    if ($script:elevationMockMode -eq 'structured-failure') {
+      Write-ElevationFailureRecord $recordPath '[EKODI:EKA-299][enrollment] simulated-child-failure'
+      return [pscustomobject]@{ ExitCode = 1 }
+    }
+    if ($script:elevationMockMode -eq 'plain-failure') {
+      Write-ElevationFailureRecord $recordPath 'simulated plain child failure'
+      return [pscustomobject]@{ ExitCode = 1 }
+    }
+    return [pscustomobject]@{ ExitCode = 0 }
+  }
+
+  [void](Invoke-ElevatedSelf @('-RegisterProtocol'))
+  if ($script:elevationStartCalls -ne 0) { throw 'Already elevated execution unexpectedly invoked RunAs.' }
+
+  $script:elevationMockMode = 'structured-failure'
+  $preservedStructuredFailure = $false
+  try { [void](Invoke-ElevatedSelf @('-RegisterProtocol')) } catch {
+    $preservedStructuredFailure = $_.Exception.Message -eq '[EKODI:EKA-299][enrollment] simulated-child-failure'
+  }
+  if (-not $preservedStructuredFailure) { throw 'Elevated child EKODI stage error was not preserved.' }
+
+  $script:elevationMockMode = 'plain-failure'
+  $plainFailureMapped = $false
+  try { [void](Invoke-ElevatedSelf @('-RegisterProtocol')) } catch {
+    $plainFailureMapped = $_.Exception.Message -match '^\[EKODI:EKA-091\]\[elevation_child\].*simulated plain child failure'
+  }
+  if (-not $plainFailureMapped) { throw 'Unstructured elevated child failure was not mapped to EKA-091.' }
+
+  $script:elevationMockMode = 'cancel'
+  $cancelMapped = $false
+  try { [void](Invoke-ElevatedSelf @('-RegisterProtocol')) } catch {
+    $cancelMapped = $_.Exception.Message -match '^\[EKODI:EKA-092\]\[elevation\]'
+  }
+  if (-not $cancelMapped) { throw 'UAC cancellation was not mapped to EKA-092.' }
+
+  Write-Host 'Elevation regression PASS: admin bypass -> child detail propagation -> plain failure mapping -> UAC cancellation.'
   Write-Host 'Transactional upgrade regression PASS: validate -> upgrade -> injected failure -> rollback -> re-upgrade.'
 } finally {
   Remove-Item Env:EKODI_AGENT_TEST_FAIL_STAGE -ErrorAction SilentlyContinue
