@@ -217,7 +217,10 @@ async function recordingMedia(request,env,url){
   if(!env.LIVE_RECORDINGS_BUCKET)return json(request,env,{ok:false,error:'recording_storage_not_configured'},503);
   const recording=await recordingById(env,decodeURIComponent(match[1]));
   if(!recording||recording.status==='deleted')return json(request,env,{ok:false,error:'recording_not_found'},404);
-  const access=await tenantAdminAccess(request,env,recording.tenant_id);if(!access.allowed)return json(request,env,{ok:false,error:'tenant_host_permission_required'},403);
+  if(recording.visibility!=='public'){
+    const access=await tenantAdminAccess(request,env,recording.tenant_id);
+    if(!access.allowed)return json(request,env,{ok:false,error:'tenant_host_permission_required'},403);
+  }
   const object=await env.LIVE_RECORDINGS_BUCKET.get(recording.storage_key);
   if(!object)return json(request,env,{ok:false,error:'recording_object_not_found'},404);
   const headers=new Headers({'cache-control':'private, no-store','x-content-type-options':'nosniff',...cors(request,env)});
@@ -229,11 +232,19 @@ async function recordingMedia(request,env,url){
   return new Response(object.body,{status:200,headers});
 }
 async function recordingRoutes(request,env,url,input){
+  if(request.method==='GET'&&url.pathname===`${PREFIX}/recordings/public`){
+    const config=realtimeTenant(url.searchParams.get('tenant')||'');if(!config)return json(request,env,{ok:false,error:'invalid_tenant'},400);
+    const rows=await env.DB.prepare(`SELECT * FROM realtime_recordings WHERE tenant_id=? AND status='ready' AND visibility='public' ORDER BY created_at DESC LIMIT 100`).bind(config.apiTenant).all();
+    return json(request,env,{ok:true,tenant:config.apiTenant,recordings:(rows.results||[]).map(safeRecording)});
+  }
   if(request.method==='GET'&&url.pathname===`${PREFIX}/recordings`){
     const config=realtimeTenant(url.searchParams.get('tenant')||'');if(!config)return json(request,env,{ok:false,error:'invalid_tenant'},400);
     const access=await tenantAdminAccess(request,env,config.apiTenant);if(!access.allowed)return json(request,env,{ok:false,error:'tenant_host_permission_required'},403);
-    const rows=await env.DB.prepare(`SELECT * FROM realtime_recordings WHERE tenant_id=? AND status!='deleted' ORDER BY created_at DESC LIMIT 200`).bind(config.apiTenant).all();
-    return json(request,env,{ok:true,tenant:config.apiTenant,recordings:(rows.results||[]).map(safeRecording)});
+    const [rows,rooms]=await Promise.all([
+      env.DB.prepare(`SELECT * FROM realtime_recordings WHERE tenant_id=? AND status!='deleted' ORDER BY created_at DESC LIMIT 200`).bind(config.apiTenant).all(),
+      env.DB.prepare(`SELECT * FROM realtime_rooms WHERE tenant_id=? ORDER BY created_at DESC LIMIT 200`).bind(config.apiTenant).all()
+    ]);
+    return json(request,env,{ok:true,tenant:config.apiTenant,recordings:(rows.results||[]).map(safeRecording),broadcasts:(rooms.results||[]).map(safeRoom)});
   }
   const start=url.pathname.match(/^\/api\/realtime\/rooms\/([^/]+)\/recordings$/);
   if(start&&request.method==='POST'){
@@ -478,6 +489,35 @@ export async function handleRealtimeControl(request,env){
   const session=await sessionRoute(request,env,url,input);if(session)return session;
   const media=await sessionMediaRoute(request,env,url,input);if(media)return media;
   return json(request,env,{ok:false,error:'realtime_endpoint_not_found'},404);
+}
+
+
+export async function runRealtimeRecordingRetention(env,{limit=10}={}){
+  if(!env.DB)return {expired:0,stale:0,skipped:'db_missing'};
+  const now=new Date(),stamp=now.toISOString(),max=Math.max(1,Math.min(50,Number(limit)||10));
+  let expired=0,stale=0;
+  const oldCutoff=new Date(now.getTime()-6*60*60*1000).toISOString();
+  const staleRows=await env.DB.prepare(`SELECT * FROM realtime_recordings WHERE status='recording' AND updated_at<? ORDER BY updated_at LIMIT ?`).bind(oldCutoff,max).all();
+  for(const recording of staleRows.results||[]){
+    if(recording.upload_id&&env.LIVE_RECORDINGS_BUCKET){
+      await env.LIVE_RECORDINGS_BUCKET.resumeMultipartUpload(recording.storage_key,recording.upload_id).abort().catch(()=>{});
+    }
+    await env.DB.prepare(`UPDATE realtime_recordings SET status='failed',archive_status='failed',upload_id=NULL,updated_at=? WHERE id=?`).bind(stamp,recording.id).run();
+    stale++;
+  }
+  const expiredRows=await env.DB.prepare(`SELECT * FROM realtime_recordings WHERE status='ready' AND retention_until IS NOT NULL AND retention_until<=? ORDER BY retention_until LIMIT ?`).bind(stamp,max).all();
+  for(const recording of expiredRows.results||[]){
+    try{
+      if(recording.drive_file_id&&env.STORAGE?.fetch){
+        const response=await env.STORAGE.fetch(new Request('https://storage.internal/api/storage/v1/delete-file',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({fileId:recording.drive_file_id})}));
+        if(!response.ok)continue;
+      }
+      if(recording.storage_key&&env.LIVE_RECORDINGS_BUCKET)await env.LIVE_RECORDINGS_BUCKET.delete(recording.storage_key);
+      await env.DB.prepare(`UPDATE realtime_recordings SET status='deleted',deleted_at=?,updated_at=? WHERE id=?`).bind(stamp,stamp,recording.id).run();
+      expired++;
+    }catch(error){console.error('recording retention cleanup',recording.id,error?.message||error)}
+  }
+  return {expired,stale};
 }
 
 export const REALTIME_CONTROL_CONTRACT=Object.freeze({
