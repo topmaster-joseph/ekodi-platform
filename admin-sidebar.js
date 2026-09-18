@@ -220,14 +220,14 @@ function renderSidebarDetails(nav, globals, group, section, locale) {
 }
 
 function activeSection(nav) {
+  const panelSection = window.EKODIAdminPanels?.current?.();
+  if (panelSection === 'command-home') return 'command-home';
+  const routed = window.EKODIAdminRoutes?.sectionFromLocation?.(window.location);
+  if (routed === 'command-home') return 'command-home';
   const active = [...navItems(nav)].find(item => item.classList.contains('active'));
   const activeId = adminSidebarSectionOf(active);
   if (activeId && getAdminMenuItem(activeId)) return activeId;
-  const panelSection = window.EKODIAdminPanels?.current?.();
-  if (panelSection === 'command-home') return 'command-home';
   if (panelSection && getAdminMenuItem(panelSection)) return panelSection;
-  const routed = window.EKODIAdminRoutes?.sectionFromLocation?.(window.location);
-  if (routed === 'command-home') return 'command-home';
   return getAdminMenuGroupDefault('home');
 }
 
