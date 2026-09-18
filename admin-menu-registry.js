@@ -50,7 +50,7 @@ export const ADMIN_MENU_REGISTRY = Object.freeze([
   { id: 'aiops', group: 'system', icon: 'AI', labels: { ko: 'AI 운영센터', en: 'AI & Agents' }, governance: { track: 'agent', changeClass: 'yellow', authorityContext: 'Person + Workspace + Role + Capability', controlPlane: true, globalPolicyMutation: 'super_admin' } },
   { id: 'ai-settings', group: 'system', icon: '⚙', labels: { ko: '에코디 AI 관리', en: 'EKODI AI Management' }, governance: { track:'agent', changeClass:'yellow', controlPlane:true, globalPolicyMutation:'super_admin' } },
   { id: 'openai', group: 'system', icon: 'O', labels: { ko: 'OpenAI 작업공간', en: 'OpenAI' }, providerWorkspace: true },
-  { id: 'devices', group: 'system', icon: 'D', labels: { ko: '컴퓨터·기기', en: 'Computers & Devices' }, governance: { track: 'agent', changeClass: 'yellow', authorityContext: 'Person + Workspace + Role + Capability', controlPlane: true, globalPolicyMutation: 'super_admin' } },
+  { id: 'devices', group: 'system', icon: 'D', labels: { ko: '컴퓨터·기기', en: 'Computer Devices' }, governance: { track: 'agent', changeClass: 'yellow', authorityContext: 'Person + Workspace + Role + Capability', controlPlane: true, globalPolicyMutation: 'super_admin' } },
   { id: 'health', group: 'system', icon: '◉', labels: { ko: '상태·관측', en: 'Health & Observability' } },
   { id: 'api-cost', group: 'system', icon: '₩', labels: { ko: 'API·비용', en: 'API & Cost' } },
   { id: 'services', group: 'system', icon: '▦', labels: { ko: '서비스·지표', en: 'Services & Metrics' }, internal: true },
