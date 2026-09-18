@@ -69,6 +69,10 @@ namespace_id = "2102"
 binding = "LIVE_RECORDINGS_BUCKET"
 bucket_name = "ekodi-storage"
 
+[[services]]
+binding = "STORAGE"
+service = "ekodi-storage-control"
+
 [[d1_databases]]
 binding = "DB"
 database_name = "ekodi-auth"
