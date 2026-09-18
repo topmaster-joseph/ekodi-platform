@@ -67,8 +67,12 @@ test('internal recording remains default while optional external channel selecti
 
 test('live chat does not trust client supplied broadcaster names',async()=>{
   const control=await read('realtime-control.js');
-  assert.match(control,/ADMIN_ROLES\.has\(actorRole\)\?'방송자'/);
-  assert.doesNotMatch(control,/displayName=clean\(input\?\.displayName/);
+  const start=control.indexOf("const chat=url.pathname.match");
+  const end=control.indexOf("const requestMe=url.pathname.match",start);
+  assert.ok(start>=0&&end>start,'chat route must exist');
+  const chat=control.slice(start,end);
+  assert.match(chat,/ADMIN_ROLES\.has\(actorRole\)\?'방송자'/);
+  assert.doesNotMatch(chat,/displayName=clean\(input\?\.displayName/);
 });
 
 
