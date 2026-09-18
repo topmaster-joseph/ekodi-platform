@@ -1,4 +1,5 @@
 const PREFIX = '/api/church/admin/reports';
+import { buildCoreAiGateway } from './core-ai-gateway.js';
 const VALID_STATUS = new Set(['DRAFT', 'AI_DRAFT', 'REVIEW', 'APPROVED', 'SENT']);
 const REPORT_MONTHS = new Set([2, 4, 6, 8, 10, 12]);
 const CENTRAL_SUPABASE_URL = 'https://renzehysxirjilvdxacv.supabase.co';
@@ -115,7 +116,11 @@ async function settings(env) {
 function mailConfigured(env) {
   return Boolean(clean(env.GMAIL_CLIENT_ID, 500) && clean(env.GMAIL_CLIENT_SECRET, 500) && clean(env.GMAIL_REFRESH_TOKEN, 2000));
 }
-function aiConfigured(env) { return Boolean(clean(env.OPENAI_API_KEY, 300)); }
+function aiGateway(env) { return buildCoreAiGateway({ ...env, AI_MULTI_PROVIDER_ENABLED:'true' }); }
+function aiConfigured(env) {
+  const providers = aiGateway(env).status()?.orchestration?.configuredProviders || [];
+  return providers.some(provider => provider.available);
+}
 function sourceEndpoint() { return CHURCH_PASTOR_API; }
 async function overview(request, env, sessionData) {
   const upcoming = nextReportPeriod();
@@ -305,23 +310,34 @@ function aiSourceFacts(snapshot) {
     items: Array.isArray(snapshot.items) ? snapshot.items.slice(0, 120) : [],
   };
 }
-async function generateWithOpenAI(env, report) {
+async function generateWithOrchestrator(env, report) {
   if (!aiConfigured(env)) return null;
   const facts = {
     manual: { activities: report.activities, outcomes: report.outcomes, evaluation: report.evaluation, plans: report.plans, requests: report.requests, prayers: report.prayers, sourceNotes: report.sourceNotes },
     recordedSources: aiSourceFacts(report.sourceSnapshot),
   };
-  const response = await fetch('https://api.openai.com/v1/responses', {
-    method: 'POST',
-    headers: { authorization: `Bearer ${env.OPENAI_API_KEY}`, 'content-type': 'application/json' },
-    body: JSON.stringify({
-      model: clean(env.OPENAI_MODEL, 120) || 'gpt-5',
-      instructions: 'You draft concise Korean ministry reports for EKODI Church. Use only supplied facts. Never invent names, counts, dates, outcomes, plans, or prayer requests. recordedSources are verified historical church worship and event records. Future plans must come from manual.plans. Member contact details and pastoral-care details are excluded from the evidence by design. If evidence is missing, write 확인 필요. Keep the tone factual, pastoral, and suitable for ministry reporting.',
-      input: `보고서: ${report.title}\n활동기간 ${report.activityFrom}~${report.activityTo}\n계획기간 ${report.planFrom}~${report.planTo}\n\n자료(JSON):\n${JSON.stringify(facts)}\n\n다음 순서로 작성: 1. 지난 2개월 주요 사역 2. 참여·성과·변화 3. 감사와 평가 4. 향후 2개월 계획 5. 협조 요청 6. 기도제목.`,
-    }),
+  const message = [
+    "검증된 사실만 사용해 간결한 한국어 사역보고서를 작성하세요. 이름·수치·날짜·성과·계획·기도제목을 만들지 마세요. recordedSources는 검증된 과거 예배·행사 기록이며 향후 계획은 manual.plans만 사용합니다. 근거가 없으면 확인 필요라고 쓰세요.",
+    `보고서: ${report.title}`,
+    `활동기간 ${report.activityFrom}~${report.activityTo}`,
+    `계획기간 ${report.planFrom}~${report.planTo}`,
+    '자료(JSON):',
+    JSON.stringify(facts),
+    '다음 순서로 작성: 1. 지난 2개월 주요 사역 2. 참여·성과·변화 3. 감사와 평가 4. 향후 2개월 계획 5. 협조 요청 6. 기도제목.',
+  ].join('\n');
+  const result = await aiGateway(env).run({
+    taskName: "church-ministry-report-draft",
+    context: { message, page: { section:'reports', title:"EKODI Church ministry report", pathname:'/reports' } },
+    requiredCapabilities:['text'],
+    risk:'normal',
+    governance:{ dataSensitivity:'internal' },
+    fallback:()=>null,
   });
-  if (!response.ok) throw new Error(`AI 생성 실패 (${response.status})`);
-  const data = await response.json(); return extractOutputText(data) || null;
+  if (result.mode !== 'ai') return null;
+  const value = result.value;
+  const body = typeof value === 'string' ? value : value?.text;
+  if (!body) return null;
+  return { body, provider: result.provider || 'orchestrator', model: value?.model || '' };
 }
 async function generateDraft(request, env, sessionData, id) {
   let report = await getReport(env, id, true); if (!report) return json({ error: '사역보고를 찾을 수 없습니다.' }, 404, request, env);
@@ -330,7 +346,7 @@ async function generateDraft(request, env, sessionData, id) {
   try { report = await syncSources(request, env, sessionData, id); sourceSynced = true; }
   catch (error) { console.warn('Church report source fallback', error); report = await getReport(env, id, true) || report; }
   let body; let mode = 'smart-template';
-  try { body = await generateWithOpenAI(env, report); if (body) mode = 'openai'; } catch (error) { console.warn('Church report AI fallback', error); }
+  try { const generated = await generateWithOrchestrator(env, report); if (generated?.body) { body = generated.body; mode = `orchestrator:${generated.provider}`; } } catch (error) { console.warn('Church report AI fallback', error); }
   if (!body) body = fallbackBody(report);
   const who = sessionData.userId; const now = new Date().toISOString();
   await env.DB.prepare(`UPDATE church_ministry_reports SET body_text=?, ai_mode=?, status='AI_DRAFT', send_error='', updated_at=?, updated_by=? WHERE id=?`)

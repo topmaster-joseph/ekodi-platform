@@ -2,7 +2,7 @@ import { getSponsoredAiAllowance, recordProviderUsage } from './api-usage-meter.
 import { projectForExternalAi } from './secure-projection.js';
 
 const GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
-const DEFAULT_GEMINI_MODEL = 'gemini-3.7-flash';
+const DEFAULT_GEMINI_MODEL = 'gemini-3.8-flash';
 
 const SYSTEM = [
   'You are a bounded specialist collaborating under the EKODI AI Orchestrator.',

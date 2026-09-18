@@ -1,5 +1,6 @@
 import { isAllowedOrigin } from './auth-worker.js';
-import { createSponsoredUserOpenAiProvider } from './user-openai-provider-adapter.js';
+import { buildCoreAiGateway } from './core-ai-gateway.js';
+import { buildEkodiAiOrchestrator } from './ai-orchestrator-runtime.js';
 import {
   buildPersonalAiBridgeSnapshot,
   canonicalAiSubject,
@@ -392,9 +393,11 @@ async function assist(request, env, identity) {
   const policy = fundingPolicyForPlan(plan.planId, env);
   const used = await sponsoredUsage(env, identity, site);
   const remaining = Math.max(0, policy.sponsoredRequests - used);
-  const sponsoredProvider = createSponsoredUserOpenAiProvider(env);
+  const sponsoredEnv = { ...env, AI_MULTI_PROVIDER_ENABLED:'true' };
+  const sponsoredGateway = buildCoreAiGateway(sponsoredEnv);
+  const sponsoredProviders = sponsoredGateway.status()?.orchestration?.configuredProviders || [];
   const personalAllowed = dataClass === 'public' || dataClass === 'general';
-  const sponsoredAvailable = sponsoredProvider.available && policy.sponsoredEligible && !['canceled','past_due'].includes(plan.status);
+  const sponsoredAvailable = sponsoredProviders.some(provider=>provider.available) && policy.sponsoredEligible && !['canceled','past_due'].includes(plan.status);
   const decision = resolveAiAccessRoute({
     mode:pref.mode,
     intent,
@@ -425,21 +428,51 @@ async function assist(request, env, identity) {
     const apiKey = await decryptSecret(env, credential.secret_cipher, credential.secret_iv);
     const provider = createPersonalProvider(credential.provider, personalProviderOptions(credential.provider, apiKey, env));
     if (!provider?.available) return null;
-    const result = await provider.invoke({ message });
-    await recordUsage(env, identity, { site, planId:plan.planId, funding:'personal', provider:credential.provider, model:result.model });
+    const wrapper = {
+      id:`personal-${credential.provider}`,
+      priority:1,
+      available:true,
+      capabilities:['text'],
+      resourceClass:'personal-api',
+      fundingSource:'personal',
+      costClass:'account-managed',
+      invoke:({context={}})=>provider.invoke({message:String(context.message||'')}),
+    };
+    const result = await buildEkodiAiOrchestrator(env,[wrapper]).run({
+      taskName:'user-personal-ai',
+      context:{message,site,taskId:`user-${identity.personId||identity.userId||'member'}`},
+      requiredCapabilities:['text'],
+      collaboration:'primary',
+      governance:{dataSensitivity:dataClass},
+      fallback:()=>null,
+    });
+    if(result.mode!=='ai') return null;
+    const value=result.value;
+    await recordUsage(env, identity, { site, planId:plan.planId, funding:'personal', provider:credential.provider, model:value?.model });
     const definition = getPersonalAiProvider(credential.provider);
     return {
       mode:'ai', funding:'personal', provider:credential.provider, providerLabel:definition?.shortLabel || definition?.label || credential.provider,
-      text:result.text, model:result.model, dataClass, intent, ekodiCost:false,
+      text:typeof value==='string'?value:value?.text, model:value?.model, dataClass, intent, ekodiCost:false,
     };
   };
 
   const trySponsored = async () => {
     if (!sponsoredAvailable || remaining <= 0) return null;
-    const result = await sponsoredProvider.invoke({ message, site });
-    await recordUsage(env, identity, { site, planId:plan.planId, funding:'ekodi', provider:sponsoredProvider.id, model:result.model });
+    const result = await sponsoredGateway.run({
+      taskName:'user-sponsored-ai',
+      context:{message,page:{section:'user-ai',title:'EKODI User AI',pathname:`/${site}`},taskId:`user-sponsored-${identity.personId||identity.userId||'member'}`},
+      requiredCapabilities:['text'],
+      collaboration:'primary',
+      governance:{dataSensitivity:dataClass,paidCommitment:true,explicitDelegatedBudget:true},
+      fallback:()=>null,
+    });
+    if(result.mode!=='ai') return null;
+    const value=result.value;
+    const providerId=result.provider||'orchestrator';
+    await recordUsage(env, identity, { site, planId:plan.planId, funding:'ekodi', provider:providerId, model:value?.model });
+    const providerLabel=providerId==='gemini'?'Gemini · EKODI 지원':providerId==='openai'?'OpenAI · EKODI 지원':`${providerId} · EKODI 지원`;
     return {
-      mode:'ai', funding:'ekodi', provider:sponsoredProvider.id, providerLabel:'OpenAI · EKODI 지원', text:result.text, model:result.model, dataClass, intent, ekodiCost:true,
+      mode:'ai', funding:'ekodi', provider:providerId, providerLabel, text:typeof value==='string'?value:value?.text, model:value?.model, dataClass, intent, ekodiCost:true,
       quota:{ monthly:policy.sponsoredRequests, used:used + 1, remaining:Math.max(0, remaining - 1) },
     };
   };

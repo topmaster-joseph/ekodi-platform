@@ -3,6 +3,7 @@ import {
   runAiEnhancedTask,
 } from './ai-resilience-runtime.js';
 import { rankAiResourceCandidates } from './ai-resource-policy.js';
+import { recordAiProviderExecution } from './ai-provider-telemetry.js';
 
 const RISK_LEVELS = new Set(['low', 'normal', 'high', 'critical']);
 const COLLABORATION_MODES = new Set(['auto', 'primary', 'review']);
@@ -55,6 +56,38 @@ function chooseMode(collaboration, risk) {
   return risk === 'high' || risk === 'critical' ? 'review' : 'primary';
 }
 
+async function invokeWithTelemetry({ env, provider, taskName, context = {}, role = 'primary' }) {
+  const started = Date.now();
+  try {
+    const value = await provider.invoke(Object.freeze({ taskName, context }));
+    await recordAiProviderExecution(env, {
+      taskId: context?.taskId || context?.task_id || '',
+      provider: provider.id,
+      model: value?.model || provider.model || '',
+      role,
+      surface: 'orchestrator',
+      status: 'completed',
+      latencyMs: Date.now() - started,
+      usage: value?.usage || {},
+      metadata: { taskName },
+    }).catch(() => {});
+    return value;
+  } catch (error) {
+    await recordAiProviderExecution(env, {
+      taskId: context?.taskId || context?.task_id || '',
+      provider: provider.id,
+      model: provider.model || '',
+      role,
+      surface: 'orchestrator',
+      status: 'failed',
+      latencyMs: Date.now() - started,
+      errorCode: String(error?.message || error).slice(0, 200),
+      metadata: { taskName },
+    }).catch(() => {});
+    throw error;
+  }
+}
+
 function publicProvider(provider) {
   return Object.freeze({
     id: provider.id,
@@ -80,7 +113,7 @@ export function buildAiOrchestrationPlan(input = {}, providers = []) {
   const eligibleBase = normalized.filter(provider => provider.available && supports(provider, requiredCapabilities));
   const lane = input.lane === 'autonomous' ? 'autonomous' : 'interactive';
   const governance = input.governance && typeof input.governance === 'object' ? input.governance : {};
-  const ranked = rankAiResourceCandidates(eligibleBase, { lane, governance });
+  const ranked = rankAiResourceCandidates(eligibleBase, { lane, governance, context:input.context ?? null });
   const eligible = ranked.map(item => normalized.find(provider => provider.id === item.id)).filter(Boolean);
   const mode = chooseMode(collaboration, risk);
   const primary = eligible[0] || null;
@@ -112,8 +145,11 @@ async function runReviewer({ env, reviewer, taskName, timeoutMs, context, primar
     providers: [{
       id: reviewer.id,
       available: reviewer.available,
-      invoke: () => reviewer.invoke(Object.freeze({
+      invoke: () => invokeWithTelemetry({
+        env,
+        provider: reviewer,
         taskName,
+        role: 'independent_reviewer',
         context: Object.freeze({
           ...context,
           collaboration: Object.freeze({
@@ -122,7 +158,7 @@ async function runReviewer({ env, reviewer, taskName, timeoutMs, context, primar
             primaryValue: primary.value,
           }),
         }),
-      })),
+      }),
     }],
     fallback: () => null,
   });
@@ -169,6 +205,7 @@ export function buildEkodiAiOrchestrator(env = {}, providers = []) {
         requiredCapabilities,
         lane,
         governance,
+        context,
       }, normalized);
       const eligibleIds = new Set(plan.eligibleProviders);
       const eligible = normalized.filter(provider => eligibleIds.has(provider.id));
@@ -180,13 +217,16 @@ export function buildEkodiAiOrchestrator(env = {}, providers = []) {
         providers: eligible.map(provider => ({
           id: provider.id,
           available: provider.available,
-          invoke: () => provider.invoke(Object.freeze({
+          invoke: () => invokeWithTelemetry({
+            env,
+            provider,
             taskName: normalizedTaskName,
+            role: 'primary',
             context: Object.freeze({
               ...context,
               collaboration: Object.freeze({ role: 'primary', mode: plan.mode }),
             }),
-          })),
+          }),
         })),
         fallback: reason => fallback(Object.freeze({ ...reason, context, plan })),
       });

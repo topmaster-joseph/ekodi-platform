@@ -2,6 +2,9 @@ name: Verify EKODI Orchestrator Live Production E2E
 
 on:
   workflow_dispatch:
+  workflow_run:
+    workflows: ['Deploy EKODI AI Control Plane']
+    types: [completed]
   push:
     branches: [main]
     paths:
@@ -21,6 +24,7 @@ env:
 
 jobs:
   live-orchestration-proof:
+    if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main')
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -232,11 +236,33 @@ jobs:
           test "$run_diversity" -ge 1
           test -n "$completed_at"
 
-          jq             --arg ledgerRunState "$run_state"             --argjson ledgerProviderDiversity "$run_diversity"             --argjson ledgerSentinelIndependent "$run_sentinel"             --arg completedAt "$completed_at"             '. + {
+          execution=$(cf_query "$ledger_db" "SELECT provider_id,model,role,status,latency_ms,input_units,output_units,estimated_cost_microusd,cost_basis,created_at FROM ai_provider_execution_events WHERE task_id='$TASK_ID' AND status='completed' ORDER BY created_at DESC LIMIT 20")
+          echo "$execution" | jq -e '.success == true and (.result[]?.results | length) > 0' >/dev/null
+          execution_count=$(echo "$execution" | jq -r '[.result[]?.results[]?] | length')
+          execution_providers=$(echo "$execution" | jq -c '[.result[]?.results[]?.provider_id | select(. != null and . != "")] | unique')
+          execution_models=$(echo "$execution" | jq -c '[.result[]?.results[]?.model | select(. != null and . != "")] | unique')
+          execution_max_latency=$(echo "$execution" | jq -r '[.result[]?.results[]?.latency_ms // 0] | max // 0')
+          execution_cost=$(echo "$execution" | jq -r '[.result[]?.results[]?.estimated_cost_microusd // 0] | add // 0')
+          execution_input=$(echo "$execution" | jq -r '[.result[]?.results[]?.input_units // 0] | add // 0')
+          execution_output=$(echo "$execution" | jq -r '[.result[]?.results[]?.output_units // 0] | add // 0')
+          test "$execution_count" -ge 1
+          test "$execution_max_latency" -ge 0
+          test "$execution_input" -ge 0
+          test "$execution_output" -ge 0
+
+          jq             --arg ledgerRunState "$run_state"             --argjson ledgerProviderDiversity "$run_diversity"             --argjson ledgerSentinelIndependent "$run_sentinel"             --arg completedAt "$completed_at"             --argjson providerExecutionCount "$execution_count"             --argjson providerExecutionProviders "$execution_providers"             --argjson providerExecutionModels "$execution_models"             --argjson providerExecutionMaxLatencyMs "$execution_max_latency"             --argjson providerExecutionEstimatedCostMicroUsd "$execution_cost"             --argjson providerExecutionInputUnits "$execution_input"             --argjson providerExecutionOutputUnits "$execution_output"             '. + {
               durableLedgerVerified:true,
               ledgerRunState:$ledgerRunState,
               ledgerProviderDiversity:$ledgerProviderDiversity,
               ledgerSentinelIndependent:($ledgerSentinelIndependent == 1),
+              providerExecutionLedgerVerified:true,
+              providerExecutionCount:$providerExecutionCount,
+              providerExecutionProviders:$providerExecutionProviders,
+              providerExecutionModels:$providerExecutionModels,
+              providerExecutionMaxLatencyMs:$providerExecutionMaxLatencyMs,
+              providerExecutionEstimatedCostMicroUsd:$providerExecutionEstimatedCostMicroUsd,
+              providerExecutionInputUnits:$providerExecutionInputUnits,
+              providerExecutionOutputUnits:$providerExecutionOutputUnits,
               completedAt:$completedAt
             }'             "$RUNNER_TEMP/ekodi-orchestrator-proof.json" > "$RUNNER_TEMP/ekodi-orchestrator-proof.final.json"
 
@@ -257,6 +283,12 @@ jobs:
 - Provider diversity: \(.providerDiversity)
 - Sentinel independent: \(.sentinelIndependent)
 - Durable D1 run evidence: \(.durableLedgerVerified)
+- Provider execution ledger: \(.providerExecutionLedgerVerified)
+- Execution providers: \(.providerExecutionProviders | join(", "))
+- Execution models: \(.providerExecutionModels | join(", "))
+- Max provider latency: \(.providerExecutionMaxLatencyMs) ms
+- Input/output units: \(.providerExecutionInputUnits)/\(.providerExecutionOutputUnits)
+- Estimated provider cost: \(.providerExecutionEstimatedCostMicroUsd) microUSD
 - Completed at: \(.completedAt)
 - Production mutation performed by task: \(.productionMutationPerformed)"' "$RUNNER_TEMP/ekodi-orchestrator-proof.json"
           } >> "$GITHUB_STEP_SUMMARY"

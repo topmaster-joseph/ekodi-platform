@@ -30,6 +30,26 @@ function bounded(value, fallback = 50) {
   const n = Number(value);
   return Number.isFinite(n) ? Math.min(Math.max(n, 0), 100) : fallback;
 }
+const SENSITIVE_LEVELS = new Set(['personal','confidential','restricted','sensitive','high']);
+
+export function aiContextContainsSensitiveData(context = {}) {
+  const governance = context?.governance && typeof context.governance === 'object' ? context.governance : context;
+  const level = String(governance?.dataSensitivity || context?.dataSensitivity || '').trim().toLowerCase();
+  return governance?.sensitiveData === true
+    || governance?.containsPersonalData === true
+    || governance?.crossTenantPrivateData === true
+    || governance?.productionSecretChange === true
+    || SENSITIVE_LEVELS.has(level);
+}
+
+export function evaluateAiDataEligibility(candidate = {}, context = {}) {
+  const costClass = String(candidate.costClass || '').trim().toLowerCase();
+  const freeExternal = costClass === 'free-preferred' || costClass === 'google-free-quota';
+  if (freeExternal && aiContextContainsSensitiveData(context)) {
+    return Object.freeze({ eligible:false, blockedBy:'sensitive_data_free_provider_blocked' });
+  }
+  return Object.freeze({ eligible:true, blockedBy:'' });
+}
 function normalizePool(value, fallback) {
   const source = value && typeof value === 'object' ? value : {};
   return { ...fallback, enabled:bool(source.enabled, fallback.enabled) };
@@ -93,7 +113,10 @@ function gateCandidate(candidate = {}, context = {}, policy = DEFAULT_AI_RESOURC
   const poolKey = ({'personal-subscription':'personalSubscription','personal-api':'personalApi','ekodi-shared-api':'ekodiSharedApi','hosted-ai':'hostedAi','core-only':'coreOnly'})[resourceClass];
   if (poolKey && policy.pools?.[poolKey]?.enabled === false) return 'pool_disabled';
   const defaultCostClass = resourceClass === 'personal-subscription' ? 'account-managed' : resourceClass === 'core-only' ? 'core-only' : 'unknown';
-  const cost = evaluateAiCostEligibility({ ...candidate, costClass:candidate.costClass || defaultCostClass }, context);
+  const normalizedCandidate = { ...candidate, costClass:candidate.costClass || defaultCostClass };
+  const data = evaluateAiDataEligibility(normalizedCandidate, context);
+  if (!data.eligible) return data.blockedBy;
+  const cost = evaluateAiCostEligibility(normalizedCandidate, context);
   if (!cost.eligible) return cost.blockedBy;
   return '';
 }
@@ -119,6 +142,8 @@ export function rankAiResourceCandidates(candidates = [], context = {}, value = 
     if (score) return score;
     const resource = (rank.get(a.resourceClass) ?? 99) - (rank.get(b.resourceClass) ?? 99);
     if (resource) return resource;
+    const priority = (Number.isFinite(Number(a.priority)) ? Number(a.priority) : 100) - (Number.isFinite(Number(b.priority)) ? Number(b.priority) : 100);
+    if (priority) return priority;
     return String(a.id || '').localeCompare(String(b.id || ''));
   }));
 }

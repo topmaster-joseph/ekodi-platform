@@ -117,3 +117,12 @@ test('known paid API cost class cannot be relabeled as free by runtime profiles'
   });
   assert.deepEqual(plan,[]);
 });
+
+
+test('sensitive control-plane work excludes the free Gemini lane',()=>{
+  const task=normalizeTaskInput({prompt:'analyze private workspace data',governance:{sensitiveData:true,paidCommitment:true,explicitDelegatedBudget:true}});
+  assert.equal(task.governance.sensitiveData,true);
+  const plan=buildExecutionPlan(task,{geminiFree:true,nodeProviders:[],openaiApi:true,anthropicApi:false,maxParallelProviders:2});
+  assert.equal(plan.some(item=>item.providerId==='gemini-free'),false);
+  assert.equal(plan.some(item=>item.providerId==='openai-api'),true);
+});

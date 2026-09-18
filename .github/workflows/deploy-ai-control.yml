@@ -16,6 +16,24 @@ on:
       - 'wrangler.site.toml'
       - 'test/ai-commons*.test.mjs'
       - 'ai-router-score.js'
+      - 'ai-resource-policy.js'
+      - 'ai-orchestrator-runtime.js'
+      - 'core-ai-gateway.js'
+      - 'ekodi-ai-provider-registry.js'
+      - 'ai-provider-control.js'
+      - 'ai-provider-telemetry.js'
+      - 'ai-provider-feedback.js'
+      - 'api-usage-meter.js'
+      - 'openai-provider-adapter.js'
+      - 'gemini-orchestrator-provider-adapter.js'
+      - 'scripts/validate-ai-provider-boundary.mjs'
+      - 'test/ai-provider-boundary.test.mjs'
+      - 'test/ai-provider-registry.test.mjs'
+      - 'test/ai-orchestrator-runtime.test.mjs'
+      - 'test/ai-resource-policy.test.mjs'
+      - 'test/core-ai-gateway.test.mjs'
+      - 'test/ai-provider-control.test.mjs'
+      - 'migrations/0095_ai_intelligence_supply_chain.sql'
       - 'ai-collaboration-settings.js'
       - 'local-execution-policy.js'
       - 'ai-governance-runtime.js'
@@ -66,6 +84,24 @@ on:
       - 'wrangler.site.toml'
       - 'test/ai-commons*.test.mjs'
       - 'ai-router-score.js'
+      - 'ai-resource-policy.js'
+      - 'ai-orchestrator-runtime.js'
+      - 'core-ai-gateway.js'
+      - 'ekodi-ai-provider-registry.js'
+      - 'ai-provider-control.js'
+      - 'ai-provider-telemetry.js'
+      - 'ai-provider-feedback.js'
+      - 'api-usage-meter.js'
+      - 'openai-provider-adapter.js'
+      - 'gemini-orchestrator-provider-adapter.js'
+      - 'scripts/validate-ai-provider-boundary.mjs'
+      - 'test/ai-provider-boundary.test.mjs'
+      - 'test/ai-provider-registry.test.mjs'
+      - 'test/ai-orchestrator-runtime.test.mjs'
+      - 'test/ai-resource-policy.test.mjs'
+      - 'test/core-ai-gateway.test.mjs'
+      - 'test/ai-provider-control.test.mjs'
+      - 'migrations/0095_ai_intelligence_supply_chain.sql'
       - 'ai-collaboration-settings.js'
       - 'local-execution-policy.js'
       - 'ai-governance-runtime.js'
@@ -132,6 +168,18 @@ jobs:
           node --check cognitive-control-plane.js
           node --check ai-control-core.js
           node --check ai-router-score.js
+          node --check ai-resource-policy.js
+          node --check ai-orchestrator-runtime.js
+          node --check core-ai-gateway.js
+          node --check ekodi-ai-provider-registry.js
+          node --check ai-provider-control.js
+          node --check ai-provider-telemetry.js
+          node --check ai-provider-feedback.js
+          node --check api-usage-meter.js
+          node --check openai-provider-adapter.js
+          node --check gemini-orchestrator-provider-adapter.js
+          node --check scripts/validate-ai-provider-boundary.mjs
+          node scripts/validate-ai-provider-boundary.mjs
           node --check ai-collaboration-settings.js
           node --check local-execution-policy.js
           node --check ai-control-provider-router.js
@@ -146,7 +194,7 @@ jobs:
           node scripts/validate-constitution.mjs
           node scripts/validate-ai-mission-governance.mjs
           node scripts/validate-additive-migrations.mjs migrations
-          node --test test/ai-control-platform.test.mjs test/ai-router-score.test.mjs test/ai-collaboration-settings.test.mjs test/local-execution-policy.test.mjs test/ai-account-node-scheduler.test.mjs test/cognitive-control-plane.test.mjs test/common-service-operator-control.test.mjs test/ai-commons.test.mjs test/ai-commons-subservice.test.mjs
+          node --test test/ai-control-platform.test.mjs test/ai-router-score.test.mjs test/ai-resource-policy.test.mjs test/ai-provider-registry.test.mjs test/ai-orchestrator-runtime.test.mjs test/core-ai-gateway.test.mjs test/ai-provider-control.test.mjs test/ai-provider-boundary.test.mjs test/ai-collaboration-settings.test.mjs test/local-execution-policy.test.mjs test/ai-account-node-scheduler.test.mjs test/cognitive-control-plane.test.mjs test/common-service-operator-control.test.mjs test/ai-commons.test.mjs test/ai-commons-subservice.test.mjs
           node --check ai-commons.js
           node --check ai-commons-admin.js
           node --check ai-control/commons.js
@@ -157,7 +205,7 @@ jobs:
           ! grep -Fq 'pattern = "ai.ekodi.kr"' wrangler.ai.release.toml
           grep -Fq 'User traffic enters through ekodi.kr/ai via the shared-site service binding.' wrangler.ai.release.toml
           grep -Fq 'AI_TASK_EXECUTION_ENABLED = "false"' wrangler.ai.staging.release.toml
-          grep -Fq 'GEMINI_MODEL = "gemini-3.7-flash"' wrangler.ai.staging.release.toml
+          grep -Fq 'GEMINI_MODEL = "gemini-3.8-flash"' wrangler.ai.staging.release.toml
           grep -Fq 'no_bundle = true' wrangler.ai.release.toml
           grep -Fq 'no_bundle = true' wrangler.ai.staging.release.toml
           grep -Fq 'humanApprovalRequired:true' ai-control-worker.js
@@ -178,6 +226,7 @@ jobs:
           test -f migrations/0086_ai_commons_ideas.sql
           test -f migrations/0087_ai_commons_governance.sql
           test -f migrations/0088_ai_commons_sources.sql
+          test -f migrations/0095_ai_intelligence_supply_chain.sql
           test -f deploy/manifests/ai-control.worker.json
       - name: Build one immutable AI Control application artifact
         id: build_artifact

@@ -45,7 +45,7 @@ requireText(runtimeFile, [
 const coreGatewayFile = 'core-ai-gateway.js';
 requireText(coreGatewayFile, [
   'buildCoreAiGateway',
-  'runAiEnhancedTask',
+  'orchestrator.run',
   'requires a non-AI fallback',
   'providerIndependent: true',
   'aiOptional: true',
