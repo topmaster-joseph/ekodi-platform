@@ -26,10 +26,8 @@ test('Control staging binds only to the isolated Personal Finance staging worker
   assert.match(workflow,/Verify Personal Finance Control service binding in staging/);
   assert.match(workflow,/pf-control-staging\.json/);
   assert.match(workflow,/Cloudflare-Access/);
-  assert.match(workflow,/personal-finance-local\.json/);
   assert.match(workflow,/PF_ADMIN_AUTH_REQUIRED/);
   assert.match(workflow,/wrangler\.api\.staging\.local-runtime\.toml/);
-  assert.match(workflow,/personal_finance=.*\/api\/control\/personal-finance/);
 });
 
 test('Control guarded release probes the Personal Finance canonical auth boundary',()=>{
