@@ -655,7 +655,8 @@ function Replace-AgentFileAtomically([string]$CandidatePath, $Snapshot) {
   $stagedPath = Join-Path $Root ("agent.candidate.$([guid]::NewGuid().ToString('N')).ps1")
   Copy-Item -LiteralPath $CandidatePath -Destination $stagedPath -Force
   if (Test-Path $AgentPath) {
-    [System.IO.File]::Replace($stagedPath, $AgentPath, $null, $true)
+    $replaceBackup = Join-Path $Snapshot.transactionPath 'agent.replace-backup.ps1'
+    [System.IO.File]::Replace($stagedPath, $AgentPath, $replaceBackup, $true)
   } else {
     Move-Item -LiteralPath $stagedPath -Destination $AgentPath -Force
   }
