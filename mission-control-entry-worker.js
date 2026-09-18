@@ -98,6 +98,50 @@ function externalAccountCorsResponse(response, request, env = {}) {
   return applyApiSecurityHeaders(new Response(response.body, { status:response.status, statusText:response.statusText, headers }));
 }
 
+const PERSONAL_FINANCE_CONTROL_PATH = '/api/control/personal-finance';
+
+async function proxyPersonalFinanceAdminControl(request, env = {}) {
+  if (!env.PERSONAL_FINANCE?.fetch) {
+    return applyApiSecurityHeaders(new Response(JSON.stringify({
+      error:'Personal Finance service binding unavailable',
+      code:'PERSONAL_FINANCE_BINDING_UNAVAILABLE',
+    }), {
+      status:503,
+      headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store'},
+    }));
+  }
+  try {
+    const target = new URL(request.url);
+    target.pathname = '/api/admin/personal-finance/control';
+    const headers = new Headers(request.headers);
+    headers.set('x-ekodi-admin-proxy', 'personal-finance-binding-v1');
+    const body = request.method === 'GET' || request.method === 'HEAD' ? undefined : request.body;
+    const upstream = await env.PERSONAL_FINANCE.fetch(new Request(target.toString(), {
+      method:request.method,
+      headers,
+      body,
+      redirect:'manual',
+    }));
+    const response = new Response(upstream.body, {
+      status:upstream.status,
+      statusText:upstream.statusText,
+      headers:new Headers(upstream.headers),
+    });
+    response.headers.set('X-EKODI-Personal-Finance-Proxy', 'service-binding-v1');
+    response.headers.set('Cache-Control', 'no-store');
+    return applyApiSecurityHeaders(response);
+  } catch (error) {
+    console.error('Personal Finance control proxy error', error);
+    return applyApiSecurityHeaders(new Response(JSON.stringify({
+      error:'Personal Finance service unavailable',
+      code:'PERSONAL_FINANCE_PROXY_UNAVAILABLE',
+    }), {
+      status:503,
+      headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','retry-after':'30'},
+    }));
+  }
+}
+
 export default {
   async fetch(request, env, ctx) {
     const incoming = new URL(request.url);
@@ -154,6 +198,10 @@ export default {
     if (path === '/api/homepage/presentation' || path === '/api/control/homepage') {
       try { const response = await handleHomepagePresentation(request, env); if (response) return applyApiSecurityHeaders(response); }
       catch (error) { console.error('Homepage presentation control error', error); return errorResponse('EKODI 첫화면 표시 설정 처리 중 오류가 발생했습니다.', 'HOMEPAGE_PRESENTATION_ERROR'); }
+    }
+
+    if (path === PERSONAL_FINANCE_CONTROL_PATH) {
+      return proxyPersonalFinanceAdminControl(request, env);
     }
 
     if (path.startsWith('/api/user-ai/')) {
