@@ -21,13 +21,16 @@ test('authenticated Admin E2E isolates every menu in a fresh Chromium process an
   assert.match(source, /runCanonicalAssist\(\)/);
 });
 
-test('isolated worker skips redundant clicks only when the active context tab has a visible rendered panel', async () => {
+test('isolated worker skips redundant activation only when the active context tab has a visible rendered panel', async () => {
   const source = await workerSource();
   assert.match(source, /let alreadyActive = aria === 'true'/);
   assert.match(source, /stage\('active-panel-check'\)/);
   assert.match(source, /const activeState = await visiblePanelState\(\)/);
   assert.match(source, /alreadyActive = Boolean\(activeState\.panelFound && activeState\.selected && activeState\.textLength >= 4\)/);
-  assert.match(source, /if \(!alreadyActive\) await clickFast\(tab\)/);
+  assert.match(source, /if \(!alreadyActive\) await activateContextTab\(tab\)/);
+  assert.match(source, /async function activateContextTab\(tab\)/);
+  assert.match(source, /admin-detail-item\[data-admin-detail-section=/);
+  assert.match(source, /if \(await detail\.count\(\) && await detail\.isVisible\(\)\) return clickFast\(detail\)/);
   assert.match(source, /click\(\{ force: true, noWaitAfter: true/);
   assert.match(source, /destination\.hostname !== 'accounts\.google\.com'/);
   assert.match(source, /Production menu registry missing/);
