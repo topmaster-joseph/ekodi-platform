@@ -3,7 +3,9 @@ import { handleAdminSessionFastPath } from './admin-session-fastpath.js';
 
 const BASE = '/api/control/storage/google';
 const REDIRECT_URI = 'https://drive.ekodi.kr/api/control/storage/google/callback';
-const MARKETING_YOUTUBE_CALLBACK = 'https://marketing-connect-api.ekodi.kr/oauth/youtube/callback';
+const CANONICAL_REDIRECT_URI = 'https://ekodi.kr/storage/api/control/storage/google/callback';
+const MARKETING_YOUTUBE_CALLBACK = 'https://ekodi.kr/marketing-connect-api/oauth/youtube/callback';
+const ALLOWED_GOOGLE_REDIRECT_URIS = new Set([REDIRECT_URI,CANONICAL_REDIRECT_URI]);
 const YOUTUBE_SCOPES = ['openid','email','https://www.googleapis.com/auth/youtube.upload','https://www.googleapis.com/auth/youtube.readonly'];
 const GOOGLE_USERINFO = 'https://openidconnect.googleapis.com/v1/userinfo';
 const ADMIN_ORIGIN = 'https://admin.ekodi.kr';
@@ -79,6 +81,14 @@ function primaryDomains(env) {
 function primarySharedDriveId(env) { return String(env.STORAGE_PRIMARY_SHARED_DRIVE_ID || '').trim(); }
 function primarySharedDriveName(env) { return String(env.STORAGE_PRIMARY_SHARED_DRIVE_NAME || 'EKODI').trim() || 'EKODI'; }
 function googleClientId(env) { return String(env.GOOGLE_DRIVE_CLIENT_ID || env.GOOGLE_CLIENT_ID || '').trim(); }
+function googleOAuthRedirectUri(env) {
+  const configured = String(env.GOOGLE_DRIVE_OAUTH_REDIRECT_URI || REDIRECT_URI).trim();
+  return ALLOWED_GOOGLE_REDIRECT_URIS.has(configured) ? configured : REDIRECT_URI;
+}
+function stateGoogleOAuthRedirectUri(payload, env) {
+  const pinned = String(payload?.redirectUri || '').trim();
+  return ALLOWED_GOOGLE_REDIRECT_URIS.has(pinned) ? pinned : googleOAuthRedirectUri(env);
+}
 function ready(env) { return Boolean(googleClientId(env) && env.GOOGLE_DRIVE_CLIENT_SECRET && env.STORAGE_CREDENTIAL_KEY && env.DB); }
 function b64url(bytes) {
   let binary=''; for (const byte of bytes) binary += String.fromCharCode(byte);
@@ -246,8 +256,9 @@ export async function refreshGoogleAccessToken(env,{refreshToken}={}) {
 export async function startMarketingYouTubeOAuth(env,{state,accountHint}={}) {
   if(!ready(env)) throw Object.assign(new Error('GOOGLE_OAUTH_BROKER_NOT_CONFIGURED'),{code:'GOOGLE_OAUTH_BROKER_NOT_CONFIGURED'});
   await ensureSchema(env.DB); const marketingState=String(state||'').trim(); if(!marketingState) throw new Error('MARKETING_STATE_REQUIRED');
-  const signed=await signState(env,{purpose:'marketing_youtube',marketingState,targetAccount:String(accountHint||'').trim().toLowerCase(),exp:Date.now()+10*60*1000});
-  const params=new URLSearchParams({client_id:googleClientId(env),redirect_uri:REDIRECT_URI,response_type:'code',access_type:'offline',prompt:'consent select_account',include_granted_scopes:'true',scope:YOUTUBE_SCOPES.join(' '),state:signed});
+  const redirectUri=googleOAuthRedirectUri(env);
+  const signed=await signState(env,{purpose:'marketing_youtube',marketingState,targetAccount:String(accountHint||'').trim().toLowerCase(),redirectUri,exp:Date.now()+10*60*1000});
+  const params=new URLSearchParams({client_id:googleClientId(env),redirect_uri:redirectUri,response_type:'code',access_type:'offline',prompt:'consent select_account',include_granted_scopes:'true',scope:YOUTUBE_SCOPES.join(' '),state:signed});
   const hint=String(accountHint||'').trim(); if(hint) params.set('login_hint',hint);
   return {authorizationUrl:`${AUTH_URL}?${params}`};
 }
@@ -454,9 +465,10 @@ export async function handleGoogleDriveStorageControl(request, env) {
     const payload = await readState(env,url.searchParams.get('state'));
     const code = url.searchParams.get('code');
     if (!payload || !code || Number(payload.exp || 0) < Date.now()) return html('연결 요청이 만료되었거나 올바르지 않습니다.');
+    const redirectUri=stateGoogleOAuthRedirectUri(payload,env);
     if(payload.purpose==='marketing_youtube'){
       try{
-        const token=await tokenRequest(env,{client_id:googleClientId(env),client_secret:String(env.GOOGLE_DRIVE_CLIENT_SECRET),code,grant_type:'authorization_code',redirect_uri:REDIRECT_URI});
+        const token=await tokenRequest(env,{client_id:googleClientId(env),client_secret:String(env.GOOGLE_DRIVE_CLIENT_SECRET),code,grant_type:'authorization_code',redirect_uri:redirectUri});
         if(!token.access_token||!token.refresh_token)return html('YouTube 장기 연결 토큰을 받지 못했습니다. 다시 연결해 주세요.');
         const targetAccount=String(payload.targetAccount||'').trim().toLowerCase();
         const profileResponse=await fetch(GOOGLE_USERINFO,{headers:{authorization:`Bearer ${token.access_token}`}});
@@ -477,7 +489,7 @@ export async function handleGoogleDriveStorageControl(request, env) {
     if (!stateRow) return html('이미 사용되었거나 만료된 연결 요청입니다.');
     await env.DB.prepare('DELETE FROM storage_oauth_states WHERE nonce_hash=?').bind(hash).run();
     try {
-      const token = await tokenRequest(env,{client_id:googleClientId(env),client_secret:String(env.GOOGLE_DRIVE_CLIENT_SECRET),code,grant_type:'authorization_code',redirect_uri:REDIRECT_URI});
+      const token = await tokenRequest(env,{client_id:googleClientId(env),client_secret:String(env.GOOGLE_DRIVE_CLIENT_SECRET),code,grant_type:'authorization_code',redirect_uri:redirectUri});
       if (!token.refresh_token) return html('Google에서 장기 연결용 refresh token을 받지 못했습니다. 연결을 다시 시도해 주세요.');
       const profile = await about(token.access_token);
       const email = String(profile.user?.emailAddress || '').trim().toLowerCase();
@@ -525,7 +537,7 @@ export async function handleGoogleDriveStorageControl(request, env) {
   }
   if (url.pathname === `${BASE}/status` && request.method === 'GET') {
     const routes = await env.DB.prepare('SELECT service_key,folder_key,folder_name,folder_id,connection_role,updated_at FROM storage_routes ORDER BY folder_name').all();
-    return json({schemaVersion:1,configured:ready(env),primaryDomains:primaryDomains(env),primarySharedDrive:{id:primarySharedDriveId(env),name:primarySharedDriveName(env)},redirectUri:REDIRECT_URI,connections:await connectionRows(env),routes:routes.results || [],policy:{primary:'Google Workspace Shared Drive EKODI',secondary:'optional Google accounts',webDelivery:'Cloudflare R2 when needed',credentials:'AES-GCM encrypted at rest'}},200,auth.response.headers);
+    return json({schemaVersion:1,configured:ready(env),primaryDomains:primaryDomains(env),primarySharedDrive:{id:primarySharedDriveId(env),name:primarySharedDriveName(env)},redirectUri:googleOAuthRedirectUri(env),canonicalRedirectUri:CANONICAL_REDIRECT_URI,legacyRedirectUri:REDIRECT_URI,connections:await connectionRows(env),routes:routes.results || [],policy:{primary:'Google Workspace Shared Drive EKODI',secondary:'optional Google accounts',webDelivery:'Cloudflare R2 when needed',credentials:'AES-GCM encrypted at rest'}},200,auth.response.headers);
   }
   if (url.pathname === `${BASE}/oauth/start` && request.method === 'POST') {
     if (!ready(env)) return json({error:'Google Drive OAuth Secret 구성이 필요합니다.',code:'GOOGLE_DRIVE_NOT_CONFIGURED'},503,auth.response.headers);
@@ -533,9 +545,10 @@ export async function handleGoogleDriveStorageControl(request, env) {
     const nonce=b64url(crypto.getRandomValues(new Uint8Array(24))); const now=new Date(); const exp=new Date(now.getTime()+10*60*1000);
     await env.DB.prepare('DELETE FROM storage_oauth_states WHERE expires_at<=?').bind(now.toISOString()).run();
     await env.DB.prepare('INSERT INTO storage_oauth_states(nonce_hash,admin_email,connection_role,expires_at,created_at) VALUES(?,?,?,?,?)').bind(await nonceHash(nonce),auth.session.email,role,exp.toISOString(),now.toISOString()).run();
-    const state=await signState(env,{nonce,role,adminEmail:auth.session.email,returnTo,exp:exp.getTime()});
+    const redirectUri=googleOAuthRedirectUri(env);
+    const state=await signState(env,{nonce,role,adminEmail:auth.session.email,returnTo,redirectUri,exp:exp.getTime()});
     const reconnectRow=await env.DB.prepare(`SELECT account_email FROM storage_connections WHERE role=? AND status!='disabled' ORDER BY updated_at DESC LIMIT 1`).bind(role).first();
-    const params=new URLSearchParams({client_id:googleClientId(env),redirect_uri:REDIRECT_URI,response_type:'code',access_type:'offline',prompt:'consent',include_granted_scopes:'true',scope:SCOPES.join(' '),state});
+    const params=new URLSearchParams({client_id:googleClientId(env),redirect_uri:redirectUri,response_type:'code',access_type:'offline',prompt:'consent',include_granted_scopes:'true',scope:SCOPES.join(' '),state});
     if(reconnectRow?.account_email)params.set('login_hint',String(reconnectRow.account_email));
     return json({authorizeUrl:`${AUTH_URL}?${params}`,role},200,auth.response.headers);
   }
