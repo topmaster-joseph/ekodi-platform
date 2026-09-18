@@ -63,3 +63,10 @@ test('internal recording remains default while optional external channel selecti
   assert.match(page,/EKODI 내부 방송 · 자동 저장/);
   assert.match(page,/외부 동시방송/);
 });
+
+
+test('live chat does not trust client supplied broadcaster names',async()=>{
+  const control=await read('realtime-control.js');
+  assert.match(control,/ADMIN_ROLES\.has\(actorRole\)\?'방송자'/);
+  assert.doesNotMatch(control,/displayName=clean\(input\?\.displayName/);
+});
