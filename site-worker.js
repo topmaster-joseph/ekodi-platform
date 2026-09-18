@@ -584,6 +584,17 @@ export default {
         applyBaseSecurityHeaders(response.headers);
         return response;
       }
+      if (['GET','HEAD'].includes(request.method) && (url.pathname === '/connect' || url.pathname === '/connect/')) {
+        const target = new URL('/auth/', request.url);
+        target.searchParams.set('site','ai');
+        target.searchParams.set('return_to','https://ekodi.kr/ai/');
+        target.searchParams.set('source','mcp-connect');
+        const response = new Response(null,{status:302,headers:{location:target.toString(),'cache-control':'no-store'}});
+        applyBaseSecurityHeaders(response.headers);
+        response.headers.set('X-EKODI-Route','mcp-connect-auth');
+        response.headers.set('X-Robots-Tag','noindex, nofollow, noarchive');
+        return response;
+      }
       if (url.pathname === '/ai') {
         const target = new URL(request.url);
         target.pathname = '/ai/';
