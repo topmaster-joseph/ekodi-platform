@@ -9,7 +9,7 @@ import {
 } from '../partner-news-engine.js';
 import { createPartnerNewsAdminAdapter, handlePartnerNewsRequest } from '../partner-news-control.js';
 
-test('partner news contract is tenant/service scoped and private first', () => {
+test('partner news contract is tenant/service scoped and private first', async () => {
   assert.equal(PARTNER_NEWS_CONTRACT.scope, 'tenant-service');
   assert.equal(PARTNER_NEWS_CONTRACT.defaultState, 'DRAFT');
   assert.equal(PARTNER_NEWS_CONTRACT.publicState, 'PUBLISHED');
@@ -17,6 +17,9 @@ test('partner news contract is tenant/service scoped and private first', () => {
   assert.equal(PARTNER_NEWS_CONTRACT.destructiveDelete, false);
   assert.equal(typeof createPartnerNewsAdminAdapter, 'function');
   assert.equal(typeof handlePartnerNewsRequest, 'function');
+  const source = await readFile(new URL('../partner-news-engine.js', import.meta.url), 'utf8');
+  assert.ok(source.includes("current.status !== 'REVIEW'"));
+  assert.ok(source.includes('PARTNER_NEWS_REVIEW_REQUIRED'));
 });
 
 test('partner news validates reusable scope and HTTPS provenance', () => {
