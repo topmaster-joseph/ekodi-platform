@@ -5,7 +5,7 @@ import './admin-context-shell-recovery.js';
 export const ADMIN_MENU_GROUPS = Object.freeze([
   { id: 'home', icon: '⌂', defaultSection: 'command-home', labels: { ko: '홈', en: 'Home' } },
   { id: 'operations', icon: '✦', defaultSection: 'work', labels: { ko: '운영', en: 'Operations' } },
-  { id: 'workspaces', icon: '▣', defaultSection: 'clients', labels: { ko: '공간', en: 'Workspaces' } },
+  { id: 'workspaces', icon: '▣', defaultSection: 'clients', labels: { ko: '조직·고객', en: 'Workspaces' } },
   { id: 'services', icon: '◆', defaultSection: 'common-services', labels: { ko: '서비스', en: 'Services' } },
   { id: 'system', icon: '◎', defaultSection: 'health', labels: { ko: '시스템', en: 'System' } },
 ]);
@@ -67,7 +67,7 @@ export const ADMIN_MENU_CATEGORY_LABELS = Object.freeze({
   ai: { ko: 'AI·자동화', en: 'AI & Automation' }, platform: { ko: '인프라·상태', en: 'Platform & Health' }, other: { ko: '기타', en: 'Other' },
 });
 const ADMIN_MENU_CATEGORY_ORDER = Object.freeze({
-  home: ['overview','other'], operations: ['workflow','finance','other'], space: ['customer','organization','other'],
+  home: ['overview','other'], operations: ['workflow','finance','other'], workspaces: ['customer','organization','other'],
   services: ['common','content','business','other'], system: ['environment','security','ai','platform','other'],
 });
 const ADMIN_MENU_SECTION_CATEGORY = Object.freeze({
