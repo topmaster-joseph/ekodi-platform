@@ -9,7 +9,7 @@ test('Mall admin exposes an operator-first seven-surface navigation', () => {
   assert.match(source, /\['products','상품관리'\]/);
   assert.match(source, /\['sourcing','제휴·소싱'\]/);
   assert.match(source, /\['channels','채널설정'\]/);
-  assert.match(source, /adminBase=service==='mall'\?`\$\{base\}\/ekodimall\/admin`/);
+  assert.match(source, /adminBase=standaloneMall\?'\/ekodimall\/admin':service==='mall'\?`\$\{base\}\/ekodimall\/admin`/);
   assert.match(source, /\['growth','AI 자동영업'\]/);
   assert.match(source, /\['analytics','성과·학습'\]/);
   assert.match(source, /\['design','사이트 스타일'\]/);
