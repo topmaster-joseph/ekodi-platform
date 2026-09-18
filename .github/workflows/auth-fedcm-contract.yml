@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - 'auth-site/index.html'
+      - 'auth-site/auth-bootstrap.js'
       - 'auth-site/auth-router.js'
       - 'auth-site/admin-auth.js'
       - 'auth-site/author-auth.js'
@@ -35,6 +36,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          node --check auth-site/auth-bootstrap.js
           node --check auth-site/auth-router.js
           node --check auth-site/admin-auth.js
           node --check auth-site/author-auth.js
@@ -54,7 +56,8 @@ jobs:
           grep -Fq "identity('/google/exchange'" auth-site/marketing-auth-hotfix.js
           grep -Fq "identity('/google/link/exchange'" auth-site/marketing-auth-hotfix.js
           grep -Fq 'verifyOtp({token_hash:proof.tokenHash' auth-site/marketing-auth-hotfix.js
-          grep -Fq '/auth-router.js?v=20260904-direct-login-1' auth-site/index.html
+          grep -Fq '/auth-bootstrap.js?v=20260918-admin-login-1' auth-site/index.html
+          grep -Fq '/auth-router.js?v=20260904-direct-login-1' auth-site/auth-bootstrap.js
           grep -Fq "admin-auth.js?v=20260909-origin-bridge-1" auth-site/auth-router.js
           grep -Fq "author-auth.js?v=20260816-author-ai-1" auth-site/auth-router.js
           grep -Fq "business-auth.js?v=20260826-free-fallback-1" auth-site/auth-router.js
@@ -62,6 +65,7 @@ jobs:
           grep -Fq "client-auth.js?v=20260904-direct-login-1" auth-site/auth-router.js
           grep -Fq "auth.js?v=20260824-return-origin-1" auth-site/auth-router.js
           grep -Fq "marketing-onboarding.js?v=20260817-workspace-label-1" auth-site/auth-router.js
+          grep -Fq "'auth-bootstrap.js'" scripts/build.mjs
           grep -Fq "'author-auth.js'" scripts/build.mjs
           grep -Fq "'business-auth.js'" scripts/build.mjs
           grep -Fq "'/author-auth.js'" site-worker.js
