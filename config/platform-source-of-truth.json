@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "policyId": "PLATFORM-SOT-001",
+  "status": "enforced",
+  "effectiveDate": "2026-09-18",
+  "purpose": "Prevent autonomous planning from treating historical or descriptive documents as higher authority than current EKODI constitutional, architecture, orchestration and runtime contracts.",
+  "authorityPrecedence": [
+    {"rank": 1, "path": "CONSTITUTION.md", "kind": "constitution"},
+    {"rank": 2, "path": "governance/architecture/ekodi-evolution-model.json", "kind": "evolution-model"},
+    {"rank": 3, "path": "governance/architecture/sovereign-autonomous-operations.v1.json", "kind": "sovereign-operations"},
+    {"rank": 4, "path": "config/ai-change-orchestration-policy.json", "kind": "change-orchestration"},
+    {"rank": 5, "path": "config/autonomous-technology-evolution-policy.json", "kind": "technology-evolution"},
+    {"rank": 6, "path": "config/ecosystem-services.json", "kind": "service-registry"},
+    {"rank": 7, "path": "platform-route-registry.js", "kind": "runtime-route-registry"}
+  ],
+  "currentFacts": {
+    "generation": 10,
+    "generationName": "Self-Architecture Optimization",
+    "scaleTier": "S0",
+    "canonicalWebRoot": "https://ekodi.kr",
+    "canonicalAdminPath": "https://ekodi.kr/admin",
+    "canonicalPersonalPath": "https://ekodi.kr/my",
+    "canonicalMcpPath": "https://ekodi.kr/mcp",
+    "newSubdomainCreationAllowed": false,
+    "automaticPaidCommitmentAllowed": false,
+    "directAutonomousProductionMutationAllowed": false,
+    "directPushToMainAllowed": false
+  },
+  "interpretationRules": {
+    "unlistedDocumentsMayDescribeHistory": true,
+    "unlistedDocumentsMayOverrideCanonicalFacts": false,
+    "legacySubdomainReferencesAreNonAuthoritative": true,
+    "autonomousPlannerMustUseAuthorityPrecedence": true,
+    "runtimeEvidenceBeatsDescriptiveDocumentationForCurrentState": true,
+    "uncertainOrConflictingCurrentStateMustBeReportedAsConfirmationRequired": true
+  },
+  "validationBindings": [
+    "current generation and scale tier must match the evolution model",
+    "free-or-low-cost-first must remain active at S0",
+    "autonomous agents may not mutate production directly",
+    "production promotion remains independently governed",
+    "direct push to main remains forbidden",
+    "new paid commitments remain human-gated"
+  ]
+}
