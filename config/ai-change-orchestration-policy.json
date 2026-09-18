@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 4,
+  "schemaVersion": 5,
   "policyId": "AI-ORCHESTRATE-001",
   "status": "enforced",
   "controlPlane": "EKODI AI",
@@ -220,5 +220,44 @@
         "next-executable-step"
       ]
     }
+  },
+  "executionFallback": {
+    "enabled": true,
+    "decisionOwner": "ekodi-ai-orchestrator",
+    "automaticDiscovery": true,
+    "automaticPreflight": true,
+    "preserveOrchestrationGate": true,
+    "preserveAuthorityAndHumanGates": true,
+    "selectionPolicy": "capability-risk-health-cost-aware",
+    "preferredLaneOrder": [
+      "github_connector",
+      "github_actions",
+      "managed_cloud_runner",
+      "service_connector",
+      "device_agent",
+      "self_hosted_runner",
+      "remote_desktop"
+    ],
+    "skipBeforeSideEffectWhen": [
+      "unavailable",
+      "disabled",
+      "offline",
+      "quota_exhausted",
+      "monthly_limit_reached",
+      "runner_capacity_unavailable",
+      "preflight_rejected"
+    ],
+    "continueAfterNoEffect": true,
+    "continueAfterVerifiedRollback": true,
+    "continueAfterExecutionErrorOnlyWhenExplicitlySafe": true,
+    "ambiguousSideEffectStopsFanout": true,
+    "auditEveryAttempt": true,
+    "completionRequiresExecutionVerification": true,
+    "escalateOnlyWhen": [
+      "human_authority_required",
+      "high_impact_or_irreversible",
+      "ambiguous_side_effect",
+      "all_registered_safe_lanes_exhausted"
+    ]
   }
 }

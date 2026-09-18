@@ -58,6 +58,18 @@ if (policy.controlPlane !== 'EKODI AI') fail('EKODI AI must remain the control p
 if (policy.mutationBoundary?.breakGlassBypassEnabled !== false) fail('break-glass bypass must remain disabled.');
 if (policy.sourceControl?.directPushToMain !== false) fail('direct main pushes must remain forbidden.');
 if (policy.execution?.externalAiMayOwnProductionMutation !== false) fail('external AI cannot own production mutation.');
+const executionFallback = policy.executionFallback || {};
+if (executionFallback.enabled !== true) fail('automatic execution fallback must remain enabled.');
+if (executionFallback.decisionOwner !== policy.orchestrator) fail('execution fallback decision owner must remain the EKODI orchestrator.');
+if (executionFallback.automaticDiscovery !== true || executionFallback.automaticPreflight !== true) fail('execution fallback must automatically discover and preflight alternate lanes.');
+if (executionFallback.preserveOrchestrationGate !== true) fail('execution fallback must preserve the EKODI AI Orchestration Gate.');
+if (executionFallback.preserveAuthorityAndHumanGates !== true) fail('execution fallback must preserve authority and human gates.');
+if (executionFallback.ambiguousSideEffectStopsFanout !== true) fail('ambiguous side effects must stop automatic fallback fan-out.');
+if (executionFallback.continueAfterExecutionErrorOnlyWhenExplicitlySafe !== true) fail('execution-error fallback must require explicit safety evidence.');
+if (executionFallback.continueAfterVerifiedRollback !== true) fail('post-effect fallback must require verified rollback.');
+if (executionFallback.auditEveryAttempt !== true || executionFallback.completionRequiresExecutionVerification !== true) fail('fallback attempts must remain audited and completion must require verification.');
+const expectedFallbackLanes = ['github_connector','github_actions','managed_cloud_runner','service_connector','device_agent','self_hosted_runner','remote_desktop'];
+if (JSON.stringify(executionFallback.preferredLaneOrder || []) !== JSON.stringify(expectedFallbackLanes)) fail('execution fallback lane order must remain cloud-first with Remote Desktop last.');
 
 const eventName = text(process.env.GITHUB_EVENT_NAME);
 const eventPath = text(process.env.GITHUB_EVENT_PATH);
@@ -284,6 +296,14 @@ const attestation = {
   roles: policy.execution.requiredRoles,
   providerSelection: policy.execution.providerSelection,
   externalAiRole: policy.execution.externalAiRole,
+  executionFallback: Object.freeze({
+    enabled: executionFallback.enabled === true,
+    decisionOwner: executionFallback.decisionOwner,
+    selectionPolicy: executionFallback.selectionPolicy,
+    preferredLaneOrder: executionFallback.preferredLaneOrder,
+    preserveOrchestrationGate: executionFallback.preserveOrchestrationGate === true,
+    ambiguousSideEffectStopsFanout: executionFallback.ambiguousSideEffectStopsFanout === true,
+  }),
   humanGateRecommended,
   directMutationAllowed: false,
   constitutionalControls: ciMode ? constitutionalControlValidators : [],
@@ -307,6 +327,8 @@ if (process.env.GITHUB_STEP_SUMMARY) {
     `- Task classes: ${taskClasses.join(', ')}`,
     `- Provider selection: ${policy.execution.providerSelection}`,
     `- External AI role: ${policy.execution.externalAiRole}`,
+    `- Execution fallback: ${executionFallback.enabled ? 'automatic' : 'disabled'} / owner=${executionFallback.decisionOwner}`,
+    `- Fallback lanes: ${(executionFallback.preferredLaneOrder || []).join(' -> ')}`,
     `- Direct mutation: forbidden`,
     ciMode ? `- Constitutional controls: ${constitutionalControlValidators.length} passed` : '- Constitutional controls: static policy mode',
     humanGateRecommended ? '- Human Gate: recommended for topology-impacting intent' : '- Human Gate: not required by this classifier',
