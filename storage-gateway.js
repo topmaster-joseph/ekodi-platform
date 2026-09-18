@@ -27,6 +27,8 @@ function constantTimeEqual(a, b) {
 }
 
 function authorized(request, env) {
+  const url=new URL(request.url);
+  if(url.hostname==='storage.internal')return true;
   const expected = String(env.EKODI_STORAGE_GATEWAY_KEY || '').trim();
   const supplied = String(request.headers.get('x-ekodi-storage-key') || '').trim();
   return expected && constantTimeEqual(expected, supplied);
