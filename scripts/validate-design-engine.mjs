@@ -21,7 +21,7 @@ const [policy, userDna, userShell, theme, adminRuntime, adminCss, adminPrinciple
 
 const errors = [];
 const expectedAxes = ['home', 'operations', 'workspaces', 'services', 'system'];
-const expectedLabels = ['홈', '운영', '공간', '서비스', '시스템'];
+const expectedLabels = ['홈', '운영', '조직·고객', '서비스', '시스템'];
 const actualAxes = ADMIN_MENU_GROUPS.map(group => group.id);
 const actualLabels = ADMIN_MENU_GROUPS.map(group => group.labels?.ko);
 
@@ -63,7 +63,7 @@ if (!/\['admin-menu-registry\.js', \[[^\]]*'admin-design-engine\.js'[^\]]*'platf
 if (!adminCss.includes('[data-ekodian-character]')) errors.push('admin design CSS must contain the EKODIAN character layer.');
 if (!adminCss.includes('@media(prefers-reduced-motion:reduce)')) errors.push('admin character layer must respect reduced-motion preferences.');
 
-for (const marker of ['8세대 공통 쉘은 네 영역과 하나의 스크롤 주체로 구성한다', 'EKODI Design Engine 계층', '내비게이션은 최대 세 단계까지만 허용한다', '서비스 개성은 Shell 교체가 아니라 Theme Token으로 표현한다', '공통 UI의 소유권을 코드 수준에서 분리한다']) {
+for (const marker of ['8세대 공통 쉘은 ChatGPT형 좌측 내비게이션 + 우측 작업공간 + 하단 대화창으로 구성한다', 'EKODI Design Engine 계층', '내비게이션은 최대 세 단계까지만 허용한다', '서비스 개성은 Shell 교체가 아니라 Theme Token으로 표현한다', '공통 UI의 소유권을 코드 수준에서 분리한다']) {
   if (!adminPrinciples.includes(marker)) errors.push(`admin UI principles lost design-engine marker: ${marker}`);
 }
 

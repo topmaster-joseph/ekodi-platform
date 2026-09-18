@@ -108,7 +108,9 @@ test('command history is global across admin menus while current screen context 
   assert.match(js,/placeholder='전체 대화 검색'/);
   assert.match(js,/classList\.add\('admin-command-history-ready'\)/);
   assert.match(js,/classList\.toggle\('history-only',!state\.open\)/);
-  assert.match(css,/body\.admin-command-history-ready:not\(\.admin-command-home\) \.content\{margin-left:286px!important\}/);
+  assert.match(css,/body\.admin-command-history-ready:not\(\.admin-command-home\) \.content\{margin-left:0!important\}/);
+  assert.match(css,/body:not\(\.admin-command-home\) \.ekodi-assist\.history-only\{display:none!important\}/);
+  assert.match(css,/body:not\(\.admin-command-home\) \.ekodi-assist:not\(\.history-only\) \.ekodi-assist-rail\{display:none!important\}/);
   assert.match(css,/\.ekodi-assist\.history-only \.ekodi-assist-main\{display:none!important\}/);
   assert.match(bootstrap,/A\(0\)\.then\(H\)/);
   assert.ok(js.includes('ekodi-admin-section-changed'));
