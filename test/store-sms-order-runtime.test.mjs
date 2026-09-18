@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { classifySmsOrderInput, customerSmsOrderReply } from '../store-sms-order-runtime.js';
+import { classifySmsOrderInput, customerSmsOrderReply, isOpaqueSmsThreadId } from '../store-sms-order-runtime.js';
 
 test('SMS order input classifier recognizes explicit confirmation and cancellation',()=>{
   for(const value of ['1','확정','주문확정','네','YES'])assert.equal(classifySmsOrderInput(value),'confirm');
@@ -24,4 +24,11 @@ test('accepted reply does not invent price, payment, or delivery promises',()=>{
   assert.match(reply,/매장에서 주문을 접수/);
   assert.match(reply,/최종 금액/);
   assert.doesNotMatch(reply,/\d+,?\d*원/);
+});
+
+
+test('SMS ingress requires opaque bridge thread IDs instead of raw phone or email identifiers',()=>{
+  assert.equal(isOpaqueSmsThreadId('conv_8d5a530d-8206-44bd-9e2e-883266e5a777'),true);
+  assert.equal(isOpaqueSmsThreadId('010-1234-5678'),false);
+  assert.equal(isOpaqueSmsThreadId('customer@example.com'),false);
 });
