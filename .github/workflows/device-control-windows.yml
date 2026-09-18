@@ -67,6 +67,11 @@ jobs:
           grep -Fq "styles: ['device-control-admin.css', 'remote-power-admin.css']" dist/admin-demand-loader.js
           grep -Fq "scripts: ['device-control-admin.js', 'remote-power-admin.js']" dist/admin-demand-loader.js
           grep -Fq 'RegisterProtocol' dist/ekodi-device-bootstrap.cmd
+          grep -Fq 'EKB-130' dist/ekodi-device-bootstrap.cmd
+          if grep -Fq 'ekodi-device-startup-bootstrap.ps1' dist/ekodi-device-bootstrap.cmd; then
+            echo 'Agent bootstrap must not install Boot/WOL automatically.'
+            exit 1
+          fi
           if grep -Fq '<script src="device-control-admin.js"' dist/control-center.html; then
             echo 'Device Control must remain demand-loaded after authentication.'
             exit 1
@@ -81,18 +86,24 @@ jobs:
     timeout-minutes: 9
     steps:
       - uses: actions/checkout@v7
-      - name: Parse Windows Agent without executing it
+      - name: Parse Windows Agent and Boot/WOL scripts without executing them
         shell: pwsh
         run: |
-          $path = Join-Path $PWD 'tools/ekodi-device-agent/windows/ekodi-device-agent.ps1'
-          $tokens = $null
-          $errors = $null
-          [void][System.Management.Automation.Language.Parser]::ParseFile($path, [ref]$tokens, [ref]$errors)
-          if ($errors.Count -gt 0) {
-            $errors | Format-List | Out-String | Write-Error
-            exit 1
+          foreach ($relative in @(
+            'tools/ekodi-device-agent/windows/ekodi-device-agent.ps1',
+            'tools/ekodi-device-agent/windows/ekodi-device-startup.ps1',
+            'tools/ekodi-device-agent/windows/transactional-upgrade.test.ps1'
+          )) {
+            $path = Join-Path $PWD $relative
+            $tokens = $null
+            $errors = $null
+            [void][System.Management.Automation.Language.Parser]::ParseFile($path, [ref]$tokens, [ref]$errors)
+            if ($errors.Count -gt 0) {
+              $errors | Format-List | Out-String | Write-Error
+              exit 1
+            }
+            Write-Host "PowerShell parse OK: $path"
           }
-          Write-Host "PowerShell parse OK: $path"
       - name: Verify remote execution and privacy boundary
         shell: pwsh
         run: |
@@ -180,3 +191,17 @@ jobs:
           try { [void](Parse-ProtocolEnrollment 'ekodi-device://shell?code=EKD-0123456789ABCDEF0123') } catch { $failed = $true }
           if (-not $failed) { throw 'Protocol parser accepted a non-enrollment action.' }
           Write-Host 'EKODI protocol boundary OK.'
+      - name: Verify transactional upgrade, injected failure rollback, and re-upgrade
+        shell: pwsh
+        run: |
+          & (Join-Path $PWD 'tools/ekodi-device-agent/windows/transactional-upgrade.test.ps1')
+      - name: Verify bootstrap separates Agent install from Boot WOL and avoids duplicate elevation
+        shell: pwsh
+        run: |
+          $bootstrap = Get-Content (Join-Path $PWD 'ekodi-device-bootstrap.cmd') -Raw
+          if ($bootstrap -notmatch '\$isAdmin=') { throw 'Bootstrap does not detect the current administrator token.' }
+          if ($bootstrap -notmatch 'if\(\$isAdmin\)') { throw 'Bootstrap does not bypass duplicate RunAs when already elevated.' }
+          if ($bootstrap -match 'ekodi-device-startup-bootstrap\.ps1') { throw 'Bootstrap still couples Boot/WOL setup to Agent installation.' }
+          if ($bootstrap -match "'-Install','-RunNow'") { throw 'Bootstrap still auto-installs the Boot/WOL task.' }
+          if ($bootstrap -notmatch 'EKB-130') { throw 'Bootstrap does not expose structured install error codes.' }
+          Write-Host 'Bootstrap elevation and Agent/Boot separation OK.'
