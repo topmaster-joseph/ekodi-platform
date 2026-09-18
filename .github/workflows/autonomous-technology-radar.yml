@@ -1,0 +1,129 @@
+name: EKODI Autonomous Technology Radar
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '23 21 * * 0'
+  pull_request:
+    paths:
+      - 'config/platform-source-of-truth.json'
+      - 'config/autonomous-technology-evolution-policy.json'
+      - 'ekodi-technology-radar.js'
+      - 'scripts/validate-platform-source-of-truth.mjs'
+      - 'scripts/run-autonomous-technology-radar.mjs'
+      - 'test/platform-source-of-truth.test.mjs'
+      - 'test/autonomous-technology-radar.test.mjs'
+      - 'AUTONOMOUS_TECHNOLOGY_EVOLUTION.md'
+      - 'governance/amendments/2026-09-18-autonomous-technology-evolution-v1.10.0.json'
+      - '.github/workflows/autonomous-technology-radar.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'config/platform-source-of-truth.json'
+      - 'config/autonomous-technology-evolution-policy.json'
+      - 'ekodi-technology-radar.js'
+      - 'scripts/validate-platform-source-of-truth.mjs'
+      - 'scripts/run-autonomous-technology-radar.mjs'
+      - 'test/platform-source-of-truth.test.mjs'
+      - 'test/autonomous-technology-radar.test.mjs'
+      - 'AUTONOMOUS_TECHNOLOGY_EVOLUTION.md'
+      - 'governance/amendments/2026-09-18-autonomous-technology-evolution-v1.10.0.json'
+      - '.github/workflows/autonomous-technology-radar.yml'
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: ekodi-autonomous-technology-radar-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate source of truth and technology evolution contracts
+        run: |
+          set -euo pipefail
+          node --check ekodi-technology-radar.js
+          node --check scripts/validate-platform-source-of-truth.mjs
+          node --check scripts/run-autonomous-technology-radar.mjs
+          node scripts/validate-platform-source-of-truth.mjs
+          node --test test/platform-source-of-truth.test.mjs test/autonomous-technology-radar.test.mjs
+
+  radar:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GITHUB_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - name: Verify canonical current-state authority
+        run: node scripts/validate-platform-source-of-truth.mjs
+
+      - name: Collect official releases and run technology radar
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/run-autonomous-technology-radar.mjs             --policy config/autonomous-technology-evolution-policy.json             --output "$RUNNER_TEMP/ekodi-technology-radar-report.json"             --summary "$RUNNER_TEMP/ekodi-technology-radar-summary.md"
+          cat "$RUNNER_TEMP/ekodi-technology-radar-summary.md" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Enforce non-sovereign research boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          jq -e '
+            .productionMutationPerformed == false
+            and .automaticPaidCommitmentPerformed == false
+            and .authorityExpanded == false
+            and .automaticPromotionPerformed == false
+            and .discoveryCycle.productionMutationPerformed == false
+            and .discoveryCycle.authorityExpanded == false
+          ' "$RUNNER_TEMP/ekodi-technology-radar-report.json" >/dev/null
+          echo 'Technology radar remained read-only, free-first and non-authority-expanding.'
+
+      - name: Maintain material technology candidate attention
+        shell: bash
+        run: |
+          set -euo pipefail
+          title='EKODI technology radar: material candidate review'
+          existing=$(gh issue list --state open --search "$title in:title" --json number --jq '.[0].number // empty')
+          count=$(jq '[.entries[] | select(.material == true and (.action == "sandbox_candidate" or .action == "assess" or .action == "human_gate"))] | length' "$RUNNER_TEMP/ekodi-technology-radar-report.json")
+          if [ "$count" -eq 0 ]; then
+            if [ -n "$existing" ]; then
+              gh issue comment "$existing" --body 'Latest official-source radar cycle found no material technology change requiring assessment. Closing this attention item; future material changes will reopen through a new issue.'
+              gh issue close "$existing" --reason completed
+            fi
+            exit 0
+          fi
+          run_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          body="$RUNNER_TEMP/ekodi-technology-radar-issue.md"
+          cat "$RUNNER_TEMP/ekodi-technology-radar-summary.md" > "$body"
+          printf '\nWorkflow evidence: %s\n\n%s\n'             "$run_url"             'This radar record is research evidence only. It does not authorize paid activation, secrets, permission expansion, provider lock-in, production mutation, or generation promotion.'             >> "$body"
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body-file "$body"
+          else
+            gh issue create --title "$title" --body-file "$body"
+          fi
+
+      - name: Upload technology radar evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: ekodi-technology-radar-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/ekodi-technology-radar-report.json
+            ${{ runner.temp }}/ekodi-technology-radar-summary.md
+          if-no-files-found: error
+          retention-days: 90
