@@ -79,6 +79,13 @@ test('admin root is a command-only workspace while Campus remains a child route'
   assert.match(e2eWorker,/#ekodiAssistPanel/);
   assert.match(e2eWorker,/admin-command-home/);
   assert.match(e2eWorker,/pathname !== '\/admin\/'/);
+  assert.match(e2eWorker,/function verifyCommandWorkbench\(started\)/);
+  assert.match(e2eWorker,/data-ekodi-main-conversation="true"/);
+  assert.match(e2eWorker,/currentSection !== 'command-home'/);
+  assert.match(e2eWorker,/tab\.waitFor\(\{ state: 'attached', timeout: interactionReadyTimeoutMs \}\)/);
+  const commandBranch=e2eWorker.indexOf("if (menuId === 'command-home') {");
+  const visibleTabWait=e2eWorker.indexOf("await tab.waitFor({ state: 'visible', timeout: interactionReadyTimeoutMs });",commandBranch);
+  assert.ok(commandBranch>=0&&visibleTabWait>commandBranch,'command-home must bypass the generic visible-tab requirement in compact mode');
 
   assert.match(productionE2e,/id === 'command-home'/);
   assert.match(productionE2e,/#ekodiAssistDock/);
