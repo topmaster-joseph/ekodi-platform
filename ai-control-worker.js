@@ -4,7 +4,7 @@ import {AI_ROUTER_SCORE_POLICY} from './ai-router-score.js';
 import {loadAiCollaborationPolicy} from './ai-collaboration-settings.js';
 import { LOCAL_EXECUTION_POLICY, compareLocalExecutionCandidates, localExecutionPolicySnapshot, normalizeLocalResource } from './local-execution-policy.js';
 import capabilityRegistry from './config/capability-registry.json' with { type: 'json' };
-import {AI_COMMONS_POLICY,adminIdeaView,canFinalPublish,executionCatalogSnapshot,memberIdeaView,normalizeAiIdeaInput,publicRequestView,rankCommonCapabilities,rankExecutionServices,rankPublicExecutionServices,requestSimilarity,suggestedIdeaState} from './ai-commons.js';
+import {AI_COMMONS_POLICY,adminIdeaView,canFinalPublish,executionCatalogSnapshot,memberIdeaView,normalizeAiIdeaInput,publicRequestView,rankCommonCapabilities,rankPublicExecutionServices,requestSimilarity,suggestedIdeaState} from './ai-commons.js';
 
 const clean=value=>String(value??'').trim();
 const now=()=>new Date().toISOString();
@@ -324,7 +324,7 @@ async function handleCommonsApi(request,env,ctx){
     }
     if(request.method==='POST'){
       let input;try{input=normalizeAiIdeaInput(await body(request)||{})}catch(error){return json({error:error.message},400)}
-      const services=rankExecutionServices(input.job,capabilityRegistry,5);const matches=rankCommonCapabilities(input.job,capabilityRegistry,5);const status=suggestedIdeaState(matches);const matchedCapabilityId=matches[0]?.id||null;const exactFingerprint=await ideaFingerprint(input);const fingerprint=await similarIdeaFingerprint(env,input,exactFingerprint);const stamp=now();
+      const matches=rankCommonCapabilities(input.job,capabilityRegistry,5);const status=suggestedIdeaState(matches);const matchedCapabilityId=matches[0]?.id||null;const exactFingerprint=await ideaFingerprint(input);const fingerprint=await similarIdeaFingerprint(env,input,exactFingerprint);const stamp=now();
       try{
         const mine=await env.DB.prepare('SELECT id,fingerprint,problem,outcome,audience,current_way,source_service_id,status,matched_capability_id,development_task_id,review_decision,created_at,updated_at FROM ai_commons_ideas WHERE user_id=? AND fingerprint=? LIMIT 1').bind(auth.user.id,fingerprint).first();
         if(mine){await recordCommonsSource(env,auth.user.id,fingerprint,input.sourceServiceId);const count=await env.DB.prepare('SELECT COUNT(DISTINCT user_id) n FROM ai_commons_ideas WHERE fingerprint=?').bind(fingerprint).first();return json({idea:memberIdeaView({...mine,request_count:count?.n||1}),services:rankPublicExecutionServices(input.job,capabilityRegistry,5),reusedSubmission:true});}
