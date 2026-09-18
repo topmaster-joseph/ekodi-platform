@@ -49,3 +49,14 @@ test('integration order never bypasses actual GitHub merge conflicts',()=>{
   assert.match(workflow,/actual merge conflict with the base branch/);
   assert.match(docs,/do not waive tests, reviews, branch protection, authorization or deployment safeguards/);
 });
+
+
+test('parallel conflict guard snapshots open PR metadata once instead of exhausting REST quota per PR',()=>{
+  assert.match(workflow,/gh pr list --repo "\$REPOSITORY" --state open --base "\$BASE_REF" --limit 500/);
+  assert.match(workflow,/--json number,headRefName,changedFiles,files,labels/);
+  assert.match(workflow,/gh pr view "\$PR_NUMBER" --repo "\$REPOSITORY"/);
+  assert.match(workflow,/Open-PR file snapshot is incomplete/);
+  assert.match(workflow,/governance_snapshot/);
+  assert.doesNotMatch(workflow,/pulls\/\$\{other_pr\}\/files\?per_page=100/);
+  assert.doesNotMatch(workflow,/pulls\/\$\{candidate_pr\}"/);
+});
