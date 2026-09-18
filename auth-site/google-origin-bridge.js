@@ -1,7 +1,19 @@
 (()=>{
   'use strict';
-  const EXPECTED_CLIENT='483044030492-ej1ie2boa4e01lglm75e9q1r6m25pkp2.apps.googleusercontent.com';
-  const TARGET_ORIGIN='https://ekodi.kr';
+  const CLIENT_IDS=Object.freeze({
+    production:'483044030492-ej1ie2boa4e01lglm75e9q1r6m25pkp2.apps.googleusercontent.com',
+    staging:'483044030492-j9dml7tsb7vq4a4ud041ttctavlgdskg.apps.googleusercontent.com',
+    development:'483044030492-qvk96u0rvptsshat0pi8g522puq9ju16.apps.googleusercontent.com',
+  });
+  const runtime=(()=>{
+    const host=location.hostname.toLowerCase();
+    if(host==='ekodi.kr'||host==='auth.ekodi.kr')return{environment:'production',targetOrigin:'https://ekodi.kr'};
+    if(host==='ekodi-shared-site-staging.ekodi-development.workers.dev')return{environment:'staging',targetOrigin:location.origin};
+    if(host==='ekodi-platform-development.ekodi-development.workers.dev'||host==='localhost'||host==='127.0.0.1')return{environment:'development',targetOrigin:location.origin};
+    return{environment:'unsupported',targetOrigin:''};
+  })();
+  const EXPECTED_CLIENT=CLIENT_IDS[runtime.environment]||'';
+  const TARGET_ORIGIN=runtime.targetOrigin;
   const params=new URLSearchParams(location.search);
   const waitMode=params.get('wait')==='1';
   const status=document.getElementById('status');
