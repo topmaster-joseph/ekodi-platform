@@ -91,3 +91,39 @@ jobs:
       - name: Run full tests on main
         if: github.event_name != 'pull_request'
         run: npm test
+
+
+  probe-cloudflare-workers-ai:
+    name: Probe Cloudflare Workers AI
+    if: github.event_name == 'pull_request' && github.head_ref == 'ai/chatgpt/dispatch-live-proof-20260918'
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Run one read-only free-allocation model inference
+        shell: bash
+        run: |
+          set -euo pipefail
+          model='@cf/meta/llama-3.1-8b-instruct'
+          code=$(curl -sS -o "$RUNNER_TEMP/workers-ai.json" -w '%{http_code}' \
+            -X POST "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/ai/run/$model" \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            -H 'Content-Type: application/json' \
+            --data '{"prompt":"Return exactly EKODI_WORKERS_AI_OK."}')
+          echo "Workers AI HTTP: $code"
+          jq '{success,errors,messages,result:{response:(.result.response // "")}}' "$RUNNER_TEMP/workers-ai.json"
+          test "$code" = "200"
+          jq -e '.success == true and (.result.response // "" | length) > 0' "$RUNNER_TEMP/workers-ai.json" >/dev/null
+
+      - name: Upload sanitized probe
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cloudflare-workers-ai-probe-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/workers-ai.json
+          if-no-files-found: warn
+          retention-days: 7
