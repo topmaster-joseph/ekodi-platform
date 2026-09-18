@@ -3,7 +3,7 @@ const clean=value=>String(value??'').trim().toLowerCase();
 const round=(value,digits=4)=>{const factor=10**digits;return Math.round(value*factor)/factor};
 
 export const AI_ROUTER_SCORE_POLICY=Object.freeze({
-  version:'1.1.0',
+  version:'1.2.0',
   historyWindowHours:168,
   recentHealthWindowHours:6,
   maxHistoryRuns:500,
@@ -45,7 +45,7 @@ const COST_SCORES=Object.freeze({
 
 export function providerCostClass(providerId=''){
   const id=clean(providerId);
-  if(id==='gemini-free')return'free-preferred';
+  if(['cloudflare-workers-ai','gemini-free','openrouter-free','groq-free'].includes(id))return'free-preferred';
   if(id==='node:codex')return'chatgpt-plan-included';
   if(id==='node:gemini-cli')return'google-free-quota';
   if(id==='node:claude-code')return'claude-subscription';
@@ -66,7 +66,7 @@ export function inferTaskTraits(task={}){
 
 function baseProfile(providerId){
   const id=clean(providerId);
-  const direct=id==='gemini-free'||id==='openai-api'||id==='anthropic-api';
+  const direct=['cloudflare-workers-ai','gemini-free','openrouter-free','groq-free','openai-api','anthropic-api'].includes(id);
   const node=id.startsWith('node:');
   const worker=id.startsWith('worker:');
   const skills=node
