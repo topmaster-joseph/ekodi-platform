@@ -3,12 +3,13 @@ import { AI_COST_POLICY, evaluateAiCostEligibility } from './ai-cost-policy.js';
 const RESOURCE_CLASSES = Object.freeze([
   'personal-subscription',
   'personal-api',
+  'cloudflare-workers-ai-binding',
   'ekodi-shared-api',
   'hosted-ai',
   'core-only',
 ]);
 const INTERACTIVE_ORDER = Object.freeze([...RESOURCE_CLASSES]);
-const AUTONOMOUS_ORDER = Object.freeze(['personal-api','ekodi-shared-api','hosted-ai','core-only']);
+const AUTONOMOUS_ORDER = Object.freeze(['personal-api','cloudflare-workers-ai-binding','ekodi-shared-api','hosted-ai','core-only']);
 const SCORE_WEIGHTS = Object.freeze({
   capability:25, taskFit:20, cost:15, subscription:10, availability:10,
   latency:5, reliability:5, privacy:5, context:5,
@@ -42,6 +43,7 @@ export const DEFAULT_AI_RESOURCE_POLICY = Object.freeze({
   pools:Object.freeze({
     personalSubscription:Object.freeze({enabled:true,humanInteractive:true,officialAutomationOnly:true}),
     personalApi:Object.freeze({enabled:true,secretStorage:'server-secret-or-encrypted-vault'}),
+    workersAi:Object.freeze({enabled:true,mode:'cloudflare-account-managed-binding',dailyBudgetGuard:true}),
     ekodiSharedApi:Object.freeze({enabled:false,budgetGated:true}),
     hostedAi:Object.freeze({enabled:false,mode:'cloud-gpu-on-demand'}),
     coreOnly:Object.freeze({enabled:true,deterministic:true}),
@@ -64,6 +66,7 @@ export function normalizeAiResourcePolicy(value = {}) {
     pools:{
       personalSubscription:normalizePool(pools.personalSubscription, defaults.pools.personalSubscription),
       personalApi:normalizePool(pools.personalApi, defaults.pools.personalApi),
+      workersAi:normalizePool(pools.workersAi, defaults.pools.workersAi),
       ekodiSharedApi:normalizePool(pools.ekodiSharedApi, defaults.pools.ekodiSharedApi),
       hostedAi:normalizePool(pools.hostedAi, defaults.pools.hostedAi),
       coreOnly:normalizePool(pools.coreOnly, defaults.pools.coreOnly),
@@ -90,7 +93,7 @@ function gateCandidate(candidate = {}, context = {}, policy = DEFAULT_AI_RESOURC
   if (candidate.budgetAllowed === false) return 'budget_blocked';
   const lane = context.lane === 'autonomous' ? 'autonomous' : 'interactive';
   if (lane === 'autonomous' && resourceClass === 'personal-subscription' && candidate.automationAllowed !== true) return 'subscription_not_automation_eligible';
-  const poolKey = ({'personal-subscription':'personalSubscription','personal-api':'personalApi','ekodi-shared-api':'ekodiSharedApi','hosted-ai':'hostedAi','core-only':'coreOnly'})[resourceClass];
+  const poolKey = ({'personal-subscription':'personalSubscription','personal-api':'personalApi','cloudflare-workers-ai-binding':'workersAi','ekodi-shared-api':'ekodiSharedApi','hosted-ai':'hostedAi','core-only':'coreOnly'})[resourceClass];
   if (poolKey && policy.pools?.[poolKey]?.enabled === false) return 'pool_disabled';
   const defaultCostClass = resourceClass === 'personal-subscription' ? 'account-managed' : resourceClass === 'core-only' ? 'core-only' : 'unknown';
   const cost = evaluateAiCostEligibility({ ...candidate, costClass:candidate.costClass || defaultCostClass }, context);
