@@ -3,19 +3,20 @@ import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import { handleAdminGoogleAuth } from '../admin-google-auth.js';
 
-const CLIENT_ID = '483044030492-4e6231l5glchhtniroinvuq3ev6n5mv5.apps.googleusercontent.com';
+const CLIENT_ID = '483044030492-ej1ie2boa4e01lglm75e9q1r6m25pkp2.apps.googleusercontent.com';
 const baseEnv = {
   ENVIRONMENT: 'production',
-  ALLOWED_ORIGINS: 'https://admin.ekodi.kr,https://auth.ekodi.kr',
+  ALLOWED_ORIGINS: 'https://ekodi.kr',
   GOOGLE_CLIENT_ID: CLIENT_ID,
+  GOOGLE_IDENTITY_ORIGIN: 'https://ekodi.kr',
   ADMIN_GOOGLE_BOOTSTRAP_EMAILS: '',
   ADMIN_WORKSPACE_DOMAIN: 'ekodi.kr',
 };
 
 function request(path, method = 'GET') {
-  return new Request(`https://api.ekodi.kr${path}`, {
+  return new Request(`https://ekodi.kr${path}`, {
     method,
-    headers: { origin: 'https://auth.ekodi.kr' },
+    headers: { origin: 'https://ekodi.kr' },
   });
 }
 
@@ -25,8 +26,17 @@ test('Google client config remains available without touching D1', async () => {
   assert.deepEqual(await response.json(), {
     enabled: true,
     clientId: CLIENT_ID,
+    identityOrigin: 'https://ekodi.kr',
     mode: 'google_allowlist',
   });
+});
+
+test('Google identity config rejects a different environment origin', async () => {
+  const response = await handleAdminGoogleAuth(new Request('https://ekodi.kr/api/google/config', {
+    headers: { origin: 'https://ekodi-shared-site-staging.ekodi-development.workers.dev' },
+  }), { ...baseEnv, ALLOWED_ORIGINS: 'https://ekodi.kr,https://ekodi-shared-site-staging.ekodi-development.workers.dev' });
+  assert.equal(response.status, 403);
+  assert.equal((await response.json()).code, 'IDENTITY_ORIGIN_MISMATCH');
 });
 
 test('D1 daily row-read exhaustion is surfaced as retryable 503 instead of generic 500', async () => {
