@@ -4,7 +4,7 @@ const directEntry=params.get('direct')==='1';
 const preopenedRequested=directEntry&&params.get('bridge')==='preopened';
 const directBridgeRoot=document.documentElement;
 const CANONICAL_AUTH_ORIGIN='https://ekodi.kr';
-const GOOGLE_BRIDGE_ORIGIN='https://auth.ekodi.kr';
+const GOOGLE_BRIDGE_ORIGIN='https://ekodi.kr';
 const rawReturn=params.get('return_to')||'https://ekodi.kr/admin/';
 const safeReturn=(()=>{try{const u=new URL(rawReturn);if(u.protocol!=='https:')return'https://ekodi.kr/admin/';if(u.origin==='https://admin.ekodi.kr'||(u.origin==='https://ekodi.kr'&&u.pathname.startsWith('/admin')))return u.href;if(u.origin==='https://ai.ekodi.kr'&&u.pathname==='/')return u.href;if(u.origin==='https://ekodi.kr'&&(u.pathname==='/tax'||u.pathname==='/tax/'))return u.href;if(u.origin==='https://ekodi.kr'&&(u.pathname==='/ekodibiz/ekodimall/admin'||u.pathname==='/ekodibiz/ekodimall/admin/'||u.pathname.startsWith('/ekodibiz/ekodimall/admin/')))return u.href;return'https://ekodi.kr/admin/'}catch{return'https://ekodi.kr/admin/'}})();
 const $=id=>document.getElementById(id);
@@ -36,7 +36,7 @@ function waitForBridgeCredential(popup,challenge,state){
 }
 function requestGoogleCredential(config,challenge){
   const state=newBridgeState();
-  const target=new URL('/google-origin-bridge',GOOGLE_BRIDGE_ORIGIN);
+  const target=new URL('/auth/google-origin-bridge',GOOGLE_BRIDGE_ORIGIN);
   target.searchParams.set('client_id',config.clientId);target.searchParams.set('nonce',challenge.nonce);target.searchParams.set('state',state);target.searchParams.set('auto','1');
   const popup=window.open(target.href,'ekodi_google_origin_bridge','popup,width=520,height=680,resizable=yes,scrollbars=yes');
   if(!popup)return Promise.reject(Object.assign(new Error('google_popup_blocked'),{code:'GOOGLE_POPUP_BLOCKED'}));

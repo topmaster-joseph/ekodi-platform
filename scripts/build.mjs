@@ -90,7 +90,7 @@ await writeFile(`${output}books-finance-admin.js`, `${financeJs}\n${distribution
 await cp(`${root}auth-site/index.html`, `${output}auth-center.html`);
 await cp(`${root}auth-site/oauth-consent.html`, `${output}oauth-consent.html`);
 await cp(`${root}auth-site/google-origin-bridge.html`, `${output}google-origin-bridge.html`);
-for (const asset of ['auth.css', 'auth.js', 'auth-router.js', 'oauth-consent.js', 'marketing-auth-hotfix.js', 'auth-workspace-target.js', 'admin-auth.js', 'client-auth.js', 'author-auth.js', 'business-auth.js', 'marketing-onboarding.js', 'membership-ui.js', 'google-origin-bridge.js']) await cp(`${root}auth-site/${asset}`, `${output}${asset}`);
+for (const asset of ['auth.css', 'auth.js', 'auth-bootstrap.js', 'auth-router.js', 'oauth-consent.js', 'marketing-auth-hotfix.js', 'auth-workspace-target.js', 'admin-auth.js', 'client-auth.js', 'author-auth.js', 'business-auth.js', 'marketing-onboarding.js', 'membership-ui.js', 'google-origin-bridge.js']) await cp(`${root}auth-site/${asset}`, `${output}${asset}`);
 
 const [homepageServices, homepageStatusCounts] = await Promise.all([loadHomepageServices(), loadHomepageStatusCounts()]);
 const homepageCards = renderServiceCards(homepageServices);

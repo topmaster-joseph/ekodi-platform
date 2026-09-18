@@ -21,10 +21,6 @@ if(!params.get('return_to')&&params.get('returnTo')){
 }
 if(changed)history.replaceState({},document.title,url.href);
 
-const manageMode=params.get('manage')==='1';
-const reviewMode=params.get('review')==='1';
-document.documentElement.dataset.identityManage=manageMode?'1':'0';
-document.documentElement.dataset.seamlessSso=manageMode||reviewMode?'0':'1';
 const site=params.get('site')||'portal';
 const targetedWorkspace=targetableWorkspaceSites.has(site)&&Boolean(params.get('workspace'));
 
@@ -34,7 +30,7 @@ function hasTrustedEkodiReturn(){
   try{
     const target=new URL(raw);
     const hostname=target.hostname.toLowerCase();
-    return target.protocol==='https:'&&!target.username&&!target.password&&(hostname==='ekodi.kr'||hostname.endsWith('.ekodi.kr'));
+    return target.protocol==='https:'&&!target.username&&!target.password&&hostname==='ekodi.kr';
   }catch{return false}
 }
 
@@ -56,7 +52,7 @@ async function loadClientAuth(){
   catch(error){console.warn('Versioned universal identity auth load failed; retrying canonical asset.',error);return await import('./client-auth.js')}
 }
 
-if(site==='admin')await import('./admin-auth.js?v=20260909-origin-bridge-1');
+if(site==='admin')await import('./admin-auth.js?v=20260918-canonical-origin-1');
 else if(site==='author')await import('./author-auth.js?v=20260816-author-ai-1');
 else if(site==='business')await import('./business-auth.js?v=20260826-free-fallback-1');
 else if(privateClientSites.has(site))await loadClientAuth();

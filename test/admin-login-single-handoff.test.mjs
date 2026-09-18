@@ -9,11 +9,12 @@ const adminAuth = await readFile(`${root}auth-site/admin-auth.js`, 'utf8');
 const bridge = await readFile(`${root}auth-site/google-origin-bridge.js`, 'utf8');
 const bridgeHtml = await readFile(`${root}auth-site/google-origin-bridge.html`, 'utf8');
 const authRouter = await readFile(`${root}auth-site/auth-router.js`, 'utf8');
+const authBootstrap = await readFile(`${root}auth-site/auth-bootstrap.js`, 'utf8');
 const authHtml = await readFile(`${root}auth-site/index.html`, 'utf8');
 
 test('central admin login pre-opens the Google bridge and keeps canonical admin root return', () => {
   assert.match(adminCore, /return_to=https%3A%2F%2Fekodi\.kr%2Fadmin%2F/);
-  assert.match(adminCore, /open\('https:\/\/auth\.ekodi\.kr\/google-origin-bridge\?wait=1','ekodi_google_origin_bridge','popup'\)/);
+  assert.match(adminCore, /open\('https:\/\/ekodi\.kr\/auth\/google-origin-bridge\?wait=1','ekodi_google_origin_bridge','popup'\)/);
   assert.match(adminCore, /u\.searchParams\.set\('bridge','preopened'\)/);
   assert.match(adminCore, /location\.assign\(u\)/);
   assert.match(adminCore, /loginLink\.onclick=e=>/);
@@ -38,7 +39,8 @@ test('Google origin bridge keeps strict origin and account-selection safety', ()
 });
 
 test('single-handoff keeps the existing no-store auth asset contract', () => {
-  assert.match(authRouter, /admin-auth\.js\?v=20260909-origin-bridge-1/);
-  assert.match(authHtml, /auth-router\.js\?v=20260904-direct-login-1/);
+  assert.match(authRouter, /admin-auth\.js\?v=20260918-canonical-origin-1/);
+  assert.match(authHtml, /auth-bootstrap\.js\?v=20260918-admin-login-1/);
+  assert.match(authBootstrap, /auth-router\.js\?v=20260904-direct-login-1/);
   assert.match(bridgeHtml, /google-origin-bridge\.js/);
 });
