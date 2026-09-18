@@ -6,16 +6,6 @@
   <meta name="robots" content="noindex,nofollow,noarchive" />
   <meta name="description" content="EKODI 서비스 공통 통합 인증 및 고유 EKODI ID" />
   <title>EKODI 로그인</title>
-  <script>
-    (()=>{
-      const p=new URLSearchParams(location.search);
-      const interactive=p.get('manage')==='1'||p.get('review')==='1';
-      const directAdmin=p.get('site')==='admin'&&p.get('direct')==='1';
-      document.documentElement.dataset.identityManage=p.get('manage')==='1'?'1':'0';
-      document.documentElement.dataset.seamlessSso=interactive?'0':'1';
-      document.documentElement.dataset.adminDirectBridge=directAdmin?'1':'0';
-    })();
-  </script>
   <link rel="stylesheet" href="/auth.css?v=20260815-membership-1" />
   <link rel="stylesheet" href="/auth-workspaces.css?v=20260817-workspace-label-1" />
   <style>
@@ -116,41 +106,6 @@
     </section>
   </main>
   <footer>EKODI Platform · 로그인 수단은 바뀌어도, 내 EKODI ID와 공간·권한은 그대로 유지됩니다.</footer>
-  <script type="module">
-    const params=new URLSearchParams(location.search);
-    const interactive=params.get('manage')==='1'||params.get('review')==='1';
-    const site=params.get('site')||'portal';
-    const returnTo=params.get('return_to')||params.get('returnTo')||'';
-    const guardKey=`ekodi-auth-entry:${site}:${returnTo}`;
-    const now=Date.now();
-    const navigationType=performance.getEntriesByType?.('navigation')?.[0]?.type||'';
-    let previous=0;
-    try{previous=Number(sessionStorage.getItem(guardKey)||0)}catch{}
-    const repeated=!interactive&&navigationType!=='reload'&&previous>0&&now-previous<120000;
-    if(!interactive){try{sessionStorage.setItem(guardKey,String(now))}catch{}}
-    if(repeated){
-      document.documentElement.dataset.authLoopBlocked='1';
-      const badge=document.getElementById('serviceBadge');
-      const status=document.getElementById('authStatus');
-      const retry=document.getElementById('googleRetry');
-      const cancel=document.getElementById('cancelSignedOut');
-      if(badge)badge.textContent='반복 이동 차단';
-      if(status){status.textContent='로그인과 서비스 화면이 반복 이동하는 것을 감지해 자동 이동을 중단했습니다. 다시 시도하면 새 인증 흐름으로 시작합니다.';status.className='notice error'}
-      retry?.classList.remove('hide');
-      cancel?.classList.remove('hide');
-      retry?.addEventListener('click',async()=>{
-        try{sessionStorage.removeItem(guardKey)}catch{}
-        retry.disabled=true;
-        await import('/auth-router.js?v=20260904-direct-login-1');
-      },{once:true});
-      cancel?.addEventListener('click',()=>{
-        let target='https://ekodi.kr/';
-        try{const u=new URL(returnTo);if(u.protocol==='https:'&&(u.hostname==='ekodi.kr'||u.hostname.endsWith('.ekodi.kr')))target=u.href}catch{}
-        location.assign(target);
-      },{once:true});
-    }else{
-      await import('/auth-router.js?v=20260904-direct-login-1');
-    }
-  </script>
+  <script type="module" src="/auth-bootstrap.js?v=20260918-admin-login-1"></script>
 </body>
 </html>
