@@ -184,6 +184,79 @@ export async function writeCanonicalDriveFile(env, options = {}) {
   };
 }
 
+
+export async function writeCanonicalDriveStream(env, options = {}) {
+  const routeKey = normalizeRouteKey(options.storageRoute || options.serviceId);
+  if (!routeKey) throw new Error('CANONICAL_STORAGE_ROUTE_REQUIRED');
+  if (!options.body) throw new Error('CANONICAL_STORAGE_CONTENT_REQUIRED');
+  const size = Number(options.size || 0);
+  if (!Number.isFinite(size) || size <= 0) throw new Error('CANONICAL_STORAGE_SIZE_REQUIRED');
+
+  const [connection, folder] = await Promise.all([
+    primaryConnection(env),
+    routeFolder(env, routeKey),
+  ]);
+  const token = await accessToken(env, connection);
+  const mimeType = String(options.mimeType || 'application/octet-stream').slice(0, 120);
+  const metadata = {
+    name: safeName(options.title || `record-${Date.now()}`),
+    parents: [folder.folder_id],
+    appProperties: {
+      ekodiSpaceId: String(options.spaceId || '').slice(0, 120),
+      ekodiServiceId: String(options.serviceId || '').slice(0, 120),
+      ekodiStorageRoute: routeKey,
+      ekodiRecordType: String(options.recordType || '').slice(0, 120),
+      ekodiCreatedBy: String(options.createdBy || '').slice(0, 120),
+      ekodiRetention: String(options.retentionClass || '').slice(0, 40),
+      ekodiSourceModule: String(options.sourceModuleId || 'ekodi').slice(0, 120),
+    },
+  };
+  const init = await fetch(`${DRIVE_UPLOAD_URL}?uploadType=resumable&supportsAllDrives=true&fields=id,name,mimeType,webViewLink,parents,createdTime`, {
+    method: 'POST',
+    headers: {
+      authorization: `Bearer ${token}`,
+      'content-type': 'application/json; charset=UTF-8',
+      'x-upload-content-type': mimeType,
+      'x-upload-content-length': String(size),
+    },
+    body: JSON.stringify(metadata),
+  });
+  if (!init.ok) throw new Error(`CANONICAL_STORAGE_RESUMABLE_INIT_${init.status}`);
+  const location = init.headers.get('location');
+  if (!location) throw new Error('CANONICAL_STORAGE_RESUMABLE_LOCATION_MISSING');
+  const uploaded = await fetch(location, {
+    method: 'PUT',
+    headers: {
+      'content-type': mimeType,
+      'content-length': String(size),
+    },
+    body: options.body,
+  });
+  const result = await uploaded.json().catch(() => ({}));
+  if (!uploaded.ok || !result.id) throw new Error(`CANONICAL_STORAGE_RESUMABLE_UPLOAD_${uploaded.status}`);
+  return {
+    ...result,
+    storageRoute: routeKey,
+    folderId: folder.folder_id,
+    folderName: folder.folder_name,
+    canonicalDriveId: connection.drive_id,
+    canonicalDriveName: connection.drive_name,
+  };
+}
+
+export async function deleteCanonicalDriveFile(env, fileId = '') {
+  const id = String(fileId || '').trim();
+  if (!id || !/^[A-Za-z0-9_-]{8,200}$/.test(id)) throw new Error('CANONICAL_STORAGE_FILE_ID_REQUIRED');
+  const connection = await primaryConnection(env);
+  const token = await accessToken(env, connection);
+  const response = await fetch(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(id)}?supportsAllDrives=true`, {
+    method: 'DELETE',
+    headers: { authorization: `Bearer ${token}` },
+  });
+  if (!(response.ok || response.status === 404)) throw new Error(`CANONICAL_STORAGE_DELETE_${response.status}`);
+  return { ok: true, id, deleted: true };
+}
+
 export const CANONICAL_DRIVE_WRITER_POLICY = Object.freeze({
   canonicalProvider: 'google_workspace_shared_drive',
   canonicalDriveName: 'EKODI',
