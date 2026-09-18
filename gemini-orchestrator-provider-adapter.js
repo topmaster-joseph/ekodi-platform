@@ -87,7 +87,17 @@ export function createGeminiOrchestratorProvider(env = {}, options = {}) {
       });
       let data = null;
       try { data = await response.json(); } catch {}
-      if (!response.ok) throw new Error(`GEMINI_HTTP_${response.status}`);
+      if (!response.ok) {
+        const error = new Error(`GEMINI_HTTP_${response.status}`);
+        error.status = response.status;
+        const retryAfter = Number(response.headers?.get?.('retry-after'));
+        if (Number.isFinite(retryAfter) && retryAfter > 0) error.retryAfterSeconds = retryAfter;
+        if (response.status === 429) {
+          const detail = text(data?.error?.message, 1200).toLowerCase();
+          error.quota = Object.freeze({ state: /daily|per day|requests per day|\brpd\b|daily[_ -]?limit|quota[_ -]?exhausted/.test(detail) ? 'exhausted' : 'throttled' });
+        }
+        throw error;
+      }
       const output = extractText(data);
       if (!output) throw new Error('GEMINI_EMPTY_RESPONSE');
       const usage = normalizeUsage(data?.usageMetadata || {});
