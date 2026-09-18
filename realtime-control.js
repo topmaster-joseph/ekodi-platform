@@ -459,10 +459,12 @@ export async function handleRealtimeControl(request,env){
     if(origin&&!originAllowed(request,env))return json(request,env,{ok:false,error:'origin_forbidden'},403);
     return new Response(null,{status:204,headers:cors(request,env)});
   }
+  const recordingPart=await uploadRecordingPart(request,env,url);if(recordingPart)return recordingPart;
+  const recordingStream=await recordingMedia(request,env,url);if(recordingStream)return recordingStream;
   const publicResponse=await publicRoutes(request,env,url);
   if(publicResponse)return publicResponse;
   let input=null;
-  if(['POST','PUT'].includes(request.method)){
+  if(['POST','PUT','PATCH'].includes(request.method)){
     input=await body(request);
     if(!input)return json(request,env,{ok:false,error:'invalid_json'},400);
   }
@@ -471,6 +473,7 @@ export async function handleRealtimeControl(request,env){
     if(!config)return json(request,env,{ok:false,error:'invalid_tenant'},400);
     return createRoom(request,env,config.apiTenant,input||{});
   }
+  const recordings=await recordingRoutes(request,env,url,input);if(recordings)return recordings;
   const mutation=await roomMutation(request,env,url,input);if(mutation)return mutation;
   const planned=await planRoute(request,env,url,input);if(planned)return planned;
   const session=await sessionRoute(request,env,url,input);if(session)return session;
@@ -479,7 +482,7 @@ export async function handleRealtimeControl(request,env){
 }
 
 export const REALTIME_CONTROL_CONTRACT=Object.freeze({
-  version:'2026-09-14.1',
+  version:'2026-09-19.1',
   prefix:PREFIX,
   canonicalChurchPath:'https://ekodi.kr/ekodichurch/live/',
   multitenant:true,
@@ -488,4 +491,6 @@ export const REALTIME_CONTROL_CONTRACT=Object.freeze({
   browserSecrets:false,
   adaptiveMedia:true,
   anonymousPublicViewing:true,
+  recordingManagement:true,
+  recordingDurableArchive:'google_workspace_shared_drive',
 });
