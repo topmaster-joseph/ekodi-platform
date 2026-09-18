@@ -31,14 +31,31 @@ jobs:
         run: |
           set -euo pipefail
           current_files=$(mktemp)
+          open_pr_snapshot=$(mktemp)
           exact_conflicts=$(mktemp)
           semantic_conflicts=$(mktemp)
-          trap 'rm -f "$current_files" "$exact_conflicts" "$semantic_conflicts"' EXIT
+          governance_snapshot="${RUNNER_TEMP}/ekodi-pr-governance-${PR_NUMBER}.json"
+          trap 'rm -f "$current_files" "$open_pr_snapshot" "$exact_conflicts" "$semantic_conflicts"' EXIT
 
-          gh api --paginate \
-            "repos/${REPOSITORY}/pulls/${PR_NUMBER}/files?per_page=100" \
-            --jq '.[].filename' \
+          # Snapshot open PR metadata once so the guard does not exhaust the
+          # GitHub App installation REST quota by fetching every PR separately.
+          gh pr list --repo "$REPOSITORY" --state open --base "$BASE_REF" --limit 500 \
+            --json number,headRefName,changedFiles,files,labels > "$open_pr_snapshot"
+          gh pr view "$PR_NUMBER" --repo "$REPOSITORY" \
+            --json labels,comments,reviews,mergeable,mergeStateStatus > "$governance_snapshot"
+
+          incomplete=$(jq '[.[] | select((.changedFiles // 0) > ((.files // []) | length))] | length' "$open_pr_snapshot")
+          if [[ "$incomplete" -ne 0 ]]; then
+            echo 'Open-PR file snapshot is incomplete; refusing to evaluate related changes with partial evidence.' >&2
+            exit 1
+          fi
+
+          jq -r --argjson current "$PR_NUMBER" '.[] | select(.number == $current) | .files[]?.path' "$open_pr_snapshot" \
             | sort -u > "$current_files"
+          if [[ ! -s "$current_files" ]]; then
+            echo 'Current PR file evidence is missing from the open-PR snapshot.' >&2
+            exit 1
+          fi
 
           : > "$exact_conflicts"
           : > "$semantic_conflicts"
@@ -49,9 +66,7 @@ jobs:
             other_files=$(mktemp)
             exact_overlap=$(mktemp)
             semantic_overlap=$(mktemp)
-            gh api --paginate \
-              "repos/${REPOSITORY}/pulls/${other_pr}/files?per_page=100" \
-              --jq '.[].filename' \
+            jq -r --argjson candidate "$other_pr" '.[] | select(.number == $candidate) | .files[]?.path' "$open_pr_snapshot" \
               | sort -u > "$other_files"
             comm -12 "$current_files" "$other_files" > "$exact_overlap"
 
@@ -74,9 +89,7 @@ jobs:
             fi
             rm -f "$other_files" "$exact_overlap" "$semantic_overlap"
           done < <(
-            gh api --paginate \
-              "repos/${REPOSITORY}/pulls?state=open&base=${BASE_REF}&per_page=100" \
-              --jq '.[] | [.number, .head.ref] | @tsv'
+            jq -r --argjson current "$PR_NUMBER" '.[] | select(.number != $current) | [.number, .headRefName] | @tsv' "$open_pr_snapshot"
           )
 
           {
@@ -124,24 +137,21 @@ jobs:
               | sed '/^$/d' | sort -nu
           )
           echo "- Related PRs: $(tr '\n' ',' <<< "$related_prs" | sed 's/,$//')" | tee -a "$GITHUB_STEP_SUMMARY"
+
           approved_count=0
           approved_winner=''
           while IFS= read -r candidate_pr; do
             [[ -n "$candidate_pr" ]] || continue
-            has_priority=$(gh api "repos/${REPOSITORY}/pulls/${candidate_pr}" \
-              --jq "[.labels[].name] | index(\"${priority_label}\") != null")
+            has_priority=$(jq -r --argjson candidate "$candidate_pr" --arg label "$priority_label" \
+              '[.[] | select(.number == $candidate) | .labels[]?.name] | index($label) != null' "$open_pr_snapshot")
             if [[ "$has_priority" == 'true' ]]; then
               approved_count=$((approved_count + 1))
               approved_winner="$candidate_pr"
             fi
           done <<< "$related_prs"
 
-          current_has_review=$(gh api "repos/${REPOSITORY}/pulls/${PR_NUMBER}" \
-            --jq "[.labels[].name] | index(\"${review_label}\") != null")
-          review_evidence="$(
-            gh api --paginate "repos/${REPOSITORY}/issues/${PR_NUMBER}/comments?per_page=100" --jq '.[] | .body // empty'
-            gh api --paginate "repos/${REPOSITORY}/pulls/${PR_NUMBER}/reviews?per_page=100" --jq '.[] | .body // empty'
-          )"
+          current_has_review=$(jq -r --arg label "$review_label" '[.labels[]?.name] | index($label) != null' "$governance_snapshot")
+          review_evidence="$(jq -r '(.comments[]?.body // empty), (.reviews[]?.body // empty)' "$governance_snapshot")"
           evidence_ok=true
           if ! grep -Fq "$evidence_marker" <<< "$review_evidence"; then evidence_ok=false; fi
           while IFS= read -r related_pr; do
@@ -178,8 +188,15 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          mergeable=$(gh api "repos/${REPOSITORY}/pulls/${PR_NUMBER}" --jq '.mergeable')
-          mergeable_state=$(gh api "repos/${REPOSITORY}/pulls/${PR_NUMBER}" --jq '.mergeable_state')
+          governance_snapshot="${RUNNER_TEMP}/ekodi-pr-governance-${PR_NUMBER}.json"
+          if [[ ! -s "$governance_snapshot" ]]; then
+            echo 'Current PR governance snapshot is unavailable; refusing to infer mergeability.' >&2
+            exit 1
+          fi
+          mergeable_raw=$(jq -r '.mergeable // "UNKNOWN"' "$governance_snapshot")
+          mergeable_state=$(jq -r '.mergeStateStatus // "UNKNOWN"' "$governance_snapshot")
+          mergeable='true'
+          if [[ "$mergeable_raw" == 'CONFLICTING' ]]; then mergeable='false'; fi
           {
             echo ''
             echo '### GitHub merge signal'
