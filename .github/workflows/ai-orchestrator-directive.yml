@@ -1,0 +1,42 @@
+name: AI Orchestrator Directive
+
+on:
+  pull_request:
+    paths:
+      - 'config/ai-orchestrator-operating-directive.json'
+      - 'ai-orchestrator-directive.js'
+      - 'ekodi-command-plane.js'
+      - 'ai-command-control.js'
+      - 'scripts/validate-ai-orchestrator-directive.mjs'
+      - 'test/ai-orchestrator-directive.test.mjs'
+      - 'package.json'
+      - '.github/workflows/ai-orchestrator-directive.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'config/ai-orchestrator-operating-directive.json'
+      - 'ai-orchestrator-directive.js'
+      - 'ekodi-command-plane.js'
+      - 'ai-command-control.js'
+      - 'scripts/validate-ai-orchestrator-directive.mjs'
+      - 'test/ai-orchestrator-directive.test.mjs'
+      - 'package.json'
+      - '.github/workflows/ai-orchestrator-directive.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run validate:orchestrator-directive
+      - run: npm run validate:mission
+      - run: npm run validate:ai-resilience
