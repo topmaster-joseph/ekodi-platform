@@ -57,7 +57,7 @@ test('contextual subservices render as a sticky top tab strip and source nav sta
   assert.doesNotMatch(sidebar, /RECENT_KEY|FAVORITES_KEY|data-admin-quick-section/);
 });
 
-test('global navigation remains synchronized to the actually active panel', () => {
+test('global navigation remains synchronized to the active panel and opens an axis in one click', () => {
   const activeNavIndex = sidebar.indexOf("find(item => item.classList.contains('active'))");
   const requestedPanelIndex = sidebar.indexOf('window.EKODIAdminPanels?.current?.()');
   const commandPriorityIndex = sidebar.indexOf("panelSection === 'command-home'");
@@ -67,8 +67,9 @@ test('global navigation remains synchronized to the actually active panel', () =
   const activateEnd = sidebar.indexOf('export function createAdminSidebarItem', activateStart);
   const activateSource = sidebar.slice(activateStart, activateEnd);
   assert.doesNotMatch(activateSource, /syncWorkbenchState/);
-  assert.doesNotMatch(sidebar, /activateSection\(nav, getAdminMenuGroupDefault\(global\.dataset\.adminGlobalGroup\)\)/);
-  assert.match(sidebar, /nav\.dataset\.adminFocusedGroup = global\.dataset\.adminGlobalGroup \|\| ''/);
+  assert.match(sidebar, /const group = global\.dataset\.adminGlobalGroup \|\| ''/);
+  assert.match(sidebar, /nav\.dataset\.adminFocusedGroup = group/);
+  assert.match(sidebar, /activateSection\(nav, getAdminMenuGroupDefault\(group\)\)/);
   assert.match(sidebar, /const displayedSection = group === activeGroup \? section : ''/);
 });
 
@@ -136,13 +137,16 @@ test('shared menu ES modules are published and cache-busted with the admin relea
 });
 
 
-test('active global axis expands every submenu directly inside the fixed sidebar', () => {
+test('active global axis shows core submenu items first and progressively discloses the rest', () => {
   assert.ok(sidebar.includes("DETAILS_CLASS = 'admin-global-details'"));
+  assert.ok(sidebar.includes("MORE_CLASS = 'admin-detail-more'"));
+  assert.ok(sidebar.includes('const PRIMARY_SECTIONS = Object.freeze('));
   assert.ok(sidebar.includes('function renderSidebarDetails(nav, globals, group, section, locale)'));
   assert.ok(sidebar.includes('data-admin-detail-section'));
   assert.ok(sidebar.includes('const ids = availableIds(nav, group)'));
-  assert.ok(sidebar.includes('const nodes = ids.map(id =>'));
-  assert.ok(sidebar.includes('renderSidebarDetails(nav, globals, group, section, locale)'));
+  assert.ok(sidebar.includes('const primary = primaryOrder.filter(id => ids.includes(id))'));
+  assert.ok(sidebar.includes('const shown = expanded ? ids : primary'));
+  assert.ok(sidebar.includes('dataset.adminDetailMore = group'));
   assert.ok(sidebar.includes('activateSection(nav, detail.dataset.adminDetailSection)'));
   assert.ok(!sidebar.includes("document.createElement('details')"));
   assert.ok(!sidebar.includes('getAdminMenuCategoryLabel(category, locale)'));
