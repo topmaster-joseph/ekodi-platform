@@ -1,5 +1,5 @@
 {
-  "version": 69,
+  "version": 70,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
@@ -103,6 +103,19 @@
           "원하는 일, 바로 시작하세요",
           "필요한 길만 가볍게 연결합니다."
         ]
+      },
+      {
+        "url": "https://ekodi.kr/connect",
+        "statuses": [
+          302
+        ],
+        "redirect": "manual",
+        "headerExpect": [
+          "location: https://ekodi.kr/auth/?site=ai&return_to=https%3A%2F%2Fekodi.kr%2Fai%2F&source=mcp-connect",
+          "x-ekodi-route: mcp-connect-auth",
+          "cache-control: no-store"
+        ],
+        "rollbackVerify": false
       },
       {
         "url": "https://ekodi.kr/my/docs/",
@@ -1386,10 +1399,21 @@
       },
       {
         "url": "https://ekodi.kr/hammu/admin",
-        "statuses": [200],
+        "statuses": [
+          200
+        ],
         "redirect": "manual",
-        "expect": ["data-ekodi-organization-admin=\"true\"","data-ekodi-authority-scope=\"tenant\"","/hammu/admin/officers","/hammu/admin/finance","/hammu/admin/attendance"],
-        "headerExpect": ["x-ekodi-route: organization-admin","cache-control: no-store"],
+        "expect": [
+          "data-ekodi-organization-admin=\"true\"",
+          "data-ekodi-authority-scope=\"tenant\"",
+          "/hammu/admin/officers",
+          "/hammu/admin/finance",
+          "/hammu/admin/attendance"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: organization-admin",
+          "cache-control: no-store"
+        ],
         "rollbackVerify": false
       }
     ]
