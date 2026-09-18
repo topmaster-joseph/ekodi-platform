@@ -57,6 +57,24 @@ jobs:
           node scripts/validate-platform-source-of-truth.mjs
           node --test test/platform-source-of-truth.test.mjs test/autonomous-technology-radar.test.mjs
 
+      - name: Smoke-test official source collection
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          node scripts/run-autonomous-technology-radar.mjs \
+            --policy config/autonomous-technology-evolution-policy.json \
+            --output "$RUNNER_TEMP/ekodi-technology-radar-pr-report.json" \
+            --summary "$RUNNER_TEMP/ekodi-technology-radar-pr-summary.md"
+          jq -e '
+            .productionMutationPerformed == false
+            and .automaticPaidCommitmentPerformed == false
+            and .authorityExpanded == false
+            and ([.entries[] | select(.fetchOk == true)] | length) >= 4
+          ' "$RUNNER_TEMP/ekodi-technology-radar-pr-report.json" >/dev/null
+          cat "$RUNNER_TEMP/ekodi-technology-radar-pr-summary.md" >> "$GITHUB_STEP_SUMMARY"
+
   radar:
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
