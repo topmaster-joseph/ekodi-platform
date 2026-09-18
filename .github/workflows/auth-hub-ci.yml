@@ -96,6 +96,8 @@ jobs:
           grep -Fq 'link.user.id!==user.id' supabase/functions/identity-api/index.ts
           grep -Fq 'platformAdminForUser' supabase/functions/identity-api/index.ts
           grep -Fq 'platform_admin' supabase/functions/identity-api/index.ts
+          grep -Fq '483044030492-ej1ie2boa4e01lglm75e9q1r6m25pkp2.apps.googleusercontent.com' supabase/functions/identity-api/index.ts
+          ! grep -Fq '483044030492-4e6231l5glchhtniroinvuq3ev6n5mv5.apps.googleusercontent.com' supabase/functions/identity-api/index.ts
           grep -Fq 'business_os_snapshot' supabase/functions/business-handoff-api/index.ts
           grep -Fq 'admin.auth.admin.generateLink' supabase/functions/business-handoff-api/index.ts
 
@@ -110,7 +112,6 @@ jobs:
         run: |
           set -euo pipefail
           good=$(curl -fsS -X POST "$IDENTITY_URL" -H 'Origin: https://auth.ekodi.kr' -H "apikey: $PUBLISHABLE_KEY")
-          printf '%s' "$good" | grep -Fq '483044030492-ej1ie2boa4e01lglm75e9q1r6m25pkp2.apps.googleusercontent.com'
           printf '%s' "$good" | grep -Eq '"nonce":"[a-f0-9]{48}"'
           bad=$(curl -sS -o /tmp/bad-origin.json -w '%{http_code}' -X POST "$IDENTITY_URL" -H 'Origin: https://evil.example' -H "apikey: $PUBLISHABLE_KEY")
           test "$bad" = '403'
