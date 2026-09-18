@@ -1,6 +1,6 @@
 const ADMIN_ORIGINS=new Set(['https://ekodi.kr','https://admin.ekodi.kr']);
-const CENTRAL_ADMIN_SESSION='https://api.ekodi.kr/api/session';
-const CENTRAL_ADMIN_ELEVATION='https://api.ekodi.kr/api/admin-access/elevation';
+const CENTRAL_ADMIN_SESSION='https://ekodi.kr/api/session';
+const CENTRAL_ADMIN_ELEVATION='https://ekodi.kr/api/admin-access/elevation';
 const MUTABLE_KEYS=Object.freeze(['serviceEnabled','manualEntryEnabled','fileImportEnabled','planningEnabled']);
 const LOCKED_KEYS=Object.freeze(['actionCeiling','financialExecution','aiWriteEnabled','personalDataAdminReadable','externalFinancialConnectors','safeToSpendExpectedIncome']);
 const DEFAULTS=Object.freeze({serviceEnabled:true,manualEntryEnabled:true,fileImportEnabled:true,planningEnabled:true});
@@ -26,7 +26,7 @@ async function central(request,url){
   const authorization=clean(request.headers.get('authorization'),8192);
   if(!authorization.toLowerCase().startsWith('bearer '))return{ok:false,status:401,data:{code:'PF_ADMIN_AUTH_REQUIRED'}};
   try{
-    const response=await fetch(url,{headers:{authorization,accept:'application/json'},cache:'no-store'});
+    const response=await fetch(url,{headers:{authorization,accept:'application/json'},cache:'no-store',signal:AbortSignal.timeout(8_000)});
     const data=await response.json().catch(()=>({}));
     return{ok:response.ok,status:response.status,data};
   }catch{return{ok:false,status:503,data:{code:'PF_ADMIN_AUTH_UNAVAILABLE'}}}
@@ -44,7 +44,7 @@ async function migrationSnapshot(db){
 }
 async function snapshot(db,session){
   const [config,migration]=await Promise.all([readPersonalFinanceServiceConfig(db),migrationSnapshot(db)]);
-  return{service:{id:'personal-finance',name:'개인재무',domain:'personal-finance-api.ekodi.kr',userEntry:'https://ekodi.kr/my/#money',dataBoundary:'dedicated-d1',runtimeVersion:3},config,schema:{...migration,serviceControlSchema:1},safety:{actionCeiling:'L2',financialExecution:false,aiWriteEnabled:false,personalDataAdminReadable:false,fullAccountNumberStorage:false,safeToSpendExpectedIncome:false,externalFinancialConnectors:'LOCKED'},privacy:{rawImportFileRetention:'none',ledgerOwnerScope:'person',adminLedgerAccess:'blocked'},admin:{role:clean(session?.role,40)||'viewer',canWrite:session?.role==='super_admin'}};
+  return{service:{id:'personal-finance',name:'개인재무',canonicalPath:'/personal-finance-api',userEntry:'https://ekodi.kr/my/#money',dataBoundary:'dedicated-d1',runtimeVersion:3},config,schema:{...migration,serviceControlSchema:1},safety:{actionCeiling:'L2',financialExecution:false,aiWriteEnabled:false,personalDataAdminReadable:false,fullAccountNumberStorage:false,safeToSpendExpectedIncome:false,externalFinancialConnectors:'LOCKED'},privacy:{rawImportFileRetention:'none',ledgerOwnerScope:'person',adminLedgerAccess:'blocked'},admin:{role:clean(session?.role,40)||'viewer',canWrite:session?.role==='super_admin'}};
 }
 async function audit(db,session,action,detail){
   const actorHash=await sha256(String(session?.email||'unknown').trim().toLowerCase());
