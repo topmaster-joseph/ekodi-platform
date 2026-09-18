@@ -43,7 +43,8 @@ test('pastor admin page is private-by-default', async () => {
   assert.match(html, /church-partner-news-admin\.css/);
   assert.match(html, /목회자 운영/);
   assert.match(response.headers.get('content-security-policy') || '', /frame-ancestors 'none'/);
-  assert.match(response.headers.get('content-security-policy') || '', /workspace-api\.ekodi\.kr/);
+  assert.doesNotMatch(response.headers.get('content-security-policy') || '', /(?:api|workspace-api)\.ekodi\.kr/);
+  assert.match(response.headers.get('content-security-policy') || '', /connect-src 'self' https:\/\/renzehysxirjilvdxacv\.supabase\.co/);
   assert.match(response.headers.get('cache-control') || '', /no-store/);
 });
 
