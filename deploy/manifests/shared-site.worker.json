@@ -534,26 +534,7 @@
         "rollbackVerify": false
       },
       {
-        "url": "https://admin.ekodi.kr/",
-        "statuses": [
-          200
-        ],
-        "redirect": "follow",
-        "expect": [
-          "EKODI Admin",
-          "admin-authenticated-shell.js?v=",
-          "admin-compact.js admin-menu-layout.js admin-demand-loader.js",
-          "https://ekodi.kr/auth/?site=admin"
-        ],
-        "headerExpect": [
-          "x-ekodi-route: admin-shell",
-          "cross-origin-opener-policy: same-origin-allow-popups",
-          "cache-control: no-store"
-        ],
-        "rollbackVerify": false
-      },
-      {
-        "url": "https://admin.ekodi.kr/openai-workspace-admin.js",
+        "url": "https://ekodi.kr/admin/openai-workspace-admin.js",
         "statuses": [
           200
         ],
@@ -569,7 +550,7 @@
         "rollbackVerify": false
       },
       {
-        "url": "https://admin.ekodi.kr/openai-workspace-admin.css",
+        "url": "https://ekodi.kr/admin/openai-workspace-admin.css",
         "statuses": [
           200
         ],
@@ -584,7 +565,7 @@
         "rollbackVerify": false
       },
       {
-        "url": "https://admin.ekodi.kr/tapo-device-admin.js",
+        "url": "https://ekodi.kr/admin/tapo-device-admin.js",
         "statuses": [
           200
         ],
@@ -601,7 +582,7 @@
         "rollbackVerify": false
       },
       {
-        "url": "https://admin.ekodi.kr/tapo-device-admin.css",
+        "url": "https://ekodi.kr/admin/tapo-device-admin.css",
         "statuses": [
           200
         ],
@@ -617,7 +598,7 @@
         "rollbackVerify": false
       },
       {
-        "url": "https://admin.ekodi.kr/admin-demand-loader.js?device=v28",
+        "url": "https://ekodi.kr/admin/admin-demand-loader.js?device=v28",
         "statuses": [
           200
         ],
@@ -638,7 +619,7 @@
         ]
       },
       {
-        "url": "https://admin.ekodi.kr/remote-power-admin.js?remote-work=v1",
+        "url": "https://ekodi.kr/admin/remote-power-admin.js?remote-work=v1",
         "statuses": [
           200
         ],
@@ -654,7 +635,7 @@
         "rollbackVerify": false
       },
       {
-        "url": "https://admin.ekodi.kr/remote-power-admin.css?remote-work=v1",
+        "url": "https://ekodi.kr/admin/remote-power-admin.css?remote-work=v1",
         "statuses": [
           200
         ],
@@ -669,7 +650,7 @@
         "rollbackVerify": false
       },
       {
-        "url": "https://admin.ekodi.kr/device-browser-diagnostics.js?v=device-v28",
+        "url": "https://ekodi.kr/admin/device-browser-diagnostics.js?v=device-v28",
         "statuses": [
           200
         ],
@@ -687,7 +668,7 @@
         ]
       },
       {
-        "url": "https://admin.ekodi.kr/device-browser-diagnostics.css?v=device-v28",
+        "url": "https://ekodi.kr/admin/device-browser-diagnostics.css?v=device-v28",
         "statuses": [
           200
         ],
@@ -703,7 +684,7 @@
         ]
       },
       {
-        "url": "https://admin.ekodi.kr/admin-compact.js?assist=v2",
+        "url": "https://ekodi.kr/admin/admin-compact.js?assist=v2",
         "statuses": [
           200
         ],
@@ -717,7 +698,7 @@
         ]
       },
       {
-        "url": "https://admin.ekodi.kr/admin-compact.css?assist=v2",
+        "url": "https://ekodi.kr/admin/admin-compact.css?assist=v2",
         "statuses": [
           200
         ],
@@ -731,7 +712,7 @@
         ]
       },
       {
-        "url": "https://admin.ekodi.kr/admin-lazy-features.js?assist=v2",
+        "url": "https://ekodi.kr/admin/admin-lazy-features.js?assist=v2",
         "statuses": [
           200
         ],
@@ -745,7 +726,7 @@
         ]
       },
       {
-        "url": "https://admin.ekodi.kr/ai-ops-admin.css?assist=v2",
+        "url": "https://ekodi.kr/admin/ai-ops-admin.css?assist=v2",
         "statuses": [
           200
         ],
@@ -832,7 +813,7 @@
         "rollbackVerify": false
       },
       {
-        "url": "https://auth.ekodi.kr/google-origin-bridge",
+        "url": "https://ekodi.kr/auth/google-origin-bridge",
         "statuses": [
           200
         ],
@@ -848,7 +829,7 @@
         "rollbackVerify": false
       },
       {
-        "url": "https://auth.ekodi.kr/google-origin-bridge.js",
+        "url": "https://ekodi.kr/auth/google-origin-bridge.js",
         "statuses": [
           200
         ],
@@ -1053,37 +1034,7 @@
         "rollbackVerify": false
       },
       {
-        "url": "https://pay.ekodi.kr/",
-        "statuses": [
-          200
-        ],
-        "redirect": "manual",
-        "expect": [
-          "EKODI Hub",
-          "EKODI 서비스 허브"
-        ],
-        "headerExpect": [
-          "x-ekodi-route: hub",
-          "x-ekodi-shell: v2"
-        ]
-      },
-      {
-        "url": "https://pay.biz.ekodi.kr/",
-        "statuses": [
-          200
-        ],
-        "redirect": "manual",
-        "expect": [
-          "EKODI Hub",
-          "EKODI 서비스 허브"
-        ],
-        "headerExpect": [
-          "x-ekodi-route: hub",
-          "x-ekodi-shell: v2"
-        ]
-      },
-      {
-        "url": "https://mail.ekodi.kr/",
+        "url": "https://ekodi.kr/mail",
         "statuses": [
           200
         ],
@@ -1116,19 +1067,7 @@
         "rollbackVerify": false
       },
       {
-        "url": "https://mail.ekodi.kr/contact",
-        "statuses": [
-          308
-        ],
-        "redirect": "manual",
-        "headerExpect": [
-          "location: https://ekodi.kr/mail/contact",
-          "cache-control: no-store"
-        ],
-        "rollbackVerify": false
-      },
-      {
-        "url": "https://mail.ekodi.kr/admin",
+        "url": "https://ekodi.kr/mail/admin",
         "statuses": [
           200
         ],
@@ -1140,59 +1079,6 @@
         "headerExpect": [
           "x-ekodi-route: mail-admin",
           "cache-control: no-store"
-        ]
-      },
-      {
-        "url": "https://live.ekodi.kr/",
-        "statuses": [
-          200
-        ],
-        "redirect": "manual",
-        "expect": [
-          "EKODI Hub",
-          "EKODI 서비스 허브"
-        ],
-        "headerExpect": [
-          "x-ekodi-route: hub"
-        ]
-      },
-      {
-        "url": "https://cloud.ekodi.kr/",
-        "statuses": [
-          200
-        ],
-        "redirect": "manual",
-        "expect": [
-          "EKODI Hub",
-          "EKODI 서비스 허브"
-        ],
-        "headerExpect": [
-          "x-ekodi-route: hub"
-        ]
-      },
-      {
-        "url": "https://trade.biz.ekodi.kr/",
-        "statuses": [
-          200
-        ],
-        "redirect": "manual",
-        "expect": [
-          "EKODI Global Trading",
-          "TRADING DIVISION · EKODIBIZ"
-        ],
-        "headerExpect": [
-          "x-ekodi-route: trade",
-          "x-ekodi-shell: v2"
-        ]
-      },
-      {
-        "url": "https://trade.ekodi.kr/",
-        "statuses": [
-          308
-        ],
-        "redirect": "manual",
-        "headerExpect": [
-          "location: https://trade.biz.ekodi.kr/"
         ]
       },
       {
@@ -1220,7 +1106,7 @@
         ]
       },
       {
-        "url": "https://admin.ekodi.kr/ai-ops-admin.js?evolution=v1",
+        "url": "https://ekodi.kr/admin/ai-ops-admin.js?evolution=v1",
         "statuses": [
           200
         ],
@@ -1235,15 +1121,15 @@
         ]
       },
       {
-        "url": "https://admin.ekodi.kr/communication-admin.js?communication=v1",
+        "url": "https://ekodi.kr/admin/communication-admin.js?communication=v1",
         "statuses": [
           200
         ],
         "redirect": "follow",
         "expect": [
           "EKODI COMMUNICATION ADMIN",
-          "https://mail.ekodi.kr/admin",
-          "https://live.ekodi.kr/"
+          "https://ekodi.kr/mail/admin",
+          "https://ekodi.kr/live"
         ],
         "headerExpect": [
           "x-content-type-options: nosniff"
@@ -1402,7 +1288,7 @@
         "rollbackVerify": false
       },
       {
-        "url": "https://admin.ekodi.kr/personal-finance-admin.js?pf=v1",
+        "url": "https://ekodi.kr/admin/personal-finance-admin.js?pf=v1",
         "statuses": [
           200
         ],
@@ -1418,7 +1304,7 @@
         "rollbackVerify": false
       },
       {
-        "url": "https://admin.ekodi.kr/personal-finance-admin.css?pf=v1",
+        "url": "https://ekodi.kr/admin/personal-finance-admin.css?pf=v1",
         "statuses": [
           200
         ],
@@ -1449,6 +1335,106 @@
         "headerExpect": [
           "x-ekodi-route: organization-admin",
           "cache-control: no-store"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/shop",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "쇼핑플랫폼",
+          "PLANNED"
+        ],
+        "headerExpect": [
+          "x-ekodi-canonical-surface: shop",
+          "x-ekodi-canonical-path: /shop",
+          "cache-control: no-store"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/pay",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "EKODI Pay",
+          "PREPARING"
+        ],
+        "headerExpect": [
+          "x-ekodi-canonical-surface: pay",
+          "x-ekodi-canonical-path: /pay",
+          "cache-control: no-store"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/live",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "EKODI Live",
+          "PREPARING"
+        ],
+        "headerExpect": [
+          "x-ekodi-canonical-surface: live",
+          "x-ekodi-canonical-path: /live",
+          "cache-control: no-store"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/cloud",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "EKODI Cloud",
+          "PREPARING"
+        ],
+        "headerExpect": [
+          "x-ekodi-canonical-surface: cloud",
+          "x-ekodi-canonical-path: /cloud",
+          "cache-control: no-store"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/media",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "에코디미디어",
+          "PLANNED"
+        ],
+        "headerExpect": [
+          "x-ekodi-canonical-surface: media",
+          "x-ekodi-canonical-path: /media",
+          "cache-control: no-store"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/education",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "Education"
+        ],
+        "headerExpect": [
+          "x-ekodi-canonical-surface: education",
+          "x-ekodi-canonical-path: /education"
         ],
         "rollbackVerify": false
       }
