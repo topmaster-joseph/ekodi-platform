@@ -6,6 +6,8 @@ import { isWorkspaceAdminPath, workspaceAdminScript } from '../workspace-admin-p
 
 test('site admins use each managed site canonical path plus /admin', async () => {
   assert.equal(isWorkspaceAdminPath('/ekodibiz/admin/'), true);
+  assert.equal(isWorkspaceAdminPath('/ekodimall/admin/'), true);
+  assert.equal(isWorkspaceAdminPath('/ekodimall/admin/channel-settings'), true);
   assert.equal(isWorkspaceAdminPath('/ekodibiz/ekodimall/admin/'), true);
   assert.equal(isWorkspaceAdminPath('/ekodibiz/ekodimall/admin/channel-settings'), true);
   assert.equal(isWorkspaceAdminPath('/admin/ekodimall/'), false);
@@ -14,8 +16,9 @@ test('site admins use each managed site canonical path plus /admin', async () =>
   assert.equal(isWorkspaceAdminPath('/jadam/admin/'), true);
   assert.equal(isWorkspaceAdminPath('/admin/'), false);
   const js = await workspaceAdminScript().text();
+  assert.match(js, /const standaloneMall=clean\.match/);
   assert.match(js, /const base=`\/\$\{workspace\}`/);
-  assert.match(js, /adminBase=service==='mall'\?`\$\{base\}\/ekodimall\/admin`/);
+  assert.match(js, /adminBase=standaloneMall\?'\/ekodimall\/admin':service==='mall'\?`\$\{base\}\/ekodimall\/admin`/);
   assert.match(js,/service\?`\$\{base\}\/\$\{service\}\/admin`/);
   assert.ok(js.includes('channelAccountForm'));
   assert.ok(js.includes('data-account-auth'));
@@ -45,4 +48,18 @@ test('guarded release probes the unique Mall admin and redirect-only aliases', a
   const legacy=byUrl.get('https://ekodi.kr/mall/admin/');
   assert.deepEqual(legacy?.statuses,[308]);
   assert.ok(legacy?.headerExpect.includes('location: https://ekodi.kr/ekodibiz/ekodimall/admin'));
+});
+
+
+test('top-level EKODIMALL admin is parsed as the Mall service surface', async () => {
+  const js = await workspaceAdminScript().text();
+  assert.match(js, /standaloneMall=clean\.match/);
+  assert.match(js, /mall=Boolean\(canonicalMall\|\|standaloneMall\)/);
+  assert.match(js, /standaloneMall\?'ekodibiz'/);
+  assert.match(js, /rawSection=canonicalMall\?\.\[2\]\|\|standaloneMall\?\.\[1\]/);
+  assert.match(js, /adminBase=standaloneMall\?'\/ekodimall\/admin'/);
+  assert.ok(js.includes('Google 계정으로 관리자 확인'));
+  assert.ok(js.includes('상품 · 제휴'));
+  assert.ok(js.includes('판매 · 마케팅'));
+  assert.ok(js.includes('AI 영업'));
 });
