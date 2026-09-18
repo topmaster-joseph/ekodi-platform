@@ -487,6 +487,52 @@ async function verifyCommandWorkbench(started) {
   results.push({ id: menuId, group, ok: true, durationMs: Date.now() - started, ...state });
 }
 
+async function verifyPersonalFinance(tab, alreadyActive, started) {
+  stage('personal-finance-control');
+  if (!alreadyActive) await clickFast(tab);
+
+  stage('personal-finance-api');
+  const response = await fetch('https://ekodi.kr/api/control/personal-finance', {
+    headers: { accept:'application/json', authorization:`Bearer ${token}`, origin:adminOrigin },
+    signal:AbortSignal.timeout(10_000),
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (response.status !== 200) throw new Error(`personal-finance: apex control proxy returned HTTP ${response.status} ${payload.code || payload.error || ''}`.trim());
+  const corsOrigin = response.headers.get('access-control-allow-origin') || '';
+  const proxyMode = response.headers.get('x-ekodi-personal-finance-proxy') || '';
+  if (corsOrigin !== adminOrigin) throw new Error(`personal-finance: CORS origin mismatch: ${corsOrigin || 'missing'}`);
+  if (proxyMode !== 'service-binding-v1') throw new Error(`personal-finance: service binding proxy evidence missing: ${proxyMode || 'missing'}`);
+  if (payload.service?.canonicalPath !== '/api/control/personal-finance' || payload.service?.serviceBinding !== 'PERSONAL_FINANCE') throw new Error('personal-finance: canonical service-binding metadata drift');
+  if (payload.service?.dataBoundary !== 'dedicated-d1') throw new Error('personal-finance: dedicated D1 boundary missing');
+  if (payload.safety?.actionCeiling !== 'L2' || payload.safety?.financialExecution !== false || payload.safety?.aiWriteEnabled !== false || payload.safety?.personalDataAdminReadable !== false) throw new Error('personal-finance: immutable safety boundary drift');
+
+  stage('personal-finance-render');
+  await page.waitForFunction(() => {
+    const panel = document.querySelector('#personalFinanceAdminPanel');
+    if (!panel || panel.hidden || panel.classList.contains('hidden-panel')) return false;
+    if (panel.getAttribute('aria-busy') === 'true') return false;
+    return Boolean(panel.querySelector('.pf-admin-summary') || panel.querySelector('.pf-admin-error'));
+  }, null, { timeout: 12_000 });
+  const state = await page.evaluate(() => {
+    const panel = document.querySelector('#personalFinanceAdminPanel');
+    const summary = panel?.querySelector('.pf-admin-summary');
+    const error = panel?.querySelector('.pf-admin-error');
+    const text = String(panel?.innerText || '').replace(/\s+/g, ' ').trim();
+    return {
+      loaded: Boolean(summary),
+      error: String(error?.innerText || '').replace(/\s+/g, ' ').trim(),
+      text,
+      textLength: text.length,
+      proxyRequestSeen: performance.getEntriesByType('resource').some(entry => {
+        try { return new URL(entry.name, location.href).pathname === '/api/control/personal-finance'; } catch { return false; }
+      }),
+    };
+  });
+  if (!state.loaded || state.error || !state.proxyRequestSeen) throw new Error(`personal-finance control failed: ${JSON.stringify(state)}`);
+  for (const marker of ['개인재무 운영 설정','관리자 원장 열람','차단']) if (!state.text.includes(marker)) throw new Error(`personal-finance semantic marker missing: ${marker}`);
+  results.push({ id:menuId, group, ok:true, durationMs:Date.now()-started, personalFinanceControl:true, apiStatus:response.status, corsOrigin, proxyMode, canonicalPath:payload.service.canonicalPath, productionMutation:false, ...state });
+}
+
 async function verifyNormal(tab, alreadyActive, started) {
   if (!alreadyActive) await clickFast(tab);
   stage('panel');
@@ -562,6 +608,7 @@ try {
       else if (menuId === 'language-status') await verifyLanguageStatus(trigger, alreadyActive, started);
       else if (menuId === 'maturity') await verifyMaturity(trigger, alreadyActive, started);
       else if (menuId === 'ai-settings') await verifyAiSettings(trigger, alreadyActive, started);
+      else if (menuId === 'personal-finance') await verifyPersonalFinance(trigger, alreadyActive, started);
       else await verifyNormal(trigger, alreadyActive, started);
     }
   }

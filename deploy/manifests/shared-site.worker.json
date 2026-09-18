@@ -1402,6 +1402,22 @@
         "rollbackVerify": false
       },
       {
+        "url": "https://ekodi.kr/api/control/personal-finance",
+        "statuses": [
+          401
+        ],
+        "redirect": "manual",
+        "expect": [
+          "PF_ADMIN_AUTH_REQUIRED"
+        ],
+        "headerExpect": [
+          "x-ekodi-personal-finance-proxy: service-binding-v1",
+          "cache-control: no-store",
+          "x-content-type-options: nosniff"
+        ],
+        "rollbackVerify": false
+      },
+      {
         "url": "https://admin.ekodi.kr/personal-finance-admin.js?pf=v1",
         "statuses": [
           200
@@ -1409,7 +1425,7 @@
         "redirect": "follow",
         "expect": [
           "전문서비스 · PERSONAL FINANCE",
-          "/api/admin/personal-finance/control",
+          "/api/control/personal-finance",
           "개인 금융원장의 내용은 이 화면에서 조회하지 않습니다"
         ],
         "headerExpect": [
