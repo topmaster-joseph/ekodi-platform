@@ -1,5 +1,5 @@
 {
-  "version": 70,
+  "version": 71,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
@@ -767,11 +767,47 @@
         "redirect": "manual",
         "expect": [
           "통합 인증센터",
-          "dataset.seamlessSso",
-          "/auth-router.js?v=20260904-direct-login-1"
+          "/auth/auth-bootstrap.js?v=20260918-csp-bootstrap-1",
+          "/auth/auth-entry.js?v=20260918-csp-bootstrap-1"
         ],
         "headerExpect": [
           "x-ekodi-route: central-auth"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/auth/auth-bootstrap.js?release=32",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "dataset.identityManage",
+          "dataset.seamlessSso",
+          "dataset.adminDirectBridge"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: central-auth-asset",
+          "cache-control: no-store",
+          "x-content-type-options: nosniff"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/auth/auth-entry.js?release=32",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "loadAuthRouter",
+          "./auth-router.js?v=20260918-csp-bootstrap-1",
+          "authLoopBlocked"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: central-auth-asset",
+          "cache-control: no-store",
+          "x-content-type-options: nosniff"
         ],
         "rollbackVerify": false
       },

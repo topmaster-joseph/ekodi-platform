@@ -27,6 +27,8 @@ jobs:
         run: |
           set -euo pipefail
           node --check auth-site/auth.js
+          node --check auth-site/auth-bootstrap.js
+          node --check auth-site/auth-entry.js
           node --check auth-site/auth-router.js
           node --check auth-site/marketing-auth-hotfix.js
           node --check auth-site/auth-workspace-target.js
@@ -40,8 +42,14 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          grep -Fq 'data-seamless-sso' auth-site/index.html
-          grep -Fq '/auth-router.js?v=20260904-direct-login-1' auth-site/index.html
+          grep -Fq '/auth-bootstrap.js?v=20260918-csp-bootstrap-1' auth-site/index.html
+          grep -Fq '/auth-entry.js?v=20260918-csp-bootstrap-1' auth-site/index.html
+          grep -Fq 'dataset.seamlessSso' auth-site/auth-bootstrap.js
+          grep -Fq "./auth-router.js?v=20260918-csp-bootstrap-1" auth-site/auth-entry.js
+          if grep -Eq '<script( [^>]*)?>[^<[:space:]]' auth-site/index.html; then
+            echo 'Central auth HTML must not contain inline executable JavaScript.'
+            exit 1
+          fi
 
           grep -Fq 'manifestService' auth-site/auth-router.js
           grep -Fq 'isRegistryUserService' auth-site/auth-router.js
