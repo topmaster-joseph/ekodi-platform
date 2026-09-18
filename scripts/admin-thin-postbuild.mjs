@@ -97,7 +97,7 @@ if (finalCompactCss.includes('.ekodi-device-panel') || finalCompactCss.includes(
 if (!finalCompactJs.includes('ekodiAssistBootstrap') || finalCompactJs.includes('/api/control/messenger/inbox')) {
   throw new Error('EKODI Assist bootstrap is not thin or full runtime leaked into first-path JS');
 }
-if (!finalCompactJs.includes('ekodi-assist-bootstrap-form') || !finalCompactJs.includes('에코디에게 이야기해보세요')) {
+if (!finalCompactJs.includes('ekodi-assist-bootstrap-form') || !finalCompactJs.includes('에코디에게 말해보세요')) {
   throw new Error('EKODI Assist conversation entry contract is missing from first-path JS');
 }
 if (!finalCompactCss.includes('.ekodi-assist-bootstrap') || finalCompactCss.includes('.ekodi-assist-panel')) {
