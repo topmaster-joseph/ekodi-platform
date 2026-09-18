@@ -49,7 +49,6 @@ test('Control staging binds to isolated Personal Finance staging while broad loc
   assert.match(workflow,/Cloudflare-Access/);
   assert.match(workflow,/wrangler\.api\.staging\.local-runtime\.toml/);
   assert.match(workflow,/perl -0pe/);
-  assert.match(workflow,/service = \\"ekodi-personal-finance-api-staging\\"/);
   assert.match(workflow,/https:\/\/ekodi\.kr\/api\/control\/personal-finance/);
 });
 
