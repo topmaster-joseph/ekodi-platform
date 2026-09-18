@@ -9,7 +9,7 @@ test('admin navigation names the device surface by the information administrator
   const demand = await read('admin-demand-loader.js');
   assert.match(registry, /컴퓨터·기기/);
   assert.match(registry, /Computer Devices/);
-  assert.match(demand, /label: '컴퓨터·기기'/);
+  assert.match(demand, /label: '기기 관리'/);
 });
 
 test('device admin shows status and attention before setup controls', async () => {
