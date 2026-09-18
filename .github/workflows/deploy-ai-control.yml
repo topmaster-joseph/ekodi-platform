@@ -6,6 +6,13 @@ on:
     paths:
       - 'ai-control/**'
       - 'ai-control-*.js'
+      - 'ekodi-ai-provider-registry.js'
+      - 'openai-provider-adapter.js'
+      - 'anthropic-provider-adapter.js'
+      - 'gemini-orchestrator-provider-adapter.js'
+      - 'api-usage-meter.js'
+      - 'secure-projection.js'
+      - 'ai-cost-policy.js'
       - 'ai-free-quota.js'
       - 'groq-free-provider-adapter.js'
       - 'openrouter-free-provider-adapter.js'
@@ -63,6 +70,13 @@ on:
     paths:
       - 'ai-control/**'
       - 'ai-control-*.js'
+      - 'ekodi-ai-provider-registry.js'
+      - 'openai-provider-adapter.js'
+      - 'anthropic-provider-adapter.js'
+      - 'gemini-orchestrator-provider-adapter.js'
+      - 'api-usage-meter.js'
+      - 'secure-projection.js'
+      - 'ai-cost-policy.js'
       - 'ai-free-quota.js'
       - 'groq-free-provider-adapter.js'
       - 'openrouter-free-provider-adapter.js'
@@ -149,6 +163,10 @@ jobs:
           node --check ai-collaboration-settings.js
           node --check local-execution-policy.js
           node --check ai-control-provider-router.js
+          node --check ekodi-ai-provider-registry.js
+          node --check openai-provider-adapter.js
+          node --check anthropic-provider-adapter.js
+          node --check gemini-orchestrator-provider-adapter.js
           node --check ai-free-quota.js
           node --check groq-free-provider-adapter.js
           node --check openrouter-free-provider-adapter.js
@@ -163,7 +181,7 @@ jobs:
           node scripts/validate-constitution.mjs
           node scripts/validate-ai-mission-governance.mjs
           node scripts/validate-additive-migrations.mjs migrations
-          node --test test/ai-control-platform.test.mjs test/ai-free-quota.test.mjs test/free-provider-adapters.test.mjs test/ai-router-score.test.mjs test/ai-collaboration-settings.test.mjs test/local-execution-policy.test.mjs test/ai-account-node-scheduler.test.mjs test/cognitive-control-plane.test.mjs test/common-service-operator-control.test.mjs test/ai-commons.test.mjs test/ai-commons-subservice.test.mjs
+          node --test test/ai-control-platform.test.mjs test/ai-control-provider-router.test.mjs test/ai-free-quota.test.mjs test/free-provider-adapters.test.mjs test/ai-router-score.test.mjs test/ai-collaboration-settings.test.mjs test/local-execution-policy.test.mjs test/ai-account-node-scheduler.test.mjs test/cognitive-control-plane.test.mjs test/common-service-operator-control.test.mjs test/ai-commons.test.mjs test/ai-commons-subservice.test.mjs
           node --check ai-commons.js
           node --check ai-commons-admin.js
           node --check ai-control/commons.js
