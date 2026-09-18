@@ -1,5 +1,6 @@
 // Canonical API surface: https://ekodi.kr/api/finance/policy-funds
 // Finance admin surface: https://ekodi.kr/admin?route=finance&source=finance
+// Branch protection refresh: validated on current main.
 export const POLICY_APPLICATION_STATUSES = Object.freeze([
   'discovered', 'eligible', 'preparing', 'submitted', 'supplement',
   'approved', 'rejected', 'executed', 'closed'
