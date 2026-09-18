@@ -84,8 +84,10 @@ test('admin root is a command-only workspace while Campus remains a child route'
   assert.match(e2eWorker,/currentSection !== 'command-home'/);
   assert.match(e2eWorker,/tab\.waitFor\(\{ state: 'attached', timeout: interactionReadyTimeoutMs \}\)/);
   const commandBranch=e2eWorker.indexOf("if (menuId === 'command-home') {");
-  const visibleTabWait=e2eWorker.indexOf("await tab.waitFor({ state: 'visible', timeout: interactionReadyTimeoutMs });",commandBranch);
-  assert.ok(commandBranch>=0&&visibleTabWait>commandBranch,'command-home must bypass the generic visible-tab requirement in compact mode');
+  assert.ok(commandBranch>=0,'command-home verifier branch must remain explicit');
+  assert.match(e2eWorker,/async function activateContextTab\(tab\)/);
+  assert.match(e2eWorker,/button\.admin-detail-item\[data-admin-detail-section=/);
+  assert.doesNotMatch(e2eWorker,/tab\.waitFor\(\{ state: 'visible', timeout: interactionReadyTimeoutMs \}\)/);
 
   assert.match(productionE2e,/id === 'command-home'/);
   assert.match(productionE2e,/#ekodiAssistDock/);
