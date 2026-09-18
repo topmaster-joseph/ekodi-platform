@@ -93,8 +93,8 @@ jobs:
         run: npm test
 
 
-  diagnose-live-orchestrator-task:
-    name: Diagnose live orchestrator task
+  probe-existing-ai-providers:
+    name: Probe existing AI providers
     if: github.event_name == 'pull_request' && github.head_ref == 'ai/chatgpt/dispatch-live-proof-20260918'
     permissions:
       contents: read
@@ -103,15 +103,12 @@ jobs:
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-      TASK_ID: proof_orch_35298337475_1
+      EKODI_ORIGIN: https://ekodi.kr
     steps:
-      - name: Read sanitized production ledger and provider health
+      - name: Issue short-lived admin session and inspect provider snapshot
         shell: bash
         run: |
           set -euo pipefail
-          test -n "$CLOUDFLARE_API_TOKEN"
-          test -n "$CLOUDFLARE_ACCOUNT_ID"
-
           cf_query() {
             local db="$1" sql="$2"
             curl -fsS --retry 2 --retry-delay 1 \
@@ -120,90 +117,88 @@ jobs:
               -H 'Content-Type: application/json' \
               --data "$(jq -nc --arg sql "$sql" '{sql:$sql}')"
           }
-
           databases=$(curl -fsS --retry 2 --retry-delay 1 \
             "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/d1/database?per_page=100" \
             -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN")
-          echo "$databases" | jq -e '.success == true' >/dev/null
-
-          ledger_db=''
+          auth_db=''
+          admin_id=''
           while IFS= read -r db; do
             [ -n "$db" ] || continue
-            schema=$(cf_query "$db" "SELECT name FROM sqlite_master WHERE type='table' AND name IN ('ai_command_tasks','ai_command_runs')" || true)
-            if echo "$schema" | jq -e '.success == true and ([.result[]?.results[]?.name] | index("ai_command_tasks") != null and index("ai_command_runs") != null)' >/dev/null 2>&1; then
-              ledger_db="$db"
-              break
-            fi
+            schema=$(cf_query "$db" "SELECT name FROM sqlite_master WHERE type='table' AND name IN ('admins','sessions')" || true)
+            if ! echo "$schema" | jq -e '.success == true and ([.result[]?.results[]?.name] | index("admins") != null and index("sessions") != null)' >/dev/null 2>&1; then continue; fi
+            candidate=$(cf_query "$db" "SELECT id FROM admins WHERE role='super_admin' ORDER BY id LIMIT 1" || true)
+            id=$(echo "$candidate" | jq -r '.result[]?.results[0]?.id // empty' | head -1)
+            if [[ "$id" =~ ^[0-9]+$ ]]; then auth_db="$db"; admin_id="$id"; break; fi
           done < <(echo "$databases" | jq -r '.result[]? | (.uuid // .id // empty)')
-          test -n "$ledger_db"
+          test -n "$auth_db"
+          test -n "$admin_id"
 
-          task=$(cf_query "$ledger_db" "SELECT id,state,attempt_count,max_attempts,next_attempt_at,last_error,plan_json,result_json,evidence_json,created_at,updated_at,closed_at FROM ai_command_tasks WHERE id='$TASK_ID' LIMIT 1")
-          runs=$(cf_query "$ledger_db" "SELECT attempt,state,provider_diversity,sentinel_independent,result_json,started_at,completed_at FROM ai_command_runs WHERE task_id='$TASK_ID' ORDER BY id ASC")
-          providers=$(cf_query "$ledger_db" "SELECT provider_id,enabled,health_status,last_checked_at,last_error FROM ai_provider_registry ORDER BY priority,provider_id" || true)
+          token=$(openssl rand -hex 32)
+          token_hash=$(printf '%s' "$token" | sha256sum | awk '{print $1}')
+          created=$(date -u +'%Y-%m-%dT%H:%M:%S.000Z')
+          expires=$(date -u -d '+20 minutes' +'%Y-%m-%dT%H:%M:%S.000Z')
+          echo "::add-mask::$token"
+          echo "::add-mask::$token_hash"
+          cf_query "$auth_db" "INSERT INTO sessions (token_hash, admin_id, expires_at, created_at) VALUES ('$token_hash', $admin_id, '$expires', '$created')" \
+            | jq -e '.success == true' >/dev/null
 
-          echo "$task" | jq -e '.success == true and (.result[]?.results | length) == 1' >/dev/null
-          echo "$runs" | jq -e '.success == true and (.result[]?.results | length) >= 1' >/dev/null
+          session=$(curl -fsS "$EKODI_ORIGIN/api/session" -H "Authorization: Bearer $token")
+          echo "$session" | jq -e '.authenticated == true and .role == "super_admin"' >/dev/null
 
-          task_row=$(echo "$task" | jq -c '.result[]?.results[0]')
-          run_rows=$(echo "$runs" | jq -c '[.result[]?.results[]]')
-          provider_rows=$(echo "$providers" | jq -c 'if .success == true then [.result[]?.results[] | {
-            providerId:.provider_id,
-            enabled:(.enabled == 1),
-            health:(.health_status // "unknown"),
-            lastCheckedAt:(.last_checked_at // null),
-            lastError:(.last_error // "")
-          }] else [] end')
+          snapshot=$(curl -fsS "$EKODI_ORIGIN/api/ai-modules/v1/providers/admin" \
+            -H "Authorization: Bearer $token")
+          echo "$snapshot" | jq '{
+            control,
+            providers:[.providers[] | {
+              id,
+              enabled,
+              configured,
+              health,
+              lastCheckedAt,
+              lastError,
+              costClass,
+              runtime,
+              inSync
+            }],
+            routes
+          }' | tee "$RUNNER_TEMP/provider-snapshot.json"
 
-          jq -n \
-            --arg taskId "$TASK_ID" \
-            --argjson task "$task_row" \
-            --argjson runs "$run_rows" \
-            --argjson providers "$provider_rows" \
-            '{
-              taskId:$taskId,
-              task:{
-                state:$task.state,
-                attemptCount:$task.attempt_count,
-                maxAttempts:$task.max_attempts,
-                nextAttemptAt:$task.next_attempt_at,
-                lastError:$task.last_error,
-                createdAt:$task.created_at,
-                updatedAt:$task.updated_at,
-                closedAt:$task.closed_at,
-                resultState:(($task.result_json|fromjson?).state // null),
-                resultError:(($task.result_json|fromjson?).error // null),
-                resultReason:(($task.result_json|fromjson?).reason // null),
-                assignments:[(($task.result_json|fromjson?).plan.assignments[]? // empty) | {role,provider}],
-                specialists:[(($task.result_json|fromjson?).specialists[]? // empty) | {role,provider,mode,ok}],
-                sentinel:(($task.result_json|fromjson?).sentinel // null | if . == null then null else {role,provider,mode,ok} end),
-                reverifier:(($task.result_json|fromjson?).reverifier // null | if . == null then null else {role,provider,mode,ok} end),
-                evidence:{
-                  providerDiversity:(($task.evidence_json|fromjson?).providerDiversity // 0),
-                  sentinelIndependent:(($task.evidence_json|fromjson?).sentinelIndependent // false),
-                  verified:(($task.evidence_json|fromjson?).verified // false),
-                  consultationStatus:(($task.evidence_json|fromjson?).consultation.status // null)
-                }
-              },
-              runs:[$runs[] | {
-                attempt,
-                state,
-                providerDiversity:.provider_diversity,
-                sentinelIndependent:(.sentinel_independent == 1),
-                resultState:((.result_json|fromjson?).state // null),
-                resultError:((.result_json|fromjson?).error // null),
-                resultReason:((.result_json|fromjson?).reason // null),
-                specialists:[((.result_json|fromjson?).specialists[]? // empty) | {role,provider,mode,ok}],
-                startedAt:.started_at,
-                completedAt:.completed_at
-              }],
-              providerHealth:$providers
-            }' | tee "$RUNNER_TEMP/ekodi-orchestrator-diagnostic.json"
+          gemini_configured=$(echo "$snapshot" | jq -r '.providers[] | select(.id=="gemini") | .configured')
+          if [ "$gemini_configured" = "true" ]; then
+            code=$(curl -sS -o "$RUNNER_TEMP/gemini-check.json" -w '%{http_code}' \
+              -X POST "$EKODI_ORIGIN/api/ai-modules/v1/providers/admin/gemini/check" \
+              -H "Authorization: Bearer $token" \
+              -H 'Content-Type: application/json' \
+              --data '{}')
+            echo "Gemini health HTTP: $code"
+            jq '{ok,provider,status,code,model,responseMs}' "$RUNNER_TEMP/gemini-check.json"
+          else
+            echo '{"ok":false,"provider":"gemini","status":"unconfigured","skipped":true}' | tee "$RUNNER_TEMP/gemini-check.json"
+          fi
 
-      - name: Upload sanitized diagnostic
+          echo "E2E_AUTH_DB_ID=$auth_db" >> "$GITHUB_ENV"
+          echo "E2E_TOKEN_HASH=$token_hash" >> "$GITHUB_ENV"
+
+      - name: Upload sanitized provider probe
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ekodi-orchestrator-diagnostic-${{ github.run_id }}-${{ github.run_attempt }}
-          path: ${{ runner.temp }}/ekodi-orchestrator-diagnostic.json
+          name: ekodi-provider-probe-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/provider-snapshot.json
+            ${{ runner.temp }}/gemini-check.json
           if-no-files-found: warn
           retention-days: 30
+
+      - name: Revoke short-lived session
+        if: always() && env.E2E_AUTH_DB_ID != '' && env.E2E_TOKEN_HASH != ''
+        shell: bash
+        run: |
+          set -euo pipefail
+          sql="DELETE FROM sessions WHERE token_hash = '$E2E_TOKEN_HASH'"
+          curl -fsS \
+            -X POST "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/d1/database/$E2E_AUTH_DB_ID/query" \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            -H 'Content-Type: application/json' \
+            --data "$(jq -nc --arg sql "$sql" '{sql:$sql}')" \
+            | jq -e '.success == true' >/dev/null
