@@ -1,0 +1,41 @@
+name: Patch Delivery Commerce Admin UI
+
+on:
+  push:
+    branches:
+      - ai/gpt-5-6-sol/delivery-commerce-intelligence-20260909
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: ${{ !contains(github.event.head_commit.message, '[admin-ui-patched]') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ai/gpt-5-6-sol/delivery-commerce-intelligence-20260909
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Patch store admin panels
+        run: |
+          node scripts/patch-delivery-commerce-admin.mjs
+          node scripts/patch-delivery-commerce-connections.mjs
+          node --check store-admin-engine.js
+          node --test test/store-admin-systems.test.mjs test/storefront-public.test.mjs test/delivery-commerce-intelligence.test.mjs
+          git diff --check
+      - name: Commit materialized admin UI
+        run: |
+          if git diff --quiet; then
+            echo 'Admin UI already materialized.'
+            exit 0
+          fi
+          git config user.name 'EKODI Collaboration Bot'
+          git config user.email 'actions@users.noreply.github.com'
+          git add store-admin-engine.js
+          git commit -m 'feat(commerce): wire delivery platform admin experience [admin-ui-patched]'
+          git push origin HEAD:ai/gpt-5-6-sol/delivery-commerce-intelligence-20260909
