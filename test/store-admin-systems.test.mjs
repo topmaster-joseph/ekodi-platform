@@ -46,6 +46,13 @@ test('existing first stores are compatibility profiles on one Store Admin Engine
   assert.match(script,/noRoleSpecificAdminPages/);assert.match(script,/tenant\.marketing\.manage/);
   assert.doesNotMatch(script,/\['store_owner','tenant_admin','platform_admin'\]/);
   assert.match(script,/state\.menu\?\.menu/);assert.match(script,/const GROUPS=\[/);assert.match(script,/function renderSecondaryNav/);assert.doesNotMatch(script,/state\.menu\?\.items/);
+  assert.match(script,/https:\/\/ekodi\.kr\/workspace-api/);
+  assert.match(script,/\/v1\/store-sms\/orders/);
+  assert.match(script,/data-sms-action/);
+  assert.match(script,/고객 확인 대기/);
+  assert.match(script,/매장 확인 필요/);
+  assert.match(script,/문자주문 상태 반영/);
+  assert.doesNotMatch(script,/STORE_SMS_INGRESS_TOKEN|CHANNEL_SMS_TOKEN/);
   assert.doesNotMatch(script,/\/api\/store\/menu/);
 });
 
