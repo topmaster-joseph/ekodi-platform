@@ -1,6 +1,6 @@
 -- Store-scoped SMS ordering foundation.
--- Raw phone numbers are intentionally not stored. The external SMS bridge supplies
--- an opaque external_thread_id which remains inside messenger_channel_links.
+-- No dedicated phone-number field is stored. The external SMS bridge must supply
+-- an opaque external_thread_id; customer message text remains part of the order/conversation ledger.
 
 CREATE TABLE IF NOT EXISTS store_sms_orders (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
