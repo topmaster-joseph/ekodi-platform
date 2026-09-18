@@ -1,5 +1,5 @@
 (() => {
-  const API='https://api.ekodi.kr';
+  const API='';
   const ROOT_ID='churchPartnerNewsRoot';
   const STATUS={DRAFT:'초안',REVIEW:'검토중',PUBLISHED:'공개',ARCHIVED:'보관'};
   let state=null,currentId='',busy=false,installed=false;
