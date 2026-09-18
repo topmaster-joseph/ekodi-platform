@@ -19,7 +19,7 @@ test('multi-provider registry is opt-in so existing callers keep their current p
   assert.deepEqual(status.orchestration.configuredProviders.map(provider => provider.id), ['supplied']);
 });
 
-test('opt-in registry attaches OpenAI Anthropic and Gemini without exposing credentials', () => {
+test('opt-in registry attaches bounded Workers AI plus OpenAI Anthropic and Gemini without exposing credentials', () => {
   const gateway = buildCoreAiGateway({
     AI_MULTI_PROVIDER_ENABLED: 'true',
     OPENAI_API_KEY: 'openai-test-secret',
