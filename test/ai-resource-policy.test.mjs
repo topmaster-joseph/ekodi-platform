@@ -15,8 +15,8 @@ test('personal-first resource order remains fixed while funding is free-first', 
     funding:{ automaticPaidBudgetKrw:999999, paidApiAutoEscalation:true },
   });
   assert.equal(policy.strategy, 'personal-first');
-  assert.deepEqual(policy.interactiveOrder, ['personal-subscription','personal-api','ekodi-shared-api','hosted-ai','core-only']);
-  assert.deepEqual(policy.autonomousOrder, ['personal-api','ekodi-shared-api','hosted-ai','core-only']);
+  assert.deepEqual(policy.interactiveOrder, ['personal-subscription','personal-api','cloudflare-workers-ai-binding','ekodi-shared-api','hosted-ai','core-only']);
+  assert.deepEqual(policy.autonomousOrder, ['personal-api','cloudflare-workers-ai-binding','ekodi-shared-api','hosted-ai','core-only']);
   assert.equal(policy.funding.principle, 'free-first-never-free-only');
   assert.equal(policy.funding.automaticPaidBudgetKrw, 0);
   assert.equal(policy.funding.paidApiAutoEscalation, false);
@@ -54,6 +54,21 @@ test('router scores only zero-cost candidates that pass hard gates', () => {
   ];
   const ranked = rankAiResourceCandidates(candidates, { lane:'autonomous' }, DEFAULT_AI_RESOURCE_POLICY);
   assert.deepEqual(ranked.map(item => item.id), ['fast','slow']);
+});
+
+
+test('Cloudflare Workers AI binding is an eligible bounded autonomous zero-cost resource', () => {
+  const result = scoreAiResourceCandidate({
+    id:'cloudflare-workers-ai',
+    resourceClass:'cloudflare-workers-ai-binding',
+    available:true,
+    officialPath:true,
+    automationAllowed:true,
+    costClass:'account-managed',
+  }, { lane:'autonomous' });
+  assert.equal(result.eligible,true);
+  assert.equal(result.blockedBy,'');
+  assert.equal(DEFAULT_AI_RESOURCE_POLICY.pools.workersAi.enabled,true);
 });
 
 test('shared API and hosted AI remain off by default while Core is always available', () => {
