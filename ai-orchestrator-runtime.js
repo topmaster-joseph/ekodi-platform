@@ -80,7 +80,7 @@ export function buildAiOrchestrationPlan(input = {}, providers = []) {
   const eligibleBase = normalized.filter(provider => provider.available && supports(provider, requiredCapabilities));
   const lane = input.lane === 'autonomous' ? 'autonomous' : 'interactive';
   const governance = input.governance && typeof input.governance === 'object' ? input.governance : {};
-  const ranked = rankAiResourceCandidates(eligibleBase, { lane, governance });
+  const ranked = rankAiResourceCandidates(eligibleBase, { lane, governance, context:input.context ?? null });
   const eligible = ranked.map(item => normalized.find(provider => provider.id === item.id)).filter(Boolean);
   const mode = chooseMode(collaboration, risk);
   const primary = eligible[0] || null;
@@ -169,6 +169,7 @@ export function buildEkodiAiOrchestrator(env = {}, providers = []) {
         requiredCapabilities,
         lane,
         governance,
+        context,
       }, normalized);
       const eligibleIds = new Set(plan.eligibleProviders);
       const eligible = normalized.filter(provider => eligibleIds.has(provider.id));
