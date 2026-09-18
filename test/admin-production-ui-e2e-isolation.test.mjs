@@ -49,3 +49,15 @@ test('synthetic production Admin UI verifier follows direct registry href menus 
   const panelWait = text.indexOf('window.EKODIAdminPanels?.current?.() === section');
   assert.ok(directHrefBranch >= 0 && panelWait > directHrefBranch, 'direct href menus must exit before local panel assertions');
 });
+
+
+test('synthetic production Admin UI verifier follows the visible compact sidebar instead of hidden context tabs', async () => {
+  const text = await source();
+  assert.match(text, /async function resolveVisibleMenuTrigger\(id, group\)/);
+  assert.match(text, /admin-detail-item\[data-admin-detail-section=/);
+  assert.match(text, /data-admin-detail-more=/);
+  assert.match(text, /contextTab\.waitFor\(\{ state: 'attached'/);
+  assert.doesNotMatch(text, /contextTab\.waitFor\(\{ state: 'visible'/);
+  assert.match(text, /const trigger = id === 'command-home' \? null : await resolveVisibleMenuTrigger\(id, group\)/);
+  assert.match(text, /if \(id !== 'command-home'\) \{\s*await dispatchClick\(trigger\)/);
+});
