@@ -45,7 +45,7 @@ test('machine-readable orchestration policy requires related-change review',()=>
 });
 
 test('integration order never bypasses actual GitHub merge conflicts',()=>{
-  assert.match(workflow,/mergeable.*== 'false'/);
+  assert.match(workflow,/mergeable.*== 'CONFLICTING'/);
   assert.match(workflow,/actual merge conflict with the base branch/);
   assert.match(docs,/do not waive tests, reviews, branch protection, authorization or deployment safeguards/);
 });
