@@ -20,15 +20,14 @@ test('canonical apex Control path is owned by CONTROL_API and proxies Personal F
   assert.match(wrangler,/\[\[services\]\]\s+binding = "PERSONAL_FINANCE"\s+service = "ekodi-personal-finance-api"/);
 });
 
-test('Control staging binds only to the isolated Personal Finance staging worker and verifies the auth contract',()=>{
+test('Control staging binds Personal Finance remotely while the broad local baseline stays isolated',()=>{
   const workflow=read('.github/workflows/deploy-control-api.yml');
   assert.match(workflow,/binding = "PERSONAL_FINANCE"\s+service = "ekodi-personal-finance-api-staging"/);
   assert.match(workflow,/Verify Personal Finance Control service binding in staging/);
   assert.match(workflow,/pf-control-staging\.json/);
   assert.match(workflow,/Cloudflare-Access/);
-  assert.match(workflow,/personal-finance-local\.json/);
   assert.match(workflow,/PF_ADMIN_AUTH_REQUIRED/);
-  assert.match(workflow,/personal_finance=.*\/api\/control\/personal-finance/);
+  assert.match(workflow,/wrangler\.api\.staging\.local-runtime\.toml/);
 });
 
 test('Control guarded release probes the Personal Finance canonical auth boundary and PROD Google identity',()=>{
