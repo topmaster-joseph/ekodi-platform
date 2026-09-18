@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { publicationDecisionSummary, resolvePublicationDecision } from './publication-approval-policy.mjs';
 
 const args = process.argv.slice(2);
 const readArg = (name, fallback = '') => {
@@ -13,6 +14,7 @@ const root = path.resolve(readArg('--root', '.'));
 const policyRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const manifestPath = path.resolve(readArg('--manifest'));
 const wranglerVersion = readArg('--wrangler-version', '4.119.0');
+const publicationDecision = resolvePublicationDecision();
 
 if (!readArg('--manifest')) {
   console.error('Usage: node scripts/guarded-pages-release.mjs --manifest <file> [--root <dir>]');
@@ -155,6 +157,7 @@ function appendSummary(lines) {
 
 runChangeOrchestrationGate();
 runProviderIndependenceGate();
+console.log(publicationDecisionSummary(publicationDecision));
 console.log(`Release gate preview branch: ${previewBranch}`);
 console.log('Phase 1/3: deploy every target to isolated Cloudflare Pages previews.');
 for (const target of targets) {
@@ -171,7 +174,24 @@ for (const item of previewResults) {
   await verify(item.previewUrl, item.target, 'preview');
 }
 
-console.log('Phase 3/3: all previews passed, promoting the same build output to production.');
+if (!publicationDecision.approved) {
+  appendSummary([
+    '## EKODI private Pages deployment',
+    '',
+    `Publication decision: ${publicationDecisionSummary(publicationDecision)}`,
+    '',
+    '| Target | Private review preview | Production |',
+    '|---|---|---|',
+    ...previewResults.map(({ target, previewUrl }) => `| ${target.name || target.project} | ${previewUrl} | unchanged: ${target.productionUrl} |`),
+    '',
+    '🔒 Preview validation passed. Production was intentionally left unchanged pending administrator review.',
+    'A manual workflow_dispatch of the guarded deployment is the publication approval action.',
+  ]);
+  console.log('🔒 Private Pages deployment complete: previews passed and production remains unchanged pending administrator approval.');
+  process.exit(0);
+}
+
+console.log('Phase 3/3: administrator approval present; promote the same build output to production.');
 for (const target of targets) {
   deploy(target, 'main');
 }
@@ -181,17 +201,19 @@ for (const target of targets) {
 }
 
 appendSummary([
-  '## EKODI guarded Pages release',
+  '## EKODI guarded Pages publication',
   '',
+  `Publication decision: ${publicationDecisionSummary(publicationDecision)}`,
   `Preview gate: \`${previewBranch}\``,
   '',
   '- AI_PROVIDER=NONE resilience gate passed before any preview or production deployment.',
+  '- Production promotion occurred only after administrator review approval.',
   '',
   '| Target | Preview | Production |',
   '|---|---|---|',
   ...previewResults.map(({ target, previewUrl }) => `| ${target.name || target.project} | ${previewUrl} | ${target.productionUrl} |`),
   '',
-  '✅ All preview checks passed before production promotion, and all production smoke checks passed after promotion.',
+  '✅ All preview checks passed before administrator-approved production promotion, and all production smoke checks passed after publication.',
 ]);
 
-console.log('✅ Guarded release complete: no-provider gate passed, preview gate passed, production promoted, production verified.');
+console.log('✅ Guarded Pages publication complete after administrator approval.');

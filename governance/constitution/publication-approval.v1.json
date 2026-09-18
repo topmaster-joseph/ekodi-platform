@@ -1,0 +1,51 @@
+{
+  "id": "EKODI-PUBLICATION-APPROVAL-001",
+  "version": "1.0.0",
+  "effectiveDate": "2026-09-14",
+  "status": "active",
+  "scope": "all EKODI sites, services, pages, features and deployable public surfaces",
+  "defaultPublicationState": "private",
+  "separateDeploymentFromPublication": true,
+  "deploymentCompletionRequired": true,
+  "reviewBeforePublicPromotionRequired": true,
+  "automaticTriggersRemainPrivate": [
+    "push",
+    "pull_request",
+    "schedule",
+    "repository_dispatch"
+  ],
+  "administratorApprovalTrigger": "workflow_dispatch",
+  "reviewSurfaces": [
+    "staging",
+    "worker-candidate-0-percent",
+    "pages-preview"
+  ],
+  "publicPromotion": {
+    "allowedAfterAdministratorReview": true,
+    "workerTargetTrafficPercent": 100,
+    "pagesProductionBranch": "main",
+    "productionVerificationRequired": true
+  },
+  "firstDeployment": {
+    "automaticPublicBootstrapForbidden": true,
+    "administratorApprovalRequiredBeforeFirstPublicExposure": true
+  },
+  "unapprovedExposure": {
+    "publicNavigation": false,
+    "searchIndexing": false,
+    "recommendation": false,
+    "automaticExternalSharing": false
+  },
+  "emergencyException": {
+    "enabled": true,
+    "allowedReasons": [
+      "security-patch",
+      "legal-notice",
+      "incident-recovery"
+    ],
+    "reasonRequired": true,
+    "auditRequired": true
+  },
+  "completionRule": "Implementation and private deployment may be complete while publication remains pending. Public release is complete only after administrator approval, 100% promotion and production verification.",
+  "finalAuthority": "ekodi_platform_super_administrator"
+}
