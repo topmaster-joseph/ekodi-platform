@@ -75,7 +75,7 @@
       });
       document.querySelectorAll('.sidebar .nav').forEach(item => item.classList.remove('active'));
       document.querySelector('[data-device-control-nav]')?.classList.add('active');
-      setPageTitle('원격 작업');
+      setPageTitle('로컬컴퓨터·기기');
       if (location.hash !== '#devices') history.replaceState(null, '', '#devices');
     }
     document.querySelector('.sidebar')?.classList.remove('open');
@@ -342,7 +342,14 @@
     revoke.addEventListener('click', async () => { if (!confirm(`${device.label || type.label}의 EKODI ${isInventory(device) ? '인벤토리 등록' : 'Device Agent 권한'}을 해제할까요?`)) return; try { await request(`/api/control/devices/${encodeURIComponent(device.id)}/revoke`, { method:'POST' }); await loadDevices(); } catch (error) { alert(error.message); } });
     foot.append(note, revoke);
 
-    card.append(head, meta, managementPanel(device), execution, health.firstElementChild, recommendationPanel(device), diagnosticSummary(device), mainActions, startupPanel(device), profileTitle, profiles, securityTitle, security, history, foot);
+    const advanced = document.createElement('details');
+    advanced.className = 'device-details device-advanced-control';
+    advanced.innerHTML = '<summary>세부 관리 · 고급 작업</summary>';
+    const advancedBody = document.createElement('div');
+    advancedBody.className = 'device-advanced-control-body';
+    advancedBody.append(managementPanel(device), execution, startupPanel(device), profileTitle, profiles, securityTitle, security, history);
+    advanced.append(advancedBody);
+    card.append(head, meta, health.firstElementChild, recommendationPanel(device), diagnosticSummary(device), mainActions, advanced, foot);
     return card;
   }
 
@@ -379,6 +386,33 @@
     host.querySelectorAll('[data-type-filter]').forEach(button => button.addEventListener('click', () => { activeType = button.dataset.typeFilter || 'all'; renderTypeFilters(currentDevices); renderDevices(currentDevices); }));
   }
 
+  function renderAttentionSummary(devices) {
+    const host = document.querySelector('#deviceAttentionSummary');
+    if (!host) return;
+    const issues = devices.filter(device => ['stale','offline'].includes(device.status) || (Number.isFinite(Number(device.health?.score)) && Number(device.health.score) < 75));
+    host.dataset.state = issues.length ? 'attention' : 'good';
+    if (!devices.length) {
+      host.innerHTML = '<div><strong>연결된 기기가 없습니다.</strong><span>아래 “기기 연결 · 자동 작업 설정”에서 첫 기기를 연결할 수 있습니다.</span></div>';
+      return;
+    }
+    if (!issues.length) {
+      host.innerHTML = '<div><strong>현재 확인이 필요한 기기가 없습니다.</strong><span>온라인 상태와 건강점수가 정상 범위입니다.</span></div>';
+      return;
+    }
+    const visible = issues.slice(0, 4).map(device => {
+      const score = Number.isFinite(Number(device.health?.score)) ? ` · 건강 ${Math.round(Number(device.health.score))}점` : '';
+      return `<button type="button" data-device-focus="${escapeHtml(device.id)}"><strong>${escapeHtml(device.label || device.hostname || typeInfo(device).label)}</strong><span>${escapeHtml(statusLabel(device.status))}${escapeHtml(score)}</span></button>`;
+    }).join('');
+    host.innerHTML = `<div><strong>확인 필요 ${issues.length}대</strong><span>오프라인·응답 지연·건강점수 75점 미만 기기를 우선 표시합니다.</span></div><div class="device-attention-items">${visible}</div>`;
+    host.querySelectorAll('[data-device-focus]').forEach(button => button.addEventListener('click', () => {
+      const id = button.dataset.deviceFocus || '';
+      const target = [...document.querySelectorAll('[data-device-id]')].find(node => node.dataset.deviceId === id);
+      target?.scrollIntoView({ behavior:'smooth', block:'center' });
+      target?.classList.add('is-focused');
+      window.setTimeout(() => target?.classList.remove('is-focused'), 1600);
+    }));
+  }
+
   function renderDevices(devices) {
     currentDevices = devices;
     const list = document.querySelector('#ekodiDeviceList');
@@ -389,6 +423,7 @@
     online.textContent = String(devices.filter(device => device.status === 'online').length);
     issues.textContent = String(devices.filter(device => ['stale','offline'].includes(device.status) || (Number.isFinite(Number(device.health?.score)) && Number(device.health.score) < 75)).length);
     avgHealth.textContent = scored.length ? String(Math.round(scored.reduce((sum, device) => sum + Number(device.health.score), 0) / scored.length)) : '—';
+    renderAttentionSummary(devices);
     renderTypeFilters(devices);
     const visible = activeType === 'all' ? devices : devices.filter(device => (device.management?.type || 'pc') === activeType);
     list.textContent = '';
@@ -440,13 +475,13 @@
     const nav = document.querySelector('.sidebar nav'), content = document.querySelector('.content');
     if (!nav || !content || document.querySelector('#deviceControlPanel')) return;
     const button = document.createElement('button'); button.type = 'button'; button.className = 'nav'; button.dataset.deviceControlNav = 'true'; button.append(document.createTextNode('⌁ '));
-    const label = document.createElement('span'); label.textContent = '원격 작업'; button.append(label);
+    const label = document.createElement('span'); label.textContent = '로컬컴퓨터·기기'; button.append(label);
     const workspace = nav.querySelector('[data-section="workspace"]'); if (workspace) workspace.insertAdjacentElement('afterend', button); else nav.append(button);
 
     const panel = document.createElement('section'); panel.id = 'deviceControlPanel'; panel.className = 'section ekodi-device-panel hidden-panel'; panel.dataset.panel = 'devices';
     panel.innerHTML = `
       <div class="device-panel-head">
-        <div><p class="kicker">REMOTE WORK & DEVICE MANAGEMENT</p><h2>원격 작업</h2><p>원격 PC의 연결·복구·작업배정과 기기 진단을 한곳에서 관리합니다. PC는 허용된 원격 작업만 실행하며 POS·키오스크·센서·서비스로봇은 기기 유형별 안전정책을 그대로 적용합니다.</p></div>
+        <div><p class="kicker">REMOTE WORK & DEVICE MANAGEMENT · LOCAL COMPUTERS</p><h2>로컬컴퓨터·기기</h2><p>현재 연결 상태와 이용현황을 먼저 보고, 문제가 있는 기기만 빠르게 찾아 원격 작업으로 조치합니다. 연결·자동작업·고급 설정은 필요할 때 펼쳐 사용합니다.</p></div>
         <div class="device-head-actions"><span id="deviceGeneratedAt">연결 상태 확인 전</span><button type="button" class="secondary" id="refreshDevices">↻ 새로고침</button></div>
       </div>
       <div class="device-type-filters" id="deviceTypeFilters" aria-label="기기 유형 필터"></div>
@@ -457,6 +492,7 @@
         <article><small>확인 필요</small><strong id="deviceMetricIssues">—</strong></article>
         <article><small>평균 건강점수</small><strong id="deviceMetricHealth">—</strong><span>진단 가능한 기기 기준</span></article>
       </div>
+      <div class="device-attention-summary" id="deviceAttentionSummary" data-state="good"><div><strong>기기 상태를 확인하는 중입니다.</strong><span>문제가 있는 기기를 우선 표시합니다.</span></div></div>
       <section class="device-job-console">
         <div><p class="kicker">HYBRID EXECUTION QUEUE</p><h3>자동 작업 배정</h3><p>검증된 비휴대형 데스크톱 PC만 후보가 됩니다. POS·키오스크·태블릿·센서·로봇은 자동 실행 대상에서 제외합니다.</p></div>
         <form id="deviceJobForm"><label>작업<select name="type"><option value="diagnostics.collect">전체 진단</option><option value="network.diagnose">네트워크 진단</option><option value="updates.scan">업데이트 확인</option><option value="maintenance.temp_cleanup">임시파일 정리</option></select></label><label>기기 그룹<input name="targetGroup" value="general" pattern="[a-z0-9][a-z0-9_-]{0,59}" required></label><label>우선순위<input name="priority" type="number" min="1" max="100" value="50"></label><button type="submit" class="primary">작업 등록</button></form>
@@ -470,6 +506,27 @@
       <div class="device-security-note"><strong>권한 경계</strong><p>관찰 → 유형정책 → 진단 → 관리자 승인 → 허용 작업 실행 → 결과 검증 → 감사기록 순서로 동작합니다. 물리 동작이 가능한 기기는 전용 안전 어댑터 없이는 실행권한을 받지 않습니다.</p></div>
       <div class="ekodi-device-list" id="ekodiDeviceList"><div class="device-empty"><p>기기 목록을 불러오는 중입니다.</p></div></div>`;
     content.append(panel);
+    const metrics = panel.querySelector('.device-metrics');
+    const attention = panel.querySelector('#deviceAttentionSummary');
+    const filters = panel.querySelector('#deviceTypeFilters');
+    const list = panel.querySelector('#ekodiDeviceList');
+    if (metrics && attention && filters && list) {
+      panel.querySelector('.device-panel-head')?.insertAdjacentElement('afterend', metrics);
+      metrics.insertAdjacentElement('afterend', attention);
+      attention.insertAdjacentElement('afterend', filters);
+      filters.insertAdjacentElement('afterend', list);
+    }
+    const setup = document.createElement('details');
+    setup.className = 'device-setup-tools';
+    setup.innerHTML = '<summary><strong>기기 연결 · 자동 작업 설정</strong><span>새 기기 등록, 자동 작업 배정, 권한 경계</span></summary>';
+    const setupBody = document.createElement('div');
+    setupBody.className = 'device-setup-tools-body';
+    ['.device-job-console','.device-onboarding-grid','#deviceEnrollmentResult','.device-security-note'].forEach(selector => {
+      const node = panel.querySelector(selector);
+      if (node) setupBody.append(node);
+    });
+    setup.append(setupBody);
+    list.insertAdjacentElement('afterend', setup);
     const demandLoader=globalThis.EKODIAdminDemand;
     const loadTapoScript=demandLoader?.loadScript||demandLoader?.loadJs;
     if(typeof loadTapoScript==='function') Promise.resolve(loadTapoScript.call(demandLoader,'tapo-device-admin.js')).catch(error=>console.warn('[EKODI Tapo Admin]',error.message));
