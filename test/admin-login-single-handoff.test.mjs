@@ -11,21 +11,18 @@ const bridgeHtml = await readFile(`${root}auth-site/google-origin-bridge.html`, 
 const authRouter = await readFile(`${root}auth-site/auth-router.js`, 'utf8');
 const authHtml = await readFile(`${root}auth-site/index.html`, 'utf8');
 
-test('central admin login pre-opens the Google bridge and keeps canonical admin root return', () => {
+test('central admin login navigates to canonical auth without pre-opening a cross-origin bridge', () => {
   assert.match(adminCore, /return_to=https%3A%2F%2Fekodi\.kr%2Fadmin%2F/);
-  assert.match(adminCore, /open\('https:\/\/auth\.ekodi\.kr\/google-origin-bridge\?wait=1','ekodi_google_origin_bridge','popup'\)/);
-  assert.match(adminCore, /u\.searchParams\.set\('bridge','preopened'\)/);
-  assert.match(adminCore, /location\.assign\(u\)/);
-  assert.match(adminCore, /loginLink\.onclick=e=>/);
-  assert.doesNotMatch(adminCore, /loginLink\.onclick=null/);
+  assert.match(adminCore, /loginLink\.href=route\?centralAdminAuthUrl\(route\):AUTH_URL/);
+  assert.match(adminCore, /loginLink\.onclick=null/);
+  assert.doesNotMatch(adminCore, /google-origin-bridge\?wait=1/);
+  assert.doesNotMatch(adminCore, /bridge','preopened/);
+  assert.doesNotMatch(adminCore, /bridge=preopened/);
 });
 
-test('admin auth consumes a pre-opened bridge before rendering any fallback button', () => {
+test('admin auth keeps the explicit Google bridge button as the fallback path', () => {
   assert.match(adminAuth, /const preopenedRequested=directEntry&&params\.get\('bridge'\)==='preopened'/);
-  assert.match(adminAuth, /requestPreopenedGoogleCredential\(config,challenge\)/);
-  assert.match(adminAuth, /popup\.postMessage\(\{type:'ekodi-google-origin-bridge-start'/);
   assert.match(adminAuth, /renderOriginBridgeButton\(host,config,challenge\)/);
-  assert.match(adminAuth, /revealDirectFallback\(/);
 });
 
 test('Google origin bridge keeps strict origin and account-selection safety', () => {
