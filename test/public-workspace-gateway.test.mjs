@@ -57,8 +57,9 @@ test('workspace shell assets and auth handoff stay inside the apex gateway',asyn
     read('jadam-storefront.js'),
   ]);
   assert.ok(router.includes("const WORKSPACE_ASSET_PREFIX='/_ekodi/space/'"));
-  assert.ok(router.includes("const WORKSPACE_ASSETS=new Set(['style.css','config.js','app.js','storefront.json','storefront.css','jadam-storefront.css'])"));
+  assert.ok(router.includes("const WORKSPACE_ASSETS=new Set(['style.css','config.js','app.js','storefront.json','storefront.css','jadam-storefront.css','restaurant-storefront.css'])"));
   assert.ok(jadam.includes('href="/_ekodi/space/jadam-storefront.css'));
+  assert.ok(router.includes('restaurant-storefront.css')); 
   assert.match(router,/rewriteWorkspaceShellAssets/);
   assert.match(router,/workspaceAuthRedirect/);
   assert.ok(router.includes("target.origin!=='https://ekodi.kr'"));
