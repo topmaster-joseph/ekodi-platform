@@ -129,7 +129,8 @@ test('automatic product search and partner link issuance are connected', () => {
   assert.match(automation, /TARGET_PRODUCTS = 24/);
   assert.match(automation, /searchSeed/);
   assert.match(automation, /issuePartnerLinks/);
-  assert.match(automation, /createOpenAiProvider/);
+  assert.match(automation, /buildCoreAiGateway/);
+  assert.match(automation, /AI_MULTI_PROVIDER_ENABLED:'true'/);
   assert.match(automation, /balancedRules/);
   assert.match(automation, /GIFT_SEEDS/);
   assert.match(automation, /\uD64D\uC0BC \uC120\uBB3C\uC138\uD2B8/);
