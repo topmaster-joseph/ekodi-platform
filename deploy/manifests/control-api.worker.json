@@ -1,5 +1,5 @@
 {
-  "version": 4,
+  "version": 5,
   "evidence": {
     "generation": 10,
     "ledger": "ai_production_evidence",
@@ -12,16 +12,32 @@
     "requests": [
       {
         "url": "https://api.ekodi.kr/api/public/preview/map?scope=ekodi&mode=platform",
-        "statuses": [200],
+        "statuses": [
+          200
+        ],
         "redirect": "manual",
-        "expect": ["\"schemaVersion\":1", "\"secrets\":false", "\"personalData\":false", "\"scope\":{\"id\":\"ekodi\""],
-        "headerExpect": ["x-content-type-options: nosniff", "cache-control: public"]
+        "expect": [
+          "\"schemaVersion\":1",
+          "\"secrets\":false",
+          "\"personalData\":false",
+          "\"scope\":{\"id\":\"ekodi\""
+        ],
+        "headerExpect": [
+          "x-content-type-options: nosniff",
+          "cache-control: public"
+        ]
       },
       {
         "url": "https://api.ekodi.kr/api/public/preview/map?scope=ekodibiz&mode=dev",
-        "statuses": [200],
+        "statuses": [
+          200
+        ],
         "redirect": "manual",
-        "expect": ["\"scope\":{\"id\":\"ekodibiz\"", "\"mode\":\"dev\"", "\"sourcePaths\":false"]
+        "expect": [
+          "\"scope\":{\"id\":\"ekodibiz\"",
+          "\"mode\":\"dev\"",
+          "\"sourcePaths\":false"
+        ]
       },
       {
         "url": "https://api.ekodi.kr/health",
@@ -150,6 +166,21 @@
         "url": "https://api.ekodi.kr/api/control/social/registry",
         "statuses": [
           401
+        ]
+      },
+      {
+        "url": "https://ekodi-auth-api.topmaster-joseph.workers.dev/api/control/personal-finance",
+        "statuses": [
+          401
+        ],
+        "redirect": "manual",
+        "expect": [
+          "PF_ADMIN_AUTH_REQUIRED"
+        ],
+        "headerExpect": [
+          "x-ekodi-personal-finance-proxy: service-binding-v1",
+          "cache-control: no-store",
+          "x-content-type-options: nosniff"
         ]
       },
       {
