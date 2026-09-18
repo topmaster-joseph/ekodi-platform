@@ -1,8 +1,27 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
+import { isPublicWorkspacePath, isWorkspaceSlug } from '../workspace-route-policy.js';
 
 const read=path=>readFile(new URL(`../${path}`,import.meta.url),'utf8');
+test('EKODI Mall root is reserved from generic Workspace routing',async()=>{
+  const [registry,wrangler,manifestText]=await Promise.all([
+    read('platform-route-registry.js'),
+    read('wrangler.site.toml'),
+    read('deploy/manifests/shared-site.worker.json'),
+  ]);
+  assert.equal(isWorkspaceSlug('ekodimall'),false);
+  assert.equal(isPublicWorkspacePath('/ekodimall'),false);
+  assert.equal(isPublicWorkspacePath('/ekodimall/find'),false);
+  assert.match(registry,/['"]ekodimall['"]/);
+  assert.ok(wrangler.includes('"/ekodimall*"'));
+  const manifest=JSON.parse(manifestText);
+  const rootMall=manifest.worker.requests.find(item=>item.url==='https://ekodi.kr/ekodimall');
+  assert.ok(rootMall);
+  assert.ok(rootMall.expect.includes('data-ekodi-service="mall"'));
+  assert.ok(rootMall.headerExpect.includes('x-ekodi-route: public-ekodi-mall'));
+  assert.ok(rootMall.headerExpect.includes('x-ekodi-edge: mall-path-gateway'));
+});
 test('canonical public workspace paths use the isolated Space service binding',async()=>{
   const [router,wrangler,manifestText,stageWorkflow,stageWrangler]=await Promise.all([
     read('platform-router-entry-worker.js'),
