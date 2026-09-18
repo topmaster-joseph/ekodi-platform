@@ -460,7 +460,7 @@ jobs:
           grep -Eiq "^access-control-allow-origin:[[:space:]]*$staging_origin" /tmp/local-staging-google.headers
           grep -Fq '"clientId":"483044030492-j9dml7tsb7vq4a4ud041ttctavlgdskg.apps.googleusercontent.com"' /tmp/local-staging-google.json
           grep -Fq '"identityOrigin":"https://ekodi-shared-site-staging.ekodi-development.workers.dev"' /tmp/local-staging-google.json
-          node scripts/verify-ai-collaboration-settings-roundtrip.mjs 'http://127.0.0.1:8791' "$e2e_token" > /tmp/ai-settings-roundtrip.json
+          node scripts/verify-ai-collaboration-settings-roundtrip.mjs 'http://127.0.0.1:8791' "$e2e_token" "$staging_origin" > /tmp/ai-settings-roundtrip.json
           node -e "const j=require('/tmp/ai-settings-roundtrip.json');if(!j.ok||!j.auditVerified||j.productionMutation!==false)process.exit(1);console.log('AI collaboration settings staging roundtrip verified: router='+j.routerScoreVersion+' saved='+j.savedRevision+' restored='+j.restoredRevision)"
           for attempt in $(seq 1 18); do
             health=$(curl -fsS --connect-timeout 5 --max-time 12 'http://127.0.0.1:8791/health' || true)
