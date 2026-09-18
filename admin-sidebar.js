@@ -1,6 +1,9 @@
 import {
   ADMIN_MENU_GROUPS,
   adminMenuOrder,
+  adminMenuCategoryOrder,
+  getAdminMenuCategory,
+  getAdminMenuCategoryLabel,
   getAdminMenuGroupDefault,
   getAdminMenuGroupForSection,
   getAdminMenuGroupLabel,
@@ -17,7 +20,6 @@ const GLOBAL_CLASS = 'admin-global-navs';
 const SOURCE_CLASS = 'admin-context-source';
 const TABS_SHELL_CLASS = 'admin-context-tabs-shell';
 const TABS_CLASS = 'admin-context-tabs';
-const DETAILS_CLASS = 'admin-global-details';
 
 export function adminSidebarSectionOf(item) {
   if (item?.dataset?.deviceControlNav === 'true') return 'devices';
@@ -65,16 +67,13 @@ body.admin-compact .admin-global-nav:hover{border-color:#d5e6ef;background:#eef7
 body.admin-compact .admin-global-nav.active{border-color:#b7d4f6;background:#edf4ff;color:#0b4f8a!important}
 body.admin-compact .admin-global-nav b{display:inline-grid;place-items:center;min-width:22px;color:#52738a!important;font-size:12px;font-weight:850;letter-spacing:-.03em;opacity:1!important}
 body.admin-compact .admin-global-nav.active b{color:#155eef!important}
-body.admin-compact .${DETAILS_CLASS}{display:grid;gap:2px;margin:-1px 0 5px;padding:2px 3px 7px 30px;border-left:1px solid #e1e8ef}
-body.admin-compact .admin-detail-item{display:flex;align-items:center;gap:8px;width:100%;min-height:34px;margin:0;padding:6px 8px;border:1px solid transparent;border-radius:8px;background:transparent;color:#506174;font:inherit;font-size:13px;font-weight:700;text-align:left;cursor:pointer}
-body.admin-compact .admin-detail-item:hover{border-color:#dbe7ef;background:#f2f7fb;color:#173b57}
-body.admin-compact .admin-detail-item.active{border-color:#bfd5ee;background:#edf4ff;color:#0b5cab}
-body.admin-compact .admin-detail-item b{display:inline-grid;place-items:center;min-width:19px;color:#6d8194;font-size:10px;font-weight:850}
-body.admin-compact .admin-detail-item.active b{color:#155eef}
 body.admin-compact .${SOURCE_CLASS}{display:none!important}
 body.admin-compact .${TABS_SHELL_CLASS}{position:sticky;top:0;z-index:35;display:flex;align-items:center;gap:12px;min-height:56px;padding:8px 16px;border-bottom:1px solid var(--admin-border);background:rgba(255,255,255,.98);color:#172033;box-shadow:none!important;backdrop-filter:none!important}
 body.admin-compact .admin-context-title{flex:0 0 auto;color:#66768a;font-size:13px;font-weight:820;letter-spacing:.01em;white-space:nowrap}
-body.admin-compact .${TABS_CLASS}{display:flex;align-items:center;gap:5px;min-width:0;overflow-x:auto;scrollbar-width:none}
+body.admin-compact .${TABS_CLASS}{display:flex;align-items:center;gap:10px;min-width:0;overflow-x:auto;scrollbar-width:none}
+body.admin-compact .admin-context-cluster{display:flex;align-items:center;gap:5px;flex:0 0 auto;padding-left:10px;border-left:1px solid #e4eaf1}
+body.admin-compact .admin-context-cluster:first-child{padding-left:0;border-left:0}
+body.admin-compact .admin-context-cluster-label{flex:0 0 auto;color:#8a97a6;font-size:11px;font-weight:820;letter-spacing:.02em;white-space:nowrap}
 body.admin-compact .${TABS_CLASS}::-webkit-scrollbar{display:none}
 body.admin-compact .admin-context-tab{flex:0 0 auto;min-height:40px;padding:0 12px;border:1px solid transparent;border-radius:9px;background:transparent;color:#405269;font:inherit;font-size:14px;font-weight:760;line-height:1.35;white-space:nowrap;cursor:pointer;box-shadow:none!important;transition:none!important}
 body.admin-compact .admin-context-tab:hover{border-color:#d5e6ef;background:#f2f7fb;color:#173b57}
@@ -162,6 +161,7 @@ function ensureContainers(nav, root = document) {
 
   for (const item of [...navItems(nav)]) if (item.parentElement !== source) source.append(item);
   for (const legacy of [...nav.querySelectorAll(':scope>.admin-context-nav,:scope>.admin-nav-assist')]) legacy.remove();
+  for (const legacyDetails of [...globals.querySelectorAll('.admin-global-details')]) legacyDetails.remove();
 
   const main = root.querySelector?.('#app main') || root.querySelector?.('main');
   let shell = main?.querySelector(`:scope>.${TABS_SHELL_CLASS}`) || null;
@@ -206,19 +206,6 @@ function globalButtons(globals, locale) {
   for (const button of existing.values()) button.remove();
 }
 
-function renderSidebarDetails(nav, globals, group, section, locale) {
-  let details = globals.querySelector(`:scope>.${DETAILS_CLASS}`);
-  if (!details) { details = document.createElement('div'); details.className = DETAILS_CLASS; details.setAttribute('aria-label', locale === 'en' ? 'Admin submenu' : '관리자 하위 메뉴'); }
-  const ids = availableIds(nav, group);
-  const nodes = ids.map(id => {
-    const definition = getAdminMenuItem(id); const button = document.createElement('button'); button.type = 'button'; button.className = 'admin-detail-item'; button.dataset.adminDetailSection = id;
-    const icon = document.createElement('b'); icon.setAttribute('aria-hidden', 'true'); icon.textContent = definition?.icon || '·'; const text = document.createElement('span'); text.textContent = getAdminMenuLabel(id, locale);
-    button.append(icon, text); button.classList.toggle('active', id === section); return button;
-  });
-  details.dataset.adminDetailGroup = group; details.replaceChildren(...nodes); details.hidden = nodes.length === 0;
-  const active = [...globals.querySelectorAll('[data-admin-global-group]')].find(button => button.dataset.adminGlobalGroup === group); if (active) active.insertAdjacentElement('afterend', details); else globals.append(details);
-}
-
 function activeSection(nav) {
   const panelSection = window.EKODIAdminPanels?.current?.();
   if (panelSection === 'command-home') return 'command-home';
@@ -242,6 +229,21 @@ function availableIds(nav, group) {
   });
 }
 
+function contextGroups(group, ids) {
+  const order = adminMenuCategoryOrder(group);
+  const buckets = new Map();
+  for (const id of ids) {
+    const category = getAdminMenuCategory(id);
+    if (!buckets.has(category)) buckets.set(category, []);
+    buckets.get(category).push(id);
+  }
+  const categories = [
+    ...order.filter(category => buckets.has(category)),
+    ...[...buckets.keys()].filter(category => !order.includes(category)),
+  ];
+  return categories.map(category => ({ category, ids: buckets.get(category) || [] }));
+}
+
 function renderContextTabs(nav, shell, group, section, locale) {
   if (!shell) return;
   const title = shell.querySelector('.admin-context-title');
@@ -249,14 +251,31 @@ function renderContextTabs(nav, shell, group, section, locale) {
   if (!tabs) return;
   if (title) title.textContent = getAdminMenuGroupLabel(group, locale);
   const ids = availableIds(nav, group);
-  const signature = `${locale}|${group}|${ids.join(',')}`;
+  const clusters = contextGroups(group, ids);
+  const signature = `${locale}|${group}|${clusters.map(({ category, ids: categoryIds }) => `${category}:${categoryIds.join(',')}`).join(';')}`;
   if (tabs.dataset.renderSignature !== signature) {
     tabs.dataset.renderSignature = signature;
-    const nodes = ids.map(id => {
-      const button = document.createElement('button');
-      button.type = 'button'; button.className = 'admin-context-tab';
-      button.dataset.adminContextSection = id; button.setAttribute('role', 'tab');
-      button.textContent = getAdminMenuLabel(id, locale); return button;
+    const showCategoryLabels = clusters.length > 1;
+    const nodes = clusters.map(({ category, ids: categoryIds }) => {
+      const cluster = document.createElement('div');
+      cluster.className = 'admin-context-cluster';
+      cluster.dataset.adminContextCategory = category;
+      if (showCategoryLabels) {
+        const label = document.createElement('span');
+        label.className = 'admin-context-cluster-label';
+        label.textContent = getAdminMenuCategoryLabel(category, locale);
+        cluster.append(label);
+      }
+      for (const id of categoryIds) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'admin-context-tab';
+        button.dataset.adminContextSection = id;
+        button.setAttribute('role', 'tab');
+        button.textContent = getAdminMenuLabel(id, locale);
+        cluster.append(button);
+      }
+      return cluster;
     });
     tabs.replaceChildren(...nodes);
   }
@@ -291,7 +310,6 @@ function syncWorkbenchState(nav, locale, preferredSection = '') {
     button.setAttribute('aria-expanded', selected ? 'true' : 'false');
   }
   renderContextTabs(nav, shell, group, displayedSection, locale);
-  renderSidebarDetails(nav, globals, group, displayedSection, locale);
   nav.dataset.adminGlobalGroup = group;
 }
 
@@ -350,7 +368,7 @@ export function renderAdminSidebar(nav, { locale = readAdminSidebarLocale(), ids
     const items = ids.map(id => createAdminSidebarItem(id, locale)).filter(Boolean);
     nav.replaceChildren(...items);
     nav.dataset.adminSidebarShared = 'true';
-    nav.dataset.adminMenuGovernance = 'workbench-tabs-v2';
+    nav.dataset.adminMenuGovernance = 'workbench-tabs-v3-simple';
     syncAdminSidebar(nav.ownerDocument || document, { locale });
     return items;
   } finally {
@@ -387,7 +405,7 @@ export function syncAdminSidebar(root = document, options = {}) {
   syncWorkbenchState(nav, locale);
   nav.dataset.adminSidebarShared = 'true';
   nav.dataset.adminSidebarLocale = locale;
-  nav.dataset.adminMenuGovernance = 'workbench-tabs-v2';
+  nav.dataset.adminMenuGovernance = 'workbench-tabs-v3-simple';
 
   const id = activeSection(nav);
   const title = root.querySelector?.('#pageTitle');
@@ -425,8 +443,6 @@ export function mountAdminSidebar(root = document, options = {}) {
   observer.observe(nav, { childList: true, subtree: false });
 
   nav.addEventListener('click', event => {
-    const detail = event.target.closest('[data-admin-detail-section]');
-    if (detail) { event.preventDefault(); delete nav.dataset.adminFocusedGroup; activateSection(nav, detail.dataset.adminDetailSection); schedule(); return; }
     const global = event.target.closest('[data-admin-global-group]');
     if (!global) return;
     event.preventDefault();
