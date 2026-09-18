@@ -77,7 +77,7 @@ test('Admin navigation classifies Personal Finance under the v8 professional-ser
 });
 
 test('Personal Finance admin UI manages policy only and never calls personal ledger endpoints',()=>{
-  const ui=fs.readFileSync(new URL('../personal-finance-admin.js',import.meta.url),'utf8');const build=fs.readFileSync(new URL('../scripts/build.mjs',import.meta.url),'utf8');const workerSource=fs.readFileSync(new URL('../site-worker.js',import.meta.url),'utf8');const siteConfig=fs.readFileSync(new URL('../wrangler.site.toml',import.meta.url),'utf8');
+  const ui=fs.readFileSync(new URL('../personal-finance-admin.js',import.meta.url),'utf8');const build=fs.readFileSync(new URL('../scripts/build.mjs',import.meta.url),'utf8');const workerSource=fs.readFileSync(new URL('../site-worker.js',import.meta.url),'utf8');const siteConfig=fs.readFileSync(new URL('../wrangler.site.toml',import.meta.url),'utf8');const apiSource=fs.readFileSync(new URL('../api-worker.js',import.meta.url),'utf8');const apiConfig=fs.readFileSync(new URL('../wrangler.api.toml',import.meta.url),'utf8');
   assert.match(ui,/const API='\/api\/control\/personal-finance'/);assert.match(ui,/AbortSignal\.timeout\(REQUEST_TIMEOUT_MS\)/);assert.match(ui,/aria-busy/);assert.doesNotMatch(ui,/https:\/\/personal-finance-api\.ekodi\.kr\/api\/admin/);
   assert.match(ui,/전문서비스 · PERSONAL FINANCE/);assert.match(ui,/개인 금융원장의 내용은 이 화면에서 조회하지 않습니다/);assert.match(ui,/EKODIAdminContext\?\.elevate/);
   assert.match(ui,/function refreshWhenSharedNavigationActivates\(event\)/);assert.match(ui,/ekodi-admin-section-changed',refreshWhenSharedNavigationActivates/);assert.match(ui,/queueMicrotask\(\(\)=>refreshWhenSharedNavigationActivates\(\)\)/);assert.match(ui,/개인재무 운영 상태를 확인하고 있습니다/);
@@ -88,6 +88,11 @@ test('Personal Finance admin UI manages policy only and never calls personal led
   assert.match(workerSource,/target\.pathname = '\/api\/admin\/personal-finance\/control'/);
   assert.match(workerSource,/X-EKODI-Personal-Finance-Proxy/);
   assert.match(siteConfig,/binding = "PERSONAL_FINANCE"\s+service = "ekodi-personal-finance-api"/);
+  assert.match(apiSource,/path === `\$\{CONTROL_PREFIX\}\/personal-finance`/);
+  assert.match(apiSource,/async function proxyPersonalFinanceControl\(request, env\)/);
+  assert.match(apiSource,/target\.pathname = '\/api\/admin\/personal-finance\/control'/);
+  assert.match(apiSource,/\/api\/health\/personal-finance/);
+  assert.match(apiConfig,/binding = "PERSONAL_FINANCE"\s+service = "ekodi-personal-finance-api"/);
   assert.match(build,/personal-finance-admin\.css/);assert.match(build,/personal-finance-admin\.js/);assert.match(workerSource,/personal-finance-admin\.js/);
   const serviceControl=fs.readFileSync(new URL('../personal-finance-service-control.js',import.meta.url),'utf8');
   assert.match(serviceControl,/CENTRAL_ADMIN_SESSION='https:\/\/ekodi\.kr\/api\/session'/);
