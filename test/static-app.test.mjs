@@ -3,10 +3,10 @@ import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
 const read = path => readFile(new URL(path, import.meta.url), 'utf8');
-const [portal, adminShell, handoff, authShell, demandLoader, financeJs, hub, registryText, ecosystemRegistryText, headers, build, siteToml, siteWorker, financeToml, proxy, proxyToml, bizLegacy, bizLegacyToml] = await Promise.all([
+const [portal, adminShell, handoff, authShell, demandLoader, financeJs, hub, registryText, ecosystemRegistryText, headers, build, siteToml, siteWorker, financeToml, platformRouter, proxy, proxyToml, bizLegacy, bizLegacyToml] = await Promise.all([
   read('../index.html'), read('../admin-shell.html'), read('../admin-central-handoff.js'), read('../admin-authenticated-shell.js'), read('../admin-demand-loader.js'),
   read('../finance-monitor.js'), read('../hub.html'), read('../service-registry.json'), read('../config/ecosystem-services.json'), read('../_headers'),
-  read('../scripts/build.mjs'), read('../wrangler.site.toml'), read('../site-worker.js'), read('../wrangler.finance.toml'),
+  read('../scripts/build.mjs'), read('../wrangler.site.toml'), read('../site-worker.js'), read('../wrangler.finance.toml'), read('../platform-router-entry-worker.js'),
   read('../service-proxy.js'), read('../wrangler.service-proxy.toml'), read('../biz-legacy-redirect.js'), read('../wrangler.biz-legacy.toml')
 ]);
 
@@ -46,7 +46,8 @@ test('production build uses the current Admin Shell and runtime graph only', () 
   assert.match(build, /admin-authenticated-shell\.js/);
   assert.match(authShell, /admin-menu-layout\.js/);
   assert.match(authShell, /admin-demand-loader\.js/);
-  assert.match(financeJs, /https:\/\/finance-api\.ekodi\.kr/);
+  assert.match(financeJs, /const FINANCE_API = 'https:\/\/ekodi\.kr'/);
+  assert.match(financeJs, /const POLICY_FUND_API = '\/api\/finance\/policy-funds'/);
 });
 
 test('unverified public services remain gated except explicit gateways', () => {
@@ -92,7 +93,11 @@ test('biz.ekodi.kr proxy remains independent while legacy external domain redire
 
 test('finance and root custom-domain contracts remain intact', () => {
   assert.match(financeToml, /name = "ekodi-finance-api"/);
-  hasRoute(financeToml, 'finance-api.ekodi.kr');
+  assert.doesNotMatch(financeToml, /finance-api\.ekodi\.kr/);
+  assert.match(financeToml, /ALLOWED_ORIGINS = "https:\/\/ekodi\.kr"/);
+  assert.match(siteToml, /binding = "FINANCE"[\s\S]*service = "ekodi-finance-api"/);
+  assert.match(platformRouter, /url\.pathname==='\/api\/finance'\|\|url\.pathname\.startsWith\('\/api\/finance\/'\)/);
+  assert.match(platformRouter, /env\.FINANCE\.fetch\(request\)/);
   assert.match(financeToml, /database_name = "ekodi-auth"/);
   hasRoute(siteToml, 'ekodi.kr');
   hasRoute(siteToml, 'www.ekodi.kr');

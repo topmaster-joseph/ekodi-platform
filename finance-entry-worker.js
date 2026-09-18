@@ -2,6 +2,7 @@ import financeWorker from './finance-worker.js';
 import taxServiceWorker from './tax-service-worker.js';
 import taxHometaxLedgerService from './tax-hometax-ledger-service.js';
 import taxBusinessRegistryService from './tax-business-registry-service.js';
+import policyFundWorker from './policy-fund-worker.js';
 
 const FINANCE_TABLES = Object.freeze({
   organizations: 'finance_organizations',
@@ -45,7 +46,8 @@ export default {
     const financeEnv = Object.create(env || null);
     if (env?.DB) financeEnv.DB = namespacedDatabase(env.DB);
     const pathname = new URL(request.url).pathname;
-    if (pathname === '/admin' || pathname === '/admin/') return Response.redirect('https://admin.ekodi.kr/?route=finance&source=finance-api.ekodi.kr', 307);
+    if (pathname === '/admin' || pathname === '/admin/') return Response.redirect('https://ekodi.kr/admin?route=finance&source=finance', 307);
+    if (pathname.startsWith('/api/finance/policy-funds')) return policyFundWorker.fetch(request, financeEnv, ctx);
     if (pathname.startsWith('/api/finance/tax-business-')) return taxBusinessRegistryService.fetch(request, financeEnv, ctx);
     if (pathname.startsWith('/api/finance/tax-hometax-')) return taxHometaxLedgerService.fetch(request, financeEnv, ctx);
     if (pathname.startsWith('/api/finance/tax-')) return taxServiceWorker.fetch(request, financeEnv, ctx);
