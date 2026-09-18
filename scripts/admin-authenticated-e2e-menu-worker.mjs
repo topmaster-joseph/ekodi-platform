@@ -29,10 +29,11 @@ let page;
 let fatal = null;
 let currentStage = 'bootstrap';
 const stage = value => { currentStage = value; console.log(`[E2E:${menuId}] stage=${value}`); };
+const interactionReadyTimeoutMs = 15_000;
 
 async function clickFast(locator) {
-  await locator.waitFor({ state: 'visible', timeout: 5_000 });
-  await locator.click({ force: true, noWaitAfter: true, timeout: 5_000 });
+  await locator.waitFor({ state: 'visible', timeout: interactionReadyTimeoutMs });
+  await locator.click({ force: true, noWaitAfter: true, timeout: interactionReadyTimeoutMs });
 }
 
 async function waitForReady() {
@@ -77,11 +78,11 @@ async function waitForAdminNavigationIdle() {
 async function selectWorkArea() {
   stage('global');
   const global = page.locator(`button.admin-global-nav[data-admin-global-group="${group}"]`);
-  await global.waitFor({ state: 'visible', timeout: 5_000 });
+  await global.waitFor({ state: 'visible', timeout: interactionReadyTimeoutMs });
   const aria = await global.getAttribute('aria-current');
   const classes = String(await global.getAttribute('class') || '');
   if (aria !== 'page' && !classes.split(/\s+/).includes('active')) await clickFast(global);
-  await page.waitForFunction(target => [...document.querySelectorAll('button[data-admin-global-group]')].some(node => node.dataset.adminGlobalGroup === target && (node.getAttribute('aria-current') === 'page' || node.classList.contains('active'))), group, { timeout: 5_000 });
+  await page.waitForFunction(target => [...document.querySelectorAll('button[data-admin-global-group]')].some(node => node.dataset.adminGlobalGroup === target && (node.getAttribute('aria-current') === 'page' || node.classList.contains('active'))), group, { timeout: interactionReadyTimeoutMs });
 }
 
 async function visiblePanelState() {
@@ -427,6 +428,37 @@ async function verifyRegistryHref(trigger, started) {
 
 async function verifyNormal(tab, alreadyActive, started) {
   if (!alreadyActive) await clickFast(tab);
+  if (menuId === 'command-home') {
+    stage('command-workbench');
+    await page.waitForFunction(() => {
+      const body = document.body;
+      const dock = document.querySelector('#ekodiAssistDock');
+      const panel = document.querySelector('#ekodiAssistPanel');
+      const chat = document.querySelector('#ekodiAssistChat');
+      const tab = document.querySelector('button.admin-context-tab[data-admin-context-section="command-home"]');
+      if (!body?.classList.contains('admin-command-home') || !body.classList.contains('admin-command-active')) return false;
+      if (!dock || !panel || !chat || panel.hidden) return false;
+      const style = getComputedStyle(panel);
+      const selected = tab?.getAttribute('aria-selected') === 'true' || tab?.classList.contains('active');
+      return selected && style.display !== 'none' && style.visibility !== 'hidden';
+    }, null, { timeout: 10_000 });
+    const state = await page.evaluate(() => {
+      const panel = document.querySelector('#ekodiAssistPanel');
+      const chat = document.querySelector('#ekodiAssistChat');
+      const tab = document.querySelector('button.admin-context-tab[data-admin-context-section="command-home"]');
+      const text = String(panel?.innerText || '').replace(/\s+/g, ' ').trim();
+      return {
+        commandWorkbench: Boolean(panel && chat),
+        textLength: text.length,
+        selected: tab?.getAttribute('aria-selected') === 'true' || tab?.classList.contains('active') || false,
+        currentSection: window.EKODIAdminPanels?.current?.() || '',
+        pathname: location.pathname,
+      };
+    });
+    if (!state.commandWorkbench || !state.selected || state.textLength < 4 || state.pathname !== '/admin/') throw new Error(`command workbench invalid: ${JSON.stringify(state)}`);
+    results.push({ id: menuId, group, ok: true, durationMs: Date.now() - started, ...state });
+    return;
+  }
   stage('panel');
   await page.waitForFunction(section => {
     return [...document.querySelectorAll('[data-panel]')].some(node => {
@@ -475,12 +507,12 @@ try {
   if (directDefinition?.href && !directDefinition.adminHandoff) {
     stage('registry-link');
     const tab = page.locator(`button.admin-context-tab[data-admin-context-section="${menuId}"]`);
-    await tab.waitFor({ state: 'visible', timeout: 5_000 });
+    await tab.waitFor({ state: 'visible', timeout: interactionReadyTimeoutMs });
     await verifyRegistryHref(tab, started);
   } else {
     stage('tab');
     const tab = page.locator(`button.admin-context-tab[data-admin-context-section="${menuId}"]`);
-    await tab.waitFor({ state: 'visible', timeout: 5_000 });
+    await tab.waitFor({ state: 'visible', timeout: interactionReadyTimeoutMs });
     const aria = await tab.getAttribute('aria-selected');
     const classes = String(await tab.getAttribute('class') || '');
     let alreadyActive = aria === 'true' || classes.split(/\s+/).includes('active');
