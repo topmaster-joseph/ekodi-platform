@@ -8,7 +8,8 @@ test('authenticated Admin E2E activates only the target demand menu before conte
   assert.doesNotMatch(source, /stage\('ready-demand'\)/);
   assert.match(source, /async function prepareTargetDemand\(\)/);
   assert.match(source, /\[data-demand-feature\]\[data-section=/);
-  assert.match(source, /await clickFast\(placeholder\)/);
+  assert.match(source, /await window\.EKODIAdminDemand\.activate\(section\)/);
+  assert.doesNotMatch(source, /await clickFast\(placeholder\)/);
   assert.match(source, /!target\.hasAttribute\('data-demand-feature'\)/);
   assert.ok(source.indexOf('await prepareTargetDemand();') < source.indexOf('await selectWorkArea();'));
 });
