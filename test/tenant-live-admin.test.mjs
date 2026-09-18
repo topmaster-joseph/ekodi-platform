@@ -31,5 +31,5 @@ test('shared tenant admin shell injects the canonical live manager link',async()
   assert.match(shell,/function liveAdminPath\(\)/);
   assert.match(shell,/base\+'\/live\/admin'/);
   assert.match(shell,/방송 · 녹화/);
-  assert.match(shell,/data-ekodi-live-admin-link/);
+  assert.match(shell,/ekodiLiveAdminLink/);
 });
