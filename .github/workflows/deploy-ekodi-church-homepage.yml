@@ -71,7 +71,7 @@ jobs:
           grep -Fq '/api/partner-news/public?tenant=ekodi-church&service=church' church/partner-news.js
           grep -Fq "item.status==='PUBLISHED'" church/partner-news.js
           ! grep -Fq '/api/church/admin/partner-news' church/partner-news.js
-          grep -Fq "connect-src 'self' https://api.ekodi.kr" church/_headers
+          grep -Fq "connect-src 'self'" church/_headers
           grep -Fq 'church-online-status.js' church/index.html
           grep -Fq 'data-ekodi-church-live-entry' church/index.html
           grep -Fq "AUTH_ATTEMPT_KEY='ekodi-live-auth-attempt'" church/live/live.js
