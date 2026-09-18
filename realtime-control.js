@@ -482,6 +482,7 @@ async function collaborationRoute(request,env,url,input){
   if(chat){
     const room=await roomById(env,decodeURIComponent(chat[1]));if(!room)return json(request,env,{ok:false,error:'room_not_found'},404);
     if(request.method==='GET'){
+      if(!room.anonymous_viewers_enabled){const access=await entitlementFor(request,env,slug(room.tenant_id));if(!access.identity)return json(request,env,{ok:false,error:'authentication_required'},401)}
       const since=clean(url.searchParams.get('after'),40);
       const query=since
         ? env.DB.prepare(`SELECT * FROM realtime_chat_messages WHERE room_id=? AND deleted_at IS NULL AND created_at>? ORDER BY created_at,id LIMIT 100`).bind(room.id,since)
