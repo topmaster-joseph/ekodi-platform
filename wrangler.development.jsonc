@@ -7,12 +7,17 @@
   "workers_dev": true,
   "preview_urls": true,
   "vars": {
-    "ENVIRONMENT": "staging"
+    "ENVIRONMENT": "development",
+    "GOOGLE_CLIENT_ID": "483044030492-qvk96u0rvptsshat0pi8g522puq9ju16.apps.googleusercontent.com",
+    "GOOGLE_IDENTITY_ORIGIN": "https://ekodi-platform-development.ekodi-development.workers.dev"
   },
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS",
-    "run_worker_first": ["/", "/api/*"]
+    "run_worker_first": [
+      "/",
+      "/api/*"
+    ]
   },
   "observability": {
     "enabled": true,
