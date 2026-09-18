@@ -26,9 +26,10 @@ test('tenant live admin exposes recording management actions',async()=>{
   assert.match(source,/\/recordings\?tenant=/);
 });
 
-test('tenant and church admins link to the canonical live manager',async()=>{
-  const [workspace,church]=await Promise.all([read('workspace-admin-page.js'),read('church-pastor-admin-page.js')]);
-  assert.match(workspace,/id="liveAdminLink"/);
-  assert.match(workspace,/방송 · 녹화/);
-  assert.match(church,/\/ekodichurch\/live\/admin/);
+test('shared tenant admin shell injects the canonical live manager link',async()=>{
+  const shell=await read('tenant-admin-command-home.js');
+  assert.match(shell,/function liveAdminPath\(\)/);
+  assert.match(shell,/base\+'\/live\/admin'/);
+  assert.match(shell,/방송 · 녹화/);
+  assert.match(shell,/data-ekodi-live-admin-link/);
 });
