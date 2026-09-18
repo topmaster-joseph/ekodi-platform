@@ -378,12 +378,13 @@ jobs:
           ADMIN_EMAIL = "topmaster.joseph@gmail.com"
           ADMIN_GOOGLE_BOOTSTRAP_EMAILS = "topmaster.joseph@gmail.com,joseph@ekodi.kr"
           ADMIN_WORKSPACE_DOMAIN = "ekodibiz.kr"
-          GOOGLE_CLIENT_ID = "483044030492-4e6231l5glchhtniroinvuq3ev6n5mv5.apps.googleusercontent.com"
+          GOOGLE_CLIENT_ID = "483044030492-j9dml7tsb7vq4a4ud041ttctavlgdskg.apps.googleusercontent.com"
+          GOOGLE_IDENTITY_ORIGIN = "https://ekodi-shared-site-staging.ekodi-development.workers.dev"
           AI_PROVIDER = "NONE"
           OPENAI_MODEL = "gpt-5.6-terra"
           EKODI_PROVIDER_WORKERS_AI_ENABLED = "false"
           EKODI_WORKERS_AI_DAILY_CALL_LIMIT = "4"
-          ALLOWED_ORIGINS = "https://admin.ekodi.kr,https://auth.ekodi.kr,https://mail.ekodi.kr,https://ekodi.kr"
+          ALLOWED_ORIGINS = "https://ekodi-shared-site-staging.ekodi-development.workers.dev,https://ekodi-admin-staging.ekodi-development.workers.dev,http://127.0.0.1:4173,http://localhost:4173"
           [ai]
           binding = "AI"
           [observability.logs]
