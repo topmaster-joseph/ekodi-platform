@@ -353,6 +353,38 @@
         "rollbackVerify": false
       },
       {
+        "url": "https://ekodi.kr/api/partner-news/public?tenant=ekodi-church&service=church",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "\"publicState\":\"PUBLISHED\"",
+          "\"privateFirst\":true",
+          "\"tenantSlug\":\"ekodi-church\""
+        ],
+        "headerExpect": [
+          "cache-control: public",
+          "x-content-type-options: nosniff"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/api/church/admin/partner-news",
+        "statuses": [
+          401
+        ],
+        "redirect": "manual",
+        "expect": [
+          "목회자 인증이 필요합니다."
+        ],
+        "headerExpect": [
+          "cache-control: no-store",
+          "x-content-type-options: nosniff"
+        ],
+        "rollbackVerify": false
+      },
+      {
         "url": "https://ekodi.kr/ekodichurch/admin/partners",
         "statuses": [
           200
