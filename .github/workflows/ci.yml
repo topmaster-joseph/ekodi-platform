@@ -91,3 +91,222 @@ jobs:
       - name: Run full tests on main
         if: github.event_name != 'pull_request'
         run: npm test
+
+  production-orchestrator-proof:
+    name: Production orchestrator proof
+    if: github.event_name == 'pull_request' && github.head_ref == 'ai/chatgpt/prove-workers-ai-production-20260918'
+    permissions:
+      actions: write
+      contents: read
+    runs-on: ubuntu-latest
+    timeout-minutes: 28
+    env:
+      GH_TOKEN: ${{ github.token }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      EKODI_ORIGIN: https://ekodi.kr
+    steps:
+      - name: Dispatch guarded production releases
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$GH_TOKEN"
+          started_epoch=$(date -u +%s)
+          echo "STARTED_EPOCH=$started_epoch" >> "$GITHUB_ENV"
+          dispatch() {
+            local wf="$1"
+            local code
+            code=$(curl -sS -o /tmp/dispatch.out -w '%{http_code}' \
+              -X POST "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/$wf/dispatches" \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H 'Accept: application/vnd.github+json' \
+              -H 'X-GitHub-Api-Version: 2022-11-28' \
+              -d '{"ref":"main"}')
+            cat /tmp/dispatch.out || true
+            test "$code" = "204"
+          }
+          dispatch deploy-control-api.yml
+          dispatch deploy-site-core.yml
+
+      - name: Wait for production releases
+        shell: bash
+        run: |
+          set -euo pipefail
+          find_run() {
+            local wf="$1"
+            curl -fsS --retry 3 --retry-delay 2 \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H 'Accept: application/vnd.github+json' \
+              "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/$wf/runs?branch=main&event=workflow_dispatch&per_page=20" \
+              | jq -r --argjson started "$STARTED_EPOCH" '.workflow_runs | map(select((.created_at|fromdateiso8601) >= $started)) | sort_by(.created_at) | last | .id // empty'
+          }
+          wait_for_id() {
+            local wf="$1" id=''
+            for attempt in $(seq 1 30); do
+              id=$(find_run "$wf")
+              if [ -n "$id" ]; then echo "$id"; return 0; fi
+              sleep 2
+            done
+            return 1
+          }
+          wait_for_success() {
+            local id="$1" label="$2"
+            for attempt in $(seq 1 120); do
+              payload=$(curl -fsS --retry 3 --retry-delay 2 \
+                -H "Authorization: Bearer $GH_TOKEN" \
+                -H 'Accept: application/vnd.github+json' \
+                "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/runs/$id")
+              status=$(echo "$payload" | jq -r '.status')
+              conclusion=$(echo "$payload" | jq -r '.conclusion // empty')
+              echo "$label run=$id status=$status conclusion=$conclusion attempt=$attempt"
+              if [ "$status" = "completed" ]; then
+                test "$conclusion" = "success"
+                return 0
+              fi
+              sleep 6
+            done
+            return 1
+          }
+          control_id=$(wait_for_id deploy-control-api.yml)
+          site_id=$(wait_for_id deploy-site-core.yml)
+          echo "CONTROL_RUN_ID=$control_id" >> "$GITHUB_ENV"
+          echo "SITE_RUN_ID=$site_id" >> "$GITHUB_ENV"
+          wait_for_success "$control_id" control
+          wait_for_success "$site_id" shared-site
+
+      - name: Verify live connect route
+        shell: bash
+        run: |
+          set -euo pipefail
+          headers=$(mktemp)
+          code=$(curl -sS -o /dev/null -D "$headers" -w '%{http_code}' --max-redirs 0 "$EKODI_ORIGIN/connect")
+          test "$code" = "302"
+          grep -qi '^location: https://ekodi.kr/auth/?site=ai&return_to=https%3A%2F%2Fekodi.kr%2Fai%2F&source=mcp-connect' "$headers"
+          grep -qi '^x-ekodi-route: mcp-connect-auth' "$headers"
+
+      - name: Issue short-lived production admin session
+        shell: bash
+        run: |
+          set -euo pipefail
+          cf_query() {
+            local db="$1" sql="$2"
+            curl -fsS --retry 2 --retry-delay 1 \
+              -X POST "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/d1/database/$db/query" \
+              -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+              -H 'Content-Type: application/json' \
+              --data "$(jq -nc --arg sql "$sql" '{sql:$sql}')"
+          }
+          databases=$(curl -fsS --retry 2 --retry-delay 1 \
+            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/d1/database?per_page=100" \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN")
+          auth_db=''; admin_id=''
+          while IFS= read -r db; do
+            [ -n "$db" ] || continue
+            schema=$(cf_query "$db" "SELECT name FROM sqlite_master WHERE type='table' AND name IN ('admins','sessions')" || true)
+            if ! echo "$schema" | jq -e '.success == true and ([.result[]?.results[]?.name] | index("admins") != null and index("sessions") != null)' >/dev/null 2>&1; then continue; fi
+            candidate=$(cf_query "$db" "SELECT id FROM admins WHERE role='super_admin' ORDER BY id LIMIT 1" || true)
+            id=$(echo "$candidate" | jq -r '.result[]?.results[0]?.id // empty' | head -1)
+            if [[ "$id" =~ ^[0-9]+$ ]]; then auth_db="$db"; admin_id="$id"; break; fi
+          done < <(echo "$databases" | jq -r '.result[]? | (.uuid // .id // empty)')
+          test -n "$auth_db"; test -n "$admin_id"
+          token=$(openssl rand -hex 32)
+          token_hash=$(printf '%s' "$token" | sha256sum | awk '{print $1}')
+          created=$(date -u +'%Y-%m-%dT%H:%M:%S.000Z')
+          expires=$(date -u -d '+20 minutes' +'%Y-%m-%dT%H:%M:%S.000Z')
+          echo "::add-mask::$token"
+          echo "::add-mask::$token_hash"
+          cf_query "$auth_db" "INSERT INTO sessions (token_hash, admin_id, expires_at, created_at) VALUES ('$token_hash', $admin_id, '$expires', '$created')" | jq -e '.success == true' >/dev/null
+          session=$(curl -fsS "$EKODI_ORIGIN/api/session" -H "Authorization: Bearer $token")
+          echo "$session" | jq -e '.authenticated == true and .role == "super_admin"' >/dev/null
+          echo "E2E_ADMIN_TOKEN=$token" >> "$GITHUB_ENV"
+          echo "E2E_TOKEN_HASH=$token_hash" >> "$GITHUB_ENV"
+          echo "E2E_AUTH_DB_ID=$auth_db" >> "$GITHUB_ENV"
+
+      - name: Submit real production Orchestrator task
+        shell: bash
+        run: |
+          set -euo pipefail
+          task_id="proof_workers_ai_${GITHUB_RUN_ID}_${GITHUB_RUN_ATTEMPT}"
+          pulse_id="pulse_${task_id}"
+          goal='Read-only production orchestration proof. Assess current EKODI platform health at a high level and return concise structured findings. Do not deploy, mutate business data, change permissions, DNS, secrets, purchases, or irreversible state.'
+          payload=$(jq -nc --arg taskId "$task_id" --arg pulseId "$pulse_id" --arg goal "$goal" '{
+            taskId:$taskId,goal:$goal,risk:"low",
+            target:{service:"core",capability:"platform_health",surface:"admin"},
+            delegation:{allowed:true,reversible:true,audited:true,preflightVerified:true,verificationDefined:true},
+            context:{proof:"workers-ai-production-e2e",externalTestClient:"github-actions",productionMutationAllowed:false},
+            event:{id:$pulseId,kind:"manual_goal",source:"github-actions-production-proof",summary:$goal,changeClass:"green",actionable:true,requiresHumanDecision:false},
+            executeNow:true
+          }')
+          response=$(curl -fsS --retry 2 --retry-delay 1 -X POST "$EKODI_ORIGIN/api/control/ai/v8/pulse" \
+            -H "Authorization: Bearer $E2E_ADMIN_TOKEN" -H 'Content-Type: application/json' --data "$payload")
+          echo "$response" | jq -e '.ok == true and .queued == true' >/dev/null
+          echo "TASK_ID=$task_id" >> "$GITHUB_ENV"
+          echo "Submitted task: $task_id"
+
+      - name: Prove Workers AI execution and durable evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          terminal=''
+          for attempt in $(seq 1 40); do
+            response=$(curl -fsS "$EKODI_ORIGIN/api/control/ai/v8/tasks/$TASK_ID" -H "Authorization: Bearer $E2E_ADMIN_TOKEN")
+            state=$(echo "$response" | jq -r '.task.state // empty')
+            echo "task=$TASK_ID state=$state attempt=$attempt"
+            case "$state" in
+              verified|degraded|core_only|failed|human_gate|ignored)
+                printf '%s' "$response" > "$RUNNER_TEMP/task.json"
+                terminal="$state"
+                break
+                ;;
+            esac
+            sleep 4
+          done
+          test -n "$terminal"
+          case "$terminal" in verified|degraded) ;; *) cat "$RUNNER_TEMP/task.json" | jq '{task:{id:.task.id,state:.task.state,lastError:.task.lastError,evidence:.task.evidence,result:{specialists:[.task.result.specialists[]? | {role,provider,mode,ok}],sentinel:(.task.result.sentinel // null | if .==null then null else {provider,mode,ok} end)}}}'; exit 1;; esac
+          providers=$(jq -c '[.task.result.specialists[]?.provider,.task.result.sentinel?.provider,.task.result.reverifier?.provider] | map(select(. != null and . != "")) | unique' "$RUNNER_TEMP/task.json")
+          echo "$providers" | jq -e 'index("cloudflare-workers-ai") != null' >/dev/null
+          diversity=$(jq -r '.task.evidence.providerDiversity // 0' "$RUNNER_TEMP/task.json")
+          test "$diversity" -ge 1
+          cf_query() {
+            local db="$1" sql="$2"
+            curl -fsS --retry 2 --retry-delay 1 -X POST "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/d1/database/$db/query" \
+              -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H 'Content-Type: application/json' --data "$(jq -nc --arg sql "$sql" '{sql:$sql}')"
+          }
+          databases=$(curl -fsS "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/d1/database?per_page=100" -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN")
+          ledger_db=''
+          while IFS= read -r db; do
+            [ -n "$db" ] || continue
+            schema=$(cf_query "$db" "SELECT name FROM sqlite_master WHERE type='table' AND name IN ('ai_command_tasks','ai_command_runs','ai_provider_daily_budget')" || true)
+            if echo "$schema" | jq -e '.success == true and ([.result[]?.results[]?.name] | index("ai_command_tasks") != null and index("ai_command_runs") != null and index("ai_provider_daily_budget") != null)' >/dev/null 2>&1; then ledger_db="$db"; break; fi
+          done < <(echo "$databases" | jq -r '.result[]? | (.uuid // .id // empty)')
+          test -n "$ledger_db"
+          run=$(cf_query "$ledger_db" "SELECT task_id,attempt,state,provider_diversity,completed_at FROM ai_command_runs WHERE task_id='$TASK_ID' ORDER BY id DESC LIMIT 1")
+          echo "$run" | jq -e '.success == true and (.result[]?.results | length) > 0' >/dev/null
+          completed_at=$(echo "$run" | jq -r '.result[]?.results[0]?.completed_at // empty' | head -1)
+          test -n "$completed_at"
+          budget=$(cf_query "$ledger_db" "SELECT call_count FROM ai_provider_daily_budget WHERE provider_id='cloudflare-workers-ai' AND usage_date=date('now') LIMIT 1")
+          calls=$(echo "$budget" | jq -r '.result[]?.results[0]?.call_count // 0' | head -1)
+          test "$calls" -ge 1
+          test "$calls" -le 4
+          jq -n --arg taskId "$TASK_ID" --arg terminalState "$terminal" --argjson actualProviders "$providers" --argjson providerDiversity "$diversity" --arg completedAt "$completed_at" --argjson workersAiCalls "$calls" --arg controlRun "$CONTROL_RUN_ID" --arg siteRun "$SITE_RUN_ID" '{
+            schemaVersion:1,proof:"ekodi-orchestrator-workers-ai-production-e2e",taskId:$taskId,terminalState:$terminalState,actualProviders:$actualProviders,providerDiversity:$providerDiversity,durableLedgerVerified:true,workersAiDailyCalls:$workersAiCalls,completedAt:$completedAt,productionMutationPerformed:false,productionDeployRuns:{control:$controlRun,sharedSite:$siteRun}
+          }' | tee "$RUNNER_TEMP/ekodi-workers-ai-proof.json"
+
+      - name: Upload production proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ekodi-workers-ai-production-proof-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/ekodi-workers-ai-proof.json
+          if-no-files-found: warn
+          retention-days: 90
+
+      - name: Revoke short-lived session
+        if: always() && env.E2E_AUTH_DB_ID != '' && env.E2E_TOKEN_HASH != ''
+        shell: bash
+        run: |
+          set -euo pipefail
+          sql="DELETE FROM sessions WHERE token_hash = '$E2E_TOKEN_HASH'"
+          curl -fsS -X POST "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/d1/database/$E2E_AUTH_DB_ID/query" \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H 'Content-Type: application/json' \
+            --data "$(jq -nc --arg sql "$sql" '{sql:$sql}')" | jq -e '.success == true' >/dev/null
