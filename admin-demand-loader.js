@@ -79,7 +79,7 @@
       insert: 'after-work',
     },
     devices: {
-      label: '기기 관리', icon: '⌁',
+      label: '실행 인프라', icon: '⌁',
       styles: ['device-control-admin.css', 'remote-power-admin.css'],
       scripts: ['device-control-admin.js', 'remote-power-admin.js'],
       secondaryStyles: ['device-browser-diagnostics.css'],
