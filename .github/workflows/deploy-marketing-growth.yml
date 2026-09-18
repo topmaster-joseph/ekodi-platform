@@ -9,6 +9,7 @@ on:
       - 'marketing-growth-entry.js'
       - 'mall-growth-dashboard.js'
       - 'mall-autonomous-profit-loop.js'
+      - 'owned-tenant-autopost-loop.js'
       - 'mall-official-promotion-board.js'
       - 'mall-promotion-automation.js'
       - 'mall-sales-intelligence.js'
@@ -22,11 +23,13 @@ on:
       - 'migrations/0050_ekodibiz_marketing_internal_entitlement.sql'
       - 'migrations/0064_marketing_channel_settings.sql'
       - 'migrations/0079_channel_tenant_split.sql'
+      - 'migrations/0093_owned_tenant_autopost_rollout.sql'
       - 'migrations/0085_ekodimall_canonical_path.sql'
       - 'test/ekodi-mall-promotion-automation.test.mjs'
       - 'test/ekodi-mall-official-promotion-board.test.mjs'
       - 'test/ekodi-mall-growth-learning-loop.test.mjs'
       - 'test/ekodi-mall-autonomous-profit-loop.test.mjs'
+      - 'test/owned-tenant-autopost-loop.test.mjs'
       - 'test/ekodi-mall-v8-dashboard.test.mjs'
       - 'test/marketing-growth-oauth.test.mjs'
       - 'test/ekodimall-channel-settings-admin.test.mjs'
@@ -74,10 +77,11 @@ jobs:
           node --check marketing-growth-entry.js
           node --check mall-growth-dashboard.js
           node --check mall-autonomous-profit-loop.js
+          node --check owned-tenant-autopost-loop.js
           node --check mall-official-promotion-board.js
           node --check mall-promotion-automation.js
           node --check mall-sales-intelligence.js
-          node --test test/ekodi-mall-promotion-automation.test.mjs test/ekodi-mall-official-promotion-board.test.mjs test/ekodi-mall-growth-learning-loop.test.mjs test/ekodi-mall-autonomous-profit-loop.test.mjs test/ekodi-mall-v8-dashboard.test.mjs test/ekodi-mall-active-sales-ai.test.mjs test/marketing-growth-oauth.test.mjs test/ekodimall-channel-settings-admin.test.mjs test/ekodibiz-youtube-channel-selection.test.mjs
+          node --test test/ekodi-mall-promotion-automation.test.mjs test/ekodi-mall-official-promotion-board.test.mjs test/ekodi-mall-growth-learning-loop.test.mjs test/ekodi-mall-autonomous-profit-loop.test.mjs test/owned-tenant-autopost-loop.test.mjs test/ekodi-mall-v8-dashboard.test.mjs test/ekodi-mall-active-sales-ai.test.mjs test/marketing-growth-oauth.test.mjs test/ekodimall-channel-settings-admin.test.mjs test/ekodibiz-youtube-channel-selection.test.mjs
           grep -Fq 'encryptedVault:true' marketing-growth-worker.js
           grep -Fq 'oauthBroker:true' marketing-growth-worker.js
           grep -Fq 'youtubeConfigured' marketing-growth-worker.js
@@ -91,6 +95,12 @@ jobs:
           grep -Fq 'mallSalesIntelligence' marketing-growth-entry.js
           grep -Fq 'mallAutonomousProfitLoop' marketing-growth-entry.js
           grep -Fq 'runMallAutonomousProfitLoop' marketing-growth-worker.js
+          grep -Fq 'runOwnedTenantAutopostCycle' marketing-growth-worker.js
+          grep -Fq 'autopostEligible === true' owned-tenant-autopost-loop.js
+          grep -Fq "'tenant','ekodi-biz','autonomous',1" migrations/0093_owned_tenant_autopost_rollout.sql
+          grep -Fq "'tenant','jadam','autonomous',1" migrations/0093_owned_tenant_autopost_rollout.sql
+          grep -Fq "'tenant','pizzamaru','autonomous',1" migrations/0093_owned_tenant_autopost_rollout.sql
+          grep -Fq "'tenant','yogurt','autonomous',1" migrations/0093_owned_tenant_autopost_rollout.sql
           grep -Fq "const SUBJECT_KEY = 'ekodimall'" mall-promotion-automation.js
           grep -Fq "const MALL_SUBJECT_KEY = 'ekodimall'" mall-autonomous-profit-loop.js
           grep -Fq "official_board_profit_learning_loop" mall-promotion-automation.js
@@ -134,11 +144,14 @@ jobs:
             grep -Fq "$table" /tmp/growth-schema.json
           done
           npx --yes wrangler@${WRANGLER_VERSION} d1 execute ekodi-auth --remote --config wrangler.marketing-growth.toml \
-            --command "SELECT subject_key || ':' || mode AS contract FROM marketing_publish_policies WHERE subject_type='tenant' AND subject_key IN ('ekodi-biz','ekodimall','ekoditrade') ORDER BY subject_key;" \
+            --command "SELECT subject_key || ':' || mode AS contract FROM marketing_publish_policies WHERE subject_type='tenant' AND subject_key IN ('ekodi-biz','ekodimall','ekoditrade','jadam','pizzamaru','yogurt') ORDER BY subject_key;" \
             --json > /tmp/growth-subject.json
-          grep -Fq 'ekodi-biz:review' /tmp/growth-subject.json
+          grep -Fq 'ekodi-biz:autonomous' /tmp/growth-subject.json
           grep -Fq 'ekodimall:autonomous' /tmp/growth-subject.json
           grep -Fq 'ekoditrade:review' /tmp/growth-subject.json
+          grep -Fq 'jadam:autonomous' /tmp/growth-subject.json
+          grep -Fq 'pizzamaru:autonomous' /tmp/growth-subject.json
+          grep -Fq 'yogurt:autonomous' /tmp/growth-subject.json
           npx --yes wrangler@${WRANGLER_VERSION} d1 execute ekodi-auth --remote --config wrangler.marketing-growth.toml \
             --command "SELECT domain FROM customer_tenants WHERE slug='ekodimall' LIMIT 1;" \
             --json > /tmp/mall-domain.json
@@ -203,6 +216,8 @@ jobs:
               && grep -Fq '"weeklyBoard"' /tmp/growth-health.json \
               && grep -Fq '"mallSalesIntelligence"' /tmp/growth-health.json \
               && grep -Fq '"mallAutonomousProfitLoop"' /tmp/growth-health.json \
+              && grep -Fq '"ownedTenantAutopost"' /tmp/growth-health.json \
+              && grep -Fq '"rolloutOrder":["ekodi-biz","jadam","pizzamaru","yogurt"]' /tmp/growth-health.json \
               && grep -Fq '"mode":"active_sales"' /tmp/growth-health.json \
               && grep -Fq '"paidAds":false' /tmp/growth-health.json; then
               cat /tmp/growth-health.json
