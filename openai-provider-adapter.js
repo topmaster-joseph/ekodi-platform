@@ -2,7 +2,7 @@
 import { projectForExternalAi } from './secure-projection.js';
 
 const OPENAI_RESPONSES_URL = 'https://api.openai.com/v1/responses';
-const DEFAULT_OPENAI_MODEL = 'gpt-5.6-terra';
+const DEFAULT_OPENAI_MODEL = 'gpt-5.6-luna';
 const MAX_MESSAGE_CHARS = 4_000;
 const MAX_HISTORY_ITEMS = 8;
 const MAX_HISTORY_CHARS = 8_000;
