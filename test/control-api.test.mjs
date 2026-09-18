@@ -16,7 +16,7 @@ const [apiSource, aiOps, domains, buildScript, wranglerApi, entrySource, mission
 test('shared API preserves the existing health endpoint', async () => {
   const response = await apiWorker.fetch(new Request('https://api.example/health'), { ENVIRONMENT:'production', ALLOWED_ORIGINS:'https://admin.ekodi.kr' });
   assert.equal(response.status, 200);
-  assert.deepEqual(await response.json(), { ok:true, service:'ekodi-auth-api', version:4 });
+  assert.deepEqual(await response.json(), { ok:true, service:'ekodi-auth-api', version:4, personalFinanceBindingConfigured:false });
 });
 
 test('control endpoints require the D1 operations store', async () => {
@@ -59,4 +59,55 @@ test('Mission Control security wrapper preserves the ten-minute monitoring sched
   assert.match(missionEntrySource, /enforceEdgeSecurity/);
   assert.match(entrySource, /apiWorker\.scheduled/);
   assert.match(entrySource, /apiWorker\.fetch/);
+});
+
+
+test('Control API exposes a provider-neutral Personal Finance binding health probe', async () => {
+  const missing = await apiWorker.fetch(new Request('https://api.example/api/health/personal-finance'), {});
+  assert.equal(missing.status, 503);
+  assert.equal((await missing.json()).code, 'PERSONAL_FINANCE_BINDING_UNAVAILABLE');
+
+  const env = {
+    PERSONAL_FINANCE: {
+      async fetch(request) {
+        assert.equal(new URL(request.url).pathname, '/health');
+        return new Response(JSON.stringify({
+          ok:true,
+          service:'ekodi-personal-finance-api',
+          dataBoundary:'dedicated-d1',
+          actionCeiling:'L2',
+          adminControl:true,
+          personalDataAdminReadable:false,
+        }), { status:200, headers:{'content-type':'application/json'} });
+      }
+    }
+  };
+  const response = await apiWorker.fetch(new Request('https://api.example/api/health/personal-finance'), env);
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get('x-ekodi-personal-finance-proxy'), 'control-service-binding-v1');
+  const data = await response.json();
+  assert.equal(data.binding, 'PERSONAL_FINANCE');
+  assert.equal(data.personalDataAdminReadable, false);
+});
+
+test('canonical Control API owns the Personal Finance admin proxy through a service binding', () => {
+  assert.match(apiSource, /path === `\$\{CONTROL_PREFIX\}\/personal-finance`/);
+  assert.match(apiSource, /proxyPersonalFinanceControl\(request, env\)/);
+  assert.match(apiSource, /env\.PERSONAL_FINANCE\?\.fetch/);
+  assert.match(apiSource, /target\.pathname = '\/api\/admin\/personal-finance\/control'/);
+  assert.match(apiSource, /X-EKODI-Personal-Finance-Proxy/);
+  assert.match(wranglerApi, /\[\[services\]\][\s\S]*binding = "PERSONAL_FINANCE"[\s\S]*service = "ekodi-personal-finance-api"/);
+});
+
+
+test('health reports the Personal Finance service binding without exposing finance data', async () => {
+  const response = await apiWorker.fetch(new Request('https://api.example/health'), {
+    PERSONAL_FINANCE:{ fetch:async()=>new Response('{}') }
+  });
+  assert.equal(response.status, 200);
+  const data = await response.json();
+  assert.equal(data.personalFinanceBindingConfigured, true);
+  assert.equal('accounts' in data, false);
+  assert.equal('transactions' in data, false);
+  assert.equal('balances' in data, false);
 });
