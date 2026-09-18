@@ -1,7 +1,10 @@
-import { resolveWorkspacePrincipal, auditPrincipal } from './ekodi-principal.js';
+import { principalFromSupabaseRequest, buildPrincipal, auditPrincipal } from './ekodi-principal.js';
+import { TENANT_ADMIN_CAPABILITIES, tenantAdminCan } from './tenant-admin-policy.js';
 import { enqueueMessengerOutbox, drainMessengerOutbox } from './messenger-outbox.js';
 
 const DEFAULT_STORES=Object.freeze(['jadam','pizzamaru','yogurt']);
+const SUPABASE_URL='https://renzehysxirjilvdxacv.supabase.co';
+const SUPABASE_PUBLISHABLE_KEY='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
 const OPEN_STATES=Object.freeze(['awaiting_customer_confirmation','customer_confirmed','store_accepted']);
 const clean=(value,max=8000)=>String(value??'').trim().slice(0,max);
 const nowIso=()=>new Date().toISOString();
@@ -157,9 +160,35 @@ async function handleInbound(request,env,executionCtx){
 }
 
 async function adminContext(request,env,{write=false}={}){
-  const ctx=await resolveWorkspacePrincipal(request,env,{write});
-  if(ctx.error)return {ctx,response:json(request,env,{error:ctx.error},ctx.status)};
-  if(ctx.subject.type!=='tenant'||!allowedStores(env).has(String(ctx.subject.key).toLowerCase()))return {ctx,response:json(request,env,{error:'STORE_SUBJECT_REQUIRED'},403)};
+  if(write&&String(env.ALLOW_MUTATIONS)!=='true')return {ctx:null,response:json(request,env,{error:'MUTATIONS_DISABLED'},503)};
+  const base=await principalFromSupabaseRequest(request);
+  if(!base)return {ctx:null,response:json(request,env,{error:'AUTH_REQUIRED'},401)};
+  const url=new URL(request.url);
+  const storeSlug=clean(url.searchParams.get('subject_key'),80).toLowerCase();
+  if(String(url.searchParams.get('subject_type')||'').toLowerCase()!=='tenant'||!allowedStores(env).has(storeSlug)){
+    return {ctx:null,response:json(request,env,{error:'STORE_SUBJECT_REQUIRED'},403)};
+  }
+  const auth=clean(request.headers.get('authorization'),8192);
+  const verify=await fetch(`${SUPABASE_URL}/rest/v1/rpc/store_operating_space_snapshot`,{
+    method:'POST',
+    headers:{apikey:SUPABASE_PUBLISHABLE_KEY,authorization:auth,'content-type':'application/json'},
+    body:JSON.stringify({p_operating_slug:storeSlug}),
+    signal:AbortSignal.timeout(10000),
+  }).catch(()=>null);
+  if(!verify)return {ctx:null,response:json(request,env,{error:'STORE_AUTHORITY_UNAVAILABLE'},503)};
+  if(verify.status===401)return {ctx:null,response:json(request,env,{error:'AUTH_REQUIRED'},401)};
+  if(verify.status===403)return {ctx:null,response:json(request,env,{error:'STORE_ACCESS_REQUIRED'},403)};
+  if(!verify.ok)return {ctx:null,response:json(request,env,{error:'STORE_AUTHORITY_CHECK_FAILED'},502)};
+  const snapshot=await verify.json().catch(()=>null);
+  const role=clean(snapshot?.role,80).toLowerCase();
+  if(!role||!tenantAdminCan(role,TENANT_ADMIN_CAPABILITIES.orders)){
+    return {ctx:null,response:json(request,env,{error:'STORE_ORDER_CAPABILITY_REQUIRED'},403)};
+  }
+  const principal=buildPrincipal({
+    id:base.id,email:base.email,kind:'user',provider:base.provider,role,
+    subjectType:'tenant',subjectKey:storeSlug,capabilities:['conversation:read','conversation:write'],
+  });
+  const ctx={principal,subject:principal.subject,identity:{id:base.subject.key,email:base.email},store:snapshot?.store||null,role};
   return {ctx,response:null};
 }
 
