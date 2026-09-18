@@ -79,7 +79,7 @@
       insert: 'after-work',
     },
     devices: {
-      label: '컴퓨터·기기', icon: '⌁',
+      label: '로컬컴퓨터·기기', icon: '⌁',
       styles: ['device-control-admin.css', 'remote-power-admin.css'],
       scripts: ['device-control-admin.js', 'remote-power-admin.js'],
       secondaryStyles: ['device-browser-diagnostics.css'],
