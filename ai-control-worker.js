@@ -1,5 +1,6 @@
 import {AI_CONTROL_POLICY,buildExecutionPlan,buildOriginSynthesisPrompt,createTaskId,evaluateTaskMissionPolicy,isOriginPreserved,normalizeTaskInput,resolveOriginResponseProvider,rolePrompt,summarizeRuns,taskOrigin} from './ai-control-core.js';
-import {invokeProvider,providerCapabilities,providerStatus} from './ai-control-provider-router.js';
+import {invokeProviderWithMeta,providerCapabilities,providerStatus} from './ai-control-provider-router.js';
+import {AI_FREE_QUOTA_POLICY,configuredFreeProviderIds,ensureFreePoolDecisionAlert,freePoolSnapshot,hasAlternateZeroCostExecution,listOpenAiCostAlerts,quotaCapabilities,recordFreeProviderOutcome} from './ai-free-quota.js';
 import {AI_ROUTER_SCORE_POLICY} from './ai-router-score.js';
 import {loadAiCollaborationPolicy} from './ai-collaboration-settings.js';
 import { LOCAL_EXECUTION_POLICY, compareLocalExecutionCandidates, localExecutionPolicySnapshot, normalizeLocalResource } from './local-execution-policy.js';
@@ -12,10 +13,23 @@ const ONLINE_WINDOW_MS=LOCAL_EXECUTION_POLICY.onlineWindowMs;
 function headers(){return{'x-content-type-options':'nosniff','referrer-policy':'strict-origin-when-cross-origin','permissions-policy':'camera=(), microphone=(), geolocation=(), payment=()','content-security-policy':"default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://ekodi.kr https://auth.ekodi.kr https://*.supabase.co; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"}}
 function json(data,status=200){return new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store',...headers()}})}
 async function body(request){try{return await request.json()}catch{return null}}
-function config(env={}){return{platform:'ai-control',architectureVersion:'1.9.0',hierarchy:['sovereign','autonomous','agentic','services'],mode:'parallel',policyVersion:AI_CONTROL_POLICY.version,missionPolicyVersion:AI_CONTROL_POLICY.missionPolicyVersion,maxParallelProviders:AI_CONTROL_POLICY.maxParallelProviders,originPreservation:true,routerScorePolicyVersion:AI_ROUTER_SCORE_POLICY.version,adminUrl:'https://ekodi.kr/admin/services/common-services?service=ai',authUrl:env.AUTH_URL||'https://ekodi.kr/auth/?site=ai&return_to=https%3A%2F%2Fekodi.kr%2Fai%2F',taskExecutionEnabled:env.AI_TASK_EXECUTION_ENABLED==='true',branchAllocationEnabled:env.AI_GITHUB_ORCHESTRATION_ENABLED==='true',humanApprovalRequired:true,nodePairingEnabled:true,localScheduler:localExecutionPolicySnapshot()}}
+function config(env={}){return{platform:'ai-control',architectureVersion:'1.10.0',hierarchy:['sovereign','autonomous','agentic','services'],mode:'parallel',policyVersion:AI_CONTROL_POLICY.version,missionPolicyVersion:AI_CONTROL_POLICY.missionPolicyVersion,maxParallelProviders:AI_CONTROL_POLICY.maxParallelProviders,originPreservation:true,routerScorePolicyVersion:AI_ROUTER_SCORE_POLICY.version,adminUrl:'https://ekodi.kr/admin/services/common-services?service=ai',authUrl:env.AUTH_URL||'https://ekodi.kr/auth/?site=ai&return_to=https%3A%2F%2Fekodi.kr%2Fai%2F',taskExecutionEnabled:env.AI_TASK_EXECUTION_ENABLED==='true',branchAllocationEnabled:env.AI_GITHUB_ORCHESTRATION_ENABLED==='true',humanApprovalRequired:true,nodePairingEnabled:true,localScheduler:localExecutionPolicySnapshot()}}
 function dbReady(env){return Boolean(env.DB&&typeof env.DB.prepare==='function')}
 async function collaborationPolicy(env){return loadAiCollaborationPolicy(env)}
 function applyCollaborationPolicy(capabilities,loaded){const policy=loaded?.policy||{};const collaborators=Math.max(1,Math.min(4,Number(policy.governance?.maxParallelCollaborators)||4));return{...capabilities,openaiApi:capabilities.openaiApi&&policy.openai?.enabled!==false,routerPolicy:policy.router||{},maxParallelProviders:Math.min(AI_CONTROL_POLICY.maxParallelProviders,collaborators+1)}}
+async function applyFreeQuotaPolicy(env,capabilities){
+  const freeIds=configuredFreeProviderIds(capabilities);
+  const providerQuotas=await quotaCapabilities(env,freeIds);
+  return{...capabilities,providerQuotas:{...(capabilities.providerQuotas||{}),...providerQuotas}};
+}
+async function runtimeCapabilities(env,nodes=[],loadedCollaboration=null){
+  const base=loadedCollaboration?applyCollaborationPolicy(providerCapabilities(env,nodes),loadedCollaboration):providerCapabilities(env,nodes);
+  return applyFreeQuotaPolicy(env,base);
+}
+async function freeCostDecisionGate(env,capabilities){
+  try{return await ensureFreePoolDecisionAlert(env,configuredFreeProviderIds(capabilities),{alternateZeroCostAvailable:hasAlternateZeroCostExecution(capabilities)})}
+  catch(error){console.warn('free cost decision gate unavailable',clean(error?.message||error));return{snapshot:null,alert:null}}
+}
 function supabaseReady(env){return Boolean(clean(env.SUPABASE_URL)&&clean(env.SUPABASE_PUBLISHABLE_KEY))}
 function bearer(request){const value=clean(request.headers.get('authorization'));return value.toLowerCase().startsWith('bearer ')?value.slice(7).trim():''}
 function safeId(value){const id=clean(value).toLowerCase();return /^[a-z0-9][a-z0-9._-]{2,79}$/.test(id)?id:''}
@@ -154,7 +168,15 @@ async function enqueueNodeRun(env,task,entry,prompt){
 }
 async function executeDirectRun(env,task,entry,prompt){
   const stamp=now();const run={id:crypto.randomUUID(),taskId:task.id,providerId:entry.providerId,role:entry.role,state:'running',output:'',error:'',startedAt:stamp,finishedAt:'',routerScore:entry.routerScore,routerScoreBreakdown:entry.routerScoreBreakdown,routerScorePolicyVersion:entry.routerScorePolicyVersion};await createRun(env,run);
-  try{run.output=await invokeProvider(env,entry.providerId,prompt,task,entry.role);run.state='completed'}catch(error){run.state='failed';run.error=clean(error?.message||error)}run.finishedAt=now();await finishRun(env,run);return{...run,ok:run.state==='completed'};
+  try{
+    const result=await invokeProviderWithMeta(env,entry.providerId,prompt,task,entry.role);
+    run.output=result.text;run.state='completed';
+    await recordFreeProviderOutcome(env,entry.providerId,{ok:true,quota:result.quota||null}).catch(()=>{});
+  }catch(error){
+    run.state='failed';run.error=clean(error?.message||error);
+    await recordFreeProviderOutcome(env,entry.providerId,{ok:false,error}).catch(()=>{});
+  }
+  run.finishedAt=now();await finishRun(env,run);return{...run,ok:run.state==='completed'};
 }
 async function finalizeTask(env,id){
   const all=await runs(env,id);if(!all.length)return;
@@ -162,7 +184,12 @@ async function finalizeTask(env,id){
   const collaboration=all.filter(run=>run.role!==AI_CONTROL_POLICY.finalSynthesisRole);
   if(collaboration.some(run=>['queued','leased','running'].includes(run.state)))return;
   const successful=collaboration.filter(run=>run.ok);
-  if(!successful.length){const summary=summarizeRuns(all);await patchTask(env,id,{state:'failed',updated_at:now(),result_summary:summary,error:'all_providers_failed'});return}
+  if(!successful.length){
+    const summary=summarizeRuns(all),task=await getTask(env,id),nodes=await onlineNodeProviders(env),capabilities=await runtimeCapabilities(env,nodes);
+    const gate=await freeCostDecisionGate(env,capabilities);
+    if(gate.alert){await patchTask(env,id,{state:'awaiting_paid_decision',updated_at:now(),result_summary:{...summary,freePool:gate.snapshot},error:'free_quota_exhausted_paid_decision_required'});return}
+    await patchTask(env,id,{state:'failed',updated_at:now(),result_summary:summary,error:'all_providers_failed'});return;
+  }
   if(synthesis){
     if(['queued','leased','running'].includes(synthesis.state))return;
     const task=await getTask(env,id);const origin=taskOrigin(task);const summary={...summarizeRuns(all),origin,responseProvider:synthesis.providerId,originPreserved:isOriginPreserved(task,synthesis.providerId),returnRoute:{provider:origin.provider,channel:origin.channel,requestId:origin.requestId},finalResponse:clean(synthesis.output).slice(0,250000)};
@@ -170,7 +197,7 @@ async function finalizeTask(env,id){
   }
   const claim=await env.DB.prepare("UPDATE ai_control_tasks SET state='synthesizing',updated_at=? WHERE id=? AND state NOT IN ('synthesizing','approval_required','completed','failed')").bind(now(),id).run();
   if(!claim.meta?.changes)return;
-  const task=await getTask(env,id);const nodes=await onlineNodeProviders(env);const capabilities=providerCapabilities(env,nodes);const responseProvider=resolveOriginResponseProvider(task,capabilities);
+  const task=await getTask(env,id);const nodes=await onlineNodeProviders(env);const capabilities=await runtimeCapabilities(env,nodes);const responseProvider=resolveOriginResponseProvider(task,capabilities);
   if(!responseProvider){await patchTask(env,id,{state:'failed',updated_at:now(),error:'origin_response_provider_unavailable'});return}
   const entry={providerId:responseProvider,role:AI_CONTROL_POLICY.finalSynthesisRole};const prompt=buildOriginSynthesisPrompt(task,successful);
   if(responseProvider.startsWith('node:'))await enqueueNodeRun(env,task,entry,prompt);else{await executeDirectRun(env,task,entry,prompt);await finalizeTask(env,id)}
@@ -181,7 +208,7 @@ async function execute(env,id){
   if(currentMission.forbidden){await patchTask(env,id,{state:'blocked_policy',updated_at:now(),error:`mission_policy:${currentMission.reason}`});return}
   task={...task,mode:'parallel',missionDecision:currentMission};
   await patchTask(env,id,{state:'allocating',updated_at:now(),error:''});
-  try{const branch=await allocateBranch(env,task);if(branch){await patchTask(env,id,{branch,updated_at:now()});task={...task,branch}}const nodes=await onlineNodeProviders(env);const metrics=await providerPerformanceMetrics(env);const collaboration=await collaborationPolicy(env);const capabilities=applyCollaborationPolicy(providerCapabilities(env,nodes),collaboration);const plan=buildExecutionPlan(task,{...capabilities,providerMetrics:metrics});if(!plan.length)throw new Error('no_provider_available');await patchTask(env,id,{state:'running',updated_at:now()});
+  try{const branch=await allocateBranch(env,task);if(branch){await patchTask(env,id,{branch,updated_at:now()});task={...task,branch}}const nodes=await onlineNodeProviders(env);const metrics=await providerPerformanceMetrics(env);const collaboration=await collaborationPolicy(env);const capabilities=await runtimeCapabilities(env,nodes,collaboration);const plan=buildExecutionPlan(task,{...capabilities,providerMetrics:metrics});if(!plan.length){const gate=await freeCostDecisionGate(env,capabilities);if(gate.alert){await patchTask(env,id,{state:'awaiting_paid_decision',updated_at:now(),result_summary:{freePool:gate.snapshot},error:'free_quota_exhausted_paid_decision_required'});return}throw new Error('no_provider_available')}await patchTask(env,id,{state:'running',updated_at:now()});
     await Promise.all(plan.map(entry=>{const prompt=rolePrompt(task,entry.role,{branch:task.branch,missionDecision:task.missionDecision});return entry.providerId.startsWith('node:')?enqueueNodeRun(env,task,entry,prompt):executeDirectRun(env,task,entry,prompt)}));await finalizeTask(env,id);
   }catch(error){await patchTask(env,id,{state:'failed',updated_at:now(),error:clean(error?.message||error)});throw error}
 }
@@ -357,9 +384,24 @@ export default{async fetch(request,env,ctx){
   if(['GET','HEAD'].includes(request.method)&&(url.pathname==='/admin'||url.pathname==='/admin/'))return adminControlRedirect();
   if(['GET','HEAD'].includes(request.method)&&(url.pathname==='/'||url.pathname==='/index.html'))return commonsPage(request,env);
   if(url.pathname==='/config.js')return json({error:'operator_surface_moved',adminUrl:config(env).adminUrl},410);
-  if(request.method==='GET'&&url.pathname==='/__health')return json({ok:true,platform:'ai-control',architectureVersion:config(env).architectureVersion,surface:'runtime-and-commons',commons:true,commonsPolicy:AI_COMMONS_POLICY.version});
+  if(request.method==='GET'&&url.pathname==='/__health')return json({ok:true,platform:'ai-control',architectureVersion:config(env).architectureVersion,surface:'runtime-and-commons',commons:true,commonsPolicy:AI_COMMONS_POLICY.version,costMode:'free-first',freeQuotaPolicy:AI_FREE_QUOTA_POLICY.policyId,paidApiAutoEscalation:false,paidDecisionGate:true});
   const commons=await handleCommonsApi(request,env,ctx);if(commons)return commons;
-  if(request.method==='GET'&&url.pathname==='/api/status'){const auth=await requireAdmin(request,env,'ai:read');if(auth.error)return auth.error;const nodes=await onlineNodeProviders(env);const metrics=await providerPerformanceMetrics(env);let collaboration;try{collaboration=await collaborationPolicy(env)}catch{return json({error:'collaboration_policy_invalid'},503)}const providers=providerStatus(env,nodes).map(item=>({...item,routingEnabled:item.automaticEligible!==false&&(item.id!=='openai-api'||collaboration.policy?.openai?.enabled!==false),routerMetrics:metrics[item.id]||null}));const weights=collaboration.policy?.router?.weights||AI_ROUTER_SCORE_POLICY.weights;return json({ok:true,platform:'ai-control',config:config(env),providers,costPolicy:collaboration.policy?.resources?.funding||null,routerScorePolicy:{version:AI_ROUTER_SCORE_POLICY.version,weights,historyWindowHours:AI_ROUTER_SCORE_POLICY.historyWindowHours,recentHealthWindowHours:AI_ROUTER_SCORE_POLICY.recentHealthWindowHours},collaboration:{revision:collaboration.revision||0,source:collaboration.source||'defaults',maxParallelCollaborators:Number(collaboration.policy?.governance?.maxParallelCollaborators)||4},stateStore:dbReady(env)?'ready':'unavailable',onlineNodeProviders:nodes,authoritySource:auth.source||'admin'})}
+  if(request.method==='GET'&&url.pathname==='/api/status'){
+    const auth=await requireAdmin(request,env,'ai:read');if(auth.error)return auth.error;
+    const nodes=await onlineNodeProviders(env),metrics=await providerPerformanceMetrics(env);
+    let collaboration;try{collaboration=await collaborationPolicy(env)}catch{return json({error:'collaboration_policy_invalid'},503)}
+    const capabilities=await runtimeCapabilities(env,nodes,collaboration);
+    const freeIds=configuredFreeProviderIds(capabilities);
+    const freePool=await freePoolSnapshot(env,freeIds,{alternateZeroCostAvailable:hasAlternateZeroCostExecution(capabilities)});
+    const costAlerts=await listOpenAiCostAlerts(env);
+    const providers=providerStatus(env,nodes).map(item=>{
+      const freeQuota=capabilities.providerQuotas?.[item.id]||null;
+      const quotaBlocked=freeQuota?.remaining===0;
+      return{...item,freeQuota,routingEnabled:item.automaticEligible!==false&&!quotaBlocked&&(item.id!=='openai-api'||collaboration.policy?.openai?.enabled!==false),routerMetrics:metrics[item.id]||null};
+    });
+    const weights=collaboration.policy?.router?.weights||AI_ROUTER_SCORE_POLICY.weights;
+    return json({ok:true,platform:'ai-control',config:config(env),providers,costPolicy:collaboration.policy?.resources?.funding||null,freeQuotaPolicy:{id:AI_FREE_QUOTA_POLICY.policyId,version:AI_FREE_QUOTA_POLICY.version,paidAutoEscalation:false},freePool,costAlerts,routerScorePolicy:{version:AI_ROUTER_SCORE_POLICY.version,weights,historyWindowHours:AI_ROUTER_SCORE_POLICY.historyWindowHours,recentHealthWindowHours:AI_ROUTER_SCORE_POLICY.recentHealthWindowHours},collaboration:{revision:collaboration.revision||0,source:collaboration.source||'defaults',maxParallelCollaborators:Number(collaboration.policy?.governance?.maxParallelCollaborators)||4},stateStore:dbReady(env)?'ready':'unavailable',onlineNodeProviders:nodes,authoritySource:auth.source||'admin'});
+  }
   if(url.pathname==='/api/auth/exchange')return json({error:'service_local_auth_retired',adminUrl:config(env).adminUrl},410);
   if(request.method==='POST'&&url.pathname==='/api/node/enroll')return enrollNode(request,env);
   if(url.pathname.startsWith('/api/node/')){
