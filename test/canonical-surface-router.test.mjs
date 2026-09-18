@@ -191,13 +191,17 @@ test('Bible canonical path uses its service binding without double-prefixing ass
 });
 
 
-test('legacy Admin release probes follow canonical redirects while canonical Admin owns release truth',async()=>{
+test('shared-site release truth uses canonical apex paths for public and admin assets',async()=>{
   const manifest=JSON.parse(await fs.promises.readFile(new URL('../deploy/manifests/shared-site.worker.json',import.meta.url),'utf8'));
   const canonical=manifest.worker.requests.find(item=>item.url==='https://ekodi.kr/admin/');
   assert.equal(canonical?.rollbackVerify,false);
-  const legacy=manifest.worker.requests.filter(item=>item.url.startsWith('https://admin.ekodi.kr/'));
-  assert.ok(legacy.length>1);
-  for(const probe of legacy) assert.equal(probe.redirect,'follow',probe.url);
+  const urls=manifest.worker.requests.map(item=>item.url);
+  assert.ok(urls.includes('https://ekodi.kr/admin/openai-workspace-admin.js'));
+  assert.ok(urls.includes('https://ekodi.kr/auth/google-origin-bridge'));
+  assert.ok(urls.includes('https://ekodi.kr/pay'));
+  assert.ok(urls.includes('https://ekodi.kr/live'));
+  assert.ok(urls.includes('https://ekodi.kr/cloud'));
+  assert.doesNotMatch(urls.join('\n'),/https:\/\/(?:admin|auth|pay|pay\.biz|mail|live|cloud|trade|trade\.biz)\.ekodi\.kr/i);
 });
 
 test('shared-site release verifies Shell integration without requiring script URLs in service HTML',async()=>{
