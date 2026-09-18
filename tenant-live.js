@@ -1,6 +1,6 @@
 (()=>{'use strict';
 const API='/api/realtime',SUPABASE_URL='https://renzehysxirjilvdxacv.supabase.co',PUBLISHABLE_KEY='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_',cfg=document.body.dataset,$=id=>document.getElementById(id),params=new URLSearchParams(location.search);
-const state={room:null,pc:null,session:null,local:null,screen:null,remote:new MediaStream(),hosting:false};
+const state={room:null,pc:null,session:null,local:null,screen:null,remote:new MediaStream(),hosting:false,recording:null};
 function token(){try{return sessionStorage.getItem('ekodi-auth-token')||''}catch{return''}}
 async function bootstrapAuthHandoff(){const hash=new URLSearchParams(location.hash.replace(/^#/,''));const tokenHash=hash.get('ekodi_token');if(!tokenHash)return false;history.replaceState(null,'',location.pathname+location.search);const response=await fetch(`${SUPABASE_URL}/auth/v1/verify`,{method:'POST',headers:{apikey:PUBLISHABLE_KEY,'content-type':'application/json'},body:JSON.stringify({token_hash:tokenHash,type:hash.get('ekodi_type')||'email'})});const data=await response.json().catch(()=>({}));const access=data?.access_token||data?.session?.access_token||'';if(!response.ok||!access)throw new Error(data?.msg||data?.error_description||'login_handoff_failed');sessionStorage.setItem('ekodi-auth-token',access);return true}
 function headers(json=false,session=false){const h=new Headers();if(token())h.set('authorization',`Bearer ${token()}`);if(json)h.set('content-type','application/json');if(session&&state.session?.accessKey)h.set('x-ekodi-session-key',state.session.accessKey);return h}
@@ -16,9 +16,44 @@ async function createSession(roomId,role){const data=await api(`/rooms/${encodeU
 async function acquireCamera(){if(state.local)return state.local;const stream=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:1280},height:{ideal:720}},audio:{echoCancellation:true,noiseSuppression:true}});state.local=stream;$('mainVideo').srcObject=stream;$('programPlaceholder')?.classList.add('hidden');return stream}
 function trackPayload(pc,stream,source='camera'){return pc.getTransceivers().filter(t=>t.sender?.track&&stream.getTracks().includes(t.sender.track)).map((t,index)=>({mid:t.mid,trackName:`${source}-${t.sender.track.kind}-${Date.now()}-${index}`,kind:t.sender.track.kind,sourceType:t.sender.track.kind==='audio'?'microphone':source}))}
 async function publishStream(stream,source='camera'){for(const track of stream.getTracks())state.pc.addTrack(track,stream);const offer=await state.pc.createOffer();await state.pc.setLocalDescription(offer);await waitIce(state.pc);const tracks=trackPayload(state.pc,stream,source);if(tracks.some(t=>!t.mid))throw new Error('media_negotiation_not_ready');const data=await api(`/rooms/${state.room.id}/sessions/${state.session.id}/publish`,{method:'POST',session:true,body:JSON.stringify({sessionDescription:state.pc.localDescription,tracks})});const answer=providerDescription(data);if(!answer?.sdp)throw new Error('media_server_answer_missing');await state.pc.setRemoteDescription(answer)}
+
+const RECORD_PART_TARGET=6*1024*1024;
+function recordingMime(){for(const type of ['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'])if(globalThis.MediaRecorder?.isTypeSupported?.(type))return type;return 'video/webm'}
+async function uploadRecordingBlob(rec,blob){
+  const part=rec.part++;
+  const response=await fetch(`${API}/rooms/${encodeURIComponent(state.room.id)}/recordings/${encodeURIComponent(rec.id)}/parts/${part}`,{method:'PUT',headers:{authorization:`Bearer ${token()}`,'content-type':rec.mime},body:blob});
+  const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.error||`recording_part_${response.status}`);return data;
+}
+function flushRecordingPart(rec,force=false){
+  if(!rec||!rec.pending.length||(!force&&rec.pendingBytes<RECORD_PART_TARGET))return;
+  const blob=new Blob(rec.pending,{type:rec.mime});rec.pending=[];rec.pendingBytes=0;
+  rec.queue=rec.queue.then(()=>uploadRecordingBlob(rec,blob)).catch(error=>{rec.failed=true;note(`녹화 저장 지연: ${error.message}. 방송은 계속됩니다.`)});
+}
+async function startRecording(){
+  if(!state.room||!state.local||!globalThis.MediaRecorder)return false;
+  try{
+    const mime=recordingMime(),created=await api(`/rooms/${state.room.id}/recordings`,{method:'POST',body:JSON.stringify({mimeType:mime,title:state.room.title,retentionDays:180})});
+    const rec={id:created.recording.id,mime,part:1,pending:[],pendingBytes:0,queue:Promise.resolve(),failed:false,media:null};
+    const media=new MediaRecorder(state.local,{mimeType:mime});rec.media=media;state.recording=rec;
+    media.ondataavailable=event=>{if(!event.data?.size)return;rec.pending.push(event.data);rec.pendingBytes+=event.data.size;flushRecordingPart(rec,false)};
+    media.onerror=event=>{rec.failed=true;note(`녹화 오류: ${event.error?.message||'recording_error'}. 방송은 계속됩니다.`)};
+    media.start(5000);note('방송 중입니다. 녹화본은 R2에 안전하게 기록한 뒤 공유드라이브로 보관합니다.');return true;
+  }catch(error){note(`방송은 시작됐지만 녹화 준비에 실패했습니다: ${error.message}`);return false}
+}
+async function stopRecording(){
+  const rec=state.recording;if(!rec)return null;
+  if(rec.media?.state!=='inactive')await new Promise(resolve=>{rec.media.addEventListener('stop',resolve,{once:true});rec.media.stop()});
+  flushRecordingPart(rec,true);await rec.queue;
+  try{
+    if(rec.failed){await api(`/rooms/${state.room.id}/recordings/${rec.id}/abort`,{method:'POST',body:'{}'}).catch(()=>{});return null}
+    const done=await api(`/rooms/${state.room.id}/recordings/${rec.id}/finalize`,{method:'POST',body:'{}'});
+    note(done.archive?.ok?'방송 종료 · 녹화본 공유드라이브 보관 완료':'방송 종료 · 녹화본 저장 완료, 공유드라이브 보관 대기');return done;
+  }catch(error){note(`방송은 종료됐지만 녹화 확정에 실패했습니다: ${error.message}`);return null}
+  finally{state.recording=null}
+}
 async function startHost(){if(state.hosting)return;state.hosting=true;show('studioView');note('방송 준비 중입니다.');try{const created=await createRoom();if(!created)return;state.room=created.room;$('roomTitle').textContent=state.room.title;$('shareLink').value=`${location.origin}${cfg.livePath}?room=${encodeURIComponent(state.room.id)}`;$('roomLinks').classList.remove('hidden');const stream=await acquireCamera();await api(`/rooms/${state.room.id}/status`,{method:'POST',body:JSON.stringify({status:'starting'})});await createSession(state.room.id,'owner');await publishStream(stream,'camera');note('미디어 연결이 완료되었습니다. 방송 시작을 누르면 공개됩니다.');$('goLiveButton').disabled=false}catch(error){state.hosting=false;note(`방송 준비 실패: ${error.message}`)}}
-async function goLive(){if(!state.room)return;try{await api(`/rooms/${state.room.id}/status`,{method:'POST',body:JSON.stringify({status:'live'})});$('programBadge').textContent='LIVE';$('liveState').textContent='방송 중';$('goLiveButton').disabled=true;$('endLiveButton').disabled=false;note('방송 중입니다.')}catch(error){note(`방송 시작 실패: ${error.message}`)}}
-async function endLive(){if(!state.room)return;try{await api(`/rooms/${state.room.id}/status`,{method:'POST',body:JSON.stringify({status:'ending'})});if(state.session)await api(`/rooms/${state.room.id}/sessions/${state.session.id}/leave`,{method:'POST',session:true,body:'{}'}).catch(()=>{});state.pc?.close();state.local?.getTracks().forEach(t=>t.stop());state.screen?.getTracks().forEach(t=>t.stop());await api(`/rooms/${state.room.id}/status`,{method:'POST',body:JSON.stringify({status:'ended'})});$('programBadge').textContent='종료';$('endLiveButton').disabled=true;note('방송이 종료되었습니다.')}catch(error){note(`방송 종료 처리 실패: ${error.message}`)}}
+async function goLive(){if(!state.room)return;try{await api(`/rooms/${state.room.id}/status`,{method:'POST',body:JSON.stringify({status:'live'})});$('programBadge').textContent='LIVE';$('liveState').textContent='방송 중';$('goLiveButton').disabled=true;$('endLiveButton').disabled=false;note('방송 중입니다. 녹화를 준비합니다.');await startRecording()}catch(error){note(`방송 시작 실패: ${error.message}`)}}
+async function endLive(){if(!state.room)return;try{await api(`/rooms/${state.room.id}/status`,{method:'POST',body:JSON.stringify({status:'ending'})});await stopRecording();if(state.session)await api(`/rooms/${state.room.id}/sessions/${state.session.id}/leave`,{method:'POST',session:true,body:'{}'}).catch(()=>{});state.pc?.close();state.local?.getTracks().forEach(t=>t.stop());state.screen?.getTracks().forEach(t=>t.stop());await api(`/rooms/${state.room.id}/status`,{method:'POST',body:JSON.stringify({status:'ended'})});$('programBadge').textContent='종료';$('endLiveButton').disabled=true;if(!state.recording)note('방송이 종료되었습니다.')}catch(error){note(`방송 종료 처리 실패: ${error.message}`)}}
 async function shareScreen(){if(!state.room||!state.pc)return note('먼저 방송을 준비해 주세요.');try{const stream=await navigator.mediaDevices.getDisplayMedia({video:true,audio:true});state.screen=stream;await publishStream(stream,'screen');$('mainVideo').srcObject=stream;stream.getVideoTracks()[0]?.addEventListener('ended',()=>{if(state.local)$('mainVideo').srcObject=state.local});note('화면공유를 방송에 추가했습니다.')}catch(error){if(error.name!=='NotAllowedError')note(`화면공유 실패: ${error.message}`)}}
 async function joinViewer(roomId=''){show('viewerView');note('현재 방송을 찾고 있습니다.','viewerStatus');try{let id=roomId;if(!id){const live=await api(`/live?tenant=${encodeURIComponent(cfg.tenant)}`);if(!live.live||!live.room){$('viewerEmpty').textContent='현재 진행 중인 공개 방송이 없습니다.';note('현재 생방송이 없습니다.','viewerStatus');return}id=live.room.id}const detail=await api(`/rooms/${encodeURIComponent(id)}`);state.room=detail.room;$('viewerTitle').textContent=state.room.title||cfg.defaultTitle;await createSession(id,'viewer');state.pc.ontrack=event=>{for(const track of event.streams?.[0]?.getTracks?.()||[event.track])if(!state.remote.getTracks().some(x=>x.id===track.id))state.remote.addTrack(track);$('viewerVideo').srcObject=state.remote;$('viewerEmpty').classList.add('hidden')};const pulled=await api(`/rooms/${id}/sessions/${state.session.id}/pull`,{method:'POST',session:true,body:JSON.stringify({tracks:(detail.tracks||[]).map(track=>({trackName:track.track_name||track.trackName}))})});if(pulled.empty){note('방송방은 열려 있지만 아직 영상 트랙이 없습니다.','viewerStatus');return}const offer=providerDescription(pulled);if(!offer?.sdp)throw new Error('media_server_offer_missing');await state.pc.setRemoteDescription(offer);const answer=await state.pc.createAnswer();await state.pc.setLocalDescription(answer);await waitIce(state.pc);await api(`/rooms/${id}/sessions/${state.session.id}/renegotiate`,{method:'PUT',session:true,body:JSON.stringify({sessionDescription:state.pc.localDescription})});note('실시간 방송에 연결되었습니다.','viewerStatus')}catch(error){note(`참여 연결 실패: ${error.message}`,'viewerStatus')}}
 async function refreshLive(){try{const live=await api(`/live?tenant=${encodeURIComponent(cfg.tenant)}`);$('liveState').textContent=live.live?'현재 LIVE':'현재 대기';if(live.live)$('joinButton').textContent='현재 방송 참여하기'}catch{$('liveState').textContent='상태 확인 필요'}}
