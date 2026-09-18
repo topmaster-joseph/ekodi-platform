@@ -27,7 +27,7 @@ test('admin auth keeps the explicit canonical Google bridge button as the fallba
 });
 
 test('Google origin bridge keeps strict origin and account-selection safety', () => {
-  assert.match(bridge, /const TARGET_ORIGIN='https:\/\/ekodi\.kr'/);
+  assert.match(bridge, /targetOrigin:'https:\/\/ekodi\.kr'/);
   assert.match(bridge, /event\.origin!==TARGET_ORIGIN\|\|event\.source!==window\.opener/);
   assert.match(bridge, /clientId===EXPECTED_CLIENT/);
   assert.match(bridge, /auto_select:false/);
