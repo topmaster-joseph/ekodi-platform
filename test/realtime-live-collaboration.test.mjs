@@ -70,3 +70,13 @@ test('live chat does not trust client supplied broadcaster names',async()=>{
   assert.match(control,/ADMIN_ROLES\.has\(actorRole\)\?'방송자'/);
   assert.doesNotMatch(control,/displayName=clean\(input\?\.displayName/);
 });
+
+
+test('presenter source can be removed and re-added during screen share like other overlays',async()=>{
+  const [page,live]=await Promise.all([read('tenant-live-page.js'),read('tenant-live.js')]);
+  assert.match(page,/id="presenterOverlaySource"/);
+  assert.match(live,/presenterHidden:false/);
+  assert.match(live,/if\(id==='presenter'\)state\.presenterHidden=true/);
+  assert.match(live,/presenter\.visible=!state\.presenterHidden/);
+  assert.match(live,/addOverlay\('presenter'\)/);
+});
