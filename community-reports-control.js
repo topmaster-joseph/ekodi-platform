@@ -1,4 +1,5 @@
 import authWorker from './auth-worker.js';
+import { buildCoreAiGateway } from './core-ai-gateway.js';
 
 const PREFIX = '/api/community/admin/reports';
 const VALID_STATUS = new Set(['DRAFT', 'AI_DRAFT', 'REVIEW', 'APPROVED', 'SENT']);
@@ -89,7 +90,10 @@ async function settings(env) {
 function mailConfigured(env) {
   return Boolean(clean(env.GMAIL_CLIENT_ID, 500) && clean(env.GMAIL_CLIENT_SECRET, 500) && clean(env.GMAIL_REFRESH_TOKEN, 2000));
 }
-function aiConfigured(env) { return Boolean(clean(env.OPENAI_API_KEY, 300)); }
+function aiConfigured(env) {
+  const providers = buildCoreAiGateway(env).status()?.orchestration?.configuredProviders || [];
+  return providers.some(provider => provider.available);
+}
 function sourceEndpoint(env) { return clean(env.COMMUNITY_REPORT_SOURCE_URL, 1000) || DEFAULT_SOURCE_URL; }
 async function overview(request, env) {
   const upcoming = nextReportPeriod();
@@ -263,23 +267,34 @@ function aiSourceFacts(snapshot) {
     items: Array.isArray(snapshot.items) ? snapshot.items.slice(0, 120) : [],
   };
 }
-async function generateWithOpenAI(env, report) {
+async function generateWithOrchestrator(env, report) {
   if (!aiConfigured(env)) return null;
   const facts = {
     manual: { activities: report.activities, outcomes: report.outcomes, evaluation: report.evaluation, plans: report.plans, requests: report.requests, prayers: report.prayers, sourceNotes: report.sourceNotes },
     recordedSources: aiSourceFacts(report.sourceSnapshot),
   };
-  const response = await fetch('https://api.openai.com/v1/responses', {
-    method: 'POST',
-    headers: { authorization: `Bearer ${env.OPENAI_API_KEY}`, 'content-type': 'application/json' },
-    body: JSON.stringify({
-      model: clean(env.OPENAI_MODEL, 120) || 'gpt-5',
-      instructions: 'You draft concise Korean ministry reports for Community. Use only supplied facts. Never invent names, counts, dates, outcomes, plans, or prayer requests. recordedSources are verified historical Community records; ongoingCircles are recurring-schedule context only and are not confirmed future events. Future plans must come from manual.plans. If evidence is missing, write 확인 필요. Keep the tone factual, pastoral, and suitable for headquarters reporting.',
-      input: `보고서: ${report.title}\n활동기간 ${report.activityFrom}~${report.activityTo}\n계획기간 ${report.planFrom}~${report.planTo}\n\n자료(JSON):\n${JSON.stringify(facts)}\n\n다음 순서로 작성: 1. 지난 2개월 주요 사역 2. 참여·성과·변화 3. 감사와 평가 4. 향후 2개월 계획 5. 본부 협조 요청 6. 기도제목.`,
-    }),
+  const message = [
+    "검증된 사실만 사용해 간결한 한국어 사역보고서를 작성하세요. 이름·수치·날짜·성과·계획·기도제목을 만들지 마세요. recordedSources는 검증된 과거 기록이며 ongoingCircles는 반복 일정 맥락일 뿐 미래 행사 확정이 아닙니다. 향후 계획은 manual.plans만 사용하고 근거가 없으면 확인 필요라고 쓰세요.",
+    `보고서: ${report.title}`,
+    `활동기간 ${report.activityFrom}~${report.activityTo}`,
+    `계획기간 ${report.planFrom}~${report.planTo}`,
+    '자료(JSON):',
+    JSON.stringify(facts),
+    '다음 순서로 작성: 1. 지난 2개월 주요 사역 2. 참여·성과·변화 3. 감사와 평가 4. 향후 2개월 계획 5. 협조 요청 6. 기도제목.',
+  ].join('\n');
+  const result = await buildCoreAiGateway(env).run({
+    taskName: "community-ministry-report-draft",
+    context: { message, page: { section:'reports', title:"Community ministry report", pathname:'/reports' } },
+    requiredCapabilities:['text'],
+    risk:'normal',
+    governance:{ dataSensitivity:'internal' },
+    fallback:()=>null,
   });
-  if (!response.ok) throw new Error(`AI 생성 실패 (${response.status})`);
-  const data = await response.json(); return extractOutputText(data) || null;
+  if (result.mode !== 'ai') return null;
+  const value = result.value;
+  const body = typeof value === 'string' ? value : value?.text;
+  if (!body) return null;
+  return { body, provider: result.provider || 'orchestrator', model: value?.model || '' };
 }
 async function generateDraft(request, env, sessionData, id) {
   let report = await getReport(env, id, true); if (!report) return json({ error: '사역보고를 찾을 수 없습니다.' }, 404, request, env);
@@ -288,7 +303,7 @@ async function generateDraft(request, env, sessionData, id) {
   try { report = await syncSources(request, env, sessionData, id); sourceSynced = true; }
   catch (error) { console.warn('Community report source fallback', error); report = await getReport(env, id, true) || report; }
   let body; let mode = 'smart-template';
-  try { body = await generateWithOpenAI(env, report); if (body) mode = 'openai'; } catch (error) { console.warn('Community report AI fallback', error); }
+  try { const generated = await generateWithOrchestrator(env, report); if (generated?.body) { body = generated.body; mode = `orchestrator:${generated.provider}`; } } catch (error) { console.warn('Community report AI fallback', error); }
   if (!body) body = fallbackBody(report);
   const who = await adminId(env, sessionData.email); const now = new Date().toISOString();
   await env.DB.prepare(`UPDATE community_ministry_reports SET body_text=?, ai_mode=?, status='AI_DRAFT', send_error='', updated_at=?, updated_by=? WHERE id=?`)
