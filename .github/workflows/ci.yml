@@ -65,7 +65,8 @@ jobs:
             .github/workflows/cloud-control-workers-builds.yml \
             .github/workflows/redeploy-control-on-central-core.yml \
             .github/workflows/github-governance-audit.yml \
-            .github/workflows/reliability-validation.yml
+            .github/workflows/reliability-validation.yml \
+            .github/workflows/verify-ekodi-orchestrator-live-e2e.yml
       - name: Enforce traffic-ready data plane
         run: |
           node --check data-plane.js
