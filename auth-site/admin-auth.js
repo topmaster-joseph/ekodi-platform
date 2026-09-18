@@ -2,6 +2,7 @@ const runtime=(()=>{
   const origin=location.origin;
   if(origin==='https://ekodi.kr')return{environment:'production',apiOrigin:'https://ekodi.kr',authOrigin:origin};
   if(origin==='https://ekodi-shared-site-staging.ekodi-development.workers.dev')return{environment:'staging',apiOrigin:'https://ekodi-auth-api-staging.ekodi-development.workers.dev',authOrigin:origin};
+  if(origin==='https://ekodi-platform-development.ekodi-development.workers.dev')return{environment:'development',apiOrigin:origin,authOrigin:origin};
   if(origin==='http://127.0.0.1:4173'||origin==='http://localhost:4173')return{environment:'development',apiOrigin:'http://127.0.0.1:8791',authOrigin:origin};
   return{environment:'unsupported',apiOrigin:'',authOrigin:''};
 })();
