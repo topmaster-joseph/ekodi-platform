@@ -37,6 +37,79 @@
         "rollbackHeaderExpect": []
       },
       {
+        "url": "https://ekodi.kr/ai/api/commons/client.js",
+        "statuses": [
+          200
+        ],
+        "expect": [
+          "const API_BASE=location.pathname.startsWith('/ai')?'/ai':'';",
+          "api('/api/commons/config')",
+          "api('/api/commons/match'"
+        ],
+        "forbid": [
+          "api('/ai/api/commons/"
+        ],
+        "headerExpect": [
+          "x-ekodi-ai-asset: worker-owned-v1",
+          "content-type: text/javascript"
+        ],
+        "candidateUrl": "https://ekodi-ai-control.topmaster-joseph.workers.dev/api/commons/client.js",
+        "candidateStatuses": [
+          200
+        ],
+        "candidateExpect": [
+          "const API_BASE=location.pathname.startsWith('/ai')?'/ai':'';",
+          "api('/api/commons/config')",
+          "api('/api/commons/match'"
+        ],
+        "candidateForbid": [
+          "api('/ai/api/commons/"
+        ],
+        "candidateHeaderExpect": [
+          "x-ekodi-ai-asset: worker-owned-v1",
+          "content-type: text/javascript"
+        ],
+        "rollbackStatuses": [
+          200,
+          404
+        ],
+        "rollbackExpect": [],
+        "rollbackHeaderExpect": []
+      },
+      {
+        "url": "https://ekodi.kr/ai/api/commons/client.css",
+        "statuses": [
+          200
+        ],
+        "expect": [
+          ".page",
+          "want-form"
+        ],
+        "headerExpect": [
+          "x-ekodi-ai-asset: worker-owned-v1",
+          "content-type: text/css"
+        ],
+        "candidateUrl": "https://ekodi-ai-control.topmaster-joseph.workers.dev/api/commons/client.css",
+        "candidateStatuses": [
+          200
+        ],
+        "candidateExpect": [
+          ".page",
+          "want-form"
+        ],
+        "candidateHeaderExpect": [
+          "x-ekodi-ai-asset: worker-owned-v1",
+          "content-type: text/css"
+        ],
+        "candidateForbid": [],
+        "rollbackStatuses": [
+          200,
+          404
+        ],
+        "rollbackExpect": [],
+        "rollbackHeaderExpect": []
+      },
+      {
         "url": "https://ekodi.kr/ai/__health",
         "statuses": [
           200
