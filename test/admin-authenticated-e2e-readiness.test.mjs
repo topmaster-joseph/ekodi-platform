@@ -49,3 +49,14 @@ test('authenticated Admin E2E gives demand-loaded navigation a bounded productio
   const demandBody=worker.slice(worker.indexOf('async function prepareTargetDemand()'),worker.indexOf('async function waitForAdminNavigationIdle()'));
   assert.doesNotMatch(demandBody,/clickFast\(placeholder\)/);
 });
+
+
+test('authenticated Admin E2E requires the Personal Finance control payload, not only its loading shell', async () => {
+  const worker = await read('scripts/admin-authenticated-e2e-menu-worker.mjs');
+  assert.match(worker, /async function verifyPersonalFinance\(tab, alreadyActive, started\)/);
+  assert.match(worker, /#personalFinanceAdminPanel/);
+  assert.match(worker, /\.pf-admin-summary/);
+  assert.match(worker, /\.pf-admin-error/);
+  assert.match(worker, /personal-finance control failed/);
+  assert.match(worker, /menuId === 'personal-finance'[\s\S]*verifyPersonalFinance\(trigger, alreadyActive, started\)/);
+});
