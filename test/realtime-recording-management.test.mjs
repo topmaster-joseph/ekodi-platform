@@ -44,3 +44,13 @@ test('generic live broadcaster writes recording parts without blocking media on 
   assert.match(live,/recordings\/\$\{encodeURIComponent\(rec\.id\)\}\/parts/);
   assert.match(live,/방송은 계속됩니다/);
 });
+
+
+test('public visibility is an actual delivery boundary and retention is enforced',async()=>{
+  const [control,entry]=await Promise.all([read('realtime-control.js'),read('mission-control-entry-worker.js')]);
+  assert.match(control,/recording\.visibility!=='public'/);
+  assert.match(control,/recordings\/public/);
+  assert.match(control,/runRealtimeRecordingRetention/);
+  assert.match(control,/retention_until<=\?/);
+  assert.match(entry,/runRealtimeRecordingRetention/);
+});
