@@ -50,3 +50,15 @@ test('AI_PROVIDER=NONE overrides opt-in provider pooling and preserves Core fall
   assert.equal(result.mode, 'free_assist');
   assert.equal(result.value.text, 'core-fallback');
 });
+
+
+test('multi-provider pool exposes the active Workers AI model when the binding is enabled', () => {
+  const gateway=buildCoreAiGateway({
+    AI_MULTI_PROVIDER_ENABLED:'true',
+    EKODI_PROVIDER_WORKERS_AI_ENABLED:'true',
+    AI:{async run(){return{response:'ok'}}},
+  },[]);
+  const workers=gateway.status().orchestration.configuredProviders.find(provider=>provider.id==='cloudflare-workers-ai');
+  assert.ok(workers);
+  assert.equal(workers.available,true);
+});

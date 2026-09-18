@@ -1,6 +1,6 @@
 import { projectForExternalAi } from './secure-projection.js';
 
-const DEFAULT_MODEL='@cf/meta/llama-3.1-8b-instruct';
+const DEFAULT_MODEL='@cf/meta/llama-3.1-8b-instruct-fast';
 const DEFAULT_DAILY_CALL_LIMIT=4;
 const MAX_DAILY_CALL_LIMIT=20;
 const MAX_OUTPUT_TOKENS=256;
@@ -17,7 +17,7 @@ async function reserveDailyCall(env={}){
   const limit=dailyLimit(env);
   if(!env.DB?.prepare){
     if(String(env.ENVIRONMENT||'').toLowerCase()==='production')throw new Error('WORKERS_AI_BUDGET_DB_UNAVAILABLE');
-    return Object.freeze({allowed:true,limit,used:null});
+    return Object.freeze({allowed:true,limit,used:null,day:null});
   }
   const day=utcDay(),now=new Date().toISOString();
   await env.DB.prepare(
@@ -31,7 +31,14 @@ async function reserveDailyCall(env={}){
   const row=await env.DB.prepare(
     'SELECT call_count FROM ai_provider_daily_budget WHERE provider_id=? AND usage_date=?'
   ).bind(PROVIDER_ID,day).first();
-  return Object.freeze({allowed:true,limit,used:Number(row?.call_count||0)});
+  return Object.freeze({allowed:true,limit,used:Number(row?.call_count||0),day});
+}
+async function refundFailedDailyCall(env={},reservation={}){
+  if(!reservation?.day||!env.DB?.prepare)return;
+  const now=new Date().toISOString();
+  await env.DB.prepare(
+    'UPDATE ai_provider_daily_budget SET call_count=CASE WHEN call_count>0 THEN call_count-1 ELSE 0 END,updated_at=? WHERE provider_id=? AND usage_date=?'
+  ).bind(now,PROVIDER_ID,reservation.day).run();
 }
 
 function extractResponse(result){
@@ -81,28 +88,33 @@ export function createCloudflareWorkersAiProvider(env={},options={}){
     freeQuotaRemaining:null,
     async invoke({taskName='',context={}}={}){
       if(!available)throw new Error('WORKERS_AI_NOT_CONFIGURED');
-      await reserveDailyCall(env);
-      const projected=await projectForExternalAi(context,{
-        profile:'ai_minimum',
-        purpose:'ekodi-ai-orchestration',
-        salt:crypto.randomUUID()
-      });
-      const result=await ai.run(model,{
-        messages:buildMessages(taskName,projected),
-        max_tokens:MAX_OUTPUT_TOKENS,
-        temperature:0.2
-      });
-      const output=extractResponse(result);
-      if(!output)throw new Error('WORKERS_AI_EMPTY_RESPONSE');
-      return Object.freeze({
-        text:output,
-        model,
-        responseId:'',
-        usage:Object.freeze({
-          inputTokens:Number(result?.usage?.prompt_tokens||result?.usage?.input_tokens||0),
-          outputTokens:Number(result?.usage?.completion_tokens||result?.usage?.output_tokens||0)
-        })
-      });
+      const reservation=await reserveDailyCall(env);
+      try{
+        const projected=await projectForExternalAi(context,{
+          profile:'ai_minimum',
+          purpose:'ekodi-ai-orchestration',
+          salt:crypto.randomUUID()
+        });
+        const result=await ai.run(model,{
+          messages:buildMessages(taskName,projected),
+          max_tokens:MAX_OUTPUT_TOKENS,
+          temperature:0.2
+        });
+        const output=extractResponse(result);
+        if(!output)throw new Error('WORKERS_AI_EMPTY_RESPONSE');
+        return Object.freeze({
+          text:output,
+          model,
+          responseId:'',
+          usage:Object.freeze({
+            inputTokens:Number(result?.usage?.prompt_tokens||result?.usage?.input_tokens||0),
+            outputTokens:Number(result?.usage?.completion_tokens||result?.usage?.output_tokens||0)
+          })
+        });
+      }catch(error){
+        await refundFailedDailyCall(env,reservation).catch(()=>{});
+        throw error;
+      }
     }
   });
 }

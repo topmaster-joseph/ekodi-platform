@@ -46,6 +46,14 @@ test('AI management unifies resource routing and dynamic provider Router Score',
   assert.match(admin, /Origin AI · LOCK/);
 });
 
+test('AI management routes common-service runtime status through the apex service binding', () => {
+  const admin = read('ai-management-admin.js');
+  assert.match(admin, /COMMON_SERVICE_PREFIX='\/api\/control\/common-services\/'/);
+  assert.match(admin, /function needsApexServiceBinding\(path\)/);
+  assert.match(admin, /if\(!needsApexServiceBinding\(path\)&&typeof window\.EKODIAdminCore\?\.request==='function'\)/);
+  assert.match(admin, /fetch\(`https:\/\/ekodi\.kr\$\{path\}`/);
+});
+
 test('AI management exposes locked free-first cost governance', () => {
   const admin=read('ai-management-admin.js');
   assert.match(admin, /AI-COST-001/);
