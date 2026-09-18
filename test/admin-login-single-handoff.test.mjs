@@ -9,6 +9,7 @@ const adminAuth = await readFile(`${root}auth-site/admin-auth.js`, 'utf8');
 const bridge = await readFile(`${root}auth-site/google-origin-bridge.js`, 'utf8');
 const bridgeHtml = await readFile(`${root}auth-site/google-origin-bridge.html`, 'utf8');
 const authRouter = await readFile(`${root}auth-site/auth-router.js`, 'utf8');
+const authBootstrap = await readFile(`${root}auth-site/auth-bootstrap.js`, 'utf8');
 const authHtml = await readFile(`${root}auth-site/index.html`, 'utf8');
 
 test('central admin login navigates to canonical auth without pre-opening a cross-origin bridge', () => {
@@ -36,6 +37,7 @@ test('Google origin bridge keeps strict origin and account-selection safety', ()
 
 test('single-handoff keeps the existing no-store auth asset contract', () => {
   assert.match(authRouter, /admin-auth\.js\?v=20260909-origin-bridge-1/);
-  assert.match(authHtml, /auth-router\.js\?v=20260904-direct-login-1/);
+  assert.match(authHtml, /auth-bootstrap\.js\?v=20260918-admin-login-1/);
+  assert.match(authBootstrap, /auth-router\.js\?v=20260904-direct-login-1/);
   assert.match(bridgeHtml, /google-origin-bridge\.js/);
 });
