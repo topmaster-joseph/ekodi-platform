@@ -98,7 +98,8 @@ function ideaDisplayBase(row={}){
     recommended:Boolean(row.recommended)||requestCount>=3,createdAt:row.created_at||row.createdAt||null,updatedAt:row.updated_at||row.updatedAt||null};
 }
 export function publicRequestView(row={}){
-  const {id:_internalRowId,...view}=ideaDisplayBase(row);return Object.freeze(view);
+  const view=ideaDisplayBase(row);return Object.freeze({title:view.title,status:view.status,userStatus:view.userStatus,requestCount:view.requestCount,
+    recommended:view.recommended,createdAt:view.createdAt,updatedAt:view.updatedAt});
 }
 export function memberIdeaView(row={}){
   return Object.freeze({...ideaDisplayBase(row),problem:String(row.problem||''),outcome:String(row.outcome||''),audience:String(row.audience||''),
