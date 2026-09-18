@@ -230,7 +230,7 @@ async function aiSelect(env, candidates) {
     JSON.stringify(compact),
   ].join('\n');
   try {
-    const result = await buildCoreAiGateway(env).run({
+    const result = await buildCoreAiGateway({ ...env, AI_MULTI_PROVIDER_ENABLED:'true' }).run({
       taskName:'affiliate-product-selection',
       context:{message,page:{section:'affiliate',title:'EKODI Mall automatic curation',pathname:'/api/affiliate/automation'}},
       requiredCapabilities:['text'],
