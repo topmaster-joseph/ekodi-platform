@@ -14,8 +14,14 @@ AI_CONTROL_CALLER_REGISTRY_JSON = '[{"id":"ekodi-mall","secretBinding":"MALL_ING
 AUTH_URL = "https://ekodi.kr/auth/?site=ai&return_to=https%3A%2F%2Fekodi.kr%2Fai%2F"
 GEMINI_MODEL = "gemini-3.7-flash"
 AI_WORKER_PROVIDERS = ""
+EKODI_PROVIDER_WORKERS_AI_ENABLED = "false"
+EKODI_WORKERS_AI_DAILY_CALL_LIMIT = "4"
+EKODI_PROVIDER_OPENROUTER_FREE_ENABLED = "true"
+EKODI_OPENROUTER_FREE_DAILY_CALL_LIMIT = "45"
+EKODI_PROVIDER_GROQ_FREE_ENABLED = "false"
+EKODI_GROQ_FREE_DAILY_CALL_LIMIT = "900"
 
-[assets]
+[ai]\nbinding = "AI"\n\n[assets]
 directory = "./.release/ai-control/assets"
 binding = "ASSETS"
 run_worker_first = true
