@@ -11,6 +11,7 @@ on:
       - 'platform-boundaries.json'
       - 'shell/theme.json'
       - 'test/money-platform.test.mjs'
+      - 'test/money-public-refunds.test.mjs'
       - 'wrangler.money.toml'
       - 'wrangler.money.staging.toml'
       - 'deploy/manifests/money.worker.json'
@@ -25,6 +26,7 @@ on:
       - 'platform-boundaries.json'
       - 'shell/theme.json'
       - 'test/money-platform.test.mjs'
+      - 'test/money-public-refunds.test.mjs'
       - 'wrangler.money.toml'
       - 'wrangler.money.staging.toml'
       - 'deploy/manifests/money.worker.json'
@@ -56,9 +58,10 @@ jobs:
           node --check money-worker.js
           node --check money/core.js
           node --check money/integrations.js
+          node --check money/public-refunds.js
           node --check money/app.js
           node --check ekodi-service-manifest.js
-          node --test test/money-platform.test.mjs
+          node --test test/money-platform.test.mjs test/money-public-refunds.test.mjs
           node scripts/validate-platform-boundaries.mjs
           node scripts/validate-ai-mission-governance.mjs
           node -e "JSON.parse(require('fs').readFileSync('deploy/manifests/money.worker.json','utf8'))"
@@ -101,10 +104,11 @@ jobs:
             fi
             root=$(curl -L -sS -D /tmp/money-headers -o /tmp/money.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/" || true)
             health=$(curl -sS -o /tmp/money-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/health" || true)
+            refunds=$(curl -sS -o /tmp/money-refunds.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/api/refunds/sources" || true)
             integrations=$(curl -sS -o /tmp/money-integrations.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/api/integrations" || true)
             gate=$(curl -sS -o /tmp/money-gate.json -w '%{http_code}' --connect-timeout 5 --max-time 15 -H 'content-type: application/json' -d '{"action":"close-account"}' "$STAGING_URL/api/action-gate" || true)
             blocked=$(curl -sS -o /tmp/money-connect.json -w '%{http_code}' --connect-timeout 5 --max-time 15 -H 'content-type: application/json' -d '{"providerId":"kftc-openbanking","scopes":["accounts:read"]}' "$STAGING_URL/api/connect/begin" || true)
-            if [[ "$root" == '200' && "$health" == '200' && "$integrations" == '200' && "$gate" == '200' && "$blocked" == '503' ]] && grep -Fq 'V2 · 금융연동 준비층' /tmp/money.html && grep -Fq '"service":"ekodi-money"' /tmp/money-health.json && grep -Fq '"apiStatus":"integration-readiness"' /tmp/money-health.json && grep -Fq '"dataMode":"isolated-staging"' /tmp/money-health.json && grep -Fq '"id":"accountinfo"' /tmp/money-integrations.json && grep -Fq '"id":"kftc-openbanking"' /tmp/money-integrations.json && grep -Fq '"financialExecution":false' /tmp/money-integrations.json && grep -Fq '"humanGateRequired":true' /tmp/money-gate.json && grep -Fq '"provider_not_live"' /tmp/money-connect.json && grep -Eiq '^x-ekodi-shell: v2' /tmp/money-headers; then exit 0; fi
+            if [[ "$root" == '200' && "$health" == '200' && "$integrations" == '200' && "$refunds" == '200' && "$gate" == '200' && "$blocked" == '503' ]] && grep -Fq 'V2 · 금융연동 준비층' /tmp/money.html && grep -Fq '"service":"ekodi-money"' /tmp/money-health.json && grep -Fq '"apiStatus":"integration-readiness"' /tmp/money-health.json && grep -Fq '"dataMode":"isolated-staging"' /tmp/money-health.json && grep -Fq '"id":"accountinfo"' /tmp/money-integrations.json && grep -Fq '"id":"kftc-openbanking"' /tmp/money-integrations.json && grep -Fq '"financialExecution":false' /tmp/money-integrations.json && grep -Fq '"id":"national-tax"' /tmp/money-refunds.json && grep -Fq '"sensitiveCredentialCollection":false' /tmp/money-refunds.json && grep -Fq '"humanGateRequired":true' /tmp/money-gate.json && grep -Fq '"provider_not_live"' /tmp/money-connect.json && grep -Eiq '^x-ekodi-shell: v2' /tmp/money-headers; then exit 0; fi
             sleep 4
           done
           cat /tmp/money-health.json || true
@@ -156,10 +160,11 @@ jobs:
             root=$(curl -L -sS -D /tmp/money-headers -o /tmp/money.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://money.ekodi.kr/' || true)
             health=$(curl -sS -o /tmp/money-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://money.ekodi.kr/health' || true)
             integrations=$(curl -sS -o /tmp/money-integrations.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://money.ekodi.kr/api/integrations' || true)
+            refunds=$(curl -sS -o /tmp/money-refunds.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://money.ekodi.kr/api/refunds/sources' || true)
             exec_code=$(curl -sS -o /tmp/money-exec.json -w '%{http_code}' --connect-timeout 5 --max-time 15 -X POST 'https://money.ekodi.kr/api/execution' || true)
             openbanking=$(curl -sS -o /tmp/money-openbanking.json -w '%{http_code}' --connect-timeout 5 --max-time 15 -H 'content-type: application/json' -d '{"providerId":"kftc-openbanking","scopes":["accounts:read"]}' 'https://money.ekodi.kr/api/connect/begin' || true)
             admin=$(curl -sS -o /dev/null -D /tmp/money-admin-headers -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://money.ekodi.kr/admin' || true)
-            if [[ "$root" == '200' && "$health" == '200' && "$integrations" == '200' && "$exec_code" == '409' && "$openbanking" == '503' ]] && grep -Fq 'V2 · 금융연동 준비층' /tmp/money.html && grep -Fq '"dataMode":"production"' /tmp/money-health.json && grep -Fq '"apiStatus":"integration-readiness"' /tmp/money-health.json && grep -Fq '"financialExecution":false' /tmp/money-health.json && grep -Fq '"autonomousFinancialExecution":false' /tmp/money-health.json && grep -Fq '"id":"accountinfo"' /tmp/money-integrations.json && grep -Fq '"id":"kftc-openbanking"' /tmp/money-integrations.json && grep -Fq '"financial_execution_disabled"' /tmp/money-exec.json && grep -Fq '"provider_not_live"' /tmp/money-openbanking.json && grep -Eiq '^x-ekodi-shell: v2' /tmp/money-headers && grep -Eiq '^location: https://admin\.ekodi\.kr/\?focus=money' /tmp/money-admin-headers; then exit 0; fi
+            if [[ "$root" == '200' && "$health" == '200' && "$integrations" == '200' && "$refunds" == '200' && "$exec_code" == '409' && "$openbanking" == '503' ]] && grep -Fq 'V2 · 금융연동 준비층' /tmp/money.html && grep -Fq '"dataMode":"production"' /tmp/money-health.json && grep -Fq '"apiStatus":"integration-readiness"' /tmp/money-health.json && grep -Fq '"financialExecution":false' /tmp/money-health.json && grep -Fq '"autonomousFinancialExecution":false' /tmp/money-health.json && grep -Fq '"id":"accountinfo"' /tmp/money-integrations.json && grep -Fq '"id":"kftc-openbanking"' /tmp/money-integrations.json && grep -Fq '"id":"national-tax"' /tmp/money-refunds.json && grep -Fq '"sensitiveCredentialCollection":false' /tmp/money-refunds.json && grep -Fq '"financial_execution_disabled"' /tmp/money-exec.json && grep -Fq '"provider_not_live"' /tmp/money-openbanking.json && grep -Eiq '^x-ekodi-shell: v2' /tmp/money-headers && grep -Eiq '^location: https://admin\.ekodi\.kr/\?focus=money' /tmp/money-admin-headers; then exit 0; fi
             sleep 5
           done
           cat /tmp/money-health.json || true

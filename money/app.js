@@ -90,6 +90,16 @@ async function connectProvider(providerId){
   if(box)box.innerHTML=`<div class="consent-panel"><strong>아직 실제 API 연결 전입니다.</strong><p>${escapeHtml(data.message||'정식 계약과 보안검토가 완료된 뒤 활성화됩니다.')}</p><span class="state-chip">${escapeHtml(providerStates[data.state]||data.state||'준비중')}</span></div>`;
 }
 
+function renderRefundSources(data){
+  const root=document.querySelector('#refunds'),benefit=document.querySelector('#benefit-source'),status=document.querySelector('#refund-status');
+  if(!root)return;
+  root.innerHTML=(data.sources||[]).map(source=>`<article class="provider-card refund-source-card" data-refund-source="${escapeHtml(source.id)}"><div class="provider-top"><span class="state-chip available">공식기관</span><strong>${escapeHtml(source.name)}</strong></div><p>${escapeHtml(source.scope)}</p><div class="capabilities"><span>${escapeHtml(source.agency)}</span><span>본인인증</span></div><div class="provider-actions"><button class="primary refund-open" type="button">조회·신청 열기</button></div></article>`).join('');
+  if(benefit&&data.benefit)benefit.innerHTML=`<div><strong>환급 외 받을 수 있는 혜택도 확인</strong><p>정부24 혜택알리미는 환급금과 분리하여 맞춤 혜택을 찾습니다.</p></div><a class="secondary" href="${escapeHtml(data.benefit.url)}" target="_blank" rel="noopener noreferrer">혜택알리미 열기</a>`;
+  if(status)status.textContent=`${(data.sources||[]).length}개 공식 조회 경로 · ${escapeHtml(data.verifiedAt||'')} 확인`;
+}
+async function loadRefundSources(){try{const {response,data}=await api('/api/refunds/sources',{method:'GET',headers:{}});if(!response.ok)throw new Error('refund_sources_unavailable');renderRefundSources(data)}catch{const status=document.querySelector('#refund-status');if(status)status.textContent='공식 조회처를 불러오지 못했습니다.'}}
+async function openRefundSource(sourceId){const {response,data}=await api('/api/refunds/handoff',{method:'POST',body:JSON.stringify({sourceId})});if(response.ok&&data.mode==='official-handoff'&&data.url)window.open(data.url,'_blank','noopener,noreferrer')}
+
 function announce(){
   render();
   const target=document.querySelector('#summary');
@@ -97,6 +107,8 @@ function announce(){
 }
 
 document.querySelector('#analyze')?.addEventListener('click',announce);
+
+document.querySelector('#refunds')?.addEventListener('click',event=>{const card=event.target.closest('[data-refund-source]');if(card&&event.target.closest('.refund-open'))void openRefundSource(card.dataset.refundSource)});
 
 document.querySelector('#integrations')?.addEventListener('click',event=>{
   const card=event.target.closest('[data-provider]');if(!card)return;
@@ -106,3 +118,4 @@ document.querySelector('#integrations')?.addEventListener('click',event=>{
 });
 render();
 void loadIntegrations();
+void loadRefundSources();
