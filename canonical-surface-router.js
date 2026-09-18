@@ -3,7 +3,7 @@ import { injectEkodiShell } from './ekodi-shell-injector.js';
 
 const CANONICAL_HOST='ekodi.kr';
 const SURFACE_PREFIXES=Object.freeze({my:'/my',admin:'/admin',auth:'/auth'});
-const SYSTEM_PATHS=Object.freeze(['/api','/mcp','/webhooks','/health']);
+const SYSTEM_PATHS=Object.freeze(['/api','/mcp','/webhooks','/health','/connect']);
 const PUBLIC_EXECUTION_SURFACES=Object.freeze([
   Object.freeze({id:'shell',prefix:'/shell',binding:'SHELL',basePathAware:true}),
   Object.freeze({id:'mission-application',prefix:'/ekodimission/api/activities/260925-chuseok-open-table/applications',binding:'SPACE',preservePrefix:true,basePathAware:true}),
@@ -225,6 +225,19 @@ async function proxyExecutionSurface(request,env,spec,legacyFetch,externalFetch)
   if(request.method==='GET'&&path==='/mail/contact'){
     const page=mailContactPage();
     return typeof HTMLRewriter==='function'?injectEkodiShell(page,'mail'):page;
+  }
+  if(['GET','HEAD'].includes(request.method)&&(path==='/connect'||path==='/connect/')){
+    const target=new URL('/auth/',request.url);
+    target.searchParams.set('site','ai');
+    target.searchParams.set('return_to','https://ekodi.kr/ai/');
+    target.searchParams.set('source','mcp-connect');
+    return new Response(null,{status:302,headers:{
+      location:target.toString(),
+      'cache-control':'no-store',
+      'x-content-type-options':'nosniff',
+      'x-ekodi-route':'mcp-connect-auth',
+      'x-robots-tag':'noindex, nofollow, noarchive',
+    }});
   }
   const executionSurface=executionSurfaceForPath(path);if(executionSurface)return proxyExecutionSurface(request,env,executionSurface,legacyFetch,externalFetch);
   if(path===SURFACE_PREFIXES.my)return canonicalSlashRedirect(request,SURFACE_PREFIXES.my);

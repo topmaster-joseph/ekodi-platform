@@ -1,5 +1,5 @@
 export const PLATFORM_ROUTE_REGISTRY=Object.freeze({
-  canonical:Object.freeze(['admin','my','auth','api','mcp','webhooks','health']),
+  canonical:Object.freeze(['admin','my','auth','api','mcp','webhooks','health','connect']),
   platformServices:Object.freeze([
     'ai','bible','books','business','cafe','community','cmpmyi','dev','education','energy','event','experience','give','history','insurance','invest','journal','lab','life','live','login','logout','mail','mall','marketing','media','messenger','mission','money','pay','preview','privacy','publish','social','status','stores','support','tax','terms','trade','try','work','www'
   ]),

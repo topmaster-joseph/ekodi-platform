@@ -191,3 +191,25 @@ test('shared-site release verifies Shell integration without requiring script UR
   assert.ok(shellIntegrated.length>=4,'expected service pages to verify Shell v2 through response headers');
   for(const probe of shellIntegrated) assert.ok(!probe.expect?.includes(apexShell),`${probe.url} must not require a literal Shell script URL in HTML`);
 });
+
+test('Connect is reserved at the canonical edge before workspace routing',async()=>{
+  const direct=await routeCanonicalSurface(new Request('https://ekodi.kr/connect'),{});
+  assert.equal(direct.status,302);
+  const target=new URL(direct.headers.get('location'));
+  assert.equal(target.pathname,'/auth/');
+  assert.equal(target.searchParams.get('site'),'ai');
+  assert.equal(target.searchParams.get('return_to'),'https://ekodi.kr/ai/');
+  assert.equal(target.searchParams.get('source'),'mcp-connect');
+  assert.equal(direct.headers.get('x-ekodi-route'),'mcp-connect-auth');
+
+  const routed=await platformEntry.fetch(new Request('https://ekodi.kr/connect'),{},{});
+  assert.equal(routed.status,302);
+  assert.equal(routed.headers.get('x-ekodi-route'),'mcp-connect-auth');
+  assert.equal(new URL(routed.headers.get('location')).pathname,'/auth/');
+});
+
+test('connect cannot be claimed as a workspace slug',async()=>{
+  const policy=await import('../workspace-route-policy.js');
+  assert.equal(policy.isWorkspaceSlug('connect'),false);
+  assert.equal(policy.workspaceRouteFromPublicPath('/connect'),null);
+});
