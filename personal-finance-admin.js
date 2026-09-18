@@ -1,7 +1,8 @@
 (()=>{
 'use strict';
 const SECTION='personal-finance';
-const API='https://personal-finance-api.ekodi.kr/api/admin/personal-finance/control';
+const API='/personal-finance-api/api/admin/personal-finance/control';
+const REQUEST_TIMEOUT_MS=10_000;
 const TOKEN_KEY='ekodi-auth-token';
 let state=null,busy=false;
 const $=selector=>document.querySelector(selector);
@@ -10,7 +11,7 @@ const token=()=>{try{return sessionStorage.getItem(TOKEN_KEY)||''}catch{return''
 const t=(ko,en)=>String(window.EKODIAdminMenu?.locale?.()||document.documentElement.lang||'ko').toLowerCase().startsWith('en')?en:ko;
 function date(value){if(!value)return '—';const d=new Date(value);return Number.isNaN(d.getTime())?'—':d.toLocaleString('ko-KR',{dateStyle:'short',timeStyle:'short'})}
 async function request(method='GET',body=null){
-  const response=await fetch(API,{method,cache:'no-store',headers:{authorization:`Bearer ${token()}`,accept:'application/json',...(body?{'content-type':'application/json'}:{})},...(body?{body:JSON.stringify(body)}:{})});
+  const response=await fetch(API,{method,cache:'no-store',headers:{authorization:`Bearer ${token()}`,accept:'application/json',...(body?{'content-type':'application/json'}:{})},...(body?{body:JSON.stringify(body)}:{}),signal:AbortSignal.timeout(REQUEST_TIMEOUT_MS)});
   const data=await response.json().catch(()=>({}));
   if(!response.ok){const error=new Error(data.error||`Personal Finance control ${response.status}`);error.code=data.code||'';error.status=response.status;throw error}
   return data;
@@ -40,8 +41,9 @@ async function save(event){
 }
 async function refresh(force=false){
   const host=$('#personalFinanceAdminPanel');if(!host||busy)return;
-  busy=true;if(force)host.dataset.refreshing='true';
-  try{state=await request('GET');render()}catch(error){host.innerHTML=`<div class="pf-admin-error"><strong>개인재무 운영 상태를 불러오지 못했습니다.</strong><p>${esc(error.message)}</p><button id="pfAdminRetry" class="secondary" type="button">다시 확인</button></div>`;$('#pfAdminRetry')?.addEventListener('click',()=>refresh(true))}finally{busy=false;delete host.dataset.refreshing}
+  busy=true;host.setAttribute('aria-busy','true');if(force)host.dataset.refreshing='true';
+  if(!state||force)host.innerHTML='<div class="pf-admin-loading" role="status">개인재무 운영 상태를 확인 중입니다.</div>';
+  try{state=await request('GET');render()}catch(error){const message=error?.name==='TimeoutError'?'개인재무 운영 API 응답 시간이 초과되었습니다.':error.message;host.innerHTML=`<div class="pf-admin-error" role="alert"><strong>개인재무 운영 상태를 불러오지 못했습니다.</strong><p>${esc(message)}</p><button id="pfAdminRetry" class="secondary" type="button">다시 확인</button></div>`;$('#pfAdminRetry')?.addEventListener('click',()=>refresh(true))}finally{busy=false;host.removeAttribute('aria-busy');delete host.dataset.refreshing}
 }
 function activate(button,section){
   document.querySelectorAll('[data-panel]').forEach(panel=>{const visible=String(panel.dataset.panel||'').split(/\s+/).includes(SECTION);panel.hidden=!visible;panel.classList.toggle('hidden-panel',!visible)});
