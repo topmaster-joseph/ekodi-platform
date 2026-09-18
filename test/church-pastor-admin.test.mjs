@@ -39,6 +39,8 @@ test('pastor admin page is private-by-default', async () => {
   assert.equal(response.headers.get('x-ekodi-authority-scope'), 'tenant');
   assert.match(html, /noindex,nofollow,noarchive/);
   assert.match(html, /church-pastor-admin\.js/);
+  assert.match(html, /church-partner-news-admin\.js/);
+  assert.match(html, /church-partner-news-admin\.css/);
   assert.match(html, /목회자 운영/);
   assert.match(response.headers.get('content-security-policy') || '', /frame-ancestors 'none'/);
   assert.match(response.headers.get('content-security-policy') || '', /workspace-api\.ekodi\.kr/);
