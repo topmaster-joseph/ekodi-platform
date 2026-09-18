@@ -487,6 +487,44 @@ async function verifyCommandWorkbench(started) {
   results.push({ id: menuId, group, ok: true, durationMs: Date.now() - started, ...state });
 }
 
+async function verifyPersonalFinance(trigger, alreadyActive, started) {
+  stage('personal-finance-ready');
+  if (!alreadyActive) await clickFast(trigger);
+  await page.waitForFunction(() => typeof window.EKODIPersonalFinanceAdmin?.refresh === 'function', null, { timeout: 10_000 });
+
+  stage('personal-finance-api');
+  const response = await fetch('https://ekodi.kr/personal-finance-api/api/admin/personal-finance/control', {
+    headers: { accept:'application/json', authorization:`Bearer ${token}`, origin:adminOrigin },
+    signal:AbortSignal.timeout(10_000),
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (response.status !== 200) throw new Error(`personal-finance: canonical Admin API returned HTTP ${response.status} ${payload.code || payload.error || ''}`.trim());
+  const corsOrigin = response.headers.get('access-control-allow-origin') || '';
+  if (corsOrigin !== adminOrigin) throw new Error(`personal-finance: canonical CORS origin mismatch: ${corsOrigin || 'missing'}`);
+  if (payload.service?.canonicalPath !== '/personal-finance-api') throw new Error(`personal-finance: canonical service path mismatch: ${payload.service?.canonicalPath || 'missing'}`);
+  if (payload.service?.dataBoundary !== 'dedicated-d1') throw new Error('personal-finance: dedicated D1 boundary missing');
+  if (payload.safety?.actionCeiling !== 'L2' || payload.safety?.financialExecution !== false || payload.safety?.aiWriteEnabled !== false || payload.safety?.personalDataAdminReadable !== false) {
+    throw new Error('personal-finance: immutable safety boundary drift');
+  }
+
+  stage('personal-finance-render');
+  await page.evaluate(() => window.EKODIPersonalFinanceAdmin.refresh(true));
+  await page.waitForFunction(() => {
+    const panel = document.querySelector('#personalFinanceAdminPanel');
+    if (!panel || panel.hidden || panel.classList.contains('hidden-panel')) return false;
+    if (panel.getAttribute('aria-busy') === 'true') return false;
+    return Boolean(panel.querySelector('.pf-admin-head') || panel.querySelector('.pf-admin-error'));
+  }, null, { timeout: 12_000 });
+  const panel = page.locator('#personalFinanceAdminPanel');
+  const errorText = String(await panel.locator('.pf-admin-error').textContent().catch(() => '') || '').replace(/\s+/g,' ').trim();
+  if (errorText) throw new Error(`personal-finance: Admin UI rendered error: ${errorText}`);
+  const state = await visiblePanelState();
+  const text = String(await panel.textContent() || '').replace(/\s+/g,' ').trim();
+  if (!state.panelFound || !state.selected || state.busy) throw new Error(`personal-finance panel invalid: ${JSON.stringify(state)}`);
+  for (const marker of ['개인재무 운영 설정','관리자 원장 열람','차단']) if (!text.includes(marker)) throw new Error(`personal-finance: semantic marker missing: ${marker}`);
+  results.push({ id:menuId, group, ok:true, durationMs:Date.now()-started, ...state, apiStatus:response.status, corsOrigin, canonicalPath:payload.service.canonicalPath, productionMutation:false });
+}
+
 async function verifyNormal(tab, alreadyActive, started) {
   if (!alreadyActive) await clickFast(tab);
   stage('panel');
@@ -562,6 +600,7 @@ try {
       else if (menuId === 'language-status') await verifyLanguageStatus(trigger, alreadyActive, started);
       else if (menuId === 'maturity') await verifyMaturity(trigger, alreadyActive, started);
       else if (menuId === 'ai-settings') await verifyAiSettings(trigger, alreadyActive, started);
+      else if (menuId === 'personal-finance') await verifyPersonalFinance(trigger, alreadyActive, started);
       else await verifyNormal(trigger, alreadyActive, started);
     }
   }
