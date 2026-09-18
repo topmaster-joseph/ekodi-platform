@@ -412,17 +412,25 @@ jobs:
         run: npx --yes wrangler@${WRANGLER_VERSION} d1 migrations apply DB --remote --config wrangler.api.staging.runtime.toml
       - name: Deploy isolated Control staging
         run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.api.staging.runtime.toml
-      - name: Verify staging Google identity client boundary
+      - name: Verify protected staging Google identity boundary
         shell: bash
         run: |
           set -euo pipefail
           endpoint='https://ekodi-auth-api-staging.ekodi-development.workers.dev/api/google/config'
           origin='https://ekodi-shared-site-staging.ekodi-development.workers.dev'
-          code=$(curl -sS -D /tmp/staging-google.headers -o /tmp/staging-google.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$endpoint" -H "Origin: $origin")
-          test "$code" = '200'
-          grep -Eiq "^access-control-allow-origin:[[:space:]]*$origin" /tmp/staging-google.headers
-          grep -Fq '"clientId":"483044030492-j9dml7tsb7vq4a4ud041ttctavlgdskg.apps.googleusercontent.com"' /tmp/staging-google.json
-          grep -Fq '"identityOrigin":"https://ekodi-shared-site-staging.ekodi-development.workers.dev"' /tmp/staging-google.json
+          code=$(curl -sS -D /tmp/staging-google.headers -o /tmp/staging-google.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$endpoint" -H "Origin: $origin" || true)
+          if [ "$code" = '200' ]; then
+            grep -Eiq "^access-control-allow-origin:[[:space:]]*$origin" /tmp/staging-google.headers
+            grep -Fq '"clientId":"483044030492-j9dml7tsb7vq4a4ud041ttctavlgdskg.apps.googleusercontent.com"' /tmp/staging-google.json
+            grep -Fq '"identityOrigin":"https://ekodi-shared-site-staging.ekodi-development.workers.dev"' /tmp/staging-google.json
+          elif [ "$code" = '302' ] && grep -Eiq '^Www-Authenticate:[[:space:]]*Cloudflare-Access' /tmp/staging-google.headers; then
+            echo 'Remote staging Control API is protected by Cloudflare Access; exact Google client contract will be verified against the same staging runtime locally.'
+          else
+            echo "Unexpected staging Google config response: HTTP $code"
+            cat /tmp/staging-google.headers
+            cat /tmp/staging-google.json
+            exit 1
+          fi
       - name: Verify security, AI auth boundary and universal membership
         shell: bash
         run: |
@@ -446,6 +454,12 @@ jobs:
             sleep 2
           done
           if [ "$ready" != '1' ]; then cat /tmp/control-remote-dev.log; exit 1; fi
+          staging_origin='https://ekodi-shared-site-staging.ekodi-development.workers.dev'
+          staging_google_code=$(curl -sS -D /tmp/local-staging-google.headers -o /tmp/local-staging-google.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'http://127.0.0.1:8791/api/google/config' -H "Origin: $staging_origin")
+          test "$staging_google_code" = '200'
+          grep -Eiq "^access-control-allow-origin:[[:space:]]*$staging_origin" /tmp/local-staging-google.headers
+          grep -Fq '"clientId":"483044030492-j9dml7tsb7vq4a4ud041ttctavlgdskg.apps.googleusercontent.com"' /tmp/local-staging-google.json
+          grep -Fq '"identityOrigin":"https://ekodi-shared-site-staging.ekodi-development.workers.dev"' /tmp/local-staging-google.json
           node scripts/verify-ai-collaboration-settings-roundtrip.mjs 'http://127.0.0.1:8791' "$e2e_token" > /tmp/ai-settings-roundtrip.json
           node -e "const j=require('/tmp/ai-settings-roundtrip.json');if(!j.ok||!j.auditVerified||j.productionMutation!==false)process.exit(1);console.log('AI collaboration settings staging roundtrip verified: router='+j.routerScoreVersion+' saved='+j.savedRevision+' restored='+j.restoredRevision)"
           for attempt in $(seq 1 18); do
