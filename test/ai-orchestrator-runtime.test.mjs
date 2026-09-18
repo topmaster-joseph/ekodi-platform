@@ -88,3 +88,32 @@ test('AI_PROVIDER=NONE preserves the non-AI fallback path', async () => {
   assert.equal(result.mode, 'free_assist');
   assert.equal(result.value.text, 'core-fallback');
 });
+
+
+test('configured shared zero-marginal provider opens its runtime resource pool without changing static defaults', async () => {
+  let invoked=0;
+  const orchestrator=buildEkodiAiOrchestrator({}, [{
+    id:'shared-zero-cost',
+    priority:5,
+    capabilities:['text'],
+    available:true,
+    resourceClass:'ekodi-shared-api',
+    fundingSource:'ekodi',
+    costClass:'account-managed',
+    async invoke(){
+      invoked+=1;
+      return {text:'shared-ok'};
+    },
+  }]);
+  const plan=orchestrator.plan({taskName:'shared.plan'});
+  assert.equal(plan.primaryProvider,'shared-zero-cost');
+  assert.deepEqual(plan.eligibleProviders,['shared-zero-cost']);
+  const result=await orchestrator.run({
+    taskName:'shared.run',
+    fallback:()=>({text:'fallback'}),
+  });
+  assert.equal(result.mode,'ai');
+  assert.equal(result.provider,'shared-zero-cost');
+  assert.equal(result.value.text,'shared-ok');
+  assert.equal(invoked,1);
+});
