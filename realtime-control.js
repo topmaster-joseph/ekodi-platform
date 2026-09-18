@@ -128,14 +128,13 @@ async function tenantAdminAccess(request,env,tenant){
   return {...access,config,allowed:Boolean(access.identity&&ADMIN_ROLES.has(access.role))};
 }
 async function archiveRecordingToSharedDrive(env,recording,room,access){
-  const key=clean(env.EKODI_STORAGE_GATEWAY_KEY,500);
-  if(!key)return {ok:false,code:'storage_gateway_not_configured'};
+  if(!env.STORAGE?.fetch)return {ok:false,code:'storage_service_not_configured'};
   const stamp=new Date(recording.created_at||Date.now());
   const year=String(stamp.getUTCFullYear()),month=String(stamp.getUTCMonth()+1).padStart(2,'0');
   try{
-    const response=await fetch('https://drive.ekodi.kr/api/storage/v1/archive-r2',{
+    const response=await env.STORAGE.fetch(new Request('https://storage.internal/api/storage/v1/archive-r2',{
       method:'POST',
-      headers:{'content-type':'application/json','x-ekodi-storage-key':key,'x-request-id':recording.id},
+      headers:{'content-type':'application/json','x-request-id':recording.id},
       body:JSON.stringify({
         r2Key:recording.storage_key,
         storageRoute:'media',
@@ -149,7 +148,7 @@ async function archiveRecordingToSharedDrive(env,recording,room,access){
         mimeType:recording.mime_type||'video/webm',
         subfolderPath:`Live/${room.tenant_id}/${year}/${month}`,
       }),
-    });
+    }));
     const data=await response.json().catch(()=>({}));
     if(!response.ok||!data?.file?.id)return {ok:false,code:data?.code||`storage_archive_${response.status}`};
     await env.DB.prepare(`UPDATE realtime_recordings SET archive_status='archived',drive_file_id=?,drive_web_view_link=?,updated_at=? WHERE id=?`).bind(String(data.file.id),String(data.file.webViewLink||''),new Date().toISOString(),recording.id).run();
@@ -263,8 +262,8 @@ async function recordingRoutes(request,env,url,input){
       return json(request,env,{ok:true,recording:safeRecording(await recordingById(env,recording.id))});
     }
     if(env.LIVE_RECORDINGS_BUCKET&&recording.storage_key)await env.LIVE_RECORDINGS_BUCKET.delete(recording.storage_key).catch(()=>{});
-    if(recording.drive_file_id&&clean(env.EKODI_STORAGE_GATEWAY_KEY,500)){
-      await fetch('https://drive.ekodi.kr/api/storage/v1/delete-file',{method:'POST',headers:{'content-type':'application/json','x-ekodi-storage-key':clean(env.EKODI_STORAGE_GATEWAY_KEY,500)},body:JSON.stringify({fileId:recording.drive_file_id})}).catch(()=>null);
+    if(recording.drive_file_id&&env.STORAGE?.fetch){
+      await env.STORAGE.fetch(new Request('https://storage.internal/api/storage/v1/delete-file',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({fileId:recording.drive_file_id})})).catch(()=>null);
     }
     await env.DB.prepare(`UPDATE realtime_recordings SET status='deleted',deleted_at=?,updated_at=? WHERE id=?`).bind(new Date().toISOString(),new Date().toISOString(),recording.id).run();
     return json(request,env,{ok:true,deleted:true,id:recording.id});
