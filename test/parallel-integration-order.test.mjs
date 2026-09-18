@@ -49,3 +49,35 @@ test('integration order never bypasses actual GitHub merge conflicts',()=>{
   assert.match(workflow,/actual merge conflict with the base branch/);
   assert.match(docs,/do not waive tests, reviews, branch protection, authorization or deployment safeguards/);
 });
+
+test('parallel conflict guard snapshots open PR metadata and uses REST only as a fail-closed large-PR fallback',()=>{
+  assert.match(workflow,/gh_retry pr list --repo "\$REPOSITORY" --state open --base "\$BASE_REF" --limit 500/);
+  assert.match(workflow,/--json number,headRefName,isDraft,baseRefOid,changedFiles,files,labels/);
+  assert.match(workflow,/gh_retry pr view "\$PR_NUMBER" --repo "\$REPOSITORY"/);
+  assert.match(workflow,/select\(\.number != \$current and \.isDraft == false and \.baseRefOid == \$base\)/);
+  assert.match(workflow,/Current PR file evidence is missing; refusing to infer independence/);
+  assert.match(workflow,/PR #\$\{other_pr\} file evidence is missing; refusing to infer independence/);
+  assert.match(workflow,/governance_snapshot/);
+  assert.match(workflow,/if \[\[ "\$changed" -gt "\$listed" \]\]/);
+  assert.match(workflow,/pulls\/\$\{other_pr\}\/files\?per_page=100/);
+  assert.doesNotMatch(workflow,/has_priority=\$\(gh api "repos\/\$\{REPOSITORY\}\/pulls\/\$\{candidate_pr\}"/);
+});
+
+
+test('stale PRs must refresh onto the same base commit before they participate in integration ordering',()=>{
+  assert.match(workflow,/baseRefOid/);
+  assert.match(workflow,/current_base_oid/);
+  assert.match(workflow,/\.baseRefOid == \$base/);
+  assert.match(workflow,/stale PRs must refresh\/rebase/);
+  assert.match(workflow,/current-base ready PRs/);
+});
+
+
+test('parallel conflict guard retries only explicit GitHub rate-limit responses with a hard bound',()=>{
+  assert.match(workflow,/gh_retry\(\)/);
+  assert.match(workflow,/attempt.*-ge 4/);
+  assert.match(workflow,/rate limit\|secondary rate\|abuse detection/);
+  assert.match(workflow,/GitHub API rate limit encountered; retrying guard query/);
+  assert.match(workflow,/gh_retry pr list/);
+  assert.match(workflow,/gh_retry pr view/);
+});
