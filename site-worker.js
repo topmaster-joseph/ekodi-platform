@@ -14,6 +14,7 @@ import { tenantLivePage } from './tenant-live-page.js';
 const PUBLIC_HOST = 'ekodi.kr';
 const PUBLIC_ALIAS_HOSTS = new Set(['www.ekodi.kr']);
 const MALL_PREFIX = '/ekodibiz/ekodimall';
+const MALL_ROOT_ALIAS_PREFIX = '/ekodimall';
 const FORMER_MALL_PREFIX = '/ekodibiz/mall';
 const LEGACY_MALL_PREFIX = '/mall';
 const LEGACY_EKODIBIZ_PREFIX = '/org/ekodibiz';
@@ -292,11 +293,19 @@ function isMallPath(pathname) {
   return pathname === MALL_PREFIX || pathname.startsWith(`${MALL_PREFIX}/`);
 }
 
-function isMallVerificationOpsPath(pathname) {
-  return pathname === `${MALL_PREFIX}/verification-ops`
-    || pathname === `${MALL_PREFIX}/verification-ops/`
-    || pathname === `${MALL_PREFIX}/assets/verification-ops`
-    || pathname === `${MALL_PREFIX}/assets/verification-ops.html`;
+function isRootMallPath(pathname) {
+  return pathname === MALL_ROOT_ALIAS_PREFIX || pathname.startsWith(`${MALL_ROOT_ALIAS_PREFIX}/`);
+}
+
+function isRootMallAdminPath(pathname) {
+  return pathname === `${MALL_ROOT_ALIAS_PREFIX}/admin` || pathname.startsWith(`${MALL_ROOT_ALIAS_PREFIX}/admin/`);
+}
+
+function isMallVerificationOpsPath(pathname, prefix = MALL_PREFIX) {
+  return pathname === `${prefix}/verification-ops`
+    || pathname === `${prefix}/verification-ops/`
+    || pathname === `${prefix}/assets/verification-ops`
+    || pathname === `${prefix}/assets/verification-ops.html`;
 }
 
 function isLegacyMallPath(pathname) {
@@ -353,17 +362,31 @@ function redirectFormerMallPath(request) {
   return response;
 }
 
-function mallUpstreamPath(pathname) {
-  const suffix = pathname.slice(MALL_PREFIX.length);
+function redirectRootMallAdminPath(request) {
+  const target = new URL(request.url);
+  target.pathname = `${MALL_PREFIX}${target.pathname.slice(MALL_ROOT_ALIAS_PREFIX.length)}`;
+  const response = new Response(null, { status: 308, headers: { Location: target.toString() } });
+  applyBaseSecurityHeaders(response.headers);
+  response.headers.set('Cache-Control', 'no-store');
+  response.headers.set('X-EKODI-Route', 'mall-root-admin-canonical-redirect');
+  return response;
+}
+
+function mallUpstreamPath(pathname, publicPrefix = MALL_PREFIX) {
+  const suffix = pathname.slice(publicPrefix.length);
   return suffix || '/';
 }
 
-function rewriteMallHtmlDocument(html, pathname = MALL_PREFIX) {
-  let rewritten = String(html || '').replace(
-    /\b(href|src|action)=("|')\/(?!\/|ekodibiz\/ekodimall(?:\/|["']))([^"']*)\2/gi,
-    (_, attribute, quote, suffix) => `${attribute}=${quote}${MALL_PREFIX}/${suffix}${quote}`,
+function rewriteMallHtmlDocument(html, pathname = MALL_PREFIX, publicPrefix = MALL_PREFIX) {
+  let rewritten = String(html || '');
+  if (publicPrefix !== MALL_PREFIX) rewritten = rewritten.split(MALL_PREFIX).join(publicPrefix);
+  const prefixGuard = publicPrefix === MALL_ROOT_ALIAS_PREFIX ? 'ekodimall' : 'ekodibiz\\/ekodimall';
+  const rootAssetPattern = new RegExp(`\\b(href|src|action)=("|')\\/(?!\\/|${prefixGuard}(?:\\/|["']))([^"']*)\\2`, 'gi');
+  rewritten = rewritten.replace(
+    rootAssetPattern,
+    (_, attribute, quote, suffix) => `${attribute}=${quote}${publicPrefix}/${suffix}${quote}`,
   );
-  const canonical = `https://${PUBLIC_HOST}${pathname || MALL_PREFIX}`;
+  const canonical = `https://${PUBLIC_HOST}${pathname || publicPrefix}`;
   const canonicalTag = `<link rel="canonical" href="${canonical}">`;
   const canonicalPattern = /<link\b[^>]*\brel=(['"])canonical\1[^>]*>/i;
   rewritten = canonicalPattern.test(rewritten)
@@ -371,13 +394,13 @@ function rewriteMallHtmlDocument(html, pathname = MALL_PREFIX) {
     : rewritten.replace('</head>', `${canonicalTag}\n</head>`);
   return rewritten;
 }
-async function proxyMallService(request) {
+async function proxyMallService(request, publicPrefix = MALL_PREFIX) {
   const incoming = new URL(request.url);
   const upstream = new URL(request.url);
   upstream.protocol = 'https:';
   upstream.hostname = MALL_ORIGIN_HOST;
   upstream.port = '';
-  upstream.pathname = mallUpstreamPath(incoming.pathname);
+  upstream.pathname = mallUpstreamPath(incoming.pathname, publicPrefix);
 
   const upstreamRequest = new Request(upstream.toString(), request);
   upstreamRequest.headers.set(MALL_PROXY_HEADER, 'apex-mall-v1');
@@ -390,23 +413,23 @@ async function proxyMallService(request) {
       if (redirect.hostname === MALL_ORIGIN_HOST) {
         redirect.protocol = 'https:';
         redirect.hostname = PUBLIC_HOST;
-        redirect.pathname = redirect.pathname === '/' ? MALL_PREFIX : `${MALL_PREFIX}${redirect.pathname}`;
+        redirect.pathname = redirect.pathname === '/' ? publicPrefix : `${publicPrefix}${redirect.pathname}`;
         headers.set('location', redirect.toString());
       }
     } catch {}
   }
   let responseBody = upstreamResponse.body;
   if ((headers.get('content-type') || '').toLowerCase().includes('text/html')) {
-    responseBody = rewriteMallHtmlDocument(await upstreamResponse.text(), incoming.pathname);
+    responseBody = rewriteMallHtmlDocument(await upstreamResponse.text(), incoming.pathname, publicPrefix);
     headers.delete('content-length');
     headers.delete('content-encoding');
     headers.delete('etag');
   }
   headers.set('x-ekodi-edge', 'mall-path-gateway');
   headers.set('x-ekodi-service', 'mall');
-  const adminSurface = incoming.pathname === `${MALL_PREFIX}/admin` || incoming.pathname.startsWith(`${MALL_PREFIX}/admin/`);
-  const apiSurface = incoming.pathname === `${MALL_PREFIX}/api` || incoming.pathname.startsWith(`${MALL_PREFIX}/api/`);
-  const verificationOpsSurface = isMallVerificationOpsPath(incoming.pathname);
+  const adminSurface = incoming.pathname === `${publicPrefix}/admin` || incoming.pathname.startsWith(`${publicPrefix}/admin/`);
+  const apiSurface = incoming.pathname === `${publicPrefix}/api` || incoming.pathname.startsWith(`${publicPrefix}/api/`);
+  const verificationOpsSurface = isMallVerificationOpsPath(incoming.pathname, publicPrefix);
   const adminEmbed = incoming.searchParams.get('embed') === 'admin';
   const cacheControl = adminSurface || apiSurface || verificationOpsSurface || adminEmbed ? 'no-store' : 'public, max-age=0, must-revalidate';
   const route = adminSurface ? 'admin-mall-proxy' : apiSurface ? 'mall-api-proxy' : verificationOpsSurface ? 'mall-verification-ops' : 'public-ekodi-mall';
@@ -634,6 +657,8 @@ export default {
       if (['GET','HEAD'].includes(request.method)) { const adminAlias=redirectLegacyAdminAliasPath(request); if (adminAlias) return adminAlias; }
       if (isLegacyMallPath(url.pathname)) return redirectLegacyMallPath(request);
       if (isFormerMallPath(url.pathname)) return redirectFormerMallPath(request);
+      if (isRootMallAdminPath(url.pathname)) return redirectRootMallAdminPath(request);
+      if (isRootMallPath(url.pathname)) return proxyMallService(request, MALL_ROOT_ALIAS_PREFIX);
       if (['GET','HEAD'].includes(request.method) && (url.pathname === '/ekodi-church' || url.pathname.startsWith('/ekodi-church/'))) { const target=new URL(request.url); target.pathname=url.pathname.replace(/^\/ekodi-church(?=\/|$)/i,'/ekodichurch'); return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-content-type-options':'nosniff'}}); }
       if (['GET','HEAD'].includes(request.method) && isChurchPastorAdminPath(url.pathname)) return injectEkodiShell(churchPastorAdminPage(), 'church', 'admin');
       if (isWorkspaceAdminPath(url.pathname)) return injectEkodiShell(workspaceAdminPage(), 'space', 'admin');
