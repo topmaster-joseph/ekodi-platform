@@ -4,6 +4,7 @@ import { getSovereignAutonomySummary } from './sovereign-autonomy-runtime.js';
 import {AI_MISSION_RUNTIME,evaluateMissionAction} from './ai-governance-runtime.js';
 import {AI_ROUTER_SCORE_POLICY,providerCostClass,rankProviders,scoreProvider} from './ai-router-score.js';
 import {AI_COST_POLICY,evaluateAiCostEligibility} from './ai-cost-policy.js';
+import {evaluateAiDataEligibility} from './ai-resource-policy.js';
 
 export const AI_CONTROL_POLICY = Object.freeze({
   version: '0.7.0',
@@ -111,7 +112,7 @@ export function normalizeTaskInput(input = {}) {
   const needsCodeBranch = input.needsCodeBranch === true || /\b(code|coding|git|github|branch|deploy|worker|repository|repo)\b/i.test(prompt) || /코드|코딩|깃|브랜치|배포|저장소/.test(prompt);
   const origin=normalizeOrigin(input);
   const g = input.governance && typeof input.governance === 'object' ? input.governance : {};
-  const governance = Object.freeze({agentId:clean(g.agentId||input.agentId||'chief')||'chief',area:clean(g.area||input.actionArea||(needsCodeBranch?'software_change':'general_assistance'))||'general_assistance',delegated:g.delegated===true,reversible:g.reversible===true,logged:g.logged===true,preflightVerified:g.preflightVerified===true,reducesUserRights:g.reducesUserRights===true,crossTenantPrivateData:g.crossTenantPrivateData===true,highImpact:g.highImpact===true,personId:clean(g.personId||g.person_id),workspaceId:clean(g.workspaceId||g.workspace_id),role:clean(g.role),capability:clean(g.capability),production:g.production===true,standingDelegation:g.standingDelegation===true,existingBoundary:g.existingBoundary===true,rollbackDefined:g.rollbackDefined===true,verificationDefined:g.verificationDefined===true,postVerificationRequired:g.postVerificationRequired===true,automaticRollback:g.automaticRollback===true,knownStableTarget:g.knownStableTarget===true,paidCommitment:g.paidCommitment===true,explicitDelegatedBudget:g.explicitDelegatedBudget===true,permissionExpansion:g.permissionExpansion===true,canonicalIdentityChange:g.canonicalIdentityChange===true,workspaceAuthorityChange:g.workspaceAuthorityChange===true,destructiveDataChange:g.destructiveDataChange===true,massDataChange:g.massDataChange===true,newDomainOwnership:g.newDomainOwnership===true,securityBoundaryChange:g.securityBoundaryChange===true,newIndependentDeployment:g.newIndependentDeployment===true,providerLockIn:g.providerLockIn===true,productionSecretChange:g.productionSecretChange===true,productionDnsChange:g.productionDnsChange===true,violates:unique(Array.isArray(g.violates)?g.violates.map(clean):[]),origin});
+  const governance = Object.freeze({agentId:clean(g.agentId||input.agentId||'chief')||'chief',area:clean(g.area||input.actionArea||(needsCodeBranch?'software_change':'general_assistance'))||'general_assistance',delegated:g.delegated===true,reversible:g.reversible===true,logged:g.logged===true,preflightVerified:g.preflightVerified===true,reducesUserRights:g.reducesUserRights===true,crossTenantPrivateData:g.crossTenantPrivateData===true,highImpact:g.highImpact===true,personId:clean(g.personId||g.person_id),workspaceId:clean(g.workspaceId||g.workspace_id),role:clean(g.role),capability:clean(g.capability),production:g.production===true,standingDelegation:g.standingDelegation===true,existingBoundary:g.existingBoundary===true,rollbackDefined:g.rollbackDefined===true,verificationDefined:g.verificationDefined===true,postVerificationRequired:g.postVerificationRequired===true,automaticRollback:g.automaticRollback===true,knownStableTarget:g.knownStableTarget===true,paidCommitment:g.paidCommitment===true,explicitDelegatedBudget:g.explicitDelegatedBudget===true,permissionExpansion:g.permissionExpansion===true,canonicalIdentityChange:g.canonicalIdentityChange===true,workspaceAuthorityChange:g.workspaceAuthorityChange===true,destructiveDataChange:g.destructiveDataChange===true,massDataChange:g.massDataChange===true,newDomainOwnership:g.newDomainOwnership===true,securityBoundaryChange:g.securityBoundaryChange===true,newIndependentDeployment:g.newIndependentDeployment===true,providerLockIn:g.providerLockIn===true,productionSecretChange:g.productionSecretChange===true,productionDnsChange:g.productionDnsChange===true,sensitiveData:g.sensitiveData===true,containsPersonalData:g.containsPersonalData===true,dataSensitivity:clean(g.dataSensitivity||g.data_sensitivity).toLowerCase(),violates:unique(Array.isArray(g.violates)?g.violates.map(clean):[]),origin});
   return Object.freeze({title,prompt,mode,requestedMode,requestedProviders,needsCodeBranch,origin,executionEnvironment:AI_CONTROL_POLICY.executionEnvironment,governance});
 }
 
@@ -137,7 +138,10 @@ function providerCostClassForTask(providerId, capabilities = {}) {
 }
 function providerAllowedForTask(providerId, task = {}, capabilities = {}) {
   const quota = capabilities.providerQuotas?.[providerId];
-  return evaluateAiCostEligibility({ costClass:providerCostClassForTask(providerId, capabilities), freeQuotaRemaining:quota?.remaining }, task).eligible;
+  const candidate = { costClass:providerCostClassForTask(providerId, capabilities), freeQuotaRemaining:quota?.remaining };
+  const context = { ...task, governance:task.governance || {} };
+  if (!evaluateAiDataEligibility(candidate, context).eligible) return false;
+  return evaluateAiCostEligibility(candidate, context).eligible;
 }
 export function availableProviderIds(capabilities = {}, task = null) {
   const ids = [];
