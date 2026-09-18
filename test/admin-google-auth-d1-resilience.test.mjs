@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import { handleAdminGoogleAuth } from '../admin-google-auth.js';
 
-const CLIENT_ID = '483044030492-4e6231l5glchhtniroinvuq3ev6n5mv5.apps.googleusercontent.com';
+const CLIENT_ID = '483044030492-ej1ie2boa4e01lglm75e9q1r6m25pkp2.apps.googleusercontent.com';
 const baseEnv = {
   ENVIRONMENT: 'production',
   ALLOWED_ORIGINS: 'https://admin.ekodi.kr,https://auth.ekodi.kr',
