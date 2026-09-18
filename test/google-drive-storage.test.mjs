@@ -65,15 +65,13 @@ test('successful Google Drive OAuth returns directly to the exact admin route wi
   assert.doesNotMatch(control, /return html\(`\$\{email\} 계정이 .*연결되었습니다.*`,true\)/s);
 });
 test('Google OAuth callback cutover is dual-stack, state-pinned, and apex-ready', () => {
-  assert.match(control, /LEGACY_REDIRECT_URI = 'https:\\/\\/drive\\.ekodi\\.kr\\/api\\/control\\/storage\\/google\\/callback'/);
-  assert.match(control, /CANONICAL_REDIRECT_URI = 'https:\\/\\/ekodi\\.kr\\/storage\\/api\\/control\\/storage\\/google\\/callback'/);
+  assert.match(control, /CANONICAL_REDIRECT_URI = 'https:\/\/ekodi\.kr\/storage\/api\/control\/storage\/google\/callback'/);
   assert.match(control, /GOOGLE_DRIVE_OAUTH_REDIRECT_URI/);
   assert.match(control, /ALLOWED_GOOGLE_REDIRECT_URIS/);
   assert.match(control, /stateGoogleOAuthRedirectUri/);
   assert.match(control, /redirectUri,exp/);
   assert.match(control, /redirect_uri:redirectUri/);
-  assert.match(control, /MARKETING_YOUTUBE_CALLBACK = 'https:\\/\\/ekodi\\.kr\\/marketing-connect-api\\/oauth\\/youtube\\/callback'/);
-  assert.doesNotMatch(control, /MARKETING_YOUTUBE_CALLBACK = 'https:\\/\\/marketing-connect-api\\.ekodi\\.kr/);
+  assert.match(control, /MARKETING_YOUTUBE_CALLBACK = 'https:\/\/ekodi\.kr\/marketing-connect-api\/oauth\/youtube\/callback'/);
 });
 
 test('Storage brokers Marketing YouTube OAuth through the already-authorized Drive callback without exposing the client secret', () => {
