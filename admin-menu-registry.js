@@ -3,7 +3,7 @@ import './admin-service-handoffs.js';
 import './admin-context-shell-recovery.js';
 
 export const ADMIN_MENU_GROUPS = Object.freeze([
-  { id: 'home', icon: '⌂', defaultSection: 'campus', labels: { ko: '홈', en: 'Home' } },
+  { id: 'home', icon: '⌂', defaultSection: 'command-home', labels: { ko: '홈', en: 'Home' } },
   { id: 'operations', icon: '✦', defaultSection: 'work', labels: { ko: '운영', en: 'Operations' } },
   { id: 'workspaces', icon: '▣', defaultSection: 'clients', labels: { ko: '공간', en: 'Workspaces' } },
   { id: 'services', icon: '◆', defaultSection: 'common-services', labels: { ko: '서비스', en: 'Services' } },
@@ -11,6 +11,7 @@ export const ADMIN_MENU_GROUPS = Object.freeze([
 ]);
 
 export const ADMIN_MENU_REGISTRY = Object.freeze([
+  { id: 'command-home', group: 'home', icon: '⌘', labels: { ko: '에코디 명령', en: 'EKODI Command' } },
   { id: 'campus', group: 'home', icon: '⌂', labels: { ko: '관리 홈·사이트', en: 'Admin Home & Sites' } },
 
   { id: 'work', group: 'operations', icon: 'W', labels: { ko: '업무', en: 'Work' } },
@@ -70,7 +71,7 @@ const ADMIN_MENU_CATEGORY_ORDER = Object.freeze({
   services: ['common','content','business','other'], system: ['environment','security','ai','platform','other'],
 });
 const ADMIN_MENU_SECTION_CATEGORY = Object.freeze({
-  campus:'overview', work:'workflow', communication:'workflow', finance:'finance', tax:'finance',
+  'command-home':'overview', campus:'overview', work:'workflow', communication:'workflow', finance:'finance', tax:'finance',
   clients:'customer', cmpmyi:'customer', organization:'organization', workspace:'organization',
   'common-services':'common', 'life-ai':'common', community:'content', books:'content', social:'content', devotional:'content',
   'personal-finance':'business', invest:'business', 'marketing-ai':'business', 'ai-membership':'business', 'supply-network':'business', insurance:'business',
