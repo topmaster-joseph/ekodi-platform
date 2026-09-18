@@ -14,7 +14,6 @@ on:
       - 'test/platform-source-of-truth.test.mjs'
       - 'test/autonomous-technology-radar.test.mjs'
       - 'AUTONOMOUS_TECHNOLOGY_EVOLUTION.md'
-      - 'governance/amendments/2026-09-18-autonomous-technology-evolution-v1.10.0.json'
       - '.github/workflows/autonomous-technology-radar.yml'
   push:
     branches: [main]
@@ -27,7 +26,6 @@ on:
       - 'test/platform-source-of-truth.test.mjs'
       - 'test/autonomous-technology-radar.test.mjs'
       - 'AUTONOMOUS_TECHNOLOGY_EVOLUTION.md'
-      - 'governance/amendments/2026-09-18-autonomous-technology-evolution-v1.10.0.json'
       - '.github/workflows/autonomous-technology-radar.yml'
 
 permissions:
