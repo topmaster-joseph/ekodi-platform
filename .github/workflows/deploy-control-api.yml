@@ -463,14 +463,18 @@ jobs:
         run: |
           set -euo pipefail
           npx --yes wrangler@$WRANGLER_VERSION deployments status --config wrangler.api.staging.runtime.toml --json > /tmp/staging-deployments.json
-          npx --yes wrangler@$WRANGLER_VERSION d1 migrations apply DB --local --config wrangler.api.staging.runtime.toml >/tmp/local-migrations.log 2>&1
+          # Keep the broad local Control regression deterministic. The real Personal Finance
+          # service binding is verified by remote staging, executable proxy tests and guarded
+          # production probes; do not let Wrangler local service binding alter unrelated routes.
+          perl -0pe 's/\n\[\[services\]\]\nbinding = "PERSONAL_FINANCE"\nservice = "ekodi-personal-finance-api-staging"\n/\n/' wrangler.api.staging.runtime.toml > wrangler.api.staging.local-runtime.toml
+          npx --yes wrangler@$WRANGLER_VERSION d1 migrations apply DB --local --config wrangler.api.staging.local-runtime.toml >/tmp/local-migrations.log 2>&1
           e2e_token="ai-settings-staging-$(openssl rand -hex 24)"
           e2e_token_hash=$(printf '%s' "$e2e_token" | sha256sum | awk '{print $1}')
           e2e_created=$(date -u +'%Y-%m-%dT%H:%M:%S.000Z')
           e2e_expires=$(date -u -d '+20 minutes' +'%Y-%m-%dT%H:%M:%S.000Z')
           e2e_sql="INSERT INTO admins(email,password_hash,password_salt,birth_hash,birth_salt,role,created_at) VALUES ('ai-settings-e2e@ekodi.local','x','x','x','x','super_admin','$e2e_created') ON CONFLICT(email) DO UPDATE SET role='super_admin'; INSERT OR REPLACE INTO sessions(token_hash,admin_id,expires_at,created_at) SELECT '$e2e_token_hash',id,'$e2e_expires','$e2e_created' FROM admins WHERE email='ai-settings-e2e@ekodi.local';"
-          npx --yes wrangler@$WRANGLER_VERSION d1 execute DB --local --config wrangler.api.staging.runtime.toml --command "$e2e_sql" >/tmp/ai-settings-e2e-session.log 2>&1
-          npx --yes wrangler@$WRANGLER_VERSION dev --local --config wrangler.api.staging.runtime.toml --ip 127.0.0.1 --port 8791 > /tmp/control-remote-dev.log 2>&1 &
+          npx --yes wrangler@$WRANGLER_VERSION d1 execute DB --local --config wrangler.api.staging.local-runtime.toml --command "$e2e_sql" >/tmp/ai-settings-e2e-session.log 2>&1
+          npx --yes wrangler@$WRANGLER_VERSION dev --local --config wrangler.api.staging.local-runtime.toml --ip 127.0.0.1 --port 8791 > /tmp/control-remote-dev.log 2>&1 &
           runtime_pid=$!
           trap 'kill $runtime_pid 2>/dev/null || true' EXIT
           ready=0
@@ -503,7 +507,6 @@ jobs:
             catalog=$(curl -sS -o /tmp/catalog.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'http://127.0.0.1:8791/api/membership/catalog?site=invest' || true)
             i18n=$(curl -sS -o /tmp/i18n.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'http://127.0.0.1:8791/api/i18n/v1/status?service=community' || true)
             language_admin=$(curl -sS -o /tmp/language-admin.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'http://127.0.0.1:8791/api/control/language-status' || true)
-            personal_finance=$(curl -sS -o /tmp/personal-finance-local.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'http://127.0.0.1:8791/api/control/personal-finance' || true)
             maturity_unauth=$(curl -sS -o /tmp/maturity-unauth.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'http://127.0.0.1:8791/api/control/platform-maturity' || true)
             maturity_admin=$(curl -sS -o /tmp/maturity-admin.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'http://127.0.0.1:8791/api/control/platform-maturity' -H "Authorization: Bearer $e2e_token" || true)
             if printf '%s' "$health" | grep -q '"ok":true' \
@@ -521,8 +524,6 @@ jobs:
               && [ "$catalog" = '200' ] \
               && [ "$i18n" = '200' ] \
               && [ "$language_admin" = '401' ] \
-              && [ "$personal_finance" = '401' ] \
-              && grep -Fq '"code":"PF_ADMIN_AUTH_REQUIRED"' /tmp/personal-finance-local.json \
               && [ "$maturity_unauth" = '401' ] \
               && [ "$maturity_admin" = '200' ] \
               && grep -Fq '"certificationStatus":"not-claimed"' /tmp/maturity-admin.json \
@@ -535,7 +536,7 @@ jobs:
           exit 1
       - name: Cleanup staging config
         if: always()
-        run: rm -f wrangler.api.staging.runtime.toml
+        run: rm -f wrangler.api.staging.runtime.toml wrangler.api.staging.local-runtime.toml
 
   production:
     needs: [validate, staging]
