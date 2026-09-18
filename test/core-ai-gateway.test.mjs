@@ -52,8 +52,8 @@ test('Core AI Gateway can fail over to another replaceable provider', async () =
   resetAiResilienceCircuitsForTest();
   const calls = [];
   const gateway = buildCoreAiGateway({}, [
-    { id: 'provider-a', invoke: async () => { calls.push('a'); throw new Error('down'); } },
-    { id: 'provider-b', invoke: async ({ taskName }) => { calls.push('b'); return `${taskName}:ok`; } },
+    { id: 'provider-a', costClass:'account-managed', invoke: async () => { calls.push('a'); throw new Error('down'); } },
+    { id: 'provider-b', costClass:'account-managed', invoke: async ({ taskName }) => { calls.push('b'); return `${taskName}:ok`; } },
   ]);
   const result = await gateway.run({
     taskName: 'assist',
