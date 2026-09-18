@@ -149,7 +149,7 @@ test('admin menu governance uses five canonical EKODI axes with contextual top t
   assert.match(sidebar, /TABS_CLASS = 'admin-context-tabs'/);
   assert.match(sidebar, /data-admin-context-section/);
   assert.match(sidebar, /data-admin-capability-shortcut/);
-  assert.match(sidebar, /nav\.dataset\.adminMenuGovernance = 'workbench-tabs-v2'/);
+  assert.match(sidebar, /nav\.dataset\.adminMenuGovernance = 'workbench-tabs-v3-simple'/);
   assert.match(sidebar, /item\.dataset\.adminMenuGroup = definition\.group/);
   assert.match(sidebar, /observer\.observe\(nav, \{ childList: true, subtree: false \}\)/);
   assert.doesNotMatch(sidebar, /subtree: true/);
