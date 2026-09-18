@@ -56,7 +56,7 @@ test('guarded production release verifies current auth entry, bridge and workspa
   assert.ok(client.expect.includes('session_timeout'));
   assert.ok(workspaceTarget.expect.includes('workspace_key:requested'));
   assert.ok(workspaceTarget.expect.includes('serviceOrigins'));
-  assert.ok(admin.expect.includes("GOOGLE_BRIDGE_ORIGIN='https://ekodi.kr'"));
+  assert.ok(admin.expect.includes('GOOGLE_BRIDGE_ORIGIN=runtime.authOrigin'));
   assert.ok(admin.expect.includes('requestGoogleCredential'));
   assert.ok(admin.expect.includes('renderOriginBridgeButton'));
   assert.ok(admin.expect.includes('event.origin!==GOOGLE_BRIDGE_ORIGIN'));
@@ -64,7 +64,7 @@ test('guarded production release verifies current auth entry, bridge and workspa
   assert.ok(admin.expect.includes('isEmbeddedWebView'));
   assert.ok(admin.expect.includes('location.replace(targetHref)'));
   assert.ok(bridgeDoc.expect.includes('/google-origin-bridge.js'));
-  assert.ok(bridgeScript.expect.includes("TARGET_ORIGIN='https://ekodi.kr'"));
+  assert.ok(bridgeScript.expect.includes('CLIENT_IDS=Object.freeze'));
   assert.ok(bridgeScript.expect.includes('use_fedcm_for_button:false'));
   assert.ok(bridgeScript.expect.includes('window.opener.postMessage'));
   for (const probe of [root, bootstrap, entry, router, client, workspaceTarget, admin, bridgeDoc, bridgeScript]) {
