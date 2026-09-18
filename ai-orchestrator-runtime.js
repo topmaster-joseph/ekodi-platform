@@ -2,7 +2,7 @@ import {
   isAiProviderDisabled,
   runAiEnhancedTask,
 } from './ai-resilience-runtime.js';
-import { rankAiResourceCandidates } from './ai-resource-policy.js';
+import { normalizeAiResourcePolicy, rankAiResourceCandidates } from './ai-resource-policy.js';
 
 const RISK_LEVELS = new Set(['low', 'normal', 'high', 'critical']);
 const COLLABORATION_MODES = new Set(['auto', 'primary', 'review']);
@@ -68,6 +68,18 @@ function publicProvider(provider) {
   });
 }
 
+function runtimeResourcePolicy(providers = []) {
+  const available = (Array.isArray(providers) ? providers : []).filter(provider => provider?.available !== false);
+  return normalizeAiResourcePolicy({
+    pools: {
+      // These pools remain off in the static default. A concrete runtime adapter
+      // opens only the corresponding pool after it is explicitly configured.
+      ekodiSharedApi: { enabled: available.some(provider => provider.resourceClass === 'ekodi-shared-api') },
+      hostedAi: { enabled: available.some(provider => provider.resourceClass === 'hosted-ai') },
+    },
+  });
+}
+
 export function buildAiOrchestrationPlan(input = {}, providers = []) {
   const risk = RISK_LEVELS.has(String(input.risk || '').toLowerCase())
     ? String(input.risk).toLowerCase()
@@ -80,7 +92,7 @@ export function buildAiOrchestrationPlan(input = {}, providers = []) {
   const eligibleBase = normalized.filter(provider => provider.available && supports(provider, requiredCapabilities));
   const lane = input.lane === 'autonomous' ? 'autonomous' : 'interactive';
   const governance = input.governance && typeof input.governance === 'object' ? input.governance : {};
-  const ranked = rankAiResourceCandidates(eligibleBase, { lane, governance });
+  const ranked = rankAiResourceCandidates(eligibleBase, { lane, governance }, input.resourcePolicy);
   const eligible = ranked.map(item => normalized.find(provider => provider.id === item.id)).filter(Boolean);
   const mode = chooseMode(collaboration, risk);
   const primary = eligible[0] || null;
@@ -131,6 +143,7 @@ async function runReviewer({ env, reviewer, taskName, timeoutMs, context, primar
 
 export function buildEkodiAiOrchestrator(env = {}, providers = []) {
   const normalized = normalizeProviders(providers);
+  const resourcePolicy = runtimeResourcePolicy(normalized);
 
   return Object.freeze({
     schemaVersion: 1,
@@ -145,7 +158,7 @@ export function buildEkodiAiOrchestrator(env = {}, providers = []) {
       });
     },
     plan(input = {}) {
-      return buildAiOrchestrationPlan(input, normalized);
+      return buildAiOrchestrationPlan({ ...input, resourcePolicy }, normalized);
     },
     async run({
       taskName,
@@ -169,6 +182,7 @@ export function buildEkodiAiOrchestrator(env = {}, providers = []) {
         requiredCapabilities,
         lane,
         governance,
+        resourcePolicy,
       }, normalized);
       const eligibleIds = new Set(plan.eligibleProviders);
       const eligible = normalized.filter(provider => eligibleIds.has(provider.id));
