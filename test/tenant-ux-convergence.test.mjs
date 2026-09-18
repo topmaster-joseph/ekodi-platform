@@ -30,8 +30,8 @@ test('delegated admins use task-first navigation without changing authority',asy
   assert.match(church,/label:'예배 · 사역'/);
   assert.match(church,/label:'기록 · AI'/);
   assert.match(church,/label:'사이트 · 권한'/);
-  assert.match(church,/id="sectionNav" class="admin-subnav"/);
-  assert.match(church,/function renderSecondaryNav/);
+  assert.match(church,/admin-nav-group-label/);
+  assert.match(church,/dataset\.adminSection=key/);
 
   assert.match(trade,/['overview','홈']/);
   assert.match(trade,/['companies','거래처']/);
