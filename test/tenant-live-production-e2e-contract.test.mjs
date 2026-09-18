@@ -27,3 +27,14 @@ test('tenant live E2E proves anonymous media delivery and safe skip',()=>{
   assert.match(script,/status:'ended'/);
   assert.match(script,/assert\.equal\(ended\.live,false\)/);
 });
+
+
+test('tenant live production E2E proves durable recording archive and cleanup',()=>{
+  assert.match(script,/recording_missing_for_test_room/);
+  assert.match(script,/recording_not_ready/);
+  assert.match(script,/recording_has_no_bytes/);
+  assert.match(script,/recording_not_archived/);
+  assert.match(script,/recording_drive_file_missing/);
+  assert.match(script,/recordingDeleted=true/);
+  assert.match(script,/method:'DELETE'/);
+});

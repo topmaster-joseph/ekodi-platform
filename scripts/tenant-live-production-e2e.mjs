@@ -8,7 +8,7 @@ const liveUrl=process.env.TENANT_LIVE_URL||'https://ekodi.kr/ekodibiz/live/';
 const label=process.env.TENANT_LIVE_LABEL||'EKODI Biz';
 const api='https://ekodi.kr/api/realtime';
 const artifactDir='artifacts/tenant-live-production-e2e';
-const report={passed:false,skipped:false,tenant,roomId:null,hostReady:false,viewerTracks:0,ended:false,hostStatus:null,viewerStatus:null,pageErrors:[],requestFailures:[],realtime:[]};
+const report={passed:false,skipped:false,tenant,roomId:null,hostReady:false,viewerTracks:0,ended:false,recordingId:null,recordingStatus:null,recordingArchiveStatus:null,recordingBytes:0,recordingDeleted:false,hostStatus:null,viewerStatus:null,pageErrors:[],requestFailures:[],realtime:[]};
 
 if(!token)throw new Error('e2e_admin_token_missing');
 
@@ -77,7 +77,7 @@ try{
     await host.waitForFunction(()=>{
       const button=document.querySelector('#goLiveButton');
       const status=document.querySelector('#statusLog')?.textContent||'';
-      return button&&!button.disabled&&status.includes('미디어 연결이 완료되었습니다');
+      return button&&!button.disabled&&(status.includes('준비 완료')||status.includes('미디어 연결이 완료되었습니다'));
     },{timeout:30000});
   }catch(error){
     report.hostStatus=await text(host,'#statusLog');
@@ -86,16 +86,16 @@ try{
   report.hostReady=true;
   report.hostStatus=await text(host,'#statusLog');
 
+  await host.locator('#goLiveButton').click();
+  await host.waitForFunction(()=>{
+    const status=document.querySelector('#statusLog')?.textContent||'';
+    return status.includes('방송 중')&&document.querySelector('#programBadge')?.textContent==='LIVE';
+  },{timeout:30000});
+
   const shareLink=await host.locator('#shareLink').inputValue();
   const roomId=new URL(shareLink).searchParams.get('room');
   assert.ok(roomId,'room_id_missing');
   report.roomId=roomId;
-
-  await host.locator('#goLiveButton').click();
-  await host.waitForFunction(()=>{
-    const status=document.querySelector('#statusLog')?.textContent||'';
-    return status.includes('방송 중입니다.')&&document.querySelector('#programBadge')?.textContent==='LIVE';
-  },{timeout:30000});
 
   const live=await publicLive();
   assert.equal(live.live,true);
@@ -118,10 +118,28 @@ try{
   assert.equal(report.pageErrors.length,0,'browser_page_errors');
 
   await host.locator('#endLiveButton').click();
-  await host.waitForFunction(()=>document.querySelector('#statusLog')?.textContent?.includes('방송이 종료되었습니다.'),{timeout:15000});
+  await host.waitForFunction(()=>{
+    const status=document.querySelector('#statusLog')?.textContent||'';
+    return status.includes('방송이 종료되었습니다.')||status.includes('녹화본 공유드라이브 보관 완료')||status.includes('녹화본 저장 완료');
+  },{timeout:30000});
   const ended=await publicLive();
   assert.equal(ended.live,false);
   report.ended=true;
+
+  const managed=await call(`/recordings?tenant=${encodeURIComponent(tenant)}`);
+  const recording=(managed.recordings||[]).find(item=>item.roomId===roomId);
+  assert.ok(recording,'recording_missing_for_test_room');
+  report.recordingId=recording.id;
+  report.recordingStatus=recording.status;
+  report.recordingArchiveStatus=recording.archiveStatus;
+  report.recordingBytes=Number(recording.byteSize||0);
+  assert.equal(recording.status,'ready','recording_not_ready');
+  assert.ok(report.recordingBytes>0,'recording_has_no_bytes');
+  assert.equal(recording.archiveStatus,'archived','recording_not_archived');
+  assert.ok(recording.driveFileId,'recording_drive_file_missing');
+  const removed=await call(`/recordings/${encodeURIComponent(recording.id)}`,{method:'DELETE'});
+  assert.equal(removed.deleted,true,'recording_delete_failed');
+  report.recordingDeleted=true;
   report.passed=true;
 }catch(error){
   report.failure=String(error?.message||error).slice(0,700);
@@ -133,6 +151,10 @@ try{
   if(report.roomId&&!report.ended){
     await call(`/rooms/${encodeURIComponent(report.roomId)}/status`,{method:'POST',body:JSON.stringify({status:'ended'})}).catch(()=>{});
   }
+  if(report.recordingId&&!report.recordingDeleted){
+    const removed=await call(`/recordings/${encodeURIComponent(report.recordingId)}`,{method:'DELETE'}).catch(()=>null);
+    if(removed?.deleted)report.recordingDeleted=true;
+  }
   await viewerContext?.close().catch(()=>{});
   await hostContext?.close().catch(()=>{});
   await browser.close().catch(()=>{});
@@ -140,4 +162,4 @@ try{
 }
 
 assert.equal(report.passed,true);
-console.log(`Tenant Live production E2E passed: tenant=${tenant}, room=${report.roomId}, viewerTracks=${report.viewerTracks}`);
+console.log(`Tenant Live production E2E passed: tenant=${tenant}, room=${report.roomId}, viewerTracks=${report.viewerTracks}, recordingBytes=${report.recordingBytes}, archive=${report.recordingArchiveStatus}, recordingDeleted=${report.recordingDeleted}`);

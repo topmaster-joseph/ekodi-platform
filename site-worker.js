@@ -6,8 +6,9 @@ import { ekodiBizInvestBusinessPage, isEkodiBizInvestPath } from './ekodibiz-inv
 import { ekodiBizInvestAdminPage, isEkodiBizInvestAdminPath } from './ekodibiz-invest-admin-page.js';
 import { tenantAdminCommandHomeScript, tenantAdminCommandHomeCss } from './tenant-admin-command-home.js';
 import { decorateDiscoveryResponse } from './discovery-layer.js';
-import { realtimeTenantFromPath } from './realtime-tenant-registry.js';
+import { realtimeTenantAdminFromPath, realtimeTenantFromPath } from './realtime-tenant-registry.js';
 import { tenantLivePage } from './tenant-live-page.js';
+import { tenantLiveAdminCss, tenantLiveAdminPage, tenantLiveAdminScript } from './tenant-live-admin-page.js';
 
 // Static Assets canonicalizes *.html URLs to extensionless paths.
 // Always request canonical asset paths internally so edge redirects never escape the Worker.
@@ -657,6 +658,8 @@ export default {
       }
       if (url.pathname === '/tenant-admin-command-home.css') return tenantAdminCommandHomeCss();
       if (url.pathname === '/tenant-admin-command-home.js') return tenantAdminCommandHomeScript();
+      if (url.pathname === '/tenant-live-admin.css') return tenantLiveAdminCss();
+      if (url.pathname === '/tenant-live-admin.js') return tenantLiveAdminScript();
       if (url.pathname === '/workspace-admin.css') return workspaceAdminCss();
       if (url.pathname === '/workspace-admin.js') return workspaceAdminScript();
       if (url.pathname.startsWith('/api/control/storage/google/cheonggye-members')) return proxyAdminStorage(request, env);
@@ -672,6 +675,8 @@ export default {
         const secured=withHostSecurity(page, ADMIN_CSP, 'no-store', 'public-ekodibiz-invest-admin');
         return injectEkodiShell(secured, 'biz', 'admin');
       }
+      const liveAdminTenant = realtimeTenantAdminFromPath(url.pathname);
+      if (['GET','HEAD'].includes(request.method) && liveAdminTenant) return withHostSecurity(tenantLiveAdminPage(liveAdminTenant), LIVE_CSP, 'no-store', 'tenant-'+liveAdminTenant.apiTenant+'-live-admin');
       const liveTenant = realtimeTenantFromPath(url.pathname);
       if (['GET','HEAD'].includes(request.method) && liveTenant && !liveTenant.dedicated) return withHostSecurity(tenantLivePage(liveTenant), LIVE_CSP, 'no-store', 'public-'+liveTenant.apiTenant+'-live');
       if (isLegacyEkodiBizPath(url.pathname)) return redirectLegacyEkodiBizPath(request);

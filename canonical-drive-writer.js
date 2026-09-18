@@ -106,6 +106,43 @@ function safeName(value) {
   return (cleaned || 'record').slice(0, 180);
 }
 
+function driveQueryValue(value) {
+  return String(value || '').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+}
+async function driveJson(token, path, init = {}) {
+  const headers = new Headers(init.headers || {});
+  headers.set('authorization', `Bearer ${token}`);
+  if (init.body && !headers.has('content-type')) headers.set('content-type','application/json');
+  const response = await fetch(`https://www.googleapis.com/drive/v3${path}`,{...init,headers});
+  const data = await response.json().catch(()=>({}));
+  if (!response.ok) throw new Error(`CANONICAL_STORAGE_DRIVE_${response.status}`);
+  return data;
+}
+async function ensureSubfolderPath(token, parentId, path = '') {
+  const segments = String(path || '').split('/').map(value=>safeName(value)).filter(Boolean).slice(0,8);
+  let parent = parentId;
+  for (const segment of segments) {
+    const params = new URLSearchParams({
+      q:`'${driveQueryValue(parent)}' in parents and name = '${driveQueryValue(segment)}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
+      spaces:'drive',
+      pageSize:'1',
+      supportsAllDrives:'true',
+      includeItemsFromAllDrives:'true',
+      fields:'files(id,name)',
+    });
+    const found = await driveJson(token,`/files?${params.toString()}`);
+    const existing = found.files?.[0];
+    if (existing?.id) { parent = existing.id; continue; }
+    const created = await driveJson(token,'/files?supportsAllDrives=true&fields=id,name,parents',{
+      method:'POST',
+      body:JSON.stringify({name:segment,mimeType:'application/vnd.google-apps.folder',parents:[parent]}),
+    });
+    if (!created?.id) throw new Error('CANONICAL_STORAGE_FOLDER_CREATE_FAILED');
+    parent = created.id;
+  }
+  return parent;
+}
+
 function concatBytes(...parts) {
   const total = parts.reduce((sum, part) => sum + part.length, 0);
   const out = new Uint8Array(total);
@@ -148,9 +185,10 @@ export async function writeCanonicalDriveFile(env, options = {}) {
   ]);
   const token = await accessToken(env, connection);
   const mimeType = String(options.mimeType || 'application/octet-stream').slice(0, 120);
+  const parentId = await ensureSubfolderPath(token, folder.folder_id, options.subfolderPath || '');
   const metadata = {
     name: safeName(options.title || `record-${Date.now()}`),
-    parents: [folder.folder_id],
+    parents: [parentId],
     appProperties: {
       ekodiSpaceId: String(options.spaceId || '').slice(0, 120),
       ekodiServiceId: String(options.serviceId || '').slice(0, 120),
@@ -182,6 +220,80 @@ export async function writeCanonicalDriveFile(env, options = {}) {
     canonicalDriveId: connection.drive_id,
     canonicalDriveName: connection.drive_name,
   };
+}
+
+
+export async function writeCanonicalDriveStream(env, options = {}) {
+  const routeKey = normalizeRouteKey(options.storageRoute || options.serviceId);
+  if (!routeKey) throw new Error('CANONICAL_STORAGE_ROUTE_REQUIRED');
+  if (!options.body) throw new Error('CANONICAL_STORAGE_CONTENT_REQUIRED');
+  const size = Number(options.size || 0);
+  if (!Number.isFinite(size) || size <= 0) throw new Error('CANONICAL_STORAGE_SIZE_REQUIRED');
+
+  const [connection, folder] = await Promise.all([
+    primaryConnection(env),
+    routeFolder(env, routeKey),
+  ]);
+  const token = await accessToken(env, connection);
+  const mimeType = String(options.mimeType || 'application/octet-stream').slice(0, 120);
+  const parentId = await ensureSubfolderPath(token, folder.folder_id, options.subfolderPath || '');
+  const metadata = {
+    name: safeName(options.title || `record-${Date.now()}`),
+    parents: [parentId],
+    appProperties: {
+      ekodiSpaceId: String(options.spaceId || '').slice(0, 120),
+      ekodiServiceId: String(options.serviceId || '').slice(0, 120),
+      ekodiStorageRoute: routeKey,
+      ekodiRecordType: String(options.recordType || '').slice(0, 120),
+      ekodiCreatedBy: String(options.createdBy || '').slice(0, 120),
+      ekodiRetention: String(options.retentionClass || '').slice(0, 40),
+      ekodiSourceModule: String(options.sourceModuleId || 'ekodi').slice(0, 120),
+    },
+  };
+  const init = await fetch(`${DRIVE_UPLOAD_URL}?uploadType=resumable&supportsAllDrives=true&fields=id,name,mimeType,webViewLink,parents,createdTime`, {
+    method: 'POST',
+    headers: {
+      authorization: `Bearer ${token}`,
+      'content-type': 'application/json; charset=UTF-8',
+      'x-upload-content-type': mimeType,
+      'x-upload-content-length': String(size),
+    },
+    body: JSON.stringify(metadata),
+  });
+  if (!init.ok) throw new Error(`CANONICAL_STORAGE_RESUMABLE_INIT_${init.status}`);
+  const location = init.headers.get('location');
+  if (!location) throw new Error('CANONICAL_STORAGE_RESUMABLE_LOCATION_MISSING');
+  const uploaded = await fetch(location, {
+    method: 'PUT',
+    headers: {
+      'content-type': mimeType,
+      'content-length': String(size),
+    },
+    body: options.body,
+  });
+  const result = await uploaded.json().catch(() => ({}));
+  if (!uploaded.ok || !result.id) throw new Error(`CANONICAL_STORAGE_RESUMABLE_UPLOAD_${uploaded.status}`);
+  return {
+    ...result,
+    storageRoute: routeKey,
+    folderId: folder.folder_id,
+    folderName: folder.folder_name,
+    canonicalDriveId: connection.drive_id,
+    canonicalDriveName: connection.drive_name,
+  };
+}
+
+export async function deleteCanonicalDriveFile(env, fileId = '') {
+  const id = String(fileId || '').trim();
+  if (!id || !/^[A-Za-z0-9_-]{8,200}$/.test(id)) throw new Error('CANONICAL_STORAGE_FILE_ID_REQUIRED');
+  const connection = await primaryConnection(env);
+  const token = await accessToken(env, connection);
+  const response = await fetch(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(id)}?supportsAllDrives=true`, {
+    method: 'DELETE',
+    headers: { authorization: `Bearer ${token}` },
+  });
+  if (!(response.ok || response.status === 404)) throw new Error(`CANONICAL_STORAGE_DELETE_${response.status}`);
+  return { ok: true, id, deleted: true };
 }
 
 export const CANONICAL_DRIVE_WRITER_POLICY = Object.freeze({
