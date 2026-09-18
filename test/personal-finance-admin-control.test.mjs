@@ -17,6 +17,15 @@ async function withFetch({role='super_admin',elevated=false,user=false}={},fn){
   globalThis.fetch=async input=>{const url=String(input instanceof Request?input.url:input);if(url.includes('/api/admin-access/elevation'))return new Response(JSON.stringify({elevated,authority:{role}}),{status:200,headers:{'content-type':'application/json'}});if(url.includes('/api/session'))return new Response(JSON.stringify({authenticated:true,email:'admin@example.com',role}),{status:200,headers:{'content-type':'application/json'}});if(url.includes('/auth/v1/user'))return new Response(user?JSON.stringify({id:'user-1',email:'user@example.com'}):'{}',{status:user?200:401,headers:{'content-type':'application/json'}});return new Response('{}',{status:404,headers:{'content-type':'application/json'}})};
   try{return await fn()}finally{globalThis.fetch=original}
 }
+test('admin control rejects missing bearer token with the protected PF auth contract',async()=>{
+  const DB=fakeDb();
+  const response=await worker.fetch(new Request('https://personal-finance-api.ekodi.kr/api/admin/personal-finance/control',{headers:{origin:'https://ekodi.kr'}}),env(DB));
+  assert.equal(response.status,401);
+  const data=await response.json();
+  assert.equal(data.code,'PF_ADMIN_AUTH_REQUIRED');
+  assert.equal(data.authenticated,undefined);
+});
+
 test('admin control exposes only service policy and immutable safety metadata',async()=>{
   const DB=fakeDb();const response=await withFetch({},()=>worker.fetch(new Request('https://personal-finance-api.ekodi.kr/api/admin/personal-finance/control',{headers:adminHeaders}),env(DB)));
   assert.equal(response.status,200);assert.equal(response.headers.get('access-control-allow-origin'),'https://admin.ekodi.kr');const data=await response.json();
