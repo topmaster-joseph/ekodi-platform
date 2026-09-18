@@ -495,11 +495,11 @@ async function collaborationRoute(request,env,url,input){
       if(!['starting','live'].includes(room.status))return json(request,env,{ok:false,error:'room_chat_not_open'},409);
       const actor=await requestActorKey(request,env,room,{allowAnonymous:room.anonymous_viewers_enabled});
       if(!actor.actorKey)return json(request,env,{ok:false,error:'authentication_required'},401);
-      const message=clean(input?.message,500),displayName=clean(input?.displayName,40)||(actor.authenticated?(clean(actor.access.identity?.email,80).split('@')[0]||'참여자'):'참여자');
+      const message=clean(input?.message,500),actorRole=actor.authenticated?(normalizeRealtimeRole(actor.access.role)||'viewer'):'viewer',displayName=actor.authenticated&&ADMIN_ROLES.has(actorRole)?'방송자':actor.authenticated?(clean(actor.access.identity?.email,80).split('@')[0]||'참여자'):'참여자';
       if(!message)return json(request,env,{ok:false,error:'chat_message_required'},400);
       const last=await env.DB.prepare(`SELECT created_at FROM realtime_chat_messages WHERE room_id=? AND actor_key=? ORDER BY created_at DESC LIMIT 1`).bind(room.id,actor.actorKey).first();
       if(last?.created_at&&Date.now()-Date.parse(last.created_at)<1800)return json(request,env,{ok:false,error:'chat_rate_limited'},429);
-      const id=uid('chat'),stamp=new Date().toISOString(),role=actor.authenticated?(normalizeRealtimeRole(actor.access.role)||'viewer'):'viewer';
+      const id=uid('chat'),stamp=new Date().toISOString(),role=actorRole;
       await env.DB.prepare(`INSERT INTO realtime_chat_messages(id,room_id,tenant_id,actor_key,display_name,role,message,created_at,deleted_at) VALUES(?,?,?,?,?,?,?,?,NULL)`).bind(id,room.id,room.tenant_id,actor.actorKey,displayName,role,message,stamp).run();
       return json(request,env,{ok:true,message:safeChat(await env.DB.prepare('SELECT * FROM realtime_chat_messages WHERE id=?').bind(id).first())},201);
     }
