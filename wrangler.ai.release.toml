@@ -22,8 +22,14 @@ GEMINI_MODEL = "gemini-3.7-flash"
 OPENAI_MODEL = "gpt-5.6-luna"
 ANTHROPIC_MODEL = "claude-haiku-4-5-20251001"
 AI_WORKER_PROVIDERS = ""
+EKODI_PROVIDER_WORKERS_AI_ENABLED = "true"
+EKODI_WORKERS_AI_DAILY_CALL_LIMIT = "4"
+EKODI_PROVIDER_OPENROUTER_FREE_ENABLED = "true"
+EKODI_OPENROUTER_FREE_DAILY_CALL_LIMIT = "45"
+EKODI_PROVIDER_GROQ_FREE_ENABLED = "false"
+EKODI_GROQ_FREE_DAILY_CALL_LIMIT = "900"
 
-[[d1_databases]]
+[ai]\nbinding = "AI"\n\n[[d1_databases]]
 binding = "DB"
 database_name = "ekodi-auth"
 database_id = "e38778f1-b059-4fe7-8816-300f3eec6e19"
