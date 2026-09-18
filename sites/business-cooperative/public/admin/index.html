@@ -7,10 +7,10 @@
   <title>사업자협동조합 설립·운영 관리자</title>
   <link rel="stylesheet" href="/business-coop/app.css">
 </head>
-<body data-ekodi-admin-surface="tenant" data-ekodi-global-nav="off" data-coop-admin="formation-v1">
+<body data-ekodi-admin-surface="tenant" data-ekodi-global-nav="off" data-coop-admin="formation-v2">
 <div class="admin-shell">
   <aside class="side">
-    <h1>협동조합 관리자</h1><p>설립 → 신고 → 등기 → 운영 → 지원사업</p>
+    <h1>협동조합 관리자</h1><p>여러 설립 프로젝트를 한 엔진으로 관리</p>
     <nav id="tabs">
       <button class="active" data-tab="dashboard">대시보드</button>
       <button data-tab="profile">조합 기본정보</button>
@@ -23,8 +23,17 @@
     </nav>
   </aside>
   <main class="main">
-    <div class="toolbar"><div><h2 id="pageTitle">설립 준비 대시보드</h2><p id="pageSub">가칭 단계부터 법인 설립 이후 운영까지 한 흐름으로 관리합니다.</p></div><div class="row"><a class="action secondary" href="/business-coop/" target="_blank" rel="noopener">사용자 페이지</a><button class="action" id="saveAll">저장</button></div></div>
-    <div class="privacy">이 화면에는 주민등록번호·개인 주소·계좌 비밀번호 등 민감정보를 입력하지 마십시오. 현재 설립준비 데이터는 이 브라우저에만 저장됩니다. 법정 원본·서명본은 승인된 보안문서 저장소에서 별도 관리해야 합니다.</div>
+    <div class="toolbar"><div><h2 id="pageTitle">설립 준비 대시보드</h2><p id="pageSub">조합별 데이터를 분리해 가칭 단계부터 법인 설립 이후 운영까지 관리합니다.</p></div><div class="row"><a class="action secondary" id="publicLink" href="/business-coop/" target="_blank" rel="noopener">현재 조합 사용자 페이지</a><button class="action" id="saveAll">저장</button></div></div>
+
+    <div class="card" style="margin-top:18px">
+      <div class="row" style="justify-content:space-between;align-items:end">
+        <div class="field" style="min-width:280px;flex:1"><label>설립 프로젝트</label><select id="projectSelect" aria-label="협동조합 설립 프로젝트 선택"></select></div>
+        <div class="row"><button class="action" id="newProject" type="button">새 협동조합 만들기</button><button class="action secondary" id="duplicateProject" type="button">기본설정 복제</button></div>
+      </div>
+      <p class="muted" id="projectMeta">조합별 발기인·서류·일정·지원사업 데이터는 서로 분리됩니다.</p>
+    </div>
+
+    <div class="privacy">이 화면에는 주민등록번호·개인 주소·계좌 비밀번호 등 민감정보를 입력하지 마십시오. 현재 설립준비 데이터는 이 브라우저에만 저장되며 조합별로 분리됩니다. 법정 원본·서명본은 승인된 보안문서 저장소에서 별도 관리해야 합니다.</div>
 
     <section class="panel active" data-panel="dashboard">
       <div class="kpis" style="margin-top:18px"><div class="kpi"><b id="kpiFounders">0/5</b><span>발기인 최소기준</span></div><div class="kpi"><b id="kpiCapital">0원</b><span>예정 출자총액</span></div><div class="kpi"><b id="kpiDocs">0/8</b><span>설립신고 핵심서류</span></div><div class="kpi"><b id="kpiReady">0%</b><span>설립 준비도</span></div></div>
@@ -47,17 +56,17 @@
       <div class="field"><label>사업체명</label><input name="business" required></div><div class="field"><label>대표자 표시명</label><input name="representative" required></div><div class="field"><label>업종</label><input name="industry" required></div><div class="field"><label>인수 출자좌수</label><input name="shares" type="number" min="1" value="1" required></div><div class="field"><label>설립동의</label><select name="consent"><option value="pending">확인 전</option><option value="yes">동의 완료</option></select></div><button class="action" type="submit">발기인 추가</button>
     </form></article><article class="card span-8"><h3>발기인·설립동의자 관리</h3><div id="founderTable"></div></article></div></section>
 
-    <section class="panel" data-panel="documents"><div class="grid"><article class="card span-8"><h3>설립신고 첨부서류</h3><p class="muted">2026년 현행 시행규칙의 일반협동조합 설립신고 기준입니다.</p><div id="docChecklist" class="checklist"></div></article><aside class="card span-4"><h3>업로드 정관 활용</h3><p>열린유통협동조합 정관의 장·조문 구조를 참고하되, 명칭·소재지·조합원 업종·사업종류·출자금 등은 신규 조합의 확정값으로 다시 작성해야 합니다.</p><div class="notice">정관 최종본에는 법정 필수 기재사항과 실제 운영방식을 일치시키는 검토가 필요합니다.</div></aside></div></section>
+    <section class="panel" data-panel="documents"><div class="grid"><article class="card span-8"><h3>설립신고 첨부서류</h3><p class="muted">2026년 현행 시행규칙의 일반협동조합 설립신고 기준입니다.</p><div id="docChecklist" class="checklist"></div></article><aside class="card span-4"><h3>정관 템플릿 활용</h3><p>기존 검토 정관의 장·조문 구조를 참고 템플릿으로 활용하되, 조합마다 명칭·소재지·조합원 자격·사업종류·출자금·기관구성을 별도로 확정해야 합니다.</p><div class="notice">한 조합의 확정값이나 개인정보를 다른 조합 프로젝트로 자동 복사하지 않습니다.</div></aside></div></section>
 
     <section class="panel" data-panel="schedule"><div class="grid"><article class="card span-6"><h3>설립 일정 입력</h3><div class="form-grid">
       <div class="field"><label>창립총회 예정/개최일</label><input id="foundingMeetingDate" type="date"></div><div class="field"><label>설립신고 접수일</label><input id="filingDate" type="date"></div><div class="field"><label>신고확인증 수령일</label><input id="confirmationDate" type="date"></div><div class="field"><label>출자금 납입 완료일</label><input id="capitalPaidDate" type="date"></div>
     </div></article><article class="card span-6"><h3>자동 계산 일정</h3><div id="deadlineList"></div></article></div></section>
 
-    <section class="panel" data-panel="meetings"><div class="grid"><article class="card span-7"><h3>운영 캘린더</h3><div class="deadline"><strong>정기총회</strong><span>매년 1회, 정관으로 정한 시기</span><span class="tag">필수</span></div><div class="deadline"><strong>총회 통지</strong><span>총회 개최 7일 전까지 목적·안건·일시·장소 통지</span><span class="tag">D-7</span></div><div class="deadline"><strong>결산·감사</strong><span>결산보고서·감사보고서 준비 후 총회 승인</span><span class="tag">연 1회</span></div><div class="deadline"><strong>경영공시</strong><span>조합원 200명 이상 또는 직전연도 출자금 30억원 이상이면 결산일부터 4개월 이내</span><span class="tag warn">조건부</span></div></article><aside class="card span-5"><h3>정관 초안 기준</h3><p>업로드 정관은 회계연도 1월 1일~12월 31일, 정기총회는 회계연도 종료 후 2개월 이내로 정하고 있습니다. 신규 정관에서도 이 기준을 유지할지 최종 확정하세요.</p><div class="code-note">총회 의사록 · 이사회 의사록 · 조합원 명부 · 출자 변동 · 감사보고 · 결산승인 기록을 연도별로 묶어 보관</div></aside></div></section>
+    <section class="panel" data-panel="meetings"><div class="grid"><article class="card span-7"><h3>운영 캘린더</h3><div class="deadline"><strong>정기총회</strong><span>매년 1회, 정관으로 정한 시기</span><span class="tag">필수</span></div><div class="deadline"><strong>총회 통지</strong><span>총회 개최 7일 전까지 목적·안건·일시·장소 통지</span><span class="tag">D-7</span></div><div class="deadline"><strong>결산·감사</strong><span>결산보고서·감사보고서 준비 후 총회 승인</span><span class="tag">연 1회</span></div><div class="deadline"><strong>경영공시</strong><span>조합원 200명 이상 또는 직전연도 출자금 30억원 이상이면 결산일부터 4개월 이내</span><span class="tag warn">조건부</span></div></article><aside class="card span-5"><h3>조합별 정관 확정</h3><p>회계연도와 정기총회 시기는 각 조합의 실제 운영계획에 맞춰 정관에서 확정합니다.</p><div class="code-note">총회 의사록 · 이사회 의사록 · 조합원 명부 · 출자 변동 · 감사보고 · 결산승인 기록을 조합별·연도별로 분리 보관</div></aside></div></section>
 
-    <section class="panel" data-panel="support"><div class="grid"><article class="card span-4"><h3>지원사업 등록</h3><form id="supportForm" class="form-grid" style="grid-template-columns:1fr"><div class="field"><label>사업명</label><input name="title" required></div><div class="field"><label>기관</label><input name="agency"></div><div class="field"><label>마감일</label><input name="deadline" type="date"></div><div class="field"><label>상태</label><select name="status"><option>관심</option><option>검토중</option><option>준비중</option><option>신청</option><option>선정</option><option>종료</option></select></div><button class="action" type="submit">추가</button></form></article><article class="card span-8"><h3>정부·지자체 지원사업 파이프라인</h3><p class="muted">공고가 열릴 때마다 자격·마감·필요서류·담당자·성과지표를 붙여 관리합니다. 설립만으로 지원이 보장되지는 않습니다.</p><div id="supportTable"></div></article></div></section>
+    <section class="panel" data-panel="support"><div class="grid"><article class="card span-4"><h3>지원사업 등록</h3><form id="supportForm" class="form-grid" style="grid-template-columns:1fr"><div class="field"><label>사업명</label><input name="title" required></div><div class="field"><label>기관</label><input name="agency"></div><div class="field"><label>마감일</label><input name="deadline" type="date"></div><div class="field"><label>상태</label><select name="status"><option>관심</option><option>검토중</option><option>준비중</option><option>신청</option><option>선정</option><option>종료</option></select></div><button class="action" type="submit">추가</button></form></article><article class="card span-8"><h3>정부·지자체 지원사업 파이프라인</h3><p class="muted">공고가 열릴 때마다 자격·마감·필요서류·담당자·성과지표를 조합별로 관리합니다. 설립만으로 지원이 보장되지는 않습니다.</p><div id="supportTable"></div></article></div></section>
 
-    <section class="panel" data-panel="export"><div class="card"><h3>검수·내보내기</h3><p>현재 준비상태를 JSON으로 내려받아 검토·백업할 수 있습니다. 개인정보가 아닌 설립 진행정보만 포함됩니다.</p><div class="row"><button class="action" id="exportJson">준비현황 JSON 내보내기</button><button class="action secondary" id="printReport">화면 인쇄</button><button class="action danger" id="resetDraft">이 브라우저 초안 초기화</button></div><h3 style="margin-top:28px">법정 기준 출처</h3><div id="sourceLinks" class="pill-row"></div></div></section>
+    <section class="panel" data-panel="export"><div class="card"><h3>검수·내보내기</h3><p>현재 선택한 조합의 준비상태만 JSON으로 내려받습니다. 다른 조합 프로젝트 데이터는 포함하지 않습니다.</p><div class="row"><button class="action" id="exportJson">현재 조합 JSON 내보내기</button><button class="action secondary" id="printReport">화면 인쇄</button><button class="action danger" id="resetDraft">현재 조합 초안 초기화</button></div><h3 style="margin-top:28px">법정 기준 출처</h3><div id="sourceLinks" class="pill-row"></div></div></section>
   </main>
 </div>
 <script src="https://ekodi.kr/shell/shell.js" data-ekodi-service="business" data-ekodi-surface="admin" data-ekodi-authority-scope="tenant" data-ekodi-member-gate="shared" defer></script>
