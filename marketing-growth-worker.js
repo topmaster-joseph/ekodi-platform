@@ -1,5 +1,6 @@
 import { WorkerEntrypoint } from 'cloudflare:workers';
 import { runMallAutonomousProfitLoop } from './mall-autonomous-profit-loop.js';
+import { runOwnedTenantAutopostCycle } from './owned-tenant-autopost-loop.js';
 import { d1SchemaReady } from './d1-schema-readiness.js';
 import { mallGrowthDashboardSnapshot } from './mall-growth-dashboard.js';
 import { channelCatalogSnapshot } from './channel-publishing-catalog.js';
@@ -703,7 +704,9 @@ async function preparePaidPromotion(request, env, identity, subject, id) {
 export class MarketingGrowthPublisher extends WorkerEntrypoint {
   async runGrowthCycle(input = {}) {
     const reason = clean(input?.reason || 'shared-publishing-cron',80);
-    return runMallAutonomousProfitLoop(this.env,{reason,force:Boolean(input?.force)});
+    const mall = await runMallAutonomousProfitLoop(this.env,{reason,force:Boolean(input?.force)});
+    const ownedTenants = await runOwnedTenantAutopostCycle(this.env,{reason});
+    return {...mall,ownedTenants,ok:Boolean(mall?.ok)&&Boolean(ownedTenants?.ok)};
   }
 
   async publishFromVault(input = {}) {
