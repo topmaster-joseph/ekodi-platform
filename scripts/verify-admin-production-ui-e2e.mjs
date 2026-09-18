@@ -123,6 +123,24 @@ async function dispatchClick(locator, timeout = 10_000) {
   await locator.evaluate(node => { setTimeout(() => node.click(), 0); return true; });
 }
 
+async function resolveVisibleMenuTrigger(id, group) {
+  const detail = page.locator(`button.admin-detail-item[data-admin-detail-section="${id}"]`).first();
+  if (await detail.count() && await detail.isVisible().catch(() => false)) return detail;
+
+  const more = page.locator(`button[data-admin-detail-more="${group}"]`).first();
+  if (await more.count() && await more.isVisible().catch(() => false)) {
+    await dispatchClick(more);
+    await detail.waitFor({ state: 'visible', timeout: 10_000 });
+    return detail;
+  }
+
+  const context = page.locator(`button.admin-context-tab[data-admin-context-section="${id}"]`).first();
+  await context.waitFor({ state: 'attached', timeout: 10_000 });
+  if (await context.isVisible().catch(() => false)) return context;
+
+  throw new Error(`${id}: no visible Admin navigation trigger in work area ${group}`);
+}
+
 const results = [];
 let selectedWorkArea = null;
 for (const [id, group] of menus) {
@@ -136,9 +154,10 @@ for (const [id, group] of menus) {
     selectedWorkArea = group;
   }
 
-  const tab = page.locator(`[data-admin-context-section="${id}"]`);
-  await tab.waitFor({ state: 'visible', timeout: 10000 });
+  const contextTab = page.locator(`button.admin-context-tab[data-admin-context-section="${id}"]`).first();
+  await contextTab.waitFor({ state: 'attached', timeout: 10000 });
   const definition = getAdminMenuItem(id);
+  const trigger = id === 'command-home' ? null : await resolveVisibleMenuTrigger(id, group);
 
   if (id === 'tax') {
     const source = page.locator('.admin-context-source .nav[data-section="tax"]');
@@ -158,7 +177,7 @@ for (const [id, group] of menus) {
     const sourceHref = await source.getAttribute('href');
     if (!sourceHref || new URL(sourceHref, ADMIN_URL).href !== expected.href) throw new Error(`${id} direct href drifted: ${sourceHref || '(missing)'}`);
     const popupPromise = page.waitForEvent('popup', { timeout: 10000 });
-    await dispatchClick(tab);
+    await dispatchClick(trigger);
     const popup = await popupPromise;
     await popup.waitForLoadState('domcontentloaded', { timeout: 20000 });
     const actual = new URL(popup.url());
@@ -179,8 +198,12 @@ for (const [id, group] of menus) {
     continue;
   }
 
-  await dispatchClick(tab);
-  await page.waitForFunction(section => window.EKODIAdminPanels?.current?.() === section, id, { timeout: 12000 });
+  if (id !== 'command-home') {
+    await dispatchClick(trigger);
+    await page.waitForFunction(section => window.EKODIAdminPanels?.current?.() === section, id, { timeout: 12000 });
+  } else {
+    await page.waitForFunction(section => window.EKODIAdminPanels?.current?.() === section, id, { timeout: 12000 });
+  }
 
   if (id === 'command-home') {
     await page.waitForFunction(() => {
