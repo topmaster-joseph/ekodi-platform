@@ -52,7 +52,7 @@ const syntheticJson = body => ({
   body: JSON.stringify(body),
 });
 
-await page.route('https://api.ekodi.kr/api/control/overview', async route => {
+await page.route('**/api/control/overview', async route => {
   if (route.request().method() === 'OPTIONS') return route.fulfill(syntheticJson({ ok:true }));
   await route.fulfill(syntheticJson({ ok:true, services:[] }));
 });
