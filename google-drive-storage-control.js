@@ -2,10 +2,10 @@ import { superviseConnection } from './integration-connection-supervisor.js';
 import { handleAdminSessionFastPath } from './admin-session-fastpath.js';
 
 const BASE = '/api/control/storage/google';
-const REDIRECT_URI = 'https://drive.ekodi.kr/api/control/storage/google/callback';
+const LEGACY_REDIRECT_URI = 'https://drive.ekodi.kr/api/control/storage/google/callback';
 const CANONICAL_REDIRECT_URI = 'https://ekodi.kr/storage/api/control/storage/google/callback';
 const MARKETING_YOUTUBE_CALLBACK = 'https://ekodi.kr/marketing-connect-api/oauth/youtube/callback';
-const ALLOWED_GOOGLE_REDIRECT_URIS = new Set([REDIRECT_URI,CANONICAL_REDIRECT_URI]);
+const ALLOWED_GOOGLE_REDIRECT_URIS = new Set([LEGACY_REDIRECT_URI,CANONICAL_REDIRECT_URI]);
 const YOUTUBE_SCOPES = ['openid','email','https://www.googleapis.com/auth/youtube.upload','https://www.googleapis.com/auth/youtube.readonly'];
 const GOOGLE_USERINFO = 'https://openidconnect.googleapis.com/v1/userinfo';
 const ADMIN_ORIGIN = 'https://admin.ekodi.kr';
@@ -82,8 +82,8 @@ function primarySharedDriveId(env) { return String(env.STORAGE_PRIMARY_SHARED_DR
 function primarySharedDriveName(env) { return String(env.STORAGE_PRIMARY_SHARED_DRIVE_NAME || 'EKODI').trim() || 'EKODI'; }
 function googleClientId(env) { return String(env.GOOGLE_DRIVE_CLIENT_ID || env.GOOGLE_CLIENT_ID || '').trim(); }
 function googleOAuthRedirectUri(env) {
-  const configured = String(env.GOOGLE_DRIVE_OAUTH_REDIRECT_URI || REDIRECT_URI).trim();
-  return ALLOWED_GOOGLE_REDIRECT_URIS.has(configured) ? configured : REDIRECT_URI;
+  const configured = String(env.GOOGLE_DRIVE_OAUTH_REDIRECT_URI || LEGACY_REDIRECT_URI).trim();
+  return ALLOWED_GOOGLE_REDIRECT_URIS.has(configured) ? configured : LEGACY_REDIRECT_URI;
 }
 function stateGoogleOAuthRedirectUri(payload, env) {
   const pinned = String(payload?.redirectUri || '').trim();
@@ -537,7 +537,7 @@ export async function handleGoogleDriveStorageControl(request, env) {
   }
   if (url.pathname === `${BASE}/status` && request.method === 'GET') {
     const routes = await env.DB.prepare('SELECT service_key,folder_key,folder_name,folder_id,connection_role,updated_at FROM storage_routes ORDER BY folder_name').all();
-    return json({schemaVersion:1,configured:ready(env),primaryDomains:primaryDomains(env),primarySharedDrive:{id:primarySharedDriveId(env),name:primarySharedDriveName(env)},redirectUri:googleOAuthRedirectUri(env),canonicalRedirectUri:CANONICAL_REDIRECT_URI,legacyRedirectUri:REDIRECT_URI,connections:await connectionRows(env),routes:routes.results || [],policy:{primary:'Google Workspace Shared Drive EKODI',secondary:'optional Google accounts',webDelivery:'Cloudflare R2 when needed',credentials:'AES-GCM encrypted at rest'}},200,auth.response.headers);
+    return json({schemaVersion:1,configured:ready(env),primaryDomains:primaryDomains(env),primarySharedDrive:{id:primarySharedDriveId(env),name:primarySharedDriveName(env)},redirectUri:googleOAuthRedirectUri(env),canonicalRedirectUri:CANONICAL_REDIRECT_URI,legacyRedirectUri:LEGACY_REDIRECT_URI,connections:await connectionRows(env),routes:routes.results || [],policy:{primary:'Google Workspace Shared Drive EKODI',secondary:'optional Google accounts',webDelivery:'Cloudflare R2 when needed',credentials:'AES-GCM encrypted at rest'}},200,auth.response.headers);
   }
   if (url.pathname === `${BASE}/oauth/start` && request.method === 'POST') {
     if (!ready(env)) return json({error:'Google Drive OAuth Secret 구성이 필요합니다.',code:'GOOGLE_DRIVE_NOT_CONFIGURED'},503,auth.response.headers);
