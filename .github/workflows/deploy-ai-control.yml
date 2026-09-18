@@ -421,6 +421,26 @@ jobs:
           NODE
           trap 'rm -f /tmp/ai-control-secrets.json' EXIT
           node scripts/guarded-worker-release.mjs --manifest deploy/manifests/ai-control.worker.json --secrets-file /tmp/ai-control-secrets.json
+      - name: Record official provider secret inventory
+        id: official_provider_secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+          names=$(npx --yes wrangler@${WRANGLER_VERSION} secret list --config wrangler.ai.release.toml 2>/dev/null || true)
+          has_secret() { printf '%s' "$names" | grep -Fq "$1"; }
+          gemini=false; openai=false; anthropic=false
+          if has_secret 'GEMINI_API_KEY' || has_secret 'GOOGLE_AI_API_KEY'; then gemini=true; fi
+          if has_secret 'OPENAI_API_KEY'; then openai=true; fi
+          if has_secret 'ANTHROPIC_API_KEY'; then anthropic=true; fi
+          count=0
+          [ "$gemini" = true ] && count=$((count + 1))
+          [ "$openai" = true ] && count=$((count + 1))
+          [ "$anthropic" = true ] && count=$((count + 1))
+          echo "count=$count" >> "$GITHUB_OUTPUT"
+          echo "gemini=$gemini" >> "$GITHUB_OUTPUT"
+          echo "openai=$openai" >> "$GITHUB_OUTPUT"
+          echo "anthropic=$anthropic" >> "$GITHUB_OUTPUT"
+          echo "Official AI provider secret inventory: configured=$count gemini=$gemini openai=$openai anthropic=$anthropic. Secret values were not read or printed." >> "$GITHUB_STEP_SUMMARY"
       - name: Record governed recovery and artifact identity
         shell: bash
         env:
