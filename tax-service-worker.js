@@ -1,5 +1,6 @@
 import authWorker from './auth-worker.js';
 import freeFirstWorker from './tax-invoice-free-first-worker.js';
+import taxNoticeIntakeService from './tax-notice-intake-service.js';
 
 const ALLOWED_ORIGINS = new Set([
   'https://ekodi.kr',
@@ -280,6 +281,10 @@ export default {
     if (request.method === 'OPTIONS') return new Response(null, { status:204, headers:corsHeaders(origin) });
     if (!env.DB) return json({ error:'D1 데이터베이스 연결이 없습니다.' }, 503, null, origin);
     const url = new URL(request.url);
+
+    if (url.pathname.startsWith('/api/finance/tax-invoices/intake/')) {
+      return taxNoticeIntakeService.fetch(request, env, ctx);
+    }
 
     if (request.method === 'GET' && url.pathname === '/api/finance/tax-health') {
       const response = await delegate(request, env, ctx, { method:'GET' });
