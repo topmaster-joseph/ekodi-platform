@@ -61,7 +61,7 @@ jobs:
           grep -Fq '/auth-bootstrap.js?v=20260918-csp-bootstrap-1' auth-site/index.html
           grep -Fq '/auth-entry.js?v=20260918-csp-bootstrap-1' auth-site/index.html
           grep -Fq "./auth-router.js?v=20260918-csp-bootstrap-1" auth-site/auth-entry.js
-          grep -Fq "admin-auth.js?v=20260909-origin-bridge-1" auth-site/auth-router.js
+          grep -Fq "admin-auth.js?v=20260918-canonical-origin-2" auth-site/auth-router.js
           grep -Fq "author-auth.js?v=20260816-author-ai-1" auth-site/auth-router.js
           grep -Fq "business-auth.js?v=20260826-free-fallback-1" auth-site/auth-router.js
           grep -Fq "marketing-auth-hotfix.js?v=20260824-return-origin-1" auth-site/auth-router.js
@@ -92,6 +92,8 @@ jobs:
           fi
           grep -Fq 'parts.slice(0,2)' auth-site/marketing-onboarding.js
           grep -Fq "return await import('./marketing-auth-hotfix.js')" auth-site/auth-router.js
+          grep -Fq '483044030492-ej1ie2boa4e01lglm75e9q1r6m25pkp2.apps.googleusercontent.com' supabase/functions/identity-api/index.ts
+          ! grep -Fq '483044030492-4e6231l5glchhtniroinvuq3ev6n5mv5.apps.googleusercontent.com' supabase/functions/identity-api/index.ts
       - name: Probe central identity challenge contract
         shell: bash
         env:
@@ -99,7 +101,6 @@ jobs:
           PUBLISHABLE_KEY: sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_
         run: |
           set -euo pipefail
-          code=$(curl -sS -o /tmp/challenge.json -w '%{http_code}' -X POST "$IDENTITY_URL" -H 'Origin: https://auth.ekodi.kr' -H "apikey: $PUBLISHABLE_KEY")
+          code=$(curl -sS -o /tmp/challenge.json -w '%{http_code}' -X POST "$IDENTITY_URL" -H 'Origin: https://ekodi.kr' -H "apikey: $PUBLISHABLE_KEY")
           test "$code" = '201'
           grep -Eq '"nonce":"[a-f0-9]{48}"' /tmp/challenge.json
-          grep -Fq '483044030492-4e6231l5glchhtniroinvuq3ev6n5mv5.apps.googleusercontent.com' /tmp/challenge.json
