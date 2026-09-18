@@ -8,6 +8,11 @@ on:
     branches: [main]
     paths:
       - 'ai-provider-control.js'
+      - 'ai-control-provider-router.js'
+      - 'openai-provider-adapter.js'
+      - 'anthropic-provider-adapter.js'
+      - 'gemini-orchestrator-provider-adapter.js'
+      - 'test/ai-control-provider-router.test.mjs'
       - 'ai-free-quota.js'
       - 'ekodi-ai-provider-registry.js'
       - 'external-ai-module-gateway.js'
@@ -39,12 +44,14 @@ jobs:
         run: |
           set -euo pipefail
           node --check ai-provider-control.js
+          node --check ai-control-provider-router.js
+          node --check gemini-orchestrator-provider-adapter.js
           node --check ai-free-quota.js
           node --check ekodi-ai-provider-registry.js
           node --check external-ai-module-gateway.js
           node --check admin-provider-control.js
           node scripts/validate-additive-migrations.mjs migrations
-          node --test test/ai-provider-control.test.mjs test/ai-free-quota.test.mjs test/ai-provider-registry.test.mjs test/ai-provider-pool-activation.test.mjs test/my-docs-ai.test.mjs
+          node --test test/ai-provider-control.test.mjs test/ai-control-provider-router.test.mjs test/ai-free-quota.test.mjs test/ai-provider-registry.test.mjs test/ai-provider-pool-activation.test.mjs test/my-docs-ai.test.mjs
           ! grep -Fq 'OPENAI_API_KEY =' wrangler.api.toml
           ! grep -Fq 'GEMINI_API_KEY =' wrangler.api.toml
           ! grep -Fq 'ANTHROPIC_API_KEY =' wrangler.api.toml
