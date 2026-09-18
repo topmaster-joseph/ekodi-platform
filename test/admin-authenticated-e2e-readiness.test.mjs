@@ -30,3 +30,14 @@ test('authenticated Admin E2E boots the canonical path-hosted Admin surface', as
   assert.match(worker, /isCanonicalAdminUrl/);
   assert.doesNotMatch(worker, /https:\/\/admin\.ekodi\.kr/);
 });
+
+
+test('authenticated Admin E2E gives demand-loaded navigation a bounded production readiness window', async () => {
+  const worker = await read('scripts/admin-authenticated-e2e-menu-worker.mjs');
+  assert.match(worker, /const interactionReadyTimeoutMs = 15_000/);
+  assert.match(worker, /locator\.waitFor\(\{ state: 'visible', timeout: interactionReadyTimeoutMs \}\)/);
+  assert.match(worker, /locator\.click\(\{ force: true, noWaitAfter: true, timeout: interactionReadyTimeoutMs \}\)/);
+  assert.match(worker, /global\.waitFor\(\{ state: 'visible', timeout: interactionReadyTimeoutMs \}\)/);
+  assert.match(worker, /group, \{ timeout: interactionReadyTimeoutMs \}\)/);
+  assert.ok((worker.match(/tab\.waitFor\(\{ state: 'visible', timeout: interactionReadyTimeoutMs \}\)/g) || []).length >= 2);
+});
