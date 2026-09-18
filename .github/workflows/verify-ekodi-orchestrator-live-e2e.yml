@@ -250,15 +250,17 @@ jobs:
           {
             echo '## EKODI Orchestrator live production proof'
             echo
-            jq -r '"- Task ID: \(.taskId)
-- Terminal state: \(.terminalState)
-- External test client: \(.externalTestClient)
-- Actual providers: \(.actualProviders | join(", "))
-- Provider diversity: \(.providerDiversity)
-- Sentinel independent: \(.sentinelIndependent)
-- Durable D1 run evidence: \(.durableLedgerVerified)
-- Completed at: \(.completedAt)
-- Production mutation performed by task: \(.productionMutationPerformed)"' "$RUNNER_TEMP/ekodi-orchestrator-proof.json"
+            jq -r '[
+              "- Task ID: " + (.taskId | tostring),
+              "- Terminal state: " + (.terminalState | tostring),
+              "- External test client: " + (.externalTestClient | tostring),
+              "- Actual providers: " + (.actualProviders | join(", ")),
+              "- Provider diversity: " + (.providerDiversity | tostring),
+              "- Sentinel independent: " + (.sentinelIndependent | tostring),
+              "- Durable D1 run evidence: " + (.durableLedgerVerified | tostring),
+              "- Completed at: " + (.completedAt | tostring),
+              "- Production mutation performed by task: " + (.productionMutationPerformed | tostring)
+            ] | join("\\n")' "$RUNNER_TEMP/ekodi-orchestrator-proof.json"
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload sanitized production proof
