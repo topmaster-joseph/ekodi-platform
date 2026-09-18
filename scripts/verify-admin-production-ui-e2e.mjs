@@ -181,6 +181,33 @@ for (const [id, group] of menus) {
 
   await dispatchClick(tab);
   await page.waitForFunction(section => window.EKODIAdminPanels?.current?.() === section, id, { timeout: 12000 });
+
+  if (id === 'command-home') {
+    await page.waitForFunction(() => {
+      const body = document.body;
+      const panel = document.querySelector('#ekodiAssistPanel');
+      const dock = document.querySelector('#ekodiAssistDock');
+      const tab = document.querySelector('button.admin-context-tab[data-admin-context-section="command-home"]');
+      if (!body?.classList.contains('admin-command-home') || !body.classList.contains('admin-command-active')) return false;
+      if (!dock || !panel || panel.hidden) return false;
+      const style = getComputedStyle(panel);
+      const rect = panel.getBoundingClientRect();
+      const text = String(panel.innerText || panel.textContent || '').replace(/\s+/g, ' ').trim();
+      const selected = tab?.getAttribute('aria-selected') === 'true' || tab?.classList.contains('active');
+      return selected && text.length > 0 && style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 0 && rect.height > 0;
+    }, null, { timeout: 12000 });
+    const command = await page.evaluate(() => {
+      const panel = document.querySelector('#ekodiAssistPanel');
+      const rect = panel?.getBoundingClientRect();
+      const text = String(panel?.innerText || panel?.textContent || '').replace(/\s+/g, ' ').trim();
+      return { textLength:text.length, width:rect?.width || 0, height:rect?.height || 0, pathname:location.pathname };
+    });
+    if (command.pathname !== '/admin/' || command.textLength < 1 || command.width < 1 || command.height < 1) throw new Error(`command-home did not render the root workbench: ${JSON.stringify(command)}`);
+    results.push({ id, group, kind:'command-workbench', ok:true, detail:`ekodiAssistPanel:${command.textLength}` });
+    console.log(`[PROD-E2E] ${id}: ok command-workbench:${command.textLength}`);
+    continue;
+  }
+
   await page.waitForFunction(section => {
     const panels = [...document.querySelectorAll('.content [data-panel]')].filter(panel => String(panel.dataset.panel || '').split(/\s+/).includes(section));
     return panels.some(panel => !panel.hidden && !panel.classList.contains('hidden-panel'));
