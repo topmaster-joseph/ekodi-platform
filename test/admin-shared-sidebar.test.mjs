@@ -136,14 +136,13 @@ test('shared menu ES modules are published and cache-busted with the admin relea
 });
 
 
-test('active global axis expands every submenu directly inside the fixed sidebar', () => {
-  assert.ok(sidebar.includes("DETAILS_CLASS = 'admin-global-details'"));
-  assert.ok(sidebar.includes('function renderSidebarDetails(nav, globals, group, section, locale)'));
-  assert.ok(sidebar.includes('data-admin-detail-section'));
-  assert.ok(sidebar.includes('const ids = availableIds(nav, group)'));
-  assert.ok(sidebar.includes('const nodes = ids.map(id =>'));
-  assert.ok(sidebar.includes('renderSidebarDetails(nav, globals, group, section, locale)'));
-  assert.ok(sidebar.includes('activateSection(nav, detail.dataset.adminDetailSection)'));
-  assert.ok(!sidebar.includes("document.createElement('details')"));
-  assert.ok(!sidebar.includes('getAdminMenuCategoryLabel(category, locale)'));
+test('fixed sidebar shows only five global axes while top context groups related features', () => {
+  assert.doesNotMatch(sidebar, /DETAILS_CLASS|data-admin-detail-section|admin-detail-item/);
+  assert.match(sidebar, /adminMenuCategoryOrder/);
+  assert.match(sidebar, /getAdminMenuCategory\(id\)/);
+  assert.match(sidebar, /getAdminMenuCategoryLabel\(category, locale\)/);
+  assert.match(sidebar, /admin-context-cluster/);
+  assert.match(sidebar, /data-admin-context-category/);
+  assert.match(sidebar, /workbench-tabs-v3-simple/);
+  assert.match(sidebar, /for \(const group of ADMIN_MENU_GROUPS\)/);
 });
