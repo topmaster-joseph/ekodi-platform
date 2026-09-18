@@ -19,7 +19,7 @@ async function withFetch({role='super_admin',elevated=false,user=false}={},fn){
 }
 test('admin control rejects missing bearer token with the protected PF auth contract',async()=>{
   const DB=fakeDb();
-  const response=await worker.fetch(new Request('https://personal-finance-api.ekodi.kr/api/admin/personal-finance/control',{headers:{origin:'https://ekodi.kr'}}),env(DB));
+  const response=await worker.fetch(new Request('https://ekodi.kr/api/admin/personal-finance/control',{headers:{origin:'https://ekodi.kr'}}),env(DB));
   assert.equal(response.status,401);
   const data=await response.json();
   assert.equal(data.code,'PF_ADMIN_AUTH_REQUIRED');
