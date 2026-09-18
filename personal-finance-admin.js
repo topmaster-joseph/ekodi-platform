@@ -1,7 +1,7 @@
 (()=>{
 'use strict';
 const SECTION='personal-finance';
-const API='https://personal-finance-api.ekodi.kr/api/admin/personal-finance/control';
+const API='/api/control/personal-finance';
 const TOKEN_KEY='ekodi-auth-token';
 let state=null,busy=false;
 const $=selector=>document.querySelector(selector);
@@ -41,6 +41,7 @@ async function save(event){
 async function refresh(force=false){
   const host=$('#personalFinanceAdminPanel');if(!host||busy)return;
   busy=true;if(force)host.dataset.refreshing='true';
+  if(!state)host.innerHTML='<div class="pf-admin-status"><strong>개인재무 운영 상태를 확인하고 있습니다.</strong><p>보호된 서비스 연결과 운영정책을 확인합니다.</p></div>';
   try{state=await request('GET');render()}catch(error){host.innerHTML=`<div class="pf-admin-error"><strong>개인재무 운영 상태를 불러오지 못했습니다.</strong><p>${esc(error.message)}</p><button id="pfAdminRetry" class="secondary" type="button">다시 확인</button></div>`;$('#pfAdminRetry')?.addEventListener('click',()=>refresh(true))}finally{busy=false;delete host.dataset.refreshing}
 }
 function activate(button,section){
@@ -60,5 +61,6 @@ function install(){
   if(location.hash==='#personal-finance')queueMicrotask(()=>activate(button,section));
 }
 install();window.addEventListener('ekodi-admin-ready',install);window.addEventListener('ekodi-admin-locale-changed',()=>{if(state&&$('#personalFinanceAdminPanel:not(.hidden-panel)'))render()});
+window.addEventListener('ekodi-admin-section-changed',event=>{if(event.detail?.section!==SECTION)return;const host=$('#personalFinanceAdminPanel');if(host&&!host.hidden&&!host.classList.contains('hidden-panel'))void refresh()});
 window.EKODIPersonalFinanceAdmin=Object.freeze({refresh});
 })();
