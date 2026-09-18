@@ -224,7 +224,7 @@ jobs:
     secrets: inherit
 
   deploy:
-    needs: reliability_gate
+    needs: [staging_gate, reliability_gate]
     runs-on: ubuntu-latest
     timeout-minutes: 22
     env:
@@ -237,6 +237,15 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
+
+      - name: Resolve reproducible build timestamp
+        shell: bash
+        run: |
+          set -euo pipefail
+          source_date_epoch="$(git show -s --format=%ct HEAD)"
+          [[ "$source_date_epoch" =~ ^[0-9]+$ ]]
+          echo "SOURCE_DATE_EPOCH=$source_date_epoch" >> "$GITHUB_ENV"
+          echo "Production release build timestamp pinned to source commit epoch: $source_date_epoch"
 
       - name: EKODI AI Orchestration Gate
         run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
@@ -386,6 +395,46 @@ jobs:
           grep -Fq 'position:fixed!important' dist/admin-shell.css
           grep -Fq '.app>main{padding-top:calc(78px + env(safe-area-inset-top,0px))}' dist/admin-shell.css
           grep -Fq -- '--ekodi-home-header-height' dist/index.html
+
+      - name: Enforce staging-to-production artifact continuity
+        id: production_release_artifact
+        shell: bash
+        env:
+          STAGING_RELEASE_DIGEST: ${{ needs.staging_gate.outputs.release_digest }}
+          WRANGLER_VERSION: '4.119.0'
+        run: |
+          set -euo pipefail
+          test -n "$STAGING_RELEASE_DIGEST"
+          rm -rf .ekodi-release-bundle
+          mkdir -p .ekodi-release-bundle artifacts
+          npx --yes wrangler@${WRANGLER_VERSION} versions upload \
+            --config wrangler.site.toml \
+            --dry-run \
+            --outdir .ekodi-release-bundle
+          node scripts/attest-worker-release-artifact.mjs \
+            --bundle .ekodi-release-bundle \
+            --assets dist \
+            --file config=wrangler.site.toml \
+            --file manifest=deploy/manifests/shared-site.worker.json \
+            --output artifacts/shared-site-release-artifact-production.json \
+            --source-sha "$GITHUB_SHA" \
+            --wrangler-version "$WRANGLER_VERSION"
+          actual=$(node -p "JSON.parse(require('fs').readFileSync('artifacts/shared-site-release-artifact-production.json','utf8')).artifactDigest")
+          test "$actual" = "$STAGING_RELEASE_DIGEST" || {
+            echo "::error::Production release artifact diverged from staging: expected=$STAGING_RELEASE_DIGEST actual=$actual"
+            exit 1
+          }
+          echo "digest=$actual" >> "$GITHUB_OUTPUT"
+          echo "Production release artifact matches verified staging digest: $actual"
+
+      - name: Persist production release continuity evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: shared-site-production-release-evidence-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/shared-site-release-artifact-production.json
+          if-no-files-found: warn
+          retention-days: 90
 
       - name: Verify and repair Cloudflare custom-domain attachments
         shell: bash
