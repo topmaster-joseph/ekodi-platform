@@ -167,7 +167,7 @@ async function aiContent(env,product,provider) {
     'JSON만 반환하세요: {"title":"80자 이내","caption":"700자 이내"}',
   ].join('\n');
   try {
-    const result=await buildCoreAiGateway(env).run({
+    const result=await buildCoreAiGateway({ ...env, AI_MULTI_PROVIDER_ENABLED:'true' }).run({
       taskName:'ekodi-mall-active-sales-promotion',
       context:{message,page:{section:'marketing',title:'EKODI Mall active sales promotion',pathname:'/ekodibiz/ekodimall'}},
       requiredCapabilities:['text'],
