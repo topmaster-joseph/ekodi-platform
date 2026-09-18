@@ -112,7 +112,8 @@
         ],
         "expect": [
           "\"enabled\":true",
-          "483044030492-4e6231l5glchhtniroinvuq3ev6n5mv5.apps.googleusercontent.com"
+          "483044030492-ej1ie2boa4e01lglm75e9q1r6m25pkp2.apps.googleusercontent.com",
+          "\"identityOrigin\":\"https://ekodi.kr\""
         ]
       },
       {
