@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 
 const read=path=>fs.readFileSync(new URL(`../${path}`,import.meta.url),'utf8');
 const router=read('auth-site/auth-router.js');
+const bootstrap=read('auth-site/auth-bootstrap.js');
 const auth=read('auth-site/auth.js');
 const client=read('auth-site/client-auth.js');
 const business=read('auth-site/business-auth.js');
@@ -15,7 +16,7 @@ const marketing=read('auth-site/marketing-auth-hotfix.js');
 test('normal user login is a pass-through instead of an auth dashboard stop',()=>{
   assert.doesNotMatch(router,/marketingHomeMode/);
   assert.doesNotMatch(router,/params\.set\('manage','1'\)/);
-  assert.match(router,/dataset\.seamlessSso/);
+  assert.match(bootstrap,/dataset\.seamlessSso/);
   assert.match(router,/site==='admin'/);
 });
 
