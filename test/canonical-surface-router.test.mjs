@@ -41,6 +41,26 @@ test('My and system paths preserve the internal execution boundary',async()=>{
   assert.equal(response.status,200);assert.equal(control.calls[3].pathname,'/api/control/ai/v8/status');
 });
 
+test('planned public services are owned by canonical apex paths without legacy-host fallthrough',async()=>{
+  const planned=new Map([
+    ['/shop','쇼핑플랫폼'],['/pay','EKODI Pay'],['/live','EKODI Live'],['/cloud','EKODI Cloud'],['/media','에코디미디어'],
+  ]);
+  for(const [path,title] of planned){
+    const response=await routeCanonicalSurface(new Request(`https://ekodi.kr${path}`),{});
+    assert.equal(response.status,200,path);assert.equal(response.headers.get('x-ekodi-canonical-path'),path);
+    assert.match(await response.text(),new RegExp(title));
+  }
+});
+
+test('public service registries expose only ekodi.kr path URLs',async()=>{
+  const ecosystem=await fs.promises.readFile(new URL('../config/ecosystem-services.json',import.meta.url),'utf8');
+  const manifest=await fs.promises.readFile(new URL('../ekodi-service-manifest.js',import.meta.url),'utf8');
+  assert.doesNotMatch(ecosystem,/https:\/\/[a-z0-9.-]+\.ekodi\.kr\/?/i);
+  assert.doesNotMatch(manifest,/https:\/\/[a-z0-9.-]+\.ekodi\.kr\/?/i);
+  assert.match(ecosystem,/https:\/\/ekodi\.kr\/education/);
+  assert.match(manifest,/https:\/\/ekodi\.kr\/education/);
+});
+
 test('Shell canonical path uses its service binding and strips the apex prefix',async()=>{
   const shell=binding(JSON.stringify({ok:true,service:'ekodi-shell'}),'application/json');
   const response=await routeCanonicalSurface(new Request('https://ekodi.kr/shell/manifest.json?release=1'),{SHELL:shell});
