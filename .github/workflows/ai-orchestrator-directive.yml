@@ -1,0 +1,41 @@
+# EKODI AI Orchestrator Directive CI guardrail v1
+name: AI Orchestrator Directive
+
+on:
+  pull_request:
+    paths:
+      - 'config/ai-orchestrator-operating-directive.json'
+      - 'ai-orchestrator-directive.js'
+      - 'ekodi-command-plane.js'
+      - 'ai-command-control.js'
+      - 'scripts/validate-ai-orchestrator-directive.mjs'
+      - 'test/ai-orchestrator-directive.test.mjs'
+      - 'package.json'
+  push:
+    branches: [main]
+    paths:
+      - 'config/ai-orchestrator-operating-directive.json'
+      - 'ai-orchestrator-directive.js'
+      - 'ekodi-command-plane.js'
+      - 'ai-command-control.js'
+      - 'scripts/validate-ai-orchestrator-directive.mjs'
+      - 'test/ai-orchestrator-directive.test.mjs'
+      - 'package.json'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          package-manager-cache: true
+      - run: npm ci
+      - run: npm run validate:orchestrator-directive
+      - run: npm run validate:mission
+      - run: npm run validate:ai-resilience
