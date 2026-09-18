@@ -24,7 +24,7 @@ test('device admin prioritizes status and attention before setup controls at run
   assert.match(source, /className = 'device-setup-tools'/);
   assert.match(source, /확인 필요 \$\{issues\.length\}대/);
   assert.match(source, /세부 관리 · 고급 작업/);
-  assert.match(source, /LOCAL COMPUTERS · DEVICES/);
+  assert.match(source, /REMOTE WORK & DEVICE MANAGEMENT · LOCAL COMPUTERS/);
 });
 
 test('shared admin design engine carries the information hierarchy across admin surfaces', async () => {
