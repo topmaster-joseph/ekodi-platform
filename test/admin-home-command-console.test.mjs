@@ -50,7 +50,7 @@ test('admin root is a command-only workspace while Campus remains a child route'
   assert.match(dock,/addSessionMessage\('assistant',reply/);
   assert.match(bootstrap,/aria-label="에코디와 대화하기"/);
   assert.match(bootstrap,/aria-label="새 대화"/);
-  assert.match(bootstrap,/placeholder="에코디에게 이야기해보세요"/);
+  assert.match(bootstrap,/placeholder="에코디에게 말해보세요"/);
   assert.match(dock,/aria-label="에코디와 대화하기"/);
   assert.match(dock,/data-ekodi-main-conversation="true"/);
   assert.match(dock,/aria-live="polite"/);
