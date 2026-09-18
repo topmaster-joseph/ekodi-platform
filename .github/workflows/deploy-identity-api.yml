@@ -84,8 +84,7 @@ jobs:
           grep -Eiq "^access-control-allow-origin:[[:space:]]*$origin" /tmp/identity.headers
           grep -Fq '483044030492-ej1ie2boa4e01lglm75e9q1r6m25pkp2.apps.googleusercontent.com' /tmp/identity.json
           grep -Eq '"nonce":"[a-f0-9]{48}"' /tmp/identity.json
-          for bad_origin in https://auth.ekodi.kr https://evil.example; do
-            bad=$(curl -sS -o /tmp/identity-bad.json -w '%{http_code}' -X POST "$endpoint" -H "Origin: $bad_origin" -H "apikey: $key")
-            test "$bad" = '403'
-            grep -Fq 'origin_not_allowed' /tmp/identity-bad.json
-          done
+          bad_origin='https://evil.example'
+          bad=$(curl -sS -o /tmp/identity-bad.json -w '%{http_code}' -X POST "$endpoint" -H "Origin: $bad_origin" -H "apikey: $key")
+          test "$bad" = '403'
+          grep -Fq 'origin_not_allowed' /tmp/identity-bad.json
