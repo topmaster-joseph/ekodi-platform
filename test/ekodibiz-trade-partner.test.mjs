@@ -101,8 +101,10 @@ test('trade admin uses shared two-level UI and canonical apex auth',async()=>{
   assert.ok(workspaceAdmin.includes("tradeAdminMatch=clean.match(/^\\/[^/]+\\/trade\\/admin"));
   assert.ok(workspaceAdmin.includes("['publishing','marketing','channels']"));
   assert.ok(workspaceAdmin.includes('/workspace-trade-admin.js?v=20260909-admin-ui-v8'));
-  assert.ok(tradeAdmin.includes("b.dataset.adminGroup=key"));
-  assert.ok(tradeAdmin.includes('renderSecondaryNav(key)'));
+  assert.ok(tradeAdmin.includes("a.dataset.adminGroup=key"));
+  assert.ok(tradeAdmin.includes("a.href=sectionHref(key)"));
+  assert.ok(tradeAdmin.includes("[['overview','홈'],['companies','거래처'],['publishing','채널 · 게시'],['access','권한']]"));
+  assert.ok(tradeAdmin.includes('renderSecondaryNav();'));
   assert.ok(tradeAdmin.includes('id="tradeAdminSearch"'));
   assert.ok(tradeAdmin.includes('id="roles"'));
   assert.ok(tradeAdmin.includes("new URL('/auth/',location.origin)"));
