@@ -67,11 +67,11 @@
     "primaryAxisLabelsKo": [
       "홈",
       "운영",
-      "공간",
+      "조직·고객",
       "서비스",
       "시스템"
     ],
-    "layout": "fixed-primary-sidebar + contextual-top-tabs + scrolling-workspace",
+    "layout": "fixed-primary-sidebar + progressive-left-details + scrolling-workspace + bottom-command-composer",
     "desktopPrimarySidebarScroll": false,
     "workspaceScroll": true,
     "pageTopOffsetPx": 0,
@@ -104,13 +104,6 @@
         "scrollOwner": false
       },
       {
-        "id": "context-navigation",
-        "placement": "workspace-top",
-        "owner": "active-primary-axis",
-        "persistent": "within-workspace",
-        "scrollOwner": false
-      },
-      {
         "id": "workspace-header",
         "placement": "content-top",
         "owner": "active-service",
@@ -119,10 +112,17 @@
       },
       {
         "id": "workspace",
-        "placement": "center",
+        "placement": "center-right",
         "owner": "active-service",
         "persistent": false,
         "scrollOwner": true
+      },
+      {
+        "id": "command-composer",
+        "placement": "workspace-bottom",
+        "owner": "ekodi-assist",
+        "persistent": true,
+        "scrollOwner": false
       }
     ],
     "navigationLevels": [
@@ -135,8 +135,8 @@
       {
         "level": 2,
         "owner": "context",
-        "surface": "top-tabs",
-        "rule": "show-only-the-active-axis-children"
+        "surface": "active-axis-left-details",
+        "rule": "show-core-children-first-and-progressively-disclose-the-rest"
       },
       {
         "level": 3,
@@ -149,15 +149,16 @@
       "body": "locked",
       "app": "locked",
       "primarySidebar": "locked",
-      "contextNavigation": "sticky-not-scroll-owner",
+      "contextNavigation": "not-a-separate-scroll-owner",
       "workspace": "single-vertical-scroll-owner",
       "nestedScroll": "tables-and-explicit-data-views-only"
     },
     "pageAnatomy": [
-      "context navigation",
+      "left navigation: active axis + progressive child actions",
       "workspace header: title + purpose + status + primary actions",
       "optional KPI/status summary",
       "primary workbench",
+      "persistent bottom EKODI command composer",
       "detail drawer or modal only when needed"
     ],
     "densityProfiles": {
@@ -181,7 +182,7 @@
     },
     "aiInterface": {
       "role": "contextual coworker",
-      "default": "on-demand",
+      "default": "persistent-bottom-composer",
       "persistentFloating": false,
       "contentOverlapForbidden": true,
       "humanPathRequired": true,
