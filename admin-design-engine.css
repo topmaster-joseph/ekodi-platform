@@ -123,3 +123,29 @@ body.admin-compact.ekodi-admin-design-engine .autonomous-health-actions{
   body.admin-compact.ekodi-admin-design-engine [data-ekodian-character],
   body.admin-compact.ekodi-admin-design-engine [data-ekodian-character] *{animation:none!important;transition:none!important}
 }
+
+/* EKODI Admin information hierarchy v3 · shared platform/tenant/service admin grammar */
+body.admin-compact.ekodi-admin-design-engine .content{width:100%!important;max-width:1600px!important;margin-inline:auto!important;padding:22px 26px 56px!important}
+body.admin-compact.ekodi-admin-design-engine .content>[data-panel]{margin-top:0!important}
+body.admin-compact.ekodi-admin-design-engine .content>[data-panel]>.section-head:first-child,
+body.admin-compact.ekodi-admin-design-engine .content>[data-panel]>.device-panel-head:first-child{margin-bottom:16px!important}
+body.admin-compact.ekodi-admin-design-engine .section,
+body.admin-compact.ekodi-admin-design-engine .architecture{border-color:#d9e2ec!important;border-radius:12px!important;background:#fff!important;box-shadow:none!important}
+body.admin-compact.ekodi-admin-design-engine .section-head{align-items:flex-start!important;gap:18px!important}
+body.admin-compact.ekodi-admin-design-engine .section-head h2,
+body.admin-compact.ekodi-admin-design-engine .content [data-panel] h2{font-size:26px!important;line-height:1.28!important;letter-spacing:-.025em!important}
+body.admin-compact.ekodi-admin-design-engine .content [data-panel] h3{font-size:17px!important;line-height:1.35!important}
+body.admin-compact.ekodi-admin-design-engine .content [data-panel] p{line-height:1.65!important}
+body.admin-compact.ekodi-admin-design-engine .content :is(.metrics,.finance-status){grid-template-columns:repeat(auto-fit,minmax(165px,1fr))!important;gap:10px!important}
+body.admin-compact.ekodi-admin-design-engine .content :is(.metrics,.finance-status)>article{border:1px solid #d9e2ec!important;border-radius:10px!important;background:#fff!important;box-shadow:none!important}
+body.admin-compact.ekodi-admin-design-engine .content .cards{grid-template-columns:repeat(auto-fit,minmax(240px,1fr))!important;gap:10px!important}
+body.admin-compact.ekodi-admin-design-engine .content .module{min-height:118px!important;border:1px solid #d9e2ec!important;border-radius:10px!important;background:#fff!important;box-shadow:none!important}
+body.admin-compact.ekodi-admin-design-engine .content .module:hover{border-color:#b7d4f6!important;background:#f8fbff!important}
+body.admin-compact.ekodi-admin-design-engine .content [data-panel] :is(button,.button,.primary,.secondary,.ghost){min-height:40px}
+body.admin-compact.ekodi-admin-design-engine .content [data-panel] details>summary{min-height:42px}
+body.admin-compact.ekodi-admin-design-engine .content [data-panel] table{border-collapse:separate!important;border-spacing:0!important}
+body.admin-compact.ekodi-admin-design-engine .content [data-panel] thead th{position:sticky;top:0;z-index:2}
+body.admin-compact.ekodi-admin-design-engine .content [data-panel] :is(.finance-table-wrap,.table-wrap,[class*="-table-wrap"]){scrollbar-width:thin}
+body.admin-compact.ekodi-admin-design-engine .content [data-panel] :is(.error,.operations-error){overflow-wrap:anywhere}
+@media(max-width:900px){body.admin-compact.ekodi-admin-design-engine .content{padding:16px 16px 42px!important}body.admin-compact.ekodi-admin-design-engine .section-head{flex-direction:column!important}body.admin-compact.ekodi-admin-design-engine .section-head>p{text-align:left!important}}
+@media(max-width:620px){body.admin-compact.ekodi-admin-design-engine .content{padding:12px 10px 36px!important}body.admin-compact.ekodi-admin-design-engine .section,body.admin-compact.ekodi-admin-design-engine .architecture{padding:15px!important}body.admin-compact.ekodi-admin-design-engine .section-head h2,body.admin-compact.ekodi-admin-design-engine .content [data-panel] h2{font-size:22px!important}body.admin-compact.ekodi-admin-design-engine .content :is(.metrics,.finance-status){grid-template-columns:repeat(2,minmax(0,1fr))!important}body.admin-compact.ekodi-admin-design-engine .content .cards{grid-template-columns:1fr!important}}
