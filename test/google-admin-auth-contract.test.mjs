@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
 const read = path => readFile(new URL(path, import.meta.url), 'utf8');
-const [backend, frontend, css, entry, build, site, wrangler, migration, controlWorkflow, developmentConfig] = await Promise.all([
+const [backend, frontend, css, entry, build, site, wrangler, migration, controlWorkflow, developmentWorkflow, developmentConfig, adminAuth] = await Promise.all([
   read('../admin-google-auth.js'),
   read('../google-admin-auth.js'),
   read('../google-admin-auth.css'),
@@ -13,7 +13,9 @@ const [backend, frontend, css, entry, build, site, wrangler, migration, controlW
   read('../wrangler.api.toml'),
   read('../migrations/0006_admin_google_auth.sql'),
   read('../.github/workflows/deploy-control-api.yml'),
+  read('../.github/workflows/deploy-development.yml'),
   read('../wrangler.development.jsonc'),
+  read('../auth-site/admin-auth.js'),
 ]);
 
 test('Google administrator API uses exact allowlist and Google subject pinning', () => {
@@ -110,5 +112,12 @@ test('DEV/STAGING/PROD Google clients remain isolated in active environment conf
   assert.equal(development.vars.ENVIRONMENT, 'development');
   assert.equal(development.vars.GOOGLE_CLIENT_ID, '483044030492-qvk96u0rvptsshat0pi8g522puq9ju16.apps.googleusercontent.com');
   assert.equal(development.vars.GOOGLE_IDENTITY_ORIGIN, 'https://ekodi-platform-development.ekodi-development.workers.dev');
-  assert.doesNotMatch(wrangler + staging + developmentConfig, /4e6231l5glchhtniroinvuq3ev6n5mv5/);
+  assert.ok(development.services?.some(service => service.binding === 'CONTROL_API' && service.service === 'ekodi-auth-api-development'));
+  assert.match(developmentWorkflow, /name = "ekodi-auth-api-development"/);
+  assert.match(developmentWorkflow, /database_name = "ekodi-auth-development"/);
+  assert.match(developmentWorkflow, /GOOGLE_CLIENT_ID = "483044030492-qvk96u0rvptsshat0pi8g522puq9ju16\.apps\.googleusercontent\.com"/);
+  assert.match(developmentWorkflow, /GOOGLE_IDENTITY_ORIGIN = "https:\/\/ekodi-platform-development\.ekodi-development\.workers\.dev"/);
+  assert.match(adminAuth, /origin==='https:\/\/ekodi-platform-development\.ekodi-development\.workers\.dev'/);
+  assert.match(adminAuth, /return\{environment:'development',apiOrigin:origin,authOrigin:origin\}/);
+  assert.doesNotMatch(wrangler + staging + developmentConfig + developmentWorkflow, /4e6231l5glchhtniroinvuq3ev6n5mv5/);
 });
