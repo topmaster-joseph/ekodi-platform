@@ -1,5 +1,5 @@
 {
-  "version": 71,
+  "version": 72,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
@@ -339,7 +339,29 @@
         "expect": [
           "에코디교회 목회자 관리자",
           "church-pastor-admin.js",
-          "church-reports-admin.js"
+          "church-reports-admin.js",
+          "church-partner-news-admin.js",
+          "church-partner-news-admin.css"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: church-pastor-admin",
+          "cache-control: no-store",
+          "x-content-type-options: nosniff"
+        ],
+        "candidateVerify": false,
+        "candidateVerifyReason": "run_worker_first bootstrap requires the promoted static-asset routing table before the Worker can receive this path",
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/ekodichurch/admin/partners",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "에코디교회 목회자 관리자",
+          "church-partner-news-admin.js",
+          "church-partner-news-admin.css"
         ],
         "headerExpect": [
           "x-ekodi-route: church-pastor-admin",
