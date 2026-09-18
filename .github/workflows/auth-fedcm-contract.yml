@@ -92,6 +92,8 @@ jobs:
           fi
           grep -Fq 'parts.slice(0,2)' auth-site/marketing-onboarding.js
           grep -Fq "return await import('./marketing-auth-hotfix.js')" auth-site/auth-router.js
+          grep -Fq '483044030492-ej1ie2boa4e01lglm75e9q1r6m25pkp2.apps.googleusercontent.com' supabase/functions/identity-api/index.ts
+          ! grep -Fq '483044030492-4e6231l5glchhtniroinvuq3ev6n5mv5.apps.googleusercontent.com' supabase/functions/identity-api/index.ts
       - name: Probe central identity challenge contract
         shell: bash
         env:
@@ -102,4 +104,3 @@ jobs:
           code=$(curl -sS -o /tmp/challenge.json -w '%{http_code}' -X POST "$IDENTITY_URL" -H 'Origin: https://ekodi.kr' -H "apikey: $PUBLISHABLE_KEY")
           test "$code" = '201'
           grep -Eq '"nonce":"[a-f0-9]{48}"' /tmp/challenge.json
-          grep -Fq '483044030492-ej1ie2boa4e01lglm75e9q1r6m25pkp2.apps.googleusercontent.com' /tmp/challenge.json
