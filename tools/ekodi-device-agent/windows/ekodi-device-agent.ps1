@@ -5,11 +5,12 @@ param(
   [string]$EnrollmentCode = '',
   [string]$ApiBase = 'https://api.ekodi.kr',
   [string]$Label = '',
-  [string]$ProtocolUrl = ''
+  [string]$ProtocolUrl = '',
+  [string]$ElevationResultPath = ''
 )
 
 $ErrorActionPreference = 'Stop'
-$AgentVersion = '2.2.0'
+$AgentVersion = '2.2.1'
 $Root = Join-Path $env:ProgramData 'EKODI\DeviceAgent'
 $AgentPath = Join-Path $Root 'ekodi-device-agent.ps1'
 $ConfigPath = Join-Path $Root 'config.json'
@@ -41,21 +42,70 @@ function Invoke-TestFailure([string]$Stage) {
   }
 }
 
-function Invoke-ElevatedSelf([string[]]$Arguments) {
-  if (Test-IsAdministrator) { return $null }
+function Test-IsSafeElevationResultPath([string]$Path) {
+  if (-not $Path) { return $false }
   try {
-    $process = Start-Process powershell.exe -Verb RunAs -Wait -PassThru -ArgumentList (@(
-      '-NoProfile','-ExecutionPolicy','Bypass','-File',("`"$PSCommandPath`"")
-    ) + $Arguments)
-    if ($process.ExitCode -ne 0) {
-      Throw-AgentStageError 'EKA-091' 'elevation' "관리자 프로세스가 종료 코드 $($process.ExitCode)로 실패했습니다."
-    }
-    return $process.ExitCode
+    $full = [IO.Path]::GetFullPath($Path)
+    $temp = [IO.Path]::GetFullPath($env:TEMP)
+    if (-not $temp.EndsWith([IO.Path]::DirectorySeparatorChar)) { $temp += [IO.Path]::DirectorySeparatorChar }
+    return $full.StartsWith($temp, [StringComparison]::OrdinalIgnoreCase)
   } catch {
-    Throw-AgentStageError 'EKA-090' 'elevation' 'Windows 관리자 권한 승격에 실패했습니다.' $_
+    return $false
   }
 }
 
+function Write-ElevationFailureRecord([string]$Path, [string]$Message) {
+  if (-not (Test-IsSafeElevationResultPath $Path)) { return }
+  try {
+    @{
+      message = $Message
+      recordedAt = (Get-Date).ToUniversalTime().ToString('o')
+    } | ConvertTo-Json -Compress | Set-Content -LiteralPath $Path -Encoding UTF8
+  } catch { }
+}
+
+function Read-ElevationFailureRecord([string]$Path) {
+  if (-not (Test-IsSafeElevationResultPath $Path) -or -not (Test-Path -LiteralPath $Path)) { return '' }
+  try {
+    $record = Get-Content -LiteralPath $Path -Raw -Encoding UTF8 | ConvertFrom-Json
+    return [string]$record.message
+  } catch {
+    return ''
+  }
+}
+
+function Invoke-ElevatedSelf([string[]]$Arguments) {
+  if (Test-IsAdministrator) { return $null }
+
+  $resultPath = Join-Path $env:TEMP ("ekodi-device-elevation-" + [guid]::NewGuid().ToString('N') + ".json")
+  try {
+    $childArguments = @(
+      '-NoProfile','-ExecutionPolicy','Bypass','-File',("`"$PSCommandPath`"")
+    ) + $Arguments + @('-ElevationResultPath', ("`"$resultPath`""))
+
+    $process = Start-Process powershell.exe -Verb RunAs -Wait -PassThru -ArgumentList $childArguments
+    if ($process.ExitCode -ne 0) {
+      $childMessage = Read-ElevationFailureRecord $resultPath
+      if ($childMessage -and $childMessage.StartsWith('[EKODI:')) {
+        throw $childMessage
+      }
+      $detail = "관리자 프로세스가 종료 코드 $($process.ExitCode)로 실패했습니다."
+      if ($childMessage) { $detail += " :: $childMessage" }
+      Throw-AgentStageError 'EKA-091' 'elevation_child' $detail
+    }
+    return $process.ExitCode
+  } catch {
+    if ($_.Exception.Message.StartsWith('[EKODI:')) { throw }
+    $nativeCode = $null
+    if ($_.Exception.PSObject.Properties.Name -contains 'NativeErrorCode') { $nativeCode = $_.Exception.NativeErrorCode }
+    if ($nativeCode -eq 1223) {
+      Throw-AgentStageError 'EKA-092' 'elevation' 'Windows 관리자 권한 승인이 취소되었습니다.' $_
+    }
+    Throw-AgentStageError 'EKA-090' 'elevation' 'Windows 관리자 권한 승격 자체에 실패했습니다.' $_
+  } finally {
+    Remove-Item -LiteralPath $resultPath -Force -ErrorAction SilentlyContinue
+  }
+}
 function Protect-LocalSecret([string]$Value) {
   $bytes = [Text.Encoding]::UTF8.GetBytes($Value)
   $protected = [Security.Cryptography.ProtectedData]::Protect($bytes, $null, [Security.Cryptography.DataProtectionScope]::LocalMachine)
@@ -1092,12 +1142,17 @@ function Run-Agent {
   }
 }
 
-if ($ProtocolUrl) { Handle-ProtocolUrl $ProtocolUrl; exit }
-if ($RegisterProtocol) { Register-ProtocolOnly; exit }
-if ($Install) { Install-Agent; exit }
-if ($Run) { Run-Agent; exit }
+try {
+  if ($ProtocolUrl) { Handle-ProtocolUrl $ProtocolUrl; exit }
+  if ($RegisterProtocol) { Register-ProtocolOnly; exit }
+  if ($Install) { Install-Agent; exit }
+  if ($Run) { Run-Agent; exit }
 
-Write-Host "EKODI Device Agent $AgentVersion" -ForegroundColor Cyan
-Write-Host '등록: -Install -EnrollmentCode <코드>'
-Write-Host '원클릭 연결 등록: -RegisterProtocol'
-Write-Host '실행: -Run'
+  Write-Host "EKODI Device Agent $AgentVersion" -ForegroundColor Cyan
+  Write-Host '등록: -Install -EnrollmentCode <코드>'
+  Write-Host '원클릭 연결 등록: -RegisterProtocol'
+  Write-Host '실행: -Run'
+} catch {
+  Write-ElevationFailureRecord $ElevationResultPath $_.Exception.Message
+  throw
+}
