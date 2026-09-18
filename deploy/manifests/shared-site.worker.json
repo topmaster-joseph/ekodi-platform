@@ -767,11 +767,28 @@
         "redirect": "manual",
         "expect": [
           "통합 인증센터",
-          "dataset.seamlessSso",
-          "/auth-router.js?v=20260904-direct-login-1"
+          "/auth-bootstrap.js?v=20260918-admin-login-1"
         ],
         "headerExpect": [
           "x-ekodi-route: central-auth"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/auth/auth-bootstrap.js?release=32",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "dataset.seamlessSso",
+          "ekodi-auth-entry:",
+          "/auth-router.js?v=20260904-direct-login-1"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: central-auth-asset",
+          "cache-control: no-store",
+          "x-content-type-options: nosniff"
         ],
         "rollbackVerify": false
       },
