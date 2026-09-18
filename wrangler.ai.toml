@@ -34,7 +34,10 @@ EKODI_GROQ_FREE_DAILY_CALL_LIMIT = "900"
 # Optional legacy/external adapters: AI_WORKER_URL, AI_WORKER_TOKEN
 # Account CLI nodes (Codex/Gemini CLI/Claude Code) keep their account auth only on each node.
 
-[ai]\nbinding = "AI"\n\n[[d1_databases]]
+[ai]
+binding = "AI"
+
+[[d1_databases]]
 binding = "DB"
 database_name = "ekodi-auth"
 database_id = "e38778f1-b059-4fe7-8816-300f3eec6e19"
