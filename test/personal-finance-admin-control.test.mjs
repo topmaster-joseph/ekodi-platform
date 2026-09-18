@@ -77,10 +77,18 @@ test('Admin navigation classifies Personal Finance under the v8 professional-ser
 });
 
 test('Personal Finance admin UI manages policy only and never calls personal ledger endpoints',()=>{
-  const ui=fs.readFileSync(new URL('../personal-finance-admin.js',import.meta.url),'utf8');const build=fs.readFileSync(new URL('../scripts/build.mjs',import.meta.url),'utf8');const workerSource=fs.readFileSync(new URL('../site-worker.js',import.meta.url),'utf8');
-  assert.match(ui,/api\/admin\/personal-finance\/control/);assert.match(ui,/전문서비스 · PERSONAL FINANCE/);assert.match(ui,/개인 금융원장의 내용은 이 화면에서 조회하지 않습니다/);assert.match(ui,/EKODIAdminContext\?\.elevate/);
+  const ui=fs.readFileSync(new URL('../personal-finance-admin.js',import.meta.url),'utf8');const build=fs.readFileSync(new URL('../scripts/build.mjs',import.meta.url),'utf8');const workerSource=fs.readFileSync(new URL('../site-worker.js',import.meta.url),'utf8');const siteConfig=fs.readFileSync(new URL('../wrangler.site.toml',import.meta.url),'utf8');
+  assert.match(ui,/const API='\/api\/control\/personal-finance'/);assert.doesNotMatch(ui,/https:\/\/personal-finance-api\.ekodi\.kr\/api\/admin/);
+  assert.match(ui,/전문서비스 · PERSONAL FINANCE/);assert.match(ui,/개인 금융원장의 내용은 이 화면에서 조회하지 않습니다/);assert.match(ui,/EKODIAdminContext\?\.elevate/);
+  assert.match(ui,/ekodi-admin-section-changed/);assert.match(ui,/event\.detail\?\.section!==SECTION/);assert.match(ui,/개인재무 운영 상태를 확인하고 있습니다/);
   assert.doesNotMatch(ui,/api\/finance\/personal\/(?:accounts|transactions|summary|goals|budgets|recurring)/);
-  assert.match(build,/personal-finance-admin\.css/);assert.match(build,/personal-finance-admin\.js/);assert.match(workerSource,/personal-finance-api\.ekodi\.kr/);assert.match(workerSource,/personal-finance-admin\.js/);
+  assert.match(workerSource,/ADMIN_PERSONAL_FINANCE_PATH = '\/api\/control\/personal-finance'/);
+  assert.match(workerSource,/async function proxyAdminPersonalFinance\(request, env\)/);
+  assert.match(workerSource,/env\.PERSONAL_FINANCE\?\.fetch/);
+  assert.match(workerSource,/target\.pathname = '\/api\/admin\/personal-finance\/control'/);
+  assert.match(workerSource,/X-EKODI-Personal-Finance-Proxy/);
+  assert.match(siteConfig,/binding = "PERSONAL_FINANCE"\s+service = "ekodi-personal-finance-api"/);
+  assert.match(build,/personal-finance-admin\.css/);assert.match(build,/personal-finance-admin\.js/);assert.match(workerSource,/personal-finance-admin\.js/);
 });
 
 
@@ -93,4 +101,12 @@ test('Personal Finance admin assets are asset-first and candidate-only in the gu
     assert.deepEqual(probe.headerExpect,['x-content-type-options: nosniff'],suffix);
     assert.equal(probe.headerExpect.some(value=>value.startsWith('x-ekodi-route:')),false,suffix);
   }
+});
+
+
+test('Personal Finance Admin control proxy stays on the apex and fails closed without its service binding',()=>{
+  const workerSource=fs.readFileSync(new URL('../site-worker.js',import.meta.url),'utf8');
+  assert.match(workerSource,/PERSONAL_FINANCE_BINDING_UNAVAILABLE/);
+  assert.match(workerSource,/url\.pathname === ADMIN_PERSONAL_FINANCE_PATH\) return proxyAdminPersonalFinance\(request, env\)/);
+  assert.match(workerSource,/withHostSecurity\(response, ADMIN_CSP, 'no-store', 'admin-personal-finance-proxy'\)/);
 });
