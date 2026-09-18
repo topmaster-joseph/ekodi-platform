@@ -27,6 +27,7 @@ jobs:
         run: |
           set -euo pipefail
           node --check auth-site/auth.js
+          node --check auth-site/auth-bootstrap.js
           node --check auth-site/auth-router.js
           node --check auth-site/marketing-auth-hotfix.js
           node --check auth-site/auth-workspace-target.js
@@ -41,7 +42,8 @@ jobs:
         run: |
           set -euo pipefail
           grep -Fq 'data-seamless-sso' auth-site/index.html
-          grep -Fq '/auth-router.js?v=20260904-direct-login-1' auth-site/index.html
+          grep -Fq '/auth-bootstrap.js?v=20260918-admin-login-1' auth-site/index.html
+          grep -Fq '/auth-router.js?v=20260904-direct-login-1' auth-site/auth-bootstrap.js
 
           grep -Fq 'manifestService' auth-site/auth-router.js
           grep -Fq 'isRegistryUserService' auth-site/auth-router.js
