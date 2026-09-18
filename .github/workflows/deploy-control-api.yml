@@ -412,6 +412,17 @@ jobs:
         run: npx --yes wrangler@${WRANGLER_VERSION} d1 migrations apply DB --remote --config wrangler.api.staging.runtime.toml
       - name: Deploy isolated Control staging
         run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.api.staging.runtime.toml
+      - name: Verify staging Google identity client boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          endpoint='https://ekodi-auth-api-staging.ekodi-development.workers.dev/api/google/config'
+          origin='https://ekodi-shared-site-staging.ekodi-development.workers.dev'
+          code=$(curl -sS -D /tmp/staging-google.headers -o /tmp/staging-google.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$endpoint" -H "Origin: $origin")
+          test "$code" = '200'
+          grep -Eiq "^access-control-allow-origin:[[:space:]]*$origin" /tmp/staging-google.headers
+          grep -Fq '"clientId":"483044030492-j9dml7tsb7vq4a4ud041ttctavlgdskg.apps.googleusercontent.com"' /tmp/staging-google.json
+          grep -Fq '"identityOrigin":"https://ekodi-shared-site-staging.ekodi-development.workers.dev"' /tmp/staging-google.json
       - name: Verify security, AI auth boundary and universal membership
         shell: bash
         run: |
