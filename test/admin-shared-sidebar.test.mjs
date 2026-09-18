@@ -56,7 +56,9 @@ test('contextual subservices render as a sticky top tab strip and source nav sta
 test('global navigation remains synchronized to the actually active panel', () => {
   const activeNavIndex = sidebar.indexOf("find(item => item.classList.contains('active'))");
   const requestedPanelIndex = sidebar.indexOf('window.EKODIAdminPanels?.current?.()');
-  assert.ok(activeNavIndex >= 0 && requestedPanelIndex > activeNavIndex, 'active rendered panel should win over a pending requested section');
+  const commandPriorityIndex = sidebar.indexOf("panelSection === 'command-home'");
+  assert.ok(requestedPanelIndex >= 0 && commandPriorityIndex > requestedPanelIndex && commandPriorityIndex < activeNavIndex, 'canonical command home must override stale Campus selection');
+  assert.ok(activeNavIndex >= 0, 'normal rendered panels must still remain observable');
   const activateStart = sidebar.indexOf('function activateSection');
   const activateEnd = sidebar.indexOf('export function createAdminSidebarItem', activateStart);
   const activateSource = sidebar.slice(activateStart, activateEnd);
@@ -112,7 +114,10 @@ test('internal operational capabilities stay off the global work areas as direct
   assert.match(layout, /const INTERNAL=new Set\(\['services','deployments','policies'\]\)/);
   assert.match(layout, /#campus:campus/);
   assert.match(layout, /campus:#campus/);
-  assert.match(layout, /requestedSection = 'campus'/);
+  assert.match(layout, /const COMMAND_HOME='command-home'/);
+  assert.match(layout, /function activateCommandHome\(\)/);
+  assert.match(layout, /#campus:campus/);
+  assert.doesNotMatch(layout, /requestedSection = 'campus'/);
   assert.doesNotMatch(layout, /INTERNAL_ONLY_SECTIONS[^\n]*overview/);
 });
 
