@@ -3,7 +3,7 @@ import { TENANT_ADMIN_CAPABILITIES, tenantAdminPolicySnapshot } from './tenant-a
 const SUPABASE_URL='https://renzehysxirjilvdxacv.supabase.co';
 const SUPABASE_KEY='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
 const CHURCH_SLUG='ekodi-church';
-const ALLOWED_SECTIONS=new Set(['overview','people','worship','care','calendar','ministry','reports','ai','chrome','access']);
+const ALLOWED_SECTIONS=new Set(['overview','people','worship','care','calendar','ministry','partners','reports','ai','chrome','access']);
 const CHURCH_SECTION_CAPABILITY=Object.freeze({overview:TENANT_ADMIN_CAPABILITIES.dashboard,people:TENANT_ADMIN_CAPABILITIES.people,worship:TENANT_ADMIN_CAPABILITIES.worship,care:TENANT_ADMIN_CAPABILITIES.care,calendar:TENANT_ADMIN_CAPABILITIES.calendar,ministry:TENANT_ADMIN_CAPABILITIES.ministry,partners:TENANT_ADMIN_CAPABILITIES.partnerNews,reports:TENANT_ADMIN_CAPABILITIES.reports,ai:TENANT_ADMIN_CAPABILITIES.ai,chrome:TENANT_ADMIN_CAPABILITIES.site,access:TENANT_ADMIN_CAPABILITIES.access});
 export function churchPastorCanAccess(role,section){const policy=tenantAdminPolicySnapshot();const allowed=policy.roleCapabilities[String(role||'').trim().toLowerCase()]||[];const capability=CHURCH_SECTION_CAPABILITY[String(section||'overview').toLowerCase()];return Boolean(capability&&(allowed.includes('*')||allowed.includes(capability)));}
 export function churchPastorSectionsForRole(role){return [...ALLOWED_SECTIONS].filter(section=>churchPastorCanAccess(role,section));}
