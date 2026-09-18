@@ -44,7 +44,8 @@ test('Tax portal is focused, FREE-FIRST and handles core tax workflows', async (
 test('Tax apex path uses same-origin API and explicit canonical-auth return target', async () => {
   const router = await read('platform-router-entry-worker.js');
   assert.match(router, /const TAX_APEX_PREFIX='\/tax'/);
-  assert.match(router, /url\.pathname\.startsWith\('\/api\/finance\/tax-'\)/);
+  assert.match(router, /url\.pathname==='\/api\/finance'\|\|url\.pathname\.startsWith\('\/api\/finance\/'\)/);
+  assert.match(router, /env\.FINANCE\.fetch\(request\)/);
   assert.match(router, /financeEntryWorker\.fetch\(request,env,ctx\)/);
   const auth = await read('auth-site/admin-auth.js');
   assert.match(auth, /u\.origin==='https:\/\/ekodi\.kr'/);
