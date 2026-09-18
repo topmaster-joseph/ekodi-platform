@@ -2,9 +2,9 @@ const DEFAULT_POLICY = Object.freeze({
   dailyMaxCalls: 500,
   monthlyMaxCalls: 10_000,
   monthlyBudgetUsd: 20,
-  inputUsdPerMillion: 2,
-  cachedInputUsdPerMillion: 0.2,
-  outputUsdPerMillion: 12,
+  inputUsdPerMillion: 0.2,
+  cachedInputUsdPerMillion: 0.02,
+  outputUsdPerMillion: 1.2,
 });
 
 function envNumber(env, keys, fallback) {
