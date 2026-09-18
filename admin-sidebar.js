@@ -220,12 +220,15 @@ function renderSidebarDetails(nav, globals, group, section, locale) {
 }
 
 function activeSection(nav) {
+  const panelSection = window.EKODIAdminPanels?.current?.();
+  if (panelSection === 'command-home') return 'command-home';
+  const routed = window.EKODIAdminRoutes?.sectionFromLocation?.(window.location);
+  if (routed === 'command-home') return 'command-home';
   const active = [...navItems(nav)].find(item => item.classList.contains('active'));
   const activeId = adminSidebarSectionOf(active);
   if (activeId && getAdminMenuItem(activeId)) return activeId;
-  const panelSection = window.EKODIAdminPanels?.current?.();
   if (panelSection && getAdminMenuItem(panelSection)) return panelSection;
-  return 'campus';
+  return getAdminMenuGroupDefault('home');
 }
 
 function availableIds(nav, group) {
@@ -339,12 +342,22 @@ export function createAdminSidebarItem(id, locale = readAdminSidebarLocale()) {
 
 export function renderAdminSidebar(nav, { locale = readAdminSidebarLocale(), ids = adminMenuOrder() } = {}) {
   if (!nav) return [];
-  const items = ids.map(id => createAdminSidebarItem(id, locale)).filter(Boolean);
-  nav.replaceChildren(...items);
-  nav.dataset.adminSidebarShared = 'true';
-  nav.dataset.adminMenuGovernance = 'workbench-tabs-v2';
-  syncAdminSidebar(nav.ownerDocument || document, { locale });
-  return items;
+  const previousVisibility = nav.style.getPropertyValue('visibility');
+  const previousPriority = nav.style.getPropertyPriority('visibility');
+  nav.dataset.adminSidebarHydrating = 'true';
+  nav.style.setProperty('visibility', 'hidden', 'important');
+  try {
+    const items = ids.map(id => createAdminSidebarItem(id, locale)).filter(Boolean);
+    nav.replaceChildren(...items);
+    nav.dataset.adminSidebarShared = 'true';
+    nav.dataset.adminMenuGovernance = 'workbench-tabs-v2';
+    syncAdminSidebar(nav.ownerDocument || document, { locale });
+    return items;
+  } finally {
+    delete nav.dataset.adminSidebarHydrating;
+    if (previousVisibility) nav.style.setProperty('visibility', previousVisibility, previousPriority);
+    else nav.style.removeProperty('visibility');
+  }
 }
 
 export function syncAdminSidebar(root = document, options = {}) {

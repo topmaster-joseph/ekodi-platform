@@ -19,6 +19,7 @@ test('Admin roots resolve to command home while child routes remain independent'
   const routes=routesFor();
   assert.equal(routes.sectionFromPath('/admin/'),'command-home');
   assert.equal(routes.sectionFromPath('/admin/home'),'command-home');
+  assert.equal(routes.groups.home,'command-home');
   assert.equal(routes.pathFor('command-home'),'/admin/');
   assert.equal(routes.sectionFromPath('/admin/home/campus'),'campus');
   assert.equal(routes.pathFor('campus'),'/admin/home/campus');

@@ -8,7 +8,7 @@ const SECTION_GROUP=Object.freeze({
   'public-site-controls':'system','language-status':'system',architecture:'system',maturity:'system',security:'system',admins:'system','ai-module-spec':'system',storage:'system',capabilities:'system',aiops:'system','ai-settings':'system',openai:'system',devices:'system',health:'system','api-cost':'system',services:'system',deployments:'system',policies:'system',
 });
 const GROUP_DEFAULT=Object.freeze({
-  home:'campus',operations:'work',workspaces:'clients',services:'common-services',system:'health',
+  home:'command-home',operations:'work',workspaces:'clients',services:'common-services',system:'health',
 });
 const LEGACY_GROUP_DEFAULT=Object.freeze({
   common:'common-services',professional:'life-ai',space:'clients',spaces:'clients',
