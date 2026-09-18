@@ -1,5 +1,6 @@
 import legacyWorkspaceWorker from './workspace-platform-api-worker.js';
 import { handleWorkspaceMessengerV2 } from './workspace-messenger-v2.js';
+import { handleStoreSmsOrderApi } from './store-sms-order-runtime.js';
 import { drainMessengerOutbox } from './messenger-outbox.js';
 import { handleProfileEvidenceApi, profileSchemaReady } from './profile-evidence-runtime.js';
 import { createOfficialProfileDataBinding, officialDataConnections } from './profile-official-data-adapter.js';
@@ -13,6 +14,7 @@ async function designProfileSchemaReady(env){ return d1SchemaReady(env?.DB,['sit
 async function siteChromeSchemaReady(env){ return d1SchemaReady(env?.DB,['site_chrome_settings']); }
 
 async function conversationSchemaReady(env){ return d1SchemaReady(env?.DB,['messenger_outbox','messenger_identity_audit']); }
+async function storeSmsOrderSchemaReady(env){ return d1SchemaReady(env?.DB,['store_sms_orders','store_sms_ingress_events']); }
 async function investAutomationSchemaReady(env){ return d1SchemaReady(env?.DB,['investment_policies','investment_strategies','investment_broker_connections','investment_cycles']); }
 
 function scheduleOutboxRecovery(env,ctx,limit=8){
@@ -50,6 +52,11 @@ export default {
       const response=await handleDesignProfileApi(request,env);
       if(response)return response;
     }
+    if(url.pathname.startsWith('/v1/store-sms/')){
+      scheduleOutboxRecovery(env,ctx,8);
+      const response=await handleStoreSmsOrderApi(request,env,ctx);
+      if(response)return response;
+    }
     if(url.pathname.startsWith('/v1/messenger/')){
       scheduleOutboxRecovery(env,ctx,8);
       const response=await handleWorkspaceMessengerV2(request,env,ctx);
@@ -59,9 +66,9 @@ export default {
       const response=await legacyWorkspaceWorker.fetch(request,env,ctx);
       try{
         const data=await response.clone().json();
-        const [foundationReady,profileReady,designReady,investAutomationReady,chromeReady]=await Promise.all([conversationSchemaReady(env),profileSchemaReady(env),designProfileSchemaReady(env),investAutomationSchemaReady(env),siteChromeSchemaReady(env)]);
+        const [foundationReady,smsOrderReady,profileReady,designReady,investAutomationReady,chromeReady]=await Promise.all([conversationSchemaReady(env),storeSmsOrderSchemaReady(env),profileSchemaReady(env),designProfileSchemaReady(env),investAutomationSchemaReady(env),siteChromeSchemaReady(env)]);
         const connections=officialDataConnections(env).map(({id,status})=>({id,status}));
-        return new Response(JSON.stringify({...data,conversationFoundation:'v2',eventOutbox:true,conversationSchemaReady:foundationReady,profileEvidenceFoundation:'v1',profileSchemaReady:profileReady,officialDataFirst:true,officialDataProvider:'embedded-v1',investPersonalization:'v1',investAutomation:'v1',investAutomationSchemaReady:investAutomationReady,investDataConnections:connections,adaptiveDesign:'v1',designProfileSchemaReady:designReady,siteChrome:'v1',siteChromeSchemaReady:chromeReady}),{status:response.status,headers:response.headers});
+        return new Response(JSON.stringify({...data,conversationFoundation:'v2',eventOutbox:true,conversationSchemaReady:foundationReady,storeSmsOrders:'v1',storeSmsOrderSchemaReady:smsOrderReady,smsIngressConfigured:Boolean(env.STORE_SMS_INGRESS_TOKEN),smsOutboundConfigured:Boolean((env.CHANNEL_SMS&&typeof env.CHANNEL_SMS.fetch==='function')||env.CHANNEL_SMS_URL),profileEvidenceFoundation:'v1',profileSchemaReady:profileReady,officialDataFirst:true,officialDataProvider:'embedded-v1',investPersonalization:'v1',investAutomation:'v1',investAutomationSchemaReady:investAutomationReady,investDataConnections:connections,adaptiveDesign:'v1',designProfileSchemaReady:designReady,siteChrome:'v1',siteChromeSchemaReady:chromeReady}),{status:response.status,headers:response.headers});
       }catch{return response}
     }
     return legacyWorkspaceWorker.fetch(request,env,ctx);

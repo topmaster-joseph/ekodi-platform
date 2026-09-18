@@ -6,9 +6,26 @@
     "requests": [
       {
         "url": "https://workspace-api.ekodi.kr/health",
-        "statuses": [200],
+        "statuses": [
+          200
+        ],
         "redirect": "follow",
-        "expect": ["\"service\":\"ekodi-workspace-platform-api\"","\"schemaReady\":true","\"mutations\":true","\"transactionExecution\":false","\"conversationFoundation\":\"v2\"","\"eventOutbox\":true","\"conversationSchemaReady\":true","\"profileEvidenceFoundation\":\"v1\"","\"profileSchemaReady\":true","\"officialDataFirst\":true","\"officialDataProvider\":\"embedded-v1\"","\"investPersonalization\":\"v1\""]
+        "expect": [
+          "\"service\":\"ekodi-workspace-platform-api\"",
+          "\"schemaReady\":true",
+          "\"mutations\":true",
+          "\"transactionExecution\":false",
+          "\"conversationFoundation\":\"v2\"",
+          "\"eventOutbox\":true",
+          "\"conversationSchemaReady\":true",
+          "\"profileEvidenceFoundation\":\"v1\"",
+          "\"profileSchemaReady\":true",
+          "\"officialDataFirst\":true",
+          "\"officialDataProvider\":\"embedded-v1\"",
+          "\"investPersonalization\":\"v1\"",
+          "\"storeSmsOrders\":\"v1\"",
+          "\"storeSmsOrderSchemaReady\":true"
+        ]
       }
     ]
   }
