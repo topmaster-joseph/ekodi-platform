@@ -1,4 +1,4 @@
-import { createOpenAiProvider } from './openai-provider-adapter.js';
+import { buildCoreAiGateway } from './core-ai-gateway.js';
 import { d1SchemaReady } from './d1-schema-readiness.js';
 import { ensureWeeklyPromotionBoard, getWeeklyPromotionBoardStatus } from './mall-official-promotion-board.js';
 
@@ -148,8 +148,6 @@ export function fallbackContent(product,provider) {
 
 async function aiContent(env,product,provider) {
   const fallback=fallbackContent(product,provider);
-  const ai=createOpenAiProvider(env);
-  if(!ai.available) return fallback;
   const message=[
     '에코디몰의 능동형 유기적 SNS 영업 콘텐츠를 작성하세요.',
     `채널: ${provider}`,
@@ -169,13 +167,22 @@ async function aiContent(env,product,provider) {
     'JSON만 반환하세요: {"title":"80자 이내","caption":"700자 이내"}',
   ].join('\n');
   try {
-    const result=await ai.invoke({taskName:'ekodi-mall-active-sales-promotion',context:{message,page:{section:'marketing',title:'EKODI Mall active sales promotion',pathname:'/ekodibiz/ekodimall'}}});
-    const parsed=parseJsonObject(result.text);
+    const result=await buildCoreAiGateway(env).run({
+      taskName:'ekodi-mall-active-sales-promotion',
+      context:{message,page:{section:'marketing',title:'EKODI Mall active sales promotion',pathname:'/ekodibiz/ekodimall'}},
+      requiredCapabilities:['text'],
+      governance:{dataSensitivity:'public'},
+      fallback:()=>null,
+    });
+    if(result.mode!=='ai') return fallback;
+    const value=result.value;
+    const parsed=parseJsonObject(typeof value==='string'?value:value?.text);
     const title=clean(parsed?.title,120); const caption=clean(parsed?.caption,900);
     if(!title||!caption) return fallback;
-    return {title,caption:`${AFFILIATE_DISCLOSURE}\n\n${caption}\n\n에코디몰에서 자세히 보기`,mode:'ai',model:clean(result.model,120)};
+    return {title,caption:`${AFFILIATE_DISCLOSURE}\n\n${caption}\n\n에코디몰에서 자세히 보기`,mode:'ai',provider:result.provider||'',model:clean(value?.model,120)};
   } catch(error) { console.error('EKODI Mall active sales content fallback',String(error?.message||error)); return fallback; }
 }
+
 
 function base64ToBytes(value){ const raw=atob(value); return Uint8Array.from(raw,char=>char.charCodeAt(0)); }
 async function encryptionKey(secret){ const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(String(secret||''))); return crypto.subtle.importKey('raw',digest,{name:'AES-GCM'},false,['decrypt']); }
