@@ -20,8 +20,8 @@ test('admin Google auth and origin bridge modules remain syntactically valid', (
   }
 });
 
-test('Google popup UX runs only on the canonical EKODI origin bridge', () => {
-  assert.match(adminAuth, /GOOGLE_BRIDGE_ORIGIN='https:\/\/ekodi\.kr'/);
+test('Google popup UX uses the environment-scoped EKODI origin bridge', () => {
+  assert.match(adminAuth, /GOOGLE_BRIDGE_ORIGIN=runtime\.authOrigin/);
   assert.match(adminAuth, /window\.open\(target\.href,'ekodi_google_origin_bridge'/);
   assert.doesNotMatch(adminAuth, /google\.accounts\.id\.initialize/);
   assert.match(bridge, /use_fedcm_for_button:false/);
