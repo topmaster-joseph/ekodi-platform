@@ -1,12 +1,21 @@
-const ADMIN_API='https://ekodi.kr';
+const runtime=(()=>{
+  const origin=location.origin;
+  if(origin==='https://ekodi.kr')return{environment:'production',apiOrigin:'https://ekodi.kr',authOrigin:origin};
+  if(origin==='https://ekodi-shared-site-staging.ekodi-development.workers.dev')return{environment:'staging',apiOrigin:'https://ekodi-auth-api-staging.ekodi-development.workers.dev',authOrigin:origin};
+  if(origin==='https://ekodi-platform-development.ekodi-development.workers.dev')return{environment:'development',apiOrigin:origin,authOrigin:origin};
+  if(origin==='http://127.0.0.1:4173'||origin==='http://localhost:4173')return{environment:'development',apiOrigin:'http://127.0.0.1:8791',authOrigin:origin};
+  return{environment:'unsupported',apiOrigin:'',authOrigin:''};
+})();
+const ADMIN_API=runtime.apiOrigin;
 const params=new URLSearchParams(location.search);
 const directEntry=params.get('direct')==='1';
 const preopenedRequested=directEntry&&params.get('bridge')==='preopened';
 const directBridgeRoot=document.documentElement;
-const CANONICAL_AUTH_ORIGIN='https://ekodi.kr';
-const GOOGLE_BRIDGE_ORIGIN='https://auth.ekodi.kr';
-const rawReturn=params.get('return_to')||'https://ekodi.kr/admin/';
-const safeReturn=(()=>{try{const u=new URL(rawReturn);if(u.protocol!=='https:')return'https://ekodi.kr/admin/';if(u.origin==='https://admin.ekodi.kr'||(u.origin==='https://ekodi.kr'&&u.pathname.startsWith('/admin')))return u.href;if(u.origin==='https://ai.ekodi.kr'&&u.pathname==='/')return u.href;if(u.origin==='https://ekodi.kr'&&(u.pathname==='/tax'||u.pathname==='/tax/'))return u.href;if(u.origin==='https://ekodi.kr'&&(u.pathname==='/ekodibiz/ekodimall/admin'||u.pathname==='/ekodibiz/ekodimall/admin/'||u.pathname.startsWith('/ekodibiz/ekodimall/admin/')))return u.href;return'https://ekodi.kr/admin/'}catch{return'https://ekodi.kr/admin/'}})();
+const CANONICAL_AUTH_ORIGIN=runtime.authOrigin;
+const GOOGLE_BRIDGE_ORIGIN=runtime.authOrigin;
+const defaultReturn=runtime.environment==='production'?'https://ekodi.kr/admin/':runtime.authOrigin?runtime.authOrigin+'/admin/':'https://ekodi.kr/admin/';
+const rawReturn=params.get('return_to')||defaultReturn;
+const safeReturn=(()=>{try{const u=new URL(rawReturn);if(u.protocol!=='https:'&&!/^http:\/\/(localhost|127\.0\.0\.1)(?::\d+)?$/.test(u.origin))return defaultReturn;if(runtime.environment!=='production'&&u.origin===runtime.authOrigin&&u.pathname.startsWith('/admin'))return u.href;if(u.origin==='https://ekodi.kr'&&u.pathname.startsWith('/admin'))return u.href;if(u.origin==='https://ekodi.kr'&&(u.pathname==='/ai'||u.pathname==='/ai/'))return u.href;if(u.origin==='https://ekodi.kr'&&(u.pathname==='/tax'||u.pathname==='/tax/'))return u.href;if(u.origin==='https://ekodi.kr'&&(u.pathname==='/ekodibiz/ekodimall/admin'||u.pathname==='/ekodibiz/ekodimall/admin/'||u.pathname.startsWith('/ekodibiz/ekodimall/admin/')))return u.href;return defaultReturn}catch{return defaultReturn}})();
 const $=id=>document.getElementById(id);
 $('serviceName').textContent='EKODI 관리자';
 $('serviceBadge').textContent='관리자 전용';
@@ -36,7 +45,7 @@ function waitForBridgeCredential(popup,challenge,state){
 }
 function requestGoogleCredential(config,challenge){
   const state=newBridgeState();
-  const target=new URL('/google-origin-bridge',GOOGLE_BRIDGE_ORIGIN);
+  const target=new URL('/auth/google-origin-bridge',GOOGLE_BRIDGE_ORIGIN);
   target.searchParams.set('client_id',config.clientId);target.searchParams.set('nonce',challenge.nonce);target.searchParams.set('state',state);target.searchParams.set('auto','1');
   const popup=window.open(target.href,'ekodi_google_origin_bridge','popup,width=520,height=680,resizable=yes,scrollbars=yes');
   if(!popup)return Promise.reject(Object.assign(new Error('google_popup_blocked'),{code:'GOOGLE_POPUP_BLOCKED'}));
@@ -120,9 +129,11 @@ async function prepare(){
   const host=$('googleButtonHost');host.replaceChildren();show('googleRetry',false);notice('관리자 전용 Google 인증을 준비하고 있습니다.');
   if(isEmbeddedWebView){if(directEntry)directBridgeRoot.dataset.adminDirectBridge='fallback';renderExternalBrowserGate();return;}
   try{
+    if(!ADMIN_API||!CANONICAL_AUTH_ORIGIN)throw Object.assign(new Error('unsupported_admin_auth_environment'),{code:'UNSUPPORTED_ADMIN_AUTH_ENVIRONMENT'});
     const [config,challenge]=await Promise.all([request('/api/google/config'),request('/api/google/challenge',{method:'POST'})]);
     if(!config.clientId||!challenge.nonce)throw new Error('admin_google_not_ready');
     if(location.origin!==CANONICAL_AUTH_ORIGIN)throw Object.assign(new Error('unexpected_admin_auth_origin'),{code:'UNEXPECTED_ADMIN_AUTH_ORIGIN'});
+    if(config.identityOrigin&&config.identityOrigin!==location.origin)throw Object.assign(new Error('identity_origin_mismatch'),{code:'IDENTITY_ORIGIN_MISMATCH'});
     if(preopenedRequested){
       notice('Google 계정 선택창을 여는 중입니다.');
       try{

@@ -3,14 +3,16 @@ import { AI_ROUTER_SCORE_POLICY } from '../ai-router-score.js';
 
 const baseUrl = String(process.argv[2] || '').replace(/\/$/, '');
 const token = String(process.argv[3] || '').trim();
+const origin = String(process.argv[4] || 'https://ekodi.kr').trim();
 if (!baseUrl) throw new Error('base URL is required');
 if (!token) throw new Error('admin bearer token is required');
+try { new URL(origin); } catch { throw new Error('valid request origin is required'); }
 
 const endpoint = `${baseUrl}/api/control/ai/v8/collaboration-settings`;
 const headers = {
   accept: 'application/json',
   authorization: `Bearer ${token}`,
-  origin: 'https://admin.ekodi.kr',
+  origin,
 };
 
 async function request(path = '', options = {}) {

@@ -12,6 +12,7 @@ on:
     branches: [main]
     paths:
       - 'site-worker.js'
+      - 'cgmurrc.html'
       - 'test/ekodi-connect-route.test.mjs'
       - 'platform-route-registry.js'
       - 'ai-commons-admin.js'
@@ -234,6 +235,22 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 2
+      - name: Refuse stale rerun production promotion
+        shell: bash
+        run: |
+          set -euo pipefail
+          attempt="${GITHUB_RUN_ATTEMPT:-1}"
+          if [ "$attempt" -le 1 ]; then
+            echo "Normal first-attempt release; stale-rerun guard not required."
+            exit 0
+          fi
+          latest_main="$(git ls-remote origin refs/heads/main | awk 'NR==1{print $1}')"
+          test -n "$latest_main"
+          if [ "$GITHUB_SHA" != "$latest_main" ]; then
+            echo "Blocked stale Shared Site rerun: workflow SHA=$GITHUB_SHA current main=$latest_main attempt=$attempt" >&2
+            exit 42
+          fi
+          echo "Rerun SHA is still current main; guarded release may continue."
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
