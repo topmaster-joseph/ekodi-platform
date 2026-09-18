@@ -14,6 +14,9 @@ test('tenant admin constitution keeps one page and projects authority by capabil
   assert.equal(tenantAdminCan('store_owner',policy.capabilities.site),true);
   assert.equal(tenantAdminCan('marketing_manager',policy.capabilities.finance),false);
   assert.equal(tenantAdminCan('pastor',policy.capabilities.care),true);
+  assert.equal(tenantAdminCan('pastor',policy.capabilities.partnerNews),true);
+  assert.equal(tenantAdminCan('care_staff',policy.capabilities.partnerNews),false);
+  assert.equal(tenantAdminCan('marketing_manager',policy.capabilities.partnerNews),true);
   assert.equal(tenantAdminCan('pastor',policy.capabilities.access),false);
   assert.equal(tenantAdminCan('viewer',policy.capabilities.care),false);
   for(const response of [storeAdminPage({slug:'demo',name:'Demo'}),churchPastorAdminPage(),workspaceAdminPage()]){

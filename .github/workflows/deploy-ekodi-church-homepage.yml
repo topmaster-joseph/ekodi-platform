@@ -54,10 +54,10 @@ jobs:
           set -euo pipefail
           test -n "$CLOUDFLARE_API_TOKEN"
           test -n "$CLOUDFLARE_ACCOUNT_ID"
-          for file in index.html script.js live/index.html live/live.js live/host-intent.js live/live.css church-character-identity.js church-i18n.js church-i18n-extended.js church-i18n-payment-patch.js church-shell-i18n.js church-header-controls.js church-header-tune.css church-online-status.js church-live-entry.css giving.js church-footer.css community-visual.css church-life-hub.js church-life-hub.css church-life-hub-i18n.js; do
+          for file in index.html script.js live/index.html live/live.js live/host-intent.js live/live.css church-character-identity.js church-i18n.js church-i18n-extended.js church-i18n-payment-patch.js church-shell-i18n.js church-header-controls.js church-header-tune.css church-online-status.js church-live-entry.css giving.js church-footer.css community-visual.css church-life-hub.js church-life-hub.css church-life-hub-i18n.js partner-news.js partner-news.css; do
             test -s "church/$file"
           done
-          for file in script.js live/live.js live/host-intent.js church-character-identity.js church-i18n.js church-i18n-extended.js church-i18n-payment-patch.js church-shell-i18n.js church-header-controls.js church-online-status.js giving.js church-life-hub.js church-life-hub-i18n.js; do
+          for file in script.js live/live.js live/host-intent.js church-character-identity.js church-i18n.js church-i18n-extended.js church-i18n-payment-patch.js church-shell-i18n.js church-header-controls.js church-online-status.js giving.js church-life-hub.js church-life-hub-i18n.js partner-news.js; do
             node --check "church/$file"
           done
           grep -Fq 'data-ekodi-life-hub' church/index.html
@@ -65,6 +65,13 @@ jobs:
           grep -Fq 'church-life-hub.css' church/index.html
           grep -Fq 'church-life-hub-i18n.js' church/index.html
           grep -Fq 'church-i18n-extended.js' church/index.html
+          grep -Fq 'id="partner-news"' church/index.html
+          grep -Fq 'partner-news.js' church/index.html
+          grep -Fq 'partner-news.css' church/index.html
+          grep -Fq '/api/partner-news/public?tenant=ekodi-church&service=church' church/partner-news.js
+          grep -Fq "item.status==='PUBLISHED'" church/partner-news.js
+          ! grep -Fq '/api/church/admin/partner-news' church/partner-news.js
+          grep -Fq "connect-src 'self'" church/_headers
           grep -Fq 'church-online-status.js' church/index.html
           grep -Fq 'data-ekodi-church-live-entry' church/index.html
           grep -Fq "AUTH_ATTEMPT_KEY='ekodi-live-auth-attempt'" church/live/live.js
@@ -145,10 +152,17 @@ jobs:
             live_js=$(curl -L -sS -o /tmp/church-live.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/live/live.js?release=${release}" || true)
             live_intent=$(curl -L -sS -o /tmp/church-live-host-intent.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/live/host-intent.js?release=${release}" || true)
             marker=$(curl -L -sS -o /tmp/church-release.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/church-release.json?release=${release}" || true)
-            if [[ "$root" == 200 && "$life" == 200 && "$life_i18n" == 200 && "$life_css" == 200 && "$online_status" == 200 && "$live_css" == 200 && "$live_js" == 200 && "$live_intent" == 200 && "$marker" == 200 ]] \
+            partner_js=$(curl -L -sS -o /tmp/partner-news.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/partner-news.js?release=${release}" || true)
+            partner_css=$(curl -L -sS -o /tmp/partner-news.css -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/partner-news.css?release=${release}" || true)
+            if [[ "$root" == 200 && "$life" == 200 && "$life_i18n" == 200 && "$life_css" == 200 && "$online_status" == 200 && "$live_css" == 200 && "$live_js" == 200 && "$live_intent" == 200 && "$marker" == 200 && "$partner_js" == 200 && "$partner_css" == 200 ]] \
               && grep -Fq 'data-ekodi-life-hub' /tmp/church.html \
               && grep -Fq '에코디선교회' /tmp/church.html \
               && grep -Fq 'church-i18n-extended.js' /tmp/church.html \
+              && grep -Fq 'partner-news.js' /tmp/church.html \
+              && grep -Fq 'id="partner-news"' /tmp/church.html \
+              && grep -Fq '/api/partner-news/public?tenant=ekodi-church&service=church' /tmp/partner-news.js \
+              && grep -Fq "item.status==='PUBLISHED'" /tmp/partner-news.js \
+              && grep -Fq '.partner-news-feed' /tmp/partner-news.css \
               && grep -Fq 'localStorage' /tmp/life.js \
               && grep -Fq '__EKODI_CHURCH_LIFE_HUB_I18N__' /tmp/life-i18n.js \
               && grep -Fq 'api/realtime/live?tenant=ekodichurch' /tmp/church-online-status.js \
@@ -164,7 +178,7 @@ jobs:
               break
             fi
             if [[ "$attempt" == 18 ]]; then
-              echo "Production did not converge: root=$root life=$life life_i18n=$life_i18n life_css=$life_css online_status=$online_status live_css=$live_css live_js=$live_js live_intent=$live_intent marker=$marker"
+              echo "Production did not converge: root=$root life=$life life_i18n=$life_i18n life_css=$life_css online_status=$online_status live_css=$live_css live_js=$live_js live_intent=$live_intent marker=$marker partner_js=$partner_js partner_css=$partner_css"
               exit 1
             fi
             sleep 5
