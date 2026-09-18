@@ -87,6 +87,8 @@ test('Personal Finance admin UI manages policy only and never calls personal led
   assert.match(workerSource,/env\.PERSONAL_FINANCE\?\.fetch/);
   assert.match(workerSource,/target\.pathname = '\/api\/admin\/personal-finance\/control'/);
   assert.match(workerSource,/X-EKODI-Personal-Finance-Proxy/);
+  assert.match(workerSource,/upstream\.status === 401/);
+  assert.match(workerSource,/code:'PF_ADMIN_AUTH_REQUIRED'/);
   assert.match(siteConfig,/binding = "PERSONAL_FINANCE"\s+service = "ekodi-personal-finance-api"/);
   assert.match(build,/personal-finance-admin\.css/);assert.match(build,/personal-finance-admin\.js/);assert.match(workerSource,/personal-finance-admin\.js/);
   const serviceControl=fs.readFileSync(new URL('../personal-finance-service-control.js',import.meta.url),'utf8');
