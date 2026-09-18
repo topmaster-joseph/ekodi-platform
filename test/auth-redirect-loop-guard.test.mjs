@@ -4,23 +4,26 @@ import { readFile } from 'node:fs/promises';
 
 const root=new URL('../',import.meta.url);
 const html=await readFile(new URL('auth-site/index.html',root),'utf8');
+const bootstrap=await readFile(new URL('auth-site/auth-bootstrap.js',root),'utf8');
 
 test('central auth blocks rapid repeated service handoff navigation',()=>{
-  assert.match(html,/ekodi-auth-entry:/);
-  assert.match(html,/now-previous<120000/);
-  assert.match(html,/authLoopBlocked/);
-  assert.match(html,/반복 이동 차단/);
-  assert.match(html,/sessionStorage\.removeItem\(guardKey\)/);
+  assert.match(bootstrap,/ekodi-auth-entry:/);
+  assert.match(bootstrap,/now - previous < 120000/);
+  assert.match(bootstrap,/authLoopBlocked/);
+  assert.match(bootstrap,/반복 이동 차단/);
+  assert.match(bootstrap,/sessionStorage\.removeItem\(guardKey\)/);
 });
 
 test('central auth loop guard does not block interactive management or reload recovery',()=>{
-  assert.match(html,/const interactive=params\.get\('manage'\)==='1'\|\|params\.get\('review'\)==='1'/);
-  assert.match(html,/navigationType!=='reload'/);
-  assert.match(html,/if\(!interactive\)/);
+  assert.match(bootstrap,/const interactive = manageMode \|\| reviewMode/);
+  assert.match(bootstrap,/navigationType !== 'reload'/);
+  assert.match(bootstrap,/if \(!interactive\)/);
 });
 
 test('auth router starts only after the loop decision and retry opens a fresh flow',()=>{
   assert.doesNotMatch(html,/<script type="module" src="\/auth-router\.js/);
-  assert.match(html,/await import\('\/auth-router\.js\?v=20260904-direct-login-1'\)/);
-  assert.match(html,/retry\?\.addEventListener\('click'/);
+  assert.match(html,/src="\/auth-bootstrap\.js\?v=20260918-admin-login-1"/);
+  assert.match(bootstrap,/await import\('\/auth-router\.js\?v=20260904-direct-login-1'\)/);
+  assert.match(bootstrap,/retry\?\.addEventListener\('click'/);
+  assert.ok(bootstrap.indexOf('if (repeated)') < bootstrap.indexOf('await startRouter()'));
 });
