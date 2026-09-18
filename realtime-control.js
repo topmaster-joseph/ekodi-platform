@@ -86,6 +86,199 @@ async function ownerAllowed(request,env,room){
   const subject=access.identity?canonicalAiSubject(access.identity):'';
   return {access,allowed:Boolean(access.identity&&(room.owner_user_id===subject||ADMIN_ROLES.has(access.role)))};
 }
+
+function safeRecording(row){
+  if(!row)return null;
+  return {
+    id:row.id,
+    roomId:row.room_id,
+    tenantId:row.tenant_id,
+    status:row.status,
+    title:row.title||'',
+    mimeType:row.mime_type||'video/webm',
+    byteSize:Number(row.byte_size||0),
+    visibility:row.visibility||'private',
+    archiveStatus:row.archive_status||'pending',
+    driveFileId:row.drive_file_id||null,
+    driveWebViewLink:row.drive_web_view_link||null,
+    youtubeStatus:row.youtube_status||'not_requested',
+    youtubeVideoId:row.youtube_video_id||null,
+    youtubeUrl:row.youtube_url||null,
+    retentionUntil:row.retention_until||null,
+    createdAt:row.created_at,
+    updatedAt:row.updated_at,
+    deletedAt:row.deleted_at||null,
+  };
+}
+async function recordingById(env,id){return env.DB.prepare('SELECT * FROM realtime_recordings WHERE id=?').bind(id).first()}
+function recordingObjectKey(room,recordingId,mimeType='video/webm'){
+  const now=new Date(),year=String(now.getUTCFullYear()),month=String(now.getUTCMonth()+1).padStart(2,'0');
+  const ext=String(mimeType).includes('mp4')?'mp4':'webm';
+  return `live-recordings/${slug(room.tenant_id)}/${year}/${month}/${room.id}/${recordingId}.${ext}`;
+}
+function retentionUntil(days=180){
+  const n=Number(days);
+  if(n===0)return null;
+  const safe=Number.isFinite(n)?Math.min(3650,Math.max(1,Math.trunc(n))):180;
+  return new Date(Date.now()+safe*86400000).toISOString();
+}
+async function tenantAdminAccess(request,env,tenant){
+  const config=realtimeTenant(tenant);if(!config)return {identity:null,role:'',allowed:false,config:null};
+  const access=await entitlementFor(request,env,config.apiTenant);
+  return {...access,config,allowed:Boolean(access.identity&&ADMIN_ROLES.has(access.role))};
+}
+async function archiveRecordingToSharedDrive(env,recording,room,access){
+  const key=clean(env.EKODI_STORAGE_GATEWAY_KEY,500);
+  if(!key)return {ok:false,code:'storage_gateway_not_configured'};
+  const stamp=new Date(recording.created_at||Date.now());
+  const year=String(stamp.getUTCFullYear()),month=String(stamp.getUTCMonth()+1).padStart(2,'0');
+  try{
+    const response=await fetch('https://drive.ekodi.kr/api/storage/v1/archive-r2',{
+      method:'POST',
+      headers:{'content-type':'application/json','x-ekodi-storage-key':key,'x-request-id':recording.id},
+      body:JSON.stringify({
+        r2Key:recording.storage_key,
+        storageRoute:'media',
+        serviceId:'media',
+        spaceId:room.tenant_id,
+        recordType:'live_recording',
+        createdBy:access?.identity?canonicalAiSubject(access.identity):room.owner_user_id,
+        retentionClass:recording.retention_until?'business_record':'permanent',
+        sourceModuleId:'ekodi-realtime',
+        title:recording.title||`${room.title||room.tenant_id}-${recording.id}.webm`,
+        mimeType:recording.mime_type||'video/webm',
+        subfolderPath:`Live/${room.tenant_id}/${year}/${month}`,
+      }),
+    });
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok||!data?.file?.id)return {ok:false,code:data?.code||`storage_archive_${response.status}`};
+    await env.DB.prepare(`UPDATE realtime_recordings SET archive_status='archived',drive_file_id=?,drive_web_view_link=?,updated_at=? WHERE id=?`).bind(String(data.file.id),String(data.file.webViewLink||''),new Date().toISOString(),recording.id).run();
+    return {ok:true,file:data.file};
+  }catch(error){
+    console.error('recording archive',error?.message||error);
+    return {ok:false,code:'storage_archive_failed'};
+  }
+}
+async function startRecordingUpload(request,env,room,input){
+  if(!env.LIVE_RECORDINGS_BUCKET)return json(request,env,{ok:false,error:'recording_storage_not_configured'},503);
+  const auth=await ownerAllowed(request,env,room);
+  if(!auth.allowed)return json(request,env,{ok:false,error:'room_owner_permission_required'},403);
+  if(!room.recording_enabled)return json(request,env,{ok:false,error:'recording_not_enabled'},409);
+  const mimeType=clean(input?.mimeType,120)||'video/webm';
+  const id=uid('rec'),key=recordingObjectKey(room,id,mimeType),stamp=new Date().toISOString();
+  const multipart=await env.LIVE_RECORDINGS_BUCKET.createMultipartUpload(key,{httpMetadata:{contentType:mimeType}});
+  const retention=retentionUntil(input?.retentionDays);
+  const title=clean(input?.title,180)||room.title||'Live recording';
+  await env.DB.prepare(`INSERT INTO realtime_recordings
+    (id,room_id,tenant_id,status,storage_key,retention_until,created_at,updated_at,upload_id,mime_type,byte_size,visibility,archive_status,title,created_by)
+    VALUES (?,?,?,'recording',?,?,?,?,?,?,0,'private','pending',?,?)`)
+    .bind(id,room.id,room.tenant_id,key,retention,stamp,stamp,multipart.uploadId,mimeType,title,auth.access.identity?canonicalAiSubject(auth.access.identity):room.owner_user_id).run();
+  return json(request,env,{ok:true,recording:safeRecording(await recordingById(env,id)),partMinBytes:5*1024*1024},201);
+}
+async function uploadRecordingPart(request,env,url){
+  const match=url.pathname.match(/^\/api\/realtime\/rooms\/([^/]+)\/recordings\/([^/]+)\/parts\/(\d+)$/);
+  if(!match||request.method!=='PUT')return null;
+  if(!env.LIVE_RECORDINGS_BUCKET)return json(request,env,{ok:false,error:'recording_storage_not_configured'},503);
+  const room=await roomById(env,decodeURIComponent(match[1]));
+  if(!room)return json(request,env,{ok:false,error:'room_not_found'},404);
+  const auth=await ownerAllowed(request,env,room);if(!auth.allowed)return json(request,env,{ok:false,error:'room_owner_permission_required'},403);
+  const recording=await recordingById(env,decodeURIComponent(match[2]));
+  if(!recording||recording.room_id!==room.id)return json(request,env,{ok:false,error:'recording_not_found'},404);
+  if(recording.status!=='recording'||!recording.upload_id)return json(request,env,{ok:false,error:'recording_not_uploading'},409);
+  const partNumber=Number(match[3]);if(!Number.isInteger(partNumber)||partNumber<1||partNumber>10000)return json(request,env,{ok:false,error:'invalid_part_number'},400);
+  if(!request.body)return json(request,env,{ok:false,error:'recording_part_body_required'},400);
+  const upload=env.LIVE_RECORDINGS_BUCKET.resumeMultipartUpload(recording.storage_key,recording.upload_id);
+  const part=await upload.uploadPart(partNumber,request.body);
+  const size=Math.max(0,Number(request.headers.get('content-length')||0));
+  await env.DB.prepare(`INSERT INTO realtime_recording_parts(recording_id,part_number,etag,size_bytes,uploaded_at)
+    VALUES (?,?,?,?,?) ON CONFLICT(recording_id,part_number) DO UPDATE SET etag=excluded.etag,size_bytes=excluded.size_bytes,uploaded_at=excluded.uploaded_at`)
+    .bind(recording.id,part.partNumber,part.etag,size,new Date().toISOString()).run();
+  return json(request,env,{ok:true,recordingId:recording.id,partNumber:part.partNumber,etag:part.etag});
+}
+async function finalizeRecording(request,env,room,recording,auth){
+  if(!env.LIVE_RECORDINGS_BUCKET)return json(request,env,{ok:false,error:'recording_storage_not_configured'},503);
+  if(recording.status==='ready')return json(request,env,{ok:true,recording:safeRecording(recording),alreadyFinalized:true});
+  if(recording.status!=='recording'||!recording.upload_id)return json(request,env,{ok:false,error:'recording_not_uploading'},409);
+  const rows=await env.DB.prepare('SELECT part_number,etag,size_bytes FROM realtime_recording_parts WHERE recording_id=? ORDER BY part_number').bind(recording.id).all();
+  const parts=(rows.results||[]).map(row=>({partNumber:Number(row.part_number),etag:String(row.etag)}));
+  if(!parts.length)return json(request,env,{ok:false,error:'recording_has_no_parts'},409);
+  const upload=env.LIVE_RECORDINGS_BUCKET.resumeMultipartUpload(recording.storage_key,recording.upload_id);
+  await upload.complete(parts);
+  const object=await env.LIVE_RECORDINGS_BUCKET.head(recording.storage_key);
+  const stamp=new Date().toISOString();
+  await env.DB.prepare(`UPDATE realtime_recordings SET status='ready',upload_id=NULL,byte_size=?,archive_status='pending',updated_at=? WHERE id=?`).bind(Number(object?.size||0),stamp,recording.id).run();
+  const ready=await recordingById(env,recording.id);
+  const archive=await archiveRecordingToSharedDrive(env,ready,room,auth.access);
+  const fresh=await recordingById(env,recording.id);
+  return json(request,env,{ok:true,recording:safeRecording(fresh),archive});
+}
+async function recordingMedia(request,env,url){
+  const match=url.pathname.match(/^\/api\/realtime\/recordings\/([^/]+)\/media$/);
+  if(!match||request.method!=='GET')return null;
+  if(!env.LIVE_RECORDINGS_BUCKET)return json(request,env,{ok:false,error:'recording_storage_not_configured'},503);
+  const recording=await recordingById(env,decodeURIComponent(match[1]));
+  if(!recording||recording.status==='deleted')return json(request,env,{ok:false,error:'recording_not_found'},404);
+  const access=await tenantAdminAccess(request,env,recording.tenant_id);if(!access.allowed)return json(request,env,{ok:false,error:'tenant_host_permission_required'},403);
+  const object=await env.LIVE_RECORDINGS_BUCKET.get(recording.storage_key);
+  if(!object)return json(request,env,{ok:false,error:'recording_object_not_found'},404);
+  const headers=new Headers({'cache-control':'private, no-store','x-content-type-options':'nosniff',...cors(request,env)});
+  if(typeof object.writeHttpMetadata==='function')object.writeHttpMetadata(headers);else headers.set('content-type',recording.mime_type||'video/webm');
+  headers.set('content-length',String(object.size||recording.byte_size||0));
+  const disposition=url.searchParams.get('download')==='1'?'attachment':'inline';
+  const ext=String(recording.mime_type||'').includes('mp4')?'mp4':'webm';
+  headers.set('content-disposition',`${disposition}; filename="recording-${recording.id}.${ext}"`);
+  return new Response(object.body,{status:200,headers});
+}
+async function recordingRoutes(request,env,url,input){
+  if(request.method==='GET'&&url.pathname===`${PREFIX}/recordings`){
+    const config=realtimeTenant(url.searchParams.get('tenant')||'');if(!config)return json(request,env,{ok:false,error:'invalid_tenant'},400);
+    const access=await tenantAdminAccess(request,env,config.apiTenant);if(!access.allowed)return json(request,env,{ok:false,error:'tenant_host_permission_required'},403);
+    const rows=await env.DB.prepare(`SELECT * FROM realtime_recordings WHERE tenant_id=? AND status!='deleted' ORDER BY created_at DESC LIMIT 200`).bind(config.apiTenant).all();
+    return json(request,env,{ok:true,tenant:config.apiTenant,recordings:(rows.results||[]).map(safeRecording)});
+  }
+  const start=url.pathname.match(/^\/api\/realtime\/rooms\/([^/]+)\/recordings$/);
+  if(start&&request.method==='POST'){
+    const room=await roomById(env,decodeURIComponent(start[1]));if(!room)return json(request,env,{ok:false,error:'room_not_found'},404);
+    return startRecordingUpload(request,env,room,input||{});
+  }
+  const action=url.pathname.match(/^\/api\/realtime\/rooms\/([^/]+)\/recordings\/([^/]+)\/(finalize|abort)$/);
+  if(action&&request.method==='POST'){
+    const room=await roomById(env,decodeURIComponent(action[1]));if(!room)return json(request,env,{ok:false,error:'room_not_found'},404);
+    const auth=await ownerAllowed(request,env,room);if(!auth.allowed)return json(request,env,{ok:false,error:'room_owner_permission_required'},403);
+    const recording=await recordingById(env,decodeURIComponent(action[2]));if(!recording||recording.room_id!==room.id)return json(request,env,{ok:false,error:'recording_not_found'},404);
+    if(action[3]==='finalize')return finalizeRecording(request,env,room,recording,auth);
+    if(recording.upload_id&&env.LIVE_RECORDINGS_BUCKET){await env.LIVE_RECORDINGS_BUCKET.resumeMultipartUpload(recording.storage_key,recording.upload_id).abort().catch(()=>{});}
+    await env.DB.prepare(`UPDATE realtime_recordings SET status='failed',archive_status='failed',updated_at=? WHERE id=?`).bind(new Date().toISOString(),recording.id).run();
+    return json(request,env,{ok:true,recording:safeRecording(await recordingById(env,recording.id))});
+  }
+  const item=url.pathname.match(/^\/api\/realtime\/recordings\/([^/]+)$/);
+  if(item&&['PATCH','DELETE'].includes(request.method)){
+    const recording=await recordingById(env,decodeURIComponent(item[1]));if(!recording||recording.status==='deleted')return json(request,env,{ok:false,error:'recording_not_found'},404);
+    const access=await tenantAdminAccess(request,env,recording.tenant_id);if(!access.allowed)return json(request,env,{ok:false,error:'tenant_host_permission_required'},403);
+    if(request.method==='PATCH'){
+      const visibility=['private','public','unlisted'].includes(String(input?.visibility||''))?String(input.visibility):recording.visibility;
+      const retention=input&&Object.prototype.hasOwnProperty.call(input,'retentionDays')?retentionUntil(input.retentionDays):recording.retention_until;
+      const title=clean(input?.title,180)||recording.title||'';
+      await env.DB.prepare('UPDATE realtime_recordings SET visibility=?,retention_until=?,title=?,updated_at=? WHERE id=?').bind(visibility,retention,title,new Date().toISOString(),recording.id).run();
+      return json(request,env,{ok:true,recording:safeRecording(await recordingById(env,recording.id))});
+    }
+    if(env.LIVE_RECORDINGS_BUCKET&&recording.storage_key)await env.LIVE_RECORDINGS_BUCKET.delete(recording.storage_key).catch(()=>{});
+    if(recording.drive_file_id&&clean(env.EKODI_STORAGE_GATEWAY_KEY,500)){
+      await fetch('https://drive.ekodi.kr/api/storage/v1/delete-file',{method:'POST',headers:{'content-type':'application/json','x-ekodi-storage-key':clean(env.EKODI_STORAGE_GATEWAY_KEY,500)},body:JSON.stringify({fileId:recording.drive_file_id})}).catch(()=>null);
+    }
+    await env.DB.prepare(`UPDATE realtime_recordings SET status='deleted',deleted_at=?,updated_at=? WHERE id=?`).bind(new Date().toISOString(),new Date().toISOString(),recording.id).run();
+    return json(request,env,{ok:true,deleted:true,id:recording.id});
+  }
+  const youtube=url.pathname.match(/^\/api\/realtime\/recordings\/([^/]+)\/youtube$/);
+  if(youtube&&request.method==='POST'){
+    const recording=await recordingById(env,decodeURIComponent(youtube[1]));if(!recording||recording.status!=='ready')return json(request,env,{ok:false,error:'recording_not_ready'},409);
+    const access=await tenantAdminAccess(request,env,recording.tenant_id);if(!access.allowed)return json(request,env,{ok:false,error:'tenant_host_permission_required'},403);
+    await env.DB.prepare(`UPDATE realtime_recordings SET youtube_status='connection_required',updated_at=? WHERE id=?`).bind(new Date().toISOString(),recording.id).run();
+    return json(request,env,{ok:false,error:'youtube_connection_required',recording:safeRecording(await recordingById(env,recording.id)),connectUrl:'https://ekodi.kr/admin/?route=marketing-channels'},409);
+  }
+  return null;
+}
+
 async function providerCall(env,path,{method='POST',payload}={}){
   const appId=clean(env.REALTIME_SFU_APP_ID,80),secret=clean(env.REALTIME_SFU_APP_SECRET,200);
   if(!appId||!secret)throw Object.assign(new Error('realtime_provider_not_configured'),{status:503});
