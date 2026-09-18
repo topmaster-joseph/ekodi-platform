@@ -38,7 +38,7 @@ test('Control guarded release probes the Personal Finance canonical auth boundar
   assert.deepEqual(probe.statuses,[401]);
   assert.ok(probe.expect.includes('PF_ADMIN_AUTH_REQUIRED'));
   assert.ok(probe.headerExpect.includes('x-ekodi-personal-finance-proxy: service-binding-v1'));
-  const google=manifest.worker.requests.find(item=>item.url==='https://api.ekodi.kr/api/google/config');
+  const google=manifest.worker.requests.find(item=>String(item.url||'').endsWith('/api/google/config'));
   assert.ok(google.expect.includes('483044030492-ej1ie2boa4e01lglm75e9q1r6m25pkp2.apps.googleusercontent.com'));
   assert.ok(google.expect.includes('"identityOrigin":"https://ekodi.kr"'));
 });
