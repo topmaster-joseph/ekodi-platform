@@ -7,6 +7,9 @@ const clean=(value,max=8000)=>String(value??'').trim().slice(0,max);
 const nowIso=()=>new Date().toISOString();
 const safeJson=value=>{try{return JSON.stringify(value??{})}catch{return '{}'}};
 const toId=value=>{const n=Number(value);return Number.isSafeInteger(n)&&n>0?n:0};
+const phoneLike=value=>/(?:\d[\s().-]?){7,}/.test(String(value||''));
+export function isOpaqueSmsThreadId(value=''){const id=clean(value,240);return Boolean(id&&!phoneLike(id)&&!id.includes('@'))}
+function safeCustomerDisplay(value=''){const display=clean(value,80);return !display||phoneLike(display)||display.includes('@')?'고객':display}
 
 export function classifySmsOrderInput(value=''){
   const text=clean(value,500);
@@ -109,12 +112,14 @@ async function handleInbound(request,env,executionCtx){
   if(!data)return json(request,env,{error:'INVALID_JSON'},400);
   const storeSlug=clean(data.storeSlug,80).toLowerCase();
   const providerEventId=clean(data.providerEventId,240);
+  const provider=clean(data.provider||'sms-bridge',80).toLowerCase();
   const externalThreadId=clean(data.externalThreadId,240);
   const text=clean(data.text,8000);
-  const customerDisplay=clean(data.customerDisplay,80);
+  const customerDisplay=safeCustomerDisplay(data.customerDisplay);
   if(!allowedStores(env).has(storeSlug))return json(request,env,{error:'STORE_NOT_ALLOWED'},403);
   if(!providerEventId||!externalThreadId||!text)return json(request,env,{error:'SMS_EVENT_FIELDS_REQUIRED'},400);
-  const duplicate=await env.DB.prepare('SELECT order_id,thread_id FROM store_sms_ingress_events WHERE provider_event_id=?').bind(providerEventId).first();
+  if(!isOpaqueSmsThreadId(externalThreadId))return json(request,env,{error:'OPAQUE_THREAD_ID_REQUIRED'},400);
+  const duplicate=await env.DB.prepare('SELECT order_id,thread_id FROM store_sms_ingress_events WHERE provider=? AND provider_event_id=?').bind(provider,providerEventId).first();
   if(duplicate)return json(request,env,{ok:true,idempotent:true,orderId:duplicate.order_id||null,threadId:duplicate.thread_id||null});
   const threadId=await findOrCreateThread(env,{storeSlug,externalThreadId,customerDisplay});
   const now=nowIso();
@@ -145,8 +150,8 @@ async function handleInbound(request,env,executionCtx){
   }else{
     return json(request,env,{error:'EMPTY_SMS'},400);
   }
-  await env.DB.prepare(`INSERT INTO store_sms_ingress_events(provider_event_id,store_slug,thread_id,order_id,message_id,created_at) VALUES(?,?,?,?,?,?)`)
-    .bind(providerEventId,storeSlug,threadId,order?.id||null,messageId,now).run();
+  await env.DB.prepare(`INSERT INTO store_sms_ingress_events(provider,provider_event_id,store_slug,thread_id,order_id,message_id,created_at) VALUES(?,?,?,?,?,?,?)`)
+    .bind(provider,providerEventId,storeSlug,threadId,order?.id||null,messageId,now).run();
   const queued=await queueSmsReply(env,executionCtx,{threadId,body:reply,eventType});
   return json(request,env,{ok:true,orderId:order?.id||null,threadId,status:order?.status||null,replyQueued:queued.status},201);
 }
