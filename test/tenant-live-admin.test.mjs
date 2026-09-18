@@ -19,6 +19,8 @@ test('tenant live admin exposes recording management actions',async()=>{
   const response=tenantLiveAdminPage(tenant);
   const html=await response.text();
   assert.match(html,/방송 · 녹화 관리/);
+  assert.match(html,/id="broadcastList"/);
+  assert.match(html,/id="recordingList"/);
   assert.match(html,/라이브 스튜디오/);
   const source=await read('tenant-live-admin-page.js');
   for(const label of ['재생','다운로드','YouTube 게시','삭제','보존기간']) assert.match(source,new RegExp(label));
