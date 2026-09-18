@@ -189,6 +189,61 @@ async function mediaSession(env,roomId,sessionId,request){
   return row;
 }
 
+
+async function createCameraSourceSession(request,env,room,source){
+  const provider=await providerCall(env,'/sessions/new',{method:'POST'});
+  const accessKey=`rts_${crypto.randomUUID().replaceAll('-','')}${crypto.randomUUID().replaceAll('-','')}`;
+  const id=uid('ms'),stamp=new Date().toISOString();
+  await env.DB.prepare(`INSERT INTO realtime_media_sessions (id,room_id,tenant_id,actor_key,role,provider,provider_session_id,access_hash,status,created_at,updated_at) VALUES (?,?,?,?,?,'cloudflare-realtime',?,?,'active',?,?)`).bind(id,room.id,room.tenant_id,`camera-source:${source.id}`,'presenter',provider.sessionId,await sha256(accessKey),stamp,stamp).run();
+  await env.DB.prepare(`UPDATE realtime_camera_sources SET status='connected',updated_at=? WHERE id=? AND room_id=?`).bind(stamp,source.id,room.id).run();
+  return json(request,env,{ok:true,source:{id:source.id,roomId:room.id,label:source.label,status:'connected'},session:{id,providerSessionId:provider.sessionId,accessKey,role:'presenter'},iceServers:[{urls:'stun:stun.cloudflare.com:3478'}]});
+}
+async function cameraSourceRoute(request,env,url,input){
+  const inviteMatch=url.pathname.match(/^\/api\/realtime\/rooms\/([^/]+)\/camera-sources\/invites$/);
+  if(inviteMatch&&request.method==='POST'){
+    const room=await roomById(env,decodeURIComponent(inviteMatch[1]));if(!room)return json(request,env,{ok:false,error:'room_not_found'},404);
+    const auth=await ownerAllowed(request,env,room);if(!auth.allowed)return json(request,env,{ok:false,error:'room_owner_permission_required'},403);
+    const active=await env.DB.prepare(`SELECT COUNT(*) count FROM realtime_camera_sources WHERE room_id=? AND status IN ('pending','approved','connected')`).bind(room.id).first();
+    if(Number(active?.count||0)>=6)return json(request,env,{ok:false,error:'camera_source_limit_reached',limit:6},409);
+    const raw=`rcs_${crypto.randomUUID().replaceAll('-','')}${crypto.randomUUID().replaceAll('-','')}`,id=uid('csi'),stamp=new Date().toISOString();
+    const ttl=Math.min(30,Math.max(2,Number(input?.expiresMinutes||10))),expires=new Date(Date.now()+ttl*60000).toISOString();
+    await env.DB.prepare(`INSERT INTO realtime_camera_source_invites (id,room_id,tenant_id,token_hash,label,status,expires_at,created_at,updated_at) VALUES (?,?,?,?,?,'pending',?,?,?)`).bind(id,room.id,room.tenant_id,await sha256(raw),clean(input?.label,80)||'모바일 카메라',expires,stamp,stamp).run();
+    return json(request,env,{ok:true,invite:{id,label:clean(input?.label,80)||'모바일 카메라',status:'pending',expiresAt:expires,joinUrl:`https://ekodi.kr/ekodichurch/live/camera/?invite=${encodeURIComponent(raw)}`}},201);
+  }
+  const listMatch=url.pathname.match(/^\/api\/realtime\/rooms\/([^/]+)\/camera-sources$/);
+  if(listMatch&&request.method==='GET'){
+    const room=await roomById(env,decodeURIComponent(listMatch[1]));if(!room)return json(request,env,{ok:false,error:'room_not_found'},404);
+    const auth=await ownerAllowed(request,env,room);if(!auth.allowed)return json(request,env,{ok:false,error:'room_owner_permission_required'},403);
+    const rows=await env.DB.prepare(`SELECT id,label,status,created_at,updated_at FROM realtime_camera_sources WHERE room_id=? ORDER BY created_at`).bind(room.id).all();
+    return json(request,env,{ok:true,sources:rows.results||[]});
+  }
+  if(url.pathname===`${PREFIX}/camera-sources/claim`&&request.method==='POST'){
+    const raw=clean(input?.inviteToken,300);if(!raw)return json(request,env,{ok:false,error:'camera_source_invite_required'},400);
+    const invite=await env.DB.prepare(`SELECT * FROM realtime_camera_source_invites WHERE token_hash=?`).bind(await sha256(raw)).first();
+    if(!invite)return json(request,env,{ok:false,error:'invalid_camera_source_invite'},403);
+    if(invite.status==='revoked')return json(request,env,{ok:false,error:'camera_source_invite_revoked'},403);
+    if(invite.expires_at<=new Date().toISOString()){await env.DB.prepare(`UPDATE realtime_camera_source_invites SET status='expired',updated_at=? WHERE id=?`).bind(new Date().toISOString(),invite.id).run();return json(request,env,{ok:false,error:'camera_source_invite_expired'},403);}
+    const room=await roomById(env,invite.room_id);if(!room||!['created','starting','live'].includes(room.status))return json(request,env,{ok:false,error:'room_not_joinable'},409);
+    let source=invite.claimed_source_id?await env.DB.prepare(`SELECT * FROM realtime_camera_sources WHERE id=? AND room_id=?`).bind(invite.claimed_source_id,room.id).first():null;
+    if(!source){const sid=uid('camsrc'),stamp=new Date().toISOString();await env.DB.prepare(`INSERT INTO realtime_camera_sources (id,room_id,tenant_id,invite_id,label,status,created_at,updated_at) VALUES (?,?,?,?,?,'pending',?,?)`).bind(sid,room.id,room.tenant_id,invite.id,invite.label,stamp,stamp).run();await env.DB.prepare(`UPDATE realtime_camera_source_invites SET claimed_source_id=?,updated_at=? WHERE id=?`).bind(sid,stamp,invite.id).run();source=await env.DB.prepare(`SELECT * FROM realtime_camera_sources WHERE id=?`).bind(sid).first();}
+    if(source.status==='revoked')return json(request,env,{ok:false,error:'camera_source_revoked'},403);
+    if(source.status!=='approved')return json(request,env,{ok:true,waitingApproval:true,source:{id:source.id,roomId:room.id,label:source.label,status:source.status}},202);
+    await env.DB.prepare(`UPDATE realtime_camera_source_invites SET status='used',updated_at=? WHERE id=?`).bind(new Date().toISOString(),invite.id).run();
+    return createCameraSourceSession(request,env,room,source);
+  }
+  const actionMatch=url.pathname.match(/^\/api\/realtime\/rooms\/([^/]+)\/camera-sources\/([^/]+)\/(approve|revoke)$/);
+  if(actionMatch&&request.method==='POST'){
+    const room=await roomById(env,decodeURIComponent(actionMatch[1]));if(!room)return json(request,env,{ok:false,error:'room_not_found'},404);
+    const auth=await ownerAllowed(request,env,room);if(!auth.allowed)return json(request,env,{ok:false,error:'room_owner_permission_required'},403);
+    const source=await env.DB.prepare(`SELECT * FROM realtime_camera_sources WHERE id=? AND room_id=?`).bind(decodeURIComponent(actionMatch[2]),room.id).first();if(!source)return json(request,env,{ok:false,error:'camera_source_not_found'},404);
+    const next=actionMatch[3]==='approve'?'approved':'revoked',stamp=new Date().toISOString();
+    await env.DB.prepare(`UPDATE realtime_camera_sources SET status=?,updated_at=? WHERE id=? AND room_id=?`).bind(next,stamp,source.id,room.id).run();
+    if(next==='revoked')await env.DB.prepare(`UPDATE realtime_camera_source_invites SET status='revoked',updated_at=? WHERE id=?`).bind(stamp,source.invite_id).run();
+    return json(request,env,{ok:true,source:{id:source.id,label:source.label,status:next}});
+  }
+  return null;
+}
+
 async function sessionRoute(request,env,url,input){
   const match=url.pathname.match(/^\/api\/realtime\/rooms\/([^/]+)\/sessions$/);
   if(!match||request.method!=='POST')return null;
@@ -277,13 +332,14 @@ export async function handleRealtimeControl(request,env){
   }
   const mutation=await roomMutation(request,env,url,input);if(mutation)return mutation;
   const planned=await planRoute(request,env,url,input);if(planned)return planned;
+  const cameraSource=await cameraSourceRoute(request,env,url,input);if(cameraSource)return cameraSource;
   const session=await sessionRoute(request,env,url,input);if(session)return session;
   const media=await sessionMediaRoute(request,env,url,input);if(media)return media;
   return json(request,env,{ok:false,error:'realtime_endpoint_not_found'},404);
 }
 
 export const REALTIME_CONTROL_CONTRACT=Object.freeze({
-  version:'2026-09-14.1',
+  version:'2026-09-18.1',
   prefix:PREFIX,
   canonicalChurchPath:'https://ekodi.kr/ekodichurch/live/',
   multitenant:true,
