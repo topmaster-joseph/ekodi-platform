@@ -38,13 +38,13 @@ function clientMain(POLICY,CHANNEL_CATALOG){
   const SITE_CHROME_API='https://workspace-api.ekodi.kr/v1/site-chrome';
   const SESSION_KEY=IS_PORTFOLIO?'ekodi-cmpmyi-admin-session':'ekodi-store-admin-session:'+SLUG;
   const LEGACY_SESSION_KEYS={jadam:'ekodi-jadam-admin-session',pizzamaru:'ekodi-pizzamaru-admin-session',yogurt:'ekodi-yogurt-admin-session'};
-  const GROUPS=[{id:'home',label:'홈',items:[['overview','운영 홈']]},{id:'site',label:'사이트',items:[['site','사용자 사이트'],['chrome','헤더 · 푸터']]},{id:'sales',label:'판매',items:[['delivery','배달플랫폼'],['orders','주문 · 채널'],['menu','메뉴 · 가격'],['sales','매출'],['inventory','재고']]},{id:'customers',label:'고객',items:[['customers','고객'],['reviews','리뷰']]},{id:'marketing',label:'마케팅',items:[['marketing','Marketing AI'],['publishing','채널 · 게시']]},{id:'operations',label:'운영',items:[['work','매장업무'],['connections','연결관리']]},{id:'management',label:'경영',items:[['finance','비용 · 정산']]}];
+  const GROUPS=[{id:'home',label:'홈',items:[['overview','운영 홈']]},{id:'sales',label:'주문 · 판매',items:[['delivery','배달플랫폼'],['orders','주문 · 채널'],['sales','매출']]},{id:'catalog',label:'메뉴 · 재고',items:[['menu','메뉴 · 가격'],['inventory','재고']]},{id:'customers',label:'고객 · 리뷰',items:[['customers','고객'],['reviews','리뷰']]},{id:'growth',label:'홍보 · 채널',items:[['marketing','Marketing AI'],['publishing','채널 · 게시']]},{id:'operations',label:'운영 · 설정',items:[['site','사용자 사이트'],['chrome','헤더 · 푸터'],['work','매장업무'],['connections','연결관리'],['finance','비용 · 정산']]}];
 
   const NAV=GROUPS.flatMap(group=>group.items);
   const META={
     site:['사용자 사이트','이 점포의 사용자 사이트 생성 상태·주소·표현·별칭을 관리합니다.'],
     chrome:['헤더 · 푸터','이 매장 사이트의 헤더와 푸터를 관리합니다. 저장한 값은 이 사이트에만 반영됩니다.'],
-    overview:['운영 홈','오늘 매장의 핵심 신호와 다음 행동을 한눈에 봅니다.'],
+    overview:['운영 홈','오늘 매장의 주문·매출·고객 상태와 다음 행동을 한눈에 봅니다.'],
     delivery:['배달플랫폼','플랫폼별 매장·메뉴·주문·매출·정산·리뷰를 하나의 운영 흐름으로 관리합니다.'],
     menu:['메뉴 · 가격','배달앱·POS에서 들어온 실제 메뉴와 가격 차이를 비교합니다.'],
     orders:['주문 · 채널','오늘 주문과 채널별 매출 흐름을 집계값으로 확인합니다.'],
