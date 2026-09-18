@@ -14,7 +14,7 @@ const baseEnv = {
 };
 
 function request(path, method = 'GET') {
-  return new Request(`https://api.ekodi.kr${path}`, {
+  return new Request(`https://ekodi.kr${path}`, {
     method,
     headers: { origin: 'https://ekodi.kr' },
   });
@@ -32,9 +32,9 @@ test('Google client config remains available without touching D1', async () => {
 });
 
 test('Google identity config rejects a different environment origin', async () => {
-  const response = await handleAdminGoogleAuth(new Request('https://api.ekodi.kr/api/google/config', {
-    headers: { origin: 'https://auth.ekodi.kr' },
-  }), { ...baseEnv, ALLOWED_ORIGINS: 'https://ekodi.kr,https://auth.ekodi.kr' });
+  const response = await handleAdminGoogleAuth(new Request('https://ekodi.kr/api/google/config', {
+    headers: { origin: 'https://ekodi-shared-site-staging.ekodi-development.workers.dev' },
+  }), { ...baseEnv, ALLOWED_ORIGINS: 'https://ekodi.kr,https://ekodi-shared-site-staging.ekodi-development.workers.dev' });
   assert.equal(response.status, 403);
   assert.equal((await response.json()).code, 'IDENTITY_ORIGIN_MISMATCH');
 });
