@@ -429,6 +429,26 @@ jobs:
       - name: Candidate at 0%, verify routes, promote and auto-rollback on failure
         run: node scripts/guarded-worker-release.mjs --manifest deploy/manifests/shared-site.worker.json
 
+      - name: Verify EKODI Mall root address
+        shell: bash
+        run: |
+          set -euo pipefail
+          ok=false
+          for attempt in $(seq 1 12); do
+            code=$(curl -sS -D /tmp/ekodimall-root.headers -o /tmp/ekodimall-root.html -w '%{http_code}' --retry 2 --retry-delay 1 --connect-timeout 5 --max-time 20 'https://ekodi.kr/ekodimall' || true)
+            if [ "$code" = '200' ] \
+              && grep -Fiq 'x-ekodi-route: public-ekodi-mall' /tmp/ekodimall-root.headers \
+              && grep -Fiq 'x-ekodi-edge: mall-path-gateway' /tmp/ekodimall-root.headers \
+              && grep -Fq 'data-ekodi-service="mall"' /tmp/ekodimall-root.html \
+              && grep -Fq '/ekodimall/' /tmp/ekodimall-root.html; then
+              ok=true
+              break
+            fi
+            sleep 5
+          done
+          [ "$ok" = true ] || { echo "EKODI Mall root address did not serve the Mall storefront."; cat /tmp/ekodimall-root.headers || true; exit 1; }
+          echo 'ekodiMallRootAddress=verified'
+
       - name: Verify canonical Admin route ownership
         shell: bash
         run: |
