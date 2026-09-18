@@ -25,6 +25,28 @@ test('EKODI AI is the mandatory change control plane', () => {
   assert.equal(policy.mutationBoundary.directManualProductionMutation, false);
   assert.equal(policy.execution.externalAiMayOwnProductionMutation, false);
   assert.equal(policy.ownerExperience.resultOnlyReporting, true);
+  assert.equal(policy.executionFallback.enabled, true);
+  assert.equal(policy.executionFallback.decisionOwner, 'ekodi-ai-orchestrator');
+  assert.equal(policy.executionFallback.preserveOrchestrationGate, true);
+  assert.equal(policy.executionFallback.preserveAuthorityAndHumanGates, true);
+  assert.equal(policy.executionFallback.automaticDiscovery, true);
+  assert.equal(policy.executionFallback.automaticPreflight, true);
+  assert.equal(policy.executionFallback.ambiguousSideEffectStopsFanout, true);
+  assert.equal(policy.executionFallback.continueAfterExecutionErrorOnlyWhenExplicitlySafe, true);
+  assert.equal(policy.executionFallback.continueAfterVerifiedRollback, true);
+  assert.equal(policy.executionFallback.preferredLaneOrder.at(-1), 'remote_desktop');
+});
+
+test('execution fallback remains orchestrator-owned and fail-closed', () => {
+  assert.match(validator, /automatic execution fallback must remain enabled/);
+  assert.match(validator, /execution fallback decision owner must remain the EKODI orchestrator/);
+  assert.match(validator, /execution fallback must preserve the EKODI AI Orchestration Gate/);
+  assert.match(validator, /ambiguous side effects must stop automatic fallback fan-out/);
+  assert.match(validator, /execution-error fallback must require explicit safety evidence/);
+  assert.match(validator, /post-effect fallback must require verified rollback/);
+  assert.match(validator, /cloud-first with Remote Desktop last/);
+  assert.match(validator, /Execution fallback:/);
+  assert.match(validator, /Fallback lanes:/);
 });
 
 test('main and production releases are fail-closed around orchestration and constitution', () => {
