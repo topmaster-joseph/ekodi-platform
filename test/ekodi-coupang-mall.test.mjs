@@ -237,11 +237,14 @@ test('automatic product schema is additive and stores provider facts', () => {
 
 test('root router publishes Mall under EKODIBIZ and redirects the legacy root path', () => {
   assert.match(router, /const MALL_PREFIX = '\/ekodibiz\/ekodimall'/);
+  assert.match(router, /const MALL_ROOT_ALIAS_PREFIX = '\/ekodimall'/);
+  assert.match(router, /proxyMallService\(request, MALL_ROOT_ALIAS_PREFIX\)/);
+  assert.match(router, /mall-root-admin-canonical-redirect/);
   assert.match(router, /const LEGACY_MALL_PREFIX = '\/mall'/);
   assert.match(router, /mall-legacy-canonical-redirect/);
   assert.match(router, /public-ekodi-mall/);
   assert.match(router, /rewriteMallHtmlDocument/);
-  assert.match(router, /MALL_PREFIX\}\/\$\{suffix/);
+  assert.match(router, /publicPrefix\}\$\{redirect\.pathname\}/);
   assert.match(router, /responseBody = rewriteMallHtmlDocument/);
   assert.match(router, /'\/mall\.css'/);
   assert.match(router, /'\/mall\.js'/);
