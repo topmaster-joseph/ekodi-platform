@@ -110,6 +110,7 @@ jobs:
               taskId:$taskId,
               goal:$goal,
               risk:"low",
+              maxAttempts:1,
               target:{service:"core",capability:"platform_health",surface:"admin"},
               delegation:{allowed:true,reversible:true,audited:true,preflightVerified:true,verificationDefined:true},
               context:{proof:"live-production-e2e",externalTestClient:"github-actions",productionMutationAllowed:false},
