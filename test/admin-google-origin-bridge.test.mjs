@@ -8,14 +8,14 @@ const html=read('auth-site/google-origin-bridge.html');
 const router=read('platform-router-entry-worker.js');
 const site=read('site-worker.js');
 const build=read('scripts/build.mjs');
-test('canonical admin auth uses the approved auth host as Google origin bridge',()=>{
-  assert.match(admin,/GOOGLE_BRIDGE_ORIGIN='https:\/\/auth\.ekodi\.kr'/);
+test('canonical admin auth resolves the Google origin bridge from the active identity environment',()=>{
+  assert.match(admin,/GOOGLE_BRIDGE_ORIGIN=runtime\.authOrigin/);
   assert.match(admin,/window\.open\(target\.href,'ekodi_google_origin_bridge'/);
   assert.match(admin,/event\.origin!==GOOGLE_BRIDGE_ORIGIN/);
   assert.doesNotMatch(admin,/loadGoogleLibrary\(/);
 });
 test('bridge validates request and returns credential only to canonical EKODI',()=>{
-  assert.match(bridge,/TARGET_ORIGIN='https:\/\/ekodi\.kr'/);
+  assert.match(bridge,/targetOrigin:'https:\/\/ekodi\.kr'/);
   assert.match(bridge,/clientId===EXPECTED_CLIENT/);
   assert.match(bridge,/window\.opener\.postMessage/);
   assert.match(html,/accounts\.google\.com\/gsi\/client/);

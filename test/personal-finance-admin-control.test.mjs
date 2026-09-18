@@ -17,6 +17,15 @@ async function withFetch({role='super_admin',elevated=false,user=false}={},fn){
   globalThis.fetch=async input=>{const url=String(input instanceof Request?input.url:input);if(url.includes('/api/admin-access/elevation'))return new Response(JSON.stringify({elevated,authority:{role}}),{status:200,headers:{'content-type':'application/json'}});if(url.includes('/api/session'))return new Response(JSON.stringify({authenticated:true,email:'admin@example.com',role}),{status:200,headers:{'content-type':'application/json'}});if(url.includes('/auth/v1/user'))return new Response(user?JSON.stringify({id:'user-1',email:'user@example.com'}):'{}',{status:user?200:401,headers:{'content-type':'application/json'}});return new Response('{}',{status:404,headers:{'content-type':'application/json'}})};
   try{return await fn()}finally{globalThis.fetch=original}
 }
+test('admin control rejects missing bearer token with the protected PF auth contract',async()=>{
+  const DB=fakeDb();
+  const response=await worker.fetch(new Request('https://ekodi.kr/api/admin/personal-finance/control',{headers:{origin:'https://ekodi.kr'}}),env(DB));
+  assert.equal(response.status,401);
+  const data=await response.json();
+  assert.equal(data.code,'PF_ADMIN_AUTH_REQUIRED');
+  assert.equal(data.authenticated,undefined);
+});
+
 test('admin control exposes only service policy and immutable safety metadata',async()=>{
   const DB=fakeDb();const response=await withFetch({},()=>worker.fetch(new Request('https://personal-finance-api.ekodi.kr/api/admin/personal-finance/control',{headers:adminHeaders}),env(DB)));
   assert.equal(response.status,200);assert.equal(response.headers.get('access-control-allow-origin'),'https://admin.ekodi.kr');const data=await response.json();
@@ -87,6 +96,8 @@ test('Personal Finance admin UI manages policy only and never calls personal led
   assert.match(workerSource,/env\.PERSONAL_FINANCE\?\.fetch/);
   assert.match(workerSource,/target\.pathname = '\/api\/admin\/personal-finance\/control'/);
   assert.match(workerSource,/X-EKODI-Personal-Finance-Proxy/);
+  assert.match(workerSource,/upstream\.status === 401/);
+  assert.match(workerSource,/code:'PF_ADMIN_AUTH_REQUIRED'/);
   assert.match(siteConfig,/binding = "PERSONAL_FINANCE"\s+service = "ekodi-personal-finance-api"/);
   assert.match(build,/personal-finance-admin\.css/);assert.match(build,/personal-finance-admin\.js/);assert.match(workerSource,/personal-finance-admin\.js/);
   const serviceControl=fs.readFileSync(new URL('../personal-finance-service-control.js',import.meta.url),'utf8');
@@ -126,4 +137,12 @@ test('Personal Finance Admin control proxy stays on the apex and fails closed wi
   assert.match(workerSource,/PERSONAL_FINANCE_BINDING_UNAVAILABLE/);
   assert.match(workerSource,/url\.pathname === ADMIN_PERSONAL_FINANCE_PATH\) return proxyAdminPersonalFinance\(request, env\)/);
   assert.match(workerSource,/withHostSecurity\(response, ADMIN_CSP, 'no-store', 'admin-personal-finance-proxy'\)/);
+});
+
+
+test('Personal Finance production promotion requires an explicit protected-main release signal',()=>{
+  const workflow=fs.readFileSync(new URL('../.github/workflows/deploy-personal-finance.yml',import.meta.url),'utf8');
+  assert.match(workflow,/github\.ref == 'refs\/heads\/main'/);
+  assert.match(workflow,/github\.event_name == 'workflow_dispatch' && inputs\.promote_production == true/);
+  assert.match(workflow,/github\.event_name == 'push' && contains\(github\.event\.head_commit\.message, '\[promote-personal-finance\]'\)/);
 });

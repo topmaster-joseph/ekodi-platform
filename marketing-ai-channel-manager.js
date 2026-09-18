@@ -2,7 +2,7 @@
   'use strict';
 
   const TAB_KEY = 'channels';
-  const API = 'https://marketing-connect-api.ekodi.kr';
+  const API = '/marketing-connect-api';
   const STYLE_ID = 'marketingGrowthConnectorStyle';
   let loading = false;
   let installed = false;

@@ -20,8 +20,8 @@ test('admin Google auth and origin bridge modules remain syntactically valid', (
   }
 });
 
-test('Google popup UX runs only on the approved legacy auth origin bridge', () => {
-  assert.match(adminAuth, /GOOGLE_BRIDGE_ORIGIN='https:\/\/auth\.ekodi\.kr'/);
+test('Google popup UX uses the environment-scoped EKODI origin bridge', () => {
+  assert.match(adminAuth, /GOOGLE_BRIDGE_ORIGIN=runtime\.authOrigin/);
   assert.match(adminAuth, /window\.open\(target\.href,'ekodi_google_origin_bridge'/);
   assert.doesNotMatch(adminAuth, /google\.accounts\.id\.initialize/);
   assert.match(bridge, /use_fedcm_for_button:false/);
@@ -46,5 +46,5 @@ test('admin auth preserves allowlist and expired-challenge recovery', () => {
   assert.match(adminAuth, /setTimeout\(prepare,350\)/);
   assert.match(adminAuth, /event\.origin!==GOOGLE_BRIDGE_ORIGIN/);
   assert.match(adminAuth, /event\.source!==popup/);
-  assert.match(authRouter, /admin-auth\.js\?v=20260909-origin-bridge-1/);
+  assert.match(authRouter, /admin-auth\.js\?v=20260918-canonical-origin-2/);
 });

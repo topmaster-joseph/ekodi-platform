@@ -3,10 +3,17 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const SUPABASE_URL=Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const GOOGLE_CLIENT_ID="483044030492-4e6231l5glchhtniroinvuq3ev6n5mv5.apps.googleusercontent.com";
+const GOOGLE_CLIENT_IDS={
+  development:"483044030492-qvk96u0rvptsshat0pi8g522puq9ju16.apps.googleusercontent.com",
+  staging:"483044030492-j9dml7tsb7vq4a4ud041ttctavlgdskg.apps.googleusercontent.com",
+  production:"483044030492-ej1ie2boa4e01lglm75e9q1r6m25pkp2.apps.googleusercontent.com",
+} as const;
+const IDENTITY_ENV=String(Deno.env.get("EKODI_ENVIRONMENT")||Deno.env.get("ENVIRONMENT")||"production").trim().toLowerCase();
+const GOOGLE_CLIENT_ID=String(Deno.env.get("GOOGLE_CLIENT_ID")||GOOGLE_CLIENT_IDS[IDENTITY_ENV as keyof typeof GOOGLE_CLIENT_IDS]||"").trim();
+if(!Object.values(GOOGLE_CLIENT_IDS).includes(GOOGLE_CLIENT_ID as any))throw new Error("google_client_id_not_allowed_for_ekodi_environment");
 const GOOGLE_ISSUERS=new Set(["accounts.google.com","https://accounts.google.com"]);
 const GOOGLE_JWKS_URL="https://www.googleapis.com/oauth2/v3/certs";
-const AUTH_ORIGINS=new Set(["https://ekodi.kr","https://auth.ekodi.kr"]);
+const AUTH_ORIGINS=new Set(["https://ekodi.kr"]);
 const CHALLENGE_MINUTES=10;
 const admin=createClient(SUPABASE_URL,SERVICE_ROLE,{auth:{persistSession:false}});
 const encoder=new TextEncoder();
