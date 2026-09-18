@@ -15,6 +15,7 @@ import {
 } from './ekodi-command-ledger.js';
 import { getEkodiConsultationHistory } from './ekodi-consultation-ledger.js';
 import { getEkodiProviderOperationalReadiness, runEkodiCommandQueue } from './ekodi-pulse-runtime.js';
+import { getAiOrchestratorDirectiveSummary } from './ai-orchestrator-directive.js';
 
 const PREFIX = '/api/control/ai/v8';
 const COLLABORATION_PATH = `${PREFIX}/collaboration-settings`;
@@ -154,6 +155,7 @@ export async function handleEkodiV8CommandControl(request, env) {
       runtime: 'ekodi-v8-command-plane',
       proactive: true,
       orchestrationByDefault: true,
+      operatingDirective: getAiOrchestratorDirectiveSummary(),
       consultationByNeed: true,
       consultationPolicy: 'AI-CONSULT-001',
       collaborationByDefault: false,
