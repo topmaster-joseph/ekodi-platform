@@ -1,10 +1,14 @@
 import {buildExecutionPlan,buildOriginSynthesisPrompt,isOriginPreserved,resolveOriginResponseProvider,rolePrompt,summarizeRuns} from './ai-control-core.js';
 import {providerCostClass} from './ai-router-score.js';
 import {evaluateAiCostEligibility} from './ai-cost-policy.js';
+import {createCloudflareWorkersAiProvider} from './cloudflare-workers-ai-provider-adapter.js';
+import {createGroqFreeProvider} from './groq-free-provider-adapter.js';
+import {createOpenRouterFreeProvider} from './openrouter-free-provider-adapter.js';
 
 const clean=value=>String(value??'').trim();
 const DEFAULT_WORKER_PROVIDERS=Object.freeze([]);
 
+function enabled(value,fallback=false){const raw=clean(value).toLowerCase();if(!raw)return fallback;return ['1','true','yes','on','enabled'].includes(raw)}
 function configuredProviderProfiles(env={}){
   const raw=clean(env.AI_ROUTER_PROVIDER_PROFILES);if(!raw)return{};
   try{const parsed=JSON.parse(raw);return parsed&&typeof parsed==='object'&&!Array.isArray(parsed)?parsed:{}}catch{return{}}
@@ -16,7 +20,10 @@ export function providerCapabilities(env={},nodeProviders=[]){
     ? clean(env.AI_WORKER_PROVIDERS).split(',').map(v=>v.trim().toLowerCase()).filter(Boolean)
     : DEFAULT_WORKER_PROVIDERS;
   return {
+    cloudflareWorkersAi:enabled(env.EKODI_PROVIDER_WORKERS_AI_ENABLED,false)&&Boolean(env.AI&&typeof env.AI.run==='function'),
     geminiFree:Boolean(clean(env.GEMINI_API_KEY)),
+    openrouterFree:enabled(env.EKODI_PROVIDER_OPENROUTER_FREE_ENABLED,true)&&Boolean(clean(env.OPENROUTER_API_KEY)),
+    groqFree:enabled(env.EKODI_PROVIDER_GROQ_FREE_ENABLED,false)&&Boolean(clean(env.GROQ_API_KEY)),
     nodeProviders:[...new Set((nodeProviders||[]).map(v=>clean(v).toLowerCase()).filter(Boolean))],
     openaiApi:Boolean(clean(env.OPENAI_API_KEY)),
     anthropicApi:Boolean(clean(env.ANTHROPIC_API_KEY)),
@@ -28,7 +35,10 @@ export function providerCapabilities(env={},nodeProviders=[]){
 export function providerStatus(env={},nodeProviders=[]){
   const capabilities=providerCapabilities(env,nodeProviders);const providers=[];
   const push=item=>{const override=item.id.startsWith('worker:')?capabilities.providerProfiles?.[item.id]?.costClass:'';const costClass=override||item.costClass;providers.push({...item,costClass,automaticEligible:evaluateAiCostEligibility({costClass},{}).eligible})};
+  push({id:'cloudflare-workers-ai',kind:'account-ai',costClass:providerCostClass('cloudflare-workers-ai'),available:capabilities.cloudflareWorkersAi,configured:capabilities.cloudflareWorkersAi,model:clean(env.EKODI_WORKERS_AI_MODEL)||'@cf/meta/llama-3.1-8b-instruct'});
   push({id:'gemini-free',kind:'official-api',costClass:providerCostClass('gemini-free'),available:capabilities.geminiFree,configured:capabilities.geminiFree,model:clean(env.GEMINI_MODEL)||'gemini-3.7-flash'});
+  push({id:'openrouter-free',kind:'official-api',costClass:providerCostClass('openrouter-free'),available:capabilities.openrouterFree,configured:capabilities.openrouterFree,model:clean(env.EKODI_OPENROUTER_FREE_MODEL)||'openrouter/free'});
+  push({id:'groq-free',kind:'official-api',costClass:providerCostClass('groq-free'),available:capabilities.groqFree,configured:capabilities.groqFree,model:clean(env.EKODI_GROQ_FREE_MODEL)||'openai/gpt-oss-20b'});
   for(const id of capabilities.nodeProviders){const providerId=`node:${id}`;push({id:providerId,kind:'account-cli',costClass:providerCostClass(providerId),available:true,configured:true,model:'account-managed'});}
   push({id:'openai-api',kind:'official-api',costClass:providerCostClass('openai-api'),available:capabilities.openaiApi,configured:capabilities.openaiApi,model:clean(env.OPENAI_MODEL)||'gpt-5.6-luna'});
   push({id:'anthropic-api',kind:'official-api',costClass:providerCostClass('anthropic-api'),available:capabilities.anthropicApi,configured:capabilities.anthropicApi,model:clean(env.ANTHROPIC_MODEL)||'claude-haiku-4-5-20251001'});
@@ -41,7 +51,7 @@ async function invokeGemini(env,prompt){
   const model=clean(env.GEMINI_MODEL)||'gemini-3.7-flash';
   const response=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,{method:'POST',headers:{'content-type':'application/json','x-goog-api-key':key,'x-goog-api-client':'ekodi-ai-control/0.3.0'},body:JSON.stringify({contents:[{role:'user',parts:[{text:prompt}]}]})});
   const data=await response.json().catch(()=>({}));
-  if(!response.ok)throw new Error(data?.error?.message||`gemini_${response.status}`);
+  if(!response.ok){const error=new Error(data?.error?.message||`gemini_${response.status}`);error.status=response.status;const retry=Number(response.headers.get('retry-after'));if(Number.isFinite(retry)&&retry>0)error.retryAfterSeconds=retry;if(response.status===429){const detail=clean(data?.error?.message).toLowerCase();error.quota={state:/daily|per day|requests per day|\brpd\b/.test(detail)?'exhausted':'throttled'};}throw error;}
   const text=(data?.candidates?.[0]?.content?.parts||[]).map(part=>part.text||'').join('\n').trim();
   if(!text)throw new Error('gemini_empty_response');
   return text;
@@ -81,13 +91,30 @@ async function invokeWorker(env,provider,prompt,task,role){
   return output;
 }
 
-export async function invokeProvider(env,providerId,prompt,task,role){
-  if(providerId==='gemini-free')return invokeGemini(env,prompt);
-  if(providerId==='openai-api')return invokeOpenAI(env,prompt);
-  if(providerId==='anthropic-api')return invokeAnthropic(env,prompt);
+export async function invokeProviderWithMeta(env,providerId,prompt,task,role){
+  if(providerId==='cloudflare-workers-ai'){
+    const provider=createCloudflareWorkersAiProvider(env,{ai:env.AI});
+    const result=await provider.invoke({taskName:task?.title||role||'ekodi-ai-task',context:{prompt,taskId:task?.id||'',role}});
+    return Object.freeze({text:result.text,quota:null,usage:result.usage||null});
+  }
+  if(providerId==='gemini-free')return Object.freeze({text:await invokeGemini(env,prompt),quota:null});
+  if(providerId==='openrouter-free'){
+    const result=await createOpenRouterFreeProvider(env).invoke({prompt});
+    return Object.freeze({text:result.text,quota:result.quota||null});
+  }
+  if(providerId==='groq-free'){
+    const result=await createGroqFreeProvider(env).invoke({prompt});
+    return Object.freeze({text:result.text,quota:result.quota||null});
+  }
+  if(providerId==='openai-api')return Object.freeze({text:await invokeOpenAI(env,prompt),quota:null});
+  if(providerId==='anthropic-api')return Object.freeze({text:await invokeAnthropic(env,prompt),quota:null});
   if(providerId.startsWith('node:'))throw new Error('node_provider_requires_queue');
-  if(providerId.startsWith('worker:'))return invokeWorker(env,providerId.slice(7),prompt,task,role);
+  if(providerId.startsWith('worker:'))return Object.freeze({text:await invokeWorker(env,providerId.slice(7),prompt,task,role),quota:null});
   throw new Error('unsupported_provider');
+}
+
+export async function invokeProvider(env,providerId,prompt,task,role){
+  return (await invokeProviderWithMeta(env,providerId,prompt,task,role)).text;
 }
 
 export async function runExecutionPlan(env,task,onRun=async()=>{},nodeProviders=[]){

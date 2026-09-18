@@ -7,16 +7,32 @@
     "requests": [
       {
         "url": "https://ekodi.kr/ai/",
-        "statuses": [200],
+        "statuses": [
+          200
+        ],
         "redirect": "manual",
-        "expect": ["EKODI 모두의 AI 프로젝트", "무엇을 원하세요?"],
-        "headerExpect": ["x-ekodi-canonical-surface: ai", "x-ekodi-canonical-path: /ai"],
+        "expect": [
+          "EKODI 모두의 AI 프로젝트",
+          "무엇을 원하세요?"
+        ],
+        "headerExpect": [
+          "x-ekodi-canonical-surface: ai",
+          "x-ekodi-canonical-path: /ai"
+        ],
         "candidateUrl": "https://ekodi-ai-control.topmaster-joseph.workers.dev/",
-        "candidateStatuses": [200],
-        "candidateExpect": ["EKODI 모두의 AI 프로젝트", "무엇을 원하세요?"],
+        "candidateStatuses": [
+          200
+        ],
+        "candidateExpect": [
+          "EKODI 모두의 AI 프로젝트",
+          "무엇을 원하세요?"
+        ],
         "candidateHeaderExpect": [],
         "candidateForbid": [],
-        "rollbackStatuses": [200, 307],
+        "rollbackStatuses": [
+          200,
+          307
+        ],
         "rollbackExpect": [],
         "rollbackHeaderExpect": []
       },
@@ -28,7 +44,10 @@
         "expect": [
           "\"ok\":true",
           "\"platform\":\"ai-control\"",
-          "\"commons\":true"
+          "\"commons\":true",
+          "\"freeQuotaPolicy\":\"AI-FREE-QUOTA-001\"",
+          "\"paidApiAutoEscalation\":false",
+          "\"paidDecisionGate\":true"
         ],
         "candidateUrl": "https://ekodi-ai-control.topmaster-joseph.workers.dev/__health",
         "candidateStatuses": [
@@ -37,7 +56,10 @@
         "candidateExpect": [
           "\"ok\":true",
           "\"platform\":\"ai-control\"",
-          "\"commons\":true"
+          "\"commons\":true",
+          "\"freeQuotaPolicy\":\"AI-FREE-QUOTA-001\"",
+          "\"paidApiAutoEscalation\":false",
+          "\"paidDecisionGate\":true"
         ],
         "candidateHeaderExpect": [],
         "rollbackStatuses": [

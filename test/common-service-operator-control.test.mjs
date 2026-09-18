@@ -78,7 +78,7 @@ test('AI runtime exposes public Commons health and protects detailed operator st
   const data = await health.json();
   assert.equal(data.ok, true);
   assert.equal(data.platform, 'ai-control');
-  assert.equal(data.architectureVersion, '1.9.0');
+  assert.equal(data.architectureVersion, '1.10.0');
   assert.equal(data.surface, 'runtime-and-commons');
   assert.equal(data.commons, true);
   assert.match(data.commonsPolicy, /^1\./);
