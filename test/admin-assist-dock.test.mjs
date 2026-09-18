@@ -70,7 +70,7 @@ test('Assist first path is bottom command-entry-only and upgrades through existi
   assert.match(postbuild,/bottom Assist command dock \+ lazy recent-command workbench verified/);
   assert.doesNotMatch(bootstrap,/requestIdleCallback/);
   assert.match(bootstrap,/ekodi-assist-bootstrap-form/);
-  assert.match(bootstrap,/에코디에게 이야기해보세요/);
+  assert.match(bootstrap,/에코디에게 말해보세요/);
   assert.match(bootstrap,/ekodi-admin-assist-request/);
   assert.match(bootstrap,/loadStyle\('ai-ops-admin\.css'\)/);
   assert.match(bootstrap,/loadScript\('admin-lazy-features\.js'\)/);
