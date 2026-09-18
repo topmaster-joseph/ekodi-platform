@@ -171,6 +171,45 @@ test('resource targets are symbolic identities, not hard-coded user or admin hos
   assert.equal(JSON.stringify(target).includes('my.ekodi.kr'), false);
 });
 
+
+test('registered Cloudflare Workers AI remains eligible inside the nested orchestrator', async () => {
+  let calls = 0;
+  const workersAi = {
+    id: 'cloudflare-workers-ai',
+    priority: 5,
+    capabilities: ['text', 'reasoning', 'review', 'code'],
+    available: true,
+    resourceClass: 'cloudflare-workers-ai-binding',
+    fundingSource: 'ekodi-cloudflare',
+    officialPath: true,
+    automationAllowed: true,
+    costClass: 'account-managed',
+    async invoke() {
+      calls += 1;
+      return { text: 'workers-ai-ok' };
+    },
+  };
+  const plane = buildEkodiCommandPlane({}, [workersAi]);
+  const result = await plane.handlePulse({
+    event: {
+      id: 'evt-workers-ai',
+      kind: 'system_event',
+      summary: 'Verify Workers AI orchestration resource eligibility.',
+      changeClass: 'green',
+    },
+    delegation: {
+      allowed: true,
+      reversible: true,
+      audited: true,
+      preflightVerified: true,
+      verificationDefined: true,
+    },
+  });
+  assert.notEqual(result.state, 'core_only');
+  assert.ok(calls >= 1);
+  assert.ok(result.evidence.providerDiversity >= 1);
+});
+
 test('AI_PROVIDER=NONE leaves the Command Plane in Core-only degraded mode without invoking providers', async () => {
   let calls = 0;
   const plane = buildEkodiCommandPlane({ AI_PROVIDER: 'NONE' }, [
