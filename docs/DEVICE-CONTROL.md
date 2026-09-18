@@ -2,11 +2,11 @@
 
 ## Purpose
 
-Device Control adds a bounded device-management layer to `admin.ekodi.kr` without giving the browser arbitrary operating-system authority.
+Device Control adds a bounded device-management layer to `https://ekodi.kr/admin` without giving the browser arbitrary operating-system authority.
 
 The control path is:
 
-`admin.ekodi.kr → api.ekodi.kr → Device Control queue → enrolled Windows Agent → verify/result → audit`
+`https://ekodi.kr/admin → internal Control API → Device Control queue → enrolled Windows Agent → verify/result → audit`
 
 The hybrid execution extension keeps the cloud as the control plane and treats enrolled PCs as replaceable execution nodes. An administrator must explicitly enable automatic work on each device. Jobs remain in the cloud queue until an online, enabled device in the requested group has the required capability and spare capacity.
 
@@ -96,7 +96,7 @@ Do not release directly to production. Before merge/deployment:
 8. Verify all power profiles, resume-lock off/on, and exact `power.restore` behavior.
 9. Verify AutoLogon only opens the local Microsoft UI and no password appears in network requests, D1, logs, or audit detail.
 10. Revoke the test device and confirm subsequent heartbeat/command polling returns 401.
-11. Verify `admin.ekodi.kr` shows the upgraded device online with the new Agent version and fresh heartbeat.
+11. Verify `https://ekodi.kr/admin` shows the upgraded device online with the new Agent version and fresh heartbeat.
 12. Apply desktop Boot/WOL separately and confirm a Boot/WOL failure cannot roll back or invalidate a healthy Agent installation.
 
 ## Deferred work
