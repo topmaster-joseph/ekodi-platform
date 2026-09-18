@@ -19,6 +19,7 @@ const clientAuth=read('auth-site/client-auth.js');
 const authTarget=read('auth-site/auth-workspace-target.js');
 const authRouter=read('auth-site/auth-router.js');
 const authHtml=read('auth-site/index.html');
+const authEntry=read('auth-site/auth-entry.js');
 const marketingOnboarding=read('auth-site/marketing-onboarding.js');
 const myHtml=read('my/index.html');
 const myApp=read('my/app.js');
@@ -59,7 +60,8 @@ test('legacy Mall seller login is normalized back to Seller Studio through the c
   assert.match(authRouter,/'mall-seller':'mall'/);
   assert.match(authRouter,/requestedSite==='mall-seller'/);
   assert.match(authRouter,/https:\/\/ekodi\.kr\/ekodibiz\/ekodimall\/seller\//);
-  assert.match(authHtml,/auth-router\.js\?v=20260904-direct-login-1/);
+  assert.match(authHtml,/auth-entry\.js\?v=20260918-csp-bootstrap-1/);
+  assert.match(authEntry,/\.\/auth-router\.js\?v=20260918-csp-bootstrap-1/);
 });
 
 test('stable Google subject cannot be silently replaced by a recycled email account',()=>{
@@ -121,7 +123,8 @@ test('auth center is workspace-first and hides linked login identities outside a
 
 test('Marketing workspace labels are separated and current routed assets are force-refreshed',()=>{
   assert.match(authHtml,/auth-workspaces\.css\?v=20260817-workspace-label-1/);
-  assert.match(authHtml,/auth-router\.js\?v=20260904-direct-login-1/);
+  assert.match(authHtml,/auth-entry\.js\?v=20260918-csp-bootstrap-1/);
+  assert.match(authEntry,/\.\/auth-router\.js\?v=20260918-csp-bootstrap-1/);
   assert.match(authRouter,/marketing-auth-hotfix\.js\?v=20260824-return-origin-1/);
   assert.match(authRouter,/marketing-onboarding\.js\?v=20260817-workspace-label-1/);
   assert.match(marketingOnboarding,/parts\.slice\(0,2\)/);
@@ -180,7 +183,7 @@ test('My EKODI is the signed-in workspace home and routes connected platforms th
 });
 
 test('browser auth and My router scripts parse as JavaScript',()=>{
-  for(const path of ['auth-site/auth.js','auth-site/client-auth.js','auth-site/auth-router.js','auth-site/auth-workspace-target.js','auth-site/marketing-onboarding.js','my/app.js','my/user-ai-ui.js']){
+  for(const path of ['auth-site/auth.js','auth-site/auth-entry.js','auth-site/client-auth.js','auth-site/auth-router.js','auth-site/auth-workspace-target.js','auth-site/marketing-onboarding.js','my/app.js','my/user-ai-ui.js']){
     const result=spawnSync(process.execPath,['--check',fileURLToPath(new URL(`../${path}`,import.meta.url))],{encoding:'utf8'});
     assert.equal(result.status,0,`${path}\n${result.stderr||result.stdout}`);
   }
