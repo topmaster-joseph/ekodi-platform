@@ -487,6 +487,31 @@ async function verifyCommandWorkbench(started) {
   results.push({ id: menuId, group, ok: true, durationMs: Date.now() - started, ...state });
 }
 
+async function verifyPersonalFinance(tab, alreadyActive, started) {
+  stage('personal-finance-control');
+  if (!alreadyActive) await clickFast(tab);
+  await page.waitForFunction(() => {
+    const panel = document.querySelector('#personalFinanceAdminPanel');
+    if (!panel || panel.hidden || panel.classList.contains('hidden-panel')) return false;
+    return Boolean(panel.querySelector('.pf-admin-summary') || panel.querySelector('.pf-admin-error'));
+  }, null, { timeout: 10_000 });
+  const state = await page.evaluate(() => {
+    const panel = document.querySelector('#personalFinanceAdminPanel');
+    const summary = panel?.querySelector('.pf-admin-summary');
+    const error = panel?.querySelector('.pf-admin-error');
+    return {
+      loaded: Boolean(summary),
+      error: String(error?.innerText || '').replace(/\s+/g, ' ').trim(),
+      textLength: String(panel?.innerText || '').replace(/\s+/g, ' ').trim().length,
+      proxyRequestSeen: performance.getEntriesByType('resource').some(entry => {
+        try { return new URL(entry.name, location.href).pathname === '/api/control/personal-finance'; } catch { return false; }
+      }),
+    };
+  });
+  if (!state.loaded || state.error) throw new Error(`personal-finance control failed: ${JSON.stringify(state)}`);
+  results.push({ id: menuId, group, ok: true, durationMs: Date.now() - started, personalFinanceControl: true, ...state });
+}
+
 async function verifyNormal(tab, alreadyActive, started) {
   if (!alreadyActive) await clickFast(tab);
   stage('panel');
@@ -562,6 +587,7 @@ try {
       else if (menuId === 'language-status') await verifyLanguageStatus(trigger, alreadyActive, started);
       else if (menuId === 'maturity') await verifyMaturity(trigger, alreadyActive, started);
       else if (menuId === 'ai-settings') await verifyAiSettings(trigger, alreadyActive, started);
+      else if (menuId === 'personal-finance') await verifyPersonalFinance(trigger, alreadyActive, started);
       else await verifyNormal(trigger, alreadyActive, started);
     }
   }
