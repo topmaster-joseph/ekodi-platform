@@ -91,3 +91,29 @@ jobs:
       - name: Run full tests on main
         if: github.event_name != 'pull_request'
         run: npm test
+
+
+  dispatch-live-orchestrator-proof:
+    name: Dispatch live orchestrator proof
+    if: github.event_name == 'pull_request' && github.head_ref == 'ai/chatgpt/dispatch-live-proof-20260918'
+    permissions:
+      actions: write
+      contents: read
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Dispatch main live production proof
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          code=$(curl -sS -o /tmp/dispatch.out -w '%{http_code}' \
+            -X POST "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/verify-ekodi-orchestrator-live-e2e.yml/dispatches" \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            -d '{"ref":"main"}')
+          cat /tmp/dispatch.out || true
+          test "$code" = "204"
+          echo "Live orchestrator proof dispatched from PR CI."
