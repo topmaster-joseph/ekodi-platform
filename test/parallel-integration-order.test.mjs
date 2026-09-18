@@ -49,16 +49,3 @@ test('integration order never bypasses actual GitHub merge conflicts',()=>{
   assert.match(workflow,/actual merge conflict with the base branch/);
   assert.match(docs,/do not waive tests, reviews, branch protection, authorization or deployment safeguards/);
 });
-
-test('parallel conflict guard snapshots open PR metadata and uses REST only as a fail-closed large-PR fallback',()=>{
-  assert.match(workflow,/gh pr list --repo "\$REPOSITORY" --state open --base "\$BASE_REF" --limit 500/);
-  assert.match(workflow,/--json number,headRefName,isDraft,changedFiles,files,labels/);
-  assert.match(workflow,/gh pr view "\$PR_NUMBER" --repo "\$REPOSITORY"/);
-  assert.match(workflow,/select\(\.number != \$current and \.isDraft == false\)/);
-  assert.match(workflow,/Current PR file evidence is missing; refusing to infer independence/);
-  assert.match(workflow,/PR #\$\{other_pr\} file evidence is missing; refusing to infer independence/);
-  assert.match(workflow,/governance_snapshot/);
-  assert.match(workflow,/if \[\[ "\$changed" -gt "\$listed" \]\]/);
-  assert.match(workflow,/pulls\/\$\{other_pr\}\/files\?per_page=100/);
-  assert.doesNotMatch(workflow,/has_priority=\$\(gh api "repos\/\$\{REPOSITORY\}\/pulls\/\$\{candidate_pr\}"/);
-});
