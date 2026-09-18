@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 const read=path=>readFile(new URL(`../${path}`,import.meta.url),'utf8');
 
 test('admin root is a command-only workspace while Campus remains a child route',async()=>{
-  const [bootstrap,bootstrapCss,dock,dockCss,menuLayout,menuRegistry,sidebar]=await Promise.all([
+  const [bootstrap,bootstrapCss,dock,dockCss,menuLayout,menuRegistry,sidebar,e2eWorker]=await Promise.all([
     read('admin-assist-bootstrap.js'),
     read('admin-assist-bootstrap.css'),
     read('admin-assist-dock.js'),
@@ -15,6 +15,7 @@ test('admin root is a command-only workspace while Campus remains a child route'
     read('admin-menu-layout.js'),
     read('admin-menu-registry.js'),
     read('admin-sidebar.js'),
+    read('scripts/admin-authenticated-e2e-menu-worker.mjs'),
   ]);
   const parsed=spawnSync(process.execPath,['--check',fileURLToPath(new URL('../admin-assist-bootstrap.js',import.meta.url))],{encoding:'utf8'});
   assert.equal(parsed.status,0,parsed.stderr);
@@ -55,4 +56,11 @@ test('admin root is a command-only workspace while Campus remains a child route'
   assert.match(menuLayout,/if\(initialSection===COMMAND_HOME\)activateCommandHome\(\)/);
   assert.doesNotMatch(menuLayout,/else\{requestedSection = 'campus';dc=true;requestDemand\('campus'\);\}/);
   assert.match(sidebar,/panelSection === 'command-home'/);
+
+  assert.match(e2eWorker,/menuId === 'command-home'/);
+  assert.match(e2eWorker,/stage\('command-workbench'\)/);
+  assert.match(e2eWorker,/#ekodiAssistDock/);
+  assert.match(e2eWorker,/#ekodiAssistPanel/);
+  assert.match(e2eWorker,/admin-command-home/);
+  assert.match(e2eWorker,/pathname !== '\/admin\/'/);
 });
