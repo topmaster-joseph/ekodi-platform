@@ -2,6 +2,7 @@
 'use strict';
 const SECTION='personal-finance';
 const API='/api/control/personal-finance';
+const REQUEST_TIMEOUT_MS=10_000;
 const TOKEN_KEY='ekodi-auth-token';
 let state=null,busy=false;
 const $=selector=>document.querySelector(selector);
@@ -10,7 +11,7 @@ const token=()=>{try{return sessionStorage.getItem(TOKEN_KEY)||''}catch{return''
 const t=(ko,en)=>String(window.EKODIAdminMenu?.locale?.()||document.documentElement.lang||'ko').toLowerCase().startsWith('en')?en:ko;
 function date(value){if(!value)return '—';const d=new Date(value);return Number.isNaN(d.getTime())?'—':d.toLocaleString('ko-KR',{dateStyle:'short',timeStyle:'short'})}
 async function request(method='GET',body=null){
-  const response=await fetch(API,{method,cache:'no-store',headers:{authorization:`Bearer ${token()}`,accept:'application/json',...(body?{'content-type':'application/json'}:{})},...(body?{body:JSON.stringify(body)}:{})});
+  const response=await fetch(API,{method,cache:'no-store',headers:{authorization:`Bearer ${token()}`,accept:'application/json',...(body?{'content-type':'application/json'}:{})},...(body?{body:JSON.stringify(body)}:{}),signal:AbortSignal.timeout(REQUEST_TIMEOUT_MS)});
   const data=await response.json().catch(()=>({}));
   if(!response.ok){const error=new Error(data.error||`Personal Finance control ${response.status}`);error.code=data.code||'';error.status=response.status;throw error}
   return data;
@@ -25,7 +26,7 @@ function render(){
   <div class="pf-admin-grid"><section class="pf-admin-card"><div class="pf-admin-subhead"><div><small>SERVICE FEATURES</small><h3>사용 기능</h3></div>${badge(admin.canWrite,'변경 가능','조회 전용')}</div><form id="pfAdminSettings">${settingRow('serviceEnabled','서비스 사용','My EKODI의 개인재무 API 전체 사용 여부',c.serviceEnabled,!admin.canWrite)}${settingRow('manualEntryEnabled','수동 입력','계좌·거래 직접 입력 허용',c.manualEntryEnabled,!admin.canWrite)}${settingRow('fileImportEnabled','파일 가져오기','CSV·Excel Preview → Commit 허용',c.fileImportEnabled,!admin.canWrite)}${settingRow('planningEnabled','계획 엔진','반복지출·예산·목표·안전사용가능액',c.planningEnabled,!admin.canWrite)}<div class="pf-admin-save"><span id="pfAdminSaveState">최근 변경 ${date(c.updatedAt)}</span><button class="primary" type="submit" ${admin.canWrite?'':'disabled'}>운영 설정 저장</button></div></form></section>
   <section class="pf-admin-card"><div class="pf-admin-subhead"><div><small>IMMUTABLE SAFETY</small><h3>안전 잠금</h3></div>${badge(true,'강제 적용','')}</div><div class="pf-admin-locks"><article><span>AI 쓰기</span><strong>OFF</strong></article><article><span>금융 실행</span><strong>OFF</strong></article><article><span>외부 금융 Connector</span><strong>${esc(s.externalFinancialConnectors||'LOCKED')}</strong></article><article><span>예상수입 선사용</span><strong>금지</strong></article><article><span>전체 계좌번호 저장</span><strong>금지</strong></article><article><span>개인 원장 Admin 열람</span><strong>차단</strong></article></div></section></div>
   <div class="pf-admin-grid"><section class="pf-admin-card"><div class="pf-admin-subhead"><div><small>BOUNDARY</small><h3>데이터 · 인증 경계</h3></div></div><dl class="pf-admin-kv"><div><dt>사용자 진입</dt><dd>ekodi.kr/my/#money</dd></div><div><dt>데이터 경계</dt><dd>${esc(state.service?.dataBoundary||'dedicated-d1')}</dd></div><div><dt>원장 소유권</dt><dd>${esc(privacy.ledgerOwnerScope||'person')}</dd></div><div><dt>원본 가져오기 파일</dt><dd>${privacy.rawImportFileRetention==='none'?'보관하지 않음':esc(privacy.rawImportFileRetention)}</dd></div><div><dt>관리자 권한</dt><dd>${esc(admin.role||'viewer')}${admin.canWrite?' · Google 추가인증 후 변경':''}</dd></div></dl></section>
-  <section class="pf-admin-card"><div class="pf-admin-subhead"><div><small>REALITY CHECK</small><h3>구축 상태</h3></div></div><dl class="pf-admin-kv"><div><dt>서비스 API</dt><dd>personal-finance-api.ekodi.kr</dd></div><div><dt>Schema</dt><dd>${schema.migrationCount==null?'확인 필요':`${schema.migrationCount} migrations`} · control v${esc(schema.serviceControlSchema||1)}</dd></div><div><dt>Personal Finance Core</dt><dd>전용 D1</dd></div><div><dt>안전사용가능액</dt><dd>Deterministic P1</dd></div></dl><p class="pf-admin-note">이 화면은 개인별 계좌·거래·잔액·목표 데이터를 요청하는 API를 사용하지 않습니다.</p></section></div>`;
+  <section class="pf-admin-card"><div class="pf-admin-subhead"><div><small>REALITY CHECK</small><h3>구축 상태</h3></div></div><dl class="pf-admin-kv"><div><dt>서비스 API</dt><dd>ekodi.kr/api/control/personal-finance</dd></div><div><dt>Schema</dt><dd>${schema.migrationCount==null?'확인 필요':`${schema.migrationCount} migrations`} · control v${esc(schema.serviceControlSchema||1)}</dd></div><div><dt>Personal Finance Core</dt><dd>전용 D1</dd></div><div><dt>안전사용가능액</dt><dd>Deterministic P1</dd></div></dl><p class="pf-admin-note">이 화면은 개인별 계좌·거래·잔액·목표 데이터를 요청하는 API를 사용하지 않습니다.</p></section></div>`;
   $('#pfAdminRefresh')?.addEventListener('click',()=>refresh(true));$('#pfAdminSettings')?.addEventListener('submit',save);
 }
 async function save(event){
@@ -40,9 +41,9 @@ async function save(event){
 }
 async function refresh(force=false){
   const host=$('#personalFinanceAdminPanel');if(!host||busy)return;
-  busy=true;if(force)host.dataset.refreshing='true';
-  if(!state)host.innerHTML='<div class="pf-admin-status"><strong>개인재무 운영 상태를 확인하고 있습니다.</strong><p>보호된 서비스 연결과 운영정책을 확인합니다.</p></div>';
-  try{state=await request('GET');render()}catch(error){host.innerHTML=`<div class="pf-admin-error"><strong>개인재무 운영 상태를 불러오지 못했습니다.</strong><p>${esc(error.message)}</p><button id="pfAdminRetry" class="secondary" type="button">다시 확인</button></div>`;$('#pfAdminRetry')?.addEventListener('click',()=>refresh(true))}finally{busy=false;delete host.dataset.refreshing}
+  busy=true;host.setAttribute('aria-busy','true');if(force)host.dataset.refreshing='true';
+  if(!state||force)host.innerHTML='<div class="pf-admin-status" role="status"><strong>개인재무 운영 상태를 확인하고 있습니다.</strong><p>보호된 서비스 연결과 운영정책을 확인합니다.</p></div>';
+  try{state=await request('GET');render()}catch(error){const message=error?.name==='TimeoutError'?'개인재무 운영 API 응답 시간이 초과되었습니다.':error.message;host.innerHTML=`<div class="pf-admin-error" role="alert"><strong>개인재무 운영 상태를 불러오지 못했습니다.</strong><p>${esc(message)}</p><button id="pfAdminRetry" class="secondary" type="button">다시 확인</button></div>`;$('#pfAdminRetry')?.addEventListener('click',()=>refresh(true))}finally{busy=false;host.removeAttribute('aria-busy');delete host.dataset.refreshing}
 }
 function activate(button,section){
   document.querySelectorAll('[data-panel]').forEach(panel=>{const visible=String(panel.dataset.panel||'').split(/\s+/).includes(SECTION);panel.hidden=!visible;panel.classList.toggle('hidden-panel',!visible)});
@@ -60,7 +61,13 @@ function install(){
   window.dispatchEvent(new CustomEvent('ekodi-nav-changed',{detail:{feature:SECTION}}));
   if(location.hash==='#personal-finance')queueMicrotask(()=>activate(button,section));
 }
-install();window.addEventListener('ekodi-admin-ready',install);window.addEventListener('ekodi-admin-locale-changed',()=>{if(state&&$('#personalFinanceAdminPanel:not(.hidden-panel)'))render()});
-window.addEventListener('ekodi-admin-section-changed',event=>{if(event.detail?.section!==SECTION)return;const host=$('#personalFinanceAdminPanel');if(host&&!host.hidden&&!host.classList.contains('hidden-panel'))void refresh()});
-window.EKODIPersonalFinanceAdmin=Object.freeze({refresh});
+function refreshWhenSharedNavigationActivates(event){
+  const current=String(event?.detail?.section||window.EKODIAdminPanels?.current?.()||'').trim();
+  if(current!==SECTION)return;
+  const host=$('#personalFinanceAdminPanel');if(!host||host.hidden||host.classList.contains('hidden-panel'))return;
+  void refresh();
+}
+install();window.addEventListener('ekodi-admin-ready',install);window.addEventListener('ekodi-admin-locale-changed',()=>{if(state&&$('#personalFinanceAdminPanel:not(.hidden-panel)'))render()});window.addEventListener('ekodi-admin-section-changed',refreshWhenSharedNavigationActivates);
+queueMicrotask(()=>refreshWhenSharedNavigationActivates());
+window.EKODIPersonalFinanceAdmin=Object.freeze({refresh,activate:()=>refreshWhenSharedNavigationActivates({detail:{section:SECTION}})});
 })();
