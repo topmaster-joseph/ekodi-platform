@@ -22,5 +22,11 @@
   "observability": {
     "enabled": true,
     "head_sampling_rate": 0.1
-  }
+  },
+  "services": [
+    {
+      "binding": "CONTROL_API",
+      "service": "ekodi-auth-api-development"
+    }
+  ]
 }
