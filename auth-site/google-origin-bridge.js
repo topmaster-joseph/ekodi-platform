@@ -1,6 +1,6 @@
 (()=>{
   'use strict';
-  const EXPECTED_CLIENT='483044030492-4e6231l5glchhtniroinvuq3ev6n5mv5.apps.googleusercontent.com';
+  const EXPECTED_CLIENT='483044030492-ej1ie2boa4e01lglm75e9q1r6m25pkp2.apps.googleusercontent.com';
   const TARGET_ORIGIN='https://ekodi.kr';
   const params=new URLSearchParams(location.search);
   const waitMode=params.get('wait')==='1';
