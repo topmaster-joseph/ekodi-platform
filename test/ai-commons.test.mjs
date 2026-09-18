@@ -35,6 +35,7 @@ test('public and member request projections hide orchestration internals while a
     assert.doesNotMatch(serialized,/secret-fingerprint|core\.secret|task-secret|reviewDecision|matchedCapabilityId|developmentTaskId|fingerprint/);
   }
   assert.equal(publicView.requestCount,4);
+  assert.equal('id' in publicView,false);
   assert.equal(memberView.outcome,'업무 자동화');
   assert.equal(adminView.matchedCapabilityId,'core.secret');
   assert.equal(adminView.developmentTaskId,'task-secret');
