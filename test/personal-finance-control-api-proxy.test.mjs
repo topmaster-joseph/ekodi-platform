@@ -39,6 +39,10 @@ test('Control guarded release probes the Personal Finance canonical auth boundar
   assert.ok(probe.headerExpect.includes('x-ekodi-personal-finance-proxy: service-binding-v1'));
   assert.ok(probe.headerExpect.includes('cache-control: no-store'));
   assert.ok(probe.headerExpect.includes('x-content-type-options: nosniff'));
+  const google=manifest.worker.requests.find(item=>String(item.url||'').endsWith('/api/google/config'));
+  assert.ok(google);
+  assert.ok(google.expect.includes('483044030492-ej1ie2boa4e01lglm75e9q1r6m25pkp2.apps.googleusercontent.com'));
+  assert.ok(google.expect.includes('"identityOrigin":"https://ekodi.kr"'));
 });
 
 test('mission entry normalizes downstream unauthenticated Personal Finance responses before generic Control auth fallback',async()=>{
