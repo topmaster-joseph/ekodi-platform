@@ -8,7 +8,7 @@ test('admin navigation names the device surface by the information administrator
   const registry = await read('admin-menu-registry.js');
   const demand = await read('admin-demand-loader.js');
   assert.match(registry, /컴퓨터·기기/);
-  assert.match(registry, /Computers & Devices/);
+  assert.match(registry, /Computer Devices/);
   assert.match(demand, /label: '컴퓨터·기기'/);
 });
 
