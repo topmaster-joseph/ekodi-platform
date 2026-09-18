@@ -6,9 +6,8 @@ const token = String(process.env.E2E_ADMIN_TOKEN || '').trim();
 if (!token) throw new Error('E2E_ADMIN_TOKEN is required');
 
 const canonicalBaseUrl = 'https://ekodi.kr/admin/';
-const campusUrl = 'https://ekodi.kr/admin/home/campus';
 const authEntryUrl = `${canonicalBaseUrl}?route=finance#ekodi_admin_token=${token}`;
-const assistApiUrl = 'https://api.ekodi.kr/api/control/ai/assist';
+const assistApiUrl = 'https://ekodi.kr/api/control/ai/assist';
 const prompt = 'EKODI E2E 확인: "정상"이라고 한 단어로 답해줘.';
 const artifactsDir = path.resolve('artifacts/admin-authenticated-e2e');
 const reportPath = path.join(artifactsDir, 'assist-canonical.json');
@@ -17,7 +16,6 @@ await fs.mkdir(artifactsDir, { recursive: true });
 const report = {
   generatedAt: new Date().toISOString(),
   canonicalBaseUrl,
-  campusUrl,
   assistApiUrl,
   passed: false,
   apiStatus: null,
@@ -26,6 +24,7 @@ const report = {
   provider: null,
   mode: null,
   historyVerified: false,
+  userRenderedBeforeResponse: false,
   renderedReplyLength: 0,
   inputCleared: false,
   finalUrl: null,
@@ -49,25 +48,35 @@ try {
   await page.waitForSelector('#app:not([hidden])');
   await page.waitForFunction(() => document.querySelector('#apiState')?.textContent?.includes('정상'));
 
-  console.log('[ASSIST-E2E] open canonical campus route');
-  await page.goto(campusUrl, { waitUntil: 'domcontentloaded' });
+  console.log('[ASSIST-E2E] open canonical Talk with EKODI main conversation');
+  await page.goto(canonicalBaseUrl, { waitUntil: 'domcontentloaded' });
   await page.waitForFunction(() => Boolean(sessionStorage.getItem('ekodi-auth-token')));
   await page.waitForSelector('#app:not([hidden])');
   await page.waitForFunction(() => document.querySelector('#apiState')?.textContent?.includes('정상'));
+  await page.waitForSelector('#ekodiAssistPanel:not([hidden])', { timeout: 15_000 });
   const canonicalLocation = new URL(page.url());
-  if (canonicalLocation.hostname !== 'ekodi.kr' || canonicalLocation.pathname !== '/admin/home/campus') {
-    throw new Error(`Canonical campus route mismatch: ${page.url()}`);
+  if (canonicalLocation.hostname !== 'ekodi.kr' || canonicalLocation.pathname !== '/admin/') {
+    throw new Error(`Canonical conversation route mismatch: ${page.url()}`);
   }
 
-  const input = page.locator('#ekodiAssistBootstrap input');
+  const input = page.locator('#ekodiAssistCommand');
   await input.waitFor({ state: 'visible', timeout: 15_000 });
   await input.fill(prompt);
 
-  console.log('[ASSIST-E2E] submit through bottom command input');
+  console.log('[ASSIST-E2E] submit through main conversation composer');
+  await page.route(assistApiUrl, async route => {
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    await route.continue();
+  });
   const responsePromise = page.waitForResponse(response => {
     return response.url() === assistApiUrl && response.request().method() === 'POST';
   }, { timeout: 30_000 });
   await input.press('Enter');
+  await page.waitForFunction(expectedPrompt => {
+    return [...document.querySelectorAll('#ekodiAssistChat .ekodi-assist-turn.user .ekodi-assist-bubble')]
+      .some(node => String(node.textContent || '').trim() === expectedPrompt);
+  }, prompt, { timeout: 1_000 });
+  report.userRenderedBeforeResponse = true;
   const response = await responsePromise;
   report.apiStatus = response.status();
   if (!response.ok()) throw new Error(`Assist API returned HTTP ${response.status()}`);
@@ -85,7 +94,6 @@ try {
   report.provider = payload.provider || null;
   report.mode = payload.mode || null;
 
-  await page.waitForSelector('#ekodiAssistPanel:not([hidden])', { timeout: 10_000 });
   await page.waitForFunction(expectedPrompt => {
     try {
       const sessions = JSON.parse(sessionStorage.getItem('ekodi-admin-command-history-v1') || '[]');
@@ -113,7 +121,7 @@ try {
 
   report.finalUrl = page.url();
   report.passed = true;
-  console.log(`[ASSIST-E2E] passed status=${report.apiStatus} provider=${report.provider || 'fallback'} mode=${report.mode || 'unknown'} replyLength=${report.replyLength}`);
+  console.log(`[ASSIST-E2E] passed status=${report.apiStatus} userRenderedBeforeResponse=${report.userRenderedBeforeResponse} provider=${report.provider || 'fallback'} mode=${report.mode || 'unknown'} replyLength=${report.replyLength}`);
 } catch (error) {
   report.error = String(error?.stack || error?.message || error);
   console.error(`[ASSIST-E2E] failed: ${error?.message || error}`);
