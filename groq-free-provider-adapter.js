@@ -1,4 +1,5 @@
 import { reserveFreeDailyRequest } from './ai-free-quota.js';
+import { projectForExternalAi } from './secure-projection.js';
 
 const DEFAULT_MODEL='openai/gpt-oss-20b';
 const DEFAULT_DAILY_LIMIT=900;
@@ -29,7 +30,9 @@ export function createGroqFreeProvider(env={},options={}){
     async invoke({prompt='' }={}){
       if(!available)throw new Error('groq_free_not_configured');
       const reservation=await reserveFreeDailyRequest(env,'groq-free',dailyLimit(env));
-      const response=await fetchImpl('https://api.groq.com/openai/v1/chat/completions',{method:'POST',headers:{authorization:`Bearer ${key}`,'content-type':'application/json'},body:JSON.stringify({model,messages:[{role:'user',content:clean(prompt,24000)}],temperature:0.2,max_completion_tokens:1024}),signal:AbortSignal.timeout(60000)});
+      const projected=await projectForExternalAi({prompt:clean(prompt,24000)},{profile:'ai_minimum',purpose:'ekodi-free-provider',salt:crypto.randomUUID()});
+      const safePrompt=clean(projected?.prompt||JSON.stringify(projected),24000);
+      const response=await fetchImpl('https://api.groq.com/openai/v1/chat/completions',{method:'POST',headers:{authorization:`Bearer ${key}`,'content-type':'application/json'},body:JSON.stringify({model,messages:[{role:'user',content:safePrompt}],temperature:0.2,max_completion_tokens:1024}),signal:AbortSignal.timeout(60000)});
       const data=await response.json().catch(()=>({}));
       if(!response.ok)throw errorFromResponse(response,data);
       const output=clean(data?.choices?.[0]?.message?.content,40000);if(!output)throw new Error('groq_free_empty_response');
