@@ -18,6 +18,14 @@ const SOURCE_CLASS = 'admin-context-source';
 const TABS_SHELL_CLASS = 'admin-context-tabs-shell';
 const TABS_CLASS = 'admin-context-tabs';
 const DETAILS_CLASS = 'admin-global-details';
+const MORE_CLASS = 'admin-detail-more';
+const PRIMARY_SECTIONS = Object.freeze({
+  home: ['command-home', 'campus'],
+  operations: ['work', 'communication', 'finance', 'tax'],
+  workspaces: ['clients', 'cmpmyi', 'organization', 'workspace'],
+  services: ['common-services', 'marketing-ai', 'community', 'social', 'books'],
+  system: ['health', 'aiops', 'ai-settings', 'devices', 'security', 'admins', 'api-cost'],
+});
 
 export function adminSidebarSectionOf(item) {
   if (item?.dataset?.deviceControlNav === 'true') return 'devices';
@@ -71,8 +79,11 @@ body.admin-compact .admin-detail-item:hover{border-color:#dbe7ef;background:#f2f
 body.admin-compact .admin-detail-item.active{border-color:#bfd5ee;background:#edf4ff;color:#0b5cab}
 body.admin-compact .admin-detail-item b{display:inline-grid;place-items:center;min-width:19px;color:#6d8194;font-size:10px;font-weight:850}
 body.admin-compact .admin-detail-item.active b{color:#155eef}
+body.admin-compact .${MORE_CLASS}{display:flex;align-items:center;justify-content:space-between;width:100%;min-height:32px;margin:2px 0 0;padding:5px 8px;border:0;border-radius:8px;background:transparent;color:#748294;font:inherit;font-size:12px;font-weight:760;cursor:pointer}
+body.admin-compact .${MORE_CLASS}:hover{background:#f2f7fb;color:#173b57}
+body.admin-compact .${MORE_CLASS} b{font-size:11px;font-weight:800}
 body.admin-compact .${SOURCE_CLASS}{display:none!important}
-body.admin-compact .${TABS_SHELL_CLASS}{position:sticky;top:0;z-index:35;display:flex;align-items:center;gap:12px;min-height:56px;padding:8px 16px;border-bottom:1px solid var(--admin-border);background:rgba(255,255,255,.98);color:#172033;box-shadow:none!important;backdrop-filter:none!important}
+body.admin-compact .${TABS_SHELL_CLASS}{position:sticky;top:0;z-index:35;display:none!important;align-items:center;gap:12px;min-height:56px;padding:8px 16px;border-bottom:1px solid var(--admin-border);background:rgba(255,255,255,.98);color:#172033;box-shadow:none!important;backdrop-filter:none!important}
 body.admin-compact .admin-context-title{flex:0 0 auto;color:#66768a;font-size:13px;font-weight:820;letter-spacing:.01em;white-space:nowrap}
 body.admin-compact .${TABS_CLASS}{display:flex;align-items:center;gap:5px;min-width:0;overflow-x:auto;scrollbar-width:none}
 body.admin-compact .${TABS_CLASS}::-webkit-scrollbar{display:none}
@@ -208,15 +219,54 @@ function globalButtons(globals, locale) {
 
 function renderSidebarDetails(nav, globals, group, section, locale) {
   let details = globals.querySelector(`:scope>.${DETAILS_CLASS}`);
-  if (!details) { details = document.createElement('div'); details.className = DETAILS_CLASS; details.setAttribute('aria-label', locale === 'en' ? 'Admin submenu' : '관리자 하위 메뉴'); }
+  if (!details) {
+    details = document.createElement('div');
+    details.className = DETAILS_CLASS;
+    details.setAttribute('aria-label', locale === 'en' ? 'Admin submenu' : '관리자 하위 메뉴');
+  }
   const ids = availableIds(nav, group);
-  const nodes = ids.map(id => {
-    const definition = getAdminMenuItem(id); const button = document.createElement('button'); button.type = 'button'; button.className = 'admin-detail-item'; button.dataset.adminDetailSection = id;
-    const icon = document.createElement('b'); icon.setAttribute('aria-hidden', 'true'); icon.textContent = definition?.icon || '·'; const text = document.createElement('span'); text.textContent = getAdminMenuLabel(id, locale);
-    button.append(icon, text); button.classList.toggle('active', id === section); return button;
+  const primaryOrder = PRIMARY_SECTIONS[group] || [];
+  const primarySet = new Set(primaryOrder);
+  const primary = primaryOrder.filter(id => ids.includes(id));
+  const extras = ids.filter(id => !primarySet.has(id));
+  const expanded = nav.dataset.adminMoreGroup === group || extras.includes(section);
+  const shown = expanded ? ids : primary;
+  const nodes = shown.map(id => {
+    const definition = getAdminMenuItem(id);
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'admin-detail-item';
+    button.dataset.adminDetailSection = id;
+    const icon = document.createElement('b');
+    icon.setAttribute('aria-hidden', 'true');
+    icon.textContent = definition?.icon || '·';
+    const text = document.createElement('span');
+    text.textContent = getAdminMenuLabel(id, locale);
+    button.append(icon, text);
+    button.classList.toggle('active', id === section);
+    return button;
   });
-  details.dataset.adminDetailGroup = group; details.replaceChildren(...nodes); details.hidden = nodes.length === 0;
-  const active = [...globals.querySelectorAll('[data-admin-global-group]')].find(button => button.dataset.adminGlobalGroup === group); if (active) active.insertAdjacentElement('afterend', details); else globals.append(details);
+  if (extras.length) {
+    const more = document.createElement('button');
+    more.type = 'button';
+    more.className = MORE_CLASS;
+    more.dataset.adminDetailMore = group;
+    const label = document.createElement('span');
+    label.textContent = expanded
+      ? (locale === 'en' ? 'Show less' : '간단히 보기')
+      : (locale === 'en' ? `More (${extras.length})` : `더보기 ${extras.length}`);
+    const mark = document.createElement('b');
+    mark.setAttribute('aria-hidden', 'true');
+    mark.textContent = expanded ? '⌃' : '⌄';
+    more.append(label, mark);
+    nodes.push(more);
+  }
+  details.dataset.adminDetailGroup = group;
+  details.replaceChildren(...nodes);
+  details.hidden = nodes.length === 0;
+  const active = [...globals.querySelectorAll('[data-admin-global-group]')].find(button => button.dataset.adminGlobalGroup === group);
+  if (active) active.insertAdjacentElement('afterend', details);
+  else globals.append(details);
 }
 
 function activeSection(nav) {
@@ -425,12 +475,32 @@ export function mountAdminSidebar(root = document, options = {}) {
   observer.observe(nav, { childList: true, subtree: false });
 
   nav.addEventListener('click', event => {
+    const more = event.target.closest('[data-admin-detail-more]');
+    if (more) {
+      event.preventDefault();
+      const group = more.dataset.adminDetailMore || '';
+      if (nav.dataset.adminMoreGroup === group) delete nav.dataset.adminMoreGroup;
+      else nav.dataset.adminMoreGroup = group;
+      schedule();
+      return;
+    }
     const detail = event.target.closest('[data-admin-detail-section]');
-    if (detail) { event.preventDefault(); delete nav.dataset.adminFocusedGroup; activateSection(nav, detail.dataset.adminDetailSection); schedule(); return; }
+    if (detail) {
+      event.preventDefault();
+      delete nav.dataset.adminFocusedGroup;
+      activateSection(nav, detail.dataset.adminDetailSection);
+      schedule();
+      return;
+    }
     const global = event.target.closest('[data-admin-global-group]');
     if (!global) return;
     event.preventDefault();
-    nav.dataset.adminFocusedGroup = global.dataset.adminGlobalGroup || '';
+    const group = global.dataset.adminGlobalGroup || '';
+    nav.dataset.adminFocusedGroup = group;
+    if (getAdminMenuGroupForSection(activeSection(nav)) !== group) {
+      activateSection(nav, getAdminMenuGroupDefault(group));
+      delete nav.dataset.adminFocusedGroup;
+    }
     schedule();
   }, true);
 
