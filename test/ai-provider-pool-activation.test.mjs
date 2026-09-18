@@ -28,7 +28,7 @@ test('opt-in registry attaches bounded Workers AI plus OpenAI Anthropic and Gemi
   }, []);
   const status = gateway.status();
   assert.equal(status.multiProviderEnabled, true);
-  assert.deepEqual(status.orchestration.configuredProviders.map(provider => provider.id), ['openai', 'anthropic', 'gemini']);
+  assert.deepEqual(status.orchestration.configuredProviders.map(provider => provider.id), ['cloudflare-workers-ai', 'openai', 'anthropic', 'gemini']);
   const serialized = JSON.stringify(status);
   assert.equal(serialized.includes('openai-test-secret'), false);
   assert.equal(serialized.includes('anthropic-test-secret'), false);
