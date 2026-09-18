@@ -42,9 +42,10 @@ test('partner news validates reusable scope and HTTPS provenance', () => {
 });
 
 test('partner news migration and API entrypoint preserve publication gate', async () => {
-  const [migration, entry] = await Promise.all([
+  const [migration, entry, apex] = await Promise.all([
     readFile(new URL('../migrations/0086_partner_news_engine.sql', import.meta.url), 'utf8'),
     readFile(new URL('../customer-entry-worker.js', import.meta.url), 'utf8'),
+    readFile(new URL('../platform-router-entry-worker.js', import.meta.url), 'utf8'),
   ]);
   for (const marker of ['partner_news_items', "'DRAFT'", "'PUBLISHED'", 'partner_news_audit_logs']) {
     assert.ok(migration.includes(marker), `missing migration marker: ${marker}`);
@@ -53,4 +54,7 @@ test('partner news migration and API entrypoint preserve publication gate', asyn
   assert.ok(entry.includes('handlePartnerNewsRequest'));
   assert.ok(entry.includes('/api/partner-news/public'));
   assert.ok(entry.includes('/api/church/admin/partner-news'));
+  assert.ok(apex.includes('handlePartnerNewsRequest'));
+  assert.ok(apex.includes("url.pathname==='/api/partner-news/public'"));
+  assert.ok(apex.includes('env.WORKSPACE_PLATFORM.fetch'));
 });
