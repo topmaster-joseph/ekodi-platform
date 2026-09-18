@@ -18,7 +18,7 @@ test('Admin uses a left-first progressive menu with one-click work-area activati
     "services: ['common-services', 'marketing-ai', 'community', 'social', 'books']",
     "system: ['health', 'aiops', 'ai-settings', 'devices', 'security', 'admins', 'api-cost']",
   ]) assert.ok(sidebar.includes(marker), marker);
-  assert.match(sidebar, /data\.adminDetailMore = group/);
+  assert.match(sidebar, /dataset\.adminDetailMore = group/);
   assert.match(sidebar, /간단히 보기/);
   assert.match(sidebar, /더보기/);
   assert.match(sidebar, /activateSection\(nav, getAdminMenuGroupDefault\(group\)\)/);
