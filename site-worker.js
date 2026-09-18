@@ -45,6 +45,7 @@ const ADMIN_HOSTS = new Set([
   'admin.trade.ekodi.kr',
 ]);
 const ADMIN_STORAGE_PREFIX = '/api/control/storage/';
+const ADMIN_PERSONAL_FINANCE_PATH = '/api/control/personal-finance';
 const ADMIN_MARKETING_PUBLISHING_PREFIX = '/api/control/marketing-publishing';
 const ADMIN_COMMON_SERVICE_AI_PREFIX = '/api/control/common-services/ai/';
 
@@ -541,6 +542,25 @@ async function proxyAdminStorage(request, env) {
   return withHostSecurity(response, ADMIN_CSP, 'no-store', 'admin-storage-proxy');
 }
 
+async function proxyAdminPersonalFinance(request, env) {
+  if (!env.PERSONAL_FINANCE?.fetch) {
+    return withHostSecurity(new Response(JSON.stringify({error:'Personal Finance service binding unavailable',code:'PERSONAL_FINANCE_BINDING_UNAVAILABLE'}), {
+      status:503,
+      headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store'},
+    }), ADMIN_CSP, 'no-store', 'admin-personal-finance-proxy');
+  }
+  const target = new URL(request.url);
+  target.pathname = '/api/admin/personal-finance/control';
+  target.search = '';
+  const headers = new Headers(request.headers);
+  headers.set('x-ekodi-admin-proxy', 'personal-finance-binding-v1');
+  const body = ['GET','HEAD'].includes(request.method) ? undefined : await request.arrayBuffer();
+  const upstream = await env.PERSONAL_FINANCE.fetch(new Request(target.toString(), {method:request.method,headers,body,redirect:'manual'}));
+  const response = new Response(upstream.body, upstream);
+  response.headers.set('X-EKODI-Personal-Finance-Proxy', 'service-binding-v1');
+  return withHostSecurity(response, ADMIN_CSP, 'no-store', 'admin-personal-finance-proxy');
+}
+
 async function proxyAdminCommonServiceAi(request, env) {
   const url = new URL(request.url);
   const suffix = url.pathname.slice(ADMIN_COMMON_SERVICE_AI_PREFIX.length);
@@ -640,6 +660,7 @@ export default {
       if (url.pathname === '/workspace-admin.css') return workspaceAdminCss();
       if (url.pathname === '/workspace-admin.js') return workspaceAdminScript();
       if (url.pathname.startsWith('/api/control/storage/google/cheonggye-members')) return proxyAdminStorage(request, env);
+      if (url.pathname === ADMIN_PERSONAL_FINANCE_PATH) return proxyAdminPersonalFinance(request, env);
       if (url.pathname === '/church-pastor-admin.js') return churchPastorAdminScript();
       const workspaceAdminAsset = WORKSPACE_ADMIN_ASSET_ALIASES.get(url.pathname);
       if (workspaceAdminAsset) {
@@ -700,6 +721,7 @@ export default {
     if (ADMIN_HOSTS.has(host)) {
       if (RETIRED_ADMIN_PATHS.has(url.pathname)) return retiredAdminResponse();
       if (url.pathname.startsWith(ADMIN_STORAGE_PREFIX)) return proxyAdminStorage(request, env);
+      if (url.pathname === ADMIN_PERSONAL_FINANCE_PATH) return proxyAdminPersonalFinance(request, env);
       if (url.pathname.startsWith(ADMIN_MARKETING_PUBLISHING_PREFIX)) return proxyAdminMarketingPublishing(request);
       if (url.pathname.startsWith(ADMIN_COMMON_SERVICE_AI_PREFIX)) return proxyAdminCommonServiceAi(request, env);
       if (url.pathname === '/auth/start') {
