@@ -949,7 +949,6 @@
           "Chrome에서 관리자 로그인 열기",
           "location.replace(targetHref)",
           "u.origin==='https://ekodi.kr'",
-          "u.origin==='https://ai.ekodi.kr'",
           "u.pathname==='/tax'",
           "apiOrigin:'https://ekodi.kr'"
         ],
