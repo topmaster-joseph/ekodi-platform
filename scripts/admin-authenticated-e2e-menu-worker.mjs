@@ -88,6 +88,25 @@ async function selectWorkArea() {
   await page.waitForFunction(target => [...document.querySelectorAll('button[data-admin-global-group]')].some(node => node.dataset.adminGlobalGroup === target && (node.getAttribute('aria-current') === 'page' || node.classList.contains('active'))), group, { timeout: interactionReadyTimeoutMs });
 }
 
+async function resolveMenuTrigger() {
+  const detailSelector = `button.admin-detail-item[data-admin-detail-section="${menuId}"]`;
+  const detail = page.locator(detailSelector).first();
+  if (await detail.count() && await detail.isVisible().catch(() => false)) return detail;
+
+  const more = page.locator(`button[data-admin-detail-more="${group}"]`).first();
+  if (await more.count() && await more.isVisible().catch(() => false)) {
+    await clickFast(more);
+    await detail.waitFor({ state: 'visible', timeout: interactionReadyTimeoutMs });
+    return detail;
+  }
+
+  const context = page.locator(`button.admin-context-tab[data-admin-context-section="${menuId}"]`).first();
+  await context.waitFor({ state: 'attached', timeout: interactionReadyTimeoutMs });
+  if (await context.isVisible().catch(() => false)) return context;
+
+  throw new Error(`${menuId}: no visible sidebar navigation trigger after selecting work area ${group}`);
+}
+
 async function visiblePanelState() {
   return page.evaluate(section => {
     const panel = [...document.querySelectorAll('[data-panel]')].find(node => {
@@ -515,34 +534,35 @@ try {
   await selectWorkArea();
   if (menuId === 'tax') await waitForAdminNavigationIdle();
   const directDefinition = getAdminMenuItem(menuId);
-  if (directDefinition?.href && !directDefinition.adminHandoff) {
-    stage('registry-link');
-    const tab = page.locator(`button.admin-context-tab[data-admin-context-section="${menuId}"]`);
-    await tab.waitFor({ state: 'visible', timeout: interactionReadyTimeoutMs });
-    await verifyRegistryHref(tab, started);
+  if (menuId === 'command-home') {
+    stage('command-home');
+    const context = page.locator(`button.admin-context-tab[data-admin-context-section="${menuId}"]`);
+    await context.waitFor({ state: 'attached', timeout: interactionReadyTimeoutMs });
+    await verifyCommandWorkbench(started);
   } else {
-    stage('tab');
-    const tab = page.locator(`button.admin-context-tab[data-admin-context-section="${menuId}"]`);
-    if (menuId === 'command-home') {
-      await tab.waitFor({ state: 'attached', timeout: interactionReadyTimeoutMs });
-      await verifyCommandWorkbench(started);
+    stage('sidebar-trigger');
+    const trigger = await resolveMenuTrigger();
+    const context = page.locator(`button.admin-context-tab[data-admin-context-section="${menuId}"]`);
+    await context.waitFor({ state: 'attached', timeout: interactionReadyTimeoutMs });
+    if (directDefinition?.href && !directDefinition.adminHandoff) {
+      stage('registry-link');
+      await verifyRegistryHref(trigger, started);
     } else {
-      await tab.waitFor({ state: 'visible', timeout: interactionReadyTimeoutMs });
-      const aria = await tab.getAttribute('aria-selected');
-      const classes = String(await tab.getAttribute('class') || '');
+      const aria = await context.getAttribute('aria-selected');
+      const classes = String(await context.getAttribute('class') || '');
       let alreadyActive = aria === 'true' || classes.split(/\s+/).includes('active');
       if (alreadyActive) {
         stage('active-panel-check');
         const activeState = await visiblePanelState();
         alreadyActive = Boolean(activeState.panelFound && activeState.selected && activeState.textLength >= 4);
       }
-      if (menuId === 'storage') await verifyStorage(tab, alreadyActive, started);
-      else if (menuId === 'tax') await verifyTax(tab, alreadyActive, started);
-      else if (menuId === 'public-site-controls') await verifyPublicSiteControls(tab, alreadyActive, started);
-      else if (menuId === 'language-status') await verifyLanguageStatus(tab, alreadyActive, started);
-      else if (menuId === 'maturity') await verifyMaturity(tab, alreadyActive, started);
-      else if (menuId === 'ai-settings') await verifyAiSettings(tab, alreadyActive, started);
-      else await verifyNormal(tab, alreadyActive, started);
+      if (menuId === 'storage') await verifyStorage(trigger, alreadyActive, started);
+      else if (menuId === 'tax') await verifyTax(trigger, alreadyActive, started);
+      else if (menuId === 'public-site-controls') await verifyPublicSiteControls(trigger, alreadyActive, started);
+      else if (menuId === 'language-status') await verifyLanguageStatus(trigger, alreadyActive, started);
+      else if (menuId === 'maturity') await verifyMaturity(trigger, alreadyActive, started);
+      else if (menuId === 'ai-settings') await verifyAiSettings(trigger, alreadyActive, started);
+      else await verifyNormal(trigger, alreadyActive, started);
     }
   }
 
