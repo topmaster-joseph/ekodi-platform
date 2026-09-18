@@ -11,6 +11,7 @@ const allowedEndpointFiles = [
   /provider-router\.js$/i,
   /provider-control\.js$/i,
   /scripts[\\/]ai-account-node\.mjs$/i,
+  /scripts[\\/]validate-author\.mjs$/i,
 ];
 const allowedAdapterImporters = new Set([
   'ekodi-ai-provider-registry.js',
