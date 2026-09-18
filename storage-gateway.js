@@ -1,4 +1,4 @@
-import { canonicalDriveStatus, writeCanonicalDriveFile } from './canonical-drive-writer.js';
+import { canonicalDriveStatus, deleteCanonicalDriveFile, writeCanonicalDriveFile, writeCanonicalDriveStream } from './canonical-drive-writer.js';
 
 const STORAGE_PREFIX = '/api/storage/v1';
 const STORAGE_CONTROL_ORIGIN = 'https://drive.ekodi.kr';
@@ -149,6 +149,42 @@ export async function storeEkodiDurableRecord(env, record = {}, options = {}) {
   }
 }
 
+
+function archiveRecord(body = {}) {
+  validateRecord(body);
+  const key = String(body.r2Key || '').trim();
+  if (!key || key.startsWith('/') || key.includes('..') || key.includes('\\')) throw new Error('STORAGE_INVALID_R2_KEY');
+  return { ...body, r2Key:key };
+}
+
+async function archiveR2ToCanonicalDrive(env, body = {}, requestId = crypto.randomUUID()) {
+  if (!env.R2_BUCKET) throw new Error('STORAGE_R2_NOT_READY');
+  const record = archiveRecord(body);
+  const object = await env.R2_BUCKET.get(record.r2Key);
+  if (!object?.body) throw new Error('STORAGE_R2_OBJECT_NOT_FOUND');
+  let result = null;
+  try {
+    result = await writeCanonicalDriveStream(env, {
+      storageRoute:record.storageRoute,
+      serviceId:record.serviceId,
+      title:record.title || record.r2Key.split('/').pop() || 'recording.webm',
+      mimeType:record.mimeType || object.httpMetadata?.contentType || 'video/webm',
+      body:object.body,
+      size:object.size,
+      spaceId:record.spaceId,
+      recordType:record.recordType,
+      createdBy:record.createdBy,
+      retentionClass:record.retentionClass,
+      sourceModuleId:record.sourceModuleId || 'ekodi-live',
+    });
+    await audit(env,{...record,storageRoute:result.storageRoute},requestId,result,'stored');
+    return {ok:true,requestId,systemOfRecord:'google_workspace_shared_drive',driveName:result.canonicalDriveName||'EKODI',source:{provider:'r2',key:record.r2Key,size:object.size},file:result};
+  } catch (error) {
+    await audit(env,record,requestId,result,'failed').catch(()=>{});
+    throw error;
+  }
+}
+
 export async function handleStorageGateway(request, env = {}) {
   const url = new URL(request.url);
   if (!url.pathname.startsWith(STORAGE_PREFIX)) return null;
@@ -159,7 +195,7 @@ export async function handleStorageGateway(request, env = {}) {
     const status = await canonicalDriveStatus(env);
     return json({
       ok: true,
-      version: '1.0.0',
+      version: '1.1.0',
       service: 'ekodi-storage-control',
       canonicalStore: 'google_workspace_shared_drive',
       driveName: 'EKODI',
@@ -182,6 +218,32 @@ export async function handleStorageGateway(request, env = {}) {
       deliveryStore: 'cloudflare_r2',
       directExternalDriveAccess: false,
     });
+  }
+
+  if (request.method === 'POST' && url.pathname === `${STORAGE_PREFIX}/archive-r2`) {
+    let body;
+    try { body = await request.json(); }
+    catch { return json({ error:'JSON 요청이 필요합니다.', code:'STORAGE_INVALID_JSON' },400); }
+    try {
+      const result = await archiveR2ToCanonicalDrive(env,body,request.headers.get('x-request-id') || crypto.randomUUID());
+      return json(result,201);
+    } catch (error) {
+      console.error('Storage R2 archive error',error);
+      const message=String(error?.message || 'STORAGE_ARCHIVE_ERROR');
+      return json({ error:'R2 녹화본을 공유드라이브로 보관하지 못했습니다.', code:message.split(':')[0] },errorStatus(message));
+    }
+  }
+
+  if (request.method === 'POST' && url.pathname === `${STORAGE_PREFIX}/delete-file`) {
+    let body;
+    try { body = await request.json(); }
+    catch { return json({ error:'JSON 요청이 필요합니다.', code:'STORAGE_INVALID_JSON' },400); }
+    try {
+      return json(await deleteCanonicalDriveFile(env,String(body?.fileId || '')),200);
+    } catch (error) {
+      const message=String(error?.message || 'STORAGE_DELETE_ERROR');
+      return json({ error:'공유드라이브 파일 삭제에 실패했습니다.', code:message.split(':')[0] },errorStatus(message));
+    }
   }
 
   if (request.method === 'POST' && url.pathname === `${STORAGE_PREFIX}/records`) {
