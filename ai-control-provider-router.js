@@ -51,7 +51,7 @@ async function invokeGemini(env,prompt){
   const model=clean(env.GEMINI_MODEL)||'gemini-3.7-flash';
   const response=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,{method:'POST',headers:{'content-type':'application/json','x-goog-api-key':key,'x-goog-api-client':'ekodi-ai-control/0.3.0'},body:JSON.stringify({contents:[{role:'user',parts:[{text:prompt}]}]})});
   const data=await response.json().catch(()=>({}));
-  if(!response.ok){const error=new Error(data?.error?.message||`gemini_${response.status}`);error.status=response.status;const retry=Number(response.headers.get('retry-after'));if(Number.isFinite(retry)&&retry>0)error.retryAfterSeconds=retry;if(response.status===429){const detail=clean(data?.error?.message).toLowerCase();error.quota={state:/daily|per day|requests per day|\\brpd\\b/.test(detail)?'exhausted':'throttled'};}throw error;}
+  if(!response.ok){const error=new Error(data?.error?.message||`gemini_${response.status}`);error.status=response.status;const retry=Number(response.headers.get('retry-after'));if(Number.isFinite(retry)&&retry>0)error.retryAfterSeconds=retry;if(response.status===429){const detail=clean(data?.error?.message).toLowerCase();error.quota={state:/daily|per day|requests per day|\brpd\b/.test(detail)?'exhausted':'throttled'};}throw error;}
   const text=(data?.candidates?.[0]?.content?.parts||[]).map(part=>part.text||'').join('\n').trim();
   if(!text)throw new Error('gemini_empty_response');
   return text;
