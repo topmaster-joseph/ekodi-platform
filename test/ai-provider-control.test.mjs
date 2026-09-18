@@ -81,3 +81,15 @@ test('provider traffic circuit breaker skips a known exhausted-credit provider',
   const originalFetch=globalThis.fetch;globalThis.fetch=async()=>{providerFetches+=1;throw new Error('provider_should_not_be_called')};
   try{await assert.rejects(invokeAiProviderCapability({DB,OPENAI_API_KEY:'test-key-1234567890'},{input:'health-aware routing test',governance:{paidCommitment:true,explicitDelegatedBudget:true}}),error=>error?.message==='provider_unavailable'&&error?.blocked?.includes('openai'));assert.equal(providerFetches,0)}finally{globalThis.fetch=originalFetch}
 });
+
+
+test('provider control exposes human-only paid decision alerts without auto escalation',()=>{
+  const api=read('ai-provider-control.js'),admin=read('admin-provider-control.js');
+  assert.match(api,/paidApiAutoEscalation:false/);
+  assert.match(api,/paidDecisionMode:'human-only'/);
+  assert.match(api,/ai-cost-alert-decision/);
+  assert.match(admin,/무료 AI 사용 한도 소진|무료 AI 한도 알림/);
+  assert.match(admin,/무료 유지/);
+  assert.match(admin,/유료 설정 검토/);
+  assert.doesNotMatch(admin,/자동 결제/);
+});

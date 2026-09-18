@@ -6,14 +6,17 @@ import {AI_ROUTER_SCORE_POLICY,providerCostClass,rankProviders,scoreProvider} fr
 import {AI_COST_POLICY,evaluateAiCostEligibility} from './ai-cost-policy.js';
 
 export const AI_CONTROL_POLICY = Object.freeze({
-  version: '0.7.0',
+  version: '0.8.0',
   defaultMode: 'parallel',
   modes: Object.freeze(['parallel']),
   providerOrder: Object.freeze([
     'node:codex',
     'node:claude-code',
     'node:gemini-cli',
+    'cloudflare-workers-ai',
     'gemini-free',
+    'openrouter-free',
+    'groq-free',
     'openai-api',
     'anthropic-api',
     'worker:claude',
@@ -39,7 +42,7 @@ const unique = values => [...new Set(values.filter(Boolean))];
 const clip = (value, max=4000) => clean(value).slice(0,max);
 const PROVIDER_TOKEN=/^[a-z0-9][a-z0-9._-]{0,79}$/;
 function providerToken(value){const id=clean(value).toLowerCase();return PROVIDER_TOKEN.test(id)?id:''}
-function providerId(value){const id=clean(value).toLowerCase();if(['gemini-free','openai-api','anthropic-api'].includes(id))return id;const match=id.match(/^(node|worker):(.+)$/);if(!match)return'';const token=providerToken(match[2]);return token?`${match[1]}:${token}`:''}
+function providerId(value){const id=clean(value).toLowerCase();if(['cloudflare-workers-ai','gemini-free','openrouter-free','groq-free','openai-api','anthropic-api'].includes(id))return id;const match=id.match(/^(node|worker):(.+)$/);if(!match)return'';const token=providerToken(match[2]);return token?`${match[1]}:${token}`:''}
 
 const ORIGIN_ALIASES = Object.freeze({
   chatgpt:'chatgpt',gpt:'chatgpt',openai:'chatgpt','openai-api':'chatgpt','worker:chatgpt':'chatgpt',codex:'codex','node:codex':'codex',
@@ -89,6 +92,9 @@ export function providerFamily(providerId = '') {
   if(['openai-api','worker:chatgpt','node:codex'].includes(id))return'openai';
   if(['anthropic-api','worker:claude','node:claude-code'].includes(id))return'anthropic';
   if(['gemini-free','worker:gemini','node:gemini-cli'].includes(id))return'google';
+  if(id==='openrouter-free')return'openrouter';
+  if(id==='groq-free')return'groq';
+  if(id==='cloudflare-workers-ai')return'cloudflare';
   if(id.startsWith('worker:')||id.startsWith('node:'))return providerOriginIdentity(id)||'unknown';
   return id||'unknown';
 }
@@ -141,7 +147,10 @@ function providerAllowedForTask(providerId, task = {}, capabilities = {}) {
 }
 export function availableProviderIds(capabilities = {}, task = null) {
   const ids = [];
+  if (capabilities.cloudflareWorkersAi) ids.push('cloudflare-workers-ai');
   if (capabilities.geminiFree) ids.push('gemini-free');
+  if (capabilities.openrouterFree) ids.push('openrouter-free');
+  if (capabilities.groqFree) ids.push('groq-free');
   for (const raw of capabilities.nodeProviders || []) {const id=providerToken(raw);if(id)ids.push(`node:${id}`);}
   if (capabilities.openaiApi) ids.push('openai-api');
   if (capabilities.anthropicApi) ids.push('anthropic-api');

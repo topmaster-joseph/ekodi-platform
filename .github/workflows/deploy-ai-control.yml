@@ -6,6 +6,9 @@ on:
     paths:
       - 'ai-control/**'
       - 'ai-control-*.js'
+      - 'ai-free-quota.js'
+      - 'groq-free-provider-adapter.js'
+      - 'openrouter-free-provider-adapter.js'
       - 'ai-commons.js'
       - 'ai-commons-admin.js'
       - 'config/ai-execution-services.json'
@@ -31,6 +34,8 @@ on:
       - 'scripts/build-ai-control-release.mjs'
       - 'wrangler.ai*.toml'
       - 'test/ai-control-platform.test.mjs'
+      - 'test/ai-free-quota.test.mjs'
+      - 'test/free-provider-adapters.test.mjs'
       - 'test/ai-router-score.test.mjs'
       - 'test/ai-collaboration-settings.test.mjs'
       - 'test/local-execution-policy.test.mjs'
@@ -44,6 +49,8 @@ on:
       - 'migrations/0086_ai_commons_ideas.sql'
       - 'migrations/0087_ai_commons_governance.sql'
       - 'migrations/0088_ai_commons_sources.sql'
+      - 'migrations/0094_ai_provider_daily_budget.sql'
+      - 'migrations/0095_ai_free_quota_decisions.sql'
       - 'deploy/manifests/ai-control.worker.json'
       - 'scripts/validate-cognitive-control-plane.mjs'
       - 'scripts/validate-additive-migrations.mjs'
@@ -56,6 +63,9 @@ on:
     paths:
       - 'ai-control/**'
       - 'ai-control-*.js'
+      - 'ai-free-quota.js'
+      - 'groq-free-provider-adapter.js'
+      - 'openrouter-free-provider-adapter.js'
       - 'ai-commons.js'
       - 'ai-commons-admin.js'
       - 'config/ai-execution-services.json'
@@ -81,6 +91,8 @@ on:
       - 'scripts/build-ai-control-release.mjs'
       - 'wrangler.ai*.toml'
       - 'test/ai-control-platform.test.mjs'
+      - 'test/ai-free-quota.test.mjs'
+      - 'test/free-provider-adapters.test.mjs'
       - 'test/ai-router-score.test.mjs'
       - 'test/ai-collaboration-settings.test.mjs'
       - 'test/local-execution-policy.test.mjs'
@@ -94,6 +106,8 @@ on:
       - 'migrations/0086_ai_commons_ideas.sql'
       - 'migrations/0087_ai_commons_governance.sql'
       - 'migrations/0088_ai_commons_sources.sql'
+      - 'migrations/0094_ai_provider_daily_budget.sql'
+      - 'migrations/0095_ai_free_quota_decisions.sql'
       - 'deploy/manifests/ai-control.worker.json'
       - 'scripts/validate-cognitive-control-plane.mjs'
       - 'scripts/validate-additive-migrations.mjs'
@@ -135,6 +149,9 @@ jobs:
           node --check ai-collaboration-settings.js
           node --check local-execution-policy.js
           node --check ai-control-provider-router.js
+          node --check ai-free-quota.js
+          node --check groq-free-provider-adapter.js
+          node --check openrouter-free-provider-adapter.js
           node --check ai-control-worker.js
           node --check ai-control/app.js
           node --check scripts/ai-account-node.mjs
@@ -146,7 +163,7 @@ jobs:
           node scripts/validate-constitution.mjs
           node scripts/validate-ai-mission-governance.mjs
           node scripts/validate-additive-migrations.mjs migrations
-          node --test test/ai-control-platform.test.mjs test/ai-router-score.test.mjs test/ai-collaboration-settings.test.mjs test/local-execution-policy.test.mjs test/ai-account-node-scheduler.test.mjs test/cognitive-control-plane.test.mjs test/common-service-operator-control.test.mjs test/ai-commons.test.mjs test/ai-commons-subservice.test.mjs
+          node --test test/ai-control-platform.test.mjs test/ai-free-quota.test.mjs test/free-provider-adapters.test.mjs test/ai-router-score.test.mjs test/ai-collaboration-settings.test.mjs test/local-execution-policy.test.mjs test/ai-account-node-scheduler.test.mjs test/cognitive-control-plane.test.mjs test/common-service-operator-control.test.mjs test/ai-commons.test.mjs test/ai-commons-subservice.test.mjs
           node --check ai-commons.js
           node --check ai-commons-admin.js
           node --check ai-control/commons.js
@@ -159,6 +176,9 @@ jobs:
           grep -Fq 'AI_TASK_EXECUTION_ENABLED = "false"' wrangler.ai.staging.release.toml
           grep -Fq 'GEMINI_MODEL = "gemini-3.7-flash"' wrangler.ai.staging.release.toml
           grep -Fq 'no_bundle = true' wrangler.ai.release.toml
+          grep -Fq 'binding = "AI"' wrangler.ai.release.toml
+          grep -Fq 'EKODI_PROVIDER_WORKERS_AI_ENABLED = "true"' wrangler.ai.release.toml
+          grep -Fq 'paidApiAutoEscalation:false' ai-control-worker.js
           grep -Fq 'no_bundle = true' wrangler.ai.staging.release.toml
           grep -Fq 'humanApprovalRequired:true' ai-control-worker.js
           grep -Fq 'evaluateTaskMissionPolicy' ai-control-worker.js
@@ -311,6 +331,8 @@ jobs:
       AI_OPENAI_API_KEY: ${{ secrets.AI_CONTROL_OPENAI_API_KEY }}
       AI_ANTHROPIC_API_KEY: ${{ secrets.AI_CONTROL_ANTHROPIC_API_KEY }}
       AI_GITHUB_TASK_TOKEN: ${{ secrets.AI_CONTROL_GITHUB_TASK_TOKEN }}
+      AI_OPENROUTER_API_KEY: ${{ secrets.AI_CONTROL_OPENROUTER_API_KEY }}
+      AI_GROQ_API_KEY: ${{ secrets.AI_CONTROL_GROQ_API_KEY }}
       AI_EXTERNAL_WORKER_URL: ${{ secrets.AI_CONTROL_WORKER_URL }}
       AI_EXTERNAL_WORKER_TOKEN: ${{ secrets.AI_CONTROL_WORKER_TOKEN }}
     steps:
@@ -372,6 +394,8 @@ jobs:
           if (process.env.AI_OPENAI_API_KEY) secrets.OPENAI_API_KEY = process.env.AI_OPENAI_API_KEY;
           if (process.env.AI_ANTHROPIC_API_KEY) secrets.ANTHROPIC_API_KEY = process.env.AI_ANTHROPIC_API_KEY;
           if (process.env.AI_GITHUB_TASK_TOKEN) secrets.GITHUB_TASK_TOKEN = process.env.AI_GITHUB_TASK_TOKEN;
+          if (process.env.AI_OPENROUTER_API_KEY) secrets.OPENROUTER_API_KEY = process.env.AI_OPENROUTER_API_KEY;
+          if (process.env.AI_GROQ_API_KEY) secrets.GROQ_API_KEY = process.env.AI_GROQ_API_KEY;
           if (process.env.AI_EXTERNAL_WORKER_URL) secrets.AI_WORKER_URL = process.env.AI_EXTERNAL_WORKER_URL;
           if (process.env.AI_EXTERNAL_WORKER_TOKEN) secrets.AI_WORKER_TOKEN = process.env.AI_EXTERNAL_WORKER_TOKEN;
           fs.writeFileSync('/tmp/ai-control-secrets.json', JSON.stringify(secrets), { mode: 0o600 });
