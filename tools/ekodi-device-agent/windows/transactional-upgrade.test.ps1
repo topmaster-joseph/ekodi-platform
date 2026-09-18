@@ -14,7 +14,7 @@ try {
   $script:ProtocolKey = 'Registry::HKEY_CURRENT_USER\Software\EKODI\TransactionTestProtocol'
 
   Set-Content -Path $script:AgentPath -Value '# previous stable agent' -Encoding UTF8
-  Set-Content -Path $script:ConfigPath -Value '{"deviceId":"test","apiBase":"https://api.ekodi.kr","protectedToken":"test"}' -Encoding UTF8
+  @{ deviceId = 'test'; apiBase = $AllowedApiBase; protectedToken = 'test' } | ConvertTo-Json | Set-Content -Path $script:ConfigPath -Encoding UTF8
 
   $script:stopCalls = 0
   $script:protocolCalls = 0
