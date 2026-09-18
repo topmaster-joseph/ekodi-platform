@@ -39,7 +39,11 @@ test('authenticated Admin E2E gives demand-loaded navigation a bounded productio
   assert.match(worker, /locator\.click\(\{ force: true, noWaitAfter: true, timeout: interactionReadyTimeoutMs \}\)/);
   assert.match(worker, /global\.waitFor\(\{ state: 'visible', timeout: interactionReadyTimeoutMs \}\)/);
   assert.match(worker, /group, \{ timeout: interactionReadyTimeoutMs \}\)/);
-  assert.ok((worker.match(/tab\.waitFor\(\{ state: 'visible', timeout: interactionReadyTimeoutMs \}\)/g) || []).length >= 2);
+  assert.ok((worker.match(/tab\.waitFor\(\{ state: 'attached', timeout: interactionReadyTimeoutMs \}\)/g) || []).length >= 2);
+  assert.match(worker,/async function activateContextTab\(tab\)/);
+  assert.match(worker,/button\.admin-detail-item\[data-admin-detail-section=/);
+  assert.match(worker,/await detail\.count\(\) && await detail\.isVisible\(\)/);
+  assert.match(worker,/return clickFast\(detail\)/);
   assert.match(worker,/menuId === 'command-home'[\s\S]*tab\.waitFor\(\{ state: 'attached', timeout: interactionReadyTimeoutMs \}\)[\s\S]*verifyCommandWorkbench\(started\)/);
   assert.match(worker, /window\.EKODIAdminDemand\?\.activate/);
   assert.match(worker, /await window\.EKODIAdminDemand\.activate\(section\)/);
