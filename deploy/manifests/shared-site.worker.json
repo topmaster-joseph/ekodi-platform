@@ -854,9 +854,12 @@
         ],
         "redirect": "manual",
         "expect": [
-          "TARGET_ORIGIN='https://ekodi.kr'",
+          "CLIENT_IDS=Object.freeze",
           "use_fedcm_for_button:false",
-          "window.opener.postMessage"
+          "window.opener.postMessage",
+          "ej1ie2boa4e01lglm75e9q1r6m25pkp2.apps.googleusercontent.com",
+          "j9dml7tsb7vq4a4ud041ttctavlgdskg.apps.googleusercontent.com",
+          "qvk96u0rvptsshat0pi8g522puq9ju16.apps.googleusercontent.com"
         ],
         "headerExpect": [
           "x-ekodi-route: central-auth-asset",
@@ -917,7 +920,7 @@
         ],
         "redirect": "manual",
         "expect": [
-          "GOOGLE_BRIDGE_ORIGIN='https://ekodi.kr'",
+          "GOOGLE_BRIDGE_ORIGIN=runtime.authOrigin",
           "requestGoogleCredential",
           "renderOriginBridgeButton",
           "event.origin!==GOOGLE_BRIDGE_ORIGIN",
@@ -927,7 +930,8 @@
           "location.replace(targetHref)",
           "u.origin==='https://ekodi.kr'",
           "u.origin==='https://ai.ekodi.kr'",
-          "u.pathname==='/tax'"
+          "u.pathname==='/tax'",
+          "apiOrigin:'https://ekodi.kr'"
         ],
         "headerExpect": [
           "x-ekodi-route: central-auth-asset",
