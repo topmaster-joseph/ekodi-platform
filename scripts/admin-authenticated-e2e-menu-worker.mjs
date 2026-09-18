@@ -186,7 +186,7 @@ async function verifyTax(tab, alreadyActive, started) {
       return request.isNavigationRequest() && request.frame() === page.mainFrame() && destination.origin === 'https://ekodi.kr' && destination.pathname === '/tax';
     } catch { return false; }
   }, { timeout: 10_000 });
-  await clickFast(tab);
+  await activateContextTab(tab);
   const request = await navigation;
   const destination = new URL(request.url());
   if (destination.origin !== 'https://ekodi.kr' || destination.pathname !== '/tax') throw new Error(`tax: wrong handoff destination ${destination.hostname}`);
@@ -393,7 +393,7 @@ async function verifyMaturity(tab, alreadyActive, started) {
   if(!payload.serviceScopes?.summary?.totalScopes||!Array.isArray(payload.serviceScopes.services)||!Array.isArray(payload.serviceScopes.workspaceSites)||!Array.isArray(payload.serviceScopes.systemFunctions))throw new Error('maturity: subordinate service/site/function coverage missing');
   if([...payload.serviceScopes.services,...payload.serviceScopes.workspaceSites,...payload.serviceScopes.systemFunctions].some(item=>item.localMaturityScore!==null))throw new Error('maturity: unevidenced subordinate score exposed');
   if(payload.serviceScopes.summary.systemFunctions!==payload.serviceScopes.systemFunctions.length)throw new Error('maturity: system function summary mismatch');
-  if(!alreadyActive)await clickFast(tab);
+  if(!alreadyActive)await activateContextTab(tab);
   stage('maturity-render');
   await page.waitForFunction(()=>{
     const panel=document.querySelector('[data-panel~="maturity"]');
