@@ -28,7 +28,9 @@ test('central auth entry stays executable under restrictive CSP without inline J
   assert.match(authBootstrap, /dataset\.adminDirectBridge/);
   assert.match(authEntry, /import\('\.\/auth-router\.js\?v=20260918-csp-bootstrap-1'\)/);
   assert.match(authEntry, /dataset\.authLoopBlocked/);
-  assert.doesNotMatch(worker, /script-src 'self' 'unsafe-inline'/);
+  const authCsp = worker.match(/const AUTH_CSP = \[[\s\S]*?\]\.join\('; '\);/)?.[0] || '';
+  assert.ok(authCsp, 'AUTH_CSP block must remain present');
+  assert.doesNotMatch(authCsp, /script-src[^\n]*'unsafe-inline'/);
 });
 
 test('guarded production release verifies current auth entry, bridge and workspace handoff assets', () => {
