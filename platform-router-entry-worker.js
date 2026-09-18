@@ -33,6 +33,8 @@ import { isLearningPath, learningPage, learningScript, learningStyles } from './
 import { decorateDiscoveryResponse } from './discovery-layer.js';
 import { realtimeTenantFromPath } from './realtime-tenant-registry.js';
 import { tenantLivePage } from './tenant-live-page.js';
+import { handlePartnerNewsRequest } from './partner-news-control.js';
+import { handleChurchReportsRequest } from './church-reports-control.js';
 
 const PUBLIC_HOST='ekodi.kr';
 const CGMA_HOSTS=new Set(['cgma.or.kr','www.cgma.or.kr']);
@@ -55,6 +57,31 @@ const WORKSPACE_ASSET_PREFIX='/_ekodi/space/';
 const DEPLOYMENT_PROBE_PATH='/deployment-probe';
 const STORE_GATEWAY_PATHS=new Set(['/cmpmyi','/cmpmyi/']);
 const WORKSPACE_ASSETS=new Set(['style.css','config.js','app.js','storefront.json','storefront.css','jadam-storefront.css']);
+
+
+async function routeChurchOperationsApi(request,env){
+  const url=new URL(request.url);
+  if(url.pathname==='/api/partner-news/public'||url.pathname.startsWith('/api/church/admin/partner-news')){
+    const response=await handlePartnerNewsRequest(request,env);
+    if(response)return response;
+  }
+  if(url.pathname.startsWith('/api/church/admin/reports')){
+    const response=await handleChurchReportsRequest(request,env);
+    if(response)return response;
+  }
+  return null;
+}
+async function routeWorkspacePlatformApi(request,env){
+  if(!env?.WORKSPACE_PLATFORM?.fetch)return new Response(JSON.stringify({error:'Workspace platform service unavailable',code:'WORKSPACE_PLATFORM_BINDING_UNAVAILABLE'}),{status:503,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}});
+  const source=new URL(request.url);
+  const target=new URL(request.url);
+  target.pathname=source.pathname.replace(/^\/api\/workspace-platform(?=\/|$)/,'')||'/';
+  const body=['GET','HEAD'].includes(request.method)?undefined:await request.arrayBuffer();
+  const upstream=await env.WORKSPACE_PLATFORM.fetch(new Request(target.toString(),{method:request.method,headers:request.headers,body,redirect:'manual'}));
+  const response=new Response(upstream.body,upstream);
+  response.headers.set('x-ekodi-workspace-platform-gateway','service-binding-v1');
+  return response;
+}
 
 function resolvedHost(request,env){
   const url=new URL(request.url);
@@ -226,6 +253,8 @@ export default {
     const legacySurface=legacySurfaceRedirect(request);if(legacySurface)return legacySurface;
     const legacyStores=legacyStoreGatewayRedirect(request);if(legacyStores)return legacyStores;
     if(host===PUBLIC_HOST&&(url.pathname==='/api/finance'||url.pathname.startsWith('/api/finance/')))return routeTaxFinance(request,env,ctx);
+    if(host===PUBLIC_HOST&&(url.pathname==='/api/partner-news/public'||url.pathname.startsWith('/api/church/admin/partner-news')||url.pathname.startsWith('/api/church/admin/reports'))){const churchOps=await routeChurchOperationsApi(request,env);if(churchOps)return churchOps;}
+    if(host===PUBLIC_HOST&&url.pathname.startsWith('/api/workspace-platform/v1/site-chrome'))return routeWorkspacePlatformApi(request,env);
     if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)){const adminTarget=legacyAdminAliasTarget(url.pathname);if(adminTarget){const target=new URL(request.url);target.pathname=adminTarget;return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-content-type-options':'nosniff','x-ekodi-route':'admin-canonical-handoff'}})}}
     if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)){
       const liveTenant=realtimeTenantFromPath(url.pathname);
