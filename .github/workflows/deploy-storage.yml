@@ -71,9 +71,28 @@ jobs:
           ! grep -Eq 'GOOGLE_DRIVE_CLIENT_SECRET\s*=\s*".+' wrangler.storage.toml
           ! grep -Eq 'STORAGE_CREDENTIAL_KEY\s*=\s*".+' wrangler.storage.toml
 
-  deploy:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+  staging:
     needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Build immutable Storage candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/storage-candidate
+          npx --yes wrangler@4.119.0 deploy --dry-run --config wrangler.storage.toml --outdir /tmp/storage-candidate
+          test -d /tmp/storage-candidate
+          test -n "$(find /tmp/storage-candidate -type f -print -quit)"
+          echo 'Storage staging candidate built successfully without production mutation.' >> "$GITHUB_STEP_SUMMARY"
+
+  production:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [validate, staging]
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
