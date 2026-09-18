@@ -85,8 +85,8 @@ test('identity api preserves Google subject while persisting a provider-neutral 
   assert.match(identityApi,/link\.user\.id!==user\.id/);
 });
 
-test('identity api accepts the canonical path-based auth origin while retaining the legacy auth bridge',()=>{
-  assert.match(identityApi,/const AUTH_ORIGINS=new Set\(\["https:\/\/ekodi\.kr","https:\/\/auth\.ekodi\.kr"\]\)/);
+test('identity api accepts only the canonical path-based auth origin',()=>{
+  assert.match(identityApi,/const AUTH_ORIGINS=new Set\(\["https:\/\/ekodi\.kr"\]\)/);
   assert.match(identityApi,/origin&&AUTH_ORIGINS\.has\(origin\)\?origin:"null"/);
   assert.match(identityApi,/if\(!origin\|\|!AUTH_ORIGINS\.has\(origin\)\)return json\(req,\{error:"origin_not_allowed"\},403\)/);
 });

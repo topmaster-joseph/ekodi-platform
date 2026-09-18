@@ -1,5 +1,5 @@
 {
-  "version": 71,
+  "version": 72,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
@@ -838,7 +838,7 @@
         ],
         "redirect": "manual",
         "expect": [
-          "admin-auth.js?v=20260909-origin-bridge-1",
+          "admin-auth.js?v=20260918-canonical-origin-2",
           "business-auth.js?v=20260826-free-fallback-1",
           "client-auth.js?v=20260904-direct-login-1",
           "isRegistryUserService",
@@ -852,7 +852,7 @@
         "rollbackVerify": false
       },
       {
-        "url": "https://auth.ekodi.kr/google-origin-bridge",
+        "url": "https://ekodi.kr/auth/google-origin-bridge",
         "statuses": [
           200
         ],
@@ -868,15 +868,18 @@
         "rollbackVerify": false
       },
       {
-        "url": "https://auth.ekodi.kr/google-origin-bridge.js",
+        "url": "https://ekodi.kr/auth/google-origin-bridge.js",
         "statuses": [
           200
         ],
         "redirect": "manual",
         "expect": [
-          "TARGET_ORIGIN='https://ekodi.kr'",
+          "CLIENT_IDS=Object.freeze",
           "use_fedcm_for_button:false",
-          "window.opener.postMessage"
+          "window.opener.postMessage",
+          "ej1ie2boa4e01lglm75e9q1r6m25pkp2.apps.googleusercontent.com",
+          "j9dml7tsb7vq4a4ud041ttctavlgdskg.apps.googleusercontent.com",
+          "qvk96u0rvptsshat0pi8g522puq9ju16.apps.googleusercontent.com"
         ],
         "headerExpect": [
           "x-ekodi-route: central-auth-asset",
@@ -937,7 +940,7 @@
         ],
         "redirect": "manual",
         "expect": [
-          "GOOGLE_BRIDGE_ORIGIN='https://auth.ekodi.kr'",
+          "GOOGLE_BRIDGE_ORIGIN=runtime.authOrigin",
           "requestGoogleCredential",
           "renderOriginBridgeButton",
           "event.origin!==GOOGLE_BRIDGE_ORIGIN",
@@ -947,7 +950,8 @@
           "location.replace(targetHref)",
           "u.origin==='https://ekodi.kr'",
           "u.origin==='https://ai.ekodi.kr'",
-          "u.pathname==='/tax'"
+          "u.pathname==='/tax'",
+          "apiOrigin:'https://ekodi.kr'"
         ],
         "headerExpect": [
           "x-ekodi-route: central-auth-asset",

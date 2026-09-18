@@ -42,21 +42,21 @@ test('guarded production release verifies current auth entry, bridge and workspa
   const client = requests.find(item => item.url.startsWith('https://ekodi.kr/auth/client-auth.js'));
   const workspaceTarget = requests.find(item => item.url.startsWith('https://ekodi.kr/auth/auth-workspace-target.js'));
   const admin = requests.find(item => item.url.startsWith('https://ekodi.kr/auth/admin-auth.js'));
-  const bridgeDoc = requests.find(item => item.url === 'https://auth.ekodi.kr/google-origin-bridge');
-  const bridgeScript = requests.find(item => item.url === 'https://auth.ekodi.kr/google-origin-bridge.js');
+  const bridgeDoc = requests.find(item => item.url === 'https://ekodi.kr/auth/google-origin-bridge');
+  const bridgeScript = requests.find(item => item.url === 'https://ekodi.kr/auth/google-origin-bridge.js');
   for (const probe of [root, bootstrap, entry, router, client, workspaceTarget, admin, bridgeDoc, bridgeScript]) assert.ok(probe);
   assert.ok(root.expect.includes('/auth/auth-bootstrap.js?v=20260918-csp-bootstrap-1'));
   assert.ok(root.expect.includes('/auth/auth-entry.js?v=20260918-csp-bootstrap-1'));
   assert.ok(bootstrap.expect.includes('dataset.seamlessSso'));
   assert.ok(entry.expect.includes("./auth-router.js?v=20260918-csp-bootstrap-1"));
-  assert.ok(router.expect.includes('admin-auth.js?v=20260909-origin-bridge-1'));
+  assert.ok(router.expect.includes('admin-auth.js?v=20260918-canonical-origin-2'));
   assert.ok(router.expect.includes('business-auth.js?v=20260826-free-fallback-1'));
   assert.ok(router.expect.includes('client-auth.js?v=20260904-direct-login-1'));
   assert.ok(client.expect.includes('/session/handoff'));
   assert.ok(client.expect.includes('session_timeout'));
   assert.ok(workspaceTarget.expect.includes('workspace_key:requested'));
   assert.ok(workspaceTarget.expect.includes('serviceOrigins'));
-  assert.ok(admin.expect.includes("GOOGLE_BRIDGE_ORIGIN='https://auth.ekodi.kr'"));
+  assert.ok(admin.expect.includes('GOOGLE_BRIDGE_ORIGIN=runtime.authOrigin'));
   assert.ok(admin.expect.includes('requestGoogleCredential'));
   assert.ok(admin.expect.includes('renderOriginBridgeButton'));
   assert.ok(admin.expect.includes('event.origin!==GOOGLE_BRIDGE_ORIGIN'));
@@ -64,7 +64,7 @@ test('guarded production release verifies current auth entry, bridge and workspa
   assert.ok(admin.expect.includes('isEmbeddedWebView'));
   assert.ok(admin.expect.includes('location.replace(targetHref)'));
   assert.ok(bridgeDoc.expect.includes('/google-origin-bridge.js'));
-  assert.ok(bridgeScript.expect.includes("TARGET_ORIGIN='https://ekodi.kr'"));
+  assert.ok(bridgeScript.expect.includes('CLIENT_IDS=Object.freeze'));
   assert.ok(bridgeScript.expect.includes('use_fedcm_for_button:false'));
   assert.ok(bridgeScript.expect.includes('window.opener.postMessage'));
   for (const probe of [root, bootstrap, entry, router, client, workspaceTarget, admin, bridgeDoc, bridgeScript]) {

@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
 const read = path => readFile(new URL(path, import.meta.url), 'utf8');
-const [backend, frontend, css, entry, build, site, wrangler, migration] = await Promise.all([
+const [backend, frontend, css, entry, build, site, wrangler, migration, controlWorkflow, developmentWorkflow, developmentConfig, adminAuth] = await Promise.all([
   read('../admin-google-auth.js'),
   read('../google-admin-auth.js'),
   read('../google-admin-auth.css'),
@@ -12,6 +12,10 @@ const [backend, frontend, css, entry, build, site, wrangler, migration] = await 
   read('../site-worker.js'),
   read('../wrangler.api.toml'),
   read('../migrations/0006_admin_google_auth.sql'),
+  read('../.github/workflows/deploy-control-api.yml'),
+  read('../.github/workflows/deploy-development.yml'),
+  read('../wrangler.development.jsonc'),
+  read('../auth-site/admin-auth.js'),
 ]);
 
 test('Google administrator API uses exact allowlist and Google subject pinning', () => {
@@ -91,8 +95,29 @@ test('production build and CSP allow only required Google Identity Services reso
 
 test('designated super administrators and production OAuth client are exact contracts', () => {
   assert.ok(wrangler.includes('ADMIN_GOOGLE_BOOTSTRAP_EMAILS = "topmaster.joseph@gmail.com,joseph@ekodi.kr"'));
-  assert.match(wrangler, /GOOGLE_CLIENT_ID = "483044030492-4e6231l5glchhtniroinvuq3ev6n5mv5\.apps\.googleusercontent\.com"/);
+  assert.match(wrangler, /GOOGLE_CLIENT_ID = "483044030492-ej1ie2boa4e01lglm75e9q1r6m25pkp2\.apps\.googleusercontent\.com"/);
+  assert.match(wrangler, /GOOGLE_IDENTITY_ORIGIN = "https:\/\/ekodi\.kr"/);
   assert.match(wrangler, /ADMIN_WORKSPACE_DOMAIN = "ekodi\.kr"/);
   assert.match(migration, /admin_google_accounts/);
   assert.match(migration, /google_login_challenges/);
+});
+
+
+test('DEV/STAGING/PROD Google clients remain isolated in active environment configs', () => {
+  assert.match(wrangler, /GOOGLE_CLIENT_ID = "483044030492-ej1ie2boa4e01lglm75e9q1r6m25pkp2\.apps\.googleusercontent\.com"/);
+  const staging = controlWorkflow.match(/\n  staging:[\s\S]*?\n  production:/)?.[0] || '';
+  assert.match(staging, /GOOGLE_CLIENT_ID = "483044030492-j9dml7tsb7vq4a4ud041ttctavlgdskg\.apps\.googleusercontent\.com"/);
+  assert.match(staging, /GOOGLE_IDENTITY_ORIGIN = "https:\/\/ekodi-shared-site-staging\.ekodi-development\.workers\.dev"/);
+  const development = JSON.parse(developmentConfig);
+  assert.equal(development.vars.ENVIRONMENT, 'development');
+  assert.equal(development.vars.GOOGLE_CLIENT_ID, '483044030492-qvk96u0rvptsshat0pi8g522puq9ju16.apps.googleusercontent.com');
+  assert.equal(development.vars.GOOGLE_IDENTITY_ORIGIN, 'https://ekodi-platform-development.ekodi-development.workers.dev');
+  assert.ok(development.services?.some(service => service.binding === 'CONTROL_API' && service.service === 'ekodi-auth-api-development'));
+  assert.match(developmentWorkflow, /name = "ekodi-auth-api-development"/);
+  assert.match(developmentWorkflow, /database_name = "ekodi-auth-development"/);
+  assert.match(developmentWorkflow, /GOOGLE_CLIENT_ID = "483044030492-qvk96u0rvptsshat0pi8g522puq9ju16\.apps\.googleusercontent\.com"/);
+  assert.match(developmentWorkflow, /GOOGLE_IDENTITY_ORIGIN = "https:\/\/ekodi-platform-development\.ekodi-development\.workers\.dev"/);
+  assert.match(adminAuth, /origin==='https:\/\/ekodi-platform-development\.ekodi-development\.workers\.dev'/);
+  assert.match(adminAuth, /return\{environment:'development',apiOrigin:origin,authOrigin:origin\}/);
+  assert.doesNotMatch(wrangler + staging + developmentConfig + developmentWorkflow, /4e6231l5glchhtniroinvuq3ev6n5mv5/);
 });

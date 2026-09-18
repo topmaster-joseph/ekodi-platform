@@ -34,7 +34,7 @@ test('successful admin login navigates with replace and provides a delayed manua
 test('admin destination still accepts the same handoff token and router cache is bumped', () => {
   assert.match(handoff, /hash\.get\('ekodi_admin_token'\)/);
   assert.match(handoff, /sessionStorage\.setItem\('ekodi-auth-token'/);
-  assert.match(router, /admin-auth\.js\?v=20260909-origin-bridge-1/);
+  assert.match(router, /admin-auth\.js\?v=20260918-canonical-origin-2/);
 });
 
 test('admin auth can return a verified platform session to nested Mall admin controls', () => {
