@@ -58,7 +58,7 @@ test('successful Google Drive OAuth returns directly to the exact admin route wi
   assert.ok(admin.includes("function currentAdminReturnPath(){return `${location.pathname}${location.search}${location.hash}`;}"));
   assert.ok(admin.includes("JSON.stringify({role,returnTo:currentAdminReturnPath()})"));
   assert.ok(control.includes("const returnTo = safeAdminReturnPath(body.returnTo);"));
-  assert.ok(control.includes("signState(env,{nonce,role,adminEmail:auth.session.email,returnTo,exp:exp.getTime()})"));
+  assert.ok(control.includes("signState(env,{nonce,role,adminEmail:auth.session.email,returnTo,redirectUri,exp:exp.getTime()})"));
   assert.ok(control.includes("return adminRedirect(payload.returnTo);"));
   assert.ok(control.includes("status:303"));
   assert.ok(control.includes("target.origin !== ADMIN_ORIGIN"));
