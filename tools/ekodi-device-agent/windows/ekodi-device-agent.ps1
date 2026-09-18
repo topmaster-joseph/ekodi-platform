@@ -9,7 +9,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$AgentVersion = '2.1.0'
+$AgentVersion = '2.2.0'
 $Root = Join-Path $env:ProgramData 'EKODI\DeviceAgent'
 $AgentPath = Join-Path $Root 'ekodi-device-agent.ps1'
 $ConfigPath = Join-Path $Root 'config.json'
@@ -22,11 +22,38 @@ $ProtocolScheme = 'ekodi-device'
 $ProtocolKey = 'Registry::HKEY_LOCAL_MACHINE\Software\Classes\ekodi-device'
 $AgentSourceUrl = 'https://raw.githubusercontent.com/topmaster-joseph/ekodi-platform/main/tools/ekodi-device-agent/windows/ekodi-device-agent.ps1'
 $AllowedApiBase = 'https://api.ekodi.kr'
+$UpgradeRoot = Join-Path $Root 'transactions'
 
 function Test-IsAdministrator {
   $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
   $principal = [Security.Principal.WindowsPrincipal]::new($identity)
   return $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+}
+
+function Throw-AgentStageError([string]$Code, [string]$Stage, [string]$Message, $Inner = $null) {
+  $detail = if ($Inner) { "$Message :: $($Inner.Exception.Message)" } else { $Message }
+  throw "[EKODI:$Code][$Stage] $detail"
+}
+
+function Invoke-TestFailure([string]$Stage) {
+  if ($env:EKODI_AGENT_TEST_FAIL_STAGE -and $env:EKODI_AGENT_TEST_FAIL_STAGE -eq $Stage) {
+    throw "injected_failure:$Stage"
+  }
+}
+
+function Invoke-ElevatedSelf([string[]]$Arguments) {
+  if (Test-IsAdministrator) { return $null }
+  try {
+    $process = Start-Process powershell.exe -Verb RunAs -Wait -PassThru -ArgumentList @(
+      '-NoProfile','-ExecutionPolicy','Bypass','-File',("`"$PSCommandPath`"")
+    ) + $Arguments
+    if ($process.ExitCode -ne 0) {
+      Throw-AgentStageError 'EKA-091' 'elevation' "관리자 프로세스가 종료 코드 $($process.ExitCode)로 실패했습니다."
+    }
+    return $process.ExitCode
+  } catch {
+    Throw-AgentStageError 'EKA-090' 'elevation' 'Windows 관리자 권한 승격에 실패했습니다.' $_
+  }
 }
 
 function Protect-LocalSecret([string]$Value) {
@@ -475,14 +502,235 @@ function Test-AgentSourceSafety([string]$Content) {
   return $true
 }
 
+function Assert-AgentCandidate([string]$CandidatePath) {
+  if (-not (Test-Path -LiteralPath $CandidatePath)) {
+    Throw-AgentStageError 'EKA-100' 'candidate_validation' '업그레이드 후보 Agent 파일을 찾을 수 없습니다.'
+  }
+  try {
+    $content = Get-Content $CandidatePath -Raw -Encoding UTF8
+    if (-not (Test-AgentSourceSafety $content)) {
+      Throw-AgentStageError 'EKA-101' 'candidate_validation' '업그레이드 후보 Agent의 PowerShell 안전성 검증에 실패했습니다.'
+    }
+    if ($content -notmatch "\\$AgentVersion\\s*=\\s*'([^']+)'") {
+      Throw-AgentStageError 'EKA-102' 'candidate_validation' '업그레이드 후보 Agent 버전을 확인하지 못했습니다.'
+    }
+    return [string]$Matches[1]
+  } catch {
+    if ($_.Exception.Message -like '[EKODI:*') { throw }
+    Throw-AgentStageError 'EKA-103' 'candidate_validation' '업그레이드 후보 Agent 검증 중 오류가 발생했습니다.' $_
+  }
+}
+
+function Test-AgentRunProcess {
+  try {
+    foreach ($process in @(Get-CimInstance Win32_Process -ErrorAction SilentlyContinue)) {
+      if ([string]$process.Name -notin @('powershell.exe', 'pwsh.exe')) { continue }
+      $line = [string]$process.CommandLine
+      if ($line -and $line.Contains($AgentPath) -and $line -match '(?i)(?:^|\\s|\")-Run(?:\\s|\"|$)') { return $true }
+    }
+  } catch { }
+  return $false
+}
+
+function Get-AgentTaskSnapshot {
+  try {
+    $task = Get-ScheduledTask -TaskName $TaskName -ErrorAction Stop
+    return @{ exists = $true; xml = (Export-ScheduledTask -TaskName $TaskName); state = [string]$task.State }
+  } catch {
+    return @{ exists = $false; xml = ''; state = 'Missing' }
+  }
+}
+
+function Restore-AgentTaskSnapshot($Snapshot) {
+  Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false -ErrorAction SilentlyContinue
+  if ($Snapshot -and $Snapshot.exists -and $Snapshot.xml) {
+    Register-ScheduledTask -TaskName $TaskName -Xml ([string]$Snapshot.xml) -Force | Out-Null
+  }
+}
+
+function Get-ProtocolSnapshot {
+  if (-not (Test-Path $ProtocolKey)) { return @{ exists = $false } }
+  try {
+    $rootKey = Get-Item $ProtocolKey
+    $commandKey = Join-Path $ProtocolKey 'shell\open\command'
+    return @{
+      exists = $true
+      rootValue = [string]$rootKey.GetValue('')
+      urlProtocol = [string]$rootKey.GetValue('URL Protocol')
+      command = $(if (Test-Path $commandKey) { [string](Get-Item $commandKey).GetValue('') } else { '' })
+    }
+  } catch {
+    Throw-AgentStageError 'EKA-111' 'snapshot' '기존 EKODI 프로토콜 상태를 읽지 못했습니다.' $_
+  }
+}
+
+function Restore-ProtocolSnapshot($Snapshot) {
+  Remove-Item -Path $ProtocolKey -Recurse -Force -ErrorAction SilentlyContinue
+  if (-not $Snapshot -or -not $Snapshot.exists) { return }
+  New-Item -Path $ProtocolKey -Force | Out-Null
+  Set-Item -Path $ProtocolKey -Value ([string]$Snapshot.rootValue)
+  New-ItemProperty -Path $ProtocolKey -Name 'URL Protocol' -Value ([string]$Snapshot.urlProtocol) -PropertyType String -Force | Out-Null
+  if ($Snapshot.command) {
+    $commandKey = Join-Path $ProtocolKey 'shell\open\command'
+    New-Item -Path $commandKey -Force | Out-Null
+    Set-Item -Path $commandKey -Value ([string]$Snapshot.command)
+  }
+}
+
+function New-AgentUpgradeSnapshot {
+  try {
+    New-Item -ItemType Directory -Path $UpgradeRoot -Force | Out-Null
+    $transactionPath = Join-Path $UpgradeRoot ([guid]::NewGuid().ToString('N'))
+    New-Item -ItemType Directory -Path $transactionPath -Force | Out-Null
+    $agentBackup = Join-Path $transactionPath 'agent.previous.ps1'
+    $configBackup = Join-Path $transactionPath 'config.previous.json'
+    $agentExists = Test-Path $AgentPath
+    $configExists = Test-Path $ConfigPath
+    if ($agentExists) { Copy-Item -LiteralPath $AgentPath -Destination $agentBackup -Force }
+    if ($configExists) { Copy-Item -LiteralPath $ConfigPath -Destination $configBackup -Force }
+    return @{
+      transactionPath = $transactionPath
+      agentExists = [bool]$agentExists
+      agentBackup = $agentBackup
+      configExists = [bool]$configExists
+      configBackup = $configBackup
+      task = Get-AgentTaskSnapshot
+      protocol = Get-ProtocolSnapshot
+      wasRunning = [bool](Test-AgentRunProcess)
+    }
+  } catch {
+    Throw-AgentStageError 'EKA-110' 'snapshot' '기존 Agent 상태 백업에 실패했습니다.' $_
+  }
+}
+
+function Remove-AgentUpgradeSnapshot($Snapshot) {
+  if ($Snapshot -and $Snapshot.transactionPath -and (Test-Path $Snapshot.transactionPath)) {
+    Remove-Item -LiteralPath $Snapshot.transactionPath -Recurse -Force -ErrorAction SilentlyContinue
+  }
+}
+
+function Start-AgentProcess {
+  Start-Process powershell.exe -WindowStyle Hidden -ArgumentList @('-NoProfile','-ExecutionPolicy','Bypass','-File',("`"$AgentPath`""),'-Run') | Out-Null
+}
+
+function Test-AgentHeartbeatResume {
+  try {
+    $config = Load-Config
+    Send-Heartbeat $config
+    return $true
+  } catch {
+    return $false
+  }
+}
+
+function Restore-AgentUpgradeSnapshot($Snapshot) {
+  if (-not $Snapshot) { return }
+  Stop-ExistingAgentProcesses
+  if ($Snapshot.agentExists -and (Test-Path $Snapshot.agentBackup)) {
+    Copy-Item -LiteralPath $Snapshot.agentBackup -Destination $AgentPath -Force
+  } else {
+    Remove-Item -LiteralPath $AgentPath -Force -ErrorAction SilentlyContinue
+  }
+  if ($Snapshot.configExists -and (Test-Path $Snapshot.configBackup)) {
+    Copy-Item -LiteralPath $Snapshot.configBackup -Destination $ConfigPath -Force
+  } elseif (-not $Snapshot.configExists) {
+    Remove-Item -LiteralPath $ConfigPath -Force -ErrorAction SilentlyContinue
+  }
+  Restore-AgentTaskSnapshot $Snapshot.task
+  Restore-ProtocolSnapshot $Snapshot.protocol
+  if ($Snapshot.configExists) {
+    try {
+      if ($Snapshot.task -and $Snapshot.task.exists) {
+        Start-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
+      }
+      if (-not (Test-AgentRunProcess)) { Start-AgentProcess }
+      Start-Sleep -Milliseconds 600
+      [void](Test-AgentHeartbeatResume)
+    } catch { }
+  }
+}
+
+function Replace-AgentFileAtomically([string]$CandidatePath, $Snapshot) {
+  New-Item -ItemType Directory -Path $Root -Force | Out-Null
+  $stagedPath = Join-Path $Root ("agent.candidate.$([guid]::NewGuid().ToString('N')).ps1")
+  Copy-Item -LiteralPath $CandidatePath -Destination $stagedPath -Force
+  if (Test-Path $AgentPath) {
+    [System.IO.File]::Replace($stagedPath, $AgentPath, $null, $true)
+  } else {
+    Move-Item -LiteralPath $stagedPath -Destination $AgentPath -Force
+  }
+}
+
+function Invoke-AgentUpgradeTransaction([string]$CandidatePath, [switch]$DeferRestart) {
+  $stage = 'candidate_validation'
+  $snapshot = $null
+  try {
+    $candidateVersion = Assert-AgentCandidate $CandidatePath
+    Invoke-TestFailure 'candidate_validated'
+
+    $stage = 'snapshot'
+    $snapshot = New-AgentUpgradeSnapshot
+    Invoke-TestFailure 'snapshot_created'
+
+    $stage = 'stop_existing'
+    if ($snapshot.configExists -or $snapshot.wasRunning) { Stop-ExistingAgentProcesses }
+    Invoke-TestFailure 'existing_stopped'
+
+    $stage = 'replace_agent'
+    Replace-AgentFileAtomically $CandidatePath $snapshot
+    Invoke-TestFailure 'agent_replaced'
+
+    $stage = 'register_protocol'
+    Register-EkodiProtocol
+    Invoke-TestFailure 'protocol_registered'
+
+    $stage = 'register_task'
+    if ($snapshot.configExists) { Ensure-AgentTask }
+    Invoke-TestFailure 'task_registered'
+
+    if ($snapshot.configExists -and -not $DeferRestart) {
+      $stage = 'start_agent'
+      Start-AgentProcess
+      Start-Sleep -Milliseconds 700
+      if (-not (Test-AgentRunProcess)) { throw '업그레이드된 Agent 실행 프로세스를 확인하지 못했습니다.' }
+      Invoke-TestFailure 'agent_started'
+
+      $stage = 'heartbeat_verify'
+      if (-not (Test-AgentHeartbeatResume)) { throw '업그레이드 후 heartbeat 재개를 확인하지 못했습니다.' }
+      Invoke-TestFailure 'heartbeat_verified'
+    } elseif ($snapshot.configExists) {
+      $stage = 'heartbeat_verify'
+      if (-not (Test-AgentHeartbeatResume)) { throw '업그레이드 후 heartbeat 확인에 실패했습니다.' }
+      Invoke-TestFailure 'heartbeat_verified'
+    }
+
+    Remove-AgentUpgradeSnapshot $snapshot
+    return @{ version = $candidateVersion; upgraded = $true; heartbeatVerified = [bool]$snapshot.configExists }
+  } catch {
+    $failure = $_
+    if ($snapshot) {
+      try {
+        Restore-AgentUpgradeSnapshot $snapshot
+        Remove-AgentUpgradeSnapshot $snapshot
+      } catch {
+        Throw-AgentStageError 'EKA-190' 'rollback' "업그레이드 실패 후 자동 롤백에도 실패했습니다. 원래 단계=$stage; 원래 오류=$($failure.Exception.Message)" $_
+      }
+    }
+    $codes = @{
+      candidate_validation='EKA-100'; snapshot='EKA-110'; stop_existing='EKA-120'; replace_agent='EKA-130'
+      register_protocol='EKA-140'; register_task='EKA-150'; start_agent='EKA-160'; heartbeat_verify='EKA-170'
+    }
+    $code = if ($codes.ContainsKey($stage)) { $codes[$stage] } else { 'EKA-199' }
+    Throw-AgentStageError $code $stage 'Agent 설치·업그레이드를 중단하고 이전 상태로 롤백했습니다.' $failure
+  }
+}
+
 function Update-AgentFromOfficialSource {
   $temp = Join-Path $env:TEMP 'ekodi-device-agent-update.ps1'
   Invoke-WebRequest -UseBasicParsing $AgentSourceUrl -OutFile $temp
-  $content = Get-Content $temp -Raw -Encoding UTF8
-  if (-not (Test-AgentSourceSafety $content)) { throw '공식 Agent 업데이트 파일 검증에 실패했습니다.' }
-  Copy-Item -LiteralPath $temp -Destination $AgentPath -Force
-  Register-EkodiProtocol
-  return @{ message = 'EKODI Device Agent 파일과 원클릭 연결 프로토콜을 업데이트했습니다. 실행 중인 Agent는 다음 재시작부터 새 버전을 사용합니다.'; settings = Get-AgentSettings }
+  [void](Assert-AgentCandidate $temp)
+  $result = Invoke-AgentUpgradeTransaction -CandidatePath $temp -DeferRestart
+  return @{ message = "EKODI Device Agent를 트랜잭션 방식으로 $($result.version) 버전으로 업데이트했습니다. 현재 실행은 다음 안전 재시작 때 새 코드로 전환됩니다."; settings = Get-AgentSettings }
 }
 
 function Get-AgentSettings {
@@ -714,68 +962,102 @@ function Copy-SelfToAgentPath {
 
 function Start-CurrentAgent {
   Ensure-AgentTask
-  Start-Process powershell.exe -WindowStyle Hidden -ArgumentList @('-NoProfile','-ExecutionPolicy','Bypass','-File',"`"$AgentPath`"",'-Run')
+  Start-AgentProcess
 }
 
 function Install-Agent {
-  if (-not $EnrollmentCode) { throw '-EnrollmentCode가 필요합니다.' }
-  if ($ApiBase.TrimEnd('/') -ne $AllowedApiBase) { throw '허용되지 않은 EKODI API 주소입니다.' }
+  if (-not $EnrollmentCode) { Throw-AgentStageError 'EKA-200' 'enrollment' '-EnrollmentCode가 필요합니다.' }
+  if ($ApiBase.TrimEnd('/') -ne $AllowedApiBase) { Throw-AgentStageError 'EKA-201' 'enrollment' '허용되지 않은 EKODI API 주소입니다.' }
   if (-not (Test-IsAdministrator)) {
-    $arguments = @('-NoProfile','-ExecutionPolicy','Bypass','-File',"`"$PSCommandPath`"",'-Install','-EnrollmentCode',"`"$EnrollmentCode`"",'-ApiBase',"`"$AllowedApiBase`"")
-    if ($Label) { $arguments += @('-Label', "`"$Label`"") }
-    Start-Process powershell.exe -Verb RunAs -ArgumentList $arguments
+    $args = @('-Install','-EnrollmentCode',"`"$EnrollmentCode`"",'-ApiBase',"`"$AllowedApiBase`"")
+    if ($Label) { $args += @('-Label', "`"$Label`"") }
+    [void](Invoke-ElevatedSelf $args)
     return
   }
 
+  [void](Assert-AgentCandidate $PSCommandPath)
   $hadConfig = Test-Path $ConfigPath
-  if ($hadConfig) { Stop-ExistingAgentProcesses }
-  Copy-SelfToAgentPath
-  Register-EkodiProtocol
   if ($hadConfig) {
-    Start-CurrentAgent
-    Write-Host '기존 EKODI 기기 등록과 토큰을 유지한 채 Agent를 최신 버전으로 전환했습니다.' -ForegroundColor Green
+    $result = Invoke-AgentUpgradeTransaction -CandidatePath $PSCommandPath
+    Write-Host "기존 EKODI 기기 등록과 토큰을 유지하고 Agent $($result.version) 업그레이드·heartbeat 검증을 완료했습니다." -ForegroundColor Green
     return
   }
 
-  $enrollmentBody = @{
-    enrollmentCode = $EnrollmentCode
-    platform = 'windows'
-    hostname = $env:COMPUTERNAME
-    label = $(if ($Label) { $Label } else { $env:COMPUTERNAME })
-    osVersion = Get-OsVersion
-    agentVersion = $AgentVersion
-    capabilities = @{
-      powerProfiles = $true; resumeLock = $true; restore = $true; autologonLocalConsent = $true
-      diagnostics = $true; storageMaintenance = $true; windowsUpdate = $true; startupManagement = $true
-      networkDiagnostics = $true; printerDiagnostics = $true; workstationProfile = $true; protocolLaunch = $true
-      arbitraryShell = $false; screenCapture = $false; credentialCollection = $false
+  $snapshot = $null
+  $stage = 'snapshot'
+  try {
+    $snapshot = New-AgentUpgradeSnapshot
+    $stage = 'replace_agent'
+    Replace-AgentFileAtomically $PSCommandPath $snapshot
+    $stage = 'register_protocol'
+    Register-EkodiProtocol
+    $stage = 'enrollment'
+    $enrollmentBody = @{
+      enrollmentCode = $EnrollmentCode
+      platform = 'windows'
+      hostname = $env:COMPUTERNAME
+      label = $(if ($Label) { $Label } else { $env:COMPUTERNAME })
+      osVersion = Get-OsVersion
+      agentVersion = $AgentVersion
+      capabilities = @{
+        powerProfiles = $true; resumeLock = $true; restore = $true; autologonLocalConsent = $true
+        diagnostics = $true; storageMaintenance = $true; windowsUpdate = $true; startupManagement = $true
+        networkDiagnostics = $true; printerDiagnostics = $true; workstationProfile = $true; protocolLaunch = $true
+        arbitraryShell = $false; screenCapture = $false; credentialCollection = $false
+      }
+    } | ConvertTo-Json -Depth 8
+    $enrollment = Invoke-RestMethod -Method Post -Uri "$AllowedApiBase/api/device-agent/enroll" -ContentType 'application/json' -Body $enrollmentBody
+    @{
+      deviceId = [string]$enrollment.deviceId
+      apiBase = $AllowedApiBase
+      protectedToken = Protect-LocalSecret ([string]$enrollment.deviceToken)
+      installedAt = (Get-Date).ToUniversalTime().ToString('o')
+    } | ConvertTo-Json | Set-Content -Path $ConfigPath -Encoding UTF8
+    $stage = 'register_task'
+    Ensure-AgentTask
+    $stage = 'start_agent'
+    Start-AgentProcess
+    Start-Sleep -Milliseconds 700
+    if (-not (Test-AgentRunProcess)) { throw '신규 Agent 실행 프로세스를 확인하지 못했습니다.' }
+    $stage = 'heartbeat_verify'
+    if (-not (Test-AgentHeartbeatResume)) { throw '신규 Agent heartbeat를 확인하지 못했습니다.' }
+    Remove-AgentUpgradeSnapshot $snapshot
+    Write-Host "EKODI Device Agent 등록 및 heartbeat 검증 완료: $($enrollment.deviceId)" -ForegroundColor Green
+  } catch {
+    $failure = $_
+    if ($snapshot) {
+      try { Restore-AgentUpgradeSnapshot $snapshot; Remove-AgentUpgradeSnapshot $snapshot } catch {
+        Throw-AgentStageError 'EKA-290' 'rollback' "신규 설치 실패 후 롤백에도 실패했습니다. 원래 단계=$stage; 원래 오류=$($failure.Exception.Message)" $_
+      }
     }
-  } | ConvertTo-Json -Depth 8
-  $enrollment = Invoke-RestMethod -Method Post -Uri "$AllowedApiBase/api/device-agent/enroll" -ContentType 'application/json' -Body $enrollmentBody
-  @{
-    deviceId = [string]$enrollment.deviceId
-    apiBase = $AllowedApiBase
-    protectedToken = Protect-LocalSecret ([string]$enrollment.deviceToken)
-    installedAt = (Get-Date).ToUniversalTime().ToString('o')
-  } | ConvertTo-Json | Set-Content -Path $ConfigPath -Encoding UTF8
-  Start-CurrentAgent
-  Write-Host "EKODI Device Agent 등록 완료: $($enrollment.deviceId)" -ForegroundColor Green
+    Throw-AgentStageError 'EKA-299' $stage '신규 Device Agent 설치를 중단하고 로컬 상태를 롤백했습니다.' $failure
+  }
 }
 
 function Register-ProtocolOnly {
   if (-not (Test-IsAdministrator)) {
-    Start-Process powershell.exe -Verb RunAs -ArgumentList @('-NoProfile','-ExecutionPolicy','Bypass','-File',"`"$PSCommandPath`"",'-RegisterProtocol')
+    [void](Invoke-ElevatedSelf @('-RegisterProtocol'))
     return
   }
+  [void](Assert-AgentCandidate $PSCommandPath)
   $hadConfig = Test-Path $ConfigPath
-  if ($hadConfig) { Stop-ExistingAgentProcesses }
-  Copy-SelfToAgentPath
-  Register-EkodiProtocol
   if ($hadConfig) {
-    Start-CurrentAgent
-    Write-Host '기존 등록을 유지한 채 EKODI Device Agent 업그레이드와 원클릭 연결 준비를 완료했습니다.' -ForegroundColor Green
+    $result = Invoke-AgentUpgradeTransaction -CandidatePath $PSCommandPath
+    Write-Host "기존 등록을 유지한 채 Agent $($result.version) 업그레이드·프로토콜·heartbeat 검증을 완료했습니다." -ForegroundColor Green
   } else {
-    Write-Host 'EKODI 원클릭 PC 연결 프로그램을 설치했습니다. 관리자 사이트에서 “이 PC 연결 계속”을 누르세요.' -ForegroundColor Green
+    $snapshot = New-AgentUpgradeSnapshot
+    try {
+      Replace-AgentFileAtomically $PSCommandPath $snapshot
+      Register-EkodiProtocol
+      Remove-AgentUpgradeSnapshot $snapshot
+      Write-Host 'EKODI 원클릭 PC 연결 프로그램을 설치했습니다. 관리자 사이트에서 “이 PC 연결 계속”을 누르세요.' -ForegroundColor Green
+    } catch {
+      $failure = $_
+      try { Restore-AgentUpgradeSnapshot $snapshot; Remove-AgentUpgradeSnapshot $snapshot } catch {
+        Throw-AgentStageError 'EKA-390' 'rollback' '원클릭 연결 프로그램 설치 실패 후 롤백에도 실패했습니다.' $_
+      }
+      Throw-AgentStageError 'EKA-399' 'protocol_install' '원클릭 연결 프로그램 설치를 롤백했습니다.' $failure
+    }
   }
 }
 
@@ -814,7 +1096,7 @@ if ($RegisterProtocol) { Register-ProtocolOnly; exit }
 if ($Install) { Install-Agent; exit }
 if ($Run) { Run-Agent; exit }
 
-Write-Host 'EKODI Device Agent 2.0.1' -ForegroundColor Cyan
+Write-Host "EKODI Device Agent $AgentVersion" -ForegroundColor Cyan
 Write-Host '등록: -Install -EnrollmentCode <코드>'
 Write-Host '원클릭 연결 등록: -RegisterProtocol'
 Write-Host '실행: -Run'
