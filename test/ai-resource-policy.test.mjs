@@ -66,3 +66,23 @@ test('shared API and hosted AI remain off by default while Core is always availa
   assert.equal(policy.core.productionVerificationRequired, true);
   assert.equal(policy.core.promotionMode, 'reviewed');
 });
+
+
+test('sensitive workloads never route to a free external provider', () => {
+  const free={id:'gemini',resourceClass:'personal-api',available:true,costClass:'free-preferred'};
+  const blocked=scoreAiResourceCandidate(free,{lane:'interactive',governance:{sensitiveData:true}});
+  assert.equal(blocked.eligible,false);
+  assert.equal(blocked.blockedBy,'sensitive_data_free_provider_blocked');
+
+  const paid={id:'openai',resourceClass:'personal-api',available:true,costClass:'paid-opt-in'};
+  const allowed=scoreAiResourceCandidate(paid,{lane:'interactive',governance:{sensitiveData:true,paidCommitment:true,explicitDelegatedBudget:true}});
+  assert.equal(allowed.eligible,true);
+});
+
+test('provider priority breaks equal policy scores deterministically', () => {
+  const ranked=rankAiResourceCandidates([
+    {id:'openai',priority:20,resourceClass:'personal-api',available:true,costClass:'account-managed'},
+    {id:'gemini',priority:10,resourceClass:'personal-api',available:true,costClass:'account-managed'},
+  ],{lane:'interactive'});
+  assert.deepEqual(ranked.map(item=>item.id),['gemini','openai']);
+});
