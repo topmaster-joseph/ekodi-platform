@@ -3,6 +3,7 @@ import {
   runAiEnhancedTask,
 } from './ai-resilience-runtime.js';
 import { rankAiResourceCandidates } from './ai-resource-policy.js';
+import { recordAiProviderExecution } from './ai-provider-telemetry.js';
 
 const RISK_LEVELS = new Set(['low', 'normal', 'high', 'critical']);
 const COLLABORATION_MODES = new Set(['auto', 'primary', 'review']);
@@ -53,6 +54,38 @@ function supports(provider, requiredCapabilities) {
 function chooseMode(collaboration, risk) {
   if (collaboration !== 'auto') return collaboration;
   return risk === 'high' || risk === 'critical' ? 'review' : 'primary';
+}
+
+async function invokeWithTelemetry({ env, provider, taskName, context = {}, role = 'primary' }) {
+  const started = Date.now();
+  try {
+    const value = await provider.invoke(Object.freeze({ taskName, context }));
+    await recordAiProviderExecution(env, {
+      taskId: context?.taskId || context?.task_id || '',
+      provider: provider.id,
+      model: value?.model || provider.model || '',
+      role,
+      surface: 'orchestrator',
+      status: 'completed',
+      latencyMs: Date.now() - started,
+      usage: value?.usage || {},
+      metadata: { taskName },
+    }).catch(() => {});
+    return value;
+  } catch (error) {
+    await recordAiProviderExecution(env, {
+      taskId: context?.taskId || context?.task_id || '',
+      provider: provider.id,
+      model: provider.model || '',
+      role,
+      surface: 'orchestrator',
+      status: 'failed',
+      latencyMs: Date.now() - started,
+      errorCode: String(error?.message || error).slice(0, 200),
+      metadata: { taskName },
+    }).catch(() => {});
+    throw error;
+  }
 }
 
 function publicProvider(provider) {
@@ -112,8 +145,11 @@ async function runReviewer({ env, reviewer, taskName, timeoutMs, context, primar
     providers: [{
       id: reviewer.id,
       available: reviewer.available,
-      invoke: () => reviewer.invoke(Object.freeze({
+      invoke: () => invokeWithTelemetry({
+        env,
+        provider: reviewer,
         taskName,
+        role: 'independent_reviewer',
         context: Object.freeze({
           ...context,
           collaboration: Object.freeze({
@@ -122,7 +158,7 @@ async function runReviewer({ env, reviewer, taskName, timeoutMs, context, primar
             primaryValue: primary.value,
           }),
         }),
-      })),
+      }),
     }],
     fallback: () => null,
   });
@@ -181,13 +217,16 @@ export function buildEkodiAiOrchestrator(env = {}, providers = []) {
         providers: eligible.map(provider => ({
           id: provider.id,
           available: provider.available,
-          invoke: () => provider.invoke(Object.freeze({
+          invoke: () => invokeWithTelemetry({
+            env,
+            provider,
             taskName: normalizedTaskName,
+            role: 'primary',
             context: Object.freeze({
               ...context,
               collaboration: Object.freeze({ role: 'primary', mode: plan.mode }),
             }),
-          })),
+          }),
         })),
         fallback: reason => fallback(Object.freeze({ ...reason, context, plan })),
       });
