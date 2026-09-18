@@ -171,7 +171,7 @@ jobs:
           preview_urls = false
           [vars]
           ENVIRONMENT = "staging"
-          ALLOWED_ORIGINS = "https://ekodi.kr,https://admin.ekodi.kr"
+          ALLOWED_ORIGINS = "https://ekodi.kr"
 
           [observability.logs]
           enabled = true
@@ -295,20 +295,21 @@ jobs:
         run: |
           set -euo pipefail
           for attempt in $(seq 1 18); do
-            health=$(curl -fsS --connect-timeout 5 --max-time 12 'https://finance-api.ekodi.kr/health' || true)
-            registry_health=$(curl -fsS --connect-timeout 5 --max-time 12 'https://finance-api.ekodi.kr/api/finance/tax-business-status-health' || true)
-            overview_code=$(curl -sS -o /tmp/finance-overview.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://finance-api.ekodi.kr/api/finance/overview' || true)
-            structure_code=$(curl -sS -o /tmp/finance-structure.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://finance-api.ekodi.kr/api/finance/structure' || true)
-            tax_profile_code=$(curl -sS -o /tmp/finance-tax-profile.json -w '%{http_code}' --connect-timeout 5 --max-time 12 -H 'Origin: https://ekodi.kr' 'https://finance-api.ekodi.kr/api/finance/tax-profiles?organizationId=EKODIBIZ' || true)
+            health=$(curl -fsS --connect-timeout 5 --max-time 12 'https://ekodi.kr/api/finance/policy-funds/health' || true)
+            registry_health=$(curl -fsS --connect-timeout 5 --max-time 12 'https://ekodi.kr/api/finance/tax-business-status-health' || true)
+            overview_code=$(curl -sS -o /tmp/finance-overview.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://ekodi.kr/api/finance/overview' || true)
+            structure_code=$(curl -sS -o /tmp/finance-structure.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://ekodi.kr/api/finance/structure' || true)
+            tax_profile_code=$(curl -sS -o /tmp/finance-tax-profile.json -w '%{http_code}' --connect-timeout 5 --max-time 12 -H 'Origin: https://ekodi.kr' 'https://ekodi.kr/api/finance/tax-profiles?organizationId=EKODIBIZ' || true)
             if printf '%s' "$health" | grep -q '"ok":true' \
-              && printf '%s' "$health" | grep -Fq 'ekodi-finance-api' \
+              && printf '%s' "$health" | grep -Fq '"service":"ekodi-policy-fund-management"' \
+              && printf '%s' "$health" | grep -Fq '"version":2' \
               && printf '%s' "$registry_health" | grep -Fq '"service":"ekodi-tax-business-registry"' \
               && printf '%s' "$registry_health" | grep -Fq '"provider":"NTS_PUBLIC_DATA"' \
               && printf '%s' "$registry_health" | grep -Fq '"schemaVersion":1' \
               && [ "$overview_code" = '401' ] \
               && [ "$structure_code" = '401' ] \
               && [ "$tax_profile_code" = '401' ]; then
-              echo 'EKODI Finance API production verified.'
+              echo 'EKODI Finance API production verified on canonical apex route.'
               exit 0
             fi
             sleep 5
