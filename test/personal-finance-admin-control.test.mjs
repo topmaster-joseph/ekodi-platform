@@ -92,7 +92,7 @@ test('Personal Finance admin UI manages policy only and never calls personal led
 });
 
 
-test('Personal Finance admin assets are asset-first and candidate-only in the guarded release contract',()=>{
+test('Personal Finance admin assets and same-origin proxy are covered by the guarded release contract',()=>{
   const manifest=JSON.parse(fs.readFileSync(new URL('../deploy/manifests/shared-site.worker.json',import.meta.url),'utf8'));
   for(const suffix of ['personal-finance-admin.js?pf=v1','personal-finance-admin.css?pf=v1']){
     const probe=manifest.worker.requests.find(item=>item.url.endsWith(suffix));
@@ -101,6 +101,16 @@ test('Personal Finance admin assets are asset-first and candidate-only in the gu
     assert.deepEqual(probe.headerExpect,['x-content-type-options: nosniff'],suffix);
     assert.equal(probe.headerExpect.some(value=>value.startsWith('x-ekodi-route:')),false,suffix);
   }
+  const jsProbe=manifest.worker.requests.find(item=>item.url.endsWith('personal-finance-admin.js?pf=v1'));
+  assert.ok(jsProbe.expect.includes('/api/control/personal-finance'));
+  assert.equal(jsProbe.expect.includes('/api/admin/personal-finance/control'),false);
+  const proxy=manifest.worker.requests.find(item=>item.url==='https://ekodi.kr/api/control/personal-finance');
+  assert.ok(proxy);
+  assert.deepEqual(proxy.statuses,[401]);
+  assert.ok(proxy.expect.includes('PF_ADMIN_AUTH_REQUIRED'));
+  assert.ok(proxy.headerExpect.includes('x-ekodi-personal-finance-proxy: service-binding-v1'));
+  assert.ok(proxy.headerExpect.includes('cache-control: no-store'));
+  assert.equal(proxy.rollbackVerify,false);
 });
 
 
