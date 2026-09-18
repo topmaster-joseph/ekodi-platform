@@ -429,25 +429,25 @@ jobs:
       - name: Candidate at 0%, verify routes, promote and auto-rollback on failure
         run: node scripts/guarded-worker-release.mjs --manifest deploy/manifests/shared-site.worker.json
 
-      - name: Verify EKODI Mall root address
+      - name: Verify EKODI Mall canonical address
         shell: bash
         run: |
           set -euo pipefail
           ok=false
           for attempt in $(seq 1 12); do
-            code=$(curl -sS -D /tmp/ekodimall-root.headers -o /tmp/ekodimall-root.html -w '%{http_code}' --retry 2 --retry-delay 1 --connect-timeout 5 --max-time 20 'https://ekodi.kr/ekodimall' || true)
+            code=$(curl -sS -D /tmp/ekodimall-canonical.headers -o /tmp/ekodimall-canonical.html -w '%{http_code}' --retry 2 --retry-delay 1 --connect-timeout 5 --max-time 20 'https://ekodi.kr/ekodibiz/ekodimall' || true)
             if [ "$code" = '200' ] \
-              && grep -Fiq 'x-ekodi-route: public-ekodi-mall' /tmp/ekodimall-root.headers \
-              && grep -Fiq 'x-ekodi-edge: mall-path-gateway' /tmp/ekodimall-root.headers \
-              && grep -Fq 'data-ekodi-service="mall"' /tmp/ekodimall-root.html \
-              && grep -Fq '/ekodimall/' /tmp/ekodimall-root.html; then
+              && grep -Fiq 'x-ekodi-route: public-ekodi-mall' /tmp/ekodimall-canonical.headers \
+              && grep -Fiq 'x-ekodi-edge: mall-path-gateway' /tmp/ekodimall-canonical.headers \
+              && grep -Fq 'data-ekodi-service="mall"' /tmp/ekodimall-canonical.html \
+              && grep -Fq '/ekodimall/' /tmp/ekodimall-canonical.html; then
               ok=true
               break
             fi
             sleep 5
           done
-          [ "$ok" = true ] || { echo "EKODI Mall root address did not serve the Mall storefront."; cat /tmp/ekodimall-root.headers || true; exit 1; }
-          echo 'ekodiMallRootAddress=verified'
+          [ "$ok" = true ] || { echo "EKODI Mall canonical address did not serve the Mall storefront."; cat /tmp/ekodimall-canonical.headers || true; exit 1; }
+          echo 'ekodiMallCanonicalAddress=verified'
 
       - name: Verify canonical Admin route ownership
         shell: bash
