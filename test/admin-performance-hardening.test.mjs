@@ -158,7 +158,9 @@ test('versioned admin startup graph runs Worker-first so cache policy is not byp
     '/system-health-admin.js',
     '/system-health-admin.css',
   ]) assert.match(wrangler, new RegExp(asset.replaceAll('.', '\\.').replaceAll('/', '\\/')));
-  assert.match(wrangler, /run_worker_first\s*=\s*\[[\s\S]*"\/ai\*"/);
+  assert.match(wrangler, /run_worker_first\s*=\s*\[[\s\S]*"\/ai"/);
+  assert.match(wrangler, /run_worker_first\s*=\s*\[[\s\S]*"\/ai\/\*"/);
+  assert.doesNotMatch(wrangler, /"\/ai\*"/);
   assert.doesNotMatch(wrangler, /"\/ai-ops-admin\.css"/);
 });
 
