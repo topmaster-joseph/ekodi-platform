@@ -7,9 +7,9 @@ const read = path => readFile(new URL('../' + path, import.meta.url), 'utf8');
 test('admin navigation names the device surface by the information administrators look for', async () => {
   const registry = await read('admin-menu-registry.js');
   const demand = await read('admin-demand-loader.js');
-  assert.match(registry, /로컬컴퓨터·기기/);
-  assert.match(registry, /Local Computers & Devices/);
-  assert.match(demand, /label: '로컬컴퓨터·기기'/);
+  assert.match(registry, /컴퓨터·기기/);
+  assert.match(registry, /Computers & Devices/);
+  assert.match(demand, /label: '컴퓨터·기기'/);
 });
 
 test('device admin shows status and attention before setup controls', async () => {
