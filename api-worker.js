@@ -338,6 +338,63 @@ async function readJson(request) {
   }
 }
 
+function personalFinanceProxyJson(data,status=200){
+  const response=controlJson(data,status);
+  response.headers.set('X-EKODI-Personal-Finance-Proxy','control-service-binding-v1');
+  response.headers.set('cache-control','no-store');
+  response.headers.set('x-content-type-options','nosniff');
+  return response;
+}
+
+async function personalFinanceBindingHealth(env) {
+  if (!env.PERSONAL_FINANCE?.fetch) {
+    return personalFinanceProxyJson({ ok:false, service:'personal-finance', code:'PERSONAL_FINANCE_BINDING_UNAVAILABLE' },503);
+  }
+  try {
+    const upstream = await env.PERSONAL_FINANCE.fetch(new Request('https://personal-finance.internal/health', {
+      method:'GET',
+      headers:{ accept:'application/json', 'x-ekodi-internal-probe':'control-api' },
+    }));
+    const data = await upstream.json().catch(() => ({}));
+    const ok = upstream.ok && data?.ok === true && data?.service === 'ekodi-personal-finance-api';
+    return personalFinanceProxyJson({
+      ok,
+      service:'personal-finance',
+      binding:'PERSONAL_FINANCE',
+      dataBoundary:data?.dataBoundary || null,
+      actionCeiling:data?.actionCeiling || null,
+      adminControl:data?.adminControl === true,
+      personalDataAdminReadable:data?.personalDataAdminReadable === true,
+    },ok ? 200 : 503);
+  } catch (error) {
+    console.error('Personal Finance binding health failed', error);
+    return personalFinanceProxyJson({ ok:false, service:'personal-finance', code:'PERSONAL_FINANCE_BINDING_UNAVAILABLE' },503);
+  }
+}
+
+async function proxyPersonalFinanceControl(request, env) {
+  if (!env.PERSONAL_FINANCE?.fetch) {
+    return personalFinanceProxyJson({ error:'Personal Finance service binding unavailable', code:'PERSONAL_FINANCE_BINDING_UNAVAILABLE' },503);
+  }
+  const target = new URL(request.url);
+  target.pathname = '/api/admin/personal-finance/control';
+  target.search = '';
+  const headers = new Headers(request.headers);
+  headers.set('x-ekodi-admin-proxy', 'control-service-binding-v1');
+  const body = ['GET','HEAD'].includes(request.method) ? undefined : await request.arrayBuffer();
+  const upstream = await env.PERSONAL_FINANCE.fetch(new Request(target.toString(), {
+    method:request.method,
+    headers,
+    body,
+    redirect:'manual',
+  }));
+  const response = new Response(upstream.body, upstream);
+  response.headers.set('X-EKODI-Personal-Finance-Proxy', 'control-service-binding-v1');
+  response.headers.set('cache-control', 'no-store');
+  response.headers.set('x-content-type-options', 'nosniff');
+  return response;
+}
+
 async function probeService(service) {
   const startedAt = Date.now();
   const controller = new AbortController();
@@ -612,6 +669,10 @@ async function handleControl(request, env) {
   const url = new URL(request.url);
   const path = url.pathname;
 
+  if (path === `${CONTROL_PREFIX}/personal-finance`) {
+    return proxyPersonalFinanceControl(request, env);
+  }
+
   if (request.method === 'GET' && path === `${CONTROL_PREFIX}/overview`) {
     return controlJson(await overview(env), 200, auth.response.headers);
   }
@@ -810,6 +871,14 @@ async function handleControl(request, env) {
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    if (request.method === 'GET' && url.pathname === '/health') {
+      return controlJson({
+        ok:true,
+        service:'ekodi-auth-api',
+        version:4,
+        personalFinanceBindingConfigured:Boolean(env.PERSONAL_FINANCE?.fetch),
+      },200);
+    }
     const publicDomainResponse = await handlePublicDomainRequest(request, env);
     if (publicDomainResponse) return publicDomainResponse;
 
@@ -822,6 +891,9 @@ export default {
     if (languageResponse) return languageResponse;
     const learningResponse = await handleLearningControl(request, env);
     if (learningResponse) return learningResponse;
+    if (request.method === 'GET' && url.pathname === '/api/health/personal-finance') {
+      return personalFinanceBindingHealth(env);
+    }
     if (url.pathname.startsWith('/api/mail/control')) {
       try {
         const response = await handleMailControl(request, env);
