@@ -49,6 +49,13 @@ function activate(button,section){
   const title=$('#pageTitle');if(title)title.textContent=t('개인재무','Personal Finance');document.querySelector('.sidebar')?.classList.remove('open');
   if(location.hash!=='#personal-finance')history.replaceState(null,'','#personal-finance');void refresh();
 }
+function refreshWhenSharedNavigationActivates(event){
+  const current=String(event?.detail?.section||window.EKODIAdminPanels?.current?.()||'').trim();
+  if(current!==SECTION)return;
+  const panel=$('#personalFinanceAdminPanel');
+  if(!panel||panel.hidden||panel.classList.contains('hidden-panel'))return;
+  void refresh();
+}
 function install(){
   const nav=document.querySelector('.sidebar nav'),content=document.querySelector('.content');if(!nav||!content)return;
   let button=nav.querySelector('[data-section="personal-finance"],[data-lazy-section="personal-finance"],[data-demand-feature="personal-finance"]');
@@ -59,6 +66,7 @@ function install(){
   window.dispatchEvent(new CustomEvent('ekodi-nav-changed',{detail:{feature:SECTION}}));
   if(location.hash==='#personal-finance')queueMicrotask(()=>activate(button,section));
 }
-install();window.addEventListener('ekodi-admin-ready',install);window.addEventListener('ekodi-admin-locale-changed',()=>{if(state&&$('#personalFinanceAdminPanel:not(.hidden-panel)'))render()});
-window.EKODIPersonalFinanceAdmin=Object.freeze({refresh});
+install();window.addEventListener('ekodi-admin-ready',install);window.addEventListener('ekodi-admin-locale-changed',()=>{if(state&&$('#personalFinanceAdminPanel:not(.hidden-panel)'))render()});window.addEventListener('ekodi-admin-section-changed',refreshWhenSharedNavigationActivates);
+queueMicrotask(()=>refreshWhenSharedNavigationActivates());
+window.EKODIPersonalFinanceAdmin=Object.freeze({refresh,activate:()=>refreshWhenSharedNavigationActivates({detail:{section:SECTION}})});
 })();
