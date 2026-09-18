@@ -9,6 +9,7 @@ const ADMIN_ROLES=new Set(['owner','admin','tenant_admin','manager','operator'])
 const ROLE_ALIASES=Object.freeze({store_owner:'owner',hq_manager:'manager',client_admin:'owner',client_editor:'operator',marketing_manager:'operator'});
 
 function clean(value,max=240){return String(value??'').trim().slice(0,max)}
+function parseJson(value,fallback={}){try{return JSON.parse(String(value||''))}catch{return fallback}}
 function slug(value){const v=clean(value,80).toLowerCase();return /^[a-z0-9][a-z0-9-]{0,79}$/.test(v)?v:''}
 function uid(prefix){return `${prefix}_${crypto.randomUUID().replaceAll('-','')}`}
 function bearer(request){const raw=clean(request.headers.get('authorization'),8192);return raw.toLowerCase().startsWith('bearer ')?raw.slice(7).trim():''}
@@ -81,6 +82,74 @@ async function entitlementFor(request,env,tenant){
 }
 function safeRoom(row){if(!row)return null;return {id:row.id,tenantId:row.tenant_id,mode:row.mode,securityProfile:row.security_profile,title:row.title,status:row.status,aiEnabled:Boolean(row.ai_enabled),recordingEnabled:Boolean(row.recording_enabled),recordingNoticeEnabled:Boolean(row.recording_notice_enabled),anonymousViewersEnabled:Boolean(row.anonymous_viewers_enabled),createdAt:row.created_at,updatedAt:row.updated_at,endedAt:row.ended_at||null}}
 async function roomById(env,id){return env.DB.prepare('SELECT * FROM realtime_rooms WHERE id=?').bind(id).first()}
+
+function safeDestination(row,extra={}){
+  if(!row)return null;
+  return {
+    id:row.id,
+    roomId:row.room_id,
+    tenantId:row.tenant_id,
+    type:row.destination_type,
+    status:row.status,
+    failureCount:Number(row.failure_count||0),
+    lastErrorCode:row.last_error_code||null,
+    updatedAt:row.updated_at,
+    ...extra,
+  };
+}
+function externalDestinationId(value){const raw=clean(value,80);return /^channel:\d+$/.test(raw)?raw:''}
+async function destinationCatalogRows(env,tenant){
+  const config=realtimeTenant(tenant);if(!config||!env.DB)return [];
+  const aliases=[config.apiTenant,config.id,...config.aliases].filter(Boolean);
+  const placeholders=aliases.map(()=>'?').join(',');
+  let rows=[];
+  try{
+    const result=await env.DB.prepare(`SELECT id,subject_key,provider,channel_type,display_name,external_account_id,status,config_json,credential_ref,updated_at
+      FROM marketing_publish_channels WHERE subject_type='tenant' AND subject_key IN (${placeholders}) ORDER BY updated_at DESC,id DESC`).bind(...aliases).all();
+    rows=result.results||[];
+  }catch(error){console.warn('realtime destination catalog',error?.message||error)}
+  const distributionReady=Boolean(env.LIVE_DISTRIBUTION?.fetch);
+  const seen=new Set();
+  return rows.filter(row=>{
+    const key=`${row.provider}:${row.external_account_id||row.display_name||row.id}`;if(seen.has(key))return false;seen.add(key);return true;
+  }).map(row=>{
+    const configJson=parseJson(row.config_json,{});
+    const connected=row.status==='active'&&Boolean(row.credential_ref);
+    const liveConfigured=configJson.liveBroadcastEnabled===true||configJson.liveBroadcastEnabled==='true';
+    const supported=['youtube','facebook'].includes(String(row.provider||'').toLowerCase());
+    const selectable=connected&&supported&&liveConfigured&&distributionReady;
+    const reason=selectable?'ready'
+      :!connected?'channel_connection_required'
+      :!supported?'live_provider_not_supported'
+      :!liveConfigured?'live_permission_required'
+      :'distribution_engine_pending';
+    return {
+      id:`channel:${Number(row.id)}`,
+      provider:String(row.provider||'external').toLowerCase(),
+      channelType:String(row.channel_type||''),
+      label:clean(row.display_name,120)||String(row.provider||'외부 채널'),
+      externalAccountId:clean(row.external_account_id,180),
+      connected,
+      liveConfigured,
+      distributionReady,
+      selectable,
+      reason,
+    };
+  });
+}
+async function roomDestinations(env,roomId){
+  const result=await env.DB.prepare('SELECT * FROM realtime_destinations WHERE room_id=? ORDER BY updated_at,id').bind(roomId).all();
+  return (result.results||[]).map(safeDestination);
+}
+async function validateDestinationSelection(env,tenant,input){
+  const ids=[...new Set((Array.isArray(input?.destinationIds)?input.destinationIds:[]).map(externalDestinationId).filter(Boolean))].slice(0,8);
+  if(!ids.length)return {ids:[],selected:[],catalog:[]};
+  const catalog=await destinationCatalogRows(env,tenant);
+  const map=new Map(catalog.map(item=>[item.id,item]));
+  const selected=ids.map(id=>map.get(id)).filter(Boolean);
+  const rejected=ids.filter(id=>!map.get(id)?.selectable);
+  return {ids,selected,catalog,rejected};
+}
 async function ownerAllowed(request,env,room){
   const access=await entitlementFor(request,env,slug(room.tenant_id));
   const subject=access.identity?canonicalAiSubject(access.identity):'';
@@ -336,9 +405,11 @@ async function createRoom(request,env,tenant,input){
   const loginTarget=`https://ekodi.kr${config.path}`;
   if(!access.identity)return json(request,env,{ok:false,error:'authentication_required',loginUrl:`https://ekodi.kr/auth/?site=${encodeURIComponent(config.authSite)}&return_to=${encodeURIComponent(loginTarget)}`},401);
   if(!ADMIN_ROLES.has(access.role))return json(request,env,{ok:false,error:'tenant_host_permission_required'},403);
-  const wanted={tier:access.tier,interactiveParticipants:Number(input.interactiveParticipants||1),languages:Array.isArray(input.languages)?input.languages.length:Number(input.languages||0),durationMinutes:Number(input.durationMinutes||0),recording:input.recording!==false,multistream:Boolean(input.multistream)};
+  const destinationSelection=await validateDestinationSelection(env,canonicalTenant,input);
+  const wanted={tier:access.tier,interactiveParticipants:Number(input.interactiveParticipants||1),languages:Array.isArray(input.languages)?input.languages.length:Number(input.languages||0),durationMinutes:Number(input.durationMinutes||0),recording:input.recording!==false,multistream:destinationSelection.ids.length>0};
   const decision=evaluateRealtimeRequest(wanted);
   if(!decision.allowed)return json(request,env,{ok:false,error:'realtime_entitlement_exceeded',decision,subscriptionUrl:'https://ekodi.kr/my/?service=media'},decision.requiresSubscription?402:403);
+  if(destinationSelection.rejected?.length)return json(request,env,{ok:false,error:'external_destination_not_ready',rejected:destinationSelection.rejected,catalog:destinationSelection.catalog},409);
   const id=uid('room'),stamp=new Date().toISOString(),owner=canonicalAiSubject(access.identity);
   const mode=clean(input.mode,40)||config.mode;
   const security=clean(input.securityProfile,30)||'standard';
@@ -346,7 +417,14 @@ async function createRoom(request,env,tenant,input){
   const recording=input.recording!==false,notice=recording!==false;
   await env.DB.prepare(`INSERT INTO realtime_rooms (id,tenant_id,owner_user_id,mode,security_profile,title,status,ai_enabled,recording_enabled,recording_notice_enabled,anonymous_viewers_enabled,created_at,updated_at) VALUES (?,?,?,?,?,?, 'created',?,?,?,?,?,?)`).bind(id,canonicalTenant,owner,mode,security,title,input.ai!==false?1:0,recording?1:0,notice?1:0,input.publicViewers===false?0:1,stamp,stamp).run();
   await env.DB.prepare(`INSERT OR REPLACE INTO realtime_room_members (room_id,tenant_id,user_id,role,joined_at,left_at) VALUES (?,?,?,?,?,NULL)`).bind(id,canonicalTenant,owner,'owner',stamp).run();
-  return json(request,env,{ok:true,room:safeRoom(await roomById(env,id)),entitlement:decision,studioUrl:`https://ekodi.kr${config.path}?room=${encodeURIComponent(id)}&mode=studio`},201);
+  const destinationRows=[];
+  for(const item of destinationSelection.selected){
+    const destinationId=uid('dest');
+    await env.DB.prepare(`INSERT INTO realtime_destinations(id,room_id,tenant_id,destination_type,secret_ref,status,failure_count,last_error_code,updated_at)
+      VALUES(?,?,?,?,?,'idle',0,NULL,?)`).bind(destinationId,id,canonicalTenant,item.provider,`marketing-channel:${item.id.slice('channel:'.length)}`,stamp).run();
+    destinationRows.push({id:destinationId,room_id:id,tenant_id:canonicalTenant,destination_type:item.provider,status:'idle',failure_count:0,last_error_code:null,updated_at:stamp,label:item.label,externalDestinationId:item.id});
+  }
+  return json(request,env,{ok:true,room:safeRoom(await roomById(env,id)),destinations:destinationRows.map(row=>safeDestination(row,{label:row.label,externalDestinationId:row.externalDestinationId})),entitlement:decision,studioUrl:`https://ekodi.kr${config.path}?room=${encodeURIComponent(id)}&mode=studio`},201);
 }
 async function roomMutation(request,env,url,input){
   const statusMatch=url.pathname.match(/^\/api\/realtime\/rooms\/([^/]+)\/status$/);
@@ -360,6 +438,22 @@ async function roomMutation(request,env,url,input){
   const stamp=new Date().toISOString(),ended=next==='ended'?stamp:null;
   await env.DB.prepare(`UPDATE realtime_rooms SET status=?,updated_at=?,ended_at=COALESCE(?,ended_at) WHERE id=?`).bind(next,stamp,ended,room.id).run();
   return json(request,env,{ok:true,room:safeRoom(await roomById(env,room.id))});
+}
+
+async function destinationRoute(request,env,url){
+  if(request.method==='GET'&&url.pathname===`${PREFIX}/destinations/catalog`){
+    const config=realtimeTenant(url.searchParams.get('tenant')||'');if(!config)return json(request,env,{ok:false,error:'invalid_tenant'},400);
+    const access=await tenantAdminAccess(request,env,config.apiTenant);if(!access.allowed)return json(request,env,{ok:false,error:'tenant_host_permission_required'},403);
+    const channels=await destinationCatalogRows(env,config.apiTenant);
+    return json(request,env,{ok:true,tenant:config.apiTenant,internal:{enabled:true,recordingDefault:true,label:'EKODI 내부 방송 · 자동 저장'},channels});
+  }
+  const match=url.pathname.match(/^\/api\/realtime\/rooms\/([^/]+)\/destinations$/);
+  if(match&&request.method==='GET'){
+    const room=await roomById(env,decodeURIComponent(match[1]));if(!room)return json(request,env,{ok:false,error:'room_not_found'},404);
+    const auth=await ownerAllowed(request,env,room);if(!auth.allowed)return json(request,env,{ok:false,error:'room_owner_permission_required'},403);
+    return json(request,env,{ok:true,roomId:room.id,destinations:await roomDestinations(env,room.id)});
+  }
+  return null;
 }
 
 async function planRoute(request,env,url,input){
@@ -484,6 +578,7 @@ export async function handleRealtimeControl(request,env){
     return createRoom(request,env,config.apiTenant,input||{});
   }
   const recordings=await recordingRoutes(request,env,url,input);if(recordings)return recordings;
+  const destinations=await destinationRoute(request,env,url);if(destinations)return destinations;
   const mutation=await roomMutation(request,env,url,input);if(mutation)return mutation;
   const planned=await planRoute(request,env,url,input);if(planned)return planned;
   const session=await sessionRoute(request,env,url,input);if(session)return session;
@@ -532,4 +627,7 @@ export const REALTIME_CONTROL_CONTRACT=Object.freeze({
   anonymousPublicViewing:true,
   recordingManagement:true,
   recordingDurableArchive:'google_workspace_shared_drive',
+  internalRecordingDefault:true,
+  externalChannelSelection:true,
+  externalDistributionFailIsolated:true,
 });
