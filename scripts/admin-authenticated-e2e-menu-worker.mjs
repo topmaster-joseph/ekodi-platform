@@ -429,39 +429,47 @@ async function verifyRegistryHref(trigger, started) {
   }
 }
 
+async function verifyCommandWorkbench(started) {
+  stage('command-workbench');
+  await page.waitForFunction(() => {
+    const body = document.body;
+    const dock = document.querySelector('#ekodiAssistDock');
+    const panel = document.querySelector('#ekodiAssistPanel');
+    const chat = document.querySelector('#ekodiAssistChat[data-ekodi-main-conversation="true"]');
+    const tab = document.querySelector('button.admin-context-tab[data-admin-context-section="command-home"]');
+    if (window.EKODIAdminPanels?.current?.() !== 'command-home') return false;
+    if (!body?.classList.contains('admin-command-home') || !body.classList.contains('admin-command-active')) return false;
+    if (!dock || !panel || !chat || panel.hidden) return false;
+    const panelStyle = getComputedStyle(panel);
+    const chatStyle = getComputedStyle(chat);
+    const selected = tab?.getAttribute('aria-selected') === 'true' || tab?.classList.contains('active');
+    return selected && panelStyle.display !== 'none' && panelStyle.visibility !== 'hidden' && chatStyle.display !== 'none' && chatStyle.visibility !== 'hidden';
+  }, null, { timeout: 10_000 });
+  const state = await page.evaluate(() => {
+    const panel = document.querySelector('#ekodiAssistPanel');
+    const chat = document.querySelector('#ekodiAssistChat[data-ekodi-main-conversation="true"]');
+    const tab = document.querySelector('button.admin-context-tab[data-admin-context-section="command-home"]');
+    const text = String(panel?.innerText || '').replace(/\s+/g, ' ').trim();
+    const panelRect = panel?.getBoundingClientRect();
+    const chatRect = chat?.getBoundingClientRect();
+    return {
+      commandWorkbench: Boolean(panel && chat),
+      textLength: text.length,
+      selected: tab?.getAttribute('aria-selected') === 'true' || tab?.classList.contains('active') || false,
+      currentSection: window.EKODIAdminPanels?.current?.() || '',
+      pathname: location.pathname,
+      panelWidth: panelRect?.width || 0,
+      panelHeight: panelRect?.height || 0,
+      chatWidth: chatRect?.width || 0,
+      chatHeight: chatRect?.height || 0,
+    };
+  });
+  if (!state.commandWorkbench || !state.selected || state.currentSection !== 'command-home' || state.textLength < 4 || state.pathname !== '/admin/' || state.panelWidth < 1 || state.panelHeight < 1 || state.chatWidth < 1 || state.chatHeight < 1) throw new Error(`command workbench invalid: ${JSON.stringify(state)}`);
+  results.push({ id: menuId, group, ok: true, durationMs: Date.now() - started, ...state });
+}
+
 async function verifyNormal(tab, alreadyActive, started) {
   if (!alreadyActive) await clickFast(tab);
-  if (menuId === 'command-home') {
-    stage('command-workbench');
-    await page.waitForFunction(() => {
-      const body = document.body;
-      const dock = document.querySelector('#ekodiAssistDock');
-      const panel = document.querySelector('#ekodiAssistPanel');
-      const chat = document.querySelector('#ekodiAssistChat');
-      const tab = document.querySelector('button.admin-context-tab[data-admin-context-section="command-home"]');
-      if (!body?.classList.contains('admin-command-home') || !body.classList.contains('admin-command-active')) return false;
-      if (!dock || !panel || !chat || panel.hidden) return false;
-      const style = getComputedStyle(panel);
-      const selected = tab?.getAttribute('aria-selected') === 'true' || tab?.classList.contains('active');
-      return selected && style.display !== 'none' && style.visibility !== 'hidden';
-    }, null, { timeout: 10_000 });
-    const state = await page.evaluate(() => {
-      const panel = document.querySelector('#ekodiAssistPanel');
-      const chat = document.querySelector('#ekodiAssistChat');
-      const tab = document.querySelector('button.admin-context-tab[data-admin-context-section="command-home"]');
-      const text = String(panel?.innerText || '').replace(/\s+/g, ' ').trim();
-      return {
-        commandWorkbench: Boolean(panel && chat),
-        textLength: text.length,
-        selected: tab?.getAttribute('aria-selected') === 'true' || tab?.classList.contains('active') || false,
-        currentSection: window.EKODIAdminPanels?.current?.() || '',
-        pathname: location.pathname,
-      };
-    });
-    if (!state.commandWorkbench || !state.selected || state.textLength < 4 || state.pathname !== '/admin/') throw new Error(`command workbench invalid: ${JSON.stringify(state)}`);
-    results.push({ id: menuId, group, ok: true, durationMs: Date.now() - started, ...state });
-    return;
-  }
   stage('panel');
   await page.waitForFunction(section => {
     return [...document.querySelectorAll('[data-panel]')].some(node => {
@@ -515,22 +523,27 @@ try {
   } else {
     stage('tab');
     const tab = page.locator(`button.admin-context-tab[data-admin-context-section="${menuId}"]`);
-    await tab.waitFor({ state: 'visible', timeout: interactionReadyTimeoutMs });
-    const aria = await tab.getAttribute('aria-selected');
-    const classes = String(await tab.getAttribute('class') || '');
-    let alreadyActive = aria === 'true' || classes.split(/\s+/).includes('active');
-    if (alreadyActive) {
-      stage('active-panel-check');
-      const activeState = await visiblePanelState();
-      alreadyActive = Boolean(activeState.panelFound && activeState.selected && activeState.textLength >= 4);
+    if (menuId === 'command-home') {
+      await tab.waitFor({ state: 'attached', timeout: interactionReadyTimeoutMs });
+      await verifyCommandWorkbench(started);
+    } else {
+      await tab.waitFor({ state: 'visible', timeout: interactionReadyTimeoutMs });
+      const aria = await tab.getAttribute('aria-selected');
+      const classes = String(await tab.getAttribute('class') || '');
+      let alreadyActive = aria === 'true' || classes.split(/\s+/).includes('active');
+      if (alreadyActive) {
+        stage('active-panel-check');
+        const activeState = await visiblePanelState();
+        alreadyActive = Boolean(activeState.panelFound && activeState.selected && activeState.textLength >= 4);
+      }
+      if (menuId === 'storage') await verifyStorage(tab, alreadyActive, started);
+      else if (menuId === 'tax') await verifyTax(tab, alreadyActive, started);
+      else if (menuId === 'public-site-controls') await verifyPublicSiteControls(tab, alreadyActive, started);
+      else if (menuId === 'language-status') await verifyLanguageStatus(tab, alreadyActive, started);
+      else if (menuId === 'maturity') await verifyMaturity(tab, alreadyActive, started);
+      else if (menuId === 'ai-settings') await verifyAiSettings(tab, alreadyActive, started);
+      else await verifyNormal(tab, alreadyActive, started);
     }
-    if (menuId === 'storage') await verifyStorage(tab, alreadyActive, started);
-    else if (menuId === 'tax') await verifyTax(tab, alreadyActive, started);
-    else if (menuId === 'public-site-controls') await verifyPublicSiteControls(tab, alreadyActive, started);
-    else if (menuId === 'language-status') await verifyLanguageStatus(tab, alreadyActive, started);
-    else if (menuId === 'maturity') await verifyMaturity(tab, alreadyActive, started);
-    else if (menuId === 'ai-settings') await verifyAiSettings(tab, alreadyActive, started);
-    else await verifyNormal(tab, alreadyActive, started);
   }
 
   stage('diagnostics');
