@@ -15,6 +15,12 @@
   Content-Security-Policy: default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; script-src 'self' 'unsafe-inline'; connect-src 'self' https://renzehysxirjilvdxacv.supabase.co; frame-ancestors 'none'; base-uri 'self'; form-action 'none'; object-src 'none'
   Cache-Control: no-cache
 
+/auth-bootstrap.js
+  Cache-Control: no-store
+
+/auth-entry.js
+  Cache-Control: no-store
+
 /auth-router.js
   Cache-Control: no-store
 
