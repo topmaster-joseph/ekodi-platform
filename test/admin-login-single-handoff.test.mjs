@@ -21,7 +21,7 @@ test('central admin login navigates to canonical auth without pre-opening a cros
   assert.doesNotMatch(adminCore, /bridge=preopened/);
 });
 
-test('admin auth keeps the explicit Google bridge button as the fallback path', () => {
+test('admin auth keeps the explicit canonical Google bridge button as the fallback path', () => {
   assert.match(adminAuth, /const preopenedRequested=directEntry&&params\.get\('bridge'\)==='preopened'/);
   assert.match(adminAuth, /renderOriginBridgeButton\(host,config,challenge\)/);
 });
@@ -36,7 +36,7 @@ test('Google origin bridge keeps strict origin and account-selection safety', ()
 });
 
 test('single-handoff keeps the existing no-store auth asset contract', () => {
-  assert.match(authRouter, /admin-auth\.js\?v=20260909-origin-bridge-1/);
+  assert.match(authRouter, /admin-auth\.js\?v=20260918-canonical-origin-2/);
   assert.match(authHtml, /auth-entry\.js\?v=20260918-csp-bootstrap-1/);
   assert.match(authEntry, /\.\/auth-router\.js\?v=20260918-csp-bootstrap-1/);
   assert.match(bridgeHtml, /google-origin-bridge\.js/);
