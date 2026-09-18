@@ -298,19 +298,6 @@
     values[2].textContent = device.agentVersion || '없음';
     values[3].textContent = ({managed:'관리 작업',observe:'관찰 작업',none:'없음'})[device.management?.remoteCommandLevel] || '없음';
 
-    const health = document.createElement('div'); health.innerHTML = healthMarkup(device);
-    const mainActions = document.createElement('div'); mainActions.className = 'device-ops-grid device-primary-actions';
-    mainActions.append(
-      makeActionButton(device, 'diagnostics.collect', '전체 진단', 'primary', {}, !capability(device, 'diagnostics')),
-      makeActionButton(device, 'network.diagnose', '네트워크 진단', 'ghost', {}, !capability(device, 'networkDiagnostics')),
-      makeActionButton(device, 'updates.scan', '업데이트 확인', 'ghost', {}, !capability(device, 'windowsUpdate')),
-      makeActionButton(device, 'agent.self_update', 'Agent 업데이트', 'secondary'),
-    );
-
-    const advanced = document.createElement('details'); advanced.className = 'device-details device-advanced-control';
-    advanced.innerHTML = '<summary>세부 관리 · 고급 작업</summary>';
-    const advancedBody = document.createElement('div'); advancedBody.className = 'device-advanced-control-body';
-
     const execution = document.createElement('div'); execution.className = 'device-execution-policy';
     const executionText = document.createElement('div');
     const pcType = device.management?.type === 'pc' && !isInventory(device);
@@ -328,14 +315,19 @@
     });
     execution.append(executionText, executionToggle);
 
-    const advancedActions = document.createElement('div'); advancedActions.className = 'device-ops-grid';
-    advancedActions.append(
-      makeActionButton(device, 'maintenance.temp_cleanup', '임시파일 정리', 'ghost', {}, !capability(device, 'storageMaintenance')),
-      makeActionButton(device, 'updates.install', '업데이트 설치', 'ghost', {}, !capability(device, 'windowsUpdate')),
-      makeActionButton(device, 'printers.diagnose', '프린터 진단', 'ghost', {}, !capability(device, 'printerDiagnostics')),
-      makeActionButton(device, 'profile.workstation.apply', 'EKODI 업무환경', 'ghost', {}, !capability(device, 'workstationProfile')),
-      makeActionButton(device, 'profile.workstation.restore', '업무환경 복원', 'ghost', {}, !capability(device, 'workstationProfile')),
+    const health = document.createElement('div'); health.innerHTML = healthMarkup(device);
+    const mainActions = document.createElement('div'); mainActions.className = 'device-ops-grid';
+    mainActions.append(
+      makeActionButton(device, 'diagnostics.collect', '🩺 전체 진단', 'primary', {}, !capability(device, 'diagnostics')),
+      makeActionButton(device, 'maintenance.temp_cleanup', '🧹 임시파일 정리', 'ghost', {}, !capability(device, 'storageMaintenance')),
+      makeActionButton(device, 'updates.scan', '🔄 업데이트 확인', 'ghost', {}, !capability(device, 'windowsUpdate')),
+      makeActionButton(device, 'updates.install', '⬆ 업데이트 설치', 'ghost', {}, !capability(device, 'windowsUpdate')),
+      makeActionButton(device, 'network.diagnose', '🌐 네트워크 진단', 'ghost', {}, !capability(device, 'networkDiagnostics')),
+      makeActionButton(device, 'printers.diagnose', '🖨 프린터 진단', 'ghost', {}, !capability(device, 'printerDiagnostics')),
+      makeActionButton(device, 'profile.workstation.apply', '◫ EKODI 업무환경', 'ghost', {}, !capability(device, 'workstationProfile')),
+      makeActionButton(device, 'profile.workstation.restore', '↩ 업무환경 복원', 'ghost', {}, !capability(device, 'workstationProfile')),
     );
+
     const profileTitle = document.createElement('h3'); profileTitle.textContent = '전원 프로필';
     const profiles = document.createElement('div'); profiles.className = 'device-command-grid';
     POWER_COMMANDS.forEach(([command, label, title]) => { const b = makeActionButton(device, command, label, command === 'power.restore' ? 'secondary' : 'ghost'); b.title = b.disabled ? b.title : title; profiles.append(b); });
@@ -343,9 +335,6 @@
     const security = document.createElement('div'); security.className = 'device-command-grid security';
     security.append(makeActionButton(device, 'lock.resume_off', '복귀 잠금 해제'), makeActionButton(device, 'lock.resume_on', '복귀 잠금 사용'), makeActionButton(device, 'autologon.open', '자동로그인 관리', 'secondary'), makeActionButton(device, 'agent.self_update', 'Agent 업데이트', 'secondary'));
     const history = document.createElement('div'); history.className = 'device-history'; history.innerHTML = `<h3>최근 작업</h3>${latestCommandMarkup(device.recentCommands)}`;
-    advancedBody.append(managementPanel(device), execution, diagnosticSummary(device), advancedActions, startupPanel(device), profileTitle, profiles, securityTitle, security, history);
-    advanced.append(advancedBody);
-
     const foot = document.createElement('div'); foot.className = 'device-card-foot';
     const note = document.createElement('p');
     note.textContent = isInventory(device) ? '관찰 인벤토리입니다. 전용 어댑터가 검증되기 전에는 원격 제어나 물리 동작을 실행하지 않습니다.' : device.status === 'online' ? 'Agent가 연결되어 있습니다. 실행 결과는 검증 후 이 화면과 Activity Logs에 남습니다.' : device.status === 'revoked' ? '이 기기의 EKODI 접근 권한이 해제되었습니다.' : '오프라인이면 허용된 작업만 대기열에 보관되고 Agent가 다시 연결된 뒤 처리됩니다.';
@@ -353,7 +342,14 @@
     revoke.addEventListener('click', async () => { if (!confirm(`${device.label || type.label}의 EKODI ${isInventory(device) ? '인벤토리 등록' : 'Device Agent 권한'}을 해제할까요?`)) return; try { await request(`/api/control/devices/${encodeURIComponent(device.id)}/revoke`, { method:'POST' }); await loadDevices(); } catch (error) { alert(error.message); } });
     foot.append(note, revoke);
 
-    card.append(head, meta, health.firstElementChild, recommendationPanel(device), mainActions, advanced, foot);
+    const advanced = document.createElement('details');
+    advanced.className = 'device-details device-advanced-control';
+    advanced.innerHTML = '<summary>세부 관리 · 고급 작업</summary>';
+    const advancedBody = document.createElement('div');
+    advancedBody.className = 'device-advanced-control-body';
+    advancedBody.append(managementPanel(device), execution, startupPanel(device), profileTitle, profiles, securityTitle, security, history);
+    advanced.append(advancedBody);
+    card.append(head, meta, health.firstElementChild, recommendationPanel(device), diagnosticSummary(device), mainActions, advanced, foot);
     return card;
   }
 
@@ -409,7 +405,8 @@
     }).join('');
     host.innerHTML = `<div><strong>확인 필요 ${issues.length}대</strong><span>오프라인·응답 지연·건강점수 75점 미만 기기를 우선 표시합니다.</span></div><div class="device-attention-items">${visible}</div>`;
     host.querySelectorAll('[data-device-focus]').forEach(button => button.addEventListener('click', () => {
-      const target = document.querySelector(`[data-device-id="${CSS.escape(button.dataset.deviceFocus || '')}"]`);
+      const id = button.dataset.deviceFocus || '';
+      const target = [...document.querySelectorAll('[data-device-id]')].find(node => node.dataset.deviceId === id);
       target?.scrollIntoView({ behavior:'smooth', block:'center' });
       target?.classList.add('is-focused');
       window.setTimeout(() => target?.classList.remove('is-focused'), 1600);
@@ -487,34 +484,49 @@
         <div><p class="kicker">LOCAL COMPUTERS · DEVICES</p><h2>로컬컴퓨터·기기</h2><p>현재 연결 상태와 이용현황을 먼저 보고, 문제가 있는 기기만 빠르게 찾아 조치합니다. 연결·자동작업·고급 설정은 필요할 때 펼쳐 사용합니다.</p></div>
         <div class="device-head-actions"><span id="deviceGeneratedAt">연결 상태 확인 전</span><button type="button" class="secondary" id="refreshDevices">↻ 새로고침</button></div>
       </div>
-      <div class="device-metrics" aria-label="기기 핵심 현황">
-        <article><small>등록 기기</small><strong id="deviceMetricTotal">—</strong><span>전체 자산</span></article>
-        <article><small>현재 온라인</small><strong id="deviceMetricOnline">—</strong><span>Agent 응답 기준</span></article>
-        <article><small>확인 필요</small><strong id="deviceMetricIssues">—</strong><span>오프라인·지연·건강 저하</span></article>
+      <div class="device-type-filters" id="deviceTypeFilters" aria-label="기기 유형 필터"></div>
+      <div class="device-metrics">
+        <article><small>등록 기기</small><strong id="deviceMetricTotal">—</strong></article>
+        <article><small>온라인</small><strong id="deviceMetricOnline">—</strong></article>
+        <article><small>배정 대기</small><strong id="deviceMetricQueued">—</strong></article>
+        <article><small>확인 필요</small><strong id="deviceMetricIssues">—</strong></article>
         <article><small>평균 건강점수</small><strong id="deviceMetricHealth">—</strong><span>진단 가능한 기기 기준</span></article>
-        <article><small>배정 대기</small><strong id="deviceMetricQueued">—</strong><span>자동 작업 큐</span></article>
       </div>
       <div class="device-attention-summary" id="deviceAttentionSummary" data-state="good"><div><strong>기기 상태를 확인하는 중입니다.</strong><span>문제가 있는 기기를 우선 표시합니다.</span></div></div>
-      <div class="device-type-filters" id="deviceTypeFilters" aria-label="기기 유형 필터"></div>
-      <div class="ekodi-device-list" id="ekodiDeviceList"><div class="device-empty"><p>기기 목록을 불러오는 중입니다.</p></div></div>
-      <details class="device-setup-tools">
-        <summary><strong>기기 연결 · 자동 작업 설정</strong><span>새 기기 등록, 자동 작업 배정, 권한 경계</span></summary>
-        <div class="device-setup-tools-body">
-          <section class="device-job-console">
-            <div><p class="kicker">HYBRID EXECUTION QUEUE</p><h3>자동 작업 배정</h3><p>검증된 비휴대형 데스크톱 PC만 후보가 됩니다. POS·키오스크·태블릿·센서·로봇은 자동 실행 대상에서 제외합니다.</p></div>
-            <form id="deviceJobForm"><label>작업<select name="type"><option value="diagnostics.collect">전체 진단</option><option value="network.diagnose">네트워크 진단</option><option value="updates.scan">업데이트 확인</option><option value="maintenance.temp_cleanup">임시파일 정리</option></select></label><label>기기 그룹<input name="targetGroup" value="general" pattern="[a-z0-9][a-z0-9_-]{0,59}" required></label><label>우선순위<input name="priority" type="number" min="1" max="100" value="50"></label><button type="submit" class="primary">작업 등록</button></form>
-            <div id="deviceJobList" class="device-job-list"><p class="device-command-empty">작업 큐를 불러오는 중입니다.</p></div>
-          </section>
-          <div class="device-onboarding-grid">
-            <div class="device-enrollment-box device-enrollment-agent"><div><p class="kicker">AGENT PAIRING</p><h3>Windows Agent 기기 연결</h3><p>PC·Windows POS·Windows 키오스크·Windows 태블릿을 연결합니다. 기기유형 정책은 서버에서 강제됩니다.</p><div class="device-onboarding-fields"><label>유형<select id="deviceEnrollmentType"><option value="pc">PC</option><option value="pos">POS</option><option value="kiosk">키오스크</option><option value="tablet">태블릿</option></select></label><label>표시 이름<input id="deviceEnrollmentLabel" maxlength="80" placeholder="예: 자담 카운터 POS"></label><label>위치<input id="deviceEnrollmentLocation" maxlength="120" placeholder="예: 목포대점 카운터"></label></div></div><button type="button" class="primary" id="createDeviceEnrollment">Windows Agent 연결</button></div>
-            <form class="device-enrollment-box device-inventory-box" id="deviceInventoryForm"><div><p class="kicker">OBSERVE FIRST</p><h3>관찰 인벤토리 등록</h3><p>센서·로봇 등 아직 Agent가 없는 기기도 자산과 정책부터 등록합니다. 등록만으로 원격제어 권한이 생기지 않습니다.</p><div class="device-onboarding-fields"><label>유형<select name="deviceType"><option value="sensor">센서</option><option value="robot">서비스로봇</option><option value="pos">POS</option><option value="kiosk">키오스크</option><option value="tablet">태블릿</option><option value="other">기타</option></select></label><label>표시 이름<input name="label" maxlength="80" required placeholder="예: 전력계 1번"></label><label>위치<input name="locationLabel" maxlength="120" placeholder="예: 매장 주방"></label><label>메모<input name="notes" maxlength="500" placeholder="모델/용도 등"></label></div></div><button type="submit" class="secondary">관찰 등록</button></form>
-          </div>
-          <div class="device-enrollment-result" id="deviceEnrollmentResult" hidden><div><small>1회용 등록 코드</small><strong data-enrollment-code></strong><span data-enrollment-expiry></span></div><p><b>연결 창이 떴다면 Windows 승인만 진행하세요.</b> 아무 반응이 없으면 연결 프로그램을 한 번 설치한 뒤 “이 PC 연결 계속”을 누르면 됩니다. 기존 Agent 업그레이드는 검증·자동 롤백 후 heartbeat까지 확인하며, 데스크톱 Boot/WOL은 Agent 연결과 별도로 설정합니다.</p><div class="device-pair-actions"><a class="button secondary" href="${BOOTSTRAP_URL}" download="EKODI_Device_연결프로그램.cmd">연결 프로그램 설치</a><button type="button" class="primary" id="continueDeviceEnrollment">이 PC 연결 계속</button></div><details class="device-advanced-install"><summary>고급 설치 · PowerShell 명령 보기</summary><code data-install-command></code><button type="button" class="secondary" id="copyDeviceInstallCommand">설치 명령 복사</button></details></div>
-          <div class="device-security-note"><strong>권한 경계</strong><p>관찰 → 유형정책 → 진단 → 관리자 승인 → 허용 작업 실행 → 결과 검증 → 감사기록 순서로 동작합니다. 물리 동작이 가능한 기기는 전용 안전 어댑터 없이는 실행권한을 받지 않습니다.</p></div>
-        </div>
-      </details>
-      `;
+      <section class="device-job-console">
+        <div><p class="kicker">HYBRID EXECUTION QUEUE</p><h3>자동 작업 배정</h3><p>검증된 비휴대형 데스크톱 PC만 후보가 됩니다. POS·키오스크·태블릿·센서·로봇은 자동 실행 대상에서 제외합니다.</p></div>
+        <form id="deviceJobForm"><label>작업<select name="type"><option value="diagnostics.collect">전체 진단</option><option value="network.diagnose">네트워크 진단</option><option value="updates.scan">업데이트 확인</option><option value="maintenance.temp_cleanup">임시파일 정리</option></select></label><label>기기 그룹<input name="targetGroup" value="general" pattern="[a-z0-9][a-z0-9_-]{0,59}" required></label><label>우선순위<input name="priority" type="number" min="1" max="100" value="50"></label><button type="submit" class="primary">작업 등록</button></form>
+        <div id="deviceJobList" class="device-job-list"><p class="device-command-empty">작업 큐를 불러오는 중입니다.</p></div>
+      </section>
+      <div class="device-onboarding-grid">
+        <div class="device-enrollment-box device-enrollment-agent"><div><p class="kicker">AGENT PAIRING</p><h3>Windows Agent 기기 연결</h3><p>PC·Windows POS·Windows 키오스크·Windows 태블릿을 연결합니다. 기기유형 정책은 서버에서 강제됩니다.</p><div class="device-onboarding-fields"><label>유형<select id="deviceEnrollmentType"><option value="pc">PC</option><option value="pos">POS</option><option value="kiosk">키오스크</option><option value="tablet">태블릿</option></select></label><label>표시 이름<input id="deviceEnrollmentLabel" maxlength="80" placeholder="예: 자담 카운터 POS"></label><label>위치<input id="deviceEnrollmentLocation" maxlength="120" placeholder="예: 목포대점 카운터"></label></div></div><button type="button" class="primary" id="createDeviceEnrollment">Windows Agent 연결</button></div>
+        <form class="device-enrollment-box device-inventory-box" id="deviceInventoryForm"><div><p class="kicker">OBSERVE FIRST</p><h3>관찰 인벤토리 등록</h3><p>센서·로봇 등 아직 Agent가 없는 기기도 자산과 정책부터 등록합니다. 등록만으로 원격제어 권한이 생기지 않습니다.</p><div class="device-onboarding-fields"><label>유형<select name="deviceType"><option value="sensor">센서</option><option value="robot">서비스로봇</option><option value="pos">POS</option><option value="kiosk">키오스크</option><option value="tablet">태블릿</option><option value="other">기타</option></select></label><label>표시 이름<input name="label" maxlength="80" required placeholder="예: 전력계 1번"></label><label>위치<input name="locationLabel" maxlength="120" placeholder="예: 매장 주방"></label><label>메모<input name="notes" maxlength="500" placeholder="모델/용도 등"></label></div></div><button type="submit" class="secondary">관찰 등록</button></form>
+      </div>
+      <div class="device-enrollment-result" id="deviceEnrollmentResult" hidden><div><small>1회용 등록 코드</small><strong data-enrollment-code></strong><span data-enrollment-expiry></span></div><p><b>연결 창이 떴다면 Windows 승인만 진행하세요.</b> 아무 반응이 없으면 연결 프로그램을 한 번 설치한 뒤 “이 PC 연결 계속”을 누르면 됩니다. 기존 Agent 업그레이드는 검증·자동 롤백 후 heartbeat까지 확인하며, 데스크톱 Boot/WOL은 Agent 연결과 별도로 설정합니다.</p><div class="device-pair-actions"><a class="button secondary" href="${BOOTSTRAP_URL}" download="EKODI_Device_연결프로그램.cmd">연결 프로그램 설치</a><button type="button" class="primary" id="continueDeviceEnrollment">이 PC 연결 계속</button></div><details class="device-advanced-install"><summary>고급 설치 · PowerShell 명령 보기</summary><code data-install-command></code><button type="button" class="secondary" id="copyDeviceInstallCommand">설치 명령 복사</button></details></div>
+      <div class="device-security-note"><strong>권한 경계</strong><p>관찰 → 유형정책 → 진단 → 관리자 승인 → 허용 작업 실행 → 결과 검증 → 감사기록 순서로 동작합니다. 물리 동작이 가능한 기기는 전용 안전 어댑터 없이는 실행권한을 받지 않습니다.</p></div>
+      <div class="ekodi-device-list" id="ekodiDeviceList"><div class="device-empty"><p>기기 목록을 불러오는 중입니다.</p></div></div>`;
     content.append(panel);
+    const metrics = panel.querySelector('.device-metrics');
+    const attention = panel.querySelector('#deviceAttentionSummary');
+    const filters = panel.querySelector('#deviceTypeFilters');
+    const list = panel.querySelector('#ekodiDeviceList');
+    if (metrics && attention && filters && list) {
+      panel.querySelector('.device-panel-head')?.insertAdjacentElement('afterend', metrics);
+      metrics.insertAdjacentElement('afterend', attention);
+      attention.insertAdjacentElement('afterend', filters);
+      filters.insertAdjacentElement('afterend', list);
+    }
+    const setup = document.createElement('details');
+    setup.className = 'device-setup-tools';
+    setup.innerHTML = '<summary><strong>기기 연결 · 자동 작업 설정</strong><span>새 기기 등록, 자동 작업 배정, 권한 경계</span></summary>';
+    const setupBody = document.createElement('div');
+    setupBody.className = 'device-setup-tools-body';
+    ['.device-job-console','.device-onboarding-grid','#deviceEnrollmentResult','.device-security-note'].forEach(selector => {
+      const node = panel.querySelector(selector);
+      if (node) setupBody.append(node);
+    });
+    setup.append(setupBody);
+    list.insertAdjacentElement('afterend', setup);
     const demandLoader=globalThis.EKODIAdminDemand;
     const loadTapoScript=demandLoader?.loadScript||demandLoader?.loadJs;
     if(typeof loadTapoScript==='function') Promise.resolve(loadTapoScript.call(demandLoader,'tapo-device-admin.js')).catch(error=>console.warn('[EKODI Tapo Admin]',error.message));
