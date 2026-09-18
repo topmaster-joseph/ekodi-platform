@@ -62,14 +62,17 @@ test('site chrome listing deduplicates technical Cheonggye aliases',async()=>{
 });
 
 test('central Admin ships site chrome as an on-demand asset',async()=>{
-  const [build,shell,layout,postbuild]=await Promise.all([
+  const [build,shell,layout,postbuild,siteChromeAdmin]=await Promise.all([
     readFile(new URL('../scripts/build.mjs',import.meta.url),'utf8'),
     readFile(new URL('../admin-authenticated-shell.js',import.meta.url),'utf8'),
     readFile(new URL('../admin-menu-layout.js',import.meta.url),'utf8'),
     readFile(new URL('../scripts/admin-performance-postbuild.mjs',import.meta.url),'utf8'),
+    readFile(new URL('../admin-site-chrome.js',import.meta.url),'utf8'),
   ]);
   assert.match(build,/admin-site-chrome\.js/);
   assert.doesNotMatch(shell,/deferredPostAuthScripts[^\n]*admin-site-chrome\.js/);
   assert.match(layout,/import\('\.\/admin-site-chrome\.js'\)/);
   assert.match(postbuild,/admin-site-chrome\.js/);
+  assert.match(siteChromeAdmin,/ekodi-admin-section-changed/);
+  assert.match(siteChromeAdmin,/detail:\{section:SECTION\}/);
 });

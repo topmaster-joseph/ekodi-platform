@@ -49,14 +49,17 @@ async function waitForReady() {
 
 async function prepareTargetDemand() {
   stage('target-demand');
-  const placeholder = page.locator(`.sidebar nav [data-demand-feature][data-section="${menuId}"], .sidebar nav [data-demand-feature][data-lazy-section="${menuId}"]`).first();
-  if (!await placeholder.count()) return;
-  await clickFast(placeholder);
+  const selector = `.sidebar nav [data-demand-feature][data-section="${menuId}"], .sidebar nav [data-demand-feature][data-lazy-section="${menuId}"]`;
+  if (!await page.locator(selector).count()) return;
+  await page.evaluate(async section => {
+    if (!window.EKODIAdminDemand?.activate) throw new Error('Admin demand runtime unavailable');
+    await window.EKODIAdminDemand.activate(section);
+  }, menuId);
   await page.waitForFunction(section => {
     const nodes = [...document.querySelectorAll('.sidebar nav [data-section], .sidebar nav [data-lazy-section]')];
     const target = nodes.find(node => node.dataset.section === section || node.dataset.lazySection === section);
     return Boolean(target && !target.hasAttribute('data-demand-feature') && target.getAttribute('aria-busy') !== 'true' && !target.classList.contains('is-loading'));
-  }, menuId, { timeout: 15_000 });
+  }, menuId, { timeout: interactionReadyTimeoutMs });
 }
 
 async function waitForAdminNavigationIdle() {
