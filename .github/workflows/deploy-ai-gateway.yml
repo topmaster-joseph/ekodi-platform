@@ -4,6 +4,12 @@ on:
   pull_request:
     paths: &ai_runtime_paths
       - 'ai-control-worker.js'
+      - 'ai-control-provider-router.js'
+      - 'ekodi-ai-provider-registry.js'
+      - 'openai-provider-adapter.js'
+      - 'anthropic-provider-adapter.js'
+      - 'gemini-orchestrator-provider-adapter.js'
+      - 'test/ai-control-provider-router.test.mjs'
       - 'ai-commons.js'
       - 'ai-control/**'
       - 'site-worker.js'
@@ -35,6 +41,9 @@ jobs:
         run: |
           set -euo pipefail
           node --check ai-control-worker.js
+          node --check ai-control-provider-router.js
+          node --check gemini-orchestrator-provider-adapter.js
+          node --test test/ai-control-provider-router.test.mjs
           node --check site-worker.js
           node --test test/ai-runtime-boundary.test.mjs
           ! grep -Fq 'pattern = "ai.ekodi.kr"' wrangler.ai.release.toml
