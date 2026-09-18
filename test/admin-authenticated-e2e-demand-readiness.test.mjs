@@ -13,3 +13,13 @@ test('authenticated Admin E2E activates only the target demand menu before conte
   assert.match(source, /!target\.hasAttribute\('data-demand-feature'\)/);
   assert.ok(source.indexOf('await prepareTargetDemand();') < source.indexOf('await selectWorkArea();'));
 });
+
+
+test('authenticated Admin E2E uses the visible left submenu when contextual tabs are intentionally hidden', () => {
+  assert.match(source, /async function resolveMenuTrigger\(\)/);
+  assert.match(source, /admin-detail-item\[data-admin-detail-section=/);
+  assert.match(source, /data-admin-detail-more=/);
+  assert.match(source, /no visible sidebar navigation trigger/);
+  assert.match(source, /stage\('sidebar-trigger'\)/);
+  assert.doesNotMatch(source, /await tab\.waitFor\(\{ state: 'visible'/);
+});
