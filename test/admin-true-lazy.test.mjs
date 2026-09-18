@@ -93,7 +93,10 @@ test('shared admin navigation exposes five canonical axes with top contextual ta
   assert.match(sidebar, /data-admin-context-section/);
   assert.match(sidebar, /data-admin-capability-shortcut/);
   assert.match(sidebar, /admin-context-source/);
-  assert.match(sidebar, /adminMenuGovernance = 'workbench-tabs-v2'/);
+  assert.match(sidebar, /adminMenuGovernance = 'workbench-tabs-v3-simple'/);
+  assert.match(sidebar, /admin-context-cluster/);
+  assert.match(sidebar, /getAdminMenuCategoryLabel\(category, locale\)/);
+  assert.doesNotMatch(sidebar, /data-admin-detail-section|admin-detail-item/);
   assert.match(sidebar, /observer\.observe\(nav, \{ childList: true, subtree: false \}\)/);
   assert.doesNotMatch(sidebar, /subtree: true/);
   assert.doesNotMatch(sidebar, /ekodi-admin-recent-sections|ekodi-admin-favorite-sections/);
