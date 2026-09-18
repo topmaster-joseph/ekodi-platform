@@ -205,7 +205,7 @@ export async function transitionPartnerNewsItem(db, scopeInput, id, action, acto
       WHERE id=? AND tenant_slug=? AND service_key=?`;
     bindings = [now, who, now, who, id, scope.tenantSlug, scope.serviceKey];
   } else if (act === 'publish') {
-    if (!['DRAFT','REVIEW'].includes(current.status)) throw domainError('초안 또는 검토 상태만 공개할 수 있습니다.', 409);
+    if (current.status !== 'REVIEW') throw domainError('검토 완료 상태만 공개할 수 있습니다.', 409, 'PARTNER_NEWS_REVIEW_REQUIRED');
     if (!current.partnerName || !current.title) throw domainError('공개 전에 협력 기관/단체와 제목을 확인해 주세요.');
     next = 'PUBLISHED';
     sql = `UPDATE partner_news_items SET status='PUBLISHED', published_at=?, published_by=?, archived_at='',
