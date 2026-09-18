@@ -5,7 +5,6 @@ import { enqueueMessengerOutbox, drainMessengerOutbox } from './messenger-outbox
 const DEFAULT_STORES=Object.freeze(['jadam','pizzamaru','yogurt']);
 const SUPABASE_URL='https://renzehysxirjilvdxacv.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
-const OPEN_STATES=Object.freeze(['awaiting_customer_confirmation','customer_confirmed','store_accepted']);
 const clean=(value,max=8000)=>String(value??'').trim().slice(0,max);
 const nowIso=()=>new Date().toISOString();
 const safeJson=value=>{try{return JSON.stringify(value??{})}catch{return '{}'}};
@@ -13,6 +12,8 @@ const toId=value=>{const n=Number(value);return Number.isSafeInteger(n)&&n>0?n:0
 const phoneLike=value=>/(?:\d[\s().-]?){7,}/.test(String(value||''));
 export function isOpaqueSmsThreadId(value=''){const id=clean(value,240);return Boolean(id&&!phoneLike(id)&&!id.includes('@'))}
 function safeCustomerDisplay(value=''){const display=clean(value,80);return !display||phoneLike(display)||display.includes('@')?'고객':display}
+
+export function customerCanCancelSmsOrder(status=''){return ['awaiting_customer_confirmation','customer_confirmed'].includes(String(status||''))}
 
 export function classifySmsOrderInput(value=''){
   const text=clean(value,500);
@@ -137,7 +138,7 @@ async function handleInbound(request,env,executionCtx){
   if(input==='confirm'&&order?.status==='awaiting_customer_confirmation'){
     await env.DB.prepare(`UPDATE store_sms_orders SET status='customer_confirmed',confirmed_at=?,updated_at=? WHERE id=?`).bind(now,now,order.id).run();
     order={...order,status:'customer_confirmed'};reply=customerSmsOrderReply('confirmed');eventType='store_sms.customer_confirmed';
-  }else if(input==='cancel'&&order&&['awaiting_customer_confirmation','customer_confirmed'].includes(order.status)){
+  }else if(input==='cancel'&&order&&customerCanCancelSmsOrder(order.status)){
     await env.DB.prepare(`UPDATE store_sms_orders SET status='cancelled',cancelled_at=?,updated_at=? WHERE id=?`).bind(now,now,order.id).run();
     order={...order,status:'cancelled'};reply=customerSmsOrderReply('cancelled');eventType='store_sms.customer_cancelled';
   }else if(order?.status==='awaiting_customer_confirmation'&&input==='order_text'){
