@@ -228,7 +228,261 @@
   function diagnosticSummary(device) {
     const panel = document.createElement('div'); panel.className = 'device-diagnostic-summary';
     if (isInventory(device)) {
-      panel.innerHTML = `
+      panel.innerHTML = `<span><small>관리 방식</small><strong>관찰 등록</strong></span><span><small>원격명령</small><strong>차단</strong></span><span><small>자동배정</small><strong>제외</strong></span>`;
+      return panel;
+    }
+    const diagnostics = device.diagnostics || {};
+    const updates = diagnostics.updates || {}, network = diagnostics.network || {}, printers = diagnostics.printers || {}, startup = diagnostics.startup || {};
+    panel.innerHTML = `
+      <span><small>최근 정밀진단</small><strong>${device.diagnosticsAt ? timeLabel(device.diagnosticsAt) : '아직 없음'}</strong></span>
+      <span><small>업데이트</small><strong>${updates.pendingCount ?? '—'}개 대기</strong></span>
+      <span><small>네트워크</small><strong>${network.apiReachable === true ? '정상' : network.apiReachable === false ? '점검' : '—'}</strong></span>
+      <span><small>프린터</small><strong>${printers.issueCount ?? '—'}개 문제</strong></span>
+      <span><small>시작항목</small><strong>${startup.count ?? '—'}개</strong></span>`;
+    return panel;
+  }
+
+  function startupPanel(device) {
+    const box = document.createElement('details'); box.className = 'device-details'; box.innerHTML = '<summary>시작 프로그램 관리</summary>';
+    if (!commandAllowed(device, 'startup.scan')) {
+      const p = document.createElement('p'); p.className = 'device-command-empty'; p.textContent = '이 기기 유형에서는 시작 프로그램 원격관리를 허용하지 않습니다.'; box.append(p); return box;
+    }
+    const startup = device.diagnostics?.startup || {};
+    const items = Array.isArray(startup.items) ? startup.items.slice(0, 12) : [];
+    const disabled = Array.isArray(startup.disabledItems) ? startup.disabledItems.slice(0, 12) : [];
+    const toolbar = document.createElement('div'); toolbar.className = 'device-inline-actions';
+    toolbar.append(makeActionButton(device, 'startup.scan', '목록 새로 확인', 'ghost', {}, !capability(device, 'startupManagement'))); box.append(toolbar);
+    if (!items.length && !disabled.length) {
+      const p = document.createElement('p'); p.className = 'device-command-empty'; p.textContent = '“목록 새로 확인”을 누르면 명령문을 노출하지 않고 항목 이름과 안전 ID만 가져옵니다.'; box.append(p); return box;
+    }
+    const list = document.createElement('div'); list.className = 'device-startup-list';
+    items.forEach(item => { const row = document.createElement('div'); const text = document.createElement('span'); text.innerHTML = `<strong>${escapeHtml(item.name)}</strong><small>${escapeHtml(item.scope)}</small>`; row.append(text, makeActionButton(device, 'startup.disable', '사용 안 함', 'ghost', { itemId: item.id })); list.append(row); });
+    disabled.forEach(item => { const row = document.createElement('div'); row.dataset.disabled = 'true'; const text = document.createElement('span'); text.innerHTML = `<strong>${escapeHtml(item.name)}</strong><small>${escapeHtml(item.scope)} · 비활성</small>`; row.append(text, makeActionButton(device, 'startup.restore', '복원', 'secondary', { itemId: item.id })); list.append(row); });
+    box.append(list); return box;
+  }
+
+  function managementPanel(device) {
+    const box = document.createElement('div'); box.className = 'device-management-row';
+    const current = device.management || { type:'pc', locationLabel:'' };
+    const options = deviceCatalog.map(item => `<option value="${escapeHtml(item.id)}"${item.id === current.type ? ' selected' : ''}>${escapeHtml(item.label)}</option>`).join('');
+    box.innerHTML = `<label>기기 유형<select data-device-type>${options}</select></label><label>위치<input data-device-location maxlength="120" value="${escapeHtml(current.locationLabel || '')}" placeholder="예: 목포대점 카운터"></label><button type="button" class="secondary" data-save-management>정책 저장</button>`;
+    const save = box.querySelector('[data-save-management]');
+    save.addEventListener('click', async () => {
+      const nextType = box.querySelector('[data-device-type]').value;
+      const locationLabel = box.querySelector('[data-device-location]').value.trim();
+      if (!confirm(`${device.label || '기기'}를 ${typeInfo(nextType).label} 유형으로 관리할까요? 유형에 따라 원격권한이 자동 축소될 수 있습니다.`)) return;
+      save.disabled = true;
+      try { await request(`/api/control/devices/${encodeURIComponent(device.id)}/management`, { method:'POST', body:JSON.stringify({ deviceType:nextType, locationLabel, confirmed:true }) }); await loadDevices(); }
+      catch (error) { alert(error.message); save.disabled = false; }
+    });
+    return box;
+  }
+
+  function deviceCard(device) {
+    const card = document.createElement('article'); card.className = 'ekodi-device-card'; card.dataset.status = device.status; card.dataset.deviceType = device.management?.type || 'pc'; card.dataset.deviceId = device.id;
+    const type = typeInfo(device);
+    const head = document.createElement('div'); head.className = 'ekodi-device-head';
+    const identity = document.createElement('div');
+    identity.innerHTML = `<span class="device-platform-mark">${escapeHtml(type.icon || '○')}</span><div><span class="device-type-badge">${escapeHtml(type.label)}</span><strong></strong><small></small></div>`;
+    identity.querySelector('strong').textContent = device.label || device.hostname || type.label;
+    identity.querySelector('small').textContent = isInventory(device)
+      ? `${device.management?.locationLabel || '위치 미지정'} · 관찰 인벤토리`
+      : `${device.hostname || 'hostname 미확인'} · ${device.osVersion || device.platform}${device.management?.locationLabel ? ` · ${device.management.locationLabel}` : ''}`;
+    const state = document.createElement('span'); state.className = 'device-state'; state.textContent = statusLabel(device.status); head.append(identity, state);
+
+    const meta = document.createElement('div'); meta.className = 'ekodi-device-meta';
+    meta.innerHTML = '<span><small>마지막 연결</small><strong></strong></span><span><small>관리모드</small><strong></strong></span><span><small>Agent</small><strong></strong></span><span><small>원격권한</small><strong></strong></span>';
+    const values = meta.querySelectorAll('strong');
+    values[0].textContent = isInventory(device) ? '어댑터 연결 전' : timeLabel(device.lastSeenAt);
+    values[1].textContent = ({managed:'관리',limited:'제한 관리',observe:'관찰'})[device.management?.mode] || device.management?.mode || '관리';
+    values[2].textContent = device.agentVersion || '없음';
+    values[3].textContent = ({managed:'관리 작업',observe:'관찰 작업',none:'없음'})[device.management?.remoteCommandLevel] || '없음';
+
+    const health = document.createElement('div'); health.innerHTML = healthMarkup(device);
+    const mainActions = document.createElement('div'); mainActions.className = 'device-ops-grid device-primary-actions';
+    mainActions.append(
+      makeActionButton(device, 'diagnostics.collect', '전체 진단', 'primary', {}, !capability(device, 'diagnostics')),
+      makeActionButton(device, 'network.diagnose', '네트워크 진단', 'ghost', {}, !capability(device, 'networkDiagnostics')),
+      makeActionButton(device, 'updates.scan', '업데이트 확인', 'ghost', {}, !capability(device, 'windowsUpdate')),
+      makeActionButton(device, 'agent.self_update', 'Agent 업데이트', 'secondary'),
+    );
+
+    const advanced = document.createElement('details'); advanced.className = 'device-details device-advanced-control';
+    advanced.innerHTML = '<summary>세부 관리 · 고급 작업</summary>';
+    const advancedBody = document.createElement('div'); advancedBody.className = 'device-advanced-control-body';
+
+    const execution = document.createElement('div'); execution.className = 'device-execution-policy';
+    const executionText = document.createElement('div');
+    const pcType = device.management?.type === 'pc' && !isInventory(device);
+    executionText.innerHTML = `<strong>자동 작업 ${device.execution?.enabled ? '허용됨' : '중지됨'}</strong><small>${pcType ? `그룹 ${escapeHtml(device.execution?.group || 'general')} · 동시 ${Number(device.execution?.maxConcurrency || 1)}개` : '데스크톱 PC가 아닌 기기는 자동 작업배정에서 제외'}</small>`;
+    const executionToggle = document.createElement('button'); executionToggle.type = 'button'; executionToggle.className = device.execution?.enabled ? 'secondary' : 'primary'; executionToggle.textContent = device.execution?.enabled ? '자동 작업 OFF' : '자동 작업 ON';
+    const autoEligible = pcType && device.settings?.health?.system?.autoExecutionEligible === true && device.settings?.health?.system?.isPortable === false;
+    executionToggle.disabled = device.status === 'revoked' || (!device.execution?.enabled && !autoEligible) || !pcType;
+    if (!autoEligible) executionToggle.title = pcType ? '노트북·휴대형 기기는 자동 작업 노드에서 제외됩니다.' : '자동 작업은 검증된 데스크톱 PC에만 허용됩니다.';
+    executionToggle.addEventListener('click', async () => {
+      const enabled = !device.execution?.enabled;
+      if (!confirm(`${device.label || device.hostname}의 자동 작업을 ${enabled ? '허용' : '중지'}할까요?`)) return;
+      executionToggle.disabled = true;
+      try { await request(`/api/control/devices/${encodeURIComponent(device.id)}/execution-policy`, { method:'POST', body:JSON.stringify({ enabled, group:device.execution?.group || 'general', maxConcurrency:device.execution?.maxConcurrency || 1, confirmed:true }) }); await loadDevices(); }
+      catch (error) { alert(error.message); executionToggle.disabled = false; }
+    });
+    execution.append(executionText, executionToggle);
+
+    const advancedActions = document.createElement('div'); advancedActions.className = 'device-ops-grid';
+    advancedActions.append(
+      makeActionButton(device, 'maintenance.temp_cleanup', '임시파일 정리', 'ghost', {}, !capability(device, 'storageMaintenance')),
+      makeActionButton(device, 'updates.install', '업데이트 설치', 'ghost', {}, !capability(device, 'windowsUpdate')),
+      makeActionButton(device, 'printers.diagnose', '프린터 진단', 'ghost', {}, !capability(device, 'printerDiagnostics')),
+      makeActionButton(device, 'profile.workstation.apply', 'EKODI 업무환경', 'ghost', {}, !capability(device, 'workstationProfile')),
+      makeActionButton(device, 'profile.workstation.restore', '업무환경 복원', 'ghost', {}, !capability(device, 'workstationProfile')),
+    );
+    const profileTitle = document.createElement('h3'); profileTitle.textContent = '전원 프로필';
+    const profiles = document.createElement('div'); profiles.className = 'device-command-grid';
+    POWER_COMMANDS.forEach(([command, label, title]) => { const b = makeActionButton(device, command, label, command === 'power.restore' ? 'secondary' : 'ghost'); b.title = b.disabled ? b.title : title; profiles.append(b); });
+    const securityTitle = document.createElement('h3'); securityTitle.textContent = '잠금 · Agent';
+    const security = document.createElement('div'); security.className = 'device-command-grid security';
+    security.append(makeActionButton(device, 'lock.resume_off', '복귀 잠금 해제'), makeActionButton(device, 'lock.resume_on', '복귀 잠금 사용'), makeActionButton(device, 'autologon.open', '자동로그인 관리', 'secondary'), makeActionButton(device, 'agent.self_update', 'Agent 업데이트', 'secondary'));
+    const history = document.createElement('div'); history.className = 'device-history'; history.innerHTML = `<h3>최근 작업</h3>${latestCommandMarkup(device.recentCommands)}`;
+    advancedBody.append(managementPanel(device), execution, diagnosticSummary(device), advancedActions, startupPanel(device), profileTitle, profiles, securityTitle, security, history);
+    advanced.append(advancedBody);
+
+    const foot = document.createElement('div'); foot.className = 'device-card-foot';
+    const note = document.createElement('p');
+    note.textContent = isInventory(device) ? '관찰 인벤토리입니다. 전용 어댑터가 검증되기 전에는 원격 제어나 물리 동작을 실행하지 않습니다.' : device.status === 'online' ? 'Agent가 연결되어 있습니다. 실행 결과는 검증 후 이 화면과 Activity Logs에 남습니다.' : device.status === 'revoked' ? '이 기기의 EKODI 접근 권한이 해제되었습니다.' : '오프라인이면 허용된 작업만 대기열에 보관되고 Agent가 다시 연결된 뒤 처리됩니다.';
+    const revoke = document.createElement('button'); revoke.type = 'button'; revoke.className = 'ghost device-revoke'; revoke.textContent = isInventory(device) ? '인벤토리 해제' : '기기 권한 해제'; revoke.disabled = device.status === 'revoked';
+    revoke.addEventListener('click', async () => { if (!confirm(`${device.label || type.label}의 EKODI ${isInventory(device) ? '인벤토리 등록' : 'Device Agent 권한'}을 해제할까요?`)) return; try { await request(`/api/control/devices/${encodeURIComponent(device.id)}/revoke`, { method:'POST' }); await loadDevices(); } catch (error) { alert(error.message); } });
+    foot.append(note, revoke);
+
+    card.append(head, meta, health.firstElementChild, recommendationPanel(device), mainActions, advanced, foot);
+    return card;
+  }
+
+  function renderJobs(jobs = []) {
+    const list = document.querySelector('#deviceJobList');
+    const queued = document.querySelector('#deviceMetricQueued');
+    if (queued) queued.textContent = String(jobs.filter(job => ['queued','assigned'].includes(job.status)).length);
+    if (!list) return;
+    list.textContent = '';
+    if (!jobs.length) { list.innerHTML = '<p class="device-command-empty">아직 자동 배정 작업이 없습니다.</p>'; return; }
+    jobs.slice(0, 12).forEach(job => { const row = document.createElement('div'); row.className = 'device-job-row'; row.dataset.status = job.status; row.innerHTML = `<div><strong>${escapeHtml(commandLabel(job.type))}</strong><small>${escapeHtml(job.targetGroup)} 그룹 · 우선순위 ${Number(job.priority)} · 시도 ${Number(job.attempts)}</small></div><span>${escapeHtml(commandStatus(job.status))}</span><time>${escapeHtml(timeLabel(job.completedAt || job.assignedAt || job.requestedAt))}</time>`; list.append(row); });
+  }
+
+  async function createAutoJob(event) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const type = form.elements.type.value, targetGroup = form.elements.targetGroup.value.trim() || 'general', priority = Number(form.elements.priority.value) || 50;
+    const confirmed = Boolean(CONFIRM_MESSAGES[type]) ? confirm(CONFIRM_MESSAGES[type]) : true;
+    if (!confirmed) return;
+    const submit = form.querySelector('button[type="submit"]'); submit.disabled = true;
+    try { await request('/api/control/devices/jobs', { method:'POST', body:JSON.stringify({ type, targetGroup, priority, confirmed }) }); await loadDevices(); }
+    catch (error) { alert(error.message); } finally { submit.disabled = false; }
+  }
+
+  function renderTypeFilters(devices) {
+    const host = document.querySelector('#deviceTypeFilters');
+    if (!host) return;
+    const counts = devices.reduce((map, device) => { const type = device.management?.type || 'pc'; map[type] = (map[type] || 0) + 1; return map; }, {});
+    const buttons = [{id:'all',label:'전체',icon:'◉'}, ...deviceCatalog].map(item => {
+      const count = item.id === 'all' ? devices.length : (counts[item.id] || 0);
+      return `<button type="button" class="device-type-filter${activeType === item.id ? ' active' : ''}" data-type-filter="${escapeHtml(item.id)}"><span>${escapeHtml(item.icon || '○')}</span><strong>${escapeHtml(item.label)}</strong><small>${count}</small></button>`;
+    }).join('');
+    host.innerHTML = buttons;
+    host.querySelectorAll('[data-type-filter]').forEach(button => button.addEventListener('click', () => { activeType = button.dataset.typeFilter || 'all'; renderTypeFilters(currentDevices); renderDevices(currentDevices); }));
+  }
+
+  function renderAttentionSummary(devices) {
+    const host = document.querySelector('#deviceAttentionSummary');
+    if (!host) return;
+    const issues = devices.filter(device => ['stale','offline'].includes(device.status) || (Number.isFinite(Number(device.health?.score)) && Number(device.health.score) < 75));
+    host.dataset.state = issues.length ? 'attention' : 'good';
+    if (!devices.length) {
+      host.innerHTML = '<div><strong>연결된 기기가 없습니다.</strong><span>아래 “기기 연결 · 자동 작업 설정”에서 첫 기기를 연결할 수 있습니다.</span></div>';
+      return;
+    }
+    if (!issues.length) {
+      host.innerHTML = '<div><strong>현재 확인이 필요한 기기가 없습니다.</strong><span>온라인 상태와 건강점수가 정상 범위입니다.</span></div>';
+      return;
+    }
+    const visible = issues.slice(0, 4).map(device => {
+      const score = Number.isFinite(Number(device.health?.score)) ? ` · 건강 ${Math.round(Number(device.health.score))}점` : '';
+      return `<button type="button" data-device-focus="${escapeHtml(device.id)}"><strong>${escapeHtml(device.label || device.hostname || typeInfo(device).label)}</strong><span>${escapeHtml(statusLabel(device.status))}${escapeHtml(score)}</span></button>`;
+    }).join('');
+    host.innerHTML = `<div><strong>확인 필요 ${issues.length}대</strong><span>오프라인·응답 지연·건강점수 75점 미만 기기를 우선 표시합니다.</span></div><div class="device-attention-items">${visible}</div>`;
+    host.querySelectorAll('[data-device-focus]').forEach(button => button.addEventListener('click', () => {
+      const target = document.querySelector(`[data-device-id="${CSS.escape(button.dataset.deviceFocus || '')}"]`);
+      target?.scrollIntoView({ behavior:'smooth', block:'center' });
+      target?.classList.add('is-focused');
+      window.setTimeout(() => target?.classList.remove('is-focused'), 1600);
+    }));
+  }
+
+  function renderDevices(devices) {
+    currentDevices = devices;
+    const list = document.querySelector('#ekodiDeviceList');
+    const total = document.querySelector('#deviceMetricTotal'), online = document.querySelector('#deviceMetricOnline'), issues = document.querySelector('#deviceMetricIssues'), avgHealth = document.querySelector('#deviceMetricHealth');
+    if (!list) return;
+    const scored = devices.filter(device => Number.isFinite(Number(device.health?.score)));
+    total.textContent = String(devices.length);
+    online.textContent = String(devices.filter(device => device.status === 'online').length);
+    issues.textContent = String(devices.filter(device => ['stale','offline'].includes(device.status) || (Number.isFinite(Number(device.health?.score)) && Number(device.health.score) < 75)).length);
+    avgHealth.textContent = scored.length ? String(Math.round(scored.reduce((sum, device) => sum + Number(device.health.score), 0) / scored.length)) : '—';
+    renderAttentionSummary(devices);
+    renderTypeFilters(devices);
+    const visible = activeType === 'all' ? devices : devices.filter(device => (device.management?.type || 'pc') === activeType);
+    list.textContent = '';
+    if (!visible.length) { list.innerHTML = `<div class="device-empty"><strong>${devices.length ? '이 유형에 등록된 기기가 없습니다.' : '아직 등록된 기기가 없습니다.'}</strong><p>Windows Agent 기기는 연결하고, 센서·로봇 등은 관찰 인벤토리로 먼저 등록할 수 있습니다.</p></div>`; return; }
+    visible.forEach(device => list.append(deviceCard(device)));
+  }
+
+  async function loadDevices() {
+    const list = document.querySelector('#ekodiDeviceList');
+    if (!list || !sessionStorage.getItem(TOKEN_KEY)) return;
+    try {
+      const data = await request('/api/control/devices');
+      if (Array.isArray(data.catalog) && data.catalog.length) deviceCatalog = data.catalog;
+      renderDevices(data.devices || []); renderJobs(data.jobs || []);
+      window.dispatchEvent(new CustomEvent('ekodi-device-control-data', { detail:{ devices:data.devices || [], jobs:data.jobs || [], generatedAt:data.generatedAt } }));
+      const stamp = document.querySelector('#deviceGeneratedAt'); if (stamp) stamp.textContent = `최근 갱신 ${timeLabel(data.generatedAt)}`;
+    } catch (error) { list.innerHTML = '<div class="device-empty error"><strong>Device Control API를 불러오지 못했습니다.</strong><p></p></div>'; list.querySelector('p').textContent = error.message; }
+  }
+
+  async function createEnrollment() {
+    const button = document.querySelector('#createDeviceEnrollment'), result = document.querySelector('#deviceEnrollmentResult'), typeSelect = document.querySelector('#deviceEnrollmentType'), labelInput = document.querySelector('#deviceEnrollmentLabel'), locationInput = document.querySelector('#deviceEnrollmentLocation');
+    if (!button || !result) return;
+    const deviceType = typeSelect?.value || 'pc';
+    button.disabled = true; button.textContent = '연결 준비 중…';
+    try {
+      const data = await request('/api/control/devices/enrollment', { method:'POST', body:JSON.stringify({ deviceType, label:labelInput?.value.trim() || typeInfo(deviceType).label, locationLabel:locationInput?.value.trim() || '' }) });
+      const command = `$p="$env:TEMP\\ekodi-device-agent.ps1"; Invoke-WebRequest -UseBasicParsing "${WINDOWS_AGENT_URL}" -OutFile $p; powershell -NoProfile -ExecutionPolicy Bypass -File $p -Install -EnrollmentCode "${data.enrollmentCode}" -ApiBase "${API_BASE}"`;
+      currentEnrollmentUrl = data.protocolUrl || `ekodi-device://enroll?code=${encodeURIComponent(data.enrollmentCode)}`;
+      result.hidden = false;
+      result.querySelector('[data-enrollment-code]').textContent = data.enrollmentCode;
+      result.querySelector('[data-enrollment-expiry]').textContent = `${typeInfo(deviceType).label} · 유효시간: ${timeLabel(data.expiresAt)}까지 · 1회 사용`;
+      result.querySelector('[data-install-command]').textContent = command;
+      result.dataset.installCommand = command;
+      launchProtocol(currentEnrollmentUrl);
+    } catch (error) { alert(error.message); }
+    finally { button.disabled = false; button.textContent = 'Windows Agent 연결'; }
+  }
+
+  async function createInventory(event) {
+    event.preventDefault();
+    const form = event.currentTarget, submit = form.querySelector('button[type="submit"]');
+    const payload = { deviceType:form.elements.deviceType.value, label:form.elements.label.value.trim(), locationLabel:form.elements.locationLabel.value.trim(), notes:form.elements.notes.value.trim() };
+    submit.disabled = true;
+    try { await request('/api/control/devices/inventory', { method:'POST', body:JSON.stringify(payload) }); form.reset(); await loadDevices(); }
+    catch (error) { alert(error.message); } finally { submit.disabled = false; }
+  }
+
+  function installPanel() {
+    const nav = document.querySelector('.sidebar nav'), content = document.querySelector('.content');
+    if (!nav || !content || document.querySelector('#deviceControlPanel')) return;
+    const button = document.createElement('button'); button.type = 'button'; button.className = 'nav'; button.dataset.deviceControlNav = 'true'; button.append(document.createTextNode('⌁ '));
+    const label = document.createElement('span'); label.textContent = '로컬컴퓨터·기기'; button.append(label);
+    const workspace = nav.querySelector('[data-section="workspace"]'); if (workspace) workspace.insertAdjacentElement('afterend', button); else nav.append(button);
+
+    const panel = document.createElement('section'); panel.id = 'deviceControlPanel'; panel.className = 'section ekodi-device-panel hidden-panel'; panel.dataset.panel = 'devices';
+    panel.innerHTML = `
       <div class="device-panel-head">
         <div><p class="kicker">LOCAL COMPUTERS · DEVICES</p><h2>로컬컴퓨터·기기</h2><p>현재 연결 상태와 이용현황을 먼저 보고, 문제가 있는 기기만 빠르게 찾아 조치합니다. 연결·자동작업·고급 설정은 필요할 때 펼쳐 사용합니다.</p></div>
         <div class="device-head-actions"><span id="deviceGeneratedAt">연결 상태 확인 전</span><button type="button" class="secondary" id="refreshDevices">↻ 새로고침</button></div>
