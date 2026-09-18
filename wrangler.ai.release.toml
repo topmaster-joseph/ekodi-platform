@@ -29,7 +29,10 @@ EKODI_OPENROUTER_FREE_DAILY_CALL_LIMIT = "45"
 EKODI_PROVIDER_GROQ_FREE_ENABLED = "false"
 EKODI_GROQ_FREE_DAILY_CALL_LIMIT = "900"
 
-[ai]\nbinding = "AI"\n\n[[d1_databases]]
+[ai]
+binding = "AI"
+
+[[d1_databases]]
 binding = "DB"
 database_name = "ekodi-auth"
 database_id = "e38778f1-b059-4fe7-8816-300f3eec6e19"
