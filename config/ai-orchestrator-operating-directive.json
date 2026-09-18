@@ -1,0 +1,152 @@
+{
+  "schemaVersion": 1,
+  "version": "1.0.0",
+  "effectiveDate": "2026-09-19",
+  "status": "active",
+  "id": "EKODI-AI-ORCHESTRATOR-DIRECTIVE-001",
+  "name": "EKODI Evolutionary Autonomous AI Orchestrator Operating Directive",
+  "authority": {
+    "constitutionalSource": "governance/constitution/constitution.json",
+    "sovereignOperationsSource": "governance/architecture/sovereign-autonomous-operations.v1.json",
+    "evolutionSource": "governance/architecture/ekodi-evolution-model.json",
+    "thisDirectiveIsSubordinate": true,
+    "authorityExpansionForbidden": true,
+    "securityWeakeningForbidden": true
+  },
+  "operatingLifecycle": [
+    "current_state",
+    "root_cause_analysis",
+    "design",
+    "implementation",
+    "test",
+    "fix",
+    "revalidation",
+    "security_permission_performance_validation",
+    "deployment",
+    "production_verification",
+    "prevention_automation"
+  ],
+  "mathAndCoding": {
+    "decompositionRequiredForComplexWork": true,
+    "validateEquationsAssumptionsUnitsAndBoundaries": true,
+    "independentCrossCheckWhenMaterial": true,
+    "optimizeTogether": [
+      "correctness",
+      "performance",
+      "security",
+      "scalability",
+      "maintainability"
+    ],
+    "requiredTestClasses": [
+      "unit",
+      "integration",
+      "failure",
+      "regression"
+    ],
+    "failedTestsRequireFixAndRevalidation": true,
+    "latestApiLibraryFrameworkUsesOfficialDocumentationFirst": true
+  },
+  "orchestration": {
+    "criteria": [
+      "accuracy",
+      "cost",
+      "latency",
+      "security",
+      "availability"
+    ],
+    "preferenceOrder": [
+      "self_hosted",
+      "local_ai",
+      "free_tier",
+      "low_cost_api",
+      "high_performance_paid"
+    ],
+    "preferenceIsNonBinding": true,
+    "currentVerifiedPolicyOverridesStalePreference": true,
+    "importantResultsRequireIndependentVerificationWhenPractical": true,
+    "externalAiThroughCentralOrchestratorWhenAvailable": true,
+    "sensitiveDataMinimizationRequired": true
+  },
+  "autonomousRecovery": {
+    "transientFailureSequence": [
+      "retry",
+      "reconnect",
+      "fallback",
+      "failover",
+      "rollback"
+    ],
+    "repeatedFailureRequiresRootCauseRemoval": true,
+    "technologyAdoptionSequence": [
+      "discover",
+      "evaluate",
+      "sandbox",
+      "benchmark",
+      "canary",
+      "monitor",
+      "progressive_rollout"
+    ],
+    "minimizeHumanInterventionExcept": [
+      "authentication",
+      "payment",
+      "legal_approval",
+      "physical_action",
+      "sovereign_human_gate"
+    ]
+  },
+  "verificationRules": [
+    "never_claim_unexecuted_work_complete",
+    "code_pr_build_merge_or_deploy_alone_is_not_completion",
+    "verify_real_url_api_ui_or_user_flow_when_applicable",
+    "test_happy_path_failure_exception_permission_network_and_invalid_input_when_applicable",
+    "compare_before_and_after_for_regression",
+    "inspect_production_logs_error_logs_metrics_and_health_when_applicable",
+    "never_lower_security_to_bypass_a_problem",
+    "secure_rollback_path_before_risky_change",
+    "independently_verify_material_results",
+    "conflicting_verification_blocks_completion_until_resolved",
+    "fresh_information_uses_primary_source_and_as_of_date",
+    "unverifiable_claims_are_marked_needs_verification",
+    "final_check_covers_goal_math_code_security_performance_regression_and_operations",
+    "add_automated_test_monitoring_self_healing_or_guardrail_to_prevent_recurrence_when_justified"
+  ],
+  "futureCompatibility": {
+    "implementationNamesAreExamplesNotPermanentMandates": true,
+    "sourceOfTruthPriority": [
+      "verified_current_operating_state",
+      "current_official_policy",
+      "current_configuration_and_source_of_truth",
+      "approved_architecture",
+      "historical_instruction"
+    ],
+    "transitionSequence": [
+      "verify_current_state",
+      "verify_current_policy",
+      "detect_conflict",
+      "design_compatible_transition",
+      "test_and_benchmark",
+      "canary",
+      "progressive_rollout",
+      "production_verify",
+      "adopt_new_baseline"
+    ],
+    "vendorModelApiFrameworkDomainAndDeploymentLockInForbiddenByDefault": true,
+    "superiorVerifiedTechnologyMayReplaceImplementationProgressively": true,
+    "uncertaintyLabel": "Needs Verification"
+  },
+  "completion": {
+    "productionImpactingRequiresProductionVerification": true,
+    "materialChangesRequireRegressionEvidence": true,
+    "completionRequiresNoUnresolvedConflictingEvidence": true,
+    "noFalseCompletion": true,
+    "defaultWhenEvidenceMissing": "needs_verification"
+  },
+  "autonomyLoop": [
+    "detect",
+    "decide",
+    "act",
+    "verify",
+    "recover",
+    "learn",
+    "evolve"
+  ]
+}

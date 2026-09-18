@@ -1,6 +1,7 @@
 import { buildEkodiAiOrchestrator } from './ai-orchestrator-runtime.js';
 import { evaluateAiCostEligibility } from './ai-cost-policy.js';
 import { decideEkodiConsultation, summarizeConsultationExecution } from './ai-consultation-governance.js';
+import { buildAiExecutionProtocol, getAiOrchestratorDirectiveSummary } from './ai-orchestrator-directive.js';
 
 const RISK_LEVELS = new Set(['low', 'normal', 'high', 'critical']);
 const PULSE_KINDS = new Set(['manual_goal', 'schedule', 'webhook', 'repository', 'monitor', 'service_health', 'system_event']);
@@ -163,6 +164,13 @@ export function buildEkodiCommandPlan(input = {}, providers = []) {
   const assignment = chooseAssignments(specialists, costEligibleProviders, consultationDecision.requirements.sentinel);
   const reverifier = consultationDecision.requirements.reverifier ? chooseReverifier(costEligibleProviders, assignment) : null;
   const taskId = text(input.taskId || input.taskName || `task_${Date.now()}`, 120) || `task_${Date.now()}`;
+  const operatingDirective = getAiOrchestratorDirectiveSummary();
+  const executionProtocol = buildAiExecutionProtocol({
+    ...input,
+    risk,
+    productionImpacting: input.productionImpacting === true || input.production === true,
+    material: input.material === true || risk === 'high' || risk === 'critical',
+  });
 
   return Object.freeze({
     schemaVersion: 2,
@@ -179,6 +187,8 @@ export function buildEkodiCommandPlan(input = {}, providers = []) {
     sentinelIndependent: assignment.sentinelIndependent,
     reverifierProvider: reverifier?.id || null,
     configuredProviders: Object.freeze(normalizedProviders.map(publicProvider)),
+    operatingDirective,
+    executionProtocol,
     principle: 'ekodi-controls-agents-agents-do-not-control-ekodi',
   });
 }

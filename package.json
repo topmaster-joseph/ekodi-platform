@@ -51,12 +51,13 @@
     "validate:capabilities": "node scripts/validate-capability-registry.mjs",
     "pretest": "npm run generate:user-services",
     "validate:insurance": "node sites/ekodi-insurance/test.mjs && node --test test/insurance-8g.test.mjs test/insurance-advisor-site.test.mjs test/insurance-practice-affiliations.test.mjs",
-    "validate:orchestration": "node scripts/validate-ekodi-ai-change-orchestration.mjs && node scripts/validate-workflow-orchestration-gates.mjs && node scripts/validate-main-write-boundaries.mjs",
+    "validate:orchestration": "node scripts/validate-ekodi-ai-change-orchestration.mjs && node scripts/validate-workflow-orchestration-gates.mjs && node scripts/validate-main-write-boundaries.mjs && npm run validate:orchestrator-directive",
     "validate:github-governance": "node scripts/github-governance-controller.mjs --contract && node --test test/github-governance-controller.test.mjs",
     "validate:ai-cost": "node --check ai-cost-policy.js && node --check scripts/validate-ai-cost-policy.mjs && node scripts/validate-ai-cost-policy.mjs && node --test test/ai-resource-policy.test.mjs test/ai-control-platform.test.mjs test/ai-provider-control.test.mjs test/ai-collaboration-settings.test.mjs test/ai-management-admin.test.mjs",
     "validate:generation-readiness": "node scripts/validate-generation-readiness.mjs",
     "validate:tapo-generation": "node scripts/validate-tapo-generation-10-plus.mjs",
-    "validate:admin-site-hierarchy": "node scripts/validate-admin-site-hierarchy.mjs"
+    "validate:admin-site-hierarchy": "node scripts/validate-admin-site-hierarchy.mjs",
+    "validate:orchestrator-directive": "node scripts/validate-ai-orchestrator-directive.mjs && node --test test/ai-orchestrator-directive.test.mjs"
   },
   "engines": {
     "node": ">=20"
