@@ -7,7 +7,7 @@
   });
   const runtime=(()=>{
     const host=location.hostname.toLowerCase();
-    if(host==='ekodi.kr'||host==='auth.ekodi.kr')return{environment:'production',targetOrigin:'https://ekodi.kr'};
+    if(host==='ekodi.kr')return{environment:'production',targetOrigin:'https://ekodi.kr'};
     if(host==='ekodi-shared-site-staging.ekodi-development.workers.dev')return{environment:'staging',targetOrigin:location.origin};
     if(host==='ekodi-platform-development.ekodi-development.workers.dev'||host==='localhost'||host==='127.0.0.1')return{environment:'development',targetOrigin:location.origin};
     return{environment:'unsupported',targetOrigin:''};
