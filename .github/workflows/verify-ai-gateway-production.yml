@@ -39,12 +39,16 @@ jobs:
             root_code=$(curl -sS -D /tmp/ai-root-headers -o /tmp/ai-root -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/ai/' || true)
             health_code=$(curl -sS -o /tmp/ai-health -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/ai/__health' || true)
             services_code=$(curl -sS -o /tmp/ai-services -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/ai/api/commons/services' || true)
+            client_code=$(curl -sS -D /tmp/ai-client-headers -o /tmp/ai-client -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/ai/api/commons/client.js' || true)
+            capabilities_code=$(curl -sS -o /tmp/ai-capabilities -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/ai/api/commons/capabilities' || true)
             requests_code=$(curl -sS -o /tmp/ai-requests -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/ai/api/commons/requests' || true)
             ideas_code=$(curl -sS -o /tmp/ai-ideas -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/ai/api/commons/ideas' || true)
             if [ "$canonical_code" = '200' ] \
               && [ "$root_code" = '200' ] \
               && [ "$health_code" = '200' ] \
               && [ "$services_code" = '200' ] \
+              && [ "$client_code" = '200' ] \
+              && [ "$capabilities_code" = '410' ] \
               && [ "$requests_code" = '200' ] \
               && [ "$ideas_code" = '401' ] \
               && grep -Fiq 'x-ekodi-canonical-surface: ai' /tmp/ai-canonical-headers \
@@ -56,12 +60,20 @@ jobs:
               && grep -Fq '"surface":"runtime-and-commons"' /tmp/ai-health \
               && grep -Fq '"commons":true' /tmp/ai-health \
               && grep -Fq '"categories"' /tmp/ai-services \
+              && ! grep -Fq '"capabilityId"' /tmp/ai-services \
+              && grep -Fiq 'x-ekodi-ai-asset: worker-owned-v1' /tmp/ai-client-headers \
+              && grep -Fiq 'content-type: text/javascript' /tmp/ai-client-headers \
+              && grep -Fq "const API_BASE=location.pathname.startsWith('/ai')?'/ai':'';" /tmp/ai-client \
+              && grep -Fq "api('/api/commons/config')" /tmp/ai-client \
+              && grep -Fq "api('/api/commons/match'" /tmp/ai-client \
+              && ! grep -Fq "api('/ai/api/commons/" /tmp/ai-client \
+              && grep -Fq 'operator_surface_moved' /tmp/ai-capabilities \
               && grep -Fq '"requests"' /tmp/ai-requests \
               && grep -Fq 'authentication_required' /tmp/ai-ideas; then
               passed='true'
               break
             fi
-            echo "AI Commons verification pending (attempt $attempt/8 canonical=$canonical_code root=$root_code health=$health_code services=$services_code requests=$requests_code ideas=$ideas_code)"
+            echo "AI Commons verification pending (attempt $attempt/8 canonical=$canonical_code root=$root_code health=$health_code services=$services_code client=$client_code capabilities=$capabilities_code requests=$requests_code ideas=$ideas_code)"
             sleep 8
           done
           test "$passed" = 'true' || (echo 'AI Commons production verification failed within bounded retries.' && exit 1)

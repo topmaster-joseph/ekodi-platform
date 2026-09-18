@@ -69,6 +69,22 @@ test('AI progress labels and final publish gate stay distinct',()=>{
   assert.equal(canFinalPublish('staged'),true);
 });
 
+test('Commons page loads browser assets only through the Worker-owned API boundary',()=>{
+  const html=fs.readFileSync(new URL('../ai-control/commons.html',import.meta.url),'utf8');
+  const worker=fs.readFileSync(new URL('../ai-control-worker.js',import.meta.url),'utf8');
+  const verifier=fs.readFileSync(new URL('../.github/workflows/verify-ai-gateway-production.yml',import.meta.url),'utf8');
+  assert.match(html,/\.\/api\/commons\/client\.js\?v=/);
+  assert.match(html,/\.\/api\/commons\/client\.css\?v=/);
+  assert.doesNotMatch(html,/\.\/commons\.js\?v=/);
+  assert.doesNotMatch(html,/\.\/commons\.css\?v=/);
+  assert.match(worker,/\/api\/commons\/client\.js/);
+  assert.match(worker,/\/api\/commons\/client\.css/);
+  assert.match(worker,/x-ekodi-ai-asset/);
+  assert.match(verifier,/ai\/api\/commons\/client\.js/);
+  assert.match(verifier,/capabilityId/);
+  assert.match(verifier,/api\('\/ai\/api\/commons\//);
+});
+
 test('public route is wired through the AI service binding',()=>{
   const worker=fs.readFileSync(new URL('../site-worker.js',import.meta.url),'utf8');
   assert.match(worker,/url\.pathname === '\/ai'/);

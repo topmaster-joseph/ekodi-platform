@@ -279,6 +279,15 @@ async function commonsPage(request,env){
   for(const [key,value] of Object.entries(headers()))out.headers.set(key,value);out.headers.set('cache-control','no-store');out.headers.set('x-ekodi-ai-surface','commons');return out;
 }
 
+async function commonsBrowserAsset(request,env,assetName,contentType){
+  const target=new URL(request.url);target.pathname='/' + assetName;target.search='';
+  const asset=await env.ASSETS.fetch(new Request(target.toString(),{method:'GET',headers:request.headers}));
+  if(!asset.ok)return json({error:'commons_asset_unavailable'},503);
+  const out=new Response(request.method==='HEAD'?null:asset.body,asset);
+  for(const [key,value] of Object.entries(headers()))out.headers.set(key,value);
+  out.headers.set('content-type',contentType);out.headers.set('cache-control','no-store');out.headers.set('x-ekodi-ai-asset','worker-owned-v1');return out;
+}
+
 
 async function requireCommonsSuperAdmin(request,env){
   const central=await centralAdminSession(request,env,'ai:publish');
@@ -334,6 +343,8 @@ async function handleCommonsAdmin(request,env,url){
 async function handleCommonsApi(request,env,ctx){
   const url=new URL(request.url);if(!url.pathname.startsWith('/api/commons/'))return null;
   if(url.pathname.startsWith('/api/commons/admin/'))return handleCommonsAdmin(request,env,url);
+  if(['GET','HEAD'].includes(request.method)&&url.pathname==='/api/commons/client.js')return commonsBrowserAsset(request,env,'commons.js','text/javascript; charset=utf-8');
+  if(['GET','HEAD'].includes(request.method)&&url.pathname==='/api/commons/client.css')return commonsBrowserAsset(request,env,'commons.css','text/css; charset=utf-8');
   if(request.method==='GET'&&url.pathname==='/api/commons/config')return json(commonsConfig(env));
   if(request.method==='GET'&&url.pathname==='/api/commons/services')return json(executionCatalogSnapshot(capabilityRegistry));
   if(request.method==='GET'&&url.pathname==='/api/commons/capabilities')return json({error:'operator_surface_moved'},410);
