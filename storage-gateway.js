@@ -176,6 +176,7 @@ async function archiveR2ToCanonicalDrive(env, body = {}, requestId = crypto.rand
       createdBy:record.createdBy,
       retentionClass:record.retentionClass,
       sourceModuleId:record.sourceModuleId || 'ekodi-live',
+      subfolderPath:record.subfolderPath || '',
     });
     await audit(env,{...record,storageRoute:result.storageRoute},requestId,result,'stored');
     return {ok:true,requestId,systemOfRecord:'google_workspace_shared_drive',driveName:result.canonicalDriveName||'EKODI',source:{provider:'r2',key:record.r2Key,size:object.size},file:result};
