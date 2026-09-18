@@ -26,6 +26,7 @@ on:
       - 'church-reports-control.js'
       - 'test/church-ministry-reports-contract.test.mjs'
       - 'mission-control-entry-worker.js'
+      - 'test/personal-finance-control-api-proxy.test.mjs'
       - 'realtime-control.js'
       - 'realtime-tenant-registry.js'
       - 'src/realtime/**'
@@ -164,6 +165,7 @@ on:
       - 'church-reports-control.js'
       - 'test/church-ministry-reports-contract.test.mjs'
       - 'mission-control-entry-worker.js'
+      - 'test/personal-finance-control-api-proxy.test.mjs'
       - 'realtime-control.js'
       - 'realtime-tenant-registry.js'
       - 'src/realtime/**'
@@ -325,11 +327,13 @@ jobs:
           node scripts/validate-ai-mission-governance.mjs
           node scripts/validate-security-baseline.mjs
           node scripts/validate-storage-ai-contracts.mjs
-          node --test test/universal-membership-contract.test.mjs test/device-control-contract.test.mjs test/core-ai-gateway.test.mjs test/external-ai-module-gateway.test.mjs test/ai-orchestrator-runtime.test.mjs test/ekodi-command-plane.test.mjs test/ekodi-capability-executor-fallback.test.mjs test/core-ai-command-plane-gateway.test.mjs test/ekodi-v8-durable-command-plane.test.mjs test/openai-provider-adapter.test.mjs test/cloudflare-workers-ai-provider-adapter.test.mjs test/ai-free-quota.test.mjs test/api-cost-control.test.mjs test/traffic-intelligence.test.mjs test/user-ai-routing-policy.test.mjs test/learning-control.test.mjs test/personal-ai-provider-registry.test.mjs test/personal-ai-bridge.test.mjs test/personal-ai-bridge-migration.test.mjs test/ekodi-mcp-gateway.test.mjs test/oauth-consent-contract.test.mjs test/devotional-control.test.mjs test/mail-control.test.mjs test/local-commerce-control.test.mjs test/affiliate-provider-feed.test.mjs test/mall-product-identity.test.mjs test/ekodi-coupang-mall.test.mjs test/coupang-partners-reporting.test.mjs test/preview-public-projection.test.mjs test/language-automation.test.mjs test/platform-maturity-admin.test.mjs test/realtime-core.test.mjs test/realtime-adaptive-media.test.mjs test/realtime-entitlement.test.mjs test/realtime-admin-bridge.test.mjs
+          node --test test/universal-membership-contract.test.mjs test/device-control-contract.test.mjs test/core-ai-gateway.test.mjs test/external-ai-module-gateway.test.mjs test/ai-orchestrator-runtime.test.mjs test/ekodi-command-plane.test.mjs test/ekodi-capability-executor-fallback.test.mjs test/core-ai-command-plane-gateway.test.mjs test/ekodi-v8-durable-command-plane.test.mjs test/openai-provider-adapter.test.mjs test/cloudflare-workers-ai-provider-adapter.test.mjs test/ai-free-quota.test.mjs test/api-cost-control.test.mjs test/traffic-intelligence.test.mjs test/user-ai-routing-policy.test.mjs test/learning-control.test.mjs test/personal-ai-provider-registry.test.mjs test/personal-ai-bridge.test.mjs test/personal-ai-bridge-migration.test.mjs test/ekodi-mcp-gateway.test.mjs test/oauth-consent-contract.test.mjs test/devotional-control.test.mjs test/mail-control.test.mjs test/local-commerce-control.test.mjs test/affiliate-provider-feed.test.mjs test/mall-product-identity.test.mjs test/ekodi-coupang-mall.test.mjs test/coupang-partners-reporting.test.mjs test/preview-public-projection.test.mjs test/language-automation.test.mjs test/platform-maturity-admin.test.mjs test/personal-finance-control-api-proxy.test.mjs test/realtime-core.test.mjs test/realtime-adaptive-media.test.mjs test/realtime-entitlement.test.mjs test/realtime-admin-bridge.test.mjs
           bash -n scripts/apply-d1-migrations-with-retry.sh
           grep -Fq 'main = "mission-control-entry-worker.js"' wrangler.api.toml
           grep -Fq 'OPENAI_MODEL = "gpt-5.6-terra"' wrangler.api.toml
           grep -Fq 'AI_MULTI_PROVIDER_ENABLED = "true"' wrangler.api.toml
+          grep -Fq 'binding = "PERSONAL_FINANCE"' wrangler.api.toml
+          grep -Fq 'service = "ekodi-personal-finance-api"' wrangler.api.toml
           ! grep -Fq 'OPENAI_API_KEY' wrangler.api.toml
 
   staging:
@@ -392,6 +396,9 @@ jobs:
           ALLOWED_ORIGINS = "https://ekodi-shared-site-staging.ekodi-development.workers.dev,https://ekodi-admin-staging.ekodi-development.workers.dev,http://127.0.0.1:4173,http://localhost:4173"
           [ai]
           binding = "AI"
+          [[services]]
+          binding = "PERSONAL_FINANCE"
+          service = "ekodi-personal-finance-api-staging"
           [observability.logs]
           enabled = true
           invocation_logs = true
@@ -417,6 +424,14 @@ jobs:
         run: npx --yes wrangler@${WRANGLER_VERSION} d1 migrations apply DB --remote --config wrangler.api.staging.runtime.toml
       - name: Deploy isolated Control staging
         run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.api.staging.runtime.toml
+      - name: Verify Personal Finance Control service binding in staging
+        shell: bash
+        run: |
+          set -euo pipefail
+          endpoint='https://ekodi-auth-api-staging.ekodi-development.workers.dev/api/control/personal-finance'
+          code=$(curl -sS -o /tmp/pf-control-staging.json -w '%{http_code}' --connect-timeout 5 --max-time 12 "$endpoint")
+          [ "$code" = '401' ]
+          grep -Fq '"code":"PF_ADMIN_AUTH_REQUIRED"' /tmp/pf-control-staging.json
       - name: Verify protected staging Google identity boundary
         shell: bash
         run: |
@@ -598,6 +613,7 @@ jobs:
           catalog=$(curl -sS -o /tmp/catalog.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/membership/catalog?site=invest')
           i18n=$(curl -sS -o /tmp/i18n.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/i18n/v1/status?service=community')
           language_admin=$(curl -sS -o /tmp/language-admin.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/control/language-status')
+          personal_finance=$(curl -sS -o /tmp/personal-finance.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/api/control/personal-finance')
           mcp_tools=$(curl -fsS --connect-timeout 5 --max-time 12 -H 'content-type: application/json' --data-binary '{"jsonrpc":"2.0","id":901,"method":"tools/list","params":{}}' 'https://ekodi.kr/mcp')
           printf '%s' "$mcp_tools" > /tmp/mcp-tools.json
           node -e "const b=require('/tmp/mcp-tools.json');const t=b?.result?.tools?.find(x=>x.name==='ekodi_delegate_command');if(!t||t.ekodiCapability!=='ai.command.delegate'||t.securitySchemes?.[0]?.type!=='oauth2'||t.annotations?.destructiveHint!==false)process.exit(1)"
@@ -619,6 +635,8 @@ jobs:
           [ "$catalog" = '200' ]
           [ "$i18n" = '200' ]
           [ "$language_admin" = '401' ]
+          [ "$personal_finance" = '401' ]
+          grep -Fq '"code":"PF_ADMIN_AUTH_REQUIRED"' /tmp/personal-finance.json
           grep -Fq '"publishedLocales":["ko-KR"]' /tmp/i18n.json
           grep -Fq '"inheritedDefault":true' /tmp/catalog.json
       - name: Verify Realtime SFU production health
