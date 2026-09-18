@@ -62,7 +62,7 @@ The Windows CI regression runs the sequence `candidate validation → existing i
 
 ## Enrollment flow
 
-1. Administrator signs into `admin.ekodi.kr`.
+1. Administrator signs into `https://ekodi.kr/admin`.
 2. Open **Devices** and select **Windows PC 등록**.
 3. The API returns a one-time enrollment code valid for 10 minutes.
 4. Run the generated PowerShell install command once on the target Windows PC.
