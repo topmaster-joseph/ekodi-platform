@@ -26,6 +26,7 @@ export function customerSmsOrderReply(kind,{orderText='',status=''}={}){
   if(kind==='updated')return `주문 내용을 "${clean(orderText,500)}"로 바꿨습니다. 주문확정은 1, 취소는 2를 보내주세요.`;
   if(kind==='confirmed')return '주문확정을 접수했습니다. 매장에서 주문 가능 여부를 확인한 뒤 다시 안내드립니다.';
   if(kind==='cancelled')return '문자주문이 취소되었습니다. 새 주문 내용을 보내면 다시 접수할 수 있습니다.';
+  if(kind==='no_draft')return '확정하거나 취소할 문자주문이 없습니다. 먼저 주문 내용을 문자로 보내주세요.';
   if(kind==='pending')return status==='store_accepted'?'이미 매장에서 접수한 주문이 있습니다. 변경이나 취소가 필요하면 매장에 직접 연락해 주세요.':'현재 주문이 매장 확인 중입니다. 잠시 후 매장 확인 결과를 문자로 안내드립니다.';
   if(kind==='accepted')return `매장에서 주문을 접수했습니다. 주문 내용: "${clean(orderText,500)}". 최종 금액과 수령·배달 안내는 매장 확인 내용에 따릅니다.`;
   if(kind==='rejected')return '매장 확인 결과 현재 이 문자주문을 접수하기 어렵습니다. 필요하면 매장으로 직접 문의해 주세요.';
@@ -136,7 +137,7 @@ async function handleInbound(request,env,executionCtx){
   if(input==='confirm'&&order?.status==='awaiting_customer_confirmation'){
     await env.DB.prepare(`UPDATE store_sms_orders SET status='customer_confirmed',confirmed_at=?,updated_at=? WHERE id=?`).bind(now,now,order.id).run();
     order={...order,status:'customer_confirmed'};reply=customerSmsOrderReply('confirmed');eventType='store_sms.customer_confirmed';
-  }else if(input==='cancel'&&order&&OPEN_STATES.includes(order.status)){
+  }else if(input==='cancel'&&order&&['awaiting_customer_confirmation','customer_confirmed'].includes(order.status)){
     await env.DB.prepare(`UPDATE store_sms_orders SET status='cancelled',cancelled_at=?,updated_at=? WHERE id=?`).bind(now,now,order.id).run();
     order={...order,status:'cancelled'};reply=customerSmsOrderReply('cancelled');eventType='store_sms.customer_cancelled';
   }else if(order?.status==='awaiting_customer_confirmation'&&input==='order_text'){
@@ -144,7 +145,9 @@ async function handleInbound(request,env,executionCtx){
     order={...order,raw_order_text:text};reply=customerSmsOrderReply('updated',{orderText:text});eventType='store_sms.draft_updated';
   }else if(order&&['customer_confirmed','store_accepted'].includes(order.status)){
     reply=customerSmsOrderReply('pending',{status:order.status});eventType='store_sms.pending_notice';
-  }else if(input==='order_text'||input==='confirm'||input==='cancel'){
+  }else if(!order&&['confirm','cancel'].includes(input)){
+    reply=customerSmsOrderReply('no_draft');eventType='store_sms.no_draft';
+  }else if(input==='order_text'){
     const created=await env.DB.prepare(`INSERT INTO store_sms_orders(store_slug,thread_id,status,raw_order_text,customer_display,created_at,updated_at) VALUES(?,?,'awaiting_customer_confirmation',?,?,?,?)`)
       .bind(storeSlug,threadId,text,customerDisplay,now,now).run();
     const orderId=Number(created.meta?.last_row_id||0);
