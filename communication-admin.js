@@ -4,9 +4,9 @@
   const SECTION = 'communication';
   const CSS = 'communication-admin.css';
   const services = [
-    { key:'mail-admin', title:'메일 관리', description:'개인·기관 메일 연결과 권한 경계를 관리합니다.', href:'https://mail.ekodi.kr/admin', action:'메일 관리 열기' },
-    { key:'mail', title:'메일', description:'권한이 있는 메일 계정과 메시지 작업 공간을 엽니다.', href:'https://mail.ekodi.kr/', action:'메일 열기' },
-    { key:'live', title:'라이브', description:'방송과 실시간 송출 서비스의 독립 운영 공간을 엽니다.', href:'https://live.ekodi.kr/', action:'라이브 열기' },
+    { key:'mail-admin', title:'메일 관리', description:'개인·기관 메일 연결과 권한 경계를 관리합니다.', href:'https://ekodi.kr/mail/admin', action:'메일 관리 열기' },
+    { key:'mail', title:'메일', description:'권한이 있는 메일 계정과 메시지 작업 공간을 엽니다.', href:'https://ekodi.kr/mail', action:'메일 열기' },
+    { key:'live', title:'라이브', description:'방송과 실시간 송출 서비스의 독립 운영 공간을 엽니다.', href:'https://ekodi.kr/live', action:'라이브 열기' },
   ];
 
   function el(tag, text = '', className = '') {
