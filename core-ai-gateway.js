@@ -1,7 +1,6 @@
 import {
   AI_RESILIENCE_POLICY,
   getAiResilienceStatus,
-  runAiEnhancedTask,
 } from './ai-resilience-runtime.js';
 import { buildEkodiAiOrchestrator } from './ai-orchestrator-runtime.js';
 import { createEkodiAiProviderRegistry } from './ekodi-ai-provider-registry.js';
@@ -166,23 +165,22 @@ export function buildCoreAiGateway(env = {}, providers = []) {
     commandPlan(input = {}) {
       return commandPlane.plan(input);
     },
-    async run({ taskName, fallback, timeoutMs, totalTimeoutMs, context = {} } = {}) {
+    async run({ taskName, fallback, timeoutMs, totalTimeoutMs, context = {}, risk = 'normal', collaboration = 'auto', requiredCapabilities = ['text'], lane = 'interactive', governance = {} } = {}) {
       const normalizedTask = String(taskName || '').trim().slice(0, 120);
       if (!normalizedTask) throw new TypeError('EKODI Core AI Gateway requires taskName.');
       if (typeof fallback !== 'function') {
         throw new TypeError('EKODI Core AI Gateway requires a non-AI fallback.');
       }
-      return runAiEnhancedTask({
-        env,
-        providers: adapters.map(adapter => ({
-          id: adapter.id,
-          available: adapter.available,
-          invoke: () => adapter.invoke(Object.freeze({ taskName: normalizedTask, context })),
-        })),
-        fallback: reason => fallback(Object.freeze({ ...reason, context })),
+      return orchestrator.run({
         taskName: normalizedTask,
-        timeoutMs,
-        totalTimeoutMs,
+        context,
+        fallback: reason => fallback(Object.freeze({ ...reason, context })),
+        timeoutMs: timeoutMs || totalTimeoutMs,
+        risk,
+        collaboration,
+        requiredCapabilities,
+        lane,
+        governance,
       });
     },
     async collaborate(options = {}) {
