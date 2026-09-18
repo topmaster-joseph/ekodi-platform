@@ -196,7 +196,7 @@ async function createCameraSourceSession(request,env,room,source){
   const id=uid('ms'),stamp=new Date().toISOString();
   await env.DB.prepare(`INSERT INTO realtime_media_sessions (id,room_id,tenant_id,actor_key,role,provider,provider_session_id,access_hash,status,created_at,updated_at) VALUES (?,?,?,?,?,'cloudflare-realtime',?,?,'active',?,?)`).bind(id,room.id,room.tenant_id,`camera-source:${source.id}`,'presenter',provider.sessionId,await sha256(accessKey),stamp,stamp).run();
   await env.DB.prepare(`UPDATE realtime_camera_sources SET status='connected',updated_at=? WHERE id=? AND room_id=?`).bind(stamp,source.id,room.id).run();
-  return json(request,env,{ok:true,source:{id:source.id,label:source.label,status:'connected'},session:{id,providerSessionId:provider.sessionId,accessKey,role:'presenter'},iceServers:[{urls:'stun:stun.cloudflare.com:3478'}]});
+  return json(request,env,{ok:true,source:{id:source.id,roomId:room.id,label:source.label,status:'connected'},session:{id,providerSessionId:provider.sessionId,accessKey,role:'presenter'},iceServers:[{urls:'stun:stun.cloudflare.com:3478'}]});
 }
 async function cameraSourceRoute(request,env,url,input){
   const inviteMatch=url.pathname.match(/^\/api\/realtime\/rooms\/([^/]+)\/camera-sources\/invites$/);
@@ -227,7 +227,7 @@ async function cameraSourceRoute(request,env,url,input){
     let source=invite.claimed_source_id?await env.DB.prepare(`SELECT * FROM realtime_camera_sources WHERE id=? AND room_id=?`).bind(invite.claimed_source_id,room.id).first():null;
     if(!source){const sid=uid('camsrc'),stamp=new Date().toISOString();await env.DB.prepare(`INSERT INTO realtime_camera_sources (id,room_id,tenant_id,invite_id,label,status,created_at,updated_at) VALUES (?,?,?,?,?,'pending',?,?)`).bind(sid,room.id,room.tenant_id,invite.id,invite.label,stamp,stamp).run();await env.DB.prepare(`UPDATE realtime_camera_source_invites SET claimed_source_id=?,updated_at=? WHERE id=?`).bind(sid,stamp,invite.id).run();source=await env.DB.prepare(`SELECT * FROM realtime_camera_sources WHERE id=?`).bind(sid).first();}
     if(source.status==='revoked')return json(request,env,{ok:false,error:'camera_source_revoked'},403);
-    if(source.status!=='approved')return json(request,env,{ok:true,waitingApproval:true,source:{id:source.id,label:source.label,status:source.status}},202);
+    if(source.status!=='approved')return json(request,env,{ok:true,waitingApproval:true,source:{id:source.id,roomId:room.id,label:source.label,status:source.status}},202);
     await env.DB.prepare(`UPDATE realtime_camera_source_invites SET status='used',updated_at=? WHERE id=?`).bind(new Date().toISOString(),invite.id).run();
     return createCameraSourceSession(request,env,room,source);
   }
