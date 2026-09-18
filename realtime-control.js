@@ -13,7 +13,7 @@ function slug(value){const v=clean(value,80).toLowerCase();return /^[a-z0-9][a-z
 function uid(prefix){return `${prefix}_${crypto.randomUUID().replaceAll('-','')}`}
 function bearer(request){const raw=clean(request.headers.get('authorization'),8192);return raw.toLowerCase().startsWith('bearer ')?raw.slice(7).trim():''}
 function originAllowed(request,env){const origin=clean(request.headers.get('origin'),300);if(!origin)return '';const allowed=new Set(clean(env.ALLOWED_ORIGINS,20000).split(',').map(x=>x.trim()).filter(Boolean));return allowed.has(origin)?origin:''}
-function cors(request,env){const origin=originAllowed(request,env);const headers={'access-control-allow-methods':'GET, POST, PUT, OPTIONS','access-control-allow-headers':'authorization, content-type, x-ekodi-session-key','access-control-max-age':'86400','vary':'Origin'};if(origin)headers['access-control-allow-origin']=origin;return headers}
+function cors(request,env){const origin=originAllowed(request,env);const headers={'access-control-allow-methods':'GET, POST, PUT, PATCH, DELETE, OPTIONS','access-control-allow-headers':'authorization, content-type, x-ekodi-session-key','access-control-max-age':'86400','vary':'Origin'};if(origin)headers['access-control-allow-origin']=origin;return headers}
 function json(request,env,data,status=200){return new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff','referrer-policy':'no-referrer',...cors(request,env)}})}
 async function body(request){try{return await request.json()}catch{return null}}
 async function sha256(value){const bytes=new TextEncoder().encode(String(value));const digest=await crypto.subtle.digest('SHA-256',bytes);return [...new Uint8Array(digest)].map(x=>x.toString(16).padStart(2,'0')).join('')}
@@ -49,10 +49,13 @@ function tenantMatches(context,tenant){
   const aliases=realtimeTenantAliases(tenant);
   return aliases.has(context?.tenant)||aliases.has(slug(context?.tenantId));
 }
+function platformOwnerEmails(env={}){
+  return new Set([clean(env.ADMIN_EMAIL,254),...clean(env.ADMIN_GOOGLE_BOOTSTRAP_EMAILS,4000).split(',').map(v=>v.trim())].map(v=>v.toLowerCase()).filter(Boolean));
+}
 export function authorizationRole(identity,tenant,env){
   if(!identity)return '';
   if(identity.platformAdminRole==='super_admin')return 'owner';
-  if(identity.email&&identity.email===clean(env.ADMIN_EMAIL,254).toLowerCase())return 'owner';
+  if(identity.email&&platformOwnerEmails(env).has(identity.email.toLowerCase()))return 'owner';
   return normalizeRealtimeRole(identity.contexts?.find(context=>tenantMatches(context,tenant))?.authorizationRole||'');
 }
 async function resolveAuthorizationRole(identity,tenant,env){
