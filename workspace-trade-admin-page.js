@@ -32,9 +32,9 @@ function tradeAdminClient(ADMIN_HUB){
   function setHeader(){
     $('workspaceName').textContent='에코디비즈';$('scopeLabel').textContent='에코디비즈';$('serviceName').textContent='무역거래 관리';
     $('breadcrumb').textContent='에코디비즈 / 무역거래 / ADMIN';$('publicLink').href=`/${workspaceUrlSlug}/trade`;$('publicLink').textContent='관계자 화면';    const nav=$('adminNav');nav.replaceChildren();
-    [['overview','운영'],['companies','거래관리'],['publishing','채널 · 게시'],['access','사용자 · 관리자']].forEach(([key,label])=>{
-      const b=document.createElement('button');b.type='button';b.dataset.adminGroup=key;b.textContent=label;
-      if(key===section)b.classList.add('active');b.onclick=()=>{nav.querySelectorAll('[data-admin-group]').forEach(node=>node.classList.toggle('active',node===b));renderSecondaryNav(key);};nav.append(b);
+    [['overview','홈'],['companies','거래처'],['publishing','채널 · 게시'],['access','권한']].forEach(([key,label])=>{
+      const a=document.createElement('a');a.href=sectionHref(key);a.dataset.adminGroup=key;a.textContent=label;
+      if(key===section)a.classList.add('active');nav.append(a);
     });
     renderSecondaryNav();
   }
@@ -114,7 +114,7 @@ function tradeAdminClient(ADMIN_HUB){
     $('tradeAdminSearch')?.addEventListener('input',apply);$('tradeAdminRole')?.addEventListener('change',apply);$('tradeAdminStatus')?.addEventListener('change',apply);bindAdminForm();if(editing)document.querySelector('.editor-shell')?.scrollIntoView({block:'nearest'});state('전체관리자');
   }
   function renderOverview(){
-    sectionTitle('무역거래 대시보드','에코디비즈 전체권한과 거래회사별 위임권한을 분리해 운영합니다.');accessSummary();
+    sectionTitle('운영 홈','내 거래 범위와 다음 관리 행동을 한눈에 확인합니다.');accessSummary();
     const visible=companies.length,active=companies.filter(c=>c.status==='active').length;
     $('mainPanel').innerHTML=`<section id="scope"><h2>현재 관리 범위</h2><div class="service-list"><div class="service-row"><div><strong>${esc(scopeLabel(access?.scope_mode))}</strong><p>${access?.scope_mode==='all'?'현재와 앞으로 등록되는 모든 거래회사를 관리합니다.':`지정된 ${visible}개 거래회사만 접근합니다.`}</p></div><a href="${base}/companies">거래회사 보기</a></div><div class="service-row"><div><strong>활성 거래회사 ${active}개</strong><p>회사별 데이터와 업무는 동일한 권한 범위로 제한합니다.</p></div>${access?.can_manage_access?`<a href="${base}/access">관리자 지정</a>`:'<span class="tag">위임됨</span>'}</div></div></section>`;
     state(access?.role==='workspace_admin'?'전체관리자':'범위 관리자');
