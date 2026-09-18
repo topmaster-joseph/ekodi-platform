@@ -90,8 +90,9 @@ async function settings(env) {
 function mailConfigured(env) {
   return Boolean(clean(env.GMAIL_CLIENT_ID, 500) && clean(env.GMAIL_CLIENT_SECRET, 500) && clean(env.GMAIL_REFRESH_TOKEN, 2000));
 }
+function aiGateway(env) { return buildCoreAiGateway({ ...env, AI_MULTI_PROVIDER_ENABLED:'true' }); }
 function aiConfigured(env) {
-  const providers = buildCoreAiGateway(env).status()?.orchestration?.configuredProviders || [];
+  const providers = aiGateway(env).status()?.orchestration?.configuredProviders || [];
   return providers.some(provider => provider.available);
 }
 function sourceEndpoint(env) { return clean(env.COMMUNITY_REPORT_SOURCE_URL, 1000) || DEFAULT_SOURCE_URL; }
@@ -282,7 +283,7 @@ async function generateWithOrchestrator(env, report) {
     JSON.stringify(facts),
     '다음 순서로 작성: 1. 지난 2개월 주요 사역 2. 참여·성과·변화 3. 감사와 평가 4. 향후 2개월 계획 5. 협조 요청 6. 기도제목.',
   ].join('\n');
-  const result = await buildCoreAiGateway(env).run({
+  const result = await aiGateway(env).run({
     taskName: "community-ministry-report-draft",
     context: { message, page: { section:'reports', title:"Community ministry report", pathname:'/reports' } },
     requiredCapabilities:['text'],
