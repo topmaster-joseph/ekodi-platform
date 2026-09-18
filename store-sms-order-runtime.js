@@ -3,7 +3,6 @@ import { enqueueMessengerOutbox, drainMessengerOutbox } from './messenger-outbox
 
 const DEFAULT_STORES=Object.freeze(['jadam','pizzamaru','yogurt']);
 const OPEN_STATES=Object.freeze(['awaiting_customer_confirmation','customer_confirmed','store_accepted']);
-const TERMINAL_STATES=new Set(['completed','cancelled','rejected']);
 const clean=(value,max=8000)=>String(value??'').trim().slice(0,max);
 const nowIso=()=>new Date().toISOString();
 const safeJson=value=>{try{return JSON.stringify(value??{})}catch{return '{}'}};
@@ -17,12 +16,12 @@ export function classifySmsOrderInput(value=''){
 }
 
 export function customerSmsOrderReply(kind,{orderText='',status=''}={}){
-  if(kind==='draft')return `문자주문 내용을 확인해 주세요. "\${clean(orderText,500)}" 주문이 맞으면 1, 취소는 2를 보내주세요.`;
-  if(kind==='updated')return `주문 내용을 "\${clean(orderText,500)}"로 바꿨습니다. 주문확정은 1, 취소는 2를 보내주세요.`;
+  if(kind==='draft')return `문자주문 내용을 확인해 주세요. "${clean(orderText,500)}" 주문이 맞으면 1, 취소는 2를 보내주세요.`;
+  if(kind==='updated')return `주문 내용을 "${clean(orderText,500)}"로 바꿨습니다. 주문확정은 1, 취소는 2를 보내주세요.`;
   if(kind==='confirmed')return '주문확정을 접수했습니다. 매장에서 주문 가능 여부를 확인한 뒤 다시 안내드립니다.';
   if(kind==='cancelled')return '문자주문이 취소되었습니다. 새 주문 내용을 보내면 다시 접수할 수 있습니다.';
   if(kind==='pending')return status==='store_accepted'?'이미 매장에서 접수한 주문이 있습니다. 변경이나 취소가 필요하면 매장에 직접 연락해 주세요.':'현재 주문이 매장 확인 중입니다. 잠시 후 매장 확인 결과를 문자로 안내드립니다.';
-  if(kind==='accepted')return `매장에서 주문을 접수했습니다. 주문 내용: "\${clean(orderText,500)}". 최종 금액과 수령·배달 안내는 매장 확인 내용에 따릅니다.`;
+  if(kind==='accepted')return `매장에서 주문을 접수했습니다. 주문 내용: "${clean(orderText,500)}". 최종 금액과 수령·배달 안내는 매장 확인 내용에 따릅니다.`;
   if(kind==='rejected')return '매장 확인 결과 현재 이 문자주문을 접수하기 어렵습니다. 필요하면 매장으로 직접 문의해 주세요.';
   if(kind==='completed')return '주문 처리가 완료되었습니다. 이용해 주셔서 감사합니다.';
   return '문자주문 요청을 확인했습니다.';
