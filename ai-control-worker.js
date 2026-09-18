@@ -4,7 +4,7 @@ import {AI_ROUTER_SCORE_POLICY} from './ai-router-score.js';
 import {loadAiCollaborationPolicy} from './ai-collaboration-settings.js';
 import { LOCAL_EXECUTION_POLICY, compareLocalExecutionCandidates, localExecutionPolicySnapshot, normalizeLocalResource } from './local-execution-policy.js';
 import capabilityRegistry from './config/capability-registry.json' with { type: 'json' };
-import {AI_COMMONS_POLICY,canFinalPublish,executionCatalogSnapshot,listCommonCapabilities,normalizeAiIdeaInput,publicIdeaView,rankCommonCapabilities,rankExecutionServices,requestSimilarity,suggestedIdeaState} from './ai-commons.js';
+import {AI_COMMONS_POLICY,adminIdeaView,canFinalPublish,executionCatalogSnapshot,memberIdeaView,normalizeAiIdeaInput,publicRequestView,rankCommonCapabilities,rankExecutionServices,rankPublicExecutionServices,requestSimilarity,suggestedIdeaState} from './ai-commons.js';
 
 const clean=value=>String(value??'').trim();
 const now=()=>new Date().toISOString();
@@ -261,9 +261,9 @@ async function requireCommonsSuperAdmin(request,env){
   if(!allowed.length||!allowed.includes(legacy.user.email))return{error:json({error:'super_admin_required'},403)};
   return legacy;
 }
-async function aggregateCommonsIdeas(env,limit=100){
+async function aggregateCommonsIdeas(env,limit=100,view=publicRequestView){
   const sql='SELECT MIN(id) id,fingerprint,MAX(problem) problem,MAX(outcome) outcome,MAX(audience) audience,MAX(current_way) current_way,MAX(status) status,MAX(matched_capability_id) matched_capability_id,MAX(development_task_id) development_task_id,MAX(review_decision) review_decision,(SELECT GROUP_CONCAT(DISTINCT src.source_service_id) FROM ai_commons_idea_sources src WHERE src.fingerprint=ai_commons_ideas.fingerprint) source_services,COUNT(DISTINCT user_id) request_count,MIN(created_at) created_at,MAX(updated_at) updated_at FROM ai_commons_ideas GROUP BY fingerprint ORDER BY request_count DESC,updated_at DESC LIMIT ?';
-  const rows=await env.DB.prepare(sql).bind(Math.max(1,Math.min(200,Number(limit)||100))).all();return(rows.results||[]).map(publicIdeaView);
+  const rows=await env.DB.prepare(sql).bind(Math.max(1,Math.min(200,Number(limit)||100))).all();return(rows.results||[]).map(view);
 }
 async function updateIdeaGroup(env,fingerprint,fields={}){const entries=Object.entries(fields);if(!entries.length)return;await env.DB.prepare('UPDATE ai_commons_ideas SET '+entries.map(([key])=>key+'=?').join(',')+' WHERE fingerprint=?').bind(...entries.map(([,value])=>value),fingerprint).run();}
 async function recordCommonsSource(env,userId,fingerprint,sourceServiceId){if(!sourceServiceId)return;try{await env.DB.prepare('INSERT OR IGNORE INTO ai_commons_idea_sources (id,user_id,fingerprint,source_service_id,created_at) VALUES (?,?,?,?,?)').bind(crypto.randomUUID(),userId,fingerprint,sourceServiceId,now()).run();}catch(error){console.warn('ai commons source',clean(error?.message||error));}}
@@ -293,9 +293,9 @@ async function startCommonsPipeline(env,ctx,auth,input,fingerprint){
 }
 async function handleCommonsAdmin(request,env,url){
   const auth=await requireCommonsSuperAdmin(request,env);if(auth.error)return auth.error;if(!dbReady(env))return json({error:'state_store_unavailable'},503);
-  if(request.method==='GET'&&url.pathname==='/api/commons/admin/requests')return json({requests:await aggregateCommonsIdeas(env,200),finalPublishAuthority:'super_admin'});
+  if(request.method==='GET'&&url.pathname==='/api/commons/admin/requests')return json({requests:await aggregateCommonsIdeas(env,200,adminIdeaView),finalPublishAuthority:'super_admin'});
   const match=url.pathname.match(/^\/api\/commons\/admin\/requests\/([a-f0-9]{64})\/decision$/);if(request.method==='POST'&&match){
-    const input=await body(request)||{};const decision=clean(input.decision).toLowerCase();const fingerprint=match[1];const rows=await aggregateCommonsIdeas(env,200);const idea=rows.find(item=>item.fingerprint===fingerprint);if(!idea)return json({error:'request_not_found'},404);
+    const input=await body(request)||{};const decision=clean(input.decision).toLowerCase();const fingerprint=match[1];const rows=await aggregateCommonsIdeas(env,200,adminIdeaView);const idea=rows.find(item=>item.fingerprint===fingerprint);if(!idea)return json({error:'request_not_found'},404);
     if(decision==='publish'){if(!canFinalPublish(idea.status))return json({error:'request_not_staged'},409);await updateIdeaGroup(env,fingerprint,{status:'shared',review_decision:'publish',reviewed_by:auth.user.email,reviewed_at:now(),published_service_id:clean(input.serviceId),updated_at:now()});}
     else if(decision==='hold')await updateIdeaGroup(env,fingerprint,{review_decision:'hold',reviewed_by:auth.user.email,reviewed_at:now(),updated_at:now()});
     else if(decision==='reject')await updateIdeaGroup(env,fingerprint,{status:'rejected',review_decision:'reject',reviewed_by:auth.user.email,reviewed_at:now(),updated_at:now()});
@@ -309,30 +309,30 @@ async function handleCommonsApi(request,env,ctx){
   if(url.pathname.startsWith('/api/commons/admin/'))return handleCommonsAdmin(request,env,url);
   if(request.method==='GET'&&url.pathname==='/api/commons/config')return json(commonsConfig(env));
   if(request.method==='GET'&&url.pathname==='/api/commons/services')return json(executionCatalogSnapshot(capabilityRegistry));
-  if(request.method==='GET'&&url.pathname==='/api/commons/capabilities')return json({policy:AI_COMMONS_POLICY,capabilities:listCommonCapabilities(capabilityRegistry)});
+  if(request.method==='GET'&&url.pathname==='/api/commons/capabilities')return json({error:'operator_surface_moved'},410);
   if(request.method==='GET'&&url.pathname==='/api/commons/requests'){
-    if(!dbReady(env))return json({requests:[]});try{return json({requests:await aggregateCommonsIdeas(env,100)})}catch{return json({requests:[],schemaReady:false})}
+    if(!dbReady(env))return json({requests:[]});try{return json({requests:await aggregateCommonsIdeas(env,100,publicRequestView)})}catch{return json({requests:[],schemaReady:false})}
   }
   if(request.method==='POST'&&url.pathname==='/api/commons/match'){
     const input=await body(request)||{};const job=clean(input.job);if(!job||job.length>1200)return json({error:'invalid_job'},400);
-    return json({services:rankExecutionServices(job,capabilityRegistry,5),matches:rankCommonCapabilities(job,capabilityRegistry,5)});
+    return json({services:rankPublicExecutionServices(job,capabilityRegistry,5)});
   }
   if(url.pathname==='/api/commons/ideas'){
     const auth=await requireCommonsMember(request,env);if(auth.error)return auth.error;if(!dbReady(env))return json({error:'state_store_unavailable'},503);
     if(request.method==='GET'){
-      try{const rows=await env.DB.prepare('SELECT id,fingerprint,problem,outcome,audience,current_way,source_service_id,status,matched_capability_id,development_task_id,review_decision,created_at,updated_at FROM ai_commons_ideas WHERE user_id=? ORDER BY created_at DESC LIMIT 100').bind(auth.user.id).all();return json({ideas:(rows.results||[]).map(publicIdeaView)})}catch{return json({error:'ai_commons_schema_unavailable'},503)}
+      try{const rows=await env.DB.prepare('SELECT id,fingerprint,problem,outcome,audience,current_way,source_service_id,status,matched_capability_id,development_task_id,review_decision,created_at,updated_at FROM ai_commons_ideas WHERE user_id=? ORDER BY created_at DESC LIMIT 100').bind(auth.user.id).all();return json({ideas:(rows.results||[]).map(memberIdeaView)})}catch{return json({error:'ai_commons_schema_unavailable'},503)}
     }
     if(request.method==='POST'){
       let input;try{input=normalizeAiIdeaInput(await body(request)||{})}catch(error){return json({error:error.message},400)}
       const services=rankExecutionServices(input.job,capabilityRegistry,5);const matches=rankCommonCapabilities(input.job,capabilityRegistry,5);const status=suggestedIdeaState(matches);const matchedCapabilityId=matches[0]?.id||null;const exactFingerprint=await ideaFingerprint(input);const fingerprint=await similarIdeaFingerprint(env,input,exactFingerprint);const stamp=now();
       try{
         const mine=await env.DB.prepare('SELECT id,fingerprint,problem,outcome,audience,current_way,source_service_id,status,matched_capability_id,development_task_id,review_decision,created_at,updated_at FROM ai_commons_ideas WHERE user_id=? AND fingerprint=? LIMIT 1').bind(auth.user.id,fingerprint).first();
-        if(mine){await recordCommonsSource(env,auth.user.id,fingerprint,input.sourceServiceId);const count=await env.DB.prepare('SELECT COUNT(DISTINCT user_id) n FROM ai_commons_ideas WHERE fingerprint=?').bind(fingerprint).first();return json({idea:publicIdeaView({...mine,request_count:count?.n||1}),services,matches,reusedSubmission:true});}
+        if(mine){await recordCommonsSource(env,auth.user.id,fingerprint,input.sourceServiceId);const count=await env.DB.prepare('SELECT COUNT(DISTINCT user_id) n FROM ai_commons_ideas WHERE fingerprint=?').bind(fingerprint).first();return json({idea:memberIdeaView({...mine,request_count:count?.n||1}),services:rankPublicExecutionServices(input.job,capabilityRegistry,5),reusedSubmission:true});}
         const group=await env.DB.prepare('SELECT status,matched_capability_id,development_task_id,review_decision FROM ai_commons_ideas WHERE fingerprint=? ORDER BY created_at ASC LIMIT 1').bind(fingerprint).first();
         const inheritedStatus=group?.status||status;const id=crypto.randomUUID();await env.DB.prepare('INSERT INTO ai_commons_ideas (id,user_id,user_email,fingerprint,problem,outcome,audience,current_way,source_service_id,status,matched_capability_id,development_task_id,review_decision,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)').bind(id,auth.user.id,auth.user.email||null,fingerprint,input.problem,input.outcome,input.audience,input.currentWay,input.sourceServiceId||'',inheritedStatus,group?.matched_capability_id||matchedCapabilityId,group?.development_task_id||null,group?.review_decision||null,stamp,stamp).run();
         await recordCommonsSource(env,auth.user.id,fingerprint,input.sourceServiceId);
         if(!group&&inheritedStatus==='submitted')await startCommonsPipeline(env,ctx,auth,input,fingerprint);
-        const count=await env.DB.prepare('SELECT COUNT(DISTINCT user_id) n FROM ai_commons_ideas WHERE fingerprint=?').bind(fingerprint).first();const latest=await env.DB.prepare('SELECT * FROM ai_commons_ideas WHERE id=?').bind(id).first();return json({idea:publicIdeaView({...latest,request_count:count?.n||1}),services,matches,reusedSubmission:Boolean(group)},201);
+        const count=await env.DB.prepare('SELECT COUNT(DISTINCT user_id) n FROM ai_commons_ideas WHERE fingerprint=?').bind(fingerprint).first();const latest=await env.DB.prepare('SELECT * FROM ai_commons_ideas WHERE id=?').bind(id).first();return json({idea:memberIdeaView({...latest,request_count:count?.n||1}),services:rankPublicExecutionServices(input.job,capabilityRegistry,5),reusedSubmission:Boolean(group)},201);
       }catch(error){console.error('ai commons idea',clean(error?.message||error));return json({error:'ai_commons_schema_unavailable'},503)}
     }
   }
