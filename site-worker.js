@@ -556,6 +556,14 @@ async function proxyAdminPersonalFinance(request, env) {
   headers.set('x-ekodi-admin-proxy', 'personal-finance-binding-v1');
   const body = ['GET','HEAD'].includes(request.method) ? undefined : await request.arrayBuffer();
   const upstream = await env.PERSONAL_FINANCE.fetch(new Request(target.toString(), {method:request.method,headers,body,redirect:'manual'}));
+  if (upstream.status === 401) {
+    const response = new Response(JSON.stringify({error:'EKODI 관리자 인증이 필요합니다.',code:'PF_ADMIN_AUTH_REQUIRED'}), {
+      status:401,
+      headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store'},
+    });
+    response.headers.set('X-EKODI-Personal-Finance-Proxy', 'service-binding-v1');
+    return withHostSecurity(response, ADMIN_CSP, 'no-store', 'admin-personal-finance-proxy');
+  }
   const response = new Response(upstream.body, upstream);
   response.headers.set('X-EKODI-Personal-Finance-Proxy', 'service-binding-v1');
   return withHostSecurity(response, ADMIN_CSP, 'no-store', 'admin-personal-finance-proxy');
