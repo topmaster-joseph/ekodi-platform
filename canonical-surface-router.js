@@ -4,6 +4,13 @@ import { injectEkodiShell } from './ekodi-shell-injector.js';
 const CANONICAL_HOST='ekodi.kr';
 const SURFACE_PREFIXES=Object.freeze({my:'/my',admin:'/admin',auth:'/auth'});
 const SYSTEM_PATHS=Object.freeze(['/api','/mcp','/webhooks','/health','/connect']);
+const STATIC_CANONICAL_SERVICES=Object.freeze([
+  Object.freeze({id:'shop',prefix:'/shop',title:'쇼핑플랫폼',status:'PLANNED',description:'개인·사업자·기관·단체가 독립 쇼핑몰을 만들고 운영하는 공통 커머스 플랫폼을 준비하고 있습니다.'}),
+  Object.freeze({id:'pay',prefix:'/pay',title:'EKODI Pay',status:'PREPARING',description:'결제와 정산을 안전하게 연결하는 공통 결제 서비스를 준비하고 있습니다.'}),
+  Object.freeze({id:'live',prefix:'/live',title:'EKODI Live',status:'PREPARING',description:'예배·행사·교육·지역 콘텐츠의 라이브 운영을 위한 공통 방송 서비스를 준비하고 있습니다.'}),
+  Object.freeze({id:'cloud',prefix:'/cloud',title:'EKODI Cloud',status:'PREPARING',description:'파일과 협업 자산을 운영공간별로 안전하게 관리하는 공통 클라우드 서비스를 준비하고 있습니다.'}),
+  Object.freeze({id:'media',prefix:'/media',title:'에코디미디어',status:'PLANNED',description:'영상·이미지·라이브 콘텐츠 제작과 배포를 연결하는 미디어 서비스를 준비하고 있습니다.'}),
+]);
 const PUBLIC_EXECUTION_SURFACES=Object.freeze([
   Object.freeze({id:'shell',prefix:'/shell',binding:'SHELL',basePathAware:true}),
   Object.freeze({id:'mission-application',prefix:'/ekodimission/api/activities/260925-chuseok-open-table/applications',binding:'SPACE',preservePrefix:true,basePathAware:true}),
@@ -33,9 +40,6 @@ const PUBLIC_EXECUTION_SURFACES=Object.freeze([
   Object.freeze({id:'marketing-api',prefix:'/marketing-api',binding:'MARKETING_DOMAIN',virtualHost:'marketing-api.ekodi.kr',basePathAware:true}),
   Object.freeze({id:'marketing-connect-api',prefix:'/marketing-connect-api',binding:'MARKETING_GROWTH',virtualHost:'marketing-connect-api.ekodi.kr',basePathAware:true}),
   Object.freeze({id:'marketing-publish-api',prefix:'/marketing-publish-api',binding:'MARKETING_PUBLISHING',virtualHost:'marketing-publish-api.ekodi.kr',basePathAware:true}),
-  Object.freeze({id:'pay',prefix:'/pay',legacyHost:'pay.ekodi.kr'}),
-  Object.freeze({id:'live',prefix:'/live',legacyHost:'live.ekodi.kr'}),
-  Object.freeze({id:'cloud',prefix:'/cloud',legacyHost:'cloud.ekodi.kr'}),
   Object.freeze({id:'trade',prefix:'/trade',legacyHost:'trade.ekodi.kr'}),
   Object.freeze({id:'lab',prefix:'/ekodilab',host:'ekodilab.pages.dev',canonicalHost:'lab.ekodi.kr'}),
   Object.freeze({id:'cafe',prefix:'/cafe',host:'ekodi-cafe.pages.dev',canonicalHost:'cafe.ekodi.kr'}),
@@ -94,6 +98,13 @@ function serviceUnavailable(surface){
     'cache-control':'no-store','content-type':'text/plain; charset=utf-8',
     'x-content-type-options':'nosniff','x-ekodi-surface':surface,
   }});
+}
+function staticCanonicalServiceForPath(pathname){
+  return STATIC_CANONICAL_SERVICES.find(item=>pathname===item.prefix||pathname===`${item.prefix}/`)||null;
+}
+function staticCanonicalServicePage(spec){
+  const html=`<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>${spec.title} · EKODI</title><style>body{margin:0;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f7f8fa;color:#17191d}main{max-width:760px;margin:0 auto;padding:72px 24px}.eyebrow{font-size:12px;font-weight:700;letter-spacing:.12em;color:#667085}h1{font-size:clamp(34px,7vw,58px);margin:14px 0 18px;line-height:1.05}p{font-size:18px;line-height:1.7;color:#475467}.status{display:inline-block;margin-top:22px;padding:8px 12px;border:1px solid #d0d5dd;border-radius:999px;font-size:12px;font-weight:700;letter-spacing:.08em}</style></head><body><main><div class="eyebrow">EKODI · CANONICAL SERVICE</div><h1>${spec.title}</h1><p>${spec.description}</p><span class="status">${spec.status}</span></main></body></html>`;
+  return new Response(html,{status:200,headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff','x-robots-tag':'noindex, nofollow, noarchive','x-ekodi-canonical-surface':spec.id,'x-ekodi-canonical-path':spec.prefix}});
 }
 async function proxyBinding(request,binding,prefix,surface){
   if(!binding?.fetch)return serviceUnavailable(surface);
@@ -239,6 +250,7 @@ async function proxyExecutionSurface(request,env,spec,legacyFetch,externalFetch)
       'x-robots-tag':'noindex, nofollow, noarchive',
     }});
   }
+  const staticService=staticCanonicalServiceForPath(path);if(staticService)return staticCanonicalServicePage(staticService);
   const executionSurface=executionSurfaceForPath(path);if(executionSurface)return proxyExecutionSurface(request,env,executionSurface,legacyFetch,externalFetch);
   if(path===SURFACE_PREFIXES.my)return canonicalSlashRedirect(request,SURFACE_PREFIXES.my);
   if(path.startsWith(`${SURFACE_PREFIXES.my}/`))return proxyBinding(request,env?.MY,SURFACE_PREFIXES.my,'my');
