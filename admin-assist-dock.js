@@ -1,6 +1,6 @@
 (() => {
   'use strict';
-  const API='https://api.ekodi.kr';
+  const API='https://ekodi.kr';
   const TOKEN_KEY='ekodi-auth-token';
   const STATE_KEY='ekodi-assist-state-v2';
   const HISTORY_KEY='ekodi-admin-command-history-v1';
@@ -34,7 +34,7 @@
   function saveSessions(){try{sessionStorage.setItem(HISTORY_KEY,JSON.stringify(sessions.slice(0,MAX_SESSIONS)))}catch{}}
   function esc(text){return String(text??'')}
   function now(){return new Date().toISOString()}
-  function titleFor(text){const value=String(text||'').replace(/\s+/g,' ').trim();return value.length>44?`${value.slice(0,44)}…`:value||'새 명령'}
+  function titleFor(text){const value=String(text||'').replace(/\s+/g,' ').trim();return value.length>44?`${value.slice(0,44)}…`:value||'새 대화'}
   function rememberAi(role,text){const value=String(text||'').trim();if(!value)return;aiHistory.push({role,text:value.slice(0,2000)});if(aiHistory.length>8)aiHistory=aiHistory.slice(-8)}
   function context(){
     const active=document.querySelector('.sidebar .nav.active[data-section]');
@@ -85,7 +85,7 @@
     if(document.querySelector('#ekodiAssistDock')||!token())return;
     positionWorkbench();
     root=el('div','ekodi-assist');root.id='ekodiAssistDock';
-    root.innerHTML='<button type="button" class="ekodi-assist-launcher" id="ekodiAssistLauncher" aria-label="EKODI AI 열기" aria-expanded="false">✦<span class="ekodi-assist-badge" id="ekodiAssistBadge" hidden></span></button><section class="ekodi-assist-panel" id="ekodiAssistPanel" hidden aria-label="EKODI AI 명령 워크벤치"><aside class="ekodi-assist-rail" id="ekodiAssistRail"><div class="ekodi-assist-rail-head"><strong id="ekodiAssistRailTitle">최근 명령</strong><button type="button" id="ekodiAssistNew" aria-label="새 명령">＋</button></div><div class="ekodi-assist-tabs" role="tablist"><button type="button" class="ekodi-assist-tab" data-assist-tab="ai">AI 명령</button><button type="button" class="ekodi-assist-tab" data-assist-tab="inbox">대화 · 문의</button></div><label class="ekodi-assist-search"><span>⌕</span><input id="ekodiAssistSearch" type="search" placeholder="최근 명령 검색" autocomplete="off"></label><div class="ekodi-assist-history" id="ekodiAssistHistory"></div><div class="ekodi-assist-rail-foot"><small id="ekodiAssistContext">현재 화면을 확인 중입니다.</small><a href="https://api.ekodi.kr/operator" target="_blank" rel="noopener">운영자 전체 화면 ↗</a></div></aside><main class="ekodi-assist-main"><header class="ekodi-assist-head"><button type="button" class="ekodi-assist-rail-toggle" id="ekodiAssistRailToggle" aria-label="최근 명령 보기">☰</button><div class="ekodi-assist-title"><strong id="ekodiAssistTitle">새 명령</strong><small>에코디 헌법 · AI 협업 · 권한 경계를 지키며 실행합니다.</small></div><button type="button" class="ekodi-assist-close" id="ekodiAssistClose" aria-label="관리자 화면으로 돌아가기">×</button></header><div class="ekodi-assist-chat-scroll" id="ekodiAssistChat"></div><footer class="ekodi-assist-composer-wrap" id="ekodiAssistComposer"><form class="ekodi-assist-composer" id="ekodiAssistForm"><button type="button" class="ekodi-assist-plus" id="ekodiAssistComposerNew" aria-label="새 명령">＋</button><textarea class="ekodi-assist-command" id="ekodiAssistCommand" rows="1" maxlength="1800" placeholder="에코디 AI에게 물어보세요"></textarea><button type="submit" class="ekodi-assist-send" aria-label="보내기">↑</button></form><small>Enter 전송 · Shift+Enter 줄바꿈 · 고위험 작업은 사람 승인 경계를 유지합니다.</small></footer></main></section>';
+    root.innerHTML='<button type="button" class="ekodi-assist-launcher" id="ekodiAssistLauncher" aria-label="에코디와 대화 열기" aria-expanded="false">✦<span class="ekodi-assist-badge" id="ekodiAssistBadge" hidden></span></button><section class="ekodi-assist-panel" id="ekodiAssistPanel" hidden aria-label="에코디와 대화하기"><aside class="ekodi-assist-rail" id="ekodiAssistRail"><div class="ekodi-assist-rail-head"><strong id="ekodiAssistRailTitle">최근 대화</strong><button type="button" id="ekodiAssistNew" aria-label="새 대화">＋</button></div><div class="ekodi-assist-tabs" role="tablist"><button type="button" class="ekodi-assist-tab" data-assist-tab="ai">에코디와 대화</button><button type="button" class="ekodi-assist-tab" data-assist-tab="inbox">대화 · 문의</button></div><label class="ekodi-assist-search"><span>⌕</span><input id="ekodiAssistSearch" type="search" placeholder="최근 대화 검색" autocomplete="off"></label><div class="ekodi-assist-history" id="ekodiAssistHistory"></div><div class="ekodi-assist-rail-foot"><small id="ekodiAssistContext">현재 화면을 확인 중입니다.</small><a href="/operator" target="_blank" rel="noopener">운영자 전체 화면 ↗</a></div></aside><main class="ekodi-assist-main"><header class="ekodi-assist-head"><button type="button" class="ekodi-assist-rail-toggle" id="ekodiAssistRailToggle" aria-label="최근 대화 보기">☰</button><div class="ekodi-assist-title"><strong id="ekodiAssistTitle">새 대화</strong><small>에코디 헌법 · AI 협업 · 권한 경계를 지키며 실행합니다.</small></div><button type="button" class="ekodi-assist-close" id="ekodiAssistClose" aria-label="관리자 화면으로 돌아가기">×</button></header><div class="ekodi-assist-chat-scroll" id="ekodiAssistChat" aria-live="polite" data-ekodi-main-conversation="true"></div><footer class="ekodi-assist-composer-wrap" id="ekodiAssistComposer"><form class="ekodi-assist-composer" id="ekodiAssistForm"><button type="button" class="ekodi-assist-plus" id="ekodiAssistComposerNew" aria-label="새 대화">＋</button><textarea class="ekodi-assist-command" id="ekodiAssistCommand" rows="1" maxlength="1800" placeholder="에코디에게 말해보세요"></textarea><button type="submit" class="ekodi-assist-send" aria-label="보내기">↑</button></form><small>Enter 전송 · Shift+Enter 줄바꿈 · 고위험 작업은 사람 승인 경계를 유지합니다.</small></footer></main></section>';
     document.body.appendChild(root);document.body.classList.add('admin-command-history-ready');
     root.querySelector('#ekodiAssistLauncher').addEventListener('click',()=>setOpen(true));
     root.querySelector('#ekodiAssistClose').addEventListener('click',()=>setOpen(false));
@@ -110,7 +110,7 @@
     rebuildHistory();setTab(state.tab,false);setOpen(Boolean(state.open),false);updateContext();refreshSummary();
   }
   function resizeInput(input){input.style.height='auto';input.style.height=`${Math.min(132,Math.max(28,input.scrollHeight))}px`}
-  function updateContext(){if(!root)return;positionWorkbench();const c=context();const node=root.querySelector('#ekodiAssistContext');if(node)node.textContent=`현재: ${c.title}`;const railTitle=root.querySelector('#ekodiAssistRailTitle');if(railTitle)railTitle.textContent='공통 명령 이력';const search=root.querySelector('#ekodiAssistSearch');if(search){search.value=state.query||'';search.placeholder='전체 명령 검색';}renderRail();if(state.open)renderMain()}
+  function updateContext(){if(!root)return;positionWorkbench();const c=context();const node=root.querySelector('#ekodiAssistContext');if(node)node.textContent=`현재: ${c.title}`;const railTitle=root.querySelector('#ekodiAssistRailTitle');if(railTitle)railTitle.textContent='공통 대화 이력';const search=root.querySelector('#ekodiAssistSearch');if(search){search.value=state.query||'';search.placeholder='전체 대화 검색';}renderRail();if(state.open)renderMain()}
   function setOpen(open,persist=true){state.open=Boolean(open);const panel=root?.querySelector('#ekodiAssistPanel');const launcher=root?.querySelector('#ekodiAssistLauncher');root?.classList.toggle('history-only',!state.open);if(panel)panel.hidden=false;if(launcher){launcher.hidden=true;launcher.setAttribute('aria-expanded',String(state.open))}if(persist)saveState();positionWorkbench();renderRail();if(state.open){renderMain();refreshSummary();setTimeout(()=>root?.querySelector('#ekodiAssistCommand')?.focus(),0)}}
   function setTab(tab,persist=true){state.tab=tab==='inbox'?'inbox':'ai';root?.querySelectorAll('[data-assist-tab]').forEach(button=>button.classList.toggle('active',button.dataset.assistTab===state.tab));if(persist)saveState();activeThread=null;renderRail();renderMain()}
   function newCommand(){state.tab='ai';state.activeSessionId=null;state.query='';aiHistory=[];lastAiReply=null;saveState();const search=root?.querySelector('#ekodiAssistSearch');if(search)search.value='';setTab('ai',false);renderRail();renderAi();root?.querySelector('#ekodiAssistCommand')?.focus()}
@@ -123,7 +123,7 @@
     if(state.tab==='inbox'){renderInboxList(list);return}
     const query=String(state.query||'').trim().toLowerCase();
     const filtered=sessions.filter(session=>!query||session.title.toLowerCase().includes(query)||(session.messages||[]).some(message=>String(message.text||'').toLowerCase().includes(query)));
-    if(!filtered.length){list.append(el('div','ekodi-assist-empty',query?'전체 명령에서 검색 결과가 없습니다.':'명령을 입력하면 공통 대화이력이 여기에 쌓입니다.'));return}
+    if(!filtered.length){list.append(el('div','ekodi-assist-empty',query?'전체 대화에서 검색 결과가 없습니다.':'대화를 시작하면 공통 대화 이력이 여기에 쌓입니다.'));return}
     const today=new Date().toDateString();
     for(const session of filtered){
       const button=el('button',`ekodi-assist-history-item${session.id===state.activeSessionId?' active':''}`);button.type='button';
@@ -139,7 +139,7 @@
   }
   function renderMain(){state.tab==='inbox'?renderInbox():renderAi()}
   function renderAi(){
-    const chat=root?.querySelector('#ekodiAssistChat');if(!chat)return;const composer=root.querySelector('#ekodiAssistComposer');if(composer)composer.hidden=false;chat.replaceChildren();const session=activeSession();const title=root.querySelector('#ekodiAssistTitle');if(title)title.textContent=session?.title||'새 명령';
+    const chat=root?.querySelector('#ekodiAssistChat');if(!chat)return;const composer=root.querySelector('#ekodiAssistComposer');if(composer)composer.hidden=false;chat.replaceChildren();const session=activeSession();const title=root.querySelector('#ekodiAssistTitle');if(title)title.textContent=session?.title||'새 대화';
     if(!session?.messages?.length){
       const welcome=el('div','ekodi-assist-welcome');welcome.append(el('div','ekodi-assist-mark','E'),el('h2','',`${context().title}에서 무엇을 도와드릴까요?`),el('p','','질문부터 상태 점검, 수정·구축 요청까지 한 창에서 이어갑니다.'));
       const quick=el('div','ekodi-assist-quick');[['현재 화면 상태 점검','현재 화면과 관련 서비스 상태를 점검해줘'],['승인 대기 보기','현재 사람 승인을 기다리는 작업을 알려줘'],['이 화면 개선점','현재 관리자 화면의 개선점을 분석해줘']].forEach(([label,text])=>{const button=el('button','',label);button.type='button';button.addEventListener('click',()=>submitAi(text));quick.append(button)});welcome.append(quick);chat.append(welcome);
@@ -182,30 +182,35 @@
   async function threadAction(id,action){try{await api(`/api/control/messenger/threads/${id}/${action}`,{method:'POST',body:'{}'});if(action==='close'){activeThread=null;await refreshSummary();renderInbox()}else await openThread(id)}catch(error){showStatus(error.message,true)}}
   function highRiskArea(text){return HIGH_RISK.find(item=>item.re.test(text))?.area||''}
 
+  function beginConversationTurn(text){
+    const value=String(text||'').trim();if(!value)return null;
+    ensureSession(value);const history=aiHistory.slice(-8);rememberAi('user',value);addSessionMessage('user',value,{kind:'message',status:'active'});renderAi();scrollChat();return history;
+  }
+
   async function submitAi(text){
-    if(!String(text||'').trim())return;
+    const value=String(text||'').trim();if(!value)return;
     state.tab='ai';setTab('ai',false);
-    ensureSession(text);const history=aiHistory.slice(-8);rememberAi('user',text);addSessionMessage('user',text,{kind:'message',status:'active'});renderAi();showStatus('요청을 분류하고 안전 경계를 확인 중입니다.');
-    const c=context();const risky=highRiskArea(text);
+    const history=beginConversationTurn(value);showStatus('요청을 분류하고 안전 경계를 확인 중입니다.');
+    const c=context();const risky=highRiskArea(value);
     try{
       let result;let queued=null;let reply='';let provider=null;let mode=null;let status='active';
       if(risky){
-        result=await api('/api/control/ai/actions',{method:'POST',body:JSON.stringify({agentId:'chief',actionType:'admin.assist_request',area:risky,target:c.section,rationale:text,payload:{source:'admin-assist-dock',context:c,request:text},reversible:false,delegated:true,preflightVerified:false,reducesUserRights:risky==='policy_change_that_materially_reduces_user_rights'})});
+        result=await api('/api/control/ai/actions',{method:'POST',body:JSON.stringify({agentId:'chief',actionType:'admin.assist_request',area:risky,target:c.section,rationale:value,payload:{source:'admin-assist-dock',context:c,request:value},reversible:false,delegated:true,preflightVerified:false,reducesUserRights:risky==='policy_change_that_materially_reduces_user_rights'})});
         reply=`${statusLabel(result.status)} · 이 요청은 관리자 판단 경계에 두었습니다.`;status=result.status||'awaiting_human';lastAiReply=null;
-      }else if(HEALTH_RE.test(text)){
-        result=await api('/api/control/ai/actions',{method:'POST',body:JSON.stringify({agentId:'chief',actionType:'service.health_check',area:'health_checks',target:c.section,rationale:text,payload:{source:'admin-assist-dock',context:c},reversible:true,delegated:true,preflightVerified:true})});
+      }else if(HEALTH_RE.test(value)){
+        result=await api('/api/control/ai/actions',{method:'POST',body:JSON.stringify({agentId:'chief',actionType:'service.health_check',area:'health_checks',target:c.section,rationale:value,payload:{source:'admin-assist-dock',context:c},reversible:true,delegated:true,preflightVerified:true})});
         reply=result.status==='verified'?'상태 점검을 완료했고 운영 기록에 남겼습니다.':`${statusLabel(result.status)} · 상태 점검 결과를 확인해 주세요.`;status=result.status||'active';lastAiReply=null;
       }else{
-        if(ACTION_RE.test(text)){
-          let preflight=false;try{const check=await api('/api/control/ai/actions',{method:'POST',body:JSON.stringify({agentId:'chief',actionType:'service.health_check',area:'health_checks',target:c.section,rationale:`Assist 사전점검: ${text}`,payload:{source:'admin-assist-dock',context:c},reversible:true,delegated:true,preflightVerified:true})});preflight=Boolean(check.ok)}catch{}
-          queued=await api('/api/control/ai/actions',{method:'POST',body:JSON.stringify({agentId:'chief',actionType:'ui.change_request',area:'bounded_admin_change',target:c.section,rationale:text,payload:{source:'admin-assist-dock',context:c,request:text},reversible:true,delegated:true,preflightVerified:preflight})});
+        if(ACTION_RE.test(value)){
+          let preflight=false;try{const check=await api('/api/control/ai/actions',{method:'POST',body:JSON.stringify({agentId:'chief',actionType:'service.health_check',area:'health_checks',target:c.section,rationale:`Assist 사전점검: ${value}`,payload:{source:'admin-assist-dock',context:c},reversible:true,delegated:true,preflightVerified:true})});preflight=Boolean(check.ok)}catch{}
+          queued=await api('/api/control/ai/actions',{method:'POST',body:JSON.stringify({agentId:'chief',actionType:'ui.change_request',area:'bounded_admin_change',target:c.section,rationale:value,payload:{source:'admin-assist-dock',context:c,request:value},reversible:true,delegated:true,preflightVerified:preflight})});
           status=queued.status||'active';
         }
-        result=await api('/api/control/ai/assist',{method:'POST',body:JSON.stringify({message:text,context:c,history})});
+        result=await api('/api/control/ai/assist',{method:'POST',body:JSON.stringify({message:value,context:c,history})});
         reply=String(result.reply||'응답을 받지 못했습니다.');provider=result.provider||null;mode=result.mode||'free_assist';rememberAi('assistant',reply);lastAiReply={text:reply,mode,provider,notice:result.notice||''};
         if(queued)reply=`${reply}\n\n${statusLabel(queued.status)} · 운영 큐에 기록하고 Admin AI가 응답했습니다.`;
       }
-      addSessionMessage('assistant',reply,{kind:risky||HEALTH_RE.test(text)||queued?'status':'message',status,provider,mode});
+      addSessionMessage('assistant',reply,{kind:risky||HEALTH_RE.test(value)||queued?'status':'message',status,provider,mode});
       const session=activeSession();if(session&&['verified','resolved'].includes(status))session.status='done';if(session&&status==='failed')session.status='failed';saveSessions();
       await refreshSummary();renderAi();
     }catch(error){

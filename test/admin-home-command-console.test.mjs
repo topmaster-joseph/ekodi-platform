@@ -48,9 +48,24 @@ test('admin root is a command-only workspace while Campus remains a child route'
   assert.match(dock,/id=\"ekodiAssistChat\"/);
   assert.match(dock,/api\('\/api\/control\/ai\/assist'/);
   assert.match(dock,/addSessionMessage\('assistant',reply/);
+  assert.match(bootstrap,/aria-label="에코디와 대화하기"/);
+  assert.match(bootstrap,/aria-label="새 대화"/);
+  assert.match(bootstrap,/placeholder="에코디에게 말해보세요"/);
+  assert.match(dock,/aria-label="에코디와 대화하기"/);
+  assert.match(dock,/data-ekodi-main-conversation="true"/);
+  assert.match(dock,/aria-live="polite"/);
+  assert.match(dock,/최근 대화/);
+  assert.match(dock,/에코디와 대화/);
+  assert.match(dock,/공통 대화 이력/);
+  assert.match(dock,/전체 대화 검색/);
+  assert.match(dock,/function beginConversationTurn\(text\)/);
+  assert.match(dock,/addSessionMessage\('user',value,\{kind:'message',status:'active'\}\);renderAi\(\);scrollChat\(\);return history/);
+  const optimisticTurn=dock.indexOf('const history=beginConversationTurn(value)');
+  const remoteAssist=dock.indexOf("await api('/api/control/ai/assist'");
+  assert.ok(optimisticTurn>=0&&remoteAssist>optimisticTurn,'submitted text must render in the main conversation before the remote AI call');
 
   assert.match(menuRegistry,/defaultSection: 'command-home'/);
-  assert.match(menuRegistry,/id: 'command-home'[\s\S]*ko: '에코디 명령'/);
+  assert.match(menuRegistry,/id: 'command-home'[\s\S]*ko: '에코디와 대화하기'[\s\S]*en: 'Talk with EKODI'/);
   assert.match(menuLayout,/function activateCommandHome\(\)/);
   assert.match(menuLayout,/requestedSection=COMMAND_HOME/);
   assert.match(menuLayout,/section===COMMAND_HOME\)return activateCommandHome\(\)/);

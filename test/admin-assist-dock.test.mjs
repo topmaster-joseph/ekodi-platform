@@ -70,7 +70,7 @@ test('Assist first path is bottom command-entry-only and upgrades through existi
   assert.match(postbuild,/bottom Assist command dock \+ lazy recent-command workbench verified/);
   assert.doesNotMatch(bootstrap,/requestIdleCallback/);
   assert.match(bootstrap,/ekodi-assist-bootstrap-form/);
-  assert.match(bootstrap,/에코디 AI에게 물어보세요/);
+  assert.match(bootstrap,/에코디에게 말해보세요/);
   assert.match(bootstrap,/ekodi-admin-assist-request/);
   assert.match(bootstrap,/loadStyle\('ai-ops-admin\.css'\)/);
   assert.match(bootstrap,/loadScript\('admin-lazy-features\.js'\)/);
@@ -104,8 +104,8 @@ test('command history is global across admin menus while current screen context 
   const [js,css,bootstrap]=await Promise.all([read('admin-assist-dock.js'),read('admin-assist-dock.css'),read('admin-assist-bootstrap.js')]);
   assert.doesNotMatch(js,/selectSessionForCurrentSection/);
   assert.doesNotMatch(js,/sessions\.filter\(session=>session\.context\?\.section===section\)/);
-  assert.match(js,/railTitle\.textContent='공통 명령 이력'/);
-  assert.match(js,/placeholder='전체 명령 검색'/);
+  assert.match(js,/railTitle\.textContent='공통 대화 이력'/);
+  assert.match(js,/placeholder='전체 대화 검색'/);
   assert.match(js,/classList\.add\('admin-command-history-ready'\)/);
   assert.match(js,/classList\.toggle\('history-only',!state\.open\)/);
   assert.match(css,/body\.admin-command-history-ready:not\(\.admin-command-home\) \.content\{margin-left:286px!important\}/);
