@@ -13,7 +13,7 @@ const GOOGLE_CLIENT_ID=String(Deno.env.get("GOOGLE_CLIENT_ID")||GOOGLE_CLIENT_ID
 if(!Object.values(GOOGLE_CLIENT_IDS).includes(GOOGLE_CLIENT_ID as any))throw new Error("google_client_id_not_allowed_for_ekodi_environment");
 const GOOGLE_ISSUERS=new Set(["accounts.google.com","https://accounts.google.com"]);
 const GOOGLE_JWKS_URL="https://www.googleapis.com/oauth2/v3/certs";
-const AUTH_ORIGINS=new Set(["https://ekodi.kr","https://auth.ekodi.kr"]);
+const AUTH_ORIGINS=new Set(["https://ekodi.kr"]);
 const CHALLENGE_MINUTES=10;
 const admin=createClient(SUPABASE_URL,SERVICE_ROLE,{auth:{persistSession:false}});
 const encoder=new TextEncoder();
