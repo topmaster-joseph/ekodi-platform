@@ -1,5 +1,5 @@
 (() => {
-  const API='https://api.ekodi.kr';
+  const API='';
   const STATUS={DRAFT:'작성중',AI_DRAFT:'AI 초안',REVIEW:'검토중',APPROVED:'승인',SENT:'발송완료'};
   const SOURCE_STATUS={not_loaded:'미수집',ready:'수집완료',error:'수집오류'};
   let state=null,installed=false,loading=false,currentId='',sourceState=null,sourceLoading=false;
