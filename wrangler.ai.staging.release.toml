@@ -21,7 +21,10 @@ EKODI_OPENROUTER_FREE_DAILY_CALL_LIMIT = "45"
 EKODI_PROVIDER_GROQ_FREE_ENABLED = "false"
 EKODI_GROQ_FREE_DAILY_CALL_LIMIT = "900"
 
-[ai]\nbinding = "AI"\n\n[assets]
+[ai]
+binding = "AI"
+
+[assets]
 directory = "./.release/ai-control/assets"
 binding = "ASSETS"
 run_worker_first = true
