@@ -133,7 +133,7 @@ function requestDemand(section){
   if(section==='communication')return import('./communication-admin.js').then(()=>{if(requestedSection!==section)return;applyOrder();activatePanel(section);syncTitle(section);});
   if(section==='capabilities')return import('./capability-center-admin.js').then(()=>{if(requestedSection!==section)return;applyOrder();activatePanel(section);syncTitle(section);});
   if(section==='admins')return requestAdminAccess();
-  if(section==='site-chrome')return import('./admin-site-chrome.js').then(()=>requestedSection===section&&window.EKODISiteChromeAdmin?.activate?.());
+  if(section==='site-chrome')return import('./admin-site-chrome.js').then(()=>{if(requestedSection!==section)return;window.EKODISiteChromeAdmin?.activate?.();syncTitle(section);});
   if(section==='insurance')return import('./insurance-admin.js').then(()=>{if(requestedSection!==section)return;applyOrder();activatePanel(section);syncTitle(section);});
   if(section==='invest')return import('./invest-admin.js').then(()=>{if(requestedSection!==section)return;applyOrder();activatePanel(section);syncTitle(section);});
   const demandKey=DEMAND_KEYS.get(section);
