@@ -26,12 +26,14 @@ CREATE INDEX IF NOT EXISTS store_sms_orders_thread_idx
 
 CREATE TABLE IF NOT EXISTS store_sms_ingress_events (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  provider_event_id TEXT NOT NULL UNIQUE,
+  provider TEXT NOT NULL DEFAULT 'sms-bridge',
+  provider_event_id TEXT NOT NULL,
   store_slug TEXT NOT NULL,
   thread_id INTEGER NOT NULL REFERENCES messenger_threads(id) ON DELETE CASCADE,
   order_id INTEGER REFERENCES store_sms_orders(id) ON DELETE SET NULL,
   message_id INTEGER REFERENCES messenger_messages(id) ON DELETE SET NULL,
-  created_at TEXT NOT NULL
+  created_at TEXT NOT NULL,
+  UNIQUE(provider,provider_event_id)
 );
 
 CREATE INDEX IF NOT EXISTS store_sms_ingress_events_store_idx
