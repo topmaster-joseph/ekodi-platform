@@ -11,7 +11,7 @@ export const ADMIN_MENU_GROUPS = Object.freeze([
 ]);
 
 export const ADMIN_MENU_REGISTRY = Object.freeze([
-  { id: 'command-home', group: 'home', icon: '⌘', labels: { ko: '에코디 명령', en: 'EKODI Command' } },
+  { id: 'command-home', group: 'home', icon: '⌘', labels: { ko: '에코디와 대화하기', en: 'Talk with EKODI' } },
   { id: 'campus', group: 'home', icon: '⌂', labels: { ko: '관리 홈·사이트', en: 'Admin Home & Sites' } },
 
   { id: 'work', group: 'operations', icon: 'W', labels: { ko: '업무', en: 'Work' } },
