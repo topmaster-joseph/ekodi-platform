@@ -40,7 +40,9 @@ jobs:
           ! grep -Fq 'pattern = "ai.ekodi.kr"' wrangler.ai.release.toml
           grep -Fq 'binding = "AI"' wrangler.site.toml
           grep -Fq 'service = "ekodi-ai-control"' wrangler.site.toml
-          grep -Fq '"/ai*"' wrangler.site.toml
+          grep -Fq '"/ai"' wrangler.site.toml
+          grep -Fq '"/ai/*"' wrangler.site.toml
+          ! grep -Fq '"/ai*"' wrangler.site.toml
           grep -Fq "surface:'runtime-and-commons'" ai-control-worker.js
           grep -Fq 'commons:true' ai-control-worker.js
           grep -Fq "url.pathname === '/ai'" site-worker.js
