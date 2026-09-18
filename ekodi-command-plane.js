@@ -1,5 +1,6 @@
 import { buildEkodiAiOrchestrator } from './ai-orchestrator-runtime.js';
 import { evaluateAiCostEligibility } from './ai-cost-policy.js';
+import { evaluateAiDataEligibility } from './ai-resource-policy.js';
 import { decideEkodiConsultation, summarizeConsultationExecution } from './ai-consultation-governance.js';
 
 const RISK_LEVELS = new Set(['low', 'normal', 'high', 'critical']);
@@ -155,7 +156,7 @@ function chooseReverifier(providers, assignment) {
 export function buildEkodiCommandPlan(input = {}, providers = []) {
   const normalizedProviders = normalizeProviders(providers);
   const governance = input.governance && typeof input.governance === 'object' ? input.governance : {};
-  const costEligibleProviders = normalizedProviders.filter(provider => evaluateAiCostEligibility(provider, { governance }).eligible);
+  const costEligibleProviders = normalizedProviders.filter(provider => evaluateAiDataEligibility(provider, { governance }).eligible && evaluateAiCostEligibility(provider, { governance }).eligible);
   const risk = RISK_LEVELS.has(text(input.risk, 20).toLowerCase()) ? text(input.risk, 20).toLowerCase() : 'normal';
   const target = normalizeEkodiResourceTarget(input.target);
   const consultationDecision = decideEkodiConsultation({ ...input, risk, target });
@@ -252,6 +253,7 @@ export function buildEkodiCommandPlane(env = {}, providers = []) {
     const plan = buildEkodiCommandPlan(input, normalizedProviders);
     const context = Object.freeze({
       ...(input.context || {}),
+      taskId: plan.taskId,
       commandGoal: plan.goal,
       resourceTarget: plan.target,
       consultationDecision: plan.consultationDecision,
