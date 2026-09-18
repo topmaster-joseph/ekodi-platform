@@ -20,7 +20,7 @@ async function withFetch({role='super_admin',elevated=false,user=false}={},fn){
 test('admin control exposes only service policy and immutable safety metadata',async()=>{
   const DB=fakeDb();const response=await withFetch({},()=>worker.fetch(new Request('https://personal-finance-api.ekodi.kr/api/admin/personal-finance/control',{headers:adminHeaders}),env(DB)));
   assert.equal(response.status,200);assert.equal(response.headers.get('access-control-allow-origin'),'https://admin.ekodi.kr');const data=await response.json();
-  assert.equal(data.service.dataBoundary,'dedicated-d1');assert.equal(data.schema.latestMigration,'0004_personal_finance_service_control.sql');assert.equal(data.safety.actionCeiling,'L2');assert.equal(data.safety.financialExecution,false);assert.equal(data.safety.aiWriteEnabled,false);assert.equal(data.safety.personalDataAdminReadable,false);assert.equal(data.admin.canWrite,true);
+  assert.equal(data.service.dataBoundary,'dedicated-d1');assert.equal(data.service.canonicalPath,'/api/control/personal-finance');assert.equal(data.service.serviceBinding,'PERSONAL_FINANCE');assert.equal(data.service.domain,undefined);assert.equal(data.schema.latestMigration,'0004_personal_finance_service_control.sql');assert.equal(data.safety.actionCeiling,'L2');assert.equal(data.safety.financialExecution,false);assert.equal(data.safety.aiWriteEnabled,false);assert.equal(data.safety.personalDataAdminReadable,false);assert.equal(data.admin.canWrite,true);
   const serialized=JSON.stringify(data);for(const forbidden of ['currentBalance','transactions','accounts','profileId'])assert.equal(serialized.includes(forbidden),false,forbidden);
 });
 
@@ -78,9 +78,9 @@ test('Admin navigation classifies Personal Finance under the v8 professional-ser
 
 test('Personal Finance admin UI manages policy only and never calls personal ledger endpoints',()=>{
   const ui=fs.readFileSync(new URL('../personal-finance-admin.js',import.meta.url),'utf8');const build=fs.readFileSync(new URL('../scripts/build.mjs',import.meta.url),'utf8');const workerSource=fs.readFileSync(new URL('../site-worker.js',import.meta.url),'utf8');const siteConfig=fs.readFileSync(new URL('../wrangler.site.toml',import.meta.url),'utf8');
-  assert.match(ui,/const API='\/api\/control\/personal-finance'/);assert.doesNotMatch(ui,/https:\/\/personal-finance-api\.ekodi\.kr\/api\/admin/);
+  assert.match(ui,/const API='\/api\/control\/personal-finance'/);assert.match(ui,/AbortSignal\.timeout\(REQUEST_TIMEOUT_MS\)/);assert.match(ui,/aria-busy/);assert.doesNotMatch(ui,/https:\/\/personal-finance-api\.ekodi\.kr\/api\/admin/);
   assert.match(ui,/전문서비스 · PERSONAL FINANCE/);assert.match(ui,/개인 금융원장의 내용은 이 화면에서 조회하지 않습니다/);assert.match(ui,/EKODIAdminContext\?\.elevate/);
-  assert.match(ui,/ekodi-admin-section-changed/);assert.match(ui,/event\.detail\?\.section!==SECTION/);assert.match(ui,/개인재무 운영 상태를 확인하고 있습니다/);
+  assert.match(ui,/function refreshWhenSharedNavigationActivates\(event\)/);assert.match(ui,/ekodi-admin-section-changed',refreshWhenSharedNavigationActivates/);assert.match(ui,/queueMicrotask\(\(\)=>refreshWhenSharedNavigationActivates\(\)\)/);assert.match(ui,/개인재무 운영 상태를 확인하고 있습니다/);
   assert.doesNotMatch(ui,/api\/finance\/personal\/(?:accounts|transactions|summary|goals|budgets|recurring)/);
   assert.match(workerSource,/ADMIN_PERSONAL_FINANCE_PATH = '\/api\/control\/personal-finance'/);
   assert.match(workerSource,/async function proxyAdminPersonalFinance\(request, env\)/);
@@ -89,6 +89,13 @@ test('Personal Finance admin UI manages policy only and never calls personal led
   assert.match(workerSource,/X-EKODI-Personal-Finance-Proxy/);
   assert.match(siteConfig,/binding = "PERSONAL_FINANCE"\s+service = "ekodi-personal-finance-api"/);
   assert.match(build,/personal-finance-admin\.css/);assert.match(build,/personal-finance-admin\.js/);assert.match(workerSource,/personal-finance-admin\.js/);
+  const serviceControl=fs.readFileSync(new URL('../personal-finance-service-control.js',import.meta.url),'utf8');
+  assert.match(serviceControl,/CENTRAL_ADMIN_SESSION='https:\/\/ekodi\.kr\/api\/session'/);
+  assert.match(serviceControl,/CENTRAL_ADMIN_ELEVATION='https:\/\/ekodi\.kr\/api\/admin-access\/elevation'/);
+  assert.match(serviceControl,/signal:AbortSignal\.timeout\(8_000\)/);
+  assert.match(serviceControl,/canonicalPath:'\/api\/control\/personal-finance'/);
+  assert.match(serviceControl,/serviceBinding:'PERSONAL_FINANCE'/);
+  assert.doesNotMatch(serviceControl,/https:\/\/api\.ekodi\.kr/);
 });
 
 
