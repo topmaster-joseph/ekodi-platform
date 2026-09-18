@@ -7,11 +7,14 @@ import { fileURLToPath } from 'node:url';
 const read=path=>readFile(new URL(`../${path}`,import.meta.url),'utf8');
 
 test('admin root is a command-only workspace while Campus remains a child route',async()=>{
-  const [bootstrap,bootstrapCss,dock,dockCss]=await Promise.all([
+  const [bootstrap,bootstrapCss,dock,dockCss,menuLayout,menuRegistry,sidebar]=await Promise.all([
     read('admin-assist-bootstrap.js'),
     read('admin-assist-bootstrap.css'),
     read('admin-assist-dock.js'),
     read('admin-assist-dock.css'),
+    read('admin-menu-layout.js'),
+    read('admin-menu-registry.js'),
+    read('admin-sidebar.js'),
   ]);
   const parsed=spawnSync(process.execPath,['--check',fileURLToPath(new URL('../admin-assist-bootstrap.js',import.meta.url))],{encoding:'utf8'});
   assert.equal(parsed.status,0,parsed.stderr);
@@ -43,4 +46,13 @@ test('admin root is a command-only workspace while Campus remains a child route'
   assert.match(dock,/id=\"ekodiAssistChat\"/);
   assert.match(dock,/api\('\/api\/control\/ai\/assist'/);
   assert.match(dock,/addSessionMessage\('assistant',reply/);
+
+  assert.match(menuRegistry,/defaultSection: 'command-home'/);
+  assert.match(menuRegistry,/id: 'command-home'[\s\S]*ko: '에코디 명령'/);
+  assert.match(menuLayout,/function activateCommandHome\(\)/);
+  assert.match(menuLayout,/requestedSection=COMMAND_HOME/);
+  assert.match(menuLayout,/section===COMMAND_HOME\)return activateCommandHome\(\)/);
+  assert.match(menuLayout,/if\(initialSection===COMMAND_HOME\)activateCommandHome\(\)/);
+  assert.doesNotMatch(menuLayout,/else\{requestedSection = 'campus';dc=true;requestDemand\('campus'\);\}/);
+  assert.match(sidebar,/panelSection === 'command-home'/);
 });
