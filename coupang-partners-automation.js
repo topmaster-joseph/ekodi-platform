@@ -1,4 +1,4 @@
-import { createOpenAiProvider } from './openai-provider-adapter.js';
+import { buildCoreAiGateway } from './core-ai-gateway.js';
 import { affiliateProductOffer, ensureOfferRegistrySchema, upsertOffer } from './offer-registry.js';
 
 const COUPANG_HOST = 'https://api-gateway.coupang.com';
@@ -212,8 +212,6 @@ function parseJsonObject(text) {
 }
 
 async function aiSelect(env, candidates) {
-  const provider = createOpenAiProvider(env);
-  if (!provider.available) return { mode: 'rules', model: '', ids: [] };
   const shortlist = balancedRules(candidates, TARGET_PRODUCTS);
   const compact = shortlist.map(item => ({
     id: item.productId,
@@ -232,21 +230,27 @@ async function aiSelect(env, candidates) {
     JSON.stringify(compact),
   ].join('\n');
   try {
-    const result = await provider.invoke({
-      taskName: 'affiliate-product-selection',
-      context: { message, page: { section: 'affiliate', title: 'EKODI Mall automatic curation', pathname: '/api/affiliate/automation' } },
+    const result = await buildCoreAiGateway(env).run({
+      taskName:'affiliate-product-selection',
+      context:{message,page:{section:'affiliate',title:'EKODI Mall automatic curation',pathname:'/api/affiliate/automation'}},
+      requiredCapabilities:['text'],
+      governance:{dataSensitivity:'public'},
+      fallback:()=>null,
     });
-    const parsed = parseJsonObject(result.text);
+    if(result.mode!=='ai') return { mode:'rules', model:'', ids:[] };
+    const value=result.value;
+    const parsed = parseJsonObject(typeof value==='string'?value:value?.text);
     const validIds = new Set(shortlist.map(item => item.productId));
     const ids = Array.isArray(parsed?.selectedProductIds)
       ? [...new Set(parsed.selectedProductIds.map(value => cleanText(value, 100)).filter(value => validIds.has(value)))].slice(0, TARGET_PRODUCTS)
       : [];
-    return { mode: ids.length ? 'ai' : 'rules', model: ids.length ? cleanText(result.model, 120) : '', ids };
+    return { mode: ids.length ? 'ai' : 'rules', provider:result.provider||'', model: ids.length ? cleanText(value?.model, 120) : '', ids };
   } catch (error) {
     console.error('EKODI Mall AI selection fallback', String(error?.message || error));
     return { mode: 'rules', model: '', ids: [] };
   }
 }
+
 
 function applyOrder(candidates, ai) {
   const rules = balancedRules(candidates, TARGET_PRODUCTS);
