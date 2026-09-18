@@ -8,3 +8,43 @@
 :root[data-ekodi-shell-surface="document"] :where(.document,.paper,.editor-canvas,[data-ekodi-document-surface]){background:#fff;color:#18212b;color-scheme:light}
 @media(max-width:768px){:root[data-ekodi-shell-surface="workspace"],:root[data-ekodi-shell-surface="admin"],:root[data-ekodi-shell-surface="form"],:root[data-ekodi-shell-surface="document"],:root[data-ekodi-shell-surface="data"]{scroll-padding-top:calc(56px + env(safe-area-inset-top))}}
 @media(prefers-reduced-motion:reduce){:root[data-ekodi-shell-surface] *{scroll-behavior:auto!important}}
+
+/* Tenant / delegated admin readability convergence v2.
+ * Applies to middle/lower authority surfaces without changing platform-superadmin layout.
+ */
+:root[data-ekodi-shell-surface="admin"][data-ekodi-authority-scope="tenant"],
+:root[data-ekodi-shell-surface="admin"][data-ekodi-authority-scope="platform-entry"]{
+  --ekodi-tenant-admin-reading:78ch;
+  --ekodi-tenant-admin-touch:40px;
+  line-height:1.55;
+  text-rendering:optimizeLegibility;
+}
+:root[data-ekodi-shell-surface="admin"][data-ekodi-authority-scope="tenant"] :where(h1,h2,h3,h4),
+:root[data-ekodi-shell-surface="admin"][data-ekodi-authority-scope="platform-entry"] :where(h1,h2,h3,h4){
+  line-height:1.24!important;
+  text-wrap:balance;
+}
+:root[data-ekodi-shell-surface="admin"][data-ekodi-authority-scope="tenant"] :where(.heading p,.panel p,.empty,.note,.service-row p),
+:root[data-ekodi-shell-surface="admin"][data-ekodi-authority-scope="platform-entry"] :where(.heading p,.panel p,.empty,.note,.service-row p){
+  line-height:1.65!important;
+}
+:root[data-ekodi-shell-surface="admin"][data-ekodi-authority-scope="tenant"] :where(button,.button,input,select,[role="button"]),
+:root[data-ekodi-shell-surface="admin"][data-ekodi-authority-scope="platform-entry"] :where(button,.button,input,select,[role="button"]){
+  min-height:var(--ekodi-tenant-admin-touch);
+}
+:root[data-ekodi-shell-surface="admin"][data-ekodi-authority-scope="tenant"] :where(.table-wrap),
+:root[data-ekodi-shell-surface="admin"][data-ekodi-authority-scope="platform-entry"] :where(.table-wrap){
+  max-width:100%;
+  overflow-x:auto;
+  -webkit-overflow-scrolling:touch;
+}
+:root[data-ekodi-shell-surface="admin"][data-ekodi-authority-scope="tenant"] :where(th,td),
+:root[data-ekodi-shell-surface="admin"][data-ekodi-authority-scope="platform-entry"] :where(th,td){
+  line-height:1.45!important;
+}
+@media(max-width:768px){
+  :root[data-ekodi-shell-surface="admin"][data-ekodi-authority-scope="tenant"],
+  :root[data-ekodi-shell-surface="admin"][data-ekodi-authority-scope="platform-entry"]{
+    --ekodi-tenant-admin-touch:44px;
+  }
+}
