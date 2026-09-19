@@ -76,7 +76,7 @@ jobs:
           }
           EOF
 
-      - name: Preserve quota, canary and completion evidence
+      - name: Upload production completion evidence
         if: always()
         uses: actions/upload-artifact@v7
         with:
