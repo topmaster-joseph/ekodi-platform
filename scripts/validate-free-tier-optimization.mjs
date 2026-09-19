@@ -20,7 +20,10 @@ expect(policy.release?.productionAccountMustNotBeConfusedWithDevelopment===true,
 
 expect(wrangler.includes('[assets]')&&wrangler.includes('binding = "ASSETS"'),'Cloudflare static assets binding is required');
 for(const path of ['/admin-shell.css','/admin-menu-layout.js','/admin-demand-loader.js','/device-browser-diagnostics.js']) {
-  expect(!wrangler.includes(`"${path}"`),`immutable static asset must not be forced Worker-first: ${path}`);
+  expect(wrangler.includes(`"${path}"`),`secured admin runtime asset must remain Worker-first: ${path}`);
+}
+for(const path of ['/workspace-admin.css','/workspace-admin.js','/workspace-trade-admin.js','/workspace-trade-portal.css','/workspace-trade-portal.js']) {
+  expect(!wrangler.includes(`"${path}"`),`ordinary immutable asset should stay asset-first: ${path}`);
 }
 expect(runtime.includes("'1027'")&&runtime.includes("'429'"),'runtime quota guard must stop retries on Cloudflare/rate-limit signals');
 expect(workflow.includes('validate-free-tier-optimization.mjs'),'orchestration gate must validate free-tier policy');
