@@ -18,7 +18,7 @@ concurrency:
   group: ekodi-church-source-watch
   cancel-in-progress: true
 
-# Release reconciliation marker: church-live-collaboration-a19a8e5-20260919
+# Release reconciliation marker: church-live-current-9d78aff-20260920
 jobs:
   check:
     runs-on: ubuntu-latest
