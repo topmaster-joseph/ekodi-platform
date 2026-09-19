@@ -50,7 +50,7 @@ test('legacy Open Table URLs permanently redirect to the corrected dated activit
 });
 
 test('EKODI Mission shared assets and unknown child routes are guarded',async()=>{
-  for(const path of ['/ekodimission/assets/site.css','/ekodimission/assets/site.js','/ekodimission/assets/mission-table-hero.svg','/ekodimission/assets/open-table-hero-260926.svg','/ekodimission/assets/open-table-meal-260925.jpg']){const response=await spaceWorker.fetch(new Request(`https://ekodi.kr${path}`),env);assert.equal(response.status,200,path);assert.equal(response.headers.get('x-ekodi-route'),'ekodimission-asset',path);assert.equal(response.headers.get('x-ekodi-publication-status'),'published',path)}
+  for(const path of ['/ekodimission/assets/site.css','/ekodimission/assets/site.js','/ekodimission/assets/shell.css','/ekodimission/assets/shell.js','/ekodimission/assets/mission-table-hero.svg','/ekodimission/assets/open-table-hero-260926.svg','/ekodimission/assets/open-table-meal-260925.jpg']){const response=await spaceWorker.fetch(new Request(`https://ekodi.kr${path}`),env);assert.equal(response.status,200,path);assert.equal(response.headers.get('x-ekodi-route'),'ekodimission-asset',path);assert.equal(response.headers.get('x-ekodi-publication-status'),'published',path)}
   const missing=await spaceWorker.fetch(new Request('https://ekodi.kr/ekodimission/not-published'),env);assert.equal(missing.status,404);assert.equal(missing.headers.get('x-ekodi-route'),'ekodimission-not-found');
 });
 
@@ -74,8 +74,8 @@ test('first-party application API uses the canonical Sep 26 event key end-to-end
   assert.equal(denied.status,400);
 });
 
-// Regression guard: page HTML owns only a mount point; one JS contract owns nav and language visibility.
-test('every EKODI Mission page consumes one shared navigation contract with published-only languages',async()=>{
+// Regression guard: all public Mission surfaces, including Live, consume one shell contract.
+test('every EKODI Mission page consumes one shared shell with published-only languages',async()=>{
   const pageFiles=[
     'ekodimission.page','ekodimission-activities.page','ekodimission-activity.page','ekodimission-contact.page',
     'ekodimission-give.page','ekodimission-participate.page','ekodimission-partners.page','ekodimission-prayer.page',
@@ -83,21 +83,37 @@ test('every EKODI Mission page consumes one shared navigation contract with publ
   ];
   for(const file of pageFiles){
     const source=await readFile(new URL('../space/'+file,import.meta.url),'utf8');
+    assert.match(source,/<header class="mission-site-header">/,file);
     assert.match(source,/<nav aria-label="주요 메뉴" data-mission-nav><\/nav>/,file);
+    assert.match(source,/\/ekodimission\/assets\/shell\.css/,file);
+    assert.match(source,/\/ekodimission\/assets\/shell\.js/,file);
     assert.doesNotMatch(source,/<span>언어<\/span>/,file);
   }
-  const script=await readFile(new URL('../space/ekodimission.js',import.meta.url),'utf8');
-  assert.match(script,/missionNavigationContract=Object\.freeze/);
-  for(const href of ['/ekodimission/activities','/ekodimission/live','/ekodimission/participate','/ekodimission/partners','/ekodimission/stories'])assert.match(script,new RegExp(href.replace(/\//g,'\\/')));
-  assert.match(script,/language-registry\.json/);
-  assert.match(script,/api\/i18n\/v1\/status\?service=mission/);
-  assert.match(script,/api\/i18n\/v1\/catalog\?service=mission/);
-  assert.match(script,/visibility:'published-only'/);
-  assert.match(script,/languages\.filter\(item=>published\.has\(item\.locale\)\)/);
-  assert.doesNotMatch(script,/option\.disabled=!published\.has/);
-  assert.doesNotMatch(script,/준비 중/);
-  assert.match(script,/select\.setAttribute\('aria-label','언어 선택'\)/);
-  assert.match(script,/syncMissionHeader\(\)/);
+  const [shell,featureScript]=await Promise.all([
+    readFile(new URL('../space/ekodimission-shell.js',import.meta.url),'utf8'),
+    readFile(new URL('../space/ekodimission.js',import.meta.url),'utf8')
+  ]);
+  assert.match(shell,/EKODI_MISSION_NAVIGATION_CONTRACT/);
+  assert.match(shell,/version:3/);
+  for(const href of ['/ekodimission/activities','/ekodimission/live','/ekodimission/participate','/ekodimission/partners','/ekodimission/stories'])assert.match(shell,new RegExp(href.replace(/\//g,'\\/')));
+  assert.match(shell,/language-registry\.json/);
+  assert.match(shell,/api\/i18n\/v1\/status\?service=mission/);
+  assert.match(shell,/api\/i18n\/v1\/catalog\?service=mission/);
+  assert.match(shell,/visibility:'published-only'/);
+  assert.match(shell,/languages\.filter\(item=>published\.has\(item\.locale\)\)/);
+  assert.doesNotMatch(shell,/option\.disabled=!published\.has/);
+  assert.doesNotMatch(shell,/준비 중/);
+  assert.match(shell,/select\.setAttribute\('aria-label','언어 선택'\)/);
+  assert.match(shell,/nav\.replaceChildren/);
+  assert.doesNotMatch(featureScript,/missionNavigationContract|language-registry\.json|data-mission-language-control/);
+  const live=await spaceWorker.fetch(new Request('https://ekodi.kr/ekodimission/live'),env);
+  assert.equal(live.status,200);
+  const liveHtml=await live.text();
+  assert.match(liveHtml,/<header class="mission-site-header">/);
+  assert.match(liveHtml,/<nav aria-label="주요 메뉴" data-mission-nav><\/nav>/);
+  assert.match(liveHtml,/\/ekodimission\/assets\/shell\.css/);
+  assert.match(liveHtml,/\/ekodimission\/assets\/shell\.js/);
+  assert.doesNotMatch(liveHtml,/class="live-header"/);
 });
 
 test('mission hero visuals are first-party SVG assets and pages render the complete artwork',async()=>{
