@@ -1,11 +1,15 @@
 const cfg=window.EKODI_BUSINESS_CONFIG||{};
 const $=(id)=>document.getElementById(id);
 const SESSION_KEY='ekodi-business-session';
-const AUTH_FALLBACK='https://auth.ekodi.kr/';
+const AUTH_FALLBACK='https://ekodi.kr/auth/';
 const state={workspaces:[],current:null,metrics:null,liveSnapshot:null,session:null};
 
 function canonicalBusinessUrl(){
-  const target=new URL(location.href);target.hash='';target.searchParams.delete('problem');return target.href;
+  const current=new URL(location.href);current.hash='';current.searchParams.delete('problem');
+  let path=current.pathname||'/';
+  if(current.hostname==='business.ekodi.kr')path=`/business${path==='/'?'/':path}`;
+  if(path!=='/business'&&!path.startsWith('/business/'))path='/business/';
+  const target=new URL(path,'https://ekodi.kr');target.search=current.search;return target.href;
 }
 function businessAuthUrl(){
   const target=new URL(cfg.authUrl||AUTH_FALLBACK);target.searchParams.set('site','business');target.searchParams.set('return_to',canonicalBusinessUrl());return target.href;
