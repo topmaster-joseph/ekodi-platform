@@ -45,3 +45,14 @@ test('lazy room creation happens only after broadcast start',()=>{
   assert.ok(share>roomWait);
   assert.doesNotMatch(script.slice(0,click),/shareLink.*inputValue/);
 });
+
+
+test('shared Live keeps the publisher lease fresh and stops heartbeat with the host',()=>{
+  const live=fs.readFileSync('tenant-live.js','utf8');
+  assert.match(live,/hostHeartbeatTimer:null/);
+  assert.match(live,/\/heartbeat/);
+  assert.match(live,/setInterval\(\(\)=>void sendHostHeartbeat\(\),20000\)/);
+  assert.match(live,/state\.isLive=true;startHostHeartbeat\(\)/);
+  assert.match(live,/async function endLive\(\).*?stopHostHeartbeat\(\)/s);
+  assert.match(live,/function hostExitCleanup\(\).*?stopHostHeartbeat\(\)/s);
+});
