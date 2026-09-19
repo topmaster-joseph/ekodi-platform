@@ -31,6 +31,8 @@
   "rollback": "Revert the Evolution Kernel contract, registries, validator, tests, additive migration and workflow gate invocation. Existing Generation 10 capability ecosystem and autonomous evolution loop remain the safe baseline.",
   "approvalEvidence": {
     "explicitOwnerInstruction": true,
-    "requiredPullRequestLabel": "constitution-approved"
+    "requiredPullRequestLabel": "constitution-approved",
+    "pullRequest": 2042,
+    "approvalLabel": "constitution-approved"
   }
 }
