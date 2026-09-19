@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "policyId": "REMOTE-COMPUTER-001",
   "status": "enforced-contract",
   "capabilityId": "device.remote-computer",
@@ -9,6 +9,31 @@
     "externalFallback": true,
     "fallbackMustPreserveOrIncreaseSecurity": true,
     "providerLockInForbidden": true
+  },
+  "transition": {
+    "phase": "external-bridge-until-native-verified",
+    "temporaryProvider": "remote-desktop-commander",
+    "temporaryProviderRole": "bridge-only",
+    "nativeTargetProvider": "ekodi-native-remote-computer",
+    "automaticCutoverWhenVerified": true,
+    "cutoverRequires": [
+      "production-ready-native-service",
+      "device-heartbeat-verified",
+      "operation-capability-verified",
+      "security-boundary-verified",
+      "independent-production-verification"
+    ],
+    "postCutoverDefault": "ekodi-native-remote-computer",
+    "temporaryProviderAfterCutover": "disabled-unless-explicitly-enabled",
+    "rollbackToTemporaryProvider": "allowed-only-if-security-equivalent-and-no-paid-upgrade-required"
+  },
+  "costPolicy": {
+    "target": "self-hosted-no-third-party-per-call-fee",
+    "temporaryExternalProviderMayUseExistingFreeAllowance": true,
+    "paidExternalAutoUpgrade": false,
+    "paidExternalPurchaseWithoutExplicitApproval": false,
+    "externalQuotaExhaustion": "pause-or-use-verified-native-provider",
+    "nativeOperationMustNotRequireThirdPartyRemoteCommandSubscription": true
   },
   "hostBoundary": {
     "observeAllowlist": [
