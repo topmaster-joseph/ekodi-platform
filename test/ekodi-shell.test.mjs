@@ -71,6 +71,31 @@ test('remaining Worker services use thin shared Shell adapters without moving do
   assert.match(siteToml,/main = "platform-router-entry-worker\.js"/);
 });
 
+test('brand-neutral tenant readability preserves tenant chrome while adding shared mobile safety',async()=>{
+  const [injector,siteShell,router,css,liveVerifier]=await Promise.all([
+    read('ekodi-shell-injector.js'),
+    read('site-shell-worker.js'),
+    read('platform-router-entry-worker.js'),
+    read('shell/user-ui-shell.css'),
+    read('scripts/verify-mobile-fixed-headers-live.mjs'),
+  ]);
+  assert.match(injector,/export function injectEkodiTenantReadability/);
+  assert.match(injector,/data-ekodi-tenant-readability/);
+  assert.match(injector,/SHELL_MOBILE_HEADER_SCRIPT/);
+  assert.match(injector,/data-ekodi-fixed-header/);
+  assert.doesNotMatch(injector,/function injectEkodiTenantReadability[\s\S]{0,5000}fallbackHeader\(/);
+  assert.match(siteShell,/standaloneBrandPlacePath\(pathname\)\)return injectEkodiTenantReadability\(response\)/);
+  assert.match(router,/space-storefront'[\s\S]{0,500}injectEkodiTenantReadability\(routed\)/);
+  assert.match(router,/x-ekodi-independent-site'[\s\S]{0,500}injectEkodiTenantReadability\(routed\)/);
+  assert.match(router,/isCgmaRoot\(url\.pathname\)[\s\S]{0,500}injectEkodiTenantReadability\(legacyResponse\)/);
+  assert.match(css,/Brand-neutral tenant readability v1/);
+  assert.match(css,/html\[data-ekodi-tenant-readability="v1"\]/);
+  const origins=[...liveVerifier.matchAll(/https:\/\/[^/'"`]+/g)].map(match=>match[0]);
+  assert.ok(origins.length>0);
+  assert.ok(origins.every(origin=>origin==='https://ekodi.kr'),`non-canonical verifier origin: ${origins.find(origin=>origin!=='https://ekodi.kr')||'unknown'}`);
+  for(const canonical of ['https://ekodi.kr/jadam','https://ekodi.kr/pizzamaru','https://ekodi.kr/yogurt','https://ekodi.kr/cgma','https://ekodi.kr/admin-shell.css'])assert.ok(liveVerifier.includes(canonical),canonical);
+});
+
 test('canonical root services win before generic workspace slug classification',async()=>{
   const site=await read('site-shell-worker.js');
   const {shellServiceForRootPath}=await import('../ekodi-shell-injector.js');
