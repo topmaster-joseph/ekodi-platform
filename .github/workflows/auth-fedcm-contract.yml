@@ -15,6 +15,7 @@ on:
       - 'auth-site/marketing-onboarding.js'
       - 'scripts/build.mjs'
       - 'site-worker.js'
+      - 'canonical-surface-router.js'
       - 'deploy/manifests/shared-site.worker.json'
       - 'test/admin-fedcm-login.test.mjs'
       - 'test/admin-mobile-auth.test.mjs'
@@ -47,6 +48,7 @@ jobs:
           node --check auth-site/marketing-auth-hotfix.js
           node --check auth-site/marketing-onboarding.js
           node --check site-worker.js
+          node --check canonical-surface-router.js
           node --test test/admin-fedcm-login.test.mjs test/admin-mobile-auth.test.mjs test/admin-auth-cache-boundary.test.mjs
           grep -Fq 'use_fedcm_for_button:true' auth-site/marketing-auth-hotfix.js
           grep -Fq 'button_auto_select:false' auth-site/marketing-auth-hotfix.js
@@ -70,9 +72,9 @@ jobs:
           grep -Fq "marketing-onboarding.js?v=20260817-workspace-label-1" auth-site/auth-router.js
           grep -Fq "'author-auth.js'" scripts/build.mjs
           grep -Fq "'business-auth.js'" scripts/build.mjs
-          grep -Fq "'/author-auth.js'" site-worker.js
-          grep -Fq "'/business-auth.js'" site-worker.js
-          grep -Fq "AUTH_CRITICAL_ASSETS" site-worker.js
+          grep -Fq "'/author-auth.js'" canonical-surface-router.js
+          grep -Fq "'/business-auth.js'" canonical-surface-router.js
+          grep -Fq "AUTH_CRITICAL_ASSETS" canonical-surface-router.js
           grep -Fq 'supabase_cdn_timeout' auth-site/business-auth.js
           grep -Fq 'supabase_fallback_timeout' auth-site/business-auth.js
           grep -Fq 'session_timeout' auth-site/business-auth.js
