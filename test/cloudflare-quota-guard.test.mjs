@@ -45,14 +45,28 @@ test('429 and Cloudflare Error 1027 open the circuit breaker', () => {
   assert.equal(isQuotaCircuitBreak({ status: 500, body: 'ordinary failure', config }), false);
 });
 
-test('production verification is consolidated into one post-deploy canary', async () => {
-  const productionGate = await readFile(new URL('../.github/workflows/production-gate.yml', import.meta.url), 'utf8');
-  const reliability = await readFile(new URL('../.github/workflows/reliability-validation.yml', import.meta.url), 'utf8');
+test('production verification is consolidated into one automatic quota-aware post-deploy canary', async () => {
+  const [productionGate,reliability,shared,fullA,fullB,mission] = await Promise.all([
+    readFile(new URL('../.github/workflows/production-gate.yml', import.meta.url), 'utf8'),
+    readFile(new URL('../.github/workflows/reliability-validation.yml', import.meta.url), 'utf8'),
+    readFile(new URL('../.github/workflows/deploy-site-core.yml', import.meta.url), 'utf8'),
+    readFile(new URL('../.github/workflows/admin-authenticated-e2e.yml', import.meta.url), 'utf8'),
+    readFile(new URL('../.github/workflows/verify-admin-authenticated-production-e2e.yml', import.meta.url), 'utf8'),
+    readFile(new URL('../.github/workflows/verify-ekodimission-admin-production-e2e.yml', import.meta.url), 'utf8')
+  ]);
   assert.match(productionGate, /workflow_run:/);
   assert.match(productionGate, /Run one quota-aware post-deploy canary/);
   assert.doesNotMatch(productionGate, /cron:/);
   assert.doesNotMatch(reliability, /production-synthetic:/);
   assert.doesNotMatch(reliability, /workflow_run:/);
+  assert.doesNotMatch(shared, /\n\s*admin-authenticated-e2e:\s*\n/);
+  for (const workflow of [fullA,fullB]) {
+    assert.match(workflow, /on:\s*\n\s*workflow_dispatch:/);
+    assert.doesNotMatch(workflow, /\n\s*push:\s*\n/);
+  }
+  assert.doesNotMatch(mission, /schedule:/);
+  assert.match(mission, /cloudflare-production-budget\.mjs/);
+  assert.match(mission, /skip_nonessential != 'true'/);
 });
 
 test('Admin static shell bypasses Worker while auth and deep Admin routes keep Worker boundaries', async () => {
