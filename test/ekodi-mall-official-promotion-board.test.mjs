@@ -76,7 +76,10 @@ test('production growth deploy combines the official weekly board with the V8 pr
   assert.match(workflow,/affiliate_promotion_weekly_products/);
   assert.match(workflow,/const SUBJECT_KEY = 'ekodimall'/);
   assert.match(workflow,/ekodimall:autonomous/);
-  assert.match(workflow,/ekodi-biz:review/);
+  assert.match(workflow,/ekodi-biz:autonomous/);
+  assert.match(workflow,/jadam:autonomous/);
+  assert.match(workflow,/pizzamaru:autonomous/);
+  assert.match(workflow,/yogurt:autonomous/);
   assert.match(workflow,/ekoditrade:review/);
   assert.match(workflow,/\"strategy\":\"official_board_profit_learning_loop\"/);
   assert.match(workflow,/\"weeklyBoard\"/);
