@@ -1,3 +1,9 @@
+import { readFile } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
+import { isQuotaCircuitBreak } from './cloudflare-quota-guard-lib.mjs';
+
+const quotaConfig=JSON.parse(await readFile(fileURLToPath(new URL('../config/cloudflare-production-quota-guard.json',import.meta.url)),'utf8'));
+
 const base=String(process.env.EKODI_SHELL_VERIFY_BASE||'https://ekodi.kr/shell').replace(/\/$/,'');
 const release=String(process.env.GITHUB_SHA||Date.now()).slice(0,40);
 const attempts=Math.max(1,Number(process.env.EKODI_SHELL_VERIFY_ATTEMPTS||18));
@@ -34,10 +40,21 @@ function includesAll(text,label,needles,failures){
 }
 
 for(let attempt=1;attempt<=attempts;attempt++){
-  const [healthResult,manifestResult,footerConfigResult,languageRegistryResult,shellResult,userLanguageResult,characterRegistryResult,identityRegistryResult,founderAssetResult,themeResult,styleResult,userUiStyleResult]=await Promise.all([
-    read('/health',attempt),read('/manifest.json',attempt),read('/user-footer.json',attempt),read('/language-registry.json',attempt),read('/shell.js',attempt),read('/user-language.js',attempt),read('/character-registry.js',attempt),read('/character-identity-registry.js',attempt),read('/assets/ekodian/founder-face.webp',attempt),read('/theme.json',attempt),read('/workspace.css',attempt),read('/user-ui-shell.css',attempt),
+  // One essential probe owns the quota decision. Never fan out or retry after 429/1027.
+  const healthResult=await read('/health',attempt);
+  if(isQuotaCircuitBreak({status:healthResult.status,body:healthResult.text,config:quotaConfig.circuitBreaker})){
+    console.error(`CF-QUOTA-001 circuit open at ${base}: health HTTP ${healthResult.status||'network'}; stopping live verification without retries or fan-out.`);
+    process.exit(75);
+  }
+  const [manifestResult,footerConfigResult,languageRegistryResult,shellResult,userLanguageResult,characterRegistryResult,identityRegistryResult,founderAssetResult,themeResult,styleResult,userUiStyleResult]=await Promise.all([
+    read('/manifest.json',attempt),read('/user-footer.json',attempt),read('/language-registry.json',attempt),read('/shell.js',attempt),read('/user-language.js',attempt),read('/character-registry.js',attempt),read('/character-identity-registry.js',attempt),read('/assets/ekodian/founder-face.webp',attempt),read('/theme.json',attempt),read('/workspace.css',attempt),read('/user-ui-shell.css',attempt),
   ]);
   const results=[healthResult,manifestResult,footerConfigResult,languageRegistryResult,shellResult,userLanguageResult,characterRegistryResult,identityRegistryResult,founderAssetResult,themeResult,styleResult,userUiStyleResult];
+  const quotaBlocked=results.find(result=>isQuotaCircuitBreak({status:result.status,body:result.text,config:quotaConfig.circuitBreaker}));
+  if(quotaBlocked){
+    console.error(`CF-QUOTA-001 circuit opened during ${base} verification: HTTP ${quotaBlocked.status||'network'}; stopping immediately without retry.`);
+    process.exit(75);
+  }
   if(allowAccessGate&&results.every(result=>result.ok&&isCloudflareAccessGate(result))){
     console.log(`✅ EKODI Shell staging deployed at ${base}; endpoint is intentionally protected by Cloudflare Access, so content verification remains covered by the Shell contract test suite. release=${release}.`);
     process.exit(0);
