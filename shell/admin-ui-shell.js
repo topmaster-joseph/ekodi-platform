@@ -12,6 +12,7 @@ const TOPBAR_SELECTORS=['[data-ekodi-admin-topbar]','.topbar','.admin-topbar','.
 const ACCOUNT_SELECTORS=['[data-ekodi-account]','[data-ekodi-profile]','.profile','.profile-card','.account-card','.user-profile','.user-card','.sidebar-profile'];
 const LOGOUT_SELECTORS=['[data-ekodi-logout]','#logoutButton','[data-action="logout"]','a[href*="logout"]','button[name="logout"]'];
 const TITLE_SELECTORS=['[data-ekodi-page-title]','[data-ekodi-header-title]','#pageTitle','.page-title','.topbar-title','.header-title'];
+const LANGUAGE_CONTROL_SELECTORS=['[data-ekodi-language-control]','[data-language-selector]','[data-language-switcher]','.language-selector','.language-switcher','.lang-selector','.lang-switcher','#google_translate_element','.goog-te-gadget'];
 
 if(window.__EKODI_ADMIN_UI_SHELL_BOOTED)return;
 if(String(document.documentElement.dataset.ekodiShellSurface||'').toLowerCase()!==SURFACE)return;
@@ -26,6 +27,7 @@ function installStyle(){
   style.id=STYLE_ID;
   style.textContent=`
     html[data-ekodi-shell-surface="admin"] :is([data-ekodi-admin-sidebar-header],[data-ekodi-admin-brand],.side-brand,.sidebar-brand,.admin-sidebar-brand){display:none!important}
+    html[data-ekodi-shell-surface="admin"] :is([data-ekodi-language-control],[data-language-selector],[data-language-switcher],.language-selector,.language-switcher,.lang-selector,.lang-switcher,#google_translate_element,.goog-te-gadget){display:none!important}
     html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-sidebar{display:flex!important;flex-direction:column!important;height:100dvh!important;min-height:0!important;overflow:hidden!important;box-sizing:border-box!important;padding-top:max(8px,env(safe-area-inset-top,0px))!important}
     html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-nav{flex:1 1 auto!important;min-height:0!important;overflow-y:auto!important;overflow-x:hidden!important;overscroll-behavior:contain!important;scrollbar-gutter:stable}
     html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-nav[data-ekodi-admin-nav-mode="primary"]{flex:0 0 auto!important;overflow:hidden!important;overscroll-behavior:auto!important;scrollbar-gutter:auto!important}
@@ -52,6 +54,18 @@ function findSidebar(){return first(document,SIDEBAR_SELECTORS);}
 function findNav(sidebar){return first(sidebar,NAV_SELECTORS);}
 function findMain(){return first(document,MAIN_SELECTORS);}
 function findTopbar(main){return first(main,TOPBAR_SELECTORS)||first(document,TOPBAR_SELECTORS);}
+
+function removeAdminLanguageControls(){
+  let removed=0;
+  for(const selector of LANGUAGE_CONTROL_SELECTORS){
+    for(const node of [...document.querySelectorAll(selector)]){
+      node.remove();
+      removed+=1;
+    }
+  }
+  document.documentElement.dataset.ekodiAdminLanguageControl='disabled';
+  return removed;
+}
 
 function removeSidebarBrand(sidebar){
   let removed=0;
@@ -121,6 +135,7 @@ function normalize(){
   scheduled=false;
   if(String(document.documentElement.dataset.ekodiShellSurface||'').toLowerCase()!==SURFACE)return;
   installStyle();
+  removeAdminLanguageControls();
   document.body?.classList.add('ekodi-admin-shell-ui');
   document.documentElement.dataset.ekodiAdminShell='v1';
 
@@ -156,7 +171,8 @@ window.EKODIAdminUIShell=Object.freeze({
   getState:()=>({
     enabled:String(document.documentElement.dataset.ekodiShellSurface||'').toLowerCase()===SURFACE,
     sidebar:Boolean(document.querySelector('.ekodi-admin-shell-sidebar')),
-    brandHeaderRemoved:Boolean(document.querySelector('.ekodi-admin-shell-sidebar')?.dataset.ekodiAdminBrandRemoved==='true')
+    brandHeaderRemoved:Boolean(document.querySelector('.ekodi-admin-shell-sidebar')?.dataset.ekodiAdminBrandRemoved==='true'),
+    languageControlDisabled:document.documentElement.dataset.ekodiAdminLanguageControl==='disabled'
   })
 });
 
