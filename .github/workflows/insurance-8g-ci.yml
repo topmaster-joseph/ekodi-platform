@@ -14,9 +14,15 @@ on:
       - 'wrangler.api.toml'
       - '.github/workflows/insurance-8g-ci.yml'
       - '.github/workflows/insurance-production-green.yml'
-  # Branch protection requires the verify job on every PR. Running the
-  # guardrails is cheap and prevents required-check deadlocks on unrelated changes.
   pull_request:
+    paths:
+      - 'sites/ekodi-insurance/**'
+      - 'insurance-*.js'
+      - 'insurance-*.css'
+      - 'customer-entry-worker.js'
+      - 'config/**'
+      - 'test/insurance-8g.test.mjs'
+      - 'wrangler.api.toml'
 
 permissions:
   contents: read
