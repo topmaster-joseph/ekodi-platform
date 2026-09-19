@@ -18,7 +18,7 @@ The permanent target is the EKODI Device Agent + native Remote Computer Provider
 
 The temporary bridge can be used only when it preserves the EKODI security boundary. Existing free allowance may be used, but exhaustion of that allowance is not permission to move to a paid plan.
 
-This policy is a transition contract, not evidence that native cutover has already happened. Do not report native migration as complete until the production `serviceReady` gate and real device verification have both passed.
+This policy is a transition contract, not evidence that native cutover has already happened. Do not report native migration as complete until the production `serviceReady` gate and real device verification have both passed. Cutover eligibility is evaluated from verified runtime state, not from the presence of this policy file alone.
 
 ## Native cutover gate
 
