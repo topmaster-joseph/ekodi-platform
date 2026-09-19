@@ -25,6 +25,9 @@ async function loadAuthRouter() {
 
 if (repeated) {
   document.documentElement.dataset.authLoopBlocked = '1';
+  if (site === 'admin' && params.get('direct') === '1') {
+    document.documentElement.dataset.adminDirectBridge = 'fallback';
+  }
   const badge = document.getElementById('serviceBadge');
   const status = document.getElementById('authStatus');
   const retry = document.getElementById('googleRetry');
