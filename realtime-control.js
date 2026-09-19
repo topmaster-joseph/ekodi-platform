@@ -650,7 +650,7 @@ async function renegotiateSession(request,env,room,session,input){
   if(!input?.sessionDescription?.sdp)return json(request,env,{ok:false,error:'session_description_required'},400);
   const type=clean(input.sessionDescription.type,16)||'answer';
   if(type!=='answer')return json(request,env,{ok:false,error:'renegotiation_answer_required'},400);
-  const response=await providerCall(env,`/sessions/${encodeURIComponent(session.provider_session_id)}/renegotiate`,{method:'PUT',payload:{sessionDescription:{type:'answer',sdp:String(input.sessionDescription.sdp)}});
+  const response=await providerCall(env,`/sessions/${encodeURIComponent(session.provider_session_id)}/renegotiate`,{method:'PUT',payload:{sessionDescription:{type:'answer',sdp:String(input.sessionDescription.sdp)}}});
   const stamp=new Date().toISOString();
   await env.DB.prepare(`UPDATE realtime_media_sessions SET updated_at=? WHERE id=? AND room_id=? AND status='active'`).bind(stamp,session.id,room.id).run();
   return json(request,env,{ok:true,provider:response});
