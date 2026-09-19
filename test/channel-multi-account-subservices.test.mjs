@@ -11,7 +11,8 @@ test('subservices and store admins inherit the multi-account channel center',asy
   assert.match(workspace,/authorityRef:channelRegistryAuthority\(\)/);
   assert.match(workspace,/visibleChannelIds/);
   assert.match(trade,/\['publishing','marketing','channels'\]\.includes\(section\)/);
-  assert.match(trade,/\['publishing','channels'/);
+  assert.match(trade,/\['publishing','채널 · 게시'\]/);
+  assert.match(trade,/sub\.hidden=true/);
   assert.match(store,/section==='publishing'/);
   assert.match(store,/STORE_SECTIONS=.*publishing/);
   assert.match(store,/subject_type=store&subject_key=/);
