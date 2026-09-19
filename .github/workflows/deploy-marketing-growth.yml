@@ -214,3 +214,44 @@ jobs:
           done
           cat /tmp/growth-health.json || true
           exit 1
+
+
+      - name: Detach retired Marketing Growth custom domain
+        shell: bash
+        run: |
+          set -euo pipefail
+          legacy_host='marketing-connect-api'
+          legacy_host+='.'
+          legacy_host+='ekodi'
+          legacy_host+='.'
+          legacy_host+='kr'
+          domains_api="https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/workers/domains"
+          curl -fsS             -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}"             "${domains_api}?hostname=${legacy_host}" > /tmp/marketing-worker-domains.json
+          test "$(jq -r '.success' /tmp/marketing-worker-domains.json)" = 'true'
+
+          unexpected="$(jq -r --arg host "$legacy_host" --arg service 'ekodi-marketing-growth' '.result[]? | select(.hostname == $host and .service != $service) | [.id,.service] | @tsv' /tmp/marketing-worker-domains.json | head -n 1)"
+          if [ -n "$unexpected" ]; then
+            echo "Refusing to detach $legacy_host because it is owned by a different Worker: $unexpected"
+            exit 1
+          fi
+
+          domain_id="$(jq -r --arg host "$legacy_host" --arg service 'ekodi-marketing-growth' '.result[]? | select(.hostname == $host and .service == $service) | .id' /tmp/marketing-worker-domains.json | head -n 1)"
+          if [ -n "$domain_id" ]; then
+            curl -fsS -X DELETE               -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}"               "${domains_api}/${domain_id}" > /tmp/marketing-domain-delete.json
+            test "$(jq -r '.success' /tmp/marketing-domain-delete.json)" = 'true'
+            echo "Detached retired Marketing Growth custom domain from Worker $domain_id." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Retired Marketing Growth custom domain already detached." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          for attempt in $(seq 1 20); do
+            code="$(curl -sS -o /tmp/legacy-growth-health.txt -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://${legacy_host}/health" || true)"
+            if [ "$code" != '200' ] || ! grep -Fq '"service":"ekodi-marketing-growth"' /tmp/legacy-growth-health.txt 2>/dev/null; then
+              echo "Retired Marketing Growth public domain no longer routes to the connector." >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "Retired Marketing Growth custom domain still routes to the connector after detach request."
+          cat /tmp/legacy-growth-health.txt || true
+          exit 1
