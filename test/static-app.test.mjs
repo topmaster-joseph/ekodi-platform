@@ -58,26 +58,24 @@ test('unverified public services remain gated except explicit gateways', () => {
   }
 });
 
-test('admin routing serves the official shell and fails closed for retired entry paths', () => {
+test('admin routing serves the official apex-path shell and fails closed for retired entry paths', () => {
   assert.match(siteWorker, /const RETIRED_ADMIN_PATHS = new Set/);
   for (const retired of ['/admin.html','/control-center','/control-center.html','/control-center.js','/control-center-features.js']) assert.ok(siteWorker.includes(`'${retired}'`));
   assert.match(siteWorker, /function retiredAdminResponse/);
   assert.ok(siteWorker.includes("'admin-retired'"));
   assert.ok(siteWorker.includes("assetRequest(request, '/admin-shell')"));
-  for (const d of ['admin.ekodi.kr','admin.biz.ekodi.kr','admin.church.ekodi.kr','admin.lab.ekodi.kr','admin.trade.ekodi.kr']) { hasDomain(siteWorker,d); hasRoute(siteToml,d); }
+  assert.match(siteToml, /"\/admin"/);
+  assert.match(siteToml, /"\/admin\/\*"/);
   assert.match(siteWorker, /frame-ancestors 'none'/);
   assert.match(siteWorker, /script-src 'self'/);
 });
 
-test('nested EKODI business service routes remain explicit compatibility boundaries', () => {
-  for (const d of ['pay.ekodi.kr','pay.biz.ekodi.kr','live.biz.ekodi.kr']) { hasDomain(siteWorker,d); hasRoute(siteToml,d); }
-  hasRoute(proxyToml, 'mail.biz.ekodi.kr');
-  assert.doesNotMatch(siteToml, /pattern = "mail\.biz\.ekodi\.kr"/);
-  assert.match(hub, /pay\.ekodi\.kr/);
-  assert.match(siteWorker, /TRADE_CANONICAL_HOST = 'trade\.biz\.ekodi\.kr'/);
+test('nested EKODI business services remain explicit apex-path boundaries', () => {
+  assert.match(platformRouter, /routeCanonicalSurface/);
+  assert.match(siteToml, /pattern = "ekodi\.kr\/ekodibiz\/trade\*"/);
+  assert.match(siteToml, /"\/mail\*"/);
+  assert.match(siteToml, /"\/messenger\*"/);
   assert.match(siteWorker, /TRADE_LEGACY_HOSTS/);
-  hasRoute(siteToml, 'trade.biz.ekodi.kr');
-  hasRoute(siteToml, 'trade.ekodi.kr');
 });
 
 test('biz.ekodi.kr proxy remains independent while legacy external domain redirect stays dedicated', () => {
@@ -99,8 +97,11 @@ test('finance and root custom-domain contracts remain intact', () => {
   assert.match(platformRouter, /url\.pathname==='\/api\/finance'\|\|url\.pathname\.startsWith\('\/api\/finance\/'\)/);
   assert.match(platformRouter, /env\.FINANCE\.fetch\(request\)/);
   assert.match(financeToml, /database_name = "ekodi-auth"/);
-  hasRoute(siteToml, 'ekodi.kr');
-  hasRoute(siteToml, 'www.ekodi.kr');
+  const sharedCustomDomains = siteToml.split('[[routes]]').slice(1)
+    .filter(block => /custom_domain\s*=\s*true/.test(block))
+    .map(block => block.match(/pattern\s*=\s*"([^"]+)"/)?.[1])
+    .filter(Boolean);
+  assert.deepEqual(sharedCustomDomains, ['ekodi.kr']);
   const policy = headers.split('\n').find(line => line.includes('Content-Security-Policy')) || '';
   assert.match(policy, /script-src 'none'/);
   assert.doesNotMatch(policy, /connect-src/);
