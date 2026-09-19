@@ -417,7 +417,23 @@ jobs:
           grep -Fq '.app>main{padding-top:calc(78px + env(safe-area-inset-top,0px))}' dist/admin-shell.css
           grep -Fq -- '--ekodi-home-header-height' dist/index.html
 
+      - name: Read Production Cloudflare quota Source of Truth
+        id: quota
+        run: node scripts/cloudflare-production-budget.mjs --output=cloudflare-production-quota.json
+
+      - name: Hold domain mutation while quota protection circuit is open
+        if: steps.quota.outputs.skip_nonessential == 'true'
+        shell: bash
+        run: |
+          {
+            echo '### Shared Site production mutation deferred'
+            echo '- quota state: **${{ steps.quota.outputs.state }}**'
+            echo '- usage: **${{ steps.quota.outputs.percent }}%**'
+            echo '- action: domain trigger synchronization is held; guarded release will fail-fast on the quota circuit without retry storm'
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Verify and repair Cloudflare custom-domain attachments
+        if: steps.quota.outputs.skip_nonessential != 'true'
         shell: bash
         env:
           BEFORE_SHA: ${{ github.event.before }}
