@@ -13,3 +13,10 @@ test('Cloudflare retirement remains fail-closed for explicit API failure',()=>{
   assert.match(source,/throw new Error\("Cloudflare API "/);
   assert.match(source,/data\.errors\|\|data/);
 });
+
+test('legacy hostname verification allows Cloudflare edge propagation without cache reuse',()=>{
+  assert.match(source,/attempt<=60/);
+  assert.match(source,/setTimeout\(r,5000\)/);
+  assert.match(source,/"cache-control":"no-cache"/);
+  assert.match(source,/"pragma":"no-cache"/);
+});
