@@ -10,6 +10,8 @@ test('central auth blocks rapid repeated service handoff navigation',()=>{
   assert.match(entry,/ekodi-auth-entry:/);
   assert.match(entry,/now - previous < 120000/);
   assert.match(entry,/authLoopBlocked/);
+  assert.match(entry,/site === 'admin' && params\.get\('direct'\) === '1'/);
+  assert.match(entry,/adminDirectBridge = 'fallback'/);
   assert.match(entry,/반복 이동 차단/);
   assert.match(entry,/sessionStorage\.removeItem\(guardKey\)/);
 });

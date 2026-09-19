@@ -10,29 +10,30 @@
   const sourceLocale='ko-KR';
   const localeStorageKey='ekodi_user_locale';
   const localeCookieKey='ekodi_locale';
-  const canonicalNav=[
-    ['/ekodimission/activities','활동'],
-    ['/ekodimission/live','라이브'],
-    ['/ekodimission/participate','함께하기'],
-    ['/ekodimission/partners','협력'],
-    ['/ekodimission/stories','소식']
-  ];
+  const missionNavigationContract=Object.freeze({
+    version:2,
+    links:Object.freeze([
+      Object.freeze({href:'/ekodimission/activities',label:'활동'}),
+      Object.freeze({href:'/ekodimission/live',label:'라이브'}),
+      Object.freeze({href:'/ekodimission/participate',label:'함께하기'}),
+      Object.freeze({href:'/ekodimission/partners',label:'협력'}),
+      Object.freeze({href:'/ekodimission/stories',label:'소식'})
+    ]),
+    language:Object.freeze({registry:languageRegistryUrl,status:languageStatusUrl,visibility:'published-only'})
+  });
   const normalizedText=value=>String(value||'').replace(/\s+/g,' ').trim();
   function syncMissionHeader(){
-    const nav=document.querySelector('.site-header nav[aria-label="주요 메뉴"]');if(!nav)return;
-    let language=nav.querySelector('[data-mission-language-control]');
-    if(!language){
-      language=document.createElement('label');language.className='mission-language';language.dataset.missionLanguageControl='';
-      const label=document.createElement('span');label.textContent='언어';
-      const select=document.createElement('select');select.setAttribute('aria-label','언어');select.innerHTML='<option value="ko-KR">한국어</option>';
-      language.append(label,select);
-    }
-    const links=canonicalNav.map(([href,label])=>{const a=document.createElement('a');a.href=href;a.textContent=label;return a;});
+    const nav=document.querySelector('[data-mission-nav],.site-header nav[aria-label="주요 메뉴"]');if(!nav)return;
+    const links=missionNavigationContract.links.map(item=>{const a=document.createElement('a');a.href=item.href;a.textContent=item.label;return a;});
     const current=location.pathname.replace(/\/+$/,'')||'/';
     for(const a of links){
       const target=new URL(a.href,location.origin).pathname.replace(/\/+$/,'')||'/';
       if(current===target||(target==='/ekodimission/activities'&&current.startsWith('/ekodimission/activities/')))a.setAttribute('aria-current','page');
     }
+    const language=document.createElement('label');language.className='mission-language';language.dataset.missionLanguageControl='';
+    language.setAttribute('title','언어 선택');
+    const select=document.createElement('select');select.setAttribute('aria-label','언어 선택');select.innerHTML='<option value="ko-KR">한국어</option>';
+    language.append(select);
     nav.replaceChildren(...links,language);
   }
   function readLocaleCookie(){
@@ -83,16 +84,17 @@
       const aliases=new Map();
       for(const item of languages){aliases.set(String(item.locale||'').toLowerCase(),item.locale);for(const alias of item.aliases||[])aliases.set(String(alias).toLowerCase(),item.locale);}
       const normalize=value=>aliases.get(String(value||'').trim().toLowerCase())||'';
-      select.replaceChildren(...languages.map(item=>{
-        const option=document.createElement('option');option.value=item.locale;option.disabled=!published.has(item.locale);
-        option.textContent=`${item.short||item.label||item.locale}${option.disabled?' · 준비 중':''}`;option.title=option.disabled?'번역 준비 중':(item.label||item.locale);return option;
+      const available=languages.filter(item=>published.has(item.locale));
+      select.replaceChildren(...available.map(item=>{
+        const option=document.createElement('option');option.value=item.locale;
+        option.textContent=item.short||item.label||item.locale;option.title=item.label||item.locale;return option;
       }));
       const params=new URL(location.href).searchParams;
       const requested=normalize(params.get('lang')||readLocaleCookie()||localStorage.getItem(localeStorageKey)||navigator.language)||sourceLocale;
       const active=published.has(requested)?requested:sourceLocale;
       if(requested!==active){
         const cleanUrl=new URL(location.href);cleanUrl.searchParams.delete('lang');history.replaceState(history.state,'',cleanUrl);
-        languageNotice('선택한 언어는 준비 중입니다. 현재 한국어로 표시합니다.');
+        languageNotice('현재 제공되는 언어로 표시합니다.');
       }
       select.value=active;document.documentElement.lang=active;
       if(active!==sourceLocale){
