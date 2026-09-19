@@ -55,21 +55,24 @@ test('production verification is consolidated into one post-deploy canary', asyn
   assert.doesNotMatch(reliability, /workflow_run:/);
 });
 
-test('ordinary static assets stay asset-first while security-critical Admin and auth assets remain Worker-first', async () => {
-  const wrangler = await readFile(new URL('../wrangler.site.toml', import.meta.url), 'utf8');
-  for (const securityCritical of [
-    '/auth-bootstrap.js',
-    '/auth-router.js',
-    '/admin-authenticated-shell.js',
-    '/admin-shell.css',
-    '/admin-compact.css',
-    '/system-health-admin.css',
-    '/device-browser-diagnostics.css',
-    '/tapo-device-admin.css',
-    '/workspace-trade-portal.css'
-  ]) {
+test('Admin static shell bypasses Worker while auth and deep Admin routes keep Worker boundaries', async () => {
+  const [wrangler, build, headers] = await Promise.all([
+    readFile(new URL('../wrangler.site.toml', import.meta.url), 'utf8'),
+    readFile(new URL('../scripts/build.mjs', import.meta.url), 'utf8'),
+    readFile(new URL('../_headers', import.meta.url), 'utf8')
+  ]);
+  for (const securityCritical of ['/auth-bootstrap.js','/auth-router.js']) {
     assert.equal(wrangler.includes(`"${securityCritical}"`), true, `${securityCritical} must remain Worker-first`);
   }
+  assert.match(wrangler, /"\/admin\/\*"/);
+  for (const assetFirst of ['!/admin','!/admin/','!/admin/*.js','!/admin/*.css']) {
+    assert.equal(wrangler.includes(`"${assetFirst}"`), true, `${assetFirst} must bypass Worker invocation`);
+  }
+  const routeLine = wrangler.split('\n').find(line => line.trim().startsWith('run_worker_first =')) || '';
+  assert.ok((routeLine.match(/"/g) || []).length / 2 <= 100, 'Cloudflare run_worker_first entries must stay within the 100-entry limit');
+  assert.match(build, /adminStaticMirrorDir/);
+  assert.match(build, /admin-shell\.html/);
+  assert.match(headers, /\/admin\/\*[\s\S]*Content-Security-Policy:[\s\S]*Cache-Control: no-store/);
   for (const ordinaryStatic of ['/styles.css', '/homepage-ambient.css', '/mall.css']) {
     assert.equal(wrangler.includes(`"${ordinaryStatic}"`), false, `${ordinaryStatic} should use Static Assets asset-first delivery`);
   }
