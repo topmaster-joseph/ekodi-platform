@@ -280,7 +280,7 @@ jobs:
             health_code=$(curl -sS -o /tmp/ai-local-health.json -w '%{http_code}' --connect-timeout 2 --max-time 5 http://127.0.0.1:8787/__health || true)
             status_code=$(curl -sS -o /tmp/ai-local-status.json -w '%{http_code}' --connect-timeout 2 --max-time 5 http://127.0.0.1:8787/api/status || true)
             services_code=$(curl -sS -o /tmp/ai-local-services.json -w '%{http_code}' --connect-timeout 2 --max-time 5 http://127.0.0.1:8787/api/commons/services || true)
-            client_code=$(curl -sS -D /tmp/ai-local-client-headers.txt -o /tmp/ai-local-client.js -w '%{http_code}' --connect-timeout 2 --max-time 5 http://127.0.0.1:8787/api/commons/client.js || true)
+            client_code=$(curl -sS -D /tmp/ai-local-client-headers.txt -o /tmp/ai-local-client.txt -w '%{http_code}' --connect-timeout 2 --max-time 5 http://127.0.0.1:8787/api/commons/client || true)
             capabilities_code=$(curl -sS -o /tmp/ai-local-capabilities.json -w '%{http_code}' --connect-timeout 2 --max-time 5 http://127.0.0.1:8787/api/commons/capabilities || true)
             ideas_code=$(curl -sS -o /tmp/ai-local-ideas.json -w '%{http_code}' --connect-timeout 2 --max-time 5 http://127.0.0.1:8787/api/commons/ideas || true)
             if [[ "$root_code" == "200" && "$config_code" == "410" && "$exchange_code" == "410" && "$health_code" == "200" && "$status_code" == "401" && "$services_code" == "200" && "$client_code" == "200" && "$capabilities_code" == "410" && "$ideas_code" == "401" ]] \
@@ -293,8 +293,8 @@ jobs:
               && grep -Fq '"categories"' /tmp/ai-local-services.json \
               && ! grep -Fq '"capabilityId"' /tmp/ai-local-services.json \
               && grep -Fiq 'x-ekodi-ai-asset: worker-owned-v1' /tmp/ai-local-client-headers.txt \
-              && grep -Fq "api('/api/commons/config')" /tmp/ai-local-client.js \
-              && ! grep -Fq "api('/ai/api/commons/" /tmp/ai-local-client.js \
+              && grep -Fq "api('/api/commons/config')" /tmp/ai-local-client.txt \
+              && ! grep -Fq "api('/ai/api/commons/" /tmp/ai-local-client.txt \
               && grep -Fq 'operator_surface_moved' /tmp/ai-local-capabilities.json \
               && grep -Fq 'authentication_required' /tmp/ai-local-ideas.json; then
               echo 'Immutable AI Commons staging artifact verified: public project surface works, catalog is public, and member/admin boundaries remain protected.'

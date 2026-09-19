@@ -343,8 +343,8 @@ async function handleCommonsAdmin(request,env,url){
 async function handleCommonsApi(request,env,ctx){
   const url=new URL(request.url);if(!url.pathname.startsWith('/api/commons/'))return null;
   if(url.pathname.startsWith('/api/commons/admin/'))return handleCommonsAdmin(request,env,url);
-  if(['GET','HEAD'].includes(request.method)&&url.pathname==='/api/commons/client.js')return commonsBrowserAsset(request,env,'commons.js','text/javascript; charset=utf-8');
-  if(['GET','HEAD'].includes(request.method)&&url.pathname==='/api/commons/client.css')return commonsBrowserAsset(request,env,'commons.css','text/css; charset=utf-8');
+  if(['GET','HEAD'].includes(request.method)&&url.pathname==='/api/commons/client')return commonsBrowserAsset(request,env,'commons.js','text/javascript; charset=utf-8');
+  if(['GET','HEAD'].includes(request.method)&&url.pathname==='/api/commons/style')return commonsBrowserAsset(request,env,'commons.css','text/css; charset=utf-8');
   if(request.method==='GET'&&url.pathname==='/api/commons/config')return json(commonsConfig(env));
   if(request.method==='GET'&&url.pathname==='/api/commons/services')return json(executionCatalogSnapshot(capabilityRegistry));
   if(request.method==='GET'&&url.pathname==='/api/commons/capabilities')return json({error:'operator_surface_moved'},410);
