@@ -4,10 +4,12 @@ import './admin-context-shell-recovery.js';
 
 export const ADMIN_MENU_GROUPS = Object.freeze([
   { id: 'home', icon: '⌂', defaultSection: 'command-home', labels: { ko: '홈', en: 'Home' } },
-  { id: 'operations', icon: '✦', defaultSection: 'work', labels: { ko: '운영', en: 'Operations' } },
-  { id: 'workspaces', icon: '▣', defaultSection: 'clients', labels: { ko: '조직·고객', en: 'Workspaces' } },
-  { id: 'services', icon: '◆', defaultSection: 'common-services', labels: { ko: '서비스', en: 'Services' } },
-  { id: 'system', icon: '◎', defaultSection: 'health', labels: { ko: '시스템', en: 'System' } },
+  { id: 'operations', icon: '▥', defaultSection: 'work', labels: { ko: '운영', en: 'Operations' } },
+  { id: 'workspaces', icon: '♙', defaultSection: 'clients', labels: { ko: '조직·고객', en: 'Organizations & Customers' } },
+  { id: 'services', icon: '◇', defaultSection: 'common-services', labels: { ko: '서비스', en: 'Services' } },
+  { id: 'community', icon: '◌', defaultSection: 'community', labels: { ko: '커뮤니티', en: 'Community' } },
+  { id: 'publishing', icon: '▤', defaultSection: 'books', labels: { ko: '출판·도서', en: 'Publishing' } },
+  { id: 'system', icon: '⚙', defaultSection: 'health', labels: { ko: '시스템', en: 'System' } },
 ]);
 
 export const ADMIN_MENU_REGISTRY = Object.freeze([
@@ -29,12 +31,12 @@ export const ADMIN_MENU_REGISTRY = Object.freeze([
   { id: 'life-ai', group: 'services', icon: 'Q', labels: { ko: '인생AI', en: 'Life AI' } },
   { id: 'personal-finance', group: 'services', icon: '₩', managementArea: 'professional-services', labels: { ko: '개인재무', en: 'Personal Finance' } },
   { id: 'invest', group: 'services', icon: 'I', managementArea: 'professional-services', labels: { ko: '투자 AI', en: 'Invest AI' } },
-  { id: 'community', group: 'services', icon: '◎', labels: { ko: '커뮤니티', en: 'Community' } },
-  { id: 'books', group: 'services', icon: 'B', labels: { ko: '출판·도서', en: 'Books & Publishing' } },
-  { id: 'social', group: 'services', icon: 'S', labels: { ko: '채널·계정 연결', en: 'Channel Connections' } },
-  { id: 'devotional', group: 'services', icon: 'V', labels: { ko: '매일묵상', en: 'Daily Devotional' } },
+  { id: 'social', group: 'services', icon: '↗', labels: { ko: '채널·계정 연결', en: 'Channel Connections' } },
   { id: 'marketing-ai', group: 'services', icon: 'M', labels: { ko: '마케팅AI', en: 'Marketing AI' } },
-  { id: 'ai-membership', group: 'services', icon: '◈', labels: { ko: 'AI 회원운영', en: 'AI Membership' } },
+  { id: 'community', group: 'community', icon: '◌', labels: { ko: '커뮤니티 운영', en: 'Community Operations' } },
+  { id: 'ai-membership', group: 'community', icon: '◈', labels: { ko: 'AI 회원운영', en: 'AI Membership' } },
+  { id: 'books', group: 'publishing', icon: 'B', labels: { ko: '출판·도서', en: 'Books & Publishing' } },
+  { id: 'devotional', group: 'publishing', icon: 'V', labels: { ko: '매일묵상', en: 'Daily Devotional' } },
   { id: 'supply-network', group: 'services', icon: 'N', managementArea: 'professional-services', labels: { ko: '판매·공급망', en: 'Sales & Supply Network' } },
   { id: 'insurance', group: 'services', icon: 'I', labels: { ko: '보험', en: 'Insurance' } },
 
@@ -67,8 +69,13 @@ export const ADMIN_MENU_CATEGORY_LABELS = Object.freeze({
   ai: { ko: 'AI·자동화', en: 'AI & Automation' }, platform: { ko: '인프라·상태', en: 'Platform & Health' }, other: { ko: '기타', en: 'Other' },
 });
 const ADMIN_MENU_CATEGORY_ORDER = Object.freeze({
-  home: ['overview','other'], operations: ['workflow','finance','other'], workspaces: ['customer','organization','other'],
-  services: ['common','content','business','other'], system: ['environment','security','ai','platform','other'],
+  home: ['overview','other'],
+  operations: ['workflow','finance','other'],
+  workspaces: ['customer','organization','other'],
+  services: ['common','business','content','other'],
+  community: ['content','other'],
+  publishing: ['content','other'],
+  system: ['environment','security','ai','platform','other'],
 });
 const ADMIN_MENU_SECTION_CATEGORY = Object.freeze({
   'command-home':'overview', campus:'overview', work:'workflow', communication:'workflow', finance:'finance', tax:'finance',
