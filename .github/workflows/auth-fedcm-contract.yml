@@ -72,8 +72,8 @@ jobs:
           grep -Fq "marketing-onboarding.js?v=20260817-workspace-label-1" auth-site/auth-router.js
           grep -Fq "'author-auth.js'" scripts/build.mjs
           grep -Fq "'business-auth.js'" scripts/build.mjs
-          grep -Fq "'/author-auth.js'" site-worker.js
-          grep -Fq "'/business-auth.js'" site-worker.js
+          grep -Fq "'/author-auth.js'" canonical-surface-router.js
+          grep -Fq "'/business-auth.js'" canonical-surface-router.js
           grep -Fq "AUTH_CRITICAL_ASSETS" canonical-surface-router.js
           grep -Fq 'supabase_cdn_timeout' auth-site/business-auth.js
           grep -Fq 'supabase_fallback_timeout' auth-site/business-auth.js
