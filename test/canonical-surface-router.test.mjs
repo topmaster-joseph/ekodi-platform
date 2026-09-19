@@ -187,6 +187,18 @@ test('Business canonical paths hide execution hosts while EKODIBIZ Trade stays t
   assert.equal(response,null);
 });
 
+test('AI canonical path preserves its base-aware client paths without double-prefixing',async()=>{
+  const source="const API_BASE=location.pathname.startsWith('/ai')?'/ai':'';\napi('/api/commons/config');\napi('/api/commons/match');";
+  const ai=binding(source,'text/javascript');
+  const response=await routeCanonicalSurface(new Request('https://ekodi.kr/ai/api/commons/client.js'),{AI:ai});
+  assert.equal(response.status,200);assert.equal(ai.calls[0].pathname,'/api/commons/client.js');
+  assert.equal(response.headers.get('x-ekodi-canonical-surface'),'ai');assert.equal(response.headers.get('x-ekodi-canonical-path'),'/ai');
+  const body=await response.text();
+  assert.match(body,/api\('\/api\/commons\/config'\)/);
+  assert.match(body,/api\('\/api\/commons\/match'\)/);
+  assert.doesNotMatch(body,/\/ai\/api\/commons\//);
+});
+
 test('Bible canonical path uses its service binding without double-prefixing assets',async()=>{
   const bible=binding('<html><head><link href="/bible/styles.css"></head><body>Bible</body></html>','text/html');
   const response=await routeCanonicalSurface(new Request('https://ekodi.kr/bible/reader?provider=KRV1961'),{BIBLE:bible});

@@ -170,7 +170,7 @@ function prefixRootLiterals(text,prefix){
 }
 function rewriteExecutionText(text,spec,type=''){
   let output=rewriteAbsoluteEkodiOrigins(text);
-  if(spec.basePathAware)return output;
+  if(spec.basePathAware||spec.id==='ai')return output;
   if(type.includes('text/html')||type.includes('javascript')||type.includes('application/json')||type.includes('text/plain'))output=prefixRootLiterals(output,spec.prefix);
   if(type.includes('text/css'))output=output.replace(/url\(\s*(["']?)\/(?!\/)/g,(m,q)=>`url(${q}${spec.prefix}/`);
   if(spec.id==='business')output=output.replace("function routeWorkspaceId(){\n  const path=location.pathname.replace(/^\\/+|\\/+$/g,'').toLowerCase();\n  if(path)return path;","function routeWorkspaceId(){\n  const path=location.pathname.replace(/^\\/+|\\/+$/g,'').toLowerCase();\n  if(path.startsWith('business/'))return path.slice('business/'.length).split('/')[0];\n  if(path&&path!=='business')return path;");
