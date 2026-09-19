@@ -160,6 +160,7 @@ async function menuDiagnostics(id) {
       currentSection: window.EKODIAdminPanels?.current?.() || '',
       hash: location.hash,
       busy,
+      textPreview: text.slice(0, 240),
     };
   }, id), 5_000, `${id} diagnostics`);
 }
@@ -258,6 +259,7 @@ async function clickMenu(id) {
     if (!state.panelFound) throw new Error('visible panel not found');
     if (!state.selected) throw new Error('context tab did not become active');
     if (state.textLength < 4) throw new Error('rendered panel is effectively empty');
+    if (id === 'storage' && /Control API endpoint not found/i.test(state.textPreview || '')) throw new Error('Storage is still using the retired root Control API route');
 
     if (state.busy) {
       stage(`menu-${id}-loading`);
