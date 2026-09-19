@@ -3,59 +3,61 @@ import './admin-service-handoffs.js';
 import './admin-context-shell-recovery.js';
 
 export const ADMIN_MENU_GROUPS = Object.freeze([
-  { id: 'home', icon: '⌂', defaultSection: 'command-home', labels: { ko: '홈', en: 'Home' } },
-  { id: 'operations', icon: '✦', defaultSection: 'work', labels: { ko: '운영', en: 'Operations' } },
-  { id: 'workspaces', icon: '▣', defaultSection: 'clients', labels: { ko: '조직·고객', en: 'Workspaces' } },
-  { id: 'services', icon: '◆', defaultSection: 'common-services', labels: { ko: '서비스', en: 'Services' } },
-  { id: 'system', icon: '◎', defaultSection: 'health', labels: { ko: '시스템', en: 'System' } },
+  { id: 'core', icon: '◈', defaultSection: 'command-home', labels: { ko: '핵심코어', en: 'Core' } },
+  { id: 'common', icon: '▦', defaultSection: 'common-services', labels: { ko: '공통서비스', en: 'Shared Services' } },
+  { id: 'professional', icon: '◆', defaultSection: 'marketing-ai', labels: { ko: '전문서비스', en: 'Professional Services' } },
+  { id: 'status', icon: '◉', defaultSection: 'health', labels: { ko: '상태서비스', en: 'Status & Operations' } },
+  { id: 'manager', icon: '♙', defaultSection: 'clients', labels: { ko: '중간관리자', en: 'Manager' } },
+  { id: 'submanager', icon: '▣', defaultSection: 'campus', labels: { ko: '하위관리자', en: 'Sub-admins' } },
+  { id: 'other', icon: '⋯', defaultSection: 'ai-module-spec', labels: { ko: '기타', en: 'Other' } },
 ]);
 
 export const ADMIN_MENU_REGISTRY = Object.freeze([
-  { id: 'command-home', group: 'home', icon: '⌘', labels: { ko: '에코디와 대화하기', en: 'Talk with EKODI' } },
-  { id: 'campus', group: 'home', icon: '⌂', labels: { ko: '관리 홈·사이트', en: 'Admin Home & Sites' } },
+  { id: 'command-home', group: 'core', icon: '⌘', labels: { ko: '에코디와 대화하기', en: 'Talk with EKODI' } },
+  { id: 'campus', group: 'submanager', icon: '⌂', labels: { ko: '관리 홈·사이트', en: 'Admin Home & Sites' } },
 
-  { id: 'work', group: 'operations', icon: 'W', labels: { ko: '업무', en: 'Work' } },
-  { id: 'communication', group: 'operations', icon: '✉', labels: { ko: '소통', en: 'Communication' } },
-  { id: 'finance', group: 'operations', icon: '₩', labels: { ko: '결제·회계', en: 'Finance & Accounting' } },
-  { id: 'tax', group: 'operations', icon: 'T', labels: { ko: '세금·증빙', en: 'Tax & Evidence' }, href: 'https://ekodi.kr/tax', adminHandoff: true },
+  { id: 'work', group: 'common', icon: 'W', labels: { ko: '업무', en: 'Work' } },
+  { id: 'communication', group: 'common', icon: '✉', labels: { ko: '소통', en: 'Communication' } },
+  { id: 'finance', group: 'common', icon: '₩', labels: { ko: '결제·회계', en: 'Finance & Accounting' } },
+  { id: 'tax', group: 'common', icon: 'T', labels: { ko: '세금·증빙', en: 'Tax & Evidence' }, href: 'https://ekodi.kr/tax', adminHandoff: true },
 
-  { id: 'clients', group: 'workspaces', icon: 'C', labels: { ko: '고객·운영공간', en: 'Customer & Operating Workspaces' } },
-  { id: 'site-chrome', group: 'workspaces', icon: 'HF', labels: { ko: '사이트 헤더·푸터', en: 'Site Header & Footer' }, superAdminOnly: true },
-  { id: 'cmpmyi', group: 'workspaces', icon: '3', labels: { ko: '통합 매장 운영', en: 'Multi-store Operations' }, href: 'https://ekodi.kr/cmpmyi/admin', superAdminOnly: true },
-  { id: 'organization', group: 'workspaces', icon: '◌', labels: { ko: '조직·협업', en: 'Organizations' } },
-  { id: 'workspace', group: 'workspaces', icon: '▧', labels: { ko: '공간·자료', en: 'Workspaces & Files' } },
+  { id: 'clients', group: 'manager', icon: 'C', labels: { ko: '고객·운영공간', en: 'Customer & Operating Workspaces' } },
+  { id: 'site-chrome', group: 'manager', icon: 'HF', labels: { ko: '사이트 헤더·푸터', en: 'Site Header & Footer' }, superAdminOnly: true },
+  { id: 'cmpmyi', group: 'submanager', icon: '3', labels: { ko: '통합 매장 운영', en: 'Multi-store Operations' }, href: 'https://ekodi.kr/cmpmyi/admin', superAdminOnly: true },
+  { id: 'organization', group: 'manager', icon: '◌', labels: { ko: '조직·협업', en: 'Organizations' } },
+  { id: 'workspace', group: 'manager', icon: '▧', labels: { ko: '공간·자료', en: 'Workspaces & Files' } },
 
-  { id: 'common-services', group: 'services', icon: '▦', labels: { ko: '공통서비스', en: 'Common Services' } },
-  { id: 'life-ai', group: 'services', icon: 'Q', labels: { ko: '인생AI', en: 'Life AI' } },
-  { id: 'personal-finance', group: 'services', icon: '₩', managementArea: 'professional-services', labels: { ko: '개인재무', en: 'Personal Finance' } },
-  { id: 'invest', group: 'services', icon: 'I', managementArea: 'professional-services', labels: { ko: '투자 AI', en: 'Invest AI' } },
-  { id: 'community', group: 'services', icon: '◎', labels: { ko: '커뮤니티', en: 'Community' } },
-  { id: 'books', group: 'services', icon: 'B', labels: { ko: '출판·도서', en: 'Books & Publishing' } },
-  { id: 'social', group: 'services', icon: 'S', labels: { ko: '채널·계정 연결', en: 'Channel Connections' } },
-  { id: 'devotional', group: 'services', icon: 'V', labels: { ko: '매일묵상', en: 'Daily Devotional' } },
-  { id: 'marketing-ai', group: 'services', icon: 'M', labels: { ko: '마케팅AI', en: 'Marketing AI' } },
-  { id: 'ai-membership', group: 'services', icon: '◈', labels: { ko: 'AI 회원운영', en: 'AI Membership' } },
-  { id: 'supply-network', group: 'services', icon: 'N', managementArea: 'professional-services', labels: { ko: '판매·공급망', en: 'Sales & Supply Network' } },
-  { id: 'insurance', group: 'services', icon: 'I', labels: { ko: '보험', en: 'Insurance' } },
+  { id: 'common-services', group: 'common', icon: '▦', labels: { ko: '공통서비스', en: 'Common Services' } },
+  { id: 'life-ai', group: 'professional', icon: 'Q', labels: { ko: '인생AI', en: 'Life AI' } },
+  { id: 'personal-finance', group: 'professional', icon: '₩', managementArea: 'professional-services', labels: { ko: '개인재무', en: 'Personal Finance' } },
+  { id: 'invest', group: 'professional', icon: 'I', managementArea: 'professional-services', labels: { ko: '투자 AI', en: 'Invest AI' } },
+  { id: 'community', group: 'common', icon: '◎', labels: { ko: '커뮤니티', en: 'Community' } },
+  { id: 'books', group: 'common', icon: 'B', labels: { ko: '출판·도서', en: 'Books & Publishing' } },
+  { id: 'social', group: 'common', icon: 'S', labels: { ko: '채널·계정 연결', en: 'Channel Connections' } },
+  { id: 'devotional', group: 'common', icon: 'V', labels: { ko: '매일묵상', en: 'Daily Devotional' } },
+  { id: 'marketing-ai', group: 'professional', icon: 'M', labels: { ko: '마케팅AI', en: 'Marketing AI' } },
+  { id: 'ai-membership', group: 'professional', icon: '◈', labels: { ko: 'AI 회원운영', en: 'AI Membership' } },
+  { id: 'supply-network', group: 'professional', icon: 'N', managementArea: 'professional-services', labels: { ko: '판매·공급망', en: 'Sales & Supply Network' } },
+  { id: 'insurance', group: 'professional', icon: 'I', labels: { ko: '보험', en: 'Insurance' } },
 
-  { id: 'public-site-controls', group: 'system', icon: '▤', labels: { ko: '공개·점검 전환', en: 'Public & Maintenance Mode' } },
-  { id: 'language-status', group: 'system', icon: '文', labels: { ko: '다국어 지원 현황', en: 'Language Readiness' } },
-  { id: 'architecture', group: 'system', icon: '◇', labels: { ko: '시스템 구조', en: 'System Structure' } },
-  { id: 'maturity', group: 'system', icon: 'M5', labels: { ko: '플랫폼 성숙도', en: 'Platform Maturity' }, superAdminOnly: true },
-  { id: 'security', group: 'system', icon: 'S', labels: { ko: '보안·Identity', en: 'Security & Identity' } },
-  { id: 'admins', group: 'system', icon: '♙', labels: { ko: '관리자·권한', en: 'Administrators & Access' }, superAdminOnly: true },
-  { id: 'ai-module-spec', group: 'system', icon: 'API', labels: { ko: 'AI·API 연동규격', en: 'AI & API Contracts' } },
-  { id: 'storage', group: 'system', icon: '▣', labels: { ko: '저장소', en: 'Storage' } },
-  { id: 'capabilities', group: 'system', icon: '⚡', labels: { ko: 'Capability Center', en: 'Capability Center' } },
-  { id: 'aiops', group: 'system', icon: 'AI', labels: { ko: 'AI 운영센터', en: 'AI & Agents' }, governance: { track: 'agent', changeClass: 'yellow', authorityContext: 'Person + Workspace + Role + Capability', controlPlane: true, globalPolicyMutation: 'super_admin' } },
-  { id: 'ai-settings', group: 'system', icon: '⚙', labels: { ko: '에코디 AI 관리', en: 'EKODI AI Management' }, governance: { track:'agent', changeClass:'yellow', controlPlane:true, globalPolicyMutation:'super_admin' } },
-  { id: 'openai', group: 'system', icon: 'O', labels: { ko: 'OpenAI 작업공간', en: 'OpenAI' }, providerWorkspace: true },
-  { id: 'devices', group: 'system', icon: 'D', labels: { ko: '실행 인프라', en: 'Execution Infrastructure' }, governance: { track: 'agent', changeClass: 'yellow', authorityContext: 'Person + Workspace + Role + Capability', controlPlane: true, globalPolicyMutation: 'super_admin' } },
-  { id: 'health', group: 'system', icon: '◉', labels: { ko: '상태·관측', en: 'Health & Observability' } },
-  { id: 'api-cost', group: 'system', icon: '₩', labels: { ko: 'API·비용', en: 'API & Cost' } },
-  { id: 'services', group: 'system', icon: '▦', labels: { ko: '서비스·지표', en: 'Services & Metrics' }, internal: true },
-  { id: 'deployments', group: 'system', icon: '↑', labels: { ko: '배포', en: 'Deployments' }, internal: true },
-  { id: 'policies', group: 'system', icon: '§', labels: { ko: '정책', en: 'Policies' }, internal: true },
+  { id: 'public-site-controls', group: 'status', icon: '▤', labels: { ko: '공개·점검 전환', en: 'Public & Maintenance Mode' } },
+  { id: 'language-status', group: 'status', icon: '文', labels: { ko: '다국어 지원 현황', en: 'Language Readiness' } },
+  { id: 'architecture', group: 'core', icon: '◇', labels: { ko: '시스템 구조', en: 'System Structure' } },
+  { id: 'maturity', group: 'status', icon: 'M5', labels: { ko: '플랫폼 성숙도', en: 'Platform Maturity' }, superAdminOnly: true },
+  { id: 'security', group: 'core', icon: 'S', labels: { ko: '보안·Identity', en: 'Security & Identity' } },
+  { id: 'admins', group: 'manager', icon: '♙', labels: { ko: '관리자·권한', en: 'Administrators & Access' }, superAdminOnly: true },
+  { id: 'ai-module-spec', group: 'other', icon: 'API', labels: { ko: 'AI·API 연동규격', en: 'AI & API Contracts' } },
+  { id: 'storage', group: 'core', icon: '▣', labels: { ko: '저장소', en: 'Storage' } },
+  { id: 'capabilities', group: 'core', icon: '⚡', labels: { ko: 'Capability Center', en: 'Capability Center' } },
+  { id: 'aiops', group: 'core', icon: 'AI', labels: { ko: 'AI 운영센터', en: 'AI & Agents' }, governance: { track: 'agent', changeClass: 'yellow', authorityContext: 'Person + Workspace + Role + Capability', controlPlane: true, globalPolicyMutation: 'super_admin' } },
+  { id: 'ai-settings', group: 'core', icon: '⚙', labels: { ko: '에코디 AI 관리', en: 'EKODI AI Management' }, governance: { track:'agent', changeClass:'yellow', controlPlane:true, globalPolicyMutation:'super_admin' } },
+  { id: 'openai', group: 'other', icon: 'O', labels: { ko: 'OpenAI 작업공간', en: 'OpenAI' }, providerWorkspace: true },
+  { id: 'devices', group: 'core', icon: 'D', labels: { ko: '실행 인프라', en: 'Execution Infrastructure' }, governance: { track: 'agent', changeClass: 'yellow', authorityContext: 'Person + Workspace + Role + Capability', controlPlane: true, globalPolicyMutation: 'super_admin' } },
+  { id: 'health', group: 'status', icon: '◉', labels: { ko: '상태·관측', en: 'Health & Observability' } },
+  { id: 'api-cost', group: 'status', icon: '₩', labels: { ko: 'API·비용', en: 'API & Cost' } },
+  { id: 'services', group: 'status', icon: '▦', labels: { ko: '서비스·지표', en: 'Services & Metrics' }, internal: true },
+  { id: 'deployments', group: 'status', icon: '↑', labels: { ko: '배포', en: 'Deployments' }, internal: true },
+  { id: 'policies', group: 'other', icon: '§', labels: { ko: '정책', en: 'Policies' }, internal: true },
 ]);
 
 export const ADMIN_MENU_CATEGORY_LABELS = Object.freeze({
@@ -67,8 +69,13 @@ export const ADMIN_MENU_CATEGORY_LABELS = Object.freeze({
   ai: { ko: 'AI·자동화', en: 'AI & Automation' }, platform: { ko: '인프라·상태', en: 'Platform & Health' }, other: { ko: '기타', en: 'Other' },
 });
 const ADMIN_MENU_CATEGORY_ORDER = Object.freeze({
-  home: ['overview','other'], operations: ['workflow','finance','other'], workspaces: ['customer','organization','other'],
-  services: ['common','content','business','other'], system: ['environment','security','ai','platform','other'],
+  core: ['overview','security','ai','platform','other'],
+  common: ['workflow','finance','common','content','other'],
+  professional: ['business','common','other'],
+  status: ['environment','platform','other'],
+  manager: ['customer','organization','security','other'],
+  submanager: ['overview','customer','organization','other'],
+  other: ['ai','other'],
 });
 const ADMIN_MENU_SECTION_CATEGORY = Object.freeze({
   'command-home':'overview', campus:'overview', work:'workflow', communication:'workflow', finance:'finance', tax:'finance',
@@ -91,8 +98,8 @@ export function getAdminMenuGroupLabel(id, locale = 'ko') { const group = getAdm
 export function getAdminMenuCategory(section) { return ADMIN_MENU_SECTION_CATEGORY[String(section || '').trim()] || 'other'; }
 export function getAdminMenuCategoryLabel(category, locale = 'ko') { const language = normalizeAdminLocale(locale); const labels = ADMIN_MENU_CATEGORY_LABELS[category] || ADMIN_MENU_CATEGORY_LABELS.other; return labels?.[language] || labels?.ko || category || 'other'; }
 export function adminMenuCategoryOrder(group) { const order = ADMIN_MENU_CATEGORY_ORDER[String(group || '').trim()] || ['other']; return [...order]; }
-export function getAdminMenuGroupForSection(section) { return getAdminMenuItem(section)?.group || 'home'; }
-export function getAdminMenuGroupDefault(id) { const group = getAdminMenuGroup(id); if (!group) return 'campus'; const explicit = ADMIN_MENU_REGISTRY.find(item => item.id === group.defaultSection && item.group === group.id && !item.internal && !item.superAdminOnly); if (explicit) return explicit.id; const firstVisibleChild = ADMIN_MENU_REGISTRY.find(item => item.group === group.id && !item.internal && !item.superAdminOnly); return firstVisibleChild?.id || 'campus'; }
+export function getAdminMenuGroupForSection(section) { return getAdminMenuItem(section)?.group || 'core'; }
+export function getAdminMenuGroupDefault(id) { const group = getAdminMenuGroup(id); if (!group) return 'command-home'; const explicit = ADMIN_MENU_REGISTRY.find(item => item.id === group.defaultSection && item.group === group.id && !item.internal && !item.superAdminOnly); if (explicit) return explicit.id; const firstVisibleChild = ADMIN_MENU_REGISTRY.find(item => item.group === group.id && !item.internal && !item.superAdminOnly); return firstVisibleChild?.id || 'command-home'; }
 export function adminMenuGroups() { return ADMIN_MENU_GROUPS.map(group => group.id); }
 export function adminMenuOrder() { return ADMIN_MENU_REGISTRY.filter(item => !item.internal).map(item => item.id); }
 
