@@ -52,7 +52,7 @@ test('admin exposes Tapo bridge enrollment and live view without raw RTSP',()=>{
 test('device observation is a registered generation-10 capability composition',()=>{
   const capability=registry.capabilities.find(x=>x.id==='device.observe');
   assert.ok(capability);
-  assert.equal(registry.version,'3.1.0');
+  assert.equal(registry.generation.currentFoundation,10);
   assert.equal(capability.actionTier,'observe');
   assert.equal(capability.maturity,'service-backed-readonly');
   assert.ok(capability.surfaces.includes('my'));

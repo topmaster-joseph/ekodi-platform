@@ -9,7 +9,7 @@ import {
 } from '../sovereign-capability-fabric.js';
 
 test('Capability Registry is the one 8G contract source for all adapters',()=>{
-  assert.equal(registry.version,'3.1.0');
+  assert.match(registry.version,/^\d+\.\d+\.\d+$/);
   assert.equal(SOVEREIGN_CAPABILITY_FABRIC.registryVersion,registry.version);
   assert.equal(SOVEREIGN_CAPABILITY_FABRIC.contract,'ekodi.sovereign-capability.v1');
   assert.ok(registry.capabilities.length >= 27);

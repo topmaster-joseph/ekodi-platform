@@ -70,6 +70,9 @@ const COMMAND_POLICIES = Object.freeze({
   'lock.resume_on': { risk: 'maintain' },
   'autologon.open': { risk: 'privileged', confirm: true },
   'diagnostics.collect': { risk: 'observe' },
+  'computer.system.read': { risk: 'observe' },
+  'computer.process.list': { risk: 'observe' },
+  'computer.agent.status': { risk: 'observe' },
   'network.diagnose': { risk: 'observe' },
   'printers.diagnose': { risk: 'observe' },
   'startup.scan': { risk: 'observe' },
@@ -96,6 +99,9 @@ const DIAGNOSTIC_SECTIONS = Object.freeze({
 
 const COMMAND_CAPABILITIES = Object.freeze({
   'diagnostics.collect': 'diagnostics',
+  'computer.system.read': 'computerRead',
+  'computer.process.list': 'processRead',
+  'computer.agent.status': 'agentStatus',
   'network.diagnose': 'networkDiagnostics',
   'printers.diagnose': 'printerDiagnostics',
   'startup.scan': 'startupManagement',

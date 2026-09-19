@@ -1,5 +1,5 @@
 {
-  "version": "1.1.0",
+  "version": "1.2.0",
   "name": "EKODI Workspace Packs",
   "defaultPack": "personal-starter",
   "packs": [
@@ -340,6 +340,29 @@
         "에너지",
         "발전량",
         "시설"
+      ]
+    },
+    {
+      "id": "platform-operations",
+      "name": "Platform Operations Workspace",
+      "audiences": [
+        "platform-operator"
+      ],
+      "description": "검증된 플랫폼 운영자가 기기 상태 관찰과 제한된 원격 컴퓨터 실행을 권한·감사·격리 정책 아래 수행하는 운영 작업공간.",
+      "capabilities": [
+        "core.project",
+        "core.automation",
+        "core.analytics",
+        "device.observe",
+        "device.remote-computer"
+      ],
+      "signals": [
+        "플랫폼 운영",
+        "기기 관리",
+        "원격 컴퓨터",
+        "원격 실행",
+        "디바이스",
+        "장애 복구"
       ]
     }
   ],
