@@ -4,8 +4,34 @@
     "name": "ekodi-energy",
     "config": "wrangler.energy.toml",
     "requests": [
-      {"url":"https://energy.ekodi.kr/","statuses":[200],"redirect":"follow","expect":["Energy AI","읽기 전용 MVP","https://ekodi.kr/shell/shell.js"],"headerExpect":["x-ekodi-shell: v2"]},
-      {"url":"https://energy.ekodi.kr/health","statuses":[200],"expect":["ekodi-energy-ai","production-readonly-mvp","\"controlEnabled\":false"]}
+      {
+        "url": "https://ekodi.kr/energy/",
+        "statuses": [
+          200
+        ],
+        "redirect": "follow",
+        "expect": [
+          "Energy AI",
+          "읽기 전용 MVP",
+          "https://ekodi.kr/shell/shell.js"
+        ],
+        "headerExpect": [
+          "x-ekodi-shell: v2"
+        ],
+        "candidateUrl": "https://ekodi-energy.topmaster-joseph.workers.dev/"
+      },
+      {
+        "url": "https://ekodi.kr/energy/health",
+        "statuses": [
+          200
+        ],
+        "expect": [
+          "ekodi-energy-ai",
+          "production-readonly-mvp",
+          "\"controlEnabled\":false"
+        ],
+        "candidateUrl": "https://ekodi-energy.topmaster-joseph.workers.dev/health"
+      }
     ]
   }
 }

@@ -43,7 +43,10 @@ jobs:
           npm run validate:boundaries
           npm run validate:ui-dna
           npm run validate:mission
-          grep -Fq 'pattern = "energy.ekodi.kr"' wrangler.energy.toml
+          if grep -Fq '[[routes]]' wrangler.energy.toml || grep -Fq 'custom_domain = true' wrangler.energy.toml; then
+            echo 'Energy public custom-domain routing must stay retired.'
+            exit 1
+          fi
           grep -Fq 'CONTROL_ENABLED = "false"' wrangler.energy.toml
           test -f deploy/manifests/energy.worker.json
 
@@ -85,9 +88,9 @@ jobs:
           echo 'No production Energy Worker exists. Performing one-time read-only bootstrap from the staging-verified source.'
           npx --yes wrangler@4.119.0 deploy --config wrangler.energy.toml
           for attempt in $(seq 1 18); do
-            root_code=$(curl -L -sS -o /tmp/energy-bootstrap.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://energy.ekodi.kr/' || true)
-            health_code=$(curl -sS -o /tmp/energy-bootstrap-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://energy.ekodi.kr/health' || true)
-            block_code=$(curl -sS -o /tmp/energy-bootstrap-block.json -w '%{http_code}' -H 'content-type: application/json' -d '{"action":"breaker_off","controlMode":3}' --connect-timeout 5 --max-time 15 'https://energy.ekodi.kr/api/action-check' || true)
+            root_code=$(curl -L -sS -o /tmp/energy-bootstrap.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/energy/' || true)
+            health_code=$(curl -sS -o /tmp/energy-bootstrap-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/energy/health' || true)
+            block_code=$(curl -sS -o /tmp/energy-bootstrap-block.json -w '%{http_code}' -H 'content-type: application/json' -d '{"action":"breaker_off","controlMode":3}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/energy/api/action-check' || true)
             if [[ "$root_code" == "200" ]] && [[ "$health_code" == "200" ]] && [[ "$block_code" == "200" ]] \
               && grep -Fq 'Energy AI' /tmp/energy-bootstrap.html \
               && grep -Fq '"telemetryEnabled":false' /tmp/energy-bootstrap-health.json \
@@ -109,9 +112,9 @@ jobs:
         run: |
           set -euo pipefail
           for attempt in $(seq 1 18); do
-            root_code=$(curl -L -sS -o /tmp/energy.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://energy.ekodi.kr/' || true)
-            health_code=$(curl -sS -o /tmp/energy-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://energy.ekodi.kr/health' || true)
-            block_code=$(curl -sS -o /tmp/energy-block.json -w '%{http_code}' -H 'content-type: application/json' -d '{"action":"breaker_off","controlMode":3}' --connect-timeout 5 --max-time 15 'https://energy.ekodi.kr/api/action-check' || true)
+            root_code=$(curl -L -sS -o /tmp/energy.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/energy/' || true)
+            health_code=$(curl -sS -o /tmp/energy-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/energy/health' || true)
+            block_code=$(curl -sS -o /tmp/energy-block.json -w '%{http_code}' -H 'content-type: application/json' -d '{"action":"breaker_off","controlMode":3}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/energy/api/action-check' || true)
             if [[ "$root_code" == "200" ]] && [[ "$health_code" == "200" ]] && [[ "$block_code" == "200" ]] \
               && grep -Fq 'Energy AI' /tmp/energy.html \
               && grep -Fq '"telemetryEnabled":false' /tmp/energy-health.json \
