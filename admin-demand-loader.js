@@ -9,6 +9,8 @@
   const loadedStyles=new Map();
   const pending=new Map();
   const secondaryScheduled=new Set();
+  const FEATURE_ALIASES=Object.freeze({'marketing-ai':'marketing','ai-membership':'aimembers'});
+  function normalizeFeatureKey(key){const value=String(key||'').trim();return FEATURE_ALIASES[value]||value;}
 
   const FEATURES={
     campus: {
@@ -346,7 +348,7 @@
   });
 
   window.EKODIAdminDemand = Object.freeze({
-    activate: key => activateFeature(key, nav?.querySelector(`[data-demand-feature="${key}"]`), false),
+    activate: key => {const normalized=normalizeFeatureKey(key);return activateFeature(normalized, nav?.querySelector(`[data-demand-feature="${normalized}"]`), false);},
     loadScript,
     loadStyle,
   });
