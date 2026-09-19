@@ -1,5 +1,5 @@
 {
-  "version": 72,
+  "version": 73,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
@@ -129,6 +129,28 @@
         ],
         "headerExpect": [
           "x-ekodi-canonical-surface: my"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/ekodimission/live",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "EKODI REALTIME",
+          "class=\"mission-site-header\"",
+          "data-mission-nav",
+          "/ekodimission/assets/shell.css",
+          "/ekodimission/assets/shell.js"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: ekodimission-public",
+          "x-ekodi-independent-site: true",
+          "x-ekodi-publication-status: published",
+          "x-robots-tag: index, follow",
+          "cache-control: no-store"
         ],
         "rollbackVerify": false
       },
