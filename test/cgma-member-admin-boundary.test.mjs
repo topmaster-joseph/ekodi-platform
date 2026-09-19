@@ -16,7 +16,10 @@ test('CGMA member roster is owned by the association workspace', async () => {
   assert.match(script, /workspace==='cgma'/);
   assert.match(script, /member:POLICY\.capabilities\.memberRoster/);
   assert.match(script, /\/cgma\/admin\/assets\/cgma-member-admin\.js/);
-  assert.match(script, /site',workspace==='cgma'\?'cgma':'space'/);
+  assert.match(script, /function workspaceAuthSite\(\)/);
+  assert.match(script, /if\(workspace==='cgma'\)return'cgma'/);
+  assert.match(script, /if\(workspace==='ekodimission'\)return'mission'/);
+  assert.match(script, /return'space'/);
 });
 
 test('CGMA member projection cannot control Google credentials', async () => {
