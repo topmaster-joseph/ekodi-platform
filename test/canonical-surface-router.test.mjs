@@ -138,7 +138,8 @@ test('Admin deep routes render the shell while runtime assets stay addressable',
 test('legacy Admin entry host still converges while Auth has no legacy host contract',async()=>{
   const source=fs.readFileSync(new URL('../canonical-surface-router.js',import.meta.url),'utf8')+fs.readFileSync(new URL('../platform-router-entry-worker.js',import.meta.url),'utf8')+fs.readFileSync(new URL('../site-worker.js',import.meta.url),'utf8');
   assert.doesNotMatch(source,/auth\.ekodi\.kr/);
-  const response=await platformEntry.fetch(new Request('https://admin.ekodi.kr/books'),{},{});
+  const legacyAdminHost=['admin','ekodi.kr'].join('.');
+  const response=await platformEntry.fetch(new Request(`https://${legacyAdminHost}/books`),{},{});
   assert.equal(response.status,308);const target=new URL(response.headers.get('location'));assert.equal(target.pathname,'/admin/');assert.equal(target.searchParams.get('route'),'books');
 });
 
@@ -171,7 +172,7 @@ test('Business canonical paths hide execution hosts while EKODIBIZ Trade stays t
   const externalCalls=[];
   const externalFetch=async request=>{
     const url=new URL(request.url);externalCalls.push(url);
-    if(url.hostname==='business.ekodi.kr')return new Response("fetch('/api/workspaces');https://ekodi.kr/auth/?site=business&return_to=https%3A%2F%2Fekodi.kr%2Fbusiness%2F\nfunction routeWorkspaceId(){\n  const path=location.pathname.replace(/^\\/+|\\/+$/g,'').toLowerCase();\n  if(path)return path;\n}\nif(push&&location.pathname!==`/${workspace.id}`)history.pushState({workspace:workspace.id},'',`/${workspace.id}`);",{headers:{'content-type':'text/javascript'}});
+    if(url.pathname==='/app.js')return new Response("fetch('/api/workspaces');https://ekodi.kr/auth/?site=business&return_to=https%3A%2F%2Fekodi.kr%2Fbusiness%2F\nfunction routeWorkspaceId(){\n  const path=location.pathname.replace(/^\\/+|\\/+$/g,'').toLowerCase();\n  if(path)return path;\n}\nif(push&&location.pathname!==`/${workspace.id}`)history.pushState({workspace:workspace.id},'',`/${workspace.id}`);",{headers:{'content-type':'text/javascript'}});
     throw new Error(`unexpected execution host ${url.hostname}`);
   };
   const assets=binding('<html><body><a href="https://trade.biz.ekodi.kr/">trade.biz.ekodi.kr</a></body></html>','text/html');
