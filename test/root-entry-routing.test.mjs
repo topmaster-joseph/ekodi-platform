@@ -5,11 +5,13 @@ import { readFile } from 'node:fs/promises';
 const worker = await readFile(new URL('../site-worker.js', import.meta.url), 'utf8');
 const wrangler = await readFile(new URL('../wrangler.site.toml', import.meta.url), 'utf8');
 
-test('EKODI public homepage is an explicit secured Worker route', () => {
-  assert.match(wrangler, /pattern = "ekodi\.kr"/);
-  assert.match(wrangler, /pattern = "www\.ekodi\.kr"/);
+test('EKODI public homepage is an explicit secured apex Worker route', () => {
+  const custom = wrangler.split('[[routes]]').slice(1)
+    .filter(block => /custom_domain\s*=\s*true/.test(block))
+    .map(block => block.match(/pattern\s*=\s*"([^"]+)"/)?.[1])
+    .filter(Boolean);
+  assert.deepEqual(custom, ['ekodi.kr']);
   assert.match(worker, /const PUBLIC_HOST = 'ekodi\.kr'/);
-  assert.match(worker, /PUBLIC_ALIAS_HOSTS = new Set\(\['www\.ekodi\.kr'\]\)/);
   assert.match(worker, /'public-home'/);
   assert.match(worker, /'public-asset'/);
   assert.match(worker, /PUBLIC_CSP/);

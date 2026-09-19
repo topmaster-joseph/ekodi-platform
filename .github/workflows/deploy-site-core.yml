@@ -301,8 +301,8 @@ jobs:
           test -f ai-management-admin.js
           test -f communication-admin.css
           grep -Fq 'EKODI COMMUNICATION ADMIN' communication-admin.js
-          grep -Fq 'https://mail.ekodi.kr/admin' communication-admin.js
-          grep -Fq 'https://live.ekodi.kr/' communication-admin.js
+          grep -Fq 'https://ekodi.kr/mail/admin' communication-admin.js
+          grep -Fq 'https://ekodi.kr/live' communication-admin.js
           grep -Fq 'Permission transfer: NONE' openai-workspace-admin.js
           grep -Fq 'EKODIAdminContext' openai-workspace-admin.js
           grep -Fq 'ekodi-admin-assist-request' openai-workspace-admin.js
@@ -342,9 +342,9 @@ jobs:
             exit 1
           fi
           root_host='ekodi.kr'
-          for host in "$root_host" "admin.$root_host" "mail.$root_host"; do
-            grep -Fq "pattern = \"$host\"" wrangler.site.toml
-          done
+          grep -Fq "pattern = \"$root_host\"" wrangler.site.toml
+          custom_domain_count=$(awk '/\[\[routes\]\]/{block=""} {block=block $0 "\\n"} /custom_domain = true/{count++} END{print count+0}' wrangler.site.toml)
+          test "$custom_domain_count" = '1'
 
       - name: Verify Cloudflare credentials
         run: |
@@ -380,8 +380,8 @@ jobs:
           grep -Fq 'renderMissingTargets' dist/ai-ops-admin.js
           grep -Fq '.ai-evolution-block' dist/ai-ops-admin.css
           grep -Fq 'EKODI COMMUNICATION ADMIN' dist/communication-admin.js
-          grep -Fq 'https://mail.ekodi.kr/admin' dist/communication-admin.js
-          grep -Fq 'https://live.ekodi.kr/' dist/communication-admin.js
+          grep -Fq 'https://ekodi.kr/mail/admin' dist/communication-admin.js
+          grep -Fq 'https://ekodi.kr/live' dist/communication-admin.js
           grep -Fq 'Permission transfer: NONE' dist/openai-workspace-admin.js
           grep -Fq 'EKODIAdminContext' dist/openai-workspace-admin.js
           grep -Fq 'ekodi-admin-assist-request' dist/openai-workspace-admin.js
@@ -417,7 +417,23 @@ jobs:
           grep -Fq '.app>main{padding-top:calc(78px + env(safe-area-inset-top,0px))}' dist/admin-shell.css
           grep -Fq -- '--ekodi-home-header-height' dist/index.html
 
+      - name: Read Production Cloudflare quota Source of Truth
+        id: quota
+        run: node scripts/cloudflare-production-budget.mjs --output=cloudflare-production-quota.json
+
+      - name: Hold domain mutation while quota protection circuit is open
+        if: steps.quota.outputs.skip_nonessential == 'true'
+        shell: bash
+        run: |
+          {
+            echo '### Shared Site production mutation deferred'
+            echo '- quota state: **${{ steps.quota.outputs.state }}**'
+            echo '- usage: **${{ steps.quota.outputs.percent }}%**'
+            echo '- action: domain trigger synchronization is held; guarded release will fail-fast on the quota circuit without retry storm'
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Verify and repair Cloudflare custom-domain attachments
+        if: steps.quota.outputs.skip_nonessential != 'true'
         shell: bash
         env:
           BEFORE_SHA: ${{ github.event.before }}
@@ -433,12 +449,14 @@ jobs:
           echo "$payload" | jq -e '.success == true' >/dev/null
           needs_sync=false
           root_host='ekodi.kr'
-          for host in "$root_host" "admin.$root_host" "mail.$root_host"; do
-            if ! echo "$payload" | jq -e --arg host "$host" --arg service 'shy-thunder-39a4' '.result[] | select(.hostname == $host and .service == $service)' >/dev/null; then
-              echo "Cloudflare Worker domain missing: $host"
-              needs_sync=true
-            fi
-          done
+          if ! echo "$payload" | jq -e --arg host "$root_host" --arg service 'shy-thunder-39a4' '.result[] | select(.hostname == $host and .service == $service)' >/dev/null; then
+            echo "Cloudflare Worker domain missing: $root_host"
+            needs_sync=true
+          fi
+          if echo "$payload" | jq -e --arg host "$root_host" --arg service 'shy-thunder-39a4' '.result[] | select(.service == $service and .hostname != $host)' >/dev/null; then
+            echo 'Unexpected Shared Site custom domain attachment detected; trigger synchronization required.'
+            needs_sync=true
+          fi
           config_changed=false
           if [ "$GITHUB_EVENT_NAME" = 'push' ] && [ -n "${BEFORE_SHA:-}" ] && [ "$BEFORE_SHA" != '0000000000000000000000000000000000000000' ]; then
             if git diff --name-only "$BEFORE_SHA" "$GITHUB_SHA" 2>/dev/null | grep -Fxq 'wrangler.site.toml'; then config_changed=true; fi
@@ -449,11 +467,13 @@ jobs:
             payload=$(read_domains)
           fi
           root_host='ekodi.kr'
-          for host in "$root_host" "admin.$root_host" "mail.$root_host"; do
-            echo "$payload" | jq -e --arg host "$host" --arg service 'shy-thunder-39a4' '.result[] | select(.hostname == $host and .service == $service)' >/dev/null \
-              || { echo "Required Cloudflare Worker domain is not attached: $host"; exit 1; }
-            echo "Verified Cloudflare Worker domain: $host"
-          done
+          echo "$payload" | jq -e --arg host "$root_host" --arg service 'shy-thunder-39a4' '.result[] | select(.hostname == $host and .service == $service)' >/dev/null \
+            || { echo "Required Cloudflare Worker domain is not attached: $root_host"; exit 1; }
+          if echo "$payload" | jq -e --arg host "$root_host" --arg service 'shy-thunder-39a4' '.result[] | select(.service == $service and .hostname != $host)' >/dev/null; then
+            echo 'Unexpected Shared Site custom domain remains attached after synchronization.'
+            exit 1
+          fi
+          echo "Verified Cloudflare Worker domain: $root_host"
 
       - name: Enforce canonical Church route ownership
         run: node scripts/ensure-church-route-ownership.mjs
@@ -495,10 +515,6 @@ jobs:
           grep -Fiq 'x-ekodi-route: admin-shell' /tmp/admin-canonical.headers || { echo 'Canonical Admin route owner missing.'; exit 1; }
           grep -Fiq 'cache-control: no-store' /tmp/admin-canonical.headers || { echo 'Canonical Admin shell must remain no-store.'; exit 1; }
 
-          legacy_code=$(curl -sS --max-redirs 0 -D /tmp/admin-legacy.headers -o /tmp/admin-legacy.body -w '%{http_code}' --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 20 'https://admin.ekodi.kr/' || true)
-          [ "$legacy_code" = '308' ] || { echo "Legacy Admin host must redirect permanently; HTTP $legacy_code"; exit 1; }
-          grep -Fiq 'location: https://ekodi.kr/admin/?source=admin.ekodi.kr' /tmp/admin-legacy.headers || { echo 'Legacy Admin redirect target is not canonical.'; exit 1; }
-          grep -Fiq 'cache-control: no-store' /tmp/admin-legacy.headers || { echo 'Legacy Admin redirect must remain no-store.'; exit 1; }
           echo 'canonicalAdminRouteOwnership=verified'
 
       - name: Verify admin assets and every registered production service
@@ -538,27 +554,32 @@ jobs:
             'https://ekodi.kr/admin',
             'https://ekodi.kr/auth',
             'https://ekodi.kr/auth/',
-            'https://admin.ekodi.kr/',
-            'https://ai.ekodi.kr/',
+            'https://ekodi.kr/admin/',
+            'https://ekodi.kr/ai/',
             'https://ekodi.kr/tax',
-            'https://mail.ekodi.kr/',
-            'https://live.ekodi.kr/',
-            'https://live.church.ekodi.kr/',
-            'https://cloud.ekodi.kr/',
-            'https://marketing.ekodi.kr/',
+            'https://ekodi.kr/mail',
+            'https://ekodi.kr/live',
+            'https://ekodi.kr/live/church',
+            'https://ekodi.kr/cloud',
+            'https://ekodi.kr/ekodibiz/marketing-ai',
             'https://cgma.or.kr/',
             'https://www.cgma.or.kr/',
-            'https://cgma.ekodi.kr/',
             'https://ekodi.kr/cgma/',
-            'https://biz.ekodi.kr/',
-            'https://trade.biz.ekodi.kr/',
-            'https://pay.ekodi.kr/',
-            'https://pay.biz.ekodi.kr/',
+            'https://ekodi.kr/ekodibiz',
+            'https://ekodi.kr/ekodibiz/trade',
+            'https://ekodi.kr/pay',
+            'https://ekodi.kr/ekodibiz/pay',
             'https://ekodi.kr/ekodichurch/',
             'https://ekodi.kr/ekodilab/'
           ]);
-          for(const service of registry.services||[]) if(service.productionVerified===true && service.url) urls.add(service.url);
-          for(const match of shell.matchAll(/href=["'](https:\/\/[^"']+\.ekodi\.kr\/?[^"']*)["']/g)) urls.add(match[1]);
+          for(const service of registry.services||[]) {
+            if(service.productionVerified!==true || !service.url) continue;
+            try {
+              const target=new URL(service.url);
+              if(target.hostname==='ekodi.kr' || !target.hostname.endsWith('.ekodi.kr')) urls.add(service.url);
+            } catch {}
+          }
+          for(const match of shell.matchAll(/href=["'](https:\/\/ekodi\.kr\/[^"']*)["']/g)) urls.add(match[1]);
           console.log([...urls].sort().join('\n'));
           NODE
 
@@ -585,7 +606,7 @@ jobs:
           done
 
           : > /tmp/mail-body
-          if curl -L -fsS --retry 3 --retry-delay 2 --connect-timeout 5 --max-time 20 'https://mail.ekodi.kr/' -o /tmp/mail-body; then
+          if curl -L -fsS --retry 3 --retry-delay 2 --connect-timeout 5 --max-time 20 'https://ekodi.kr/mail' -o /tmp/mail-body; then
             grep -Fq '<title>EKODI Mail</title>' /tmp/mail-body || failed=1
             grep -Fq 'id="accountLabel"' /tmp/mail-body || failed=1
             grep -Fq 'id="searchForm"' /tmp/mail-body || failed=1
@@ -595,19 +616,19 @@ jobs:
           fi
 
           for asset in \
-            'https://admin.ekodi.kr/admin-shell.css' \
-            'https://admin.ekodi.kr/admin-demand-loader.js' \
-            'https://admin.ekodi.kr/admin-menu-registry.js' \
-            'https://admin.ekodi.kr/admin-menu-layout.js' \
-            'https://admin.ekodi.kr/admin-sidebar.js' \
-            'https://admin.ekodi.kr/admin-design-engine.js' \
-            'https://admin.ekodi.kr/admin-design-engine.css' \
-            'https://admin.ekodi.kr/campus-actions.js' \
-            'https://admin.ekodi.kr/marketing-ai-admin.js' \
-            'https://admin.ekodi.kr/tapo-device-admin.js' \
-            'https://admin.ekodi.kr/tapo-device-admin.css' \
-            'https://admin.ekodi.kr/admin-public-site-controls.js' \
-            'https://admin.ekodi.kr/admin-language-status.js' \
+            'https://ekodi.kr/admin/admin-shell.css' \
+            'https://ekodi.kr/admin/admin-demand-loader.js' \
+            'https://ekodi.kr/admin/admin-menu-registry.js' \
+            'https://ekodi.kr/admin/admin-menu-layout.js' \
+            'https://ekodi.kr/admin/admin-sidebar.js' \
+            'https://ekodi.kr/admin/admin-design-engine.js' \
+            'https://ekodi.kr/admin/admin-design-engine.css' \
+            'https://ekodi.kr/admin/campus-actions.js' \
+            'https://ekodi.kr/admin/marketing-ai-admin.js' \
+            'https://ekodi.kr/admin/tapo-device-admin.js' \
+            'https://ekodi.kr/admin/tapo-device-admin.css' \
+            'https://ekodi.kr/admin/admin-public-site-controls.js' \
+            'https://ekodi.kr/admin/admin-language-status.js' \
             'https://ekodi.kr/auth/auth-workspace-target.js'; do
             check "$asset" || failed=1
           done
