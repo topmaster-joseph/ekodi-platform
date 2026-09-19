@@ -49,9 +49,6 @@ const ADMIN_PERSONAL_FINANCE_PATH = '/api/control/personal-finance';
 const ADMIN_MARKETING_PUBLISHING_PREFIX = '/api/control/marketing-publishing';
 const ADMIN_COMMON_SERVICE_AI_PREFIX = '/api/control/common-services/ai/';
 
-const AUTH_HOST = 'auth.ekodi.kr';
-const AUTH_ASSETS = new Set(['/auth.js','/auth-bootstrap.js','/auth-entry.js','/auth.css','/auth-router.js','/oauth-consent.js','/marketing-auth-hotfix.js','/auth-workspace-target.js','/admin-auth.js','/google-origin-bridge.js','/client-auth.js','/author-auth.js','/business-auth.js','/marketing-onboarding.js','/membership-ui.js','/google-origin-bridge.js']);
-const AUTH_CRITICAL_ASSETS = new Set(['/auth.js','/auth-bootstrap.js','/auth-entry.js','/auth-router.js','/oauth-consent.js','/marketing-auth-hotfix.js','/auth-workspace-target.js','/admin-auth.js','/google-origin-bridge.js','/client-auth.js','/author-auth.js','/business-auth.js','/marketing-onboarding.js','/membership-ui.js']);
 
 const HUB_HOSTS = new Set([
   'pay.ekodi.kr',
@@ -479,11 +476,11 @@ function safeAdminReturnPath(value) {
 }
 
 function adminAuthRedirect(returnPath) {
-  const safePath = safeAdminReturnPath(returnPath);
-  const target = new URL('https://auth.ekodi.kr/');
+  safeAdminReturnPath(returnPath);
+  const target = new URL('https://ekodi.kr/auth/');
   target.searchParams.set('site', 'admin');
   target.searchParams.set('direct', '1');
-  target.searchParams.set('return_to', `https://admin.ekodi.kr${safePath}`);
+  target.searchParams.set('return_to', 'https://ekodi.kr/admin/');
   const response = new Response(null, {
     status: 302,
     headers: {
@@ -629,7 +626,7 @@ export default {
     if (host === PUBLIC_HOST) {
       if (RETIRED_ADMIN_PATHS.has(url.pathname)) return retiredAdminResponse();
       if (url.pathname === '/oauth/consent' || url.pathname === '/cgma/oauth/consent') {
-        const target = new URL('https://auth.ekodi.kr/oauth/consent');
+        const target = new URL('https://ekodi.kr/auth/oauth/consent');
         target.search = url.search;
         const response = new Response(null, { status:307, headers:{ Location:target.toString(), 'Cache-Control':'no-store' } });
         applyBaseSecurityHeaders(response.headers);
@@ -747,26 +744,6 @@ export default {
       if (ADMIN_ASSETS.has(url.pathname)) {
         const response = await env.ASSETS.fetch(request);
         return withHostSecurity(response, ADMIN_CSP, adminAssetCacheControl(url), 'admin-asset');
-      }
-    }
-
-    if (host === AUTH_HOST) {
-      if (url.pathname === '/' || url.pathname === '/index.html' || url.pathname === '/login' || url.pathname === '/login/') {
-        const response = await env.ASSETS.fetch(assetRequest(request, '/auth-center'));
-        return withHostSecurity(response, AUTH_CSP, 'no-store', 'central-auth');
-      }
-      if (url.pathname === '/google-origin-bridge' || url.pathname === '/google-origin-bridge/') {
-        const response = await env.ASSETS.fetch(assetRequest(request, '/google-origin-bridge'));
-        return withHostSecurity(response, AUTH_CSP, 'no-store', 'google-origin-bridge');
-      }
-      if (url.pathname === '/oauth/consent' || url.pathname === '/oauth/consent/') {
-        const response = await env.ASSETS.fetch(assetRequest(request, '/oauth-consent'));
-        return withHostSecurity(response, AUTH_CSP, 'no-store', 'oauth-consent');
-      }
-      if (AUTH_ASSETS.has(url.pathname)) {
-        const response = await env.ASSETS.fetch(request);
-        const cacheControl = AUTH_CRITICAL_ASSETS.has(url.pathname) ? 'no-store' : 'public, max-age=300';
-        return withHostSecurity(response, AUTH_CSP, cacheControl, 'central-auth-asset');
       }
     }
 
