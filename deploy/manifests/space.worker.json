@@ -73,7 +73,7 @@
         "url": "https://ekodi.kr/ekodimission",
         "statuses": [200],
         "redirect": "manual",
-        "expect": ["EKODI MISSION"],
+        "expect": ["EKODI MISSION","class=\"mission-site-header\"","data-mission-nav","/ekodimission/assets/shell.css","/ekodimission/assets/shell.js"],
         "headerExpect": ["x-ekodi-route: ekodimission-public","x-ekodi-independent-site: true","x-ekodi-publication-status: published","x-robots-tag: index, follow","cache-control: no-store"],
         "rollbackVerify": false
       },
@@ -81,7 +81,7 @@
         "url": "https://ekodi.kr/ekodimission/activities",
         "statuses": [200],
         "redirect": "manual",
-        "expect": ["MISSION ACTIVITIES","260926-chuseok-open-table","15:00–17:00"],
+        "expect": ["MISSION ACTIVITIES","260926-chuseok-open-table","15:00–17:00","class=\"mission-site-header\"","data-mission-nav","/ekodimission/assets/shell.css","/ekodimission/assets/shell.js"],
         "headerExpect": ["x-ekodi-route: ekodimission-public","x-ekodi-independent-site: true","x-ekodi-publication-status: published","x-robots-tag: index, follow","cache-control: no-store"],
         "rollbackVerify": false
       },
@@ -89,7 +89,7 @@
         "url": "https://ekodi.kr/ekodimission/activities/260926-chuseok-open-table",
         "statuses": [200],
         "redirect": "manual",
-        "expect": ["260926 · OPEN TABLE","15:00–17:00","JOIN THE TABLE","data-event-application"],
+        "expect": ["260926 · OPEN TABLE","15:00–17:00","JOIN THE TABLE","data-event-application","class=\"mission-site-header\"","data-mission-nav","/ekodimission/assets/shell.css","/ekodimission/assets/shell.js"],
         "headerExpect": ["x-ekodi-route: ekodimission-public","x-ekodi-independent-site: true","x-ekodi-site-class: brand-site","x-ekodi-publication-status: published","x-robots-tag: index, follow","cache-control: no-store"],
         "rollbackVerify": false
       },
@@ -118,7 +118,7 @@
         "url": "https://ekodi.kr/ekodimission/participate",
         "statuses": [200],
         "redirect": "manual",
-        "expect": ["PARTICIPATE"],
+        "expect": ["PARTICIPATE","class=\"mission-site-header\"","data-mission-nav","/ekodimission/assets/shell.css","/ekodimission/assets/shell.js"],
         "headerExpect": ["x-ekodi-route: ekodimission-public","x-ekodi-independent-site: true","x-ekodi-publication-status: published","x-robots-tag: index, follow","cache-control: no-store"],
         "rollbackVerify": false
       },
@@ -126,7 +126,7 @@
         "url": "https://ekodi.kr/ekodimission/partners",
         "statuses": [200],
         "redirect": "manual",
-        "expect": ["PARTNERSHIP"],
+        "expect": ["PARTNERSHIP","class=\"mission-site-header\"","data-mission-nav","/ekodimission/assets/shell.css","/ekodimission/assets/shell.js"],
         "headerExpect": ["x-ekodi-route: ekodimission-public","x-ekodi-independent-site: true","x-ekodi-publication-status: published","x-robots-tag: index, follow","cache-control: no-store"],
         "rollbackVerify": false
       },
@@ -134,7 +134,7 @@
         "url": "https://ekodi.kr/ekodimission/stories",
         "statuses": [200],
         "redirect": "manual",
-        "expect": ["STORIES & NEWS"],
+        "expect": ["STORIES & NEWS","class=\"mission-site-header\"","data-mission-nav","/ekodimission/assets/shell.css","/ekodimission/assets/shell.js"],
         "headerExpect": ["x-ekodi-route: ekodimission-public","x-ekodi-independent-site: true","x-ekodi-publication-status: published","x-robots-tag: index, follow","cache-control: no-store"],
         "rollbackVerify": false
       },
@@ -142,7 +142,7 @@
         "url": "https://ekodi.kr/ekodimission/give",
         "statuses": [200],
         "redirect": "manual",
-        "expect": ["GIVE & SHARE"],
+        "expect": ["GIVE & SHARE","class=\"mission-site-header\"","data-mission-nav","/ekodimission/assets/shell.css","/ekodimission/assets/shell.js"],
         "headerExpect": ["x-ekodi-route: ekodimission-public","x-ekodi-independent-site: true","x-ekodi-publication-status: published","x-robots-tag: index, follow","cache-control: no-store"],
         "rollbackVerify": false
       },
@@ -150,7 +150,7 @@
         "url": "https://ekodi.kr/ekodimission/vision",
         "statuses": [200],
         "redirect": "manual",
-        "expect": ["VISION & VALUES"],
+        "expect": ["VISION & VALUES","class=\"mission-site-header\"","data-mission-nav","/ekodimission/assets/shell.css","/ekodimission/assets/shell.js"],
         "headerExpect": ["x-ekodi-route: ekodimission-public","x-ekodi-independent-site: true","x-ekodi-publication-status: published","x-robots-tag: index, follow","cache-control: no-store"],
         "rollbackVerify": false
       },
@@ -158,7 +158,7 @@
         "url": "https://ekodi.kr/ekodimission/prayer",
         "statuses": [200],
         "redirect": "manual",
-        "expect": ["PRAYER"],
+        "expect": ["PRAYER","class=\"mission-site-header\"","data-mission-nav","/ekodimission/assets/shell.css","/ekodimission/assets/shell.js"],
         "headerExpect": ["x-ekodi-route: ekodimission-public","x-ekodi-independent-site: true","x-ekodi-publication-status: published","x-robots-tag: index, follow","cache-control: no-store"],
         "rollbackVerify": false
       },
@@ -166,7 +166,7 @@
         "url": "https://ekodi.kr/ekodimission/transparency",
         "statuses": [200],
         "redirect": "manual",
-        "expect": ["STEWARDSHIP & TRANSPARENCY"],
+        "expect": ["STEWARDSHIP & TRANSPARENCY","class=\"mission-site-header\"","data-mission-nav","/ekodimission/assets/shell.css","/ekodimission/assets/shell.js"],
         "headerExpect": ["x-ekodi-route: ekodimission-public","x-ekodi-independent-site: true","x-ekodi-publication-status: published","x-robots-tag: index, follow","cache-control: no-store"],
         "rollbackVerify": false
       },
@@ -174,7 +174,7 @@
         "url": "https://ekodi.kr/ekodimission/contact",
         "statuses": [200],
         "redirect": "manual",
-        "expect": ["CONTACT"],
+        "expect": ["CONTACT","class=\"mission-site-header\"","data-mission-nav","/ekodimission/assets/shell.css","/ekodimission/assets/shell.js"],
         "headerExpect": ["x-ekodi-route: ekodimission-public","x-ekodi-independent-site: true","x-ekodi-publication-status: published","x-robots-tag: index, follow","cache-control: no-store"],
         "rollbackVerify": false
       },

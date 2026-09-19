@@ -63,7 +63,9 @@ test('Control Center lazy-loads Social Channels while security-wrapped Mission C
   assert.ok(sharedDeploy.includes("- 'social-admin.css'"));
   assert.match(sharedDeploy, /client-access\.js social-admin\.js [^\r\n]*books-admin\.js/);
   assert.match(admin, /\/api\/control\/social\/registry/);
-  assert.match(admin, /marketing-connect-api\.ekodi\.kr/);
+  assert.ok(admin.includes("const CONNECT_API = '/marketing-connect-api'"));
+  assert.ok(admin.includes("new URL(`${CONNECT_API}${path}`, location.origin)"));
+  assert.doesNotMatch(admin, /marketing-connect-api\.ekodi\.kr/);
   assert.match(admin, /\/v1\/connect\/youtube\/start/);
   assert.match(admin, /\/v1\/connect\/meta\/start/);
   assert.match(admin, /\/v1\/connect\/threads\/start/);
