@@ -100,8 +100,9 @@ async function audit(){
     need(result,`tenant:${id}`,'https://ekodi.kr/shell/mobile-fixed-header.js',errors);
   }
 
-  const [cgmaRoot,cgmaAdmin]=await Promise.all([
+  const [cgmaRoot,cgmaAi,cgmaAdmin]=await Promise.all([
     get('https://ekodi.kr/cgma'),
+    get('https://ekodi.kr/cgma/market-ai'),
     get('https://ekodi.kr/cgma/admin'),
   ]);
   http(cgmaRoot,'cgma-root',errors);
@@ -109,6 +110,8 @@ async function audit(){
   need(cgmaRoot,'cgma-root','data-ekodi-tenant-readability="v1"',errors);
   need(cgmaRoot,'cgma-root','data-ekodi-fixed-header',errors);
   need(cgmaRoot,'cgma-root','https://ekodi.kr/shell/mobile-fixed-header.js',errors);
+  http(cgmaAi,'cgma-market-ai',errors);
+  need(cgmaAi,'cgma-market-ai','CHEONGGYE MARKETING AI',errors);
   http(cgmaAdmin,'cgma-admin',errors);
   need(cgmaAdmin,'cgma-admin','상인회 운영관리',errors);
 
