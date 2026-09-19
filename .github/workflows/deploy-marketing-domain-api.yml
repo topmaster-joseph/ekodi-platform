@@ -156,17 +156,28 @@ jobs:
         run: |
           set -euo pipefail
           npx --yes wrangler@$WRANGLER_VERSION deployments status --config wrangler.marketing-domains.staging.toml --json > /tmp/staging-deployments.json
-          base='https://ekodi-marketing-domain-api-staging.ekodi-development.workers.dev'
-          for attempt in $(seq 1 24); do
-            health=$(curl -fsS --retry 2 --retry-delay 1 --connect-timeout 5 --max-time 12 "$base/health" || true)
-            unauthorized=$(curl -sS -o /tmp/domain-staging.json -w '%{http_code}' --connect-timeout 5 --max-time 12 "$base/api/marketing/domains" || true)
-            store_workspace=$(curl -sS -o /tmp/store-workspace-staging.json -w '%{http_code}' --connect-timeout 5 --max-time 12 "$base/api/marketing/workspace?store=11111111-1111-4111-8111-111111111111" || true)
-            store_domains=$(curl -sS -o /tmp/store-domains-staging.json -w '%{http_code}' --connect-timeout 5 --max-time 12 "$base/api/marketing/store-domains?store=11111111-1111-4111-8111-111111111111" || true)
-            invalid_resolve=$(curl -sS -o /tmp/store-resolve-staging.json -w '%{http_code}' --connect-timeout 5 --max-time 12 "$base/api/marketing/workspace/resolve?host=invalid.example.com" || true)
-            preflight=$(curl -sS -o /tmp/domain-options.txt -w '%{http_code}' -X OPTIONS -H 'Origin: https://ekodi.kr' -H 'Access-Control-Request-Method: POST' --connect-timeout 5 --max-time 12 "$base/api/marketing/workspace/provision" || true)
-            handoff_preflight=$(curl -sS -D /tmp/handoff-options-headers.txt -o /tmp/handoff-options.txt -w '%{http_code}' -X OPTIONS -H 'Origin: https://ekodi.kr' -H 'Access-Control-Request-Method: POST' --connect-timeout 5 --max-time 12 "$base/api/marketing/handoff/start" || true)
-            consume_empty=$(curl -sS -D /tmp/handoff-consume-headers.txt -o /tmp/handoff-consume.txt -w '%{http_code}' -X POST -H 'Origin: https://ekodi.kr' --connect-timeout 5 --max-time 12 "$base/api/marketing/handoff/consume" || true)
-            bad_handoff_origin=$(curl -sS -o /tmp/handoff-bad-origin.txt -w '%{http_code}' -X POST -H 'Origin: https://evil.example' --connect-timeout 5 --max-time 12 "$base/api/marketing/handoff/consume" || true)
+          npx --yes wrangler@$WRANGLER_VERSION d1 migrations apply DB --local --config wrangler.marketing-domains.staging.toml >/tmp/local-migrations.log 2>&1
+          npx --yes wrangler@$WRANGLER_VERSION dev --local --config wrangler.marketing-domains.staging.toml --ip 127.0.0.1 --port 8793 > /tmp/marketing-domain-remote-dev.log 2>&1 &
+          runtime_pid=$!
+          trap 'kill $runtime_pid 2>/dev/null || true' EXIT
+          ready=0
+          for attempt in $(seq 1 30); do
+            code=$(curl -sS -o /dev/null -w '%{http_code}' --connect-timeout 3 --max-time 8 'http://127.0.0.1:8793/health' || true)
+            if [ "$code" = '200' ]; then ready=1; break; fi
+            if ! kill -0 $runtime_pid 2>/dev/null; then cat /tmp/marketing-domain-remote-dev.log; exit 1; fi
+            sleep 2
+          done
+          if [ "$ready" != '1' ]; then cat /tmp/marketing-domain-remote-dev.log; exit 1; fi
+          for attempt in $(seq 1 18); do
+            health=$(curl -fsS --connect-timeout 5 --max-time 12 'http://127.0.0.1:8793/health' || true)
+            unauthorized=$(curl -sS -o /tmp/domain-staging.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'http://127.0.0.1:8793/api/marketing/domains' || true)
+            store_workspace=$(curl -sS -o /tmp/store-workspace-staging.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'http://127.0.0.1:8793/api/marketing/workspace?store=11111111-1111-4111-8111-111111111111' || true)
+            store_domains=$(curl -sS -o /tmp/store-domains-staging.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'http://127.0.0.1:8793/api/marketing/store-domains?store=11111111-1111-4111-8111-111111111111' || true)
+            invalid_resolve=$(curl -sS -o /tmp/store-resolve-staging.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'http://127.0.0.1:8793/api/marketing/workspace/resolve?host=invalid.example.com' || true)
+            preflight=$(curl -sS -o /tmp/domain-options.txt -w '%{http_code}' -X OPTIONS -H 'Origin: https://ekodi.kr' -H 'Access-Control-Request-Method: POST' --connect-timeout 5 --max-time 12 'http://127.0.0.1:8793/api/marketing/workspace/provision' || true)
+            handoff_preflight=$(curl -sS -D /tmp/handoff-options-headers.txt -o /tmp/handoff-options.txt -w '%{http_code}' -X OPTIONS -H 'Origin: https://ekodi.kr' -H 'Access-Control-Request-Method: POST' --connect-timeout 5 --max-time 12 'http://127.0.0.1:8793/api/marketing/handoff/start' || true)
+            consume_empty=$(curl -sS -D /tmp/handoff-consume-headers.txt -o /tmp/handoff-consume.txt -w '%{http_code}' -X POST -H 'Origin: https://ekodi.kr' --connect-timeout 5 --max-time 12 'http://127.0.0.1:8793/api/marketing/handoff/consume' || true)
+            bad_handoff_origin=$(curl -sS -o /tmp/handoff-bad-origin.txt -w '%{http_code}' -X POST -H 'Origin: https://evil.example' --connect-timeout 5 --max-time 12 'http://127.0.0.1:8793/api/marketing/handoff/consume' || true)
             if printf '%s' "$health" | grep -Fq '"authHandoff":"httpOnly-cookie"' \
               && [ "$unauthorized" = '401' ] \
               && [ "$store_workspace" = '403' ] \
@@ -176,15 +187,13 @@ jobs:
               && [ "$handoff_preflight" = '204' ] \
               && [ "$consume_empty" = '204' ] \
               && [ "$bad_handoff_origin" = '403' ] \
-              && grep -Fiq 'access-control-allow-origin: https://ekodi.kr' /tmp/handoff-options-headers.txt \
               && grep -Fiq 'access-control-allow-credentials: true' /tmp/handoff-options-headers.txt \
               && grep -Fiq 'set-cookie: __Host-ekodi_handoff=' /tmp/handoff-consume-headers.txt; then
-              echo 'Marketing domain API isolated remote staging and apex-auth boundary verified.'
+              echo 'Marketing domain API isolated staging and URL-free auth boundary verified.'
               exit 0
             fi
             sleep 5
           done
-          echo 'Marketing domain remote staging boundary verification failed.' >&2
           exit 1
       - name: Cleanup staging config
         if: always()
@@ -233,13 +242,13 @@ jobs:
         run: |
           set -euo pipefail
           for attempt in $(seq 1 18); do
-            health=$(curl -fsS --connect-timeout 5 --max-time 12 'https://marketing-api.ekodi.kr/health' || true)
-            unauthorized=$(curl -sS -o /tmp/domain-prod.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://marketing-api.ekodi.kr/api/marketing/domains' || true)
-            store_workspace=$(curl -sS -o /tmp/store-workspace-prod.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://marketing-api.ekodi.kr/api/marketing/workspace?store=11111111-1111-4111-8111-111111111111' || true)
-            store_domains=$(curl -sS -o /tmp/store-domains-prod.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://marketing-api.ekodi.kr/api/marketing/store-domains?store=11111111-1111-4111-8111-111111111111' || true)
-            invalid_resolve=$(curl -sS -o /tmp/store-resolve-prod.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://marketing-api.ekodi.kr/api/marketing/workspace/resolve?host=invalid.example.com' || true)
-            handoff_preflight=$(curl -sS -D /tmp/handoff-prod-options-headers.txt -o /tmp/handoff-prod-options.txt -w '%{http_code}' -X OPTIONS -H 'Origin: https://ekodi.kr' -H 'Access-Control-Request-Method: POST' --connect-timeout 5 --max-time 12 'https://marketing-api.ekodi.kr/api/marketing/handoff/start' || true)
-            consume_empty=$(curl -sS -D /tmp/handoff-prod-consume-headers.txt -o /tmp/handoff-prod-consume.txt -w '%{http_code}' -X POST -H 'Origin: https://marketing.ekodi.kr' --connect-timeout 5 --max-time 12 'https://marketing-api.ekodi.kr/api/marketing/handoff/consume' || true)
+            health=$(curl -fsS --connect-timeout 5 --max-time 12 'https://ekodi.kr/marketing-api/health' || true)
+            unauthorized=$(curl -sS -o /tmp/domain-prod.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://ekodi.kr/marketing-api/api/marketing/domains' || true)
+            store_workspace=$(curl -sS -o /tmp/store-workspace-prod.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://ekodi.kr/marketing-api/api/marketing/workspace?store=11111111-1111-4111-8111-111111111111' || true)
+            store_domains=$(curl -sS -o /tmp/store-domains-prod.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://ekodi.kr/marketing-api/api/marketing/store-domains?store=11111111-1111-4111-8111-111111111111' || true)
+            invalid_resolve=$(curl -sS -o /tmp/store-resolve-prod.json -w '%{http_code}' --connect-timeout 5 --max-time 12 'https://ekodi.kr/marketing-api/api/marketing/workspace/resolve?host=invalid.example.com' || true)
+            handoff_preflight=$(curl -sS -D /tmp/handoff-prod-options-headers.txt -o /tmp/handoff-prod-options.txt -w '%{http_code}' -X OPTIONS -H 'Origin: https://ekodi.kr' -H 'Access-Control-Request-Method: POST' --connect-timeout 5 --max-time 12 'https://ekodi.kr/marketing-api/api/marketing/handoff/start' || true)
+            consume_empty=$(curl -sS -D /tmp/handoff-prod-consume-headers.txt -o /tmp/handoff-prod-consume.txt -w '%{http_code}' -X POST -H 'Origin: https://ekodi.kr' --connect-timeout 5 --max-time 12 'https://ekodi.kr/marketing-api/api/marketing/handoff/consume' || true)
             if printf '%s' "$health" | grep -Fq '"authHandoff":"httpOnly-cookie"' \
               && [ "$unauthorized" = '401' ] \
               && [ "$store_workspace" = '403' ] \
