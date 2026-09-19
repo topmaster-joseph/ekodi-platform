@@ -91,6 +91,16 @@ test('native remote computer provider exposes bounded observe-only host commands
   assert.match(agent, /directHostMutation = \$false/);
 });
 
+test('admin exposes native remote computer observation without dangerous computer controls', () => {
+  for (const command of ['computer.agent.status','computer.system.read','computer.process.list']) {
+    assert.match(admin, new RegExp(command.replaceAll('.', '\\\\.')));
+  }
+  for (const capability of ['agentStatus','computerRead','processRead']) assert.match(admin, new RegExp(capability));
+  assert.match(admin, /보기 전용입니다/);
+  assert.match(api, /result\.processes\.items\.slice\(0, 20\)/);
+  assert.doesNotMatch(admin, /computer\.terminal\.exec|computer\.files\.write|computer\.desktop\.input/);
+});
+
 test('diagnostics avoid remote screen, keyboard and credential collection', () => {
   assert.match(agent, /Get-SystemSnapshot/);
   assert.match(agent, /Get-StorageSnapshot/);
