@@ -2,8 +2,6 @@ name: Verify EKODI Mission Tenant Admin Production E2E
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '37 */6 * * *'
   workflow_run:
     workflows: ['Deploy EKODI Shared Site Core']
     types: [completed]
@@ -15,6 +13,11 @@ concurrency:
   group: ekodimission-tenant-admin-production-e2e
   cancel-in-progress: true
 
+env:
+  CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+  CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+  CLOUDFLARE_DEVELOPMENT_ACCOUNT_ID: ${{ vars.CLOUDFLARE_DEVELOPMENT_ACCOUNT_ID || '46aad4738793fbaca88574832a2ccc0f' }}
+
 jobs:
   mission-tenant-admin-e2e:
     if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
@@ -23,22 +26,33 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: main
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
+      - name: Read Production Cloudflare quota Source of Truth
+        id: quota
+        run: node scripts/cloudflare-production-budget.mjs --output=cloudflare-production-quota.json
       - name: Validate Mission tenant-admin E2E contract
         run: |
           set -euo pipefail
           node --check scripts/verify-ekodimission-admin-production-e2e.mjs
           node --test test/ekodimission-admin-production-e2e-contract.test.mjs
       - name: Install Chromium harness
+        if: steps.quota.outputs.skip_nonessential != 'true'
         run: |
           set -euo pipefail
           npm install --no-save --package-lock=false playwright@1.55.0
           npx playwright install --with-deps chromium
       - name: Verify EKODI Mission tenant admin production surface
+        if: steps.quota.outputs.skip_nonessential != 'true'
         run: node scripts/verify-ekodimission-admin-production-e2e.mjs
+      - name: Record quota-protected Mission E2E skip
+        if: steps.quota.outputs.skip_nonessential == 'true'
+        run: |
+          echo 'Mission production browser E2E skipped because Cloudflare quota protection is active.' >> "$GITHUB_STEP_SUMMARY"
+          echo "- quota state: ${{ steps.quota.outputs.state }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- usage: ${{ steps.quota.outputs.requests }} / ${{ steps.quota.outputs.limit }} (${{ steps.quota.outputs.percent }}%)" >> "$GITHUB_STEP_SUMMARY"
       - name: Publish Mission E2E summary
         if: always()
         shell: bash
