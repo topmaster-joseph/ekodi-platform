@@ -9,8 +9,8 @@ const sidebar = await readFile(new URL('../admin-sidebar.js', import.meta.url), 
 const layout = await readFile(new URL('../admin-menu-layout.js', import.meta.url), 'utf8');
 const postbuild = await readFile(new URL('../scripts/admin-performance-postbuild.mjs', import.meta.url), 'utf8');
 
-test('five canonical axes replace the former many-group admin taxonomy', () => {
-  for (const id of ['home', 'operations', 'workspaces', 'services', 'system']) {
+test('seven canonical areas replace the former many-group admin taxonomy', () => {
+  for (const id of ['home', 'operations', 'workspaces', 'services', 'community', 'publishing', 'system']) {
     assert.match(registry, new RegExp(`id: '${id}'`));
   }
   for (const retired of ['site-management', 'security-audit', 'settings', 'access']) {
@@ -73,11 +73,11 @@ test('global navigation remains synchronized to the active panel and opens an ax
   assert.match(sidebar, /const displayedSection = group === activeGroup \? section : ''/);
 });
 
-test('global menu labels use readable contrast on the light sidebar', () => {
-  assert.match(sidebar, /\.admin-global-nav\{[^}]*color:#40566d!important/);
-  assert.match(sidebar, /\.admin-global-nav\.active\{[^}]*background:#edf4ff[^}]*color:#0b4f8a!important/);
+test('global menu labels use readable contrast on the dark primary sidebar', () => {
+  assert.match(sidebar, /\.admin-global-nav\{[^}]*color:#dbe8f6!important/);
+  assert.match(sidebar, /\.admin-global-nav\.active\{[^}]*background:#174b7b[^}]*color:#fff!important/);
   assert.match(sidebar, /\.admin-global-nav span\{color:inherit!important;opacity:1!important\}/);
-  assert.match(sidebar, /font-size:14px;font-weight:780/);
+  assert.match(sidebar, /font-size:15px;font-weight:780/);
 });
 
 test('context tabs keep the same light readable hierarchy as the sidebar', () => {
@@ -137,22 +137,14 @@ test('shared menu ES modules are published and cache-busted with the admin relea
 });
 
 
-test('active global axis shows core submenu items first and progressively discloses the rest', () => {
+test('left sidebar contains primary areas only and removes nested detail navigation', () => {
   assert.ok(sidebar.includes("DETAILS_CLASS = 'admin-global-details'"));
-  assert.ok(sidebar.includes("MORE_CLASS = 'admin-detail-more'"));
-  assert.ok(sidebar.includes('const PRIMARY_SECTIONS = Object.freeze('));
-  assert.ok(sidebar.includes('function renderSidebarDetails(nav, globals, group, section, locale)'));
-  assert.ok(sidebar.includes('data-admin-detail-section'));
-  assert.ok(sidebar.includes('const ids = availableIds(nav, group)'));
-  assert.ok(sidebar.includes('const primary = primaryOrder.filter(id => ids.includes(id))'));
-  assert.ok(sidebar.includes('const shown = expanded ? ids : primary'));
-  assert.ok(sidebar.includes('dataset.adminDetailMore = group'));
-  assert.ok(sidebar.includes('activateSection(nav, detail.dataset.adminDetailSection)'));
-  assert.ok(!sidebar.includes("document.createElement('details')"));
-  assert.ok(!sidebar.includes('getAdminMenuCategoryLabel(category, locale)'));
+  assert.ok(sidebar.includes("display:none!important"));
+  assert.ok(sidebar.includes("globals.querySelector(`:scope>.${DETAILS_CLASS}`)?.remove()"));
+  assert.ok(sidebar.includes("TABS_SHELL_CLASS = 'admin-context-tabs-shell'"));
+  assert.ok(sidebar.includes("data-admin-context-section"));
+  assert.ok(sidebar.includes("primary-sidebar-tabs-v3"));
 });
-
-
 test('visible task navigation lazy-loads demand features before shared panel activation', () => {
   const activateStart = sidebar.indexOf('function activateSection');
   const activateEnd = sidebar.indexOf('export function createAdminSidebarItem', activateStart);
