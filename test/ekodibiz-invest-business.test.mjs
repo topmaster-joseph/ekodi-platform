@@ -35,7 +35,7 @@ test('business page keeps EKODIBIZ business and common Invest boundaries explici
 test('shared-site router owns the business path before the final static fallback', async () => {
   const source = await readFile(new URL('../site-worker.js', import.meta.url), 'utf8');
   const businessRoute = source.indexOf('isEkodiBizInvestPath(url.pathname)');
-  const fallbackRoute = source.lastIndexOf('return env.ASSETS.fetch(request)');
+  const fallbackRoute = source.lastIndexOf('const fallbackResponse=await env.ASSETS.fetch(request)');
   assert.ok(businessRoute > 0);
   assert.ok(fallbackRoute > businessRoute);
   assert.match(source, /public-ekodibiz-invest/);
