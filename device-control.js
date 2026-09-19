@@ -472,8 +472,48 @@ function deviceHealth(settings = {}, diagnostics = {}) {
 
 function summarizeCommandResult(result = {}) {
   const summary = {};
+  const finiteNumber = value => value === null || value === undefined || value === ''
+    ? null
+    : (Number.isFinite(Number(value)) ? Number(value) : null);
   for (const key of ['message', 'freedMB', 'pendingCount', 'installedCount', 'failedCount', 'rebootRequired', 'profile']) {
     if (result[key] !== undefined) summary[key] = result[key];
+  }
+  if (result.agent && typeof result.agent === 'object') {
+    summary.agent = {
+      checkedAt: safeText(result.agent.checkedAt, 64),
+      version: safeText(result.agent.version, 40),
+      taskState: safeText(result.agent.taskState, 40),
+      persistentShell: result.agent.persistentShell === true,
+      directHostMutation: result.agent.directHostMutation === true,
+    };
+  }
+  if (result.system && typeof result.system === 'object') {
+    summary.system = {
+      cpuLoadPct: finiteNumber(result.system.cpuLoadPct),
+      memoryUsedPct: finiteNumber(result.system.memoryUsedPct),
+      memoryTotalGB: finiteNumber(result.system.memoryTotalGB),
+      uptimeHours: finiteNumber(result.system.uptimeHours),
+      batteryPct: finiteNumber(result.system.batteryPct),
+      batteryStatus: safeText(result.system.batteryStatus, 40),
+      deviceClass: safeText(result.system.deviceClass, 40),
+      isPortable: result.system.isPortable === true,
+      autoExecutionEligible: result.system.autoExecutionEligible === true,
+      error: safeText(result.system.error, 80),
+    };
+  }
+  if (result.processes && typeof result.processes === 'object') {
+    const items = Array.isArray(result.processes.items) ? result.processes.items.slice(0, 20) : [];
+    summary.processes = {
+      checkedAt: safeText(result.processes.checkedAt, 64),
+      count: Math.max(0, Number(result.processes.count) || 0),
+      error: safeText(result.processes.error, 80),
+      items: items.map(item => ({
+        id: Math.max(0, Number(item?.id) || 0),
+        name: safeText(item?.name, 120),
+        cpuSeconds: finiteNumber(item?.cpuSeconds),
+        memoryMB: finiteNumber(item?.memoryMB),
+      })),
+    };
   }
   return summary;
 }
