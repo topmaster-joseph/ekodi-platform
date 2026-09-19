@@ -96,7 +96,7 @@ test('start hides the credential in an HttpOnly cookie and consume is one-time',
     const cookiePair = setCookie.split(';', 1)[0];
     const consume = await handleMarketingAuthHandoffRequest(new Request('https://marketing-api.ekodi.kr/api/marketing/handoff/consume', {
       method: 'POST',
-      headers: { origin: 'https://marketing.ekodi.kr', cookie: cookiePair },
+      headers: { origin: 'https://ekodi.kr', cookie: cookiePair },
     }), env);
     assert.equal(consume.status, 200);
     const payload = await consume.json();
@@ -106,7 +106,7 @@ test('start hides the credential in an HttpOnly cookie and consume is one-time',
 
     const replay = await handleMarketingAuthHandoffRequest(new Request('https://marketing-api.ekodi.kr/api/marketing/handoff/consume', {
       method: 'POST',
-      headers: { origin: 'https://marketing.ekodi.kr', cookie: cookiePair },
+      headers: { origin: 'https://ekodi.kr', cookie: cookiePair },
     }), env);
     assert.equal(replay.status, 410);
   } finally {
