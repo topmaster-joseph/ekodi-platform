@@ -9,6 +9,8 @@
   const loadedStyles=new Map();
   const pending=new Map();
   const secondaryScheduled=new Set();
+  const DEMAND_KEY_ALIASES=Object.freeze({'marketing-ai':'marketing','ai-membership':'aimembers'});
+  const demandKey=value=>DEMAND_KEY_ALIASES[String(value||'').trim()]||String(value||'').trim();
   const FEATURES={
     campus: {
       label: 'Campus', icon: '⌂',
@@ -35,7 +37,7 @@
     'ai-module-spec':{label:'A',icon:'A',styles:['ai-module-spec-admin.css'],scripts:['ai-module-spec-admin.js'],real:'[data-section="ai-module-spec"]',hashes:['#ai-module-spec']},
     'life-ai':{label:'인생AI',icon:'Q',styles:['life-ai-admin.css'],scripts:['life-ai-admin.js'],real:'[data-section="life-ai"]',hashes:['#life-ai'],insert:'after-aiops'},
     'personal-finance':{label:'개인재무',icon:'₩',styles:['personal-finance-admin.css'],scripts:['personal-finance-admin.js'],real:'[data-section="personal-finance"]',hashes:['#personal-finance'],insert:'after-aiops'},
-    'ai-membership': {
+    aimembers: {
       label: 'AI 회원운영', icon: '◈',
       styles: ['ai-ops-admin.css'],
       scripts: ['ai-ops-admin.js'],
@@ -69,7 +71,7 @@
     books: { label:'출판 · 도서', icon:'B', styles:['books-admin.css'], scripts:['books-admin.js'], secondaryStyles:['books-finance-admin.css'], secondaryScripts:['books-finance-admin.js'], real:'[data-section="books"]', hashes:['#books'] },
     social: { label:'채널·계정 연결', icon:'S', styles:['social-admin.css'], scripts:['social-admin.js'], real:'[data-section="social"]', hashes:['#social'] },
     'supply-network': { label:'판매·공급망', icon:'N', styles:['supply-network-admin.css'], scripts:['supply-network-admin.js'], real:'[data-section="supply-network"]', hashes:['#supply-network'] },
-    'marketing-ai': {
+    marketing: {
       label: 'MarketingAI', icon: 'AI',
       styles: ['marketing-ai-admin.css'],
       scripts: ['marketing-ai-admin.js'],
@@ -276,7 +278,7 @@
       button = document.createElement('button');
       button.type = 'button';
       button.className = 'nav';
-      button.dataset.lazySection = key;
+      button.dataset.lazySection = key === 'marketing' ? 'marketing-ai' : key === 'aimembers' ? 'ai-membership' : key;
       button.append(document.createTextNode(`${feature.icon} `));
       const label = document.createElement('span');
       label.textContent = feature.label;
@@ -345,7 +347,7 @@
   });
 
   window.EKODIAdminDemand = Object.freeze({
-    activate: key => activateFeature(key, nav?.querySelector(`[data-demand-feature="${key}"]`), false),
+    activate: key => { const resolved=demandKey(key); return activateFeature(resolved, nav?.querySelector(`[data-demand-feature="${resolved}"]`), false); },
     loadScript,
     loadStyle,
   });
