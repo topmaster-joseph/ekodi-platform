@@ -35,7 +35,7 @@ test('homepage registry exposes only production-verified live bilingual services
   const community = services.find(service => service.id === 'community');
   assert.equal(community?.name, '커뮤니티');
   assert.equal(community?.nameEn, 'Community');
-  assert.equal(community?.url, 'https://community.ekodi.kr');
+  assert.equal(community?.url, 'https://ekodi.kr/community');
   assert.equal(community?.category, 'community-ministry');
 });
 

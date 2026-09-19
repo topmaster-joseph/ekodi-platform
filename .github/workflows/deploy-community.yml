@@ -57,6 +57,10 @@ jobs:
           node --check community/connect/app.js
           node --check scripts/guarded-worker-release.mjs
           test -f deploy/manifests/community.worker.json
+          if grep -Fq '[[routes]]' wrangler.community.toml || grep -Fq 'custom_domain = true' wrangler.community.toml; then
+            echo 'Community public custom-domain routing must stay retired.'
+            exit 1
+          fi
           grep -Fq 'injectEkodiShell' community-worker.js
           grep -Fq "'community'" community-worker.js
           grep -Fq 'Community' community/index.html
@@ -185,10 +189,10 @@ jobs:
         run: |
           set -euo pipefail
           for attempt in $(seq 1 18); do
-            root_code=$(curl -L -sS -D /tmp/community.headers -o /tmp/community.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://community.ekodi.kr/' || true)
-            social_code=$(curl -L -sS -o /tmp/community-social.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://community.ekodi.kr/social-links.js' || true)
-            connect_code=$(curl -L -sS -o /tmp/community-connect.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://community.ekodi.kr/connect/' || true)
-            health_code=$(curl -sS -o /tmp/community-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://community.ekodi.kr/health' || true)
+            root_code=$(curl -L -sS -D /tmp/community.headers -o /tmp/community.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/community/' || true)
+            social_code=$(curl -L -sS -o /tmp/community-social.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/community/social-links.js' || true)
+            connect_code=$(curl -L -sS -o /tmp/community-connect.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/community/connect/' || true)
+            health_code=$(curl -sS -o /tmp/community-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/community/health' || true)
             if [[ "$root_code" == '200' && "$social_code" == '200' && "$connect_code" == '200' && "$health_code" == '200' ]] \
               && grep -Fq 'Community' /tmp/community.html \
               && grep -Fq 'EKODI Connect' /tmp/community-connect.html \
