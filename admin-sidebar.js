@@ -343,7 +343,7 @@ function syncWorkbenchState(nav, locale, preferredSection = '') {
     button.setAttribute('aria-expanded', selected ? 'true' : 'false');
   }
   renderContextTabs(nav, shell, group, displayedSection, locale);
-  renderSidebarDetails(nav, globals, group, displayedSection, locale);
+  globals.querySelector(`:scope>.${DETAILS_CLASS}`)?.remove();
   nav.dataset.adminGlobalGroup = group;
 }
 
