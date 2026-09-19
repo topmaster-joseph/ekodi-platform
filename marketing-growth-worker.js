@@ -11,6 +11,7 @@ const SUBJECT_TYPES = new Set(['person','tenant','store']);
 const META_PROVIDER = 'meta';
 const THREADS_PROVIDER = 'threads';
 const YOUTUBE_PROVIDER = 'youtube';
+const GOOGLE_BROKER_REDIRECT_URI = 'https://ekodi.kr/storage/api/control/storage/google/callback';
 
 const nowIso = () => new Date().toISOString();
 const clean = (value, max = 240) => String(value ?? '').trim().slice(0, max);
@@ -290,7 +291,15 @@ async function startYouTube(request, env, identity, subject) {
   if(registry&&!accountHint) return json(request,env,{error:'YOUTUBE_ACCOUNT_EMAIL_REQUIRED'},400);
   const state = await createOAuthState(env,YOUTUBE_PROVIDER,'publish',identity,subject,body.returnUrl,registry?.id||'');
   const broker=await env.GOOGLE_OAUTH_BROKER.startYouTubeOAuth({state,accountHint});
-  return json(request,env,{authorizationUrl:String(broker.authorizationUrl||''),provider:'youtube',mode:'publish',targetAccount:accountHint});
+  const authorizationUrl=String(broker.authorizationUrl||'');
+  let authorization;
+  try { authorization=new URL(authorizationUrl); } catch { throw new Error('GOOGLE_OAUTH_BROKER_URL_INVALID'); }
+  if (authorization.origin !== 'https://accounts.google.com'
+    || authorization.searchParams.get('client_id') !== String(env.GOOGLE_CLIENT_ID)
+    || authorization.searchParams.get('redirect_uri') !== GOOGLE_BROKER_REDIRECT_URI) {
+    throw new Error('GOOGLE_OAUTH_BROKER_REDIRECT_DRIFT');
+  }
+  return json(request,env,{authorizationUrl,provider:'youtube',mode:'publish',targetAccount:accountHint});
 }
 async function fetchJson(url, init = {}) {
   const response = await fetch(url,init);
