@@ -33,12 +33,14 @@ export const ADMIN_MENU_REGISTRY = Object.freeze([
   { id: 'invest', group: 'services', icon: 'I', managementArea: 'professional-services', labels: { ko: '투자 AI', en: 'Invest AI' } },
   { id: 'social', group: 'services', icon: '↗', labels: { ko: '채널·계정 연결', en: 'Channel Connections' } },
   { id: 'marketing-ai', group: 'services', icon: 'M', labels: { ko: '마케팅AI', en: 'Marketing AI' } },
-  { id: 'community', group: 'community', icon: '◌', labels: { ko: '커뮤니티 운영', en: 'Community Operations' } },
-  { id: 'ai-membership', group: 'community', icon: '◈', labels: { ko: 'AI 회원운영', en: 'AI Membership' } },
-  { id: 'books', group: 'publishing', icon: 'B', labels: { ko: '출판·도서', en: 'Books & Publishing' } },
-  { id: 'devotional', group: 'publishing', icon: 'V', labels: { ko: '매일묵상', en: 'Daily Devotional' } },
   { id: 'supply-network', group: 'services', icon: 'N', managementArea: 'professional-services', labels: { ko: '판매·공급망', en: 'Sales & Supply Network' } },
   { id: 'insurance', group: 'services', icon: 'I', labels: { ko: '보험', en: 'Insurance' } },
+
+  { id: 'community', group: 'community', icon: '◌', labels: { ko: '커뮤니티 운영', en: 'Community Operations' } },
+  { id: 'ai-membership', group: 'community', icon: '◈', labels: { ko: 'AI 회원운영', en: 'AI Membership' } },
+
+  { id: 'books', group: 'publishing', icon: 'B', labels: { ko: '출판·도서', en: 'Books & Publishing' } },
+  { id: 'devotional', group: 'publishing', icon: 'V', labels: { ko: '매일묵상', en: 'Daily Devotional' } },
 
   { id: 'public-site-controls', group: 'system', icon: '▤', labels: { ko: '공개·점검 전환', en: 'Public & Maintenance Mode' } },
   { id: 'language-status', group: 'system', icon: '文', labels: { ko: '다국어 지원 현황', en: 'Language Readiness' } },
