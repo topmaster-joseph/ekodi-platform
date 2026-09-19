@@ -25,8 +25,12 @@ test('tenant live E2E proves anonymous media delivery and safe skip',()=>{
   assert.match(script,/sessionStorage\.setItem\('ekodi-auth-token'/);
   assert.match(script,/viewerContext=await browser\.newContext\(\)/);
   assert.doesNotMatch(script,/viewerContext\.addInitScript/);
+  assert.match(script,/host_has_no_live_local_track/);
+  assert.match(script,/hostTracks>=1/);
+  assert.match(script,/waitForPublicState/);
   assert.match(script,/viewer_received_no_live_track/);
   assert.match(script,/viewerTracks>=1/);
+  assert.doesNotMatch(script,/미디어 연결이 완료되었습니다|방송 중입니다.|방송이 종료되었습니다./);
   assert.match(script,/status:'ended'/);
   assert.match(script,/assert\.equal\(ended\.live,false\)/);
 });

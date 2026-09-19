@@ -8,7 +8,7 @@ const liveUrl=process.env.TENANT_LIVE_URL||'https://ekodi.kr/ekodibiz/live/';
 const label=process.env.TENANT_LIVE_LABEL||'EKODI Biz';
 const api='https://ekodi.kr/api/realtime';
 const artifactDir='artifacts/tenant-live-production-e2e';
-const report={passed:false,skipped:false,tenant,roomId:null,hostReady:false,viewerTracks:0,ended:false,hostStatus:null,viewerStatus:null,pageErrors:[],requestFailures:[],realtime:[]};
+const report={passed:false,skipped:false,tenant,roomId:null,hostReady:false,hostTracks:0,viewerTracks:0,ended:false,hostStatus:null,viewerStatus:null,pageErrors:[],requestFailures:[],realtime:[]};
 
 if(!token)throw new Error('e2e_admin_token_missing');
 
@@ -26,6 +26,17 @@ async function publicLive(){
   const response=await fetch(`${api}/live?tenant=${encodeURIComponent(tenant)}`,{cache:'no-store'});
   assert.equal(response.status,200);
   return response.json();
+}
+
+async function waitForPublicState(predicate,timeoutMs=30000){
+  const started=Date.now();
+  let last=null;
+  while(Date.now()-started<timeoutMs){
+    last=await publicLive();
+    if(predicate(last))return last;
+    await new Promise(resolve=>setTimeout(resolve,250));
+  }
+  throw new Error(`public_state_timeout:${JSON.stringify(last)}`);
 }
 
 function observePage(page,actor){
@@ -76,13 +87,16 @@ try{
   try{
     await host.waitForFunction(()=>{
       const button=document.querySelector('#goLiveButton');
-      const status=document.querySelector('#statusLog')?.textContent||'';
-      return button&&!button.disabled&&status.includes('미디어 연결이 완료되었습니다');
+      const link=document.querySelector('#shareLink')?.value||'';
+      const tracks=Array.from(document.querySelector('#mainVideo')?.srcObject?.getTracks?.()||[]);
+      return button&&!button.disabled&&link.includes('room=')&&tracks.some(track=>track.readyState==='live');
     },{timeout:30000});
   }catch(error){
     report.hostStatus=await text(host,'#statusLog');
     throw new Error(`host_not_ready:${report.hostStatus||error.message}`);
   }
+  report.hostTracks=await host.locator('#mainVideo').evaluate(video=>video.srcObject?.getTracks?.().filter(track=>track.readyState==='live').length||0);
+  assert.ok(report.hostTracks>=1,'host_has_no_live_local_track');
   report.hostReady=true;
   report.hostStatus=await text(host,'#statusLog');
 
@@ -92,12 +106,7 @@ try{
   report.roomId=roomId;
 
   await host.locator('#goLiveButton').click();
-  await host.waitForFunction(()=>{
-    const status=document.querySelector('#statusLog')?.textContent||'';
-    return status.includes('방송 중입니다.')&&document.querySelector('#programBadge')?.textContent==='LIVE';
-  },{timeout:30000});
-
-  const live=await publicLive();
+  const live=await waitForPublicState(state=>state.live===true&&state.room?.id===roomId,30000);
   assert.equal(live.live,true);
   assert.equal(live.room?.id,roomId);
 
@@ -118,8 +127,7 @@ try{
   assert.equal(report.pageErrors.length,0,'browser_page_errors');
 
   await host.locator('#endLiveButton').click();
-  await host.waitForFunction(()=>document.querySelector('#statusLog')?.textContent?.includes('방송이 종료되었습니다.'),{timeout:15000});
-  const ended=await publicLive();
+  const ended=await waitForPublicState(state=>state.live===false||state.room?.id!==roomId,15000);
   assert.equal(ended.live,false);
   report.ended=true;
   report.passed=true;
