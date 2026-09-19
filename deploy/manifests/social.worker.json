@@ -4,10 +4,10 @@
     "name": "ekodi-social",
     "config": "wrangler.social.toml",
     "requests": [
-      {"url":"https://social.ekodi.kr/","statuses":[200],"redirect":"follow","expect":["EKODI Social","https://ekodi.kr/shell/shell.js"],"headerExpect":["x-ekodi-shell: v2"]},
-      {"url":"https://social.ekodi.kr/health","statuses":[200],"expect":["ekodi-social"]},
-      {"url":"https://social.ekodi.kr/api/feed?org=community","statuses":[200],"expect":["커뮤니티"]},
-      {"url":"https://social.ekodi.kr/api/media/youtube/status?handle=@cgma4989&channelId=UC001JT9opxVBt9z_h-tsx8A","statuses":[200],"expect":["\"provider\":\"youtube\"","\"state\":"]}
+      {"url":"https://ekodi.kr/social/","statuses":[200],"redirect":"follow","expect":["EKODI Social","https://ekodi.kr/shell/shell.js"],"headerExpect":["x-ekodi-shell: v2"]},
+      {"url":"https://ekodi.kr/social/health","statuses":[200],"expect":["ekodi-social"]},
+      {"url":"https://ekodi.kr/social/api/feed?org=community","statuses":[200],"expect":["커뮤니티"]},
+      {"url":"https://ekodi.kr/social/api/media/youtube/status?handle=@cgma4989&channelId=UC001JT9opxVBt9z_h-tsx8A","statuses":[200],"expect":["\"provider\":\"youtube\"","\"state\":"]}
     ]
   }
 }
