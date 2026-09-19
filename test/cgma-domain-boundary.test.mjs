@@ -18,7 +18,9 @@ test('CGMA external DNS stays outside Shared Site ownership until approved cutov
 
 test('Shared Site domain repair only enforces domains it currently owns', () => {
   assert.doesNotMatch(workflow, /for host in[^\n]*cgma\.or\.kr/);
-  assert.match(workflow, /for host in ekodi\.kr admin\.ekodi\.kr auth\.ekodi\.kr mail\.ekodi\.kr; do/);
+  assert.match(workflow, /root_host='ekodi\.kr'/);
+  assert.match(workflow, /for host in "\$root_host" "admin\.\$root_host" "mail\.\$root_host"; do/);
+  assert.doesNotMatch(workflow, /"auth\.\$root_host"/);
 });
 
 test('Shared Site candidate smoke excludes the independently routed CGMA public gateway', () => {

@@ -3,7 +3,7 @@ const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_
 const ACCESS_API = `${SUPABASE_URL}/functions/v1/access-api`;
 const COOKIE_NAME = '__Host-ekodi_handoff';
 const HANDOFF_TTL_SECONDS = 90;
-const AUTH_ORIGIN = 'https://auth.ekodi.kr';
+const AUTH_ORIGIN = 'https://ekodi.kr';
 const FIXED_RETURN_ORIGINS = new Set([
   'https://marketing.ekodi.kr',
   'https://jadam.ekodi.kr',
@@ -59,8 +59,9 @@ export function safeMarketingReturn(raw) {
 
 function consumerOriginAllowed(origin, env = {}) {
   if (!origin) return false;
+  if (origin === AUTH_ORIGIN) return true;
   if (isMarketingReturnOrigin(origin)) return true;
-  return configuredOrigins(env).has(origin) && origin !== AUTH_ORIGIN;
+  return configuredOrigins(env).has(origin);
 }
 
 function allowedOriginFor(path, origin, env = {}) {

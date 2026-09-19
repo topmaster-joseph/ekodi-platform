@@ -56,7 +56,9 @@ test('mail root is exclusively owned by the shared site core',async()=>{
   assert.match(entry,/mailUserPage\(\)/);
   assert.match(entry,/mailAdminPage\(\)/);
   const workflow=await read('.github/workflows/deploy-site-core.yml');
-  assert.match(workflow,/for host in ekodi\.kr admin\.ekodi\.kr auth\.ekodi\.kr mail\.ekodi\.kr; do/);
+  assert.match(workflow,/root_host='ekodi\.kr'/);
+  assert.match(workflow,/for host in "\$root_host" "admin\.\$root_host" "mail\.\$root_host"; do/);
+  assert.doesNotMatch(workflow,/for host in[^\n]*auth\.ekodi\.kr/);
 });
 
 

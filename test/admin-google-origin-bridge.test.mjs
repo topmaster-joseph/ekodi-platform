@@ -20,9 +20,9 @@ test('bridge validates request and returns credential only to canonical EKODI',(
   assert.match(bridge,/window\.opener\.postMessage/);
   assert.match(html,/accounts\.google\.com\/gsi\/client/);
 });
-test('legacy auth host exposes only the dedicated bridge surface without redirecting it',()=>{
-  assert.match(router,/pathname==='\/google-origin-bridge'/);
-  assert.match(site,/google-origin-bridge/);
-  assert.match(site,/google-origin-bridge\.js/);
+test('canonical auth path owns the Google bridge and the legacy auth host is retired',()=>{
+  assert.doesNotMatch(router,/auth\.ekodi\.kr/);
+  assert.doesNotMatch(site,/auth\.ekodi\.kr/);
   assert.match(build,/google-origin-bridge\.html/);
+  assert.match(admin,/new URL\('\/auth\/google-origin-bridge',GOOGLE_BRIDGE_ORIGIN\)/);
 });
