@@ -10,7 +10,7 @@ export const REQUIRED_MISSION_LINKS=Object.freeze([
   '/ekodimission/partners',
   '/ekodimission/stories',
 ]);
-const REQUIRED_SHELL_MARKERS=Object.freeze([
+export const REQUIRED_SHELL_MARKERS=Object.freeze([
   'class="mission-site-header"',
   'data-mission-nav',
   '/ekodimission/assets/shell.css',
