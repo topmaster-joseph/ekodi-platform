@@ -1,3 +1,45 @@
+/* EKODI Admin UI v3: shared readability and primary navigation surface */
+body.admin-compact{color-scheme:light;--bg:#f4f7fb;--bg2:#eef3f8;--panel:#fff;--line:#d9e3ec;--text:#172033;--muted:#65788d;--blue:#155eef;--green:#237a54;--amber:#8a6418;background:#f4f7fb!important;color:#172033!important;font-size:15px;line-height:1.55}
+body.admin-compact .app,body.admin-compact .app>main,body.admin-compact .content{background:#f4f7fb!important;color:#172033!important}
+body.admin-compact .sidebar{background:#0b1f36!important;color:#e9f2fb!important;border-color:#173653!important}
+body.admin-compact .side-bottom{border-color:#23435f!important;color:#e9f2fb!important}
+body.admin-compact .side-bottom strong{color:#f5f9fd!important;font-size:12px!important}
+body.admin-compact .side-bottom small{color:#9fb5ca!important;font-size:10px!important}
+body.admin-compact .side-bottom .ghost{border-color:#31536f!important;background:#102943!important;color:#eaf3fb!important}
+body.admin-compact .content>.section,body.admin-compact .content>.architecture,body.admin-compact .content>.hero{background:#fff!important;color:#172033!important;border:1px solid #dce5ee!important;box-shadow:0 8px 24px rgba(40,60,80,.045)!important}
+body.admin-compact .section h2,body.admin-compact .section h3,body.admin-compact .architecture h2,body.admin-compact .architecture h3,body.admin-compact .hero h2{color:#172033!important}
+body.admin-compact .operations-copy,body.admin-compact .section-head>p,body.admin-compact .hero p:not(.kicker),body.admin-compact .muted,body.admin-compact small{color:#65788d!important}
+body.admin-compact input:not([type="checkbox"]):not([type="radio"]),body.admin-compact select,body.admin-compact textarea{min-height:42px!important;padding:9px 11px!important;border:1px solid #bccbd9!important;border-radius:10px!important;background:#fff!important;color:#203247!important;font:inherit!important;font-size:14px!important;line-height:1.45!important}
+body.admin-compact input::placeholder,body.admin-compact textarea::placeholder{color:#8a98a8!important;opacity:1!important}
+body.admin-compact input:focus,body.admin-compact select:focus,body.admin-compact textarea:focus{outline:none!important;border-color:#4d8fc7!important;box-shadow:0 0 0 3px #dceeff!important}
+body.admin-compact label{color:#42566c!important}
+body.admin-compact table{width:100%;color:#2d4157!important;background:#fff!important;border-collapse:separate;border-spacing:0}
+body.admin-compact th{background:#f4f7fa!important;color:#43566a!important;font-size:12px!important;font-weight:800!important}
+body.admin-compact td{color:#334b63!important;border-color:#e7edf3!important}
+body.admin-compact tr:hover td{background:#f9fbfd!important}
+body.admin-compact .primary{background:#155eef!important;color:#fff!important;border-color:#155eef!important}
+body.admin-compact .secondary{background:#102f50!important;color:#fff!important;border:1px solid #214e78!important}
+body.admin-compact .ghost{background:#fff!important;color:#40566d!important;border:1px solid #c8d5e1!important}
+body.admin-compact .primary:disabled,body.admin-compact .secondary:disabled,body.admin-compact .ghost:disabled{opacity:.5!important}
+body.admin-compact :focus-visible{outline:3px solid #b7daf8!important;outline-offset:2px!important}
+
+/* Shared service cards follow the same readable surface instead of inheriting dark legacy panels. */
+body.admin-compact .social-connections,body.admin-compact .social-org-card,body.admin-compact .social-admin-summary article,body.admin-compact .social-connection-metrics article,
+body.admin-compact .service-control-card,body.admin-compact .finance-status article,body.admin-compact .finance-note,body.admin-compact .finance-table-wrap,
+body.admin-compact .books-admin-card,body.admin-compact .community-admin-card,body.admin-compact .marketing-ai-card{background:#fff!important;color:#172033!important;border-color:#dce5ee!important;box-shadow:none!important}
+body.admin-compact .social-connection-card,body.admin-compact .social-channel-row{background:#f7f9fc!important;color:#263b52!important}
+body.admin-compact .social-admin-status{border:1px solid #dce5ee!important;background:#f7f9fc!important;color:#52667b!important}
+body.admin-compact .social-admin-status[data-state="error"]{border-color:#f2c6c6!important;background:#fff3f3!important;color:#a53b3b!important}
+body.admin-compact .social-admin-status[data-state="saved"]{border-color:#bee2cf!important;background:#f1fbf5!important;color:#237a54!important}
+body.admin-compact .social-admin-status[data-state="dirty"]{border-color:#ead8ad!important;background:#fff9e8!important;color:#7a5a15!important}
+body.admin-compact .social-admin-head{align-items:center!important}
+body.admin-compact .social-admin-head h2{font-size:26px!important;letter-spacing:-.035em!important}
+body.admin-compact .social-connections{padding:18px!important;border-radius:16px!important}
+body.admin-compact .social-scope-bar{gap:12px!important}
+body.admin-compact .social-admin-summary{gap:10px!important}
+body.admin-compact .social-admin-summary article{padding:14px 16px!important;border-radius:13px!important}
+body.admin-compact .social-org-card{padding:16px!important;border-radius:15px!important}
+
 body.admin-compact .app{grid-template-columns:220px minmax(0,1fr)}
 body.admin-compact .app>main{grid-column:2;min-width:0}
 body.admin-compact .sidebar{padding:18px 14px;display:flex;flex-direction:column;position:fixed!important;inset:0 auto 0 0;width:220px;height:100dvh;min-height:100vh;overflow:hidden!important;overscroll-behavior:none;z-index:30}
