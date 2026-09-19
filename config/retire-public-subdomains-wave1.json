@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "rootDomain": "ekodi.kr",
+  "targets": [
+    {
+      "label": "community",
+      "service": "ekodi-community",
+      "apexHealth": "https://ekodi.kr/community/health",
+      "directHealth": "https://ekodi-community.topmaster-joseph.workers.dev/health",
+      "expect": [
+        "ekodi-community"
+      ]
+    },
+    {
+      "label": "social",
+      "service": "ekodi-social",
+      "apexHealth": "https://ekodi.kr/social/health",
+      "directHealth": "https://ekodi-social.topmaster-joseph.workers.dev/health",
+      "expect": [
+        "ekodi-social"
+      ]
+    },
+    {
+      "label": "energy",
+      "service": "ekodi-energy",
+      "apexHealth": "https://ekodi.kr/energy/health",
+      "directHealth": "https://ekodi-energy.topmaster-joseph.workers.dev/health",
+      "expect": [
+        "ekodi-energy-ai",
+        "\"controlEnabled\":false"
+      ]
+    }
+  ]
+}

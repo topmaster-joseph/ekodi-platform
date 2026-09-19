@@ -47,7 +47,10 @@ jobs:
           node --test test/energy-platform.test.mjs
           grep -Fq '실제 인버터·계량기·ESS 제어는 비활성화' energy/index.html
           grep -Fq 'CONTROL_ENABLED = "false"' wrangler.energy-staging.toml
-          grep -Fq 'pattern = "energy.ekodi.kr"' wrangler.energy.toml
+          if grep -Fq '[[routes]]' wrangler.energy.toml || grep -Fq 'custom_domain = true' wrangler.energy.toml; then
+            echo 'Energy public custom-domain routing must stay retired.'
+            exit 1
+          fi
           grep -Fq 'CONTROL_ENABLED = "false"' wrangler.energy.toml
           test -f deploy/manifests/energy.worker.json
       - name: Ecosystem guardrails
