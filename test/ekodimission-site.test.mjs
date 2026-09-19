@@ -74,6 +74,34 @@ test('first-party application API preserves existing application record identity
   assert.equal(denied.status,400);
 });
 
+test('every EKODI Mission page uses the same primary navigation and managed language selector',async()=>{
+  const pageFiles=[
+    'ekodimission.page','ekodimission-activities.page','ekodimission-activity.page','ekodimission-contact.page',
+    'ekodimission-give.page','ekodimission-participate.page','ekodimission-partners.page','ekodimission-prayer.page',
+    'ekodimission-stories.page','ekodimission-transparency.page','ekodimission-vision.page'
+  ];
+  const canonical=['/ekodimission/activities','/ekodimission/live','/ekodimission/participate','/ekodimission/partners','/ekodimission/stories'];
+  for(const file of pageFiles){
+    const source=await readFile(new URL('../space/'+file,import.meta.url),'utf8');
+    const nav=source.match(/<nav aria-label="주요 메뉴">([\s\S]*?)<\/nav>/)?.[1]||'';
+    let position=-1;
+    for(const href of canonical){
+      const next=nav.indexOf(`href="${href}"`);
+      assert.ok(next>position,`${file}: ${href}`);
+      position=next;
+    }
+    assert.match(nav,/data-mission-language-control/,file);
+    assert.match(nav,/<select aria-label="언어">/,file);
+  }
+  const script=await readFile(new URL('../space/ekodimission.js',import.meta.url),'utf8');
+  assert.match(script,/language-registry\.json/);
+  assert.match(script,/api\/i18n\/v1\/status\?service=mission/);
+  assert.match(script,/api\/i18n\/v1\/catalog\?service=mission/);
+  assert.match(script,/published\.has\(item\.locale\)/);
+  assert.match(script,/option\.disabled=!published\.has\(item\.locale\)/);
+  assert.match(script,/syncMissionHeader\(\)/);
+});
+
 test('platform router preserves tenant-branded independent sites without EKODI shell injection',async()=>{
   const source=await readFile(new URL('../platform-router-entry-worker.js',import.meta.url),'utf8');assert.match(source,/x-ekodi-independent-site/);assert.match(source,/independent-workspace-site/);
 });
