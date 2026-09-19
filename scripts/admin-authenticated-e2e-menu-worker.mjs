@@ -50,11 +50,14 @@ async function waitForReady() {
 async function prepareTargetDemand() {
   stage('target-demand');
   const selector = `.sidebar nav [data-demand-feature][data-section="${menuId}"], .sidebar nav [data-demand-feature][data-lazy-section="${menuId}"]`;
-  if (!await page.locator(selector).count()) return;
-  await page.evaluate(async section => {
+  const placeholder = page.locator(selector).first();
+  if (!await placeholder.count()) return;
+  const demandKey = String(await placeholder.getAttribute('data-demand-feature') || '').trim();
+  if (!demandKey) throw new Error(`${menuId}: demand placeholder is missing its loader key`);
+  await page.evaluate(async key => {
     if (!window.EKODIAdminDemand?.activate) throw new Error('Admin demand runtime unavailable');
-    await window.EKODIAdminDemand.activate(section);
-  }, menuId);
+    await window.EKODIAdminDemand.activate(key);
+  }, demandKey);
   await page.waitForFunction(section => {
     const nodes = [...document.querySelectorAll('.sidebar nav [data-section], .sidebar nav [data-lazy-section]')];
     const target = nodes.find(node => node.dataset.section === section || node.dataset.lazySection === section);
