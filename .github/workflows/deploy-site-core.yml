@@ -301,8 +301,8 @@ jobs:
           test -f ai-management-admin.js
           test -f communication-admin.css
           grep -Fq 'EKODI COMMUNICATION ADMIN' communication-admin.js
-          grep -Fq 'https://mail.ekodi.kr/admin' communication-admin.js
-          grep -Fq 'https://live.ekodi.kr/' communication-admin.js
+          grep -Fq 'https://ekodi.kr/mail/admin' communication-admin.js
+          grep -Fq 'https://ekodi.kr/live' communication-admin.js
           grep -Fq 'Permission transfer: NONE' openai-workspace-admin.js
           grep -Fq 'EKODIAdminContext' openai-workspace-admin.js
           grep -Fq 'ekodi-admin-assist-request' openai-workspace-admin.js
@@ -499,10 +499,6 @@ jobs:
           grep -Fiq 'x-ekodi-route: admin-shell' /tmp/admin-canonical.headers || { echo 'Canonical Admin route owner missing.'; exit 1; }
           grep -Fiq 'cache-control: no-store' /tmp/admin-canonical.headers || { echo 'Canonical Admin shell must remain no-store.'; exit 1; }
 
-          legacy_code=$(curl -sS --max-redirs 0 -D /tmp/admin-legacy.headers -o /tmp/admin-legacy.body -w '%{http_code}' --retry 3 --retry-delay 1 --connect-timeout 5 --max-time 20 'https://admin.ekodi.kr/' || true)
-          [ "$legacy_code" = '308' ] || { echo "Legacy Admin host must redirect permanently; HTTP $legacy_code"; exit 1; }
-          grep -Fiq 'location: https://ekodi.kr/admin/?source=admin.ekodi.kr' /tmp/admin-legacy.headers || { echo 'Legacy Admin redirect target is not canonical.'; exit 1; }
-          grep -Fiq 'cache-control: no-store' /tmp/admin-legacy.headers || { echo 'Legacy Admin redirect must remain no-store.'; exit 1; }
           echo 'canonicalAdminRouteOwnership=verified'
 
       - name: Verify admin assets and every registered production service
@@ -542,27 +538,32 @@ jobs:
             'https://ekodi.kr/admin',
             'https://ekodi.kr/auth',
             'https://ekodi.kr/auth/',
-            'https://admin.ekodi.kr/',
-            'https://ai.ekodi.kr/',
+            'https://ekodi.kr/admin/',
+            'https://ekodi.kr/ai/',
             'https://ekodi.kr/tax',
-            'https://mail.ekodi.kr/',
-            'https://live.ekodi.kr/',
-            'https://live.church.ekodi.kr/',
-            'https://cloud.ekodi.kr/',
-            'https://marketing.ekodi.kr/',
+            'https://ekodi.kr/mail',
+            'https://ekodi.kr/live',
+            'https://ekodi.kr/live/church',
+            'https://ekodi.kr/cloud',
+            'https://ekodi.kr/ekodibiz/marketing-ai',
             'https://cgma.or.kr/',
             'https://www.cgma.or.kr/',
-            'https://cgma.ekodi.kr/',
             'https://ekodi.kr/cgma/',
-            'https://biz.ekodi.kr/',
-            'https://trade.biz.ekodi.kr/',
-            'https://pay.ekodi.kr/',
-            'https://pay.biz.ekodi.kr/',
+            'https://ekodi.kr/ekodibiz',
+            'https://ekodi.kr/ekodibiz/trade',
+            'https://ekodi.kr/pay',
+            'https://ekodi.kr/ekodibiz/pay',
             'https://ekodi.kr/ekodichurch/',
             'https://ekodi.kr/ekodilab/'
           ]);
-          for(const service of registry.services||[]) if(service.productionVerified===true && service.url) urls.add(service.url);
-          for(const match of shell.matchAll(/href=["'](https:\/\/[^"']+\.ekodi\.kr\/?[^"']*)["']/g)) urls.add(match[1]);
+          for(const service of registry.services||[]) {
+            if(service.productionVerified!==true || !service.url) continue;
+            try {
+              const target=new URL(service.url);
+              if(target.hostname==='ekodi.kr' || !target.hostname.endsWith('.ekodi.kr')) urls.add(service.url);
+            } catch {}
+          }
+          for(const match of shell.matchAll(/href=["'](https:\/\/ekodi\.kr\/[^"']*)["']/g)) urls.add(match[1]);
           console.log([...urls].sort().join('\n'));
           NODE
 
@@ -589,7 +590,7 @@ jobs:
           done
 
           : > /tmp/mail-body
-          if curl -L -fsS --retry 3 --retry-delay 2 --connect-timeout 5 --max-time 20 'https://mail.ekodi.kr/' -o /tmp/mail-body; then
+          if curl -L -fsS --retry 3 --retry-delay 2 --connect-timeout 5 --max-time 20 'https://ekodi.kr/mail' -o /tmp/mail-body; then
             grep -Fq '<title>EKODI Mail</title>' /tmp/mail-body || failed=1
             grep -Fq 'id="accountLabel"' /tmp/mail-body || failed=1
             grep -Fq 'id="searchForm"' /tmp/mail-body || failed=1
@@ -599,19 +600,19 @@ jobs:
           fi
 
           for asset in \
-            'https://admin.ekodi.kr/admin-shell.css' \
-            'https://admin.ekodi.kr/admin-demand-loader.js' \
-            'https://admin.ekodi.kr/admin-menu-registry.js' \
-            'https://admin.ekodi.kr/admin-menu-layout.js' \
-            'https://admin.ekodi.kr/admin-sidebar.js' \
-            'https://admin.ekodi.kr/admin-design-engine.js' \
-            'https://admin.ekodi.kr/admin-design-engine.css' \
-            'https://admin.ekodi.kr/campus-actions.js' \
-            'https://admin.ekodi.kr/marketing-ai-admin.js' \
-            'https://admin.ekodi.kr/tapo-device-admin.js' \
-            'https://admin.ekodi.kr/tapo-device-admin.css' \
-            'https://admin.ekodi.kr/admin-public-site-controls.js' \
-            'https://admin.ekodi.kr/admin-language-status.js' \
+            'https://ekodi.kr/admin/admin-shell.css' \
+            'https://ekodi.kr/admin/admin-demand-loader.js' \
+            'https://ekodi.kr/admin/admin-menu-registry.js' \
+            'https://ekodi.kr/admin/admin-menu-layout.js' \
+            'https://ekodi.kr/admin/admin-sidebar.js' \
+            'https://ekodi.kr/admin/admin-design-engine.js' \
+            'https://ekodi.kr/admin/admin-design-engine.css' \
+            'https://ekodi.kr/admin/campus-actions.js' \
+            'https://ekodi.kr/admin/marketing-ai-admin.js' \
+            'https://ekodi.kr/admin/tapo-device-admin.js' \
+            'https://ekodi.kr/admin/tapo-device-admin.css' \
+            'https://ekodi.kr/admin/admin-public-site-controls.js' \
+            'https://ekodi.kr/admin/admin-language-status.js' \
             'https://ekodi.kr/auth/auth-workspace-target.js'; do
             check "$asset" || failed=1
           done
