@@ -36,7 +36,9 @@ test('publishing engine enforces channel controls before provider execution', as
 test('Mall OAuth projection preserves explicit control while applying safe defaults', async()=>{
   const growth=await read('marketing-growth-worker.js');
   assert.match(growth,/mallSubject=subject\.type==='tenant'&&subject\.key==='ekodimall'/);
-  assert.match(growth,/\['facebook','instagram','threads'\]\.includes\(provider\)/);
+  assert.match(growth,/ownedTenantAutopostSubject/);
+  assert.match(growth,/autoProviders=ownedAutoSubject\?\['facebook','instagram','threads','youtube'\]:\['facebook','instagram','threads'\]/);
+  assert.match(growth,/autoPublishEnabled:autoProviders\.includes\(provider\)/);
   assert.match(growth,/maxPostsPerDay:1/);
   assert.match(growth,/minHoursBetweenPosts:6/);
   assert.match(growth,/publishWindowStart:'08:00'/);

@@ -3,6 +3,7 @@ export { MarketingGrowthPublisher } from './marketing-growth-worker.js';
 import { getMallPromotionStatus, handleMallPromotionRequest, mallPromotionAutomationEnabled } from './mall-promotion-automation.js';
 import { getMallSalesIntelligenceStatus } from './mall-sales-intelligence.js';
 import { getMallAutonomousProfitLoopStatus, runMallAutonomousProfitLoop } from './mall-autonomous-profit-loop.js';
+import { getOwnedTenantAutopostStatus, runOwnedTenantAutopostCycle } from './owned-tenant-autopost-loop.js';
 
 function json(data, status = 200, inheritedHeaders = null) {
   const headers = new Headers(inheritedHeaders || undefined);
@@ -21,10 +22,11 @@ export default {
       const baseResponse = await growthWorker.fetch(request, env, ctx);
       let base = {};
       try { base = await baseResponse.clone().json(); } catch {}
-      const [rawMallPromotionAutomation, mallSalesIntelligence, mallAutonomousProfitLoop] = await Promise.all([
+      const [rawMallPromotionAutomation, mallSalesIntelligence, mallAutonomousProfitLoop, ownedTenantAutopost] = await Promise.all([
         getMallPromotionStatus(env),
         getMallSalesIntelligenceStatus(env),
         getMallAutonomousProfitLoopStatus(env),
+        getOwnedTenantAutopostStatus(env),
       ]);
       const enabled = mallPromotionAutomationEnabled(env);
       const mallPromotionAutomation = {
@@ -33,7 +35,7 @@ export default {
         scheduler: enabled && rawMallPromotionAutomation?.scheduler !== false,
         safetyGate: enabled ? 'explicitly_enabled' : 'social_oauth_connection_and_test_publish_required',
       };
-      return json({...base, mallPromotionAutomation, mallSalesIntelligence, mallAutonomousProfitLoop}, baseResponse.status, baseResponse.headers);
+      return json({...base, mallPromotionAutomation, mallSalesIntelligence, mallAutonomousProfitLoop, ownedTenantAutopost}, baseResponse.status, baseResponse.headers);
     }
     return growthWorker.fetch(request, env, ctx);
   },
@@ -41,6 +43,8 @@ export default {
     ctx.waitUntil((async () => {
       const loop = await runMallAutonomousProfitLoop(env,{reason:'cron'});
       if (!loop.ok) console.error('EKODI Mall autonomous profit loop degraded', loop.after?.state || 'failed');
+      const owned = await runOwnedTenantAutopostCycle(env,{reason:'cron'});
+      if (!owned.ok) console.error('EKODI owned tenant autopost cycle degraded', owned.status || 'failed');
     })());
   },
 };

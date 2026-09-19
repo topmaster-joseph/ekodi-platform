@@ -1,5 +1,6 @@
 import { WorkerEntrypoint } from 'cloudflare:workers';
 import { runMallAutonomousProfitLoop } from './mall-autonomous-profit-loop.js';
+import { ownedTenantAutopostSubject, runOwnedTenantAutopostCycle } from './owned-tenant-autopost-loop.js';
 import { d1SchemaReady } from './d1-schema-readiness.js';
 import { mallGrowthDashboardSnapshot } from './mall-growth-dashboard.js';
 import { channelCatalogSnapshot } from './channel-publishing-catalog.js';
@@ -283,9 +284,10 @@ async function upsertConnection(env, subject, {provider,resourceType,externalId,
     .bind(subject.type,subject.key,provider,resourceType,externalId).first();
 }
 async function upsertPublishChannel(env, subject, {provider,channelType,displayName,externalId,connectionId}) {
-  const now=nowIso(),mallSubject=subject.type==='tenant'&&subject.key==='ekodimall';
+  const now=nowIso(),mallSubject=subject.type==='tenant'&&subject.key==='ekodimall',ownedAutoSubject=ownedTenantAutopostSubject(subject),autoSubject=mallSubject||ownedAutoSubject;
   const current=await env.DB.prepare('SELECT status,config_json FROM marketing_publish_channels WHERE subject_type=? AND subject_key=? AND provider=? AND channel_type=? AND external_account_id=?').bind(subject.type,subject.key,provider,channelType,externalId).first();
-  const defaults=mallSubject?{autoPublishEnabled:['facebook','instagram','threads'].includes(provider),maxPostsPerDay:1,minHoursBetweenPosts:6,publishWindowStart:'08:00',publishWindowEnd:'22:00',timezone:'Asia/Seoul',maxAttempts:5}:{autoPublishEnabled:false,maxPostsPerDay:0,minHoursBetweenPosts:0,publishWindowStart:'08:00',publishWindowEnd:'22:00',timezone:'Asia/Seoul',maxAttempts:5};
+  const autoProviders=ownedAutoSubject?['facebook','instagram','threads','youtube']:['facebook','instagram','threads'];
+  const defaults=autoSubject?{autoPublishEnabled:autoProviders.includes(provider),maxPostsPerDay:1,minHoursBetweenPosts:6,publishWindowStart:'08:00',publishWindowEnd:'22:00',timezone:'Asia/Seoul',maxAttempts:5}:{autoPublishEnabled:false,maxPostsPerDay:0,minHoursBetweenPosts:0,publishWindowStart:'08:00',publishWindowEnd:'22:00',timezone:'Asia/Seoul',maxAttempts:5};
   const config={...defaults,...safeParse(current?.config_json,{}),credentialMode:'oauth-vault',oauthConnectionId:connectionId};
   const auto=config.autoPublishEnabled!==false;
   const status=auto?'active':'paused';
@@ -703,7 +705,9 @@ async function preparePaidPromotion(request, env, identity, subject, id) {
 export class MarketingGrowthPublisher extends WorkerEntrypoint {
   async runGrowthCycle(input = {}) {
     const reason = clean(input?.reason || 'shared-publishing-cron',80);
-    return runMallAutonomousProfitLoop(this.env,{reason,force:Boolean(input?.force)});
+    const mall = await runMallAutonomousProfitLoop(this.env,{reason,force:Boolean(input?.force)});
+    const ownedTenants = await runOwnedTenantAutopostCycle(this.env,{reason});
+    return {...mall,ownedTenants,ok:Boolean(mall?.ok)&&Boolean(ownedTenants?.ok)};
   }
 
   async publishFromVault(input = {}) {
