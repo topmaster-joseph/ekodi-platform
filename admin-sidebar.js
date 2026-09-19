@@ -20,11 +20,13 @@ const TABS_CLASS = 'admin-context-tabs';
 const DETAILS_CLASS = 'admin-global-details';
 const MORE_CLASS = 'admin-detail-more';
 const PRIMARY_SECTIONS = Object.freeze({
-  home: ['command-home', 'campus'],
-  operations: ['work', 'communication', 'finance', 'tax'],
-  workspaces: ['clients', 'cmpmyi', 'organization', 'workspace'],
-  services: ['common-services', 'marketing-ai', 'community', 'social', 'books'],
-  system: ['health', 'aiops', 'ai-settings', 'devices', 'security', 'admins', 'api-cost'],
+  core: ['command-home', 'architecture', 'aiops', 'devices', 'security'],
+  common: ['common-services', 'work', 'communication', 'finance', 'social'],
+  professional: ['marketing-ai', 'personal-finance', 'invest', 'supply-network', 'insurance'],
+  status: ['health', 'public-site-controls', 'api-cost', 'maturity', 'language-status'],
+  manager: ['clients', 'organization', 'workspace', 'admins'],
+  submanager: ['campus', 'cmpmyi'],
+  other: ['ai-module-spec', 'openai'],
 });
 
 export function adminSidebarSectionOf(item) {
@@ -67,7 +69,7 @@ function ensureStyle() {
 body.admin-compact{--admin-readable:#172033;--admin-secondary:#66768a;--admin-border:#d9e2ec;--admin-soft:#f1f5f9;--admin-active:#edf4ff}
 body.admin-compact .sidebar nav{display:flex!important;flex-direction:column!important;gap:2px!important;overflow-y:hidden!important;overflow-x:hidden!important;overscroll-behavior:none!important}
 body.admin-compact .${GLOBAL_CLASS}{display:grid;gap:3px;margin:2px 0 8px}
-body.admin-compact .admin-global-nav{display:flex;align-items:center;gap:9px;width:100%;min-height:42px;padding:8px 10px;border:1px solid transparent;border-radius:9px;background:transparent;color:#40566d!important;font:inherit;font-size:14px;font-weight:780;line-height:1.25;text-align:left;cursor:pointer;box-shadow:none!important;transition:none!important;opacity:1!important}
+body.admin-compact .admin-global-nav{display:flex;align-items:center;gap:9px;width:100%;min-height:40px;padding:7px 10px;border:1px solid transparent;border-radius:9px;background:transparent;color:#40566d!important;font:inherit;font-size:14px;font-weight:780;line-height:1.25;text-align:left;cursor:pointer;box-shadow:none!important;transition:none!important;opacity:1!important}
 body.admin-compact .admin-global-nav span{color:inherit!important;opacity:1!important}
 body.admin-compact .admin-global-nav:hover{border-color:#d5e6ef;background:#eef7fb;color:#123c58!important}
 body.admin-compact .admin-global-nav.active{border-color:#b7d4f6;background:#edf4ff;color:#0b4f8a!important}
@@ -278,7 +280,7 @@ function activeSection(nav) {
   const activeId = adminSidebarSectionOf(active);
   if (activeId && getAdminMenuItem(activeId)) return activeId;
   if (panelSection && getAdminMenuItem(panelSection)) return panelSection;
-  return getAdminMenuGroupDefault('home');
+  return getAdminMenuGroupDefault('core');
 }
 
 function availableIds(nav, group) {
@@ -412,7 +414,7 @@ export function renderAdminSidebar(nav, { locale = readAdminSidebarLocale(), ids
     const items = ids.map(id => createAdminSidebarItem(id, locale)).filter(Boolean);
     nav.replaceChildren(...items);
     nav.dataset.adminSidebarShared = 'true';
-    nav.dataset.adminMenuGovernance = 'workbench-tabs-v2';
+    nav.dataset.adminMenuGovernance = 'seven-domain-chat-v1';
     syncAdminSidebar(nav.ownerDocument || document, { locale });
     return items;
   } finally {
@@ -449,7 +451,7 @@ export function syncAdminSidebar(root = document, options = {}) {
   syncWorkbenchState(nav, locale);
   nav.dataset.adminSidebarShared = 'true';
   nav.dataset.adminSidebarLocale = locale;
-  nav.dataset.adminMenuGovernance = 'workbench-tabs-v2';
+  nav.dataset.adminMenuGovernance = 'seven-domain-chat-v1';
 
   const id = activeSection(nav);
   const title = root.querySelector?.('#pageTitle');
