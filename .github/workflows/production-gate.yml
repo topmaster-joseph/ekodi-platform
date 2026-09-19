@@ -1,135 +1,89 @@
 name: Production Revenue Gate
 
 on:
+  workflow_run:
+    workflows: ['Deploy EKODI Shared Site Core']
+    types: [completed]
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - 'site-worker.js'
-      - 'api-worker.js'
-      - 'admin-shell.html'
-      - 'admin-authenticated-shell.js'
-      - 'admin-central-handoff.js'
-      - 'test/**'
-      - 'config/ai-development-completion-policy.json'
-      - 'scripts/validate-ai-development-completion-policy.mjs'
-      - '.github/workflows/production-gate.yml'
-  schedule:
-    - cron: '5 * * * *'
 
 permissions:
   contents: read
 
 concurrency:
-  group: production-revenue-gate
+  group: production-post-deploy-canary
   cancel-in-progress: true
 
 jobs:
   verify-production:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_DEVELOPMENT_ACCOUNT_ID: ${{ vars.CLOUDFLARE_DEVELOPMENT_ACCOUNT_ID || '46aad4738793fbaca88574832a2ccc0f' }}
     steps:
       - uses: actions/checkout@v7
-      - name: Identify EKODI monitor traffic
-        shell: bash
-        run: |
-          printf '%s\n' 'user-agent = "EKODI-github-monitor/1.0"' > "$HOME/.curlrc"
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
-      - name: Run business contract tests only when source changed or manually requested
-        if: github.event_name != 'schedule'
-        run: npm test
-      - name: Verify revenue-critical production endpoints
-        shell: bash
-        run: |
-          set -euo pipefail
 
-          verify_html() {
-            url="$1"
-            needle="$2"
-            label="$3"
-            code=$(curl -sS --retry 3 --retry-delay 1 --retry-all-errors --max-redirs 3 -D /tmp/headers -o /tmp/body -w '%{http_code}' --connect-timeout 5 --max-time 15 "$url")
-            echo "$label | $url | HTTP $code"
-            [ "$code" = '200' ]
-            grep -Fq "$needle" /tmp/body
-          }
+      - name: EKODI AI Orchestration Gate
+        run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
 
-          verify_admin() {
-            url="$1"
-            route="$2"
-            code=$(curl -sS --retry 3 --retry-delay 1 --retry-all-errors --max-redirs 0 -D /tmp/headers -o /tmp/body -w '%{http_code}' --connect-timeout 5 --max-time 15 "$url")
-            echo "ADMIN | $url | HTTP $code"
-            [ "$code" = '200' ]
-            grep -Fiq "x-ekodi-route: $route" /tmp/headers
-            ! grep -Fiq '^location:' /tmp/headers
-            grep -Fq '<title>EKODI Admin</title>' /tmp/body
-          }
+      - name: Read Production Cloudflare quota Source of Truth
+        id: quota
+        run: node scripts/cloudflare-production-budget.mjs --output=cloudflare-production-quota.json
 
-          verify_redirect() {
-            url="$1"
-            target="$2"
-            label="$3"
-            code=$(curl -sS --retry 3 --retry-delay 1 --retry-all-errors --max-redirs 0 -D /tmp/headers -o /tmp/body -w '%{http_code}' --connect-timeout 5 --max-time 15 "$url")
-            echo "$label | $url | HTTP $code"
-            [ "$code" = '308' ]
-            grep -Fiq "location: $target" /tmp/headers
-          }
+      - name: Run one quota-aware post-deploy canary
+        id: canary
+        env:
+          EKODI_CF_QUOTA_STATE: ${{ steps.quota.outputs.state }}
+        run: node scripts/post-deploy-canary.mjs --scope=full --output=production-canary.json
 
-          verify_admin 'https://ekodi.kr/admin/' 'admin-shell'
-          verify_redirect 'https://ekodi.kr/admin' 'https://ekodi.kr/admin/' 'ADMIN CANONICAL SLASH'
-          verify_html 'https://ekodi.kr/cgma/' '청계면상인회' 'CLIENT cgma'
-          verify_html 'https://ekodi.kr/jadam' '자담치킨 목포대점' 'CLIENT jadam'
-          verify_html 'https://ekodi.kr/pizzamaru' '피자마루 목포대점' 'CLIENT pizzamaru'
-          verify_html 'https://ekodi.kr/yogurt' '요거트퍼플 목포대점' 'CLIENT yogurt'
-          verify_html 'https://ekodi.kr/ekodibiz/marketing-ai' '마케팅AI' 'PLATFORM marketing'
-
-          api_code=$(curl -sS --retry 3 --retry-delay 1 --retry-all-errors -o /tmp/api -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://api.ekodi.kr/health')
-          echo "CONTROL API | https://api.ekodi.kr/health | HTTP $api_code"
-          [ "$api_code" = '200' ]
       - name: Create production completion evidence
+        if: success()
         shell: bash
         env:
-          RELEASE_SHA: ${{ github.sha }}
-          RUN_ID: ${{ github.run_id }}
-          RUN_ATTEMPT: ${{ github.run_attempt }}
+          RELEASE_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+          SOURCE_RUN_ID: ${{ github.event.workflow_run.id || github.run_id }}
+          QUOTA_STATE: ${{ steps.quota.outputs.state }}
+          QUOTA_REQUESTS: ${{ steps.quota.outputs.requests }}
+          QUOTA_PERCENT: ${{ steps.quota.outputs.percent }}
         run: |
           set -euo pipefail
           mkdir -p artifacts
           verified_at=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
           cat > artifacts/production-completion-evidence.json <<EOF
           {
-            "schemaVersion": 1,
+            "schemaVersion": 2,
             "policyId": "AI-COMPLETE-001",
+            "quotaPolicyId": "CF-QUOTA-001",
             "status": "production-verified-complete",
             "releaseSha": "${RELEASE_SHA}",
-            "workflowRunId": "${RUN_ID}",
-            "workflowRunAttempt": "${RUN_ATTEMPT}",
+            "sourceDeploymentRunId": "${SOURCE_RUN_ID}",
             "productionHostname": "ekodi.kr ecosystem",
-            "functionalChecks": [
-              "canonical apex admin route",
-              "cgma customer surface content",
-              "jadam customer surface content",
-              "pizzamaru customer surface content",
-              "yogurt customer surface content",
-              "marketing platform content",
-              "control API health"
-            ],
-            "observabilityCheck": "workflow logs and endpoint responses captured by Production Revenue Gate",
+            "verificationMode": "single-post-deploy-canary",
+            "quota": {
+              "state": "${QUOTA_STATE}",
+              "requests": ${QUOTA_REQUESTS},
+              "percent": ${QUOTA_PERCENT}
+            },
+            "observabilityCheck": "Cloudflare Production Analytics + quota-aware canary",
             "verificationTimestamp": "${verified_at}"
           }
           EOF
-      - name: Upload production completion evidence
-        uses: actions/upload-artifact@v4
+
+      - name: Preserve quota, canary and completion evidence
+        if: always()
+        uses: actions/upload-artifact@v7
         with:
-          name: production-completion-evidence-${{ github.run_id }}-${{ github.run_attempt }}
-          path: artifacts/production-completion-evidence.json
-          if-no-files-found: error
+          name: production-post-deploy-canary-${{ github.run_id }}
+          path: |
+            cloudflare-production-quota.json
+            production-canary.json
+            artifacts/production-completion-evidence.json
+          if-no-files-found: warn
           retention-days: 30
-      - name: Production completion summary
-        run: |
-          echo '### AI-COMPLETE-001' >> "$GITHUB_STEP_SUMMARY"
-          echo '- Status: production-verified-complete' >> "$GITHUB_STEP_SUMMARY"
-          echo '- Real production hostnames: verified' >> "$GITHUB_STEP_SUMMARY"
-          echo '- Functional production checks: passed' >> "$GITHUB_STEP_SUMMARY"
-          echo '- Completion evidence artifact: uploaded' >> "$GITHUB_STEP_SUMMARY"
