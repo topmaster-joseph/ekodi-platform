@@ -8,11 +8,13 @@ test('broad registry monitor runs hourly on the delegated autonomy cadence', asy
   assert.doesNotMatch(text, /cron:\s*["']17 \*\/4 \* \* \*["']/);
 });
 
-test('critical availability monitors remain more frequent', async () => {
+test('critical availability monitor stays frequent while full production verification is deploy-only', async () => {
   const admin = await readFile('.github/workflows/admin-availability-watch.yml', 'utf8');
   const revenue = await readFile('.github/workflows/production-gate.yml', 'utf8');
   const perf = await readFile('.github/workflows/ecosystem-performance-watch.yml', 'utf8');
   assert.match(admin, /cron:\s*['"]\*\/15 \* \* \* \*['"]/);
-  assert.match(revenue, /cron:\s*['"]5 \* \* \* \*['"]/);
   assert.match(perf, /cron:\s*['"]37 \* \* \* \*['"]/);
+  assert.doesNotMatch(revenue, /cron:/);
+  assert.match(revenue, /workflow_run:/);
+  assert.match(revenue, /Deploy EKODI Shared Site Core/);
 });

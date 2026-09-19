@@ -8,11 +8,10 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/admin-availability-watch.yml'
-      - 'test/admin-availability-watch.test.mjs'
+      - 'config/cloudflare-production-quota-guard.json'
+      - 'scripts/cloudflare-production-budget.mjs'
+      - 'scripts/post-deploy-canary.mjs'
       - 'wrangler.site.toml'
-      - 'site-worker.js'
-      - 'admin-shell.html'
-      - 'auth-site/**'
 
 permissions:
   contents: read
@@ -20,170 +19,108 @@ permissions:
 
 concurrency:
   group: ekodi-admin-availability-watch
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   watch:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 8
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_DEVELOPMENT_ACCOUNT_ID: ${{ vars.CLOUDFLARE_DEVELOPMENT_ACCOUNT_ID || '46aad4738793fbaca88574832a2ccc0f' }}
       GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v7
-      - name: Identify EKODI monitor traffic
-        shell: bash
-        run: |
-          printf '%s\n' 'user-agent = "EKODI-github-monitor/1.0"' > "$HOME/.curlrc"
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
 
       - name: EKODI AI Orchestration Gate
         run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
-      - name: Inspect legacy Admin Worker and DNS state
-        id: infra
+
+      - name: Inspect canonical Worker attachment without user traffic
         shell: bash
         run: |
           set -euo pipefail
-          test -n "$CLOUDFLARE_API_TOKEN" || { echo 'Missing CLOUDFLARE_API_TOKEN'; exit 1; }
-          test -n "$CLOUDFLARE_ACCOUNT_ID" || { echo 'Missing CLOUDFLARE_ACCOUNT_ID'; exit 1; }
           api='https://api.cloudflare.com/client/v4'
-          domains=$(curl -fsS --retry 3 --retry-delay 2 \
-            "$api/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/domains?service=shy-thunder-39a4" \
-            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN")
+          domains=$(curl -fsS --retry 2 --retry-delay 2             "$api/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/domains?service=shy-thunder-39a4"             -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN")
           echo "$domains" | jq -e '.success == true' >/dev/null
-          zone_id=$(echo "$domains" | jq -r '.result[] | select(.hostname == "admin.ekodi.kr" and .service == "shy-thunder-39a4") | .zone_id' | head -n1)
-          attached=false
-          if [ -n "$zone_id" ] && [ "$zone_id" != null ]; then attached=true; fi
+          echo "$domains" | jq -e '.result[] | select(.hostname == "ekodi.kr" and .service == "shy-thunder-39a4")' >/dev/null
+          echo 'Canonical ekodi.kr Worker attachment verified through Cloudflare API.'
 
-          dns_ok=false
-          if [ "$attached" = true ]; then
-            records=$(curl -fsS --retry 3 --retry-delay 2 \
-              "$api/zones/$zone_id/dns_records?name=admin.ekodi.kr&per_page=100" \
-              -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN")
-            echo "$records" | jq -e '.success == true' >/dev/null
-            if echo "$records" | jq -e '.result[] | select(.name == "admin.ekodi.kr" and .proxied == true)' >/dev/null; then dns_ok=true; fi
+      - name: Read Production Cloudflare quota Source of Truth
+        id: quota
+        run: node scripts/cloudflare-production-budget.mjs --output=cloudflare-production-quota.json
+
+      - name: Run minimal Admin liveness probe only below protection threshold
+        id: canary
+        env:
+          EKODI_CF_QUOTA_STATE: ${{ steps.quota.outputs.state }}
+        run: node scripts/post-deploy-canary.mjs --scope=admin-monitor --output=admin-availability-canary.json
+
+      - name: Open or update quota alert
+        if: steps.quota.outputs.state != 'normal'
+        shell: bash
+        run: |
+          set -euo pipefail
+          title='Cloudflare Production quota guard alert'
+          body=$(cat <<EOF
+          CF-QUOTA-001 detected Production Worker usage at or above the warning threshold.
+
+          - state: ${{ steps.quota.outputs.state }}
+          - requests: ${{ steps.quota.outputs.requests }} / ${{ steps.quota.outputs.limit }}
+          - usage: ${{ steps.quota.outputs.percent }}%
+          - nonessential probes blocked: ${{ steps.quota.outputs.skip_nonessential }}
+          - workflow: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID
+          - observed: $(date -u +'%Y-%m-%dT%H:%M:%SZ')
+
+          At 90% or higher, scheduled user-facing probes are blocked. HTTP 429 or Cloudflare Error 1027 opens the canary circuit immediately; no retry storm is permitted.
+          EOF
+          )
+          existing=$(gh issue list --state open --search "$title in:title" --json number --jq '.[0].number // empty')
+          if [ -n "$existing" ]; then gh issue comment "$existing" --body "$body"; else gh issue create --title "$title" --body "$body"; fi
+
+      - name: Close recovered quota alert
+        if: steps.quota.outputs.state == 'normal'
+        shell: bash
+        run: |
+          set -euo pipefail
+          title='Cloudflare Production quota guard alert'
+          existing=$(gh issue list --state open --search "$title in:title" --json number --jq '.[0].number // empty')
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body "Production usage returned below 70% at $(date -u +'%Y-%m-%dT%H:%M:%SZ'). Quota guard is normal."
+            gh issue close "$existing" --reason completed
           fi
 
-          needs_repair=false
-          if [ "$attached" != true ] || [ "$dns_ok" != true ]; then needs_repair=true; fi
-          echo "attached=$attached" >> "$GITHUB_OUTPUT"
-          echo "dns_ok=$dns_ok" >> "$GITHUB_OUTPUT"
-          echo "needs_repair=$needs_repair" >> "$GITHUB_OUTPUT"
-          echo "Legacy Admin infra: attached=$attached dns_ok=$dns_ok needs_repair=$needs_repair"
-
-      - name: Check independent DNS resolvers
-        id: resolvers
-        shell: bash
-        run: |
-          set -euo pipefail
-          cf=$(curl -fsS --retry 3 -H 'accept: application/dns-json' \
-            'https://cloudflare-dns.com/dns-query?name=admin.ekodi.kr&type=A')
-          google=$(curl -fsS --retry 3 \
-            'https://dns.google/resolve?name=admin.ekodi.kr&type=A')
-          cf_ok=false
-          google_ok=false
-          if echo "$cf" | jq -e '.Status == 0 and ([.Answer[]? | select(.type == 1)] | length > 0)' >/dev/null; then cf_ok=true; fi
-          if echo "$google" | jq -e '.Status == 0 and ([.Answer[]? | select(.type == 1)] | length > 0)' >/dev/null; then google_ok=true; fi
-          echo "cloudflare=$cf_ok" >> "$GITHUB_OUTPUT"
-          echo "google=$google_ok" >> "$GITHUB_OUTPUT"
-          echo "Resolver health: cloudflare=$cf_ok google=$google_ok"
-
-      - name: Repair missing legacy Admin attachment only
-        if: steps.infra.outputs.needs_repair == 'true'
-        shell: bash
-        run: |
-          set -euo pipefail
-          echo 'Legacy Admin Worker/DNS attachment is incomplete. Running one guarded trigger repair.'
-          npx --yes wrangler@4.119.0 triggers deploy --config wrangler.site.toml
-          sleep 15
-
-      - name: Verify canonical Admin and legacy compatibility routes
-        id: endpoints
-        shell: bash
-        run: |
-          set -euo pipefail
-          probe_admin() {
-            label="$1"; url="$2"; route="$3"; status=000
-            for attempt in 1 2 3; do
-              status=$(curl -sS --max-redirs 0 -o /tmp/${label}.body -D /tmp/${label}.headers -w '%{http_code}' \
-                --connect-timeout 5 --max-time 15 "$url" || true)
-              if [ "$status" = 200 ] \
-                && grep -Fq '<title>EKODI Admin</title>' /tmp/${label}.body \
-                && grep -Fiq "x-ekodi-route: $route" /tmp/${label}.headers \
-                && ! grep -Fiq '^location:' /tmp/${label}.headers; then
-                echo "$label=ok" >> "$GITHUB_OUTPUT"
-                echo "$url -> 200 ($route)"
-                return 0
-              fi
-              echo "$url attempt $attempt -> $status"
-              sleep 3
-            done
-            echo "$label=fail" >> "$GITHUB_OUTPUT"
-            return 1
-          }
-
-          probe_redirect() {
-            label="$1"; url="$2"; target="$3"; status=000
-            for attempt in 1 2 3; do
-              status=$(curl -sS --max-redirs 0 -o /tmp/${label}.body -D /tmp/${label}.headers -w '%{http_code}' \
-                --connect-timeout 5 --max-time 15 "$url" || true)
-              if [ "$status" = 308 ] && grep -Fiq "location: $target" /tmp/${label}.headers; then
-                echo "$label=ok" >> "$GITHUB_OUTPUT"
-                echo "$url -> 308 $target"
-                return 0
-              fi
-              echo "$url attempt $attempt -> $status"
-              sleep 3
-            done
-            echo "$label=fail" >> "$GITHUB_OUTPUT"
-            return 1
-          }
-
-          failed=0
-          probe_admin canonical_admin 'https://ekodi.kr/admin/' 'admin-shell' || failed=1
-          probe_redirect canonical_slash 'https://ekodi.kr/admin' 'https://ekodi.kr/admin/' || failed=1
-          probe_redirect legacy_root 'https://admin.ekodi.kr/' 'https://ekodi.kr/admin/?source=admin.ekodi.kr' || failed=1
-          probe_redirect legacy_admin 'https://admin.ekodi.kr/admin' 'https://ekodi.kr/admin/?source=admin.ekodi.kr' || failed=1
-          probe_redirect legacy_retired 'https://admin.ekodi.kr/control-center.html' 'https://ekodi.kr/admin/?source=admin.ekodi.kr' || failed=1
-          exit "$failed"
-
-      - name: Recheck legacy Admin infrastructure after any repair
-        if: always()
-        shell: bash
-        run: |
-          set -euo pipefail
-          api='https://api.cloudflare.com/client/v4'
-          domains=$(curl -fsS --retry 3 --retry-delay 2 \
-            "$api/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/domains?service=shy-thunder-39a4" \
-            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN")
-          echo "$domains" | jq -e '.result[] | select(.hostname == "admin.ekodi.kr" and .service == "shy-thunder-39a4" and (.cert_id | length > 0))' >/dev/null
-          echo 'Verified legacy admin.ekodi.kr Worker attachment and certificate reference.'
-
-      - name: Open or update admin incident issue
-        if: failure()
+      - name: Open or update Admin availability incident without extra probes
+        if: failure() && steps.quota.outcome == 'success'
         shell: bash
         run: |
           set -euo pipefail
           title='Admin availability incident: canonical EKODI Admin'
-          canonical_code=$(curl -sS --max-redirs 0 -o /dev/null -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/admin/' || true)
-          legacy_code=$(curl -sS --max-redirs 0 -o /dev/null -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://admin.ekodi.kr/' || true)
           body=$(cat <<EOF
-          Automated Chief AI availability guard detected a persistent Admin access failure after retries and any safe compatibility-route repair.
+          Quota-aware Admin monitor detected a failure without retrying the Production endpoint.
 
-          - canonical: https://ekodi.kr/admin/ -> $canonical_code
-          - legacy compatibility: https://admin.ekodi.kr/ -> $legacy_code
+          - quota state: ${{ steps.quota.outputs.state }}
+          - quota usage: ${{ steps.quota.outputs.percent }}%
+          - circuit open: ${{ steps.canary.outputs.circuit_open }}
           - workflow: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID
           - observed: $(date -u +'%Y-%m-%dT%H:%M:%SZ')
 
-          The canonical Admin is ekodi.kr/admin/. Do not delete/recreate DNS records automatically; preserve legacy redirects while the canonical route is investigated.
+          The monitor deliberately performs no follow-up curl after 429/Error 1027.
           EOF
           )
-          existing=$(gh issue list --state open --search 'Admin availability incident: canonical EKODI Admin in:title' --json number --jq '.[0].number // empty')
-          if [ -n "$existing" ]; then
-            gh issue comment "$existing" --body "$body"
-          else
-            gh issue create --title "$title" --body "$body"
-          fi
+          existing=$(gh issue list --state open --search "$title in:title" --json number --jq '.[0].number // empty')
+          if [ -n "$existing" ]; then gh issue comment "$existing" --body "$body"; else gh issue create --title "$title" --body "$body"; fi
+
+      - name: Preserve monitor evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: admin-quota-aware-monitor-${{ github.run_id }}
+          path: |
+            cloudflare-production-quota.json
+            admin-availability-canary.json
+          if-no-files-found: warn
+          retention-days: 14

@@ -101,10 +101,6 @@ custom_domain = true
 pattern = "cloud.ekodi.kr"
 custom_domain = true
 
-[[routes]]
-pattern = "auth.ekodi.kr"
-custom_domain = true
-
 [[services]]
 binding = "FINANCE"
 service = "ekodi-finance-api"

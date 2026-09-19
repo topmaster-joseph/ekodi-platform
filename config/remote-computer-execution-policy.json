@@ -59,5 +59,29 @@
     ],
     "routerMayLearn": true,
     "securityBoundaryMayNotBeLoweredByLearning": true
+  },
+  "adminObservationSurface": {
+    "enabled": true,
+    "allowedOperations": [
+      "computer.agent.status",
+      "computer.system.read",
+      "computer.process.list"
+    ],
+    "processProjection": {
+      "maximumItems": 20,
+      "allowedFields": [
+        "id",
+        "name",
+        "cpuSeconds",
+        "memoryMB"
+      ],
+      "commandLine": false,
+      "environment": false
+    },
+    "forbiddenOperations": [
+      "computer.terminal.exec",
+      "computer.files.write",
+      "computer.desktop.input"
+    ]
   }
 }

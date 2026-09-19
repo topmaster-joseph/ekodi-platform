@@ -6,12 +6,12 @@ const root=new URL('../',import.meta.url);
 const html=await readFile(new URL('auth-site/oauth-consent.html',root),'utf8');
 const js=await readFile(new URL('auth-site/oauth-consent.js',root),'utf8');
 const auth=await readFile(new URL('auth-site/auth.js',root),'utf8');
-const worker=await readFile(new URL('site-worker.js',root),'utf8');
+const authSurface=await readFile(new URL('canonical-surface-router.js',root),'utf8');
 const build=await readFile(new URL('scripts/build.mjs',root),'utf8');
 
 test('OAuth consent screen is served from the central auth boundary',()=>{
-  assert.match(worker,/url\.pathname === '\/oauth\/consent'/);
-  assert.match(worker,/assetRequest\(request, '\/oauth-consent'\)/);
+  assert.match(authSurface,/stripped==='\/oauth\/consent'/);
+  assert.match(authSurface,/assetPath='\/oauth-consent';routeName='oauth-consent'/);
   assert.match(build,/auth-site\/oauth-consent\.html/);
   assert.match(build,/oauth-consent\.js/);
   assert.match(html,/PERSONAL AI BRIDGE/);
