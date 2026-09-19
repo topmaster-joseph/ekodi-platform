@@ -1,16 +1,9 @@
 name: EKODI Constitution Check
 
 on:
+  # Branch protection requires the constitution job on every PR. Keep push
+  # path filtering for cost control, but never path-filter a required PR check.
   pull_request:
-    paths:
-      - 'CONSTITUTION.md'
-      - 'governance/**'
-      - 'platform-boundaries.json'
-      - 'config/**'
-      - 'scripts/validate-constitution*.mjs'
-      - 'scripts/validate-ekodi-os-architecture.mjs'
-      - '.github/workflows/**'
-      - 'package.json'
   push:
     branches: [main, development]
     paths:
