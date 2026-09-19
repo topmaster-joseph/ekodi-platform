@@ -13,6 +13,8 @@ test('shared tenant Live paths render on ekodi.kr with isolated tenant identity'
     assert.match(html,new RegExp(`data-tenant="${tenant.apiTenant}"`),tenant.id);
     assert.match(html,/\/tenant-live\.js/,tenant.id);
     assert.match(html,/공개 방송은 로그인 없이 시청/,tenant.id);
+    assert.match(html,/id="openViewerButton"/,tenant.id);
+    assert.match(html,/시청 화면 새 탭으로 열기/,tenant.id);
     const apex=await platformRouter.fetch(new Request(`https://ekodi.kr${tenant.path}`),{});
     assert.equal(apex.status,200,`apex ${tenant.id}`);
     const apexHtml=await apex.text();
@@ -30,5 +32,13 @@ test('shared Live auth handoff exchanges EKODI proof without third-party script 
   assert.match(source,/ekodi_token/);
   assert.match(source,/\/auth\/v1\/verify/);
   assert.match(source,/sessionStorage\.setItem\('ekodi-auth-token'/);
+  assert.match(source,/openViewerWindow/);
+  assert.match(source,/link\.target='_blank'/);
+  assert.match(source,/link\.rel='noopener noreferrer'/);
+  assert.match(source,/addEventListener\('pagehide',hostExitCleanup\)/);
+  assert.match(source,/beforeunload/);
+  assert.match(source,/waitForRemoteTracks/);
+  assert.match(source,/publisher_media_unavailable/);
+  assert.match(source,/실시간 방송 수신 중입니다/);
   assert.doesNotMatch(source,/cdn\.jsdelivr\.net|esm\.sh/);
 });
