@@ -55,22 +55,22 @@ test('production verification is consolidated into one post-deploy canary', asyn
   assert.doesNotMatch(reliability, /workflow_run:/);
 });
 
-test('immutable Admin CSS is asset-first while auth JavaScript stays Worker-first', async () => {
+test('ordinary static assets stay asset-first while security-critical Admin and auth assets remain Worker-first', async () => {
   const wrangler = await readFile(new URL('../wrangler.site.toml', import.meta.url), 'utf8');
-  for (const asset of [
-    '/workspace-admin.css',
-    '/workspace-trade-portal.css',
-    '/control-center.css',
+  for (const securityCritical of [
+    '/auth-bootstrap.js',
+    '/auth-router.js',
+    '/admin-authenticated-shell.js',
     '/admin-shell.css',
-    '/compact-control-center.css',
     '/admin-compact.css',
-    '/tapo-device-admin.css',
+    '/system-health-admin.css',
     '/device-browser-diagnostics.css',
-    '/system-health-admin.css'
+    '/tapo-device-admin.css',
+    '/workspace-trade-portal.css'
   ]) {
-    assert.equal(wrangler.includes(`"${asset}"`), false, `${asset} should be asset-first`);
-  }
-  for (const securityCritical of ['/auth-bootstrap.js', '/admin-authenticated-shell.js', '/auth-router.js']) {
     assert.equal(wrangler.includes(`"${securityCritical}"`), true, `${securityCritical} must remain Worker-first`);
+  }
+  for (const ordinaryStatic of ['/styles.css', '/homepage-ambient.css', '/mall.css']) {
+    assert.equal(wrangler.includes(`"${ordinaryStatic}"`), false, `${ordinaryStatic} should use Static Assets asset-first delivery`);
   }
 });
