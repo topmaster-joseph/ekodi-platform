@@ -70,7 +70,7 @@ test('Assist first path is bottom command-entry-only and upgrades through existi
   assert.match(postbuild,/bottom Assist command dock \+ lazy recent-command workbench verified/);
   assert.doesNotMatch(bootstrap,/requestIdleCallback/);
   assert.match(bootstrap,/ekodi-assist-bootstrap-form/);
-  assert.match(bootstrap,/에코디에게 말해보세요/);
+  assert.match(bootstrap,/에코디와 대화하기/);
   assert.match(bootstrap,/ekodi-admin-assist-request/);
   assert.match(bootstrap,/loadStyle\('ai-ops-admin\.css'\)/);
   assert.match(bootstrap,/loadScript\('admin-lazy-features\.js'\)/);
@@ -114,4 +114,17 @@ test('command history is global across admin menus while current screen context 
   assert.match(css,/\.ekodi-assist\.history-only \.ekodi-assist-main\{display:none!important\}/);
   assert.match(bootstrap,/A\(0\)\.then\(H\)/);
   assert.ok(js.includes('ekodi-admin-section-changed'));
+});
+
+test('Admin first screen keeps the canonical sidebar and only the ChatGPT-like EKODI conversation canvas on the right', async()=>{
+  const [dock,css,bootstrapCss]=await Promise.all([read('admin-assist-dock.js'),read('admin-assist-dock.css'),read('admin-assist-bootstrap.css')]);
+  assert.match(dock,/placeholder="에코디와 대화하기"/);
+  assert.match(dock,/const commandHome=document\.body\.classList\.contains\('admin-command-home'\)/);
+  assert.match(dock,/const empty=!session\?\.messages\?\.length/);
+  assert.match(dock,/if\(empty&&!commandHome\)/);
+  assert.match(dock,/chat\.dataset\.emptyChat=empty\?'true':'false'/);
+  assert.match(css,/body\.admin-command-home\.admin-command-active \.ekodi-assist-rail\{display:none!important\}/);
+  assert.match(css,/body\.admin-command-home\.admin-command-active \.ekodi-assist-head\{display:none!important\}/);
+  assert.match(css,/data-empty-chat="true"/);
+  assert.match(bootstrapCss,/html body\.admin-command-home\.admin-command-active \.content\{padding:0!important;visibility:hidden!important;pointer-events:none!important\}/);
 });
