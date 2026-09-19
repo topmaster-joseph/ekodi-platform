@@ -9,6 +9,9 @@ test('tenant live production E2E stays bounded and self-cleaning',()=>{
   assert.match(workflow,/workflow_dispatch:/);
   assert.match(workflow,/branches: \[main\]/);
   assert.match(workflow,/TENANT_LIVE_TENANT: ekodibiz/);
+  for(const path of ['realtime-control.js','realtime-tenant-registry.js','tenant-live-page.js','tenant-live.js','tenant-live.css']){
+    assert.ok(workflow.includes(`- '${path}'`),`missing production E2E trigger: ${path}`);
+  }
   assert.match(workflow,/Issue short-lived super-admin session/);
   assert.match(workflow,/Revoke short-lived E2E session/);
   assert.match(workflow,/if: always\(\) && env\.E2E_AUTH_DB_ID != '' && env\.E2E_TOKEN_HASH != ''/);
