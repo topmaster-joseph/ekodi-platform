@@ -13,6 +13,7 @@ import {
 } from './ekodi-capability-executor.js';
 import { buildExperienceRecord } from './ekodi-capability-ecosystem.js';
 import { appendCapabilityExperience } from './ekodi-capability-ecosystem-store.js';
+import { evaluateAiCostEligibility } from './ai-cost-policy.js';
 
 const ENABLED_VALUES = new Set(['1', 'true', 'yes', 'on', 'enabled']);
 
@@ -172,17 +173,37 @@ export function buildCoreAiGateway(env = {}, providers = []) {
       if (typeof fallback !== 'function') {
         throw new TypeError('EKODI Core AI Gateway requires a non-AI fallback.');
       }
-      return runAiEnhancedTask({
+      const decisions = adapters.map(adapter => {
+        const cost = adapter.costClass
+          ? evaluateAiCostEligibility(adapter, context)
+          : Object.freeze({ eligible: true, costClass: '', blockedBy: '' });
+        return Object.freeze({ adapter, cost });
+      });
+      const blockedProviders = Object.freeze(decisions
+        .filter(item => item.adapter.available !== false && !item.cost.eligible)
+        .map(item => Object.freeze({
+          provider: item.adapter.id,
+          costClass: item.cost.costClass,
+          blockedBy: item.cost.blockedBy,
+        })));
+      const eligibleAdapters = decisions.filter(item => item.cost.eligible).map(item => item.adapter);
+      const result = await runAiEnhancedTask({
         env,
-        providers: adapters.map(adapter => ({
+        providers: eligibleAdapters.map(adapter => ({
           id: adapter.id,
           available: adapter.available,
           invoke: () => adapter.invoke(Object.freeze({ taskName: normalizedTask, context })),
         })),
-        fallback: reason => fallback(Object.freeze({ ...reason, context })),
+        fallback: reason => fallback(Object.freeze({ ...reason, context, blockedProviders })),
         taskName: normalizedTask,
         timeoutMs,
         totalTimeoutMs,
+      });
+      const winner = result.provider ? adapters.find(adapter => adapter.id === result.provider) : null;
+      return Object.freeze({
+        ...result,
+        costClass: winner?.costClass || null,
+        blockedProviders,
       });
     },
     async collaborate(options = {}) {

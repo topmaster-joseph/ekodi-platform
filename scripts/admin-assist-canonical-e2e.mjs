@@ -9,7 +9,8 @@ const canonicalBaseUrl = 'https://ekodi.kr/admin/';
 const campusUrl = 'https://ekodi.kr/admin/home/campus';
 const authEntryUrl = `${canonicalBaseUrl}?route=finance#ekodi_admin_token=${token}`;
 const assistApiUrl = 'https://ekodi.kr/api/control/ai/assist';
-const prompt = 'EKODI E2E 확인: "정상"이라고 한 단어로 답해줘.';
+const prompt = 'EKODI E2E UI 전달 확인: "정상"이라고 한 단어로 답해줘.';
+const liveBackend = String(process.env.E2E_ASSIST_LIVE_BACKEND || '').trim().toLowerCase() === 'true';
 const artifactsDir = path.resolve('artifacts/admin-authenticated-e2e');
 const reportPath = path.join(artifactsDir, 'assist-canonical.json');
 await fs.mkdir(artifactsDir, { recursive: true });
@@ -25,6 +26,7 @@ const report = {
   replyLength: 0,
   provider: null,
   mode: null,
+  transport: liveBackend ? 'live-backend' : 'intercepted-ui-contract',
   historyVerified: false,
   renderedReplyLength: 0,
   inputCleared: false,
@@ -42,6 +44,27 @@ try {
 
   const pageErrors = [];
   page.on('pageerror', error => pageErrors.push(String(error?.message || error)));
+
+  if (!liveBackend) {
+    await page.route(assistApiUrl, async route => {
+      const request = route.request();
+      if (request.method() !== 'POST') return route.continue();
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json; charset=utf-8',
+        body: JSON.stringify({
+          ok: true,
+          status: 'verified',
+          mode: 'e2e_contract',
+          degraded: false,
+          provider: 'e2e-contract',
+          costClass: 'core-only',
+          reply: '정상',
+          notice: '',
+        }),
+      });
+    });
+  }
 
   console.log('[ASSIST-E2E] authenticate on canonical Admin');
   await page.goto(authEntryUrl, { waitUntil: 'domcontentloaded' });
@@ -63,7 +86,7 @@ try {
   await input.waitFor({ state: 'visible', timeout: 15_000 });
   await input.fill(prompt);
 
-  console.log('[ASSIST-E2E] submit through bottom command input');
+  console.log(`[ASSIST-E2E] submit through bottom command input transport=${report.transport}`);
   const responsePromise = page.waitForResponse(response => {
     return response.url() === assistApiUrl && response.request().method() === 'POST';
   }, { timeout: 30_000 });
@@ -113,7 +136,7 @@ try {
 
   report.finalUrl = page.url();
   report.passed = true;
-  console.log(`[ASSIST-E2E] passed status=${report.apiStatus} provider=${report.provider || 'fallback'} mode=${report.mode || 'unknown'} replyLength=${report.replyLength}`);
+  console.log(`[ASSIST-E2E] passed status=${report.apiStatus} transport=${report.transport} provider=${report.provider || 'none'} mode=${report.mode || 'unknown'} replyLength=${report.replyLength}`);
 } catch (error) {
   report.error = String(error?.stack || error?.message || error);
   console.error(`[ASSIST-E2E] failed: ${error?.message || error}`);

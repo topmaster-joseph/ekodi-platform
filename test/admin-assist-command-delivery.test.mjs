@@ -47,8 +47,14 @@ test('shared-site build publishes every lazy asset required by the fixed Admin c
 test('production verification submits the real bottom command on canonical ekodi.kr Admin',async()=>{
   const probePath=new URL('../scripts/admin-assist-canonical-e2e.mjs',import.meta.url);
   const retryPath=new URL('../scripts/admin-authenticated-e2e-retry.mjs',import.meta.url);
-  const [probe,retry]=await Promise.all([read('scripts/admin-assist-canonical-e2e.mjs'),read('scripts/admin-authenticated-e2e-retry.mjs')]);
-  for(const path of [probePath,retryPath]){
+  const [probe,retry,providerSmoke,controlWorkflow]=await Promise.all([
+    read('scripts/admin-assist-canonical-e2e.mjs'),
+    read('scripts/admin-authenticated-e2e-retry.mjs'),
+    read('scripts/verify-control-admin-assist-production.mjs'),
+    read('.github/workflows/deploy-control-api.yml'),
+  ]);
+  const providerSmokePath=new URL('../scripts/verify-control-admin-assist-production.mjs',import.meta.url);
+  for(const path of [probePath,retryPath,providerSmokePath]){
     const parsed=spawnSync(process.execPath,['--check',fileURLToPath(path)],{encoding:'utf8'});
     assert.equal(parsed.status,0,parsed.stderr);
   }
@@ -60,6 +66,9 @@ test('production verification submits the real bottom command on canonical ekodi
   assert.match(dock,/const API='https:\/\/ekodi\.kr'/);
   assert.match(probe,/#ekodiAssistBootstrap input/);
   assert.match(probe,/postDataJSON/);
+  assert.match(probe,/E2E_ASSIST_LIVE_BACKEND/);
+  assert.match(probe,/intercepted-ui-contract/);
+  assert.match(probe,/page\.route\(assistApiUrl/);
   assert.match(probe,/ekodi-admin-command-history-v1/);
   assert.match(probe,/#ekodiAssistPanel:not\(\[hidden\]\)/);
   assert.match(probe,/ekodi-assist-turn\.assistant/);
@@ -68,6 +77,13 @@ test('production verification submits the real bottom command on canonical ekodi
   assert.match(retry,/baseUrl: 'https:\/\/ekodi\.kr\/admin\/'/);
   assert.match(retry,/canonicalCampusUrl: 'https:\/\/ekodi\.kr\/admin\/home\/campus'/);
   assert.match(retry,/aggregate\.assistProbe\?\.passed === true/);
+  assert.match(providerSmoke,/https:\/\/ekodi\.kr\/api\/control\/ai\/assist/);
+  assert.match(providerSmoke,/mode!=='ai'/);
+  assert.match(providerSmoke,/zeroMarginal|zeroCost/);
+  assert.match(providerSmoke,/\['openai','anthropic'\]/);
+  assert.match(controlWorkflow,/Verify real free-first Admin Assist in production/);
+  assert.match(controlWorkflow,/scripts\/verify-control-admin-assist-production\.mjs/);
+  assert.ok((controlWorkflow.match(/scripts\/verify-control-admin-assist-production\.mjs/g)||[]).length>=3,'Control workflow must watch the smoke script on PR/push and execute it in production');
 });
 test('Admin Assist treats AI_ADMIN_TIMEOUT_MS as a bounded total multi-provider budget',async()=>{
   const [handler,gateway,resilience]=await Promise.all([read('ai-agent-control.js'),read('core-ai-gateway.js'),read('ai-resilience-runtime.js')]);
@@ -77,6 +93,19 @@ test('Admin Assist treats AI_ADMIN_TIMEOUT_MS as a bounded total multi-provider 
   assert.match(gateway,/totalTimeoutMs/);
   assert.match(resilience,/remainingBudgetMs/);
   assert.match(resilience,/fairShareMs/);
+});
+
+test('Admin Assist response exposes only bounded routing diagnostics and keeps paid auto-escalation blocked',async()=>{
+  const [handler,gateway,resilience,wrangler]=await Promise.all([
+    read('ai-agent-control.js'),read('core-ai-gateway.js'),read('ai-resilience-runtime.js'),read('wrangler.api.toml')
+  ]);
+  assert.match(handler,/providerFailures: result\.providerFailures \|\| \[\]/);
+  assert.match(handler,/blockedProviders: result\.blockedProviders \|\| \[\]/);
+  assert.match(gateway,/evaluateAiCostEligibility/);
+  assert.match(gateway,/blockedProviders/);
+  assert.match(resilience,/safeProviderFailureCode/);
+  assert.match(resilience,/PROVIDER_ERROR/);
+  assert.match(wrangler,/EKODI_WORKERS_AI_DAILY_CALL_LIMIT = "20"/);
 });
 
 test('Shared Site production owner watches and verifies every Assist delivery asset',async()=>{

@@ -10,6 +10,7 @@ on:
       - 'governance/standards/**'
       - 'scripts/assess-international-maturity.mjs'
       - 'scripts/admin-authenticated-e2e-menu-worker.mjs'
+      - 'scripts/verify-control-admin-assist-production.mjs'
       - 'test/platform-maturity-admin.test.mjs'
       - 'preview-public-projection.js'
       - 'test/preview-public-projection.test.mjs'
@@ -152,6 +153,7 @@ on:
       - 'governance/standards/**'
       - 'scripts/assess-international-maturity.mjs'
       - 'scripts/admin-authenticated-e2e-menu-worker.mjs'
+      - 'scripts/verify-control-admin-assist-production.mjs'
       - 'test/platform-maturity-admin.test.mjs'
       - 'preview-public-projection.js'
       - 'test/preview-public-projection.test.mjs'
@@ -664,6 +666,8 @@ jobs:
           grep -Fq '"code":"PF_ADMIN_AUTH_REQUIRED"' /tmp/personal-finance.json
           grep -Fq '"publishedLocales":["ko-KR"]' /tmp/i18n.json
           grep -Fq '"inheritedDefault":true' /tmp/catalog.json
+      - name: Verify real free-first Admin Assist in production
+        run: node scripts/verify-control-admin-assist-production.mjs
       - name: Verify Realtime SFU production health
         run: node scripts/provision-realtime-sfu.mjs --verify
       - name: Record recovery point
