@@ -46,16 +46,48 @@ function json(request, env, data, status = 200) {
 }
 async function readJson(request) { try { return await request.json(); } catch { return null; } }
 
-async function identityFromRequest(request) {
+async function adminIdentityFromSession(request, env) {
+  if (!env?.CONTROL_API?.fetch) return null;
+  const authorization = String(request.headers.get('authorization') || '');
+  if (!authorization.toLowerCase().startsWith('bearer ')) return null;
+  const probe = new URL(request.url);
+  probe.protocol = 'https:';
+  probe.hostname = 'api.ekodi.kr';
+  probe.pathname = '/api/session';
+  probe.search = '';
+  try {
+    const response = await env.CONTROL_API.fetch(new Request(probe.toString(), {
+      method:'GET',
+      headers:{authorization,accept:'application/json'},
+      redirect:'manual',
+    }));
+    if (!response.ok) return null;
+    const session = await response.json().catch(() => null);
+    const email = String(session?.email || '').trim().toLowerCase();
+    const role = String(session?.role || '').trim().toLowerCase();
+    if (!session?.authenticated || !email || !role) return null;
+    return { id:`admin:${email}`, email, platformAdmin:true, adminRole:role };
+  } catch {
+    return null;
+  }
+}
+async function identityFromRequest(request, env) {
   const auth = String(request.headers.get('authorization') || '');
   const token = auth.toLowerCase().startsWith('bearer ') ? auth.slice(7).trim() : '';
   if (!token || token.length > 8192) return null;
-  const response = await fetch(`${SUPABASE_URL}/auth/v1/user`, { headers:{apikey:SUPABASE_PUBLISHABLE_KEY,authorization:`Bearer ${token}`} });
-  if (!response.ok) return null;
-  const user = await response.json().catch(() => null);
-  const email = String(user?.email || '').trim().toLowerCase();
-  if (!user?.id || !email || !user?.email_confirmed_at) return null;
-  return { id:String(user.id), email };
+  if (/^[a-f0-9]{64}$/i.test(token)) {
+    const admin = await adminIdentityFromSession(request,env);
+    if (admin) return admin;
+  }
+  try {
+    const response = await fetch(`${SUPABASE_URL}/auth/v1/user`, { headers:{apikey:SUPABASE_PUBLISHABLE_KEY,authorization:`Bearer ${token}`} });
+    if (response.ok) {
+      const user = await response.json().catch(() => null);
+      const email = String(user?.email || '').trim().toLowerCase();
+      if (user?.id && email && user?.email_confirmed_at) return { id:String(user.id), email, platformAdmin:false, adminRole:'' };
+    }
+  } catch {}
+  return adminIdentityFromSession(request,env);
 }
 async function resolveSubject(env, identity, type, key) {
   const subjectType = SUBJECT_TYPES.has(String(type || '').toLowerCase()) ? String(type).toLowerCase() : 'person';
@@ -67,6 +99,7 @@ async function resolveSubject(env, identity, type, key) {
     if (!slug) return null;
     const tenant = await env.DB.prepare('SELECT id,slug,status FROM customer_tenants WHERE slug=?').bind(slug).first();
     if (!tenant || tenant.status !== 'active') return null;
+    if (identity.platformAdmin && identity.adminRole === 'super_admin') return { type:'tenant', key:String(tenant.slug), role:'super_admin', writable:true };
     const grant = await env.DB.prepare('SELECT role,enabled FROM customer_access_grants WHERE tenant_id=? AND email=?').bind(tenant.id,identity.email).first();
     if (!grant || Number(grant.enabled) !== 1) return null;
     const role = String(grant.role || '');
@@ -78,6 +111,7 @@ async function resolveSubject(env, identity, type, key) {
   if (!store || store.status !== 'active' || !store.tenant_slug) return null;
   const tenant = await env.DB.prepare('SELECT id,slug,status FROM customer_tenants WHERE slug=?').bind(store.tenant_slug).first();
   if (!tenant || tenant.status !== 'active') return null;
+  if (identity.platformAdmin && identity.adminRole === 'super_admin') return { type:'store', key:String(store.store_id), role:'super_admin', writable:true };
   const grant = await env.DB.prepare('SELECT role,enabled FROM customer_access_grants WHERE tenant_id=? AND email=?').bind(tenant.id,identity.email).first();
   if (!grant || Number(grant.enabled) !== 1) return null;
   const role = String(grant.role || '');
@@ -85,7 +119,7 @@ async function resolveSubject(env, identity, type, key) {
 }
 function subjectParams(url) { return {type:url.searchParams.get('subject_type') || 'person',key:url.searchParams.get('subject_key') || ''}; }
 async function authSubject(request, env, write = false) {
-  const identity = await identityFromRequest(request);
+  const identity = await identityFromRequest(request,env);
   if (!identity) return { error:'AUTH_REQUIRED', status:401 };
   const url = new URL(request.url);
   const params = subjectParams(url);
