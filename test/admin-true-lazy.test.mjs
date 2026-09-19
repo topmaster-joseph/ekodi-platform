@@ -33,6 +33,7 @@ test('heavy admin modules are explicit on-demand features', async () => {
   }
   assert.match(loader, /author-billing-admin\.js/);
   assert.match(loader, /system-health-admin\.js/);
+  assert.match(loader, /storage:\{[^\n]*paths:\['\/admin\/system\/storage'\]/);
   assert.doesNotMatch(loader, /setInterval\([^)]*loadDevices/);
 });
 
