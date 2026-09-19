@@ -18,6 +18,10 @@ SUPABASE_PUBLISHABLE_KEY = "sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_"
 enabled = true
 invocation_logs = true
 
+[[services]]
+binding = "CONTROL_API"
+service = "ekodi-auth-api"
+
 [[d1_databases]]
 binding = "PERSONAL_DB"
 database_name = "ekodi-personal-finance"
