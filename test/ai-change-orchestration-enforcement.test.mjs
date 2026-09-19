@@ -15,6 +15,7 @@ const pagesRelease = read('scripts/guarded-pages-release.mjs');
 const sharedDeploy = read('.github/workflows/deploy-site-core.yml');
 const sharedStage = read('.github/workflows/stage-shared-site-shell.yml');
 const adminControl = read('.github/workflows/deploy-admin-control-plane.yml');
+const ciWorkflow = read('.github/workflows/ci.yml');
 
 test('EKODI AI is the mandatory change control plane', () => {
   assert.equal(policy.policyId, 'AI-ORCHESTRATE-001');
@@ -70,7 +71,7 @@ test('main and production releases are fail-closed around orchestration and cons
 });
 
 test('production workflows that validate PR provenance can read pull requests', () => {
-  for (const [name, source] of [['shared deploy', sharedDeploy], ['shared staging', sharedStage], ['admin control', adminControl]]) {
+  for (const [name, source] of [['shared deploy', sharedDeploy], ['shared staging', sharedStage], ['admin control', adminControl], ['main CI', ciWorkflow]]) {
     assert.match(source, /permissions:\s*\n\s*contents:\s*read\s*\n\s*pull-requests:\s*read/, `${name} must grant read-only PR provenance access`);
   }
 });
