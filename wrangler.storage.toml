@@ -11,6 +11,7 @@ custom_domain = true
 [vars]
 ENVIRONMENT = "production"
 GOOGLE_DRIVE_CLIENT_ID = "483044030492-4e6231l5glchhtniroinvuq3ev6n5mv5.apps.googleusercontent.com"
+GOOGLE_DRIVE_OAUTH_REDIRECT_URI = "https://ekodi.kr/storage/api/control/storage/google/callback"
 STORAGE_PRIMARY_GOOGLE_DOMAINS = "ekodi.kr"
 STORAGE_PRIMARY_SHARED_DRIVE_ID = "0ACM_FnMYWMFuUk9PVA"
 STORAGE_PRIMARY_SHARED_DRIVE_NAME = "EKODI"
