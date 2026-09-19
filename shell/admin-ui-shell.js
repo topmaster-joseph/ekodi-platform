@@ -1,7 +1,7 @@
 (()=>{
 'use strict';
 
-const VERSION=1;
+const VERSION=2;
 const STYLE_ID='ekodi-admin-ui-shell-style';
 const SURFACE='admin';
 const SIDEBAR_SELECTORS=['[data-ekodi-admin-sidebar]','[data-ekodi-sidebar]','#sidebar','.admin-sidebar','.sidebar'];
@@ -12,7 +12,7 @@ const TOPBAR_SELECTORS=['[data-ekodi-admin-topbar]','.topbar','.admin-topbar','.
 const ACCOUNT_SELECTORS=['[data-ekodi-account]','[data-ekodi-profile]','.profile','.profile-card','.account-card','.user-profile','.user-card','.sidebar-profile'];
 const LOGOUT_SELECTORS=['[data-ekodi-logout]','#logoutButton','[data-action="logout"]','a[href*="logout"]','button[name="logout"]'];
 const TITLE_SELECTORS=['[data-ekodi-page-title]','[data-ekodi-header-title]','#pageTitle','.page-title','.topbar-title','.header-title'];
-const LANGUAGE_CONTROL_SELECTORS=['[data-ekodi-language-control]','[data-language-selector]','[data-language-switcher]','.language-selector','.language-switcher','.lang-selector','.lang-switcher','#google_translate_element','.goog-te-gadget'];
+const LANGUAGE_CONTROL_SELECTORS=['[data-ekodi-language-control]','[data-language-selector]','[data-language-switcher]','[data-admin-locale-caption]','.language-selector','.language-switcher','.lang-selector','.lang-switcher','#ekodiAdminLocaleWrap','#ekodiAdminLocale','#google_translate_element','.goog-te-gadget'];
 
 if(window.__EKODI_ADMIN_UI_SHELL_BOOTED)return;
 if(String(document.documentElement.dataset.ekodiShellSurface||'').toLowerCase()!==SURFACE)return;
@@ -27,7 +27,7 @@ function installStyle(){
   style.id=STYLE_ID;
   style.textContent=`
     html[data-ekodi-shell-surface="admin"] :is([data-ekodi-admin-sidebar-header],[data-ekodi-admin-brand],.side-brand,.sidebar-brand,.admin-sidebar-brand){display:none!important}
-    html[data-ekodi-shell-surface="admin"] :is([data-ekodi-language-control],[data-language-selector],[data-language-switcher],.language-selector,.language-switcher,.lang-selector,.lang-switcher,#google_translate_element,.goog-te-gadget){display:none!important}
+    html[data-ekodi-shell-surface="admin"] :is([data-ekodi-language-control],[data-language-selector],[data-language-switcher],[data-admin-locale-caption],.language-selector,.language-switcher,.lang-selector,.lang-switcher,#ekodiAdminLocaleWrap,#ekodiAdminLocale,#google_translate_element,.goog-te-gadget){display:none!important}
     html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-sidebar{display:flex!important;flex-direction:column!important;height:100dvh!important;min-height:0!important;overflow:hidden!important;box-sizing:border-box!important;padding-top:max(8px,env(safe-area-inset-top,0px))!important}
     html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-nav{flex:1 1 auto!important;min-height:0!important;overflow-y:auto!important;overflow-x:hidden!important;overscroll-behavior:contain!important;scrollbar-gutter:stable}
     html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-nav[data-ekodi-admin-nav-mode="primary"]{flex:0 0 auto!important;overflow:hidden!important;overscroll-behavior:auto!important;scrollbar-gutter:auto!important}
