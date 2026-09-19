@@ -5,12 +5,13 @@ import { readFile } from 'node:fs/promises';
 const read=path=>readFile(new URL(`../${path}`,import.meta.url),'utf8');
 
 test('admin shell is separate from user shell and removes the left brand header',async()=>{
-  const [adminShell,adminRuntime,adminRegistry,adminSidebar,adminCompact,userHeader,userLanguage,injector,worker,principles]=await Promise.all([
+  const [adminShell,adminRuntime,adminRegistry,adminSidebar,adminCompact,adminDesign,userHeader,userLanguage,injector,worker,principles]=await Promise.all([
     read('shell/admin-ui-shell.js'),
     read('admin-menu-runtime.js'),
     read('admin-menu-registry.js'),
     read('admin-sidebar.js'),
     read('admin-compact.css'),
+    read('admin-design-engine.css'),
     read('shell/user-ui-header.js'),
     read('shell/user-language.js'),
     read('ekodi-shell-injector.js'),
@@ -47,8 +48,9 @@ test('admin shell is separate from user shell and removes the left brand header'
   assert.equal(adminSidebar.includes("primary-sidebar-tabs-v3"),true);
   assert.equal(adminSidebar.includes("display:flex!important;align-items:center;gap:14px"),true);
   assert.equal(adminSidebar.includes("globals.querySelector(`:scope>.${DETAILS_CLASS}`)?.remove()"),true);
-  assert.equal(adminCompact.includes('--panel:#fff'),true);
-  assert.equal(adminCompact.includes('background:#0b1f36!important'),true);
+  assert.equal(adminDesign.includes('background:#0b1f36!important'),true);
+  assert.equal(adminDesign.includes('background:#f6f8fb!important'),true);
+  assert.equal(adminCompact.includes('social-connections'),true);
 
   assert.match(userHeader,/USER_SURFACES=new Set\(\['public','workspace'\]\)/);
   assert.doesNotMatch(userHeader,/USER_SURFACES=new Set\([^)]*'admin'/);
