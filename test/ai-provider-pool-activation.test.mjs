@@ -62,3 +62,37 @@ test('multi-provider pool exposes the active Workers AI model when the binding i
   assert.ok(workers);
   assert.equal(workers.available,true);
 });
+
+
+test('Core Assist blocks paid-opt-in providers until an explicit delegated budget exists', async () => {
+  let invoked=0;
+  const paid={
+    id:'paid-test',
+    available:true,
+    costClass:'paid-opt-in',
+    async invoke(){invoked+=1;return{text:'paid'}},
+  };
+  const gateway=buildCoreAiGateway({},[paid]);
+  const blocked=await gateway.run({
+    taskName:'cost.blocked',
+    context:{},
+    fallback:()=>({text:'fallback'}),
+  });
+  assert.equal(invoked,0);
+  assert.equal(blocked.mode,'free_assist');
+  assert.deepEqual(blocked.blockedProviders,[{
+    provider:'paid-test',
+    costClass:'paid-opt-in',
+    blockedBy:'paid_or_unclassified_cost_requires_explicit_budget',
+  }]);
+
+  const allowed=await gateway.run({
+    taskName:'cost.allowed',
+    context:{governance:{paidCommitment:true,explicitDelegatedBudget:true}},
+    fallback:()=>({text:'fallback'}),
+  });
+  assert.equal(invoked,1);
+  assert.equal(allowed.mode,'ai');
+  assert.equal(allowed.provider,'paid-test');
+  assert.equal(allowed.costClass,'paid-opt-in');
+});
