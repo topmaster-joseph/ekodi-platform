@@ -45,3 +45,21 @@ test('shared Live auth handoff exchanges EKODI proof without third-party script 
   assert.match(source,/실시간 방송 수신 중입니다/);
   assert.doesNotMatch(source,/cdn\.jsdelivr\.net|esm\.sh/);
 });
+
+test('platform entry router reserves /live/admin before generic workspace admin routing',async()=>{
+  for(const tenant of realtimeTenantList()){
+    const path=tenant.path.replace(/\/$/,'')+'/admin';
+    const response=await platformRouter.fetch(new Request(`https://ekodi.kr${path}`),{});
+    assert.equal(response.status,200,tenant.id);
+    const html=await response.text();
+    assert.match(html,/방송 · 녹화 관리/,tenant.id);
+    assert.match(html,new RegExp(`data-tenant="${tenant.apiTenant}"`),tenant.id);
+    assert.doesNotMatch(html,/<h1[^>]*>대시보드<\/h1>/,tenant.id);
+  }
+  const css=await platformRouter.fetch(new Request('https://ekodi.kr/tenant-live-admin.css'),{});
+  assert.equal(css.status,200);
+  assert.match(css.headers.get('content-type')||'',/text\/css/);
+  const script=await platformRouter.fetch(new Request('https://ekodi.kr/tenant-live-admin.js'),{});
+  assert.equal(script.status,200);
+  assert.match(script.headers.get('content-type')||'',/javascript/);
+});
