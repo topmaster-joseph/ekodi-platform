@@ -1,5 +1,5 @@
 {
-  "version": 5,
+  "version": 6,
   "evidence": {
     "generation": 10,
     "ledger": "ai_production_evidence",
@@ -115,6 +115,28 @@
           "483044030492-ej1ie2boa4e01lglm75e9q1r6m25pkp2.apps.googleusercontent.com",
           "\"identityOrigin\":\"https://ekodi.kr\""
         ]
+      },
+      {
+        "url": "https://ekodi.kr/api/google/challenge",
+        "method": "POST",
+        "headers": {
+          "origin": "https://ekodi.kr"
+        },
+        "statuses": [
+          201
+        ],
+        "expect": [
+          "\"nonce\":",
+          "\"expiresAt\":"
+        ],
+        "headerExpect": [
+          "access-control-allow-origin: https://ekodi.kr",
+          "cache-control: no-store",
+          "x-content-type-options: nosniff"
+        ],
+        "candidateVerify": false,
+        "candidateVerifyReason": "Canonical apex reaches Control API through the Shared Site service binding, so this end-to-end route is verified immediately after guarded promotion.",
+        "rollbackVerify": false
       },
       {
         "url": "https://api.ekodi.kr/api/books/public/config",
