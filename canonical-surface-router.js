@@ -43,7 +43,7 @@ const PUBLIC_EXECUTION_SURFACES=Object.freeze([
 
 ]);
 const CANONICAL_HOST_PATHS=Object.freeze({
-  'admin.ekodi.kr':'/admin','auth.ekodi.kr':'/auth','api.ekodi.kr':'/api','my.ekodi.kr':'/my',
+  'admin.ekodi.kr':'/admin','api.ekodi.kr':'/api','my.ekodi.kr':'/my',
   'ai.ekodi.kr':'/ai','author.ekodi.kr':'/author','bible.ekodi.kr':'/bible',
   'books.ekodi.kr':'/books','business.ekodi.kr':'/business','community.ekodi.kr':'/community','edu.ekodi.kr':'/education',
   'energy.ekodi.kr':'/energy','exp.ekodi.kr':'/experience','try.ekodi.kr':'/experience','dev.ekodi.kr':'/developer',
