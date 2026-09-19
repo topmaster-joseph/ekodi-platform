@@ -102,7 +102,7 @@
     const scopeApply = el('button','범위 불러오기','secondary'); scopeApply.type='button';
     scopeBar.append(field('관리 범위',scopeType),field('공간 / 매장 키',scopeKey,'wide'),scopeApply);
     const tenantPresets=el('div','','social-scope-presets');
-    [['ekodi-biz','에코디비즈'],['ekodimall','에코디몰'],['ekoditrade','에코디무역']].forEach(([key,label])=>{const b=el('button',label,'ghost');b.type='button';b.dataset.tenantPreset=key;tenantPresets.append(b)});
+    [['ekodi-biz','에코디비즈'],['jadam','자담치킨'],['pizzamaru','피자마루'],['yogurt','요거트퍼플'],['ekodimall','에코디몰'],['ekoditrade','에코디무역']].forEach(([key,label])=>{const b=el('button',label,'ghost');b.type='button';b.dataset.tenantPreset=key;tenantPresets.append(b)});
     const connectionActions = el('div','','social-connection-actions');
     const youtubeConnect = el('button','＋ YouTube 계정·채널 추가','primary'); youtubeConnect.type='button'; youtubeConnect.dataset.connectProvider='youtube';
     const metaConnect = el('button','＋ Facebook · Instagram 계정 추가','secondary'); metaConnect.type='button'; metaConnect.dataset.connectProvider='meta';
