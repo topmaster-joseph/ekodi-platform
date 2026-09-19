@@ -6,25 +6,25 @@ const read = path => readFileSync(path, 'utf8');
 const availability = read('.github/workflows/admin-availability-watch.yml');
 const revenue = read('.github/workflows/production-gate.yml');
 const performance = read('.github/workflows/ecosystem-performance-watch.yml');
+const canary = read('scripts/post-deploy-canary.mjs');
 
-test('scheduled production probes avoid redundant 15-minute overlap', () => {
+test('scheduled production probes do not duplicate the deployment canary', () => {
   assert.match(availability, /cron: '\*\/15 \* \* \* \*'/);
-  assert.match(revenue, /cron: '5 \* \* \* \*'/);
   assert.match(performance, /cron: '37 \* \* \* \*'/);
-  assert.doesNotMatch(revenue, /cron: '\*\/15 \* \* \* \*'/);
+  assert.doesNotMatch(revenue, /cron:/);
   assert.doesNotMatch(performance, /cron: '7,22,37,52 \* \* \* \*'/);
 });
 
-test('deployment-triggered verification remains enabled', () => {
-  assert.match(revenue, /push:\s*\n\s*branches: \[main\]/);
-  assert.match(performance, /push:\s*\n\s*branches: \[main\]/);
+test('full production verification is triggered after guarded Shared Site deployment', () => {
+  assert.match(revenue, /workflow_run:/);
+  assert.match(revenue, /workflows: \['Deploy EKODI Shared Site Core'\]/);
+  assert.match(revenue, /github\.event\.workflow_run\.conclusion == 'success'/);
   assert.match(availability, /push:\s*\n\s*branches: \[main\]/);
 });
 
-
-test('scheduled monitors identify themselves as EKODI internal traffic', () => {
-  for (const source of [availability, revenue, performance]) {
-    assert.match(source, /EKODI-github-monitor\/1\.0/);
-    assert.match(source, /user-agent =/);
-  }
+test('quota-aware probes identify themselves as EKODI internal traffic', () => {
+  assert.match(canary, /EKODI-quota-aware-monitor\/1\.0/);
+  assert.match(canary, /EKODI-post-deploy-canary\/1\.0/);
+  assert.match(performance, /EKODI-github-monitor\/1\.0/);
+  assert.match(performance, /user-agent =/);
 });

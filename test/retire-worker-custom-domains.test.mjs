@@ -13,3 +13,13 @@ test('Cloudflare retirement remains fail-closed for explicit API failure',()=>{
   assert.match(source,/throw new Error\("Cloudflare API "/);
   assert.match(source,/data\.errors\|\|data/);
 });
+
+
+test('retirement does not reattach successfully detached domains only because legacy edge propagation is slow',()=>{
+  assert.match(source,/let rollbackAllowed=true/);
+  assert.match(source,/rollbackAllowed=false/);
+  assert.match(source,/if\(rollbackAllowed\)/);
+  assert.match(source,/attempt<=60/);
+  assert.match(source,/setTimeout\(r,5000\)/);
+  assert.match(source,/do not undo retirement for edge propagation lag/);
+});

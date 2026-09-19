@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
-const worker = await readFile(new URL('../site-worker.js', import.meta.url), 'utf8');
+const authRouterWorker = await readFile(new URL('../canonical-surface-router.js', import.meta.url), 'utf8');
 const authIndex = await readFile(new URL('../auth-site/index.html', import.meta.url), 'utf8');
 const authBootstrap = await readFile(new URL('../auth-site/auth-bootstrap.js', import.meta.url), 'utf8');
 const authEntry = await readFile(new URL('../auth-site/auth-entry.js', import.meta.url), 'utf8');
@@ -13,10 +13,10 @@ const criticalAuthAssets = ['/auth.js', '/auth-bootstrap.js', '/auth-entry.js', 
 
 test('critical central auth JavaScript cannot remain stale in the browser or edge cache', () => {
   for (const asset of criticalAuthAssets) {
-    assert.match(worker, new RegExp(`AUTH_CRITICAL_ASSETS[\\s\\S]*?${asset.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&')}`));
+    assert.match(authRouterWorker, new RegExp(`AUTH_CRITICAL_ASSETS[\\s\\S]*?${asset.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&')}`));
     assert.ok(siteConfig.includes(`"${asset}"`), `${asset} must be Worker-first so candidate and production security headers match`);
   }
-  assert.match(worker, /AUTH_CRITICAL_ASSETS\.has\(url\.pathname\) \? 'no-store'/);
+  assert.match(authRouterWorker, /AUTH_CRITICAL_ASSETS\.has\(stripped\)\?'no-store':'public, max-age=300'/);
   assert.match(authIndex, /auth-bootstrap\.js\?v=20260918-csp-bootstrap-1/);
   assert.match(authIndex, /auth-entry\.js\?v=20260918-csp-bootstrap-1/);
 });
@@ -28,7 +28,7 @@ test('central auth entry stays executable under restrictive CSP without inline J
   assert.match(authBootstrap, /dataset\.adminDirectBridge/);
   assert.match(authEntry, /import\('\.\/auth-router\.js\?v=20260918-csp-bootstrap-1'\)/);
   assert.match(authEntry, /dataset\.authLoopBlocked/);
-  const authCsp = worker.match(/const AUTH_CSP = \[[\s\S]*?\]\.join\('; '\);/)?.[0] || '';
+  const authCsp = authRouterWorker.match(/const AUTH_CSP=\[[\s\S]*?\]\.join\('; '\);/)?.[0] || '';
   assert.ok(authCsp, 'AUTH_CSP block must remain present');
   assert.doesNotMatch(authCsp, /script-src[^\n]*'unsafe-inline'/);
 });

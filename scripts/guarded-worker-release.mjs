@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { isQuotaCircuitBreak } from './cloudflare-quota-guard-lib.mjs';
 
 const args = process.argv.slice(2);
 const readArg = (name, fallback = '') => {
@@ -16,6 +17,7 @@ const manifestPath = manifestArg ? path.resolve(manifestArg) : '';
 const wranglerVersion = readArg('--wrangler-version', '4.119.0');
 const secretsFileArg = readArg('--secrets-file');
 const secretsFilePath = secretsFileArg ? path.resolve(secretsFileArg) : '';
+const quotaGuardConfig = JSON.parse(fs.readFileSync(path.resolve(policyRoot, 'config/cloudflare-production-quota-guard.json'), 'utf8'));
 
 if (!manifestPath || !fs.existsSync(manifestPath)) {
   console.error('Usage: node scripts/guarded-worker-release.mjs --manifest <file> [--root <dir>] [--secrets-file <file>]');
@@ -246,6 +248,12 @@ async function fetchCheck(request, overrideVersion = '', phase = 'standard') {
       const body = await response.text();
       const diagnostic = responseDiagnostic(response, body);
       last = `${response.status} ${response.statusText}; ${diagnostic}`;
+      if (isQuotaCircuitBreak({ status: response.status, body, config: quotaGuardConfig.circuitBreaker })) {
+        const quotaError = new Error(`Cloudflare quota circuit open for ${targetUrl}: ${last}`);
+        quotaError.quotaCircuitOpen = true;
+        quotaError.status = response.status;
+        throw quotaError;
+      }
       if (!statuses.includes(response.status)) throw new Error(`unexpected HTTP ${response.status}; ${diagnostic}`);
       for (const marker of bodyExpect) {
         if (!body.includes(marker)) throw new Error(`missing body marker: ${marker}; ${diagnostic}`);
@@ -261,6 +269,10 @@ async function fetchCheck(request, overrideVersion = '', phase = 'standard') {
       return;
     } catch (error) {
       last = error?.message || String(error);
+      if (error?.quotaCircuitOpen === true) {
+        console.error(`⛔ Cloudflare quota circuit opened; stopping verification retries immediately: ${last}`);
+        throw error;
+      }
       if (attemptIndex === STANDARD_VERIFY_ATTEMPTS && attemptLimit > STANDARD_VERIFY_ATTEMPTS) {
         console.log(`⏳ Production route has not stabilized yet; extending verification before rollback: ${request.url}`);
       }

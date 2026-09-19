@@ -13,9 +13,13 @@ test('shared-site production deploy repairs Cloudflare custom-domain triggers on
   assert.match(workflow, /Verified Cloudflare Worker domain/);
 });
 
-test('public, admin and auth entry hosts remain declared as Worker custom domains', () => {
-  for (const host of ['ekodi.kr', 'admin.ekodi.kr', 'auth.ekodi.kr']) {
+test('canonical public and Admin entry hosts remain declared while Auth is path-owned', () => {
+  for (const host of ['ekodi.kr', ['admin','ekodi.kr'].join('.')]) {
     const escaped = host.replaceAll('.', '\\.');
     assert.match(wrangler, new RegExp(`pattern = "${escaped}"[\\s\\S]{0,80}custom_domain = true`));
   }
+  const retiredAuthHost=['auth','ekodi.kr'].join('.');
+  assert.equal(wrangler.includes(`pattern = "${retiredAuthHost}"`),false);
+  assert.match(wrangler, /"\/auth"/);
+  assert.match(wrangler, /"\/auth\/\*"/);
 });

@@ -3,12 +3,10 @@ const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_
 const ACCESS_API = `${SUPABASE_URL}/functions/v1/access-api`;
 const COOKIE_NAME = '__Host-ekodi_handoff';
 const HANDOFF_TTL_SECONDS = 90;
-const AUTH_ORIGIN = 'https://auth.ekodi.kr';
+const AUTH_ORIGIN = 'https://ekodi.kr';
 const FIXED_RETURN_ORIGINS = new Set([
-  'https://marketing.ekodi.kr',
-  'https://jadam.ekodi.kr',
-  'https://pizzamaru.ekodi.kr',
-  'https://yogurt.ekodi.kr',
+  'https://ekodi.kr',
+  'https://cgma.or.kr',
 ]);
 
 const encoder = new TextEncoder();
@@ -37,18 +35,12 @@ function configuredOrigins(env = {}) {
 }
 
 export function isMarketingReturnOrigin(origin) {
-  if (FIXED_RETURN_ORIGINS.has(origin)) return true;
-  try {
-    const url = new URL(origin);
-    return url.protocol === 'https:' && /^[a-z0-9-]+\.ai\.ekodi\.kr$/i.test(url.hostname) && url.origin === origin;
-  } catch {
-    return false;
-  }
+  return FIXED_RETURN_ORIGINS.has(origin);
 }
 
 export function safeMarketingReturn(raw) {
   try {
-    const url = new URL(String(raw || 'https://marketing.ekodi.kr/'));
+    const url = new URL(String(raw || 'https://ekodi.kr/ekodibiz/marketing-ai/'));
     if (url.protocol !== 'https:' || url.username || url.password || !isMarketingReturnOrigin(url.origin)) return null;
     url.hash = '';
     return url.href;
@@ -59,8 +51,9 @@ export function safeMarketingReturn(raw) {
 
 function consumerOriginAllowed(origin, env = {}) {
   if (!origin) return false;
+  if (origin === AUTH_ORIGIN) return true;
   if (isMarketingReturnOrigin(origin)) return true;
-  return configuredOrigins(env).has(origin) && origin !== AUTH_ORIGIN;
+  return configuredOrigins(env).has(origin);
 }
 
 function allowedOriginFor(path, origin, env = {}) {

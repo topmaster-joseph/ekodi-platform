@@ -20,3 +20,12 @@ test('candidate and rollback verification remain fail-closed', () => {
   assert.match(release, /throw new Error\(`\$\{targetUrl\} verification failed:/);
   assert.match(release, /Rolling back \$\{worker\.name\} to \$\{previousVersion\} at 100%/);
 });
+
+test('Cloudflare 429 or Error 1027 opens the guarded release circuit without retry storm', () => {
+  assert.match(release, /isQuotaCircuitBreak/);
+  assert.match(release, /quotaGuardConfig\.circuitBreaker/);
+  assert.match(release, /quotaCircuitOpen = true/);
+  assert.match(release, /error\?\.quotaCircuitOpen === true/);
+  assert.match(release, /stopping verification retries immediately/);
+  assert.match(release, /throw error;/);
+});

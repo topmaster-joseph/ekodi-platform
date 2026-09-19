@@ -34,6 +34,33 @@ jobs:
           zone_id=$(echo "$domains" | jq -r '.result[] | select(.hostname == "ekodi.kr" or .hostname == "admin.ekodi.kr") | .zone_id' | head -n1)
           test -n "$zone_id" && test "$zone_id" != null
           echo "ZONE_ID=$zone_id" >> "$GITHUB_ENV"
+      - name: Inspect 429 policy layers and live response fingerprints
+        shell: bash
+        run: |
+          set -euo pipefail
+          api='https://api.cloudflare.com/client/v4'
+          auth=(-H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H 'Content-Type: application/json')
+
+          for phase in http_ratelimit http_request_firewall_custom http_request_firewall_managed; do
+            echo "=== ruleset phase: $phase ==="
+            response=$(curl -sS "${auth[@]}" "$api/zones/$ZONE_ID/rulesets/phases/$phase/entrypoint" || true)
+            if echo "$response" | jq -e '.success == true' >/dev/null 2>&1; then
+              echo "$response" | jq '{result:{id:.result.id,name:.result.name,phase:.result.phase,rules:[.result.rules[]? | {id,action,enabled,description,expression,ratelimit,logging}]}}'
+            else
+              echo "$response" | jq '{success,errors}' 2>/dev/null || printf '%s\n' "$response"
+            fi
+          done
+
+          for url in             'https://ekodi.kr/'             'https://ekodi.kr/ekodimission/'             'https://ekodi.kr/ekodimission/admin/activities'             'https://ekodi.kr/ekodichurch/'             'https://ekodi.kr/ekodichurch/admin'             'https://ekodi.kr/admin/'; do
+            echo "=== live fingerprint: $url ==="
+            : >/tmp/ekodi-429.headers
+            : >/tmp/ekodi-429.body
+            status=$(curl -sS -D /tmp/ekodi-429.headers -o /tmp/ekodi-429.body -w '%{http_code}' --connect-timeout 5 --max-time 20 "$url" || true)
+            echo "status=$status"
+            grep -Ei '^(server|cf-ray|retry-after|content-type|x-ekodi-route|x-powered-by|cache-control):' /tmp/ekodi-429.headers || true
+            head -c 600 /tmp/ekodi-429.body | tr '\n' ' '; echo
+          done
+
       - name: Query top hosts paths and user agents
         shell: bash
         run: |
