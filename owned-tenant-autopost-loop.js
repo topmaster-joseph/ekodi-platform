@@ -16,6 +16,11 @@ export const OWNED_TENANT_AUTOPOST_ROLLOUT = Object.freeze([
   Object.freeze({order:4,subjectType:'tenant',subjectKey:'yogurt',name:'요거트퍼플 목포대점',templateId:'store_promo'}),
 ]);
 
+const OWNED_TENANT_AUTOPOST_KEYS = new Set(OWNED_TENANT_AUTOPOST_ROLLOUT.map(item=>item.subjectKey));
+export function ownedTenantAutopostSubject(subject = {}) {
+  return String(subject?.type || '') === 'tenant' && OWNED_TENANT_AUTOPOST_KEYS.has(String(subject?.key || ''));
+}
+
 const clean = (value, max = 240) => String(value ?? '').trim().slice(0, max);
 const nowIso = () => new Date().toISOString();
 function safeParse(value, fallback = {}) { try { return JSON.parse(value || ''); } catch { return fallback; } }
