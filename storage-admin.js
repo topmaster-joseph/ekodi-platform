@@ -1,6 +1,6 @@
 (() => {
   'use strict';
-  const API='/api/control/storage/google';
+  const API='/storage/api/control/storage/google';
   const TOKEN_KEY='ekodi-auth-token';
   const LOCALE_KEY='ekodi-admin-locale';
   const GOOGLE_ACCOUNT_BY_ROLE=Object.freeze({primary:'joseph@ekodi.kr',secondary:'topmaster.joseph@gmail.com'});
