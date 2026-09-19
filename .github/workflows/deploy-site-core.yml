@@ -296,7 +296,7 @@ jobs:
           test -f ai-management-admin.js
           test -f communication-admin.css
           grep -Fq 'EKODI COMMUNICATION ADMIN' communication-admin.js
-          grep -Fq 'https://mail.ekodi.kr/admin' communication-admin.js
+          grep -Fq 'https://ekodi.kr/mail/admin' communication-admin.js
           grep -Fq 'https://live.ekodi.kr/' communication-admin.js
           grep -Fq 'Permission transfer: NONE' openai-workspace-admin.js
           grep -Fq 'EKODIAdminContext' openai-workspace-admin.js
@@ -335,7 +335,7 @@ jobs:
             echo 'Marketing public UI must not be embedded in the admin CSP.'
             exit 1
           fi
-          for host in ekodi.kr admin.ekodi.kr auth.ekodi.kr mail.ekodi.kr; do
+          for host in ekodi.kr admin.ekodi.kr auth.ekodi.kr; do
             grep -Fq "pattern = \"$host\"" wrangler.site.toml
           done
 
@@ -373,7 +373,7 @@ jobs:
           grep -Fq 'renderMissingTargets' dist/ai-ops-admin.js
           grep -Fq '.ai-evolution-block' dist/ai-ops-admin.css
           grep -Fq 'EKODI COMMUNICATION ADMIN' dist/communication-admin.js
-          grep -Fq 'https://mail.ekodi.kr/admin' dist/communication-admin.js
+          grep -Fq 'https://ekodi.kr/mail/admin' dist/communication-admin.js
           grep -Fq 'https://live.ekodi.kr/' dist/communication-admin.js
           grep -Fq 'Permission transfer: NONE' dist/openai-workspace-admin.js
           grep -Fq 'EKODIAdminContext' dist/openai-workspace-admin.js
@@ -424,7 +424,7 @@ jobs:
           payload=$(read_domains)
           echo "$payload" | jq -e '.success == true' >/dev/null
           needs_sync=false
-          for host in ekodi.kr admin.ekodi.kr auth.ekodi.kr mail.ekodi.kr; do
+          for host in ekodi.kr admin.ekodi.kr auth.ekodi.kr; do
             if ! echo "$payload" | jq -e --arg host "$host" --arg service 'shy-thunder-39a4' '.result[] | select(.hostname == $host and .service == $service)' >/dev/null; then
               echo "Cloudflare Worker domain missing: $host"
               needs_sync=true
@@ -439,7 +439,7 @@ jobs:
             npx --yes wrangler@4.119.0 triggers deploy --config wrangler.site.toml
             payload=$(read_domains)
           fi
-          for host in ekodi.kr admin.ekodi.kr auth.ekodi.kr mail.ekodi.kr; do
+          for host in ekodi.kr admin.ekodi.kr auth.ekodi.kr; do
             echo "$payload" | jq -e --arg host "$host" --arg service 'shy-thunder-39a4' '.result[] | select(.hostname == $host and .service == $service)' >/dev/null \
               || { echo "Required Cloudflare Worker domain is not attached: $host"; exit 1; }
             echo "Verified Cloudflare Worker domain: $host"
@@ -527,7 +527,8 @@ jobs:
             'https://auth.ekodi.kr/',
             'https://ai.ekodi.kr/',
             'https://ekodi.kr/tax',
-            'https://mail.ekodi.kr/',
+            'https://ekodi.kr/mail',
+            'https://ekodi.kr/messenger',
             'https://live.ekodi.kr/',
             'https://live.church.ekodi.kr/',
             'https://cloud.ekodi.kr/',
@@ -571,7 +572,7 @@ jobs:
           done
 
           : > /tmp/mail-body
-          if curl -L -fsS --retry 3 --retry-delay 2 --connect-timeout 5 --max-time 20 'https://mail.ekodi.kr/' -o /tmp/mail-body; then
+          if curl -L -fsS --retry 3 --retry-delay 2 --connect-timeout 5 --max-time 20 'https://ekodi.kr/mail' -o /tmp/mail-body; then
             grep -Fq '<title>EKODI Mail</title>' /tmp/mail-body || failed=1
             grep -Fq 'id="accountLabel"' /tmp/mail-body || failed=1
             grep -Fq 'id="searchForm"' /tmp/mail-body || failed=1
@@ -599,6 +600,120 @@ jobs:
           done
 
           exit "$failed"
+
+      - name: Retire removed Worker and legacy Pages custom domains
+        shell: bash
+        env:
+          BEFORE_SHA: ${{ github.event.before }}
+        run: |
+          set -euo pipefail
+          api='https://api.cloudflare.com/client/v4'
+          auth=(-H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H 'Content-Type: application/json')
+
+          for spec in \
+            '/ekodichurch/:EKODI CHURCH' \
+            '/ekodilab/:EKODI KNOWLEDGE LAB' \
+            '/mail:EKODI Mail' \
+            '/messenger:EKODI Messenger'; do
+            path="${spec%%:*}"
+            marker="${spec#*:}"
+            body="/tmp/canonical-$(printf '%s' "$path" | tr '/:' '__').html"
+            code=$(curl -L -sS -o "$body" -w '%{http_code}' --connect-timeout 5 --max-time 20 "https://ekodi.kr${path}" || true)
+            [[ "$code" == 200 ]] || { echo "Canonical path unhealthy before retirement: $path HTTP $code"; exit 1; }
+            grep -Fq "$marker" "$body" || { echo "Canonical marker missing before retirement: $path"; exit 1; }
+          done
+
+          retired_hosts=()
+
+          if [[ -n "${BEFORE_SHA:-}" && ! "$BEFORE_SHA" =~ ^0+$ ]] && git cat-file -e "$BEFORE_SHA:wrangler.site.toml" 2>/dev/null; then
+            git show "$BEFORE_SHA:wrangler.site.toml" > /tmp/site-before.toml
+            node <<'NODE' > /tmp/removed-worker-domains
+          const fs=require('node:fs');
+          const suffix='.'+'ekodi.kr';
+          function customDomains(source){
+            const out=new Set();
+            for(const block of source.split('[[routes]]').slice(1)){
+              const pattern=block.match(/pattern\s*=\s*"([^"]+)"/)?.[1]||'';
+              if(pattern && !pattern.includes('*') && pattern.endsWith(suffix) && /custom_domain\s*=\s*true/.test(block)) out.add(pattern);
+            }
+            return out;
+          }
+          const before=customDomains(fs.readFileSync('/tmp/site-before.toml','utf8'));
+          const after=customDomains(fs.readFileSync('wrangler.site.toml','utf8'));
+          for(const host of before) if(!after.has(host)) console.log(host);
+          NODE
+            while IFS= read -r host; do [[ -n "$host" ]] && retired_hosts+=("$host"); done < /tmp/removed-worker-domains
+          fi
+
+          worker_domains=$(curl --fail-with-body -sS "${auth[@]}" "$api/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/domains")
+          echo "$worker_domains" | jq -e '.success == true' >/dev/null
+          for host in "${retired_hosts[@]}"; do
+            mapfile -t ids < <(echo "$worker_domains" | jq -r --arg host "$host" '.result[]? | select(.hostname == $host) | .id')
+            for id in "${ids[@]}"; do
+              curl --fail-with-body -sS -X DELETE "${auth[@]}" "$api/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/domains/$id" >/dev/null
+            done
+          done
+
+          for project in ekodi-church ekodilab; do
+            page_domains=$(curl --fail-with-body -sS "${auth[@]}" "$api/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/$project/domains")
+            echo "$page_domains" | jq -e '.success == true' >/dev/null
+            mapfile -t names < <(echo "$page_domains" | jq -r '.result[]?.name | select(endswith("." + "ekodi.kr"))')
+            for host in "${names[@]}"; do
+              retired_hosts+=("$host")
+              encoded=$(node -e 'process.stdout.write(encodeURIComponent(process.argv[1]))' "$host")
+              curl --fail-with-body -sS -X DELETE "${auth[@]}" "$api/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/$project/domains/$encoded" >/dev/null
+            done
+          done
+
+          mapfile -t retired_hosts < <(printf '%s\n' "${retired_hosts[@]}" | awk 'NF && !seen[$0]++')
+          [[ "${#retired_hosts[@]}" -gt 0 ]] || { echo 'No legacy public-root domains discovered for retirement.'; exit 1; }
+
+          zones=$(curl --fail-with-body -sS "${auth[@]}" "$api/zones?name=ekodi.kr&status=active&per_page=10")
+          echo "$zones" | jq -e '.success == true' >/dev/null
+          zone_count=$(echo "$zones" | jq '[.result[]? | select(.name == "ekodi.kr" and .status == "active")] | length')
+          [[ "$zone_count" -eq 1 ]] || { echo "Expected exactly one active EKODI zone, found $zone_count"; exit 1; }
+          zone_id=$(echo "$zones" | jq -r '.result[] | select(.name == "ekodi.kr" and .status == "active") | .id')
+
+          for host in "${retired_hosts[@]}"; do
+            encoded=$(node -e 'process.stdout.write(encodeURIComponent(process.argv[1]))' "$host")
+            records=$(curl --fail-with-body -sS "${auth[@]}" "$api/zones/$zone_id/dns_records?name=$encoded&per_page=100")
+            echo "$records" | jq -e '.success == true' >/dev/null
+            mapfile -t record_ids < <(echo "$records" | jq -r --arg host "$host" '.result[]? | select(.name == $host) | .id')
+            for record_id in "${record_ids[@]}"; do
+              curl --fail-with-body -sS -X DELETE "${auth[@]}" "$api/zones/$zone_id/dns_records/$record_id" >/dev/null
+            done
+          done
+
+          worker_domains=$(curl --fail-with-body -sS "${auth[@]}" "$api/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/domains")
+          for host in "${retired_hosts[@]}"; do
+            if echo "$worker_domains" | jq -e --arg host "$host" '.result[]? | select(.hostname == $host)' >/dev/null; then
+              echo "Retired Worker custom domain still attached: $host"
+              exit 1
+            fi
+            encoded=$(node -e 'process.stdout.write(encodeURIComponent(process.argv[1]))' "$host")
+            records=$(curl --fail-with-body -sS "${auth[@]}" "$api/zones/$zone_id/dns_records?name=$encoded&per_page=100")
+            [[ "$(echo "$records" | jq '[.result[]?] | length')" -eq 0 ]] || { echo "Retired DNS record remains: $host"; exit 1; }
+
+            inactive=false
+            for attempt in $(seq 1 24); do
+              code=$(curl -sS -o /tmp/retired-root.out -w '%{http_code}' --connect-timeout 5 --max-time 10 "https://$host/" || true)
+              if [[ ! "$code" =~ ^[23] ]]; then
+                inactive=true
+                echo "Retired hostname inactive: $host HTTP ${code:-000}"
+                break
+              fi
+              sleep 5
+            done
+            [[ "$inactive" == true ]] || { echo "Retired hostname still serves or redirects traffic: $host"; exit 1; }
+          done
+
+          for project in ekodi-church ekodilab; do
+            page_domains=$(curl --fail-with-body -sS "${auth[@]}" "$api/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/$project/domains")
+            echo "$page_domains" | jq -e '[.result[]?.name | select(endswith("." + "ekodi.kr"))] | length == 0' >/dev/null \
+              || { echo "Retired Pages custom domain remains on $project"; exit 1; }
+          done
+
+          echo "Legacy public-root retirement verified for ${#retired_hosts[@]} exact hostnames."
 
   admin-authenticated-e2e:
     name: authenticated-admin-e2e
