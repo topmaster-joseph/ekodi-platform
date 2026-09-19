@@ -38,3 +38,28 @@ INSERT INTO marketing_brand_profiles(
   ('tenant','pizzamaru','피자마루 목포대점','','','{}',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP),
   ('tenant','yogurt','요거트퍼플 목포대점','','','{}',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)
 ON CONFLICT(subject_type,subject_key) DO NOTHING;
+
+
+-- Existing channels are activated only when a usable credential reference is present.
+-- This preserves fail-closed behavior for disconnected or never-authorized channels.
+UPDATE marketing_publish_channels
+SET
+  status='active',
+  config_json=json_set(
+    CASE WHEN json_valid(config_json) THEN config_json ELSE '{}' END,
+    '$.autoPublishEnabled', json('true'),
+    '$.maxPostsPerDay', 1,
+    '$.minHoursBetweenPosts', 6,
+    '$.publishWindowStart', '08:00',
+    '$.publishWindowEnd', '22:00',
+    '$.timezone', 'Asia/Seoul',
+    '$.maxAttempts', 5
+  ),
+  updated_at=CURRENT_TIMESTAMP
+WHERE subject_type='tenant'
+  AND subject_key IN ('ekodi-biz','jadam','pizzamaru','yogurt')
+  AND provider IN ('facebook','instagram','threads','youtube')
+  AND (
+    COALESCE(NULLIF(credential_ref,''),'') <> ''
+    OR CAST(COALESCE(json_extract(CASE WHEN json_valid(config_json) THEN config_json ELSE '{}' END,'$.oauthConnectionId'),0) AS INTEGER) > 0
+  );
