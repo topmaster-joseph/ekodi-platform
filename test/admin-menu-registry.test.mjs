@@ -15,11 +15,11 @@ import {
   normalizeAdminLocale,
 } from '../admin-menu-registry.js';
 
-const WORK_AREAS = ['home', 'operations', 'workspaces', 'services', 'system'];
+const WORK_AREAS = ['home', 'operations', 'workspaces', 'services', 'community', 'publishing', 'system'];
 
-test('admin navigation has exactly five canonical EKODI axes', () => {
+test('admin navigation has exactly seven canonical EKODI areas', () => {
   assert.deepEqual(ADMIN_MENU_GROUPS.map(group => group.id), WORK_AREAS);
-  assert.deepEqual(ADMIN_MENU_GROUPS.map(group => group.labels.en), ['Home','Operations','Workspaces','Services','System']);
+  assert.deepEqual(ADMIN_MENU_GROUPS.map(group => group.labels.en), ['Home','Operations','Organizations & Customers','Services','Community','Publishing','System']);
   for (const group of ADMIN_MENU_GROUPS) {
     assert.ok(group.defaultSection, `${group.id} missing defaultSection`);
     assert.equal(getAdminMenuGroupForSection(group.defaultSection), group.id);
@@ -27,7 +27,7 @@ test('admin navigation has exactly five canonical EKODI axes', () => {
   }
 });
 
-test('every public admin subservice belongs to one work area', () => {
+test('every public admin subservice belongs to one canonical area', () => {
   const ids = ADMIN_MENU_REGISTRY.map(item => item.id);
   assert.equal(new Set(ids).size, ids.length);
   for (const item of ADMIN_MENU_REGISTRY) {
@@ -44,6 +44,10 @@ test('every public admin subservice belongs to one work area', () => {
   assert.equal(getAdminMenuGroupForSection('marketing-ai'), 'services');
   assert.equal(getAdminMenuGroupForSection('finance'), 'operations');
   assert.equal(getAdminMenuGroupForSection('workspace'), 'workspaces');
+  assert.equal(getAdminMenuGroupForSection('community'), 'community');
+  assert.equal(getAdminMenuGroupForSection('ai-membership'), 'community');
+  assert.equal(getAdminMenuGroupForSection('books'), 'publishing');
+  assert.equal(getAdminMenuGroupForSection('devotional'), 'publishing');
   assert.equal(getAdminMenuGroupForSection('storage'), 'system');
   assert.equal(getAdminMenuLabel('devices', 'ko'), '실행 인프라');
   assert.equal(getAdminMenuLabel('devices', 'en'), 'Execution Infrastructure');
