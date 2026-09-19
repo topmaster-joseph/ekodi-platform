@@ -1,5 +1,5 @@
 {
-  "version": "3.2.0",
+  "version": "3.3.0",
   "name": "EKODI Universal Capability Registry",
   "principle": "Capabilities are stable reusable abilities. Intent selects capabilities; services and providers are replaceable implementations.",
   "surfacePolicy": {
@@ -762,6 +762,33 @@
         "contract": "ekodi.capability-provider.v1",
         "policy": "REMOTE-COMPUTER-001",
         "fallback": "security-equivalent-adapters-only"
+      }
+    },
+    {
+      "id": "device.web-computer-execution",
+      "name": "웹·브라우저 실행",
+      "domain": "device",
+      "ownerAgent": "platform",
+      "actionTier": "execute_reversible",
+      "maturity": "service-backed",
+      "description": "EKODI Orchestrator가 Provider-neutral Web/Computer Execution Plane을 통해 웹 탐색·입력·추출·검증을 수행한다. 자체 실행을 우선하고 외부 Provider는 검증된 bounded failover로만 사용하며 권한확장·유료약정·파괴적 작업은 별도 게이트를 유지한다.",
+      "surfaces": [
+        "workspace",
+        "dedicated"
+      ],
+      "tags": [
+        "web",
+        "browser",
+        "computer",
+        "execution",
+        "provider-neutral",
+        "verification"
+      ],
+      "provider": {
+        "id": "ekodi-web-computer-execution",
+        "contract": "EKODI-WEB-COMPUTER-EXECUTION-001",
+        "capabilityProviderContract": "ekodi.capability-provider.v1",
+        "fallback": "bounded-verified-adapters-only"
       }
     }
   ],

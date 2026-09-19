@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "contractId": "EKODI-WEB-COMPUTER-EXECUTION-001",
+  "status": "candidate",
+  "capability": "web-computer-execution",
+  "authority": {
+    "owner": "ekodi-orchestrator",
+    "executionPlaneMayExpandAuthority": false,
+    "productionPromotion": "central-release-gate-only"
+  },
+  "modules": ["planner","worker-pool","session","action","extraction","verification","recovery","observability","learning"],
+  "implementation": {
+    "providerNeutral": true,
+    "selfExecutionPreferred": true,
+    "engineBehindAdapter": true,
+    "externalProviders": "bounded-failover-only",
+    "deterministicExecutionPreferredWhenAIUnnecessary": true
+  },
+  "routingEvidence": ["capability","adapter","engine","siteClass","taskClass","success","verified","latencyMs","retryCount","cost","failureClass","fallback"],
+  "riskGates": {
+    "authenticationConsentMfa": "human-or-provider-gate",
+    "permissionExpansion": "sovereign-gate",
+    "paidCommitment": "sovereign-gate",
+    "destructiveOrIrreversibleAction": "sovereign-gate",
+    "captchaOrSecurityBypass": "forbidden"
+  },
+  "evolution": {
+    "stages": ["sandbox","benchmark","canary","production-verification"],
+    "learningMayChangeAuthority": false,
+    "adapterReplacementMustPreserveContract": true
+  },
+  "completion": {
+    "actionSuccessIsCompletion": false,
+    "requiresIndependentVerification": true,
+    "requiresProductionEvidenceWhenDeploymentRequested": true
+  }
+}
