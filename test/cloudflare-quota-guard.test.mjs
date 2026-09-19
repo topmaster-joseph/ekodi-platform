@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { readFile } from 'node:fs/promises';
 import {
   assertProductionAccountBoundary,
   classifyQuotaState,
@@ -42,4 +43,34 @@ test('429 and Cloudflare Error 1027 open the circuit breaker', () => {
   assert.equal(isQuotaCircuitBreak({ status: 200, body: 'Error 1027', config }), true);
   assert.equal(isQuotaCircuitBreak({ status: 503, body: 'temporarily rate limited', config }), true);
   assert.equal(isQuotaCircuitBreak({ status: 500, body: 'ordinary failure', config }), false);
+});
+
+test('production verification is consolidated into one post-deploy canary', async () => {
+  const productionGate = await readFile(new URL('../.github/workflows/production-gate.yml', import.meta.url), 'utf8');
+  const reliability = await readFile(new URL('../.github/workflows/reliability-validation.yml', import.meta.url), 'utf8');
+  assert.match(productionGate, /workflow_run:/);
+  assert.match(productionGate, /Run one quota-aware post-deploy canary/);
+  assert.doesNotMatch(productionGate, /cron:/);
+  assert.doesNotMatch(reliability, /production-synthetic:/);
+  assert.doesNotMatch(reliability, /workflow_run:/);
+});
+
+test('immutable Admin CSS is asset-first while auth JavaScript stays Worker-first', async () => {
+  const wrangler = await readFile(new URL('../wrangler.site.toml', import.meta.url), 'utf8');
+  for (const asset of [
+    '/workspace-admin.css',
+    '/workspace-trade-portal.css',
+    '/control-center.css',
+    '/admin-shell.css',
+    '/compact-control-center.css',
+    '/admin-compact.css',
+    '/tapo-device-admin.css',
+    '/device-browser-diagnostics.css',
+    '/system-health-admin.css'
+  ]) {
+    assert.equal(wrangler.includes(`"${asset}"`), false, `${asset} should be asset-first`);
+  }
+  for (const securityCritical of ['/auth-bootstrap.js', '/admin-authenticated-shell.js', '/auth-router.js']) {
+    assert.equal(wrangler.includes(`"${securityCritical}"`), true, `${securityCritical} must remain Worker-first`);
+  }
 });
