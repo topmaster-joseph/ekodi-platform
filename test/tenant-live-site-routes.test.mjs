@@ -24,6 +24,16 @@ test('shared tenant Live paths render on ekodi.kr with isolated tenant identity'
     if(tenant.route)assert.equal(apex.headers.get('x-ekodi-route'),tenant.route,`route ${tenant.id}`);
     if(tenant.independentSite)assert.equal(apex.headers.get('x-ekodi-independent-site'),'true',`independent ${tenant.id}`);
     if(tenant.workspace)assert.equal(apex.headers.get('x-ekodi-workspace'),tenant.workspace,`workspace ${tenant.id}`);
+    if(tenant.workspace==='ekodimission'){
+      assert.match(html,/class="mission-site-header"/,tenant.id);
+      assert.match(html,/data-mission-nav/,tenant.id);
+      assert.match(html,/\/ekodimission\/assets\/shell\.css/,tenant.id);
+      assert.match(html,/\/ekodimission\/assets\/shell\.js/,tenant.id);
+      assert.doesNotMatch(html,/class="live-header"/,tenant.id);
+    }else{
+      assert.match(html,/class="live-header"/,tenant.id);
+      assert.doesNotMatch(html,/data-mission-nav/,tenant.id);
+    }
   }
 });
 
