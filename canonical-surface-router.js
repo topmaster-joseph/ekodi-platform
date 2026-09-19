@@ -43,7 +43,6 @@ const PUBLIC_EXECUTION_SURFACES=Object.freeze([
 
 ]);
 const CANONICAL_HOST_PATHS=Object.freeze({
-  'admin.ekodi.kr':'/admin','auth.ekodi.kr':'/auth','api.ekodi.kr':'/api','my.ekodi.kr':'/my',
   'ai.ekodi.kr':'/ai','author.ekodi.kr':'/author','bible.ekodi.kr':'/bible',
   'books.ekodi.kr':'/books','business.ekodi.kr':'/business','community.ekodi.kr':'/community','edu.ekodi.kr':'/education',
   'energy.ekodi.kr':'/energy','exp.ekodi.kr':'/experience','try.ekodi.kr':'/experience','dev.ekodi.kr':'/developer',
@@ -62,6 +61,20 @@ const CANONICAL_HOST_PATHS=Object.freeze({
   'jadam.ai.ekodi.kr':'/jadam/marketing','pizzamaru.ai.ekodi.kr':'/pizzamaru/marketing','yogurt.ai.ekodi.kr':'/yogurt/marketing','cgma.ai.ekodi.kr':'/cgma/marketing'
 });const ADMIN_RUNTIME_FILE=/\.(?:js|css|cmd|json|map|svg|png|webp|ico)$/i;
 const AUTH_TOP_LEVEL_TEXT_ASSET=/\.(?:js|css|json|map)$/i;
+const AUTH_CSP=[
+  "default-src 'self'",
+  "style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style",
+  "script-src 'self' https://cdn.jsdelivr.net https://esm.sh https://accounts.google.com/gsi/client https://js.tosspayments.com",
+  "connect-src 'self' https://renzehysxirjilvdxacv.supabase.co https://cdn.jsdelivr.net https://esm.sh https://accounts.google.com/gsi/ https://*.tosspayments.com",
+  "frame-src https://accounts.google.com/gsi/ https://accounts.google.com/ https://*.tosspayments.com",
+  "img-src 'self' data: https://lh3.googleusercontent.com https://*.tosspayments.com",
+  "frame-ancestors 'none'",
+  "base-uri 'self'",
+  "form-action 'self' https://renzehysxirjilvdxacv.supabase.co https://*.tosspayments.com",
+  "object-src 'none'",
+].join('; ');
+const AUTH_ASSETS=new Set(['/auth.js','/auth-bootstrap.js','/auth-entry.js','/auth.css','/auth-router.js','/oauth-consent.js','/marketing-auth-hotfix.js','/auth-workspace-target.js','/admin-auth.js','/google-origin-bridge.js','/client-auth.js','/author-auth.js','/business-auth.js','/marketing-onboarding.js','/membership-ui.js']);
+const AUTH_CRITICAL_ASSETS=new Set(['/auth.js','/auth-bootstrap.js','/auth-entry.js','/auth-router.js','/oauth-consent.js','/marketing-auth-hotfix.js','/auth-workspace-target.js','/admin-auth.js','/google-origin-bridge.js','/client-auth.js','/author-auth.js','/business-auth.js','/marketing-onboarding.js','/membership-ui.js']);
 
 function cloneRequest(request,url){
   return new Request(url.toString(),{
@@ -198,9 +211,43 @@ async function proxyAdminShell(request,legacyFetch){
   routed.headers.set('x-ekodi-canonical-path','/admin');
   return routed;
 }
-async function proxyAuth(request,legacyFetch){
-  const response=await proxyLegacySurface(request,legacyFetch,SURFACE_PREFIXES.auth,'auth.ekodi.kr','auth');
-  return rewriteHtmlResponse(response,rewriteAuthHtml);
+function applyAuthSecurity(response,cacheControl,routeName){
+  const secured=new Response(response.body,response);
+  const headers=secured.headers;
+  headers.set('Strict-Transport-Security','max-age=31536000; includeSubDomains');
+  headers.set('Referrer-Policy','no-referrer');
+  headers.set('X-Content-Type-Options','nosniff');
+  headers.set('X-Frame-Options','DENY');
+  headers.set('Permissions-Policy','camera=(), microphone=(), geolocation=(), usb=()');
+  headers.set('X-XSS-Protection','0');
+  const type=String(headers.get('Content-Type')||'');
+  if(type&&!/;\s*charset=/i.test(type)&&(/^text\//i.test(type)||/^application\/(?:javascript|json|xml)(?:;|$)/i.test(type)))headers.set('Content-Type',`${type}; charset=utf-8`);
+  headers.set('Content-Security-Policy',AUTH_CSP);
+  headers.set('Cache-Control',cacheControl);
+  headers.set('X-EKODI-Route',routeName);
+  return secured;
+}
+async function serveCanonicalAuth(request,env){
+  if(!env?.ASSETS?.fetch)return serviceUnavailable('auth');
+  const url=new URL(request.url);
+  const stripped=stripPrefix(url.pathname,SURFACE_PREFIXES.auth);
+  let assetPath='',routeName='central-auth-asset',cacheControl='no-store',rewrite=false;
+  if(stripped==='/'||stripped==='/index.html'||stripped==='/login'||stripped==='/login/'){
+    assetPath='/auth-center';routeName='central-auth';rewrite=true;
+  }else if(stripped==='/google-origin-bridge'||stripped==='/google-origin-bridge/'){
+    assetPath='/google-origin-bridge';routeName='google-origin-bridge';
+  }else if(stripped==='/oauth/consent'||stripped==='/oauth/consent/'){
+    assetPath='/oauth-consent';routeName='oauth-consent';
+  }else if(AUTH_ASSETS.has(stripped)){
+    assetPath=stripped;cacheControl=AUTH_CRITICAL_ASSETS.has(stripped)?'no-store':'public, max-age=300';
+  }else return null;
+  const assetUrl=new URL(request.url);assetUrl.pathname=assetPath;
+  let response=await env.ASSETS.fetch(cloneRequest(request,assetUrl));
+  if(rewrite)response=await rewriteHtmlResponse(response,rewriteAuthHtml);
+  response=applyAuthSecurity(response,cacheControl,routeName);
+  response.headers.set('x-ekodi-canonical-surface','auth');
+  response.headers.set('x-ekodi-canonical-path','/auth');
+  return response;
 }
 async function proxyAdminRuntime(request,legacyFetch){
   return proxyLegacySurface(request,legacyFetch,SURFACE_PREFIXES.admin,'admin.ekodi.kr','admin');
@@ -263,8 +310,7 @@ async function proxyExecutionSurface(request,env,spec,legacyFetch,externalFetch)
   if(path===SURFACE_PREFIXES.auth)return canonicalSlashRedirect(request,SURFACE_PREFIXES.auth);
   if(path.startsWith(`${SURFACE_PREFIXES.auth}/`)){
     const documentRedirect=authAssetDocumentRedirect(request,path);if(documentRedirect)return documentRedirect;
-    if(typeof legacyFetch!=='function')return serviceUnavailable('auth');
-    return proxyAuth(request,legacyFetch);
+    return serveCanonicalAuth(request,env);
   }
   if(path===SURFACE_PREFIXES.admin)return canonicalSlashRedirect(request,SURFACE_PREFIXES.admin);
   if(path.startsWith(`${SURFACE_PREFIXES.admin}/`)){
