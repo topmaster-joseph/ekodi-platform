@@ -12,6 +12,7 @@ const migration = await readFile(new URL('../migrations/0038_google_drive_storag
 const admin = await readFile(new URL('../storage-admin.js', import.meta.url), 'utf8');
 const cheonggyeAdmin = await readFile(new URL('../cgma-member-admin.js', import.meta.url), 'utf8');
 const manifest = await readFile(new URL('../deploy/manifests/storage.worker.json', import.meta.url), 'utf8');
+const sharedSiteRelease = await readFile(new URL('../.github/workflows/deploy-site-core.yml', import.meta.url), 'utf8');
 
 test('Google Drive credentials are encrypted and never committed', () => {
   assert.match(control, /AES-GCM/);
@@ -53,6 +54,15 @@ test('admin browser uses canonical same-origin Storage API and localized failure
   assert.doesNotMatch(admin, /drive\.ekodi\.kr\/api\/control\/storage\/google/);
   assert.match(admin, /저장소 연결을 확인할 수 없습니다/);
   assert.match(admin, /t\('저장소','Storage'\)/);
+});
+
+test('shared-site production gate cannot regress Storage back to generic Control API routing', () => {
+  assert.ok(sharedSiteRelease.includes(`grep -Fq "const API='/storage/api/control/storage/google'" storage-admin.js`));
+  assert.ok(sharedSiteRelease.includes(`! grep -Fq "const API='/api/control/storage/google'" storage-admin.js`));
+  assert.ok(sharedSiteRelease.includes(`grep -Fq "const API='/storage/api/control/storage/google'" dist/storage-admin.js`));
+  assert.ok(sharedSiteRelease.includes(`! grep -Fq "const API='/api/control/storage/google'" dist/storage-admin.js`));
+  assert.ok(!sharedSiteRelease.includes(`          grep -Fq "const API='/api/control/storage/google'" storage-admin.js`));
+  assert.ok(!sharedSiteRelease.includes(`          grep -Fq "const API='/api/control/storage/google'" dist/storage-admin.js`));
 });
 
 test('Storage refreshes when the shared Admin panel controller activates the section', () => {
