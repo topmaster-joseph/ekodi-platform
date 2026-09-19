@@ -244,7 +244,10 @@
   }
 
   function latestCommandByType(device, type) {
-    return (device.recentCommands || []).find(command => command.type === type) || null;
+    const commands = device.recentCommands || [];
+    return commands.find(command => command.type === type && command.status === 'succeeded')
+      || commands.find(command => command.type === type)
+      || null;
   }
 
   function remoteComputerPanel(device) {
