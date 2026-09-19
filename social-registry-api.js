@@ -8,7 +8,7 @@ const DEFAULT_REGISTRY = {
     {
       id: 'community', name: '커뮤니티', shortName: 'Community',
       description: '공동체, 선교, 지역과 디아스포라의 이야기를 연결합니다.',
-      website: 'https://community.ekodi.kr', isActive: true, order: 10, socialPolicy: 'inherit_org',
+      website: 'https://ekodi.kr/community', isActive: true, order: 10, socialPolicy: 'inherit_org',
       channels: [
         { id:'community-youtube', provider:'youtube', label:'YouTube', handle:'@ekodicommunity', channelId:'UCm1PFvzN0PRnyiF8Xx_mYTw', uploadsPlaylist:'UUm1PFvzN0PRnyiF8Xx_mYTw', url:'https://www.youtube.com/@ekodicommunity', description:'말씀 · 공동체 · 선교 · 현장', isActive:true, order:10 },
         { id:'community-instagram', provider:'instagram', label:'Instagram', url:'https://www.instagram.com/ekodicommunity', description:'사진 · 현장 · 짧은 이야기', isActive:true, order:20 },
@@ -25,9 +25,21 @@ const DEFAULT_REGISTRY = {
       ]
     },
     { id:'biz', name:'에코디비즈', shortName:'Biz', description:'비즈니스, 소상공인, 마케팅 AI와 지역경제 콘텐츠를 모읍니다.', website:'https://ekodi.kr/ekodibiz', isActive:true, order:30, socialPolicy:'inherit_org', channels:[] },
-    { id:'books', name:'출판', shortName:'Books', description:'출판, 전자책, 연구와 저자 콘텐츠를 연결합니다.', website:'https://books.ekodi.kr', isActive:true, order:40, socialPolicy:'inherit_org', channels:[] }
+    { id:'books', name:'출판', shortName:'Books', description:'출판, 전자책, 연구와 저자 콘텐츠를 연결합니다.', website:'https://ekodi.kr/books', isActive:true, order:40, socialPolicy:'inherit_org', channels:[] }
   ]
 };
+
+const EKODI_ROOT_HOST=['ekodi','kr'].join('.');
+const EKODI_APEX_PATHS=Object.freeze({community:'/community',books:'/books',trade:'/trade',edu:'/education'});
+function canonicalizeEkodiUrl(url){
+  const suffix='.'+EKODI_ROOT_HOST;
+  if(url.hostname.endsWith(suffix)){
+    const label=url.hostname.slice(0,-suffix.length);
+    const prefix=EKODI_APEX_PATHS[label];
+    if(prefix){url.hostname=EKODI_ROOT_HOST;url.pathname=prefix+(url.pathname==='/'?'':url.pathname)}
+  }
+  return url;
+}
 
 function httpsUrl(value, field) {
   const text = String(value || '').trim();
@@ -35,7 +47,7 @@ function httpsUrl(value, field) {
   let url;
   try { url = new URL(text); } catch { throw new Error(`${field} must be a valid URL`); }
   if (url.protocol !== 'https:') throw new Error(`${field} must use https`);
-  return url.toString();
+  return canonicalizeEkodiUrl(url).toString();
 }
 function text(value, max = 120) { return String(value || '').trim().slice(0, max); }
 function safeId(value, field) {
