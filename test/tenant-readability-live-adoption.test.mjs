@@ -33,11 +33,9 @@ test('live mobile verifier checks canonical apex tenant paths only',async()=>{
     'https://ekodi.kr/cgma/market-ai',
     'https://ekodi.kr/cgma/admin',
   ]) assert.ok(verifier.includes(url),`missing canonical verifier target: ${url}`);
-  assert.doesNotMatch(verifier,/jadam\.ai\.ekodi\.kr/);
-  assert.doesNotMatch(verifier,/pizzamaru\.ai\.ekodi\.kr/);
-  assert.doesNotMatch(verifier,/yogurt\.ai\.ekodi\.kr/);
-  assert.doesNotMatch(verifier,/cgma\.ai\.ekodi\.kr/);
-  assert.doesNotMatch(verifier,/cgma\.ekodi\.kr/);
+  const origins=[...verifier.matchAll(/https:\/\/[^/'"`]+/g)].map(match=>match[0]);
+  assert.ok(origins.length>0);
+  assert.ok(origins.every(origin=>origin==='https://ekodi.kr'));
   assert.match(verifier,/tenant-readability-css/);
   assert.match(verifier,/live-readability-not-observed/);
 });
