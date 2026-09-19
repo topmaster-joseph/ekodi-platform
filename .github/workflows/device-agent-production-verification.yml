@@ -1,0 +1,152 @@
+name: Device Agent Production Verification
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'tools/ekodi-device-agent/windows/**'
+      - 'ekodi-device-bootstrap.cmd'
+      - 'device-control.js'
+      - 'scripts/verify-device-agent-production.mjs'
+      - 'test/device-agent-production-verification.test.mjs'
+      - '.github/workflows/device-agent-production-verification.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'tools/ekodi-device-agent/windows/**'
+      - 'ekodi-device-bootstrap.cmd'
+      - 'device-control.js'
+      - 'scripts/verify-device-agent-production.mjs'
+      - 'test/device-agent-production-verification.test.mjs'
+      - '.github/workflows/device-agent-production-verification.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: device-agent-production-verification-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate real-device verification contract
+        run: |
+          set -euo pipefail
+          node --check scripts/verify-device-agent-production.mjs
+          node --test test/device-agent-production-verification.test.mjs
+          grep -Fq "agent.self_update" scripts/verify-device-agent-production.mjs
+          grep -Fq "https://ekodi.kr" scripts/verify-device-agent-production.mjs
+          if grep -Eq 'https://(api|admin|my)\.ekodi\.kr' scripts/verify-device-agent-production.mjs; then
+            echo 'Production verifier must use the canonical apex only.'
+            exit 1
+          fi
+
+  real-device:
+    needs: contract
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    environment: production
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - name: EKODI AI Orchestration Gate
+        run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
+
+      - name: Issue short-lived genuine super-admin session
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+
+          cf_query() {
+            local db="$1" sql="$2"
+            curl -fsS --retry 2 --retry-delay 1               -X POST "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/d1/database/$db/query"               -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN"               -H 'Content-Type: application/json'               --data "$(jq -nc --arg sql "$sql" '{sql:$sql}')"
+          }
+
+          databases=$(curl -fsS --retry 2 --retry-delay 1             "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/d1/database?per_page=100"             -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN")
+          echo "$databases" | jq -e '.success == true' >/dev/null
+
+          auth_db=''
+          admin_id=''
+          while IFS= read -r db; do
+            [ -n "$db" ] || continue
+            schema=$(cf_query "$db" "SELECT name FROM sqlite_master WHERE type='table' AND name IN ('admins','sessions')" || true)
+            if ! echo "$schema" | jq -e '.success == true and ([.result[]?.results[]?.name] | index("admins") != null and index("sessions") != null)' >/dev/null 2>&1; then
+              continue
+            fi
+            candidate=$(cf_query "$db" "SELECT id FROM admins WHERE role='super_admin' ORDER BY id LIMIT 1" || true)
+            id=$(echo "$candidate" | jq -r '.result[]?.results[0]?.id // empty' | head -1)
+            if [[ "$id" =~ ^[0-9]+$ ]]; then
+              auth_db="$db"
+              admin_id="$id"
+              break
+            fi
+          done < <(echo "$databases" | jq -r '.result[]? | (.uuid // .id // empty)')
+
+          if [ -z "$auth_db" ] || [ -z "$admin_id" ]; then
+            echo 'Could not locate the authorized EKODI auth D1 database with a super_admin account.'
+            exit 1
+          fi
+
+          token=$(openssl rand -hex 32)
+          token_hash=$(printf '%s' "$token" | sha256sum | awk '{print $1}')
+          created=$(date -u +'%Y-%m-%dT%H:%M:%S.000Z')
+          expires=$(date -u -d '+20 minutes' +'%Y-%m-%dT%H:%M:%S.000Z')
+          echo "::add-mask::$token"
+          echo "::add-mask::$token_hash"
+
+          insert="INSERT INTO sessions (token_hash, admin_id, expires_at, created_at) VALUES ('$token_hash', $admin_id, '$expires', '$created')"
+          result=$(cf_query "$auth_db" "$insert")
+          echo "$result" | jq -e '.success == true and ([.result[]?.success] | all)' >/dev/null
+
+          session=$(curl -fsS --retry 3 --retry-delay 1 'https://ekodi.kr/api/session' -H "Authorization: Bearer $token")
+          echo "$session" | jq -e '.role == "super_admin" and .authenticated == true' >/dev/null
+
+          echo "E2E_ADMIN_TOKEN=$token" >> "$GITHUB_ENV"
+          echo "E2E_TOKEN_HASH=$token_hash" >> "$GITHUB_ENV"
+          echo "E2E_AUTH_DB_ID=$auth_db" >> "$GITHUB_ENV"
+          echo 'Short-lived production-authenticated Device Agent verification session issued.'
+
+      - name: Transactionally update one real Windows Agent and verify heartbeat
+        env:
+          DEVICE_TARGET_WAIT_MS: '120000'
+          DEVICE_COMMAND_WAIT_MS: '210000'
+          DEVICE_VERIFY_POLL_MS: '5000'
+        run: node scripts/verify-device-agent-production.mjs
+
+      - name: Publish sanitized Device Agent verification summary
+        if: always()
+        shell: bash
+        run: |
+          if [ -f artifacts/device-agent-production-verification.json ]; then
+            echo '## Real Device Agent production verification' >> "$GITHUB_STEP_SUMMARY"
+            echo '' >> "$GITHUB_STEP_SUMMARY"
+            jq -r '"- Passed: \(.ok)\n- Transactional result: \(.verification.transactionalResult)\n- Admin status: \(.verification.status)\n- Fresh heartbeat after issue: \(.verification.heartbeatAfterIssue)\n- Expected candidate: \(.verification.expectedVersion)\n- Runtime-reported version: \(.verification.reportedAgentVersion // "unknown")\n- Verified at: \(.verifiedAt)"' artifacts/device-agent-production-verification.json >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo '## Real Device Agent production verification' >> "$GITHUB_STEP_SUMMARY"
+            echo '- Verification artifact was not produced because the live check did not pass.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Revoke short-lived verification session
+        if: always() && env.E2E_AUTH_DB_ID != '' && env.E2E_TOKEN_HASH != ''
+        shell: bash
+        run: |
+          set -euo pipefail
+          sql="DELETE FROM sessions WHERE token_hash = '$E2E_TOKEN_HASH'"
+          curl -fsS --retry 2 --retry-delay 1             -X POST "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/d1/database/$E2E_AUTH_DB_ID/query"             -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN"             -H 'Content-Type: application/json'             --data "$(jq -nc --arg sql "$sql" '{sql:$sql}')"             | jq -e '.success == true' >/dev/null
+          echo 'Short-lived Device Agent verification session revoked.'
