@@ -62,6 +62,24 @@ test('shared shells enforce readable public and delegated-admin geometry',async(
   assert.match(injector,/SHELL_WORKSPACE_STYLE/);
 });
 
+test('independent public tenant sites inherit readability without platform chrome',async()=>{
+  const [injector,router,userCss]=await Promise.all([
+    read('ekodi-shell-injector.js'),
+    read('platform-router-entry-worker.js'),
+    read('shell/user-ui-shell.css'),
+  ]);
+  assert.match(injector,/export function injectEkodiTenantReadability/);
+  assert.match(injector,/data-ekodi-tenant-readability/);
+  assert.match(injector,/SHELL_MOBILE_HEADER_SCRIPT/);
+  assert.match(injector,/data-ekodi-fixed-header/);
+  assert.match(router,/space-storefront'[\s\S]*injectEkodiTenantReadability/);
+  assert.match(router,/x-ekodi-independent-site'[\s\S]*injectEkodiTenantReadability/);
+  assert.match(router,/isCgmaRoot\(url\.pathname\)[\s\S]*injectEkodiTenantReadability/);
+  assert.match(userCss,/Brand-neutral tenant readability v1/);
+  assert.match(userCss,/data-ekodi-tenant-readability="v1"/);
+  assert.doesNotMatch(injector,/data-ekodi-tenant-readability[^\n]+My EKODI/);
+});
+
 test('multi-store public gateway avoids duplicate same-destination actions',async()=>{
   const source=await read('store-gateway-page.js');
   assert.match(source,/매장 보기/);
