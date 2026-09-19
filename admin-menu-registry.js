@@ -81,7 +81,7 @@ const ADMIN_MENU_SECTION_CATEGORY = Object.freeze({
   'command-home':'overview', campus:'overview', work:'workflow', communication:'workflow', finance:'finance', tax:'finance',
   clients:'customer', cmpmyi:'customer', organization:'organization', workspace:'organization',
   'common-services':'common', 'life-ai':'common', community:'content', books:'content', social:'content', devotional:'content',
-  'personal-finance':'business', invest:'business', 'marketing-ai':'business', 'ai-membership':'business', 'supply-network':'business', insurance:'business',
+  'personal-finance':'business', invest:'business', 'marketing-ai':'business', 'ai-membership':'content', 'supply-network':'business', insurance:'business',
   'public-site-controls':'environment', 'language-status':'environment', security:'security', admins:'security',
   'ai-module-spec':'ai', capabilities:'ai', aiops:'ai', 'ai-settings':'ai', openai:'ai', architecture:'platform', maturity:'platform', storage:'platform', devices:'platform', health:'platform', 'api-cost':'platform',
   services:'other', deployments:'other', policies:'other',
