@@ -69,11 +69,11 @@ test('start hides the credential in an HttpOnly cookie and consume is one-time',
     }), { status: 200, headers: { 'content-type': 'application/json' } });
   };
   try {
-    const env = { DB: new MemoryD1(), ALLOWED_ORIGINS: 'https://marketing.ekodi.kr,https://auth.ekodi.kr' };
+    const env = { DB: new MemoryD1(), ALLOWED_ORIGINS: 'https://ekodi.kr' };
     const start = await handleMarketingAuthHandoffRequest(new Request('https://marketing-api.ekodi.kr/api/marketing/handoff/start', {
       method: 'POST',
       headers: {
-        origin: 'https://auth.ekodi.kr',
+        origin: 'https://ekodi.kr',
         authorization: 'Bearer session-token',
         'content-type': 'application/json',
       },
