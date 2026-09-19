@@ -28,6 +28,7 @@ test('AI Commons has one canonical public path and a private runtime owner', () 
 test('production verifier follows the AI Commons public/member boundary contract', () => {
   const workflow = read('.github/workflows/verify-ai-gateway-production.yml');
   const manifest = JSON.parse(read('deploy/manifests/ai-control.worker.json'));
+  const html = read('ai-control/commons.html');
 
   assert.match(workflow, /https:\/\/ekodi\.kr\/ai\//);
   assert.match(workflow, /api\/commons\/services/);
@@ -47,4 +48,10 @@ test('production verifier follows the AI Commons public/member boundary contract
   assert.ok(rootProbe.headerExpect.includes('x-ekodi-canonical-path: /ai'));
   assert.equal(rootProbe.candidateUrl, 'https://ekodi-ai-control.topmaster-joseph.workers.dev/');
   assert.equal(requests.find(item => item.url.endsWith('/__health'))?.candidateUrl, 'https://ekodi-ai-control.topmaster-joseph.workers.dev/__health');
+  const clientVersion = html.match(/src="\.\/api\/commons\/client\?v=([^"]+)"/)?.[1];
+  const styleVersion = html.match(/href="\.\/api\/commons\/style\?v=([^"]+)"/)?.[1];
+  assert.ok(clientVersion && styleVersion);
+  assert.equal(clientVersion, styleVersion);
+  assert.equal(requests.find(item => item.url.startsWith('https://ekodi.kr/ai/api/commons/client?v='))?.url, `https://ekodi.kr/ai/api/commons/client?v=${clientVersion}`);
+  assert.equal(requests.find(item => item.url.startsWith('https://ekodi.kr/ai/api/commons/style?v='))?.url, `https://ekodi.kr/ai/api/commons/style?v=${styleVersion}`);
 });
