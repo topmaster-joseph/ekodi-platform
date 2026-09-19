@@ -31,8 +31,9 @@ import { storePortfolioAdminPage } from './store-portfolio-admin-page.js';
 import { tenantAdminCommandHomeScript, tenantAdminCommandHomeCss } from './tenant-admin-command-home.js';
 import { isLearningPath, learningPage, learningScript, learningStyles } from './learning-page.js';
 import { decorateDiscoveryResponse } from './discovery-layer.js';
-import { realtimeTenantFromPath } from './realtime-tenant-registry.js';
+import { realtimeTenantAdminFromPath, realtimeTenantFromPath } from './realtime-tenant-registry.js';
 import { tenantLivePage } from './tenant-live-page.js';
+import { tenantLiveAdminCss, tenantLiveAdminPage, tenantLiveAdminScript } from './tenant-live-admin-page.js';
 
 const PUBLIC_HOST='ekodi.kr';
 const CGMA_HOSTS=new Set(['cgma.or.kr','www.cgma.or.kr']);
@@ -232,6 +233,10 @@ export default {
     if(host===PUBLIC_HOST&&(url.pathname==='/api/finance'||url.pathname.startsWith('/api/finance/')))return routeTaxFinance(request,env,ctx);
     if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)){const adminTarget=legacyAdminAliasTarget(url.pathname);if(adminTarget){const target=new URL(request.url);target.pathname=adminTarget;return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-content-type-options':'nosniff','x-ekodi-route':'admin-canonical-handoff'}})}}
     if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)){
+      if(url.pathname==='/tenant-live-admin.css')return tenantLiveAdminCss();
+      if(url.pathname==='/tenant-live-admin.js')return tenantLiveAdminScript();
+      const liveAdminTenant=realtimeTenantAdminFromPath(url.pathname);
+      if(liveAdminTenant)return tenantLiveAdminPage(liveAdminTenant);
       const liveTenant=realtimeTenantFromPath(url.pathname);
       if(liveTenant&&!liveTenant.dedicated)return tenantLivePage(liveTenant);
     }
