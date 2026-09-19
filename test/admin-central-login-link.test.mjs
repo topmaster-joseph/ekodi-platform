@@ -45,7 +45,7 @@ test('admin auth start remains a fixed-origin allow-listed fallback', async () =
   const worker = await read('site-worker.js');
   assert.match(worker, /url\.pathname === '\/auth\/start'/);
   assert.match(worker, /return ADMIN_ALIASES\.has\(candidate\) \? candidate : '\/'/);
-  assert.match(worker, /new URL\('https:\/\/auth\.ekodi\.kr\/'\)/);
+  assert.match(worker, /new URL\('https:\/\/ekodi\.kr\/auth\/'\)/);
   assert.match(worker, /'X-EKODI-Route': 'admin-auth-start'/);
 });
 
