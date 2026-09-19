@@ -10,10 +10,10 @@ test('authenticated Admin E2E activates only the target demand menu before conte
   assert.match(source, /\[data-demand-feature\]\[data-section=/);
   assert.match(source, /await window\.EKODIAdminDemand\.activate\(section\)/);
   const loader = readFileSync(new URL('../admin-demand-loader.js', import.meta.url), 'utf8');
-  assert.match(loader, /'marketing-ai':'marketing'/);
-  assert.match(loader, /'ai-membership':'aimembers'/);
-  assert.match(loader, /const normalized=normalizeFeatureKey\(key\)/);
-  assert.ok(loader.includes('`[data-demand-feature="${normalized}"]`'));
+  assert.match(loader, /'marketing-ai': \{/);
+  assert.match(loader, /'ai-membership': \{/);
+  assert.match(loader, /button\.dataset\.lazySection = key/);
+  assert.doesNotMatch(loader, /key === 'marketing'|key === 'aimembers'/);
   assert.doesNotMatch(source, /await clickFast\(placeholder\)/);
   assert.match(source, /!target\.hasAttribute\('data-demand-feature'\)/);
   assert.ok(source.indexOf('await prepareTargetDemand();') < source.indexOf('await selectWorkArea();'));
