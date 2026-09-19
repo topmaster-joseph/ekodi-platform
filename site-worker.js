@@ -457,11 +457,17 @@ function redirectToTradeCanonical(url) {
   return secured;
 }
 
-function adminAuthRedirect() {
+function safeAdminReturnPath(value) {
+  const candidate = String(value || '/');
+  return ADMIN_ALIASES.has(candidate) ? candidate : '/';
+}
+
+function adminAuthRedirect(returnPath) {
+  const safePath = safeAdminReturnPath(returnPath);
   const target = new URL('https://ekodi.kr/auth/');
   target.searchParams.set('site', 'admin');
   target.searchParams.set('direct', '1');
-  target.searchParams.set('return_to', 'https://ekodi.kr/admin/');
+  target.searchParams.set('return_to', safePath === '/' ? 'https://ekodi.kr/admin/' : `https://ekodi.kr/admin${safePath}`);
   const response = new Response(null, {
     status: 302,
     headers: {
