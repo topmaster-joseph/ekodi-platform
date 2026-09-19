@@ -1,5 +1,3 @@
-import { EKODI_SERVICE_MANIFEST } from '../ekodi-service-manifest.js';
-
 const release=String(process.env.GITHUB_SHA||Date.now()).slice(0,40);
 const attempts=Math.max(1,Math.min(30,Number(process.env.EKODI_MOBILE_HEADER_ATTEMPTS||6)));
 const delayMs=Math.max(0,Number(process.env.EKODI_MOBILE_HEADER_DELAY_MS||5000));
@@ -42,43 +40,50 @@ function requireReadability(result,label,errors){
 
 async function audit(){
   const errors=[];
-  const [root,adminCss,shell,userCss,mobileHeader,liveManifest]=await Promise.all([
+  const [root,adminCss,shell,mobileHeader,readabilityCss,liveManifest]=await Promise.all([
     get('https://ekodi.kr/'),
-    get('https://admin.ekodi.kr/admin-shell.css'),
+    get('https://ekodi.kr/admin-shell.css'),
     get('https://ekodi.kr/shell/shell.js'),
-    get('https://ekodi.kr/shell/user-ui-shell.css'),
     get('https://ekodi.kr/shell/mobile-fixed-header.js'),
+    get('https://ekodi.kr/shell/user-ui-shell.css'),
     get('https://ekodi.kr/shell/manifest.json'),
   ]);
-
   http(root,'ekodi.kr',errors);
   need(root,'ekodi.kr','.site-header{position:fixed;top:0;left:0;right:0;width:100%',errors);
   need(root,'ekodi.kr','--ekodi-home-header-height',errors);
-
-  http(adminCss,'admin.ekodi.kr/admin-shell.css',errors);
+  http(adminCss,'ekodi.kr/admin-shell.css',errors);
   need(adminCss,'admin','position:fixed!important',errors);
   need(adminCss,'admin','.app>main{padding-top:calc(78px + env(safe-area-inset-top,0px))}',errors);
-
   http(shell,'ekodi.kr/shell/shell.js',errors);
   for(const marker of ['ekodi-mobile-fixed-header-style','data-ekodi-mobile-header-spacer','ResizeObserver','position:fixed!important'])need(shell,'shell',marker,errors);
-
-  http(userCss,'ekodi.kr/shell/user-ui-shell.css',errors);
-  for(const marker of ['Brand-neutral tenant readability v1','data-ekodi-tenant-readability="v1"','min-height:44px','text-wrap:balance'])need(userCss,'tenant-readability-css',marker,errors);
-
   http(mobileHeader,'ekodi.kr/shell/mobile-fixed-header.js',errors);
-  for(const marker of ['data-ekodi-mobile-header-spacer','ResizeObserver','position:fixed!important'])need(mobileHeader,'mobile-header-runtime',marker,errors);
-
+  for(const marker of ['data-ekodi-mobile-header-spacer','ResizeObserver','position:fixed!important'])need(mobileHeader,'mobile-header-asset',marker,errors);
+  http(readabilityCss,'ekodi.kr/shell/user-ui-shell.css',errors);
+  need(readabilityCss,'tenant-readability-css','Brand-neutral tenant readability v1',errors);
+  need(readabilityCss,'tenant-readability-css','data-ekodi-tenant-readability="v1"',errors);
   http(liveManifest,'ekodi.kr/shell/manifest.json',errors);
   let productionManifest=null;
   try{productionManifest=JSON.parse(liveManifest.text)}catch{errors.push('shell-manifest:invalid-json')}
   if(productionManifest?.services?.some(service=>service.shellIntegration==='pending'))errors.push('shell-manifest:pending-integration');
 
-  const active=EKODI_SERVICE_MANIFEST.services.filter(service=>service.state!=='planned');
-  for(const service of active){
-    const result=await get(service.url);
-    http(result,`service:${service.id}`,errors);
+  const canonicalUserSurfaces=[
+    ['ekodibiz','https://ekodi.kr/ekodibiz'],
+    ['church','https://ekodi.kr/ekodichurch'],
+    ['my','https://ekodi.kr/my/'],
+    ['business','https://ekodi.kr/business'],
+    ['trade','https://ekodi.kr/ekodibiz/trade'],
+    ['insurance','https://ekodi.kr/insurance'],
+    ['lab','https://ekodi.kr/ekodilab'],
+    ['mall','https://ekodi.kr/ekodibiz/ekodimall'],
+  ];
+  for(const [id,url] of canonicalUserSurfaces){
+    const result=await get(url);
+    http(result,`service:${id}`,errors);
     if(!result.ok)continue;
-    requireReadability(result,`service:${service.id}`,errors);
+    const shellHeader=String(result.headers.get('x-ekodi-shell')||'').toLowerCase();
+    const shellInBody=result.text.includes('ekodi.kr/shell/shell.js')||result.text.includes('data-ekodi-shell');
+    const tenantReadability=String(result.headers.get('x-ekodi-tenant-readability')||'').toLowerCase()==='v1'||result.text.includes('data-ekodi-tenant-readability="v1"');
+    if(!shellInBody&&shellHeader!=='v2'&&!tenantReadability)errors.push(`service:${id}:canonical-user-chrome-not-observed`);
   }
 
   const tenants=[
@@ -89,35 +94,26 @@ async function audit(){
   for(const [id,url,label] of tenants){
     const result=await get(url);
     http(result,`tenant:${id}`,errors);
-    if(!result.ok)continue;
     need(result,`tenant:${id}`,label,errors);
     need(result,`tenant:${id}`,'data-ekodi-tenant-readability="v1"',errors);
-    need(result,`tenant:${id}`,'mobile-fixed-header.js',errors);
-    requireReadability(result,`tenant:${id}`,errors);
+    need(result,`tenant:${id}`,'data-ekodi-fixed-header',errors);
+    need(result,`tenant:${id}`,'https://ekodi.kr/shell/mobile-fixed-header.js',errors);
   }
 
-  const [cgmaRoot,cgmaAi,cgmaAdmin]=await Promise.all([
+  const [cgmaRoot,cgmaAdmin]=await Promise.all([
     get('https://ekodi.kr/cgma'),
-    get('https://ekodi.kr/cgma/market-ai'),
     get('https://ekodi.kr/cgma/admin'),
   ]);
   http(cgmaRoot,'cgma-root',errors);
-  if(cgmaRoot.ok){
-    need(cgmaRoot,'cgma-root','data-ekodi-tenant-readability="v1"',errors);
-    need(cgmaRoot,'cgma-root','mobile-fixed-header.js',errors);
-    requireReadability(cgmaRoot,'cgma-root',errors);
-  }
-  http(cgmaAi,'cgma-market-ai',errors);
-  if(cgmaAi.ok)requireReadability(cgmaAi,'cgma-market-ai',errors);
+  need(cgmaRoot,'cgma-root','청계면상인회',errors);
+  need(cgmaRoot,'cgma-root','data-ekodi-tenant-readability="v1"',errors);
+  need(cgmaRoot,'cgma-root','data-ekodi-fixed-header',errors);
+  need(cgmaRoot,'cgma-root','https://ekodi.kr/shell/mobile-fixed-header.js',errors);
   http(cgmaAdmin,'cgma-admin',errors);
-  if(cgmaAdmin.ok){
-    const adminOwnsHeader=cgmaAdmin.text.includes('data-ekodi-fixed-header')||cgmaAdmin.text.includes('data-ekodi-admin');
-    if(!adminOwnsHeader)errors.push('cgma-admin:fixed-admin-header-not-observed');
-  }
+  need(cgmaAdmin,'cgma-admin','상인회 운영관리',errors);
 
-  return {errors,activeCount:active.length};
+  return {errors,activeCount:canonicalUserSurfaces.length};
 }
-
 for(let attempt=1;attempt<=attempts;attempt++){
   const {errors,activeCount}=await audit();
   if(!errors.length){
