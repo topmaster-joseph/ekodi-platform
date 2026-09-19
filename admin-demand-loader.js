@@ -53,7 +53,7 @@
       insert: 'after-aiops',
     },
     'api-cost':{label:'API Cost',icon:'₩',styles:['api-cost-admin.css'],scripts:['api-cost-admin.js'],real:'[data-section="api-cost"]',hashes:['#api-cost'],insert:'after-health'},
-    storage:{label:'Storage',icon:'▣',styles:['storage-admin.css'],scripts:['storage-admin.js'],real:'[data-section="storage"]',hashes:['#storage'],insert:'after-health'},
+    storage:{label:'Storage',icon:'▣',styles:['storage-admin.css'],scripts:['storage-admin.js'],real:'[data-section="storage"]',hashes:['#storage'],paths:['/admin/system/storage'],insert:'after-health'},
     security:{label:'Security',icon:'◆',styles:['admin-secret-generator.css'],scripts:['admin-secret-generator.js'],real:'[data-section="security"]',hashes:['#security'],insert:'after-health'},
     deployments:{label:'Deployments',icon:'↑',styles:['release-control-admin.css'],scripts:['release-control-admin.js'],real:'[data-section="deployments"]',hashes:['#deployments','#release'],insert:'after-security'},
     work: {
@@ -314,14 +314,10 @@
     return true;
   }
 
-  function requestedFeature() {
-    const hash = location.hash.toLowerCase();
-    const path = location.pathname.toLowerCase();
-    return Object.entries(FEATURES).find(([, feature]) => feature.hashes?.includes(hash) || feature.paths?.includes(path))?.[0] || '';
-  }
+  function requestedFeature(){const hash=location.hash.toLowerCase(),path=location.pathname.toLowerCase();return Object.entries(FEATURES).find(([,feature])=>feature.hashes?.includes(hash)||feature.paths?.includes(path))?.[0]||''}
 
-  function install() {
-    if (!authenticated() || !nav) return;
+  function install(){
+    if(!authenticated()||!nav)return;
     let changed = false;
     Object.entries(FEATURES).forEach(([key, feature]) => { if (placeholder(key, feature)) changed = true; });
     if (bindBaseEnhancements()) changed = true;
