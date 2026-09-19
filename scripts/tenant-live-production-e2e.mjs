@@ -77,7 +77,7 @@ try{
     await host.waitForFunction(()=>{
       const button=document.querySelector('#goLiveButton');
       const status=document.querySelector('#statusLog')?.textContent||'';
-      return button&&!button.disabled&&status.includes('미디어 연결이 완료되었습니다');
+      return button&&!button.disabled&&status.includes('준비 완료');
     },{timeout:30000});
   }catch(error){
     report.hostStatus=await text(host,'#statusLog');
@@ -86,16 +86,18 @@ try{
   report.hostReady=true;
   report.hostStatus=await text(host,'#statusLog');
 
+  await host.locator('#goLiveButton').click();
+  await host.waitForFunction(()=>{
+    const badge=document.querySelector('#programBadge')?.textContent||'';
+    const status=document.querySelector('#statusLog')?.textContent||'';
+    const link=document.querySelector('#shareLink')?.value||'';
+    return badge==='LIVE'&&status.includes('방송')&&link.includes('room=');
+  },{timeout:30000});
+
   const shareLink=await host.locator('#shareLink').inputValue();
   const roomId=new URL(shareLink).searchParams.get('room');
   assert.ok(roomId,'room_id_missing');
   report.roomId=roomId;
-
-  await host.locator('#goLiveButton').click();
-  await host.waitForFunction(()=>{
-    const status=document.querySelector('#statusLog')?.textContent||'';
-    return status.includes('방송 중입니다.')&&document.querySelector('#programBadge')?.textContent==='LIVE';
-  },{timeout:30000});
 
   const live=await publicLive();
   assert.equal(live.live,true);
@@ -118,7 +120,7 @@ try{
   assert.equal(report.pageErrors.length,0,'browser_page_errors');
 
   await host.locator('#endLiveButton').click();
-  await host.waitForFunction(()=>document.querySelector('#statusLog')?.textContent?.includes('방송이 종료되었습니다.'),{timeout:15000});
+  await host.waitForFunction(()=>document.querySelector('#programBadge')?.textContent==='종료',{timeout:30000});
   const ended=await publicLive();
   assert.equal(ended.live,false);
   report.ended=true;
