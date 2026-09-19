@@ -1,0 +1,145 @@
+{
+  "schemaVersion": 1,
+  "contractId": "ekodi.evolution-kernel.v1",
+  "status": "enforced",
+  "effectiveDate": "2026-09-19",
+  "currentGeneration": 10,
+  "purpose": "Keep EKODI independent from transient organizations, services, technologies, AI providers, domains and vendors while preserving human sovereignty and evidence-gated evolution.",
+  "invariants": {
+    "permanentCore": "Evolution Kernel",
+    "transientResources": [
+      "organization",
+      "service",
+      "site",
+      "ai",
+      "provider",
+      "database",
+      "framework",
+      "cloud",
+      "domain"
+    ],
+    "connectByCapabilityNotProductName": true,
+    "providerNeutralContractsRequired": true,
+    "directProviderBindingForbiddenWhereCapabilityContractExists": true,
+    "automaticProductionAdmissionForbidden": true,
+    "independentVerifierRequiredForCompletion": true,
+    "humanFinalAuthorityPreserved": true
+  },
+  "kernelAreas": [
+    "Constitution & Policy",
+    "Universal Meta Model",
+    "Identity & Permission",
+    "Capability & Service Registry",
+    "Knowledge & Source Registry",
+    "AI/Tool Adapter & Dynamic Router",
+    "Planning & Execution",
+    "Verification & Recovery",
+    "Observability & Audit",
+    "Evolution & Lifecycle"
+  ],
+  "adoptionLifecycle": [
+    "Discover",
+    "Evaluate",
+    "Sandbox",
+    "Benchmark",
+    "Security/Cost/Performance Verification",
+    "Canary",
+    "Monitoring",
+    "Progressive Rollout",
+    "Production Verification",
+    "New Baseline"
+  ],
+  "retirementLifecycle": [
+    "Dependency Check",
+    "Migration",
+    "Regression Test",
+    "Archive",
+    "Deprecation",
+    "Removal"
+  ],
+  "closedLoop": [
+    "Detect",
+    "Understand",
+    "Decide",
+    "Plan",
+    "Act",
+    "Observe",
+    "Verify",
+    "Recover",
+    "Learn",
+    "Evolve"
+  ],
+  "resourceMetadata": {
+    "appliesTo": [
+      "code",
+      "model",
+      "data",
+      "knowledge",
+      "workflow",
+      "policy"
+    ],
+    "requiredResolvedFields": [
+      "source",
+      "version",
+      "owner",
+      "dependencies",
+      "effectiveDate",
+      "verificationState",
+      "lifecycleState"
+    ],
+    "resolutionPrecedence": [
+      "explicit_resource",
+      "resource_group",
+      "source_control_derived"
+    ],
+    "sourceControlDerivedFields": {
+      "source": "canonical_repository_path",
+      "version": "git_commit_sha",
+      "effectiveDate": "git_commit_time"
+    }
+  },
+  "verification": {
+    "completionRequires": [
+      "objective_result_evidence",
+      "runtime_or_operational_state_when_applicable",
+      "security_and_permission_integrity",
+      "performance_and_cost_check_when_applicable",
+      "regression_check",
+      "rollback_readiness",
+      "independent_verifier_result"
+    ],
+    "authorExecutionIsNotSuccessEvidence": true,
+    "prBuildMergeDeploymentAreNotCompletionByThemselves": true
+  },
+  "promotion": {
+    "newBaselineRequires": [
+      "sandbox_or_equivalent_safe_evaluation",
+      "benchmark_evidence",
+      "security_cost_performance_verification",
+      "guarded_rollout",
+      "production_verification",
+      "learning_record"
+    ],
+    "automaticGenerationPromotion": false,
+    "finalAuthority": "EKODI Platform Super Administrator"
+  },
+  "boundaries": {
+    "constitutionalAuthorityExpansionForbidden": true,
+    "legalFinancialHighImpactHumanGate": true,
+    "identityPermissionHighImpactHumanGate": true,
+    "destructiveIrreversibleHumanGate": true,
+    "unsafeSecurityBypassForbidden": true
+  },
+  "references": {
+    "constitution": "governance/constitution/constitution.json",
+    "universalMetaModel": "governance/architecture/universal-meta-model.v1.json",
+    "capabilityRegistry": "config/capability-registry.json",
+    "knowledgeSourceRegistry": "config/knowledge-source-registry.json",
+    "resourceRegistry": "config/evolution-resource-registry.json",
+    "capabilityProviderContract": "governance/architecture/capability-provider-contract.v1.json",
+    "evolutionModel": "governance/architecture/ekodi-evolution-model.json",
+    "orchestrationPolicy": "config/ai-change-orchestration-policy.json",
+    "evolutionLoop": "ekodi-autonomous-evolution-loop.js",
+    "lifecycleStore": "autonomous-evolution-store.js"
+  }
+}
