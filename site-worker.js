@@ -227,19 +227,6 @@ const ADMIN_CSP = [
   "object-src 'none'",
 ].join('; ');
 
-const AUTH_CSP = [
-  "default-src 'self'",
-  "style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style",
-  "script-src 'self' https://cdn.jsdelivr.net https://esm.sh https://accounts.google.com/gsi/client https://js.tosspayments.com",
-  "connect-src 'self' https://api.ekodi.kr https://renzehysxirjilvdxacv.supabase.co https://cdn.jsdelivr.net https://esm.sh https://accounts.google.com/gsi/ https://*.tosspayments.com",
-  "frame-src https://accounts.google.com/gsi/ https://accounts.google.com/ https://*.tosspayments.com",
-  "img-src 'self' data: https://lh3.googleusercontent.com https://*.tosspayments.com",
-  "frame-ancestors 'none'",
-  "base-uri 'self'",
-  "form-action 'self' https://renzehysxirjilvdxacv.supabase.co https://*.tosspayments.com",
-  "object-src 'none'",
-].join('; ');
-
 const HUB_CSP = [
   "default-src 'none'",
   "style-src 'unsafe-inline'",
@@ -470,13 +457,7 @@ function redirectToTradeCanonical(url) {
   return secured;
 }
 
-function safeAdminReturnPath(value) {
-  const candidate = String(value || '/');
-  return ADMIN_ALIASES.has(candidate) ? candidate : '/';
-}
-
-function adminAuthRedirect(returnPath) {
-  safeAdminReturnPath(returnPath);
+function adminAuthRedirect() {
   const target = new URL('https://ekodi.kr/auth/');
   target.searchParams.set('site', 'admin');
   target.searchParams.set('direct', '1');
