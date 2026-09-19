@@ -32,7 +32,7 @@ test('admin shell is separate from user shell and removes the left brand header'
 
   assert.match(adminRuntime,/function removeLocaleControl\\(\\)/);
   assert.doesNotMatch(adminRuntime,/function installLocaleControl\\(\\)/);
-  assert.doesNotMatch(adminRuntime,/<option value="ko">한국어<\\/option><option value="en">English<\\/option>/);
+  assert.equal(adminRuntime.includes('<option value="ko">한국어</option><option value="en">English</option>'),false);
 
   assert.match(userHeader,/USER_SURFACES=new Set\(\['public','workspace'\]\)/);
   assert.doesNotMatch(userHeader,/USER_SURFACES=new Set\([^)]*'admin'/);
