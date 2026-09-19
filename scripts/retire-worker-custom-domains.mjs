@@ -44,9 +44,10 @@ async function attach(domain){
   await cf("/accounts/"+account+"/workers/domains",{method:"PUT",body:JSON.stringify(body)});
 }
 async function legacyGone(host){
-  for(let attempt=1;attempt<=18;attempt++){
-    try{const response=await fetch("https://"+host+"/",{redirect:"manual",signal:AbortSignal.timeout(10000)});if(response.status<200||response.status>=400)return true}catch{return true}
-    await new Promise(r=>setTimeout(r,3500));
+  for(let attempt=1;attempt<=60;attempt++){
+    try{const response=await fetch("https://"+host+"/",{redirect:"manual",headers:{"cache-control":"no-cache","pragma":"no-cache"},signal:AbortSignal.timeout(10000)});if(response.status<200||response.status>=400)return true}catch{return true}
+    if(attempt%12===0)console.log("Waiting for Worker-domain edge propagation: "+host+" ("+attempt+"/60)");
+    await new Promise(r=>setTimeout(r,5000));
   }
   return false;
 }
