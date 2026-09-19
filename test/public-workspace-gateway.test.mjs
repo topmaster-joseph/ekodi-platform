@@ -70,6 +70,13 @@ test('canonical public workspace paths use the isolated Space service binding',a
   assert.ok(stageWorkflow.includes("verify_public_path '/ekodibiz/invest/admin'"));
   for(const retiredKind of ['personal','o'+'rg','group','project']) assert.ok(!wrangler.includes(`\"/${retiredKind}/*\"`),retiredKind);
 });
+test('customer storefront and independent workspace responses receive readability only, not member chrome',async()=>{
+  const router=await read('platform-router-entry-worker.js');
+  assert.match(router,/space-storefront'[\s\S]*customer-storefront'[\s\S]*injectEkodiTenantReadability/);
+  assert.match(router,/x-ekodi-independent-site'[\s\S]*independent-workspace-site'[\s\S]*injectEkodiTenantReadability/);
+  assert.doesNotMatch(router,/space-storefront'[\s\S]{0,300}injectEkodiShell/);
+});
+
 test('workspace shell assets and auth handoff stay inside the apex gateway',async()=>{
   const [router,jadam]=await Promise.all([
     read('platform-router-entry-worker.js'),
