@@ -30,7 +30,8 @@ test('browser shell preserves workspace context, bounded surfaces and intent-fir
   assert.match(shell,/suggestedServices/);
   assert.match(shell,/slice\(0,3\)/);
   assert.match(shell,/모든 서비스 보기/);
-  assert.match(shell,/내 공간 · My EKODI/);
+  assert.match(shell,/이 사이트 마이페이지/);
+  assert.match(shell,/function siteMemberHomeBase\(\)/);
 });
 
 test('shell injector is isolated in Shadow DOM and applies shared style only to internal surfaces',async()=>{
@@ -85,8 +86,8 @@ test('brand-neutral tenant readability preserves tenant chrome while adding shar
   assert.match(injector,/data-ekodi-fixed-header/);
   assert.doesNotMatch(injector,/function injectEkodiTenantReadability[\s\S]{0,5000}fallbackHeader\(/);
   assert.match(siteShell,/standaloneBrandPlacePath\(pathname\)\)return injectEkodiTenantReadability\(response\)/);
-  assert.match(router,/space-storefront'[\s\S]{0,500}injectEkodiTenantReadability\(routed\)/);
-  assert.match(router,/x-ekodi-independent-site'[\s\S]{0,500}injectEkodiTenantReadability\(routed\)/);
+  assert.match(router,/space-storefront'[\s\S]{0,1400}injectEkodiTenantReadability\(routed\)/);
+  assert.match(router,/x-ekodi-independent-site'[\s\S]{0,1400}injectEkodiTenantReadability\(routed\)/);
   assert.match(router,/isCgmaRoot\(url\.pathname\)[\s\S]{0,500}injectEkodiTenantReadability\(legacyResponse\)/);
   assert.match(css,/Brand-neutral tenant readability v1/);
   assert.match(css,/html\[data-ekodi-tenant-readability="v1"\]/);

@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "policyId": "site-local-member-home-v1",
+  "principle": "로그인 후 기본 목적지는 플랫폼 공용 My EKODI가 아니라 사용자가 진입한 사이트 또는 운영공간의 마이페이지다. 개인·기관·단체·점포의 기반공간은 생성 즉시 준비하되 Capability/Service 목록을 복제 저장하지 않고 최신 Registry와 Workspace Pack을 실시간 투영한다.",
+  "canonical": {
+    "globalPersonalHome": "https://ekodi.kr/my/",
+    "serviceMemberHome": "https://ekodi.kr/{canonical-service-path}/my",
+    "serviceAliasMemberHome": "https://ekodi.kr/{service-id}/my",
+    "workspaceMemberHome": "https://ekodi.kr/{slug}/my",
+    "loginReturnPolicy": "site-local-member-home",
+    "subdomainMemberHomes": "non-canonical"
+  },
+  "foundation": {
+    "materialization": "eager-profile-live-registry-projection",
+    "capabilitySource": "config/capability-registry.json",
+    "packSource": "config/workspace-packs.json",
+    "serviceSource": "config/ecosystem-services.json",
+    "copyCapabilityListsIntoUserRows": false,
+    "futureRegistryChangesApplyAutomatically": true,
+    "layers": {
+      "core": [
+        "core.navigator",
+        "core.project",
+        "core.documents",
+        "core.communication",
+        "core.analytics"
+      ],
+      "common": [
+        "core.automation",
+        "support.benefit-radar"
+      ],
+      "specialist": "audience-compatible-workspace-packs"
+    }
+  },
+  "audiencePacks": {
+    "person": ["personal-starter","creator","learning-research","work-career","ministry-community","insurance-care","energy-care"],
+    "business": ["small-business","trade-commerce","insurance-operations","insurance-care","energy-care"],
+    "organization": ["organization","learning-research","ministry-community","trade-commerce","insurance-operations","energy-care"],
+    "church": ["organization","ministry-community","learning-research"],
+    "community": ["organization","ministry-community","learning-research"],
+    "team": ["organization","creator","learning-research"],
+    "project": ["organization","creator","learning-research"]
+  },
+  "customization": {
+    "scope": "subject-plus-site",
+    "presentationOnly": true,
+    "doesNotGrantAuthorization": true,
+    "preferences": ["pinnedServices","hiddenServices","serviceOrder","density"],
+    "storage": "site_member_home_preferences"
+  },
+  "privacy": {
+    "privateByDefault": true,
+    "crossWorkspacePrivateDataSharing": false,
+    "publicIndexing": false
+  }
+}

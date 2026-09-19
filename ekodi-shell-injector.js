@@ -67,6 +67,17 @@ function userSurfaceForService(serviceId){return USER_SURFACES.has(defaultSurfac
 function readyLocalesForService(serviceId){return publishedLocalesForService(cleanServiceId(serviceId)).join(' ');}
 function serviceLabel(serviceId){const service=serviceForId(serviceId);return service?.shortName||service?.name||(serviceId==='ekodi'?'EKODI':'');}
 function serviceHomeHref(serviceId){return serviceForId(cleanServiceId(serviceId))?.url||'https://ekodi.kr/';}
+function serviceMemberHomeHref(serviceId){
+  const id=cleanServiceId(serviceId);
+  if(!id||id==='my'||id==='ekodi')return 'https://ekodi.kr/my/';
+  const home=serviceHomeHref(id);
+  try{
+    const url=new URL(home);
+    const path=('/'+url.pathname.replace(/^\/+|\/+$/g,'')).replace(/\/$/,'')||'/';
+    if(url.hostname==='ekodi.kr'&&path!=='/')return `https://ekodi.kr${path}/my`;
+  }catch{}
+  return `https://ekodi.kr/${encodeURIComponent(id)}/my`;
+}
 function userChromeAlreadyInjected(headers){return String(headers?.get?.(USER_CHROME_HEADER)||'').trim()===USER_UI_VERSION;}
 function uiSurfaceFor(serviceId,surface,authorityScope='',contextKind=''){return resolveEkodiUiSurface({serviceId,shellSurface:surface,authorityScope,contextKind});}
 function surfaceBootStyle(surface){
@@ -79,14 +90,16 @@ function fallbackHeader(serviceId){
   const home=escapeHtml(serviceHomeHref(service));
   const brand=service==='ekodi'?'EKODI':label;
   const context=service==='ekodi'?'<span class="ekodi-user-ui-fallback-header__context" aria-hidden="true"></span>':'<span class="ekodi-user-ui-fallback-header__context" data-ekodi-platform-relation="secondary" aria-hidden="true"></span>';
-  return `<header class="ekodi-user-ui-fallback-header" data-ekodi-user-header-root="${USER_UI_VERSION}" data-ekodi-user-header-fallback="${USER_UI_VERSION}" role="banner"><div class="ekodi-user-ui-fallback-header__inner"><a class="ekodi-user-ui-fallback-header__brand" data-ekodi-header-home href="${home}" aria-label="${brand} 홈">${brand}</a>${context}<nav class="ekodi-user-ui-fallback-header__nav" aria-label="사용자 계정"><a href="https://ekodi.kr/my/">My EKODI</a></nav></div></header>`;
+  const memberHome=escapeHtml(serviceMemberHomeHref(service));
+  return `<header class="ekodi-user-ui-fallback-header" data-ekodi-user-header-root="${USER_UI_VERSION}" data-ekodi-user-header-fallback="${USER_UI_VERSION}" role="banner"><div class="ekodi-user-ui-fallback-header__inner"><a class="ekodi-user-ui-fallback-header__brand" data-ekodi-header-home href="${home}" aria-label="${brand} 홈">${brand}</a>${context}<nav class="ekodi-user-ui-fallback-header__nav" aria-label="사용자 계정"><a data-ekodi-site-member-home href="${memberHome}">마이페이지</a></nav></div></header>`;
 }
 
 class ShellHtmlInjector{
-  constructor(serviceId,uiSurface){this.serviceId=serviceId;this.uiSurface=uiSurface;}
+  constructor(serviceId,uiSurface,memberHomeUrl=''){this.serviceId=serviceId;this.uiSurface=uiSurface;this.memberHomeUrl=memberHomeUrl;}
   element(element){
     if(!isMyEkodi(this.serviceId))element.setAttribute('data-ekodi-global-nav','off');
     if(this.uiSurface)element.setAttribute('data-ekodi-ui-surface',this.uiSurface);
+    if(this.memberHomeUrl)element.setAttribute('data-ekodi-member-home',this.memberHomeUrl);
   }
 }
 
@@ -154,7 +167,8 @@ class UserChromeInjector{
 
 
 class TenantReadabilityHtmlInjector{
-  element(element){element.setAttribute('data-ekodi-tenant-readability',TENANT_READABILITY_VERSION);}
+  constructor(memberHomeUrl=''){this.memberHomeUrl=memberHomeUrl;}
+  element(element){element.setAttribute('data-ekodi-tenant-readability',TENANT_READABILITY_VERSION);if(this.memberHomeUrl)element.setAttribute('data-ekodi-member-home',this.memberHomeUrl);}
 }
 class TenantReadabilityHeadInjector{
   element(element){element.append(`<link rel="stylesheet" href="${SHELL_TENANT_READABILITY_STYLE}" data-ekodi-tenant-readability-style="${TENANT_READABILITY_VERSION}"><script src="${SHELL_MOBILE_HEADER_SCRIPT}" defer data-ekodi-tenant-mobile-header="${TENANT_READABILITY_VERSION}"></script>`,{html:true});}
@@ -169,7 +183,7 @@ class TenantReadabilityHeaderAdopter{
   }
 }
 
-export function injectEkodiTenantReadability(response){
+export function injectEkodiTenantReadability(response,options={}){
   if(!response)return response;
   const contentType=String(response.headers.get('content-type')||'').toLowerCase();
   if(!contentType.includes('text/html'))return response;
@@ -183,9 +197,10 @@ export function injectEkodiTenantReadability(response){
     headers.set('content-security-policy',next);
   }
   headers.set(TENANT_READABILITY_HEADER,TENANT_READABILITY_VERSION);
+  const memberHomeUrl=String(options?.memberHomeUrl||response.headers.get('x-ekodi-member-home')||'');
   const headerAdopter=new TenantReadabilityHeaderAdopter();
   return new HTMLRewriter()
-    .on('html',new TenantReadabilityHtmlInjector())
+    .on('html',new TenantReadabilityHtmlInjector(memberHomeUrl))
     .on('head',new TenantReadabilityHeadInjector())
     .on('header',headerAdopter)
     .on('.site-header',headerAdopter)
@@ -267,6 +282,7 @@ export function injectEkodiShell(response,serviceId,surface='',options={}){
   const memberGate=options?.memberGate==='service-owned'?'service-owned':'shared';
   const authorityScope=String(response.headers.get('x-ekodi-authority-scope')||options?.authorityScope||'');
   const uiSurface=uiSurfaceFor(serviceId,resolved,authorityScope,options?.contextKind||'');
+  const memberHomeUrl=String(options?.memberHomeUrl||serviceMemberHomeHref(serviceId));
   const headers=new Headers(response.headers);
   headers.set('content-security-policy',shellCsp(headers.get('content-security-policy')));
   headers.set('x-ekodi-shell','v2');
@@ -274,7 +290,7 @@ export function injectEkodiShell(response,serviceId,surface='',options={}){
   headers.set('x-ekodi-ui-surface',uiSurface);
   headers.set('x-ekodi-user-shortcuts',isMyEkodi(serviceId)?'my-only':'hidden');
   const transformed=new HTMLRewriter()
-    .on('html',new ShellHtmlInjector(serviceId,uiSurface))
+    .on('html',new ShellHtmlInjector(serviceId,uiSurface,memberHomeUrl))
     .on('head',new ShellHeadInjector(serviceId,resolved,memberGate))
     .transform(new Response(response.body,{status:response.status,statusText:response.statusText,headers}));
   return injectEkodiUserUi(transformed,serviceId,resolved,{...options,uiSurface,authorityScope});

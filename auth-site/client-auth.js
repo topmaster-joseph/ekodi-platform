@@ -110,7 +110,7 @@ let lastHandoffError=null;
 
 $('serviceName').textContent=config.name;
 $('serviceBadge').textContent='EKODI';
-$('signedOutCopy').textContent=commonServiceEntry?`${config.name}의 실제 기능은 Google 로그인한 무료회원 이상에게 제공됩니다. 로그인 후 일반회원은 My EKODI에서 내 공간과 서비스를 이어서 이용합니다.`:'EKODI에서 Google 본인확인을 한 번 마치면 다른 EKODI 서비스에서도 같은 로그인 상태를 사용합니다.';
+$('signedOutCopy').textContent=commonServiceEntry?`${config.name}의 실제 기능은 Google 로그인한 무료회원 이상에게 제공됩니다. 로그인 후에는 현재 사이트의 마이페이지에서 내 공간과 서비스를 이어서 이용합니다.`:'EKODI에서 Google 본인확인을 한 번 마치면 다른 EKODI 서비스에서도 같은 로그인 상태를 사용합니다.';
 show('signedOut',true);show('signedIn',false);show('reviewConsole',false);show('membershipPanel',false);show('identityPanel',false);show('workspacePanel',false);show('requestActions',false);show('freeActions',false);show('approvedActions',false);
 
 async function session(){
@@ -147,16 +147,30 @@ function loadGoogleLibrary(){
     script.addEventListener('load',resolve,{once:true});script.addEventListener('error',()=>reject(new Error('google_library_failed')),{once:true});document.head.append(script);
   }),7000,'google_library_timeout');
 }
-function myEntryTarget(){
-  const target=new URL('https://ekodi.kr/my/');
-  if(site&&site!=='portal'&&site!=='my')target.searchParams.set('from',site);
-  if(site&&site!=='portal'&&site!=='my')target.searchParams.set('return_to',RETURN_TO);
-  if(REQUESTED_WORKSPACE)target.searchParams.set('workspace',REQUESTED_WORKSPACE);
-  return target;
+const siteMemberAlias=Object.freeze({
+  'cgma-client':'cgma',
+  'jadam-client':'jadam',
+  'pizzamaru-client':'pizzamaru',
+  'yogurt-client':'yogurt'
+});
+function siteMemberHomeTarget(){
+  if(site==='portal'||site==='my'||params.get('manage')==='1'||params.get('review')==='1')return new URL(RETURN_TO);
+  try{
+    const requested=new URL(RETURN_TO);
+    if(requested.origin==='https://ekodi.kr'&&/\/my\/?$/i.test(requested.pathname))return requested;
+  }catch{}
+  const alias=siteMemberAlias[site]||site;
+  let canonicalPath='';
+  try{
+    const source=new URL(manifestConfig?.returnTo||config.returnTo);
+    if(source.hostname==='ekodi.kr')canonicalPath=('/'+source.pathname.replace(/^\/+|\/+$/g,'')).replace(/\/$/,'');
+  }catch{}
+  if(!canonicalPath||canonicalPath==='/')canonicalPath=`/${encodeURIComponent(alias)}`;
+  return new URL(`https://ekodi.kr${canonicalPath}/my`);
 }
 function routeTarget(proof){
   if(!proof?.tokenHash)throw new Error('identity_handoff_missing');
-  const target=commonServiceEntry&&proof.platformAdmin!==true?myEntryTarget():new URL(RETURN_TO);
+  const target=siteMemberHomeTarget();
   target.hash=new URLSearchParams({ekodi_token:proof.tokenHash,ekodi_type:proof.type||'email'}).toString();
   location.assign(target.href);
 }

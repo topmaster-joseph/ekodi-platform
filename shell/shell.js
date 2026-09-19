@@ -217,7 +217,19 @@ function mergeContext(next={}){
 }
 function setSurface(next){surface=normalizeSurface(next);applyHostTokens();render();reconcileMemberGate();return resolvedTheme();}
 function currentReturn(){const u=new URL(location.href);u.hash='';return u.href;}
-function myUrl(){const u=new URL(MY);u.searchParams.set('return_to',currentReturn());return u.href;}
+function siteMemberHomeBase(){
+  const declared=String(document.documentElement.dataset.ekodiMemberHome||'').trim();
+  if(declared){try{return new URL(declared,location.href).href}catch{}}
+  const id=String(service?.id||explicitService||'').trim().toLowerCase();
+  if(!id||id==='my'||id==='ekodi')return MY;
+  try{
+    const home=new URL(service?.url||'');
+    const path=('/'+home.pathname.replace(/^\/+|\/+$/g,'')).replace(/\/$/,'')||'/';
+    if(home.hostname==='ekodi.kr'&&path!=='/')return `https://ekodi.kr${path}/my`;
+  }catch{}
+  return `https://ekodi.kr/${encodeURIComponent(id)}/my`;
+}
+function myUrl(){const u=new URL(siteMemberHomeBase());if(u.href!==MY)u.searchParams.set('return_to',currentReturn());return u.href;}
 
 function memberPolicy(){return service?.userAccessPolicy||null;}
 function guestPublicException(){const p=location.pathname.toLowerCase();return p==='/health'||p.startsWith('/health/')||p.startsWith('/api/')||p.includes('callback')||/(?:^|\/)(?:privacy|terms|legal|policy)(?:[.\/-]|$)/.test(p);}
@@ -226,7 +238,7 @@ function handoffPending(){try{return new URLSearchParams(location.hash.startsWit
 function localMemberSession(){
   try{for(let i=0;i<localStorage.length;i++){const key=localStorage.key(i)||'';if(!/^sb-[a-z0-9]+-auth-token(?:\.\d+)?$/i.test(key))continue;let parsed;try{parsed=JSON.parse(localStorage.getItem(key)||'null');}catch{continue;}const s=parsed?.currentSession||parsed?.session||parsed;const token=String(s?.access_token||'');const user=s?.user;const exp=Number(s?.expires_at||0);if(token&&user?.id&&(!exp||exp*1000>Date.now()-60000))return true;}}catch{}return false;
 }
-function memberLoginUrl(){const u=new URL(AUTH);u.searchParams.set('site',service?.id||explicitService||'portal');u.searchParams.set('return_to',currentReturn());return u.href;}
+function memberLoginUrl(){const u=new URL(AUTH);u.searchParams.set('site',service?.id||explicitService||'portal');u.searchParams.set('return_to',siteMemberHomeBase());return u.href;}
 function workspaceUiAvailable(){return localMemberSession()&&!handoffPending();}
 function syncWorkspaceUiVisibility(){
   const available=workspaceUiAvailable();
@@ -333,7 +345,7 @@ function buildUi(){
   const labels=el('span',undefined,'labels');const space=el('span','공간 선택','space');space.dataset.space='1';const sub=el('span',undefined,'sub');const person=el('span','',undefined);person.dataset.person='1';const role=el('span',service.shortName||service.name);role.dataset.role='1';sub.append(person,role);labels.append(space,sub);button.append(labels,el('span','▾','chev'));
   panel=el('div',undefined,'panel');panel.hidden=true;
   const head=el('div',undefined,'head');const contextHint=el('small','EKODI · 필요한 일 → 추천 → 선택');contextHint.dataset.contextHint='1';head.append(el('strong',service.name),contextHint);panel.append(head);
-  const switcher=el('button',undefined,'action');switcher.type='button';switcher.append(el('span','내 공간 · My EKODI'),el('span','→'));switcher.addEventListener('click',()=>location.assign(myUrl()));panel.append(switcher);
+  const switcher=el('button',undefined,'action');switcher.type='button';switcher.append(el('span','이 사이트 마이페이지'),el('span','→'));switcher.addEventListener('click',()=>location.assign(myUrl()));panel.append(switcher);
   const prompt=el('small','원하는 일을 고르거나 적어보세요');prompt.style.cssText='display:block;margin:10px 7px 3px;color:#9fb1c3;font-size:9px';panel.append(prompt);
   const quick=el('div',undefined,'services');
   for(const intent of INTENT_PRESETS){const row=el('button',undefined,'service');row.type='button';row.append(el('b',intent.label),el('small','추천 3개'));row.addEventListener('click',()=>{input.value=intent.label;renderSuggestionRows(suggestions,intent.query,intent.preferred);});quick.append(row);}panel.append(quick);
@@ -344,7 +356,7 @@ function buildUi(){
   form.addEventListener('submit',event=>{event.preventDefault();const query=input.value.trim();if(!query){input.focus();return;}renderSuggestionRows(suggestions,query);});
   const catalog=document.createElement('details');catalog.style.cssText='margin-top:8px;padding-top:8px;border-top:1px solid #18344d';const summary=document.createElement('summary');summary.textContent='모든 서비스 보기';summary.style.cssText='cursor:pointer;padding:6px 7px;color:#9fb1c3;font-size:9px;font-weight:800';catalog.append(summary);
   const allServices=el('div',undefined,'services');for(const item of (manifest.services||[]).filter(s=>s.state!=='planned'&&s.id!=='my'&&!s.selectorHidden).sort((a,b)=>(a.order||999)-(b.order||999))){const row=el('button',undefined,`service${item.id===service.id?' current':''}`);row.type='button';const left=el('span');left.append(el('b',item.shortName||item.name));const hint=el('small',item.id===service.id?'현재 서비스':(item.capabilities||[]).slice(0,2).map(value=>CAPABILITY_LABELS[value]||value).join(' · '));row.append(left,hint);row.addEventListener('click',()=>navigate(item));allServices.append(row);}catalog.append(allServices);panel.append(catalog);
-  const footer=el('div',undefined,'footer');const my=el('a','My EKODI');my.href=myUrl();const rootLink=el('a','EKODI');rootLink.href='https://ekodi.kr/';footer.append(my,rootLink);panel.append(footer);
+  const footer=el('div',undefined,'footer');const my=el('a','마이페이지');my.href=myUrl();const rootLink=el('a','EKODI');rootLink.href='https://ekodi.kr/';footer.append(my,rootLink);panel.append(footer);
   button.addEventListener('click',()=>{panel.hidden=!panel.hidden;button.setAttribute('aria-expanded',panel.hidden?'false':'true');});
   document.addEventListener('click',event=>{if(!event.composedPath().includes(host)){closePanel();button.setAttribute('aria-expanded','false');}},{capture:true});
   wrap.append(button,panel);shadow.append(style,wrap);document.documentElement.append(host);root=shadow;render();

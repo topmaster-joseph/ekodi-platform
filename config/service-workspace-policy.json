@@ -69,7 +69,11 @@
     "legacyAdminPatterns": [],
     "adminSurfaceRole": "directory-observability-and-handoff-only",
     "higherAdminChildAliases": "forbidden",
-    "canonicalAdminRule": "managed-public-path-plus-/admin"
+    "canonicalAdminRule": "managed-public-path-plus-/admin",
+    "memberHomePattern": "/{slug}/my",
+    "serviceMemberHomePattern": "/{canonical-service-path}/my",
+    "loginReturnPolicy": "site-local-member-home",
+    "globalMyEkodiRole": "platform-personal-home-only"
   },
   "serviceImplementationSelection": {
     "workspaceMaySelectCompatibleImplementation": true,
@@ -173,7 +177,9 @@
     "canonicalPath": "/admin/services/common-services",
     "runtimeHostsAreOperatorPages": false,
     "directRuntimeRootBehavior": "redirect_to_admin_control_plane",
-    "publicUserSurfaceExceptions": ["ai-commons"],
+    "publicUserSurfaceExceptions": [
+      "ai-commons"
+    ],
     "sessionAuthority": "central_admin_session",
     "authorityContext": "Person + Workspace + Role + Capability",
     "internalOperationalInfoBeforeAuthentication": false,
@@ -195,7 +201,10 @@
     "ai": "/ai",
     "mcp": "/mcp",
     "webhooks": "/webhooks",
-    "health": "/health"
+    "health": "/health",
+    "siteUser": "/{slug}/my",
+    "serviceUser": "/{canonical-service-path}/my",
+    "userMeaning": "platform-global-personal-home; not the default return target for site login"
   },
   "managementRouting": {
     "home": "/admin/home/{capability}",
@@ -203,5 +212,14 @@
     "workspaces": "/admin/workspaces/{capability}",
     "services": "/admin/services/{service}",
     "system": "/admin/system/{capability}"
+  },
+  "siteMemberHomePolicy": {
+    "sourceOfTruth": "config/site-member-home.json",
+    "defaultAfterSiteLogin": "current-site-member-home",
+    "providerGlobalHomeFallback": "/my",
+    "eagerFoundation": "person-tenant-store-creation",
+    "capabilityProjection": "registry-live",
+    "personalization": "presentation-only",
+    "authorizationSource": "canonical-membership-rbac"
   }
 }
