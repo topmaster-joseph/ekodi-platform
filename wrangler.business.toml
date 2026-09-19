@@ -14,7 +14,7 @@ BUSINESS_MODE = "production-readonly-mvp"
 INTEGRATIONS_ENABLED = "true"
 EXECUTION_ENABLED = "false"
 READINESS = "78"
-AUTH_URL = "https://auth.ekodi.kr/?site=business&return_to=https%3A%2F%2Fbusiness.ekodi.kr%2F"
+AUTH_URL = "https://ekodi.kr/auth/?site=business&return_to=https%3A%2F%2Fekodi.kr%2Fbusiness%2F"
 SUPABASE_URL = "https://renzehysxirjilvdxacv.supabase.co"
 SUPABASE_PUBLISHABLE_KEY = "sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_"
 
