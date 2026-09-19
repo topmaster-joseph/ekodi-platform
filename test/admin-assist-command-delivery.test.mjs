@@ -53,7 +53,8 @@ test('production verification submits the real bottom command on canonical ekodi
     read('scripts/verify-control-admin-assist-production.mjs'),
     read('.github/workflows/deploy-control-api.yml'),
   ]);
-  for(const path of [probePath,retryPath]){
+  const providerSmokePath=new URL('../scripts/verify-control-admin-assist-production.mjs',import.meta.url);
+  for(const path of [probePath,retryPath,providerSmokePath]){
     const parsed=spawnSync(process.execPath,['--check',fileURLToPath(path)],{encoding:'utf8'});
     assert.equal(parsed.status,0,parsed.stderr);
   }
@@ -82,6 +83,7 @@ test('production verification submits the real bottom command on canonical ekodi
   assert.match(providerSmoke,/\['openai','anthropic'\]/);
   assert.match(controlWorkflow,/Verify real free-first Admin Assist in production/);
   assert.match(controlWorkflow,/scripts\/verify-control-admin-assist-production\.mjs/);
+  assert.ok((controlWorkflow.match(/scripts\/verify-control-admin-assist-production\.mjs/g)||[]).length>=3,'Control workflow must watch the smoke script on PR/push and execute it in production');
 });
 test('Admin Assist treats AI_ADMIN_TIMEOUT_MS as a bounded total multi-provider budget',async()=>{
   const [handler,gateway,resilience]=await Promise.all([read('ai-agent-control.js'),read('core-ai-gateway.js'),read('ai-resilience-runtime.js')]);
