@@ -2,7 +2,7 @@
 # Tax release trigger: serialize Shared Site deployment for NTS business registry
 # Mall canonical release: publish ekodi.kr/ekodibiz/ekodimall disclosures and centered footer
 # CGMA public domain remains externally DNS-managed until the approved cutover stage; ekodi.kr/cgma stays canonical inside EKODI.
-# Domain ownership reconcile 2026-09-08: re-apply declared custom domains after mail.ekodi.kr drifted to an external redirect.
+# Canonical domain contract: only ekodi.kr is a Shared Site custom domain; all EKODI user/admin surfaces use apex paths.
 name = "shy-thunder-39a4"
 main = "platform-router-entry-worker.js"
 compatibility_date = "2026-08-12"
@@ -17,11 +17,6 @@ pattern = "ekodi.kr"
 custom_domain = true
 
 [[routes]]
-pattern = "www.ekodi.kr"
-custom_domain = true
-
-# Canonical Mail contact and send API must reach the Shared Site Worker before asset fallback.
-[[routes]]
 pattern = "ekodi.kr/mail*"
 zone_name = "ekodi.kr"
 
@@ -34,72 +29,6 @@ zone_name = "ekodi.kr"
 [[routes]]
 pattern = "ekodi.kr/ekodichurch/admin*"
 zone_name = "ekodi.kr"
-
-[[routes]]
-pattern = "trade.ekodi.kr"
-custom_domain = true
-
-[[routes]]
-pattern = "trade.biz.ekodi.kr"
-custom_domain = true
-
-[[routes]]
-pattern = "pay.ekodi.kr"
-custom_domain = true
-
-[[routes]]
-pattern = "pay.biz.ekodi.kr"
-custom_domain = true
-
-[[routes]]
-pattern = "messenger.ekodi.kr"
-custom_domain = true
-
-
-
-[[routes]]
-pattern = "admin.ekodi.kr"
-custom_domain = true
-
-[[routes]]
-pattern = "admin.biz.ekodi.kr"
-custom_domain = true
-
-[[routes]]
-pattern = "admin.church.ekodi.kr"
-custom_domain = true
-
-[[routes]]
-pattern = "admin.lab.ekodi.kr"
-custom_domain = true
-
-[[routes]]
-pattern = "admin.trade.ekodi.kr"
-custom_domain = true
-
-[[routes]]
-pattern = "mail.ekodi.kr"
-custom_domain = true
-
-[[routes]]
-pattern = "live.ekodi.kr"
-custom_domain = true
-
-[[routes]]
-pattern = "live.biz.ekodi.kr"
-custom_domain = true
-
-[[routes]]
-pattern = "live.church.ekodi.kr"
-custom_domain = true
-
-[[routes]]
-pattern = "live.lab.ekodi.kr"
-custom_domain = true
-
-[[routes]]
-pattern = "cloud.ekodi.kr"
-custom_domain = true
 
 [[services]]
 binding = "FINANCE"
@@ -161,103 +90,81 @@ run_worker_first = ["/ai", "/ai/*", "/", "/shell*", "/bible*", "/preview*", "/le
 binding = "WORKSPACE_PLATFORM"
 service = "ekodi-workspace-platform-api"
 
-
 [[services]]
 binding = "AI"
 service = "ekodi-ai-control"
-
 
 [[services]]
 binding = "MONEY"
 service = "ekodi-money"
 
-
 [[services]]
 binding = "WORK"
 service = "ekodi-work"
-
 
 [[services]]
 binding = "MANAGEMENT"
 service = "ekodi-management"
 
-
 [[services]]
 binding = "AUTHOR"
 service = "ekodi-author-ai"
-
-
-
 
 [[services]]
 binding = "BUSINESS"
 service = "ekodi-business"
 
-
 [[services]]
 binding = "LIFE"
 service = "ekodi-life-ai"
-
 
 [[services]]
 binding = "EXPERIENCE"
 service = "ekodi-experience"
 
-
 [[services]]
 binding = "BOOKS"
 service = "ekodi-books"
-
 
 [[services]]
 binding = "PUBLISHING"
 service = "ekodi-publishing"
 
-
 [[services]]
 binding = "PERSONAL_FINANCE"
 service = "ekodi-personal-finance-api"
-
 
 [[services]]
 binding = "SUPPORT"
 service = "ekodi-support-opportunity"
 
-
 [[services]]
 binding = "MARKETING_GROWTH"
 service = "ekodi-marketing-growth"
-
 
 [[services]]
 binding = "SOCIAL"
 service = "ekodi-social"
 
-
 [[services]]
 binding = "MARKETING_PUBLISHING"
 service = "ekodi-marketing-publishing-api"
-
 
 [[services]]
 binding = "JOURNAL"
 service = "ekodi-journal"
 
-
 [[services]]
 binding = "ENERGY"
 service = "ekodi-energy"
-
 
 [[services]]
 binding = "COMMUNITY"
 service = "ekodi-community"
 
-
 [[services]]
 binding = "EDUCATION"
 service = "ekodi-education"
-
 
 [[services]]
 binding = "MARKETING_DOMAIN"
