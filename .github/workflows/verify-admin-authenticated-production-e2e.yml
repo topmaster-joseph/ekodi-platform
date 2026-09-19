@@ -78,7 +78,7 @@ jobs:
           result=$(cf_query "$auth_db" "$insert")
           echo "$result" | jq -e '.success == true and ([.result[]?.success] | all)' >/dev/null
 
-          session=$(curl -fsS 'https://api.ekodi.kr/api/session' -H "Authorization: Bearer $token")
+          session=$(curl -fsS 'https://ekodi.kr/api/session' -H "Authorization: Bearer $token")
           echo "$session" | jq -e '.role == "super_admin"' >/dev/null
 
           echo "E2E_ADMIN_TOKEN=$token" >> "$GITHUB_ENV"
