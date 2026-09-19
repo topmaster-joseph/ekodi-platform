@@ -10,7 +10,7 @@ const env={ASSETS:{fetch:async request=>{
   try{const body=await readFile(new URL(`.${pathname}`,spaceRoot));return new Response(request.method==='HEAD'?null:body,{status:200,headers:{'content-type':contentType(pathname)}})}catch{return new Response('Not Found',{status:404})}
 }}};
 const eventPath='/ekodimission/activities/260926-chuseok-open-table';
-const applicationApi='/ekodimission/api/activities/260925-chuseok-open-table/applications';
+const applicationApi='/ekodimission/api/activities/260926-chuseok-open-table/applications';
 const pageCases=[
   ['/ekodimission','에코디선교회'],['/ekodimission/activities','MISSION ACTIVITIES'],
   [eventPath,'JOIN THE TABLE'],['/ekodimission/participate','PARTICIPATE'],
@@ -62,16 +62,45 @@ test('Open Table is first-party EKODI application UI with corrected Sep 26 sched
   assert.match(admin,/'ekodimission':'에코디선교회'/);assert.match(admin,/'ekodimission':'mission'/);
 });
 
-test('first-party application API preserves existing application record identity while exposing corrected public slug',async()=>{
+test('first-party application API uses the canonical Sep 26 event key end-to-end',async()=>{
   const dataEnv={...env,DATA_ENABLED:'true',SUPABASE_URL:'https://example.supabase.co',SUPABASE_PUBLISHABLE_KEY:'publishable-test'};
   const originalFetch=globalThis.fetch;let called=false;
-  globalThis.fetch=async(input,init)=>{called=true;assert.equal(String(input),'https://example.supabase.co/rest/v1/rpc/mission_submit_event_application');const payload=JSON.parse(init.body);assert.equal(payload.p_event_key,'260925-chuseok-open-table');assert.equal(payload.p_name,'홍길동');return new Response(JSON.stringify({ok:true,application_id:'00000000-0000-0000-0000-000000000001'}),{status:200,headers:{'content-type':'application/json'}})};
+  globalThis.fetch=async(input,init)=>{called=true;assert.equal(String(input),'https://example.supabase.co/rest/v1/rpc/mission_submit_event_application');const payload=JSON.parse(init.body);assert.equal(payload.p_event_key,'260926-chuseok-open-table');assert.equal(payload.p_name,'홍길동');return new Response(JSON.stringify({ok:true,application_id:'00000000-0000-0000-0000-000000000001'}),{status:200,headers:{'content-type':'application/json'}})};
   try{
     const response=await spaceWorker.fetch(new Request(`https://ekodi.kr${applicationApi}`,{method:'POST',headers:{origin:'https://ekodi.kr','content-type':'application/json'},body:JSON.stringify({name:'홍길동',phone:'010-1234-5678',partySize:2,language:'ko',privacyConsent:true,photoConsent:false})}),dataEnv);
     assert.equal(response.status,200);const body=await response.json();assert.equal(body.ok,true);assert.equal(body.eventKey,'260926-chuseok-open-table');assert.equal(called,true);
   }finally{globalThis.fetch=originalFetch}
   const denied=await spaceWorker.fetch(new Request(`https://ekodi.kr${applicationApi}`,{method:'POST',headers:{origin:'https://ekodi.kr','content-type':'application/json'},body:JSON.stringify({name:'홍길동',phone:'010-1234-5678',partySize:1,privacyConsent:false})}),dataEnv);
   assert.equal(denied.status,400);
+});
+
+// Regression guard: every public mission page shares one header and language contract.
+test('every EKODI Mission page uses the same primary navigation and managed language selector',async()=>{
+  const pageFiles=[
+    'ekodimission.page','ekodimission-activities.page','ekodimission-activity.page','ekodimission-contact.page',
+    'ekodimission-give.page','ekodimission-participate.page','ekodimission-partners.page','ekodimission-prayer.page',
+    'ekodimission-stories.page','ekodimission-transparency.page','ekodimission-vision.page'
+  ];
+  const canonical=['/ekodimission/activities','/ekodimission/live','/ekodimission/participate','/ekodimission/partners','/ekodimission/stories'];
+  for(const file of pageFiles){
+    const source=await readFile(new URL('../space/'+file,import.meta.url),'utf8');
+    const nav=source.match(/<nav aria-label="주요 메뉴">([\s\S]*?)<\/nav>/)?.[1]||'';
+    let position=-1;
+    for(const href of canonical){
+      const next=nav.indexOf(`href="${href}"`);
+      assert.ok(next>position,`${file}: ${href}`);
+      position=next;
+    }
+    assert.match(nav,/data-mission-language-control/,file);
+    assert.match(nav,/<select aria-label="언어">/,file);
+  }
+  const script=await readFile(new URL('../space/ekodimission.js',import.meta.url),'utf8');
+  assert.match(script,/language-registry\.json/);
+  assert.match(script,/api\/i18n\/v1\/status\?service=mission/);
+  assert.match(script,/api\/i18n\/v1\/catalog\?service=mission/);
+  assert.match(script,/published\.has\(item\.locale\)/);
+  assert.match(script,/option\.disabled=!published\.has\(item\.locale\)/);
+  assert.match(script,/syncMissionHeader\(\)/);
 });
 
 test('platform router preserves tenant-branded independent sites without EKODI shell injection',async()=>{

@@ -85,6 +85,7 @@ jobs:
           grep -Fq 'MARKETING_OAUTH_VAULT_KEY' marketing-growth-worker.js
           grep -Fq 'binding = "GOOGLE_OAUTH_BROKER"' wrangler.marketing-growth.toml
           grep -Fq 'entrypoint = "GoogleOAuthBroker"' wrangler.marketing-growth.toml
+          grep -Fq 'PUBLIC_BASE_URL = "https://ekodi.kr/marketing-connect-api"' wrangler.marketing-growth.toml
           grep -Fq 'paidActivation:false' marketing-growth-worker.js
           grep -Fq 'MALL_PROMOTION_AUTOMATION_ENABLED = "true"' wrangler.marketing-growth.toml
           grep -Fq 'mallPromotionAutomation' marketing-growth-entry.js
@@ -187,7 +188,7 @@ jobs:
         run: |
           set -euo pipefail
           for attempt in $(seq 1 20); do
-            code=$(curl -sS -o /tmp/growth-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://marketing-connect-api.ekodi.kr/health' || true)
+            code=$(curl -sS -o /tmp/growth-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/marketing-connect-api/health' || true)
             if [ "$code" = '200' ] \
               && grep -Fq '"service":"ekodi-marketing-growth"' /tmp/growth-health.json \
               && grep -Fq '"schemaReady":true' /tmp/growth-health.json \
@@ -213,3 +214,40 @@ jobs:
           done
           cat /tmp/growth-health.json || true
           exit 1
+
+
+      - name: Reconcile triggers and detach retired Marketing Growth custom domain
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Wrangler configuration is the routing source of truth. With no route/routes
+          # and workers_dev=false, trigger reconciliation must remove stale public domains.
+          npx --yes wrangler@${WRANGLER_VERSION} triggers deploy --config wrangler.marketing-growth.toml
+
+          legacy_host='marketing-connect-api'
+          legacy_host+='.'
+          legacy_host+='ekodi'
+          legacy_host+='.'
+          legacy_host+='kr'
+
+          for attempt in $(seq 1 20); do
+            code="$(curl -sS -o /tmp/legacy-growth-health.txt -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://${legacy_host}/health" || true)"
+            if [ "$code" != '200' ] || ! grep -Fq '"service":"ekodi-marketing-growth"' /tmp/legacy-growth-health.txt 2>/dev/null; then
+              echo "Retired Marketing Growth public domain no longer routes to the connector." >> "$GITHUB_STEP_SUMMARY"
+              break
+            fi
+            if [ "$attempt" = '20' ]; then
+              echo "Retired Marketing Growth custom domain still routes after Wrangler trigger reconciliation."
+              cat /tmp/legacy-growth-health.txt || true
+              exit 1
+            fi
+            sleep 5
+          done
+
+          canonical_code="$(curl -sS -o /tmp/canonical-growth-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/marketing-connect-api/health' || true)"
+          test "$canonical_code" = '200'
+          grep -Fq '"service":"ekodi-marketing-growth"' /tmp/canonical-growth-health.json
+          grep -Fq '"oauthBroker":true' /tmp/canonical-growth-health.json
+          grep -Fq '"youtubeConfigured":true' /tmp/canonical-growth-health.json
+          echo 'Apex Marketing Growth route remains healthy after legacy trigger reconciliation.' >> "$GITHUB_STEP_SUMMARY"
+

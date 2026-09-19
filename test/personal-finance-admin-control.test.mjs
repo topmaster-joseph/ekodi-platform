@@ -9,8 +9,8 @@ function fakeDb(initial={}){
   return{calls,config,prepare(sql){const stmt={sql,args:[],bind(...args){this.args=args;return this},async run(){calls.push({kind:'run',sql,args:this.args});if(/UPDATE personal_finance_service_config/.test(sql)){config.service_enabled=this.args[0];config.manual_entry_enabled=this.args[1];config.file_import_enabled=this.args[2];config.planning_enabled=this.args[3];config.updated_at=this.args[4]}return{success:true,meta:{changes:1}}},async first(){calls.push({kind:'first',sql,args:this.args});if(/FROM personal_finance_service_config/.test(sql))return{...config};if(/FROM d1_migrations/.test(sql))return{migrationCount:4,latestMigration:'0004_personal_finance_service_control.sql'};return null},async all(){calls.push({kind:'all',sql,args:this.args});return{results:[]}}};return stmt},async batch(stmts){for(const stmt of stmts)await stmt.run();return stmts.map(()=>({success:true}))}};
 }
 const env=DB=>({PERSONAL_DB:DB,SUPABASE_URL:'https://example.supabase.co',SUPABASE_PUBLISHABLE_KEY:'publishable'});
-const adminHeaders={authorization:'Bearer admin-token',origin:'https://admin.ekodi.kr','content-type':'application/json'};
-const userHeaders={authorization:'Bearer user-token',origin:'https://my.ekodi.kr','content-type':'application/json'};
+const adminHeaders={authorization:'Bearer admin-token',origin:'https://ekodi.kr','content-type':'application/json'};
+const userHeaders={authorization:'Bearer user-token',origin:'https://ekodi.kr','content-type':'application/json'};
 
 async function withFetch({role='super_admin',elevated=false,user=false}={},fn){
   const original=globalThis.fetch;
@@ -26,39 +26,52 @@ test('admin control rejects missing bearer token with the protected PF auth cont
   assert.equal(data.authenticated,undefined);
 });
 
+test('admin control prefers the Control API service binding and does not re-enter the public apex',async()=>{
+  const DB=fakeDb();
+  const calls=[];
+  const CONTROL_API={fetch:async request=>{const url=new URL(request.url);calls.push(url);return new Response(JSON.stringify({authenticated:true,email:'admin@example.com',role:'super_admin'}),{status:200,headers:{'content-type':'application/json'}})}};
+  const original=globalThis.fetch;let publicFetchCalls=0;
+  globalThis.fetch=async()=>{publicFetchCalls++;throw new Error('public apex auth fetch must not be used when service binding exists')};
+  try{
+    const response=await worker.fetch(new Request('https://ekodi.kr/api/admin/personal-finance/control',{headers:adminHeaders}),{...env(DB),CONTROL_API});
+    assert.equal(response.status,200);assert.equal(calls.length,1);assert.equal(calls[0].pathname,'/api/session');assert.equal(publicFetchCalls,0);
+    const data=await response.json();assert.equal(data.admin.role,'super_admin');assert.equal(data.service.serviceBinding,'PERSONAL_FINANCE');
+  }finally{globalThis.fetch=original}
+});
+
 test('admin control exposes only service policy and immutable safety metadata',async()=>{
-  const DB=fakeDb();const response=await withFetch({},()=>worker.fetch(new Request('https://personal-finance-api.ekodi.kr/api/admin/personal-finance/control',{headers:adminHeaders}),env(DB)));
-  assert.equal(response.status,200);assert.equal(response.headers.get('access-control-allow-origin'),'https://admin.ekodi.kr');const data=await response.json();
+  const DB=fakeDb();const response=await withFetch({},()=>worker.fetch(new Request('https://ekodi.kr/api/admin/personal-finance/control',{headers:adminHeaders}),env(DB)));
+  assert.equal(response.status,200);assert.equal(response.headers.get('access-control-allow-origin'),'https://ekodi.kr');const data=await response.json();
   assert.equal(data.service.dataBoundary,'dedicated-d1');assert.equal(data.service.canonicalPath,'/api/control/personal-finance');assert.equal(data.service.serviceBinding,'PERSONAL_FINANCE');assert.equal(data.service.domain,undefined);assert.equal(data.schema.latestMigration,'0004_personal_finance_service_control.sql');assert.equal(data.safety.actionCeiling,'L2');assert.equal(data.safety.financialExecution,false);assert.equal(data.safety.aiWriteEnabled,false);assert.equal(data.safety.personalDataAdminReadable,false);assert.equal(data.admin.canWrite,true);
   const serialized=JSON.stringify(data);for(const forbidden of ['currentBalance','transactions','accounts','profileId'])assert.equal(serialized.includes(forbidden),false,forbidden);
 });
 
 test('canonical apex Admin origin receives the Personal Finance control CORS grant',async()=>{
-  const DB=fakeDb();const headers={...adminHeaders,origin:'https://ekodi.kr'};const response=await withFetch({},()=>worker.fetch(new Request('https://personal-finance-api.ekodi.kr/api/admin/personal-finance/control',{headers}),env(DB)));
+  const DB=fakeDb();const headers={...adminHeaders,origin:'https://ekodi.kr'};const response=await withFetch({},()=>worker.fetch(new Request('https://ekodi.kr/api/admin/personal-finance/control',{headers}),env(DB)));
   assert.equal(response.status,200);assert.equal(response.headers.get('access-control-allow-origin'),'https://ekodi.kr');
 });
 
 test('operator cannot change Personal Finance operating policy',async()=>{
-  const DB=fakeDb();const response=await withFetch({role:'operator',elevated:true},()=>worker.fetch(new Request('https://personal-finance-api.ekodi.kr/api/admin/personal-finance/control',{method:'PUT',headers:adminHeaders,body:JSON.stringify({fileImportEnabled:false})}),env(DB)));
+  const DB=fakeDb();const response=await withFetch({role:'operator',elevated:true},()=>worker.fetch(new Request('https://ekodi.kr/api/admin/personal-finance/control',{method:'PUT',headers:adminHeaders,body:JSON.stringify({fileImportEnabled:false})}),env(DB)));
   assert.equal(response.status,403);assert.equal((await response.json()).code,'PF_ADMIN_FORBIDDEN');assert.equal(DB.config.file_import_enabled,1);
 });
 
 test('super admin write requires current Google elevation',async()=>{
-  const DB=fakeDb();const response=await withFetch({elevated:false},()=>worker.fetch(new Request('https://personal-finance-api.ekodi.kr/api/admin/personal-finance/control',{method:'PUT',headers:adminHeaders,body:JSON.stringify({planningEnabled:false})}),env(DB)));
+  const DB=fakeDb();const response=await withFetch({elevated:false},()=>worker.fetch(new Request('https://ekodi.kr/api/admin/personal-finance/control',{method:'PUT',headers:adminHeaders,body:JSON.stringify({planningEnabled:false})}),env(DB)));
   assert.equal(response.status,403);assert.equal((await response.json()).code,'ELEVATION_REQUIRED');assert.equal(DB.config.planning_enabled,1);
 });
 test('elevated super admin can change only the four bounded feature flags',async()=>{
-  const DB=fakeDb();const response=await withFetch({elevated:true},()=>worker.fetch(new Request('https://personal-finance-api.ekodi.kr/api/admin/personal-finance/control',{method:'PUT',headers:adminHeaders,body:JSON.stringify({serviceEnabled:true,manualEntryEnabled:false,fileImportEnabled:false,planningEnabled:true})}),env(DB)));
+  const DB=fakeDb();const response=await withFetch({elevated:true},()=>worker.fetch(new Request('https://ekodi.kr/api/admin/personal-finance/control',{method:'PUT',headers:adminHeaders,body:JSON.stringify({serviceEnabled:true,manualEntryEnabled:false,fileImportEnabled:false,planningEnabled:true})}),env(DB)));
   assert.equal(response.status,200);const data=await response.json();assert.equal(data.config.manualEntryEnabled,false);assert.equal(data.config.fileImportEnabled,false);assert.equal(data.safety.actionCeiling,'L2');assert.equal(data.safety.financialExecution,false);assert.equal(data.safety.aiWriteEnabled,false);
   assert.ok(DB.calls.some(call=>call.kind==='run'&&/UPDATE personal_finance_service_config/.test(call.sql)));assert.ok(DB.calls.some(call=>call.kind==='run'&&/personal_finance_service_control_audit/.test(call.sql)));
 });
 
 test('even elevated super admin cannot unlock financial execution or AI writes',async()=>{
-  const DB=fakeDb();for(const payload of [{financialExecution:true},{aiWriteEnabled:true},{actionCeiling:'L4'},{personalDataAdminReadable:true}]){const response=await withFetch({elevated:true},()=>worker.fetch(new Request('https://personal-finance-api.ekodi.kr/api/admin/personal-finance/control',{method:'PUT',headers:adminHeaders,body:JSON.stringify(payload)}),env(DB)));assert.equal(response.status,400);assert.equal((await response.json()).code,'PF_CONTROL_LOCKED_POLICY')}
+  const DB=fakeDb();for(const payload of [{financialExecution:true},{aiWriteEnabled:true},{actionCeiling:'L4'},{personalDataAdminReadable:true}]){const response=await withFetch({elevated:true},()=>worker.fetch(new Request('https://ekodi.kr/api/admin/personal-finance/control',{method:'PUT',headers:adminHeaders,body:JSON.stringify(payload)}),env(DB)));assert.equal(response.status,400);assert.equal((await response.json()).code,'PF_CONTROL_LOCKED_POLICY')}
 });
 
 test('paused service blocks member API before creating a personal profile',async()=>{
-  const DB=fakeDb({config:{service_enabled:0}});const response=await withFetch({user:true},()=>worker.fetch(new Request('https://personal-finance-api.ekodi.kr/api/finance/personal/summary',{headers:userHeaders}),env(DB)));
+  const DB=fakeDb({config:{service_enabled:0}});const response=await withFetch({user:true},()=>worker.fetch(new Request('https://ekodi.kr/api/finance/personal/summary',{headers:userHeaders}),env(DB)));
   assert.equal(response.status,503);assert.equal((await response.json()).code,'PF_SERVICE_PAUSED');assert.equal(DB.calls.some(call=>call.kind==='run'&&/personal_finance_profiles/.test(call.sql)),false);
 });
 test('bounded feature flags block manual entry, file import and planning independently',async()=>{
@@ -67,11 +80,11 @@ test('bounded feature flags block manual entry, file import and planning indepen
     [{file_import_enabled:0},'/api/finance/personal/import/preview','POST',{accountId:'x',rows:[{}]},'PF_IMPORT_DISABLED'],
     [{planning_enabled:0},'/api/finance/personal/safe-to-spend','GET',null,'PF_PLANNING_DISABLED'],
   ];
-  for(const [config,path,method,payload,code] of cases){const DB=fakeDb({config});const response=await withFetch({user:true},()=>worker.fetch(new Request(`https://personal-finance-api.ekodi.kr${path}`,{method,headers:userHeaders,...(payload?{body:JSON.stringify(payload)}:{})}),env(DB)));assert.equal(response.status,503,path);assert.equal((await response.json()).code,code,path);assert.equal(DB.calls.some(call=>call.kind==='run'&&/personal_finance_profiles/.test(call.sql)),false,path)}
+  for(const [config,path,method,payload,code] of cases){const DB=fakeDb({config});const response=await withFetch({user:true},()=>worker.fetch(new Request(`https://ekodi.kr${path}`,{method,headers:userHeaders,...(payload?{body:JSON.stringify(payload)}:{})}),env(DB)));assert.equal(response.status,503,path);assert.equal((await response.json()).code,code,path);assert.equal(DB.calls.some(call=>call.kind==='run'&&/personal_finance_profiles/.test(call.sql)),false,path)}
 });
 
 test('central admin token is never accepted as a My EKODI personal-ledger token',async()=>{
-  const DB=fakeDb();const response=await withFetch({user:false},()=>worker.fetch(new Request('https://personal-finance-api.ekodi.kr/api/finance/personal/summary',{headers:adminHeaders}),env(DB)));
+  const DB=fakeDb();const response=await withFetch({user:false},()=>worker.fetch(new Request('https://ekodi.kr/api/finance/personal/summary',{headers:adminHeaders}),env(DB)));
   assert.equal(response.status,401);assert.equal((await response.json()).code,'PF_AUTH_REQUIRED');
 });
 
@@ -87,7 +100,7 @@ test('Admin navigation classifies Personal Finance under the v8 professional-ser
 
 test('Personal Finance admin UI manages policy only and never calls personal ledger endpoints',()=>{
   const ui=fs.readFileSync(new URL('../personal-finance-admin.js',import.meta.url),'utf8');const build=fs.readFileSync(new URL('../scripts/build.mjs',import.meta.url),'utf8');const workerSource=fs.readFileSync(new URL('../site-worker.js',import.meta.url),'utf8');const siteConfig=fs.readFileSync(new URL('../wrangler.site.toml',import.meta.url),'utf8');
-  assert.match(ui,/const API='\/api\/control\/personal-finance'/);assert.match(ui,/AbortSignal\.timeout\(REQUEST_TIMEOUT_MS\)/);assert.match(ui,/aria-busy/);assert.doesNotMatch(ui,/https:\/\/personal-finance-api\.ekodi\.kr\/api\/admin/);
+  assert.match(ui,/const API='\/api\/control\/personal-finance'/);assert.match(ui,/AbortSignal\.timeout\(REQUEST_TIMEOUT_MS\)/);assert.match(ui,/aria-busy/);
   assert.match(ui,/전문서비스 · PERSONAL FINANCE/);assert.match(ui,/개인 금융원장의 내용은 이 화면에서 조회하지 않습니다/);assert.match(ui,/EKODIAdminContext\?\.elevate/);
   assert.match(ui,/function refreshWhenSharedNavigationActivates\(event\)/);assert.match(ui,/ekodi-admin-section-changed',refreshWhenSharedNavigationActivates/);assert.match(ui,/queueMicrotask\(\(\)=>refreshWhenSharedNavigationActivates\(\)\)/);assert.match(ui,/개인재무 운영 상태를 확인하고 있습니다/);
   assert.doesNotMatch(ui,/api\/finance\/personal\/(?:accounts|transactions|summary|goals|budgets|recurring)/);
@@ -100,10 +113,10 @@ test('Personal Finance admin UI manages policy only and never calls personal led
   assert.match(workerSource,/code:'PF_ADMIN_AUTH_REQUIRED'/);
   assert.match(siteConfig,/binding = "PERSONAL_FINANCE"\s+service = "ekodi-personal-finance-api"/);
   assert.match(build,/personal-finance-admin\.css/);assert.match(build,/personal-finance-admin\.js/);assert.match(workerSource,/personal-finance-admin\.js/);
-  const serviceControl=fs.readFileSync(new URL('../personal-finance-service-control.js',import.meta.url),'utf8');
+  const serviceControl=fs.readFileSync(new URL('../personal-finance-service-control.js',import.meta.url),'utf8');const pfWrangler=fs.readFileSync(new URL('../wrangler.personal-finance.toml',import.meta.url),'utf8');
   assert.match(serviceControl,/CENTRAL_ADMIN_SESSION='https:\/\/ekodi\.kr\/api\/session'/);
   assert.match(serviceControl,/CENTRAL_ADMIN_ELEVATION='https:\/\/ekodi\.kr\/api\/admin-access\/elevation'/);
-  assert.match(serviceControl,/signal:AbortSignal\.timeout\(8_000\)/);
+  assert.match(serviceControl,/signal=AbortSignal\.timeout\(8_000\)/);assert.match(serviceControl,/controlApi\?\.fetch/);assert.match(pfWrangler,/binding = \"CONTROL_API\"\s+service = \"ekodi-auth-api\"/);
   assert.match(serviceControl,/canonicalPath:'\/api\/control\/personal-finance'/);
   assert.match(serviceControl,/serviceBinding:'PERSONAL_FINANCE'/);
   assert.doesNotMatch(serviceControl,/https:\/\/api\.ekodi\.kr/);

@@ -22,17 +22,21 @@ export async function readPersonalFinanceServiceConfig(db){
   if(!row){await ensureConfig(db);row=await db.prepare("SELECT service_enabled,manual_entry_enabled,file_import_enabled,planning_enabled,updated_at FROM personal_finance_service_config WHERE id='global'").first()}
   return normalize(row||{});
 }
-async function central(request,url){
+async function central(request,url,controlApi){
   const authorization=clean(request.headers.get('authorization'),8192);
   if(!authorization.toLowerCase().startsWith('bearer '))return{ok:false,status:401,data:{code:'PF_ADMIN_AUTH_REQUIRED'}};
   try{
-    const response=await fetch(url,{headers:{authorization,accept:'application/json'},cache:'no-store',signal:AbortSignal.timeout(8_000)});
+    const headers={authorization,accept:'application/json'};
+    const signal=AbortSignal.timeout(8_000);
+    const response=controlApi?.fetch
+      ? await controlApi.fetch(new Request(url,{method:'GET',headers,redirect:'manual',signal}))
+      : await fetch(url,{headers,cache:'no-store',signal});
     const data=await response.json().catch(()=>({}));
     return{ok:response.ok,status:response.status,data};
   }catch{return{ok:false,status:503,data:{code:'PF_ADMIN_AUTH_UNAVAILABLE'}}}
 }
-async function adminSession(request){
-  const result=await central(request,CENTRAL_ADMIN_SESSION);
+async function adminSession(request,controlApi){
+  const result=await central(request,CENTRAL_ADMIN_SESSION,controlApi);
   if(!result.ok||result.data?.authenticated!==true)return{...result,ok:false};
   return{...result,session:result.data};
 }
@@ -50,9 +54,9 @@ async function audit(db,session,action,detail){
   const actorHash=await sha256(String(session?.email||'unknown').trim().toLowerCase());
   await db.prepare('INSERT INTO personal_finance_service_control_audit (actor_hash,action,detail,created_at) VALUES (?,?,?,?)').bind(actorHash,action,clean(detail,500),new Date().toISOString()).run();
 }
-async function update(request,db,session){
+async function update(request,db,session,controlApi){
   if(session?.role!=='super_admin')return json({error:'최고관리자만 개인재무 운영 설정을 변경할 수 있습니다.',code:'PF_ADMIN_FORBIDDEN'},403,request);
-  const elevation=await central(request,CENTRAL_ADMIN_ELEVATION);
+  const elevation=await central(request,CENTRAL_ADMIN_ELEVATION,controlApi);
   if(!elevation.ok){const unavailable=elevation.status>=500;return json({error:unavailable?'추가 인증 상태를 확인할 수 없습니다.':'보호된 설정 변경에는 Google 추가 인증이 필요합니다.',code:unavailable?'PF_ADMIN_AUTH_UNAVAILABLE':'ELEVATION_REQUIRED'},unavailable?503:403,request)}
   if(elevation.data?.elevated!==true)return json({error:'보호된 설정 변경에는 Google 추가 인증이 필요합니다.',code:'ELEVATION_REQUIRED'},403,request);
   const body=await readBody(request);
@@ -67,11 +71,11 @@ async function update(request,db,session){
   await audit(db,session,'service_config.update',JSON.stringify(Object.fromEntries(MUTABLE_KEYS.map(key=>[key,next[key]]))));
   return json(await snapshot(db,session),200,request);
 }
-export async function handlePersonalFinanceAdminControl(request,db){
-  const auth=await adminSession(request);
+export async function handlePersonalFinanceAdminControl(request,db,controlApi){
+  const auth=await adminSession(request,controlApi);
   if(!auth.ok){const status=auth.status===403?403:auth.status>=500?503:401;return json({error:status===503?'관리자 인증 서비스를 확인할 수 없습니다.':'EKODI 관리자 인증이 필요합니다.',code:auth.data?.code||'PF_ADMIN_AUTH_REQUIRED'},status,request)}
   if(request.method==='GET')return json(await snapshot(db,auth.session),200,request);
-  if(request.method==='PUT')return update(request,db,auth.session);
+  if(request.method==='PUT')return update(request,db,auth.session,controlApi);
   return json({error:'지원하지 않는 관리자 요청입니다.',code:'PF_ADMIN_METHOD_NOT_ALLOWED'},405,request);
 }
 export function personalFinanceFeatureGate(request,url,config){

@@ -359,6 +359,18 @@ function activateSection(nav, section) {
     fallback.click();
     return true;
   }
+  const demandTarget = [...navItems(nav)].find(item => item.dataset.demandFeature === section);
+  if (demandTarget && window.EKODIAdminDemand?.activate) {
+    Promise.resolve(window.EKODIAdminDemand.activate(section)).then(() => {
+      if (window.EKODIAdminPanels?.activate) {
+        window.EKODIAdminPanels.activate(section);
+        return;
+      }
+      const installed = [...navItems(nav)].find(item => adminSidebarSectionOf(item) === section && !item.hasAttribute('data-demand-feature'));
+      installed?.click?.();
+    }).catch(error => console.warn(`[EKODI Admin] visible navigation demand activation failed: ${section}`, error));
+    return true;
+  }
   if (window.EKODIAdminPanels?.activate) {
     window.EKODIAdminPanels.activate(section);
     return true;
