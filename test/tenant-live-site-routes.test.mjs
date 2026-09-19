@@ -33,7 +33,7 @@ test('shared Live auth handoff exchanges EKODI proof without third-party script 
   assert.match(source,/\/auth\/v1\/verify/);
   assert.match(source,/sessionStorage\.setItem\('ekodi-auth-token'/);
   assert.match(source,/openViewerWindow/);
-  assert.match(source,/window\.open\(url,'_blank','noopener,noreferrer'\)/);
+  assert.match(source,/link\.target='_blank'/);\n  assert.match(source,/link\.rel='noopener noreferrer'/);
   assert.match(source,/addEventListener\('pagehide',hostExitCleanup\)/);
   assert.match(source,/beforeunload/);
   assert.match(source,/waitForRemoteTracks/);
