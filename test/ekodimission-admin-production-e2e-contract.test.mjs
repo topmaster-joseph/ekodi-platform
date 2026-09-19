@@ -18,7 +18,10 @@ test('Mission tenant-admin production E2E exercises the deployed Activity partic
     "data-activity-checkin",
     "privacyConsent",
     "단순 참가자",
-    "production-assets+synthetic-tenant-auth-data"
+    "production-assets+synthetic-tenant-auth-data",
+    "Mission admin signed-out login link missing",
+    "searchParams.get('site')!=='mission'",
+    "authReturnToExact:true"
   ]) assert.ok(source.includes(marker),marker);
   assert.ok(source.includes("p_privacy_consent===true"));
   assert.ok(source.includes("p_status==='attended'"));
@@ -33,4 +36,12 @@ test('Shared Site production release runs Mission tenant-admin E2E after deploy'
   assert.ok(workflow.includes("Verify EKODI Mission tenant admin production surface"));
   assert.ok(workflow.includes("node scripts/verify-ekodimission-admin-production-e2e.mjs"));
   assert.ok(workflow.includes("ekodimission-admin-production-e2e"));
+});
+
+
+test('Mission workspace admin selects mission auth scope instead of shared space auth',async()=>{
+  const source=await readFile(new URL('../workspace-admin-page.js',import.meta.url),'utf8');
+  assert.ok(source.includes("if(workspace==='ekodimission')return'mission'"));
+  assert.ok(source.includes("u.searchParams.set('site',workspaceAuthSite())"));
+  assert.ok(source.includes("u.searchParams.set('return_to',location.origin+location.pathname+location.search)"));
 });

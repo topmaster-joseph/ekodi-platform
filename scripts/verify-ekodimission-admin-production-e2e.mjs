@@ -75,6 +75,28 @@ function requestBody(request){
 }
 
 const browser=await chromium.launch({headless:true});
+
+// First verify the real signed-out production surface builds a Mission-scoped
+// auth URL that returns to the exact participant-management route. This catches
+// regressions where a tenant admin login is accidentally routed through My EKODI.
+const signedOutContext=await browser.newContext({viewport:{width:1440,height:1100}});
+const signedOutPage=await signedOutContext.newPage();
+signedOutPage.setDefaultTimeout(12_000);
+signedOutPage.setDefaultNavigationTimeout(20_000);
+await signedOutPage.goto(targetUrl,{waitUntil:'domcontentloaded'});
+const loginHref=await signedOutPage.getByRole('link',{name:/Google 계정으로 관리자 확인/}).getAttribute('href');
+if(!loginHref)throw new Error('Mission admin signed-out login link missing');
+const loginUrl=new URL(loginHref);
+const expectedReturn=new URL(targetUrl);
+if(loginUrl.origin!==origin||loginUrl.pathname!=='/auth/'||loginUrl.searchParams.get('site')!=='mission'||loginUrl.searchParams.get('direct')!=='1'){
+  throw new Error('Mission admin auth scope is not canonical: '+loginUrl.href);
+}
+const returnTo=new URL(loginUrl.searchParams.get('return_to')||'');
+if(returnTo.origin!==expectedReturn.origin||returnTo.pathname!==expectedReturn.pathname||returnTo.search!==expectedReturn.search){
+  throw new Error('Mission admin return_to lost the participant-management route: '+loginUrl.href);
+}
+await signedOutContext.close();
+
 const context=await browser.newContext({viewport:{width:1440,height:1100}});
 const page=await context.newPage();
 page.setDefaultTimeout(12_000);
@@ -180,7 +202,7 @@ await page.route('https://renzehysxirjilvdxacv.supabase.co/rest/v1/rpc/**',async
 });
 
 let fatal=null;
-const checks={};
+const checks={authSiteMission:true,authReturnToExact:true};
 try{
   await page.goto(targetUrl,{waitUntil:'domcontentloaded'});
   await page.waitForSelector('#activityPicker');
