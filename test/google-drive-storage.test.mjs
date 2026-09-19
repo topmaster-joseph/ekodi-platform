@@ -64,6 +64,11 @@ test('successful Google Drive OAuth returns directly to the exact admin route wi
   assert.ok(control.includes("target.origin !== ADMIN_ORIGIN"));
   assert.doesNotMatch(control, /return html\(`\$\{email\} 계정이 .*연결되었습니다.*`,true\)/s);
 });
+test('Storage production config activates only the canonical Google OAuth callback', () => {
+  assert.match(config, /GOOGLE_DRIVE_OAUTH_REDIRECT_URI = "https:\/\/ekodi\.kr\/storage\/api\/control\/storage\/google\/callback"/);
+  assert.doesNotMatch(config, /GOOGLE_DRIVE_OAUTH_REDIRECT_URI = "https:\/\/drive\.ekodi\.kr/);
+});
+
 test('Google OAuth callback cutover is dual-stack, state-pinned, and apex-ready', () => {
   assert.match(control, /CANONICAL_REDIRECT_URI = 'https:\/\/ekodi\.kr\/storage\/api\/control\/storage\/google\/callback'/);
   assert.match(control, /GOOGLE_DRIVE_OAUTH_REDIRECT_URI/);
