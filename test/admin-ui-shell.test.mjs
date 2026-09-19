@@ -30,8 +30,8 @@ test('admin shell is separate from user shell and removes the left brand header'
   assert.match(adminShell,/data-ekodi-language-control/);
   assert.match(adminShell,/ekodiAdminLanguageControl='disabled'/);
 
-  assert.match(adminRuntime,/function removeLocaleControl\\(\\)/);
-  assert.doesNotMatch(adminRuntime,/function installLocaleControl\\(\\)/);
+  assert.equal(adminRuntime.includes('function removeLocaleControl()'),true);
+  assert.equal(adminRuntime.includes('function installLocaleControl()'),false);
   assert.equal(adminRuntime.includes('<option value="ko">한국어</option><option value="en">English</option>'),false);
 
   assert.match(userHeader,/USER_SURFACES=new Set\(\['public','workspace'\]\)/);
