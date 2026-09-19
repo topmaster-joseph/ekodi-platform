@@ -87,11 +87,11 @@ test('delegated admin navigation never requires a category click before reaching
   assert.doesNotMatch(workspace,/button\.dataset\.adminGroup=group\.id/);
 
   assert.match(store,/admin-nav-group-label/);
-  assert.match(store,/a\.href=key==='overview'\?ADMIN_BASE+'\/overview':ADMIN_BASE+'\/'+key/);
+  assert.ok(store.includes("a.href=key==='overview'?ADMIN_BASE+'/overview':ADMIN_BASE+'/'+key"));
   assert.doesNotMatch(store,/a\.dataset\.group=group\.id/);
 
   assert.match(church,/admin-nav-group-label/);
-  assert.match(church,/a\.href=key==='overview'\?base+'\/overview':base+'\/'+key/);
+  assert.ok(church.includes("a.href=key==='overview'?base+'/overview':base+'/'+key"));
 
   assert.match(trade,/a\.href=sectionHref\(key\)/);
   assert.match(trade,/sub\.hidden=true/);
