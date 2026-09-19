@@ -44,14 +44,15 @@ async function attach(domain){
   await cf("/accounts/"+account+"/workers/domains",{method:"PUT",body:JSON.stringify(body)});
 }
 async function legacyGone(host){
-  for(let attempt=1;attempt<=18;attempt++){
+  for(let attempt=1;attempt<=60;attempt++){
     try{const response=await fetch("https://"+host+"/",{redirect:"manual",signal:AbortSignal.timeout(10000)});if(response.status<200||response.status>=400)return true}catch{return true}
-    await new Promise(r=>setTimeout(r,3500));
+    await new Promise(r=>setTimeout(r,5000));
   }
   return false;
 }
 
 const detached=[];
+let rollbackAllowed=true;
 try{
   for(const t of targets){await health(t.apexHealth,t.expect);await health(t.directHealth,t.expect)}
   const domains=await listDomains();
@@ -73,12 +74,20 @@ try{
     if(!absent)throw new Error("Domain still attached: "+host);
     await health(t.apexHealth,t.expect);
     await health(t.directHealth,t.expect);
-    if(!(await legacyGone(host)))throw new Error("Legacy hostname still routes successfully: "+host);
+  }
+  rollbackAllowed=false;
+  for(const t of targets){
+    const host=oldHost(t);
+    if(!(await legacyGone(host)))throw new Error("Legacy hostname propagation still active after detach: "+host);
     console.log("Verified retired: "+host+"; apex healthy: "+t.apexHealth);
   }
 }catch(error){
   console.error("Retirement failed: "+(error&&error.message?error.message:error));
-  for(const domain of detached.reverse()){try{await attach(domain);console.error("Rollback reattached "+domain.hostname+" -> "+domain.service)}catch(e){console.error("Rollback failed for "+domain.hostname+": "+(e&&e.message?e.message:e))}}
+  if(rollbackAllowed){
+    for(const domain of detached.reverse()){try{await attach(domain);console.error("Rollback reattached "+domain.hostname+" -> "+domain.service)}catch(e){console.error("Rollback failed for "+domain.hostname+": "+(e&&e.message?e.message:e))}}
+  }else{
+    console.error("Domains remain detached because Cloudflare source-of-truth removal and canonical health checks already succeeded; do not undo retirement for edge propagation lag.");
+  }
   process.exit(1);
 }
 console.log("Wave custom-domain retirement verified.");
