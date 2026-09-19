@@ -3,6 +3,8 @@ import test from 'node:test';
 import { readFile } from 'node:fs/promises';
 
 const wrangler = await readFile(new URL('../wrangler.site.toml', import.meta.url), 'utf8');
+const manifest = await readFile(new URL('../ekodi-service-manifest.js', import.meta.url), 'utf8');
+const shellValidator = await readFile(new URL('../scripts/validate-ekodi-shell-adoption.mjs', import.meta.url), 'utf8');
 const policy = JSON.parse(await readFile(new URL('../config/domain-canonical-policy.json', import.meta.url), 'utf8'));
 
 function routeBlocks(source) {
@@ -34,4 +36,12 @@ test('canonical apex path routes remain attached without subdomain aliases', () 
     'admin.lab.ekodi.kr','admin.trade.ekodi.kr','mail.ekodi.kr','live.ekodi.kr',
     'live.biz.ekodi.kr','live.church.ekodi.kr','live.lab.ekodi.kr','cloud.ekodi.kr'
   ]) assert.equal(wrangler.includes(`pattern = "${legacy}"`), false, legacy);
+});
+
+
+test('Messenger canonical identity no longer depends on a public subdomain', () => {
+  assert.match(manifest, /id:'messenger'[\s\S]*?url:'https:\/\/ekodi\.kr\/messenger'/);
+  assert.doesNotMatch(manifest, /url:'https:\/\/messenger\.ekodi\.kr/);
+  assert.match(shellValidator, /canonical apex path is missing from wrangler\.site\.toml/);
+  assert.match(shellValidator, /platform-router-entry-worker\.js/);
 });
