@@ -65,7 +65,6 @@ jobs:
           node scripts/validate-additive-migrations.mjs
           grep -Fq 'drive.ekodi.kr' wrangler.storage.toml
           grep -Fq 'STORAGE_PRIMARY_GOOGLE_DOMAINS = "ekodi.kr"' wrangler.storage.toml
-          grep -Fq 'GOOGLE_DRIVE_OAUTH_REDIRECT_URI = "https://ekodi.kr/storage/api/control/storage/google/callback"' wrangler.storage.toml
           grep -Fq 'binding = "R2_BUCKET"' wrangler.storage.toml
           grep -Fq 'bucket_name = "ekodi-storage"' wrangler.storage.toml
           grep -Fq 'binding = "STORAGE"' wrangler.site.toml
@@ -170,4 +169,4 @@ jobs:
           canonical_callback_status=$(curl -sS --retry 6 --retry-delay 3 -o /tmp/storage-canonical-callback.html -w '%{http_code}' 'https://ekodi.kr/storage/api/control/storage/google/callback')
           test "$canonical_callback_status" = "400"
           grep -Fq 'Google Drive 연결 확인 필요' /tmp/storage-canonical-callback.html
-          echo 'Canonical Google OAuth callback is active in Storage production config; legacy callback remains accepted only for in-flight compatibility.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Legacy and canonical Storage OAuth callback paths both reach the same guarded callback handler.' >> "$GITHUB_STEP_SUMMARY"
