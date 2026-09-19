@@ -87,9 +87,8 @@ try{
   try{
     await host.waitForFunction(()=>{
       const button=document.querySelector('#goLiveButton');
-      const link=document.querySelector('#shareLink')?.value||'';
       const tracks=Array.from(document.querySelector('#mainVideo')?.srcObject?.getTracks?.()||[]);
-      return button&&!button.disabled&&link.includes('room=')&&tracks.some(track=>track.readyState==='live');
+      return button&&!button.disabled&&tracks.some(track=>track.readyState==='live');
     },{timeout:30000});
   }catch(error){
     report.hostStatus=await text(host,'#statusLog');
@@ -100,12 +99,21 @@ try{
   report.hostReady=true;
   report.hostStatus=await text(host,'#statusLog');
 
+  await host.locator('#goLiveButton').click();
+  try{
+    await host.waitForFunction(()=>{
+      const link=document.querySelector('#shareLink')?.value||'';
+      return link.includes('room=');
+    },{timeout:30000});
+  }catch(error){
+    report.hostStatus=await text(host,'#statusLog');
+    throw new Error(`room_not_created_after_start:${report.hostStatus||error.message}`);
+  }
   const shareLink=await host.locator('#shareLink').inputValue();
   const roomId=new URL(shareLink).searchParams.get('room');
   assert.ok(roomId,'room_id_missing');
   report.roomId=roomId;
 
-  await host.locator('#goLiveButton').click();
   const live=await waitForPublicState(state=>state.live===true&&state.room?.id===roomId,30000);
   assert.equal(live.live,true);
   assert.equal(live.room?.id,roomId);
