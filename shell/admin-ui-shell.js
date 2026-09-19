@@ -28,6 +28,18 @@ function installStyle(){
   style.textContent=`
     html[data-ekodi-shell-surface="admin"] :is([data-ekodi-admin-sidebar-header],[data-ekodi-admin-brand],.side-brand,.sidebar-brand,.admin-sidebar-brand){display:none!important}
     html[data-ekodi-shell-surface="admin"] :is([data-ekodi-language-control],[data-language-selector],[data-language-switcher],[data-admin-locale-caption],.language-selector,.language-switcher,.lang-selector,.lang-switcher,#ekodiAdminLocaleWrap,#ekodiAdminLocale,#google_translate_element,.goog-te-gadget){display:none!important}
+    html[data-ekodi-shell-surface="admin"]{color-scheme:light;--ekodi-admin-bg:#f4f7fb;--ekodi-admin-panel:#fff;--ekodi-admin-text:#172033;--ekodi-admin-muted:#65788d;--ekodi-admin-line:#d9e3ec;--ekodi-admin-sidebar:#0b1f36;--ekodi-admin-sidebar-line:#173653;--ekodi-admin-active:#174b7b}
+    html[data-ekodi-shell-surface="admin"] body{background:var(--ekodi-admin-bg)!important;color:var(--ekodi-admin-text)!important}
+    html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-sidebar{display:flex!important;flex-direction:column!important;height:100dvh!important;min-height:0!important;overflow:hidden!important;box-sizing:border-box!important;padding-top:max(8px,env(safe-area-inset-top,0px))!important;background:var(--ekodi-admin-sidebar)!important;color:#e9f2fb!important;border-color:var(--ekodi-admin-sidebar-line)!important}
+    html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-sidebar :is(.nav,[data-ekodi-admin-nav] a,[data-ekodi-admin-nav] button){color:#dbe8f6!important}
+    html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-sidebar :is(.nav,[data-ekodi-admin-nav] a,[data-ekodi-admin-nav] button):hover{background:#102c49!important;color:#fff!important}
+    html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-sidebar :is(.nav.active,[aria-current="page"]){background:var(--ekodi-admin-active)!important;color:#fff!important}
+    html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-main{background:var(--ekodi-admin-bg)!important;color:var(--ekodi-admin-text)!important}
+    html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-main :is(input:not([type="checkbox"]):not([type="radio"]),select,textarea){min-height:42px;border:1px solid #bccbd9;border-radius:10px;background:#fff;color:#203247;padding:9px 11px;font:inherit}
+    html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-main :is(input,select,textarea):focus{outline:none;border-color:#4d8fc7;box-shadow:0 0 0 3px #dceeff}
+    html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-main table{color:#2d4157;background:#fff}
+    html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-main th{background:#f4f7fa;color:#43566a}
+    html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-main :is(.section,.module,.card,[data-ekodi-admin-card]){border-color:var(--ekodi-admin-line)}
     html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-sidebar{display:flex!important;flex-direction:column!important;height:100dvh!important;min-height:0!important;overflow:hidden!important;box-sizing:border-box!important;padding-top:max(8px,env(safe-area-inset-top,0px))!important}
     html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-nav{flex:1 1 auto!important;min-height:0!important;overflow-y:auto!important;overflow-x:hidden!important;overscroll-behavior:contain!important;scrollbar-gutter:stable}
     html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-nav[data-ekodi-admin-nav-mode="primary"]{flex:0 0 auto!important;overflow:hidden!important;overscroll-behavior:auto!important;scrollbar-gutter:auto!important}
