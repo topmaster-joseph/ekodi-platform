@@ -258,6 +258,10 @@ begin
   end if;
   if v_phone='' and v_email='' then raise exception 'CONTACT_REQUIRED'; end if;
 
+  -- Serialize equal identifiers so two concurrent submissions cannot create two People.
+  if v_phone<>'' then perform pg_advisory_xact_lock(hashtextextended('activity-phone:'||v_phone,0)); end if;
+  if v_email<>'' then perform pg_advisory_xact_lock(hashtextextended('activity-email:'||v_email,0)); end if;
+
   if v_phone<>'' then
     select person_id into v_phone_person
     from public.person_contacts
@@ -507,7 +511,8 @@ create or replace function public.activity_admin_add_participant(
   p_support_notes text default '',
   p_follow_up_status text default 'none',
   p_follow_up_note text default '',
-  p_source_channel text default 'admin'
+  p_source_channel text default 'admin',
+  p_privacy_consent boolean default false
 ) returns jsonb
 language plpgsql
 security definer
@@ -528,6 +533,7 @@ begin
   if not found or not public.activity_is_workspace_operator(v_activity.workspace_tenant_id) then
     raise exception 'ACTIVITY_ADMIN_FORBIDDEN';
   end if;
+  if not coalesce(p_privacy_consent,false) then raise exception 'PRIVACY_CONSENT_REQUIRED'; end if;
   if p_status not in ('applied','waitlist','confirmed','attended','no_show','cancelled') then raise exception 'INVALID_STATUS'; end if;
   if p_follow_up_status not in ('none','pending','contacted','closed') then raise exception 'INVALID_FOLLOW_UP_STATUS'; end if;
   if p_party_size<1 or p_party_size>20 then raise exception 'INVALID_PARTY_SIZE'; end if;
@@ -573,8 +579,8 @@ begin
   return jsonb_build_object('ok',true,'person_id',v_person,'participation_id',v_row.id,'status',v_row.status);
 end;
 $$;
-revoke all on function public.activity_admin_add_participant(text,text,text,text,text,integer,text,text,text,jsonb,text,text,text,text) from public;
-grant execute on function public.activity_admin_add_participant(text,text,text,text,text,integer,text,text,text,jsonb,text,text,text,text) to authenticated;
+revoke all on function public.activity_admin_add_participant(text,text,text,text,text,integer,text,text,text,jsonb,text,text,text,text,boolean) from public;
+grant execute on function public.activity_admin_add_participant(text,text,text,text,text,integer,text,text,text,jsonb,text,text,text,text,boolean) to authenticated;
 
 create or replace function public.activity_admin_update_participation(
   p_participation_id uuid,
