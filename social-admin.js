@@ -1,6 +1,6 @@
 (() => {
   const API = 'https://api.ekodi.kr';
-  const CONNECT_API = 'https://marketing-connect-api.ekodi.kr';
+  const CONNECT_API = '/marketing-connect-api';
   const TOKEN_KEY = 'ekodi-auth-token';
   const token = () => sessionStorage.getItem(TOKEN_KEY) || '';
   const providers = ['youtube','instagram','facebook','kakao','blog','threads','live','tiktok','linkedin','other'];
@@ -42,7 +42,7 @@
     const headers = new Headers(options.headers || {});
     if (token()) headers.set('authorization', `Bearer ${token()}`);
     if (options.body && !headers.has('content-type')) headers.set('content-type', 'application/json');
-    const url = new URL(`${CONNECT_API}${path}`);
+    const url = new URL(`${CONNECT_API}${path}`, location.origin);
     url.searchParams.set('subject_type',connectionScope.type);
     if (connectionScope.type !== 'person' && connectionScope.key) url.searchParams.set('subject_key',connectionScope.key);
     const response = await fetch(url, { ...options, headers, body: options.body ? JSON.stringify(options.body) : undefined, cache:'no-store' });
