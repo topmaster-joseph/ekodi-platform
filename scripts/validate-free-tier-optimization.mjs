@@ -19,10 +19,20 @@ expect(policy.release?.securityBoundaryMayNotBeWeakenedForCost===true,'cost opti
 expect(policy.release?.productionAccountMustNotBeConfusedWithDevelopment===true,'Production/Development account boundary must remain explicit');
 
 expect(wrangler.includes('[assets]')&&wrangler.includes('binding = "ASSETS"'),'Cloudflare static assets binding is required');
-for(const path of ['/admin-shell.css','/admin-menu-layout.js','/admin-demand-loader.js','/device-browser-diagnostics.js']) {
-  expect(wrangler.includes(`"${path}"`),`secured admin runtime asset must remain Worker-first: ${path}`);
+for(const path of [
+  '/auth-bootstrap.js',
+  '/auth-router.js',
+  '/admin-authenticated-shell.js',
+  '/admin-shell.css',
+  '/admin-compact.css',
+  '/system-health-admin.css',
+  '/device-browser-diagnostics.css',
+  '/tapo-device-admin.css',
+  '/workspace-trade-portal.css'
+]) {
+  expect(wrangler.includes(`"${path}"`),`security-critical asset must remain Worker-first: ${path}`);
 }
-for(const path of ['/workspace-admin.css','/workspace-admin.js','/workspace-trade-admin.js','/workspace-trade-portal.css','/workspace-trade-portal.js']) {
+for(const path of ['/styles.css','/homepage-ambient.css','/mall.css']) {
   expect(!wrangler.includes(`"${path}"`),`ordinary immutable asset should stay asset-first: ${path}`);
 }
 expect(runtime.includes("'1027'")&&runtime.includes("'429'"),'runtime quota guard must stop retries on Cloudflare/rate-limit signals');
