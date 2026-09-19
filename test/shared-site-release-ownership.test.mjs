@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises';
 
 const manifest = JSON.parse(await readFile(new URL('../deploy/manifests/shared-site.worker.json', import.meta.url), 'utf8'));
 const worker = await readFile(new URL('../site-worker.js', import.meta.url), 'utf8');
+const authSurface = await readFile(new URL('../canonical-surface-router.js', import.meta.url), 'utf8');
 const workflow = await readFile(new URL('../.github/workflows/deploy-site-core.yml', import.meta.url), 'utf8');
 
 const urls = manifest.worker.requests.map(item => item.url);
@@ -11,7 +12,9 @@ const urls = manifest.worker.requests.map(item => item.url);
 test('shared-site guarded release verifies only domains owned by the shared Worker', () => {
   assert.equal(urls.some(url => url.startsWith('https://invest.ekodi.kr/')), false,
     'Independent Investment service must not block shared Admin/Auth promotion');
-  assert.match(worker, /const AUTH_HOST = 'auth\.ekodi\.kr'/);
+  assert.match(authSurface, /const AUTH_ASSETS=new Set/);
+  assert.match(authSurface, /serveCanonicalAuth/);
+  assert.doesNotMatch(worker, /const AUTH_HOST/);
   assert.match(worker, /const ADMIN_HOSTS = new Set/);
 });
 

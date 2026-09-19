@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
-const [billing, migration, entry, authRouter, marketingAuth, clientAuth, membershipUi, siteWorker, onboarding] = await Promise.all([
+const [billing, migration, entry, authRouter, marketingAuth, clientAuth, membershipUi, authSurface, onboarding] = await Promise.all([
   readFile(new URL('../membership-billing.js', import.meta.url), 'utf8'),
   readFile(new URL('../migrations/0016_membership_billing.sql', import.meta.url), 'utf8'),
   readFile(new URL('../customer-entry-worker.js', import.meta.url), 'utf8'),
@@ -10,7 +10,7 @@ const [billing, migration, entry, authRouter, marketingAuth, clientAuth, members
   readFile(new URL('../auth-site/marketing-auth-hotfix.js', import.meta.url), 'utf8'),
   readFile(new URL('../auth-site/client-auth.js', import.meta.url), 'utf8'),
   readFile(new URL('../auth-site/membership-ui.js', import.meta.url), 'utf8'),
-  readFile(new URL('../site-worker.js', import.meta.url), 'utf8'),
+  readFile(new URL('../canonical-surface-router.js', import.meta.url), 'utf8'),
   readFile(new URL('../auth-site/marketing-onboarding.js', import.meta.url), 'utf8'),
 ]);
 
@@ -62,8 +62,8 @@ test('central auth bundles membership UI and keeps Marketing Pro opt-in explicit
   assert.doesNotMatch(authRouter, /params\.set\(['"]intent['"],['"]pro['"]\)/);
   assert.match(marketingAuth, /params\.get\(['"]plan['"]\)===['"]pro['"].*params\.get\(['"]intent['"]\)===['"]pro['"]/s);
   assert.match(membershipUi, /js\.tosspayments\.com\/v2\/standard/);
-  assert.match(siteWorker, /https:\/\/js\.tosspayments\.com/);
-  assert.match(siteWorker, /'\/membership-ui\.js'/);
+  assert.match(authSurface, /https:\/\/js\.tosspayments\.com/);
+  assert.match(authSurface, /'\/membership-ui\.js'/);
 });
 
 test('membership API exposes state, billing, cancellation and administrator observability', () => {

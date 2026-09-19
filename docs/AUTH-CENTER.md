@@ -19,21 +19,21 @@ EKODI 인증은 `사람(Person)`, `로그인 수단(Identity)`, `기본 무료�
 
 ## 2. One Login / Invisible Auth
 
-정상적인 사용자 흐름에서 `https://auth.ekodi.kr`은 방문 목적지가 아니라 보이지 않는 인증 인프라다.
+정상적인 사용자 흐름에서 `https://ekodi.kr/auth`은 방문 목적지가 아니라 보이지 않는 인증 인프라다.
 
 ### 최초 로그인
 
-`EKODI 서비스 → auth.ekodi.kr → Google 본인확인 1회 → EKODI Person → 공통 FREE → 일회용 handoff → 원래 서비스`
+`EKODI 서비스 → ekodi.kr/auth → Google 본인확인 1회 → EKODI Person → 공통 FREE → 일회용 handoff → 원래 서비스`
 
 ### 이후 로그인
 
-`다른 EKODI 서비스 → auth.ekodi.kr(기존 중앙 세션 확인) → 일회용 handoff → 원래 서비스`
+`다른 EKODI 서비스 → ekodi.kr/auth(기존 중앙 세션 확인) → 일회용 handoff → 원래 서비스`
 
 기존 중앙 세션이 유효하면 사용자는 인증센터의 설명 화면이나 Google 계정 선택창을 볼 필요가 없다. 처음 방문하는 서비스라도 동일하다.
 
 ### 실패 시
 
-`서비스 → auth.ekodi.kr → 실패 메시지 → 다시 시도`
+`서비스 → ekodi.kr/auth → 실패 메시지 → 다시 시도`
 
 - 세션 확인, 외부 로그인 라이브러리 로드, handoff API에는 시간 제한을 둔다.
 - 무한 로딩 화면을 허용하지 않는다.
@@ -61,7 +61,7 @@ EKODI 인증은 `사람(Person)`, `로그인 수단(Identity)`, `기본 무료�
 
 기본 진입:
 
-`https://auth.ekodi.kr/?site=<service-key>&return_to=<encoded-target>`
+`https://ekodi.kr/auth/?site=<service-key>&return_to=<encoded-target>`
 
 - `return_to`는 해당 서비스의 허용된 HTTPS origin만 허용한다.
 - 일반 서비스는 중앙 세션이 있으면 즉시 `identity-api /session/handoff`를 통해 일회용 handoff를 받는다.
