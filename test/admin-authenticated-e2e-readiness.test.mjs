@@ -45,7 +45,8 @@ test('authenticated Admin E2E gives demand-loaded navigation a bounded productio
   assert.match(worker,/detail\.waitFor\(\{ state: 'visible', timeout: interactionReadyTimeoutMs \}\)/);
   assert.match(worker,/menuId === 'command-home'[\s\S]*context\.waitFor\(\{ state: 'attached', timeout: interactionReadyTimeoutMs \}\)[\s\S]*verifyCommandWorkbench\(started\)/);
   assert.match(worker, /window\.EKODIAdminDemand\?\.activate/);
-  assert.match(worker, /await window\.EKODIAdminDemand\.activate\(section\)/);
+  assert.match(worker, /getAttribute\('data-demand-feature'\)/);
+  assert.match(worker, /await window\.EKODIAdminDemand\.activate\(key\)/);
   const demandBody=worker.slice(worker.indexOf('async function prepareTargetDemand()'),worker.indexOf('async function waitForAdminNavigationIdle()'));
   assert.doesNotMatch(demandBody,/clickFast\(placeholder\)/);
 });
