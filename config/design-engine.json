@@ -1,7 +1,7 @@
 {
   "version": 2,
   "name": "EKODI Design Engine",
-  "asOf": "2026-09-10",
+  "asOf": "2026-09-20",
   "principle": "Evidence defines reusable UX rules; EKODI identity, service DNA and EKODIAN character remain first-party layers.",
   "evidence": {
     "publicUser": {
@@ -58,18 +58,22 @@
   },
   "admin": {
     "primaryAxes": [
-      "home",
-      "operations",
-      "workspaces",
-      "services",
-      "system"
+      "core",
+      "common",
+      "professional",
+      "status",
+      "manager",
+      "submanager",
+      "other"
     ],
     "primaryAxisLabelsKo": [
-      "홈",
-      "운영",
-      "조직·고객",
-      "서비스",
-      "시스템"
+      "핵심코어",
+      "공통서비스",
+      "전문서비스",
+      "상태서비스",
+      "중간관리자",
+      "하위관리자",
+      "기타"
     ],
     "layout": "fixed-primary-sidebar + progressive-left-details + scrolling-workspace + bottom-command-composer",
     "desktopPrimarySidebarScroll": false,
@@ -130,7 +134,7 @@
         "level": 1,
         "owner": "global",
         "surface": "fixed-left-sidebar",
-        "rule": "exactly-five-primary-axes"
+        "rule": "exactly-seven-primary-domains"
       },
       {
         "level": 2,
@@ -154,7 +158,7 @@
       "nestedScroll": "tables-and-explicit-data-views-only"
     },
     "pageAnatomy": [
-      "left navigation: active axis + progressive child actions",
+      "left navigation: active domain + progressive child actions",
       "workspace header: title + purpose + status + primary actions",
       "optional KPI/status summary",
       "primary workbench",

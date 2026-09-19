@@ -38,8 +38,8 @@ test('Campus shortcuts cannot reopen hidden technical panels', () => {
   assert.ok(layout.includes('routeInternal()'));
 });
 
-test('human-facing Admin menu has one canonical order inside five EKODI axes', () => {
-  assert.deepEqual(adminMenuGroups(), ['home','operations','workspaces','services','system']);
+test('human-facing Admin menu has one canonical order inside seven governance domains', () => {
+  assert.deepEqual(adminMenuGroups(), ['core','common','professional','status','manager','submanager','other']);
   assert.deepEqual(adminMenuOrder(), [
     'command-home','campus','work','communication','finance','tax','clients','site-chrome','cmpmyi','organization','workspace',
     'common-services','life-ai','personal-finance','invest','community','books','social','devotional','marketing-ai','ai-membership','supply-network','insurance',

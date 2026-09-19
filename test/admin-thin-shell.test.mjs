@@ -122,25 +122,25 @@ test('normal login opens EKODI command console without auto-opening Campus or in
   assert.doesNotMatch(menu, /setInterval\(/);
 });
 
-test('admin menu governance uses five canonical EKODI axes with contextual top tabs', async () => {
+test('admin menu governance uses seven canonical EKODI domains with contextual top tabs', async () => {
   const registry = await read('admin-menu-registry.js');
   const sidebar = await read('admin-sidebar.js');
   assert.match(registry, /ADMIN_MENU_GROUPS/);
-  for (const group of ['home', 'operations', 'workspaces', 'services', 'system']) {
+  for (const group of ['core', 'common', 'professional', 'status', 'manager', 'submanager', 'other']) {
     assert.match(registry, new RegExp(`id: '${group}'`));
   }
-  for (const retired of ['structure', 'core', 'common', 'vertical', 'tenants', 'operations-center', 'people', 'ai', 'business', 'data', 'site-management', 'access', 'security-audit', 'settings']) {
+  for (const retired of ['structure', 'vertical', 'tenants', 'operations-center', 'people', 'ai', 'business', 'data', 'site-management', 'access', 'security-audit', 'settings']) {
     assert.doesNotMatch(registry, new RegExp(`id: '${retired}', icon:`));
   }
-  assert.match(registry, /id: 'campus', group: 'home'/);
-  assert.match(registry, /id: 'work', group: 'operations'/);
-  assert.match(registry, /id: 'clients', group: 'workspaces'/);
-  assert.match(registry, /id: 'common-services', group: 'services'/);
-  assert.match(registry, /id: 'life-ai', group: 'services'/);
-  assert.match(registry, /id: 'security', group: 'system'/);
-  assert.match(registry, /id: 'capabilities', group: 'system'/);
-  assert.match(registry, /id: 'devices', group: 'system'/);
-  assert.match(registry, /id: 'health', group: 'system'/);
+  assert.match(registry, /id: 'campus', group: 'submanager'/);
+  assert.match(registry, /id: 'work', group: 'common'/);
+  assert.match(registry, /id: 'clients', group: 'manager'/);
+  assert.match(registry, /id: 'common-services', group: 'common'/);
+  assert.match(registry, /id: 'life-ai', group: 'professional'/);
+  assert.match(registry, /id: 'security', group: 'core'/);
+  assert.match(registry, /id: 'capabilities', group: 'core'/);
+  assert.match(registry, /id: 'devices', group: 'core'/);
+  assert.match(registry, /id: 'health', group: 'status'/);
   assert.match(sidebar, /function pruneNonRegistryItems\(nav\)/);
   assert.match(sidebar, /RETIRED_MENU_SECTIONS = new Set\(\['overview'\]\)/);
   assert.match(sidebar, /GLOBAL_CLASS = 'admin-global-navs'/);
@@ -149,7 +149,7 @@ test('admin menu governance uses five canonical EKODI axes with contextual top t
   assert.match(sidebar, /TABS_CLASS = 'admin-context-tabs'/);
   assert.match(sidebar, /data-admin-context-section/);
   assert.match(sidebar, /data-admin-capability-shortcut/);
-  assert.match(sidebar, /nav\.dataset\.adminMenuGovernance = 'workbench-tabs-v2'/);
+  assert.match(sidebar, /nav\.dataset\.adminMenuGovernance = 'seven-domain-chat-v1'/);
   assert.match(sidebar, /item\.dataset\.adminMenuGroup = definition\.group/);
   assert.match(sidebar, /observer\.observe\(nav, \{ childList: true, subtree: false \}\)/);
   assert.doesNotMatch(sidebar, /subtree: true/);

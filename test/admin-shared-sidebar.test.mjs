@@ -9,8 +9,8 @@ const sidebar = await readFile(new URL('../admin-sidebar.js', import.meta.url), 
 const layout = await readFile(new URL('../admin-menu-layout.js', import.meta.url), 'utf8');
 const postbuild = await readFile(new URL('../scripts/admin-performance-postbuild.mjs', import.meta.url), 'utf8');
 
-test('five canonical axes replace the former many-group admin taxonomy', () => {
-  for (const id of ['home', 'operations', 'workspaces', 'services', 'system']) {
+test('seven governance domains replace the former generic five-axis taxonomy', () => {
+  for (const id of ['core', 'common', 'professional', 'status', 'manager', 'submanager', 'other']) {
     assert.match(registry, new RegExp(`id: '${id}'`));
   }
   for (const retired of ['site-management', 'security-audit', 'settings', 'access']) {
@@ -22,7 +22,7 @@ test('five canonical axes replace the former many-group admin taxonomy', () => {
   assert.match(sidebar, /getAdminMenuGroupForSection/);
 });
 
-test('every global work area opens its configured visible default submenu', () => {
+test('every governance domain opens its configured visible default submenu', () => {
   const { ADMIN_MENU_GROUPS, ADMIN_MENU_REGISTRY, getAdminMenuGroupDefault } = registryModule;
   for (const group of ADMIN_MENU_GROUPS) {
     const configured = ADMIN_MENU_REGISTRY.find(item => item.id === group.defaultSection && item.group === group.id && !item.internal && !item.superAdminOnly);
@@ -57,7 +57,7 @@ test('contextual subservices render as a sticky top tab strip and source nav sta
   assert.doesNotMatch(sidebar, /RECENT_KEY|FAVORITES_KEY|data-admin-quick-section/);
 });
 
-test('global navigation remains synchronized to the active panel and opens an axis in one click', () => {
+test('global navigation remains synchronized to the active panel and opens a domain in one click', () => {
   const activeNavIndex = sidebar.indexOf("find(item => item.classList.contains('active'))");
   const requestedPanelIndex = sidebar.indexOf('window.EKODIAdminPanels?.current?.()');
   const commandPriorityIndex = sidebar.indexOf("panelSection === 'command-home'");

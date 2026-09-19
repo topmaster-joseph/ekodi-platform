@@ -20,13 +20,13 @@ const [policy, userDna, userShell, theme, adminRuntime, adminCss, adminPrinciple
 ]);
 
 const errors = [];
-const expectedAxes = ['home', 'operations', 'workspaces', 'services', 'system'];
-const expectedLabels = ['홈', '운영', '조직·고객', '서비스', '시스템'];
+const expectedAxes = ['core', 'common', 'professional', 'status', 'manager', 'submanager', 'other'];
+const expectedLabels = ['핵심코어', '공통서비스', '전문서비스', '상태서비스', '중간관리자', '하위관리자', '기타'];
 const actualAxes = ADMIN_MENU_GROUPS.map(group => group.id);
 const actualLabels = ADMIN_MENU_GROUPS.map(group => group.labels?.ko);
 
 if (policy?.name !== 'EKODI Design Engine') errors.push('design-engine policy must use the canonical EKODI Design Engine name.');
-if (JSON.stringify(policy?.admin?.primaryAxes) !== JSON.stringify(expectedAxes)) errors.push('design-engine policy must define exactly five admin axes.');
+if (JSON.stringify(policy?.admin?.primaryAxes) !== JSON.stringify(expectedAxes)) errors.push('design-engine policy must define the seven canonical admin domains.');
 if (JSON.stringify(actualAxes) !== JSON.stringify(expectedAxes)) errors.push(`admin registry axes drifted: ${actualAxes.join(', ')}`);
 if (JSON.stringify(actualLabels) !== JSON.stringify(expectedLabels)) errors.push(`admin registry Korean labels drifted: ${actualLabels.join(', ')}`);
 
@@ -102,4 +102,4 @@ if (errors.length) {
   process.exit(1);
 }
 
-console.log(`✅ EKODI Design Engine validation passed: ${expectedAxes.length} admin axes, ${placementTotal} public award placements, shared character guardrails active.`);
+console.log(`✅ EKODI Design Engine validation passed: ${expectedAxes.length} admin domains, ${placementTotal} public award placements, shared character guardrails active.`);

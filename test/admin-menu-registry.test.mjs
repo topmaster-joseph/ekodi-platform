@@ -15,11 +15,11 @@ import {
   normalizeAdminLocale,
 } from '../admin-menu-registry.js';
 
-const WORK_AREAS = ['home', 'operations', 'workspaces', 'services', 'system'];
+const WORK_AREAS = ['core', 'common', 'professional', 'status', 'manager', 'submanager', 'other'];
 
-test('admin navigation has exactly five canonical EKODI axes', () => {
+test('admin navigation has seven task and governance domains', () => {
   assert.deepEqual(ADMIN_MENU_GROUPS.map(group => group.id), WORK_AREAS);
-  assert.deepEqual(ADMIN_MENU_GROUPS.map(group => group.labels.en), ['Home','Operations','Workspaces','Services','System']);
+  assert.deepEqual(ADMIN_MENU_GROUPS.map(group => group.labels.en), ['Core','Shared Services','Professional Services','Status & Operations','Manager','Sub-admins','Other']);
   for (const group of ADMIN_MENU_GROUPS) {
     assert.ok(group.defaultSection, `${group.id} missing defaultSection`);
     assert.equal(getAdminMenuGroupForSection(group.defaultSection), group.id);
@@ -38,16 +38,16 @@ test('every public admin subservice belongs to one work area', () => {
   assert.equal(getAdminMenuLabel('admins', 'ko'), '관리자·권한');
   assert.equal(getAdminMenuLabel('admins', 'en'), 'Administrators & Access');
   assert.equal(getAdminMenuLabel('common-services', 'ko'), '공통서비스');
-  assert.equal(getAdminMenuGroupForSection('common-services'), 'services');
+  assert.equal(getAdminMenuGroupForSection('common-services'), 'common');
   assert.ok(adminMenuOrder().includes('security'));
   assert.ok(adminMenuOrder().includes('admins'));
-  assert.equal(getAdminMenuGroupForSection('marketing-ai'), 'services');
-  assert.equal(getAdminMenuGroupForSection('finance'), 'operations');
-  assert.equal(getAdminMenuGroupForSection('workspace'), 'workspaces');
-  assert.equal(getAdminMenuGroupForSection('storage'), 'system');
+  assert.equal(getAdminMenuGroupForSection('marketing-ai'), 'professional');
+  assert.equal(getAdminMenuGroupForSection('finance'), 'common');
+  assert.equal(getAdminMenuGroupForSection('workspace'), 'manager');
+  assert.equal(getAdminMenuGroupForSection('storage'), 'core');
   assert.equal(getAdminMenuLabel('devices', 'ko'), '실행 인프라');
   assert.equal(getAdminMenuLabel('devices', 'en'), 'Execution Infrastructure');
-  assert.equal(getAdminMenuGroupForSection('devices'), 'system');
+  assert.equal(getAdminMenuGroupForSection('devices'), 'core');
   const execution = ADMIN_MENU_REGISTRY.find(item => item.id === 'devices');
   assert.deepEqual(execution?.governance, {
     track: 'agent',
