@@ -475,6 +475,43 @@ function summarizeCommandResult(result = {}) {
   for (const key of ['message', 'freedMB', 'pendingCount', 'installedCount', 'failedCount', 'rebootRequired', 'profile']) {
     if (result[key] !== undefined) summary[key] = result[key];
   }
+  if (result.agent && typeof result.agent === 'object') {
+    summary.agent = {
+      checkedAt: safeText(result.agent.checkedAt, 64),
+      version: safeText(result.agent.version, 40),
+      taskState: safeText(result.agent.taskState, 40),
+      persistentShell: result.agent.persistentShell === true,
+      directHostMutation: result.agent.directHostMutation === true,
+    };
+  }
+  if (result.system && typeof result.system === 'object') {
+    summary.system = {
+      cpuLoadPct: Number.isFinite(Number(result.system.cpuLoadPct)) ? Number(result.system.cpuLoadPct) : null,
+      memoryUsedPct: Number.isFinite(Number(result.system.memoryUsedPct)) ? Number(result.system.memoryUsedPct) : null,
+      memoryTotalGB: Number.isFinite(Number(result.system.memoryTotalGB)) ? Number(result.system.memoryTotalGB) : null,
+      uptimeHours: Number.isFinite(Number(result.system.uptimeHours)) ? Number(result.system.uptimeHours) : null,
+      batteryPct: Number.isFinite(Number(result.system.batteryPct)) ? Number(result.system.batteryPct) : null,
+      batteryStatus: safeText(result.system.batteryStatus, 40),
+      deviceClass: safeText(result.system.deviceClass, 40),
+      isPortable: result.system.isPortable === true,
+      autoExecutionEligible: result.system.autoExecutionEligible === true,
+      error: safeText(result.system.error, 80),
+    };
+  }
+  if (result.processes && typeof result.processes === 'object') {
+    const items = Array.isArray(result.processes.items) ? result.processes.items.slice(0, 20) : [];
+    summary.processes = {
+      checkedAt: safeText(result.processes.checkedAt, 64),
+      count: Math.max(0, Number(result.processes.count) || 0),
+      error: safeText(result.processes.error, 80),
+      items: items.map(item => ({
+        id: Math.max(0, Number(item?.id) || 0),
+        name: safeText(item?.name, 120),
+        cpuSeconds: Number.isFinite(Number(item?.cpuSeconds)) ? Number(item.cpuSeconds) : null,
+        memoryMB: Number.isFinite(Number(item?.memoryMB)) ? Number(item.memoryMB) : null,
+      })),
+    };
+  }
   return summary;
 }
 
