@@ -1,3 +1,4 @@
+// Release reconciliation: shared-live-collaboration-20260919
 (()=>{'use strict';
 const API='/api/realtime',SUPABASE_URL='https://renzehysxirjilvdxacv.supabase.co',PUBLISHABLE_KEY='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_',cfg=document.body.dataset,$=id=>document.getElementById(id),params=new URLSearchParams(location.search),PROGRAM_WIDTH=1280,PROGRAM_HEIGHT=720;
 const state={room:null,pc:null,session:null,local:null,screen:null,program:null,canvas:null,ctx:null,canvasStream:null,animationFrame:null,remote:new MediaStream(),hosting:false,isLive:false,closing:false,viewerMutedFallback:false,recording:null,studioPrepared:false,destinationCatalogLoaded:false,overlayDrag:null,overlays:new Map(),extraCameras:new Map(),participantPulls:new Map(),participantPublish:null,presenterHidden:false,chatMessages:[],chatTimer:null,participantTimer:null};
