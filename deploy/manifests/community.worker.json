@@ -5,19 +5,19 @@
     "config": "wrangler.community.toml",
     "requests": [
       {
-        "url": "https://community.ekodi.kr/",
+        "url": "https://ekodi.kr/community/",
         "statuses": [200],
         "redirect": "follow",
         "expect": ["Community", "/social-links.js"]
       },
       {
-        "url": "https://community.ekodi.kr/social-links.js",
+        "url": "https://ekodi.kr/community/social-links.js",
         "statuses": [200],
         "redirect": "follow",
         "expect": ["api.ekodi.kr/api/social/registry"]
       },
       {
-        "url": "https://community.ekodi.kr/health",
+        "url": "https://ekodi.kr/community/health",
         "statuses": [200],
         "redirect": "follow",
         "expect": ["\"socialRegistry\":true"]
