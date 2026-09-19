@@ -189,6 +189,33 @@
       "effectiveDate": "git_commit_time",
       "verificationState": "ci_gate",
       "lifecycleState": "active"
+    },
+    {
+      "id": "free-tier-optimization-policy",
+      "kind": "policy",
+      "source": "config/free-tier-optimization-policy.json",
+      "version": "EKODI-FREE-TIER-001",
+      "owner": "EKODI Orchestrator",
+      "dependencies": [
+        "governance/architecture/evolution-kernel.v1.json",
+        "config/ai-change-orchestration-policy.json"
+      ],
+      "effectiveDate": "2026-09-20",
+      "verificationState": "ci_gate",
+      "lifecycleState": "active"
+    },
+    {
+      "id": "free-tier-quota-guard",
+      "kind": "code",
+      "source": "free-tier-quota-guard.js",
+      "version": "git_commit_sha",
+      "owner": "EKODI Orchestrator",
+      "dependencies": [
+        "config/free-tier-optimization-policy.json"
+      ],
+      "effectiveDate": "2026-09-20",
+      "verificationState": "ci_gate",
+      "lifecycleState": "active"
     }
   ]
 }
