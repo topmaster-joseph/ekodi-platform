@@ -1,0 +1,61 @@
+name: Verify Storage Google OAuth Redirect Registration
+
+on:
+  pull_request:
+    paths:
+      - 'wrangler.storage.toml'
+      - '.github/workflows/google-oauth-storage-redirect-registration.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'wrangler.storage.toml'
+      - '.github/workflows/google-oauth-storage-redirect-registration.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  google-oauth-registration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - name: Verify canonical config and Google redirect registration
+        shell: bash
+        run: |
+          set -euo pipefail
+          canonical_redirect='https://ekodi.kr/storage/api/control/storage/google/callback'
+          grep -Fq "GOOGLE_DRIVE_OAUTH_REDIRECT_URI = \"${canonical_redirect}\"" wrangler.storage.toml
+
+          client_id="$(sed -n 's/^GOOGLE_DRIVE_CLIENT_ID = "\(.*\)"$/\1/p' wrangler.storage.toml | head -n 1)"
+          test -n "$client_id"
+
+          probe_redirect() {
+            label="$1"
+            redirect_uri="$2"
+            state="ekodi-storage-registration-probe-${label}"
+            encoded_redirect="$(node -p "encodeURIComponent(process.argv[1])" "$redirect_uri")"
+            encoded_scope="$(node -p "encodeURIComponent(process.argv[1])" 'openid email')"
+            url="https://accounts.google.com/o/oauth2/v2/auth?client_id=${client_id}&redirect_uri=${encoded_redirect}&response_type=code&scope=${encoded_scope}&state=${state}&access_type=offline&prompt=consent"
+            effective="$(curl -L -sS --connect-timeout 5 --max-time 20 -o "/tmp/google-oauth-${label}.html" -w '%{url_effective}' "$url")"
+            if printf '%s' "$effective" | grep -Fq '/signin/oauth/error' || grep -Fq 'redirect_uri_mismatch' "/tmp/google-oauth-${label}.html"; then
+              echo "::error::Google OAuth has not registered the ${label} redirect URI: ${redirect_uri}"
+              return 1
+            fi
+            echo "Google OAuth accepted the ${label} redirect URI contract."
+          }
+
+          probe_redirect canonical "$canonical_redirect"
+
+          legacy_host='drive'
+          legacy_host+='.'
+          legacy_host+='ekodi'
+          legacy_host+='.'
+          legacy_host+='kr'
+          legacy_redirect="https://${legacy_host}/api/control/storage/google/callback"
+          probe_redirect legacy "$legacy_redirect"
