@@ -12,6 +12,29 @@ export const AI_RESILIENCE_POLICY = Object.freeze({
 
 const DISABLED_VALUES = new Set(['none', 'off', 'disabled', 'false', '0']);
 
+const SAFE_PROVIDER_FAILURE_CODES = Object.freeze([
+  'AI_PROVIDER_TIMEOUT',
+  'WORKERS_AI_DAILY_CALL_LIMIT',
+  'WORKERS_AI_BUDGET_DB_UNAVAILABLE',
+  'WORKERS_AI_NOT_CONFIGURED',
+  'WORKERS_AI_EMPTY_RESPONSE',
+  'AI_USAGE_METER_UNAVAILABLE',
+  'EKODI_AI_BUDGET_LIMIT',
+  'OPENAI_PROVIDER_NOT_CONFIGURED',
+  'OPENAI_EMPTY_RESPONSE',
+  'GEMINI_PROVIDER_NOT_CONFIGURED',
+  'GEMINI_EMPTY_RESPONSE',
+  'ANTHROPIC_PROVIDER_NOT_CONFIGURED',
+  'ANTHROPIC_EMPTY_RESPONSE',
+]);
+
+function safeProviderFailureCode(error) {
+  const raw = String(error?.message || error || '').trim().toUpperCase();
+  if (SAFE_PROVIDER_FAILURE_CODES.includes(raw)) return raw;
+  if (/^(OPENAI|GEMINI|ANTHROPIC)_HTTP_\d{3}$/.test(raw)) return raw;
+  return 'PROVIDER_ERROR';
+}
+
 export function isAiProviderDisabled(env = {}) {
   const provider = String(env.AI_PROVIDER ?? '').trim().toLowerCase();
   const enabled = String(env.AI_PROVIDER_ENABLED ?? '').trim().toLowerCase();
@@ -48,10 +71,11 @@ export async function runAiEnhancedTask(options = {}) {
 
   const normalized = normalizeProviders(providers);
   if (isAiProviderDisabled(env) || normalized.length === 0) {
-    return runFallback(fallback, { taskName, reason: 'provider_disabled_or_missing', attemptedProviders: [] });
+    return runFallback(fallback, { taskName, reason: 'provider_disabled_or_missing', attemptedProviders: [], providerFailures: [] });
   }
 
   const attemptedProviders = [];
+  const providerFailures = [];
   const perProviderTimeoutMs = Math.max(1, Number(timeoutMs) || AI_RESILIENCE_POLICY.defaultTimeoutMs);
   const requestedTotalTimeoutMs = Number(totalTimeoutMs);
   const totalBudgetMs = Number.isFinite(requestedTotalTimeoutMs) && requestedTotalTimeoutMs > 0
@@ -83,15 +107,18 @@ export async function runAiEnhancedTask(options = {}) {
         degraded: false,
         provider: provider.id,
         taskName,
+        attemptedProviders: Object.freeze([...attemptedProviders]),
+        providerFailures: Object.freeze([...providerFailures]),
         value,
         notice: '',
       });
     } catch (error) {
+      providerFailures.push(Object.freeze({ provider: provider.id, code: safeProviderFailureCode(error) }));
       recordFailure(provider.id, now());
     }
   }
 
-  return runFallback(fallback, { taskName, reason: 'provider_unavailable', attemptedProviders });
+  return runFallback(fallback, { taskName, reason: 'provider_unavailable', attemptedProviders, providerFailures });
 }
 
 function normalizeProviders(providers) {
@@ -115,7 +142,8 @@ async function runFallback(fallback, context) {
       provider: null,
       taskName: context.taskName,
       reason: context.reason,
-      attemptedProviders: Object.freeze([...context.attemptedProviders]),
+      attemptedProviders: Object.freeze([...(context.attemptedProviders || [])]),
+      providerFailures: Object.freeze([...(context.providerFailures || [])]),
       value,
       notice: AI_RESILIENCE_POLICY.userNotice,
     });
@@ -127,7 +155,8 @@ async function runFallback(fallback, context) {
       provider: null,
       taskName: context.taskName,
       reason: 'assist_unavailable',
-      attemptedProviders: Object.freeze([...context.attemptedProviders]),
+      attemptedProviders: Object.freeze([...(context.attemptedProviders || [])]),
+      providerFailures: Object.freeze([...(context.providerFailures || [])]),
       value: null,
       notice: 'AI 보조 기능 없이 핵심 기능을 계속 이용할 수 있습니다.',
     });
