@@ -37,7 +37,7 @@
         "rollbackHeaderExpect": []
       },
       {
-        "url": "https://ekodi.kr/ai/api/commons/client",
+        "url": "https://ekodi.kr/ai/api/commons/client?v=20260919-3",
         "statuses": [
           200
         ],
@@ -77,7 +77,7 @@
         "rollbackHeaderExpect": []
       },
       {
-        "url": "https://ekodi.kr/ai/api/commons/style",
+        "url": "https://ekodi.kr/ai/api/commons/style?v=20260919-3",
         "statuses": [
           200
         ],
