@@ -24,7 +24,9 @@ test('delegated admins use task-first navigation without changing authority',asy
   assert.match(store,/label:'고객 · 리뷰'/);
   assert.match(store,/label:'홍보 · 채널'/);
   assert.match(store,/label:'운영 · 설정'/);
-  assert.match(store,/function renderSecondaryNav/);
+  assert.match(store,/admin-nav-group-label/);
+  assert.match(store,/dataset\.adminSection=key/);
+  assert.match(store,/root\.hidden=true/);
 
   assert.match(church,/label:'사람 · 돌봄'/);
   assert.match(church,/label:'예배 · 사역'/);
@@ -37,6 +39,7 @@ test('delegated admins use task-first navigation without changing authority',asy
   assert.match(trade,/\['companies','거래처'\]/);
   assert.match(trade,/\['access','권한'\]/);
   assert.match(trade,/const a=document\.createElement\('a'\);a\.href=sectionHref\(key\)/);
+  assert.match(trade,/sub\.hidden=true/);
 
   assert.match(portfolio,/PORTFOLIO_ACTIONS/);
   assert.match(portfolio,/\['orders','주문 · 매출'\]/);
@@ -68,4 +71,28 @@ test('multi-store public gateway avoids duplicate same-destination actions',asyn
   assert.match(source,/메뉴 · 가격 바로가기/);
   assert.match(source,/\$\{store\.slug\}#menu/);
   assert.doesNotMatch(source,/매장 정보 · 주문 · 배달/);
+});
+
+
+test('delegated admin navigation never requires a category click before reaching a task',async()=>{
+  const [workspace,store,church,trade]=await Promise.all([
+    read('workspace-admin-page.js'),
+    read('store-admin-engine.js'),
+    read('church-pastor-admin-page.js'),
+    read('workspace-trade-admin-page.js'),
+  ]);
+
+  assert.match(workspace,/admin-nav-group-label/);
+  assert.match(workspace,/a\.href=sectionHref\(key\)/);
+  assert.doesNotMatch(workspace,/button\.dataset\.adminGroup=group\.id/);
+
+  assert.match(store,/admin-nav-group-label/);
+  assert.match(store,/a\.href=key==='overview'\?ADMIN_BASE+'\/overview':ADMIN_BASE+'\/'+key/);
+  assert.doesNotMatch(store,/a\.dataset\.group=group\.id/);
+
+  assert.match(church,/admin-nav-group-label/);
+  assert.match(church,/a\.href=key==='overview'\?base+'\/overview':base+'\/'+key/);
+
+  assert.match(trade,/a\.href=sectionHref\(key\)/);
+  assert.match(trade,/sub\.hidden=true/);
 });
