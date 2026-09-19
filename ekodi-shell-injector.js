@@ -10,7 +10,6 @@ const SHELL_SCRIPT=`${SHELL_ORIGIN}/shell.js`;
 const SHELL_WORKSPACE_STYLE=`${SHELL_ORIGIN}/workspace.css`;
 const SHELL_USER_UI_STYLE=`${SHELL_ORIGIN}/user-ui-shell.css?v=${EKODI_SERVICE_MANIFEST.shellVersion}`;
 const SHELL_CHARACTER_STYLE=`${SHELL_ORIGIN}/user-character.css?v=${EKODI_SERVICE_MANIFEST.shellVersion}`;
-const SHELL_MOBILE_HEADER_SCRIPT=`${SHELL_ORIGIN}/mobile-fixed-header.js?v=${EKODI_SERVICE_MANIFEST.shellVersion}`;
 const PROGRESSIVE_HOME_SCRIPT=`${SHELL_ORIGIN}/progressive-home.js?v=${EKODI_SERVICE_MANIFEST.shellVersion}`;
 const PROGRESSIVE_HOME_STYLE=`${SHELL_ORIGIN}/progressive-home.css?v=${EKODI_SERVICE_MANIFEST.shellVersion}`;
 const INTERNAL_SURFACES=new Set(['workspace','admin','form','document','data']);
@@ -23,6 +22,8 @@ const USER_LAYOUT_VERSION='centered-v1';
 const USER_CHROME_HEADER='x-ekodi-user-chrome';
 const TENANT_READABILITY_HEADER='x-ekodi-tenant-readability';
 const TENANT_READABILITY_VERSION='v1';
+const SHELL_TENANT_READABILITY_STYLE=`${SHELL_ORIGIN}/user-ui-shell.css?tenant-readability=${TENANT_READABILITY_VERSION}`;
+const SHELL_MOBILE_HEADER_SCRIPT=`${SHELL_ORIGIN}/mobile-fixed-header.js?tenant-readability=${TENANT_READABILITY_VERSION}`;
 const ADMIN_BOOT_STYLE=`<style data-ekodi-admin-shell-boot>:where(.side-brand,.sidebar-brand,.admin-sidebar-brand,[data-ekodi-admin-sidebar-header],[data-ekodi-admin-brand]){display:none!important}</style>`;
 const SPECIAL_HOST_ALIASES=Object.freeze({
   'mall.ekodi.kr':'mall','mall.biz.ekodi.kr':'mall','trade.biz.ekodi.kr':'trade','pay.biz.ekodi.kr':'pay'
@@ -156,7 +157,7 @@ class TenantReadabilityHtmlInjector{
   element(element){element.setAttribute('data-ekodi-tenant-readability',TENANT_READABILITY_VERSION);}
 }
 class TenantReadabilityHeadInjector{
-  element(element){element.append(`<link rel="stylesheet" href="${SHELL_USER_UI_STYLE}" data-ekodi-tenant-readability-style="${TENANT_READABILITY_VERSION}"><script src="${SHELL_MOBILE_HEADER_SCRIPT}" defer data-ekodi-tenant-mobile-header="${TENANT_READABILITY_VERSION}"></script>`,{html:true});}
+  element(element){element.append(`<link rel="stylesheet" href="${SHELL_TENANT_READABILITY_STYLE}" data-ekodi-tenant-readability-style="${TENANT_READABILITY_VERSION}"><script src="${SHELL_MOBILE_HEADER_SCRIPT}" defer data-ekodi-tenant-mobile-header="${TENANT_READABILITY_VERSION}"></script>`,{html:true});}
 }
 class TenantReadabilityHeaderAdopter{
   constructor(){this.seen=false;}
@@ -297,4 +298,4 @@ export function shellServiceForRootPath(pathname){
   return '';
 }
 
-export { SHELL_ORIGIN, SHELL_SCRIPT, SHELL_WORKSPACE_STYLE, SHELL_USER_UI_STYLE, SHELL_CHARACTER_STYLE, SHELL_MOBILE_HEADER_SCRIPT, USER_UI_VERSION, USER_LAYOUT_VERSION, USER_CHROME_HEADER, TENANT_READABILITY_HEADER, TENANT_READABILITY_VERSION, userChromeAlreadyInjected, shellCsp };
+export { SHELL_ORIGIN, SHELL_SCRIPT, SHELL_WORKSPACE_STYLE, SHELL_USER_UI_STYLE, SHELL_CHARACTER_STYLE, SHELL_TENANT_READABILITY_STYLE, SHELL_MOBILE_HEADER_SCRIPT, USER_UI_VERSION, USER_LAYOUT_VERSION, USER_CHROME_HEADER, TENANT_READABILITY_HEADER, TENANT_READABILITY_VERSION, userChromeAlreadyInjected, shellCsp };
