@@ -79,6 +79,18 @@ test('autologon stays local and never sends a Windows password to EKODI', () => 
   assert.doesNotMatch(admin, /password\s*:/i);
 });
 
+test('native remote computer provider exposes bounded observe-only host commands', () => {
+  for (const command of ['computer.system.read','computer.process.list','computer.agent.status']) {
+    const escaped = command.replaceAll('.', '\\.');
+    assert.match(api, new RegExp(`'${escaped}'[^\\n]*risk: 'observe'`));
+    assert.match(agent, new RegExp(`'${escaped}'`));
+  }
+  assert.match(agent, /computerRead = \$true; processRead = \$true; agentStatus = \$true/);
+  assert.match(agent, /isolatedCommand = \$false/);
+  assert.match(agent, /persistentShell = \$false/);
+  assert.match(agent, /directHostMutation = \$false/);
+});
+
 test('diagnostics avoid remote screen, keyboard and credential collection', () => {
   assert.match(agent, /Get-SystemSnapshot/);
   assert.match(agent, /Get-StorageSnapshot/);
@@ -107,7 +119,7 @@ test('one-click device protocol is bounded to EKODI enrollment and official API'
 });
 
 test('existing registered devices upgrade transactionally and preserve registration', () => {
-  assert.match(agent, /\$AgentVersion = '2\.2\.1'/);
+  assert.match(agent, /\$AgentVersion = '2\.2\.2'/);
   assert.match(agent, /Invoke-AgentUpgradeTransaction/);
   assert.match(agent, /Assert-AgentCandidate/);
   assert.match(agent, /New-AgentUpgradeSnapshot/);
