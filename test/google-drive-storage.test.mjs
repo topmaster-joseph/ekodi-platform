@@ -46,8 +46,9 @@ test('storage control supports shared drives and app-scoped writes', () => {
   assert.match(control, /\/drives\?pageSize=100/);
 });
 
-test('admin browser uses same-origin Storage API and localized failure UX', () => {
-  assert.match(admin, /const API='\/api\/control\/storage\/google'/);
+test('admin browser uses canonical same-origin Storage API and localized failure UX', () => {
+  assert.match(admin, /const API='\/storage\/api\/control\/storage\/google'/);
+  assert.doesNotMatch(admin, /const API='\/api\/control\/storage\/google'/);
   assert.match(admin, /credentials:'same-origin'/);
   assert.doesNotMatch(admin, /drive\.ekodi\.kr\/api\/control\/storage\/google/);
   assert.match(admin, /저장소 연결을 확인할 수 없습니다/);
