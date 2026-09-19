@@ -54,7 +54,10 @@ test('production verification submits the real bottom command on canonical ekodi
   }
   assert.match(probe,/https:\/\/ekodi\.kr\/admin\//);
   assert.match(probe,/https:\/\/ekodi\.kr\/admin\/home\/campus/);
-  assert.match(probe,/https:\/\/api\.ekodi\.kr\/api\/control\/ai\/assist/);
+  assert.match(probe,/https:\/\/ekodi\.kr\/api\/control\/ai\/assist/);
+  assert.doesNotMatch(probe,/api\.ekodi\.kr/);
+  const dock=await read('admin-assist-dock.js');
+  assert.match(dock,/const API='https:\/\/ekodi\.kr'/);
   assert.match(probe,/#ekodiAssistBootstrap input/);
   assert.match(probe,/postDataJSON/);
   assert.match(probe,/ekodi-admin-command-history-v1/);
