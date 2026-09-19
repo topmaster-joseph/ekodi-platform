@@ -1,3 +1,4 @@
+// EKODI production recovery redeploy marker: 2026-09-19 latest-main restore.
 import { injectEkodiShell } from './ekodi-shell-injector.js';
 import { isWorkspaceAdminPath, workspaceAdminPage, workspaceAdminCss, workspaceAdminScript } from './workspace-admin-page.js';
 import { legacyAdminAliasTarget } from './admin-address-policy.js';
