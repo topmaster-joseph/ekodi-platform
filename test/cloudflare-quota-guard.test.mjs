@@ -60,6 +60,10 @@ test('production verification is consolidated into one automatic quota-aware pos
   assert.doesNotMatch(reliability, /production-synthetic:/);
   assert.doesNotMatch(reliability, /workflow_run:/);
   assert.doesNotMatch(shared, /\n\s*admin-authenticated-e2e:\s*\n/);
+  assert.match(shared, /Read Production Cloudflare quota Source of Truth/);
+  assert.match(shared, /cloudflare-production-budget\.mjs/);
+  assert.match(shared, /steps\.quota\.outputs\.state == 'exhausted'/);
+  assert.match(shared, /steps\.quota\.outputs\.skip_nonessential != 'true'/);
   for (const workflow of [fullA,fullB]) {
     assert.match(workflow, /on:\s*\n\s*workflow_dispatch:/);
     assert.doesNotMatch(workflow, /\n\s*push:\s*\n/);
