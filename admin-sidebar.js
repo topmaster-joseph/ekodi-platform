@@ -22,7 +22,7 @@ const MORE_CLASS = 'admin-detail-more';
 const PRIMARY_SECTIONS = Object.freeze({
   home: ['command-home', 'campus'],
   operations: ['work', 'communication', 'finance', 'tax'],
-  workspaces: ['clients', 'cmpmyi', 'organization', 'workspace'],
+  workspaces: ['clients', 'organization', 'workspace', 'cmpmyi', 'site-chrome'],
   services: ['common-services', 'marketing-ai', 'social', 'life-ai'],
   community: ['community', 'ai-membership'],
   publishing: ['books', 'devotional'],
