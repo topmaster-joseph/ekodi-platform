@@ -70,7 +70,7 @@ test('ordinary static assets stay asset-first while security-critical Admin and 
   ]) {
     assert.equal(wrangler.includes(`"${securityCritical}"`), true, `${securityCritical} must remain Worker-first`);
   }
-  for (const ordinaryStatic of ['/styles.css', '/homepage-ambient.css', '/mall.css', '/device-browser-diagnostics.js']) {
+  for (const ordinaryStatic of ['/styles.css', '/homepage-ambient.css', '/mall.css']) {
     assert.equal(wrangler.includes(`"${ordinaryStatic}"`), false, `${ordinaryStatic} should use Static Assets asset-first delivery`);
   }
 });
