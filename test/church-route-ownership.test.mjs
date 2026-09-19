@@ -20,3 +20,12 @@ test('Shared Site production workflow repairs Church route ownership before guar
   assert.ok(repair>0&&promote>repair);
   assert.match(workflow,/node scripts\/ensure-church-route-ownership\.mjs/);
 });
+
+
+test('Church live ownership verification opens the quota circuit immediately on 429/1027 instead of retrying',async()=>{
+  const source=await readFile(new URL('../scripts/ensure-church-route-ownership.mjs',import.meta.url),'utf8');
+  assert.match(source,/isQuotaCircuitBreak/);
+  assert.match(source,/QUOTA_GUARD\.circuitBreaker/);
+  assert.match(source,/error\.quotaCircuitOpen=true/);
+  assert.match(source,/if\(error\?\.quotaCircuitOpen===true\)throw error/);
+});

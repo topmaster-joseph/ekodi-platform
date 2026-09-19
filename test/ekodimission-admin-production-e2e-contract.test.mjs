@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
 const scriptUrl=new URL('../scripts/verify-ekodimission-admin-production-e2e.mjs',import.meta.url);
-const workflowUrl=new URL('../.github/workflows/deploy-site-core.yml',import.meta.url);
+const workflowUrl=new URL('../.github/workflows/verify-ekodimission-admin-production-e2e.yml',import.meta.url);
 
 test('Mission tenant-admin production E2E exercises the deployed Activity participant surface',async()=>{
   const source=await readFile(scriptUrl,'utf8');
@@ -32,12 +32,17 @@ test('Mission tenant-admin production E2E exercises the deployed Activity partic
   assert.ok(source.includes("workspace-admin.css"));
 });
 
-test('Shared Site production release runs Mission tenant-admin E2E after deploy',async()=>{
+test('Mission tenant-admin E2E runs only after a successful Shared Site deploy or explicit manual dispatch and obeys quota protection',async()=>{
   const workflow=await readFile(workflowUrl,'utf8');
-  assert.ok(workflow.includes("scripts/verify-ekodimission-admin-production-e2e.mjs"));
+  assert.ok(workflow.includes("workflow_run:"));
+  assert.ok(workflow.includes("workflows: ['Deploy EKODI Shared Site Core']"));
+  assert.ok(workflow.includes("workflow_dispatch:"));
+  assert.equal(workflow.includes("schedule:"),false);
+  assert.ok(workflow.includes("cloudflare-production-budget.mjs"));
+  assert.ok(workflow.includes("steps.quota.outputs.skip_nonessential != 'true'"));
   assert.ok(workflow.includes("Verify EKODI Mission tenant admin production surface"));
   assert.ok(workflow.includes("node scripts/verify-ekodimission-admin-production-e2e.mjs"));
-  assert.ok(workflow.includes("ekodimission-admin-production-e2e"));
+  assert.ok(workflow.includes("Mission production browser E2E skipped because Cloudflare quota protection is active."));
 });
 
 

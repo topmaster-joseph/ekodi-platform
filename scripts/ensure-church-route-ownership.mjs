@@ -1,5 +1,8 @@
+import { readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
+import { isQuotaCircuitBreak } from './cloudflare-quota-guard-lib.mjs';
 const API='https://api.cloudflare.com/client/v4';
+const QUOTA_GUARD=JSON.parse(readFileSync(new URL('../config/cloudflare-production-quota-guard.json',import.meta.url),'utf8'));
 export const CHURCH_ROUTE_CONTRACT=Object.freeze({
   gateway:'ekodi-church-path-gateway',
   desiredGateway:['ekodi.kr/ekodichurch','ekodi.kr/ekodichurch/*'],
@@ -25,10 +28,19 @@ async function verifyLive(url,expectedRoute){
   for(let attempt=1;attempt<=10;attempt++){
     try{
       const response=await fetch(url,{redirect:'manual',cache:'no-store'});
+      const body=await response.text();
       const route=response.headers.get('x-ekodi-route')||'';
       last=`HTTP ${response.status}, x-ekodi-route=${route||'missing'}`;
+      if(isQuotaCircuitBreak({status:response.status,body,config:QUOTA_GUARD.circuitBreaker})){
+        const error=new Error(`Cloudflare quota circuit open for ${url}: ${last}`);
+        error.quotaCircuitOpen=true;
+        throw error;
+      }
       if(response.status===200&&route===expectedRoute)return;
-    }catch(error){last=error.message}
+    }catch(error){
+      if(error?.quotaCircuitOpen===true)throw error;
+      last=error.message;
+    }
     await new Promise(resolve=>setTimeout(resolve,1500));
   }
   throw new Error(`Live route verification failed for ${url}: ${last}`);

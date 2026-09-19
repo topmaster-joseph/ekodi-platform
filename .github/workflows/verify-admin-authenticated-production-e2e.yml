@@ -2,21 +2,6 @@ name: Verify Authenticated Admin Production E2E
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/verify-admin-authenticated-production-e2e.yml'
-      - 'scripts/admin-authenticated-e2e.mjs'
-      - 'scripts/admin-authenticated-e2e-retry.mjs'
-      - 'scripts/admin-authenticated-e2e-menu-worker.mjs'
-      - 'admin-menu-registry.js'
-      - 'admin-menu-layout.js'
-      - 'admin-menu-runtime.js'
-      - 'admin-sidebar.js'
-      - 'admin-authenticated-shell.js'
-      - 'admin-demand-loader.js'
-      - 'ai-management-admin.js'
-      - 'ai-management-admin.css'
 
 permissions:
   contents: read
