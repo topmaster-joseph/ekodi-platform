@@ -39,6 +39,9 @@ test('shared Live auth handoff exchanges EKODI proof without third-party script 
   assert.match(source,/beforeunload/);
   assert.match(source,/waitForRemoteTracks/);
   assert.match(source,/publisher_media_unavailable/);
+  assert.match(source,/media_tracks_not_ready/);
+  assert.match(source,/attempt<5/);
+  assert.match(source,/송출 트랙을 기다리고 있습니다/);
   assert.match(source,/실시간 방송 수신 중입니다/);
   assert.doesNotMatch(source,/cdn\.jsdelivr\.net|esm\.sh/);
 });
