@@ -54,6 +54,14 @@ test('admin browser uses same-origin Storage API and localized failure UX', () =
   assert.match(admin, /t\('저장소','Storage'\)/);
 });
 
+test('Storage refreshes when the shared Admin panel controller activates the section', () => {
+  assert.match(admin, /function refreshWhenSharedNavigationActivates\(event\)/);
+  assert.match(admin, /ekodi-admin-section-changed',refreshWhenSharedNavigationActivates/);
+  assert.match(admin, /window\.EKODIAdminPanels\?\.current\?\.\(\)/);
+  assert.match(admin, /queueMicrotask\(\(\)=>refreshWhenSharedNavigationActivates\(\)\)/);
+  assert.match(admin, /EKODIStorageAdmin=Object\.freeze\(\{refresh,activate:/);
+});
+
 test('successful Google Drive OAuth returns directly to the exact admin route without an intermediate success page', () => {
   assert.ok(admin.includes("function currentAdminReturnPath(){return `${location.pathname}${location.search}${location.hash}`;}"));
   assert.ok(admin.includes("JSON.stringify({role,returnTo:currentAdminReturnPath()})"));
