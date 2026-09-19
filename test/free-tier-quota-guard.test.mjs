@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import {
   FREE_TIER_THRESHOLDS,
   evaluateFreeTierQuota,
@@ -38,4 +39,15 @@ test('free-tier provider preferences keep provider responsibilities separated', 
   assert.ok(providerFreeTierPreference('cloudflare').includes('static-assets'));
   assert.ok(providerFreeTierPreference('supabase').includes('rls'));
   assert.ok(providerFreeTierPreference('github').includes('public-hosted-actions'));
+});
+
+test('admin cost control exposes the free-tier guard and additive provider quota ledger exists', async () => {
+  const [control,migration]=await Promise.all([
+    readFile('api-cost-control.js','utf8'),
+    readFile('migrations/0099_free_tier_provider_quota.sql','utf8'),
+  ]);
+  assert.match(control,/EKODI-FREE-TIER-001/);
+  assert.match(control,/FREE_TIER_RETRY_STOP_SIGNALS/);
+  assert.match(migration,/provider_quota_snapshots/);
+  assert.match(migration,/provider_quota_state/);
 });
