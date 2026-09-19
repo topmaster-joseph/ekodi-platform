@@ -472,6 +472,9 @@ function deviceHealth(settings = {}, diagnostics = {}) {
 
 function summarizeCommandResult(result = {}) {
   const summary = {};
+  const finiteNumber = value => value === null || value === undefined || value === ''
+    ? null
+    : (Number.isFinite(Number(value)) ? Number(value) : null);
   for (const key of ['message', 'freedMB', 'pendingCount', 'installedCount', 'failedCount', 'rebootRequired', 'profile']) {
     if (result[key] !== undefined) summary[key] = result[key];
   }
@@ -486,11 +489,11 @@ function summarizeCommandResult(result = {}) {
   }
   if (result.system && typeof result.system === 'object') {
     summary.system = {
-      cpuLoadPct: Number.isFinite(Number(result.system.cpuLoadPct)) ? Number(result.system.cpuLoadPct) : null,
-      memoryUsedPct: Number.isFinite(Number(result.system.memoryUsedPct)) ? Number(result.system.memoryUsedPct) : null,
-      memoryTotalGB: Number.isFinite(Number(result.system.memoryTotalGB)) ? Number(result.system.memoryTotalGB) : null,
-      uptimeHours: Number.isFinite(Number(result.system.uptimeHours)) ? Number(result.system.uptimeHours) : null,
-      batteryPct: Number.isFinite(Number(result.system.batteryPct)) ? Number(result.system.batteryPct) : null,
+      cpuLoadPct: finiteNumber(result.system.cpuLoadPct),
+      memoryUsedPct: finiteNumber(result.system.memoryUsedPct),
+      memoryTotalGB: finiteNumber(result.system.memoryTotalGB),
+      uptimeHours: finiteNumber(result.system.uptimeHours),
+      batteryPct: finiteNumber(result.system.batteryPct),
       batteryStatus: safeText(result.system.batteryStatus, 40),
       deviceClass: safeText(result.system.deviceClass, 40),
       isPortable: result.system.isPortable === true,
@@ -507,8 +510,8 @@ function summarizeCommandResult(result = {}) {
       items: items.map(item => ({
         id: Math.max(0, Number(item?.id) || 0),
         name: safeText(item?.name, 120),
-        cpuSeconds: Number.isFinite(Number(item?.cpuSeconds)) ? Number(item.cpuSeconds) : null,
-        memoryMB: Number.isFinite(Number(item?.memoryMB)) ? Number(item.memoryMB) : null,
+        cpuSeconds: finiteNumber(item?.cpuSeconds),
+        memoryMB: finiteNumber(item?.memoryMB),
       })),
     };
   }
