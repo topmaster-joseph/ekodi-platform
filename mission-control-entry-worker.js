@@ -34,7 +34,7 @@ import { handleDevotionalControl } from './devotional-control.js';
 import { handleLearningControl } from './learning-control.js';
 import { handleLocalCommerceControl } from './local-commerce-control.js';
 import { handleExternalAccountControl } from './external-account-control.js';
-import { handleRealtimeControl } from './realtime-control.js';
+import { handleRealtimeControl, runRealtimeRecordingRetention } from './realtime-control.js';
 import { applyApiSecurityHeaders, enforceEdgeSecurity } from './security-edge.js';
 
 function errorResponse(message, code) {
@@ -363,6 +363,7 @@ export default {
     const commandPulse = runEkodiPulseSchedule(env, { limit:1 }).catch(error => { console.error('EKODI v8 Pulse schedule error', error); return { ok:false, error:'ekodi_v8_pulse_failed' }; });
     const aiProviderHealth = runAiProviderHealthSchedule(env, { scheduledTime:controller?.scheduledTime }).catch(error => { console.error('AI provider health schedule error', error); return { ok:false, checked:0, error:'ai_provider_health_failed' }; });
     const hybridWatchdog = runHybridExecutionMonitor(env).catch(error => { console.error('Hybrid execution watchdog schedule error', error); return { status:'unavailable', error:'hybrid_execution_watchdog_failed' }; });
+    const recordingRetention = runRealtimeRecordingRetention(env,{limit:10}).catch(error => { console.error('Realtime recording retention error', error); return { expired:0, stale:0, error:'realtime_recording_retention_failed' }; });
     const wakeOrchestration = (async () => {
       await disableIneligibleWakeProfiles(env);
       return runWakeOrchestration(env);
@@ -373,9 +374,10 @@ export default {
       ctx.waitUntil(commandPulse);
       ctx.waitUntil(aiProviderHealth);
       ctx.waitUntil(hybridWatchdog);
+      ctx.waitUntil(recordingRetention);
       ctx.waitUntil(wakeOrchestration);
     }
-    return customerSchedule || Promise.all([authorBilling, messengerOutbox, commandPulse, aiProviderHealth, hybridWatchdog, wakeOrchestration]);
+    return customerSchedule || Promise.all([authorBilling, messengerOutbox, commandPulse, aiProviderHealth, hybridWatchdog, recordingRetention, wakeOrchestration]);
   },
 };
 
