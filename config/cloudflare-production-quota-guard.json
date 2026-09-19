@@ -1,0 +1,77 @@
+{
+  "schemaVersion": 1,
+  "policyId": "CF-QUOTA-001",
+  "purpose": "Protect EKODI Production from Cloudflare Workers Free-plan quota exhaustion without weakening auth or security boundaries.",
+  "dailyRequestLimit": 100000,
+  "warningRatio": 0.7,
+  "protectRatio": 0.9,
+  "productionAccountEnv": "CLOUDFLARE_ACCOUNT_ID",
+  "developmentAccountEnv": "CLOUDFLARE_DEVELOPMENT_ACCOUNT_ID",
+  "knownDevelopmentAccountIds": [
+    "46aad4738793fbaca88574832a2ccc0f"
+  ],
+  "circuitBreaker": {
+    "statuses": [429],
+    "bodyMarkers": [
+      "Error 1027",
+      "temporarily rate limited",
+      "reached their plan limits"
+    ]
+  },
+  "canary": {
+    "essential": [
+      {
+        "id": "admin",
+        "url": "https://ekodi.kr/admin/",
+        "status": 200,
+        "text": "<title>EKODI Admin</title>",
+        "header": {
+          "name": "x-ekodi-route",
+          "contains": "admin-shell"
+        }
+      },
+      {
+        "id": "control-api",
+        "url": "https://api.ekodi.kr/health",
+        "status": 200
+      }
+    ],
+    "nonessential": [
+      {
+        "id": "root",
+        "url": "https://ekodi.kr/",
+        "status": 200
+      },
+      {
+        "id": "cgma",
+        "url": "https://ekodi.kr/cgma/",
+        "status": 200,
+        "text": "청계면상인회"
+      },
+      {
+        "id": "jadam",
+        "url": "https://ekodi.kr/jadam",
+        "status": 200,
+        "text": "자담치킨 목포대점"
+      },
+      {
+        "id": "pizzamaru",
+        "url": "https://ekodi.kr/pizzamaru",
+        "status": 200,
+        "text": "피자마루 목포대점"
+      },
+      {
+        "id": "yogurt",
+        "url": "https://ekodi.kr/yogurt",
+        "status": 200,
+        "text": "요거트퍼플 목포대점"
+      },
+      {
+        "id": "marketing",
+        "url": "https://ekodi.kr/ekodibiz/marketing-ai",
+        "status": 200,
+        "text": "마케팅AI"
+      }
+    ]
+  }
+}
