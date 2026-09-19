@@ -53,6 +53,15 @@ test('public health artifact is emitted at the canonical ops path', async () => 
   }
 });
 
+test('public health static header replaces the inherited cache policy with no-store', async () => {
+  const headers = await readFile(new URL('../_headers', import.meta.url), 'utf8');
+  const block = headers.match(/^\/ops\/health\.json\n((?:[ \t].*(?:\n|$))*)/m);
+  assert.ok(block, 'missing /ops/health.json header block');
+  assert.match(block[1], /^\s+! Cache-Control$/m);
+  assert.match(block[1], /^\s+Cache-Control: no-store$/m);
+  assert.match(block[1], /^\s+Access-Control-Allow-Origin: \*$/m);
+});
+
 test('restricted crawlers can retrieve only the public health exception while remaining denied elsewhere', () => {
   const robots = allowOpsHealthForRestrictedCrawlers(renderRobotsTxt());
   for (const crawler of [...DISCOVERY_CRAWLER_POLICY.training, ...DISCOVERY_CRAWLER_POLICY.agent]) {
