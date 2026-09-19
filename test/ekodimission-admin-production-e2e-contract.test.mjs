@@ -20,6 +20,8 @@ test('Mission tenant-admin production E2E exercises the deployed Activity partic
     "단순 참가자",
     "production-assets+synthetic-tenant-auth-data",
     "Mission admin signed-out login link missing",
+    "textContent?.includes('로그인 필요')",
+    "#mainPanel a.button.primary[href*=\"/auth/\"]",
     "searchParams.get('site')!=='mission'",
     "authReturnToExact:true"
   ]) assert.ok(source.includes(marker),marker);
