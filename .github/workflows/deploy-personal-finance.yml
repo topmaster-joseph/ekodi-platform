@@ -71,6 +71,8 @@ jobs:
           test -f deploy/manifests/personal-finance-api.worker.json
           grep -Fq 'binding = "PERSONAL_DB"' wrangler.personal-finance.toml
           grep -Fq 'database_name = "ekodi-personal-finance"' wrangler.personal-finance.toml
+          grep -Fq 'binding = "CONTROL_API"' wrangler.personal-finance.toml
+          grep -Fq 'service = "ekodi-auth-api"' wrangler.personal-finance.toml
           ! grep -R -Fq 'DROP TABLE' personal-finance-migrations
           npx --yes wrangler@${WRANGLER_VERSION} d1 migrations apply PERSONAL_DB --local --config wrangler.personal-finance.toml
 
