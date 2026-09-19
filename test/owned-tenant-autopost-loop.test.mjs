@@ -5,6 +5,7 @@ import {
   OWNED_TENANT_AUTOPOST_ROLLOUT,
   autopostChannelCompatible,
   autopostContentEligible,
+  ownedTenantAutopostSubject,
 } from '../owned-tenant-autopost-loop.js';
 
 const read = path => readFile(new URL(`../${path}`, import.meta.url),'utf8');
@@ -16,6 +17,11 @@ test('owned tenant rollout order follows the approved sequence', () => {
   );
   assert.equal(OWNED_TENANT_AUTOPOST_ROLLOUT[0].name,'에코디비즈');
   assert.equal(OWNED_TENANT_AUTOPOST_ROLLOUT[1].templateId,'store_promo');
+  assert.equal(ownedTenantAutopostSubject({type:'tenant',key:'ekodi-biz'}),true);
+  assert.equal(ownedTenantAutopostSubject({type:'tenant',key:'jadam'}),true);
+  assert.equal(ownedTenantAutopostSubject({type:'tenant',key:'pizzamaru'}),true);
+  assert.equal(ownedTenantAutopostSubject({type:'tenant',key:'yogurt'}),true);
+  assert.equal(ownedTenantAutopostSubject({type:'tenant',key:'ekodimall'}),false);
 });
 
 test('automatic queueing is fail-closed unless content is explicitly eligible and approved', () => {
@@ -52,4 +58,8 @@ test('migration enables autonomous policy but preserves the explicit content gat
   assert.match(loop,/status IN \('scheduled','queued','publishing','retrying','credentials_required'\)/);
   assert.match(loop,/requested_by/);
   assert.match(loop,/'ai'/);
+  assert.match(migration,/UPDATE marketing_publish_channels/);
+  assert.match(migration,/json_extract/);
+  assert.match(migration,/oauthConnectionId/);
+  assert.match(migration,/credential_ref/);
 });
