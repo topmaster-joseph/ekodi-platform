@@ -27,7 +27,7 @@ const auth={authorization:"Bearer "+token,"content-type":"application/json"};
 async function cf(path,options={}){
   const response=await fetch(api+path,{...options,headers:{...auth,...(options.headers||{})},signal:AbortSignal.timeout(15000)});
   const data=await response.json().catch(()=>({}));
-  if(!response.ok||data.success!==true)throw new Error("Cloudflare API "+response.status+": "+JSON.stringify(data.errors||data));
+  if(!response.ok||data.success===false)throw new Error("Cloudflare API "+response.status+": "+JSON.stringify(data.errors||data));
   return data;
 }
 async function listDomains(){return (await cf("/accounts/"+account+"/workers/domains")).result||[]}
