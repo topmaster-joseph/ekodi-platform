@@ -80,15 +80,14 @@ test('global menu labels use readable contrast on the dark primary sidebar', () 
   assert.match(sidebar, /font-size:15px;font-weight:780/);
 });
 
-test('context tabs keep the same light readable hierarchy as the sidebar', () => {
-  assert.match(sidebar, /\.\$\{TABS_SHELL_CLASS\}\{[^}]*min-height:56px[^}]*background:rgba\(255,255,255,\.98\)/);
-  assert.match(sidebar, /\.admin-context-title\{[^}]*font-size:13px/);
+test('context tabs keep a light readable hierarchy above the work surface', () => {
+  assert.match(sidebar, /\.\$\{TABS_SHELL_CLASS\}\{[^}]*min-height:62px[^}]*background:rgba\(255,255,255,\.98\)/);
+  assert.match(sidebar, /\.admin-context-title\{[^}]*font-size:14px/);
   assert.match(sidebar, /\.admin-context-tab\{[^}]*min-height:40px[^}]*font-size:14px[^}]*line-height:1\.35/);
-  assert.match(sidebar, /\.admin-context-tab\.active\{[^}]*background:#edf4ff[^}]*color:#0b5cab/);
+  assert.match(sidebar, /\.admin-context-tab\.active\{[^}]*background:#eaf3ff[^}]*color:#0b5cab/);
   assert.match(sidebar, /\.admin-capability-shortcut\{[^}]*min-height:40px[^}]*font-size:14px/);
   assert.match(sidebar, /@media\(max-width:760px\)[^`]*\.admin-context-tab\{min-height:42px[^}]*font-size:15px/);
 });
-
 test('site-management workbench keeps operational text above miniature-preview density', () => {
   assert.match(sidebar, /#campusPanel \.campus-toolbar p:not\(\.kicker\)\{font-size:14px!important/);
   assert.match(sidebar, /#campusSiteGroups \.campus-group-head h3\{font-size:17px!important/);
