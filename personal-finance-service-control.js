@@ -1,4 +1,4 @@
-const ADMIN_ORIGINS=new Set(['https://ekodi.kr','https://admin.ekodi.kr']);
+const ADMIN_ORIGINS=new Set(['https://ekodi.kr']);
 const CENTRAL_ADMIN_SESSION='https://ekodi.kr/api/session';
 const CENTRAL_ADMIN_ELEVATION='https://ekodi.kr/api/admin-access/elevation';
 const MUTABLE_KEYS=Object.freeze(['serviceEnabled','manualEntryEnabled','fileImportEnabled','planningEnabled']);

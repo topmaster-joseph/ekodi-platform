@@ -115,6 +115,9 @@ jobs:
           [vars]
           SUPABASE_URL = "https://renzehysxirjilvdxacv.supabase.co"
           SUPABASE_PUBLISHABLE_KEY = "sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_"
+          [[services]]
+          binding = "CONTROL_API"
+          service = "ekodi-auth-api-staging"
           [[d1_databases]]
           binding = "PERSONAL_DB"
           database_name = "ekodi-personal-finance-staging"
@@ -125,6 +128,16 @@ jobs:
         run: |
           bash scripts/apply-d1-migrations-with-retry.sh PERSONAL_DB wrangler.personal-finance.staging.runtime.toml "$WRANGLER_VERSION"
           npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.personal-finance.staging.runtime.toml
+      - name: Verify staging Control API service binding
+        shell: bash
+        run: |
+          set -euo pipefail
+          endpoint='https://ekodi-personal-finance-api-staging.ekodi-development.workers.dev/api/admin/personal-finance/control'
+          code=$(curl -sS -o /tmp/pf-staging-admin.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$endpoint" \
+            -H 'Authorization: Bearer pf-staging-invalid-token' \
+            -H 'Origin: https://ekodi.kr')
+          [ "$code" = '401' ]
+          grep -Fq '"code":"PF_ADMIN_AUTH_REQUIRED"' /tmp/pf-staging-admin.json
       - name: Verify local runtime auth boundary
         shell: bash
         run: |
