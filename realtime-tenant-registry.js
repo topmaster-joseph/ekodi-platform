@@ -24,6 +24,10 @@ export function realtimeTenantFromPath(pathname='') {
   const path=String(pathname||'');
   return TENANTS.find(tenant=>path===tenant.path||path===tenant.path.slice(0,-1)||path===`${tenant.path}index.html`)||null;
 }
+export function realtimeTenantAdminFromPath(pathname='') {
+  const path=String(pathname||'').replace(/\/+$/,'');
+  return TENANTS.find(tenant=>path===`${tenant.path.replace(/\/$/,'')}/admin`)||null;
+}
 export function realtimeTenantAliases(value='') {
   const tenant=realtimeTenant(value);return tenant?new Set([tenant.id,tenant.apiTenant,...tenant.aliases]):new Set();
 }
