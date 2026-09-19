@@ -342,9 +342,9 @@ jobs:
             exit 1
           fi
           root_host='ekodi.kr'
-          for host in "$root_host" "admin.$root_host" "mail.$root_host"; do
-            grep -Fq "pattern = \"$host\"" wrangler.site.toml
-          done
+          grep -Fq "pattern = \"$root_host\"" wrangler.site.toml
+          custom_domain_count=$(awk '/\[\[routes\]\]/{block=""} {block=block $0 "\\n"} /custom_domain = true/{count++} END{print count+0}' wrangler.site.toml)
+          test "$custom_domain_count" = '1'
 
       - name: Verify Cloudflare credentials
         run: |
@@ -380,8 +380,8 @@ jobs:
           grep -Fq 'renderMissingTargets' dist/ai-ops-admin.js
           grep -Fq '.ai-evolution-block' dist/ai-ops-admin.css
           grep -Fq 'EKODI COMMUNICATION ADMIN' dist/communication-admin.js
-          grep -Fq 'https://mail.ekodi.kr/admin' dist/communication-admin.js
-          grep -Fq 'https://live.ekodi.kr/' dist/communication-admin.js
+          grep -Fq 'https://ekodi.kr/mail/admin' dist/communication-admin.js
+          grep -Fq 'https://ekodi.kr/live' dist/communication-admin.js
           grep -Fq 'Permission transfer: NONE' dist/openai-workspace-admin.js
           grep -Fq 'EKODIAdminContext' dist/openai-workspace-admin.js
           grep -Fq 'ekodi-admin-assist-request' dist/openai-workspace-admin.js
@@ -433,12 +433,14 @@ jobs:
           echo "$payload" | jq -e '.success == true' >/dev/null
           needs_sync=false
           root_host='ekodi.kr'
-          for host in "$root_host" "admin.$root_host" "mail.$root_host"; do
-            if ! echo "$payload" | jq -e --arg host "$host" --arg service 'shy-thunder-39a4' '.result[] | select(.hostname == $host and .service == $service)' >/dev/null; then
-              echo "Cloudflare Worker domain missing: $host"
-              needs_sync=true
-            fi
-          done
+          if ! echo "$payload" | jq -e --arg host "$root_host" --arg service 'shy-thunder-39a4' '.result[] | select(.hostname == $host and .service == $service)' >/dev/null; then
+            echo "Cloudflare Worker domain missing: $root_host"
+            needs_sync=true
+          fi
+          if echo "$payload" | jq -e --arg host "$root_host" --arg service 'shy-thunder-39a4' '.result[] | select(.service == $service and .hostname != $host)' >/dev/null; then
+            echo 'Unexpected Shared Site custom domain attachment detected; trigger synchronization required.'
+            needs_sync=true
+          fi
           config_changed=false
           if [ "$GITHUB_EVENT_NAME" = 'push' ] && [ -n "${BEFORE_SHA:-}" ] && [ "$BEFORE_SHA" != '0000000000000000000000000000000000000000' ]; then
             if git diff --name-only "$BEFORE_SHA" "$GITHUB_SHA" 2>/dev/null | grep -Fxq 'wrangler.site.toml'; then config_changed=true; fi
@@ -449,11 +451,13 @@ jobs:
             payload=$(read_domains)
           fi
           root_host='ekodi.kr'
-          for host in "$root_host" "admin.$root_host" "mail.$root_host"; do
-            echo "$payload" | jq -e --arg host "$host" --arg service 'shy-thunder-39a4' '.result[] | select(.hostname == $host and .service == $service)' >/dev/null \
-              || { echo "Required Cloudflare Worker domain is not attached: $host"; exit 1; }
-            echo "Verified Cloudflare Worker domain: $host"
-          done
+          echo "$payload" | jq -e --arg host "$root_host" --arg service 'shy-thunder-39a4' '.result[] | select(.hostname == $host and .service == $service)' >/dev/null \
+            || { echo "Required Cloudflare Worker domain is not attached: $root_host"; exit 1; }
+          if echo "$payload" | jq -e --arg host "$root_host" --arg service 'shy-thunder-39a4' '.result[] | select(.service == $service and .hostname != $host)' >/dev/null; then
+            echo 'Unexpected Shared Site custom domain remains attached after synchronization.'
+            exit 1
+          fi
+          echo "Verified Cloudflare Worker domain: $root_host"
 
       - name: Enforce canonical Church route ownership
         run: node scripts/ensure-church-route-ownership.mjs
