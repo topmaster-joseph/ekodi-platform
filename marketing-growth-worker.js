@@ -52,7 +52,7 @@ async function adminIdentityFromSession(request, env) {
   if (!authorization.toLowerCase().startsWith('bearer ')) return null;
   const probe = new URL(request.url);
   probe.protocol = 'https:';
-  probe.hostname = 'api.ekodi.kr';
+  probe.hostname = 'ekodi.kr';
   probe.pathname = '/api/session';
   probe.search = '';
   try {
