@@ -41,6 +41,32 @@ test('My and system paths preserve the internal execution boundary',async()=>{
   assert.equal(response.status,200);assert.equal(control.calls[3].pathname,'/api/control/ai/v8/status');
 });
 
+test('Personal Finance admin control is owned before the generic Control API',async()=>{
+  const calls=[];const personal={fetch:async request=>{calls.push(new URL(request.url));return new Response(JSON.stringify({authenticated:false}),{status:401,headers:{'content-type':'application/json'}})}};
+  const control=binding('generic-control');
+  const response=await routeCanonicalSurface(new Request('https://ekodi.kr/api/control/personal-finance'),{PERSONAL_FINANCE:personal,CONTROL_API:control});
+  assert.equal(response.status,401);assert.equal(calls.length,1);assert.equal(calls[0].pathname,'/api/admin/personal-finance/control');assert.equal(calls[0].search,'');
+  assert.equal(control.calls.length,0);
+  const data=await response.json();assert.equal(data.code,'PF_ADMIN_AUTH_REQUIRED');assert.equal(data.authenticated,undefined);
+  assert.equal(response.headers.get('x-ekodi-personal-finance-proxy'),'service-binding-v1');assert.equal(response.headers.get('cache-control'),'no-store');assert.equal(response.headers.get('x-content-type-options'),'nosniff');
+});
+
+test('OAuth callback apex paths reach Storage and Marketing service bindings',async()=>{
+  const storage=binding('storage-callback');
+  const marketing=binding('marketing-callback');
+  let response=await routeCanonicalSurface(new Request('https://ekodi.kr/storage/api/control/storage/google/callback?state=s&code=c'),{STORAGE:storage,MARKETING_GROWTH:marketing});
+  assert.equal(response.status,200);
+  assert.equal(storage.calls[0].pathname,'/api/control/storage/google/callback');
+  assert.equal(storage.calls[0].search,'?state=s&code=c');
+  assert.equal(response.headers.get('x-ekodi-canonical-surface'),'storage');
+
+  response=await routeCanonicalSurface(new Request('https://ekodi.kr/marketing-connect-api/oauth/youtube/callback?state=s&ticket=t'),{STORAGE:storage,MARKETING_GROWTH:marketing});
+  assert.equal(response.status,200);
+  assert.equal(marketing.calls[0].pathname,'/oauth/youtube/callback');
+  assert.equal(marketing.calls[0].search,'?state=s&ticket=t');
+  assert.equal(response.headers.get('x-ekodi-canonical-surface'),'marketing-connect-api');
+});
+
 test('Shell canonical path uses its service binding and strips the apex prefix',async()=>{
   const shell=binding(JSON.stringify({ok:true,service:'ekodi-shell'}),'application/json');
   const response=await routeCanonicalSurface(new Request('https://ekodi.kr/shell/manifest.json?release=1'),{SHELL:shell});

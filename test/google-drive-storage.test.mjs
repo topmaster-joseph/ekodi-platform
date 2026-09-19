@@ -54,16 +54,34 @@ test('admin browser uses same-origin Storage API and localized failure UX', () =
   assert.match(admin, /t\('저장소','Storage'\)/);
 });
 
+test('Storage refreshes when the shared Admin panel controller activates the section', () => {
+  assert.match(admin, /function refreshWhenSharedNavigationActivates\(event\)/);
+  assert.match(admin, /ekodi-admin-section-changed',refreshWhenSharedNavigationActivates/);
+  assert.match(admin, /window\.EKODIAdminPanels\?\.current\?\.\(\)/);
+  assert.match(admin, /queueMicrotask\(\(\)=>refreshWhenSharedNavigationActivates\(\)\)/);
+  assert.match(admin, /EKODIStorageAdmin=Object\.freeze\(\{refresh,activate:/);
+});
+
 test('successful Google Drive OAuth returns directly to the exact admin route without an intermediate success page', () => {
   assert.ok(admin.includes("function currentAdminReturnPath(){return `${location.pathname}${location.search}${location.hash}`;}"));
   assert.ok(admin.includes("JSON.stringify({role,returnTo:currentAdminReturnPath()})"));
   assert.ok(control.includes("const returnTo = safeAdminReturnPath(body.returnTo);"));
-  assert.ok(control.includes("signState(env,{nonce,role,adminEmail:auth.session.email,returnTo,exp:exp.getTime()})"));
+  assert.ok(control.includes("signState(env,{nonce,role,adminEmail:auth.session.email,returnTo,redirectUri,exp:exp.getTime()})"));
   assert.ok(control.includes("return adminRedirect(payload.returnTo);"));
   assert.ok(control.includes("status:303"));
   assert.ok(control.includes("target.origin !== ADMIN_ORIGIN"));
   assert.doesNotMatch(control, /return html\(`\$\{email\} 계정이 .*연결되었습니다.*`,true\)/s);
 });
+test('Google OAuth callback cutover is dual-stack, state-pinned, and apex-ready', () => {
+  assert.match(control, /CANONICAL_REDIRECT_URI = 'https:\/\/ekodi\.kr\/storage\/api\/control\/storage\/google\/callback'/);
+  assert.match(control, /GOOGLE_DRIVE_OAUTH_REDIRECT_URI/);
+  assert.match(control, /ALLOWED_GOOGLE_REDIRECT_URIS/);
+  assert.match(control, /stateGoogleOAuthRedirectUri/);
+  assert.match(control, /redirectUri,exp/);
+  assert.match(control, /redirect_uri:redirectUri/);
+  assert.match(control, /MARKETING_YOUTUBE_CALLBACK = 'https:\/\/ekodi\.kr\/marketing-connect-api\/oauth\/youtube\/callback'/);
+});
+
 test('Storage brokers Marketing YouTube OAuth through the already-authorized Drive callback without exposing the client secret', () => {
   assert.match(control, /MARKETING_YOUTUBE_CALLBACK/);
   assert.match(control, /purpose:'marketing_youtube'/);

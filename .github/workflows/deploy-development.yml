@@ -56,5 +56,109 @@ jobs:
             echo "::error::CLOUDFLARE_DEVELOPMENT_API_TOKEN is not configured in the development environment."
             exit 1
           }
+      - name: Resolve isolated Development auth D1
+        id: development_d1
+        shell: bash
+        run: |
+          set -euo pipefail
+          list_db() {
+            npx --yes wrangler@4.127.0 d1 list --json | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{const j=JSON.parse(s);const a=Array.isArray(j)?j:(j.result||[]);const x=a.find(v=>v.name==='ekodi-auth-development');if(x)process.stdout.write(x.uuid||x.id||'')})"
+          }
+          DB_ID=$(list_db)
+          if [ -z "$DB_ID" ]; then
+            npx --yes wrangler@4.127.0 d1 create ekodi-auth-development --location apac
+            DB_ID=$(list_db)
+          fi
+          test -n "$DB_ID"
+          echo "database_id=$DB_ID" >> "$GITHUB_OUTPUT"
+      - name: Build isolated Development Control API config
+        env:
+          DB_ID: ${{ steps.development_d1.outputs.database_id }}
+        run: |
+          cat > wrangler.api.development.runtime.toml <<EOF
+          name = "ekodi-auth-api-development"
+          main = "mission-control-entry-worker.js"
+          compatibility_date = "2026-08-12"
+          workers_dev = true
+          preview_urls = false
+          [vars]
+          ENVIRONMENT = "development"
+          ADMIN_EMAIL = "topmaster.joseph@gmail.com"
+          ADMIN_GOOGLE_BOOTSTRAP_EMAILS = "topmaster.joseph@gmail.com,joseph@ekodi.kr"
+          ADMIN_WORKSPACE_DOMAIN = "ekodi.kr"
+          GOOGLE_CLIENT_ID = "483044030492-qvk96u0rvptsshat0pi8g522puq9ju16.apps.googleusercontent.com"
+          GOOGLE_IDENTITY_ORIGIN = "https://ekodi-platform-development.ekodi-development.workers.dev"
+          AI_PROVIDER = "NONE"
+          OPENAI_MODEL = "gpt-5.6-terra"
+          EKODI_PROVIDER_WORKERS_AI_ENABLED = "false"
+          EKODI_WORKERS_AI_DAILY_CALL_LIMIT = "4"
+          ALLOWED_ORIGINS = "https://ekodi-platform-development.ekodi-development.workers.dev,http://127.0.0.1:4173,http://localhost:4173"
+          [ai]
+          binding = "AI"
+          [observability.logs]
+          enabled = true
+          invocation_logs = true
+          [[ratelimits]]
+          name = "AUTH_RATE_LIMITER"
+          namespace_id = "3201"
+            [ratelimits.simple]
+            limit = 20
+            period = 60
+          [[ratelimits]]
+          name = "SENSITIVE_RATE_LIMITER"
+          namespace_id = "3202"
+            [ratelimits.simple]
+            limit = 120
+            period = 60
+          [[d1_databases]]
+          binding = "DB"
+          database_name = "ekodi-auth-development"
+          database_id = "$DB_ID"
+          migrations_dir = "migrations"
+          EOF
+      - name: Apply migrations to isolated Development auth D1
+        run: npx --yes wrangler@4.127.0 d1 migrations apply DB --remote --config wrangler.api.development.runtime.toml
+      - name: Verify Development Google identity contract locally
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4.127.0 d1 migrations apply DB --local --config wrangler.api.development.runtime.toml >/tmp/development-local-migrations.log 2>&1
+          npx --yes wrangler@4.127.0 dev --local --config wrangler.api.development.runtime.toml --ip 127.0.0.1 --port 8792 >/tmp/development-control.log 2>&1 &
+          runtime_pid=$!
+          trap 'kill $runtime_pid 2>/dev/null || true' EXIT
+          ready=0
+          for attempt in $(seq 1 30); do
+            code=$(curl -sS -o /dev/null -w '%{http_code}' --connect-timeout 3 --max-time 8 'http://127.0.0.1:8792/health' || true)
+            if [ "$code" = "200" ]; then ready=1; break; fi
+            if ! kill -0 $runtime_pid 2>/dev/null; then cat /tmp/development-control.log; exit 1; fi
+            sleep 2
+          done
+          if [ "$ready" != "1" ]; then cat /tmp/development-control.log; exit 1; fi
+          origin="https://ekodi-platform-development.ekodi-development.workers.dev"
+          code=$(curl -sS -D /tmp/development-google.headers -o /tmp/development-google.json -w '%{http_code}' 'http://127.0.0.1:8792/api/google/config' -H "Origin: $origin")
+          test "$code" = "200"
+          grep -Eiq "^access-control-allow-origin:[[:space:]]*$origin" /tmp/development-google.headers
+          grep -Fq '"clientId":"483044030492-qvk96u0rvptsshat0pi8g522puq9ju16.apps.googleusercontent.com"' /tmp/development-google.json
+          grep -Fq '"identityOrigin":"https://ekodi-platform-development.ekodi-development.workers.dev"' /tmp/development-google.json
+      - name: Deploy isolated Development Control API
+        run: npx --yes wrangler@4.127.0 deploy --config wrangler.api.development.runtime.toml --experimental-provision=false
       - name: Deploy only to EKODI Development
         run: npx --yes wrangler@4.127.0 deploy --config wrangler.development.jsonc --experimental-provision=false
+      - name: Verify Development canonical Google identity boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          origin="https://ekodi-platform-development.ekodi-development.workers.dev"
+          code=$(curl -sS -D /tmp/development-live.headers -o /tmp/development-live.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$origin/api/google/config" -H "Origin: $origin" || true)
+          if [ "$code" = "200" ]; then
+            grep -Eiq "^access-control-allow-origin:[[:space:]]*$origin" /tmp/development-live.headers
+            grep -Fq '"clientId":"483044030492-qvk96u0rvptsshat0pi8g522puq9ju16.apps.googleusercontent.com"' /tmp/development-live.json
+            grep -Fq '"identityOrigin":"https://ekodi-platform-development.ekodi-development.workers.dev"' /tmp/development-live.json
+          elif [ "$code" = "302" ] && grep -Eiq '^Www-Authenticate:[[:space:]]*Cloudflare-Access' /tmp/development-live.headers; then
+            echo "Development surface is correctly protected by Cloudflare Access; exact DEV identity contract was verified locally before deployment."
+          else
+            echo "Unexpected Development Google config response: HTTP $code"
+            cat /tmp/development-live.headers
+            cat /tmp/development-live.json
+            exit 1
+          fi

@@ -11,8 +11,9 @@ test('business cooperative site is independently built under the canonical path'
   assert.ok(build.includes("sites/business-cooperative/public"));
   assert.ok(build.includes("${output}business-coop"));
   assert.ok(publicHtml.includes('data-coop-status="private-review"'));
+  assert.ok(publicHtml.includes('data-coop-mode="multi-project"'));
   assert.ok(publicHtml.includes('noindex,nofollow,noarchive'));
-  assert.ok(adminHtml.includes('data-coop-admin="formation-v1"'));
+  assert.ok(adminHtml.includes('data-coop-admin="formation-v2"'));
   assert.ok(adminHtml.includes('주민등록번호'));
 });
 
@@ -45,6 +46,34 @@ test('formation workflow carries 2026 legal timing and filing-document guardrail
   assert.ok(admin.includes('COOP_LEGAL.registrationAfterContributionDays'));
 });
 
+test('admin supports multiple isolated cooperative formation projects with v1 migration', () => {
+  const html = read('../sites/business-cooperative/public/admin/index.html');
+  const js = read('../sites/business-cooperative/public/admin/admin.js');
+  assert.ok(html.includes('id="projectSelect"'));
+  assert.ok(html.includes('id="newProject"'));
+  assert.ok(html.includes('id="duplicateProject"'));
+  assert.ok(js.includes("const LEGACY_STORAGE_KEY = 'ekodi.businessCoop.setup.v1'"));
+  assert.ok(js.includes("const REGISTRY_KEY = 'ekodi.businessCoop.projects.v2'"));
+  assert.ok(js.includes("const ACTIVE_KEY = 'ekodi.businessCoop.activeProject.v2'"));
+  assert.ok(js.includes("migratedFrom: 'v1'"));
+  assert.ok(js.includes('registry.projects[project.project.id] = project'));
+  assert.ok(js.includes('founders: []'));
+  assert.ok(js.includes('supports: []'));
+  assert.ok(js.includes('documents: Object.fromEntries'));
+  assert.ok(js.includes("dates: { foundingMeetingDate: '', filingDate: '', confirmationDate: '', capitalPaidDate: '' }"));
+});
+
+test('basic-setting duplication never copies founders, documents, dates or support pipelines', () => {
+  const js = read('../sites/business-cooperative/public/admin/admin.js');
+  const duplicateBlock = js.slice(js.indexOf("$('#duplicateProject')"), js.indexOf('function renderProjectManager'));
+  assert.ok(duplicateBlock.includes('purpose: state.profile.purpose'));
+  assert.ok(duplicateBlock.includes('industries: state.profile.industries'));
+  assert.ok(duplicateBlock.includes('shareUnit: state.profile.shareUnit'));
+  for (const forbidden of ['founders: state.founders', 'documents: state.documents', 'dates: state.dates', 'supports: state.supports']) {
+    assert.equal(duplicateBlock.includes(forbidden), false, forbidden);
+  }
+});
+
 test('draft admin avoids collecting high-risk identity and credential fields', () => {
   const html = read('../sites/business-cooperative/public/admin/index.html');
   const js = read('../sites/business-cooperative/public/admin/admin.js');
@@ -52,5 +81,5 @@ test('draft admin avoids collecting high-risk identity and credential fields', (
     assert.equal(html.includes(banned), false, banned);
     assert.equal(js.includes(banned), false, banned);
   }
-  assert.ok(html.includes('현재 설립준비 데이터는 이 브라우저에만 저장됩니다'));
+  assert.ok(html.includes('현재 설립준비 데이터는 이 브라우저에만 저장되며 조합별로 분리됩니다'));
 });

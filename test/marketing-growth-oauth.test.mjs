@@ -31,10 +31,16 @@ test('EKODI central social connector exposes login-only YouTube OAuth and vault 
   assert.match(ui,/data-connect="youtube"/);
   assert.match(ui,/Google로 YouTube 연결/);
   assert.match(ui,/Metricool은 필수가 아닙니다/);
+  assert.match(ui,/const API = '\/marketing-connect-api'/);
+  assert.doesNotMatch(ui,/https:\/\/marketing-connect-api\.ekodi\.kr/);
+  assert.match(broker,/MARKETING_YOUTUBE_CALLBACK = 'https:\/\/ekodi\.kr\/marketing-connect-api\/oauth\/youtube\/callback'/);
   assert.doesNotMatch(config,/`r`n/);
   assert.match(config,/MALL_PROMOTION_AUTOMATION_ENABLED = "true"\r?\nALLOWED_ORIGINS =/);
   assert.match(config,/GOOGLE_CLIENT_ID/);
   assert.match(config,/binding = "GOOGLE_OAUTH_BROKER"/);
   assert.match(config,/service = "ekodi-storage-control"/);
   assert.match(config,/entrypoint = "GoogleOAuthBroker"/);
+  assert.match(config,/PUBLIC_BASE_URL = "https:\/\/ekodi\.kr\/marketing-connect-api"/);
+  assert.doesNotMatch(config,/marketing-connect-api\.ekodi\.kr/);
+  assert.doesNotMatch(growth,/marketing-connect-api\.ekodi\.kr/);
 });

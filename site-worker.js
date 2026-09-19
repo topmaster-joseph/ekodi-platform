@@ -6,8 +6,9 @@ import { ekodiBizInvestBusinessPage, isEkodiBizInvestPath } from './ekodibiz-inv
 import { ekodiBizInvestAdminPage, isEkodiBizInvestAdminPath } from './ekodibiz-invest-admin-page.js';
 import { tenantAdminCommandHomeScript, tenantAdminCommandHomeCss } from './tenant-admin-command-home.js';
 import { decorateDiscoveryResponse } from './discovery-layer.js';
-import { realtimeTenantFromPath } from './realtime-tenant-registry.js';
+import { realtimeTenantAdminFromPath, realtimeTenantFromPath } from './realtime-tenant-registry.js';
 import { tenantLivePage } from './tenant-live-page.js';
+import { tenantLiveAdminCss, tenantLiveAdminPage, tenantLiveAdminScript } from './tenant-live-admin-page.js';
 
 // Static Assets canonicalizes *.html URLs to extensionless paths.
 // Always request canonical asset paths internally so edge redirects never escape the Worker.
@@ -556,6 +557,14 @@ async function proxyAdminPersonalFinance(request, env) {
   headers.set('x-ekodi-admin-proxy', 'personal-finance-binding-v1');
   const body = ['GET','HEAD'].includes(request.method) ? undefined : await request.arrayBuffer();
   const upstream = await env.PERSONAL_FINANCE.fetch(new Request(target.toString(), {method:request.method,headers,body,redirect:'manual'}));
+  if (upstream.status === 401) {
+    const response = new Response(JSON.stringify({error:'EKODI 관리자 인증이 필요합니다.',code:'PF_ADMIN_AUTH_REQUIRED'}), {
+      status:401,
+      headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store'},
+    });
+    response.headers.set('X-EKODI-Personal-Finance-Proxy', 'service-binding-v1');
+    return withHostSecurity(response, ADMIN_CSP, 'no-store', 'admin-personal-finance-proxy');
+  }
   const response = new Response(upstream.body, upstream);
   response.headers.set('X-EKODI-Personal-Finance-Proxy', 'service-binding-v1');
   return withHostSecurity(response, ADMIN_CSP, 'no-store', 'admin-personal-finance-proxy');
@@ -657,6 +666,8 @@ export default {
       }
       if (url.pathname === '/tenant-admin-command-home.css') return tenantAdminCommandHomeCss();
       if (url.pathname === '/tenant-admin-command-home.js') return tenantAdminCommandHomeScript();
+      if (url.pathname === '/tenant-live-admin.css') return tenantLiveAdminCss();
+      if (url.pathname === '/tenant-live-admin.js') return tenantLiveAdminScript();
       if (url.pathname === '/workspace-admin.css') return workspaceAdminCss();
       if (url.pathname === '/workspace-admin.js') return workspaceAdminScript();
       if (url.pathname.startsWith('/api/control/storage/google/cheonggye-members')) return proxyAdminStorage(request, env);
@@ -672,6 +683,8 @@ export default {
         const secured=withHostSecurity(page, ADMIN_CSP, 'no-store', 'public-ekodibiz-invest-admin');
         return injectEkodiShell(secured, 'biz', 'admin');
       }
+      const liveAdminTenant = realtimeTenantAdminFromPath(url.pathname);
+      if (['GET','HEAD'].includes(request.method) && liveAdminTenant) return withHostSecurity(tenantLiveAdminPage(liveAdminTenant), LIVE_CSP, 'no-store', 'tenant-'+liveAdminTenant.apiTenant+'-live-admin');
       const liveTenant = realtimeTenantFromPath(url.pathname);
       if (['GET','HEAD'].includes(request.method) && liveTenant && !liveTenant.dedicated) return withHostSecurity(tenantLivePage(liveTenant), LIVE_CSP, 'no-store', 'public-'+liveTenant.apiTenant+'-live');
       if (isLegacyEkodiBizPath(url.pathname)) return redirectLegacyEkodiBizPath(request);

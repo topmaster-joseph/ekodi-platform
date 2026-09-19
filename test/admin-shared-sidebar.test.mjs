@@ -151,3 +151,16 @@ test('active global axis shows core submenu items first and progressively disclo
   assert.ok(!sidebar.includes("document.createElement('details')"));
   assert.ok(!sidebar.includes('getAdminMenuCategoryLabel(category, locale)'));
 });
+
+
+test('visible task navigation lazy-loads demand features before shared panel activation', () => {
+  const activateStart = sidebar.indexOf('function activateSection');
+  const activateEnd = sidebar.indexOf('export function createAdminSidebarItem', activateStart);
+  const source = sidebar.slice(activateStart, activateEnd);
+  assert.match(source, /item\.dataset\.demandFeature === section/);
+  assert.match(source, /window\.EKODIAdminDemand\?\.activate/);
+  assert.match(source, /Promise\.resolve\(window\.EKODIAdminDemand\.activate\(section\)\)/);
+  assert.match(source, /window\.EKODIAdminPanels\?\.activate/);
+  assert.ok(source.indexOf('window.EKODIAdminDemand.activate(section)') < source.indexOf('window.EKODIAdminPanels?.activate'), 'demand feature must load before the shared panel controller activates it');
+  assert.match(source, /visible navigation demand activation failed/);
+});

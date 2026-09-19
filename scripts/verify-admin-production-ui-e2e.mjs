@@ -40,6 +40,37 @@ await page.route('https://ekodi.kr/api/session', async route => {
   });
 });
 
+const syntheticJson = body => ({
+  status: 200,
+  contentType: 'application/json; charset=utf-8',
+  headers: {
+    'access-control-allow-origin': 'https://ekodi.kr',
+    'access-control-allow-methods': 'GET, POST, OPTIONS',
+    'access-control-allow-headers': 'authorization, content-type',
+    'cache-control': 'no-store',
+  },
+  body: JSON.stringify(body),
+});
+
+await page.route('**/api/control/overview', async route => {
+  if (route.request().method() === 'OPTIONS') return route.fulfill(syntheticJson({ ok:true }));
+  await route.fulfill(syntheticJson({ ok:true, services:[] }));
+});
+await page.route('https://ekodi.kr/api/control/common-services/ai/status', async route => {
+  await route.fulfill(syntheticJson({
+    ok:true,
+    config:{ architectureVersion:'1.10.0', taskExecutionEnabled:false, branchAllocationEnabled:false },
+    stateStore:'ready',
+    providers:[],
+  }));
+});
+await page.route('https://ekodi.kr/api/control/common-services/ai/tasks', async route => {
+  await route.fulfill(syntheticJson({ tasks:[] }));
+});
+await page.route('https://ekodi.kr/api/control/common-services/ai/nodes', async route => {
+  await route.fulfill(syntheticJson({ nodes:[] }));
+});
+
 async function waitForAdminShell() {
   await page.waitForFunction(() => document.documentElement.dataset.ekodiAdminReady === 'true', null, { timeout: 30000 });
   await page.waitForFunction(() => window.EKODIAdminPanels && window.EKODIAdminSidebar, null, { timeout: 30000 });
@@ -123,6 +154,24 @@ async function dispatchClick(locator, timeout = 10_000) {
   await locator.evaluate(node => { setTimeout(() => node.click(), 0); return true; });
 }
 
+async function resolveMenuTrigger(id, group) {
+  const detail = page.locator(`button.admin-detail-item[data-admin-detail-section="${id}"]`).first();
+  if (await detail.count() && await detail.isVisible().catch(() => false)) return detail;
+
+  const more = page.locator(`button[data-admin-detail-more="${group}"]`).first();
+  if (await more.count() && await more.isVisible().catch(() => false)) {
+    await dispatchClick(more);
+    await detail.waitFor({ state: 'visible', timeout: 10_000 });
+    return detail;
+  }
+
+  const contextTab = page.locator(`button.admin-context-tab[data-admin-context-section="${id}"]`).first();
+  await contextTab.waitFor({ state: 'attached', timeout: 10_000 });
+  if (await contextTab.isVisible().catch(() => false)) return contextTab;
+
+  throw new Error(`${id}: no visible sidebar navigation trigger after selecting work area ${group}`);
+}
+
 const results = [];
 let selectedWorkArea = null;
 for (const [id, group] of menus) {
@@ -136,8 +185,8 @@ for (const [id, group] of menus) {
     selectedWorkArea = group;
   }
 
-  const tab = page.locator(`[data-admin-context-section="${id}"]`);
-  await tab.waitFor({ state: 'visible', timeout: 10000 });
+  const contextTab = page.locator(`button.admin-context-tab[data-admin-context-section="${id}"]`).first();
+  await contextTab.waitFor({ state: 'attached', timeout: 10000 });
   const definition = getAdminMenuItem(id);
 
   if (id === 'tax') {
@@ -157,8 +206,9 @@ for (const [id, group] of menus) {
     const source = page.locator(`.admin-context-source .nav[data-section="${id}"]`);
     const sourceHref = await source.getAttribute('href');
     if (!sourceHref || new URL(sourceHref, ADMIN_URL).href !== expected.href) throw new Error(`${id} direct href drifted: ${sourceHref || '(missing)'}`);
+    const trigger = await resolveMenuTrigger(id, group);
     const popupPromise = page.waitForEvent('popup', { timeout: 10000 });
-    await dispatchClick(tab);
+    await dispatchClick(trigger);
     const popup = await popupPromise;
     await popup.waitForLoadState('domcontentloaded', { timeout: 20000 });
     const actual = new URL(popup.url());
@@ -179,7 +229,11 @@ for (const [id, group] of menus) {
     continue;
   }
 
-  await dispatchClick(tab);
+  if (id !== 'command-home') {
+    const trigger = await resolveMenuTrigger(id, group);
+    const alreadyActive = await contextTab.evaluate(node => node.getAttribute('aria-selected') === 'true' || node.classList.contains('active'));
+    if (!alreadyActive) await dispatchClick(trigger);
+  }
   await page.waitForFunction(section => window.EKODIAdminPanels?.current?.() === section, id, { timeout: 12000 });
 
   if (id === 'command-home') {

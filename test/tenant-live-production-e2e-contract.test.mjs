@@ -9,6 +9,9 @@ test('tenant live production E2E stays bounded and self-cleaning',()=>{
   assert.match(workflow,/workflow_dispatch:/);
   assert.match(workflow,/branches: \[main\]/);
   assert.match(workflow,/TENANT_LIVE_TENANT: ekodibiz/);
+  for(const path of ['realtime-control.js','realtime-tenant-registry.js','tenant-live-page.js','tenant-live.js','tenant-live.css']){
+    assert.ok(workflow.includes(`- '${path}'`),`missing production E2E trigger: ${path}`);
+  }
   assert.match(workflow,/Issue short-lived super-admin session/);
   assert.match(workflow,/Revoke short-lived E2E session/);
   assert.match(workflow,/if: always\(\) && env\.E2E_AUTH_DB_ID != '' && env\.E2E_TOKEN_HASH != ''/);
@@ -22,8 +25,23 @@ test('tenant live E2E proves anonymous media delivery and safe skip',()=>{
   assert.match(script,/sessionStorage\.setItem\('ekodi-auth-token'/);
   assert.match(script,/viewerContext=await browser\.newContext\(\)/);
   assert.doesNotMatch(script,/viewerContext\.addInitScript/);
+  assert.match(script,/host_has_no_live_local_track/);
+  assert.match(script,/hostTracks>=1/);
+  assert.match(script,/waitForPublicState/);
   assert.match(script,/viewer_received_no_live_track/);
   assert.match(script,/viewerTracks>=1/);
+  assert.doesNotMatch(script,/미디어 연결이 완료되었습니다|방송 중입니다.|방송이 종료되었습니다./);
   assert.match(script,/status:'ended'/);
   assert.match(script,/assert\.equal\(ended\.live,false\)/);
+});
+
+
+test('lazy room creation happens only after broadcast start',()=>{
+  const click=script.indexOf("await host.locator('#goLiveButton').click()");
+  const roomWait=script.indexOf("link.includes('room=')",click);
+  const share=script.indexOf("const shareLink=await host.locator('#shareLink').inputValue()",click);
+  assert.ok(click>=0);
+  assert.ok(roomWait>click);
+  assert.ok(share>roomWait);
+  assert.doesNotMatch(script.slice(0,click),/shareLink.*inputValue/);
 });

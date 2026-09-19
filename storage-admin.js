@@ -35,5 +35,14 @@
   async function refresh(){const section=document.querySelector('#storageAdminPanel');if(section)section.innerHTML=`<div class="storage-loading">${t('저장소 상태를 확인하는 중…','Checking storage status…')}</div>`;try{state=await request('/status');paint();}catch(error){if(section)section.textContent='';showError(error);}}
   function activate(button,section){document.querySelectorAll('[data-panel]').forEach(panel=>panel.classList.toggle('hidden-panel',panel!==section));document.querySelectorAll('.sidebar .nav').forEach(item=>item.classList.toggle('active',item===button));const title=document.querySelector('#pageTitle');if(title)title.textContent=t('저장소','Storage');document.querySelector('.sidebar')?.classList.remove('open');if(location.hash!=='#storage')history.replaceState(null,'','#storage');refresh();}
   function install(){const nav=document.querySelector('.sidebar nav'),content=document.querySelector('.content');if(!nav||!content)return;let button=nav.querySelector('[data-section="storage"]');if(!button){button=el('button','','nav');button.type='button';button.dataset.section='storage';button.append(document.createTextNode('▣ '),el('span',t('저장소','Storage')));const security=nav.querySelector('[data-section="security"],[data-demand-feature="security"]');if(security)nav.insertBefore(button,security);else nav.append(button);}let section=document.querySelector('#storageAdminPanel');if(!section){section=el('section','','section storage-admin hidden-panel');section.dataset.panel='storage';section.id='storageAdminPanel';content.append(section);}if(!button.dataset.storageBound){button.dataset.storageBound='true';button.addEventListener('click',()=>activate(button,section));}if(location.hash==='#storage')queueMicrotask(()=>activate(button,section));}
-  install();window.addEventListener('ekodi-admin-ready',install);window.addEventListener('ekodi-admin-locale-changed',()=>{if(document.querySelector('#storageAdminPanel:not(.hidden-panel)'))paint();window.EKODIAdminSidebar?.sync?.();});window.EKODIStorageAdmin=Object.freeze({refresh});
+  function refreshWhenSharedNavigationActivates(event){
+    const current=String(event?.detail?.section||window.EKODIAdminPanels?.current?.()||'').trim();
+    if(current!=='storage')return;
+    const section=document.querySelector('#storageAdminPanel');
+    if(!section||section.hidden||section.classList.contains('hidden-panel'))return;
+    void refresh();
+  }
+  install();window.addEventListener('ekodi-admin-ready',install);window.addEventListener('ekodi-admin-locale-changed',()=>{if(document.querySelector('#storageAdminPanel:not(.hidden-panel)'))paint();window.EKODIAdminSidebar?.sync?.();});window.addEventListener('ekodi-admin-section-changed',refreshWhenSharedNavigationActivates);
+  queueMicrotask(()=>refreshWhenSharedNavigationActivates());
+  window.EKODIStorageAdmin=Object.freeze({refresh,activate:()=>refreshWhenSharedNavigationActivates({detail:{section:'storage'}})});
 })();
