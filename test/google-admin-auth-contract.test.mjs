@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
 const read = path => readFile(new URL(path, import.meta.url), 'utf8');
-const [backend, frontend, css, entry, build, site, wrangler, migration, controlWorkflow, developmentWorkflow, developmentConfig, adminAuth] = await Promise.all([
+const [backend, frontend, css, entry, build, site, wrangler, migration, controlWorkflow, developmentWorkflow, developmentConfig, adminAuth, missionControl, releaseManifest, guardedRelease] = await Promise.all([
   read('../admin-google-auth.js'),
   read('../google-admin-auth.js'),
   read('../google-admin-auth.css'),
@@ -16,6 +16,9 @@ const [backend, frontend, css, entry, build, site, wrangler, migration, controlW
   read('../.github/workflows/deploy-development.yml'),
   read('../wrangler.development.jsonc'),
   read('../auth-site/admin-auth.js'),
+  read('../mission-control-entry-worker.js'),
+  read('../deploy/manifests/control-api.worker.json'),
+  read('../scripts/guarded-worker-release.mjs'),
 ]);
 
 test('Google administrator API uses exact allowlist and Google subject pinning', () => {
@@ -120,4 +123,25 @@ test('DEV/STAGING/PROD Google clients remain isolated in active environment conf
   assert.match(adminAuth, /origin==='https:\/\/ekodi-platform-development\.ekodi-development\.workers\.dev'/);
   assert.match(adminAuth, /return\{environment:'development',apiOrigin:origin,authOrigin:origin\}/);
   assert.doesNotMatch(wrangler + staging + developmentConfig + developmentWorkflow, /4e6231l5glchhtniroinvuq3ev6n5mv5/);
+});
+
+
+test('canonical PROD Google challenge keeps the ekodi.kr origin through Mission Control', () => {
+  assert.doesNotMatch(missionControl, /handleSameOriginOperatorGoogleAuth/);
+  assert.doesNotMatch(missionControl, /headers\.set\('origin',\s*'https:\/\/admin\.ekodi\.kr'\)/);
+  assert.match(backend, /identitySensitive && origin && identityOrigin && origin !== identityOrigin/);
+  assert.match(backend, /path === '\/api\/google\/challenge'/);
+});
+
+test('guarded Control release verifies canonical POST challenge after promotion', () => {
+  const manifest = JSON.parse(releaseManifest);
+  const probe = manifest.worker.requests.find(item => item.url === 'https://ekodi.kr/api/google/challenge');
+  assert.ok(probe);
+  assert.equal(probe.method, 'POST');
+  assert.equal(probe.headers.origin, 'https://ekodi.kr');
+  assert.deepEqual(probe.statuses, [201]);
+  assert.equal(probe.candidateVerify, false);
+  assert.equal(probe.rollbackVerify, false);
+  assert.match(guardedRelease, /const method = String\(request\.method \|\| 'GET'\)\.toUpperCase\(\)/);
+  assert.match(guardedRelease, /body: \['GET','HEAD'\]\.includes\(method\) \? undefined : requestBody/);
 });

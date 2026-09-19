@@ -53,7 +53,7 @@ test('Operator script uses existing authenticated Messenger control endpoints',a
   assert.match(js,/setInterval/);
 });
 
-test('production configs point to friendly Messenger entry and allow same-origin Operator',async()=>{
+test('production configs keep friendly Messenger entry without overriding canonical Admin Google origin',async()=>{
   const [prod,staging,api,mission]=await Promise.all([
     read('wrangler.site.toml'),read('wrangler.site-staging.toml'),read('wrangler.api.toml'),read('mission-control-entry-worker.js')
   ]);
@@ -61,5 +61,6 @@ test('production configs point to friendly Messenger entry and allow same-origin
   assert.match(staging,/main = "platform-router-entry-worker\.js"/);
   assert.match(api,/https:\/\/api\.ekodi\.kr/);
   assert.match(mission,/handleMessengerOperatorPage/);
-  assert.match(mission,/handleSameOriginOperatorGoogleAuth/);
+  assert.doesNotMatch(mission,/handleSameOriginOperatorGoogleAuth/);
+  assert.doesNotMatch(mission,/https:\/\/admin\.ekodi\.kr/);
 });
