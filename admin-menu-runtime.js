@@ -107,30 +107,10 @@ function applyMenuLabels() {
   const menuButton = document.querySelector('#menuButton');
   if (menuButton) menuButton.setAttribute('aria-label', t('메뉴 열기', 'Open menu'));
 }
-function installLocaleControl() {
-  if (document.querySelector('#ekodiAdminLocale')) return;
-  const host = document.querySelector('.side-bottom') || document.querySelector('.sidebar');
-  if (!host) return;
-  const label = document.createElement('label');
-  label.id = 'ekodiAdminLocaleWrap';
-  label.style.cssText = 'display:flex;align-items:center;gap:7px;margin:8px 0;font-size:11px;opacity:.9';
-  const caption = document.createElement('span');
-  caption.dataset.adminLocaleCaption = 'true';
-  const select = document.createElement('select');
-  select.id = 'ekodiAdminLocale';
-  select.style.cssText = 'min-width:92px;padding:5px 7px;border-radius:7px;background:transparent;color:inherit;border:1px solid rgba(148,163,184,.3)';
-  select.innerHTML = '<option value="ko">한국어</option><option value="en">English</option>';
-  select.value = locale;
-  select.addEventListener('change', () => { saveLocale(select.value); applyLocale(); });
-  label.append(caption, select);
-  host.prepend(label);
-  updateLocaleControl();
-}
-function updateLocaleControl() {
-  const caption = document.querySelector('[data-admin-locale-caption]');
-  if (caption) caption.textContent = t('관리자 언어', 'Admin language');
-  const select = document.querySelector('#ekodiAdminLocale');
-  if (select) select.value = locale;
+function removeLocaleControl() {
+  document.querySelector('#ekodiAdminLocaleWrap')?.remove();
+  const legacySelect = document.querySelector('#ekodiAdminLocale');
+  if (legacySelect) legacySelect.closest('label')?.remove();
 }
 function roleLabel(role) {
   return ({ super_admin: t('최고관리자', 'Super Admin'), operator: t('운영관리자', 'Operator'), viewer: t('조회관리자', 'Viewer') })[role] || role;
@@ -480,9 +460,9 @@ async function withPrivilege(operation) {
   }
 }
 
-function applyLocale() { updateLocaleControl(); applyMenuLabels(); translateAdminPanel(); renderContextControl(); }
+function applyLocale() { removeLocaleControl(); applyMenuLabels(); translateAdminPanel(); renderContextControl(); }
 async function install() {
-  installStyle(); installLocaleControl(); ensureExternalMenuItems(); applyMenuLabels();
+  installStyle(); removeLocaleControl(); ensureExternalMenuItems(); applyMenuLabels();
   if (!token()) return;
   try {
     currentSession = await loadCurrentSession();
