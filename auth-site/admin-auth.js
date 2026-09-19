@@ -122,7 +122,7 @@ function showNavigationFallback(targetHref){
 function navigateToAdmin(result){
   const target=new URL(safeReturn);target.hash=new URLSearchParams({ekodi_admin_token:result.token}).toString();const targetHref=target.href;
   notice('관리자 인증이 완료되었습니다. 관리자 화면으로 이동합니다.');
-  window.setTimeout(()=>{if(location.hostname==='auth.ekodi.kr')showNavigationFallback(targetHref)},1200);
+  const authHref=location.href;window.setTimeout(()=>{if(location.href===authHref)showNavigationFallback(targetHref)},1200);
   try{location.replace(targetHref)}catch{try{location.assign(targetHref)}catch{showNavigationFallback(targetHref)}}
 }
 async function prepare(){
