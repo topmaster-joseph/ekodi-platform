@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {normalizeAiIdeaInput} from '../ai-commons.js';
+import {realtimeTenantFromHomePath} from '../realtime-tenant-registry.js';
 const read=path=>fs.readFileSync(new URL(`../${path}`,import.meta.url),'utf8');
 
 test('subservice source id is normalized without changing request identity',()=>{
@@ -18,6 +19,23 @@ test('shared user shell bundles the common AI entry for user surfaces',()=>{
   assert.match(entry,/AI로 하기/);
   assert.match(entry,/blocked=new Set\(\['admin','form','document','data'\]\)/);
   assert.match(entry,/searchParams\.set\('source',service\)/);
+});
+
+
+test('static tenant home paths resolve to their common Shell context',()=>{
+  assert.equal(realtimeTenantFromHomePath('/jadam/')?.apiTenant,'jadam');
+  assert.equal(realtimeTenantFromHomePath('/pizzamaru/menu')?.apiTenant,'pizzamaru');
+  assert.equal(realtimeTenantFromHomePath('/yogurt/')?.apiTenant,'yogurt');
+  assert.equal(realtimeTenantFromHomePath('/cgma/')?.apiTenant,'cgma');
+  assert.equal(realtimeTenantFromHomePath('/unrelated/'),null);
+});
+
+test('shared site injects the common Shell into final static subservice HTML',()=>{
+  const worker=read('site-worker.js');
+  assert.match(worker,/shellServiceForRootPath/);
+  assert.match(worker,/realtimeTenantFromHomePath/);
+  assert.match(worker,/const fallbackResponse=await env\.ASSETS\.fetch\(request\)/);
+  assert.match(worker,/return injectEkodiShell\(fallbackResponse,serviceId\)/);
 });
 
 test('central AI handoff consumes subservice source and request',()=>{

@@ -24,6 +24,13 @@ export function realtimeTenantFromPath(pathname='') {
   const path=String(pathname||'');
   return TENANTS.find(tenant=>path===tenant.path||path===tenant.path.slice(0,-1)||path===`${tenant.path}index.html`)||null;
 }
+export function realtimeTenantFromHomePath(pathname='') {
+  const path=('/'+String(pathname||'/').replace(/^\/+|\/+$/g,'')).replace(/\/$/,'')||'/';
+  return TENANTS.find(tenant=>{
+    const home=('/'+String(tenant.home||'/').replace(/^\/+|\/+$/g,'')).replace(/\/$/,'')||'/';
+    return path===home||path.startsWith(home+'/');
+  })||null;
+}
 export function realtimeTenantAdminFromPath(pathname='') {
   const path=String(pathname||'').replace(/\/+$/,'');
   return TENANTS.find(tenant=>path===`${tenant.path.replace(/\/$/,'')}/admin`)||null;
