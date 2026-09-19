@@ -41,6 +41,7 @@ test('provider failure silently falls back instead of escaping into the core req
   assert.equal(result.mode, 'free_assist');
   assert.equal(result.reason, 'provider_unavailable');
   assert.deepEqual(result.attemptedProviders, ['openai']);
+  assert.deepEqual(result.providerFailures, [{ provider:'openai', code:'PROVIDER_ERROR' }]);
 });
 
 test('healthy provider is used when available', async () => {
@@ -56,6 +57,8 @@ test('healthy provider is used when available', async () => {
   assert.equal(result.mode, 'ai');
   assert.equal(result.degraded, false);
   assert.equal(result.provider, 'provider-a');
+  assert.deepEqual(result.attemptedProviders, ['provider-a']);
+  assert.deepEqual(result.providerFailures, []);
   assert.deepEqual(result.value, { text: 'ok' });
 });
 
@@ -86,6 +89,24 @@ test('total timeout budget is shared across slow providers before fallback', asy
   assert.equal(result.mode, 'free_assist');
   assert.deepEqual(result.attemptedProviders, ['provider-a', 'provider-b', 'provider-c']);
   assert.ok(elapsedMs < 350, `total timeout budget exceeded: ${elapsedMs}ms`);
+});
+
+test('provider failures expose only sanitized diagnostic codes', async () => {
+  resetAiResilienceCircuitsForTest();
+  const result = await runAiEnhancedTask({
+    env: {},
+    taskName: 'survival.sanitized',
+    providers: [
+      { id:'workers', invoke:async()=>{ throw new Error('WORKERS_AI_DAILY_CALL_LIMIT'); } },
+      { id:'unknown', invoke:async()=>{ throw new Error('secret-bearing upstream detail sk-proj-should-never-leak'); } },
+    ],
+    fallback: async () => 'safe',
+  });
+  assert.deepEqual(result.providerFailures, [
+    { provider:'workers', code:'WORKERS_AI_DAILY_CALL_LIMIT' },
+    { provider:'unknown', code:'PROVIDER_ERROR' },
+  ]);
+  assert.equal(JSON.stringify(result).includes('sk-proj-should-never-leak'), false);
 });
 
 test('fallback failure returns core mode and still does not throw', async () => {
