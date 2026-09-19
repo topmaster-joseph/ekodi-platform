@@ -163,11 +163,7 @@ async function routePublicWorkspace(request,env){
   if(!env?.SPACE?.fetch)return workspaceServiceUnavailable();
   const progressiveHome=isWorkspaceProgressiveHome(new URL(request.url).pathname);
   const upstream=await env.SPACE.fetch(request);const routed=new Response(upstream.body,upstream);routed.headers.set('x-ekodi-workspace-gateway','space-service-binding');
-  if(routed.headers.get('x-ekodi-route')==='space-storefront'){
-    routed.headers.set('x-ekodi-public-surface','customer-storefront');
-    const branded=injectEkodiTenantReadability(routed);
-    return progressiveHome?injectEkodiProgressiveHome(branded):branded;
-  }
+  if(routed.headers.get('x-ekodi-route')==='space-storefront'){routed.headers.set('x-ekodi-public-surface','customer-storefront');const branded=injectEkodiTenantReadability(routed);return progressiveHome?injectEkodiProgressiveHome(branded):branded;}
   if(routed.headers.get('x-ekodi-independent-site')==='true'){
     routed.headers.set('x-ekodi-public-surface','independent-workspace-site');
     const branded=injectEkodiTenantReadability(routed);
