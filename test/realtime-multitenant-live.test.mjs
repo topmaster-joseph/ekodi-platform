@@ -56,3 +56,10 @@ test('tenant context aliases normalize existing operator roles',()=>{
   assert.equal(authorizationRole(identity,'pizzamaru',{}),'owner');
   assert.equal(authorizationRole(identity,'cgma',{}),'');
 });
+
+
+test('configured platform bootstrap admins are accepted as realtime owners',()=>{
+  const identity={email:'owner@example.test',contexts:[]};
+  assert.equal(authorizationRole(identity,'ekodichurch',{ADMIN_GOOGLE_BOOTSTRAP_EMAILS:'other@example.test,owner@example.test'}),'owner');
+  assert.equal(authorizationRole(identity,'ekodichurch',{ADMIN_GOOGLE_BOOTSTRAP_EMAILS:'other@example.test'}),'');
+});

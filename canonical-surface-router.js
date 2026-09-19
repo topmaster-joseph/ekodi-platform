@@ -4,7 +4,6 @@ import { injectEkodiShell } from './ekodi-shell-injector.js';
 const CANONICAL_HOST='ekodi.kr';
 const SURFACE_PREFIXES=Object.freeze({my:'/my',admin:'/admin',auth:'/auth'});
 const SYSTEM_PATHS=Object.freeze(['/api','/mcp','/webhooks','/health','/connect']);
-const PERSONAL_FINANCE_CONTROL_PATH='/api/control/personal-finance';
 const PUBLIC_EXECUTION_SURFACES=Object.freeze([
   Object.freeze({id:'shell',prefix:'/shell',binding:'SHELL',basePathAware:true}),
   Object.freeze({id:'mission-application',prefix:'/ekodimission/api/activities/260925-chuseok-open-table/applications',binding:'SPACE',preservePrefix:true,basePathAware:true}),
@@ -105,23 +104,6 @@ async function proxyBinding(request,binding,prefix,surface){
   routed.headers.set('x-ekodi-canonical-surface',surface);
   routed.headers.set('x-ekodi-canonical-path',prefix||'/');
   return routed;
-}
-async function proxyPersonalFinanceAdminControl(request,env){
-  if(!env?.PERSONAL_FINANCE?.fetch)return serviceUnavailable('personal-finance-admin-control');
-  const target=new URL(request.url);target.pathname='/api/admin/personal-finance/control';target.search='';
-  const headers=new Headers(request.headers);headers.set('x-ekodi-admin-proxy','personal-finance-binding-v1');
-  const body=['GET','HEAD'].includes(request.method)?undefined:request.body;
-  const upstream=await env.PERSONAL_FINANCE.fetch(new Request(target,{method:request.method,headers,body,redirect:'manual'}));
-  let response;
-  if(upstream.status===401){
-    response=new Response(JSON.stringify({error:'EKODI 관리자 인증이 필요합니다.',code:'PF_ADMIN_AUTH_REQUIRED'}),{status:401,headers:{'content-type':'application/json; charset=utf-8'}});
-  }else response=new Response(upstream.body,upstream);
-  response.headers.set('x-ekodi-personal-finance-proxy','service-binding-v1');
-  response.headers.set('x-ekodi-canonical-surface','system');
-  response.headers.set('x-ekodi-canonical-path','/api');
-  response.headers.set('cache-control','no-store');
-  response.headers.set('x-content-type-options','nosniff');
-  return response;
 }
 async function proxyLegacySurface(request,legacyFetch,prefix,legacyHost,surface){
   const upstreamUrl=new URL(request.url);
@@ -272,7 +254,6 @@ async function proxyExecutionSurface(request,env,spec,legacyFetch,externalFetch)
     if(adminRuntimeRequest(path))return proxyAdminRuntime(request,legacyFetch);
     return proxyAdminShell(request,legacyFetch);
   }
-  if(path===PERSONAL_FINANCE_CONTROL_PATH)return proxyPersonalFinanceAdminControl(request,env);
   if(path==='/mcp'||path.startsWith('/api/')||path==='/api'||path.startsWith('/webhooks/')||path==='/health'||path==='/.well-known/oauth-protected-resource'){
     return proxyBinding(request,env?.CONTROL_API,'','system');
   }
