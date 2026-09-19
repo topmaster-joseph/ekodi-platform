@@ -2,7 +2,7 @@ function securityHeaders(){return{'x-content-type-options':'nosniff','referrer-p
 function json(data,status=200){return new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store',...securityHeaders()}})}
 function withHeaders(response){const headers=new Headers(response.headers);for(const [key,value]of Object.entries(securityHeaders()))headers.set(key,value);if(!headers.has('cache-control'))headers.set('cache-control',response.headers.get('content-type')?.includes('text/html')?'no-cache':'public, max-age=300');return new Response(response.body,{status:response.status,statusText:response.statusText,headers})}
 function boundedNumber(value,min,max,fallback=0){const n=Number(value);return Number.isFinite(n)?Math.min(max,Math.max(min,n)):fallback}
-function runtimeConfig(env={}){return{mode:env.BUSINESS_MODE||'isolated-staging',integrationsEnabled:env.INTEGRATIONS_ENABLED==='true',executionEnabled:env.EXECUTION_ENABLED==='true',readiness:boundedNumber(env.READINESS,0,100,62),authUrl:env.AUTH_URL||'https://auth.ekodi.kr/?site=business',policy:'observe-discern-suggest-approve-act-verify-report',defaultWorkspace:'ekodibiz'}}
+function runtimeConfig(env={}){return{mode:env.BUSINESS_MODE||'isolated-staging',integrationsEnabled:env.INTEGRATIONS_ENABLED==='true',executionEnabled:env.EXECUTION_ENABLED==='true',readiness:boundedNumber(env.READINESS,0,100,62),authUrl:env.AUTH_URL||'https://ekodi.kr/auth/?site=business',policy:'observe-discern-suggest-approve-act-verify-report',defaultWorkspace:'ekodibiz'}}
 
 const WORKSPACES={
   ekodibiz:{
