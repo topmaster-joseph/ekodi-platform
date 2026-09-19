@@ -32,7 +32,7 @@
       },
       {
         "id": "control-api",
-        "url": "https://api.ekodi.kr/health",
+        "url": "https://ekodi.kr/health",
         "status": 200
       }
     ],
