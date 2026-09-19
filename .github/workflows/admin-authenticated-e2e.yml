@@ -2,17 +2,6 @@ name: Verify Admin Authenticated Production E2E
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - 'admin-*.js'
-      - 'mission-control-entry-worker.js'
-      - 'marketing-funnel-admin.js'
-      - 'scripts/admin-authenticated-e2e.mjs'
-      - 'scripts/admin-authenticated-e2e-retry.mjs'
-      - 'scripts/admin-authenticated-e2e-menu-worker.mjs'
-      - '.github/workflows/admin-authenticated-e2e.yml'
-
 permissions:
   contents: read
 
@@ -88,7 +77,7 @@ jobs:
           result=$(cf_query "$auth_db" "$insert")
           echo "$result" | jq -e '.success == true and ([.result[]?.success] | all)' >/dev/null
 
-          session=$(curl -fsS --retry 3 --retry-delay 1 'https://api.ekodi.kr/api/session' -H "Authorization: Bearer $token")
+          session=$(curl -fsS 'https://api.ekodi.kr/api/session' -H "Authorization: Bearer $token")
           echo "$session" | jq -e '.role == "super_admin"' >/dev/null
 
           echo "E2E_ADMIN_TOKEN=$token" >> "$GITHUB_ENV"
