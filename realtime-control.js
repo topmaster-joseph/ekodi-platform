@@ -630,6 +630,7 @@ async function publishTracks(request,env,room,session,input){
     const kind=clean(offered[index]?.kind,10)==='audio'?'audio':'video';
     await env.DB.prepare(`INSERT OR REPLACE INTO realtime_media_tracks (id,room_id,tenant_id,publisher_session_id,track_name,media_kind,source_type,language_code,status,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?, 'active',?,?)`).bind(uid('track'),room.id,room.tenant_id,session.provider_session_id,tracks[index].trackName,kind,['camera','microphone','screen','program','translation'].includes(source)?source:'camera',clean(offered[index]?.languageCode,12)||null,stamp,stamp).run();
   }
+  await env.DB.prepare(`UPDATE realtime_media_sessions SET updated_at=? WHERE id=? AND room_id=? AND status='active'`).bind(stamp,session.id,room.id).run();
   return json(request,env,{ok:true,provider:response,published:tracks.map(track=>track.trackName)});
 }
 
