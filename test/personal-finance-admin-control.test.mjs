@@ -33,7 +33,7 @@ test('admin control prefers the Control API service binding and does not re-ente
   const original=globalThis.fetch;let publicFetchCalls=0;
   globalThis.fetch=async()=>{publicFetchCalls++;throw new Error('public apex auth fetch must not be used when service binding exists')};
   try{
-    const response=await worker.fetch(new Request('https://personal-finance-api.ekodi.kr/api/admin/personal-finance/control',{headers:adminHeaders}),{...env(DB),CONTROL_API});
+    const response=await worker.fetch(new Request('https://ekodi.kr/api/admin/personal-finance/control',{headers:adminHeaders}),{...env(DB),CONTROL_API});
     assert.equal(response.status,200);assert.equal(calls.length,1);assert.equal(calls[0].pathname,'/api/session');assert.equal(publicFetchCalls,0);
     const data=await response.json();assert.equal(data.admin.role,'super_admin');assert.equal(data.service.serviceBinding,'PERSONAL_FINANCE');
   }finally{globalThis.fetch=original}
