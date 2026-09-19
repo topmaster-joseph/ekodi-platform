@@ -74,6 +74,7 @@ test('first-party application API preserves existing application record identity
   assert.equal(denied.status,400);
 });
 
+// Regression guard: every public mission page shares one header and language contract.
 test('every EKODI Mission page uses the same primary navigation and managed language selector',async()=>{
   const pageFiles=[
     'ekodimission.page','ekodimission-activities.page','ekodimission-activity.page','ekodimission-contact.page',
