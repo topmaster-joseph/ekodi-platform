@@ -20,6 +20,7 @@ async function query(sql){
   return body;
 }
 function firstResult(body){return body?.result?.[0]?.results?.[0]||null}
+async function optionalFirst(sql){try{return firstResult(await query(sql))}catch{return null}}
 
 const admin=firstResult(await query("SELECT id FROM admins WHERE role='super_admin' ORDER BY id LIMIT 1"));
 const adminId=Number(admin?.id);
@@ -29,7 +30,7 @@ const token=crypto.randomBytes(32).toString('hex');
 const tokenHash=crypto.createHash('sha256').update(token).digest('hex');
 const created=new Date().toISOString();
 const expires=new Date(Date.now()+10*60*1000).toISOString();
-const budgetBefore=firstResult(await query("SELECT usage_date,call_count FROM ai_provider_daily_budget WHERE provider_id='cloudflare-workers-ai' ORDER BY usage_date DESC LIMIT 1")).catch?.(()=>null);
+const budgetBefore=await optionalFirst("SELECT usage_date,call_count FROM ai_provider_daily_budget WHERE provider_id='cloudflare-workers-ai' ORDER BY usage_date DESC LIMIT 1");
 
 let verification=null;
 try{
@@ -66,7 +67,7 @@ try{
 }finally{
   await query(`DELETE FROM sessions WHERE token_hash='${tokenHash}'`).catch(()=>{});
 }
-const budgetAfter=firstResult(await query("SELECT usage_date,call_count FROM ai_provider_daily_budget WHERE provider_id='cloudflare-workers-ai' ORDER BY usage_date DESC LIMIT 1")).catch?.(()=>null);
+const budgetAfter=await optionalFirst("SELECT usage_date,call_count FROM ai_provider_daily_budget WHERE provider_id='cloudflare-workers-ai' ORDER BY usage_date DESC LIMIT 1");
 console.log(JSON.stringify({
   verified:true,
   ...verification,
