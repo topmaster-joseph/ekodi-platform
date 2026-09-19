@@ -34,3 +34,14 @@ test('tenant live E2E proves anonymous media delivery and safe skip',()=>{
   assert.match(script,/status:'ended'/);
   assert.match(script,/assert\.equal\(ended\.live,false\)/);
 });
+
+
+test('lazy room creation happens only after broadcast start',()=>{
+  const click=script.indexOf("await host.locator('#goLiveButton').click()");
+  const roomWait=script.indexOf("link.includes('room=')",click);
+  const share=script.indexOf("const shareLink=await host.locator('#shareLink').inputValue()",click);
+  assert.ok(click>=0);
+  assert.ok(roomWait>click);
+  assert.ok(share>roomWait);
+  assert.doesNotMatch(script.slice(0,click),/shareLink.*inputValue/);
+});
