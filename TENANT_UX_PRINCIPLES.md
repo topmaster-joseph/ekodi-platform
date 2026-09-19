@@ -9,9 +9,9 @@ Middle managers, local managers, store operators, pastors, organization staff an
 ## Navigation contract
 
 - Primary navigation describes the user's work, not internal modules.
-- Keep the primary level small enough to scan at a glance; place related detail functions in contextual secondary navigation.
-- Selecting a primary item must lead to a real working screen or reveal its contextual choices immediately.
-- High-frequency actions appear before configuration and diagnostic actions.
+- Keep the sidebar scannable with non-clickable task-group labels, but every visible working item must be a direct link to its destination.
+- Do not require a category click followed by a second navigation click. One click from the visible manager menu must reach the requested working screen.
+- High-frequency actions appear before configuration and diagnostic actions. Low-frequency controls belong under the final settings/operations group unless safety or role semantics require a dedicated entry.
 - Role and capability filtering remains authoritative. UX grouping never widens data or action permissions.
 - Platform administrator, delegated administrator and public user surfaces remain visually and operationally distinct.
 
@@ -27,8 +27,8 @@ Middle managers, local managers, store operators, pastors, organization staff an
 
 ## Current task-oriented projections
 
-- Workspace: Home / Communication & Promotion / Operations & Finance / Site & Settings.
-- Store: Home / Orders & Sales / Menu & Inventory / Customers & Reviews / Promotion & Channels / Operations & Settings.
+- Workspace: group labels Home / Communication & Promotion / Operations & Finance / Site & Settings, with each permitted task shown as a direct link.
+- Store: group labels Home / Orders & Sales / Menu & Inventory / Customers & Reviews / Promotion & Channels / Operations & Settings, with each permitted task shown as a direct link.
 - Church: Home / People & Care / Worship & Ministry / Records & AI / Site & Permissions.
 - Trade: Home / Counterparties / Channels & Publishing / Permissions.
 - EKODIMALL keeps its direct one-level operating menu.
