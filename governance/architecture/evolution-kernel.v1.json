@@ -140,6 +140,8 @@
     "evolutionModel": "governance/architecture/ekodi-evolution-model.json",
     "orchestrationPolicy": "config/ai-change-orchestration-policy.json",
     "evolutionLoop": "ekodi-autonomous-evolution-loop.js",
-    "lifecycleStore": "autonomous-evolution-store.js"
+    "lifecycleStore": "autonomous-evolution-store.js",
+    "freeTierOptimizationPolicy": "config/free-tier-optimization-policy.json",
+    "freeTierQuotaGuard": "free-tier-quota-guard.js"
   }
 }
