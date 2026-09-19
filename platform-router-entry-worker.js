@@ -4,7 +4,7 @@ import taxPortalWorker from './tax-portal-worker.js';
 import { injectTaxLocalFallback } from './tax-local-fallback.js';
 import { injectTaxHometaxLedger } from './tax-hometax-ledger.js';
 import { injectTaxBusinessRegistry } from './tax-business-registry.js';
-import { injectEkodiProgressiveHome, injectEkodiShell } from './ekodi-shell-injector.js';
+import { injectEkodiProgressiveHome, injectEkodiShell, injectEkodiTenantReadability } from './ekodi-shell-injector.js';
 import { messengerUserPage, messengerUiScript } from './messenger-user-page.js';
 import { investUserPage, investUiScript } from './invest-user-page.js';
 import { investSubjectUiScript } from './invest-subject-ui.js';
@@ -163,8 +163,16 @@ async function routePublicWorkspace(request,env){
   if(!env?.SPACE?.fetch)return workspaceServiceUnavailable();
   const progressiveHome=isWorkspaceProgressiveHome(new URL(request.url).pathname);
   const upstream=await env.SPACE.fetch(request);const routed=new Response(upstream.body,upstream);routed.headers.set('x-ekodi-workspace-gateway','space-service-binding');
-  if(routed.headers.get('x-ekodi-route')==='space-storefront'){routed.headers.set('x-ekodi-public-surface','customer-storefront');return progressiveHome?injectEkodiProgressiveHome(routed):routed;}
-  if(routed.headers.get('x-ekodi-independent-site')==='true'){routed.headers.set('x-ekodi-public-surface','independent-workspace-site');return progressiveHome?injectEkodiProgressiveHome(routed):routed;}
+  if(routed.headers.get('x-ekodi-route')==='space-storefront'){
+    routed.headers.set('x-ekodi-public-surface','customer-storefront');
+    const branded=injectEkodiTenantReadability(routed);
+    return progressiveHome?injectEkodiProgressiveHome(branded):branded;
+  }
+  if(routed.headers.get('x-ekodi-independent-site')==='true'){
+    routed.headers.set('x-ekodi-public-surface','independent-workspace-site');
+    const branded=injectEkodiTenantReadability(routed);
+    return progressiveHome?injectEkodiProgressiveHome(branded):branded;
+  }
   return injectEkodiShell(rewriteWorkspaceShellAssets(routed),'space','workspace',{progressiveHome,contextKind:'workspace'});
 }
 
@@ -237,7 +245,7 @@ export default {
     if(CGMA_HOSTS.has(host)&&['GET','HEAD'].includes(request.method))return routeCgmaPublic(request,env);
 
     if(host===PUBLIC_HOST){
-      if(['GET','HEAD'].includes(request.method)&&isCgmaRoot(url.pathname)){const legacyResponse=await legacyPlatformRouter.fetch(request,env,ctx);return injectEkodiProgressiveHome(legacyResponse);}
+      if(['GET','HEAD'].includes(request.method)&&isCgmaRoot(url.pathname)){const legacyResponse=await legacyPlatformRouter.fetch(request,env,ctx);return injectEkodiProgressiveHome(injectEkodiTenantReadability(legacyResponse));}
       const mailApex=routeMailApex(request);if(mailApex)return mailApex;
       const messengerApex=await routeMessengerApex(request,env,ctx);if(messengerApex)return messengerApex;
       const investApex=await routeInvestApex(request,env,ctx);if(investApex)return investApex;
