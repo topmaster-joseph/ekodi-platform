@@ -86,6 +86,8 @@ jobs:
           grep -Fq 'oauthBroker:true' marketing-growth-worker.js
           grep -Fq 'youtubeConfigured' marketing-growth-worker.js
           grep -Fq 'GOOGLE_OAUTH_BROKER' marketing-growth-worker.js
+          grep -Fq "GOOGLE_BROKER_REDIRECT_URI = 'https://ekodi.kr/storage/api/control/storage/google/callback'" marketing-growth-worker.js
+          grep -Fq 'GOOGLE_OAUTH_BROKER_REDIRECT_DRIFT' marketing-growth-worker.js
           grep -Fq 'MARKETING_OAUTH_VAULT_KEY' marketing-growth-worker.js
           grep -Fq 'binding = "GOOGLE_OAUTH_BROKER"' wrangler.marketing-growth.toml
           grep -Fq 'entrypoint = "GoogleOAuthBroker"' wrangler.marketing-growth.toml
