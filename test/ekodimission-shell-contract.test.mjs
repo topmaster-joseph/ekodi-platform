@@ -2,11 +2,18 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   missionPageEntries,
+  REQUIRED_SHELL_MARKERS,
   validateMissionPageSource,
   validateMissionShellSource,
   validateMissionShellCss,
   validateMissionShellContract,
 } from '../scripts/validate-ekodimission-shell-contract.mjs';
+
+test('mission production verifier can import the shared shell marker contract',()=>{
+  assert.ok(Array.isArray(REQUIRED_SHELL_MARKERS));
+  assert.ok(REQUIRED_SHELL_MARKERS.includes('class="mission-site-header"'));
+  assert.ok(REQUIRED_SHELL_MARKERS.includes('/ekodimission/assets/shell.js'));
+});
 
 test('mission registry discovery is automatic for current and future page routes',async()=>{
   const result=await validateMissionShellContract();
