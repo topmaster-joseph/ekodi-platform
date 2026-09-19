@@ -10,7 +10,7 @@ const auth={authorization:'Bearer valid-user-token'};
 
 test('personal finance health is public and declares the dedicated data boundary',async()=>{const r=await worker.fetch(new Request('https://personal-finance-api.ekodi.kr/health'),{});assert.equal(r.status,200);const d=await r.json();assert.equal(d.service,'ekodi-personal-finance-api');assert.equal(d.dataBoundary,'dedicated-d1');assert.equal(d.aiWriteEnabled,false)});
 
-test('personal finance admin route hands off without exposing personal data',async()=>{const r=await worker.fetch(new Request('https://personal-finance-api.ekodi.kr/admin'),{});assert.equal(r.status,307);assert.equal(r.headers.get('location'),'https://admin.ekodi.kr/#personal-finance')});
+test('personal finance admin route hands off without exposing personal data',async()=>{const r=await worker.fetch(new Request('https://personal-finance-api.ekodi.kr/admin'),{});assert.equal(r.status,307);assert.equal(r.headers.get('location'),'https://ekodi.kr/admin/#personal-finance')});
 
 test('personal finance rejects untrusted browser origins',async()=>{const r=await worker.fetch(new Request('https://personal-finance-api.ekodi.kr/api/finance/personal/summary',{headers:{origin:'https://example.com'}}),{});assert.equal(r.status,403);assert.equal((await r.json()).code,'PF_ORIGIN_DENIED')});
 
