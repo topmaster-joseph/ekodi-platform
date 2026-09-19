@@ -586,3 +586,46 @@ html[data-ekodi-user-ui] :where(.table-wrap,[data-ekodi-table-scroll]){
     gap:10px;
   }
 }
+
+/* Brand-neutral tenant readability v1.
+ * Applied to independent public sites without adding EKODI platform chrome.
+ */
+html[data-ekodi-tenant-readability="v1"]{
+  text-rendering:optimizeLegibility;
+  -webkit-font-smoothing:antialiased;
+}
+html[data-ekodi-tenant-readability="v1"] :where(h1,h2,h3,h4){
+  line-height:1.22;
+  text-wrap:balance;
+  word-break:keep-all;
+}
+html[data-ekodi-tenant-readability="v1"] :where(p,li,dd,figcaption){
+  line-height:1.7;
+  overflow-wrap:break-word;
+}
+html[data-ekodi-tenant-readability="v1"] :where(a,button,input,select,textarea,[role="button"],[role="tab"]):focus-visible{
+  outline:3px solid currentColor;
+  outline-offset:3px;
+}
+html[data-ekodi-tenant-readability="v1"] :where(button,.btn,.button,[role="button"],input,select){
+  min-height:40px;
+}
+html[data-ekodi-tenant-readability="v1"] :where(table){
+  font-variant-numeric:tabular-nums;
+}
+html[data-ekodi-tenant-readability="v1"] :where(img,video,canvas,svg){
+  max-width:100%;
+}
+html[data-ekodi-tenant-readability="v1"] :where(.table-wrap,[data-ekodi-table-scroll]){
+  max-width:100%;
+  overflow-x:auto;
+  -webkit-overflow-scrolling:touch;
+}
+@media(max-width:768px){
+  html[data-ekodi-tenant-readability="v1"] :where(button,.btn,.button,[role="button"],input,select){
+    min-height:44px;
+  }
+  html[data-ekodi-tenant-readability="v1"] :where(h1){
+    font-size:clamp(30px,10vw,48px);
+  }
+}
