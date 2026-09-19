@@ -73,4 +73,25 @@ test('ordinary static assets stay asset-first while security-critical Admin and 
   for (const ordinaryStatic of ['/styles.css', '/homepage-ambient.css', '/mall.css']) {
     assert.equal(wrangler.includes(`"${ordinaryStatic}"`), false, `${ordinaryStatic} should use Static Assets asset-first delivery`);
   }
+  for (const quotaHeavyAdminStatic of [
+    '/admin-central-handoff.js',
+    '/admin-compact.js',
+    '/admin-menu-layout.js',
+    '/admin-menu-registry.js',
+    '/admin-sidebar.js',
+    '/admin-menu-runtime.js',
+    '/admin-demand-loader.js',
+    '/admin-public-site-controls.js',
+    '/admin-perf-diagnostics.js',
+    '/admin-lazy-features.js',
+    '/tapo-device-admin.js',
+    '/device-browser-diagnostics.js',
+    '/system-health-admin.js'
+  ]) {
+    assert.equal(
+      wrangler.includes(`"${quotaHeavyAdminStatic}"`),
+      false,
+      `${quotaHeavyAdminStatic} should bypass Worker invocation and use free Static Assets`
+    );
+  }
 });
