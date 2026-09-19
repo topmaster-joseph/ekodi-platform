@@ -12,8 +12,9 @@ const args = new Map(process.argv.slice(2).map(arg => {
 const scope = args.get('scope') || 'full';
 const quotaState = String(process.env.EKODI_CF_QUOTA_STATE || 'unknown').toLowerCase();
 const skipNonessential = ['protect', 'exhausted', 'unknown'].includes(quotaState);
+const adminMonitorSuppressed = scope === 'admin-monitor' && ['exhausted', 'unknown'].includes(quotaState);
 const checks = scope === 'admin-monitor'
-  ? (skipNonessential ? [] : config.canary.essential.filter(check => check.id === 'admin'))
+  ? (adminMonitorSuppressed ? [] : config.canary.essential.filter(check => check.id === 'admin'))
   : [...config.canary.essential, ...(skipNonessential ? [] : config.canary.nonessential)];
 
 const report = {
