@@ -19,6 +19,11 @@ test('EKODI central social connector exposes login-only YouTube OAuth and vault 
   assert.doesNotMatch(growth,/topmaster\.joseph@gmail\.com/);
   assert.match(growth,/registryConnectionId/);
   assert.match(growth,/oauthRegistryRow/);
+  assert.match(growth,/adminIdentityFromSession/);
+  assert.match(growth,/env\.CONTROL_API\.fetch/);
+  assert.match(growth,/\/api\/session/);
+  assert.match(growth,/platformAdmin:true/);
+  assert.match(growth,/identity\.platformAdmin && identity\.adminRole === 'super_admin'/);
   assert.match(growth,/YOUTUBE_TARGET_ACCOUNT_MISMATCH/);
   assert.match(growth,/authorizedEmail,targetAccount/);
   assert.match(growth,/scopes:\['youtube\.upload','youtube\.readonly'\]/);
@@ -38,6 +43,8 @@ test('EKODI central social connector exposes login-only YouTube OAuth and vault 
   assert.match(config,/MALL_PROMOTION_AUTOMATION_ENABLED = "true"\r?\nALLOWED_ORIGINS =/);
   assert.match(config,/GOOGLE_CLIENT_ID/);
   assert.match(config,/binding = "GOOGLE_OAUTH_BROKER"/);
+  assert.match(config,/binding = "CONTROL_API"/);
+  assert.match(config,/service = "ekodi-auth-api"/);
   assert.match(config,/service = "ekodi-storage-control"/);
   assert.match(config,/entrypoint = "GoogleOAuthBroker"/);
   assert.match(config,/PUBLIC_BASE_URL = "https:\/\/ekodi\.kr\/marketing-connect-api"/);
