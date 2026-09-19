@@ -22,6 +22,9 @@ on:
       - 'test/ai-commons*.test.mjs'
       - 'realtime-tenant-registry.js'
       - 'tenant-live-page.js'
+      - 'scripts/validate-ekodimission-shell-contract.mjs'
+      - 'scripts/verify-ekodimission-production.mjs'
+      - 'deploy/manifests/shared-site.worker.json'
       - 'tenant-live.js'
       - 'tenant-live.css'
       - 'tenant-live-admin-page.js'
@@ -450,6 +453,11 @@ jobs:
 
       - name: Candidate at 0%, verify routes, promote and auto-rollback on failure
         run: node scripts/guarded-worker-release.mjs --manifest deploy/manifests/shared-site.worker.json
+
+      - name: Verify EKODI Mission LIVE production shell contract
+        env:
+          EKODI_MISSION_VERIFY_SCOPE: shared
+        run: node scripts/verify-ekodimission-production.mjs
 
       - name: Verify EKODI Mall canonical address
         shell: bash
