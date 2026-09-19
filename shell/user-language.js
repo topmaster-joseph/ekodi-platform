@@ -1,5 +1,6 @@
 (()=>{
 'use strict';
+if(String(document.documentElement.dataset.ekodiShellSurface||'').toLowerCase()==='admin')return;
 if(window.__EKODI_USER_LANGUAGE_BOOTED)return;
 window.__EKODI_USER_LANGUAGE_BOOTED=true;
 
