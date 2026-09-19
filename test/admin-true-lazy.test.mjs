@@ -37,6 +37,12 @@ test('heavy admin modules are explicit on-demand features', async () => {
   assert.doesNotMatch(loader, /setInterval\([^)]*loadDevices/);
 });
 
+test('storage admin uses the canonical Storage service namespace instead of generic Control API', async () => {
+  const storage = await read('storage-admin.js');
+  assert.match(storage, /const API='\\/storage\\/api\\/control\\/storage\\/google'/);
+  assert.doesNotMatch(storage, /const API='\\/api\\/control\\/storage\\/google'/);
+});
+
 test('on-demand assets are independently served and not merged into startup bundles', async () => {
   const worker = await read('site-worker.js');
   const build = await read('scripts/build.mjs');
