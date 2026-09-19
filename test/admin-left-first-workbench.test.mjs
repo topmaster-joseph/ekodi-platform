@@ -4,28 +4,29 @@ import { readFile } from 'node:fs/promises';
 
 const read = path => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 
-test('Admin uses a left-first progressive menu with one-click work-area activation', async () => {
+test('Admin uses a seven-area primary sidebar with contextual top navigation', async () => {
   const [registry, sidebar] = await Promise.all([
     read('admin-menu-registry.js'),
     read('admin-sidebar.js'),
   ]);
-  assert.match(registry, /id: 'workspaces'.*ko: '조직·고객'.*en: 'Workspaces'/);
-  assert.match(sidebar, /const PRIMARY_SECTIONS = Object\.freeze\(/);
+  for (const marker of [
+    "id: 'home'", "id: 'operations'", "id: 'workspaces'", "id: 'services'",
+    "id: 'community'", "id: 'publishing'", "id: 'system'",
+  ]) assert.ok(registry.includes(marker), marker);
   for (const marker of [
     "home: ['command-home', 'campus']",
     "operations: ['work', 'communication', 'finance', 'tax']",
-    "workspaces: ['clients', 'cmpmyi', 'organization', 'workspace']",
-    "services: ['common-services', 'marketing-ai', 'community', 'social', 'books']",
-    "system: ['health', 'aiops', 'ai-settings', 'devices', 'security', 'admins', 'api-cost']",
+    "workspaces: ['clients', 'organization', 'workspace', 'cmpmyi', 'site-chrome']",
+    "services: ['common-services', 'marketing-ai', 'social', 'life-ai']",
+    "community: ['community', 'ai-membership']",
+    "publishing: ['books', 'devotional']",
+    "system: ['health', 'aiops', 'devices', 'security', 'admins', 'api-cost']",
   ]) assert.ok(sidebar.includes(marker), marker);
-  assert.match(sidebar, /dataset\.adminDetailMore = group/);
-  assert.match(sidebar, /간단히 보기/);
-  assert.match(sidebar, /더보기/);
-  assert.match(sidebar, /activateSection\(nav, getAdminMenuGroupDefault\(group\)\)/);
   assert.match(sidebar, /admin-context-tabs-shell/);
-  assert.match(sidebar, /display:none!important/);
+  assert.match(sidebar, /display:flex!important/);
+  assert.match(sidebar, /globals\.querySelector\(`:scope>\.\$\{DETAILS_CLASS\}`\)\?\.remove\(\)/);
+  assert.match(sidebar, /primary-sidebar-tabs-v3/);
 });
-
 test('Functional Admin pages keep only the bottom EKODI composer until conversation is opened', async () => {
   const [bootstrapCss, dockCss, principles] = await Promise.all([
     read('admin-assist-bootstrap.css'),

@@ -4,11 +4,13 @@ const SECTION_GROUP=Object.freeze({
   campus:'home',
   work:'operations',communication:'operations',finance:'operations',tax:'operations',
   clients:'workspaces','site-chrome':'workspaces',organization:'workspaces',workspace:'workspaces','cheonggye-members':'workspaces',
-  'common-services':'services','life-ai':'services','personal-finance':'services',invest:'services',community:'services',books:'services',social:'services',devotional:'services','marketing-ai':'services','ai-membership':'services',affiliates:'services','supply-network':'services',insurance:'services',
+  'common-services':'services','life-ai':'services','personal-finance':'services',invest:'services',social:'services','marketing-ai':'services',affiliates:'services','supply-network':'services',insurance:'services',
+  community:'community','ai-membership':'community',
+  books:'publishing',devotional:'publishing',
   'public-site-controls':'system','language-status':'system',architecture:'system',maturity:'system',security:'system',admins:'system','ai-module-spec':'system',storage:'system',capabilities:'system',aiops:'system','ai-settings':'system',openai:'system',devices:'system',health:'system','api-cost':'system',services:'system',deployments:'system',policies:'system',
 });
 const GROUP_DEFAULT=Object.freeze({
-  home:'command-home',operations:'work',workspaces:'clients',services:'common-services',system:'health',
+  home:'command-home',operations:'work',workspaces:'clients',services:'common-services',community:'community',publishing:'books',system:'health',
 });
 const LEGACY_GROUP_DEFAULT=Object.freeze({
   common:'common-services',professional:'life-ai',space:'clients',spaces:'clients',
@@ -46,6 +48,7 @@ function sectionFromPath(pathname){
   if(!section)return'';
   if(SECTION_GROUP[section]===group)return section;
   if(LEGACY_SECTION_GROUP[section]===group)return section;
+  if(group==='services'&&['community','ai-membership','books','devotional'].includes(section))return section;
   if((group==='space'||group==='spaces')&&SECTION_GROUP[section]==='workspaces')return section;
   return'';
 }
@@ -77,7 +80,7 @@ function navigationTarget(section,loc=window.location){
   return isCanonicalHost(loc)?canonicalUrl(section,loc):legacyHashFor(section);
 }
 window.EKODIAdminRoutes=Object.freeze({
-  version:'1.2.0',
+  version:'1.3.0',
   groups:Object.freeze({...GROUP_DEFAULT}),
   normalizeSection,
   sectionFromPath,
