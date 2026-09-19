@@ -5,9 +5,10 @@ import { readFile } from 'node:fs/promises';
 const read=path=>readFile(new URL(`../${path}`,import.meta.url),'utf8');
 
 test('admin shell is separate from user shell and removes the left brand header',async()=>{
-  const [adminShell,userHeader,injector,worker,principles]=await Promise.all([
+  const [adminShell,userHeader,userLanguage,injector,worker,principles]=await Promise.all([
     read('shell/admin-ui-shell.js'),
     read('shell/user-ui-header.js'),
+    read('shell/user-language.js'),
     read('ekodi-shell-injector.js'),
     read('ekodi-shell-worker.js'),
     read('docs/admin-ui-module-principles.md')
@@ -23,9 +24,14 @@ test('admin shell is separate from user shell and removes the left brand header'
   assert.match(adminShell,/ekodiIndependentScroll/);
   assert.match(adminShell,/data-ekodi-admin-nav-mode=\"primary\"/);
   assert.match(adminShell,/primary-fixed/);
+  assert.match(adminShell,/LANGUAGE_CONTROL_SELECTORS/);
+  assert.match(adminShell,/removeAdminLanguageControls\(\)/);
+  assert.match(adminShell,/data-ekodi-language-control/);
+  assert.match(adminShell,/ekodiAdminLanguageControl='disabled'/);
 
   assert.match(userHeader,/USER_SURFACES=new Set\(\['public','workspace'\]\)/);
   assert.doesNotMatch(userHeader,/USER_SURFACES=new Set\([^)]*'admin'/);
+  assert.match(userLanguage,/ekodiShellSurface\|\|'\'\)\.toLowerCase\(\)===\'admin\'/);
 
   assert.match(injector,/USER_SURFACES=new Set\(\['public','workspace'\]\)/);
   assert.match(injector,/if\(surface==='admin'\)return ADMIN_BOOT_STYLE/);
