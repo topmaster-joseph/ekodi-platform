@@ -5,8 +5,9 @@ import { readFile } from 'node:fs/promises';
 const read=path=>readFile(new URL(`../${path}`,import.meta.url),'utf8');
 
 test('admin shell is separate from user shell and removes the left brand header',async()=>{
-  const [adminShell,userHeader,userLanguage,injector,worker,principles]=await Promise.all([
+  const [adminShell,adminRuntime,userHeader,userLanguage,injector,worker,principles]=await Promise.all([
     read('shell/admin-ui-shell.js'),
+    read('admin-menu-runtime.js'),
     read('shell/user-ui-header.js'),
     read('shell/user-language.js'),
     read('ekodi-shell-injector.js'),
@@ -28,6 +29,10 @@ test('admin shell is separate from user shell and removes the left brand header'
   assert.match(adminShell,/removeAdminLanguageControls\(\)/);
   assert.match(adminShell,/data-ekodi-language-control/);
   assert.match(adminShell,/ekodiAdminLanguageControl='disabled'/);
+
+  assert.match(adminRuntime,/function removeLocaleControl\\(\\)/);
+  assert.doesNotMatch(adminRuntime,/function installLocaleControl\\(\\)/);
+  assert.doesNotMatch(adminRuntime,/<option value="ko">한국어<\\/option><option value="en">English<\\/option>/);
 
   assert.match(userHeader,/USER_SURFACES=new Set\(\['public','workspace'\]\)/);
   assert.doesNotMatch(userHeader,/USER_SURFACES=new Set\([^)]*'admin'/);
