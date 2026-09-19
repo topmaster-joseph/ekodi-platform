@@ -1,5 +1,5 @@
 {
-  "version": "1.2.0",
+  "version": "1.3.0",
   "name": "EKODI Workspace Packs",
   "defaultPack": "personal-starter",
   "packs": [
@@ -354,7 +354,8 @@
         "core.automation",
         "core.analytics",
         "device.observe",
-        "device.remote-computer"
+        "device.remote-computer",
+        "device.web-computer-execution"
       ],
       "signals": [
         "플랫폼 운영",
@@ -362,7 +363,10 @@
         "원격 컴퓨터",
         "원격 실행",
         "디바이스",
-        "장애 복구"
+        "장애 복구",
+        "웹 실행",
+        "브라우저 실행",
+        "웹 자동화"
       ]
     }
   ],
