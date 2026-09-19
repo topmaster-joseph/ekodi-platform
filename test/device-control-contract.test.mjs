@@ -93,7 +93,7 @@ test('native remote computer provider exposes bounded observe-only host commands
 
 test('admin exposes native remote computer observation without dangerous computer controls', () => {
   for (const command of ['computer.agent.status','computer.system.read','computer.process.list']) {
-    assert.match(admin, new RegExp(command.replaceAll('.', '\\\\.')));
+    assert.match(admin, new RegExp(command.replaceAll('.', '\\.')));
   }
   for (const capability of ['agentStatus','computerRead','processRead']) assert.match(admin, new RegExp(capability));
   assert.match(admin, /보기 전용입니다/);
