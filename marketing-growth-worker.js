@@ -133,7 +133,7 @@ function randomState() {
   const bytes = crypto.getRandomValues(new Uint8Array(24));
   return bytesToBase64(bytes).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
 }
-function publicBase(env) { return String(env.PUBLIC_BASE_URL || 'https://marketing-connect-api.ekodi.kr').replace(/\/$/,''); }
+function publicBase(env) { return String(env.PUBLIC_BASE_URL || 'https://ekodi.kr/marketing-connect-api').replace(/\/$/,''); }
 function callbackUrl(env, provider) { return `${publicBase(env)}/oauth/${provider}/callback`; }
 function safeReturnUrl(value) {
   const fallback = 'https://ekodi.kr/admin/';
@@ -731,7 +731,7 @@ export default {
     const url = new URL(request.url);
     const { allowed, headers } = cors(request,env);
     if (request.method === 'OPTIONS') return new Response(null,{status:allowed ? 204 : 403,headers});
-    if (url.pathname === '/admin' || url.pathname === '/admin/') return Response.redirect('https://ekodi.kr/admin/services/marketing-ai?source=marketing-connect-api.ekodi.kr',307);
+    if (url.pathname === '/admin' || url.pathname === '/admin/') return Response.redirect('https://ekodi.kr/admin/services/marketing-ai?source=marketing-connect-api',307);
     if (!allowed) return json(request,env,{error:'ORIGIN_FORBIDDEN'},403);
     if (url.pathname === '/health' && request.method === 'GET') {
       const ready = await schemaReady(env);

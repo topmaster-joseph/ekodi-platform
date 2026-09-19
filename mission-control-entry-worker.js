@@ -34,7 +34,7 @@ import { handleDevotionalControl } from './devotional-control.js';
 import { handleLearningControl } from './learning-control.js';
 import { handleLocalCommerceControl } from './local-commerce-control.js';
 import { handleExternalAccountControl } from './external-account-control.js';
-import { handleRealtimeControl } from './realtime-control.js';
+import { handleRealtimeControl, runRealtimeRecordingRetention } from './realtime-control.js';
 import { applyApiSecurityHeaders, enforceEdgeSecurity } from './security-edge.js';
 
 function errorResponse(message, code) {
@@ -98,6 +98,41 @@ function externalAccountCorsResponse(response, request, env = {}) {
   return applyApiSecurityHeaders(new Response(response.body, { status:response.status, statusText:response.statusText, headers }));
 }
 
+const PERSONAL_FINANCE_CONTROL_PATH = '/api/control/personal-finance';
+
+async function proxyPersonalFinanceAdminControl(request, env) {
+  if (new URL(request.url).pathname !== PERSONAL_FINANCE_CONTROL_PATH) return null;
+  if (!env.PERSONAL_FINANCE?.fetch) {
+    return applyApiSecurityHeaders(new Response(JSON.stringify({
+      error:'Personal Finance service binding unavailable',
+      code:'PERSONAL_FINANCE_BINDING_UNAVAILABLE',
+    }), {
+      status:503,
+      headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'},
+    }));
+  }
+  const target = new URL(request.url);
+  target.pathname = '/api/admin/personal-finance/control';
+  target.search = '';
+  const headers = new Headers(request.headers);
+  headers.set('x-ekodi-admin-proxy', 'personal-finance-binding-v1');
+  const body = ['GET','HEAD'].includes(request.method) ? undefined : await request.arrayBuffer();
+  const upstream = await env.PERSONAL_FINANCE.fetch(new Request(target.toString(), {
+    method:request.method,
+    headers,
+    body,
+    redirect:'manual',
+  }));
+  const response = upstream.status === 401
+    ? new Response(JSON.stringify({error:'EKODI 관리자 인증이 필요합니다.',code:'PF_ADMIN_AUTH_REQUIRED'}), {
+        status:401,
+        headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store'},
+      })
+    : new Response(upstream.body, upstream);
+  response.headers.set('X-EKODI-Personal-Finance-Proxy', 'service-binding-v1');
+  return applyApiSecurityHeaders(response);
+}
+
 export default {
   async fetch(request, env, ctx) {
     const incoming = new URL(request.url);
@@ -143,12 +178,14 @@ export default {
       if (response) return response;
     }
 
-    const operatorGoogle = await handleSameOriginOperatorGoogleAuth(request, env, ctx);
-    if (operatorGoogle) return applyApiSecurityHeaders(operatorGoogle);
-
     if (path === '/api/session' && request.method === 'GET') {
       try { const response = await handleAdminSessionFastPath(request, env); if (response) return applyApiSecurityHeaders(response); }
       catch (error) { console.error('Admin session fast path error', error); return errorResponse('관리자 세션 확인 중 오류가 발생했습니다.', 'ADMIN_SESSION_FASTPATH_ERROR'); }
+    }
+
+    if (path === PERSONAL_FINANCE_CONTROL_PATH) {
+      try { return await proxyPersonalFinanceAdminControl(request, env); }
+      catch (error) { console.error('Personal Finance control proxy error', error); return errorResponse('개인재무 운영 API 연결 중 오류가 발생했습니다.', 'PERSONAL_FINANCE_CONTROL_PROXY_ERROR'); }
     }
 
     if (path === '/api/homepage/presentation' || path === '/api/control/homepage') {
@@ -323,6 +360,7 @@ export default {
     const commandPulse = runEkodiPulseSchedule(env, { limit:1 }).catch(error => { console.error('EKODI v8 Pulse schedule error', error); return { ok:false, error:'ekodi_v8_pulse_failed' }; });
     const aiProviderHealth = runAiProviderHealthSchedule(env, { scheduledTime:controller?.scheduledTime }).catch(error => { console.error('AI provider health schedule error', error); return { ok:false, checked:0, error:'ai_provider_health_failed' }; });
     const hybridWatchdog = runHybridExecutionMonitor(env).catch(error => { console.error('Hybrid execution watchdog schedule error', error); return { status:'unavailable', error:'hybrid_execution_watchdog_failed' }; });
+    const recordingRetention = runRealtimeRecordingRetention(env,{limit:10}).catch(error => { console.error('Realtime recording retention error', error); return { expired:0, stale:0, error:'realtime_recording_retention_failed' }; });
     const wakeOrchestration = (async () => {
       await disableIneligibleWakeProfiles(env);
       return runWakeOrchestration(env);
@@ -333,20 +371,10 @@ export default {
       ctx.waitUntil(commandPulse);
       ctx.waitUntil(aiProviderHealth);
       ctx.waitUntil(hybridWatchdog);
+      ctx.waitUntil(recordingRetention);
       ctx.waitUntil(wakeOrchestration);
     }
-    return customerSchedule || Promise.all([authorBilling, messengerOutbox, commandPulse, aiProviderHealth, hybridWatchdog, wakeOrchestration]);
+    return customerSchedule || Promise.all([authorBilling, messengerOutbox, commandPulse, aiProviderHealth, hybridWatchdog, recordingRetention, wakeOrchestration]);
   },
 };
 
-async function handleSameOriginOperatorGoogleAuth(request, env, ctx) {
-  if (request.method !== 'POST') return null;
-  const url = new URL(request.url);
-  if (!['/api/google/challenge','/api/google/login'].includes(url.pathname)) return null;
-  if (String(request.headers.get('origin') || '') !== url.origin) return null;
-  const headers = new Headers(request.headers);
-  headers.set('origin', 'https://admin.ekodi.kr');
-  const body = await request.clone().arrayBuffer();
-  const forwarded = new Request(url.toString(), { method:'POST', headers, body });
-  return customerEntryWorker.fetch(forwarded, env, ctx);
-}

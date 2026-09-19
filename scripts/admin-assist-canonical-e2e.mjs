@@ -8,7 +8,7 @@ if (!token) throw new Error('E2E_ADMIN_TOKEN is required');
 const canonicalBaseUrl = 'https://ekodi.kr/admin/';
 const campusUrl = 'https://ekodi.kr/admin/home/campus';
 const authEntryUrl = `${canonicalBaseUrl}?route=finance#ekodi_admin_token=${token}`;
-const assistApiUrl = 'https://api.ekodi.kr/api/control/ai/assist';
+const assistApiUrl = 'https://ekodi.kr/api/control/ai/assist';
 const prompt = 'EKODI E2E 확인: "정상"이라고 한 단어로 답해줘.';
 const artifactsDir = path.resolve('artifacts/admin-authenticated-e2e');
 const reportPath = path.join(artifactsDir, 'assist-canonical.json');

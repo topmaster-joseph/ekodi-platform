@@ -221,17 +221,26 @@ async function fetchCheck(request, overrideVersion = '', phase = 'standard') {
   const headers = {
     'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36',
     'accept': 'text/html,application/xhtml+xml,application/json;q=0.9,*/*;q=0.8',
+    ...(request.headers && typeof request.headers === 'object' ? request.headers : {}),
   };
   if (overrideVersion) {
     headers['Cloudflare-Workers-Version-Overrides'] = `${worker.name}="${overrideVersion}"`;
   }
+  const method = String(request.method || 'GET').toUpperCase();
+  const requestBody = request.body === undefined || request.body === null
+    ? undefined
+    : typeof request.body === 'string'
+      ? request.body
+      : JSON.stringify(request.body);
   let last = '';
   const attemptLimit = phase === 'production' && !overrideVersion ? PROMOTION_VERIFY_ATTEMPTS : STANDARD_VERIFY_ATTEMPTS;
   for (let attemptIndex = 1; attemptIndex <= attemptLimit; attemptIndex += 1) {
     try {
       const response = await fetch(targetUrl, {
+        method,
         redirect: request.redirect || 'manual',
         headers,
+        body: ['GET','HEAD'].includes(method) ? undefined : requestBody,
         signal: AbortSignal.timeout(12000),
       });
       const body = await response.text();

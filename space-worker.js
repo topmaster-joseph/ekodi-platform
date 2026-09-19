@@ -8,7 +8,7 @@ import { isOrganizationWorkspaceSlug, renderOrganizationPublicPage } from './org
 
 const EKODIMISSION_PREFIX='/ekodimission';
 const EKODIMISSION_PUBLIC_ROUTE='ekodimission-public';
-const MISSION_EVENT_RECORD_KEY='260925-chuseok-open-table';
+const MISSION_EVENT_RECORD_KEY='260926-chuseok-open-table';
 const MISSION_EVENT_SLUG='260926-chuseok-open-table';
 const MISSION_EVENT_PATH=`/ekodimission/activities/${MISSION_EVENT_SLUG}`;
 const MISSION_EVENT_LEGACY_PATHS=new Set(['/ekodimission/activities/260925-chuseok-open-table','/ekodimission/activities/2026-chuseok-open-table']);
