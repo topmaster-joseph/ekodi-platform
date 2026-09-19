@@ -11,9 +11,6 @@ const userHeader=await readFile(new URL('../shell/user-ui-header.js',import.meta
 const spaceApp=await readFile(new URL('../space/app.js',import.meta.url),'utf8');
 const missionShell=await readFile(new URL('../space/ekodimission-shell.js',import.meta.url),'utf8');
 const clientAuth=await readFile(new URL('../auth-site/client-auth.js',import.meta.url),'utf8');
-const authorAuth=await readFile(new URL('../auth-site/author-auth.js',import.meta.url),'utf8');
-const businessAuth=await readFile(new URL('../auth-site/business-auth.js',import.meta.url),'utf8');
-const marketingAuth=await readFile(new URL('../auth-site/marketing-auth-hotfix.js',import.meta.url),'utf8');
 const migration=await readFile(new URL('../supabase/migrations/20260919235500_site_member_home_foundation.sql',import.meta.url),'utf8');
 const membershipPolicy=JSON.parse(await readFile(new URL('../config/universal-membership.json',import.meta.url),'utf8'));
 const workspacePolicy=JSON.parse(await readFile(new URL('../config/service-workspace-policy.json',import.meta.url),'utf8'));
@@ -60,6 +57,7 @@ test('foundation projection is registry-live for every supported audience',async
   assert.equal(data.policy.projection,'registry-live');
   assert.ok(data.specialist.some(pack=>pack.id==='organization'));
   assert.ok(data.services.some(service=>service.id==='mission'));
+  assert.ok(data.services.every(service=>{try{return new URL(service.url).hostname!=='ekodi.kr'? !new URL(service.url).hostname.endsWith('.ekodi.kr') : true}catch{return false}}));
 });
 
 test('shared shell login and account links target the current site My Page',()=>{
@@ -74,16 +72,11 @@ test('shared shell login and account links target the current site My Page',()=>
   assert.doesNotMatch(userHeader,/href="https:\/\/ekodi\.kr\/my\/">My EKODI<\/a>/);
 });
 
-test('central and specialized auth handlers return successful site login to canonical site My Pages',()=>{
+test('central auth returns successful site login to canonical site My Pages',()=>{
   assert.match(clientAuth,/function siteMemberHomeTarget\(\)/);
   assert.match(clientAuth,/const target=siteMemberHomeTarget\(\)/);
   assert.match(clientAuth,/jadam-client':'jadam/);
-  assert.match(authorAuth,/AUTHOR_MEMBER_HOME='https:\/\/ekodi\.kr\/author\/my'/);
-  assert.match(authorAuth,/location\.assign\(RETURN_TO\|\|AUTHOR_MEMBER_HOME\)/);
-  assert.match(businessAuth,/BUSINESS_MEMBER_HOME='https:\/\/ekodi\.kr\/business\/my'/);
-  assert.match(businessAuth,/location\.assign\(RETURN_TO\|\|BUSINESS_MEMBER_HOME\)/);
-  assert.match(marketingAuth,/MARKETING_MEMBER_HOME='https:\/\/ekodi\.kr\/ekodibiz\/marketing-ai\/my'/);
-  assert.match(marketingAuth,/isMarketingMemberHome/);
+  assert.match(clientAuth,/return new URL\(`https:\/\/ekodi\.kr\$\{canonicalPath\}\/my`\)/);
 });
 
 test('workspace login returns to slug-local My Page and Mission nav exposes Mission My Page',()=>{
