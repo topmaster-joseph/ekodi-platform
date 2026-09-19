@@ -44,6 +44,9 @@ test('central channel manager can scope connections to person, tenant or store w
   assert.match(admin, /\['person','내 계정'\],\['tenant','운영공간'\],\['store','매장'\]/);
   assert.match(admin, /url\.searchParams\.set\('subject_type',connectionScope\.type\)/);
   assert.match(admin, /url\.searchParams\.set\('subject_key',connectionScope\.key\)/);
+  assert.match(admin,/\['jadam','자담치킨'\]/);
+  assert.match(admin,/\['pizzamaru','피자마루'\]/);
+  assert.match(admin,/\['yogurt','요거트퍼플'\]/);
   assert.ok(admin.includes("const CONNECT_API = '/marketing-connect-api'"));
   assert.ok(admin.includes("new URL(`${CONNECT_API}${path}`, location.origin)"));
   assert.doesNotMatch(admin, /marketing-connect-api\.ekodi\.kr/);
