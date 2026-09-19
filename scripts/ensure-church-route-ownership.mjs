@@ -20,16 +20,27 @@ async function createRoute(zone,token,pattern,script){
   await cf(`/zones/${zone}/workers/routes`,token,{method:'POST',body:JSON.stringify({pattern,script})});
   console.log(`Created route: ${pattern} -> ${script}`);
 }
-async function verifyLive(url,expectedRoute){
+function retryAfterMs(response,now=Date.now()){
+  const value=String(response?.headers?.get?.('retry-after')||'').trim();
+  if(!value)return 0;
+  if(/^\d+(?:\.\d+)?$/.test(value))return Math.max(0,Number(value)*1000);
+  const retryAt=Date.parse(value);return Number.isFinite(retryAt)?Math.max(0,retryAt-now):0;
+}
+export async function verifyChurchLive(url,expectedRoute,{fetchImpl=fetch,sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms)),attempts=10}={}){
   let last='';
-  for(let attempt=1;attempt<=10;attempt++){
+  for(let attempt=1;attempt<=attempts;attempt++){
+    let delay=Math.min(30000,1500*(2**Math.min(attempt-1,4)));
     try{
-      const response=await fetch(url,{redirect:'manual',cache:'no-store'});
+      const response=await fetchImpl(url,{redirect:'manual',cache:'no-store'});
       const route=response.headers.get('x-ekodi-route')||'';
       last=`HTTP ${response.status}, x-ekodi-route=${route||'missing'}`;
       if(response.status===200&&route===expectedRoute)return;
+      if(response.status===429){
+        delay=Math.min(30000,Math.max(delay,retryAfterMs(response)));
+        console.warn(`Church live verification rate-limited for ${url}; retrying in ${delay}ms (attempt ${attempt}/${attempts}).`);
+      }
     }catch(error){last=error.message}
-    await new Promise(resolve=>setTimeout(resolve,1500));
+    if(attempt<attempts)await sleep(delay);
   }
   throw new Error(`Live route verification failed for ${url}: ${last}`);
 }
@@ -53,8 +64,8 @@ export async function ensureChurchRouteOwnership({token=process.env.CLOUDFLARE_A
     if(row?.script!==CHURCH_ROUTE_CONTRACT.gateway)throw new Error(`Church gateway route missing after repair: ${pattern}`);
   }
   if(routes.some(row=>row.pattern===CHURCH_ROUTE_CONTRACT.retiredGateway&&row.script===CHURCH_ROUTE_CONTRACT.gateway))throw new Error('Ambiguous church gateway route still present');
-  await verifyLive(CHURCH_ROUTE_CONTRACT.publicUrl,CHURCH_ROUTE_CONTRACT.publicRoute);
-  await verifyLive(CHURCH_ROUTE_CONTRACT.adminUrl,CHURCH_ROUTE_CONTRACT.adminRoute);
+  await verifyChurchLive(CHURCH_ROUTE_CONTRACT.publicUrl,CHURCH_ROUTE_CONTRACT.publicRoute);
+  await verifyChurchLive(CHURCH_ROUTE_CONTRACT.adminUrl,CHURCH_ROUTE_CONTRACT.adminRoute);
   console.log('Church route ownership and live boundaries verified.');
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
