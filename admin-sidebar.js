@@ -23,8 +23,10 @@ const PRIMARY_SECTIONS = Object.freeze({
   home: ['command-home', 'campus'],
   operations: ['work', 'communication', 'finance', 'tax'],
   workspaces: ['clients', 'cmpmyi', 'organization', 'workspace'],
-  services: ['common-services', 'marketing-ai', 'community', 'social', 'books'],
-  system: ['health', 'aiops', 'ai-settings', 'devices', 'security', 'admins', 'api-cost'],
+  services: ['common-services', 'marketing-ai', 'social', 'life-ai'],
+  community: ['community', 'ai-membership'],
+  publishing: ['books', 'devotional'],
+  system: ['health', 'aiops', 'devices', 'security', 'admins', 'api-cost'],
 });
 
 export function adminSidebarSectionOf(item) {
@@ -64,16 +66,16 @@ function ensureStyle() {
   const style = document.createElement('style');
   style.id = 'ekodi-admin-workbench-tabs-style';
   style.textContent = `
-body.admin-compact{--admin-readable:#172033;--admin-secondary:#66768a;--admin-border:#d9e2ec;--admin-soft:#f1f5f9;--admin-active:#edf4ff}
-body.admin-compact .sidebar nav{display:flex!important;flex-direction:column!important;gap:2px!important;overflow-y:hidden!important;overflow-x:hidden!important;overscroll-behavior:none!important}
-body.admin-compact .${GLOBAL_CLASS}{display:grid;gap:3px;margin:2px 0 8px}
-body.admin-compact .admin-global-nav{display:flex;align-items:center;gap:9px;width:100%;min-height:42px;padding:8px 10px;border:1px solid transparent;border-radius:9px;background:transparent;color:#40566d!important;font:inherit;font-size:14px;font-weight:780;line-height:1.25;text-align:left;cursor:pointer;box-shadow:none!important;transition:none!important;opacity:1!important}
+body.admin-compact{--admin-readable:#172033;--admin-secondary:#66768a;--admin-border:#d9e2ec;--admin-soft:#f4f7fb;--admin-active:#eaf3ff}
+body.admin-compact .sidebar nav{display:flex!important;flex-direction:column!important;gap:4px!important;overflow-y:hidden!important;overflow-x:hidden!important;overscroll-behavior:none!important}
+body.admin-compact .${GLOBAL_CLASS}{display:grid;gap:5px;margin:6px 0 10px}
+body.admin-compact .admin-global-nav{display:flex;align-items:center;gap:11px;width:100%;min-height:48px;padding:10px 12px;border:1px solid transparent;border-radius:11px;background:transparent;color:#dbe8f6!important;font:inherit;font-size:15px;font-weight:780;line-height:1.25;text-align:left;cursor:pointer;box-shadow:none!important;transition:background .12s ease,border-color .12s ease!important;opacity:1!important}
 body.admin-compact .admin-global-nav span{color:inherit!important;opacity:1!important}
-body.admin-compact .admin-global-nav:hover{border-color:#d5e6ef;background:#eef7fb;color:#123c58!important}
-body.admin-compact .admin-global-nav.active{border-color:#b7d4f6;background:#edf4ff;color:#0b4f8a!important}
-body.admin-compact .admin-global-nav b{display:inline-grid;place-items:center;min-width:22px;color:#52738a!important;font-size:12px;font-weight:850;letter-spacing:-.03em;opacity:1!important}
-body.admin-compact .admin-global-nav.active b{color:#155eef!important}
-body.admin-compact .${DETAILS_CLASS}{display:grid;gap:2px;margin:-1px 0 5px;padding:2px 3px 7px 30px;border-left:1px solid #e1e8ef}
+body.admin-compact .admin-global-nav:hover{border-color:#274d73;background:#102c49;color:#fff!important}
+body.admin-compact .admin-global-nav.active{border-color:#2d6fac;background:#174b7b;color:#fff!important}
+body.admin-compact .admin-global-nav b{display:inline-grid;place-items:center;min-width:24px;color:#8fb5d6!important;font-size:14px;font-weight:850;letter-spacing:-.03em;opacity:1!important}
+body.admin-compact .admin-global-nav.active b{color:#d9ecff!important}
+body.admin-compact .${DETAILS_CLASS}{display:none!important}
 body.admin-compact .admin-detail-item{display:flex;align-items:center;gap:8px;width:100%;min-height:34px;margin:0;padding:6px 8px;border:1px solid transparent;border-radius:8px;background:transparent;color:#506174;font:inherit;font-size:13px;font-weight:700;text-align:left;cursor:pointer}
 body.admin-compact .admin-detail-item:hover{border-color:#dbe7ef;background:#f2f7fb;color:#173b57}
 body.admin-compact .admin-detail-item.active{border-color:#bfd5ee;background:#edf4ff;color:#0b5cab}
@@ -83,15 +85,15 @@ body.admin-compact .${MORE_CLASS}{display:flex;align-items:center;justify-conten
 body.admin-compact .${MORE_CLASS}:hover{background:#f2f7fb;color:#173b57}
 body.admin-compact .${MORE_CLASS} b{font-size:11px;font-weight:800}
 body.admin-compact .${SOURCE_CLASS}{display:none!important}
-body.admin-compact .${TABS_SHELL_CLASS}{position:sticky;top:0;z-index:35;display:none!important;align-items:center;gap:12px;min-height:56px;padding:8px 16px;border-bottom:1px solid var(--admin-border);background:rgba(255,255,255,.98);color:#172033;box-shadow:none!important;backdrop-filter:none!important}
-body.admin-compact .admin-context-title{flex:0 0 auto;color:#66768a;font-size:13px;font-weight:820;letter-spacing:.01em;white-space:nowrap}
+body.admin-compact .${TABS_SHELL_CLASS}{position:sticky;top:0;z-index:35;display:flex!important;align-items:center;gap:14px;min-height:62px;padding:10px 22px;border-bottom:1px solid var(--admin-border);background:rgba(255,255,255,.98);color:#172033;box-shadow:0 5px 18px rgba(38,58,78,.04)!important;backdrop-filter:blur(12px)!important}
+body.admin-compact .admin-context-title{flex:0 0 auto;min-width:72px;color:#334b63;font-size:14px;font-weight:850;letter-spacing:-.01em;white-space:nowrap}
 body.admin-compact .${TABS_CLASS}{display:flex;align-items:center;gap:5px;min-width:0;overflow-x:auto;scrollbar-width:none}
 body.admin-compact .${TABS_CLASS}::-webkit-scrollbar{display:none}
-body.admin-compact .admin-context-tab{flex:0 0 auto;min-height:40px;padding:0 12px;border:1px solid transparent;border-radius:9px;background:transparent;color:#405269;font:inherit;font-size:14px;font-weight:760;line-height:1.35;white-space:nowrap;cursor:pointer;box-shadow:none!important;transition:none!important}
+body.admin-compact .admin-context-tab{flex:0 0 auto;min-height:40px;padding:0 13px;border:1px solid transparent;border-radius:10px;background:transparent;color:#52667b;font:inherit;font-size:14px;font-weight:760;line-height:1.35;white-space:nowrap;cursor:pointer;box-shadow:none!important;transition:background .12s ease,border-color .12s ease!important}
 body.admin-compact .admin-context-tab:hover{border-color:#d5e6ef;background:#f2f7fb;color:#173b57}
-body.admin-compact .admin-context-tab.active{border-color:#bfd5ee;background:#edf4ff;color:#0b5cab}
+body.admin-compact .admin-context-tab.active{border-color:#aecdec;background:#eaf3ff;color:#0b5cab;font-weight:850}
 body.admin-compact .admin-capability-shortcut{margin-left:auto;flex:0 0 auto;min-height:40px;padding:0 12px;border:1px solid #bfd5ee;border-radius:9px;background:#f3f8ff;color:#0b5cab;font:inherit;font-size:14px;font-weight:800;cursor:pointer}
-body.admin-compact .content{padding:14px 16px 28px!important}
+body.admin-compact .content{padding:22px 24px 42px!important;max-width:1680px!important;margin:0 auto!important}
 body.admin-compact .content .hero{margin-bottom:12px!important;padding:14px 16px!important;box-shadow:none!important;backdrop-filter:none!important}
 body.admin-compact .content .section,body.admin-compact .content .module,body.admin-compact .content .architecture,body.admin-compact .content .arch-zone{box-shadow:none!important;backdrop-filter:none!important}
 body.admin-compact .content button,body.admin-compact .content .btn{box-shadow:none!important;transition:none!important}
@@ -412,7 +414,8 @@ export function renderAdminSidebar(nav, { locale = readAdminSidebarLocale(), ids
     const items = ids.map(id => createAdminSidebarItem(id, locale)).filter(Boolean);
     nav.replaceChildren(...items);
     nav.dataset.adminSidebarShared = 'true';
-    nav.dataset.adminMenuGovernance = 'workbench-tabs-v2';
+    nav.dataset.adminMenuGovernance = 'primary-sidebar-tabs-v3';
+    nav.dataset.ekodiAdminNavMode = 'primary';
     syncAdminSidebar(nav.ownerDocument || document, { locale });
     return items;
   } finally {
@@ -449,7 +452,8 @@ export function syncAdminSidebar(root = document, options = {}) {
   syncWorkbenchState(nav, locale);
   nav.dataset.adminSidebarShared = 'true';
   nav.dataset.adminSidebarLocale = locale;
-  nav.dataset.adminMenuGovernance = 'workbench-tabs-v2';
+  nav.dataset.adminMenuGovernance = 'primary-sidebar-tabs-v3';
+  nav.dataset.ekodiAdminNavMode = 'primary';
 
   const id = activeSection(nav);
   const title = root.querySelector?.('#pageTitle');
