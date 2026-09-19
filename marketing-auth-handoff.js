@@ -59,8 +59,9 @@ export function safeMarketingReturn(raw) {
 
 function consumerOriginAllowed(origin, env = {}) {
   if (!origin) return false;
+  if (origin === AUTH_ORIGIN) return true;
   if (isMarketingReturnOrigin(origin)) return true;
-  return configuredOrigins(env).has(origin) && origin !== AUTH_ORIGIN;
+  return configuredOrigins(env).has(origin);
 }
 
 function allowedOriginFor(path, origin, env = {}) {
