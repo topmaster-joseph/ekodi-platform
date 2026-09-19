@@ -40,4 +40,7 @@ test('EKODI central social connector exposes login-only YouTube OAuth and vault 
   assert.match(config,/binding = "GOOGLE_OAUTH_BROKER"/);
   assert.match(config,/service = "ekodi-storage-control"/);
   assert.match(config,/entrypoint = "GoogleOAuthBroker"/);
+  assert.match(config,/PUBLIC_BASE_URL = "https:\/\/ekodi\.kr\/marketing-connect-api"/);
+  assert.doesNotMatch(config,/marketing-connect-api\.ekodi\.kr/);
+  assert.doesNotMatch(growth,/marketing-connect-api\.ekodi\.kr/);
 });
