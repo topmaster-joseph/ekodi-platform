@@ -178,9 +178,6 @@ export default {
       if (response) return response;
     }
 
-    const operatorGoogle = await handleSameOriginOperatorGoogleAuth(request, env, ctx);
-    if (operatorGoogle) return applyApiSecurityHeaders(operatorGoogle);
-
     if (path === '/api/session' && request.method === 'GET') {
       try { const response = await handleAdminSessionFastPath(request, env); if (response) return applyApiSecurityHeaders(response); }
       catch (error) { console.error('Admin session fast path error', error); return errorResponse('관리자 세션 확인 중 오류가 발생했습니다.', 'ADMIN_SESSION_FASTPATH_ERROR'); }
@@ -379,14 +376,3 @@ export default {
   },
 };
 
-async function handleSameOriginOperatorGoogleAuth(request, env, ctx) {
-  if (request.method !== 'POST') return null;
-  const url = new URL(request.url);
-  if (!['/api/google/challenge','/api/google/login'].includes(url.pathname)) return null;
-  if (String(request.headers.get('origin') || '') !== url.origin) return null;
-  const headers = new Headers(request.headers);
-  headers.set('origin', 'https://admin.ekodi.kr');
-  const body = await request.clone().arrayBuffer();
-  const forwarded = new Request(url.toString(), { method:'POST', headers, body });
-  return customerEntryWorker.fetch(forwarded, env, ctx);
-}
