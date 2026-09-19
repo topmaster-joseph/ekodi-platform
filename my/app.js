@@ -44,7 +44,22 @@ function discardUnsafeReturnTarget(){
  const query=params.toString();
  history.replaceState({},document.title,`${location.pathname}${query?`?${query}`:''}${location.hash}`);
 }
-discardUnsafeReturnTarget();
+function misroutedWorkspaceAdminReturn(){
+ const params=new URLSearchParams(location.search);
+ if(params.get('from')!=='space')return null;
+ const raw=params.get('return_to');
+ const hash=new URLSearchParams(location.hash.slice(1));
+ if(!raw||!hash.get('ekodi_token'))return null;
+ try{
+  const target=new URL(raw);
+  if(target.origin!=='https://ekodi.kr'||target.username||target.password)return null;
+  if(!/^\/[a-z0-9](?:[a-z0-9-]{0,98}[a-z0-9])?\/admin(?:\/|$)/i.test(target.pathname))return null;
+  target.hash=location.hash;
+  return target;
+ }catch{return null}
+}
+const MISROUTED_WORKSPACE_ADMIN_RETURN=misroutedWorkspaceAdminReturn();
+if(!MISROUTED_WORKSPACE_ADMIN_RETURN)discardUnsafeReturnTarget();
 
 async function handoff(){
  if(!sb||!location.hash.startsWith('#'))return;
@@ -321,7 +336,9 @@ window.addEventListener('ekodi:personalization-signal',event=>{
 });
 window.addEventListener('hashchange',()=>{syncSurfaceState({scroll:true});progressiveSurfaceUi()});
 
-if(!enabled){authUi();await loadAll()}else{
+if(MISROUTED_WORKSPACE_ADMIN_RETURN){
+ location.replace(MISROUTED_WORKSPACE_ADMIN_RETURN.href);
+}else if(!enabled){authUi();await loadAll()}else{
  try{await handoff()}catch(e){console.error('auth handoff',e)}
  const {data}=await sb.auth.getSession();session=data.session;authUi();announceSession();
  try{await loadAll()}catch(e){console.error('My EKODI load',e)}

@@ -191,6 +191,7 @@ jobs:
               && grep -Fq 'current_site_access' /tmp/my-stage-journey-app.js \
               && grep -Fq 'https://ekodi.kr/auth/' /tmp/my-stage-journey-app.js \
               && grep -Fq 'buildPersonalizedServiceView' /tmp/my-stage-app.js \
+              && grep -Fq 'misroutedWorkspaceAdminReturn' /tmp/my-stage-app.js \
               && grep -Fq 'PERSONALIZATION_VERSION=1' /tmp/my-stage-personalization.js \
               && grep -Fq "DB_NAME='ekodi-my-character-v1'" /tmp/my-stage-character.js \
               && grep -Fq 'const EKODI_SERVICE_MANIFEST_VERSION=' /tmp/my-stage-app.js \
@@ -347,6 +348,7 @@ jobs:
               && grep -Fq 'current_site_access' /tmp/my-journey-app.js \
               && grep -Fq 'https://ekodi.kr/auth/' /tmp/my-journey-app.js \
               && grep -Fq 'buildPersonalizedServiceView' /tmp/my-app.js \
+              && grep -Fq 'misroutedWorkspaceAdminReturn' /tmp/my-app.js \
               && grep -Fq 'PERSONALIZATION_VERSION=1' /tmp/my-personalization.js \
               && grep -Fq "DB_NAME='ekodi-my-character-v1'" /tmp/my-character.js \
               && grep -Fq 'const EKODI_SERVICE_MANIFEST_VERSION=' /tmp/my-app.js \
