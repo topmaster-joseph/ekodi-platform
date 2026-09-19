@@ -78,8 +78,10 @@ test('production probe loops fail fast on quota circuit and deep E2E stays expli
     assert.match(workflow, /on:\n  workflow_dispatch:/);
     assert.doesNotMatch(workflow, /\n  push:/);
   }
-  assert.doesNotMatch(adminAuthenticated, /api\/session'[^\n]*--retry/);
-  assert.doesNotMatch(adminAuthenticatedUi, /api\/session'[^\n]*--retry/);
+  for (const workflow of [adminAuthenticated, adminAuthenticatedUi]) {
+    assert.match(workflow, /https:\/\/ekodi\.kr\/api\/session/);
+    assert.doesNotMatch(workflow, /curl[^\n]*--retry[^\n]*api\/session/);
+  }
 
   assert.match(productionGate, /workflow_run:/);
   assert.match(productionGate, /Run one quota-aware post-deploy canary/);
