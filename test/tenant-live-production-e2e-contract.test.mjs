@@ -30,3 +30,17 @@ test('tenant live E2E proves anonymous media delivery and safe skip',()=>{
   assert.match(script,/status:'ended'/);
   assert.match(script,/assert\.equal\(ended\.live,false\)/);
 });
+
+
+test('tenant live E2E follows lazy room creation after studio readiness',()=>{
+  const ready=script.indexOf("status.includes('준비 완료')");
+  const click=script.indexOf("await host.locator('#goLiveButton').click()");
+  const share=script.indexOf("const shareLink=await host.locator('#shareLink').inputValue()",click);
+  assert.ok(ready>=0);
+  assert.ok(click>ready);
+  assert.ok(share>click,'room/share link must be read only after 방송 시작 creates the room');
+  assert.doesNotMatch(script.slice(ready,click),/shareLink.*inputValue/);
+  assert.match(script,/badge==='LIVE'/);
+  assert.match(script,/status\.includes\('방송'\)/);
+  assert.match(script,/programBadge'\)\?\.textContent==='종료'/);
+});
