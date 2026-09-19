@@ -26,6 +26,19 @@ test('admin control rejects missing bearer token with the protected PF auth cont
   assert.equal(data.authenticated,undefined);
 });
 
+test('admin control prefers the Control API service binding and does not re-enter the public apex',async()=>{
+  const DB=fakeDb();
+  const calls=[];
+  const CONTROL_API={fetch:async request=>{const url=new URL(request.url);calls.push(url);return new Response(JSON.stringify({authenticated:true,email:'admin@example.com',role:'super_admin'}),{status:200,headers:{'content-type':'application/json'}})}};
+  const original=globalThis.fetch;let publicFetchCalls=0;
+  globalThis.fetch=async()=>{publicFetchCalls++;throw new Error('public apex auth fetch must not be used when service binding exists')};
+  try{
+    const response=await worker.fetch(new Request('https://personal-finance-api.ekodi.kr/api/admin/personal-finance/control',{headers:adminHeaders}),{...env(DB),CONTROL_API});
+    assert.equal(response.status,200);assert.equal(calls.length,1);assert.equal(calls[0].pathname,'/api/session');assert.equal(publicFetchCalls,0);
+    const data=await response.json();assert.equal(data.admin.role,'super_admin');assert.equal(data.service.serviceBinding,'PERSONAL_FINANCE');
+  }finally{globalThis.fetch=original}
+});
+
 test('admin control exposes only service policy and immutable safety metadata',async()=>{
   const DB=fakeDb();const response=await withFetch({},()=>worker.fetch(new Request('https://personal-finance-api.ekodi.kr/api/admin/personal-finance/control',{headers:adminHeaders}),env(DB)));
   assert.equal(response.status,200);assert.equal(response.headers.get('access-control-allow-origin'),'https://admin.ekodi.kr');const data=await response.json();
@@ -100,10 +113,10 @@ test('Personal Finance admin UI manages policy only and never calls personal led
   assert.match(workerSource,/code:'PF_ADMIN_AUTH_REQUIRED'/);
   assert.match(siteConfig,/binding = "PERSONAL_FINANCE"\s+service = "ekodi-personal-finance-api"/);
   assert.match(build,/personal-finance-admin\.css/);assert.match(build,/personal-finance-admin\.js/);assert.match(workerSource,/personal-finance-admin\.js/);
-  const serviceControl=fs.readFileSync(new URL('../personal-finance-service-control.js',import.meta.url),'utf8');
+  const serviceControl=fs.readFileSync(new URL('../personal-finance-service-control.js',import.meta.url),'utf8');const pfWrangler=fs.readFileSync(new URL('../wrangler.personal-finance.toml',import.meta.url),'utf8');
   assert.match(serviceControl,/CENTRAL_ADMIN_SESSION='https:\/\/ekodi\.kr\/api\/session'/);
   assert.match(serviceControl,/CENTRAL_ADMIN_ELEVATION='https:\/\/ekodi\.kr\/api\/admin-access\/elevation'/);
-  assert.match(serviceControl,/signal:AbortSignal\.timeout\(8_000\)/);
+  assert.match(serviceControl,/signal=AbortSignal\.timeout\(8_000\)/);assert.match(serviceControl,/controlApi\?\.fetch/);assert.match(pfWrangler,/binding = \"CONTROL_API\"\s+service = \"ekodi-auth-api\"/);
   assert.match(serviceControl,/canonicalPath:'\/api\/control\/personal-finance'/);
   assert.match(serviceControl,/serviceBinding:'PERSONAL_FINANCE'/);
   assert.doesNotMatch(serviceControl,/https:\/\/api\.ekodi\.kr/);
