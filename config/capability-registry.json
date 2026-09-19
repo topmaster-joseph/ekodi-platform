@@ -6,7 +6,12 @@
     "defaultHome": "https://ekodi.kr/my",
     "specialistSites": "showroom_and_entry",
     "workspace": "compose_capabilities_on_demand",
-    "dedicatedSite": "exception_only_with_declared_boundary_evidence"
+    "dedicatedSite": "exception_only_with_declared_boundary_evidence",
+    "globalPersonalHome": "https://ekodi.kr/my",
+    "authenticatedSiteHome": "site-local-member-home",
+    "siteMemberHomePattern": "https://ekodi.kr/{site}/my",
+    "foundationProjection": "latest-registry-and-compatible-workspace-packs",
+    "customizationAuthority": "presentation-only"
   },
   "capabilities": [
     {

@@ -1,0 +1,23 @@
+{
+  "id": "2026-09-20-site-local-member-home-v1.16.0",
+  "constitutionVersion": "1.16.0",
+  "status": "approved",
+  "approvedBy": "topmaster-joseph",
+  "approvedAt": "2026-09-20",
+  "changeClass": "C2",
+  "taskId": "site-local-member-home-20260920",
+  "summary": "Adopt site-local canonical My Pages as the default post-login destination for EKODI user and independent sites, while retaining /my as the platform-wide personal/cross-site home and keeping authorization in canonical Person + Workspace + Role + Capability boundaries.",
+  "approvalBasis": "The EKODI Platform Super Administrator explicitly confirmed the Site-Local Member Home Contract and instructed EKODI to proceed on 2026-09-20.",
+  "policy": [
+    "Central authentication remains shared.",
+    "Successful site login returns to the current site's canonical My Page rather than the global /my home.",
+    "New person, organization, business, church, community and store subjects receive an eager registry-live experience foundation.",
+    "Core/Common/Specialist capabilities are projected from current registries and Workspace Packs rather than copied into per-user authorization rows.",
+    "Site-specific personalization is presentation-only and cannot grant or remove RBAC authority.",
+    "Future compatible services and capabilities inherit through the current registries without per-user catalog migrations."
+  ],
+  "authorityImpact": "No autonomous authority expansion. RBAC, immutable workspace identity and private-data boundaries remain the authorization source of truth; My Page preferences are presentation-only.",
+  "dataImpact": "Adds additive foundation and presentation-preference records. No existing private service data is copied across workspaces and no provider becomes an identity or authorization authority.",
+  "rollout": "CI -> isolated Shared Site staging -> Supabase migration validation -> guarded production promotion -> real route and login-return verification.",
+  "rollback": "Revert the site-local member-home routing/UI release and additive policy changes through the guarded pipeline. Keep canonical membership and identity records intact. If database rollback is required, stop writes to the new preference/foundation tables first, revert application use, then remove only the additive objects after verifying no dependent release remains."
+}

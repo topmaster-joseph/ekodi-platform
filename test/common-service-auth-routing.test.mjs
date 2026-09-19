@@ -42,11 +42,14 @@ test('workspace common services remain member-gated while public services use se
   assert.match(manifest, /userAccessPolicy: 'public-guide-workspace-member-content'/);
 });
 
-test('ordinary common-service members land in My EKODI while platform admins keep original return', () => {
-  assert.match(client, /const commonServiceEntry=config\.operatingModel==='shared-service'/);
-  assert.match(client, /new URL\('https:\/\/ekodi\.kr\/my\/'\)/);
-  assert.match(client, /commonServiceEntry&&proof\.platformAdmin!==true/);
-  assert.match(client, /target\.searchParams\.set\('from',site\)/);
+test('ordinary service members land in the current site-local My Page', () => {
+  assert.match(client, /function siteMemberHomeTarget\(\)/);
+  assert.match(client, /requested\.origin==='https:\/\/ekodi\.kr'/);
+  assert.match(client, /\/my\\\/\?\$\/i/);
+  assert.match(client, /manifestConfig\?\.returnTo\|\|config\.returnTo/);
+  assert.match(client, /siteMemberAlias/);
+  assert.match(client, /const target=siteMemberHomeTarget\(\)/);
+  assert.doesNotMatch(client, /commonServiceEntry&&proof\.platformAdmin!==true\?myEntryTarget/);
   assert.match(identity, /async function platformAdminForUser/);
   assert.match(identity, /select\("platform_admin"\)/);
   assert.match(identity, /platformAdmin/);

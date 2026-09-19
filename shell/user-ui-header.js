@@ -189,7 +189,7 @@ function ensureFallback(){
   header.setAttribute(FALLBACK_ATTR,`v${VERSION}`);
   header.setAttribute('data-ekodi-user-header-root',`v${VERSION}`);
   header.setAttribute('role','banner');
-  header.innerHTML=`<div class="ekodi-user-ui-header-fallback__inner"><a class="ekodi-user-ui-header-fallback__brand" data-ekodi-header-home href="https://ekodi.kr/" aria-label="EKODI 홈">EKODI</a><span class="ekodi-user-ui-header-fallback__context" data-ekodi-header-center>${serviceLabel()}</span><a class="ekodi-user-ui-header-fallback__my" href="https://ekodi.kr/my/">My EKODI</a></div>`;
+  header.innerHTML=`<div class="ekodi-user-ui-header-fallback__inner"><a class="ekodi-user-ui-header-fallback__brand" data-ekodi-header-home href="https://ekodi.kr/" aria-label="EKODI 홈">EKODI</a><span class="ekodi-user-ui-header-fallback__context" data-ekodi-header-center>${serviceLabel()}</span><a class="ekodi-user-ui-header-fallback__my" data-ekodi-site-member-home href="${siteMemberHomeUrl()}">마이페이지</a></div>`;
   document.body.prepend(header);
   fallbackHeader=header;
   return header;
@@ -213,6 +213,17 @@ function serviceHomeUrl(){
 function serviceHomeAnchor(){
   const value=String(document.documentElement.dataset.ekodiHomeAnchor||document.body?.dataset?.ekodiHomeAnchor||'').trim();
   return /^#[A-Za-z][\w:.-]*$/.test(value)?value:'';
+}
+function siteMemberHomeUrl(){
+  const declared=String(document.documentElement.dataset.ekodiMemberHome||document.body?.dataset?.ekodiMemberHome||'').trim();
+  if(declared){try{return new URL(declared,location.href).href}catch{}}
+  const id=String(document.currentScript?.dataset?.ekodiService||document.documentElement.dataset.ekodiService||'').trim().toLowerCase();
+  if(!id||id==='my'||id==='ekodi')return 'https://ekodi.kr/my/';
+  if(id==='space'&&location.hostname==='ekodi.kr'){
+    const first=location.pathname.split('/').filter(Boolean)[0]||'';
+    if(first)return `https://ekodi.kr/${encodeURIComponent(first)}/my`;
+  }
+  return `https://ekodi.kr/${encodeURIComponent(id)}/my`;
 }
 function findHomeAnchor(header){
   const selectors=[`[${HOME_ATTR}]`,'.brand[href]','a.brand[href]','.site-brand a[href]','.logo a[href]','a.logo[href]','.site-logo a[href]'];
