@@ -1,0 +1,57 @@
+name: Verify EKODI Mission Tenant Admin Production E2E
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '37 */6 * * *'
+  workflow_run:
+    workflows: ['Deploy EKODI Shared Site Core']
+    types: [completed]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodimission-tenant-admin-production-e2e
+  cancel-in-progress: true
+
+jobs:
+  mission-tenant-admin-e2e:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate Mission tenant-admin E2E contract
+        run: |
+          set -euo pipefail
+          node --check scripts/verify-ekodimission-admin-production-e2e.mjs
+          node --test test/ekodimission-admin-production-e2e-contract.test.mjs
+      - name: Install Chromium harness
+        run: |
+          set -euo pipefail
+          npm install --no-save --package-lock=false playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Verify EKODI Mission tenant admin production surface
+        run: node scripts/verify-ekodimission-admin-production-e2e.mjs
+      - name: Publish Mission E2E summary
+        if: always()
+        shell: bash
+        run: |
+          if [ -f artifacts/ekodimission-admin-production-e2e/report.json ]; then
+            echo '## EKODI Mission tenant-admin production UI E2E' >> "$GITHUB_STEP_SUMMARY"
+            jq -r '"- Passed: \(.passed)\n- Target: \(.targetUrl)\n- Mode: \(.mode)\n- Checks: \([.checks|to_entries[]|select(.value==true)]|length)/\(.checks|length)\n- Mutations exercised: \(.mutationCalls|length)\n- Page errors: \(.diagnostics.pageErrors|length)"' artifacts/ekodimission-admin-production-e2e/report.json >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Upload Mission E2E evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ekodimission-admin-production-e2e
+          path: artifacts/ekodimission-admin-production-e2e/
+          if-no-files-found: warn
+          retention-days: 7
