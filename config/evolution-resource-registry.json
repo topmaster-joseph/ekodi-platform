@@ -1,0 +1,194 @@
+{
+  "schemaVersion": 1,
+  "registryId": "ekodi.evolution-resource-registry.v1",
+  "status": "enforced",
+  "effectiveDate": "2026-09-19",
+  "metadataContract": "ekodi.evolution-kernel.v1",
+  "coverage": {
+    "resourceKinds": [
+      "code",
+      "model",
+      "data",
+      "knowledge",
+      "workflow",
+      "policy"
+    ],
+    "allCoveredByInheritanceOrExplicitRecord": true,
+    "resolutionPrecedence": [
+      "explicit_resource",
+      "resource_group",
+      "source_control_derived"
+    ]
+  },
+  "resourceGroups": [
+    {
+      "id": "repository-code",
+      "kinds": [
+        "code"
+      ],
+      "pathPatterns": [
+        "**/*.js",
+        "**/*.mjs",
+        "**/*.ts",
+        "**/*.tsx",
+        "**/*.jsx"
+      ],
+      "source": "git_path",
+      "version": "git_commit_sha",
+      "owner": "repository_ownership_policy",
+      "dependencies": "package_manifest_and_static_import_graph",
+      "effectiveDate": "git_commit_time",
+      "verificationState": "ci_gate",
+      "lifecycleState": "active_or_declared"
+    },
+    {
+      "id": "repository-model-data-knowledge-policy",
+      "kinds": [
+        "model",
+        "data",
+        "knowledge",
+        "policy"
+      ],
+      "pathPatterns": [
+        "config/**",
+        "governance/**",
+        "docs/**",
+        "database/**",
+        "migrations/**"
+      ],
+      "source": "git_path",
+      "version": "git_commit_sha",
+      "owner": "repository_ownership_policy",
+      "dependencies": "declared_references_and_schema_dependencies",
+      "effectiveDate": "git_commit_time",
+      "verificationState": "ci_gate",
+      "lifecycleState": "active_or_declared"
+    },
+    {
+      "id": "repository-workflow",
+      "kinds": [
+        "workflow"
+      ],
+      "pathPatterns": [
+        ".github/workflows/**",
+        "scripts/**"
+      ],
+      "source": "git_path",
+      "version": "git_commit_sha",
+      "owner": "repository_ownership_policy",
+      "dependencies": "workflow_uses_and_script_imports",
+      "effectiveDate": "git_commit_time",
+      "verificationState": "ci_gate",
+      "lifecycleState": "active_or_declared"
+    }
+  ],
+  "explicitResources": [
+    {
+      "id": "constitution",
+      "kind": "policy",
+      "source": "governance/constitution/constitution.json",
+      "version": "constitution-v1.16.0",
+      "owner": "topmaster-joseph",
+      "dependencies": [
+        "config/ai-mission-governance.json"
+      ],
+      "effectiveDate": "2026-09-14",
+      "verificationState": "verified",
+      "lifecycleState": "active"
+    },
+    {
+      "id": "evolution-kernel",
+      "kind": "model",
+      "source": "governance/architecture/evolution-kernel.v1.json",
+      "version": "v1",
+      "owner": "topmaster-joseph",
+      "dependencies": [
+        "governance/architecture/ekodi-evolution-model.json",
+        "governance/architecture/capability-provider-contract.v1.json"
+      ],
+      "effectiveDate": "2026-09-19",
+      "verificationState": "verified",
+      "lifecycleState": "active"
+    },
+    {
+      "id": "universal-meta-model",
+      "kind": "model",
+      "source": "governance/architecture/universal-meta-model.v1.json",
+      "version": "v1",
+      "owner": "topmaster-joseph",
+      "dependencies": [
+        "governance/architecture/evolution-kernel.v1.json"
+      ],
+      "effectiveDate": "2026-09-19",
+      "verificationState": "verified",
+      "lifecycleState": "active"
+    },
+    {
+      "id": "capability-registry",
+      "kind": "data",
+      "source": "config/capability-registry.json",
+      "version": "registry_version",
+      "owner": "EKODI Orchestrator",
+      "dependencies": [
+        "governance/architecture/capability-provider-contract.v1.json",
+        "config/ai-mission-governance.json"
+      ],
+      "effectiveDate": "git_commit_time",
+      "verificationState": "ci_gate",
+      "lifecycleState": "active"
+    },
+    {
+      "id": "knowledge-source-registry",
+      "kind": "knowledge",
+      "source": "config/knowledge-source-registry.json",
+      "version": "v1",
+      "owner": "EKODI Orchestrator",
+      "dependencies": [
+        "governance/architecture/evolution-kernel.v1.json"
+      ],
+      "effectiveDate": "2026-09-19",
+      "verificationState": "verified",
+      "lifecycleState": "active"
+    },
+    {
+      "id": "ai-change-orchestration",
+      "kind": "policy",
+      "source": "config/ai-change-orchestration-policy.json",
+      "version": "schemaVersion",
+      "owner": "topmaster-joseph",
+      "dependencies": [
+        "governance/constitution/constitution.json"
+      ],
+      "effectiveDate": "git_commit_time",
+      "verificationState": "ci_gate",
+      "lifecycleState": "active"
+    },
+    {
+      "id": "autonomous-evolution-loop",
+      "kind": "code",
+      "source": "ekodi-autonomous-evolution-loop.js",
+      "version": "git_commit_sha",
+      "owner": "EKODI Orchestrator",
+      "dependencies": [
+        "config/autonomous-technology-evolution-policy.json",
+        "autonomous-evolution-store.js"
+      ],
+      "effectiveDate": "git_commit_time",
+      "verificationState": "ci_gate",
+      "lifecycleState": "active"
+    },
+    {
+      "id": "orchestration-gate",
+      "kind": "workflow",
+      "source": ".github/workflows/ekodi-ai-orchestration-gate.yml",
+      "version": "git_commit_sha",
+      "owner": "topmaster-joseph",
+      "dependencies": [
+        "scripts/validate-ekodi-ai-change-orchestration.mjs"
+      ],
+      "effectiveDate": "git_commit_time",
+      "verificationState": "ci_gate",
+      "lifecycleState": "active"
+    }
+  ]
+}
