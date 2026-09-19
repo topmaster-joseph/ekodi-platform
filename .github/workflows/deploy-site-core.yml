@@ -302,7 +302,8 @@ jobs:
           grep -Fq 'EKODIAdminContext' openai-workspace-admin.js
           grep -Fq 'ekodi-admin-assist-request' openai-workspace-admin.js
           test -f openai-workspace-admin.css
-          grep -Fq "const API='/api/control/storage/google'" storage-admin.js
+          grep -Fq "const API='/storage/api/control/storage/google'" storage-admin.js
+          ! grep -Fq "const API='/api/control/storage/google'" storage-admin.js
           ! grep -Fq 'drive.ekodi.kr/api/control/storage/google' storage-admin.js
           grep -Fq '/api/control/public-sites' admin-public-site-controls.js
           grep -Fq '/api/control/language-status' admin-language-status.js
@@ -379,7 +380,8 @@ jobs:
           grep -Fq 'EKODIAdminContext' dist/openai-workspace-admin.js
           grep -Fq 'ekodi-admin-assist-request' dist/openai-workspace-admin.js
           test -f dist/openai-workspace-admin.css
-          grep -Fq "const API='/api/control/storage/google'" dist/storage-admin.js
+          grep -Fq "const API='/storage/api/control/storage/google'" dist/storage-admin.js
+          ! grep -Fq "const API='/api/control/storage/google'" dist/storage-admin.js
           grep -Fq 'currentAdminReturnPath' dist/storage-admin.js
           grep -Fq 'serviceOrigins' dist/auth-workspace-target.js
           grep -Fq "button.dataset.section = 'marketing-ai'" dist/marketing-ai-admin.js
