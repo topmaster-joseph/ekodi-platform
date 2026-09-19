@@ -13,7 +13,9 @@ on:
     paths:
       - 'site-worker.js'
       - 'cgmurrc.html'
-      - 'test/ekodi-connect-route.test.mjs test/realtime-live-collaboration.test.mjs test/tenant-live-admin.test.mjs'
+      - 'test/ekodi-connect-route.test.mjs'
+      - 'test/realtime-live-collaboration.test.mjs'
+      - 'test/tenant-live-admin.test.mjs'
       - 'platform-route-registry.js'
       - 'ai-commons-admin.js'
       - 'common-services-admin.js'
