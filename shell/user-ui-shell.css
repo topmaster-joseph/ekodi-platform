@@ -528,3 +528,61 @@ html[data-ekodi-home-focus="v1"] [data-ekodi-progressive-hidden="1"][hidden]{dis
 html[data-ekodi-home-focus="v1"] [data-ekodi-progressive-reveal="v1"]{display:block;min-height:38px;margin:18px auto;padding:0 16px;border:1px solid var(--ekodi-user-chrome-line);border-radius:var(--ekodi-user-control-radius);background:transparent;color:var(--ekodi-user-chrome-link);font:750 12px/1.2 system-ui,-apple-system,"Noto Sans KR",sans-serif;cursor:pointer}
 html[data-ekodi-home-focus="v1"] [data-ekodi-progressive-reveal="v1"]:focus-visible{outline:2px solid currentColor;outline-offset:3px}
 html[data-ekodi-home-focus="v1"] :where(.hero,.intro,[class*="hero"],[class*="intro"]) :where(p,.description,.subtitle){max-width:62ch}
+
+/* Tenant readability convergence v2
+ * Shared baseline for every public/workspace subsite. Brand visuals remain service-owned,
+ * while reading rhythm, focus visibility and mobile touch geometry stay consistent.
+ */
+html[data-ekodi-user-ui] body{
+  line-height:1.6;
+  text-rendering:optimizeLegibility;
+  -webkit-font-smoothing:antialiased;
+}
+html[data-ekodi-user-ui] :where(h1,h2,h3,h4){
+  line-height:1.22;
+  text-wrap:balance;
+}
+html[data-ekodi-user-ui] :where(p,li,dd,figcaption){
+  line-height:1.7;
+}
+html[data-ekodi-user-ui] :where(main,[role="main"]) :where(h1,h2,h3,h4,[id]){
+  scroll-margin-top:calc(var(--ekodi-user-header-height,var(--ekodi-user-header-fallback-height)) + 18px);
+}
+html[data-ekodi-user-ui] :where(a,button,input,select,textarea,[role="button"],[role="tab"]):focus-visible{
+  outline:3px solid color-mix(in srgb,var(--ekodi-service-accent,#315d48) 72%,#fff 28%);
+  outline-offset:3px;
+}
+html[data-ekodi-user-ui] :where(button,.btn,.button,.smallbtn,.ekodi-button,.ekodi-cta,[data-ekodi-control],[role="button"]){
+  min-height:40px;
+}
+html[data-ekodi-user-ui] :where(input,select,textarea,.ekodi-field,[data-ekodi-field]){
+  min-height:40px;
+}
+html[data-ekodi-user-ui] :where(table){
+  font-variant-numeric:tabular-nums;
+}
+html[data-ekodi-user-ui] :where(img,video,canvas,svg){
+  max-width:100%;
+}
+html[data-ekodi-user-ui] :where(.table-wrap,[data-ekodi-table-scroll]){
+  max-width:100%;
+  overflow-x:auto;
+  -webkit-overflow-scrolling:touch;
+}
+@media(max-width:760px){
+  html[data-ekodi-user-ui]{
+    --ekodi-user-canvas-max:100%;
+  }
+  html[data-ekodi-user-ui] body > main,
+  html[data-ekodi-user-ui] body > [role="main"],
+  html[data-ekodi-user-ui][data-ekodi-user-layout="centered-v1"] [data-ekodi-user-canvas="centered-v1"]{
+    width:min(100% - 24px,var(--ekodi-user-canvas-max));
+  }
+  html[data-ekodi-user-ui] :where(button,.btn,.button,.smallbtn,.ekodi-button,.ekodi-cta,[data-ekodi-control],[role="button"],input,select){
+    min-height:44px;
+  }
+  html[data-ekodi-user-ui] :where(h1){font-size:clamp(30px,10vw,48px)}
+  html[data-ekodi-user-ui] :where(.ekodi-user-ui-fallback-header__inner,.ekodi-user-ui-header-fallback__inner){
+    gap:10px;
+  }
+}
