@@ -6,7 +6,7 @@ import { DEFAULT_REGISTRY, normalizeRegistry } from '../social-registry-api.js';
 test('Social registry normalizes the canonical EKODI organizations', () => {
   const registry = normalizeRegistry(DEFAULT_REGISTRY);
   assert.equal(registry.version, 3);
-  assert.ok(registry.organizations.some(org => org.id === 'community' && org.name === '커뮤니티'));
+  assert.ok(registry.organizations.some(org => org.id === 'community' && org.name === '커뮤니티' && org.website === 'https://ekodi.kr/community'));
   assert.ok(registry.organizations.some(org => org.id === 'church'));
   assert.ok(registry.organizations.every(org => org.website.startsWith('https://')));
   assert.ok(registry.organizations.flatMap(org => org.channels).every(channel => channel.id && channel.url.startsWith('https://')));
@@ -21,7 +21,7 @@ test('Social registry rejects insecure channel URLs and duplicate organizations'
 });
 
 test('Social registry rejects the retired EKODI mission organization label', () => {
-  assert.throws(() => normalizeRegistry({ organizations: [{ id:'mission', name:'에코디선교회', website:'https://community.ekodi.kr', channels:[] }] }), /legacy EKODI mission/);
+  assert.throws(() => normalizeRegistry({ organizations: [{ id:'mission', name:'에코디선교회', website:'https://ekodi.kr/community', channels:[] }] }), /legacy EKODI mission/);
 });
 
 test('Social workspace switcher consumes one-time handoff and revalidates person workspace', async () => {

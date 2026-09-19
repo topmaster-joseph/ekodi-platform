@@ -5,22 +5,38 @@
     "config": "wrangler.community.toml",
     "requests": [
       {
-        "url": "https://community.ekodi.kr/",
-        "statuses": [200],
+        "url": "https://ekodi.kr/community/",
+        "statuses": [
+          200
+        ],
         "redirect": "follow",
-        "expect": ["Community", "/social-links.js"]
+        "expect": [
+          "Community",
+          "/social-links.js"
+        ],
+        "candidateUrl": "https://ekodi-community.topmaster-joseph.workers.dev/"
       },
       {
-        "url": "https://community.ekodi.kr/social-links.js",
-        "statuses": [200],
+        "url": "https://ekodi.kr/community/social-links.js",
+        "statuses": [
+          200
+        ],
         "redirect": "follow",
-        "expect": ["api.ekodi.kr/api/social/registry"]
+        "expect": [
+          "ekodi.kr/api/social/registry"
+        ],
+        "candidateUrl": "https://ekodi-community.topmaster-joseph.workers.dev/social-links.js"
       },
       {
-        "url": "https://community.ekodi.kr/health",
-        "statuses": [200],
+        "url": "https://ekodi.kr/community/health",
+        "statuses": [
+          200
+        ],
         "redirect": "follow",
-        "expect": ["\"socialRegistry\":true"]
+        "expect": [
+          "\"socialRegistry\":true"
+        ],
+        "candidateUrl": "https://ekodi-community.topmaster-joseph.workers.dev/health"
       }
     ]
   }
