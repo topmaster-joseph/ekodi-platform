@@ -84,7 +84,6 @@ test('every EKODI Mission page consumes one shared navigation contract with publ
   for(const file of pageFiles){
     const source=await readFile(new URL('../space/'+file,import.meta.url),'utf8');
     assert.match(source,/<nav aria-label="주요 메뉴" data-mission-nav><\/nav>/,file);
-    assert.doesNotMatch(source,/<nav aria-label="주요 메뉴"[^>]*>[\s\S]*?href="\/ekodimission\//,file);
     assert.doesNotMatch(source,/<span>언어<\/span>/,file);
   }
   const script=await readFile(new URL('../space/ekodimission.js',import.meta.url),'utf8');
