@@ -55,6 +55,38 @@ test('production verification is consolidated into one post-deploy canary', asyn
   assert.doesNotMatch(reliability, /workflow_run:/);
 });
 
+test('production probe loops fail fast on quota circuit and deep E2E stays explicit-only', async () => {
+  const [shellVerify, churchOwnership, adminRetry, adminAuthenticated, adminUi, adminAuthenticatedUi, productionGate] = await Promise.all([
+    readFile(new URL('../scripts/verify-ekodi-shell-live.mjs', import.meta.url), 'utf8'),
+    readFile(new URL('../scripts/ensure-church-route-ownership.mjs', import.meta.url), 'utf8'),
+    readFile(new URL('../scripts/admin-authenticated-e2e-retry.mjs', import.meta.url), 'utf8'),
+    readFile(new URL('../.github/workflows/admin-authenticated-e2e.yml', import.meta.url), 'utf8'),
+    readFile(new URL('../.github/workflows/verify-admin-production-ui-e2e.yml', import.meta.url), 'utf8'),
+    readFile(new URL('../.github/workflows/verify-admin-authenticated-production-e2e.yml', import.meta.url), 'utf8'),
+    readFile(new URL('../.github/workflows/production-gate.yml', import.meta.url), 'utf8'),
+  ]);
+
+  assert.match(shellVerify, /One essential probe owns the quota decision/);
+  assert.match(shellVerify, /isQuotaCircuitBreak/);
+  assert.match(shellVerify, /stopping live verification without retries or fan-out/);
+  assert.match(churchOwnership, /CF-QUOTA-001 circuit open/);
+  assert.match(churchOwnership, /no retry/);
+  assert.match(adminRetry, /throwIfQuotaCircuit/);
+  assert.match(adminRetry, /CF-QUOTA-001 circuit open/);
+
+  for (const workflow of [adminAuthenticated, adminUi, adminAuthenticatedUi]) {
+    assert.match(workflow, /on:\n  workflow_dispatch:/);
+    assert.doesNotMatch(workflow, /\n  push:/);
+  }
+  for (const workflow of [adminAuthenticated, adminAuthenticatedUi]) {
+    assert.match(workflow, /https:\/\/ekodi\.kr\/api\/session/);
+    assert.doesNotMatch(workflow, /curl[^\n]*--retry[^\n]*api\/session/);
+  }
+
+  assert.match(productionGate, /workflow_run:/);
+  assert.match(productionGate, /Run one quota-aware post-deploy canary/);
+});
+
 test('Admin static shell bypasses Worker while auth and deep Admin routes keep Worker boundaries', async () => {
   const [wrangler, build, headers] = await Promise.all([
     readFile(new URL('../wrangler.site.toml', import.meta.url), 'utf8'),
