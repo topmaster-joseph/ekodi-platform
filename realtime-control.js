@@ -7,6 +7,7 @@ const PREFIX='/api/realtime';
 const PROVIDER_BASE='https://rtc.live.cloudflare.com/v1';
 const ADMIN_ROLES=new Set(['owner','admin','tenant_admin','manager','operator']);
 const ROLE_ALIASES=Object.freeze({store_owner:'owner',hq_manager:'manager',client_admin:'owner',client_editor:'operator',marketing_manager:'operator'});
+const PUBLISHER_HEARTBEAT_STALE_MS=180000;
 
 function clean(value,max=240){return String(value??'').trim().slice(0,max)}
 function parseJson(value,fallback={}){try{return JSON.parse(String(value||''))}catch{return fallback}}
@@ -82,6 +83,25 @@ async function entitlementFor(request,env,tenant){
 }
 function safeRoom(row){if(!row)return null;return {id:row.id,tenantId:row.tenant_id,mode:row.mode,securityProfile:row.security_profile,title:row.title,status:row.status,aiEnabled:Boolean(row.ai_enabled),recordingEnabled:Boolean(row.recording_enabled),recordingNoticeEnabled:Boolean(row.recording_notice_enabled),anonymousViewersEnabled:Boolean(row.anonymous_viewers_enabled),createdAt:row.created_at,updatedAt:row.updated_at,endedAt:row.ended_at||null}}
 async function roomById(env,id){return env.DB.prepare('SELECT * FROM realtime_rooms WHERE id=?').bind(id).first()}
+function publisherHeartbeatCutoff(now=Date.now()){return new Date(now-PUBLISHER_HEARTBEAT_STALE_MS).toISOString()}
+async function freshPublisherSession(env,roomId,cutoff=publisherHeartbeatCutoff()){
+  return env.DB.prepare(`SELECT id FROM realtime_media_sessions WHERE room_id=? AND status='active' AND role IN ('owner','cohost','presenter') AND updated_at>=? ORDER BY updated_at DESC LIMIT 1`).bind(roomId,cutoff).first();
+}
+async function reconcilePublicLiveRoom(env,row){
+  if(!row)return null;
+  const cutoff=publisherHeartbeatCutoff();
+  if(await freshPublisherSession(env,row.id,cutoff))return row;
+  const stamp=new Date().toISOString();
+  await env.DB.prepare(`UPDATE realtime_rooms SET status='ended',ended_at=COALESCE(ended_at,?),updated_at=? WHERE id=? AND status='live' AND NOT EXISTS (SELECT 1 FROM realtime_media_sessions WHERE room_id=? AND status='active' AND role IN ('owner','cohost','presenter') AND updated_at>=?)`).bind(stamp,stamp,row.id,row.id,cutoff).run();
+  const current=await roomById(env,row.id);
+  if(current?.status==='live')return current;
+  await env.DB.prepare(`UPDATE realtime_media_sessions SET status='closed',updated_at=? WHERE room_id=? AND status='active'`).bind(stamp,row.id).run();
+  await env.DB.prepare(`UPDATE realtime_media_tracks SET status='closed',updated_at=? WHERE room_id=? AND status='active'`).bind(stamp,row.id).run();
+  await env.DB.prepare(`UPDATE realtime_destinations SET status='stopped',updated_at=? WHERE room_id=? AND status IN ('connecting','live','retrying','degraded')`).bind(stamp,row.id).run();
+  await env.DB.prepare(`UPDATE realtime_recordings SET status='failed',updated_at=? WHERE room_id=? AND status IN ('starting','recording','stopping')`).bind(stamp,row.id).run();
+  await env.DB.prepare(`UPDATE realtime_room_members SET left_at=COALESCE(left_at,?) WHERE room_id=? AND left_at IS NULL`).bind(stamp,row.id).run();
+  return null;
+}
 
 function safeDestination(row,extra={}){
   if(!row)return null;
@@ -381,7 +401,8 @@ async function publicRoutes(request,env,url){
     const aliases=[config.apiTenant,config.id,...config.aliases];
     const placeholders=aliases.map(()=>'?').join(',');
     const row=await env.DB.prepare(`SELECT * FROM realtime_rooms WHERE tenant_id IN (${placeholders}) AND status='live' ORDER BY updated_at DESC LIMIT 1`).bind(...aliases).first();
-    return json(request,env,{ok:true,tenant,canonicalTenant:config.id,live:Boolean(row),room:safeRoom(row)});
+    const reconciled=await reconcilePublicLiveRoom(env,row);
+    return json(request,env,{ok:true,tenant,canonicalTenant:config.id,live:Boolean(reconciled),room:safeRoom(reconciled)});
   }
   const match=url.pathname.match(/^\/api\/realtime\/rooms\/([^/]+)$/);
   if(match){
@@ -628,8 +649,16 @@ async function renegotiateSession(request,env,room,session,input){
   if(!input?.sessionDescription?.sdp)return json(request,env,{ok:false,error:'session_description_required'},400);
   const type=clean(input.sessionDescription.type,16)||'answer';
   if(type!=='answer')return json(request,env,{ok:false,error:'renegotiation_answer_required'},400);
-  const response=await providerCall(env,`/sessions/${encodeURIComponent(session.provider_session_id)}/renegotiate`,{method:'PUT',payload:{sessionDescription:{type:'answer',sdp:String(input.sessionDescription.sdp)}}});
+  const response=await providerCall(env,`/sessions/${encodeURIComponent(session.provider_session_id)}/renegotiate`,{method:'PUT',payload:{sessionDescription:{type:'answer',sdp:String(input.sessionDescription.sdp)}});
+  const stamp=new Date().toISOString();
+  await env.DB.prepare(`UPDATE realtime_media_sessions SET updated_at=? WHERE id=? AND room_id=? AND status='active'`).bind(stamp,session.id,room.id).run();
   return json(request,env,{ok:true,provider:response});
+}
+async function heartbeatSession(request,env,room,session){
+  if(!['owner','cohost','presenter'].includes(session.role))return json(request,env,{ok:false,error:'publisher_heartbeat_forbidden'},403);
+  const stamp=new Date().toISOString();
+  await env.DB.prepare(`UPDATE realtime_media_sessions SET updated_at=? WHERE id=? AND room_id=? AND status='active'`).bind(stamp,session.id,room.id).run();
+  return json(request,env,{ok:true,heartbeatAt:stamp});
 }
 
 async function leaveSession(request,env,room,session){
@@ -639,7 +668,7 @@ async function leaveSession(request,env,room,session){
 }
 
 async function sessionMediaRoute(request,env,url,input){
-  const match=url.pathname.match(/^\/api\/realtime\/rooms\/([^/]+)\/sessions\/([^/]+)\/(publish|pull|renegotiate|leave)$/);
+  const match=url.pathname.match(/^\/api\/realtime\/rooms\/([^/]+)\/sessions\/([^/]+)\/(publish|pull|renegotiate|heartbeat|leave)$/);
   if(!match)return null;
   const room=await roomById(env,decodeURIComponent(match[1]));
   if(!room)return json(request,env,{ok:false,error:'room_not_found'},404);
@@ -649,6 +678,7 @@ async function sessionMediaRoute(request,env,url,input){
   if(action==='publish'&&request.method==='POST')return publishTracks(request,env,room,session,input);
   if(action==='pull'&&request.method==='POST')return pullTracks(request,env,room,session,input);
   if(action==='renegotiate'&&request.method==='PUT')return renegotiateSession(request,env,room,session,input);
+  if(action==='heartbeat'&&request.method==='POST')return heartbeatSession(request,env,room,session);
   if(action==='leave'&&request.method==='POST')return leaveSession(request,env,room,session);
   return json(request,env,{ok:false,error:'method_not_allowed'},405);
 }
