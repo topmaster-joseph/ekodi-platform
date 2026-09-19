@@ -90,7 +90,9 @@ test('brand-neutral tenant readability preserves tenant chrome while adding shar
   assert.match(router,/isCgmaRoot\(url\.pathname\)[\s\S]{0,500}injectEkodiTenantReadability\(legacyResponse\)/);
   assert.match(css,/Brand-neutral tenant readability v1/);
   assert.match(css,/html\[data-ekodi-tenant-readability="v1"\]/);
-  for(const legacy of ['jadam.ai.ekodi.kr','pizzamaru.ai.ekodi.kr','yogurt.ai.ekodi.kr','cgma.ekodi.kr','admin.ekodi.kr'])assert.doesNotMatch(liveVerifier,new RegExp(legacy.replaceAll('.','\\.')));
+  const origins=[...liveVerifier.matchAll(/https:\/\/[^/'"`]+/g)].map(match=>match[0]);
+  assert.ok(origins.length>0);
+  assert.ok(origins.every(origin=>origin==='https://ekodi.kr'),`non-canonical verifier origin: ${origins.find(origin=>origin!=='https://ekodi.kr')||'unknown'}`);
   for(const canonical of ['https://ekodi.kr/jadam','https://ekodi.kr/pizzamaru','https://ekodi.kr/yogurt','https://ekodi.kr/cgma','https://ekodi.kr/admin-shell.css'])assert.ok(liveVerifier.includes(canonical),canonical);
 });
 
