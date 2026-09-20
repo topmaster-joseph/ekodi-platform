@@ -34,6 +34,7 @@ import { decorateDiscoveryResponse } from './discovery-layer.js';
 import { realtimeTenantAdminFromPath, realtimeTenantFromPath } from './realtime-tenant-registry.js';
 import { tenantLivePage } from './tenant-live-page.js';
 import { tenantLiveAdminCss, tenantLiveAdminPage, tenantLiveAdminScript } from './tenant-live-admin-page.js';
+import { liveServiceAdminPage, liveServiceMaintenancePage, liveServicePage } from './live-service-page.js';
 
 const PUBLIC_HOST='ekodi.kr';
 const CGMA_HOSTS=new Set(['cgma.or.kr','www.cgma.or.kr']);
@@ -224,6 +225,11 @@ const LEGACY_ADMIN_PATHS=Object.freeze({books:'books',community:'community',work
 function legacySurfaceRedirect(request){const url=new URL(request.url),host=url.hostname.toLowerCase();if(!['GET','HEAD'].includes(request.method))return null;if(!LEGACY_ADMIN_HOSTS.has(host))return null;const target=new URL(request.url);target.hostname='ekodi.kr';const key=url.pathname.split('/').filter(Boolean)[0]||'';if(url.pathname==='/'||url.pathname==='/admin'||url.pathname==='/admin/')target.pathname='/admin/';else if(/\.(?:js|css|cmd|json|map|svg|png|webp|ico)$/i.test(url.pathname)||url.pathname.startsWith('/api/')||url.pathname==='/auth/start')target.pathname=`/admin${url.pathname}`;else{target.pathname='/admin/';if(!target.searchParams.has('route')&&LEGACY_ADMIN_PATHS[key])target.searchParams.set('route',LEGACY_ADMIN_PATHS[key])}target.searchParams.set('source',host);return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-ekodi-legacy-surface':host}})}
 function legacyStoreGatewayRedirect(request){const url=new URL(request.url);if(url.hostname.toLowerCase()!==PUBLIC_HOST||!['GET','HEAD'].includes(request.method)||!/^\/stores(?:\/|$)/i.test(url.pathname))return null;const target=new URL(request.url);target.pathname=url.pathname.replace(/^\/stores(?=\/|$)/i,'/cmpmyi');return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-ekodi-legacy-surface':'stores'}})}
 
+async function livePublicStatus(env,tenant){
+  if(!env?.DB?.prepare)return'public';
+  try{const row=await env.DB.prepare('SELECT public_status FROM public_site_controls WHERE site_id = ? LIMIT 1').bind('live-'+String(tenant?.apiTenant||'').toLowerCase()).first();return row?.public_status==='maintenance'?'maintenance':'public'}catch{return'public'}
+}
+
 export default {
   async fetch(request,env,ctx){
     const url=new URL(request.url);
@@ -233,12 +239,17 @@ export default {
     if(host===PUBLIC_HOST&&(url.pathname==='/api/finance'||url.pathname.startsWith('/api/finance/')))return routeTaxFinance(request,env,ctx);
     if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)){const adminTarget=legacyAdminAliasTarget(url.pathname);if(adminTarget){const target=new URL(request.url);target.pathname=adminTarget;return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-content-type-options':'nosniff','x-ekodi-route':'admin-canonical-handoff'}})}}
     if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)){
+      if(url.pathname==='/live'||url.pathname==='/live/')return injectEkodiShell(liveServicePage(),'live');
+      if(url.pathname==='/live/admin'||url.pathname==='/live/admin/')return injectEkodiShell(liveServiceAdminPage(),'live','admin');
       if(url.pathname==='/tenant-live-admin.css')return tenantLiveAdminCss();
       if(url.pathname==='/tenant-live-admin.js')return tenantLiveAdminScript();
       const liveAdminTenant=realtimeTenantAdminFromPath(url.pathname);
       if(liveAdminTenant)return tenantLiveAdminPage(liveAdminTenant);
       const liveTenant=realtimeTenantFromPath(url.pathname);
-      if(liveTenant&&!liveTenant.dedicated)return tenantLivePage(liveTenant);
+      if(liveTenant){
+        if(await livePublicStatus(env,liveTenant)==='maintenance')return injectEkodiShell(liveServiceMaintenancePage(liveTenant),'live');
+        if(!liveTenant.dedicated)return tenantLivePage(liveTenant);
+      }
     }
     const canonical=await routeCanonicalSurface(request,env,{legacyFetch:next=>legacyPlatformRouter.fetch(next,env,ctx)});
     if(canonical)return canonical;
