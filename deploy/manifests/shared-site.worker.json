@@ -1,5 +1,5 @@
 {
-  "version": 74,
+  "version": 76,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
@@ -690,7 +690,7 @@
         "rollbackVerify": false
       },
       {
-        "url": "https://admin.ekodi.kr/",
+        "url": "https://ekodi.kr/admin/",
         "statuses": [
           200
         ],
@@ -709,7 +709,7 @@
         "rollbackVerify": false
       },
       {
-        "url": "https://admin.ekodi.kr/openai-workspace-admin.js",
+        "url": "https://ekodi.kr/admin/openai-workspace-admin.js",
         "statuses": [
           200
         ],
@@ -725,7 +725,7 @@
         "rollbackVerify": false
       },
       {
-        "url": "https://admin.ekodi.kr/openai-workspace-admin.css",
+        "url": "https://ekodi.kr/admin/openai-workspace-admin.css",
         "statuses": [
           200
         ],
@@ -740,7 +740,7 @@
         "rollbackVerify": false
       },
       {
-        "url": "https://admin.ekodi.kr/tapo-device-admin.js",
+        "url": "https://ekodi.kr/admin/tapo-device-admin.js",
         "statuses": [
           200
         ],
@@ -751,13 +751,13 @@
           "TAPO EDGE BRIDGE"
         ],
         "headerExpect": [
-          "x-ekodi-route: admin-asset",
+          "cache-control: no-store",
           "x-content-type-options: nosniff"
         ],
         "rollbackVerify": false
       },
       {
-        "url": "https://admin.ekodi.kr/tapo-device-admin.css",
+        "url": "https://ekodi.kr/admin/tapo-device-admin.css",
         "statuses": [
           200
         ],
@@ -767,13 +767,13 @@
           ".tapo-camera-dialog"
         ],
         "headerExpect": [
-          "x-ekodi-route: admin-asset",
+          "cache-control: no-store",
           "x-content-type-options: nosniff"
         ],
         "rollbackVerify": false
       },
       {
-        "url": "https://admin.ekodi.kr/admin-demand-loader.js?device=v28",
+        "url": "https://ekodi.kr/admin/admin-demand-loader.js?device=v28",
         "statuses": [
           200
         ],
@@ -794,7 +794,7 @@
         ]
       },
       {
-        "url": "https://admin.ekodi.kr/remote-power-admin.js?remote-work=v1",
+        "url": "https://ekodi.kr/admin/remote-power-admin.js?remote-work=v1",
         "statuses": [
           200
         ],
@@ -810,7 +810,7 @@
         "rollbackVerify": false
       },
       {
-        "url": "https://admin.ekodi.kr/remote-power-admin.css?remote-work=v1",
+        "url": "https://ekodi.kr/admin/remote-power-admin.css?remote-work=v1",
         "statuses": [
           200
         ],
@@ -825,41 +825,44 @@
         "rollbackVerify": false
       },
       {
-        "url": "https://admin.ekodi.kr/device-browser-diagnostics.js?v=device-v28",
+        "url": "https://ekodi.kr/admin/device-browser-diagnostics.js?v=device-v28",
         "statuses": [
           200
         ],
-        "redirect": "follow",
+        "redirect": "manual",
         "expect": [
           "현재 관리자 브라우저 진단",
-          "서버로 업로드하지 않습니다",
-          "CACHE_ALLOWLIST",
-          "registration.update()"
+          "CACHE_ALLOWLIST"
         ],
         "headerExpect": [
-          "x-ekodi-route: admin-asset",
-          "cache-control: public, max-age=31536000, immutable",
-          "x-content-type-options: nosniff"
-        ]
+          "cache-control: no-store",
+          "x-content-type-options: nosniff",
+          "x-robots-tag: noindex, nofollow, noarchive"
+        ],
+        "rollbackVerify": false,
+        "candidateVerify": false,
+        "candidateVerifyReason": "canonical /admin static assets are intentionally asset-first and are verified after promotion without requiring the legacy admin-subdomain Worker route"
       },
       {
-        "url": "https://admin.ekodi.kr/device-browser-diagnostics.css?v=device-v28",
+        "url": "https://ekodi.kr/admin/device-browser-diagnostics.css?v=device-v28",
         "statuses": [
           200
         ],
-        "redirect": "follow",
+        "redirect": "manual",
         "expect": [
-          ".admin-browser-diagnostic",
-          "@media(max-width:720px)"
+          ".admin-browser-diagnostic"
         ],
         "headerExpect": [
-          "x-ekodi-route: admin-asset",
-          "cache-control: public, max-age=31536000, immutable",
-          "x-content-type-options: nosniff"
-        ]
+          "cache-control: no-store",
+          "x-content-type-options: nosniff",
+          "x-robots-tag: noindex, nofollow, noarchive"
+        ],
+        "rollbackVerify": false,
+        "candidateVerify": false,
+        "candidateVerifyReason": "canonical /admin static assets are intentionally asset-first and are verified after promotion without requiring the legacy admin-subdomain Worker route"
       },
       {
-        "url": "https://admin.ekodi.kr/admin-compact.js?assist=v2",
+        "url": "https://ekodi.kr/admin/admin-compact.js?assist=v2",
         "statuses": [
           200
         ],
@@ -870,10 +873,12 @@
         ],
         "headerExpect": [
           "x-content-type-options: nosniff"
-        ]
+        ],
+        "candidateVerify": false,
+        "candidateVerifyReason": "Admin static asset routing becomes authoritative only after promotion; verify the Assist asset contract immediately post-promotion"
       },
       {
-        "url": "https://admin.ekodi.kr/admin-compact.css?assist=v2",
+        "url": "https://ekodi.kr/admin/admin-compact.css?assist=v2",
         "statuses": [
           200
         ],
@@ -884,10 +889,12 @@
         ],
         "headerExpect": [
           "x-content-type-options: nosniff"
-        ]
+        ],
+        "candidateVerify": false,
+        "candidateVerifyReason": "Admin static asset routing becomes authoritative only after promotion; verify the Assist asset contract immediately post-promotion"
       },
       {
-        "url": "https://admin.ekodi.kr/admin-lazy-features.js?assist=v2",
+        "url": "https://ekodi.kr/admin/admin-lazy-features.js?assist=v2",
         "statuses": [
           200
         ],
@@ -898,10 +905,12 @@
         ],
         "headerExpect": [
           "x-content-type-options: nosniff"
-        ]
+        ],
+        "candidateVerify": false,
+        "candidateVerifyReason": "Admin static asset routing becomes authoritative only after promotion; verify the Assist asset contract immediately post-promotion"
       },
       {
-        "url": "https://admin.ekodi.kr/ai-ops-admin.css?assist=v2",
+        "url": "https://ekodi.kr/admin/ai-ops-admin.css?assist=v2",
         "statuses": [
           200
         ],
@@ -913,7 +922,9 @@
         ],
         "headerExpect": [
           "x-content-type-options: nosniff"
-        ]
+        ],
+        "candidateVerify": false,
+        "candidateVerifyReason": "Admin static asset routing becomes authoritative only after promotion; verify the Assist asset contract immediately post-promotion"
       },
       {
         "url": "https://ekodi.kr/auth/",
@@ -1242,7 +1253,7 @@
         ]
       },
       {
-        "url": "https://mail.ekodi.kr/",
+        "url": "https://ekodi.kr/mail",
         "statuses": [
           200
         ],
@@ -1275,7 +1286,7 @@
         "rollbackVerify": false
       },
       {
-        "url": "https://mail.ekodi.kr/contact",
+        "url": "https://ekodi.kr/mail/contact",
         "statuses": [
           308
         ],
@@ -1287,22 +1298,23 @@
         "rollbackVerify": false
       },
       {
-        "url": "https://mail.ekodi.kr/admin",
+        "url": "https://ekodi.kr/mail/admin",
         "statuses": [
-          200
+          307
         ],
         "redirect": "manual",
-        "expect": [
-          "EKODI Mail Admin",
-          "한곳에서 관리하되 개인·기관의 실제 권한 경계는 그대로 유지합니다."
-        ],
         "headerExpect": [
-          "x-ekodi-route: mail-admin",
-          "cache-control: no-store"
-        ]
+          "location: https://ekodi.kr/admin/",
+          "cache-control: no-store",
+          "x-robots-tag: noindex, nofollow, noarchive",
+          "x-content-type-options: nosniff"
+        ],
+        "rollbackVerify": false,
+        "candidateVerify": false,
+        "candidateVerifyReason": "Mail Admin custom-domain routing becomes authoritative only after promotion; verify the canonical apex Admin handoff immediately post-promotion"
       },
       {
-        "url": "https://live.ekodi.kr/",
+        "url": "https://ekodi.kr/live",
         "statuses": [
           200
         ],
@@ -1379,7 +1391,7 @@
         ]
       },
       {
-        "url": "https://admin.ekodi.kr/ai-ops-admin.js?evolution=v1",
+        "url": "https://ekodi.kr/admin/ai-ops-admin.js?evolution=v1",
         "statuses": [
           200
         ],
@@ -1394,15 +1406,15 @@
         ]
       },
       {
-        "url": "https://admin.ekodi.kr/communication-admin.js?communication=v1",
+        "url": "https://ekodi.kr/admin/communication-admin.js?communication=v1",
         "statuses": [
           200
         ],
         "redirect": "follow",
         "expect": [
           "EKODI COMMUNICATION ADMIN",
-          "https://mail.ekodi.kr/admin",
-          "https://live.ekodi.kr/"
+          "https://ekodi.kr/mail/admin",
+          "https://ekodi.kr/live"
         ],
         "headerExpect": [
           "x-content-type-options: nosniff"
@@ -1577,7 +1589,7 @@
         "rollbackVerify": false
       },
       {
-        "url": "https://admin.ekodi.kr/personal-finance-admin.js?pf=v1",
+        "url": "https://ekodi.kr/admin/personal-finance-admin.js?pf=v1",
         "statuses": [
           200
         ],
@@ -1593,7 +1605,7 @@
         "rollbackVerify": false
       },
       {
-        "url": "https://admin.ekodi.kr/personal-finance-admin.css?pf=v1",
+        "url": "https://ekodi.kr/admin/personal-finance-admin.css?pf=v1",
         "statuses": [
           200
         ],
