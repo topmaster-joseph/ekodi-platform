@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 3,
+  "schemaVersion": 4,
   "policyId": "AI-COMPLETE-001",
   "status": "active",
   "defaultRule": "production-verified-before-complete",
@@ -13,7 +13,7 @@
   "completionStates": {
     "implementation": "code-or-config-change-prepared",
     "deployed": "guarded-deployment-succeeded-but-production-not-yet-proven",
-    "verified": "real-production-service-behavior-confirmed",
+    "verified": "real-production-behavior-or-materially-equivalent-synthetic-behavior-confirmed",
     "complete": "verified-and-evidence-recorded",
     "blocked": "completion-cannot-proceed-with-current-authority-or-dependency-and-resolution-plan-is-required",
     "interrupted": "recoverable-interruption-checkpointed-resume-required"
@@ -25,6 +25,7 @@
     "validation_result",
     "deployment_result",
     "production_hostname",
+    "verification_mode",
     "production_functional_checks",
     "observability_check",
     "verification_timestamp"
@@ -52,7 +53,15 @@
     "resumeFromCheckpointBeforeRestartingWork": true,
     "interruptionMustPreserveEvidenceAndNextStep": true,
     "rateLimitOrConnectorFailureIsRecoverableByDefault": true,
-    "recoverableInterruptionMustNotBeReportedAsBlockedIfAlternatePathExists": true
+    "recoverableInterruptionMustNotBeReportedAsBlockedIfAlternatePathExists": true,
+    "preflightMustPassBeforeImplementationMutation": true,
+    "branchNamingMustBeValidatedBeforeBranchCreation": true,
+    "verificationPlanMustExistBeforeImplementation": true,
+    "equivalentSyntheticVerificationAllowedWhenRealInteractionUnavailable": true,
+    "syntheticVerificationMustExerciseMateriallyEquivalentFlow": true,
+    "syntheticVerificationMustRecordObjectiveEvidence": true,
+    "noKnownMaterialGapForSyntheticCompletion": true,
+    "intermediateProgressSuppressedUnlessHumanActionSafetyOrUnresolvedException": true
   },
   "exceptionPolicy": {
     "allowed": true,
@@ -81,7 +90,7 @@
   },
   "reporting": {
     "preVerificationLabel": "deployed-awaiting-production-verification",
-    "successLabel": "production-verified-complete",
+    "successLabel": "production-or-equivalent-synthetic-verified-complete",
     "failureLabel": "verification-failed-recovery-required",
     "blockedLabel": "blocked-resolution-plan-required",
     "unresolvedReportRequired": true,
@@ -99,7 +108,13 @@
       "completion-criteria",
       "next-executable-step"
     ],
-    "interruptionLabel": "recoverable-interruption-resume-required"
+    "interruptionLabel": "recoverable-interruption-resume-required",
+    "verificationModes": [
+      "real-production",
+      "automated-canary",
+      "synthetic-equivalent",
+      "deterministic-contract"
+    ]
   },
   "requiredCheckpointForRecoverableInterruption": [
     "task_id",
