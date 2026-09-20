@@ -84,6 +84,7 @@ const COMMAND_POLICIES = Object.freeze({
   'profile.workstation.apply': { risk: 'maintain', confirm: true },
   'profile.workstation.restore': { risk: 'maintain', confirm: true },
   'agent.self_update': { risk: 'maintain', confirm: true },
+  'computer.browser.canary': { risk: 'maintain', confirm: true },
   'remote_desktop.recovery.enable': { risk: 'maintain', confirm: true },
   'remote_desktop.recovery.disable': { risk: 'maintain', confirm: true },
   'remote_desktop.recovery.run': { risk: 'maintain', confirm: true },
@@ -477,6 +478,23 @@ function summarizeCommandResult(result = {}) {
     : (Number.isFinite(Number(value)) ? Number(value) : null);
   for (const key of ['message', 'freedMB', 'pendingCount', 'installedCount', 'failedCount', 'rebootRequired', 'profile']) {
     if (result[key] !== undefined) summary[key] = result[key];
+  }
+  if (result.browserCanary && typeof result.browserCanary === 'object') {
+    summary.browserCanary = {
+      ok: result.browserCanary.ok === true,
+      mode: safeText(result.browserCanary.mode, 60),
+      agentVersion: safeText(result.browserCanary.agentVersion, 40),
+      browser: safeText(result.browserCanary.browser, 80),
+      url: safeText(result.browserCanary.url, 240),
+      exitCode: finiteNumber(result.browserCanary.exitCode),
+      contentBytes: finiteNumber(result.browserCanary.contentBytes),
+      dedicatedAutomationProfile: result.browserCanary.dedicatedAutomationProfile === true,
+      offscreenOrHeadless: result.browserCanary.offscreenOrHeadless === true,
+      focusIsolated: result.browserCanary.focusIsolated === true,
+      clipboardShared: result.browserCanary.clipboardShared === true,
+      userInputInjection: result.browserCanary.userInputInjection === true,
+      checkedAt: safeText(result.browserCanary.checkedAt, 64),
+    };
   }
   if (result.agent && typeof result.agent === 'object') {
     summary.agent = {
