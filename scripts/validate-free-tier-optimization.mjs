@@ -5,6 +5,8 @@ const wrangler = fs.readFileSync('wrangler.site.toml','utf8');
 const runtime = fs.readFileSync('free-tier-quota-guard.js','utf8');
 const governor = fs.readFileSync('free-tier-resource-governor.js','utf8');
 const workflow = fs.readFileSync('.github/workflows/ekodi-ai-orchestration-gate.yml','utf8');
+const collectorWorkflow = fs.readFileSync('.github/workflows/free-tier-resource-governor.yml','utf8');
+const collector = fs.readFileSync('scripts/collect-free-tier-resource-usage.mjs','utf8');
 const failures=[];
 const expect=(condition,message)=>{if(!condition)failures.push(message)};
 
@@ -48,6 +50,12 @@ expect(governor.includes("publicRepositoryStandardHostedRunners:'free'"),'resour
 expect(workflow.includes('validate-free-tier-optimization.mjs'),'orchestration gate must validate free-tier policy');
 expect(workflow.includes('free-tier-quota-guard.test.mjs'),'orchestration gate must run free-tier regression tests');
 expect(workflow.includes('free-tier-resource-governor.test.mjs'),'orchestration gate must run resource governor regression tests');
+expect(collectorWorkflow.includes('collect-free-tier-resource-usage.mjs'),'resource collector workflow must execute the measured collector');
+expect(collectorWorkflow.includes('provider_quota_snapshots'),'resource collector workflow must persist into the quota snapshot ledger');
+expect(collectorWorkflow.includes('SUPABASE_ACCESS_TOKEN'),'resource collector must use the existing Supabase management credential boundary');
+expect(collector.includes('/database/query'),'Supabase database usage must come from an authorized read-only database query');
+expect(collector.includes('/actions/cache/usage'),'GitHub cache usage must come from the official repository usage endpoint');
+expect(collector.includes('/actions/artifacts?'),'GitHub artifact usage must come from the official repository artifact endpoint');
 
 if(failures.length){
   for(const failure of failures) console.error(`[EKODI-FREE-TIER-001] ${failure}`);
