@@ -31,8 +31,8 @@ test('OAuth connection ledger remains multi-resource and supports scoped soft di
 
 test('central admin exposes one multi-channel account control center instead of a duplicate menu', () => {
   assert.match(registry, /id: 'social'/);
-  assert.match(registry, /채널·계정 연결/);
-  assert.match(loader, /social: \{ label:'채널·계정 연결'/);
+  assert.match(registry, /SNS 채널·자동게시/);
+  assert.match(loader, /social: \{ label:'SNS 채널·자동게시'/);
   assert.match(admin, /MULTI-CHANNEL CONTROL CENTER/);
   assert.match(admin, /YouTube 계정·채널 추가/);
   assert.match(admin, /Facebook · Instagram 계정 추가/);
