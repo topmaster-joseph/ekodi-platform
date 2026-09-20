@@ -1,5 +1,5 @@
 {
-  "version": 75,
+  "version": 76,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
@@ -748,69 +748,81 @@
         "candidateVerifyReason": "canonical /admin static assets are intentionally asset-first and are verified after promotion without requiring the legacy admin-subdomain Worker route"
       },
       {
-        "url": "https://admin.ekodi.kr/admin-compact.js?assist=v2",
+        "url": "https://ekodi.kr/admin/admin-compact.js?assist=v2",
         "statuses": [
           200
         ],
-        "redirect": "follow",
+        "redirect": "manual",
         "expect": [
           "ekodiAssistBootstrap",
           "admin-lazy-features.js"
         ],
         "headerExpect": [
-          "x-content-type-options: nosniff"
+          "cache-control: no-store",
+          "x-content-type-options: nosniff",
+          "x-robots-tag: noindex, nofollow, noarchive"
         ],
         "candidateVerify": false,
-        "candidateVerifyReason": "Admin static asset routing becomes authoritative only after promotion; verify the Assist asset contract immediately post-promotion"
+        "candidateVerifyReason": "canonical /admin Assist assets are intentionally asset-first and are verified after promotion without requiring the legacy Admin host",
+        "rollbackVerify": false
       },
       {
-        "url": "https://admin.ekodi.kr/admin-compact.css?assist=v2",
+        "url": "https://ekodi.kr/admin/admin-compact.css?assist=v2",
         "statuses": [
           200
         ],
-        "redirect": "follow",
+        "redirect": "manual",
         "expect": [
           ".ekodi-assist-bootstrap",
           "@media(max-width:760px)"
         ],
         "headerExpect": [
-          "x-content-type-options: nosniff"
+          "cache-control: no-store",
+          "x-content-type-options: nosniff",
+          "x-robots-tag: noindex, nofollow, noarchive"
         ],
         "candidateVerify": false,
-        "candidateVerifyReason": "Admin static asset routing becomes authoritative only after promotion; verify the Assist asset contract immediately post-promotion"
+        "candidateVerifyReason": "canonical /admin Assist assets are intentionally asset-first and are verified after promotion without requiring the legacy Admin host",
+        "rollbackVerify": false
       },
       {
-        "url": "https://admin.ekodi.kr/admin-lazy-features.js?assist=v2",
+        "url": "https://ekodi.kr/admin/admin-lazy-features.js?assist=v2",
         "statuses": [
           200
         ],
-        "redirect": "follow",
+        "redirect": "manual",
         "expect": [
           "ekodi-chief-ai-chat-v1",
           "DECISION_RULES"
         ],
         "headerExpect": [
-          "x-content-type-options: nosniff"
+          "cache-control: no-store",
+          "x-content-type-options: nosniff",
+          "x-robots-tag: noindex, nofollow, noarchive"
         ],
         "candidateVerify": false,
-        "candidateVerifyReason": "Admin static asset routing becomes authoritative only after promotion; verify the Assist asset contract immediately post-promotion"
+        "candidateVerifyReason": "canonical /admin Assist assets are intentionally asset-first and are verified after promotion without requiring the legacy Admin host",
+        "rollbackVerify": false
       },
       {
-        "url": "https://admin.ekodi.kr/ai-ops-admin.css?assist=v2",
+        "url": "https://ekodi.kr/admin/ai-ops-admin.css?assist=v2",
         "statuses": [
           200
         ],
-        "redirect": "follow",
+        "redirect": "manual",
         "expect": [
           ".ekodi-assist-launcher",
           ".ekodi-assist-panel",
           "@media(max-width:720px)"
         ],
         "headerExpect": [
-          "x-content-type-options: nosniff"
+          "cache-control: no-store",
+          "x-content-type-options: nosniff",
+          "x-robots-tag: noindex, nofollow, noarchive"
         ],
         "candidateVerify": false,
-        "candidateVerifyReason": "Admin static asset routing becomes authoritative only after promotion; verify the Assist asset contract immediately post-promotion"
+        "candidateVerifyReason": "canonical /admin Assist assets are intentionally asset-first and are verified after promotion without requiring the legacy Admin host",
+        "rollbackVerify": false
       },
       {
         "url": "https://ekodi.kr/auth/",

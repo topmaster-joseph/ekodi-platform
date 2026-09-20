@@ -87,23 +87,31 @@ test('Assist first path is bottom command-entry-only and upgrades through existi
   assert.doesNotMatch(shell,/admin-assist-dock\.css/);
 });
 
-test('guarded shared-site release verifies bootstrap and full Assist lazy assets post-promotion',async()=>{
+test('guarded shared-site release verifies full Assist lazy assets on canonical /admin static paths',async()=>{
   const manifestText=await read('deploy/manifests/shared-site.worker.json');
   const manifest=JSON.parse(manifestText);
-  const legacyAdminHost=['admin','ekodi.kr'].join('.');
-  const urls=[
+  const assets=[
     'admin-compact.js?assist=v2',
     'admin-compact.css?assist=v2',
     'admin-lazy-features.js?assist=v2',
     'ai-ops-admin.css?assist=v2',
-  ].map(asset=>`https://${legacyAdminHost}/${asset}`);
-  for(const url of urls){
+  ];
+  for(const asset of assets){
+    const url=`https://ekodi.kr/admin/${asset}`;
     const request=manifest.worker.requests.find(item=>item.url===url);
-    assert.ok(request,`missing guarded-release Assist asset: ${url}`);
+    assert.ok(request,`missing canonical guarded-release Assist asset: ${url}`);
     assert.equal(request.candidateVerify,false);
-    assert.match(request.candidateVerifyReason||'',/post-promotion|after promotion/i);
+    assert.match(request.candidateVerifyReason||'',/canonical \/admin Assist assets|asset-first/i);
+    assert.equal(request.rollbackVerify,false);
+    assert.ok(request.headerExpect?.includes('cache-control: no-store'));
     assert.ok(request.headerExpect?.includes('x-content-type-options: nosniff'));
+    assert.ok(request.headerExpect?.includes('x-robots-tag: noindex, nofollow, noarchive'));
   }
+  const assistUrls=manifest.worker.requests
+    .filter(item=>/\/(?:admin-compact\.(?:js|css)|admin-lazy-features\.js|ai-ops-admin\.css)\?assist=v2$/.test(item.url||''))
+    .map(item=>item.url);
+  assert.equal(assistUrls.length,4);
+  assert.ok(assistUrls.every(url=>url.startsWith('https://ekodi.kr/admin/')));
   assert.match(manifestText,/ekodiAssistBootstrap/);
   assert.match(manifestText,/ekodi-chief-ai-chat-v1/);
   assert.match(manifestText,/DECISION_RULES/);

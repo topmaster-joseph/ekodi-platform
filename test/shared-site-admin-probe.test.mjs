@@ -13,9 +13,12 @@ test('shared-site release probes the canonical slash form of apex Admin',()=>{
   assert.equal(admin.rollbackVerify,false);
 });
 test('shared-site compact CSS probe follows the live responsive breakpoint',()=>{
-  const compact=manifest.worker.requests.find(item=>item.url==='https://admin.ekodi.kr/admin-compact.css?assist=v2');
+  const compact=manifest.worker.requests.find(item=>item.url==='https://ekodi.kr/admin/admin-compact.css?assist=v2');
   assert.ok(compact);
   assert.ok(compact.expect.includes('@media(max-width:760px)'));
   assert.ok(compactCss.includes('@media(max-width:760px)'));
   assert.equal(compact.expect.includes('@media(max-width:720px)'),false);
+  assert.ok(compact.headerExpect.includes('cache-control: no-store'));
+  assert.ok(compact.headerExpect.includes('x-content-type-options: nosniff'));
+  assert.ok(compact.headerExpect.includes('x-robots-tag: noindex, nofollow, noarchive'));
 });
