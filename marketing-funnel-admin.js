@@ -42,7 +42,7 @@
     if (head) {
       const link = document.createElement('a');
       link.className = 'secondary compact';
-      link.href = 'https://auth.ekodi.kr/?site=marketing&review=1&return_to=https%3A%2F%2Fmarketing.ekodi.kr%2F';
+      link.href = 'https://ekodi.kr/auth/?site=marketing&review=1&return_to=https%3A%2F%2Fekodi.kr%2Fekodibiz%2Fmarketing-ai%2F';
       link.target = '_blank';
       link.rel = 'noopener';
       link.textContent = 'Marketing AI Pro 신청 검수 ↗';
