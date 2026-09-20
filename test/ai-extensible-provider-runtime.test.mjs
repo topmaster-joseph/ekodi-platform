@@ -79,7 +79,7 @@ test('trusted invoke adapters can extend the orchestrator registry without chang
     fetchImpl: async () => { throw new Error('built-ins must not be invoked'); },
     additionalProviders: [future],
   });
-  assert.deepEqual(providers.map(provider => provider.id), ['cloudflare-workers-ai', 'openai', 'anthropic', 'gemini', 'future-ai']);
+  assert.deepEqual(providers.map(provider => provider.id), ['cloudflare-workers-ai', 'openrouter-free', 'groq-free', 'openai', 'anthropic', 'gemini', 'future-ai']);
   assert.equal(typeof providers.at(-1).invoke, 'function');
   assert.equal(providers.at(-1).officialPath, false);
   assert.equal(providers.at(-1).automationAllowed, true);
