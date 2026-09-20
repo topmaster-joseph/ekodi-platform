@@ -2,25 +2,6 @@ name: Verify Admin Production UI E2E
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/verify-admin-production-ui-e2e.yml'
-      - 'scripts/verify-admin-production-ui-e2e.mjs'
-      - 'admin-shell.html'
-      - 'admin-shell.css'
-      - 'admin-central-handoff.js'
-      - 'admin-authenticated-shell.js'
-      - 'admin-design-engine.js'
-      - 'admin-design-engine.css'
-      - 'admin-menu-layout.js'
-      - 'admin-menu-registry.js'
-      - 'admin-sidebar.js'
-      - 'admin-menu-runtime.js'
-      - 'admin-demand-loader.js'
-      - 'campus-actions.js'
-      - 'campus-actions.css'
-
 permissions:
   contents: read
 

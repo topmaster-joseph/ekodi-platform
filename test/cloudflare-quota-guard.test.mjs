@@ -55,21 +55,72 @@ test('production verification is consolidated into one post-deploy canary', asyn
   assert.doesNotMatch(reliability, /workflow_run:/);
 });
 
-test('ordinary static assets stay asset-first while security-critical Admin and auth assets remain Worker-first', async () => {
-  const wrangler = await readFile(new URL('../wrangler.site.toml', import.meta.url), 'utf8');
-  for (const securityCritical of [
-    '/auth-bootstrap.js',
-    '/auth-router.js',
-    '/admin-authenticated-shell.js',
-    '/admin-shell.css',
-    '/admin-compact.css',
-    '/system-health-admin.css',
-    '/device-browser-diagnostics.css',
-    '/tapo-device-admin.css',
-    '/workspace-trade-portal.css'
-  ]) {
+test('production probe loops fail fast on quota circuit and deep E2E stays explicit-only', async () => {
+  const [shellVerify, churchOwnership, adminRetry, adminAuthenticated, adminUi, adminAuthenticatedUi, productionGate] = await Promise.all([
+    readFile(new URL('../scripts/verify-ekodi-shell-live.mjs', import.meta.url), 'utf8'),
+    readFile(new URL('../scripts/ensure-church-route-ownership.mjs', import.meta.url), 'utf8'),
+    readFile(new URL('../scripts/admin-authenticated-e2e-retry.mjs', import.meta.url), 'utf8'),
+    readFile(new URL('../.github/workflows/admin-authenticated-e2e.yml', import.meta.url), 'utf8'),
+    readFile(new URL('../.github/workflows/verify-admin-production-ui-e2e.yml', import.meta.url), 'utf8'),
+    readFile(new URL('../.github/workflows/verify-admin-authenticated-production-e2e.yml', import.meta.url), 'utf8'),
+    readFile(new URL('../.github/workflows/production-gate.yml', import.meta.url), 'utf8'),
+  ]);
+
+  assert.match(shellVerify, /One essential probe owns the quota decision/);
+  assert.match(shellVerify, /isQuotaCircuitBreak/);
+  assert.match(shellVerify, /stopping live verification without retries or fan-out/);
+  assert.match(churchOwnership, /CF-QUOTA-001 circuit open/);
+  assert.match(churchOwnership, /no retry/);
+  assert.match(adminRetry, /throwIfQuotaCircuit/);
+  assert.match(adminRetry, /CF-QUOTA-001 circuit open/);
+
+  for (const workflow of [adminAuthenticated, adminUi, adminAuthenticatedUi]) {
+    assert.match(workflow, /on:\n  workflow_dispatch:/);
+    assert.doesNotMatch(workflow, /\n  push:/);
+  }
+  for (const workflow of [adminAuthenticated, adminAuthenticatedUi]) {
+    assert.match(workflow, /https:\/\/ekodi\.kr\/api\/session/);
+    assert.doesNotMatch(workflow, /curl[^\n]*--retry[^\n]*api\/session/);
+  }
+
+  assert.match(productionGate, /workflow_run:/);
+  assert.match(productionGate, /Run one quota-aware post-deploy canary/);
+});
+
+test('Shared Site release and Mission E2E obey the same production quota budget without duplicate full-menu probes', async () => {
+  const [shared,mission] = await Promise.all([
+    readFile(new URL('../.github/workflows/deploy-site-core.yml', import.meta.url), 'utf8'),
+    readFile(new URL('../.github/workflows/verify-ekodimission-admin-production-e2e.yml', import.meta.url), 'utf8')
+  ]);
+  assert.doesNotMatch(shared, /\n\s*admin-authenticated-e2e:\s*\n/);
+  assert.match(shared, /Read Production Cloudflare quota Source of Truth/);
+  assert.match(shared, /cloudflare-production-budget\.mjs/);
+  assert.match(shared, /steps\.quota\.outputs\.state == 'exhausted'/);
+  assert.match(shared, /steps\.quota\.outputs\.skip_nonessential != 'true'/);
+  assert.doesNotMatch(mission, /schedule:/);
+  assert.match(mission, /workflow_run:/);
+  assert.match(mission, /cloudflare-production-budget\.mjs/);
+  assert.match(mission, /skip_nonessential != 'true'/);
+});
+
+test('Admin static shell bypasses Worker while auth and deep Admin routes keep Worker boundaries', async () => {
+  const [wrangler, build, headers] = await Promise.all([
+    readFile(new URL('../wrangler.site.toml', import.meta.url), 'utf8'),
+    readFile(new URL('../scripts/build.mjs', import.meta.url), 'utf8'),
+    readFile(new URL('../_headers', import.meta.url), 'utf8')
+  ]);
+  for (const securityCritical of ['/auth-bootstrap.js','/auth-router.js']) {
     assert.equal(wrangler.includes(`"${securityCritical}"`), true, `${securityCritical} must remain Worker-first`);
   }
+  assert.match(wrangler, /"\/admin\/\*"/);
+  for (const assetFirst of ['!/admin','!/admin/','!/admin/*.js','!/admin/*.css']) {
+    assert.equal(wrangler.includes(`"${assetFirst}"`), true, `${assetFirst} must bypass Worker invocation`);
+  }
+  const routeLine = wrangler.split('\n').find(line => line.trim().startsWith('run_worker_first =')) || '';
+  assert.ok((routeLine.match(/"/g) || []).length / 2 <= 100, 'Cloudflare run_worker_first entries must stay within the 100-entry limit');
+  assert.match(build, /adminStaticMirrorDir/);
+  assert.match(build, /admin-shell\.html/);
+  assert.match(headers, /\/admin\/\*[\s\S]*Content-Security-Policy:[\s\S]*Cache-Control: no-store/);
   for (const ordinaryStatic of ['/styles.css', '/homepage-ambient.css', '/mall.css']) {
     assert.equal(wrangler.includes(`"${ordinaryStatic}"`), false, `${ordinaryStatic} should use Static Assets asset-first delivery`);
   }

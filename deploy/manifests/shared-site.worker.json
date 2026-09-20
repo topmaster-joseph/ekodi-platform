@@ -637,7 +637,7 @@
           "TAPO EDGE BRIDGE"
         ],
         "headerExpect": [
-          "x-ekodi-route: admin-asset",
+          "cache-control: no-store",
           "x-content-type-options: nosniff"
         ],
         "rollbackVerify": false
@@ -653,7 +653,7 @@
           ".tapo-camera-dialog"
         ],
         "headerExpect": [
-          "x-ekodi-route: admin-asset",
+          "cache-control: no-store",
           "x-content-type-options: nosniff"
         ],
         "rollbackVerify": false
@@ -726,7 +726,9 @@
           "x-ekodi-route: admin-asset",
           "cache-control: public, max-age=31536000, immutable",
           "x-content-type-options: nosniff"
-        ]
+        ],
+        "candidateVerify": false,
+        "candidateVerifyReason": "run_worker_first static-asset routing table becomes authoritative only after promotion; verify the Worker admin-asset boundary immediately post-promotion"
       },
       {
         "url": "https://ekodi.kr/admin/device-browser-diagnostics.css?v=device-v28",
@@ -742,7 +744,9 @@
           "x-ekodi-route: admin-asset",
           "cache-control: public, max-age=31536000, immutable",
           "x-content-type-options: nosniff"
-        ]
+        ],
+        "candidateVerify": false,
+        "candidateVerifyReason": "run_worker_first static-asset routing table becomes authoritative only after promotion; verify the Worker admin-asset boundary immediately post-promotion"
       },
       {
         "url": "https://ekodi.kr/admin/admin-compact.js?assist=v2",
@@ -756,7 +760,9 @@
         ],
         "headerExpect": [
           "x-content-type-options: nosniff"
-        ]
+        ],
+        "candidateVerify": false,
+        "candidateVerifyReason": "Admin static asset routing becomes authoritative only after promotion; verify the Assist asset contract immediately post-promotion"
       },
       {
         "url": "https://ekodi.kr/admin/admin-compact.css?assist=v2",
@@ -770,7 +776,9 @@
         ],
         "headerExpect": [
           "x-content-type-options: nosniff"
-        ]
+        ],
+        "candidateVerify": false,
+        "candidateVerifyReason": "Admin static asset routing becomes authoritative only after promotion; verify the Assist asset contract immediately post-promotion"
       },
       {
         "url": "https://ekodi.kr/admin/admin-lazy-features.js?assist=v2",
@@ -784,7 +792,9 @@
         ],
         "headerExpect": [
           "x-content-type-options: nosniff"
-        ]
+        ],
+        "candidateVerify": false,
+        "candidateVerifyReason": "Admin static asset routing becomes authoritative only after promotion; verify the Assist asset contract immediately post-promotion"
       },
       {
         "url": "https://ekodi.kr/admin/ai-ops-admin.css?assist=v2",
@@ -799,7 +809,9 @@
         ],
         "headerExpect": [
           "x-content-type-options: nosniff"
-        ]
+        ],
+        "candidateVerify": false,
+        "candidateVerifyReason": "Admin static asset routing becomes authoritative only after promotion; verify the Assist asset contract immediately post-promotion"
       },
       {
         "url": "https://ekodi.kr/auth/",

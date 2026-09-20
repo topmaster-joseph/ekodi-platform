@@ -72,19 +72,31 @@ test('device browser diagnostics are shipped and stay on the immutable admin wor
   assert.match(smoke, /cache-control: public, max-age=31536000, immutable/);
   assert.match(smoke, /현재 관리자 브라우저 진단/);
   assert.match(smoke, /\.admin-browser-diagnostic/);
+  for (const suffix of ['device-browser-diagnostics.js?v=device-v28','device-browser-diagnostics.css?v=device-v28']) {
+    const request = manifest.worker.requests.find(item => String(item.url || '').endsWith(`/${suffix}`));
+    assert.ok(request, `missing guarded-release request for ${suffix}`);
+    assert.equal(request.candidateVerify, false);
+    assert.match(request.candidateVerifyReason || '', /post-promotion|promotion/i);
+    assert.ok(request.headerExpect?.includes('x-ekodi-route: admin-asset'));
+    assert.ok(request.headerExpect?.includes('cache-control: public, max-age=31536000, immutable'));
+  }
 });
 
-test('shared admin navigation exposes five canonical axes with top contextual tabs', async () => {
+test('shared admin navigation exposes seven canonical areas with top contextual tabs', async () => {
   const registry = await read('admin-menu-registry.js');
   const sidebar = await read('admin-sidebar.js');
   const postbuild = await read('scripts/admin-performance-postbuild.mjs');
   assert.doesNotMatch(registry, /id: 'overview'/);
-  for (const area of ['home', 'operations', 'workspaces', 'services', 'system']) assert.match(registry, new RegExp(`id: '${area}'`));
+  for (const area of ['home', 'operations', 'workspaces', 'services', 'community', 'publishing', 'system']) assert.match(registry, new RegExp(`id: '${area}'`));
   for (const retired of ['structure', 'core', 'common', 'vertical', 'tenants', 'operations-center', 'people', 'ai', 'business', 'data', 'site-management', 'security-audit', 'settings', 'access']) assert.doesNotMatch(registry, new RegExp(`id: '${retired}', icon:`));
   assert.match(registry, /id: 'campus', group: 'home'/);
   assert.match(registry, /id: 'work', group: 'operations'/);
   assert.match(registry, /id: 'clients', group: 'workspaces'/);
   assert.match(registry, /id: 'common-services', group: 'services'/);
+  assert.match(registry, /id: 'community', group: 'community'/);
+  assert.match(registry, /id: 'ai-membership', group: 'community'/);
+  assert.match(registry, /id: 'books', group: 'publishing'/);
+  assert.match(registry, /id: 'devotional', group: 'publishing'/);
   assert.match(registry, /id: 'capabilities', group: 'system'/);
   assert.match(registry, /id: 'devices', group: 'system'/);
   assert.match(sidebar, /RETIRED_MENU_SECTIONS = new Set\(\['overview'\]\)/);
@@ -92,9 +104,10 @@ test('shared admin navigation exposes five canonical axes with top contextual ta
   assert.match(sidebar, /admin-context-tabs-shell/);
   assert.match(sidebar, /admin-context-tabs/);
   assert.match(sidebar, /data-admin-context-section/);
+  assert.match(sidebar, /globals\.querySelector\(`:scope>\.\$\{DETAILS_CLASS\}`\)\?\.remove\(\)/);
   assert.match(sidebar, /data-admin-capability-shortcut/);
   assert.match(sidebar, /admin-context-source/);
-  assert.match(sidebar, /adminMenuGovernance = 'workbench-tabs-v2'/);
+  assert.match(sidebar, /adminMenuGovernance = 'primary-sidebar-tabs-v3'/);
   assert.match(sidebar, /observer\.observe\(nav, \{ childList: true, subtree: false \}\)/);
   assert.doesNotMatch(sidebar, /subtree: true/);
   assert.doesNotMatch(sidebar, /ekodi-admin-recent-sections|ekodi-admin-favorite-sections/);
