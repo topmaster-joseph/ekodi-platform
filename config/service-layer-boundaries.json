@@ -121,7 +121,7 @@
   "serviceOwnership": {
     "mall": {
       "adminRoot": "/ekodimall/admin",
-      "capability": "commerce.mall",
+      "capability": "commerce.supply-network",
       "owns": [
         "products",
         "assortment",
@@ -161,7 +161,8 @@
           "crm"
         ]
       },
-      "capabilityProjection": "dynamic-registry"
+      "capabilityProjection": "dynamic-registry",
+      "serviceCapability": "mall"
     },
     "cheonggye-association": {
       "adminRoot": "/cgma/admin",
