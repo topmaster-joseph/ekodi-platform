@@ -127,7 +127,7 @@ for(let attempt=1;attempt<=attempts;attempt++){
     'window.EKODIMessage','window.EKODIIllustration','ekodiIllustrationSystem','window.EKODIServiceDesign','ekodiDesignInheritance','--ekodi-service-accent',
     '__EKODI_ECOSYSTEM_LINK_COMPAT',"'ekodibiz.kr':'biz'",'window.__EKODI_LANGUAGE_REGISTRY__','https://ekodi.kr/api/i18n/v1','visibleLanguages','removeFooterLanguageControls','TRAFFIC_TELEMETRY','globalPrivacyControl','sendTrafficBeacon'
   ],failures);
-  if(shellResult.text.includes('https://ekodi.kr/api/i18n/v1'))failures.push('shell:legacy-i18n-origin-present');
+  if(shellResult.text.includes('https://api.ekodi.kr/api/i18n/v1')||shellResult.text.includes('https://i18n.ekodi.kr/api/i18n/v1'))failures.push('shell:legacy-i18n-origin-present');
   if(shellResult.text.includes('https://social.ekodi.kr/api/media/youtube/status'))failures.push('shell:legacy-social-origin-present');
   if(shellResult.headers?.get?.('x-ekodi-media-meeting')!=='v2')failures.push(`shell:media-meeting:${shellResult.headers?.get?.('x-ekodi-media-meeting')||'missing'}`);
   if(shellResult.headers?.get?.('x-ekodi-character-registry')!=='v3')failures.push(`shell:character-registry:${shellResult.headers?.get?.('x-ekodi-character-registry')||'missing'}`);
