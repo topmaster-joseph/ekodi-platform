@@ -1,4 +1,4 @@
-const API='https://api.ekodi.kr';
+const API='https://ekodi.kr';
 const state=document.querySelector('#sessionState');
 const workspace=document.querySelector('#workspace');
 const storeForm=document.querySelector('#storeForm');
