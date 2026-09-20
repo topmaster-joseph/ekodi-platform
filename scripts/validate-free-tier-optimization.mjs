@@ -51,6 +51,7 @@ expect(workflow.includes('validate-free-tier-optimization.mjs'),'orchestration g
 expect(workflow.includes('free-tier-quota-guard.test.mjs'),'orchestration gate must run free-tier regression tests');
 expect(workflow.includes('free-tier-resource-governor.test.mjs'),'orchestration gate must run resource governor regression tests');
 expect(collectorWorkflow.includes('collect-free-tier-resource-usage.mjs'),'resource collector workflow must execute the measured collector');
+expect(collectorWorkflow.includes('push:')&&collectorWorkflow.includes('branches:')&&collectorWorkflow.includes('- main'),'resource collector must run on relevant main pushes');
 expect(collectorWorkflow.includes('provider_quota_snapshots'),'resource collector workflow must persist into the quota snapshot ledger');
 expect(collectorWorkflow.includes('SUPABASE_ACCESS_TOKEN'),'resource collector must use the existing Supabase management credential boundary');
 expect(collector.includes('/database/query'),'Supabase database usage must come from an authorized read-only database query');

@@ -4,6 +4,18 @@ on:
   workflow_dispatch:
   schedule:
     - cron: '45 0 * * *'
+  push:
+    branches:
+      - main
+    paths:
+      - 'free-tier-quota-guard.js'
+      - 'free-tier-resource-governor.js'
+      - 'config/free-tier-optimization-policy.json'
+      - 'scripts/collect-free-tier-resource-usage.mjs'
+      - 'test/free-tier-resource-governor.test.mjs'
+      - 'test/free-tier-resource-collector.test.mjs'
+      - 'migrations/0099_free_tier_provider_quota.sql'
+      - '.github/workflows/free-tier-resource-governor.yml'
   pull_request:
     paths:
       - 'free-tier-quota-guard.js'
