@@ -1,3 +1,8 @@
+test('admin performance postbuild changes trigger the shared-site production lane', () => {
+  assert.match(workflow, /scripts\/admin-performance-postbuild\.mjs/);
+  assert.match(workflow, /test\/admin-performance-hardening\.test\.mjs/);
+});
+
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
