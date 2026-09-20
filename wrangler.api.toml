@@ -4,11 +4,9 @@ name = "ekodi-auth-api"
 main = "mission-control-entry-worker.js"
 compatibility_date = "2026-08-12"
 workers_dev = true
+# Public API is canonical at https://ekodi.kr/api through the Shared Site CONTROL_API service binding.
 preview_urls = false
 
-[[routes]]
-pattern = "api.ekodi.kr"
-custom_domain = true
 
 [triggers]
 crons = ["*/10 * * * *"]
