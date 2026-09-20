@@ -77,9 +77,12 @@ test('monitor covers official services, shared infrastructure, Connect dependenc
   assert.equal(byId.get('marketing-public-cgma')?.[2], 'cgma.or.kr');
   assert.equal(byId.get('marketing-public-cgma')?.[3], 'https://cgma.or.kr/');
   assert.ok([...byId.keys()].some(id => id.startsWith('marketing-alias-cgma-')));
-  assert.equal(byId.get('prelaunch-mail')?.[2], 'mail.ekodi.kr');
-  assert.equal(byId.get('prelaunch-live')?.[2], 'live.ekodi.kr');
-  assert.equal(byId.get('prelaunch-cloud')?.[2], 'cloud.ekodi.kr');
+  assert.equal(byId.get('prelaunch-mail')?.[2], 'ekodi.kr');
+  assert.equal(byId.get('prelaunch-live')?.[2], 'ekodi.kr');
+  assert.equal(byId.get('prelaunch-cloud')?.[2], 'ekodi.kr');
+  assert.equal(byId.get('prelaunch-mail')?.[3], 'https://ekodi.kr/mail');
+  assert.equal(byId.get('prelaunch-live')?.[3], 'https://ekodi.kr/live');
+  assert.equal(byId.get('prelaunch-cloud')?.[3], 'https://ekodi.kr/cloud');
   assert.ok([...byId.keys()].some(id => id.startsWith('marketing-alias-jadam-')));
   assert.ok(SITE_DEFINITIONS.length >= 52);
 });

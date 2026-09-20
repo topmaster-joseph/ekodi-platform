@@ -108,6 +108,20 @@ jobs:
         run: |
           node --check scripts/zero-subdomain-guard.mjs
           node scripts/zero-subdomain-guard.mjs
+      - name: Enforce Generation 10 Evolution Kernel
+        run: |
+          set -euo pipefail
+          node --check scripts/validate-evolution-kernel.mjs
+          node scripts/validate-evolution-kernel.mjs
+          node --test test/evolution-kernel-contract.test.mjs
+      - name: Enforce free-tier quota guard
+        run: |
+          set -euo pipefail
+          node --check free-tier-quota-guard.js
+          node --check free-tier-resource-governor.js
+          node --check scripts/validate-free-tier-optimization.mjs
+          node scripts/validate-free-tier-optimization.mjs
+          node --test test/free-tier-quota-guard.test.mjs test/free-tier-resource-governor.test.mjs
       - name: Route change intent through EKODI AI
         id: ekodi_ai
         env:

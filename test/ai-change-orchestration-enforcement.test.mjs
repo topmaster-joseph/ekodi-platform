@@ -70,6 +70,30 @@ test('main and production releases are fail-closed around orchestration and cons
   assert.match(pagesRelease, /runChangeOrchestrationGate\(\)/);
 });
 
+test('static policy validation cannot replace live PR provenance enforcement', () => {
+  assert.match(ciWorkflow, /EKODI_ORCHESTRATION_STATIC_POLICY:\s*'1'[\s\S]*?npm run check/);
+  assert.match(validator, /static policy mode cannot replace CI\/release provenance enforcement/);
+  assert.match(workflow, /validate-ekodi-ai-change-orchestration\.mjs --ci/);
+
+  const cwd = new URL('..', import.meta.url);
+  const env = {
+    ...process.env,
+    GITHUB_EVENT_NAME: 'push',
+    GITHUB_REF_NAME: 'main',
+    GITHUB_REPOSITORY: 'topmaster-joseph/ekodi-platform',
+    GITHUB_RUN_ID: 'static-policy-test',
+    GITHUB_SHA: '0000000000000000000000000000000000000001',
+    GITHUB_ACTOR: 'topmaster-joseph',
+  };
+  const staticCheck = spawnSync(process.execPath, ['scripts/validate-ekodi-ai-change-orchestration.mjs'], { cwd, env: { ...env, EKODI_ORCHESTRATION_STATIC_POLICY: '1' }, encoding: 'utf8' });
+  assert.equal(staticCheck.status, 0, staticCheck.stdout + '\n' + staticCheck.stderr);
+  assert.match(staticCheck.stdout, /source=static-policy-validation/);
+
+  const forbidden = spawnSync(process.execPath, ['scripts/validate-ekodi-ai-change-orchestration.mjs', '--static-policy', '--release'], { cwd, env, encoding: 'utf8' });
+  assert.notEqual(forbidden.status, 0);
+  assert.match(forbidden.stderr, /static policy mode cannot replace CI\/release provenance enforcement/);
+});
+
 test('production workflows that validate PR provenance can read pull requests', () => {
   for (const [name, source] of [['shared deploy', sharedDeploy], ['shared staging', sharedStage], ['admin control', adminControl], ['main CI', ciWorkflow]]) {
     assert.match(source, /permissions:\s*\n\s*contents:\s*read\s*\n\s*pull-requests:\s*read/, `${name} must grant read-only PR provenance access`);

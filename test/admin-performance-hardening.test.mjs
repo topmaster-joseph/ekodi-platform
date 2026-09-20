@@ -95,6 +95,12 @@ test('postbuild removes retired first-path assets, versions the current graph an
   assert.match(perf, /\['requestedFeature','reqFeature'\]/);
   assert.match(perf, /TDZ self-call/);
   assert.match(perf, /moduleImportVersions/);
+  assert.match(perf, /demandReferencedAssets/);
+  assert.match(perf, /demandRuntimeForVersion\.matchAll/);
+  assert.match(perf, /normalizeVersionedAdminAsset/);
+  assert.match(perf, /demandReferencedAssets\.includes\('social-admin\.js'\)/);
+  assert.match(perf, /demandReferencedAssets\.includes\('social-admin\.css'\)/);
+  assert.match(perf, /\.\.\.staticVersionInputs, \.\.\.demandReferencedAssets/);
   assert.match(perf, /admin-menu-registry\.js/);
   assert.match(perf, /admin-sidebar\.js/);
   assert.match(perf, /admin-menu-runtime\.js/);
@@ -108,6 +114,13 @@ test('postbuild removes retired first-path assets, versions the current graph an
   assert.match(perf, /position:static!important/);
   assert.match(perf, /\.app>main\{padding-top:0!important\}/);
   assert.match(perf, /\.topbar \.kicker\{display:none!important\}/);
+  assert.ok(perf.includes('const adminMirrorDir = \`${dist}admin/\`;'));
+  assert.match(perf, /existingAdminMirrorEntries = await readdir/);
+  assert.match(perf, /\.\.\.existingAdminMirrorAssets, \.\.\.versionInputs/);
+  assert.ok(perf.includes('copyFile(path, \`${adminMirrorDir}index.html\`)'));
+  for (const asset of ['admin-compact.js','remote-power-admin.js','remote-power-admin.css','admin-design-engine.css','admin-lazy-features.js','ai-ops-admin.css']) {
+    assert.match(perf, new RegExp(asset.replaceAll('.', '\\.')));
+  }
 });
 
 test('admin readability is first-path without consuming the compact CSS budget, while AI command styling stays lazy', async () => {
@@ -173,6 +186,16 @@ test('Admin runtime publishes and versions its EKODIBIZ scope-registry dependenc
   assert.match(postbuild, /admin-menu-runtime\.js'\s*,\s*\['admin-menu-registry\.js', 'ekodibiz-admin-registry\.js'\]/);
   assert.match(runtime, /from '.\/ekodibiz-admin-registry\.js'/);
   assert.match(workflow, /dist\/ekodibiz-admin-registry\.js/);
+});
+
+test('shared-site release watches final Admin postbuild and conversation workbench sources', async () => {
+  const workflow = await read('.github/workflows/deploy-site-core.yml');
+  for (const source of [
+    'scripts/admin-performance-postbuild.mjs',
+    'admin-conversation-workbench.css',
+    'test/admin-performance-hardening.test.mjs',
+    'test/admin-conversation-workbench.test.mjs',
+  ]) assert.match(workflow, new RegExp(source.replaceAll('.', '\\.')));
 });
 
 test('build ordering runs readable layer before the final performance guard', async () => {

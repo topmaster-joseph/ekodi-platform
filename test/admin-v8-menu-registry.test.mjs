@@ -6,11 +6,13 @@ import {
   getAdminMenuGroupDefault,
 } from '../admin-menu-registry.js';
 
-test('v8 admin exposes the five canonical EKODI management axes', () => {
+test('v8 admin exposes the seven canonical EKODI management areas', () => {
   assert.deepEqual(ADMIN_MENU_GROUPS.map(group => group.id), [
-    'home', 'operations', 'workspaces', 'services', 'system',
+    'home', 'operations', 'workspaces', 'services', 'community', 'publishing', 'system',
   ]);
-  assert.equal(ADMIN_MENU_GROUPS.length, 5);
+  assert.equal(ADMIN_MENU_GROUPS.length, 7);
+  assert.equal(getAdminMenuGroupDefault('community'), 'community');
+  assert.equal(getAdminMenuGroupDefault('publishing'), 'books');
   assert.equal(getAdminMenuGroupDefault('system'), 'health');
 });
 
@@ -40,4 +42,6 @@ test('control-only operations remain internal instead of becoming top-level clut
   }
   assert.equal(byId.get('clients')?.group, 'workspaces');
   assert.equal(byId.get('common-services')?.group, 'services');
+  assert.equal(byId.get('community')?.group, 'community');
+  assert.equal(byId.get('books')?.group, 'publishing');
 });

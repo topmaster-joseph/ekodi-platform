@@ -81,7 +81,10 @@ jobs:
           node --check scripts/run-reliability-validation.mjs
           node scripts/run-reliability-validation.mjs --validate-only
           node --test test/reliability-validation.test.mjs
-      - run: npm run check
+      - name: Run static policy and code checks
+        env:
+          EKODI_ORCHESTRATION_STATIC_POLICY: '1'
+        run: npm run check
       - run: npm run build
       - name: Validate AI provider independence
         run: npm run validate:ai-resilience

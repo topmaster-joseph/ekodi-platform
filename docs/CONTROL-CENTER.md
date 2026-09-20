@@ -101,3 +101,19 @@ These rules are the source of truth for the Admin presentation layer. Feature-sp
 - When a design decision materially changes these principles, update this section in the same change so documentation and production UI do not drift.
 - Feature-level exceptions must be intentional, documented near the feature, and must not reduce accessibility, security, responsiveness, or startup performance.
 - New Admin subservices should inherit these principles by default rather than introducing a separate visual system.
+
+
+## EKODI-native autonomous owner reports
+
+EKODI autonomous operations report to the owner from the EKODI runtime itself, not from a ChatGPT scheduled task.
+
+- Producer: `EKODI Orchestrator`
+- Trigger: the existing Control API internal scheduled runtime
+- Durable ledger: `ekodi_owner_reports`
+- Admin surface: `/admin#ai-ops`
+- Read API: `GET /api/control/owner-report`
+- Manual refresh: `POST /api/control/owner-report/check`
+
+Routine healthy cycles are not stored as notifications. EKODI records a concise report only when a material state changes: an operational incident, an owner decision gate, a material verified improvement candidate, or a verified recovery from a previously material state. Identical states are deduplicated.
+
+The reporting runtime cannot expand authority. Paid commitments, permission expansion, destructive actions, constitutional C2/C3 changes, owner-only authentication/consent, and other human-sovereign gates remain unchanged.

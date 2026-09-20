@@ -15,7 +15,6 @@ function legacyRecorder(){
   const calls=[];
   const fetch=async request=>{
     const url=new URL(request.url);calls.push(url);
-    if(url.hostname==='auth.ekodi.kr')return new Response('<html><head><link href="/auth.css"></head><body><script src="/auth.js"></script></body></html>',{headers:{'content-type':'text/html'}});
     return new Response('<html><head></head><body><script src="admin-central-handoff.js"></script></body></html>',{headers:{'content-type':'text/html'}});
   };
   return {calls,fetch};
@@ -102,30 +101,30 @@ test('shared-site guarded release keeps canonical My Docs alive',async()=>{
   assert.ok(probe?.expect.includes('EKODI Docs AI'));assert.ok(probe?.expect.includes('docs-focus'));
   assert.ok(probe?.headerExpect.includes('x-ekodi-canonical-surface: my'));assert.equal(probe?.rollbackVerify,false);
 });
-test('Auth uses the legacy runtime but exposes apex-prefixed assets',async()=>{
-  const legacy=legacyRecorder();
-  const response=await routeCanonicalSurface(new Request('https://ekodi.kr/auth/'),{}, {legacyFetch:legacy.fetch});
-  assert.equal(legacy.calls[0].hostname,'auth.ekodi.kr');assert.equal(legacy.calls[0].pathname,'/');
+test('Auth is served directly from canonical apex assets',async()=>{
+  const assets={calls:[],fetch:async request=>{const url=new URL(request.url);assets.calls.push(url);if(url.pathname==='/auth-center')return new Response('<html><head><link href="/auth.css"></head><body><script src="/auth.js"></script></body></html>',{headers:{'content-type':'text/html'}});return new Response('asset',{headers:{'content-type':'text/javascript'}})}};
+  const response=await routeCanonicalSurface(new Request('https://ekodi.kr/auth/'),{ASSETS:assets});
+  assert.equal(assets.calls[0].hostname,'ekodi.kr');assert.equal(assets.calls[0].pathname,'/auth-center');assert.equal(response.headers.get('x-ekodi-canonical-surface'),'auth');
   const html=await response.text();assert.match(html,/href="\/auth\/auth\.css"/);assert.match(html,/src="\/auth\/auth\.js"/);
 });
 
 test('Auth runtime text assets cannot render as top-level documents',async()=>{
-  const legacy=legacyRecorder();
-  let response=await routeCanonicalSurface(new Request('https://ekodi.kr/auth/client-auth.js?v=31',{headers:{'sec-fetch-dest':'document'}}),{}, {legacyFetch:legacy.fetch});
-  assert.equal(response.status,302);assert.equal(new URL(response.headers.get('location')).href,'https://ekodi.kr/auth/');assert.equal(response.headers.get('x-ekodi-route'),'auth-document-guard');assert.equal(legacy.calls.length,0);
-  response=await routeCanonicalSurface(new Request('https://ekodi.kr/auth/client-auth.js?v=31',{headers:{'sec-fetch-dest':'script'}}),{}, {legacyFetch:legacy.fetch});
-  assert.equal(response.status,200);assert.equal(legacy.calls.length,1);assert.equal(legacy.calls[0].pathname,'/client-auth.js');
+  const assets={calls:[],fetch:async request=>{const url=new URL(request.url);assets.calls.push(url);return new Response("const ok=true",{headers:{'content-type':'text/javascript'}})}};
+  let response=await routeCanonicalSurface(new Request('https://ekodi.kr/auth/client-auth.js?v=31',{headers:{'sec-fetch-dest':'document'}}),{ASSETS:assets});
+  assert.equal(response.status,302);assert.equal(new URL(response.headers.get('location')).href,'https://ekodi.kr/auth/');assert.equal(response.headers.get('x-ekodi-route'),'auth-document-guard');assert.equal(assets.calls.length,0);
+  response=await routeCanonicalSurface(new Request('https://ekodi.kr/auth/client-auth.js?v=31',{headers:{'sec-fetch-dest':'script'}}),{ASSETS:assets});
+  assert.equal(response.status,200);assert.equal(assets.calls.length,1);assert.equal(assets.calls[0].pathname,'/client-auth.js');assert.equal(response.headers.get('cache-control'),'no-store');
 });
 
-test('Auth secured text responses explicitly declare UTF-8',async()=>{
+test('Auth secured text responses explicitly declare UTF-8 on canonical paths',async()=>{
   const assets={fetch:async request=>{
     const path=new URL(request.url).pathname;
     if(path==='/auth-center')return new Response('<!doctype html><meta charset="utf-8"><title>인증</title>',{headers:{'content-type':'text/html'}});
     return new Response("const label='자담치킨 목포대점';",{headers:{'content-type':'text/javascript'}});
   }};
-  let response=await siteWorker.fetch(new Request('https://auth.ekodi.kr/'),{ASSETS:assets},{});
+  let response=await routeCanonicalSurface(new Request('https://ekodi.kr/auth/'),{ASSETS:assets});
   assert.equal(response.status,200);assert.equal(response.headers.get('content-type'),'text/html; charset=utf-8');
-  response=await siteWorker.fetch(new Request('https://auth.ekodi.kr/client-auth.js'),{ASSETS:assets},{});
+  response=await routeCanonicalSurface(new Request('https://ekodi.kr/auth/client-auth.js'),{ASSETS:assets});
   assert.equal(response.status,200);assert.equal(response.headers.get('content-type'),'text/javascript; charset=utf-8');assert.match(await response.text(),/자담치킨 목포대점/);
 });
 test('Admin deep routes render the shell while runtime assets stay addressable',async()=>{
@@ -136,14 +135,15 @@ test('Admin deep routes render the shell while runtime assets stay addressable',
   response=await routeCanonicalSurface(new Request('https://ekodi.kr/admin/admin-menu-layout.js'),{}, {legacyFetch:legacy.fetch});
   assert.equal(legacy.calls[1].pathname,'/admin-menu-layout.js');
 });
-test('legacy Admin and Auth entry hosts converge to apex canonical paths',async()=>{
-  let response=await platformEntry.fetch(new Request('https://auth.ekodi.kr/?site=my'),{},{});
-  assert.equal(response.status,308);assert.equal(new URL(response.headers.get('location')).pathname,'/auth/');
-  response=await platformEntry.fetch(new Request('https://admin.ekodi.kr/books'),{},{});
+test('legacy Admin entry host still converges while Auth has no legacy host contract',async()=>{
+  const source=fs.readFileSync(new URL('../canonical-surface-router.js',import.meta.url),'utf8')+fs.readFileSync(new URL('../platform-router-entry-worker.js',import.meta.url),'utf8')+fs.readFileSync(new URL('../site-worker.js',import.meta.url),'utf8');
+  assert.doesNotMatch(source,/auth\.ekodi\.kr/);
+  const legacyAdminHost=['admin','ekodi.kr'].join('.');
+  const response=await platformEntry.fetch(new Request(`https://${legacyAdminHost}/books`),{},{});
   assert.equal(response.status,308);const target=new URL(response.headers.get('location'));assert.equal(target.pathname,'/admin/');assert.equal(target.searchParams.get('route'),'books');
 });
 
-test('Admin canonical route registry mirrors the five management work areas and migrates legacy groups',()=>{
+test('Admin canonical route registry mirrors the seven management areas and migrates legacy groups',()=>{
   const source=fs.readFileSync(new URL('../admin-canonical-routes.js',import.meta.url),'utf8');
   const location={href:'https://ekodi.kr/admin/',hostname:'ekodi.kr',pathname:'/admin/',search:'',hash:''};
   const window={location};vm.runInNewContext(source,{window,URL,URLSearchParams,Object,Set,String});
@@ -151,6 +151,10 @@ test('Admin canonical route registry mirrors the five management work areas and 
   assert.equal(routes.pathFor('campus'),'/admin/home/campus');
   assert.equal(routes.pathFor('communication'),'/admin/operations/communication');
   assert.equal(routes.pathFor('insurance'),'/admin/services/insurance');
+  assert.equal(routes.pathFor('community'),'/admin/community/community');
+  assert.equal(routes.pathFor('ai-membership'),'/admin/community/ai-membership');
+  assert.equal(routes.pathFor('books'),'/admin/publishing/books');
+  assert.equal(routes.pathFor('devotional'),'/admin/publishing/devotional');
   assert.equal(routes.pathFor('workspace'),'/admin/workspaces/workspace');
   assert.equal(routes.pathFor('clients'),'/admin/workspaces/clients');
   assert.equal(routes.pathFor('aiops'),'/admin/system/aiops');
@@ -158,6 +162,8 @@ test('Admin canonical route registry mirrors the five management work areas and 
   assert.equal(routes.sectionFromPath('/admin/system/campus'),'campus');
   assert.equal(routes.sectionFromPath('/admin/common/common-services'),'common-services');
   assert.equal(routes.sectionFromPath('/admin/professional/insurance'),'insurance');
+  assert.equal(routes.sectionFromPath('/admin/services/community'),'community');
+  assert.equal(routes.sectionFromPath('/admin/services/books'),'books');
   assert.equal(routes.sectionFromPath('/admin/space/clients'),'clients');
   for (const item of ADMIN_MENU_REGISTRY.filter(item => !item.href)) {
     if (item.id === 'command-home') {
@@ -172,7 +178,7 @@ test('Business canonical paths hide execution hosts while EKODIBIZ Trade stays t
   const externalCalls=[];
   const externalFetch=async request=>{
     const url=new URL(request.url);externalCalls.push(url);
-    if(url.hostname==='business.ekodi.kr')return new Response("fetch('/api/workspaces');https://auth.ekodi.kr/?site=business&return_to=https%3A%2F%2Fbusiness.ekodi.kr%2F\nfunction routeWorkspaceId(){\n  const path=location.pathname.replace(/^\\/+|\\/+$/g,'').toLowerCase();\n  if(path)return path;\n}\nif(push&&location.pathname!==`/${workspace.id}`)history.pushState({workspace:workspace.id},'',`/${workspace.id}`);",{headers:{'content-type':'text/javascript'}});
+    if(url.pathname==='/app.js')return new Response("fetch('/api/workspaces');https://ekodi.kr/auth/?site=business&return_to=https%3A%2F%2Fekodi.kr%2Fbusiness%2F\nfunction routeWorkspaceId(){\n  const path=location.pathname.replace(/^\\/+|\\/+$/g,'').toLowerCase();\n  if(path)return path;\n}\nif(push&&location.pathname!==`/${workspace.id}`)history.pushState({workspace:workspace.id},'',`/${workspace.id}`);",{headers:{'content-type':'text/javascript'}});
     throw new Error(`unexpected execution host ${url.hostname}`);
   };
   const assets=binding('<html><body><a href="https://trade.biz.ekodi.kr/">trade.biz.ekodi.kr</a></body></html>','text/html');
@@ -197,13 +203,14 @@ test('Bible canonical path uses its service binding without double-prefixing ass
 });
 
 
-test('legacy Admin release probes follow canonical redirects while canonical Admin owns release truth',async()=>{
+test('canonical Admin release probes remain apex-only while preserving release truth',async()=>{
   const manifest=JSON.parse(await fs.promises.readFile(new URL('../deploy/manifests/shared-site.worker.json',import.meta.url),'utf8'));
-  const canonical=manifest.worker.requests.find(item=>item.url==='https://ekodi.kr/admin/');
-  assert.equal(canonical?.rollbackVerify,false);
-  const legacy=manifest.worker.requests.filter(item=>item.url.startsWith('https://admin.ekodi.kr/'));
-  assert.ok(legacy.length>1);
-  for(const probe of legacy) assert.equal(probe.redirect,'follow',probe.url);
+  const canonical=manifest.worker.requests.filter(item=>item.url.startsWith('https://ekodi.kr/admin/'));
+  assert.ok(canonical.length>1);
+  assert.ok(canonical.some(item=>item.url==='https://ekodi.kr/admin/'&&item.rollbackVerify===false));
+  const legacyHost=['admin','ekodi.kr'].join('.');
+  const legacy=manifest.worker.requests.filter(item=>String(item.url||'').startsWith(`https://${legacyHost}/`));
+  assert.equal(legacy.length,0);
 });
 
 test('shared-site release verifies Shell integration without requiring script URLs in service HTML',async()=>{

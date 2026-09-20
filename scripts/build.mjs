@@ -20,6 +20,13 @@ await cp(`${root}sites/ekodi-insurance/public`, `${output}insurance`, { recursiv
 await cp(`${root}sites/business-cooperative/public`, `${output}business-coop`, { recursive: true });
 await cp(`${root}config/capability-registry.json`, `${output}capability-registry.json`);
 
+const [adminDesignEngineBaseCss, adminConversationWorkbenchCss] = await Promise.all([
+  readFile(`${output}admin-design-engine.css`, 'utf8'),
+  readFile(`${root}admin-conversation-workbench.css`, 'utf8'),
+]);
+if (!adminConversationWorkbenchCss.includes('EKODI Admin conversation-first workbench v1')) throw new Error('Admin conversation workbench marker missing');
+await writeFile(`${output}admin-design-engine.css`, `${adminDesignEngineBaseCss}\n/* admin-conversation-workbench.css */\n${adminConversationWorkbenchCss}\n`);
+
 const [browserDiagnosticsBaseJs, deviceWakeAdminJs] = await Promise.all([
   readFile(`${output}device-browser-diagnostics.js`, 'utf8'),
   readFile(`${root}device-wake-admin.js`, 'utf8'),
@@ -125,5 +132,13 @@ const [releaseCss, releaseJs, timelineCss, timelineJs] = await Promise.all([
 ]);
 await writeFile(`${output}release-control-admin.css`, `${releaseCss}\n${timelineCss}\n`);
 await writeFile(`${output}release-control-admin.js`, `${releaseJs}\n${timelineJs}\n`);
+
+const adminStaticMirrorDir = `${output}admin/`;
+await mkdir(adminStaticMirrorDir, { recursive: true });
+const adminStaticMirrorAssets = assets.filter(asset =>
+  !asset.endsWith('.html') && /\.(?:css|js|cmd|json|map|svg|png|webp|ico)$/i.test(asset)
+);
+await cp(`${output}admin-shell.html`, `${adminStaticMirrorDir}index.html`);
+await Promise.all(adminStaticMirrorAssets.map(asset => cp(`${output}${asset}`, `${adminStaticMirrorDir}${asset}`)));
 
 console.log(`Built EKODI root with ${homepageServices.length} registry-driven homepage services, minimal pre-auth Admin Shell, true on-demand AI Ops/External AI Spec/Deployments/Work/MarketingAI/Creator billing/System Health/Security, Admin AI Governor, unified Provider Control, authenticated Campus/Device Control, GitHub-backed System Timeline, MarketingAI live ops, posting status and channel connection console, device bootstrap, auth hub, service hubs and trade assets: ${assets.join(', ')}`);

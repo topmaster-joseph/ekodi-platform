@@ -122,11 +122,11 @@ test('normal login opens EKODI command console without auto-opening Campus or in
   assert.doesNotMatch(menu, /setInterval\(/);
 });
 
-test('admin menu governance uses five canonical EKODI axes with contextual top tabs', async () => {
+test('admin menu governance uses seven canonical EKODI areas with contextual top tabs', async () => {
   const registry = await read('admin-menu-registry.js');
   const sidebar = await read('admin-sidebar.js');
   assert.match(registry, /ADMIN_MENU_GROUPS/);
-  for (const group of ['home', 'operations', 'workspaces', 'services', 'system']) {
+  for (const group of ['home', 'operations', 'workspaces', 'services', 'community', 'publishing', 'system']) {
     assert.match(registry, new RegExp(`id: '${group}'`));
   }
   for (const retired of ['structure', 'core', 'common', 'vertical', 'tenants', 'operations-center', 'people', 'ai', 'business', 'data', 'site-management', 'access', 'security-audit', 'settings']) {
@@ -136,6 +136,10 @@ test('admin menu governance uses five canonical EKODI axes with contextual top t
   assert.match(registry, /id: 'work', group: 'operations'/);
   assert.match(registry, /id: 'clients', group: 'workspaces'/);
   assert.match(registry, /id: 'common-services', group: 'services'/);
+  assert.match(registry, /id: 'community', group: 'community'/);
+  assert.match(registry, /id: 'ai-membership', group: 'community'/);
+  assert.match(registry, /id: 'books', group: 'publishing'/);
+  assert.match(registry, /id: 'devotional', group: 'publishing'/);
   assert.match(registry, /id: 'life-ai', group: 'services'/);
   assert.match(registry, /id: 'security', group: 'system'/);
   assert.match(registry, /id: 'capabilities', group: 'system'/);
@@ -148,8 +152,9 @@ test('admin menu governance uses five canonical EKODI axes with contextual top t
   assert.match(sidebar, /TABS_SHELL_CLASS = 'admin-context-tabs-shell'/);
   assert.match(sidebar, /TABS_CLASS = 'admin-context-tabs'/);
   assert.match(sidebar, /data-admin-context-section/);
+  assert.match(sidebar, /globals\.querySelector\(`:scope>\.\$\{DETAILS_CLASS\}`\)\?\.remove\(\)/);
   assert.match(sidebar, /data-admin-capability-shortcut/);
-  assert.match(sidebar, /nav\.dataset\.adminMenuGovernance = 'workbench-tabs-v2'/);
+  assert.match(sidebar, /nav\.dataset\.adminMenuGovernance = 'primary-sidebar-tabs-v3'/);
   assert.match(sidebar, /item\.dataset\.adminMenuGroup = definition\.group/);
   assert.match(sidebar, /observer\.observe\(nav, \{ childList: true, subtree: false \}\)/);
   assert.doesNotMatch(sidebar, /subtree: true/);

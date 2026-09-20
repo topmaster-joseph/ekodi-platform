@@ -71,10 +71,19 @@ test('AI progress labels and final publish gate stay distinct',()=>{
 
 test('Commons page loads browser assets only through the Worker-owned API boundary',()=>{
   const html=fs.readFileSync(new URL('../ai-control/commons.html',import.meta.url),'utf8');
+  const client=fs.readFileSync(new URL('../ai-control/commons.js',import.meta.url),'utf8');
   const worker=fs.readFileSync(new URL('../ai-control-worker.js',import.meta.url),'utf8');
+  const canonical=fs.readFileSync(new URL('../canonical-surface-router.js',import.meta.url),'utf8');
   const verifier=fs.readFileSync(new URL('../.github/workflows/verify-ai-gateway-production.yml',import.meta.url),'utf8');
+  const release=JSON.parse(fs.readFileSync(new URL('../deploy/manifests/ai-control.worker.json',import.meta.url),'utf8'));
   assert.match(html,/\.\/api\/commons\/client\?v=/);
   assert.match(html,/\.\/api\/commons\/style\?v=/);
+  assert.match(html,/AI로 하기/);
+  assert.match(html,/최근 공개된 AI/);
+  assert.match(html,/요청접수[\s\S]*공개준비중[\s\S]*사용가능/);
+  assert.match(client,/releasedRequests/);
+  assert.match(client,/item\.status==='shared'/);
+  assert.match(client,/\/api\/commons\/match/);
   assert.doesNotMatch(html,/\.\/commons\.js\?v=/);
   assert.doesNotMatch(html,/\.\/commons\.css\?v=/);
   assert.doesNotMatch(html,/api\/commons\/client\.js/);
@@ -82,10 +91,20 @@ test('Commons page loads browser assets only through the Worker-owned API bounda
   assert.match(worker,/\/api\/commons\/client/);
   assert.match(worker,/\/api\/commons\/style/);
   assert.match(worker,/x-ekodi-ai-asset/);
+  assert.match(client,/function apiUrl\(path\)/);
+  assert.match(client,/fetch\(apiUrl\(path\)/);
+  assert.match(canonical,/spec\.basePathAware\|\|spec\.id==='ai'/);
   assert.match(verifier,/ai\/api\/commons\/client/);
   assert.doesNotMatch(verifier,/ai\/api\/commons\/client\.js/);
   assert.match(verifier,/capabilityId/);
-  assert.match(verifier,/api\('\/ai\/api\/commons\//);
+  assert.match(verifier,/function apiUrl\(path\)/);
+  assert.match(verifier,/ai\/ai\/api\/commons/);
+  const clientProbe=release.worker.requests.find(item=>item.url.endsWith('/ai/api/commons/client'));
+  assert.ok(clientProbe);
+  assert.ok(clientProbe.expect.includes('function apiUrl(path)'));
+  assert.ok(clientProbe.forbid.includes('/ai/ai/api/commons/'));
+  assert.ok(clientProbe.candidateForbid.includes('/ai/ai/api/commons/'));
+  assert.equal(clientProbe.forbid.includes('/ai/api/commons/'),false);
 });
 
 test('public route is wired through the AI service binding',()=>{

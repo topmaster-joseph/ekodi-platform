@@ -1,5 +1,5 @@
 /* EKODI Design Engine · Admin Surface v1
- * Five-axis primary navigation, light operational canvas, contained EKODIAN layer.
+ * Seven-area primary navigation, light operational canvas, contained EKODIAN layer.
  */
 body.admin-compact.ekodi-admin-design-engine{
   padding-top:0!important;
@@ -23,8 +23,9 @@ body.admin-compact.ekodi-admin-design-engine .app>main{
   overscroll-behavior:contain!important;
 }
 body.admin-compact.ekodi-admin-design-engine .sidebar{
-  background:#fff!important;
-  border-right:1px solid #d9e2ec!important;
+  background:#0b1f36!important;
+  color:#e9f2fb!important;
+  border-right:1px solid #173653!important;
   box-shadow:none!important;
   overflow:hidden!important;
 }
@@ -36,22 +37,22 @@ body.admin-compact.ekodi-admin-design-engine .sidebar nav{
 }
 body.admin-compact.ekodi-admin-design-engine .sidebar nav::-webkit-scrollbar{display:none!important}
 body.admin-compact.ekodi-admin-design-engine .admin-global-nav{
-  min-height:42px!important;
-  border-radius:9px!important;
-  color:#40566d!important;
+  min-height:48px!important;
+  border-radius:11px!important;
+  color:#dbe8f6!important;
 }
 body.admin-compact.ekodi-admin-design-engine .admin-global-nav:hover{
-  border-color:#d5e6ef!important;
-  background:#eef7fb!important;
-  color:#123c58!important;
+  border-color:#274d73!important;
+  background:#102c49!important;
+  color:#fff!important;
 }
 body.admin-compact.ekodi-admin-design-engine .admin-global-nav.active{
-  border-color:#b7d4f6!important;
-  background:#edf4ff!important;
-  color:#0b4f8a!important;
+  border-color:#2d6fac!important;
+  background:#174b7b!important;
+  color:#fff!important;
 }
-body.admin-compact.ekodi-admin-design-engine .admin-global-nav b{color:#52738a!important}
-body.admin-compact.ekodi-admin-design-engine .admin-global-nav.active b{color:#155eef!important}
+body.admin-compact.ekodi-admin-design-engine .admin-global-nav b{color:#8fb5d6!important}
+body.admin-compact.ekodi-admin-design-engine .admin-global-nav.active b{color:#d9ecff!important}
 body.admin-compact.ekodi-admin-design-engine .admin-context-tabs-shell{
   position:sticky!important;
   top:0!important;

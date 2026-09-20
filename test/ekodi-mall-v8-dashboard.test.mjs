@@ -92,7 +92,7 @@ INSERT INTO channel_automation_profiles(owner_type,owner_key,workspace_slug,temp
 test('Mall product management projects the real public affiliate catalog instead of a placeholder', async()=>{
   const workspace=await read('workspace-admin-page.js');
   assert.match(workspace,/async function mallProducts\(\)/);
-  assert.match(workspace,/api\.ekodi\.kr\/api\/affiliate\/public\/products\?storefront=ekodi-mall&limit=100/);
+  assert.match(workspace,/\/api\/affiliate\/public\/products\?storefront=ekodi-mall&limit=100/);
   assert.match(workspace,/실제 공개 상품 카탈로그/);
   assert.match(workspace,/if\(section==='products'\)return mallProducts\(\)/);
   assert.match(workspace,/제휴·소싱 관리/);

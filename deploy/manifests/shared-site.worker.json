@@ -1,5 +1,5 @@
 {
-  "version": 73,
+  "version": 79,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
@@ -563,26 +563,10 @@
         "statuses": [
           200
         ],
-        "redirect": "manual",
-        "expect": [
-          "EKODI Admin",
-          "return_to=https%3A%2F%2Fekodi.kr%2Fadmin"
-        ],
-        "headerExpect": [
-          "x-ekodi-route: admin-shell",
-          "cross-origin-opener-policy: same-origin-allow-popups",
-          "cache-control: no-store"
-        ],
-        "rollbackVerify": false
-      },
-      {
-        "url": "https://admin.ekodi.kr/",
-        "statuses": [
-          200
-        ],
         "redirect": "follow",
         "expect": [
           "EKODI Admin",
+          "return_to=https%3A%2F%2Fekodi.kr%2Fadmin",
           "admin-authenticated-shell.js?v=",
           "admin-compact.js admin-menu-layout.js admin-demand-loader.js",
           "https://ekodi.kr/auth/?site=admin"
@@ -595,38 +579,46 @@
         "rollbackVerify": false
       },
       {
-        "url": "https://admin.ekodi.kr/openai-workspace-admin.js",
+        "url": "https://ekodi.kr/admin/openai-workspace-admin.js",
         "statuses": [
           200
         ],
-        "redirect": "follow",
+        "redirect": "manual",
         "expect": [
           "Permission transfer: NONE",
           "EKODIAdminContext",
           "ekodi-admin-assist-request"
         ],
         "headerExpect": [
-          "x-content-type-options: nosniff"
+          "x-content-type-options: nosniff",
+          "cache-control: no-store",
+          "x-robots-tag: noindex, nofollow, noarchive"
         ],
-        "rollbackVerify": false
+        "rollbackVerify": false,
+        "candidateVerify": false,
+        "candidateVerifyReason": "canonical /admin static assets are asset-first; verify the final postbuild mirror immediately after promotion"
       },
       {
-        "url": "https://admin.ekodi.kr/openai-workspace-admin.css",
+        "url": "https://ekodi.kr/admin/openai-workspace-admin.css",
         "statuses": [
           200
         ],
-        "redirect": "follow",
+        "redirect": "manual",
         "expect": [
           ".openai-workspace-policy",
           "@media(max-width:900px)"
         ],
         "headerExpect": [
-          "x-content-type-options: nosniff"
+          "x-content-type-options: nosniff",
+          "cache-control: no-store",
+          "x-robots-tag: noindex, nofollow, noarchive"
         ],
-        "rollbackVerify": false
+        "rollbackVerify": false,
+        "candidateVerify": false,
+        "candidateVerifyReason": "canonical /admin static assets are asset-first; verify the final postbuild mirror immediately after promotion"
       },
       {
-        "url": "https://admin.ekodi.kr/tapo-device-admin.js",
+        "url": "https://ekodi.kr/admin/tapo-device-admin.js",
         "statuses": [
           200
         ],
@@ -637,13 +629,13 @@
           "TAPO EDGE BRIDGE"
         ],
         "headerExpect": [
-          "x-ekodi-route: admin-asset",
+          "cache-control: no-store",
           "x-content-type-options: nosniff"
         ],
         "rollbackVerify": false
       },
       {
-        "url": "https://admin.ekodi.kr/tapo-device-admin.css",
+        "url": "https://ekodi.kr/admin/tapo-device-admin.css",
         "statuses": [
           200
         ],
@@ -653,17 +645,17 @@
           ".tapo-camera-dialog"
         ],
         "headerExpect": [
-          "x-ekodi-route: admin-asset",
+          "cache-control: no-store",
           "x-content-type-options: nosniff"
         ],
         "rollbackVerify": false
       },
       {
-        "url": "https://admin.ekodi.kr/admin-demand-loader.js?device=v28",
+        "url": "https://ekodi.kr/admin/admin-demand-loader.js?device=v28",
         "statuses": [
           200
         ],
-        "redirect": "follow",
+        "redirect": "manual",
         "expect": [
           "label: '실행 인프라'",
           "remote-power-admin.js",
@@ -672,134 +664,170 @@
           "device-browser-diagnostics.css"
         ],
         "headerExpect": [
-          "x-content-type-options: nosniff"
+          "x-content-type-options: nosniff",
+          "cache-control: no-store",
+          "x-robots-tag: noindex, nofollow, noarchive"
         ],
         "rollbackExpect": [
           "device-browser-diagnostics.js",
           "device-browser-diagnostics.css"
-        ]
+        ],
+        "candidateVerify": false,
+        "candidateVerifyReason": "canonical /admin static assets are asset-first; verify the final postbuild mirror immediately after promotion",
+        "rollbackVerify": false
       },
       {
-        "url": "https://admin.ekodi.kr/remote-power-admin.js?remote-work=v1",
+        "url": "https://ekodi.kr/admin/remote-power-admin.js?remote-work=v1",
         "statuses": [
           200
         ],
-        "redirect": "follow",
+        "redirect": "manual",
         "expect": [
           "Remote Desktop 자가복구",
           "#deviceControlPanel",
           "remote_desktop.recovery."
         ],
         "headerExpect": [
-          "x-content-type-options: nosniff"
+          "x-content-type-options: nosniff",
+          "cache-control: no-store",
+          "x-robots-tag: noindex, nofollow, noarchive"
         ],
-        "rollbackVerify": false
+        "rollbackVerify": false,
+        "candidateVerify": false,
+        "candidateVerifyReason": "canonical /admin static assets are asset-first; verify the final postbuild mirror immediately after promotion"
       },
       {
-        "url": "https://admin.ekodi.kr/remote-power-admin.css?remote-work=v1",
+        "url": "https://ekodi.kr/admin/remote-power-admin.css?remote-work=v1",
         "statuses": [
           200
         ],
-        "redirect": "follow",
+        "redirect": "manual",
         "expect": [
           ".remote-power-card",
           ".remote-power-actions"
         ],
         "headerExpect": [
-          "x-content-type-options: nosniff"
+          "x-content-type-options: nosniff",
+          "cache-control: no-store",
+          "x-robots-tag: noindex, nofollow, noarchive"
         ],
-        "rollbackVerify": false
+        "rollbackVerify": false,
+        "candidateVerify": false,
+        "candidateVerifyReason": "canonical /admin static assets are asset-first; verify the final postbuild mirror immediately after promotion"
       },
       {
-        "url": "https://admin.ekodi.kr/device-browser-diagnostics.js?v=device-v28",
+        "url": "https://ekodi.kr/admin/device-browser-diagnostics.js?v=device-v28",
         "statuses": [
           200
         ],
-        "redirect": "follow",
+        "redirect": "manual",
         "expect": [
           "현재 관리자 브라우저 진단",
-          "서버로 업로드하지 않습니다",
-          "CACHE_ALLOWLIST",
-          "registration.update()"
+          "CACHE_ALLOWLIST"
         ],
         "headerExpect": [
-          "x-ekodi-route: admin-asset",
-          "cache-control: public, max-age=31536000, immutable",
-          "x-content-type-options: nosniff"
-        ]
+          "x-content-type-options: nosniff",
+          "cache-control: no-store",
+          "x-robots-tag: noindex, nofollow, noarchive"
+        ],
+        "rollbackVerify": false,
+        "candidateVerify": false,
+        "candidateVerifyReason": "canonical /admin static assets are asset-first; verify the final postbuild mirror immediately after promotion"
       },
       {
-        "url": "https://admin.ekodi.kr/device-browser-diagnostics.css?v=device-v28",
+        "url": "https://ekodi.kr/admin/device-browser-diagnostics.css?v=device-v28",
         "statuses": [
           200
         ],
-        "redirect": "follow",
+        "redirect": "manual",
         "expect": [
-          ".admin-browser-diagnostic",
-          "@media(max-width:720px)"
+          ".admin-browser-diagnostic"
         ],
         "headerExpect": [
-          "x-ekodi-route: admin-asset",
-          "cache-control: public, max-age=31536000, immutable",
-          "x-content-type-options: nosniff"
-        ]
+          "x-content-type-options: nosniff",
+          "cache-control: no-store",
+          "x-robots-tag: noindex, nofollow, noarchive"
+        ],
+        "rollbackVerify": false,
+        "candidateVerify": false,
+        "candidateVerifyReason": "canonical /admin static assets are asset-first; verify the final postbuild mirror immediately after promotion"
       },
       {
-        "url": "https://admin.ekodi.kr/admin-compact.js?assist=v2",
+        "url": "https://ekodi.kr/admin/admin-compact.js?assist=v2",
         "statuses": [
           200
         ],
-        "redirect": "follow",
+        "redirect": "manual",
         "expect": [
           "ekodiAssistBootstrap",
           "admin-lazy-features.js"
         ],
         "headerExpect": [
-          "x-content-type-options: nosniff"
-        ]
+          "x-content-type-options: nosniff",
+          "cache-control: no-store",
+          "x-robots-tag: noindex, nofollow, noarchive"
+        ],
+        "candidateVerify": false,
+        "candidateVerifyReason": "canonical /admin static assets are asset-first; verify the final postbuild mirror immediately after promotion",
+        "rollbackVerify": false
       },
       {
-        "url": "https://admin.ekodi.kr/admin-compact.css?assist=v2",
+        "url": "https://ekodi.kr/admin/admin-compact.css?assist=v2",
         "statuses": [
           200
         ],
-        "redirect": "follow",
+        "redirect": "manual",
         "expect": [
           ".ekodi-assist-bootstrap",
           "@media(max-width:760px)"
         ],
         "headerExpect": [
-          "x-content-type-options: nosniff"
-        ]
+          "x-content-type-options: nosniff",
+          "cache-control: no-store",
+          "x-robots-tag: noindex, nofollow, noarchive"
+        ],
+        "candidateVerify": false,
+        "candidateVerifyReason": "canonical /admin static assets are asset-first; verify the final postbuild mirror immediately after promotion",
+        "rollbackVerify": false
       },
       {
-        "url": "https://admin.ekodi.kr/admin-lazy-features.js?assist=v2",
+        "url": "https://ekodi.kr/admin/admin-lazy-features.js?assist=v2",
         "statuses": [
           200
         ],
-        "redirect": "follow",
+        "redirect": "manual",
         "expect": [
           "ekodi-chief-ai-chat-v1",
           "DECISION_RULES"
         ],
         "headerExpect": [
-          "x-content-type-options: nosniff"
-        ]
+          "x-content-type-options: nosniff",
+          "cache-control: no-store",
+          "x-robots-tag: noindex, nofollow, noarchive"
+        ],
+        "candidateVerify": false,
+        "candidateVerifyReason": "canonical /admin static assets are asset-first; verify the final postbuild mirror immediately after promotion",
+        "rollbackVerify": false
       },
       {
-        "url": "https://admin.ekodi.kr/ai-ops-admin.css?assist=v2",
+        "url": "https://ekodi.kr/admin/ai-ops-admin.css?assist=v2",
         "statuses": [
           200
         ],
-        "redirect": "follow",
+        "redirect": "manual",
         "expect": [
           ".ekodi-assist-launcher",
           ".ekodi-assist-panel",
           "@media(max-width:720px)"
         ],
         "headerExpect": [
-          "x-content-type-options: nosniff"
-        ]
+          "x-content-type-options: nosniff",
+          "cache-control: no-store",
+          "x-robots-tag: noindex, nofollow, noarchive"
+        ],
+        "candidateVerify": false,
+        "candidateVerifyReason": "canonical /admin static assets are asset-first; verify the final postbuild mirror immediately after promotion",
+        "rollbackVerify": false
       },
       {
         "url": "https://ekodi.kr/auth/",
@@ -1098,37 +1126,7 @@
         "rollbackVerify": false
       },
       {
-        "url": "https://pay.ekodi.kr/",
-        "statuses": [
-          200
-        ],
-        "redirect": "manual",
-        "expect": [
-          "EKODI Hub",
-          "EKODI 서비스 허브"
-        ],
-        "headerExpect": [
-          "x-ekodi-route: hub",
-          "x-ekodi-shell: v2"
-        ]
-      },
-      {
-        "url": "https://pay.biz.ekodi.kr/",
-        "statuses": [
-          200
-        ],
-        "redirect": "manual",
-        "expect": [
-          "EKODI Hub",
-          "EKODI 서비스 허브"
-        ],
-        "headerExpect": [
-          "x-ekodi-route: hub",
-          "x-ekodi-shell: v2"
-        ]
-      },
-      {
-        "url": "https://mail.ekodi.kr/",
+        "url": "https://ekodi.kr/mail",
         "statuses": [
           200
         ],
@@ -1161,34 +1159,24 @@
         "rollbackVerify": false
       },
       {
-        "url": "https://mail.ekodi.kr/contact",
-        "statuses": [
-          308
-        ],
-        "redirect": "manual",
-        "headerExpect": [
-          "location: https://ekodi.kr/mail/contact",
-          "cache-control: no-store"
-        ],
-        "rollbackVerify": false
-      },
-      {
-        "url": "https://mail.ekodi.kr/admin",
+        "url": "https://ekodi.kr/mail/admin",
         "statuses": [
           200
         ],
         "redirect": "manual",
-        "expect": [
-          "EKODI Mail Admin",
-          "한곳에서 관리하되 개인·기관의 실제 권한 경계는 그대로 유지합니다."
-        ],
         "headerExpect": [
           "x-ekodi-route: mail-admin",
-          "cache-control: no-store"
+          "cache-control: no-store",
+          "x-content-type-options: nosniff"
+        ],
+        "rollbackVerify": false,
+        "expect": [
+          "EKODI Mail Admin",
+          "메일 관리"
         ]
       },
       {
-        "url": "https://live.ekodi.kr/",
+        "url": "https://ekodi.kr/live",
         "statuses": [
           200
         ],
@@ -1199,45 +1187,6 @@
         ],
         "headerExpect": [
           "x-ekodi-route: hub"
-        ]
-      },
-      {
-        "url": "https://cloud.ekodi.kr/",
-        "statuses": [
-          200
-        ],
-        "redirect": "manual",
-        "expect": [
-          "EKODI Hub",
-          "EKODI 서비스 허브"
-        ],
-        "headerExpect": [
-          "x-ekodi-route: hub"
-        ]
-      },
-      {
-        "url": "https://trade.biz.ekodi.kr/",
-        "statuses": [
-          200
-        ],
-        "redirect": "manual",
-        "expect": [
-          "EKODI Global Trading",
-          "TRADING DIVISION · EKODIBIZ"
-        ],
-        "headerExpect": [
-          "x-ekodi-route: trade",
-          "x-ekodi-shell: v2"
-        ]
-      },
-      {
-        "url": "https://trade.ekodi.kr/",
-        "statuses": [
-          308
-        ],
-        "redirect": "manual",
-        "headerExpect": [
-          "location: https://trade.biz.ekodi.kr/"
         ]
       },
       {
@@ -1265,35 +1214,44 @@
         ]
       },
       {
-        "url": "https://admin.ekodi.kr/ai-ops-admin.js?evolution=v1",
+        "url": "https://ekodi.kr/admin/ai-ops-admin.js?evolution=v1",
         "statuses": [
           200
         ],
-        "redirect": "follow",
+        "redirect": "manual",
         "expect": [
           "EVOLUTION INTELLIGENCE",
           "/api/control/evolution",
           "플랫폼 진화 제안"
         ],
         "headerExpect": [
-          "x-content-type-options: nosniff"
-        ]
+          "x-content-type-options: nosniff",
+          "cache-control: no-store",
+          "x-robots-tag: noindex, nofollow, noarchive"
+        ],
+        "candidateVerify": false,
+        "candidateVerifyReason": "canonical /admin static assets are asset-first; verify the final postbuild mirror immediately after promotion",
+        "rollbackVerify": false
       },
       {
-        "url": "https://admin.ekodi.kr/communication-admin.js?communication=v1",
+        "url": "https://ekodi.kr/admin/communication-admin.js?communication=v1",
         "statuses": [
           200
         ],
-        "redirect": "follow",
+        "redirect": "manual",
         "expect": [
           "EKODI COMMUNICATION ADMIN",
-          "https://mail.ekodi.kr/admin",
-          "https://live.ekodi.kr/"
+          "https://ekodi.kr/mail/admin",
+          "https://ekodi.kr/live"
         ],
         "headerExpect": [
-          "x-content-type-options: nosniff"
+          "x-content-type-options: nosniff",
+          "cache-control: no-store",
+          "x-robots-tag: noindex, nofollow, noarchive"
         ],
-        "rollbackVerify": false
+        "rollbackVerify": false,
+        "candidateVerify": false,
+        "candidateVerifyReason": "canonical /admin static assets are asset-first; verify the final postbuild mirror immediately after promotion"
       },
       {
         "url": "https://ekodi.kr/ekodibiz/invest",
@@ -1463,36 +1421,44 @@
         "rollbackVerify": false
       },
       {
-        "url": "https://admin.ekodi.kr/personal-finance-admin.js?pf=v1",
+        "url": "https://ekodi.kr/admin/personal-finance-admin.js?pf=v1",
         "statuses": [
           200
         ],
-        "redirect": "follow",
+        "redirect": "manual",
         "expect": [
           "전문서비스 · PERSONAL FINANCE",
           "/api/control/personal-finance",
           "개인 금융원장의 내용은 이 화면에서 조회하지 않습니다"
         ],
         "headerExpect": [
-          "x-content-type-options: nosniff"
+          "x-content-type-options: nosniff",
+          "cache-control: no-store",
+          "x-robots-tag: noindex, nofollow, noarchive"
         ],
-        "rollbackVerify": false
+        "rollbackVerify": false,
+        "candidateVerify": false,
+        "candidateVerifyReason": "canonical /admin static assets are asset-first; verify the final postbuild mirror immediately after promotion"
       },
       {
-        "url": "https://admin.ekodi.kr/personal-finance-admin.css?pf=v1",
+        "url": "https://ekodi.kr/admin/personal-finance-admin.css?pf=v1",
         "statuses": [
           200
         ],
-        "redirect": "follow",
+        "redirect": "manual",
         "expect": [
           ".personal-finance-admin",
           ".pf-admin-setting",
           ".pf-admin-locks"
         ],
         "headerExpect": [
-          "x-content-type-options: nosniff"
+          "x-content-type-options: nosniff",
+          "cache-control: no-store",
+          "x-robots-tag: noindex, nofollow, noarchive"
         ],
-        "rollbackVerify": false
+        "rollbackVerify": false,
+        "candidateVerify": false,
+        "candidateVerifyReason": "canonical /admin static assets are asset-first; verify the final postbuild mirror immediately after promotion"
       },
       {
         "url": "https://ekodi.kr/hammu/admin",
@@ -1512,6 +1478,42 @@
           "cache-control: no-store"
         ],
         "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/pay",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "path === '/pay'",
+          "title:'EKODI Pay'",
+          "https://ekodi.kr/admin/#finance"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: hub",
+          "x-ekodi-shell: v2",
+          "x-ekodi-canonical-surface: pay",
+          "x-ekodi-canonical-path: /pay"
+        ]
+      },
+      {
+        "url": "https://ekodi.kr/cloud",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "path === '/cloud'",
+          "title:'EKODI Cloud'",
+          "https://drive.google.com"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: hub",
+          "x-ekodi-shell: v2",
+          "x-ekodi-canonical-surface: cloud",
+          "x-ekodi-canonical-path: /cloud"
+        ]
       }
     ]
   }

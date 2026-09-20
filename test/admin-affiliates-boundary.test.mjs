@@ -41,7 +41,7 @@ test('sales and supply network separates professional engine health from Mall op
   assert.match(workspace, /1단계 운영공간 로그인 후 플랫폼 관리자 인증으로 자동 이어집니다/);
   assert.match(workspace, /location\.assign\(platformAdminAuthUrl\(\)\)/);
   assert.match(workspace, /site','admin'/);
-  assert.match(workspace, /AFFILIATE_API='https:\/\/api\.ekodi\.kr\/api\/affiliate'/);
+  assert.match(workspace, /AFFILIATE_API='\/api\/affiliate'/);
   assert.equal(workspace.includes("affiliateApi('/programs')"), true);
   assert.equal(workspace.includes("affiliateApi('/automation')"), true);
   assert.equal(workspace.includes("affiliateApi('/reporting')"), true);

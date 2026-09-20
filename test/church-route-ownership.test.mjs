@@ -20,3 +20,26 @@ test('Shared Site production workflow repairs Church route ownership before guar
   assert.ok(repair>0&&promote>repair);
   assert.match(workflow,/node scripts\/ensure-church-route-ownership\.mjs/);
 });
+
+
+test('Church live ownership verification opens the quota circuit immediately on 429/1027 instead of retrying',async()=>{
+  const source=await readFile(new URL('../scripts/ensure-church-route-ownership.mjs',import.meta.url),'utf8');
+  assert.match(source,/isQuotaCircuitBreak/);
+  assert.match(source,/quotaConfig\.circuitBreaker/);
+  assert.match(source,/CF-QUOTA-001 circuit open/);
+  assert.match(source,/no retry/);
+});
+
+
+test('Church Live canonical navigation never points at the retired /live/church path',async()=>{
+  const [shell,workflow,tenants]=await Promise.all([
+    readFile(new URL('../admin-shell.html',import.meta.url),'utf8'),
+    readFile(new URL('../.github/workflows/deploy-site-core.yml',import.meta.url),'utf8'),
+    readFile(new URL('../realtime-tenant-registry.js',import.meta.url),'utf8')
+  ]);
+  for(const source of [shell,workflow]) {
+    assert.match(source,/https:\/\/ekodi\.kr\/ekodichurch\/live\//);
+    assert.doesNotMatch(source,/https:\/\/ekodi\.kr\/live\/church/);
+  }
+  assert.match(tenants,/path:'\/ekodichurch\/live\/'/);
+});

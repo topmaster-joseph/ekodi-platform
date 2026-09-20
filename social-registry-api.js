@@ -8,7 +8,7 @@ const DEFAULT_REGISTRY = {
     {
       id: 'community', name: '커뮤니티', shortName: 'Community',
       description: '공동체, 선교, 지역과 디아스포라의 이야기를 연결합니다.',
-      website: 'https://community.ekodi.kr', isActive: true, order: 10, socialPolicy: 'inherit_org',
+      website: 'https://ekodi.kr/community', isActive: true, order: 10, socialPolicy: 'inherit_org',
       channels: [
         { id:'community-youtube', provider:'youtube', label:'YouTube', handle:'@ekodicommunity', channelId:'UCm1PFvzN0PRnyiF8Xx_mYTw', uploadsPlaylist:'UUm1PFvzN0PRnyiF8Xx_mYTw', url:'https://www.youtube.com/@ekodicommunity', description:'말씀 · 공동체 · 선교 · 현장', isActive:true, order:10 },
         { id:'community-instagram', provider:'instagram', label:'Instagram', url:'https://www.instagram.com/ekodicommunity', description:'사진 · 현장 · 짧은 이야기', isActive:true, order:20 },

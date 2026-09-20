@@ -195,6 +195,23 @@ export async function getEkodiCommandLedgerStatus(input) {
   });
 }
 
+export async function claimEkodiCommandTask(input, taskId, options = {}) {
+  const db = await ensureEkodiCommandLedger(input);
+  const id = text(taskId, 120);
+  if (!id) return null;
+  const now = iso(options.now || Date.now());
+  const leaseMs = Math.min(Math.max(Number(options.leaseMs) || 120000, 30000), 300000);
+  const leaseUntil = iso(new Date(now).getTime() + leaseMs);
+  const result = await db.prepare(`UPDATE ai_command_tasks
+    SET state = 'running', attempt_count = attempt_count + 1, lease_until = ?, updated_at = ?
+    WHERE id = ? AND state IN ('queued','retry')
+      AND (next_attempt_at IS NULL OR next_attempt_at <= ?)
+      AND (lease_until IS NULL OR lease_until <= ?)`)
+    .bind(leaseUntil, now, id, now, now).run();
+  if (Number(result?.meta?.changes ?? result?.changes ?? 0) < 1) return null;
+  return getEkodiCommandTask(db, id, { includeEvent: true });
+}
+
 export async function claimNextEkodiCommandTask(input, options = {}) {
   const db = await ensureEkodiCommandLedger(input);
   const now = iso(options.now || Date.now());

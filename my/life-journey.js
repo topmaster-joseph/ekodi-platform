@@ -9,7 +9,7 @@ export const EKODI_LIFE_JOURNEY=Object.freeze({
     {id:'study',label:'학습·유학',shortLabel:'Study',state:'active',ownerService:'edu',route:'https://edu.ekodi.kr/study',audience:'all',summary:'국내 학습과 국내외 유학의 학업·생활 준비를 Education 안에서 이어갑니다.',capabilities:['learning','study-abroad','academic-life','mobility','scholarship']},
     {id:'career',label:'취업·진로',shortLabel:'Career',state:'active',ownerService:'work',route:'https://work.ekodi.kr/',audience:'all',summary:'개인 프로필, 채용 탐색, 지원, 기업 채용 흐름을 EKODI Work에서 연결합니다.',capabilities:['jobs','talent','recruiting','applications']},
     {id:'startup',label:'창업·사업',shortLabel:'Startup',state:'active',ownerService:'business',route:'https://ekodi.kr/business/',supportingServices:['biz','marketing','trade','mall'],audience:'all',summary:'창업을 선택하면 사업 운영, 마케팅, 거래, 판매까지 기존 EKODI 비즈니스 생태계로 이어갑니다.',capabilities:['startup','operations','marketing','trade','commerce']},
-    {id:'settlement',label:'생활·정착',shortLabel:'Life',state:'active',ownerService:'community',route:'https://community.ekodi.kr/',supportingServices:['work','church','energy'],audience:'all',summary:'지역과 공동체 안에서 생활, 관계, 역할을 이어가되 특정 공동체 참여를 강제하지 않습니다.',capabilities:['community','local-life','relationships','events']}
+    {id:'settlement',label:'생활·정착',shortLabel:'Life',state:'active',ownerService:'community',route:'https://ekodi.kr/community/',supportingServices:['work','church','energy'],audience:'all',summary:'지역과 공동체 안에서 생활, 관계, 역할을 이어가되 특정 공동체 참여를 강제하지 않습니다.',capabilities:['community','local-life','relationships','events']}
   ],
   handoffs:[
     {from:'admission',to:'study',trigger:'admission-confirmed',mode:'suggest',consent:'required',samePlatform:true},

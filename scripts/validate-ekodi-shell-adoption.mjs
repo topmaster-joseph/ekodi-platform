@@ -1,13 +1,15 @@
 import { readFile } from 'node:fs/promises';
 import { EKODI_SERVICE_MANIFEST } from '../ekodi-service-manifest.js';
 
-const [ecosystem,docs,authRouter,clientAuth,siteConfig,platformRouter,theme,shellSource,shellWorker,mobileHeaderSource,injectorSource,userUiStyle,workspaceStyle,responsiveStyle,rootIndex,adminStyle]=await Promise.all([
+const [ecosystem,domainPolicy,docs,authRouter,clientAuth,siteConfig,platformRouter,platformRouterEntry,theme,shellSource,shellWorker,mobileHeaderSource,injectorSource,userUiStyle,workspaceStyle,responsiveStyle,rootIndex,adminStyle]=await Promise.all([
   readFile(new URL('../config/ecosystem-services.json',import.meta.url),'utf8').then(JSON.parse),
+  readFile(new URL('../config/domain-canonical-policy.json',import.meta.url),'utf8').then(JSON.parse),
   readFile(new URL('../docs/ekodi-shell-contract.md',import.meta.url),'utf8'),
   readFile(new URL('../auth-site/auth-router.js',import.meta.url),'utf8'),
   readFile(new URL('../auth-site/client-auth.js',import.meta.url),'utf8'),
   readFile(new URL('../wrangler.site.toml',import.meta.url),'utf8'),
   readFile(new URL('../platform-router-worker.js',import.meta.url),'utf8').catch(()=>''),
+  readFile(new URL('../platform-router-entry-worker.js',import.meta.url),'utf8').catch(()=>''),
   readFile(new URL('../shell/theme.json',import.meta.url),'utf8').then(JSON.parse),
   readFile(new URL('../shell/shell.js',import.meta.url),'utf8'),
   readFile(new URL('../ekodi-shell-worker.js',import.meta.url),'utf8'),
@@ -26,6 +28,7 @@ const allowedSurfaces=new Set(['public','workspace','admin','form','document','d
 const legacyPending=new Set();
 const legacyServiceIds=new Set(['my','marketing','community','church','business','biz','work','author','books','lab','social','energy','mall','trade','pay','edu','media','insurance','mail','live','cloud']);
 const compactPlatformRouter=platformRouter.replace(/\s+/g,'');
+const compactPlatformRouterEntry=platformRouterEntry.replace(/\s+/g,'');
 const compactUserUiStyle=userUiStyle.replace(/\s+/g,'');
 const canonicalPath=value=>{const path=String(value||'/').replace(/\/+$/,'');return path||'/';};
 const canonicalUrl=value=>{const url=value instanceof URL?value:new URL(value);return `${url.origin}${canonicalPath(url.pathname)}`;};
@@ -128,8 +131,15 @@ for(const service of manifest.services||[]){
       if(!clientAuth.includes('manifestRealm'))fail('Client Auth lost manifest-backed client realm support');
     }
     if(!planned&&service.shellIntegration==='shared-proxy'){
-      if(!siteConfig.includes(`pattern = "${url.hostname}"`))fail(`${service.id} shared platform host is missing from wrangler.site.toml`);
-      if(!compactPlatformRouter.includes(`'${url.hostname}':'${service.id}'`))fail(`${service.id} shared platform host is missing from platform-router-worker.js`);
+      const apexPathMode=domainPolicy?.subdomainPolicy==='forbidden'&&url.hostname==='ekodi.kr'&&canonicalPath(url.pathname)!=='/';
+      if(apexPathMode){
+        const path=canonicalPath(url.pathname);
+        if(!siteConfig.includes(`"${path}*"`)&&!siteConfig.includes(`"${path}"`))fail(`${service.id} canonical apex path is missing from wrangler.site.toml`);
+        if(!compactPlatformRouterEntry.includes(`url.pathname==='${path}'`)&&!compactPlatformRouterEntry.includes(`url.pathname.startsWith('${path}/')`))fail(`${service.id} canonical apex path is missing from platform-router-entry-worker.js`);
+      }else{
+        if(!siteConfig.includes(`pattern = "${url.hostname}"`))fail(`${service.id} shared platform host is missing from wrangler.site.toml`);
+        if(!compactPlatformRouter.includes(`'${url.hostname}':'${service.id}'`))fail(`${service.id} shared platform host is missing from platform-router-worker.js`);
+      }
     }
   }
 }

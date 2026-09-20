@@ -79,6 +79,35 @@ test('autologon stays local and never sends a Windows password to EKODI', () => 
   assert.doesNotMatch(admin, /password\s*:/i);
 });
 
+test('native remote computer provider exposes bounded observe-only host commands', () => {
+  for (const command of ['computer.system.read','computer.process.list','computer.agent.status']) {
+    const escaped = command.replaceAll('.', '\\.');
+    assert.match(api, new RegExp(`'${escaped}'[^\\n]*risk: 'observe'`));
+    assert.match(agent, new RegExp(`'${escaped}'`));
+  }
+  assert.match(agent, /computerRead = \$true; processRead = \$true; agentStatus = \$true/);
+  assert.match(agent, /isolatedCommand = \$false/);
+  assert.match(agent, /persistentShell = \$false/);
+  assert.match(agent, /directHostMutation = \$false/);
+  assert.match(agent, /backgroundBrowser = \$false/);
+  assert.match(agent, /isolatedDesktop = \$false/);
+  assert.match(agent, /foregroundUserSessionProtected = \$true/);
+  assert.match(agent, /minimizedWindowCountsAsIsolation = \$false/);
+});
+
+test('admin exposes native remote computer observation without dangerous computer controls', () => {
+  for (const command of ['computer.agent.status','computer.system.read','computer.process.list']) {
+    assert.match(admin, new RegExp(command.replaceAll('.', '\\.')));
+  }
+  for (const capability of ['agentStatus','computerRead','processRead']) assert.match(admin, new RegExp(capability));
+  assert.match(admin, /사용자 화면 보호가 기본입니다/);
+  assert.match(admin, /BG Browser/);
+  assert.match(admin, /Isolated Desktop/);
+  assert.match(admin, /최소화 창은 격리로 인정하지 않습니다/);
+  assert.match(api, /result\.processes\.items\.slice\(0, 20\)/);
+  assert.doesNotMatch(admin, /computer\.terminal\.exec|computer\.files\.write|computer\.desktop\.input/);
+});
+
 test('diagnostics avoid remote screen, keyboard and credential collection', () => {
   assert.match(agent, /Get-SystemSnapshot/);
   assert.match(agent, /Get-StorageSnapshot/);
@@ -107,7 +136,7 @@ test('one-click device protocol is bounded to EKODI enrollment and official API'
 });
 
 test('existing registered devices upgrade transactionally and preserve registration', () => {
-  assert.match(agent, /\$AgentVersion = '2\.2\.1'/);
+  assert.match(agent, /\$AgentVersion = '2\.2\.3'/);
   assert.match(agent, /Invoke-AgentUpgradeTransaction/);
   assert.match(agent, /Assert-AgentCandidate/);
   assert.match(agent, /New-AgentUpgradeSnapshot/);

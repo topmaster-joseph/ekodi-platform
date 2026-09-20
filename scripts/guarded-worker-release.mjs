@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { isQuotaCircuitBreak } from './cloudflare-quota-guard-lib.mjs';
 
 const args = process.argv.slice(2);
 const readArg = (name, fallback = '') => {
@@ -16,6 +17,7 @@ const manifestPath = manifestArg ? path.resolve(manifestArg) : '';
 const wranglerVersion = readArg('--wrangler-version', '4.119.0');
 const secretsFileArg = readArg('--secrets-file');
 const secretsFilePath = secretsFileArg ? path.resolve(secretsFileArg) : '';
+const quotaGuardConfig = JSON.parse(fs.readFileSync(path.resolve(policyRoot, 'config/cloudflare-production-quota-guard.json'), 'utf8'));
 
 if (!manifestPath || !fs.existsSync(manifestPath)) {
   console.error('Usage: node scripts/guarded-worker-release.mjs --manifest <file> [--root <dir>] [--secrets-file <file>]');
@@ -189,6 +191,28 @@ function deployVersions(specs, message) {
   command(['versions', 'deploy', ...specs, '-y', '--config', worker.config, '--message', message]);
 }
 
+function isTransientWranglerTransportError(error) {
+  const detail = `${error?.message || ''}\n${error?.providerOutput || ''}`;
+  return /fetch failed|network connectivity|econnreset|etimedout|eai_again|enotfound|socket hang up|connection reset/i.test(detail);
+}
+
+async function restoreVersionWithRetry(version, message) {
+  const specs = [`${version}@100%`];
+  let lastError = null;
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    try {
+      deployVersions(specs, message);
+      return;
+    } catch (error) {
+      lastError = error;
+      if (!isTransientWranglerTransportError(error) || attempt === 3) throw error;
+      console.warn(`Transient Wrangler transport failure during rollback attempt ${attempt}/3; retrying safely.`);
+      await new Promise(resolve => setTimeout(resolve, 1500 * attempt));
+    }
+  }
+  throw lastError;
+}
+
 function responseDiagnostic(response, body) {
   const route = response?.headers?.get?.('x-ekodi-route') || 'none';
   const mitigated = response?.headers?.get?.('cf-mitigated') || 'none';
@@ -246,6 +270,12 @@ async function fetchCheck(request, overrideVersion = '', phase = 'standard') {
       const body = await response.text();
       const diagnostic = responseDiagnostic(response, body);
       last = `${response.status} ${response.statusText}; ${diagnostic}`;
+      if (isQuotaCircuitBreak({ status: response.status, body, config: quotaGuardConfig.circuitBreaker })) {
+        const quotaError = new Error(`Cloudflare quota circuit open for ${targetUrl}: ${last}`);
+        quotaError.quotaCircuitOpen = true;
+        quotaError.status = response.status;
+        throw quotaError;
+      }
       if (!statuses.includes(response.status)) throw new Error(`unexpected HTTP ${response.status}; ${diagnostic}`);
       for (const marker of bodyExpect) {
         if (!body.includes(marker)) throw new Error(`missing body marker: ${marker}; ${diagnostic}`);
@@ -261,6 +291,10 @@ async function fetchCheck(request, overrideVersion = '', phase = 'standard') {
       return;
     } catch (error) {
       last = error?.message || String(error);
+      if (error?.quotaCircuitOpen === true) {
+        console.error(`⛔ Cloudflare quota circuit opened; stopping verification retries immediately: ${last}`);
+        throw error;
+      }
       if (attemptIndex === STANDARD_VERIFY_ATTEMPTS && attemptLimit > STANDARD_VERIFY_ATTEMPTS) {
         console.log(`⏳ Production route has not stabilized yet; extending verification before rollback: ${request.url}`);
       }
@@ -349,7 +383,7 @@ try {
   if (candidateAttached && previousVersion) {
     try {
       console.error(`Rolling back ${worker.name} to ${previousVersion} at 100%.`);
-      deployVersions([`${previousVersion}@100%`], `EKODI automatic rollback after failed gate ${tag}`);
+      await restoreVersionWithRetry(previousVersion, `EKODI automatic rollback after failed gate ${tag}`);
       await verifyAll('', 'rollback');
       console.error('✅ Automatic rollback verified against the stable rollback contract.');
     } catch (rollbackError) {

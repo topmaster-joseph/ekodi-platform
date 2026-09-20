@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { copyFile, readFile, writeFile } from 'node:fs/promises';
+import { copyFile, readFile, readdir, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
@@ -129,7 +129,9 @@ await writeFile(menuRuntimePath, menuCompactSource.slice(menuCompactHeader[0].le
 
 // Fingerprint the complete admin runtime. HTML is no-store, while every referenced versioned
 // asset can then be cached immutably without ever mixing two releases in one browser session.
-const versionInputs = [
+// Demand-loaded assets are discovered from the generated loader itself so adding a new
+// lazy feature cannot silently reuse an older immutable URL.
+const staticVersionInputs = [
   'admin-central-handoff.js','admin-authenticated-shell.js','admin-demand-loader.js','admin-menu-layout.js',
   ...sharedAdminMenuModules,
   'admin-design-engine.js','admin-design-engine.css',
@@ -141,6 +143,21 @@ const versionInputs = [
   'marketing-ai-admin.js','marketing-ai-admin.css','author-billing-admin.js','author-billing-admin.css',
   'admin-perf-diagnostics.js',
 ];
+function normalizeVersionedAdminAsset(value) {
+  const asset = String(value || '').split(/[?#]/)[0].replace(/^\.\//, '').replace(/^\//, '').replace(/^admin\//, '');
+  if (!asset || asset.includes('..') || !/^[A-Za-z0-9][A-Za-z0-9._/-]*\.(?:js|css)$/.test(asset)) return '';
+  return asset;
+}
+const demandRuntimeForVersion = await readFile(`${dist}admin-demand-loader.js`, 'utf8');
+const demandReferencedAssets = [...new Set(
+  [...demandRuntimeForVersion.matchAll(/['"`]([^'"`]+\.(?:js|css)(?:[?#][^'"`]*)?)['"`]/g)]
+    .map(match => normalizeVersionedAdminAsset(match[1]))
+    .filter(Boolean)
+)].sort();
+if (!demandReferencedAssets.includes('social-admin.js') || !demandReferencedAssets.includes('social-admin.css')) {
+  throw new Error('Admin Social lazy assets are missing from the fingerprint graph');
+}
+const versionInputs = [...new Set([...staticVersionInputs, ...demandReferencedAssets])].sort();
 const hash = createHash('sha256');
 for (const asset of versionInputs) hash.update(await readFile(`${dist}${asset}`));
 const assetVersion = hash.digest('hex').slice(0, 16);
@@ -244,5 +261,26 @@ const finalFinance = await readFile(financePath, 'utf8');
 if (finalFinance.includes('setInterval(')) throw new Error('Finance monitor still contains perpetual polling');
 if ((await readFile(`${dist}admin-compact.css`, 'utf8')).includes('admin-readable-command.css')) throw new Error('AI command CSS leaked into startup compact CSS');
 if (!(await readFile(`${dist}ai-ops-admin.css`, 'utf8')).includes('admin-readable-command.css')) throw new Error('AI command CSS missing from on-demand AI Ops');
+
+// /admin/* is asset-first in Production to avoid unnecessary Worker invocations. The initial
+// mirror is created before postbuild transforms, so refresh it only after every Admin runtime
+// mutation and fingerprint has finished. This keeps the canonical /admin/ surface byte-identical
+// to the finalized root assets and also publishes postbuild-generated assets such as
+// admin-compact.js and remote-power-admin.{js,css}.
+const adminMirrorDir = `${dist}admin/`;
+const existingAdminMirrorEntries = await readdir(adminMirrorDir, { withFileTypes:true });
+const existingAdminMirrorAssets = existingAdminMirrorEntries
+  .filter(entry => entry.isFile() && entry.name !== 'index.html')
+  .map(entry => entry.name);
+const finalAdminMirrorAssets = [...new Set([...existingAdminMirrorAssets, ...versionInputs])].sort();
+await Promise.all(finalAdminMirrorAssets.map(asset => copyFile(`${dist}${asset}`, `${adminMirrorDir}${asset}`)));
+await copyFile(path, `${adminMirrorDir}index.html`);
+for (const required of ['admin-compact.js','remote-power-admin.js','remote-power-admin.css','admin-design-engine.css','admin-lazy-features.js','ai-ops-admin.css']) {
+  const [rootAsset, mirroredAsset] = await Promise.all([
+    readFile(`${dist}${required}`),
+    readFile(`${adminMirrorDir}${required}`),
+  ]);
+  if (!rootAsset.equals(mirroredAsset)) throw new Error(`Final Admin mirror is stale: ${required}`);
+}
 
 console.log(`Admin performance postbuild: version=${assetVersion} handoff=${bytes.handoff}B post-auth=${postAuthBytes}B first-path=${firstPathBytes}B CSS=${firstCssBytes}B; immutable versioning ready, shared menu modules published, retired runtime removed and polling guarded.`);

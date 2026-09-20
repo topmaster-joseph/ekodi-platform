@@ -59,6 +59,7 @@ on:
       - 'migrations/0088_ai_commons_sources.sql'
       - 'migrations/0094_ai_provider_daily_budget.sql'
       - 'migrations/0095_ai_free_quota_decisions.sql'
+      - 'migrations/0096_activate_ai_provider_pool.sql'
       - 'deploy/manifests/ai-control.worker.json'
       - 'scripts/validate-cognitive-control-plane.mjs'
       - 'scripts/validate-additive-migrations.mjs'
@@ -123,6 +124,7 @@ on:
       - 'migrations/0088_ai_commons_sources.sql'
       - 'migrations/0094_ai_provider_daily_budget.sql'
       - 'migrations/0095_ai_free_quota_decisions.sql'
+      - 'migrations/0096_activate_ai_provider_pool.sql'
       - 'deploy/manifests/ai-control.worker.json'
       - 'scripts/validate-cognitive-control-plane.mjs'
       - 'scripts/validate-additive-migrations.mjs'
@@ -197,6 +199,11 @@ jobs:
           grep -Fq 'no_bundle = true' wrangler.ai.release.toml
           grep -Fq 'binding = "AI"' wrangler.ai.release.toml
           grep -Fq 'EKODI_PROVIDER_WORKERS_AI_ENABLED = "true"' wrangler.ai.release.toml
+          grep -Fq 'EKODI_PROVIDER_GEMINI_ENABLED = "true"' wrangler.ai.release.toml
+          grep -Fq 'EKODI_PROVIDER_OPENAI_ENABLED = "true"' wrangler.ai.release.toml
+          grep -Fq 'EKODI_PROVIDER_ANTHROPIC_ENABLED = "true"' wrangler.ai.release.toml
+          grep -Fq 'EKODI_PROVIDER_OPENROUTER_FREE_ENABLED = "true"' wrangler.ai.release.toml
+          grep -Fq 'EKODI_PROVIDER_GROQ_FREE_ENABLED = "true"' wrangler.ai.release.toml
           grep -Fq 'paidApiAutoEscalation:false' ai-control-worker.js
           grep -Fq 'no_bundle = true' wrangler.ai.staging.release.toml
           grep -Fq 'humanApprovalRequired:true' ai-control-worker.js
@@ -217,6 +224,7 @@ jobs:
           test -f migrations/0086_ai_commons_ideas.sql
           test -f migrations/0087_ai_commons_governance.sql
           test -f migrations/0088_ai_commons_sources.sql
+          test -f migrations/0096_activate_ai_provider_pool.sql
           test -f deploy/manifests/ai-control.worker.json
       - name: Build one immutable AI Control application artifact
         id: build_artifact
@@ -286,6 +294,8 @@ jobs:
             ideas_code=$(curl -sS -o /tmp/ai-local-ideas.json -w '%{http_code}' --connect-timeout 2 --max-time 5 http://127.0.0.1:8787/api/commons/ideas || true)
             if [[ "$root_code" == "200" && "$config_code" == "410" && "$exchange_code" == "410" && "$health_code" == "200" && "$status_code" == "401" && "$services_code" == "200" && "$client_code" == "200" && "$capabilities_code" == "410" && "$ideas_code" == "401" ]] \
               && grep -Fq 'EKODI 모두의 AI 프로젝트' /tmp/ai-local-root-body.txt \
+              && grep -Fq 'AI로 하기' /tmp/ai-local-root-body.txt \
+              && grep -Fq '최근 공개된 AI' /tmp/ai-local-root-body.txt \
               && grep -Fq 'operator_surface_moved' /tmp/ai-local-config.json \
               && grep -Fq 'service_local_auth_retired' /tmp/ai-local-exchange.json \
               && grep -Fq '"platform":"ai-control"' /tmp/ai-local-health.json \
@@ -408,11 +418,11 @@ jobs:
           echo "bookmark=$BOOKMARK" >> "$GITHUB_OUTPUT"
       - name: Apply additive AI ledger migrations after staging success
         run: bash scripts/apply-d1-migrations-with-retry.sh ekodi-auth wrangler.ai.release.toml "$WRANGLER_VERSION"
-      - name: Attach secrets to immutable candidate, verify at 0%, then promote
+      - name: Attach supplied secrets or preserve existing Worker secrets, verify at 0%, then promote
         shell: bash
         run: |
           set -euo pipefail
-          node - <<'NODE'
+          SECRET_COUNT=$(node - <<'NODE'
           const fs = require('fs');
           const secrets = {};
           if (process.env.AI_ADMIN_EMAILS) secrets.ADMIN_EMAILS = process.env.AI_ADMIN_EMAILS;
@@ -424,11 +434,19 @@ jobs:
           if (process.env.AI_GROQ_API_KEY) secrets.GROQ_API_KEY = process.env.AI_GROQ_API_KEY;
           if (process.env.AI_EXTERNAL_WORKER_URL) secrets.AI_WORKER_URL = process.env.AI_EXTERNAL_WORKER_URL;
           if (process.env.AI_EXTERNAL_WORKER_TOKEN) secrets.AI_WORKER_TOKEN = process.env.AI_EXTERNAL_WORKER_TOKEN;
-          fs.writeFileSync('/tmp/ai-control-secrets.json', JSON.stringify(secrets), { mode: 0o600 });
-          console.log(`Prepared guarded AI Control candidate with ${Object.keys(secrets).length} secret key(s); values remain hidden.`);
+          const count = Object.keys(secrets).length;
+          if (count > 0) fs.writeFileSync('/tmp/ai-control-secrets.json', JSON.stringify(secrets), { mode: 0o600 });
+          process.stdout.write(String(count));
           NODE
+          )
           trap 'rm -f /tmp/ai-control-secrets.json' EXIT
-          node scripts/guarded-worker-release.mjs --manifest deploy/manifests/ai-control.worker.json --secrets-file /tmp/ai-control-secrets.json
+          if [ "$SECRET_COUNT" -gt 0 ]; then
+            echo "Prepared guarded AI Control candidate with $SECRET_COUNT supplied secret key(s); values remain hidden."
+            node scripts/guarded-worker-release.mjs --manifest deploy/manifests/ai-control.worker.json --secrets-file /tmp/ai-control-secrets.json
+          else
+            echo "No GitHub-managed AI Control secrets supplied; preserving existing Worker secrets."
+            node scripts/guarded-worker-release.mjs --manifest deploy/manifests/ai-control.worker.json
+          fi
       - name: Record governed recovery and artifact identity
         shell: bash
         env:

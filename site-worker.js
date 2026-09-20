@@ -50,10 +50,6 @@ const ADMIN_PERSONAL_FINANCE_PATH = '/api/control/personal-finance';
 const ADMIN_MARKETING_PUBLISHING_PREFIX = '/api/control/marketing-publishing';
 const ADMIN_COMMON_SERVICE_AI_PREFIX = '/api/control/common-services/ai/';
 
-const AUTH_HOST = 'auth.ekodi.kr';
-const AUTH_ASSETS = new Set(['/auth.js','/auth-bootstrap.js','/auth-entry.js','/auth.css','/auth-router.js','/oauth-consent.js','/marketing-auth-hotfix.js','/auth-workspace-target.js','/admin-auth.js','/google-origin-bridge.js','/client-auth.js','/author-auth.js','/business-auth.js','/marketing-onboarding.js','/membership-ui.js','/google-origin-bridge.js']);
-const AUTH_CRITICAL_ASSETS = new Set(['/auth.js','/auth-bootstrap.js','/auth-entry.js','/auth-router.js','/oauth-consent.js','/marketing-auth-hotfix.js','/auth-workspace-target.js','/admin-auth.js','/google-origin-bridge.js','/client-auth.js','/author-auth.js','/business-auth.js','/marketing-onboarding.js','/membership-ui.js']);
-
 const HUB_HOSTS = new Set([
   'pay.ekodi.kr',
   'pay.biz.ekodi.kr',
@@ -192,7 +188,7 @@ const PUBLIC_CSP = [
   "default-src 'self'",
   "style-src 'self' 'unsafe-inline'",
   "script-src 'self'",
-  "connect-src 'self' https://api.ekodi.kr",
+  "connect-src 'self'",
   "img-src 'self' data:",
   "frame-ancestors 'none'",
   "base-uri 'self'",
@@ -200,7 +196,7 @@ const PUBLIC_CSP = [
   "object-src 'none'",
 ].join('; ');
 
-const LIVE_CSP = PUBLIC_CSP.replace("connect-src 'self' https://api.ekodi.kr","connect-src 'self' https://renzehysxirjilvdxacv.supabase.co");
+const LIVE_CSP = PUBLIC_CSP.replace("connect-src 'self'","connect-src 'self' https://renzehysxirjilvdxacv.supabase.co");
 
 const MALL_CSP = [
   "default-src 'self'",
@@ -223,24 +219,11 @@ const ADMIN_CSP = [
   "style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style",
   "script-src 'self' https://accounts.google.com/gsi/client",
   "img-src 'self' data:",
-  "connect-src 'self' https://api.ekodi.kr https://finance-api.ekodi.kr https://personal-finance-api.ekodi.kr https://marketing-connect-api.ekodi.kr https://renzehysxirjilvdxacv.supabase.co https://api.github.com https://ekodi-auth-api.topmaster-joseph.workers.dev https://accounts.google.com/gsi/ https://life.ekodi.kr",
+  "connect-src 'self' https://renzehysxirjilvdxacv.supabase.co https://api.github.com https://ekodi-auth-api.topmaster-joseph.workers.dev https://accounts.google.com/gsi/",
   "frame-src https://accounts.google.com/gsi/ https://ekodi.kr",
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "form-action 'self'",
-  "object-src 'none'",
-].join('; ');
-
-const AUTH_CSP = [
-  "default-src 'self'",
-  "style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style",
-  "script-src 'self' https://cdn.jsdelivr.net https://esm.sh https://accounts.google.com/gsi/client https://js.tosspayments.com",
-  "connect-src 'self' https://api.ekodi.kr https://renzehysxirjilvdxacv.supabase.co https://cdn.jsdelivr.net https://esm.sh https://accounts.google.com/gsi/ https://*.tosspayments.com",
-  "frame-src https://accounts.google.com/gsi/ https://accounts.google.com/ https://*.tosspayments.com",
-  "img-src 'self' data: https://lh3.googleusercontent.com https://*.tosspayments.com",
-  "frame-ancestors 'none'",
-  "base-uri 'self'",
-  "form-action 'self' https://renzehysxirjilvdxacv.supabase.co https://*.tosspayments.com",
   "object-src 'none'",
 ].join('; ');
 
@@ -481,10 +464,10 @@ function safeAdminReturnPath(value) {
 
 function adminAuthRedirect(returnPath) {
   const safePath = safeAdminReturnPath(returnPath);
-  const target = new URL('https://auth.ekodi.kr/');
+  const target = new URL('https://ekodi.kr/auth/');
   target.searchParams.set('site', 'admin');
   target.searchParams.set('direct', '1');
-  target.searchParams.set('return_to', `https://admin.ekodi.kr${safePath}`);
+  target.searchParams.set('return_to', safePath === '/' ? 'https://ekodi.kr/admin/' : `https://ekodi.kr/admin${safePath}`);
   const response = new Response(null, {
     status: 302,
     headers: {
@@ -588,7 +571,7 @@ async function proxyAdminCommonServiceAi(request, env) {
   response.headers.set('X-EKODI-Common-Service-Proxy', 'ai-service-binding-v2');
   return withHostSecurity(response, ADMIN_CSP, 'no-store', 'admin-common-service-ai-proxy');
 }
-async function proxyAdminMarketingPublishing(request) {
+async function proxyAdminMarketingPublishing(request, env) {
   const url = new URL(request.url);
   const suffix = url.pathname.slice(ADMIN_MARKETING_PUBLISHING_PREFIX.length) || '/health';
   if (!(suffix === '/health' || suffix.startsWith('/v1/'))) {
@@ -597,14 +580,13 @@ async function proxyAdminMarketingPublishing(request) {
       headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store'},
     }), ADMIN_CSP, 'no-store', 'admin-marketing-publishing-proxy');
   }
-  const target = new URL('https://marketing-publish-api.ekodi.kr');
-  target.pathname = suffix;
+  const target = new URL(`https://marketing-publishing.internal${suffix}`);
   target.search = url.search;
   const headers = new Headers(request.headers);
   headers.delete('origin');
   headers.delete('host');
   const body = ['GET','HEAD'].includes(request.method) ? undefined : await request.arrayBuffer();
-  const upstream = await fetch(target.toString(), {method:request.method,headers,body,redirect:'manual'});
+  const upstream = await env.MARKETING_PUBLISHING.fetch(new Request(target.toString(), {method:request.method,headers,body,redirect:'manual'}));
   const response = new Response(upstream.body, upstream);
   response.headers.set('X-EKODI-Marketing-Publishing-Proxy', 'same-origin-v1');
   return withHostSecurity(response, ADMIN_CSP, 'no-store', 'admin-marketing-publishing-proxy');
@@ -618,7 +600,7 @@ export default {
     if (PUBLIC_ALIAS_HOSTS.has(host)) return redirectToPublicCanonical(url);
 
     if ((url.pathname === '/admin' || url.pathname === '/admin/') && host !== PUBLIC_HOST && !ADMIN_HOSTS.has(host)) {
-      const target = new URL('https://admin.ekodi.kr/');
+      const target = new URL('https://ekodi.kr/admin/');
       target.searchParams.set('source', host);
       const response = new Response(null, { status: 307, headers: { Location: target.toString() } });
       applyBaseSecurityHeaders(response.headers);
@@ -630,7 +612,7 @@ export default {
     if (host === PUBLIC_HOST) {
       if (RETIRED_ADMIN_PATHS.has(url.pathname)) return retiredAdminResponse();
       if (url.pathname === '/oauth/consent' || url.pathname === '/cgma/oauth/consent') {
-        const target = new URL('https://auth.ekodi.kr/oauth/consent');
+        const target = new URL('https://ekodi.kr/auth/oauth/consent');
         target.search = url.search;
         const response = new Response(null, { status:307, headers:{ Location:target.toString(), 'Cache-Control':'no-store' } });
         applyBaseSecurityHeaders(response.headers);
@@ -735,7 +717,7 @@ export default {
       if (RETIRED_ADMIN_PATHS.has(url.pathname)) return retiredAdminResponse();
       if (url.pathname.startsWith(ADMIN_STORAGE_PREFIX)) return proxyAdminStorage(request, env);
       if (url.pathname === ADMIN_PERSONAL_FINANCE_PATH) return proxyAdminPersonalFinance(request, env);
-      if (url.pathname.startsWith(ADMIN_MARKETING_PUBLISHING_PREFIX)) return proxyAdminMarketingPublishing(request);
+      if (url.pathname.startsWith(ADMIN_MARKETING_PUBLISHING_PREFIX)) return proxyAdminMarketingPublishing(request, env);
       if (url.pathname.startsWith(ADMIN_COMMON_SERVICE_AI_PREFIX)) return proxyAdminCommonServiceAi(request, env);
       if (url.pathname === '/auth/start') {
         if (!['GET', 'HEAD'].includes(request.method)) {
@@ -752,26 +734,6 @@ export default {
       if (ADMIN_ASSETS.has(url.pathname)) {
         const response = await env.ASSETS.fetch(request);
         return withHostSecurity(response, ADMIN_CSP, adminAssetCacheControl(url), 'admin-asset');
-      }
-    }
-
-    if (host === AUTH_HOST) {
-      if (url.pathname === '/' || url.pathname === '/index.html' || url.pathname === '/login' || url.pathname === '/login/') {
-        const response = await env.ASSETS.fetch(assetRequest(request, '/auth-center'));
-        return withHostSecurity(response, AUTH_CSP, 'no-store', 'central-auth');
-      }
-      if (url.pathname === '/google-origin-bridge' || url.pathname === '/google-origin-bridge/') {
-        const response = await env.ASSETS.fetch(assetRequest(request, '/google-origin-bridge'));
-        return withHostSecurity(response, AUTH_CSP, 'no-store', 'google-origin-bridge');
-      }
-      if (url.pathname === '/oauth/consent' || url.pathname === '/oauth/consent/') {
-        const response = await env.ASSETS.fetch(assetRequest(request, '/oauth-consent'));
-        return withHostSecurity(response, AUTH_CSP, 'no-store', 'oauth-consent');
-      }
-      if (AUTH_ASSETS.has(url.pathname)) {
-        const response = await env.ASSETS.fetch(request);
-        const cacheControl = AUTH_CRITICAL_ASSETS.has(url.pathname) ? 'no-store' : 'public, max-age=300';
-        return withHostSecurity(response, AUTH_CSP, cacheControl, 'central-auth-asset');
       }
     }
 

@@ -48,11 +48,11 @@ class MemoryD1 {
   }
 }
 
-test('Marketing return URLs are HTTPS and restricted to EKODI Marketing origins', () => {
-  assert.equal(isMarketingReturnOrigin('https://marketing.ekodi.kr'), true);
-  assert.equal(isMarketingReturnOrigin('https://demo.ai.ekodi.kr'), true);
+test('Marketing return URLs are restricted to canonical EKODI or approved external origins', () => {
+  assert.equal(isMarketingReturnOrigin('https://ekodi.kr'), true);
+  assert.equal(isMarketingReturnOrigin('https://cgma.or.kr'), true);
   assert.equal(isMarketingReturnOrigin('https://evil.example.com'), false);
-  assert.equal(safeMarketingReturn('https://marketing.ekodi.kr/path?x=1#secret'), 'https://marketing.ekodi.kr/path?x=1');
+  assert.equal(safeMarketingReturn('https://ekodi.kr/ekodibiz/marketing-ai/?x=1#secret'), 'https://ekodi.kr/ekodibiz/marketing-ai/?x=1');
   assert.equal(safeMarketingReturn('https://evil.example.com/'), null);
 });
 
@@ -64,20 +64,20 @@ test('start hides the credential in an HttpOnly cookie and consume is one-time',
     return new Response(JSON.stringify({
       tokenHash: 'otp-token-hash',
       type: 'email',
-      returnTo: 'https://marketing.ekodi.kr/',
+      returnTo: 'https://ekodi.kr/ekodibiz/marketing-ai/',
       workspace: { workspace_key: 'store:123', tenant_id: 'tenant-1', store_id: 'store-1' },
     }), { status: 200, headers: { 'content-type': 'application/json' } });
   };
   try {
-    const env = { DB: new MemoryD1(), ALLOWED_ORIGINS: 'https://marketing.ekodi.kr,https://auth.ekodi.kr' };
-    const start = await handleMarketingAuthHandoffRequest(new Request('https://marketing-api.ekodi.kr/api/marketing/handoff/start', {
+    const env = { DB: new MemoryD1(), ALLOWED_ORIGINS: 'https://ekodi.kr,https://cgma.or.kr' };
+    const start = await handleMarketingAuthHandoffRequest(new Request('https://ekodi.kr/api/marketing/handoff/start', {
       method: 'POST',
       headers: {
-        origin: 'https://auth.ekodi.kr',
+        origin: 'https://ekodi.kr',
         authorization: 'Bearer session-token',
         'content-type': 'application/json',
       },
-      body: JSON.stringify({ return_to: 'https://marketing.ekodi.kr/', workspace_key: 'store:123' }),
+      body: JSON.stringify({ return_to: 'https://ekodi.kr/ekodibiz/marketing-ai/', workspace_key: 'store:123' }),
     }), env);
     assert.equal(start.status, 200);
     assert.equal(start.headers.get('access-control-allow-credentials'), 'true');
@@ -88,14 +88,14 @@ test('start hides the credential in an HttpOnly cookie and consume is one-time',
     assert.match(setCookie, /SameSite=Lax/i);
     assert.doesNotMatch(setCookie, /Domain=/i);
     const startBody = await start.json();
-    assert.equal(startBody.returnTo, 'https://marketing.ekodi.kr/');
+    assert.equal(startBody.returnTo, 'https://ekodi.kr/ekodibiz/marketing-ai/');
     assert.equal('tokenHash' in startBody, false);
     assert.equal(JSON.stringify(startBody).includes('otp-token-hash'), false);
 
     const cookiePair = setCookie.split(';', 1)[0];
-    const consume = await handleMarketingAuthHandoffRequest(new Request('https://marketing-api.ekodi.kr/api/marketing/handoff/consume', {
+    const consume = await handleMarketingAuthHandoffRequest(new Request('https://ekodi.kr/api/marketing/handoff/consume', {
       method: 'POST',
-      headers: { origin: 'https://marketing.ekodi.kr', cookie: cookiePair },
+      headers: { origin: 'https://ekodi.kr', cookie: cookiePair },
     }), env);
     assert.equal(consume.status, 200);
     const payload = await consume.json();
@@ -103,9 +103,9 @@ test('start hides the credential in an HttpOnly cookie and consume is one-time',
     assert.equal(payload.workspace.workspace_key, 'store:123');
     assert.match(consume.headers.get('set-cookie'), /Max-Age=0/);
 
-    const replay = await handleMarketingAuthHandoffRequest(new Request('https://marketing-api.ekodi.kr/api/marketing/handoff/consume', {
+    const replay = await handleMarketingAuthHandoffRequest(new Request('https://ekodi.kr/api/marketing/handoff/consume', {
       method: 'POST',
-      headers: { origin: 'https://marketing.ekodi.kr', cookie: cookiePair },
+      headers: { origin: 'https://ekodi.kr', cookie: cookiePair },
     }), env);
     assert.equal(replay.status, 410);
   } finally {

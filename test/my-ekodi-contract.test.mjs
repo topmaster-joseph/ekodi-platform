@@ -120,6 +120,17 @@ test('My EKODI security middleware runs before static assets in staging and prod
   assert.match(manifest,/x-ekodi-service: my-ekodi/);
 });
 
+test('My EKODI recovers a misrouted workspace-admin handoff without consuming the one-time token',async()=>{
+  const app=await read('my/app.js');
+  assert.match(app,/function misroutedWorkspaceAdminReturn\(\)/);
+  assert.match(app,/params\.get\('from'\)!=='space'/);
+  assert.match(app,/hash\.get\('ekodi_token'\)/);
+  assert.match(app,/target\.origin!=='https:\/\/ekodi\.kr'/);
+  assert.match(app,/target\.hash=location\.hash/);
+  assert.match(app,/location\.replace\(MISROUTED_WORKSPACE_ADMIN_RETURN\.href\)/);
+  assert.match(app,/if\(!MISROUTED_WORKSPACE_ADMIN_RETURN\)discardUnsafeReturnTarget\(\)/);
+});
+
 test('My EKODI rejects recursive or foreign return targets and private pages opt out of indexing',async()=>{
   const [home,journey,device,app]=await Promise.all([
     read('my/index.html'),read('my/journey/index.html'),read('my/device-care/index.html'),read('my/app.js')

@@ -6,6 +6,10 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/verify-ekodi-orchestrator-live-e2e.yml'
+  workflow_run:
+    workflows: ['Deploy Control API']
+    types: [completed]
+    branches: [main]
 
 permissions:
   contents: read
@@ -21,11 +25,14 @@ env:
 
 jobs:
   live-orchestration-proof:
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
       - name: Issue short-lived genuine production admin session
         shell: bash
@@ -80,23 +87,6 @@ jobs:
           echo "E2E_AUTH_DB_ID=$auth_db" >> "$GITHUB_ENV"
           echo 'Canonical ekodi.kr production session verified.' >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Wait for an empty command queue without draining unrelated work
-        shell: bash
-        run: |
-          set -euo pipefail
-          for attempt in $(seq 1 18); do
-            queued=$(curl -fsS --retry 2 --retry-delay 1               "$EKODI_ORIGIN/api/control/ai/v8/tasks?state=queued&limit=5"               -H "Authorization: Bearer $E2E_ADMIN_TOKEN")
-            count=$(echo "$queued" | jq '.tasks | length')
-            if [ "$count" -eq 0 ]; then
-              echo 'No unrelated queued command task detected.'
-              exit 0
-            fi
-            echo "Existing queued tasks: $count; waiting for normal EKODI scheduler (attempt $attempt/18)."
-            sleep 10
-          done
-          echo 'Refusing to manually drain unrelated production work.'
-          exit 1
-
       - name: Submit and execute read-only orchestration proof
         id: execute
         shell: bash
@@ -127,7 +117,14 @@ jobs:
             }')
 
           response=$(curl -fsS --retry 2 --retry-delay 1             -X POST "$EKODI_ORIGIN/api/control/ai/v8/pulse"             -H "Authorization: Bearer $E2E_ADMIN_TOKEN"             -H 'Content-Type: application/json'             --data "$payload")
-          echo "$response" | jq -e '.ok == true and .queued == true' >/dev/null
+          echo "$response" | jq -e --arg taskId "$task_id" '
+            .ok == true
+            and .queued == true
+            and .task.id == $taskId
+            and .execution.ok == true
+            and .execution.processed == 1
+            and .execution.results[0].taskId == $taskId
+          ' >/dev/null
 
           echo "TASK_ID=$task_id" >> "$GITHUB_ENV"
           echo "task_id=$task_id" >> "$GITHUB_OUTPUT"
@@ -175,8 +172,10 @@ jobs:
             ] | map(select(. != null and . != "")) | unique' "$RUNNER_TEMP/ekodi-orchestrator-task.json")
           sentinel_independent=$(jq -r '.task.evidence.sentinelIndependent // false' "$RUNNER_TEMP/ekodi-orchestrator-task.json")
           consultation_status=$(jq -r '.task.consultation.status // .task.result.consultation.status // "unknown"' "$RUNNER_TEMP/ekodi-orchestrator-task.json")
+          configured_providers=$(jq -c '[.task.result.plan.configuredProviders[]? | {id,available,costClass,freeQuotaRemaining}]' "$RUNNER_TEMP/ekodi-orchestrator-task.json")
+          provider_attempts=$(jq -c '[.task.result.specialists[]? | {role,provider,mode,ok,reason:(.value.reason // .value.code // null)}]' "$RUNNER_TEMP/ekodi-orchestrator-task.json")
 
-          jq -n             --arg taskId "$TASK_ID"             --arg state "$terminal"             --arg canonicalIngress "$EKODI_ORIGIN/api/control/ai/v8/pulse"             --argjson providerDiversity "$provider_diversity"             --argjson actualProviderCount "$actual_provider_count"             --argjson actualProviders "$actual_providers"             --argjson sentinelIndependent "$sentinel_independent"             --arg consultationStatus "$consultation_status"             '{
+          jq -n             --arg taskId "$TASK_ID"             --arg state "$terminal"             --arg canonicalIngress "$EKODI_ORIGIN/api/control/ai/v8/pulse"             --argjson providerDiversity "$provider_diversity"             --argjson actualProviderCount "$actual_provider_count"             --argjson actualProviders "$actual_providers"             --argjson sentinelIndependent "$sentinel_independent"             --arg consultationStatus "$consultation_status"             --argjson configuredProviders "$configured_providers"             --argjson providerAttempts "$provider_attempts"             '{
               schemaVersion:1,
               proof:"ekodi-orchestrator-live-production-e2e",
               externalTestClient:"github-actions",
@@ -186,10 +185,15 @@ jobs:
               providerDiversity:$providerDiversity,
               actualProviderCount:$actualProviderCount,
               actualProviders:$actualProviders,
+              configuredProviders:$configuredProviders,
+              providerAttempts:$providerAttempts,
               sentinelIndependent:$sentinelIndependent,
               consultationStatus:$consultationStatus,
               productionMutationPerformed:false
             }' > "$RUNNER_TEMP/ekodi-orchestrator-proof.json"
+
+          # Emit only sanitized provider metadata and failure codes; never provider secret values.
+          cat "$RUNNER_TEMP/ekodi-orchestrator-proof.json"
 
           # The user's claim requires real external-provider execution, not a structural/core-only pass.
           test "$provider_diversity" -ge 1
@@ -248,20 +252,19 @@ jobs:
         if: success()
         shell: bash
         run: |
+          proof="$RUNNER_TEMP/ekodi-orchestrator-proof.json"
           {
             echo '## EKODI Orchestrator live production proof'
             echo
-            jq -r '[
-              "- Task ID: " + (.taskId | tostring),
-              "- Terminal state: " + (.terminalState | tostring),
-              "- External test client: " + (.externalTestClient | tostring),
-              "- Actual providers: " + (.actualProviders | join(", ")),
-              "- Provider diversity: " + (.providerDiversity | tostring),
-              "- Sentinel independent: " + (.sentinelIndependent | tostring),
-              "- Durable D1 run evidence: " + (.durableLedgerVerified | tostring),
-              "- Completed at: " + (.completedAt | tostring),
-              "- Production mutation performed by task: " + (.productionMutationPerformed | tostring)
-            ] | join("\\n")' "$RUNNER_TEMP/ekodi-orchestrator-proof.json"
+            echo "- Task ID: $(jq -r '.taskId // ""' "$proof")"
+            echo "- Terminal state: $(jq -r '.terminalState // ""' "$proof")"
+            echo "- External test client: $(jq -r '.externalTestClient // ""' "$proof")"
+            echo "- Actual providers: $(jq -r '(.actualProviders // []) | join(", ")' "$proof")"
+            echo "- Provider diversity: $(jq -r '.providerDiversity // 0' "$proof")"
+            echo "- Sentinel independent: $(jq -r '.sentinelIndependent // false' "$proof")"
+            echo "- Durable D1 run evidence: $(jq -r '.durableLedgerVerified // false' "$proof")"
+            echo "- Completed at: $(jq -r '.completedAt // ""' "$proof")"
+            echo "- Production mutation performed by task: $(jq -r '.productionMutationPerformed // false' "$proof")"
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload sanitized production proof

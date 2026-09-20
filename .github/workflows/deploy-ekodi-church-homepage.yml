@@ -1,4 +1,5 @@
 name: Deploy EKODI Church Homepage
+# Release reconciliation marker: church-publisher-heartbeat-f2f00cc-20260919
 
 on:
   workflow_dispatch:

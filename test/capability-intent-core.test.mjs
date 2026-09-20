@@ -18,7 +18,7 @@ test('universal capability registry respects governance, provider and pack contr
   assert.equal(result.capabilityCount, registry.capabilities.length);
   assert.equal(result.packCount, packs.packs.length);
   assert.equal(result.humanGateCount, registry.capabilities.filter(item => item.actionTier === 'human_gate').length);
-  assert.equal(result.reversibleCount, 2);
+  assert.equal(result.reversibleCount, registry.capabilities.filter(item => item.actionTier === 'execute_reversible').length);
 });
 
 test('registry preserves capability milestones under the Generation 10 open-ended baseline', () => {
