@@ -13,7 +13,7 @@ const [router,injector,standalone,standaloneCss,shell]=await Promise.all([
 test('brand-independent workspace homes receive progressive focus without shared chrome',()=>{
   assert.match(router,/space-storefront'[\s\S]{0,500}injectEkodiTenantReadability\(routed\)[\s\S]{0,500}injectEkodiProgressiveHome\(branded\)/);
   assert.match(router,/independent-workspace-site'[\s\S]{0,500}injectEkodiTenantReadability\(routed\)[\s\S]{0,500}injectEkodiProgressiveHome\(branded\)/);
-  assert.match(router,/routeEkodiBizPublic[\s\S]+injectEkodiProgressiveHome\(rewritten\)/);
+  assert.match(router,/routeEkodiBizPublic[\s\S]+injectEkodiProgressiveHome\(injectEkodiTenantReadability\(rewritten\)\)/);
   assert.match(router,/isCgmaRoot[\s\S]+injectEkodiProgressiveHome\(injectEkodiTenantReadability\(legacyResponse\)\)/);
   assert.match(router,/isProjectionHome[\s\S]+injectEkodiProgressiveHome\(projected\)/);
   assert.doesNotMatch(router,/space-storefront'[\s\S]{0,500}injectEkodiShell\(routed/);

@@ -107,9 +107,7 @@ async function audit(){
   ]);
   http(cgmaRoot,'cgma-root',errors);
   need(cgmaRoot,'cgma-root','청계면상인회',errors);
-  need(cgmaRoot,'cgma-root','data-ekodi-tenant-readability="v1"',errors);
-  need(cgmaRoot,'cgma-root','data-ekodi-fixed-header',errors);
-  need(cgmaRoot,'cgma-root','https://ekodi.kr/shell/mobile-fixed-header.js',errors);
+  requireReadability(cgmaRoot,'cgma-root',errors);
   http(cgmaAi,'cgma-market-ai',errors);
   need(cgmaAi,'cgma-market-ai','CHEONGGYE MARKETING AI',errors);
   http(cgmaAdmin,'cgma-admin',errors);
