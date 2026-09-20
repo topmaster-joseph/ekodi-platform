@@ -142,6 +142,12 @@ test('central auth directly honors a requested verified Social or Energy workspa
   assert.match(authTarget,/window\.__EKODI_WORKSPACE_ROUTING/);
 });
 
+test('AI login is a canonical first-party client realm',()=>{
+  assert.match(clientAuth,/ai:\{name:'EKODI AI',returnTo:'https:\/\/ekodi\.kr\/ai\/'/);
+  assert.match(authRouter,/firstPartyClientSites=new Set\(\['ai'\]\)/);
+  assert.match(authRouter,/firstPartyClientSites\.has\(site\)/);
+});
+
 test('client auth reuses the central EKODI session instead of forcing Google login again',()=>{
   assert.match(clientAuth,/persistSession:true/);
   assert.match(clientAuth,/sb\.auth\.getSession/);
