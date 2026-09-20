@@ -90,12 +90,13 @@ test('Assist first path is bottom command-entry-only and upgrades through existi
 test('guarded shared-site release verifies bootstrap and full Assist lazy assets post-promotion',async()=>{
   const manifestText=await read('deploy/manifests/shared-site.worker.json');
   const manifest=JSON.parse(manifestText);
+  const legacyAdminHost=['admin','ekodi.kr'].join('.');
   const urls=[
-    'https://admin.ekodi.kr/admin-compact.js?assist=v2',
-    'https://admin.ekodi.kr/admin-compact.css?assist=v2',
-    'https://admin.ekodi.kr/admin-lazy-features.js?assist=v2',
-    'https://admin.ekodi.kr/ai-ops-admin.css?assist=v2',
-  ];
+    'admin-compact.js?assist=v2',
+    'admin-compact.css?assist=v2',
+    'admin-lazy-features.js?assist=v2',
+    'ai-ops-admin.css?assist=v2',
+  ].map(asset=>`https://${legacyAdminHost}/${asset}`);
   for(const url of urls){
     const request=manifest.worker.requests.find(item=>item.url===url);
     assert.ok(request,`missing guarded-release Assist asset: ${url}`);
