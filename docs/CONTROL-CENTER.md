@@ -5,7 +5,7 @@
 EKODI uses a balanced architecture:
 
 - Separate first: every public service keeps its own domain, deployment, and failure boundary.
-- Connect when useful: shared operational data flows through `api.ekodi.kr`.
+- Connect when useful: shared operational data flows through `ekodi.kr/api`.
 - Manage together: authenticated operators use `admin.ekodi.kr` as the control center.
 
 A public service must remain usable even when the control center or API is unavailable. The API is an operations and integration layer, not a mandatory reverse proxy for every visitor request.
@@ -15,7 +15,7 @@ A public service must remain usable even when the control center or API is unava
 ```text
 ekodi.kr                 public ecosystem gateway
 *.ekodi.kr               independent public services
-api.ekodi.kr             authenticated integration and operations API
+ekodi.kr/api             authenticated integration and operations API
 admin.ekodi.kr           authenticated control center
 Cloudflare D1            control metadata, health history, audit history
 Cloudflare Cron Trigger  periodic service health checks
@@ -71,7 +71,7 @@ Each adapter should expose read-only statistics first. Write operations should b
 
 ## Failure boundary
 
-`api.ekodi.kr` and `admin.ekodi.kr` must never become required dependencies for rendering `ekodi.kr`, `church.ekodi.kr`, `mall.ekodi.kr`, `books.ekodi.kr`, or other public services.
+`ekodi.kr/api` and `admin.ekodi.kr` must never become required dependencies for rendering `ekodi.kr`, `church.ekodi.kr`, `mall.ekodi.kr`, `books.ekodi.kr`, or other public services.
 
 In short:
 
