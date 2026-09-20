@@ -1,7 +1,7 @@
 (() => {
   const API = 'https://ekodi.kr';
   const LIVE = 'https://marketing.ekodi.kr/';
-  const REVIEW = 'https://auth.ekodi.kr/?site=marketing&review=1&return_to=https%3A%2F%2Fmarketing.ekodi.kr%2F';
+  const REVIEW = 'https://ekodi.kr/auth/?site=marketing&review=1&return_to=https%3A%2F%2Fekodi.kr%2Fekodibiz%2Fmarketing-ai%2F';
   const token = () => sessionStorage.getItem('ekodi-auth-token') || '';
   const TABS = [
     ['overview','Overview'],['customers','Customers'],['workspaces','Workspaces'],['campaigns','Campaigns'],['crm','CRM'],
