@@ -62,6 +62,8 @@ test('production configs keep friendly Messenger entry without overriding canoni
   assert.match(api,/https:\/\/ekodi\.kr\/api/);
   assert.doesNotMatch(api,/pattern = "api\.ekodi\.kr"/);
   assert.match(mission,/handleMessengerOperatorPage/);
+  assert.match(mission,/path === '\/api\/operator'/);
+  assert.match(mission,/path === '\/api\/operator\.js'/);
   assert.doesNotMatch(mission,/handleSameOriginOperatorGoogleAuth/);
   assert.doesNotMatch(mission,/https:\/\/admin\.ekodi\.kr/);
 });

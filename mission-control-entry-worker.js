@@ -185,7 +185,7 @@ export default {
       catch (error) { console.error('External AI Module Gateway error', error); return errorResponse('EKODI AI Module Gateway 처리 중 오류가 발생했습니다.', 'AI_MODULE_GATEWAY_ERROR'); }
     }
 
-    if ((path === '/operator' || path === '/operator/' || path === '/operator.js') && request.method === 'GET') {
+    if ((path === '/operator' || path === '/operator/' || path === '/operator.js' || path === '/api/operator' || path === '/api/operator/' || path === '/api/operator.js') && request.method === 'GET') {
       const response = handleMessengerOperatorPage(request);
       if (response) return response;
     }
