@@ -564,7 +564,7 @@
 
   async function initialData() {
     try {
-      await Promise.all([loadOverview(false), loadEvolution(false)]);
+      await Promise.all([loadOverview(false), loadEvolution(false), loadOwnerReport(false)]);
       render();
     } catch (error) {
       console.warn('EKODI AI Ops overview unavailable', error);

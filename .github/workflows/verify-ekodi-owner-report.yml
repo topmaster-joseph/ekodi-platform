@@ -1,0 +1,135 @@
+name: Verify EKODI Native Owner Report
+
+on:
+  pull_request:
+    paths:
+      - 'ekodi-owner-report.js'
+      - 'api-worker.js'
+      - 'ai-ops-admin.js'
+      - 'config/autonomous-operations-policy.json'
+      - 'migrations/0100_ekodi_owner_reports.sql'
+      - 'test/ekodi-owner-report.test.mjs'
+      - 'test/ekodi-owner-report-integration.test.mjs'
+      - '.github/workflows/verify-ekodi-owner-report.yml'
+  workflow_run:
+    workflows: ['Deploy EKODI Shared Site Core']
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-native-owner-report-${{ github.event.workflow_run.head_sha || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate EKODI-owned reporting contract
+        run: |
+          set -euo pipefail
+          node --check ekodi-owner-report.js
+          node --check api-worker.js
+          node --check ai-ops-admin.js
+          node --test test/ekodi-owner-report.test.mjs test/ekodi-owner-report-integration.test.mjs
+          grep -Fq 'EKODI AUTONOMOUS REPORT' ai-ops-admin.js
+          grep -Fq '/api/control/owner-report?limit=8' ai-ops-admin.js
+          grep -Fq '/api/control/owner-report/check' ai-ops-admin.js
+          grep -Fq 'chatgptTriggerRequired: false' api-worker.js
+          grep -Fq 'ownerReportSnapshot(env, { persist:true, evolution, limit:10 })' api-worker.js
+
+  production-proof:
+    needs: validate
+    if: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && needs.validate.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      WRANGLER_VERSION: '4.119.0'
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - name: EKODI AI Orchestration Gate
+        run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
+
+      - name: Verify Control API cron owns the reporting cadence
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+          curl -fsS --connect-timeout 5 --max-time 20             -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN"             "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/ekodi-auth-api/schedules"             > /tmp/ekodi-owner-report-schedules.json
+          jq -e '.success == true and any(.result[]?; .cron == "*/10 * * * *")' /tmp/ekodi-owner-report-schedules.json >/dev/null
+          echo 'Verified: EKODI Control API owns a 10-minute internal scheduled runtime.'
+
+      - name: Verify durable owner-report ledger exists in production D1
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@$WRANGLER_VERSION d1 execute ekodi-auth             --remote --config wrangler.api.toml --json             --command "SELECT name FROM sqlite_master WHERE type='table' AND name='ekodi_owner_reports';"             > /tmp/ekodi-owner-report-schema.json
+          jq -e 'any(.[]?; .success == true and any(.results[]?; .name == "ekodi_owner_reports"))' /tmp/ekodi-owner-report-schema.json >/dev/null
+
+          npx --yes wrangler@$WRANGLER_VERSION d1 execute ekodi-auth             --remote --config wrangler.api.toml --json             --command "SELECT COUNT(*) AS report_count, MAX(generated_at) AS last_generated_at FROM ekodi_owner_reports;"             > /tmp/ekodi-owner-report-count.json
+
+          count=$(jq -r '.[0].results[0].report_count // 0' /tmp/ekodi-owner-report-count.json)
+          last=$(jq -r '.[0].results[0].last_generated_at // "none"' /tmp/ekodi-owner-report-count.json)
+          echo "Durable EKODI owner-report ledger verified: material_reports=$count last_generated_at=$last"
+          echo "Healthy routine cycles may correctly keep material_reports at zero."
+
+      - name: Verify deployed AI Ops reads EKODI-native reports
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 12); do
+            if curl -fsS --connect-timeout 5 --max-time 15               'https://ekodi.kr/admin/ai-ops-admin.js?owner-report=production-proof'               -o /tmp/ai-ops-admin.js; then
+              if grep -Fq 'EKODI AUTONOMOUS REPORT' /tmp/ai-ops-admin.js                 && grep -Fq '/api/control/owner-report?limit=8' /tmp/ai-ops-admin.js                 && grep -Fq '/api/control/owner-report/check' /tmp/ai-ops-admin.js                 && grep -Fq 'loadOwnerReport(false)' /tmp/ai-ops-admin.js; then
+                echo 'Verified: production AI Ops carries the EKODI-native owner-report surface.'
+                exit 0
+              fi
+            fi
+            sleep 5
+          done
+          echo 'Production AI Ops owner-report asset contract not observed.'
+          exit 1
+
+      - name: Verify owner-report API remains authenticated
+        shell: bash
+        run: |
+          set -euo pipefail
+          code=$(curl -sS -o /tmp/owner-report-unauth.json -w '%{http_code}'             --connect-timeout 5 --max-time 15             'https://ekodi.kr/api/control/owner-report?limit=1' || true)
+          case "$code" in
+            401|403) ;;
+            *) echo "Expected authenticated owner-report boundary, got HTTP $code"; cat /tmp/owner-report-unauth.json || true; exit 1 ;;
+          esac
+          echo "Verified: owner-report API is not publicly readable (HTTP $code)."
+
+      - name: Publish concise production proof
+        shell: bash
+        run: |
+          {
+            echo '## EKODI native owner-report production proof'
+            echo '- Producer: EKODI Orchestrator'
+            echo '- ChatGPT scheduler required: no'
+            echo '- Internal cadence: Cloudflare Control API cron, every 10 minutes'
+            echo '- Durable ledger: production D1 ekodi_owner_reports'
+            echo '- Admin delivery: /admin#ai-ops'
+            echo '- Public access to report API: blocked'
+            echo '- Reporting rule: material state change only; duplicate states suppressed'
+          } >> "$GITHUB_STEP_SUMMARY"
