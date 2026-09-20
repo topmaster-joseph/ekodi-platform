@@ -134,7 +134,7 @@ function routeFamily(hostValue,pathValue){
   if(path==='/ekodibiz'||path.startsWith('/ekodibiz/'))return 'ekodibiz';
   if(path==='/api'||path.startsWith('/api/'))return 'api';
   if(path.includes('/marketing'))return 'marketing';
-  if(path.startsWith('/mall')||path.startsWith('/ekodibiz/ekodimall'))return 'mall';
+  if(path.startsWith('/mall')||path.startsWith('/ekodimall')||path.startsWith('/ekodibiz/ekodimall'))return 'mall';
   if(path==='/'||path==='/privacy'||path==='/terms'||path.startsWith('/history'))return 'public-root';
   const first=path.split('/').filter(Boolean)[0]||'';
   if(host==='ekodi.kr'&&first&&serviceForId(first))return 'service-root';
