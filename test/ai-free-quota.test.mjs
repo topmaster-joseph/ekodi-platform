@@ -4,6 +4,7 @@ import {
   AI_FREE_QUOTA_POLICY,
   classifyFreeQuotaError,
   configuredFreeProviderIds,
+  configuredRuntimeFreeProviderIds,
   freePoolSnapshot,
   hasAlternateZeroCostExecution,
 } from '../ai-free-quota.js';
@@ -57,4 +58,18 @@ test('paid decision is required only when every configured free provider is exha
 test('account execution prevents premature paid escalation',()=>{
   assert.equal(hasAlternateZeroCostExecution({nodeProviders:['codex']}),true);
   assert.equal(hasAlternateZeroCostExecution({nodeProviders:[]}),false);
+});
+
+
+test('runtime free-provider inventory includes only configured executable free lanes',()=>{
+  const ids=configuredRuntimeFreeProviderIds({
+    EKODI_PROVIDER_WORKERS_AI_ENABLED:'true',
+    AI:{async run(){}},
+    GEMINI_API_KEY:'gemini-test-key',
+    OPENROUTER_API_KEY:'openrouter-test-key',
+    EKODI_PROVIDER_OPENROUTER_FREE_ENABLED:'true',
+    GROQ_API_KEY:'groq-test-key',
+    EKODI_PROVIDER_GROQ_FREE_ENABLED:'false',
+  });
+  assert.deepEqual(ids,['cloudflare-workers-ai','gemini-free','openrouter-free']);
 });
