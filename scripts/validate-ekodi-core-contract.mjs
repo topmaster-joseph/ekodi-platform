@@ -29,8 +29,9 @@ if (controlApi && !controlApi.domains?.includes(core.canonicalHost)) fail('contr
 if (controlApi && controlApi.database !== core.controlPlane.database) fail('control-plane database declaration differs from Core contract');
 
 const adminAuth = boundaries.platforms?.['admin-auth'];
-if (!adminAuth?.domains?.includes('admin.ekodi.kr')) fail('admin.ekodi.kr must remain in the admin-auth boundary');
-if (!adminAuth?.domains?.includes('auth.ekodi.kr')) fail('auth.ekodi.kr must remain in the admin-auth boundary');
+if (!adminAuth) fail('admin-auth platform boundary is missing');
+if (adminAuth && adminAuth.kind !== 'shared-control-plane-ui') fail('admin-auth boundary kind must remain shared-control-plane-ui');
+if (adminAuth && adminAuth.database !== 'none') fail('admin-auth UI boundary must not own a database');
 
 const requiredEntities = ['organization', 'person', 'membership', 'audit'];
 for (const entity of requiredEntities) {
