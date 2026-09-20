@@ -2,16 +2,10 @@ import { injectEkodiShell, shellServiceForHost } from './ekodi-shell-injector.js
 
 const ORIGINS = Object.freeze({});
 
-const MAIL_CANONICAL = 'https://mail.ekodi.kr';
 const MALL_CANONICAL = 'https://ekodi.kr/ekodibiz/ekodimall';
 const CANONICAL_REDIRECTS = Object.freeze({
   'mall.ekodi.kr': MALL_CANONICAL,
-  'mall.biz.ekodi.kr': MALL_CANONICAL,
-  'mail.biz.ekodi.kr': MAIL_CANONICAL,
-  'mail.church.ekodi.kr': MAIL_CANONICAL,
-  'mail.lab.ekodi.kr': MAIL_CANONICAL,
-  'mail.books.ekodi.kr': MAIL_CANONICAL,
-  'mail.trade.ekodi.kr': MAIL_CANONICAL
+  'mall.biz.ekodi.kr': MALL_CANONICAL
 });
 
 const REDIRECTS = Object.freeze({
@@ -55,7 +49,7 @@ function businessHub() {
 <a class="card" href="https://ekodi.kr/ekodibiz/trade"><div><span class="icon">T</span><strong>Global Trading</strong><small>글로벌 B2B 무역 · GPU · AI Server · Components</small></div><span class="arrow">↗</span></a>
 <a class="card" href="https://ekodi.kr/ekodibiz/ekodimall"><div><span class="icon">M</span><strong>EKODI Mall</strong><small>상품과 서비스의 비즈니스 커머스 허브</small></div><span class="arrow">↗</span></a>
 <a class="card" href="https://pay.biz.ekodi.kr"><div><span class="icon">P</span><strong>EKODI Pay</strong><small>결제와 사업부별 회계 관제 진입점</small></div><span class="arrow">↗</span></a>
-<a class="card" href="https://mail.ekodi.kr"><div><span class="icon">@</span><strong>Business Mail</strong><small>EKODI 공통 Mail 서비스</small></div><span class="arrow">↗</span></a>
+<a class="card" href="https://ekodi.kr/mail"><div><span class="icon">@</span><strong>Business Mail</strong><small>EKODI 공통 Mail 서비스</small></div><span class="arrow">↗</span></a>
 <a class="card" href="https://live.biz.ekodi.kr"><div><span class="icon">▶</span><strong>Business Live</strong><small>비즈니스 방송과 라이브 콘텐츠 로비</small></div><span class="arrow">↗</span></a>
 </section>
 <div class="note">공식 운영 주소는 <strong>biz.ekodi.kr</strong>입니다. 기존 <strong>ekodibiz.kr</strong>은 브랜드 보호·전환 주소로 유지하고 이 로비로 영구 연결합니다.</div>
