@@ -25,3 +25,5 @@ jobs:
         run: |
           node --check scripts/zero-subdomain-guard.mjs
           node scripts/zero-subdomain-guard.mjs
+          node --check scripts/validate-retired-api-host.mjs
+          node scripts/validate-retired-api-host.mjs
