@@ -58,7 +58,7 @@ test('My EKODI and workspace admin expose separate channel automation entry poin
   assert.match(myApp, /window\.EKODI_MY_AUTH/);
   const myWorker=await read('my-worker.js'); assert.match(myWorker, /marketing-publish-api\.ekodi\.kr/);
   assert.match(myChannel, /subject_type=person/);
-  assert.match(workspace, /\['publishing','채널 · 게시'\]/);
+  assert.match(workspace, /\['publishing','SNS 채널·자동게시'\]/);
   assert.match(workspace, /subject_type=workspace/);
   assert.match(workspace, /CHANNEL_AUTOMATION='\/marketing-publish-api'/);
   assert.match(worker, /channelAutomationCore:automationReady/);
