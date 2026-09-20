@@ -132,14 +132,13 @@ export async function collectGitHub({repository,token='',fetchJson=jsonFetch,obs
 }
 
 export function snapshotsToSql(snapshots){
-  const lines=['BEGIN TRANSACTION;'];
+  const lines=[];
   for(const row of snapshots){
     const percent=row.freeLimit&&row.freeLimit>0?(Number(row.observedValue)/Number(row.freeLimit))*100:null;
     lines.push(`INSERT INTO provider_quota_snapshots(provider,metric,period_start,observed_value,free_limit,usage_percent,source,observed_at)
 VALUES(${sqlString(row.provider)},${sqlString(row.metric)},${sqlString(row.periodStart)},${Number(row.observedValue)||0},${row.freeLimit==null?'NULL':Number(row.freeLimit)},${percent==null?'NULL':percent},${sqlString(row.source)},${sqlString(row.observedAt)})
 ON CONFLICT(provider,metric,period_start) DO UPDATE SET observed_value=excluded.observed_value,free_limit=excluded.free_limit,usage_percent=excluded.usage_percent,source=excluded.source,observed_at=excluded.observed_at;`);
   }
-  lines.push('COMMIT;');
   return lines.join('\n');
 }
 

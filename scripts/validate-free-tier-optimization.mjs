@@ -65,6 +65,7 @@ expect(collector.includes("reason:'credential_missing'"),'Supabase collector mus
 expect(collector.includes('/database/query'),'Supabase database usage must come from an authorized read-only database query');
 expect(collector.includes('/actions/cache/usage'),'GitHub cache usage must come from the official repository usage endpoint');
 expect(collector.includes('/actions/artifacts?'),'GitHub artifact usage must come from the official repository artifact endpoint');
+expect(!/BEGIN TRANSACTION|SAVEPOINT|lines\.push\('COMMIT;'\)/.test(collector),'remote D1 collector must not emit explicit transaction statements');
 
 if(failures.length){
   for(const failure of failures) console.error(`[EKODI-FREE-TIER-001] ${failure}`);

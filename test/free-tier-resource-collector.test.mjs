@@ -64,5 +64,6 @@ test('collector emits additive quota snapshot upserts and never changes provider
   }]);
   assert.match(sql,/INSERT INTO provider_quota_snapshots/);
   assert.match(sql,/ON CONFLICT\(provider,metric,period_start\) DO UPDATE/);
+  assert.doesNotMatch(sql,/\b(BEGIN(?: TRANSACTION)?|COMMIT|SAVEPOINT)\b/i);
   assert.doesNotMatch(sql,/\b(DROP|ALTER|DELETE FROM|UPDATE provider_quota_state)\b/i);
 });
