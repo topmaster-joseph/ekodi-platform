@@ -27,6 +27,8 @@ test('publishing studio keeps AI optional and uses shared control API', () => {
   assert.match(studio, /\/api\/books\/me/);
   assert.doesNotMatch(studio, /OPENAI|ANTHROPIC|GEMINI|api[_-]?key/i);
   assert.match(studio, /credentials:'include'/);
+  assert.match(studio, /https:\/\/ekodi\.kr\/auth\/\?site=books/);
+  assert.doesNotMatch(studio, /https:\/\/auth\.ekodi\.kr/);
 });
 
 test('network schema is additive and portable SQL', () => {
