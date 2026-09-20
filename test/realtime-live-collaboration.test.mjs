@@ -100,6 +100,8 @@ test('live studio exposes compact shared-surface controls and QR camera invitati
   assert.match(live,/replaceTrack/);
   assert.match(css,/\.studio-focus/);
   assert.match(css,/\.camera-source-mode/);
+  const worker=await read('site-worker.js');
+  assert.match(worker,/img-src 'self' data: https:\/\/api\.qrserver\.com/);
 });
 
 test('presenter compositor uses a round transparent-outside mask',async()=>{
