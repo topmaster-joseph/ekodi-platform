@@ -1,5 +1,5 @@
 {
-  "version": 77,
+  "version": 78,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
@@ -1154,18 +1154,6 @@
         "headerExpect": [
           "x-ekodi-route: mail-contact",
           "x-ekodi-shell: v2",
-          "cache-control: no-store"
-        ],
-        "rollbackVerify": false
-      },
-      {
-        "url": "https://ekodi.kr/mail/contact",
-        "statuses": [
-          308
-        ],
-        "redirect": "manual",
-        "headerExpect": [
-          "location: https://ekodi.kr/mail/contact",
           "cache-control: no-store"
         ],
         "rollbackVerify": false
