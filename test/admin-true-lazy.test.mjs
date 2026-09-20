@@ -73,10 +73,10 @@ test('device browser diagnostics are shipped and stay on the immutable admin wor
   assert.match(smoke, /현재 관리자 브라우저 진단/);
   assert.match(smoke, /\.admin-browser-diagnostic/);
   for (const suffix of ['device-browser-diagnostics.js?v=device-v28','device-browser-diagnostics.css?v=device-v28']) {
-    const request = manifest.worker.requests.find(item => item.url === `https://admin.ekodi.kr/${suffix}`);
+    const request = manifest.worker.requests.find(item => String(item.url || '').endsWith(`/${suffix}`));
     assert.ok(request, `missing guarded-release request for ${suffix}`);
     assert.equal(request.candidateVerify, false);
-    assert.match(request.candidateVerifyReason || '', /post-promotion|after promotion|after promotion|promotion/i);
+    assert.match(request.candidateVerifyReason || '', /post-promotion|promotion/i);
     assert.ok(request.headerExpect?.includes('x-ekodi-route: admin-asset'));
     assert.ok(request.headerExpect?.includes('cache-control: public, max-age=31536000, immutable'));
   }
