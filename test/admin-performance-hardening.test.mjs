@@ -114,6 +114,13 @@ test('postbuild removes retired first-path assets, versions the current graph an
   assert.match(perf, /position:static!important/);
   assert.match(perf, /\.app>main\{padding-top:0!important\}/);
   assert.match(perf, /\.topbar \.kicker\{display:none!important\}/);
+  assert.ok(perf.includes('const adminMirrorDir = \`${dist}admin/\`;'));
+  assert.match(perf, /existingAdminMirrorEntries = await readdir/);
+  assert.match(perf, /\.\.\.existingAdminMirrorAssets, \.\.\.versionInputs/);
+  assert.ok(perf.includes('copyFile(path, \`${adminMirrorDir}index.html\`)'));
+  for (const asset of ['admin-compact.js','remote-power-admin.js','remote-power-admin.css','admin-design-engine.css','admin-lazy-features.js','ai-ops-admin.css']) {
+    assert.match(perf, new RegExp(asset.replaceAll('.', '\\.')));
+  }
 });
 
 test('admin readability is first-path without consuming the compact CSS budget, while AI command styling stays lazy', async () => {
