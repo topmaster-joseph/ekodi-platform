@@ -10,10 +10,10 @@ const WORKSPACES=["ekodibiz","jadam"] as const;
 const WORKSPACE_SET=new Set<string>(WORKSPACES);
 
 const cors=(req:Request)=>{
-  const origin=req.headers.get("Origin")||"https://auth.ekodi.kr";
-  const allowed=origin==="https://auth.ekodi.kr"||origin==="https://business.ekodi.kr";
+  const origin=req.headers.get("Origin")||"https://ekodi.kr";
+  const allowed=origin==="https://ekodi.kr"||origin==="https://business.ekodi.kr";
   return{
-    "Access-Control-Allow-Origin":allowed?origin:"https://auth.ekodi.kr",
+    "Access-Control-Allow-Origin":allowed?origin:"https://ekodi.kr",
     "Vary":"Origin",
     "Access-Control-Allow-Headers":"authorization, apikey, content-type, x-client-info",
     "Access-Control-Allow-Methods":"POST,OPTIONS"
