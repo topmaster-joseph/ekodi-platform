@@ -13,6 +13,15 @@ test('Workers AI provider is unavailable without a binding', () => {
   assert.equal(provider.costClass,'account-managed');
 });
 
+test('Workers AI advertises a standard hosted resource class for orchestration', () => {
+  const provider=createCloudflareWorkersAiProvider({
+    ENVIRONMENT:'test',
+    AI:{async run(){return{response:'ok'}}}
+  });
+  assert.equal(provider.resourceClass,'hosted-ai');
+  assert.equal(provider.costClass,'account-managed');
+});
+
 test('Workers AI provider invokes the bound model in non-production tests without D1', async () => {
   let input=null;
   const provider=createCloudflareWorkersAiProvider({
