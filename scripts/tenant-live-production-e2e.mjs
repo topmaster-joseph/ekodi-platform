@@ -8,6 +8,7 @@ const liveUrl=process.env.TENANT_LIVE_URL||'https://ekodi.kr/ekodibiz/live/';
 const label=process.env.TENANT_LIVE_LABEL||'EKODI Biz';
 const api='https://ekodi.kr/api/realtime';
 const artifactDir='artifacts/tenant-live-production-e2e';
+const reportPath=`${artifactDir}/${String(tenant).replace(/[^a-z0-9._-]+/gi,'-')}.json`;
 const report={passed:false,skipped:false,tenant,roomId:null,hostReady:false,hostTracks:0,viewerTracks:0,ended:false,hostStatus:null,viewerStatus:null,pageErrors:[],requestFailures:[],realtime:[]};
 
 if(!token)throw new Error('e2e_admin_token_missing');
@@ -67,7 +68,7 @@ await fs.mkdir(artifactDir,{recursive:true});
 const initial=await publicLive();
 if(initial.live){
   Object.assign(report,{passed:true,skipped:true,reason:'active_tenant_broadcast'});
-  await fs.writeFile(`${artifactDir}/report.json`,JSON.stringify(report,null,2));
+  await fs.writeFile(reportPath,JSON.stringify(report,null,2));
   console.log(`Tenant Live production E2E skipped for ${tenant}: a real live broadcast is active.`);
   process.exit(0);
 }
@@ -152,7 +153,7 @@ try{
   await viewerContext?.close().catch(()=>{});
   await hostContext?.close().catch(()=>{});
   await browser.close().catch(()=>{});
-  await fs.writeFile(`${artifactDir}/report.json`,JSON.stringify(report,null,2));
+  await fs.writeFile(reportPath,JSON.stringify(report,null,2));
 }
 
 assert.equal(report.passed,true);
