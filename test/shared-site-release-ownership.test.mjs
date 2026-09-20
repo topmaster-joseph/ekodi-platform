@@ -20,6 +20,12 @@ test('shared-site guarded release verifies only apex paths owned by the shared W
   assert.match(worker, /const ADMIN_HOSTS = new Set/);
 });
 
+test('shared-site smoke contracts are unique by HTTP method and canonical URL', () => {
+  const signatures = manifest.worker.requests.map(item => `${String(item.method || 'GET').toUpperCase()} ${item.url}`);
+  const duplicates = signatures.filter((signature,index) => signatures.indexOf(signature) !== index);
+  assert.deepEqual(duplicates, [], `Duplicate Shared Site smoke contracts: ${[...new Set(duplicates)].join(', ')}`);
+});
+
 test('shared-site production blocks a rerun of an older commit before deployment', () => {
   assert.match(workflow, /Refuse stale rerun production promotion/);
   assert.match(workflow, /GITHUB_RUN_ATTEMPT/);
