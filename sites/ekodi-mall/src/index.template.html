@@ -21,7 +21,7 @@
   <div class="notice">{{NOTICE}}</div>
   <header class="header buyer-header">
     <a class="brand" href="/#top"><span class="mark">E</span><span>EKODI<small>MALL</small></span></a>
-    <nav><a href="/#discover">찾기</a><a href="/#recommend">추천</a><a href="/#shop">마켓</a><a href="/#local">로컬</a></nav>
+    <nav><a href="/#discover">찾기</a><a href="/#recommend">추천</a><a href="/#shop">마켓</a><a href="/agoda/">아고다</a><a href="/coupang/">쿠팡</a><a href="/#local">로컬</a></nav>
     <div class="actions"><button class="icon" id="searchBtn" aria-label="상품 검색">⌕</button><button class="icon" id="wishBtn">♡ <span id="wishCount">0</span></button><a class="seller-mini" href="{{SELLER_STUDIO_HREF}}">판매하기</a></div>
   </header>
   <main id="main">
@@ -37,6 +37,7 @@
       <div class="context-result-grid" id="contextResults" aria-live="polite"><article class="context-loading"><strong>추천을 준비하고 있습니다.</strong><span>상품보다 먼저, 필요한 이유를 살펴봅니다.</span></article></div>
       <p class="context-disclosure" id="contextDisclosure">판매처와 제휴관계는 구매 전에 분명하게 표시합니다.</p>
     </section>
+    <section class="affiliate-gates" aria-labelledby="affiliateGatesTitle"><div class="heading"><div><p class="eyebrow">AFFILIATE COLLECTIONS</p><h2 id="affiliateGatesTitle">제휴 판매처별로<br>분명하게 나눠 봅니다</h2><p>모든 추천은 에코디몰에서 시작하되 예약·주문과 책임 주체는 판매처별 하위경로에서 명확하게 안내합니다.</p></div></div><div class="affiliate-gate-grid"><a href="/agoda/"><small>TRAVEL · STAY</small><strong>아고다 숙박</strong><span>지역·일정·동행에 맞는 숙소 찾기 →</span></a><a href="/coupang/"><small>LIFE · SHOPPING</small><strong>쿠팡 파트너스</strong><span>생활 맥락에 맞는 상품 찾기 →</span></a></div></section>
     <section class="discover" id="discover"><div class="heading"><div><p class="eyebrow">BROWSE BY SITUATION</p><h2>상품명이 생각나지 않아도<br>상황에서 시작하세요</h2></div></div><div class="discover-grid"><button type="button" data-context-prompt="부담 없는 감사선물 5만원 이하"><span>감사</span><strong>마음을 전할 때</strong><small>교수님 · 은사 · 거래처 · 답례</small></button><button type="button" data-context-prompt="부모님과 어르신께 드릴 건강 선물 5만원 이하"><span>돌봄</span><strong>건강을 챙길 때</strong><small>부모님 · 어르신 · 안부</small></button><button type="button" data-context-prompt="3만원대 집들이 실용 선물"><span>생활</span><strong>새로운 시작에</strong><small>집들이 · 개업 · 이사</small></button><button type="button" data-context-prompt="전남 지역상생 상품 선물"><span>로컬</span><strong>지역의 이야기를 함께</strong><small>특산 · 소상공인 · 지역상생</small></button></div></section>
     <div class="filters" id="filters">{{FILTERS}}</div>
     <section class="shop" id="shop"><div class="heading"><div><p class="eyebrow">ALL MARKET</p><h2>추천을 넘어<br>모든 상품 둘러보기</h2><p>에코디 큐레이션, 공개 스토어 상품, 개인상품을 한 시장에서 검색합니다. 판매 주체와 거래 상태는 상품마다 분명하게 표시합니다.</p></div><input class="search" id="search" type="search" placeholder="상품·판매자·스토어·키워드 검색" aria-label="상품 검색"></div><div class="grid" id="grid">{{PRODUCTS}}</div><div class="empty" id="empty" hidden>검색 조건에 맞는 상품이 없습니다.</div></section>
