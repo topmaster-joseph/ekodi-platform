@@ -8,7 +8,7 @@ const json = path => JSON.parse(read(path));
 
 test('platform maturity dashboard uses protected Control API and super-admin gate', () => {
   const source = read('platform-maturity-admin.js');
-  assert.match(source, /ekodi\\.kr\\/api\\/control\\/platform-maturity/);
+  assert.match(source, /ekodi\.kr\/api\/control\/platform-maturity/);
   assert.match(source, /authorization.*Bearer/s);
   assert.match(source, /session\?\.role !== 'super_admin'/);
   assert.match(source, /certificationStatus === 'not-claimed'/);
