@@ -38,7 +38,7 @@ function renderHub(pathname) {
   };
 }
 
-test('hub inline script compiles and renders Pay and Cloud from canonical apex paths', () => {
+test('hub inline script compiles and renders Pay, Cloud and Live from canonical apex paths', () => {
   const pay = renderHub('/pay');
   assert.equal(pay.documentTitle, 'EKODI Pay · EKODI');
   assert.equal(pay.heading, 'EKODI Pay');
@@ -53,12 +53,22 @@ test('hub inline script compiles and renders Pay and Cloud from canonical apex p
 
   const paySlash = renderHub('/pay/');
   assert.equal(paySlash.heading, 'EKODI Pay');
+
+  const live = renderHub('/live');
+  assert.equal(live.documentTitle, 'EKODI Live · EKODI');
+  assert.equal(live.heading, 'EKODI Live');
+  assert.equal(live.eyebrow, 'LIVE LOBBY');
+  assert.equal(live.context, 'ekodi.kr/live');
+
+  const liveSlash = renderHub('/live/');
+  assert.equal(liveSlash.heading, 'EKODI Live');
 });
 
 test('hub source uses canonical path-only routing and apex Admin/Auth links', () => {
   assert.match(hub, /const rawPath = location\.pathname \|\| '\/'/);
   assert.match(hub, /if \(path === '\/pay'\)/);
   assert.match(hub, /else if \(path === '\/cloud'\)/);
+  assert.match(hub, /path === '\/live'/);
   assert.doesNotMatch(hub, /https:\/\/admin\.ekodi\.kr/);
   assert.doesNotMatch(hub, /https:\/\/auth\.ekodi\.kr/);
   assert.match(hub, /https:\/\/ekodi\.kr\/admin\//);

@@ -68,16 +68,18 @@
           {label:'EKODI Portal',href:'https://ekodi.kr'}
         ]
       };
-    } else if (host.startsWith('live.')) {
-      const org = host.split('.').length > 3 ? host.split('.')[1].toUpperCase() : 'ALL';
+    } else if (path === '/live' || host.startsWith('live.')) {
+      const org = host.startsWith('live.') && host.split('.').length > 3 ? host.split('.')[1].toUpperCase() : 'ALL';
       model = {
-        eyebrow:'LIVE LOBBY', title:'EKODI Live', context:`${host} · ${org}`,
-        description:'예배, 선교, 비즈니스, 연구의 생방송 입구를 하나의 방송 로비로 묶습니다.',
-        note:'교회·선교 채널은 바로 연결되어 있습니다. 비즈니스·연구 라이브는 채널이 확정되는 즉시 같은 주소 체계 안에서 확장합니다.',
+        eyebrow:'LIVE LOBBY', title:'EKODI Live', context:host === 'ekodi.kr' ? canonicalContext : `${host} · ${org}`,
+        description:'교회·선교·비즈니스·연구·상권·매장의 실시간 방송을 공통 Live 전문서비스로 연결합니다.',
+        note:'각 운영공간은 자신의 브랜드와 관리자 권한을 유지하며, 공개 여부와 하위 방송 관리는 EKODI Live 관리자에서 통합 확인합니다.',
         cards:[
-          card('▶','에코디교회 라이브','YouTube @ekodichurch','https://www.youtube.com/@ekodichurch/live'),
-          card('◉','에코디선교회 라이브','YouTube @ekodicommunity','https://www.youtube.com/@ekodicommunity/live'),
-          common.admin, common.root
+          card('▶','에코디교회 라이브','예배 · 모임 방송','https://ekodi.kr/ekodichurch/live/'),
+          card('◉','에코디선교회 라이브','선교 · 행사 방송','https://ekodi.kr/ekodimission/live/'),
+          card('B','에코디비즈 라이브','사업 · 현장 방송','https://ekodi.kr/ekodibiz/live/'),
+          card('⌘','Live 관리자','공개 여부 · 하위관리자','https://ekodi.kr/live/admin'),
+          common.root
         ]
       };
     } else if (path === '/cloud') {
