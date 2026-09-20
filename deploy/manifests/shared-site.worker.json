@@ -1182,8 +1182,9 @@
         ],
         "redirect": "manual",
         "expect": [
-          "EKODI Hub",
-          "EKODI 서비스 허브"
+          "EKODI Live",
+          "LIVE LOBBY",
+          "data-ekodi-service=\"live\""
         ],
         "headerExpect": [
           "x-ekodi-route: hub"
