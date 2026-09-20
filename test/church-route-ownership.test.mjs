@@ -29,3 +29,17 @@ test('Church live ownership verification opens the quota circuit immediately on 
   assert.match(source,/CF-QUOTA-001 circuit open/);
   assert.match(source,/no retry/);
 });
+
+
+test('Church Live canonical navigation never points at the retired /live/church path',async()=>{
+  const [shell,workflow,tenants]=await Promise.all([
+    readFile(new URL('../admin-shell.html',import.meta.url),'utf8'),
+    readFile(new URL('../.github/workflows/deploy-site-core.yml',import.meta.url),'utf8'),
+    readFile(new URL('../realtime-tenant-registry.js',import.meta.url),'utf8')
+  ]);
+  for(const source of [shell,workflow]) {
+    assert.match(source,/https:\/\/ekodi\.kr\/ekodichurch\/live\//);
+    assert.doesNotMatch(source,/https:\/\/ekodi\.kr\/live\/church/);
+  }
+  assert.match(tenants,/path:'\/ekodichurch\/live\/'/);
+});
