@@ -1,5 +1,5 @@
 name: Deploy EKODI AI Control Plane
-# Production redeploy trigger: promote the verified AI Commons public-contract hardening from current main.
+# Production redeploy trigger: promote verified AI Commons hardening from PR #1864 / merge eb2f90e on current main.
 
 on:
   workflow_dispatch:
