@@ -47,6 +47,11 @@ test('admin root is a command-only workspace while Campus remains a child route'
   assert.match(dock,/id=\"ekodiAssistHistory\"/);
   assert.match(dock,/id=\"ekodiAssistChat\"/);
   assert.match(dock,/api\('\/api\/control\/ai\/assist'/);
+  assert.match(dock,/api\('\/api\/control\/ai\/v8\/pulse'/);
+  assert.match(dock,/capability:'core\.automation'/);
+  assert.match(dock,/executeNow:true/);
+  assert.match(dock,/EKODI Command Plane/);
+  assert.doesNotMatch(dock,/actionType:'ui\.change_request'/);
   assert.match(dock,/addSessionMessage\('assistant',reply/);
   assert.match(bootstrap,/aria-label="에코디와 대화하기"/);
   assert.match(bootstrap,/aria-label="새 대화"/);
