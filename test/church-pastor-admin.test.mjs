@@ -83,3 +83,13 @@ test('pastor admin release contract requires nosniff and candidate-only rollback
   assert.equal(probe?.rollbackVerify, false);
   assert.ok(probe?.headerExpect?.includes('x-content-type-options: nosniff'));
 });
+
+
+test('church admin home prioritizes today, newcomers, care and worship follow-up', async () => {
+  const source = await fs.promises.readFile(new URL('../church-pastor-admin-page.js', import.meta.url), 'utf8');
+  assert.match(source, /오늘의 교회/);
+  assert.match(source, /status=eq\.newcomer/);
+  assert.match(source, /새가족 보기/);
+  assert.match(source, /돌봄 보기/);
+  assert.match(source, /예배 준비/);
+});
