@@ -9,6 +9,7 @@ import {
 
 const native = {
   state:'online',
+  serviceReady:true,
   capabilities:{ backgroundBrowser:true, isolatedDesktop:true },
 };
 
