@@ -42,6 +42,12 @@ test('central admin exposes one multi-channel account control center instead of 
 
 test('central channel manager can scope connections to person, tenant or store without bypassing backend membership checks', () => {
   assert.match(admin, /\['person','내 계정'\],\['tenant','운영공간'\],\['store','매장'\]/);
+  assert.match(admin, /params\.get\('social_scope'\)/);
+  assert.match(admin, /params\.get\('social_subject'\)/);
+  assert.match(admin, /params\.get\('social_connect'\)/);
+  assert.match(admin, /\['youtube','meta','threads'\]\.includes\(requestedProvider\)/);
+  assert.match(admin, /url\.searchParams\.delete\('social_connect'\)/);
+  assert.match(admin, /queueMicrotask\(async\(\)=>/);
   assert.match(admin, /url\.searchParams\.set\('subject_type',connectionScope\.type\)/);
   assert.match(admin, /url\.searchParams\.set\('subject_key',connectionScope\.key\)/);
   assert.match(admin,/\['jadam','자담치킨'\]/);
