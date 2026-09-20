@@ -141,6 +141,13 @@ export async function handleEkodiV8CommandControl(request, env) {
   const collaboration = await collaborationResponse(request, env, auth.session, url);
   if (collaboration) return collaboration;
 
+  const commandMutation = request.method === 'POST' && (url.pathname === `${PREFIX}/pulse` || url.pathname === `${PREFIX}/drain`);
+  const commandRead = request.method === 'GET';
+  const requiredCommandCapability = commandMutation ? 'ai:operate' : commandRead ? 'ai:read' : '';
+  if (requiredCommandCapability && !sessionCapabilityGranted(auth.session, requiredCommandCapability)) {
+    return json(request, env, { error: 'capability_required', capability: requiredCommandCapability }, 403);
+  }
+
   if (request.method === 'GET' && url.pathname === `${PREFIX}/status`) {
     const [ledger, gateway, readiness, collaborationSettings] = await Promise.all([
       getEkodiCommandLedgerStatus(env),
