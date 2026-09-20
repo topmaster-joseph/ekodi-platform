@@ -17,6 +17,7 @@ test('tenant readability injector stays brand-neutral and idempotent',async()=>{
   assert.match(injector,/x-ekodi-shell/);
   assert.match(injector,/x-ekodi-user-ui/);
   assert.doesNotMatch(injector,/function injectEkodiTenantReadability[\s\S]*fallbackHeader\(/);
+  assert.match(injector,/typeof HTMLRewriter!==['"]function['"]/);
   assert.match(css,/Brand-neutral tenant readability v1/);
   assert.match(css,/html\[data-ekodi-tenant-readability="v1"\]/);
   assert.match(css,/min-height:44px/);
@@ -40,6 +41,7 @@ test('live mobile verifier checks canonical apex tenant paths only',async()=>{
   assert.match(verifier,/live-readability-not-observed/);
 });
 
+
 test('remaining canonical business, trade and lab surfaces inherit a readability contract',async()=>{
   const [router,canonical,verifier]=await Promise.all([
     read('platform-router-entry-worker.js'),
@@ -52,4 +54,3 @@ test('remaining canonical business, trade and lab surfaces inherit a readability
   assert.match(verifier,/requireReadability\(cgmaRoot,'cgma-root',errors\)/);
   assert.doesNotMatch(verifier,/need\(cgmaRoot,'cgma-root','data-ekodi-tenant-readability/);
 });
-
