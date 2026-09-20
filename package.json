@@ -58,7 +58,7 @@
     "validate:tapo-generation": "node scripts/validate-tapo-generation-10-plus.mjs",
     "validate:admin-site-hierarchy": "node scripts/validate-admin-site-hierarchy.mjs",
     "validate:mission-shell": "node --check scripts/verify-ekodimission-production.mjs && node scripts/validate-ekodimission-shell-contract.mjs",
-    "validate:web-execution": "node --check web-computer-execution-runtime.js && node --test test/web-computer-execution.test.mjs && node scripts/validate-capability-registry.mjs"
+    "validate:web-execution": "node --check web-computer-execution-runtime.js && node --check playwright-web-execution-adapter.js && node --test test/web-computer-execution.test.mjs test/playwright-web-execution-adapter.test.mjs && node scripts/validate-capability-registry.mjs"
   },
   "engines": {
     "node": ">=20"
