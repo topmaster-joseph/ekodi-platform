@@ -1,5 +1,5 @@
 (() => {
-  const API = 'https://api.ekodi.kr';
+  const API = 'https://ekodi.kr';
   const CONNECT_API = '/marketing-connect-api';
   const TOKEN_KEY = 'ekodi-auth-token';
   const token = () => sessionStorage.getItem(TOKEN_KEY) || '';
