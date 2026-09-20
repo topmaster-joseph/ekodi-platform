@@ -5,7 +5,7 @@ import { readFile } from 'node:fs/promises';
 const read=path=>readFile(new URL(`../${path}`,import.meta.url),'utf8');
 
 test('admin shell is separate from user shell and removes the left brand header',async()=>{
-  const [adminShell,adminRuntime,adminRegistry,adminSidebar,adminCompact,adminDesign,userHeader,userLanguage,injector,worker,principles]=await Promise.all([
+  const [adminShell,adminRuntime,adminRegistry,adminSidebar,adminCompact,adminDesign,userHeader,userLanguage,injector,worker,principles,liveVerifier]=await Promise.all([
     read('shell/admin-ui-shell.js'),
     read('admin-menu-runtime.js'),
     read('admin-menu-registry.js'),
@@ -16,7 +16,8 @@ test('admin shell is separate from user shell and removes the left brand header'
     read('shell/user-language.js'),
     read('ekodi-shell-injector.js'),
     read('ekodi-shell-worker.js'),
-    read('docs/admin-ui-module-principles.md')
+    read('docs/admin-ui-module-principles.md'),
+    read('scripts/verify-ekodi-shell-live.mjs')
   ]);
 
   assert.match(adminShell,/SURFACE='admin'/);
@@ -64,6 +65,9 @@ test('admin shell is separate from user shell and removes the left brand header'
   assert.match(worker,/adminShellUrl\.pathname='\/admin-ui-shell\.js'/);
   assert.match(worker,/x-ekodi-admin-ui-shell/);
   assert.match(worker,/adminUIShellVersion:2/);
+  assert.match(liveVerifier,/adminUIShellVersion\)<2/);
+  assert.match(liveVerifier,/x-ekodi-admin-ui-shell'\)!=='v2'/);
+  assert.match(liveVerifier,/adminUI=v2/);
 
   assert.match(principles,/관리자 왼쪽 상단 헤더는 삭제가 기본 원칙/);
   assert.match(principles,/User Shell UI/);
