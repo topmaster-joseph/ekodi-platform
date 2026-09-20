@@ -45,7 +45,7 @@ test('existing first stores are compatibility profiles on one Store Admin Engine
   assert.match(script,/운영 데이터 비공개/);assert.match(script,/관리 영역/);
   assert.match(script,/noRoleSpecificAdminPages/);assert.match(script,/tenant\.marketing\.manage/);
   assert.doesNotMatch(script,/\['store_owner','tenant_admin','platform_admin'\]/);
-  assert.match(script,/state\.menu\?\.menu/);assert.match(script,/const GROUPS=\[/);assert.match(script,/function renderSecondaryNav/);assert.doesNotMatch(script,/state\.menu\?\.items/);
+  assert.match(script,/state\.menu\?\.menu/);assert.match(script,/const GROUPS=\[/);assert.match(script,/admin-nav-group-label/);assert.ok(script.includes("a.href=key==='overview'?ADMIN_BASE+'/overview':ADMIN_BASE+'/'+key"));assert.match(script,/root\.hidden=true/);assert.doesNotMatch(script,/a\.dataset\.group=group\.id/);assert.doesNotMatch(script,/state\.menu\?\.items/);
   assert.match(script,/https:\/\/ekodi\.kr\/workspace-api/);
   assert.match(script,/\/v1\/store-sms\/orders/);
   assert.match(script,/data-sms-action/);
