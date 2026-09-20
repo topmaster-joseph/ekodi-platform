@@ -160,7 +160,11 @@ const registeredCommonPaths = new Set(constitution.registeredCommonServicePaths 
 const registeredCore = new Set(constitution.registeredCoreServiceBoundaries || []);
 const targets = constitution.legacyDomainTargets || {};
 const customerOwned = constitution.customerOwnedDomainMappings || {};
-if (!systemDomains.has('ekodi.kr') || !systemDomains.has('api.ekodi.kr') || !systemDomains.has('auth.ekodi.kr')) fail('canonical system domain set is incomplete');
+if (!systemDomains.has('ekodi.kr') || !systemDomains.has('auth.ekodi.kr')) fail('canonical system domain set is incomplete');
+if (constitution.apiRoutingPolicy?.canonicalBase !== 'https://ekodi.kr/api') fail('canonical API base must be https://ekodi.kr/api');
+if (constitution.apiRoutingPolicy?.publicApiSubdomain !== null) fail('public API subdomain must remain retired');
+if (constitution.surfaceRoutingPolicy?.api !== '/api') fail('surface API path must remain /api');
+if (constitution.featurePatterns?.includes('https://ekodi.kr/api/v1/{feature}') !== true) fail('feature API pattern must use the apex /api path');
 if (constitution.domainPolicy?.newFeatureSubdomainsForbidden !== true) fail('new feature subdomains must be forbidden');
 if (constitution.domainPolicy?.newTenantSubdomainsForbidden !== true) fail('new tenant/workspace subdomains must be forbidden');
 if (constitution.domainPolicy?.sustainableBoundaryGateRequired !== true) fail('new system/common/core subdomains must pass the sustainable boundary gate');
