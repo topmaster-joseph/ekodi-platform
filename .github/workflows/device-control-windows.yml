@@ -92,6 +92,7 @@ jobs:
           foreach ($relative in @(
             'tools/ekodi-device-agent/windows/ekodi-device-agent.ps1',
             'tools/ekodi-device-agent/windows/ekodi-device-startup.ps1',
+            'tools/ekodi-device-agent/windows/background-browser-canary.ps1',
             'tools/ekodi-device-agent/windows/transactional-upgrade.test.ps1'
           )) {
             $path = Join-Path $PWD $relative
