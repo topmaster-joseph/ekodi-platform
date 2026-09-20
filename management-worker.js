@@ -13,7 +13,7 @@ function cfg(env={}){return{
   mode:env.MANAGEMENT_MODE||'isolated-staging',
   integrationsEnabled:env.INTEGRATIONS_ENABLED==='true',
   executionEnabled:false,
-  authUrl:env.AUTH_URL||'https://auth.ekodi.kr/?site=management&return_to=https%3A%2F%2Fmanagement.ekodi.kr%2F',
+  authUrl:env.AUTH_URL||'https://ekodi.kr/auth/?site=management&return_to=https%3A%2F%2Fmanagement.ekodi.kr%2F',
   minimumTier:'free',
   commercialModel:'base-tier + selected-modules + usage'
 }}
