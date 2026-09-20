@@ -41,7 +41,7 @@ test('Production Control keeps the 401 boundary and retries only for bounded edg
   const workflow=await read();
   const block=jobBlock(workflow,'production-control',null);
   assert.match(block,/for attempt in \$\(seq 1 18\)/);
-  assert.match(block,/ekodi\\.kr\\/api\\/control\\/messenger\\/inbox/);
+  assert.match(block,/https:\/\/ekodi\.kr\/api\/control\/messenger\/inbox/);
   assert.match(block,/\[ "\$code" = '401' \]/);
   assert.match(block,/exit 1/);
 });
