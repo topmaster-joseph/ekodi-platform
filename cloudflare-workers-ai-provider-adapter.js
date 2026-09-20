@@ -32,6 +32,10 @@ function modelIndex(taskName='',context={},size=1){
 }
 function selectModel(env={},taskName='',context={}){
   const models=modelPool(env);
+  const role=text(context?.role,80).toLowerCase();
+  if(role==='origin-primary')return models[0]||DEFAULT_MODELS[0];
+  if(role==='origin-synthesis')return models[1%models.length]||models[0]||DEFAULT_MODELS[0];
+  if(role.startsWith('parallel-'))return models[2%models.length]||models[0]||DEFAULT_MODELS[0];
   return models[modelIndex(taskName,context,models.length)]||DEFAULT_MODELS[0];
 }
 
