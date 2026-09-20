@@ -6,7 +6,7 @@ import { homedir, hostname, platform, release } from 'node:os';
 import { dirname, join } from 'node:path';
 
 const VERSION = '1.0.0';
-const API_DEFAULT = 'https://api.ekodi.kr';
+const API_DEFAULT = 'https://ekodi.kr';
 const HOME = process.env.EKODI_TAPO_HOME || join(homedir(), '.ekodi-tapo-bridge');
 const CONFIG_PATH = process.env.EKODI_TAPO_CONFIG || join(HOME, 'config.json');
 const sessions = new Map();
