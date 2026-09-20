@@ -87,6 +87,22 @@ test('production probe loops fail fast on quota circuit and deep E2E stays expli
   assert.match(productionGate, /Run one quota-aware post-deploy canary/);
 });
 
+test('Shared Site release and Mission E2E obey the same production quota budget without duplicate full-menu probes', async () => {
+  const [shared,mission] = await Promise.all([
+    readFile(new URL('../.github/workflows/deploy-site-core.yml', import.meta.url), 'utf8'),
+    readFile(new URL('../.github/workflows/verify-ekodimission-admin-production-e2e.yml', import.meta.url), 'utf8')
+  ]);
+  assert.doesNotMatch(shared, /\n\s*admin-authenticated-e2e:\s*\n/);
+  assert.match(shared, /Read Production Cloudflare quota Source of Truth/);
+  assert.match(shared, /cloudflare-production-budget\.mjs/);
+  assert.match(shared, /steps\.quota\.outputs\.state == 'exhausted'/);
+  assert.match(shared, /steps\.quota\.outputs\.skip_nonessential != 'true'/);
+  assert.doesNotMatch(mission, /schedule:/);
+  assert.match(mission, /workflow_run:/);
+  assert.match(mission, /cloudflare-production-budget\.mjs/);
+  assert.match(mission, /skip_nonessential != 'true'/);
+});
+
 test('Admin static shell bypasses Worker while auth and deep Admin routes keep Worker boundaries', async () => {
   const [wrangler, build, headers] = await Promise.all([
     readFile(new URL('../wrangler.site.toml', import.meta.url), 'utf8'),
