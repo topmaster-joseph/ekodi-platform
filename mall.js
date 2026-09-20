@@ -82,7 +82,8 @@
   async function resolveImage(url) {
     if (!url) return '';
     try {
-      if (new URL(url).hostname !== 'api.ekodi.kr') return url;
+      const parsed = new URL(url);
+      if (parsed.hostname !== 'ekodi.kr' || !parsed.pathname.startsWith('/api/')) return url;
     } catch { return ''; }
     if (imageCache.has(url)) return imageCache.get(url);
     const promise = fetch(url, { method: 'GET', mode: 'cors', credentials: 'omit' })

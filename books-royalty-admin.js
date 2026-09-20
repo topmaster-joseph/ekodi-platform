@@ -1,5 +1,5 @@
 (() => {
-  const API='https://api.ekodi.kr';
+  const API='https://ekodi.kr';
   const ROLE_LABELS={author:'저자',translator:'번역',illustrator:'삽화',editor:'편집',organization:'기관',other:'기타'};
   const BASIS_LABELS={gross_sales:'총매출-환불',net_receipts:'순수입(매출-환불-채널수수료)',per_unit:'권당 정액'};
   const STATEMENT_LABELS={draft:'초안',reviewed:'검토완료',approved:'지급승인',paid:'지급완료',void:'무효'};

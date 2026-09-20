@@ -70,7 +70,7 @@ function capabilityGranted(authority,required){
 }
 async function centralAdminSession(request,env,requiredCapability='ai:read'){
   const token=bearer(request);if(!token)return null;
-  const base=(clean(env.CONTROL_API_URL)||'https://api.ekodi.kr').replace(/\/+$/,'');
+  const base=(clean(env.CONTROL_API_URL)||'https://ekodi.kr').replace(/\/+$/,'');
   try{
     const response=await fetch(`${base}/api/session`,{headers:{accept:'application/json',authorization:`Bearer ${token}`},cache:'no-store'});
     if(!response.ok)return null;

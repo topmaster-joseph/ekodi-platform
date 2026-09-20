@@ -570,6 +570,8 @@ jobs:
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CF_ZONE_ID: e39707f426b195d12c67a86f62b52ba7
+      LEGACY_API_LABEL: api
       MAIL_GOOGLE_CLIENT_SECRET: ${{ secrets.MAIL_GOOGLE_CLIENT_SECRET }}
       GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
     steps:
@@ -674,6 +676,66 @@ jobs:
           grep -Fq '"code":"PF_ADMIN_AUTH_REQUIRED"' /tmp/personal-finance.json
           grep -Fq '"publishedLocales":["ko-KR"]' /tmp/i18n.json
           grep -Fq '"inheritedDefault":true' /tmp/catalog.json
+      - name: Detach retired API Workers Custom Domain
+        shell: bash
+        run: |
+          set -euo pipefail
+          LEGACY_API_HOST="${LEGACY_API_LABEL}.ekodi.kr"
+          export LEGACY_API_HOST
+          endpoint="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/domains"
+          domains=$(curl --fail-with-body -sS -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H 'Content-Type: application/json' "$endpoint")
+          echo "$domains" | jq -e '.success == true' >/dev/null
+          domain_id=$(echo "$domains" | jq -r '.result[] | select(.hostname == env.LEGACY_API_HOST) | .id' | head -n1)
+          if [[ -n "$domain_id" ]]; then
+            delete_http=$(curl -sS -o /tmp/api-domain-delete.out -w '%{http_code}' -X DELETE -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H 'Content-Type: application/json' "$endpoint/$domain_id")
+            [[ "$delete_http" =~ ^20[0-9]$ ]] || { cat /tmp/api-domain-delete.out || true; exit 1; }
+            echo "Detached retired Workers Custom Domain: $LEGACY_API_HOST"
+          else
+            echo "Retired Workers Custom Domain already absent: $LEGACY_API_HOST"
+          fi
+      - name: Remove exact retired API DNS record
+        shell: bash
+        run: |
+          set -euo pipefail
+          LEGACY_API_HOST="${LEGACY_API_LABEL}.ekodi.kr"
+          export LEGACY_API_HOST
+          api='https://api.cloudflare.com/client/v4'
+          auth=(-H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H 'Content-Type: application/json')
+          curl --fail-with-body -sS "${auth[@]}" "$api/zones/$CF_ZONE_ID/dns_records?name=$LEGACY_API_HOST&per_page=100" > /tmp/api-dns.json
+          jq -e '.success == true' /tmp/api-dns.json >/dev/null
+          mapfile -t record_ids < <(jq -r '.result[] | select(.name == env.LEGACY_API_HOST) | .id' /tmp/api-dns.json)
+          for record_id in "${record_ids[@]}"; do
+            delete_http=$(curl -sS -o /tmp/api-dns-delete.out -w '%{http_code}' -X DELETE "${auth[@]}" "$api/zones/$CF_ZONE_ID/dns_records/$record_id")
+            [[ "$delete_http" =~ ^20[0-9]$ ]] || { cat /tmp/api-dns-delete.out || true; exit 1; }
+          done
+          curl --fail-with-body -sS "${auth[@]}" "$api/zones/$CF_ZONE_ID/dns_records?name=$LEGACY_API_HOST&per_page=100" > /tmp/api-dns-after.json
+          jq -e '.success == true' /tmp/api-dns-after.json >/dev/null
+          test "$(jq '[.result[] | select(.name == env.LEGACY_API_HOST)] | length' /tmp/api-dns-after.json)" = '0'
+          echo "Exact retired API DNS hostname absent: $LEGACY_API_HOST"
+      - name: Verify retired API hostname no longer serves first-party traffic
+        shell: bash
+        run: |
+          set -euo pipefail
+          LEGACY_API_HOST="${LEGACY_API_LABEL}.ekodi.kr"
+          export LEGACY_API_HOST
+          endpoint="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/domains"
+          domains=$(curl --fail-with-body -sS -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$endpoint")
+          echo "$domains" | jq -e '.success == true' >/dev/null
+          if echo "$domains" | jq -e '.result[] | select(.hostname == env.LEGACY_API_HOST)' >/dev/null; then
+            echo "Retired API hostname remains attached as Workers Custom Domain." >&2
+            exit 1
+          fi
+          for attempt in $(seq 1 24); do
+            code=$(curl -sS -o /tmp/retired-api.out -w '%{http_code}' --connect-timeout 5 --max-time 10 "https://$LEGACY_API_HOST/" || true)
+            if [[ ! "$code" =~ ^[23] ]]; then
+              echo "Retired API hostname no longer serves first-party traffic (HTTP ${code:-000})."
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "Retired API hostname still serves first-party traffic." >&2
+          cat /tmp/retired-api.out || true
+          exit 1
       - name: Verify Realtime SFU production health
         run: node scripts/provision-realtime-sfu.mjs --verify
       - name: Record recovery point

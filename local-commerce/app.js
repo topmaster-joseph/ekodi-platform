@@ -1,5 +1,5 @@
 const cfg=window.EKODI_LOCAL_COMMERCE_CONFIG||{};
-const apiBase=String(cfg.apiBase||'https://api.ekodi.kr/api/local-commerce').replace(/\/$/,'');
+const apiBase=String(cfg.apiBase||'https://ekodi.kr/api/local-commerce').replace(/\/$/,'');
 const state={issuers:[],me:null,wallets:[],pendingPay:null,dashboard:null};
 const manageRoles=new Set(['owner','admin','tenant_admin','manager','store_owner','operator']);
 const accountingRoles=new Set(['accountant','accounting','finance','treasurer']);
