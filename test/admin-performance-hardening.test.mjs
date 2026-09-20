@@ -188,6 +188,16 @@ test('Admin runtime publishes and versions its EKODIBIZ scope-registry dependenc
   assert.match(workflow, /dist\/ekodibiz-admin-registry\.js/);
 });
 
+test('shared-site release watches final Admin postbuild and conversation workbench sources', async () => {
+  const workflow = await read('.github/workflows/deploy-site-core.yml');
+  for (const source of [
+    'scripts/admin-performance-postbuild.mjs',
+    'admin-conversation-workbench.css',
+    'test/admin-performance-hardening.test.mjs',
+    'test/admin-conversation-workbench.test.mjs',
+  ]) assert.match(workflow, new RegExp(source.replaceAll('.', '\\.')));
+});
+
 test('build ordering runs readable layer before the final performance guard', async () => {
   const pkg = JSON.parse(await read('package.json'));
   const build = pkg.scripts.build;
