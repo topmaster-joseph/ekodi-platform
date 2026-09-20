@@ -54,6 +54,8 @@ expect(collectorWorkflow.includes('collect-free-tier-resource-usage.mjs'),'resou
 expect(collectorWorkflow.includes('push:')&&collectorWorkflow.includes('branches:')&&collectorWorkflow.includes('- main'),'resource collector must run on relevant main pushes');
 expect(collectorWorkflow.includes('provider_quota_snapshots'),'resource collector workflow must persist into the quota snapshot ledger');
 expect(collectorWorkflow.includes('SUPABASE_ACCESS_TOKEN'),'resource collector must use the existing Supabase management credential boundary');
+expect(collectorWorkflow.includes('SUPABASE_TOKEN')&&collectorWorkflow.includes('SUPABASE_PAT')&&collectorWorkflow.includes('SUPABASE_MANAGEMENT_TOKEN'),'resource collector must reuse the established Supabase credential fallback boundary');
+expect(collectorWorkflow.includes('Select Supabase management credential'),'resource collector must resolve a single masked Supabase management credential before collection');
 expect(collector.includes('/database/query'),'Supabase database usage must come from an authorized read-only database query');
 expect(collector.includes('/actions/cache/usage'),'GitHub cache usage must come from the official repository usage endpoint');
 expect(collector.includes('/actions/artifacts?'),'GitHub artifact usage must come from the official repository artifact endpoint');
