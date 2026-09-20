@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 5,
+  "schemaVersion": 6,
   "policyId": "AI-ORCHESTRATE-001",
   "status": "enforced",
   "controlPlane": "EKODI AI",
@@ -26,7 +26,10 @@
     "unresolvedResolutionPlanRequired": true,
     "minimalSpecificHumanActionOnly": true,
     "consultationStatusVisible": true,
-    "consultationDetailOnDemand": true
+    "consultationDetailOnDemand": true,
+    "preflightBeforeMutation": true,
+    "syntheticVerificationBeforeHumanEscalation": true,
+    "noIntermediateProgressReportingWhenSafe": true
   },
   "execution": {
     "cloudFirst": true,
@@ -58,7 +61,30 @@
     "noProviderFallback": "EKODI Core deterministic path",
     "continueAllResolvableWorkBeforeEscalation": true,
     "rootCauseFirst": true,
-    "retryRepairRedeployReverify": true
+    "retryRepairRedeployReverify": true,
+    "preflightRequiredBeforeBranchOrMutation": true,
+    "preflightChecks": [
+      "branch-naming-and-source-control-contract",
+      "authority-and-human-gates",
+      "affected-scope-and-related-change-conflicts",
+      "required-ci-and-release-gates",
+      "verification-plan-and-completion-evidence",
+      "available-execution-and-fallback-lanes"
+    ],
+    "verificationFallbackOrder": [
+      "real-production-functional-verification",
+      "automated-browser-or-api-canary",
+      "synthetic-or-virtual-equivalent-verification",
+      "deterministic-contract-and-regression-verification"
+    ],
+    "syntheticVerificationMaySatisfyCompletionWhenRealInteractionUnavailable": true,
+    "syntheticVerificationRequirements": [
+      "materially-equivalent-user-flow",
+      "same-production-artifact-or-runtime-contract",
+      "objective-pass-fail-assertions",
+      "evidence-recorded",
+      "no-known-material-gap"
+    ]
   },
   "consultationDecision": {
     "policyId": "AI-CONSULT-001",
@@ -219,7 +245,9 @@
         "completion-criteria",
         "next-executable-step"
       ]
-    }
+    },
+    "intermediateProgressDefault": "suppress-unless-human-action-safety-or-unresolved-exception",
+    "completionOnlyAfter": "preflight-validation-deployment-and-real-or-equivalent-synthetic-verification"
   },
   "executionFallback": {
     "enabled": true,
