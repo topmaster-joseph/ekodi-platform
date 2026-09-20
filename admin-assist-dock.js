@@ -62,8 +62,38 @@
     if(!response.ok)throw new Error(data.error||data.message||`요청 실패 (${response.status})`);
     return data;
   }
+  const AI_EXECUTION_PREFIX='/api/control/common-services/ai';
+  function executionTaskPrompt(value,c){
+    return [
+      'EKODI 관리자 명령창에서 위임된 안전한 변경 요청입니다.',
+      `요청: ${String(value||'').slice(0,1800)}`,
+      `관리 맥락: section=${c.section||'overview'}, title=${c.title||'Admin'}, path=${c.pathname||'/admin/'}`,
+      '독립 개발 브랜치에서만 구현하십시오. production을 직접 변경하거나 배포하지 마십시오.',
+      '관련 테스트, 보안·권한 회귀, 롤백 가능성을 검증하고 검증 근거를 결과에 포함하십시오.',
+      '최종 production 반영은 EKODI Orchestration Gate와 보호된 병합·배포 경계를 별도로 통과해야 합니다.'
+    ].join('\n');
+  }
+  async function dispatchExecutionTask(value,c,queued){
+    const requestId=String(queued?.action?.id||queued?.id||'').slice(0,160);
+    const created=await api(`${AI_EXECUTION_PREFIX}/tasks`,{method:'POST',body:JSON.stringify({
+      title:`Admin command: ${String(value||'').replace(/\s+/g,' ').slice(0,100)}`,
+      prompt:executionTaskPrompt(value,c),
+      mode:'parallel',
+      needsCodeBranch:true,
+      origin:{provider:'ekodi',channel:'admin-command-home',requestId},
+      governance:{
+        agentId:'chief',area:'software_change',delegated:true,reversible:true,logged:true,preflightVerified:true,
+        production:false,existingBoundary:true,rollbackDefined:true,verificationDefined:true,
+        postVerificationRequired:true,automaticRollback:true,knownStableTarget:true
+      }
+    })});
+    const task=created?.task||{};
+    if(!task.id)throw new Error('AI 실행 작업 ID를 받지 못했습니다.');
+    const started=await api(`${AI_EXECUTION_PREFIX}/tasks/${encodeURIComponent(task.id)}/run`,{method:'POST',body:'{}'});
+    return {ok:true,taskId:task.id,branch:task.branch||'',state:started?.state||task.state||'allocating',mode:started?.mode||task.mode||'parallel'};
+  }
   function el(tag,className,text){const node=document.createElement(tag);if(className)node.className=className;if(text!==undefined)node.textContent=esc(text);return node}
-  function statusLabel(value){const map={waiting_human:'담당자 확인 대기',open:'AI 응답',resolved:'완료',archived:'보관',accepted:'담당자 응답 중',requested:'연결 대기',awaiting_human:'승인 대기',verified:'완료',ready_for_executor:'실행 대기',assist_only:'검토',blocked:'차단',failed:'실패',approved_pending_executor:'승인됨'};return map[value]||value||'확인'}
+  function statusLabel(value){const map={waiting_human:'담당자 확인 대기',open:'AI 응답',resolved:'완료',archived:'보관',accepted:'담당자 응답 중',requested:'연결 대기',awaiting_human:'승인 대기',verified:'완료',ready_for_executor:'실행 대기',executing:'실행 중',allocating:'개발 실행 준비',queued:'개발 실행 대기',assist_only:'검토',blocked:'차단',failed:'실패',approved_pending_executor:'승인됨'};return map[value]||value||'확인'}
   function priorityLabel(value){if(value==='urgent')return'긴급';if(value==='review')return'확인 필요';return'일반'}
   function positionWorkbench(){
     const sidebar=document.querySelector('.sidebar');
@@ -242,10 +272,25 @@
           let preflight=false;try{const check=await api('/api/control/ai/actions',{method:'POST',body:JSON.stringify({agentId:'chief',actionType:'service.health_check',area:'health_checks',target:c.section,rationale:`Assist 사전점검: ${value}`,payload:{source:'admin-assist-dock',context:c},reversible:true,delegated:true,preflightVerified:true})});preflight=Boolean(check.ok)}catch{}
           queued=await api('/api/control/ai/actions',{method:'POST',body:JSON.stringify({agentId:'chief',actionType:'ui.change_request',area:'bounded_admin_change',target:c.section,rationale:value,payload:{source:'admin-assist-dock',context:c,request:value},reversible:true,delegated:true,preflightVerified:preflight})});
           status=queued.status||'active';
+          if(queued.status==='ready_for_executor'){
+            try{
+              queued.execution=await dispatchExecutionTask(value,c,queued);
+              status=queued.execution.state||'allocating';
+            }catch(error){
+              queued.execution={ok:false,error:error.message||'AI 실행기 연결 실패'};
+            }
+          }
         }
         result=await api('/api/control/ai/assist',{method:'POST',body:JSON.stringify({message:value,context:c,history})});
         reply=String(result.reply||'응답을 받지 못했습니다.');provider=result.provider||null;mode=result.mode||'free_assist';rememberAi('assistant',reply);lastAiReply={text:reply,mode,provider,notice:result.notice||''};
-        if(queued)reply=`${reply}\n\n${statusLabel(queued.status)} · 운영 큐에 기록하고 Admin AI가 응답했습니다.`;
+        if(queued){
+          const executionNote=queued.execution?.ok
+            ? `\n개발 실행: ${queued.execution.taskId} · ${statusLabel(queued.execution.state)} · 독립 브랜치/검증 경로로 인계했습니다.`
+            : queued.execution?.error
+              ? `\n개발 실행: 운영 큐는 유지했지만 실행기 인계는 보류됐습니다 (${queued.execution.error}).`
+              : '';
+          reply=`${reply}\n\n${statusLabel(queued.status)} · 운영 감사 큐에 기록했습니다.${executionNote}`;
+        }
       }
       addSessionMessage('assistant',reply,{kind:risky||HEALTH_RE.test(value)||queued?'status':'message',status,provider,mode});
       const session=activeSession();if(session&&['verified','resolved'].includes(status))session.status='done';if(session&&status==='failed')session.status='failed';saveSessions();
