@@ -58,18 +58,19 @@ test('mail root is exclusively owned by the shared site apex path',async()=>{
 });
 
 
-test('Mail aliases remain compatibility-only and converge on the constitutional Mail boundary',async()=>{
+test('Mail is apex-owned and retired aliases are absent from the service proxy',async()=>{
   const [source,proxyConfig,siteConfig,boundaries]=await Promise.all([
     read('service-proxy.js'),read('wrangler.service-proxy.toml'),read('wrangler.site.toml'),read('platform-boundaries.json')
   ]);
-  assert.match(source,/const MAIL_CANONICAL = 'https:\/\/mail\.ekodi\.kr'/);
-  assert.doesNotMatch(source,/mail\.google\.com/);
+  assert.doesNotMatch(source,/MAIL_CANONICAL/);
+  assert.match(source,/href=\"https:\/\/ekodi\.kr\/mail\"/);
   for(const alias of ['mail.biz.ekodi.kr','mail.church.ekodi.kr','mail.lab.ekodi.kr','mail.books.ekodi.kr','mail.trade.ekodi.kr']){
-    assert.match(source,new RegExp(`'${alias.replaceAll('.','\\.')}': MAIL_CANONICAL`));
-    assert.match(proxyConfig,new RegExp(`pattern = "${alias.replaceAll('.','\\.')}"`));
-    assert.doesNotMatch(siteConfig,new RegExp(`pattern = "${alias.replaceAll('.','\\.')}"`));
+    const escaped=alias.replaceAll('.','\\\\.');
+    assert.doesNotMatch(source,new RegExp(escaped));
+    assert.doesNotMatch(proxyConfig,new RegExp(escaped));
+    assert.doesNotMatch(siteConfig,new RegExp(escaped));
   }
   const boundaryJson=JSON.parse(boundaries);
-  const currentMailHost=['mail',['ekodi','kr'].join('.')].join('.');
-  assert.deepEqual(boundaryJson.platforms['mail-service'].domains,[currentMailHost]);
+  assert.deepEqual(boundaryJson.platforms['mail-service'].domains,['ekodi.kr']);
+  assert.equal(boundaryJson.platforms['mail-service'].canonicalPath,'https://ekodi.kr/mail');
 });
