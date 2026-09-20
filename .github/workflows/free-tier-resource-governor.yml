@@ -57,6 +57,7 @@ jobs:
   collect:
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
+    environment: production
     timeout-minutes: 10
     env:
       TOKEN_A: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
