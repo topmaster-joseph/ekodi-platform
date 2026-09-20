@@ -1,4 +1,5 @@
 import { getSponsoredAiAllowance, recordProviderUsage } from './api-usage-meter.js';
+import { recordFreeProviderOutcomeAndAlert } from './ai-free-quota.js';
 import { projectForExternalAi } from './secure-projection.js';
 
 const GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
@@ -66,53 +67,59 @@ export function createGeminiOrchestratorProvider(env = {}, options = {}) {
     trustClass: 'external',
     async invoke({ taskName, context = {} } = {}) {
       if (!available) throw new Error('GEMINI_PROVIDER_NOT_CONFIGURED');
-      await budgetGuard(env);
-      const projected = await projectForExternalAi(context, {
-        profile: 'ai_minimum',
-        purpose: 'ekodi-ai-orchestration',
-        salt: crypto.randomUUID(),
-      });
-      const endpoint = `${GEMINI_BASE_URL}/${encodeURIComponent(model)}:generateContent`;
-      const response = await fetchImpl(endpoint, {
-        method: 'POST',
-        headers: {
-          'x-goog-api-key': apiKey,
-          'content-type': 'application/json',
-        },
-        body: JSON.stringify({
-          systemInstruction: { parts: [{ text: SYSTEM }] },
-          contents: [{ role: 'user', parts: [{ text: buildInput(taskName, projected) }] }],
-          generationConfig: { maxOutputTokens: 1_500 },
-        }),
-      });
-      let data = null;
-      try { data = await response.json(); } catch {}
-      if (!response.ok) {
-        const error = new Error(`GEMINI_HTTP_${response.status}`);
-        error.status = response.status;
-        const retryAfter = Number(response.headers?.get?.('retry-after'));
-        if (Number.isFinite(retryAfter) && retryAfter > 0) error.retryAfterSeconds = retryAfter;
-        if (response.status === 429) {
-          const detail = text(data?.error?.message, 1200).toLowerCase();
-          error.quota = Object.freeze({ state: /daily|per day|requests per day|\brpd\b|daily[_ -]?limit|quota[_ -]?exhausted/.test(detail) ? 'exhausted' : 'throttled' });
+      try {
+        await budgetGuard(env);
+        const projected = await projectForExternalAi(context, {
+          profile: 'ai_minimum',
+          purpose: 'ekodi-ai-orchestration',
+          salt: crypto.randomUUID(),
+        });
+        const endpoint = `${GEMINI_BASE_URL}/${encodeURIComponent(model)}:generateContent`;
+        const response = await fetchImpl(endpoint, {
+          method: 'POST',
+          headers: {
+            'x-goog-api-key': apiKey,
+            'content-type': 'application/json',
+          },
+          body: JSON.stringify({
+            systemInstruction: { parts: [{ text: SYSTEM }] },
+            contents: [{ role: 'user', parts: [{ text: buildInput(taskName, projected) }] }],
+            generationConfig: { maxOutputTokens: 1_500 },
+          }),
+        });
+        let data = null;
+        try { data = await response.json(); } catch {}
+        if (!response.ok) {
+          const error = new Error(`GEMINI_HTTP_${response.status}`);
+          error.status = response.status;
+          const retryAfter = Number(response.headers?.get?.('retry-after'));
+          if (Number.isFinite(retryAfter) && retryAfter > 0) error.retryAfterSeconds = retryAfter;
+          if (response.status === 429) {
+            const detail = text(data?.error?.message, 1200).toLowerCase();
+            error.quota = Object.freeze({ state: /daily|per day|requests per day|\brpd\b|daily[_ -]?limit|quota[_ -]?exhausted/.test(detail) ? 'exhausted' : 'throttled' });
+          }
+          throw error;
         }
+        const output = extractText(data);
+        if (!output) throw new Error('GEMINI_EMPTY_RESPONSE');
+        const usage = normalizeUsage(data?.usageMetadata || {});
+        if (env.DB?.prepare) {
+          await recordProviderUsage(env, {
+            provider: 'gemini',
+            model,
+            surface: 'orchestrator',
+            funding: 'ekodi-sponsored',
+            requestId: String(response.headers?.get?.('x-request-id') || ''),
+            usage,
+          }).catch(() => {});
+        }
+        await recordFreeProviderOutcomeAndAlert(env, 'gemini-free', { ok:true }).catch(() => {});
+        return Object.freeze({ text: output, model, responseId: String(response.headers?.get?.('x-request-id') || ''), usage });
+      } catch (error) {
+        await recordFreeProviderOutcomeAndAlert(env, 'gemini-free', { ok:false, error }).catch(() => {});
         throw error;
       }
-      const output = extractText(data);
-      if (!output) throw new Error('GEMINI_EMPTY_RESPONSE');
-      const usage = normalizeUsage(data?.usageMetadata || {});
-      if (env.DB?.prepare) {
-        await recordProviderUsage(env, {
-          provider: 'gemini',
-          model,
-          surface: 'orchestrator',
-          funding: 'ekodi-sponsored',
-          requestId: String(response.headers?.get?.('x-request-id') || ''),
-          usage,
-        }).catch(() => {});
-      }
-      return Object.freeze({ text: output, model, responseId: String(response.headers?.get?.('x-request-id') || ''), usage });
-    },
+    }
   });
 }
 
