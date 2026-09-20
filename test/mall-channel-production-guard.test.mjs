@@ -13,8 +13,8 @@ test('production verifier guards multi-account channel flow across subservices',
   assert.match(workflow, /\/cgma\/admin\/publishing/);
   assert.match(workflow, /\/ekodibiz\/trade\/admin\/publishing/);
   assert.match(workflow, /\/jadam\/admin\/publishing/);
-  assert.match(workflow, /marketing-connect-api\.ekodi\.kr\/health/);
-  assert.match(workflow, /marketing-publish-api\.ekodi\.kr\/health/);
+  assert.match(workflow, /ekodi\.kr\/marketing-connect-api\/health/);
+  assert.match(workflow, /ekodi\.kr\/marketing-publish-api\/health/);
   assert.match(workflow, /youtubeConfigured/);
   assert.match(workflow, /paidActivation!==false/);
   assert.match(workflow, /github\.event_name == 'push'/);

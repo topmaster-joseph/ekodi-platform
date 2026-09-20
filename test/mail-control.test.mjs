@@ -32,7 +32,7 @@ test('Control API exposes mail control before generic OPTIONS routing', async ()
 test('Workspace admin includes tenant-local Mail management under the canonical org path', async () => {
   const admin = await read('workspace-admin-page.js');
   assert.match(admin, /\['mail','메일'\]/);
-  assert.match(admin, /api\.ekodi\.kr\/api\/mail\/control/);
+  assert.match(admin, /MAIL_CONTROL='\/api\/mail\/control'/);
   assert.match(admin, /ekodi-workspace-admin-session/);
   assert.match(admin, /\/auth\/v1\/verify/);
   assert.match(admin, /'ekodi-church':'에코디교회'/);
