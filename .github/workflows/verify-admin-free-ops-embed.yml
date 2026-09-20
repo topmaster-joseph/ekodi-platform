@@ -44,8 +44,8 @@ jobs:
           for attempt in $(seq 1 3); do
             free_code=$(fetch_final 'https://ekodi.kr/ekodibiz/ekodimall/free-ops?embed=admin' /tmp/free-headers /tmp/free-body /tmp/free-url)
             root_code=$(fetch_final 'https://ekodi.kr/ekodibiz/ekodimall/' /tmp/mall-headers /tmp/mall-body /tmp/mall-url)
-            admin_code=$(fetch_final 'https://admin.ekodi.kr/' /tmp/admin-headers /tmp/admin-body /tmp/admin-url)
-            asset_code=$(fetch_final 'https://admin.ekodi.kr/release-control-admin.js' /tmp/admin-asset-headers /tmp/admin-asset /tmp/admin-asset-url)
+            admin_code=$(fetch_final 'https://ekodi.kr/admin/' /tmp/admin-headers /tmp/admin-body /tmp/admin-url)
+            asset_code=$(fetch_final 'https://ekodi.kr/release-control-admin.js' /tmp/admin-asset-headers /tmp/admin-asset /tmp/admin-asset-url)
 
             free_ok=false
             root_ok=false
