@@ -21,7 +21,8 @@
   </main>
   <script>
     const host = location.hostname.toLowerCase();
-    const path = (`/${location.pathname.replace(/^\\/+|\\/+$/g,'')}`).replace(/\\/$/,'') || '/';
+    const rawPath = location.pathname || '/';
+    const path = rawPath.length > 1 && rawPath.endsWith('/') ? rawPath.slice(0,-1) : rawPath;
     const canonicalContext = host === 'ekodi.kr' ? `ekodi.kr${path}` : host;
     const card = (icon,title,detail,href,kind='') => ({icon,title,detail,href,kind});
     const common = {
