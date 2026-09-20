@@ -14,13 +14,13 @@ const [apiSource, aiOps, domains, buildScript, wranglerApi, entrySource, mission
 ]);
 
 test('shared API preserves the existing health endpoint', async () => {
-  const response = await apiWorker.fetch(new Request('https://api.example/health'), { ENVIRONMENT:'production', ALLOWED_ORIGINS:'https://admin.ekodi.kr' });
+  const response = await apiWorker.fetch(new Request('https://api.example/health'), { ENVIRONMENT:'production', ALLOWED_ORIGINS:'https://ekodi.kr' });
   assert.equal(response.status, 200);
   assert.deepEqual(await response.json(), { ok:true, service:'ekodi-auth-api', version:4, canonicalApiBase:'https://ekodi.kr/api' });
 });
 
 test('control endpoints require the D1 operations store', async () => {
-  const response = await apiWorker.fetch(new Request('https://api.example/api/control/overview'), { ENVIRONMENT:'production', ALLOWED_ORIGINS:'https://admin.ekodi.kr' });
+  const response = await apiWorker.fetch(new Request('https://api.example/api/control/overview'), { ENVIRONMENT:'production', ALLOWED_ORIGINS:'https://ekodi.kr' });
   assert.equal(response.status, 503);
 });
 
