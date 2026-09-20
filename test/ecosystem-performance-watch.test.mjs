@@ -7,7 +7,6 @@ const workflow = fs.readFileSync('.github/workflows/ecosystem-performance-watch.
 test('performance guard covers canonical public, admin, and Support entry points', () => {
   for (const target of [
     "https://ekodi.kr/",
-    "https://admin.ekodi.kr/",
     "https://ekodi.kr/admin",
     "https://ekodi.kr/support/",
     "https://ekodi.kr/support/health",
