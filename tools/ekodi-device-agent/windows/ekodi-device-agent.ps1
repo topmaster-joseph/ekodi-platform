@@ -998,7 +998,8 @@ function Send-Heartbeat($Config) {
       diagnostics = $true; storageMaintenance = $true; windowsUpdate = $true; startupManagement = $true
       networkDiagnostics = $true; printerDiagnostics = $true; workstationProfile = $true; protocolLaunch = $true
       computerRead = $true; processRead = $true; agentStatus = $true
-      isolatedCommand = $false; filesystemRead = $false; filesystemWrite = $false; backgroundBrowser = $false; isolatedDesktop = $false`n      desktopCapture = $false; desktopInput = $false
+      isolatedCommand = $false; filesystemRead = $false; filesystemWrite = $false; backgroundBrowser = $false; isolatedDesktop = $false
+      desktopCapture = $false; desktopInput = $false
       arbitraryShell = $false; screenCapture = $false; credentialCollection = $false
     }
     settings = $settings
