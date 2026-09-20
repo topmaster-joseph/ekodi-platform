@@ -1,6 +1,6 @@
 (() => {
 'use strict';
-const API='https://api.ekodi.kr';
+const API='https://ekodi.kr';
 const sessionKey='ekodi-auth-token';
 const auth=()=>{try{return sessionStorage.getItem(sessionKey)||''}catch{return''}};
 const node=(tag,text='',cls='')=>{const n=document.createElement(tag);if(text)n.textContent=text;if(cls)n.className=cls;return n};
