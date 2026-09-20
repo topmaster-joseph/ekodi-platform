@@ -16,7 +16,7 @@ test('authenticated Admin E2E waits for canonical production menu-registry conve
 
 test('authenticated Admin E2E waits for protected maturity API convergence before menu rendering', async () => {
   const source = await retrySource();
-  assert.match(source, /https:\/\/api\.ekodi\.kr\/api\/control\/platform-maturity/);
+  assert.match(source, /https:\/\/ekodi\.kr\/api\/control\/platform-maturity/);
   assert.match(source, /E2E_ADMIN_TOKEN/);
   assert.match(source, /authorization:`Bearer \$\{e2eAdminToken\}`/);
   assert.match(source, /certificationStatus === 'not-claimed'/);
