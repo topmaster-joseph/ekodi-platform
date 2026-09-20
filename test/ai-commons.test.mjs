@@ -75,6 +75,7 @@ test('Commons page loads browser assets only through the Worker-owned API bounda
   const worker=fs.readFileSync(new URL('../ai-control-worker.js',import.meta.url),'utf8');
   const canonical=fs.readFileSync(new URL('../canonical-surface-router.js',import.meta.url),'utf8');
   const verifier=fs.readFileSync(new URL('../.github/workflows/verify-ai-gateway-production.yml',import.meta.url),'utf8');
+  const release=JSON.parse(fs.readFileSync(new URL('../deploy/manifests/ai-control.worker.json',import.meta.url),'utf8'));
   assert.match(html,/\.\/api\/commons\/client\?v=/);
   assert.match(html,/\.\/api\/commons\/style\?v=/);
   assert.doesNotMatch(html,/\.\/commons\.js\?v=/);
@@ -90,7 +91,14 @@ test('Commons page loads browser assets only through the Worker-owned API bounda
   assert.match(verifier,/ai\/api\/commons\/client/);
   assert.doesNotMatch(verifier,/ai\/api\/commons\/client\.js/);
   assert.match(verifier,/capabilityId/);
-  assert.match(verifier,/api\('\/ai\/api\/commons\//);
+  assert.match(verifier,/function apiUrl\(path\)/);
+  assert.match(verifier,/ai\/ai\/api\/commons/);
+  const clientProbe=release.worker.requests.find(item=>item.url.endsWith('/ai/api/commons/client'));
+  assert.ok(clientProbe);
+  assert.ok(clientProbe.expect.includes('function apiUrl(path)'));
+  assert.ok(clientProbe.forbid.includes('/ai/ai/api/commons/'));
+  assert.ok(clientProbe.candidateForbid.includes('/ai/ai/api/commons/'));
+  assert.equal(clientProbe.forbid.includes('/ai/api/commons/'),false);
 });
 
 test('public route is wired through the AI service binding',()=>{
