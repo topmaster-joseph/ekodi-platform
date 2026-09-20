@@ -81,10 +81,6 @@
         "ekodi-mall.pages.dev"
       ],
       "publicEntry": "https://ekodi.kr/ekodimall",
-      "legacyRedirectDomains": [
-        "mall.ekodi.kr",
-        "mall.biz.ekodi.kr"
-      ],
       "deployWorkflow": ".github/workflows/deploy-ekodi-mall.yml",
       "sharedDependencies": [
         "service-proxy",
@@ -96,7 +92,8 @@
       "database": "none",
       "adminEntry": "https://ekodi.kr/ekodimall/admin",
       "serviceLayerContract": "config/service-layer-boundaries.json#serviceOwnership.mall",
-      "note": "EKODI Mall owns commerce operating records and UI, while system/common/professional capabilities are consumed through explicit contracts and remain independently owned."
+      "note": "EKODI Mall is an independently managed responsible service boundary. It owns commerce operating records and UI, consumes system/common/professional capabilities through explicit contracts, and remains under EKODIBIZ commercial authority for EKODI revenue activity.",
+      "commercialAuthority": "ekodibiz"
     },
     "cafe": {
       "kind": "independent-platform",
