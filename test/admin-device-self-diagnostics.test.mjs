@@ -33,3 +33,10 @@ test('admin browser diagnostics remains responsive', () => {
   assert.match(style, /@media\(max-width:720px\)/);
   assert.match(style, /@media\(max-width:460px\)/);
 });
+
+
+test('admin diagnostics resolve through the canonical /admin static mirror', () => {
+  assert.match(loader, /const base = path\.startsWith\('\/'\) \? path : `\/admin\/\$\{path\}`/);
+  assert.match(build, /const adminStaticMirrorDir = `\$\{output\}admin\//);
+  assert.match(build, /adminStaticMirrorAssets\.map\(asset => cp\(`\$\{output\}\$\{asset\}`, `\$\{adminStaticMirrorDir\}\$\{asset\}`\)\)/);
+});
