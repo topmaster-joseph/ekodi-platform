@@ -41,7 +41,9 @@ test('shared-site build publishes every lazy asset required by the fixed Admin c
   for(const asset of ['admin-assist-bootstrap.js','admin-assist-bootstrap.css','admin-assist-dock.js','admin-assist-dock.css','admin-ai-control-plane.js']){
     assert.match(postbuild,new RegExp(`['\"]${asset.replaceAll('.','\\.')}['\"]`));
   }
+  assert.match(postbuild,/const adminMirror = `\$\{output\}admin\/`/);
   assert.match(postbuild,/copyFile\(`\$\{root\}\$\{asset\}`, `\$\{output\}\$\{asset\}`\)/);
+  assert.match(postbuild,/copyFile\(`\$\{root\}\$\{asset\}`, `\$\{adminMirror\}\$\{asset\}`\)/);
 });
 
 test('production verification submits the real bottom command on canonical ekodi.kr Admin',async()=>{
@@ -89,6 +91,10 @@ test('Shared Site production owner watches and verifies every Assist delivery as
     'scripts/admin-readable-command-postbuild.mjs',
     'test/admin-assist-command-delivery.test.mjs',
   ]) assert.match(workflow,new RegExp(path.replaceAll('.','\\.')));
-  for(const asset of ['admin-assist-bootstrap.js','admin-assist-bootstrap.css','admin-assist-dock.js','admin-assist-dock.css'])
-    assert.match(workflow,new RegExp(`dist/${asset.replaceAll('.','\\.')}`));
+  for(const asset of ['admin-assist-bootstrap.js','admin-assist-bootstrap.css','admin-assist-dock.js','admin-assist-dock.css','admin-ai-control-plane.js']){
+    const escaped=asset.replaceAll('.','\\.');
+    assert.match(workflow,new RegExp(`dist/${escaped}`));
+    assert.match(workflow,new RegExp(`dist/admin/${escaped}`));
+    assert.match(workflow,new RegExp(`https://ekodi\\.kr/admin/${escaped}`));
+  }
 });
