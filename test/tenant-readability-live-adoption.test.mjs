@@ -41,16 +41,15 @@ test('live mobile verifier checks canonical apex tenant paths only',async()=>{
   assert.match(verifier,/live-readability-not-observed/);
 });
 
-
 test('remaining canonical business, trade and lab surfaces inherit a readability contract',async()=>{
   const [router,canonical,verifier]=await Promise.all([
     read('platform-router-entry-worker.js'),
     read('canonical-surface-router.js'),
     read('scripts/verify-mobile-fixed-headers-live.mjs'),
   ]);
-  assert.match(router,/routeEkodiBizPublic[\s\S]*injectEkodiProgressiveHome\(injectEkodiTenantReadability\(rewritten\)\)/);
-  assert.match(router,/isTradePartnerPath\(url\.pathname\)\)return injectEkodiTenantReadability\(tradePartnerPage\(\)\)/);
-  assert.match(canonical,/executionSurface\.id==='lab'\?injectEkodiTenantReadability\(response\):response/);
-  assert.match(verifier,/requireReadability\(cgmaRoot,'cgma-root',errors\)/);
-  assert.doesNotMatch(verifier,/need\(cgmaRoot,'cgma-root','data-ekodi-tenant-readability/);
+  assert.match(router,/routeEkodiBizPublic[\\s\\S]*injectEkodiProgressiveHome\\(injectEkodiTenantReadability\\(rewritten\\)\\)/);
+  assert.match(router,/isTradePartnerPath\\(url\\.pathname\\)\\)return injectEkodiTenantReadability\\(tradePartnerPage\\(\\)\\)/);
+  assert.match(canonical,/executionSurface\\.id==='lab'\\?injectEkodiTenantReadability\\(response\\):response/);
+  assert.match(verifier,/requireReadability\\(cgmaRoot,'cgma-root',errors\\)/);
+  assert.doesNotMatch(verifier,/need\\(cgmaRoot,'cgma-root','data-ekodi-tenant-readability/);
 });

@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const API_BASE = 'https://api.ekodi.kr';
+  const API_BASE = 'https://ekodi.kr';
   const TOKEN_KEY = 'ekodi-auth-token';
   const WINDOWS_AGENT_URL = 'https://raw.githubusercontent.com/topmaster-joseph/ekodi-platform/main/tools/ekodi-device-agent/windows/ekodi-device-agent.ps1';
   const BOOTSTRAP_URL = '/ekodi-device-bootstrap.cmd';
@@ -33,6 +33,7 @@
     'profile.workstation.apply': '바탕화면과 시작 메뉴에 EKODI 업무 바로가기를 구성할까요?',
     'profile.workstation.restore': 'EKODI가 만든 업무 바로가기를 제거할까요?',
     'agent.self_update': '공식 EKODI Agent로 업데이트하고 원클릭 연결 프로토콜을 다시 등록할까요?',
+    'computer.browser.canary': '사용자 화면·입력·클립보드를 건드리지 않는 전용 headless 브라우저 canary를 실행할까요?',
     'startup.disable': '이 시작 프로그램을 비활성화할까요? EKODI가 복원 정보를 로컬에 보관합니다.',
     'startup.restore': '이 시작 프로그램을 다시 활성화할까요?',
   };
@@ -100,7 +101,7 @@
       'diagnostics.collect': '전체 진단', 'network.diagnose': '네트워크 진단', 'printers.diagnose': '프린터 진단', 'startup.scan': '시작프로그램 확인',
       'startup.disable': '시작프로그램 해제', 'startup.restore': '시작프로그램 복원', 'maintenance.temp_cleanup': '임시파일 정리',
       'updates.scan': '업데이트 확인', 'updates.install': '업데이트 설치', 'profile.workstation.apply': 'EKODI 업무환경',
-      'profile.workstation.restore': '업무환경 복원', 'agent.self_update': 'Agent 업데이트',
+      'profile.workstation.restore': '업무환경 복원', 'agent.self_update': 'Agent 업데이트', 'computer.browser.canary': 'BG Browser Canary',
       'computer.agent.status': 'Agent 상태', 'computer.system.read': '시스템 상태', 'computer.process.list': '프로세스 보기',
     };
     return labels[type] || type;
@@ -285,7 +286,7 @@
 
     const agentCard = document.createElement('div');
     agentCard.className = 'device-remote-summary-card';
-    agentCard.innerHTML = `<small>Agent · 사용자 화면 보호</small><strong>${escapeHtml(agent?.version || device.agentVersion || '확인 전')}</strong><span>${agent ? `작업 ${escapeHtml(agent.taskState || 'unknown')} · Shell ${agent.persistentShell ? '열림' : '차단'} · BG Browser ${agent.backgroundBrowserReady ? '준비' : '대기'} · Isolated Desktop ${agent.isolatedDesktopReady ? '준비' : '대기'}` : '“Agent 상태”로 최신 상태를 확인하세요.'}</span>`;
+    agentCard.innerHTML = `<small>Agent · 사용자 화면 보호</small><strong>${escapeHtml(agent?.version || device.agentVersion || '확인 전')}</strong><span>${agent ? `작업 ${escapeHtml(agent.taskState || 'unknown')} · Shell ${agent.persistentShell ? '열림' : '차단'} · BG Canary ${device.capabilities?.backgroundBrowserCanary ? '통과' : '대기'} · Browser Worker ${agent.backgroundBrowserReady ? '준비' : '대기'} · Isolated Desktop ${agent.isolatedDesktopReady ? '준비' : '대기'}` : '“Agent 상태”로 최신 상태를 확인하세요.'}</span>`;
 
     const systemCard = document.createElement('div');
     systemCard.className = 'device-remote-summary-card';
@@ -422,7 +423,7 @@
     POWER_COMMANDS.forEach(([command, label, title]) => { const b = makeActionButton(device, command, label, command === 'power.restore' ? 'secondary' : 'ghost'); b.title = b.disabled ? b.title : title; profiles.append(b); });
     const securityTitle = document.createElement('h3'); securityTitle.textContent = '잠금 · Agent';
     const security = document.createElement('div'); security.className = 'device-command-grid security';
-    security.append(makeActionButton(device, 'lock.resume_off', '복귀 잠금 해제'), makeActionButton(device, 'lock.resume_on', '복귀 잠금 사용'), makeActionButton(device, 'autologon.open', '자동로그인 관리', 'secondary'), makeActionButton(device, 'agent.self_update', 'Agent 업데이트', 'secondary'));
+    security.append(makeActionButton(device, 'lock.resume_off', '복귀 잠금 해제'), makeActionButton(device, 'lock.resume_on', '복귀 잠금 사용'), makeActionButton(device, 'autologon.open', '자동로그인 관리', 'secondary'), makeActionButton(device, 'agent.self_update', 'Agent 업데이트', 'secondary'), makeActionButton(device, 'computer.browser.canary', 'BG Browser Canary', 'secondary'));
     const history = document.createElement('div'); history.className = 'device-history'; history.innerHTML = `<h3>최근 작업</h3>${latestCommandMarkup(device.recentCommands)}`;
     advancedBody.append(managementPanel(device), execution, remoteComputerPanel(device), diagnosticSummary(device), advancedActions, startupPanel(device), profileTitle, profiles, securityTitle, security, history);
     advanced.append(advancedBody);

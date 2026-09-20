@@ -206,7 +206,7 @@ export async function registerMarketplaceProduct(env, input = {}, { createdBy = 
   const offer = await upsertOffer(env.DB, {
     offerType: 'product', ownerType: 'business', ownerKey: 'ekodibiz', sourceProvider: providerKey,
     sourceId: offerSourceId || `link:${linkId}`, title: productName, summary, category, priceAmount: priceKrw,
-    canonicalUrl: `https://api.ekodi.kr/api/affiliate/public/link/${linkId}`, imageUrl: imageUrl || '',
+    canonicalUrl: `https://ekodi.kr/api/affiliate/public/link/${linkId}`, imageUrl: imageUrl || '',
     actionKind: 'external_purchase', visibility: 'public', status: 'active',
     discoveryKeywords: [providerName, category, productName, '에코디몰'],
     metadata: { storefront: 'ekodi-mall', providerName, accountId, linkId, merchantSourceId, productIdentityKey, gtin, brand, model, sourcePriceAmount: safeSourcePriceAmount, sourcePriceCurrency: safeSourcePriceCurrency, destinationUrl: destinationUrl || '', disclosureText, channel, campaignName, sourceType: normalizedConnectionMode, syncedAt: now },

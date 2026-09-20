@@ -2,7 +2,7 @@
 'use strict';
 const SECTION='language-status';
 const PANEL_ID='languageStatusPanel';
-const API='https://api.ekodi.kr/api/control/language-status';
+const API='https://ekodi.kr/api/control/language-status';
 const TOKEN_KEY='ekodi-auth-token';
 const READY_STAGES=new Set(['source','published']);
 function token(){try{return sessionStorage.getItem(TOKEN_KEY)||''}catch{return''}}

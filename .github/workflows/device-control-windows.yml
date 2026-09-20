@@ -15,6 +15,8 @@ on:
       - 'migrations/0021_device_control.sql'
       - 'migrations/0022_device_ai_ops.sql'
       - 'test/device-control-contract.test.mjs'
+      - 'test/non-disruptive-device-agent-contract.test.mjs'
+      - 'test/background-browser-canary-contract.test.mjs'
       - '.github/workflows/device-control-windows.yml'
   push:
     branches: [main]
@@ -31,6 +33,8 @@ on:
       - 'migrations/0021_device_control.sql'
       - 'migrations/0022_device_ai_ops.sql'
       - 'test/device-control-contract.test.mjs'
+      - 'test/non-disruptive-device-agent-contract.test.mjs'
+      - 'test/background-browser-canary-contract.test.mjs'
       - '.github/workflows/device-control-windows.yml'
 
 permissions:
@@ -51,7 +55,7 @@ jobs:
           node --check device-control-admin.js
           node --check remote-power-admin.js
           node --check admin-demand-loader.js
-          node --test test/device-control-contract.test.mjs
+          node --test test/device-control-contract.test.mjs test/non-disruptive-device-agent-contract.test.mjs test/background-browser-canary-contract.test.mjs
       - name: Build authenticated true-lazy Admin with Device AI
         run: |
           set -euo pipefail
@@ -122,13 +126,13 @@ jobs:
           $commands = @(
             'power.always_on','power.presentation','power.normal','power.restore','lock.resume_off','lock.resume_on','autologon.open',
             'diagnostics.collect','network.diagnose','printers.diagnose','startup.scan','startup.disable','startup.restore',
-            'maintenance.temp_cleanup','updates.scan','updates.install','profile.workstation.apply','profile.workstation.restore','agent.self_update',
+            'maintenance.temp_cleanup','updates.scan','updates.install','profile.workstation.apply','profile.workstation.restore','agent.self_update','computer.browser.canary',
             'remote_desktop.recovery.enable','remote_desktop.recovery.disable','remote_desktop.recovery.run'
           )
           foreach ($command in $commands) {
             if (-not $content.Contains("'$command'")) { throw "Missing allowlisted command: $command" }
           }
-          foreach ($guard in @('arbitraryShell = $false','screenCapture = $false','credentialCollection = $false')) {
+          foreach ($guard in @('arbitraryShell = $false','screenCapture = $false','credentialCollection = $false','backgroundBrowser = $false','isolatedDesktop = $false')) {
             if (-not $content.Contains($guard)) { throw "Missing privacy guard: $guard" }
           }
           if ($content -match '(?i)Restart-Computer|GetAsyncKeyState|SetWindowsHookEx|CopyFromScreen|GetClipboard') { throw 'Forbidden remote-control behavior found.' }
@@ -186,7 +190,7 @@ jobs:
           $path = Join-Path $PWD 'tools/ekodi-device-agent/windows/ekodi-device-agent.ps1'
           . $path
           $parsed = Parse-ProtocolEnrollment 'ekodi-device://enroll?code=EKD-0123456789ABCDEF0123&api=https%3A%2F%2Fevil.example'
-          if ($parsed.apiBase -ne 'https://api.ekodi.kr') { throw 'Protocol parser accepted an untrusted API base.' }
+          if ($parsed.apiBase -ne 'https://ekodi.kr') { throw 'Protocol parser accepted an untrusted API base.' }
           if ($parsed.enrollmentCode -ne 'EKD-0123456789ABCDEF0123') { throw 'Protocol parser changed the enrollment code.' }
           $failed = $false
           try { [void](Parse-ProtocolEnrollment 'ekodi-device://shell?code=EKD-0123456789ABCDEF0123') } catch { $failed = $true }

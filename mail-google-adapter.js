@@ -1,7 +1,7 @@
 const TOKEN_URL = 'https://oauth2.googleapis.com/token';
 const AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth';
 const GMAIL_API = 'https://gmail.googleapis.com/gmail/v1/users/me';
-export const MAIL_GOOGLE_REDIRECT_URI = 'https://api.ekodi.kr/api/mail/control/oauth/google/callback';
+export const MAIL_GOOGLE_REDIRECT_URI = 'https://ekodi.kr/api/mail/control/oauth/google/callback';
 export const GMAIL_READ_SCOPE = 'https://www.googleapis.com/auth/gmail.readonly';
 export const GMAIL_SEND_SCOPE = 'https://www.googleapis.com/auth/gmail.send';
 const BASE_SCOPES = ['openid', 'email', 'profile'];

@@ -16,7 +16,7 @@ test('release verification bypasses stale Shell bundle cache and refreshes the c
     const env={ASSETS:{fetch:async request=>{
       const path=new URL(request.url).pathname;
       if(path==='/shell.js')return new Response('window.shellCore=true;',{status:200});
-      if(path==='/user-language.js')return new Response("const I18N_API='https://api.ekodi.kr/api/i18n/v1';",{status:200});
+      if(path==='/user-language.js')return new Response("const I18N_API='https://ekodi.kr/api/i18n/v1';",{status:200});
       if(path==='/media-meeting-adapter.js')return new Response("const RESOLVER_DEFAULT='https://social.ekodi.kr/api/media/youtube/status';",{status:200});
       return new Response(`// ${path}`,{status:200});
     }}};

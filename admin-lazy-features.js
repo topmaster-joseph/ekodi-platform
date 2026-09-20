@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const API = 'https://api.ekodi.kr';
+  const API = 'https://ekodi.kr';
   const TOKEN_KEY = 'ekodi-auth-token';
   const CHAT_STATE_KEY = 'ekodi-chief-ai-chat-v1';
   const MAX_MESSAGES = 40;

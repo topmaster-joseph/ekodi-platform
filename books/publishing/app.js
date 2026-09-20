@@ -1,4 +1,4 @@
-const API='https://api.ekodi.kr';
+const API='https://ekodi.kr';
 const menuButton=document.querySelector('.menu-button');
 const nav=document.querySelector('#site-nav');
 const packageGrid=document.querySelector('#packageGrid');

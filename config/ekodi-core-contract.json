@@ -22,11 +22,6 @@
     "providerCredentialsServerSide": true,
     "safeDisconnectionRequired": true
   },
-  "canonicalHosts": {
-    "api": "api.ekodi.kr",
-    "admin": "admin.ekodi.kr",
-    "auth": "auth.ekodi.kr"
-  },
   "controlPlane": {
     "platformId": "control-api",
     "database": "ekodi-auth D1",
@@ -41,9 +36,18 @@
     "mode": "hybrid",
     "authoritativeRule": "Each domain owns its data. Cross-platform access uses an explicit shared API contract.",
     "stores": [
-      { "kind": "cloudflare-d1", "role": "shared control-plane and selected service namespaces" },
-      { "kind": "supabase-postgres", "role": "platform-owned relational workloads and auth where declared" },
-      { "kind": "object-storage", "role": "documents, media, exports and independent backup artifacts" }
+      {
+        "kind": "cloudflare-d1",
+        "role": "shared control-plane and selected service namespaces"
+      },
+      {
+        "kind": "supabase-postgres",
+        "role": "platform-owned relational workloads and auth where declared"
+      },
+      {
+        "kind": "object-storage",
+        "role": "documents, media, exports and independent backup artifacts"
+      }
     ],
     "rules": [
       "Do not consolidate healthy platform data into one database only for architectural symmetry.",
@@ -98,5 +102,13 @@
     "automatic-worker-rollback-contract-is-enforced",
     "d1-recovery-point-is-captured-before-control-release",
     "security-baseline-is-enforced"
-  ]
+  ],
+  "canonicalHost": "ekodi.kr",
+  "canonicalPaths": {
+    "api": "/api",
+    "admin": "/admin",
+    "auth": "/auth",
+    "mcp": "/mcp"
+  },
+  "canonicalApiBase": "https://ekodi.kr/api"
 }

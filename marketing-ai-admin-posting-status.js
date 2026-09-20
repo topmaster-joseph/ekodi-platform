@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const API = 'https://api.ekodi.kr';
+  const API = 'https://ekodi.kr';
   const TAB_KEY = 'publications';
   const POSTING_ACTION_RE = /(post|posting|publish|publication|social|channel|콘텐츠|게시|포스팅)/i;
   const CACHE_MS = 15_000;

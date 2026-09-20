@@ -17,7 +17,7 @@ import { buildEkodiOwnerReport, latestEkodiOwnerReport, listEkodiOwnerReports, p
 const SERVICE_CATALOG = [
   { id: 'root', name: 'EKODI Root', domain: 'ekodi.kr', url: 'https://ekodi.kr', group: 'platform', defaultState: 'active', defaultMonitor: true },
   { id: 'admin', name: 'EKODI Control Center', domain: 'admin.ekodi.kr', url: 'https://admin.ekodi.kr', group: 'platform', defaultState: 'active', defaultMonitor: true },
-  { id: 'api', name: 'EKODI API', domain: 'api.ekodi.kr', url: 'https://api.ekodi.kr/health', group: 'platform', defaultState: 'active', defaultMonitor: false },
+  { id: 'api', name: 'EKODI API', domain: 'ekodi.kr', url: 'https://ekodi.kr/api/health', group: 'platform', defaultState: 'active', defaultMonitor: false },
   { id: 'biz', name: '에코디비즈', domain: 'biz.ekodi.kr', url: 'https://biz.ekodi.kr', group: 'business', defaultState: 'planned', defaultMonitor: false },
   { id: 'trade', name: 'EKODI Global Trading', domain: 'trade.ekodi.kr', url: 'https://trade.ekodi.kr', group: 'business', defaultState: 'planned', defaultMonitor: false },
   { id: 'mall', name: '에코디몰', domain: 'ekodi.kr/ekodibiz/ekodimall', url: 'https://ekodi.kr/ekodibiz/ekodimall', group: 'business', defaultState: 'active', defaultMonitor: true },

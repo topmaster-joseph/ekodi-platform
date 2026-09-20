@@ -148,6 +148,18 @@ export default {
 
     const path = incoming.pathname;
 
+    if ((path === '/api' || path === '/api/') && request.method === 'GET') {
+      return applyApiSecurityHeaders(new Response(JSON.stringify({
+        ok: true,
+        service: 'ekodi-api',
+        generation: 10,
+        canonicalBase: 'https://ekodi.kr/api',
+        health: 'https://ekodi.kr/api/health',
+        providerIndependent: true,
+        executionBoundary: 'CONTROL_API service binding',
+      }), { status: 200, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' } }));
+    }
+
     if (path === '/.well-known/oauth-protected-resource') {
       try { return applyApiSecurityHeaders(handleEkodiMcpMetadata(request)); }
       catch (error) { console.error('EKODI MCP metadata error', error); return errorResponse('EKODI MCP 인증 메타데이터 처리 중 오류가 발생했습니다.', 'MCP_METADATA_ERROR'); }
@@ -173,7 +185,7 @@ export default {
       catch (error) { console.error('External AI Module Gateway error', error); return errorResponse('EKODI AI Module Gateway 처리 중 오류가 발생했습니다.', 'AI_MODULE_GATEWAY_ERROR'); }
     }
 
-    if ((path === '/operator' || path === '/operator/' || path === '/operator.js') && request.method === 'GET') {
+    if ((path === '/operator' || path === '/operator/' || path === '/operator.js' || path === '/api/operator' || path === '/api/operator/' || path === '/api/operator.js') && request.method === 'GET') {
       const response = handleMessengerOperatorPage(request);
       if (response) return response;
     }

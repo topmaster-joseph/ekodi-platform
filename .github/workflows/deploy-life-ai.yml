@@ -177,7 +177,7 @@ jobs:
           done
       - name: Verify central User AI service is reachable
         run: |
-          code=$(curl -sS -o /tmp/life-user-ai-status.json -w '%{http_code}' --max-time 15 'https://api.ekodi.kr/api/user-ai/status?site=life' || true)
+          code=$(curl -sS -o /tmp/life-user-ai-status.json -w '%{http_code}' --max-time 15 'https://ekodi.kr/api/user-ai/status?site=life' || true)
           test "$code" = '401' || test "$code" = '200'
       - name: Bootstrap or guarded Life AI release
         shell: bash

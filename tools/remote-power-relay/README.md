@@ -4,7 +4,7 @@
 
 ## 구조
 
-`admin.ekodi.kr → api.ekodi.kr → 인증된 HTTPS/Tunnel → LAN relay → Wake-on-LAN → Remote Desktop Commander 자동 시작`
+`admin.ekodi.kr → ekodi.kr/api → 인증된 HTTPS/Tunnel → LAN relay → Wake-on-LAN → Remote Desktop Commander 자동 시작`
 
 브라우저와 Cloudflare Worker에는 실제 MAC 주소를 저장하지 않습니다. MAC 주소와 브로드캐스트 주소는 LAN 릴레이에만 둡니다.
 
@@ -14,7 +14,7 @@
 2. `.env.example`을 참고해 환경변수를 등록합니다. 실제 비밀키와 MAC 주소는 Git에 커밋하지 않습니다.
 3. `node relay.mjs`로 실행하고 서비스 관리자(systemd, Windows Service 등)에서 자동 시작하도록 등록합니다.
 4. 릴레이의 8789 포트를 인터넷에 직접 노출하지 않습니다. Cloudflare Tunnel, Tailscale 또는 동등한 사설 터널을 사용합니다.
-5. `REMOTE_POWER_RELAY_URL`과 동일한 `REMOTE_POWER_SHARED_SECRET`을 `api.ekodi.kr` Worker secret에 등록합니다.
+5. `REMOTE_POWER_RELAY_URL`과 동일한 `REMOTE_POWER_SHARED_SECRET`을 `ekodi.kr/api` Worker secret에 등록합니다.
 
 ## 대상 PC 1회 설정
 

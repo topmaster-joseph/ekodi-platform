@@ -2,7 +2,7 @@
   'use strict';
   const TOKEN_KEY = 'ekodi-auth-token';
   const PANEL_ID = 'supplyNetworkAdminSection';
-  const API = 'https://api.ekodi.kr/api/affiliate';
+  const API = 'https://ekodi.kr/api/affiliate';
   const MALL_ADMIN = 'https://ekodi.kr/ekodibiz/ekodimall/admin/sourcing';
   const APPLICATION = { candidate:'후보', prepared:'가입 준비', account_exists:'계정보유', applied:'신청완료', review:'심사중', approved:'승인됨', active:'활성', blocked:'보류' };
   const INTEGRATION = { not_ready:'미연동', manual:'수동', deeplink:'딥링크', api:'API', feed:'Feed', live:'실연동' };

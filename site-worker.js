@@ -203,7 +203,7 @@ const MALL_CSP = [
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "font-src 'self' https://fonts.gstatic.com",
   "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://js.tosspayments.com",
-  "connect-src 'self' https://api.ekodi.kr https://mall-api.ekodi.kr https://mall-api-staging.ekodi.kr https://renzehysxirjilvdxacv.supabase.co https://*.tosspayments.com",
+  "connect-src 'self' https://ekodi.kr https://mall-api.ekodi.kr https://mall-api-staging.ekodi.kr https://renzehysxirjilvdxacv.supabase.co https://*.tosspayments.com",
   "frame-src https://*.tosspayments.com",
   "img-src 'self' data: blob: https:",
   "frame-ancestors 'none'",

@@ -24,7 +24,7 @@ Shared infrastructure that must remain stable and provider-independent:
 
 For files and durable records, **Google Workspace Shared Drive `EKODI` is the canonical system of record**. Durable business documents, final artifacts, retained AI outputs and backups must ultimately be written there through the EKODI Storage Gateway. D1 or Supabase is the operational state/index layer; Cloudflare R2 is a cache, delivery or staging layer. Neither replaces the canonical Shared Drive copy when retention is required.
 
-External modules and browsers must never receive privileged Google credentials or write directly to the Shared Drive. The permitted path is `EKODI service/module -> api.ekodi.kr -> EKODI Storage Gateway -> Google Workspace Shared Drive EKODI`.
+External modules and browsers must never receive privileged Google credentials or write directly to the Shared Drive. The permitted path is `EKODI service/module -> ekodi.kr/api -> EKODI Storage Gateway -> Google Workspace Shared Drive EKODI`.
 
 The detailed storage contract is `docs/EKODI-STORAGE-LAYER.md` and the machine-readable policy is `config/storage-policy.json`.
 

@@ -1,5 +1,5 @@
 (() => {
-  const API = 'https://api.ekodi.kr';
+  const API = 'https://ekodi.kr';
   const TOKEN_KEY = 'ekodi-auth-token';
   const ADMIN_ROLES = {
     super_admin: '최고관리자',

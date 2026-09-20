@@ -2,7 +2,7 @@
   'use strict';
   if (window.EKODIRemotePowerAdmin) return;
 
-  const API = 'https://api.ekodi.kr';
+  const API = 'https://ekodi.kr';
   const TOKEN_KEY = 'ekodi-auth-token';
   const state = { loading:false, relayConfigured:false, devices:[], agents:[], message:'' };
 

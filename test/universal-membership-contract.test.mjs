@@ -38,7 +38,7 @@ test('paid plans stay service-specific and universal runtime is wired', () => {
 });
 
 test('My EKODI may read the shared membership API without weakening other browser boundaries', () => {
-  assert.match(myWorker, /https:\/\/api\.ekodi\.kr/);
+  assert.match(myWorker, /https:\/\/ekodi\.kr/);
   assert.match(myWorker, /universalMembership:true/);
   assert.match(myWorker, /frame-ancestors 'none'/);
 });

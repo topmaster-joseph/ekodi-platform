@@ -445,7 +445,9 @@
     for (const card of grid.querySelectorAll('.service-control-card')) {
       const domain = card.querySelector('.service-control-head small')?.textContent?.trim() || '';
       const open = card.querySelector('.service-actions a');
-      if (!open || domain === 'api.ekodi.kr') continue;
+      if (!open) continue;
+      const currentPath = (() => { try { return new URL(open.href, location.origin).pathname; } catch { return ''; } })();
+      if (domain === 'ekodi.kr' && currentPath.startsWith('/api')) continue;
       const publicUrl = publicServiceUrl(domain);
       if (publicUrl && open.href !== `${publicUrl}/` && open.href !== publicUrl) open.href = publicUrl;
     }

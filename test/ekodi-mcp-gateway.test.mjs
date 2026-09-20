@@ -73,15 +73,6 @@ test('MCP bearer validation rejects direct sessions and wrong audience',async()=
   assert.equal(result.reason,'invalid_audience');
 });
 
-test('MCP bearer validation temporarily accepts an already-issued legacy audience',async()=>{
-  const token=tokenFor({sub:'user-1',client_id:'client-1',aud:EKODI_MCP_LEGACY_RESOURCES[0]});
-  const fetchImpl=async()=>new Response(JSON.stringify({id:'user-1',email:'u@example.com'}),{status:200});
-  const result=await validateMcpBearer(new Request('https://ekodi.kr/mcp',{headers:{authorization:`Bearer ${token}`}}),{fetchImpl});
-  assert.equal(result.ok,true);
-  assert.equal(result.legacyAudience,true);
-  assert.equal(result.resourceAudience,EKODI_MCP_LEGACY_RESOURCES[0]);
-});
-
 test('MCP bearer validation accepts an OAuth token minted for EKODI MCP',async()=>{
   const token=tokenFor({sub:'user-1',client_id:'client-1',aud:EKODI_MCP_RESOURCE});
   const fetchImpl=async()=>new Response(JSON.stringify({id:'user-1',email:'u@example.com'}),{status:200});
@@ -92,14 +83,11 @@ test('MCP bearer validation accepts an OAuth token minted for EKODI MCP',async()
   assert.equal(result.legacyAudience,false);
 });
 
-test('canonical MCP responses advertise the canonical resource and mark the legacy execution endpoint',async()=>{
+test('canonical MCP responses advertise only the apex resource',async()=>{
   const canonical=await handleEkodiMcpGateway(new Request('https://ekodi.kr/mcp',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:7,method:'ping'})}),{});
   assert.equal(canonical.headers.get('x-ekodi-mcp-resource'),EKODI_MCP_RESOURCE);
   assert.match(canonical.headers.get('link')||'',/rel="canonical"/);
   assert.equal(canonical.headers.get('x-ekodi-mcp-legacy-endpoint'),null);
-  const legacy=await handleEkodiMcpGateway(new Request('https://api.ekodi.kr/mcp',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:8,method:'ping'})}),{});
-  assert.equal(legacy.headers.get('x-ekodi-mcp-legacy-endpoint'),'true');
-  assert.equal(legacy.headers.get('x-ekodi-mcp-resource'),EKODI_MCP_RESOURCE);
 });
 
 test('authenticated tool advertises OAuth challenge when connection is missing',async()=>{

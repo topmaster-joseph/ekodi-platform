@@ -12,6 +12,6 @@ test('September 2026 devotional plan contains 30 ordered passages', () => {
 });
 
 test('devotional control ignores unrelated routes before authentication', async () => {
-  const response = await handleDevotionalControl(new Request('https://api.ekodi.kr/api/other'), {}, {});
+  const response = await handleDevotionalControl(new Request('https://ekodi.kr/api/other'), {}, {});
   assert.equal(response, null);
 });

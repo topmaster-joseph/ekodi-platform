@@ -1,5 +1,5 @@
 {
-  "apiBase": "https://api.ekodi.kr",
+  "apiBase": "https://ekodi.kr",
   "publicBase": "https://tapo-bridge.example.ekodi.kr",
   "port": 8789,
   "ffmpegPath": "ffmpeg",

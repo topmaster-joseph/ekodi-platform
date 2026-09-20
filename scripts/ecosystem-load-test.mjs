@@ -4,7 +4,7 @@ import { performance } from 'node:perf_hooks';
 const DEFAULT_TARGETS = [
   { label: 'root', url: 'https://ekodi.kr/' },
   { label: 'admin', url: 'https://admin.ekodi.kr/' },
-  { label: 'api-health', url: 'https://api.ekodi.kr/health' },
+  { label: 'api-health', url: 'https://ekodi.kr/api/health' },
   { label: 'biz', url: 'https://biz.ekodi.kr/' },
   { label: 'marketing', url: 'https://marketing.ekodi.kr/' },
   { label: 'church', url: 'https://ekodi.kr/ekodichurch/' },

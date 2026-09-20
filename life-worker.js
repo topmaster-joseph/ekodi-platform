@@ -6,11 +6,11 @@ const SECURITY_HEADERS={
   'x-content-type-options':'nosniff',
   'referrer-policy':'strict-origin-when-cross-origin',
   'permissions-policy':'camera=(), microphone=(), geolocation=()',
-  'content-security-policy':"default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self'; img-src 'self' data: https:; connect-src 'self' https://renzehysxirjilvdxacv.supabase.co https://api.ekodi.kr; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests",
+  'content-security-policy':"default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self'; img-src 'self' data: https:; connect-src 'self' https://renzehysxirjilvdxacv.supabase.co https://ekodi.kr; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests",
 };
 function config(env){
   const dataEnabled=env.DATA_ENABLED==='true'&&!!env.SUPABASE_URL&&!!env.SUPABASE_PUBLISHABLE_KEY;
-  return {dataEnabled,dataMode:env.DATA_MODE||'production',supabaseUrl:dataEnabled?env.SUPABASE_URL:'',supabasePublishableKey:dataEnabled?env.SUPABASE_PUBLISHABLE_KEY:'',authUrl:env.AUTH_URL||'https://ekodi.kr/auth/?site=life',coreApiUrl:env.CORE_API_URL||'https://api.ekodi.kr'};
+  return {dataEnabled,dataMode:env.DATA_MODE||'production',supabaseUrl:dataEnabled?env.SUPABASE_URL:'',supabasePublishableKey:dataEnabled?env.SUPABASE_PUBLISHABLE_KEY:'',authUrl:env.AUTH_URL||'https://ekodi.kr/auth/?site=life',coreApiUrl:env.CORE_API_URL||'https://ekodi.kr'};
 }
 const CORS_ORIGINS=new Set(['https://life.ekodi.kr','https://ekodi.kr']);
 function corsHeaders(request){const origin=request?.headers?.get?.('origin')||'';return origin&&CORS_ORIGINS.has(origin)?{'access-control-allow-origin':origin,'access-control-allow-headers':'authorization,content-type','access-control-allow-methods':'GET,POST,OPTIONS',vary:'Origin'}:{}}

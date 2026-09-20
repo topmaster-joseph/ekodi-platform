@@ -29,5 +29,5 @@
     "social",
     "work"
   ],
-  "rule": "Platform-owned source under platformRoots must not directly reference EKODI Core protected tables. Cross-platform access uses core-client.js / api.ekodi.kr contracts."
+  "rule": "Platform-owned source under platformRoots must not directly reference EKODI Core protected tables. Cross-platform access uses core-client.js / https://ekodi.kr/api contracts."
 }
