@@ -127,6 +127,29 @@ if (!fs.existsSync(sharedSiteWranglerPath)) {
   }
 }
 
+const sharedReleaseManifestPath = path.join(root, 'deploy/manifests/shared-site.worker.json');
+if (!fs.existsSync(sharedReleaseManifestPath)) {
+  fail('deploy/manifests/shared-site.worker.json is required for production release verification');
+} else {
+  try {
+    const sharedReleaseManifest = JSON.parse(fs.readFileSync(sharedReleaseManifestPath, 'utf8'));
+    for (const request of sharedReleaseManifest?.worker?.requests || []) {
+      if (!request?.url) continue;
+      const match = String(request.url).match(/^https:\/\/([^/]+)(?:\/|$)/i);
+      if (!match) {
+        fail(`shared-site release request must be an absolute https URL: ${request.url}`);
+        continue;
+      }
+      const hostname = match[1].toLowerCase();
+      if (hostname !== policy.canonicalHost) {
+        fail(`shared-site release request must use canonical apex ${policy.canonicalHost}, not ${hostname}: ${request.url}`);
+      }
+    }
+  } catch (error) {
+    fail(`unable to validate shared-site release manifest: ${error.message}`);
+  }
+}
+
 const ignoredFiles = new Set(['scripts/zero-subdomain-guard.mjs']);
 const hostPattern = /(?<!@)\b(?:[a-z0-9-]+\.)+ekodi\.kr\b|\*\.ekodi\.kr\b/ig;
 let currentFile = '';
