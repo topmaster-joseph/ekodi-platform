@@ -42,7 +42,7 @@ test('Mall keeps global anti-framing but grants Admin narrow Free Ops exceptions
     const block = headerBlock(path);
     assert.ok(block.includes('! X-Frame-Options'));
     assert.ok(block.includes('! Content-Security-Policy'));
-    assert.ok(block.includes('frame-ancestors https://admin.ekodi.kr'));
+    assert.ok(block.includes('frame-ancestors https://ekodi.kr'));
   }
 });
 
