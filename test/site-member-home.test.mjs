@@ -16,6 +16,8 @@ const membershipPolicy=JSON.parse(await readFile(new URL('../config/universal-me
 const workspacePolicy=JSON.parse(await readFile(new URL('../config/service-workspace-policy.json',import.meta.url),'utf8'));
 
 test('canonical service and independent workspace paths resolve to their own My Page',()=>{
+  assert.equal(memberHomeRouteFromPath('/ekodichurch/my')?.siteKey,'church');
+  assert.equal(memberHomeRouteFromPath('/ekodichurch/my')?.canonical,true);
   assert.equal(memberHomeRouteFromPath('/ekodimission/my')?.siteKey,'mission');
   assert.equal(memberHomeRouteFromPath('/ekodimission/my')?.canonical,true);
   assert.equal(memberHomeRouteFromPath('/mission/my')?.siteKey,'mission');
@@ -24,12 +26,13 @@ test('canonical service and independent workspace paths resolve to their own My 
   assert.equal(memberHomeRouteFromPath('/jadam/my')?.workspaceSlug,'jadam');
   assert.equal(memberHomeRouteFromPath('/my'),null);
   assert.equal(memberHomeRouteFromPath('/admin/my'),null);
+  assert.equal(canonicalMemberHomeForService('church'),'https://ekodi.kr/ekodichurch/my');
   assert.equal(canonicalMemberHomeForService('mission'),'https://ekodi.kr/ekodimission/my');
   assert.equal(canonicalMemberHomeForService('marketing'),'https://ekodi.kr/ekodibiz/marketing-ai/my');
 });
 
 test('apex router owns service and workspace My Pages before public-service fallthrough',async()=>{
-  for(const path of ['/jadam/my','/ekodimission/my','/bible/my']){
+  for(const path of ['/jadam/my','/ekodichurch/my','/ekodimission/my','/bible/my']){
     const response=await platformRouter.fetch(new Request(`https://ekodi.kr${path}`),{},{waitUntil(){}});
     assert.equal(response.status,200,path);
     assert.equal(response.headers.get('x-ekodi-route'),'site-member-home',path);
