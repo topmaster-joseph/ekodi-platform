@@ -190,7 +190,7 @@ jobs:
           $path = Join-Path $PWD 'tools/ekodi-device-agent/windows/ekodi-device-agent.ps1'
           . $path
           $parsed = Parse-ProtocolEnrollment 'ekodi-device://enroll?code=EKD-0123456789ABCDEF0123&api=https%3A%2F%2Fevil.example'
-          if ($parsed.apiBase -ne 'https://api.ekodi.kr') { throw 'Protocol parser accepted an untrusted API base.' }
+          if ($parsed.apiBase -ne 'https://ekodi.kr') { throw 'Protocol parser accepted an untrusted API base.' }
           if ($parsed.enrollmentCode -ne 'EKD-0123456789ABCDEF0123') { throw 'Protocol parser changed the enrollment code.' }
           $failed = $false
           try { [void](Parse-ProtocolEnrollment 'ekodi-device://shell?code=EKD-0123456789ABCDEF0123') } catch { $failed = $true }
