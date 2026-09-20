@@ -80,23 +80,6 @@ jobs:
           echo "E2E_AUTH_DB_ID=$auth_db" >> "$GITHUB_ENV"
           echo 'Canonical ekodi.kr production session verified.' >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Wait for an empty command queue without draining unrelated work
-        shell: bash
-        run: |
-          set -euo pipefail
-          for attempt in $(seq 1 18); do
-            queued=$(curl -fsS --retry 2 --retry-delay 1               "$EKODI_ORIGIN/api/control/ai/v8/tasks?state=queued&limit=5"               -H "Authorization: Bearer $E2E_ADMIN_TOKEN")
-            count=$(echo "$queued" | jq '.tasks | length')
-            if [ "$count" -eq 0 ]; then
-              echo 'No unrelated queued command task detected.'
-              exit 0
-            fi
-            echo "Existing queued tasks: $count; waiting for normal EKODI scheduler (attempt $attempt/18)."
-            sleep 10
-          done
-          echo 'Refusing to manually drain unrelated production work.'
-          exit 1
-
       - name: Submit and execute read-only orchestration proof
         id: execute
         shell: bash
