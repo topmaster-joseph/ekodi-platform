@@ -191,6 +191,27 @@ function deployVersions(specs, message) {
   command(['versions', 'deploy', ...specs, '-y', '--config', worker.config, '--message', message]);
 }
 
+function isTransientWranglerTransportError(error) {
+  const detail = `${error?.message || ''}\n${error?.providerOutput || ''}`;
+  return /fetch failed|network connectivity|econnreset|etimedout|eai_again|enotfound|socket hang up|connection reset/i.test(detail);
+}
+
+async function restoreVersionWithRetry(version, message) {
+  const specs = [`${version}@100%`];
+  let lastError = null;
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    try {
+      deployVersions(specs, message);
+      return;
+    } catch (error) {
+      lastError = error;
+      if (!isTransientWranglerTransportError(error) || attempt === 3) throw error;
+      console.warn(`Transient Wrangler transport failure during rollback attempt ${attempt}/3; retrying safely.`);
+      await new Promise(resolve => setTimeout(resolve, 1500 * attempt));
+    }
+  }
+  throw lastError;
+}
 
 function responseDiagnostic(response, body) {
   const route = response?.headers?.get?.('x-ekodi-route') || 'none';
@@ -362,7 +383,7 @@ try {
   if (candidateAttached && previousVersion) {
     try {
       console.error(`Rolling back ${worker.name} to ${previousVersion} at 100%.`);
-      deployVersions([`${previousVersion}@100%`], `EKODI automatic rollback after failed gate ${tag}`);
+      await restoreVersionWithRetry(previousVersion, `EKODI automatic rollback after failed gate ${tag}`);
       await verifyAll('', 'rollback');
       console.error('✅ Automatic rollback verified against the stable rollback contract.');
     } catch (rollbackError) {

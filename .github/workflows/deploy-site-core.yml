@@ -206,6 +206,10 @@ on:
       - 'test/admin-performance-hardening.test.mjs'
       - 'test/admin-conversation-workbench.test.mjs'
       - 'test/admin-assist-command-delivery.test.mjs'
+      - 'test/admin-assist-dock.test.mjs'
+      - 'test/admin-deploy-report.test.mjs'
+      - 'test/openai-workspace-release-contract.test.mjs'
+      - 'test/shared-site-admin-probe.test.mjs'
       - 'scripts/build.mjs'
       - 'scripts/guarded-worker-release.mjs'
       - 'scripts/cloudflare-production-budget.mjs'
@@ -296,6 +300,7 @@ jobs:
           node --test test/cloudflare-quota-guard.test.mjs test/production-gate-transport-resilience.test.mjs
           node --test test/admin-subdomain-redirect-runtime.test.mjs
           node --test test/tapo-admin-asset-boundary.test.mjs test/admin-true-lazy.test.mjs test/mall-production-verifier-contract.test.mjs
+          node --test test/admin-assist-dock.test.mjs test/admin-deploy-report.test.mjs test/openai-workspace-release-contract.test.mjs test/shared-site-admin-probe.test.mjs
           node --test test/admin-communication.test.mjs test/devotional-admin-readiness.test.mjs test/ekodibiz-invest-business.test.mjs test/ekodibiz-invest-admin.test.mjs test/invest-site-system.test.mjs test/public-workspace-gateway.test.mjs test/store-public-gateway.test.mjs test/store-portfolio-admin.test.mjs test/marketing-canonical-projection.test.mjs test/church-pastor-admin.test.mjs test/church-route-ownership.test.mjs test/organization-subsite.test.mjs
           node scripts/validate-admin-source.mjs
           node scripts/validate-user-ui-dna.mjs
