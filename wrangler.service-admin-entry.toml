@@ -11,9 +11,6 @@ ENVIRONMENT = "production"
 pattern = "ai.ekodi.kr/admin*"
 zone_name = "ekodi.kr"
 [[routes]]
-pattern = "auth.ekodi.kr/admin*"
-zone_name = "ekodi.kr"
-[[routes]]
 pattern = "cloud.ekodi.kr/admin*"
 zone_name = "ekodi.kr"
 [[routes]]
