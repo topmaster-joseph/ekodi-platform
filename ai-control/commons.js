@@ -3,7 +3,7 @@ import {createClient} from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2
 const $=id=>document.getElementById(id);
 const state={config:null,client:null,session:null,services:[],requests:[],sourceServiceId:''};
 // Canonical /ai clients apply the public prefix exactly once, even behind the shared path router.
-const API_BASE=location.pathname==='/ai'||location.pathname.startsWith('/ai/')?'/ai':'';
+const API_BASE=location.pathname.startsWith('/ai')?'/ai':'';
 const escText=value=>String(value??'').trim();
 function apiUrl(path){
   const normalized=String(path||'').replace(/^\/ai(?=\/api\/commons(?:\/|$))/,'');
