@@ -609,10 +609,12 @@ async function ownerReportSnapshot(env, options = {}) {
   const persist = options.persist === true;
   if (force) await runChecks(env);
   const controlOverview = await overview(env);
+  const accountSnapshot = options.accountSnapshot || await cloudflareAccountSnapshot(env);
   const liveEvolution = options.evolution || await evolutionSnapshot(env);
   const previous = await latestEkodiOwnerReport(env.DB);
   const current = buildEkodiOwnerReport({
     overview: controlOverview,
+    accountSnapshot,
     evolution: liveEvolution,
     previous,
     generatedAt: new Date().toISOString(),
@@ -894,12 +896,12 @@ export default {
 
   async scheduled(_controller, env, ctx) {
     ctx.waitUntil((async () => {
-      await Promise.all([
+      const [, accountSnapshot] = await Promise.all([
         runChecks(env),
         cloudflareAccountSnapshot(env)
       ]);
       const [evolution] = await Promise.all([evolutionSnapshot(env), runLanguageAutomation(env), analyzeCapabilityEcosystem(env.DB)]);
-      await ownerReportSnapshot(env, { persist:true, evolution, limit:10 });
+      await ownerReportSnapshot(env, { persist:true, evolution, accountSnapshot, limit:10 });
     })().catch(error => console.error('Scheduled service, account, or evolution check failed', error)));
   }
 };
