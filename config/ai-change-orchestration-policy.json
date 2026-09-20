@@ -77,14 +77,15 @@
       "synthetic-or-virtual-equivalent-verification",
       "deterministic-contract-and-regression-verification"
     ],
-    "syntheticVerificationMaySatisfyCompletionWhenRealInteractionUnavailable": true,
+    "syntheticVerificationMaySatisfyCompletionWhenRealInteractionUnavailable": false,
     "syntheticVerificationRequirements": [
       "materially-equivalent-user-flow",
       "same-production-artifact-or-runtime-contract",
       "objective-pass-fail-assertions",
       "evidence-recorded",
       "no-known-material-gap"
-    ]
+    ],
+    "syntheticVerificationPurpose": "precompletion-equivalent-proof-and-fast-recovery; final production completion still requires real production verification"
   },
   "consultationDecision": {
     "policyId": "AI-CONSULT-001",
@@ -247,7 +248,7 @@
       ]
     },
     "intermediateProgressDefault": "suppress-unless-human-action-safety-or-unresolved-exception",
-    "completionOnlyAfter": "preflight-validation-deployment-and-real-or-equivalent-synthetic-verification"
+    "completionOnlyAfter": "preflight-validation-deployment-and-real-production-verification; synthetic-equivalent-verification runs automatically before escalation but is not a production-completion substitute"
   },
   "executionFallback": {
     "enabled": true,
