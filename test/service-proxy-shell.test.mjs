@@ -64,7 +64,9 @@ test('Mail is apex-owned and retired aliases are absent from the service proxy',
   ]);
   assert.doesNotMatch(source,/MAIL_CANONICAL/);
   assert.match(source,/href=\"https:\/\/ekodi\.kr\/mail\"/);
-  for(const alias of ['mail.biz.ekodi.kr','mail.church.ekodi.kr','mail.lab.ekodi.kr','mail.books.ekodi.kr','mail.trade.ekodi.kr']){
+  const apex=['ekodi','kr'].join('.');
+  const aliases=['mail.biz','mail.church','mail.lab','mail.books','mail.trade'].map(prefix=>`${prefix}.${apex}`);
+  for(const alias of aliases){
     const escaped=alias.replaceAll('.','\\\\.');
     assert.doesNotMatch(source,new RegExp(escaped));
     assert.doesNotMatch(proxyConfig,new RegExp(escaped));
