@@ -571,7 +571,7 @@ jobs:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       CF_ZONE_ID: e39707f426b195d12c67a86f62b52ba7
-      LEGACY_API_HOST: api.ekodi.kr
+      LEGACY_API_LABEL: api
       MAIL_GOOGLE_CLIENT_SECRET: ${{ secrets.MAIL_GOOGLE_CLIENT_SECRET }}
       GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
     steps:
@@ -680,6 +680,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          LEGACY_API_HOST="${LEGACY_API_LABEL}.ekodi.kr"
+          export LEGACY_API_HOST
           endpoint="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/domains"
           domains=$(curl --fail-with-body -sS -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H 'Content-Type: application/json' "$endpoint")
           echo "$domains" | jq -e '.success == true' >/dev/null
@@ -695,6 +697,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          LEGACY_API_HOST="${LEGACY_API_LABEL}.ekodi.kr"
+          export LEGACY_API_HOST
           api='https://api.cloudflare.com/client/v4'
           auth=(-H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H 'Content-Type: application/json')
           curl --fail-with-body -sS "${auth[@]}" "$api/zones/$CF_ZONE_ID/dns_records?name=$LEGACY_API_HOST&per_page=100" > /tmp/api-dns.json
@@ -712,6 +716,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          LEGACY_API_HOST="${LEGACY_API_LABEL}.ekodi.kr"
+          export LEGACY_API_HOST
           endpoint="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/domains"
           domains=$(curl --fail-with-body -sS -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$endpoint")
           echo "$domains" | jq -e '.success == true' >/dev/null
