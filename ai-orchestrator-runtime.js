@@ -2,7 +2,8 @@ import {
   isAiProviderDisabled,
   runAiEnhancedTask,
 } from './ai-resilience-runtime.js';
-import { rankAiResourceCandidates } from './ai-resource-policy.js';
+import { normalizeAiResourcePolicy, rankAiResourceCandidates, scoreAiResourceCandidate } from './ai-resource-policy.js';
+import { isZeroMarginalCostClass } from './ai-cost-policy.js';
 
 const RISK_LEVELS = new Set(['low', 'normal', 'high', 'critical']);
 const COLLABORATION_MODES = new Set(['auto', 'primary', 'review']);
@@ -50,6 +51,20 @@ function supports(provider, requiredCapabilities) {
   return supported.has('*') || requiredCapabilities.every(capability => supported.has(capability));
 }
 
+function activeResourcePolicy(providers = []) {
+  const enabledZeroMarginal = resourceClass => providers.some(provider =>
+    provider.available !== false
+    && provider.resourceClass === resourceClass
+    && isZeroMarginalCostClass(provider.costClass)
+  );
+  return normalizeAiResourcePolicy({
+    pools: {
+      ekodiSharedApi: { enabled: enabledZeroMarginal('ekodi-shared-api') },
+      hostedAi: { enabled: enabledZeroMarginal('hosted-ai') },
+    },
+  });
+}
+
 function chooseMode(collaboration, risk) {
   if (collaboration !== 'auto') return collaboration;
   return risk === 'high' || risk === 'critical' ? 'review' : 'primary';
@@ -80,8 +95,22 @@ export function buildAiOrchestrationPlan(input = {}, providers = []) {
   const eligibleBase = normalized.filter(provider => provider.available && supports(provider, requiredCapabilities));
   const lane = input.lane === 'autonomous' ? 'autonomous' : 'interactive';
   const governance = input.governance && typeof input.governance === 'object' ? input.governance : {};
-  const ranked = rankAiResourceCandidates(eligibleBase, { lane, governance });
+  const resourcePolicy = activeResourcePolicy(eligibleBase);
+  const resourceContext = { lane, governance };
+  const decisions = eligibleBase.map(provider => ({
+    provider,
+    result: scoreAiResourceCandidate(provider, resourceContext, resourcePolicy),
+  }));
+  const ranked = rankAiResourceCandidates(eligibleBase, resourceContext, resourcePolicy);
   const eligible = ranked.map(item => normalized.find(provider => provider.id === item.id)).filter(Boolean);
+  const blockedProviders = decisions
+    .filter(item => !item.result.eligible)
+    .map(item => Object.freeze({
+      id: item.provider.id,
+      resourceClass: item.provider.resourceClass,
+      costClass: item.provider.costClass,
+      blockedBy: item.result.blockedBy,
+    }));
   const mode = chooseMode(collaboration, risk);
   const primary = eligible[0] || null;
   const reviewer = mode === 'review' ? eligible.find(provider => provider.id !== primary?.id) || null : null;
@@ -98,6 +127,7 @@ export function buildAiOrchestrationPlan(input = {}, providers = []) {
     primaryProvider: primary?.id || null,
     reviewerProvider: reviewer?.id || null,
     eligibleProviders: Object.freeze(eligible.map(provider => provider.id)),
+    blockedProviders: Object.freeze(blockedProviders),
     reviewAvailable: Boolean(reviewer),
     principle: 'ekodi-controls-models-models-do-not-control-ekodi',
   });
