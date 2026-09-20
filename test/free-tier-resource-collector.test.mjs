@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { collectSupabase, collectGitHub, snapshotsToSql } from '../scripts/collect-free-tier-resource-usage.mjs';
+import { collectSupabase, collectSupabasePublicTelemetry, collectGitHub, snapshotsToSql } from '../scripts/collect-free-tier-resource-usage.mjs';
 
 const observedAt='2026-09-20T08:30:00.000Z';
 
@@ -32,13 +32,43 @@ test('Supabase collector measures free project capacity and per-project database
   }
 });
 
-test('Supabase collector reports missing telemetry when no management credential exists',async()=>{
-  let called=false;
-  const result=await collectSupabase({token:'',observedAt,fetchJson:async()=>{called=true;throw new Error('must not fetch');}});
-  assert.equal(result.available,false);
-  assert.equal(result.reason,'credential_missing');
-  assert.deepEqual(result.snapshots,[]);
-  assert.equal(called,false);
+test('Supabase collector falls back to aggregate project telemetry when management credential is absent',async()=>{
+  const projects=[
+    {ref:'project-a',publishableKey:'pub-a',group:'ekodi-free'},
+    {ref:'project-b',publishableKey:'pub-b',group:'ekodi-free'},
+  ];
+  const fetchJson=async(url,options={})=>{
+    assert.equal(options.headers.apikey,url.includes('project-a')?'pub-a':'pub-b');
+    if(url.includes('project-a'))return {ok:true,database_bytes:23325843,storage_object_bytes:1000};
+    if(url.includes('project-b'))return {ok:true,database_bytes:12184723,storage_object_bytes:33132};
+    throw new Error(`unexpected ${url}`);
+  };
+  const result=await collectSupabase({token:'',observedAt,fetchJson,projects});
+  const byMetric=new Map(result.snapshots.map(row=>[row.metric,row]));
+  assert.equal(result.available,true);
+  assert.equal(result.mode,'project-telemetry');
+  assert.equal(byMetric.get('active_projects').observedValue,2);
+  assert.equal(byMetric.get('database_bytes:project-a').observedValue,23325843);
+  assert.equal(byMetric.get('database_bytes:project-b').observedValue,12184723);
+  assert.equal(byMetric.get('storage_bytes_org:ekodi-free').observedValue,34132);
+});
+
+test('partial project telemetry never fabricates active-project capacity',async()=>{
+  const projects=[
+    {ref:'project-a',publishableKey:'pub-a',group:'ekodi-free'},
+    {ref:'project-b',publishableKey:'pub-b',group:'ekodi-free'},
+  ];
+  const result=await collectSupabasePublicTelemetry({
+    projects,observedAt,
+    fetchJson:async(url)=>{
+      if(url.includes('project-a'))return {ok:true,database_bytes:100,storage_object_bytes:10};
+      throw Object.assign(new Error('HTTP_503'),{status:503});
+    }
+  });
+  assert.equal(result.available,true);
+  assert.equal(result.reason,'partial_project_telemetry');
+  assert.equal(result.snapshots.some(row=>row.metric==='active_projects'),false);
+  assert.equal(result.snapshots.some(row=>row.metric==='database_bytes:project-a'),true);
 });
 
 test('GitHub collector records public repository cache and artifact storage only',async()=>{
