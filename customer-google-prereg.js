@@ -259,7 +259,7 @@ async function preregister(request, env, slug) {
       expiresAt: grantInput.expiresAt || '',
       status: existing?.last_verified_at ? 'active' : 'pre_registered',
       tenant: tenant.slug,
-      loginUrl: `https://auth.ekodi.kr/?site=${TENANT_REALMS[slug]}`,
+      loginUrl: `https://ekodi.kr/auth/?site=${TENANT_REALMS[slug]}`,
     },
   }, existing ? 200 : 201, request, env);
 }
