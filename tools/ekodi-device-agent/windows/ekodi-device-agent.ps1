@@ -10,7 +10,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$AgentVersion = '2.2.3'
+$AgentVersion = '2.2.4'
 $Root = Join-Path $env:ProgramData 'EKODI\DeviceAgent'
 $AgentPath = Join-Path $Root 'ekodi-device-agent.ps1'
 $ConfigPath = Join-Path $Root 'config.json'
@@ -24,6 +24,10 @@ $ProtocolKey = 'Registry::HKEY_LOCAL_MACHINE\Software\Classes\ekodi-device'
 $AgentSourceUrl = 'https://raw.githubusercontent.com/topmaster-joseph/ekodi-platform/main/tools/ekodi-device-agent/windows/ekodi-device-agent.ps1'
 $AllowedApiBase = 'https://ekodi.kr'
 $UpgradeRoot = Join-Path $Root 'transactions'
+$script:RestartAfterCommand = $false
+$BrowserCanaryStatePath = Join-Path $Root 'background-browser-canary.json'
+$BrowserCanaryProfileRoot = Join-Path $env:ProgramData 'EKODI\BrowserWorker\CanaryProfile'
+$BrowserCanaryUrl = 'https://ekodi.kr/'
 
 function Test-IsAdministrator {
   $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
@@ -251,11 +255,11 @@ function Get-NetworkDiagnostic {
     $connected = $adapters.Count
   } catch { $issues += 'adapter_query_failed' }
   try {
-    $addresses = [Net.Dns]::GetHostAddresses('api.ekodi.kr')
+    $addresses = [Net.Dns]::GetHostAddresses('ekodi.kr')
     $dnsOk = $addresses.Count -gt 0
   } catch { $issues += 'dns_failed' }
   try {
-    $apiReachable = [bool](Test-NetConnection -ComputerName 'api.ekodi.kr' -Port 443 -InformationLevel Quiet -WarningAction SilentlyContinue)
+    $apiReachable = [bool](Test-NetConnection -ComputerName 'ekodi.kr' -Port 443 -InformationLevel Quiet -WarningAction SilentlyContinue)
   } catch { $issues += 'api_connection_test_failed' }
   return @{
     checkedAt = (Get-Date).ToUniversalTime().ToString('o')
@@ -781,7 +785,7 @@ function Update-AgentFromOfficialSource {
   Invoke-WebRequest -UseBasicParsing $AgentSourceUrl -OutFile $temp
   [void](Assert-AgentCandidate $temp)
   $result = Invoke-AgentUpgradeTransaction -CandidatePath $temp -DeferRestart
-  return @{ message = "EKODI Device Agent를 트랜잭션 방식으로 $($result.version) 버전으로 업데이트했습니다. 현재 실행은 다음 안전 재시작 때 새 코드로 전환됩니다."; settings = Get-AgentSettings }
+  return @{ message = "EKODI Device Agent를 트랜잭션 방식으로 $($result.version) 버전으로 업데이트했습니다. 명령 결과 전송 후 Agent를 안전 재시작합니다."; restartRequired = $true; version = $result.version; settings = Get-AgentSettings }
 }
 
 function Get-AgentSettings {
@@ -794,6 +798,7 @@ function Get-AgentSettings {
     protocolRegistered = (Test-ProtocolRegistered)
     workstationProfile = Get-WorkstationProfileName
     health = Get-LightHealth
+    backgroundBrowserCanary = Get-BackgroundBrowserCanaryState
   }
 }
 
@@ -816,6 +821,108 @@ function Get-RemoteProcessList {
   }
 }
 
+function Resolve-EkodiBrowser {
+  $candidates = @(
+    "$env:ProgramFiles\Microsoft\Edge\Application\msedge.exe",
+    "$env:ProgramFiles\Google\Chrome\Application\chrome.exe",
+    "$env:LOCALAPPDATA\Microsoft\Edge\Application\msedge.exe",
+    "$env:LOCALAPPDATA\Google\Chrome\Application\chrome.exe"
+  )
+  return ($candidates | Where-Object { $_ -and (Test-Path -LiteralPath $_) } | Select-Object -First 1)
+}
+
+function Get-BackgroundBrowserCanaryState {
+  if (-not (Test-Path -LiteralPath $BrowserCanaryStatePath)) {
+    return @{ verified = $false; checkedAt = ''; agentVersion = $AgentVersion }
+  }
+  try {
+    $state = Get-Content -LiteralPath $BrowserCanaryStatePath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $verified = (
+      $state.ok -eq $true -and
+      [string]$state.agentVersion -eq $AgentVersion -and
+      $state.dedicatedAutomationProfile -eq $true -and
+      $state.offscreenOrHeadless -eq $true -and
+      $state.focusIsolated -eq $true -and
+      $state.clipboardShared -eq $false -and
+      $state.userInputInjection -eq $false -and
+      [string]$state.url -eq $BrowserCanaryUrl
+    )
+    return @{
+      verified = [bool]$verified
+      checkedAt = [string]$state.checkedAt
+      agentVersion = [string]$state.agentVersion
+      browser = [string]$state.browser
+      url = [string]$state.url
+      dedicatedAutomationProfile = [bool]$state.dedicatedAutomationProfile
+      offscreenOrHeadless = [bool]$state.offscreenOrHeadless
+      focusIsolated = [bool]$state.focusIsolated
+      clipboardShared = [bool]$state.clipboardShared
+      userInputInjection = [bool]$state.userInputInjection
+    }
+  } catch {
+    return @{ verified = $false; checkedAt = ''; agentVersion = $AgentVersion; error = 'canary_state_invalid' }
+  }
+}
+
+function Invoke-BackgroundBrowserCanary {
+  Remove-Item -LiteralPath $BrowserCanaryStatePath -Force -ErrorAction SilentlyContinue
+  $browser = Resolve-EkodiBrowser
+  if (-not $browser) { throw 'supported_browser_not_found' }
+  New-Item -ItemType Directory -Path $BrowserCanaryProfileRoot -Force | Out-Null
+
+  $arguments = @(
+    '--headless=new',
+    '--disable-gpu',
+    '--disable-extensions',
+    '--disable-sync',
+    '--no-first-run',
+    '--no-default-browser-check',
+    "--user-data-dir=`"$BrowserCanaryProfileRoot`"",
+    '--dump-dom',
+    "`"$BrowserCanaryUrl`""
+  ) -join ' '
+
+  $process = [Diagnostics.Process]::new()
+  $process.StartInfo = [Diagnostics.ProcessStartInfo]@{
+    FileName = $browser
+    Arguments = $arguments
+    UseShellExecute = $false
+    CreateNoWindow = $true
+    RedirectStandardOutput = $true
+    RedirectStandardError = $true
+  }
+  [void]$process.Start()
+  $stdoutTask = $process.StandardOutput.ReadToEndAsync()
+  $stderrTask = $process.StandardError.ReadToEndAsync()
+  if (-not $process.WaitForExit(25000)) {
+    try { $process.Kill() } catch { }
+    throw 'background_browser_timeout'
+  }
+  $stdout = $stdoutTask.GetAwaiter().GetResult()
+  $stderr = $stderrTask.GetAwaiter().GetResult()
+  $ok = ($process.ExitCode -eq 0 -and $stdout.Length -gt 0)
+  $proof = @{
+    ok = [bool]$ok
+    mode = 'background-browser-canary'
+    agentVersion = $AgentVersion
+    browser = [IO.Path]::GetFileName($browser)
+    url = $BrowserCanaryUrl
+    exitCode = $process.ExitCode
+    contentBytes = [Text.Encoding]::UTF8.GetByteCount($stdout)
+    dedicatedAutomationProfile = $true
+    offscreenOrHeadless = $true
+    focusIsolated = $true
+    clipboardShared = $false
+    userInputInjection = $false
+    checkedAt = (Get-Date).ToUniversalTime().ToString('o')
+    stderrSummary = $(if ($stderr) { $stderr.Substring(0, [Math]::Min(300, $stderr.Length)) } else { '' })
+  }
+  if (-not $ok) { throw 'background_browser_canary_failed' }
+  New-Item -ItemType Directory -Path $Root -Force | Out-Null
+  $proof | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $BrowserCanaryStatePath -Encoding UTF8
+  return @{ message = 'Background Browser canary를 사용자 화면 개입 없이 검증했습니다. 실제 Browser Worker 실행 권한은 아직 활성화하지 않습니다.'; browserCanary = $proof }
+}
+
 function Get-RemoteAgentStatus {
   $taskState = 'unknown'
   try {
@@ -832,6 +939,7 @@ function Get-RemoteAgentStatus {
     persistentShell = $false
     directHostMutation = $false
     foregroundUserSessionProtected = $true
+    backgroundBrowserCanaryVerified = [bool](Get-BackgroundBrowserCanaryState).verified
     backgroundBrowserReady = $false
     isolatedDesktopReady = $false
     minimizedWindowCountsAsIsolation = $false
@@ -915,6 +1023,7 @@ function Invoke-DeviceCommand([pscustomobject]$Command) {
     'profile.workstation.apply' { return Apply-WorkstationProfile }
     'profile.workstation.restore' { return Restore-WorkstationProfile }
     'agent.self_update' { return Update-AgentFromOfficialSource }
+    'computer.browser.canary' { return Invoke-BackgroundBrowserCanary }
     'remote_desktop.recovery.enable' { return Set-DesktopCommanderRecovery $true }
     'remote_desktop.recovery.disable' { return Set-DesktopCommanderRecovery $false }
     'remote_desktop.recovery.run' { return Ensure-DesktopCommanderRunning $true }
@@ -1002,7 +1111,7 @@ function Send-Heartbeat($Config) {
       diagnostics = $true; storageMaintenance = $true; windowsUpdate = $true; startupManagement = $true
       networkDiagnostics = $true; printerDiagnostics = $true; workstationProfile = $true; protocolLaunch = $true
       computerRead = $true; processRead = $true; agentStatus = $true
-      isolatedCommand = $false; filesystemRead = $false; filesystemWrite = $false; backgroundBrowser = $false; isolatedDesktop = $false
+      isolatedCommand = $false; filesystemRead = $false; filesystemWrite = $false; backgroundBrowserCanary = [bool](Get-BackgroundBrowserCanaryState).verified; backgroundBrowser = $false; isolatedDesktop = $false
       desktopCapture = $false; desktopInput = $false
       arbitraryShell = $false; screenCapture = $false; credentialCollection = $false
     }
@@ -1022,6 +1131,9 @@ function Poll-Command($Config) {
   try {
     $result = Invoke-DeviceCommand $response.command
     Complete-Command $Config ([string]$response.command.id) $true $result
+    if ([string]$response.command.type -eq 'agent.self_update' -and $result.restartRequired -eq $true) {
+      $script:RestartAfterCommand = $true
+    }
   } catch {
     Complete-Command $Config ([string]$response.command.id) $false @{ message = $_.Exception.Message }
   }
@@ -1178,14 +1290,20 @@ function Run-Agent {
         if (((Get-Date) - $lastHeartbeat).TotalSeconds -ge 60) { Send-Heartbeat $config; $lastHeartbeat = Get-Date }
         Reconcile-DesktopCommanderRecovery
         Poll-Command $config
+        if ($script:RestartAfterCommand) { break }
       } catch {
         # 네트워크 중단은 다음 주기에 자동 복구합니다. 임의 명령 실행으로 우회하지 않습니다.
       }
       Start-Sleep -Seconds 10
     }
   } finally {
+    $restart = [bool]$script:RestartAfterCommand
     try { $mutex.ReleaseMutex() } catch { }
     $mutex.Dispose()
+    if ($restart) {
+      Start-Sleep -Milliseconds 500
+      Start-AgentProcess
+    }
   }
 }
 
