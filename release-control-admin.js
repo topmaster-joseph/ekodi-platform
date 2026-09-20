@@ -1,5 +1,5 @@
 (() => {
-  const API = 'https://api.ekodi.kr';
+  const API = 'https://ekodi.kr';
   const TOKEN_KEY = 'ekodi-auth-token';
   const REPOSITORY = 'topmaster-joseph/ekodi-platform';
   const RUNS_URL = `https://api.github.com/repos/${REPOSITORY}/actions/runs?per_page=80`;
