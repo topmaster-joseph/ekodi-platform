@@ -601,7 +601,7 @@ export default {
     if (PUBLIC_ALIAS_HOSTS.has(host)) return redirectToPublicCanonical(url);
 
     if ((url.pathname === '/admin' || url.pathname === '/admin/') && host !== PUBLIC_HOST && !ADMIN_HOSTS.has(host)) {
-      const target = new URL('https://admin.ekodi.kr/');
+      const target = new URL('https://ekodi.kr/admin/');
       target.searchParams.set('source', host);
       const response = new Response(null, { status: 307, headers: { Location: target.toString() } });
       applyBaseSecurityHeaders(response.headers);
