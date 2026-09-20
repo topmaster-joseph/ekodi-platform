@@ -55,7 +55,7 @@ test('cloud operations use a fixed capability allowlist and never expose arbitra
 
 test('maintain and privileged actions require explicit admin confirmation', () => {
   assert.match(api, /DEVICE_COMMAND_CONFIRM_REQUIRED/);
-  for (const command of ['autologon.open','maintenance.temp_cleanup','updates.install','startup.disable','startup.restore','profile.workstation.apply','profile.workstation.restore','agent.self_update']) {
+  for (const command of ['autologon.open','maintenance.temp_cleanup','updates.install','startup.disable','startup.restore','profile.workstation.apply','profile.workstation.restore','agent.self_update','computer.browser.canary']) {
     const escaped = command.replaceAll('.', '\\.');
     assert.match(api, new RegExp(`'${escaped}'[^\n]*confirm: true`));
   }
@@ -89,6 +89,7 @@ test('native remote computer provider exposes bounded observe-only host commands
   assert.match(agent, /isolatedCommand = \$false/);
   assert.match(agent, /persistentShell = \$false/);
   assert.match(agent, /directHostMutation = \$false/);
+  assert.match(agent, /backgroundBrowserCanary = \[bool\]\(Get-BackgroundBrowserCanaryState\)\.verified/);
   assert.match(agent, /backgroundBrowser = \$false/);
   assert.match(agent, /isolatedDesktop = \$false/);
   assert.match(agent, /foregroundUserSessionProtected = \$true/);
@@ -258,4 +259,14 @@ test('unified fleet types reduce authority by default', () => {
   assert.match(api, /robot:[\s\S]*allowedCommands: Object\.freeze\(\[\]\)/);
   assert.match(admin, /원격 작업/);
   assert.match(admin, /관찰 인벤토리 등록/);
+});
+
+
+test('browser canary command is explicit, summarized, and never unlocks browser execution', () => {
+  assert.match(api, /'computer\.browser\.canary': \{ risk: 'maintain', confirm: true \}/);
+  assert.match(api, /summary\.browserCanary/);
+  assert.match(admin, /'computer\.browser\.canary': 'BG Browser Canary'/);
+  assert.match(admin, /사용자 화면·입력·클립보드를 건드리지 않는 전용 headless 브라우저 canary/);
+  assert.match(agent, /'computer\.browser\.canary' \{ return Invoke-BackgroundBrowserCanary \}/);
+  assert.doesNotMatch(agent, /backgroundBrowser = \$true/);
 });
