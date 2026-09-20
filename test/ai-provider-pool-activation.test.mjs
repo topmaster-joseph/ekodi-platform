@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { buildCoreAiGateway } from '../core-ai-gateway.js';
+import { createOpenRouterFreeProvider } from '../openrouter-free-provider-adapter.js';
+import { createGroqFreeProvider } from '../groq-free-provider-adapter.js';
 
 function suppliedProvider(id = 'supplied') {
   return {
@@ -82,4 +84,29 @@ test('active Workers AI is an executable zero-cost Core provider instead of fall
   assert.equal(result.provider,'cloudflare-workers-ai');
   assert.equal(result.value.text,'workers-ai-runtime-ok');
   assert.equal(calls,1);
+});
+
+
+test('optional free adapters accept the Core taskName/context invoke contract', async () => {
+  const seen=[];
+  const openrouter=createOpenRouterFreeProvider({
+    ENVIRONMENT:'test',
+    OPENROUTER_API_KEY:'test-key',
+    EKODI_PROVIDER_OPENROUTER_FREE_ENABLED:'true',
+  },{fetchImpl:async(_url,options)=>{
+    seen.push(JSON.parse(options.body).messages[0].content);
+    return new Response(JSON.stringify({choices:[{message:{content:'openrouter-ok'}}]}),{status:200,headers:{'content-type':'application/json'}});
+  }});
+  const groq=createGroqFreeProvider({
+    ENVIRONMENT:'test',
+    GROQ_API_KEY:'test-key',
+    EKODI_PROVIDER_GROQ_FREE_ENABLED:'true',
+  },{fetchImpl:async(_url,options)=>{
+    seen.push(JSON.parse(options.body).messages[0].content);
+    return new Response(JSON.stringify({choices:[{message:{content:'groq-ok'}}]}),{status:200,headers:{'content-type':'application/json'}});
+  }});
+  assert.equal((await openrouter.invoke({taskName:'planner',context:{message:'openrouter core contract'}})).text,'openrouter-ok');
+  assert.equal((await groq.invoke({taskName:'operator',context:{message:'groq core contract'}})).text,'groq-ok');
+  assert.equal(seen.length,2);
+  assert.equal(seen.every(value=>value.length>0),true);
 });
