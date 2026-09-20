@@ -19,6 +19,7 @@ test('trade partner and trade admin routes are apex workspace routes',async()=>{
   ]);
   assert.ok(router.includes("from './workspace-trade-portal.js'"));
   assert.ok(router.includes('isTradePartnerPath(url.pathname)'));
+  assert.ok(router.includes("isTradePartnerPath(url.pathname))return injectEkodiTenantReadability(tradePartnerPage())"));
   assert.ok(portal.includes('export function isTradePartnerPath'));
   assert.ok(portal.includes('/ekodibiz\\/trade'));
   assert.ok(admin.includes('/trade\\/admin'));
