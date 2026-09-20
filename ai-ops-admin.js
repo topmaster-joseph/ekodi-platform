@@ -1,5 +1,5 @@
 (() => {
-  const API = 'https://api.ekodi.kr';
+  const API = 'https://ekodi.kr';
   const TOKEN_KEY = 'ekodi-auth-token';
   const SECTION = 'aiops';
   const REVIEW_STALE_MS = 30 * 60 * 1000;
