@@ -188,7 +188,7 @@ const PUBLIC_CSP = [
   "default-src 'self'",
   "style-src 'self' 'unsafe-inline'",
   "script-src 'self'",
-  "connect-src 'self' https://api.ekodi.kr",
+  "connect-src 'self' https://ekodi.kr",
   "img-src 'self' data:",
   "frame-ancestors 'none'",
   "base-uri 'self'",
@@ -196,14 +196,14 @@ const PUBLIC_CSP = [
   "object-src 'none'",
 ].join('; ');
 
-const LIVE_CSP = PUBLIC_CSP.replace("connect-src 'self' https://api.ekodi.kr","connect-src 'self' https://renzehysxirjilvdxacv.supabase.co");
+const LIVE_CSP = PUBLIC_CSP.replace("connect-src 'self' https://ekodi.kr","connect-src 'self' https://renzehysxirjilvdxacv.supabase.co");
 
 const MALL_CSP = [
   "default-src 'self'",
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "font-src 'self' https://fonts.gstatic.com",
   "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://js.tosspayments.com",
-  "connect-src 'self' https://api.ekodi.kr https://mall-api.ekodi.kr https://mall-api-staging.ekodi.kr https://renzehysxirjilvdxacv.supabase.co https://*.tosspayments.com",
+  "connect-src 'self' https://ekodi.kr https://mall-api.ekodi.kr https://mall-api-staging.ekodi.kr https://renzehysxirjilvdxacv.supabase.co https://*.tosspayments.com",
   "frame-src https://*.tosspayments.com",
   "img-src 'self' data: blob: https:",
   "frame-ancestors 'none'",
@@ -219,7 +219,7 @@ const ADMIN_CSP = [
   "style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style",
   "script-src 'self' https://accounts.google.com/gsi/client",
   "img-src 'self' data:",
-  "connect-src 'self' https://api.ekodi.kr https://finance-api.ekodi.kr https://personal-finance-api.ekodi.kr https://marketing-connect-api.ekodi.kr https://renzehysxirjilvdxacv.supabase.co https://api.github.com https://ekodi-auth-api.topmaster-joseph.workers.dev https://accounts.google.com/gsi/ https://life.ekodi.kr",
+  "connect-src 'self' https://ekodi.kr https://finance-api.ekodi.kr https://personal-finance-api.ekodi.kr https://marketing-connect-api.ekodi.kr https://renzehysxirjilvdxacv.supabase.co https://api.github.com https://ekodi-auth-api.topmaster-joseph.workers.dev https://accounts.google.com/gsi/ https://life.ekodi.kr",
   "frame-src https://accounts.google.com/gsi/ https://ekodi.kr",
   "frame-ancestors 'none'",
   "base-uri 'self'",
