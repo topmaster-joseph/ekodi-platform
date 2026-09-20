@@ -15,7 +15,7 @@ async function body(request){try{return await request.json()}catch{return null}}
 function hasSensitiveKeys(value){if(!value||typeof value!=='object')return false;if(Array.isArray(value))return value.some(hasSensitiveKeys);return Object.entries(value).some(([key,item])=>SENSITIVE_KEYS.has(String(key).toLowerCase())||hasSensitiveKeys(item))}
 function runtimeConfig(env){const readiness=buildIntegrationReadiness(env);return{
   dataMode:env.DATA_MODE||'isolated-staging',
-  authUrl:env.AUTH_URL||'https://auth.ekodi.kr/?site=money',
+  authUrl:env.AUTH_URL||'https://ekodi.kr/auth/?site=money',
   myUrl:'https://ekodi.kr/my/',
   officialHandoffUrl:env.ACCOUNTINFO_URL||'https://www.payinfo.or.kr/main/main.do',
   financialExecution:false,
