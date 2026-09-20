@@ -53,3 +53,12 @@ test('remaining canonical business, trade and lab surfaces inherit a readability
   assert.match(verifier,/requireReadability\(cgmaRoot,'cgma-root',errors\)/);
   assert.doesNotMatch(verifier,/need\(cgmaRoot,'cgma-root','data-ekodi-tenant-readability/);
 });
+
+
+test('live tenant verifier probes canonical services and storefronts in bounded parallel batches',async()=>{
+  const verifier=await read('scripts/verify-mobile-fixed-headers-live.mjs');
+  assert.match(verifier,/const canonicalResults=await Promise\.all\(canonicalUserSurfaces\.map/);
+  assert.match(verifier,/const tenantResults=await Promise\.all\(tenants\.map/);
+  assert.doesNotMatch(verifier,/for\(const \[id,url\] of canonicalUserSurfaces\)\{\s*const result=await get\(url\)/);
+  assert.doesNotMatch(verifier,/for\(const \[id,url,label\] of tenants\)\{\s*const result=await get\(url\)/);
+});
