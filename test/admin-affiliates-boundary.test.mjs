@@ -24,7 +24,7 @@ test('sales and supply network separates professional engine health from Mall op
   assert.match(professionalPanel, /outreachStatus/);
   assert.match(professionalPanel, /data-supply-program-save/);
   assert.match(professionalPanel, /method:'PUT'/);
-  assert.match(professionalPanel, /https:\/\/api\.ekodi\.kr\/api\/affiliate/);
+  assert.match(professionalPanel, /https:\\/\\/ekodi\\.kr\\/api\/api\/affiliate/);
   assert.match(professionalPanel, /관리 ↗/);
   assert.match(professionalPanel, /mallAdminUrl/);
   assert.match(professionalPanel, /ekodi_admin_token/);
