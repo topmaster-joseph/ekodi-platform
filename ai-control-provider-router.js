@@ -59,7 +59,8 @@ export function providerStatus(env={},nodeProviders=[]){
   const capabilities=providerCapabilities(env,nodeProviders);const providers=[];const registry=directProviderRegistry(env);
   const push=item=>{const override=item.id.startsWith('worker:')?capabilities.providerProfiles?.[item.id]?.costClass:'';const costClass=override||item.costClass;providers.push({...item,costClass,automaticEligible:evaluateAiCostEligibility({costClass},{}).eligible})};
   const gemini=registry.get('gemini'),openai=registry.get('openai'),anthropic=registry.get('anthropic');
-  push({id:'cloudflare-workers-ai',kind:'account-ai',costClass:providerCostClass('cloudflare-workers-ai'),available:capabilities.cloudflareWorkersAi,configured:capabilities.cloudflareWorkersAi,model:clean(env.EKODI_WORKERS_AI_MODEL)||'@cf/meta/llama-3.1-8b-instruct-fast'});
+  const workersAi=createCloudflareWorkersAiProvider(env,{ai:env.AI});
+  push({id:'cloudflare-workers-ai',kind:'account-ai',costClass:providerCostClass('cloudflare-workers-ai'),available:capabilities.cloudflareWorkersAi,configured:capabilities.cloudflareWorkersAi,model:workersAi.model,models:workersAi.models,selectionMode:workersAi.selectionMode});
   push({id:'gemini-free',kind:'official-api',costClass:providerCostClass('gemini-free'),available:gemini?.available===true,configured:directConfigured(env,'gemini-free'),model:gemini?.model||clean(env.GEMINI_MODEL)||'gemini-3.7-flash'});
   push({id:'openrouter-free',kind:'official-api',costClass:providerCostClass('openrouter-free'),available:capabilities.openrouterFree,configured:capabilities.openrouterFree,model:clean(env.EKODI_OPENROUTER_FREE_MODEL)||'openrouter/free'});
   push({id:'groq-free',kind:'official-api',costClass:providerCostClass('groq-free'),available:capabilities.groqFree,configured:capabilities.groqFree,model:clean(env.EKODI_GROQ_FREE_MODEL)||'openai/gpt-oss-20b'});
