@@ -17,7 +17,7 @@ function seededDb(){
 }
 
 test('local commerce health explicitly keeps cash execution disabled', async()=>{
-  const response=await handleLocalCommerceControl(new Request('https://api.ekodi.kr/api/local-commerce/health'),{});
+  const response=await handleLocalCommerceControl(new Request('https://ekodi.kr/api/local-commerce/health'),{});
   assert.equal(response.status,200);
   const body=await response.json();
   assert.equal(body.cashCustody,false);
