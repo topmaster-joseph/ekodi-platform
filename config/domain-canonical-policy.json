@@ -24,7 +24,11 @@
     "platformServiceAdminPattern": "https://ekodi.kr/admin/{service}",
     "reservedTopLevelPaths": [
       "admin",
-      "marketing"
+      "marketing",
+      "api",
+      "auth",
+      "mcp",
+      "health"
     ],
     "requiredIndependentSites": [
       "ekodibiz",
