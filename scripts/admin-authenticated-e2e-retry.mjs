@@ -1,6 +1,8 @@
 // Generation 10 Autonomous Health production verification wiring probe.
 import { spawn } from 'node:child_process';
 import fs from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
+import { isQuotaCircuitBreak } from './cloudflare-quota-guard-lib.mjs';
 import path from 'node:path';
 import { adminMenuOrder } from '../admin-menu-registry.js';
 import ecosystemServices from '../config/ecosystem-services.json' with { type: 'json' };
@@ -18,6 +20,12 @@ const maturityApiUrl = 'https://api.ekodi.kr/api/control/platform-maturity';
 const e2eAdminToken = String(process.env.E2E_ADMIN_TOKEN || '').trim();
 const productionConvergenceAttempts = 36;
 const productionConvergenceDelayMs = 5_000;
+const quotaConfig = JSON.parse(await fs.readFile(fileURLToPath(new URL('../config/cloudflare-production-quota-guard.json', import.meta.url)), 'utf8'));
+function throwIfQuotaCircuit(status, body, label) {
+  if (isQuotaCircuitBreak({ status, body, config: quotaConfig.circuitBreaker })) {
+    throw new Error(`CF-QUOTA-001 circuit open during ${label}: HTTP ${status || 'network'}; no retry`);
+  }
+}
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 const expectedMaturityScope = Object.freeze({
   services: (ecosystemServices.services || []).length,
@@ -42,14 +50,17 @@ async function waitForProductionMenuRegistry() {
         cache: 'no-store',
         signal: AbortSignal.timeout(10_000),
       });
+      const body = await response.text();
+      throwIfQuotaCircuit(response.status, body, 'production Admin registry convergence');
       if (response.ok) {
-        lastMissing = missingProductionMenus(await response.text());
+        lastMissing = missingProductionMenus(body);
         if (!lastMissing.length) {
           console.log(`[E2E] production Admin registry converged: ${menuIds.length}/${menuIds.length} menus`);
           return;
         }
       }
     } catch (error) {
+      if (String(error?.message || error).includes('CF-QUOTA-001 circuit open')) throw error;
       console.warn(`[E2E] production Admin registry probe ${attempt} failed: ${error?.message || error}`);
     }
     console.warn(`[E2E] production Admin registry not converged (${attempt}/${productionConvergenceAttempts}); missing=${lastMissing.join(',') || 'probe-error'}`);
@@ -68,7 +79,9 @@ async function waitForMaturityApi() {
         cache:'no-store', signal:AbortSignal.timeout(10_000),
       });
       lastStatus = response.status;
-      const payload = await response.json().catch(() => ({}));
+      const body = await response.text();
+      throwIfQuotaCircuit(response.status, body, 'production maturity API convergence');
+      const payload = JSON.parse(body || '{}');
       const scope = payload.serviceScopes?.summary || {};
       const scopeConverged = scope.services === expectedMaturityScope.services
         && scope.workspaceSites === expectedMaturityScope.workspaceSites
@@ -78,7 +91,10 @@ async function waitForMaturityApi() {
         console.log(`[E2E] production maturity API converged: HTTP ${response.status}, domains=${payload.model.domains.length}, scopes=${scope.totalScopes} (${scope.services}+${scope.workspaceSites}+${scope.systemFunctions})`);
         return;
       }
-    } catch (error) { console.warn(`[E2E] maturity API probe ${attempt} failed: ${error?.message || error}`); }
+    } catch (error) {
+      if (String(error?.message || error).includes('CF-QUOTA-001 circuit open')) throw error;
+      console.warn(`[E2E] maturity API probe ${attempt} failed: ${error?.message || error}`);
+    }
     console.warn(`[E2E] production maturity API not converged (${attempt}/${productionConvergenceAttempts}); status=${lastStatus || 'network'}`);
     if (attempt < productionConvergenceAttempts) await sleep(productionConvergenceDelayMs);
   }

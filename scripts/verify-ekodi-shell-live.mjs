@@ -1,3 +1,9 @@
+import { readFile } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
+import { isQuotaCircuitBreak } from './cloudflare-quota-guard-lib.mjs';
+
+const quotaConfig=JSON.parse(await readFile(fileURLToPath(new URL('../config/cloudflare-production-quota-guard.json',import.meta.url)),'utf8'));
+
 const base=String(process.env.EKODI_SHELL_VERIFY_BASE||'https://ekodi.kr/shell').replace(/\/$/,'');
 const release=String(process.env.GITHUB_SHA||Date.now()).slice(0,40);
 const attempts=Math.max(1,Number(process.env.EKODI_SHELL_VERIFY_ATTEMPTS||18));
@@ -34,10 +40,21 @@ function includesAll(text,label,needles,failures){
 }
 
 for(let attempt=1;attempt<=attempts;attempt++){
-  const [healthResult,manifestResult,footerConfigResult,languageRegistryResult,shellResult,userLanguageResult,characterRegistryResult,identityRegistryResult,founderAssetResult,themeResult,styleResult,userUiStyleResult]=await Promise.all([
-    read('/health',attempt),read('/manifest.json',attempt),read('/user-footer.json',attempt),read('/language-registry.json',attempt),read('/shell.js',attempt),read('/user-language.js',attempt),read('/character-registry.js',attempt),read('/character-identity-registry.js',attempt),read('/assets/ekodian/founder-face.webp',attempt),read('/theme.json',attempt),read('/workspace.css',attempt),read('/user-ui-shell.css',attempt),
+  // One essential probe owns the quota decision. Never fan out or retry after 429/1027.
+  const healthResult=await read('/health',attempt);
+  if(isQuotaCircuitBreak({status:healthResult.status,body:healthResult.text,config:quotaConfig.circuitBreaker})){
+    console.error(`CF-QUOTA-001 circuit open at ${base}: health HTTP ${healthResult.status||'network'}; stopping live verification without retries or fan-out.`);
+    process.exit(75);
+  }
+  const [manifestResult,footerConfigResult,languageRegistryResult,shellResult,userLanguageResult,characterRegistryResult,identityRegistryResult,founderAssetResult,themeResult,styleResult,userUiStyleResult]=await Promise.all([
+    read('/manifest.json',attempt),read('/user-footer.json',attempt),read('/language-registry.json',attempt),read('/shell.js',attempt),read('/user-language.js',attempt),read('/character-registry.js',attempt),read('/character-identity-registry.js',attempt),read('/assets/ekodian/founder-face.webp',attempt),read('/theme.json',attempt),read('/workspace.css',attempt),read('/user-ui-shell.css',attempt),
   ]);
   const results=[healthResult,manifestResult,footerConfigResult,languageRegistryResult,shellResult,userLanguageResult,characterRegistryResult,identityRegistryResult,founderAssetResult,themeResult,styleResult,userUiStyleResult];
+  const quotaBlocked=results.find(result=>isQuotaCircuitBreak({status:result.status,body:result.text,config:quotaConfig.circuitBreaker}));
+  if(quotaBlocked){
+    console.error(`CF-QUOTA-001 circuit opened during ${base} verification: HTTP ${quotaBlocked.status||'network'}; stopping immediately without retry.`);
+    process.exit(75);
+  }
   if(allowAccessGate&&results.every(result=>result.ok&&isCloudflareAccessGate(result))){
     console.log(`✅ EKODI Shell staging deployed at ${base}; endpoint is intentionally protected by Cloudflare Access, so content verification remains covered by the Shell contract test suite. release=${release}.`);
     process.exit(0);
@@ -69,7 +86,7 @@ for(let attempt=1;attempt<=attempts;attempt++){
     if(Number(health.characterRegistryVersion)<3)failures.push(`health:characterRegistryVersion:${health.characterRegistryVersion||'missing'}`);
     if(Number(health.characterIdentityRegistryVersion)<2)failures.push(`health:characterIdentityRegistryVersion:${health.characterIdentityRegistryVersion||'missing'}`);
     if(Number(health.userCharacterVersion)<6)failures.push(`health:userCharacterVersion:${health.userCharacterVersion||'missing'}`);
-    if(Number(health.adminUIShellVersion)<1)failures.push(`health:adminUIShellVersion:${health.adminUIShellVersion||'missing'}`);
+    if(Number(health.adminUIShellVersion)<2)failures.push(`health:adminUIShellVersion:${health.adminUIShellVersion||'missing'}`);
     if(Number(health.messageUIVersion)<1)failures.push(`health:messageUIVersion:${health.messageUIVersion||'missing'}`);
     if(Number(health.illustrationSystemVersion)<1)failures.push(`health:illustrationSystemVersion:${health.illustrationSystemVersion||'missing'}`);
     if(Number(health.serviceDesignVersion)<1)failures.push(`health:serviceDesignVersion:${health.serviceDesignVersion||'missing'}`);
@@ -120,7 +137,7 @@ for(let attempt=1;attempt<=attempts;attempt++){
   if(shellResult.headers?.get?.('x-ekodi-user-ai-entry')!=='v1')failures.push(`shell:user-ai-entry:${shellResult.headers?.get?.('x-ekodi-user-ai-entry')||'missing'}`);
   const expectedFooterHeader=footerConfig?.version?`v${Number(footerConfig.version)}`:'';
   if(expectedFooterHeader&&shellResult.headers?.get?.('x-ekodi-user-ui-footer')!==expectedFooterHeader)failures.push(`shell:user-ui-footer:${shellResult.headers?.get?.('x-ekodi-user-ui-footer')||'missing'}`);
-  if(shellResult.headers?.get?.('x-ekodi-admin-ui-shell')!=='v1')failures.push(`shell:admin-ui-shell:${shellResult.headers?.get?.('x-ekodi-admin-ui-shell')||'missing'}`);
+  if(shellResult.headers?.get?.('x-ekodi-admin-ui-shell')!=='v2')failures.push(`shell:admin-ui-shell:${shellResult.headers?.get?.('x-ekodi-admin-ui-shell')||'missing'}`);
   if(shellResult.headers?.get?.('x-ekodi-message-ui')!=='v1')failures.push(`shell:message-ui-header:${shellResult.headers?.get?.('x-ekodi-message-ui')||'missing'}`);
   if(shellResult.headers?.get?.('x-ekodi-illustration-system')!=='v1')failures.push(`shell:illustration-header:${shellResult.headers?.get?.('x-ekodi-illustration-system')||'missing'}`);
   if(shellResult.headers?.get?.('x-ekodi-service-design')!=='v1')failures.push(`shell:service-design-header:${shellResult.headers?.get?.('x-ekodi-service-design')||'missing'}`);
@@ -137,7 +154,7 @@ for(let attempt=1;attempt<=attempts;attempt++){
 
   const statuses=results.map(item=>item.status).join('/');
   if(!failures.length){
-    console.log(`✅ EKODI Shell live verified at ${base}: statuses=${statuses}, services=${manifest.services.length}, userUI=header-v3/footer-${expectedFooterHeader||'current'}+ai-entry-v1+main-aligned-centered-v1+csp-safe-css, centralFooter=ok, language=header-only-v8, userCharacter=v6+identity-v2, adminUI=v1, messageUI=v1, illustrations=v1, serviceDesign=v1, linkCompat=v1, release=${release}.`);
+    console.log(`✅ EKODI Shell live verified at ${base}: statuses=${statuses}, services=${manifest.services.length}, userUI=header-v3/footer-${expectedFooterHeader||'current'}+ai-entry-v1+main-aligned-centered-v1+csp-safe-css, centralFooter=ok, language=header-only-v8, userCharacter=v6+identity-v2, adminUI=v2, messageUI=v1, illustrations=v1, serviceDesign=v1, linkCompat=v1, release=${release}.`);
     process.exit(0);
   }
   console.log(`Shell live verify ${attempt}/${attempts}: statuses=${statuses}; ${failures.join(' | ')}`);
