@@ -89,6 +89,10 @@ test('native remote computer provider exposes bounded observe-only host commands
   assert.match(agent, /isolatedCommand = \$false/);
   assert.match(agent, /persistentShell = \$false/);
   assert.match(agent, /directHostMutation = \$false/);
+  assert.match(agent, /backgroundBrowser = \$false/);
+  assert.match(agent, /isolatedDesktop = \$false/);
+  assert.match(agent, /foregroundUserSessionProtected = \$true/);
+  assert.match(agent, /minimizedWindowCountsAsIsolation = \$false/);
 });
 
 test('admin exposes native remote computer observation without dangerous computer controls', () => {
@@ -96,7 +100,10 @@ test('admin exposes native remote computer observation without dangerous compute
     assert.match(admin, new RegExp(command.replaceAll('.', '\\.')));
   }
   for (const capability of ['agentStatus','computerRead','processRead']) assert.match(admin, new RegExp(capability));
-  assert.match(admin, /보기 전용입니다/);
+  assert.match(admin, /사용자 화면 보호가 기본입니다/);
+  assert.match(admin, /BG Browser/);
+  assert.match(admin, /Isolated Desktop/);
+  assert.match(admin, /최소화 창은 격리로 인정하지 않습니다/);
   assert.match(api, /result\.processes\.items\.slice\(0, 20\)/);
   assert.doesNotMatch(admin, /computer\.terminal\.exec|computer\.files\.write|computer\.desktop\.input/);
 });
@@ -129,7 +136,7 @@ test('one-click device protocol is bounded to EKODI enrollment and official API'
 });
 
 test('existing registered devices upgrade transactionally and preserve registration', () => {
-  assert.match(agent, /\$AgentVersion = '2\.2\.2'/);
+  assert.match(agent, /\$AgentVersion = '2\.2\.3'/);
   assert.match(agent, /Invoke-AgentUpgradeTransaction/);
   assert.match(agent, /Assert-AgentCandidate/);
   assert.match(agent, /New-AgentUpgradeSnapshot/);

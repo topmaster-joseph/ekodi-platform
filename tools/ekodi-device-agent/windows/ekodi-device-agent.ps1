@@ -10,7 +10,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$AgentVersion = '2.2.2'
+$AgentVersion = '2.2.3'
 $Root = Join-Path $env:ProgramData 'EKODI\DeviceAgent'
 $AgentPath = Join-Path $Root 'ekodi-device-agent.ps1'
 $ConfigPath = Join-Path $Root 'config.json'
@@ -831,6 +831,10 @@ function Get-RemoteAgentStatus {
     taskState = $taskState
     persistentShell = $false
     directHostMutation = $false
+    foregroundUserSessionProtected = $true
+    backgroundBrowserReady = $false
+    isolatedDesktopReady = $false
+    minimizedWindowCountsAsIsolation = $false
   }
 }
 
@@ -998,7 +1002,8 @@ function Send-Heartbeat($Config) {
       diagnostics = $true; storageMaintenance = $true; windowsUpdate = $true; startupManagement = $true
       networkDiagnostics = $true; printerDiagnostics = $true; workstationProfile = $true; protocolLaunch = $true
       computerRead = $true; processRead = $true; agentStatus = $true
-      isolatedCommand = $false; filesystemRead = $false; filesystemWrite = $false; desktopCapture = $false; desktopInput = $false
+      isolatedCommand = $false; filesystemRead = $false; filesystemWrite = $false; backgroundBrowser = $false; isolatedDesktop = $false
+      desktopCapture = $false; desktopInput = $false
       arbitraryShell = $false; screenCapture = $false; credentialCollection = $false
     }
     settings = $settings

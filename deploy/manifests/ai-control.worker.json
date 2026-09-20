@@ -43,11 +43,12 @@
         ],
         "expect": [
           "const API_BASE=location.pathname.startsWith('/ai')?'/ai':'';",
+          "function apiUrl(path)",
           "/api/commons/config",
           "/api/commons/match"
         ],
         "forbid": [
-          "/ai/api/commons/"
+          "/ai/ai/api/commons/"
         ],
         "headerExpect": [
           "x-ekodi-ai-asset: worker-owned-v1",
@@ -59,11 +60,12 @@
         ],
         "candidateExpect": [
           "const API_BASE=location.pathname.startsWith('/ai')?'/ai':'';",
+          "function apiUrl(path)",
           "/api/commons/config",
           "/api/commons/match"
         ],
         "candidateForbid": [
-          "/ai/api/commons/"
+          "/ai/ai/api/commons/"
         ],
         "candidateHeaderExpect": [
           "x-ekodi-ai-asset: worker-owned-v1",
