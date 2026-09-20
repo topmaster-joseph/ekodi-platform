@@ -70,7 +70,6 @@
       "my.ekodi.kr",
       "admin.ekodi.kr",
       "auth.ekodi.kr",
-      "api.ekodi.kr",
       "status.ekodi.kr",
       "ai.ekodi.kr",
       "dev.ekodi.kr",
@@ -79,8 +78,7 @@
     "development": [
       "my.dev.ekodi.kr",
       "admin.dev.ekodi.kr",
-      "auth.dev.ekodi.kr",
-      "api.dev.ekodi.kr"
+      "auth.dev.ekodi.kr"
     ],
     "rule": "User-operated spaces live under ekodi.kr paths. Subdomains are reserved for justified system, security, protocol, common-service or core-service boundaries and never define workspace identity."
   },
@@ -102,7 +100,7 @@
   "featurePatterns": [
     "https://ekodi.kr/{feature}",
     "https://ekodi.kr/my/{feature}",
-    "https://api.ekodi.kr/v1/{feature}"
+    "https://ekodi.kr/api/v1/{feature}"
   ],
   "workspaceRoutingPolicy": {
     "canonicalHost": "ekodi.kr",
@@ -347,7 +345,6 @@
     "my.ekodi.kr": "https://ekodi.kr/my",
     "admin.ekodi.kr": "https://ekodi.kr/admin",
     "auth.ekodi.kr": "https://ekodi.kr/auth",
-    "api.ekodi.kr": "https://ekodi.kr/api",
     "trade.biz.ekodi.kr": "https://ekodi.kr/ekodibiz/trade",
     "ins.ekodi.kr": "https://ekodi.kr/insurance"
   },
@@ -1028,5 +1025,13 @@
       "admin"
     ],
     "grandfatheredListExpansionRequiresConstitutionalAmendment": true
+  },
+  "apiRoutingPolicy": {
+    "canonicalBase": "https://ekodi.kr/api",
+    "publicApiSubdomain": null,
+    "internalExecutionBoundary": "CONTROL_API service binding",
+    "directProviderExposureForbidden": true,
+    "retiredHostnameMustHaveNoWorkersCustomDomain": true,
+    "retiredHostnameMustHaveNoExactDnsRecord": true
   }
 }
