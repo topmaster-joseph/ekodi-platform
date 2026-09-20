@@ -54,14 +54,40 @@ function renderRequestList(id,items,empty){
   if(!items.length){const p=document.createElement('p');p.className='empty';p.textContent=empty;host.append(p);return}
   for(const item of items)host.append(requestButton(item));
 }
+async function openReleased(item){
+  $('wantInput').value=item.title;
+  $('wantResult').textContent='공개된 AI와 현재 실행서비스를 연결하고 있습니다.';
+  renderMatches([]);
+  try{
+    const matched=await api('/api/commons/match',{method:'POST',body:JSON.stringify({job:item.title})});
+    if((matched.services||[]).length){
+      renderMatches(matched.services);
+      $('wantResult').textContent='현재 바로 사용할 수 있는 실행서비스를 찾았습니다.';
+      return;
+    }
+    $('wantResult').textContent='공개 기록은 확인됐지만 연결 가능한 실행서비스가 아직 카탈로그에 반영되지 않았습니다.';
+  }catch(error){$('wantResult').textContent=`실행서비스 연결 확인 실패: ${error.message}`;}
+}
+function renderReleased(items=[]){
+  const host=$('releasedRequests');if(!host)return;host.replaceChildren();
+  if(!items.length){const p=document.createElement('p');p.className='empty';p.textContent='아직 공개 완료된 요청이 없습니다.';host.append(p);return}
+  for(const item of items){
+    const row=document.createElement('button');row.type='button';row.className='request-button released-request';
+    const title=document.createElement('strong');title.textContent=item.title;
+    const meta=document.createElement('span');meta.textContent=`사용가능 · ${item.requestCount}명 요청`;
+    row.append(title,meta);row.addEventListener('click',()=>void openReleased(item));host.append(row);
+  }
+}
 function renderRequests(items=[]){
   state.requests=items;
   const developing=items.filter(item=>['candidate','sandboxed','verified','staged'].includes(item.status));
+  const released=items.filter(item=>item.status==='shared').sort((a,b)=>String(b.updatedAt||b.createdAt||'').localeCompare(String(a.updatedAt||a.createdAt||''))).slice(0,8);
   const recommended=items.filter(item=>item.recommended&&!developing.includes(item)&&item.status!=='shared'&&item.status!=='rejected');
   const pending=items.filter(item=>!developing.includes(item)&&!recommended.includes(item)&&!['shared','rejected'].includes(item.status));
   renderRequestList('recommendedRequests',recommended,'아직 추천 요청 AI가 없습니다.');
   renderRequestList('developingRequests',developing,'현재 개발중인 요청이 없습니다.');
   renderRequestList('pendingRequests',pending,'아직 요청중인 AI가 없습니다.');
+  renderReleased(released);
 }
 
 function renderMyIdeas(items=[]){

@@ -5,15 +5,26 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="description" content="있는 AI는 바로 사용하고, 없는 AI는 요청하고, 좋은 요청은 함께 만들어 모두가 사용하는 EKODI 모두의 AI 프로젝트">
   <title>EKODI 모두의 AI 프로젝트</title>
-  <link rel="stylesheet" href="./api/commons/style?v=20260920-ai-login-1">
+  <link rel="stylesheet" href="./api/commons/style?v=20260920-ai-commons-2">
 </head>
 <body>
   <main class="page">
     <header class="hero">
-      <div><p class="eyebrow">EKODI 모두의 AI 프로젝트</p><h1>필요한 일을 바로 시작하세요.</h1>
+      <div><p class="eyebrow">EKODI 모두의 AI 프로젝트</p><h1>필요한 AI는 바로 쓰고, 없으면 함께 만듭니다.</h1>
       <p class="principle">있는 것은 바로 사용하고, 없는 것은 요청하고, 좋은 요청은 함께 만들어 모두가 사용한다.</p></div>
       <div class="session-bar"><span id="sessionState">서비스를 확인하는 중입니다.</span><a id="loginLink" class="login" href="../auth/?site=ai">에코디 로그인</a></div>
     </header>
+
+    <section class="want want-primary" aria-labelledby="wantTitle">
+      <p class="kicker">바로 시작하기</p>
+      <h2 id="wantTitle">무엇을 하고 싶으세요?</h2>
+      <form id="wantForm" class="want-form">
+        <input id="wantInput" name="request" maxlength="1200" required autocomplete="off" placeholder="하고 싶은 일을 입력하세요…">
+        <button type="submit">AI로 하기</button>
+      </form>
+      <p id="wantResult" class="want-result" aria-live="polite">에코디 AI가 먼저 기존 서비스를 찾고, 없으면 같은 요청을 모아 자동 검토·개발합니다.</p>
+      <div id="matches" class="match-list"></div>
+    </section>
 
     <section class="section" aria-labelledby="serviceTitle">
       <div class="section-head"><div><p class="kicker">바로 사용하기</p><h2 id="serviceTitle">실행 서비스</h2></div><p>기술 이름 대신 하고 싶은 일을 선택하세요.</p></div>
@@ -21,29 +32,20 @@
     </section>
 
     <section class="section" aria-labelledby="requestTitle">
-      <div class="section-head"><div><p class="kicker">함께 만들기</p><h2 id="requestTitle">모두가 요청한 AI</h2></div><p>같은 요청은 하나로 모으고 요청한 사람 수를 함께 표시합니다.</p></div>
+      <div class="section-head"><div><p class="kicker">함께 만들기</p><h2 id="requestTitle">요청·개발 현황</h2></div><p>같은 요청은 하나로 모으고 요청한 사람 수와 진행상태를 함께 표시합니다.</p></div>
+      <div class="progress-flow" aria-label="AI 요청 진행 단계"><span>요청접수</span><span>검토중</span><span>개발중</span><span>테스트중</span><span>검증완료</span><span>공개준비중</span><span>사용가능</span></div>
       <div class="request-columns">
         <div><h3>추천 요청 AI</h3><div id="recommendedRequests" class="request-list"></div></div>
         <div><h3>개발중</h3><div id="developingRequests" class="request-list"></div></div>
         <div><h3>요청중</h3><div id="pendingRequests" class="request-list"></div></div>
       </div>
+      <div class="released-block"><div><p class="kicker">새로운 AI</p><h3>최근 공개된 AI</h3><p>검증과 최종 공개 승인을 마친 요청입니다. 선택하면 현재 실행 가능한 서비스를 다시 찾아 연결합니다.</p></div><div id="releasedRequests" class="request-list released-list"></div></div>
       <details class="mine"><summary>내가 요청한 AI 보기</summary><div id="ideaHistory" class="request-list"></div></details>
     </section>
-    <section class="want" aria-labelledby="wantTitle">
-      <p class="kicker">없다면 요청해 주세요</p>
-      <h2 id="wantTitle">무엇을 원하세요?</h2>
-      <form id="wantForm" class="want-form">
-        <input id="wantInput" name="request" maxlength="1200" required autocomplete="off" placeholder="예: 회의 녹음을 올리면 할 일까지 정리해줘">
-        <button type="submit">요청하기</button>
-      </form>
-      <p id="wantResult" class="want-result" aria-live="polite">에코디 AI가 먼저 기존 서비스를 찾고, 없으면 여러 AI가 협업해 개발합니다.</p>
-      <div id="matches" class="match-list"></div>
-    </section>
-
     <footer>
       <span>EKODI 내부 공통 AI 실행서비스</span><a href="../">ekodi.kr</a>
     </footer>
   </main>
-  <script type="module" src="./api/commons/client?v=20260920-ai-login-1"></script>
+  <script type="module" src="./api/commons/client?v=20260920-ai-commons-2"></script>
 </body>
 </html>

@@ -78,6 +78,12 @@ test('Commons page loads browser assets only through the Worker-owned API bounda
   const release=JSON.parse(fs.readFileSync(new URL('../deploy/manifests/ai-control.worker.json',import.meta.url),'utf8'));
   assert.match(html,/\.\/api\/commons\/client\?v=/);
   assert.match(html,/\.\/api\/commons\/style\?v=/);
+  assert.match(html,/AI로 하기/);
+  assert.match(html,/최근 공개된 AI/);
+  assert.match(html,/요청접수[\s\S]*공개준비중[\s\S]*사용가능/);
+  assert.match(client,/releasedRequests/);
+  assert.match(client,/item\.status==='shared'/);
+  assert.match(client,/\/api\/commons\/match/);
   assert.doesNotMatch(html,/\.\/commons\.js\?v=/);
   assert.doesNotMatch(html,/\.\/commons\.css\?v=/);
   assert.doesNotMatch(html,/api\/commons\/client\.js/);

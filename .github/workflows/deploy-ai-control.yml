@@ -286,6 +286,8 @@ jobs:
             ideas_code=$(curl -sS -o /tmp/ai-local-ideas.json -w '%{http_code}' --connect-timeout 2 --max-time 5 http://127.0.0.1:8787/api/commons/ideas || true)
             if [[ "$root_code" == "200" && "$config_code" == "410" && "$exchange_code" == "410" && "$health_code" == "200" && "$status_code" == "401" && "$services_code" == "200" && "$client_code" == "200" && "$capabilities_code" == "410" && "$ideas_code" == "401" ]] \
               && grep -Fq 'EKODI 모두의 AI 프로젝트' /tmp/ai-local-root-body.txt \
+              && grep -Fq 'AI로 하기' /tmp/ai-local-root-body.txt \
+              && grep -Fq '최근 공개된 AI' /tmp/ai-local-root-body.txt \
               && grep -Fq 'operator_surface_moved' /tmp/ai-local-config.json \
               && grep -Fq 'service_local_auth_retired' /tmp/ai-local-exchange.json \
               && grep -Fq '"platform":"ai-control"' /tmp/ai-local-health.json \
