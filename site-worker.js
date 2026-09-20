@@ -652,6 +652,7 @@ export default {
       if (url.pathname === '/tenant-live-admin.js') return tenantLiveAdminScript();
       if (url.pathname === '/workspace-admin.css') return workspaceAdminCss();
       if (url.pathname === '/workspace-admin.js') return workspaceAdminScript();
+      if (url.pathname.startsWith(ADMIN_COMMON_SERVICE_AI_PREFIX)) return proxyAdminCommonServiceAi(request, env);
       if (url.pathname.startsWith('/api/control/storage/google/cheonggye-members')) return proxyAdminStorage(request, env);
       if (url.pathname === ADMIN_PERSONAL_FINANCE_PATH) return proxyAdminPersonalFinance(request, env);
       if (url.pathname === '/church-pastor-admin.js') return churchPastorAdminScript();
