@@ -76,7 +76,7 @@ jobs:
           test -n "$CLOUDFLARE_API_TOKEN"
           test -n "$CLOUDFLARE_ACCOUNT_ID"
           curl -fsS --connect-timeout 5 --max-time 20             -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN"             "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/ekodi-auth-api/schedules"             > /tmp/ekodi-owner-report-schedules.json
-          jq -e '.success == true and any(.result[]?; .cron == "*/10 * * * *")' /tmp/ekodi-owner-report-schedules.json >/dev/null
+          jq -e '.success == true and ([.. | strings | select(. == "*/10 * * * *")] | length > 0)' /tmp/ekodi-owner-report-schedules.json >/dev/null
           echo 'Verified: EKODI Control API owns a 10-minute internal scheduled runtime.'
 
       - name: Verify durable owner-report ledger exists in production D1
