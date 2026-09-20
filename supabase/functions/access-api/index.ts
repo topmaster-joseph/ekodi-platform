@@ -14,12 +14,12 @@ import {
 } from "../_shared/trust.ts";
 
 const allowedOrigin=(origin:string|null)=>{
-  if(!origin) return "https://auth.ekodi.kr";
+  if(!origin) return "https://ekodi.kr";
   try{
     const u=new URL(origin);
     if(u.protocol==="https:"&&(u.hostname==="ekodi.kr"||u.hostname.endsWith(".ekodi.kr")||u.hostname==="ekodibiz.kr"||u.hostname.endsWith(".ekodibiz.kr")||u.hostname==="cgma.or.kr"||u.hostname==="www.cgma.or.kr"||u.hostname==="cheonggye-market.pages.dev"))return origin;
   }catch{}
-  return "https://auth.ekodi.kr";
+  return "https://ekodi.kr";
 };
 const cors=(req:Request)=>({
   "Access-Control-Allow-Origin":allowedOrigin(req.headers.get("Origin")),
