@@ -426,7 +426,7 @@
       let overview = latestOverview;
       try { overview = await fetchOverview(false); } catch {}
       const issues = overviewIssues(overview);
-      const critical = issues.filter(item => ['admin.ekodi.kr','auth.ekodi.kr','pay.ekodi.kr','api.ekodi.kr'].includes(item.domain));
+      const critical = issues.filter(item => ['ekodi.kr','admin.ekodi.kr','auth.ekodi.kr','pay.ekodi.kr'].includes(item.domain));
       return {
         role:'assistant', classification:critical.length ? 'DECISION' : 'INFO',
         content:critical.length
