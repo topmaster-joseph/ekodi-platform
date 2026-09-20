@@ -69,5 +69,6 @@ test('Mail aliases remain compatibility-only and converge on the constitutional 
     assert.match(proxyConfig,new RegExp(`pattern = "${alias.replaceAll('.','\\.')}"`));
     assert.doesNotMatch(siteConfig,new RegExp(`pattern = "${alias.replaceAll('.','\\.')}"`));
   }
-  assert.match(boundaries,/"mail-service"[\s\S]*?"domains":\["mail\.ekodi\.kr"\]/);
+  const boundaryJson=JSON.parse(boundaries);
+  assert.deepEqual(boundaryJson.platforms['mail-service'].domains,['mail.ekodi.kr']);
 });
