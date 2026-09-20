@@ -3,7 +3,7 @@ param(
   [switch]$Run,
   [switch]$RegisterProtocol,
   [string]$EnrollmentCode = '',
-  [string]$ApiBase = 'https://api.ekodi.kr',
+  [string]$ApiBase = 'https://ekodi.kr',
   [string]$Label = '',
   [string]$ProtocolUrl = '',
   [string]$ElevationResultPath = ''
@@ -22,7 +22,7 @@ $TaskName = 'EKODI Device Agent'
 $ProtocolScheme = 'ekodi-device'
 $ProtocolKey = 'Registry::HKEY_LOCAL_MACHINE\Software\Classes\ekodi-device'
 $AgentSourceUrl = 'https://raw.githubusercontent.com/topmaster-joseph/ekodi-platform/main/tools/ekodi-device-agent/windows/ekodi-device-agent.ps1'
-$AllowedApiBase = 'https://api.ekodi.kr'
+$AllowedApiBase = 'https://ekodi.kr'
 $UpgradeRoot = Join-Path $Root 'transactions'
 
 function Test-IsAdministrator {
