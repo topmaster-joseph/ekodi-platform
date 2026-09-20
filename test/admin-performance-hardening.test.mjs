@@ -95,6 +95,12 @@ test('postbuild removes retired first-path assets, versions the current graph an
   assert.match(perf, /\['requestedFeature','reqFeature'\]/);
   assert.match(perf, /TDZ self-call/);
   assert.match(perf, /moduleImportVersions/);
+  assert.match(perf, /demandReferencedAssets/);
+  assert.match(perf, /demandRuntimeForVersion\.matchAll/);
+  assert.match(perf, /normalizeVersionedAdminAsset/);
+  assert.match(perf, /demandReferencedAssets\.includes\('social-admin\.js'\)/);
+  assert.match(perf, /demandReferencedAssets\.includes\('social-admin\.css'\)/);
+  assert.match(perf, /\.\.\.staticVersionInputs, \.\.\.demandReferencedAssets/);
   assert.match(perf, /admin-menu-registry\.js/);
   assert.match(perf, /admin-sidebar\.js/);
   assert.match(perf, /admin-menu-runtime\.js/);
