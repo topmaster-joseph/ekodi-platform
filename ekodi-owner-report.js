@@ -41,6 +41,27 @@ function serviceSignals(overview = {}) {
   };
 }
 
+function executionBoundarySignals(snapshot = {}) {
+  const accounts = Array.isArray(snapshot.accounts) ? snapshot.accounts : [];
+  const collect = id => {
+    const account = accounts.find(item => String(item?.id || '') === id) || {};
+    const services = Array.isArray(account.services) ? account.services : [];
+    return {
+      status: text(account.status || '', 40),
+      offline: services
+        .filter(service => service?.status === 'offline')
+        .map(service => text(service.name || service.host || service.id, 120)),
+      degraded: services
+        .filter(service => service?.status === 'degraded')
+        .map(service => text(service.name || service.host || service.id, 120)),
+    };
+  };
+  return {
+    production: collect('production'),
+    development: collect('development'),
+  };
+}
+
 function evolutionSignals(evolution = {}) {
   const items = Array.isArray(evolution.recommendations)
     ? evolution.recommendations
@@ -71,10 +92,13 @@ export function buildEkodiOwnerReport(input = {}) {
   const generatedAt = input.generatedAt || new Date().toISOString();
   const previous = input.previous || null;
   const service = serviceSignals(input.overview || {});
+  const execution = executionBoundarySignals(input.accountSnapshot || {});
   const evolution = evolutionSignals(input.evolution || {});
 
-  const offline = unique(service.offline);
-  const degraded = unique([...service.degraded, ...service.slow]);
+  const productionExecutionOffline = execution.production.offline.map(name => `Production · ${name}`);
+  const productionExecutionDegraded = execution.production.degraded.map(name => `Production · ${name}`);
+  const offline = unique([...service.offline, ...productionExecutionOffline]);
+  const degraded = unique([...service.degraded, ...service.slow, ...productionExecutionDegraded]);
   const decisions = evolution.decisions;
   const material = evolution.material.filter(item => !item.approvalRequired);
 
@@ -158,6 +182,12 @@ export function buildEkodiOwnerReport(input = {}) {
       activeMonitoredServices: service.activeCount,
       offline,
       degraded,
+      productionExecutionStatus: execution.production.status || 'unknown',
+      productionExecutionOffline,
+      productionExecutionDegraded,
+      developmentExecutionStatus: execution.development.status || 'unknown',
+      developmentExecutionOffline: execution.development.offline,
+      developmentExecutionDegraded: execution.development.degraded,
       decisionIds: decisions.map(item => item.id),
       materialEvolutionIds: material.map(item => item.id),
     },
