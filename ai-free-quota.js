@@ -29,6 +29,22 @@ export function configuredFreeProviderIds(capabilities={}){
   return ids;
 }
 
+function enabledValue(value,fallback=false){
+  const raw=clean(value).toLowerCase();
+  if(!raw)return fallback;
+  return ['1','true','yes','on','enabled'].includes(raw);
+}
+
+export function configuredRuntimeFreeProviderIds(env={}){
+  const ids=[];
+  if(enabledValue(env.EKODI_PROVIDER_WORKERS_AI_ENABLED,false)&&env.AI&&typeof env.AI.run==='function')ids.push('cloudflare-workers-ai');
+  const geminiKey=clean(env.GEMINI_API_KEY||env.GOOGLE_AI_API_KEY);
+  if(geminiKey&&enabledValue(env.EKODI_PROVIDER_GEMINI_ENABLED??env.GEMINI_ENABLED,true))ids.push('gemini-free');
+  if(clean(env.OPENROUTER_API_KEY)&&enabledValue(env.EKODI_PROVIDER_OPENROUTER_FREE_ENABLED,false))ids.push('openrouter-free');
+  if(clean(env.GROQ_API_KEY)&&enabledValue(env.EKODI_PROVIDER_GROQ_FREE_ENABLED,false))ids.push('groq-free');
+  return Object.freeze(ids);
+}
+
 export function hasAlternateZeroCostExecution(capabilities={}){
   if((capabilities.nodeProviders||[]).length)return true;
   const profiles=capabilities.providerProfiles||{};
@@ -135,6 +151,13 @@ export async function recordFreeProviderOutcome(env={},providerId,{ok=false,erro
   const classified=classifyFreeQuotaError(id,error);
   if(classified.state==='error')return;
   await writeQuotaState(env,id,{...classified,lastError:clean(error?.message||error),statusCode:Number(error?.status||0)});
+}
+
+export async function recordFreeProviderOutcomeAndAlert(env={},providerId,outcome={}){
+  await recordFreeProviderOutcome(env,providerId,outcome);
+  const configured=configuredRuntimeFreeProviderIds(env);
+  if(!configured.length)return{snapshot:null,alert:null};
+  return ensureFreePoolDecisionAlert(env,configured,{alternateZeroCostAvailable:false});
 }
 
 export async function reserveFreeDailyRequest(env={},providerId,limit){
