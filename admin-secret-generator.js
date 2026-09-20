@@ -3,7 +3,7 @@
 
   const MODULE_ID = 'ekodiAdminSecretGenerator';
   const SECTION = 'security';
-  const API = 'https://api.ekodi.kr';
+  const API = 'https://ekodi.kr';
   const TOKEN_KEY = 'ekodi-auth-token';
   const DEFAULT_BYTES = 48;
   const ALLOWED_BYTES = new Set([32, 48, 64]);
