@@ -76,8 +76,8 @@ async function audit(){
     ['lab','https://ekodi.kr/ekodilab'],
     ['mall','https://ekodi.kr/ekodibiz/ekodimall'],
   ];
-  for(const [id,url] of canonicalUserSurfaces){
-    const result=await get(url);
+  const canonicalResults=await Promise.all(canonicalUserSurfaces.map(async([id,url])=>[id,await get(url)]));
+  for(const [id,result] of canonicalResults){
     http(result,`service:${id}`,errors);
     if(!result.ok)continue;
     const shellHeader=String(result.headers.get('x-ekodi-shell')||'').toLowerCase();
@@ -91,8 +91,8 @@ async function audit(){
     ['pizzamaru','https://ekodi.kr/pizzamaru','피자마루 목포대점'],
     ['yogurt','https://ekodi.kr/yogurt','요거트퍼플 목포대점'],
   ];
-  for(const [id,url,label] of tenants){
-    const result=await get(url);
+  const tenantResults=await Promise.all(tenants.map(async([id,url,label])=>[id,label,await get(url)]));
+  for(const [id,label,result] of tenantResults){
     http(result,`tenant:${id}`,errors);
     need(result,`tenant:${id}`,label,errors);
     need(result,`tenant:${id}`,'data-ekodi-tenant-readability="v1"',errors);
