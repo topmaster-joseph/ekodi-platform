@@ -2,12 +2,13 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
-const [adminJs, siteWorker, mallHeaders, freeOpsJs, authRouter] = await Promise.all([
+const [adminJs, siteWorker, mallHeaders, freeOpsJs, authRouter, verifyWorkflow] = await Promise.all([
   readFile(new URL('../release-control-admin.js', import.meta.url), 'utf8'),
   readFile(new URL('../site-worker.js', import.meta.url), 'utf8'),
   readFile(new URL('../sites/ekodi-mall/_headers', import.meta.url), 'utf8'),
   readFile(new URL('../sites/ekodi-mall/assets/free-ops.js', import.meta.url), 'utf8'),
   readFile(new URL('../auth-site/auth-router.js', import.meta.url), 'utf8'),
+  readFile(new URL('../.github/workflows/verify-admin-free-ops-embed.yml', import.meta.url), 'utf8'),
 ]);
 
 function headerBlock(path) {
@@ -61,4 +62,12 @@ test('central auth router repairs legacy Free Ops links before loading auth.js',
   assert.ok(authRouter.includes("!params.get('return_to')&&params.get('returnTo')"));
   assert.ok(authRouter.includes("params.set('return_to',params.get('returnTo'))"));
   assert.ok(authRouter.includes("params.delete('returnTo')"));
+});
+
+
+test('Free Ops production verifier uses canonical apex Admin only', () => {
+  assert.match(verifyWorkflow, /https:\/\/ekodi\.kr\/admin\//);
+  assert.match(verifyWorkflow, /https:\/\/ekodi\.kr\/release-control-admin\.js/);
+  assert.doesNotMatch(verifyWorkflow, /https:\/\/admin\.ekodi\.kr/);
+  assert.match(verifyWorkflow, /frame-ancestors https:\/\/ekodi\\\.kr/);
 });
