@@ -54,7 +54,7 @@ const CANONICAL_HOST_PATHS=Object.freeze({
   'work.ekodi.kr':'/work','workspace-api.ekodi.kr':'/workspace-api','marketing-api.ekodi.kr':'/marketing-api',
   'marketing-connect-api.ekodi.kr':'/marketing-connect-api','marketing-publish-api.ekodi.kr':'/marketing-publish-api',
   'pay.ekodi.kr':'/pay','pay.biz.ekodi.kr':'/ekodibiz/pay','live.ekodi.kr':'/live','live.biz.ekodi.kr':'/live/biz',
-  'live.church.ekodi.kr':'/ekodichurch/live/','live.lab.ekodi.kr':'/live/lab','cloud.ekodi.kr':'/cloud','trade.ekodi.kr':'/trade',
+  'live.church.ekodi.kr':'/live/church','live.lab.ekodi.kr':'/live/lab','cloud.ekodi.kr':'/cloud','trade.ekodi.kr':'/trade',
   'trade.biz.ekodi.kr':'/ekodibiz/trade','biz.ekodi.kr':'/ekodibiz','church.ekodi.kr':'/ekodichurch','lab.ekodi.kr':'/ekodilab',
   'mall.ekodi.kr':'/ekodibiz/mall','mall.biz.ekodi.kr':'/ekodibiz/mall','mail.ekodi.kr':'/mail','mail.biz.ekodi.kr':'/mail',
   'mail.church.ekodi.kr':'/mail','mail.lab.ekodi.kr':'/mail','mail.books.ekodi.kr':'/mail','mail.trade.ekodi.kr':'/mail',
