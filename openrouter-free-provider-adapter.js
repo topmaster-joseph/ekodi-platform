@@ -23,11 +23,12 @@ export function createOpenRouterFreeProvider(env={},options={}){
   const available=Boolean(enabled&&key&&typeof fetchImpl==='function');
   return Object.freeze({
     id:'openrouter-free',model,available,priority:20,costClass:'free-preferred',
-    async invoke({prompt='' }={}){
+    async invoke({prompt='',taskName='',context={}}={}){
+      const sourcePrompt=clean(prompt||context?.prompt||context?.message||context?.request||JSON.stringify({taskName,context}),24000);
       if(!available)throw new Error('openrouter_free_not_configured');
       try{
         const reservation=await reserveFreeDailyRequest(env,'openrouter-free',dailyLimit(env));
-        const projected=await projectForExternalAi({prompt:clean(prompt,24000)},{profile:'ai_minimum',purpose:'ekodi-free-provider',salt:crypto.randomUUID()});
+        const projected=await projectForExternalAi({prompt:sourcePrompt},{profile:'ai_minimum',purpose:'ekodi-free-provider',salt:crypto.randomUUID()});
         const safePrompt=clean(projected?.prompt||JSON.stringify(projected),24000);
         const response=await fetchImpl('https://openrouter.ai/api/v1/chat/completions',{method:'POST',headers:{authorization:`Bearer ${key}`,'content-type':'application/json','HTTP-Referer':'https://ekodi.kr','X-OpenRouter-Title':'EKODI AI Control'},body:JSON.stringify({model,messages:[{role:'user',content:safePrompt}],temperature:0.2,max_tokens:1024}),signal:AbortSignal.timeout(60000)});
         const data=await response.json().catch(()=>({}));
