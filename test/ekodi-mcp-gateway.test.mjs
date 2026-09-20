@@ -97,7 +97,7 @@ test('canonical MCP responses advertise the canonical resource and mark the lega
   assert.equal(canonical.headers.get('x-ekodi-mcp-resource'),EKODI_MCP_RESOURCE);
   assert.match(canonical.headers.get('link')||'',/rel="canonical"/);
   assert.equal(canonical.headers.get('x-ekodi-mcp-legacy-endpoint'),null);
-  const legacy=await handleEkodiMcpGateway(new Request('https://api.ekodi.kr/mcp',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:8,method:'ping'})}),{});
+  const legacy=await handleEkodiMcpGateway(new Request('https://ekodi.kr/mcp',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:8,method:'ping'})}),{});
   assert.equal(legacy.headers.get('x-ekodi-mcp-legacy-endpoint'),'true');
   assert.equal(legacy.headers.get('x-ekodi-mcp-resource'),EKODI_MCP_RESOURCE);
 });
