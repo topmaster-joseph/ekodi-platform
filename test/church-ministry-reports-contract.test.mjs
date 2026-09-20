@@ -63,9 +63,10 @@ test('church report UI is mounted inside pastor admin and removed from global Ad
   for (const marker of ['#churchReportsRoot', '/api/church/admin/reports', '사역보고 발송 설정', '교회 원자료', 'ekodi-church-pastor-session']) {
     assert.ok(ui.includes(marker), `missing church report UI marker: ${marker}`);
   }
-  for (const marker of ["['reports','사역보고']", "section==='reports'", '/church-reports-admin.js', '/church-reports-admin.css', 'https://api.ekodi.kr']) {
+  for (const marker of ["['reports','사역보고']", "section==='reports'", '/church-reports-admin.js', '/church-reports-admin.css']) {
     assert.ok(page.includes(marker), `missing pastor admin integration marker: ${marker}`);
   }
+  assert.ok(!page.includes('https://api.ekodi.kr'), 'pastor admin page must not reintroduce the retired API subdomain');
   assert.ok(!features.includes('community-reports-admin.js'), 'global Admin must no longer lazy-load the Community report UI');
   assert.ok(!/const lazy=\[[^\]]*'community'/.test(audit), 'shared Admin audit must not require the retired Community lazy module');
   assert.ok(build.includes('church-reports-admin.js'));
