@@ -1,6 +1,6 @@
 {
-  "version": "1.16.0",
-  "effectiveDate": "2026-09-14",
+  "version": "1.17.0",
+  "effectiveDate": "2026-09-20",
   "status": "active",
   "title": "EKODI Platform Constitution",
   "principles": [
@@ -33,7 +33,8 @@
     "ordinary-user-information-first-commercial-separation",
     "completion-continuity-through-recoverable-interruptions",
     "supreme-attributes-binding",
-    "site-owned-admin-canonical-path"
+    "site-owned-admin-canonical-path",
+    "independent-service-capability-composition"
   ],
   "architectureModel": {
     "registry": "governance/architecture/ekodi-os-architecture.json",
@@ -53,7 +54,7 @@
       "external-provider-responsible"
     ],
     "rule": "Modular monolith defines default deployment topology; explicit service responsibility and capability contracts define independent service boundaries. New independent deployment requires the sustainable boundary-creation gate.",
-    "operatingArchitectureVersion": "1.8.1",
+    "operatingArchitectureVersion": "1.8.2",
     "sovereignOperationsRegistry": "governance/architecture/sovereign-autonomous-operations.v1.json"
   },
   "systemBoundaries": {
@@ -521,7 +522,7 @@
       "services": "/admin/services/{service}",
       "system": "/admin/system/{capability}"
     },
-    "rule": "One domain, multiple security realms: human and management surfaces are canonical paths on ekodi.kr; subdomains may remain only as justified internal, protocol, emergency or compatibility execution boundaries."
+    "rule": "One domain, multiple security realms: human and management surfaces use canonical ekodi.kr paths; independently managed services own their canonical path and /admin while reusable capabilities remain contract-bound."
   },
   "commercialSubjectPolicy": {
     "id": "REV-001",
