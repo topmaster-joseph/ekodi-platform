@@ -21,7 +21,7 @@ test('API security headers block framing and downgrade exposure', () => {
 });
 
 test('public Google login is rate limited before auth processing', async () => {
-  const request = new Request('https://api.ekodi.kr/api/google/login', {
+  const request = new Request('https://ekodi.kr/api/google/login', {
     method: 'POST',
     headers: { 'cf-connecting-ip': '203.0.113.10', 'content-type': 'application/json' },
     body: '{}',
@@ -34,7 +34,7 @@ test('public Google login is rate limited before auth processing', async () => {
 });
 
 test('public authentication fails closed if its limiter binding is missing', async () => {
-  const request = new Request('https://api.ekodi.kr/api/google/login', {
+  const request = new Request('https://ekodi.kr/api/google/login', {
     method: 'POST',
     headers: { 'cf-connecting-ip': '203.0.113.11', 'content-type': 'application/json' },
     body: '{}',
@@ -46,7 +46,7 @@ test('public authentication fails closed if its limiter binding is missing', asy
 });
 
 test('sensitive mutations are rate limited by authenticated identity', async () => {
-  const request = new Request('https://api.ekodi.kr/api/control/ai/actions', {
+  const request = new Request('https://ekodi.kr/api/control/ai/actions', {
     method: 'POST',
     headers: { authorization: `Bearer ${'a'.repeat(64)}`, 'content-type': 'application/json' },
     body: '{}',
@@ -57,7 +57,7 @@ test('sensitive mutations are rate limited by authenticated identity', async () 
 });
 
 test('sensitive mutations fail closed if rate-limit infrastructure errors', async () => {
-  const request = new Request('https://api.ekodi.kr/api/control/ai/actions', {
+  const request = new Request('https://ekodi.kr/api/control/ai/actions', {
     method: 'POST',
     headers: { authorization: `Bearer ${'b'.repeat(64)}`, 'content-type': 'application/json' },
     body: '{}',
@@ -68,7 +68,7 @@ test('sensitive mutations fail closed if rate-limit infrastructure errors', asyn
 });
 
 test('oversized mutation requests are rejected before application code', async () => {
-  const request = new Request('https://api.ekodi.kr/api/control/ai/actions', {
+  const request = new Request('https://ekodi.kr/api/control/ai/actions', {
     method: 'POST',
     headers: { 'content-length': String(SECURITY_EDGE_CONSTANTS.MAX_MUTATION_BODY_BYTES + 1) },
   });
@@ -78,7 +78,7 @@ test('oversized mutation requests are rejected before application code', async (
 });
 
 test('TRACE and CONNECT are blocked at the edge', async () => {
-  const request = { method: 'TRACE', url: 'https://api.ekodi.kr/api/status', headers: new Headers() };
+  const request = { method: 'TRACE', url: 'https://ekodi.kr/api/status', headers: new Headers() };
   const response = await enforceEdgeSecurity(request, {});
   assert.equal(response?.status, 405);
   assert.equal((await response.json()).code, 'METHOD_BLOCKED');
