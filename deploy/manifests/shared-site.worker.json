@@ -1,5 +1,5 @@
 {
-  "version": 76,
+  "version": 77,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
@@ -1126,36 +1126,6 @@
         "rollbackVerify": false
       },
       {
-        "url": "https://pay.ekodi.kr/",
-        "statuses": [
-          200
-        ],
-        "redirect": "manual",
-        "expect": [
-          "EKODI Hub",
-          "EKODI 서비스 허브"
-        ],
-        "headerExpect": [
-          "x-ekodi-route: hub",
-          "x-ekodi-shell: v2"
-        ]
-      },
-      {
-        "url": "https://pay.biz.ekodi.kr/",
-        "statuses": [
-          200
-        ],
-        "redirect": "manual",
-        "expect": [
-          "EKODI Hub",
-          "EKODI 서비스 허브"
-        ],
-        "headerExpect": [
-          "x-ekodi-route: hub",
-          "x-ekodi-shell: v2"
-        ]
-      },
-      {
         "url": "https://ekodi.kr/mail",
         "statuses": [
           200
@@ -1228,45 +1198,6 @@
         ],
         "headerExpect": [
           "x-ekodi-route: hub"
-        ]
-      },
-      {
-        "url": "https://cloud.ekodi.kr/",
-        "statuses": [
-          200
-        ],
-        "redirect": "manual",
-        "expect": [
-          "EKODI Hub",
-          "EKODI 서비스 허브"
-        ],
-        "headerExpect": [
-          "x-ekodi-route: hub"
-        ]
-      },
-      {
-        "url": "https://trade.biz.ekodi.kr/",
-        "statuses": [
-          200
-        ],
-        "redirect": "manual",
-        "expect": [
-          "EKODI Global Trading",
-          "TRADING DIVISION · EKODIBIZ"
-        ],
-        "headerExpect": [
-          "x-ekodi-route: trade",
-          "x-ekodi-shell: v2"
-        ]
-      },
-      {
-        "url": "https://trade.ekodi.kr/",
-        "statuses": [
-          308
-        ],
-        "redirect": "manual",
-        "headerExpect": [
-          "location: https://trade.biz.ekodi.kr/"
         ]
       },
       {

@@ -9,15 +9,16 @@ const workflow = await readFile(new URL('../.github/workflows/deploy-site-core.y
 
 const urls = manifest.worker.requests.map(item => item.url);
 
-test('shared-site guarded release verifies only domains owned by the shared Worker', () => {
-  assert.equal(urls.some(url => url.startsWith('https://invest.ekodi.kr/')), false,
-    'Independent Investment service must not block shared Admin/Auth promotion');
+test('shared-site guarded release verifies only apex paths owned by the shared Worker', () => {
+  assert.ok(urls.length > 0);
+  const nonApex = urls.filter(url => !String(url).startsWith('https://ekodi.kr/'));
+  assert.deepEqual(nonApex, [],
+    `Shared Site release must not depend on independent or legacy hosts: ${nonApex.join(', ')}`);
   assert.match(authSurface, /const AUTH_ASSETS=new Set/);
   assert.match(authSurface, /serveCanonicalAuth/);
   assert.doesNotMatch(worker, /const AUTH_HOST/);
   assert.match(worker, /const ADMIN_HOSTS = new Set/);
 });
-
 
 test('shared-site production blocks a rerun of an older commit before deployment', () => {
   assert.match(workflow, /Refuse stale rerun production promotion/);
