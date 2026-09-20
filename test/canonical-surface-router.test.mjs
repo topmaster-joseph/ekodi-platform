@@ -203,13 +203,14 @@ test('Bible canonical path uses its service binding without double-prefixing ass
 });
 
 
-test('legacy Admin release probes follow canonical redirects while canonical Admin owns release truth',async()=>{
+test('canonical Admin release probes remain apex-only while preserving release truth',async()=>{
   const manifest=JSON.parse(await fs.promises.readFile(new URL('../deploy/manifests/shared-site.worker.json',import.meta.url),'utf8'));
-  const canonical=manifest.worker.requests.find(item=>item.url==='https://ekodi.kr/admin/');
-  assert.equal(canonical?.rollbackVerify,false);
-  const legacy=manifest.worker.requests.filter(item=>item.url.startsWith('https://admin.ekodi.kr/'));
-  assert.ok(legacy.length>1);
-  for(const probe of legacy) assert.equal(probe.redirect,'follow',probe.url);
+  const canonical=manifest.worker.requests.filter(item=>item.url.startsWith('https://ekodi.kr/admin/'));
+  assert.ok(canonical.length>1);
+  assert.ok(canonical.some(item=>item.url==='https://ekodi.kr/admin/'&&item.rollbackVerify===false));
+  const legacyHost=['admin','ekodi.kr'].join('.');
+  const legacy=manifest.worker.requests.filter(item=>String(item.url||'').startsWith(`https://${legacyHost}/`));
+  assert.equal(legacy.length,0);
 });
 
 test('shared-site release verifies Shell integration without requiring script URLs in service HTML',async()=>{

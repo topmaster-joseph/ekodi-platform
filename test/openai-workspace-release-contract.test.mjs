@@ -15,8 +15,8 @@ test('OpenAI workspace assets enter the guarded Shared Site release graph', () =
 
 test('OpenAI workspace production assets have explicit smoke contracts', () => {
   const byUrl = new Map(manifest.worker.requests.map(request => [request.url, request]));
-  const js = byUrl.get('https://admin.ekodi.kr/openai-workspace-admin.js');
-  const css = byUrl.get('https://admin.ekodi.kr/openai-workspace-admin.css');
+  const js = byUrl.get('https://ekodi.kr/admin/openai-workspace-admin.js');
+  const css = byUrl.get('https://ekodi.kr/admin/openai-workspace-admin.css');
   assert.ok(js && css);
   for (const marker of ['Permission transfer: NONE','EKODIAdminContext','ekodi-admin-assist-request']) assert.ok(js.expect.includes(marker));
   for (const marker of ['.openai-workspace-policy','@media(max-width:900px)']) assert.ok(css.expect.includes(marker));

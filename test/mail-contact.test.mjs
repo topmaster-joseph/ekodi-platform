@@ -105,10 +105,9 @@ test('public contact release guard is registered', async()=>{
   assert.match(wrangler,/limit = 5/);
 });
 
-test('Mail Admin release defers only the 0% candidate and verifies canonical handoff after promotion', async()=>{
+test('Mail Admin release defers only the 0% candidate and verifies canonical apex handoff after promotion', async()=>{
   const manifest=JSON.parse(await readFile(new URL('../deploy/manifests/shared-site.worker.json',import.meta.url),'utf8'));
-  const legacyMailHost=['mail','ekodi.kr'].join('.');
-  const probe=manifest.worker.requests.find(item=>item.url===`https://${legacyMailHost}/admin`);
+  const probe=manifest.worker.requests.find(item=>item.url==='https://ekodi.kr/mail/admin');
   assert.deepEqual(probe?.statuses,[307]);
   assert.equal(probe?.candidateVerify,false);
   assert.match(probe?.candidateVerifyReason||'',/post-promotion|after promotion/i);

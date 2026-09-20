@@ -102,6 +102,31 @@ function gitDiff() {
   }
 }
 
+const sharedSiteWranglerPath = path.join(root, 'wrangler.site.toml');
+if (!fs.existsSync(sharedSiteWranglerPath)) {
+  fail('wrangler.site.toml is required for the Shared Site canonical-domain contract');
+} else {
+  const sharedSiteWrangler = fs.readFileSync(sharedSiteWranglerPath, 'utf8');
+  const routeBlocks = sharedSiteWrangler.split('[[routes]]').slice(1);
+  const customDomains = [];
+  for (const block of routeBlocks) {
+    const pattern = block.match(/pattern\s*=\s*"([^"]+)"/)?.[1] || '';
+    const customDomain = /custom_domain\s*=\s*true/.test(block);
+    if (customDomain && pattern) customDomains.push(pattern);
+  }
+  if (!customDomains.includes(policy.canonicalHost)) {
+    fail(`wrangler.site.toml must keep the canonical apex custom domain: ${policy.canonicalHost}`);
+  }
+  for (const host of customDomains) {
+    if (host !== policy.canonicalHost) {
+      fail(`wrangler.site.toml custom domain violates apex-path-only policy: ${host}`);
+    }
+  }
+  if (customDomains.filter(host => host === policy.canonicalHost).length !== 1) {
+    fail(`wrangler.site.toml must declare exactly one ${policy.canonicalHost} custom domain`);
+  }
+}
+
 const ignoredFiles = new Set(['scripts/zero-subdomain-guard.mjs']);
 const hostPattern = /(?<!@)\b(?:[a-z0-9-]+\.)+ekodi\.kr\b|\*\.ekodi\.kr\b/ig;
 let currentFile = '';
