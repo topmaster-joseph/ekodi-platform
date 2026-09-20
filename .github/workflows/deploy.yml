@@ -1,5 +1,6 @@
 name: Full Ecosystem Verification (Manual)
 # deployment-guardrail: verification-only-no-production-write
+# production-probe-policy: single-quota-aware-post-deploy-canary
 
 on:
   workflow_dispatch:
@@ -20,6 +21,10 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_DEVELOPMENT_ACCOUNT_ID: ${{ vars.CLOUDFLARE_DEVELOPMENT_ACCOUNT_ID || '46aad4738793fbaca88574832a2ccc0f' }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -30,32 +35,15 @@ jobs:
           echo "Full ecosystem verification requested: ${{ inputs.reason }}"
           echo 'This workflow performs no deployment, migration, DNS mutation, or secret change.'
           echo 'Production writes are owned by the service-specific guarded release workflows.'
+          echo 'Production HTTP verification is delegated to the canonical quota-aware canary; no retry fan-out is permitted.'
       - name: Validate all source and platform boundaries
         run: |
           npm run check
           npm test
-      - name: Verify coordinated production state
-        shell: bash
-        run: |
-          set -euo pipefail
-          verify_html() { url="$1"; needle="$2"; code=$(curl -L -sS -o /tmp/verify-body -w '%{http_code}' --connect-timeout 5 --max-time 15 "$url" || true); echo "$url -> $code"; [[ "$code" =~ ^[23] ]] && grep -Fq "$needle" /tmp/verify-body; }
-          for attempt in $(seq 1 12); do
-            api=$(curl -fsS --connect-timeout 5 --max-time 12 'https://api.ekodi.kr/health' || true)
-            finance=$(curl -fsS --connect-timeout 5 --max-time 12 'https://finance-api.ekodi.kr/health' || true)
-            community=$(curl -fsS --connect-timeout 5 --max-time 12 'https://community.ekodi.kr/health' || true)
-            social=$(curl -fsS --connect-timeout 5 --max-time 12 'https://social.ekodi.kr/health' || true)
-            if verify_html 'https://ekodi.kr/' 'CONNECTED ECOSYSTEM' \
-              && verify_html 'https://admin.ekodi.kr/' '<title>EKODI Admin</title>' \
-              && verify_html 'https://auth.ekodi.kr/' 'EKODI 로그인' \
-              && verify_html 'https://marketing.ekodi.kr/' '마케팅AI' \
-              && verify_html 'https://books.ekodi.kr/' 'EKODI' \
-              && printf '%s' "$api" | grep -q '"ok":true' \
-              && printf '%s' "$finance" | grep -q '"ok":true' \
-              && printf '%s' "$community" | grep -q '"ok":true' \
-              && printf '%s' "$social" | grep -q 'ekodi-social'; then
-              echo 'EKODI guarded production ecosystem verified without modifying production.'
-              exit 0
-            fi
-            sleep 5
-          done
-          exit 1
+      - name: Read Production Cloudflare quota Source of Truth
+        id: quota
+        run: node scripts/cloudflare-production-budget.mjs --output=cloudflare-production-quota.json
+      - name: Verify coordinated production state with canonical canary
+        env:
+          EKODI_CF_QUOTA_STATE: ${{ steps.quota.outputs.state }}
+        run: node scripts/post-deploy-canary.mjs --scope=full --output=production-canary.json
