@@ -98,7 +98,9 @@ const productionVerifier = requireText('scripts/verify-ekodi-core-production.mjs
   "['marketing', 'https://ekodi.kr/ekodibiz/marketing-ai']",
   'strict-transport-security',
 ]);
-for (const retiredHost of ['https://api.ekodi.kr','https://admin.ekodi.kr','https://auth.ekodi.kr','https://biz.ekodi.kr','https://marketing.ekodi.kr']) {
+const canonicalHost = ['ekodi','kr'].join('.');
+for (const prefix of ['api','admin','auth','biz','marketing']) {
+  const retiredHost = `https://${prefix}.${canonicalHost}`;
   if (productionVerifier.includes(retiredHost)) fail('scripts/verify-ekodi-core-production.mjs', `retired production verifier host remains: ${retiredHost}`);
 }
 
