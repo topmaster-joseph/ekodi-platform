@@ -42,7 +42,7 @@ function rowsFromResult(data){
 }
 
 export async function collectSupabase({token,fetchJson=jsonFetch,observedAt=nowIso()}={}){
-  if(!token)throw new Error('SUPABASE_ACCESS_TOKEN_REQUIRED');
+  if(!token)return {available:false,reason:'credential_missing',snapshots:[],freeOrganizations:[],activeProjects:[]};
   const [organizationsRaw,projectsRaw]=await Promise.all([
     fetchJson(`${SUPABASE_API}/organizations`,{token}),
     fetchJson(`${SUPABASE_API}/projects`,{token}),
@@ -102,7 +102,7 @@ export async function collectSupabase({token,fetchJson=jsonFetch,observedAt=nowI
       observedValue:bytes,freeLimit:GB,source:'supabase-database-query',observedAt
     });
   }
-  return {snapshots,freeOrganizations:freeOrganizations.map(org=>({id:String(org.id),plan:'free'})),activeProjects:activeProjects.map(p=>String(p.ref||p.id||''))};
+  return {available:true,reason:null,snapshots,freeOrganizations:freeOrganizations.map(org=>({id:String(org.id),plan:'free'})),activeProjects:activeProjects.map(p=>String(p.ref||p.id||''))};
 }
 
 export async function collectGitHub({repository,token='',fetchJson=jsonFetch,observedAt=nowIso()}={}){
@@ -159,7 +159,7 @@ async function main(){
   await fs.writeFile(output,snapshotsToSql(result.snapshots)+'\n','utf8');
   process.stdout.write(JSON.stringify({
     observedAt:result.observedAt,
-    supabase:{freeOrganizations:result.supabase.freeOrganizations.length,activeProjects:result.supabase.activeProjects.length,snapshots:result.supabase.snapshots.length},
+    supabase:{available:result.supabase.available,reason:result.supabase.reason,freeOrganizations:result.supabase.freeOrganizations.length,activeProjects:result.supabase.activeProjects.length,snapshots:result.supabase.snapshots.length},
     github:{repository:result.github.repository,snapshots:result.github.snapshots.length},
   })+'\n');
 }
