@@ -391,7 +391,7 @@ jobs:
           set -euo pipefail
           npm run build
           cp auth-site/auth-workspace-target.js dist/auth-workspace-target.js
-          for f in dist/index.html dist/robots.txt dist/sitemap.xml dist/llms.txt dist/mall.html dist/mall.css dist/mall.js dist/admin-shell.html dist/admin-shell.css dist/admin-authenticated-shell.js dist/admin-assist-bootstrap.js dist/admin-assist-bootstrap.css dist/admin-assist-dock.js dist/admin-assist-dock.css dist/admin-demand-loader.js dist/admin-public-site-controls.js dist/ai-ops-admin.js dist/ai-ops-admin.css dist/devotional-admin.js dist/devotional-admin.css dist/ai-module-spec-admin.js dist/ai-module-spec-admin.css dist/communication-admin.js dist/communication-admin.css dist/openai-workspace-admin.js dist/openai-workspace-admin.css dist/common-services-admin.js dist/common-services-admin.css dist/storage-admin.js dist/storage-admin.css dist/admin-menu-registry.js dist/admin-menu-layout.js dist/admin-sidebar.js dist/admin-menu-runtime.js dist/ekodibiz-admin-registry.js dist/admin-design-engine.js dist/admin-design-engine.css dist/campus-actions.js dist/campus-actions.css dist/marketing-ai-admin.js dist/marketing-ai-admin.css dist/invest-admin.js dist/invest-admin.css dist/ecosystem-services.json dist/auth-bootstrap.js dist/auth-entry.js dist/auth-workspace-target.js dist/admin-language-status.js; do
+          for f in dist/index.html dist/robots.txt dist/sitemap.xml dist/llms.txt dist/mall.html dist/mall.css dist/mall.js dist/admin-shell.html dist/admin-shell.css dist/admin-authenticated-shell.js dist/admin-assist-bootstrap.js dist/admin-assist-bootstrap.css dist/admin-assist-dock.js dist/admin-assist-dock.css dist/admin-ai-control-plane.js dist/admin/admin-assist-bootstrap.js dist/admin/admin-assist-bootstrap.css dist/admin/admin-assist-dock.js dist/admin/admin-assist-dock.css dist/admin/admin-ai-control-plane.js dist/admin-demand-loader.js dist/admin-public-site-controls.js dist/ai-ops-admin.js dist/ai-ops-admin.css dist/devotional-admin.js dist/devotional-admin.css dist/ai-module-spec-admin.js dist/ai-module-spec-admin.css dist/communication-admin.js dist/communication-admin.css dist/openai-workspace-admin.js dist/openai-workspace-admin.css dist/common-services-admin.js dist/common-services-admin.css dist/storage-admin.js dist/storage-admin.css dist/admin-menu-registry.js dist/admin-menu-layout.js dist/admin-sidebar.js dist/admin-menu-runtime.js dist/ekodibiz-admin-registry.js dist/admin-design-engine.js dist/admin-design-engine.css dist/campus-actions.js dist/campus-actions.css dist/marketing-ai-admin.js dist/marketing-ai-admin.css dist/invest-admin.js dist/invest-admin.css dist/ecosystem-services.json dist/auth-bootstrap.js dist/auth-entry.js dist/auth-workspace-target.js dist/admin-language-status.js; do
             test -f "$f"
           done
           test -f dist/tapo-device-admin.js
@@ -641,6 +641,11 @@ jobs:
 
           for asset in \
             'https://ekodi.kr/admin/admin-shell.css' \
+            'https://ekodi.kr/admin/admin-assist-bootstrap.js' \
+            'https://ekodi.kr/admin/admin-assist-bootstrap.css' \
+            'https://ekodi.kr/admin/admin-assist-dock.js' \
+            'https://ekodi.kr/admin/admin-assist-dock.css' \
+            'https://ekodi.kr/admin/admin-ai-control-plane.js' \
             'https://ekodi.kr/admin/admin-demand-loader.js' \
             'https://ekodi.kr/admin/admin-menu-registry.js' \
             'https://ekodi.kr/admin/admin-menu-layout.js' \
