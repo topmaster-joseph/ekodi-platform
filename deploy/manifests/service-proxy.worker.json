@@ -7,8 +7,7 @@
       {"url":"https://biz.ekodi.kr/","statuses":[200],"redirect":"follow","expect":["EKODI BIZ","https://ekodi.kr/shell/shell.js"]},
       {"url":"https://church.ekodi.kr/","statuses":[200],"redirect":"follow","expect":["https://ekodi.kr/shell/shell.js"]},
       {"url":"https://lab.ekodi.kr/","statuses":[200],"redirect":"follow","expect":["https://ekodi.kr/shell/shell.js"]},
-      {"url":"https://mall.ekodi.kr/","statuses":[308],"redirect":"manual","headerExpect":["location: https://ekodi.kr/ekodibiz/ekodimall"]},
-      {"url":"https://mall.biz.ekodi.kr/","statuses":[308],"redirect":"manual","headerExpect":["location: https://ekodi.kr/ekodibiz/ekodimall"]}
+      {"url":"https://ekodi.kr/ekodimall","statuses":[200],"redirect":"follow","expect":["data-ekodi-service=\"mall\""]}
     ]
   }
 }

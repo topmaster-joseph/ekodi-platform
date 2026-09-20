@@ -107,7 +107,7 @@ export function affiliateProductOffer(product = {}) {
     summary: `${category} · 에코디몰 연동 상품`,
     category,
     priceAmount: product.productPrice,
-    canonicalUrl: `https://ekodi.kr/ekodibiz/ekodimall?product=${encodeURIComponent(cleanText(product.productId, 160))}`,
+    canonicalUrl: `https://ekodi.kr/ekodimall?product=${encodeURIComponent(cleanText(product.productId, 160))}`,
     imageUrl: product.productImage,
     actionKind: 'external_purchase',
     discoveryKeywords: [sourceKeyword, category, '에코디몰'].filter(Boolean),
