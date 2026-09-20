@@ -53,11 +53,15 @@ expect(workflow.includes('free-tier-resource-governor.test.mjs'),'orchestration 
 expect(collectorWorkflow.includes('collect-free-tier-resource-usage.mjs'),'resource collector workflow must execute the measured collector');
 expect(collectorWorkflow.includes('push:')&&collectorWorkflow.includes('branches:')&&collectorWorkflow.includes('- main'),'resource collector must run on relevant main pushes');
 expect(collectorWorkflow.includes('provider_quota_snapshots'),'resource collector workflow must persist into the quota snapshot ledger');
+expect(collectorWorkflow.includes('environment: production'),'resource collector must reuse the established production environment secret boundary');
 expect(collectorWorkflow.includes('SUPABASE_ACCESS_TOKEN'),'resource collector must use the existing Supabase management credential boundary');
 expect(collectorWorkflow.includes('SUPABASE_TOKEN'),'resource collector must accept the existing Supabase token fallback');
 expect(collectorWorkflow.includes('SUPABASE_PAT'),'resource collector must accept the existing Supabase PAT fallback');
 expect(collectorWorkflow.includes('SUPABASE_MANAGEMENT_TOKEN'),'resource collector must accept the existing Supabase management-token fallback');
-expect(collectorWorkflow.includes('SUPABASE_ACCESS_TOKEN=$token'),'resource collector must normalize the selected Supabase credential before collection');
+expect(collectorWorkflow.includes('SUPABASE_ACCESS_TOKEN=$token'),'resource collector must normalize the selected Supabase credential before collection when available');
+expect(collectorWorkflow.includes('SUPABASE_TELEMETRY_AVAILABLE=false'),'resource collector must explicitly mark missing Supabase telemetry');
+expect(!collectorWorkflow.includes('test -n "$SUPABASE_ACCESS_TOKEN"'),'missing Supabase management credentials must not block GitHub/Cloudflare telemetry collection');
+expect(collector.includes("reason:'credential_missing'"),'Supabase collector must represent unavailable management credentials as missing telemetry');
 expect(collector.includes('/database/query'),'Supabase database usage must come from an authorized read-only database query');
 expect(collector.includes('/actions/cache/usage'),'GitHub cache usage must come from the official repository usage endpoint');
 expect(collector.includes('/actions/artifacts?'),'GitHub artifact usage must come from the official repository artifact endpoint');
