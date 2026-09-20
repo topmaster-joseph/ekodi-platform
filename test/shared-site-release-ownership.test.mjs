@@ -6,6 +6,8 @@ const manifest = JSON.parse(await readFile(new URL('../deploy/manifests/shared-s
 const worker = await readFile(new URL('../site-worker.js', import.meta.url), 'utf8');
 const authSurface = await readFile(new URL('../canonical-surface-router.js', import.meta.url), 'utf8');
 const workflow = await readFile(new URL('../.github/workflows/deploy-site-core.yml', import.meta.url), 'utf8');
+const stagingWorkflow = await readFile(new URL('../.github/workflows/stage-shared-site-shell.yml', import.meta.url), 'utf8');
+const zeroSubdomainGuard = await readFile(new URL('../scripts/zero-subdomain-guard.mjs', import.meta.url), 'utf8');
 
 const urls = manifest.worker.requests.map(item => item.url);
 
@@ -33,4 +35,15 @@ test('shared-site production blocks a rerun of an older commit before deployment
   assert.match(workflow, /if \[ "\$GITHUB_SHA" != "\$latest_main" \]/);
   assert.match(workflow, /exit 42/);
   assert.match(workflow, /group: ekodi-shared-site-worker-production/);
+});
+
+
+test('shared-site staging and governance checks stay apex-path-only', () => {
+  assert.doesNotMatch(stagingWorkflow, /verify_shell\s*\(/);
+  assert.doesNotMatch(stagingWorkflow, /(?<!@)\b(?:[a-z0-9-]+\.)+ekodi\.kr\b/i);
+  assert.match(stagingWorkflow, /verify_public_path '\/pay' 'EKODI Pay' 'x-ekodi-canonical-surface: pay'/);
+  assert.match(stagingWorkflow, /verify_public_path '\/cloud' 'EKODI Hub' 'x-ekodi-canonical-surface: cloud'/);
+  assert.match(stagingWorkflow, /verify_public_path '\/ekodibiz\/trade' 'PRIVATE TRADE WORKSPACE' 'x-ekodi-route: trade-partner-workspace'/);
+  assert.match(zeroSubdomainGuard, /shared-site release request must use canonical apex/);
+  assert.match(zeroSubdomainGuard, /deploy\/manifests\/shared-site\.worker\.json/);
 });
