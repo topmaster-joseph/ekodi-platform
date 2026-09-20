@@ -42,7 +42,7 @@ export const DEFAULT_AI_RESOURCE_POLICY = Object.freeze({
   pools:Object.freeze({
     personalSubscription:Object.freeze({enabled:true,humanInteractive:true,officialAutomationOnly:true}),
     personalApi:Object.freeze({enabled:true,secretStorage:'server-secret-or-encrypted-vault'}),
-    ekodiSharedApi:Object.freeze({enabled:false,budgetGated:true}),
+    ekodiSharedApi:Object.freeze({enabled:true,budgetGated:true,zeroMarginalOnlyByDefault:true}),
     hostedAi:Object.freeze({enabled:false,mode:'cloud-gpu-on-demand'}),
     coreOnly:Object.freeze({enabled:true,deterministic:true}),
   }),
