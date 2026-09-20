@@ -25,12 +25,12 @@ export const FREE_TIER_RESOURCE_CATALOG=Object.freeze({
     metrics:Object.freeze([
       {metric:'active_projects',label:'Active projects',freeLimit:2,unit:'projects',scope:'capacity',fullAction:'block_new_resource'},
       {metricPrefix:'database_bytes:',label:'Database size / project',freeLimit:500*MB,unit:'bytes',scope:'consumption'},
-      {metric:'egress_bytes_month',label:'Unified egress / month',freeLimit:5*GB,unit:'bytes',scope:'consumption'},
-      {metric:'storage_bytes_org',label:'Storage size',freeLimit:GB,unit:'bytes',scope:'consumption'},
-      {metric:'mau_month',label:'Monthly active users',freeLimit:50000,unit:'users',scope:'consumption'},
-      {metric:'edge_function_invocations_month',label:'Edge Function invocations / month',freeLimit:500000,unit:'invocations',scope:'consumption'},
-      {metric:'realtime_messages_month',label:'Realtime messages / month',freeLimit:2000000,unit:'messages',scope:'consumption'},
-      {metric:'realtime_peak_connections',label:'Realtime peak connections',freeLimit:200,unit:'connections',scope:'consumption'},
+      {metricPrefix:'egress_bytes_month:',label:'Unified egress / organization / month',freeLimit:5*GB,unit:'bytes',scope:'consumption'},
+      {metricPrefix:'storage_bytes_org:',label:'Storage size / organization',freeLimit:GB,unit:'bytes',scope:'consumption'},
+      {metricPrefix:'mau_month:',label:'Monthly active users / organization',freeLimit:50000,unit:'users',scope:'consumption'},
+      {metricPrefix:'edge_function_invocations_month:',label:'Edge Function invocations / organization / month',freeLimit:500000,unit:'invocations',scope:'consumption'},
+      {metricPrefix:'realtime_messages_month:',label:'Realtime messages / organization / month',freeLimit:2000000,unit:'messages',scope:'consumption'},
+      {metricPrefix:'realtime_peak_connections:',label:'Realtime peak connections / organization',freeLimit:200,unit:'connections',scope:'consumption'},
     ]),
   }),
   github:Object.freeze({
