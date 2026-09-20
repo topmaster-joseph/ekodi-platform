@@ -16,9 +16,9 @@
 ## 플랫폼 격리 규칙
 
 1. Mall 기능 작업은 원칙적으로 `sites/ekodi-mall/**` 안에서 완결한다.
-2. `api.ekodi.kr`, `auth.ekodi.kr`, `pay.ekodi.kr`, `finance-api.ekodi.kr` 내부 DB를 Mall 편의를 위해 직접 수정하지 않는다.
+2. `ekodi.kr/api`, `auth.ekodi.kr`, `pay.ekodi.kr`, `finance-ekodi.kr/api` 내부 DB를 Mall 편의를 위해 직접 수정하지 않는다.
 3. production은 Worker `ekodi-mall-api` + D1 `ekodi-mall`, staging은 Worker `ekodi-mall-api-staging` + D1 `ekodi-mall-staging`을 사용한다. 두 DB를 섞지 않는다.
-4. 루트에 별도 `mall-api-worker.js`/`wrangler.mall-api.toml` 같은 두 번째 Mall API를 만들지 않는다. `mall-api.ekodi.kr`는 `sites/ekodi-mall/api/entry.js` 단일 진입점만 사용한다.
+4. 루트에 별도 `mall-api-worker.js`/`wrangler.mall-api.toml` 같은 두 번째 Mall API를 만들지 않는다. `mall-ekodi.kr/api`는 `sites/ekodi-mall/api/entry.js` 단일 진입점만 사용한다.
 5. Google/Supabase 사용자 토큰은 Mall API가 Auth 서버에서 재검증한다. 브라우저가 보낸 이메일·회원등급을 신뢰하지 않는다.
 6. 수수료·attribution·membership·주문금액·정산원장·소싱 권한은 서버가 최종 결정한다.
 
@@ -104,7 +104,7 @@ Mall 변경은 `.github/workflows/deploy-ekodi-mall.yml`에서 다음 순서로�
 2. `ekodi-mall-staging` D1에 migration을 적용한다.
 3. `mall-api-staging.ekodi.kr` staging Worker를 배포한다.
 4. staging `/health`에서 base/order/first-touch/sourcing schema, 7·8·9, 공개상품 feed, `paymentsEnabled=false`, `payoutExecutionEnabled=false`를 확인한다.
-5. staging 성공 후에만 production D1 `ekodi-mall`과 `mall-api.ekodi.kr`로 승격한다.
+5. staging 성공 후에만 production D1 `ekodi-mall`과 `mall-ekodi.kr/api`로 승격한다.
 6. production API 검증 성공 후에만 Cloudflare Pages 운영본을 배포하고 UI smoke test를 수행한다.
 
 ## 결제·자동발주 기능을 켜기 전
