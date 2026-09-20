@@ -48,7 +48,7 @@ test('on-demand assets are independently served and not merged into startup bund
   assert.doesNotMatch(build, /lazyJs.*authorBillingJs/);
 });
 
-test('device browser diagnostics are shipped and stay on the immutable admin worker path', async () => {
+test('device browser diagnostics are mirrored under canonical /admin and verified asset-first', async () => {
   const build = await read('scripts/build.mjs');
   const worker = await read('site-worker.js');
   const wrangler = await read('wrangler.site.toml');
@@ -56,30 +56,32 @@ test('device browser diagnostics are shipped and stay on the immutable admin wor
   const manifest = JSON.parse(await read('deploy/manifests/shared-site.worker.json'));
   assert.match(build, /'device-browser-diagnostics\.css'/);
   assert.match(build, /'device-browser-diagnostics\.js'/);
+  assert.match(build, /const adminStaticMirrorDir = \`\$\{output\}admin\/\`/);
+  assert.match(build, /adminStaticMirrorAssets/);
   assert.match(worker, /'\/device-browser-diagnostics\.css'/);
   assert.match(worker, /'\/device-browser-diagnostics\.js'/);
-  assert.match(worker, /url\.searchParams\.has\('v'\)[\s\S]*max-age=31536000, immutable/);
   const workerFirst = wrangler.match(/run_worker_first = \[([\s\S]*?)\]/)?.[1] || '';
-  assert.match(workerFirst, /"\/device-browser-diagnostics\.js"/);
-  assert.match(workerFirst, /"\/device-browser-diagnostics\.css"/);
+  assert.match(workerFirst, /"!\/admin\/\*\.js"/);
+  assert.match(workerFirst, /"!\/admin\/\*\.css"/);
   assert.match(diagnostics, /CACHE_ALLOWLIST/);
   assert.match(diagnostics, /registration\.update\(\)/);
   assert.match(diagnostics, /현재 관리자 브라우저 진단/);
-  const smoke = JSON.stringify(manifest.smoke || manifest);
-  assert.match(smoke, /device-browser-diagnostics\.js\?v=device-v28/);
-  assert.match(smoke, /device-browser-diagnostics\.css\?v=device-v28/);
-  assert.match(smoke, /x-ekodi-route: admin-asset/);
-  assert.match(smoke, /cache-control: public, max-age=31536000, immutable/);
-  assert.match(smoke, /현재 관리자 브라우저 진단/);
-  assert.match(smoke, /\.admin-browser-diagnostic/);
+
   for (const suffix of ['device-browser-diagnostics.js?v=device-v28','device-browser-diagnostics.css?v=device-v28']) {
-    const request = manifest.worker.requests.find(item => String(item.url || '').endsWith(`/${suffix}`));
-    assert.ok(request, `missing guarded-release request for ${suffix}`);
+    const request = manifest.worker.requests.find(item => item.url === `https://ekodi.kr/admin/${suffix}`);
+    assert.ok(request, `missing canonical guarded-release request for ${suffix}`);
     assert.equal(request.candidateVerify, false);
-    assert.match(request.candidateVerifyReason || '', /post-promotion|promotion/i);
-    assert.ok(request.headerExpect?.includes('x-ekodi-route: admin-asset'));
-    assert.ok(request.headerExpect?.includes('cache-control: public, max-age=31536000, immutable'));
+    assert.match(request.candidateVerifyReason || '', /canonical \/admin static assets|asset-first/i);
+    assert.ok(request.headerExpect?.includes('cache-control: no-store'));
+    assert.ok(request.headerExpect?.includes('x-content-type-options: nosniff'));
+    assert.ok(request.headerExpect?.includes('x-robots-tag: noindex, nofollow, noarchive'));
+    assert.ok(!request.headerExpect?.some(item => item.includes('x-ekodi-route: admin-asset')));
   }
+
+  const diagnosticRequests = manifest.worker.requests
+    .filter(item => /\/device-browser-diagnostics\.(?:js|css)\?v=device-v28$/.test(item.url || ''));
+  assert.equal(diagnosticRequests.length, 2);
+  assert.ok(diagnosticRequests.every(item => String(item.url).startsWith('https://ekodi.kr/admin/')));
 });
 
 test('shared admin navigation exposes seven canonical areas with top contextual tabs', async () => {
