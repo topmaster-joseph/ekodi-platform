@@ -87,16 +87,27 @@ test('Assist first path is bottom command-entry-only and upgrades through existi
   assert.doesNotMatch(shell,/admin-assist-dock\.css/);
 });
 
-test('guarded shared-site release verifies bootstrap and full Assist lazy assets separately',async()=>{
-  const manifest=await read('deploy/manifests/shared-site.worker.json');
-  assert.match(manifest,/admin\.ekodi\.kr\/admin-compact\.js\?assist=v2/);
-  assert.match(manifest,/ekodiAssistBootstrap/);
-  assert.match(manifest,/admin\.ekodi\.kr\/admin-lazy-features\.js\?assist=v2/);
-  assert.match(manifest,/ekodi-chief-ai-chat-v1/);
-  assert.match(manifest,/DECISION_RULES/);
-  assert.match(manifest,/admin\.ekodi\.kr\/ai-ops-admin\.css\?assist=v2/);
-  assert.match(manifest,/ekodi-assist-launcher/);
-  assert.match(manifest,/ekodi-assist-panel/);
+test('guarded shared-site release verifies bootstrap and full Assist lazy assets post-promotion',async()=>{
+  const manifestText=await read('deploy/manifests/shared-site.worker.json');
+  const manifest=JSON.parse(manifestText);
+  const urls=[
+    'https://admin.ekodi.kr/admin-compact.js?assist=v2',
+    'https://admin.ekodi.kr/admin-compact.css?assist=v2',
+    'https://admin.ekodi.kr/admin-lazy-features.js?assist=v2',
+    'https://admin.ekodi.kr/ai-ops-admin.css?assist=v2',
+  ];
+  for(const url of urls){
+    const request=manifest.worker.requests.find(item=>item.url===url);
+    assert.ok(request,`missing guarded-release Assist asset: ${url}`);
+    assert.equal(request.candidateVerify,false);
+    assert.match(request.candidateVerifyReason||'',/post-promotion|after promotion/i);
+    assert.ok(request.headerExpect?.includes('x-content-type-options: nosniff'));
+  }
+  assert.match(manifestText,/ekodiAssistBootstrap/);
+  assert.match(manifestText,/ekodi-chief-ai-chat-v1/);
+  assert.match(manifestText,/DECISION_RULES/);
+  assert.match(manifestText,/ekodi-assist-launcher/);
+  assert.match(manifestText,/ekodi-assist-panel/);
 });
 
 
