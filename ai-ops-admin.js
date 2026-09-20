@@ -45,6 +45,8 @@
 
   let overview = null;
   let evolution = null;
+  let ownerReport = null;
+  let ownerReportHistory = [];
   let lastReviewAt = null;
   let selectedDomain = '';
   const displayAddress = domain => window.EKODIAdminSurfaceLabels?.label?.(domain) || domain;
@@ -91,6 +93,26 @@
     } catch (error) {
       evolution = { error:String(error?.message || 'Evolution Intelligence 연결 실패') };
       console.warn('EKODI Evolution Intelligence unavailable', error);
+      return null;
+    }
+  }
+
+  async function loadOwnerReport(force = false) {
+    const path = force ? '/api/control/owner-report/check' : '/api/control/owner-report?limit=8';
+    try {
+      const response = await fetch(`${API}${path}`, {
+        method: force ? 'POST' : 'GET',
+        headers:authHeaders(),
+        cache:'no-store',
+      });
+      if (!response.ok) throw new Error(`운영보고 API ${response.status}`);
+      const data = await response.json();
+      ownerReport = data.current || data.latestPersisted || null;
+      ownerReportHistory = Array.isArray(data.reports) ? data.reports : [];
+      return ownerReport;
+    } catch (error) {
+      console.warn('EKODI owner report unavailable', error);
+      ownerReport = { error:String(error?.message || '운영보고 연결 실패') };
       return null;
     }
   }
@@ -217,6 +239,10 @@
       </div>
       <div class="ai-ops-metrics" id="aiOpsMetrics"></div>
       <div class="ai-ops-main">
+        <section class="ai-ops-block ai-evolution-block ai-owner-report-block" aria-live="polite">
+          <div class="ai-evolution-head"><div><small>EKODI AUTONOMOUS REPORT</small><h3>중요 운영보고</h3></div><span id="aiOwnerReportMeta">EKODI Orchestrator</span></div>
+          <div class="ai-evolution-cards" id="aiOwnerReportCards"></div>
+        </section>
         <section class="ai-ops-block ai-evolution-block" aria-live="polite">
           <div class="ai-evolution-head"><div><small>EVOLUTION INTELLIGENCE</small><h3>플랫폼 진화 제안</h3></div><span id="aiEvolutionMeta">검증된 근거 기반 분석</span></div>
           <div class="ai-evolution-cards" id="aiEvolutionCards"></div>
@@ -269,6 +295,36 @@
     const sources = (item?.references || []).filter(source => source?.url).slice(0, 2);
     if (!sources.length) return '<span class="ai-evidence-missing">근거 링크 보강 필요</span>';
     return sources.map(source => `<a href="${esc(source.url)}" target="_blank" rel="noopener" title="${esc(source.title || source.url)}">근거 ↗</a>`).join('');
+  }
+
+  function renderOwnerReport() {
+    const host = $('#aiOwnerReportCards');
+    const meta = $('#aiOwnerReportMeta');
+    if (!host) return;
+    if (ownerReport?.error) {
+      host.innerHTML = `<div class="ai-evolution-empty">운영보고 연결 대기 · ${esc(ownerReport.error)}</div>`;
+      if (meta) meta.textContent = 'EKODI Orchestrator · 연결 확인 필요';
+      return;
+    }
+    const report = ownerReport;
+    if (!report) {
+      host.innerHTML = '<div class="ai-evolution-empty">아직 중요 운영보고가 없습니다. EKODI가 승인된 범위에서 자율운영 중입니다.</div>';
+      if (meta) meta.textContent = 'EKODI Orchestrator · 중요 변화만 보고';
+      return;
+    }
+    const tone = report.category === 'owner-decision-required' ? 'gate'
+      : report.category === 'attention-required' ? 'high'
+      : 'normal';
+    const when = report.generatedAt ? new Date(report.generatedAt).toLocaleString('ko-KR') : '시간 확인 필요';
+    const action = report.requiredAction && report.requiredAction !== '없음'
+      ? `<div class="ai-evolution-card-foot"><span>필요 조치 · ${esc(report.requiredAction)}</span></div>`
+      : '<div class="ai-evolution-card-foot"><span>대표 조치 없음</span></div>';
+    host.innerHTML = `<article class="ai-evolution-card ${tone}">
+      <div class="ai-evolution-card-top"><strong>${esc(report.title || 'EKODI 운영보고')}</strong><b>${esc(report.importance || 'info')}</b></div>
+      <p>${esc(report.summary || '')}</p>
+      ${action}
+    </article>`;
+    if (meta) meta.textContent = `${esc(report.reportAuthor || 'EKODI Orchestrator')} · ${when} · 누적 ${ownerReportHistory.length}건`;
   }
 
   function renderEvolution() {
@@ -482,6 +538,7 @@
     const data = summary();
     data.decisions += evolutionRecommendations().filter(item => item?.approval?.required).length;
     renderMetrics(data);
+    renderOwnerReport();
     renderEvolution();
     renderFleet();
     renderSelectedDetail();
@@ -495,8 +552,8 @@
     const button = $('#aiOpsRefresh');
     if (button) { button.disabled = true; button.textContent = '↻ 점검 중…'; }
     try {
-      await loadOverview(true);
-      await loadEvolution(false);
+      await loadOwnerReport(true);
+      await Promise.all([loadOverview(false), loadEvolution(false), loadOwnerReport(false)]);
       render();
     } catch (error) {
       render(error.message || '상태점검 실패');
