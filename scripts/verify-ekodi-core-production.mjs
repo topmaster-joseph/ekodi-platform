@@ -3,10 +3,10 @@ import { mkdir, writeFile } from 'node:fs/promises';
 const apiBase = 'https://ekodi.kr';
 const majorHosts = [
   ['root', 'https://ekodi.kr/'],
-  ['admin', 'https://admin.ekodi.kr/'],
-  ['auth', 'https://auth.ekodi.kr/'],
-  ['biz', 'https://biz.ekodi.kr/'],
-  ['marketing', 'https://marketing.ekodi.kr/'],
+  ['admin', 'https://ekodi.kr/admin/'],
+  ['auth', 'https://ekodi.kr/auth/'],
+  ['biz', 'https://ekodi.kr/ekodibiz/'],
+  ['marketing', 'https://ekodi.kr/ekodibiz/marketing-ai'],
   ['church', 'https://ekodi.kr/ekodichurch/'],
   ['lab', 'https://ekodi.kr/ekodilab/'],
 ];
@@ -50,7 +50,7 @@ const report = {
   securityHeaders: {},
 };
 
-const health = await jsonGet('/health');
+const health = await jsonGet('/api/health');
 assert(health.data?.ok === true, 'Control API health is not ok');
 report.core.health = true;
 
@@ -98,7 +98,7 @@ for (const [label, url] of majorHosts) {
   report.hosts[label] = { url, status: response.status, finalUrl: response.url };
 }
 
-const headerProbe = await fetchWithRetry(`${apiBase}/health`);
+const headerProbe = await fetchWithRetry(`${apiBase}/api/health`);
 const hsts = headerProbe.headers.get('strict-transport-security') || '';
 const nosniff = headerProbe.headers.get('x-content-type-options') || '';
 assert(hsts.length > 0, 'Production API is missing strict-transport-security');
