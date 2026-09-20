@@ -128,7 +128,7 @@ jobs:
           console.log('transactionSafety=verified');
           NODE
 
-          curl -fsS --retry 3 --retry-delay 2 --connect-timeout 5 --max-time 30 'https://api.ekodi.kr/api/affiliate/public/products?storefront=ekodi-mall&limit=100' -o /tmp/products.json
+          curl -fsS --retry 3 --retry-delay 2 --connect-timeout 5 --max-time 30 'https://ekodi.kr/api/affiliate/public/products?storefront=ekodi-mall&limit=100' -o /tmp/products.json
           node <<'NODE'
           const fs = require('node:fs');
           const payload = JSON.parse(fs.readFileSync('/tmp/products.json', 'utf8'));
@@ -152,7 +152,7 @@ jobs:
             if (!/^https:\/\//.test(String(product.imageUrl || ''))) throw new Error(`imageUrl missing for ${product.productName}`);
             if (!String(product.providerKey || '').trim()) throw new Error(`providerKey missing for ${product.productName}`);
             const click = new URL(String(product.clickUrl || ''));
-            if (click.origin !== 'https://api.ekodi.kr' || !click.pathname.startsWith('/api/affiliate/public/click/')) {
+            if (click.origin !== 'https://ekodi.kr' || !click.pathname.startsWith('/api/affiliate/public/click/')) {
               throw new Error(`invalid tracked click URL for ${product.productName}`);
             }
           }
