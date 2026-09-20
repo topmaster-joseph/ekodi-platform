@@ -91,3 +91,15 @@ test('collaboration settings enforce read and operate capabilities server-side',
   assert.match(source, /error: 'capability_required', capability: requiredCapability/);
   assert.match(source, /sessionCapabilityGranted\(session, requiredCapability\)/);
 });
+
+test('executeNow claims the newly ingested task instead of an unrelated queued or retry task', () => {
+  const control = fs.readFileSync(new URL('../ai-command-control.js', import.meta.url), 'utf8');
+  const runtime = fs.readFileSync(new URL('../ekodi-pulse-runtime.js', import.meta.url), 'utf8');
+  const ledger = fs.readFileSync(new URL('../ekodi-command-ledger.js', import.meta.url), 'utf8');
+  assert.match(control, /runEkodiCommandQueue\(env, \{ limit: 1, taskId: task\.id \}\)/);
+  assert.match(runtime, /claimEkodiCommandTask\(env, requestedTaskId/);
+  assert.match(runtime, /requestedTaskId \? 1 : Math\.min/);
+  assert.match(ledger, /export async function claimEkodiCommandTask/);
+  assert.match(ledger, /WHERE id = \? AND state IN \('queued','retry'\)/);
+});
+
