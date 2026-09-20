@@ -117,4 +117,6 @@ test('shared-site release verifies Tapo admin assets before production completio
   assert.ok(!tapoCss.headerExpect?.includes('x-ekodi-route: admin-asset'));
   assert.ok(tapoJs.headerExpect?.includes('x-content-type-options: nosniff'));
   assert.ok(tapoCss.headerExpect?.includes('x-content-type-options: nosniff'));
+  assert.ok(tapoJs.headerExpect?.includes('cache-control: no-store'));
+  assert.ok(tapoCss.headerExpect?.includes('cache-control: no-store'));
 });
