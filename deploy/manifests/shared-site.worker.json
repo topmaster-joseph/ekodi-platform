@@ -1187,17 +1187,16 @@
       {
         "url": "https://mail.ekodi.kr/admin",
         "statuses": [
-          200
+          307
         ],
         "redirect": "manual",
-        "expect": [
-          "EKODI Mail Admin",
-          "한곳에서 관리하되 개인·기관의 실제 권한 경계는 그대로 유지합니다."
-        ],
         "headerExpect": [
-          "x-ekodi-route: mail-admin",
-          "cache-control: no-store"
-        ]
+          "location: https://ekodi.kr/admin/",
+          "cache-control: no-store",
+          "x-robots-tag: noindex, nofollow, noarchive",
+          "x-content-type-options: nosniff"
+        ],
+        "rollbackVerify": false
       },
       {
         "url": "https://live.ekodi.kr/",
