@@ -53,6 +53,7 @@ expect(workflow.includes('free-tier-resource-governor.test.mjs'),'orchestration 
 expect(collectorWorkflow.includes('collect-free-tier-resource-usage.mjs'),'resource collector workflow must execute the measured collector');
 expect(collectorWorkflow.includes('push:')&&collectorWorkflow.includes('branches:')&&collectorWorkflow.includes('- main'),'resource collector must run on relevant main pushes');
 expect(collectorWorkflow.includes('provider_quota_snapshots'),'resource collector workflow must persist into the quota snapshot ledger');
+expect(collectorWorkflow.includes('environment: production'),'resource collector must reuse the established production environment secret boundary');
 expect(collectorWorkflow.includes('SUPABASE_ACCESS_TOKEN'),'resource collector must use the existing Supabase management credential boundary');
 expect(collectorWorkflow.includes('SUPABASE_TOKEN'),'resource collector must accept the existing Supabase token fallback');
 expect(collectorWorkflow.includes('SUPABASE_PAT'),'resource collector must accept the existing Supabase PAT fallback');
