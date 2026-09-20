@@ -6,7 +6,7 @@ const sb=createClient(SUPABASE_URL,PUBLISHABLE_KEY,{auth:{detectSessionInUrl:fal
 const workspaceSwitch=document.getElementById('workspaceSwitch');
 
 function loginHref(){
-  const target=new URL('https://auth.ekodi.kr/');
+  const target=new URL('https://ekodi.kr/auth/');
   target.searchParams.set('site','social');
   target.searchParams.set('return_to',location.href.split('#')[0]);
   return target.href;
