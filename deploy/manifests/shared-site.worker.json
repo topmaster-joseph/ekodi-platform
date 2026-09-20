@@ -1,5 +1,5 @@
 {
-  "version": 75,
+  "version": 76,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
@@ -129,6 +129,120 @@
         ],
         "headerExpect": [
           "x-ekodi-canonical-surface: my"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/jadam/my",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "MY PAGE · SITE",
+          "jadam 마이페이지",
+          "핵심서비스",
+          "공통서비스",
+          "전문서비스",
+          "/_ekodi/member-home/site-member-home.js"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: site-member-home",
+          "x-ekodi-member-home: site-local-v1",
+          "x-robots-tag: noindex, nofollow, noarchive",
+          "cache-control: no-store"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/ekodimission/my",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "에코디선교회 마이페이지",
+          "핵심서비스",
+          "공통서비스",
+          "전문서비스",
+          "return_to=https%3A%2F%2Fekodi.kr%2Fekodimission%2Fmy"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: site-member-home",
+          "x-ekodi-member-home: site-local-v1",
+          "x-robots-tag: noindex, nofollow, noarchive",
+          "cache-control: no-store"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/bible/my",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "마이페이지",
+          "핵심서비스",
+          "공통서비스",
+          "전문서비스"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: site-member-home",
+          "x-ekodi-member-home: site-local-v1",
+          "cache-control: no-store"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/_ekodi/member-home/foundation.json?audience=organization",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "site-local-member-home-v1",
+          "registry-live",
+          "organization",
+          "futureRegistryChangesApplyAutomatically"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: site-member-home-foundation",
+          "cache-control: no-store"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/_ekodi/member-home/site-member-home.css",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          ".smh-hero",
+          ".smh-services",
+          "@media(max-width:760px)"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: site-member-home-asset",
+          "x-content-type-options: nosniff"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/_ekodi/member-home/site-member-home.js",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "current_site_member_home_profile",
+          "update_site_member_home_preferences",
+          "ekodi:site-member-home-ready"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: site-member-home-asset",
+          "x-content-type-options: nosniff"
         ],
         "rollbackVerify": false
       },

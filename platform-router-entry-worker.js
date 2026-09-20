@@ -34,6 +34,7 @@ import { decorateDiscoveryResponse } from './discovery-layer.js';
 import { realtimeTenantAdminFromPath, realtimeTenantFromPath } from './realtime-tenant-registry.js';
 import { tenantLivePage } from './tenant-live-page.js';
 import { tenantLiveAdminCss, tenantLiveAdminPage, tenantLiveAdminScript } from './tenant-live-admin-page.js';
+import { memberHomeRouteFromPath, siteMemberHomePage, siteMemberFoundationResponse, MEMBER_HOME_JS, MEMBER_HOME_CSS } from './site-member-home-page.js';
 
 const PUBLIC_HOST='ekodi.kr';
 const CGMA_HOSTS=new Set(['cgma.or.kr','www.cgma.or.kr']);
@@ -78,6 +79,18 @@ function workspaceServiceUnavailable(){
 function workspaceUpstreamRequest(request,pathname){
   const url=new URL(request.url);url.pathname=pathname;
   return new Request(url,{method:request.method,headers:request.headers,body:['GET','HEAD'].includes(request.method)?undefined:request.body,redirect:request.redirect});
+}
+async function routeSiteMemberHomeAsset(request,env){
+  if(!env?.ASSETS?.fetch)return new Response('Asset unavailable',{status:503,headers:{'cache-control':'no-store'}});
+  const url=new URL(request.url);
+  const source=url.pathname===MEMBER_HOME_JS?'/site-member-home.js':url.pathname===MEMBER_HOME_CSS?'/site-member-home.css':'';
+  if(!source)return null;
+  const response=await env.ASSETS.fetch(workspaceUpstreamRequest(request,source));
+  const headers=new Headers(response.headers);
+  headers.set('cache-control','public, max-age=300');
+  headers.set('x-content-type-options','nosniff');
+  headers.set('x-ekodi-route','site-member-home-asset');
+  return new Response(response.body,{status:response.status,statusText:response.statusText,headers});
 }
 function rewriteWorkspaceShellAssets(response){
   const rewrite=(element,name)=>{const value=element.getAttribute(name)||'';for(const asset of WORKSPACE_ASSETS){const rootPath=`/${asset}`;if(value===rootPath||value.startsWith(`${rootPath}?`)){element.setAttribute(name,`${WORKSPACE_ASSET_PREFIX}${asset}${value.slice(rootPath.length)}`);break}}};
@@ -162,15 +175,18 @@ async function routeDeploymentProbe(request,env){
 }
 async function routePublicWorkspace(request,env){
   if(!env?.SPACE?.fetch)return workspaceServiceUnavailable();
-  const progressiveHome=isWorkspaceProgressiveHome(new URL(request.url).pathname);
-  const upstream=await env.SPACE.fetch(request);const routed=new Response(upstream.body,upstream);routed.headers.set('x-ekodi-workspace-gateway','space-service-binding');
+  const pathname=new URL(request.url).pathname;
+  const progressiveHome=isWorkspaceProgressiveHome(pathname);
+  const locator=workspaceRouteFromPublicPath(pathname);
+  const memberHomeUrl=locator?.slug?`https://ekodi.kr/${encodeURIComponent(locator.slug)}/my`:'https://ekodi.kr/my/';
+  const upstream=await env.SPACE.fetch(request);const routed=new Response(upstream.body,upstream);routed.headers.set('x-ekodi-workspace-gateway','space-service-binding');routed.headers.set('x-ekodi-member-home',memberHomeUrl);
   if(routed.headers.get('x-ekodi-route')==='space-storefront'){routed.headers.set('x-ekodi-public-surface','customer-storefront');const branded=injectEkodiTenantReadability(routed);return progressiveHome?injectEkodiProgressiveHome(branded):branded;}
   if(routed.headers.get('x-ekodi-independent-site')==='true'){
     routed.headers.set('x-ekodi-public-surface','independent-workspace-site');
     const branded=injectEkodiTenantReadability(routed);
     return progressiveHome?injectEkodiProgressiveHome(branded):branded;
   }
-  return injectEkodiShell(rewriteWorkspaceShellAssets(routed),'space','workspace',{progressiveHome,contextKind:'workspace'});
+  return injectEkodiShell(rewriteWorkspaceShellAssets(routed),'space','workspace',{progressiveHome,contextKind:'workspace',memberHomeUrl});
 }
 
 async function routeTaxFinance(request,env,ctx){
@@ -233,6 +249,10 @@ export default {
     if(host===PUBLIC_HOST&&(url.pathname==='/api/finance'||url.pathname.startsWith('/api/finance/')))return routeTaxFinance(request,env,ctx);
     if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)){const adminTarget=legacyAdminAliasTarget(url.pathname);if(adminTarget){const target=new URL(request.url);target.pathname=adminTarget;return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-content-type-options':'nosniff','x-ekodi-route':'admin-canonical-handoff'}})}}
     if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)){
+      if(url.pathname===MEMBER_HOME_JS||url.pathname===MEMBER_HOME_CSS)return routeSiteMemberHomeAsset(request,env);
+      if(url.pathname==='/_ekodi/member-home/foundation.json')return siteMemberFoundationResponse(request);
+      const memberHomeRoute=memberHomeRouteFromPath(url.pathname);
+      if(memberHomeRoute)return siteMemberHomePage(request,memberHomeRoute);
       if(url.pathname==='/tenant-live-admin.css')return tenantLiveAdminCss();
       if(url.pathname==='/tenant-live-admin.js')return tenantLiveAdminScript();
       const liveAdminTenant=realtimeTenantAdminFromPath(url.pathname);

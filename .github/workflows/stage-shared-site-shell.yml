@@ -16,6 +16,15 @@ on:
       - 'site-shell-worker.js'
       - 'platform-router-worker.js'
       - 'platform-router-entry-worker.js'
+      - 'site-member-home-page.js'
+      - 'site-member-home.js'
+      - 'site-member-home.css'
+      - 'config/site-member-home.json'
+      - 'config/capability-registry.json'
+      - 'config/workspace-packs.json'
+      - 'generated/site-member-home-foundation.js'
+      - 'scripts/generate-site-member-home-foundation.mjs'
+      - 'test/site-member-home.test.mjs'
       - 'store-gateway-page.js'
       - 'store-portfolio-admin-page.js'
       - 'test/store-public-gateway.test.mjs'
@@ -77,6 +86,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          node scripts/generate-user-service-registry.mjs
           source_date_epoch="$(git show -s --format=%ct HEAD)"
           [[ "$source_date_epoch" =~ ^[0-9]+$ ]]
           echo "SOURCE_DATE_EPOCH=$source_date_epoch" >> "$GITHUB_ENV"
@@ -92,6 +102,9 @@ jobs:
           node --check site-shell-worker.js
           node --check platform-router-worker.js
           node --check platform-router-entry-worker.js
+          node --check site-member-home-page.js
+          node --check site-member-home.js
+          node --check scripts/generate-site-member-home-foundation.mjs
           node --check store-gateway-page.js
           node --check store-portfolio-admin-page.js
           node --check insurance-public-route.js
@@ -115,6 +128,8 @@ jobs:
           test -f dist/sitemap.xml
           test -f dist/llms.txt
           test -f dist/auth-workspace-target.js
+          test -f dist/site-member-home.js
+          test -f dist/site-member-home.css
           grep -Fq 'OAI-SearchBot' dist/robots.txt
           grep -Fq 'User-agent: GPTBot' dist/robots.txt
           grep -Fq 'Disallow: /' dist/robots.txt
@@ -229,6 +244,8 @@ jobs:
               && verify_public_path '/messenger' 'EKODI Messenger' 'x-ekodi-shell: v2' \
               && verify_public_path '/invest' 'EKODI Invest' 'x-ekodi-shell: v2' \
               && verify_public_path '/cmpmyi' 'THREE STORES · ONE GATE' 'x-ekodi-route: store-gateway' \
+              && verify_public_path '/jadam/my' 'jadam 마이페이지' 'x-ekodi-route: site-member-home' \
+              && verify_public_path '/ekodimission/my' '에코디선교회 마이페이지' 'x-ekodi-route: site-member-home' \
               && verify_public_path '/deployment-probe' 'OPERATING SPACE' 'x-ekodi-workspace-gateway: space-service-binding' \
               && verify_public_path '/ekodibiz' 'EKODIBIZ' 'x-ekodi-workspace-gateway: ekodibiz-service-binding' \
               && verify_public_path '/insurance' '보험을 파는 AI가 아니라, 내 보험을 챙겨주는 AI' 'x-ekodi-route: public-insurance' \

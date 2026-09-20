@@ -20,13 +20,19 @@ function legacyRecorder(){
   return {calls,fetch};
 }
 
-test('canonical surface roots normalize with trailing slashes',async()=>{
-  for(const path of ['/my','/admin','/auth']){
+test('canonical Admin and Auth roots normalize while global My landing is retired to the hub',async()=>{
+  for(const path of ['/admin','/auth']){
     const response=await routeCanonicalSurface(new Request(`https://ekodi.kr${path}`),{});
     assert.equal(response.status,308);assert.equal(new URL(response.headers.get('location')).pathname,`${path}/`);
   }
+  for(const path of ['/my','/my/']){
+    const response=await routeCanonicalSurface(new Request(`https://ekodi.kr${path}`),{});
+    assert.equal(response.status,308);
+    assert.equal(new URL(response.headers.get('location')).pathname,'/');
+    assert.equal(response.headers.get('x-ekodi-route'),'retired-global-my-to-root');
+  }
 });
-test('My and system paths preserve the internal execution boundary',async()=>{
+test('legacy deep My capabilities and system paths preserve their internal execution boundaries',async()=>{
   const my=binding(),control=binding();
   let response=await routeCanonicalSurface(new Request('https://ekodi.kr/my/docs/app.js'),{MY:my,CONTROL_API:control});
   assert.equal(response.status,200);assert.equal(my.calls[0].pathname,'/docs/app.js');assert.equal(response.headers.get('x-ekodi-canonical-surface'),'my');

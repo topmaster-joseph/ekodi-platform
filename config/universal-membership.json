@@ -30,7 +30,10 @@
     "generator": "scripts/generate-user-service-registry.mjs",
     "generatedServerModule": "generated/user-services.js",
     "generatedMyModule": "my/user-services.js",
-    "enabledForFutureRegistryServices": true
+    "enabledForFutureRegistryServices": true,
+    "siteMemberHomePolicy": "config/site-member-home.json",
+    "siteMemberHomeGenerator": "scripts/generate-site-member-home-foundation.mjs",
+    "futureRegistryServicesAppearWithoutPerUserMigration": true
   },
   "excludedInfrastructure": [
     "admin",
@@ -55,5 +58,15 @@
       "health_check",
       "required_webhook"
     ]
+  },
+  "siteMemberHome": {
+    "defaultAfterSiteLogin": true,
+    "globalMyEkodiFallback": "https://ekodi.kr/my/",
+    "canonicalWorkspacePattern": "https://ekodi.kr/{slug}/my",
+    "canonicalServicePattern": "https://ekodi.kr/{canonical-service-path}/my",
+    "foundationMaterialization": "eager_on_person_tenant_store_creation",
+    "serviceAndCapabilityProjection": "live_from_current_registries",
+    "customizationStorage": "site_member_home_preferences",
+    "customizationGrantsAuthorization": false
   }
 }

@@ -117,7 +117,12 @@ if (shell?.header?.strategy !== 'adopt-existing-first' || shell?.header?.owner !
 if (shell?.header?.fallback !== 'shared-shell-header-when-missing') {
   errors.push('User header must provide the shared fallback header when a page has no service header.');
 }
-for (const meaning of ['EKODI identity', 'current service context', 'account or My EKODI path', 'language choice']) {
+if (shell?.principles?.siteLocalMemberHomeAfterLogin !== true
+    || shell?.memberHome?.owner !== 'current-site'
+    || shell?.memberHome?.registryProjection !== 'live') {
+  errors.push('User Shell must route signed-in site users to a site-local My Page backed by the live registry projection.');
+}
+for (const meaning of ['EKODI identity', 'current service context', 'account or site-local My Page path', 'language choice']) {
   if (!shell?.header?.requiredMeaning?.includes(meaning)) errors.push(`User header is missing required meaning: ${meaning}`);
 }
 for (const selector of ['header','.site-header','.topbar','.app-header','.main-header','[data-ekodi-fixed-header]']) {

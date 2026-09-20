@@ -35,11 +35,12 @@ async function renderPublicStorefront(slug){
 }
 
 
-function authStart(){const target=new URL('/auth/start',location.origin);target.searchParams.set('return_to',location.href.split('#')[0]);location.assign(target.href)}
+function siteMemberHome(){const slug=routeMatch?.[1]||'';return slug?`${location.origin}/${encodeURIComponent(slug)}/my`:location.href.split('#')[0]}
+function authStart(){const target=new URL('/auth/start',location.origin);target.searchParams.set('return_to',siteMemberHome());location.assign(target.href)}
 function status(text,type=''){const el=$('status');if(!el)return;el.textContent=text;el.dataset.type=type}
 function show(id,on=true){$(id)?.classList.toggle('hidden',!on)}
 function esc(value){return String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-function pathFor(space){return `/${encodeURIComponent(space.slug)}`}
+function pathFor(space){return `/${encodeURIComponent(space.slug)}/my`}
 function won(value){return Number.isFinite(Number(value))?`${Number(value).toLocaleString('ko-KR')}원`:'—'}
 function dateText(value){if(!value)return '기록 없음';const date=new Date(value);return Number.isNaN(date.getTime())?'기록 없음':date.toLocaleString('ko-KR',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})}
 async function session(){const {data,error}=await sb.auth.getSession();if(error)throw error;return data.session}
@@ -212,6 +213,7 @@ async function renderSignedIn(){
   renderSpaces(currentSpaces);renderSwitcher(currentSpaces);await renderWorkspace();
 }
 async function boot(){
+  const siteHome=$('siteMemberHomeLink');if(siteHome)siteHome.href=siteMemberHome();
   if(routeMatch?.[1]==='yogurt'){await renderPublicStorefront('yogurt');return;}
   if(!cfg.dataEnabled||!cfg.supabaseUrl||!cfg.supabasePublishableKey||!cfg.workspaceApi){show('signedOut',true);show('signedIn',false);show('login',false);show('spaceSwitcherWrap',false);status('이 환경은 개인 운영데이터와 분리된 검증 환경입니다.');return;}
   try{

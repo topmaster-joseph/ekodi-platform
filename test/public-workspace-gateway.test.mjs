@@ -33,7 +33,7 @@ test('canonical public workspace paths use the isolated Space service binding',a
   assert.ok(router.includes("import { isPublicWorkspacePath } from './workspace-route-policy.js'"));
   assert.match(router,/env\?\.SPACE\?\.fetch/);
   assert.ok(router.includes("routed.headers.set('x-ekodi-workspace-gateway','space-service-binding')"));
-  assert.ok(router.includes("injectEkodiShell(rewriteWorkspaceShellAssets(routed),'space','workspace')"));
+  assert.ok(router.includes("injectEkodiShell(rewriteWorkspaceShellAssets(routed),'space','workspace',{progressiveHome,contextKind:'workspace',memberHomeUrl})"));
   assert.match(router,/safeWorkspaceReturnTo/);
   assert.ok(router.includes("const DEPLOYMENT_PROBE_PATH='/deployment-probe'"));
   assert.match(router,/routeDeploymentProbe[\s\S]*workspaceUpstreamRequest\(request,'\/'\)/);
@@ -74,6 +74,8 @@ test('customer storefront and independent workspace responses receive readabilit
   const router=await read('platform-router-entry-worker.js');
   assert.match(router,/space-storefront'[\s\S]*customer-storefront'[\s\S]*injectEkodiTenantReadability/);
   assert.match(router,/x-ekodi-independent-site'[\s\S]*independent-workspace-site'[\s\S]*injectEkodiTenantReadability/);
+  assert.ok(router.includes("const memberHomeUrl=locator?.slug?`https://ekodi.kr/${encodeURIComponent(locator.slug)}/my`:'https://ekodi.kr/my/'"));
+  assert.ok(router.includes("routed.headers.set('x-ekodi-member-home',memberHomeUrl)"));
   assert.doesNotMatch(router,/space-storefront'[\s\S]{0,300}injectEkodiShell/);
 });
 

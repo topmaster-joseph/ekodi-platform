@@ -32,7 +32,8 @@
     "globalAmbientAudioForbidden": true,
     "progressiveHomeDisclosure": true,
     "languageChoiceInHeaderOnly": true,
-    "footerLanguageChoiceForbidden": true
+    "footerLanguageChoiceForbidden": true,
+    "siteLocalMemberHomeAfterLogin": true
   },
   "header": {
     "owner": "shared-shell",
@@ -41,7 +42,7 @@
     "requiredMeaning": [
       "EKODI identity",
       "current service context",
-      "account or My EKODI path",
+      "account or site-local My Page path",
       "language choice"
     ],
     "localNavigation": "service-owned",
@@ -156,7 +157,10 @@
     "canonicalPath": "https://ekodi.kr/my",
     "persistentGlobalControl": "forbidden",
     "servicePageSwitcher": "forbidden",
-    "contextHandoff": "central-auth-and-workspace-context"
+    "contextHandoff": "central-auth-and-workspace-context",
+    "role": "cross-site workspace directory only",
+    "siteLocalMemberHome": "https://ekodi.kr/{site}/my",
+    "loginReturn": "current-site-member-home"
   },
   "inheritance": {
     "hostRule": "all public/workspace service hosts inherit the manifest service shell",
@@ -212,5 +216,13 @@
     "backgrounds": "header-and-footer-shells-remain-full-bleed",
     "responsive": "follow-adopted-main-resize",
     "subserviceInheritance": true
+  },
+  "memberHome": {
+    "owner": "current-site",
+    "canonicalPattern": "https://ekodi.kr/{site}/my",
+    "globalFallback": "https://ekodi.kr/my",
+    "sourceOfTruth": "config/site-member-home.json",
+    "personalization": "presentation-only",
+    "registryProjection": "live"
   }
 }
