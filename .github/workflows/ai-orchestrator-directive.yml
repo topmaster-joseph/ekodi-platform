@@ -1,4 +1,4 @@
-# EKODI AI Orchestrator Directive CI guardrail v1
+# EKODI AI Orchestrator Directive CI guardrail v2
 name: AI Orchestrator Directive
 
 on:
@@ -36,6 +36,6 @@ jobs:
           node-version: 24
           package-manager-cache: true
       - run: npm ci
-      - run: npm run validate:orchestrator-directive
+      - run: npm run validate:orchestration
       - run: npm run validate:mission
       - run: npm run validate:ai-resilience

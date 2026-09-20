@@ -91,3 +91,21 @@ test('collaboration settings enforce read and operate capabilities server-side',
   assert.match(source, /error: 'capability_required', capability: requiredCapability/);
   assert.match(source, /sessionCapabilityGranted\(session, requiredCapability\)/);
 });
+
+test('executeNow targets the newly ingested task instead of draining an unrelated retry', () => {
+  const control = fs.readFileSync(new URL('../ai-command-control.js', import.meta.url), 'utf8');
+  const runtime = fs.readFileSync(new URL('../ekodi-pulse-runtime.js', import.meta.url), 'utf8');
+  const ledger = fs.readFileSync(new URL('../ekodi-command-ledger.js', import.meta.url), 'utf8');
+  assert.match(control, /runEkodiCommandQueue\(env, \{ limit: 1, taskId: task\.id \}\)/);
+  assert.match(runtime, /claimEkodiCommandTask\(env, requestedTaskId/);
+  assert.match(ledger, /export async function claimEkodiCommandTask/);
+  assert.match(ledger, /WHERE id = \? AND state IN \('queued','retry'\)/);
+});
+
+test('live production proof fails fast unless the submitted task itself executes', () => {
+  const workflow = fs.readFileSync(new URL('../.github/workflows/verify-ekodi-orchestrator-live-e2e.yml', import.meta.url), 'utf8');
+  assert.match(workflow, /\.execution\.processed == 1/);
+  assert.match(workflow, /\.execution\.results\[0\]\.taskId == \$taskId/);
+  assert.doesNotMatch(workflow, /Wait for an empty command queue/);
+});
+

@@ -4,6 +4,7 @@ import { getEkodiAiProviderRegistryStatus } from './ekodi-ai-provider-registry.j
 import { recordAutonomousHealthSnapshot } from './ekodi-autonomous-health-telemetry.js';
 import { attachEkodiConsultationReceipt } from './ekodi-consultation-ledger.js';
 import {
+  claimEkodiCommandTask,
   claimNextEkodiCommandTask,
   getEkodiCommandLedgerStatus,
   ingestEkodiPulse,
@@ -112,6 +113,7 @@ export async function getEkodiProviderOperationalReadiness(env = {}) {
 export async function runEkodiCommandQueue(env = {}, options = {}) {
   if (!env.DB?.prepare) return Object.freeze({ ok: false, processed: 0, reason: 'command_ledger_db_unavailable' });
   const limit = Math.min(Math.max(Number(options.limit) || 1, 1), 3);
+  const requestedTaskId = text(options.taskId, 120);
   let collaboration;
   try {
     collaboration = await collaborationRuntime(env);
@@ -122,7 +124,9 @@ export async function runEkodiCommandQueue(env = {}, options = {}) {
   const results = [];
 
   for (let index = 0; index < limit; index += 1) {
-    const task = await claimNextEkodiCommandTask(env, { leaseMs: 180000 });
+    const task = requestedTaskId
+      ? (index === 0 ? await claimEkodiCommandTask(env, requestedTaskId, { leaseMs: 180000 }) : null)
+      : await claimNextEkodiCommandTask(env, { leaseMs: 180000 });
     if (!task) break;
     const startedAt = new Date().toISOString();
     let result;
@@ -200,6 +204,7 @@ export async function runEkodiCommandQueue(env = {}, options = {}) {
     consultationByNeed: true,
     collaborationByDefault: false,
     collaborationRevision: collaboration.revision,
+    targetedTaskId: requestedTaskId || null,
     results: Object.freeze(results),
   });
 }
