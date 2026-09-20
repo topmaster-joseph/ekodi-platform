@@ -24,6 +24,7 @@ $ProtocolKey = 'Registry::HKEY_LOCAL_MACHINE\Software\Classes\ekodi-device'
 $AgentSourceUrl = 'https://raw.githubusercontent.com/topmaster-joseph/ekodi-platform/main/tools/ekodi-device-agent/windows/ekodi-device-agent.ps1'
 $AllowedApiBase = 'https://api.ekodi.kr'
 $UpgradeRoot = Join-Path $Root 'transactions'
+$script:RestartAfterCommand = $false
 $BrowserCanaryStatePath = Join-Path $Root 'background-browser-canary.json'
 $BrowserCanaryProfileRoot = Join-Path $env:ProgramData 'EKODI\BrowserWorker\CanaryProfile'
 $BrowserCanaryUrl = 'https://ekodi.kr/'
@@ -784,7 +785,7 @@ function Update-AgentFromOfficialSource {
   Invoke-WebRequest -UseBasicParsing $AgentSourceUrl -OutFile $temp
   [void](Assert-AgentCandidate $temp)
   $result = Invoke-AgentUpgradeTransaction -CandidatePath $temp -DeferRestart
-  return @{ message = "EKODI Device Agent를 트랜잭션 방식으로 $($result.version) 버전으로 업데이트했습니다. 현재 실행은 다음 안전 재시작 때 새 코드로 전환됩니다."; settings = Get-AgentSettings }
+  return @{ message = "EKODI Device Agent를 트랜잭션 방식으로 $($result.version) 버전으로 업데이트했습니다. 명령 결과 전송 후 Agent를 안전 재시작합니다."; restartRequired = $true; version = $result.version; settings = Get-AgentSettings }
 }
 
 function Get-AgentSettings {
@@ -1130,6 +1131,9 @@ function Poll-Command($Config) {
   try {
     $result = Invoke-DeviceCommand $response.command
     Complete-Command $Config ([string]$response.command.id) $true $result
+    if ([string]$response.command.type -eq 'agent.self_update' -and $result.restartRequired -eq $true) {
+      $script:RestartAfterCommand = $true
+    }
   } catch {
     Complete-Command $Config ([string]$response.command.id) $false @{ message = $_.Exception.Message }
   }
@@ -1286,14 +1290,20 @@ function Run-Agent {
         if (((Get-Date) - $lastHeartbeat).TotalSeconds -ge 60) { Send-Heartbeat $config; $lastHeartbeat = Get-Date }
         Reconcile-DesktopCommanderRecovery
         Poll-Command $config
+        if ($script:RestartAfterCommand) { break }
       } catch {
         # 네트워크 중단은 다음 주기에 자동 복구합니다. 임의 명령 실행으로 우회하지 않습니다.
       }
       Start-Sleep -Seconds 10
     }
   } finally {
+    $restart = [bool]$script:RestartAfterCommand
     try { $mutex.ReleaseMutex() } catch { }
     $mutex.Dispose()
+    if ($restart) {
+      Start-Sleep -Milliseconds 500
+      Start-AgentProcess
+    }
   }
 }
 
