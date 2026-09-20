@@ -38,7 +38,7 @@ const LIVE_PUBLIC_SITE_CATALOG = realtimeTenantList().map(tenant => ({
   id: `live-${String(tenant.apiTenant || tenant.id).toLowerCase()}`,
   workspaceId: tenant.workspace || tenant.apiTenant || tenant.id,
   name: `${tenant.name} Live`,
-  domain: `ekodi.kr${tenant.path.replace(/\\/$/, '')}`,
+  domain: `ekodi.kr${tenant.path.replace(/\/$/, '')}`,
   defaultPublicStatus: 'public',
   defaultMaintenanceDisplayType: 'default',
   defaultMaintenanceRedirectUrl: '',
