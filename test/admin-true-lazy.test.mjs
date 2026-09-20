@@ -78,9 +78,10 @@ test('device browser diagnostics are mirrored under canonical /admin and verifie
     assert.ok(!request.headerExpect?.some(item => item.includes('x-ekodi-route: admin-asset')));
   }
 
-  const urls = manifest.worker.requests.map(item => item.url);
-  assert.ok(!urls.includes('https://admin.ekodi.kr/device-browser-diagnostics.js?v=device-v28'));
-  assert.ok(!urls.includes('https://admin.ekodi.kr/device-browser-diagnostics.css?v=device-v28'));
+  const diagnosticRequests = manifest.worker.requests
+    .filter(item => /\/device-browser-diagnostics\.(?:js|css)\?v=device-v28$/.test(item.url || ''));
+  assert.equal(diagnosticRequests.length, 2);
+  assert.ok(diagnosticRequests.every(item => String(item.url).startsWith('https://ekodi.kr/admin/')));
 });
 
 test('shared admin navigation exposes seven canonical areas with top contextual tabs', async () => {
