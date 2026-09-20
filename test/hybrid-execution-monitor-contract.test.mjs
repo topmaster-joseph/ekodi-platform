@@ -35,7 +35,7 @@ test('watchdog detects node loss, backlog, repeated failures and requeue churn',
 });
 
 test('watchdog verifies production Control health and deployed Hybrid admin asset', () => {
-  assert.match(monitor, /https:\/\/api\.ekodi\.kr\/health/);
+  assert.match(monitor, /https:\/\/ekodi\.kr\/api\/health/);
   assert.match(monitor, /https:\/\/admin\.ekodi\.kr\/device-control-admin\.js/);
   assert.match(monitor, /EKODI HYBRID EXECUTION/);
   assert.match(monitor, /admin_hybrid_asset_missing/);
