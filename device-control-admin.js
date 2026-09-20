@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const API_BASE = 'https://api.ekodi.kr';
+  const API_BASE = 'https://ekodi.kr';
   const TOKEN_KEY = 'ekodi-auth-token';
   const WINDOWS_AGENT_URL = 'https://raw.githubusercontent.com/topmaster-joseph/ekodi-platform/main/tools/ekodi-device-agent/windows/ekodi-device-agent.ps1';
   const BOOTSTRAP_URL = '/ekodi-device-bootstrap.cmd';
