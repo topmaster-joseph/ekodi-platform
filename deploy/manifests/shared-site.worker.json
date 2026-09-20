@@ -1255,11 +1255,13 @@
         "redirect": "manual",
         "expect": [
           "EKODI Live",
-          "LIVE LOBBY",
+          "LIVE BROADCAST PROFESSIONAL SERVICE",
+          "라이브 서비스 사이트",
           "data-ekodi-service=\"live\""
         ],
         "headerExpect": [
-          "x-ekodi-route: hub"
+          "x-ekodi-shell: v2",
+          "x-ekodi-ui-surface: user-public"
         ]
       },
       {
