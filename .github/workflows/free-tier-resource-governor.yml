@@ -1,4 +1,5 @@
 name: Free Tier Resource Governor
+# Main-path changes intentionally trigger one post-merge collection baseline in addition to the daily schedule.
 
 on:
   workflow_dispatch:
