@@ -218,30 +218,38 @@ function degradedValue(role, reason) {
   });
 }
 
-async function runAssigned({ env, provider, taskName, context, role, objective, timeoutMs, governance = {} }) {
-  if (!provider) {
+async function runAssigned({ env, provider, fallbackProviders = [], taskName, context, role, objective, timeoutMs, governance = {} }) {
+  const candidates=[provider,...fallbackProviders].filter((candidate,index,array)=>candidate&&array.findIndex(item=>item?.id===candidate.id)===index);
+  if (!candidates.length) {
     return Object.freeze({ role, provider: null, mode: 'core_only', ok: false, value: degradedValue(role, 'no_eligible_provider') });
   }
-  const orchestrator = buildEkodiAiOrchestrator(env, [provider]);
-  const result = await orchestrator.run({
-    taskName,
-    context: Object.freeze({
-      ...context,
-      commandPlane: Object.freeze({ role, objective }),
-    }),
-    collaboration: 'primary',
-    risk: 'normal',
-    requiredCapabilities: [],
-    governance,
-    timeoutMs,
-    fallback: reason => degradedValue(role, reason),
-  });
+  let last=null;
+  for(const candidate of candidates){
+    const orchestrator = buildEkodiAiOrchestrator(env, [candidate]);
+    const result = await orchestrator.run({
+      taskName,
+      context: Object.freeze({
+        ...context,
+        commandPlane: Object.freeze({ role, objective }),
+      }),
+      collaboration: 'primary',
+      risk: 'normal',
+      requiredCapabilities: [],
+      governance,
+      timeoutMs,
+      fallback: reason => degradedValue(role, reason),
+    });
+    last=result;
+    if(result.mode==='ai'&&result.ok!==false){
+      return Object.freeze({role,provider:result.provider,mode:result.mode,ok:true,value:result.value});
+    }
+  }
   return Object.freeze({
     role,
-    provider: result.mode === 'ai' ? result.provider : null,
-    mode: result.mode,
-    ok: result.mode === 'ai' && result.ok !== false,
-    value: result.value,
+    provider:null,
+    mode:last?.mode||'core_only',
+    ok:false,
+    value:last?.value||degradedValue(role,'provider_unavailable'),
   });
 }
 
@@ -257,15 +265,22 @@ export function buildEkodiCommandPlane(env = {}, providers = []) {
       consultationDecision: plan.consultationDecision,
     });
 
+    const governance=input.governance||{};
+    const zeroCostFallbacks=(selectedId,requiredCapabilities=[])=>normalizedProviders.filter(candidate=>
+      candidate.id!==selectedId
+      && supports(candidate,requiredCapabilities)
+      && evaluateAiCostEligibility(candidate,{governance}).eligible
+    );
     const specialistResults = await Promise.all(plan.assignments.map(assignment => runAssigned({
       env,
       provider: providerById(normalizedProviders, assignment.provider),
+      fallbackProviders: zeroCostFallbacks(assignment.provider,assignment.requiredCapabilities),
       taskName: `${plan.taskId}.${assignment.role}`,
       context,
       role: assignment.role,
       objective: assignment.objective,
       timeoutMs: input.timeoutMs,
-      governance: input.governance || {},
+      governance,
     })));
 
     const specialistEvidence = Object.freeze(specialistResults.map(result => Object.freeze({
@@ -288,7 +303,8 @@ export function buildEkodiCommandPlane(env = {}, providers = []) {
       role: 'sentinel',
       objective: 'Independently verify the specialist evidence. Do not merely agree with the specialists.',
       timeoutMs: input.timeoutMs,
-      governance: input.governance || {},
+      governance,
+      fallbackProviders: zeroCostFallbacks(plan.sentinelProvider,['review']),
     }) : null;
 
     const reverifierProvider = providerById(normalizedProviders, plan.reverifierProvider);
@@ -305,7 +321,8 @@ export function buildEkodiCommandPlane(env = {}, providers = []) {
       role: 'reverifier',
       objective: 'Reverify the task after the first sentinel review and report only structured findings.',
       timeoutMs: input.timeoutMs,
-      governance: input.governance || {},
+      governance,
+      fallbackProviders: zeroCostFallbacks(plan.reverifierProvider,['review']),
     }) : null;
 
     const successfulProviders = new Set(specialistResults.filter(result => result.ok && result.provider).map(result => result.provider));
@@ -315,6 +332,8 @@ export function buildEkodiCommandPlane(env = {}, providers = []) {
     const sentinelOk = !plan.consultationDecision.requirements.sentinel || Boolean(sentinel?.ok);
     const reverifierOk = !plan.consultationDecision.requirements.reverifier || Boolean(reverifier?.ok);
     const diversityOk = successfulProviders.size >= Number(plan.consultationDecision.requirements.minProviderDiversity || 0);
+    const specialistProviderIds=new Set(specialistResults.filter(result=>result.ok&&result.provider).map(result=>result.provider));
+    const sentinelIndependent=Boolean(sentinel?.ok&&sentinel.provider&&!specialistProviderIds.has(sentinel.provider));
     const state = specialistOk && sentinelOk && reverifierOk && diversityOk
       ? 'verified'
       : successfulProviders.size > 0
@@ -339,7 +358,7 @@ export function buildEkodiCommandPlane(env = {}, providers = []) {
         specialistCount: specialistResults.length,
         successfulSpecialists: specialistResults.filter(result => result.ok).length,
         providerDiversity: successfulProviders.size,
-        sentinelIndependent: Boolean(sentinel?.ok && plan.sentinelIndependent),
+        sentinelIndependent,
         verified: state === 'verified',
         consultation: Object.freeze({
           status: consultation.status,
