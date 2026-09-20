@@ -394,7 +394,7 @@ async function billingStart(request, env) {
     .bind(checkout, subject.type, subject.key, site, plan.id, plan.monthlyFee, customerKey, identity.email, expires.toISOString(), now.toISOString()).run();
 
   const returnTo = String(body?.returnTo || '').slice(0, 500);
-  const callback = new URL('https://auth.ekodi.kr/');
+  const callback = new URL('https://ekodi.kr/auth/');
   callback.searchParams.set('site', site);
   callback.searchParams.set('billing', 'success');
   callback.searchParams.set('checkout', checkout);
