@@ -17,7 +17,8 @@ test('legacy and aggregate Mall admin paths redirect to the unique site-owned ad
     ['https://ekodi.kr/ekodibiz/mall?ref=former','https://ekodi.kr/ekodimall?ref=former','mall-former-canonical-redirect'],
     ['https://ekodi.kr/ekodibiz/mall/admin/channels','https://ekodi.kr/ekodimall/admin/channel-settings','admin-canonical-handoff'],
     ['https://ekodi.kr/admin/ekodimall/channel-settings','https://ekodi.kr/ekodimall/admin/channel-settings','admin-canonical-handoff'],
-    ['https://ekodi.kr/ekodibiz/ekodimall/admin/marketing/channels','https://ekodi.kr/ekodibiz/ekodimall/admin/channel-settings','admin-canonical-handoff'],
+    ['https://ekodi.kr/ekodibiz/ekodimall/admin/marketing/channels','https://ekodi.kr/ekodimall/admin/channel-settings','admin-canonical-handoff'],
+    ['https://ekodi.kr/ekodibiz/ekodimall?ref=parent','https://ekodi.kr/ekodimall?ref=parent','mall-parent-canonical-redirect'],
     ['https://ekodi.kr/org/ekodibiz','https://ekodi.kr/ekodibiz','ekodibiz-legacy-canonical-redirect'],
   ]) {
     const response = await siteWorker.fetch(new Request(from), {}, {});
