@@ -27,6 +27,7 @@
   "approvalEvidence": {
     "explicitOwnerInstruction": true,
     "requiredPullRequestLabel": "constitution-approved",
-    "approvalLabel": "constitution-approved"
+    "approvalLabel": "constitution-approved",
+    "pullRequest": 2180
   }
 }
