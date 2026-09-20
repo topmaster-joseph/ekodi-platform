@@ -23,7 +23,7 @@
   const SITE_META = [
     { domain:'ekodi.kr', name:'EKODI Home', group:'Core & Access', role:'생태계 정문·서비스 레지스트리', aliases:['에코디 홈','에코디','홈','root','home'] },
     { domain:'admin.ekodi.kr', name:'Control Center', group:'Core & Access', role:'통합운영·권한·감사', aliases:['관리자','관리자페이지','컨트롤센터','control center','admin'] },
-    { domain:'auth.ekodi.kr', name:'EKODI Auth', group:'Core & Access', role:'통합인증·계정·SSO', aliases:['인증센터','통합인증','인증','auth','로그인'] },
+    { domain:'ekodi.kr/auth', name:'EKODI Auth', group:'Core & Access', role:'통합인증·계정·SSO', aliases:['인증센터','통합인증','인증','auth','로그인'] },
     { domain:'life.ekodi.kr', name:'오늘의 질문', group:'Life & Community', role:'삶의 질문·성찰·말씀 연결·실천', aliases:['오늘의 질문','인생ai','인생 ai','life ai','life'] },
     { domain:'church.ekodi.kr', name:'에코디교회', group:'Community', role:'예배·사역·공동체 운영', aliases:['에코디교회','교회','church'] },
     { domain:'community.ekodi.kr', name:'커뮤니티', group:'Community', role:'관계·그룹·참여·소통', aliases:['커뮤니티','커뮤니티','community'] },
@@ -356,7 +356,7 @@
     } else {
       items.push({ name:'Chief AI', conclusion:'전체 Site AI 상태를 모아 우선순위와 영향범위를 판단합니다.' });
     }
-    if (/(로그인|인증|권한|보안|token|토큰|auth)/i.test(text) || site?.domain === 'auth.ekodi.kr') items.push({ name:'Security AI', conclusion:'인증·권한·토큰 노출 여부를 우선 확인하고 비밀정보를 브라우저에 남기지 않는 경계를 적용합니다.' });
+    if (/(로그인|인증|권한|보안|token|토큰|auth)/i.test(text) || site?.domain === 'ekodi.kr/auth') items.push({ name:'Security AI', conclusion:'인증·권한·토큰 노출 여부를 우선 확인하고 비밀정보를 브라우저에 남기지 않는 경계를 적용합니다.' });
     if (/(결제|요금|가격|정산|회계|pay|finance)/i.test(text) || site?.domain === 'pay.ekodi.kr') items.push({ name:'Finance AI', conclusion:'결제·정산·비용 영향은 별도 검토하며 정책 변경은 Decision Gate를 거칩니다.' });
     if (classification !== 'INFO' || status?.key === 'critical' || /(배포|수정|고쳐|복구|장애|오류)/i.test(text)) items.push({ name:'Release AI', conclusion:'수정이 필요하면 staging → CI → guarded release → 실제 도메인 검증 순서를 유지합니다.' });
     items.push({ name:'Platform AI', conclusion:'API·네트워크·공통 인프라와 서비스 상태를 함께 비교합니다.' });
@@ -426,7 +426,7 @@
       let overview = latestOverview;
       try { overview = await fetchOverview(false); } catch {}
       const issues = overviewIssues(overview);
-      const critical = issues.filter(item => ['admin.ekodi.kr','auth.ekodi.kr','pay.ekodi.kr','api.ekodi.kr'].includes(item.domain));
+      const critical = issues.filter(item => ['admin.ekodi.kr','ekodi.kr/auth','pay.ekodi.kr','api.ekodi.kr'].includes(item.domain));
       return {
         role:'assistant', classification:critical.length ? 'DECISION' : 'INFO',
         content:critical.length
@@ -476,10 +476,10 @@
         if (service?.stats24h) content += `\n24시간 가용률: ${service.stats24h.availabilityPercent ?? '—'}% · 평균응답 ${service.stats24h.averageResponseTime ?? '—'}ms`;
         if (!service) content += '\n\n이 사이트는 AI Ops에는 등록되어 있지만 Control API 실시간 점검 레지스트리에는 아직 직접 연결되지 않았습니다. 상태판에서는 “연결 대기”로 표시합니다.';
         return {
-          role:'assistant', classification:status?.key === 'critical' && ['admin.ekodi.kr','auth.ekodi.kr','pay.ekodi.kr'].includes(site.domain) ? 'DECISION' : status?.key === 'critical' || status?.key === 'attention' ? 'REPORT' : 'INFO',
+          role:'assistant', classification:status?.key === 'critical' && ['admin.ekodi.kr','ekodi.kr/auth','pay.ekodi.kr'].includes(site.domain) ? 'DECISION' : status?.key === 'critical' || status?.key === 'attention' ? 'REPORT' : 'INFO',
           content,
           council:councilFor(site, status, input, status?.key === 'healthy' ? 'INFO' : 'REPORT'),
-          actions:actionSet(site, { includeReview:!force, includeDecision:status?.key === 'critical' && ['admin.ekodi.kr','auth.ekodi.kr','pay.ekodi.kr'].includes(site.domain) }),
+          actions:actionSet(site, { includeReview:!force, includeDecision:status?.key === 'critical' && ['admin.ekodi.kr','ekodi.kr/auth','pay.ekodi.kr'].includes(site.domain) }),
         };
       }
       const issues = overviewIssues(overview);
