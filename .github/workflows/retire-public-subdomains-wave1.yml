@@ -76,5 +76,21 @@ jobs:
         run: |
           test -n "$CLOUDFLARE_API_TOKEN"
           test -n "$CLOUDFLARE_ACCOUNT_ID"
+      - name: Read Production Cloudflare quota Source of Truth
+        id: quota
+        run: node scripts/cloudflare-production-budget.mjs --output=cloudflare-production-quota.json
+      - name: Hold retirement while quota protection circuit is open
+        if: steps.quota.outputs.skip_nonessential == 'true'
+        run: |
+          echo "Cloudflare Production quota is in protect/exhausted state. Domain retirement is deferred without probing apex or changing Worker Domains."
+          {
+            echo "### Domain retirement deferred"
+            echo "- Quota state: **${{ steps.quota.outputs.state }}**"
+            echo "- Usage: **${{ steps.quota.outputs.percent }}%**"
+            echo "- Action: no apex probe, no detach, no retry"
+          } >> "$GITHUB_STEP_SUMMARY"
       - name: Detach proven-safe public Worker domains with rollback
+        if: steps.quota.outputs.skip_nonessential != 'true'
+        env:
+          EKODI_CF_QUOTA_STATE: ${{ steps.quota.outputs.state }}
         run: node scripts/retire-worker-custom-domains.mjs --config config/retire-public-subdomains-wave1.json

@@ -17,9 +17,11 @@ for (const host of siteOwnedHosts) {
     const response = await worker.fetch(new Request(`https://${host}/admin`), {});
     assert.equal(response.status, 307);
     const location = new URL(response.headers.get('location'));
-    assert.equal(location.origin, 'https://admin.ekodi.kr');
+    assert.equal(location.origin, 'https://ekodi.kr');
+    assert.equal(location.pathname, '/admin/');
     assert.equal(location.searchParams.get('source'), host);
     assert.equal(response.headers.get('cache-control'), 'no-store');
+    assert.equal(response.headers.get('x-content-type-options'), 'nosniff');
     assert.match(response.headers.get('x-robots-tag') || '', /noindex/i);
   });
 }

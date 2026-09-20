@@ -54,7 +54,7 @@ async function legacyGone(host){
 const detached=[];
 let rollbackAllowed=true;
 try{
-  for(const t of targets){await health(t.apexHealth,t.expect);await health(t.directHealth,t.expect)}
+  for(const t of targets){await health(t.apexHealth,t.apexExpect||t.expect);await health(t.directHealth,t.directExpect||t.expect)}
   const domains=await listDomains();
   for(const t of targets){
     const host=oldHost(t);
@@ -72,8 +72,8 @@ try{
     let absent=false;
     for(let attempt=1;attempt<=18;attempt++){absent=!(await listDomains()).some(d=>d.hostname===host);if(absent)break;await new Promise(r=>setTimeout(r,2500))}
     if(!absent)throw new Error("Domain still attached: "+host);
-    await health(t.apexHealth,t.expect);
-    await health(t.directHealth,t.expect);
+    await health(t.apexHealth,t.apexExpect||t.expect);
+    await health(t.directHealth,t.directExpect||t.expect);
   }
   rollbackAllowed=false;
   for(const t of targets){
