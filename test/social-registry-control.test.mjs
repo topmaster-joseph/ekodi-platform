@@ -89,5 +89,6 @@ test('central Admin CSP permits the Social Marketing Connect API', async () => {
   const start=worker.indexOf('const ADMIN_CSP = [');
   assert.ok(start>=0);
   const adminCsp=worker.slice(start,start+1400);
-  assert.match(adminCsp,/https:\/\/marketing-connect-api\.ekodi\.kr/);
+  assert.doesNotMatch(adminCsp,/marketing-connect-api\.ekodi\.kr/);
+  assert.match(adminCsp,/connect-src 'self'/);
 });

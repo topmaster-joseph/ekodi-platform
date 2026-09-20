@@ -6,6 +6,10 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/verify-ekodi-orchestrator-live-e2e.yml'
+  workflow_run:
+    workflows: ['Deploy Control API']
+    types: [completed]
+    branches: [main]
 
 permissions:
   contents: read
@@ -21,11 +25,14 @@ env:
 
 jobs:
   live-orchestration-proof:
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
       - name: Issue short-lived genuine production admin session
         shell: bash
@@ -165,8 +172,10 @@ jobs:
             ] | map(select(. != null and . != "")) | unique' "$RUNNER_TEMP/ekodi-orchestrator-task.json")
           sentinel_independent=$(jq -r '.task.evidence.sentinelIndependent // false' "$RUNNER_TEMP/ekodi-orchestrator-task.json")
           consultation_status=$(jq -r '.task.consultation.status // .task.result.consultation.status // "unknown"' "$RUNNER_TEMP/ekodi-orchestrator-task.json")
+          configured_providers=$(jq -c '[.task.result.plan.configuredProviders[]? | {id,available,costClass,freeQuotaRemaining}]' "$RUNNER_TEMP/ekodi-orchestrator-task.json")
+          provider_attempts=$(jq -c '[.task.result.specialists[]? | {role,provider,mode,ok,reason:(.value.reason // .value.code // null)}]' "$RUNNER_TEMP/ekodi-orchestrator-task.json")
 
-          jq -n             --arg taskId "$TASK_ID"             --arg state "$terminal"             --arg canonicalIngress "$EKODI_ORIGIN/api/control/ai/v8/pulse"             --argjson providerDiversity "$provider_diversity"             --argjson actualProviderCount "$actual_provider_count"             --argjson actualProviders "$actual_providers"             --argjson sentinelIndependent "$sentinel_independent"             --arg consultationStatus "$consultation_status"             '{
+          jq -n             --arg taskId "$TASK_ID"             --arg state "$terminal"             --arg canonicalIngress "$EKODI_ORIGIN/api/control/ai/v8/pulse"             --argjson providerDiversity "$provider_diversity"             --argjson actualProviderCount "$actual_provider_count"             --argjson actualProviders "$actual_providers"             --argjson sentinelIndependent "$sentinel_independent"             --arg consultationStatus "$consultation_status"             --argjson configuredProviders "$configured_providers"             --argjson providerAttempts "$provider_attempts"             '{
               schemaVersion:1,
               proof:"ekodi-orchestrator-live-production-e2e",
               externalTestClient:"github-actions",
@@ -176,10 +185,15 @@ jobs:
               providerDiversity:$providerDiversity,
               actualProviderCount:$actualProviderCount,
               actualProviders:$actualProviders,
+              configuredProviders:$configuredProviders,
+              providerAttempts:$providerAttempts,
               sentinelIndependent:$sentinelIndependent,
               consultationStatus:$consultationStatus,
               productionMutationPerformed:false
             }' > "$RUNNER_TEMP/ekodi-orchestrator-proof.json"
+
+          # Emit only sanitized provider metadata and failure codes; never provider secret values.
+          cat "$RUNNER_TEMP/ekodi-orchestrator-proof.json"
 
           # The user's claim requires real external-provider execution, not a structural/core-only pass.
           test "$provider_diversity" -ge 1

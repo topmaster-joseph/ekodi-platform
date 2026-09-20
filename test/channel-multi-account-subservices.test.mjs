@@ -16,8 +16,8 @@ test('subservices and store admins inherit the multi-account channel center',asy
   assert.match(store,/STORE_SECTIONS=.*publishing/);
   assert.match(store,/subject_type=store&subject_key=/);
   assert.match(store,/authorityRef:`store:\$\{STORE_ID\}`/);
-  assert.match(store,/marketing-connect-api\.ekodi\.kr/);
-  assert.match(store,/marketing-publish-api\.ekodi\.kr/);
+  assert.match(store,/const GROWTH_API='\/marketing-connect-api'/);
+  assert.match(store,/const PUBLISH_API='\/marketing-publish-api'/);
   assert.match(growth,/registryWorkspaceSlug/);
   assert.match(growth,/subject\?\.type==='store'/);
   assert.match(growth,/autoPublishEnabled:false/);

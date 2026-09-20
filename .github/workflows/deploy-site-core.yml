@@ -83,6 +83,7 @@ on:
       - 'homepage-ambient.css'
       - 'homepage-ambient.js'
       - 'hub.html'
+      - 'test/hub-apex-routing.test.mjs'
       - 'trade.html'
       - 'styles.css'
       - 'script.js'
@@ -300,6 +301,7 @@ jobs:
           node --test test/store-admin-systems.test.mjs test/store-user-site-admin.test.mjs test/tenant-admin-policy.test.mjs test/workspace-admin-marketing-channels-route.test.mjs test/workspace-admin-two-level-shell.test.mjs test/mall-v83-workspace-admin.test.mjs test/personal-finance-admin-control.test.mjs test/admin-finance-render-performance.test.mjs test/admin-authenticated-e2e-retry.test.mjs test/admin-assist-command-delivery.test.mjs test/ekodimission-admin-production-e2e-contract.test.mjs
           node --test test/cloudflare-quota-guard.test.mjs test/production-gate-transport-resilience.test.mjs
           node --test test/shared-site-release-ownership.test.mjs
+          node --test test/hub-apex-routing.test.mjs
           node --test test/admin-subdomain-redirect-runtime.test.mjs
           node --test test/tapo-admin-asset-boundary.test.mjs test/admin-true-lazy.test.mjs test/mall-production-verifier-contract.test.mjs
           node --test test/admin-assist-dock.test.mjs test/admin-deploy-report.test.mjs test/openai-workspace-release-contract.test.mjs test/shared-site-admin-probe.test.mjs

@@ -119,6 +119,9 @@ for (const marker of [
   'validate-additive-migrations.mjs migrations',
   'apply-d1-migrations-with-retry.sh ekodi-auth wrangler.ai.release.toml',
   'guarded-worker-release.mjs --manifest deploy/manifests/ai-control.worker.json --secrets-file /tmp/ai-control-secrets.json',
+  'SECRET_COUNT=$(node -',
+  'No GitHub-managed AI Control secrets supplied; preserving existing Worker secrets.',
+  'guarded-worker-release.mjs --manifest deploy/manifests/ai-control.worker.json',
   'validate-cognitive-control-plane.mjs',
   'test/cognitive-control-plane.test.mjs',
 ]) {

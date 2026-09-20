@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import {
   COGNITIVE_CONTROL_POLICY,
   evaluateControlIntent,
@@ -20,6 +21,17 @@ const verifiedArtifact = Object.freeze({
 });
 const fullGates = [...COGNITIVE_CONTROL_POLICY.requiredPromotionGates];
 const fullMigrationGates = [...COGNITIVE_CONTROL_POLICY.requiredMigrationGates];
+
+const readSource = path => fs.readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
+
+test('AI Control release preserves runtime secrets when GitHub supplies none', () => {
+  const workflow = readSource('.github/workflows/deploy-ai-control.yml');
+  assert.ok(workflow.includes('SECRET_COUNT=$(node -'));
+  assert.ok(workflow.includes('if [ "$SECRET_COUNT" -gt 0 ]; then'));
+  assert.ok(workflow.includes('--secrets-file /tmp/ai-control-secrets.json'));
+  assert.ok(workflow.includes('No GitHub-managed AI Control secrets supplied; preserving existing Worker secrets.'));
+  assert.ok(workflow.includes('node scripts/guarded-worker-release.mjs --manifest deploy/manifests/ai-control.worker.json\n'));
+});
 
 function mallWorkload(overrides = {}) {
   return normalizeWorkloadEvent({

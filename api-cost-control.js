@@ -1,9 +1,10 @@
 import authWorker from './auth-worker.js';
 import { apiCostPolicy, ensureApiUsageSchema, getSponsoredAiAllowance } from './api-usage-meter.js';
 import { FREE_TIER_THRESHOLDS, FREE_TIER_RETRY_STOP_SIGNALS } from './free-tier-quota-guard.js';
+import { buildFreeTierResourceGovernor, FREE_TIER_RESOURCE_CATALOG } from './free-tier-resource-governor.js';
 
 const PATH = '/api/control/api-cost';
-const REFERENCE_DATE = '2026-08-27';
+const REFERENCE_DATE = '2026-09-20';
 
 function json(data, status = 200, sourceHeaders = new Headers()) {
   const headers = new Headers({
@@ -80,7 +81,25 @@ async function aiSeries(db) {
   }));
 }
 
-function providerCards(allowance, traffic, env) {
+async function resourceQuotaLedger(db) {
+  try {
+    const [snapshotRows,stateRows]=await Promise.all([
+      db.prepare(`SELECT provider,metric,period_start,observed_value,free_limit,usage_percent,source,observed_at
+        FROM provider_quota_snapshots ORDER BY observed_at DESC LIMIT 500`).all(),
+      db.prepare(`SELECT provider,state,highest_usage_percent,last_error_code,circuit_open,source,observed_at
+        FROM provider_quota_state ORDER BY observed_at DESC`).all(),
+    ]);
+    return { available:true, snapshots:snapshotRows.results||[], states:stateRows.results||[] };
+  } catch {
+    return { available:false, snapshots:[], states:[] };
+  }
+}
+
+function providerResource(governor,id){
+  return governor?.providers?.[id]||null;
+}
+
+function providerCards(allowance, traffic, env, governor) {
   const policy = apiCostPolicy(env);
   const openAi = {
     id: 'openai',
@@ -118,6 +137,7 @@ function providerCards(allowance, traffic, env) {
     note: traffic.available
       ? '현재 값은 Zone Analytics 운영 추세이며 Workers 과금 지표와 동일하지 않아 한도 비율 계산에는 사용하지 않습니다.'
       : 'Cloudflare Analytics 집계 연결이 필요합니다.',
+    resourceGovernor: providerResource(governor,'cloudflare'),
   };
 
   return [
@@ -126,17 +146,20 @@ function providerCards(allowance, traffic, env) {
     {
       id: 'cloudflare-d1', name: 'Cloudflare D1', connection: 'needs-connection', status: 'unknown', comparisonEligible: false,
       usage: null, limit: { readsPerDay: 5_000_000, writesPerDay: 100_000, storageGb: 5 },
-      note: 'D1은 사용 중이지만 계정 quota telemetry를 이 Worker에서 직접 읽지 않습니다.',
+      note: 'D1은 quota ledger에 실제 측정값이 들어온 경우에만 사용률을 계산합니다.',
+      resourceGovernor: providerResource(governor,'cloudflare'),
     },
     {
       id: 'cloudflare-kv', name: 'Cloudflare KV', connection: 'needs-connection', status: 'unknown', comparisonEligible: false,
       usage: null, limit: { readsPerDay: 100_000, writesPerDay: 1_000, deletesPerDay: 1_000, listsPerDay: 1_000, storageGb: 1 },
       note: 'KV write는 무료 한도가 작으므로 heartbeat/log 원장으로 사용하지 않습니다.',
+      resourceGovernor: providerResource(governor,'cloudflare'),
     },
     {
       id: 'cloudflare-r2', name: 'Cloudflare R2 Standard', connection: 'needs-connection', status: 'unknown', comparisonEligible: false,
       usage: null, limit: { storageGbMonth: 10, classAMonth: 1_000_000, classBMonth: 10_000_000, egress: 'free' },
       note: 'R2는 임시·배포·고속 객체용이며 장기 공식 자료는 Google Workspace Shared Drive가 기준입니다.',
+      resourceGovernor: providerResource(governor,'cloudflare'),
     },
     {
       id: 'google-drive', name: 'Google Drive / Workspace API', connection: 'needs-connection', status: 'unknown', comparisonEligible: false,
@@ -144,9 +167,19 @@ function providerCards(allowance, traffic, env) {
       note: '실제 Google Cloud quota/billing 수집 연결 전까지 임의 사용량을 표시하지 않습니다.',
     },
     {
-      id: 'github-actions', name: 'GitHub Actions', connection: 'needs-connection', status: 'unknown', comparisonEligible: false,
-      usage: null, limit: { publicRepositoryStandardRunners: 'free' },
-      note: 'Actions 계정 사용량 API를 연결하기 전까지 실행 분·스토리지 사용량을 추정하지 않습니다.',
+      id: 'supabase', name: 'Supabase Free', connection: providerResource(governor,'supabase')?.telemetryStatus || 'needs-connection',
+      status: providerResource(governor,'supabase')?.state || 'unknown', comparisonEligible: false,
+      usage: providerResource(governor,'supabase')?.metrics || null,
+      limit: FREE_TIER_RESOURCE_CATALOG.supabase,
+      resourceGovernor: providerResource(governor,'supabase'),
+      note: '조직/프로젝트 실제 측정값만 사용합니다. 프로젝트 수 한도는 기존 서비스 차단이 아니라 신규 프로젝트 생성만 막습니다.',
+    },
+    {
+      id: 'github-actions', name: 'GitHub Actions', connection: 'policy-known', status: providerResource(governor,'github')?.state || 'normal', comparisonEligible: false,
+      usage: providerResource(governor,'github')?.metrics || null,
+      limit: FREE_TIER_RESOURCE_CATALOG.github,
+      resourceGovernor: providerResource(governor,'github'),
+      note: '현재 저장소는 public 기준으로 표준 GitHub-hosted runner 실행시간을 비용 병목으로 보지 않고 중복 실행·artifact/cache 저장량을 우선 최적화합니다.',
     },
   ];
 }
@@ -162,14 +195,19 @@ export async function handleApiCostControl(request, env = {}) {
 
   try {
     await ensureApiUsageSchema(env.DB);
-    const [allowance, traffic, series] = await Promise.all([
+    const [allowance, traffic, series, quotaLedger] = await Promise.all([
       getSponsoredAiAllowance(env),
       cloudflareTraffic(env.DB),
       aiSeries(env.DB),
+      resourceQuotaLedger(env.DB),
     ]);
-    const providers = providerCards(allowance, traffic, env);
+    const resourceGovernor=buildFreeTierResourceGovernor({
+      snapshots:quotaLedger.snapshots,
+      states:quotaLedger.states,
+    });
+    const providers = providerCards(allowance, traffic, env, resourceGovernor);
     return json({
-      schemaVersion: 1,
+      schemaVersion: 2,
       generatedAt: new Date().toISOString(),
       referenceDate: REFERENCE_DATE,
       thresholds: allowance.policy.thresholds,
@@ -181,6 +219,7 @@ export async function handleApiCostControl(request, env = {}) {
         sourceOfTruthRequired: true,
       },
       sponsoredAi: allowance,
+      resourceGovernor: { ...resourceGovernor, ledgerAvailable: quotaLedger.available, catalog: FREE_TIER_RESOURCE_CATALOG },
       providers,
       series,
       policy: {
