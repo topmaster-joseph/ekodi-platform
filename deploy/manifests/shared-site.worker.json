@@ -626,7 +626,7 @@
         "rollbackVerify": false
       },
       {
-        "url": "https://admin.ekodi.kr/tapo-device-admin.js",
+        "url": "https://ekodi.kr/admin/tapo-device-admin.js",
         "statuses": [
           200
         ],
@@ -637,13 +637,12 @@
           "TAPO EDGE BRIDGE"
         ],
         "headerExpect": [
-          "x-ekodi-route: admin-asset",
           "x-content-type-options: nosniff"
         ],
         "rollbackVerify": false
       },
       {
-        "url": "https://admin.ekodi.kr/tapo-device-admin.css",
+        "url": "https://ekodi.kr/admin/tapo-device-admin.css",
         "statuses": [
           200
         ],
@@ -653,7 +652,6 @@
           ".tapo-camera-dialog"
         ],
         "headerExpect": [
-          "x-ekodi-route: admin-asset",
           "x-content-type-options: nosniff"
         ],
         "rollbackVerify": false
