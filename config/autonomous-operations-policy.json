@@ -1,8 +1,8 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "policyId": "EKODI-AUTONOMY-001",
   "status": "active",
-  "effectiveDate": "2026-09-17",
+  "effectiveDate": "2026-09-20",
   "purpose": "Keep EKODI autonomous, communicative, lightweight, creative, safe, and human-sovereign without turning routine operation into continuous owner micromanagement.",
   "scope": [
     "platform",
@@ -45,54 +45,105 @@
         "id": "github-actions-ephemeral",
         "class": "cloud-ci",
         "availability": "ready",
-        "roles": ["reproduce", "test", "build", "workflow-evidence", "bounded-rerun"],
+        "roles": [
+          "reproduce",
+          "test",
+          "build",
+          "workflow-evidence",
+          "bounded-rerun"
+        ],
         "mutationBoundary": "ephemeral-workspace-only"
       },
       {
         "id": "isolated-container-sandbox",
         "class": "container-sandbox",
         "availability": "ready",
-        "roles": ["reproduce", "test", "build", "dependency-isolation", "failure-injection"],
+        "roles": [
+          "reproduce",
+          "test",
+          "build",
+          "dependency-isolation",
+          "failure-injection"
+        ],
         "mutationBoundary": "isolated-sandbox-only"
       },
       {
         "id": "serverless-staging-executor",
         "class": "serverless-cloud",
         "availability": "conditional",
-        "roles": ["staging-probe", "edge-runtime-verification", "service-contract-test"],
-        "requires": ["registered-boundary", "delegated-provider-credential"],
+        "roles": [
+          "staging-probe",
+          "edge-runtime-verification",
+          "service-contract-test"
+        ],
+        "requires": [
+          "registered-boundary",
+          "delegated-provider-credential"
+        ],
         "mutationBoundary": "registered-staging-boundary-only"
       },
       {
         "id": "database-local-sandbox",
         "class": "data-sandbox",
         "availability": "conditional",
-        "roles": ["schema-test", "rls-test", "migration-dry-run", "integration-test"],
-        "requires": ["task-needs-data-plane"],
+        "roles": [
+          "schema-test",
+          "rls-test",
+          "migration-dry-run",
+          "integration-test"
+        ],
+        "requires": [
+          "task-needs-data-plane"
+        ],
         "mutationBoundary": "ephemeral-database-only"
       },
       {
         "id": "browser-e2e-executor",
         "class": "browser-e2e",
         "availability": "conditional",
-        "roles": ["ui-reproduction", "login-flow-test", "route-test", "post-deploy-verification"],
-        "requires": ["browser-capability-available"],
+        "roles": [
+          "ui-reproduction",
+          "login-flow-test",
+          "route-test",
+          "post-deploy-verification"
+        ],
+        "requires": [
+          "browser-capability-available"
+        ],
         "mutationBoundary": "test-session-only"
       },
       {
         "id": "authorized-remote-execution-node",
         "class": "remote-node",
         "availability": "conditional",
-        "roles": ["os-specific-test", "long-running-task", "special-device-test", "local-network-integration"],
-        "requires": ["registered-node", "fresh-heartbeat", "task-scoped-delegation"],
+        "roles": [
+          "os-specific-test",
+          "long-running-task",
+          "special-device-test",
+          "local-network-integration"
+        ],
+        "requires": [
+          "registered-node",
+          "fresh-heartbeat",
+          "task-scoped-delegation"
+        ],
         "mutationBoundary": "registered-task-workspace-only"
       },
       {
         "id": "external-ai-tool-worker",
         "class": "external-ai-tool",
         "availability": "conditional",
-        "roles": ["independent-analysis", "alternate-implementation", "review", "research", "diagnosis"],
-        "requires": ["approved-provider", "task-scoped-capability"],
+        "roles": [
+          "independent-analysis",
+          "alternate-implementation",
+          "review",
+          "research",
+          "diagnosis"
+        ],
+        "requires": [
+          "approved-provider",
+          "task-scoped-capability"
+        ],
         "mutationBoundary": "proposal-or-isolated-branch-only"
       }
     ],
@@ -152,12 +203,21 @@
     "default": "report-only-what-matters",
     "preferredCategories": [
       "operating-well",
+      "verified-completion",
       "owner-decision-required",
       "attention-required"
     ],
     "suppressRoutineProcessNarration": true,
     "neverHideMaterialRiskOrRequiredHumanAction": true,
-    "reportDegradedExecutionLanesOnlyWhenTheyReduceRequiredEvidenceOrNeedOwnerAction": true
+    "reportDegradedExecutionLanesOnlyWhenTheyReduceRequiredEvidenceOrNeedOwnerAction": true,
+    "reportOwner": "ekodi-orchestrator",
+    "reportAuthor": "EKODI Orchestrator",
+    "chatgptTriggerRequired": false,
+    "durableLedger": "ekodi_owner_reports",
+    "deliverySurface": "/admin#ai-ops",
+    "emitOnlyOnMaterialStateChange": true,
+    "suppressDuplicateStateReports": true,
+    "reportVerifiedRecovery": true
   },
   "safety": {
     "neverExpandOwnAuthority": true,
