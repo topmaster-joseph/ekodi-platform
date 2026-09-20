@@ -60,6 +60,8 @@ test('pastor admin client enforces church staff lookup before data modules', asy
   assert.match(source, /Google 계정으로 관리자 확인/);
   assert.match(source, /https:\/\/ekodi\.kr\/workspace-api\/v1\/site-chrome/);
   assert.doesNotMatch(source, /https:\/\/(?:api|workspace-api)\.ekodi\.kr/);
+  assert.match(source, /https:\/\/ekodi\.kr\/workspace-api\/v1\/site-chrome/);
+  assert.doesNotMatch(source, /https:\/\/(?:api|workspace-api)\.ekodi\.kr/);
 });
 
 test('production entry routes church admin before generic workspace admin', async () => {
