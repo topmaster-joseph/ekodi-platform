@@ -20,7 +20,7 @@ test('retirement does not reattach successfully detached domains only because le
   assert.match(source,/rollbackAllowed=false/);
   assert.match(source,/if\(rollbackAllowed\)/);
   assert.match(source,/attempt<=60/);
-  assert.match(source,/setTimeout\(r,5000\)/);
+  assert.match(source,/await sleep\(5000\)/);
   assert.match(source,/do not undo retirement for edge propagation lag/);
 });
 
