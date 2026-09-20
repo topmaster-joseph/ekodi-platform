@@ -1478,6 +1478,42 @@
           "cache-control: no-store"
         ],
         "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/pay",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "path === '/pay'",
+          "title:'EKODI Pay'",
+          "https://ekodi.kr/admin/#finance"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: hub",
+          "x-ekodi-shell: v2",
+          "x-ekodi-canonical-surface: pay",
+          "x-ekodi-canonical-path: /pay"
+        ]
+      },
+      {
+        "url": "https://ekodi.kr/cloud",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "path === '/cloud'",
+          "title:'EKODI Cloud'",
+          "https://drive.google.com"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: hub",
+          "x-ekodi-shell: v2",
+          "x-ekodi-canonical-surface: cloud",
+          "x-ekodi-canonical-path: /cloud"
+        ]
       }
     ]
   }

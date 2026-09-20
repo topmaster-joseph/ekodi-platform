@@ -21,26 +21,29 @@
   </main>
   <script>
     const host = location.hostname.toLowerCase();
+    const rawPath = location.pathname || '/';
+    const path = rawPath.length > 1 && rawPath.endsWith('/') ? rawPath.slice(0,-1) : rawPath;
+    const canonicalContext = host === 'ekodi.kr' ? `ekodi.kr${path}` : host;
     const card = (icon,title,detail,href,kind='') => ({icon,title,detail,href,kind});
     const common = {
-      admin: card('⌘','EKODI Admin','통합 관리 콘솔','https://admin.ekodi.kr'),
+      admin: card('⌘','EKODI Admin','통합 관리 콘솔','https://ekodi.kr/admin/'),
       root: card('E','EKODI Portal','전체 서비스 정문','https://ekodi.kr'),
     };
     let model;
-    if (host === 'pay.ekodi.kr' || host === 'pay.biz.ekodi.kr') {
+    if (path === '/pay') {
       model = {
-        eyebrow:'PAYMENT GATE', title:'EKODI Pay', context:host,
+        eyebrow:'PAYMENT GATE', title:'EKODI Pay', context:canonicalContext,
         description:'상품, 교육, 무역, 서비스 결제는 하나의 주소 체계에서 연결하고 실제 회계 귀속은 조직과 사업부별로 분리합니다.',
         note:'에코디비즈 상거래 결제는 기존 Toss Payments 계약을 기준으로 연결합니다. 교회·비영리 자금은 사업 결제·회계와 섞지 않고 별도 계약과 정산 체계를 사용합니다.',
         cards:[
           card('₩','에코디비즈 결제','서비스별 결제 화면으로 연결','https://ekodi.kr/ekodibiz'),
-          card('▦','결제 · 회계 관제','Toss 상태와 사업부별 원장','https://admin.ekodi.kr/#finance'),
+          card('▦','결제 · 회계 관제','Toss 상태와 사업부별 원장','https://ekodi.kr/admin/#finance'),
           common.admin, common.root
         ]
       };
     } else if (host.startsWith('mail.')) {
       const org = host.split('.').length > 3 ? host.split('.')[1].toUpperCase() : 'ALL';
-      const mailAuth = new URL('https://auth.ekodi.kr/');
+      const mailAuth = new URL('https://ekodi.kr/auth/');
       const mailReturn = new URL(location.href); mailReturn.hash='';
       mailAuth.searchParams.set('site','mail');
       mailAuth.searchParams.set('return_to',mailReturn.href);
@@ -61,7 +64,7 @@
         aliasNote:'기본 업무 주소는 name@ekodi.kr 형식입니다. 추가 계정은 각 Google 계정의 권한과 보관 정책을 그대로 유지하며, 계정 추가 후 Google 우측 상단 프로필에서 언제든 전환할 수 있습니다.',
         adminLinks:[
           {label:'Workspace Admin',href:'https://admin.google.com'},
-          {label:'EKODI Admin',href:'https://admin.ekodi.kr'},
+          {label:'EKODI Admin',href:'https://ekodi.kr/admin/'},
           {label:'EKODI Portal',href:'https://ekodi.kr'}
         ]
       };
@@ -77,9 +80,9 @@
           common.admin, common.root
         ]
       };
-    } else if (host === 'cloud.ekodi.kr') {
+    } else if (path === '/cloud') {
       model = {
-        eyebrow:'CLOUD LOBBY', title:'EKODI Cloud', context:host,
+        eyebrow:'CLOUD LOBBY', title:'EKODI Cloud', context:canonicalContext,
         description:'문서와 자료가 흩어지지 않도록 EKODI의 업무 도구로 들어가는 자료 로비입니다.',
         note:'현재 기본 저장소는 Google Drive입니다. 향후 조직별 공유드라이브와 자료실을 이 허브에서 분기합니다.',
         cards:[
@@ -94,7 +97,7 @@
         description:'EKODI 서비스의 인증과 관리자 접속을 모으는 통합 로그인 관문입니다.',
         note:'관리자 인증과 서비스 운영 API는 서버에서 처리하며 각 공개 서비스의 실패와 분리합니다.',
         cards:[
-          card('🔐','EKODI Admin Login','EKODI 관리 콘솔 인증','https://admin.ekodi.kr'),
+          card('🔐','EKODI Admin Login','EKODI 관리 콘솔 인증','https://ekodi.kr/admin/'),
           card('G','Google Account','Google 계정 로그인','https://accounts.google.com'),
           common.root
         ]
