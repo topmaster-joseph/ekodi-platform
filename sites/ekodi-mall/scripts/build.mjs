@@ -315,8 +315,8 @@ const urls = [
   `${baseUrl}/`,
   ...stores.map((store) => `${baseUrl}/stores/${store.slug}/`),
   ...products.map((product) => `${baseUrl}/products/${product.slug}/`),
-  ...(pages.policies || []).map((policy) => `${baseUrl}/pages/${policy.slug}/`)
-  ,...affiliateHubs.map((hub) => `${baseUrl}/${hub.id}/`)
+  ...(pages.policies || []).map((policy) => `${baseUrl}/pages/${policy.slug}/`),
+  ...affiliateHubs.map((hub) => `${baseUrl}/${hub.id}/`)
 ];
 const sitemap = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.map((url) => `  <url><loc>${esc(url)}</loc></url>`).join('\n')}\n</urlset>\n`;
 await write('sitemap.xml', sitemap);
