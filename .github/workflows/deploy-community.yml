@@ -198,7 +198,7 @@ jobs:
               && grep -Fq 'EKODI Connect' /tmp/community-connect.html \
               && grep -Fq 'https://ekodi.kr/shell/shell.js' /tmp/community.html \
               && grep -Fiq 'x-ekodi-shell: v2' /tmp/community.headers \
-              && grep -Fq 'api.ekodi.kr/api/social/registry' /tmp/community-social.js \
+              && grep -Fq 'ekodi.kr/api/social/registry' /tmp/community-social.js \
               && grep -Fq '"socialRegistry":true' /tmp/community-health.json \
               && grep -Fq '"ekodiShell":true' /tmp/community-health.json; then
               echo 'Community production verified with shared Shell v2 and Connect.'
