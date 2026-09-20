@@ -1,6 +1,6 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 
-const apiBase = 'https://api.ekodi.kr';
+const apiBase = 'https://ekodi.kr';
 const majorHosts = [
   ['root', 'https://ekodi.kr/'],
   ['admin', 'https://admin.ekodi.kr/'],
