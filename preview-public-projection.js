@@ -21,7 +21,7 @@ const SCOPES = Object.freeze({
   }),
 });
 const PUBLIC_CONTRACTS = Object.freeze([
-  Object.freeze({ id:'auth', name:'EKODI Auth', kind:'identity', url:'https://auth.ekodi.kr/' }),
+  Object.freeze({ id:'auth', name:'EKODI Auth', kind:'identity', url:'https://ekodi.kr/auth/' }),
   Object.freeze({ id:'api', name:'EKODI API', kind:'api', url:'https://ekodi.kr/' }),
   Object.freeze({ id:'mcp', name:'EKODI MCP', kind:'mcp', url:'https://ekodi.kr/mcp' }),
   Object.freeze({ id:'mcp-metadata', name:'OAuth Protected Resource', kind:'metadata', url:'https://ekodi.kr/.well-known/oauth-protected-resource' }),
