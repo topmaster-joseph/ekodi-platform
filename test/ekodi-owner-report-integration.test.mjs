@@ -41,3 +41,8 @@ test('AI Ops presents EKODI Orchestrator reports instead of a ChatGPT scheduler'
   assert.match(admin, /\/api\/control\/owner-report\/check/);
   assert.doesNotMatch(admin, /ChatGPT 자동화/);
 });
+
+
+test('AI Ops loads persisted EKODI owner report on the initial view', () => {
+  assert.match(admin, /Promise\.all\(\[loadOverview\(false\), loadEvolution\(false\), loadOwnerReport\(false\)\]\)/);
+});
