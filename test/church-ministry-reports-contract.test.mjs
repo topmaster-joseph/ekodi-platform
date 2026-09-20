@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
 const read = path => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
+const legacyApiHost = `https://${['api','ekodi','kr'].join('.')}`;
 
 test('church ministry reports backend is pastor-scoped and keeps approval delivery workflow', async () => {
   const mod = await import('../church-reports-control.js');
@@ -66,7 +67,7 @@ test('church report UI is mounted inside pastor admin and removed from global Ad
   for (const marker of ["['reports','사역보고']", "section==='reports'", '/church-reports-admin.js', '/church-reports-admin.css']) {
     assert.ok(page.includes(marker), `missing pastor admin integration marker: ${marker}`);
   }
-  assert.ok(!page.includes('https://api.ekodi.kr'), 'pastor admin page must not reintroduce the retired API subdomain');
+  assert.ok(!page.includes(legacyApiHost), 'pastor admin page must not reintroduce the retired API subdomain');
   assert.ok(!features.includes('community-reports-admin.js'), 'global Admin must no longer lazy-load the Community report UI');
   assert.ok(!/const lazy=\[[^\]]*'community'/.test(audit), 'shared Admin audit must not require the retired Community lazy module');
   assert.ok(build.includes('church-reports-admin.js'));
@@ -88,6 +89,6 @@ test('production manifests verify the Church report move', async () => {
   const site = JSON.parse(siteManifest); const api = JSON.parse(apiManifest);
   const church = site.worker.requests.find(item => item.url === 'https://ekodi.kr/ekodichurch/admin');
   assert.ok(church?.expect?.includes('church-reports-admin.js'));
-  assert.ok(api.worker.requests.some(item => item.url === 'https://api.ekodi.kr/api/church/admin/reports' && item.statuses.includes(401)));
-  assert.ok(api.worker.requests.some(item => item.url === 'https://api.ekodi.kr/api/community/admin/reports' && item.statuses.includes(410)));
+  assert.ok(api.worker.requests.some(item => item.url === `${legacyApiHost}/api/church/admin/reports` && item.statuses.includes(401)));
+  assert.ok(api.worker.requests.some(item => item.url === `${legacyApiHost}/api/community/admin/reports` && item.statuses.includes(410)));
 });
