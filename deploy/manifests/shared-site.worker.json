@@ -438,7 +438,7 @@
         ]
       },
       {
-        "url": "https://ekodi.kr/ekodibiz/ekodimall",
+        "url": "https://ekodi.kr/ekodimall",
         "statuses": [
           308
         ],
@@ -539,7 +539,7 @@
         ]
       },
       {
-        "url": "https://ekodi.kr/ekodibiz/ekodimall/admin/",
+        "url": "https://ekodi.kr/ekodimall/admin/",
         "statuses": [
           308
         ],
@@ -552,7 +552,7 @@
         "rollbackVerify": false
       },
       {
-        "url": "https://ekodi.kr/ekodibiz/ekodimall/admin/channel-settings",
+        "url": "https://ekodi.kr/ekodimall/admin/channel-settings",
         "statuses": [
           308
         ],
