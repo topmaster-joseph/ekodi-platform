@@ -42,7 +42,7 @@ test('pastor admin page is private-by-default', async () => {
   assert.match(html, /church-pastor-admin\.js\?v=20260920-today1/);
   assert.doesNotMatch(html, /api\.ekodi\.kr|workspace-api\.ekodi\.kr/);
   assert.match(response.headers.get('content-security-policy') || '', /frame-ancestors 'none'/);
-  assert.match(response.headers.get('content-security-policy') || '', /workspace-api\.ekodi\.kr/);
+  assert.doesNotMatch(response.headers.get('content-security-policy') || '', /(?:api|workspace-api)\.ekodi\.kr/);
   assert.match(response.headers.get('cache-control') || '', /no-store/);
 });
 
