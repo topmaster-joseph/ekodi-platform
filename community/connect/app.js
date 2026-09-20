@@ -34,7 +34,7 @@ function clearFocus(userId=''){
 }
 
 function login(){
-  location.href='https://auth.ekodi.kr/?site=community&return_to='+encodeURIComponent('/connect/');
+  location.href='https://ekodi.kr/auth/?site=community&return_to='+encodeURIComponent('https://ekodi.kr/community/connect/');
 }
 
 async function logout(){
