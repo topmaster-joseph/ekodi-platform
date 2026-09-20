@@ -418,11 +418,11 @@ jobs:
           echo "bookmark=$BOOKMARK" >> "$GITHUB_OUTPUT"
       - name: Apply additive AI ledger migrations after staging success
         run: bash scripts/apply-d1-migrations-with-retry.sh ekodi-auth wrangler.ai.release.toml "$WRANGLER_VERSION"
-      - name: Attach secrets to immutable candidate, verify at 0%, then promote
+      - name: Attach supplied secrets or preserve existing Worker secrets, verify at 0%, then promote
         shell: bash
         run: |
           set -euo pipefail
-          node - <<'NODE'
+          SECRET_COUNT=$(node - <<'NODE'
           const fs = require('fs');
           const secrets = {};
           if (process.env.AI_ADMIN_EMAILS) secrets.ADMIN_EMAILS = process.env.AI_ADMIN_EMAILS;
@@ -434,11 +434,19 @@ jobs:
           if (process.env.AI_GROQ_API_KEY) secrets.GROQ_API_KEY = process.env.AI_GROQ_API_KEY;
           if (process.env.AI_EXTERNAL_WORKER_URL) secrets.AI_WORKER_URL = process.env.AI_EXTERNAL_WORKER_URL;
           if (process.env.AI_EXTERNAL_WORKER_TOKEN) secrets.AI_WORKER_TOKEN = process.env.AI_EXTERNAL_WORKER_TOKEN;
-          fs.writeFileSync('/tmp/ai-control-secrets.json', JSON.stringify(secrets), { mode: 0o600 });
-          console.log(`Prepared guarded AI Control candidate with ${Object.keys(secrets).length} secret key(s); values remain hidden.`);
+          const count = Object.keys(secrets).length;
+          if (count > 0) fs.writeFileSync('/tmp/ai-control-secrets.json', JSON.stringify(secrets), { mode: 0o600 });
+          process.stdout.write(String(count));
           NODE
+          )
           trap 'rm -f /tmp/ai-control-secrets.json' EXIT
-          node scripts/guarded-worker-release.mjs --manifest deploy/manifests/ai-control.worker.json --secrets-file /tmp/ai-control-secrets.json
+          if [ "$SECRET_COUNT" -gt 0 ]; then
+            echo "Prepared guarded AI Control candidate with $SECRET_COUNT supplied secret key(s); values remain hidden."
+            node scripts/guarded-worker-release.mjs --manifest deploy/manifests/ai-control.worker.json --secrets-file /tmp/ai-control-secrets.json
+          else
+            echo "No GitHub-managed AI Control secrets supplied; preserving existing Worker secrets."
+            node scripts/guarded-worker-release.mjs --manifest deploy/manifests/ai-control.worker.json
+          fi
       - name: Record governed recovery and artifact identity
         shell: bash
         env:
