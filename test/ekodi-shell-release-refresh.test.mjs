@@ -1,6 +1,16 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
+import { readFile } from 'node:fs/promises';
+
+test('Shell live verifier accepts the canonical apex i18n endpoint and rejects legacy i18n subdomains',async()=>{
+  const verifier=await readFile(new URL('../scripts/verify-ekodi-shell-live.mjs',import.meta.url),'utf8');
+  assert.match(verifier,/https:\/\/ekodi\.kr\/api\/i18n\/v1/);
+  assert.match(verifier,/https:\/\/api\.ekodi\.kr\/api\/i18n\/v1/);
+  assert.match(verifier,/https:\/\/i18n\.ekodi\.kr\/api\/i18n\/v1/);
+  assert.doesNotMatch(verifier,/if\(shellResult\.text\.includes\('https:\/\/ekodi\.kr\/api\/i18n\/v1'\)\)failures\.push\('shell:legacy-i18n-origin-present'\)/);
+});
+
 test('release verification bypasses stale Shell bundle cache and refreshes the canonical cache entry',async()=>{
   const {default:worker}=await import('../ekodi-shell-worker.js');
   const priorCaches=globalThis.caches;
