@@ -6,7 +6,7 @@
   "approvedAt": "2026-09-20",
   "changeClass": "C1",
   "taskId": "apex-api-canonical-20260920",
-  "summary": "Retire the public legacy API subdomain dependency and make https://ekodi.kr/api the single canonical public EKODI API base while keeping the Control Worker behind private service binding.",
+  "summary": "Retire the public legacy API hostname dependency and make https://ekodi.kr/api the single canonical public EKODI API base while keeping the Control Worker behind private service binding.",
   "approvalBasis": "The EKODI Platform Super Administrator explicitly instructed EKODI to continue with the https://ekodi.kr/api structure and complete the migration under EKODI orchestration.",
   "constitutionalInterpretation": "This tightens the existing apex-path-only and zero-subdomain policy without expanding autonomous authority. Internal service boundaries, authentication, permissions, guarded release, rollback and production verification remain mandatory.",
   "implementedCapabilities": [
