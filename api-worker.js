@@ -11,6 +11,7 @@ import { listSiteChromeSettings, putSiteChromeSettings } from './site-chrome-run
 import { platformMaturityProjection } from './platform-maturity-control.js';
 import { handleLearningControl } from './learning-control.js';
 import { buildEkodiOwnerReport, latestEkodiOwnerReport, listEkodiOwnerReports, persistEkodiOwnerReport } from './ekodi-owner-report.js';
+import { realtimeTenantList } from './realtime-tenant-registry.js';
 
 // Provider service registry only. Customer organizations and their sites are managed as
 // customer tenants/workspaces through the customer directory, never as EKODI services.
@@ -33,6 +34,19 @@ const SERVICE_CATALOG = [
   { id: 'social', name: 'EKODI Social', domain: 'social.ekodi.kr', url: 'https://social.ekodi.kr/health', group: 'platform', defaultState: 'active', defaultMonitor: true }
 ];
 
+const LIVE_PUBLIC_SITE_CATALOG = realtimeTenantList().map(tenant => ({
+  id: `live-${String(tenant.apiTenant || tenant.id).toLowerCase()}`,
+  workspaceId: tenant.workspace || tenant.apiTenant || tenant.id,
+  name: `${tenant.name} Live`,
+  domain: `ekodi.kr${tenant.path.replace(/\/$/, '')}`,
+  defaultPublicStatus: 'public',
+  defaultMaintenanceDisplayType: 'default',
+  defaultMaintenanceRedirectUrl: '',
+  defaultMaintenanceTitle: '라이브 서비스 준비 중입니다',
+  defaultMaintenanceMessage: '현재 이 Live 서비스는 관리자 검수 또는 준비 상태입니다.',
+  defaultRedirectMode: 'button'
+}));
+
 const PUBLIC_SITE_CATALOG = [
   {
     id: 'cgma',
@@ -45,7 +59,8 @@ const PUBLIC_SITE_CATALOG = [
     defaultMaintenanceTitle: '현재 사이트 개발중입니다',
     defaultMaintenanceMessage: '더 좋은 서비스로 준비 중입니다.',
     defaultRedirectMode: 'button'
-  }
+  },
+  ...LIVE_PUBLIC_SITE_CATALOG
 ];
 
 const SERVICE_BY_ID = new Map(SERVICE_CATALOG.map(service => [service.id, service]));
