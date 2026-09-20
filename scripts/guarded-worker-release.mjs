@@ -191,6 +191,7 @@ function deployVersions(specs, message) {
   command(['versions', 'deploy', ...specs, '-y', '--config', worker.config, '--message', message]);
 }
 
+
 function responseDiagnostic(response, body) {
   const route = response?.headers?.get?.('x-ekodi-route') || 'none';
   const mitigated = response?.headers?.get?.('cf-mitigated') || 'none';

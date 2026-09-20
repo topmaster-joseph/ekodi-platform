@@ -1,5 +1,6 @@
 import authWorker from './auth-worker.js';
 import { apiCostPolicy, ensureApiUsageSchema, getSponsoredAiAllowance } from './api-usage-meter.js';
+import { FREE_TIER_THRESHOLDS, FREE_TIER_RETRY_STOP_SIGNALS } from './free-tier-quota-guard.js';
 
 const PATH = '/api/control/api-cost';
 const REFERENCE_DATE = '2026-08-27';
@@ -172,6 +173,13 @@ export async function handleApiCostControl(request, env = {}) {
       generatedAt: new Date().toISOString(),
       referenceDate: REFERENCE_DATE,
       thresholds: allowance.policy.thresholds,
+      freeTierProtection: {
+        policyId: 'EKODI-FREE-TIER-001',
+        thresholds: FREE_TIER_THRESHOLDS,
+        retryStopSignals: FREE_TIER_RETRY_STOP_SIGNALS,
+        automaticPaidUpgrade: false,
+        sourceOfTruthRequired: true,
+      },
       sponsoredAi: allowance,
       providers,
       series,

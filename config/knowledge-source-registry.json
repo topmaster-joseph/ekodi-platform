@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 1,
+  "registryId": "ekodi.knowledge-source.v1",
+  "status": "enforced",
+  "effectiveDate": "2026-09-19",
+  "principle": "Knowledge is provenance-first, version-aware and freshness-aware. Dynamic claims prefer current primary sources over remembered or derived text.",
+  "requiredSourceFields": [
+    "sourceId",
+    "domain",
+    "sourceType",
+    "authority",
+    "owner",
+    "versionPolicy",
+    "effectiveDatePolicy",
+    "verificationPolicy",
+    "lifecycleState"
+  ],
+  "sourceTypes": [
+    "ekodi_canonical",
+    "workspace_private",
+    "official_primary",
+    "authoritative_reference",
+    "secondary_reference",
+    "user_supplied",
+    "model_generated"
+  ],
+  "trustOrder": [
+    "ekodi_canonical",
+    "workspace_private",
+    "official_primary",
+    "authoritative_reference",
+    "user_supplied",
+    "secondary_reference",
+    "model_generated"
+  ],
+  "dynamicKnowledgePolicy": {
+    "reverifyBeforeMaterialDecision": true,
+    "currentPrimarySourcePreferred": true,
+    "unverifiableState": "needs_verification",
+    "staleSourceMayNotSilentlyOverrideCurrentSource": true
+  },
+  "baselineSources": [
+    {
+      "sourceId": "ekodi.constitution",
+      "domain": "governance",
+      "sourceType": "ekodi_canonical",
+      "authority": "EKODI Platform Super Administrator",
+      "owner": "topmaster-joseph",
+      "versionPolicy": "constitution_version",
+      "effectiveDatePolicy": "approved_amendment_date",
+      "verificationPolicy": "repository_and_governance_gate",
+      "lifecycleState": "active"
+    },
+    {
+      "sourceId": "ekodi.repository",
+      "domain": "platform",
+      "sourceType": "ekodi_canonical",
+      "authority": "Git repository main branch after guarded merge",
+      "owner": "topmaster-joseph",
+      "versionPolicy": "git_commit_sha",
+      "effectiveDatePolicy": "git_commit_time",
+      "verificationPolicy": "ci_and_guarded_release",
+      "lifecycleState": "active"
+    }
+  ]
+}
