@@ -51,6 +51,21 @@ test('Control API derives Live visibility records from the shared realtime tenan
   assert.match(source,/defaultMaintenanceTitle: '라이브 서비스 준비 중입니다'/);
 });
 
+test('Shared Site release verifies the current canonical Live surface instead of the retired lobby',async()=>{
+  const release=JSON.parse(await read('deploy/manifests/shared-site.worker.json'));
+  const request=release.worker.requests.find(item=>item.url==='https://ekodi.kr/live');
+  assert.ok(request,'canonical /live production probe is required');
+  assert.deepEqual(request.statuses,[200]);
+  assert.ok(request.expect.includes('EKODI Live'));
+  assert.ok(request.expect.includes('LIVE BROADCAST PROFESSIONAL SERVICE'));
+  assert.ok(request.expect.includes('라이브 서비스 사이트'));
+  assert.ok(request.expect.includes('data-ekodi-service="live"'));
+  assert.ok(request.headerExpect.includes('x-ekodi-shell: v2'));
+  assert.ok(request.headerExpect.includes('x-ekodi-ui-surface: user-public'));
+  assert.ok(!request.expect.includes('LIVE LOBBY'));
+  assert.ok(!request.headerExpect.includes('x-ekodi-route: hub'));
+});
+
 test('service manifest advertises canonical apex Live as an active public surface',async()=>{
   const manifest=await read('ekodi-service-manifest.js');
   assert.match(manifest,/id:'live'.*url:'https:\/\/ekodi\.kr\/live'.*defaultSurface:'public'.*state:'live'/);
