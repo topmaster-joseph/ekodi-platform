@@ -64,7 +64,7 @@ function securityHeaders(env={}){
   const connect=["'self'",'https://cdn.jsdelivr.net'];
   if(env.SUPABASE_URL){try{connect.push(new URL(env.SUPABASE_URL).origin)}catch{}}
   return {
-    'content-security-policy':`default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self'; img-src 'self' data: https:; connect-src ${connect.join(' ')}; frame-ancestors 'none'; base-uri 'self'; form-action 'self' https://auth.ekodi.kr; object-src 'none'; upgrade-insecure-requests`,
+    'content-security-policy':`default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self'; img-src 'self' data: https:; connect-src ${connect.join(' ')}; frame-ancestors 'none'; base-uri 'self'; form-action 'self' https://ekodi.kr; object-src 'none'; upgrade-insecure-requests`,
     'referrer-policy':'no-referrer',
     'x-content-type-options':'nosniff',
     'x-frame-options':'DENY',
@@ -129,12 +129,12 @@ async function publicStorefront(slug,env){
 }
 function runtimeConfig(env){
   const dataEnabled=env.DATA_ENABLED==='true'&&Boolean(env.SUPABASE_URL&&env.SUPABASE_PUBLISHABLE_KEY);
-  return {dataEnabled,dataMode:env.DATA_MODE||'isolated-staging',supabaseUrl:dataEnabled?env.SUPABASE_URL:'',supabasePublishableKey:dataEnabled?env.SUPABASE_PUBLISHABLE_KEY:'',workspaceApi:dataEnabled?`${env.SUPABASE_URL}/functions/v1/workspace-api`:'',authUrl:env.AUTH_URL||'https://auth.ekodi.kr/?site=space',canonicalOrigin:'https://ekodi.kr',routeModel:['/{slug}','/{slug}/{service}'],memberNamespaceRequired:false,identityModel:'path -> slug(locator) -> workspace_id -> relationship/policy -> role -> capability'};
+  return {dataEnabled,dataMode:env.DATA_MODE||'isolated-staging',supabaseUrl:dataEnabled?env.SUPABASE_URL:'',supabasePublishableKey:dataEnabled?env.SUPABASE_PUBLISHABLE_KEY:'',workspaceApi:dataEnabled?`${env.SUPABASE_URL}/functions/v1/workspace-api`:'',authUrl:env.AUTH_URL||'https://ekodi.kr/auth/?site=space',canonicalOrigin:'https://ekodi.kr',routeModel:['/{slug}','/{slug}/{service}'],memberNamespaceRequired:false,identityModel:'path -> slug(locator) -> workspace_id -> relationship/policy -> role -> capability'};
 }
 function authRedirect(request,env){
   const current=new URL(request.url);current.hash='';
   const canonical=new URL(current.pathname+current.search,'https://ekodi.kr');
-  const target=new URL(env.AUTH_URL||'https://auth.ekodi.kr/?site=space');
+  const target=new URL(env.AUTH_URL||'https://ekodi.kr/auth/?site=space');
   target.searchParams.set('site','space');target.searchParams.set('return_to',canonical.href);
   return withHeaders(env,Response.redirect(target.href,302),'auth-start');
 }
