@@ -8,7 +8,8 @@
     "nativeFirst": true,
     "externalFallback": true,
     "fallbackMustPreserveOrIncreaseSecurity": true,
-    "providerLockInForbidden": true
+    "providerLockInForbidden": true,
+    "nonDisruptiveDefault": true
   },
   "hostBoundary": {
     "observeAllowlist": [
@@ -22,11 +23,45 @@
     "desktopInputDefault": "disabled",
     "credentialCollection": false
   },
+  "nonDisruptiveExecution": {
+    "routingOrder": [
+      "official-api",
+      "background-browser",
+      "isolated-desktop",
+      "foreground-takeover"
+    ],
+    "foregroundUserSessionOwnedByUser": true,
+    "sameBrowserProfileConcurrentControl": false,
+    "minimizedWindowIsIsolation": false,
+    "backgroundBrowser": {
+      "dedicatedAutomationProfileRequired": true,
+      "offscreenOrHeadlessRequired": true,
+      "focusIsolationRequired": true,
+      "sharedClipboardDefault": false,
+      "userDesktopInputInjection": false
+    },
+    "isolatedDesktop": {
+      "allowedSessionTypes": [
+        "windows-secondary-session",
+        "vm",
+        "sandbox"
+      ],
+      "sharedInteractiveDesktopForbidden": true,
+      "focusIsolationRequired": true
+    },
+    "foregroundTakeover": {
+      "automaticFallback": false,
+      "explicitLocalConsentRequired": true,
+      "privilegedGateRequired": true
+    }
+  },
   "isolatedExecution": {
     "requiredFor": [
       "computer.files.read",
       "computer.files.write",
       "computer.terminal.exec",
+      "computer.browser.execute",
+      "computer.desktop.session.execute",
       "computer.desktop.capture",
       "computer.desktop.input"
     ],
@@ -81,6 +116,8 @@
     "forbiddenOperations": [
       "computer.terminal.exec",
       "computer.files.write",
+      "computer.browser.execute",
+      "computer.desktop.session.execute",
       "computer.desktop.input"
     ]
   }
