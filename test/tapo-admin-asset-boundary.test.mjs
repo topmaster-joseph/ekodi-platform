@@ -18,6 +18,7 @@ test('Tapo admin assets publish on canonical apex Admin static paths with securi
     assert.ok(request);
     assert.ok(!request.headerExpect?.includes('x-ekodi-route: admin-asset'));
     assert.ok(request.headerExpect?.includes('x-content-type-options: nosniff'));
+    assert.ok(request.headerExpect?.includes('cache-control: no-store'));
   }
   assert.equal(manifest.worker.requests.some(item => /^https:\/\/admin\.ekodi\.kr\/tapo-device-admin\.(?:js|css)$/.test(item.url)), false);
 });
