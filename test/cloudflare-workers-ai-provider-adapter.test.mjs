@@ -21,7 +21,8 @@ test('Workers AI provider invokes the bound model in non-production tests withou
   });
   const result=await provider.invoke({taskName:'health proof',context:{safe:true}});
   assert.equal(result.text,'EKODI_WORKERS_AI_OK');
-  assert.equal(input.model,CLOUDFLARE_WORKERS_AI_DEFAULTS.model);
+  assert.ok(CLOUDFLARE_WORKERS_AI_DEFAULTS.models.includes(input.model));
+  assert.equal(result.model,input.model);
   assert.equal(input.payload.max_tokens,CLOUDFLARE_WORKERS_AI_DEFAULTS.maxOutputTokens);
   assert.equal(input.payload.messages.length,2);
 });
@@ -45,13 +46,32 @@ test('Workers AI status exposes no credential material', () => {
     configured:true,
     available:true,
     model:CLOUDFLARE_WORKERS_AI_DEFAULTS.model,
+    models:CLOUDFLARE_WORKERS_AI_DEFAULTS.models,
+    selectionMode:'task-role-hash',
     dailyCallLimit:4,
     costClass:'account-managed'
   });
 });
 
-test('Workers AI defaults to the active fast Llama replacement', () => {
-  assert.equal(CLOUDFLARE_WORKERS_AI_DEFAULTS.model,'@cf/meta/llama-3.1-8b-instruct-fast');
+test('Workers AI defaults to a free-plan open-model pool', () => {
+  assert.deepEqual(CLOUDFLARE_WORKERS_AI_DEFAULTS.models,[
+    '@cf/zai-org/glm-4.7-flash',
+    '@cf/google/gemma-4-26b-a4b-it',
+    '@cf/nvidia/nemotron-3-120b-a12b',
+  ]);
+});
+
+test('Workers AI assigns distinct open models to primary, synthesis and collaborator roles', async () => {
+  const used=[];
+  const env={
+    ENVIRONMENT:'test',
+    AI:{async run(model){used.push(model);return{response:'ok'}}}
+  };
+  const provider=createCloudflareWorkersAiProvider(env);
+  await provider.invoke({taskName:'pool',context:{taskId:'task-1',role:'origin-primary'}});
+  await provider.invoke({taskName:'pool',context:{taskId:'task-1',role:'origin-synthesis'}});
+  await provider.invoke({taskName:'pool',context:{taskId:'task-1',role:'parallel-2'}});
+  assert.deepEqual(used,CLOUDFLARE_WORKERS_AI_DEFAULTS.models);
 });
 
 test('failed Workers AI calls refund the local daily reservation so recovery can retry', async () => {
