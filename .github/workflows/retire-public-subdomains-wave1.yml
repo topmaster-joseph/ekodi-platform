@@ -8,6 +8,7 @@ on:
       - 'wrangler.community.toml'
       - 'wrangler.social.toml'
       - 'wrangler.energy.toml'
+      - 'wrangler.api.toml'
       - 'deploy/manifests/community.worker.json'
       - 'deploy/manifests/social.worker.json'
       - 'deploy/manifests/energy.worker.json'
@@ -21,6 +22,7 @@ on:
       - 'wrangler.community.toml'
       - 'wrangler.social.toml'
       - 'wrangler.energy.toml'
+      - 'wrangler.api.toml'
       - 'deploy/manifests/community.worker.json'
       - 'deploy/manifests/social.worker.json'
       - 'deploy/manifests/energy.worker.json'
@@ -49,7 +51,7 @@ jobs:
           set -euo pipefail
           node --check scripts/retire-worker-custom-domains.mjs
           node scripts/retire-worker-custom-domains.mjs --config config/retire-public-subdomains-wave1.json --dry-run
-          for f in wrangler.community.toml wrangler.social.toml wrangler.energy.toml; do
+          for f in wrangler.community.toml wrangler.social.toml wrangler.energy.toml wrangler.api.toml; do
             if grep -Fq '[[routes]]' "$f" || grep -Fq 'custom_domain = true' "$f"; then
               echo "Public custom-domain declaration remains in $f"
               exit 1
