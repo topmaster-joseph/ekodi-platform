@@ -49,7 +49,7 @@ EKODI_WORKERS_AI_DAILY_CALL_LIMIT = "8"
 # Personal API remains preferred when connected; otherwise EKODI sponsors a small bounded allowance.
 USER_AI_FREE_MONTHLY_REQUESTS = "20"
 USER_AI_FLEX_MONTHLY_REQUESTS = "20"
-ALLOWED_ORIGINS = "https://ekodi.kr,https://www.ekodi.kr,https://cgma.or.kr,https://shy-thunder-39a4.topmaster-joseph.workers.dev,https://ekodi-platform.pages.dev"
+ALLOWED_ORIGINS = "https://ekodi.kr,https://cgma.or.kr,https://shy-thunder-39a4.topmaster-joseph.workers.dev,https://ekodi-platform.pages.dev"
 
 [ai]
 binding = "AI"
