@@ -63,7 +63,7 @@
     return data;
   }
   function el(tag,className,text){const node=document.createElement(tag);if(className)node.className=className;if(text!==undefined)node.textContent=esc(text);return node}
-  function statusLabel(value){const map={waiting_human:'담당자 확인 대기',open:'AI 응답',resolved:'완료',archived:'보관',accepted:'담당자 응답 중',requested:'연결 대기',awaiting_human:'승인 대기',verified:'완료',ready_for_executor:'실행 대기',assist_only:'검토',blocked:'차단',failed:'실패',approved_pending_executor:'승인됨'};return map[value]||value||'확인'}
+  function statusLabel(value){const map={waiting_human:'담당자 확인 대기',open:'AI 응답',resolved:'완료',archived:'보관',accepted:'담당자 응답 중',requested:'연결 대기',awaiting_human:'승인 대기',verified:'완료',ready_for_executor:'실행 대기',assist_only:'검토',blocked:'차단',failed:'실패',approved_pending_executor:'승인됨',queued:'실행 큐 등록',running:'실행 중',retry:'재시도 대기',degraded:'실행 경로 확인 필요',core_only:'핵심 경로 처리',human_gate:'승인 대기',ignored:'처리 제외'};return map[value]||value||'확인'}
   function priorityLabel(value){if(value==='urgent')return'긴급';if(value==='review')return'확인 필요';return'일반'}
   function positionWorkbench(){
     const sidebar=document.querySelector('.sidebar');
@@ -240,12 +240,20 @@
       }else{
         if(ACTION_RE.test(value)){
           let preflight=false;try{const check=await api('/api/control/ai/actions',{method:'POST',body:JSON.stringify({agentId:'chief',actionType:'service.health_check',area:'health_checks',target:c.section,rationale:`Assist 사전점검: ${value}`,payload:{source:'admin-assist-dock',context:c},reversible:true,delegated:true,preflightVerified:true})});preflight=Boolean(check.ok)}catch{}
-          queued=await api('/api/control/ai/actions',{method:'POST',body:JSON.stringify({agentId:'chief',actionType:'ui.change_request',area:'bounded_admin_change',target:c.section,rationale:value,payload:{source:'admin-assist-dock',context:c,request:value},reversible:true,delegated:true,preflightVerified:preflight})});
-          status=queued.status||'active';
+          queued=await api('/api/control/ai/v8/pulse',{method:'POST',body:JSON.stringify({
+            goal:value,
+            risk:'normal',
+            target:{capability:'core.automation',service:'admin',section:c.section,surface:'admin'},
+            delegation:{allowed:true,reversible:true,audited:true,preflightVerified:preflight,verificationDefined:true},
+            context:{source:'admin-assist-dock',page:c,request:value},
+            event:{kind:'admin_change_request',source:'admin-assist-dock',summary:value,changeClass:'yellow',actionable:true,requiresHumanDecision:false},
+            executeNow:true
+          })});
+          status=queued.task?.state||queued.execution?.results?.[0]?.state||'queued';
         }
         result=await api('/api/control/ai/assist',{method:'POST',body:JSON.stringify({message:value,context:c,history})});
         reply=String(result.reply||'응답을 받지 못했습니다.');provider=result.provider||null;mode=result.mode||'free_assist';rememberAi('assistant',reply);lastAiReply={text:reply,mode,provider,notice:result.notice||''};
-        if(queued)reply=`${reply}\n\n${statusLabel(queued.status)} · 운영 큐에 기록하고 Admin AI가 응답했습니다.`;
+        if(queued){const taskId=queued.task?.id||queued.execution?.results?.[0]?.taskId||'';reply=`${reply}\n\n${statusLabel(status)} · EKODI Command Plane${taskId?` #${taskId}`:''}에 기록하고 실행 경로를 확인했습니다.`;}
       }
       addSessionMessage('assistant',reply,{kind:risky||HEALTH_RE.test(value)||queued?'status':'message',status,provider,mode});
       const session=activeSession();if(session&&['verified','resolved'].includes(status))session.status='done';if(session&&status==='failed')session.status='failed';saveSessions();
