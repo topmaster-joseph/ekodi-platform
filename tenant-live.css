@@ -78,3 +78,16 @@ body.studio-focus .status{margin:8px 0;font-size:12px}
   .surface-control-buttons button{font-size:10px}
   .viewer-camera-actions{grid-template-columns:1fr}
 }
+
+
+/* QR-connected phone camera mode */
+body.camera-source-mode .live-shell{width:min(560px,96vw);padding:12px 0}
+body.camera-source-mode .viewer{display:block}
+body.camera-source-mode .viewer>.stage,
+body.camera-source-mode .viewer .interpretation-box,
+body.camera-source-mode .viewer .viewer-chat{display:none}
+body.camera-source-mode .viewer .panel{position:static;padding:14px;max-width:560px;margin:auto}
+body.camera-source-mode .viewer .panel>small{display:none}
+body.camera-source-mode .viewer .panel h2{font-size:20px;margin:2px 0 8px}
+body.camera-source-mode .viewer-camera-box{margin:8px 0;padding:10px}
+body.camera-source-mode .participant-camera-preview{aspect-ratio:9/16;max-height:68vh;object-fit:cover}
