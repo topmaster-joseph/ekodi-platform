@@ -472,14 +472,23 @@
     const privacy = document.createElement('a');
     privacy.href = '/privacy';
     privacy.textContent = copy(locale, 'privacy');
-    links.append(history, about, terms, privacy);
+    const admin = document.createElement('a');
+    admin.href = '/admin/';
+    admin.textContent = locale === 'ko-KR' ? '관리자' : 'Admin';
+    links.append(history, about, terms, privacy, admin);
     note.append(links);
   }
 
   function renderHomepageLocale(locale) {
     const next=normalizeLocale(locale);
-    setHookFirstHero(next);
-    applyPageLocale(next);
+    const characterHub=document.body?.dataset?.livingGateway==='v8-character-hub';
+    if(characterHub){
+      document.documentElement.lang=next;
+      document.documentElement.dataset.locale=next;
+    }else{
+      setHookFirstHero(next);
+      applyPageLocale(next);
+    }
     installSecondaryLinks(next);
     const cards=[...document.querySelectorAll('.service-card[data-service-status][data-service-id]')].filter(card=>!card.hasAttribute('hidden'));
     buildDynamicVisual(next);
