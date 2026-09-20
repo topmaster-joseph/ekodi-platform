@@ -870,7 +870,9 @@
         "redirect": "manual",
         "expect": [
           "ekodi-chief-ai-chat-v1",
-          "DECISION_RULES"
+          "DECISION_RULES",
+          "/api/control/ai/v8/pulse",
+          "executeNow:true"
         ],
         "headerExpect": [
           "x-content-type-options: nosniff",
@@ -1255,11 +1257,12 @@
         "redirect": "manual",
         "expect": [
           "EKODI Live",
-          "LIVE LOBBY",
-          "data-ekodi-service=\"live\""
+          "LIVE BROADCAST PROFESSIONAL SERVICE",
+          "라이브 서비스 사이트"
         ],
         "headerExpect": [
-          "x-ekodi-route: hub"
+          "x-ekodi-route: live-service-hub",
+          "x-content-type-options: nosniff"
         ]
       },
       {
