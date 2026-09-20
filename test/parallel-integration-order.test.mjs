@@ -26,6 +26,13 @@ test('admin menu changes in different files are detected as related',()=>{
   assert.deepEqual(overlaps[0].rightFiles,['admin-shell.css']);
 });
 
+test('admin workbench visual and postbuild changes are always treated as related',()=>{
+  const workbench=semanticScopeOverlaps(['admin-conversation-workbench.css'],['scripts/admin-thin-postbuild.mjs'],scopes);
+  assert.deepEqual(workbench.map(item=>item.scope),['admin-navigation']);
+  const performance=semanticScopeOverlaps(['test/admin-performance-hardening.test.mjs'],['admin-shell.css'],scopes);
+  assert.deepEqual(performance.map(item=>item.scope),['admin-navigation']);
+});
+
 test('admin route registry changes are related while unrelated service work stays independent',()=>{
   const routing=semanticScopeOverlaps(['ekodi-service-manifest.js'],['workspace-route-policy.js'],scopes);
   assert.deepEqual(routing.map(item=>item.scope),['admin-routing-registry']);
