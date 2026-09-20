@@ -11,7 +11,7 @@
 - 고객 보험목록·청구메모·기본 AI 대화: 브라우저 로컬
 - 실제 설계사 연결요청: 연락정보 처리 필수동의 후 D1에 최소정보만 저장
 - AI 상담 대화 원문: 별도 선택동의가 있을 때만 AES-GCM 암호화 저장
-- 관리자: `admin.ekodi.kr → api.ekodi.kr → Insurance Worker → D1`
+- 관리자: `admin.ekodi.kr → ekodi.kr/api → Insurance Worker → D1`
 - 배포: GitHub Actions validate → isolated staging D1 → 실제 중앙세션 E2E → production Green → blue-green cutover
 
 **유료 Supabase development branch는 사용하지 않는다.**
@@ -74,7 +74,7 @@ staging은 합성데이터만 사용하며 테스트 완료 후 자동 삭제한
 - [x] 중앙 관리자 상세 열람·상태변경 및 audit 흐름 확인
 - [x] 합성 staging 데이터 삭제
 - [x] 운영 `customer-entry-worker.js`에 `/api/insurance/admin` 프록시 라우트 준비
-- [x] 운영 `wrangler.api.toml`에 `INSURANCE_API_BASE=https://insurance-api.ekodi.kr` 준비
+- [x] 운영 `wrangler.api.toml`에 `INSURANCE_API_BASE=https://insurance-ekodi.kr/api` 준비
 - [x] 30일 상담정보 자동파기 cron 코드·설정 준비
 
 실제 중앙 세션 통합 E2E 성공 Run: `31842647201`
@@ -114,7 +114,7 @@ staging은 합성데이터만 사용하며 테스트 완료 후 자동 삭제한
 5. 합성데이터 E2E
 6. 고객 UI Green 배포
 7. 중앙 Admin Green 연결 및 실제 운영 관리자 세션 smoke
-8. `insurance-api.ekodi.kr` 및 `ins.ekodi.kr` 단계 전환
+8. `insurance-ekodi.kr/api` 및 `ins.ekodi.kr` 단계 전환
 9. AI상담·설계사 연결·Admin Queue·취소 흐름 smoke
 10. 이상 시 이전 route 즉시 rollback
 
@@ -142,4 +142,4 @@ staging은 합성데이터만 사용하며 테스트 완료 후 자동 삭제한
 
 **Technical staging gates: PASS**
 
-**Production source: MERGED TO `main`. `ins.ekodi.kr` / `insurance-api.ekodi.kr` public cutover: NOT ENABLED. External compliance/privacy + production-secret gates remain. Production Green validation is the mandatory pre-cutover proof.**
+**Production source: MERGED TO `main`. `ins.ekodi.kr` / `insurance-ekodi.kr/api` public cutover: NOT ENABLED. External compliance/privacy + production-secret gates remain. Production Green validation is the mandatory pre-cutover proof.**
