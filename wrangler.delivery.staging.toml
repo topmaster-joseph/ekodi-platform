@@ -6,7 +6,7 @@ preview_urls = false
 
 [vars]
 DATA_MODE = "isolated-staging"
-AUTH_URL = "https://auth.ekodi.kr/?site=delivery"
+AUTH_URL = "https://ekodi.kr/auth/?site=delivery"
 EXECUTION_ENABLED = "false"
 
 [assets]
