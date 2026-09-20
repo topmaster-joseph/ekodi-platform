@@ -6,7 +6,7 @@
   const CONTRACT_VERSION = '1.0.0';
   const SPEC_URL = 'https://github.com/topmaster-joseph/ekodi-platform/blob/main/docs/EKODI-EXTERNAL-AI-MODULE-SPEC.md';
   const CONTRACT_URL = 'https://github.com/topmaster-joseph/ekodi-platform/blob/main/config/external-ai-module-contract.json';
-  const API_BASE = 'https://api.ekodi.kr/api/ai-modules/v1';
+  const API_BASE = 'https://ekodi.kr/api/ai-modules/v1';
 
   const manifestExample = {
     id: 'vendor.marketing-ai',
