@@ -1,7 +1,7 @@
 import { TENANT_ADMIN_CAPABILITIES, tenantAdminPolicySnapshot } from './tenant-admin-policy.js';
 import { channelTargetOptions } from './channel-publishing-catalog.js';
 
-const STORE_SECTION_CAPABILITY=Object.freeze({overview:TENANT_ADMIN_CAPABILITIES.dashboard,site:TENANT_ADMIN_CAPABILITIES.site,chrome:TENANT_ADMIN_CAPABILITIES.site,delivery:TENANT_ADMIN_CAPABILITIES.orders,menu:TENANT_ADMIN_CAPABILITIES.catalog,orders:TENANT_ADMIN_CAPABILITIES.orders,customers:TENANT_ADMIN_CAPABILITIES.customers,reviews:TENANT_ADMIN_CAPABILITIES.reviews,sales:TENANT_ADMIN_CAPABILITIES.sales,inventory:TENANT_ADMIN_CAPABILITIES.inventory,marketing:TENANT_ADMIN_CAPABILITIES.marketing,work:TENANT_ADMIN_CAPABILITIES.operations,finance:TENANT_ADMIN_CAPABILITIES.finance,connections:TENANT_ADMIN_CAPABILITIES.connections});
+const STORE_SECTION_CAPABILITY=Object.freeze({overview:TENANT_ADMIN_CAPABILITIES.dashboard,site:TENANT_ADMIN_CAPABILITIES.site,chrome:TENANT_ADMIN_CAPABILITIES.site,delivery:TENANT_ADMIN_CAPABILITIES.orders,menu:TENANT_ADMIN_CAPABILITIES.catalog,orders:TENANT_ADMIN_CAPABILITIES.orders,customers:TENANT_ADMIN_CAPABILITIES.customers,reviews:TENANT_ADMIN_CAPABILITIES.reviews,sales:TENANT_ADMIN_CAPABILITIES.sales,inventory:TENANT_ADMIN_CAPABILITIES.inventory,marketing:TENANT_ADMIN_CAPABILITIES.marketing,publishing:TENANT_ADMIN_CAPABILITIES.marketing,work:TENANT_ADMIN_CAPABILITIES.operations,finance:TENANT_ADMIN_CAPABILITIES.finance,connections:TENANT_ADMIN_CAPABILITIES.connections});
 export function storeAdminCanAccess(role,section){const policy=tenantAdminPolicySnapshot();const allowed=policy.roleCapabilities[String(role||'').trim().toLowerCase()]||[];const capability=STORE_SECTION_CAPABILITY[String(section||'overview').toLowerCase()];return Boolean(capability&&(allowed.includes('*')||allowed.includes(capability)));}
 export function storeAdminSectionsForRole(role){return Object.keys(STORE_SECTION_CAPABILITY).filter(section=>storeAdminCanAccess(role,section));}
 
@@ -39,7 +39,7 @@ function clientMain(POLICY,CHANNEL_CATALOG){
   const SITE_CHROME_API='https://ekodi.kr/workspace-api/v1/site-chrome';
   const SESSION_KEY=IS_PORTFOLIO?'ekodi-cmpmyi-admin-session':'ekodi-store-admin-session:'+SLUG;
   const LEGACY_SESSION_KEYS={jadam:'ekodi-jadam-admin-session',pizzamaru:'ekodi-pizzamaru-admin-session',yogurt:'ekodi-yogurt-admin-session'};
-  const GROUPS=[{id:'home',label:'홈',items:[['overview','운영 홈']]},{id:'sales',label:'주문 · 판매',items:[['delivery','배달플랫폼'],['orders','주문 · 채널'],['sales','매출']]},{id:'catalog',label:'메뉴 · 재고',items:[['menu','메뉴 · 가격'],['inventory','재고']]},{id:'customers',label:'고객 · 리뷰',items:[['customers','고객'],['reviews','리뷰']]},{id:'growth',label:'홍보 · 채널',items:[['marketing','Marketing AI'],['publishing','채널 · 게시']]},{id:'operations',label:'운영 · 설정',items:[['site','사용자 사이트'],['chrome','헤더 · 푸터'],['work','매장업무'],['connections','연결관리'],['finance','비용 · 정산']]}];
+  const GROUPS=[{id:'home',label:'홈',items:[['overview','운영 홈']]},{id:'sales',label:'주문 · 판매',items:[['delivery','배달플랫폼'],['orders','주문 · 채널'],['sales','매출']]},{id:'catalog',label:'메뉴 · 재고',items:[['menu','메뉴 · 가격'],['inventory','재고']]},{id:'customers',label:'고객 · 리뷰',items:[['customers','고객'],['reviews','리뷰']]},{id:'growth',label:'마케팅 · 채널',items:[['marketing','마케팅 AI'],['publishing','SNS 채널·자동게시']]},{id:'operations',label:'운영 · 설정',items:[['site','사용자 사이트'],['chrome','헤더 · 푸터'],['work','매장업무'],['connections','연결관리'],['finance','비용 · 정산']]}];
 
   const NAV=GROUPS.flatMap(group=>group.items);
   const META={
@@ -53,8 +53,8 @@ function clientMain(POLICY,CHANNEL_CATALOG){
     reviews:['리뷰','연결된 마케팅 원장에서 미응답 리뷰와 대응 상태를 확인합니다.'],
     sales:['매출','오늘 매출·객단가·비교 신호를 확인합니다.'],
     inventory:['재고','메뉴 품절 신호와 향후 재고 연동 상태를 확인합니다.'],
-    marketing:['마케팅','이 점포 전용 Marketing AI 운영공간으로 연결합니다.'],
-    publishing:['채널 · 게시','이 점포의 여러 게시계정을 등록하고 계정별 OAuth 인증·자동게시 상태를 관리합니다.'],
+    marketing:['마케팅 AI','이 점포 전용 Marketing AI 운영공간으로 연결합니다.'],
+    publishing:['SNS 채널·자동게시','이 점포의 SNS 게시계정을 등록하고 계정별 OAuth 인증·예약게시·자동게시 상태를 관리합니다.'],
     work:['매장업무','점포 운영업무와 승인 필요 행동을 관리합니다.'],
     finance:['비용 · 정산','비용·광고비·마진 집계 연결 상태를 확인합니다.'],
     connections:['연결관리','POS·배달플랫폼·EKODI Orders 연결 상태를 관리합니다.']
@@ -74,7 +74,7 @@ function clientMain(POLICY,CHANNEL_CATALOG){
   function authUrl(){const u=new URL('https://ekodi.kr/auth/');u.searchParams.set('site','space');u.searchParams.set('return_to',location.origin+location.pathname+location.search);return u.href}
   function roleCapabilities(role=state.role){return POLICY.roleCapabilities[String(role||'').trim().toLowerCase()]||[]}
   function canSection(key,role=state.role){const capability=SECTION_CAPABILITY[key];const allowed=roleCapabilities(role);return Boolean(capability&&(allowed.includes('*')||allowed.includes(capability)))}
-  function commandRoutes(role=state.role){const aliases={overview:['운영 홈','대시보드','홈'],site:['사이트 관리','사용자 사이트'],delivery:['배달','배달플랫폼'],orders:['주문','채널'],menu:['메뉴','가격'],sales:['매출'],inventory:['재고'],customers:['고객'],reviews:['리뷰'],marketing:['마케팅'],work:['업무'],connections:['연결','연결관리'],finance:['재무','비용','정산']};return NAV.filter(([key])=>canSection(key,role)).map(([id,label])=>({id,label,path:id==='overview'?ADMIN_BASE+'/overview':ADMIN_BASE+'/'+id,keywords:aliases[id]||[]}))}
+  function commandRoutes(role=state.role){const aliases={overview:['운영 홈','대시보드','홈'],site:['사이트 관리','사용자 사이트'],delivery:['배달','배달플랫폼'],orders:['주문','채널'],menu:['메뉴','가격'],sales:['매출'],inventory:['재고'],customers:['고객'],reviews:['리뷰'],marketing:['마케팅','마케팅 AI'],publishing:['SNS','채널','계정 연결','OAuth','자동게시','예약게시','쇼츠'],work:['업무'],connections:['연결','연결관리'],finance:['재무','비용','정산']};return NAV.filter(([key])=>canSection(key,role)).map(([id,label])=>({id,label,path:id==='overview'?ADMIN_BASE+'/overview':ADMIN_BASE+'/'+id,keywords:aliases[id]||[]}))}
   function mountCommandHome(role=state.role){const current='/'+PATH_PARTS.filter(Boolean).join('/');if(current!==ADMIN_BASE)return false;window.EKODITenantCommandHome?.mount({rootPath:ADMIN_BASE,siteName:STORE_NAME,publicPath:STORE_BASE,routes:commandRoutes(role)});return true}
   function activeGroup(){return GROUPS.find(group=>group.items.some(([key])=>key===section))||GROUPS[0]}
   function renderSecondaryNav(){const root=$('sectionNav');if(!root)return;root.replaceChildren();root.hidden=true}
