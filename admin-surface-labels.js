@@ -2,7 +2,6 @@
   'use strict';
   const canonical = Object.freeze({
     'admin.ekodi.kr': ['ekodi.kr/admin', 'https://ekodi.kr/admin/'],
-    'auth.ekodi.kr': ['ekodi.kr/auth', 'https://ekodi.kr/auth/'],
     'my.ekodi.kr': ['ekodi.kr/my', 'https://ekodi.kr/my/'],
     'church.ekodi.kr': ['ekodi.kr/ekodichurch', 'https://ekodi.kr/ekodichurch'],
     'biz.ekodi.kr': ['ekodi.kr/ekodibiz', 'https://ekodi.kr/ekodibiz'],
