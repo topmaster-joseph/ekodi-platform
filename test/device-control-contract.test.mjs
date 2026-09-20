@@ -270,3 +270,12 @@ test('browser canary command is explicit, summarized, and never unlocks browser 
   assert.match(agent, /'computer\.browser\.canary' \{ return Invoke-BackgroundBrowserCanary \}/);
   assert.doesNotMatch(agent, /backgroundBrowser = \$true/);
 });
+
+
+test('self-update completes the command before a safe Agent process restart', () => {
+  assert.match(agent, /restartRequired = \$true/);
+  assert.match(agent, /\$script:RestartAfterCommand = \$true/);
+  assert.match(agent, /if \(\$script:RestartAfterCommand\) \{ break \}/);
+  assert.match(agent, /\$restart = \[bool\]\$script:RestartAfterCommand/);
+  assert.match(agent, /if \(\$restart\)[\s\S]*Start-AgentProcess/);
+});
