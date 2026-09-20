@@ -7,6 +7,7 @@ on:
     paths:
       - '.github/workflows/tenant-live-production-e2e.yml'
       - 'scripts/tenant-live-production-e2e.mjs'
+      - 'scripts/church-live-production-e2e.mjs'
       - 'realtime-control.js'
       - 'realtime-tenant-registry.js'
       - 'tenant-live-page.js'
@@ -23,13 +24,10 @@ concurrency:
 jobs:
   tenant-live-e2e:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 25
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-      TENANT_LIVE_TENANT: ekodibiz
-      TENANT_LIVE_URL: https://ekodi.kr/ekodibiz/live/
-      TENANT_LIVE_LABEL: EKODI Biz
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -78,15 +76,47 @@ jobs:
           npm install --no-save --package-lock=false playwright@1.55.0
           npx playwright install --with-deps chromium
 
-      - name: Run common Tenant Live publish and anonymous viewer pull
-        run: node scripts/tenant-live-production-e2e.mjs
+      - name: Run every common Tenant Live publish and anonymous viewer pull
+        shell: bash
+        run: |
+          set -uo pipefail
+          failures=0
+          while IFS='|' read -r tenant live_url label; do
+            [ -n "$tenant" ] || continue
+            echo "::group::System Verify $tenant"
+            if TENANT_LIVE_TENANT="$tenant" TENANT_LIVE_URL="$live_url" TENANT_LIVE_LABEL="$label" node scripts/tenant-live-production-e2e.mjs; then
+              echo "System Verified: $tenant"
+            else
+              echo "::error::System verification failed: $tenant"
+              failures=$((failures+1))
+            fi
+            echo "::endgroup::"
+          done <<'TENANTS'
+          ekodimission|https://ekodi.kr/ekodimission/live/|EKODI Mission
+          ekodi-biz|https://ekodi.kr/ekodibiz/live/|EKODI Biz
+          ekodi-lab|https://ekodi.kr/ekodilab/live/|EKODI Lab
+          cgma|https://ekodi.kr/cgma/live/|CGMA
+          mokdaehumun|https://ekodi.kr/mokdaehumun/live/|Mokdae Humun
+          jadam|https://ekodi.kr/jadam/live/|Jadam
+          pizzamaru|https://ekodi.kr/pizzamaru/live/|Pizzamaru
+          yogurt|https://ekodi.kr/yogurt/live/|Yogurt Purple
+          ekodimall|https://ekodi.kr/ekodibiz/ekodimall/live/|EKODI Mall
+          ekoditrade|https://ekodi.kr/ekodibiz/trade/live/|EKODI Trade
+          TENANTS
+          test "$failures" -eq 0
 
-      - name: Upload E2E report
+      - name: Run dedicated Church Live publish and anonymous viewer pull
+        if: always() && env.E2E_ADMIN_TOKEN != ''
+        run: node scripts/church-live-production-e2e.mjs
+
+      - name: Upload E2E reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: tenant-live-production-e2e
-          path: artifacts/tenant-live-production-e2e/report.json
+          path: |
+            artifacts/tenant-live-production-e2e/*.json
+            artifacts/church-live-production-e2e/report.json
           if-no-files-found: warn
           retention-days: 7
 
