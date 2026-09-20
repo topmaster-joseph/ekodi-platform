@@ -8,7 +8,7 @@ import { EKODI_MCP_EXTENSION_TOOLS, callAuthorizedEkodiMcpExtensionTool, callPub
 const SUPABASE_URL='https://renzehysxirjilvdxacv.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
 export const EKODI_MCP_RESOURCE='https://ekodi.kr/mcp';
-export const EKODI_MCP_LEGACY_RESOURCES=Object.freeze(['https://api.ekodi.kr/mcp']);
+export const EKODI_MCP_LEGACY_RESOURCES=Object.freeze([]);
 const ACCEPTED_MCP_RESOURCES=Object.freeze([EKODI_MCP_RESOURCE,...EKODI_MCP_LEGACY_RESOURCES]);
 export const EKODI_MCP_AUTH_SERVER=`${SUPABASE_URL}/auth/v1`;
 export const EKODI_MCP_METADATA_URL='https://ekodi.kr/.well-known/oauth-protected-resource';
@@ -35,7 +35,6 @@ function mcpResponseHeaders(request,headers={}){
   return {
     link:`<${EKODI_MCP_RESOURCE}>; rel="canonical"`,
     'x-ekodi-mcp-resource':EKODI_MCP_RESOURCE,
-    ...(host==='api.ekodi.kr'?{'x-ekodi-mcp-legacy-endpoint':'true'}:{}),
     ...headers,
   };
 }
