@@ -41,10 +41,29 @@ test('shared tenant live UI exposes movable chat, extra cameras, and participant
   assert.match(css,/\.chat-messages/);
 });
 
-test('shared interpretation UI is concise and lists supported languages only',async()=>{
-  const page=await read('tenant-live-page.js');
+test('shared interpretation UI is concise and exposes working language controls',async()=>{
+  const [migration,control,page,live,css]=await Promise.all([
+    read('migrations/0101_realtime_live_interpretation.sql'),
+    read('realtime-control.js'),
+    read('tenant-live-page.js'),
+    read('tenant-live.js'),
+    read('tenant-live.css'),
+  ]);
+  assert.match(migration,/realtime_interpretation_segments/);
+  assert.match(control,/\/interpretation/);
+  assert.match(control,/capability:'translation'/);
+  assert.match(control,/env\.CONTROL_API\.fetch/);
+  assert.match(control,/automaticInterpretation:true/);
   assert.match(page,/자동동시통역 가능/);
-  for(const language of ['English','中文','日本語','Tiếng Việt','Монгол']) assert.match(page,new RegExp(language));
+  for(const [locale,language] of [['en-US','English'],['zh-CN','中文'],['ja-JP','日本語'],['vi-VN','Tiếng Việt'],['mn-MN','Монгол']]){
+    assert.match(page,new RegExp(`data-interpretation-language="${locale}"[^>]*>${language}`));
+  }
+  assert.match(page,/id="interpretationCaption"/);
+  assert.match(live,/SpeechRecognition\|\|globalThis\.webkitSpeechRecognition/);
+  assert.match(live,/speechSynthesis/);
+  assert.match(live,/SpeechSynthesisUtterance/);
+  assert.match(live,/sourceLanguage:'ko-KR'/);
+  assert.match(css,/\.viewer \.stage\{min-height:0;aspect-ratio:16\/9;max-height:min\(56vh,620px\)\}/);
   assert.doesNotMatch(page,/원음을 자동으로 인식/);
 });
 
