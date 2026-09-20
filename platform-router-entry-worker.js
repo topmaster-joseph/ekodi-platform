@@ -229,6 +229,7 @@ async function livePublicStatus(env,tenant){
   if(!env?.DB?.prepare)return'public';
   try{const row=await env.DB.prepare('SELECT public_status FROM public_site_controls WHERE site_id = ? LIMIT 1').bind('live-'+String(tenant?.apiTenant||'').toLowerCase()).first();return row?.public_status==='maintenance'?'maintenance':'public'}catch{return'public'}
 }
+function liveShell(response,surface=''){return typeof HTMLRewriter==='function'?injectEkodiShell(response,'live',surface):response}
 
 export default {
   async fetch(request,env,ctx){
@@ -239,15 +240,15 @@ export default {
     if(host===PUBLIC_HOST&&(url.pathname==='/api/finance'||url.pathname.startsWith('/api/finance/')))return routeTaxFinance(request,env,ctx);
     if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)){const adminTarget=legacyAdminAliasTarget(url.pathname);if(adminTarget){const target=new URL(request.url);target.pathname=adminTarget;return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-content-type-options':'nosniff','x-ekodi-route':'admin-canonical-handoff'}})}}
     if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)){
-      if(url.pathname==='/live'||url.pathname==='/live/')return injectEkodiShell(liveServicePage(),'live');
-      if(url.pathname==='/live/admin'||url.pathname==='/live/admin/')return injectEkodiShell(liveServiceAdminPage(),'live','admin');
+      if(url.pathname==='/live'||url.pathname==='/live/')return liveShell(liveServicePage());
+      if(url.pathname==='/live/admin'||url.pathname==='/live/admin/')return liveShell(liveServiceAdminPage(),'admin');
       if(url.pathname==='/tenant-live-admin.css')return tenantLiveAdminCss();
       if(url.pathname==='/tenant-live-admin.js')return tenantLiveAdminScript();
       const liveAdminTenant=realtimeTenantAdminFromPath(url.pathname);
       if(liveAdminTenant)return tenantLiveAdminPage(liveAdminTenant);
       const liveTenant=realtimeTenantFromPath(url.pathname);
       if(liveTenant){
-        if(await livePublicStatus(env,liveTenant)==='maintenance')return injectEkodiShell(liveServiceMaintenancePage(liveTenant),'live');
+        if(await livePublicStatus(env,liveTenant)==='maintenance')return liveShell(liveServiceMaintenancePage(liveTenant));
         if(!liveTenant.dedicated)return tenantLivePage(liveTenant);
       }
     }
