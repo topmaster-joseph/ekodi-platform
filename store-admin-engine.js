@@ -39,7 +39,7 @@ function clientMain(POLICY,CHANNEL_CATALOG){
   const SITE_CHROME_API='https://ekodi.kr/workspace-api/v1/site-chrome';
   const SESSION_KEY=IS_PORTFOLIO?'ekodi-cmpmyi-admin-session':'ekodi-store-admin-session:'+SLUG;
   const LEGACY_SESSION_KEYS={jadam:'ekodi-jadam-admin-session',pizzamaru:'ekodi-pizzamaru-admin-session',yogurt:'ekodi-yogurt-admin-session'};
-  const GROUPS=[{id:'home',label:'홈',items:[['overview','운영 홈']]},{id:'sales',label:'주문 · 판매',items:[['delivery','배달플랫폼'],['orders','주문 · 채널'],['sales','매출']]},{id:'catalog',label:'메뉴 · 재고',items:[['menu','메뉴 · 가격'],['inventory','재고']]},{id:'customers',label:'고객 · 리뷰',items:[['customers','고객'],['reviews','리뷰']]},{id:'growth',label:'마케팅 · 채널',items:[['marketing','마케팅 AI'],['publishing','SNS 채널·자동게시']]},{id:'operations',label:'운영 · 설정',items:[['site','사용자 사이트'],['chrome','헤더 · 푸터'],['work','매장업무'],['connections','연결관리'],['finance','비용 · 정산']]}];
+  const GROUPS=[{id:'home',label:'홈',items:[['overview','운영 홈']]},{id:'sales',label:'주문 · 판매',items:[['delivery','배달플랫폼'],['orders','주문 · 채널'],['sales','매출']]},{id:'catalog',label:'메뉴 · 재고',items:[['menu','메뉴 · 가격'],['inventory','재고']]},{id:'customers',label:'고객 · 리뷰',items:[['customers','고객'],['reviews','리뷰']]},{id:'growth',label:'마케팅 · 채널',items:[['marketing','마케팅 AI'],['publishing','채널·자동게시']]},{id:'operations',label:'운영 · 설정',items:[['site','사용자 사이트'],['chrome','헤더 · 푸터'],['work','매장업무'],['connections','연결관리'],['finance','비용 · 정산']]}];
 
   const NAV=GROUPS.flatMap(group=>group.items);
   const META={
@@ -54,7 +54,7 @@ function clientMain(POLICY,CHANNEL_CATALOG){
     sales:['매출','오늘 매출·객단가·비교 신호를 확인합니다.'],
     inventory:['재고','메뉴 품절 신호와 향후 재고 연동 상태를 확인합니다.'],
     marketing:['마케팅 AI','이 점포 전용 Marketing AI 운영공간으로 연결합니다.'],
-    publishing:['SNS 채널·자동게시','이 점포의 SNS 게시계정을 등록하고 계정별 OAuth 인증·예약게시·자동게시 상태를 관리합니다.'],
+    publishing:['채널·자동게시','이 점포의 SNS 게시계정을 등록하고 계정별 OAuth 인증·예약게시·자동게시 상태를 관리합니다.'],
     work:['매장업무','점포 운영업무와 승인 필요 행동을 관리합니다.'],
     finance:['비용 · 정산','비용·광고비·마진 집계 연결 상태를 확인합니다.'],
     connections:['연결관리','POS·배달플랫폼·EKODI Orders 연결 상태를 관리합니다.']
