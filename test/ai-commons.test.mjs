@@ -86,7 +86,7 @@ test('Commons page loads browser assets only through the Worker-owned API bounda
   assert.match(worker,/x-ekodi-ai-asset/);
   assert.match(client,/function apiUrl\(path\)/);
   assert.match(client,/fetch\(apiUrl\(path\)/);
-  assert.match(canonical,/id:'ai'[^\n]+basePathAware:true/);
+  assert.match(canonical,/spec\.basePathAware\|\|spec\.id==='ai'/);
   assert.match(verifier,/ai\/api\/commons\/client/);
   assert.doesNotMatch(verifier,/ai\/api\/commons\/client\.js/);
   assert.match(verifier,/capabilityId/);
