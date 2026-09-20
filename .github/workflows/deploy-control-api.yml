@@ -342,6 +342,9 @@ jobs:
           grep -Fq 'OPENAI_MODEL = "gpt-5.6-terra"' wrangler.api.toml
           grep -Fq 'AI_MULTI_PROVIDER_ENABLED = "true"' wrangler.api.toml
           grep -Fq 'EKODI_PROVIDER_WORKERS_AI_ENABLED = "true"' wrangler.api.toml
+          grep -Fq '@cf/zai-org/glm-4.7-flash' wrangler.api.toml
+          grep -Fq '@cf/google/gemma-4-26b-a4b-it' wrangler.api.toml
+          grep -Fq '@cf/nvidia/nemotron-3-120b-a12b' wrangler.api.toml
           grep -Fq 'EKODI_PROVIDER_GEMINI_ENABLED = "true"' wrangler.api.toml
           grep -Fq 'EKODI_PROVIDER_OPENAI_ENABLED = "true"' wrangler.api.toml
           grep -Fq 'EKODI_PROVIDER_ANTHROPIC_ENABLED = "true"' wrangler.api.toml
