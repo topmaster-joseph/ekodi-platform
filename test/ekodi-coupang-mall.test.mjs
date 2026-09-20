@@ -29,7 +29,7 @@ const [offerRegistry, offerControl, offerSources, offerMigration, entryWorker, m
 test('EKODI Mall remains a root storefront separate from shared Shop platform', () => {
   const mall = registry.services.find(service => service.id === 'mall');
   const shop = registry.services.find(service => service.id === 'shop');
-  assert.equal(mall.url, 'https://ekodi.kr/ekodibiz/ekodimall');
+  assert.equal(mall.url, 'https://ekodi.kr/ekodimall');
   assert.equal(mall.status, 'live');
   assert.equal(shop.url, 'https://shop.ekodi.kr');
   assert.equal(shop.status, 'planned');
@@ -48,14 +48,14 @@ test('public storefront reads as a normal shopping mall', () => {
   assert.doesNotMatch(html, /에코디 추천상품/);
 });
 
-test('official storefront canonical is ekodi.kr/ekodibiz/ekodimall', () => {
+test('official storefront canonical is ekodi.kr/ekodimall', () => {
   assert.match(html, /<link rel="canonical" href="https:\/\/ekodi\.kr\/ekodibiz\/ekodimall">/);
 });
 
 test('legacy /mall redirects safely to the canonical EKODIBIZ storefront', async () => {
   const response = await siteWorker.fetch(new Request('https://ekodi.kr/mall?source=legacy'), {});
   assert.equal(response.status, 308);
-  assert.equal(response.headers.get('location'), 'https://ekodi.kr/ekodibiz/ekodimall?source=legacy');
+  assert.equal(response.headers.get('location'), 'https://ekodi.kr/ekodimall?source=legacy');
   assert.equal(response.headers.get('x-ekodi-route'), 'mall-legacy-canonical-redirect');
 });
 
