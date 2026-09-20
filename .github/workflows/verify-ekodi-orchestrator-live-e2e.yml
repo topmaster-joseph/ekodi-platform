@@ -248,20 +248,19 @@ jobs:
         if: success()
         shell: bash
         run: |
+          proof="$RUNNER_TEMP/ekodi-orchestrator-proof.json"
           {
             echo '## EKODI Orchestrator live production proof'
             echo
-            jq -r '[
-              "- Task ID: " + (.taskId | tostring),
-              "- Terminal state: " + (.terminalState | tostring),
-              "- External test client: " + (.externalTestClient | tostring),
-              "- Actual providers: " + (.actualProviders | join(", ")),
-              "- Provider diversity: " + (.providerDiversity | tostring),
-              "- Sentinel independent: " + (.sentinelIndependent | tostring),
-              "- Durable D1 run evidence: " + (.durableLedgerVerified | tostring),
-              "- Completed at: " + (.completedAt | tostring),
-              "- Production mutation performed by task: " + (.productionMutationPerformed | tostring)
-            ] | join("\\n")' "$RUNNER_TEMP/ekodi-orchestrator-proof.json"
+            echo "- Task ID: $(jq -r '.taskId // ""' "$proof")"
+            echo "- Terminal state: $(jq -r '.terminalState // ""' "$proof")"
+            echo "- External test client: $(jq -r '.externalTestClient // ""' "$proof")"
+            echo "- Actual providers: $(jq -r '(.actualProviders // []) | join(", ")' "$proof")"
+            echo "- Provider diversity: $(jq -r '.providerDiversity // 0' "$proof")"
+            echo "- Sentinel independent: $(jq -r '.sentinelIndependent // false' "$proof")"
+            echo "- Durable D1 run evidence: $(jq -r '.durableLedgerVerified // false' "$proof")"
+            echo "- Completed at: $(jq -r '.completedAt // ""' "$proof")"
+            echo "- Production mutation performed by task: $(jq -r '.productionMutationPerformed // false' "$proof")"
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload sanitized production proof
