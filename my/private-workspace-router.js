@@ -44,7 +44,7 @@
     const raw=link.dataset.ekodiServiceTarget||link.getAttribute('href')||'';
     try{
       const target=new URL(raw,location.href);
-      if((target.origin==='https://ekodi.kr'&&target.pathname.startsWith('/auth'))||target.origin==='https://auth.ekodi.kr'){
+      if(target.origin==='https://ekodi.kr'&&target.pathname.startsWith('/auth')){
         const site=String(target.searchParams.get('site')||'');
         return services.has(site)?site:'';
       }
