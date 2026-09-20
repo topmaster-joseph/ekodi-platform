@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 5,
+  "schemaVersion": 6,
   "policyId": "AI-ORCHESTRATE-001",
   "status": "enforced",
   "controlPlane": "EKODI AI",
@@ -130,7 +130,19 @@
           "actor": "dependabot[bot]",
           "branchPrefix": "dependabot/"
         }
-      ]
+      ],
+      "enforcement": {
+        "canonicalSource": "config/ai-change-orchestration-policy.json",
+        "applyToAllAiInitiatedChanges": true,
+        "preflightBeforeBranchCreation": true,
+        "autoGenerateCompliantBranch": true,
+        "autoCorrectNonCompliantBranchBeforeMutation": true,
+        "preserveTaskIdentityOnCorrection": true,
+        "closeOrRetireSupersededNonCompliantPr": true,
+        "ciGateIsFinalDefenseOnly": true,
+        "userInterruptionOnCorrectableNamingError": false,
+        "auditCorrection": true
+      }
     },
     "requiredStatusCheck": "EKODI AI Orchestration Gate",
     "forcePush": false,
