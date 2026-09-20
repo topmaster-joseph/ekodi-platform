@@ -74,3 +74,44 @@ test('verified recovery after a material incident produces one short completion 
   assert.equal(recovered.shouldPersist, true);
   assert.match(recovered.title, /복구/);
 });
+
+
+test('production execution-boundary failure becomes a material EKODI report without new external polling', () => {
+  const report = buildEkodiOwnerReport({
+    overview:healthyOverview,
+    accountSnapshot:{
+      accounts:[
+        { id:'production', status:'degraded', services:[
+          { id:'control-api', name:'Control API', status:'offline' },
+          { id:'shared-site', name:'Shared Site', status:'degraded' },
+        ]},
+        { id:'development', status:'online', services:[] },
+      ],
+    },
+    evolution:{ recommendations:[] },
+    generatedAt:'2026-09-20T08:10:00Z',
+  });
+  assert.equal(report.category, 'attention-required');
+  assert.equal(report.importance, 'high');
+  assert.equal(report.shouldPersist, true);
+  assert.match(report.title, /Production · Control API/);
+  assert.deepEqual(report.evidence.productionExecutionOffline, ['Production · Control API']);
+  assert.deepEqual(report.evidence.productionExecutionDegraded, ['Production · Shared Site']);
+});
+
+test('development-only execution degradation stays evidence-only and does not notify the owner', () => {
+  const report = buildEkodiOwnerReport({
+    overview:healthyOverview,
+    accountSnapshot:{
+      accounts:[
+        { id:'production', status:'online', services:[{ id:'root', name:'Root', status:'online' }] },
+        { id:'development', status:'degraded', services:[{ id:'dev-api', name:'Dev API', status:'offline' }] },
+      ],
+    },
+    evolution:{ recommendations:[] },
+    generatedAt:'2026-09-20T08:20:00Z',
+  });
+  assert.equal(report.category, 'operating-well');
+  assert.equal(report.shouldPersist, false);
+  assert.deepEqual(report.evidence.developmentExecutionOffline, ['Dev API']);
+});
