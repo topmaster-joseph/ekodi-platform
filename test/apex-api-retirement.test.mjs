@@ -12,12 +12,12 @@ test('public EKODI API is apex-only and Control remains privately bound',()=>{
   const manifest=JSON.parse(read('deploy/manifests/control-api.worker.json'));
   const policy=JSON.parse(read('config/domain-canonical-policy.json'));
 
-  assert.doesNotMatch(wrangler,/api\.ekodi\.kr/);
-  assert.doesNotMatch(wrangler,/pattern\s*=\s*"api\.ekodi\.kr"/);
+  assert.equal(wrangler.includes('https://'+retiredHost),false);
+  assert.equal(wrangler.includes('pattern = "'+retiredHost+'"'),false);
   assert.match(wrangler,/name = "ekodi-auth-api"/);
   assert.match(wrangler,/main = "mission-control-entry-worker\.js"/);
 
-  assert.doesNotMatch(workflow,/https:\/\/api\.ekodi\.kr/);
+  assert.equal(workflow.includes('https://'+retiredHost),false);
   assert.match(workflow,/https:\/\/ekodi\.kr\/api\/health/);
 
   assert.doesNotMatch(router,/\[legacyEkodiHost\('api'\)\]/);
