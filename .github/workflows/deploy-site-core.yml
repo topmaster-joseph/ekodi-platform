@@ -165,6 +165,7 @@ on:
       - 'tapo-device-admin.js'
       - 'tapo-device-admin.css'
       - 'test/tapo-admin-asset-boundary.test.mjs'
+      - 'test/admin-device-self-diagnostics.test.mjs'
       - 'test/admin-true-lazy.test.mjs'
       - 'test/mall-production-verifier-contract.test.mjs'
       - 'hybrid-execution-admin.js'
@@ -291,7 +292,7 @@ jobs:
           node --test test/store-admin-systems.test.mjs test/store-user-site-admin.test.mjs test/tenant-admin-policy.test.mjs test/workspace-admin-marketing-channels-route.test.mjs test/workspace-admin-two-level-shell.test.mjs test/mall-v83-workspace-admin.test.mjs test/personal-finance-admin-control.test.mjs test/admin-finance-render-performance.test.mjs test/admin-authenticated-e2e-retry.test.mjs test/admin-assist-command-delivery.test.mjs test/ekodimission-admin-production-e2e-contract.test.mjs
           node --test test/cloudflare-quota-guard.test.mjs test/production-gate-transport-resilience.test.mjs
           node --test test/admin-subdomain-redirect-runtime.test.mjs
-          node --test test/tapo-admin-asset-boundary.test.mjs test/admin-true-lazy.test.mjs test/mall-production-verifier-contract.test.mjs
+          node --test test/tapo-admin-asset-boundary.test.mjs test/admin-device-self-diagnostics.test.mjs test/admin-true-lazy.test.mjs test/mall-production-verifier-contract.test.mjs
           node --test test/admin-communication.test.mjs test/devotional-admin-readiness.test.mjs test/ekodibiz-invest-business.test.mjs test/ekodibiz-invest-admin.test.mjs test/invest-site-system.test.mjs test/public-workspace-gateway.test.mjs test/store-public-gateway.test.mjs test/store-portfolio-admin.test.mjs test/marketing-canonical-projection.test.mjs test/church-pastor-admin.test.mjs test/church-route-ownership.test.mjs test/organization-subsite.test.mjs
           node scripts/validate-admin-source.mjs
           node scripts/validate-user-ui-dna.mjs
