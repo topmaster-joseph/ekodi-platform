@@ -1,6 +1,11 @@
 import { projectForExternalAi } from './secure-projection.js';
 
-const DEFAULT_MODEL='@cf/meta/llama-3.1-8b-instruct-fast';
+const DEFAULT_MODELS=Object.freeze([
+  '@cf/zai-org/glm-4.7-flash',
+  '@cf/google/gemma-4-26b-a4b-it',
+  '@cf/nvidia/nemotron-3-120b-a12b',
+]);
+const MAX_MODEL_POOL=5;
 const DEFAULT_DAILY_CALL_LIMIT=4;
 const MAX_DAILY_CALL_LIMIT=20;
 const MAX_OUTPUT_TOKENS=256;
@@ -12,6 +17,23 @@ function dailyLimit(env={}){
   return Math.max(1,Math.min(MAX_DAILY_CALL_LIMIT,Math.floor(number(env.EKODI_WORKERS_AI_DAILY_CALL_LIMIT,DEFAULT_DAILY_CALL_LIMIT))));
 }
 function utcDay(){return new Date().toISOString().slice(0,10)}
+function modelPool(env={}){
+  const configured=text(env.EKODI_WORKERS_AI_MODELS,1200).split(',').map(v=>v.trim()).filter(Boolean);
+  const legacy=text(env.EKODI_WORKERS_AI_MODEL,180);
+  const models=configured.length?configured:(legacy?[legacy]:DEFAULT_MODELS);
+  return Object.freeze([...new Set(models)].slice(0,MAX_MODEL_POOL));
+}
+function modelIndex(taskName='',context={},size=1){
+  if(size<=1)return 0;
+  const seed=`${text(context?.taskId,160)}|${text(context?.role,80)}|${text(taskName,160)}`;
+  let hash=2166136261;
+  for(let i=0;i<seed.length;i++){hash^=seed.charCodeAt(i);hash=Math.imul(hash,16777619)>>>0}
+  return hash%size;
+}
+function selectModel(env={},taskName='',context={}){
+  const models=modelPool(env);
+  return models[modelIndex(taskName,context,models.length)]||DEFAULT_MODELS[0];
+}
 
 async function reserveDailyCall(env={}){
   const limit=dailyLimit(env);
@@ -70,12 +92,14 @@ function buildMessages(taskName,context){
 }
 
 export function createCloudflareWorkersAiProvider(env={},options={}){
-  const model=text(env.EKODI_WORKERS_AI_MODEL||DEFAULT_MODEL,180)||DEFAULT_MODEL;
+  const models=modelPool(env);
   const ai=options.ai||env.AI;
   const available=Boolean(ai&&typeof ai.run==='function');
   return Object.freeze({
     id:PROVIDER_ID,
-    model,
+    model:models[0],
+    models,
+    selectionMode:'task-role-hash',
     available,
     priority:5,
     capabilities:Object.freeze(['text','reasoning','review','code']),
@@ -88,6 +112,7 @@ export function createCloudflareWorkersAiProvider(env={},options={}){
     freeQuotaRemaining:null,
     async invoke({taskName='',context={}}={}){
       if(!available)throw new Error('WORKERS_AI_NOT_CONFIGURED');
+      const model=selectModel(env,taskName,context);
       const reservation=await reserveDailyCall(env);
       try{
         const projected=await projectForExternalAi(context,{
@@ -126,6 +151,8 @@ export function getCloudflareWorkersAiProviderStatus(env={}){
     configured:provider.available,
     available:provider.available,
     model:provider.model,
+    models:provider.models,
+    selectionMode:provider.selectionMode,
     dailyCallLimit:dailyLimit(env),
     costClass:provider.costClass
   });
@@ -133,7 +160,8 @@ export function getCloudflareWorkersAiProviderStatus(env={}){
 
 export const CLOUDFLARE_WORKERS_AI_DEFAULTS=Object.freeze({
   id:PROVIDER_ID,
-  model:DEFAULT_MODEL,
+  model:DEFAULT_MODELS[0],
+  models:DEFAULT_MODELS,
   dailyCallLimit:DEFAULT_DAILY_CALL_LIMIT,
   maxDailyCallLimit:MAX_DAILY_CALL_LIMIT,
   maxOutputTokens:MAX_OUTPUT_TOKENS
