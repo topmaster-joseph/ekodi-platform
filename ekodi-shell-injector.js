@@ -69,7 +69,7 @@ function serviceLabel(serviceId){const service=serviceForId(serviceId);return se
 function serviceHomeHref(serviceId){return serviceForId(cleanServiceId(serviceId))?.url||'https://ekodi.kr/';}
 function serviceMemberHomeHref(serviceId){
   const id=cleanServiceId(serviceId);
-  if(!id||id==='my'||id==='ekodi')return 'https://ekodi.kr/my/';
+  if(!id||id==='my'||id==='ekodi')return 'https://ekodi.kr/';
   const home=serviceHomeHref(id);
   try{
     const url=new URL(home);
