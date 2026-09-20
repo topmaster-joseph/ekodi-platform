@@ -1,3 +1,4 @@
+import { recordFreeProviderOutcomeAndAlert } from './ai-free-quota.js';
 import { projectForExternalAi } from './secure-projection.js';
 
 const DEFAULT_MODEL='@cf/meta/llama-3.1-8b-instruct-fast';
@@ -80,7 +81,7 @@ export function createCloudflareWorkersAiProvider(env={},options={}){
     priority:5,
     capabilities:Object.freeze(['text','reasoning','review','code']),
     trustClass:'external',
-    resourceClass:'cloudflare-workers-ai-binding',
+    resourceClass:'ekodi-shared-api',
     fundingSource:'ekodi-cloudflare',
     officialPath:true,
     automationAllowed:true,
@@ -88,8 +89,9 @@ export function createCloudflareWorkersAiProvider(env={},options={}){
     freeQuotaRemaining:null,
     async invoke({taskName='',context={}}={}){
       if(!available)throw new Error('WORKERS_AI_NOT_CONFIGURED');
-      const reservation=await reserveDailyCall(env);
+      let reservation=null;
       try{
+        reservation=await reserveDailyCall(env);
         const projected=await projectForExternalAi(context,{
           profile:'ai_minimum',
           purpose:'ekodi-ai-orchestration',
@@ -102,6 +104,10 @@ export function createCloudflareWorkersAiProvider(env={},options={}){
         });
         const output=extractResponse(result);
         if(!output)throw new Error('WORKERS_AI_EMPTY_RESPONSE');
+        await recordFreeProviderOutcomeAndAlert(env,PROVIDER_ID,{
+          ok:true,
+          quota:{remainingRequests:reservation?.used===null?null:Math.max(0,Number(reservation.limit||0)-Number(reservation.used||0))}
+        }).catch(()=>{});
         return Object.freeze({
           text:output,
           model,
@@ -112,7 +118,8 @@ export function createCloudflareWorkersAiProvider(env={},options={}){
           })
         });
       }catch(error){
-        await refundFailedDailyCall(env,reservation).catch(()=>{});
+        await recordFreeProviderOutcomeAndAlert(env,PROVIDER_ID,{ok:false,error}).catch(()=>{});
+        if(reservation)await refundFailedDailyCall(env,reservation).catch(()=>{});
         throw error;
       }
     }
