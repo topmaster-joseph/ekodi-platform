@@ -45,7 +45,7 @@ const LIVE_PUBLIC_SITE_CATALOG = realtimeTenantList().map(tenant => ({
   defaultMaintenanceTitle: '라이브 서비스 준비 중입니다',
   defaultMaintenanceMessage: '현재 이 Live 서비스는 관리자 검수 또는 준비 상태입니다.',
   defaultRedirectMode: 'button'
-});
+}));
 
 const PUBLIC_SITE_CATALOG = [
   {
