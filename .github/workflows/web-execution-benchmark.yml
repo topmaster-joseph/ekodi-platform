@@ -1,0 +1,43 @@
+name: EKODI Web Execution Benchmark
+
+on:
+  pull_request:
+    paths:
+      - 'web-computer-execution-runtime.js'
+      - 'test/web-computer-execution.test.mjs'
+      - 'config/web-computer-execution-contract.json'
+      - 'config/capability-registry.json'
+      - 'config/workspace-packs.json'
+      - 'WEB_COMPUTER_EXECUTION_PLANE.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sandbox-benchmark:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Validate governed runtime
+        run: npm run validate:web-execution
+      - name: Run deterministic benchmark
+        run: |
+          node --input-type=module <<'NODE'
+          import { executeWebTask } from './web-computer-execution-runtime.js';
+          const cases = Array.from({length: 25}, (_, i) => i);
+          let verified = 0;
+          for (const i of cases) {
+            const result = await executeWebTask({ taskName: 'sandbox-benchmark' }, {
+              adapters: [{ id:'ekodi-sandbox', engine:'deterministic', trustClass:'ekodi-owned', costClass:'free', invoke: async () => ({ok:true, verified:true, taskClass:'benchmark', siteClass:'sandbox', cost:0}) }]
+            });
+            if (result.verified) verified += 1;
+          }
+          const rate = verified / cases.length;
+          console.log(JSON.stringify({samples:cases.length, verified, successRate:rate, cost:0}));
+          if (rate < 0.98) process.exit(1);
+          NODE
