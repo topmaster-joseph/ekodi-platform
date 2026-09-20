@@ -106,5 +106,6 @@ test('live production proof fails fast unless the submitted task itself executes
   const workflow = fs.readFileSync(new URL('../.github/workflows/verify-ekodi-orchestrator-live-e2e.yml', import.meta.url), 'utf8');
   assert.match(workflow, /\.execution\.processed == 1/);
   assert.match(workflow, /\.execution\.results\[0\]\.taskId == \$taskId/);
+  assert.doesNotMatch(workflow, /Wait for an empty command queue/);
 });
 
