@@ -10,13 +10,14 @@ import { buildPublicPreviewProjection } from './preview-public-projection.js';
 import { listSiteChromeSettings, putSiteChromeSettings } from './site-chrome-runtime.js';
 import { platformMaturityProjection } from './platform-maturity-control.js';
 import { handleLearningControl } from './learning-control.js';
+import { buildEkodiOwnerReport, latestEkodiOwnerReport, listEkodiOwnerReports, persistEkodiOwnerReport } from './ekodi-owner-report.js';
 
 // Provider service registry only. Customer organizations and their sites are managed as
 // customer tenants/workspaces through the customer directory, never as EKODI services.
 const SERVICE_CATALOG = [
   { id: 'root', name: 'EKODI Root', domain: 'ekodi.kr', url: 'https://ekodi.kr', group: 'platform', defaultState: 'active', defaultMonitor: true },
   { id: 'admin', name: 'EKODI Control Center', domain: 'admin.ekodi.kr', url: 'https://admin.ekodi.kr', group: 'platform', defaultState: 'active', defaultMonitor: true },
-  { id: 'api', name: 'EKODI API', domain: 'ekodi.kr/api', url: 'https://ekodi.kr/api/health', group: 'platform', defaultState: 'active', defaultMonitor: false },
+  { id: 'api', name: 'EKODI API', domain: 'ekodi.kr', url: 'https://ekodi.kr/api/health', group: 'platform', defaultState: 'active', defaultMonitor: false },
   { id: 'biz', name: '에코디비즈', domain: 'biz.ekodi.kr', url: 'https://biz.ekodi.kr', group: 'business', defaultState: 'planned', defaultMonitor: false },
   { id: 'trade', name: 'EKODI Global Trading', domain: 'trade.ekodi.kr', url: 'https://trade.ekodi.kr', group: 'business', defaultState: 'planned', defaultMonitor: false },
   { id: 'mall', name: '에코디몰', domain: 'ekodi.kr/ekodibiz/ekodimall', url: 'https://ekodi.kr/ekodibiz/ekodimall', group: 'business', defaultState: 'active', defaultMonitor: true },
@@ -603,6 +604,35 @@ async function evolutionSnapshot(env, force = false) {
   };
 }
 
+async function ownerReportSnapshot(env, options = {}) {
+  const force = options.force === true;
+  const persist = options.persist === true;
+  if (force) await runChecks(env);
+  const controlOverview = await overview(env);
+  const liveEvolution = options.evolution || await evolutionSnapshot(env);
+  const previous = await latestEkodiOwnerReport(env.DB);
+  const current = buildEkodiOwnerReport({
+    overview: controlOverview,
+    evolution: liveEvolution,
+    previous,
+    generatedAt: new Date().toISOString(),
+  });
+  const persistence = persist
+    ? await persistEkodiOwnerReport(env.DB, current)
+    : { persisted:false, reason:'read_only_projection' };
+  const reports = await listEkodiOwnerReports(env.DB, { limit: Math.max(1, Math.min(50, Number(options.limit || 10) || 10)) });
+  return {
+    schemaVersion: 1,
+    generatedAt: new Date().toISOString(),
+    reportOwner: 'ekodi-orchestrator',
+    chatgptTriggerRequired: false,
+    current,
+    latestPersisted: reports[0] || null,
+    reports,
+    persistence,
+  };
+}
+
 async function handleControl(request, env) {
   if (!env.DB) return controlJson({ error: '데이터베이스 연결이 설정되지 않았습니다.' }, 503);
   const auth = await sessionCheck(request, env);
@@ -690,6 +720,22 @@ async function handleControl(request, env) {
   if (request.method === 'POST' && path === `${CONTROL_PREFIX}/evolution/check`) {
     const snapshot = await evolutionSnapshot(env, true);
     await writeAudit(env, auth.session, 'evolution.check', 'platform', 'manual platform evolution analysis');
+    return controlJson(snapshot, 200, auth.response.headers);
+  }
+
+  if (request.method === 'GET' && path === `${CONTROL_PREFIX}/owner-report`) {
+    const limit = Math.max(1, Math.min(50, Number(url.searchParams.get('limit') || 10) || 10));
+    return controlJson(await ownerReportSnapshot(env, { limit, persist:false }), 200, auth.response.headers);
+  }
+
+  if (request.method === 'POST' && path === `${CONTROL_PREFIX}/owner-report/check`) {
+    const snapshot = await ownerReportSnapshot(env, { force:true, persist:true, limit:10 });
+    await writeAudit(env, auth.session, 'owner-report.check', 'platform', JSON.stringify({
+      category: snapshot.current?.category || '',
+      importance: snapshot.current?.importance || '',
+      persisted: snapshot.persistence?.persisted === true,
+      reportOwner: 'ekodi-orchestrator',
+    }));
     return controlJson(snapshot, 200, auth.response.headers);
   }
 
@@ -852,7 +898,8 @@ export default {
         runChecks(env),
         cloudflareAccountSnapshot(env)
       ]);
-      await Promise.all([evolutionSnapshot(env), runLanguageAutomation(env), analyzeCapabilityEcosystem(env.DB)]);
+      const [evolution] = await Promise.all([evolutionSnapshot(env), runLanguageAutomation(env), analyzeCapabilityEcosystem(env.DB)]);
+      await ownerReportSnapshot(env, { persist:true, evolution, limit:10 });
     })().catch(error => console.error('Scheduled service, account, or evolution check failed', error)));
   }
 };
