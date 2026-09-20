@@ -129,7 +129,9 @@ await writeFile(menuRuntimePath, menuCompactSource.slice(menuCompactHeader[0].le
 
 // Fingerprint the complete admin runtime. HTML is no-store, while every referenced versioned
 // asset can then be cached immutably without ever mixing two releases in one browser session.
-const versionInputs = [
+// Demand-loaded assets are discovered from the generated loader itself so adding a new
+// lazy feature cannot silently reuse an older immutable URL.
+const staticVersionInputs = [
   'admin-central-handoff.js','admin-authenticated-shell.js','admin-demand-loader.js','admin-menu-layout.js',
   ...sharedAdminMenuModules,
   'admin-design-engine.js','admin-design-engine.css',
@@ -141,6 +143,21 @@ const versionInputs = [
   'marketing-ai-admin.js','marketing-ai-admin.css','author-billing-admin.js','author-billing-admin.css',
   'admin-perf-diagnostics.js',
 ];
+function normalizeVersionedAdminAsset(value) {
+  const asset = String(value || '').split(/[?#]/)[0].replace(/^\.\//, '').replace(/^\//, '').replace(/^admin\//, '');
+  if (!asset || asset.includes('..') || !/^[A-Za-z0-9][A-Za-z0-9._/-]*\.(?:js|css)$/.test(asset)) return '';
+  return asset;
+}
+const demandRuntimeForVersion = await readFile(`${dist}admin-demand-loader.js`, 'utf8');
+const demandReferencedAssets = [...new Set(
+  [...demandRuntimeForVersion.matchAll(/['"`]([^'"`]+\.(?:js|css)(?:[?#][^'"`]*)?)['"`]/g)]
+    .map(match => normalizeVersionedAdminAsset(match[1]))
+    .filter(Boolean)
+)].sort();
+if (!demandReferencedAssets.includes('social-admin.js') || !demandReferencedAssets.includes('social-admin.css')) {
+  throw new Error('Admin Social lazy assets are missing from the fingerprint graph');
+}
+const versionInputs = [...new Set([...staticVersionInputs, ...demandReferencedAssets])].sort();
 const hash = createHash('sha256');
 for (const asset of versionInputs) hash.update(await readFile(`${dist}${asset}`));
 const assetVersion = hash.digest('hex').slice(0, 16);
