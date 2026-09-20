@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import aiWorker from '../ai-control-worker.js';
+import siteWorker from '../site-worker.js';
 
 const read = path => fs.readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 
@@ -50,6 +51,29 @@ test('common-service Admin UI consumes the central admin session and has no serv
   assert.match(source, /routeButton\('ai-settings','AI 설정 관리'\)/);
   assert.doesNotMatch(source, /commonAiSettingsSave|data-ai-weight/);
   assert.doesNotMatch(source, /Google 로그인|ekodi-ai-control-session|site=ai/);
+});
+
+test('canonical apex Admin proxies AI execution tasks through the private service binding', async () => {
+  let forwarded=null;
+  const env={
+    AI:{fetch:async request=>{
+      forwarded=request;
+      return new Response(JSON.stringify({task:{id:'task-admin-command',state:'queued'}}),{status:201,headers:{'content-type':'application/json'}});
+    }},
+    ASSETS:{fetch:async()=>new Response('not-used',{status:404})},
+  };
+  const request=new Request('https://ekodi.kr/api/control/common-services/ai/tasks',{
+    method:'POST',
+    headers:{authorization:'Bearer central-admin-token','content-type':'application/json'},
+    body:JSON.stringify({prompt:'admin command'})
+  });
+  const response=await siteWorker.fetch(request,env,{waitUntil(){}});
+  assert.equal(response.status,201);
+  assert.equal(new URL(forwarded.url).pathname,'/api/tasks');
+  assert.equal(forwarded.headers.get('authorization'),'Bearer central-admin-token');
+  assert.equal(response.headers.get('x-ekodi-route'),'admin-common-service-ai-proxy');
+  assert.equal(response.headers.get('cache-control'),'no-store');
+  assert.equal(response.headers.get('x-robots-tag'),'noindex, nofollow, noarchive');
 });
 
 test('AI runtime root serves the public Commons surface while operator admin stays centralized', async () => {

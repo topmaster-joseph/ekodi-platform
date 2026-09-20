@@ -59,6 +59,15 @@ test('admin root is a command-only workspace while Campus remains a child route'
   assert.match(dock,/공통 대화 이력/);
   assert.match(dock,/전체 대화 검색/);
   assert.match(dock,/function beginConversationTurn\(text\)/);
+  assert.ok(dock.includes("AI_EXECUTION_PREFIX='/api/control/common-services/ai'"));
+  assert.ok(dock.includes('function dispatchExecutionTask(value,c,queued)'));
+  assert.ok(dock.includes('needsCodeBranch:true'));
+  assert.ok(dock.includes('production:false'));
+  assert.ok(dock.includes("area:'software_change'"));
+  assert.ok(dock.includes("queued.status==='ready_for_executor'"));
+  assert.ok(dock.includes('/tasks/${encodeURIComponent(task.id)}/run'));
+  assert.ok(dock.includes('독립 개발 브랜치에서만 구현하십시오'));
+  assert.ok(dock.includes('production을 직접 변경하거나 배포하지 마십시오'));
   assert.match(dock,/addSessionMessage\('user',value,\{kind:'message',status:'active'\}\);renderAi\(\);scrollChat\(\);return history/);
   const optimisticTurn=dock.indexOf('const history=beginConversationTurn(value)');
   const remoteAssist=dock.indexOf("await api('/api/control/ai/assist'");

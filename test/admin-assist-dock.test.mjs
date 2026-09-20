@@ -54,7 +54,12 @@ test('Assist is current-screen aware, action-first and high-impact actions map t
   assert.match(js,/ui\.change_request/);
   assert.match(js,/ACTION_RE/);
   assert.match(js,/preflightVerified/);
-  assert.match(js,/운영 큐에 기록하고 Admin AI가 응답했습니다/);
+  assert.match(js,/운영 감사 큐에 기록했습니다/);
+  assert.match(js,/dispatchExecutionTask/);
+  assert.match(js,/ready_for_executor/);
+  assert.match(js,/needsCodeBranch:true/);
+  assert.match(js,/production:false/);
+  assert.match(js,/독립 브랜치\/검증 경로로 인계했습니다/);
 });
 
 test('Assist first path is bottom command-entry-only and upgrades through existing secured lazy assets',async()=>{
