@@ -107,12 +107,14 @@ test('Mall production verifier proves Commerce OS provider, ledger and cockpit b
   assert.match(workflow, /Cockpit must require operator auth/);
 });
 test('shared-site release verifies Tapo admin assets before production completion', () => {
-  const tapoJs = manifest.worker.requests.find(request => request.url === 'https://admin.ekodi.kr/tapo-device-admin.js');
-  const tapoCss = manifest.worker.requests.find(request => request.url === 'https://admin.ekodi.kr/tapo-device-admin.css');
+  const tapoJs = manifest.worker.requests.find(request => request.url === 'https://ekodi.kr/admin/tapo-device-admin.js');
+  const tapoCss = manifest.worker.requests.find(request => request.url === 'https://ekodi.kr/admin/tapo-device-admin.css');
   assert.ok(tapoJs);
   assert.ok(tapoCss);
   assert.ok(tapoJs.expect?.includes('TAPO EDGE BRIDGE'));
-  assert.ok(tapoJs.headerExpect?.includes('x-ekodi-route: admin-asset'));
+  assert.ok(!tapoJs.headerExpect?.includes('x-ekodi-route: admin-asset'));
   assert.ok(tapoCss.expect?.includes('.tapo-camera-panel'));
-  assert.ok(tapoCss.headerExpect?.includes('x-ekodi-route: admin-asset'));
+  assert.ok(!tapoCss.headerExpect?.includes('x-ekodi-route: admin-asset'));
+  assert.ok(tapoJs.headerExpect?.includes('x-content-type-options: nosniff'));
+  assert.ok(tapoCss.headerExpect?.includes('x-content-type-options: nosniff'));
 });
