@@ -2,11 +2,12 @@
    A single light navigation rail + spacious work canvas + persistent command composer.
    This is an EKODI-native interaction contract, not a provider-specific clone. */
 
-html[data-ekodi-admin-ui="official"] body.admin-compact.ekodi-admin-shell-v2{
+body.admin-compact{
   color-scheme:light;
   background:#fff!important;
   color:#1f1f1f!important;
   --ekodi-admin-sidebar-width:272px;
+  --ekodi-assist-left:272px;
   --ekodi-admin-canvas:#ffffff;
   --ekodi-admin-sidebar:#f7f8fc;
   --ekodi-admin-hover:#eceff5;
@@ -16,11 +17,11 @@ html[data-ekodi-admin-ui="official"] body.admin-compact.ekodi-admin-shell-v2{
   --ekodi-admin-line:#e5e8ee;
   --ekodi-admin-blue:#0b57d0;
 }
-html body.admin-compact.ekodi-admin-shell-v2 .app{
+body.admin-compact .app{
   grid-template-columns:var(--ekodi-admin-sidebar-width) minmax(0,1fr)!important;
   background:var(--ekodi-admin-canvas)!important;
 }
-html body.admin-compact.ekodi-admin-shell-v2 .sidebar{
+body.admin-compact .sidebar{
   width:auto!important;
   padding:12px 10px 10px!important;
   border-right:0!important;
@@ -30,7 +31,7 @@ html body.admin-compact.ekodi-admin-shell-v2 .sidebar{
   flex-direction:column!important;
   gap:8px!important;
 }
-html body.admin-compact.ekodi-admin-shell-v2 .sidebar nav{
+body.admin-compact .sidebar nav{
   flex:1 1 auto!important;
   min-height:0!important;
   overflow-y:auto!important;
@@ -40,7 +41,7 @@ html body.admin-compact.ekodi-admin-shell-v2 .sidebar nav{
   scrollbar-width:thin;
   scrollbar-color:#c9cdd4 transparent;
 }
-html body.admin-compact.ekodi-admin-shell-v2 .admin-global-nav{
+body.admin-compact .admin-global-nav{
   min-height:44px!important;
   padding:9px 11px!important;
   gap:11px!important;
@@ -51,29 +52,29 @@ html body.admin-compact.ekodi-admin-shell-v2 .admin-global-nav{
   font-size:14px!important;
   font-weight:650!important;
 }
-html body.admin-compact.ekodi-admin-shell-v2 .admin-global-nav:hover{
+body.admin-compact .admin-global-nav:hover{
   background:var(--ekodi-admin-hover)!important;
   color:#202124!important;
 }
-html body.admin-compact.ekodi-admin-shell-v2 .admin-global-nav.active{
+body.admin-compact .admin-global-nav.active{
   background:var(--ekodi-admin-active)!important;
   color:#174ea6!important;
 }
-html body.admin-compact.ekodi-admin-shell-v2 .admin-global-nav b{
+body.admin-compact .admin-global-nav b{
   min-width:22px!important;
   color:#5f6368!important;
   font-size:14px!important;
 }
-html body.admin-compact.ekodi-admin-shell-v2 .admin-global-nav.active b{
+body.admin-compact .admin-global-nav.active b{
   color:#174ea6!important;
 }
-html body.admin-compact.ekodi-admin-shell-v2 .admin-global-details{
+body.admin-compact .admin-global-details{
   display:grid!important;
   gap:2px!important;
   margin:2px 0 8px 30px!important;
   padding:0 4px 2px!important;
 }
-html body.admin-compact.ekodi-admin-shell-v2 .admin-detail-item{
+body.admin-compact .admin-detail-item{
   min-height:36px!important;
   padding:7px 10px!important;
   border:0!important;
@@ -83,33 +84,33 @@ html body.admin-compact.ekodi-admin-shell-v2 .admin-detail-item{
   font-size:13px!important;
   font-weight:560!important;
 }
-html body.admin-compact.ekodi-admin-shell-v2 .admin-detail-item:hover{
+body.admin-compact .admin-detail-item:hover{
   background:#eef1f6!important;
   color:#202124!important;
 }
-html body.admin-compact.ekodi-admin-shell-v2 .admin-detail-item.active{
+body.admin-compact .admin-detail-item.active{
   background:#dfe9fb!important;
   color:#174ea6!important;
   font-weight:700!important;
 }
-html body.admin-compact.ekodi-admin-shell-v2 .admin-detail-item[data-admin-detail-section="command-home"]{
+body.admin-compact .admin-detail-item[data-admin-detail-section="command-home"]{
   min-height:40px!important;
   margin-bottom:2px!important;
 }
-html body.admin-compact.ekodi-admin-shell-v2 .admin-detail-more{
+body.admin-compact .admin-detail-more{
   min-height:34px!important;
   padding:6px 10px!important;
   color:#6f747a!important;
   border-radius:12px!important;
 }
-html body.admin-compact.ekodi-admin-shell-v2 .admin-detail-more:hover{
+body.admin-compact .admin-detail-more:hover{
   background:#eef1f6!important;
   color:#303134!important;
 }
-html body.admin-compact.ekodi-admin-shell-v2 .admin-context-tabs-shell{
+body.admin-compact .admin-context-tabs-shell{
   display:none!important;
 }
-html body.admin-compact.ekodi-admin-shell-v2 .side-bottom{
+body.admin-compact .side-bottom{
   position:static!important;
   left:auto!important;
   right:auto!important;
@@ -120,18 +121,25 @@ html body.admin-compact.ekodi-admin-shell-v2 .side-bottom{
   border-top:0!important;
   background:transparent!important;
 }
-html body.admin-compact.ekodi-admin-shell-v2 .side-bottom>div{
+body.admin-compact .side-bottom>div{
   padding:8px 8px!important;
   border-radius:14px!important;
+  color:#303134!important;
+  background:transparent!important;
 }
-html body.admin-compact.ekodi-admin-shell-v2 .side-bottom .side-profile,
-html body.admin-compact.ekodi-admin-shell-v2 .side-bottom .profile{
+body.admin-compact .side-bottom strong,
+body.admin-compact .side-bottom small{
+  color:#5f6368!important;
+}
+body.admin-compact .side-bottom strong{color:#303134!important}
+body.admin-compact .side-bottom .side-profile,
+body.admin-compact .side-bottom .profile{
   min-height:48px!important;
   padding:7px 8px!important;
   border-radius:14px!important;
   color:#303134!important;
 }
-html body.admin-compact.ekodi-admin-shell-v2 .side-bottom .ghost{
+body.admin-compact .side-bottom .ghost{
   margin-top:4px!important;
   min-height:38px!important;
   border:0!important;
@@ -139,87 +147,87 @@ html body.admin-compact.ekodi-admin-shell-v2 .side-bottom .ghost{
   background:transparent!important;
   color:#5f6368!important;
 }
-html body.admin-compact.ekodi-admin-shell-v2 .side-bottom .ghost:hover{
+body.admin-compact .side-bottom .ghost:hover{
   background:#eceff5!important;
   color:#202124!important;
 }
-html body.admin-compact.ekodi-admin-shell-v2 .dot{
+body.admin-compact .dot{
   background:#1e8e3e!important;
 }
-html body.admin-compact.ekodi-admin-shell-v2 main{
+body.admin-compact main{
   background:#fff!important;
 }
-html body.admin-compact.ekodi-admin-shell-v2 .content{
+body.admin-compact .content{
   width:min(100%,1480px)!important;
   max-width:1480px!important;
   padding:28px 32px 124px!important;
   margin:0 auto!important;
 }
-html body.admin-compact.ekodi-admin-shell-v2 .content .section,
-html body.admin-compact.ekodi-admin-shell-v2 .content .architecture,
-html body.admin-compact.ekodi-admin-shell-v2 .content .module{
+body.admin-compact .content .section,
+body.admin-compact .content .architecture,
+body.admin-compact .content .module{
   border-color:#e2e7ee!important;
   background:#fff!important;
   box-shadow:none!important;
 }
-html body.admin-compact.ekodi-admin-shell-v2 .content .section,
-html body.admin-compact.ekodi-admin-shell-v2 .content .architecture{
+body.admin-compact .content .section,
+body.admin-compact .content .architecture{
   border-radius:18px!important;
 }
-html body.admin-compact.ekodi-admin-shell-v2 .content .module{
+body.admin-compact .content .module{
   border-radius:16px!important;
 }
-html body.admin-compact.ekodi-admin-shell-v2 .content .module:hover{
+body.admin-compact .content .module:hover{
   border-color:#c7d6ea!important;
   background:#f8fbff!important;
 }
-html body.admin-compact.ekodi-admin-shell-v2 .content h1,
-html body.admin-compact.ekodi-admin-shell-v2 .content h2,
-html body.admin-compact.ekodi-admin-shell-v2 .content h3,
-html body.admin-compact.ekodi-admin-shell-v2 .content strong{
+body.admin-compact .content h1,
+body.admin-compact .content h2,
+body.admin-compact .content h3,
+body.admin-compact .content strong{
   color:#202124!important;
 }
-html body.admin-compact.ekodi-admin-shell-v2 .content p,
-html body.admin-compact.ekodi-admin-shell-v2 .content small,
-html body.admin-compact.ekodi-admin-shell-v2 .content .muted{
+body.admin-compact .content p,
+body.admin-compact .content small,
+body.admin-compact .content .muted{
   color:#6b7280!important;
 }
 
 /* First screen: one Admin sidebar and one conversation canvas. */
-html body.admin-compact.ekodi-admin-shell-v2.admin-command-home.admin-command-active .ekodi-assist{
+body.admin-compact.admin-command-home.admin-command-active .ekodi-assist{
   left:var(--ekodi-assist-left,var(--ekodi-admin-sidebar-width))!important;
   top:0!important;
   bottom:0!important;
   background:
     radial-gradient(circle at 50% 46%,rgba(219,238,255,.9) 0,rgba(239,247,255,.74) 24%,rgba(255,255,255,.96) 58%,#fff 78%)!important;
 }
-html body.admin-compact.ekodi-admin-shell-v2.admin-command-home.admin-command-active .ekodi-assist-panel{
+body.admin-compact.admin-command-home.admin-command-active .ekodi-assist-panel{
   background:transparent!important;
   border:0!important;
   box-shadow:none!important;
 }
-html body.admin-compact.ekodi-admin-shell-v2.admin-command-home.admin-command-active .ekodi-assist-rail{
+body.admin-compact.admin-command-home.admin-command-active .ekodi-assist-rail{
   display:none!important;
 }
-html body.admin-compact.ekodi-admin-shell-v2.admin-command-home.admin-command-active .ekodi-assist-main{
+body.admin-compact.admin-command-home.admin-command-active .ekodi-assist-main{
   background:transparent!important;
 }
-html body.admin-compact.ekodi-admin-shell-v2.admin-command-home.admin-command-active .ekodi-assist-head{
+body.admin-compact.admin-command-home.admin-command-active .ekodi-assist-head{
   display:none!important;
 }
-html body.admin-compact.ekodi-admin-shell-v2.admin-command-home.admin-command-active .ekodi-assist-chat-scroll{
+body.admin-compact.admin-command-home.admin-command-active .ekodi-assist-chat-scroll{
   padding:clamp(52px,9vh,104px) max(28px,calc((100% - 880px)/2)) 120px!important;
 }
-html body.admin-compact.ekodi-admin-shell-v2.admin-command-home.admin-command-active .ekodi-assist-welcome{
+body.admin-compact.admin-command-home.admin-command-active .ekodi-assist-welcome{
   max-width:780px!important;
   margin:clamp(118px,22vh,260px) auto 0!important;
   text-align:center!important;
 }
-html body.admin-compact.ekodi-admin-shell-v2.admin-command-home.admin-command-active .ekodi-assist-mark,
-html body.admin-compact.ekodi-admin-shell-v2.admin-command-home.admin-command-active .ekodi-assist-quick{
+body.admin-compact.admin-command-home.admin-command-active .ekodi-assist-mark,
+body.admin-compact.admin-command-home.admin-command-active .ekodi-assist-quick{
   display:none!important;
 }
-html body.admin-compact.ekodi-admin-shell-v2.admin-command-home.admin-command-active .ekodi-assist-welcome h2{
+body.admin-compact.admin-command-home.admin-command-active .ekodi-assist-welcome h2{
   margin:0!important;
   color:#2b2f33!important;
   font-size:clamp(28px,3vw,38px)!important;
@@ -227,19 +235,19 @@ html body.admin-compact.ekodi-admin-shell-v2.admin-command-home.admin-command-ac
   line-height:1.28!important;
   letter-spacing:-.035em!important;
 }
-html body.admin-compact.ekodi-admin-shell-v2.admin-command-home.admin-command-active .ekodi-assist-welcome p{
+body.admin-compact.admin-command-home.admin-command-active .ekodi-assist-welcome p{
   margin:10px auto 0!important;
   max-width:560px!important;
   color:#747a82!important;
   font-size:13px!important;
   line-height:1.65!important;
 }
-html body.admin-compact.ekodi-admin-shell-v2.admin-command-home.admin-command-active .ekodi-assist-composer-wrap{
+body.admin-compact.admin-command-home.admin-command-active .ekodi-assist-composer-wrap{
   display:block!important;
   padding:12px max(30px,calc((100% - 720px)/2)) max(28px,env(safe-area-inset-bottom))!important;
   background:linear-gradient(to bottom,rgba(255,255,255,0),rgba(255,255,255,.86) 26%,#fff 62%)!important;
 }
-html body.admin-compact.ekodi-admin-shell-v2.admin-command-home.admin-command-active .ekodi-assist-composer{
+body.admin-compact.admin-command-home.admin-command-active .ekodi-assist-composer{
   min-height:62px!important;
   padding:10px 12px!important;
   border:1px solid #d9dde5!important;
@@ -247,25 +255,25 @@ html body.admin-compact.ekodi-admin-shell-v2.admin-command-home.admin-command-ac
   background:#fff!important;
   box-shadow:0 4px 16px rgba(60,64,67,.14),0 1px 2px rgba(60,64,67,.08)!important;
 }
-html body.admin-compact.ekodi-admin-shell-v2.admin-command-home.admin-command-active .ekodi-assist-command{
+body.admin-compact.admin-command-home.admin-command-active .ekodi-assist-command{
   color:#202124!important;
   font-size:15px!important;
 }
-html body.admin-compact.ekodi-admin-shell-v2.admin-command-home.admin-command-active .ekodi-assist-send{
+body.admin-compact.admin-command-home.admin-command-active .ekodi-assist-send{
   background:#1a73e8!important;
 }
-html body.admin-compact.ekodi-admin-shell-v2.admin-command-home.admin-command-active .ekodi-assist-composer-wrap>small{
+body.admin-compact.admin-command-home.admin-command-active .ekodi-assist-composer-wrap>small{
   color:#8a9098!important;
   font-size:10px!important;
 }
 
 /* Persistent command composer on normal Admin panels. */
-html body.admin-compact.ekodi-admin-shell-v2:not(.admin-command-home) .ekodi-assist-bootstrap{
+body.admin-compact:not(.admin-command-home) .ekodi-assist-bootstrap{
   left:var(--ekodi-assist-left,var(--ekodi-admin-sidebar-width))!important;
   padding:10px max(28px,calc((100% - 760px)/2)) max(18px,env(safe-area-inset-bottom))!important;
   background:linear-gradient(to bottom,rgba(255,255,255,0),rgba(255,255,255,.92) 32%,#fff 70%)!important;
 }
-html body.admin-compact.ekodi-admin-shell-v2:not(.admin-command-home) .ekodi-assist-bootstrap-form{
+body.admin-compact:not(.admin-command-home) .ekodi-assist-bootstrap-form{
   width:min(760px,100%)!important;
   min-height:58px!important;
   padding:8px 10px!important;
@@ -274,52 +282,52 @@ html body.admin-compact.ekodi-admin-shell-v2:not(.admin-command-home) .ekodi-ass
   background:#fff!important;
   box-shadow:0 4px 16px rgba(60,64,67,.12)!important;
 }
-html body.admin-compact.ekodi-admin-shell-v2:not(.admin-command-home) .ekodi-assist-bootstrap-form input{
+body.admin-compact:not(.admin-command-home) .ekodi-assist-bootstrap-form input{
   color:#202124!important;
   font-size:14px!important;
 }
-html body.admin-compact.ekodi-admin-shell-v2:not(.admin-command-home) .ekodi-assist-bootstrap-send{
+body.admin-compact:not(.admin-command-home) .ekodi-assist-bootstrap-send{
   background:#1a73e8!important;
 }
 
 /* Mobile keeps the same information hierarchy while the sidebar becomes a drawer. */
 @media(max-width:760px){
-  html body.admin-compact.ekodi-admin-shell-v2 .app{display:block!important}
-  html body.admin-compact.ekodi-admin-shell-v2 .sidebar{
+  body.admin-compact .app{display:block!important}
+  body.admin-compact .sidebar{
     width:min(86vw,286px)!important;
     left:-300px!important;
     border-right:1px solid #e3e7ed!important;
     box-shadow:none!important;
   }
-  html body.admin-compact.ekodi-admin-shell-v2 .sidebar.open{
+  body.admin-compact .sidebar.open{
     left:0!important;
     box-shadow:18px 0 54px rgba(32,33,36,.16)!important;
   }
-  html body.admin-compact.ekodi-admin-shell-v2 .topbar{
+  body.admin-compact .topbar{
     background:rgba(255,255,255,.96)!important;
     border-bottom:1px solid #e6e9ee!important;
     color:#202124!important;
     backdrop-filter:blur(12px)!important;
   }
-  html body.admin-compact.ekodi-admin-shell-v2 .menu{color:#3c4043!important}
-  html body.admin-compact.ekodi-admin-shell-v2 .content{padding:14px 12px 112px!important}
-  html body.admin-compact.ekodi-admin-shell-v2.admin-command-home.admin-command-active .ekodi-assist{
+  body.admin-compact .menu{color:#3c4043!important}
+  body.admin-compact .content{padding:14px 12px 112px!important}
+  body.admin-compact.admin-command-home.admin-command-active .ekodi-assist{
     left:0!important;
     top:calc(78px + env(safe-area-inset-top,0px))!important;
   }
-  html body.admin-compact.ekodi-admin-shell-v2.admin-command-home.admin-command-active .ekodi-assist-chat-scroll{
+  body.admin-compact.admin-command-home.admin-command-active .ekodi-assist-chat-scroll{
     padding:24px 14px 104px!important;
   }
-  html body.admin-compact.ekodi-admin-shell-v2.admin-command-home.admin-command-active .ekodi-assist-welcome{
+  body.admin-compact.admin-command-home.admin-command-active .ekodi-assist-welcome{
     margin:18vh auto 0!important;
   }
-  html body.admin-compact.ekodi-admin-shell-v2.admin-command-home.admin-command-active .ekodi-assist-welcome h2{
+  body.admin-compact.admin-command-home.admin-command-active .ekodi-assist-welcome h2{
     font-size:27px!important;
   }
-  html body.admin-compact.ekodi-admin-shell-v2.admin-command-home.admin-command-active .ekodi-assist-composer-wrap{
+  body.admin-compact.admin-command-home.admin-command-active .ekodi-assist-composer-wrap{
     padding:8px 10px max(10px,env(safe-area-inset-bottom))!important;
   }
-  html body.admin-compact.ekodi-admin-shell-v2:not(.admin-command-home) .ekodi-assist-bootstrap{
+  body.admin-compact:not(.admin-command-home) .ekodi-assist-bootstrap{
     left:0!important;
     padding:8px 10px max(10px,env(safe-area-inset-bottom))!important;
   }
