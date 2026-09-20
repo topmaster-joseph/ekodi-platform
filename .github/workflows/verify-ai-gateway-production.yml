@@ -64,9 +64,11 @@ jobs:
               && grep -Fiq 'x-ekodi-ai-asset: worker-owned-v1' /tmp/ai-client-headers \
               && grep -Fiq 'content-type: text/javascript' /tmp/ai-client-headers \
               && grep -Fq "const API_BASE=location.pathname.startsWith('/ai')?'/ai':'';" /tmp/ai-client \
-              && grep -Fq "api('/api/commons/config')" /tmp/ai-client \
-              && grep -Fq "api('/api/commons/match'" /tmp/ai-client \
-              && ! grep -Fq "api('/ai/api/commons/" /tmp/ai-client \
+              && grep -Fq 'function apiUrl(path)' /tmp/ai-client \
+              && grep -Fq 'fetch(apiUrl(path)' /tmp/ai-client \
+              && grep -Fq '/api/commons/config' /tmp/ai-client \
+              && grep -Fq '/api/commons/match' /tmp/ai-client \
+              && ! grep -Fq '/ai/ai/api/commons/' /tmp/ai-client \
               && grep -Fq 'operator_surface_moved' /tmp/ai-capabilities \
               && grep -Fq '"requests"' /tmp/ai-requests \
               && grep -Fq 'authentication_required' /tmp/ai-ideas; then
