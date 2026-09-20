@@ -1,0 +1,16 @@
+{
+  "id": "2026-09-20-ekodimall-independent-root-v1.17.0",
+  "constitutionVersion": "1.17.0",
+  "status": "approved",
+  "approvedBy": "topmaster-joseph",
+  "approvedAt": "2026-09-20",
+  "changeClass": "C2",
+  "taskId": "ekodimall-independent-root-20260920",
+  "summary": "Make https://ekodi.kr/ekodimall and https://ekodi.kr/ekodimall/admin the canonical public and admin surfaces for EKODI Mall, and register Mall as an independently managed responsible service that composes reusable capabilities.",
+  "approvalBasis": "The platform owner explicitly instructed EKODI to continue with /ekodimall and /ekodimall/admin and to operate internal independent, common and professional services.",
+  "migrationPolicy": "Use /ekodimall as the unique canonical Mall path. Historical /ekodibiz/ekodimall, /ekodibiz/mall and /mall paths may only hand off to the canonical root path during migration and must not own a second Mall UI.",
+  "serviceBoundary": "Mall owns seller, product, assortment, order, customer-service and settlement operating records. System/common/professional services retain independent ownership and are consumed through registered capability contracts.",
+  "commercialAuthority": "EKODIBIZ remains the commercial subject, merchant/operator and contracting authority for EKODI revenue activity under REV-001; technical service independence does not create a separate commercial subject.",
+  "authorityImpact": "No permission expansion. Person + Workspace + Role + Capability remains authoritative and URL nesting does not grant access.",
+  "rollbackPlan": "Revert the boundary/path commits through the guarded release lane, restore the prior canonical metadata with a new additive migration, and verify auth/admin/public flows before promotion."
+}

@@ -1,7 +1,7 @@
 export const ADMIN_SERVICE_CATALOG = Object.freeze([
   { id:'church', name:'에코디교회', basePath:'/ekodichurch', group:'community' },
   { id:'biz', name:'에코디비즈', basePath:'/ekodibiz', group:'business' },
-  { id:'mall', name:'에코디몰', basePath:'/ekodibiz/ekodimall', group:'business' },
+  { id:'mall', name:'에코디몰', basePath:'/ekodimall', group:'business' },
   { id:'marketing', name:'마케팅 AI', basePath:'/ekodibiz/marketing-ai', group:'business' },
   { id:'trade', name:'에코디 트레이딩', basePath:'/ekodibiz/trade', group:'business' },
   { id:'invest', name:'에코디 투자', basePath:'/ekodibiz/invest', group:'business' },

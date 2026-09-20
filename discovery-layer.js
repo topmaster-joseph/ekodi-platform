@@ -9,12 +9,12 @@ export const DISCOVERY_PUBLIC_ROUTES = Object.freeze([
   { path: '/jadam', asset: null, changefreq: 'weekly', priority: '0.8', label: 'Jadam Chicken Mokpo', title: '자담치킨 목포대점 | EKODI', description: '자담치킨 목포대점 매장·메뉴·주문·배달 안내.' },
   { path: '/pizzamaru', asset: null, changefreq: 'weekly', priority: '0.8', label: 'PizzaMaru Mokpo', title: '피자마루 목포대점 | EKODI', description: '피자마루 목포대점 매장·메뉴·주문·배달 안내.' },
   { path: '/yogurt', asset: null, changefreq: 'weekly', priority: '0.8', label: 'Yogurt Purple Mokpo', title: '요거트퍼플 목포대점 | EKODI', description: '요거트퍼플 목포대점 매장·메뉴·주문·배달 안내.' },
-  { path: '/ekodibiz/ekodimall', asset: null, changefreq: 'daily', priority: '0.8', label: 'EKODI Mall', title: 'EKODI Mall | 에코디몰', description: 'EKODI 생태계의 상품과 서비스를 만나는 공용 몰입니다.' },
+  { path: '/ekodimall', asset: null, changefreq: 'daily', priority: '0.8', label: 'EKODI Mall', title: 'EKODI Mall | 에코디몰', description: 'EKODI 생태계의 상품과 서비스를 만나는 공용 몰입니다.' },
 ]);
 
 export const DISCOVERY_PRIVATE_PREFIXES = Object.freeze([
   '/admin', '/api/', '/auth/', '/oauth/', '/cgma/oauth/', '/workspace-admin', '/preview/dev',
-  '/ekodibiz/ekodimall/admin', '/ekodibiz/ekodimall/api', '/ekodibiz/ekodimall/verification-ops',
+  '/ekodimall/admin', '/ekodimall/api', '/ekodimall/verification-ops',
 ]);
 
 export const DISCOVERY_CRAWLER_POLICY = Object.freeze({

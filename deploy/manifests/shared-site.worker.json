@@ -438,24 +438,19 @@
         ]
       },
       {
-        "url": "https://ekodi.kr/ekodibiz/ekodimall",
+        "url": "https://ekodi.kr/ekodimall",
         "statuses": [
-          200
+          308
         ],
-        "redirect": "follow",
-        "expect": [
-          "data-ekodi-service=\"mall\"",
-          "data-ekodi-user-surface=\"public\"",
-          "data-ekodi-global-nav=\"off\""
-        ],
+        "redirect": "manual",
         "headerExpect": [
-          "x-content-type-options: nosniff",
-          "x-ekodi-route: public-ekodi-mall",
-          "x-ekodi-edge: mall-path-gateway"
+          "location: https://ekodi.kr/ekodimall",
+          "cache-control: no-store",
+          "x-ekodi-route: mall-parent-canonical-redirect"
         ],
         "rollbackVerify": false,
         "candidateVerify": false,
-        "candidateVerifyReason": "run_worker_first bootstrap for /ekodibiz/ekodimall can serve the stable static storefront during 0% version-override smoke; verify the marketplace Worker route immediately after promotion"
+        "candidateVerifyReason": "former parent-nested Mall path is compatibility-only; verify the canonical redirect after promotion"
       },
       {
         "url": "https://ekodi.kr/ekodimall",
@@ -484,7 +479,7 @@
         ],
         "redirect": "manual",
         "headerExpect": [
-          "location: https://ekodi.kr/ekodibiz/ekodimall/admin",
+          "location: https://ekodi.kr/ekodimall/admin",
           "cache-control: no-store",
           "x-ekodi-route: admin-canonical-handoff"
         ],
@@ -497,14 +492,14 @@
         ],
         "redirect": "manual",
         "headerExpect": [
-          "location: https://ekodi.kr/ekodibiz/ekodimall/admin/channel-settings",
+          "location: https://ekodi.kr/ekodimall/admin/channel-settings",
           "cache-control: no-store",
           "x-ekodi-route: admin-canonical-handoff"
         ],
         "rollbackVerify": false
       },
       {
-        "url": "https://ekodi.kr/ekodibiz/ekodimall/admin/",
+        "url": "https://ekodi.kr/ekodimall/admin/",
         "statuses": [
           200
         ],
@@ -524,7 +519,7 @@
         ]
       },
       {
-        "url": "https://ekodi.kr/ekodibiz/ekodimall/admin/channel-settings",
+        "url": "https://ekodi.kr/ekodimall/admin/channel-settings",
         "statuses": [
           200
         ],
@@ -542,6 +537,32 @@
           "data-ekodi-admin-nav-mode=\"primary\"",
           "data-ekodi-admin-subnav"
         ]
+      },
+      {
+        "url": "https://ekodi.kr/ekodimall/admin/",
+        "statuses": [
+          308
+        ],
+        "redirect": "manual",
+        "headerExpect": [
+          "location: https://ekodi.kr/ekodimall/admin",
+          "cache-control: no-store",
+          "x-ekodi-route: admin-canonical-handoff"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/ekodimall/admin/channel-settings",
+        "statuses": [
+          308
+        ],
+        "redirect": "manual",
+        "headerExpect": [
+          "location: https://ekodi.kr/ekodimall/admin/channel-settings",
+          "cache-control: no-store",
+          "x-ekodi-route: admin-canonical-handoff"
+        ],
+        "rollbackVerify": false
       },
       {
         "url": "https://ekodi.kr/mall/admin/",
@@ -550,7 +571,7 @@
         ],
         "redirect": "manual",
         "headerExpect": [
-          "location: https://ekodi.kr/ekodibiz/ekodimall/admin",
+          "location: https://ekodi.kr/ekodimall/admin",
           "cache-control: no-store",
           "x-ekodi-route: admin-canonical-handoff"
         ],

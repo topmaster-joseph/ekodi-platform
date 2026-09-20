@@ -1,6 +1,6 @@
 {
   "mall": {
-    "publicCanonical": "https://ekodi.kr/ekodibiz/ekodimall",
+    "publicCanonical": "https://ekodi.kr/ekodimall",
     "internalDeploymentAliases": [
       "https://mall.ekodi.kr",
       "https://ekodi-mall.pages.dev"
