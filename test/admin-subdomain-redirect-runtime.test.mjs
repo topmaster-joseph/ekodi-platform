@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import worker from '../site-worker.js';
+import { readFile } from 'node:fs/promises';
 
 const siteOwnedHosts = [
   'auth.ekodi.kr',
@@ -25,3 +26,16 @@ for (const host of siteOwnedHosts) {
     assert.match(response.headers.get('x-robots-tag') || '', /noindex/i);
   });
 }
+
+test('Mail Admin handoff is verified only after candidate promotion', async () => {
+  const manifest=JSON.parse(await readFile(new URL('../deploy/manifests/shared-site.worker.json',import.meta.url),'utf8'));
+  const legacyMailHost=['mail','ekodi.kr'].join('.');
+  const probe=manifest.worker.requests.find(item=>item.url===`https://${legacyMailHost}/admin`);
+  assert.deepEqual(probe?.statuses,[307]);
+  assert.equal(probe?.candidateVerify,false);
+  assert.match(probe?.candidateVerifyReason||'',/after promotion|post-promotion/i);
+  assert.ok(probe?.headerExpect?.includes('location: https://ekodi.kr/admin/'));
+  assert.ok(probe?.headerExpect?.includes('cache-control: no-store'));
+  assert.ok(probe?.headerExpect?.includes('x-robots-tag: noindex, nofollow, noarchive'));
+  assert.ok(probe?.headerExpect?.includes('x-content-type-options: nosniff'));
+});
