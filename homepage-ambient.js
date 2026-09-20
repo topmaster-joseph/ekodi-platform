@@ -144,6 +144,7 @@
   }
 
   function setHookFirstHero(locale) {
+    if (document.body?.dataset?.livingGateway === 'v8-character-hub') return;
     const labels = ({
       'ko-KR':{services:'서비스',ecosystem:'생태계',explore:'둘러보기'},
       en:{services:'Services',ecosystem:'Ecosystem',explore:'Explore'},
@@ -298,25 +299,25 @@
       'ko-KR':{
         stage:'사람을 중심으로 연결되는 더 큰 가능성',
         domains:[['공동체','함께하는 사람들이 더 큰 변화를 만듭니다.'],['사역','좋은 사역이 더 멀리, 더 깊이 이어집니다.'],['비즈니스','가치 있는 일이 지속되도록 연결합니다.'],['삶','오늘도, 더 나은 내일을 향해 이어집니다.']],
-        kicker:'EKODI NEXT',title:'지금, 당신의 필요를 여기서 시작하세요.',desc:'독립적인 서비스들이 필요한 순간 연결되어 더 큰 가치를 만듭니다.',more:'모든 서비스',my:['마이 에코디','나의 활동과 서비스를 한곳에서'],
+        kicker:'EKODI NEXT',title:'지금, 당신의 필요를 여기서 시작하세요.',desc:'독립적인 서비스들이 필요한 순간 연결되어 더 큰 가치를 만듭니다.',more:'모든 서비스',
         values:[['사람 중심','사람이 있는 곳에서 가능성이 시작됩니다.'],['독립적 운영','각 서비스는 목적과 경계를 지킵니다.'],['필요한 연결','선택한 범위 안에서 안전하게 연결됩니다.']],
       },
       en:{
         stage:'More possibility, connected around people',
         domains:[['Community','People together create larger change.'],['Ministry','Good ministry travels farther and deeper.'],['Business','Helping valuable work endure.'],['Life','For a better tomorrow, starting today.']],
-        kicker:'EKODI NEXT',title:'Start with what you need, right here.',desc:'Independent services connect when needed to create more value.',more:'All services',my:['My EKODI','Your activity and services in one place'],
+        kicker:'EKODI NEXT',title:'Start with what you need, right here.',desc:'Independent services connect when needed to create more value.',more:'All services',
         values:[['Human centered','Possibility starts where people are.'],['Independent','Each service keeps its purpose and boundary.'],['Connected by choice','Connections stay within the scope you choose.']],
       },
       'zh-CN':{
         stage:'以人为中心，连接更多可能',
         domains:[['社区','同行的人一起创造更大的改变。'],['事工','让好的事工走得更远、更深。'],['商业','让有价值的工作持续成长。'],['生活','从今天连接更好的明天。']],
-        kicker:'EKODI NEXT',title:'从这里开始你此刻需要的事。',desc:'独立服务在需要时连接，创造更大的价值。',more:'全部服务',my:['My EKODI','集中管理我的活动与服务'],
+        kicker:'EKODI NEXT',title:'从这里开始你此刻需要的事。',desc:'独立服务在需要时连接，创造更大的价值。',more:'全部服务',
         values:[['以人为本','可能性从人所在之处开始。'],['独立运营','每项服务守住自己的目标与边界。'],['按需连接','只在你选择的范围内安全连接。']],
       },
       ja:{
         stage:'人を中心につながる、より大きな可能性',
         domains:[['コミュニティ','人が集まり、より大きな変化を生み出します。'],['ミニストリー','良い働きを、より遠く深くへ。'],['ビジネス','価値ある仕事が続くようにつなぎます。'],['暮らし','今日から、より良い明日へ。']],
-        kicker:'EKODI NEXT',title:'今必要なことを、ここから始めよう。',desc:'独立したサービスが必要な時につながり、より大きな価値を生みます。',more:'すべてのサービス',my:['My EKODI','活動とサービスを一か所に'],
+        kicker:'EKODI NEXT',title:'今必要なことを、ここから始めよう。',desc:'独立したサービスが必要な時につながり、より大きな価値を生みます。',more:'すべてのサービス',
         values:[['人を中心に','人がいる場所から可能性が始まります。'],['独立運営','各サービスが目的と境界を守ります。'],['必要なつながり','選んだ範囲の中で安全につながります。']],
       },
     })[locale] || null;
@@ -358,7 +359,7 @@
     section.setAttribute('aria-label', locale==='ko-KR'?'빠른 시작':'Quick start');
     const title=document.createElement('h2');
     title.className='dynamic-start-title';
-    title.textContent=locale==='ko-KR'?'무엇을 할까요?':c.title;
+    title.textContent=locale==='ko-KR'?'관련 사이트':c.title;
     section.append(title);
     const launcher=document.createElement('div');
     launcher.className='dynamic-service-launchers';
@@ -388,7 +389,7 @@
     const more=document.createElement('a');
     more.className='dynamic-more-link';
     more.href='#services';
-    more.textContent=locale==='ko-KR'?'전체 서비스 →':c.more+' →';
+    more.textContent=locale==='ko-KR'?'모든 사이트 →':c.more+' →';
     section.append(more);
     hero.after(section);
   }
@@ -501,7 +502,7 @@
     keys.forEach((key, index) => root.style.setProperty(key, palette[index]));
     root.dataset.ambientTheme = String((seed % palettes.length) + 1);
     root.dataset.dailyDate = dateKey;
-    document.body.dataset.livingGateway = 'v7-calm-personal';
+    document.body.dataset.livingGateway = 'v8-character-hub';
 
     const allCards = [...document.querySelectorAll('.service-card[data-service-status][data-service-id]')];
     await applyHomepagePresentation(allCards);
