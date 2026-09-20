@@ -8,7 +8,7 @@ const read=path=>readFile(new URL('../'+path,import.meta.url),'utf8');
 const escapeRe=value=>String(value).replace(/[|\\{}()[\]^$+*?.-]/g,'\\$&');
 
 test('Live hub lists the registered tenant Live surfaces on the canonical apex path',async()=>{
-  const response=liveServicePage();
+  const response=await liveServicePage({});
   assert.equal(response.status,200);
   const html=await response.text();
   assert.match(html,/EKODI Live/);
