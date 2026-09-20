@@ -92,7 +92,7 @@ test('Mall production verifier checks the seller-neutral product identity catalo
   assert.match(workflow, /productIdentities/);
   assert.match(workflow, /payload\.providers/);
   assert.match(workflow, /providerKey missing/);
-  assert.match(workflow, /ekodi\\.kr\\/api\\/affiliate\\/public\\/products/);
+  assert.match(workflow, /ekodi\.kr\/api\/affiliate\/public\/products/);
   assert.match(workflow, /workflow_dispatch/);
 });
 
