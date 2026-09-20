@@ -17,7 +17,7 @@ test('WORK admin edge function revalidates EKODI admin sessions and limits admin
   const source = await read('supabase/functions/work-admin-api/index.ts');
   const parseable = source.replace(/^import .*;$/gm, '');
   assert.doesNotThrow(() => new Function(parseable));
-  assert.match(source, /api\.ekodi\.kr\/api\/session/);
+  assert.match(source, /ekodi\\.kr\\/api\\/session/);
   assert.match(source, /admin_can_only_unpublish_or_close/);
   assert.match(source, /\["draft", "closed"\]/);
   assert.doesNotMatch(source, /req\.method === "PATCH"[^\n]+applications/i);
