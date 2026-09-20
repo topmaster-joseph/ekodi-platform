@@ -96,6 +96,10 @@ function canonicalSlashRedirect(request,prefix){
   const target=new URL(request.url);target.pathname=`${prefix}/`;
   return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-content-type-options':'nosniff'}});
 }
+function retiredGlobalMyRedirect(request){
+  const target=new URL(request.url);target.pathname='/';target.search='';target.hash='';
+  return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-content-type-options':'nosniff','x-ekodi-route':'retired-global-my-to-root'}});
+}
 function directDocumentNavigation(request){
   return String(request.headers.get('sec-fetch-dest')||'').toLowerCase()==='document';
 }
@@ -307,7 +311,7 @@ async function proxyExecutionSurface(request,env,spec,legacyFetch,externalFetch)
     }});
   }
   const executionSurface=executionSurfaceForPath(path);if(executionSurface)return proxyExecutionSurface(request,env,executionSurface,legacyFetch,externalFetch);
-  if(path===SURFACE_PREFIXES.my)return canonicalSlashRedirect(request,SURFACE_PREFIXES.my);
+  if(path===SURFACE_PREFIXES.my||path===`${SURFACE_PREFIXES.my}/`)return retiredGlobalMyRedirect(request);
   if(path.startsWith(`${SURFACE_PREFIXES.my}/`))return proxyBinding(request,env?.MY,SURFACE_PREFIXES.my,'my');
   if(path===SURFACE_PREFIXES.auth)return canonicalSlashRedirect(request,SURFACE_PREFIXES.auth);
   if(path.startsWith(`${SURFACE_PREFIXES.auth}/`)){
