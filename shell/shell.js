@@ -8,7 +8,7 @@ const SHELL_ORIGIN='https://ekodi.kr/shell';
 const MANIFEST_URL=`${SHELL_ORIGIN}/manifest.json`;
 const THEME_URL=`${SHELL_ORIGIN}/theme.json`;
 const AUTH='https://ekodi.kr/auth/';
-const MY='https://ekodi.kr/my/';
+const ROOT='https://ekodi.kr/';
 const TRAFFIC_TELEMETRY='https://api.ekodi.kr/api/telemetry/visit';
 const explicitService=String(script?.dataset?.ekodiService||'').trim().toLowerCase();
 const hidden=script?.dataset?.ekodiShell==='off';
@@ -221,7 +221,7 @@ function siteMemberHomeBase(){
   const declared=String(document.documentElement.dataset.ekodiMemberHome||'').trim();
   if(declared){try{return new URL(declared,location.href).href}catch{}}
   const id=String(service?.id||explicitService||'').trim().toLowerCase();
-  if(!id||id==='my'||id==='ekodi')return MY;
+  if(!id||id==='my'||id==='ekodi')return ROOT;
   try{
     const home=new URL(service?.url||'');
     const path=('/'+home.pathname.replace(/^\/+|\/+$/g,'')).replace(/\/$/,'')||'/';
@@ -229,7 +229,7 @@ function siteMemberHomeBase(){
   }catch{}
   return `https://ekodi.kr/${encodeURIComponent(id)}/my`;
 }
-function myUrl(){const u=new URL(siteMemberHomeBase());if(u.href!==MY)u.searchParams.set('return_to',currentReturn());return u.href;}
+function myUrl(){const u=new URL(siteMemberHomeBase());if(u.href!==ROOT)u.searchParams.set('return_to',currentReturn());return u.href;}
 
 function memberPolicy(){return service?.userAccessPolicy||null;}
 function guestPublicException(){const p=location.pathname.toLowerCase();return p==='/health'||p.startsWith('/health/')||p.startsWith('/api/')||p.includes('callback')||/(?:^|\/)(?:privacy|terms|legal|policy)(?:[.\/-]|$)/.test(p);}
@@ -268,7 +268,7 @@ function reconcileMemberGate(){syncWorkspaceUiVisibility();if(!memberGateApplies
 function startMemberGate(){reconcileMemberGate();if(memberGateTimer)clearInterval(memberGateTimer);memberGateTimer=setInterval(reconcileMemberGate,2000);window.addEventListener('storage',reconcileMemberGate);window.addEventListener('focus',reconcileMemberGate);document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')reconcileMemberGate();});window.addEventListener('ekodi:auth-state',reconcileMemberGate);}
 
 function serviceUrl(target){
-  if(!target?.url)return MY;
+  if(!target?.url)return ROOT;
   if(target.id==='my')return myUrl();
   if(!target.sso)return target.url;
   const auth=new URL(AUTH);auth.searchParams.set('site',target.id);auth.searchParams.set('return_to',target.url);
