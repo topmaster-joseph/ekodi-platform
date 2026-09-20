@@ -183,6 +183,7 @@ export function injectEkodiTenantReadability(response){
     headers.set('content-security-policy',next);
   }
   headers.set(TENANT_READABILITY_HEADER,TENANT_READABILITY_VERSION);
+  if(typeof HTMLRewriter!=='function')return new Response(response.body,{status:response.status,statusText:response.statusText,headers});
   const headerAdopter=new TenantReadabilityHeaderAdopter();
   return new HTMLRewriter()
     .on('html',new TenantReadabilityHtmlInjector())
