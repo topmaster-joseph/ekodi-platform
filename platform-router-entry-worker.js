@@ -148,7 +148,7 @@ async function routeEkodiBizAsset(request,env){
 }
 async function routeEkodiBizPublic(request,env){
   if(!env?.EKODIBIZ?.fetch)return workspaceServiceUnavailable();const upstream=await env.EKODIBIZ.fetch(workspaceUpstreamRequest(request,'/'));const routed=new Response(upstream.body,upstream);routed.headers.set('x-ekodi-workspace-gateway','ekodibiz-service-binding');
-  const rewrite=(element,name)=>{const v=element.getAttribute(name)||'';for(const asset of EKODIBIZ_ASSETS){const rootPath=`/${asset}`;if(v===rootPath||v.startsWith(`${rootPath}?`)){element.setAttribute(name,EKODIBIZ_ASSET_PREFIX+asset+v.slice(rootPath.length));break}}};const rewritten=new HTMLRewriter().on('link[href]',{element:e=>rewrite(e,'href')}).on('script[src]',{element:e=>rewrite(e,'src')}).transform(routed);return injectEkodiProgressiveHome(rewritten);
+  const rewrite=(element,name)=>{const v=element.getAttribute(name)||'';for(const asset of EKODIBIZ_ASSETS){const rootPath=`/${asset}`;if(v===rootPath||v.startsWith(`${rootPath}?`)){element.setAttribute(name,EKODIBIZ_ASSET_PREFIX+asset+v.slice(rootPath.length));break}}};const rewritten=new HTMLRewriter().on('link[href]',{element:e=>rewrite(e,'href')}).on('script[src]',{element:e=>rewrite(e,'src')}).transform(routed);return injectEkodiProgressiveHome(injectEkodiTenantReadability(rewritten));
 }
 async function routeEkodiBizApi(request,env){
   if(!env?.EKODIBIZ?.fetch)return workspaceServiceUnavailable();
@@ -274,7 +274,7 @@ export default {
         if(url.pathname==='/church-pastor-admin.js')return churchPastorAdminScript();
         if(url.pathname==='/workspace-trade-portal.css')return tradePartnerCss();
         if(url.pathname==='/workspace-trade-portal.js')return tradePartnerScript();
-        if(isTradePartnerPath(url.pathname))return tradePartnerPage();
+        if(isTradePartnerPath(url.pathname))return injectEkodiTenantReadability(tradePartnerPage());
         if(url.pathname==='/ekodi-church'||url.pathname.startsWith('/ekodi-church/')){const target=new URL(request.url);target.pathname=url.pathname.replace(/^\/ekodi-church(?=\/|$)/i,'/ekodichurch');return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-content-type-options':'nosniff'}});}
         if(isChurchPastorAdminPath(url.pathname))return injectEkodiShell(churchPastorAdminPage(),'church','admin');
         if(isWorkspaceAdminPath(url.pathname)&&!isEkodiBizInvestAdminPath(url.pathname))return injectEkodiShell(workspaceAdminPage(),'space','admin');
