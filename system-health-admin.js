@@ -73,6 +73,17 @@
       </div>
     </div>
 
+    <nav class="system-health-tabs" aria-label="상태·관측 세부항목">
+      <button type="button" class="is-active" data-health-jump="top">종합</button>
+      <button type="button" data-health-jump="core">Core</button>
+      <button type="button" data-health-jump="database">DB</button>
+      <button type="button" data-health-jump="backup">Backup</button>
+      <button type="button" data-health-jump="ai">AI</button>
+      <button type="button" data-health-jump="sites">사이트</button>
+      <button type="button" data-health-jump="traffic">트래픽</button>
+      <button type="button" data-health-jump="deploy">배포</button>
+    </nav>
+
     <div class="core-health-overall" data-core-overall data-state="pending">
       <span class="system-health-dot" aria-hidden="true"></span>
       <div><small>EKODI Core</small><strong data-core-overall-label>확인 전</strong><span data-core-status>Health 메뉴를 열면 Core 운영 상태를 확인합니다.</span></div>
@@ -210,6 +221,24 @@
   content.append(section);
 
   const get = selector => section.querySelector(selector);
+  const healthTargets = {
+    top: section,
+    core: section.querySelector('[data-core-overall]'),
+    database: section.querySelector('[data-core-card="database"]'),
+    backup: section.querySelector('[data-core-card="backup"]'),
+    ai: section.querySelector('[data-core-card="ai"]'),
+    sites: section.querySelector('[data-core-fleet]')?.closest('.core-health-card'),
+    traffic: section.querySelector('[data-health-overall]'),
+    deploy: section.querySelector('.code-health-overall')
+  };
+  section.querySelectorAll('[data-health-jump]').forEach(tab => tab.addEventListener('click', () => {
+    const key = tab.dataset.healthJump;
+    const target = healthTargets[key];
+    if (!target) return;
+    section.querySelectorAll('[data-health-jump]').forEach(item => item.classList.toggle('is-active', item === tab));
+    target.scrollIntoView({ behavior:'smooth', block:key === 'top' ? 'start' : 'center' });
+  }));
+
   const status = get('[data-health-status]');
   const overall = get('[data-health-overall]');
   const overallLabel = get('[data-health-overall-label]');
