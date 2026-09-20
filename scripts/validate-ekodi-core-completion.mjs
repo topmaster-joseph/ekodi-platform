@@ -85,13 +85,22 @@ requireText('.github/workflows/ci.yml', [
   'npm run test:ai-none',
   'npm run validate:ai-resilience',
 ]);
-requireText('scripts/verify-ekodi-core-production.mjs', [
+const productionVerifier = requireText('scripts/verify-ekodi-core-production.mjs', [
+  "const apiBase = 'https://ekodi.kr'",
+  '/api/health',
   '/api/core/v1/status',
   '/api/core/v1/roles',
   '/api/core/v1/ai/status',
   '/api/core/v1/recovery/status',
+  "['admin', 'https://ekodi.kr/admin/']",
+  "['auth', 'https://ekodi.kr/auth/']",
+  "['biz', 'https://ekodi.kr/ekodibiz/']",
+  "['marketing', 'https://ekodi.kr/ekodibiz/marketing-ai']",
   'strict-transport-security',
 ]);
+for (const retiredHost of ['https://api.ekodi.kr','https://admin.ekodi.kr','https://auth.ekodi.kr','https://biz.ekodi.kr','https://marketing.ekodi.kr']) {
+  if (productionVerifier.includes(retiredHost)) fail('scripts/verify-ekodi-core-production.mjs', `retired production verifier host remains: ${retiredHost}`);
+}
 
 const packageJson = readJson('package.json');
 if (!String(packageJson.scripts?.['validate:core-completion'] || '').includes('validate-ekodi-core-completion.mjs')) {
