@@ -2,7 +2,7 @@
   // Build contract marker: data-section = 'work' is the dedicated left sidebar entry.
   const TOKEN_KEY = 'ekodi-auth-token';
   const WORK_URL = 'https://work.ekodi.kr';
-  const AUTH_URL = 'https://auth.ekodi.kr/?site=work';
+  const AUTH_URL = 'https://ekodi.kr/auth/?site=work';
   const ADMIN_API = 'https://renzehysxirjilvdxacv.supabase.co/functions/v1/work-admin-api';
 
   const text = value => String(value ?? '');
