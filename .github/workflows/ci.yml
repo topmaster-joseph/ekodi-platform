@@ -50,7 +50,7 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: "24"
-      - uses: actions/setup-go@v6
+      - uses: actions/setup-go@v7
         with:
           go-version: "1.25.x"
       - name: Validate GitHub Actions workflows
@@ -59,6 +59,8 @@ jobs:
           "$(go env GOPATH)/bin/actionlint" -color -shellcheck= -pyflakes= \
             .github/workflows/ci.yml \
             .github/workflows/deploy-control-api.yml \
+            .github/workflows/deploy-space.yml \
+            .github/workflows/deploy-site-core.yml \
             .github/workflows/backup-ekodi-core.yml \
             .github/workflows/verify-ekodi-core-completion.yml \
             .github/workflows/release-messenger-investment-functional.yml \
@@ -79,7 +81,10 @@ jobs:
           node --check scripts/run-reliability-validation.mjs
           node scripts/run-reliability-validation.mjs --validate-only
           node --test test/reliability-validation.test.mjs
-      - run: npm run check
+      - name: Run static policy and code checks
+        env:
+          EKODI_ORCHESTRATION_STATIC_POLICY: '1'
+        run: npm run check
       - run: npm run build
       - name: Validate AI provider independence
         run: npm run validate:ai-resilience

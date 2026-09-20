@@ -1,6 +1,6 @@
 import siteWorker from './site-worker.js';
 import { serviceForId } from './ekodi-service-manifest.js';
-import { injectEkodiShell, shellServiceForHost, shellServiceForRootPath } from './ekodi-shell-injector.js';
+import { injectEkodiShell, injectEkodiTenantReadability, shellServiceForHost, shellServiceForRootPath } from './ekodi-shell-injector.js';
 import { isWorkspaceAdminPathShape, isWorkspaceSlug } from './workspace-route-policy.js';
 import { resolveWorkspaceVisualDNA, workspaceVisualCssVariables } from './workspace-visual-dna.js';
 
@@ -133,7 +133,8 @@ export default {
     const response = await siteWorker.fetch(effective.request, env, ctx);
     if (effective.host === PUBLIC_HOST) {
       const pathname=new URL(effective.request.url).pathname;
-      if(rootInternalPath(pathname)||standaloneBrandPlacePath(pathname)||isWorkspaceAdminPathShape(pathname))return response;
+      if(rootInternalPath(pathname)||isWorkspaceAdminPathShape(pathname))return response;
+      if(standaloneBrandPlacePath(pathname))return injectEkodiTenantReadability(response);
       const serviceId=rootUserService(pathname);
       if(serviceId)return injectRootServiceShell(response,serviceId,isUserHomePath(pathname,serviceId));
       const workspaceSlug=workspaceSlugForPath(pathname);

@@ -91,9 +91,9 @@ const MARKETING_ALIAS_SITES = marketingTenants.tenants.flatMap(row =>
 // These are intentionally still marked planned in the service manifest, but their
 // public endpoints are already live and therefore remain part of operational checks.
 const LIVE_PRELAUNCH_SITES = [
-  ['prelaunch-mail', 'EKODI Mail', 'mail.ekodi.kr', 'https://mail.ekodi.kr/'],
-  ['prelaunch-live', 'EKODI Live', 'live.ekodi.kr', 'https://live.ekodi.kr/'],
-  ['prelaunch-cloud', 'EKODI Cloud', 'cloud.ekodi.kr', 'https://cloud.ekodi.kr/']
+  ['prelaunch-mail', 'EKODI Mail', 'ekodi.kr', 'https://ekodi.kr/mail'],
+  ['prelaunch-live', 'EKODI Live', 'ekodi.kr', 'https://ekodi.kr/live'],
+  ['prelaunch-cloud', 'EKODI Cloud', 'ekodi.kr', 'https://ekodi.kr/cloud']
 ];
 
 const EXTRA_SITES = [

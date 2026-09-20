@@ -13,7 +13,9 @@
         "redirect": "manual",
         "expect": [
           "EKODI 모두의 AI 프로젝트",
-          "무엇을 원하세요?"
+          "무엇을 하고 싶으세요?",
+          "AI로 하기",
+          "최근 공개된 AI"
         ],
         "headerExpect": [
           "x-ekodi-canonical-surface: ai",
@@ -25,7 +27,9 @@
         ],
         "candidateExpect": [
           "EKODI 모두의 AI 프로젝트",
-          "무엇을 원하세요?"
+          "무엇을 하고 싶으세요?",
+          "AI로 하기",
+          "최근 공개된 AI"
         ],
         "candidateHeaderExpect": [],
         "candidateForbid": [],
@@ -43,11 +47,12 @@
         ],
         "expect": [
           "const API_BASE=location.pathname.startsWith('/ai')?'/ai':'';",
+          "function apiUrl(path)",
           "/api/commons/config",
           "/api/commons/match"
         ],
         "forbid": [
-          "/ai/api/commons/"
+          "/ai/ai/api/commons/"
         ],
         "headerExpect": [
           "x-ekodi-ai-asset: worker-owned-v1",
@@ -59,11 +64,12 @@
         ],
         "candidateExpect": [
           "const API_BASE=location.pathname.startsWith('/ai')?'/ai':'';",
+          "function apiUrl(path)",
           "/api/commons/config",
           "/api/commons/match"
         ],
         "candidateForbid": [
-          "/ai/api/commons/"
+          "/ai/ai/api/commons/"
         ],
         "candidateHeaderExpect": [
           "x-ekodi-ai-asset: worker-owned-v1",

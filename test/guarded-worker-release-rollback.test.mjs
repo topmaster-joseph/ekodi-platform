@@ -58,6 +58,7 @@ if (enabled) {
   const candidate = process.env.EKODI_ROLLBACK_PROOF_CANDIDATE;
   const logPath = process.env.EKODI_ROLLBACK_PROOF_COMMAND_LOG;
   let active = previous;
+  let rollbackAttempts = 0;
   const realSpawnSync = childProcess.spawnSync;
   const realSetTimeout = globalThis.setTimeout;
 
@@ -83,9 +84,20 @@ if (enabled) {
       } else if (rendered.includes('versions upload')) {
         stdout = 'Worker Version ID: ' + candidate + '\\n';
       } else if (rendered.includes('versions deploy')) {
-        if (argv.includes(candidate + '@100%')) active = candidate;
-        else if (argv.includes(previous + '@100%')) active = previous;
-        stdout = 'deployment accepted\\n';
+        if (argv.includes(candidate + '@100%')) {
+          active = candidate;
+        } else if (argv.includes(previous + '@100%') && !argv.includes(candidate + '@0%')) {
+          rollbackAttempts += 1;
+          if (rollbackAttempts === 1) {
+            status = 1;
+            stderr = 'fetch failed: simulated transient rollback transport error\\n';
+          } else {
+            active = previous;
+          }
+        } else if (argv.includes(previous + '@100%')) {
+          active = previous;
+        }
+        if (status === 0) stdout = 'deployment accepted\\n';
       } else {
         status = 2;
         stderr = 'unexpected fake Wrangler invocation: ' + rendered + '\\n';
@@ -138,6 +150,7 @@ if (enabled) {
     const output = `${result.stdout || ''}\n${result.stderr || ''}`;
     assert.equal(result.status, 1, `fault-injected release must fail closed after verified rollback:\n${output}`);
     assert.match(output, /Rolling back ekodi-rollback-proof to 11111111-1111-4111-8111-111111111111 at 100%\./);
+    assert.match(output, /Transient Wrangler transport failure during rollback attempt 1\/3; retrying safely\./);
     assert.match(output, /Automatic rollback verified against the stable rollback contract\./);
 
     const commands = fs.readFileSync(commandLogPath, 'utf8').trim().split(/\r?\n/).filter(Boolean);
@@ -148,6 +161,8 @@ if (enabled) {
     assert.ok(attachIndex >= 0, `candidate must first be attached at 0% traffic: ${commands.join('\n')}`);
     assert.ok(promoteIndex > attachIndex, `candidate must be promoted only after candidate verification: ${commands.join('\n')}`);
     assert.ok(rollbackIndex > promoteIndex, `previous stable version must be restored after the injected production failure: ${commands.join('\n')}`);
+    const rollbackCommands = commands.filter((line, index) => index > promoteIndex && line.includes(`${PREVIOUS_VERSION}@100%`) && !line.includes(`${CANDIDATE_VERSION}@0%`));
+    assert.equal(rollbackCommands.length, 2, `transient rollback transport failure must cause exactly one bounded retry: ${commands.join('\n')}`);
 
     const scriptDigest = crypto.createHash('sha256').update(fs.readFileSync(releaseScript)).digest('hex');
     writeProof(process.env.EKODI_ROLLBACK_PROOF_OUTPUT, {

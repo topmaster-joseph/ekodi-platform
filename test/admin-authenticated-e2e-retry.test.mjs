@@ -7,6 +7,7 @@ const workerSource = () => readFile(new URL('../scripts/admin-authenticated-e2e-
 const workflowSource = () => readFile(new URL('../.github/workflows/admin-authenticated-e2e.yml', import.meta.url), 'utf8');
 const productionWorkflowSource = () => readFile(new URL('../.github/workflows/verify-admin-authenticated-production-e2e.yml', import.meta.url), 'utf8');
 const sharedWorkflowSource = () => readFile(new URL('../.github/workflows/deploy-site-core.yml', import.meta.url), 'utf8');
+const productionGateSource = () => readFile(new URL('../.github/workflows/production-gate.yml', import.meta.url), 'utf8');
 
 test('authenticated Admin E2E isolates every menu in a fresh Chromium process and retries only that menu once', async () => {
   const source = await retrySource();
@@ -33,17 +34,21 @@ test('isolated worker skips redundant clicks only when the active context tab ha
   assert.match(source, /Production menu registry missing/);
 });
 
-test('production Admin workflow keeps the isolated recovery runner wired', async () => {
-  const workflow = await workflowSource();
-  assert.match(workflow, /scripts\/admin-authenticated-e2e-retry\.mjs/);
-  assert.match(workflow, /run: node scripts\/admin-authenticated-e2e-retry\.mjs/);
+test('full production Admin E2E remains available only by explicit manual dispatch', async () => {
+  for (const workflow of [await workflowSource(), await productionWorkflowSource()]) {
+    assert.match(workflow, /on:\s*\n\s*workflow_dispatch:/);
+    assert.doesNotMatch(workflow, /\n\s*push:\s*\n/);
+    assert.match(workflow, /run: node scripts\/admin-authenticated-e2e-retry\.mjs/);
+  }
 });
 
 
-test('Shared Site release uses the same isolated authenticated Admin verifier', async () => {
-  const workflow = await sharedWorkflowSource();
-  assert.match(workflow, /run: node scripts\/admin-authenticated-e2e-retry\.mjs/);
-  assert.doesNotMatch(workflow, /run: node scripts\/admin-authenticated-e2e\.mjs\s*$/m);
+test('Shared Site release does not duplicate full-menu production E2E and delegates post-deploy verification to the quota-aware canary', async () => {
+  const [workflow, productionGate] = await Promise.all([sharedWorkflowSource(), productionGateSource()]);
+  assert.doesNotMatch(workflow, /\n\s*admin-authenticated-e2e:\s*\n/);
+  assert.doesNotMatch(workflow, /run: node scripts\/admin-authenticated-e2e-retry\.mjs/);
+  assert.match(productionGate, /Run one quota-aware post-deploy canary/);
+  assert.match(productionGate, /post-deploy-canary\.mjs --scope=full/);
 });
 
 test('isolated Tax E2E verifies authenticated handoff and value-preserving supplier save in production verification', async () => {

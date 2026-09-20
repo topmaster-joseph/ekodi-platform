@@ -7,7 +7,13 @@ import { fileURLToPath } from 'node:url';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const policyPath = path.join(root, 'config', 'ai-change-orchestration-policy.json');
 const releaseMode = process.argv.includes('--release');
-const ciMode = process.argv.includes('--ci') || releaseMode;
+const staticPolicyMode = process.argv.includes('--static-policy') || String(process.env.EKODI_ORCHESTRATION_STATIC_POLICY || '').trim() === '1';
+const ciFlag = process.argv.includes('--ci');
+if (staticPolicyMode && (releaseMode || ciFlag)) {
+  console.error('[EKODI][AI-ORCHESTRATE-001] static policy mode cannot replace CI/release provenance enforcement.');
+  process.exit(1);
+}
+const ciMode = ciFlag || releaseMode;
 
 function fail(message) {
   console.error(`[EKODI][AI-ORCHESTRATE-001] ${message}`);
@@ -229,7 +235,10 @@ async function verifiedMainPrMerge() {
 let source = 'static-policy-validation';
 let intentBranch = text(process.env.GITHUB_HEAD_REF || process.env.GITHUB_REF_NAME);
 
-if (eventName === 'pull_request' || eventName === 'pull_request_target') {
+if (staticPolicyMode) {
+  source = 'static-policy-validation';
+  intentBranch = '';
+} else if (eventName === 'pull_request' || eventName === 'pull_request_target') {
   intentBranch = text(event.pull_request?.head?.ref || process.env.GITHUB_HEAD_REF);
   if (!branchAllowed(intentBranch)) fail(`change branch must enter through EKODI AI namespace (${allowedPrefixes.join(', ')}): ${intentBranch || 'missing'}`);
   source = `pull-request:${event.pull_request?.number || 'unknown'}`;

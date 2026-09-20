@@ -105,6 +105,19 @@ test('public contact release guard is registered', async()=>{
   assert.match(wrangler,/limit = 5/);
 });
 
+test('Mail Admin release verifies the canonical site-local Admin surface', async()=>{
+  const manifest=JSON.parse(await readFile(new URL('../deploy/manifests/shared-site.worker.json',import.meta.url),'utf8'));
+  const probe=manifest.worker.requests.find(item=>item.url==='https://ekodi.kr/mail/admin');
+  assert.deepEqual(probe?.statuses,[200]);
+  assert.ok(probe?.expect?.includes('EKODI Mail Admin'));
+  assert.ok(probe?.expect?.includes('메일 관리'));
+  assert.ok(probe?.headerExpect?.includes('x-ekodi-route: mail-admin'));
+  assert.ok(probe?.headerExpect?.includes('cache-control: no-store'));
+  assert.ok(probe?.headerExpect?.includes('x-content-type-options: nosniff'));
+  assert.equal(probe?.candidateVerify,undefined);
+  assert.equal(probe?.rollbackVerify,false);
+});
+
 test('shared-site workflow watches and validates the contact surface', async()=>{
   const workflow=await readFile(new URL('../.github/workflows/deploy-site-core.yml',import.meta.url),'utf8');
   assert.match(workflow,/- 'mail-contact\.js'/);

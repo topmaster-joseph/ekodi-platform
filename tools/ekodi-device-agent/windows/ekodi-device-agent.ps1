@@ -10,7 +10,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$AgentVersion = '2.2.1'
+$AgentVersion = '2.2.3'
 $Root = Join-Path $env:ProgramData 'EKODI\DeviceAgent'
 $AgentPath = Join-Path $Root 'ekodi-device-agent.ps1'
 $ConfigPath = Join-Path $Root 'config.json'
@@ -797,6 +797,47 @@ function Get-AgentSettings {
   }
 }
 
+function Get-RemoteProcessList {
+  try {
+    $items = @(Get-Process -ErrorAction Stop |
+      Sort-Object -Property CPU -Descending |
+      Select-Object -First 100 |
+      ForEach-Object {
+        @{
+          id = [int]$_.Id
+          name = [string]$_.ProcessName
+          cpuSeconds = $(if ($null -ne $_.CPU) { [math]::Round([double]$_.CPU, 1) } else { $null })
+          memoryMB = [math]::Round([double]$_.WorkingSet64 / 1MB, 1)
+        }
+      })
+    return @{ checkedAt = (Get-Date).ToUniversalTime().ToString('o'); count = $items.Count; items = $items }
+  } catch {
+    return @{ checkedAt = (Get-Date).ToUniversalTime().ToString('o'); count = 0; items = @(); error = 'process_list_unavailable' }
+  }
+}
+
+function Get-RemoteAgentStatus {
+  $taskState = 'unknown'
+  try {
+    $task = Get-ScheduledTask -TaskName $TaskName -ErrorAction Stop
+    $taskState = [string]$task.State
+  } catch { }
+  return @{
+    checkedAt = (Get-Date).ToUniversalTime().ToString('o')
+    version = $AgentVersion
+    hostname = $env:COMPUTERNAME
+    processId = $PID
+    taskName = $TaskName
+    taskState = $taskState
+    persistentShell = $false
+    directHostMutation = $false
+    foregroundUserSessionProtected = $true
+    backgroundBrowserReady = $false
+    isolatedDesktopReady = $false
+    minimizedWindowCountsAsIsolation = $false
+  }
+}
+
 function Get-FullDiagnostic {
   return @{
     generatedAt = (Get-Date).ToUniversalTime().ToString('o')
@@ -860,6 +901,9 @@ function Invoke-DeviceCommand([pscustomobject]$Command) {
     }
     'autologon.open' { return @{ message = Open-AutologonManager; settings = Get-AgentSettings } }
     'diagnostics.collect' { return @{ message = '시스템·저장공간·네트워크·프린터·시작프로그램·업데이트 진단을 완료했습니다.'; diagnostics = Get-FullDiagnostic; settings = Get-AgentSettings } }
+    'computer.system.read' { return @{ message = '원격 컴퓨터 시스템 상태를 읽었습니다.'; system = Get-SystemSnapshot } }
+    'computer.process.list' { return @{ message = '원격 컴퓨터 프로세스 목록을 읽었습니다.'; processes = Get-RemoteProcessList } }
+    'computer.agent.status' { return @{ message = 'EKODI Native Remote Agent 상태를 읽었습니다.'; agent = Get-RemoteAgentStatus } }
     'network.diagnose' { return @{ message = '네트워크 진단을 완료했습니다.'; network = Get-NetworkDiagnostic } }
     'printers.diagnose' { return @{ message = '프린터와 인쇄 대기열 진단을 완료했습니다.'; printers = Get-PrinterDiagnostic } }
     'startup.scan' { return @{ message = '시작 프로그램 목록을 확인했습니다.'; startup = Get-StartupDiagnostic } }
@@ -957,6 +1001,9 @@ function Send-Heartbeat($Config) {
       powerProfiles = $true; resumeLock = $true; restore = $true; autologonLocalConsent = $true
       diagnostics = $true; storageMaintenance = $true; windowsUpdate = $true; startupManagement = $true
       networkDiagnostics = $true; printerDiagnostics = $true; workstationProfile = $true; protocolLaunch = $true
+      computerRead = $true; processRead = $true; agentStatus = $true
+      isolatedCommand = $false; filesystemRead = $false; filesystemWrite = $false; backgroundBrowser = $false; isolatedDesktop = $false
+      desktopCapture = $false; desktopInput = $false
       arbitraryShell = $false; screenCapture = $false; credentialCollection = $false
     }
     settings = $settings

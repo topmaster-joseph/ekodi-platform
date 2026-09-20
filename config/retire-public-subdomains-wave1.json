@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "rootDomain": "ekodi.kr",
+  "targets": [
+    {
+      "label": "community",
+      "service": "ekodi-community",
+      "apexHealth": "https://ekodi.kr/community/",
+      "directHealth": "https://ekodi-community.topmaster-joseph.workers.dev/health",
+      "apexExpect": [
+        "FLOWING COMMUNITY",
+        "관심이 사람을 만나고"
+      ],
+      "directExpect": [
+        "ekodi-community"
+      ]
+    },
+    {
+      "label": "social",
+      "service": "ekodi-social",
+      "apexHealth": "https://ekodi.kr/social/",
+      "directHealth": "https://ekodi-social.topmaster-joseph.workers.dev/health",
+      "apexExpect": [
+        "EKODI SOCIAL HUB",
+        "공식 채널"
+      ],
+      "directExpect": [
+        "ekodi-social"
+      ]
+    },
+    {
+      "label": "energy",
+      "service": "ekodi-energy",
+      "apexHealth": "https://ekodi.kr/energy/",
+      "directHealth": "https://ekodi-energy.topmaster-joseph.workers.dev/health",
+      "apexExpect": [
+        "ENERGY FLOW OS",
+        "실제 인버터·계량기·ESS 제어는 비활성화"
+      ],
+      "directExpect": [
+        "ekodi-energy-ai",
+        "\"controlEnabled\":false"
+      ]
+    }
+  ]
+}

@@ -63,7 +63,9 @@ test('Control Center lazy-loads Social Channels while security-wrapped Mission C
   assert.ok(sharedDeploy.includes("- 'social-admin.css'"));
   assert.match(sharedDeploy, /client-access\.js social-admin\.js [^\r\n]*books-admin\.js/);
   assert.match(admin, /\/api\/control\/social\/registry/);
-  assert.match(admin, /marketing-connect-api\.ekodi\.kr/);
+  assert.ok(admin.includes("const CONNECT_API = '/marketing-connect-api'"));
+  assert.ok(admin.includes("new URL(`${CONNECT_API}${path}`, location.origin)"));
+  assert.doesNotMatch(admin, /marketing-connect-api\.ekodi\.kr/);
   assert.match(admin, /\/v1\/connect\/youtube\/start/);
   assert.match(admin, /\/v1\/connect\/meta\/start/);
   assert.match(admin, /\/v1\/connect\/threads\/start/);
@@ -87,5 +89,6 @@ test('central Admin CSP permits the Social Marketing Connect API', async () => {
   const start=worker.indexOf('const ADMIN_CSP = [');
   assert.ok(start>=0);
   const adminCsp=worker.slice(start,start+1400);
-  assert.match(adminCsp,/https:\/\/marketing-connect-api\.ekodi\.kr/);
+  assert.doesNotMatch(adminCsp,/marketing-connect-api\.ekodi\.kr/);
+  assert.match(adminCsp,/connect-src 'self'/);
 });

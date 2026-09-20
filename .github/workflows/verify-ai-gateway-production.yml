@@ -56,6 +56,8 @@ jobs:
               && grep -Fiq 'x-ekodi-canonical-surface: ai' /tmp/ai-root-headers \
               && grep -Fiq 'x-ekodi-canonical-path: /ai' /tmp/ai-root-headers \
               && grep -Fq 'EKODI 모두의 AI 프로젝트' /tmp/ai-root \
+              && grep -Fq 'AI로 하기' /tmp/ai-root \
+              && grep -Fq '최근 공개된 AI' /tmp/ai-root \
               && grep -Fq '"platform":"ai-control"' /tmp/ai-health \
               && grep -Fq '"surface":"runtime-and-commons"' /tmp/ai-health \
               && grep -Fq '"commons":true' /tmp/ai-health \
@@ -64,9 +66,11 @@ jobs:
               && grep -Fiq 'x-ekodi-ai-asset: worker-owned-v1' /tmp/ai-client-headers \
               && grep -Fiq 'content-type: text/javascript' /tmp/ai-client-headers \
               && grep -Fq "const API_BASE=location.pathname.startsWith('/ai')?'/ai':'';" /tmp/ai-client \
-              && grep -Fq "api('/api/commons/config')" /tmp/ai-client \
-              && grep -Fq "api('/api/commons/match'" /tmp/ai-client \
-              && ! grep -Fq "api('/ai/api/commons/" /tmp/ai-client \
+              && grep -Fq 'function apiUrl(path)' /tmp/ai-client \
+              && grep -Fq 'fetch(apiUrl(path)' /tmp/ai-client \
+              && grep -Fq '/api/commons/config' /tmp/ai-client \
+              && grep -Fq '/api/commons/match' /tmp/ai-client \
+              && ! grep -Fq '/ai/ai/api/commons/' /tmp/ai-client \
               && grep -Fq 'operator_surface_moved' /tmp/ai-capabilities \
               && grep -Fq '"requests"' /tmp/ai-requests \
               && grep -Fq 'authentication_required' /tmp/ai-ideas; then

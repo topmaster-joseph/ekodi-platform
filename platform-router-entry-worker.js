@@ -4,7 +4,7 @@ import taxPortalWorker from './tax-portal-worker.js';
 import { injectTaxLocalFallback } from './tax-local-fallback.js';
 import { injectTaxHometaxLedger } from './tax-hometax-ledger.js';
 import { injectTaxBusinessRegistry } from './tax-business-registry.js';
-import { injectEkodiProgressiveHome, injectEkodiShell } from './ekodi-shell-injector.js';
+import { injectEkodiProgressiveHome, injectEkodiShell, injectEkodiTenantReadability } from './ekodi-shell-injector.js';
 import { messengerUserPage, messengerUiScript } from './messenger-user-page.js';
 import { investUserPage, investUiScript } from './invest-user-page.js';
 import { investSubjectUiScript } from './invest-subject-ui.js';
@@ -88,7 +88,7 @@ function safeWorkspaceReturnTo(value){
 }
 function workspaceAuthRedirect(request){
   const url=new URL(request.url);const returnTo=safeWorkspaceReturnTo(url.searchParams.get('return_to'));if(!returnTo)return null;
-  const target=new URL('https://auth.ekodi.kr/');target.searchParams.set('site','space');target.searchParams.set('return_to',returnTo.toString());
+  const target=new URL('https://ekodi.kr/auth/');target.searchParams.set('site','space');target.searchParams.set('return_to',returnTo.toString());
   return new Response(null,{status:302,headers:{location:target.toString(),'cache-control':'no-store','x-content-type-options':'nosniff','x-ekodi-workspace-gateway':'auth-handoff'}});
 }
 function escapeHtml(value){return String(value||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
@@ -164,8 +164,12 @@ async function routePublicWorkspace(request,env){
   if(!env?.SPACE?.fetch)return workspaceServiceUnavailable();
   const progressiveHome=isWorkspaceProgressiveHome(new URL(request.url).pathname);
   const upstream=await env.SPACE.fetch(request);const routed=new Response(upstream.body,upstream);routed.headers.set('x-ekodi-workspace-gateway','space-service-binding');
-  if(routed.headers.get('x-ekodi-route')==='space-storefront'){routed.headers.set('x-ekodi-public-surface','customer-storefront');return progressiveHome?injectEkodiProgressiveHome(routed):routed;}
-  if(routed.headers.get('x-ekodi-independent-site')==='true'){routed.headers.set('x-ekodi-public-surface','independent-workspace-site');return progressiveHome?injectEkodiProgressiveHome(routed):routed;}
+  if(routed.headers.get('x-ekodi-route')==='space-storefront'){routed.headers.set('x-ekodi-public-surface','customer-storefront');const branded=injectEkodiTenantReadability(routed);return progressiveHome?injectEkodiProgressiveHome(branded):branded;}
+  if(routed.headers.get('x-ekodi-independent-site')==='true'){
+    routed.headers.set('x-ekodi-public-surface','independent-workspace-site');
+    const branded=injectEkodiTenantReadability(routed);
+    return progressiveHome?injectEkodiProgressiveHome(branded):branded;
+  }
   return injectEkodiShell(rewriteWorkspaceShellAssets(routed),'space','workspace',{progressiveHome,contextKind:'workspace'});
 }
 
@@ -217,7 +221,7 @@ async function withInvestSubjectScript(response){
 
 const LEGACY_ADMIN_HOSTS=new Set(['admin.ekodi.kr','admin.biz.ekodi.kr','admin.church.ekodi.kr','admin.lab.ekodi.kr','admin.trade.ekodi.kr']);
 const LEGACY_ADMIN_PATHS=Object.freeze({books:'books',community:'community',work:'work',business:'organization',publishing:'books',energy:'life-ai',journal:'common-services',experience:'campus'});
-function legacySurfaceRedirect(request){const url=new URL(request.url),host=url.hostname.toLowerCase();if(!['GET','HEAD'].includes(request.method))return null;if(host==='auth.ekodi.kr'){if(url.pathname==='/google-origin-bridge'||url.pathname==='/google-origin-bridge/'||url.pathname==='/google-origin-bridge.js')return null;const target=new URL(request.url);target.hostname='ekodi.kr';target.pathname=url.pathname==='/'?'/auth/':`/auth${url.pathname}`;return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-ekodi-legacy-surface':host}})}if(!LEGACY_ADMIN_HOSTS.has(host))return null;const target=new URL(request.url);target.hostname='ekodi.kr';const key=url.pathname.split('/').filter(Boolean)[0]||'';if(url.pathname==='/'||url.pathname==='/admin'||url.pathname==='/admin/')target.pathname='/admin/';else if(/\.(?:js|css|cmd|json|map|svg|png|webp|ico)$/i.test(url.pathname)||url.pathname.startsWith('/api/')||url.pathname==='/auth/start')target.pathname=`/admin${url.pathname}`;else{target.pathname='/admin/';if(!target.searchParams.has('route')&&LEGACY_ADMIN_PATHS[key])target.searchParams.set('route',LEGACY_ADMIN_PATHS[key])}target.searchParams.set('source',host);return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-ekodi-legacy-surface':host}})}
+function legacySurfaceRedirect(request){const url=new URL(request.url),host=url.hostname.toLowerCase();if(!['GET','HEAD'].includes(request.method))return null;if(!LEGACY_ADMIN_HOSTS.has(host))return null;const target=new URL(request.url);target.hostname='ekodi.kr';const key=url.pathname.split('/').filter(Boolean)[0]||'';if(url.pathname==='/'||url.pathname==='/admin'||url.pathname==='/admin/')target.pathname='/admin/';else if(/\.(?:js|css|cmd|json|map|svg|png|webp|ico)$/i.test(url.pathname)||url.pathname.startsWith('/api/')||url.pathname==='/auth/start')target.pathname=`/admin${url.pathname}`;else{target.pathname='/admin/';if(!target.searchParams.has('route')&&LEGACY_ADMIN_PATHS[key])target.searchParams.set('route',LEGACY_ADMIN_PATHS[key])}target.searchParams.set('source',host);return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-ekodi-legacy-surface':host}})}
 function legacyStoreGatewayRedirect(request){const url=new URL(request.url);if(url.hostname.toLowerCase()!==PUBLIC_HOST||!['GET','HEAD'].includes(request.method)||!/^\/stores(?:\/|$)/i.test(url.pathname))return null;const target=new URL(request.url);target.pathname=url.pathname.replace(/^\/stores(?=\/|$)/i,'/cmpmyi');return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-ekodi-legacy-surface':'stores'}})}
 
 export default {
@@ -242,7 +246,7 @@ export default {
     if(CGMA_HOSTS.has(host)&&['GET','HEAD'].includes(request.method))return routeCgmaPublic(request,env);
 
     if(host===PUBLIC_HOST){
-      if(['GET','HEAD'].includes(request.method)&&isCgmaRoot(url.pathname)){const legacyResponse=await legacyPlatformRouter.fetch(request,env,ctx);return injectEkodiProgressiveHome(legacyResponse);}
+      if(['GET','HEAD'].includes(request.method)&&isCgmaRoot(url.pathname)){const legacyResponse=await legacyPlatformRouter.fetch(request,env,ctx);return injectEkodiProgressiveHome(injectEkodiTenantReadability(legacyResponse));}
       const mailApex=routeMailApex(request);if(mailApex)return mailApex;
       const messengerApex=await routeMessengerApex(request,env,ctx);if(messengerApex)return messengerApex;
       const investApex=await routeInvestApex(request,env,ctx);if(investApex)return investApex;

@@ -101,6 +101,7 @@
       'startup.disable': '시작프로그램 해제', 'startup.restore': '시작프로그램 복원', 'maintenance.temp_cleanup': '임시파일 정리',
       'updates.scan': '업데이트 확인', 'updates.install': '업데이트 설치', 'profile.workstation.apply': 'EKODI 업무환경',
       'profile.workstation.restore': '업무환경 복원', 'agent.self_update': 'Agent 업데이트',
+      'computer.agent.status': 'Agent 상태', 'computer.system.read': '시스템 상태', 'computer.process.list': '프로세스 보기',
     };
     return labels[type] || type;
   }
@@ -242,6 +243,86 @@
     return panel;
   }
 
+  function latestCommandByType(device, type) {
+    const commands = device.recentCommands || [];
+    return commands.find(command => command.type === type && command.status === 'succeeded')
+      || commands.find(command => command.type === type)
+      || null;
+  }
+
+  function remoteComputerPanel(device) {
+    const box = document.createElement('details');
+    box.className = 'device-details device-remote-computer';
+    box.innerHTML = '<summary>원격 컴퓨터 · 상태 보기</summary>';
+    if (isInventory(device) || device.management?.type !== 'pc') {
+      const p = document.createElement('p');
+      p.className = 'device-command-empty';
+      p.textContent = 'Native Remote Computer는 현재 검증된 PC Agent에서만 상태 조회를 제공합니다.';
+      box.append(p);
+      return box;
+    }
+
+    const intro = document.createElement('p');
+    intro.className = 'device-remote-note';
+    intro.textContent = '사용자 화면 보호가 기본입니다. 웹 작업은 Background Browser, GUI 작업은 격리 Desktop을 우선하며 최소화 창은 격리로 인정하지 않습니다.';
+
+    const actions = document.createElement('div');
+    actions.className = 'device-inline-actions device-remote-actions';
+    actions.append(
+      makeActionButton(device, 'computer.agent.status', 'Agent 상태', 'ghost', {}, !capability(device, 'agentStatus')),
+      makeActionButton(device, 'computer.system.read', '시스템 상태', 'ghost', {}, !capability(device, 'computerRead')),
+      makeActionButton(device, 'computer.process.list', '프로세스 보기', 'secondary', {}, !capability(device, 'processRead')),
+    );
+
+    const result = document.createElement('div');
+    result.className = 'device-remote-result';
+    const agentCommand = latestCommandByType(device, 'computer.agent.status');
+    const systemCommand = latestCommandByType(device, 'computer.system.read');
+    const processCommand = latestCommandByType(device, 'computer.process.list');
+    const agent = agentCommand?.result?.agent;
+    const system = systemCommand?.result?.system;
+    const processes = processCommand?.result?.processes;
+
+    const agentCard = document.createElement('div');
+    agentCard.className = 'device-remote-summary-card';
+    agentCard.innerHTML = `<small>Agent · 사용자 화면 보호</small><strong>${escapeHtml(agent?.version || device.agentVersion || '확인 전')}</strong><span>${agent ? `작업 ${escapeHtml(agent.taskState || 'unknown')} · Shell ${agent.persistentShell ? '열림' : '차단'} · BG Browser ${agent.backgroundBrowserReady ? '준비' : '대기'} · Isolated Desktop ${agent.isolatedDesktopReady ? '준비' : '대기'}` : '“Agent 상태”로 최신 상태를 확인하세요.'}</span>`;
+
+    const systemCard = document.createElement('div');
+    systemCard.className = 'device-remote-summary-card';
+    systemCard.innerHTML = `<small>시스템</small><strong>${system?.cpuLoadPct != null ? `CPU ${Number(system.cpuLoadPct)}%` : '확인 전'}</strong><span>${system ? `메모리 ${system.memoryUsedPct ?? '—'}% · 업타임 ${system.uptimeHours ?? '—'}h · ${escapeHtml(system.deviceClass || 'unknown')}` : '“시스템 상태”로 현재 부하를 확인하세요.'}</span>`;
+
+    result.append(agentCard, systemCard);
+
+    if (processes) {
+      const processWrap = document.createElement('div');
+      processWrap.className = 'device-remote-processes';
+      const heading = document.createElement('div');
+      heading.className = 'device-subhead';
+      heading.innerHTML = `<h3>프로세스</h3><span>총 ${Math.max(0, Number(processes.count) || 0)}개 · 상위 ${Array.isArray(processes.items) ? processes.items.length : 0}개 표시</span>`;
+      processWrap.append(heading);
+      const items = Array.isArray(processes.items) ? processes.items : [];
+      if (!items.length) {
+        const empty = document.createElement('p');
+        empty.className = 'device-command-empty';
+        empty.textContent = processes.error ? '프로세스 목록을 가져오지 못했습니다.' : '표시할 프로세스가 없습니다.';
+        processWrap.append(empty);
+      } else {
+        const list = document.createElement('div');
+        list.className = 'device-remote-process-list';
+        items.forEach(item => {
+          const row = document.createElement('div');
+          row.innerHTML = `<strong>${escapeHtml(item.name || 'unknown')}</strong><span>PID ${Math.max(0, Number(item.id) || 0)}</span><span>CPU ${item.cpuSeconds ?? '—'}s</span><span>메모리 ${item.memoryMB ?? '—'} MB</span>`;
+          list.append(row);
+        });
+        processWrap.append(list);
+      }
+      result.append(processWrap);
+    }
+
+    box.append(intro, actions, result);
+    return box;
+  }
+
   function startupPanel(device) {
     const box = document.createElement('details'); box.className = 'device-details'; box.innerHTML = '<summary>시작 프로그램 관리</summary>';
     if (!commandAllowed(device, 'startup.scan')) {
@@ -343,7 +424,7 @@
     const security = document.createElement('div'); security.className = 'device-command-grid security';
     security.append(makeActionButton(device, 'lock.resume_off', '복귀 잠금 해제'), makeActionButton(device, 'lock.resume_on', '복귀 잠금 사용'), makeActionButton(device, 'autologon.open', '자동로그인 관리', 'secondary'), makeActionButton(device, 'agent.self_update', 'Agent 업데이트', 'secondary'));
     const history = document.createElement('div'); history.className = 'device-history'; history.innerHTML = `<h3>최근 작업</h3>${latestCommandMarkup(device.recentCommands)}`;
-    advancedBody.append(managementPanel(device), execution, diagnosticSummary(device), advancedActions, startupPanel(device), profileTitle, profiles, securityTitle, security, history);
+    advancedBody.append(managementPanel(device), execution, remoteComputerPanel(device), diagnosticSummary(device), advancedActions, startupPanel(device), profileTitle, profiles, securityTitle, security, history);
     advanced.append(advancedBody);
 
     const foot = document.createElement('div'); foot.className = 'device-card-foot';

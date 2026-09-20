@@ -1,0 +1,96 @@
+name: Retire EKODI Public Subdomains Wave 1
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/retire-worker-custom-domains.mjs'
+      - 'config/retire-public-subdomains-wave1.json'
+      - 'wrangler.community.toml'
+      - 'wrangler.social.toml'
+      - 'wrangler.energy.toml'
+      - 'deploy/manifests/community.worker.json'
+      - 'deploy/manifests/social.worker.json'
+      - 'deploy/manifests/energy.worker.json'
+      - 'config/ecosystem-services.json'
+      - '.github/workflows/retire-public-subdomains-wave1.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/retire-worker-custom-domains.mjs'
+      - 'config/retire-public-subdomains-wave1.json'
+      - 'wrangler.community.toml'
+      - 'wrangler.social.toml'
+      - 'wrangler.energy.toml'
+      - 'deploy/manifests/community.worker.json'
+      - 'deploy/manifests/social.worker.json'
+      - 'deploy/manifests/energy.worker.json'
+      - 'config/ecosystem-services.json'
+      - '.github/workflows/retire-public-subdomains-wave1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-public-subdomain-retirement-wave1
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate retirement plan
+        run: |
+          set -euo pipefail
+          node --check scripts/retire-worker-custom-domains.mjs
+          node scripts/retire-worker-custom-domains.mjs --config config/retire-public-subdomains-wave1.json --dry-run
+          for f in wrangler.community.toml wrangler.social.toml wrangler.energy.toml; do
+            if grep -Fq '[[routes]]' "$f" || grep -Fq 'custom_domain = true' "$f"; then
+              echo "Public custom-domain declaration remains in $f"
+              exit 1
+            fi
+          done
+
+  retire:
+    if: github.event_name != 'pull_request'
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    environment: production
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: EKODI AI Orchestration Gate
+        run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
+      - name: Verify production credentials
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+      - name: Read Production Cloudflare quota Source of Truth
+        id: quota
+        run: node scripts/cloudflare-production-budget.mjs --output=cloudflare-production-quota.json
+      - name: Hold retirement while quota protection circuit is open
+        if: steps.quota.outputs.skip_nonessential == 'true'
+        run: |
+          echo "Cloudflare Production quota is in protect/exhausted state. Domain retirement is deferred without probing apex or changing Worker Domains."
+          {
+            echo "### Domain retirement deferred"
+            echo "- Quota state: **${{ steps.quota.outputs.state }}**"
+            echo "- Usage: **${{ steps.quota.outputs.percent }}%**"
+            echo "- Action: no apex probe, no detach, no retry"
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Detach proven-safe public Worker domains with rollback
+        if: steps.quota.outputs.skip_nonessential != 'true'
+        env:
+          EKODI_CF_QUOTA_STATE: ${{ steps.quota.outputs.state }}
+        run: node scripts/retire-worker-custom-domains.mjs --config config/retire-public-subdomains-wave1.json

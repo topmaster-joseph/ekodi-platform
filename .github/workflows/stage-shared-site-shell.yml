@@ -178,14 +178,6 @@ jobs:
             [[ "$code" == '200' ]]
             grep -Fq "$needle" /tmp/shared-discovery.body
           }
-          verify_shell() {
-            host="$1"; needle="$2"
-            code=$(curl -sS -D /tmp/shared-stage.headers -o /tmp/shared-stage.html -w '%{http_code}' --connect-timeout 5 --max-time 15 -H "x-ekodi-staging-host: $host" "$STAGING_URL/" || true)
-            echo "$host -> $code"
-            [[ "$code" == '200' ]]
-            grep -Fq "$needle" /tmp/shared-stage.html
-            grep -Fiq 'x-ekodi-shell: v2' /tmp/shared-stage.headers
-          }
           verify_canonical_shell() {
             code=$(curl -sS -D /tmp/shared-shell.headers -o /tmp/shared-shell.js -w '%{http_code}' --connect-timeout 5 --max-time 15 -H "x-ekodi-staging-host: ekodi.kr" "$STAGING_URL/shell/shell.js" || true)
             echo "/shell/shell.js -> $code"
@@ -221,11 +213,9 @@ jobs:
           for attempt in $(seq 1 18); do
             if verify_canonical_shell \
               && verify_auth_bootstrap \
-              && verify_shell 'trade.biz.ekodi.kr' 'EKODI GLOBAL TRADING' \
-              && verify_shell 'pay.ekodi.kr' 'EKODI Pay' \
-              && verify_shell 'pay.biz.ekodi.kr' 'EKODI Pay' \
-              && verify_shell 'messenger.ekodi.kr' 'EKODI Messenger' \
-              && verify_shell 'invest.ekodi.kr' 'EKODI Investment' \
+              && verify_public_path '/pay' 'EKODI Pay' 'x-ekodi-canonical-surface: pay' \
+              && verify_public_path '/cloud' 'EKODI Hub' 'x-ekodi-canonical-surface: cloud' \
+              && verify_public_path '/ekodibiz/trade' 'PRIVATE TRADE WORKSPACE' 'x-ekodi-route: trade-partner-workspace' \
               && verify_public_path '/messenger' 'EKODI Messenger' 'x-ekodi-shell: v2' \
               && verify_public_path '/invest' 'EKODI Invest' 'x-ekodi-shell: v2' \
               && verify_public_path '/cmpmyi' 'THREE STORES · ONE GATE' 'x-ekodi-route: store-gateway' \
