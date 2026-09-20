@@ -32,6 +32,15 @@ test('Supabase collector measures free project capacity and per-project database
   }
 });
 
+test('Supabase collector reports missing telemetry when no management credential exists',async()=>{
+  let called=false;
+  const result=await collectSupabase({token:'',observedAt,fetchJson:async()=>{called=true;throw new Error('must not fetch');}});
+  assert.equal(result.available,false);
+  assert.equal(result.reason,'credential_missing');
+  assert.deepEqual(result.snapshots,[]);
+  assert.equal(called,false);
+});
+
 test('GitHub collector records public repository cache and artifact storage only',async()=>{
   const fetchJson=async(url)=>{
     if(url.endsWith('/repos/owner/repo'))return {visibility:'public',private:false};
