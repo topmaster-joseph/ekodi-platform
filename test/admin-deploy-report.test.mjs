@@ -47,8 +47,12 @@ test('Admin production verification follows the content fingerprint and lazy AI 
 
 test('shared-site guarded release accepts any valid content fingerprint instead of a stale fixed version', async () => {
   const manifest = JSON.parse(await read('deploy/manifests/shared-site.worker.json'));
-  const admin = manifest.worker.requests.find(item => item.url === 'https://ekodi.kr/admin/');
-  assert.ok(admin, 'canonical Admin smoke request must exist');
+  const admin = manifest.worker.requests.find(item =>
+    item.url === 'https://ekodi.kr/admin/' &&
+    Array.isArray(item.expect) &&
+    item.expect.some(value => value.includes('admin-authenticated-shell.js?v='))
+  );
+  assert.ok(admin, 'canonical Admin authenticated-shell smoke request must exist');
   assert.ok(admin.expect.includes('EKODI Admin'));
   assert.ok(admin.expect.includes('admin-authenticated-shell.js?v='));
   assert.ok(admin.expect.includes('https://ekodi.kr/auth/?site=admin'));
