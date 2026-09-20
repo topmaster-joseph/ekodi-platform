@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 4,
+  "schemaVersion": 3,
   "policyId": "AI-COMPLETE-001",
   "status": "active",
   "defaultRule": "production-verified-before-complete",
@@ -13,7 +13,7 @@
   "completionStates": {
     "implementation": "code-or-config-change-prepared",
     "deployed": "guarded-deployment-succeeded-but-production-not-yet-proven",
-    "verified": "real-production-behavior-or-materially-equivalent-synthetic-behavior-confirmed",
+    "verified": "real-production-service-behavior-confirmed",
     "complete": "verified-and-evidence-recorded",
     "blocked": "completion-cannot-proceed-with-current-authority-or-dependency-and-resolution-plan-is-required",
     "interrupted": "recoverable-interruption-checkpointed-resume-required"
@@ -57,11 +57,12 @@
     "preflightMustPassBeforeImplementationMutation": true,
     "branchNamingMustBeValidatedBeforeBranchCreation": true,
     "verificationPlanMustExistBeforeImplementation": true,
-    "equivalentSyntheticVerificationAllowedWhenRealInteractionUnavailable": true,
+    "equivalentSyntheticVerificationAllowedWhenRealInteractionUnavailable": false,
     "syntheticVerificationMustExerciseMateriallyEquivalentFlow": true,
     "syntheticVerificationMustRecordObjectiveEvidence": true,
     "noKnownMaterialGapForSyntheticCompletion": true,
-    "intermediateProgressSuppressedUnlessHumanActionSafetyOrUnresolvedException": true
+    "intermediateProgressSuppressedUnlessHumanActionSafetyOrUnresolvedException": true,
+    "syntheticVerificationIsPreCompletionEvidenceOnly": true
   },
   "exceptionPolicy": {
     "allowed": true,
@@ -90,7 +91,7 @@
   },
   "reporting": {
     "preVerificationLabel": "deployed-awaiting-production-verification",
-    "successLabel": "production-or-equivalent-synthetic-verified-complete",
+    "successLabel": "production-verified-complete",
     "failureLabel": "verification-failed-recovery-required",
     "blockedLabel": "blocked-resolution-plan-required",
     "unresolvedReportRequired": true,
@@ -112,8 +113,8 @@
     "verificationModes": [
       "real-production",
       "automated-canary",
-      "synthetic-equivalent",
-      "deterministic-contract"
+      "synthetic-equivalent-precompletion",
+      "deterministic-contract-precompletion"
     ]
   },
   "requiredCheckpointForRecoverableInterruption": [
