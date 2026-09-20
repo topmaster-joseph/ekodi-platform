@@ -20,13 +20,13 @@ const [policy, userDna, userShell, theme, adminRuntime, adminCss, adminPrinciple
 ]);
 
 const errors = [];
-const expectedAxes = ['home', 'operations', 'workspaces', 'services', 'system'];
-const expectedLabels = ['홈', '운영', '조직·고객', '서비스', '시스템'];
+const expectedAxes = ['home', 'operations', 'workspaces', 'services', 'community', 'publishing', 'system'];
+const expectedLabels = ['홈', '운영', '조직·고객', '서비스', '커뮤니티', '출판·도서', '시스템'];
 const actualAxes = ADMIN_MENU_GROUPS.map(group => group.id);
 const actualLabels = ADMIN_MENU_GROUPS.map(group => group.labels?.ko);
 
 if (policy?.name !== 'EKODI Design Engine') errors.push('design-engine policy must use the canonical EKODI Design Engine name.');
-if (JSON.stringify(policy?.admin?.primaryAxes) !== JSON.stringify(expectedAxes)) errors.push('design-engine policy must define exactly five admin axes.');
+if (JSON.stringify(policy?.admin?.primaryAxes) !== JSON.stringify(expectedAxes)) errors.push('design-engine policy must define exactly seven admin areas.');
 if (JSON.stringify(actualAxes) !== JSON.stringify(expectedAxes)) errors.push(`admin registry axes drifted: ${actualAxes.join(', ')}`);
 if (JSON.stringify(actualLabels) !== JSON.stringify(expectedLabels)) errors.push(`admin registry Korean labels drifted: ${actualLabels.join(', ')}`);
 

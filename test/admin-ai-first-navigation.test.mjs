@@ -38,11 +38,12 @@ test('Campus shortcuts cannot reopen hidden technical panels', () => {
   assert.ok(layout.includes('routeInternal()'));
 });
 
-test('human-facing Admin menu has one canonical order inside five EKODI axes', () => {
-  assert.deepEqual(adminMenuGroups(), ['home','operations','workspaces','services','system']);
+test('human-facing Admin menu has one canonical order inside seven EKODI areas', () => {
+  assert.deepEqual(adminMenuGroups(), ['home','operations','workspaces','services','community','publishing','system']);
   assert.deepEqual(adminMenuOrder(), [
     'command-home','campus','work','communication','finance','tax','clients','site-chrome','cmpmyi','organization','workspace',
-    'common-services','life-ai','personal-finance','invest','community','books','social','devotional','marketing-ai','ai-membership','supply-network','insurance',
+    'common-services','life-ai','personal-finance','invest','social','marketing-ai','supply-network','insurance',
+    'community','ai-membership','books','devotional',
     'public-site-controls','language-status','architecture','maturity','security','admins','ai-module-spec','storage','capabilities','aiops','ai-settings','openai','devices','health','api-cost',
   ]);
   assert.ok(layout.includes('const ORDER=Object.freeze(adminMenuOrder());'));
@@ -50,8 +51,9 @@ test('human-facing Admin menu has one canonical order inside five EKODI axes', (
   assert.ok(layout.includes('function applyOrder()'));
 });
 
-test('Admin sidebar menu uses compact spacing without shrinking label readability', () => {
-  for (const marker of ['ekodi-admin-workbench-tabs-style','gap:2px!important','min-height:40px','padding:8px 10px','font-size:14px']) assert.ok(sidebar.includes(marker));
+test('Admin sidebar menu uses readable seven-area spacing without shrinking labels', () => {
+  for (const marker of ['ekodi-admin-workbench-tabs-style','gap:4px!important','min-height:48px','padding:10px 12px','font-size:15px']) assert.ok(sidebar.includes(marker));
+  assert.ok(sidebar.includes("primary-sidebar-tabs-v3"));
 });
 
 test('administrator access waits for its runtime instead of recursively clicking the hidden source menu', () => {

@@ -1,7 +1,7 @@
 {
-  "version": 2,
+  "version": 3,
   "name": "EKODI Design Engine",
-  "asOf": "2026-09-10",
+  "asOf": "2026-09-20",
   "principle": "Evidence defines reusable UX rules; EKODI identity, service DNA and EKODIAN character remain first-party layers.",
   "evidence": {
     "publicUser": {
@@ -62,6 +62,8 @@
       "operations",
       "workspaces",
       "services",
+      "community",
+      "publishing",
       "system"
     ],
     "primaryAxisLabelsKo": [
@@ -69,9 +71,11 @@
       "운영",
       "조직·고객",
       "서비스",
+      "커뮤니티",
+      "출판·도서",
       "시스템"
     ],
-    "layout": "fixed-primary-sidebar + progressive-left-details + scrolling-workspace + bottom-command-composer",
+    "layout": "fixed-primary-sidebar + contextual-top-tabs + scrolling-workspace + bottom-command-composer",
     "desktopPrimarySidebarScroll": false,
     "workspaceScroll": true,
     "pageTopOffsetPx": 0,
@@ -130,13 +134,13 @@
         "level": 1,
         "owner": "global",
         "surface": "fixed-left-sidebar",
-        "rule": "exactly-five-primary-axes"
+        "rule": "exactly-seven-primary-areas"
       },
       {
         "level": 2,
         "owner": "context",
-        "surface": "active-axis-left-details",
-        "rule": "show-core-children-first-and-progressively-disclose-the-rest"
+        "surface": "workspace-top-context-tabs",
+        "rule": "show-authorized-functions-for-active-primary-area"
       },
       {
         "level": 3,
@@ -154,7 +158,8 @@
       "nestedScroll": "tables-and-explicit-data-views-only"
     },
     "pageAnatomy": [
-      "left navigation: active axis + progressive child actions",
+      "left navigation: seven primary areas only",
+      "context tabs: authorized second-level functions for the active area",
       "workspace header: title + purpose + status + primary actions",
       "optional KPI/status summary",
       "primary workbench",
