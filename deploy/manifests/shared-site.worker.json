@@ -1,5 +1,5 @@
 {
-  "version": 73,
+  "version": 74,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
@@ -1526,6 +1526,7 @@
         ],
         "rollbackVerify": false
       }
-    ]
+    ],
+    "reconcileTriggersAfterPromotion": true
   }
 }

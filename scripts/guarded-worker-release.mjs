@@ -38,6 +38,7 @@ if (!worker.name || !worker.config || !Array.isArray(worker.requests) || !worker
   throw new Error('Worker manifest requires worker.name, worker.config and worker.requests.');
 }
 const allowFirstDeploy = worker.allowFirstDeploy === true;
+const reconcileTriggersAfterPromotion = worker.reconcileTriggersAfterPromotion === true;
 
 const configPath = path.resolve(root, worker.config);
 if (!configPath.startsWith(root + path.sep) || !fs.existsSync(configPath)) {
@@ -189,6 +190,12 @@ function uploadCandidate() {
 
 function deployVersions(specs, message) {
   command(['versions', 'deploy', ...specs, '-y', '--config', worker.config, '--message', message]);
+}
+
+function reconcilePromotionTriggers() {
+  if (!reconcileTriggersAfterPromotion) return;
+  console.log('Reconciling non-versioned Worker triggers after candidate promotion and before production verification.');
+  command(['triggers', 'deploy', '--config', worker.config]);
 }
 
 function responseDiagnostic(response, body) {
@@ -343,6 +350,7 @@ try {
 
   console.log('Phase 3/3: candidate passed, promote it to 100% and verify production without overrides.');
   deployVersions([`${candidateVersion}@100%`], `EKODI guarded promote ${tag}`);
+  reconcilePromotionTriggers();
   await verifyAll('', 'production');
 
   appendSummary([
@@ -353,6 +361,7 @@ try {
     `- Candidate secret file: ${secretsFilePath ? 'supplied securely' : 'not supplied; existing Worker secrets preserved by Wrangler'}`,
     '- AI_PROVIDER=NONE resilience gate passed before any production candidate was attached.',
     '- Candidate was attached at 0% traffic, verified with version overrides, then promoted to 100%.',
+    `- Post-promotion trigger reconciliation: ${reconcileTriggersAfterPromotion ? 'enabled' : 'not requested'}.`,
     '- Production smoke verification passed after promotion.',
   ]);
   console.log('✅ Guarded Worker release complete.');
