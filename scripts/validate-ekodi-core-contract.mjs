@@ -17,17 +17,20 @@ if (core.schemaVersion !== 2) fail('schemaVersion must be 2 after final completi
 if (core.status !== 'completed') fail('status must be completed after seven-stage rollout');
 if (core.adoptionStatus !== 'adopted') fail('adoptionStatus must preserve the adopted architecture state');
 if (core.completionEvidence !== 'config/ekodi-core-completion.json') fail('completion evidence contract must be declared');
-if (core.canonicalHosts?.api !== 'api.ekodi.kr') fail('canonical API host must be api.ekodi.kr');
+if (core.canonicalHost !== 'ekodi.kr') fail('canonical host must be ekodi.kr');
+if (core.canonicalPaths?.api !== '/api') fail('canonical API path must be /api');
+if (core.canonicalApiBase !== 'https://ekodi.kr/api') fail('canonical API base must be https://ekodi.kr/api');
 if (core.controlPlane?.platformId !== 'control-api') fail('control plane must be control-api');
 
 const controlApi = boundaries.platforms?.[core.controlPlane?.platformId];
 if (!controlApi) fail('control-api platform boundary is missing');
-if (controlApi && !controlApi.domains?.includes(core.canonicalHosts.api)) fail('control-api must own api.ekodi.kr');
+if (controlApi && controlApi.canonicalPath !== core.canonicalApiBase) fail('control-api canonical path must match Core canonical API base');
+if (controlApi && !controlApi.domains?.includes(core.canonicalHost)) fail('control-api must execute behind the canonical apex host');
 if (controlApi && controlApi.database !== core.controlPlane.database) fail('control-plane database declaration differs from Core contract');
 
 const adminAuth = boundaries.platforms?.['admin-auth'];
-if (!adminAuth?.domains?.includes(core.canonicalHosts.admin)) fail('admin.ekodi.kr must remain in the admin-auth boundary');
-if (!adminAuth?.domains?.includes(core.canonicalHosts.auth)) fail('auth.ekodi.kr must remain in the admin-auth boundary');
+if (!adminAuth?.domains?.includes('admin.ekodi.kr')) fail('admin.ekodi.kr must remain in the admin-auth boundary');
+if (!adminAuth?.domains?.includes('auth.ekodi.kr')) fail('auth.ekodi.kr must remain in the admin-auth boundary');
 
 const requiredEntities = ['organization', 'person', 'membership', 'audit'];
 for (const entity of requiredEntities) {
