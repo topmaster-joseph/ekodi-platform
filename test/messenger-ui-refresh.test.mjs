@@ -35,7 +35,7 @@ test('shared router entry changes only Messenger and delegates all other service
 });
 
 test('Operator page is a conversation cockpit rather than a raw JSON console',async()=>{
-  const response=handleMessengerOperatorPage(new Request('https://api.ekodi.kr/operator'));
+  const response=handleMessengerOperatorPage(new Request('https://ekodi.kr/api/operator'));
   const html=await response.text();
   assert.equal(response.status,200);
   for(const marker of ['관리자 대화 조종석','중요 대화','직접 응답','AI에게 반환','대화 정보','상세 관리자']) assert.match(html,new RegExp(marker));
@@ -46,7 +46,7 @@ test('Operator page is a conversation cockpit rather than a raw JSON console',as
 });
 
 test('Operator script uses existing authenticated Messenger control endpoints',async()=>{
-  const response=handleMessengerOperatorPage(new Request('https://api.ekodi.kr/operator.js'));
+  const response=handleMessengerOperatorPage(new Request('https://ekodi.kr/api/operator.js'));
   const js=await response.text();
   for(const marker of ['/api/control/messenger/inbox','/api/control/messenger/threads/','takeover','release','reply','close','/api/google/challenge','/api/google/login']) assert.ok(js.includes(marker));
   assert.match(js,/authorization:'Bearer '/);
