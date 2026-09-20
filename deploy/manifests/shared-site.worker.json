@@ -1,5 +1,5 @@
 {
-  "version": 78,
+  "version": 79,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
@@ -1161,18 +1161,19 @@
       {
         "url": "https://ekodi.kr/mail/admin",
         "statuses": [
-          307
+          200
         ],
         "redirect": "manual",
         "headerExpect": [
-          "location: https://ekodi.kr/admin/",
+          "x-ekodi-route: mail-admin",
           "cache-control: no-store",
-          "x-robots-tag: noindex, nofollow, noarchive",
           "x-content-type-options: nosniff"
         ],
         "rollbackVerify": false,
-        "candidateVerify": false,
-        "candidateVerifyReason": "Mail Admin custom-domain routing becomes authoritative only after promotion; verify the canonical apex Admin handoff immediately post-promotion"
+        "expect": [
+          "EKODI Mail Admin",
+          "메일 관리"
+        ]
       },
       {
         "url": "https://ekodi.kr/live",
