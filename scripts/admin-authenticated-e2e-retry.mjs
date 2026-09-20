@@ -184,7 +184,7 @@ const aggregate = {
   generatedAt: new Date().toISOString(),
   baseUrl: 'https://ekodi.kr/admin/',
   canonicalCampusUrl: 'https://ekodi.kr/admin/home/campus',
-  compatibilityMenuBaseUrl: 'https://admin.ekodi.kr/',
+  compatibilityMenuBaseUrl: null,
   expectedMenuCount: menuIds.length,
   checkedMenuCount: 0,
   passed: false,
