@@ -1197,7 +1197,9 @@
         "headerExpect": [
           "x-ekodi-route: mail-admin",
           "cache-control: no-store"
-        ]
+        ],
+        "candidateVerify": false,
+        "candidateVerifyReason": "Mail Admin custom-domain routing becomes authoritative only after promotion; verify the Mail Admin contract immediately post-promotion"
       },
       {
         "url": "https://live.ekodi.kr/",
