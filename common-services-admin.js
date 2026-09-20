@@ -2,13 +2,13 @@ import './ai-commons-admin.js';
 (() => {
 'use strict';
 const SECTION='common-services';
-const CONTROL='https://api.ekodi.kr';
+const CONTROL='https://ekodi.kr';
 const TOKEN_KEY='ekodi-auth-token';
 const SERVICE_PARAM='service';
 const style=document.createElement('link');style.rel='stylesheet';style.href='common-services-admin.css';style.dataset.ekodiCommonServicesStyle='1';document.head.append(style);
 const SERVICES=Object.freeze([
   {id:'auth',name:'통합인증',domain:'auth.ekodi.kr',layer:'Sovereign',role:'Identity · SSO · 계정',manage:'admins',critical:true,operatorOnly:true},
-  {id:'api',name:'공통 API',domain:'api.ekodi.kr',layer:'Sovereign',role:'Control API · 권한 · 공통 계약',manage:'health',critical:true,operatorOnly:true},
+  {id:'api',name:'공통 API',domain:'ekodi.kr',layer:'Sovereign',role:'Control API · 권한 · 공통 계약',manage:'health',critical:true,operatorOnly:true},
   {id:'ai',name:'AI Control Runtime',domain:'ai.ekodi.kr',layer:'Autonomous',role:'AI 실행 · 작업노드 · 공급자 라우팅',manage:'common-services',critical:true,operatorOnly:true},
   {id:'mail',name:'메일 허브',domain:'mail.ekodi.kr',layer:'Services',role:'Workspace 메일 연결',manage:'communication',operatorOnly:false},
   {id:'live',name:'라이브 허브',domain:'live.ekodi.kr',layer:'Services',role:'공통 방송 · 송출 진입',manage:'communication',operatorOnly:false},
