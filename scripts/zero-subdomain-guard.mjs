@@ -152,13 +152,26 @@ if (!fs.existsSync(sharedReleaseManifestPath)) {
 
 const ignoredFiles = new Set(['scripts/zero-subdomain-guard.mjs']);
 const hostPattern = /(?<!@)\b(?:[a-z0-9-]+\.)+ekodi\.kr\b|\*\.ekodi\.kr\b/ig;
+const removedHosts = new Map();
+const addedHosts = new Map();
 let currentFile = '';
+const countHost = (bucket, file, host) => {
+  const key = `${file}\0${host.toLowerCase()}`;
+  bucket.set(key, (bucket.get(key) || 0) + 1);
+};
 for (const line of gitDiff().split('\n')) {
   if (line.startsWith('+++ b/')) { currentFile = line.slice(6); continue; }
-  if (!line.startsWith('+') || line.startsWith('+++') || ignoredFiles.has(currentFile)) continue;
-  const added = line.slice(1);
-  const matches = [...added.matchAll(hostPattern)].map(match => match[0]);
-  for (const host of matches) fail(`${currentFile}: new EKODI subdomain reference is forbidden: ${host}`);
+  if (!currentFile || ignoredFiles.has(currentFile) || line.startsWith('+++') || line.startsWith('---')) continue;
+  const sign = line[0];
+  if (sign !== '+' && sign !== '-') continue;
+  const matches = [...line.slice(1).matchAll(hostPattern)].map(match => match[0]);
+  for (const host of matches) countHost(sign === '+' ? addedHosts : removedHosts, currentFile, host);
+}
+for (const [key, count] of addedHosts) {
+  const removed = removedHosts.get(key) || 0;
+  if (count <= removed) continue;
+  const [file, host] = key.split('\0');
+  fail(`${file}: new EKODI subdomain reference is forbidden: ${host}`);
 }
 
 if (failures.length) {
