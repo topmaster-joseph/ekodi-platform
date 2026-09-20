@@ -2,7 +2,7 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 
 const SUPABASE_URL='https://renzehysxirjilvdxacv.supabase.co';
 const PUBLISHABLE_KEY='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
-const API='https://api.ekodi.kr';
+const API='https://ekodi.kr';
 const sb=createClient(SUPABASE_URL,PUBLISHABLE_KEY,{auth:{persistSession:true,detectSessionInUrl:true}});
 const section=document.querySelector('#membership');
 const params=new URLSearchParams(location.search);
