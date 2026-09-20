@@ -73,3 +73,32 @@ test('platform entry router reserves /live/admin before generic workspace admin 
   assert.equal(script.status,200);
   assert.match(script.headers.get('content-type')||'',/javascript/);
 });
+
+
+test('canonical /live and /live/admin are owned by the apex Live service',async()=>{
+  const hub=await platformRouter.fetch(new Request('https://ekodi.kr/live/'),{});
+  assert.equal(hub.status,200);
+  assert.equal(hub.headers.get('location'),null);
+  const hubHtml=await hub.text();
+  assert.match(hubHtml,/라이브 방송 전문서비스|LIVE BROADCAST PROFESSIONAL SERVICE/);
+  assert.doesNotMatch(hubHtml,/EKODI Auth/);
+
+  const admin=await platformRouter.fetch(new Request('https://ekodi.kr/live/admin'),{});
+  assert.equal(admin.status,200);
+  assert.equal(admin.headers.get('location'),null);
+  const adminHtml=await admin.text();
+  assert.match(adminHtml,/라이브 전문서비스 관리/);
+  assert.match(adminHtml,/return_to=https%3A%2F%2Fekodi.kr%2Flive%2Fadmin/);
+  assert.doesNotMatch(adminHtml,/source=live\.ekodi\.kr/);
+});
+
+test('Live public visibility control can hide a tenant route without blocking its admin route',async()=>{
+  const DB={prepare(){return{bind(){return{first:async()=>({public_status:'maintenance'})}}}}};
+  const hidden=await platformRouter.fetch(new Request('https://ekodi.kr/ekodibiz/live/'),{DB});
+  assert.equal(hidden.status,200);
+  assert.match(await hidden.text(),/관리자 검수 또는 준비 상태/);
+
+  const admin=await platformRouter.fetch(new Request('https://ekodi.kr/ekodibiz/live/admin'),{DB});
+  assert.equal(admin.status,200);
+  assert.match(await admin.text(),/방송 · 녹화 관리/);
+});
