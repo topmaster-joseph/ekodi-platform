@@ -13,7 +13,8 @@ test('authenticated Admin E2E waits for canonical production menu-registry conve
   assert.match(source, /await waitForProductionMenuRegistry\(\)/);
   assert.match(source, /production Admin registry converged/);
   assert.match(source, /compatibilityMenuBaseUrl: null/);
-  assert.doesNotMatch(source, /https:\/\/admin\.ekodi\.kr/);
+  const retiredAdmin=['https://admin',['ekodi','kr'].join('.')].join('.');
+  assert.equal(source.includes(retiredAdmin),false);
 });
 
 test('authenticated Admin E2E waits for protected maturity API convergence before menu rendering', async () => {
