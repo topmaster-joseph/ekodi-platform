@@ -831,6 +831,10 @@ function Get-RemoteAgentStatus {
     taskState = $taskState
     persistentShell = $false
     directHostMutation = $false
+    foregroundUserSessionProtected = $true
+    backgroundBrowserReady = $false
+    isolatedDesktopReady = $false
+    minimizedWindowCountsAsIsolation = $false
   }
 }
 
