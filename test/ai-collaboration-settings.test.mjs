@@ -109,3 +109,14 @@ test('free-first funding guard cannot be weakened by saved collaboration setting
   assert.equal(policy.resources.funding.paidApiRequiresExplicitDelegatedBudget,true);
   assert.deepEqual(policy.resources.funding.freeExhaustedFallback,['alternate-zero-cost','core-only','retry-later']);
 });
+
+
+test('admin collaboration snapshot recognizes bounded Workers AI as configured EKODI shared AI', async () => {
+  const { getAiCollaborationAdminSnapshot } = await import('../ai-collaboration-settings.js');
+  const snapshot=await getAiCollaborationAdminSnapshot({
+    EKODI_PROVIDER_WORKERS_AI_ENABLED:'true',
+    AI:{async run(){}},
+  });
+  assert.equal(snapshot.resourceStatus.ekodiSharedApi.configured,true);
+  assert.equal(snapshot.policy.resources.pools.ekodiSharedApi.enabled,true);
+});

@@ -193,3 +193,23 @@ test('AI_PROVIDER=NONE leaves the Command Plane in Core-only degraded mode witho
   assert.equal(result.evidence.providerDiversity, 0);
   assert.equal(calls, 0);
 });
+
+
+test('Command Plane falls through to another zero-cost provider when the assigned free provider fails', async () => {
+  const calls=[];
+  const plane=buildEkodiCommandPlane({},[
+    provider('free-primary',5,['text','reasoning','review'],async()=>{
+      calls.push('free-primary');
+      throw new Error('FREE_PROVIDER_QUOTA_EXHAUSTED');
+    }),
+    provider('free-fallback',10,['text','reasoning','review'],async({context})=>{
+      calls.push(`free-fallback:${context.commandPlane.role}`);
+      return{text:'fallback-ok'};
+    }),
+  ]);
+  const result=await plane.execute({taskId:'free-fallback-proof',goal:'Handle a normal reversible task.'});
+  assert.equal(result.specialists[0].ok,true);
+  assert.equal(result.specialists[0].provider,'free-fallback');
+  assert.equal(calls.includes('free-primary'),true);
+  assert.equal(calls.some(item=>item.startsWith('free-fallback:')),true);
+});

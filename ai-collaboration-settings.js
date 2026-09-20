@@ -259,7 +259,7 @@ export async function getAiCollaborationAdminSnapshot(env = {}) {
     resourceStatus: Object.freeze({
       personalSubscriptions: Object.freeze({ mode:'official-client-nodes', secretShared:false }),
       personalApis: Object.freeze({ openai:Boolean(text(env.OPENAI_API_KEY,10000)), anthropic:Boolean(text(env.ANTHROPIC_API_KEY,10000)), gemini:Boolean(text(env.GEMINI_API_KEY,10000)) }),
-      ekodiSharedApi: Object.freeze({ configured:Boolean(text(env.EKODI_SHARED_OPENAI_API_KEY,10000)||text(env.EKODI_SHARED_AI_URL,1000)) }),
+      ekodiSharedApi: Object.freeze({ configured:Boolean((env.AI&&typeof env.AI.run==='function'&&bool(env.EKODI_PROVIDER_WORKERS_AI_ENABLED,false))||text(env.OPENROUTER_API_KEY,10000)||text(env.GROQ_API_KEY,10000)||text(env.EKODI_SHARED_OPENAI_API_KEY,10000)||text(env.EKODI_SHARED_AI_URL,1000)) }),
       hostedAi: Object.freeze({ configured:Boolean(text(env.EKODI_HOSTED_AI_URL,1000)), mode:'cloud-gpu-on-demand' }),
     }),
     coreLearning: Object.freeze(coreLearning),

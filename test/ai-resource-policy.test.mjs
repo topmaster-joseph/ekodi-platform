@@ -56,13 +56,22 @@ test('router scores only zero-cost candidates that pass hard gates', () => {
   assert.deepEqual(ranked.map(item => item.id), ['fast','slow']);
 });
 
-test('shared API and hosted AI remain off by default while Core is always available', () => {
+test('zero-cost EKODI shared API is enabled while hosted AI remains off and Core stays available', () => {
   const policy = DEFAULT_AI_RESOURCE_POLICY;
-  assert.equal(policy.pools.ekodiSharedApi.enabled, false);
+  assert.equal(policy.pools.ekodiSharedApi.enabled, true);
   assert.equal(policy.pools.hostedAi.enabled, false);
   assert.equal(policy.pools.coreOnly.enabled, true);
   assert.equal(policy.funding.paidApiRequiresExplicitDelegatedBudget, true);
   assert.equal(policy.funding.automaticPaidBudgetKrw, 0);
   assert.equal(policy.core.productionVerificationRequired, true);
   assert.equal(policy.core.promotionMode, 'reviewed');
+});
+
+
+test('EKODI shared pool automatically admits zero-cost providers but not paid providers', () => {
+  const free=scoreAiResourceCandidate({id:'workers-ai',resourceClass:'ekodi-shared-api',available:true,costClass:'account-managed'},{lane:'autonomous'});
+  assert.equal(free.eligible,true);
+  const paid=scoreAiResourceCandidate({id:'paid-shared',resourceClass:'ekodi-shared-api',available:true,costClass:'paid-opt-in'},{lane:'autonomous'});
+  assert.equal(paid.eligible,false);
+  assert.equal(paid.blockedBy,'paid_or_unclassified_cost_requires_explicit_budget');
 });
