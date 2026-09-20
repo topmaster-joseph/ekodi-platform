@@ -365,7 +365,7 @@ function mallUpstreamPath(pathname, publicPrefix = MALL_PREFIX) {
 function rewriteMallHtmlDocument(html, pathname = MALL_PREFIX, publicPrefix = MALL_PREFIX) {
   let rewritten = String(html || '');
   if (publicPrefix !== MALL_PREFIX) rewritten = rewritten.split(MALL_PREFIX).join(publicPrefix);
-  const prefixGuard = publicPrefix.replace(/^\\//,'').replaceAll('/','\\\\/');
+  const prefixGuard = publicPrefix.replace(/^[/]+/,'');
   const rootAssetPattern = new RegExp(`\\b(href|src|action)=("|')\\/(?!\\/|${prefixGuard}(?:\\/|["']))([^"']*)\\2`, 'gi');
   rewritten = rewritten.replace(
     rootAssetPattern,
