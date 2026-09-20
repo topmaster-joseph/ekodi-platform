@@ -1196,6 +1196,8 @@
           "x-robots-tag: noindex, nofollow, noarchive",
           "x-content-type-options: nosniff"
         ],
+        "candidateVerify": false,
+        "candidateVerifyReason": "Mail Admin custom-domain routing becomes authoritative only after promotion; verify the canonical apex handoff immediately post-promotion",
         "rollbackVerify": false
       },
       {
