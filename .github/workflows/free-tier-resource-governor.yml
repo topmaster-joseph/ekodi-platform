@@ -79,17 +79,19 @@ jobs:
           [ -n "$token" ] || token="${TOKEN_B:-}"
           [ -n "$token" ] || token="${TOKEN_C:-}"
           [ -n "$token" ] || token="${TOKEN_D:-}"
-          if [ -z "$token" ]; then
-            echo 'No Supabase management credential is configured for the Resource Governor.'
-            exit 2
+          if [ -n "$token" ]; then
+            echo "::add-mask::$token"
+            echo "SUPABASE_ACCESS_TOKEN=$token" >> "$GITHUB_ENV"
+            echo "SUPABASE_TELEMETRY_AVAILABLE=true" >> "$GITHUB_ENV"
+          else
+            echo 'Supabase management credential is not configured; Supabase telemetry will remain missing.'
+            echo "SUPABASE_ACCESS_TOKEN=" >> "$GITHUB_ENV"
+            echo "SUPABASE_TELEMETRY_AVAILABLE=false" >> "$GITHUB_ENV"
           fi
-          echo "::add-mask::$token"
-          echo "SUPABASE_ACCESS_TOKEN=$token" >> "$GITHUB_ENV"
       - name: Collect measured free-tier resource telemetry
         shell: bash
         run: |
           set -euo pipefail
-          test -n "$SUPABASE_ACCESS_TOKEN"
           test -n "$CLOUDFLARE_API_TOKEN"
           test -n "$CLOUDFLARE_ACCOUNT_ID"
           sql_file="$RUNNER_TEMP/free-tier-resource-snapshots.sql"
