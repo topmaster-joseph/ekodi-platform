@@ -59,6 +59,7 @@ on:
       - 'migrations/0088_ai_commons_sources.sql'
       - 'migrations/0094_ai_provider_daily_budget.sql'
       - 'migrations/0095_ai_free_quota_decisions.sql'
+      - 'migrations/0096_activate_ai_provider_pool.sql'
       - 'deploy/manifests/ai-control.worker.json'
       - 'scripts/validate-cognitive-control-plane.mjs'
       - 'scripts/validate-additive-migrations.mjs'
@@ -123,6 +124,7 @@ on:
       - 'migrations/0088_ai_commons_sources.sql'
       - 'migrations/0094_ai_provider_daily_budget.sql'
       - 'migrations/0095_ai_free_quota_decisions.sql'
+      - 'migrations/0096_activate_ai_provider_pool.sql'
       - 'deploy/manifests/ai-control.worker.json'
       - 'scripts/validate-cognitive-control-plane.mjs'
       - 'scripts/validate-additive-migrations.mjs'
@@ -197,6 +199,11 @@ jobs:
           grep -Fq 'no_bundle = true' wrangler.ai.release.toml
           grep -Fq 'binding = "AI"' wrangler.ai.release.toml
           grep -Fq 'EKODI_PROVIDER_WORKERS_AI_ENABLED = "true"' wrangler.ai.release.toml
+          grep -Fq 'EKODI_PROVIDER_GEMINI_ENABLED = "true"' wrangler.ai.release.toml
+          grep -Fq 'EKODI_PROVIDER_OPENAI_ENABLED = "true"' wrangler.ai.release.toml
+          grep -Fq 'EKODI_PROVIDER_ANTHROPIC_ENABLED = "true"' wrangler.ai.release.toml
+          grep -Fq 'EKODI_PROVIDER_OPENROUTER_FREE_ENABLED = "true"' wrangler.ai.release.toml
+          grep -Fq 'EKODI_PROVIDER_GROQ_FREE_ENABLED = "true"' wrangler.ai.release.toml
           grep -Fq 'paidApiAutoEscalation:false' ai-control-worker.js
           grep -Fq 'no_bundle = true' wrangler.ai.staging.release.toml
           grep -Fq 'humanApprovalRequired:true' ai-control-worker.js
@@ -217,6 +224,7 @@ jobs:
           test -f migrations/0086_ai_commons_ideas.sql
           test -f migrations/0087_ai_commons_governance.sql
           test -f migrations/0088_ai_commons_sources.sql
+          test -f migrations/0096_activate_ai_provider_pool.sql
           test -f deploy/manifests/ai-control.worker.json
       - name: Build one immutable AI Control application artifact
         id: build_artifact
