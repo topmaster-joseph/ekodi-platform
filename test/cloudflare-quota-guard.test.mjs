@@ -53,6 +53,11 @@ test('production verification is consolidated into one post-deploy canary', asyn
   assert.doesNotMatch(productionGate, /cron:/);
   assert.doesNotMatch(reliability, /production-synthetic:/);
   assert.doesNotMatch(reliability, /workflow_run:/);
+  const manual = await readFile(new URL('../.github/workflows/deploy.yml', import.meta.url), 'utf8');
+  assert.match(manual, /post-deploy-canary\\.mjs --scope=full/);
+  assert.match(manual, /cloudflare-production-budget\\.mjs/);
+  assert.doesNotMatch(manual, /for attempt in/);
+  assert.doesNotMatch(manual, /admin\\.ekodi\\.kr|api\\.ekodi\\.kr|finance-api\\.ekodi\\.kr|community\\.ekodi\\.kr|social\\.ekodi\\.kr/);
 });
 
 test('production probe loops fail fast on quota circuit and deep E2E stays explicit-only', async () => {
