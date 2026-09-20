@@ -4,7 +4,7 @@ const SUPABASE_URL = 'https://renzehysxirjilvdxacv.supabase.co';
 const DEFAULT_PUBLISHABLE_KEY = 'sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
 const MAIL_PREFIX = '/api/mail/control';
 const WRITE_ROLES = new Set(['tenant_admin', 'owner', 'admin', 'manager', 'store_owner']);
-const ALLOWED_ORIGINS = new Set(['https://ekodi.kr', 'https://mail.ekodi.kr', 'https://my.ekodi.kr']);
+const ALLOWED_ORIGINS = new Set(['https://ekodi.kr']);
 const DEFAULT_PROVIDER = 'forward-email';
 const ACCOUNT_PROVIDERS = Object.freeze({
   gmail: { label: 'Gmail', connectorMode: 'google-oauth', auth: 'oauth', read: true, send: true, externalVerification: 'google-restricted-scope-review' },
@@ -149,7 +149,7 @@ async function googleAccessForAccount(env, db, account){
   await db.prepare('UPDATE mail_credentials SET last_refreshed_at=?,updated_at=? WHERE account_id=?').bind(new Date().toISOString(),new Date().toISOString(),account.id).run();
   return{accessToken:token.access_token,scopes:row.scopes||'',credentialRow:row};
 }
-function callbackHtml(message,ok=false){const title=ok?'EKODI Mail 연결 완료':'EKODI Mail 연결 확인 필요';return new Response(`<!doctype html><html lang="ko"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>${title}</title><body style="font-family:system-ui;padding:32px;max-width:680px;margin:auto"><h1>${title}</h1><p>${String(message).replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]))}</p><p><a href="https://mail.ekodi.kr/admin">메일 관리로 돌아가기</a></p></body></html>`,{status:ok?200:400,headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-frame-options':'DENY'}})}
+function callbackHtml(message,ok=false){const title=ok?'EKODI Mail 연결 완료':'EKODI Mail 연결 확인 필요';return new Response(`<!doctype html><html lang="ko"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>${title}</title><body style="font-family:system-ui;padding:32px;max-width:680px;margin:auto"><h1>${title}</h1><p>${String(message).replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]))}</p><p><a href="https://ekodi.kr/mail/admin">메일 관리로 돌아가기</a></p></body></html>`,{status:ok?200:400,headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-frame-options':'DENY'}})}
 
 async function ensureSchema(db) {
   await db.batch([
@@ -380,7 +380,7 @@ async function workspaceSnapshot(db, identity) {
       canManage: identity.canManage,
     },
     strategy: {
-      hub: 'mail.ekodi.kr',
+      hub: 'ekodi.kr/mail',
       inbound: 'custom-domain -> routing provider -> external Gmail inbox',
       outbound: 'independent authenticated SMTP/API provider -> custom-domain From address',
       providerIndependence: true,

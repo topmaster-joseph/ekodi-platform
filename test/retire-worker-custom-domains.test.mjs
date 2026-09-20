@@ -23,3 +23,9 @@ test('retirement does not reattach successfully detached domains only because le
   assert.match(source,/setTimeout\(r,5000\)/);
   assert.match(source,/do not undo retirement for edge propagation lag/);
 });
+
+
+test('canonical-page and direct-health markers stay independent',()=>{
+  assert.match(source,/t\.apexExpect\|\|t\.expect/);
+  assert.match(source,/t\.directExpect\|\|t\.expect/);
+});

@@ -1,5 +1,15 @@
 export const REMOTE_COMPUTER_PROVIDER_ID = 'ekodi-native-remote-computer';
 
+export const REMOTE_COMPUTER_TRANSITION_POLICY = Object.freeze({
+  stage: 'external-bridge-until-native-verified',
+  temporaryExternalProviderId: 'remote-desktop-commander',
+  targetProviderId: REMOTE_COMPUTER_PROVIDER_ID,
+  targetCostModel: 'self-hosted-no-third-party-per-call-fee',
+  paidExternalAutoUpgrade: false,
+  cutoverRequiresVerifiedNativeService: true,
+  retireTemporaryBridgeAfterCutover: true,
+});
+
 export const REMOTE_COMPUTER_OPERATIONS = Object.freeze({
   'computer.system.read': Object.freeze({ capability:'computerRead', risk:'observe', hostMode:'allow', mutation:false }),
   'computer.process.list': Object.freeze({ capability:'processRead', risk:'observe', hostMode:'allow', mutation:false }),
@@ -7,6 +17,8 @@ export const REMOTE_COMPUTER_OPERATIONS = Object.freeze({
   'computer.files.read': Object.freeze({ capability:'filesystemRead', risk:'observe', hostMode:'isolated-required', mutation:false }),
   'computer.files.write': Object.freeze({ capability:'filesystemWrite', risk:'maintain', hostMode:'isolated-required', mutation:true }),
   'computer.terminal.exec': Object.freeze({ capability:'isolatedCommand', risk:'maintain', hostMode:'isolated-required', mutation:true }),
+  'computer.browser.execute': Object.freeze({ capability:'backgroundBrowser', risk:'maintain', hostMode:'isolated-required', mutation:true }),
+  'computer.desktop.session.execute': Object.freeze({ capability:'isolatedDesktop', risk:'privileged', hostMode:'isolated-required', mutation:true }),
   'computer.desktop.capture': Object.freeze({ capability:'desktopCapture', risk:'privileged', hostMode:'consent-required', mutation:false }),
   'computer.desktop.input': Object.freeze({ capability:'desktopInput', risk:'privileged', hostMode:'consent-required', mutation:true }),
 });
@@ -20,6 +32,13 @@ export function remoteComputerProviderDescriptor() {
     contractVersion: 'ekodi.capability-provider.v1',
     providerType: 'ekodi-responsible',
     nativeFirst: true,
+    transitionStage: REMOTE_COMPUTER_TRANSITION_POLICY.stage,
+    temporaryExternalProviderId: REMOTE_COMPUTER_TRANSITION_POLICY.temporaryExternalProviderId,
+    targetCostModel: REMOTE_COMPUTER_TRANSITION_POLICY.targetCostModel,
+    paidExternalAutoUpgrade: false,
+    nonDisruptiveDefault: true,
+    foregroundUserSessionOwnedByUser: true,
+    minimizedWindowCountsAsIsolation: false,
     persistentAgentShell: false,
     directHostMutation: false,
     supportedOperations: Object.keys(REMOTE_COMPUTER_OPERATIONS),
@@ -41,6 +60,8 @@ export function planRemoteComputerExecution({
   externalProviders = [],
   isolatedExecutorVerified = false,
   localConsent = false,
+  allowPaidExternal = false,
+  externalFallbackAfterNativeCutover = false,
 } = {}) {
   const policy = operationPolicy(operation);
   if (!policy) return Object.freeze({ ok:false, reason:'operation_not_allowed', candidates:[] });
@@ -48,19 +69,21 @@ export function planRemoteComputerExecution({
   const candidates = [];
   const nativeCaps = native?.capabilities && typeof native.capabilities === 'object' ? native.capabilities : {};
   const nativeOnline = native?.state === 'online';
+  const nativeServiceReady = native?.serviceReady === true;
   const nativeCapability = nativeCaps[policy.capability] === true;
   const nativeSecurityReady =
     policy.hostMode === 'allow'
     || (policy.hostMode === 'isolated-required' && isolatedExecutorVerified === true)
     || (policy.hostMode === 'consent-required' && localConsent === true && isolatedExecutorVerified === true);
 
-  if (nativeOnline && nativeCapability && nativeSecurityReady) {
+  if (nativeServiceReady && nativeOnline && nativeCapability && nativeSecurityReady) {
     candidates.push(Object.freeze({
       providerId: REMOTE_COMPUTER_PROVIDER_ID,
       kind: 'native',
       operation,
       risk: policy.risk,
       securityMode: policy.hostMode,
+      costModel: REMOTE_COMPUTER_TRANSITION_POLICY.targetCostModel,
     }));
   }
 
@@ -68,19 +91,44 @@ export function planRemoteComputerExecution({
     if (!item || item.state !== 'online' || item.securityEquivalent !== true) continue;
     const operations = Array.isArray(item.operations) ? item.operations : [];
     if (!operations.includes(operation)) continue;
+
+    const providerId = safeText(item.id, 80);
+    const paidOnly = item.requiresPaidUpgrade === true || safeText(item.costModel, 40) === 'paid-only';
+    if (paidOnly && allowPaidExternal !== true) continue;
+    if (item.quotaAvailable === false) continue;
+
+    const isTemporaryBridge =
+      item.temporaryBridge === true
+      || providerId === REMOTE_COMPUTER_TRANSITION_POLICY.temporaryExternalProviderId;
+
+    if (
+      nativeServiceReady
+      && isTemporaryBridge
+      && externalFallbackAfterNativeCutover !== true
+      && REMOTE_COMPUTER_TRANSITION_POLICY.retireTemporaryBridgeAfterCutover
+    ) {
+      continue;
+    }
+
     candidates.push(Object.freeze({
-      providerId: safeText(item.id, 80),
+      providerId,
       kind: 'external-adapter',
       operation,
       risk: policy.risk,
       securityMode: safeText(item.securityMode || 'equivalent', 40),
+      temporaryBridge: isTemporaryBridge,
+      costModel: safeText(item.costModel || 'external-provider', 40),
     }));
   }
 
+  const transitionStage = nativeServiceReady ? 'native-cutover' : 'external-bridge';
   return Object.freeze({
     ok: candidates.length > 0,
     reason: candidates.length ? 'candidate_ready' : 'no_compliant_provider',
     nativePreferred: candidates[0]?.providerId === REMOTE_COMPUTER_PROVIDER_ID,
+    transitionStage,
+    nativeServiceReady,
+    paidExternalAutoUpgrade: false,
     policy,
     candidates,
   });
@@ -95,5 +143,7 @@ export function validateRemoteComputerReceipt(receipt = {}) {
   if (receipt.authorityExpanded === true) errors.push('authority_expansion_forbidden');
   if (receipt.reusableCredentialExposed === true) errors.push('credential_exposure_forbidden');
   if (receipt.directProductionMutation === true) errors.push('direct_production_mutation_forbidden');
+  if (receipt.foregroundFocusStolen === true) errors.push('foreground_focus_theft_forbidden');
+  if (receipt.activeUserBrowserProfileReused === true) errors.push('active_user_profile_reuse_forbidden');
   return Object.freeze({ ok:errors.length === 0, errors });
 }

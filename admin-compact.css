@@ -1,3 +1,21 @@
+/* EKODI Admin UI v3: service-specific readability overrides; global tokens live in Admin Design Engine. */
+/* Shared service cards follow the same readable surface instead of inheriting dark legacy panels. */
+body.admin-compact .social-connections,body.admin-compact .social-org-card,body.admin-compact .social-admin-summary article,body.admin-compact .social-connection-metrics article,
+body.admin-compact .service-control-card,body.admin-compact .finance-status article,body.admin-compact .finance-note,body.admin-compact .finance-table-wrap,
+body.admin-compact .books-admin-card,body.admin-compact .community-admin-card,body.admin-compact .marketing-ai-card{background:#fff!important;color:#172033!important;border-color:#dce5ee!important;box-shadow:none!important}
+body.admin-compact .social-connection-card,body.admin-compact .social-channel-row{background:#f7f9fc!important;color:#263b52!important}
+body.admin-compact .social-admin-status{border:1px solid #dce5ee!important;background:#f7f9fc!important;color:#52667b!important}
+body.admin-compact .social-admin-status[data-state="error"]{border-color:#f2c6c6!important;background:#fff3f3!important;color:#a53b3b!important}
+body.admin-compact .social-admin-status[data-state="saved"]{border-color:#bee2cf!important;background:#f1fbf5!important;color:#237a54!important}
+body.admin-compact .social-admin-status[data-state="dirty"]{border-color:#ead8ad!important;background:#fff9e8!important;color:#7a5a15!important}
+body.admin-compact .social-admin-head{align-items:center!important}
+body.admin-compact .social-admin-head h2{font-size:26px!important;letter-spacing:-.035em!important}
+body.admin-compact .social-connections{padding:18px!important;border-radius:16px!important}
+body.admin-compact .social-scope-bar{gap:12px!important}
+body.admin-compact .social-admin-summary{gap:10px!important}
+body.admin-compact .social-admin-summary article{padding:14px 16px!important;border-radius:13px!important}
+body.admin-compact .social-org-card{padding:16px!important;border-radius:15px!important}
+
 body.admin-compact .app{grid-template-columns:220px minmax(0,1fr)}
 body.admin-compact .app>main{grid-column:2;min-width:0}
 body.admin-compact .sidebar{padding:18px 14px;display:flex;flex-direction:column;position:fixed!important;inset:0 auto 0 0;width:220px;height:100dvh;min-height:100vh;overflow:hidden!important;overscroll-behavior:none;z-index:30}

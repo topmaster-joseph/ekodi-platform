@@ -264,7 +264,7 @@
 
     const intro = document.createElement('p');
     intro.className = 'device-remote-note';
-    intro.textContent = '보기 전용입니다. 영구 셸·파일 변경·화면 제어는 이 화면에서 허용하지 않습니다.';
+    intro.textContent = '사용자 화면 보호가 기본입니다. 웹 작업은 Background Browser, GUI 작업은 격리 Desktop을 우선하며 최소화 창은 격리로 인정하지 않습니다.';
 
     const actions = document.createElement('div');
     actions.className = 'device-inline-actions device-remote-actions';
@@ -285,7 +285,7 @@
 
     const agentCard = document.createElement('div');
     agentCard.className = 'device-remote-summary-card';
-    agentCard.innerHTML = `<small>Agent</small><strong>${escapeHtml(agent?.version || device.agentVersion || '확인 전')}</strong><span>${agent ? `작업 ${escapeHtml(agent.taskState || 'unknown')} · Shell ${agent.persistentShell ? '열림' : '차단'}` : '“Agent 상태”로 최신 상태를 확인하세요.'}</span>`;
+    agentCard.innerHTML = `<small>Agent · 사용자 화면 보호</small><strong>${escapeHtml(agent?.version || device.agentVersion || '확인 전')}</strong><span>${agent ? `작업 ${escapeHtml(agent.taskState || 'unknown')} · Shell ${agent.persistentShell ? '열림' : '차단'} · BG Browser ${agent.backgroundBrowserReady ? '준비' : '대기'} · Isolated Desktop ${agent.isolatedDesktopReady ? '준비' : '대기'}` : '“Agent 상태”로 최신 상태를 확인하세요.'}</span>`;
 
     const systemCard = document.createElement('div');
     systemCard.className = 'device-remote-summary-card';

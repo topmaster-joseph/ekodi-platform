@@ -41,24 +41,20 @@ test('retired Mall subdomains permanently redirect to the canonical EKODIBIZ pat
   assert.match(source,/Response\.redirect\(target\.toString\(\), 308\)/);
 });
 
-test('mail root is exclusively owned by the shared site core',async()=>{
-  const [source,proxyConfig,siteConfig,entry]=await Promise.all([
-    read('service-proxy.js'),
-    read('wrangler.service-proxy.toml'),
+test('mail root is exclusively owned by the shared site apex path',async()=>{
+  const [siteConfig,entry]=await Promise.all([
     read('wrangler.site.toml'),
     read('platform-router-entry-worker.js'),
   ]);
-  assert.doesNotMatch(source,/'mail\.ekodi\.kr': GMAIL/);
-  assert.doesNotMatch(proxyConfig,/pattern = "mail\.ekodi\.kr"/);
-  assert.match(proxyConfig,/pattern = "mail\.biz\.ekodi\.kr"/);
-  assert.match(siteConfig,/pattern = "mail\.ekodi\.kr"/);
-  assert.match(entry,/if\(host===MAIL_HOST\)/);
+  assert.match(siteConfig,/pattern = "ekodi\.kr\/mail\*"[\s\S]{0,80}zone_name = "ekodi\.kr"/);
+  assert.match(entry,/function routeMailApex\(request\)/);
+  assert.match(entry,/url\.pathname==='\/mail'/);
+  assert.match(entry,/url\.pathname==='\/mail\/admin'/);
   assert.match(entry,/mailUserPage\(\)/);
-  assert.match(entry,/mailAdminPage\(\)/);
+  assert.match(entry,/mailAdminPage\(/);
   const workflow=await read('.github/workflows/deploy-site-core.yml');
   assert.match(workflow,/root_host='ekodi\.kr'/);
-  assert.match(workflow,/for host in "\$root_host" "admin\.\$root_host" "mail\.\$root_host"; do/);
-  assert.doesNotMatch(workflow,/for host in[^\n]*auth\.ekodi\.kr/);
+  assert.match(workflow,/Required Cloudflare Worker domain is not attached: \$root_host/);
 });
 
 

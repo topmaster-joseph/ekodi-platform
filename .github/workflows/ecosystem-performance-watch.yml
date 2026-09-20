@@ -34,16 +34,41 @@ jobs:
     timeout-minutes: 8
     env:
       GH_TOKEN: ${{ github.token }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_DEVELOPMENT_ACCOUNT_ID: ${{ vars.CLOUDFLARE_DEVELOPMENT_ACCOUNT_ID || '46aad4738793fbaca88574832a2ccc0f' }}
       WARN_SECONDS: '2.0'
       FAIL_SECONDS: '5.0'
     steps:
       - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - name: Read Production Cloudflare quota Source of Truth
+        id: quota
+        run: node scripts/cloudflare-production-budget.mjs --output=cloudflare-performance-quota.json
+
+      - name: Record quota-protected performance hold
+        if: steps.quota.outputs.skip_nonessential == 'true'
+        shell: bash
+        run: |
+          {
+            echo '## EKODI Entry Performance'
+            echo ''
+            echo 'Performance probes are held by CF-QUOTA-001.'
+            echo '- state: **${{ steps.quota.outputs.state }}**'
+            echo '- usage: **${{ steps.quota.outputs.percent }}%**'
+            echo '- endpoint requests: **0**'
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Identify EKODI monitor traffic
         shell: bash
         run: |
           printf '%s\n' 'user-agent = "EKODI-github-monitor/1.0"' > "$HOME/.curlrc"
 
       - name: Measure public entry performance
+        if: steps.quota.outputs.skip_nonessential != 'true'
         id: perf
         shell: bash
         run: |
@@ -81,8 +106,7 @@ jobs:
           }
 
           probe homepage 'https://ekodi.kr/' '<title>EKODI'
-          probe admin 'https://admin.ekodi.kr/' '<title>EKODI Admin</title>'
-          probe admin_fallback 'https://ekodi.kr/admin' '<title>EKODI Admin</title>'
+          probe admin 'https://ekodi.kr/admin' '<title>EKODI Admin</title>'
           probe support 'https://ekodi.kr/support/' 'EKODI SUPPORT · OPPORTUNITY FIRST'
           probe support_health 'https://ekodi.kr/support/health' '"service":"ekodi-support-opportunity"'
 
@@ -95,7 +119,7 @@ jobs:
           exit "$failed"
 
       - name: Publish performance summary
-        if: always()
+        if: always() && steps.quota.outputs.skip_nonessential != 'true'
         shell: bash
         run: |
           {
@@ -111,7 +135,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Open or update performance incident
-        if: failure()
+        if: failure() && steps.quota.outputs.skip_nonessential != 'true'
         shell: bash
         run: |
           set -euo pipefail

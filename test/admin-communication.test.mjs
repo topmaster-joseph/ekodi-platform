@@ -14,6 +14,6 @@ test('communication registry entry has an operational demand-loaded panel', asyn
   assert.match(layout, /communication:#communication/);
   assert.match(module, /communication-admin\.css/);
   assert.match(module, /dataset\.panel = SECTION/);
-  assert.match(module, /https:\/\/mail\.ekodi\.kr\/admin/);
-  assert.match(module, /https:\/\/live\.ekodi\.kr\//);
+  assert.match(module, /https:\/\/ekodi\.kr\/mail\/admin/);
+  assert.match(module, /https:\/\/ekodi\.kr\/live/);
 });

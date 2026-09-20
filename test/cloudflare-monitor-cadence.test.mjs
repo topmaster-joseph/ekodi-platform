@@ -28,3 +28,13 @@ test('quota-aware probes identify themselves as EKODI internal traffic', () => {
   assert.match(performance, /EKODI-github-monitor\/1\.0/);
   assert.match(performance, /user-agent =/);
 });
+
+test('hourly performance watch reads Production quota before generating endpoint traffic', () => {
+  const quota = performance.indexOf('Read Production Cloudflare quota Source of Truth');
+  const measure = performance.indexOf('Measure public entry performance');
+  assert.ok(quota >= 0 && measure > quota);
+  assert.match(performance, /cloudflare-production-budget\.mjs/);
+  assert.match(performance, /steps\.quota\.outputs\.skip_nonessential != 'true'/);
+  assert.match(performance, /endpoint requests: \*\*0\*\*/);
+  assert.doesNotMatch(performance, /https:\/\/admin\.ekodi\.kr\//);
+});

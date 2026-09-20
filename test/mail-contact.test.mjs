@@ -105,6 +105,18 @@ test('public contact release guard is registered', async()=>{
   assert.match(wrangler,/limit = 5/);
 });
 
+test('Mail Admin release defers only the 0% candidate and verifies canonical apex handoff after promotion', async()=>{
+  const manifest=JSON.parse(await readFile(new URL('../deploy/manifests/shared-site.worker.json',import.meta.url),'utf8'));
+  const probe=manifest.worker.requests.find(item=>item.url==='https://ekodi.kr/mail/admin');
+  assert.deepEqual(probe?.statuses,[307]);
+  assert.equal(probe?.candidateVerify,false);
+  assert.match(probe?.candidateVerifyReason||'',/post-promotion|after promotion/i);
+  assert.ok(probe?.headerExpect?.includes('location: https://ekodi.kr/admin/'));
+  assert.ok(probe?.headerExpect?.includes('cache-control: no-store'));
+  assert.ok(probe?.headerExpect?.includes('x-robots-tag: noindex, nofollow, noarchive'));
+  assert.equal(probe?.rollbackVerify,false);
+});
+
 test('shared-site workflow watches and validates the contact surface', async()=>{
   const workflow=await readFile(new URL('../.github/workflows/deploy-site-core.yml',import.meta.url),'utf8');
   assert.match(workflow,/- 'mail-contact\.js'/);

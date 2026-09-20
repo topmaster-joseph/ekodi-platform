@@ -1,0 +1,128 @@
+{
+  "schemaVersion": 1,
+  "policyId": "EKODI-FREE-TIER-001",
+  "status": "enforced",
+  "effectiveDate": "2026-09-20",
+  "referenceDate": "2026-09-20",
+  "principle": "maximize-zero-marginal-cost-without-weakening-security-or-source-of-truth",
+  "automaticPaidUpgrade": false,
+  "requireMeasuredTelemetryBeforeUsagePercentClaims": true,
+  "thresholds": {
+    "warning": 70,
+    "conserve": 85,
+    "protect": 90,
+    "survival": 95,
+    "circuitBreaker": 100
+  },
+  "states": [
+    {"id":"normal","minPercent":0,"maxPercentExclusive":70},
+    {"id":"warning","minPercent":70,"maxPercentExclusive":85},
+    {"id":"conserve","minPercent":85,"maxPercentExclusive":90},
+    {"id":"protect","minPercent":90,"maxPercentExclusive":95},
+    {"id":"survival","minPercent":95,"maxPercentExclusive":100},
+    {"id":"circuit_breaker","minPercent":100}
+  ],
+  "providerRoles": {
+    "cloudflare": {
+      "role": "edge-delivery-and-bounded-compute",
+      "prefer": [
+        "static-assets-before-worker",
+        "cdn-cache",
+        "r2-for-large-noncanonical-objects",
+        "kv-for-low-write-config-and-feature-flags",
+        "d1-for-derived-edge-read-models",
+        "queues-for-bounded-async-work",
+        "turnstile-for-public-abuse-protection",
+        "workers-ai-for-lightweight-zero-cost-eligible-ai"
+      ],
+      "forbid": [
+        "worker-invocation-for-immutable-static-assets-without-explicit-security-need",
+        "d1-as-authoritative-replacement-for-supabase-when-supabase-is-source-of-truth",
+        "kv-as-high-frequency-heartbeat-or-log-ledger"
+      ]
+    },
+    "supabase": {
+      "role": "authoritative-relational-data-auth-and-rls",
+      "prefer": [
+        "postgres-source-of-truth",
+        "auth",
+        "rls",
+        "realtime-when-user-value-requires-it",
+        "direct-rls-protected-crud-before-edge-functions"
+      ],
+      "forbid": [
+        "large-binary-storage-when-r2-is-suitable",
+        "edge-function-hop-for-simple-rls-protected-crud",
+        "tenant-per-project-proliferation-without-isolation-need"
+      ]
+    },
+    "github": {
+      "role": "source-control-review-ci-and-release-orchestration",
+      "prefer": [
+        "public-repository-standard-hosted-runners-when-security-policy-allows",
+        "concurrency-cancel-in-progress",
+        "short-lived-artifacts",
+        "dependency-cache",
+        "isolated-self-hosted-runner-only-when-it-improves-capability-or-control"
+      ],
+      "forbid": [
+        "duplicate-ci-and-e2e-runs-for-the-same-release",
+        "long-lived-large-artifacts-when-r2-or-canonical-storage-is-more-appropriate",
+        "self-hosted-runner-on-privileged-production-host"
+      ]
+    }
+  },
+  "sourceOfTruth": {
+    "relationalBusinessData": "supabase-postgres",
+    "edgeDerivedState": "cloudflare-d1-or-kv",
+    "largePublicOrOperationalObjects": "cloudflare-r2",
+    "officialDurableOrganizationalArtifacts": "google-workspace-shared-drive-ekodi",
+    "sourceAndReleaseHistory": "github"
+  },
+  "protection": {
+    "warningActions": [
+      "notify-admin",
+      "increase-cache-efficiency",
+      "reduce-nonessential-probes"
+    ],
+    "conserveActions": [
+      "batch-background-work",
+      "suppress-duplicate-ci-e2e",
+      "prefer-zero-cost-provider"
+    ],
+    "protectActions": [
+      "block-nonessential-probes",
+      "stop-nonessential-worker-work",
+      "prefer-static-and-cache-paths",
+      "defer-low-priority-ai"
+    ],
+    "survivalActions": [
+      "preserve-auth-security-orders-and-admin-control",
+      "defer-nonessential-background-jobs"
+    ],
+    "circuitBreakerActions": [
+      "stop-retry-on-quota-errors",
+      "open-provider-circuit",
+      "use-safe-registered-fallback",
+      "notify-admin"
+    ],
+    "retryStopSignals": [
+      "1027",
+      "429",
+      "quota_exhausted",
+      "monthly_limit_reached",
+      "daily_limit_reached"
+    ]
+  },
+  "release": {
+    "requiredLifecycle": [
+      "Sandbox",
+      "CI",
+      "Staging",
+      "Guarded Release",
+      "Production Verification"
+    ],
+    "securityBoundaryMayNotBeWeakenedForCost": true,
+    "productionAccountMustNotBeConfusedWithDevelopment": true
+  }
+}
