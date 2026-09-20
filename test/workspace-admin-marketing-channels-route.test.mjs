@@ -15,7 +15,7 @@ test('canonical Mall and child-service publishing routes use site-owned admins',
   assert.equal(isWorkspaceAdminPathShape('/cgma/admin/publishing/'),true);
   const source=await read('workspace-admin-page.js');
   assert.match(source,/genericService=clean\.match/);
-  assert.match(source,/adminBase=standaloneMall\\?'\\/ekodimall\\/admin':service\\?/);
+  assert.match(source,/adminBase=standaloneMall\?'\/ekodimall\/admin':service\?/);
   assert.match(source,/service\?`\$\{base\}\/\$\{service\}\/admin`/);
   assert.match(source,/visibleChannelIds/);
 });
