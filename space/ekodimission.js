@@ -1,13 +1,15 @@
 (()=>{
   const eventSlug='260926-chuseok-open-table';
   const applicationRecordKey='260926-chuseok-open-table';
-  const url=`https://ekodi.kr/ekodimission/activities/${eventSlug}`;
+  const baseUrl=`https://ekodi.kr/ekodimission/activities/${eventSlug}`;
+  const currentLocale=new URL(location.href).searchParams.get('lang')||'ko-KR';
+  const url=currentLocale==='ko-KR'||currentLocale==='ko'?baseUrl:`${baseUrl}?lang=${encodeURIComponent(currentLocale)}`;
   const api=`/ekodimission/api/activities/${applicationRecordKey}/applications`;
-  const invite=`이번 추석, 함께 밥 먹을 사람이 필요하다면 에코디 열린식탁으로 오세요. 국적과 나이, 신앙과 관계없이 누구나 환영합니다. 2026년 9월 26일 토요일 오후 3시, 목포대 후문에서 기다리겠습니다. ${url}`;
+  const invite=`이번 추석, 함께 밥 먹을 사람이 필요하다면 에코디 열린식탁·팟트럭·나눔마켓으로 오세요. 국적과 나이, 신앙과 관계없이 누구나 환영합니다. 2026년 9월 26일 토요일 오후 3시, 자담치킨 목포대점에서 기다리겠습니다. ${url}`;
   const shareStatus=m=>document.querySelectorAll('[data-share-status]').forEach(el=>el.textContent=m);
   async function copy(v,m){try{await navigator.clipboard.writeText(v)}catch{const t=document.createElement('textarea');t.value=v;document.body.append(t);t.select();document.execCommand('copy');t.remove()}shareStatus(m)}
   document.addEventListener('click',async e=>{
-    if(e.target.closest('[data-share-event]')){if(navigator.share){try{await navigator.share({title:'2026 에코디 추석 열린식탁',text:'빈자리를 식탁으로, 낯선 이를 이웃으로.',url});shareStatus('공유 창을 열었습니다.')}catch(err){if(err?.name!=='AbortError')await copy(url,'행사 링크를 복사했습니다.')}}else await copy(url,'행사 링크를 복사했습니다.');return}
+    if(e.target.closest('[data-share-event]')){if(navigator.share){try{await navigator.share({title:'2026 에코디 한가위 · 열린식탁 · 팟트럭 · 나눔마켓',text:'자담치킨 목포대점에서 함께 먹고 나누는 한가위.',url});shareStatus('공유 창을 열었습니다.')}catch(err){if(err?.name!=='AbortError')await copy(url,'행사 링크를 복사했습니다.')}}else await copy(url,'행사 링크를 복사했습니다.');return}
     if(e.target.closest('[data-copy-invite]'))await copy(invite,'초대문을 복사했습니다.');
   });
   const form=document.querySelector('[data-event-application]');if(!form)return;
@@ -16,7 +18,9 @@
     e.preventDefault();status.textContent='';status.dataset.state='';
     if(!form.reportValidity())return;
     const data=new FormData(form);
-    const payload={name:String(data.get('name')||'').trim(),phone:String(data.get('phone')||'').trim(),email:String(data.get('email')||'').trim(),partySize:Number(data.get('partySize')||1),language:String(data.get('language')||'ko'),dietary:String(data.get('dietary')||'').trim(),note:String(data.get('note')||'').trim(),photoConsent:data.get('photoConsent')==='on',privacyConsent:data.get('privacyConsent')==='on',website:String(data.get('website')||'')};
+    const programs=data.getAll('program').map(String);if(!programs.length){status.dataset.state='error';status.textContent='참여 프로그램을 하나 이상 선택해 주세요.';return}
+    const extra=[String(data.get('note')||'').trim(),programs.length?`참여 프로그램: ${programs.join(', ')}`:'',data.get('potTruckItem')?`팟트럭: ${String(data.get('potTruckItem')).trim()}`:'',data.get('marketItem')?`나눔마켓: ${String(data.get('marketItem')).trim()}`:''].filter(Boolean).join('\n');
+    const payload={name:String(data.get('name')||'').trim(),phone:String(data.get('phone')||'').trim(),email:String(data.get('email')||'').trim(),partySize:Number(data.get('partySize')||1),language:String(data.get('language')||'ko'),dietary:String(data.get('dietary')||'').trim(),note:extra,photoConsent:data.get('photoConsent')==='on',privacyConsent:data.get('privacyConsent')==='on',website:String(data.get('website')||'')};
     submit.disabled=true;submit.textContent='신청 중…';status.textContent='신청을 저장하고 있습니다.';
     try{
       const response=await fetch(api,{method:'POST',headers:{'content-type':'application/json','accept':'application/json'},body:JSON.stringify(payload),credentials:'same-origin'});
