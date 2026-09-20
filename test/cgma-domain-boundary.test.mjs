@@ -16,11 +16,12 @@ test('CGMA external DNS stays outside Shared Site ownership until approved cutov
   assert.match(workflow, /'https:\/\/www\.cgma\.or\.kr\/'/);
 });
 
-test('Shared Site domain repair only enforces domains it currently owns', () => {
+test('Shared Site domain repair enforces only the canonical apex custom domain', () => {
   assert.doesNotMatch(workflow, /for host in[^\n]*cgma\.or\.kr/);
   assert.match(workflow, /root_host='ekodi\.kr'/);
-  assert.match(workflow, /for host in "\$root_host" "admin\.\$root_host" "mail\.\$root_host"; do/);
-  assert.doesNotMatch(workflow, /"auth\.\$root_host"/);
+  assert.match(workflow, /custom_domain_count=.*grep -c 'custom_domain = true'/);
+  assert.match(workflow, /Unexpected Shared Site custom domain attachment detected/);
+  assert.match(workflow, /Unexpected Shared Site custom domain remains attached after synchronization/);
 });
 
 test('Shared Site candidate smoke excludes the independently routed CGMA public gateway', () => {
