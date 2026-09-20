@@ -8,7 +8,7 @@ preview_urls = true
 TELEMETRY_ENABLED = "false"
 TELEMETRY_MODE = "isolated-staging"
 CONTROL_ENABLED = "false"
-AUTH_URL = "https://auth.ekodi.kr/?site=energy"
+AUTH_URL = "https://ekodi.kr/auth/?site=energy"
 
 [assets]
 directory = "./energy"
