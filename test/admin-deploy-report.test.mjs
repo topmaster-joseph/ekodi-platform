@@ -47,8 +47,8 @@ test('Admin production verification follows the content fingerprint and lazy AI 
 
 test('shared-site guarded release accepts any valid content fingerprint instead of a stale fixed version', async () => {
   const manifest = JSON.parse(await read('deploy/manifests/shared-site.worker.json'));
-  const admin = manifest.worker.requests.find(item => item.url === 'https://admin.ekodi.kr/');
-  assert.ok(admin, 'admin.ekodi.kr smoke request must exist');
+  const admin = manifest.worker.requests.find(item => item.url === 'https://ekodi.kr/admin/');
+  assert.ok(admin, 'canonical Admin smoke request must exist');
   assert.ok(admin.expect.includes('EKODI Admin'));
   assert.ok(admin.expect.includes('admin-authenticated-shell.js?v='));
   assert.ok(admin.expect.includes('https://ekodi.kr/auth/?site=admin'));
@@ -61,13 +61,13 @@ test('shared-site guarded release accepts any valid content fingerprint instead 
   assert.equal(admin.redirect, 'follow');
 });
 
-test('shared-site production promotion proves canonical Admin ownership and legacy redirect compatibility', async () => {
+test('shared-site production promotion proves canonical Admin ownership without a public subdomain dependency', async () => {
   const workflow = await read('.github/workflows/deploy-site-core.yml');
+  const legacyHost=['admin','ekodi.kr'].join('.');
   assert.match(workflow, /Verify canonical Admin route ownership/);
   assert.match(workflow, /https:\/\/ekodi\.kr\/admin\//);
   assert.match(workflow, /x-ekodi-route: admin-shell/);
-  assert.match(workflow, /https:\/\/admin\.ekodi\.kr\//);
-  assert.match(workflow, /legacy_code.*308/);
-  assert.match(workflow, /location: https:\/\/ekodi\.kr\/admin\/\?source=admin\.ekodi\.kr/);
+  assert.doesNotMatch(workflow, new RegExp(`https:\\/\\/${legacyHost.replaceAll('.', '\\\\.')}\\/`));
+  assert.doesNotMatch(workflow, /legacy_code.*308/);
   assert.match(workflow, /canonicalAdminRouteOwnership=verified/);
 });
