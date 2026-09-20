@@ -8,23 +8,22 @@ const [release, manifestRaw] = await Promise.all([
 ]);
 const manifest = JSON.parse(manifestRaw);
 
-test('shared-site guarded release reconciles non-versioned triggers after promotion', () => {
-  assert.equal(manifest.worker.reconcileTriggersAfterPromotion, true);
-  assert.match(release, /const reconcileTriggersAfterPromotion = worker\.reconcileTriggersAfterPromotion === true/);
-  assert.match(release, /function reconcilePromotionTriggers\(\)/);
-  assert.match(release, /command\(\['triggers', 'deploy', '--config', worker\.config\]\)/);
-
+test('guarded version promotion does not mutate non-versioned triggers', () => {
+  assert.equal(manifest.worker.reconcileTriggersAfterPromotion, undefined);
+  assert.doesNotMatch(release, /reconcileTriggersAfterPromotion|reconcilePromotionTriggers/);
+  assert.doesNotMatch(release, /command\(\['triggers', 'deploy'/);
   const phase = release.indexOf("console.log('Phase 3/3:");
   const promote = release.indexOf('deployVersions([`${candidateVersion}@100%`]', phase);
-  const reconcile = release.indexOf('reconcilePromotionTriggers();', promote);
-  const verify = release.indexOf("await verifyAll('', 'production');", reconcile);
-
+  const verify = release.indexOf("await verifyAll('', 'production');", promote);
   assert.ok(phase >= 0);
   assert.ok(promote > phase);
-  assert.ok(reconcile > promote);
-  assert.ok(verify > reconcile);
+  assert.ok(verify > promote);
 });
 
-test('trigger reconciliation remains opt-in for other Worker manifests', () => {
-  assert.match(release, /if \(!reconcileTriggersAfterPromotion\) return/);
+test('shared-site release manifest verifies the canonical apex admin diagnostic assets', () => {
+  const urls = manifest.worker.requests.map(item => item.url);
+  assert.ok(urls.includes('https://ekodi.kr/admin/device-browser-diagnostics.js?v=device-v28'));
+  assert.ok(urls.includes('https://ekodi.kr/admin/device-browser-diagnostics.css?v=device-v28'));
+  assert.ok(!urls.includes('https://admin.ekodi.kr/device-browser-diagnostics.js?v=device-v28'));
+  assert.ok(!urls.includes('https://admin.ekodi.kr/device-browser-diagnostics.css?v=device-v28'));
 });
