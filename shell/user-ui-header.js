@@ -218,7 +218,7 @@ function siteMemberHomeUrl(){
   const declared=String(document.documentElement.dataset.ekodiMemberHome||document.body?.dataset?.ekodiMemberHome||'').trim();
   if(declared){try{return new URL(declared,location.href).href}catch{}}
   const id=String(document.currentScript?.dataset?.ekodiService||document.documentElement.dataset.ekodiService||'').trim().toLowerCase();
-  if(!id||id==='my'||id==='ekodi')return 'https://ekodi.kr/my/';
+  if(!id||id==='my'||id==='ekodi')return 'https://ekodi.kr/';
   if(id==='space'&&location.hostname==='ekodi.kr'){
     const first=location.pathname.split('/').filter(Boolean)[0]||'';
     if(first)return `https://ekodi.kr/${encodeURIComponent(first)}/my`;
