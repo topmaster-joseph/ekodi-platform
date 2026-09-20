@@ -44,7 +44,7 @@ const PUBLIC_EXECUTION_SURFACES=Object.freeze([
 ]);
 const legacyEkodiHost=label=>`${label}.${CANONICAL_HOST}`;
 const CANONICAL_HOST_PATHS=Object.freeze({
-  [legacyEkodiHost('admin')]:'/admin',[legacyEkodiHost('api')]:'/api',[legacyEkodiHost('my')]:'/my',
+  [legacyEkodiHost('admin')]:'/admin',[legacyEkodiHost('my')]:'/my',
   'ai.ekodi.kr':'/ai','author.ekodi.kr':'/author','bible.ekodi.kr':'/bible',
   'books.ekodi.kr':'/books','business.ekodi.kr':'/business','community.ekodi.kr':'/community','edu.ekodi.kr':'/education',
   'energy.ekodi.kr':'/energy','exp.ekodi.kr':'/experience','try.ekodi.kr':'/experience','dev.ekodi.kr':'/developer',
