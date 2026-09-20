@@ -5,6 +5,7 @@ import test from 'node:test';
 const read=path=>fs.readFileSync(new URL(`../${path}`,import.meta.url),'utf8');
 
 test('public EKODI API is apex-only and Control remains privately bound',()=>{
+  const retiredHost=['api','ekodi','kr'].join('.');
   const wrangler=read('wrangler.api.toml');
   const workflow=read('.github/workflows/deploy-control-api.yml');
   const router=read('canonical-surface-router.js');
@@ -24,7 +25,7 @@ test('public EKODI API is apex-only and Control remains privately bound',()=>{
   assert.match(router,/proxyBinding\(request,env\?\.CONTROL_API/);
 
   const urls=manifest.worker.requests.map(item=>String(item.url||''));
-  assert.equal(urls.some(url=>url.includes('api.ekodi.kr')),false);
+  assert.equal(urls.some(url=>url.includes(retiredHost)),false);
   assert.equal(urls.some(url=>url==='https://ekodi.kr/api/health'),true);
 
   assert.equal(policy.canonicalHost,'ekodi.kr');
