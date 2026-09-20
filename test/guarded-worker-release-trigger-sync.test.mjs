@@ -22,8 +22,9 @@ test('guarded version promotion does not mutate non-versioned triggers', () => {
 
 test('shared-site release manifest verifies the canonical apex admin diagnostic assets', () => {
   const urls = manifest.worker.requests.map(item => item.url);
-  assert.ok(urls.includes('https://ekodi.kr/admin/device-browser-diagnostics.js?v=device-v28'));
-  assert.ok(urls.includes('https://ekodi.kr/admin/device-browser-diagnostics.css?v=device-v28'));
-  assert.ok(!urls.includes('https://admin.ekodi.kr/device-browser-diagnostics.js?v=device-v28'));
-  assert.ok(!urls.includes('https://admin.ekodi.kr/device-browser-diagnostics.css?v=device-v28'));
+  const diagnostics = urls.filter(url => /\/device-browser-diagnostics\.(?:js|css)\?v=device-v28$/.test(url));
+  assert.deepEqual(diagnostics.sort(), [
+    'https://ekodi.kr/admin/device-browser-diagnostics.css?v=device-v28',
+    'https://ekodi.kr/admin/device-browser-diagnostics.js?v=device-v28',
+  ]);
 });
