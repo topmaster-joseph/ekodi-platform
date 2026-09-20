@@ -260,7 +260,22 @@ for (const [name, source] of Object.entries(files)) {
 const finalFinance = await readFile(financePath, 'utf8');
 if (finalFinance.includes('setInterval(')) throw new Error('Finance monitor still contains perpetual polling');
 if ((await readFile(`${dist}admin-compact.css`, 'utf8')).includes('admin-readable-command.css')) throw new Error('AI command CSS leaked into startup compact CSS');
-if (!(await readFile(`${dist}ai-ops-admin.css`, 'utf8')).includes('admin-readable-command.css')) throw new Error('AI command CSS missing from on-demand AI Ops');
+const finalAiOpsVisualCss = await readFile(`${dist}ai-ops-admin.css`, 'utf8');
+if (!finalAiOpsVisualCss.includes('admin-readable-command.css')) throw new Error('AI command CSS missing from on-demand AI Ops');
+if (!finalAiOpsVisualCss.includes('admin-conversation-workbench.css: final visual authority')) {
+  throw new Error('Admin conversation workbench lost final visual precedence');
+}
+for (const requiredVisualContract of [
+  'body.admin-compact{',
+  '--ekodi-assist-left:272px',
+  'body.admin-compact.admin-command-home.admin-command-active .ekodi-assist{',
+  'body.admin-compact.admin-command-home.admin-command-active .ekodi-assist-rail{',
+  'body.admin-compact.admin-command-home.admin-command-active .ekodi-assist-composer{',
+]) {
+  if (!finalAiOpsVisualCss.includes(requiredVisualContract)) {
+    throw new Error(`Admin conversation visual contract missing: ${requiredVisualContract}`);
+  }
+}
 
 // /admin/* is asset-first in Production to avoid unnecessary Worker invocations. The initial
 // mirror is created before postbuild transforms, so refresh it only after every Admin runtime

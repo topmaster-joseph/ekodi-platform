@@ -26,6 +26,7 @@ const assistJs = (await text(`${root}admin-assist-dock.js`)).trim();
 const assistCss = (await text(`${root}admin-assist-dock.css`)).trim();
 const assistBootstrapJs = (await text(`${root}admin-assist-bootstrap.js`)).trim();
 const assistBootstrapCss = (await text(`${root}admin-assist-bootstrap.css`)).trim();
+const conversationWorkbenchCss = (await text(`${root}admin-conversation-workbench.css`)).trim();
 new Function(hybridExecutionJs);
 new Function(assistJs);
 new Function(assistBootstrapJs);
@@ -41,7 +42,7 @@ let lazyFeatures = await text(`${dist}admin-lazy-features.js`);
 lazyFeatures = `${lazyFeatures}\n${assistJs}\n`;
 await writeFile(`${dist}admin-lazy-features.js`, lazyFeatures);
 let aiOpsCss = await text(`${dist}ai-ops-admin.css`);
-aiOpsCss = `${aiOpsCss}\n${assistCss}\n`;
+aiOpsCss = `${aiOpsCss}\n${assistCss}\n/* admin-conversation-workbench.css: final visual authority */\n${conversationWorkbenchCss}\n`;
 await writeFile(`${dist}ai-ops-admin.css`, aiOpsCss);
 
 // Rebuild the startup JavaScript from the actual first-login responsibility instead of
@@ -114,6 +115,9 @@ if (!finalLazyFeatures.includes('ekodi-admin-command-history-v1') || !finalLazyF
 }
 if (!finalAiOpsCss.includes('.ekodi-assist-launcher') || !finalAiOpsCss.includes('.ekodi-assist-panel') || !finalAiOpsCss.includes('@media(max-width:720px)')) {
   throw new Error('Full EKODI Assist responsive styles were not attached to the secured lazy stylesheet');
+}
+if (!finalAiOpsCss.includes('EKODI Admin conversation-first workbench v1') || !finalAiOpsCss.includes('final visual authority')) {
+  throw new Error('Conversation-first workbench must be the final Admin Assist visual authority');
 }
 if (!finalAiOpsCss.includes('.ekodi-assist-rail{width:286px') || !finalAiOpsCss.includes('.ekodi-assist-chat-scroll') || !finalAiOpsCss.includes('.ekodi-assist-composer-wrap')) {
   throw new Error('EKODI Assist fixed recent-command rail, scrollable conversation, or bottom composer layout is missing');

@@ -108,6 +108,10 @@ test('postbuild removes retired first-path assets, versions the current graph an
   assert.match(perf, /first-path CSS budget exceeded/);
   assert.match(perf, /AI command CSS leaked into startup compact CSS/);
   assert.match(perf, /Finance monitor still contains perpetual polling/);
+  assert.match(perf, /Admin conversation workbench lost final visual precedence/);
+  assert.match(perf, /Admin conversation visual contract missing/);
+  assert.match(perf, /admin-conversation-workbench\.css: final visual authority/);
+  assert.match(perf, /--ekodi-assist-left:272px/);
   assert.match(perf, /content-visibility:auto/);
   assert.match(perf, /backdrop-filter:none!important/);
   assert.match(perf, /admin mobile flow/);
