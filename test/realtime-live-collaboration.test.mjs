@@ -52,7 +52,7 @@ test('shared interpretation UI is concise and exposes working language controls'
   assert.match(migration,/realtime_interpretation_segments/);
   assert.match(control,/\/interpretation/);
   assert.match(control,/capability:'translation'/);
-  assert.match(control,/env\.CONTROL_API\.fetch/);
+  assert.match(control,/invokeAiProviderCapability\(env,\{capability:'translation'/);
   assert.match(control,/automaticInterpretation:true/);
   assert.match(page,/자동동시통역 가능/);
   for(const [locale,language] of [['en-US','English'],['zh-CN','中文'],['ja-JP','日本語'],['vi-VN','Tiếng Việt'],['mn-MN','Монгол']]){
