@@ -9,6 +9,23 @@ on:
       - 'scripts/verify-mobile-fixed-headers-live.mjs'
       - 'ekodi-service-manifest.js'
       - 'ekodi-shell-injector.js'
+      - 'site-shell-worker.js'
+      - 'platform-router-entry-worker.js'
+      - 'space-worker.js'
+      - 'workspace-admin-page.js'
+      - 'store-admin-engine.js'
+      - 'church-pastor-admin-page.js'
+      - 'workspace-trade-admin-page.js'
+      - 'store-portfolio-admin-page.js'
+      - 'store-gateway-page.js'
+      - 'storefront-page.js'
+      - 'jadam-storefront.js'
+      - 'restaurant-storefront.js'
+      - 'TENANT_UX_PRINCIPLES.md'
+      - 'test/tenant-ux-convergence.test.mjs'
+      - 'test/tenant-readability-live-adoption.test.mjs'
+      - 'test/public-workspace-gateway.test.mjs'
+      - 'test/store-operating-space.test.mjs'
       - 'shell/**'
       - 'responsive.css'
       - 'index.html'
@@ -39,6 +56,11 @@ jobs:
           set -euo pipefail
           node --check scripts/verify-mobile-fixed-headers-live.mjs
           node scripts/validate-ekodi-shell-adoption.mjs
+          node --test \
+            test/tenant-ux-convergence.test.mjs \
+            test/tenant-readability-live-adoption.test.mjs \
+            test/public-workspace-gateway.test.mjs \
+            test/store-operating-space.test.mjs
       - name: Audit production mobile fixed headers
         env:
           EKODI_MOBILE_HEADER_ATTEMPTS: '30'
