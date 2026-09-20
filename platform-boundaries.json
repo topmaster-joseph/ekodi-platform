@@ -600,7 +600,7 @@
         "test/mail-control.test.mjs"
       ],
       "domains": [
-        "mail.ekodi.kr"
+        "ekodi.kr"
       ],
       "deployWorkflow": ".github/workflows/deploy-site-core.yml",
       "sharedDependencies": [
@@ -610,7 +610,8 @@
         "Cloudflare Worker secrets and ekodi-auth D1"
       ],
       "database": "ekodi-auth D1 mail_* metadata and encrypted credential ciphertext only; mailbox content remains at source providers by default",
-      "note": "mail.ekodi.kr is the common Mail Engine and UI, while each institution retains ownership and authority under its immutable workspace_id. mail.ekodi.kr/admin is a projection of existing personal/workspace authority, not a source of tenant authority. Read, send and manage permissions are independent."
+      "note": "EKODI Mail is the shared Mail Engine and UI at https://ekodi.kr/mail. Each institution retains ownership and authority under its immutable workspace_id. /mail/admin is a projection of existing personal/workspace authority, not a source of tenant authority. Read, send and manage permissions are independent.",
+      "canonicalPath": "https://ekodi.kr/mail"
     },
     "storage-control": {
       "kind": "external-storage-control-plane",
