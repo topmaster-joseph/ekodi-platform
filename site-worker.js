@@ -219,7 +219,7 @@ const ADMIN_CSP = [
   "style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style",
   "script-src 'self' https://accounts.google.com/gsi/client",
   "img-src 'self' data:",
-  "connect-src 'self' https://api.ekodi.kr https://finance-api.ekodi.kr https://personal-finance-api.ekodi.kr https://marketing-connect-api.ekodi.kr https://renzehysxirjilvdxacv.supabase.co https://api.github.com https://ekodi-auth-api.topmaster-joseph.workers.dev https://accounts.google.com/gsi/ https://life.ekodi.kr",
+  "connect-src 'self' https://api.ekodi.kr https://finance-api.ekodi.kr https://personal-finance-api.ekodi.kr https://renzehysxirjilvdxacv.supabase.co https://api.github.com https://ekodi-auth-api.topmaster-joseph.workers.dev https://accounts.google.com/gsi/ https://life.ekodi.kr",
   "frame-src https://accounts.google.com/gsi/ https://ekodi.kr",
   "frame-ancestors 'none'",
   "base-uri 'self'",
@@ -571,7 +571,7 @@ async function proxyAdminCommonServiceAi(request, env) {
   response.headers.set('X-EKODI-Common-Service-Proxy', 'ai-service-binding-v2');
   return withHostSecurity(response, ADMIN_CSP, 'no-store', 'admin-common-service-ai-proxy');
 }
-async function proxyAdminMarketingPublishing(request) {
+async function proxyAdminMarketingPublishing(request, env) {
   const url = new URL(request.url);
   const suffix = url.pathname.slice(ADMIN_MARKETING_PUBLISHING_PREFIX.length) || '/health';
   if (!(suffix === '/health' || suffix.startsWith('/v1/'))) {
@@ -580,14 +580,13 @@ async function proxyAdminMarketingPublishing(request) {
       headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store'},
     }), ADMIN_CSP, 'no-store', 'admin-marketing-publishing-proxy');
   }
-  const target = new URL('https://marketing-publish-api.ekodi.kr');
-  target.pathname = suffix;
+  const target = new URL(`https://marketing-publishing.internal${suffix}`);
   target.search = url.search;
   const headers = new Headers(request.headers);
   headers.delete('origin');
   headers.delete('host');
   const body = ['GET','HEAD'].includes(request.method) ? undefined : await request.arrayBuffer();
-  const upstream = await fetch(target.toString(), {method:request.method,headers,body,redirect:'manual'});
+  const upstream = await env.MARKETING_PUBLISHING.fetch(new Request(target.toString(), {method:request.method,headers,body,redirect:'manual'}));
   const response = new Response(upstream.body, upstream);
   response.headers.set('X-EKODI-Marketing-Publishing-Proxy', 'same-origin-v1');
   return withHostSecurity(response, ADMIN_CSP, 'no-store', 'admin-marketing-publishing-proxy');
@@ -718,7 +717,7 @@ export default {
       if (RETIRED_ADMIN_PATHS.has(url.pathname)) return retiredAdminResponse();
       if (url.pathname.startsWith(ADMIN_STORAGE_PREFIX)) return proxyAdminStorage(request, env);
       if (url.pathname === ADMIN_PERSONAL_FINANCE_PATH) return proxyAdminPersonalFinance(request, env);
-      if (url.pathname.startsWith(ADMIN_MARKETING_PUBLISHING_PREFIX)) return proxyAdminMarketingPublishing(request);
+      if (url.pathname.startsWith(ADMIN_MARKETING_PUBLISHING_PREFIX)) return proxyAdminMarketingPublishing(request, env);
       if (url.pathname.startsWith(ADMIN_COMMON_SERVICE_AI_PREFIX)) return proxyAdminCommonServiceAi(request, env);
       if (url.pathname === '/auth/start') {
         if (!['GET', 'HEAD'].includes(request.method)) {
