@@ -2,6 +2,7 @@ import { canonicalAiSubject, personalAiSubjectCandidates, resolveCanonicalEkodiI
 import { entitlementSnapshot, evaluateRealtimeRequest, resolveRealtimeTier } from './src/realtime/entitlement.mjs';
 import { planAdaptiveMedia } from './src/realtime/adaptive-media.mjs';
 import { realtimeTenant, realtimeTenantAliases, realtimeTenantList } from './realtime-tenant-registry.js';
+import { invokeAiProviderCapability } from './ai-provider-control.js';
 
 const PREFIX='/api/realtime';
 const PROVIDER_BASE='https://rtc.live.cloudflare.com/v1';
@@ -493,6 +494,9 @@ async function planRoute(request,env,url,input){
 }
 
 
+function safeInterpretation(row){if(!row)return null;let translations={};try{translations=JSON.parse(row.translations_json||'{}')}catch{}return{id:row.id,roomId:row.room_id,sourceLanguage:row.source_language||'ko-KR',sourceText:row.source_text||'',translations,status:row.status||'degraded',provider:row.provider||'',model:row.model||'',createdAt:row.created_at,cursor:row.created_at}}
+function parseInterpretationJson(value){let raw=String(value||'').trim().replace(/^\`\`\`(?:json)?\s*/i,'').replace(/\s*\`\`\`$/,'');let parsed=null;try{parsed=JSON.parse(raw)}catch{const start=raw.indexOf('{'),end=raw.lastIndexOf('}');if(start>=0&&end>start){try{parsed=JSON.parse(raw.slice(start,end+1))}catch{}}}if(!parsed||typeof parsed!=='object')return null;const out={};for(const key of ['en','zh','ja','vi','mn']){const text=clean(parsed[key],1600);if(text)out[key]=text}return Object.keys(out).length?out:null}
+async function translateLiveInterpretation(request,env,text){const system='Translate Korean live worship speech faithfully and concisely into English, Simplified Chinese, Japanese, Vietnamese, and Mongolian. Preserve Bible references, names, numbers, and meaning. Do not add explanations or invented content. Return ONLY strict JSON with exactly these keys: {"en":"...","zh":"...","ja":"...","vi":"...","mn":"..."}.';try{const data=await invokeAiProviderCapability(env,{capability:'translation',system,input:text,maxOutputTokens:1400,governance:{paidCommitment:false,explicitDelegatedBudget:false}});const translations=parseInterpretationJson(data?.text);if(!translations)throw new Error('translation_payload_invalid');return{translations,status:'ready',provider:clean(data?.provider,80),model:clean(data?.model,120),error:''}}catch(error){return{translations:{},status:'degraded',provider:'',model:'',error:clean(error?.message||error,160)}}}
 function safeChat(row){return row?{id:row.id,roomId:row.room_id,displayName:row.display_name||'참여자',role:row.role||'viewer',message:row.message||'',createdAt:row.created_at}:null}
 function safeParticipation(row){return row?{id:row.id,roomId:row.room_id,displayName:row.display_name||'참여자',status:row.status,requestedAt:row.requested_at,decidedAt:row.decided_at||null}:null}
 async function requestActorKey(request,env,room,{allowAnonymous=false}={}){
@@ -504,6 +508,29 @@ async function requestActorKey(request,env,room,{allowAnonymous=false}={}){
   return {access,actorKey:`anon:${(await sha256(`${room.id}|${ip}|${agent}`)).slice(0,32)}`,authenticated:false};
 }
 async function collaborationRoute(request,env,url,input){
+  const interpretation=url.pathname.match(/^\/api\/realtime\/rooms\/([^/]+)\/interpretation$/);
+  if(interpretation){
+    const room=await roomById(env,decodeURIComponent(interpretation[1]));if(!room)return json(request,env,{ok:false,error:'room_not_found'},404);
+    if(request.method==='GET'){
+      if(!room.anonymous_viewers_enabled){const access=await entitlementFor(request,env,slug(room.tenant_id));if(!access.identity)return json(request,env,{ok:false,error:'authentication_required'},401)}
+      const after=clean(url.searchParams.get('after'),40);
+      const query=after
+        ? env.DB.prepare('SELECT * FROM realtime_interpretation_segments WHERE room_id=? AND created_at>? ORDER BY created_at,id LIMIT 20').bind(room.id,after)
+        : env.DB.prepare('SELECT * FROM realtime_interpretation_segments WHERE room_id=? ORDER BY created_at DESC,id DESC LIMIT 1').bind(room.id);
+      const rows=await query.all(),segments=(rows.results||[]).map(safeInterpretation);if(!after)segments.reverse();
+      return json(request,env,{ok:true,roomId:room.id,segments});
+    }
+    if(request.method==='POST'){
+      if(!['starting','live'].includes(room.status))return json(request,env,{ok:false,error:'room_interpretation_not_open'},409);
+      const auth=await ownerAllowed(request,env,room);if(!auth.allowed)return json(request,env,{ok:false,error:'room_owner_permission_required'},403);
+      const text=clean(input?.text,700),sourceLanguage=clean(input?.sourceLanguage,12)||'ko-KR';if(!text)return json(request,env,{ok:false,error:'interpretation_text_required'},400);
+      const recent=await env.DB.prepare('SELECT * FROM realtime_interpretation_segments WHERE room_id=? ORDER BY created_at DESC,id DESC LIMIT 1').bind(room.id).first();
+      if(recent&&recent.source_text===text&&Date.now()-Date.parse(recent.created_at)<10000)return json(request,env,{ok:true,deduplicated:true,segment:safeInterpretation(recent)});
+      const translated=await translateLiveInterpretation(request,env,text),id=uid('intp'),stamp=new Date().toISOString();
+      await env.DB.prepare(`INSERT INTO realtime_interpretation_segments(id,room_id,tenant_id,source_language,source_text,translations_json,provider,model,status,error_code,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)`).bind(id,room.id,room.tenant_id,sourceLanguage,text,JSON.stringify(translated.translations),translated.provider,translated.model,translated.status,translated.error,stamp).run();
+      return json(request,env,{ok:true,segment:safeInterpretation(await env.DB.prepare('SELECT * FROM realtime_interpretation_segments WHERE id=?').bind(id).first())},201);
+    }
+  }
   const chat=url.pathname.match(/^\/api\/realtime\/rooms\/([^/]+)\/chat$/);
   if(chat){
     const room=await roomById(env,decodeURIComponent(chat[1]));if(!room)return json(request,env,{ok:false,error:'room_not_found'},404);
@@ -741,7 +768,7 @@ export async function runRealtimeRecordingRetention(env,{limit=10}={}){
 }
 
 export const REALTIME_CONTROL_CONTRACT=Object.freeze({
-  version:'2026-09-19.1',
+  version:'2026-09-21.1',
   prefix:PREFIX,
   canonicalChurchPath:'https://ekodi.kr/ekodichurch/live/',
   multitenant:true,
@@ -758,4 +785,6 @@ export const REALTIME_CONTROL_CONTRACT=Object.freeze({
   liveChat:true,
   participantCameraRequests:true,
   draggableProgramSources:true,
+  automaticInterpretation:true,
+  interpretationLanguages:Object.freeze(['en','zh','ja','vi','mn']),
 });

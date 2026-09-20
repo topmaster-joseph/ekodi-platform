@@ -196,7 +196,7 @@ const PUBLIC_CSP = [
   "object-src 'none'",
 ].join('; ');
 
-const LIVE_CSP = PUBLIC_CSP.replace("connect-src 'self'","connect-src 'self' https://renzehysxirjilvdxacv.supabase.co");
+const LIVE_CSP = PUBLIC_CSP.replace("connect-src 'self'","connect-src 'self' https://renzehysxirjilvdxacv.supabase.co").replace("img-src 'self' data:","img-src 'self' data: https://api.qrserver.com");
 
 const MALL_CSP = [
   "default-src 'self'",
