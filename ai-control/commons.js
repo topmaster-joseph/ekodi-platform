@@ -2,14 +2,18 @@ import {createClient} from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2
 
 const $=id=>document.getElementById(id);
 const state={config:null,client:null,session:null,services:[],requests:[],sourceServiceId:''};
-const API_BASE=location.pathname.startsWith('/ai')?'/ai':'';
+const API_BASE=location.pathname==='/ai'||location.pathname.startsWith('/ai/')?'/ai':'';
 const escText=value=>String(value??'').trim();
+function apiUrl(path){
+  const normalized=String(path||'').replace(/^\/ai(?=\/api\/commons(?:\/|$))/,'');
+  return `${API_BASE}${normalized}`;
+}
 
 async function api(path,options={}){
   const headers={accept:'application/json',...(options.headers||{})};
   if(state.session?.access_token)headers.authorization=`Bearer ${state.session.access_token}`;
   if(options.body&&!headers['content-type'])headers['content-type']='application/json';
-  const response=await fetch(`${API_BASE}${path}`,{...options,headers,cache:'no-store'});
+  const response=await fetch(apiUrl(path),{...options,headers,cache:'no-store'});
   const data=await response.json().catch(()=>({}));
   if(!response.ok)throw Object.assign(new Error(data.error||`http_${response.status}`),{status:response.status,data});
   return data;
@@ -104,7 +108,7 @@ async function submitWanted(requestText){
 }
 async function boot(){
   const params=new URLSearchParams(location.search);state.sourceServiceId=escText(params.get('source')).toLowerCase().replace(/[^a-z0-9-]/g,'').slice(0,80);const handoff=escText(params.get('q')).slice(0,600);
-  const [config,catalog,requests]=await Promise.all([api('/api/commons/config'),api('/api/commons/services'),api('/api/commons/requests')]);
+  const [config,catalog,requests]=await Promise.all([api('/api/commons/config'),api('/api/commons/services'),api('/api/commons/requests').catch(()=>({requests:[]}))]);
   state.config=config;state.services=catalog.categories||[];renderServices(state.services);renderRequests(requests.requests||[]);
   const loginUrl=new URL(config.authUrl||'/auth/?site=ai',location.origin);loginUrl.searchParams.set('return_to',location.href.split('#')[0]);$('loginLink').href=loginUrl.toString();
   if(config.supabaseUrl&&config.supabasePublishableKey){
