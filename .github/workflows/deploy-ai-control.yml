@@ -199,6 +199,9 @@ jobs:
           grep -Fq 'no_bundle = true' wrangler.ai.release.toml
           grep -Fq 'binding = "AI"' wrangler.ai.release.toml
           grep -Fq 'EKODI_PROVIDER_WORKERS_AI_ENABLED = "true"' wrangler.ai.release.toml
+          grep -Fq '@cf/zai-org/glm-4.7-flash' wrangler.ai.release.toml
+          grep -Fq '@cf/google/gemma-4-26b-a4b-it' wrangler.ai.release.toml
+          grep -Fq '@cf/nvidia/nemotron-3-120b-a12b' wrangler.ai.release.toml
           grep -Fq 'EKODI_PROVIDER_GEMINI_ENABLED = "true"' wrangler.ai.release.toml
           grep -Fq 'EKODI_PROVIDER_OPENAI_ENABLED = "true"' wrangler.ai.release.toml
           grep -Fq 'EKODI_PROVIDER_ANTHROPIC_ENABLED = "true"' wrangler.ai.release.toml
