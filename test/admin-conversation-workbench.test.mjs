@@ -13,7 +13,7 @@ test('Admin authenticated shell ships the conversation-first workbench skin', as
   ]);
 
   assert.doesNotMatch(shell, /admin-conversation-workbench\.css/);
-  assert.match(build, /readFile\(`\\\$\{root\}admin-conversation-workbench\.css`/);
+  assert.match(build, /readFile\(`\$\{root\}admin-conversation-workbench\.css`/);
   assert.match(build, /admin-conversation-workbench\.css \*\//);
   assert.match(css, /--ekodi-admin-sidebar-width:272px/);
   assert.match(css, /\.admin-global-details\{[\s\S]*display:grid!important/);
