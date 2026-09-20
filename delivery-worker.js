@@ -15,7 +15,7 @@ function centralIdentityConfig(env={}){
   const enabled=Boolean(production&&supabaseUrl&&publishableKey);
   return{
     enabled,
-    authUrl:env.AUTH_URL||'https://auth.ekodi.kr/?site=delivery',
+    authUrl:env.AUTH_URL||'https://ekodi.kr/auth/?site=delivery',
     supabaseUrl:enabled?supabaseUrl:'',
     publishableKey:enabled?publishableKey:'',
     profileApi:enabled?`${supabaseUrl.replace(/\/$/,'')}/functions/v1/profile-api`:'',
@@ -34,7 +34,7 @@ function securityHeaders(env={}){
     'x-content-type-options':'nosniff',
     'referrer-policy':'strict-origin-when-cross-origin',
     'permissions-policy':'camera=(), microphone=(), geolocation=()',
-    'content-security-policy':`default-src 'self'; script-src ${scriptSrc.join(' ')}; style-src 'self'; img-src 'self' data: https:; connect-src ${connectSrc.join(' ')}; frame-ancestors 'none'; base-uri 'self'; form-action 'self' https://auth.ekodi.kr; object-src 'none'; upgrade-insecure-requests`,
+    'content-security-policy':`default-src 'self'; script-src ${scriptSrc.join(' ')}; style-src 'self'; img-src 'self' data: https:; connect-src ${connectSrc.join(' ')}; frame-ancestors 'none'; base-uri 'self'; form-action 'self' https://ekodi.kr; object-src 'none'; upgrade-insecure-requests`,
   };
 }
 function json(data,status=200,env={}){return new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store',...securityHeaders(env)}})}
@@ -50,7 +50,7 @@ async function requireMember(request,env){
   if(!response.ok||!user?.id)return{error:json({ok:false,error:'invalid_session'},401,env)};
   return{user:{id:String(user.id),email:String(user.email||'')}};
 }
-function runtimeConfig(env={}){const providers=storeDiscoveryProviderStatus(env);return{dataMode:env.DATA_MODE||'isolated-staging',authUrl:env.AUTH_URL||'https://auth.ekodi.kr/?site=delivery',centralIdentity:centralIdentityConfig(env),canonicalUrl:'https://ekodi.kr/delivery',accessPolicy:'public-guide-free-member-workspace',providerAdapterCount:providers.filter(item=>item.configured).length,providerAdapters:'official-or-approved-adapters-only',storeResolver:{version:'10g-preview',providers},executionEnabled:false,persistence:'browser-local-non-sensitive-mvp',aiMode:'provider-independent-decision-support',externalMutation:false,humanConfirmationRequired:true}}
+function runtimeConfig(env={}){const providers=storeDiscoveryProviderStatus(env);return{dataMode:env.DATA_MODE||'isolated-staging',authUrl:env.AUTH_URL||'https://ekodi.kr/auth/?site=delivery',centralIdentity:centralIdentityConfig(env),canonicalUrl:'https://ekodi.kr/delivery',accessPolicy:'public-guide-free-member-workspace',providerAdapterCount:providers.filter(item=>item.configured).length,providerAdapters:'official-or-approved-adapters-only',storeResolver:{version:'10g-preview',providers},executionEnabled:false,persistence:'browser-local-non-sensitive-mvp',aiMode:'provider-independent-decision-support',externalMutation:false,humanConfirmationRequired:true}}
 async function assetResponse(request,env,pathname){const assetUrl=new URL(request.url);assetUrl.pathname=pathname;const assetRequest=new Request(assetUrl,{method:'GET',headers:request.headers});return env.ASSETS.fetch(assetRequest)}
 
 export default{async fetch(request,env){
