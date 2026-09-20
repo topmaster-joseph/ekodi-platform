@@ -12,7 +12,7 @@ const INFRA_SITES = [
   ['auth-client-js', 'EKODI Auth Client', 'auth.ekodi.kr', 'https://auth.ekodi.kr/client-auth.js'],
   ['auth-router-js', 'EKODI Auth Router', 'auth.ekodi.kr', 'https://auth.ekodi.kr/auth-router.js'],
   ['ai-gateway', 'EKODI AI Gateway', 'ai.ekodi.kr'],
-  ['api', 'EKODI API', 'api.ekodi.kr', 'https://api.ekodi.kr/health'],
+  ['api', 'EKODI API', 'api.ekodi.kr', 'https://ekodi.kr/api/health'],
   ['finance', 'EKODI Finance API', 'finance-api.ekodi.kr', 'https://finance-api.ekodi.kr/health'],
   ['marketing-publish-api', 'Marketing Publishing API', 'marketing-publish-api.ekodi.kr', 'https://marketing-publish-api.ekodi.kr/health'],
   ['shell-js', 'EKODI Shell JS', 'ekodi.kr', 'https://ekodi.kr/shell/shell.js'],
