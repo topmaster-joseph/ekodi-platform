@@ -16,7 +16,7 @@ test('external account center keeps provider ownership separate', () => {
 });
 
 test('control route requires central authentication', async () => {
-  const response = await handleExternalAccountControl(new Request('https://api.ekodi.kr/api/control/external-accounts/summary'), {});
+  const response = await handleExternalAccountControl(new Request('https://ekodi.kr/api/control/external-accounts/summary'), {});
   assert.equal(response.status, 401);
   assert.equal((await response.json()).error, 'auth_required');
 });
@@ -27,7 +27,7 @@ test('registration rejects direct secret material before persistence', async () 
     ? new Response(JSON.stringify({ id:'u1', email:'joseph@ekodi.kr' }), { status:200, headers:{'content-type':'application/json'} })
     : new Response(JSON.stringify([]), { status:200, headers:{'content-type':'application/json'} });
   try {
-    const request = new Request('https://api.ekodi.kr/api/control/external-accounts/accounts', { method:'POST', headers:{ authorization:'Bearer session', 'content-type':'application/json' }, body:JSON.stringify({ workspaceSlug:'platform', provider:'google', providerAccountId:'church@example.com', password:'never-store-this' }) });
+    const request = new Request('https://ekodi.kr/api/control/external-accounts/accounts', { method:'POST', headers:{ authorization:'Bearer session', 'content-type':'application/json' }, body:JSON.stringify({ workspaceSlug:'platform', provider:'google', providerAccountId:'church@example.com', password:'never-store-this' }) });
     const response = await handleExternalAccountControl(request, { MY_SUPABASE_URL:'https://example.supabase.co', MY_SUPABASE_PUBLISHABLE_KEY:'public-key', ADMIN_GOOGLE_BOOTSTRAP_EMAILS:'topmaster.joseph@gmail.com,joseph@ekodi.kr' });
     assert.equal(response.status, 400);
     assert.equal((await response.json()).error, 'secret_material_not_accepted');
