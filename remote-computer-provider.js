@@ -7,6 +7,8 @@ export const REMOTE_COMPUTER_OPERATIONS = Object.freeze({
   'computer.files.read': Object.freeze({ capability:'filesystemRead', risk:'observe', hostMode:'isolated-required', mutation:false }),
   'computer.files.write': Object.freeze({ capability:'filesystemWrite', risk:'maintain', hostMode:'isolated-required', mutation:true }),
   'computer.terminal.exec': Object.freeze({ capability:'isolatedCommand', risk:'maintain', hostMode:'isolated-required', mutation:true }),
+  'computer.browser.execute': Object.freeze({ capability:'backgroundBrowser', risk:'maintain', hostMode:'isolated-required', mutation:true }),
+  'computer.desktop.session.execute': Object.freeze({ capability:'isolatedDesktop', risk:'privileged', hostMode:'isolated-required', mutation:true }),
   'computer.desktop.capture': Object.freeze({ capability:'desktopCapture', risk:'privileged', hostMode:'consent-required', mutation:false }),
   'computer.desktop.input': Object.freeze({ capability:'desktopInput', risk:'privileged', hostMode:'consent-required', mutation:true }),
 });
@@ -20,6 +22,9 @@ export function remoteComputerProviderDescriptor() {
     contractVersion: 'ekodi.capability-provider.v1',
     providerType: 'ekodi-responsible',
     nativeFirst: true,
+    nonDisruptiveDefault: true,
+    foregroundUserSessionOwnedByUser: true,
+    minimizedWindowCountsAsIsolation: false,
     persistentAgentShell: false,
     directHostMutation: false,
     supportedOperations: Object.keys(REMOTE_COMPUTER_OPERATIONS),
@@ -95,5 +100,7 @@ export function validateRemoteComputerReceipt(receipt = {}) {
   if (receipt.authorityExpanded === true) errors.push('authority_expansion_forbidden');
   if (receipt.reusableCredentialExposed === true) errors.push('credential_exposure_forbidden');
   if (receipt.directProductionMutation === true) errors.push('direct_production_mutation_forbidden');
+  if (receipt.foregroundFocusStolen === true) errors.push('foreground_focus_theft_forbidden');
+  if (receipt.activeUserBrowserProfileReused === true) errors.push('active_user_profile_reuse_forbidden');
   return Object.freeze({ ok:errors.length === 0, errors });
 }
