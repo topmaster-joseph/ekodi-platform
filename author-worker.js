@@ -10,7 +10,7 @@ const CSP = [
   "frame-src https://*.tosspayments.com",
   "frame-ancestors 'none'",
   "base-uri 'self'",
-  "form-action 'self' https://auth.ekodi.kr https://*.tosspayments.com",
+  "form-action 'self' https://ekodi.kr https://*.tosspayments.com",
   "object-src 'none'",
 ].join('; ');
 
