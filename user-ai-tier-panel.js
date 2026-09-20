@@ -1,6 +1,6 @@
 (() => {
   'use strict';
-  const API = 'https://api.ekodi.kr';
+  const API = 'https://ekodi.kr';
   const TOKEN_KEY = 'ekodi-auth-token';
   const SECTION = 'ai-membership';
   const PANEL_ID = 'userAiMembershipPanel';
