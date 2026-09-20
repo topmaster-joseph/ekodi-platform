@@ -22,6 +22,13 @@ await cp(`${root}sites/ekodi-insurance/public`, `${output}insurance`, { recursiv
 await cp(`${root}sites/business-cooperative/public`, `${output}business-coop`, { recursive: true });
 await cp(`${root}config/capability-registry.json`, `${output}capability-registry.json`);
 
+const [adminDesignEngineBaseCss, adminConversationWorkbenchCss] = await Promise.all([
+  readFile(`${output}admin-design-engine.css`, 'utf8'),
+  readFile(`${root}admin-conversation-workbench.css`, 'utf8'),
+]);
+if (!adminConversationWorkbenchCss.includes('EKODI Admin conversation-first workbench v1')) throw new Error('Admin conversation workbench marker missing');
+await writeFile(`${output}admin-design-engine.css`, `${adminDesignEngineBaseCss}\n/* admin-conversation-workbench.css */\n${adminConversationWorkbenchCss}\n`);
+
 const [browserDiagnosticsBaseJs, deviceWakeAdminJs] = await Promise.all([
   readFile(`${output}device-browser-diagnostics.js`, 'utf8'),
   readFile(`${root}device-wake-admin.js`, 'utf8'),
