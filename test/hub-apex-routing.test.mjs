@@ -68,6 +68,7 @@ test('hub source uses canonical path-only routing and apex Admin/Auth links', ()
   assert.match(hub, /const rawPath = location\.pathname \|\| '\/'/);
   assert.match(hub, /if \(path === '\/pay'\)/);
   assert.match(hub, /else if \(path === '\/cloud'\)/);
+  assert.match(hub, /path === '\/live'/);
   assert.doesNotMatch(hub, /https:\/\/admin\.ekodi\.kr/);
   assert.doesNotMatch(hub, /https:\/\/auth\.ekodi\.kr/);
   assert.match(hub, /https:\/\/ekodi\.kr\/admin\//);
