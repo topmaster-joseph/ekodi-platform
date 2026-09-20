@@ -31,11 +31,36 @@ async function cf(path,options={}){
   return data;
 }
 async function listDomains(){return (await cf("/accounts/"+account+"/workers/domains")).result||[]}
+const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+function retryDelay(response,attempt){
+  const header=Number(response?.headers?.get?.("retry-after")||0);
+  if(Number.isFinite(header)&&header>0)return Math.min(header*1000,60000);
+  return Math.min(2000*(2**(attempt-1)),30000);
+}
 async function health(url,expect=[]){
-  const response=await fetch(url,{redirect:"follow",headers:{"user-agent":"EKODI zero-subdomain verifier"},signal:AbortSignal.timeout(15000)});
-  const body=await response.text();
-  if(!response.ok)throw new Error("Health failed "+url+": HTTP "+response.status);
-  for(const marker of expect||[])if(!body.includes(marker))throw new Error("Health marker missing "+url+": "+marker);
+  let lastStatus=0;
+  for(let attempt=1;attempt<=7;attempt++){
+    try{
+      const response=await fetch(url,{redirect:"follow",headers:{"user-agent":"EKODI zero-subdomain verifier"},signal:AbortSignal.timeout(15000)});
+      lastStatus=response.status;
+      if([429,502,503,504].includes(response.status)&&attempt<7){
+        const delay=retryDelay(response,attempt);
+        console.log("Health retry "+attempt+" for "+url+": HTTP "+response.status+"; waiting "+delay+"ms");
+        await sleep(delay);
+        continue;
+      }
+      const body=await response.text();
+      if(!response.ok)throw new Error("Health failed "+url+": HTTP "+response.status);
+      for(const marker of expect||[])if(!body.includes(marker))throw new Error("Health marker missing "+url+": "+marker);
+      return;
+    }catch(error){
+      if(attempt>=7||!/TimeoutError|fetch failed|network|ECONN|EAI_AGAIN/i.test(String(error?.name||"")+" "+String(error?.message||error)))throw error;
+      const delay=Math.min(2000*(2**(attempt-1)),30000);
+      console.log("Health transport retry "+attempt+" for "+url+"; waiting "+delay+"ms");
+      await sleep(delay);
+    }
+  }
+  throw new Error("Health failed "+url+": HTTP "+lastStatus);
 }
 async function attach(domain){
   const body={hostname:domain.hostname,service:domain.service};
@@ -46,7 +71,7 @@ async function attach(domain){
 async function legacyGone(host){
   for(let attempt=1;attempt<=60;attempt++){
     try{const response=await fetch("https://"+host+"/",{redirect:"manual",signal:AbortSignal.timeout(10000)});if(response.status<200||response.status>=400)return true}catch{return true}
-    await new Promise(r=>setTimeout(r,5000));
+    await sleep(5000);
   }
   return false;
 }
@@ -70,7 +95,7 @@ try{
   for(const t of targets){
     const host=oldHost(t);
     let absent=false;
-    for(let attempt=1;attempt<=18;attempt++){absent=!(await listDomains()).some(d=>d.hostname===host);if(absent)break;await new Promise(r=>setTimeout(r,2500))}
+    for(let attempt=1;attempt<=18;attempt++){absent=!(await listDomains()).some(d=>d.hostname===host);if(absent)break;await sleep(2500)}
     if(!absent)throw new Error("Domain still attached: "+host);
     await health(t.apexHealth,t.apexExpect||t.expect);
     await health(t.directHealth,t.directExpect||t.expect);
