@@ -3,7 +3,11 @@ import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import { readFile } from 'node:fs/promises';
 
-const hub = await readFile(new URL('../hub.html', import.meta.url), 'utf8');
+const [hub, releaseManifestText] = await Promise.all([
+  readFile(new URL('../hub.html', import.meta.url), 'utf8'),
+  readFile(new URL('../deploy/manifests/shared-site.worker.json', import.meta.url), 'utf8'),
+]);
+const releaseManifest = JSON.parse(releaseManifestText);
 const scriptMatch = hub.match(/<script>([\s\S]*?)<\/script>/);
 assert.ok(scriptMatch, 'hub inline script is required');
 const hubScript = scriptMatch[1];
@@ -73,4 +77,13 @@ test('hub source uses canonical path-only routing and apex Admin/Auth links', ()
   assert.doesNotMatch(hub, /https:\/\/auth\.ekodi\.kr/);
   assert.match(hub, /https:\/\/ekodi\.kr\/admin\//);
   assert.match(hub, /https:\/\/ekodi\.kr\/auth\//);
+});
+
+
+test('Shared Site release verifies the canonical Live lobby contract', () => {
+  const live = releaseManifest.worker.requests.find(item => item.url === 'https://ekodi.kr/live');
+  assert.ok(live);
+  for (const marker of ['EKODI Live','LIVE LOBBY','data-ekodi-service="live"']) assert.ok(live.expect.includes(marker));
+  assert.equal(live.expect.includes('EKODI Hub'), false);
+  assert.equal(live.expect.includes('EKODI 서비스 허브'), false);
 });

@@ -45,7 +45,7 @@ test('existing first stores are compatibility profiles on one Store Admin Engine
   assert.match(script,/운영 데이터 비공개/);assert.match(script,/관리 영역/);
   assert.match(script,/noRoleSpecificAdminPages/);assert.match(script,/tenant\.marketing\.manage/);
   assert.doesNotMatch(script,/\['store_owner','tenant_admin','platform_admin'\]/);
-  assert.match(script,/state\.menu\?\.menu/);assert.match(script,/const GROUPS=\[/);assert.match(script,/admin-nav-group-label/);assert.ok(script.includes("a.href=key==='overview'?ADMIN_BASE+'/overview':ADMIN_BASE+'/'+key"));assert.match(script,/root\.hidden=true/);assert.doesNotMatch(script,/a\.dataset\.group=group\.id/);assert.doesNotMatch(script,/state\.menu\?\.items/);
+  assert.match(script,/state\.menu\?\.menu/);assert.match(script,/const GROUPS=\[/);assert.match(script,/마케팅 · 채널/);assert.match(script,/채널·자동게시/);assert.match(script,/publishing:\['SNS','채널','계정 연결','OAuth','자동게시','예약게시','쇼츠'\]/);assert.match(script,/admin-nav-group-label/);assert.ok(script.includes("a.href=key==='overview'?ADMIN_BASE+'/overview':ADMIN_BASE+'/'+key"));assert.match(script,/root\.hidden=true/);assert.doesNotMatch(script,/a\.dataset\.group=group\.id/);assert.doesNotMatch(script,/state\.menu\?\.items/);
   assert.match(script,/https:\/\/ekodi\.kr\/workspace-api/);
   assert.match(script,/\/v1\/store-sms\/orders/);
   assert.match(script,/data-sms-action/);
@@ -58,8 +58,8 @@ test('existing first stores are compatibility profiles on one Store Admin Engine
 
 test('one Store Admin page projects sections from tenant role capabilities',()=>{
   const all=storeAdminSectionsForRole('store_owner');
-  assert.equal(all.length,14);assert.ok(all.includes('site'));assert.ok(all.includes('chrome'));assert.ok(all.includes('delivery'));assert.ok(all.includes('finance'));
-  assert.deepEqual(storeAdminSectionsForRole('marketing_manager'),['overview','customers','reviews','sales','marketing']);
+  assert.equal(all.length,15);assert.ok(all.includes('site'));assert.ok(all.includes('chrome'));assert.ok(all.includes('delivery'));assert.ok(all.includes('publishing'));assert.ok(all.includes('finance'));
+  assert.deepEqual(storeAdminSectionsForRole('marketing_manager'),['overview','customers','reviews','sales','marketing','publishing']);
   assert.deepEqual(storeAdminSectionsForRole('accounting_manager'),['overview','sales','finance']);
   assert.equal(storeAdminCanAccess('hq_manager','connections'),true);assert.equal(storeAdminCanAccess('hq_manager','site'),false);
   assert.equal(storeAdminCanAccess('client_viewer','sales'),true);assert.equal(storeAdminCanAccess('client_viewer','customers'),false);

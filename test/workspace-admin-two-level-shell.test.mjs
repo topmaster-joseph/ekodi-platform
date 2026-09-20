@@ -16,6 +16,10 @@ test('workspace admin keeps the shared shell while all tenant menus navigate dir
   assert.match(script,/const mallDirectSections=\[\['overview','홈'\],\['products','상품'\],\['sourcing','공급·제휴'\],\['channels','판매채널'\],\['growth','AI 영업'\],\['analytics','성과'\],\['design','설정'\]\]/);
   assert.match(script,/function renderSecondaryNav\(_groupId,_role=workspaceRole\)\{[^}]*h\.hidden=true/);
   assert.match(script,/admin-nav-group-label/);
+  assert.match(script,/소통 · 홍보/);
+  assert.match(script,/마케팅 AI/);
+  assert.match(script,/채널·자동게시/);
+  assert.match(script,/publishing:\['SNS','채널','계정 연결','OAuth','쇼츠','자동게시','예약게시'\]/);
   assert.match(script,/a\.href=sectionHref\(key\)/);
   assert.match(script,/dataset\.adminSection=key/);
   assert.doesNotMatch(script,/data\.adminGroup=group\.id/);
