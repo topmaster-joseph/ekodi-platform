@@ -760,7 +760,9 @@
         ],
         "headerExpect": [
           "x-content-type-options: nosniff"
-        ]
+        ],
+        "candidateVerify": false,
+        "candidateVerifyReason": "Admin static asset routing becomes authoritative only after promotion; verify the Assist asset contract immediately post-promotion"
       },
       {
         "url": "https://admin.ekodi.kr/admin-compact.css?assist=v2",
@@ -774,7 +776,9 @@
         ],
         "headerExpect": [
           "x-content-type-options: nosniff"
-        ]
+        ],
+        "candidateVerify": false,
+        "candidateVerifyReason": "Admin static asset routing becomes authoritative only after promotion; verify the Assist asset contract immediately post-promotion"
       },
       {
         "url": "https://admin.ekodi.kr/admin-lazy-features.js?assist=v2",
@@ -788,7 +792,9 @@
         ],
         "headerExpect": [
           "x-content-type-options: nosniff"
-        ]
+        ],
+        "candidateVerify": false,
+        "candidateVerifyReason": "Admin static asset routing becomes authoritative only after promotion; verify the Assist asset contract immediately post-promotion"
       },
       {
         "url": "https://admin.ekodi.kr/ai-ops-admin.css?assist=v2",
@@ -803,7 +809,9 @@
         ],
         "headerExpect": [
           "x-content-type-options: nosniff"
-        ]
+        ],
+        "candidateVerify": false,
+        "candidateVerifyReason": "Admin static asset routing becomes authoritative only after promotion; verify the Assist asset contract immediately post-promotion"
       },
       {
         "url": "https://ekodi.kr/auth/",
