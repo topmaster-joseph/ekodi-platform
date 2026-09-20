@@ -149,7 +149,7 @@ test('legacy Admin entry host still converges while Auth has no legacy host cont
   assert.equal(response.status,308);const target=new URL(response.headers.get('location'));assert.equal(target.pathname,'/admin/');assert.equal(target.searchParams.get('route'),'books');
 });
 
-test('Admin canonical route registry mirrors the five management work areas and migrates legacy groups',()=>{
+test('Admin canonical route registry mirrors the seven management areas and migrates legacy groups',()=>{
   const source=fs.readFileSync(new URL('../admin-canonical-routes.js',import.meta.url),'utf8');
   const location={href:'https://ekodi.kr/admin/',hostname:'ekodi.kr',pathname:'/admin/',search:'',hash:''};
   const window={location};vm.runInNewContext(source,{window,URL,URLSearchParams,Object,Set,String});
@@ -157,6 +157,10 @@ test('Admin canonical route registry mirrors the five management work areas and 
   assert.equal(routes.pathFor('campus'),'/admin/home/campus');
   assert.equal(routes.pathFor('communication'),'/admin/operations/communication');
   assert.equal(routes.pathFor('insurance'),'/admin/services/insurance');
+  assert.equal(routes.pathFor('community'),'/admin/community/community');
+  assert.equal(routes.pathFor('ai-membership'),'/admin/community/ai-membership');
+  assert.equal(routes.pathFor('books'),'/admin/publishing/books');
+  assert.equal(routes.pathFor('devotional'),'/admin/publishing/devotional');
   assert.equal(routes.pathFor('workspace'),'/admin/workspaces/workspace');
   assert.equal(routes.pathFor('clients'),'/admin/workspaces/clients');
   assert.equal(routes.pathFor('aiops'),'/admin/system/aiops');
@@ -164,6 +168,8 @@ test('Admin canonical route registry mirrors the five management work areas and 
   assert.equal(routes.sectionFromPath('/admin/system/campus'),'campus');
   assert.equal(routes.sectionFromPath('/admin/common/common-services'),'common-services');
   assert.equal(routes.sectionFromPath('/admin/professional/insurance'),'insurance');
+  assert.equal(routes.sectionFromPath('/admin/services/community'),'community');
+  assert.equal(routes.sectionFromPath('/admin/services/books'),'books');
   assert.equal(routes.sectionFromPath('/admin/space/clients'),'clients');
   for (const item of ADMIN_MENU_REGISTRY.filter(item => !item.href)) {
     if (item.id === 'command-home') {
@@ -203,13 +209,14 @@ test('Bible canonical path uses its service binding without double-prefixing ass
 });
 
 
-test('legacy Admin release probes follow canonical redirects while canonical Admin owns release truth',async()=>{
+test('canonical Admin release probes remain apex-only while preserving release truth',async()=>{
   const manifest=JSON.parse(await fs.promises.readFile(new URL('../deploy/manifests/shared-site.worker.json',import.meta.url),'utf8'));
-  const canonical=manifest.worker.requests.find(item=>item.url==='https://ekodi.kr/admin/');
-  assert.equal(canonical?.rollbackVerify,false);
-  const legacy=manifest.worker.requests.filter(item=>item.url.startsWith('https://admin.ekodi.kr/'));
-  assert.ok(legacy.length>1);
-  for(const probe of legacy) assert.equal(probe.redirect,'follow',probe.url);
+  const canonical=manifest.worker.requests.filter(item=>item.url.startsWith('https://ekodi.kr/admin/'));
+  assert.ok(canonical.length>1);
+  assert.ok(canonical.some(item=>item.url==='https://ekodi.kr/admin/'&&item.rollbackVerify===false));
+  const legacyHost=['admin','ekodi.kr'].join('.');
+  const legacy=manifest.worker.requests.filter(item=>String(item.url||'').startsWith(`https://${legacyHost}/`));
+  assert.equal(legacy.length,0);
 });
 
 test('shared-site release verifies Shell integration without requiring script URLs in service HTML',async()=>{
