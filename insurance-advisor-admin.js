@@ -1,6 +1,6 @@
 (() => {
   'use strict';
-  const API='https://api.ekodi.kr';
+  const API='https://ekodi.kr';
   const token=()=>{try{return sessionStorage.getItem('ekodi-auth-token')||''}catch{return''}};
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   async function request(options={}){const h=new Headers(options.headers||{});if(token())h.set('authorization',`Bearer ${token()}`);if(options.body)h.set('content-type','application/json');const r=await fetch(`${API}/api/insurance/admin/network/advisor-profile`,{...options,headers:h,cache:'no-store'});let d={};try{d=await r.json()}catch{}if(!r.ok)throw new Error(d.error||`설계사 프로필 API ${r.status}`);return d}
