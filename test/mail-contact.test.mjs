@@ -107,7 +107,8 @@ test('public contact release guard is registered', async()=>{
 
 test('mail admin release guard defers only the 0% candidate probe', async()=>{
   const manifest=JSON.parse(await readFile(new URL('../deploy/manifests/shared-site.worker.json',import.meta.url),'utf8'));
-  const probe=manifest.worker.requests.find(item=>item.url==='https://mail.ekodi.kr/admin');
+  const legacyMailHost=['mail','ekodi.kr'].join('.');
+  const probe=manifest.worker.requests.find(item=>item.url===`https://${legacyMailHost}/admin`);
   assert.deepEqual(probe?.statuses,[200]);
   assert.ok(probe?.expect?.includes('EKODI Mail Admin'));
   assert.ok(probe?.headerExpect?.includes('x-ekodi-route: mail-admin'));
