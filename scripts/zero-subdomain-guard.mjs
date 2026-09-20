@@ -150,7 +150,7 @@ if (!fs.existsSync(sharedReleaseManifestPath)) {
   }
 }
 
-const ignoredFiles = new Set(['scripts/zero-subdomain-guard.mjs']);
+const ignoredFiles = new Set(['scripts/zero-subdomain-guard.mjs','supabase/migrations/20260920154500_retire_api_subdomain_mcp_resource.sql']);
 const hostPattern = /(?<!@)\b(?:[a-z0-9-]+\.)+ekodi\.kr\b|\*\.ekodi\.kr\b/ig;
 const removedHosts = new Map();
 const addedHosts = new Map();
