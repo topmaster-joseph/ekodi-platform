@@ -7,7 +7,7 @@ function fetchTimed(url,options={},ms=10000){const controller=new AbortControlle
 
 const realms={
   portal:{name:'EKODI',returnTo:'https://ekodi.kr/',open:true,kind:'portal'},
-  'my':{name:'My EKODI',returnTo:'https://ekodi.kr/my/',open:true,kind:'my'},
+  'my':{name:'EKODI',returnTo:'https://ekodi.kr/',open:true,kind:'portal'},
   community:{name:'Community',returnTo:'https://ekodi.kr/community/',open:true,kind:'community'},
   church:{name:'EKODI Church',returnTo:'https://church.ekodi.kr/',open:true,kind:'church'},
   biz:{name:'EKODI Biz',returnTo:'https://biz.ekodi.kr/',open:true,kind:'biz'},
@@ -154,7 +154,8 @@ const siteMemberAlias=Object.freeze({
   'yogurt-client':'yogurt'
 });
 function siteMemberHomeTarget(){
-  if(site==='portal'||site==='my'||params.get('manage')==='1'||params.get('review')==='1')return new URL(RETURN_TO);
+  if(site==='my')return new URL('https://ekodi.kr/');
+  if(site==='portal'||params.get('manage')==='1'||params.get('review')==='1')return new URL(RETURN_TO);
   try{
     const requested=new URL(RETURN_TO);
     if(requested.origin==='https://ekodi.kr'&&/\/my\/?$/i.test(requested.pathname))return requested;
