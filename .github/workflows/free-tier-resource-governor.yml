@@ -15,6 +15,8 @@ on:
       - 'test/free-tier-resource-governor.test.mjs'
       - 'test/free-tier-resource-collector.test.mjs'
       - 'migrations/0099_free_tier_provider_quota.sql'
+      - 'supabase/migrations/20260921061500_ekodi_resource_telemetry.sql'
+      - 'supabase/functions/ekodi-resource-telemetry/**'
       - '.github/workflows/free-tier-resource-governor.yml'
   pull_request:
     paths:
@@ -25,6 +27,8 @@ on:
       - 'test/free-tier-resource-governor.test.mjs'
       - 'test/free-tier-resource-collector.test.mjs'
       - 'migrations/0099_free_tier_provider_quota.sql'
+      - 'supabase/migrations/20260921061500_ekodi_resource_telemetry.sql'
+      - 'supabase/functions/ekodi-resource-telemetry/**'
       - '.github/workflows/free-tier-resource-governor.yml'
 
 permissions:
@@ -85,9 +89,9 @@ jobs:
             echo "SUPABASE_ACCESS_TOKEN=$token" >> "$GITHUB_ENV"
             echo "SUPABASE_TELEMETRY_AVAILABLE=true" >> "$GITHUB_ENV"
           else
-            echo 'Supabase management credential is not configured; Supabase telemetry will remain missing.'
+            echo 'Supabase management credential is not configured; Supabase project telemetry fallback remains enabled.'
             echo "SUPABASE_ACCESS_TOKEN=" >> "$GITHUB_ENV"
-            echo "SUPABASE_TELEMETRY_AVAILABLE=false" >> "$GITHUB_ENV"
+            echo "SUPABASE_TELEMETRY_AVAILABLE=fallback" >> "$GITHUB_ENV"
           fi
       - name: Collect measured free-tier resource telemetry
         shell: bash
@@ -113,3 +117,5 @@ jobs:
             --command "SELECT provider,metric,observed_value,free_limit,source,observed_at FROM provider_quota_snapshots WHERE provider IN ('supabase','github') ORDER BY observed_at DESC LIMIT 20;" \
             > "$RUNNER_TEMP/free-tier-resource-proof.json"
           grep -Fq '"provider"' "$RUNNER_TEMP/free-tier-resource-proof.json"
+          grep -Fq 'supabase' "$RUNNER_TEMP/free-tier-resource-proof.json"
+          grep -Fq 'github' "$RUNNER_TEMP/free-tier-resource-proof.json"
