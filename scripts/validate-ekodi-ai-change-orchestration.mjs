@@ -198,6 +198,24 @@ async function loadPullRequestByNumber(number) {
   const apiBase = text(process.env.GITHUB_API_URL || 'https://api.github.com').replace(/\/+$/, '');
   return fetchGithubJson(`${apiBase}/repos/${repository}/pulls/${encodeURIComponent(number)}`, `GitHub PR #${number}`, { allowNotFound: true });
 }
+
+async function loadRecentClosedPullRequests() {
+  if (!repository.includes('/')) return [];
+  const apiBase = text(process.env.GITHUB_API_URL || 'https://api.github.com').replace(/\/+$/, '');
+  const params = new URLSearchParams({
+    state: 'closed',
+    base: defaultBranch,
+    sort: 'updated',
+    direction: 'desc',
+    per_page: '30',
+  });
+  const value = await fetchGithubJson(
+    `${apiBase}/repos/${repository}/pulls?${params.toString()}`,
+    'GitHub recent closed PR API',
+  );
+  if (!Array.isArray(value)) throw new Error('PR merge provenance from GitHub recent closed PR API must be a JSON array.');
+  return value;
+}
 async function verifiedMainPrMerge() {
   const fixtureMode = Boolean(text(process.env.EKODI_GITHUB_PR_PROVENANCE) || text(process.env.EKODI_GITHUB_PR_LOOKUP));
   const attempts = fixtureMode ? 1 : boundedInteger(process.env.EKODI_GITHUB_PROVENANCE_ATTEMPTS, 10, 1, 12);
@@ -218,6 +236,17 @@ async function verifiedMainPrMerge() {
     try {
       const pulls = await loadAssociatedPullRequests();
       if (pulls.some(pr => isVerifiedMergedPr(pr, { shaBound: true }))) return true;
+    } catch (error) {
+      lastError = error?.message || String(error);
+    }
+
+    // Some GitHub token shapes cannot access the commit->pulls association endpoint even
+    // when pull-request metadata is readable. Fall back to the public/read-only closed-PR
+    // collection and still require an exact merge_commit_sha, main base and EKODI AI branch.
+    // This preserves fail-closed provenance without expanding token permissions.
+    try {
+      const recentPulls = await loadRecentClosedPullRequests();
+      if (recentPulls.some(pr => isVerifiedMergedPr(pr))) return true;
     } catch (error) {
       lastError = error?.message || String(error);
     }
