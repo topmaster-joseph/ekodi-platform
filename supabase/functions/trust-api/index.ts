@@ -22,7 +22,7 @@ const service = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const admin = createClient(url, service, { auth: { persistSession: false } });
 
 const allowedOrigin = (origin: string | null) => {
-  if (!origin) return "https://auth.ekodi.kr";
+  if (!origin) return "https://ekodi.kr";
   try {
     const parsed = new URL(origin);
     if (
@@ -36,7 +36,7 @@ const allowedOrigin = (origin: string | null) => {
   } catch {
     // fall through to canonical origin
   }
-  return "https://auth.ekodi.kr";
+  return "https://ekodi.kr";
 };
 
 const cors = (req: Request) => ({
