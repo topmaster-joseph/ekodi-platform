@@ -126,7 +126,7 @@ test('Windows Update install never triggers automatic reboot', () => {
 test('one-click device protocol is bounded to EKODI enrollment and official API', () => {
   assert.match(api, /ekodi-device:\/\/enroll\?code=/);
   assert.match(agent, /\$ProtocolScheme = 'ekodi-device'/);
-  assert.match(agent, /\\$AllowedApiBase = 'https:\\/\\/ekodi\\.kr'/);
+  assert.match(agent, /\$AllowedApiBase = 'https:\/\/ekodi\.kr'/);
   assert.match(agent, /\^EKD-\[A-F0-9\]\{20\}\$/);
   assert.match(admin, /launchProtocol/);
   assert.match(admin, /ekodi-device-bootstrap\.cmd/);
