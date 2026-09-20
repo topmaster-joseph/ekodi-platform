@@ -205,7 +205,7 @@ export async function handleEkodiV8CommandControl(request, env) {
     const input = pulseInput(body, auth.session);
     if (!input.goal && !input.event.summary) return json(request, env, { error: 'goal 또는 summary가 필요합니다.', code: 'PULSE_GOAL_REQUIRED' }, 400);
     const task = await ingestEkodiPulse(env, input);
-    const execution = body.executeNow === true ? await runEkodiCommandQueue(env, { limit: 1 }) : null;
+    const execution = body.executeNow === true && task?.id ? await runEkodiCommandQueue(env, { limit: 1, taskId: task.id }) : null;
     const latestTask = task?.id ? await getEkodiCommandTask(env, task.id, { includeEvent: true }) : task;
     return json(request, env, {
       ok: true,
@@ -225,7 +225,7 @@ export async function handleEkodiV8CommandControl(request, env) {
 }
 
 export const EKODI_V8_COMMAND_CONTROL = Object.freeze({
-  version: '1.2.0',
+  version: '1.3.0',
   prefix: PREFIX,
   surfaces: Object.freeze(['status', 'tasks', 'tasks/:taskId/consultation', 'pulse', 'drain', 'collaboration-settings', 'collaboration-settings/audit']),
 });
