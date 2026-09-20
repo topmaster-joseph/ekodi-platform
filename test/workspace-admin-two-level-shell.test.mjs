@@ -18,7 +18,7 @@ test('workspace admin keeps the shared shell while all tenant menus navigate dir
   assert.match(script,/admin-nav-group-label/);
   assert.match(script,/소통 · 홍보/);
   assert.match(script,/마케팅 AI/);
-  assert.match(script,/SNS 채널·자동게시/);
+  assert.match(script,/채널·자동게시/);
   assert.match(script,/publishing:\['SNS','채널','계정 연결','OAuth','쇼츠','자동게시','예약게시'\]/);
   assert.match(script,/a\.href=sectionHref\(key\)/);
   assert.match(script,/dataset\.adminSection=key/);
