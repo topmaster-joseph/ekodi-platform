@@ -37,6 +37,10 @@ test('API cost control never pretends unmetered provider usage is exact', async 
   assert.match(source, /needs-connection/);
   assert.match(source, /unknownUsageLabel: '연결 필요'/);
   assert.match(source, /hardCapScope: 'ekodi-sponsored-ai-only'/);
+  assert.match(source, /buildFreeTierResourceGovernor/);
+  assert.match(source, /resourceQuotaLedger/);
+  assert.match(source, /ledgerAvailable/);
+  assert.match(source, /FREE_TIER_RESOURCE_CATALOG/);
   assert.doesNotMatch(source, /api[_-]?key\s*:/i);
 });
 
