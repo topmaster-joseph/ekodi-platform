@@ -56,6 +56,8 @@ jobs:
               && grep -Fiq 'x-ekodi-canonical-surface: ai' /tmp/ai-root-headers \
               && grep -Fiq 'x-ekodi-canonical-path: /ai' /tmp/ai-root-headers \
               && grep -Fq 'EKODI 모두의 AI 프로젝트' /tmp/ai-root \
+              && grep -Fq 'AI로 하기' /tmp/ai-root \
+              && grep -Fq '최근 공개된 AI' /tmp/ai-root \
               && grep -Fq '"platform":"ai-control"' /tmp/ai-health \
               && grep -Fq '"surface":"runtime-and-commons"' /tmp/ai-health \
               && grep -Fq '"commons":true' /tmp/ai-health \
