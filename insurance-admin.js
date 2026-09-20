@@ -1,5 +1,5 @@
 (() => {
-  const API='https://api.ekodi.kr';
+  const API='https://ekodi.kr';
   const token=()=>sessionStorage.getItem('ekodi-auth-token')||'';
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   let installed=false,loading=false,state={consultations:[],metrics:{}};
