@@ -10,7 +10,7 @@ zone_name = "ekodi.kr"
 
 [vars]
 DATA_MODE = "production"
-AUTH_URL = "https://auth.ekodi.kr/?site=delivery"
+AUTH_URL = "https://ekodi.kr/auth/?site=delivery"
 SUPABASE_URL = "https://renzehysxirjilvdxacv.supabase.co"
 SUPABASE_PUBLISHABLE_KEY = "sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_"
 EXECUTION_ENABLED = "false"
