@@ -129,7 +129,10 @@ test('Personal Finance admin assets and same-origin proxy are covered by the gua
     const probe=manifest.worker.requests.find(item=>item.url.endsWith(suffix));
     assert.ok(probe,suffix);
     assert.equal(probe.rollbackVerify,false,suffix);
-    assert.deepEqual(probe.headerExpect,['x-content-type-options: nosniff'],suffix);
+    assert.ok(probe.url.startsWith('https://ekodi.kr/admin/'),suffix);
+    assert.ok(probe.headerExpect.includes('x-content-type-options: nosniff'),suffix);
+    assert.ok(probe.headerExpect.includes('cache-control: no-store'),suffix);
+    assert.ok(probe.headerExpect.includes('x-robots-tag: noindex, nofollow, noarchive'),suffix);
     assert.equal(probe.headerExpect.some(value=>value.startsWith('x-ekodi-route:')),false,suffix);
   }
   const jsProbe=manifest.worker.requests.find(item=>item.url.endsWith('personal-finance-admin.js?pf=v1'));
