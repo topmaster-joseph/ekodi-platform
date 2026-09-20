@@ -5,6 +5,19 @@ const SUPABASE_API='https://api.supabase.com/v1';
 const GITHUB_API='https://api.github.com';
 const GB=1024*1024*1024;
 
+export const SUPABASE_PUBLIC_TELEMETRY_PROJECTS=Object.freeze([
+  Object.freeze({
+    ref:'renzehysxirjilvdxacv',
+    publishableKey:'sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_',
+    group:'ekodi-free',
+  }),
+  Object.freeze({
+    ref:'lxcxwbdwwojjkgybbqii',
+    publishableKey:'sb_publishable_SyaM4rBxa1JdE9arZrhULg_z1BIQRXL',
+    group:'ekodi-free',
+  }),
+]);
+
 function sqlString(value){return `'${String(value??'').replaceAll("'","''")}'`}
 function nowIso(){return new Date().toISOString()}
 function periodDay(iso){return String(iso).slice(0,10)}
@@ -41,8 +54,7 @@ function rowsFromResult(data){
   return [];
 }
 
-export async function collectSupabase({token,fetchJson=jsonFetch,observedAt=nowIso()}={}){
-  if(!token)return {available:false,reason:'credential_missing',snapshots:[],freeOrganizations:[],activeProjects:[]};
+async function collectSupabaseManagement({token,fetchJson,observedAt}){
   const [organizationsRaw,projectsRaw]=await Promise.all([
     fetchJson(`${SUPABASE_API}/organizations`,{token}),
     fetchJson(`${SUPABASE_API}/projects`,{token}),
@@ -102,7 +114,82 @@ export async function collectSupabase({token,fetchJson=jsonFetch,observedAt=nowI
       observedValue:bytes,freeLimit:GB,source:'supabase-database-query',observedAt
     });
   }
-  return {available:true,reason:null,snapshots,freeOrganizations:freeOrganizations.map(org=>({id:String(org.id),plan:'free'})),activeProjects:activeProjects.map(p=>String(p.ref||p.id||''))};
+  return {
+    available:true,reason:null,mode:'management-api',snapshots,
+    freeOrganizations:freeOrganizations.map(org=>({id:String(org.id),plan:'free'})),
+    activeProjects:activeProjects.map(p=>String(p.ref||p.id||'')),
+  };
+}
+
+export async function collectSupabasePublicTelemetry({
+  projects=SUPABASE_PUBLIC_TELEMETRY_PROJECTS,
+  fetchJson=jsonFetch,
+  observedAt=nowIso(),
+}={}){
+  const measured=[];
+  for(const project of projects){
+    try{
+      const data=await fetchJson(`https://${project.ref}.supabase.co/functions/v1/ekodi-resource-telemetry`,{
+        headers:{
+          apikey:project.publishableKey,
+          'user-agent':'ekodi-free-tier-governor/2',
+        },
+      });
+      if(data?.ok!==true)throw new Error('TELEMETRY_NOT_OK');
+      const databaseBytes=Number(data.database_bytes);
+      const storageBytes=Number(data.storage_object_bytes);
+      if(!Number.isFinite(databaseBytes)||!Number.isFinite(storageBytes))throw new Error('TELEMETRY_INVALID');
+      measured.push({...project,databaseBytes,storageBytes});
+    }catch{
+      // Missing project telemetry must remain unknown; never fabricate a usage percentage.
+    }
+  }
+
+  if(!measured.length){
+    return {available:false,reason:'project_telemetry_unavailable',mode:'project-telemetry',snapshots:[],freeOrganizations:[],activeProjects:[]};
+  }
+
+  const snapshots=[];
+  if(measured.length===projects.length){
+    snapshots.push({
+      provider:'supabase',metric:'active_projects',periodStart:periodDay(observedAt),
+      observedValue:measured.length,freeLimit:2,source:'supabase-project-telemetry',observedAt
+    });
+  }
+
+  const storageByGroup=new Map();
+  for(const project of measured){
+    snapshots.push({
+      provider:'supabase',metric:`database_bytes:${project.ref}`,periodStart:periodDay(observedAt),
+      observedValue:project.databaseBytes,freeLimit:500*1024*1024,source:'supabase-project-telemetry',observedAt
+    });
+    storageByGroup.set(project.group,(storageByGroup.get(project.group)||0)+project.storageBytes);
+  }
+  for(const [group,bytes] of storageByGroup){
+    snapshots.push({
+      provider:'supabase',metric:`storage_bytes_org:${group}`,periodStart:periodMonth(observedAt),
+      observedValue:bytes,freeLimit:GB,source:'supabase-project-telemetry',observedAt
+    });
+  }
+  return {
+    available:true,
+    reason:measured.length===projects.length?null:'partial_project_telemetry',
+    mode:'project-telemetry',
+    snapshots,
+    freeOrganizations:[],
+    activeProjects:measured.map(project=>project.ref),
+  };
+}
+
+export async function collectSupabase({token,fetchJson=jsonFetch,observedAt=nowIso(),projects=SUPABASE_PUBLIC_TELEMETRY_PROJECTS}={}){
+  if(token){
+    try{
+      return await collectSupabaseManagement({token,fetchJson,observedAt});
+    }catch(error){
+      if(![401,403].includes(Number(error?.status||0)))throw error;
+    }
+  }
+  return collectSupabasePublicTelemetry({projects,fetchJson,observedAt});
 }
 
 export async function collectGitHub({repository,token='',fetchJson=jsonFetch,observedAt=nowIso()}={}){
@@ -158,7 +245,14 @@ async function main(){
   await fs.writeFile(output,snapshotsToSql(result.snapshots)+'\n','utf8');
   process.stdout.write(JSON.stringify({
     observedAt:result.observedAt,
-    supabase:{available:result.supabase.available,reason:result.supabase.reason,freeOrganizations:result.supabase.freeOrganizations.length,activeProjects:result.supabase.activeProjects.length,snapshots:result.supabase.snapshots.length},
+    supabase:{
+      available:result.supabase.available,
+      reason:result.supabase.reason,
+      mode:result.supabase.mode,
+      freeOrganizations:result.supabase.freeOrganizations.length,
+      activeProjects:result.supabase.activeProjects.length,
+      snapshots:result.supabase.snapshots.length,
+    },
     github:{repository:result.github.repository,snapshots:result.github.snapshots.length},
   })+'\n');
 }
