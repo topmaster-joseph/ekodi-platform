@@ -9,7 +9,9 @@ test('EKODI Core owns canonical control-plane identity and organization contract
   const core = await readJson('config/ekodi-core-contract.json');
   assert.equal(core.status, 'completed');
   assert.equal(core.adoptionStatus, 'adopted');
-  assert.equal(core.canonicalHosts.api, 'api.ekodi.kr');
+  assert.equal(core.canonicalHost, 'ekodi.kr');
+  assert.equal(core.canonicalApiBase, 'https://ekodi.kr/api');
+  assert.equal(core.canonicalPaths.api, '/api');
   assert.equal(core.controlPlane.platformId, 'control-api');
   assert.equal(core.controlPlane.database, 'ekodi-auth D1');
   assert.equal(core.controlPlane.canonicalEntities.organization, 'customer_tenants');
