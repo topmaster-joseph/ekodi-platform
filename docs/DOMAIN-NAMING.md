@@ -23,7 +23,7 @@ Use a first-level subdomain when the service is an ecosystem-wide brand, platfor
 | Events | `event.ekodi.kr` |
 | Giving | `give.ekodi.kr` |
 | Administration | `admin.ekodi.kr` |
-| Shared API | `api.ekodi.kr` |
+| Shared API | `ekodi.kr/api` |
 | Shared webmail entry | `mail.ekodi.kr` |
 
 ## 2. Nested functional domains
@@ -90,7 +90,7 @@ Use a first-level domain when one service is shared across the whole ecosystem.
 
 - Shared payments: `pay.ekodi.kr`
 - Shared identity/admin: `admin.ekodi.kr`
-- Shared API gateway: `api.ekodi.kr`
+- Shared API gateway: `ekodi.kr/api`
 - Shared webmail entry: `mail.ekodi.kr`
 
 Use a nested domain when a unit needs its own independent instance.
