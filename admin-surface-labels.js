@@ -8,7 +8,7 @@
     'biz.ekodi.kr': ['ekodi.kr/ekodibiz', 'https://ekodi.kr/ekodibiz'],
     'lab.ekodi.kr': ['ekodi.kr/ekodilab', 'https://ekodi.kr/ekodilab'],
     'trade.ekodi.kr': ['ekodi.kr/ekodibiz/trade', 'https://ekodi.kr/ekodibiz/trade'],
-    'mall.ekodi.kr': ['ekodi.kr/ekodibiz/ekodimall', 'https://ekodi.kr/ekodibiz/ekodimall'],
+    'mall.ekodi.kr': ['ekodi.kr/ekodimall', 'https://ekodi.kr/ekodimall'],
     'business.ekodi.kr': ['ekodi.kr/business', 'https://ekodi.kr/business'],
     'cgma.ekodi.kr': ['ekodi.kr/cgma · cgma.or.kr', 'https://ekodi.kr/cgma'],
     'jadam.ekodi.kr': ['ekodi.kr/jadam', 'https://ekodi.kr/jadam'],
