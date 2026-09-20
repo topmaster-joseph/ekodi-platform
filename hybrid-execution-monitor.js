@@ -148,7 +148,7 @@ async function externalProductionChecks(env) {
   }
 
   const [health, asset] = await Promise.all([
-    fetchText('https://api.ekodi.kr/health'),
+    fetchText('https://ekodi.kr/api/health'),
     fetchText('https://admin.ekodi.kr/device-control-admin.js'),
   ]);
 
