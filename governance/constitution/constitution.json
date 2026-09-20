@@ -289,8 +289,8 @@
   },
   "legacyDomainTargets": {
     "management.ekodi.kr": "https://ekodi.kr/my/management",
-    "mall.ekodi.kr": "https://ekodi.kr/ekodibiz/ekodimall",
-    "mall.biz.ekodi.kr": "https://ekodi.kr/ekodibiz/ekodimall",
+    "mall.ekodi.kr": "https://ekodi.kr/ekodimall",
+    "mall.biz.ekodi.kr": "https://ekodi.kr/ekodimall",
     "cafe.ekodi.kr": "https://ekodi.kr/cafe",
     "books.ekodi.kr": "https://ekodi.kr/books",
     "publishing.ekodi.kr": "https://ekodi.kr/publish",
