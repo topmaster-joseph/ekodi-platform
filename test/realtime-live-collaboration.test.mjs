@@ -104,3 +104,31 @@ test('presenter source can be removed and re-added during screen share like othe
   assert.match(live,/presenter\.visible=!state\.presenterHidden/);
   assert.match(live,/addOverlay\('presenter'\)/);
 });
+
+
+test('live studio exposes compact shared-surface controls and QR camera invitation',async()=>{
+  const [page,live,css,worker]=await Promise.all([
+    read('tenant-live-page.js'),
+    read('tenant-live.js'),
+    read('tenant-live.css'),
+    read('site-worker.js'),
+  ]);
+  for(const marker of ['cameraInviteButton','cameraInviteDialog','sharedSurfaceControls','surfaceScrollButton','screenFreezeButton','participantFlipButton'])assert.match(page,new RegExp(marker));
+  assert.match(live,/CaptureController/);
+  assert.match(live,/forwardWheel/);
+  assert.match(live,/screenFrozen/);
+  assert.match(live,/camera=1/);
+  assert.match(live,/replaceTrack/);
+  assert.match(live,/JSON\.stringify\(\{\}\)/);
+  assert.match(css,/\.studio-focus/);
+  assert.match(css,/\.camera-source-mode/);
+  assert.match(worker,/img-src 'self' data: https:\/\/api\.qrserver\.com/);
+});
+
+test('presenter compositor uses a round transparent-outside mask',async()=>{
+  const [live,css]=await Promise.all([read('tenant-live.js'),read('tenant-live.css')]);
+  assert.match(live,/function drawPresenterOverlay/);
+  assert.match(live,/ctx\.ellipse\(/);
+  assert.match(live,/overlay\.id==='presenter'/);
+  assert.match(css,/\.program-drag-handle\.presenter-handle/);
+});
