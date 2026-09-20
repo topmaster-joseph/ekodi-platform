@@ -5,7 +5,7 @@ import {
   resetExternalAiModuleCircuitsForTest,
 } from '../external-ai-module-gateway.js';
 
-const API = 'https://api.ekodi.kr/api/ai-modules/v1/execute';
+const API = 'https://ekodi.kr/api/ai-modules/v1/execute';
 
 function envFor(manifest = {}) {
   return {
