@@ -1196,7 +1196,9 @@
           "x-robots-tag: noindex, nofollow, noarchive",
           "x-content-type-options: nosniff"
         ],
-        "rollbackVerify": false
+        "rollbackVerify": false,
+        "candidateVerify": false,
+        "candidateVerifyReason": "Mail Admin custom-domain routing becomes authoritative only after promotion; verify the canonical apex Admin handoff immediately post-promotion"
       },
       {
         "url": "https://live.ekodi.kr/",
