@@ -62,6 +62,20 @@
     location.assign(data.authorizationUrl);
   }
   function slug(value) { return String(value || '').trim().toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,48); }
+  function initialConnectionIntent() {
+    const params = new URLSearchParams(location.search);
+    const requestedType = String(params.get('social_scope') || '').toLowerCase();
+    const type = ['person','tenant','store'].includes(requestedType) ? requestedType : 'person';
+    const key = type === 'person' ? '' : slug(params.get('social_subject') || '');
+    const requestedProvider = String(params.get('social_connect') || '').toLowerCase();
+    const provider = ['youtube','meta','threads'].includes(requestedProvider) ? requestedProvider : '';
+    return { type, key, provider };
+  }
+  function consumeConnectionIntent() {
+    const url = new URL(location.href);
+    url.searchParams.delete('social_connect');
+    history.replaceState(history.state, '', url.href);
+  }
   function markDirty(save, status) {
     dirty = true; save.disabled = false; status.textContent = '저장하지 않은 변경사항이 있습니다.'; status.dataset.state = 'dirty';
   }
@@ -112,6 +126,15 @@
     const connectionStatus = el('p','OAuth 연결상태를 확인하지 않았습니다.','social-admin-status'); connectionStatus.setAttribute('role','status');
     const connectionList = el('div','','social-connection-list');
     connectionPanel.append(connectionHead,scopeBar,tenantPresets,connectionActions,connectionMetrics,connectionStatus,connectionList);
+    const initialIntent = initialConnectionIntent();
+    if (initialIntent.type !== 'person' && initialIntent.key) {
+      scopeType.value = initialIntent.type;
+      scopeKey.disabled = false;
+      scopeKey.value = initialIntent.key;
+      connectionScope = { type:initialIntent.type, key:initialIntent.key };
+    } else if (initialIntent.type === 'person') {
+      connectionScope = { type:'person', key:'' };
+    }
     const summary = el('div','','social-admin-summary');
     const status = el('p','Registry를 불러오지 않았습니다.','social-admin-status'); status.setAttribute('role','status');
     const list = el('div','','social-org-list');
@@ -279,6 +302,26 @@
       if(reconnect){try{await startConnection(reconnect.dataset.reconnectProvider);}catch(error){connectionStatus.textContent=error.message;connectionStatus.dataset.state='error';}}
     });
     addOrg.addEventListener('click',()=>{ const id=`org-${Date.now().toString(36)}`; registry.organizations.push({id,name:'New organization',shortName:'Organization',description:'',website:'https://',isActive:true,order:(registry.organizations.length+1)*10,socialPolicy:'inherit_org',channels:[]}); markDirty(save,status); render(); });
+    if (initialIntent.provider && (initialIntent.type === 'person' || initialIntent.key)) {
+      consumeConnectionIntent();
+      queueMicrotask(async()=>{
+        connectionStatus.textContent=`${providerLabel(initialIntent.provider)} 연결 준비 중입니다.`;
+        connectionStatus.dataset.state='loading';
+        try {
+          await loadConnections();
+          const providerButton = initialIntent.provider === 'youtube' ? youtubeConnect : initialIntent.provider === 'threads' ? threadsConnect : metaConnect;
+          if (providerButton.disabled) {
+            connectionStatus.textContent=`${providerLabel(initialIntent.provider)} 플랫폼 앱 설정이 먼저 필요합니다.`;
+            connectionStatus.dataset.state='dirty';
+            return;
+          }
+          await startConnection(initialIntent.provider);
+        } catch(error) {
+          connectionStatus.textContent=error.message;
+          connectionStatus.dataset.state='error';
+        }
+      });
+    }
     window.addEventListener('beforeunload',event=>{ if(!dirty)return; event.preventDefault(); event.returnValue=''; });
   }
   install();
