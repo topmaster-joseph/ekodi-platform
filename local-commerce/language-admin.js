@@ -1,4 +1,4 @@
-const API='https://api.ekodi.kr/api/i18n/v1/admin';
+const API='https://ekodi.kr/api/i18n/v1/admin';
 const SERVICE='local-commerce';
 const tab=document.getElementById('languageAdminTab');
 const panel=document.getElementById('languageAdminPanel');

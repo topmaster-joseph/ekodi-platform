@@ -69,7 +69,7 @@ jobs:
           grep -Fq 'connect-api' community/connect/app.js
           grep -Fq '<script src="/social-links.js" defer></script>' community/index.html
           grep -Fq '<script src="/community-enhancements.js" defer></script>' community/index.html
-          grep -Fq 'https://api.ekodi.kr/api/social/registry' community/social-links.js
+          grep -Fq 'https://ekodi.kr/api/social/registry' community/social-links.js
           grep -Fq "community:{name:'Community'" auth-site/client-auth.js
           grep -Fq "returnTo:'https://ekodi.kr/community/'" auth-site/client-auth.js
           grep -Fq "open:true,kind:'community'" auth-site/client-auth.js

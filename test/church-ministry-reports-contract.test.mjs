@@ -63,7 +63,7 @@ test('church report UI is mounted inside pastor admin and removed from global Ad
   for (const marker of ['#churchReportsRoot', '/api/church/admin/reports', '사역보고 발송 설정', '교회 원자료', 'ekodi-church-pastor-session']) {
     assert.ok(ui.includes(marker), `missing church report UI marker: ${marker}`);
   }
-  for (const marker of ["['reports','사역보고']", "section==='reports'", '/church-reports-admin.js', '/church-reports-admin.css', 'https://api.ekodi.kr']) {
+  for (const marker of ["['reports','사역보고']", "section==='reports'", '/church-reports-admin.js', '/church-reports-admin.css', 'https://ekodi.kr']) {
     assert.ok(page.includes(marker), `missing pastor admin integration marker: ${marker}`);
   }
   assert.ok(!features.includes('community-reports-admin.js'), 'global Admin must no longer lazy-load the Community report UI');
@@ -87,6 +87,6 @@ test('production manifests verify the Church report move', async () => {
   const site = JSON.parse(siteManifest); const api = JSON.parse(apiManifest);
   const church = site.worker.requests.find(item => item.url === 'https://ekodi.kr/ekodichurch/admin');
   assert.ok(church?.expect?.includes('church-reports-admin.js'));
-  assert.ok(api.worker.requests.some(item => item.url === 'https://api.ekodi.kr/api/church/admin/reports' && item.statuses.includes(401)));
-  assert.ok(api.worker.requests.some(item => item.url === 'https://api.ekodi.kr/api/community/admin/reports' && item.statuses.includes(410)));
+  assert.ok(api.worker.requests.some(item => item.url === 'https://ekodi.kr/api/church/admin/reports' && item.statuses.includes(401)));
+  assert.ok(api.worker.requests.some(item => item.url === 'https://ekodi.kr/api/community/admin/reports' && item.statuses.includes(410)));
 });

@@ -2,7 +2,7 @@
   'use strict';
   if (window.EKODIAdminAIControlPlane) return;
 
-  const API='https://api.ekodi.kr';
+  const API='https://ekodi.kr';
   const TOKEN_KEY='ekodi-auth-token';
   const SPECIALISTS=[
     {id:'chief',label:'EKODI Admin AI',detail:'총괄 AI · 전체 조정'},

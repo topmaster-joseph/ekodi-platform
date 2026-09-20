@@ -81,7 +81,7 @@ test('isolated renderer treats aria-busy on the panel root as active work', asyn
 test('public-site controls E2E proves the live Control API and CGMA form render', async () => {
   const source = await workerSource();
   assert.match(source, /verifyPublicSiteControls/);
-  assert.match(source, /fetch\('https:\/\/api\.ekodi\.kr\/api\/control\/public-sites'/);
+  assert.match(source, /fetch\('https:\/\/ekodi\.kr\/api\/control\/public-sites'/);
   assert.match(source, /const adminOrigin = 'https:\/\/ekodi\.kr'/);
   assert.match(source, /origin: adminOrigin/);
   assert.match(source, /authorization: `Bearer \$\{token\}`/);

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { handleLearningControl, LEARNING_FABRIC_CATALOG } from '../learning-control.js';
 
 test('learning catalog is public and prerequisite-aware', async () => {
-  const response=await handleLearningControl(new Request('https://api.ekodi.kr/api/learning/catalog'),{});
+  const response=await handleLearningControl(new Request('https://ekodi.kr/api/learning/catalog'),{});
   assert.equal(response.status,200);
   const body=await response.json();
   assert.equal(body.service,'ekodi-learning-fabric');
@@ -14,11 +14,11 @@ test('learning catalog is public and prerequisite-aware', async () => {
 });
 
 test('member progress never opens without storage and auth', async () => {
-  const response=await handleLearningControl(new Request('https://api.ekodi.kr/api/learning/progress'),{});
+  const response=await handleLearningControl(new Request('https://ekodi.kr/api/learning/progress'),{});
   assert.equal(response.status,503);
   assert.equal((await response.json()).error,'learning_database_unavailable');
 });
 
 test('unrelated endpoint is ignored', async () => {
-  assert.equal(await handleLearningControl(new Request('https://api.ekodi.kr/health'),{}),null);
+  assert.equal(await handleLearningControl(new Request('https://ekodi.kr/api/health'),{}),null);
 });

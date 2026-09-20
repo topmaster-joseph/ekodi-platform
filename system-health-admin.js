@@ -3,7 +3,7 @@
 
   const MODULE_ID = 'ekodiSystemHealth';
   const SECTION = 'health';
-  const API_BASE = 'https://api.ekodi.kr';
+  const API_BASE = 'https://ekodi.kr';
   const TOKEN_KEY = 'ekodi-auth-token';
   const CORE_SERVICES = ['root', 'admin', 'api', 'biz', 'church', 'lab', 'client-cgma', 'client-jadam', 'client-pizzamaru', 'client-yogurt'];
   if (document.getElementById(MODULE_ID)) return;

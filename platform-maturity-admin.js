@@ -2,7 +2,7 @@ const SECTION = 'maturity';
 const MODULE_ID = 'ekodiPlatformMaturity';
 const TOKEN_KEY = 'ekodi-auth-token';
 const SESSION_URL = 'https://ekodi.kr/api/session';
-const MATURITY_API = 'https://api.ekodi.kr/api/control/platform-maturity';
+const MATURITY_API = 'https://ekodi.kr/api/control/platform-maturity';
 
 if (typeof document !== 'undefined' && !document.getElementById(MODULE_ID)) {
   const content = document.querySelector('.content');

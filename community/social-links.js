@@ -1,5 +1,5 @@
 (() => {
-  const API = 'https://api.ekodi.kr/api/social/registry';
+  const API = 'https://ekodi.kr/api/social/registry';
   const HUB = 'https://social.ekodi.kr';
   const icons = { youtube:'▶', instagram:'◎', facebook:'f', kakao:'◇', blog:'N', threads:'@', live:'●', tiktok:'♪', linkedin:'in', other:'↗' };
   const recommendationTags = { youtube:'영상,찬양,성경공부,음악', instagram:'영상,지역활동,여행,디자인', live:'찬양,성경공부,기도,선교', facebook:'지역활동,봉사', blog:'독서,지역활동', threads:'영상,디자인', tiktok:'영상,음악', linkedin:'경영,마케팅,창업', other:'지역활동' };

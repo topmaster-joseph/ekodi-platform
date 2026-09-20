@@ -23,8 +23,8 @@ EKODI 생태계의 각 사이트와 서비스는 단순 페이지가 아니라 �
 - EKODI Work: 전용 Worker와 `work.ekodi.kr`
 - EKODI Social: 전용 Worker와 `social.ekodi.kr`
 - EKODI Energy AI: 전용 Worker, 전용 `energy/**` 소스, `ekodi-energy-staging.topmaster-joseph.workers.dev` 스테이징. 운영 도메인은 검증 후 `energy.ekodi.kr`로 승격
-- Finance API: 전용 Worker와 `finance-api.ekodi.kr`
-- Control API: 전용 Worker와 `api.ekodi.kr`
+- Finance API: 전용 Worker와 `finance-ekodi.kr/api`
+- Control API: 전용 Worker와 `ekodi.kr/api`
 - Marketing AI 계열: 전용 동기화/고객 사이트 배포 흐름
 
 ### 아직 공유되는 영역
@@ -63,7 +63,7 @@ Energy AI는 스테이징에서 `TELEMETRY_ENABLED=false`, `CONTROL_ENABLED=fals
 
 ## 데이터 경계
 
-현재 `api.ekodi.kr`과 `finance-api.ekodi.kr`은 동일한 `ekodi-auth` D1 데이터베이스를 사용합니다. Finance는 SQL table name을 `finance_*` namespace로 변환하여 충돌을 줄이고 있습니다. 이 구조는 당분간 유지하되 다음 원칙을 적용합니다.
+현재 `ekodi.kr/api`과 `finance-ekodi.kr/api`은 동일한 `ekodi-auth` D1 데이터베이스를 사용합니다. Finance는 SQL table name을 `finance_*` namespace로 변환하여 충돌을 줄이고 있습니다. 이 구조는 당분간 유지하되 다음 원칙을 적용합니다.
 
 - Finance table은 `finance_*` prefix를 유지합니다.
 - Books 운영 table은 Books 전용 prefix를 유지합니다.

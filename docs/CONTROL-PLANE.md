@@ -2,7 +2,7 @@
 
 ## Purpose
 
-`admin.ekodi.kr` is the EKODI ecosystem control center. `api.ekodi.kr` is the shared connection layer used by the control center and selected services. Public services remain independently deployable and must not require the control plane to render their normal public pages.
+`admin.ekodi.kr` is the EKODI ecosystem control center. `ekodi.kr/api` is the shared connection layer used by the control center and selected services. Public services remain independently deployable and must not require the control plane to render their normal public pages.
 
 ## Core principle
 
@@ -10,10 +10,10 @@
 
 - `ekodi.kr`: ultra-light public gateway
 - `*.ekodi.kr`: independent ministry, business, knowledge, media and commerce services
-- `api.ekodi.kr`: connection and operations API
+- `ekodi.kr/api`: connection and operations API
 - `admin.ekodi.kr`: authenticated control center
 
-A failure in `api.ekodi.kr` or `admin.ekodi.kr` must not take down the public root portal or independent service sites.
+A failure in `ekodi.kr/api` or `admin.ekodi.kr` must not take down the public root portal or independent service sites.
 
 ## Control center capabilities
 
@@ -82,7 +82,7 @@ Examples:
 
 A single giant database is not the goal.
 
-Each domain keeps a clear system of record. `api.ekodi.kr` aggregates and orchestrates only what the admin control center needs.
+Each domain keeps a clear system of record. `ekodi.kr/api` aggregates and orchestrates only what the admin control center needs.
 
 This avoids tight coupling and lets individual services move technologies later without rebuilding the entire ecosystem.
 

@@ -148,6 +148,18 @@ export default {
 
     const path = incoming.pathname;
 
+    if ((path === '/api' || path === '/api/') && request.method === 'GET') {
+      return applyApiSecurityHeaders(new Response(JSON.stringify({
+        ok: true,
+        service: 'ekodi-api',
+        generation: 10,
+        canonicalBase: 'https://ekodi.kr/api',
+        health: 'https://ekodi.kr/api/health',
+        providerIndependent: true,
+        executionBoundary: 'CONTROL_API service binding',
+      }), { status: 200, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' } }));
+    }
+
     if (path === '/.well-known/oauth-protected-resource') {
       try { return applyApiSecurityHeaders(handleEkodiMcpMetadata(request)); }
       catch (error) { console.error('EKODI MCP metadata error', error); return errorResponse('EKODI MCP 인증 메타데이터 처리 중 오류가 발생했습니다.', 'MCP_METADATA_ERROR'); }

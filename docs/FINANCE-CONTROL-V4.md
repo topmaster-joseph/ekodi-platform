@@ -18,14 +18,14 @@ Historical nested addresses may remain only as compatibility redirects. `trade.b
 
 The admin screen is unified, but the server responsibilities remain isolated.
 
-### api.ekodi.kr
+### ekodi.kr/api
 
 - administrator authentication and sessions
 - domain and DNS control through the existing advanced console
 - service controls and 10-minute D1 health checks
 - 24-hour availability and response-time statistics
 
-### finance-api.ekodi.kr
+### finance-ekodi.kr/api
 
 - payment classification
 - Toss payment synchronization
@@ -77,13 +77,13 @@ Commercial EKODIBIZ payments, church/ministry funds, research projects, and asso
 
 The unified admin console combines three monitoring layers:
 
-1. **D1 live service control** from `api.ekodi.kr`
+1. **D1 live service control** from `ekodi.kr/api`
    - active/planned/paused service state
    - manual immediate health check
    - 10-minute scheduled health check
    - 24-hour availability and response time
 
-2. **Finance control** from `finance-api.ekodi.kr`
+2. **Finance control** from `finance-ekodi.kr/api`
    - Toss readiness
    - recent synchronized payments
    - monthly revenue/expense/profit by organization and business unit

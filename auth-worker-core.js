@@ -245,7 +245,7 @@ export default {
     if (!isAllowedOrigin(origin, env)) return reply({ error: '허용되지 않은 요청입니다.' }, 403);
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors(origin, env) });
     const url = new URL(request.url);
-    if (request.method === 'GET' && url.pathname === '/health') return reply({ ok: true, service: 'ekodi-auth-api', version: 4 });
+    if (request.method === 'GET' && (url.pathname === '/health' || url.pathname === '/api/health')) return reply({ ok: true, service: 'ekodi-auth-api', version: 4, canonicalApiBase: 'https://ekodi.kr/api' });
     if (!env.DB) return reply({ error: '데이터베이스 연결이 설정되지 않았습니다.' }, 503);
 
     try {

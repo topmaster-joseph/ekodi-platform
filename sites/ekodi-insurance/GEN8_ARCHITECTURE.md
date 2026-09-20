@@ -34,7 +34,7 @@ EKODI Insurance 8G는 보험상품을 자동판매하는 엔진이 아니라, �
 
 ## 중앙 관리자 경계
 
-`admin.ekodi.kr → api.ekodi.kr → Insurance API → Insurance D1` 순서다. 중앙 경로도 `INSURANCE_ADMIN_ENABLED=false`가 기본값이다.
+`admin.ekodi.kr → ekodi.kr/api → Insurance API → Insurance D1` 순서다. 중앙 경로도 `INSURANCE_ADMIN_ENABLED=false`가 기본값이다.
 
 운영자가 관리하는 범위는 상담 Queue, Partner Registry, Reference Catalog, Outcome Funnel이다. 고객의 전체 보험계약·청구·건강 원장은 중앙 관리대상이 아니다.
 

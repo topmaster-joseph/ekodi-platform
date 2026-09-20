@@ -1,4 +1,4 @@
-const DEFAULT_CORE_ORIGIN = 'https://api.ekodi.kr';
+const DEFAULT_CORE_ORIGIN = 'https://ekodi.kr';
 const CORE_PREFIX = '/api/core/v1';
 
 function coreOrigin(env = {}) {

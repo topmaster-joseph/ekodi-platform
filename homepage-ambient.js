@@ -412,7 +412,7 @@
   async function applyHomepagePresentation(cards) {
     const settings = new Map();
     try {
-      const response = await fetch('https://api.ekodi.kr/api/homepage/presentation', {
+      const response = await fetch('https://ekodi.kr/api/homepage/presentation', {
         method:'GET', mode:'cors', credentials:'omit', cache:'no-store', headers:{ accept:'application/json' },
       });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);

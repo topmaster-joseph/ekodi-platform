@@ -8,7 +8,7 @@ preview_urls = false
 DATA_ENABLED = "false"
 DATA_MODE = "isolated-staging"
 AUTH_URL = "https://auth.ekodi.kr/?site=life"
-CORE_API_URL = "https://api.ekodi.kr"
+CORE_API_URL = "https://ekodi.kr"
 
 [assets]
 directory = "./life"

@@ -1,5 +1,5 @@
 (() => {
-  const API = 'https://api.ekodi.kr';
+  const API = 'https://ekodi.kr';
   const CHECKLIST = [
     ['metadata', '메타데이터'], ['files', '파일'], ['identifiers', '식별자'],
     ['pricing', '가격'], ['rights', '권리/지역'], ['submitted', '제출'],

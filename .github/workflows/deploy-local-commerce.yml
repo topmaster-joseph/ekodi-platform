@@ -142,7 +142,7 @@ jobs:
         run: |
           set -euo pipefail
           for attempt in $(seq 1 24); do
-            code=$(curl -sS -o /tmp/local-commerce-api.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://api.ekodi.kr/api/local-commerce/health' || true)
+            code=$(curl -sS -o /tmp/local-commerce-api.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/api/local-commerce/health' || true)
             if [[ "$code" == '200' ]] && grep -Fq '"paymentAdapter":"disabled"' /tmp/local-commerce-api.json; then exit 0; fi
             sleep 5
           done
@@ -169,7 +169,7 @@ jobs:
           for attempt in $(seq 1 18); do
             root=$(curl -L -sS -D /tmp/local-commerce-headers -o /tmp/local-commerce.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/local-commerce' || true)
             health=$(curl -sS -o /tmp/local-commerce-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/local-commerce/health' || true)
-            api=$(curl -sS -o /tmp/local-commerce-api.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://api.ekodi.kr/api/local-commerce/health' || true)
+            api=$(curl -sS -o /tmp/local-commerce-api.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/api/local-commerce/health' || true)
             if [[ "$root" == '200' && "$health" == '200' && "$api" == '200' ]] \
               && grep -Fq '지역상권 지갑' /tmp/local-commerce.html \
               && grep -Fq '"cashCustody":false' /tmp/local-commerce-health.json \

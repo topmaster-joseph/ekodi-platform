@@ -11,7 +11,7 @@
     "config": "wrangler.api.toml",
     "requests": [
       {
-        "url": "https://api.ekodi.kr/api/public/preview/map?scope=ekodi&mode=platform",
+        "url": "https://ekodi.kr/api/public/preview/map?scope=ekodi&mode=platform",
         "statuses": [
           200
         ],
@@ -28,7 +28,7 @@
         ]
       },
       {
-        "url": "https://api.ekodi.kr/api/public/preview/map?scope=ekodibiz&mode=dev",
+        "url": "https://ekodi.kr/api/public/preview/map?scope=ekodibiz&mode=dev",
         "statuses": [
           200
         ],
@@ -40,7 +40,7 @@
         ]
       },
       {
-        "url": "https://api.ekodi.kr/health",
+        "url": "https://ekodi.kr/api/health",
         "statuses": [
           200
         ],
@@ -49,7 +49,7 @@
         ]
       },
       {
-        "url": "https://api.ekodi.kr/api/ai-modules/v1/providers/health",
+        "url": "https://ekodi.kr/api/ai-modules/v1/providers/health",
         "statuses": [
           200
         ],
@@ -65,7 +65,7 @@
         ]
       },
       {
-        "url": "https://api.ekodi.kr/operator",
+        "url": "https://ekodi.kr/api/operator",
         "statuses": [
           200
         ],
@@ -81,7 +81,7 @@
         ]
       },
       {
-        "url": "https://api.ekodi.kr/operator.js",
+        "url": "https://ekodi.kr/api/operator.js",
         "statuses": [
           200
         ],
@@ -97,7 +97,7 @@
         ]
       },
       {
-        "url": "https://api.ekodi.kr/api/status",
+        "url": "https://ekodi.kr/api/status",
         "statuses": [
           200
         ],
@@ -106,7 +106,7 @@
         ]
       },
       {
-        "url": "https://api.ekodi.kr/api/google/config",
+        "url": "https://ekodi.kr/api/google/config",
         "statuses": [
           200
         ],
@@ -139,7 +139,7 @@
         "rollbackVerify": false
       },
       {
-        "url": "https://api.ekodi.kr/api/books/public/config",
+        "url": "https://ekodi.kr/api/books/public/config",
         "statuses": [
           200
         ],
@@ -148,7 +148,7 @@
         ]
       },
       {
-        "url": "https://api.ekodi.kr/api/affiliate/public/products?storefront=ekodi-mall",
+        "url": "https://ekodi.kr/api/affiliate/public/products?storefront=ekodi-mall",
         "statuses": [
           200
         ],
@@ -163,7 +163,7 @@
         ]
       },
       {
-        "url": "https://api.ekodi.kr/api/affiliate/public/click/999999999?storefront=ekodi-mall",
+        "url": "https://ekodi.kr/api/affiliate/public/click/999999999?storefront=ekodi-mall",
         "statuses": [
           404
         ],
@@ -176,7 +176,7 @@
         ]
       },
       {
-        "url": "https://api.ekodi.kr/api/social/registry",
+        "url": "https://ekodi.kr/api/social/registry",
         "statuses": [
           200
         ],
@@ -186,7 +186,7 @@
         ]
       },
       {
-        "url": "https://api.ekodi.kr/api/control/social/registry",
+        "url": "https://ekodi.kr/api/control/social/registry",
         "statuses": [
           401
         ]
@@ -207,25 +207,25 @@
         ]
       },
       {
-        "url": "https://api.ekodi.kr/api/control/ai/governance",
+        "url": "https://ekodi.kr/api/control/ai/governance",
         "statuses": [
           401
         ]
       },
       {
-        "url": "https://api.ekodi.kr/api/control/ai/actions",
+        "url": "https://ekodi.kr/api/control/ai/actions",
         "statuses": [
           401
         ]
       },
       {
-        "url": "https://api.ekodi.kr/api/customers/tenants",
+        "url": "https://ekodi.kr/api/customers/tenants",
         "statuses": [
           401
         ]
       },
       {
-        "url": "https://api.ekodi.kr/api/customers/directory",
+        "url": "https://ekodi.kr/api/customers/directory",
         "statuses": [
           401
         ],
@@ -234,19 +234,19 @@
         ]
       },
       {
-        "url": "https://api.ekodi.kr/api/admin-access/google-accounts",
+        "url": "https://ekodi.kr/api/admin-access/google-accounts",
         "statuses": [
           401
         ]
       },
       {
-        "url": "https://api.ekodi.kr/api/books/admin/pipeline",
+        "url": "https://ekodi.kr/api/books/admin/pipeline",
         "statuses": [
           401
         ]
       },
       {
-        "url": "https://api.ekodi.kr/api/church/admin/reports",
+        "url": "https://ekodi.kr/api/church/admin/reports",
         "statuses": [
           401
         ],
@@ -259,7 +259,7 @@
         ]
       },
       {
-        "url": "https://api.ekodi.kr/api/community/admin/reports",
+        "url": "https://ekodi.kr/api/community/admin/reports",
         "statuses": [
           410
         ],

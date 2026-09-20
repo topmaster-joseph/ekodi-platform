@@ -2,7 +2,7 @@
   'use strict';
   const MODULE_ID = 'ekodiApiCostAdmin';
   const SECTION = 'api-cost';
-  const API = 'https://api.ekodi.kr';
+  const API = 'https://ekodi.kr';
   const TOKEN_KEY = 'ekodi-auth-token';
   if (document.getElementById(MODULE_ID)) return;
 

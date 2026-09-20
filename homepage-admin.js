@@ -1,4 +1,4 @@
-const API = 'https://api.ekodi.kr';
+const API = 'https://ekodi.kr';
 
 let servicesById = new Map();
 let servicesByDomain = new Map();

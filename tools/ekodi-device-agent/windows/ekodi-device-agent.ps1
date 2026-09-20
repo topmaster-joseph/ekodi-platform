@@ -255,11 +255,11 @@ function Get-NetworkDiagnostic {
     $connected = $adapters.Count
   } catch { $issues += 'adapter_query_failed' }
   try {
-    $addresses = [Net.Dns]::GetHostAddresses('api.ekodi.kr')
+    $addresses = [Net.Dns]::GetHostAddresses('ekodi.kr')
     $dnsOk = $addresses.Count -gt 0
   } catch { $issues += 'dns_failed' }
   try {
-    $apiReachable = [bool](Test-NetConnection -ComputerName 'api.ekodi.kr' -Port 443 -InformationLevel Quiet -WarningAction SilentlyContinue)
+    $apiReachable = [bool](Test-NetConnection -ComputerName 'ekodi.kr' -Port 443 -InformationLevel Quiet -WarningAction SilentlyContinue)
   } catch { $issues += 'api_connection_test_failed' }
   return @{
     checkedAt = (Get-Date).ToUniversalTime().ToString('o')

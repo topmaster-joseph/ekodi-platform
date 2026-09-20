@@ -1,5 +1,5 @@
 (() => {
-  const API = 'https://api.ekodi.kr/api/social/registry';
+  const API = 'https://ekodi.kr/api/social/registry';
   const HUB = 'https://social.ekodi.kr';
   const icons = { youtube:'▶', instagram:'◎', facebook:'f', kakao:'◇', blog:'N', threads:'@', live:'●', tiktok:'♪', linkedin:'in', other:'↗' };
   let targets = [...document.querySelectorAll('[data-ekodi-social-links]')];
