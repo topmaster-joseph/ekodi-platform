@@ -47,10 +47,13 @@ function runRestrictedTokenFallback(pr, { message = `Merge PR #${pr.number}: rel
   fs.writeFileSync(preloadPath, `
 const pr = JSON.parse(Buffer.from(process.env.EKODI_TEST_PR_B64, 'base64').toString('utf8'));
 globalThis.fetch = async (url, options = {}) => {
+  const target = String(url);
   const authorization = options.headers?.Authorization || options.headers?.authorization;
   if (authorization) return new Response('forbidden', { status: 403 });
-  if (String(url).includes('/pulls/' + pr.number)) return Response.json(pr);
-  return Response.json([pr]);
+  if (target.includes('/pulls/' + pr.number)) return Response.json(pr);
+  if (target.includes('/commits/') && target.endsWith('/pulls')) return new Response('forbidden', { status: 403 });
+  if (target.includes('/pulls?')) return Response.json([pr]);
+  return new Response('not found', { status: 404 });
 };
 `);
   const result = spawnSync(process.execPath, [validator, '--release'], {
@@ -144,6 +147,13 @@ test('falls back to public PR metadata when a restricted workflow token gets HTT
   const result = runRestrictedTokenFallback(validPr({ number: 1650 }));
   assert.equal(result.status, 0, result.stderr);
   assert.match(result.stderr, /without expanding token permissions/);
+  assert.match(result.stdout, /source=protected-main-pr-merge/);
+});
+
+test('falls back to recent closed PR metadata when commit association API is forbidden and squash title has no PR number', () => {
+  const result = runRestrictedTokenFallback(validPr({ number: 2117 }), { message: 'fix(release): trigger Shared Site deploy after final Admin postbuild' });
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stderr, /GitHub recent closed PR API authenticated lookup returned HTTP 403; verified public PR metadata without expanding token permissions/);
   assert.match(result.stdout, /source=protected-main-pr-merge/);
 });
 
