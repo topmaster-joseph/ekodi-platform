@@ -127,7 +127,14 @@ jobs:
             }')
 
           response=$(curl -fsS --retry 2 --retry-delay 1             -X POST "$EKODI_ORIGIN/api/control/ai/v8/pulse"             -H "Authorization: Bearer $E2E_ADMIN_TOKEN"             -H 'Content-Type: application/json'             --data "$payload")
-          echo "$response" | jq -e '.ok == true and .queued == true' >/dev/null
+          echo "$response" | jq -e --arg taskId "$task_id" '
+            .ok == true
+            and .queued == true
+            and .task.id == $taskId
+            and .execution.ok == true
+            and .execution.processed == 1
+            and .execution.results[0].taskId == $taskId
+          ' >/dev/null
 
           echo "TASK_ID=$task_id" >> "$GITHUB_ENV"
           echo "task_id=$task_id" >> "$GITHUB_OUTPUT"
