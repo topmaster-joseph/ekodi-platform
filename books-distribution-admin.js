@@ -1,5 +1,5 @@
 (() => {
-  const API = 'https://api.ekodi.kr';
+  const API = 'https://ekodi.kr';
   const STALE_DAYS = 14;
   const BOOK_LABELS = {
     not_started: '미등록',

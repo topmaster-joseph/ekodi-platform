@@ -1,5 +1,5 @@
 (() => {
-  const API = 'https://api.ekodi.kr';
+  const API = 'https://ekodi.kr';
   const ACCOUNT = 'coupang-ekodibiz';
   const MALL = 'https://ekodi.kr/ekodibiz/ekodimall';
   const TRACKING_URL = 'https://renzehysxirjilvdxacv.supabase.co/rest/v1/mall_sales_events';

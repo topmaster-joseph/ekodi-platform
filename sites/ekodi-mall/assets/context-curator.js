@@ -1,6 +1,6 @@
 (() => {
   'use strict';
-  const API = 'https://api.ekodi.kr/api/affiliate/public/products?storefront=ekodi-mall&limit=80';
+  const API = 'https://ekodi.kr/api/affiliate/public/products?storefront=ekodi-mall&limit=80';
   const form = document.querySelector('#contextForm');
   const input = document.querySelector('#contextInput');
   const results = document.querySelector('#contextResults');

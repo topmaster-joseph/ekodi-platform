@@ -9,7 +9,7 @@ const MANIFEST_URL=`${SHELL_ORIGIN}/manifest.json`;
 const THEME_URL=`${SHELL_ORIGIN}/theme.json`;
 const AUTH='https://ekodi.kr/auth/';
 const MY='https://ekodi.kr/my/';
-const TRAFFIC_TELEMETRY='https://api.ekodi.kr/api/telemetry/visit';
+const TRAFFIC_TELEMETRY='https://ekodi.kr/api/telemetry/visit';
 const explicitService=String(script?.dataset?.ekodiService||'').trim().toLowerCase();
 const hidden=script?.dataset?.ekodiShell==='off';
 const requestedSurface=normalizeSurface(script?.dataset?.ekodiSurface||'workspace');

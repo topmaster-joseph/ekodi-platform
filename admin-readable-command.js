@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const API = 'https://api.ekodi.kr';
+  const API = 'https://ekodi.kr';
   const TOKEN_KEY = 'ekodi-auth-token';
   const ACTION_RE = /(고쳐|복구|해결|수정|개선|구성|재구성|개편|단순화|정리|배치|옮겨|없애|제거|추가|바꿔|적용|만들어|줄여|늘려|처리|조치|fix|repair|update|improve|rebuild|reorganize|simplify)/i;
   const LAYOUT_RE = /(관리자|admin|화면|페이지|ui|ux|레이아웃|구성|배치|오른쪽|패널|화면속\s*화면|화면\s*속\s*화면|복잡|가독|폰트|글씨)/i;

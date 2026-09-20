@@ -1,5 +1,5 @@
 (() => {
-  const API = 'https://api.ekodi.kr';
+  const API = 'https://ekodi.kr';
   const ROLE_OPTIONS = [
     ['store_owner', '점주/책임자'],
     ['marketing_manager', '마케팅담당자'],

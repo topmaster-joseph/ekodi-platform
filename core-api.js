@@ -215,11 +215,14 @@ function coreStatus(env = {}) {
     apiVersion: CORE_API_VERSION,
     schemaVersion: 4,
     architecture: 'hybrid-cloud',
-    canonicalHosts: {
-      api: 'api.ekodi.kr',
-      admin: 'admin.ekodi.kr',
-      auth: 'auth.ekodi.kr',
+    canonicalHost: 'ekodi.kr',
+    canonicalPaths: {
+      api: '/api',
+      admin: '/admin',
+      auth: '/auth',
+      mcp: '/mcp',
     },
+    canonicalApiBase: 'https://ekodi.kr/api',
     principles: [
       'tenant-isolation',
       'provider-independence',

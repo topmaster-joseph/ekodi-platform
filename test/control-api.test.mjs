@@ -16,7 +16,7 @@ const [apiSource, aiOps, domains, buildScript, wranglerApi, entrySource, mission
 test('shared API preserves the existing health endpoint', async () => {
   const response = await apiWorker.fetch(new Request('https://api.example/health'), { ENVIRONMENT:'production', ALLOWED_ORIGINS:'https://admin.ekodi.kr' });
   assert.equal(response.status, 200);
-  assert.deepEqual(await response.json(), { ok:true, service:'ekodi-auth-api', version:4 });
+  assert.deepEqual(await response.json(), { ok:true, service:'ekodi-auth-api', version:4, canonicalApiBase:'https://ekodi.kr/api' });
 });
 
 test('control endpoints require the D1 operations store', async () => {
@@ -52,7 +52,8 @@ test('production build ships current operations surfaces', () => {
 
 test('Mission Control security wrapper preserves the ten-minute monitoring schedule', () => {
   assert.match(wranglerApi, /main = "mission-control-entry-worker\.js"/);
-  assert.match(wranglerApi, /pattern = "api\.ekodi\.kr"/);
+  assert.match(wranglerApi, /Public API is canonical at https:\/\/ekodi\.kr\/api/);
+  assert.doesNotMatch(wranglerApi, /pattern = "api\.ekodi\.kr"/);
   assert.match(wranglerApi, /crons = \["\*\/10 \* \* \* \*"\]/);
   assert.match(missionEntrySource, /customerEntryWorker\.scheduled/);
   assert.match(missionEntrySource, /applyApiSecurityHeaders/);

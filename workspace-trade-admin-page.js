@@ -24,10 +24,8 @@ function tradeAdminClient(ADMIN_HUB){
   function sectionHref(key){return key==='overview'?`${base}/overview`:`${base}/${key}`;}
   function commandRoutes(){const routes=[{id:'overview',label:'운영 홈',path:base+'/overview',keywords:['대시보드','홈']},{id:'companies',label:'거래회사',path:base+'/companies',keywords:['회사','거래관리']}];if(access?.can_manage_access)routes.push({id:'access',label:'사용자 · 관리자',path:base+'/access',keywords:['관리자','권한','사용자']});return routes}
   function mountCommandHome(){if(location.pathname.replace(/\/+$/,'')!==base)return false;window.EKODITenantCommandHome?.mount({rootPath:base,siteName:'에코디비즈 무역거래',publicPath:`/${workspaceUrlSlug}/trade`,routes:commandRoutes()});return true}
-  function renderSecondaryNav(group=section){
-    const sub=$('sectionNav');if(!sub)return;sub.replaceChildren();
-    const items=group==='access'?[['access','admins','관리자'],['access','roles','역할 · 권한']]:group==='companies'?[['companies','list','거래회사'],['companies','editor','등록 · 수정']]:group==='publishing'?[['publishing','channels','채널 · 게시']]:[['overview','scope','대시보드']];
-    items.forEach(([routeKey,anchor,label],index)=>{const a=document.createElement('a');a.href=`${sectionHref(routeKey)}#${anchor}`;a.textContent=label;if(routeKey===section&&index===0)a.classList.add('active');sub.append(a);});
+  function renderSecondaryNav(){
+    const sub=$('sectionNav');if(!sub)return;sub.replaceChildren();sub.hidden=true;
   }
   function setHeader(){
     $('workspaceName').textContent='에코디비즈';$('scopeLabel').textContent='에코디비즈';$('serviceName').textContent='무역거래 관리';

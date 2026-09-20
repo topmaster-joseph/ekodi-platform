@@ -1,4 +1,4 @@
-const API='https://api.ekodi.kr';
+const API='https://ekodi.kr';
 const parts=location.pathname.split('/').filter(Boolean);
 const slug=parts[0]==='store'&&parts[1]?decodeURIComponent(parts[1]):new URLSearchParams(location.search).get('store');
 const nameEl=document.querySelector('#storeName');

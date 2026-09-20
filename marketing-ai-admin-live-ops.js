@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const API = 'https://api.ekodi.kr';
+  const API = 'https://ekodi.kr';
   const LIVE_TABS = new Set(['campaigns','crm','channels','automation','approvals']);
   const CACHE_MS = 15_000;
   const WORKSPACE_LABELS = {

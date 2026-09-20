@@ -8,7 +8,7 @@ const USER_FOOTER_BOOTSTRAP=`window.__EKODI_USER_FOOTER_CONFIG__=${JSON.stringif
 const USER_EXPERIENCE_PROFILES_BOOTSTRAP=renderUserExperienceProfilesBootstrap();
 const LANGUAGE_REGISTRY_BOOTSTRAP=renderLanguageRegistryBootstrap();
 const CANONICAL_BUNDLED_SERVICE_URLS=Object.freeze([
-  Object.freeze(['https://api.ekodi.kr/api/i18n/v1','https://ekodi.kr/api/i18n/v1']),
+  Object.freeze(['https://ekodi.kr/api/i18n/v1','https://ekodi.kr/api/i18n/v1']),
   Object.freeze(['https://social.ekodi.kr/api/media/youtube/status','https://ekodi.kr/social/api/media/youtube/status']),
 ]);
 

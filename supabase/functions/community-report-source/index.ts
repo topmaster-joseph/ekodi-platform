@@ -4,7 +4,7 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const admin = createClient(SUPABASE_URL, SERVICE_ROLE, { auth: { persistSession: false } });
-const EKODI_SESSION_URL = Deno.env.get("EKODI_ADMIN_SESSION_URL") || "https://api.ekodi.kr/api/session";
+const EKODI_SESSION_URL = Deno.env.get("EKODI_ADMIN_SESSION_URL") || "https://ekodi.kr/api/session";
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const BODY_KEYS = [

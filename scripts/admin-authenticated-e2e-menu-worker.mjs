@@ -292,7 +292,7 @@ async function verifyPublicSiteControls(tab, alreadyActive, started) {
   await page.waitForFunction(() => typeof window.EKODIPublicSiteControls?.load === 'function', null, { timeout: 10_000 });
 
   stage('public-site-controls-api');
-  const response = await fetch('https://api.ekodi.kr/api/control/public-sites', {
+  const response = await fetch('https://ekodi.kr/api/control/public-sites', {
     headers: { accept: 'application/json', authorization: `Bearer ${token}`, origin: adminOrigin },
     signal: AbortSignal.timeout(10_000),
   });
@@ -328,7 +328,7 @@ async function verifyAiSettings(tab, alreadyActive, started) {
   if (!alreadyActive) await clickFast(tab);
   await page.waitForFunction(() => typeof window.EKODIAIManagement?.load === 'function', null, { timeout: 10_000 });
   stage('ai-settings-api');
-  const response = await fetch('https://api.ekodi.kr/api/control/ai/v8/collaboration-settings', {
+  const response = await fetch('https://ekodi.kr/api/control/ai/v8/collaboration-settings', {
     headers: { accept:'application/json', authorization:`Bearer ${token}`, origin:adminOrigin },
     signal: AbortSignal.timeout(10_000),
   });
@@ -367,7 +367,7 @@ async function verifyLanguageStatus(tab, alreadyActive, started) {
   if (!alreadyActive) await clickFast(tab);
   await page.waitForFunction(() => typeof window.EKODILanguageStatus?.load === 'function', null, { timeout: 10_000 });
   stage('language-status-api');
-  const response = await fetch('https://api.ekodi.kr/api/control/language-status', {
+  const response = await fetch('https://ekodi.kr/api/control/language-status', {
     headers: { accept:'application/json', authorization:`Bearer ${token}`, origin:adminOrigin },
     signal: AbortSignal.timeout(10_000),
   });
@@ -394,7 +394,7 @@ async function verifyLanguageStatus(tab, alreadyActive, started) {
 
 async function verifyMaturity(tab, alreadyActive, started) {
   stage('maturity-api');
-  const endpoint='https://api.ekodi.kr/api/control/platform-maturity';
+  const endpoint='https://ekodi.kr/api/control/platform-maturity';
   const response=await fetch(endpoint,{headers:{accept:'application/json',authorization:`Bearer ${token}`,origin:adminOrigin},signal:AbortSignal.timeout(10_000)});
   if(response.status!==200)throw new Error(`maturity: API returned HTTP ${response.status}`);
   const payload=await response.json().catch(()=>({}));

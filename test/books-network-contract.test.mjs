@@ -23,7 +23,8 @@ test('public storefront exposes only published titles', () => {
 });
 
 test('publishing studio keeps AI optional and uses shared control API', () => {
-  assert.match(studio, /https:\/\/api\.ekodi\.kr/);
+  assert.match(studio, /const API='https:\/\/ekodi\.kr'/);
+  assert.match(studio, /\/api\/books\/me/);
   assert.doesNotMatch(studio, /OPENAI|ANTHROPIC|GEMINI|api[_-]?key/i);
   assert.match(studio, /credentials:'include'/);
 });

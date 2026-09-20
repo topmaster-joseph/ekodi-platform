@@ -96,7 +96,9 @@ test('Creator browser exposes no server billing or Supabase service secrets', ()
 });
 
 test('Creator site and control plane route the isolated billing surface without dropping Marketing ledger', () => {
-  assert.match(worker, /https:\/\/api\.ekodi\.kr/);
+  assert.match(browser, /const API='https:\/\/ekodi\.kr'/);
+  assert.match(browser, /\/api\/author\/billing\//);
+  assert.match(worker, /connect-src 'self' https:\/\/ekodi\.kr/);
   assert.match(worker, /js\.tosspayments\.com/);
   assert.match(worker, /paidAiBilling: 'server-verified'/);
   assert.match(mission, /handleAuthorBillingControl/);

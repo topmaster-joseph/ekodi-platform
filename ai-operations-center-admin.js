@@ -2,7 +2,7 @@
   'use strict';
   if (window.EKODIAIOperationsCenter) return;
 
-  const API = 'https://api.ekodi.kr';
+  const API = 'https://ekodi.kr';
   const TOKEN_KEY = 'ekodi-auth-token';
   const ROOT_ID = 'aiOperationsCenter';
   const TABS = [

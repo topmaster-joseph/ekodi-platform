@@ -83,7 +83,8 @@ test('Homepage controls share the same Campus row and remain responsive', () => 
 test('public site Open links never inherit monitor-only health endpoints', () => {
   assert.match(js, /function publicServiceUrl/);
   assert.match(js, /function normalizeServiceOpenLinks/);
-  assert.match(js, /domain === 'api\.ekodi\.kr'/);
+  assert.match(js, /domain === 'ekodi\.kr'/);
+  assert.match(js, /currentPath\.startsWith\('\/api'\)/);
   assert.match(js, /open\.href = publicUrl/);
   assert.match(js, /serviceControlGrid/);
 });

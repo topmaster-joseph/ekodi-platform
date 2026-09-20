@@ -15,7 +15,7 @@ DATA_MODE = "production"
 SUPABASE_URL = "https://renzehysxirjilvdxacv.supabase.co"
 SUPABASE_PUBLISHABLE_KEY = "sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_"
 AUTH_URL = "https://ekodi.kr/auth/?site=life"
-CORE_API_URL = "https://api.ekodi.kr"
+CORE_API_URL = "https://ekodi.kr"
 
 [assets]
 directory = "./life"

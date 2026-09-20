@@ -368,6 +368,30 @@ async function providerCall(env,path,{method='POST',payload}={}){
   if(!response.ok||data?.errorCode)throw Object.assign(new Error(data?.errorDescription||data?.errorCode||`realtime_provider_${response.status}`),{status:502,providerStatus:response.status});
   return data;
 }
+async function recoverStaleLiveRoom(env,row){
+  if(!row||row.status!=='live'||!env.DB)return row;
+  const updatedAt=Date.parse(String(row.updated_at||row.created_at||''));
+  if(!Number.isFinite(updatedAt)||Date.now()-updatedAt<30*60*1000)return row;
+  const sessions=await env.DB.prepare(`SELECT id,provider_session_id FROM realtime_media_sessions WHERE room_id=? AND role IN ('owner','cohost','presenter') AND status='active' ORDER BY updated_at DESC`).bind(row.id).all().catch(()=>({results:[]}));
+  let uncertain=false,active=false;
+  for(const session of sessions.results||[]){
+    const providerId=clean(session?.provider_session_id,160);if(!providerId)continue;
+    try{
+      const state=await providerCall(env,`/sessions/${encodeURIComponent(providerId)}`,{method:'GET'});
+      if((state?.tracks||[]).some(track=>track?.location==='local'&&track?.status==='active')){active=true;break;}
+    }catch(error){
+      if(Number(error?.providerStatus)===404)continue;
+      uncertain=true;break;
+    }
+  }
+  if(active||uncertain)return row;
+  const stamp=new Date().toISOString();
+  await env.DB.prepare(`UPDATE realtime_rooms SET status='ended',updated_at=?,ended_at=COALESCE(ended_at,?) WHERE id=? AND status='live'`).bind(stamp,stamp,row.id).run();
+  await env.DB.prepare(`UPDATE realtime_media_sessions SET status='closed',updated_at=? WHERE room_id=? AND status='active'`).bind(stamp,row.id).run().catch(()=>{});
+  await env.DB.prepare(`UPDATE realtime_media_tracks SET status='closed',updated_at=? WHERE room_id=? AND status='active'`).bind(stamp,row.id).run().catch(()=>{});
+  return await roomById(env,row.id);
+}
+
 async function publicRoutes(request,env,url){
   if(request.method!=='GET')return null;
   if(url.pathname===`${PREFIX}/health`){
@@ -380,8 +404,10 @@ async function publicRoutes(request,env,url){
     const tenant=config.apiTenant;
     const aliases=[config.apiTenant,config.id,...config.aliases];
     const placeholders=aliases.map(()=>'?').join(',');
-    const row=await env.DB.prepare(`SELECT * FROM realtime_rooms WHERE tenant_id IN (${placeholders}) AND status='live' ORDER BY updated_at DESC LIMIT 1`).bind(...aliases).first();
-    return json(request,env,{ok:true,tenant,canonicalTenant:config.id,live:Boolean(row),room:safeRoom(row)});
+    let row=await env.DB.prepare(`SELECT * FROM realtime_rooms WHERE tenant_id IN (${placeholders}) AND status='live' ORDER BY updated_at DESC LIMIT 1`).bind(...aliases).first();
+    if(row)row=await recoverStaleLiveRoom(env,row);
+    const live=row?.status==='live';
+    return json(request,env,{ok:true,tenant,canonicalTenant:config.id,live,room:live?safeRoom(row):null});
   }
   const match=url.pathname.match(/^\/api\/realtime\/rooms\/([^/]+)$/);
   if(match){

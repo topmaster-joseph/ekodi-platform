@@ -1,5 +1,5 @@
 (() => {
-  const API = 'https://api.ekodi.kr';
+  const API = 'https://ekodi.kr';
   const TYPE_LABELS = {
     sale: '판매',
     refund: '환불',

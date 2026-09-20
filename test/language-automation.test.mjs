@@ -44,12 +44,12 @@ test('automation probes only public non-planned user content',()=>{
 });
 
 test('public readiness endpoint exposes only published locales without mutation access',async()=>{
-  const response=await handleLanguageAutomationPublic(new Request('https://api.ekodi.kr/api/i18n/v1/status?service=community'),{});
+  const response=await handleLanguageAutomationPublic(new Request('https://ekodi.kr/api/i18n/v1/status?service=community'),{});
   assert.equal(response.status,200);
   const data=await response.json();
   assert.deepEqual(data.publishedLocales,['ko-KR']);
   assert.equal(data.languages.find(item=>item.locale==='en')?.public,false);
-  const blocked=await handleLanguageAutomationPublic(new Request('https://api.ekodi.kr/api/i18n/v1/status?service=community',{method:'POST'}),{});
+  const blocked=await handleLanguageAutomationPublic(new Request('https://ekodi.kr/api/i18n/v1/status?service=community',{method:'POST'}),{});
   assert.equal(blocked.status,405);
 });
 test('publication control uses an idempotent side table so partially applied legacy columns cannot block staging',async()=>{

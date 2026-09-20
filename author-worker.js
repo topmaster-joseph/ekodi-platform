@@ -4,7 +4,7 @@ const CSP = [
   "default-src 'self'",
   "style-src 'self'",
   "script-src 'self' https://cdn.jsdelivr.net https://js.tosspayments.com",
-  "connect-src 'self' https://api.ekodi.kr https://renzehysxirjilvdxacv.supabase.co wss://renzehysxirjilvdxacv.supabase.co https://cdn.jsdelivr.net https://*.tosspayments.com",
+  "connect-src 'self' https://ekodi.kr https://renzehysxirjilvdxacv.supabase.co wss://renzehysxirjilvdxacv.supabase.co https://cdn.jsdelivr.net https://*.tosspayments.com",
   "img-src 'self' data: blob:",
   "font-src 'self'",
   "frame-src https://*.tosspayments.com",

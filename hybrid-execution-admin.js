@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const API_BASE = 'https://api.ekodi.kr';
+  const API_BASE = 'https://ekodi.kr';
   const TOKEN_KEY = 'ekodi-auth-token';
   const ENGINE_MARKER = 'EKODI HYBRID EXECUTION';
   const HYBRID_REFRESH_MS = 30 * 1000;

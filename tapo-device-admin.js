@@ -1,6 +1,6 @@
 (() => {
   'use strict';
-  const API_BASE='https://api.ekodi.kr';
+  const API_BASE='https://ekodi.kr';
   const TOKEN_KEY='ekodi-auth-token';
   const BRIDGE_URL='https://raw.githubusercontent.com/topmaster-joseph/ekodi-platform/main/tools/ekodi-device-agent/tapo/index.mjs';
   if(!document.querySelector('link[data-tapo-device-admin-style]')){const l=document.createElement('link');l.rel='stylesheet';l.href='tapo-device-admin.css';l.dataset.tapoDeviceAdminStyle='true';document.head.append(l);}

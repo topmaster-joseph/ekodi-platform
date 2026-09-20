@@ -14,7 +14,7 @@
         "url": "https://ekodi.kr/community/social-links.js",
         "statuses": [200],
         "redirect": "follow",
-        "expect": ["api.ekodi.kr/api/social/registry"]
+        "expect": ["ekodi.kr/api/social/registry"]
       },
       {
         "url": "https://ekodi.kr/community/health",

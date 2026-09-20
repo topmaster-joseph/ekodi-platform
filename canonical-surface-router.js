@@ -1,5 +1,5 @@
 import { handleMailContactApi, mailContactPage } from './mail-contact.js';
-import { injectEkodiShell } from './ekodi-shell-injector.js';
+import { injectEkodiShell, injectEkodiTenantReadability } from './ekodi-shell-injector.js';
 
 const CANONICAL_HOST='ekodi.kr';
 const SURFACE_PREFIXES=Object.freeze({my:'/my',admin:'/admin',auth:'/auth'});
@@ -44,7 +44,7 @@ const PUBLIC_EXECUTION_SURFACES=Object.freeze([
 ]);
 const legacyEkodiHost=label=>`${label}.${CANONICAL_HOST}`;
 const CANONICAL_HOST_PATHS=Object.freeze({
-  [legacyEkodiHost('admin')]:'/admin',[legacyEkodiHost('api')]:'/api',[legacyEkodiHost('my')]:'/my',
+  [legacyEkodiHost('admin')]:'/admin',[legacyEkodiHost('my')]:'/my',
   'ai.ekodi.kr':'/ai','author.ekodi.kr':'/author','bible.ekodi.kr':'/bible',
   'books.ekodi.kr':'/books','business.ekodi.kr':'/business','community.ekodi.kr':'/community','edu.ekodi.kr':'/education',
   'energy.ekodi.kr':'/energy','exp.ekodi.kr':'/experience','try.ekodi.kr':'/experience','dev.ekodi.kr':'/developer',
@@ -306,7 +306,7 @@ async function proxyExecutionSurface(request,env,spec,legacyFetch,externalFetch)
       'x-robots-tag':'noindex, nofollow, noarchive',
     }});
   }
-  const executionSurface=executionSurfaceForPath(path);if(executionSurface)return proxyExecutionSurface(request,env,executionSurface,legacyFetch,externalFetch);
+  const executionSurface=executionSurfaceForPath(path);if(executionSurface){const response=await proxyExecutionSurface(request,env,executionSurface,legacyFetch,externalFetch);return executionSurface.id==='lab'?injectEkodiTenantReadability(response):response;}
   if(path===SURFACE_PREFIXES.my)return canonicalSlashRedirect(request,SURFACE_PREFIXES.my);
   if(path.startsWith(`${SURFACE_PREFIXES.my}/`))return proxyBinding(request,env?.MY,SURFACE_PREFIXES.my,'my');
   if(path===SURFACE_PREFIXES.auth)return canonicalSlashRedirect(request,SURFACE_PREFIXES.auth);

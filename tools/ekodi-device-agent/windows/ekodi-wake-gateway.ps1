@@ -2,7 +2,7 @@ param(
   [switch]$Install,
   [switch]$Run,
   [string]$EnrollmentCode = '',
-  [string]$ApiBase = 'https://api.ekodi.kr',
+  [string]$ApiBase = 'https://ekodi.kr',
   [string]$Label = ''
 )
 
@@ -12,7 +12,7 @@ $Root = Join-Path $env:ProgramData 'EKODI\WakeGateway'
 $ScriptPath = Join-Path $Root 'ekodi-wake-gateway.ps1'
 $ConfigPath = Join-Path $Root 'config.json'
 $TaskName = 'EKODI Wake Gateway'
-$AllowedApiBase = 'https://api.ekodi.kr'
+$AllowedApiBase = 'https://ekodi.kr'
 
 function Test-IsAdministrator {
   $identity = [Security.Principal.WindowsIdentity]::GetCurrent()

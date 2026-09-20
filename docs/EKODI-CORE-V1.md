@@ -12,7 +12,7 @@ Cloudflare, Supabase, external AI providers, object storage and future worker se
 
 The existing control plane remains the starting point:
 
-- `api.ekodi.kr` / `control-api`: shared control and data API layer
+- `ekodi.kr/api` / `control-api`: shared control and data API layer
 - `admin.ekodi.kr`: private control plane UI
 - `auth.ekodi.kr`: shared authentication entry
 - `ekodi-auth` D1: current shared control-plane database
@@ -32,7 +32,7 @@ EKODI sites and apps
   EKODI service contracts
         |
         v
- api.ekodi.kr / EKODI Core
+ ekodi.kr/api / EKODI Core
         |
         +---- D1 control-plane namespaces
         +---- Supabase/Postgres platform-owned namespaces
@@ -63,7 +63,7 @@ EKODI sites and apps
 
 ### Phase B: Shared API normalization
 
-- Introduce stable versioned Core service contracts under `api.ekodi.kr` as runtime changes are needed.
+- Introduce stable versioned Core service contracts under `ekodi.kr/api` as runtime changes are needed.
 - Route organization, membership, authorization, audit, shared files and provider adapters through those contracts.
 - Migrate direct cross-platform reads into explicit APIs incrementally.
 

@@ -16,7 +16,7 @@ EKODI service authenticates user + Space + Role + Capability
 registered EKODI internal caller
    |
    v
-api.ekodi.kr/api/ai-modules/v1/execute
+ekodi.kr/api/ai-modules/v1/execute
    |
    v
 EKODI AI Module Gateway

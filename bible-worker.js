@@ -3,7 +3,7 @@ import { bibleCorePolicy, bibleProviderCatalog, readBiblePassage, readBibleRefer
 
 const MAX_MESSAGE = 4000;
 const MAX_HISTORY = 8;
-const USER_AI_URL = 'https://api.ekodi.kr/api/user-ai/assist';
+const USER_AI_URL = 'https://ekodi.kr/api/user-ai/assist';
 const CANONICAL_HOST = 'ekodi.kr';
 const CANONICAL_PREFIX = '/bible';
 const LEGACY_HOST = 'bible.ekodi.kr';

@@ -338,7 +338,7 @@ jobs:
         run: |
           set -euo pipefail
           for attempt in $(seq 1 18); do
-            code=$(curl -sS -o /tmp/inbox -w '%{http_code}' --connect-timeout 5 --max-time 15 https://api.ekodi.kr/api/control/messenger/inbox || true)
+            code=$(curl -sS -o /tmp/inbox -w '%{http_code}' --connect-timeout 5 --max-time 15 https://ekodi.kr/api/control/messenger/inbox || true)
             if [ "$code" = '401' ]; then
               echo "Production Operator boundary verified at attempt=$attempt."
               exit 0

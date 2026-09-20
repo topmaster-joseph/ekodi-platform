@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const API = 'https://api.ekodi.kr';
+  const API = 'https://ekodi.kr';
   const TOKEN_KEY = 'ekodi-auth-token';
   const START_KEY = 'ekodi-governance-cockpit-started-v1';
   const OVERVIEW_TTL_MS = 5 * 60 * 1000;
