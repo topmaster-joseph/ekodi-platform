@@ -31,7 +31,7 @@ The Storage Gateway does not introduce a second Google credential system.
 EKODI service / external AI module
           |
           v
-api.ekodi.kr
+ekodi.kr/api
           |
           v
 EKODI Storage Gateway
@@ -50,7 +50,7 @@ Google OAuth credentials stay inside the `drive.ekodi.kr` Worker. External modul
 
 ## API
 
-Canonical facade: `https://api.ekodi.kr/api/storage/v1`
+Canonical facade: `https://ekodi.kr/api/storage/v1`
 
 Storage-control implementation: `https://drive.ekodi.kr/api/storage/v1`
 
@@ -89,7 +89,7 @@ Google secrets are configured only on the Storage Worker and continue to use the
 - `STORAGE_CREDENTIAL_KEY`
 - encrypted refresh token in `storage_connections`
 
-`api.ekodi.kr` does **not** need Google Drive credentials. It needs only the service-to-service `EKODI_STORAGE_GATEWAY_KEY` when server-side durable writes are enabled. The same gateway key is configured on the Storage Worker to validate those calls.
+`ekodi.kr/api` does **not** need Google Drive credentials. It needs only the service-to-service `EKODI_STORAGE_GATEWAY_KEY` when server-side durable writes are enabled. The same gateway key is configured on the Storage Worker to validate those calls.
 
 Secrets are never committed to GitHub.
 
@@ -111,7 +111,7 @@ external AI -> privileged R2 credentials
 second/parallel Google credential system -> canonical Drive
 ```
 
-The permitted durable write pattern is contract-based access through `api.ekodi.kr`, with Google access terminating inside `drive.ekodi.kr`.
+The permitted durable write pattern is contract-based access through `ekodi.kr/api`, with Google access terminating inside `drive.ekodi.kr`.
 
 ## Definition of done
 
