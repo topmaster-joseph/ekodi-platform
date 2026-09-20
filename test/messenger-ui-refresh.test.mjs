@@ -59,7 +59,8 @@ test('production configs keep friendly Messenger entry without overriding canoni
   ]);
   assert.match(prod,/main = "platform-router-entry-worker\.js"/);
   assert.match(staging,/main = "platform-router-entry-worker\.js"/);
-  assert.match(api,/https:\/\/api\.ekodi\.kr/);
+  assert.match(api,/https:\/\/ekodi\.kr\/api/);
+  assert.doesNotMatch(api,/pattern = "api\.ekodi\.kr"/);
   assert.match(mission,/handleMessengerOperatorPage/);
   assert.doesNotMatch(mission,/handleSameOriginOperatorGoogleAuth/);
   assert.doesNotMatch(mission,/https:\/\/admin\.ekodi\.kr/);
