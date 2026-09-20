@@ -1,8 +1,9 @@
-import { appendFile, copyFile, readFile } from 'node:fs/promises';
+import { appendFile, copyFile, mkdir, readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const output = fileURLToPath(new URL('../dist/', import.meta.url));
+const adminMirror = `${output}admin/`;
 const [baseCss, principlesCss, css, js] = await Promise.all([
   readFile(`${root}admin-readability-base.css`, 'utf8'),
   readFile(`${root}admin-ui-principles.css`, 'utf8'),
@@ -70,12 +71,17 @@ const assistAssets = [
   'admin-assist-dock.css',
   'admin-ai-control-plane.js',
 ];
+await mkdir(adminMirror, { recursive: true });
+
 await Promise.all([
   appendFile(`${output}admin-shell.css`, `\n/* admin-readability-base.css */\n${baseCss}\n`),
   appendFile(`${output}marketing-ai-admin.css`, `\n/* admin-ui-principles.css */\n${principlesCss}\n`),
   appendFile(`${output}ai-ops-admin.css`, `\n/* admin-readable-command.css */\n${css}\n`),
   appendFile(`${output}admin-lazy-features.js`, `\n/* admin-readable-command.js */\n${js}\n`),
-  ...assistAssets.map(asset => copyFile(`${root}${asset}`, `${output}${asset}`)),
+  ...assistAssets.flatMap(asset => [
+    copyFile(`${root}${asset}`, `${output}${asset}`),
+    copyFile(`${root}${asset}`, `${adminMirror}${asset}`),
+  ]),
 ]);
 
 console.log(`Applied Admin readability/orchestration and published lazy Assist runtime assets: ${assistAssets.join(', ')}`);
