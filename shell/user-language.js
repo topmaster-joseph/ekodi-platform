@@ -278,7 +278,7 @@ function isAccountLink(link){
   const label=String(link.textContent||'').trim().toLowerCase();
   const classes=String(link.className||'').toLowerCase();
   return classes.includes('shell-my')||classes.includes('login')||classes.includes('account')||
-    href.includes('my.ekodi.kr')||href.includes('auth.ekodi.kr')||href.includes('/login')||href.includes('/signin')||href.includes('/signup')||
+    href.includes('my.ekodi.kr')||href.includes('ekodi.kr/auth')||href.includes('/login')||href.includes('/signin')||href.includes('/signup')||
     /^(my ekodi|login|log in|sign in|로그인|회원가입|내 공간|마이)/i.test(label);
 }
 function actionContainer(target){
