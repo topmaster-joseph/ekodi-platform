@@ -21,7 +21,7 @@ function save(){localStorage.setItem(STORAGE_KEY,JSON.stringify(state));renderAl
 function makeId(){return crypto.randomUUID?.()||`${Date.now()}-${Math.random().toString(16).slice(2)}`}
 function isHttps(value){try{return new URL(value).protocol==='https:'}catch{return false}}
 function safeText(value,max=180){return String(value||'').replace(/[<>]/g,'').trim().slice(0,max)}
-function authUrl(returnTo=location.href){const u=new URL(cfg.authUrl||'https://auth.ekodi.kr/?site=edu');u.searchParams.set('site','edu');u.searchParams.set('return_to',returnTo.split('#')[0]);return u.href}
+function authUrl(returnTo=location.href){const u=new URL(cfg.authUrl||'https://ekodi.kr/auth/?site=edu');u.searchParams.set('site','edu');u.searchParams.set('return_to',returnTo.split('#')[0]);return u.href}
 async function handoff(){
   if(!sb||!location.hash.startsWith('#'))return;
   const params=new URLSearchParams(location.hash.slice(1));
