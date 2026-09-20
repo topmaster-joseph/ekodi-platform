@@ -58,6 +58,7 @@ expect(collectorWorkflow.includes('SUPABASE_TOKEN'),'resource collector must acc
 expect(collectorWorkflow.includes('SUPABASE_PAT'),'resource collector must accept the existing Supabase PAT fallback');
 expect(collectorWorkflow.includes('SUPABASE_MANAGEMENT_TOKEN'),'resource collector must accept the existing Supabase management-token fallback');
 expect(collectorWorkflow.includes('SUPABASE_ACCESS_TOKEN=$token'),'resource collector must normalize the selected Supabase credential before collection');
+expect(collectorWorkflow.includes('environment: production'),'resource collector must run inside the production credential boundary');
 expect(collector.includes('/database/query'),'Supabase database usage must come from an authorized read-only database query');
 expect(collector.includes('/actions/cache/usage'),'GitHub cache usage must come from the official repository usage endpoint');
 expect(collector.includes('/actions/artifacts?'),'GitHub artifact usage must come from the official repository artifact endpoint');
