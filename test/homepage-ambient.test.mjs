@@ -4,6 +4,8 @@ import { readFile } from 'node:fs/promises';
 
 const css = await readFile(new URL('../homepage-ambient.css', import.meta.url), 'utf8');
 const js = await readFile(new URL('../homepage-ambient.js', import.meta.url), 'utf8');
+const showcase = await readFile(new URL('../homepage-showcase.css', import.meta.url), 'utf8');
+const identity = await readFile(new URL('../homepage-identity.js', import.meta.url), 'utf8');
 const build = await readFile(new URL('../scripts/build.mjs', import.meta.url), 'utf8');
 const deploySiteCore = await readFile(new URL('../.github/workflows/deploy-site-core.yml', import.meta.url), 'utf8');
 
@@ -23,16 +25,19 @@ test('homepage keeps a translucent daily Seoul-date ambient scene', () => {
   assert.match(deploySiteCore, /npm run build/);
 });
 
-test('public homepage leads with a calm personalized first view', () => {
+test('public homepage leads with a character-led identity hub', () => {
   assert.match(js, /원하는 일, 바로 시작하세요/);
   assert.match(js, /function buildDynamicVisual/);
   assert.match(js, /function buildQuickLaunch/);
   assert.match(js, /ekodi\.home\.recentServices\.v1/);
-  assert.match(js, /dataset\.livingGateway = 'v7-calm-personal'/);
+  assert.match(js, /dataset\.livingGateway = 'v8-character-hub'/);
   assert.match(js, /selected\.length>=4/);
-  assert.match(css, /EKODI calm personalized landing v7/);
-  assert.match(css, /v7-calm-personal/);
-  assert.match(css, /#ecosystem:has\(#services:target\)/);
+  assert.match(showcase, /EKODI root character hub v8/);
+  assert.match(showcase, /v8-character-hub/);
+  assert.match(showcase, /character-world/);
+  assert.match(showcase, /#ecosystem:has\(#services:target\)/);
+  assert.match(identity, /dataset\.ekodiIdentity/);
+  assert.doesNotMatch(identity, /\/my\//);
 });
 
 test('quick launch respects homepage presentation and links only to verified live launch choices', () => {
@@ -69,6 +74,8 @@ test('ambient layer stays visible above the body background and below content', 
 test('ambient assets are shipped and injected into the EKODI homepage build', () => {
   assert.match(build, /'homepage-ambient\.css'/);
   assert.match(build, /'homepage-ambient\.js'/);
+  assert.match(build, /'homepage-showcase\.css'/);
+  assert.match(build, /'homepage-identity\.js'/);
   assert.match(build, /href="\/homepage-ambient\.css"/);
   assert.match(build, /src="\/homepage-ambient\.js"/);
 });
