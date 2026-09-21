@@ -1,4 +1,4 @@
-function clientMain(){{
+function clientMain(){
   const SUPABASE_URL='https://renzehysxirjilvdxacv.supabase.co';
   const SUPABASE_KEY='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
   const SESSION_KEY='ekodi-region-admin-session';
