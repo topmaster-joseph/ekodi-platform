@@ -36,6 +36,7 @@
     'ai-module-spec':{label:'A',icon:'A',styles:['ai-module-spec-admin.css'],scripts:['ai-module-spec-admin.js'],real:'[data-section="ai-module-spec"]',hashes:['#ai-module-spec']},
     'life-ai':{label:'인생AI',icon:'Q',styles:['life-ai-admin.css'],scripts:['life-ai-admin.js'],real:'[data-section="life-ai"]',hashes:['#life-ai'],insert:'after-aiops'},
     'personal-finance':{label:'개인재무',icon:'₩',styles:['personal-finance-admin.css'],scripts:['personal-finance-admin.js'],real:'[data-section="personal-finance"]',hashes:['#personal-finance'],insert:'after-aiops'},
+    confirmations:{scripts:['confirmation-admin.js'],real:'[data-section="confirmations"]'},
     aimembers: {
       label: 'AI 회원운영', icon: '◈',
       styles: ['ai-ops-admin.css'],
@@ -156,7 +157,7 @@
       if (nav) observer.observe(nav, { childList:true, subtree:true });
       const content = document.querySelector('.content');
       if (content) observer.observe(content, { childList:true, subtree:true });
-      const timer = window.setTimeout(() => finish(null, new Error('관리 메뉴 준비 시간이 초과되었습니다.')), timeout);
+      const timer = window.setTimeout(() => finish(null, new Error('menu timeout')), timeout);
     });
   }
 
@@ -258,7 +259,7 @@
           placeholder.disabled = false;
           placeholder.removeAttribute('aria-busy');
           placeholder.classList.remove('is-loading');
-          placeholder.title = '다시 눌러 로드';
+          placeholder.title = '다시 시도';
         }
       } finally {
         pending.delete(key);

@@ -4,7 +4,7 @@ const SECTION_GROUP=Object.freeze({
   campus:'home',
   work:'operations',communication:'operations',finance:'operations',tax:'operations',
   clients:'workspaces','site-chrome':'workspaces',organization:'workspaces',workspace:'workspaces','cheonggye-members':'workspaces',
-  'common-services':'services','life-ai':'services','personal-finance':'services',invest:'services',social:'services','marketing-ai':'services',affiliates:'services','supply-network':'services',insurance:'services',
+  'common-services':'services',confirmations:'services','life-ai':'services','personal-finance':'services',invest:'services',social:'services','marketing-ai':'services',affiliates:'services','supply-network':'services',insurance:'services',
   community:'community','ai-membership':'community',
   books:'publishing',devotional:'publishing',
   'public-site-controls':'system','language-status':'system',architecture:'system',maturity:'system',security:'system',admins:'system','ai-module-spec':'system',storage:'system',capabilities:'system',aiops:'system','ai-settings':'system',openai:'system',devices:'system',health:'system','api-cost':'system',services:'system',deployments:'system',policies:'system',

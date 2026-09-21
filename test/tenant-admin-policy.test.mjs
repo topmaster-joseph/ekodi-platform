@@ -27,15 +27,17 @@ test('tenant admin constitution keeps one page and projects authority by capabil
 
 test('workspace admin projects root and mall sections from tenant-local capabilities',async()=>{
   assert.deepEqual(workspaceAdminSectionsForRole('marketing_manager'),['overview','mall','publishing','marketing']);
-  assert.deepEqual(workspaceAdminSectionsForRole('accounting_manager'),['overview','mall','finance']);
+  assert.deepEqual(workspaceAdminSectionsForRole('accounting_manager'),['overview','mall','finance','confirmations']);
   assert.deepEqual(workspaceAdminSectionsForRole('client_viewer'),['overview','mall']);
   assert.deepEqual(workspaceAdminSectionsForRole('marketing_manager','mall'),['overview','sales','marketing','channels','automation','growth','analytics']);
-  assert.deepEqual(workspaceAdminSectionsForRole('manager','mall'),['languages','overview','sales','products','sourcing','marketing','channels','automation','growth','analytics']);
+  assert.deepEqual(workspaceAdminSectionsForRole('manager','mall'),['languages','overview','sales','products','sourcing','marketing','channels','automation','growth','analytics','confirmations']);
   assert.equal(workspaceAdminCanAccess('manager','languages','mall'),true);
   assert.equal(workspaceAdminCanAccess('workspace_admin','languages'),true);
   assert.equal(workspaceAdminCanAccess('marketing_manager','sourcing','mall'),false);
   assert.equal(workspaceAdminCanAccess('manager','sourcing','mall'),true);
-  assert.deepEqual(workspaceAdminSectionsForRole('accounting_manager','mall'),['overview','sales','analytics']);
+  assert.deepEqual(workspaceAdminSectionsForRole('accounting_manager','mall'),['overview','sales','analytics','confirmations']);
+  assert.equal(workspaceAdminCanAccess('manager','confirmations'),true);
+  assert.equal(workspaceAdminCanAccess('marketing_manager','confirmations'),false);
   assert.equal(workspaceAdminCanAccess('manager','members'),false);
   assert.equal(workspaceAdminCanAccess('workspace_admin','members'),true);
   assert.equal(workspaceAdminCanAccess('member','overview'),false);

@@ -17,7 +17,7 @@ test('Admin uses a seven-area primary sidebar with contextual top navigation', a
     "home: ['command-home', 'campus']",
     "operations: ['work', 'communication', 'finance', 'tax']",
     "workspaces: ['clients', 'organization', 'workspace', 'cmpmyi', 'site-chrome']",
-    "services: ['common-services', 'marketing-ai', 'social', 'life-ai']",
+    "services: ['common-services', 'confirmations', 'marketing-ai', 'social', 'life-ai']",
     "community: ['community', 'ai-membership']",
     "publishing: ['books', 'devotional']",
     "system: ['health', 'aiops', 'devices', 'security', 'admins', 'api-cost']",
