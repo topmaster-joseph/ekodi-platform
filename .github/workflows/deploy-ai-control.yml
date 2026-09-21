@@ -295,9 +295,11 @@ jobs:
             status_code=$(curl -sS -o /tmp/ai-local-status.json -w '%{http_code}' --connect-timeout 2 --max-time 5 http://127.0.0.1:8787/api/status || true)
             services_code=$(curl -sS -o /tmp/ai-local-services.json -w '%{http_code}' --connect-timeout 2 --max-time 5 http://127.0.0.1:8787/api/commons/services || true)
             client_code=$(curl -sS -D /tmp/ai-local-client-headers.txt -o /tmp/ai-local-client.txt -w '%{http_code}' --connect-timeout 2 --max-time 5 http://127.0.0.1:8787/api/commons/client || true)
+            interpreter_code=$(curl -sS -D /tmp/ai-local-interpreter-headers.txt -o /tmp/ai-local-interpreter.html -w '%{http_code}' --connect-timeout 2 --max-time 5 http://127.0.0.1:8787/interpreter/ || true)
+            interpreter_client_code=$(curl -sS -D /tmp/ai-local-interpreter-client-headers.txt -o /tmp/ai-local-interpreter.js -w '%{http_code}' --connect-timeout 2 --max-time 5 http://127.0.0.1:8787/api/interpreter/client || true)
             capabilities_code=$(curl -sS -o /tmp/ai-local-capabilities.json -w '%{http_code}' --connect-timeout 2 --max-time 5 http://127.0.0.1:8787/api/commons/capabilities || true)
             ideas_code=$(curl -sS -o /tmp/ai-local-ideas.json -w '%{http_code}' --connect-timeout 2 --max-time 5 http://127.0.0.1:8787/api/commons/ideas || true)
-            if [[ "$root_code" == "200" && "$config_code" == "410" && "$exchange_code" == "410" && "$health_code" == "200" && "$status_code" == "401" && "$services_code" == "200" && "$client_code" == "200" && "$capabilities_code" == "410" && "$ideas_code" == "401" ]] \
+            if [[ "$root_code" == "200" && "$config_code" == "410" && "$exchange_code" == "410" && "$health_code" == "200" && "$status_code" == "401" && "$services_code" == "200" && "$client_code" == "200" && "$interpreter_code" == "200" && "$interpreter_client_code" == "200" && "$capabilities_code" == "410" && "$ideas_code" == "401" ]] \
               && grep -Fq 'EKODI 모두의 AI 프로젝트' /tmp/ai-local-root-body.txt \
               && grep -Fq 'AI로 하기' /tmp/ai-local-root-body.txt \
               && grep -Fq '최근 공개된 AI' /tmp/ai-local-root-body.txt \
@@ -311,6 +313,11 @@ jobs:
               && grep -Fiq 'x-ekodi-ai-asset: worker-owned-v1' /tmp/ai-local-client-headers.txt \
               && grep -Fq "api('/api/commons/config')" /tmp/ai-local-client.txt \
               && ! grep -Fq "api('/ai/api/commons/" /tmp/ai-local-client.txt \
+              && grep -Fq '모두의 통역' /tmp/ai-local-interpreter.html \
+              && grep -Fq '마이크 시작' /tmp/ai-local-interpreter.html \
+              && grep -Fiq 'permissions-policy: camera=(), microphone=(self)' /tmp/ai-local-interpreter-headers.txt \
+              && grep -Fq 'SpeechRecognition||window.webkitSpeechRecognition' /tmp/ai-local-interpreter.js \
+              && grep -Fiq 'x-ekodi-ai-asset: interpreter-v1' /tmp/ai-local-interpreter-client-headers.txt \
               && grep -Fq 'operator_surface_moved' /tmp/ai-local-capabilities.json \
               && grep -Fq 'authentication_required' /tmp/ai-local-ideas.json; then
               echo 'Immutable AI Commons staging artifact verified: public project surface works, catalog is public, and member/admin boundaries remain protected.'
