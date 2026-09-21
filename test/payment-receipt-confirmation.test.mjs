@@ -45,7 +45,7 @@ test('tenant policy limits confirmation management to accounting and managing ro
   assert.equal(policy.capabilities.confirmations,'tenant.confirmations.manage');
   assert.ok(policy.roleCapabilities.accountant.includes(policy.capabilities.confirmations));
   assert.ok(policy.roleCapabilities.manager.includes(policy.capabilities.confirmations));
-  assert.equal(policy.roleCapabilities.marketer.includes(policy.capabilities.confirmations),false);
+  assert.equal(policy.roleCapabilities.marketing_manager.includes(policy.capabilities.confirmations),false);
   assert.equal(policy.roleCapabilities.staff.includes(policy.capabilities.confirmations),false);
 });
 
@@ -68,6 +68,7 @@ test('central and tenant admin surfaces expose separate payment and receipt work
   assert.match(script,/data-confirmation-kind="payment">지급/);
   assert.match(script,/data-confirmation-kind="receipt">수령/);
   assert.match(script,/data-confirmation-action="counterpart"/);
+  assert.match(script,/workspace==='cgma'.*\['confirmations','지급·수령 확인'\]/s);
   assert.match(script,/async function confirmationApi/);
   assert.match(script,/confirmation_pending/);
 });
