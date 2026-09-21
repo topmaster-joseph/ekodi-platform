@@ -5,6 +5,14 @@ const CANONICAL_HOST='ekodi.kr';
 const SURFACE_PREFIXES=Object.freeze({my:'/my',admin:'/admin',auth:'/auth'});
 const SYSTEM_PATHS=Object.freeze(['/api','/mcp','/webhooks','/health','/connect']);
 const PERSONAL_FINANCE_CONTROL_PATH='/api/control/personal-finance';
+const API_CAPABILITY_SURFACES=Object.freeze([
+  Object.freeze({id:'personal-finance-api',prefix:'/api/finance/personal',binding:'PERSONAL_FINANCE',preservePath:true}),
+  Object.freeze({id:'finance-api',prefix:'/api/finance',binding:'FINANCE',preservePath:true}),
+  Object.freeze({id:'workspace-api',prefix:'/api/workspace',binding:'WORKSPACE_PLATFORM'}),
+  Object.freeze({id:'marketing-connect-api',prefix:'/api/marketing/connect',binding:'MARKETING_GROWTH'}),
+  Object.freeze({id:'marketing-publish-api',prefix:'/api/marketing/publish',binding:'MARKETING_PUBLISHING'}),
+  Object.freeze({id:'marketing-api',prefix:'/api/marketing',binding:'MARKETING_DOMAIN',preservePath:true}),
+]);
 const PUBLIC_EXECUTION_SURFACES=Object.freeze([
   Object.freeze({id:'shell',prefix:'/shell',binding:'SHELL',basePathAware:true}),
   Object.freeze({id:'mission-application',prefix:'/ekodimission/api/activities/260926-chuseok-open-table/applications',binding:'SPACE',preservePrefix:true,basePathAware:true}),
@@ -119,6 +127,22 @@ async function proxyBinding(request,binding,prefix,surface){
   const routed=new Response(response.body,response);
   routed.headers.set('x-ekodi-canonical-surface',surface);
   routed.headers.set('x-ekodi-canonical-path',prefix||'/');
+  return routed;
+}
+function apiCapabilityForPath(pathname){
+  return API_CAPABILITY_SURFACES.find(item=>pathname===item.prefix||pathname.startsWith(`${item.prefix}/`))||null;
+}
+async function proxyApiCapability(request,env,spec){
+  const binding=env?.[spec.binding];
+  if(!binding?.fetch)return serviceUnavailable(spec.id);
+  const upstreamUrl=new URL(request.url);
+  if(upstreamUrl.pathname===`${spec.prefix}/health`)upstreamUrl.pathname='/health';
+  else if(!spec.preservePath)upstreamUrl.pathname=stripPrefix(upstreamUrl.pathname,spec.prefix);
+  const response=await binding.fetch(cloneRequest(request,upstreamUrl));
+  const routed=new Response(response.body,response);
+  routed.headers.set('x-ekodi-canonical-surface',spec.id);
+  routed.headers.set('x-ekodi-canonical-path',spec.prefix);
+  routed.headers.set('x-ekodi-api-capability',spec.id);
   return routed;
 }
 async function proxyPersonalFinanceAdminControl(request,env){
@@ -321,6 +345,8 @@ async function proxyExecutionSurface(request,env,spec,legacyFetch,externalFetch)
     return proxyAdminShell(request,legacyFetch);
   }
   if(path===PERSONAL_FINANCE_CONTROL_PATH)return proxyPersonalFinanceAdminControl(request,env);
+  const apiCapability=apiCapabilityForPath(path);
+  if(apiCapability)return proxyApiCapability(request,env,apiCapability);
   if(path==='/mcp'||path.startsWith('/api/')||path==='/api'||path.startsWith('/webhooks/')||path==='/health'||path==='/.well-known/oauth-protected-resource'){
     return proxyBinding(request,env?.CONTROL_API,'','system');
   }
@@ -334,6 +360,7 @@ export const EKODI_CANONICAL_SURFACES=Object.freeze({
   auth:'/auth',
   shell:'/shell',
   api:'/api',
+  apiCapabilities:Object.freeze(Object.fromEntries(API_CAPABILITY_SURFACES.map(item=>[item.id,item.prefix]))),
   mcp:'/mcp',
   webhooks:'/webhooks',
   health:'/health',
