@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
 const edge=await readFile(new URL('../supabase/functions/free-tier-usage/index.ts',import.meta.url),'utf8');
-const migration=await readFile(new URL('../migrations/0101_free_tier_usage_rpc.sql',import.meta.url),'utf8');
+const migration=await readFile(new URL('../supabase/migrations/20260920235500_free_tier_usage_rpc.sql',import.meta.url),'utf8');
 const config=JSON.parse(await readFile(new URL('../config/free-tier-supabase-oidc.json',import.meta.url),'utf8'));
 
 test('Supabase telemetry edge function accepts only GitHub Actions main-branch OIDC',()=>{
