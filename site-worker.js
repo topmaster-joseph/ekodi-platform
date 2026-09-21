@@ -578,9 +578,7 @@ export default {
     const host = url.hostname.toLowerCase();
 
     if ((url.pathname === '/admin' || url.pathname === '/admin/') && host !== PUBLIC_HOST && !ADMIN_HOSTS.has(host)) {
-      const target = new URL('https://ekodi.kr/admin/');
-      target.searchParams.set('source', host);
-      const response = new Response(null, { status: 307, headers: { Location: target.toString() } });
+      const response = new Response('Not Found', { status: 404 });
       applyBaseSecurityHeaders(response.headers);
       response.headers.set('Cache-Control', 'no-store');
       response.headers.set('X-Robots-Tag', 'noindex, nofollow, noarchive');
