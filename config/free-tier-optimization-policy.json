@@ -157,7 +157,8 @@
       "supabase.active_projects": {
         "fullAt": 2,
         "action": "block-new-project-only",
-        "existingProjectsRemainAvailable": true
+        "existingProjectsRemainAvailable": true,
+        "whenTelemetryMissing": "block-new-project-until-measured"
       }
     },
     "providerTelemetry": {
@@ -169,6 +170,7 @@
     "projectCreationPolicy": {
       "supabase": "reuse-existing-projects-before-new-project",
       "automaticPaidProjectCreation": false
-    }
+    },
+    "capacityTelemetryPolicy": "fail-closed-for-new-resource-provisioning-only"
   }
 }
