@@ -102,6 +102,46 @@ function gitDiff() {
   }
 }
 
+
+const ecosystemRegistryPath = path.join(root, 'config/ecosystem-services.json');
+if (!fs.existsSync(ecosystemRegistryPath)) {
+  fail('config/ecosystem-services.json is required for the public service URL contract');
+} else {
+  try {
+    const ecosystem = JSON.parse(fs.readFileSync(ecosystemRegistryPath, 'utf8'));
+    for (const service of ecosystem.services || []) {
+      const rawUrl = String(service?.url || '').trim();
+      const match = rawUrl.match(/^https:\/\/([^/?#]+)(?:[/?#]|$)/i);
+      if (!match) {
+        fail(`ecosystem service ${service?.id || 'unknown'} must use an absolute https URL: ${rawUrl}`);
+        continue;
+      }
+      if (match[1].toLowerCase() !== policy.canonicalHost) {
+        fail(`ecosystem service ${service?.id || 'unknown'} must use canonical apex ${policy.canonicalHost}, not ${match[1]}`);
+      }
+      const label = String(service?.label || '').trim().toLowerCase();
+      if (/(?:^|[^@])(?:[a-z0-9-]+\.)+ekodi\.kr\b/i.test(label)) {
+        fail(`ecosystem service ${service?.id || 'unknown'} label must not publish an EKODI subdomain: ${service.label}`);
+      }
+    }
+  } catch (error) {
+    fail(`unable to validate ecosystem service URLs: ${error.message}`);
+  }
+}
+
+const serviceManifestPath = path.join(root, 'ekodi-service-manifest.js');
+if (!fs.existsSync(serviceManifestPath)) {
+  fail('ekodi-service-manifest.js is required for the user-facing service URL contract');
+} else {
+  const manifestSource = fs.readFileSync(serviceManifestPath, 'utf8');
+  for (const match of manifestSource.matchAll(/\burl:'https:\/\/([^/'?#]+)([^']*)'/g)) {
+    const host = match[1].toLowerCase();
+    if (host !== policy.canonicalHost) {
+      fail(`ekodi-service-manifest user URL must use canonical apex ${policy.canonicalHost}, not ${host}`);
+    }
+  }
+}
+
 const sharedSiteWranglerPath = path.join(root, 'wrangler.site.toml');
 if (!fs.existsSync(sharedSiteWranglerPath)) {
   fail('wrangler.site.toml is required for the Shared Site canonical-domain contract');
