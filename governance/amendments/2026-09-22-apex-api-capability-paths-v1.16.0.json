@@ -1,0 +1,27 @@
+{
+  "id": "2026-09-22-apex-api-capability-paths-v1.16.0",
+  "constitutionVersion": "1.16.0",
+  "status": "approved",
+  "approvedBy": "topmaster-joseph",
+  "approvedAt": "2026-09-22",
+  "changeClass": "C2",
+  "taskId": "apex-api-capability-paths-20260922",
+  "summary": "Make https://ekodi.kr/api the constitutional public API base and route capability-specific APIs through internal Service Bindings instead of public API subdomains.",
+  "approvalBasis": "The EKODI Platform Super Administrator explicitly instructed EKODI to continue the https://ekodi.kr/api structure under EKODI orchestration and to shorten delivery time while keeping verification-first operation.",
+  "constitutionalInterpretation": "The public API boundary is a canonical path on ekodi.kr. Provider and service Workers remain replaceable internal execution resources behind capability contracts. The retired generic API subdomain is neither canonical nor a compatibility redirect target.",
+  "implementedCapabilities": [
+    "Constitutional canonicalApiBase=https://ekodi.kr/api",
+    "Retired generic API subdomain removed from production system boundaries",
+    "Redirect target for the retired generic API subdomain removed",
+    "Capability API routing for finance, personal finance, workspace and marketing services",
+    "Generic Control API remains the fallback owner for unmatched /api routes",
+    "Admin, MCP, device and monitoring clients use the apex API boundary"
+  ],
+  "authorityImpact": "None. Identity, permission, financial, legal and destructive authority remain unchanged.",
+  "deploymentImpact": "Shared Site selects the responsible internal Service Binding from the canonical /api capability path. No new public subdomain or external provider dependency is introduced.",
+  "rollback": "Revert the capability router and client path changes while retaining the last known good Shared Site and Control API Worker versions. Do not restore the retired generic API subdomain as a redirect.",
+  "approvalEvidence": {
+    "explicitOwnerInstruction": true,
+    "requiredPullRequestLabel": "constitution-approved"
+  }
+}
