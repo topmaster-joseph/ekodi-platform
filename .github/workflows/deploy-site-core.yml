@@ -47,6 +47,8 @@ on:
       - 'platform-router-entry-worker.js'
       - 'platform-security-policy.js'
       - 'scripts/validate-platform-security-policy.mjs'
+      - 'scripts/validate-production-worker-exposure.mjs'
+      - 'test/production-worker-exposure.test.mjs'
       - 'test/platform-security-policy.test.mjs'
       - 'canonical-surface-router.js'
       - 'test/canonical-surface-router.test.mjs'
@@ -330,6 +332,7 @@ jobs:
           node scripts/validate-admin-source.mjs
           node scripts/validate-user-ui-dna.mjs
           node scripts/validate-platform-security-policy.mjs
+          node scripts/validate-production-worker-exposure.mjs
           if [ -f scripts/audit-admin-menu-services.mjs ]; then node scripts/audit-admin-menu-services.mjs; fi
           test -f homepage-ambient.css
           test -f mall.html
