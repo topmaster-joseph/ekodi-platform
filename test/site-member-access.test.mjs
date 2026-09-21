@@ -33,7 +33,7 @@ test('site access authority distinguishes platform super-admin from tenant-local
 });
 
 test('member directory preserves the production auth marker for anonymous callers',()=>{
-  assert.match(directory,/ACCESS_AUTH_REQUIRED: 'EKODI 관리자 인증이 필요합니다\\.'/);
+  assert.match(directory,/ACCESS_AUTH_REQUIRED: 'EKODI 관리자 인증이 필요합니다\.'/);
 });
 
 test('member directory is filtered at the database query for tenant administrators',()=>{
