@@ -85,7 +85,7 @@ export async function handleRegionalAccessControl(request,env){
     const loginUrl=new URL('https://ekodi.kr/auth/');loginUrl.searchParams.set('site','portal');loginUrl.searchParams.set('direct','1');loginUrl.searchParams.set('return_to',scope.adminPath);
     return json(request,{authenticated:false,error:result.status===401?'Google 로그인이 필요합니다.':'이 관리공간에 등록된 권한이 없습니다.',code:result.code,loginUrl:loginUrl.toString(),publicUrl:scope.publicPath},result.status);
   }
-  return json(request,{authenticated:true,email:result.email,role:result.role,principalType:result.principalType||'platform',capabilities:result.capabilities,canManageAccess:result.canManageAccess,scope:{slug:scope.slug,label:scope.label,service:scope.service,adminPath:scope.adminPath,publicPath:scope.publicPath},menu:result.menu,expiresAt:result.expiresAt||''});
+  return json(request,{authenticated:true,platform:Boolean(result.platform),email:result.email,role:result.role,principalType:result.principalType||'platform',capabilities:result.capabilities,canManageAccess:result.canManageAccess,scope:{slug:scope.slug,label:scope.label,service:scope.service,adminPath:scope.adminPath,publicPath:scope.publicPath},menu:result.menu,expiresAt:result.expiresAt||''});
 }
 
 export function regionalAccessScopeSnapshot(){return Object.freeze(Object.values(SCOPES).map(item=>Object.freeze({...item})));}
