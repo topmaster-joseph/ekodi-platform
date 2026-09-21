@@ -41,7 +41,7 @@ export function ekodiBizAdminScopeSnapshot() {
 
 export function ekodiBizAdminScopeForPath(pathname = '') {
   const path = String(pathname || '').replace(/\/+$/, '') || '/';
-  if (/^\/ekodibiz\/ekodimall\/admin(?:\/|$)/i.test(path)) return 'mall';
+  if (/^\/ekodimall\/admin(?:\/|$)/i.test(path)) return 'mall';
   if (/^\/ekodibiz\/trade\/admin(?:\/|$)/i.test(path)) return 'trade';
   if (/^\/ekodibiz\/invest\/admin(?:\/|$)/i.test(path)) return 'invest';
   if (/^\/admin\/services\/books(?:\/|$)/i.test(path)) return 'books';
