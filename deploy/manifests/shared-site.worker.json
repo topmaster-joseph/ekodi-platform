@@ -1715,6 +1715,78 @@
           "cache-control: no-store"
         ],
         "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/api/finance/health",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "headerExpect": [
+          "x-ekodi-api-capability: finance-api",
+          "x-ekodi-canonical-path: /api/finance"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/api/finance/personal/health",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "headerExpect": [
+          "x-ekodi-api-capability: personal-finance-api",
+          "x-ekodi-canonical-path: /api/finance/personal"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/api/workspace/health",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "headerExpect": [
+          "x-ekodi-api-capability: workspace-api",
+          "x-ekodi-canonical-path: /api/workspace"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/api/marketing/health",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "headerExpect": [
+          "x-ekodi-api-capability: marketing-api",
+          "x-ekodi-canonical-path: /api/marketing"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/api/marketing/connect/health",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "headerExpect": [
+          "x-ekodi-api-capability: marketing-connect-api",
+          "x-ekodi-canonical-path: /api/marketing/connect"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/api/marketing/publish/health",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "headerExpect": [
+          "x-ekodi-api-capability: marketing-publish-api",
+          "x-ekodi-canonical-path: /api/marketing/publish"
+        ],
+        "rollbackVerify": false
       }
     ]
   }
