@@ -34,7 +34,7 @@ import { decorateDiscoveryResponse } from './discovery-layer.js';
 import { realtimeTenantAdminFromPath, realtimeTenantFromPath } from './realtime-tenant-registry.js';
 import { tenantLivePage } from './tenant-live-page.js';
 import { tenantLiveAdminCss, tenantLiveAdminPage, tenantLiveAdminScript } from './tenant-live-admin-page.js';
-import { liveServiceAdminPage, liveServiceMaintenancePage, liveServicePage } from './live-service-page.js';
+import { liveAuxCameraPage, liveServiceAdminPage, liveServiceMaintenancePage, liveServicePage } from './live-service-page.js';
 import { localRegionFromPath } from './local-region-registry.js';
 import { localRegionPublicPage, localRegionAdminPage, localRegionAccessAdminPage } from './local-region-page.js';
 import { localRegionAdminAuthScript } from './local-region-admin-auth.js';
@@ -248,6 +248,7 @@ export default {
     if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)){const adminTarget=legacyAdminAliasTarget(url.pathname);if(adminTarget){const target=new URL(request.url);target.pathname=adminTarget;return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-content-type-options':'nosniff','x-ekodi-route':'admin-canonical-handoff'}})}}
     if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)){
       if(url.pathname==='/live'||url.pathname==='/live/')return liveShell(liveServicePage());
+      const auxCamera=url.pathname.match(/^\/live\/c\/([A-Z0-9]{8})\/?$/i);if(auxCamera)return liveAuxCameraPage(auxCamera[1]);
       if(url.pathname==='/live/admin'||url.pathname==='/live/admin/')return liveShell(liveServiceAdminPage(),'admin');
       if(url.pathname==='/tenant-live-admin.css')return tenantLiveAdminCss();
       if(url.pathname==='/tenant-live-admin.js')return tenantLiveAdminScript();

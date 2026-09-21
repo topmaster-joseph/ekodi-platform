@@ -12,9 +12,9 @@ test('shared tenant Live paths render on ekodi.kr with isolated tenant identity'
     const html=await response.text();
     assert.match(html,new RegExp(`data-tenant="${tenant.apiTenant}"`),tenant.id);
     assert.match(html,/\/tenant-live\.js/,tenant.id);
-    assert.match(html,/공개 방송은 로그인 없이 시청/,tenant.id);
+    assert.match(html,/공개 방송은 바로 시청/,tenant.id);
     assert.match(html,/id="openViewerButton"/,tenant.id);
-    assert.match(html,/시청 화면 새 탭으로 열기/,tenant.id);
+    assert.match(html,/id="openViewerButton"[^>]*>시청 화면<\/button>/,tenant.id);
     const apex=await platformRouter.fetch(new Request(`https://ekodi.kr${tenant.path}`),{});
     assert.equal(apex.status,200,`apex ${tenant.id}`);
     const apexHtml=await apex.text();
@@ -51,9 +51,23 @@ test('shared Live auth handoff exchanges EKODI proof without third-party script 
   assert.match(source,/publisher_media_unavailable/);
   assert.match(source,/media_tracks_not_ready/);
   assert.match(source,/attempt<5/);
-  assert.match(source,/송출 트랙을 기다리고 있습니다/);
-  assert.match(source,/실시간 방송 수신 중입니다/);
+  assert.match(source,/재연결 중/);
+  assert.match(source,/시청 중/);
+  assert.match(source,/viewerTracksForLanguage/);
   assert.doesNotMatch(source,/cdn\.jsdelivr\.net|esm\.sh/);
+});
+
+test('canonical short QR camera route stays separate from viewer and participant surfaces',async()=>{
+  const response=await platformRouter.fetch(new Request('https://ekodi.kr/live/c/AB12CD34'),{});
+  assert.equal(response.status,200);
+  assert.equal(response.headers.get('x-ekodi-route'),'live-aux-camera');
+  assert.equal(response.headers.get('x-robots-tag'),'noindex, nofollow, noarchive');
+  const html=await response.text();
+  assert.match(html,/data-camera-code="AB12CD34"/);
+  assert.match(html,/id="auxCameraPreview"/);
+  assert.match(html,/id="auxCameraConnectButton"/);
+  assert.match(html,/관리자 승인 후 연결됩니다/);
+  assert.doesNotMatch(html,/id="requestSpeakButton"/);
 });
 
 test('platform entry router reserves /live/admin before generic workspace admin routing',async()=>{

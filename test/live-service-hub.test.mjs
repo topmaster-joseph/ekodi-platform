@@ -16,6 +16,10 @@ test('Live hub lists the registered tenant Live surfaces on the canonical apex p
   assert.match(html,/EKODI Live/);
   assert.match(html,/라이브 서비스 사이트/);
   assert.match(html,/href="\/live\/admin"/);
+  assert.match(html,/id="live-sites"/);
+  assert.match(html,/class="hero-actions"/);
+  assert.match(html,/@media\(max-width:720px\)/);
+  assert.match(html,/grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
   for(const tenant of realtimeTenantList()){
     assert.match(html,new RegExp(escapeRe(tenant.path)),tenant.id);
     assert.match(html,new RegExp(escapeRe(tenant.name)),tenant.id);
@@ -32,6 +36,9 @@ test('Live admin preserves its own central-auth return target and exposes per-si
   assert.match(html,/EKODI Live 관리자/);
   assert.match(html,/return_to=https%3A%2F%2Fekodi.kr%2Flive%2Fadmin/);
   assert.match(html,/공개 여부 · 방송관리 · 하위관리자 메뉴/);
+  assert.match(html,/@media\(max-width:640px\)/);
+  assert.match(html,/grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
+  assert.match(html,/\.site-menu\{display:grid;grid-template-columns:1fr 1fr/);
   for(const tenant of realtimeTenantList()){
     const liveAdmin=tenant.path.replace(/\/$/,'')+'/admin';
     const siteAdmin=tenant.home.replace(/\/$/,'')+'/admin';
@@ -59,4 +66,17 @@ test('service manifest advertises canonical apex Live as an active public surfac
   const manifest=await read('ekodi-service-manifest.js');
   assert.match(manifest,/id:'live'.*url:'https:\/\/ekodi\.kr\/live'.*defaultSurface:'public'.*state:'live'/);
   assert.doesNotMatch(manifest,/id:'live'.*url:'https:\/\/live\.ekodi\.kr\//);
+});
+
+
+test('Shared Site release watches and packages Live hub and QR camera UI',async()=>{
+  const [workflow,build,site]=await Promise.all([
+    read('.github/workflows/deploy-site-core.yml'),
+    read('scripts/build.mjs'),
+    read('site-worker.js'),
+  ]);
+  for(const file of ['live-service-page.js','tenant-live-page.js','tenant-live.js','tenant-live.css','qr-code-v2.js']) assert.match(workflow,new RegExp(file.replaceAll('.','\\.')));
+  assert.match(workflow,/test\/live-service-hub\.test\.mjs/);
+  assert.match(build,/qr-code-v2\.js/);
+  assert.match(site,/['"]\/qr-code-v2\.js['"]/);
 });
