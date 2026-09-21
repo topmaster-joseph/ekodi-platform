@@ -25,7 +25,7 @@
     const serverMessage=payload?.message||payload?.error||payload?.detail||'';
     if(status===401)return {status:'error',httpStatus:status,message:'EKODI 관리자 인증이 필요합니다.',detail:'로그인 세션 또는 관리자 토큰을 확인하세요.'};
     if(status===403)return {status:'error',httpStatus:status,message:'Cloudflare 또는 관리자 권한이 부족합니다.',detail:serverMessage||'API Token의 Account/Zone/Workers 읽기 권한과 관리자 권한을 확인하세요.'};
-    if(status===404)return {status:'error',httpStatus:status,message:'공급자 조회 API를 찾을 수 없습니다.',detail:'api.ekodi.kr 배포 경로와 라우팅을 확인하세요.'};
+    if(status===404)return {status:'error',httpStatus:status,message:'공급자 조회 API를 찾을 수 없습니다.',detail:'ekodi.kr/api 배포 경로와 라우팅을 확인하세요.'};
     if(status===429)return {status:'warn',httpStatus:status,message:'Cloudflare 조회가 일시적으로 제한되었습니다.',detail:'잠시 후 다시 확인하거나 API rate limit 상태를 점검하세요.'};
     if(status>=500)return {status:'error',httpStatus:status,message:'공급자 조회 서버에서 오류가 발생했습니다.',detail:serverMessage||'Control API와 Cloudflare 연동 로그를 확인하세요.'};
     return {status:'error',httpStatus:status,message:'공급자 정보를 확인하지 못했습니다.',detail:serverMessage||`HTTP ${status}`};
