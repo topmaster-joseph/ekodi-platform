@@ -19,12 +19,13 @@ test('Admin roots resolve to command home while child routes remain independent'
   const routes=routesFor();
   assert.equal(routes.sectionFromPath('/admin/'),'command-home');
   assert.equal(routes.sectionFromPath('/admin/home'),'command-home');
-  assert.equal(routes.groups.home,'command-home');
+  assert.equal(routes.groups.summary,'platform-overview');
   assert.equal(routes.pathFor('command-home'),'/admin/');
   assert.equal(routes.sectionFromPath('/admin/home/campus'),'campus');
-  assert.equal(routes.pathFor('campus'),'/admin/home/campus');
+  assert.equal(routes.pathFor('campus'),'/admin/sites/campus');
   assert.equal(routes.sectionFromPath('/admin/services/insurance'),'insurance');
   assert.equal(routes.sectionFromPath('/admin/operations/finance'),'finance');
+  assert.equal(routes.pathFor('finance'),'/admin/content/finance');
 });
 
 test('legacy query and hash routes override command root for downstream compatibility',()=>{
