@@ -123,7 +123,7 @@ test('studio layout is compact on desktop and mobile',async()=>{
   assert.match(page,/class="controls compact-controls"/);
   assert.match(page,/<details class="compact-settings">/);
   assert.match(css,/grid-template-columns:minmax\(0,820px\) 300px/);
-  assert.match(css,/\.compact-controls\{grid-template-columns:repeat\(2/);
+  assert.match(css,/\.compact-controls\{grid-template-columns:repeat\(4/);
   assert.match(css,/@media\(max-width:560px\)/);
   assert.match(css,/\.compact-controls\{grid-template-columns:repeat\(4/);
 });
