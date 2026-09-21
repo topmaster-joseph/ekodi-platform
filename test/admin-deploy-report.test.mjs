@@ -34,6 +34,8 @@ test('Admin production verification follows the content fingerprint and lazy AI 
   assert.match(workflow, /EXPECTED_VERSION/);
   assert.match(workflow, /LIVE_VERSION/);
   assert.match(workflow, /max-age=31536000, immutable/);
+  assert.match(workflow, /x-content-type-options: nosniff/);
+  assert.doesNotMatch(workflow, /x-ekodi-route: admin-asset/);
   assert.match(workflow, /verify_asset 'ai-ops-admin\.css'/);
   assert.match(workflow, /verify_asset 'system-health-admin\.js'/);
   assert.match(workflow, /verify_asset 'system-health-admin\.css'/);
