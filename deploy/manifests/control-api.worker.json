@@ -1,5 +1,5 @@
 {
-  "version": 7,
+  "version": 8,
   "evidence": {
     "generation": 10,
     "ledger": "ai_production_evidence",
@@ -274,6 +274,26 @@
       },
       {
         "url": "https://ekodi.kr/api/local-operations/cheonggye",
+        "statuses": [
+          401
+        ],
+        "redirect": "manual",
+        "expect": [
+          "REGION_AUTH_REQUIRED"
+        ],
+        "headerExpect": [
+          "cache-control: no-store",
+          "x-content-type-options: nosniff"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/api/local-operations/cheonggye/actions",
+        "method": "POST",
+        "headers": {
+          "origin": "https://ekodi.kr",
+          "content-type": "application/json"
+        },
         "statuses": [
           401
         ],

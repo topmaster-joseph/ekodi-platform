@@ -12,14 +12,9 @@ const SCOPES=Object.freeze({
 const clean=value=>String(value||'').trim().toLowerCase();
 const DELEGATED_OPERATOR_ROLES=new Set(['owner','tenant_admin','workspace_admin','admin','manager','client_admin']);
 
-export function delegatedRegionalCapabilitiesFor(scopeSlug,operatorTenantSlug,role){
-  const scope=SCOPES[clean(scopeSlug)];
-  const operatorSlug=clean(operatorTenantSlug);
+function delegatedCapabilitiesForRole(scope,role){
   const normalizedRole=clean(role);
-  if(!scope||operatorSlug!=='cgma'||!DELEGATED_OPERATOR_ROLES.has(normalizedRole))return Object.freeze([]);
-  const region=localRegionBySlug('cheonggye');
-  const operator=region?.operators?.cgma;
-  if(scope.regionId!==region?.id||operator?.status!=='active'||clean(operator?.tenantSlug)!==operatorSlug||operator?.operatingRights?.accessMode!=='delegated-operations')return Object.freeze([]);
+  if(!scope||!DELEGATED_OPERATOR_ROLES.has(normalizedRole))return Object.freeze([]);
   const roleCapabilities=tenantAdminCapabilitiesForRole(normalizedRole);
   const canOperate=roleCapabilities.includes('*')||roleCapabilities.includes(TENANT_ADMIN_CAPABILITIES.operations);
   if(!canOperate)return Object.freeze([]);
@@ -35,6 +30,16 @@ export function delegatedRegionalCapabilitiesFor(scopeSlug,operatorTenantSlug,ro
     TENANT_ADMIN_CAPABILITIES.dashboard,
     TENANT_ADMIN_CAPABILITIES.operations,
   ]);
+}
+
+export function delegatedRegionalCapabilitiesFor(scopeSlug,operatorTenantSlug,role){
+  const scope=SCOPES[clean(scopeSlug)];
+  const operatorSlug=clean(operatorTenantSlug);
+  if(!scope||operatorSlug!=='cgma')return Object.freeze([]);
+  const region=localRegionBySlug('cheonggye');
+  const operator=region?.operators?.cgma;
+  if(scope.regionId!==region?.id||operator?.status!=='active'||clean(operator?.tenantSlug)!==operatorSlug||operator?.operatingRights?.accessMode!=='delegated-operations')return Object.freeze([]);
+  return delegatedCapabilitiesForRole(scope,role);
 }
 
 
@@ -63,31 +68,63 @@ async function grantFor(env,tenantId,email){
   return env.DB.prepare('SELECT role,enabled,principal_type,github_username,capabilities_json,denied_capabilities_json,expires_at,last_verified_at FROM customer_access_grants WHERE tenant_id=? AND lower(trim(email))=?').bind(tenantId,email).first();
 }
 
+async function delegatedOperatorCandidates(env,scope){
+  const moduleFilter=scope.service==='commerce-pass'?" AND a.module_id='commerce-pass'":'';
+  try{
+    const rows=await env.DB.prepare(`
+      SELECT o.operator_id,o.tenant_slug,o.name,
+        CASE WHEN SUM(CASE WHEN a.role='lead_operator' THEN 1 ELSE 0 END)>0 THEN 'lead_operator' ELSE 'co_operator' END AS operator_role,
+        GROUP_CONCAT(DISTINCT a.module_id) AS module_ids
+      FROM local_region_operators o
+      JOIN local_region_operator_assignments a
+        ON a.region_id=o.region_id AND a.operator_id=o.operator_id
+      WHERE o.region_id=? AND o.status='active'
+        AND a.status IN ('active','handover')
+        AND a.role IN ('lead_operator','co_operator')${moduleFilter}
+      GROUP BY o.operator_id,o.tenant_slug,o.name
+      ORDER BY CASE WHEN operator_role='lead_operator' THEN 0 ELSE 1 END,o.operator_id
+    `).bind(scope.regionId).all();
+    return rows.results||[];
+  }catch{
+    const region=localRegionBySlug('cheonggye');
+    const operator=region?.operators?.cgma;
+    if(!operator?.tenantSlug)return[];
+    return [{operator_id:operator.id,tenant_slug:operator.tenantSlug,name:operator.name,operator_role:operator.role,module_ids:operator.operatingRights?.moduleIds?.join(',')||''}];
+  }
+}
+
 async function delegatedOperatorAccess(env,scope,email){
   if(scope.regionId!=='local:cheonggye')return null;
-  const region=localRegionBySlug('cheonggye');
-  const operator=region?.operators?.cgma;
-  if(operator?.status!=='active'||!operator?.tenantSlug)return null;
-  const tenant=await tenantBySlug(env,operator.tenantSlug);
-  if(!tenant||tenant.status!=='active')return null;
-  const grant=await grantFor(env,tenant.id,email);
-  if(!accessGrantIsActive(grant))return null;
-  const capabilities=[...delegatedRegionalCapabilitiesFor(scope.slug,operator.tenantSlug,grant.role)];
-  if(!capabilities.length)return null;
-  try{await env.DB.prepare('UPDATE customer_access_grants SET last_verified_at=? WHERE tenant_id=? AND lower(trim(email))=?').bind(new Date().toISOString(),tenant.id,email).run();}catch{}
-  return {
-    ok:true,
-    platform:false,
-    email,
-    role:clean(grant.role),
-    capabilities,
-    canManageAccess:false,
-    scope,
-    principalType:'delegated_operator',
-    expiresAt:grant.expires_at||'',
-    delegatedOperator:{id:operator.id,name:operator.name,tenantSlug:operator.tenantSlug,role:operator.role},
-    menu:menuFor(scope,capabilities,false),
-  };
+  const candidates=await delegatedOperatorCandidates(env,scope);
+  for(const operator of candidates){
+    const tenant=await tenantBySlug(env,operator.tenant_slug);
+    if(!tenant||tenant.status!=='active')continue;
+    const grant=await grantFor(env,tenant.id,email);
+    if(!accessGrantIsActive(grant))continue;
+    const capabilities=[...delegatedCapabilitiesForRole(scope,grant.role)];
+    if(!capabilities.length)continue;
+    try{await env.DB.prepare('UPDATE customer_access_grants SET last_verified_at=? WHERE tenant_id=? AND lower(trim(email))=?').bind(new Date().toISOString(),tenant.id,email).run();}catch{}
+    return {
+      ok:true,
+      platform:false,
+      email,
+      role:clean(grant.role),
+      capabilities,
+      canManageAccess:false,
+      scope,
+      principalType:'delegated_operator',
+      expiresAt:grant.expires_at||'',
+      delegatedOperator:{
+        id:operator.operator_id,
+        name:operator.name,
+        tenantSlug:operator.tenant_slug,
+        role:operator.operator_role,
+        moduleIds:String(operator.module_ids||'').split(',').filter(Boolean),
+      },
+      menu:menuFor(scope,capabilities,false),
+    };
+  }
+  return null;
 }
 
 function capabilitiesFor(grant){
