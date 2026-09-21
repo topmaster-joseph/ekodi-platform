@@ -61,7 +61,7 @@ function adminBody(region){
   <section class="section" data-region-capability="tenant.access.manage"><div class="org"><div><strong>사용자 · 관리자 · 외부업체 권한</strong><div class="muted">Google 이메일을 지역플랫폼 또는 청계패스 범위에 등록하고 역할·만료일·권한회수를 관리합니다.</div></div><a class="button" href="/cheonggye/admin/access">권한 관리</a></div></section>
   <section class="section"><div class="org"><div><strong>청계면상인회 자체 운영</strong><div class="muted">회원·회비·회의·상인회 사업·문서·회계 등 조직 고유업무는 지역플랫폼 운영권 이양과 무관하게 유지됩니다.</div></div><a class="button" href="/cgma/admin">상인회 관리자</a></div></section>
   <div class="auth-meta"><span class="auth-chip">로그인 <span data-region-auth-email></span></span><span class="auth-chip">권한 <span data-region-auth-role></span></span></div>
-  </main>
+  </main>`;
 }
 
 function headers(route){
