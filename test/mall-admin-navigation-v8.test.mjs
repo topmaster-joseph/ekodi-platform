@@ -5,14 +5,14 @@ import { readFile } from 'node:fs/promises';
 const source = await readFile(new URL('../workspace-admin-page.js', import.meta.url), 'utf8');
 
 test('Mall admin exposes an operator-first seven-surface navigation', () => {
-  assert.match(source, /\['overview','홈'\]/);
+  assert.match(source, /\['overview','대시보드'\]/);
   assert.match(source, /\['products','상품'\]/);
   assert.match(source, /\['sourcing','공급·제휴'\]/);
   assert.match(source, /\['channels','판매채널'\]/);
   assert.match(source, /adminBase=standaloneMall\?'\/ekodimall\/admin':service==='mall'\?`\$\{base\}\/ekodimall\/admin`/);
   assert.match(source, /\['growth','AI 영업'\]/);
   assert.match(source, /\['analytics','성과'\]/);
-  assert.match(source, /\['design','설정'\]/);
+  assert.match(source, /\['design','관리설정'\]/);
   assert.match(source, /if\(service==='mall'\)\{for\(const \[key,label\] of mallDirectSections/);
   assert.match(source, /h\.hidden=true/);
   assert.doesNotMatch(source, /const nav=service==='mall'\?[^;]*\['sales','영업장부'\]/);
