@@ -126,9 +126,10 @@ jobs:
           set -euo pipefail
           npx --yes wrangler@4.127.1 d1 execute ekodi-auth \
             --remote --config wrangler.api.toml --json \
-            --command "SELECT provider,metric,observed_value,free_limit,source,observed_at FROM provider_quota_snapshots WHERE provider IN ('supabase','github') ORDER BY observed_at DESC LIMIT 20;" \
+            --command "SELECT provider,metric,observed_value,free_limit,source,observed_at FROM provider_quota_snapshots WHERE provider IN ('cloudflare','supabase','github') ORDER BY observed_at DESC LIMIT 40;" \
             > "$RUNNER_TEMP/free-tier-resource-proof.json"
           grep -Fq '"provider"' "$RUNNER_TEMP/free-tier-resource-proof.json"
+          grep -Fq '"cloudflare"' "$RUNNER_TEMP/free-tier-resource-proof.json"
           node - "$RUNNER_TEMP/free-tier-resource-proof.json" <<'NODE'
           const fs=require('node:fs');
           const path=process.argv[2];
