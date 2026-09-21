@@ -134,7 +134,7 @@ test('mission hero visuals are first-party SVG assets and pages render the compl
     readFile(new URL('../space/open-table-hero-260926.svg',import.meta.url),'utf8'),
     readFile(new URL('../space/ekodimission.css',import.meta.url),'utf8')
   ]);
-  assert.match(home,/mission-table-hero\.svg/);assert.match(event,/open-table-hero-260926\.svg/);
+  assert.match(home,/mission-table-hero\.svg/);assert.match(event,/Chuseok Open Table & Sharing Market/);assert.doesNotMatch(event,/open-table-hero-260926\.svg/);
   assert.match(worker,/mission-table-hero\.svg/);assert.match(worker,/open-table-hero-260926\.svg/);
   assert.match(homeSvg,/<svg[\s\S]*한 식탁이/);assert.match(eventSvg,/<svg[\s\S]*2026 에코디 추석 열린식탁/);
   assert.match(css,/\.event-visual img\{[^}]*object-fit:contain/);assert.match(css,/\.hero-visual img\{[^}]*object-fit:cover/);
