@@ -1,0 +1,154 @@
+name: Deploy EKODI Church
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/deploy-church.yml'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/deploy-church.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-church-central-release
+  cancel-in-progress: false
+
+env:
+  WRANGLER_VERSION: '4.127.1'
+  CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+  CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate EKODI constitution
+        run: node scripts/validate-constitution.mjs
+      - name: Checkout church source
+        uses: actions/checkout@v7
+        with:
+          repository: topmaster-joseph/ekodi-church
+          ref: main
+          path: church
+          persist-credentials: false
+      - name: Capture church source revision
+        id: church
+        shell: bash
+        run: |
+          set -euo pipefail
+          sha=$(git -C church rev-parse HEAD)
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          echo "CHURCH_SHA=$sha" >> "$GITHUB_ENV"
+      - name: Validate church release contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd church
+          npm test
+          node --check giving.js
+          node --check functions/api/giving/config.js
+          grep -Fq "provider: 'missionfund'" functions/api/giving/config.js
+          grep -Fq 'https://go.missionfund.org/fmd01' functions/api/giving/config.js
+          grep -Fq '에코디교회 · 십일조·주일헌금' index.html
+          grep -Fq '에코디선교회 · 선교헌금' index.html
+          if grep -RniE 'TOSS_CLIENT_KEY|TOSS_SECRET_KEY|tosspayments\.com' -- index.html giving.js functions README.md _headers; then
+            echo 'Direct Toss dependency detected in Church giving surface.'
+            exit 1
+          fi
+          curl -L -fsS --connect-timeout 5 --max-time 20 -o /tmp/missionfund.html https://go.missionfund.org/fmd01
+          test -s /tmp/missionfund.html
+
+  preview:
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          repository: topmaster-joseph/ekodi-church
+          ref: main
+          path: church
+          persist-credentials: false
+      - name: Verify Cloudflare release credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+      - name: Deploy isolated Pages preview
+        shell: bash
+        run: |
+          set -euo pipefail
+          church_sha=$(git -C church rev-parse HEAD)
+          branch="central-${church_sha:0:8}"
+          (cd church && npx --yes wrangler@${WRANGLER_VERSION} pages deploy . --project-name ekodi-church --branch "$branch" --commit-hash "$church_sha" --commit-dirty=true) 2>&1 | tee /tmp/church-preview.log
+          preview_url=$(grep -Eo 'https://[^[:space:]]+\.pages\.dev' /tmp/church-preview.log | tail -1 || true)
+          test -n "$preview_url"
+          echo "PREVIEW_URL=$preview_url" >> "$GITHUB_ENV"
+      - name: Verify preview
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 15); do
+            root_code=$(curl -L -sS -o /tmp/preview.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$PREVIEW_URL/" || true)
+            config_code=$(curl -L -sS -o /tmp/preview-config.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$PREVIEW_URL/api/giving/config" || true)
+            if [ "$root_code" = '200' ] && [ "$config_code" = '200' ] \
+              && grep -Fq '미션펀드 보안 후원창' /tmp/preview.html \
+              && grep -Fq '에코디선교회 · 선교헌금' /tmp/preview.html \
+              && grep -Fq '"provider":"missionfund"' /tmp/preview-config.json \
+              && grep -Fq 'https://go.missionfund.org/fmd01' /tmp/preview-config.json; then
+              echo 'Church preview verified.'
+              exit 0
+            fi
+            sleep 4
+          done
+          exit 1
+
+  production:
+    needs: preview
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          repository: topmaster-joseph/ekodi-church
+          ref: main
+          path: church
+          persist-credentials: false
+      - name: Deploy church production
+        shell: bash
+        run: |
+          set -euo pipefail
+          church_sha=$(git -C church rev-parse HEAD)
+          cd church
+          npx --yes wrangler@${WRANGLER_VERSION} pages deploy . --project-name ekodi-church --branch main --commit-hash "$church_sha" --commit-dirty=true
+      - name: Verify church production
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 24); do
+            root_code=$(curl -L -sS -o /tmp/live.html -w '%{http_code}' --connect-timeout 5 --max-time 15 https://church.ekodi.kr/ || true)
+            config_code=$(curl -L -sS -o /tmp/live-config.json -w '%{http_code}' --connect-timeout 5 --max-time 15 https://church.ekodi.kr/api/giving/config || true)
+            if [ "$root_code" = '200' ] && [ "$config_code" = '200' ] \
+              && grep -Fq '미션펀드 보안 후원창' /tmp/live.html \
+              && grep -Fq '에코디교회 · 십일조·주일헌금' /tmp/live.html \
+              && grep -Fq '에코디선교회 · 선교헌금' /tmp/live.html \
+              && grep -Fq '"provider":"missionfund"' /tmp/live-config.json \
+              && grep -Fq 'https://go.missionfund.org/fmd01' /tmp/live-config.json; then
+              echo 'EKODI Church production verified.'
+              exit 0
+            fi
+            sleep 5
+          done
+          echo 'Church production verification did not converge.'
+          exit 1
