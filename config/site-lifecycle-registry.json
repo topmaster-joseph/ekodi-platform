@@ -1,13 +1,13 @@
 {
   "version": 1,
   "status": "active",
-  "policy": "Existing EKODI sites are retained and connected to canonical Workspace/Core identity. New customer user sites are virtual shared-shell surfaces, not copied applications.",
+  "policy": "Existing EKODI sites are retained and connected to canonical Workspace/Core identity. New customer user sites are virtual shared-shell surfaces, not copied applications. Redirect-only EKODI subdomains are forbidden.",
   "generation": {
     "signup": "identity_only",
     "workspaceCreatedWithoutSlug": "no_public_site_yet",
     "canonicalSlugAssigned": "auto_provision_user_site",
     "optionalServiceActivated": "jit_service_profile",
-    "legacyUrlAfterVerification": "redirect_or_compatibility_alias"
+    "legacyUrlAfterVerification": "retire_or_direct_service_no_redirect"
   },
   "identity": {
     "authorizationKey": "workspace_id",
@@ -173,7 +173,10 @@
     ]
   },
   "legacyPolicy": {
-    "redirectOnlyAfterCanonicalVerified": true,
+    "subdomainRedirectsAllowed": false,
+    "redirectOnlyCompatibilityAliasesAllowed": false,
+    "directServiceSubdomainsAllowed": true,
+    "executionOnlySubdomainsAllowed": true,
     "preserveCustomDomainOwnership": true,
     "legacyAliasMayAuthorize": false,
     "deleteExistingSiteBeforeReplacementVerified": false
@@ -184,7 +187,7 @@
     "preserve_current_public_surface",
     "attach_shared_core_and_permissions",
     "verify_canonical_surface",
-    "redirect_only_verified_legacy_aliases",
+    "retire_redirect_aliases_without_redirect",
     "retire_duplicate_runtime_after_observation_window"
   ]
 }
