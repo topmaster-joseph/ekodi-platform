@@ -152,7 +152,7 @@ jobs:
             code=$(curl -sS -D /tmp/asset-headers -o /tmp/admin-asset -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/admin/${asset}?v=$LIVE_VERSION" || true)
             echo "$asset?v=$LIVE_VERSION -> $code"
             [ "$code" = '200' ] || return 1
-            grep -Fiq 'x-ekodi-route: admin-asset' /tmp/asset-headers || return 1
+            grep -Fiq 'x-content-type-options: nosniff' /tmp/asset-headers || return 1
             grep -Fiq 'cache-control: public, max-age=31536000, immutable' /tmp/asset-headers || return 1
             grep -Fq "$expected" /tmp/admin-asset || return 1
           }
