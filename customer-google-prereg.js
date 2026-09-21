@@ -9,6 +9,8 @@ const TENANTS = Object.freeze([
   { slug: 'ekodichurch', name: '에코디교회', domain: 'ekodi.kr/ekodichurch', realm: 'ekodichurch-client' },
   { slug: 'ekodimission', name: '에코디선교회', domain: 'ekodi.kr/ekodimission', realm: 'ekodimission-client' },
   { slug: 'cgma', name: '청계면상인회', domain: 'cgma.ekodi.kr', realm: 'cgma-client' },
+  { slug: 'cheonggye-local', name: '청계잇다 지역플랫폼', domain: 'ekodi.kr/cheonggye', realm: 'portal' },
+  { slug: 'cheonggye-pass', name: '청계패스', domain: 'ekodi.kr/cheonggye/pass', realm: 'portal' },
   { slug: 'cmpmyi', name: '통합 매장 운영', domain: 'ekodi.kr/cmpmyi', realm: 'cmpmyi-client' },
   { slug: 'jadam', name: '자담치킨 목포대점', domain: 'jadam.ekodi.kr', realm: 'jadam-client' },
   { slug: 'pizzamaru', name: '피자마루 목포대점', domain: 'pizzamaru.ekodi.kr', realm: 'pizzamaru-client' },
@@ -22,7 +24,7 @@ const ROLE_LABELS = Object.freeze({
   tenant_admin: '사이트 책임관리자 · 호환', workspace_admin: '사이트 책임관리자 · 호환',
   store_owner: '점주/책임자', marketing_manager: '마케팅담당자', hq_manager: '본사담당자',
   accounting_manager: '회계담당자', senior_pastor: '담임목사/책임관리자', pastor: '목회자', care_staff: '돌봄담당자',
-  external_developer: '외부개발자', client_admin: '점주/책임자 · 기존', client_editor: '마케팅담당자 · 기존', client_viewer: '조회·검수자 · 기존',
+  external_vendor: '외부업체', external_developer: '외부개발자', client_admin: '점주/책임자 · 기존', client_editor: '마케팅담당자 · 기존', client_viewer: '조회·검수자 · 기존',
 });
 const ROLE_SET = new Set(Object.keys(ROLE_LABELS));
 
@@ -80,7 +82,7 @@ async function readJson(request) {
   try { return await request.json(); } catch { return null; }
 }
 
-async function ensureSchema(db) {
+export async function ensureCustomerAccessSchema(db) {
   await db.batch([
     db.prepare(`CREATE TABLE IF NOT EXISTS customer_tenants (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -222,7 +224,7 @@ async function preregister(request, env, slug) {
   if (!grantInput.ok) {
     const messages = {
       GITHUB_USERNAME_REQUIRED: '외부개발자는 GitHub 사용자명이 필요합니다.',
-      EXPIRY_REQUIRED: '외부개발자는 접근 만료일이 필요합니다.',
+      EXPIRY_REQUIRED: '외부협력 권한은 접근 만료일이 필요합니다.',
       INVALID_EXPIRY: '접근 만료일은 현재보다 이후여야 합니다.',
       EXPIRY_TOO_LONG: '외부개발자 접근기간은 최대 180일까지 설정할 수 있습니다.',
     };
@@ -400,7 +402,7 @@ export async function handleGoogleCustomerPreregistration(request, env) {
   const origin = request.headers.get('origin');
   if (origin && !isAllowedOrigin(origin, env)) return json({ error: '허용되지 않은 요청입니다.' }, 403, request, env);
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors(origin, env) });
-  await ensureSchema(env.DB);
+  await ensureCustomerAccessSchema(env.DB);
 
   const path = new URL(request.url).pathname;
   if (request.method === 'GET' && path === '/api/customers/directory') {
