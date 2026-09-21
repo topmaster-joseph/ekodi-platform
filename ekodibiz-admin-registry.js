@@ -7,7 +7,7 @@ const EKODIBIZ_ADMIN_SCOPE_DEFINITIONS = [
   {
     id: 'mall', label: '에코디몰', shortLabel: '몰',
     description: '상품·제휴·채널·AI 영업·성과 학습을 관리합니다.',
-    adminHref: '/ekodibiz/ekodimall/admin', publicHref: '/ekodibiz/ekodimall', kind: 'module',
+    adminHref: '/ekodimall/admin', publicHref: '/ekodimall', kind: 'module',
   },
   {
     id: 'trade', label: '에코디무역', shortLabel: '무역',
@@ -41,7 +41,7 @@ export function ekodiBizAdminScopeSnapshot() {
 
 export function ekodiBizAdminScopeForPath(pathname = '') {
   const path = String(pathname || '').replace(/\/+$/, '') || '/';
-  if (/^\/ekodibiz\/ekodimall\/admin(?:\/|$)/i.test(path)) return 'mall';
+  if (/^\/ekodimall\/admin(?:\/|$)/i.test(path)) return 'mall';
   if (/^\/ekodibiz\/trade\/admin(?:\/|$)/i.test(path)) return 'trade';
   if (/^\/ekodibiz\/invest\/admin(?:\/|$)/i.test(path)) return 'invest';
   if (/^\/admin\/services\/books(?:\/|$)/i.test(path)) return 'books';

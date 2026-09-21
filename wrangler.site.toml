@@ -1,6 +1,6 @@
 ﻿# Admin site rollout: password recovery interface
 # Tax release trigger: serialize Shared Site deployment for NTS business registry
-# Mall canonical release: publish ekodi.kr/ekodibiz/ekodimall disclosures and centered footer
+# Mall canonical release: publish ekodi.kr/ekodimall disclosures and centered footer
 # CGMA public domain remains externally DNS-managed until the approved cutover stage; ekodi.kr/cgma stays canonical inside EKODI.
 # Canonical domain contract: only ekodi.kr is a Shared Site custom domain; all EKODI user/admin surfaces use apex paths.
 name = "shy-thunder-39a4"

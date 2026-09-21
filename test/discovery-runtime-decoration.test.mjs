@@ -22,12 +22,12 @@ test('unregistered routes are not rewritten', () => {
 
 test('response decoration preserves response policy headers and skips non-HTML', async () => {
   const response = new Response(shell, { status: 200, headers: { 'content-type': 'text/html; charset=utf-8', 'content-security-policy': "default-src 'self'", etag: 'abc', 'content-length': String(shell.length) } });
-  const decorated = await decorateDiscoveryResponse(response, '/ekodibiz/ekodimall');
+  const decorated = await decorateDiscoveryResponse(response, '/ekodimall');
   const html = await decorated.text();
   assert.equal(decorated.status, 200);
   assert.equal(decorated.headers.get('content-security-policy'), "default-src 'self'");
   assert.equal(decorated.headers.has('etag'), false);
-  assert.match(html, /data-ekodi-path="\/ekodibiz\/ekodimall"/);
+  assert.match(html, /data-ekodi-path="\/ekodimall"/);
 
   const json = new Response('{}', { headers: { 'content-type': 'application/json' } });
   assert.equal(await decorateDiscoveryResponse(json, '/jadam'), json);

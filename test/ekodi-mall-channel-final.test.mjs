@@ -6,7 +6,7 @@ const read = path => readFile(new URL(`../${path}`, import.meta.url),'utf8');
 test('Mall channel console unifies connection policy AI allocation and job recovery', async()=>{
   const ui=await read('workspace-admin-page.js');
   assert.match(ui,/채널설정/);
-  assert.match(ui,/adminBase=standaloneMall\?'\/ekodimall\/admin':service==='mall'\?`\$\{base\}\/ekodimall\/admin`/);
+  assert.match(ui,/adminBase=standaloneMall\?'\/ekodimall\/admin':service==='mall'\?'\/ekodimall\/admin'/);
   assert.match(ui,/channelAccountForm/);
   assert.match(ui,/data-account-auth/);
   assert.match(ui,/registryConnectionId/);

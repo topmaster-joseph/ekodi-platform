@@ -16,12 +16,12 @@ for(const row of [...(hierarchy.forbiddenAggregationAliases||[]),...(hierarchy.l
   if(adminPaths.has(row.alias))fail.push(`alias collides with canonical admin: ${row.alias}`);
 }
 const registry=fs.readFileSync('ekodibiz-admin-registry.js','utf8');
-if(!registry.includes("adminHref: '/ekodibiz/ekodimall/admin'"))fail.push('EKODIBIZ Mall handoff must use Mall canonical admin');
+if(!registry.includes("adminHref: '/ekodimall/admin'"))fail.push('EKODIBIZ Mall handoff must use Mall canonical admin');
 if(registry.includes("adminHref: '/admin/ekodimall'"))fail.push('EKODIBIZ registry must not expose central Mall alias');
 const source=fs.readFileSync('platform-router-entry-worker.js','utf8');
 if(!source.includes('legacyAdminAliasTarget'))fail.push('platform router must guard legacy/aggregate admin aliases');
 if(source.includes('isIntegratedStoreAdminPathShape'))fail.push('platform router must not render integrated store child-admin aliases');
 const boundaries=JSON.parse(fs.readFileSync('config/service-layer-boundaries.json','utf8'));
-if(boundaries.serviceOwnership?.mall?.adminRoot!=='/ekodibiz/ekodimall/admin')fail.push('Mall ownership adminRoot drifted');
+if(boundaries.serviceOwnership?.mall?.adminRoot!=='/ekodimall/admin')fail.push('Mall ownership adminRoot drifted');
 if(fail.length){console.error(`Admin site hierarchy validation failed (${fail.length})`);for(const x of fail)console.error(`- ${x}`);process.exit(1)}
 console.log(`Admin site hierarchy v${hierarchy.version}: OK (${sites.length} canonical site admins)`);

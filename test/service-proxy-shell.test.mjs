@@ -35,7 +35,7 @@ test('production config explicitly disables staging host behavior',async()=>{
 
 test('retired Mall subdomains permanently redirect to the canonical EKODIBIZ path',async()=>{
   const source=await read('service-proxy.js');
-  assert.match(source,/MALL_CANONICAL = 'https:\/\/ekodi\.kr\/ekodibiz\/ekodimall'/);
+  assert.match(source,/MALL_CANONICAL = 'https:\/\/ekodi\.kr\/ekodimall'/);
   assert.match(source,/'mall\.ekodi\.kr': MALL_CANONICAL/);
   assert.match(source,/'mall\.biz\.ekodi\.kr': MALL_CANONICAL/);
   assert.match(source,/Response\.redirect\(target\.toString\(\), 308\)/);

@@ -1,7 +1,7 @@
 const CANONICAL = Object.freeze({
   'ekodichurch.kr': 'https://ekodi.kr/ekodichurch',
   'ekodilab.kr': 'https://ekodi.kr/ekodilab',
-  'ekodimall.kr': 'https://ekodi.kr/ekodibiz/ekodimall'
+  'ekodimall.kr': 'https://ekodi.kr/ekodimall'
 });
 
 export default {

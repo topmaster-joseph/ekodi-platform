@@ -338,7 +338,7 @@ jobs:
           test -f mall.html
           test -f mall.css
           test -f config/ekodi-service-urls.json
-          grep -Fq 'https://ekodi.kr/ekodibiz/ekodimall' config/ekodi-service-urls.json
+          grep -Fq 'https://ekodi.kr/ekodimall' config/ekodi-service-urls.json
           if grep -Eq 'https://(ekodi-mall\.pages\.dev|mall\.ekodi\.kr)' mall.html mall.js 2>/dev/null; then
             echo 'Legacy Mall public URL detected in shared-site source.'
             exit 1
@@ -579,7 +579,7 @@ jobs:
           set -euo pipefail
           ok=false
           for attempt in $(seq 1 12); do
-            code=$(curl -sS -D /tmp/ekodimall-canonical.headers -o /tmp/ekodimall-canonical.html -w '%{http_code}' --retry 2 --retry-delay 1 --connect-timeout 5 --max-time 20 'https://ekodi.kr/ekodibiz/ekodimall' || true)
+            code=$(curl -sS -D /tmp/ekodimall-canonical.headers -o /tmp/ekodimall-canonical.html -w '%{http_code}' --retry 2 --retry-delay 1 --connect-timeout 5 --max-time 20 'https://ekodi.kr/ekodimall' || true)
             if [ "$code" = '200' ] \
               && grep -Fiq 'x-ekodi-route: public-ekodi-mall' /tmp/ekodimall-canonical.headers \
               && grep -Fiq 'x-ekodi-edge: mall-path-gateway' /tmp/ekodimall-canonical.headers \
@@ -634,7 +634,7 @@ jobs:
           const urls=new Set([
             'https://ekodi.kr/',
             'https://ekodi.kr/history',
-            'https://ekodi.kr/ekodibiz/ekodimall',
+            'https://ekodi.kr/ekodimall',
             'https://ekodi.kr/ekodibiz/marketing-ai',
             'https://ekodi.kr/jadam/marketing',
             'https://ekodi.kr/pizzamaru/marketing',
