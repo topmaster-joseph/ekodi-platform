@@ -131,6 +131,13 @@ async function resolveAccess(request,env,scope){
   return {ok:false,status:403,code:'REGION_ACCESS_FORBIDDEN',email};
 }
 
+export async function resolveRegionalAccess(request,env,scopeSlug){
+  const scope=SCOPES[clean(scopeSlug)];
+  if(!scope)return {ok:false,status:404,code:'REGION_SCOPE_UNKNOWN'};
+  if(!env?.DB)return {ok:false,status:503,code:'REGION_ACCESS_DB_UNAVAILABLE'};
+  return resolveAccess(request,env,scope);
+}
+
 export async function handleRegionalAccessControl(request,env){
   const url=new URL(request.url);
   const match=url.pathname.match(/^\/api\/local-access\/([a-z0-9-]+)\/me$/);
@@ -140,7 +147,7 @@ export async function handleRegionalAccessControl(request,env){
   const scope=SCOPES[clean(match[1])];
   if(!scope)return json(request,{error:'등록되지 않은 지역 권한 범위입니다.',code:'REGION_SCOPE_UNKNOWN'},404);
   if(!env?.DB)return json(request,{error:'권한 데이터베이스를 사용할 수 없습니다.',code:'REGION_ACCESS_DB_UNAVAILABLE'},503);
-  const result=await resolveAccess(request,env,scope);
+  const result=await resolveRegionalAccess(request,env,scope.slug);
   if(!result.ok){
     const loginUrl=new URL('https://ekodi.kr/auth/');loginUrl.searchParams.set('site','portal');loginUrl.searchParams.set('direct','1');loginUrl.searchParams.set('return_to',scope.adminPath);
     return json(request,{authenticated:false,error:result.status===401?'Google 로그인이 필요합니다.':'이 관리공간에 등록된 권한이 없습니다.',code:result.code,loginUrl:loginUrl.toString(),publicUrl:scope.publicPath},result.status);

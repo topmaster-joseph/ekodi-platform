@@ -49,6 +49,8 @@ on:
       - 'platform-router-entry-worker.js'
       - 'local-region-registry.js'
       - 'local-region-page.js'
+      - 'local-region-operations-admin.js'
+      - 'test/local-region-operations.test.mjs'
       - 'test/local-region-platform.test.mjs'
       - 'canonical-surface-router.js'
       - 'test/canonical-surface-router.test.mjs'
