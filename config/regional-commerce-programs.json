@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "programs": [
+    {
+      "id": "cheonggye-pass",
+      "regionId": "local:cheonggye",
+      "publicName": "청계패스",
+      "publicPath": "/cheonggye/pass",
+      "adminPath": "/cheonggye/admin/pass",
+      "mode": "hybrid",
+      "providerId": null,
+      "providerStatus": "unassigned",
+      "adapterVersion": "v1",
+      "initialOperatorId": "cgma",
+      "capabilities": [
+        "catalog",
+        "merchant-enrollment",
+        "merchant-status",
+        "benefit-rules",
+        "coupon",
+        "points",
+        "voucher",
+        "transaction-summary",
+        "settlement-summary",
+        "webhook-events",
+        "health"
+      ],
+      "rules": {
+        "regionalPlatformOwnsProgramIdentity": true,
+        "providerReplaceable": true,
+        "providerMayOwnRegionalIdentity": false,
+        "providerMayAccessPrivateEkodiDatabase": false,
+        "financialExecutionEnabledBeforeProviderApproval": false,
+        "merchantPrivateDataProjection": "minimum-required-only"
+      }
+    }
+  ]
+}

@@ -23,7 +23,8 @@
     "legacy_alias": "Compatibility URL that must not become identity authority.",
     "planned_surface": "No production user site until explicitly promoted."
   },
-  "existingWorkspaceSites": [    {
+  "existingWorkspaceSites": [
+    {
       "id": "jadam",
       "name": "자담치킨 목포대점",
       "ownerKind": "store",
@@ -32,7 +33,11 @@
       "migrationState": "promoted",
       "runtime": "store_user_sites",
       "action": "retain_and_link",
-      "legacyAliases": ["https://jadam.ekodi.kr", "https://marketing.jadam.ekodi.kr", "https://jadam.ai.ekodi.kr"]
+      "legacyAliases": [
+        "https://jadam.ekodi.kr",
+        "https://marketing.jadam.ekodi.kr",
+        "https://jadam.ai.ekodi.kr"
+      ]
     },
     {
       "id": "pizzamaru",
@@ -43,8 +48,13 @@
       "migrationState": "promoted",
       "runtime": "store_user_sites",
       "action": "retain_and_link",
-      "legacyAliases": ["https://pizzamaru.ekodi.kr", "https://marketing.pizzamaru.ekodi.kr", "https://pizzamaru.ai.ekodi.kr"]
-    },    {
+      "legacyAliases": [
+        "https://pizzamaru.ekodi.kr",
+        "https://marketing.pizzamaru.ekodi.kr",
+        "https://pizzamaru.ai.ekodi.kr"
+      ]
+    },
+    {
       "id": "yogurt",
       "name": "요거트퍼플 목포대점",
       "ownerKind": "store",
@@ -53,7 +63,25 @@
       "migrationState": "promoted",
       "runtime": "store_user_sites",
       "action": "retain_and_link",
-      "legacyAliases": ["https://ekodi.kr/yogurtpurple", "https://yogurt.ekodi.kr", "https://marketing.yogurt.ekodi.kr", "https://yogurt.ai.ekodi.kr"]
+      "legacyAliases": [
+        "https://ekodi.kr/yogurtpurple",
+        "https://yogurt.ekodi.kr",
+        "https://marketing.yogurt.ekodi.kr",
+        "https://yogurt.ai.ekodi.kr"
+      ]
+    },
+    {
+      "id": "local-cheonggye",
+      "name": "청계잇다",
+      "ownerKind": "region",
+      "class": "workspace_user_site",
+      "canonicalUrl": "https://ekodi.kr/cheonggye",
+      "migrationState": "additive",
+      "runtime": "shared-site-local-region",
+      "action": "create_region_preserve_connected_organizations",
+      "connectedOrganizations": [
+        "cgma"
+      ]
     },
     {
       "id": "cgma",
@@ -61,12 +89,19 @@
       "ownerKind": "organization",
       "class": "workspace_user_site",
       "canonicalUrl": "https://ekodi.kr/cgma",
-      "customDomains": ["https://cgma.or.kr"],
+      "customDomains": [
+        "https://cgma.or.kr"
+      ],
       "migrationState": "retain_existing",
       "runtime": "site_access_registry+public_site_controls",
       "action": "retain_and_link_custom_domain",
-      "legacyAliases": ["https://cgma.ekodi.kr", "https://marketing.cheonggye.ekodi.kr", "https://cgma.ai.ekodi.kr"]
-    },    {
+      "legacyAliases": [
+        "https://cgma.ekodi.kr",
+        "https://marketing.cheonggye.ekodi.kr",
+        "https://cgma.ai.ekodi.kr"
+      ]
+    },
+    {
       "id": "ekodi-church",
       "name": "에코디교회",
       "ownerKind": "church",
@@ -87,7 +122,8 @@
       "migrationState": "retain_existing",
       "runtime": "tenant_customer_site",
       "action": "connect_core_preserve_public_surface"
-    },    {
+    },
+    {
       "id": "ekodi-lab",
       "name": "에코디연구소",
       "ownerKind": "organization",
@@ -118,7 +154,8 @@
       "runtime": "tenant_customer_site",
       "action": "connect_core_no_launch_claim"
     }
-  ],  "servicePolicy": {
+  ],
+  "servicePolicy": {
     "catalogSource": "config/ecosystem-services.json",
     "liveOrBeta": "retain_registered_service_boundary",
     "preparing": "keep_registry_hidden_until_ready",
