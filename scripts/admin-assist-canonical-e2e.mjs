@@ -28,6 +28,8 @@ const report = {
   historyVerified: false,
   renderedReplyLength: 0,
   inputCleared: false,
+  visualContractVerified: false,
+  visualState: null,
   finalUrl: null,
   error: null,
 };
@@ -48,6 +50,72 @@ try {
   await page.waitForFunction(() => Boolean(sessionStorage.getItem('ekodi-auth-token')));
   await page.waitForSelector('#app:not([hidden])');
   await page.waitForFunction(() => document.querySelector('#apiState')?.textContent?.includes('정상'));
+
+  console.log('[ASSIST-E2E] verify canonical light conversation home');
+  await page.goto(canonicalBaseUrl, { waitUntil: 'domcontentloaded' });
+  await page.waitForFunction(() => Boolean(sessionStorage.getItem('ekodi-auth-token')));
+  await page.waitForSelector('#app:not([hidden])');
+  await page.waitForFunction(() => document.querySelector('#apiState')?.textContent?.includes('정상'));
+  await page.waitForFunction(() => (
+    document.body.classList.contains('admin-compact')
+    && document.body.classList.contains('admin-command-home')
+    && document.body.classList.contains('admin-command-active')
+  ));
+  await page.waitForSelector('.sidebar', { state: 'visible' });
+  await page.waitForSelector('#ekodiAssistPanel:not([hidden])', { timeout: 15_000 });
+  await page.waitForSelector('.ekodi-assist-composer', { state: 'visible', timeout: 15_000 });
+
+  report.visualState = await page.evaluate(() => {
+    const sidebar = document.querySelector('.sidebar');
+    const assist = document.querySelector('.ekodi-assist');
+    const rail = document.querySelector('.ekodi-assist-rail');
+    const composer = document.querySelector('.ekodi-assist-composer');
+    const welcome = document.querySelector('.ekodi-assist-welcome');
+    const bodyStyle = getComputedStyle(document.body);
+    return {
+      colorScheme: bodyStyle.colorScheme,
+      bodyBackground: bodyStyle.backgroundColor,
+      sidebarBackground: sidebar ? getComputedStyle(sidebar).backgroundColor : null,
+      assistBackgroundImage: assist ? getComputedStyle(assist).backgroundImage : null,
+      railDisplay: rail ? getComputedStyle(rail).display : null,
+      composerBackground: composer ? getComputedStyle(composer).backgroundColor : null,
+      composerRadius: composer ? getComputedStyle(composer).borderRadius : null,
+      welcomeText: welcome ? String(welcome.textContent || '').trim() : '',
+      assistLeft: assist ? Math.round(assist.getBoundingClientRect().left) : null,
+      sidebarRight: sidebar ? Math.round(sidebar.getBoundingClientRect().right) : null,
+    };
+  });
+
+  const visual = report.visualState;
+  if (!String(visual?.colorScheme || '').includes('light')) {
+    throw new Error(`Admin home color scheme is not light: ${visual?.colorScheme || 'missing'}`);
+  }
+  if (visual?.bodyBackground !== 'rgb(255, 255, 255)') {
+    throw new Error(`Admin body is not white: ${visual?.bodyBackground || 'missing'}`);
+  }
+  if (visual?.sidebarBackground !== 'rgb(247, 248, 252)') {
+    throw new Error(`Admin sidebar light surface mismatch: ${visual?.sidebarBackground || 'missing'}`);
+  }
+  if (visual?.railDisplay !== 'none') {
+    throw new Error(`Admin home recent-command rail must be hidden: ${visual?.railDisplay || 'missing'}`);
+  }
+  if (visual?.composerBackground !== 'rgb(255, 255, 255)') {
+    throw new Error(`Admin home composer is not white: ${visual?.composerBackground || 'missing'}`);
+  }
+  if (visual?.composerRadius !== '32px') {
+    throw new Error(`Admin home composer radius mismatch: ${visual?.composerRadius || 'missing'}`);
+  }
+  if (!String(visual?.assistBackgroundImage || '').includes('radial-gradient')) {
+    throw new Error('Admin home conversation canvas gradient is missing');
+  }
+  if (!String(visual?.welcomeText || '').trim()) {
+    throw new Error('Admin home conversation welcome content is missing');
+  }
+  if (Math.abs(Number(visual?.assistLeft) - Number(visual?.sidebarRight)) > 2) {
+    throw new Error(`Admin workbench/sidebar alignment mismatch: ${visual?.assistLeft} vs ${visual?.sidebarRight}`);
+  }
+  report.visualContractVerified = true;
+  await page.screenshot({ path: path.join(artifactsDir, 'admin-home-visual.png'), fullPage: true });
 
   console.log('[ASSIST-E2E] open canonical campus route');
   await page.goto(campusUrl, { waitUntil: 'domcontentloaded' });
