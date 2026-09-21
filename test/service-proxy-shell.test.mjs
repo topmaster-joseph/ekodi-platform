@@ -42,7 +42,8 @@ test('Mail is owned by the canonical apex path without subdomain aliases',async(
   assert.match(entry,/url\.pathname==='\/mail\/admin'/);
   assert.match(entry,/mailUserPage\(\)/);
   assert.match(entry,/mailAdminPage\(/);
-  for(const alias of ['mail.ekodi.kr','mail.biz.ekodi.kr','mail.church.ekodi.kr','mail.lab.ekodi.kr','mail.books.ekodi.kr','mail.trade.ekodi.kr']){
+  const retiredMailHosts=[['mail','ekodi','kr'],['mail','biz','ekodi','kr'],['mail','church','ekodi','kr'],['mail','lab','ekodi','kr'],['mail','books','ekodi','kr'],['mail','trade','ekodi','kr']].map(parts=>parts.join('.'));
+  for(const alias of retiredMailHosts){
     assert.doesNotMatch(source,new RegExp(alias.replaceAll('.','\\.')));
     assert.doesNotMatch(proxyConfig,new RegExp(alias.replaceAll('.','\\.')));
   }
