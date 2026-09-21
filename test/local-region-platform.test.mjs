@@ -13,6 +13,10 @@ test('Cheonggye is an independent regional identity and keeps CGMA as delegated 
   assert.equal(region.initialOperatorId,'cgma');
   assert.equal(region.operators.cgma.publicPath,'/cgma');
   assert.equal(region.operators.cgma.adminPath,'/cgma/admin');
+  assert.equal(region.operators.cgma.tenantSlug,'cgma');
+  assert.equal(region.operators.cgma.operatingRights.scope,'all-region-modules');
+  assert.equal(region.operators.cgma.operatingRights.accessMode,'delegated-operations');
+  assert.equal(region.operators.cgma.operatingRights.moduleIds.length,region.modules.length);
   assert.equal(region.transferPolicy.dataMovement,'none');
   assert.equal(region.transferPolicy.allowPerModuleTransfer,true);
   assert.equal(region.transferPolicy.allowCoOperation,true);
@@ -35,7 +39,12 @@ test('regional pages declare separate chrome subject and operating boundary',asy
   assert.match(publicHtml,/data-ekodi-site-subject="local-cheonggye"/);
   assert.match(publicHtml,/청계잇다/);
   assert.match(publicHtml,/href="\/cgma"/);
+  assert.match(adminHtml,/청계잇다 관리자/);
+  assert.match(adminHtml,/운영권 보유 단체/);
   assert.match(adminHtml,/서비스별 운영주체/);
+  assert.match(adminHtml,/청계면상인회 운영권 적용/);
+  assert.match(adminHtml,/href="\/cheonggye\/admin\/pass"/);
+  assert.match(adminHtml,/href="\/cheonggye\/admin\/access"/);
   assert.match(adminHtml,/청계면상인회/);
   assert.match(adminHtml,/데이터는 이동·복사하지 않고/);
   assert.match(adminHtml,/href="\/cgma\/admin"/);
