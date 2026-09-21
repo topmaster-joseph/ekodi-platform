@@ -11,6 +11,7 @@ const clean=value=>String(value??'').trim();
 const now=()=>new Date().toISOString();
 const ONLINE_WINDOW_MS=LOCAL_EXECUTION_POLICY.onlineWindowMs;
 function headers(){return{'x-content-type-options':'nosniff','referrer-policy':'strict-origin-when-cross-origin','permissions-policy':'camera=(), microphone=(), geolocation=(), payment=()','content-security-policy':"default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://ekodi.kr https://auth.ekodi.kr https://*.supabase.co; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"}}
+function interpreterHeaders(){return{...headers(),'permissions-policy':'camera=(), microphone=(self), geolocation=(), payment=()'}}
 function json(data,status=200){return new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store',...headers()}})}
 async function body(request){try{return await request.json()}catch{return null}}
 function config(env={}){return{platform:'ai-control',architectureVersion:'1.10.0',hierarchy:['sovereign','autonomous','agentic','services'],mode:'parallel',policyVersion:AI_CONTROL_POLICY.version,missionPolicyVersion:AI_CONTROL_POLICY.missionPolicyVersion,maxParallelProviders:AI_CONTROL_POLICY.maxParallelProviders,originPreservation:true,routerScorePolicyVersion:AI_ROUTER_SCORE_POLICY.version,adminUrl:'https://ekodi.kr/admin/services/common-services?service=ai',authUrl:env.AUTH_URL||'https://ekodi.kr/auth/?site=ai&return_to=https%3A%2F%2Fekodi.kr%2Fai%2F',taskExecutionEnabled:env.AI_TASK_EXECUTION_ENABLED==='true',branchAllocationEnabled:env.AI_GITHUB_ORCHESTRATION_ENABLED==='true',humanApprovalRequired:true,nodePairingEnabled:true,localScheduler:localExecutionPolicySnapshot()}}
@@ -288,6 +289,21 @@ async function commonsBrowserAsset(request,env,assetName,contentType){
   out.headers.set('content-type',contentType);out.headers.set('cache-control','no-store');out.headers.set('x-ekodi-ai-asset','worker-owned-v1');return out;
 }
 
+async function interpreterPage(request,env){
+  const target=new URL(request.url);target.pathname='/interpreter.html';target.search='';
+  const asset=await env.ASSETS.fetch(new Request(target.toString(),request));if(!asset.ok)return json({error:'interpreter_unavailable'},503);
+  const out=new Response(request.method==='HEAD'?null:asset.body,asset);
+  for(const [key,value] of Object.entries(interpreterHeaders()))out.headers.set(key,value);
+  out.headers.set('cache-control','no-store');out.headers.set('x-ekodi-ai-surface','interpreter');return out;
+}
+async function interpreterBrowserAsset(request,env,assetName,contentType){
+  const target=new URL(request.url);target.pathname='/' + assetName;target.search='';
+  const asset=await env.ASSETS.fetch(new Request(target.toString(),{method:'GET',headers:request.headers}));if(!asset.ok)return json({error:'interpreter_asset_unavailable'},503);
+  const out=new Response(request.method==='HEAD'?null:asset.body,asset);
+  for(const [key,value] of Object.entries(headers()))out.headers.set(key,value);
+  out.headers.set('content-type',contentType);out.headers.set('cache-control','no-store');out.headers.set('x-ekodi-ai-asset','interpreter-v1');return out;
+}
+
 
 async function requireCommonsSuperAdmin(request,env){
   const central=await centralAdminSession(request,env,'ai:publish');
@@ -394,6 +410,9 @@ export default{async fetch(request,env,ctx){
   const url=new URL(request.url);
   if(['GET','HEAD'].includes(request.method)&&(url.pathname==='/admin'||url.pathname==='/admin/'))return adminControlRedirect();
   if(['GET','HEAD'].includes(request.method)&&(url.pathname==='/'||url.pathname==='/index.html'))return commonsPage(request,env);
+  if(['GET','HEAD'].includes(request.method)&&(url.pathname==='/interpreter'||url.pathname==='/interpreter/'))return interpreterPage(request,env);
+  if(['GET','HEAD'].includes(request.method)&&url.pathname==='/api/interpreter/client')return interpreterBrowserAsset(request,env,'interpreter.js','text/javascript; charset=utf-8');
+  if(['GET','HEAD'].includes(request.method)&&url.pathname==='/api/interpreter/style')return interpreterBrowserAsset(request,env,'interpreter.css','text/css; charset=utf-8');
   if(url.pathname==='/config.js')return json({error:'operator_surface_moved',adminUrl:config(env).adminUrl},410);
   if(request.method==='GET'&&url.pathname==='/__health')return json({ok:true,platform:'ai-control',architectureVersion:config(env).architectureVersion,surface:'runtime-and-commons',commons:true,commonsPolicy:AI_COMMONS_POLICY.version,costMode:'free-first',freeQuotaPolicy:AI_FREE_QUOTA_POLICY.policyId,paidApiAutoEscalation:false,paidDecisionGate:true});
   const commons=await handleCommonsApi(request,env,ctx);if(commons)return commons;
