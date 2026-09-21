@@ -137,7 +137,7 @@ for (const file of ['.github/workflows/deploy-service-proxy.yml','.github/workfl
   if (/\n\s*push\s*:/.test(text)) fail(file, 'domain-topology mutation workflow must not run automatically on push');
 }
 
-for (const retired of ['.github/workflows/deploy-biz-legacy.yml','wrangler.biz-legacy.toml','biz-legacy-redirect.js']) {
+for (const retired of ['.github/workflows/deploy-biz-legacy.yml','wrangler.biz-legacy.toml','biz-legacy-redirect.js','.github/workflows/deploy-service-admin-entry.yml','wrangler.service-admin-entry.toml','wrangler.service-admin-entry.staging.toml','service-admin-entry-worker.js','deploy/manifests/service-admin-entry.worker.json']) {
   if (fs.existsSync(path.join(root, retired))) fail(retired, 'retired redirect-only Biz topology artifact must remain deleted');
 }
 
