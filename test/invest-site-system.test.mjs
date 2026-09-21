@@ -34,8 +34,8 @@ test('project investment lifecycle is evidence-first and connection-only',async(
   for(const [path,marker] of [
     ['/invest/opportunities','Opportunity Discovery'],
     ['/invest/projects','Project Investment'],
-    ['/invest/diligence','Evidence & Diligence'],
-    ['/invest/matching','Connection Gate'],
+    ['/invest/diligence','Evidence'],
+    ['/invest/matching','Investor Matching'],
     ['/invest/aftercare','Post-Investment']
   ]){
     const response=routeInvestSite(new Request('https://ekodi.kr'+path));
