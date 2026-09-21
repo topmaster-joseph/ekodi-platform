@@ -182,8 +182,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          health=$(curl -fsS --retry 8 --retry-delay 3 https://personal-finance-api.ekodi.kr/health)
-          auth_code=$(curl -sS --retry 8 --retry-delay 3 -o /tmp/pf-production-auth.json -w '%{http_code}' https://personal-finance-api.ekodi.kr/api/finance/personal/summary)
+          health=$(curl -fsS --retry 8 --retry-delay 3 https://ekodi.kr/api/finance/personal/health)
+          auth_code=$(curl -sS --retry 8 --retry-delay 3 -o /tmp/pf-production-auth.json -w '%{http_code}' https://ekodi.kr/api/finance/personal/summary)
           printf '%s' "$health" | grep -Fq 'ekodi-personal-finance-api'
           printf '%s' "$health" | grep -Fq '"dataBoundary":"dedicated-d1"'
           [ "$auth_code" = '401' ]
