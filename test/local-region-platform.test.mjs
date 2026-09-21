@@ -13,6 +13,10 @@ test('Cheonggye is an independent regional identity and keeps CGMA as delegated 
   assert.equal(region.initialOperatorId,'cgma');
   assert.equal(region.operators.cgma.publicPath,'/cgma');
   assert.equal(region.operators.cgma.adminPath,'/cgma/admin');
+  assert.equal(region.operators.cgma.tenantSlug,'cgma');
+  assert.equal(region.operators.cgma.operatingRights.scope,'all-region-modules');
+  assert.equal(region.operators.cgma.operatingRights.accessMode,'delegated-operations');
+  assert.equal(region.operators.cgma.operatingRights.moduleIds.length,region.modules.length);
   assert.equal(region.transferPolicy.dataMovement,'none');
   assert.equal(region.transferPolicy.allowPerModuleTransfer,true);
   assert.equal(region.transferPolicy.allowCoOperation,true);
@@ -35,7 +39,12 @@ test('regional pages declare separate chrome subject and operating boundary',asy
   assert.match(publicHtml,/data-ekodi-site-subject="local-cheonggye"/);
   assert.match(publicHtml,/청계잇다/);
   assert.match(publicHtml,/href="\/cgma"/);
+  assert.match(adminHtml,/청계잇다 관리자/);
+  assert.match(adminHtml,/운영권 보유 단체/);
   assert.match(adminHtml,/서비스별 운영주체/);
+  assert.match(adminHtml,/청계면상인회 운영권 적용/);
+  assert.match(adminHtml,/href="\/cheonggye\/admin\/pass"/);
+  assert.match(adminHtml,/href="\/cheonggye\/admin\/access"/);
   assert.match(adminHtml,/청계면상인회/);
   assert.match(adminHtml,/데이터는 이동·복사하지 않고/);
   assert.match(adminHtml,/href="\/cgma\/admin"/);
@@ -61,4 +70,23 @@ test('regional registry is reusable for additional regions',()=>{
   assert.ok(Array.isArray(snapshot));
   assert.equal(snapshot[0].governanceModel,'delegated-multi-operator');
   assert.ok(snapshot[0].modules.every(module=>module.leadOperatorId&&Array.isArray(module.operatorIds)));
+});
+
+
+test('Cheonggye public experience is local-first, readable, communicative and personalization-ready',async()=>{
+  const region=localRegionBySlug('cheonggye');
+  const response=localRegionPublicPage(region);
+  const html=await response.text();
+  assert.equal(response.headers.get('x-ekodi-user-chrome'),'v1');
+  assert.equal(response.headers.get('x-ekodi-site-experience'),'local-conversational-adaptive-v1');
+  assert.match(html,/class="site-header"/);
+  assert.match(html,/청계 지역 공통 플랫폼/);
+  assert.match(html,/오늘, 청계에서 무엇을 하시나요\?/);
+  assert.match(html,/청계에 말하기/);
+  assert.match(html,/나에게 맞게 보기/);
+  assert.match(html,/data-ekodi-personalization="progressive-consent"/);
+  assert.match(html,/data-audiences=/);
+  assert.match(html,/grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
+  assert.match(html,/font-size:16px;line-height:1\.65/);
+  assert.doesNotMatch(html,/>Space</);
 });
