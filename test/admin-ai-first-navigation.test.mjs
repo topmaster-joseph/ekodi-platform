@@ -48,6 +48,7 @@ test('human-facing Admin menu has one canonical order inside seven EKODI areas',
     'sites-all','sites-internal','sites-user','sites-customer-partner','sites-independent','sites-preparing',
     'users-access','security','admins','ai-membership',
     'work','communication','community','books','devotional','social','finance','tax',
+    'executor-registry','executor-infrastructure','executor-jobs','executor-verification','executor-policies',
     'health','deployments','aiops','devices','api-cost','architecture','maturity',
     'public-site-controls','language-status','ai-module-spec','storage','ai-settings','audit-records',
   ]);
