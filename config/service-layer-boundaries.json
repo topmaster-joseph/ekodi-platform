@@ -47,7 +47,7 @@
   },
   "serviceOwnership": {
     "mall": {
-      "adminRoot": "/ekodibiz/ekodimall/admin",
+      "adminRoot": "/ekodimall/admin",
       "capability": "commerce.supply-network",
       "owns": ["products", "assortment", "sourcing", "merchant-routes", "affiliate-apply-state", "supplier-mappings", "recommendation-policy", "sales-performance"]
     },
