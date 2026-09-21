@@ -3,12 +3,40 @@ import { principalFromSupabaseRequest } from './ekodi-principal.js';
 import { accessGrantIsActive, effectiveAccessCapabilities } from './access-governance.js';
 import { ensureCustomerAccessSchema } from './customer-google-prereg.js';
 import { tenantAdminCapabilitiesForRole, TENANT_ADMIN_CAPABILITIES } from './tenant-admin-policy.js';
+import { localRegionBySlug } from './local-region-registry.js';
 
 const SCOPES=Object.freeze({
   'cheonggye-local':Object.freeze({slug:'cheonggye-local',regionId:'local:cheonggye',label:'청계잇다 지역플랫폼',publicPath:'/cheonggye',adminPath:'/cheonggye/admin',service:'region'}),
   'cheonggye-pass':Object.freeze({slug:'cheonggye-pass',regionId:'local:cheonggye',label:'청계패스',publicPath:'/cheonggye/pass',adminPath:'/cheonggye/admin/pass',service:'commerce-pass'}),
 });
 const clean=value=>String(value||'').trim().toLowerCase();
+const DELEGATED_OPERATOR_ROLES=new Set(['owner','tenant_admin','workspace_admin','admin','manager','client_admin']);
+
+export function delegatedRegionalCapabilitiesFor(scopeSlug,operatorTenantSlug,role){
+  const scope=SCOPES[clean(scopeSlug)];
+  const operatorSlug=clean(operatorTenantSlug);
+  const normalizedRole=clean(role);
+  if(!scope||operatorSlug!=='cgma'||!DELEGATED_OPERATOR_ROLES.has(normalizedRole))return Object.freeze([]);
+  const region=localRegionBySlug('cheonggye');
+  const operator=region?.operators?.cgma;
+  if(scope.regionId!==region?.id||operator?.status!=='active'||clean(operator?.tenantSlug)!==operatorSlug||operator?.operatingRights?.accessMode!=='delegated-operations')return Object.freeze([]);
+  const roleCapabilities=tenantAdminCapabilitiesForRole(normalizedRole);
+  const canOperate=roleCapabilities.includes('*')||roleCapabilities.includes(TENANT_ADMIN_CAPABILITIES.operations);
+  if(!canOperate)return Object.freeze([]);
+  if(scope.service==='commerce-pass'){
+    return Object.freeze([
+      TENANT_ADMIN_CAPABILITIES.dashboard,
+      TENANT_ADMIN_CAPABILITIES.integrationInspect,
+      TENANT_ADMIN_CAPABILITIES.integrationTest,
+      TENANT_ADMIN_CAPABILITIES.logs,
+    ]);
+  }
+  return Object.freeze([
+    TENANT_ADMIN_CAPABILITIES.dashboard,
+    TENANT_ADMIN_CAPABILITIES.operations,
+  ]);
+}
+
 
 function json(request,data,status=200){
   const origin=request.headers.get('origin')||'';
@@ -33,6 +61,33 @@ async function tenantBySlug(env,slug){
 
 async function grantFor(env,tenantId,email){
   return env.DB.prepare('SELECT role,enabled,principal_type,github_username,capabilities_json,denied_capabilities_json,expires_at,last_verified_at FROM customer_access_grants WHERE tenant_id=? AND lower(trim(email))=?').bind(tenantId,email).first();
+}
+
+async function delegatedOperatorAccess(env,scope,email){
+  if(scope.regionId!=='local:cheonggye')return null;
+  const region=localRegionBySlug('cheonggye');
+  const operator=region?.operators?.cgma;
+  if(operator?.status!=='active'||!operator?.tenantSlug)return null;
+  const tenant=await tenantBySlug(env,operator.tenantSlug);
+  if(!tenant||tenant.status!=='active')return null;
+  const grant=await grantFor(env,tenant.id,email);
+  if(!accessGrantIsActive(grant))return null;
+  const capabilities=[...delegatedRegionalCapabilitiesFor(scope.slug,operator.tenantSlug,grant.role)];
+  if(!capabilities.length)return null;
+  try{await env.DB.prepare('UPDATE customer_access_grants SET last_verified_at=? WHERE tenant_id=? AND lower(trim(email))=?').bind(new Date().toISOString(),tenant.id,email).run();}catch{}
+  return {
+    ok:true,
+    platform:false,
+    email,
+    role:clean(grant.role),
+    capabilities,
+    canManageAccess:false,
+    scope,
+    principalType:'delegated_operator',
+    expiresAt:grant.expires_at||'',
+    delegatedOperator:{id:operator.id,name:operator.name,tenantSlug:operator.tenantSlug,role:operator.role},
+    menu:menuFor(scope,capabilities,false),
+  };
 }
 
 function capabilitiesFor(grant){
@@ -64,11 +119,15 @@ async function resolveAccess(request,env,scope){
   if(!tenant||tenant.status!=='active')return {ok:false,status:404,code:'REGION_SCOPE_NOT_FOUND'};
   const email=clean(principal.email);
   const grant=await grantFor(env,tenant.id,email);
-  if(!accessGrantIsActive(grant))return {ok:false,status:403,code:'REGION_ACCESS_FORBIDDEN',email};
-  const capabilities=capabilitiesFor(grant);
-  const canManageAccess=capabilities.includes('*')||capabilities.includes(TENANT_ADMIN_CAPABILITIES.access);
-  try{await env.DB.prepare('UPDATE customer_access_grants SET last_verified_at=? WHERE tenant_id=? AND lower(trim(email))=?').bind(new Date().toISOString(),tenant.id,email).run();}catch{}
-  return {ok:true,platform:false,email,role:clean(grant.role),capabilities,canManageAccess,scope,principalType:grant.principal_type||'member',expiresAt:grant.expires_at||'',menu:menuFor(scope,capabilities,false)};
+  if(accessGrantIsActive(grant)){
+    const capabilities=capabilitiesFor(grant);
+    const canManageAccess=capabilities.includes('*')||capabilities.includes(TENANT_ADMIN_CAPABILITIES.access);
+    try{await env.DB.prepare('UPDATE customer_access_grants SET last_verified_at=? WHERE tenant_id=? AND lower(trim(email))=?').bind(new Date().toISOString(),tenant.id,email).run();}catch{}
+    return {ok:true,platform:false,email,role:clean(grant.role),capabilities,canManageAccess,scope,principalType:grant.principal_type||'member',expiresAt:grant.expires_at||'',menu:menuFor(scope,capabilities,false)};
+  }
+  const delegated=await delegatedOperatorAccess(env,scope,email);
+  if(delegated)return delegated;
+  return {ok:false,status:403,code:'REGION_ACCESS_FORBIDDEN',email};
 }
 
 export async function handleRegionalAccessControl(request,env){
@@ -85,7 +144,7 @@ export async function handleRegionalAccessControl(request,env){
     const loginUrl=new URL('https://ekodi.kr/auth/');loginUrl.searchParams.set('site','portal');loginUrl.searchParams.set('direct','1');loginUrl.searchParams.set('return_to',scope.adminPath);
     return json(request,{authenticated:false,error:result.status===401?'Google 로그인이 필요합니다.':'이 관리공간에 등록된 권한이 없습니다.',code:result.code,loginUrl:loginUrl.toString(),publicUrl:scope.publicPath},result.status);
   }
-  return json(request,{authenticated:true,platform:Boolean(result.platform),email:result.email,role:result.role,principalType:result.principalType||'platform',capabilities:result.capabilities,canManageAccess:result.canManageAccess,scope:{slug:scope.slug,label:scope.label,service:scope.service,adminPath:scope.adminPath,publicPath:scope.publicPath},menu:result.menu,expiresAt:result.expiresAt||''});
+  return json(request,{authenticated:true,platform:Boolean(result.platform),email:result.email,role:result.role,principalType:result.principalType||'platform',capabilities:result.capabilities,canManageAccess:result.canManageAccess,delegatedOperator:result.delegatedOperator||null,scope:{slug:scope.slug,label:scope.label,service:scope.service,adminPath:scope.adminPath,publicPath:scope.publicPath},menu:result.menu,expiresAt:result.expiresAt||''});
 }
 
 export function regionalAccessScopeSnapshot(){return Object.freeze(Object.values(SCOPES).map(item=>Object.freeze({...item})));}
