@@ -40,6 +40,7 @@ function trackSource(track){return track?.source_type||track?.sourceType||''}
 function trackLanguage(track){return String(track?.language_code||track?.languageCode||'').toLowerCase()}
 function viewerTracksForLanguage(tracks=[],language='original'){const rows=Array.isArray(tracks)?tracks:[],programVideo=rows.filter(t=>trackKind(t)==='video'&&trackSource(t)==='program'),video=programVideo.length?programVideo:rows.filter(t=>trackKind(t)==='video').slice(0,1),original=rows.filter(t=>trackKind(t)==='audio'&&trackSource(t)!=='translation'&&(trackSource(t)==='program'||!rows.some(x=>trackKind(x)==='audio'&&trackSource(x)==='program'))),translated=language!=='original'?rows.filter(t=>trackKind(t)==='audio'&&trackSource(t)==='translation'&&trackLanguage(t)===language):[];return {tracks:[...video,...(translated.length?translated:original)],translated:translated.length>0}}
 function setViewerLanguageState(translated=false){const node=$('viewerLanguageState'),language=state.viewerLanguage;if(!node)return;node.textContent=language==='original'?'원음':translated?'통역':'원음 대체'}
+async function setViewerLanguagePreference(language){if(!state.room)return;await api(`/rooms/${encodeURIComponent(state.room.id)}/language-listener`,{method:'PUT',body:JSON.stringify({languageCode:language||'original'})})}
 async function reconnectViewerLanguage(){if(!state.room||state.room.status!=='live')return;const selected=viewerTracksForLanguage(state.viewerTrackCatalog,state.viewerLanguage);setViewerLanguageState(selected.translated);note(state.viewerLanguage==='original'?'원음':'언어 전환 중','viewerStatus');await closeViewerSession();const result=await connectViewerMedia(state.room.id,selected.tracks);if(result.ok)note(selected.translated?'통역 연결':'원음 연결','viewerStatus')}
 async function connectViewerMedia(id,tracks){await createSession(id,'viewer');state.pc.ontrack=attachViewerTracks;const pulled=await api(`/rooms/${id}/sessions/${state.session.id}/pull`,{method:'POST',session:true,body:JSON.stringify({tracks:(tracks||[]).map(track=>({trackName:track.track_name||track.trackName}))})});if(pulled.empty)return {ok:false,empty:true};const offer=providerDescription(pulled);if(!offer?.sdp)throw new Error('media_server_offer_missing');await state.pc.setRemoteDescription(offer);const answer=await state.pc.createAnswer();await state.pc.setLocalDescription(answer);await waitIce(state.pc);await api(`/rooms/${id}/sessions/${state.session.id}/renegotiate`,{method:'PUT',session:true,body:JSON.stringify({sessionDescription:state.pc.localDescription})});const received=await waitForRemoteTracks();return {ok:received.length>0,empty:false,received:received.length}}
 function openViewerWindow(){const url=$('shareLink')?.value;if(!url)return note('먼저 방송을 준비해 주세요.');const link=document.createElement('a');link.href=url;link.target='_blank';link.rel='noopener noreferrer';document.body.appendChild(link);link.click();link.remove();note('시청 화면을 새 탭으로 열었습니다. 송출 스튜디오는 그대로 유지합니다.')}
@@ -167,7 +168,7 @@ async function pollAuxCameraApproval(key){
 }
 async function claimAuxCamera(){
   const key=auxClaimKey();auxStatus('연결 중');$('auxCameraConnectButton')&&($('auxCameraConnectButton').disabled=true);
-  try{await cameraPairApi(`/camera-pairings/${encodeURIComponent(cfg.cameraCode)}/claim`,'',{method:'POST',body:JSON.stringify({claimKey:key,deviceName:'보조카메라'})});auxStatus('승인 대기');await pollAuxCameraApproval(key)}
+  try{await cameraPairApi(`/camera-pairings/${encodeURIComponent(cfg.cameraCode)}/claim`,'',{method:'POST',body:JSON.stringify({claimKey:key,deviceName:`보조카메라 ${String(cfg.cameraCode||'').slice(-4)}`})});auxStatus('승인 대기');await pollAuxCameraApproval(key)}
   catch(error){$('auxCameraConnectButton')&&($('auxCameraConnectButton').disabled=false);auxStatus(error.status===410?'만료':`연결 실패`)}
 }
 async function switchAuxCamera(){
@@ -195,7 +196,7 @@ $('refreshParticipantSourcesButton')?.addEventListener('click',refreshParticipan
 $('studioChatForm')?.addEventListener('submit',event=>{event.preventDefault();void sendChat('studioChatInput','방송자')});
 $('viewerChatForm')?.addEventListener('submit',event=>{event.preventDefault();void sendChat('viewerChatInput','참여자')});
 $('requestSpeakButton')?.addEventListener('click',requestCameraParticipation);
-$('viewerLanguageSelect')?.addEventListener('change',event=>{state.viewerLanguage=event.target.value||'original';void reconnectViewerLanguage().catch(error=>note(`언어 전환 실패: ${error.message}`,'viewerStatus'))});
+$('viewerLanguageSelect')?.addEventListener('change',event=>{state.viewerLanguage=event.target.value||'original';void setViewerLanguagePreference(state.viewerLanguage).then(reconnectViewerLanguage).catch(error=>note(`언어 전환 실패: ${error.message}`,'viewerStatus'))});
 $('auxCameraConnectButton')?.addEventListener('click',claimAuxCamera);
 $('auxCameraSwitchButton')?.addEventListener('click',switchAuxCamera);
 $('auxCameraStopButton')?.addEventListener('click',()=>stopAuxCamera(true));
