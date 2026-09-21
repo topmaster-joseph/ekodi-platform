@@ -82,6 +82,10 @@ async function entitlementFor(request,env,tenant){
 }
 function safeRoom(row){if(!row)return null;return {id:row.id,tenantId:row.tenant_id,mode:row.mode,securityProfile:row.security_profile,title:row.title,status:row.status,aiEnabled:Boolean(row.ai_enabled),recordingEnabled:Boolean(row.recording_enabled),recordingNoticeEnabled:Boolean(row.recording_notice_enabled),anonymousViewersEnabled:Boolean(row.anonymous_viewers_enabled),createdAt:row.created_at,updatedAt:row.updated_at,endedAt:row.ended_at||null}}
 async function roomById(env,id){return env.DB.prepare('SELECT * FROM realtime_rooms WHERE id=?').bind(id).first()}
+function safeManagementCameraPair(row){if(!row)return null;return {id:row.id,roomId:row.room_id,tenantId:row.tenant_id,label:row.label||'관리 카메라',status:row.status,createdAt:row.created_at,requestedAt:row.requested_at||null,approvedAt:row.approved_at||null,connectedAt:row.connected_at||null,expiresAt:row.expires_at}}
+async function managementCameraPairByCode(env,code){const hash=await sha256('management-camera:'+clean(code,80));return env.DB.prepare('SELECT * FROM realtime_management_camera_pairs WHERE pairing_hash=? LIMIT 1').bind(hash).first()}
+async function managementCameraDeviceAllowed(request,row){const key=clean(request.headers.get('x-ekodi-camera-key'),180);if(!key||!row?.device_key_hash)return false;return await sha256('management-camera-device:'+key)===row.device_key_hash}
+async function ensureManagementCameraPairActive(env,row){if(!row)return null;if(Date.parse(row.expires_at)>Date.now()&&!['expired','revoked'].includes(row.status))return row;if(!['expired','revoked'].includes(row.status))await env.DB.prepare("UPDATE realtime_management_camera_pairs SET status='expired' WHERE id=?").bind(row.id).run().catch(()=>{});return {...row,status:row.status==='revoked'?'revoked':'expired'}}
 
 function safeDestination(row,extra={}){
   if(!row)return null;
