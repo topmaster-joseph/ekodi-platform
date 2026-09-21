@@ -12,6 +12,7 @@ import { platformMaturityProjection } from './platform-maturity-control.js';
 import { handleLearningControl } from './learning-control.js';
 import { buildEkodiOwnerReport, latestEkodiOwnerReport, listEkodiOwnerReports, persistEkodiOwnerReport } from './ekodi-owner-report.js';
 import { realtimeTenantList } from './realtime-tenant-registry.js';
+import { handleAdminConfirmations, handleConfirmationPublic, handleWorkspaceConfirmations } from './payment-receipt-confirmation-control.js';
 
 // Provider service registry only. Customer organizations and their sites are managed as
 // customer tenants/workspaces through the customer directory, never as EKODI services.
@@ -657,6 +658,11 @@ async function handleControl(request, env) {
   const url = new URL(request.url);
   const path = url.pathname;
 
+  if (path === `${CONTROL_PREFIX}/confirmations` || path.startsWith(`${CONTROL_PREFIX}/confirmations/`)) {
+    const response = await handleAdminConfirmations(request, env, auth.session);
+    if (response) return response;
+  }
+
   if (request.method === 'GET' && path === `${CONTROL_PREFIX}/overview`) {
     return controlJson(await overview(env), 200, auth.response.headers);
   }
@@ -871,6 +877,10 @@ async function handleControl(request, env) {
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    const confirmationPublicResponse = await handleConfirmationPublic(request, env);
+    if (confirmationPublicResponse) return confirmationPublicResponse;
+    const workspaceConfirmationResponse = await handleWorkspaceConfirmations(request, env);
+    if (workspaceConfirmationResponse) return workspaceConfirmationResponse;
     const publicDomainResponse = await handlePublicDomainRequest(request, env);
     if (publicDomainResponse) return publicDomainResponse;
 
