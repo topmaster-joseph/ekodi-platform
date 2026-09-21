@@ -14,7 +14,7 @@ function slug(value){const v=clean(value,80).toLowerCase();return /^[a-z0-9][a-z
 function uid(prefix){return `${prefix}_${crypto.randomUUID().replaceAll('-','')}`}
 function bearer(request){const raw=clean(request.headers.get('authorization'),8192);return raw.toLowerCase().startsWith('bearer ')?raw.slice(7).trim():''}
 function originAllowed(request,env){const origin=clean(request.headers.get('origin'),300);if(!origin)return '';const allowed=new Set(clean(env.ALLOWED_ORIGINS,20000).split(',').map(x=>x.trim()).filter(Boolean));return allowed.has(origin)?origin:''}
-function cors(request,env){const origin=originAllowed(request,env);const headers={'access-control-allow-methods':'GET, POST, PUT, PATCH, DELETE, OPTIONS','access-control-allow-headers':'authorization, content-type, x-ekodi-session-key','access-control-max-age':'86400','vary':'Origin'};if(origin)headers['access-control-allow-origin']=origin;return headers}
+function cors(request,env){const origin=originAllowed(request,env);const headers={'access-control-allow-methods':'GET, POST, PUT, PATCH, DELETE, OPTIONS','access-control-allow-headers':'authorization, content-type, x-ekodi-session-key, x-ekodi-camera-key','access-control-max-age':'86400','vary':'Origin'};if(origin)headers['access-control-allow-origin']=origin;return headers}
 function json(request,env,data,status=200){return new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff','referrer-policy':'no-referrer',...cors(request,env)}})}
 async function body(request){try{return await request.json()}catch{return null}}
 async function sha256(value){const bytes=new TextEncoder().encode(String(value));const digest=await crypto.subtle.digest('SHA-256',bytes);return [...new Uint8Array(digest)].map(x=>x.toString(16).padStart(2,'0')).join('')}
@@ -82,6 +82,10 @@ async function entitlementFor(request,env,tenant){
 }
 function safeRoom(row){if(!row)return null;return {id:row.id,tenantId:row.tenant_id,mode:row.mode,securityProfile:row.security_profile,title:row.title,status:row.status,aiEnabled:Boolean(row.ai_enabled),recordingEnabled:Boolean(row.recording_enabled),recordingNoticeEnabled:Boolean(row.recording_notice_enabled),anonymousViewersEnabled:Boolean(row.anonymous_viewers_enabled),createdAt:row.created_at,updatedAt:row.updated_at,endedAt:row.ended_at||null}}
 async function roomById(env,id){return env.DB.prepare('SELECT * FROM realtime_rooms WHERE id=?').bind(id).first()}
+function safeManagementCameraPair(row){if(!row)return null;return {id:row.id,roomId:row.room_id,tenantId:row.tenant_id,label:row.label||'관리 카메라',status:row.status,createdAt:row.created_at,requestedAt:row.requested_at||null,approvedAt:row.approved_at||null,connectedAt:row.connected_at||null,expiresAt:row.expires_at}}
+async function managementCameraPairByCode(env,code){const hash=await sha256('management-camera:'+clean(code,80));return env.DB.prepare('SELECT * FROM realtime_management_camera_pairs WHERE pairing_hash=? LIMIT 1').bind(hash).first()}
+async function managementCameraDeviceAllowed(request,row){const key=clean(request.headers.get('x-ekodi-camera-key'),180);if(!key||!row?.device_key_hash)return false;return await sha256('management-camera-device:'+key)===row.device_key_hash}
+async function ensureManagementCameraPairActive(env,row){if(!row)return null;if(Date.parse(row.expires_at)>Date.now()&&!['expired','revoked'].includes(row.status))return row;if(!['expired','revoked'].includes(row.status))await env.DB.prepare("UPDATE realtime_management_camera_pairs SET status='expired' WHERE id=?").bind(row.id).run().catch(()=>{});return {...row,status:row.status==='revoked'?'revoked':'expired'}}
 
 function safeDestination(row,extra={}){
   if(!row)return null;
@@ -574,19 +578,99 @@ async function collaborationRoute(request,env,url,input){
   if(sources&&request.method==='GET'){
     const room=await roomById(env,decodeURIComponent(sources[1]));if(!room)return json(request,env,{ok:false,error:'room_not_found'},404);
     const auth=await ownerAllowed(request,env,room);if(!auth.allowed)return json(request,env,{ok:false,error:'room_owner_permission_required'},403);
-    const rows=await env.DB.prepare(`SELECT s.actor_key,COALESCE(p.display_name,'참여자') display_name,t.track_name,t.media_kind,t.source_type
+    const rows=await env.DB.prepare(`SELECT s.actor_key,COALESCE(c.label,p.display_name,'참여자') display_name,
+      CASE WHEN c.id IS NOT NULL THEN 'management_camera' ELSE 'participant' END source_role,
+      t.track_name,t.media_kind,t.source_type,t.language_code
       FROM realtime_media_sessions s
       JOIN realtime_media_tracks t ON t.publisher_session_id=s.provider_session_id AND t.room_id=s.room_id AND t.status='active'
       LEFT JOIN realtime_participation_requests p ON p.room_id=s.room_id AND p.actor_key=s.actor_key
+      LEFT JOIN realtime_management_camera_pairs c ON ('camera:' || c.id)=s.actor_key
       WHERE s.room_id=? AND s.role='presenter' AND s.status='active'
       ORDER BY s.created_at,t.created_at`).bind(room.id).all();
     const map=new Map();
-    for(const row of rows.results||[]){if(!map.has(row.actor_key))map.set(row.actor_key,{actorKey:row.actor_key,displayName:row.display_name||'참여자',tracks:[]});map.get(row.actor_key).tracks.push({trackName:row.track_name,kind:row.media_kind,sourceType:row.source_type});}
+    for(const row of rows.results||[]){if(!map.has(row.actor_key))map.set(row.actor_key,{actorKey:row.actor_key,displayName:row.display_name||'참여자',sourceRole:row.source_role||'participant',tracks:[]});map.get(row.actor_key).tracks.push({trackName:row.track_name,kind:row.media_kind,sourceType:row.source_type,languageCode:row.language_code||null});}
     return json(request,env,{ok:true,sources:[...map.values()]});
   }
   return null;
 }
 
+async function managementCameraPairRoute(request,env,url,input){
+  const roomCollection=url.pathname.match(/^\/api\/realtime\/rooms\/([^/]+)\/management-cameras$/);
+  if(roomCollection){
+    const room=await roomById(env,decodeURIComponent(roomCollection[1]));if(!room)return json(request,env,{ok:false,error:'room_not_found'},404);
+    const auth=await ownerAllowed(request,env,room);if(!auth.allowed)return json(request,env,{ok:false,error:'room_owner_permission_required'},403);
+    if(request.method==='GET'){
+      const rows=await env.DB.prepare('SELECT * FROM realtime_management_camera_pairs WHERE room_id=? ORDER BY created_at DESC LIMIT 24').bind(room.id).all();
+      const pairs=[];for(const row of rows.results||[])pairs.push(safeManagementCameraPair(await ensureManagementCameraPairActive(env,row)));
+      return json(request,env,{ok:true,pairs});
+    }
+    if(request.method==='POST'){
+      if(!['created','starting','live'].includes(room.status))return json(request,env,{ok:false,error:'room_not_joinable'},409);
+      const code=crypto.randomUUID().replaceAll('-','').slice(0,18),id=uid('cam'),stamp=new Date().toISOString(),expiresAt=new Date(Date.now()+30*60*1000).toISOString(),label=clean(input?.label,60)||'관리 카메라';
+      await env.DB.prepare(`INSERT INTO realtime_management_camera_pairs(id,room_id,tenant_id,pairing_hash,label,status,created_at,expires_at) VALUES(?,?,?,?,?,'issued',?,?)`).bind(id,room.id,room.tenant_id,await sha256('management-camera:'+code),label,stamp,expiresAt).run();
+      const pair=await env.DB.prepare('SELECT * FROM realtime_management_camera_pairs WHERE id=?').bind(id).first();
+      return json(request,env,{ok:true,pair:safeManagementCameraPair(pair),pairCode:code,cameraUrl:`https://ekodi.kr/live/c/${code}`},201);
+    }
+    return json(request,env,{ok:false,error:'method_not_allowed'},405);
+  }
+  const roomItem=url.pathname.match(/^\/api\/realtime\/rooms\/([^/]+)\/management-cameras\/([^/]+)$/);
+  if(roomItem&&request.method==='PATCH'){
+    const room=await roomById(env,decodeURIComponent(roomItem[1]));if(!room)return json(request,env,{ok:false,error:'room_not_found'},404);
+    const auth=await ownerAllowed(request,env,room);if(!auth.allowed)return json(request,env,{ok:false,error:'room_owner_permission_required'},403);
+    const pair=await env.DB.prepare('SELECT * FROM realtime_management_camera_pairs WHERE room_id=? AND id=?').bind(room.id,decodeURIComponent(roomItem[2])).first();if(!pair)return json(request,env,{ok:false,error:'management_camera_pair_not_found'},404);
+    const next=clean(input?.status,20);if(!['approved','revoked'].includes(next))return json(request,env,{ok:false,error:'invalid_management_camera_status'},400);
+    const stamp=new Date().toISOString();
+    if(next==='approved'){
+      if(!['pending','approved'].includes(pair.status))return json(request,env,{ok:false,error:'management_camera_not_pending'},409);
+      await env.DB.prepare("UPDATE realtime_management_camera_pairs SET status='approved',approved_at=? WHERE id=?").bind(stamp,pair.id).run();
+    }else{
+      await env.DB.prepare("UPDATE realtime_management_camera_pairs SET status='revoked',revoked_at=? WHERE id=?").bind(stamp,pair.id).run();
+      await env.DB.prepare("UPDATE realtime_media_tracks SET status='closed',updated_at=? WHERE room_id=? AND publisher_session_id IN (SELECT provider_session_id FROM realtime_media_sessions WHERE room_id=? AND actor_key=?)").bind(stamp,room.id,room.id,'camera:'+pair.id).run().catch(()=>{});
+      await env.DB.prepare("UPDATE realtime_media_sessions SET status='closed',updated_at=? WHERE room_id=? AND actor_key=? AND status='active'").bind(stamp,room.id,'camera:'+pair.id).run().catch(()=>{});
+    }
+    return json(request,env,{ok:true,pair:safeManagementCameraPair(await env.DB.prepare('SELECT * FROM realtime_management_camera_pairs WHERE id=?').bind(pair.id).first())});
+  }
+  const publicPair=url.pathname.match(/^\/api\/realtime\/management-cameras\/([A-Za-z0-9_-]{8,80})\/(request|status|session)$/);
+  if(!publicPair)return null;
+  const code=publicPair[1],action=publicPair[2];
+  let pair=await managementCameraPairByCode(env,code);pair=await ensureManagementCameraPairActive(env,pair);
+  if(!pair)return json(request,env,{ok:false,error:'management_camera_pair_not_found'},404);
+  if(pair.status==='expired')return json(request,env,{ok:false,error:'management_camera_pair_expired'},410);
+  if(pair.status==='revoked')return json(request,env,{ok:false,error:'management_camera_pair_revoked'},410);
+  if(action==='request'&&request.method==='POST'){
+    const deviceKey=clean(input?.deviceKey,180);if(deviceKey.length<24)return json(request,env,{ok:false,error:'management_camera_device_key_required'},400);
+    const deviceHash=await sha256('management-camera-device:'+deviceKey);
+    if(pair.device_key_hash&&pair.device_key_hash!==deviceHash)return json(request,env,{ok:false,error:'management_camera_pair_already_claimed'},409);
+    const stamp=new Date().toISOString(),label=clean(input?.label,60)||pair.label||'관리 카메라';
+    await env.DB.prepare("UPDATE realtime_management_camera_pairs SET device_key_hash=?,label=?,status=CASE WHEN status IN ('approved','connected') THEN status ELSE 'pending' END,requested_at=COALESCE(requested_at,?) WHERE id=?").bind(deviceHash,label,stamp,pair.id).run();
+    pair=await env.DB.prepare('SELECT * FROM realtime_management_camera_pairs WHERE id=?').bind(pair.id).first();
+    return json(request,env,{ok:true,pair:safeManagementCameraPair(pair)});
+  }
+  if(action==='status'&&request.method==='GET'){
+    if(!await managementCameraDeviceAllowed(request,pair))return json(request,env,{ok:false,error:'management_camera_device_forbidden'},403);
+    return json(request,env,{ok:true,pair:safeManagementCameraPair(pair)});
+  }
+  if(action==='session'&&request.method==='POST'){
+    if(!await managementCameraDeviceAllowed(request,pair))return json(request,env,{ok:false,error:'management_camera_device_forbidden'},403);
+    if(!['approved','connected'].includes(pair.status))return json(request,env,{ok:false,error:'management_camera_approval_required'},409);
+    const room=await roomById(env,pair.room_id);if(!room||!['created','starting','live'].includes(room.status))return json(request,env,{ok:false,error:'room_not_joinable'},409);
+    const actorKey='camera:'+pair.id,stamp=new Date().toISOString();
+    await env.DB.prepare("UPDATE realtime_media_tracks SET status='closed',updated_at=? WHERE room_id=? AND publisher_session_id IN (SELECT provider_session_id FROM realtime_media_sessions WHERE room_id=? AND actor_key=? AND status='active')").bind(stamp,room.id,room.id,actorKey).run().catch(()=>{});
+    await env.DB.prepare("UPDATE realtime_media_sessions SET status='closed',updated_at=? WHERE room_id=? AND actor_key=? AND status='active'").bind(stamp,room.id,actorKey).run().catch(()=>{});
+    const media=await newProviderMediaSession(env,room,actorKey,'presenter');
+    await env.DB.prepare("UPDATE realtime_management_camera_pairs SET status='connected',connected_at=COALESCE(connected_at,?) WHERE id=?").bind(stamp,pair.id).run();
+    return json(request,env,{...media,pair:safeManagementCameraPair(await env.DB.prepare('SELECT * FROM realtime_management_camera_pairs WHERE id=?').bind(pair.id).first())},201);
+  }
+  return json(request,env,{ok:false,error:'method_not_allowed'},405);
+}
+
+async function newProviderMediaSession(env,room,actorKey,role){
+  const provider=await providerCall(env,'/sessions/new',{method:'POST'});
+  const accessKey=`rts_${crypto.randomUUID().replaceAll('-','')}${crypto.randomUUID().replaceAll('-','')}`;
+  const id=uid('ms'),stamp=new Date().toISOString();
+  await env.DB.prepare(`INSERT INTO realtime_media_sessions (id,room_id,tenant_id,actor_key,role,provider,provider_session_id,access_hash,status,created_at,updated_at) VALUES (?,?,?,?,?,'cloudflare-realtime',?,?,'active',?,?)`).bind(id,room.id,room.tenant_id,actorKey,role,provider.sessionId,await sha256(accessKey),stamp,stamp).run();
+  return {ok:true,session:{id,providerSessionId:provider.sessionId,accessKey,role},iceServers:[{urls:'stun:stun.cloudflare.com:3478'}]};
+}
 async function createMediaSession(request,env,room,requestedRole){
   const role=clean(requestedRole,30)||'viewer';
   let actorKey=`anon:${crypto.randomUUID()}`;
@@ -599,11 +683,7 @@ async function createMediaSession(request,env,room,requestedRole){
       if(!membership||!['owner','cohost','presenter'].includes(String(membership.role||'')))return json(request,env,{ok:false,error:'publish_permission_required'},403);
     }
   }
-  const provider=await providerCall(env,'/sessions/new',{method:'POST'});
-  const accessKey=`rts_${crypto.randomUUID().replaceAll('-','')}${crypto.randomUUID().replaceAll('-','')}`;
-  const id=uid('ms'),stamp=new Date().toISOString();
-  await env.DB.prepare(`INSERT INTO realtime_media_sessions (id,room_id,tenant_id,actor_key,role,provider,provider_session_id,access_hash,status,created_at,updated_at) VALUES (?,?,?,?,?,'cloudflare-realtime',?,?,'active',?,?)`).bind(id,room.id,room.tenant_id,actorKey,role,provider.sessionId,await sha256(accessKey),stamp,stamp).run();
-  return json(request,env,{ok:true,session:{id,providerSessionId:provider.sessionId,accessKey,role},iceServers:[{urls:'stun:stun.cloudflare.com:3478'}]});
+  return json(request,env,await newProviderMediaSession(env,room,actorKey,role));
 }
 async function mediaSession(env,roomId,sessionId,request){
   const row=await env.DB.prepare(`SELECT * FROM realtime_media_sessions WHERE room_id=? AND id=? AND status='active'`).bind(roomId,sessionId).first();
@@ -704,6 +784,7 @@ export async function handleRealtimeControl(request,env){
   const recordings=await recordingRoutes(request,env,url,input);if(recordings)return recordings;
   const destinations=await destinationRoute(request,env,url);if(destinations)return destinations;
   const collaboration=await collaborationRoute(request,env,url,input);if(collaboration)return collaboration;
+  const managementCamera=await managementCameraPairRoute(request,env,url,input);if(managementCamera)return managementCamera;
   const mutation=await roomMutation(request,env,url,input);if(mutation)return mutation;
   const planned=await planRoute(request,env,url,input);if(planned)return planned;
   const session=await sessionRoute(request,env,url,input);if(session)return session;
@@ -757,5 +838,7 @@ export const REALTIME_CONTROL_CONTRACT=Object.freeze({
   externalDistributionFailIsolated:true,
   liveChat:true,
   participantCameraRequests:true,
+  managementCameraQrPairing:true,
+  interpretationLanguageSelection:true,
   draggableProgramSources:true,
 });

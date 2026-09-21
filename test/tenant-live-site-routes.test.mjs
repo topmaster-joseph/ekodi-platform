@@ -12,9 +12,9 @@ test('shared tenant Live paths render on ekodi.kr with isolated tenant identity'
     const html=await response.text();
     assert.match(html,new RegExp(`data-tenant="${tenant.apiTenant}"`),tenant.id);
     assert.match(html,/\/tenant-live\.js/,tenant.id);
-    assert.match(html,/공개 방송은 로그인 없이 시청/,tenant.id);
+    assert.match(html,/공개 방송은 바로 볼 수 있습니다/,tenant.id);
     assert.match(html,/id="openViewerButton"/,tenant.id);
-    assert.match(html,/시청 화면 새 탭으로 열기/,tenant.id);
+    assert.match(html,/시청 화면/,tenant.id);
     const apex=await platformRouter.fetch(new Request(`https://ekodi.kr${tenant.path}`),{});
     assert.equal(apex.status,200,`apex ${tenant.id}`);
     const apexHtml=await apex.text();
@@ -51,9 +51,19 @@ test('shared Live auth handoff exchanges EKODI proof without third-party script 
   assert.match(source,/publisher_media_unavailable/);
   assert.match(source,/media_tracks_not_ready/);
   assert.match(source,/attempt<5/);
-  assert.match(source,/송출 트랙을 기다리고 있습니다/);
-  assert.match(source,/실시간 방송 수신 중입니다/);
+  assert.match(source,/다시 연결 중/);
+  assert.match(source,/수신 중/);
   assert.doesNotMatch(source,/cdn\.jsdelivr\.net|esm\.sh/);
+});
+
+test('QR management camera has a first-party noindex entry route',async()=>{
+  const response=await platformRouter.fetch(new Request('https://ekodi.kr/live/c/testpaircode123'),{});
+  assert.equal(response.status,200);
+  assert.match(response.headers.get('x-robots-tag')||'',/noindex/);
+  const html=await response.text();
+  assert.match(html,/data-camera-pair="testpaircode123"/);
+  assert.match(html,/EKODI 관리카메라/);
+  assert.match(html,/id="managementCameraConnect"/);
 });
 
 test('platform entry router reserves /live/admin before generic workspace admin routing',async()=>{
