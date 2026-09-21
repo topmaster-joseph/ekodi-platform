@@ -36,3 +36,15 @@ test('external adapter requirements avoid private database coupling',()=>{
   assert.ok(requirements.security.includes('no-direct-ekodi-database-access'));
   assert.ok(requirements.security.includes('idempotency-for-mutations'));
 });
+
+
+test('Cheonggye Pass routes are claimed before generic regional fallback',async()=>{
+  const router=await fs.readFile(new URL('../platform-router-entry-worker.js',import.meta.url),'utf8');
+  assert.match(router,/regionalCommerceProgramFromLocalRoute\(localRegionRoute\)/);
+  assert.match(router,/regionalCommerceProgramAdminPage/);
+  assert.match(router,/regionalCommerceProgramPublicPage/);
+  const manifest=JSON.parse(await fs.readFile(new URL('../deploy\/manifests\/shared-site.worker.json',import.meta.url),'utf8'));
+  const urls=new Set(manifest.worker.requests.map(item=>item.url));
+  assert.ok(urls.has('https://ekodi.kr/cheonggye/pass'));
+  assert.ok(urls.has('https://ekodi.kr/cheonggye/admin/pass'));
+});
