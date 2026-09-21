@@ -14,6 +14,6 @@ test('Admin Free Ops verifier follows the canonical ekodi.kr embed origin',async
 test('Admin remains non-embeddable while only the Free Ops page may be framed by Admin',async()=>{
   const workflow=await readFile(workflowPath,'utf8');
   assert.match(workflow,/frame-ancestors '\\''none'\\''/);
-  assert.match(workflow,/frame-ancestors https:\/\/admin\\\.ekodi\\\.kr/);
+  assert.match(workflow,/frame-ancestors https:\/\/ekodi\\\.kr/);
   assert.match(workflow,/x-frame-options:\[\[:space:\]\]\*DENY/);
 });
