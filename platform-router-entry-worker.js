@@ -41,7 +41,7 @@ import { localRegionAdminAuthScript } from './local-region-admin-auth.js';
 import { localRegionAccessAdminScript } from './local-region-access-admin.js';
 import { regionalCommerceProgramFromLocalRoute } from './regional-commerce-program-registry.js';
 import { regionalCommerceProgramPublicPage, regionalCommerceProgramAdminPage } from './regional-commerce-program-page.js';
-import { handleSeonamMedCivicApi } from './seonam-med-civic-control.js';
+import { handleSeonamMediCivicApi } from './seonam-medi-civic-control.js';
 
 const PUBLIC_HOST='ekodi.kr';
 const CGMA_HOSTS=new Set(['cgma.or.kr','www.cgma.or.kr']);
@@ -64,6 +64,8 @@ const WORKSPACE_ASSET_PREFIX='/_ekodi/space/';
 const DEPLOYMENT_PROBE_PATH='/deployment-probe';
 const STORE_GATEWAY_PATHS=new Set(['/cmpmyi','/cmpmyi/']);
 const WORKSPACE_ASSETS=new Set(['style.css','config.js','app.js','storefront.json','storefront.css','jadam-storefront.css']);
+const SEONAM_MEDI_PREFIX='/seonam-medi';
+const SEONAM_MED_LEGACY_PREFIX='/seonam-med';
 
 function resolvedHost(request,env){
   const url=new URL(request.url);
@@ -79,6 +81,10 @@ function isEkodiBizOwnedPath(pathname){
 function isWorkspaceProgressiveHome(pathname){const route=workspaceRouteFromPublicPath(pathname);return Boolean(route?.public&&route.serviceSegments.length<=1);}
 function isProjectionHome(pathname,projection){const path=String(pathname||'').replace(/\/+$/,'');return Boolean(projection&&path===projection.prefix);}
 function isCgmaRoot(pathname){return /^\/cgma\/?$/i.test(String(pathname||''));}
+function isSeonamMediPath(pathname){const path=String(pathname||'');return path===SEONAM_MEDI_PREFIX||path.startsWith(SEONAM_MEDI_PREFIX+'/');}
+function isLegacySeonamMedPath(pathname){const path=String(pathname||'');return path===SEONAM_MED_LEGACY_PREFIX||path.startsWith(SEONAM_MED_LEGACY_PREFIX+'/');}
+function redirectLegacySeonamMed(request){const source=new URL(request.url);const target=new URL(request.url);target.pathname=source.pathname.replace(/^\/seonam-med(?=\/|$)/,'/seonam-medi');return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-content-type-options':'nosniff','x-ekodi-route':'seonam-medi-canonical'}});}
+async function routeSeonamMediStatic(request,env){if(!env?.ASSETS?.fetch)return new Response('Site assets unavailable',{status:503,headers:{'cache-control':'no-store'}});const source=new URL(request.url);const target=new URL(request.url);if(source.pathname===SEONAM_MEDI_PREFIX)target.pathname=SEONAM_MEDI_PREFIX+'/';const upstream=await env.ASSETS.fetch(new Request(target.toString(),request));const out=new Response(upstream.body,upstream);out.headers.set('x-ekodi-route','seonam-medi-static');out.headers.set('x-content-type-options','nosniff');if((out.headers.get('content-type')||'').includes('text/html'))out.headers.set('cache-control','no-store');return out;}
 
 function workspaceServiceUnavailable(){
   return new Response('Workspace service unavailable',{status:503,headers:{'cache-control':'no-store','x-content-type-options':'nosniff','x-ekodi-workspace-gateway':'space-binding-unavailable'}});
@@ -244,7 +250,9 @@ export default {
     const host=resolvedHost(request,env);
     const legacySurface=legacySurfaceRedirect(request);if(legacySurface)return legacySurface;
     const legacyStores=legacyStoreGatewayRedirect(request);if(legacyStores)return legacyStores;
-    if(host===PUBLIC_HOST&&url.pathname.startsWith('/api/seonam-med/')){const civic=await handleSeonamMedCivicApi(request,env);if(civic)return civic;}
+    if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)&&isLegacySeonamMedPath(url.pathname))return redirectLegacySeonamMed(request);
+    if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)&&isSeonamMediPath(url.pathname))return routeSeonamMediStatic(request,env);
+    if(host===PUBLIC_HOST&&url.pathname.startsWith('/api/seonam-medi/')){const civic=await handleSeonamMediCivicApi(request,env);if(civic)return civic;}
     if(host===PUBLIC_HOST&&(url.pathname==='/api/finance'||url.pathname.startsWith('/api/finance/')))return routeTaxFinance(request,env,ctx);
     if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)){const adminTarget=legacyAdminAliasTarget(url.pathname);if(adminTarget){const target=new URL(request.url);target.pathname=adminTarget;return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-content-type-options':'nosniff','x-ekodi-route':'admin-canonical-handoff'}})}}
     if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)){
