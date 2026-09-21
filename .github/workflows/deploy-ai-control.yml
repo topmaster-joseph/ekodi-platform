@@ -181,6 +181,7 @@ jobs:
           node --check scripts/validate-additive-migrations.mjs
           node --check scripts/guarded-worker-release.mjs
           node scripts/validate-cognitive-control-plane.mjs
+          node scripts/validate-production-worker-exposure.mjs
           node scripts/validate-constitution.mjs
           node scripts/validate-ai-mission-governance.mjs
           node scripts/validate-additive-migrations.mjs migrations
