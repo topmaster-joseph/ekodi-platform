@@ -27,6 +27,7 @@ const PUBLIC_ASSETS = new Set([
   '/ekodi-message-ui.js',
   '/tenant-live.css',
   '/tenant-live.js',
+  '/qr-code-v2.js',
   '/mall.css',
   '/mall.js',
   '/pizzamaru-mokpodae.css',
