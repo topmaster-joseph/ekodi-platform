@@ -8,8 +8,9 @@ const [registry, campus, css] = await Promise.all([
   readFile(new URL('../admin-compact.css', import.meta.url), 'utf8'),
 ]);
 
-test('Admin Home & Sites is the canonical home entry and renders registry-driven site groups', () => {
-  assert.match(registry, /id: 'campus'[\s\S]*en: 'Admin Home & Sites'/);
+test('Sites work area delegates to the canonical site management registry', () => {
+  assert.match(registry, /id: 'sites-all'[^\n]*group: 'sites'[^\n]*delegateSection: 'campus'[^\n]*en: 'All Sites'/);
+  assert.match(registry, /id: 'campus'[^\n]*group: 'sites'[^\n]*en: 'Site Management Registry'[^\n]*internal: true/);
   assert.ok(campus.includes('const ALL_SITES = ['));
   assert.ok(campus.includes('const SITE_GROUPS = ['));
   assert.ok(campus.includes('function renderSiteItem(site)'));
