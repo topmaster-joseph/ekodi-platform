@@ -42,6 +42,9 @@ test('stale or missing telemetry never fabricates a current usage percentage',()
   }]});
   assert.equal(governor.providers.supabase.highestUsagePercent,null);
   assert.equal(governor.providers.supabase.telemetryStatus,'missing');
+  assert.equal(governor.providers.supabase.provisioningAllowed,false);
+  assert.deepEqual(governor.providers.supabase.capacityTelemetryMissing,['active_projects']);
+  assert.deepEqual(governor.providers.supabase.provisioningBlockReasons,['capacity_telemetry_missing:active_projects']);
 });
 
 test('runtime quota pressure blocks nonessential work while capacity remains a separate concern',()=>{
@@ -62,4 +65,22 @@ test('verified catalog keeps public GitHub runners free and storage plan-aware',
   assert.equal(FREE_TIER_RESOURCE_CATALOG.github.facts.publicRepositoryStandardHostedRunners,'free');
   assert.equal(FREE_TIER_RESOURCE_CATALOG.github.facts.artifactStorage,'plan-dependent');
   assert.equal(FREE_TIER_RESOURCE_CATALOG.supabase.metrics.find(x=>x.metric==='active_projects').freeLimit,2);
+});
+
+
+test('stale Supabase capacity telemetry blocks only new provisioning until refreshed',()=>{
+  const governor=buildFreeTierResourceGovernor({
+    now:NOW,
+    staleAfterHours:26,
+    snapshots:[{
+      provider:'supabase',metric:'active_projects',period_start:'2026-09-18',
+      observed_value:1,free_limit:2,source:'supabase-management-api',observed_at:'2026-09-18T00:00:00.000Z'
+    }]
+  });
+  const supabase=governor.providers.supabase;
+  assert.equal(supabase.state,'normal');
+  assert.equal(supabase.provisioningAllowed,false);
+  assert.deepEqual(supabase.capacityTelemetryMissing,['active_projects']);
+  assert.deepEqual(supabase.capacityBlocks,[]);
+  assert.equal(supabase.telemetryStatus,'missing');
 });
