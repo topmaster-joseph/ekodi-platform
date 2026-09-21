@@ -62,3 +62,22 @@ test('regional registry is reusable for additional regions',()=>{
   assert.equal(snapshot[0].governanceModel,'delegated-multi-operator');
   assert.ok(snapshot[0].modules.every(module=>module.leadOperatorId&&Array.isArray(module.operatorIds)));
 });
+
+
+test('Cheonggye public experience is local-first, readable, communicative and personalization-ready',async()=>{
+  const region=localRegionBySlug('cheonggye');
+  const response=localRegionPublicPage(region);
+  const html=await response.text();
+  assert.equal(response.headers.get('x-ekodi-user-chrome'),'v1');
+  assert.equal(response.headers.get('x-ekodi-site-experience'),'local-conversational-adaptive-v1');
+  assert.match(html,/class="site-header"/);
+  assert.match(html,/청계 지역 공통 플랫폼/);
+  assert.match(html,/오늘, 청계에서 무엇을 하시나요\?/);
+  assert.match(html,/청계에 말하기/);
+  assert.match(html,/나에게 맞게 보기/);
+  assert.match(html,/data-ekodi-personalization="progressive-consent"/);
+  assert.match(html,/data-audiences=/);
+  assert.match(html,/grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
+  assert.match(html,/font-size:16px;line-height:1\.65/);
+  assert.doesNotMatch(html,/>Space</);
+});
