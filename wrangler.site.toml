@@ -9,6 +9,10 @@ compatibility_date = "2026-08-12"
 workers_dev = false
 preview_urls = false
 
+[triggers]
+# 23:00 UTC = 08:00 KST. Site-owned daily monitoring; no ChatGPT task.
+crons = ["0 23 * * *"]
+
 [vars]
 ENVIRONMENT = "production"
 
@@ -49,31 +53,6 @@ zone_name = "ekodi.kr"
 
 
 
-
-
-[triggers]
-# 23:00 UTC = 08:00 KST. Site-owned daily monitoring; no ChatGPT task.
-crons = ["0 23 * * *"]
-
-[[routes]]
-pattern = "ekodi.kr"
-custom_domain = true
-
-
-# Canonical Mail contact and send API must reach the Shared Site Worker before asset fallback.
-[[routes]]
-pattern = "ekodi.kr/mail*"
-zone_name = "ekodi.kr"
-
-# Canonical private EKODIBIZ trade workspace must outrank public/static trade assets.
-[[routes]]
-pattern = "ekodi.kr/ekodibiz/trade*"
-zone_name = "ekodi.kr"
-
-# Canonical Church admin must outrank the public /ekodichurch* path gateway.
-[[routes]]
-pattern = "ekodi.kr/ekodichurch/admin*"
-zone_name = "ekodi.kr"
 
 [[services]]
 binding = "FINANCE"
