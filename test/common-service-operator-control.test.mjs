@@ -36,7 +36,7 @@ test('Admin menu mounts the common-service operator module', () => {
   assert.match(common, /window\.EKODICommonServicesAdmin=Object\.freeze\(\{mount,activate/);
   assert.doesNotMatch(common, /function installNav\(|function showSection\(|addEventListener\('hashchange'/);
   assert.match(routes, /'common-services':'common'/);
-  assert.match(routes, /aiops:'operations'/);
+  assert.match(routes, /aiops:'status'/);
   assert.match(site, /ADMIN_COMMON_SERVICE_AI_PREFIX/);
   assert.match(site, /proxyAdminCommonServiceAi/);
 });

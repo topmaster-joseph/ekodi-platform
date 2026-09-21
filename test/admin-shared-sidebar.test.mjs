@@ -10,7 +10,7 @@ const layout = await readFile(new URL('../admin-menu-layout.js', import.meta.url
 const postbuild = await readFile(new URL('../scripts/admin-performance-postbuild.mjs', import.meta.url), 'utf8');
 
 test('seven canonical areas replace the former many-group admin taxonomy', () => {
-  for (const id of ['home', 'operations', 'workspaces', 'services', 'community', 'publishing', 'system']) {
+  for (const id of ['summary', 'services', 'sites', 'people', 'content', 'status', 'settings-records']) {
     assert.match(registry, new RegExp(`id: '${id}'`));
   }
   for (const retired of ['site-management', 'security-audit', 'settings', 'access']) {
@@ -115,7 +115,7 @@ test('context tabs keep working when the authenticated shell replaces main', () 
 });
 
 test('internal operational capabilities stay off the global work areas as direct items', () => {
-  assert.match(layout, /const INTERNAL=new Set\(\['services','deployments','policies'\]\)/);
+  assert.match(layout, /const INTERNAL=new Set\(\['services','policies'\]\)/);
   assert.match(layout, /#campus:campus/);
   assert.match(layout, /campus:#campus/);
   assert.match(layout, /const COMMAND_HOME='command-home'/);

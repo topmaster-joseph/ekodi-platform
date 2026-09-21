@@ -1,7 +1,7 @@
 export const ADMIN_SERVICE_CATALOG = Object.freeze([
   { id:'church', name:'에코디교회', basePath:'/ekodichurch', group:'community' },
   { id:'biz', name:'에코디비즈', basePath:'/ekodibiz', group:'business' },
-  { id:'mall', name:'에코디몰', basePath:'/ekodibiz/ekodimall', group:'business' },
+  { id:'mall', name:'에코디몰', basePath:'/ekodibiz/ekodimall', group:'sites', kind:'site', siteRelation:'user' },
   { id:'marketing', name:'마케팅 AI', basePath:'/ekodibiz/marketing-ai', group:'business' },
   { id:'trade', name:'에코디 트레이딩', basePath:'/ekodibiz/trade', group:'business' },
   { id:'invest', name:'에코디 투자', basePath:'/ekodibiz/invest', group:'business' },
@@ -30,10 +30,10 @@ export const ADMIN_SERVICE_CATALOG = Object.freeze([
   { id:'cmpmyi', name:'통합 매장 운영', basePath:'/cmpmyi', group:'sites' },
   { id:'developer', name:'개발자 서비스', basePath:'/developer', group:'professional' },
   { id:'tax', name:'세금·증빙', basePath:'/tax', group:'professional' },
-  { id:'cgma', name:'청계면상인회', basePath:'/cgma', group:'sites' },
-  { id:'jadam', name:'자담치킨 목포대점', basePath:'/jadam', group:'sites' },
-  { id:'pizzamaru', name:'피자마루 목포대점', basePath:'/pizzamaru', group:'sites' },
-  { id:'yogurt', name:'요거트퍼플 목포대점', basePath:'/yogurt', group:'sites' },
+  { id:'cgma', name:'청계면상인회', basePath:'/cgma', group:'sites', kind:'site', siteRelation:'customer-partner' },
+  { id:'jadam', name:'자담치킨 목포대점', basePath:'/jadam', group:'sites', kind:'site', siteRelation:'customer-partner' },
+  { id:'pizzamaru', name:'피자마루 목포대점', basePath:'/pizzamaru', group:'sites', kind:'site', siteRelation:'customer-partner' },
+  { id:'yogurt', name:'요거트퍼플 목포대점', basePath:'/yogurt', group:'sites', kind:'site', siteRelation:'customer-partner' },
 ]);
 
 export const ADMIN_SERVICE_GROUPS = Object.freeze([
@@ -42,7 +42,7 @@ export const ADMIN_SERVICE_GROUPS = Object.freeze([
   { id:'knowledge', label:'지식·콘텐츠' },
   { id:'professional', label:'전문서비스' },
   { id:'public', label:'공개서비스' },
-  { id:'sites', label:'운영사이트·매장' },
+  { id:'sites', label:'사이트' },
 ]);
 
 function normalizeBasePath(value){

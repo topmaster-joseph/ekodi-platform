@@ -231,7 +231,7 @@
     const section = document.createElement('section');
     section.id = 'aiOpsPanel';
     section.className = 'section ai-ops-panel hidden-panel';
-    section.dataset.panel = SECTION;
+    section.dataset.panel = `${SECTION} audit-records`;
     section.innerHTML = `
       <div class="ai-ops-head">
         <div class="ai-ops-title"><p class="kicker">EKODI DIGITAL CAMPUS · AI OPERATIONS</p><h2>AI Ops</h2><p>사이트 상태를 보면서 Chief AI와 바로 대화하고, 저위험 조치는 자동 처리하며 중요한 변경만 Decision Gate로 올립니다.</p></div>

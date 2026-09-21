@@ -80,7 +80,7 @@ test('standalone Health creates its own menu and fetches only on activation', as
   assert.match(health, /const SECTION = 'health'/);
   assert.match(health, /button\.dataset\.section = SECTION/);
   assert.match(health, /navLabel\.textContent = '시스템 건강'/);
-  assert.match(health, /section\.dataset\.panel = SECTION/);
+  assert.match(health, /section\.dataset\.panel = `\$\{SECTION\} platform-overview`/);
   assert.match(health, /pageTitle\.textContent = '시스템 건강'/);
   assert.match(health, /if \(location\.hash !== '#health'\)/);
   assert.match(health, /button\.addEventListener\('click', activate\)/);
@@ -114,9 +114,9 @@ test('normal login opens EKODI command console without auto-opening Campus or in
   assert.match(menu, /EKODIAdminDemand\.activate\(demandKey\)/);
   assert.doesNotMatch(menu, /requestedSection = 'overview';[\s\S]*activatePanel\('overview'\)/);
   assert.ok(registry.indexOf("id: 'command-home'") < registry.indexOf("id: 'campus'"));
-  assert.ok(registry.indexOf("id: 'campus'") < registry.indexOf("id: 'aiops'"));
-  assert.ok(registry.indexOf("id: 'aiops'") < registry.indexOf("id: 'health'"));
-  assert.match(registry, /id: 'storage'.*ko: '저장소'.*en: 'Storage'/);
+  assert.ok(registry.indexOf("id: 'platform-overview'") < registry.indexOf("id: 'engine-all'"));
+  assert.ok(registry.indexOf("id: 'health'") < registry.indexOf("id: 'public-site-controls'"));
+  assert.match(registry, /id: 'storage'.*ko: '보관함·저장소'.*en: 'Archive & Storage'/);
   assert.ok(routePair(menu, '#health', 'health'));
   assert.doesNotMatch(menu, /requestedSection = 'aiops';\s*\n\s*preferAiOpsOnReady = true/);
   assert.doesNotMatch(menu, /setInterval\(/);
@@ -126,25 +126,25 @@ test('admin menu governance uses seven canonical EKODI areas with contextual top
   const registry = await read('admin-menu-registry.js');
   const sidebar = await read('admin-sidebar.js');
   assert.match(registry, /ADMIN_MENU_GROUPS/);
-  for (const group of ['home', 'operations', 'workspaces', 'services', 'community', 'publishing', 'system']) {
+  for (const group of ['summary', 'services', 'sites', 'people', 'content', 'status', 'settings-records']) {
     assert.match(registry, new RegExp(`id: '${group}'`));
   }
-  for (const retired of ['structure', 'core', 'common', 'vertical', 'tenants', 'operations-center', 'people', 'ai', 'business', 'data', 'site-management', 'access', 'security-audit', 'settings']) {
+  for (const retired of ['structure', 'core', 'common', 'vertical', 'tenants', 'operations-center', 'ai', 'business', 'data', 'site-management', 'access', 'security-audit', 'settings']) {
     assert.doesNotMatch(registry, new RegExp(`id: '${retired}', icon:`));
   }
-  assert.match(registry, /id: 'campus', group: 'home'/);
-  assert.match(registry, /id: 'work', group: 'operations'/);
-  assert.match(registry, /id: 'clients', group: 'workspaces'/);
+  assert.match(registry, /id: 'campus', group: 'sites'/);
+  assert.match(registry, /id: 'work', group: 'content'/);
+  assert.match(registry, /id: 'clients', group: 'sites'/);
   assert.match(registry, /id: 'common-services', group: 'services'/);
-  assert.match(registry, /id: 'community', group: 'community'/);
-  assert.match(registry, /id: 'ai-membership', group: 'community'/);
-  assert.match(registry, /id: 'books', group: 'publishing'/);
-  assert.match(registry, /id: 'devotional', group: 'publishing'/);
+  assert.match(registry, /id: 'community', group: 'content'/);
+  assert.match(registry, /id: 'ai-membership', group: 'people'/);
+  assert.match(registry, /id: 'books', group: 'content'/);
+  assert.match(registry, /id: 'devotional', group: 'content'/);
   assert.match(registry, /id: 'life-ai', group: 'services'/);
-  assert.match(registry, /id: 'security', group: 'system'/);
-  assert.match(registry, /id: 'capabilities', group: 'system'/);
-  assert.match(registry, /id: 'devices', group: 'system'/);
-  assert.match(registry, /id: 'health', group: 'system'/);
+  assert.match(registry, /id: 'security', group: 'people'/);
+  assert.match(registry, /id: 'capabilities', group: 'services'/);
+  assert.match(registry, /id: 'devices', group: 'status'/);
+  assert.match(registry, /id: 'health', group: 'status'/);
   assert.match(sidebar, /function pruneNonRegistryItems\(nav\)/);
   assert.match(sidebar, /RETIRED_MENU_SECTIONS = new Set\(\['overview'\]\)/);
   assert.match(sidebar, /GLOBAL_CLASS = 'admin-global-navs'/);

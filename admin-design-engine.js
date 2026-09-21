@@ -1,5 +1,5 @@
 const VERSION = '3.0.0';
-const EXPECTED_GROUPS = Object.freeze(['home', 'operations', 'workspaces', 'services', 'community', 'publishing', 'system']);
+const EXPECTED_GROUPS = Object.freeze(['summary', 'services', 'sites', 'people', 'content', 'status', 'settings-records']);
 const ROOT_TOKENS = Object.freeze({
   '--ekodi-ui-bg': '#f6f8fb',
   '--ekodi-ui-surface': '#ffffff',

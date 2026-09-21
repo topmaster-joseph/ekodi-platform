@@ -119,7 +119,7 @@
 
     const section = document.createElement('section');
     section.className = 'section client-access-section hidden-panel';
-    section.dataset.panel = 'clients';
+    section.dataset.panel = 'clients users-access';
     section.id = 'clientAccessSection';
 
     const head = document.createElement('div');
@@ -188,7 +188,7 @@
       });
       document.querySelectorAll('.sidebar .nav[data-section]').forEach(item => item.classList.toggle('active', item.dataset.section === 'clients'));
       const pageTitle = document.querySelector('#pageTitle');
-      if (pageTitle) pageTitle.textContent = '사용자 · 사이트 권한';
+      if (pageTitle) pageTitle.textContent = '전체 사용자 · 사이트별 관리자 · 권한';
       document.querySelector('.sidebar')?.classList.remove('open');
       loadDirectory();
     };

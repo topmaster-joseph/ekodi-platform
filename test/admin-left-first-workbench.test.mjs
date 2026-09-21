@@ -10,17 +10,17 @@ test('Admin uses a seven-area primary sidebar with contextual top navigation', a
     read('admin-sidebar.js'),
   ]);
   for (const marker of [
-    "id: 'home'", "id: 'operations'", "id: 'workspaces'", "id: 'services'",
-    "id: 'community'", "id: 'publishing'", "id: 'system'",
+    "id: 'summary'", "id: 'services'", "id: 'sites'", "id: 'people'",
+    "id: 'content'", "id: 'status'", "id: 'settings-records'",
   ]) assert.ok(registry.includes(marker), marker);
   for (const marker of [
-    "home: ['command-home', 'campus']",
-    "operations: ['work', 'communication', 'finance', 'tax']",
-    "workspaces: ['clients', 'organization', 'workspace', 'cmpmyi', 'site-chrome']",
-    "services: ['common-services', 'confirmations', 'marketing-ai', 'social', 'life-ai']",
-    "community: ['community', 'ai-membership']",
-    "publishing: ['books', 'devotional']",
-    "system: ['health', 'aiops', 'devices', 'security', 'admins', 'api-cost']",
+    "summary: ['platform-overview']",
+    "services: ['engine-all', 'engine-core', 'engine-common', 'engine-operations', 'engine-professional', 'engine-ai', 'engine-integration', 'engine-preview']",
+    "sites: ['sites-all', 'sites-internal', 'sites-user', 'sites-customer-partner', 'sites-independent', 'sites-preparing']",
+    "people: ['admins', 'security', 'ai-membership']",
+    "content: ['work', 'communication', 'community', 'books', 'social']",
+    "status: ['health', 'deployments', 'aiops', 'devices', 'api-cost']",
+    "'settings-records': ['public-site-controls', 'language-status', 'ai-settings', 'storage', 'audit-records', 'ai-module-spec']",
   ]) assert.ok(sidebar.includes(marker), marker);
   assert.match(sidebar, /admin-context-tabs-shell/);
   assert.match(sidebar, /display:flex!important/);
