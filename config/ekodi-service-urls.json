@@ -23,6 +23,8 @@
     "legacyMallUrlsAllowed": false,
     "sharedSiteProductionOwner": "deploy-site-core.yml",
     "humanSurfaceCanonicalHost": "ekodi.kr",
-    "legacySurfaceSubdomains": "compatibility-or-execution-only"
+    "legacySurfaceSubdomains": "private-execution-only-no-public-surface",
+    "subdomainRedirectsAllowed": false,
+    "publicSubdomainsAllowed": false
   }
 }

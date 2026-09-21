@@ -10,7 +10,7 @@ Discovery never widens authorization. Only information already intended for unre
 
 ## Runtime outputs
 
-The real `npm run build` path invokes `scripts/discovery-build.mjs` through `scripts/ccm-mr-postbuild.mjs` and emits or validates:
+The real `npm run build` path first regenerates `discovery-registry.generated.js` from the platform registries, then invokes `scripts/discovery-build.mjs` through `scripts/ccm-mr-postbuild.mjs` and emits or validates:
 
 - `/robots.txt`
 - `/sitemap.xml`
@@ -24,7 +24,7 @@ The real `npm run build` path invokes `scripts/discovery-build.mjs` through `scr
 
 ## Public-first, private-by-default boundary
 
-Only explicitly declared canonical public routes belong in `DISCOVERY_PUBLIC_ROUTES`. Admin, auth, API, development-preview, tenant-private, and operational surfaces must never be added to the sitemap or LLM discovery source list.
+Only canonical public routes on the apex `ekodi.kr` host belong in `DISCOVERY_PUBLIC_ROUTES`. Public subdomains are not discovery sources. Admin, auth, API, development-preview, tenant-private, personal, and operational surfaces must never be added to the sitemap or LLM discovery source list.
 
 Private prefixes are centralized in `DISCOVERY_PRIVATE_PREFIXES`. Admin, API and Mall operational routes use `X-Robots-Tag: noindex, nofollow, noarchive` where they cross the public edge. Authentication and other private hosts must remain non-discoverable independently of robots.txt.
 
@@ -37,9 +37,9 @@ EKODI separates four crawler purposes rather than treating every AI bot alike:
 - **Search index**: `Googlebot`, `bingbot` — allowed on explicitly public routes for SEO.
 - **Answer retrieval/search**: `OAI-SearchBot`, `Claude-SearchBot`, `PerplexityBot`, `Applebot` — allowed on explicitly public routes for AEO/GEO and citation/search retrieval.
 - **Model training / AI crawling**: `GPTBot`, `ClaudeBot`, `Google-Extended`, `Google-CloudVertexBot`, `Bytespider`, `CCBot`, `meta-externalagent`, `FacebookBot`, `Amazonbot` — disallowed by default.
-- **Autonomous/user-agent fetchers**: `ChatGPT-User`, `Claude-User`, `Perplexity-User`, `meta-externalfetcher`, `DuckAssistBot`, `MistralAI-User` — disallowed by default unless EKODI later creates a separately governed agent-access contract.
+- **User-requested assistant/agent fetchers**: `ChatGPT-User`, `Claude-User`, `Perplexity-User`, `meta-externalfetcher`, `DuckAssistBot`, `MistralAI-User` — allowed on public canonical routes while admin, API, auth, personal and operational routes remain disallowed.
 
-Search permission never implies training permission or autonomous-agent permission. Changing these classes is a security/governance decision, not a marketing toggle.
+Search or user-requested assistant permission never implies model-training permission. Changing these classes is a security/governance decision, not a marketing toggle.
 
 `Google-Extended` is deliberately denied as a training/grounding control token while ordinary `Googlebot` remains allowed for Google Search. This preserves normal search indexing while taking the stricter position on Gemini model use; Gemini-specific grounding reach may therefore be narrower than Google Search reach.
 
@@ -49,8 +49,8 @@ Robots rules alone cannot stop spoofed or non-compliant scrapers. EKODI therefor
 
 - Search: **Allow** (`ai_search=disabled`, meaning no Cloudflare search-blocking rule)
 - Training: **Block** (`ai_training=block`)
-- Agent/User: **Block by default** (`ai_user=block`)
-- legacy AI crawler protection: **Block** (`ai_bots_protection=block`)
+- Agent/User: **Allow** (`ai_user=disabled`, meaning no Cloudflare blocking rule; robots.txt and application authorization still protect private routes)
+- legacy all-purpose AI crawler protection: **Off** (`ai_bots_protection=disabled`) so Search/User/Training purpose controls remain authoritative
 - Cloudflare-managed robots and Bot Preference Sync: **Off**, because EKODI generates the canonical robots policy itself
 - unknown/unverified high-volume automation: handled independently by bot/WAF/rate controls
 
@@ -82,6 +82,6 @@ Structured data must never be used as a hidden channel for facts that are not su
 
 ## Validation
 
-`test/discovery-layer.test.mjs` verifies the route allowlist, private-route exclusion, crawler-purpose separation, canonical source list, and Organization/WebSite/WebPage graph.
+`scripts/generate-discovery-registry.mjs` derives discoverable apex routes from `config/ecosystem-services.json`, `config/site-lifecycle-registry.json`, and the apex-only contract in `config/domain-canonical-policy.json`. Only production-verified Live/Beta services and promoted public workspace sites whose canonical URL is on `ekodi.kr` are admitted; subdomain URLs are ignored until an apex canonical route is registered. Personal/internal surfaces can opt out with `discoveryPublic: false` or `userVisible: false`. `test/discovery-layer.test.mjs` verifies registry generation, private-route exclusion, crawler-purpose separation, canonical source lists, and Schema.org entity graphs.
 
 The production build itself fails when canonical, Open Graph, or JSON-LD markers are missing from EKODI-owned public pages. CI runs the same `npm run build`, so a Discovery Layer regression blocks the release path instead of silently shipping.

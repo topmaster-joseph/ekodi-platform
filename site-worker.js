@@ -13,7 +13,6 @@ import { tenantLiveAdminCss, tenantLiveAdminPage, tenantLiveAdminScript } from '
 // Static Assets canonicalizes *.html URLs to extensionless paths.
 // Always request canonical asset paths internally so edge redirects never escape the Worker.
 const PUBLIC_HOST = 'ekodi.kr';
-const PUBLIC_ALIAS_HOSTS = new Set(['www.ekodi.kr']);
 const MALL_PREFIX = '/ekodibiz/ekodimall';
 const MALL_ROOT_ALIAS_PREFIX = '/ekodimall';
 const FORMER_MALL_PREFIX = '/ekodibiz/mall';
@@ -64,7 +63,6 @@ const HUB_HOSTS = new Set([
 ]);
 
 const TRADE_CANONICAL_HOST = 'trade.biz.ekodi.kr';
-const TRADE_LEGACY_HOSTS = new Set(['trade.ekodi.kr']);
 
 const ADMIN_ALIASES = new Set([
   '/',
@@ -439,26 +437,6 @@ function adminAssetCacheControl(url) {
     : 'public, max-age=0, must-revalidate';
 }
 
-function redirectToPublicCanonical(url) {
-  const next = new URL(url);
-  next.protocol = 'https:';
-  next.hostname = PUBLIC_HOST;
-  const response = Response.redirect(next.toString(), 308);
-  const secured = new Response(response.body, response);
-  applyBaseSecurityHeaders(secured.headers);
-  return secured;
-}
-
-function redirectToTradeCanonical(url) {
-  const next = new URL(url);
-  next.protocol = 'https:';
-  next.hostname = TRADE_CANONICAL_HOST;
-  const response = Response.redirect(next.toString(), 308);
-  const secured = new Response(response.body, response);
-  applyBaseSecurityHeaders(secured.headers);
-  return secured;
-}
-
 function safeAdminReturnPath(value) {
   const candidate = String(value || '/');
   return ADMIN_ALIASES.has(candidate) ? candidate : '/';
@@ -599,8 +577,6 @@ export default {
     const url = new URL(request.url);
     const host = url.hostname.toLowerCase();
 
-    if (PUBLIC_ALIAS_HOSTS.has(host)) return redirectToPublicCanonical(url);
-
     if ((url.pathname === '/admin' || url.pathname === '/admin/') && host !== PUBLIC_HOST && !ADMIN_HOSTS.has(host)) {
       const target = new URL('https://ekodi.kr/admin/');
       target.searchParams.set('source', host);
@@ -707,8 +683,6 @@ export default {
         return withHostSecurity(response, PUBLIC_CSP, 'public, max-age=0, must-revalidate', 'public-asset');
       }
     }
-
-    if (TRADE_LEGACY_HOSTS.has(host)) return redirectToTradeCanonical(url);
 
     if (host === TRADE_CANONICAL_HOST && (url.pathname === '/' || url.pathname === '/index.html')) {
       const response = await env.ASSETS.fetch(assetRequest(request, '/trade'));

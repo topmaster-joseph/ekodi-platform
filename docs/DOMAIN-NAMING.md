@@ -1,6 +1,6 @@
 # EKODI Domain Naming Standard
 
-`ekodi.kr` is the canonical digital root of the EKODI ecosystem.
+`ekodi.kr` is the canonical digital root of the EKODI ecosystem.\n\n> **Authoritative redirect rule (2026-09-21):** EKODI does not create or retain redirect-only subdomains. Public canonical surfaces use registered `https://ekodi.kr/...` paths. Non-apex hostnames are not public canonical surfaces and may exist only where an explicitly private execution boundary still requires them during migration. No hostname exists only to redirect users or crawlers to another EKODI URL.
 
 ## 1. First-level service domains
 

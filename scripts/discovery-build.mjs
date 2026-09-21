@@ -1,17 +1,17 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
-import { canonicalUrl, DISCOVERY_CRAWLER_POLICY, DISCOVERY_PUBLIC_ROUTES, renderDiscoveryHead, renderLlmsTxt, renderRobotsTxt, renderSitemapXml } from '../discovery-layer.js';
+import { canonicalUrl, DISCOVERY_CRAWLER_POLICY, DISCOVERY_OFFICIAL_ORIGINS, DISCOVERY_PUBLIC_ROUTES, renderDiscoveryHead, renderLlmsTxt, renderRobotsTxt, renderSitemapXml } from '../discovery-layer.js';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const output = `${root}dist/`;
 export const OPS_HEALTH_PATH = '/ops/health.json';
 export const EKODI_AI_DISCOVERY_PATH = '/.well-known/ekodi.json';
 export const EKODI_AI_DISCOVERY = Object.freeze({
-  schema_version: '1.1',
+  schema_version: '1.2',
   name: 'EKODI',
   aliases: Object.freeze(['EKODI', '에코디']),
   canonical_origin: 'https://ekodi.kr',
-  official_origins: Object.freeze(['https://ekodi.kr']),
+  official_origins: DISCOVERY_OFFICIAL_ORIGINS,
   description: 'EKODI is a provider-independent service and AI orchestration platform.',
   discovery: Object.freeze({
     public: true,
@@ -44,9 +44,9 @@ function replaceOrInsert(html, pattern, replacement) {
 function upsertCanonical(html, canonical) { return replaceOrInsert(html, /<link\b[^>]*\brel=(['"])canonical\1[^>]*>/i, `<link rel="canonical" href="${canonical}">`); }
 function upsertDescription(html, description) { return replaceOrInsert(html, /<meta\b[^>]*\bname=(['"])description\1[^>]*>/i, `<meta name="description" content="${description}">`); }
 
-export function allowOpsHealthForRestrictedCrawlers(robots) {
+export function allowOpsHealthForTrainingCrawlers(robots) {
   let outputText = String(robots || '');
-  const restricted = [...DISCOVERY_CRAWLER_POLICY.training, ...DISCOVERY_CRAWLER_POLICY.agent];
+  const restricted = [...DISCOVERY_CRAWLER_POLICY.training];
   for (const crawler of restricted) {
     const denied = `User-agent: ${crawler}\nDisallow: /`;
     const healthOnly = `User-agent: ${crawler}\nAllow: ${OPS_HEALTH_PATH}\nDisallow: /`;
@@ -62,13 +62,13 @@ async function emitStaticPageDiscovery(route) {
   let html = await readFile(pagePath, 'utf8');
   html = upsertCanonical(html, canonicalUrl(route.path));
   html = upsertDescription(html, route.description);
-  if (!html.includes('data-ekodi-discovery="v2"')) html = html.replace('</head>', `${renderDiscoveryHead(route.path)}\n</head>`);
+  if (!html.includes('data-ekodi-discovery="v3"')) html = html.replace('</head>', `${renderDiscoveryHead(route.path)}\n</head>`);
   await writeFile(pagePath, html);
 }
 
 export async function emitDiscoveryAssets() {
   await Promise.all(DISCOVERY_PUBLIC_ROUTES.map(emitStaticPageDiscovery));
-  const robotsText = allowOpsHealthForRestrictedCrawlers(renderRobotsTxt());
+  const robotsText = allowOpsHealthForTrainingCrawlers(renderRobotsTxt());
   const wellKnownDir = `${output}.well-known/`;
   await mkdir(wellKnownDir, { recursive: true });
   await Promise.all([
@@ -86,7 +86,8 @@ export async function emitDiscoveryAssets() {
   if (!robots.includes('Sitemap: https://ekodi.kr/sitemap.xml')) throw new Error('Discovery robots sitemap marker missing');
   if (!robots.includes('User-agent: OAI-SearchBot')) throw new Error('OAI search crawler policy missing');
   if (!robots.includes(`User-agent: GPTBot\nAllow: ${OPS_HEALTH_PATH}\nDisallow: /`)) throw new Error('GPTBot health-only restriction missing');
-  if (!robots.includes(`User-agent: ChatGPT-User\nAllow: ${OPS_HEALTH_PATH}\nDisallow: /`)) throw new Error('ChatGPT-User health-only restriction missing');
+  if (!robots.includes('User-agent: ChatGPT-User\nAllow: /')) throw new Error('ChatGPT-User public assistant access missing');
+  if (!robots.includes('Disallow: /admin')) throw new Error('Private discovery boundary missing');
   if (sitemap.includes('/admin') || sitemap.includes('/api/') || sitemap.includes('/preview/dev')) throw new Error('Private surface leaked into sitemap');
   if (!llms.includes('Canonical site: https://ekodi.kr/')) throw new Error('LLM discovery canonical marker missing');
   const aiDiscovery = JSON.parse(aiDiscoveryText);
@@ -98,8 +99,8 @@ export async function emitDiscoveryAssets() {
     const html = await readFile(`${output}${route.asset}`, 'utf8'); const canonical = canonicalUrl(route.path);
     if (!html.includes(`<link rel="canonical" href="${canonical}">`)) throw new Error(`Canonical marker missing: ${route.path}`);
     if (!html.includes(`property="og:url" content="${canonical}"`)) throw new Error(`Open Graph canonical missing: ${route.path}`);
-    if (!html.includes(`data-ekodi-discovery="v2" data-ekodi-path="${route.path}"`)) throw new Error(`Structured discovery metadata missing: ${route.path}`);
+    if (!html.includes(`data-ekodi-discovery="v3" data-ekodi-path="${route.path}"`)) throw new Error(`Structured discovery metadata missing: ${route.path}`);
   }
-  console.log(`Built EKODI Discovery Layer v2 for ${DISCOVERY_PUBLIC_ROUTES.length} public routes plus ${EKODI_AI_DISCOVERY_PATH}, health-only crawler access at ${OPS_HEALTH_PATH}: robots.txt, sitemap.xml, llms.txt, canonical, Open Graph, Twitter and JSON-LD`);
+  console.log(`Built EKODI Discovery Layer v3 for ${DISCOVERY_PUBLIC_ROUTES.length} apex routes across ${DISCOVERY_OFFICIAL_ORIGINS.length} official origins plus ${EKODI_AI_DISCOVERY_PATH}: robots.txt, sitemap.xml, llms.txt, canonical, Open Graph, Twitter and JSON-LD`);
 }
 if (process.argv[1] === fileURLToPath(import.meta.url)) await emitDiscoveryAssets();

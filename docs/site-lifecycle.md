@@ -8,7 +8,7 @@ EKODI는 기존 사이트를 다시 만드는 방식으로 전환하지 않는�
 2. Workspace 생성: 개인·점포·기관·단체·프로젝트의 독립 운영주체를 만든다.
 3. 정식 slug 확정: `workspace_id`를 유지한 채 공개 사용자 사이트를 자동 프로비저닝한다.
 4. 서비스 활성화: Marketing AI 등 선택 서비스는 실제 필요 시점에 JIT로 연결한다.
-5. Legacy 정리: 새 canonical surface 검증 뒤에만 redirect/compatibility alias로 전환한다.
+5. Legacy 정리: 새 canonical surface 검증 뒤 전환용 서브도메인은 제거한다. 서브도메인 redirect/compatibility alias는 만들지 않는다.
 
 URL은 신분증이 아니다. 인증과 권한의 기준은 항상 immutable `workspace_id` 또는 그 하위 `store_id`다.
 
@@ -17,7 +17,7 @@ URL은 신분증이 아니다. 인증과 권한의 기준은 항상 immutable `w
 - **유지 + 연결**: 정상 운영 중인 사이트는 화면과 주소를 먼저 유지한다.
 - **Workspace 승격**: 기존 사이트를 Workspace 소유·권한·데이터에 연결한다.
 - **Service 분리**: 공통 플랫폼/AI 기능은 사이트가 아니라 Service로 관리한다.
-- **Legacy redirect**: 중복 주소는 canonical 검증 뒤에만 넘긴다.
+- **Redirect-only subdomain 금지**: 서브도메인은 직접 서비스를 제공하거나 내부 실행 용도로만 사용하며 다른 공개 URL로 보내는 전환 주소로 사용하지 않는다.
 - **삭제 선행 금지**: 대체 사이트가 검증되기 전에 기존 공개 사이트를 제거하지 않는다.
 
 ## 현재 분류
@@ -28,10 +28,10 @@ URL은 신분증이 아니다. 인증과 권한의 기준은 항상 immutable `w
 | 피자마루 목포대점 | `ekodi.kr/pizzamaru` | 기존 사이트를 Store Workspace에 승격 완료 |
 | 요거트퍼플 목포대점 | `ekodi.kr/yogurt` | 승격 완료, `/yogurtpurple`은 별칭 |
 | 청계면상인회 | `ekodi.kr/cgma`, `cgma.or.kr` | 기존 사이트·고객 소유 도메인 유지 후 Core 연결 |
-| 에코디교회 | `ekodi.kr/ekodichurch`, `church.ekodi.kr` | 기존 공개면 유지 후 Workspace/Core 연결 |
-| 에코디비즈 | `ekodi.kr/ekodibiz`, `biz.ekodi.kr` | 기존 공개면 유지 후 Workspace/Core 연결 |
-| 에코디연구소 | `ekodi.kr/ekodilab`, `lab.ekodi.kr` | 기존 공개면 유지 후 Workspace/Core 연결 |
-| EKODI Global Trading | `trade.ekodi.kr` | URL 변경 없이 Core 연결, canonical 결정은 보류 |
+| 에코디교회 | `ekodi.kr/ekodichurch` | 정식 경로를 Workspace/Core에 연결 |
+| 에코디비즈 | `ekodi.kr/ekodibiz` | 정식 apex 경로를 Workspace/Core에 연결하고 공개 서브도메인은 사용하지 않음 |
+| 에코디연구소 | `ekodi.kr/ekodilab` | 정식 경로를 Workspace/Core에 연결 |
+| EKODI Global Trading | `ekodi.kr/ekodibiz/trade` | 정식 경로 기준으로 Core 연결 |
 | 에코디 카페 | `cafe.ekodi.kr` | 준비 상태 유지, 실제 운영 중인 것처럼 표시하지 않음 |
 
 공통 Service는 이 표의 Workspace 사이트와 별개다. `ecosystem-services.json`의 Live/Beta Service는 등록된 서비스 경계를 유지하고, Preparing/Planned Service는 준비가 끝나기 전 새 Workspace 사이트처럼 자동 생성하지 않는다.
