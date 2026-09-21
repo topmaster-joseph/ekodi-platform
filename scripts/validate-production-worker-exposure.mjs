@@ -68,6 +68,7 @@ for(const service of boundServices){
 }
 
 for(const file of [
+  'wrangler.api.toml',
   'deploy/manifests/control-api.worker.json',
   'deploy/manifests/my.worker.json',
   'deploy/manifests/ai-control.worker.json',
