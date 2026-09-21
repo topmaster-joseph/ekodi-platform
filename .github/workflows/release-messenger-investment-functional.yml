@@ -18,6 +18,7 @@ on:
       - 'invest-personalization-runtime.js'
       - 'invest-market-core.js'
       - 'invest-automation-runtime.js'
+      - 'invest-lifecycle-runtime.js'
       - 'ekodi-principal.js'
       - 'messenger-triage.js'
       - 'messenger-outbox.js'
@@ -44,6 +45,7 @@ on:
       - 'test/invest-personalization-contract.test.mjs'
       - 'test/invest-market-core.test.mjs'
       - 'test/invest-site-system.test.mjs'
+      - 'test/invest-lifecycle-runtime.test.mjs'
       - '.github/workflows/release-messenger-investment-functional.yml'
   push:
     branches: [main]
@@ -76,8 +78,8 @@ jobs:
       - name: Validate Conversation, Operator, Investment and Profile boundaries
         run: |
           set -euo pipefail
-          for file in ekodi-principal.js profile-evidence-runtime.js profile-official-data-adapter.js invest-personalization-runtime.js invest-market-core.js invest-automation-runtime.js design-profile-runtime.js site-chrome-runtime.js config/site-chrome-defaults.js api-worker.js messenger-triage.js messenger-outbox.js messenger-channel-adapters.js messenger-operator-control.js workspace-messenger-v2.js store-sms-order-runtime.js workspace-platform-entry-worker.js workspace-platform-api-worker.js mission-control-entry-worker.js; do node --check "$file"; done
-          node --test test/workspace-platform.test.mjs test/store-sms-order-runtime.test.mjs test/conversation-release-registry.test.mjs test/conversation-production-health-retry.test.mjs test/profile-evidence-contract.test.mjs test/design-profile-contract.test.mjs test/site-chrome-runtime.test.mjs test/invest-personalization-contract.test.mjs test/invest-market-core.test.mjs test/invest-site-system.test.mjs
+          for file in ekodi-principal.js profile-evidence-runtime.js profile-official-data-adapter.js invest-personalization-runtime.js invest-market-core.js invest-automation-runtime.js invest-lifecycle-runtime.js design-profile-runtime.js site-chrome-runtime.js config/site-chrome-defaults.js api-worker.js messenger-triage.js messenger-outbox.js messenger-channel-adapters.js messenger-operator-control.js workspace-messenger-v2.js store-sms-order-runtime.js workspace-platform-entry-worker.js workspace-platform-api-worker.js mission-control-entry-worker.js; do node --check "$file"; done
+          node --test test/workspace-platform.test.mjs test/store-sms-order-runtime.test.mjs test/conversation-release-registry.test.mjs test/conversation-production-health-retry.test.mjs test/profile-evidence-contract.test.mjs test/design-profile-contract.test.mjs test/site-chrome-runtime.test.mjs test/invest-personalization-contract.test.mjs test/invest-market-core.test.mjs test/invest-site-system.test.mjs test/invest-lifecycle-runtime.test.mjs
           node scripts/validate-additive-migrations.mjs migrations
           bash -n scripts/apply-d1-migrations-with-retry.sh
           grep -Fq 'messenger_outbox' migrations/0030_messenger_event_outbox.sql
@@ -180,7 +182,11 @@ jobs:
                 'SELECT 1 FROM investment_policies LIMIT 0;' \
                 'SELECT 1 FROM investment_strategies LIMIT 0;' \
                 'SELECT 1 FROM investment_broker_connections LIMIT 0;' \
-                'SELECT 1 FROM investment_cycles LIMIT 0;' > /tmp/workspace-schema-probe.sql
+                'SELECT 1 FROM investment_cycles LIMIT 0;' \
+                'SELECT 1 FROM investment_project_profiles LIMIT 0;' \
+                'SELECT 1 FROM investment_interest_records LIMIT 0;' \
+                'SELECT 1 FROM investment_connections LIMIT 0;' \
+                'SELECT 1 FROM investment_aftercare_updates LIMIT 0;' > /tmp/workspace-schema-probe.sql
               npx --yes wrangler@${WRANGLER_VERSION} d1 execute DB --remote --config .workspace-staging.toml --file /tmp/workspace-schema-probe.sql
               echo 'Workspace staging is Access-protected; deployment and required D1 schema verified.'
               exit 0
