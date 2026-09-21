@@ -36,7 +36,9 @@ import { tenantLivePage } from './tenant-live-page.js';
 import { tenantLiveAdminCss, tenantLiveAdminPage, tenantLiveAdminScript } from './tenant-live-admin-page.js';
 import { liveServiceAdminPage, liveServiceMaintenancePage, liveServicePage } from './live-service-page.js';
 import { localRegionFromPath } from './local-region-registry.js';
-import { localRegionPublicPage, localRegionAdminPage } from './local-region-page.js';
+import { localRegionPublicPage, localRegionAdminPage, localRegionAccessAdminPage } from './local-region-page.js';
+import { localRegionAdminAuthScript } from './local-region-admin-auth.js';
+import { localRegionAccessAdminScript } from './local-region-access-admin.js';
 import { regionalCommerceProgramFromLocalRoute } from './regional-commerce-program-registry.js';
 import { regionalCommerceProgramPublicPage, regionalCommerceProgramAdminPage } from './regional-commerce-program-page.js';
 
@@ -274,6 +276,8 @@ export default {
       const previewResponse=handlePreviewRequest(request);if(previewResponse)return previewResponse;
       if(['GET','HEAD'].includes(request.method)&&isInsurancePublicPath(url.pathname))return routeInsurancePublic(request,env);
       if(request.method==='GET'){
+        if(url.pathname==='/local-region-admin-auth.js')return localRegionAdminAuthScript();
+        if(url.pathname==='/local-region-access-admin.js')return localRegionAccessAdminScript();
         if(url.pathname==='/tenant-admin-command-home.css')return tenantAdminCommandHomeCss();
         if(url.pathname==='/tenant-admin-command-home.js')return tenantAdminCommandHomeScript();
         if(['/store-admin.css','/jadam-admin.css','/pizzamaru-admin.css','/yogurt-admin.css'].includes(url.pathname))return storeAdminCss();
@@ -296,9 +300,10 @@ export default {
         const localRegionRoute=localRegionFromPath(url.pathname);
         if(localRegionRoute){
           const commerceProgram=regionalCommerceProgramFromLocalRoute(localRegionRoute);
+          const accessAdmin=localRegionRoute.admin&&String(localRegionRoute.segments?.[1]||'').toLowerCase()==='access';
           const page=commerceProgram
             ?(localRegionRoute.admin?regionalCommerceProgramAdminPage(localRegionRoute.region,commerceProgram):regionalCommerceProgramPublicPage(localRegionRoute.region,commerceProgram))
-            :(localRegionRoute.admin?localRegionAdminPage(localRegionRoute.region):localRegionPublicPage(localRegionRoute.region));
+            :(accessAdmin?localRegionAccessAdminPage(localRegionRoute.region):(localRegionRoute.admin?localRegionAdminPage(localRegionRoute.region):localRegionPublicPage(localRegionRoute.region)));
           const surface=localRegionRoute.admin?'admin':'workspace';
           const response=injectEkodiShell(page,'space',surface,{contextKind:'workspace'});
           return request.method==='GET'?decorateDiscoveryResponse(response,url.pathname):response;
