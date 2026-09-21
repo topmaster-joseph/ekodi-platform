@@ -12,6 +12,8 @@ test('tenant command home is command-only and deterministic', async()=>{
   assert.match(css,/ekodi-tenant-command-home-active/);
   assert.match(css,/visibility:hidden!important/);
   assert.match(script,/EKODITenantCommandHome/);
+  assert.match(script,/^const __name=\(target\)=>target;/);
+  if(script.includes('__name(')) assert.match(script,/const __name=/);
   assert.match(script,/targetFor\(text\)/);
   assert.match(script,/ekodi-tenant-command-config/);
   assert.match(script,/queueMicrotask\(boot\)/);
