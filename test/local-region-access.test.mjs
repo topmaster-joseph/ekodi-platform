@@ -90,6 +90,9 @@ test('regional governor may manage child pass grants but pass vendor does not in
   assert.match(regional,/'cheonggye-local'/);
   assert.match(regional,/'cheonggye-pass'/);
   assert.match(regional,/customer_access_grants/);
+  assert.match(regional,/delegatedOperatorAccess/);
+  assert.match(regional,/REGION_ACCESS_EXPLICITLY_DISABLED/);
+  assert.ok(regional.indexOf('REGION_ACCESS_EXPLICITLY_DISABLED')<regional.indexOf('delegated=await delegatedOperatorAccess'),'explicit regional disable must win over organization delegation');
 });
 
 test('router exposes auth assets and regional access page before generic workspace routing',async()=>{
