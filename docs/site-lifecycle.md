@@ -29,7 +29,7 @@ URL은 신분증이 아니다. 인증과 권한의 기준은 항상 immutable `w
 | 요거트퍼플 목포대점 | `ekodi.kr/yogurt` | 승격 완료, `/yogurtpurple`은 별칭 |
 | 청계면상인회 | `ekodi.kr/cgma`, `cgma.or.kr` | 기존 사이트·고객 소유 도메인 유지 후 Core 연결 |
 | 에코디교회 | `ekodi.kr/ekodichurch` | 정식 경로를 Workspace/Core에 연결 |
-| 에코디비즈 | `ekodi.kr/ekodibiz` | 정식 경로를 Workspace/Core에 연결; `biz.ekodi.kr`은 직접 서비스일 때만 별도 운영 |
+| 에코디비즈 | `ekodi.kr/ekodibiz` | 정식 apex 경로를 Workspace/Core에 연결하고 공개 서브도메인은 사용하지 않음 |
 | 에코디연구소 | `ekodi.kr/ekodilab` | 정식 경로를 Workspace/Core에 연결 |
 | EKODI Global Trading | `ekodi.kr/ekodibiz/trade` | 정식 경로 기준으로 Core 연결 |
 | 에코디 카페 | `cafe.ekodi.kr` | 준비 상태 유지, 실제 운영 중인 것처럼 표시하지 않음 |
