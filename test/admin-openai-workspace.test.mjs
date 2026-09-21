@@ -3,9 +3,9 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 const read = path => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 
-test('OpenAI is a visible System workspace, not a public service capability', async () => {
+test('OpenAI is an internal provider workspace under the service engine area, not a public capability', async () => {
   const registry = await read('admin-menu-registry.js');
-  assert.match(registry, /id: 'openai'.*group: 'system'.*providerWorkspace: true/);
+  assert.match(registry, /id: 'openai'[^\n]*group: 'services'[^\n]*providerWorkspace: true[^\n]*internal: true/);
   assert.doesNotMatch(await read('config/capability-registry.json'), /"id"\s*:\s*"openai"/);
 });
 
