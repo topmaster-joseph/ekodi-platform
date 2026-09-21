@@ -160,7 +160,13 @@ const registeredCommonPaths = new Set(constitution.registeredCommonServicePaths 
 const registeredCore = new Set(constitution.registeredCoreServiceBoundaries || []);
 const targets = constitution.legacyDomainTargets || {};
 const customerOwned = constitution.customerOwnedDomainMappings || {};
-if (!systemDomains.has('ekodi.kr') || !systemDomains.has('api.ekodi.kr') || !systemDomains.has('auth.ekodi.kr')) fail('canonical system domain set is incomplete');
+const retiredApiHost=['api','ekodi.kr'].join('.');
+if (!systemDomains.has('ekodi.kr') || !systemDomains.has('auth.ekodi.kr')) fail('canonical system domain set is incomplete');
+if (systemDomains.has(retiredApiHost)) fail('retired API subdomain must not remain a production system boundary');
+if (constitution.domainPolicy?.canonicalApiBase !== 'https://ekodi.kr/api') fail('canonical API base must be https://ekodi.kr/api');
+if (constitution.domainPolicy?.apiSubdomainRetired !== true || constitution.domainPolicy?.apiSubdomainRedirectForbidden !== true) fail('retired API subdomain policy must be enforced');
+if ((constitution.featurePatterns || []).includes('https://ekodi.kr/api/{feature}') !== true) fail('canonical API feature pattern is missing');
+if (constitution.legacyDomainTargets?.[retiredApiHost]) fail('retired API subdomain must not keep a redirect target');
 if (constitution.domainPolicy?.newFeatureSubdomainsForbidden !== true) fail('new feature subdomains must be forbidden');
 if (constitution.domainPolicy?.newTenantSubdomainsForbidden !== true) fail('new tenant/workspace subdomains must be forbidden');
 if (constitution.domainPolicy?.sustainableBoundaryGateRequired !== true) fail('new system/common/core subdomains must pass the sustainable boundary gate');
@@ -221,7 +227,7 @@ for (const [serviceId, service] of Object.entries(boundaries.platforms || {})) {
 for (const domain of legacy) {
   const target = targets[domain];
   if (!target) fail(`legacy domain target missing: ${domain}`);
-  else if (!/^https:\/\/(ekodi\.kr|my\.ekodi\.kr|api\.ekodi\.kr)(\/|$)/.test(target)) fail(`legacy target violates canonical grammar: ${domain} -> ${target}`);
+  else if (!/^https:\/\/(ekodi\.kr|my\.ekodi\.kr)(\/|$)/.test(target)) fail(`legacy target violates canonical grammar: ${domain} -> ${target}`);
 }
 
 if (!Array.isArray(coreData.protectedTables) || coreData.protectedTables.length < 4) fail('core data protection table set is incomplete');
