@@ -4,6 +4,7 @@ import { handleCustomerAuth } from './customer-auth.js';
 import { handleFederatedCustomerAuth } from './customer-federated-auth.js';
 import { handleGoogleCustomerPreregistration } from './customer-google-prereg.js';
 import { handleRegionalAccessControl } from './regional-access-control.js';
+import { handleLocalRegionOperations } from './local-region-operations-control.js';
 import { handleCustomerMemberDirectory } from './customer-member-directory.js';
 import { handleMembershipBilling, runMembershipBillingSchedule } from './membership-billing.js';
 import { handleAdminGoogleAuth } from './admin-google-auth.js';
@@ -279,6 +280,19 @@ export default {
       } catch (error) {
         console.error('Regional access API error', error);
         return new Response(JSON.stringify({ error:'지역플랫폼 권한 확인 중 오류가 발생했습니다.', code:'REGIONAL_ACCESS_API_ERROR' }), {
+          status:500,
+          headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'},
+        });
+      }
+    }
+
+    if (path.startsWith('/api/local-operations/')) {
+      try {
+        const operations = await handleLocalRegionOperations(request, env);
+        if (operations) return operations;
+      } catch (error) {
+        console.error('Local region operations API error', error);
+        return new Response(JSON.stringify({ error:'지역 운영권 현황을 불러오는 중 오류가 발생했습니다.', code:'LOCAL_REGION_OPERATIONS_API_ERROR' }), {
           status:500,
           headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'},
         });
