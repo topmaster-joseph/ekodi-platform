@@ -158,6 +158,23 @@ if (!demandReferencedAssets.includes('social-admin.js') || !demandReferencedAsse
   throw new Error('Admin Social lazy assets are missing from the fingerprint graph');
 }
 const versionInputs = [...new Set([...staticVersionInputs, ...demandReferencedAssets])].sort();
+
+// Cloudflare's immutable asset path must remain transport-safe for scripts that carry dense
+// Korean operational copy. Serialize non-ASCII code units as JavaScript Unicode escapes late
+// in the build, after every composition layer and before fingerprinting/mirroring.
+const unicodeSafeAdminScripts = ['system-health-admin.js', 'admin-lazy-features.js'];
+const escapeNonAsciiForTransport = source => source.replace(/[^\x00-\x7f]/g, char =>
+  `\\u${char.charCodeAt(0).toString(16).padStart(4, '0')}`
+);
+for (const asset of unicodeSafeAdminScripts) {
+  const assetPath = `${dist}${asset}`;
+  const source = await readFile(assetPath, 'utf8');
+  const escaped = escapeNonAsciiForTransport(source);
+  if (/[^\x00-\x7f]/.test(escaped)) throw new Error(`Admin Unicode-safe serialization failed: ${asset}`);
+  new Function(escaped);
+  await writeFile(assetPath, escaped);
+}
+
 const hash = createHash('sha256');
 for (const asset of versionInputs) hash.update(await readFile(`${dist}${asset}`));
 const assetVersion = hash.digest('hex').slice(0, 16);
