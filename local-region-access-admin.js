@@ -1,4 +1,4 @@
-(()=>{
+function clientMain(){{
   const root=document.documentElement;
   if(root.dataset.ekodiRegionSurface!=='admin'||!location.pathname.replace(/\/+$/,'').endsWith('/admin/access'))return;
   const API='https://ekodi.kr';
@@ -48,4 +48,8 @@
     await load();
   }
   document.addEventListener('ekodi:region-access-ready',ready,{once:true});if(root.__EKODI_REGION_ACCESS__)ready({detail:root.__EKODI_REGION_ACCESS__});
-})();
+}
+
+export function localRegionAccessAdminScript(){
+  return new Response('('+clientMain.toString()+')();',{headers:{'content-type':'text/javascript; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}});
+}
