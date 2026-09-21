@@ -30,3 +30,15 @@ test('interpreter surface supports microphone, speech output and provider-neutra
   assert.match(worker,/\/interpreter\//);
   assert.match(worker,/api\/interpreter\/client/);
 });
+
+test('interpreter assets use canonical AI paths and guarded release probes',()=>{
+  const html=read('ai-control/interpreter.html');
+  const manifest=JSON.parse(read('deploy/manifests/ai-control.worker.json'));
+  assert.match(html,/href="\.\.\/api\/interpreter\/style/);
+  assert.match(html,/src="\.\.\/api\/interpreter\/client/);
+  assert.match(html,/href="\.\.\/">← 모두의 AI/);
+  const probe=manifest.worker.requests.find(item=>item.url==='https://ekodi.kr/ai/interpreter/');
+  assert.ok(probe);
+  assert.ok(probe.expect.includes('모두의 통역'));
+  assert.ok(probe.headerExpect.some(value=>value.includes('microphone=(self)')));
+});
