@@ -111,7 +111,9 @@ export async function loadHomepageStatusCounts() {
   const registry = validateRegistry(JSON.parse(await readFile(registryPath, 'utf8')));
   const counts = Object.fromEntries(Object.keys(STATUS_DEFINITIONS).map(status => [status, 0]));
   for (const service of registry.services) {
-    if (service.productionVerified === true && service.homepage === true && STATUS_IDS.has(service.status)) counts[service.status] += 1;
+    if (service.productionVerified !== true || service.homepage !== true) continue;
+    if (service.status !== 'live') continue;
+    counts.live += 1;
   }
   return Object.freeze(counts);
 }
@@ -134,9 +136,9 @@ function renderServiceCard(service) {
   const defaultVisibility = service.homepage === true ? 'normal' : 'hidden';
   const displayOrder = Number.isFinite(Number(service.order)) ? Math.trunc(Number(service.order)) : 9999;
   const icon = `<span class="service-icon"><svg viewBox="0 0 40 40" aria-hidden="true">${ICONS[service.icon]}</svg></span>`;
-  const copy = `<span class="service-copy"><span class="service-title"><strong>${name}</strong><span class="service-name-en">${nameEn}</span></span><span class="service-description"><span>${descriptionKo}</span><small>${descriptionEn}</small></span><span class="service-domain">${label}</span></span>`;
-  const badge = `<span class="service-status" data-status-badge="${statusId}"><b>${escapeHtml(status.label)}</b><span>${escapeHtml(status.labelEn)}</span></span>`;
-  const common = `class="service-card status-${statusId}${clickable ? '' : ' is-unavailable'}" data-service-id="${id}" data-service-status="${statusId}" data-service-clickable="${clickable ? 'true' : 'false'}" data-homepage-default="${defaultVisibility}" data-homepage-order="${displayOrder}"${defaultVisibility === 'hidden' ? ' hidden' : ''}`;
+  const copy = `<span class="service-copy"><span class="service-title"><strong>${name}</strong></span><span class="service-description"><span>${descriptionKo}</span></span><span class="service-domain">${label}</span></span>`;
+  const badge = `<span class="service-status" data-status-badge="${statusId}"><b>${escapeHtml(status.label)}</b></span>`;
+  const common = `class="service-card status-${statusId}${clickable ? '' : ' is-unavailable'}" data-service-id="${id}" data-service-status="${statusId}" data-service-clickable="${clickable ? 'true' : 'false'}" data-service-name-en="${nameEn}" data-service-description-en="${descriptionEn}" data-homepage-default="${defaultVisibility}" data-homepage-order="${displayOrder}"${defaultVisibility === 'hidden' ? ' hidden' : ''}`;
 
   if (clickable) {
     return `          <a ${common} href="${url}">${icon}${copy}<span class="service-card-side">${badge}<span class="arrow" aria-hidden="true">→</span></span></a>`;
@@ -151,8 +153,8 @@ export function renderServiceCards(services) {
     if (!categoryServices.length) return '';
     const cards = categoryServices.map(renderServiceCard).join('\n');
     const visibleCount = categoryServices.filter(service => service.homepage === true).length;
-    return `      <section class="service-group" data-service-category="${escapeHtml(category.id)}"${visibleCount ? '' : ' hidden'}>
-        <div class="service-group-heading"><h3><strong>${escapeHtml(category.label)}</strong><small>${escapeHtml(category.labelEn)}</small></h3><span data-service-count>${visibleCount}</span></div>
+    return `      <section class="service-group" data-service-category="${escapeHtml(category.id)}" data-category-label-en="${escapeHtml(category.labelEn)}"${visibleCount ? '' : ' hidden'}>
+        <div class="service-group-heading"><h3><strong>${escapeHtml(category.label)}</strong></h3><span data-service-count>${visibleCount}</span></div>
         <div class="service-list">
 ${cards}
         </div>
