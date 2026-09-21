@@ -1,5 +1,5 @@
 name: Deploy EKODI Church Homepage
-# Release reconciliation marker: church-member-home-v1-20260921
+# Release reconciliation marker: church-live-system-verified-155d00cd-20260921
 
 on:
   workflow_dispatch:
