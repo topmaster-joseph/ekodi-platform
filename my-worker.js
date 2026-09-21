@@ -10,7 +10,7 @@ const PRIVATE_ROUTER_TAG='<script src="/private-workspace-router.js?v=20260827-p
 const ACCESS_CONTEXT_TAG='<script type="module" src="/access-context.js?v=20260829-common-service-access-1"></script>';
 
 function securityHeaders(env={}){
-  const connect=["'self'",'https://cdn.jsdelivr.net','https://ekodi.kr','https://marketing-publish-api.ekodi.kr','https://personal-finance-api.ekodi.kr'];
+  const connect=["'self'",'https://cdn.jsdelivr.net','https://ekodi.kr'];
   if(env.SUPABASE_URL){try{connect.push(new URL(env.SUPABASE_URL).origin)}catch{}}
   return {
     'content-security-policy':`default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self'; img-src 'self' data: https:; connect-src ${connect.join(' ')}; frame-ancestors 'none'; base-uri 'self'; form-action 'self' https://ekodi.kr https://auth.ekodi.kr; object-src 'none'; upgrade-insecure-requests`,
@@ -32,7 +32,7 @@ function withHeaders(env,response){
   }else if(!headers.has('cache-control'))headers.set('cache-control','public, max-age=300');
   return new Response(response.body,{status:response.status,statusText:response.statusText,headers});
 }
-function runtimeConfig(env){const dataEnabled=env.DATA_ENABLED==='true'&&Boolean(env.SUPABASE_URL&&env.SUPABASE_PUBLISHABLE_KEY);return{dataEnabled,dataMode:env.DATA_MODE||'isolated-staging',supabaseUrl:dataEnabled?env.SUPABASE_URL:'',supabasePublishableKey:dataEnabled?env.SUPABASE_PUBLISHABLE_KEY:'',authUrl:env.AUTH_URL||'https://ekodi.kr/auth/?site=my',personalFinanceApi:'https://personal-finance-api.ekodi.kr'}}
+function runtimeConfig(env){const dataEnabled=env.DATA_ENABLED==='true'&&Boolean(env.SUPABASE_URL&&env.SUPABASE_PUBLISHABLE_KEY);return{dataEnabled,dataMode:env.DATA_MODE||'isolated-staging',supabaseUrl:dataEnabled?env.SUPABASE_URL:'',supabasePublishableKey:dataEnabled?env.SUPABASE_PUBLISHABLE_KEY:'',authUrl:env.AUTH_URL||'https://ekodi.kr/auth/?site=my',personalFinanceApi:'https://ekodi.kr'}}
 function personalBrandUrl(){const target='https://ekodi.kr/ekodibiz/marketing-ai?mode=personal-brand&source=my';return `https://ekodi.kr/auth/?site=marketing&return_to=${encodeURIComponent(target)}`}
 function visibleServices(){return EKODI_SERVICE_MANIFEST.services.filter(service=>service.id!=='my'&&service.state!=='planned').sort((a,b)=>(a.order||999)-(b.order||999));}
 function myServicePreamble(){
