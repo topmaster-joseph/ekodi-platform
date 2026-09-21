@@ -17,6 +17,25 @@ render('전체');el('timelineFilters').addEventListener('click',e=>{const b=e.ta
 el('sourceList').innerHTML=d.sources.map(s=>`<article class="source"><a href="${safeUrl(s.url)}" target="_blank" rel="noopener noreferrer">${s.title}</a><small>${s.publisher} · ${s.date} · ${s.kind}</small></article>`).join('');
 el('raised').textContent=money(d.finance.raised);el('spent').textContent=money(d.finance.spent);el('balance').textContent=money(d.finance.balance)}
 load().catch(()=>{el('lastUpdated').textContent='데이터를 불러오지 못했습니다.'});
+async function loadMonitor(){
+  const badge=el('monitorBadge'),summary=el('monitorSummary'),list=el('monitorList');
+  try{
+    const response=await fetch('/api/seonam-medi/monitor',{cache:'no-store'});
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok||!data.ok)throw new Error(data.message||'점검 상태를 불러오지 못했습니다.');
+    const run=data.lastRun;
+    badge.textContent=run?.completed_at?'사이트 자동점검: '+new Date(run.completed_at).toLocaleString('ko-KR',{timeZone:'Asia/Seoul',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}):'사이트 자동점검: 첫 실행 대기';
+    summary.textContent=run?('최근 점검 '+(run.status==='ok'?'정상':run.status==='partial'?'일부 확인':'확인 필요')+' · 출처 '+run.sources_checked+'개 · 신규 '+run.new_items+'건'):'첫 자동점검은 매일 08:00에 실행됩니다.';
+    const rows=(data.items||[]).slice(0,12);
+    list.innerHTML=rows.length?rows.map(item=>`<article class="source"><a href="${safeUrl(item.url)}" target="_blank" rel="noopener noreferrer">${String(item.title||'').replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]))}</a><small>${String(item.publisher||'출처 확인 중').replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]))} · 자동수집 보도 · 원문 확인 필요</small></article>`).join(''):'<p class="muted">최근 7일 내 새로 수집된 보도가 없습니다.</p>';
+  }catch(error){
+    badge.textContent='사이트 자동점검: 준비 중';
+    summary.textContent=error.message||'점검 상태를 불러오지 못했습니다.';
+    list.innerHTML='';
+  }
+}
+loadMonitor();
+
 
 const voiceForm=el('voiceForm');
 if(voiceForm)voiceForm.addEventListener('submit',async event=>{
