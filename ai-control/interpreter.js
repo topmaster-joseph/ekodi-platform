@@ -7,7 +7,7 @@ const LANGS=Object.freeze({
   en:{label:'English',speech:'en-US',name:'English'},
   zh:{label:'中文',speech:'zh-CN',name:'Simplified Chinese'},
 });
-const state={config:null,client:null,session:null,recognition:null,wantsListening:false,listening:false,busy:false,lastSource:'',lastTarget:'',translatorCache:new Map()};
+const state={config:null,client:null,session:null,recognition:null,wantsListening:false,listening:false,busy:false,lastSource:'',lastTarget:'',queue:[],translatorCache:new Map()};
 const Recognition=window.SpeechRecognition||window.webkitSpeechRecognition;
 
 function setNotice(message='',error=false){const node=$('notice');node.textContent=message;node.classList.toggle('error',Boolean(error));}
@@ -61,23 +61,27 @@ async function translate(text,from,to){
   $('engineState').textContent='EKODI AI';
   return translateWithServer(text,from,to);
 }
-function speak(text,language){
+function speak(text,language,replace=false){
   if(!text||!('speechSynthesis'in window))return;
-  speechSynthesis.cancel();const utterance=new SpeechSynthesisUtterance(text);utterance.lang=LANGS[language].speech;
+  if(replace)speechSynthesis.cancel();const utterance=new SpeechSynthesisUtterance(text);utterance.lang=LANGS[language].speech;
   const prefix=utterance.lang.slice(0,2).toLowerCase();const voice=speechSynthesis.getVoices().find(item=>String(item.lang||'').toLowerCase().startsWith(prefix));if(voice)utterance.voice=voice;
   speechSynthesis.speak(utterance);
 }
 async function processText(text){
-  if(state.busy||!text.trim())return;state.busy=true;const {from,to}=selected();state.lastSource=text.trim();$('sourceText').textContent=state.lastSource;$('sourceText').classList.remove('muted');$('targetText').textContent='통역 중…';setNotice('');
-  try{
-    const translated=await translate(state.lastSource,from,to);if(!translated)throw new Error('empty_translation');
-    state.lastTarget=translated;$('targetText').textContent=translated;speak(translated,to);
-  }catch(error){
-    $('targetText').textContent='통역을 완료하지 못했습니다.';
-    if(error.code==='login_required'||error.message==='login_required'){
-      setNotice('이 기기에서 바로 번역을 지원하지 않아 EKODI 로그인이 필요합니다.',true);$('loginLink').hidden=false;
-    }else setNotice(`통역 오류: ${error.message}`,true);
-  }finally{state.busy=false;}
+  const queued=String(text||'').trim();if(!queued)return;state.queue.push(queued);if(state.busy)return;state.busy=true;
+  while(state.queue.length){
+    const utterance=state.queue.shift();const {from,to}=selected();state.lastSource=utterance;$('sourceText').textContent=utterance;$('sourceText').classList.remove('muted');$('targetText').textContent='통역 중…';setNotice('');
+    try{
+      const translated=await translate(utterance,from,to);if(!translated)throw new Error('empty_translation');
+      state.lastTarget=translated;$('targetText').textContent=translated;speak(translated,to,false);
+    }catch(error){
+      $('targetText').textContent='통역을 완료하지 못했습니다.';
+      if(error.code==='login_required'||error.message==='login_required'){
+        setNotice('이 기기에서 바로 번역을 지원하지 않아 EKODI 로그인이 필요합니다.',true);$('loginLink').hidden=false;
+      }else setNotice(`통역 오류: ${error.message}`,true);
+    }
+  }
+  state.busy=false;
 }
 function updateMicUi(){
   $('micButton').classList.toggle('listening',state.listening);$('micLabel').textContent=state.listening?'마이크 중지':'마이크 시작';$('listeningState').textContent=state.listening?'듣는 중':'대기';
@@ -102,7 +106,7 @@ function swap(restart=true){
   $('interimText').textContent='';if(restart&&state.wantsListening){stopListening();setTimeout(startListening,220);}setNotice(`${LANGS[source.value].label}로 듣고 ${LANGS[target.value].label}로 통역합니다.`);
 }
 function preset(value){const [from,to]=String(value||'').split(':');if(!LANGS[from]||!LANGS[to])return;$('sourceLanguage').value=from;$('targetLanguage').value=to;if(state.wantsListening){stopListening();setTimeout(startListening,220);}setNotice(`${LANGS[from].label} → ${LANGS[to].label}`);}
-function clearAll(){$('sourceText').textContent='마이크를 누르고 말해 주세요.';$('sourceText').classList.add('muted');$('targetText').textContent='통역 결과가 여기에 표시됩니다.';$('interimText').textContent='';state.lastSource='';state.lastTarget='';setNotice('');}
+function clearAll(){$('sourceText').textContent='마이크를 누르고 말해 주세요.';$('sourceText').classList.add('muted');$('targetText').textContent='통역 결과가 여기에 표시됩니다.';$('interimText').textContent='';state.lastSource='';state.lastTarget='';state.queue.length=0;if('speechSynthesis'in window)speechSynthesis.cancel();setNotice('');}
 fillLanguages();
 $('micButton').addEventListener('click',toggleListening);
 $('turnButton').addEventListener('click',()=>swap(true));
@@ -110,7 +114,7 @@ $('swapLanguages').addEventListener('click',()=>swap(true));
 $('sourceLanguage').addEventListener('change',()=>{if(state.wantsListening){stopListening();setTimeout(startListening,220);}});
 $('targetLanguage').addEventListener('change',()=>setNotice(`${LANGS[selected().from].label} → ${LANGS[selected().to].label}`));
 document.querySelectorAll('[data-preset]').forEach(button=>button.addEventListener('click',()=>preset(button.dataset.preset)));
-$('speakAgain').addEventListener('click',()=>speak(state.lastTarget,selected().to));
+$('speakAgain').addEventListener('click',()=>speak(state.lastTarget,selected().to,true));
 $('clearButton').addEventListener('click',clearAll);
 $('textForm').addEventListener('submit',event=>{event.preventDefault();const text=$('textInput').value.trim();if(text)void processText(text);});
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&state.listening)stopListening();});
