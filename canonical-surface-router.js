@@ -5,6 +5,7 @@ const CANONICAL_HOST='ekodi.kr';
 const SURFACE_PREFIXES=Object.freeze({my:'/my',admin:'/admin',auth:'/auth'});
 const SYSTEM_PATHS=Object.freeze(['/api','/mcp','/webhooks','/health','/connect']);
 const PERSONAL_FINANCE_CONTROL_PATH='/api/control/personal-finance';
+const FINANCE_WEBHOOK_PREFIX='/webhooks/finance';
 const API_CAPABILITY_SURFACES=Object.freeze([
   Object.freeze({id:'personal-finance-api',prefix:'/api/finance/personal',binding:'PERSONAL_FINANCE',preservePath:true}),
   Object.freeze({id:'finance-api',prefix:'/api/finance',binding:'FINANCE',preservePath:true}),
@@ -144,6 +145,17 @@ async function proxyApiCapability(request,env,spec){
   routed.headers.set('x-ekodi-canonical-path',spec.prefix);
   routed.headers.set('x-ekodi-api-capability',spec.id);
   return routed;
+}
+async function proxyFinanceWebhook(request,env){
+  if(!env?.FINANCE?.fetch)return serviceUnavailable('finance-webhook');
+  const target=new URL(request.url);
+  const suffix=stripPrefix(target.pathname,FINANCE_WEBHOOK_PREFIX);
+  target.pathname=`/webhooks${suffix==='/'?'':suffix}`;
+  const upstream=await env.FINANCE.fetch(cloneRequest(request,target));
+  const response=new Response(upstream.body,upstream);
+  response.headers.set('x-ekodi-canonical-surface','finance-webhook');
+  response.headers.set('x-ekodi-canonical-path',FINANCE_WEBHOOK_PREFIX);
+  return response;
 }
 async function proxyPersonalFinanceAdminControl(request,env){
   if(!env?.PERSONAL_FINANCE?.fetch)return serviceUnavailable('personal-finance-admin-control');
@@ -344,6 +356,7 @@ async function proxyExecutionSurface(request,env,spec,legacyFetch,externalFetch)
     if(adminRuntimeRequest(path))return proxyAdminRuntime(request,legacyFetch);
     return proxyAdminShell(request,legacyFetch);
   }
+  if(path===FINANCE_WEBHOOK_PREFIX||path.startsWith(`${FINANCE_WEBHOOK_PREFIX}/`))return proxyFinanceWebhook(request,env);
   if(path===PERSONAL_FINANCE_CONTROL_PATH)return proxyPersonalFinanceAdminControl(request,env);
   const apiCapability=apiCapabilityForPath(path);
   if(apiCapability)return proxyApiCapability(request,env,apiCapability);
