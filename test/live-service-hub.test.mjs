@@ -67,3 +67,10 @@ test('service manifest advertises canonical apex Live as an active public surfac
   assert.match(manifest,/id:'live'.*url:'https:\/\/ekodi\.kr\/live'.*defaultSurface:'public'.*state:'live'/);
   assert.doesNotMatch(manifest,/id:'live'.*url:'https:\/\/live\.ekodi\.kr\//);
 });
+
+
+test('Shared Site release watches Live hub UI and contract changes',async()=>{
+  const workflow=await read('.github/workflows/deploy-site-core.yml');
+  assert.match(workflow,/live-service-page\.js/);
+  assert.match(workflow,/test\/live-service-hub\.test\.mjs/);
+});
