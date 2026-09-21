@@ -228,7 +228,7 @@ jobs:
             grep -Fq "/workspaces?site=marketing" "$file"
             grep -Fq 'https://auth.ekodi.kr/?site=marketing' "$file"
             grep -Fq 'id="customDomainPanel"' "$file"
-            grep -Fq 'https://marketing-api.ekodi.kr' "$file"
+            grep -Fq 'https://ekodi.kr' "$file"
             grep -Fq '/api/marketing/domains' "$file"
             grep -Fq '/api/marketing/workspace/resolve?host=' "$file"
             grep -Fq '/api/marketing/store-domains' "$file"
@@ -319,7 +319,7 @@ jobs:
                  || ! grep -Fq 'data-ekodi-workspace-handoff' /tmp/live.html \
                  || ! grep -Fq 'window.EKODI_MARKETING_CONTEXT' /tmp/live.html \
                  || ! grep -Fq 'id="customDomainPanel"' /tmp/live.html \
-                 || ! grep -Fq 'https://marketing-api.ekodi.kr' /tmp/live.html \
+                 || ! grep -Fq 'https://ekodi.kr' /tmp/live.html \
                  || ! grep -Fq '/api/marketing/domains' /tmp/live.html \
                  || ! grep -Fq '/api/marketing/workspace/resolve?host=' /tmp/live.html \
                  || ! grep -Fq '/api/marketing/store-domains' /tmp/live.html \
