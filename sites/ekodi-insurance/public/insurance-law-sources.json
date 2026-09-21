@@ -1,0 +1,38 @@
+{
+  "lastVerifiedAt": "2026-09-11",
+  "jurisdiction": "KR",
+  "topics": {
+    "auto": {
+      "title": "자동차보험 법령 기준",
+      "facts": [
+        "자동차보유자는 자동차 운행으로 타인이 사망하거나 부상한 경우의 손해배상을 위한 책임보험 또는 책임공제에 가입해야 합니다.",
+        "자동차보유자는 타인의 재물이 멸실되거나 훼손된 경우의 손해배상을 위한 의무보험 또는 공제에도 가입해야 합니다.",
+        "책임보험의 사망 보상한도는 피해자 1명당 1억5천만원 범위이며, 부상은 시행령 별표 1의 상해급별 한도를 따릅니다.",
+        "재물손해 의무보험의 법정 금액은 사고 1건당 2천만원 범위입니다."
+      ],
+      "sources": [
+        {
+          "id": "car-act-art5",
+          "label": "자동차손해배상 보장법 제5조(보험 등의 가입 의무)",
+          "format": "html",
+          "url": "https://www.law.go.kr/LSW/lsLinkCommonInfo.do?chrClsCd=010202&lsJoLnkSeq=1025768537",
+          "markers": ["제5조(보험 등의 가입 의무)", "책임보험이나 책임공제", "재물이 멸실되거나 훼손"]
+        },
+        {
+          "id": "car-decree-art3",
+          "label": "자동차손해배상 보장법 시행령 제3조(책임보험금 등)",
+          "format": "html",
+          "url": "https://law.go.kr/lsLawLinkInfo.do?chrClsCd=010202&lsJoLnkSeq=1011855833",
+          "markers": ["제3조(책임보험금 등)", "1억5천만원", "2천만원", "별표 1"]
+        },
+        {
+          "id": "car-decree-schedule1",
+          "label": "자동차손해배상 보장법 시행령 별표 1(상해급별 책임보험금 한도)",
+          "format": "pdf",
+          "url": "https://law.go.kr/flDownload.do?bylClsCd=110203&flSeq=94834069&gubun=",
+          "markers": ["상해의 구분과 책임보험금의 한도금액", "1급", "3천만원"]
+        }
+      ]
+    }
+  }
+}
