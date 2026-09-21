@@ -12,8 +12,8 @@ const byId=new Map(EKODI_SERVICE_MANIFEST.services.map(service=>[service.id,serv
 test('public bookstore brand is 에코디서점 and publishing is 출판',()=>{
   assert.equal(byId.get('books')?.name,'에코디서점');
   assert.equal(byId.get('publishing')?.name,'출판');
-  assert.equal(byId.get('books')?.url,'https://books.ekodi.kr/');
-  assert.equal(byId.get('publishing')?.url,'https://publishing.ekodi.kr/');
+  assert.equal(byId.get('books')?.url,'https://ekodi.kr/books');
+  assert.equal(byId.get('publishing')?.url,'https://ekodi.kr/publishing');
 });
 
 test('bookstore does not own publishing capabilities',()=>{
