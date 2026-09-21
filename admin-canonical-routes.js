@@ -8,6 +8,7 @@ const SECTION_GROUP=Object.freeze({
   'common-services':'services',confirmations:'services','life-ai':'services','personal-finance':'services',invest:'services','marketing-ai':'services',affiliates:'services','supply-network':'services',insurance:'services',capabilities:'services',openai:'services',
   'users-access':'people',security:'people',admins:'people','ai-membership':'people',
   work:'content',communication:'content',community:'content',books:'content',devotional:'content',social:'content',finance:'content',tax:'content',
+  'executor-registry':'status','executor-infrastructure':'status','executor-jobs':'status','executor-verification':'status','executor-policies':'status',
   health:'status',deployments:'status',aiops:'status',devices:'status','api-cost':'status',architecture:'status',maturity:'status',services:'status',
   'public-site-controls':'settings-records','language-status':'settings-records','ai-module-spec':'settings-records',storage:'settings-records','ai-settings':'settings-records','audit-records':'settings-records',policies:'settings-records',
 });
