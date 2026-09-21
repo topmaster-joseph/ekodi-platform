@@ -6,7 +6,7 @@ import { TENANT_ADMIN_CAPABILITIES, TENANT_ADMIN_ROLE_CAPABILITIES } from './ten
 const normalize=value=>String(value||'').trim().toLowerCase();
 
 export const SITE_RESPONSIBILITY_ROLES=Object.freeze([
-  'owner','store_owner','tenant_admin','workspace_admin','client_admin','senior_pastor',
+  'super_admin','platform_admin','owner','store_owner','tenant_admin','workspace_admin','client_admin','senior_pastor',
 ]);
 
 export const SITE_ASSIGNABLE_ROLES=Object.freeze([
