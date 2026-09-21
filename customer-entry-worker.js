@@ -3,6 +3,7 @@ import { handleCoreApi } from './core-api.js';
 import { handleCustomerAuth } from './customer-auth.js';
 import { handleFederatedCustomerAuth } from './customer-federated-auth.js';
 import { handleGoogleCustomerPreregistration } from './customer-google-prereg.js';
+import { handleRegionalAccessControl } from './regional-access-control.js';
 import { handleCustomerMemberDirectory } from './customer-member-directory.js';
 import { handleMembershipBilling, runMembershipBillingSchedule } from './membership-billing.js';
 import { handleAdminGoogleAuth } from './admin-google-auth.js';
@@ -271,6 +272,19 @@ export default {
         });
       }
     }
+    if (path.startsWith('/api/local-access/')) {
+      try {
+        const regionalAccess = await handleRegionalAccessControl(request, env);
+        if (regionalAccess) return regionalAccess;
+      } catch (error) {
+        console.error('Regional access API error', error);
+        return new Response(JSON.stringify({ error:'지역플랫폼 권한 확인 중 오류가 발생했습니다.', code:'REGIONAL_ACCESS_API_ERROR' }), {
+          status:500,
+          headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'},
+        });
+      }
+    }
+
     if (path.startsWith('/api/customer/') || path.startsWith('/api/customers/')) {
       try {
         const directory = await handleCustomerMemberDirectory(request, env);
