@@ -260,14 +260,15 @@ if (!fatal) {
     const reason = assist?.error || outcome.error || `exit=${outcome.code} signal=${outcome.signal || 'none'}`;
     fatal = new Error(`canonical Assist round-trip failed: ${reason}`);
   } else {
-    console.log(`[E2E] canonical Assist passed: HTTP ${assist.apiStatus}, replyLength=${assist.replyLength}`);
+    console.log(`[E2E] canonical Assist + visual contract passed: HTTP ${assist.apiStatus}, replyLength=${assist.replyLength}`);
   }
 }
 
 aggregate.generatedAt = new Date().toISOString();
 aggregate.passed = !fatal
   && aggregate.checkedMenuCount === aggregate.expectedMenuCount
-  && aggregate.assistProbe?.passed === true;
+  && aggregate.assistProbe?.passed === true
+  && aggregate.assistProbe?.visualContractVerified === true;
 aggregate.error = fatal ? fatal.message : null;
 aggregate.diagnostics.consoleErrors = aggregate.diagnostics.consoleErrors.slice(-80);
 await fs.writeFile(path.join(artifactsDir, 'report.json'), JSON.stringify(aggregate, null, 2));
