@@ -37,6 +37,8 @@ import { tenantLiveAdminCss, tenantLiveAdminPage, tenantLiveAdminScript } from '
 import { liveServiceAdminPage, liveServiceMaintenancePage, liveServicePage } from './live-service-page.js';
 import { localRegionFromPath } from './local-region-registry.js';
 import { localRegionPublicPage, localRegionAdminPage } from './local-region-page.js';
+import { regionalCommerceProgramFromLocalRoute } from './regional-commerce-program-registry.js';
+import { regionalCommerceProgramPublicPage, regionalCommerceProgramAdminPage } from './regional-commerce-program-page.js';
 
 const PUBLIC_HOST='ekodi.kr';
 const CGMA_HOSTS=new Set(['cgma.or.kr','www.cgma.or.kr']);
@@ -293,7 +295,10 @@ export default {
         if(isChurchPastorAdminPath(url.pathname))return injectEkodiShell(churchPastorAdminPage(),'church','admin');
         const localRegionRoute=localRegionFromPath(url.pathname);
         if(localRegionRoute){
-          const page=localRegionRoute.admin?localRegionAdminPage(localRegionRoute.region):localRegionPublicPage(localRegionRoute.region);
+          const commerceProgram=regionalCommerceProgramFromLocalRoute(localRegionRoute);
+          const page=commerceProgram
+            ?(localRegionRoute.admin?regionalCommerceProgramAdminPage(localRegionRoute.region,commerceProgram):regionalCommerceProgramPublicPage(localRegionRoute.region,commerceProgram))
+            :(localRegionRoute.admin?localRegionAdminPage(localRegionRoute.region):localRegionPublicPage(localRegionRoute.region));
           const surface=localRegionRoute.admin?'admin':'workspace';
           const response=injectEkodiShell(page,'space',surface,{contextKind:'workspace'});
           return request.method==='GET'?decorateDiscoveryResponse(response,url.pathname):response;
