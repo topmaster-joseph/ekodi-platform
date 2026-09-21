@@ -97,7 +97,7 @@
         "url": "https://ekodi.kr/ekodimission/apply/260926-open-table",
         "statuses": [200],
         "redirect": "manual",
-        "expect": ["Chuseok Open Table & Sharing Market","16:00–18:00","Jadam Chicken","신청하기 | Register","data-event-application","/ekodimission/assets/site.js"],
+        "expect": ["Chuseok Open Table & Sharing Market","16:00–18:00","Jadam Chicken","신청하기 | Register","data-event-application","class=\"mission-site-header\"","data-mission-nav","/ekodimission/assets/site.js","/ekodimission/assets/shell.css","/ekodimission/assets/shell.js"],
         "headerExpect": ["x-ekodi-route: ekodimission-public","x-ekodi-independent-site: true","x-ekodi-site-class: brand-site","x-ekodi-publication-status: published","x-robots-tag: index, follow","cache-control: no-store"],
         "rollbackVerify": false
       },
