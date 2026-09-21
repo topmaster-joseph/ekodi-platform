@@ -95,7 +95,7 @@ function validateRegistry(registry) {
 export async function loadHomepageServices() {
   const registry = validateRegistry(JSON.parse(await readFile(registryPath, 'utf8')));
   const candidates = registry.services
-    .filter(service => service.productionVerified === true && service.status === 'live')
+    .filter(service => service.userVisible !== false && service.productionVerified === true && service.status === 'live')
     .sort((a, b) => (a.order ?? 9999) - (b.order ?? 9999) || a.id.localeCompare(b.id));
   const services = candidates.filter(service => service.homepage === true);
   Object.defineProperty(services, 'presentationCandidates', {
