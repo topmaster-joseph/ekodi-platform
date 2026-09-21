@@ -19,7 +19,8 @@ export const REQUIRED_SHELL_MARKERS=Object.freeze([
 
 export function missionPageEntries(workerSource){
   const slug=workerSource.match(/const MISSION_EVENT_SLUG='([^']+)'/)?.[1]||'';
-  const eventPath=slug?`/ekodimission/activities/${slug}`:'';
+  const declaredEventPath=workerSource.match(/const MISSION_EVENT_PATH='([^']+)'/)?.[1]||'';
+  const eventPath=declaredEventPath||(slug?`/ekodimission/activities/${slug}`:'');
   const block=workerSource.match(/const EKODIMISSION_PAGES=new Map\(\[([\s\S]*?)\]\);/)?.[1];
   if(!block)throw new Error('EKODIMISSION_PAGES registry not found');
   const entries=[];
