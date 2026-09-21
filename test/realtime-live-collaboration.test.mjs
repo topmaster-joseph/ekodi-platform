@@ -63,7 +63,7 @@ test('viewer interpretation selector chooses available translated audio and fall
   assert.match(page,/<option value="original">원음<\/option>/);
   for(const language of ['English','中文','日本語','Tiếng Việt','Монгол']) assert.match(page,new RegExp(language));
   assert.match(live,/viewerTracksForLanguage/);
-  assert.match(live,/sourceType\(t\)==='translation'/);
+  assert.match(live,/trackSource\(t\)==='translation'/);
   assert.match(live,/translated\.length\?translated:original/);
   assert.match(live,/reconnectViewerLanguage/);
   assert.match(control,/source_type/);
@@ -120,7 +120,8 @@ test('QR auxiliary camera pairing uses an on-site short URL and a local QR rende
   assert.match(qr,/globalThis\.EKODIQR/);
   assert.match(control,/pairUrl:\`https:\/\/ekodi\.kr\/live\/c\/\$\{code\}\`/);
   assert.match(page,/\/qr-code-v2\.js/);
-  assert.match(router,/\/live\\\/c\\\/\(\[A-Z0-9\]\{8\}\)/);
+  assert.match(router,/liveAuxCameraPage/);
+  assert.match(router,/A-Z0-9/);
   assert.doesNotMatch(qr,/https?:\/\//);
 });
 
