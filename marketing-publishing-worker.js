@@ -543,7 +543,7 @@ export default {
     const url = new URL(request.url);
     const corsInfo = cors(request,env);
     if (request.method === 'OPTIONS') return new Response(null,{status:corsInfo.allowed?204:403,headers:corsInfo.headers});
-    if (url.pathname === '/admin' || url.pathname === '/admin/') return Response.redirect('https://admin.ekodi.kr/?route=marketing-ai&source=marketing-publish-api.ekodi.kr',307);
+    if (url.pathname === '/admin' || url.pathname === '/admin/') return Response.redirect('https://ekodi.kr/admin/?route=marketing-ai&source=api-marketing-publish',307);
     const baseReady=await schemaReady(env), automationReady=await channelSchemaReady(env), serviceBridgeSchema=await channelServiceBridgeSchemaReady(env);
     if (url.pathname === '/health') return json(request,env,{ok:true,service:'ekodi-marketing-publishing',environment:env.ENVIRONMENT || 'unknown',schemaReady:baseReady,channelAutomationCore:automationReady,channelServiceBridgeSchema:serviceBridgeSchema,channelServiceBridgeConfigured:channelServiceBridgeReady(env),scheduler:true,personalBrand:true,workspaceIdentity:true,youtubeOAuth:youtubeConnectionReady(env),credentialVault:channelCredentialReady(env),mutations:String(env.ALLOW_MUTATIONS || 'true') !== 'false'});
     if (!baseReady) return json(request,env,{error:'SCHEMA_NOT_READY'},503);
