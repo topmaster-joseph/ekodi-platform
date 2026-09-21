@@ -78,15 +78,25 @@ test('nested EKODI business services remain explicit apex-path boundaries', () =
   assert.doesNotMatch(siteWorker, /TRADE_LEGACY_HOSTS|redirectToTradeCanonical/);
 });
 
-test('biz.ekodi.kr proxy remains independent while legacy external domain redirect stays dedicated', () => {
+test('subdomain redirect aliases are forbidden while direct subdomain services may remain', () => {
   hasRoute(proxyToml, 'biz.ekodi.kr');
-  hasRoute(proxyToml, 'mall.biz.ekodi.kr');
+  for (const retired of ['mall.ekodi.kr','mall.biz.ekodi.kr','mail.biz.ekodi.kr','mail.church.ekodi.kr','mail.lab.ekodi.kr','mail.books.ekodi.kr','mail.trade.ekodi.kr','live.church.ekodi.kr']) {
+    assert.doesNotMatch(proxyToml, new RegExp(`pattern = "${retired.replaceAll('.', '\\.')}"`));
+  }
   assert.match(proxy, /host === 'biz\.ekodi\.kr'/);
   assert.match(proxy, /requestHost\(request, env, incoming\)/);
-  assert.doesNotMatch(proxy, /'biz\.ekodi\.kr': 'https:\/\/ekodibiz\.kr'/);
-  assert.match(bizLegacy, /TARGET = 'https:\/\/biz\.ekodi\.kr'/);
-  assert.match(bizLegacy, /Response\.redirect\(target\.toString\(\), 301\)/);
-  for (const d of ['ekodibiz.kr','www.ekodibiz.kr']) hasRoute(bizLegacyToml,d);
+  assert.doesNotMatch(proxy, /CANONICAL_REDIRECTS|const REDIRECTS|Response\.redirect/);
+  assert.doesNotMatch(siteWorker, /PUBLIC_ALIAS_HOSTS|redirectToPublicCanonical|TRADE_LEGACY_HOSTS|redirectToTradeCanonical/);
+  const lifecycle = JSON.parse(lifecycleText);
+  const serviceUrls = JSON.parse(serviceUrlsText);
+  assert.equal(lifecycle.legacyPolicy.subdomainRedirectsAllowed, false);
+  assert.equal(lifecycle.legacyPolicy.redirectOnlyCompatibilityAliasesAllowed, false);
+  assert.equal(serviceUrls.policy.subdomainRedirectsAllowed, false);
+  for (const site of lifecycle.existingWorkspaceSites || []) {
+    for (const alias of site.legacyAliases || []) {
+      assert.equal(new URL(alias).hostname.endsWith('.ekodi.kr'), false, `redirect-only subdomain alias leaked: ${alias}`);
+    }
+  }
 });
 
 test('finance and root custom-domain contracts remain intact', () => {
