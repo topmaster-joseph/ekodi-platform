@@ -5,7 +5,7 @@
     "config": "wrangler.workspace-platform.toml",
     "requests": [
       {
-        "url": "https://workspace-api.ekodi.kr/health",
+        "url": "https://ekodi.kr/api/workspace/health",
         "statuses": [
           200
         ],
