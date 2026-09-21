@@ -209,10 +209,10 @@ const checks={authSiteMission:true,authReturnToExact:true};
 try{
   await page.goto(targetUrl,{waitUntil:'domcontentloaded'});
   await page.waitForSelector('#activityPicker');
-  await page.waitForFunction(()=>document.querySelector('#pageState')?.textContent?.includes('참가자 관리'));
+  await page.waitForFunction(()=>document.querySelector('#pageState')?.textContent?.includes('신청자 관리'));
 
   checks.url=new URL(page.url()).pathname==='/ekodimission/admin/activities';
-  checks.title=(await page.locator('#pageTitle').textContent())?.includes('활동 · 참가자')||false;
+  checks.title=(await page.locator('#pageTitle').textContent())?.includes('행사 · 신청자')||false;
   checks.activityPicker=await page.locator('#activityPicker').inputValue()===activityKey;
   checks.rowVisible=await page.getByText('운영검증 참가자',{exact:true}).isVisible();
   checks.relationshipSeparated=await page.getByText('단순 참가자',{exact:true}).isVisible();
