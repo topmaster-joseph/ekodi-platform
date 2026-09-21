@@ -1,4 +1,5 @@
-import authWorker, { isAllowedOrigin } from './auth-worker.js';
+import { isAllowedOrigin } from './auth-worker.js';
+import { accessGrantManageable, resolveTenantAccessAuthority } from './tenant-access-authority.js';
 import { canonicalCoreRole } from './ekodi-principal.js';
 import { accessGrantExpired } from './access-governance.js';
 
@@ -44,15 +45,6 @@ function json(data, status, request, env) {
   });
 }
 
-async function adminSession(request, env) {
-  const url = new URL(request.url);
-  url.pathname = '/api/session';
-  url.search = '';
-  const response = await authWorker.fetch(new Request(url.toString(), { method: 'GET', headers: request.headers }), env);
-  if (!response.ok) return null;
-  return response.json();
-}
-
 function normalize(value) {
   return String(value || '').trim().toLowerCase();
 }
@@ -63,13 +55,18 @@ function accessStatus(row) {
   return row.last_verified_at ? 'active' : 'pre_registered';
 }
 
-function publicMember(row) {
+function displayNameHint(note='') {
+  const value=String(note||'').trim();
+  return value.startsWith('display-name:') ? value.slice('display-name:'.length).trim() : '';
+}
+
+function publicMember(row, authority) {
   const status = accessStatus(row);
   const coreRole = canonicalCoreRole(row.role);
   return {
     userId: row.user_id == null ? null : Number(row.user_id),
     email: row.email,
-    displayName: row.display_name || '',
+    displayName: row.display_name || displayNameHint(row.note) || '',
     userStatus: status === 'disabled' || status === 'expired' ? 'disabled' : (row.user_status || 'active'),
     role: row.role,
     roleLabel: ROLE_LABELS[row.role] || row.role,
@@ -82,6 +79,7 @@ function publicMember(row) {
     joinedAt: row.grant_created_at,
     lastLoginAt: row.last_verified_at || row.last_login_at || '',
     identityProvider: 'google',
+    canManage: accessGrantManageable(authority, row),
     tenant: {
       slug: row.tenant_slug,
       name: row.tenant_name,
@@ -168,12 +166,22 @@ export async function handleCustomerMemberDirectory(request, env) {
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors(origin, env) });
   if (request.method !== 'GET') return json({ error: '지원하지 않는 요청 방식입니다.' }, 405, request, env);
 
-  const session = await adminSession(request, env);
-  if (!session) return json({ error: 'EKODI 관리자 인증이 필요합니다.' }, 401, request, env);
-
-  const [tenantRows, memberRows] = await Promise.all([
-    env.DB.prepare('SELECT slug, name, domain, status FROM customer_tenants ORDER BY name').all(),
-    env.DB.prepare(`SELECT
+  const requestedTenant = normalize(url.searchParams.get('tenant'));
+  const authority = await resolveTenantAccessAuthority(request, env, { tenantSlug: requestedTenant });
+  if (!authority.ok) {
+    const messages = {
+      ACCESS_AUTH_REQUIRED: 'EKODI 관리자 또는 운영공간 인증이 필요합니다.',
+      TENANT_CONTEXT_REQUIRED: '사이트 관리자는 관리할 사이트 범위가 필요합니다.',
+      TENANT_ACCESS_MANAGE_FORBIDDEN: '이 사이트의 사용자·권한 관리 권한이 없습니다.',
+      TENANT_NOT_FOUND: '등록된 사이트가 아닙니다.',
+    };
+    return json({ error: messages[authority.code] || '사용자·권한 접근이 허용되지 않았습니다.', code: authority.code }, authority.status || 403, request, env);
+  }
+  const tenantScope = authority.scope === 'tenant' ? authority.tenantSlug : requestedTenant;
+  const tenantFilter = tenantScope ? ' WHERE slug = ?' : '';
+  const memberFilter = tenantScope ? ' WHERE t.slug = ?' : '';
+  const tenantStatement = env.DB.prepare(`SELECT slug, name, domain, status FROM customer_tenants${tenantFilter} ORDER BY name`);
+  const memberStatement = env.DB.prepare(`SELECT
         a.email,
         a.role,
         a.enabled,
@@ -182,6 +190,7 @@ export async function handleCustomerMemberDirectory(request, env) {
         a.principal_type,
         a.github_username,
         a.expires_at,
+        a.note,
         u.id AS user_id,
         COALESCE(u.display_name, '') AS display_name,
         u.status AS user_status,
@@ -193,15 +202,20 @@ export async function handleCustomerMemberDirectory(request, env) {
       FROM customer_access_grants a
       JOIN customer_tenants t ON t.id = a.tenant_id
       LEFT JOIN customer_users u ON lower(trim(u.email)) = a.email
-      ORDER BY t.name, COALESCE(NULLIF(u.display_name, ''), a.email), a.email`).all(),
+      ${memberFilter}
+      ORDER BY t.name, COALESCE(NULLIF(u.display_name, ''), a.email), a.email`);
+  const [tenantRows, memberRows] = await Promise.all([
+    tenantScope ? tenantStatement.bind(tenantScope).all() : tenantStatement.all(),
+    tenantScope ? memberStatement.bind(tenantScope).all() : memberStatement.all(),
   ]);
 
-  const allMembers = memberRows.results.map(publicMember);
+  const allMembers = memberRows.results.map(row => publicMember(row, authority));
   const tenants = tenantDirectory(tenantRows.results, allMembers);
   const members = filterMembers(allMembers, url);
 
   return json({
-    schemaVersion: 3,
+    schemaVersion: 4,
+    authority: { scope: authority.scope, tenant: authority.tenantSlug || '', role: authority.role, canManageAllTenants: authority.canManageAllTenants },
     generatedAt: new Date().toISOString(),
     summary: directorySummary(allMembers, tenants),
     tenants,
