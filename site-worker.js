@@ -134,6 +134,8 @@ const ADMIN_ASSETS = new Set([
   '/ai-operations-center-admin.js',
   '/common-services-admin.css',
   '/common-services-admin.js',
+  '/confirmation-admin.css',
+  '/confirmation-admin.js',
   '/life-ai-admin.css',
   '/life-ai-admin.js',
   '/personal-finance-admin.css',
