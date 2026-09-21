@@ -112,14 +112,25 @@ export function buildFreeTierResourceGovernor({snapshots=[],states=[],now=Date.n
     const capacityBlocks=capacities.filter(item=>item.state==='capacity_full').map(item=>item.metric);
     const catalog=FREE_TIER_RESOURCE_CATALOG[provider]||{metrics:[]};
     const knownMetrics=new Set(metrics.map(item=>item.metric));
+    const freshMetrics=new Set(fresh.map(item=>item.metric));
     const missing=(catalog.metrics||[]).filter(def=>def.metric&&!knownMetrics.has(def.metric)).map(def=>def.metric);
+    const staleMetrics=metrics.filter(item=>item.stale).map(item=>item.metric);
+    const capacityTelemetryMissing=(catalog.metrics||[])
+      .filter(def=>def.scope==='capacity'&&def.metric&&!freshMetrics.has(def.metric))
+      .map(def=>def.metric);
+    const provisioningAllowed=capacityBlocks.length===0&&capacityTelemetryMissing.length===0;
     providers[provider]=Object.freeze({
       state,
       action:circuitOpen?'circuit_breaker':runtimePolicy.action,
       highestUsagePercent:runtime.length?Math.round(highest*100)/100:null,
-      telemetryStatus:fresh.length===0?'missing':missing.length?'partial':'measured',
-      provisioningAllowed:capacityBlocks.length===0,
+      telemetryStatus:fresh.length===0?'missing':(missing.length||staleMetrics.length)?'partial':'measured',
+      provisioningAllowed,
       capacityBlocks,
+      capacityTelemetryMissing,
+      provisioningBlockReasons:[
+        ...capacityBlocks.map(metric=>`capacity_full:${metric}`),
+        ...capacityTelemetryMissing.map(metric=>`capacity_telemetry_missing:${metric}`),
+      ],
       automaticPaidUpgrade:false,
       metrics,
       catalog,
