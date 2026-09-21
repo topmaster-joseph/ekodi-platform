@@ -86,7 +86,7 @@ test('AI Ops production workflow verifies the canonical shared-site release inst
   assert.match(workflow,/admin-compact\.css/);
   assert.match(workflow,/x-ekodi-route: admin-shell/);
   assert.match(workflow,/ai-ops-admin\.css/);
-  assert.match(workflow,/max-age=31536000, immutable/);
+  assert.match(workflow,/cache-control: no-store/);\n  assert.doesNotMatch(workflow,/max-age=31536000, immutable/);
   assert.doesNotMatch(workflow,/guarded-worker-release\.mjs/);
   assert.doesNotMatch(workflow,/CLOUDFLARE_API_TOKEN/);
   assert.doesNotMatch(workflow,/Verify production Admin Governance Cockpit boundary/);
