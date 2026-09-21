@@ -121,6 +121,6 @@ export function validateAccessGrantInput(input,{now=new Date()}={}){
 export function canTenantActorAssignRole(actorRole,targetRole){
   const actor=normalizeAccessRole(actorRole),target=normalizeAccessRole(targetRole);
   if(!['owner','tenant_admin','admin','store_owner','client_admin','workspace_admin'].includes(actor))return false;
-  return target==='external_developer'||['manager','marketer','accountant','staff','member','viewer','marketing_manager','accounting_manager','client_editor','client_viewer'].includes(target);
+  return ['external_vendor','external_developer'].includes(target)||['manager','marketer','accountant','staff','member','viewer','marketing_manager','accounting_manager','client_editor','client_viewer'].includes(target);
 }
 export function accessGovernanceSnapshot(){return Object.freeze({version:2,denyOverridesAllow:true,tenantScopeRequired:true,externalVendor:ACCESS_ROLE_PRESETS.external_vendor,externalDeveloper:ACCESS_ROLE_PRESETS.external_developer});}
