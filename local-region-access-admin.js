@@ -3,7 +3,8 @@ function clientMain(){
   if(root.dataset.ekodiRegionSurface!=='admin'||!location.pathname.replace(/\/+$/,'').endsWith('/admin/access'))return;
   const API='https://ekodi.kr';
   const SCOPES=[['cheonggye-local','청계잇다 지역플랫폼'],['cheonggye-pass','청계패스']];
-  const ROLES=[['owner','책임관리자'],['admin','관리자'],['manager','운영책임자'],['viewer','조회·검수자'],['external_vendor','외부업체'],['external_developer','외부개발자']];
+  const REGION_ROLES=[['admin','관리자'],['manager','운영책임자'],['viewer','조회·검수자']];
+  const PASS_ROLES=[...REGION_ROLES,['external_vendor','외부업체'],['external_developer','외부개발자']];
   const $=selector=>document.querySelector(selector);
   const token=()=>sessionStorage.getItem('ekodi-auth-token')||(()=>{try{return JSON.parse(sessionStorage.getItem('ekodi-region-admin-session')||'null')?.accessToken||''}catch{return''}})();
   async function request(path,options={}){
@@ -36,8 +37,17 @@ function clientMain(){
     if(!access?.canManageAccess){const main=document.querySelector('main');if(main)main.innerHTML='<section class="hero"><h1>사용자·권한 관리 권한이 없습니다</h1><p class="lead">책임관리자 또는 권한관리 권한이 있는 계정만 이메일을 등록·수정·회수할 수 있습니다.</p></section>';return}
     const scope=$('#regionAccessScope'),role=$('#regionAccessRole');
     for(const item of SCOPES){const option=document.createElement('option');option.value=item[0];option.textContent=item[1];scope.append(option)}
-    for(const item of ROLES){const option=document.createElement('option');option.value=item[0];option.textContent=item[1];role.append(option)}
-    $('#regionAccessExpiry').value=dateAfter(90);scope.addEventListener('change',load);role.addEventListener('change',syncFields);syncFields();
+    const syncRoles=()=>{
+      const selected=role.value;role.replaceChildren();
+      const roles=[...(scope.value==='cheonggye-pass'?PASS_ROLES:REGION_ROLES)];
+      if(access.platform)roles.unshift(['owner','책임관리자']);
+      for(const item of roles){const option=document.createElement('option');option.value=item[0];option.textContent=item[1];role.append(option)}
+      if([...role.options].some(option=>option.value===selected))role.value=selected;
+      syncFields();
+    };
+    $('#regionAccessExpiry').value=dateAfter(90);
+    scope.addEventListener('change',async()=>{syncRoles();await load()});
+    role.addEventListener('change',syncFields);syncRoles();
     $('#regionAccessForm').addEventListener('submit',async event=>{
       event.preventDefault();const submit=$('#regionAccessSubmit');submit.disabled=true;const external=role.value==='external_vendor'||role.value==='external_developer';const expiry=$('#regionAccessExpiry').value;const expiresAt=external&&expiry?new Date(expiry+'T23:59:59+09:00').toISOString():'';
       try{
