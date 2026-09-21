@@ -1,7 +1,7 @@
 name = "ekodi-experience"
 main = "experience-worker.js"
 compatibility_date = "2026-09-03"
-workers_dev = true
+workers_dev = false
 preview_urls = false
 
 [[routes]]
