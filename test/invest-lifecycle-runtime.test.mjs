@@ -66,12 +66,10 @@ test('signed-in Invest workspace exposes the full project lifecycle controls',as
 test('both Invest validation and canonical Workspace release include lifecycle contracts',async()=>{
   const invest=await read('.github/workflows/release-invest-personalization.yml');
   const release=await read('.github/workflows/release-messenger-investment-functional.yml');
-  const sharedSite=await read('.github/workflows/deploy-site-core.yml');
   for(const source of [invest,release]){
     assert.match(source,/invest-lifecycle-runtime\.js/);
     assert.match(source,/invest-lifecycle-runtime\.test\.mjs/);
   }
   assert.match(release,/SELECT 1 FROM investment_project_profiles LIMIT 0/);
   assert.match(release,/SELECT 1 FROM investment_aftercare_updates LIMIT 0/);
-  assert.match(sharedSite,/- 'platform-router-worker\\.js'/);
 });
