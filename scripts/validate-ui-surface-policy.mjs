@@ -10,6 +10,14 @@ if(EKODI_UI_SURFACE_POLICY.principles?.oneCoreManySurfaces!==true) fail('one Cor
 if(EKODI_UI_SURFACE_POLICY.principles?.platformAndGeneralUserUiSeparated!==true) fail('platform/general-user separation missing');
 if(EKODI_UI_SURFACE_POLICY.principles?.adminAuthoritySeparated!==true) fail('admin authority separation missing');
 if(EKODI_UI_SURFACE_POLICY.principles?.tenantBrandPrimaryOutsidePlatform!==true) fail('tenant identity priority missing');
+if(EKODI_UI_SURFACE_POLICY.principles?.universalConstructionStandard!==true) fail('universal construction standard inheritance missing');
+if(EKODI_UI_SURFACE_POLICY.principles?.communicationFirst!==true) fail('communication-first surface principle missing');
+if(EKODI_UI_SURFACE_POLICY.principles?.personalizationWithinAuthority!==true) fail('personalization-within-authority principle missing');
+const constructionStandard=EKODI_UI_SURFACE_POLICY.constructionStandard||{};
+for(const dimension of ['ease','locality','readability','originality','intuitiveness']) if(!constructionStandard.dimensions?.includes(dimension)) fail(`construction standard missing dimension: ${dimension}`);
+for(const mode of ['communication-first','personalization']) if(!constructionStandard.modes?.includes(mode)) fail(`construction standard missing mode: ${mode}`);
+if(constructionStandard.inheritance!=='mandatory') fail('construction standard inheritance must be mandatory');
+if(constructionStandard.source!=='config/design-engine.json') fail('construction standard must point to config/design-engine.json');
 
 const cases=[
   [{serviceId:'ekodi',shellSurface:'public'},'platform-public'],
@@ -38,10 +46,11 @@ for(const marker of ['tenant-admin','platform-admin','service-admin',"ekodiScrol
   if(!governor.includes(marker)) fail(`UI Surface Governor missing ${marker}`);
 }
 for(const label of required) if(!principles.includes(label)) fail(`UI system principles missing ${label}`);
+for(const marker of ['용이성','지역성·현장성','가독성','독창성','직관성','소통형','맞춤형']) if(!principles.includes(marker)) fail(`UI system principles missing construction principle: ${marker}`);
 
 if(failures.length){
   console.error(`EKODI UI Surface validation failed (${failures.length})`);
   for(const failure of failures) console.error(`- ${failure}`);
   process.exit(1);
 }
-console.log(`EKODI UI Surface policy OK: ${required.length} canonical surfaces with shared Core, governed identity separation and fixed Admin scroll ownership.`);
+console.log(`EKODI UI Surface policy OK: ${required.length} canonical surfaces inherit the universal construction standard with shared Core, governed identity separation and fixed Admin scroll ownership.`);

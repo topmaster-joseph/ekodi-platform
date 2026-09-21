@@ -33,7 +33,14 @@ if (failures.length === 0) {
   expect(policy.generation === 10, 'credential boundary must remain Generation 10');
   expect(policy.sandbox?.productionCredentials === 'forbidden', 'production credentials must remain forbidden in sandboxes');
   expect(policy.sandbox?.longLivedCredentials === 'forbidden', 'long-lived credentials must remain forbidden in sandboxes');
-  expect(policy.sandbox?.credentialInjection === 'forbidden', 'credential injection must remain forbidden in sandboxes');
+  expect(policy.sandbox?.credentialInjection === 'production-and-provider-credentials-forbidden', 'production/provider credential injection must remain forbidden in sandboxes');
+  expect(policy.sandbox?.taskGrant?.type === 'ephemeral-task-capability-bearer', 'sandbox must use an ephemeral task capability grant');
+  expect(Number(policy.sandbox?.taskGrant?.maxTtlSeconds) <= 900, 'task grants must remain short-lived');
+  expect(policy.sandbox?.taskGrant?.rawTokenPersistence === 'forbidden', 'raw task grant tokens must not be persisted');
+  expect(policy.sandbox?.taskGrant?.revokeOnCompletionOrFailure === true, 'task grants must be revoked after completion or failure');
+  expect(policy.sandbox?.taskGrant?.exactTaskWorkspaceRoleCapabilityScopeRequired === true, 'task grants must remain exactly scoped');
+  expect(policy.sandbox?.taskGrant?.productionMutationAllowed === false, 'task grants may not authorize production mutation');
+  expect(policy.sandbox?.taskGrant?.providerMutationAllowed === false, 'task grants may not authorize provider mutation');
   expect(policy.sandbox?.providerMutation === 'forbidden', 'provider mutation must remain forbidden in sandboxes');
   expect(policy.releaseController?.directAgentCredentialAccess === false, 'agents may not directly access release credentials');
   expect(policy.releaseController?.productionMutationRequiresGuardedRelease === true, 'production mutation must require guarded release');

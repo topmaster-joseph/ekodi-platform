@@ -27,21 +27,28 @@ test('public homepage leads with a calm personalized first view', () => {
   assert.match(js, /원하는 일, 바로 시작하세요/);
   assert.match(js, /function buildDynamicVisual/);
   assert.match(js, /function buildQuickLaunch/);
-  assert.match(js, /ekodi\.home\.recentServices\.v1/);
+  assert.match(js, /무엇을 하시나요\?/);
   assert.match(js, /dataset\.livingGateway = 'v7-calm-personal'/);
-  assert.match(js, /selected\.length>=4/);
+  assert.match(js, /목적별 빠른 시작/);
+  assert.match(js, /전체 서비스 보기/);
   assert.match(css, /EKODI calm personalized landing v7/);
+  assert.match(css, /EKODI homepage intent-first v8/);
   assert.match(css, /v7-calm-personal/);
   assert.match(css, /#ecosystem:has\(#services:target\)/);
 });
 
-test('quick launch respects homepage presentation and links only to verified live launch choices', () => {
+test('quick launch respects homepage presentation and recommends only visible service cards', () => {
   assert.match(js, /applyHomepagePresentation/);
-  assert.match(js, /cards\.filter\(card=>!card\.hasAttribute\('hidden'\)\)/);
-  assert.match(js, /'church','biz','books','work','lab'/);
-  assert.match(js, /rememberService\(item\.id\)/);
+  assert.match(js, /querySelectorAll\('\.service-card\[data-service-status\]\[data-service-id\]'\)\]\.filter\(card=>!card\.hasAttribute\('hidden'\)\)/);
+  assert.match(js, /공동체 · 사역/);
+  assert.match(js, /사업 · 성장/);
+  assert.match(js, /글 · 콘텐츠/);
+  assert.match(js, /연구 · 배움/);
+  assert.match(js, /일 · 프로젝트/);
+  assert.match(js, /내 활동/);
+  assert.match(js, /renderRecommendations\(results,cards,query/);
+  assert.match(js, /syncVisibleStatusCounts/);
   assert.match(js, /dynamic-more-link/);
-  assert.match(js, /무료로 시작하기/);
   assert.doesNotMatch(js, /dataset\.quickService = 'mail'/);
   assert.doesNotMatch(js, /dataset\.quickService = 'live'/);
   assert.doesNotMatch(js, /data-status-filter=/);

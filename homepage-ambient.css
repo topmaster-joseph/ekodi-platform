@@ -533,3 +533,100 @@ body[data-living-gateway="v7-calm-personal"]:has(#contact:target) .lower-grid{di
 body[data-living-gateway="v7-calm-personal"]:has(#connect:target) #contact,
 body[data-living-gateway="v7-calm-personal"]:has(#contact:target) #connect{display:none!important}
 @media(max-width:640px){body[data-living-gateway="v7-calm-personal"] .hero{padding:46px 0 24px!important}body[data-living-gateway="v7-calm-personal"] .dynamic-service-launchers{grid-template-columns:repeat(2,minmax(0,1fr))!important}body[data-living-gateway="v7-calm-personal"] .dynamic-start-panel{padding:14px 12px!important}}
+
+
+/* EKODI homepage intent-first v8 */
+body[data-living-gateway="v7-calm-personal"] .dynamic-start-panel{
+  max-width:860px!important;
+  padding:20px!important;
+}
+body[data-living-gateway="v7-calm-personal"] .dynamic-start-title{
+  margin:0!important;
+  font-size:20px!important;
+  line-height:1.25!important;
+}
+.dynamic-start-help{
+  margin:7px 0 15px;
+  color:#7c8a82;
+  font-size:11px;
+  line-height:1.5;
+}
+body[data-living-gateway="v7-calm-personal"] .dynamic-service-launchers{
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  gap:8px!important;
+}
+body[data-living-gateway="v7-calm-personal"] .dynamic-service-card{
+  min-height:105px!important;
+  align-items:flex-start!important;
+  justify-content:flex-start!important;
+  text-align:left!important;
+}
+.dynamic-intent-card{
+  width:100%;
+  appearance:none;
+  font:inherit;
+  cursor:pointer;
+}
+button.dynamic-intent-card{
+  color:inherit;
+}
+.dynamic-intent-card small{
+  display:block!important;
+  margin-top:5px!important;
+  color:#87938c!important;
+  font-size:9px!important;
+  line-height:1.35!important;
+}
+.dynamic-intent-card.is-selected{
+  border-color:rgba(42,105,72,.3)!important;
+  background:#fff!important;
+  box-shadow:0 10px 26px rgba(41,88,62,.08)!important;
+}
+.dynamic-start-search{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:8px;
+  margin-top:12px;
+}
+.dynamic-start-search input{
+  min-width:0;
+  height:42px;
+  padding:0 13px;
+  border:1px solid rgba(62,94,73,.12);
+  border-radius:12px;
+  background:rgba(255,255,255,.72);
+  color:#354a3d;
+  font:inherit;
+  font-size:11px;
+  outline:0;
+}
+.dynamic-start-search input:focus{
+  border-color:rgba(48,107,75,.32);
+  box-shadow:0 0 0 3px rgba(60,119,85,.07);
+}
+.dynamic-start-search button{
+  min-width:62px;
+  border:0;
+  border-radius:12px;
+  background:#466b55;
+  color:#fff;
+  font:inherit;
+  font-size:11px;
+  font-weight:800;
+  cursor:pointer;
+}
+.dynamic-start-results{
+  margin-top:10px;
+  padding:9px 11px;
+  border:1px solid rgba(65,95,77,.08);
+  border-radius:13px;
+  background:rgba(255,255,255,.42);
+}
+.dynamic-start-results[hidden]{display:none!important}
+.status-satellite[hidden]{display:none!important}
+@media(max-width:640px){
+  body[data-living-gateway="v7-calm-personal"] .dynamic-start-panel{padding:15px 12px!important}
+  body[data-living-gateway="v7-calm-personal"] .dynamic-service-launchers{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  body[data-living-gateway="v7-calm-personal"] .dynamic-service-card{min-height:96px!important}
+  .dynamic-start-search{grid-template-columns:minmax(0,1fr) 58px}
+}

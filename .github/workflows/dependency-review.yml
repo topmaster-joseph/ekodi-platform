@@ -1,0 +1,34 @@
+name: EKODI Dependency Security
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'package.json'
+      - 'package-lock.json'
+      - 'npm-shrinkwrap.json'
+      - '.github/workflows/**'
+
+permissions:
+  contents: read
+
+jobs:
+  dependency-security:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Fail closed on high-severity npm dependency findings
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm audit --audit-level=high --package-lock-only
+      - name: Require immutable pins for new supply-chain actions
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -Eq 'actions/attest@[0-9a-f]{40}' .github/workflows/autonomous-execution-fabric-runtime-proof.yml
+          ! grep -Eq 'actions/attest@v[0-9]+' .github/workflows/autonomous-execution-fabric-runtime-proof.yml

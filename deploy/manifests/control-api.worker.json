@@ -1,5 +1,5 @@
 {
-  "version": 6,
+  "version": 7,
   "evidence": {
     "generation": 10,
     "ledger": "ai_production_evidence",
@@ -271,6 +271,21 @@
           "cache-control: no-store",
           "x-content-type-options: nosniff"
         ]
+      },
+      {
+        "url": "https://ekodi.kr/api/local-operations/cheonggye",
+        "statuses": [
+          401
+        ],
+        "redirect": "manual",
+        "expect": [
+          "REGION_AUTH_REQUIRED"
+        ],
+        "headerExpect": [
+          "cache-control: no-store",
+          "x-content-type-options: nosniff"
+        ],
+        "rollbackVerify": false
       }
     ]
   }
