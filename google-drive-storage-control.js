@@ -357,6 +357,25 @@ async function cheonggyeAudit(env, session, action, memberNo, detail = '') {
   }
 }
 async function cheonggyeList(env) { const { values } = await cheonggyeValues(env); return parseCheonggye(values); }
+function normalizeCheonggyePublicSearch(value){return String(value||'').normalize('NFKC').trim().toLocaleLowerCase('ko-KR').replace(/\s+/g,' ');}
+export async function searchCheonggyePublicStores(env,query,limit=12){
+  const needle=normalizeCheonggyePublicSearch(query);
+  if(needle.length<2)return[];
+  const cap=Math.min(Math.max(Number(limit)||12,1),20);
+  const members=await cheonggyeList(env);
+  const seen=new Set(),results=[];
+  for(const row of members){
+    const store=String(row.store||'').trim(),category=String(row.category||'').trim();
+    if(!store)continue;
+    const hay=normalizeCheonggyePublicSearch(store+' '+category);
+    if(!hay.includes(needle))continue;
+    const key=normalizeCheonggyePublicSearch(store+'|'+category);
+    if(seen.has(key))continue;
+    seen.add(key);results.push({store,category});
+    if(results.length>=cap)break;
+  }
+  return results;
+}
 async function cheonggyeAppend(env, member) {
   const { access, values } = await cheonggyeValues(env); const members=parseCheonggye(values);
   const nextNo=members.reduce((max,row)=>Math.max(max,Number(row.no||0)),0)+1;
