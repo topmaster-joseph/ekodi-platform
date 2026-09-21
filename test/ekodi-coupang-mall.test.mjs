@@ -49,7 +49,7 @@ test('public storefront reads as a normal shopping mall', () => {
 });
 
 test('official storefront canonical is ekodi.kr/ekodimall', () => {
-  assert.match(html, /<link rel="canonical" href="https:\/\/ekodi\.kr\/ekodibiz\/ekodimall">/);
+  assert.match(html, /<link rel="canonical" href="https:\/\/ekodi\.kr\/ekodimall">/);
 });
 
 test('legacy /mall redirects safely to the canonical EKODIBIZ storefront', async () => {
@@ -236,7 +236,7 @@ test('automatic product schema is additive and stores provider facts', () => {
 });
 
 test('root router publishes Mall under EKODIBIZ and redirects the legacy root path', () => {
-  assert.match(router, /const MALL_PREFIX = '\/ekodibiz\/ekodimall'/);
+  assert.match(router, /const MALL_PREFIX = '\/ekodimall'/);
   assert.match(router, /const MALL_ROOT_ALIAS_PREFIX = '\/ekodimall'/);
   assert.match(router, /proxyMallService\(request, MALL_ROOT_ALIAS_PREFIX\)/);
   assert.match(router, /mall-root-admin-canonical-redirect/);
