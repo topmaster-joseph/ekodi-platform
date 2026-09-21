@@ -62,7 +62,6 @@
       "my.ekodi.kr",
       "admin.ekodi.kr",
       "auth.ekodi.kr",
-      "api.ekodi.kr",
       "status.ekodi.kr",
       "ai.ekodi.kr",
       "dev.ekodi.kr",
@@ -74,7 +73,7 @@
       "auth.dev.ekodi.kr",
       "api.dev.ekodi.kr"
     ],
-    "rule": "User-operated spaces live under ekodi.kr paths. Subdomains are reserved for justified system, security, protocol, common-service or core-service boundaries and never define workspace identity."
+    "rule": "User-operated spaces live under ekodi.kr paths. Public platform APIs are canonical under https://ekodi.kr/api. Subdomains are reserved only for justified internal, security, protocol, common-service or core-service execution boundaries and never define workspace identity."
   },
   "publicNamespaces": [
     "workspace-root-slug"
@@ -94,7 +93,7 @@
   "featurePatterns": [
     "https://ekodi.kr/{feature}",
     "https://ekodi.kr/my/{feature}",
-    "https://api.ekodi.kr/v1/{feature}"
+    "https://ekodi.kr/api/{feature}"
   ],
   "workspaceRoutingPolicy": {
     "canonicalHost": "ekodi.kr",
@@ -123,7 +122,10 @@
     "legacyAliasesMustBeRegistered": true,
     "userFacingEngineAddressesForbidden": true,
     "canonicalHumanAndManagementHost": "ekodi.kr",
-    "subdomainUserEntryForbidden": true
+    "subdomainUserEntryForbidden": true,
+    "canonicalApiBase": "https://ekodi.kr/api",
+    "apiSubdomainRetired": true,
+    "apiSubdomainRedirectForbidden": true
   },
   "legacyPathAliases": {
     "https://space.ekodi.kr/{slug}": "https://ekodi.kr/{slug}",
@@ -326,7 +328,6 @@
     "my.ekodi.kr": "https://ekodi.kr/my",
     "admin.ekodi.kr": "https://ekodi.kr/admin",
     "auth.ekodi.kr": "https://ekodi.kr/auth",
-    "api.ekodi.kr": "https://ekodi.kr/api",
     "trade.biz.ekodi.kr": "https://ekodi.kr/ekodibiz/trade",
     "ins.ekodi.kr": "https://ekodi.kr/insurance"
   },
