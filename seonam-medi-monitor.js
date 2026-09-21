@@ -35,9 +35,21 @@ async function insertItem(env,item,seenAt){
     .bind(fingerprint,item.title,item.url,item.publisher,item.publishedAt,item.queryKey,item.queryLabel,seenAt,seenAt).run();
   return true;
 }
-export async function runSeonamMediDailyCheck(env){
+export async function runSeonamMediDailyCheck(env,{scheduledAt=null,force=false}={}){
   if(!env?.DB?.prepare)return {ok:false,error:'storage_unavailable'};
-  const startedAt=new Date().toISOString();let runId=null;let checked=0,seen=0,added=0;const errors=[];
+  const startedAt=new Date(scheduledAt||Date.now()).toISOString();let runId=null;let checked=0,seen=0,added=0;const errors=[];
+  if(!force){
+    try{
+      const existing=await env.DB.prepare(`SELECT id,status,completed_at FROM seonam_medi_monitor_runs
+        WHERE date(datetime(started_at,'+9 hours'))=date(datetime(?,'+9 hours'))
+          AND status IN ('running','ok','partial')
+        ORDER BY id DESC LIMIT 1`).bind(startedAt).first();
+      if(existing?.id)return {ok:true,status:'already_checked',skipped:true,runId:existing.id,completedAt:existing.completed_at||null};
+    }catch(error){
+      const message=clean(error?.message||error,300);
+      if(!/no such table|no such column/i.test(message))return {ok:false,error:'daily_guard_failed',message};
+    }
+  }
   try{
     const run=await env.DB.prepare(`INSERT INTO seonam_medi_monitor_runs(started_at,status,sources_checked,items_seen,new_items,error_summary)
       VALUES (?,'running',0,0,0,'')`).bind(startedAt).run();
@@ -67,6 +79,6 @@ export async function handleSeonamMediMonitorApi(request,env){
         FROM seonam_medi_monitor_items WHERE datetime(last_seen_at)>=datetime('now','-7 days')
         ORDER BY COALESCE(published_at,first_seen_at) DESC LIMIT 24`).all()
     ]);
-    return json({ok:true,siteOwned:true,aiProvider:false,schedule:'daily 08:00 Asia/Seoul',lastRun:lastRun||null,items:rows?.results||[]});
+    return json({ok:true,siteOwned:true,aiProvider:false,schedule:'daily 08:00 Asia/Seoul',scheduler:'existing-control-cron',lastRun:lastRun||null,items:rows?.results||[]});
   }catch(error){return json({ok:false,error:'monitor_schema_unavailable',message:'사이트 자동점검 저장소 준비 중입니다.',lastRun:null,items:[]},503,'no-store')}
 }
