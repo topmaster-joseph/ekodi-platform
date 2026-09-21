@@ -15,6 +15,12 @@ const MISSION_EVENT_LEGACY_PATHS=new Set(['/ekodimission/activities/260926-chuse
 const MISSION_EVENT_APPLICATION_API=`/ekodimission/api/activities/${MISSION_EVENT_RECORD_KEY}/applications`;
 const EKODIMISSION_PAGES=new Map([['/ekodimission','/ekodimission.page'],['/ekodimission/vision','/ekodimission-vision.page'],['/ekodimission/activities','/ekodimission-activities.page'],[MISSION_EVENT_PATH,'/ekodimission-open-table-apply.page'],['/ekodimission/prayer','/ekodimission-prayer.page'],['/ekodimission/participate','/ekodimission-participate.page'],['/ekodimission/partners','/ekodimission-partners.page'],['/ekodimission/stories','/ekodimission-stories.page'],['/ekodimission/give','/ekodimission-give.page'],['/ekodimission/transparency','/ekodimission-transparency.page'],['/ekodimission/contact','/ekodimission-contact.page']]);
 const EKODIMISSION_ASSETS=new Map([['/ekodimission/assets/site.css','/ekodimission.css'],['/ekodimission/assets/site.js','/ekodimission.js'],['/ekodimission/assets/shell.css','/ekodimission-shell.css'],['/ekodimission/assets/shell.js','/ekodimission-shell.js'],['/ekodimission/assets/mission-table-hero.svg','/mission-table-hero.svg'],['/ekodimission/assets/open-table-hero-260926.svg','/open-table-hero-260926.svg'],['/ekodimission/assets/open-table-meal-260925.jpg','/open-table-meal-260925.jpg']]);
+const SEONAM_MED_PREFIX='/seonam-med';
+const SEONAM_MED_PUBLIC_ROUTE='seonam-med-public';
+const SEONAM_MED_VOICE_API='/seonam-med/api/voices';
+const SEONAM_MED_PAGES=new Map([['/seonam-med','/seonam-med.page'],['/seonam-med/history','/seonam-med.page'],['/seonam-med/news','/seonam-med.page'],['/seonam-med/voices','/seonam-med.page'],['/seonam-med/finance','/seonam-med.page'],['/seonam-med/network','/seonam-med.page']]);
+const SEONAM_MED_ASSETS=new Map([['/seonam-med/assets/site.css','/seonam-med.css'],['/seonam-med/assets/site.js','/seonam-med.js'],['/seonam-med/assets/data.json','/seonam-med-data.json']]);
+
 function normalizedMissionPath(pathname){const clean=String(pathname||'').replace(/\/+$/,'');return clean||'/'}
 function publishMissionHtml(html){return String(html||'').replace(/<meta name="robots" content="noindex,nofollow,noarchive">/gi,'<meta name="robots" content="index,follow">').replace(/<div class="review-banner">[\s\S]*?<\/div>/i,'')}
 function brandSiteResponse(response){response.headers.set('x-ekodi-independent-site','true');response.headers.set('x-ekodi-site-class','brand-site');response.headers.set('x-ekodi-workspace','ekodimission');response.headers.set('x-ekodi-publication-status','published');return response;}
@@ -32,6 +38,44 @@ async function routeEkodiMission(request,env){
   if(isPage){const headers=new Headers(asset.headers);headers.set('content-type','text/html; charset=utf-8');headers.delete('content-length');const html=publishMissionHtml(await asset.text());served=new Response(request.method==='HEAD'?null:html,{status:asset.status,statusText:asset.statusText,headers});}
   return brandSiteResponse(withHeaders(env,served,EKODIMISSION_ASSETS.has(pathname)?'ekodimission-asset':EKODIMISSION_PUBLIC_ROUTE));
 }
+function civicSiteResponse(response){response.headers.set('x-ekodi-independent-site','true');response.headers.set('x-ekodi-site-class','civic-channel');response.headers.set('x-ekodi-workspace','seonam-med');response.headers.set('x-ekodi-publication-status','published');return response;}
+async function routeSeonamMed(request,env){
+  const url=new URL(request.url);const pathname=normalizedMissionPath(url.pathname);
+  const assetPath=SEONAM_MED_PAGES.get(pathname)||SEONAM_MED_ASSETS.get(pathname);
+  if(!assetPath)return civicSiteResponse(withHeaders(env,new Response('Not Found',{status:404,headers:{'content-type':'text/plain; charset=utf-8'}}),'seonam-med-not-found'));
+  const target=new URL(request.url);target.pathname=assetPath;target.search='';const asset=await env.ASSETS.fetch(new Request(target.toString(),request));
+  const isPage=SEONAM_MED_PAGES.has(pathname);let served=asset;
+  if(isPage){const headers=new Headers(asset.headers);headers.set('content-type','text/html; charset=utf-8');headers.delete('content-length');served=new Response(request.method==='HEAD'?null:await asset.text(),{status:asset.status,statusText:asset.statusText,headers});}
+  return civicSiteResponse(withHeaders(env,served,SEONAM_MED_ASSETS.has(pathname)?'seonam-med-asset':SEONAM_MED_PUBLIC_ROUTE));
+}
+function civicVoiceError(message=''){
+  const text=String(message||'');
+  if(text.includes('PRIVACY_CONSENT_REQUIRED'))return ['privacy_consent_required','개인정보 처리 동의가 필요합니다.',400];
+  if(text.includes('INVALID_MESSAGE'))return ['invalid_message','의견 내용을 확인해 주세요.',400];
+  if(text.includes('INVALID_CATEGORY'))return ['invalid_category','의견 유형을 확인해 주세요.',400];
+  return ['submission_unavailable','의견을 접수하지 못했습니다. 잠시 후 다시 시도해 주세요.',503];
+}
+async function submitSeonamMedVoice(request,env){
+  if(request.method==='OPTIONS')return withHeaders(env,new Response(null,{status:204,headers:{allow:'POST, OPTIONS','cache-control':'no-store'}}),'seonam-med-voice-api');
+  if(request.method!=='POST')return json(env,{ok:false,error:'method_not_allowed'},405);
+  const url=new URL(request.url);const origin=String(request.headers.get('origin')||'');
+  if(url.hostname==='ekodi.kr'&&origin&&origin!=='https://ekodi.kr')return json(env,{ok:false,error:'origin_not_allowed'},403);
+  const length=Number(request.headers.get('content-length')||0);if(length>16384)return json(env,{ok:false,error:'payload_too_large'},413);
+  if(env.DATA_ENABLED!=='true'||!env.SUPABASE_URL||!env.SUPABASE_PUBLISHABLE_KEY)return json(env,{ok:false,error:'submission_storage_unavailable',message:'의견 접수 저장소가 아직 연결되지 않았습니다.'},503);
+  let body;try{body=await request.json();}catch{return json(env,{ok:false,error:'invalid_json'},400)}
+  const message=String(body?.message||'').trim();const category=String(body?.category||'other').trim().toLowerCase();
+  if(!message||message.length>3000)return json(env,{ok:false,error:'invalid_message',message:'의견 내용을 확인해 주세요.'},400);
+  if(!['question','proposal','experience','factcheck','tip','other'].includes(category))return json(env,{ok:false,error:'invalid_category',message:'의견 유형을 확인해 주세요.'},400);
+  if(body?.privacyConsent!==true)return json(env,{ok:false,error:'privacy_consent_required',message:'개인정보 처리 동의가 필요합니다.'},400);
+  const rpcBody={p_category:category,p_name:String(body?.name||'').slice(0,80),p_contact:String(body?.contact||'').slice(0,160),p_message:message,p_public_consent:body?.publicConsent===true,p_privacy_consent:true,p_website:String(body?.website||'').slice(0,200)};
+  try{
+    const upstream=await fetch(`${env.SUPABASE_URL}/rest/v1/rpc/seonam_med_submit_voice`,{method:'POST',headers:{apikey:env.SUPABASE_PUBLISHABLE_KEY,'content-type':'application/json','cache-control':'no-store'},body:JSON.stringify(rpcBody)});
+    const data=await upstream.json().catch(()=>null);
+    if(!upstream.ok){const [error,msg,status]=civicVoiceError(data?.message||data?.details||'');return json(env,{ok:false,error,message:msg},status);}
+    return json(env,{ok:true,submissionId:data?.submission_id||null,message:'의견이 접수되었습니다.'},200);
+  }catch{return json(env,{ok:false,error:'submission_unavailable',message:'의견을 접수하지 못했습니다. 잠시 후 다시 시도해 주세요.'},503)}
+}
+
 
 const DEFAULT_PAGE_PROFILE=Object.freeze({
   documentTitle:'운영공간 · EKODI',name:'내 운영공간',kicker:'OPERATING SPACE',
@@ -79,7 +123,7 @@ function withHeaders(env,response,route='asset'){
   const contentType=headers.get('content-type')||'';
   if(contentType.includes('text/html')){
     headers.set('cache-control','no-store');
-    headers.set('x-robots-tag',['space-storefront','space-organization',EKODIMISSION_PUBLIC_ROUTE].includes(route)?'index, follow':'noindex, nofollow, noarchive');
+    headers.set('x-robots-tag',['space-storefront','space-organization',EKODIMISSION_PUBLIC_ROUTE,SEONAM_MED_PUBLIC_ROUTE].includes(route)?'index, follow':'noindex, nofollow, noarchive');
   }else if(!headers.has('cache-control'))headers.set('cache-control','public, max-age=300');
   return new Response(response.body,{status:response.status,statusText:response.statusText,headers});
 }
@@ -170,6 +214,8 @@ export default{
     };
     if(normalizedMissionPath(url.pathname)===MISSION_EVENT_APPLICATION_API)return submitMissionEventApplication(request,env);
     if(['GET','HEAD'].includes(request.method)&&(normalizedMissionPath(url.pathname)===EKODIMISSION_PREFIX||normalizedMissionPath(url.pathname).startsWith(EKODIMISSION_PREFIX+'/')))return routeEkodiMission(request,env);
+    if(normalizedMissionPath(url.pathname)===SEONAM_MED_VOICE_API)return submitSeonamMedVoice(request,env);
+    if(['GET','HEAD'].includes(request.method)&&(normalizedMissionPath(url.pathname)===SEONAM_MED_PREFIX||normalizedMissionPath(url.pathname).startsWith(SEONAM_MED_PREFIX+'/')))return routeSeonamMed(request,env);
     if(url.pathname==='/health')return json(env,{ok:true,service:'ekodi-space',product:'operating-space',identity:'ekodi-id',workspaceIdentity:'workspace-id',routeModel:['root-slug','workspace-service'],memberNamespaceRequired:false,dataEnabled:runtimeConfig(env).dataEnabled,dataMode:runtimeConfig(env).dataMode});
     if(url.pathname==='/config.js')return withHeaders(env,new Response(`window.EKODI_SPACE_CONFIG=${JSON.stringify(runtimeConfig(env))};`,{headers:{'content-type':'application/javascript; charset=utf-8','cache-control':'no-store'}}),'config');
     if(url.pathname==='/storefront.json'){
