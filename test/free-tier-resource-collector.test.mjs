@@ -14,8 +14,8 @@ test('Supabase collector measures free project capacity and per-project database
       {ref:'project-a',organization_id:'org-free',status:'ACTIVE_HEALTHY'},
       {ref:'project-b',organization_id:'org-free',status:'ACTIVE_HEALTHY'},
     ];
-    if(url.includes('/projects/project-a/database/query'))return [{database_bytes:'23325843',storage_object_bytes:'1000'}];
-    if(url.includes('/projects/project-b/database/query'))return [{database_bytes:'12151955',storage_object_bytes:'33132'}];
+    if(url.includes('/projects/project-a/database/query/read-only'))return [{database_bytes:'23325843',storage_object_bytes:'1000'}];
+    if(url.includes('/projects/project-b/database/query/read-only'))return [{database_bytes:'12151955',storage_object_bytes:'33132'}];
     throw new Error(`unexpected ${url}`);
   };
   const result=await collectSupabase({token:'token',fetchJson,observedAt});
@@ -25,9 +25,12 @@ test('Supabase collector measures free project capacity and per-project database
   assert.equal(byMetric.get('database_bytes:project-a').observedValue,23325843);
   assert.equal(byMetric.get('database_bytes:project-b').observedValue,12151955);
   assert.equal(byMetric.get('storage_bytes_org:org-free').observedValue,34132);
+  assert.equal(byMetric.get('database_bytes:project-a').source,'supabase-database-read-only-query');
   assert.equal(calls.filter(call=>(call.method||'GET')!=='GET').length,2);
   for(const call of calls.filter(call=>call.method==='POST')){
+    assert.match(call.url,/\/database\/query\/read-only$/);
     assert.match(call.body.query,/^select/i);
+    assert.match(call.body.query,/pg_catalog\.pg_database_size\(pg_catalog\.current_database\(\)\)/);
     assert.doesNotMatch(call.body.query,/\b(insert|update|delete|alter|drop|create)\b/i);
   }
 });

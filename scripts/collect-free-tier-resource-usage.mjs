@@ -73,9 +73,9 @@ export async function collectSupabase({token,fetchJson=jsonFetch,observedAt=nowI
     if(!ref)continue;
     let databaseBytes=null,storageBytes=null;
     try{
-      const result=await fetchJson(`${SUPABASE_API}/projects/${encodeURIComponent(ref)}/database/query`,{
+      const result=await fetchJson(`${SUPABASE_API}/projects/${encodeURIComponent(ref)}/database/query/read-only`,{
         token,method:'POST',body:{query:`select
-          pg_database_size(current_database())::bigint as database_bytes,
+          pg_catalog.pg_database_size(pg_catalog.current_database())::bigint as database_bytes,
           coalesce((select sum((metadata->>'size')::bigint) from storage.objects where metadata ? 'size'),0)::bigint as storage_object_bytes`}
       });
       const row=rowsFromResult(result)[0]||{};
@@ -89,7 +89,7 @@ export async function collectSupabase({token,fetchJson=jsonFetch,observedAt=nowI
     if(databaseBytes!=null){
       snapshots.push({
         provider:'supabase',metric:`database_bytes:${ref}`,periodStart:periodDay(observedAt),
-        observedValue:databaseBytes,freeLimit:500*1024*1024,source:'supabase-database-query',observedAt
+        observedValue:databaseBytes,freeLimit:500*1024*1024,source:'supabase-database-read-only-query',observedAt
       });
     }
     if(storageBytes!=null){
@@ -100,7 +100,7 @@ export async function collectSupabase({token,fetchJson=jsonFetch,observedAt=nowI
   for(const [orgId,bytes] of storageByOrg){
     snapshots.push({
       provider:'supabase',metric:`storage_bytes_org:${orgId}`,periodStart:periodMonth(observedAt),
-      observedValue:bytes,freeLimit:GB,source:'supabase-database-query',observedAt
+      observedValue:bytes,freeLimit:GB,source:'supabase-database-read-only-query',observedAt
     });
   }
   return {available:true,reason:null,snapshots,freeOrganizations:freeOrganizations.map(org=>({id:String(org.id),plan:'free'})),activeProjects:activeProjects.map(p=>String(p.ref||p.id||''))};
