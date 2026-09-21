@@ -66,7 +66,7 @@ test('monitor covers official services, shared infrastructure, Connect dependenc
   assert.equal(byId.get('community-connect')?.[3], 'https://community.ekodi.kr/connect/');
   assert.equal(byId.get('community-connect-app')?.[3], 'https://community.ekodi.kr/connect/app.js');
   assert.deepEqual(byId.get('connect-api-auth-gate')?.[4], [401]);
-  assert.equal(byId.get('marketing-publish-api')?.[3], 'https://marketing-publish-api.ekodi.kr/health');
+  assert.equal(byId.get('marketing-publish-api')?.[3], 'https://ekodi.kr/api/marketing/publish/health');
   assert.equal(byId.get('publishing')?.[2], 'ekodi.kr');
   assert.equal(byId.get('books')?.[2], 'ekodi.kr');
   assert.equal(byId.get('publishing')?.[3], 'https://ekodi.kr/publishing');
