@@ -1,4 +1,4 @@
-function clientMain(){{
+function clientMain(){
   const root=document.documentElement;
   if(root.dataset.ekodiRegionSurface!=='admin'||!location.pathname.replace(/\/+$/,'').endsWith('/admin/access'))return;
   const API='https://ekodi.kr';
