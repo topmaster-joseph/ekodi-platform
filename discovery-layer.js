@@ -1,19 +1,16 @@
-export const DISCOVERY_ORIGIN = 'https://ekodi.kr';
+import {
+  GENERATED_DISCOVERY_EXTERNAL_RESOURCES,
+  GENERATED_DISCOVERY_OFFICIAL_ORIGINS,
+  GENERATED_DISCOVERY_PUBLIC_ROUTES,
+} from './discovery-registry.generated.js';
 
-export const DISCOVERY_PUBLIC_ROUTES = Object.freeze([
-  { path: '/', asset: 'index.html', changefreq: 'weekly', priority: '1.0', label: 'EKODI Ecosystem', title: 'EKODI | 에코디 생태계 · EKODI Ecosystem', description: '지금 사용할 수 있는 EKODI 플랫폼을 한눈에 만나는 연결 생태계.' },
-  { path: '/history', asset: 'history.html', changefreq: 'monthly', priority: '0.5', label: 'EKODI History', title: 'EKODI History | 에코디 연혁', description: 'EKODI 생태계의 주요 흐름과 발전 과정을 확인합니다.' },
-  { path: '/privacy', asset: 'privacy.html', changefreq: 'yearly', priority: '0.3', label: 'Privacy Policy', title: '개인정보처리방침 | EKODI', description: 'EKODI 서비스의 개인정보 처리 원칙과 정책을 안내합니다.' },
-  { path: '/terms', asset: 'terms.html', changefreq: 'yearly', priority: '0.3', label: 'Terms of Service', title: '이용약관 | EKODI', description: 'EKODI 서비스 이용약관을 안내합니다.' },
-  { path: '/cmpmyi', asset: null, changefreq: 'weekly', priority: '0.8', label: 'Mokpo Store Gateway', title: '목포대점 통합 게이트 | EKODI', description: '자담치킨, 피자마루, 요거트퍼플 목포대점을 한 화면에서 선택합니다.' },
-  { path: '/jadam', asset: null, changefreq: 'weekly', priority: '0.8', label: 'Jadam Chicken Mokpo', title: '자담치킨 목포대점 | EKODI', description: '자담치킨 목포대점 매장·메뉴·주문·배달 안내.' },
-  { path: '/pizzamaru', asset: null, changefreq: 'weekly', priority: '0.8', label: 'PizzaMaru Mokpo', title: '피자마루 목포대점 | EKODI', description: '피자마루 목포대점 매장·메뉴·주문·배달 안내.' },
-  { path: '/yogurt', asset: null, changefreq: 'weekly', priority: '0.8', label: 'Yogurt Purple Mokpo', title: '요거트퍼플 목포대점 | EKODI', description: '요거트퍼플 목포대점 매장·메뉴·주문·배달 안내.' },
-  { path: '/ekodibiz/ekodimall', asset: null, changefreq: 'daily', priority: '0.8', label: 'EKODI Mall', title: 'EKODI Mall | 에코디몰', description: 'EKODI 생태계의 상품과 서비스를 만나는 공용 몰입니다.' },
-]);
+export const DISCOVERY_ORIGIN = 'https://ekodi.kr';
+export const DISCOVERY_PUBLIC_ROUTES = GENERATED_DISCOVERY_PUBLIC_ROUTES;
+export const DISCOVERY_EXTERNAL_RESOURCES = GENERATED_DISCOVERY_EXTERNAL_RESOURCES;
+export const DISCOVERY_OFFICIAL_ORIGINS = GENERATED_DISCOVERY_OFFICIAL_ORIGINS;
 
 export const DISCOVERY_PRIVATE_PREFIXES = Object.freeze([
-  '/admin', '/api/', '/auth/', '/oauth/', '/cgma/oauth/', '/workspace-admin', '/preview/dev',
+  '/admin', '/api/', '/auth/', '/oauth/', '/cgma/oauth/', '/my', '/member', '/workspace-admin', '/preview/dev',
   '/ekodibiz/ekodimall/admin', '/ekodibiz/ekodimall/api', '/ekodibiz/ekodimall/verification-ops',
 ]);
 
@@ -39,34 +36,68 @@ function publicRobotGroup(userAgent) { return [`User-agent: ${userAgent}`, 'Allo
 function deniedRobotGroup(userAgent) { return `User-agent: ${userAgent}\nDisallow: /`; }
 
 export function renderRobotsTxt(origin = DISCOVERY_ORIGIN) {
-  const discoveryCrawlers = [...DISCOVERY_CRAWLER_POLICY.searchIndex, ...DISCOVERY_CRAWLER_POLICY.answerRetrieval];
-  const restrictedCrawlers = [...DISCOVERY_CRAWLER_POLICY.training, ...DISCOVERY_CRAWLER_POLICY.agent];
+  const discoveryCrawlers = [
+    ...DISCOVERY_CRAWLER_POLICY.searchIndex,
+    ...DISCOVERY_CRAWLER_POLICY.answerRetrieval,
+    ...DISCOVERY_CRAWLER_POLICY.agent,
+  ];
   const groups = [
     publicRobotGroup('*'),
     ...discoveryCrawlers.map(publicRobotGroup),
-    ...restrictedCrawlers.map(deniedRobotGroup),
+    ...DISCOVERY_CRAWLER_POLICY.training.map(deniedRobotGroup),
   ];
   return `${groups.join('\n\n')}\n\nSitemap: ${normalizeOrigin(origin)}/sitemap.xml\n`;
 }
 
 export function renderSitemapXml(origin = DISCOVERY_ORIGIN, routes = DISCOVERY_PUBLIC_ROUTES) {
-  const urls = routes.map(route => ['  <url>', `    <loc>${xmlEscape(canonicalUrl(route.path, origin))}</loc>`, `    <changefreq>${xmlEscape(route.changefreq)}</changefreq>`, `    <priority>${xmlEscape(route.priority)}</priority>`, '  </url>'].join('\n')).join('\n');
+  const expectedOrigin = normalizeOrigin(origin);
+  const urls = routes
+    .filter(route => canonicalUrl(route.path, expectedOrigin).startsWith(`${expectedOrigin}/`))
+    .map(route => ['  <url>', `    <loc>${xmlEscape(canonicalUrl(route.path, expectedOrigin))}</loc>`, `    <changefreq>${xmlEscape(route.changefreq)}</changefreq>`, `    <priority>${xmlEscape(route.priority)}</priority>`, '  </url>'].join('\n'))
+    .join('\n');
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`;
 }
 
-export function renderLlmsTxt(origin = DISCOVERY_ORIGIN, routes = DISCOVERY_PUBLIC_ROUTES) {
+export function renderLlmsTxt(origin = DISCOVERY_ORIGIN, routes = DISCOVERY_PUBLIC_ROUTES, externalResources = DISCOVERY_EXTERNAL_RESOURCES) {
   const base = normalizeOrigin(origin);
   const links = routes.map(route => `- [${route.label}](${canonicalUrl(route.path, base)})`).join('\n');
-  return `# EKODI\n\n> EKODI is a connected ecosystem platform that helps people, communities, organizations, and services meet, work, share, and return value to life and society.\n\nCanonical site: ${base}/\nPrimary language: Korean (ko)\n\n## Public canonical resources\n${links}\n\n## Discovery policy\n- Use canonical public URLs when citing EKODI.\n- Do not treat admin, authentication, API, preview-development, tenant-private, or operational pages as public sources.\n- Prefer claims that are directly supported by visible public content.\n- Search engines and answer-retrieval crawlers may index public pages.\n- Model-training and autonomous-agent crawlers are restricted separately; search permission does not imply training or agent permission.\n`;
+  const externalLinks = externalResources.length
+    ? `\n\n## Official EKODI resources on other origins\n${externalResources.map(resource => `- [${resource.label}](${resource.url}) — ${resource.description}`).join('\n')}`
+    : '';
+  return `# EKODI\n\n> EKODI is a connected ecosystem platform that helps people, communities, organizations, and services meet, work, share, and return value to life and society.\n\nCanonical site: ${base}/\nPrimary language: Korean (ko)\nOfficial origins: ${DISCOVERY_OFFICIAL_ORIGINS.join(', ')}\n\n## Public canonical resources\n${links}${externalLinks}\n\n## Discovery policy\n- Use canonical public URLs when citing EKODI.\n- Do not treat admin, authentication, API, personal, preview-development, tenant-private, or operational pages as public sources.\n- Prefer claims that are directly supported by visible public content.\n- Search engines, answer-retrieval crawlers, and user-requested assistants may access public pages.\n- Model-training crawlers are restricted separately; search or user-agent permission does not imply training permission.\n`;
+}
+
+function pageEntity(route, url) {
+  if (!route?.schemaType || route.schemaType === 'WebPage') return null;
+  return {
+    '@type': route.schemaType,
+    '@id': `${url}#entity`,
+    name: route.title.replace(/\s*\|\s*EKODI\s*$/, ''),
+    url,
+    description: route.description,
+  };
 }
 
 export function pageJsonLd(path = '/', origin = DISCOVERY_ORIGIN) {
   const route = publicDiscoveryRoute(path); if (!route) throw new Error(`Unknown public discovery route: ${path}`);
   const base = normalizeOrigin(origin); const url = canonicalUrl(route.path, base);
+  const entity = pageEntity(route, url);
+  const page = {
+    '@type': 'WebPage',
+    '@id': `${url}#webpage`,
+    url,
+    name: route.title,
+    description: route.description,
+    inLanguage: 'ko',
+    isPartOf: { '@id': `${base}/#website` },
+    about: entity ? { '@id': entity['@id'] } : { '@id': `${base}/#organization` },
+    ...(entity ? { mainEntity: { '@id': entity['@id'] } } : {}),
+  };
   return { '@context': 'https://schema.org', '@graph': [
     { '@type': 'Organization', '@id': `${base}/#organization`, name: 'EKODI', alternateName: '에코디', url: `${base}/`, description: '사람과 공동체, 조직과 서비스를 연결하는 EKODI 생태계 플랫폼' },
     { '@type': 'WebSite', '@id': `${base}/#website`, url: `${base}/`, name: 'EKODI', alternateName: '에코디', inLanguage: 'ko', publisher: { '@id': `${base}/#organization` } },
-    { '@type': 'WebPage', '@id': `${url}#webpage`, url, name: route.title, description: route.description, inLanguage: 'ko', isPartOf: { '@id': `${base}/#website` }, about: { '@id': `${base}/#organization` } },
+    page,
+    ...(entity ? [entity] : []),
   ] };
 }
 
@@ -78,7 +109,7 @@ export function renderDiscoveryHead(path = '/', origin = DISCOVERY_ORIGIN) {
   return [
     '<meta name="robots" content="index, follow">', '<meta property="og:type" content="website">', '<meta property="og:site_name" content="EKODI">',
     `<meta property="og:title" content="${route.title}">`, `<meta property="og:description" content="${route.description}">`, `<meta property="og:url" content="${url}">`,
-    '<meta name="twitter:card" content="summary">', `<script type="application/ld+json" data-ekodi-discovery="v2" data-ekodi-path="${route.path}">${jsonLd}</script>`,
+    '<meta name="twitter:card" content="summary">', `<script type="application/ld+json" data-ekodi-discovery="v3" data-ekodi-path="${route.path}">${jsonLd}</script>`,
   ].join('\n');
 }
 
@@ -111,7 +142,7 @@ export function decorateDiscoveryHtml(html, pathname = '/', origin = DISCOVERY_O
     /<meta\b(?=[^>]*\bname=(['"])robots\1)[^>]*>\s*/gi,
     /<meta\b(?=[^>]*\bproperty=(['"])og:(?:type|site_name|title|description|url)\1)[^>]*>\s*/gi,
     /<meta\b(?=[^>]*\bname=(['"])twitter:card\1)[^>]*>\s*/gi,
-    /<script\b(?=[^>]*\bdata-ekodi-discovery=(['"])v2\1)[^>]*>[\s\S]*?<\/script>\s*/gi,
+    /<script\b(?=[^>]*\bdata-ekodi-discovery=(['"])v[23]\1)[^>]*>[\s\S]*?<\/script>\s*/gi,
   ];
   for (const pattern of managed) output = output.replace(pattern, '');
   return insertDiscoveryHead(output, renderDiscoveryHead(route.path, origin));

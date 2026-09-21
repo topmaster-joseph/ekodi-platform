@@ -9,7 +9,7 @@ test('dynamic discovery decoration adds canonical social and JSON-LD metadata', 
   const html = decorateDiscoveryHtml(shell, '/jadam/');
   assert.match(html, /rel="canonical" href="https:\/\/ekodi\.kr\/jadam"/);
   assert.match(html, /property="og:url" content="https:\/\/ekodi\.kr\/jadam"/);
-  assert.match(html, /data-ekodi-discovery="v2" data-ekodi-path="\/jadam"/);
+  assert.match(html, /data-ekodi-discovery="v3" data-ekodi-path="\/jadam"/);
   assert.match(html, /application\/ld\+json/);
   assert.equal((html.match(/name="robots"/g) || []).length, 1);
   assert.equal((html.match(/name="description"/g) || []).length, 1);
@@ -22,7 +22,7 @@ test('unregistered routes are not rewritten', () => {
 
 test('response decoration preserves response policy headers and skips non-HTML', async () => {
   const response = new Response(shell, { status: 200, headers: { 'content-type': 'text/html; charset=utf-8', 'content-security-policy': "default-src 'self'", etag: 'abc', 'content-length': String(shell.length) } });
-  const decorated = await decorateDiscoveryResponse(response, '/ekodibiz/ekodimall');
+  const decorated = await decorateDiscoveryResponse(response, '/jadam');
   const html = await decorated.text();
   assert.equal(decorated.status, 200);
   assert.equal(decorated.headers.get('content-security-policy'), "default-src 'self'");

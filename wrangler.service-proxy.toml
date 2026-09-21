@@ -7,47 +7,5 @@ preview_urls = false
 [vars]
 ENVIRONMENT = "production"
 
-[[routes]]
-pattern = "biz.ekodi.kr"
-zone_name = "ekodi.kr"
-custom_domain = true
-
-[[routes]]
-pattern = "live.church.ekodi.kr"
-zone_name = "ekodi.kr"
-custom_domain = true
-
-[[routes]]
-pattern = "mall.ekodi.kr"
-zone_name = "ekodi.kr"
-custom_domain = true
-
-[[routes]]
-pattern = "mall.biz.ekodi.kr"
-zone_name = "ekodi.kr"
-custom_domain = true
-
-[[routes]]
-pattern = "mail.biz.ekodi.kr"
-zone_name = "ekodi.kr"
-custom_domain = true
-
-[[routes]]
-pattern = "mail.church.ekodi.kr"
-zone_name = "ekodi.kr"
-custom_domain = true
-
-[[routes]]
-pattern = "mail.lab.ekodi.kr"
-zone_name = "ekodi.kr"
-custom_domain = true
-
-[[routes]]
-pattern = "mail.books.ekodi.kr"
-zone_name = "ekodi.kr"
-custom_domain = true
-
-[[routes]]
-pattern = "mail.trade.ekodi.kr"
-zone_name = "ekodi.kr"
-custom_domain = true
+# No public custom domains. This Worker may be reached only through private
+# service bindings or explicitly governed internal execution paths.

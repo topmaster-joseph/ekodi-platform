@@ -46,9 +46,17 @@ for(const tenant of marketing.tenants||[]){
   const site=byId[tenant.tenant];
   const expectedRoot=String(tenant.canonicalUrl||'').replace(/\/marketing\/?$/,'');
   assert(site.canonicalUrl===expectedRoot,`${tenant.tenant} canonical workspace root differs from Marketing policy`);
-  const requiredAliases=[...(tenant.legacyDomains||[]).map(host=>`https://${host}`),`https://${tenant.executionAlias}`];
-  for(const alias of requiredAliases)assert((site.legacyAliases||[]).includes(alias),`${tenant.tenant} legacy alias missing: ${alias}`);
 }
+for(const site of sites){
+  for(const alias of site.legacyAliases||[]){
+    let parsed=null; try{parsed=new URL(alias);}catch{}
+    assert(!parsed?.hostname?.endsWith('.ekodi.kr'),`${site.id} must not keep redirect-only EKODI subdomain alias: ${alias}`);
+  }
+}
+assert(registry.legacyPolicy?.subdomainRedirectsAllowed===false,'subdomain redirects must remain forbidden');
+assert(registry.legacyPolicy?.redirectOnlyCompatibilityAliasesAllowed===false,'redirect-only compatibility aliases must remain forbidden');
+assert(registry.legacyPolicy?.directServiceSubdomainsAllowed===false,'public direct-service subdomains must remain forbidden');
+
 
 assert(byId.cgma.canonicalUrl===serviceUrls.canonical.cgma,'CGMA canonical site must match service URL registry');
 assert((byId.cgma.customDomains||[]).includes('https://cgma.or.kr'),'CGMA customer-owned public domain must be preserved');

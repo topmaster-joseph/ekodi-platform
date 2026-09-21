@@ -3,11 +3,11 @@ import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
 const read = path => readFile(new URL(path, import.meta.url), 'utf8');
-const [portal, adminShell, handoff, authShell, demandLoader, financeJs, hub, registryText, ecosystemRegistryText, headers, build, siteToml, siteWorker, financeToml, platformRouter, proxy, proxyToml, bizLegacy, bizLegacyToml] = await Promise.all([
+const [portal, adminShell, handoff, authShell, demandLoader, financeJs, hub, registryText, ecosystemRegistryText, headers, build, siteToml, siteWorker, financeToml, platformRouter, proxy, proxyToml, lifecycleText, serviceUrlsText] = await Promise.all([
   read('../index.html'), read('../admin-shell.html'), read('../admin-central-handoff.js'), read('../admin-authenticated-shell.js'), read('../admin-demand-loader.js'),
   read('../finance-monitor.js'), read('../hub.html'), read('../service-registry.json'), read('../config/ecosystem-services.json'), read('../_headers'),
   read('../scripts/build.mjs'), read('../wrangler.site.toml'), read('../site-worker.js'), read('../wrangler.finance.toml'), read('../platform-router-entry-worker.js'),
-  read('../service-proxy.js'), read('../wrangler.service-proxy.toml'), read('../biz-legacy-redirect.js'), read('../wrangler.biz-legacy.toml')
+  read('../service-proxy.js'), read('../wrangler.service-proxy.toml'), read('../config/site-lifecycle-registry.json'), read('../config/ekodi-service-urls.json')
 ]);
 
 function uniqueIds(html, label) {
@@ -75,18 +75,30 @@ test('nested EKODI business services remain explicit apex-path boundaries', () =
   assert.match(siteToml, /pattern = "ekodi\.kr\/ekodibiz\/trade\*"/);
   assert.match(siteToml, /"\/mail\*"/);
   assert.match(siteToml, /"\/messenger\*"/);
-  assert.match(siteWorker, /TRADE_LEGACY_HOSTS/);
+  assert.doesNotMatch(siteWorker, /TRADE_LEGACY_HOSTS|redirectToTradeCanonical/);
 });
 
-test('biz.ekodi.kr proxy remains independent while legacy external domain redirect stays dedicated', () => {
-  hasRoute(proxyToml, 'biz.ekodi.kr');
-  hasRoute(proxyToml, 'mall.biz.ekodi.kr');
-  assert.match(proxy, /host === 'biz\.ekodi\.kr'/);
-  assert.match(proxy, /requestHost\(request, env, incoming\)/);
-  assert.doesNotMatch(proxy, /'biz\.ekodi\.kr': 'https:\/\/ekodibiz\.kr'/);
-  assert.match(bizLegacy, /TARGET = 'https:\/\/biz\.ekodi\.kr'/);
-  assert.match(bizLegacy, /Response\.redirect\(target\.toString\(\), 301\)/);
-  for (const d of ['ekodibiz.kr','www.ekodibiz.kr']) hasRoute(bizLegacyToml,d);
+test('redirect-only subdomains are forbidden and public-domain policy stays apex-only', () => {
+  const proxyCustomDomains = proxyToml.split('[[routes]]').slice(1)
+    .filter(block => /custom_domain\s*=\s*true/.test(block))
+    .map(block => block.match(/pattern\s*=\s*"([^"]+)"/)?.[1])
+    .filter(Boolean);
+  assert.equal(proxyCustomDomains.length, 0);
+  assert.doesNotMatch(proxy, /CANONICAL_REDIRECTS|const REDIRECTS|Response\.redirect/);
+  assert.doesNotMatch(siteWorker, /PUBLIC_ALIAS_HOSTS|redirectToPublicCanonical|TRADE_LEGACY_HOSTS|redirectToTradeCanonical/);
+  const lifecycle = JSON.parse(lifecycleText);
+  const serviceUrls = JSON.parse(serviceUrlsText);
+  assert.equal(lifecycle.legacyPolicy.subdomainRedirectsAllowed, false);
+  assert.equal(lifecycle.legacyPolicy.redirectOnlyCompatibilityAliasesAllowed, false);
+  assert.equal(lifecycle.legacyPolicy.publicSubdomainsAllowed, false);
+  assert.equal(lifecycle.legacyPolicy.directServiceSubdomainsAllowed, false);
+  assert.equal(serviceUrls.policy.subdomainRedirectsAllowed, false);
+  assert.equal(serviceUrls.policy.publicSubdomainsAllowed, false);
+  for (const site of lifecycle.existingWorkspaceSites || []) {
+    for (const alias of site.legacyAliases || []) {
+      assert.equal(new URL(alias).hostname.endsWith('.' + ['ekodi','kr'].join('.')), false, `redirect-only subdomain alias leaked: ${alias}`);
+    }
+  }
 });
 
 test('finance and root custom-domain contracts remain intact', () => {

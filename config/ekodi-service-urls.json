@@ -2,7 +2,7 @@
   "version": 3,
   "canonical": {
     "root": "https://ekodi.kr/",
-    "mall": "https://ekodi.kr/ekodibiz/ekodimall",
+    "mall": "https://ekodi.kr/ekodimall",
     "admin": "https://ekodi.kr/admin/",
     "auth": "https://ekodi.kr/auth/",
     "ekodichurch": "https://ekodi.kr/ekodichurch",
@@ -19,10 +19,13 @@
     "ekodilab": "https://ekodi.kr/ekodilab"
   },
   "policy": {
-    "mallPublicUrl": "https://ekodi.kr/ekodibiz/ekodimall",
+    "mallPublicUrl": "https://ekodi.kr/ekodimall",
     "legacyMallUrlsAllowed": false,
     "sharedSiteProductionOwner": "deploy-site-core.yml",
     "humanSurfaceCanonicalHost": "ekodi.kr",
-    "legacySurfaceSubdomains": "compatibility-or-execution-only"
+    "legacySurfaceSubdomains": "private-execution-only",
+    "subdomainRedirectsAllowed": false,
+    "publicSubdomainsAllowed": false,
+    "redirectOnlySubdomainsAllowed": false
   }
 }

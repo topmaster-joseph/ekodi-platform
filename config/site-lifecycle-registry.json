@@ -1,13 +1,13 @@
 {
   "version": 1,
   "status": "active",
-  "policy": "Existing EKODI sites are retained and connected to canonical Workspace/Core identity. New customer user sites are virtual shared-shell surfaces, not copied applications.",
+  "policy": "Existing EKODI sites are retained and connected to canonical Workspace/Core identity. New customer user sites are virtual shared-shell surfaces, not copied applications. Redirect-only EKODI subdomains are forbidden.",
   "generation": {
     "signup": "identity_only",
     "workspaceCreatedWithoutSlug": "no_public_site_yet",
     "canonicalSlugAssigned": "auto_provision_user_site",
     "optionalServiceActivated": "jit_service_profile",
-    "legacyUrlAfterVerification": "redirect_or_compatibility_alias"
+    "legacyUrlAfterVerification": "retire_or_direct_service_no_redirect"
   },
   "identity": {
     "authorizationKey": "workspace_id",
@@ -32,12 +32,7 @@
       "canonicalUrl": "https://ekodi.kr/jadam",
       "migrationState": "promoted",
       "runtime": "store_user_sites",
-      "action": "retain_and_link",
-      "legacyAliases": [
-        "https://jadam.ekodi.kr",
-        "https://marketing.jadam.ekodi.kr",
-        "https://jadam.ai.ekodi.kr"
-      ]
+      "action": "retain_and_link"
     },
     {
       "id": "pizzamaru",
@@ -47,12 +42,7 @@
       "canonicalUrl": "https://ekodi.kr/pizzamaru",
       "migrationState": "promoted",
       "runtime": "store_user_sites",
-      "action": "retain_and_link",
-      "legacyAliases": [
-        "https://pizzamaru.ekodi.kr",
-        "https://marketing.pizzamaru.ekodi.kr",
-        "https://pizzamaru.ai.ekodi.kr"
-      ]
+      "action": "retain_and_link"
     },
     {
       "id": "yogurt",
@@ -62,13 +52,7 @@
       "canonicalUrl": "https://ekodi.kr/yogurt",
       "migrationState": "promoted",
       "runtime": "store_user_sites",
-      "action": "retain_and_link",
-      "legacyAliases": [
-        "https://ekodi.kr/yogurtpurple",
-        "https://yogurt.ekodi.kr",
-        "https://marketing.yogurt.ekodi.kr",
-        "https://yogurt.ai.ekodi.kr"
-      ]
+      "action": "retain_and_link"
     },
     {
       "id": "local-cheonggye",
@@ -94,12 +78,7 @@
       ],
       "migrationState": "retain_existing",
       "runtime": "site_access_registry+public_site_controls",
-      "action": "retain_and_link_custom_domain",
-      "legacyAliases": [
-        "https://cgma.ekodi.kr",
-        "https://marketing.cheonggye.ekodi.kr",
-        "https://cgma.ai.ekodi.kr"
-      ]
+      "action": "retain_and_link_custom_domain"
     },
     {
       "id": "ekodi-church",
@@ -118,7 +97,7 @@
       "ownerKind": "business",
       "class": "workspace_user_site",
       "canonicalUrl": "https://ekodi.kr/ekodibiz",
-      "currentServiceUrl": "https://biz.ekodi.kr",
+      "currentServiceUrl": "https://ekodi.kr/ekodibiz",
       "migrationState": "retain_existing",
       "runtime": "tenant_customer_site",
       "action": "connect_core_preserve_public_surface"
@@ -173,10 +152,14 @@
     ]
   },
   "legacyPolicy": {
-    "redirectOnlyAfterCanonicalVerified": true,
+    "subdomainRedirectsAllowed": false,
+    "redirectOnlyCompatibilityAliasesAllowed": false,
+    "directServiceSubdomainsAllowed": false,
+    "executionOnlySubdomainsAllowed": true,
     "preserveCustomDomainOwnership": true,
     "legacyAliasMayAuthorize": false,
-    "deleteExistingSiteBeforeReplacementVerified": false
+    "deleteExistingSiteBeforeReplacementVerified": false,
+    "publicSubdomainsAllowed": false
   },
   "migrationOrder": [
     "inventory",
@@ -184,7 +167,7 @@
     "preserve_current_public_surface",
     "attach_shared_core_and_permissions",
     "verify_canonical_surface",
-    "redirect_only_verified_legacy_aliases",
+    "retire_redirect_aliases_without_redirect",
     "retire_duplicate_runtime_after_observation_window"
   ]
 }
