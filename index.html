@@ -257,12 +257,12 @@ main{padding:46px 0 72px}
   <div class="shell navbar">
     <a class="brand" href="https://ekodi.kr/" aria-label="EKODI 홈"><strong>EKODI</strong><small>ECOSYSTEM · ekodi.kr</small></a>
     <nav class="nav" aria-label="주요 메뉴">
-      <a href="#about">소개 <span>About</span></a>
-      <a href="#services">플랫폼 <span>Platforms</span></a>
-      <a href="#connect">연결 <span>Connect</span></a>
-      <a href="#contact">문의 <span>Contact</span></a>
+      <a href="#about">소개</a>
+      <a href="#services">플랫폼</a>
+      <a href="#connect">연결</a>
+      <a href="#contact">문의</a>
       <a class="login" href="https://ekodi.kr/auth/?site=my&amp;return_to=https%3A%2F%2Fekodi.kr%2Fmy%2F" aria-label="My EKODI 로그인">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"></circle><path d="M4 21c.7-4.3 3.4-6.5 8-6.5S19.3 16.7 20 21"></path></svg>로그인 <span>Sign in</span>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"></circle><path d="M4 21c.7-4.3 3.4-6.5 8-6.5S19.3 16.7 20 21"></path></svg>로그인
       </a>
     </nav>
   </div>
@@ -270,8 +270,8 @@ main{padding:46px 0 72px}
 <main id="platform" class="shell" data-build="WARM LIVE ECOSYSTEM">
   <section id="about" class="about-strip section-anchor" aria-label="에코디 소개">
     <div class="about-grid">
-      <p><strong>EKODI</strong>는 사람의 선택과 독립성을 지키면서 공동체, 사역, 비즈니스, 창작과 생활을 연결하는 플랫폼 생태계입니다.<span>EKODI connects community, ministry, business, creativity, and everyday life while keeping each person and platform free to stand on its own.</span></p>
-      <div class="about-pills" aria-label="에코디 핵심 방향"><span>사람 중심 · Human-centered</span><span>독립 플랫폼 · Independent</span><span>필요한 연결 · Connected by choice</span></div>
+      <p><strong>EKODI</strong>는 사람의 선택과 독립성을 지키면서 공동체, 사역, 비즈니스, 창작과 생활을 연결하는 플랫폼 생태계입니다.</p>
+      <div class="about-pills" aria-label="에코디 핵심 방향"><span>사람 중심</span><span>독립 플랫폼</span><span>필요한 연결</span></div>
     </div>
   </section>
 
@@ -279,7 +279,7 @@ main{padding:46px 0 72px}
     <div class="hero-copy">
       <p class="eyebrow">EKODI ECOSYSTEM</p>
       <h1 id="hero-title">원하는 일, 바로 시작하세요<span>공동체, 사역, 비즈니스, 삶. 필요한 길만 가볍게 연결합니다.</span></h1>
-      <div class="hero-actions"><a href="#start">무료로 시작하기 <span>Start free</span></a><a href="#services">둘러보기 <span>Explore</span></a></div>
+      <div class="hero-actions"><a href="#start">무료로 시작하기</a><a href="#services">둘러보기</a></div>
       <aside class="hero-ekodian-scene" data-ekodi-character-village="homepage-guide-v1" aria-label="에코디언 안내">
         <svg class="hero-ekodian-figure" viewBox="0 0 120 112" role="img" aria-label="에코디 생태계를 안내하는 에코디언">
           <g aria-hidden="true" opacity=".5" fill="none" stroke="#78a889" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -301,17 +301,31 @@ main{padding:46px 0 72px}
           </g>
           <path d="M87 44l3 6 6 3-6 3-3 6-3-6-6-3 6-3z" fill="#d5ad68" opacity=".75" aria-hidden="true"/>
         </svg>
-        <p class="hero-ekodian-bubble"><strong>에코디언 · EKODIAN</strong><span>반가워요. 필요한 곳부터 둘러보세요. 연결은 선택한 만큼만 이어집니다.</span><small>your guide, not the gate</small></p>
+        <p class="hero-ekodian-bubble"><strong>에코디언</strong><span>반가워요. 필요한 곳부터 둘러보세요. 연결은 선택한 만큼만 이어집니다.</span></p>
       </aside>
     </div>
     <div class="ecosystem-pulse" aria-label="현재 사용할 수 있는 EKODI 플랫폼 상태">
       <div class="pulse-rings" aria-hidden="true"><span class="pulse-ring"></span><span class="pulse-ring"></span><span class="pulse-ring"></span></div>
       <div class="pulse-core"><div><strong>EKODI</strong><small>ECOSYSTEM</small></div></div>
       <div class="status-satellites">
-        <div class="status-satellite" data-status="live"><b>운영중</b><span>Live</span><em data-status-count="live">0</em></div>
-        <div class="status-satellite" data-status="beta"><b>테스트</b><span>Beta</span><em data-status-count="beta">0</em></div>
+        <div class="status-satellite" data-status="live"><b>운영중</b><em data-status-count="live">0</em></div>
+        <div class="status-satellite" data-status="beta" hidden><b>테스트</b><em data-status-count="beta">0</em></div>
       </div>
     </div>
+  </section>
+
+  <section id="start" class="dynamic-start-panel section-anchor" aria-label="목적별 빠른 시작">
+    <h2 class="dynamic-start-title">무엇을 하시나요?</h2>
+    <p class="dynamic-start-help">지금 하려는 일을 고르면 필요한 곳부터 시작할 수 있습니다.</p>
+    <div class="dynamic-service-launchers">
+      <a class="dynamic-service-card dynamic-intent-card" href="https://ekodi.kr/community"><span class="dynamic-service-icon">함</span><strong>공동체 · 사역</strong><small>교회·말씀·모임·참여</small></a>
+      <a class="dynamic-service-card dynamic-intent-card" href="https://ekodi.kr/ekodibiz"><span class="dynamic-service-icon">업</span><strong>사업 · 성장</strong><small>사업·매장·홍보·판매</small></a>
+      <a class="dynamic-service-card dynamic-intent-card" href="https://ekodi.kr/publishing"><span class="dynamic-service-icon">글</span><strong>글 · 콘텐츠</strong><small>글쓰기·출판·콘텐츠 제작</small></a>
+      <a class="dynamic-service-card dynamic-intent-card" href="https://ekodi.kr/ekodilab"><span class="dynamic-service-icon">연</span><strong>연구 · 배움</strong><small>연구·근거·교육·학습</small></a>
+      <a class="dynamic-service-card dynamic-intent-card" href="https://ekodi.kr/work"><span class="dynamic-service-icon">일</span><strong>일 · 프로젝트</strong><small>업무·프로젝트·운영</small></a>
+      <a class="dynamic-service-card dynamic-intent-card" href="https://ekodi.kr/my"><span class="dynamic-service-icon">나</span><strong>내 활동</strong><small>내 서비스와 활동 관리</small></a>
+    </div>
+    <a class="dynamic-more-link" href="#services">전체 서비스 보기 →</a>
   </section>
 
   <section id="ecosystem" class="ecosystem" aria-label="현재 이용 가능한 에코디 서비스">
@@ -324,20 +338,20 @@ main{padding:46px 0 72px}
 
   <div class="lower-grid">
     <section id="connect" class="info-panel section-anchor">
-      <p class="section-kicker">CONNECTED ECOSYSTEM · 연결</p>
-      <h2>각 플랫폼은 독립적으로, 필요한 곳에서 연결됩니다<span>Independent by design. Connected by choice.</span></h2>
-      <p>서비스의 목적과 운영 경계는 분명히 유지하고, 계정·데이터·AI는 허용된 범위에서만 이어집니다.<span>Each service keeps a clear purpose and boundary. Accounts, data, and AI connect only where permitted.</span></p>
+      <p class="section-kicker">연결 생태계</p>
+      <h2>각 플랫폼은 독립적으로, 필요한 곳에서 연결됩니다</h2>
+      <p>서비스의 목적과 운영 경계는 분명히 유지하고, 계정·데이터·AI는 허용된 범위에서만 이어집니다.</p>
       <div class="connect-points">
-        <div class="connect-point"><strong>하나의 입구</strong><small>One entrance</small><span>ekodi.kr에서 전체 생태계를 찾습니다.</span></div>
-        <div class="connect-point"><strong>독립 운영</strong><small>Independent services</small><span>플랫폼마다 목적과 정체성을 지킵니다.</span></div>
-        <div class="connect-point"><strong>필요한 연결</strong><small>Connected by choice</small><span>사람이 선택한 범위 안에서만 연결합니다.</span></div>
+        <div class="connect-point"><strong>하나의 입구</strong><span>ekodi.kr에서 전체 생태계를 찾습니다.</span></div>
+        <div class="connect-point"><strong>독립 운영</strong><span>플랫폼마다 목적과 정체성을 지킵니다.</span></div>
+        <div class="connect-point"><strong>필요한 연결</strong><span>사람이 선택한 범위 안에서만 연결합니다.</span></div>
       </div>
     </section>
     <section id="contact" class="info-panel section-anchor">
-      <p class="section-kicker">CONTACT · 문의</p>
-      <h2>어디에서 시작할지 모르겠다면<span>Not sure where to begin?</span></h2>
-      <p>비즈니스와 협력은 에코디비즈, 공동체와 사역은 커뮤니티에서 시작할 수 있습니다.<span>Start with EKODI Biz for business and collaboration, or Community for people and ministry.</span></p>
-      <div class="contact-actions"><a href="https://ekodi.kr/ekodibiz">비즈니스 문의 <span>Business</span></a><a href="https://community.ekodi.kr">공동체 연결 <span>Community</span></a></div>
+      <p class="section-kicker">문의</p>
+      <h2>어디에서 시작할지 모르겠다면</h2>
+      <p>비즈니스와 협력은 에코디비즈, 공동체와 사역은 커뮤니티에서 시작할 수 있습니다.</p>
+      <div class="contact-actions"><a href="https://ekodi.kr/ekodibiz">비즈니스 문의</a><a href="https://ekodi.kr/community">공동체 연결</a></div>
     </section>
   </div>
 </main>
