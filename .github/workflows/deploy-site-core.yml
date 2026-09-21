@@ -40,6 +40,8 @@ on:
       - 'test/realtime-live-collaboration.test.mjs'
       - 'ekodibiz-invest-business.js'
       - 'ekodibiz-invest-admin-page.js'
+      - 'invest-user-page.js'
+      - 'invest-subject-ui.js'
       - 'invest-site-system.js'
       - 'invest-personal-control.js'
       - 'invest-admin.js'
