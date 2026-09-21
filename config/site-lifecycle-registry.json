@@ -21,8 +21,7 @@
     "shared_service": "Platform/common service with its own registered boundary.",
     "core_system": "Authentication, administration, API, status, or internal engine boundary.",
     "legacy_alias": "Compatibility URL that must not become identity authority.",
-    "planned_surface": "No production user site until explicitly promoted.",
-    "regional_platform": "Region-owned public/common platform with delegated multi-organization operations."
+    "planned_surface": "No production user site until explicitly promoted."
   },
   "existingWorkspaceSites": [
     {
@@ -75,7 +74,7 @@
       "id": "local-cheonggye",
       "name": "청계잇다",
       "ownerKind": "region",
-      "class": "regional_platform",
+      "class": "workspace_user_site",
       "canonicalUrl": "https://ekodi.kr/cheonggye",
       "migrationState": "additive",
       "runtime": "shared-site-local-region",
