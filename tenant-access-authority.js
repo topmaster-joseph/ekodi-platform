@@ -12,7 +12,7 @@ export const SITE_RESPONSIBILITY_ROLES=Object.freeze([
 export const SITE_ASSIGNABLE_ROLES=Object.freeze([
   'admin','manager','marketer','accountant','staff','member','viewer',
   'marketing_manager','accounting_manager','hq_manager','client_editor','client_viewer',
-  'external_developer','pastor','care_staff',
+  'external_vendor','external_developer','pastor','care_staff',
 ]);
 
 export function tenantRoleCanManageAccess(role){
@@ -53,6 +53,24 @@ export async function resolveTenantAccessAuthority(request,env,{tenantSlug=''}={
 
   const tenant=await tenantRow(env,slug);
   if(!tenant||tenant.status!=='active')return Object.freeze({ok:false,status:404,code:'TENANT_NOT_FOUND'});
+
+  const parentSlug=slug==='cheonggye-pass'?'cheonggye-local':'';
+  if(parentSlug){
+    const parent=await tenantRow(env,parentSlug);
+    if(parent?.status==='active'){
+      const parentGrant=await env.DB.prepare(`SELECT role, enabled, principal_type, github_username,
+          capabilities_json, denied_capabilities_json, expires_at
+        FROM customer_access_grants
+        WHERE tenant_id = ? AND lower(trim(email)) = ?`)
+        .bind(parent.id,normalize(principal.email)).first();
+      if(accessGrantIsActive(parentGrant)&&tenantRoleCanManageAccess(parentGrant.role)){
+        return Object.freeze({
+          ok:true,scope:'tenant-delegated',email:normalize(principal.email),role:normalize(parentGrant.role),
+          tenantSlug:tenant.slug,tenantId:Number(tenant.id),canManageAllTenants:false,parentTenantSlug:parent.slug,
+        });
+      }
+    }
+  }
 
   const grant=await env.DB.prepare(`SELECT role, enabled, principal_type, github_username,
       capabilities_json, denied_capabilities_json, expires_at

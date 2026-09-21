@@ -30,6 +30,33 @@ export const EXTERNAL_DEVELOPER_DENIED=Object.freeze([
 ]);
 
 export const ACCESS_ROLE_PRESETS=Object.freeze({
+  external_vendor:Object.freeze({
+    principalType:ACCESS_PRINCIPAL_TYPES.externalCollaborator,
+    allowed:Object.freeze([
+      'tenant.dashboard.read',
+      'tenant.preview.read',
+      'tenant.logs.read',
+      'tenant.integration.inspect',
+      'tenant.integration.test',
+    ]),
+    denied:Object.freeze([
+      'tenant.access.manage',
+      'tenant.member.private.read',
+      'tenant.member-roster.manage',
+      'tenant.billing.read',
+      'tenant.billing.manage',
+      'tenant.finance.read',
+      'tenant.finance.manage',
+      'tenant.secrets.read',
+      'tenant.production.deploy',
+      'platform.admin',
+      'platform.secrets.read',
+      'platform.production.deploy',
+    ]),
+    requiresExpiry:true,
+    requiresGithubUsername:false,
+    maxDurationDays:180,
+  }),
   external_developer:Object.freeze({
     principalType:ACCESS_PRINCIPAL_TYPES.externalCollaborator,
     allowed:EXTERNAL_DEVELOPER_ALLOWED,
@@ -94,6 +121,6 @@ export function validateAccessGrantInput(input,{now=new Date()}={}){
 export function canTenantActorAssignRole(actorRole,targetRole){
   const actor=normalizeAccessRole(actorRole),target=normalizeAccessRole(targetRole);
   if(!['owner','tenant_admin','admin','store_owner','client_admin','workspace_admin'].includes(actor))return false;
-  return target==='external_developer'||['manager','marketer','accountant','staff','member','viewer','marketing_manager','accounting_manager','client_editor','client_viewer'].includes(target);
+  return ['external_vendor','external_developer'].includes(target)||['manager','marketer','accountant','staff','member','viewer','marketing_manager','accounting_manager','client_editor','client_viewer'].includes(target);
 }
-export function accessGovernanceSnapshot(){return Object.freeze({version:1,denyOverridesAllow:true,tenantScopeRequired:true,externalDeveloper:ACCESS_ROLE_PRESETS.external_developer});}
+export function accessGovernanceSnapshot(){return Object.freeze({version:2,denyOverridesAllow:true,tenantScopeRequired:true,externalVendor:ACCESS_ROLE_PRESETS.external_vendor,externalDeveloper:ACCESS_ROLE_PRESETS.external_developer});}

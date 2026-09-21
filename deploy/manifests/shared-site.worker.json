@@ -1620,7 +1620,8 @@
           "청계잇다 운영관리",
           "서비스별 운영주체",
           "청계면상인회",
-          "/cgma/admin"
+          "/cgma/admin",
+          "local-region-admin-auth.js"
         ],
         "headerExpect": [
           "x-ekodi-route: local-region-admin",
@@ -1658,10 +1659,31 @@
           "청계패스 운영관리",
           "외부 공급자",
           "직접 DB 접근",
-          "외주사 연동 계약"
+          "외주사 연동 계약",
+          "local-region-admin-auth.js"
         ],
         "headerExpect": [
           "x-ekodi-route: regional-commerce-program-admin",
+          "x-ekodi-shell: v2",
+          "cache-control: no-store"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/cheonggye/admin/access",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "청계잇다 사용자·권한",
+          "Google 이메일",
+          "regionAccessForm",
+          "local-region-admin-auth.js",
+          "local-region-access-admin.js"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: local-region-access-admin",
           "x-ekodi-shell: v2",
           "cache-control: no-store"
         ],

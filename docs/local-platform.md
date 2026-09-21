@@ -56,3 +56,22 @@ The connected mode must not grant regional operators implicit access to private 
 청계면상인회 is the initial delegated operator for the common Cheonggye services. This is an operating assignment only. The regional platform remains independently identifiable as `local:cheonggye`.
 
 The legacy internal CGMA tenant alias `cheonggye` is not repurposed in this phase. This prevents authentication/member-data regressions while the public `/cheonggye` route is claimed explicitly by the regional platform.
+
+## Regional identity and administrator access
+
+Regional administration uses the same EKODI Google identity and a separate scoped grant. An administrator registers the Google email first; the user signs in at the canonical `https://ekodi.kr/auth/` entry with that same Google account; EKODI then resolves `Person + regional scope + role + capability` before exposing administration.
+
+Cheonggye currently has two independent access scopes:
+
+- `cheonggye-local` — regional governance for `/cheonggye/admin`
+- `cheonggye-pass` — Cheonggye Pass operations for `/cheonggye/admin/pass`
+
+A permission in one scope does not implicitly grant permission in another. Existing CGMA permissions under `/cgma` remain independent.
+
+The regional governance administrator may delegate collaborators into the Cheonggye Pass child scope. External collaboration is split into two roles:
+
+- `external_vendor` — outsourced service/vendor integration. Requires an expiry date and may inspect/test the approved integration surface, but may not manage access, member rosters, finance, secrets or production deployment.
+- `external_developer` — engineering collaboration. Requires both GitHub identity and an expiry date and remains subject to the existing external-developer safe capability preset.
+
+The user/administrator access manager is `/cheonggye/admin/access`. Platform super-administrator authority is accepted only through the existing central administrator session; a normal Google login with the same email is not silently promoted to platform authority.
+
