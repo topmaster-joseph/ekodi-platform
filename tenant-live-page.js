@@ -14,7 +14,7 @@ export function tenantLivePage(tenant){
 <body data-tenant="${esc(tenant.apiTenant)}" data-room-mode="${esc(tenant.mode)}" data-live-path="${path}" data-auth-site="${esc(tenant.authSite)}" data-name="${name}" data-default-title="${title}">
 ${header}
 <main class="live-shell">
-<section id="entryView" class="live-intro"><p class="eyebrow">EKODI LIVE</p><h1>${name}<br><em>실시간 방송</em></h1><p>방송하거나 바로 시청합니다.</p><div class="entry-actions"><button class="primary" id="hostButton">방송하기</button><button id="joinButton">시청·참여</button></div><p id="entryNote">공개 방송은 바로 볼 수 있습니다.</p></section>
+<section id="entryView" class="live-intro"><p class="eyebrow">EKODI REALTIME</p><h1>${name}<br><em>실시간 방송</em></h1><p>방송하거나 바로 시청합니다.</p><div class="entry-actions"><button class="primary" id="hostButton">방송하기</button><button id="joinButton">시청·참여</button></div><p id="entryNote">공개 방송은 바로 볼 수 있습니다.</p></section>
 
 <section id="studioView" class="studio hidden">
   <div class="stage" id="programStage"><video id="mainVideo" autoplay playsinline muted></video><video id="cameraSource" class="source-video" autoplay playsinline muted aria-hidden="true"></video><video id="screenSource" class="source-video" autoplay playsinline muted aria-hidden="true"></video><div id="programOverlayLayer" class="program-overlay-layer" aria-label="방송 화면 추가 소스"></div><div id="programPlaceholder" class="placeholder">카메라를 켜 주세요.</div><span id="programBadge">대기</span></div>
