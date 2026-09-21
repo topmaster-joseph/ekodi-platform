@@ -55,8 +55,8 @@ for(const site of sites){
 }
 assert(registry.legacyPolicy?.subdomainRedirectsAllowed===false,'subdomain redirects must remain forbidden');
 assert(registry.legacyPolicy?.redirectOnlyCompatibilityAliasesAllowed===false,'redirect-only compatibility aliases must remain forbidden');
-assert(registry.legacyPolicy?.directServiceSubdomainsAllowed===true,'direct-service subdomains must remain distinguishable from redirect aliases');
-assert(registry.legacyPolicy?.publicSubdomainMode==='direct-service-only','public subdomains must be direct-service-only');
+assert(registry.legacyPolicy?.directServiceSubdomainsAllowed===false,'public direct-service subdomains must remain forbidden');
+
 
 assert(byId.cgma.canonicalUrl===serviceUrls.canonical.cgma,'CGMA canonical site must match service URL registry');
 assert((byId.cgma.customDomains||[]).includes('https://cgma.or.kr'),'CGMA customer-owned public domain must be preserved');
