@@ -1,0 +1,35 @@
+name: Integration Core Check
+
+on:
+  pull_request:
+    paths:
+      - 'integration-core/**'
+      - 'config/integration-profiles/**'
+      - 'test/integration-core.test.mjs'
+      - 'docs/EKODI_INTEGRATION_CORE.md'
+      - 'wrangler.integration-core.release.toml'
+      - 'deploy/manifests/integration-core.worker.json'
+      - '.github/workflows/integration-core-check.yml'
+  push:
+    branches:
+      - 'ai/**/integration-core*'
+    paths:
+      - 'integration-core/**'
+      - 'config/integration-profiles/**'
+      - 'test/integration-core.test.mjs'
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Syntax check
+        run: |
+          node --check integration-core/profile.js
+          node --check integration-core/conformance.js
+          node --check integration-core/worker.js
+      - name: Integration Core tests
+        run: node --test test/integration-core.test.mjs
