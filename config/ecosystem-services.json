@@ -420,7 +420,8 @@
       "order": 140,
       "homepage": false,
       "productionVerified": true,
-      "status": "live"
+      "status": "live",
+      "discoveryPublic": false
     },
     {
       "id": "space",
