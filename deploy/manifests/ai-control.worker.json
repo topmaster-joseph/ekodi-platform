@@ -21,7 +21,6 @@
           "x-ekodi-canonical-surface: ai",
           "x-ekodi-canonical-path: /ai"
         ],
-        "candidateUrl": "https://ekodi-ai-control.topmaster-joseph.workers.dev/",
         "candidateStatuses": [
           200
         ],
@@ -58,7 +57,6 @@
           "x-ekodi-ai-asset: worker-owned-v1",
           "content-type: text/javascript"
         ],
-        "candidateUrl": "https://ekodi-ai-control.topmaster-joseph.workers.dev/api/commons/client",
         "candidateStatuses": [
           200
         ],
@@ -95,7 +93,6 @@
           "x-ekodi-ai-asset: worker-owned-v1",
           "content-type: text/css"
         ],
-        "candidateUrl": "https://ekodi-ai-control.topmaster-joseph.workers.dev/api/commons/style",
         "candidateStatuses": [
           200
         ],
@@ -128,7 +125,6 @@
           "\"paidApiAutoEscalation\":false",
           "\"paidDecisionGate\":true"
         ],
-        "candidateUrl": "https://ekodi-ai-control.topmaster-joseph.workers.dev/__health",
         "candidateStatuses": [
           200
         ],
@@ -159,7 +155,6 @@
           "\"principle\"",
           "\"categories\""
         ],
-        "candidateUrl": "https://ekodi-ai-control.topmaster-joseph.workers.dev/api/commons/services",
         "candidateStatuses": [
           200
         ],
@@ -184,7 +179,6 @@
         "expect": [
           "\"requests\""
         ],
-        "candidateUrl": "https://ekodi-ai-control.topmaster-joseph.workers.dev/api/commons/requests",
         "candidateStatuses": [
           200
         ],
@@ -208,7 +202,6 @@
         "expect": [
           "authentication_required"
         ],
-        "candidateUrl": "https://ekodi-ai-control.topmaster-joseph.workers.dev/api/commons/ideas",
         "candidateStatuses": [
           401
         ],
