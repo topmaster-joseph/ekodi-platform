@@ -12,6 +12,7 @@ test('tenant command home is command-only and deterministic', async()=>{
   assert.match(css,/ekodi-tenant-command-home-active/);
   assert.match(css,/visibility:hidden!important/);
   assert.match(script,/EKODITenantCommandHome/);
+  assert.ok(script.startsWith('const __name=(target)=>target;\n'));
   assert.match(script,/targetFor\(text\)/);
   assert.match(script,/ekodi-tenant-command-config/);
   assert.match(script,/queueMicrotask\(boot\)/);
@@ -44,6 +45,12 @@ test('trade root uses the same command-home contract without widening authority'
   assert.match(script,/base\+'\/overview'/);
   assert.match(script,/access\?\.can_manage_access/);
   assert.match(script,/if\(mountCommandHome\(\)\)return/);
+});
+
+test('shared-site release watches the tenant command-home runtime and contract', async()=>{
+  const workflow=await readFile(new URL('../.github/workflows/deploy-site-core.yml',import.meta.url),'utf8');
+  assert.ok(workflow.includes("      - 'tenant-admin-command-home.js'"));
+  assert.ok(workflow.includes("      - 'test/tenant-admin-command-home.test.mjs'"));
 });
 
 test('both production routers serve the shared command-home assets', async()=>{
