@@ -86,6 +86,7 @@ export async function enforcePlatformRequestSecurity(request,env={}){
   if(pathInfo.sensitive){
     const result=await limiterResult(env.PLATFORM_SENSITIVE_RATE_LIMITER,method+':'+pathInfo.surface+':'+identity);
     if(!result.available){
+      if(String(env.ENVIRONMENT||'').toLowerCase()!=='production')return null;
       console.error('EKODI sensitive edge protection unavailable',{path:url.pathname,ray:request.headers.get('cf-ray')||''});
       return securityError('보안 보호장치가 일시적으로 사용할 수 없습니다.','PLATFORM_SECURITY_UNAVAILABLE',503,'30');
     }
