@@ -87,7 +87,7 @@
   const copy = (locale, key) => localeCopy[locale]?.[key] ?? localeCopy['ko-KR'][key];
 
   const pageCopy = Object.freeze({
-    'ko-KR':{live:'운영중',beta:'테스트',services:'현재 이용 가능한 플랫폼',aboutMain:'는 사람의 선택과 독립성을 지키면서 공동체, 사역, 비즈니스, 창작과 생활을 연결하는 플랫폼 생태계입니다.',aboutSub:'EKODI connects community, ministry, business, creativity, and everyday life while keeping each person and platform free to stand on its own.',pills:['사람 중심 · Human-centered','독립 플랫폼 · Independent','필요한 연결 · Connected by choice'],groups:{'community-ministry':['공동체 · 사역','Community & Ministry'],'business-growth':['비즈니스 · 성장','Business & Growth'],'knowledge-creation':['지식 · 콘텐츠','Knowledge & Content'],'work-life':['일 · 생활','Work & Life']},connect:{kicker:'CONNECTED ECOSYSTEM · 연결',title:'각 플랫폼은 독립적으로, 필요한 곳에서 연결됩니다',sub:'Independent by design. Connected by choice.',body:'서비스의 목적과 운영 경계는 분명히 유지하고, 계정·데이터·AI는 허용된 범위에서만 이어집니다.',bodySub:'Each service keeps a clear purpose and boundary. Accounts, data, and AI connect only where permitted.',points:[['하나의 입구','One entrance','ekodi.kr에서 전체 생태계를 찾습니다.'],['독립 운영','Independent services','플랫폼마다 목적과 정체성을 지킵니다.'],['필요한 연결','Connected by choice','사람이 선택한 범위 안에서만 연결합니다.']]},contact:{kicker:'CONTACT · 문의',title:'어디에서 시작할지 모르겠다면',sub:'Not sure where to begin?',body:'비즈니스와 협력은 에코디비즈, 공동체와 사역은 커뮤니티에서 시작할 수 있습니다.',bodySub:'Start with EKODI Biz for business and collaboration, or Community for people and ministry.',actions:['비즈니스 문의','공동체 연결']}},
+    'ko-KR':{live:'운영중',beta:'테스트',services:'현재 이용 가능한 플랫폼',aboutMain:'는 사람의 선택과 독립성을 지키면서 공동체, 사역, 비즈니스, 창작과 생활을 연결하는 플랫폼 생태계입니다.',aboutSub:'',pills:['사람 중심','독립 플랫폼','필요한 연결'],groups:{'community-ministry':['공동체 · 사역',''],'business-growth':['비즈니스 · 성장',''],'knowledge-creation':['지식 · 콘텐츠',''],'work-life':['일 · 생활','']},connect:{kicker:'연결 생태계',title:'각 플랫폼은 독립적으로, 필요한 곳에서 연결됩니다',sub:'',body:'서비스의 목적과 운영 경계는 분명히 유지하고, 계정·데이터·AI는 허용된 범위에서만 이어집니다.',bodySub:'',points:[['하나의 입구','','ekodi.kr에서 전체 생태계를 찾습니다.'],['독립 운영','','플랫폼마다 목적과 정체성을 지킵니다.'],['필요한 연결','','사람이 선택한 범위 안에서만 연결합니다.']]},contact:{kicker:'문의',title:'어디에서 시작할지 모르겠다면',sub:'',body:'비즈니스와 협력은 에코디비즈, 공동체와 사역은 커뮤니티에서 시작할 수 있습니다.',bodySub:'',actions:['비즈니스 문의','공동체 연결']}},
     en:{live:'Live',beta:'Beta',services:'Available platforms',aboutMain:' connects community, ministry, business, creativity, and everyday life while protecting each person’s choice and independence.',aboutSub:'',pills:['Human-centered','Independent platforms','Connected by choice'],groups:{'community-ministry':['Community & Ministry',''],'business-growth':['Business & Growth',''],'knowledge-creation':['Knowledge & Content',''],'work-life':['Work & Life','']},connect:{kicker:'CONNECTED ECOSYSTEM',title:'Independent by design. Connected where needed.',sub:'',body:'Each service keeps a clear purpose and operating boundary. Accounts, data, and AI connect only where permitted.',bodySub:'',points:[['One entrance','','Find the whole ecosystem at ekodi.kr.'],['Independent services','','Each platform keeps its purpose and identity.'],['Connected by choice','','Connections happen only within the scope people choose.']]},contact:{kicker:'CONTACT',title:'Not sure where to begin?',sub:'',body:'Start with EKODI Biz for business and collaboration, or Community for people and ministry.',bodySub:'',actions:['Business inquiry','Community connection']}},
     'zh-CN':{live:'运行中',beta:'测试',services:'当前可用平台',aboutMain:'连接社区、事工、商业、创作与日常生活，同时尊重每个人的选择与独立性。',aboutSub:'',pills:['以人为本','平台独立','按需连接'],groups:{'community-ministry':['社区 · 事工',''],'business-growth':['商业 · 成长',''],'knowledge-creation':['知识 · 内容',''],'work-life':['工作 · 生活','']},connect:{kicker:'连接生态',title:'各平台独立运行，在需要之处彼此连接。',sub:'',body:'每项服务都保持清晰的目标与运营边界，账户、数据与 AI 仅在获准范围内连接。',bodySub:'',points:[['一个入口','','从 ekodi.kr 找到整个生态。'],['独立运营','','每个平台保有自己的目标与身份。'],['按需连接','','只在用户选择的范围内建立连接。']]},contact:{kicker:'联系我们',title:'不知道从哪里开始？',sub:'',body:'商务与合作可从 EKODI Biz 开始，社区与事工可从 Community 开始。',bodySub:'',actions:['商务咨询','连接社区']}},
     ja:{live:'運用中',beta:'テスト',services:'現在利用できるプラットフォーム',aboutMain:'は、一人ひとりの選択と自立を大切にしながら、コミュニティ、ミニストリー、ビジネス、創作、暮らしをつなぐプラットフォーム・エコシステムです。',aboutSub:'',pills:['人を中心に','独立したプラットフォーム','必要なつながり'],groups:{'community-ministry':['コミュニティ · ミニストリー',''],'business-growth':['ビジネス · 成長',''],'knowledge-creation':['知識 · コンテンツ',''],'work-life':['仕事 · 暮らし','']},connect:{kicker:'CONNECTED ECOSYSTEM',title:'各プラットフォームは独立し、必要な場所でつながります。',sub:'',body:'サービスごとの目的と運営境界を明確に保ち、アカウント・データ・AI は許可された範囲でのみ連携します。',bodySub:'',points:[['一つの入口','','ekodi.kr からエコシステム全体を探せます。'],['独立運営','','各プラットフォームが目的とアイデンティティを守ります。'],['必要なつながり','','人が選んだ範囲の中でのみつながります。']]},contact:{kicker:'お問い合わせ',title:'どこから始めればよいかわからないときは',sub:'',body:'ビジネスと協力は EKODI Biz、コミュニティとミニストリーは Community から始められます。',bodySub:'',actions:['ビジネス相談','コミュニティにつながる']}}
@@ -230,12 +230,12 @@
       if(locale==='ko-KR'){if(title)title.textContent=card.dataset.ekodiKoTitle||title.textContent;if(desc)desc.textContent=card.dataset.ekodiKoDescription||desc.textContent;}
       else if(locale==='en'){if(title)title.textContent=card.dataset.ekodiEnTitle||card.dataset.ekodiKoTitle;if(desc)desc.textContent=card.dataset.ekodiEnDescription||card.dataset.ekodiKoDescription;}
       else {if(title)title.textContent=custom?.[0]||card.dataset.ekodiEnTitle||card.dataset.ekodiKoTitle;if(desc)desc.textContent=custom?.[1]||card.dataset.ekodiEnDescription||card.dataset.ekodiKoDescription;}
-      if(enTitle)enTitle.hidden=locale!=='ko-KR';if(enDesc)enDesc.hidden=locale!=='ko-KR';
-      const status=card.querySelector('.service-status b');const statusSub=card.querySelector('.service-status span');if(status)status.textContent=card.dataset.serviceStatus==='beta'?c.beta:c.live;if(statusSub)statusSub.hidden=locale!=='ko-KR';
+      if(enTitle)enTitle.hidden=true;if(enDesc)enDesc.hidden=true;
+      const status=card.querySelector('.service-status b');const statusSub=card.querySelector('.service-status span');if(status)status.textContent=card.dataset.serviceStatus==='beta'?c.beta:c.live;if(statusSub)statusSub.hidden=true;
     }
     const connect=document.querySelector('#connect');if(connect){const kicker=connect.querySelector('.section-kicker');if(kicker)kicker.textContent=c.connect.kicker;setHeading(connect.querySelector('h2'),c.connect.title,c.connect.sub);setHeading(connect.querySelector('p:not(.section-kicker)'),c.connect.body,c.connect.bodySub);[...connect.querySelectorAll('.connect-point')].forEach((node,index)=>{const p=c.connect.points[index];if(!p)return;const strong=node.querySelector('strong'),small=node.querySelector('small'),span=node.querySelector('span');if(strong)strong.textContent=p[0];if(small){small.textContent=p[1]||'';small.hidden=!p[1];}if(span)span.textContent=p[2];});}
     const contact=document.querySelector('#contact');if(contact){const kicker=contact.querySelector('.section-kicker');if(kicker)kicker.textContent=c.contact.kicker;setHeading(contact.querySelector('h2'),c.contact.title,c.contact.sub);setHeading(contact.querySelector('p:not(.section-kicker)'),c.contact.body,c.contact.bodySub);[...contact.querySelectorAll('.contact-actions a')].forEach((node,index)=>{if(c.contact.actions[index])node.textContent=c.contact.actions[index];});}
-    for(const node of document.querySelectorAll('.status-satellite')){const status=node.dataset.status;const b=node.querySelector('b'),span=node.querySelector('span');if(b)b.textContent=status==='beta'?c.beta:c.live;if(span)span.hidden=locale!=='ko-KR';}
+    for(const node of document.querySelectorAll('.status-satellite')){const status=node.dataset.status;const b=node.querySelector('b'),span=node.querySelector('span');if(b)b.textContent=status==='beta'?c.beta:c.live;if(span)span.hidden=true;}
   }
 
   function serviceData(card) {
@@ -351,53 +351,118 @@
     document.querySelector('.dynamic-start-panel')?.remove();
     const hero=document.querySelector('.hero');
     if(!hero)return;
-    const c=dynamicCopy(locale)||dynamicCopy('ko-KR');
+    const isKo=locale==='ko-KR';
+    const choices=[
+      {id:'community',icon:'함',label:isKo?'공동체 · 사역':'Community & Ministry',description:isKo?'교회·말씀·모임·참여':'Church, Scripture, groups, participation',query:'공동체 사역 교회 예배 말씀 성경 묵상 사람 모임 참여',preferred:['church','community','bible','social']},
+      {id:'business',icon:'업',label:isKo?'사업 · 성장':'Business & Growth',description:isKo?'사업·매장·홍보·판매':'Business, stores, marketing, sales',query:'비즈니스 성장 사업 경영 매장 마케팅 홍보 판매 쇼핑',preferred:['biz','marketing','mall','business']},
+      {id:'content',icon:'글',label:isKo?'글 · 콘텐츠':'Writing & Content',description:isKo?'글쓰기·출판·콘텐츠 제작':'Writing, publishing, content creation',query:'글쓰기 출판 책 콘텐츠 창작 소셜',preferred:['books','publishing','author','social']},
+      {id:'research',icon:'연',label:isKo?'연구 · 배움':'Research & Learning',description:isKo?'연구·근거·교육·학습':'Research, evidence, education, learning',query:'연구 근거 실험 교육 학습 지식',preferred:['lab','books','bible']},
+      {id:'work',icon:'일',label:isKo?'일 · 프로젝트':'Work & Projects',description:isKo?'업무·프로젝트·운영':'Work, projects, operations',query:'일 업무 프로젝트 운영 생활',preferred:['work','life','biz']},
+      {id:'my',icon:'나',label:isKo?'내 활동':'My EKODI',description:isKo?'내 서비스와 활동 관리':'My services and activity',href:'/my'},
+    ];
     const section=document.createElement('section');
     section.id='start';
     section.className='dynamic-start-panel section-anchor';
-    section.setAttribute('aria-label', locale==='ko-KR'?'빠른 시작':'Quick start');
+    section.setAttribute('aria-label',isKo?'목적별 빠른 시작':'Purpose-based quick start');
+
     const title=document.createElement('h2');
     title.className='dynamic-start-title';
-    title.textContent=locale==='ko-KR'?'무엇을 할까요?':c.title;
+    title.textContent=isKo?'무엇을 하시나요?':'What would you like to do?';
     section.append(title);
+
+    const help=document.createElement('p');
+    help.className='dynamic-start-help';
+    help.textContent=isKo?'목적을 고르거나 아래에 직접 입력하면 필요한 서비스만 보여드립니다.':'Choose a goal or type what you need. Only relevant services will be shown.';
+    section.append(help);
+
     const launcher=document.createElement('div');
     launcher.className='dynamic-service-launchers';
-    const byId=new Map(cards.filter(card=>!card.hasAttribute('hidden')).map(card=>[card.dataset.serviceId,card]));
-    const orderedIds=[...readRecentServiceIds(),'church','biz','books','work','lab'];
-    const selected=[];
-    for(const id of orderedIds){const card=byId.get(id);if(card&&!selected.includes(card))selected.push(card);if(selected.length>=4)break;}
-    for(const card of cards){if(selected.length>=4)break;if(!card.hasAttribute('hidden')&&!selected.includes(card))selected.push(card);}
-    selected.forEach((card,index)=>{
-      const item=serviceData(card);
-      const link=document.createElement('a');
-      link.className='dynamic-service-card';
-      link.href=item.url;
-      link.dataset.quickService=item.id;
-      link.setAttribute('aria-label',item.name);
-      const icon=document.createElement('span');
-      icon.className='dynamic-service-icon';
-      icon.setAttribute('aria-hidden','true');
-      icon.textContent=['교','비','책','일'][index]||'•';
-      const strong=document.createElement('strong');
-      strong.textContent=item.name;
-      link.append(icon,strong);
-      link.addEventListener('click',()=>rememberService(item.id));
-      launcher.append(link);
-    });
+    const results=document.createElement('div');
+    results.className='dynamic-start-results';
+    results.hidden=true;
+
+    const selectChoice=(button,choice)=>{
+      launcher.querySelectorAll('.dynamic-intent-card').forEach(node=>node.classList.remove('is-selected'));
+      button.classList.add('is-selected');
+      results.hidden=false;
+      renderRecommendations(results,cards,choice.query,choice.preferred,isKo?'추천 서비스':'Recommended services',locale,4);
+    };
+
+    for(const choice of choices){
+      if(choice.href){
+        const link=document.createElement('a');
+        link.className='dynamic-service-card dynamic-intent-card';
+        link.href=choice.href;
+        const icon=document.createElement('span'); icon.className='dynamic-service-icon'; icon.textContent=choice.icon;
+        const strong=document.createElement('strong'); strong.textContent=choice.label;
+        const small=document.createElement('small'); small.textContent=choice.description;
+        link.append(icon,strong,small);
+        launcher.append(link);
+        continue;
+      }
+      const button=document.createElement('button');
+      button.type='button';
+      button.className='dynamic-service-card dynamic-intent-card';
+      button.dataset.intentChoice=choice.id;
+      const icon=document.createElement('span'); icon.className='dynamic-service-icon'; icon.textContent=choice.icon;
+      const strong=document.createElement('strong'); strong.textContent=choice.label;
+      const small=document.createElement('small'); small.textContent=choice.description;
+      button.append(icon,strong,small);
+      button.addEventListener('click',()=>selectChoice(button,choice));
+      launcher.append(button);
+    }
     section.append(launcher);
+
+    const form=document.createElement('form');
+    form.className='dynamic-start-search';
+    form.setAttribute('role','search');
+    const input=document.createElement('input');
+    input.type='search';
+    input.autocomplete='off';
+    input.placeholder=isKo?'예: 매장 홍보하기, 교회 모임 준비하기':'e.g. Promote my store, prepare a church meeting';
+    input.setAttribute('aria-label',isKo?'하고 싶은 일 입력':'Describe what you want to do');
+    const submit=document.createElement('button');
+    submit.type='submit';
+    submit.textContent=isKo?'찾기':'Find';
+    form.append(input,submit);
+    form.addEventListener('submit',event=>{
+      event.preventDefault();
+      const query=input.value.trim();
+      if(!query)return;
+      launcher.querySelectorAll('.dynamic-intent-card').forEach(node=>node.classList.remove('is-selected'));
+      results.hidden=false;
+      renderRecommendations(results,cards,query,[],isKo?'맞춤 추천':'Personalized recommendations',locale,5);
+    });
+    section.append(form,results);
+
     const more=document.createElement('a');
     more.className='dynamic-more-link';
     more.href='#services';
-    more.textContent=locale==='ko-KR'?'전체 서비스 →':c.more+' →';
+    more.textContent=isKo?'전체 서비스 보기 →':'View all services →';
     section.append(more);
     hero.after(section);
   }
-
   function staticPresentation(card) {
     return {
       visibility: card.dataset.homepageDefault || (card.hasAttribute('hidden') ? 'hidden' : 'normal'),
       order: Math.max(0, Math.min(9999, Math.trunc(Number(card.dataset.homepageOrder) || 9999))),
     };
+  }
+
+  function syncVisibleStatusCounts() {
+    const counts = { live:0, beta:0 };
+    for (const card of document.querySelectorAll('.service-card[data-service-status][data-service-id]')) {
+      if (card.hasAttribute('hidden')) continue;
+      const status = card.dataset.serviceStatus;
+      if (Object.hasOwn(counts, status)) counts[status] += 1;
+    }
+    for (const node of document.querySelectorAll('.status-satellite[data-status]')) {
+      const status = node.dataset.status;
+      const count = counts[status] || 0;
+      const value = node.querySelector('[data-status-count]');
+      if (value) value.textContent = String(count);
+      node.hidden = count === 0;
+    }
   }
 
   function updateServiceGroups() {
@@ -407,6 +472,7 @@
       group.toggleAttribute('hidden', visible.length === 0);
       group.querySelectorAll('[data-service-count]').forEach(node => { node.textContent = String(visible.length); });
     });
+    syncVisibleStatusCounts();
   }
 
   async function applyHomepagePresentation(cards) {
