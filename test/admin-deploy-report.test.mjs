@@ -33,7 +33,8 @@ test('Admin production verification follows the content fingerprint and lazy AI 
   assert.match(workflow, /admin-authenticated-shell\\\.js\\\?v=\[a-f0-9\]\{16\}/);
   assert.match(workflow, /EXPECTED_VERSION/);
   assert.match(workflow, /LIVE_VERSION/);
-  assert.match(workflow, /cache-control: no-store/);\n  assert.doesNotMatch(workflow, /max-age=31536000, immutable/);
+  assert.match(workflow, /cache-control: no-store/);
+  assert.doesNotMatch(workflow, /max-age=31536000, immutable/);
   assert.match(workflow, /x-content-type-options: nosniff/);
   assert.match(workflow, /asset cache contract mismatch/);
   assert.match(workflow, /asset marker missing/);
