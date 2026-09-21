@@ -6,7 +6,7 @@
     "allowFirstDeploy": true,
     "requests": [
       {
-        "url": "https://personal-finance-api.ekodi.kr/health",
+        "url": "https://ekodi.kr/api/finance/personal/health",
         "statuses": [
           200
         ],
@@ -23,25 +23,25 @@
         ]
       },
       {
-        "url": "https://personal-finance-api.ekodi.kr/api/finance/personal/summary",
+        "url": "https://ekodi.kr/api/finance/personal/summary",
         "statuses": [
           401
         ]
       },
       {
-        "url": "https://personal-finance-api.ekodi.kr/api/finance/personal/controls",
+        "url": "https://ekodi.kr/api/finance/personal/controls",
         "statuses": [
           401
         ]
       },
       {
-        "url": "https://personal-finance-api.ekodi.kr/api/finance/personal/insights",
+        "url": "https://ekodi.kr/api/finance/personal/insights",
         "statuses": [
           401
         ]
       },
       {
-        "url": "https://personal-finance-api.ekodi.kr/api/admin/personal-finance/control",
+        "url": "https://ekodi.kr/api/control/personal-finance",
         "statuses": [
           401
         ]
