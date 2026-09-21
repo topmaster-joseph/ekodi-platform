@@ -87,6 +87,7 @@ test('Shared Site release verifies the canonical Live service owner contract', (
   assert.ok(live.headerExpect.includes('x-ekodi-route: live-service-hub'));
   assert.ok(live.headerExpect.includes('x-content-type-options: nosniff'));
   assert.equal(live.expect.includes('LIVE LOBBY'), false);
+  assert.equal(live.rollbackVerify, true);
   assert.equal(live.expect.includes('EKODI Hub'), false);
   assert.equal(live.expect.includes('EKODI 서비스 허브'), false);
 });
