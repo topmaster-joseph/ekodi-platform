@@ -581,7 +581,9 @@
           "cache-control: no-store",
           "x-ekodi-route: mall-nested-canonical-redirect"
         ],
-        "rollbackVerify": false
+        "rollbackVerify": false,
+        "candidateVerify": false,
+        "candidateVerifyReason": "legacy nested Mall admin redirect depends on the promoted run_worker_first routing table; verify the canonical 308 immediately after promotion"
       },
       {
         "url": "https://ekodi.kr/ekodimall/admin/",
@@ -614,7 +616,9 @@
           "cache-control: no-store",
           "x-ekodi-route: mall-nested-canonical-redirect"
         ],
-        "rollbackVerify": false
+        "rollbackVerify": false,
+        "candidateVerify": false,
+        "candidateVerifyReason": "legacy nested Mall admin redirect depends on the promoted run_worker_first routing table; verify the canonical 308 immediately after promotion"
       },
       {
         "url": "https://ekodi.kr/ekodimall/admin/channel-settings",
