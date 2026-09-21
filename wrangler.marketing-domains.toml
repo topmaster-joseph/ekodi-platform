@@ -4,9 +4,6 @@ compatibility_date = "2026-08-12"
 workers_dev = true
 preview_urls = false
 
-[[routes]]
-pattern = "marketing-api.ekodi.kr"
-custom_domain = true
 
 [triggers]
 crons = ["*/10 * * * *"]
