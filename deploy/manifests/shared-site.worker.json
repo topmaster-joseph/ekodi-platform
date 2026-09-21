@@ -425,6 +425,25 @@
         ]
       },
       {
+        "url": "https://ekodi.kr/ekodichurch/my",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "에코디교회 마이페이지",
+          "data-ekodi-surface=\"church-member-home\"",
+          "My EKODI",
+          "교회 관리자"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: church-member-home",
+          "x-ekodi-authority-scope: user",
+          "cache-control: no-store"
+        ],
+        "rollbackVerify": false
+      },
+      {
         "url": "https://ekodi.kr/ekodichurch/admin",
         "statuses": [
           200

@@ -17,6 +17,7 @@ import { isOrganizationAdminPath, organizationAdminPage, organizationAdminCss, o
 import { legacyAdminAliasTarget } from './admin-address-policy.js';
 import { isStoreAdminPathShape, resolveStoreAdminRoute, storeAdminPage, storeAdminCss, storeAdminScript } from './store-admin-engine.js';
 import { churchPastorAdminPage, churchPastorAdminScript, isChurchPastorAdminPath } from './church-pastor-admin-page.js';
+import { churchMemberHomePage, churchMemberHomeCss, isChurchMemberHomePath } from './church-member-home-page.js';
 import { isEkodiBizInvestAdminPath } from './ekodibiz-invest-admin-page.js';
 import { workspaceTradeAdminScript } from './workspace-trade-admin-page.js';
 import { isTradePartnerPath, tradePartnerPage, tradePartnerCss, tradePartnerScript } from './workspace-trade-portal.js';
@@ -284,6 +285,8 @@ export default {
         if(url.pathname==='/workspace-admin.js')return workspaceAdminScript();
         if(url.pathname==='/workspace-trade-admin.js')return workspaceTradeAdminScript();
         if(url.pathname==='/church-pastor-admin.js')return churchPastorAdminScript();
+        if(url.pathname==='/church-member-home.css')return churchMemberHomeCss();
+        if(isChurchMemberHomePath(url.pathname))return churchMemberHomePage(request);
         if(url.pathname==='/workspace-trade-portal.css')return tradePartnerCss();
         if(url.pathname==='/workspace-trade-portal.js')return tradePartnerScript();
         if(isTradePartnerPath(url.pathname))return injectEkodiTenantReadability(tradePartnerPage());
