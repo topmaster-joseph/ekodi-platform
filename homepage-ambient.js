@@ -360,7 +360,7 @@
       {id:'content',icon:'글',label:isKo?'글 · 콘텐츠':'Writing & Content',description:isKo?'글쓰기·출판·콘텐츠 제작':'Writing, publishing, content creation',query:'글쓰기 출판 책 콘텐츠 창작 소셜',preferred:['books','publishing','author','social']},
       {id:'research',icon:'연',label:isKo?'연구 · 배움':'Research & Learning',description:isKo?'연구·근거·교육·학습':'Research, evidence, education, learning',query:'연구 근거 실험 교육 학습 지식',preferred:['lab','books','bible']},
       {id:'work',icon:'일',label:isKo?'일 · 프로젝트':'Work & Projects',description:isKo?'업무·프로젝트·운영':'Work, projects, operations',query:'일 업무 프로젝트 운영 생활',preferred:['work','life','biz']},
-      {id:'my',icon:'나',label:isKo?'내 활동':'My EKODI',description:isKo?'내 서비스와 활동 관리':'My services and activity',href:'/my'},
+      {id:'my',icon:'나',label:isKo?'내 활동':'My EKODI',description:isKo?'내 서비스와 활동 관리':'My services and activity',href:'/my/'},
     ];
     const section=document.createElement('section');
     section.id='start';
