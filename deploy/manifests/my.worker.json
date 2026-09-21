@@ -8,17 +8,6 @@
     ],
     "requests": [
       {
-        "url": "https://ekodi-my.topmaster-joseph.workers.dev/",
-        "statuses": [
-          200
-        ],
-        "redirect": "manual",
-        "expect": [
-          "My EKODI",
-          "MY PLATFORMS"
-        ]
-      },
-      {
         "url": "https://ekodi.kr/my/",
         "statuses": [
           200
