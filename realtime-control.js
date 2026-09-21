@@ -654,7 +654,10 @@ async function managementCameraPairRoute(request,env,url,input){
     if(!await managementCameraDeviceAllowed(request,pair))return json(request,env,{ok:false,error:'management_camera_device_forbidden'},403);
     if(!['approved','connected'].includes(pair.status))return json(request,env,{ok:false,error:'management_camera_approval_required'},409);
     const room=await roomById(env,pair.room_id);if(!room||!['created','starting','live'].includes(room.status))return json(request,env,{ok:false,error:'room_not_joinable'},409);
-    const media=await newProviderMediaSession(env,room,'camera:'+pair.id,'presenter'),stamp=new Date().toISOString();
+    const actorKey='camera:'+pair.id,stamp=new Date().toISOString();
+    await env.DB.prepare("UPDATE realtime_media_tracks SET status='closed',updated_at=? WHERE room_id=? AND publisher_session_id IN (SELECT provider_session_id FROM realtime_media_sessions WHERE room_id=? AND actor_key=? AND status='active')").bind(stamp,room.id,room.id,actorKey).run().catch(()=>{});
+    await env.DB.prepare("UPDATE realtime_media_sessions SET status='closed',updated_at=? WHERE room_id=? AND actor_key=? AND status='active'").bind(stamp,room.id,actorKey).run().catch(()=>{});
+    const media=await newProviderMediaSession(env,room,actorKey,'presenter');
     await env.DB.prepare("UPDATE realtime_management_camera_pairs SET status='connected',connected_at=COALESCE(connected_at,?) WHERE id=?").bind(stamp,pair.id).run();
     return json(request,env,{...media,pair:safeManagementCameraPair(await env.DB.prepare('SELECT * FROM realtime_management_camera_pairs WHERE id=?').bind(pair.id).first())},201);
   }
