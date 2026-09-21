@@ -32,12 +32,7 @@
       "canonicalUrl": "https://ekodi.kr/jadam",
       "migrationState": "promoted",
       "runtime": "store_user_sites",
-      "action": "retain_and_link",
-      "legacyAliases": [
-        "https://jadam.ekodi.kr",
-        "https://marketing.jadam.ekodi.kr",
-        "https://jadam.ai.ekodi.kr"
-      ]
+      "action": "retain_and_link"
     },
     {
       "id": "pizzamaru",
@@ -47,12 +42,7 @@
       "canonicalUrl": "https://ekodi.kr/pizzamaru",
       "migrationState": "promoted",
       "runtime": "store_user_sites",
-      "action": "retain_and_link",
-      "legacyAliases": [
-        "https://pizzamaru.ekodi.kr",
-        "https://marketing.pizzamaru.ekodi.kr",
-        "https://pizzamaru.ai.ekodi.kr"
-      ]
+      "action": "retain_and_link"
     },
     {
       "id": "yogurt",
@@ -64,10 +54,7 @@
       "runtime": "store_user_sites",
       "action": "retain_and_link",
       "legacyAliases": [
-        "https://ekodi.kr/yogurtpurple",
-        "https://yogurt.ekodi.kr",
-        "https://marketing.yogurt.ekodi.kr",
-        "https://yogurt.ai.ekodi.kr"
+        "https://ekodi.kr/yogurtpurple"
       ]
     },
     {
@@ -94,12 +81,7 @@
       ],
       "migrationState": "retain_existing",
       "runtime": "site_access_registry+public_site_controls",
-      "action": "retain_and_link_custom_domain",
-      "legacyAliases": [
-        "https://cgma.ekodi.kr",
-        "https://marketing.cheonggye.ekodi.kr",
-        "https://cgma.ai.ekodi.kr"
-      ]
+      "action": "retain_and_link_custom_domain"
     },
     {
       "id": "ekodi-church",
