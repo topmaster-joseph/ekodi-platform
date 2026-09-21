@@ -47,7 +47,7 @@ async function seed(env, ids) {
       (id,seller_id,store_id,share_code,public_url,seller_display_name,seller_type,sale_type,category,name,price,contact,status,checkout_ready,created_at,updated_at,published_at)
       VALUES (?,?,?,?,?,?,'business','direct','general',?,12340,?,'published',1,?,?,?)`)
       .bind(ids.productId, ids.sellerId, ids.storeId, ids.shareCode,
-        `https://ekodi.kr/ekodibiz/ekodimall/p/${ids.shareCode}`, 'EKODI Rehearsal Seller', 'EKODI Transaction Rehearsal',
+        `https://ekodi.kr/ekodimall/p/${ids.shareCode}`, 'EKODI Rehearsal Seller', 'EKODI Transaction Rehearsal',
         'rehearsal@invalid.ekodi', now, now, now),
   ]);
 }
