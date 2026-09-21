@@ -36,6 +36,7 @@ import { handleLocalCommerceControl } from './local-commerce-control.js';
 import { handleExternalAccountControl } from './external-account-control.js';
 import { handleRealtimeControl, runRealtimeRecordingRetention } from './realtime-control.js';
 import { applyApiSecurityHeaders, enforceEdgeSecurity } from './security-edge.js';
+import { runSeonamMediDailyCheck } from './seonam-medi-monitor.js';
 
 function errorResponse(message, code) {
   return applyApiSecurityHeaders(new Response(JSON.stringify({ error:message, code }), {
@@ -367,6 +368,10 @@ export default {
       : null;
     // A real Coupang report pass owns the whole Mission Control invocation budget.
     if (customerSchedule?.reporting?.ran) return customerSchedule;
+    const scheduledAt = new Date(Number(controller?.scheduledTime || Date.now()));
+    const seonamMediDaily = scheduledAt.getUTCHours() === 23
+      ? runSeonamMediDailyCheck(env,{scheduledAt:scheduledAt.toISOString()}).catch(error => { console.error('Seonam Medi daily monitor error', error); return { ok:false, error:'seonam_medi_daily_monitor_failed' }; })
+      : null;
     const authorBilling = runAuthorBillingSchedule(env).catch(error => { console.error('Author billing schedule error', error); return { processed:0, error:'author_billing_schedule_failed' }; });
     const messengerOutbox = drainMessengerOutbox(env, { limit:20 }).catch(error => { console.error('Messenger outbox schedule error', error); return { processed:0, failed:1, error:'messenger_outbox_schedule_failed' }; });
     const commandPulse = runEkodiPulseSchedule(env, { limit:1 }).catch(error => { console.error('EKODI v8 Pulse schedule error', error); return { ok:false, error:'ekodi_v8_pulse_failed' }; });
@@ -385,8 +390,11 @@ export default {
       ctx.waitUntil(hybridWatchdog);
       ctx.waitUntil(recordingRetention);
       ctx.waitUntil(wakeOrchestration);
+      if (seonamMediDaily) ctx.waitUntil(seonamMediDaily);
     }
-    return customerSchedule || Promise.all([authorBilling, messengerOutbox, commandPulse, aiProviderHealth, hybridWatchdog, recordingRetention, wakeOrchestration]);
+    const background = [authorBilling, messengerOutbox, commandPulse, aiProviderHealth, hybridWatchdog, recordingRetention, wakeOrchestration];
+    if (seonamMediDaily) background.push(seonamMediDaily);
+    return customerSchedule || Promise.all(background);
   },
 };
 
