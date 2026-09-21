@@ -781,6 +781,7 @@ export async function handleRealtimeControl(request,env){
   const recordings=await recordingRoutes(request,env,url,input);if(recordings)return recordings;
   const destinations=await destinationRoute(request,env,url);if(destinations)return destinations;
   const collaboration=await collaborationRoute(request,env,url,input);if(collaboration)return collaboration;
+  const managementCamera=await managementCameraPairRoute(request,env,url,input);if(managementCamera)return managementCamera;
   const mutation=await roomMutation(request,env,url,input);if(mutation)return mutation;
   const planned=await planRoute(request,env,url,input);if(planned)return planned;
   const session=await sessionRoute(request,env,url,input);if(session)return session;
@@ -834,5 +835,7 @@ export const REALTIME_CONTROL_CONTRACT=Object.freeze({
   externalDistributionFailIsolated:true,
   liveChat:true,
   participantCameraRequests:true,
+  managementCameraQrPairing:true,
+  interpretationLanguageSelection:true,
   draggableProgramSources:true,
 });
