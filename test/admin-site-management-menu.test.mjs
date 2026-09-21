@@ -7,12 +7,12 @@ const layout = await readFile(new URL('../admin-menu-layout.js', import.meta.url
 const campus = await readFile(new URL('../campus-actions.js', import.meta.url), 'utf8');
 const homepage = await readFile(new URL('../homepage-admin.js', import.meta.url), 'utf8');
 
-test('Campus and Sites are one canonical Admin Home & Sites entry', () => {
-  assert.match(registry, /id: 'campus'[\s\S]*ko: '관리 홈·사이트'[\s\S]*en: 'Admin Home & Sites'/);
-  assert.doesNotMatch(registry, /id: 'sites'/);
+test('Sites is the canonical area and delegates list rendering to the internal Campus registry', () => {
+  assert.match(registry, /id: 'sites-all'[^\n]*group: 'sites'[^\n]*delegateSection: 'campus'/);
+  assert.match(registry, /id: 'campus'[^\n]*group: 'sites'[^\n]*internal: true/);
   assert.match(layout, /#sites:sites/);
-  assert.ok(layout.includes("if(section==='sites')return openSites();"));
-  assert.match(layout, /navItemFor\('campus'\)\?\.classList\.add\('active'\)/);
+  assert.match(layout, /getAdminMenuItem\(section\)\?\.delegateSection/);
+  assert.match(layout, /requestDelegated\(section,delegated\)/);
 });
 
 test('Site Structure renders one shared list for operations and homepage presentation', () => {
