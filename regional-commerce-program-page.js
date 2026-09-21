@@ -17,7 +17,7 @@ function style(){
 }
 
 function doc(region,program,title,body,surface){
-  const admin=surface==='admin';const authAttrs=admin?' data-region-auth-pending="1"':'';const scripts=admin?'<script src="/local-region-admin-auth.js" defer></script>':'';
+  const admin=surface==='admin';const authAttrs=admin?' data-region-auth-pending="1"':'';const scripts=admin?'<script src="/cheonggye/local-region-admin-auth.js" defer></script>':'';
   return `<!doctype html><html lang="ko" data-ekodi-site-subject="${esc(region.siteSubject)}" data-ekodi-local-region="${esc(region.id)}" data-ekodi-commerce-program="${esc(program.id)}" data-ekodi-region-surface="${surface}"${authAttrs}><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)}</title>${style()}<style>[data-region-auth-pending="1"] main{visibility:hidden}.auth-meta{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.auth-chip{padding:6px 9px;border-radius:999px;background:#eef3f6;font-size:12px}.auth-chip span{font-weight:800}</style></head><body>${body}${scripts}</body></html>`;
 }
 
