@@ -58,7 +58,7 @@ test('existing first stores are compatibility profiles on one Store Admin Engine
 
 test('one Store Admin page projects sections from tenant role capabilities',()=>{
   const all=storeAdminSectionsForRole('store_owner');
-  assert.equal(all.length,15);assert.ok(all.includes('site'));assert.ok(all.includes('chrome'));assert.ok(all.includes('delivery'));assert.ok(all.includes('publishing'));assert.ok(all.includes('finance'));
+  assert.equal(all.length,16);assert.ok(all.includes('site'));assert.ok(all.includes('members'));assert.ok(all.includes('chrome'));assert.ok(all.includes('delivery'));assert.ok(all.includes('publishing'));assert.ok(all.includes('finance'));
   assert.deepEqual(storeAdminSectionsForRole('marketing_manager'),['overview','customers','reviews','sales','marketing','publishing']);
   assert.deepEqual(storeAdminSectionsForRole('accounting_manager'),['overview','sales','finance']);
   assert.equal(storeAdminCanAccess('hq_manager','connections'),true);assert.equal(storeAdminCanAccess('hq_manager','site'),false);
