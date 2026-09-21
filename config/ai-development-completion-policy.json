@@ -25,6 +25,7 @@
     "validation_result",
     "deployment_result",
     "production_hostname",
+    "verification_mode",
     "production_functional_checks",
     "observability_check",
     "verification_timestamp"
@@ -52,7 +53,16 @@
     "resumeFromCheckpointBeforeRestartingWork": true,
     "interruptionMustPreserveEvidenceAndNextStep": true,
     "rateLimitOrConnectorFailureIsRecoverableByDefault": true,
-    "recoverableInterruptionMustNotBeReportedAsBlockedIfAlternatePathExists": true
+    "recoverableInterruptionMustNotBeReportedAsBlockedIfAlternatePathExists": true,
+    "preflightMustPassBeforeImplementationMutation": true,
+    "branchNamingMustBeValidatedBeforeBranchCreation": true,
+    "verificationPlanMustExistBeforeImplementation": true,
+    "equivalentSyntheticVerificationAllowedWhenRealInteractionUnavailable": false,
+    "syntheticVerificationMustExerciseMateriallyEquivalentFlow": true,
+    "syntheticVerificationMustRecordObjectiveEvidence": true,
+    "noKnownMaterialGapForSyntheticCompletion": true,
+    "intermediateProgressSuppressedUnlessHumanActionSafetyOrUnresolvedException": true,
+    "syntheticVerificationIsPreCompletionEvidenceOnly": true
   },
   "exceptionPolicy": {
     "allowed": true,
@@ -99,7 +109,13 @@
       "completion-criteria",
       "next-executable-step"
     ],
-    "interruptionLabel": "recoverable-interruption-resume-required"
+    "interruptionLabel": "recoverable-interruption-resume-required",
+    "verificationModes": [
+      "real-production",
+      "automated-canary",
+      "synthetic-equivalent-precompletion",
+      "deterministic-contract-precompletion"
+    ]
   },
   "requiredCheckpointForRecoverableInterruption": [
     "task_id",
