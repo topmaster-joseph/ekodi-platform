@@ -18,4 +18,10 @@ test('Invest panel still renders its safety and specialized-site controls', () =
   assert.match(investAdmin, /SPECIALIZED SITES/);
   assert.match(investAdmin, /IMMUTABLE SAFETY/);
   assert.match(investAdmin, /실거래 기본 잠금/);
+  assert.match(investAdmin, /INVESTMENT LIFECYCLE/);
+  assert.match(investAdmin, /\/invest\/opportunities/);
+  assert.match(investAdmin, /\/invest\/diligence/);
+  assert.match(investAdmin, /\/invest\/matching/);
+  assert.match(investAdmin, /\/invest\/aftercare/);
+  assert.match(investAdmin, /사람 최종결정/);
 });
