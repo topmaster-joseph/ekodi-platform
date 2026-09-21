@@ -148,10 +148,11 @@ test('visible task navigation lazy-loads demand features before shared panel act
   const activateStart = sidebar.indexOf('function activateSection');
   const activateEnd = sidebar.indexOf('export function createAdminSidebarItem', activateStart);
   const source = sidebar.slice(activateStart, activateEnd);
-  assert.match(source, /item\.dataset\.demandFeature === section/);
+  assert.match(source, /const demandTarget = \[\.\.\.navItems\(nav\)\]\.find\(item => item\.dataset\.demandFeature === section\)/);
   assert.match(source, /window\.EKODIAdminDemand\?\.activate/);
   assert.match(source, /Promise\.resolve\(window\.EKODIAdminDemand\.activate\(section\)\)/);
   assert.match(source, /window\.EKODIAdminPanels\?\.activate/);
-  assert.ok(source.indexOf('window.EKODIAdminDemand.activate(section)') < source.indexOf('window.EKODIAdminPanels?.activate'), 'demand feature must load before the shared panel controller activates it');
+  assert.ok(source.indexOf('window.EKODIAdminDemand.activate(section)') < source.lastIndexOf('window.EKODIAdminPanels?.activate'), 'non-delegated demand feature must load before the shared panel controller activates it');
   assert.match(source, /visible navigation demand activation failed/);
+  assert.match(source, /definition\?\.delegateSection[\s\S]*window\.EKODIAdminPanels\?\.activate\?\.\(section\)/);
 });
