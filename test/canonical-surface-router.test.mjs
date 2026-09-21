@@ -108,6 +108,18 @@ test('Capability APIs are selected before the generic Control API',async()=>{
   assert.equal(control.calls.length,0);
 });
 
+test('Finance webhook uses the apex webhook namespace and internal Finance binding',async()=>{
+  const finance=binding('accepted');
+  const control=binding('control');
+  const response=await routeCanonicalSurface(new Request('https://ekodi.kr/webhooks/finance/toss',{method:'POST',body:'{}'}),{FINANCE:finance,CONTROL_API:control});
+  assert.equal(response.status,200);
+  assert.equal(finance.calls.length,1);
+  assert.equal(finance.calls[0].pathname,'/webhooks/toss');
+  assert.equal(control.calls.length,0);
+  assert.equal(response.headers.get('x-ekodi-canonical-surface'),'finance-webhook');
+  assert.equal(response.headers.get('x-ekodi-canonical-path'),'/webhooks/finance');
+});
+
 test('OAuth callback apex paths reach Storage and Marketing service bindings',async()=>{
   const storage=binding('storage-callback');
   const marketing=binding('marketing-callback');
