@@ -11,9 +11,10 @@ const env={ASSETS:{fetch:async request=>{
 }}};
 const eventPath='/ekodimission/activities/260926-chuseok-open-table';
 const applicationApi='/ekodimission/api/activities/260926-chuseok-open-table/applications';
+const standaloneApplyPath='/ekodimission/apply/260926-open-table';
 const pageCases=[
   ['/ekodimission','에코디선교회'],['/ekodimission/activities','MISSION ACTIVITIES'],
-  [eventPath,'JOIN THE TABLE'],['/ekodimission/participate','PARTICIPATE'],
+  [eventPath,'JOIN THE TABLE'],[standaloneApplyPath,'Chuseok Open Table & Sharing Market'],['/ekodimission/participate','PARTICIPATE'],
   ['/ekodimission/partners','PARTNERSHIP'],['/ekodimission/stories','STORIES & NEWS'],['/ekodimission/give','GIVE & SHARE'],
 ];
 test('EKODI Mission pages are routed as branded published public surfaces',async()=>{
@@ -49,6 +50,13 @@ test('legacy Open Table URLs permanently redirect to the corrected dated activit
   }
 });
 
+test('standalone Open Table application link is bilingual, compact, and writes to the existing event application API',async()=>{
+  const response=await spaceWorker.fetch(new Request(`https://ekodi.kr${standaloneApplyPath}`),env);
+  assert.equal(response.status,200);assert.equal(response.headers.get('x-ekodi-route'),'ekodimission-public');
+  const body=await response.text();
+  assert.match(body,/한가위 열린식탁 & 나눔마켓/);assert.match(body,/Chuseok Open Table & Sharing Market/);assert.match(body,/16:00–18:00/);assert.match(body,/자담치킨 \| Jadam Chicken/);assert.match(body,/무료 \| Free/);assert.match(body,/신청하기 \| Register/);assert.match(body,/data-event-application/);assert.match(body,/260926-chuseok-open-table/);assert.doesNotMatch(body,/activities\/2026-chuseok-open-table#apply/);
+});
+
 test('EKODI Mission shared assets and unknown child routes are guarded',async()=>{
   for(const path of ['/ekodimission/assets/site.css','/ekodimission/assets/site.js','/ekodimission/assets/shell.css','/ekodimission/assets/shell.js','/ekodimission/assets/mission-table-hero.svg','/ekodimission/assets/open-table-hero-260926.svg','/ekodimission/assets/open-table-meal-260925.jpg']){const response=await spaceWorker.fetch(new Request(`https://ekodi.kr${path}`),env);assert.equal(response.status,200,path);assert.equal(response.headers.get('x-ekodi-route'),'ekodimission-asset',path);assert.equal(response.headers.get('x-ekodi-publication-status'),'published',path)}
   const missing=await spaceWorker.fetch(new Request('https://ekodi.kr/ekodimission/not-published'),env);assert.equal(missing.status,404);assert.equal(missing.headers.get('x-ekodi-route'),'ekodimission-not-found');
@@ -77,7 +85,7 @@ test('first-party application API uses the canonical Sep 26 event key end-to-end
 // Regression guard: all public Mission surfaces, including Live, consume one shell contract.
 test('every EKODI Mission page consumes one shared shell with published-only languages',async()=>{
   const pageFiles=[
-    'ekodimission.page','ekodimission-activities.page','ekodimission-activity.page','ekodimission-contact.page',
+    'ekodimission.page','ekodimission-activities.page','ekodimission-activity.page','ekodimission-open-table-apply.page','ekodimission-contact.page',
     'ekodimission-give.page','ekodimission-participate.page','ekodimission-partners.page','ekodimission-prayer.page',
     'ekodimission-stories.page','ekodimission-transparency.page','ekodimission-vision.page'
   ];
