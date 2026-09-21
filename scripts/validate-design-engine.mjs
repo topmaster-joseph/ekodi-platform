@@ -27,6 +27,19 @@ const actualAxes = ADMIN_MENU_GROUPS.map(group => group.id);
 const actualLabels = ADMIN_MENU_GROUPS.map(group => group.labels?.ko);
 
 if (policy?.name !== 'EKODI Design Engine') errors.push('design-engine policy must use the canonical EKODI Design Engine name.');
+const constructionStandard = policy?.constructionStandard ?? {};
+const requiredConstructionDimensions = ['ease','locality','readability','originality','intuitiveness'];
+const requiredConstructionModes = ['communication-first','personalization'];
+if (constructionStandard.scope !== 'all-ekodi-sites-subservices-and-admin-surfaces') errors.push('universal construction standard must cover all EKODI sites, subservices and admin surfaces.');
+if (constructionStandard.inheritance !== 'mandatory-default') errors.push('universal construction standard must be inherited by default.');
+for (const dimension of requiredConstructionDimensions) {
+  if (!constructionStandard.dimensions?.includes(dimension)) errors.push(`universal construction standard is missing dimension "${dimension}".`);
+}
+for (const mode of requiredConstructionModes) {
+  if (!constructionStandard.modes?.includes(mode)) errors.push(`universal construction standard is missing mode "${mode}".`);
+}
+if (!String(constructionStandard.completionGate || '').includes('not complete')) errors.push('universal construction standard must define a completion gate.');
+
 if (JSON.stringify(policy?.admin?.primaryAxes) !== JSON.stringify(expectedAxes)) errors.push('design-engine policy must define exactly seven admin areas.');
 if (JSON.stringify(actualAxes) !== JSON.stringify(expectedAxes)) errors.push(`admin registry axes drifted: ${actualAxes.join(', ')}`);
 if (JSON.stringify(actualLabels) !== JSON.stringify(expectedLabels)) errors.push(`admin registry Korean labels drifted: ${actualLabels.join(', ')}`);
@@ -87,18 +100,27 @@ if (!Array.isArray(userDna?.shared?.mustVary) || userDna.shared.mustVary.length 
 if (!theme?.services || Object.keys(theme.services).length < 10) errors.push('shell theme must keep service-specific identities instead of one universal skin.');
 
 const universalSitePrinciples = policy?.user?.universalSitePrinciples ?? {};
-const requiredExperienceDimensions = ['ease','locality','readability','originality','intuitiveness'];
+const requiredExperienceDimensions = requiredConstructionDimensions;
 for (const dimension of requiredExperienceDimensions) {
   const entry = universalSitePrinciples?.dimensions?.[dimension];
   if (!entry?.ko || !Array.isArray(entry?.rules) || entry.rules.length < 3) errors.push(`universal site experience principle "${dimension}" must have a Korean label and at least three enforceable rules.`);
 }
 if (universalSitePrinciples?.scope !== 'all-user-facing-sites-and-subservices') errors.push('universal site experience principles must apply to all user-facing sites and subservices.');
+if (universalSitePrinciples?.inheritsConstructionStandard !== true) errors.push('user-facing sites must inherit the universal construction standard.');
 if (universalSitePrinciples?.communicationFirst?.required !== true) errors.push('all user-facing sites must inherit communication-first UX.');
 if (universalSitePrinciples?.communicationFirst?.assistant?.persistentFloating !== false || universalSitePrinciples?.communicationFirst?.assistant?.contentOverlapForbidden !== true) errors.push('communication-first assistant must remain user-initiated, non-floating and non-overlapping.');
 if (universalSitePrinciples?.personalization?.mode !== 'progressive-consent-based' || universalSitePrinciples?.personalization?.anonymousBaseline !== 'fully-usable') errors.push('site personalization must be progressive, consent-based and fully usable anonymously.');
 if (universalSitePrinciples?.personalization?.sensitiveInferenceForbidden !== true || universalSitePrinciples?.personalization?.authorizationUnaffected !== true || universalSitePrinciples?.personalization?.explainableAndReversible !== true) errors.push('site personalization must not infer sensitive traits, alter authorization, or become irreversible.');
 if (userAiEntry.includes('.ekodi-user-ai-entry{position:fixed')) errors.push('shared User AI entry must not float over site content.');
 if (!userAiEntry.includes("insertBefore(root,footer)")) errors.push('shared User AI entry must be inserted into document flow before the footer when available.');
+
+const adminExperience = policy?.admin?.experienceStandard ?? {};
+if (adminExperience.inheritsConstructionStandard !== true) errors.push('admin surfaces must inherit the universal construction standard.');
+if (adminExperience.communicationFirst?.required !== true) errors.push('admin surfaces must inherit communication-first operation.');
+if (adminExperience.personalization?.required !== true || adminExperience.personalization?.authorizationUnaffected !== true) errors.push('admin personalization must be required and must not alter authorization.');
+for (const principle of ['ease','readability','intuitiveness','communication-first','personalization','locality','originality']) {
+  if (!adminExperience.priorityOrder?.includes(principle)) errors.push(`admin experience standard is missing "${principle}".`);
+}
 
 const adminCharacter = policy?.admin?.character ?? {};
 const userCharacter = policy?.user?.character ?? {};
