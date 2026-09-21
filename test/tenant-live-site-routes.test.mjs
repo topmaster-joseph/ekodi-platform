@@ -14,7 +14,7 @@ test('shared tenant Live paths render on ekodi.kr with isolated tenant identity'
     assert.match(html,/\/tenant-live\.js/,tenant.id);
     assert.match(html,/공개 방송은 바로 시청/,tenant.id);
     assert.match(html,/id="openViewerButton"/,tenant.id);
-    assert.match(html,/시청 화면 새 탭으로 열기/,tenant.id);
+    assert.match(html,/id="openViewerButton"[^>]*>시청 화면<\/button>/,tenant.id);
     const apex=await platformRouter.fetch(new Request(`https://ekodi.kr${tenant.path}`),{});
     assert.equal(apex.status,200,`apex ${tenant.id}`);
     const apexHtml=await apex.text();
