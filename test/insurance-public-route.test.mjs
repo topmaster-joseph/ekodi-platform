@@ -44,3 +44,12 @@ test('shared-site router owns insurance before workspace routing',async()=>{
   assert.ok(stageWorkflow.includes("verify_public_path '/insurance'"));
   assert.ok(stageWorkflow.includes("test/insurance-public-route.test.mjs"));
 });
+
+test('shared-site release probes follow the canonical insurance admin handoff and preserve rollback truth',async()=>{
+  const manifest=JSON.parse(await read('deploy/manifests/shared-site.worker.json'));
+  const insurance=manifest.worker.requests.find(item=>item.url==='https://ekodi.kr/insurance/admin');
+  assert.ok(insurance?.headerExpect?.includes('location: https://ekodi.kr/admin/professional/insurance'));
+  assert.equal(insurance?.rollbackVerify,false);
+  const mall=manifest.worker.requests.find(item=>item.url==='https://ekodi.kr/ekodibiz/mall/admin/');
+  assert.equal(mall?.rollbackVerify,false);
+});
