@@ -191,7 +191,7 @@ jobs:
         run: |
           set -euo pipefail
           for attempt in $(seq 1 18); do
-            code=$(curl -sS -o /tmp/publishing-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://marketing-publish-api.ekodi.kr/health' || true)
+            code=$(curl -sS -o /tmp/publishing-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/api/marketing/publish/health' || true)
             if [[ "$code" == '200' ]] \
               && grep -Fq '"service":"ekodi-marketing-publishing"' /tmp/publishing-health.json \
               && grep -Fq '"schemaReady":true' /tmp/publishing-health.json \
