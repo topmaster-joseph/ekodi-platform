@@ -24,7 +24,7 @@ test('public homepage services keep the legacy published contract while admin ca
   assert.ok(candidates.every(service => service.productionVerified === true && service.status === 'live'));
 
   const expected = registry.services
-    .filter(service => service.productionVerified === true && service.status === 'live')
+    .filter(service => service.userVisible !== false && service.productionVerified === true && service.status === 'live')
     .map(service => service.id)
     .sort();
   assert.deepEqual(candidates.map(service => service.id).sort(), expected);
@@ -38,7 +38,7 @@ test('rendered homepage candidates keep static defaults without exposing unsafe 
     assert.match(html, new RegExp(`data-service-id="${service.id}"`));
     assert.match(html, new RegExp(`data-homepage-default="${service.homepage === true ? 'normal' : 'hidden'}"`));
   }
-  for (const service of registry.services.filter(service => service.productionVerified !== true || service.status !== 'live')) {
+  for (const service of registry.services.filter(service => service.userVisible === false || service.productionVerified !== true || service.status !== 'live')) {
     assert.doesNotMatch(html, new RegExp(`data-service-id="${service.id}"`));
   }
 });
