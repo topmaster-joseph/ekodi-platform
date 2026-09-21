@@ -495,6 +495,97 @@ async function planRoute(request,env,url,input){
 
 function safeChat(row){return row?{id:row.id,roomId:row.room_id,displayName:row.display_name||'참여자',role:row.role||'viewer',message:row.message||'',createdAt:row.created_at}:null}
 function safeParticipation(row){return row?{id:row.id,roomId:row.room_id,displayName:row.display_name||'참여자',status:row.status,requestedAt:row.requested_at,decidedAt:row.decided_at||null}:null}
+
+function cameraPairCode(){const alphabet='ABCDEFGHJKLMNPQRSTUVWXYZ23456789',bytes=new Uint8Array(8);crypto.getRandomValues(bytes);return [...bytes].map(value=>alphabet[value%alphabet.length]).join('')}
+function safeCameraPairing(row,tracks=[]){return row?{id:row.id,code:row.code,roomId:row.room_id,tenantId:row.tenant_id,status:row.status,deviceName:row.device_name||'보조카메라',mediaSessionId:row.media_session_id||null,createdAt:row.created_at,claimedAt:row.claimed_at||null,approvedAt:row.approved_at||null,expiresAt:row.expires_at,tracks}:null}
+async function cameraPairingByCode(env,code){return env.DB.prepare('SELECT * FROM realtime_camera_pairings WHERE code=? LIMIT 1').bind(clean(code,16).toUpperCase()).first()}
+async function createAuxCameraMediaSession(env,room,pairing){
+  const existing=pairing.media_session_id?await env.DB.prepare("SELECT * FROM realtime_media_sessions WHERE id=? AND room_id=? AND status='active'").bind(pairing.media_session_id,room.id).first():null;
+  if(existing)return existing;
+  const provider=await providerCall(env,'/sessions/new',{method:'POST'}),id=uid('ms'),stamp=new Date().toISOString(),actorKey='aux-camera:'+pairing.id;
+  await env.DB.prepare("INSERT INTO realtime_media_sessions (id,room_id,tenant_id,actor_key,role,provider,provider_session_id,access_hash,status,created_at,updated_at) VALUES (?,?,?,?,?,'cloudflare-realtime',?,?,'active',?,?)")
+    .bind(id,room.id,room.tenant_id,actorKey,'presenter',provider.sessionId,pairing.claim_hash,stamp,stamp).run();
+  await env.DB.prepare('UPDATE realtime_camera_pairings SET media_session_id=?,updated_at=? WHERE id=?').bind(id,stamp,pairing.id).run();
+  return env.DB.prepare('SELECT * FROM realtime_media_sessions WHERE id=?').bind(id).first();
+}
+async function cameraPairingRoute(request,env,url,input){
+  const roomList=url.pathname.match(/^\/api\/realtime\/rooms\/([^/]+)\/camera-pairings$/);
+  if(roomList){
+    const room=await roomById(env,decodeURIComponent(roomList[1]));if(!room)return json(request,env,{ok:false,error:'room_not_found'},404);
+    const auth=await ownerAllowed(request,env,room);if(!auth.allowed)return json(request,env,{ok:false,error:'room_owner_permission_required'},403);
+    if(request.method==='POST'){
+      if(!['created','starting','live'].includes(room.status))return json(request,env,{ok:false,error:'room_not_joinable'},409);
+      let code='';for(let attempt=0;attempt<8;attempt++){const candidate=cameraPairCode();if(!await cameraPairingByCode(env,candidate)){code=candidate;break}}if(!code)return json(request,env,{ok:false,error:'camera_pair_code_unavailable'},503);
+      const id=uid('cam'),stamp=new Date().toISOString(),expiresAt=new Date(Date.now()+15*60*1000).toISOString(),creator=auth.access.identity?canonicalAiSubject(auth.access.identity):room.owner_user_id;
+      await env.DB.prepare("INSERT INTO realtime_camera_pairings(id,code,room_id,tenant_id,status,claim_hash,device_name,media_session_id,created_by,created_at,claimed_at,approved_at,expires_at,updated_at) VALUES(?,?,?,?,'open',NULL,'',NULL,?,?,NULL,NULL,?,?)")
+        .bind(id,code,room.id,room.tenant_id,creator,stamp,expiresAt,stamp).run();
+      const pairing=await env.DB.prepare('SELECT * FROM realtime_camera_pairings WHERE id=?').bind(id).first();
+      return json(request,env,{ok:true,pairing:safeCameraPairing(pairing),pairUrl:`https://ekodi.kr/live/c/${code}`},201);
+    }
+    if(request.method==='GET'){
+      const stamp=new Date().toISOString();
+      await env.DB.prepare("UPDATE realtime_camera_pairings SET status='expired',updated_at=? WHERE room_id=? AND status IN ('open','pending') AND expires_at<=?").bind(stamp,room.id,stamp).run();
+      const rows=await env.DB.prepare(`SELECT p.*,s.provider_session_id,t.track_name,t.media_kind,t.source_type
+        FROM realtime_camera_pairings p
+        LEFT JOIN realtime_media_sessions s ON s.id=p.media_session_id AND s.status='active'
+        LEFT JOIN realtime_media_tracks t ON t.room_id=p.room_id AND t.publisher_session_id=s.provider_session_id AND t.status='active'
+        WHERE p.room_id=? ORDER BY p.created_at DESC,t.created_at`).bind(room.id).all();
+      const map=new Map();for(const row of rows.results||[]){if(!map.has(row.id))map.set(row.id,{row,tracks:[]});if(row.track_name)map.get(row.id).tracks.push({trackName:row.track_name,kind:row.media_kind,sourceType:row.source_type})}
+      return json(request,env,{ok:true,pairings:[...map.values()].map(item=>safeCameraPairing(item.row,item.tracks))});
+    }
+  }
+  const roomItem=url.pathname.match(/^\/api\/realtime\/rooms\/([^/]+)\/camera-pairings\/([^/]+)$/);
+  if(roomItem&&request.method==='PATCH'){
+    const room=await roomById(env,decodeURIComponent(roomItem[1]));if(!room)return json(request,env,{ok:false,error:'room_not_found'},404);
+    const auth=await ownerAllowed(request,env,room);if(!auth.allowed)return json(request,env,{ok:false,error:'room_owner_permission_required'},403);
+    let pairing=await env.DB.prepare('SELECT * FROM realtime_camera_pairings WHERE room_id=? AND id=?').bind(room.id,decodeURIComponent(roomItem[2])).first();if(!pairing)return json(request,env,{ok:false,error:'camera_pairing_not_found'},404);
+    const next=clean(input?.status,20);
+    if(next==='approved'){
+      if(!pairing.claim_hash||!['pending','approved'].includes(pairing.status))return json(request,env,{ok:false,error:'camera_pairing_not_claimed'},409);
+      if(Date.parse(pairing.expires_at)<=Date.now())return json(request,env,{ok:false,error:'camera_pairing_expired'},410);
+      const session=await createAuxCameraMediaSession(env,room,pairing),stamp=new Date().toISOString(),approver=auth.access.identity?canonicalAiSubject(auth.access.identity):room.owner_user_id;
+      await env.DB.prepare("UPDATE realtime_camera_pairings SET status='approved',approved_at=COALESCE(approved_at,?),updated_at=? WHERE id=?").bind(stamp,stamp,pairing.id).run();
+      pairing=await env.DB.prepare('SELECT * FROM realtime_camera_pairings WHERE id=?').bind(pairing.id).first();
+      return json(request,env,{ok:true,pairing:safeCameraPairing(pairing),sessionId:session.id,approvedBy:approver});
+    }
+    if(next==='revoked'){
+      const stamp=new Date().toISOString();
+      if(pairing.media_session_id){
+        const media=await env.DB.prepare('SELECT provider_session_id FROM realtime_media_sessions WHERE id=?').bind(pairing.media_session_id).first();
+        await env.DB.prepare("UPDATE realtime_media_sessions SET status='closed',updated_at=? WHERE id=?").bind(stamp,pairing.media_session_id).run();
+        if(media?.provider_session_id)await env.DB.prepare("UPDATE realtime_media_tracks SET status='closed',updated_at=? WHERE room_id=? AND publisher_session_id=? AND status='active'").bind(stamp,room.id,media.provider_session_id).run();
+      }
+      await env.DB.prepare("UPDATE realtime_camera_pairings SET status='revoked',updated_at=? WHERE id=?").bind(stamp,pairing.id).run();
+      pairing=await env.DB.prepare('SELECT * FROM realtime_camera_pairings WHERE id=?').bind(pairing.id).first();
+      return json(request,env,{ok:true,pairing:safeCameraPairing(pairing)});
+    }
+    return json(request,env,{ok:false,error:'invalid_camera_pairing_status'},400);
+  }
+  const claim=url.pathname.match(/^\/api\/realtime\/camera-pairings\/([A-Z0-9]+)\/claim$/i);
+  if(claim&&request.method==='POST'){
+    let pairing=await cameraPairingByCode(env,claim[1]);if(!pairing)return json(request,env,{ok:false,error:'camera_pairing_not_found'},404);
+    if(Date.parse(pairing.expires_at)<=Date.now()||['expired','revoked'].includes(pairing.status))return json(request,env,{ok:false,error:'camera_pairing_expired'},410);
+    const room=await roomById(env,pairing.room_id);if(!room||!['created','starting','live'].includes(room.status))return json(request,env,{ok:false,error:'room_not_joinable'},409);
+    const claimKey=clean(input?.claimKey,160),deviceName=clean(input?.deviceName,60)||'보조카메라';if(claimKey.length<24)return json(request,env,{ok:false,error:'camera_claim_key_required'},400);
+    const claimHash=await sha256(claimKey);
+    if(pairing.claim_hash&&pairing.claim_hash!==claimHash)return json(request,env,{ok:false,error:'camera_pairing_already_claimed'},409);
+    if(pairing.status==='open'){
+      const stamp=new Date().toISOString();await env.DB.prepare("UPDATE realtime_camera_pairings SET status='pending',claim_hash=?,device_name=?,claimed_at=?,updated_at=? WHERE id=?").bind(claimHash,deviceName,stamp,stamp,pairing.id).run();
+      pairing=await cameraPairingByCode(env,claim[1]);
+    }
+    return json(request,env,{ok:true,pairing:{code:pairing.code,status:pairing.status,deviceName:pairing.device_name||deviceName,expiresAt:pairing.expires_at},room:{id:room.id,title:room.title,tenantId:room.tenant_id}});
+  }
+  const pairStatus=url.pathname.match(/^\/api\/realtime\/camera-pairings\/([A-Z0-9]+)\/status$/i);
+  if(pairStatus&&request.method==='GET'){
+    const pairing=await cameraPairingByCode(env,pairStatus[1]);if(!pairing)return json(request,env,{ok:false,error:'camera_pairing_not_found'},404);
+    const key=clean(request.headers.get('x-ekodi-camera-key'),160);if(!key||!pairing.claim_hash||await sha256(key)!==pairing.claim_hash)return json(request,env,{ok:false,error:'camera_pairing_key_invalid'},403);
+    if(Date.parse(pairing.expires_at)<=Date.now()&&pairing.status!=='approved')return json(request,env,{ok:false,error:'camera_pairing_expired'},410);
+    const room=await roomById(env,pairing.room_id);let session=null;
+    if(pairing.status==='approved'&&pairing.media_session_id)session=await env.DB.prepare("SELECT * FROM realtime_media_sessions WHERE id=? AND room_id=? AND status='active'").bind(pairing.media_session_id,pairing.room_id).first();
+    return json(request,env,{ok:true,status:pairing.status,deviceName:pairing.device_name||'보조카메라',room:room?{id:room.id,title:room.title,tenantId:room.tenant_id,status:room.status}:null,session:session?{id:session.id,providerSessionId:session.provider_session_id,role:session.role}:null,iceServers:session?[{urls:'stun:stun.cloudflare.com:3478'}]:[]});
+  }
+  return null;
+}
 async function requestActorKey(request,env,room,{allowAnonymous=false}={}){
   const access=await entitlementFor(request,env,slug(room.tenant_id));
   if(access.identity)return {access,actorKey:canonicalAiSubject(access.identity),authenticated:true};
@@ -578,7 +669,7 @@ async function collaborationRoute(request,env,url,input){
       FROM realtime_media_sessions s
       JOIN realtime_media_tracks t ON t.publisher_session_id=s.provider_session_id AND t.room_id=s.room_id AND t.status='active'
       LEFT JOIN realtime_participation_requests p ON p.room_id=s.room_id AND p.actor_key=s.actor_key
-      WHERE s.room_id=? AND s.role='presenter' AND s.status='active'
+      WHERE s.room_id=? AND s.role='presenter' AND s.status='active' AND s.actor_key NOT LIKE 'aux-camera:%'
       ORDER BY s.created_at,t.created_at`).bind(room.id).all();
     const map=new Map();
     for(const row of rows.results||[]){if(!map.has(row.actor_key))map.set(row.actor_key,{actorKey:row.actor_key,displayName:row.display_name||'참여자',tracks:[]});map.get(row.actor_key).tracks.push({trackName:row.track_name,kind:row.media_kind,sourceType:row.source_type});}
@@ -703,6 +794,7 @@ export async function handleRealtimeControl(request,env){
   }
   const recordings=await recordingRoutes(request,env,url,input);if(recordings)return recordings;
   const destinations=await destinationRoute(request,env,url);if(destinations)return destinations;
+  const cameraPairing=await cameraPairingRoute(request,env,url,input);if(cameraPairing)return cameraPairing;
   const collaboration=await collaborationRoute(request,env,url,input);if(collaboration)return collaboration;
   const mutation=await roomMutation(request,env,url,input);if(mutation)return mutation;
   const planned=await planRoute(request,env,url,input);if(planned)return planned;
@@ -757,5 +849,7 @@ export const REALTIME_CONTROL_CONTRACT=Object.freeze({
   externalDistributionFailIsolated:true,
   liveChat:true,
   participantCameraRequests:true,
+  auxiliaryCameraQrPairing:true,
+  viewerInterpretationTrackSelection:true,
   draggableProgramSources:true,
 });
