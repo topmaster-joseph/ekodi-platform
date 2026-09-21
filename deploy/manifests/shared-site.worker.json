@@ -1255,6 +1255,7 @@
           200
         ],
         "redirect": "manual",
+        "rollbackVerify": true,
         "expect": [
           "EKODI Live",
           "LIVE BROADCAST PROFESSIONAL SERVICE",
