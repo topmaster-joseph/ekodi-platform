@@ -1,50 +1,68 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const ignored = /(staging|release|build|development|legacy)/i;
-const wranglers = fs.readdirSync(root)
-  .filter(name => /^wrangler\..+\.toml$/.test(name) && !ignored.test(name));
+const apex = ['ekodi', 'kr'].join('.');
+const escapedApex = apex.replaceAll('.', '\\.');
+const publicHostPattern = new RegExp(`(?:\\*\\.|(?:[A-Za-z0-9_-]+\\.)+)${escapedApex}`, 'gi');
+const self = path.relative(root, fileURLToPath(import.meta.url)).replaceAll('\\', '/');
 
-function sourceHasAdmin(file, seen = new Set()) {
-  const full = path.resolve(root, file);
-  if (seen.has(full) || !fs.existsSync(full)) return false;
-  seen.add(full);
-  const source = fs.readFileSync(full, 'utf8');
-  if (source.includes("'/admin'") || source.includes('"/admin"')) return true;
-  const imports = [...source.matchAll(/from\s+['"](\.\.?\/[^'"]+)['"]/g)]
-    .map(match => match[1])
-    .map(spec => path.relative(root, path.resolve(path.dirname(full), spec)));
-  return imports.some(next => sourceHasAdmin(next, seen));
+function trackedFiles() {
+  const result = spawnSync('git', ['ls-files', '-z'], { cwd: root, encoding: 'utf8' });
+  if (result.status !== 0) {
+    console.error('EKODI subdomain-zero gate could not enumerate tracked files.');
+    process.exit(1);
+  }
+  return result.stdout.split('\0').filter(Boolean);
+}
+
+function isInfrastructureDns(hostname) {
+  const host = hostname.toLowerCase().replace(/^\*\./, '');
+  return host === `_dmarc.${apex}`
+    || host === `_acme-challenge.${apex}`
+    || host.startsWith(`_acme-challenge.`) && host.endsWith(`.${apex}`)
+    || host.includes(`._domainkey.${apex}`);
+}
+
+function looksBinary(buffer) {
+  const limit = Math.min(buffer.length, 8192);
+  for (let i = 0; i < limit; i += 1) {
+    if (buffer[i] === 0) return true;
+  }
+  return false;
 }
 
 const failures = [];
-const audited = [];
-for (const wrangler of wranglers) {
-  const text = fs.readFileSync(path.join(root, wrangler), 'utf8');
-  const main = text.match(/^main\s*=\s*"([^"]+)"/m)?.[1];
-  const patterns = [...text.matchAll(/pattern\s*=\s*"([^"]+)"/g)].map(match => match[1]);
-  const hosts = patterns.map(value => value.split('/')[0].replace(/^\*\./, ''))
-    .filter(host => host.endsWith('.ekodi.kr') && host !== 'ekodi.kr');
-  if (!main || !hosts.length) continue;
-  const ok = sourceHasAdmin(main);
-  audited.push(...hosts.map(host => ({ host, wrangler, main, ok })));
-  if (!ok) failures.push(`${wrangler} -> ${main}: ${hosts.join(', ')}`);
-}
-
-for (const [label, file] of [
-  ['cafe.ekodi.kr', 'sites/ekodi-cafe/_redirects'],
-  ['mall.ekodi.kr', 'sites/ekodi-mall/_redirects'],
-]) {
-  const full = path.join(root, file);
-  const ok = fs.existsSync(full) && /\/admin\/?\s+https:\/\/admin\.ekodi\.kr\//.test(fs.readFileSync(full, 'utf8'));
-  audited.push({ host: label, wrangler: file, main: file, ok });
-  if (!ok) failures.push(`${label}: missing Pages /admin redirect in ${file}`);
+const infrastructureReferences = [];
+for (const relative of trackedFiles()) {
+  const normalized = relative.replaceAll('\\', '/');
+  if (normalized === self || normalized.startsWith('artifacts/')) continue;
+  const full = path.join(root, relative);
+  if (!fs.existsSync(full) || !fs.statSync(full).isFile()) continue;
+  const buffer = fs.readFileSync(full);
+  if (looksBinary(buffer)) continue;
+  const text = buffer.toString('utf8');
+  const lines = text.split(/\r?\n/);
+  for (let index = 0; index < lines.length; index += 1) {
+    const matches = lines[index].match(publicHostPattern) || [];
+    for (const raw of matches) {
+      const host = raw.toLowerCase();
+      const entry = `${normalized}:${index + 1}: ${host}`;
+      if (isInfrastructureDns(host)) infrastructureReferences.push(entry);
+      else failures.push(entry);
+    }
+  }
 }
 
 if (failures.length) {
-  console.error('EKODI admin subdomain route contract failed:\n' + failures.map(v => `- ${v}`).join('\n'));
+  console.error('EKODI SUBDOMAIN-ZERO gate failed. Public *.ekodi.kr references are forbidden; use ekodi.kr path routing only.');
+  for (const failure of [...new Set(failures)].sort()) console.error(`- ${failure}`);
   process.exit(1);
 }
-console.log(`EKODI admin subdomain route contract OK: ${audited.length} routed host checks`);
+
+console.log('EKODI SUBDOMAIN-ZERO gate OK: no public *.ekodi.kr reference exists in tracked source/config/docs.');
+if (infrastructureReferences.length) {
+  console.log(`Infrastructure DNS references allowed for mail/certificate validation: ${new Set(infrastructureReferences).size}`);
+}

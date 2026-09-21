@@ -1,0 +1,23 @@
+name: Subdomain Zero Gate
+
+on:
+  pull_request:
+  push:
+    branches: [main, development]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  enforce:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: EKODI AI orchestration gate
+        run: node scripts/validate-ekodi-ai-change-orchestration.mjs --ci
+      - name: Enforce apex-only public web topology
+        run: node scripts/validate-admin-subdomain-routes.mjs
