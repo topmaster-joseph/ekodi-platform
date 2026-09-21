@@ -64,11 +64,12 @@ test('regional client scripts are served as CSP-compatible external JavaScript',
   const auth=localRegionAdminAuthScript();
   const access=localRegionAccessAdminScript();
   assert.match(auth.headers.get('content-type')||'',/text\/javascript/);
-  assert.match(await auth.text(),/\/api\/local-access\//);
-  assert.match(await auth.text().catch(()=>''),/^$/);
+  const authText=await auth.text();
+  assert.match(authText,/\/api\/local-access\//);
   assert.match(access.headers.get('content-type')||'',/text\/javascript/);
   const accessText=await access.text();
   assert.match(accessText,/external_vendor/);
+  assert.match(accessText,/scope\.value==='cheonggye-pass'\?PASS_ROLES:REGION_ROLES/);
   assert.match(accessText,/\/api\/customers\/tenants\//);
 });
 
