@@ -48,7 +48,9 @@ test('lifecycle API stays subject-bound and analysis-and-connection-only',async(
   assert.match(runtime,/investmentRecommendation:false/);
   assert.match(runtime,/transactionExecution:false/);
   assert.match(runtime,/humanDecisionRequired:true/);
-  assert.doesNotMatch(runtime,/placeOrder|executeTrade|brokerCredential|custodyBalance|guaranteedReturn/);
+  assert.match(runtime,/custody:false/);
+  assert.match(runtime,/guaranteedReturn:false/);
+  assert.doesNotMatch(runtime,/placeOrder|executeTrade|brokerCredential|custodyBalance/);
 });
 
 test('signed-in Invest workspace exposes the full project lifecycle controls',async()=>{
@@ -58,7 +60,7 @@ test('signed-in Invest workspace exposes the full project lifecycle controls',as
   assert.match(router,/IR 프로젝트 프로필/);
   assert.match(router,/투자자 관심 · 조건 매칭/);
   assert.match(router,/사후관리 · 성과보고/);
-  assert.match(router,/investmentRecommendation/);
+  assert.match(router,/투자 권유·적합성 판단이나 수익 예측이 아닙니다/);
   assert.match(page,/lifecycle-grid/);
   assert.match(page,/lifecycle-row/);
 });
