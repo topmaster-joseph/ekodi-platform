@@ -12,6 +12,7 @@ import { platformMaturityProjection } from './platform-maturity-control.js';
 import { handleLearningControl } from './learning-control.js';
 import { buildEkodiOwnerReport, latestEkodiOwnerReport, listEkodiOwnerReports, persistEkodiOwnerReport } from './ekodi-owner-report.js';
 import { realtimeTenantList } from './realtime-tenant-registry.js';
+import { deleteLivePublicBroadcastSource, listLivePublicBroadcastSources, putLivePublicBroadcastSource } from './live-public-broadcast-registry.js';
 
 // Provider service registry only. Customer organizations and their sites are managed as
 // customer tenants/workspaces through the customer directory, never as EKODI services.
@@ -72,6 +73,7 @@ const VALID_MAINTENANCE_DISPLAY_TYPES = new Set(['default', 'url']);
 const VALID_REDIRECT_MODES = new Set(['button', 'auto']);
 const CONTROL_PREFIX = '/api/control';
 const PUBLIC_SITE_PREFIX = `${CONTROL_PREFIX}/public-sites`;
+const LIVE_BROADCAST_PREFIX = `${CONTROL_PREFIX}/live/public-broadcasts`;
 const DEVELOPMENT_WORKER = 'https://ekodi-platform-development.ekodi-development.workers.dev';
 const ACCOUNT_SERVICE_TARGETS = Object.freeze(EKODI_SERVICE_MANIFEST.services
   .filter(service => service.state !== 'planned')
@@ -679,6 +681,49 @@ async function handleControl(request, env) {
 
   if (request.method === 'GET' && path === PUBLIC_SITE_PREFIX) {
     return controlJson({ sites: await publicSiteSnapshot(env) }, 200, auth.response.headers);
+  }
+
+  if (path === LIVE_BROADCAST_PREFIX) {
+    if (String(auth.session.role || '') !== 'super_admin') return controlJson({ error: '최고관리자 권한이 필요합니다.' }, 403, auth.response.headers);
+    if (request.method === 'GET') return controlJson({ sources: await listLivePublicBroadcastSources(env.DB) }, 200, auth.response.headers);
+    if (request.method === 'POST') {
+      const body = await readJson(request);
+      if (!body || typeof body !== 'object') return controlJson({ error: '공개방송 등록 형식을 확인해 주세요.' }, 400, auth.response.headers);
+      try {
+        const source = await putLivePublicBroadcastSource(env.DB, body, auth.session.email || 'super_admin');
+        await writeAudit(env, auth.session, 'live.public_broadcast.upsert', source.id, JSON.stringify({ publicationStatus: source.publicationStatus, verificationStatus: source.verificationStatus, officialUrl: source.officialUrl }));
+        return controlJson({ source }, 200, auth.response.headers);
+      } catch (error) {
+        const code=String(error?.message||'');
+        const message=code==='broadcast_name_required'?'방송원 이름이 필요합니다.':code==='broadcast_official_url_required'?'올바른 공식 방송 주소가 필요합니다.':'공개방송 정보를 저장하지 못했습니다.';
+        return controlJson({ error: message, code }, 400, auth.response.headers);
+      }
+    }
+  }
+
+  const liveBroadcastMatch = path.match(/^\/api\/control\/live\/public-broadcasts\/([a-z0-9_-]+)$/);
+  if (liveBroadcastMatch) {
+    if (String(auth.session.role || '') !== 'super_admin') return controlJson({ error: '최고관리자 권한이 필요합니다.' }, 403, auth.response.headers);
+    const sourceId=liveBroadcastMatch[1];
+    if (request.method === 'PUT') {
+      const body = await readJson(request);
+      if (!body || typeof body !== 'object') return controlJson({ error: '공개방송 수정 형식을 확인해 주세요.' }, 400, auth.response.headers);
+      try {
+        const source = await putLivePublicBroadcastSource(env.DB, { ...body, id: sourceId }, auth.session.email || 'super_admin');
+        await writeAudit(env, auth.session, 'live.public_broadcast.update', source.id, JSON.stringify({ publicationStatus: source.publicationStatus, verificationStatus: source.verificationStatus, officialUrl: source.officialUrl }));
+        return controlJson({ source }, 200, auth.response.headers);
+      } catch (error) {
+        const code=String(error?.message||'');
+        const message=code==='broadcast_name_required'?'방송원 이름이 필요합니다.':code==='broadcast_official_url_required'?'올바른 공식 방송 주소가 필요합니다.':'공개방송 정보를 수정하지 못했습니다.';
+        return controlJson({ error: message, code }, 400, auth.response.headers);
+      }
+    }
+    if (request.method === 'DELETE') {
+      const deleted=await deleteLivePublicBroadcastSource(env.DB,sourceId);
+      if (!deleted) return controlJson({ error: '삭제할 공개방송 항목을 찾지 못했습니다.' }, 404, auth.response.headers);
+      await writeAudit(env, auth.session, 'live.public_broadcast.delete', sourceId, '');
+      return controlJson({ ok:true, id:sourceId }, 200, auth.response.headers);
+    }
   }
 
   if (request.method === 'GET' && path === `${CONTROL_PREFIX}/language-status`) {

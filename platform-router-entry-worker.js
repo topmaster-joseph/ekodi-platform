@@ -240,7 +240,7 @@ export default {
     if(host===PUBLIC_HOST&&(url.pathname==='/api/finance'||url.pathname.startsWith('/api/finance/')))return routeTaxFinance(request,env,ctx);
     if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)){const adminTarget=legacyAdminAliasTarget(url.pathname);if(adminTarget){const target=new URL(request.url);target.pathname=adminTarget;return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-content-type-options':'nosniff','x-ekodi-route':'admin-canonical-handoff'}})}}
     if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)){
-      if(url.pathname==='/live'||url.pathname==='/live/')return liveShell(liveServicePage());
+      if(url.pathname==='/live'||url.pathname==='/live/')return liveShell(await liveServicePage(env));
       if(url.pathname==='/live/admin'||url.pathname==='/live/admin/')return liveShell(liveServiceAdminPage(),'admin');
       if(url.pathname==='/tenant-live-admin.css')return tenantLiveAdminCss();
       if(url.pathname==='/tenant-live-admin.js')return tenantLiveAdminScript();
