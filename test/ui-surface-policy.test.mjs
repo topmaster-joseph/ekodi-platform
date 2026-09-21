@@ -9,6 +9,12 @@ test('EKODI uses one Core with six explicit governed UI surfaces',()=>{
   assert.equal(EKODI_UI_SURFACE_POLICY.principles.oneCoreManySurfaces,true);
   assert.equal(EKODI_UI_SURFACE_POLICY.principles.platformAndGeneralUserUiSeparated,true);
   assert.equal(EKODI_UI_SURFACE_POLICY.principles.adminAuthoritySeparated,true);
+  assert.equal(EKODI_UI_SURFACE_POLICY.principles.universalConstructionStandard,true);
+  assert.equal(EKODI_UI_SURFACE_POLICY.principles.communicationFirst,true);
+  assert.equal(EKODI_UI_SURFACE_POLICY.principles.personalizationWithinAuthority,true);
+  assert.deepEqual(EKODI_UI_SURFACE_POLICY.constructionStandard.dimensions,['ease','locality','readability','originality','intuitiveness']);
+  assert.deepEqual(EKODI_UI_SURFACE_POLICY.constructionStandard.modes,['communication-first','personalization']);
+  assert.equal(EKODI_UI_SURFACE_POLICY.constructionStandard.inheritance,'mandatory');
 });
 
 test('platform, general user, member and administrator surfaces resolve separately',()=>{
