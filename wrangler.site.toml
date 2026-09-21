@@ -4,7 +4,7 @@
 # CGMA public domain remains externally DNS-managed until the approved cutover stage; ekodi.kr/cgma stays canonical inside EKODI.
 # Canonical domain contract: only ekodi.kr is a Shared Site custom domain; all EKODI user/admin surfaces use apex paths.
 name = "shy-thunder-39a4"
-main = "platform-router-entry-worker.js"
+main = "platform-mcp-entry-worker.js"
 compatibility_date = "2026-08-12"
 workers_dev = false
 preview_urls = false
