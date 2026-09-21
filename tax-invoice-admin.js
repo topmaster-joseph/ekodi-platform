@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const FINANCE_API = 'https://finance-api.ekodi.kr';
+  const FINANCE_API = 'https://ekodi.kr';
   const ORGANIZATION_ID = 'EKODIBIZ';
   const DEFAULT_UNIT = 'BIZ';
   const HOMETAX_URL = 'https://www.hometax.go.kr';
