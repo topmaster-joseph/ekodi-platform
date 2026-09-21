@@ -32,6 +32,10 @@ test('site access authority distinguishes platform super-admin from tenant-local
   assert.match(authority,/SITE_RESPONSIBILITY_ROLES/);
 });
 
+test('member directory preserves the production auth marker for anonymous callers',()=>{
+  assert.match(directory,/ACCESS_AUTH_REQUIRED: 'EKODI 관리자 인증이 필요합니다\.'/);
+});
+
 test('member directory is filtered at the database query for tenant administrators',()=>{
   assert.match(directory,/resolveTenantAccessAuthority/);
   assert.match(directory,/tenantScope/);

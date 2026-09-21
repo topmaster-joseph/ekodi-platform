@@ -173,7 +173,7 @@ export async function handleCustomerMemberDirectory(request, env) {
   const authority = await resolveTenantAccessAuthority(request, env, { tenantSlug: requestedTenant });
   if (!authority.ok) {
     const messages = {
-      ACCESS_AUTH_REQUIRED: 'EKODI 관리자 또는 운영공간 인증이 필요합니다.',
+      ACCESS_AUTH_REQUIRED: 'EKODI 관리자 인증이 필요합니다.',
       TENANT_CONTEXT_REQUIRED: '사이트 관리자는 관리할 사이트 범위가 필요합니다.',
       TENANT_ACCESS_MANAGE_FORBIDDEN: '이 사이트의 사용자·권한 관리 권한이 없습니다.',
       TENANT_NOT_FOUND: '등록된 사이트가 아닙니다.',
