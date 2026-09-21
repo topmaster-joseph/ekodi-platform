@@ -37,6 +37,8 @@ Transfers may be performed per module. A whole-region transfer is not required.
 
 Regional data includes public/common regional information such as directory records, regional events, jobs, sharing, broadcasts and resident proposals.
 
+Regional commerce programs such as **청계패스** also belong to the regional platform. The merchant association may operate merchant onboarding, campaign rules and day-to-day administration under delegated authority. Coupon/discount/point programs may be native platform capabilities, while any cash-equivalent prepaid gift-certificate or stored-value mode must keep issuer, settlement account, payment provider and regulatory responsibilities separate from the regional content/admin authority. Transferring platform operation does not automatically transfer an issuer contract or settlement account; those financial relationships require their own approved handover.
+
 Organization-private data remains with the organization. For CGMA this includes member roster, dues, officers, association meetings and resolutions, association projects, private documents, accounting, member-only benefits and internal communications.
 
 An organization may publish selected projections into the regional platform. A projection never changes the source-of-truth owner.
