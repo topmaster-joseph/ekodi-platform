@@ -42,6 +42,7 @@ import { localRegionAccessAdminScript } from './local-region-access-admin.js';
 import { localRegionOperationsAdminScript } from './local-region-operations-admin.js';
 import { regionalCommerceProgramFromLocalRoute } from './regional-commerce-program-registry.js';
 import { regionalCommerceProgramPublicPage, regionalCommerceProgramAdminPage } from './regional-commerce-program-page.js';
+import { applyPlatformSecurityHeaders, enforcePlatformRequestSecurity } from './platform-security-policy.js';
 import { handleSeonamMediCivicApi } from './seonam-medi-civic-control.js';
 import { handleSeonamMediMonitorApi, runSeonamMediDailyCheck } from './seonam-medi-monitor.js';
 
@@ -83,6 +84,10 @@ function isEkodiBizOwnedPath(pathname){
 function isWorkspaceProgressiveHome(pathname){const route=workspaceRouteFromPublicPath(pathname);return Boolean(route?.public&&route.serviceSegments.length<=1);}
 function isProjectionHome(pathname,projection){const path=String(pathname||'').replace(/\/+$/,'');return Boolean(projection&&path===projection.prefix);}
 function isCgmaRoot(pathname){return /^\/cgma\/?$/i.test(String(pathname||''));}
+function isSeonamMediPath(pathname){const path=String(pathname||'');return path===SEONAM_MEDI_PREFIX||path.startsWith(SEONAM_MEDI_PREFIX+'/');}
+function isLegacySeonamMedPath(pathname){const path=String(pathname||'');return path===SEONAM_MED_LEGACY_PREFIX||path.startsWith(SEONAM_MED_LEGACY_PREFIX+'/');}
+function redirectLegacySeonamMed(request){const source=new URL(request.url);const target=new URL(request.url);target.pathname=source.pathname.replace(/^\/seonam-med(?=\/|$)/,'/seonam-medi');return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-content-type-options':'nosniff','x-ekodi-route':'seonam-medi-canonical'}});}
+async function routeSeonamMediStatic(request,env){if(!env?.ASSETS?.fetch)return new Response('Site assets unavailable',{status:503,headers:{'cache-control':'no-store'}});const source=new URL(request.url);const target=new URL(request.url);if(source.pathname===SEONAM_MEDI_PREFIX)target.pathname=SEONAM_MEDI_PREFIX+'/';const upstream=await env.ASSETS.fetch(new Request(target.toString(),request));const out=new Response(upstream.body,upstream);out.headers.set('x-ekodi-route','seonam-medi-static');out.headers.set('x-content-type-options','nosniff');if((out.headers.get('content-type')||'').includes('text/html'))out.headers.set('cache-control','no-store');return out;}
 
 function workspaceServiceUnavailable(){
   return new Response('Workspace service unavailable',{status:503,headers:{'cache-control':'no-store','x-content-type-options':'nosniff','x-ekodi-workspace-gateway':'space-binding-unavailable'}});
@@ -235,10 +240,6 @@ const LEGACY_ADMIN_HOSTS=new Set(['admin.ekodi.kr','admin.biz.ekodi.kr','admin.c
 const LEGACY_ADMIN_PATHS=Object.freeze({books:'books',community:'community',work:'work',business:'organization',publishing:'books',energy:'life-ai',journal:'common-services',experience:'campus'});
 function legacySurfaceRedirect(request){const url=new URL(request.url),host=url.hostname.toLowerCase();if(!['GET','HEAD'].includes(request.method))return null;if(!LEGACY_ADMIN_HOSTS.has(host))return null;const target=new URL(request.url);target.hostname='ekodi.kr';const key=url.pathname.split('/').filter(Boolean)[0]||'';if(url.pathname==='/'||url.pathname==='/admin'||url.pathname==='/admin/')target.pathname='/admin/';else if(/\.(?:js|css|cmd|json|map|svg|png|webp|ico)$/i.test(url.pathname)||url.pathname.startsWith('/api/')||url.pathname==='/auth/start')target.pathname=`/admin${url.pathname}`;else{target.pathname='/admin/';if(!target.searchParams.has('route')&&LEGACY_ADMIN_PATHS[key])target.searchParams.set('route',LEGACY_ADMIN_PATHS[key])}target.searchParams.set('source',host);return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-ekodi-legacy-surface':host}})}
 function legacyStoreGatewayRedirect(request){const url=new URL(request.url);if(url.hostname.toLowerCase()!==PUBLIC_HOST||!['GET','HEAD'].includes(request.method)||!/^\/stores(?:\/|$)/i.test(url.pathname))return null;const target=new URL(request.url);target.pathname=url.pathname.replace(/^\/stores(?=\/|$)/i,'/cmpmyi');return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-ekodi-legacy-surface':'stores'}})}
-function isSeonamMediPath(pathname){const path=String(pathname||'');return path===SEONAM_MEDI_PREFIX||path.startsWith(SEONAM_MEDI_PREFIX+'/');}
-function isLegacySeonamMedPath(pathname){const path=String(pathname||'');return path===SEONAM_MED_LEGACY_PREFIX||path.startsWith(SEONAM_MED_LEGACY_PREFIX+'/');}
-function redirectLegacySeonamMed(request){const source=new URL(request.url);const target=new URL(request.url);target.pathname=source.pathname.replace(/^\/seonam-med(?=\/|$)/,'/seonam-medi');return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-content-type-options':'nosniff','x-ekodi-route':'seonam-medi-canonical'}});}
-async function routeSeonamMediStatic(request,env){if(!env?.ASSETS?.fetch)return new Response('Site assets unavailable',{status:503,headers:{'cache-control':'no-store'}});const source=new URL(request.url);const target=new URL(request.url);if(source.pathname===SEONAM_MEDI_PREFIX)target.pathname=SEONAM_MEDI_PREFIX+'/';const upstream=await env.ASSETS.fetch(new Request(target.toString(),request));const out=new Response(upstream.body,upstream);out.headers.set('x-ekodi-route','seonam-medi-static');out.headers.set('x-content-type-options','nosniff');if((out.headers.get('content-type')||'').includes('text/html'))out.headers.set('cache-control','no-store');return out;}
 
 async function livePublicStatus(env,tenant){
   if(!env?.DB?.prepare)return'public';
@@ -246,8 +247,7 @@ async function livePublicStatus(env,tenant){
 }
 function liveShell(response,surface=''){return typeof HTMLRewriter==='function'?injectEkodiShell(response,'live',surface):response}
 
-export default {
-  async fetch(request,env,ctx){
+async function routePlatform(request,env,ctx){
     const url=new URL(request.url);
     const host=resolvedHost(request,env);
     const legacySurface=legacySurfaceRedirect(request);if(legacySurface)return legacySurface;
@@ -360,6 +360,14 @@ export default {
       if(url.pathname==='/invest-subject-ui.js')return investSubjectUiScript();
     }
     return legacyPlatformRouter.fetch(request,env,ctx);
+}
+
+export default {
+  async fetch(request,env,ctx){
+    const guard=await enforcePlatformRequestSecurity(request,env);
+    if(guard)return applyPlatformSecurityHeaders(guard,request);
+    const response=await routePlatform(request,env,ctx);
+    return applyPlatformSecurityHeaders(response,request);
   },
-  async scheduled(_controller,env,ctx){ctx.waitUntil(runSeonamMediDailyCheck(env));}
+  async scheduled(_controller,env,ctx){ctx.waitUntil(runSeonamMediDailyCheck(env));},
 };
