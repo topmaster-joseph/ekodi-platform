@@ -1,5 +1,5 @@
 {
-  "version": 81,
+  "version": 82,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
@@ -1664,10 +1664,10 @@
         ],
         "redirect": "manual",
         "expect": [
-          "운영권 변경",
           "register_operator",
           "start_transfer",
           "complete_transfer",
+          "canManageOperatingRights",
           "/api/local-operations/cheonggye/actions"
         ],
         "headerExpect": [
