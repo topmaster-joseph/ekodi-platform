@@ -20,12 +20,16 @@ on:
       - 'ai-commons.js'
       - 'ai-commons-admin.js'
       - 'config/ai-execution-services.json'
+      - 'config/capability-registry.json'
+      - 'config/capability-registry.json'
       - 'shell/user-ai-entry.js'
       - 'ekodi-shell-worker.js'
       - 'site-worker.js'
       - 'platform-route-registry.js'
       - 'wrangler.site.toml'
       - 'test/ai-commons*.test.mjs'
+      - 'test/ai-interpreter.test.mjs'
+      - 'test/ai-interpreter.test.mjs'
       - 'ai-router-score.js'
       - 'ai-collaboration-settings.js'
       - 'local-execution-policy.js'
@@ -184,10 +188,11 @@ jobs:
           node scripts/validate-constitution.mjs
           node scripts/validate-ai-mission-governance.mjs
           node scripts/validate-additive-migrations.mjs migrations
-          node --test test/ai-control-platform.test.mjs test/ai-control-provider-router.test.mjs test/ai-free-quota.test.mjs test/free-provider-adapters.test.mjs test/ai-router-score.test.mjs test/ai-collaboration-settings.test.mjs test/local-execution-policy.test.mjs test/ai-account-node-scheduler.test.mjs test/cognitive-control-plane.test.mjs test/common-service-operator-control.test.mjs test/ai-commons.test.mjs test/ai-commons-subservice.test.mjs
+          node --test test/ai-control-platform.test.mjs test/ai-control-provider-router.test.mjs test/ai-free-quota.test.mjs test/free-provider-adapters.test.mjs test/ai-router-score.test.mjs test/ai-collaboration-settings.test.mjs test/local-execution-policy.test.mjs test/ai-account-node-scheduler.test.mjs test/cognitive-control-plane.test.mjs test/common-service-operator-control.test.mjs test/ai-commons.test.mjs test/ai-commons-subservice.test.mjs test/ai-interpreter.test.mjs
           node --check ai-commons.js
           node --check ai-commons-admin.js
           node --check ai-control/commons.js
+          node --check ai-control/interpreter.js
           node --check shell/user-ai-entry.js
           node --check ekodi-shell-worker.js
           node --check site-worker.js
