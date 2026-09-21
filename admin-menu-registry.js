@@ -32,9 +32,9 @@ export const ADMIN_MENU_REGISTRY = Object.freeze([
   { id: 'sites-independent', group: 'sites', icon: 'D', delegateSection: 'campus', siteRelation: 'independent', labels: { ko: '독립 사이트', en: 'Independent Sites' } },
   { id: 'sites-preparing', group: 'sites', icon: '…', delegateSection: 'campus', siteRelation: 'preparing', labels: { ko: '준비·비공개 사이트', en: 'Preparing & Private Sites' } },
 
-  { id: 'users-access', group: 'people', icon: 'U', delegateSection: 'clients', labels: { ko: '전체 사용자·사이트별 관리자', en: 'Users & Site Administrators' } },
+  { id: 'users-access', group: 'people', icon: 'U', delegateSection: 'clients', labels: { ko: '사용자설정', en: 'User Settings' } },
   { id: 'security', group: 'people', icon: 'S', labels: { ko: '접근·인증 기록', en: 'Access & Identity Records' } },
-  { id: 'admins', group: 'people', icon: '♙', labels: { ko: '전체 사용자·관리자', en: 'Users & Administrators' }, superAdminOnly: true },
+  { id: 'admins', group: 'people', icon: '♙', labels: { ko: '관리자설정', en: 'Administrator Settings' }, superAdminOnly: true },
   { id: 'ai-membership', group: 'people', icon: '◈', labels: { ko: '역할·등급·가입 승인', en: 'Roles, Grades & Approvals' } },
 
   { id: 'work', group: 'content', icon: 'W', labels: { ko: '운영 중인 작업', en: 'Active Work' } },
