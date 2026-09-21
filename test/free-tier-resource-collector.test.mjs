@@ -72,7 +72,7 @@ test('collector emits additive quota snapshot upserts and never changes provider
 });
 
 
-test('Supabase OIDC fallback records per-project DB usage without fabricating organization capacity', async()=>{
+test('Supabase OIDC fallback records per-project DB usage while leaving organization capacity unverified', async()=>{
   const config={
     audience:'ekodi-free-tier-governor',
     repository:'topmaster-joseph/ekodi-platform',
@@ -91,8 +91,9 @@ test('Supabase OIDC fallback records per-project DB usage without fabricating or
   const result=await collectSupabaseOidc({token:'oidc-token',config,fetchJson,observedAt});
   assert.equal(result.available,true);
   assert.equal(result.mode,'github_oidc');
-  assert.equal(result.reason,null);
+  assert.equal(result.reason,'capacity_unverified');
   assert.deepEqual(result.projects,['project-a','project-b']);
+  assert.equal(result.activeProjects,null);
   assert.equal(result.snapshots.find(row=>row.metric==='database_bytes:project-a').freeLimit,500*1024*1024);
   assert.equal(result.snapshots.find(row=>row.metric==='storage_object_bytes:project-b').observedValue,33132);
   assert.equal(result.snapshots.some(row=>row.metric==='active_projects'),false);
@@ -111,5 +112,6 @@ test('Supabase OIDC fallback degrades to partial telemetry instead of inventing 
   assert.equal(result.available,true);
   assert.equal(result.reason,'partial');
   assert.deepEqual(result.projects,['project-a']);
+  assert.equal(result.activeProjects,null);
   assert.equal(result.snapshots.some(row=>row.metric==='database_bytes:project-b'),false);
 });

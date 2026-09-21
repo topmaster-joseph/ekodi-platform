@@ -145,9 +145,9 @@ export async function collectSupabaseOidc({token,config,fetchJson=jsonFetch,obse
   }
   return {
     available:projects.length>0,
-    reason:projects.length===0?'oidc_endpoint_unavailable':errors.length?'partial':null,
+    reason:projects.length===0?'oidc_endpoint_unavailable':errors.length?'partial':'capacity_unverified',
     mode:'github_oidc',
-    snapshots,projects,errors
+    snapshots,projects,activeProjects:null,errors
   };
 }
 
@@ -211,7 +211,7 @@ async function main(){
   await fs.writeFile(output,snapshotsToSql(result.snapshots)+'\n','utf8');
   process.stdout.write(JSON.stringify({
     observedAt:result.observedAt,
-    supabase:{available:result.supabase.available,reason:result.supabase.reason,mode:result.supabase.mode||'management_api',freeOrganizations:(result.supabase.freeOrganizations||[]).length,activeProjects:(result.supabase.activeProjects||[]).length,projects:(result.supabase.projects||[]).length,snapshots:result.supabase.snapshots.length},
+    supabase:{available:result.supabase.available,reason:result.supabase.reason,mode:result.supabase.mode||'management_api',freeOrganizations:(result.supabase.freeOrganizations||[]).length,activeProjects:result.supabase.activeProjects==null?null:result.supabase.activeProjects.length,projects:(result.supabase.projects||[]).length,snapshots:result.supabase.snapshots.length},
     github:{repository:result.github.repository,snapshots:result.github.snapshots.length},
   })+'\n');
 }
