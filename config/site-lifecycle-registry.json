@@ -154,12 +154,13 @@
   "legacyPolicy": {
     "subdomainRedirectsAllowed": false,
     "redirectOnlyCompatibilityAliasesAllowed": false,
-    "directServiceSubdomainsAllowed": false,
+    "directServiceSubdomainsAllowed": true,
     "executionOnlySubdomainsAllowed": true,
     "preserveCustomDomainOwnership": true,
     "legacyAliasMayAuthorize": false,
     "deleteExistingSiteBeforeReplacementVerified": false,
-    "publicSubdomainsAllowed": false
+    "publicSubdomainsAllowed": true,
+    "publicSubdomainMode": "direct-service-only"
   },
   "migrationOrder": [
     "inventory",
