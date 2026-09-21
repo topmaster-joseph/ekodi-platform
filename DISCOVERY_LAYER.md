@@ -24,7 +24,7 @@ The real `npm run build` path first regenerates `discovery-registry.generated.js
 
 ## Public-first, private-by-default boundary
 
-Only explicitly declared canonical public routes belong in `DISCOVERY_PUBLIC_ROUTES`. Admin, auth, API, development-preview, tenant-private, and operational surfaces must never be added to the sitemap or LLM discovery source list.
+Only canonical public routes on the apex `ekodi.kr` host belong in `DISCOVERY_PUBLIC_ROUTES`. Public subdomains are not discovery sources. Admin, auth, API, development-preview, tenant-private, personal, and operational surfaces must never be added to the sitemap or LLM discovery source list.
 
 Private prefixes are centralized in `DISCOVERY_PRIVATE_PREFIXES`. Admin, API and Mall operational routes use `X-Robots-Tag: noindex, nofollow, noarchive` where they cross the public edge. Authentication and other private hosts must remain non-discoverable independently of robots.txt.
 
@@ -82,6 +82,6 @@ Structured data must never be used as a hidden channel for facts that are not su
 
 ## Validation
 
-`scripts/generate-discovery-registry.mjs` derives discoverable apex routes and external public resources from `config/ecosystem-services.json` and `config/site-lifecycle-registry.json`. Only production-verified Live/Beta services and promoted public workspace sites are admitted; personal/internal surfaces can opt out with `discoveryPublic: false` or `userVisible: false`. `test/discovery-layer.test.mjs` verifies registry generation, private-route exclusion, crawler-purpose separation, canonical source lists, and Schema.org entity graphs.
+`scripts/generate-discovery-registry.mjs` derives discoverable apex routes from `config/ecosystem-services.json`, `config/site-lifecycle-registry.json`, and the apex-only contract in `config/domain-canonical-policy.json`. Only production-verified Live/Beta services and promoted public workspace sites whose canonical URL is on `ekodi.kr` are admitted; subdomain URLs are ignored until an apex canonical route is registered. Personal/internal surfaces can opt out with `discoveryPublic: false` or `userVisible: false`. `test/discovery-layer.test.mjs` verifies registry generation, private-route exclusion, crawler-purpose separation, canonical source lists, and Schema.org entity graphs.
 
 The production build itself fails when canonical, Open Graph, or JSON-LD markers are missing from EKODI-owned public pages. CI runs the same `npm run build`, so a Discovery Layer regression blocks the release path instead of silently shipping.
