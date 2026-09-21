@@ -99,6 +99,20 @@ namespace_id = "3901"
 limit = 5
 period = 60
 
+[[ratelimits]]
+name = "PLATFORM_PUBLIC_WRITE_RATE_LIMITER"
+namespace_id = "3902"
+[ratelimits.simple]
+limit = 300
+period = 60
+
+[[ratelimits]]
+name = "PLATFORM_SENSITIVE_RATE_LIMITER"
+namespace_id = "3903"
+[ratelimits.simple]
+limit = 120
+period = 60
+
 [assets]
 directory = "./dist"
 binding = "ASSETS"
