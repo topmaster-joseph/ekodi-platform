@@ -9,27 +9,75 @@
     "service-owned": "Concrete records, settings, relationships and decisions controlled by one operating owner."
   },
   "workspacePolicy": {
-    "appliesTo": ["person", "team", "business", "organization", "association", "church", "project", "store", "service", "future-custom"],
+    "appliesTo": [
+      "person",
+      "team",
+      "business",
+      "organization",
+      "association",
+      "church",
+      "project",
+      "store",
+      "service",
+      "future-custom"
+    ],
     "sameBoundaryRulesForEveryWorkspaceKind": true,
     "capabilityConsumptionDoesNotGrantPlatformAuthority": true,
-    "centralAdminMayExpose": ["health", "capability-status", "adapter-contracts", "aggregate-observability"],
-    "centralAdminMustNotAbsorb": ["workspace-records", "workspace-members", "workspace-enablements", "workspace-business-decisions"]
+    "centralAdminMayExpose": [
+      "health",
+      "capability-status",
+      "adapter-contracts",
+      "aggregate-observability"
+    ],
+    "centralAdminMustNotAbsorb": [
+      "workspace-records",
+      "workspace-members",
+      "workspace-enablements",
+      "workspace-business-decisions"
+    ]
   },
   "layers": {
     "system": {
-      "examples": ["identity", "authorization", "credential-vault", "audit", "scheduler", "observability", "deployment", "provider-runtime"],
+      "examples": [
+        "identity",
+        "authorization",
+        "credential-vault",
+        "audit",
+        "scheduler",
+        "observability",
+        "deployment",
+        "provider-runtime"
+      ],
       "mayOwnTenantBusinessData": false
     },
     "common": {
-      "examples": ["mail", "files", "payments", "notifications", "generic-connections"],
+      "examples": [
+        "mail",
+        "files",
+        "payments",
+        "notifications",
+        "generic-connections"
+      ],
       "tenantDataRule": "Only explicit tenant-scoped contracts may store tenant data."
     },
     "professional": {
-      "examples": ["marketing-ai", "publishing", "crm", "sales-supply-network", "insurance"],
+      "examples": [
+        "marketing-ai",
+        "publishing",
+        "crm",
+        "sales-supply-network",
+        "insurance"
+      ],
       "tenantDataRule": "Engine facts may be central; each owner's operating choices remain owner-scoped."
     },
     "service-owned": {
-      "examples": ["mall merchant enablement", "mall assortment", "church attendance", "association members", "insurance contracts"],
+      "examples": [
+        "mall merchant enablement",
+        "mall assortment",
+        "church attendance",
+        "association members",
+        "insurance contracts"
+      ],
       "centralAdminExposure": "Summary and health only unless explicit delegated authority exists."
     }
   },
@@ -38,23 +86,87 @@
       "name": "판매·공급망 엔진",
       "layer": "professional",
       "capability": "commerce.supply-network",
-      "centralAdminOwns": ["adapter-contracts", "partner-program-templates", "provider-health", "shared-schema", "safety-gates"],
-      "centralAdminMustNotOwn": ["merchant-enablement", "assortment-decisions", "recommendation-toggle", "supplier-contract-decisions"],
-      "systemDependencies": ["credential-vault", "authorization", "audit", "scheduler"],
-      "commonDependencies": ["payments", "notifications", "generic-connections"],
-      "consumers": ["mall", "trade", "books", "future-travel"]
+      "centralAdminOwns": [
+        "adapter-contracts",
+        "partner-program-templates",
+        "provider-health",
+        "shared-schema",
+        "safety-gates"
+      ],
+      "centralAdminMustNotOwn": [
+        "merchant-enablement",
+        "assortment-decisions",
+        "recommendation-toggle",
+        "supplier-contract-decisions"
+      ],
+      "systemDependencies": [
+        "credential-vault",
+        "authorization",
+        "audit",
+        "scheduler"
+      ],
+      "commonDependencies": [
+        "payments",
+        "notifications",
+        "generic-connections"
+      ],
+      "consumers": [
+        "mall",
+        "trade",
+        "books",
+        "future-travel"
+      ]
     }
   },
   "serviceOwnership": {
     "mall": {
       "adminRoot": "/ekodibiz/ekodimall/admin",
       "capability": "commerce.supply-network",
-      "owns": ["products", "assortment", "sourcing", "merchant-routes", "affiliate-apply-state", "supplier-mappings", "recommendation-policy", "sales-performance"]
+      "owns": [
+        "products",
+        "assortment",
+        "sourcing",
+        "merchant-routes",
+        "affiliate-apply-state",
+        "supplier-mappings",
+        "recommendation-policy",
+        "sales-performance"
+      ]
     },
     "cheonggye-association": {
       "adminRoot": "/cgma/admin",
-      "owns": ["member-roster", "dues", "local-events", "association-documents"],
-      "legacyCentralSurface": "compatibility-only"
+      "owns": [
+        "member-roster",
+        "dues",
+        "officers",
+        "association-meetings",
+        "association-resolutions",
+        "association-projects",
+        "association-documents",
+        "association-finance",
+        "member-benefits",
+        "member-communications",
+        "member-activity-history"
+      ],
+      "legacyCentralSurface": "compatibility-only",
+      "regionalProjection": "publish-selected-public-records-only"
+    },
+    "local-cheonggye": {
+      "adminRoot": "/cheonggye/admin",
+      "owns": [
+        "regional-directory",
+        "regional-commerce-projection",
+        "regional-events",
+        "regional-jobs",
+        "regional-sharing",
+        "regional-broadcasts",
+        "resident-proposals",
+        "operator-delegations",
+        "regional-audit-history"
+      ],
+      "governance": "delegated-multi-operator",
+      "initialOperator": "cgma",
+      "transferRule": "authority-transfer-without-data-movement"
     }
   },
   "rules": [
@@ -65,6 +177,7 @@
     "Secrets and provider credentials remain server-side even when a workspace controls enablement.",
     "Central Admin shows cross-service health, contracts and capability status; workspace-specific CRUD stays under that workspace admin.",
     "Mixed features are split into system infrastructure, common utility, professional engine and owner-specific projection instead of being assigned to one oversized layer.",
-    "Legacy central owner-specific screens may exist only as compatibility surfaces and must not appear as canonical central navigation."
+    "Legacy central owner-specific screens may exist only as compatibility surfaces and must not appear as canonical central navigation.",
+    "Regional platform ownership is independent from delegated operators; changing a lead or co-operator changes authority only and never transfers organization-private records."
   ]
 }
