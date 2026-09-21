@@ -27,7 +27,7 @@ test('response decoration preserves response policy headers and skips non-HTML',
   assert.equal(decorated.status, 200);
   assert.equal(decorated.headers.get('content-security-policy'), "default-src 'self'");
   assert.equal(decorated.headers.has('etag'), false);
-  assert.match(html, /data-ekodi-path="\/ekodibiz\/ekodimall"/);
+  assert.match(html, /data-ekodi-path="\/ekodimall"/);
 
   const json = new Response('{}', { headers: { 'content-type': 'application/json' } });
   assert.equal(await decorateDiscoveryResponse(json, '/jadam'), json);
