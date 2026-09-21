@@ -276,8 +276,8 @@ export default {
       const previewResponse=handlePreviewRequest(request);if(previewResponse)return previewResponse;
       if(['GET','HEAD'].includes(request.method)&&isInsurancePublicPath(url.pathname))return routeInsurancePublic(request,env);
       if(request.method==='GET'){
-        if(url.pathname==='/local-region-admin-auth.js')return localRegionAdminAuthScript();
-        if(url.pathname==='/local-region-access-admin.js')return localRegionAccessAdminScript();
+        if(url.pathname==='/cheonggye/local-region-admin-auth.js')return localRegionAdminAuthScript();
+        if(url.pathname==='/cheonggye/local-region-access-admin.js')return localRegionAccessAdminScript();
         if(url.pathname==='/tenant-admin-command-home.css')return tenantAdminCommandHomeCss();
         if(url.pathname==='/tenant-admin-command-home.js')return tenantAdminCommandHomeScript();
         if(['/store-admin.css','/jadam-admin.css','/pizzamaru-admin.css','/yogurt-admin.css'].includes(url.pathname))return storeAdminCss();
