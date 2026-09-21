@@ -25,26 +25,26 @@ test('Mall production verifier follows stable route and storefront structure', (
   for (const marker of [
     'data-ekodi-service="mall"',
     'data-ekodi-user-surface="public"',
-    'rel="canonical" href="https://ekodi.kr/ekodibiz/ekodimall"',
-    '/ekodibiz/ekodimall/assets/app.js',
-    '/ekodibiz/ekodimall/assets/marketplace-live.js'
+    'rel="canonical" href="https://ekodi.kr/ekodimall"',
+    '/ekodimall/assets/app.js',
+    '/ekodimall/assets/marketplace-live.js'
   ]) assert.ok(workflow.includes(marker), `missing structural contract: ${marker}`);
   assert.doesNotMatch(workflow, /GIFT CONTEXT INTELLIGENCE|CONNECTED COMMERCE|OUR PROMISE|EKODI CONTEXT SHOPPING|ALL MARKET/);
 });
 
 test('shared-site Mall release gate uses the same stable ownership contract', () => {
-  const mallGate = manifest.worker.requests.find(request => request.url === 'https://ekodi.kr/ekodibiz/ekodimall');  assert.ok(mallGate);
+  const mallGate = manifest.worker.requests.find(request => request.url === 'https://ekodi.kr/ekodimall');  assert.ok(mallGate);
   for (const marker of ['data-ekodi-service="mall"','data-ekodi-user-surface="public"']) {
     assert.ok(mallGate.expect?.includes(marker), `missing release marker: ${marker}`);
   }
   assert.equal(mallGate.candidateVerify,false);
   assert.match(mallGate.candidateVerifyReason||'',/run_worker_first bootstrap/);
   assert.ok(mallGate.expect?.includes('data-ekodi-global-nav="off"'));
-  assert.ok(!manifestText.includes('/ekodibiz/ekodimall/assets/app.js'));
+  assert.ok(!manifestText.includes('/ekodimall/assets/app.js'));
   assert.equal(mallGate.rollbackVerify,false);
-  assert.ok(!manifestText.includes('/ekodibiz/ekodimall/app.js'));
-  assert.ok(!workflow.includes('/ekodibiz/ekodimall/assets/commerce.js'));
-  assert.ok(!manifestText.includes('/ekodibiz/ekodimall/assets/marketplace-live.js'));
+  assert.ok(!manifestText.includes('/ekodimall/app.js'));
+  assert.ok(!workflow.includes('/ekodimall/assets/commerce.js'));
+  assert.ok(!manifestText.includes('/ekodimall/assets/marketplace-live.js'));
   assert.ok(mallGate.headerExpect?.includes('x-ekodi-route: public-ekodi-mall'));
   assert.ok(mallGate.headerExpect?.includes('x-ekodi-edge: mall-path-gateway'));
   assert.doesNotMatch(manifestText, /EKODI CONTEXT SHOPPING|GIFT CONTEXT INTELLIGENCE|CONNECTED COMMERCE|OUR PROMISE/);
@@ -77,7 +77,7 @@ test('Mall production verifier preserves Verification Ops cache safety checks', 
   assert.match(workflow, /cache-control: no-store/);
   assert.match(workflow, /x-robots-tag: noindex, nofollow, noarchive/);
   assert.match(workflow, /verificationOpsCacheBoundary=verified/);
-  assert.match(workflow, /\/ekodibiz\/ekodimall\/assets\/verification-ops\.js/);
+  assert.match(workflow, /\/ekodimall\/assets\/verification-ops\.js/);
   assert.doesNotMatch(workflow, /grep -Fq '\/assets\/verification-ops\.js' \/tmp\/mall-verification-final\.html/);
   assert.match(workflow, /verification_ready=false/);
   assert.match(workflow, /seq 1 12/);

@@ -120,7 +120,7 @@
   },
   "serviceOwnership": {
     "mall": {
-      "adminRoot": "/ekodibiz/ekodimall/admin",
+      "adminRoot": "/ekodimall/admin",
       "capability": "commerce.supply-network",
       "owns": [
         "products",

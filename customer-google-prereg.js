@@ -4,7 +4,7 @@ import { accessGrantManagementDecision, resolveTenantAccessAuthority } from './t
 
 const TENANTS = Object.freeze([
   { slug: 'ekodibiz', name: '에코디비즈', domain: 'ekodi.kr/ekodibiz', realm: 'ekodibiz-client' },
-  { slug: 'ekodimall', name: '에코디몰', domain: 'ekodi.kr/ekodibiz/ekodimall', realm: 'ekodimall-client' },
+  { slug: 'ekodimall', name: '에코디몰', domain: 'ekodi.kr/ekodimall', realm: 'ekodimall-client' },
   { slug: 'ekodibiz-trade', name: '에코디비즈 무역', domain: 'ekodi.kr/ekodibiz/trade', realm: 'ekodibiz-trade-client' },
   { slug: 'ekodichurch', name: '에코디교회', domain: 'ekodi.kr/ekodichurch', realm: 'ekodichurch-client' },
   { slug: 'ekodimission', name: '에코디선교회', domain: 'ekodi.kr/ekodimission', realm: 'ekodimission-client' },

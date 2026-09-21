@@ -14,8 +14,8 @@ import { tenantLiveAdminCss, tenantLiveAdminPage, tenantLiveAdminScript } from '
 // Always request canonical asset paths internally so edge redirects never escape the Worker.
 const PUBLIC_HOST = 'ekodi.kr';
 const PUBLIC_ALIAS_HOSTS = new Set(['www.ekodi.kr']);
-const MALL_PREFIX = '/ekodibiz/ekodimall';
-const MALL_ROOT_ALIAS_PREFIX = '/ekodimall';
+const MALL_PREFIX = '/ekodimall';
+const MALL_ROOT_ALIAS_PREFIX = '/ekodibiz/ekodimall';
 const FORMER_MALL_PREFIX = '/ekodibiz/mall';
 const LEGACY_MALL_PREFIX = '/mall';
 const LEGACY_EKODIBIZ_PREFIX = '/org/ekodibiz';
@@ -349,13 +349,14 @@ function redirectFormerMallPath(request) {
   return response;
 }
 
-function redirectRootMallAdminPath(request) {
+function redirectNestedMallPath(request) {
+  const incoming = new URL(request.url);
   const target = new URL(request.url);
   target.pathname = `${MALL_PREFIX}${target.pathname.slice(MALL_ROOT_ALIAS_PREFIX.length)}`;
   const response = new Response(null, { status: 308, headers: { Location: target.toString() } });
   applyBaseSecurityHeaders(response.headers);
   response.headers.set('Cache-Control', 'no-store');
-  response.headers.set('X-EKODI-Route', 'mall-root-admin-canonical-redirect');
+  response.headers.set('X-EKODI-Route', isRootMallAdminPath(incoming.pathname) ? 'mall-root-admin-canonical-redirect' : 'mall-nested-canonical-redirect');
   return response;
 }
 
@@ -367,7 +368,7 @@ function mallUpstreamPath(pathname, publicPrefix = MALL_PREFIX) {
 function rewriteMallHtmlDocument(html, pathname = MALL_PREFIX, publicPrefix = MALL_PREFIX) {
   let rewritten = String(html || '');
   if (publicPrefix !== MALL_PREFIX) rewritten = rewritten.split(MALL_PREFIX).join(publicPrefix);
-  const prefixGuard = publicPrefix === MALL_ROOT_ALIAS_PREFIX ? 'ekodimall' : 'ekodibiz\\/ekodimall';
+  const prefixGuard = publicPrefix === MALL_ROOT_ALIAS_PREFIX ? 'ekodibiz\\/ekodimall' : 'ekodimall';
   const rootAssetPattern = new RegExp(`\\b(href|src|action)=("|')\\/(?!\\/|${prefixGuard}(?:\\/|["']))([^"']*)\\2`, 'gi');
   rewritten = rewritten.replace(
     rootAssetPattern,
@@ -675,8 +676,8 @@ export default {
       if (['GET','HEAD'].includes(request.method)) { const adminAlias=redirectLegacyAdminAliasPath(request); if (adminAlias) return adminAlias; }
       if (isLegacyMallPath(url.pathname)) return redirectLegacyMallPath(request);
       if (isFormerMallPath(url.pathname)) return redirectFormerMallPath(request);
-      if (isRootMallAdminPath(url.pathname)) return redirectRootMallAdminPath(request);
-      if (isRootMallPath(url.pathname)) return proxyMallService(request, MALL_ROOT_ALIAS_PREFIX);
+      if (isRootMallAdminPath(url.pathname)) return redirectNestedMallPath(request);
+      if (isRootMallPath(url.pathname)) return redirectNestedMallPath(request);
       if (['GET','HEAD'].includes(request.method) && (url.pathname === '/ekodi-church' || url.pathname.startsWith('/ekodi-church/'))) { const target=new URL(request.url); target.pathname=url.pathname.replace(/^\/ekodi-church(?=\/|$)/i,'/ekodichurch'); return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-content-type-options':'nosniff'}}); }
       if (['GET','HEAD'].includes(request.method) && isChurchPastorAdminPath(url.pathname)) return injectEkodiShell(churchPastorAdminPage(), 'church', 'admin');
       if (isWorkspaceAdminPath(url.pathname)) return injectEkodiShell(workspaceAdminPage(), 'space', 'admin');

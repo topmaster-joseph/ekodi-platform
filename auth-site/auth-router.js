@@ -8,7 +8,7 @@ const firstPartyClientSites=new Set(['ai']);
 let changed=false;
 const requestedSite=params.get('site');
 if(requestedSite==='mall-seller'&&!params.get('return_to')&&!params.get('returnTo')){
-  params.set('return_to','https://ekodi.kr/ekodibiz/ekodimall/seller/');
+  params.set('return_to','https://ekodi.kr/ekodimall/seller/');
   changed=true;
 }
 if(legacySiteAliases[requestedSite]){
