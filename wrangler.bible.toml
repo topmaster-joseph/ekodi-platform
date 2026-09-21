@@ -1,7 +1,7 @@
 name = "ekodi-bible-conversation"
 main = "bible-worker.js"
 compatibility_date = "2026-08-26"
-workers_dev = true
+workers_dev = false
 preview_urls = false
 
 

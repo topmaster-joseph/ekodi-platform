@@ -192,7 +192,7 @@
         ]
       },
       {
-        "url": "https://ekodi-auth-api.topmaster-joseph.workers.dev/api/control/personal-finance",
+        "url": "https://ekodi.kr/api/control/personal-finance",
         "statuses": [
           401
         ],

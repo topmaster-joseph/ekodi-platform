@@ -45,6 +45,8 @@ test('production verifier follows the AI Commons public/member boundary contract
   const rootProbe = requests.find(item => item.url === 'https://ekodi.kr/ai/');
   assert.ok(rootProbe.headerExpect.includes('x-ekodi-canonical-surface: ai'));
   assert.ok(rootProbe.headerExpect.includes('x-ekodi-canonical-path: /ai'));
-  assert.equal(rootProbe.candidateUrl, 'https://ekodi-ai-control.topmaster-joseph.workers.dev/');
-  assert.equal(requests.find(item => item.url.endsWith('/__health'))?.candidateUrl, 'https://ekodi-ai-control.topmaster-joseph.workers.dev/__health');
+  assert.doesNotMatch(production,/workers_dev = true/);
+  assert.match(production,/workers_dev = false/);
+  assert.ok(requests.every(item => !item.candidateUrl));
+  assert.doesNotMatch(JSON.stringify(manifest),/topmaster-joseph\.workers\.dev/);
 });

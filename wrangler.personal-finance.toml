@@ -1,7 +1,7 @@
 name = "ekodi-personal-finance-api"
 main = "personal-finance-worker.js"
 compatibility_date = "2026-09-04"
-workers_dev = true
+workers_dev = false
 preview_urls = false
 
 [[routes]]
