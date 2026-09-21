@@ -35,6 +35,9 @@ test('Admin conversation-first skin preserves mobile drawer and readable light s
   const css = await read('admin-conversation-workbench.css');
   assert.match(css, /color-scheme:light/);
   assert.match(css, /background:var\(--ekodi-admin-sidebar\)!important/);
+  assert.match(css, /html body\.admin-compact\.ekodi-admin-design-engine\{/);
+  assert.match(css, /html body\.admin-compact\.ekodi-admin-design-engine \.sidebar\{[\s\S]*width:272px!important[\s\S]*background:#f7f8fc!important/);
+  assert.match(css, /html body\.admin-compact\.ekodi-admin-design-engine\.admin-command-home\.admin-command-active \.ekodi-assist\{[\s\S]*left:272px!important/);
   assert.match(css, /@media\(max-width:760px\)/);
   assert.match(css, /\.sidebar\.open/);
   assert.match(css, /box-shadow:18px 0 54px/);

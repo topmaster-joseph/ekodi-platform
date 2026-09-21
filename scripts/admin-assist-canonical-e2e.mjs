@@ -82,6 +82,7 @@ try {
       composerRadius: composer ? getComputedStyle(composer).borderRadius : null,
       welcomeText: welcome ? String(welcome.textContent || '').trim() : '',
       assistLeft: assist ? Math.round(assist.getBoundingClientRect().left) : null,
+      sidebarWidth: sidebar ? Math.round(sidebar.getBoundingClientRect().width) : null,
       sidebarRight: sidebar ? Math.round(sidebar.getBoundingClientRect().right) : null,
     };
   });
@@ -95,6 +96,9 @@ try {
   }
   if (visual?.sidebarBackground !== 'rgb(247, 248, 252)') {
     throw new Error(`Admin sidebar light surface mismatch: ${visual?.sidebarBackground || 'missing'}`);
+  }
+  if (Number(visual?.sidebarWidth) !== 272) {
+    throw new Error(`Admin sidebar width mismatch: ${visual?.sidebarWidth || 'missing'}`);
   }
   if (visual?.railDisplay !== 'none') {
     throw new Error(`Admin home recent-command rail must be hidden: ${visual?.railDisplay || 'missing'}`);
