@@ -12,7 +12,7 @@ test('sales and supply network separates professional engine health from Mall op
   assert.equal(professional?.managementArea, 'professional-services');
   assert.equal(professional?.labels?.ko, '판매·공급망');
   assert.equal(getAdminMenuItem('affiliates'), null);
-  assert.equal(isWorkspaceAdminPathShape('/ekodibiz/ekodimall/admin/sourcing'), true);
+  assert.equal(isWorkspaceAdminPathShape('/ekodimall/admin/sourcing'), true);
 
   const demand = await read('admin-demand-loader.js');
   const professionalPanel = await read('supply-network-admin.js');
