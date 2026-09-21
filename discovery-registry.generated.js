@@ -256,74 +256,7 @@ export const GENERATED_DISCOVERY_PUBLIC_ROUTES = Object.freeze([
     "source": "service:messenger"
   }
 ]);
-export const GENERATED_DISCOVERY_EXTERNAL_RESOURCES = Object.freeze([
-  {
-    "id": "author",
-    "label": "Creator AI",
-    "title": "크리에이터 AI | EKODI",
-    "description": "글을 넘어 창작 전반을 돕는 AI",
-    "url": "https://author.ekodi.kr",
-    "origin": "https://author.ekodi.kr",
-    "schemaType": "Service",
-    "source": "service:author"
-  },
-  {
-    "id": "books",
-    "label": "EKODI Bookstore",
-    "title": "에코디서점 | EKODI",
-    "description": "도서 탐색·판매와 독립 온라인 서점을 연결",
-    "url": "https://books.ekodi.kr",
-    "origin": "https://books.ekodi.kr",
-    "schemaType": "Service",
-    "source": "service:books"
-  },
-  {
-    "id": "journal",
-    "label": "EKODI Journal",
-    "title": "에코디 저널 | EKODI",
-    "description": "에코디의 정신·실천·기술·공동체의 배움을 공개적으로 기록하는 공통 저널",
-    "url": "https://journal.ekodi.kr",
-    "origin": "https://journal.ekodi.kr",
-    "schemaType": "Service",
-    "source": "service:journal"
-  },
-  {
-    "id": "life",
-    "label": "Life AI",
-    "title": "오늘의 질문 | EKODI",
-    "description": "관계·돈·일·가족·마음·미래·신앙·삶의 질문에서 시작하는 인생AI",
-    "url": "https://life.ekodi.kr",
-    "origin": "https://life.ekodi.kr",
-    "schemaType": "Service",
-    "source": "service:life"
-  },
-  {
-    "id": "publishing",
-    "label": "Publishing",
-    "title": "출판 | EKODI",
-    "description": "출판상담·제작·출판대행·유통·스튜디오를 제공하는 독립 전문 출판플랫폼",
-    "url": "https://publishing.ekodi.kr",
-    "origin": "https://publishing.ekodi.kr",
-    "schemaType": "Service",
-    "source": "service:publishing"
-  },
-  {
-    "id": "work",
-    "label": "EKODI Work",
-    "title": "에코디 워크 | EKODI",
-    "description": "일과 프로젝트를 실행하는 공간",
-    "url": "https://work.ekodi.kr",
-    "origin": "https://work.ekodi.kr",
-    "schemaType": "Service",
-    "source": "service:work"
-  }
-]);
+export const GENERATED_DISCOVERY_EXTERNAL_RESOURCES = Object.freeze([]);
 export const GENERATED_DISCOVERY_OFFICIAL_ORIGINS = Object.freeze([
-  "https://author.ekodi.kr",
-  "https://books.ekodi.kr",
-  "https://ekodi.kr",
-  "https://journal.ekodi.kr",
-  "https://life.ekodi.kr",
-  "https://publishing.ekodi.kr",
-  "https://work.ekodi.kr"
+  "https://ekodi.kr"
 ]);
