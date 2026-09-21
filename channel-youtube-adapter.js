@@ -11,7 +11,7 @@ export const YOUTUBE_SCOPES = Object.freeze([
 
 function clientId(env) { return String(env.CHANNEL_GOOGLE_CLIENT_ID || '').trim(); }
 function clientSecret(env) { return String(env.CHANNEL_GOOGLE_CLIENT_SECRET || '').trim(); }
-function redirectUri(env) { return String(env.CHANNEL_GOOGLE_REDIRECT_URI || 'https://marketing-publish-api.ekodi.kr/oauth/youtube/callback').trim(); }
+function redirectUri(env) { return String(env.CHANNEL_GOOGLE_REDIRECT_URI || 'https://ekodi.kr/api/marketing/publish/oauth/youtube/callback').trim(); }
 export function youtubeOAuthConfigured(env) { return Boolean(clientId(env) && clientSecret(env) && redirectUri(env)); }
 
 export function youtubeAuthorizeUrl(env, state, loginHint = '') {
