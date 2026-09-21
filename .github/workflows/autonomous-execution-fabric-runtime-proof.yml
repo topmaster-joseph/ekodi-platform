@@ -4,6 +4,11 @@ on:
   pull_request:
     paths:
       - 'autonomous-execution-fabric-runtime.js'
+      - 'execution-task-grant.js'
+      - 'test/execution-task-grant.test.mjs'
+      - 'scripts/prove-execution-task-grant.mjs'
+      - 'config/deployment-credential-boundary.json'
+      - 'scripts/validate-deployment-credential-boundary.mjs'
       - 'test/autonomous-execution-fabric-runtime.test.mjs'
       - '.github/workflows/autonomous-execution-fabric-runtime-proof.yml'
       - 'config/autonomous-execution-fabric-policy.json'
@@ -14,6 +19,11 @@ on:
     branches: [main]
     paths:
       - 'autonomous-execution-fabric-runtime.js'
+      - 'execution-task-grant.js'
+      - 'test/execution-task-grant.test.mjs'
+      - 'scripts/prove-execution-task-grant.mjs'
+      - 'config/deployment-credential-boundary.json'
+      - 'scripts/validate-deployment-credential-boundary.mjs'
       - 'test/autonomous-execution-fabric-runtime.test.mjs'
       - '.github/workflows/autonomous-execution-fabric-runtime-proof.yml'
       - 'config/autonomous-execution-fabric-policy.json'
@@ -24,6 +34,9 @@ on:
 
 permissions:
   contents: read
+  id-token: write
+  attestations: write
+  artifact-metadata: write
 
 jobs:
   runtime-contract:
@@ -35,7 +48,29 @@ jobs:
         with:
           node-version: '24'
       - name: Verify execution runtime authority, parallel convergence and provider boundaries
-        run: node --test test/autonomous-execution-fabric-runtime.test.mjs
+        run: node --test test/autonomous-execution-fabric-runtime.test.mjs test/execution-task-grant.test.mjs
+      - name: Verify credential containment policy
+        run: node scripts/validate-deployment-credential-boundary.mjs
+
+  task-grant-proof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Prove short-lived scoped task grant issuance, expiry and revocation
+        env:
+          EKODI_TASK_GRANT_PROOF_OUTPUT: artifacts/execution-task-grant-proof.json
+        run: node scripts/prove-execution-task-grant.mjs
+      - name: Upload task-grant runtime evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: ekodi-gen10-task-grant-proof-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/execution-task-grant-proof.json
+          if-no-files-found: error
+          retention-days: 30
 
   native-ephemeral-proof:
     runs-on: ubuntu-latest
@@ -189,7 +224,7 @@ jobs:
           retention-days: 90
 
   parallel-convergence-proof:
-    needs: [runtime-contract, native-ephemeral-proof, rootless-sandbox-proof]
+    needs: [runtime-contract, task-grant-proof, native-ephemeral-proof, rootless-sandbox-proof]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -236,3 +271,72 @@ jobs:
           path: ${{ runner.temp }}/ekodi-parallel-convergence-proof.json
           if-no-files-found: error
           retention-days: 90
+
+  supply-chain-proof:
+    needs: [parallel-convergence-proof, task-grant-proof]
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Build SBOM, provenance subject and measured S0 cost evidence
+        shell: bash
+        env:
+          REPOSITORY_VISIBILITY: ${{ github.event.repository.visibility }}
+        run: |
+          set -euo pipefail
+          started_ms="$(date +%s%3N)"
+          mkdir -p artifacts
+          npm sbom --sbom-format=cyclonedx > artifacts/ekodi-execution-fabric.cdx.json
+          tar -czf artifacts/ekodi-execution-fabric-proof.tgz \
+            autonomous-execution-fabric-runtime.js \
+            execution-task-grant.js \
+            config/autonomous-execution-fabric-policy.json \
+            config/deployment-credential-boundary.json \
+            governance/architecture/ekodi-autonomous-execution-fabric.v1.json
+          digest="$(sha256sum artifacts/ekodi-execution-fabric-proof.tgz | awk '{print $1}')"
+          ended_ms="$(date +%s%3N)"
+          compute_ms="$((ended_ms-started_ms))"
+          jq -n \
+            --arg visibility "$REPOSITORY_VISIBILITY" \
+            --arg digest "sha256:$digest" \
+            --argjson compute_ms "$compute_ms" \
+            '{
+              schemaVersion: 1,
+              evidenceId: "GEN10-S0-COST-SUPPLY-CHAIN-001",
+              generation: 10,
+              runnerClass: "standard-github-hosted-ubuntu",
+              repositoryVisibility: $visibility,
+              measuredProofBuildMillis: $compute_ms,
+              incrementalPaidProviderActivated: false,
+              paidSandboxProviderActivated: false,
+              billingBasis: "public-repository-standard-github-hosted-runner",
+              artifactDigest: $digest,
+              sbomFormat: "CycloneDX",
+              provenanceMode: "github-oidc-sigstore-attestation-on-protected-main",
+              exactBilledAmountUsdClaimed: false
+            }' > artifacts/ekodi-execution-fabric-cost-supply-chain.json
+      - name: Attest execution-fabric proof bundle provenance
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
+        with:
+          subject-path: artifacts/ekodi-execution-fabric-proof.tgz
+      - name: Attest execution-fabric proof bundle SBOM
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
+        with:
+          subject-path: artifacts/ekodi-execution-fabric-proof.tgz
+          sbom-path: artifacts/ekodi-execution-fabric.cdx.json
+      - name: Upload supply-chain and cost evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: ekodi-gen10-supply-chain-proof-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            artifacts/ekodi-execution-fabric-proof.tgz
+            artifacts/ekodi-execution-fabric.cdx.json
+            artifacts/ekodi-execution-fabric-cost-supply-chain.json
+          if-no-files-found: error
+          retention-days: 30
+
