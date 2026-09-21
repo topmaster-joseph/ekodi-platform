@@ -69,8 +69,14 @@ test('service manifest advertises canonical apex Live as an active public surfac
 });
 
 
-test('Shared Site release watches Live hub UI and contract changes',async()=>{
-  const workflow=await read('.github/workflows/deploy-site-core.yml');
-  assert.match(workflow,/live-service-page\.js/);
+test('Shared Site release watches and packages Live hub and QR camera UI',async()=>{
+  const [workflow,build,site]=await Promise.all([
+    read('.github/workflows/deploy-site-core.yml'),
+    read('scripts/build.mjs'),
+    read('site-worker.js'),
+  ]);
+  for(const file of ['live-service-page.js','tenant-live-page.js','tenant-live.js','tenant-live.css','qr-code-v2.js']) assert.match(workflow,new RegExp(file.replaceAll('.','\\.')));
   assert.match(workflow,/test\/live-service-hub\.test\.mjs/);
+  assert.match(build,/qr-code-v2\.js/);
+  assert.match(site,/['"]\/qr-code-v2\.js['"]/);
 });
