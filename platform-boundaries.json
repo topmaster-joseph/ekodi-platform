@@ -234,7 +234,7 @@
       ],
       "deployWorkflow": ".github/workflows/release-invest-personalization.yml",
       "sharedDependencies": [
-        "workspace-api.ekodi.kr",
+        "https://ekodi.kr/api/workspace",
         "central auth hub",
         "ekodi-shell",
         "official data adapters through reviewed credentials and licensed partners"
@@ -537,13 +537,14 @@
         "wrangler.finance.toml"
       ],
       "domains": [
-        "finance-api.ekodi.kr"
+        "ekodi.kr"
       ],
       "deployWorkflow": ".github/workflows/deploy-finance.yml",
       "sharedDependencies": [
         "ekodi-auth D1"
       ],
-      "database": "ekodi-auth D1 with finance_* table namespace"
+      "database": "ekodi-auth D1 with finance_* table namespace",
+      "canonicalPath": "https://ekodi.kr/api/finance"
     },
     "control-api": {
       "kind": "shared-control-plane",
@@ -649,7 +650,7 @@
         "deploy/manifests/marketing-domain-api.worker.json"
       ],
       "domains": [
-        "marketing-api.ekodi.kr"
+        "ekodi.kr"
       ],
       "deployWorkflow": ".github/workflows/deploy-marketing-domain-api.yml",
       "sharedDependencies": [
@@ -658,7 +659,8 @@
         "Cloudflare Pages API",
         "control-api membership subscription data"
       ],
-      "database": "ekodi-auth D1 with marketing_* table namespace"
+      "database": "ekodi-auth D1 with marketing_* table namespace",
+      "canonicalPath": "https://ekodi.kr/api/marketing"
     },
     "marketing-publishing-api": {
       "kind": "independent-service",
@@ -681,7 +683,7 @@
         "deploy/manifests/marketing-publishing.worker.json"
       ],
       "domains": [
-        "marketing-publish-api.ekodi.kr",
+        "ekodi.kr",
         "ekodi-marketing-publishing-staging.topmaster-joseph.workers.dev"
       ],
       "deployWorkflow": ".github/workflows/deploy-marketing-publishing.yml",
@@ -691,7 +693,8 @@
         "AI mission governance",
         "official channel APIs through explicit user-authorized credentials"
       ],
-      "database": "ekodi-auth D1 with marketing_brand_profiles and marketing_publication_* namespaces"
+      "database": "ekodi-auth D1 with marketing_brand_profiles and marketing_publication_* namespaces",
+      "canonicalPath": "https://ekodi.kr/api/marketing/publish"
     },
     "admin-auth": {
       "kind": "shared-control-plane-ui",
