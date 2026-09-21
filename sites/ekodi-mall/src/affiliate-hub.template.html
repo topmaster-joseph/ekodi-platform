@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#294e7d">
+  <meta name="description" content="{{DESCRIPTION}}">
+  <meta property="og:title" content="{{NAME}} | EKODI MALL">
+  <meta property="og:description" content="{{DESCRIPTION}}">
+  <link rel="canonical" href="{{PAGE_URL}}">
+  <link rel="stylesheet" href="/assets/styles.css">
+  <link rel="stylesheet" href="/assets/platform.css">
+  <link rel="stylesheet" href="/assets/affiliate-hub.css">
+  <title>{{NAME}} | EKODI MALL</title>
+</head>
+<body data-affiliate-provider="{{PROVIDER_KEYS}}">
+  <a class="skip" href="#main">본문 바로가기</a>
+  <div class="notice">{{NOTICE}}</div>
+  <header class="header buyer-header">
+    <a class="brand" href="/#top"><span class="mark">E</span><span>EKODI<small>MALL</small></span></a>
+    <nav><a href="/agoda/">아고다</a><a href="/coupang/">쿠팡</a><a href="/#shop">전체 마켓</a><a href="/#local">로컬</a></nav>
+    <div class="actions"><a class="seller-mini" href="/seller/">판매하기</a></div>
+  </header>
+  <main id="main" class="affiliate-hub">
+    <section class="affiliate-hero">
+      <div><p class="eyebrow">{{EYEBROW}}</p><h1>{{TITLE}}</h1><p>{{DESCRIPTION}}</p></div>
+      <form id="affiliateSearch" class="affiliate-search"><label for="affiliateQuery">찾는 조건을 한 문장으로 입력하세요</label><div><input id="affiliateQuery" type="search" maxlength="180" placeholder="{{PROMPT}}"><button class="btn primary" type="submit">추천 찾기</button></div></form>
+    </section>
+    <p class="affiliate-disclosure">광고·제휴 안내 · {{DISCLOSURE}} 추천순위는 제휴수수료와 분리합니다.</p>
+    <section class="affiliate-results" aria-labelledby="affiliateResultsTitle">
+      <div class="heading"><div><p class="eyebrow">VERIFIED AFFILIATE PICKS</p><h2 id="affiliateResultsTitle">검증된 제휴상품</h2><p id="affiliateSummary">현재 연결된 상품망에서 이 제휴관의 상품을 확인합니다.</p></div></div>
+      <div class="grid" id="affiliateGrid" aria-live="polite"><article class="affiliate-empty"><strong>상품을 불러오고 있습니다.</strong><span>검증된 제휴링크만 표시합니다.</span></article></div>
+    </section>
+    <section class="affiliate-safety"><article><b>01 · 추천</b><h3>맥락 우선</h3><p>수수료보다 사용자 조건과 적합성을 먼저 봅니다.</p></article><article><b>02 · 이동</b><h3>외부 결제 표시</h3><p>구매·예약 전에 외부 판매처 이동을 분명하게 안내합니다.</p></article><article><b>03 · 최신성</b><h3>판매처 재확인</h3><p>가격·재고·예약 가능 여부는 이동한 판매처의 최신 정보가 기준입니다.</p></article></section>
+  </main>
+  <nav class="mobile buyer-mobile"><a href="/">몰 홈</a><a href="/agoda/">아고다</a><a href="/coupang/">쿠팡</a><a href="/#shop">전체</a><a href="https://ekodi.kr/my/">마이</a></nav>
+  <script src="/assets/affiliate-hub.js" defer></script>
+</body>
+</html>
