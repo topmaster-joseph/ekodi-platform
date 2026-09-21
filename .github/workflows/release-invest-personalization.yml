@@ -18,6 +18,7 @@ on:
       - 'migrations/0100_invest_lifecycle_management.sql'
       - 'workspace-platform-entry-worker.js'
       - 'platform-router-entry-worker.js'
+      - 'platform-router-worker.js'
       - 'my/user-ai-ui.js'
       - 'test/invest-personalization-contract.test.mjs'
       - 'test/invest-market-core.test.mjs'
@@ -44,7 +45,7 @@ jobs:
       - name: Validate personalized Invest contracts
         run: |
           set -euo pipefail
-          for file in profile-official-data-adapter.js invest-personalization-runtime.js invest-market-core.js invest-automation-runtime.js invest-lifecycle-runtime.js invest-site-system.js invest-personal-control.js invest-user-page.js invest-subject-ui.js invest-admin.js workspace-platform-entry-worker.js platform-router-entry-worker.js my/user-ai-ui.js; do node --check "$file"; done
+          for file in profile-official-data-adapter.js invest-personalization-runtime.js invest-market-core.js invest-automation-runtime.js invest-lifecycle-runtime.js invest-site-system.js invest-personal-control.js invest-user-page.js invest-subject-ui.js invest-admin.js workspace-platform-entry-worker.js platform-router-entry-worker.js platform-router-worker.js my/user-ai-ui.js; do node --check "$file"; done
           node --test test/invest-personalization-contract.test.mjs test/invest-market-core.test.mjs test/invest-site-system.test.mjs test/invest-lifecycle-runtime.test.mjs
           node scripts/validate-additive-migrations.mjs migrations
           npm run build
