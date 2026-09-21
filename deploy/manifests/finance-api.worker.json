@@ -5,16 +5,16 @@
     "config": "wrangler.finance.toml",
     "requests": [
       {
-        "url": "https://finance-api.ekodi.kr/health",
+        "url": "https://ekodi.kr/api/finance/health",
         "statuses": [200],
         "expect": ["\"ok\":true", "ekodi-finance-api", "\"version\":4"]
       },
       {
-        "url": "https://finance-api.ekodi.kr/api/finance/overview",
+        "url": "https://ekodi.kr/api/finance/overview",
         "statuses": [401]
       },
       {
-        "url": "https://finance-api.ekodi.kr/api/finance/structure",
+        "url": "https://ekodi.kr/api/finance/structure",
         "statuses": [401]
       }
     ]
