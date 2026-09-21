@@ -594,6 +594,30 @@ async function requestActorKey(request,env,room,{allowAnonymous=false}={}){
   const agent=clean(request.headers.get('user-agent'),180)||'unknown';
   return {access,actorKey:`anon:${(await sha256(`${room.id}|${ip}|${agent}`)).slice(0,32)}`,authenticated:false};
 }
+async function languageListenerRoute(request,env,url,input){
+  const match=url.pathname.match(/^\/api\/realtime\/rooms\/([^/]+)\/language-listener$/);
+  if(!match||request.method!=='PUT')return null;
+  const room=await roomById(env,decodeURIComponent(match[1]));if(!room)return json(request,env,{ok:false,error:'room_not_found'},404);
+  if(!['starting','live'].includes(room.status))return json(request,env,{ok:false,error:'room_not_joinable'},409);
+  const actor=await requestActorKey(request,env,room,{allowAnonymous:room.anonymous_viewers_enabled});if(!actor.actorKey)return json(request,env,{ok:false,error:'authentication_required'},401);
+  const requested=clean(input?.languageCode,12).toLowerCase(),supported=new Set(['original','ko','en','zh','ja','vi','mn']);if(!supported.has(requested))return json(request,env,{ok:false,error:'unsupported_language'},400);
+  const stamp=new Date().toISOString();
+  if(requested==='original'){
+    await env.DB.prepare('DELETE FROM realtime_language_listeners WHERE room_id=? AND actor_key=?').bind(room.id,actor.actorKey).run();
+  }else{
+    await env.DB.prepare(`INSERT INTO realtime_language_listeners(room_id,tenant_id,actor_key,language_code,updated_at) VALUES(?,?,?,?,?)
+      ON CONFLICT(room_id,actor_key) DO UPDATE SET language_code=excluded.language_code,updated_at=excluded.updated_at`).bind(room.id,room.tenant_id,actor.actorKey,requested,stamp).run();
+  }
+  await env.DB.prepare(`UPDATE realtime_language_channels SET listener_count=(SELECT COUNT(*) FROM realtime_language_listeners l WHERE l.room_id=? AND l.language_code=realtime_language_channels.language_code),updated_at=? WHERE room_id=?`).bind(room.id,stamp,room.id).run();
+  if(requested!=='original'){
+    const count=await env.DB.prepare('SELECT COUNT(*) count FROM realtime_language_listeners WHERE room_id=? AND language_code=?').bind(room.id,requested).first();
+    await env.DB.prepare(`INSERT INTO realtime_language_channels(room_id,tenant_id,language_code,status,listener_count,provider_key,last_latency_ms,updated_at)
+      VALUES(?,?,?,'idle',?,NULL,NULL,?)
+      ON CONFLICT(room_id,language_code) DO UPDATE SET listener_count=excluded.listener_count,updated_at=excluded.updated_at`).bind(room.id,room.tenant_id,requested,Number(count?.count||0),stamp).run();
+  }
+  return json(request,env,{ok:true,roomId:room.id,languageCode:requested,translationRequested:requested!=='original'});
+}
+
 async function collaborationRoute(request,env,url,input){
   const chat=url.pathname.match(/^\/api\/realtime\/rooms\/([^/]+)\/chat$/);
   if(chat){
@@ -795,6 +819,7 @@ export async function handleRealtimeControl(request,env){
   const recordings=await recordingRoutes(request,env,url,input);if(recordings)return recordings;
   const destinations=await destinationRoute(request,env,url);if(destinations)return destinations;
   const cameraPairing=await cameraPairingRoute(request,env,url,input);if(cameraPairing)return cameraPairing;
+  const languageListener=await languageListenerRoute(request,env,url,input);if(languageListener)return languageListener;
   const collaboration=await collaborationRoute(request,env,url,input);if(collaboration)return collaboration;
   const mutation=await roomMutation(request,env,url,input);if(mutation)return mutation;
   const planned=await planRoute(request,env,url,input);if(planned)return planned;
@@ -851,5 +876,6 @@ export const REALTIME_CONTROL_CONTRACT=Object.freeze({
   participantCameraRequests:true,
   auxiliaryCameraQrPairing:true,
   viewerInterpretationTrackSelection:true,
+  viewerInterpretationDemandTracking:true,
   draggableProgramSources:true,
 });
