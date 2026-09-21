@@ -12,4 +12,5 @@ test('production exposure validator is wired into the security gate',async()=>{
   assert.match(validator,/preview_urls\\s\*=\\s\*false/);
   assert.match(validator,/Shared Site binding target/);
   assert.match(validator,/topmaster-joseph\\\.workers\\\.dev/);
+  assert.match(validator,/'wrangler\.api\.toml'/);
 });
