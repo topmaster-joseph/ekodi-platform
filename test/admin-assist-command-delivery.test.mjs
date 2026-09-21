@@ -66,6 +66,14 @@ test('production verification submits the real bottom command on canonical ekodi
   assert.match(probe,/#ekodiAssistPanel:not\(\[hidden\]\)/);
   assert.match(probe,/ekodi-assist-turn\.assistant/);
   assert.doesNotMatch(probe,/admin\.ekodi\.kr/);
+  assert.match(probe,/visualContractVerified/);
+  assert.match(probe,/admin-home-visual\.png/);
+  assert.match(probe,/admin-command-home/);
+  assert.match(probe,/admin-command-active/);
+  assert.match(probe,/rgb\(247, 248, 252\)/);
+  assert.match(probe,/composerRadius !== '32px'/);
+  assert.match(probe,/radial-gradient/);
+  assert.match(probe,/workbench\/sidebar alignment mismatch/);
   assert.match(retry,/scripts\/admin-assist-canonical-e2e\.mjs/);
   assert.match(retry,/baseUrl: 'https:\/\/ekodi\.kr\/admin\/'/);
   assert.match(retry,/canonicalCampusUrl: 'https:\/\/ekodi\.kr\/admin\/home\/campus'/);
