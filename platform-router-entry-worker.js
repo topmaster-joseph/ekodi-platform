@@ -42,6 +42,7 @@ import { localRegionAccessAdminScript } from './local-region-access-admin.js';
 import { localRegionOperationsAdminScript } from './local-region-operations-admin.js';
 import { regionalCommerceProgramFromLocalRoute } from './regional-commerce-program-registry.js';
 import { regionalCommerceProgramPublicPage, regionalCommerceProgramAdminPage } from './regional-commerce-program-page.js';
+import { applyPlatformSecurityHeaders, enforcePlatformRequestSecurity } from './platform-security-policy.js';
 
 const PUBLIC_HOST='ekodi.kr';
 const CGMA_HOSTS=new Set(['cgma.or.kr','www.cgma.or.kr']);
@@ -238,8 +239,7 @@ async function livePublicStatus(env,tenant){
 }
 function liveShell(response,surface=''){return typeof HTMLRewriter==='function'?injectEkodiShell(response,'live',surface):response}
 
-export default {
-  async fetch(request,env,ctx){
+async function routePlatform(request,env,ctx){
     const url=new URL(request.url);
     const host=resolvedHost(request,env);
     const legacySurface=legacySurfaceRedirect(request);if(legacySurface)return legacySurface;
@@ -350,5 +350,13 @@ export default {
       if(url.pathname==='/invest-subject-ui.js')return investSubjectUiScript();
     }
     return legacyPlatformRouter.fetch(request,env,ctx);
+}
+
+export default {
+  async fetch(request,env,ctx){
+    const guard=await enforcePlatformRequestSecurity(request,env);
+    if(guard)return applyPlatformSecurityHeaders(guard,request);
+    const response=await routePlatform(request,env,ctx);
+    return applyPlatformSecurityHeaders(response,request);
   },
 };
