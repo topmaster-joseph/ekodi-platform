@@ -30,6 +30,7 @@ export const ADMIN_SERVICE_CATALOG = Object.freeze([
   { id:'cmpmyi', name:'통합 매장 운영', basePath:'/cmpmyi', group:'sites' },
   { id:'developer', name:'개발자 서비스', basePath:'/developer', group:'professional' },
   { id:'tax', name:'세금·증빙', basePath:'/tax', group:'professional' },
+  { id:'cheonggye-local', name:'청계잇다', basePath:'/cheonggye', group:'sites' },
   { id:'cgma', name:'청계면상인회', basePath:'/cgma', group:'sites' },
   { id:'jadam', name:'자담치킨 목포대점', basePath:'/jadam', group:'sites' },
   { id:'pizzamaru', name:'피자마루 목포대점', basePath:'/pizzamaru', group:'sites' },
