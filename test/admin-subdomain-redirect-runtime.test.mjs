@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import worker from '../site-worker.js';
 
-const siteOwnedHosts = [
+const retiredPublicSubdomains = [
   'auth.ekodi.kr',
   'cloud.ekodi.kr',
   'live.ekodi.kr',
@@ -12,14 +12,11 @@ const siteOwnedHosts = [
   'invest.ekodi.kr',
 ];
 
-for (const host of siteOwnedHosts) {
-  test(`${host} /admin uses a mutable safe redirect`, async () => {
+for (const host of retiredPublicSubdomains) {
+  test(`${host} /admin fails closed without a compatibility redirect`, async () => {
     const response = await worker.fetch(new Request(`https://${host}/admin`), {});
-    assert.equal(response.status, 307);
-    const location = new URL(response.headers.get('location'));
-    assert.equal(location.origin, 'https://ekodi.kr');
-    assert.equal(location.pathname, '/admin/');
-    assert.equal(location.searchParams.get('source'), host);
+    assert.equal(response.status, 404);
+    assert.equal(response.headers.has('location'), false);
     assert.equal(response.headers.get('cache-control'), 'no-store');
     assert.equal(response.headers.get('x-content-type-options'), 'nosniff');
     assert.match(response.headers.get('x-robots-tag') || '', /noindex/i);
