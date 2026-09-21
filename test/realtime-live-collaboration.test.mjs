@@ -6,9 +6,10 @@ const root=new URL('../',import.meta.url);
 const read=name=>readFile(new URL(name,root),'utf8');
 
 test('realtime collaboration schema and API expose chat and moderated participant cameras',async()=>{
-  const [migration,pairingMigration,control]=await Promise.all([
+  const [migration,pairingMigration,languageMigration,control]=await Promise.all([
     read('migrations/0097_realtime_chat_participant_sources.sql'),
     read('migrations/0104_realtime_aux_camera_pairings.sql'),
+    read('migrations/0105_realtime_language_listeners.sql'),
     read('realtime-control.js'),
   ]);
   assert.match(migration,/realtime_chat_messages/);
@@ -16,6 +17,8 @@ test('realtime collaboration schema and API expose chat and moderated participan
   assert.match(pairingMigration,/realtime_camera_pairings/);
   assert.match(pairingMigration,/claim_hash/);
   assert.match(pairingMigration,/status IN \('open','pending','approved','revoked','expired'\)/);
+  assert.match(languageMigration,/realtime_language_listeners/);
+  assert.match(languageMigration,/PRIMARY KEY \(room_id, actor_key\)/);
   assert.match(control,/\/chat/);
   assert.match(control,/participation-requests/);
   assert.match(control,/participant-sources/);
@@ -65,10 +68,14 @@ test('viewer interpretation selector chooses available translated audio and fall
   assert.match(live,/viewerTracksForLanguage/);
   assert.match(live,/trackSource\(t\)==='translation'/);
   assert.match(live,/translated\.length\?translated:original/);
+  assert.match(live,/setViewerLanguagePreference/);
   assert.match(live,/reconnectViewerLanguage/);
+  assert.match(control,/language-listener/);
+  assert.match(control,/realtime_language_channels/);
   assert.match(control,/source_type/);
   assert.match(control,/language_code/);
   assert.match(control,/viewerInterpretationTrackSelection:true/);
+  assert.match(control,/viewerInterpretationDemandTracking:true/);
 });
 
 test('internal recording remains default while optional external channel selection is fail-closed',async()=>{
