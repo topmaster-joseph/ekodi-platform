@@ -51,6 +51,11 @@ function normalizeRole(value) {
   return ROLE_SET.has(role) ? role : '';
 }
 
+function normalizeVisibility(value) {
+  const visibility = String(value || '').trim().toLowerCase();
+  return ['private','public'].includes(visibility) ? visibility : 'private';
+}
+
 function validEmail(email) {
   return email.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
@@ -106,6 +111,7 @@ export async function ensureCustomerAccessSchema(db) {
       denied_capabilities_json TEXT NOT NULL DEFAULT '[]',
       expires_at TEXT,
       note TEXT NOT NULL DEFAULT '',
+      visibility TEXT NOT NULL DEFAULT 'private',
       updated_at TEXT,
       updated_by INTEGER,
       PRIMARY KEY (tenant_id, email),
@@ -124,6 +130,8 @@ export async function ensureCustomerAccessSchema(db) {
       FOREIGN KEY(tenant_id) REFERENCES customer_tenants(id)
     )`),
   ]);
+
+  try { await db.prepare("ALTER TABLE customer_access_grants ADD COLUMN visibility TEXT NOT NULL DEFAULT 'private'").run(); } catch {}
 
   const now = new Date().toISOString();
   const seed = db.prepare(`INSERT OR IGNORE INTO customer_tenants (slug, name, domain, status, created_at)
@@ -197,6 +205,7 @@ function publicAccessRow(row) {
     userStatus: Number(row.enabled) === 1 && !accessGrantExpired(row) ? 'active' : 'disabled',
     lastLoginAt: row.last_verified_at || row.user_last_login_at || '',
     createdAt: row.created_at,
+    visibility: normalizeVisibility(row.visibility),
   };
 }
 
@@ -211,6 +220,7 @@ async function preregister(request, env, slug) {
   const email = normalizeEmail(body?.email);
   const role = normalizeRole(body?.role || 'member');
   const displayName = normalizeDisplayName(body?.displayName);
+  const visibility = normalizeVisibility(body?.visibility);
   if (!validEmail(email) || !role) return json({ error: '고객 이메일 또는 권한을 확인해 주세요.' }, 400, request, env);
 
   const grantInput = validateAccessGrantInput({
@@ -246,12 +256,13 @@ async function preregister(request, env, slug) {
     capabilities_json: stringifyCapabilityList(grantInput.allowed),
     denied_capabilities_json: stringifyCapabilityList(grantInput.denied),
     expires_at: grantInput.expiresAt || null,
+    visibility,
   };
 
   await env.DB.prepare(`INSERT INTO customer_access_grants
       (tenant_id, email, role, enabled, created_at, created_by, last_verified_at, principal_type, github_username,
-       capabilities_json, denied_capabilities_json, expires_at, updated_at, updated_by)
-    VALUES (?, ?, ?, 1, ?, ?, NULL, ?, ?, ?, ?, ?, ?, ?)
+       capabilities_json, denied_capabilities_json, expires_at, visibility, updated_at, updated_by)
+    VALUES (?, ?, ?, 1, ?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(tenant_id, email) DO UPDATE SET
       role = excluded.role,
       enabled = 1,
@@ -261,10 +272,11 @@ async function preregister(request, env, slug) {
       capabilities_json = excluded.capabilities_json,
       denied_capabilities_json = excluded.denied_capabilities_json,
       expires_at = excluded.expires_at,
+      visibility = excluded.visibility,
       updated_at = excluded.updated_at,
       updated_by = excluded.updated_by`)
     .bind(tenant.id, email, role, now, createdBy, grantInput.principalType, grantInput.githubUsername,
-      stringifyCapabilityList(grantInput.allowed), stringifyCapabilityList(grantInput.denied), grantInput.expiresAt || null, now, createdBy).run();
+      stringifyCapabilityList(grantInput.allowed), stringifyCapabilityList(grantInput.denied), grantInput.expiresAt || null, visibility, now, createdBy).run();
   if (displayName) {
     await env.DB.prepare('UPDATE customer_access_grants SET note = ? WHERE tenant_id = ? AND email = ?')
       .bind(displayNameNote(displayName), tenant.id, email).run();
@@ -282,6 +294,7 @@ async function preregister(request, env, slug) {
       principalType: grantInput.principalType,
       githubUsername: grantInput.githubUsername,
       expiresAt: grantInput.expiresAt || '',
+      visibility,
       status: existing?.last_verified_at ? 'active' : 'pre_registered',
       tenant: tenant.slug,
       loginUrl: `https://auth.ekodi.kr/?site=${TENANT_REALMS[slug] || `${slug}-client`}`,
@@ -312,6 +325,52 @@ async function revokeAccess(request, env, slug) {
   return json({ ok: true, email, tenant: tenant.slug, status: 'disabled' }, 200, request, env);
 }
 
+async function updateAccess(request, env, slug) {
+  const tenant = await tenantBySlug(env.DB, slug);
+  if (!tenant) return json({ error: '등록된 사이트가 아닙니다.' }, 404, request, env);
+  const authority = await resolveTenantAccessAuthority(request, env, { tenantSlug: slug });
+  if (!authority.ok) return json({ error: '이 사이트의 사용자·권한을 수정할 권한이 없습니다.', code: authority.code }, authority.status || 403, request, env);
+  const body = await readJson(request);
+  const email = normalizeEmail(body?.email);
+  if (!validEmail(email)) return json({ error: '수정할 이메일을 확인해 주세요.' }, 400, request, env);
+  const existing = await env.DB.prepare(`SELECT role, enabled, last_verified_at, principal_type, github_username,
+      capabilities_json, denied_capabilities_json, expires_at, visibility
+    FROM customer_access_grants WHERE tenant_id = ? AND email = ?`).bind(tenant.id, email).first();
+  if (!existing) return json({ error: '등록된 접근권한을 찾을 수 없습니다.' }, 404, request, env);
+
+  const nextRole = normalizeRole(body?.role || existing.role);
+  const decision = accessGrantManagementDecision(authority, { email, role: existing.role }, { role: nextRole });
+  if (!decision.ok) return json({ error: '보호된 책임관리자 권한은 이 화면에서 변경할 수 없습니다.', code: decision.code }, 403, request, env);
+
+  const roleChanged = nextRole !== normalizeRole(existing.role);
+  const validated = validateAccessGrantInput({
+    role: nextRole,
+    principalType: existing.principal_type,
+    githubUsername: body?.githubUsername ?? (roleChanged ? '' : existing.github_username),
+    expiresAt: body?.expiresAt ?? (roleChanged ? '' : existing.expires_at),
+    capabilities: body?.capabilities ?? (roleChanged ? [] : existing.capabilities_json),
+    deniedCapabilities: body?.deniedCapabilities ?? (roleChanged ? [] : existing.denied_capabilities_json),
+  });
+  if (!validated.ok) return json({ error: '접근권한 설정을 확인해 주세요.', code: validated.error }, 400, request, env);
+
+  const enabled = body?.enabled === false || body?.status === 'disabled' ? 0 : 1;
+  const visibility = normalizeVisibility(body?.visibility ?? existing.visibility);
+  const now = new Date().toISOString();
+  const updatedBy = await adminId(env.DB, { email: authority.email });
+  await env.DB.prepare(`UPDATE customer_access_grants
+    SET role=?, enabled=?, principal_type=?, github_username=?, capabilities_json=?, denied_capabilities_json=?,
+        expires_at=?, visibility=?, updated_at=?, updated_by=?
+    WHERE tenant_id=? AND email=?`)
+    .bind(nextRole, enabled, validated.principalType, validated.githubUsername,
+      stringifyCapabilityList(validated.allowed), stringifyCapabilityList(validated.denied), validated.expiresAt || null,
+      visibility, now, updatedBy, tenant.id, email).run();
+  const after = { role: nextRole, enabled, principal_type: validated.principalType, github_username: validated.githubUsername,
+    capabilities_json: stringifyCapabilityList(validated.allowed), denied_capabilities_json: stringifyCapabilityList(validated.denied),
+    expires_at: validated.expiresAt || null, visibility };
+  await writeGrantAudit(env.DB, tenant.id, email, { email: authority.email }, 'grant.update', existing, after);
+  return json({ ok:true, email, tenant:tenant.slug, role:nextRole, enabled:Boolean(enabled), visibility }, 200, request, env);
+}
+
 async function listAccessUsers(request, env, slug) {
   const tenant = await tenantBySlug(env.DB, slug);
   if (!tenant) return json({ error: '등록된 사이트가 아닙니다.' }, 404, request, env);
@@ -319,7 +378,7 @@ async function listAccessUsers(request, env, slug) {
   if (!authority.ok) return json({ error: '이 사이트의 사용자·권한을 조회할 권한이 없습니다.', code: authority.code }, authority.status || 403, request, env);
 
   const rows = await env.DB.prepare(`SELECT
-      a.email, a.role, a.enabled, a.created_at, a.last_verified_at, a.principal_type, a.github_username, a.expires_at,
+      a.email, a.role, a.enabled, a.created_at, a.last_verified_at, a.principal_type, a.github_username, a.expires_at, a.visibility,
       COALESCE(u.display_name, '') AS display_name,
       COALESCE(u.last_login_at, '') AS user_last_login_at
     FROM customer_access_grants a
@@ -345,7 +404,7 @@ async function listDirectory(request, env) {
       GROUP BY t.id
       ORDER BY t.name`).bind(new Date().toISOString(), new Date().toISOString()).all(),
     env.DB.prepare(`SELECT
-        a.email, a.role, a.enabled, a.created_at, a.last_verified_at, a.principal_type, a.github_username, a.expires_at,
+        a.email, a.role, a.enabled, a.created_at, a.last_verified_at, a.principal_type, a.github_username, a.expires_at, a.visibility,
         t.slug, t.name AS tenant_name, t.domain, t.status AS tenant_status,
         COALESCE(u.display_name, '') AS display_name,
         COALESCE(u.last_login_at, '') AS user_last_login_at
@@ -421,6 +480,13 @@ export async function handleGoogleCustomerPreregistration(request, env) {
     const slug = normalizeTenant(revokeMatch[1]);
     if (!slug) return json({ error: '등록된 고객사가 아닙니다.' }, 404, request, env);
     return revokeAccess(request, env, slug);
+  }
+
+  const updateMatch = path.match(/^\/api\/customers\/tenants\/([a-z0-9-]+)\/access\/update$/);
+  if (request.method === 'POST' && updateMatch) {
+    const slug = normalizeTenant(updateMatch[1]);
+    if (!slug) return json({ error: '등록된 고객사가 아닙니다.' }, 404, request, env);
+    return updateAccess(request, env, slug);
   }
 
   const usersMatch = path.match(/^\/api\/customers\/tenants\/([a-z0-9-]+)\/users$/);

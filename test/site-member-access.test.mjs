@@ -66,11 +66,12 @@ test('workspace and store admin surfaces both expose the same user-access workfl
   assert.match(store,/overview\|site\|members\|chrome/);
 });
 
-test('super-admin client access menu exposes common site access registry and richer roles',()=>{
-  assert.match(menu,/사용자·사이트 권한/);
-  assert.match(central,/사용자 · 관리자 · 권한/);
-  assert.match(central,/\['owner', '사이트 책임관리자'\]/);
-  assert.match(central,/\['admin', '사이트 관리자'\]/);
+test('super-admin separates user settings from administrator settings while sharing site access registry',()=>{
+  assert.match(menu,/ko: '사용자설정'/);
+  assert.match(menu,/ko: '관리자설정'/);
+  assert.match(central,/사용자설정/);
+  assert.match(central,/USER_ROLE_OPTIONS/);
+  assert.match(central,/\['member','회원'\]/);
   assert.match(central,/displayName/);
   assert.match(central,/\/pre-register/);
 });

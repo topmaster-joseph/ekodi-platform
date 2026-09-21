@@ -2,6 +2,7 @@ import { isAllowedOrigin } from './auth-worker.js';
 import { accessGrantManageable, resolveTenantAccessAuthority } from './tenant-access-authority.js';
 import { canonicalCoreRole } from './ekodi-principal.js';
 import { accessGrantExpired } from './access-governance.js';
+import { ensureCustomerAccessSchema } from './customer-google-prereg.js';
 
 const ROLE_LABELS = Object.freeze({
   owner: '사이트 책임관리자',
@@ -19,6 +20,7 @@ const ROLE_LABELS = Object.freeze({
   senior_pastor: '담임목사/책임관리자',
   pastor: '목회자',
   care_staff: '돌봄담당자',
+  external_vendor: '외부업체',
   external_developer: '외부개발자',
   client_admin: '점주/책임자 · 기존',
   client_editor: '마케팅담당자 · 기존',
@@ -78,6 +80,7 @@ function publicMember(row, authority) {
     principalType: row.principal_type || 'member',
     githubUsername: row.github_username || '',
     expiresAt: row.expires_at || '',
+    visibility: row.visibility === 'public' ? 'public' : 'private',
     status,
     joinedAt: row.grant_created_at,
     lastLoginAt: row.last_verified_at || row.last_login_at || '',
@@ -164,6 +167,7 @@ export async function handleCustomerMemberDirectory(request, env) {
   const url = new URL(request.url);
   if (url.pathname !== '/api/customers/directory') return null;
   if (!env.DB) return json({ error: '데이터베이스 연결이 설정되지 않았습니다.' }, 503, request, env);
+  await ensureCustomerAccessSchema(env.DB);
   const origin = request.headers.get('origin');
   if (origin && !isAllowedOrigin(origin, env)) return json({ error: '허용되지 않은 요청입니다.' }, 403, request, env);
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors(origin, env) });
@@ -193,6 +197,7 @@ export async function handleCustomerMemberDirectory(request, env) {
         a.principal_type,
         a.github_username,
         a.expires_at,
+        a.visibility,
         a.note,
         u.id AS user_id,
         COALESCE(u.display_name, '') AS display_name,
@@ -217,7 +222,7 @@ export async function handleCustomerMemberDirectory(request, env) {
   const members = filterMembers(allMembers, url);
 
   return json({
-    schemaVersion: 4,
+    schemaVersion: 5,
     authority: { scope: authority.scope, tenant: authority.tenantSlug || '', role: authority.role, canManageAllTenants: authority.canManageAllTenants },
     generatedAt: new Date().toISOString(),
     summary: directorySummary(allMembers, tenants),

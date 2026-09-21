@@ -23,6 +23,12 @@
     ['external_developer', '외부개발자'],
   ];
   const ROLE_LABELS = Object.fromEntries(ROLE_OPTIONS);
+  const USER_ROLE_OPTIONS = [
+    ['member','회원'],
+    ['viewer','조회·검수자'],
+    ['client_viewer','조회·검수자 · 기존'],
+  ];
+  const USER_ROLE_SET = new Set(USER_ROLE_OPTIONS.map(item => item[0]));
   const TAB_LABELS = {
     members: '전체 회원',
     sites: '사이트별',
@@ -112,7 +118,7 @@
     if (!navButton) {
       navButton = button('', 'nav');
       navButton.dataset.section = 'clients';
-      navButton.append(document.createTextNode('◎ '), text('span', 'Clients'));
+      navButton.append(document.createTextNode('◎ '), text('span', '사용자설정'));
       const servicesButton = nav.querySelector('[data-section="services"]');
       if (servicesButton) servicesButton.insertAdjacentElement('afterend', navButton);
       else nav.append(navButton);
@@ -126,8 +132,8 @@
     const head = document.createElement('div');
     head.className = 'section-head client-access-head';
     const heading = document.createElement('div');
-    heading.append(text('p', 'CLIENTS · IDENTITY & ACCESS', 'kicker'), text('h2', '사용자 · 관리자 · 권한'));
-    heading.append(text('p', 'Google 계정은 하나로 식별하고, 사이트 범위·역할·만료일을 분리해 관리합니다.', 'operations-copy'));
+    heading.append(text('p', 'USERS · SPACE ACCESS', 'kicker'), text('h2', '사용자설정'));
+    heading.append(text('p', '사이트·공간을 선택해 일반 사용자 목록, 역할, 활성상태와 공개·비공개 상태를 관리합니다.', 'operations-copy'));
     const refresh = button('↻ 새로고침', 'secondary');
     refresh.id = 'refreshClients';
     head.append(heading, refresh);
@@ -189,7 +195,7 @@
       });
       document.querySelectorAll('.sidebar .nav[data-section]').forEach(item => item.classList.toggle('active', item.dataset.section === 'clients'));
       const pageTitle = document.querySelector('#pageTitle');
-      if (pageTitle) pageTitle.textContent = '전체 사용자 · 사이트별 관리자 · 권한';
+      if (pageTitle) pageTitle.textContent = '사용자설정';
       document.querySelector('.sidebar')?.classList.remove('open');
       loadDirectory();
     };
@@ -216,8 +222,8 @@
     shell.site.value = directory.tenants.some(item => item.slug === siteValue) ? siteValue : '';
 
     shell.role.replaceChildren(selectOption('', '모든 권한'));
-    for (const item of directory.roles) shell.role.append(selectOption(item.role, item.label));
-    shell.role.value = directory.roles.some(item => item.role === roleValue) ? roleValue : '';
+    for (const item of directory.roles.filter(item => USER_ROLE_SET.has(item.role))) shell.role.append(selectOption(item.role, item.label));
+    shell.role.value = USER_ROLE_SET.has(roleValue) ? roleValue : '';
   }
 
   function renderSummary() {
@@ -243,6 +249,7 @@
     const role = shell.role.value;
     const status = forcePending ? 'pre_registered' : shell.status.value;
     return directory.members.filter(member => {
+      if (!USER_ROLE_SET.has(member.role)) return false;
       if (site && member.tenant.slug !== site) return false;
       if (role && member.role !== role) return false;
       if (status && member.status !== status) return false;
@@ -283,8 +290,8 @@
     const thead = document.createElement('thead');
     const headRow = document.createElement('tr');
     const labels = includeSite
-      ? ['사용자', '사이트', '권한', '상태', '만료', '관리']
-      : ['사용자', '권한', '상태', '만료', '관리'];
+      ? ['사용자', '사이트', '권한', '공개', '상태', '만료', '관리']
+      : ['사용자', '권한', '공개', '상태', '만료', '관리'];
     for (const label of labels) headRow.append(text('th', label));
     thead.append(headRow);
     const tbody = document.createElement('tbody');
@@ -307,12 +314,49 @@
           site.append(text('strong', member.tenant.name), text('small', member.tenant.domain));
           row.append(site);
         }
+        const roleCell = document.createElement('td');
+        const roleSelect = document.createElement('select');
+        for (const [value,label] of USER_ROLE_OPTIONS) roleSelect.append(selectOption(value,label));
+        roleSelect.value = USER_ROLE_SET.has(member.role) ? member.role : 'member';
+        roleCell.append(roleSelect);
+
+        const visibilityCell = document.createElement('td');
+        const visibility = document.createElement('select');
+        visibility.append(selectOption('private','비공개'), selectOption('public','공개'));
+        visibility.value = member.visibility === 'public' ? 'public' : 'private';
+        visibilityCell.append(visibility);
+
         const statusCell = document.createElement('td');
-        statusCell.append(membershipBadge(member.status));
+        const statusSelect = document.createElement('select');
+        statusSelect.append(selectOption('active','활성'), selectOption('disabled','중지'));
+        statusSelect.value = member.status === 'disabled' ? 'disabled' : 'active';
+        statusCell.append(statusSelect);
+
         const manageCell = document.createElement('td');
-        manageCell.append(revokeButton(member));
+        const save = button('저장', 'primary compact');
+        save.addEventListener('click', async () => {
+          save.disabled = true;
+          try {
+            await request(`/api/customers/tenants/${encodeURIComponent(member.tenant.slug)}/access/update`, {
+              method:'POST',
+              body:JSON.stringify({
+                email:member.email,
+                role:roleSelect.value,
+                visibility:visibility.value,
+                status:statusSelect.value,
+              }),
+            });
+            await loadDirectory(true);
+          } catch (error) {
+            alert(error.message);
+          } finally {
+            save.disabled = false;
+          }
+        });
+        manageCell.append(save, document.createTextNode(' '), revokeButton(member));
         row.append(
-          text('td', member.roleLabel || ROLE_LABELS[member.role] || member.role),
+          roleCell,
+          visibilityCell,
           statusCell,
           text('td', member.expiresAt ? formatDate(member.expiresAt, '-') : '계속'),
           manageCell,
@@ -383,46 +427,20 @@
     const roleLabel = text('label', '역할');
     const role = document.createElement('select');
     role.name = 'role';
-    for (const [value, label] of ROLE_OPTIONS) role.append(selectOption(value, label));
+    for (const [value, label] of USER_ROLE_OPTIONS) role.append(selectOption(value, label));
     roleLabel.append(role);
 
-    const githubLabel = text('label', 'GitHub 사용자명');
-    const github = document.createElement('input');
-    github.type = 'text';
-    github.name = 'githubUsername';
-    github.placeholder = 'github-username';
-    github.maxLength = 39;
-    githubLabel.append(github);
-
-    const expiryLabel = text('label', '접근 만료일');
-    const expiry = document.createElement('input');
-    expiry.type = 'date';
-    expiry.name = 'expiresAt';
-    expiry.min = new Date().toISOString().slice(0, 10);
-    expiry.value = dateAfter(30);
-    expiryLabel.append(expiry);
-
-    const safety = text('p', '외부업체·외부개발자는 선택한 사이트 범위만 접근하며 개인정보·재정·비밀키·운영배포·권한관리는 차단됩니다.', 'operations-copy');
-    const developerFields = document.createElement('div');
-    developerFields.className = 'client-developer-fields';
-    developerFields.append(githubLabel, expiryLabel, safety);
-    developerFields.hidden = true;
-
-    const syncDeveloperFields = () => {
-      const isDeveloper = role.value === 'external_developer';
-      const isExternal = isDeveloper || role.value === 'external_vendor';
-      developerFields.hidden = !isExternal;
-      githubLabel.hidden = !isDeveloper;
-      github.required = isDeveloper;
-      expiry.required = isExternal;
-    };
-    role.addEventListener('change', syncDeveloperFields);
-    syncDeveloperFields();
+    const visibilityLabel = text('label', '목록 공개');
+    const visibility = document.createElement('select');
+    visibility.name = 'visibility';
+    visibility.append(selectOption('private','비공개'), selectOption('public','공개'));
+    visibility.value = 'private';
+    visibilityLabel.append(visibility);
 
     const submit = button('Google 계정 등록', 'primary');
     submit.type = 'submit';
     const status = text('p', '', 'client-invite-result');
-    form.append(nameLabel, emailLabel, roleLabel, developerFields, submit, status);
+    form.append(nameLabel, emailLabel, roleLabel, visibilityLabel, submit, status);
 
     form.addEventListener('submit', async event => {
       event.preventDefault();
@@ -431,27 +449,22 @@
       submit.textContent = '등록 중…';
       status.replaceChildren();
       try {
-        const isDeveloper = role.value === 'external_developer';
-        const isExternal = isDeveloper || role.value === 'external_vendor';
-        const expiresAt = isExternal && expiry.value ? new Date(`${expiry.value}T23:59:59+09:00`).toISOString() : '';
         const data = await request(`/api/customers/tenants/${encodeURIComponent(tenant.slug)}/pre-register`, {
           method: 'POST',
           body: JSON.stringify({
             email: email.value.trim(),
             displayName: displayName.value.trim(),
             role: role.value,
-            githubUsername: isDeveloper ? github.value.trim() : '',
-            expiresAt,
+            visibility: visibility.value,
           }),
         });
         const account = data.account || {};
         const message = account.status === 'active'
           ? '기존 계정의 이 사이트 권한을 최신 설정으로 반영했습니다.'
           : '등록 완료. 같은 이메일의 Google 계정으로 로그인하면 이 사이트 범위에서만 활성화됩니다.';
-        status.append(text('strong', message), text('small', isDeveloper ? `GitHub @${account.githubUsername} · 만료 ${formatDate(account.expiresAt, '-')}` : isExternal ? `외부업체 · 만료 ${formatDate(account.expiresAt, '-')}` : 'Google 계정은 통합 식별되고 사이트별 권한만 추가됩니다.'));
+        status.append(text('strong', message), text('small', `목록 ${account.visibility === 'public' ? '공개' : '비공개'} · Google 계정은 통합 식별되고 사이트별 권한만 추가됩니다.`));
         form.reset();
-        expiry.value = dateAfter(30);
-        syncDeveloperFields();
+        visibility.value = 'private';
         await loadDirectory(true);
       } catch (error) {
         status.append(text('span', error.message, 'operations-error'));
@@ -464,7 +477,7 @@
   }
 
   function renderTenantDetail(detail, tenant) {
-    const members = directory.members.filter(member => member.tenant.slug === tenant.slug);
+    const members = directory.members.filter(member => member.tenant.slug === tenant.slug && USER_ROLE_SET.has(member.role));
     const header = document.createElement('div');
     header.className = 'client-detail-head';
     const identity = document.createElement('div');
@@ -478,9 +491,9 @@
     header.append(identity, open);
     detail.append(
       header,
-      text('h4', 'Google 계정·외부협력자 등록'),
+      text('h4', '사용자 등록'),
       createPreRegisterForm(tenant),
-      text('h4', `이 사이트 접근권한 · ${members.length}명`),
+      text('h4', `이 사이트 사용자 · ${members.length}명`),
       memberTable(members, { includeSite: false }),
     );
   }
