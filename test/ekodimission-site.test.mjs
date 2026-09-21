@@ -9,12 +9,13 @@ const env={ASSETS:{fetch:async request=>{
   const pathname=new URL(request.url).pathname;
   try{const body=await readFile(new URL(`.${pathname}`,spaceRoot));return new Response(request.method==='HEAD'?null:body,{status:200,headers:{'content-type':contentType(pathname)}})}catch{return new Response('Not Found',{status:404})}
 }}};
-const eventPath='/ekodimission/activities/260926-chuseok-open-table';
+const eventPath='/ekodimission/apply/260926-open-table';
+const legacyCurrentEventPath='/ekodimission/activities/260926-chuseok-open-table';
 const applicationApi='/ekodimission/api/activities/260926-chuseok-open-table/applications';
-const standaloneApplyPath='/ekodimission/apply/260926-open-table';
+const standaloneApplyPath=eventPath;
 const pageCases=[
   ['/ekodimission','에코디선교회'],['/ekodimission/activities','MISSION ACTIVITIES'],
-  [eventPath,'JOIN THE TABLE'],[standaloneApplyPath,'Chuseok Open Table & Sharing Market'],['/ekodimission/participate','PARTICIPATE'],
+  [eventPath,'Chuseok Open Table & Sharing Market'],['/ekodimission/participate','PARTICIPATE'],
   ['/ekodimission/partners','PARTNERSHIP'],['/ekodimission/stories','STORIES & NEWS'],['/ekodimission/give','GIVE & SHARE'],
 ];
 test('EKODI Mission pages are routed as branded published public surfaces',async()=>{
@@ -44,9 +45,9 @@ test('published EKODI Mission live route is indexable and independently branded'
 });
 
 test('legacy Open Table URLs permanently redirect to the corrected dated activity URL',async()=>{
-  for(const legacy of ['/ekodimission/activities/260925-chuseok-open-table','/ekodimission/activities/2026-chuseok-open-table']){
+  for(const legacy of [legacyCurrentEventPath,'/ekodimission/activities/260925-chuseok-open-table','/ekodimission/activities/2026-chuseok-open-table']){
     const response=await spaceWorker.fetch(new Request(`https://ekodi.kr${legacy}?from=old`),env);
-    assert.equal(response.status,308,legacy);assert.equal(response.headers.get('location'),'https://ekodi.kr/ekodimission/activities/260926-chuseok-open-table?from=old',legacy);assert.equal(response.headers.get('x-ekodi-publication-status'),'published',legacy);
+    assert.equal(response.status,308,legacy);assert.equal(response.headers.get('location'),'https://ekodi.kr/ekodimission/apply/260926-open-table?from=old',legacy);assert.equal(response.headers.get('x-ekodi-publication-status'),'published',legacy);
   }
 });
 
@@ -63,9 +64,9 @@ test('EKODI Mission shared assets and unknown child routes are guarded',async()=
 });
 
 test('Open Table is first-party EKODI application UI with corrected Sep 26 schedule',async()=>{
-  const [event,activities,script,css,admin]=await Promise.all([readFile(new URL('../space/ekodimission-activity.page',import.meta.url),'utf8'),readFile(new URL('../space/ekodimission-activities.page',import.meta.url),'utf8'),readFile(new URL('../space/ekodimission.js',import.meta.url),'utf8'),readFile(new URL('../space/ekodimission.css',import.meta.url),'utf8'),readFile(new URL('../workspace-admin-page.js',import.meta.url),'utf8')]);
-  assert.match(event,/260926-chuseok-open-table/);assert.match(event,/9\.26 토/);assert.match(event,/15:00–17:00/);assert.doesNotMatch(event,/16:00–18:00/);assert.match(event,/id="apply"/);assert.match(event,/data-event-application/);assert.doesNotMatch(event,/docs\.google\.com|forms\/d\//i);
-  assert.match(activities,/260926-chuseok-open-table/);assert.match(activities,/9월 26일 토요일 15:00–17:00/);const home=await readFile(new URL('../space/ekodimission.page',import.meta.url),'utf8');assert.match(home,/09\.26/);assert.match(home,/SAT · 2026/);assert.match(home,/2026년 9월 26일\(토\) 15:00–17:00/);assert.doesNotMatch(home,/09\.25|16:00–18:00/);assert.doesNotMatch(script,/docs\.google\.com|forms\/d\//i);assert.match(script,/260926-chuseok-open-table/);assert.match(script,/2026년 9월 26일 토요일 오후 3시/);
+  const [event,activities,script,css,admin]=await Promise.all([readFile(new URL('../space/ekodimission-open-table-apply.page',import.meta.url),'utf8'),readFile(new URL('../space/ekodimission-activities.page',import.meta.url),'utf8'),readFile(new URL('../space/ekodimission.js',import.meta.url),'utf8'),readFile(new URL('../space/ekodimission.css',import.meta.url),'utf8'),readFile(new URL('../workspace-admin-page.js',import.meta.url),'utf8')]);
+  assert.match(event,/260926-chuseok-open-table/);assert.match(event,/9\.26 토 \| Sat/);assert.match(event,/16:00–18:00/);assert.match(event,/Jadam Chicken/);assert.match(event,/id="apply"/);assert.match(event,/data-event-application/);assert.doesNotMatch(event,/docs\.google\.com|forms\/d\//i);
+  assert.match(activities,/\/ekodimission\/apply\/260926-open-table/);assert.match(activities,/9월 26일 토요일 16:00–18:00/);const home=await readFile(new URL('../space/ekodimission.page',import.meta.url),'utf8');assert.match(home,/09\.26/);assert.match(home,/SAT · 2026/);assert.match(home,/2026년 9월 26일\(토\) 16:00–18:00/);assert.doesNotMatch(home,/09\.25|15:00–17:00/);assert.match(home,/\/ekodimission\/apply\/260926-open-table/);assert.doesNotMatch(script,/docs\.google\.com|forms\/d\//i);assert.match(script,/ekodimission\/apply\/260926-open-table/);assert.match(script,/2026년 9월 26일 토요일 오후 4시/);
   assert.match(script,/applications/);assert.match(css,/word-break:keep-all/);assert.match(css,/overflow-wrap:break-word/);assert.match(css,/hyphens:none/);
   assert.match(admin,/'ekodimission':'에코디선교회'/);assert.match(admin,/'ekodimission':'mission'/);
 });
@@ -133,7 +134,7 @@ test('mission hero visuals are first-party SVG assets and pages render the compl
     readFile(new URL('../space/open-table-hero-260926.svg',import.meta.url),'utf8'),
     readFile(new URL('../space/ekodimission.css',import.meta.url),'utf8')
   ]);
-  assert.match(home,/mission-table-hero\.svg/);assert.match(event,/open-table-hero-260926\.svg/);
+  assert.match(home,/mission-table-hero\.svg/);assert.match(event,/Chuseok Open Table & Sharing Market/);assert.doesNotMatch(event,/open-table-hero-260926\.svg/);
   assert.match(worker,/mission-table-hero\.svg/);assert.match(worker,/open-table-hero-260926\.svg/);
   assert.match(homeSvg,/<svg[\s\S]*한 식탁이/);assert.match(eventSvg,/<svg[\s\S]*2026 에코디 추석 열린식탁/);
   assert.match(css,/\.event-visual img\{[^}]*object-fit:contain/);assert.match(css,/\.hero-visual img\{[^}]*object-fit:cover/);
