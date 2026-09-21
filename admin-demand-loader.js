@@ -215,7 +215,7 @@
           }
           if (scripts[index]) await loadScript(scripts[index]);
         } catch (error) {
-          console.warn(`[EKODI Admin] ${key} secondary load failed`, error);
+          console.warn('[EKODI Admin] secondary',key,error);
         }
         index += 1;
         step();
@@ -254,7 +254,7 @@
         mark(`ekodi-feature-${key}-ready`);
         scheduleSecondary(key, feature);
       } catch (error) {
-        console.warn(`[EKODI Admin] ${key} demand load failed`, error);
+        console.warn('[EKODI Admin] demand',key,error);
         if (placeholder?.isConnected) {
           placeholder.disabled = false;
           placeholder.removeAttribute('aria-busy');
