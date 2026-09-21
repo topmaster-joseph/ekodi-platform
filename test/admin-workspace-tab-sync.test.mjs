@@ -5,9 +5,9 @@ import { readFile } from 'node:fs/promises';
 const layout = await readFile(new URL('../admin-menu-layout.js', import.meta.url), 'utf8');
 const registry = await readFile(new URL('../admin-menu-registry.js', import.meta.url), 'utf8');
 
-test('workspace global switch synchronizes shared context tabs immediately', () => {
-  assert.match(registry, /id:\s*'workspaces'.*defaultSection:\s*'clients'/s);
-  assert.match(registry, /id:\s*'clients'.*group:\s*'workspaces'/s);
+test('site global switch synchronizes shared context tabs immediately', () => {
+  assert.match(registry, /id:\s*'sites'.*defaultSection:\s*'sites-all'/s);
+  assert.match(registry, /id:\s*'clients'.*group:\s*'sites'/s);
   assert.match(layout, /const sharedSidebar=mountAdminSidebar\(document\);/);
   assert.match(layout, /\[data-admin-global-group\][\s\S]*sharedSidebar\?\.sync\?\.\(\);/);
 });

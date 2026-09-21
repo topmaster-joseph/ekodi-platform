@@ -148,23 +148,26 @@ test('Admin canonical route registry mirrors the seven management areas and migr
   const location={href:'https://ekodi.kr/admin/',hostname:'ekodi.kr',pathname:'/admin/',search:'',hash:''};
   const window={location};vm.runInNewContext(source,{window,URL,URLSearchParams,Object,Set,String});
   const routes=window.EKODIAdminRoutes;
-  assert.equal(routes.pathFor('campus'),'/admin/home/campus');
-  assert.equal(routes.pathFor('communication'),'/admin/operations/communication');
+  assert.equal(routes.pathFor('campus'),'/admin/sites/campus');
+  assert.equal(routes.pathFor('communication'),'/admin/content/communication');
   assert.equal(routes.pathFor('insurance'),'/admin/services/insurance');
-  assert.equal(routes.pathFor('community'),'/admin/community/community');
-  assert.equal(routes.pathFor('ai-membership'),'/admin/community/ai-membership');
-  assert.equal(routes.pathFor('books'),'/admin/publishing/books');
-  assert.equal(routes.pathFor('devotional'),'/admin/publishing/devotional');
-  assert.equal(routes.pathFor('workspace'),'/admin/workspaces/workspace');
-  assert.equal(routes.pathFor('clients'),'/admin/workspaces/clients');
-  assert.equal(routes.pathFor('aiops'),'/admin/system/aiops');
+  assert.equal(routes.pathFor('community'),'/admin/content/community');
+  assert.equal(routes.pathFor('ai-membership'),'/admin/people/ai-membership');
+  assert.equal(routes.pathFor('books'),'/admin/content/books');
+  assert.equal(routes.pathFor('devotional'),'/admin/content/devotional');
+  assert.equal(routes.pathFor('workspace'),'/admin/sites/workspace');
+  assert.equal(routes.pathFor('clients'),'/admin/sites/clients');
+  assert.equal(routes.pathFor('aiops'),'/admin/status/aiops');
   assert.equal(routes.sectionFromPath('/admin/system/security'),'security');
+  assert.equal(routes.sectionFromPath('/admin/home/campus'),'campus');
   assert.equal(routes.sectionFromPath('/admin/system/campus'),'campus');
   assert.equal(routes.sectionFromPath('/admin/common/common-services'),'common-services');
   assert.equal(routes.sectionFromPath('/admin/professional/insurance'),'insurance');
   assert.equal(routes.sectionFromPath('/admin/services/community'),'community');
   assert.equal(routes.sectionFromPath('/admin/services/books'),'books');
   assert.equal(routes.sectionFromPath('/admin/space/clients'),'clients');
+  assert.equal(routes.sectionFromPath('/admin/services/engine-ai'),'engine-ai');
+  assert.equal(routes.sectionFromPath('/admin/sites/sites-user'),'sites-user');
   for (const item of ADMIN_MENU_REGISTRY.filter(item => !item.href)) {
     if (item.id === 'command-home') {
       assert.equal(routes.pathFor(item.id), '/admin/');

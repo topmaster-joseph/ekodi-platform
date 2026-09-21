@@ -20,13 +20,13 @@ const TABS_CLASS = 'admin-context-tabs';
 const DETAILS_CLASS = 'admin-global-details';
 const MORE_CLASS = 'admin-detail-more';
 const PRIMARY_SECTIONS = Object.freeze({
-  home: ['command-home', 'campus'],
-  operations: ['work', 'communication', 'finance', 'tax'],
-  workspaces: ['clients', 'organization', 'workspace', 'cmpmyi', 'site-chrome'],
-  services: ['common-services', 'confirmations', 'marketing-ai', 'social', 'life-ai'],
-  community: ['community', 'ai-membership'],
-  publishing: ['books', 'devotional'],
-  system: ['health', 'aiops', 'devices', 'security', 'admins', 'api-cost'],
+  summary: ['platform-overview'],
+  services: ['engine-all', 'engine-core', 'engine-common', 'engine-operations', 'engine-professional', 'engine-ai', 'engine-integration', 'engine-preview'],
+  sites: ['sites-all', 'sites-internal', 'sites-user', 'sites-customer-partner', 'sites-independent', 'sites-preparing'],
+  people: ['users-access', 'admins', 'security', 'ai-membership'],
+  content: ['work', 'communication', 'community', 'books', 'social'],
+  status: ['health', 'deployments', 'aiops', 'devices', 'api-cost'],
+  'settings-records': ['public-site-controls', 'language-status', 'ai-settings', 'storage', 'audit-records', 'ai-module-spec'],
 });
 
 export function adminSidebarSectionOf(item) {
@@ -280,7 +280,7 @@ function activeSection(nav) {
   const activeId = adminSidebarSectionOf(active);
   if (activeId && getAdminMenuItem(activeId)) return activeId;
   if (panelSection && getAdminMenuItem(panelSection)) return panelSection;
-  return getAdminMenuGroupDefault('home');
+  return getAdminMenuGroupDefault('summary');
 }
 
 function availableIds(nav, group) {
@@ -290,7 +290,7 @@ function availableIds(nav, group) {
     const definition = visibleDefinition(id);
     if (!definition || definition.group !== group) return false;
     if (definition.superAdminOnly && !present.has(id)) return false;
-    return present.has(id) || id === defaultSection || Boolean(document.querySelector(`[data-panel~="${id}"]`));
+    return present.has(id) || id === defaultSection || Boolean(definition.delegateSection) || Boolean(document.querySelector(`[data-panel~="${id}"]`));
   });
 }
 
@@ -351,6 +351,10 @@ function activateSection(nav, section) {
   if (!section) return false;
   const definition = getAdminMenuItem(section);
   const fallback = [...navItems(nav)].find(item => adminSidebarSectionOf(item) === section);
+  if (definition?.delegateSection) {
+    window.EKODIAdminPanels?.activate?.(section);
+    return true;
+  }
   if (definition?.href && definition.adminHandoff !== true) {
     const destination = new URL(definition.href, window.location.origin);
     if (destination.protocol !== 'https:') return false;

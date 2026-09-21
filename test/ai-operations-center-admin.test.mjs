@@ -12,10 +12,9 @@ test('AI operations center source parses as JavaScript', () => {
   assert.doesNotThrow(() => new Function(center));
 });
 
-test('AI operations center is promoted without breaking canonical English menu contracts', () => {
-  assert.match(menu, /ko: 'AI 운영센터'/);
-  assert.match(menu, /en: 'AI & Agents'/);
-  assert.match(menu, /id: 'openai'[\s\S]*?en: 'OpenAI'/);
+test('AI operations center remains loaded while the visible status menu uses incident language', () => {
+  assert.match(menu, /id: 'aiops'[^\n]*group: 'status'[^\n]*ko: '장애·오류·경고'[^\n]*en: 'Incidents, Errors & Warnings'/);
+  assert.match(menu, /id: 'openai'[^\n]*group: 'services'[^\n]*en: 'OpenAI'[^\n]*internal: true/);
   assert.match(menu, /import\('\.\/ai-operations-center-admin\.js'\)/);
   assert.match(menu, /globalPolicyMutation: 'super_admin'/);
 });

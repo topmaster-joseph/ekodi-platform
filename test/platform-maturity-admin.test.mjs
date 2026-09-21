@@ -51,10 +51,10 @@ test('Control API exposes maturity only behind explicit super-admin authorizatio
   assert.match(api, /PLATFORM_MATURITY_FORBIDDEN/);
 });
 
-test('maturity dashboard registry entry stays in system platform category', () => {
+test('maturity dashboard registry entry stays in the status area', () => {
   const registry = read('admin-menu-registry.js');
-  assert.match(registry, /id: 'maturity'.*group: 'system'/s);
-  assert.match(registry, /maturity:'platform'/);
+  assert.match(registry, /id: 'maturity'[^\n]*group: 'status'/);
+  assert.match(registry, /maturity:'status'/);
   assert.match(registry, /platform-maturity-admin\.js/);
 });
 

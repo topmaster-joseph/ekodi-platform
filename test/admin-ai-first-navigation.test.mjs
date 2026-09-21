@@ -8,12 +8,14 @@ const sidebar = await readFile(new URL('../admin-sidebar.js', import.meta.url), 
 const menuRuntime = await readFile(new URL('../admin-menu-runtime.js', import.meta.url), 'utf8');
 
 test('internal technical sections stay out of primary navigation', () => {
-  assert.ok(layout.includes("const INTERNAL=new Set(['services','deployments','policies']);"));
-  for (const section of ['services','deployments','policies']) {
+  assert.ok(layout.includes("const INTERNAL=new Set(['services','policies']);"));
+  for (const section of ['services','policies']) {
     assert.equal(getAdminMenuItem(section)?.internal, true);
     assert.equal(adminMenuOrder().includes(section), false);
     assert.ok(layout.includes(`#${section}:${section}`));
   }
+  assert.notEqual(getAdminMenuItem('deployments')?.internal, true);
+  assert.equal(adminMenuOrder().includes('deployments'), true);
   assert.ok(layout.includes('item.dataset.aiInternal='));
   assert.doesNotMatch(layout, /\/legacy#/);
 });
@@ -39,12 +41,15 @@ test('Campus shortcuts cannot reopen hidden technical panels', () => {
 });
 
 test('human-facing Admin menu has one canonical order inside seven EKODI areas', () => {
-  assert.deepEqual(adminMenuGroups(), ['home','operations','workspaces','services','community','publishing','system']);
+  assert.deepEqual(adminMenuGroups(), ['summary','services','sites','people','content','status','settings-records']);
   assert.deepEqual(adminMenuOrder(), [
-    'command-home','campus','work','communication','finance','tax','clients','site-chrome','cmpmyi','organization','workspace',
-    'common-services','confirmations','life-ai','personal-finance','invest','social','marketing-ai','supply-network','insurance',
-    'community','ai-membership','books','devotional',
-    'public-site-controls','language-status','architecture','maturity','security','admins','ai-module-spec','storage','capabilities','aiops','ai-settings','openai','devices','health','api-cost',
+    'platform-overview',
+    'engine-all','engine-core','engine-common','engine-operations','engine-professional','engine-ai','engine-integration','engine-preview',
+    'sites-all','sites-internal','sites-user','sites-customer-partner','sites-independent','sites-preparing',
+    'users-access','security','admins','ai-membership',
+    'work','communication','community','books','devotional','social','finance','tax',
+    'health','deployments','aiops','devices','api-cost','architecture','maturity',
+    'public-site-controls','language-status','ai-module-spec','storage','ai-settings','audit-records',
   ]);
   assert.ok(layout.includes('const ORDER=Object.freeze(adminMenuOrder());'));
   assert.ok(layout.includes('const RANK=new Map(ORDER.map((section,index)=>[section,index+1]));'));

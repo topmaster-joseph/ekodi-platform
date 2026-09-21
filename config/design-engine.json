@@ -58,22 +58,22 @@
   },
   "admin": {
     "primaryAxes": [
-      "home",
-      "operations",
-      "workspaces",
+      "summary",
       "services",
-      "community",
-      "publishing",
-      "system"
+      "sites",
+      "people",
+      "content",
+      "status",
+      "settings-records"
     ],
     "primaryAxisLabelsKo": [
-      "홈",
-      "운영",
-      "조직·고객",
+      "통합현황",
       "서비스",
-      "커뮤니티",
-      "출판·도서",
-      "시스템"
+      "사이트",
+      "사용자·권한",
+      "콘텐츠·운영",
+      "상태·배포",
+      "설정·기록"
     ],
     "layout": "fixed-primary-sidebar + contextual-top-tabs + scrolling-workspace + bottom-command-composer",
     "desktopPrimarySidebarScroll": false,

@@ -31,12 +31,12 @@
       insert: 'after-campus',
     },
     'ai-settings':{label:'AI',icon:'⚙',styles:['ai-management-admin.css'],scripts:['ai-management-admin.js'],real:'[data-section="ai-settings"]'},
+    confirmations:{scripts:['confirmation-admin.js'],real:'[data-section="confirmations"]'},
     openai:{label:'OpenAI',icon:'O',styles:['openai-workspace-admin.css'],scripts:['openai-workspace-admin.js'],real:'[data-section="openai"]',hashes:['#openai']},
     devotional:{label:'매일묵상',icon:'V',styles:['devotional-admin.css'],scripts:['devotional-admin.js'],real:'[data-section="devotional"]',hashes:['#devotional'],insert:'after-aiops'},
     'ai-module-spec':{label:'A',icon:'A',styles:['ai-module-spec-admin.css'],scripts:['ai-module-spec-admin.js'],real:'[data-section="ai-module-spec"]',hashes:['#ai-module-spec']},
     'life-ai':{label:'인생AI',icon:'Q',styles:['life-ai-admin.css'],scripts:['life-ai-admin.js'],real:'[data-section="life-ai"]',hashes:['#life-ai'],insert:'after-aiops'},
     'personal-finance':{label:'개인재무',icon:'₩',styles:['personal-finance-admin.css'],scripts:['personal-finance-admin.js'],real:'[data-section="personal-finance"]',hashes:['#personal-finance'],insert:'after-aiops'},
-    confirmations:{scripts:['confirmation-admin.js'],real:'[data-section="confirmations"]'},
     aimembers: {
       label: 'AI 회원운영', icon: '◈',
       styles: ['ai-ops-admin.css'],
@@ -54,7 +54,7 @@
       insert: 'after-aiops',
     },
     'api-cost':{label:'API Cost',icon:'₩',styles:['api-cost-admin.css'],scripts:['api-cost-admin.js'],real:'[data-section="api-cost"]',hashes:['#api-cost'],insert:'after-health'},
-    storage:{label:'Storage',icon:'▣',styles:['storage-admin.css'],scripts:['storage-admin.js'],real:'[data-section="storage"]',hashes:['#storage'],paths:['/admin/system/storage'],insert:'after-health'},
+    storage:{label:'Storage',icon:'▣',styles:['storage-admin.css'],scripts:['storage-admin.js'],real:'[data-section="storage"]',hashes:['#storage'],paths:['/admin/settings-records/storage','/admin/system/storage'],insert:'after-health'},
     security:{label:'Security',icon:'◆',styles:['admin-secret-generator.css'],scripts:['admin-secret-generator.js'],real:'[data-section="security"]',hashes:['#security'],insert:'after-health'},
     deployments:{label:'Deployments',icon:'↑',styles:['release-control-admin.css'],scripts:['release-control-admin.js'],real:'[data-section="deployments"]',hashes:['#deployments','#release'],insert:'after-security'},
     work: {
@@ -215,7 +215,7 @@
           }
           if (scripts[index]) await loadScript(scripts[index]);
         } catch (error) {
-          console.warn(`[EKODI Admin] ${key} secondary load failed`, error);
+          console.warn('[EKODI Admin] secondary',key,error);
         }
         index += 1;
         step();
@@ -254,7 +254,7 @@
         mark(`ekodi-feature-${key}-ready`);
         scheduleSecondary(key, feature);
       } catch (error) {
-        console.warn(`[EKODI Admin] ${key} demand load failed`, error);
+        console.warn('demand',key,error);
         if (placeholder?.isConnected) {
           placeholder.disabled = false;
           placeholder.removeAttribute('aria-busy');

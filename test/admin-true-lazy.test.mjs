@@ -33,7 +33,7 @@ test('heavy admin modules are explicit on-demand features', async () => {
   }
   assert.match(loader, /author-billing-admin\.js/);
   assert.match(loader, /system-health-admin\.js/);
-  assert.match(loader, /storage:\{[^\n]*paths:\['\/admin\/system\/storage'\]/);
+  assert.match(loader, /storage:\{[^\n]*paths:\['\/admin\/settings-records\/storage','\/admin\/system\/storage'\]/);
   assert.doesNotMatch(loader, /setInterval\([^)]*loadDevices/);
 });
 
@@ -89,18 +89,18 @@ test('shared admin navigation exposes seven canonical areas with top contextual 
   const sidebar = await read('admin-sidebar.js');
   const postbuild = await read('scripts/admin-performance-postbuild.mjs');
   assert.doesNotMatch(registry, /id: 'overview'/);
-  for (const area of ['home', 'operations', 'workspaces', 'services', 'community', 'publishing', 'system']) assert.match(registry, new RegExp(`id: '${area}'`));
-  for (const retired of ['structure', 'core', 'common', 'vertical', 'tenants', 'operations-center', 'people', 'ai', 'business', 'data', 'site-management', 'security-audit', 'settings', 'access']) assert.doesNotMatch(registry, new RegExp(`id: '${retired}', icon:`));
-  assert.match(registry, /id: 'campus', group: 'home'/);
-  assert.match(registry, /id: 'work', group: 'operations'/);
-  assert.match(registry, /id: 'clients', group: 'workspaces'/);
+  for (const area of ['summary', 'services', 'sites', 'people', 'content', 'status', 'settings-records']) assert.match(registry, new RegExp(`id: '${area}'`));
+  for (const retired of ['structure', 'core', 'common', 'vertical', 'tenants', 'operations-center', 'ai', 'business', 'data', 'site-management', 'security-audit', 'settings', 'access']) assert.doesNotMatch(registry, new RegExp(`id: '${retired}', icon:`));
+  assert.match(registry, /id: 'campus', group: 'sites'/);
+  assert.match(registry, /id: 'work', group: 'content'/);
+  assert.match(registry, /id: 'clients', group: 'sites'/);
   assert.match(registry, /id: 'common-services', group: 'services'/);
-  assert.match(registry, /id: 'community', group: 'community'/);
-  assert.match(registry, /id: 'ai-membership', group: 'community'/);
-  assert.match(registry, /id: 'books', group: 'publishing'/);
-  assert.match(registry, /id: 'devotional', group: 'publishing'/);
-  assert.match(registry, /id: 'capabilities', group: 'system'/);
-  assert.match(registry, /id: 'devices', group: 'system'/);
+  assert.match(registry, /id: 'community', group: 'content'/);
+  assert.match(registry, /id: 'ai-membership', group: 'people'/);
+  assert.match(registry, /id: 'books', group: 'content'/);
+  assert.match(registry, /id: 'devotional', group: 'content'/);
+  assert.match(registry, /id: 'capabilities', group: 'services'/);
+  assert.match(registry, /id: 'devices', group: 'status'/);
   assert.match(sidebar, /RETIRED_MENU_SECTIONS = new Set\(\['overview'\]\)/);
   assert.match(sidebar, /admin-global-navs/);
   assert.match(sidebar, /admin-context-tabs-shell/);

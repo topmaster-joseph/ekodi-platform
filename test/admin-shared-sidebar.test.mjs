@@ -10,7 +10,7 @@ const layout = await readFile(new URL('../admin-menu-layout.js', import.meta.url
 const postbuild = await readFile(new URL('../scripts/admin-performance-postbuild.mjs', import.meta.url), 'utf8');
 
 test('seven canonical areas replace the former many-group admin taxonomy', () => {
-  for (const id of ['home', 'operations', 'workspaces', 'services', 'community', 'publishing', 'system']) {
+  for (const id of ['summary', 'services', 'sites', 'people', 'content', 'status', 'settings-records']) {
     assert.match(registry, new RegExp(`id: '${id}'`));
   }
   for (const retired of ['site-management', 'security-audit', 'settings', 'access']) {
@@ -115,7 +115,7 @@ test('context tabs keep working when the authenticated shell replaces main', () 
 });
 
 test('internal operational capabilities stay off the global work areas as direct items', () => {
-  assert.match(layout, /const INTERNAL=new Set\(\['services','deployments','policies'\]\)/);
+  assert.match(layout, /const INTERNAL=new Set\(\['services','policies'\]\)/);
   assert.match(layout, /#campus:campus/);
   assert.match(layout, /campus:#campus/);
   assert.match(layout, /const COMMAND_HOME='command-home'/);
@@ -148,10 +148,11 @@ test('visible task navigation lazy-loads demand features before shared panel act
   const activateStart = sidebar.indexOf('function activateSection');
   const activateEnd = sidebar.indexOf('export function createAdminSidebarItem', activateStart);
   const source = sidebar.slice(activateStart, activateEnd);
-  assert.match(source, /item\.dataset\.demandFeature === section/);
+  assert.match(source, /const demandTarget = \[\.\.\.navItems\(nav\)\]\.find\(item => item\.dataset\.demandFeature === section\)/);
   assert.match(source, /window\.EKODIAdminDemand\?\.activate/);
   assert.match(source, /Promise\.resolve\(window\.EKODIAdminDemand\.activate\(section\)\)/);
   assert.match(source, /window\.EKODIAdminPanels\?\.activate/);
-  assert.ok(source.indexOf('window.EKODIAdminDemand.activate(section)') < source.indexOf('window.EKODIAdminPanels?.activate'), 'demand feature must load before the shared panel controller activates it');
+  assert.ok(source.indexOf('window.EKODIAdminDemand.activate(section)') < source.lastIndexOf('window.EKODIAdminPanels?.activate'), 'non-delegated demand feature must load before the shared panel controller activates it');
   assert.match(source, /visible navigation demand activation failed/);
+  assert.match(source, /definition\?\.delegateSection[\s\S]*window\.EKODIAdminPanels\?\.activate\?\.\(section\)/);
 });

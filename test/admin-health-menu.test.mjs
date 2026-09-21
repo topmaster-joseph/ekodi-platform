@@ -6,16 +6,15 @@ const read = path => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 const routePair = (source, hash, section) => source.includes(`['${hash}', '${section}']`) || source.includes(`${hash}:${section}`);
 const canonicalPair = (source, section, hash) => source.includes(`['${section}', '${hash}']`) || source.includes(`${section}:${hash}`);
 
-test('Health remains a visible System route after AI and node controls', async () => {
+test('Health remains a visible Status route with security and capability ownership separated', async () => {
   const menu = await read('admin-menu-layout.js');
   const registry = await read('admin-menu-registry.js');
   const loader = await read('admin-demand-loader.js');
-  assert.match(registry, /id: 'security', group: 'system'/);
-  assert.match(registry, /id: 'capabilities', group: 'system'/);
-  assert.match(registry, /id: 'health', group: 'system'/);
-  assert.ok(registry.indexOf("id: 'capabilities'") < registry.indexOf("id: 'aiops'"));
-  assert.ok(registry.indexOf("id: 'aiops'") < registry.indexOf("id: 'devices'"));
-  assert.ok(registry.indexOf("id: 'devices'") < registry.indexOf("id: 'health'"));
+  assert.match(registry, /id: 'security', group: 'people'/);
+  assert.match(registry, /id: 'capabilities', group: 'services'/);
+  assert.match(registry, /id: 'health', group: 'status'/);
+  assert.match(registry, /id: 'aiops', group: 'status'/);
+  assert.match(registry, /id: 'devices', group: 'status'/);
   assert.ok(routePair(menu, '#health', 'health'));
   assert.ok(canonicalPair(menu, 'health', '#health'));
   assert.match(loader, /health:\s*\{/);

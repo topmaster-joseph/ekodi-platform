@@ -12,7 +12,7 @@ const [registry, adminJs, adminCss, domainsJs, build, worker] = await Promise.al
 ]);
 
 test('Admin navigation keeps administrator access and retires the old Domains menu axis', () => {
-  assert.match(registry, /id: 'admins'[\s\S]*en: 'Administrators & Access'/);
+  assert.match(registry, /id: 'admins'[^\n]*group: 'people'[^\n]*en: 'Users & Administrators'/);
   assert.doesNotMatch(registry, /id: 'domains'/);
 });
 

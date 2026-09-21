@@ -15,11 +15,11 @@ import {
   normalizeAdminLocale,
 } from '../admin-menu-registry.js';
 
-const WORK_AREAS = ['home', 'operations', 'workspaces', 'services', 'community', 'publishing', 'system'];
+const WORK_AREAS = ['summary', 'services', 'sites', 'people', 'content', 'status', 'settings-records'];
 
 test('admin navigation has exactly seven canonical EKODI areas', () => {
   assert.deepEqual(ADMIN_MENU_GROUPS.map(group => group.id), WORK_AREAS);
-  assert.deepEqual(ADMIN_MENU_GROUPS.map(group => group.labels.en), ['Home','Operations','Organizations & Customers','Services','Community','Publishing','System']);
+  assert.deepEqual(ADMIN_MENU_GROUPS.map(group => group.labels.en), ['Integrated Overview','Services','Sites','Users & Access','Content & Operations','Status & Releases','Settings & Records']);
   for (const group of ADMIN_MENU_GROUPS) {
     assert.ok(group.defaultSection, `${group.id} missing defaultSection`);
     assert.equal(getAdminMenuGroupForSection(group.defaultSection), group.id);
@@ -35,25 +35,25 @@ test('every public admin subservice belongs to one canonical area', () => {
     assert.ok(item.labels?.en, `${item.id} missing English label`);
     assert.ok(WORK_AREAS.includes(item.group), `${item.id} is outside workbench navigation`);
   }
-  assert.equal(getAdminMenuLabel('admins', 'ko'), '관리자·권한');
-  assert.equal(getAdminMenuLabel('admins', 'en'), 'Administrators & Access');
-  assert.equal(getAdminMenuLabel('common-services', 'ko'), '공통서비스');
-  assert.equal(getAdminMenuGroupForSection('common-services'), 'services');
+  assert.equal(getAdminMenuLabel('admins', 'ko'), '전체 사용자·관리자');
+  assert.equal(getAdminMenuLabel('admins', 'en'), 'Users & Administrators');
+  assert.equal(getAdminMenuLabel('engine-common', 'ko'), '공통 엔진');
+  assert.equal(getAdminMenuGroupForSection('engine-common'), 'services');
   assert.ok(adminMenuOrder().includes('security'));
   assert.ok(adminMenuOrder().includes('admins'));
-  assert.equal(getAdminMenuLabel('social', 'ko'), '채널·자동게시');
-  assert.equal(getAdminMenuLabel('social', 'en'), 'Channels & Autopost');
+  assert.equal(getAdminMenuLabel('social', 'ko'), '방송·채널·자동게시');
+  assert.equal(getAdminMenuLabel('social', 'en'), 'Broadcast, Channels & Autopost');
   assert.equal(getAdminMenuGroupForSection('marketing-ai'), 'services');
-  assert.equal(getAdminMenuGroupForSection('finance'), 'operations');
-  assert.equal(getAdminMenuGroupForSection('workspace'), 'workspaces');
-  assert.equal(getAdminMenuGroupForSection('community'), 'community');
-  assert.equal(getAdminMenuGroupForSection('ai-membership'), 'community');
-  assert.equal(getAdminMenuGroupForSection('books'), 'publishing');
-  assert.equal(getAdminMenuGroupForSection('devotional'), 'publishing');
-  assert.equal(getAdminMenuGroupForSection('storage'), 'system');
+  assert.equal(getAdminMenuGroupForSection('finance'), 'content');
+  assert.equal(getAdminMenuGroupForSection('workspace'), 'sites');
+  assert.equal(getAdminMenuGroupForSection('community'), 'content');
+  assert.equal(getAdminMenuGroupForSection('ai-membership'), 'people');
+  assert.equal(getAdminMenuGroupForSection('books'), 'content');
+  assert.equal(getAdminMenuGroupForSection('devotional'), 'content');
+  assert.equal(getAdminMenuGroupForSection('storage'), 'settings-records');
   assert.equal(getAdminMenuLabel('devices', 'ko'), '실행 인프라');
   assert.equal(getAdminMenuLabel('devices', 'en'), 'Execution Infrastructure');
-  assert.equal(getAdminMenuGroupForSection('devices'), 'system');
+  assert.equal(getAdminMenuGroupForSection('devices'), 'status');
   const execution = ADMIN_MENU_REGISTRY.find(item => item.id === 'devices');
   assert.deepEqual(execution?.governance, {
     track: 'agent',
@@ -86,8 +86,8 @@ test('shared admin browser modules pass syntax checks', () => {
 
 
 test('admin submenus are categorized and unclassified sections fall back to Other last', () => {
-  assert.equal(getAdminMenuCategory('communication'), 'workflow');
-  assert.equal(getAdminMenuCategory('marketing-ai'), 'business');
+  assert.equal(getAdminMenuCategory('communication'), 'content');
+  assert.equal(getAdminMenuCategory('marketing-ai'), 'catalog');
   assert.equal(getAdminMenuCategory('unregistered-future-section'), 'other');
   assert.equal(getAdminMenuCategoryLabel('other', 'ko'), '기타');
   for (const group of WORK_AREAS) assert.equal(adminMenuCategoryOrder(group).at(-1), 'other');

@@ -25,7 +25,7 @@ test('aggregate store child URLs never render child admin and redirect to store-
 });
 test('super administrator navigation keeps only the cmpmyi hub as the aggregate entry',()=>{
   const item=ADMIN_MENU_REGISTRY.find(row=>row.id==='cmpmyi');
-  assert.ok(item);assert.equal(item.group,'workspaces');assert.equal(item.superAdminOnly,true);
+  assert.ok(item);assert.equal(item.group,'sites');assert.equal(item.superAdminOnly,true);assert.equal(item.internal,true);
   assert.equal(item.href,'https://ekodi.kr/cmpmyi/admin');
   const router=readFileSync(new URL('../platform-router-entry-worker.js',import.meta.url),'utf8');
   assert.match(router,/storePortfolioAdminPage/);

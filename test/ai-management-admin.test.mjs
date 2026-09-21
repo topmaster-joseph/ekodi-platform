@@ -12,7 +12,7 @@ test('EKODI AI management is a canonical on-demand admin menu', () => {
   assert.match(registry, /id: 'ai-settings'/);
   assert.match(loader, /ai-management-admin\.js/);
   assert.match(loader, /ai-management-admin\.css/);
-  assert.match(routes, /'ai-settings':'operations'/);
+  assert.match(routes, /'ai-settings':'settings-records'/);
   assert.match(layout, /#ai-settings:ai-settings/);
 });
 

@@ -75,7 +75,8 @@ test('admin root is a command-only workspace while Campus remains a child route'
   const remoteAssist=dock.indexOf("await api('/api/control/ai/assist'");
   assert.ok(optimisticTurn>=0&&remoteAssist>optimisticTurn,'submitted text must render in the main conversation before the remote AI call');
 
-  assert.match(menuRegistry,/defaultSection: 'command-home'/);
+  assert.match(menuRegistry,/id: 'summary'[\s\S]*defaultSection: 'platform-overview'/);
+  assert.match(menuRegistry,/id: 'command-home'[\s\S]*internal: true/);
   assert.match(menuRegistry,/id: 'command-home'[\s\S]*ko: '에코디와 대화하기'[\s\S]*en: 'Talk with EKODI'/);
   assert.match(menuLayout,/function activateCommandHome\(\)/);
   assert.match(menuLayout,/requestedSection=COMMAND_HOME/);

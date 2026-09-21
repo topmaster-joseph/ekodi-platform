@@ -27,7 +27,7 @@ test('Admin uses canonical human-facing root paths while preserving runtime keys
   assert.match(lazy, /displayAddress/);
 });
 test('Maintenance controls are clearly distinct from the canonical Site Management catalog', () => {
-  assert.match(registry, /공개·점검 전환/);
+  assert.match(registry, /id: 'public-site-controls'[^\n]*group: 'settings-records'[^\n]*ko: '플랫폼 공통설정'/);
   assert.match(maintenance, /사이트 목록을 다시 만들지 않고/);
   assert.match(maintenance, /공개 주소의 정상 공개·점검 모드만 전환/);
   assert.match(maintenance, /surfaceInfo/);
@@ -40,7 +40,8 @@ test('Architecture and common-service copy no longer presents legacy admin/auth/
   assert.match(map, /ekodi\.kr\/my/);
   assert.match(map, /ekodi\.kr\/admin/);
   assert.doesNotMatch(map, /<strong>auth\.ekodi\.kr<\/strong>|<strong>my\.ekodi\.kr<\/strong>|<strong>admin\.ekodi\.kr<\/strong>/);
-  assert.match(common, /<strong>ekodi\.kr\/admin<\/strong>/);
-  assert.match(common, /내부 서비스 엔진/);
+  assert.match(common, /domain:'ekodi\.kr\/admin'/);
+  assert.doesNotMatch(common, /domain:'(?:admin|auth|my)\.ekodi\.kr'/);
+  assert.match(common, /공통 엔진은 기준 모델·상태값·권한·보안·배포 계약을 중앙에서 관리/);
   assert.match(common, /AI Core는 내부 실행 엔진/);
 });

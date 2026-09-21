@@ -20,8 +20,8 @@ const [policy, userDna, userShell, theme, adminRuntime, adminCss, adminPrinciple
 ]);
 
 const errors = [];
-const expectedAxes = ['home', 'operations', 'workspaces', 'services', 'community', 'publishing', 'system'];
-const expectedLabels = ['홈', '운영', '조직·고객', '서비스', '커뮤니티', '출판·도서', '시스템'];
+const expectedAxes = ['summary', 'services', 'sites', 'people', 'content', 'status', 'settings-records'];
+const expectedLabels = ['통합현황', '서비스', '사이트', '사용자·권한', '콘텐츠·운영', '상태·배포', '설정·기록'];
 const actualAxes = ADMIN_MENU_GROUPS.map(group => group.id);
 const actualLabels = ADMIN_MENU_GROUPS.map(group => group.labels?.ko);
 

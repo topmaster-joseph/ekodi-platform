@@ -1,6 +1,6 @@
 window.__EKODIAdminMenuLayoutReady=(async()=>{
 'use strict';
-const [{adminMenuOrder},{mountAdminSidebar,renderAdminSidebar}]=await Promise.all([
+const [{adminMenuOrder,getAdminMenuItem},{mountAdminSidebar,renderAdminSidebar}]=await Promise.all([
   import('./admin-menu-registry.js'),import('./admin-sidebar.js')
 ]);
 const sidebar=document.querySelector('.sidebar');
@@ -9,18 +9,18 @@ const content=document.querySelector('.content');
 if(!sidebar||!nav||!content)return;
 renderAdminSidebar(nav);
 const COMMAND_HOME='command-home';
-const INTERNAL=new Set(['services','deployments','policies']);
+const INTERNAL=new Set(['services','policies']);
 const ORDER=Object.freeze(adminMenuOrder());
 const RANK=new Map(ORDER.map((section,index)=>[section,index+1]));
 const DEMAND_KEYS=new Map([
   ['campus','campus'],['public-site-controls','public-site-controls'],['language-status','language-status'],['aiops','aiops'],['ai-settings','ai-settings'],['openai','openai'],['devotional','devotional'],['ai-module-spec','ai-module-spec'],['ai-membership','aimembers'],
   ['health','health'],['api-cost','api-cost'],['storage','storage'],['security','security'],['work','work'],
   ['clients','clients'],['community','community'],['books','books'],['social','social'],['supply-network','supply-network'],
-  ['marketing-ai','marketing'],['devices','devices'],['life-ai','life-ai'],['personal-finance','personal-finance'],['confirmations','confirmations']
+  ['marketing-ai','marketing'],['devices','devices'],['life-ai','life-ai'],['personal-finance','personal-finance'],['deployments','deployments']
 ]);
 const pairMap=value=>new Map(value.split(' ').map(pair=>pair.split(':')));
-const HASH=pairMap('#sites:sites #common-services:common-services #capabilities:capabilities #capability-center:capabilities #ai-ops:aiops #aiops:aiops #ai-settings:ai-settings #openai:openai #devotional:devotional #ai-module-spec:ai-module-spec #ai-membership:ai-membership #personal-finance:personal-finance #confirmations:confirmations #site-chrome:site-chrome #invest:invest #health:health #api-cost:api-cost #storage:storage #storige:storage #security:security #architecture:architecture #devices:devices #campus:campus #public-site-controls:public-site-controls #language-status:language-status #work:work #communication:communication #marketing-ai:marketing-ai #finance:finance #organization:organization #workspace:workspace #clients:clients #admins:admins #community:community #books:books #social:social #supply-network:supply-network #insurance:insurance #policies:policies #services:services #deployments:deployments #release:deployments');
-const CANON=pairMap('sites:#sites common-services:#common-services capabilities:#capabilities aiops:#ai-ops ai-settings:#ai-settings openai:#openai devotional:#devotional ai-module-spec:#ai-module-spec ai-membership:#ai-membership personal-finance:#personal-finance confirmations:#confirmations site-chrome:#site-chrome invest:#invest health:#health api-cost:#api-cost storage:#storage security:#security architecture:#architecture devices:#devices campus:#campus public-site-controls:#public-site-controls language-status:#language-status work:#work communication:#communication marketing-ai:#marketing-ai finance:#finance organization:#organization workspace:#workspace clients:#clients admins:#admins community:#community books:#books social:#social supply-network:#supply-network insurance:#insurance');
+const HASH=pairMap('#sites:sites #common-services:common-services #capabilities:capabilities #capability-center:capabilities #ai-ops:aiops #aiops:aiops #ai-settings:ai-settings #openai:openai #devotional:devotional #ai-module-spec:ai-module-spec #ai-membership:ai-membership #personal-finance:personal-finance #site-chrome:site-chrome #invest:invest #health:health #api-cost:api-cost #storage:storage #storige:storage #security:security #architecture:architecture #devices:devices #campus:campus #public-site-controls:public-site-controls #language-status:language-status #work:work #communication:communication #marketing-ai:marketing-ai #finance:finance #organization:organization #workspace:workspace #clients:clients #admins:admins #community:community #books:books #social:social #supply-network:supply-network #insurance:insurance #policies:policies #services:services #deployments:deployments #release:deployments');
+const CANON=pairMap('sites:#sites common-services:#common-services capabilities:#capabilities aiops:#ai-ops ai-settings:#ai-settings openai:#openai devotional:#devotional ai-module-spec:#ai-module-spec ai-membership:#ai-membership personal-finance:#personal-finance site-chrome:#site-chrome invest:#invest health:#health api-cost:#api-cost storage:#storage security:#security architecture:#architecture devices:#devices campus:#campus public-site-controls:#public-site-controls language-status:#language-status work:#work communication:#communication marketing-ai:#marketing-ai finance:#finance organization:#organization workspace:#workspace clients:#clients admins:#admins community:#community books:#books social:#social supply-network:#supply-network insurance:#insurance');
 const adminRoutes=()=>window.EKODIAdminRoutes;
 function replaceSectionUrl(section){const target=adminRoutes()?.navigationTarget?.(section,location)||CANON.get(section);if(!target)return;if(target.startsWith('/')){const current=location.pathname+location.search+location.hash;if(current!==target)history.replaceState(null,'',target)}else if(location.hash!==target)history.replaceState(null,'',target)}
 let requestedSection = '';
@@ -127,7 +127,28 @@ function requestCommonServices(){
   }).catch(error=>console.error('[EKODI Admin] common services runtime activation failed',error)).finally(()=>demandLoading.delete('common-services'));
   demandLoading.set('common-services',task);return task;
 }
+function requestDelegated(section,delegate){
+  if(demandLoading.has(section))return demandLoading.get(section);
+  const task=(async()=>{
+    if(delegate==='common-services'){
+      await import('./common-services-admin.js');
+    }else{
+      const demandKey=DEMAND_KEYS.get(delegate)||delegate;
+      if(!window.EKODIAdminDemand?.activate)throw new Error(`Admin demand runtime unavailable for ${delegate}`);
+      await window.EKODIAdminDemand.activate(demandKey);
+    }
+    if(requestedSection!==section)return;
+    applyOrder();
+    if(!activatePanel(section))activatePanel(delegate);
+    if(delegate==='common-services')window.EKODICommonServicesAdmin?.activate?.();
+  })().catch(error=>console.error(`[EKODI Admin] delegated section activation failed: ${section} -> ${delegate}`,error))
+    .finally(()=>demandLoading.delete(section));
+  demandLoading.set(section,task);
+  return task;
+}
 function requestDemand(section){
+  const delegated=getAdminMenuItem(section)?.delegateSection;
+  if(delegated)return requestDelegated(section,delegated);
   for(const item of allNav())item.classList.toggle('active',!isInternalNav(item)&&sectionOf(item)===section);
   if(section==='common-services')return requestCommonServices();
   if(section==='communication')return import('./communication-admin.js').then(()=>{if(requestedSection!==section)return;applyOrder();activatePanel(section);syncTitle(section);});

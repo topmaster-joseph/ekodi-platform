@@ -77,6 +77,15 @@
 
   let homepageModulePromise = null;
   let activeSiteGroup = 'all';
+  let activeSiteRelation = 'all';
+  const SITE_SECTION_RELATION = Object.freeze({
+    'sites-all':'all',
+    'sites-internal':'internal',
+    'sites-user':'user',
+    'sites-customer-partner':'customer-partner',
+    'sites-independent':'independent',
+    'sites-preparing':'preparing',
+  });
 
   function nav() {
     return document.querySelector('.sidebar nav');
@@ -90,6 +99,15 @@
       const path=url.pathname.replace(/\/+$/,'');
       return `${url.hostname}${path==='/'?'':path}`;
     }catch{return raw.replace(/^https?:\/\//,'').split(/[?#]/)[0].replace(/\/+$/,'');}
+  }
+
+  function siteRelation(site) {
+    const lifecycle = String(site?.lifecycle || '').trim().toLowerCase();
+    if (['planned','preparing','private','hidden'].includes(lifecycle)) return 'preparing';
+    if (site?.group === 'clients') return 'customer-partner';
+    if (String(site?.id || '').toLowerCase() === 'mall' || String(site?.name || '').trim() === '에코디몰') return 'user';
+    if (site?.group === 'other') return 'independent';
+    return 'internal';
   }
 
   function surfaceInfo(site) {
@@ -213,6 +231,7 @@
     item.className = 'campus-site-item';
     item.dataset.siteDomain = site.domain;
     item.dataset.siteLifecycle = site.lifecycle || 'live';
+    item.dataset.siteRelation = site.relation || siteRelation(site);
     if (site.id) item.dataset.siteId = site.id;
     if (site.lifecycle === 'planned') item.classList.add('is-planned');
     if (site.lifecycle === 'preparing') item.classList.add('is-preparing');
@@ -294,12 +313,14 @@
       fallback,
       group,
       lifecycle,
+      relation: siteRelation({ id, name:String(service?.name||''), group, lifecycle }),
     };
   }
 
   function updateSiteItem(item, site) {
     item.dataset.siteDomain = site.domain;
     item.dataset.siteLifecycle = site.lifecycle || 'live';
+    item.dataset.siteRelation = site.relation || siteRelation(site);
     if (site.id) item.dataset.siteId = site.id;
     item.classList.toggle('is-planned', site.lifecycle === 'planned');
     item.classList.toggle('is-preparing', site.lifecycle === 'preparing');
@@ -313,14 +334,41 @@
     if (actions) actions.replaceWith(makeOperationalActions(site));
   }
 
+  function matchesSiteRelation(item) {
+    if (activeSiteRelation === 'all') return true;
+    const relation = String(item.dataset.siteRelation || 'internal');
+    const lifecycle = String(item.dataset.siteLifecycle || 'live');
+    if (activeSiteRelation === 'preparing') return relation === 'preparing' || ['planned','preparing','private','hidden'].includes(lifecycle);
+    return relation === activeSiteRelation;
+  }
+
+  function applySiteVisibility() {
+    const grid = document.querySelector('#campusSiteGroups');
+    if (!grid) return;
+    for (const card of grid.querySelectorAll('.campus-group-card')) {
+      const groupMatches = activeSiteGroup === 'all' || card.dataset.campusGroup === activeSiteGroup;
+      let visible = 0;
+      for (const item of card.querySelectorAll('.campus-site-item')) {
+        const show = groupMatches && matchesSiteRelation(item);
+        item.hidden = !show;
+        if (show) visible += 1;
+      }
+      card.hidden = visible === 0;
+    }
+  }
+
+  function applySiteRelation(relation) {
+    activeSiteRelation = ['all','internal','user','customer-partner','independent','preparing'].includes(relation) ? relation : 'all';
+    applySiteVisibility();
+    const heading = document.querySelector('#campusPanel .campus-toolbar h2');
+    const visible = document.querySelectorAll('#campusSiteGroups .campus-site-item:not([hidden])').length;
+    if (heading) heading.textContent = `사이트 관리 · ${visible}`;
+  }
+
   function applyGroupFilter(group, { syncUrl = true } = {}) {
     const valid = group === 'all' || SITE_GROUPS.some(item => item.key === group);
     activeSiteGroup = valid ? group : 'all';
-    const grid = document.querySelector('#campusSiteGroups');
-    if (grid) for (const card of grid.querySelectorAll('.campus-group-card')) {
-      const count = card.querySelectorAll('.campus-site-item').length;
-      card.hidden = count === 0 || (activeSiteGroup !== 'all' && card.dataset.campusGroup !== activeSiteGroup);
-    }
+    applySiteVisibility();
     refreshGroupTabs();
     if (syncUrl) {
       const url = new URL(location.href);
@@ -336,16 +384,17 @@
     for (const card of grid.querySelectorAll('.campus-group-card')) {
       const count = card.querySelectorAll('.campus-site-item').length;
       total += count;
-      card.hidden = count === 0 || (activeSiteGroup !== 'all' && card.dataset.campusGroup !== activeSiteGroup);
       const badge = card.querySelector('.campus-group-count');
       if (badge) {
         badge.textContent = String(count);
         badge.setAttribute('aria-label', `${count}개 사이트`);
       }
     }
+    applySiteVisibility();
     refreshGroupTabs();
     const heading = document.querySelector('#campusPanel .campus-toolbar h2');
-    if (heading) heading.textContent = `사이트 관리 · ${total}`;
+    const visible = grid.querySelectorAll('.campus-site-item:not([hidden])').length;
+    if (heading) heading.textContent = `사이트 관리 · ${activeSiteRelation === 'all' ? total : visible}`;
   }
 
   function reconcileRegistryServices(services = []) {
@@ -395,6 +444,10 @@
     const panel = document.querySelector('#campusPanel');
     const wrapper = panel?.querySelector('.campus-table-wrap');
     if (!panel || !wrapper) return false;
+    panel.dataset.panel = [...new Set([
+      ...String(panel.dataset.panel || 'campus').split(/\s+/).filter(Boolean),
+      ...Object.keys(SITE_SECTION_RELATION),
+    ])].join(' ');
     if (wrapper.dataset.allSitesReady === 'true') {
       loadHomepageAdmin();
       return true;
@@ -428,6 +481,7 @@
 
     const requestedGroup = new URLSearchParams(location.search).get('site_group') || 'all';
     applyGroupFilter(requestedGroup, { syncUrl:false });
+    applySiteRelation(SITE_SECTION_RELATION[window.EKODIAdminPanels?.current?.()] || 'all');
     refreshCampusCounts();
     loadHomepageAdmin();
     return true;
@@ -472,9 +526,15 @@
     }
   }
 
+  window.addEventListener('ekodi-admin-section-changed', event => {
+    const relation = SITE_SECTION_RELATION[String(event.detail?.section || '')];
+    if (relation) applySiteRelation(relation);
+  });
+
   window.EKODICampus = Object.freeze({
     reconcileRegistryServices,
     refreshCounts: refreshCampusCounts,
+    applySiteRelation,
     loadHomepageAdmin,
   });
 

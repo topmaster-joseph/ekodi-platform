@@ -1,26 +1,31 @@
 (()=>{
 'use strict';
 const SECTION_GROUP=Object.freeze({
-  campus:'home',
-  work:'operations',communication:'operations',finance:'operations',tax:'operations',
-  clients:'workspaces','site-chrome':'workspaces',organization:'workspaces',workspace:'workspaces','cheonggye-members':'workspaces',
-  'common-services':'services',confirmations:'services','life-ai':'services','personal-finance':'services',invest:'services',social:'services','marketing-ai':'services',affiliates:'services','supply-network':'services',insurance:'services',
-  community:'community','ai-membership':'community',
-  books:'publishing',devotional:'publishing',
-  'public-site-controls':'system','language-status':'system',architecture:'system',maturity:'system',security:'system',admins:'system','ai-module-spec':'system',storage:'system',capabilities:'system',aiops:'system','ai-settings':'system',openai:'system',devices:'system',health:'system','api-cost':'system',services:'system',deployments:'system',policies:'system',
+  'platform-overview':'summary',
+  'engine-all':'services','engine-core':'services','engine-common':'services','engine-operations':'services','engine-professional':'services','engine-ai':'services','engine-integration':'services','engine-preview':'services',
+  'sites-all':'sites','sites-internal':'sites','sites-user':'sites','sites-customer-partner':'sites','sites-independent':'sites','sites-preparing':'sites',
+  campus:'sites',clients:'sites','site-chrome':'sites',organization:'sites',workspace:'sites','cheonggye-members':'sites',
+  'common-services':'services',confirmations:'services','life-ai':'services','personal-finance':'services',invest:'services','marketing-ai':'services',affiliates:'services','supply-network':'services',insurance:'services',capabilities:'services',openai:'services',
+  'users-access':'people',security:'people',admins:'people','ai-membership':'people',
+  work:'content',communication:'content',community:'content',books:'content',devotional:'content',social:'content',finance:'content',tax:'content',
+  health:'status',deployments:'status',aiops:'status',devices:'status','api-cost':'status',architecture:'status',maturity:'status',services:'status',
+  'public-site-controls':'settings-records','language-status':'settings-records','ai-module-spec':'settings-records',storage:'settings-records','ai-settings':'settings-records','audit-records':'settings-records',policies:'settings-records',
 });
 const GROUP_DEFAULT=Object.freeze({
-  home:'command-home',operations:'work',workspaces:'clients',services:'common-services',community:'community',publishing:'books',system:'health',
+  summary:'platform-overview',services:'engine-all',sites:'sites-all',people:'users-access',content:'work',status:'health','settings-records':'public-site-controls',
 });
 const LEGACY_GROUP_DEFAULT=Object.freeze({
+  home:'command-home',operations:'work',workspaces:'clients',community:'community',publishing:'books',system:'health',
   common:'common-services',professional:'life-ai',space:'clients',spaces:'clients',
 });
 const LEGACY_SECTION_GROUP=Object.freeze({
-  campus:'system',
-  communication:'common',workspace:'common',finance:'common','common-services':'common',
-  'life-ai':'professional','personal-finance':'professional',invest:'professional',community:'professional',books:'professional',social:'professional',devotional:'professional','marketing-ai':'professional','ai-membership':'professional',tax:'professional',affiliates:'professional','supply-network':'professional',insurance:'professional',
-  work:'workspaces',
-  capabilities:'operations',aiops:'operations','ai-settings':'operations',openai:'operations',devices:'operations',health:'operations','api-cost':'operations',services:'operations',deployments:'operations',policies:'operations',
+  campus:'home',
+  work:'operations',communication:'operations',finance:'operations',tax:'operations',
+  clients:'workspaces','site-chrome':'workspaces',organization:'workspaces',workspace:'workspaces','cheonggye-members':'workspaces',
+  community:'community','ai-membership':'community',
+  books:'publishing',devotional:'publishing',
+  'public-site-controls':'system','language-status':'system',architecture:'system',maturity:'system',security:'system',admins:'system','ai-module-spec':'system',storage:'system',capabilities:'system',aiops:'system','ai-settings':'system',openai:'system',devices:'system',health:'system','api-cost':'system',services:'system',deployments:'system',policies:'system',
+  'common-services':'common','life-ai':'professional','personal-finance':'professional',invest:'professional',social:'professional','marketing-ai':'professional',affiliates:'professional','supply-network':'professional',insurance:'professional',
 });
 const ALIASES=Object.freeze({
   'ai-ops':'aiops',storige:'storage',release:'deployments','mall-ai-sales':'affiliates',
@@ -48,8 +53,9 @@ function sectionFromPath(pathname){
   if(!section)return'';
   if(SECTION_GROUP[section]===group)return section;
   if(LEGACY_SECTION_GROUP[section]===group)return section;
+  if(section==='campus'&&['home','system'].includes(group))return section;
   if(group==='services'&&['community','ai-membership','books','devotional'].includes(section))return section;
-  if((group==='space'||group==='spaces')&&SECTION_GROUP[section]==='workspaces')return section;
+  if((group==='space'||group==='spaces')&&LEGACY_SECTION_GROUP[section]==='workspaces')return section;
   return'';
 }
 function sectionFromLocation(loc=window.location){
@@ -80,7 +86,7 @@ function navigationTarget(section,loc=window.location){
   return isCanonicalHost(loc)?canonicalUrl(section,loc):legacyHashFor(section);
 }
 window.EKODIAdminRoutes=Object.freeze({
-  version:'1.3.0',
+  version:'1.4.0',
   groups:Object.freeze({...GROUP_DEFAULT}),
   normalizeSection,
   sectionFromPath,
