@@ -35,20 +35,12 @@ test('public route contract carries canonical metadata and static asset ownershi
   }
 });
 
-test('direct public subdomain services stay separate from redirect aliases', () => {
-  const urls = DISCOVERY_EXTERNAL_RESOURCES.map(resource => resource.url);
-  assert.deepEqual(urls, [
-    'https://author.ekodi.kr',
-    'https://books.ekodi.kr',
-    'https://journal.ekodi.kr',
-    'https://life.ekodi.kr',
-    'https://publishing.ekodi.kr',
-    'https://work.ekodi.kr',
-  ]);
-  for (const retiredRedirect of ['https://mall.ekodi.kr','https://mall.biz.ekodi.kr','https://mail.biz.ekodi.kr','https://live.church.ekodi.kr']) {
-    assert.equal(urls.includes(retiredRedirect), false);
+test('discovery source-of-truth is apex-path-only', () => {
+  assert.deepEqual(DISCOVERY_EXTERNAL_RESOURCES, []);
+  assert.deepEqual(DISCOVERY_OFFICIAL_ORIGINS, ['https://ekodi.kr']);
+  for (const route of DISCOVERY_PUBLIC_ROUTES) {
+    assert.ok(canonicalUrl(route.path).startsWith('https://ekodi.kr/'));
   }
-  assert.ok(DISCOVERY_OFFICIAL_ORIGINS.includes('https://books.ekodi.kr'));
 });
 
 test('crawler policy separates search, answer retrieval, training and user-requested agents', () => {
@@ -75,15 +67,14 @@ test('robots allows public search, answer and user-agent discovery while blockin
   assert.match(robots, /Sitemap: https:\/\/ekodi\.kr\/sitemap\.xml/);
 });
 
-test('llms discovery identifies apex and direct-service canonical public resources', () => {
+test('llms discovery identifies canonical apex public resources only', () => {
   const llms = renderLlmsTxt();
   assert.match(llms, /Canonical site: https:\/\/ekodi\.kr\//);
   assert.match(llms, /preview-development/);
   assert.match(llms, /user-requested assistants may access public pages/i);
   assert.match(llms, /model-training crawlers are restricted separately/i);
-  assert.match(llms, /https:\/\/books\.ekodi\.kr/);
-  assert.equal(llms.includes('https://admin.ekodi.kr'), false);
-  assert.equal(llms.includes('https://mall.ekodi.kr'), false);
+  assert.equal(llms.includes('admin.' + 'ekodi.kr'), false);
+  assert.equal(/https:\/\/[^/]+\.ekodi\.kr/.test(llms), false);
 });
 
 test('page structured data links WebPage to stable WebSite and route entity', () => {
