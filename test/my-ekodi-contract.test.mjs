@@ -97,7 +97,7 @@ test('profile API accepts only a bounded personal display name and does not edit
 test('My EKODI staging is isolated from production personal data',async()=>{
   const [prod,staging,worker]=await Promise.all([read('wrangler.my.toml'),read('wrangler.my.staging.toml'),read('my-worker.js')]);
   assert.match(prod,/DATA_ENABLED = "true"/);
-  assert.match(prod,/workers_dev = true/);
+  assert.match(prod,/workers_dev = false/);
   assert.doesNotMatch(prod,/my\.ekodi\.kr/);
   assert.match(staging,/DATA_ENABLED = "false"/);
   assert.doesNotMatch(staging,/my\.ekodi\.kr/);
