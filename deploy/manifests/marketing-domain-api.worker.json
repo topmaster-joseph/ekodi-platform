@@ -4,8 +4,8 @@
     "name": "ekodi-marketing-domain-api",
     "config": "wrangler.marketing-domains.toml",
     "requests": [
-      {"url":"https://marketing-api.ekodi.kr/health","statuses":[200],"expect":["\"ok\":true","ekodi-marketing-domain-api","\"authHandoff\":\"httpOnly-cookie\""]},
-      {"url":"https://marketing-api.ekodi.kr/api/marketing/domains","statuses":[401],"expect":["LOGIN_REQUIRED"]}
+      {"url":"https://ekodi.kr/api/marketing/health","statuses":[200],"expect":["\"ok\":true","ekodi-marketing-domain-api","\"authHandoff\":\"httpOnly-cookie\""]},
+      {"url":"https://ekodi.kr/api/marketing/domains","statuses":[401],"expect":["LOGIN_REQUIRED"]}
     ]
   }
 }
