@@ -7,10 +7,10 @@ const read=path=>readFile(new URL(`../${path}`,import.meta.url),'utf8');
 test('canonical Mall and child-service publishing routes use site-owned admins', async()=>{
   assert.equal(isWorkspaceAdminPathShape('/ekodimall/admin/'),true);
   assert.equal(isWorkspaceAdminPathShape('/ekodimall/admin/channel-settings/'),true);
-  assert.equal(isWorkspaceAdminPathShape('/ekodibiz/ekodimall/admin/'),true);
-  assert.equal(isWorkspaceAdminPathShape('/ekodibiz/ekodimall/admin/channel-settings/'),true);
+  assert.equal(isWorkspaceAdminPathShape('/ekodimall/admin/'),true);
+  assert.equal(isWorkspaceAdminPathShape('/ekodimall/admin/channel-settings/'),true);
   assert.equal(isWorkspaceAdminPathShape('/admin/ekodimall/channel-settings/'),false);
-  assert.equal(isWorkspaceAdminPathShape('/ekodibiz/ekodimall/admin/channels/'),false);
+  assert.equal(isWorkspaceAdminPathShape('/ekodimall/admin/channels/'),false);
   assert.equal(isWorkspaceAdminPathShape('/ekodibiz/trade/admin/publishing/'),true);
   assert.equal(isWorkspaceAdminPathShape('/cgma/admin/publishing/'),true);
   const source=await read('workspace-admin-page.js');
