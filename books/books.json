@@ -1,6 +1,6 @@
 {
   "publisher": "에코디서점",
-  "updated": "2026-08-27",
+  "updated": "2026-09-22",
   "books": [
     {
       "id": "BOOK-EKODI-000001",
@@ -9,7 +9,7 @@
       "series": "EKODI ORIGINAL",
       "seriesNumber": 1,
       "publicationType": "MONOGRAPH · PUBLIC THEOLOGY",
-      "status": "Publishing · 2026",
+      "status": "On Sale · 2026",
       "coverTitle": "에코디언을\n찾아서",
       "coverImage": "/assets/ekodian-cover.svg",
       "detailUrl": "/ekodian/",
@@ -38,8 +38,8 @@
         "epub": "validated",
         "cover": "complete",
         "metadata": "ready",
-        "distribution": "in_progress",
-        "storefront": "ready_after_distribution"
+        "distribution": "live",
+        "storefront": "live"
       },
       "editions": {
         "googleKoreanBilingual": {
@@ -52,7 +52,7 @@
           "provider": "Upaper",
           "version": "v1.7",
           "price": "KRW 9,900",
-          "status": "적합성검사 및 판매신청 진행 중"
+          "status": "판매 중"
         },
         "amazonEnglish": {
           "title": "In Search of the EKODIan",
@@ -65,14 +65,15 @@
       },
       "distribution": {
         "google": "등록 진행 중",
-        "upaper": "등록 진행 중",
+        "upaper": "판매 중",
+        "korea": "유페이퍼 판매 중",
         "amazon": "영문판 준비 중"
       },
       "links": {
         "amazon": "",
         "google": "",
-        "upaper": "",
-        "korea": ""
+        "upaper": "https://ekodi.upaper.kr/content/1223429",
+        "korea": "https://ekodi.upaper.kr/content/1223429"
       }
     }
   ]
