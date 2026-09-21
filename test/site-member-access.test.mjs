@@ -15,6 +15,14 @@ const files=await Promise.all([
 ]);
 const [authority,directory,prereg,workspace,store,central,menu,d1,supabase]=files;
 
+test('site access authority authenticates before enforcing tenant context',()=>{
+  const authIndex=authority.indexOf('principalFromSupabaseRequest(request)');
+  const tenantIndex=authority.indexOf("code:'TENANT_CONTEXT_REQUIRED'");
+  assert.ok(authIndex>=0&&tenantIndex>authIndex);
+  assert.match(authority,/code:'ACCESS_AUTH_REQUIRED'/);
+  assert.match(authority,/status:401/);
+});
+
 test('site access authority distinguishes platform super-admin from tenant-local access managers',()=>{
   assert.match(authority,/role==='super_admin'/);
   assert.match(authority,/TENANT_ADMIN_CAPABILITIES\.access/);
@@ -22,6 +30,10 @@ test('site access authority distinguishes platform super-admin from tenant-local
   assert.match(authority,/ACCESS_SELF_MUTATION_FORBIDDEN/);
   assert.match(authority,/ACCESS_RESPONSIBILITY_ROLE_PROTECTED/);
   assert.match(authority,/SITE_RESPONSIBILITY_ROLES/);
+});
+
+test('member directory preserves the production auth marker for anonymous callers',()=>{
+  assert.match(directory,/ACCESS_AUTH_REQUIRED: 'EKODI 관리자 인증이 필요합니다\.'/);
 });
 
 test('member directory is filtered at the database query for tenant administrators',()=>{

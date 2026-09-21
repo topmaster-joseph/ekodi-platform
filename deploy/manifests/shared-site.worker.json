@@ -1591,6 +1591,81 @@
           "x-ekodi-canonical-surface: cloud",
           "x-ekodi-canonical-path: /cloud"
         ]
+      },
+      {
+        "url": "https://ekodi.kr/cheonggye",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "청계잇다",
+          "지역 서비스",
+          "청계면상인회"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: local-region-public",
+          "x-ekodi-shell: v2",
+          "x-content-type-options: nosniff"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/cheonggye/admin",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "청계잇다 운영관리",
+          "서비스별 운영주체",
+          "청계면상인회",
+          "/cgma/admin"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: local-region-admin",
+          "x-ekodi-shell: v2",
+          "cache-control: no-store"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/cheonggye/pass",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "청계패스",
+          "외부 연동 준비",
+          "상품권",
+          "가맹점"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: regional-commerce-program-public",
+          "x-ekodi-shell: v2",
+          "x-content-type-options: nosniff"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/cheonggye/admin/pass",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "청계패스 운영관리",
+          "외부 공급자",
+          "직접 DB 접근",
+          "외주사 연동 계약"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: regional-commerce-program-admin",
+          "x-ekodi-shell: v2",
+          "cache-control: no-store"
+        ],
+        "rollbackVerify": false
       }
     ]
   }

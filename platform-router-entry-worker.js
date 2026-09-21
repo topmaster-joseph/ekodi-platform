@@ -35,6 +35,10 @@ import { realtimeTenantAdminFromPath, realtimeTenantFromPath } from './realtime-
 import { tenantLivePage } from './tenant-live-page.js';
 import { tenantLiveAdminCss, tenantLiveAdminPage, tenantLiveAdminScript } from './tenant-live-admin-page.js';
 import { liveServiceAdminPage, liveServiceMaintenancePage, liveServicePage } from './live-service-page.js';
+import { localRegionFromPath } from './local-region-registry.js';
+import { localRegionPublicPage, localRegionAdminPage } from './local-region-page.js';
+import { regionalCommerceProgramFromLocalRoute } from './regional-commerce-program-registry.js';
+import { regionalCommerceProgramPublicPage, regionalCommerceProgramAdminPage } from './regional-commerce-program-page.js';
 
 const PUBLIC_HOST='ekodi.kr';
 const CGMA_HOSTS=new Set(['cgma.or.kr','www.cgma.or.kr']);
@@ -289,6 +293,16 @@ export default {
         if(isTradePartnerPath(url.pathname))return injectEkodiTenantReadability(tradePartnerPage());
         if(url.pathname==='/ekodi-church'||url.pathname.startsWith('/ekodi-church/')){const target=new URL(request.url);target.pathname=url.pathname.replace(/^\/ekodi-church(?=\/|$)/i,'/ekodichurch');return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-content-type-options':'nosniff'}});}
         if(isChurchPastorAdminPath(url.pathname))return injectEkodiShell(churchPastorAdminPage(),'church','admin');
+        const localRegionRoute=localRegionFromPath(url.pathname);
+        if(localRegionRoute){
+          const commerceProgram=regionalCommerceProgramFromLocalRoute(localRegionRoute);
+          const page=commerceProgram
+            ?(localRegionRoute.admin?regionalCommerceProgramAdminPage(localRegionRoute.region,commerceProgram):regionalCommerceProgramPublicPage(localRegionRoute.region,commerceProgram))
+            :(localRegionRoute.admin?localRegionAdminPage(localRegionRoute.region):localRegionPublicPage(localRegionRoute.region));
+          const surface=localRegionRoute.admin?'admin':'workspace';
+          const response=injectEkodiShell(page,'space',surface,{contextKind:'workspace'});
+          return request.method==='GET'?decorateDiscoveryResponse(response,url.pathname):response;
+        }
         if(isWorkspaceAdminPath(url.pathname)&&!isEkodiBizInvestAdminPath(url.pathname))return injectEkodiShell(workspaceAdminPage(),'space','admin');
       }
       if(['GET','HEAD'].includes(request.method)&&STORE_GATEWAY_PATHS.has(url.pathname)){const response=injectEkodiShell(storeGatewayPage(),'ekodi','public');return request.method==='GET'?decorateDiscoveryResponse(response,url.pathname):response;}
