@@ -52,5 +52,5 @@ test('sales and supply network separates professional engine health from Mall op
   assert.match(workspace, /플랫폼 관리자 인증 후 여기로 돌아오기/);
   assert.doesNotMatch(workspace, /\/api\/affiliate\/accounts|affiliateMerchantRouteForm/);
   assert.match(layout, /LEGACY_MALL_AFFILIATE_HASHES/);
-  assert.match(layout, /\/ekodibiz\/ekodimall\/admin\/sourcing/);
+  assert.match(layout, /\/ekodimall\/admin\/sourcing/);
 });
