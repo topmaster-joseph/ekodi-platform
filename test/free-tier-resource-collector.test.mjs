@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { collectSupabase, collectSupabaseOidc, collectGitHub, snapshotsToSql } from '../scripts/collect-free-tier-resource-usage.mjs';
+import { collectCloudflare, collectSupabase, collectSupabaseOidc, collectGitHub, snapshotsToSql } from '../scripts/collect-free-tier-resource-usage.mjs';
 
 const observedAt='2026-09-20T08:30:00.000Z';
 
@@ -58,6 +58,72 @@ test('GitHub collector records public repository cache and artifact storage only
   assert.equal(result.repository.visibility,'public');
   assert.equal(result.snapshots.find(row=>row.metric==='cache_storage_bytes').observedValue,2048);
   assert.equal(result.snapshots.find(row=>row.metric==='artifact_storage_bytes').observedValue,4096);
+});
+
+test('Cloudflare collector measures Workers, D1, KV and current R2 storage without inventing R2 billing classes',async()=>{
+  const calls=[];
+  const fetchJson=async(url,options={})=>{
+    calls.push({url,options});
+    if(url.endsWith('/graphql')){
+      const query=String(options.body?.query||'');
+      if(query.includes('workersInvocationsAdaptive')){
+        return {data:{viewer:{accounts:[{workersInvocationsAdaptive:[{sum:{requests:4321}}]}]}}};
+      }
+      if(query.includes('d1AnalyticsAdaptiveGroups')&&query.includes('kvOperationsAdaptiveGroups')){
+        return {data:{viewer:{accounts:[{
+          d1AnalyticsAdaptiveGroups:[{sum:{rowsRead:250000,rowsWritten:321}}],
+          kvOperationsAdaptiveGroups:[
+            {sum:{requests:1200},dimensions:{actionType:'read'}},
+            {sum:{requests:44},dimensions:{actionType:'write'}},
+            {sum:{requests:3},dimensions:{actionType:'delete'}},
+          ],
+        }]}}};
+      }
+    }
+    if(url.includes('/d1/database?page=1')){
+      return {success:true,result:[{uuid:'db-a'},{uuid:'db-b'}],result_info:{page:1,total_pages:1}};
+    }
+    if(url.includes('/d1/database/db-a?'))return {success:true,result:{uuid:'db-a',file_size:1000}};
+    if(url.includes('/d1/database/db-b?'))return {success:true,result:{uuid:'db-b',file_size:2500}};
+    if(url.endsWith('/r2/metrics'))return {success:true,result:{
+      standard:{published:{payloadSize:4000,metadataSize:40},uploaded:{payloadSize:500,metadataSize:5}},
+      infrequentAccess:{published:{payloadSize:9000,metadataSize:90}},
+    }};
+    throw new Error(`unexpected ${url}`);
+  };
+  const result=await collectCloudflare({token:'cf-token',accountId:'acct',fetchJson,observedAt});
+  const byMetric=new Map(result.snapshots.map(row=>[row.metric,row]));
+  assert.equal(result.available,true);
+  assert.equal(result.reason,null);
+  assert.equal(byMetric.get('workers_requests_daily').observedValue,4321);
+  assert.equal(byMetric.get('d1_rows_read_daily').observedValue,250000);
+  assert.equal(byMetric.get('d1_rows_written_daily').observedValue,321);
+  assert.equal(byMetric.get('d1_storage_bytes').observedValue,3500);
+  assert.equal(byMetric.get('kv_reads_daily').observedValue,1200);
+  assert.equal(byMetric.get('kv_writes_daily').observedValue,44);
+  assert.equal(byMetric.get('r2_standard_storage_bytes_current').observedValue,4545);
+  assert.equal(byMetric.has('r2_class_a_month'),false);
+  assert.equal(byMetric.has('r2_class_b_month'),false);
+  assert.ok(calls.every(call=>(call.options.method||'GET')==='GET'||call.url.endsWith('/graphql')));
+});
+
+test('Cloudflare collector degrades to partial telemetry when one product analytics surface is unavailable',async()=>{
+  const fetchJson=async(url,options={})=>{
+    if(url.endsWith('/graphql')){
+      const query=String(options.body?.query||'');
+      if(query.includes('workersInvocationsAdaptive'))return {data:{viewer:{accounts:[{workersInvocationsAdaptive:[{sum:{requests:77}}]}]}}};
+      return {errors:[{message:'analytics permission missing'}]};
+    }
+    if(url.includes('/d1/database?page=1'))return {success:false,errors:[{message:'D1 unavailable'}]};
+    if(url.endsWith('/r2/metrics'))return {success:false,errors:[{message:'R2 unavailable'}]};
+    throw new Error(`unexpected ${url}`);
+  };
+  const result=await collectCloudflare({token:'cf-token',accountId:'acct',fetchJson,observedAt});
+  assert.equal(result.available,true);
+  assert.equal(result.reason,'partial');
+  assert.equal(result.snapshots.length,1);
+  assert.equal(result.snapshots[0].metric,'workers_requests_daily');
+  assert.equal(result.errors.length,3);
 });
 
 test('collector emits additive quota snapshot upserts and never changes provider billing',()=>{
