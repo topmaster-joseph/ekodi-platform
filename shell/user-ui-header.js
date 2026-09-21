@@ -4,7 +4,7 @@ if(window.__EKODI_USER_UI_HEADER_BOOTED)return;
 window.__EKODI_USER_UI_HEADER_BOOTED=true;
 
 const VERSION=5;
-const SITE_CHROME_URL='https://workspace-api.ekodi.kr/v1/site-chrome/public';
+const SITE_CHROME_URL='https://ekodi.kr/api/workspace/v1/site-chrome/public';
 const STYLE_ID='ekodi-user-ui-header-style';
 const USER_SURFACES=new Set(['public','workspace']);
 const DISABLED_MODES=new Set(['off','hidden','immersive']);
