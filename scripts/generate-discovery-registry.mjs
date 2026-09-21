@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const servicesPath = path.join(root, 'config', 'ecosystem-services.json');
 const lifecyclePath = path.join(root, 'config', 'site-lifecycle-registry.json');
+const domainPolicyPath = path.join(root, 'config', 'domain-canonical-policy.json');
 const outputPath = path.join(root, 'discovery-registry.generated.js');
 
 const PUBLIC_STATUSES = new Set(['live', 'beta']);
@@ -96,41 +97,29 @@ function workspaceRoute(site, parsed) {
   };
 }
 
-export function buildDiscoveryRegistry(servicesConfig = readJson(servicesPath), lifecycleConfig = readJson(lifecyclePath)) {
+export function buildDiscoveryRegistry(servicesConfig = readJson(servicesPath), lifecycleConfig = readJson(lifecyclePath), domainPolicy = readJson(domainPolicyPath)) {
+  const canonicalHost = String(domainPolicy?.canonicalHost || '').trim().toLowerCase();
+  if (domainPolicy?.publicAddressPolicy !== 'apex-path-only' || domainPolicy?.subdomainPolicy !== 'forbidden' || canonicalHost !== 'ekodi.kr') {
+    throw new Error('Discovery registry requires the EKODI apex-path-only canonical domain contract');
+  }
   const rootRoutes = new Map(BASE_ROUTES.map(route => [route.path, { ...route }]));
-  const externalResources = new Map();
-
   for (const site of lifecycleConfig.existingWorkspaceSites || []) {
     if (!siteIsDiscoverable(site)) continue;
     const parsed = parsePublicUrl(site.canonicalUrl);
     if (!parsed) continue;
-    if (parsed.hostname === 'ekodi.kr') rootRoutes.set(parsed.pathname, workspaceRoute(site, parsed));
+    if (parsed.hostname === canonicalHost) rootRoutes.set(parsed.pathname, workspaceRoute(site, parsed));
   }
 
   for (const service of servicesConfig.services || []) {
     if (!serviceIsDiscoverable(service)) continue;
     const parsed = parsePublicUrl(service.url);
-    if (!parsed) continue;
-    if (parsed.hostname === 'ekodi.kr') {
-      rootRoutes.set(parsed.pathname, serviceRoute(service, parsed));
-      continue;
-    }
-    const name = String(service.name || service.nameEn || service.id).trim();
-    externalResources.set(parsed.url, {
-      id: String(service.id || '').trim(),
-      label: String(service.nameEn || name).trim(),
-      title: `${name} | EKODI`,
-      description: String(service.descriptionKo || service.descriptionEn || `${name} EKODI 서비스`).trim(),
-      url: parsed.url,
-      origin: parsed.origin,
-      schemaType: ORGANIZATION_SERVICE_IDS.has(service.id) ? 'Organization' : 'Service',
-      source: `service:${service.id}`,
-    });
+    if (!parsed || parsed.hostname !== canonicalHost) continue;
+    rootRoutes.set(parsed.pathname, serviceRoute(service, parsed));
   }
 
   const routes = [...rootRoutes.values()];
-  const externals = [...externalResources.values()].sort((a, b) => a.url.localeCompare(b.url));
-  const officialOrigins = [...new Set(['https://ekodi.kr', ...externals.map(item => item.origin)])].sort();
+  const externals = [];
+  const officialOrigins = [`https://${canonicalHost}`];
 
   for (const route of routes) {
     if (!route.path.startsWith('/')) throw new Error(`Discovery route must be absolute: ${route.path}`);
@@ -161,7 +150,7 @@ export function generateDiscoveryRegistry({ check = false } = {}) {
   }
   fs.writeFileSync(outputPath, expected);
   const registry = buildDiscoveryRegistry();
-  console.log(`Generated EKODI discovery registry: ${registry.routes.length} apex routes, ${registry.externalResources.length} external public resources.`);
+  console.log(`Generated EKODI discovery registry: ${registry.routes.length} canonical apex routes; public subdomain discovery is disabled.`);
   return expected;
 }
 
