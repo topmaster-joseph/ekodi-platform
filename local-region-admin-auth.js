@@ -1,4 +1,4 @@
-(()=>{
+function clientMain(){{
   const SUPABASE_URL='https://renzehysxirjilvdxacv.supabase.co';
   const SUPABASE_KEY='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
   const SESSION_KEY='ekodi-region-admin-session';
@@ -56,4 +56,8 @@
     document.dispatchEvent(new CustomEvent('ekodi:region-access-ready',{detail:data}));
   }
   check().catch(error=>{console.error('regional admin auth',error);showMessage('인증 확인 실패','관리자 로그인 상태를 확인하지 못했습니다. 다시 로그인해 주세요.',[{href:authUrl(),label:'Google 로그인'}]);root.dataset.regionAuthPending='0'});
-})();
+}
+
+export function localRegionAdminAuthScript(){
+  return new Response('('+clientMain.toString()+')();',{headers:{'content-type':'text/javascript; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}});
+}
