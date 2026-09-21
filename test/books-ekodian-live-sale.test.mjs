@@ -2,6 +2,8 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
+// External sale evidence: UPaper approval and sales start confirmed on 2026-09-05.
+
 const [catalogText, app, detail, home, series, workspace] = await Promise.all([
   readFile(new URL('../books/books.json', import.meta.url), 'utf8'),
   readFile(new URL('../books/app.js', import.meta.url), 'utf8'),
