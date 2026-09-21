@@ -1,4 +1,4 @@
-import { injectEkodiShell } from './ekodi-shell-injector.js';
+import { injectEkodiShell, shellServiceForRootPath } from './ekodi-shell-injector.js';
 import { isWorkspaceAdminPath, workspaceAdminPage, workspaceAdminCss, workspaceAdminScript } from './workspace-admin-page.js';
 import { legacyAdminAliasTarget } from './admin-address-policy.js';
 import { churchPastorAdminPage, churchPastorAdminScript, isChurchPastorAdminPath } from './church-pastor-admin-page.js';
@@ -6,7 +6,7 @@ import { ekodiBizInvestBusinessPage, isEkodiBizInvestPath } from './ekodibiz-inv
 import { ekodiBizInvestAdminPage, isEkodiBizInvestAdminPath } from './ekodibiz-invest-admin-page.js';
 import { tenantAdminCommandHomeScript, tenantAdminCommandHomeCss } from './tenant-admin-command-home.js';
 import { decorateDiscoveryResponse } from './discovery-layer.js';
-import { realtimeTenantAdminFromPath, realtimeTenantFromPath } from './realtime-tenant-registry.js';
+import { realtimeTenantAdminFromPath, realtimeTenantFromHomePath, realtimeTenantFromPath } from './realtime-tenant-registry.js';
 import { tenantLivePage } from './tenant-live-page.js';
 import { tenantLiveAdminCss, tenantLiveAdminPage, tenantLiveAdminScript } from './tenant-live-admin-page.js';
 
@@ -744,6 +744,15 @@ export default {
       return withHostSecurity(response, HUB_CSP, 'public, max-age=300', 'hub');
     }
 
-    return env.ASSETS.fetch(request);
+    const fallbackResponse=await env.ASSETS.fetch(request);
+    if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)){
+      const manifestServiceId=shellServiceForRootPath(url.pathname);
+      const tenantServiceId=realtimeTenantFromHomePath(url.pathname)?.apiTenant||'';
+      const serviceId=manifestServiceId||tenantServiceId;
+      if(serviceId&&String(fallbackResponse.headers.get('x-ekodi-shell')||'')!=='v2'){
+        return injectEkodiShell(fallbackResponse,serviceId);
+      }
+    }
+    return fallbackResponse;
   },
 };
