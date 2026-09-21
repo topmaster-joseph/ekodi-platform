@@ -4,7 +4,7 @@ import { ADMIN_MENU_GROUPS, ADMIN_MENU_REGISTRY } from '../admin-menu-registry.j
 const readText = async (path) => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 const readJson = async (path) => JSON.parse(await readText(path));
 
-const [policy, userDna, userShell, theme, adminRuntime, adminCss, adminPrinciples, sidebar, authenticatedShell, build, siteWorker, postbuild] = await Promise.all([
+const [policy, userDna, userShell, theme, adminRuntime, adminCss, adminPrinciples, sidebar, authenticatedShell, build, siteWorker, postbuild, userAiEntry] = await Promise.all([
   readJson('config/design-engine.json'),
   readJson('config/user-ui-dna.json'),
   readJson('config/user-ui-shell.json'),
@@ -17,6 +17,7 @@ const [policy, userDna, userShell, theme, adminRuntime, adminCss, adminPrinciple
   readText('scripts/build.mjs'),
   readText('site-worker.js'),
   readText('scripts/admin-performance-postbuild.mjs'),
+  readText('shell/user-ai-entry.js'),
 ]);
 
 const errors = [];
@@ -84,6 +85,20 @@ if (userShell?.header?.owner !== 'shared-shell' || userShell?.footer?.owner !== 
 if (userShell?.adminExcluded !== true) errors.push('user shell must remain excluded from admin surfaces.');
 if (!Array.isArray(userDna?.shared?.mustVary) || userDna.shared.mustVary.length < 7) errors.push('user UI DNA must preserve service-specific visual variation.');
 if (!theme?.services || Object.keys(theme.services).length < 10) errors.push('shell theme must keep service-specific identities instead of one universal skin.');
+
+const universalSitePrinciples = policy?.user?.universalSitePrinciples ?? {};
+const requiredExperienceDimensions = ['ease','locality','readability','originality','intuitiveness'];
+for (const dimension of requiredExperienceDimensions) {
+  const entry = universalSitePrinciples?.dimensions?.[dimension];
+  if (!entry?.ko || !Array.isArray(entry?.rules) || entry.rules.length < 3) errors.push(`universal site experience principle "${dimension}" must have a Korean label and at least three enforceable rules.`);
+}
+if (universalSitePrinciples?.scope !== 'all-user-facing-sites-and-subservices') errors.push('universal site experience principles must apply to all user-facing sites and subservices.');
+if (universalSitePrinciples?.communicationFirst?.required !== true) errors.push('all user-facing sites must inherit communication-first UX.');
+if (universalSitePrinciples?.communicationFirst?.assistant?.persistentFloating !== false || universalSitePrinciples?.communicationFirst?.assistant?.contentOverlapForbidden !== true) errors.push('communication-first assistant must remain user-initiated, non-floating and non-overlapping.');
+if (universalSitePrinciples?.personalization?.mode !== 'progressive-consent-based' || universalSitePrinciples?.personalization?.anonymousBaseline !== 'fully-usable') errors.push('site personalization must be progressive, consent-based and fully usable anonymously.');
+if (universalSitePrinciples?.personalization?.sensitiveInferenceForbidden !== true || universalSitePrinciples?.personalization?.authorizationUnaffected !== true || universalSitePrinciples?.personalization?.explainableAndReversible !== true) errors.push('site personalization must not infer sensitive traits, alter authorization, or become irreversible.');
+if (userAiEntry.includes('.ekodi-user-ai-entry{position:fixed')) errors.push('shared User AI entry must not float over site content.');
+if (!userAiEntry.includes("insertBefore(root,footer)")) errors.push('shared User AI entry must be inserted into document flow before the footer when available.');
 
 const adminCharacter = policy?.admin?.character ?? {};
 const userCharacter = policy?.user?.character ?? {};
