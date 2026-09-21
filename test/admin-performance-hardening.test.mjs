@@ -101,6 +101,9 @@ test('postbuild removes retired first-path assets, versions the current graph an
   assert.match(perf, /demandReferencedAssets\.includes\('social-admin\.js'\)/);
   assert.match(perf, /demandReferencedAssets\.includes\('social-admin\.css'\)/);
   assert.match(perf, /\.\.\.staticVersionInputs, \.\.\.demandReferencedAssets/);
+  assert.match(perf, /unicodeSafeAdminScripts = \['system-health-admin\.js', 'admin-lazy-features\.js'\]/);
+  assert.match(perf, /escapeNonAsciiForTransport/);
+  assert.match(perf, /Admin Unicode-safe serialization failed/);
   assert.match(perf, /admin-menu-registry\.js/);
   assert.match(perf, /admin-sidebar\.js/);
   assert.match(perf, /admin-menu-runtime\.js/);
