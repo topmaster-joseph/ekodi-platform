@@ -120,6 +120,7 @@ jobs:
           node --check scripts/validate-my.mjs
           node --check scripts/validate-universal-membership.mjs
           node scripts/validate-my.mjs
+          node scripts/validate-production-worker-exposure.mjs
           node scripts/validate-universal-membership.mjs
           node --test test/universal-membership-contract.test.mjs test/my-ekodi-contract.test.mjs test/my-private-workspace-routing.test.mjs test/my-manifest-services.test.mjs test/my-life-journey.test.mjs test/my-life-communication.test.mjs test/my-progressive-personalization.test.mjs test/my-docs-ai.test.mjs test/my-intent-os.test.mjs test/my-intent-execution-bridge.test.mjs
           test -f deploy/manifests/my.worker.json
