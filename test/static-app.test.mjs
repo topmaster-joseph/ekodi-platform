@@ -83,19 +83,17 @@ test('redirect-only subdomains are forbidden and public-domain policy stays apex
     .filter(block => /custom_domain\s*=\s*true/.test(block))
     .map(block => block.match(/pattern\s*=\s*"([^"]+)"/)?.[1])
     .filter(Boolean);
-  assert.equal(proxyCustomDomains.length, 1);
+  assert.equal(proxyCustomDomains.length, 0);
   assert.doesNotMatch(proxy, /CANONICAL_REDIRECTS|const REDIRECTS|Response\.redirect/);
   assert.doesNotMatch(siteWorker, /PUBLIC_ALIAS_HOSTS|redirectToPublicCanonical|TRADE_LEGACY_HOSTS|redirectToTradeCanonical/);
   const lifecycle = JSON.parse(lifecycleText);
   const serviceUrls = JSON.parse(serviceUrlsText);
   assert.equal(lifecycle.legacyPolicy.subdomainRedirectsAllowed, false);
   assert.equal(lifecycle.legacyPolicy.redirectOnlyCompatibilityAliasesAllowed, false);
-  assert.equal(lifecycle.legacyPolicy.publicSubdomainsAllowed, true);
-  assert.equal(lifecycle.legacyPolicy.directServiceSubdomainsAllowed, true);
+  assert.equal(lifecycle.legacyPolicy.publicSubdomainsAllowed, false);
+  assert.equal(lifecycle.legacyPolicy.directServiceSubdomainsAllowed, false);
   assert.equal(serviceUrls.policy.subdomainRedirectsAllowed, false);
-  assert.equal(lifecycle.legacyPolicy.publicSubdomainMode, 'direct-service-only');
-  assert.equal(serviceUrls.policy.publicSubdomainMode, 'direct-service-only');
-  assert.equal(serviceUrls.policy.publicSubdomainsAllowed, true);
+  assert.equal(serviceUrls.policy.publicSubdomainsAllowed, false);
   for (const site of lifecycle.existingWorkspaceSites || []) {
     for (const alias of site.legacyAliases || []) {
       assert.equal(new URL(alias).hostname.endsWith('.' + ['ekodi','kr'].join('.')), false, `redirect-only subdomain alias leaked: ${alias}`);
