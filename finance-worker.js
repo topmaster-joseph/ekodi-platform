@@ -158,7 +158,7 @@ async function financeOverview(env) {
       tossLiveKey: String(env.TOSS_SECRET_KEY || '').startsWith('live_'),
       tossMidConfigured: Boolean(env.TOSS_MID),
       paymentDomain: 'https://pay.ekodi.kr',
-      webhookUrl: 'https://finance-api.ekodi.kr/webhooks/toss'
+      webhookUrl: 'https://ekodi.kr/webhooks/finance/toss'
     }
   };
 }
