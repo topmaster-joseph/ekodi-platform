@@ -19,6 +19,7 @@
     ['senior_pastor', '담임목사/책임관리자'],
     ['pastor', '목회자'],
     ['care_staff', '돌봄담당자'],
+    ['external_vendor', '외부업체'],
     ['external_developer', '외부개발자'],
   ];
   const ROLE_LABELS = Object.fromEntries(ROLE_OPTIONS);
@@ -401,7 +402,7 @@
     expiry.value = dateAfter(30);
     expiryLabel.append(expiry);
 
-    const safety = text('p', '외부개발자는 청계면상인회 등 선택한 사이트 범위만 접근하며 개인정보·재정·비밀키·운영배포·권한관리는 차단됩니다.', 'operations-copy');
+    const safety = text('p', '외부업체·외부개발자는 선택한 사이트 범위만 접근하며 개인정보·재정·비밀키·운영배포·권한관리는 차단됩니다.', 'operations-copy');
     const developerFields = document.createElement('div');
     developerFields.className = 'client-developer-fields';
     developerFields.append(githubLabel, expiryLabel, safety);
@@ -409,9 +410,11 @@
 
     const syncDeveloperFields = () => {
       const isDeveloper = role.value === 'external_developer';
-      developerFields.hidden = !isDeveloper;
+      const isExternal = isDeveloper || role.value === 'external_vendor';
+      developerFields.hidden = !isExternal;
+      githubLabel.hidden = !isDeveloper;
       github.required = isDeveloper;
-      expiry.required = isDeveloper;
+      expiry.required = isExternal;
     };
     role.addEventListener('change', syncDeveloperFields);
     syncDeveloperFields();
@@ -429,7 +432,8 @@
       status.replaceChildren();
       try {
         const isDeveloper = role.value === 'external_developer';
-        const expiresAt = isDeveloper && expiry.value ? new Date(`${expiry.value}T23:59:59+09:00`).toISOString() : '';
+        const isExternal = isDeveloper || role.value === 'external_vendor';
+        const expiresAt = isExternal && expiry.value ? new Date(`${expiry.value}T23:59:59+09:00`).toISOString() : '';
         const data = await request(`/api/customers/tenants/${encodeURIComponent(tenant.slug)}/pre-register`, {
           method: 'POST',
           body: JSON.stringify({
@@ -444,7 +448,7 @@
         const message = account.status === 'active'
           ? '기존 계정의 이 사이트 권한을 최신 설정으로 반영했습니다.'
           : '등록 완료. 같은 이메일의 Google 계정으로 로그인하면 이 사이트 범위에서만 활성화됩니다.';
-        status.append(text('strong', message), text('small', isDeveloper ? `GitHub @${account.githubUsername} · 만료 ${formatDate(account.expiresAt, '-')}` : 'Google 계정은 통합 식별되고 사이트별 권한만 추가됩니다.'));
+        status.append(text('strong', message), text('small', isDeveloper ? `GitHub @${account.githubUsername} · 만료 ${formatDate(account.expiresAt, '-')}` : isExternal ? `외부업체 · 만료 ${formatDate(account.expiresAt, '-')}` : 'Google 계정은 통합 식별되고 사이트별 권한만 추가됩니다.'));
         form.reset();
         expiry.value = dateAfter(30);
         syncDeveloperFields();
