@@ -23,7 +23,7 @@ test('Admin production verifier runs after successful canonical shared-site rele
   assert.match(workflow, /gh issue comment 333/);
   assert.match(workflow, /PRODUCTION NOT VERIFIED/);
   assert.doesNotMatch(workflow, /PRODUCTION VERIFIED/);
-  assert.match(workflow, /fingerprinted thin shell · immutable assets · standalone Health · flat AI Ops · internal specialist routing/);
+  assert.match(workflow, /fingerprinted thin shell · asset-first no-store assets · standalone Health · flat AI Ops · internal specialist routing/);
   assert.doesNotMatch(workflow, /guarded-worker-release\.mjs/);
   assert.doesNotMatch(workflow, /CLOUDFLARE_API_TOKEN/);
 });
@@ -33,8 +33,10 @@ test('Admin production verification follows the content fingerprint and lazy AI 
   assert.match(workflow, /admin-authenticated-shell\\\.js\\\?v=\[a-f0-9\]\{16\}/);
   assert.match(workflow, /EXPECTED_VERSION/);
   assert.match(workflow, /LIVE_VERSION/);
-  assert.match(workflow, /max-age=31536000, immutable/);
+  assert.match(workflow, /cache-control: no-store/);\n  assert.doesNotMatch(workflow, /max-age=31536000, immutable/);
   assert.match(workflow, /x-content-type-options: nosniff/);
+  assert.match(workflow, /asset cache contract mismatch/);
+  assert.match(workflow, /asset marker missing/);
   assert.doesNotMatch(workflow, /x-ekodi-route: admin-asset/);
   assert.match(workflow, /verify_asset 'ai-ops-admin\.css'/);
   assert.match(workflow, /verify_asset 'system-health-admin\.js'/);
