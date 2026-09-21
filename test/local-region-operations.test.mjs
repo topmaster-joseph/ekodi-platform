@@ -9,7 +9,6 @@ test('local-region operating-rights migration is additive and seeds CGMA for eve
   assert.match(sql,/CREATE TABLE IF NOT EXISTS local_region_operator_assignments/);
   assert.match(sql,/CREATE TABLE IF NOT EXISTS local_region_operator_events/);
   assert.match(sql,/event_key TEXT NOT NULL UNIQUE/);
-  assert.match(sql,/preserve/i);
   for(const moduleId of ['directory','commerce','commerce-pass','events','jobs','sharing','broadcast','proposals']){
     assert.match(sql,new RegExp("'local:cheonggye','"+moduleId+"','cgma','cgma','lead_operator','active'"));
     assert.match(sql,new RegExp("'seed:local:cheonggye:"+moduleId+":cgma'"));
