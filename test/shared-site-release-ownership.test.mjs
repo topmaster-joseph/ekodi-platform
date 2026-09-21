@@ -28,6 +28,12 @@ test('shared-site smoke contracts are unique by HTTP method and canonical URL', 
   assert.deepEqual(duplicates, [], `Duplicate Shared Site smoke contracts: ${[...new Set(duplicates)].join(', ')}`);
 });
 
+test('shared-site release watches Invest root runtime assets', () => {
+  assert.match(workflow, /- 'invest-user-page\.js'/);
+  assert.match(workflow, /- 'invest-subject-ui\.js'/);
+  assert.match(workflow, /- 'invest-site-system\.js'/);
+});
+
 test('shared-site production blocks a rerun of an older commit before deployment', () => {
   assert.match(workflow, /Refuse stale rerun production promotion/);
   assert.match(workflow, /GITHUB_RUN_ATTEMPT/);
