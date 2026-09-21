@@ -68,5 +68,6 @@ test('central and tenant admin surfaces expose separate payment and receipt work
   assert.match(script,/data-confirmation-kind="payment">지급/);
   assert.match(script,/data-confirmation-kind="receipt">수령/);
   assert.match(script,/data-confirmation-action="counterpart"/);
-  assert.match(script,/수령확인서는 수령자 확인 완료 후 발급/);
+  assert.match(script,/async function confirmationApi/);
+  assert.match(script,/confirmation_pending/);
 });
