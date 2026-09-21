@@ -5,6 +5,8 @@ on:
   pull_request:
     paths:
       - 'api-worker.js'
+      - 'payment-receipt-confirmation-control.js'
+      - 'test/payment-receipt-confirmation.test.mjs'
       - 'platform-maturity-control.js'
       - 'platform-maturity-admin.js'
       - 'governance/standards/**'
@@ -150,6 +152,8 @@ on:
     branches: [main]
     paths:
       - 'api-worker.js'
+      - 'payment-receipt-confirmation-control.js'
+      - 'test/payment-receipt-confirmation.test.mjs'
       - 'platform-maturity-control.js'
       - 'platform-maturity-admin.js'
       - 'governance/standards/**'
