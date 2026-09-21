@@ -236,13 +236,13 @@ export async function callEkodiMcpTool(name,args,request,env,dependencies={}){
   }
   if(name==='ekodi_my_ai_status'){
     const site=String(args?.site||'my').trim().toLowerCase().replace(/[^a-z0-9_-]/g,'').slice(0,40)||'my';
-    const response=await userAiStatusForIdentity(new Request(`https://api.ekodi.kr/api/user-ai/status?site=${encodeURIComponent(site)}`),env,identity);
+    const response=await userAiStatusForIdentity(new Request(`https://ekodi.kr/api/user-ai/status?site=${encodeURIComponent(site)}`),env,identity);
     const data=sanitizeAiStatus(await internalJson(response));
     if(!response?.ok)return textResult('EKODI AI 상태를 불러오지 못했습니다.',{error:data?.code||'USER_AI_STATUS_FAILED'});
     return textResult('개인 AI 라우팅과 연결 상태를 확인했습니다.',data);
   }
   if(name==='ekodi_my_services'){
-    const response=await membershipPortfolioForIdentity(new Request('https://api.ekodi.kr/api/membership/portfolio'),env,identity);
+    const response=await membershipPortfolioForIdentity(new Request('https://ekodi.kr/api/membership/portfolio'),env,identity);
     const data=sanitizePortfolio(await internalJson(response));
     if(!response?.ok)return textResult('EKODI 서비스 상태를 불러오지 못했습니다.',{error:data?.code||'MEMBERSHIP_STATUS_FAILED'});
     return textResult('현재 이용 가능한 EKODI 서비스와 멤버십 상태를 확인했습니다.',data);
