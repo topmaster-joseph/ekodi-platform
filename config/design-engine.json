@@ -1,7 +1,7 @@
 {
-  "version": 3,
+  "version": 4,
   "name": "EKODI Design Engine",
-  "asOf": "2026-09-20",
+  "asOf": "2026-09-21",
   "principle": "Evidence defines reusable UX rules; EKODI identity, service DNA and EKODIAN character remain first-party layers.",
   "evidence": {
     "publicUser": {
@@ -195,6 +195,89 @@
     }
   },
   "user": {
+    "universalSitePrinciples": {
+      "scope": "all-user-facing-sites-and-subservices",
+      "priority": "service-goal-first; shared platform chrome must never displace local or service identity",
+      "dimensions": {
+        "ease": {
+          "ko": "용이성",
+          "rules": [
+            "one obvious primary purpose per screen",
+            "progressive disclosure before dense menus",
+            "minimum 44px touch targets for primary interactive controls",
+            "no essential task may depend on hover, hidden gestures or AI",
+            "reduce steps, duplicate choices and repeated explanations"
+          ]
+        },
+        "locality": {
+          "ko": "지역성·현장성",
+          "rules": [
+            "lead with the service, organization or region identity rather than generic platform labels",
+            "use local names, people, places, events and operating context where the site has a local mission",
+            "shared EKODI relationship remains visible but secondary to the active site's identity"
+          ]
+        },
+        "readability": {
+          "ko": "가독성",
+          "rules": [
+            "body text remains at least 16px on mobile unless it is metadata",
+            "normal text contrast targets WCAG AA 4.5:1",
+            "line-height remains at least 1.5 for reading copy",
+            "Korean and other natural-language words must not be arbitrarily split",
+            "content hierarchy must remain legible without relying on color alone"
+          ]
+        },
+        "originality": {
+          "ko": "독창성",
+          "rules": [
+            "each site keeps a distinct visual family through palette, typography, geometry, density and hero composition",
+            "do not clone another EKODI site's page composition as a shortcut",
+            "novel visual treatment must never reduce task clarity or accessibility"
+          ]
+        },
+        "intuitiveness": {
+          "ko": "직관성",
+          "rules": [
+            "navigation labels describe user goals in plain language",
+            "interactive cards and controls must visibly look interactive",
+            "status, next action and return path stay obvious",
+            "essential meaning uses text with icons rather than icon-only controls"
+          ]
+        }
+      },
+      "communicationFirst": {
+        "required": true,
+        "rule": "Public experiences should provide a clear human-language route to ask, participate, propose, contact or receive help when that interaction belongs to the service.",
+        "patterns": [
+          "intent-first quick actions",
+          "plain-language prompts",
+          "contextual help inside content flow",
+          "feedback or participation path owned by the service"
+        ],
+        "assistant": {
+          "userInitiated": true,
+          "persistentFloating": false,
+          "contentOverlapForbidden": true,
+          "humanPathRequired": true
+        }
+      },
+      "personalization": {
+        "mode": "progressive-consent-based",
+        "anonymousBaseline": "fully-usable",
+        "allowedContext": [
+          "signed-in person context",
+          "active service or workspace",
+          "explicit role",
+          "language",
+          "user-chosen interests",
+          "recent in-service activity"
+        ],
+        "sensitiveInferenceForbidden": true,
+        "authorizationUnaffected": true,
+        "presentationOnlyByDefault": true,
+        "explainableAndReversible": true
+      }
+    },
     "layout": "shared-header + service-owned-content + shared-footer",
     "sharedSources": [
       "config/user-ui-dna.json",
