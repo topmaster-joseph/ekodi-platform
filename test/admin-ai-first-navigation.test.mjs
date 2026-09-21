@@ -42,7 +42,7 @@ test('human-facing Admin menu has one canonical order inside seven EKODI areas',
   assert.deepEqual(adminMenuGroups(), ['home','operations','workspaces','services','community','publishing','system']);
   assert.deepEqual(adminMenuOrder(), [
     'command-home','campus','work','communication','finance','tax','clients','site-chrome','cmpmyi','organization','workspace',
-    'common-services','life-ai','personal-finance','invest','social','marketing-ai','supply-network','insurance',
+    'common-services','confirmations','life-ai','personal-finance','invest','social','marketing-ai','supply-network','insurance',
     'community','ai-membership','books','devotional',
     'public-site-controls','language-status','architecture','maturity','security','admins','ai-module-spec','storage','capabilities','aiops','ai-settings','openai','devices','health','api-cost',
   ]);
