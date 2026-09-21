@@ -14,9 +14,9 @@ test('Control API contains Community and Social as active services without legac
   assert.match(api, /id: 'social'.*social\.ekodi\.kr\/health.*defaultState: 'active'.*defaultMonitor: true/);
 });
 
-test('Admin registry uses Community label instead of the retired mission organization label', async () => {
+test('Admin registry keeps Community functionality under the content operations area', async () => {
   const registry = await text('admin-menu-registry.js');
-  assert.match(registry, /id: 'community'[\s\S]*en: 'Community'/);
+  assert.match(registry, /id: 'community'[^\n]*group: 'content'[^\n]*en: 'Events, Applications & Reservations'/);
   assert.doesNotMatch(registry, /id: 'mission'/);
 });
 
