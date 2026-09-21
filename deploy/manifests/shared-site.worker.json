@@ -542,7 +542,7 @@
         ],
         "rollbackVerify": false,
         "candidateVerify": false,
-        "candidateVerifyReason": "canonical root Mall path is Worker-first and must remain owned by the Mall gateway"
+        "candidateVerifyReason": "run_worker_first bootstrap for canonical /ekodimall is verified after promotion so the Mall gateway retains root ownership"
       },
       {
         "url": "https://ekodi.kr/admin/ekodimall/",
