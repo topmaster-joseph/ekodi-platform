@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="index,follow">
+<meta name="description" content="서남권 국립의대 관련 활동·자료·언론보도·시민의견·후원회계를 공개하는 시민소통채널">
+<link rel="canonical" href="https://ekodi.kr/seonam-med">
+<link rel="stylesheet" href="/seonam-med/assets/site.css">
+<title>서남권 국립의대 시민소통센터</title>
+</head>
+<body>
+<header class="site-header">
+  <a class="brand" href="/seonam-med"><span class="brand-mark">서남권</span><span><strong>국립의대 시민소통센터</strong><small>서남권 의대 설립 비상대책위원회 공식 소통채널</small></span></a>
+  <nav aria-label="주요 메뉴">
+    <a href="#status">현황</a><a href="#history">활동이력</a><a href="#news">관련기사</a><a href="#voices">시민의 목소리</a><a href="#finance">후원·회계</a><a href="#network">참여·교류</a>
+  </nav>
+</header>
+<main>
+<section class="hero">
+  <p class="eyebrow">PUBLIC RECORD · CIVIC COMMUNICATION</p>
+  <h1>자료를 공개하고,<br>다양한 목소리를 기록합니다.</h1>
+  <p class="lead">서남권 국립의대와 지역 의료 현안을 둘러싼 활동, 공공기관 결정, 법적 절차, 언론보도와 시민 의견을 출처와 함께 기록합니다. 확인된 사실과 각 주체의 주장·의견을 구분해 표시합니다.</p>
+  <div class="hero-actions"><a class="primary" href="#history">활동이력 보기</a><a href="#voices">시민 의견 보내기</a></div>
+  <div class="principles"><span>출처 표시</span><span>사실·주장 구분</span><span>반론·정정 연결</span><span>수정이력 보존</span></div>
+</section>
+
+<section id="status" class="section">
+  <div class="section-head"><div><p class="eyebrow">CURRENT STATUS</p><h2>현재 진행상황</h2></div><p id="lastChecked" class="muted">점검정보 불러오는 중</p></div>
+  <div id="statusCards" class="grid cards"></div>
+  <div class="notice">이 페이지는 특정 정치인·정당·기관에 대한 지지 또는 반대를 권고하지 않습니다. 공식 결정, 당사자 입장, 시민·단체 의견은 서로 다른 유형으로 표시합니다.</div>
+</section>
+
+<section id="history" class="section alt">
+  <div class="section-head"><div><p class="eyebrow">TIMELINE</p><h2>활동이력</h2><p>1990년 이후 확인 가능한 관련 흐름과 2026년 비상대책위 활동을 함께 기록합니다.</p></div><div class="filters" id="historyFilters"><button data-filter="all" class="active">전체</button><button data-filter="history">이전 활동</button><button data-filter="committee">비대위</button><button data-filter="institution">정부·기관</button><button data-filter="legal">법적절차</button></div></div>
+  <ol id="timeline" class="timeline"></ol>
+</section>
+
+<section id="news" class="section">
+  <div class="section-head"><div><p class="eyebrow">NEWS & SOURCES</p><h2>관련기사·원자료</h2><p>같은 사건의 반복 보도는 묶고, 원자료와 주요 보도를 우선 연결합니다.</p></div></div>
+  <div id="newsList" class="news-list"></div>
+</section>
+
+<section id="voices" class="section alt">
+  <div class="section-head"><div><p class="eyebrow">CITIZEN VOICES</p><h2>시민의 목소리</h2><p>질문·정책제안·의료경험·사실확인 요청·자료제보를 접수합니다. 공개 동의를 받지 않은 개인정보와 제보자 정보는 공개하지 않습니다.</p></div></div>
+  <form id="voiceForm" class="voice-form">
+    <label>의견 유형<select name="category"><option value="question">질문</option><option value="proposal">정책제안</option><option value="experience">의료경험</option><option value="factcheck">사실확인 요청</option><option value="tip">자료제보</option><option value="other">기타</option></select></label>
+    <label>이름 또는 표시명<input name="name" maxlength="80" autocomplete="name" placeholder="익명 가능"></label>
+    <label>연락처 또는 이메일<input name="contact" maxlength="160" autocomplete="email" placeholder="답변을 원할 경우 입력"></label>
+    <label class="wide">내용<textarea name="message" maxlength="3000" required placeholder="의견이나 제보 내용을 작성해 주세요."></textarea></label>
+    <input class="honeypot" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
+    <label class="check wide"><input type="checkbox" name="publicConsent"> 검토 후 익명 또는 동의한 표시명으로 공개될 수 있음에 동의합니다.</label>
+    <label class="check wide"><input type="checkbox" name="privacyConsent" required> 접수·답변을 위한 개인정보 처리에 동의합니다.</label>
+    <div class="wide form-actions"><button type="submit" class="primary">의견 접수</button><span id="voiceStatus" role="status"></span></div>
+  </form>
+</section>
+
+<section id="finance" class="section">
+  <div class="section-head"><div><p class="eyebrow">TRANSPARENCY</p><h2>후원·회계 공개</h2><p>모금과 지출을 행사·목적별로 연결해 공개하고, 개인정보는 공개하지 않습니다.</p></div></div>
+  <div class="finance-summary"><article><small>누적 모금</small><strong id="totalIncome">—</strong></article><article><small>누적 지출</small><strong id="totalExpense">—</strong></article><article><small>현재 잔액</small><strong id="balance">—</strong></article><article><small>최근 결산</small><strong id="financeUpdated">—</strong></article></div>
+  <div id="financeList" class="finance-list"></div>
+  <p class="muted">후원금·지출자료는 관리자 검토와 증빙 확인 후 공개합니다. 정치자금·선거비용 등 별도 법률이 적용되는 자금과 시민운동 회계는 혼합하지 않습니다.</p>
+</section>
+
+<section id="network" class="section alt">
+  <div class="section-head"><div><p class="eyebrow">OPEN NETWORK</p><h2>참여기관·교류</h2><p>비대위, 시민사회, 대학, 지자체, 국회, 정당, 언론·방송, 전문가 등 서로 다른 주체의 자료를 출처별로 구분합니다.</p></div></div>
+  <div class="network-grid"><article><h3>공식자료</h3><p>비대위 성명·공개서한·일정·행사결과를 원문 중심으로 보존합니다.</p></article><article><h3>기관·정치권 입장</h3><p>정부·국회·지자체·대학·정당·선출직의 입장을 발언 주체와 날짜를 표시해 연결합니다.</p></article><article><h3>언론·방송</h3><p>보도 원문을 링크하고 동일 사건의 중복보도를 묶습니다.</p></article><article><h3>시민·전문가</h3><p>시민 경험과 전문가 의견은 사실자료와 구분해 게시합니다.</p></article></div>
+</section>
+</main>
+<footer><strong>서남권 국립의대 시민소통센터</strong><span>공개기록 · 시민소통 · 회계투명성</span><a href="/seonam-med/admin">관리자</a></footer>
+<script src="/seonam-med/assets/site.js" defer></script>
+</body></html>
