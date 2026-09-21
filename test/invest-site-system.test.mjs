@@ -41,7 +41,7 @@ test('project investment lifecycle is evidence-first and connection-only',async(
     const response=routeInvestSite(new Request('https://ekodi.kr'+path));
     assert.equal(response.status,200);
     const html=await response.text();
-    assert.match(html,new RegExp(marker.replace(/[.*+?^$\{\}()|[\]\\]/g,'\\test('autonomous loop is explicit and risk gate precedes execution',()=>{')));
+    assert.ok(html.includes(marker));
     assert.match(html,/Analysis & Connection Only/);
     assert.match(html,/투자금 수취·수탁·증권 중개·투자일임·수익보장/);
   }
