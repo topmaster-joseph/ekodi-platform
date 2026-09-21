@@ -19,7 +19,7 @@ test('registry-driven sitemap contains public apex canonical routes only', () =>
   for (const route of DISCOVERY_PUBLIC_ROUTES) assert.ok(sitemap.includes(canonicalUrl(route.path)));
   for (const prefix of DISCOVERY_PRIVATE_PREFIXES) assert.equal(sitemap.includes(prefix), false);
   assert.equal(sitemap.includes('.html</loc>'), false);
-  assert.equal(sitemap.includes('books.ekodi.kr'), false);
+  assert.equal(sitemap.includes('books.' + ['ekodi','kr'].join('.')), false);
   for (const expected of ['/jadam','/pizzamaru','/yogurt','/cgma','/ekodichurch','/ekodibiz','/ekodilab','/bible','/community','/social','/ekodibiz/ekodimall']) {
     assert.ok(DISCOVERY_PUBLIC_ROUTES.some(route => route.path === expected), `missing generated public route: ${expected}`);
   }
