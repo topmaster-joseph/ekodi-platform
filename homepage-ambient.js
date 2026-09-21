@@ -224,8 +224,10 @@
     }
     for(const card of document.querySelectorAll('.service-card[data-service-id]')){
       const title=card.querySelector('.service-title strong');const enTitle=card.querySelector('.service-name-en');const desc=card.querySelector('.service-description > span');const enDesc=card.querySelector('.service-description small');
-      if(title&&!card.dataset.ekodiKoTitle)card.dataset.ekodiKoTitle=title.textContent.trim();if(enTitle&&!card.dataset.ekodiEnTitle)card.dataset.ekodiEnTitle=enTitle.textContent.trim();
-      if(desc&&!card.dataset.ekodiKoDescription)card.dataset.ekodiKoDescription=desc.textContent.trim();if(enDesc&&!card.dataset.ekodiEnDescription)card.dataset.ekodiEnDescription=enDesc.textContent.trim();
+      if(title&&!card.dataset.ekodiKoTitle)card.dataset.ekodiKoTitle=title.textContent.trim();
+      if(!card.dataset.ekodiEnTitle)card.dataset.ekodiEnTitle=card.dataset.serviceNameEn||enTitle?.textContent?.trim()||'';
+      if(desc&&!card.dataset.ekodiKoDescription)card.dataset.ekodiKoDescription=desc.textContent.trim();
+      if(!card.dataset.ekodiEnDescription)card.dataset.ekodiEnDescription=card.dataset.serviceDescriptionEn||enDesc?.textContent?.trim()||'';
       const custom=serviceCopy[card.dataset.serviceId]?.[locale];
       if(locale==='ko-KR'){if(title)title.textContent=card.dataset.ekodiKoTitle||title.textContent;if(desc)desc.textContent=card.dataset.ekodiKoDescription||desc.textContent;}
       else if(locale==='en'){if(title)title.textContent=card.dataset.ekodiEnTitle||card.dataset.ekodiKoTitle;if(desc)desc.textContent=card.dataset.ekodiEnDescription||card.dataset.ekodiKoDescription;}
