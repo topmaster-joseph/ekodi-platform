@@ -179,7 +179,7 @@ export const GENERATED_DISCOVERY_PUBLIC_ROUTES = Object.freeze([
     "source": "service:business"
   },
   {
-    "path": "/ekodibiz/ekodimall",
+    "path": "/ekodimall",
     "asset": null,
     "changefreq": "weekly",
     "priority": "0.8",
