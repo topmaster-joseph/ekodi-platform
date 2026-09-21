@@ -30,6 +30,15 @@ function normalizeEmail(value) {
   return String(value || '').trim().toLowerCase();
 }
 
+function normalizeDisplayName(value) {
+  return String(value || '').trim().replace(/\s+/g, ' ').slice(0, 120);
+}
+
+function displayNameNote(value) {
+  const displayName = normalizeDisplayName(value);
+  return displayName ? `display-name:${displayName}` : '';
+}
+
 function normalizeTenant(value) {
   const tenant = String(value || '').trim().toLowerCase();
   return /^[a-z0-9][a-z0-9-]{0,79}$/.test(tenant) ? tenant : '';
@@ -198,7 +207,8 @@ async function preregister(request, env, slug) {
 
   const body = await readJson(request);
   const email = normalizeEmail(body?.email);
-  const role = normalizeRole(body?.role || 'store_owner');
+  const role = normalizeRole(body?.role || 'member');
+  const displayName = normalizeDisplayName(body?.displayName);
   if (!validEmail(email) || !role) return json({ error: '고객 이메일 또는 권한을 확인해 주세요.' }, 400, request, env);
 
   const grantInput = validateAccessGrantInput({
@@ -253,6 +263,10 @@ async function preregister(request, env, slug) {
       updated_by = excluded.updated_by`)
     .bind(tenant.id, email, role, now, createdBy, grantInput.principalType, grantInput.githubUsername,
       stringifyCapabilityList(grantInput.allowed), stringifyCapabilityList(grantInput.denied), grantInput.expiresAt || null, now, createdBy).run();
+  if (displayName) {
+    await env.DB.prepare('UPDATE customer_access_grants SET note = ? WHERE tenant_id = ? AND email = ?')
+      .bind(displayNameNote(displayName), tenant.id, email).run();
+  }
 
   await writeGrantAudit(env.DB, tenant.id, email, session, existing ? 'grant.update' : 'grant.create', existing || {}, after);
   await writeAdminAudit(env.DB, session, 'customer.access.upsert', tenant.domain, JSON.stringify({ email, role, principalType: grantInput.principalType, expiresAt: grantInput.expiresAt || '' }));
@@ -261,6 +275,7 @@ async function preregister(request, env, slug) {
     ok: true,
     account: {
       email,
+      displayName,
       role,
       principalType: grantInput.principalType,
       githubUsername: grantInput.githubUsername,
