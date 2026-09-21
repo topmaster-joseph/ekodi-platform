@@ -4,8 +4,8 @@ import { canonicalCoreRole } from './ekodi-principal.js';
 import { accessGrantExpired } from './access-governance.js';
 
 const ROLE_LABELS = Object.freeze({
-  owner: '점주/책임자',
-  admin: '관리자',
+  owner: '사이트 책임관리자',
+  admin: '사이트 관리자',
   manager: '운영책임자',
   marketer: '마케팅담당자',
   accountant: '회계담당자',
@@ -16,6 +16,9 @@ const ROLE_LABELS = Object.freeze({
   marketing_manager: '마케팅담당자',
   hq_manager: '본사담당자',
   accounting_manager: '회계담당자',
+  senior_pastor: '담임목사/책임관리자',
+  pastor: '목회자',
+  care_staff: '돌봄담당자',
   external_developer: '외부개발자',
   client_admin: '점주/책임자 · 기존',
   client_editor: '마케팅담당자 · 기존',
