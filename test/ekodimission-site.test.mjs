@@ -54,7 +54,7 @@ test('standalone Open Table application link is bilingual, compact, and writes t
   const response=await spaceWorker.fetch(new Request(`https://ekodi.kr${standaloneApplyPath}`),env);
   assert.equal(response.status,200);assert.equal(response.headers.get('x-ekodi-route'),'ekodimission-public');
   const body=await response.text();
-  assert.match(body,/한가위 열린식탁 & 나눔마켓/);assert.match(body,/Chuseok Open Table & Sharing Market/);assert.match(body,/16:00–18:00/);assert.match(body,/자담치킨 \| Jadam Chicken/);assert.match(body,/무료 \| Free/);assert.match(body,/신청하기 \| Register/);assert.match(body,/data-event-application/);assert.match(body,/260926-chuseok-open-table/);assert.doesNotMatch(body,/activities\/2026-chuseok-open-table#apply/);
+  assert.match(body,/한가위 열린식탁 & 나눔마켓/);assert.match(body,/Chuseok Open Table & Sharing Market/);assert.match(body,/16:00–18:00/);assert.match(body,/자담치킨 \| Jadam Chicken/);assert.match(body,/무료 \| Free/);assert.match(body,/팟럭 \| Potluck/);assert.match(body,/나눔마켓 \| Sharing Market/);assert.match(body,/기타 하고 싶은 말/);assert.match(body,/name="name"/);assert.match(body,/name="phone"/);assert.match(body,/name="note"/);assert.match(body,/name="partySize" value="1"/);assert.doesNotMatch(body,/참여 인원 \| Party size/);assert.doesNotMatch(body,/이메일 \| Email/);assert.match(body,/신청하기 \| Register/);assert.match(body,/data-event-application/);assert.match(body,/260926-chuseok-open-table/);assert.doesNotMatch(body,/activities\/2026-chuseok-open-table#apply/);
 });
 
 test('EKODI Mission shared assets and unknown child routes are guarded',async()=>{
