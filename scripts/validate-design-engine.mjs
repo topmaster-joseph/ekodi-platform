@@ -53,7 +53,7 @@ for (const group of ADMIN_MENU_GROUPS) {
   if (!target) errors.push(`admin group "${group.id}" has invalid default section "${group.defaultSection}".`);
 }
 
-if (Number(policy?.version) < 2 || Number(policy?.admin?.generation) !== 8) errors.push('admin design policy must declare the 8th-generation contract.');
+if (Number(policy?.version) < 5 || Number(policy?.admin?.generation) !== 8) errors.push('design policy v5+ and the 8th-generation admin contract are required.');
 if (policy?.admin?.desktopPrimarySidebarScroll !== false) errors.push('desktop primary sidebar scrolling must remain disabled.');
 if (policy?.admin?.scrollContract?.workspace !== 'single-vertical-scroll-owner') errors.push('workspace must be the single vertical scroll owner in policy.');
 if (!Array.isArray(policy?.admin?.regions) || policy.admin.regions.length !== 4) errors.push('admin design policy must define exactly four shell regions.');
@@ -77,7 +77,7 @@ if (!/\['admin-menu-registry\.js', \[[^\]]*'admin-design-engine\.js'[^\]]*'platf
 if (!adminCss.includes('[data-ekodian-character]')) errors.push('admin design CSS must contain the EKODIAN character layer.');
 if (!adminCss.includes('@media(prefers-reduced-motion:reduce)')) errors.push('admin character layer must respect reduced-motion preferences.');
 
-for (const marker of ['8세대 공통 쉘은 ChatGPT형 좌측 내비게이션 + 우측 작업공간 + 하단 대화창으로 구성한다', 'EKODI Design Engine 계층', '내비게이션은 최대 세 단계까지만 허용한다', '서비스 개성은 Shell 교체가 아니라 Theme Token으로 표현한다', '공통 UI의 소유권을 코드 수준에서 분리한다']) {
+for (const marker of ['8세대 공통 쉘은 ChatGPT형 좌측 내비게이션 + 우측 작업공간 + 하단 대화창으로 구성한다', '용이성 · 지역성·현장성 · 가독성 · 독창성 · 직관성 · 소통형 · 맞춤형', 'EKODI Design Engine 계층', '내비게이션은 최대 세 단계까지만 허용한다', '서비스 개성은 Shell 교체가 아니라 Theme Token으로 표현한다', '공통 UI의 소유권을 코드 수준에서 분리한다']) {
   if (!adminPrinciples.includes(marker)) errors.push(`admin UI principles lost design-engine marker: ${marker}`);
 }
 
