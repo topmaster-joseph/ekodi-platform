@@ -113,28 +113,6 @@ export const GENERATED_DISCOVERY_PUBLIC_ROUTES = Object.freeze([
     "source": "service:church"
   },
   {
-    "path": "/ekodibiz",
-    "asset": null,
-    "changefreq": "weekly",
-    "priority": "0.8",
-    "label": "EKODI Biz",
-    "title": "에코디비즈 | EKODI",
-    "description": "사업과 성장의 실행 허브",
-    "schemaType": "Organization",
-    "source": "service:biz"
-  },
-  {
-    "path": "/ekodilab",
-    "asset": null,
-    "changefreq": "weekly",
-    "priority": "0.8",
-    "label": "EKODI Lab",
-    "title": "에코디연구소 | EKODI",
-    "description": "연구와 근거, 실험을 축적",
-    "schemaType": "Organization",
-    "source": "service:lab"
-  },
-  {
     "path": "/bible",
     "asset": null,
     "changefreq": "weekly",
@@ -166,6 +144,17 @@ export const GENERATED_DISCOVERY_PUBLIC_ROUTES = Object.freeze([
     "description": "에코디의 소셜 흐름을 한곳에",
     "schemaType": "Service",
     "source": "service:social"
+  },
+  {
+    "path": "/ekodibiz",
+    "asset": null,
+    "changefreq": "weekly",
+    "priority": "0.8",
+    "label": "EKODI Biz",
+    "title": "에코디비즈 | EKODI",
+    "description": "사업과 성장의 실행 허브",
+    "schemaType": "Organization",
+    "source": "service:biz"
   },
   {
     "path": "/business",
@@ -223,6 +212,61 @@ export const GENERATED_DISCOVERY_PUBLIC_ROUTES = Object.freeze([
     "source": "service:support"
   },
   {
+    "path": "/books",
+    "asset": null,
+    "changefreq": "weekly",
+    "priority": "0.8",
+    "label": "EKODI Bookstore",
+    "title": "에코디서점 | EKODI",
+    "description": "도서 탐색·판매와 독립 온라인 서점을 연결",
+    "schemaType": "Service",
+    "source": "service:books"
+  },
+  {
+    "path": "/publishing",
+    "asset": null,
+    "changefreq": "weekly",
+    "priority": "0.8",
+    "label": "Publishing",
+    "title": "출판 | EKODI",
+    "description": "출판상담·제작·출판대행·유통·스튜디오를 제공하는 독립 전문 출판플랫폼",
+    "schemaType": "Service",
+    "source": "service:publishing"
+  },
+  {
+    "path": "/journal",
+    "asset": null,
+    "changefreq": "weekly",
+    "priority": "0.8",
+    "label": "EKODI Journal",
+    "title": "에코디 저널 | EKODI",
+    "description": "에코디의 정신·실천·기술·공동체의 배움을 공개적으로 기록하는 공통 저널",
+    "schemaType": "Service",
+    "source": "service:journal"
+  },
+  {
+    "path": "/author",
+    "asset": null,
+    "changefreq": "weekly",
+    "priority": "0.8",
+    "label": "Creator AI",
+    "title": "크리에이터 AI | EKODI",
+    "description": "글을 넘어 창작 전반을 돕는 AI",
+    "schemaType": "Service",
+    "source": "service:author"
+  },
+  {
+    "path": "/ekodilab",
+    "asset": null,
+    "changefreq": "weekly",
+    "priority": "0.8",
+    "label": "EKODI Lab",
+    "title": "에코디연구소 | EKODI",
+    "description": "연구와 근거, 실험을 축적",
+    "schemaType": "Organization",
+    "source": "service:lab"
+  },
+  {
     "path": "/learn",
     "asset": null,
     "changefreq": "weekly",
@@ -232,6 +276,28 @@ export const GENERATED_DISCOVERY_PUBLIC_ROUTES = Object.freeze([
     "description": "배우고, 해보고, 완료 증거를 남기는 공통 학습 인프라",
     "schemaType": "Service",
     "source": "service:learn"
+  },
+  {
+    "path": "/life",
+    "asset": null,
+    "changefreq": "weekly",
+    "priority": "0.7",
+    "label": "Life AI",
+    "title": "오늘의 질문 | EKODI",
+    "description": "관계·돈·일·가족·마음·미래·신앙·삶의 질문에서 시작하는 인생AI",
+    "schemaType": "Service",
+    "source": "service:life"
+  },
+  {
+    "path": "/work",
+    "asset": null,
+    "changefreq": "weekly",
+    "priority": "0.8",
+    "label": "EKODI Work",
+    "title": "에코디 워크 | EKODI",
+    "description": "일과 프로젝트를 실행하는 공간",
+    "schemaType": "Service",
+    "source": "service:work"
   },
   {
     "path": "/energy",
