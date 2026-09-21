@@ -26,10 +26,10 @@ const HIERARCHY_TO_CATALOG=Object.freeze({
   yogurt:'yogurt',
 });
 
-test('superadmin service handoff catalog preserves canonical five-axis menu',()=>{
+test('superadmin service handoff catalog preserves the canonical seven-area menu',()=>{
   assert.match(menuSource,/import '\.\/admin-service-handoffs\.js';/);
-  const groupIds=[...menuSource.matchAll(/\{ id: '(home|operations|workspaces|services|system)'/g)].map(match=>match[1]);
-  assert.deepEqual(groupIds.slice(0,5),['home','operations','workspaces','services','system']);
+  const groupIds=[...menuSource.matchAll(/\{ id: '(summary|services|sites|people|content|status|settings-records)'/g)].map(match=>match[1]);
+  assert.deepEqual(groupIds.slice(0,7),['summary','services','sites','people','content','status','settings-records']);
   assert.doesNotMatch(menuSource,/id: 'service-admins'/);
 });
 
