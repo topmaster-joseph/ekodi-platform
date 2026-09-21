@@ -591,6 +591,13 @@ async function collaborationRoute(request,env,url,input){
   return null;
 }
 
+async function newProviderMediaSession(env,room,actorKey,role){
+  const provider=await providerCall(env,'/sessions/new',{method:'POST'});
+  const accessKey=`rts_${crypto.randomUUID().replaceAll('-','')}${crypto.randomUUID().replaceAll('-','')}`;
+  const id=uid('ms'),stamp=new Date().toISOString();
+  await env.DB.prepare(`INSERT INTO realtime_media_sessions (id,room_id,tenant_id,actor_key,role,provider,provider_session_id,access_hash,status,created_at,updated_at) VALUES (?,?,?,?,?,'cloudflare-realtime',?,?,'active',?,?)`).bind(id,room.id,room.tenant_id,actorKey,role,provider.sessionId,await sha256(accessKey),stamp,stamp).run();
+  return {ok:true,session:{id,providerSessionId:provider.sessionId,accessKey,role},iceServers:[{urls:'stun:stun.cloudflare.com:3478'}]};
+}
 async function createMediaSession(request,env,room,requestedRole){
   const role=clean(requestedRole,30)||'viewer';
   let actorKey=`anon:${crypto.randomUUID()}`;
@@ -603,11 +610,7 @@ async function createMediaSession(request,env,room,requestedRole){
       if(!membership||!['owner','cohost','presenter'].includes(String(membership.role||'')))return json(request,env,{ok:false,error:'publish_permission_required'},403);
     }
   }
-  const provider=await providerCall(env,'/sessions/new',{method:'POST'});
-  const accessKey=`rts_${crypto.randomUUID().replaceAll('-','')}${crypto.randomUUID().replaceAll('-','')}`;
-  const id=uid('ms'),stamp=new Date().toISOString();
-  await env.DB.prepare(`INSERT INTO realtime_media_sessions (id,room_id,tenant_id,actor_key,role,provider,provider_session_id,access_hash,status,created_at,updated_at) VALUES (?,?,?,?,?,'cloudflare-realtime',?,?,'active',?,?)`).bind(id,room.id,room.tenant_id,actorKey,role,provider.sessionId,await sha256(accessKey),stamp,stamp).run();
-  return json(request,env,{ok:true,session:{id,providerSessionId:provider.sessionId,accessKey,role},iceServers:[{urls:'stun:stun.cloudflare.com:3478'}]});
+  return json(request,env,await newProviderMediaSession(env,room,actorKey,role));
 }
 async function mediaSession(env,roomId,sessionId,request){
   const row=await env.DB.prepare(`SELECT * FROM realtime_media_sessions WHERE room_id=? AND id=? AND status='active'`).bind(roomId,sessionId).first();
