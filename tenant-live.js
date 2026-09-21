@@ -206,8 +206,15 @@ $('refreshParticipantSourcesButton')?.addEventListener('click',refreshParticipan
 $('studioChatForm')?.addEventListener('submit',event=>{event.preventDefault();void sendChat('studioChatInput','방송자')});
 $('viewerChatForm')?.addEventListener('submit',event=>{event.preventDefault();void sendChat('viewerChatInput','참여자')});
 $('requestSpeakButton')?.addEventListener('click',requestCameraParticipation);
+$('viewerListenLanguage')?.addEventListener('change',event=>void switchViewerLanguage(event.target.value));
+$('openManagementCameraButton')?.addEventListener('click',()=>void createManagementCameraPair());
+$('newManagementCameraPairButton')?.addEventListener('click',()=>void createManagementCameraPair());
+$('copyManagementCameraUrlButton')?.addEventListener('click',async()=>{const value=$('managementCameraUrl')?.value||'';if(value)await navigator.clipboard?.writeText?.(value);note('QR카메라 링크 복사됨')});
+$('managementCameraDialog')?.addEventListener('close',()=>{clearTimeout(state.managementCameraTimer);state.managementCameraTimer=null});
+$('managementCameraConnect')?.addEventListener('click',()=>void connectManagementDeviceCamera());
+$('managementCameraSwitch')?.addEventListener('click',()=>void switchManagementDeviceCamera());
 $('refreshDestinationsButton')?.addEventListener('click',()=>{if(!token())return login();loadExternalDestinations()});
 $('hostButton')?.addEventListener('click',prepareStudio);$('joinButton')?.addEventListener('click',()=>joinViewer());$('goLiveButton')?.addEventListener('click',startBroadcast);$('endLiveButton')?.addEventListener('click',endLive);$('screenButton')?.addEventListener('click',shareScreen);$('cameraButton')?.addEventListener('click',async()=>{try{await acquireCamera();await refreshCameraDevices();note('카메라가 준비되었습니다.')}catch(error){note(`카메라 사용 불가: ${error.message}`)}});$('micButton')?.addEventListener('click',()=>{const track=state.local?.getAudioTracks?.()[0];if(!track)return note('먼저 카메라·마이크를 준비해 주세요.');track.enabled=!track.enabled;$('micButton').textContent=track.enabled?'마이크':'마이크 꺼짐'});$('copyLinkButton')?.addEventListener('click',async()=>{await navigator.clipboard?.writeText?.($('shareLink').value);note('참여 링크를 복사했습니다.')});$('openViewerButton')?.addEventListener('click',openViewerWindow);addEventListener('pagehide',hostExitCleanup);addEventListener('beforeunload',event=>{if(!state.hosting||!state.isLive||state.closing)return;event.preventDefault();event.returnValue='' });
 window.addEventListener('resize',syncOverlayHandles);
-void bootstrapAuthHandoff().catch(error=>note(`로그인 연결 실패: ${error.message}`,'entryNote')).finally(()=>{if(params.get('mode')==='studio')prepareStudio();else if(params.get('room'))joinViewer(params.get('room'));else refreshLive()});
+if(cfg.cameraPair){state.managementDeviceKey=managementDeviceKey(cfg.cameraPair);note('대기','managementCameraDeviceStatus');addEventListener('pagehide',()=>{clearTimeout(state.managementCameraTimer);state.managementDevicePc?.close();state.managementDeviceStream?.getTracks?.().forEach(track=>track.stop())})}else{void bootstrapAuthHandoff().catch(error=>note(`로그인 연결 실패: ${error.message}`,'entryNote')).finally(()=>{if(params.get('mode')==='studio')prepareStudio();else if(params.get('room'))joinViewer(params.get('room'));else refreshLive()})}
 })();
