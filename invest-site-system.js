@@ -17,7 +17,7 @@ export const INVEST_ASSET_SITES=Object.freeze([
   {id:'fund',path:'/invest/fund',name:'ETF·펀드',tag:'Fund Engine',summary:'구성종목·비용·추적오차·중복노출과 자산배분을 분석합니다.'},
   {id:'alternative',path:'/invest/alternative',name:'대체투자',tag:'Alternative Engine',summary:'유동성·회수구조·상대방·구조적 위험을 우선 검증합니다.'},
   {id:'portfolio',path:'/invest/portfolio',name:'포트폴리오',tag:'Portfolio AI',summary:'모든 자산군을 통합해 노출·유동성·집중도·리밸런싱을 관리합니다.'},
-  {id:'automation',path:'/invest/automation',name:'자동운용',tag:'Simulation Automation',summary:'감시→분석→반론→배분→리스크→승인 게이트를 Shadow/Simulation 우선으로 검증합니다.'}
+  {id:'automation',path:'/invest/automation',name:'자동운용',tag:'Autonomous Loop',summary:'감시→분석→반론→배분→리스크→승인 게이트를 Shadow/Simulation 우선으로 검증합니다.'}
 ]);
 
 export function investSiteForPath(pathname){const path=String(pathname||'').replace(/\/+$/,'')||'/';return INVEST_ASSET_SITES.find(site=>site.path===path)||null}
