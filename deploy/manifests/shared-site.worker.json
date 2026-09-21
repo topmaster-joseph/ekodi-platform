@@ -1591,6 +1591,43 @@
           "x-ekodi-canonical-surface: cloud",
           "x-ekodi-canonical-path: /cloud"
         ]
+      },
+      {
+        "url": "https://ekodi.kr/cheonggye",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "청계잇다",
+          "지역 서비스",
+          "청계면상인회"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: local-region-public",
+          "x-ekodi-shell: v2",
+          "x-content-type-options: nosniff"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/cheonggye/admin",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "청계잇다 운영관리",
+          "서비스별 운영주체",
+          "청계면상인회",
+          "/cgma/admin"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: local-region-admin",
+          "x-ekodi-shell: v2",
+          "cache-control: no-store"
+        ],
+        "rollbackVerify": false
       }
     ]
   }
