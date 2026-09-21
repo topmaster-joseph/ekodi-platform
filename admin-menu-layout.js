@@ -156,7 +156,7 @@ const explicitHashSection=()=>HASH.get(location.hash.toLowerCase())||'';
 const explicitPathSection=()=>adminRoutes()?.sectionFromPath?.(location.pathname)||'';
 const explicitAdminSection=()=>explicitPathSection()||explicitHashSection();
 const LEGACY_MALL_AFFILIATE_HASHES=new Set(['#affiliates','#mall-ai-sales']);
-const MALL_SUPPLY_ADMIN='https://ekodi.kr/ekodibiz/ekodimall/admin/sourcing';
+const MALL_SUPPLY_ADMIN='https://ekodi.kr/ekodimall/admin/sourcing';
 const LEGACY_CGMA_MEMBER_HASH='#cheonggye-members';
 const CGMA_MEMBER_ADMIN='https://ekodi.kr/cgma/admin/member';
 function handoffLegacyMallAffiliate(){if(!LEGACY_MALL_AFFILIATE_HASHES.has(location.hash.toLowerCase()))return false;location.replace(MALL_SUPPLY_ADMIN);return true;}
