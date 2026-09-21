@@ -10,6 +10,23 @@ test('legacy EKODIBIZ and child-admin aliases are sent through the shared worker
   for(const route of ['"/mall*"','"/ekodibiz*"','"/jadam/admin*"','"/pizzamaru/admin*"','"/yogurt/admin*"']) assert.ok(wrangler.includes(route),route);
 });
 
+test('guarded release defers nested Mall admin redirects until promoted routing is active', async () => {
+  const release = JSON.parse(await read('deploy/manifests/shared-site.worker.json'));
+  for (const [url,location] of [
+    ['https://ekodi.kr/ekodibiz/ekodimall/admin/','https://ekodi.kr/ekodimall/admin/'],
+    ['https://ekodi.kr/ekodibiz/ekodimall/admin/channel-settings','https://ekodi.kr/ekodimall/admin/channel-settings'],
+  ]) {
+    const request = release.worker.requests.find(item => item.url === url);
+    assert.ok(request, url);
+    assert.equal(request.candidateVerify, false, url);
+    assert.match(request.candidateVerifyReason, /promoted run_worker_first routing table/, url);
+    assert.deepEqual(request.statuses, [308], url);
+    assert.ok(request.headerExpect.includes(`location: ${location}`), url);
+    assert.ok(request.headerExpect.includes('cache-control: no-store'), url);
+    assert.ok(request.headerExpect.includes('x-ekodi-route: mall-nested-canonical-redirect'), url);
+  }
+});
+
 test('legacy and aggregate Mall admin paths redirect to the unique site-owned admin', async () => {
   for (const [from,to,route] of [
     ['https://ekodi.kr/mall?ref=legacy','https://ekodi.kr/ekodimall?ref=legacy','mall-legacy-canonical-redirect'],
