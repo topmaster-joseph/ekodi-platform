@@ -24,7 +24,7 @@ Finance의 Toss 비밀키는 production 배포 뒤 별도 `secret put`으로 덮
 
 ## Domain / Route Topology
 
-Worker route, custom domain, Pages-domain 연결 해제, DNS 레코드 삭제는 코드 승격과 분리한다. `deploy-service-proxy.yml`, `deploy-biz-legacy.yml`, `deploy-legacy-redirects.yml`은 자동 push 실행을 금지하고 `workflow_dispatch` 전용으로 둔다. 이 workflow들은 `deployment-guardrail: topology-workflow-manual-only` 표식을 가진다.
+Worker route, custom domain, Pages-domain 연결 해제, DNS 레코드 삭제는 코드 승격과 분리한다. `deploy-service-proxy.yml`, `deploy-legacy-redirects.yml`은 자동 push 실행을 금지하고 `workflow_dispatch` 전용으로 둔다. 이 workflow들은 `deployment-guardrail: topology-workflow-manual-only` 표식을 가진다.
 
 ## Release Control
 
