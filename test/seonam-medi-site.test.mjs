@@ -15,3 +15,5 @@ test('Shared Site router serves seonam-medi assets before generic workspace rout
 });
 
 test('site daily monitor is runtime-owned and source-only',async()=>{const [monitor,migration]=await Promise.all([readFile(new URL('../seonam-medi-monitor.js',import.meta.url),'utf8'),readFile(new URL('../migrations/0104_seonam_medi_monitor.sql',import.meta.url),'utf8')]);assert.match(monitor,/runSeonamMediDailyCheck/);assert.match(monitor,/aiProvider:false/);assert.match(monitor,/source_only/);assert.match(monitor,/news\.google\.com\/rss\/search/);assert.match(migration,/seonam_medi_monitor_runs/);assert.match(migration,/seonam_medi_monitor_items/);});
+
+test('seonam-medi static headers allow its first-party CSS, JS and API calls',async()=>{const headers=await readFile(new URL('../_headers',import.meta.url),'utf8');assert.match(headers,/\/seonam-medi\*/);assert.match(headers,/style-src 'self'/);assert.match(headers,/script-src 'self'/);assert.match(headers,/connect-src 'self'/);assert.doesNotMatch(headers,/\/seonam-medi\*[\s\S]{0,300}script-src 'none'/);});
