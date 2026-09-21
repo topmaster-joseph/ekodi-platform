@@ -34,6 +34,8 @@ on:
       - 'tenant-live.js'
       - 'tenant-live.css'
       - 'tenant-live-admin-page.js'
+      - 'tenant-admin-command-home.js'
+      - 'test/tenant-admin-command-home.test.mjs'
       - 'test/tenant-live-admin.test.mjs'
       - 'test/realtime-live-collaboration.test.mjs'
       - 'ekodibiz-invest-business.js'
