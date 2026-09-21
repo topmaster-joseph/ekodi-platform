@@ -4,7 +4,7 @@ const toast = document.querySelector('#toast');
 const palette = document.querySelector('#commandPalette');
 const commandInput = document.querySelector('#commandInput');
 let toastTimer;
-const AUTH_API = 'https://ekodi-auth-api.topmaster-joseph.workers.dev';
+const AUTH_API = '';
 let authMode = 'login';
 
 function notify(message) {
