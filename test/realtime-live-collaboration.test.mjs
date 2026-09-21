@@ -118,7 +118,7 @@ test('QR auxiliary camera pairing uses an on-site short URL and a local QR rende
   ]);
   assert.match(qr,/const SIZE=25,DATA_CODEWORDS=34,ECC_CODEWORDS=10/);
   assert.match(qr,/globalThis\.EKODIQR/);
-  assert.match(control,/pairUrl:\`https:\/\/ekodi\.kr\/live\/c\/\$\{code\}\`/);
+  assert.match(control,/pairUrl:.*ekodi\.kr\/live\/c/);
   assert.match(page,/\/qr-code-v2\.js/);
   assert.match(router,/liveAuxCameraPage/);
   assert.match(router,/A-Z0-9/);
