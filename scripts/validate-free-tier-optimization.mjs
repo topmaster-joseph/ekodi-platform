@@ -17,6 +17,8 @@ expect(policy.schemaVersion===2,'free-tier policy schema must remain v2');
 expect(policy.resourceGovernor?.mode==='measured-telemetry-only','resource governor must use measured telemetry only');
 expect(policy.resourceGovernor?.capacityAndConsumptionSeparated===true,'capacity and consumption must remain separated');
 expect(policy.resourceGovernor?.capacityRules?.['supabase.active_projects']?.action==='block-new-project-only','Supabase project capacity must block only new projects');
+expect(policy.resourceGovernor?.capacityRules?.['supabase.active_projects']?.whenTelemetryMissing==='block-new-project-until-measured','missing Supabase capacity telemetry must block only new project provisioning');
+expect(policy.resourceGovernor?.capacityTelemetryPolicy==='fail-closed-for-new-resource-provisioning-only','capacity telemetry policy must fail closed only for new resource provisioning');
 expect(policy.resourceGovernor?.projectCreationPolicy?.automaticPaidProjectCreation===false,'automatic paid Supabase project creation must stay disabled');
 expect(JSON.stringify(policy.thresholds)===JSON.stringify({warning:70,conserve:85,protect:90,survival:95,circuitBreaker:100}),'quota thresholds must remain 70/85/90/95/100');
 expect(policy.providerRoles?.cloudflare?.prefer?.includes('static-assets-before-worker'),'Cloudflare must prefer static assets before Worker invocation');
