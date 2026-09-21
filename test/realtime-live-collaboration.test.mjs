@@ -112,7 +112,7 @@ test('QR management camera pairing stays first-party and separate from participa
   assert.match(page,/QR을 찍고 승인합니다/);
   assert.match(control,/managementCameraPairRoute/);
   assert.match(control,/management_camera_approval_required/);
-  assert.match(control,/actorKey,'camera:'\+pair\.id/);
+  assert.match(control,/const actorKey='camera:'\+pair\.id/);
   assert.match(live,/drawManagementCameraQr/);
   assert.match(live,/managementDeviceKey/);
   assert.doesNotMatch(live,/api\.qrserver|quickchart|chart\.googleapis|googleapis\.com\/chart/);
