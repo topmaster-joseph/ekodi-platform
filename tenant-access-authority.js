@@ -45,11 +45,11 @@ export async function resolveTenantAccessAuthority(request,env,{tenantSlug=''}={
     });
   }
 
-  const slug=normalize(tenantSlug);
-  if(!slug)return Object.freeze({ok:false,status:403,code:'TENANT_CONTEXT_REQUIRED'});
-
   const principal=await principalFromSupabaseRequest(request);
   if(!principal?.email)return Object.freeze({ok:false,status:401,code:'ACCESS_AUTH_REQUIRED'});
+
+  const slug=normalize(tenantSlug);
+  if(!slug)return Object.freeze({ok:false,status:403,code:'TENANT_CONTEXT_REQUIRED'});
 
   const tenant=await tenantRow(env,slug);
   if(!tenant||tenant.status!=='active')return Object.freeze({ok:false,status:404,code:'TENANT_NOT_FOUND'});
