@@ -120,3 +120,34 @@ test('customer API routes local access resolver before generic customer access',
   assert.ok(regional>0&&customer>regional);
   assert.match(entry,/handleRegionalAccessControl/);
 });
+
+
+test('shared site release watches all Cheonggye regional and pass runtime files',async()=>{
+  const workflow=await fs.readFile(new URL('../.github/workflows/deploy-site-core.yml',import.meta.url),'utf8');
+  for(const file of [
+    'local-region-registry.js',
+    'local-region-page.js',
+    'local-region-admin-auth.js',
+    'local-region-access-admin.js',
+    'local-region-operations-admin.js',
+    'regional-commerce-program-contract.js',
+    'regional-commerce-program-registry.js',
+    'regional-commerce-program-page.js',
+    'test/local-region-access.test.mjs',
+  ]){
+    assert.ok(workflow.includes(`- '${file}'`),`shared-site push trigger must watch ${file}`);
+  }
+  for(const file of [
+    'local-region-registry.js',
+    'local-region-page.js',
+    'local-region-admin-auth.js',
+    'local-region-access-admin.js',
+    'local-region-operations-admin.js',
+    'regional-commerce-program-contract.js',
+    'regional-commerce-program-registry.js',
+    'regional-commerce-program-page.js',
+  ]){
+    assert.ok(workflow.includes(` ${file} `)||workflow.includes(` ${file} canonical-surface-router.js`),`release source check must include ${file}`);
+  }
+  assert.match(workflow,/node --test test\/local-region-platform\.test\.mjs test\/local-region-access\.test\.mjs test\/local-region-operations\.test\.mjs/);
+});
