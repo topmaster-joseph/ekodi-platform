@@ -50,6 +50,64 @@ test('Personal Finance admin control is owned before the generic Control API',as
   assert.equal(response.headers.get('x-ekodi-personal-finance-proxy'),'service-binding-v1');assert.equal(response.headers.get('cache-control'),'no-store');assert.equal(response.headers.get('x-content-type-options'),'nosniff');
 });
 
+test('Capability APIs are selected before the generic Control API',async()=>{
+  const finance=binding('finance');
+  const personal=binding('personal');
+  const workspace=binding('workspace');
+  const marketing=binding('marketing');
+  const connect=binding('connect');
+  const publish=binding('publish');
+  const control=binding('control');
+
+  let response=await routeCanonicalSurface(new Request('https://ekodi.kr/api/finance/overview'),{
+    FINANCE:finance,PERSONAL_FINANCE:personal,WORKSPACE_PLATFORM:workspace,MARKETING_DOMAIN:marketing,
+    MARKETING_GROWTH:connect,MARKETING_PUBLISHING:publish,CONTROL_API:control,
+  });
+  assert.equal(response.status,200);
+  assert.equal(finance.calls[0].pathname,'/api/finance/overview');
+  assert.equal(response.headers.get('x-ekodi-api-capability'),'finance-api');
+  assert.equal(control.calls.length,0);
+
+  response=await routeCanonicalSurface(new Request('https://ekodi.kr/api/finance/personal/summary'),{
+    FINANCE:finance,PERSONAL_FINANCE:personal,CONTROL_API:control,
+  });
+  assert.equal(response.status,200);
+  assert.equal(personal.calls[0].pathname,'/api/finance/personal/summary');
+  assert.equal(finance.calls.length,1);
+  assert.equal(response.headers.get('x-ekodi-api-capability'),'personal-finance-api');
+
+  response=await routeCanonicalSurface(new Request('https://ekodi.kr/api/workspace/v1/profiles'),{
+    WORKSPACE_PLATFORM:workspace,CONTROL_API:control,
+  });
+  assert.equal(response.status,200);
+  assert.equal(workspace.calls[0].pathname,'/v1/profiles');
+
+  response=await routeCanonicalSurface(new Request('https://ekodi.kr/api/marketing/domains'),{
+    MARKETING_DOMAIN:marketing,CONTROL_API:control,
+  });
+  assert.equal(response.status,200);
+  assert.equal(marketing.calls[0].pathname,'/api/marketing/domains');
+
+  response=await routeCanonicalSurface(new Request('https://ekodi.kr/api/marketing/connect/v1/connections'),{
+    MARKETING_GROWTH:connect,CONTROL_API:control,
+  });
+  assert.equal(response.status,200);
+  assert.equal(connect.calls[0].pathname,'/v1/connections');
+
+  response=await routeCanonicalSurface(new Request('https://ekodi.kr/api/marketing/publish/v1/jobs'),{
+    MARKETING_PUBLISHING:publish,CONTROL_API:control,
+  });
+  assert.equal(response.status,200);
+  assert.equal(publish.calls[0].pathname,'/v1/jobs');
+
+  response=await routeCanonicalSurface(new Request('https://ekodi.kr/api/finance/health'),{
+    FINANCE:finance,CONTROL_API:control,
+  });
+  assert.equal(response.status,200);
+  assert.equal(finance.calls[1].pathname,'/health');
+  assert.equal(control.calls.length,0);
+});
+
 test('OAuth callback apex paths reach Storage and Marketing service bindings',async()=>{
   const storage=binding('storage-callback');
   const marketing=binding('marketing-callback');
