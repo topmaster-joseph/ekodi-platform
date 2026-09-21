@@ -27,8 +27,8 @@
 .studio-title{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
 .studio-title h2,.viewer-panel h2{margin:3px 0 8px;font-size:18px;line-height:1.2}
 .studio-title>span{font-size:10px;padding:4px 7px;border-radius:999px;background:#eef3ef;color:#53665a}
-.compact-controls{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin:10px 0}
-.compact-controls button,.broadcast-actions button{min-height:34px;padding:7px 8px;border-radius:9px;font-size:11px}
+.compact-controls{grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;margin:8px 0}
+.compact-controls button,.broadcast-actions button{min-height:32px;padding:6px 4px;border-radius:8px;font-size:10px}
 .compact-section,.compact-settings{margin:8px 0;border:1px solid #dce5de;border-radius:11px;background:#fbfcfb;padding:0}
 .compact-section>summary,.compact-settings>summary{list-style:none;cursor:pointer;padding:9px 10px;font-size:11px;font-weight:850;color:#42584b}
 .compact-section>summary::-webkit-details-marker,.compact-settings>summary::-webkit-details-marker{display:none}
