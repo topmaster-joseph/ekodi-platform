@@ -1,6 +1,6 @@
 const PLATFORM_ADMIN_GROUPS=new Set(['home','operations','workspaces','services','system']);
-const MALL_CANONICAL='/ekodibiz/ekodimall/admin';
-const MALL_ALIASES=Object.freeze(['/admin/ekodimall','/ekodibiz/admin/ekodimall','/ekodibiz/mall/admin','/mall/admin']);
+const MALL_CANONICAL='/ekodimall/admin';
+const MALL_ALIASES=Object.freeze(['/admin/ekodimall','/ekodibiz/admin/ekodimall','/ekodibiz/ekodimall/admin','/ekodibiz/mall/admin','/mall/admin']);
 const STORE_ALIASES=Object.freeze({
   '/cmpmyi/admin/jadam':'/jadam/admin',
   '/cmpmyi/admin/pizzamaru':'/pizzamaru/admin',
