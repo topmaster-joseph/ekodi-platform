@@ -16,6 +16,9 @@ test('Cheonggye is an independent regional identity and keeps CGMA as delegated 
   assert.equal(region.transferPolicy.dataMovement,'none');
   assert.equal(region.transferPolicy.allowPerModuleTransfer,true);
   assert.equal(region.transferPolicy.allowCoOperation,true);
+  const pass=region.modules.find(module=>module.id==='commerce-pass');
+  assert.equal(pass?.leadOperatorId,'cgma');
+  assert.equal(pass?.financialMode,'external-settlement-required');
 });
 
 test('regional path resolver claims public and admin surfaces without changing CGMA route',()=>{
