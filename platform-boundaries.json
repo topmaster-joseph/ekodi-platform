@@ -213,6 +213,7 @@
         "invest-personal-control.js",
         "invest-market-core.js",
         "invest-automation-runtime.js",
+        "invest-lifecycle-runtime.js",
         "invest-subject-ui.js",
         "invest-personalization-runtime.js",
         "invest-admin.js",
@@ -222,9 +223,11 @@
         "workspace-platform-api-worker.js",
         "migrations/0028_messenger_investment_workspaces.sql",
         "migrations/0086_invest_autonomous_loop.sql",
+        "migrations/0100_invest_lifecycle_management.sql",
         "test/invest-personalization-contract.test.mjs",
         "test/invest-market-core.test.mjs",
         "test/invest-site-system.test.mjs",
+        "test/invest-lifecycle-runtime.test.mjs",
         "test/ekodibiz-invest-business.test.mjs",
         "test/ekodibiz-invest-admin.test.mjs"
       ],
@@ -240,7 +243,7 @@
         "official data adapters through reviewed credentials and licensed partners"
       ],
       "database": "ekodi-auth D1 investment_* and profile evidence namespaces",
-      "note": "Registered common-service boundary for reusable Evidence-First investment research, diligence, IR, simulation-first multi-broker portfolio analysis and connection support. EKODIBIZ-specific investment businesses remain under ekodi.kr/ekodibiz/invest and other workspaces may consume the common core without transferring workspace identity or business ownership."
+      "note": "Registered common-service boundary for reusable Evidence-First investment research, diligence, IR, investor-interest matching, connection tracking, post-investment aftercare, simulation-first multi-broker portfolio analysis and connection support. EKODIBIZ-specific investment businesses remain under ekodi.kr/ekodibiz/invest and other workspaces may consume the common core without transferring workspace identity or business ownership."
     },
     "community": {
       "kind": "independent-platform",
