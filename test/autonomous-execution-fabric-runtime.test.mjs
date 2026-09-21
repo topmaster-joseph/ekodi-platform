@@ -78,6 +78,12 @@ test('delegated green work remains compatible with single-provider bounded execu
   assert.equal(result.productionPromotionAuthorized, false);
   assert.equal(result.nextStage, 'verify');
   assert.equal(seenEnvelope.productionAllowed, false);
+  assert.equal(typeof seenEnvelope.taskGrantToken, 'string');
+  assert.ok(seenEnvelope.taskGrantToken.length >= 32);
+  assert.equal(seenEnvelope.taskGrant.productionMutationAllowed, false);
+  assert.equal(seenEnvelope.taskGrant.providerMutationAllowed, false);
+  assert.equal(result.receipt.taskGrant.revoked, true);
+  assert.equal(result.receipt.taskGrant.rawTokenPersisted, false);
   assert.equal(seenEnvelope.isolationProfile, 's0-default');
   assert.equal(seenEnvelope.taskId, 'gen10-runtime-test');
   assert.equal(result.receipt.workspaceIsolation, true);
