@@ -2,105 +2,23 @@
   "version": 1,
   "principle": "있는 것은 바로 사용하고, 없는 것은 요청하고, 좋은 요청은 함께 만들어 모두가 사용한다.",
   "categories": [
-    {
-      "id": "work",
-      "label": "문서·업무",
-      "order": 10
-    },
-    {
-      "id": "business",
-      "label": "사업·마케팅",
-      "order": 20
-    },
-    {
-      "id": "opportunity",
-      "label": "지원·기회",
-      "order": 30
-    },
-    {
-      "id": "creator",
-      "label": "창작·콘텐츠",
-      "order": 40
-    },
-    {
-      "id": "communication",
-      "label": "소통·언어",
-      "order": 45
-    },
-    {
-      "id": "community",
-      "label": "공동체·모임",
-      "order": 50
-    },
-    {
-      "id": "life",
-      "label": "생활·관리",
-      "order": 60
-    }
+    {"id":"work","label":"문서·업무","order":10},
+    {"id":"business","label":"사업·마케팅","order":20},
+    {"id":"opportunity","label":"지원·기회","order":30},
+    {"id":"creator","label":"창작·콘텐츠","order":40},
+    {"id":"communication","label":"소통·언어","order":45},
+    {"id":"community","label":"공동체·모임","order":50},
+    {"id":"life","label":"생활·관리","order":60}
   ],
   "services": [
-    {
-      "id": "make-documents",
-      "category": "work",
-      "label": "문서 만들기",
-      "capabilityId": "core.documents",
-      "launchUrl": "https://ekodi.kr/my/docs/"
-    },
-    {
-      "id": "find-support",
-      "category": "opportunity",
-      "label": "지원사업 찾기",
-      "capabilityId": "support.benefit-radar",
-      "launchUrl": "https://ekodi.kr/support/"
-    },
-    {
-      "id": "write-content",
-      "category": "creator",
-      "label": "글·원고 쓰기",
-      "capabilityId": "creator.writing",
-      "launchUrl": "https://ekodi.kr/author/"
-    },
-    {
-      "id": "make-marketing",
-      "category": "business",
-      "label": "홍보 콘텐츠 만들기",
-      "capabilityId": "business.marketing",
-      "launchUrl": "https://ekodi.kr/ekodibiz/marketing-ai"
-    },
-    {
-      "id": "run-business",
-      "category": "business",
-      "label": "사업 운영하기",
-      "capabilityId": "business.operations",
-      "launchUrl": "https://ekodi.kr/business"
-    },
-    {
-      "id": "manage-community",
-      "category": "community",
-      "label": "회원·공동체 관리하기",
-      "capabilityId": "community.membership",
-      "launchUrl": "https://community.ekodi.kr/"
-    },
-    {
-      "id": "prepare-insurance-claim",
-      "category": "life",
-      "label": "보험청구 준비하기",
-      "capabilityId": "insurance.claims",
-      "launchUrl": "https://ekodi.kr/insurance/"
-    },
-    {
-      "id": "check-energy",
-      "category": "life",
-      "label": "에너지 상태 확인하기",
-      "capabilityId": "energy.manage",
-      "launchUrl": "https://ekodi.kr/energy/"
-    },
-    {
-      "id": "everyone-interpreter",
-      "category": "communication",
-      "label": "모두의 통역",
-      "capabilityId": "core.interpreter",
-      "launchUrl": "https://ekodi.kr/ai/interpreter/"
-    }
+    {"id":"make-documents","category":"work","label":"문서 만들기","capabilityId":"core.documents","launchUrl":"https://ekodi.kr/my/docs/"},
+    {"id":"find-support","category":"opportunity","label":"지원사업 찾기","capabilityId":"support.benefit-radar","launchUrl":"https://ekodi.kr/support/"},
+    {"id":"write-content","category":"creator","label":"글·원고 쓰기","capabilityId":"creator.writing","launchUrl":"https://ekodi.kr/author/"},
+    {"id":"make-marketing","category":"business","label":"홍보 콘텐츠 만들기","capabilityId":"business.marketing","launchUrl":"https://ekodi.kr/ekodibiz/marketing-ai"},
+    {"id":"run-business","category":"business","label":"사업 운영하기","capabilityId":"business.operations","launchUrl":"https://ekodi.kr/business"},
+    {"id":"everyone-interpreter","category":"communication","label":"모두의 통역","capabilityId":"core.interpreter","launchUrl":"https://ekodi.kr/ai/interpreter/"},
+    {"id":"manage-community","category":"community","label":"회원·공동체 관리하기","capabilityId":"community.membership","launchUrl":"https://community.ekodi.kr/"},
+    {"id":"prepare-insurance-claim","category":"life","label":"보험청구 준비하기","capabilityId":"insurance.claims","launchUrl":"https://ekodi.kr/insurance/"},
+    {"id":"check-energy","category":"life","label":"에너지 상태 확인하기","capabilityId":"energy.manage","launchUrl":"https://ekodi.kr/energy/"}
   ]
 }
