@@ -79,6 +79,7 @@ test('canonical /live and /live/admin are owned by the apex Live service',async(
   const hub=await platformRouter.fetch(new Request('https://ekodi.kr/live/'),{});
   assert.equal(hub.status,200);
   assert.equal(hub.headers.get('location'),null);
+  assert.equal(hub.headers.get('x-ekodi-route'),'live-service-hub');
   const hubHtml=await hub.text();
   assert.match(hubHtml,/라이브 방송 전문서비스|LIVE BROADCAST PROFESSIONAL SERVICE/);
   assert.doesNotMatch(hubHtml,/EKODI Auth/);
@@ -86,6 +87,8 @@ test('canonical /live and /live/admin are owned by the apex Live service',async(
   const admin=await platformRouter.fetch(new Request('https://ekodi.kr/live/admin'),{});
   assert.equal(admin.status,200);
   assert.equal(admin.headers.get('location'),null);
+  assert.equal(admin.headers.get('x-ekodi-route'),'live-service-admin');
+  assert.equal(admin.headers.get('x-robots-tag'),'noindex, nofollow, noarchive');
   const adminHtml=await admin.text();
   assert.match(adminHtml,/라이브 전문서비스 관리/);
   assert.match(adminHtml,/return_to=https%3A%2F%2Fekodi.kr%2Flive%2Fadmin/);

@@ -1,4 +1,5 @@
 name: Free Tier Resource Governor
+# Main-path changes intentionally trigger one post-merge collection baseline in addition to the daily schedule.
 
 on:
   workflow_dispatch:
@@ -30,6 +31,7 @@ on:
 permissions:
   contents: read
   actions: read
+  id-token: write
 
 concurrency:
   group: ekodi-free-tier-resource-governor-${{ github.ref }}
@@ -52,7 +54,7 @@ jobs:
           node --check scripts/collect-free-tier-resource-usage.mjs
           node --check scripts/validate-free-tier-optimization.mjs
           node scripts/validate-free-tier-optimization.mjs
-          node --test test/free-tier-resource-governor.test.mjs test/free-tier-resource-collector.test.mjs
+          node --test test/free-tier-resource-governor.test.mjs test/free-tier-resource-collector.test.mjs test/free-tier-supabase-oidc-contract.test.mjs
 
   collect:
     if: github.event_name != 'pull_request'
@@ -89,6 +91,20 @@ jobs:
             echo "SUPABASE_ACCESS_TOKEN=" >> "$GITHUB_ENV"
             echo "SUPABASE_TELEMETRY_AVAILABLE=false" >> "$GITHUB_ENV"
           fi
+      - name: Request GitHub OIDC token for Supabase telemetry
+        if: env.SUPABASE_TELEMETRY_AVAILABLE != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          audience="$(node -e "const c=require('./config/free-tier-supabase-oidc.json');process.stdout.write(c.audience)")"
+          response="$(curl -sSf -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=$audience")"
+          token="$(printf '%s' "$response" | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{const j=JSON.parse(s);process.stdout.write(String(j.value||''))})")"
+          test -n "$token"
+          echo "::add-mask::$token"
+          echo "SUPABASE_OIDC_TOKEN=$token" >> "$GITHUB_ENV"
+          echo "SUPABASE_OIDC_CONFIG=config/free-tier-supabase-oidc.json" >> "$GITHUB_ENV"
+          echo "SUPABASE_OIDC_AVAILABLE=true" >> "$GITHUB_ENV"
+
       - name: Collect measured free-tier resource telemetry
         shell: bash
         run: |
@@ -113,3 +129,20 @@ jobs:
             --command "SELECT provider,metric,observed_value,free_limit,source,observed_at FROM provider_quota_snapshots WHERE provider IN ('supabase','github') ORDER BY observed_at DESC LIMIT 20;" \
             > "$RUNNER_TEMP/free-tier-resource-proof.json"
           grep -Fq '"provider"' "$RUNNER_TEMP/free-tier-resource-proof.json"
+          node - "$RUNNER_TEMP/free-tier-resource-proof.json" <<'NODE'
+          const fs=require('node:fs');
+          const path=process.argv[2];
+          const raw=JSON.parse(fs.readFileSync(path,'utf8'));
+          const batches=Array.isArray(raw)?raw:[raw];
+          const rows=batches.flatMap(batch=>Array.isArray(batch?.results)?batch.results:[]);
+          for(const row of rows){
+            console.log(JSON.stringify({
+              provider:row.provider,
+              metric:row.metric,
+              observed_value:row.observed_value,
+              free_limit:row.free_limit,
+              source:row.source,
+              observed_at:row.observed_at
+            }));
+          }
+          NODE

@@ -46,7 +46,7 @@ test('production config opts into guarded multi-provider pooling', () => {
   assert.match(config, /AI_MULTI_PROVIDER_ENABLED = "true"/);
   assert.match(config, /EKODI_PROVIDER_WORKERS_AI_ENABLED = "true"/);
   assert.match(config, /EKODI_WORKERS_AI_MODEL = "@cf\/meta\/llama-3\.1-8b-instruct-fast"/);
-  assert.match(config, /EKODI_WORKERS_AI_DAILY_CALL_LIMIT = "8"/);
+  assert.match(config, /EKODI_WORKERS_AI_DAILY_CALL_LIMIT = "20"/);
   assert.match(config, /\[ai\]\s*\nbinding = "AI"/);
   assert.doesNotMatch(config, /OPENAI_API_KEY\s*=/);
   assert.doesNotMatch(config, /ANTHROPIC_API_KEY\s*=/);
@@ -119,3 +119,14 @@ test('live production proof follows successful Control API deployment and emits 
   assert.doesNotMatch(workflow, /OPENAI_API_KEY|ANTHROPIC_API_KEY|GEMINI_API_KEY/);
 });
 
+
+
+test('v8 command surfaces require explicit read or operate capability after authentication', () => {
+  const source = fs.readFileSync(new URL('../ai-command-control.js', import.meta.url), 'utf8');
+  assert.match(source, /const commandMutation = request\.method === 'POST'/);
+  assert.match(source, /url\.pathname === `\$\{PREFIX\}\/pulse`/);
+  assert.match(source, /url\.pathname === `\$\{PREFIX\}\/drain`/);
+  assert.match(source, /const commandRead = request\.method === 'GET'/);
+  assert.match(source, /requiredCommandCapability = commandMutation \? 'ai:operate' : commandRead \? 'ai:read'/);
+  assert.match(source, /sessionCapabilityGranted\(auth\.session, requiredCommandCapability\)/);
+});

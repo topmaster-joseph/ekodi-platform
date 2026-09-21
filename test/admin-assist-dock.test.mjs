@@ -51,10 +51,14 @@ test('Assist is current-screen aware, action-first and high-impact actions map t
     'domain_service_shutdown_or_ownership_transfer',
   ]) assert.match(js,new RegExp(area));
   assert.match(js,/service\.health_check/);
-  assert.match(js,/ui\.change_request/);
+  assert.match(js,/\/api\/control\/ai\/v8\/pulse/);
+  assert.match(js,/capability:'core\.automation'/);
+  assert.match(js,/executeNow:true/);
+  assert.doesNotMatch(js,/ui\.change_request/);
   assert.match(js,/ACTION_RE/);
   assert.match(js,/preflightVerified/);
-  assert.match(js,/운영 큐에 기록하고 Admin AI가 응답했습니다/);
+  assert.match(js,/EKODI Command Plane/);
+  assert.match(js,/실행 경로를 확인했습니다/);
 });
 
 test('Assist first path is bottom command-entry-only and upgrades through existing secured lazy assets',async()=>{

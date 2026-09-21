@@ -10,6 +10,8 @@ const escapeRe=value=>String(value).replace(/[|\\{}()[\]^$+*?.-]/g,'\\$&');
 test('Live hub lists the registered tenant Live surfaces on the canonical apex path',async()=>{
   const response=await liveServicePage({});
   assert.equal(response.status,200);
+  assert.equal(response.headers.get('x-ekodi-route'),'live-service-hub');
+  assert.equal(response.headers.get('x-content-type-options'),'nosniff');
   const html=await response.text();
   assert.match(html,/EKODI Live/);
   assert.match(html,/라이브 서비스 사이트/);
@@ -26,6 +28,8 @@ test('Live hub lists the registered tenant Live surfaces on the canonical apex p
 test('Live admin preserves its own central-auth return target and exposes per-site admin menus',async()=>{
   const response=liveServiceAdminPage();
   assert.equal(response.status,200);
+  assert.equal(response.headers.get('x-ekodi-route'),'live-service-admin');
+  assert.equal(response.headers.get('x-robots-tag'),'noindex, nofollow, noarchive');
   const html=await response.text();
   assert.match(html,/EKODI Live 관리자/);
   assert.match(html,/return_to=https%3A%2F%2Fekodi.kr%2Flive%2Fadmin/);

@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 const read=path=>readFile(new URL(`../${path}`,import.meta.url),'utf8');
 
 test('admin root is a command-only workspace while Campus remains a child route',async()=>{
-  const [bootstrap,bootstrapCss,dock,dockCss,menuLayout,menuRegistry,sidebar,e2eWorker,productionE2e]=await Promise.all([
+  const [bootstrap,bootstrapCss,dock,dockCss,menuLayout,menuRegistry,sidebar,e2eWorker,productionE2e,releaseManifestText]=await Promise.all([
     read('admin-assist-bootstrap.js'),
     read('admin-assist-bootstrap.css'),
     read('admin-assist-dock.js'),
@@ -17,7 +17,9 @@ test('admin root is a command-only workspace while Campus remains a child route'
     read('admin-sidebar.js'),
     read('scripts/admin-authenticated-e2e-menu-worker.mjs'),
     read('scripts/verify-admin-production-ui-e2e.mjs'),
+    read('deploy/manifests/shared-site.worker.json'),
   ]);
+  const releaseManifest=JSON.parse(releaseManifestText);
   const parsed=spawnSync(process.execPath,['--check',fileURLToPath(new URL('../admin-assist-bootstrap.js',import.meta.url))],{encoding:'utf8'});
   assert.equal(parsed.status,0,parsed.stderr);
 
@@ -47,6 +49,15 @@ test('admin root is a command-only workspace while Campus remains a child route'
   assert.match(dock,/id=\"ekodiAssistHistory\"/);
   assert.match(dock,/id=\"ekodiAssistChat\"/);
   assert.match(dock,/api\('\/api\/control\/ai\/assist'/);
+  assert.match(dock,/api\('\/api\/control\/ai\/v8\/pulse'/);
+  assert.match(dock,/capability:'core\.automation'/);
+  assert.match(dock,/executeNow:true/);
+  assert.match(dock,/EKODI Command Plane/);
+  const lazyAsset=releaseManifest.worker.requests.find(item=>item.url==='https://ekodi.kr/admin/admin-lazy-features.js?assist=v2');
+  assert.ok(lazyAsset,'production release must verify the canonical Admin lazy command asset');
+  assert.ok(lazyAsset.expect.includes('/api/control/ai/v8/pulse'));
+  assert.ok(lazyAsset.expect.includes('executeNow:true'));
+  assert.doesNotMatch(dock,/actionType:'ui\.change_request'/);
   assert.match(dock,/addSessionMessage\('assistant',reply/);
   assert.match(bootstrap,/aria-label="에코디와 대화하기"/);
   assert.match(bootstrap,/aria-label="새 대화"/);

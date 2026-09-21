@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "audience": "ekodi-free-tier-governor",
+  "repository": "topmaster-joseph/ekodi-platform",
+  "requiredRef": "refs/heads/main",
+  "projects": [
+    {
+      "ref": "renzehysxirjilvdxacv",
+      "usageEndpoint": "https://renzehysxirjilvdxacv.supabase.co/functions/v1/free-tier-usage"
+    },
+    {
+      "ref": "lxcxwbdwwojjkgybbqii",
+      "usageEndpoint": "https://lxcxwbdwwojjkgybbqii.supabase.co/functions/v1/free-tier-usage"
+    }
+  ]
+}

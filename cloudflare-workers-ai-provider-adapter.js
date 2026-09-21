@@ -80,7 +80,7 @@ export function createCloudflareWorkersAiProvider(env={},options={}){
     priority:5,
     capabilities:Object.freeze(['text','reasoning','review','code']),
     trustClass:'external',
-    resourceClass:'cloudflare-workers-ai-binding',
+    resourceClass:'hosted-ai',
     fundingSource:'ekodi-cloudflare',
     officialPath:true,
     automationAllowed:true,

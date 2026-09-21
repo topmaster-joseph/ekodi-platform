@@ -62,3 +62,16 @@ test('multi-provider pool exposes the active Workers AI model when the binding i
   assert.ok(workers);
   assert.equal(workers.available,true);
 });
+
+
+test('explicitly enabled zero-marginal hosted Workers AI is routable by the autonomous orchestrator', () => {
+  const gateway=buildCoreAiGateway({
+    AI_MULTI_PROVIDER_ENABLED:'true',
+    EKODI_PROVIDER_WORKERS_AI_ENABLED:'true',
+    AI:{async run(){return{response:'ok'}}},
+  },[]);
+  const plan=gateway.plan({taskName:'workers-ai-route',lane:'autonomous'});
+  assert.equal(plan.primaryProvider,'cloudflare-workers-ai');
+  assert.deepEqual(plan.eligibleProviders,['cloudflare-workers-ai']);
+  assert.equal(plan.blockedProviders.some(item=>item.id==='cloudflare-workers-ai'),false);
+});
