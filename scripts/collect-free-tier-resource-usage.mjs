@@ -3,6 +3,8 @@ import { pathToFileURL } from 'node:url';
 
 const SUPABASE_API='https://api.supabase.com/v1';
 const GITHUB_API='https://api.github.com';
+const CLOUDFLARE_API='https://api.cloudflare.com/client/v4';
+const CLOUDFLARE_GRAPHQL=`${CLOUDFLARE_API}/graphql`;
 const DEFAULT_SUPABASE_OIDC_CONFIG='config/free-tier-supabase-oidc.json';
 const GB=1024*1024*1024;
 
@@ -151,6 +153,128 @@ export async function collectSupabaseOidc({token,config,fetchJson=jsonFetch,obse
   };
 }
 
+
+function cloudflareResult(payload,label){
+  if(payload?.success===false||payload?.errors?.length){
+    const message=payload?.errors?.map(item=>item?.message||item?.code).filter(Boolean).join('; ')||`${label}_FAILED`;
+    throw new Error(message);
+  }
+  return payload?.result;
+}
+
+async function cloudflareGraphql({token,query,variables,fetchJson=jsonFetch}){
+  const payload=await fetchJson(CLOUDFLARE_GRAPHQL,{token,method:'POST',body:{query,variables}});
+  if(payload?.errors?.length)throw new Error(payload.errors.map(item=>item?.message||'GRAPHQL_ERROR').join('; '));
+  return payload?.data?.viewer?.accounts?.[0]||{};
+}
+
+async function listCloudflareD1Databases({token,accountId,fetchJson=jsonFetch}){
+  const databases=[];
+  for(let page=1;page<=20;page++){
+    const payload=await fetchJson(`${CLOUDFLARE_API}/accounts/${encodeURIComponent(accountId)}/d1/database?page=${page}&per_page=100`,{token});
+    const result=cloudflareResult(payload,'D1_LIST');
+    const rows=Array.isArray(result)?result:[];
+    databases.push(...rows);
+    const totalPages=Number(payload?.result_info?.total_pages||1);
+    if(page>=totalPages||rows.length<100)break;
+  }
+  return databases;
+}
+
+export async function collectCloudflare({token,accountId,fetchJson=jsonFetch,observedAt=nowIso()}={}){
+  if(!token||!accountId)return {available:false,reason:'credential_missing',snapshots:[],errors:[]};
+  const snapshots=[];
+  const errors=[];
+  const day=periodDay(observedAt);
+  const start=`${day}T00:00:00.000Z`;
+  const end=observedAt;
+
+  try{
+    const account=await cloudflareGraphql({
+      token,fetchJson,
+      query:`query WorkersDaily($accountTag: string, $start: string, $end: string) {
+        viewer { accounts(filter:{accountTag:$accountTag}) {
+          workersInvocationsAdaptive(limit:10000, filter:{datetime_geq:$start, datetime_leq:$end}) { sum { requests } }
+        } }
+      }`,
+      variables:{accountTag:accountId,start,end},
+    });
+    const requests=(account.workersInvocationsAdaptive||[]).reduce((sum,row)=>sum+Number(row?.sum?.requests||0),0);
+    snapshots.push({
+      provider:'cloudflare',metric:'workers_requests_daily',periodStart:day,
+      observedValue:requests,freeLimit:100000,source:'cloudflare-workers-graphql',observedAt
+    });
+  }catch(error){errors.push({metric:'workers_requests_daily',error:error?.message||String(error)})}
+
+  try{
+    const account=await cloudflareGraphql({
+      token,fetchJson,
+      query:`query DailyEdgeUsage($accountTag: string!, $date: Date) {
+        viewer { accounts(filter:{accountTag:$accountTag}) {
+          d1AnalyticsAdaptiveGroups(limit:10000, filter:{date_geq:$date,date_leq:$date}) {
+            sum { rowsRead rowsWritten }
+          }
+          kvOperationsAdaptiveGroups(limit:10000, filter:{date_geq:$date,date_leq:$date}) {
+            sum { requests }
+            dimensions { actionType }
+          }
+        } }
+      }`,
+      variables:{accountTag:accountId,date:day},
+    });
+    const d1Rows=account.d1AnalyticsAdaptiveGroups||[];
+    const rowsRead=d1Rows.reduce((sum,row)=>sum+Number(row?.sum?.rowsRead||0),0);
+    const rowsWritten=d1Rows.reduce((sum,row)=>sum+Number(row?.sum?.rowsWritten||0),0);
+    snapshots.push(
+      {provider:'cloudflare',metric:'d1_rows_read_daily',periodStart:day,observedValue:rowsRead,freeLimit:5000000,source:'cloudflare-d1-graphql',observedAt},
+      {provider:'cloudflare',metric:'d1_rows_written_daily',periodStart:day,observedValue:rowsWritten,freeLimit:100000,source:'cloudflare-d1-graphql',observedAt},
+    );
+    const kvRows=account.kvOperationsAdaptiveGroups||[];
+    const operation=(type)=>kvRows.filter(row=>String(row?.dimensions?.actionType||'').toLowerCase()===type)
+      .reduce((sum,row)=>sum+Number(row?.sum?.requests||0),0);
+    snapshots.push(
+      {provider:'cloudflare',metric:'kv_reads_daily',periodStart:day,observedValue:operation('read'),freeLimit:100000,source:'cloudflare-kv-graphql',observedAt},
+      {provider:'cloudflare',metric:'kv_writes_daily',periodStart:day,observedValue:operation('write'),freeLimit:1000,source:'cloudflare-kv-graphql',observedAt},
+    );
+  }catch(error){errors.push({metric:'d1_kv_daily',error:error?.message||String(error)})}
+
+  try{
+    const databases=await listCloudflareD1Databases({token,accountId,fetchJson});
+    let totalBytes=0;
+    for(const database of databases){
+      const id=String(database?.uuid||database?.id||'').trim();
+      if(!id)continue;
+      const payload=await fetchJson(`${CLOUDFLARE_API}/accounts/${encodeURIComponent(accountId)}/d1/database/${encodeURIComponent(id)}?fields=uuid,name,file_size`,{token});
+      const detail=cloudflareResult(payload,'D1_GET')||{};
+      const bytes=Number(detail.file_size);
+      if(Number.isFinite(bytes)&&bytes>0)totalBytes+=bytes;
+    }
+    snapshots.push({
+      provider:'cloudflare',metric:'d1_storage_bytes',periodStart:day,
+      observedValue:totalBytes,freeLimit:5*GB,source:'cloudflare-d1-rest',observedAt
+    });
+  }catch(error){errors.push({metric:'d1_storage_bytes',error:error?.message||String(error)})}
+
+  try{
+    const payload=await fetchJson(`${CLOUDFLARE_API}/accounts/${encodeURIComponent(accountId)}/r2/metrics`,{token});
+    const result=cloudflareResult(payload,'R2_METRICS')||{};
+    const standard=result.standard||{};
+    const published=standard.published||{};
+    const uploaded=standard.uploaded||{};
+    const currentBytes=['payloadSize','metadataSize'].reduce((sum,key)=>sum+Number(published?.[key]||0)+Number(uploaded?.[key]||0),0);
+    snapshots.push({
+      provider:'cloudflare',metric:'r2_standard_storage_bytes_current',periodStart:day,
+      observedValue:currentBytes,freeLimit:null,source:'cloudflare-r2-account-metrics',observedAt
+    });
+  }catch(error){errors.push({metric:'r2_standard_storage_bytes_current',error:error?.message||String(error)})}
+
+  return {
+    available:snapshots.length>0,
+    reason:snapshots.length===0?'telemetry_unavailable':errors.length?'partial':null,
+    snapshots,errors,
+  };
+}
+
 export async function collectGitHub({repository,token='',fetchJson=jsonFetch,observedAt=nowIso()}={}){
   if(!repository||!repository.includes('/'))throw new Error('GITHUB_REPOSITORY_REQUIRED');
   const headers={'x-github-api-version':'2026-03-10','accept':'application/vnd.github+json'};
@@ -200,8 +324,13 @@ export async function collectAll(env=process.env){
   }else{
     supabasePromise=Promise.resolve({available:false,reason:'credential_missing',mode:'none',snapshots:[],freeOrganizations:[],activeProjects:[],projects:[],errors:[]});
   }
-  const [supabase,github]=await Promise.all([supabasePromise,githubPromise]);
-  return {observedAt,supabase,github,snapshots:[...supabase.snapshots,...github.snapshots]};
+  const cloudflarePromise=collectCloudflare({
+    token:env.CLOUDFLARE_API_TOKEN||'',
+    accountId:env.CLOUDFLARE_ACCOUNT_ID||'',
+    observedAt
+  });
+  const [supabase,github,cloudflare]=await Promise.all([supabasePromise,githubPromise,cloudflarePromise]);
+  return {observedAt,supabase,github,cloudflare,snapshots:[...cloudflare.snapshots,...supabase.snapshots,...github.snapshots]};
 }
 
 async function main(){
@@ -213,6 +342,7 @@ async function main(){
     observedAt:result.observedAt,
     supabase:{available:result.supabase.available,reason:result.supabase.reason,mode:result.supabase.mode||'management_api',freeOrganizations:(result.supabase.freeOrganizations||[]).length,activeProjects:(result.supabase.activeProjects||[]).length,projects:(result.supabase.projects||[]).length,snapshots:result.supabase.snapshots.length},
     github:{repository:result.github.repository,snapshots:result.github.snapshots.length},
+    cloudflare:{available:result.cloudflare.available,reason:result.cloudflare.reason,snapshots:result.cloudflare.snapshots.length,errors:result.cloudflare.errors},
   })+'\n');
 }
 
