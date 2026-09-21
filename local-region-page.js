@@ -38,7 +38,7 @@ function baseStyle(){
 
 function document(region,title,body,admin=false){
   const surface=admin?'admin':'public';
-  const authAttrs=admin?' data-region-auth-pending="1"':'';const scripts=admin?'<script src="/local-region-admin-auth.js" defer></script>':'';
+  const authAttrs=admin?' data-region-auth-pending="1"':'';const scripts=admin?'<script src="/cheonggye/local-region-admin-auth.js" defer></script>':'';
   return `<!doctype html><html lang="ko" data-ekodi-site-subject="${esc(region.siteSubject)}" data-ekodi-local-region="${esc(region.id)}" data-ekodi-region-surface="${surface}"${authAttrs}><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)}</title>${baseStyle()}</head><body>${body}${scripts}</body></html>`;
 }
 
@@ -90,6 +90,6 @@ export function localRegionAdminPage(region){
 }
 
 export function localRegionAccessAdminPage(region){
-  const response=document(region,`${region.brand} 사용자·권한`,accessAdminBody(region),true).replace('</body>','<script src="/local-region-access-admin.js" defer></script></body>');
+  const response=document(region,`${region.brand} 사용자·권한`,accessAdminBody(region),true).replace('</body>','<script src="/cheonggye/local-region-access-admin.js" defer></script></body>');
   return new Response(response,{status:200,headers:headers('local-region-access-admin')});
 }
