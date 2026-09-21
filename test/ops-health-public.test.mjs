@@ -4,7 +4,7 @@ import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { buildOpsHealthDocument, emitOpsHealthAsset } from '../scripts/ops-health-build.mjs';
-import { allowOpsHealthForRestrictedCrawlers, OPS_HEALTH_PATH } from '../scripts/discovery-build.mjs';
+import { allowOpsHealthForTrainingCrawlers, OPS_HEALTH_PATH } from '../scripts/discovery-build.mjs';
 import { DISCOVERY_CRAWLER_POLICY, renderRobotsTxt } from '../discovery-layer.js';
 
 test('public health document exposes deployment evidence and Cloud First policy without secrets', () => {
@@ -62,11 +62,14 @@ test('public health static header replaces the inherited cache policy with no-st
   assert.match(block[1], /^\s+Access-Control-Allow-Origin: \*$/m);
 });
 
-test('restricted crawlers can retrieve only the public health exception while remaining denied elsewhere', () => {
+test('training crawlers get only the public health exception while user-requested agents retain public access', () => {
   const robots = allowOpsHealthForRestrictedCrawlers(renderRobotsTxt());
-  for (const crawler of [...DISCOVERY_CRAWLER_POLICY.training, ...DISCOVERY_CRAWLER_POLICY.agent]) {
+  for (const crawler of DISCOVERY_CRAWLER_POLICY.training) {
     assert.ok(robots.includes(`User-agent: ${crawler}\nAllow: ${OPS_HEALTH_PATH}\nDisallow: /`));
   }
-  assert.ok(robots.includes(`User-agent: ChatGPT-User\nAllow: ${OPS_HEALTH_PATH}\nDisallow: /`));
+  for (const crawler of DISCOVERY_CRAWLER_POLICY.agent) {
+    assert.ok(robots.includes(`User-agent: ${crawler}\nAllow: /`));
+  }
+  assert.ok(robots.includes('User-agent: ChatGPT-User\nAllow: /'));
   assert.equal(OPS_HEALTH_PATH, '/ops/health.json');
 });
