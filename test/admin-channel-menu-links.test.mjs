@@ -8,7 +8,7 @@ import { storeAdminScript, storeAdminCanAccess } from '../store-admin-engine.js'
 const manifest = JSON.parse(await readFile(new URL('../deploy/manifests/shared-site.worker.json', import.meta.url), 'utf8'));
 
 test('channel and autopost navigation is named consistently across administrator surfaces', async () => {
-  assert.equal(getAdminMenuLabel('social','ko'),'채널·자동게시');
+  assert.equal(getAdminMenuLabel('social','ko'),'방송·채널·자동게시');
 
   const workspace = await (await workspaceAdminScript()).text();
   assert.match(workspace,/소통 · 홍보/);
