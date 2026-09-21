@@ -74,7 +74,7 @@ async function audit(){
     ['trade','https://ekodi.kr/ekodibiz/trade'],
     ['insurance','https://ekodi.kr/insurance'],
     ['lab','https://ekodi.kr/ekodilab'],
-    ['mall','https://ekodi.kr/ekodibiz/ekodimall'],
+    ['mall','https://ekodi.kr/ekodimall'],
   ];
   for(const [id,url] of canonicalUserSurfaces){
     const result=await get(url);
