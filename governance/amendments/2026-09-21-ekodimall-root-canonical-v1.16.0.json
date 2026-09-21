@@ -1,0 +1,34 @@
+{
+  "id": "2026-09-21-ekodimall-root-canonical-v1.16.0",
+  "constitutionVersion": "1.16.0",
+  "status": "approved",
+  "approvedBy": "topmaster-joseph",
+  "approvedAt": "2026-09-21",
+  "changeClass": "C1",
+  "taskId": "ekodimall-root-canonical-20260921",
+  "summary": "Make https://ekodi.kr/ekodimall the single canonical EKODI Mall public path and https://ekodi.kr/ekodimall/admin the canonical Mall admin path, while retaining older nested Mall paths as compatibility redirects only.",
+  "approvalBasis": "The EKODI Platform Super Administrator explicitly instructed that the Mall domain path must be based on ekodi.kr/ekodimall and directed continuation of the migration.",
+  "constitutionalInterpretation": "This is a canonical URL normalization within the existing apex-path architecture. It does not expand identity, authorization, autonomous execution, financial authority, or production mutation authority.",
+  "implementedCapabilities": [
+    "Canonical public Mall path https://ekodi.kr/ekodimall",
+    "Canonical Mall admin path https://ekodi.kr/ekodimall/admin",
+    "Canonical Agoda path https://ekodi.kr/ekodimall/agoda/",
+    "Canonical Coupang path https://ekodi.kr/ekodimall/coupang/",
+    "308 compatibility redirects from /ekodibiz/ekodimall, /ekodibiz/mall, and /mall",
+    "Auth return URLs, service registries, APIs, deployment manifests, tenant metadata, tests and production verification aligned to the root Mall path"
+  ],
+  "authorityImpact": "None. Existing tenant, platform, release, financial, legal and human approval boundaries remain unchanged.",
+  "generationImpact": {
+    "currentGenerationRemains": 10,
+    "automaticPromotion": false,
+    "evidenceDrivenFutureEvolution": true
+  },
+  "deploymentImpact": "Shared Site owns canonical apex routing. EKODI Mall remains independently deployed behind the existing Mall gateway; legacy routes redirect to the apex canonical path.",
+  "rollback": "If the root canonical path fails guarded production verification, restore the previous nested path only as a temporary compatibility target, repair the apex route, then re-run guarded verification before re-promoting /ekodimall.",
+  "approvalEvidence": {
+    "explicitOwnerInstruction": true,
+    "requiredPullRequestLabel": "constitution-approved",
+    "pullRequest": 2229,
+    "approvalLabel": "constitution-approved"
+  }
+}
