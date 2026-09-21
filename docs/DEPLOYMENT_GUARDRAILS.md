@@ -24,7 +24,7 @@ Finance의 Toss 비밀키는 production 배포 뒤 별도 `secret put`으로 덮
 
 ## Domain / Route Topology
 
-Worker route, custom domain, Pages-domain 연결 해제, DNS 레코드 삭제는 코드 승격과 분리한다. `deploy-service-proxy.yml`, `deploy-biz-legacy.yml`, `deploy-legacy-redirects.yml`은 자동 push 실행을 금지하고 `workflow_dispatch` 전용으로 둔다. 이 workflow들은 `deployment-guardrail: topology-workflow-manual-only` 표식을 가진다.
+Worker route, custom domain, Pages-domain 연결 해제, DNS 레코드 삭제는 코드 승격과 분리한다. 공개 EKODI 주소는 `ekodi.kr/...` 경로만 사용하며 redirect-only Worker·도메인·서브도메인은 배포 대상으로 유지하지 않는다. 현재 토폴로지 변경용 `deploy-service-proxy.yml`만 `workflow_dispatch` 전용이며, 리다이렉트 전용 Biz/Admin/legacy 배포 workflow는 폐기 상태를 CI가 강제한다.
 
 ## Release Control
 
