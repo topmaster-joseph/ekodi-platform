@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-14T04:44:49.778Z",
-  "startedAt": "2026-09-14T04:44:34.009Z",
+  "generatedAt": "2026-09-21T04:45:00.069Z",
+  "startedAt": "2026-09-21T04:44:39.043Z",
   "repository": "topmaster-joseph/ekodi-platform",
   "branch": "main",
-  "head": "7fd6354f1f6b4889d3653b7f6cf67cdf4aca3ffe",
+  "head": "4cd57c48f5d18b87e4f2ac19decaa336527a5abc",
   "overallScore": 86.5,
   "status": "watch",
   "thresholds": {
@@ -18,13 +18,13 @@
       "weight": 25,
       "score": 25,
       "status": "ok",
-      "detail": "451개 테스트 파일 · 전체 테스트 통과"
+      "detail": "549개 테스트 파일 · 전체 테스트 통과"
     },
     "duplication": {
       "weight": 15,
       "score": 1.5,
       "status": "error",
-      "detail": "교차 파일 중복 군집 30개 · 겹침 창 106개 정규화"
+      "detail": "교차 파일 중복 군집 30개 · 겹침 창 115개 정규화"
     },
     "complexity": {
       "weight": 15,
@@ -48,7 +48,7 @@
       "weight": 10,
       "score": 10,
       "status": "ok",
-      "detail": "178개 Workflow · 배포 가드 검증 통과"
+      "detail": "197개 Workflow · 배포 가드 검증 통과"
     },
     "documentation": {
       "weight": 5,
@@ -58,15 +58,15 @@
     }
   },
   "metrics": {
-    "runtimeFiles": 658,
-    "runtimeLines": 108318,
-    "testFiles": 451,
-    "workflows": 178,
+    "runtimeFiles": 739,
+    "runtimeLines": 122919,
+    "testFiles": 549,
+    "workflows": 197,
     "largeFiles": 0,
     "veryLargeFiles": 0,
     "todoMarkers": 7,
     "duplicateGroups": 30,
-    "duplicateWindows": 106
+    "duplicateWindows": 115
   },
   "technicalDebt": [
     {
@@ -90,9 +90,9 @@
       "detail": "3개 파일에서 동일한 코드 블록 후보가 반복됩니다.",
       "recommendation": "공통 Core로 승격 가능한지 영향 범위를 분석한 뒤, 테스트가 있는 경우에만 통합하세요.",
       "evidence": [
-        "tax-invoice-free-first-worker.js:21",
-        "tax-invoice-worker.js:19",
-        "tax-service-worker.js:18"
+        "customer-auth.js:94",
+        "customer-federated-auth.js:66",
+        "customer-google-prereg.js:79"
       ]
     },
     {
@@ -100,11 +100,12 @@
       "severity": "medium",
       "category": "duplication",
       "title": "교차 파일 중복 로직 후보",
-      "detail": "2개 파일에서 동일한 코드 블록 후보가 반복됩니다.",
+      "detail": "3개 파일에서 동일한 코드 블록 후보가 반복됩니다.",
       "recommendation": "공통 Core로 승격 가능한지 영향 범위를 분석한 뒤, 테스트가 있는 경우에만 통합하세요.",
       "evidence": [
-        "admin-google-auth.js:98",
-        "auth-worker-core.js:86"
+        "customer-federated-auth.js:47",
+        "customer-google-prereg.js:60",
+        "customer-member-directory.js:32"
       ]
     },
     {
@@ -112,11 +113,12 @@
       "severity": "medium",
       "category": "duplication",
       "title": "교차 파일 중복 로직 후보",
-      "detail": "2개 파일에서 동일한 코드 블록 후보가 반복됩니다.",
+      "detail": "3개 파일에서 동일한 코드 블록 후보가 반복됩니다.",
       "recommendation": "공통 Core로 승격 가능한지 영향 범위를 분석한 뒤, 테스트가 있는 경우에만 통합하세요.",
       "evidence": [
-        "affiliate-control.js:66",
-        "device-control.js:271"
+        "tax-invoice-free-first-worker.js:21",
+        "tax-invoice-worker.js:19",
+        "tax-service-worker.js:18"
       ]
     },
     {
@@ -127,8 +129,8 @@
       "detail": "2개 파일에서 동일한 코드 블록 후보가 반복됩니다.",
       "recommendation": "공통 Core로 승격 가능한지 영향 범위를 분석한 뒤, 테스트가 있는 경우에만 통합하세요.",
       "evidence": [
-        "ai-agent-control.js:28",
-        "homepage-presentation-control.js:28"
+        "affiliate-control.js:96",
+        "device-control.js:279"
       ]
     },
     {
@@ -139,8 +141,8 @@
       "detail": "2개 파일에서 동일한 코드 블록 후보가 반복됩니다.",
       "recommendation": "공통 Core로 승격 가능한지 영향 범위를 분석한 뒤, 테스트가 있는 경우에만 통합하세요.",
       "evidence": [
-        "author-billing-control.js:15",
-        "customer-federated-auth.js:47"
+        "ai-agent-control.js:28",
+        "homepage-presentation-control.js:28"
       ]
     },
     {
@@ -173,7 +175,7 @@
       "ok": true,
       "status": 0,
       "timedOut": false,
-      "summary": "✔ same workspace identity is deterministic (0.925467ms)\n✔ different workspaces receive distinct visual identities while structure remains shared (0.387153ms)\n✔ different ids within the same kind still vary atmosphere (1.043223ms)\n✔ css variables expose only visual tokens, not layout structure (0.326049ms)\nℹ tests 2133\nℹ suites 0\nℹ pass 2133\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 14590.298178"
+      "summary": "✔ same workspace identity is deterministic (1.003548ms)\n✔ different workspaces receive distinct visual identities while structure remains shared (0.435604ms)\n✔ different ids within the same kind still vary atmosphere (1.017704ms)\n✔ css variables expose only visual tokens, not layout structure (0.362726ms)\nℹ tests 2615\nℹ suites 0\nℹ pass 2615\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 19710.02455"
     },
     "security": {
       "ok": true,
