@@ -5,30 +5,107 @@
     "publicPath": "/",
     "adminPath": "/admin",
     "role": "platform-super-admin",
-    "ownRouteGroups": ["home", "operations", "workspaces", "services", "system"],
+    "ownRouteGroups": [
+      "home",
+      "operations",
+      "workspaces",
+      "services",
+      "system"
+    ],
     "mayAggregateStatus": true,
     "mayCreateChildAdminAlias": false
   },
   "sites": [
-    { "id": "ekodibiz", "publicPath": "/ekodibiz", "adminPath": "/ekodibiz/admin", "parentId": "platform" },
-    { "id": "ekodimall", "publicPath": "/ekodibiz/ekodimall", "adminPath": "/ekodibiz/ekodimall/admin", "parentId": "ekodibiz" },
-    { "id": "ekodibiz-trade", "publicPath": "/ekodibiz/trade", "adminPath": "/ekodibiz/trade/admin", "parentId": "ekodibiz" },
-    { "id": "ekodichurch", "publicPath": "/ekodichurch", "adminPath": "/ekodichurch/admin", "parentId": "platform" },
-    { "id": "cgma", "publicPath": "/cgma", "adminPath": "/cgma/admin", "parentId": "platform" },
-    { "id": "cmpmyi", "publicPath": "/cmpmyi", "adminPath": "/cmpmyi/admin", "parentId": "platform" },
-    { "id": "jadam", "publicPath": "/jadam", "adminPath": "/jadam/admin", "parentId": "cmpmyi" },
-    { "id": "pizzamaru", "publicPath": "/pizzamaru", "adminPath": "/pizzamaru/admin", "parentId": "cmpmyi" },
-    { "id": "yogurt", "publicPath": "/yogurt", "adminPath": "/yogurt/admin", "parentId": "cmpmyi" }
-  ],  "forbiddenAggregationAliases": [
-    { "alias": "/admin/ekodimall", "canonical": "/ekodibiz/ekodimall/admin" },
-    { "alias": "/ekodibiz/admin/ekodimall", "canonical": "/ekodibiz/ekodimall/admin" },
-    { "alias": "/cmpmyi/admin/jadam", "canonical": "/jadam/admin" },
-    { "alias": "/cmpmyi/admin/pizzamaru", "canonical": "/pizzamaru/admin" },
-    { "alias": "/cmpmyi/admin/yogurt", "canonical": "/yogurt/admin" }
+    {
+      "id": "ekodibiz",
+      "publicPath": "/ekodibiz",
+      "adminPath": "/ekodibiz/admin",
+      "parentId": "platform"
+    },
+    {
+      "id": "ekodimall",
+      "publicPath": "/ekodimall",
+      "adminPath": "/ekodimall/admin",
+      "parentId": "ekodibiz"
+    },
+    {
+      "id": "ekodibiz-trade",
+      "publicPath": "/ekodibiz/trade",
+      "adminPath": "/ekodibiz/trade/admin",
+      "parentId": "ekodibiz"
+    },
+    {
+      "id": "ekodichurch",
+      "publicPath": "/ekodichurch",
+      "adminPath": "/ekodichurch/admin",
+      "parentId": "platform"
+    },
+    {
+      "id": "cgma",
+      "publicPath": "/cgma",
+      "adminPath": "/cgma/admin",
+      "parentId": "platform"
+    },
+    {
+      "id": "cmpmyi",
+      "publicPath": "/cmpmyi",
+      "adminPath": "/cmpmyi/admin",
+      "parentId": "platform"
+    },
+    {
+      "id": "jadam",
+      "publicPath": "/jadam",
+      "adminPath": "/jadam/admin",
+      "parentId": "cmpmyi"
+    },
+    {
+      "id": "pizzamaru",
+      "publicPath": "/pizzamaru",
+      "adminPath": "/pizzamaru/admin",
+      "parentId": "cmpmyi"
+    },
+    {
+      "id": "yogurt",
+      "publicPath": "/yogurt",
+      "adminPath": "/yogurt/admin",
+      "parentId": "cmpmyi"
+    }
+  ],
+  "forbiddenAggregationAliases": [
+    {
+      "alias": "/admin/ekodimall",
+      "canonical": "/ekodimall/admin"
+    },
+    {
+      "alias": "/ekodibiz/admin/ekodimall",
+      "canonical": "/ekodimall/admin"
+    },
+    {
+      "alias": "/cmpmyi/admin/jadam",
+      "canonical": "/jadam/admin"
+    },
+    {
+      "alias": "/cmpmyi/admin/pizzamaru",
+      "canonical": "/pizzamaru/admin"
+    },
+    {
+      "alias": "/cmpmyi/admin/yogurt",
+      "canonical": "/yogurt/admin"
+    }
   ],
   "legacyCompatibilityAliases": [
-    { "alias": "/mall/admin", "canonical": "/ekodibiz/ekodimall/admin" },
-    { "alias": "/ekodibiz/mall/admin", "canonical": "/ekodibiz/ekodimall/admin" }
+    {
+      "alias": "/ekodibiz/ekodimall/admin",
+      "canonical": "/ekodimall/admin"
+    },
+    {
+      "alias": "/ekodibiz/mall/admin",
+      "canonical": "/ekodimall/admin"
+    },
+    {
+      "alias": "/mall/admin",
+      "canonical": "/ekodimall/admin"
+    }
   ],
   "rules": [
     "The browser-visible operational admin URL is always the managed site's canonical public path plus /admin.",
