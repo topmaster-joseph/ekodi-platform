@@ -1,0 +1,215 @@
+{
+  "version": 1,
+  "lastChecked": "2026-09-21",
+  "status": [
+    {
+      "label": "공개기록 범위",
+      "value": "1990 → 현재",
+      "note": "이전 의대 설립 활동과 2026년 현안을 함께 연결"
+    },
+    {
+      "label": "2026년 핵심 경과",
+      "value": "후보대학 선정 이후",
+      "note": "정부·지자체·대학·시민사회 입장을 구분해 기록"
+    },
+    {
+      "label": "비대위 활동",
+      "value": "현장·국회·정부 전달",
+      "note": "비대위 공식자료와 언론 확인자료를 사건별로 연결"
+    },
+    {
+      "label": "자동 점검",
+      "value": "매일",
+      "note": "새 공식자료와 보도를 중복 제거 후 반영 후보로 관리"
+    }
+  ],
+  "timeline": [
+    {
+      "date": "1990",
+      "type": "history",
+      "title": "목포대 의대 신설 요구 시작",
+      "summary": "목포대가 정부에 의대 신설을 요청하기 시작한 시기로 여러 후속 공식·언론 자료에서 확인됩니다.",
+      "tags": [
+        "이전 활동",
+        "대학"
+      ],
+      "source": "https://www.yna.co.kr/view/AKR20120313078600054"
+    },
+    {
+      "date": "2007.12",
+      "type": "history",
+      "title": "대선 지역공약에 목포대 의대·대학병원 포함",
+      "summary": "목포대 공식 홍보자료는 2007년 12월 다도해 지역 의료·보건 기반 조성을 위한 의과대학 개설과 대학병원 건립 공약을 기록하고 있습니다.",
+      "tags": [
+        "이전 활동",
+        "공약 기록"
+      ],
+      "source": "https://www.mokpo.ac.kr/www/399/subview.do"
+    },
+    {
+      "date": "2012.03",
+      "type": "history",
+      "title": "전남 의과대학 유치 도민결의대회·100만인 서명운동",
+      "summary": "목포대 의과대학 유치 추진위원회가 도민결의대회와 100만인 서명운동 선포식을 추진했습니다.",
+      "tags": [
+        "시민운동",
+        "서명"
+      ],
+      "source": "https://www.yna.co.kr/view/AKR20120313078600054"
+    },
+    {
+      "date": "2017",
+      "type": "history",
+      "title": "대선 과정에서 목포대 의대 설립 건의",
+      "summary": "후속 보도에 따르면 2017년 대선 과정에서 목포대 의대 설립 필요성이 다시 건의됐고 이후 교육부 주도 타당성 조사로 이어졌습니다.",
+      "tags": [
+        "이전 활동",
+        "정책 건의"
+      ],
+      "source": "https://www.yna.co.kr/view/AKR20231213097000054"
+    },
+    {
+      "date": "2018–2019",
+      "type": "institution",
+      "title": "교육부 주도 목포대 의대 설립 타당성 조사",
+      "summary": "후속 입법자료와 언론보도는 2019년 조사 결과 비용편익분석이 1을 넘는 것으로 나타났다고 기록합니다.",
+      "tags": [
+        "정부",
+        "연구용역"
+      ],
+      "source": "https://opinion.lawmaking.go.kr/gcom/nsmLmSts/out/2200279/detailRP"
+    },
+    {
+      "date": "2020",
+      "type": "history",
+      "title": "전남권 의대 유치 공동협력·추진위원회 활동",
+      "summary": "전남도와 지역 대학·지자체의 공동협력, 목포대 의과대학 유치 추진위원회 발대 등 활동이 이어졌습니다.",
+      "tags": [
+        "연대",
+        "시민·기관"
+      ],
+      "source": "https://www.yna.co.kr/view/AKR20231213097000054"
+    },
+    {
+      "date": "2021",
+      "type": "history",
+      "title": "목포대 의대 유치 당·정·학 TF 활동",
+      "summary": "목포시 관련 기록은 2021년 당·정·학 TF 구성 후 유치 지원사업이 이어졌다고 설명합니다.",
+      "tags": [
+        "연대",
+        "정책협의"
+      ],
+      "source": "https://www.yna.co.kr/view/AKR20231213097000054"
+    },
+    {
+      "date": "2024.03",
+      "type": "institution",
+      "title": "전남 국립의대 신설 추진 관련 대통령 발언",
+      "summary": "공개 입법자료에는 2024년 3월 민생토론회에서 전남의 의견수렴을 전제로 국립의대 신설 추진 의사가 언급됐다고 기록돼 있습니다.",
+      "tags": [
+        "정부",
+        "공식기록"
+      ],
+      "source": "https://opinion.lawmaking.go.kr/gcom/nsmLmSts/out/2200279/detailRP"
+    },
+    {
+      "date": "2024.11",
+      "type": "institution",
+      "title": "목포대·순천대 통합 및 통합의대 추진 합의",
+      "summary": "후속 보도는 두 대학이 2024년 11월 대학 통합과 통합의대 추진에 합의했다고 기록합니다.",
+      "tags": [
+        "대학",
+        "협의"
+      ],
+      "source": "https://m.kukinews.com/article/view/kuk202608280051"
+    },
+    {
+      "date": "2026.08.27",
+      "type": "institution",
+      "title": "전남 국립의대 후보대학 심사 착수",
+      "summary": "전남연구원이 목포대와 순천대를 대상으로 후보대학 심사에 착수했습니다.",
+      "tags": [
+        "공공기관",
+        "심사"
+      ],
+      "source": "https://www.yna.co.kr/view/AKR20260827082200054"
+    },
+    {
+      "date": "2026.08.30",
+      "type": "institution",
+      "title": "전남광주 국립의대 후보대학으로 순천대 추천 발표",
+      "summary": "전남광주통합특별시는 순천대를 국립의대 신설 후보대학으로 교육부에 추천한다고 발표했습니다.",
+      "tags": [
+        "지자체",
+        "공식결정"
+      ],
+      "source": "https://www.yna.co.kr/amp/view/AKR20260830015651054"
+    },
+    {
+      "date": "2026.09.09",
+      "type": "legal",
+      "title": "목포대 측 국회 기자회견과 재검증 요구",
+      "summary": "목포대 총장과 학생회장이 국회에서 후보대학 선정 과정에 대한 문제를 제기하고 정부 재검증을 요구했습니다. 이는 목포대 측의 주장으로 기록합니다.",
+      "tags": [
+        "국회",
+        "대학 입장"
+      ],
+      "source": "https://www.yna.co.kr/view/AKR20260909134300054"
+    },
+    {
+      "date": "2026.09.21",
+      "type": "committee",
+      "title": "서남권 의대 비상대책위 상경 활동",
+      "summary": "비대위 제공 참가자 자료집에 국회 소통관·국회 정문·정당사·대통령실 인근 등에서의 기자회견과 공개서한 전달 일정이 제시됐습니다. 세부 완료 여부는 공식 결과자료와 후속 보도로 계속 확인합니다.",
+      "tags": [
+        "비대위",
+        "현장자료",
+        "확인중"
+      ],
+      "source": ""
+    }
+  ],
+  "news": [
+    {
+      "date": "2012.03.13",
+      "publisher": "연합뉴스",
+      "kind": "보도",
+      "title": "목포대 의대 유치 100만 서명 캠페인",
+      "url": "https://www.yna.co.kr/view/AKR20120313078600054"
+    },
+    {
+      "date": "2023.12.13",
+      "publisher": "연합뉴스",
+      "kind": "배경자료",
+      "title": "목포시, 국립 의과대학 유치에 전력투구",
+      "url": "https://www.yna.co.kr/view/AKR20231213097000054"
+    },
+    {
+      "date": "2026.08.27",
+      "publisher": "연합뉴스",
+      "kind": "보도",
+      "title": "전남연구원, 국립의대 후보 대학 심사 착수",
+      "url": "https://www.yna.co.kr/view/AKR20260827082200054"
+    },
+    {
+      "date": "2026.08.30",
+      "publisher": "연합뉴스",
+      "kind": "보도",
+      "title": "전남광주시, 국립 의대 신설 후보 대학으로 순천대 선정",
+      "url": "https://www.yna.co.kr/amp/view/AKR20260830015651054"
+    },
+    {
+      "date": "2026.09.10",
+      "publisher": "국립목포대학교",
+      "kind": "당사자 원문",
+      "title": "송하철 총장 국회 기자회견문",
+      "url": "https://www.mokpo.ac.kr/www/395/subview.do?enc=Zm5jdDF8QEB8JTJGYmJzJTJGd3d3JTJGMTI4JTJGMTczOTMwJTJGYXJ0Y2xWaWV3LmRvJTNG"
+    }
+  ],
+  "finance": {
+    "income": 0,
+    "expense": 0,
+    "updated": "공개자료 등록 전",
+    "entries": []
+  }
+}
