@@ -28,6 +28,7 @@ export const ADMIN_MENU_REGISTRY = Object.freeze([
   { id: 'workspace', group: 'workspaces', icon: '▧', labels: { ko: '공간·자료', en: 'Workspaces & Files' } },
 
   { id: 'common-services', group: 'services', icon: '▦', labels: { ko: '공통서비스', en: 'Common Services' } },
+  { id: 'confirmations', group: 'services', icon: '✓', managementArea: 'professional-services', labels: { ko: '지급·수령 확인', en: 'Payment & Receipt Confirmation' }, superAdminOnly: true },
   { id: 'life-ai', group: 'services', icon: 'Q', labels: { ko: '인생AI', en: 'Life AI' } },
   { id: 'personal-finance', group: 'services', icon: '₩', managementArea: 'professional-services', labels: { ko: '개인재무', en: 'Personal Finance' } },
   { id: 'invest', group: 'services', icon: 'I', managementArea: 'professional-services', labels: { ko: '투자 AI', en: 'Invest AI' } },
@@ -83,7 +84,7 @@ const ADMIN_MENU_SECTION_CATEGORY = Object.freeze({
   'command-home':'overview', campus:'overview', work:'workflow', communication:'workflow', finance:'finance', tax:'finance',
   clients:'customer', cmpmyi:'customer', organization:'organization', workspace:'organization',
   'common-services':'common', 'life-ai':'common', community:'content', books:'content', social:'content', devotional:'content',
-  'personal-finance':'business', invest:'business', 'marketing-ai':'business', 'ai-membership':'content', 'supply-network':'business', insurance:'business',
+  'personal-finance':'business', confirmations:'business', invest:'business', 'marketing-ai':'business', 'ai-membership':'content', 'supply-network':'business', insurance:'business',
   'public-site-controls':'environment', 'language-status':'environment', security:'security', admins:'security',
   'ai-module-spec':'ai', capabilities:'ai', aiops:'ai', 'ai-settings':'ai', openai:'ai', architecture:'platform', maturity:'platform', storage:'platform', devices:'platform', health:'platform', 'api-cost':'platform',
   services:'other', deployments:'other', policies:'other',
