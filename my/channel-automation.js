@@ -1,6 +1,6 @@
 (() => {
   import('/my/revenue-opportunity.js?v=20260911-revenue-engine-1').catch(error=>console.warn('EKODI Revenue opportunity entry',error));
-  const API='https://marketing-publish-api.ekodi.kr';
+  const API='https://ekodi.kr/api/marketing/publish';
   const section=document.querySelector('#personal-brand');
   if(!section)return;
   const host=document.createElement('div');
