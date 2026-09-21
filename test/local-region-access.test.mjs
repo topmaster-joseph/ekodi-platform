@@ -101,8 +101,9 @@ test('router exposes auth assets and regional access page before generic workspa
   const generic=router.indexOf('isWorkspaceAdminPath(url.pathname)&&!isEkodiBizInvestAdminPath(url.pathname)');
   assert.ok(regional>0&&generic>regional);
   const wrangler=await fs.readFile(new URL('../wrangler.site.toml',import.meta.url),'utf8');
-  assert.match(wrangler,/\/local-region-admin-auth\.js/);
-  assert.match(wrangler,/\/local-region-access-admin\.js/);
+  assert.match(wrangler,/\/cheonggye\*/);
+  assert.match(router,/\/cheonggye\/local-region-admin-auth\.js/);
+  assert.match(router,/\/cheonggye\/local-region-access-admin\.js/);
 });
 
 test('customer API routes local access resolver before generic customer access',async()=>{
