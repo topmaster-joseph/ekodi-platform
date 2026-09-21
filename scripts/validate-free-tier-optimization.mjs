@@ -60,8 +60,14 @@ expect(collectorWorkflow.includes('SUPABASE_PAT'),'resource collector must accep
 expect(collectorWorkflow.includes('SUPABASE_MANAGEMENT_TOKEN'),'resource collector must accept the existing Supabase management-token fallback');
 expect(collectorWorkflow.includes('SUPABASE_ACCESS_TOKEN=$token'),'resource collector must normalize the selected Supabase credential before collection when available');
 expect(collectorWorkflow.includes('SUPABASE_TELEMETRY_AVAILABLE=false'),'resource collector must explicitly mark missing Supabase telemetry');
+expect(collectorWorkflow.includes('id-token: write'),'resource collector must request GitHub OIDC permission explicitly');
+expect(collectorWorkflow.includes('ACTIONS_ID_TOKEN_REQUEST_URL'),'resource collector must obtain an ephemeral GitHub OIDC token when PAT telemetry is unavailable');
+expect(collectorWorkflow.includes('free-tier-supabase-oidc.json'),'resource collector must use the explicit Supabase OIDC endpoint registry');
+expect(collectorWorkflow.includes('free-tier-supabase-oidc-contract.test.mjs'),'resource collector validation must execute the Supabase OIDC security contract');
 expect(!collectorWorkflow.includes('test -n "$SUPABASE_ACCESS_TOKEN"'),'missing Supabase management credentials must not block GitHub/Cloudflare telemetry collection');
 expect(collector.includes("reason:'credential_missing'"),'Supabase collector must represent unavailable management credentials as missing telemetry');
+expect(collector.includes('collectSupabaseOidc'),'collector must implement GitHub OIDC Supabase fallback');
+expect(collector.includes('supabase-edge-github-oidc'),'OIDC fallback snapshots must identify their measured source');
 expect(collector.includes('/database/query'),'Supabase database usage must come from an authorized read-only database query');
 expect(collector.includes('/actions/cache/usage'),'GitHub cache usage must come from the official repository usage endpoint');
 expect(collector.includes('/actions/artifacts?'),'GitHub artifact usage must come from the official repository artifact endpoint');

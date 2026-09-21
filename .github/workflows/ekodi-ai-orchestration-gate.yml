@@ -121,7 +121,7 @@ jobs:
           node --check free-tier-resource-governor.js
           node --check scripts/validate-free-tier-optimization.mjs
           node scripts/validate-free-tier-optimization.mjs
-          node --test test/free-tier-quota-guard.test.mjs test/free-tier-resource-governor.test.mjs
+          node --test test/free-tier-quota-guard.test.mjs test/free-tier-resource-governor.test.mjs test/free-tier-resource-collector.test.mjs test/free-tier-supabase-oidc-contract.test.mjs
       - name: Route change intent through EKODI AI
         id: ekodi_ai
         env:
