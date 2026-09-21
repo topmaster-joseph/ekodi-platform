@@ -119,7 +119,8 @@ async function resolveAccess(request,env,scope){
   if(!tenant||tenant.status!=='active')return {ok:false,status:404,code:'REGION_SCOPE_NOT_FOUND'};
   const email=clean(principal.email);
   const grant=await grantFor(env,tenant.id,email);
-  if(accessGrantIsActive(grant)){
+  if(grant){
+    if(!accessGrantIsActive(grant))return {ok:false,status:403,code:'REGION_ACCESS_EXPLICITLY_DISABLED',email};
     const capabilities=capabilitiesFor(grant);
     const canManageAccess=capabilities.includes('*')||capabilities.includes(TENANT_ADMIN_CAPABILITIES.access);
     try{await env.DB.prepare('UPDATE customer_access_grants SET last_verified_at=? WHERE tenant_id=? AND lower(trim(email))=?').bind(new Date().toISOString(),tenant.id,email).run();}catch{}
