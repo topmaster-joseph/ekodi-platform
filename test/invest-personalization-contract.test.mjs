@@ -71,6 +71,11 @@ test('Invest page preserves legacy review flow while adding evidence-first perso
   assert.match(page,/\/app\.js/);
   assert.match(page,/\/invest-ui\.js/);
   assert.match(page,/매수·매도 지시/);
+  assert.match(page,/INVESTMENT OS/);
+  assert.match(page,/투자기회부터 사후관리까지/);
+  for(const route of ['/invest/opportunities','/invest/projects','/invest/diligence','/invest/matching','/invest/aftercare','/invest/portfolio'])assert.ok(page.includes(`href="${route}"`));
+  assert.match(page,/사람 최종결정/);
+  assert.match(page,/거래 실행 분리/);
 });
 
 test('My EKODI keeps Invest inside progressive discovery and passes only an authorized workspace hint',async()=>{
