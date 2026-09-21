@@ -342,13 +342,14 @@ async function updateAccess(request, env, slug) {
   const decision = accessGrantManagementDecision(authority, { email, role: existing.role }, { role: nextRole });
   if (!decision.ok) return json({ error: '보호된 책임관리자 권한은 이 화면에서 변경할 수 없습니다.', code: decision.code }, 403, request, env);
 
+  const roleChanged = nextRole !== normalizeRole(existing.role);
   const validated = validateAccessGrantInput({
     role: nextRole,
     principalType: existing.principal_type,
-    githubUsername: body?.githubUsername ?? existing.github_username,
-    expiresAt: body?.expiresAt ?? existing.expires_at,
-    capabilities: body?.capabilities ?? existing.capabilities_json,
-    deniedCapabilities: body?.deniedCapabilities ?? existing.denied_capabilities_json,
+    githubUsername: body?.githubUsername ?? (roleChanged ? '' : existing.github_username),
+    expiresAt: body?.expiresAt ?? (roleChanged ? '' : existing.expires_at),
+    capabilities: body?.capabilities ?? (roleChanged ? [] : existing.capabilities_json),
+    deniedCapabilities: body?.deniedCapabilities ?? (roleChanged ? [] : existing.denied_capabilities_json),
   });
   if (!validated.ok) return json({ error: '접근권한 설정을 확인해 주세요.', code: validated.error }, 400, request, env);
 
