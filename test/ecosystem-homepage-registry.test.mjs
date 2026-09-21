@@ -9,7 +9,7 @@ const registry = JSON.parse(await readFile(new URL('../config/ecosystem-services
 
 const hiddenStatuses = new Set(['beta', 'preparing', 'planned']);
 
-test('homepage registry exposes only production-verified live bilingual services', async () => {
+test('homepage registry exposes only production-verified live services with translation metadata', async () => {
   const services = await loadHomepageServices();
   assert.ok(services.length > 0);
   assert.ok(services.every(service => service.homepage === true));
@@ -39,25 +39,26 @@ test('homepage registry exposes only production-verified live bilingual services
   assert.equal(community?.category, 'community-ministry');
 });
 
-test('homepage semi-list renders Korean and English together with live badges', async () => {
+test('homepage static cards are Korean-first while preserving translation metadata', async () => {
   const services = await loadHomepageServices();
   const html = renderServiceCards(services);
   for (const service of services) {
     assert.match(html, new RegExp(`data-service-id="${service.id}"`));
     assert.ok(html.includes(service.name));
-    assert.ok(html.includes(service.nameEn));
     assert.ok(html.includes(service.label));
+    assert.ok(html.includes(`data-service-name-en="${service.nameEn.replaceAll('&','&amp;').replaceAll('"','&quot;')}"`));
     assert.match(html, /data-service-status="live"/);
     assert.ok(html.includes(STATUS_DEFINITIONS.live.label));
-    assert.ok(html.includes(STATUS_DEFINITIONS.live.labelEn));
   }
+  assert.doesNotMatch(html, /class="service-name-en"/);
+  assert.doesNotMatch(html, /<span>Live<\/span>/);
 
   for (const category of CATEGORY_DEFINITIONS) {
     const categoryServices = services.filter(service => service.category === category.id);
     if (!categoryServices.length) continue;
     assert.match(html, new RegExp(`data-service-category="${category.id}"`));
     assert.ok(html.includes(category.label));
-    assert.ok(html.includes(category.labelEn.replace('&', '&amp;')) || html.includes(category.labelEn));
+    assert.ok(html.includes(`data-category-label-en="${category.labelEn.replaceAll('&','&amp;').replaceAll('"','&quot;')}"`));
   }
 });
 
@@ -71,17 +72,25 @@ test('beta and roadmap services remain in the registry but stay hidden from the 
   }
 });
 
-test('homepage navigation and bilingual hero remain compact without roadmap lifecycle filters', () => {
-  for (const anchor of ['#about', '#services', '#connect', '#contact']) {
+test('homepage static fallback is Korean-first and intent-first without roadmap lifecycle filters', () => {
+  for (const anchor of ['#about', '#start', '#services', '#connect', '#contact']) {
     assert.match(homepage, new RegExp(`href="${anchor}"`));
   }
-  for (const id of ['about', 'services', 'connect', 'contact']) {
+  for (const id of ['about', 'start', 'services', 'connect', 'contact']) {
     assert.match(homepage, new RegExp(`id="${id}"`));
   }
   assert.match(homepage, /원하는 일, 바로 시작하세요/);
-  assert.match(homepage, /필요한 길만 가볍게 연결합니다\./);
+  assert.match(homepage, /무엇을 하시나요\?/);
+  assert.match(homepage, /공동체 · 사역/);
+  assert.match(homepage, /사업 · 성장/);
+  assert.match(homepage, /글 · 콘텐츠/);
+  assert.match(homepage, /연구 · 배움/);
+  assert.match(homepage, /일 · 프로젝트/);
+  assert.match(homepage, /내 활동/);
   assert.match(homepage, /class="ecosystem-pulse"/);
   assert.match(homepage, /class="service-grid"/);
+  assert.match(homepage, /data-status="beta" hidden/);
+  assert.doesNotMatch(homepage, />About<|>Platforms<|>Connect<|>Contact<|>Sign in</);
   assert.doesNotMatch(homepage, /data-status-filter=/);
 });
 
@@ -96,11 +105,12 @@ test('guarded release smoke markers stay aligned with the actual EKODI homepage'
   assert.ok(rootCheck.expect.includes('필요한 길만 가볍게 연결합니다.'));
 });
 
-test('homepage status satellites are registry-derived rather than hardcoded zeroes', async () => {
+test('homepage status satellites count only services rendered by the static live homepage', async () => {
   const counts = await loadHomepageStatusCounts();
-  for (const status of ['live', 'beta']) {
-    const expected = registry.services.filter(service => service.homepage === true && service.productionVerified === true && service.status === status).length;
-    assert.equal(counts[status], expected);
-    assert.ok(counts[status] > 0, `${status} must reflect at least one verified homepage service`);
-  }
+  const expectedLive = registry.services.filter(service => service.homepage === true && service.productionVerified === true && service.status === 'live').length;
+  assert.equal(counts.live, expectedLive);
+  assert.ok(counts.live > 0);
+  assert.equal(counts.beta, 0);
+  assert.equal(counts.preparing, 0);
+  assert.equal(counts.planned, 0);
 });
