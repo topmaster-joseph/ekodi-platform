@@ -42,6 +42,6 @@ test('Architecture and common-service copy no longer presents legacy admin/auth/
   assert.doesNotMatch(map, /<strong>auth\.ekodi\.kr<\/strong>|<strong>my\.ekodi\.kr<\/strong>|<strong>admin\.ekodi\.kr<\/strong>/);
   assert.match(common, /domain:'ekodi\.kr\/admin'/);
   assert.doesNotMatch(common, /domain:'(?:admin|auth|my)\.ekodi\.kr'/);
-  assert.match(common, /내부 서비스 엔진/);
+  assert.match(common, /공통 엔진은 기준 모델·상태값·권한·보안·배포 계약을 중앙에서 관리/);
   assert.match(common, /AI Core는 내부 실행 엔진/);
 });
