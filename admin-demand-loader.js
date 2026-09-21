@@ -157,7 +157,7 @@
       if (nav) observer.observe(nav, { childList:true, subtree:true });
       const content = document.querySelector('.content');
       if (content) observer.observe(content, { childList:true, subtree:true });
-      const timer = window.setTimeout(() => finish(null, new Error('관리 메뉴 준비 시간이 초과되었습니다.')), timeout);
+      const timer = window.setTimeout(() => finish(null, new Error('menu timeout')), timeout);
     });
   }
 
@@ -259,7 +259,7 @@
           placeholder.disabled = false;
           placeholder.removeAttribute('aria-busy');
           placeholder.classList.remove('is-loading');
-          placeholder.title = '다시 눌러 로드';
+          placeholder.title = '다시 시도';
         }
       } finally {
         pending.delete(key);
