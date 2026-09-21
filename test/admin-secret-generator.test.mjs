@@ -51,15 +51,15 @@ test('local secret display lifetime remains bounded and clears on navigation awa
 });
 
 
-test('Security and Health stay in System while Marketing AI stays in Services', () => {
+test('Security, Health and Marketing AI follow the canonical people, status and service areas', () => {
   assert.match(loader, /security:\s*\{/);
   assert.match(loader, /styles:\s*\['admin-secret-generator\.css'\]/);
   assert.match(loader, /scripts:\s*\['admin-secret-generator\.js'\]/);
   assert.match(loader, /hashes:\s*\['#security'\]/);
   assert.match(menu, /#security:security/);
-  assert.match(menuRegistry, /\{ id: 'system'[\s\S]*defaultSection: 'health'/);
-  assert.match(menuRegistry, /\{ id: 'health', group: 'system'/);
-  assert.match(menuRegistry, /\{ id: 'security', group: 'system'/);
-  assert.match(menuRegistry, /\{ id: 'marketing-ai', group: 'services'/);
+  assert.match(menuRegistry, /\{ id: 'status'[^\n]*defaultSection: 'health'/);
+  assert.match(menuRegistry, /\{ id: 'health', group: 'status'/);
+  assert.match(menuRegistry, /\{ id: 'security', group: 'people'/);
+  assert.match(menuRegistry, /\{ id: 'marketing-ai', group: 'services'[^\n]*internal: true/);
   assert.match(build, /'admin-secret-generator\.css','admin-secret-generator\.js'/);
 });
