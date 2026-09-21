@@ -68,7 +68,8 @@ expect(!collectorWorkflow.includes('test -n "$SUPABASE_ACCESS_TOKEN"'),'missing 
 expect(collector.includes("reason:'credential_missing'"),'Supabase collector must represent unavailable management credentials as missing telemetry');
 expect(collector.includes('collectSupabaseOidc'),'collector must implement GitHub OIDC Supabase fallback');
 expect(collector.includes('supabase-edge-github-oidc'),'OIDC fallback snapshots must identify their measured source');
-expect(collector.includes('/database/query'),'Supabase database usage must come from an authorized read-only database query');
+expect(collector.includes('/database/query/read-only'),'Supabase database usage must use the dedicated Management API read-only query endpoint');
+expect(!/\/database\/query(?!\/read-only)/.test(collector),'collector must not fall back to the writable Management API query endpoint');
 expect(collector.includes('/actions/cache/usage'),'GitHub cache usage must come from the official repository usage endpoint');
 expect(collector.includes('/actions/artifacts?'),'GitHub artifact usage must come from the official repository artifact endpoint');
 expect(!/BEGIN TRANSACTION|SAVEPOINT|lines\.push\('COMMIT;'\)/.test(collector),'remote D1 collector must not emit explicit transaction statements');

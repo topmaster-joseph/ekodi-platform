@@ -1,5 +1,5 @@
 {
-  "version": 80,
+  "version": 81,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
@@ -581,7 +581,9 @@
           "cache-control: no-store",
           "x-ekodi-route: mall-nested-canonical-redirect"
         ],
-        "rollbackVerify": false
+        "rollbackVerify": false,
+        "candidateVerify": false,
+        "candidateVerifyReason": "legacy nested Mall admin redirect depends on the promoted run_worker_first routing table; verify the canonical 308 immediately after promotion"
       },
       {
         "url": "https://ekodi.kr/ekodimall/admin/",
@@ -614,7 +616,9 @@
           "cache-control: no-store",
           "x-ekodi-route: mall-nested-canonical-redirect"
         ],
-        "rollbackVerify": false
+        "rollbackVerify": false,
+        "candidateVerify": false,
+        "candidateVerifyReason": "legacy nested Mall admin redirect depends on the promoted run_worker_first routing table; verify the canonical 308 immediately after promotion"
       },
       {
         "url": "https://ekodi.kr/ekodimall/admin/channel-settings",
@@ -1650,6 +1654,25 @@
           "x-ekodi-route: local-region-admin",
           "x-ekodi-shell: v2",
           "cache-control: no-store"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/cheonggye/local-region-operations-admin.js",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "운영권 변경",
+          "register_operator",
+          "start_transfer",
+          "complete_transfer",
+          "/api/local-operations/cheonggye/actions"
+        ],
+        "headerExpect": [
+          "cache-control: no-store",
+          "x-content-type-options: nosniff"
         ],
         "rollbackVerify": false
       },

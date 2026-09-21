@@ -58,6 +58,10 @@ test('Cheonggye Pass public remains public while admin is scoped by auth',async(
   assert.match(adminHtml,/data-region-auth-pending="1"/);
   assert.match(adminHtml,/local-region-admin-auth\.js/);
   assert.match(adminHtml,/data-region-capability="tenant\.integration\.inspect"/);
+  assert.match(adminHtml,/href="\/cheonggye\/admin\/access"/);
+  assert.match(adminHtml,/외부업체·권한관리/);
+  assert.match(adminHtml,/data-region-capability="tenant\.access\.manage"/);
+  assert.match(adminHtml,/회원명부·재무·비밀키·권한관리·운영배포/);
 });
 
 test('regional client scripts are served as CSP-compatible external JavaScript',async()=>{

@@ -18,7 +18,7 @@ await Promise.all([
 ]);
 await cp(`${root}sites/ekodi-insurance/public`, `${output}insurance`, { recursive: true });
 await cp(`${root}sites/business-cooperative/public`, `${output}business-coop`, { recursive: true });
-await cp(`${root}sites/seonam-med/public`, `${output}seonam-med`, { recursive: true });
+await cp(`${root}sites/seonam-medi/public`, `${output}seonam-medi`, { recursive: true });
 await cp(`${root}config/capability-registry.json`, `${output}capability-registry.json`);
 
 const [adminDesignEngineBaseCss, adminConversationWorkbenchCss] = await Promise.all([
