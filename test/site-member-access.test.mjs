@@ -45,12 +45,12 @@ test('site access mutation accepts dynamic registered tenant slugs and enforces 
 test('workspace and store admin surfaces both expose the same user-access workflow',()=>{
   assert.match(workspace,/\['members','관리자 · 권한'\]/);
   assert.match(workspace,/async function membersAdmin\(\)/);
-  assert.match(workspace,/\/api\/customers\/directory\?tenant=/);
+  assert.match(workspace,/memberAccessApi\('\/directory\?tenant='/);
   assert.match(workspace,/if\(section==='members'\)return membersAdmin\(\)/);
   assert.match(store,/members:TENANT_ADMIN_CAPABILITIES\.access/);
   assert.match(store,/\['members','사용자 · 권한'\]/);
   assert.match(store,/async function memberAccessPanel\(\)/);
-  assert.match(store,/\/api\/customers\/directory\?tenant=/);
+  assert.match(store,/siteAccess\('\/directory\?tenant='/);
   assert.match(store,/overview\|site\|members\|chrome/);
 });
 
