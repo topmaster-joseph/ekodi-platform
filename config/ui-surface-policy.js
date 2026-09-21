@@ -1,6 +1,13 @@
 export const EKODI_UI_SURFACE_POLICY=Object.freeze({
-  version:1,
+  version:2,
   name:'EKODI UI Surface System',
+  constructionStandard:Object.freeze({
+    source:'config/design-engine.json',
+    inheritance:'mandatory',
+    dimensions:Object.freeze(['ease','locality','readability','originality','intuitiveness']),
+    modes:Object.freeze(['communication-first','personalization']),
+    completionGate:'material-missing-principle-blocks-completion',
+  }),
   principles:Object.freeze({
     oneCoreManySurfaces:true,
     sharedAccessibility:true,
@@ -11,6 +18,9 @@ export const EKODI_UI_SURFACE_POLICY=Object.freeze({
     adminAuthoritySeparated:true,
     tenantBrandPrimaryOutsidePlatform:true,
     serviceThemeCannotOverrideShellOwnership:true,
+    universalConstructionStandard:true,
+    communicationFirst:true,
+    personalizationWithinAuthority:true,
   }),
   surfaces:Object.freeze({
     'platform-public':Object.freeze({
