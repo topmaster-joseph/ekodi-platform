@@ -2,10 +2,10 @@ const API = 'https://api.cloudflare.com/client/v4';
 const ZONE_NAME = 'ekodi.kr';
 
 export const DESIRED_DISCOVERY_BOT_POLICY = Object.freeze({
-  ai_bots_protection: 'block',
+  ai_bots_protection: 'disabled',
   ai_search: 'disabled',
   ai_training: 'block',
-  ai_user: 'block',
+  ai_user: 'disabled',
   bot_preference_sync_enabled: false,
   is_robots_txt_managed: false,
 });
@@ -14,8 +14,8 @@ export function validateDesiredPolicy(policy = DESIRED_DISCOVERY_BOT_POLICY) {
   const errors = [];
   if (policy.ai_search !== 'disabled') errors.push('AI Search must remain allowed (ai_search=disabled means no Cloudflare blocking rule).');
   if (policy.ai_training !== 'block') errors.push('AI Training must be blocked.');
-  if (policy.ai_user !== 'block') errors.push('AI assistants/agents must be blocked by default.');
-  if (policy.ai_bots_protection !== 'block') errors.push('Legacy AI crawler protection must remain enabled.');
+  if (policy.ai_user !== 'disabled') errors.push('AI assistants/agents must remain allowed on public routes; robots.txt and application authorization enforce private boundaries.');
+  if (policy.ai_bots_protection !== 'disabled') errors.push('Legacy all-purpose AI crawler blocking must remain disabled so purpose-specific Search/User/Training controls are authoritative.');
   if (policy.bot_preference_sync_enabled !== false) errors.push('Bot Preference Sync must remain off because EKODI owns robots.txt generation.');
   if (policy.is_robots_txt_managed !== false) errors.push('Cloudflare managed robots.txt must remain off because EKODI owns robots.txt generation.');
   return errors;
