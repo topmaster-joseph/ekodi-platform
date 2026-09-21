@@ -1,6 +1,6 @@
 ﻿# Admin site rollout: password recovery interface
 # Tax release trigger: serialize Shared Site deployment for NTS business registry
-# Mall canonical release: publish ekodi.kr/ekodibiz/ekodimall disclosures and centered footer
+# Mall canonical release: publish ekodi.kr/ekodimall disclosures and centered footer
 # CGMA public domain remains externally DNS-managed until the approved cutover stage; ekodi.kr/cgma stays canonical inside EKODI.
 # Canonical domain contract: only ekodi.kr is a Shared Site custom domain; all EKODI user/admin surfaces use apex paths.
 name = "shy-thunder-39a4"
@@ -11,10 +11,6 @@ preview_urls = false
 
 [vars]
 ENVIRONMENT = "production"
-
-[triggers]
-# 23:00 UTC = 08:00 KST. Site-owned daily monitoring; no ChatGPT task.
-crons = ["0 23 * * *"]
 
 [[routes]]
 pattern = "ekodi.kr"
@@ -53,6 +49,31 @@ zone_name = "ekodi.kr"
 
 
 
+
+
+[triggers]
+# 23:00 UTC = 08:00 KST. Site-owned daily monitoring; no ChatGPT task.
+crons = ["0 23 * * *"]
+
+[[routes]]
+pattern = "ekodi.kr"
+custom_domain = true
+
+
+# Canonical Mail contact and send API must reach the Shared Site Worker before asset fallback.
+[[routes]]
+pattern = "ekodi.kr/mail*"
+zone_name = "ekodi.kr"
+
+# Canonical private EKODIBIZ trade workspace must outrank public/static trade assets.
+[[routes]]
+pattern = "ekodi.kr/ekodibiz/trade*"
+zone_name = "ekodi.kr"
+
+# Canonical Church admin must outrank the public /ekodichurch* path gateway.
+[[routes]]
+pattern = "ekodi.kr/ekodichurch/admin*"
+zone_name = "ekodi.kr"
 
 [[services]]
 binding = "FINANCE"
