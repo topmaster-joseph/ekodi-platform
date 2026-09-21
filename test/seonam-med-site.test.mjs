@@ -1,0 +1,3 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {readFile} from 'node:fs/promises';
+const root=new URL('../sites/seonam-med/public/',import.meta.url);
+test('seonam-med civic channel keeps source attribution and privacy boundaries',async()=>{const [html,data]=await Promise.all([readFile(new URL('index.html',root),'utf8'),readFile(new URL('data.json',root),'utf8')]);assert.match(html,/사실은 출처와 함께/);assert.match(html,/후원·회계 공개/);assert.match(html,/개인정보/);const parsed=JSON.parse(data);assert.ok(parsed.timeline.length>=10);assert.ok(parsed.sources.every(s=>s.publisher&&s.url));assert.equal(parsed.finance.raised,null);});
