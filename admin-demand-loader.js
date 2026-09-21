@@ -254,7 +254,7 @@
         mark(`ekodi-feature-${key}-ready`);
         scheduleSecondary(key, feature);
       } catch (error) {
-        console.warn('[EKODI Admin] demand',key,error);
+        console.warn('demand',key,error);
         if (placeholder?.isConnected) {
           placeholder.disabled = false;
           placeholder.removeAttribute('aria-busy');
