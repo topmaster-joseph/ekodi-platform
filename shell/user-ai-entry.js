@@ -13,7 +13,9 @@ function context(){
 }
 function eligible(){
   const {service,surface}=context();
-  if(blocked.has(surface)||location.pathname.startsWith('/ai'))return false;
+  const path=location.pathname.replace(/\/+$/,'')||'/';
+  const adminPath=path==='/admin'||path.includes('/admin/')||path.endsWith('/admin');
+  if(blocked.has(surface)||adminPath||path==='/ai'||path.startsWith('/ai/'))return false;
   return Boolean(service)&&['public','workspace'].includes(surface);
 }
 function style(){
