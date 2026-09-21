@@ -68,6 +68,19 @@ Public experience rotation remains presentation-only and provider-independent.
 - Rotation may publish accent, companion, motif, rail, or CSS experience tokens, but it must not reintroduce retired floating selectors or global audio controls.
 - Authenticated workspace/admin/form/document/data surfaces stay stable.
 
+## Universal site experience principles
+
+Every user-facing EKODI site and subservice inherits five construction principles from `config/design-engine.json`: **용이성, 지역성·현장성, 가독성, 독창성, 직관성**.
+
+They are not a request for one universal skin. The shared shell supplies accessibility, account/language conventions and platform relationship; the active site must still lead with its own purpose, service or regional identity.
+
+Two behavior layers are also mandatory:
+
+- **소통형**: the user should have an obvious human-language path to ask, participate, propose, contact or receive contextual help when the service owns that interaction. Help and AI are user-initiated and must not float over or cover content.
+- **맞춤형**: personalization is progressive and consent-based. The anonymous baseline remains fully usable; presentation may adapt to signed-in person context, active service/workspace, explicit role, language, user-selected interests and recent in-service activity. It must not infer sensitive traits, change authorization, or become irreversible.
+
+For mobile user surfaces, normal reading copy should remain at least 16px, primary touch targets at least 44px, and ordinary text should target WCAG AA contrast. Navigation labels describe user goals rather than internal architecture. Local and organizational sites should use real local/service language before generic platform terminology.
+
 ## Future-site onboarding
 
 A new EKODI user-facing site must:
@@ -79,6 +92,7 @@ A new EKODI user-facing site must:
 5. Declare the host surface explicitly.
 6. Keep workspace selection and ecosystem discovery in My EKODI rather than adding global floating controls.
 7. Never create an independent global account/profile/workspace source of truth.
+8. Conform to the universal site experience principles in `config/design-engine.json`, including communication-first, consent-based personalization and non-overlapping assistance.
 
 ## Browser context contract
 
