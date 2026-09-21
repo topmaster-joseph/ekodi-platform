@@ -1,12 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import { INVEST_ASSET_SITES, investSiteForPath, routeInvestSite } from '../invest-site-system.js';
 import { INVEST_AUTOMATION_LOOP } from '../invest-automation-runtime.js';
 
 test('Invest exposes one canonical hub with specialized asset subpaths',()=>{
   const paths=INVEST_ASSET_SITES.map(site=>site.path);
   assert.deepEqual(paths,[
-    '/invest','/invest/personal','/invest/stock','/invest/bond','/invest/real-estate',
+    '/invest','/invest/personal','/invest/opportunities','/invest/projects','/invest/diligence',
+    '/invest/matching','/invest/aftercare','/invest/stock','/invest/bond','/invest/real-estate',
     '/invest/fund','/invest/alternative','/invest/portfolio','/invest/automation'
   ]);
   assert.equal(investSiteForPath('/invest/stock')?.id,'stock');
@@ -26,6 +28,32 @@ test('personal investment control is private-by-default and uses shared Invest A
   assert.match(js,/\/workspace-api\/v1\/invest/);
   assert.match(js,/\/automation\/halt/);
   assert.match(js,/\/automation\/resume/);
+});
+
+test('project investment lifecycle is evidence-first and connection-only',async()=>{
+  for(const [path,marker] of [
+    ['/invest/opportunities','Opportunity Discovery'],
+    ['/invest/projects','Project Investment'],
+    ['/invest/diligence','Evidence'],
+    ['/invest/matching','Investor Matching'],
+    ['/invest/aftercare','Post-Investment']
+  ]){
+    const response=routeInvestSite(new Request('https://ekodi.kr'+path));
+    assert.equal(response.status,200);
+    const html=await response.text();
+    assert.ok(html.includes(marker));
+    assert.match(html,/Analysis & Connection Only/);
+    assert.match(html,/투자금 수취·수탁·증권 중개·투자일임·수익보장/);
+  }
+});
+
+test('Invest registry exposes only the canonical public path',async()=>{
+  const raw=await readFile(new URL('../config/ecosystem-services.json',import.meta.url),'utf8');
+  const registry=JSON.parse(raw);
+  const invest=registry.services.find(service=>service.id==='invest');
+  assert.equal(invest.url,'https://ekodi.kr/invest');
+  assert.equal(invest.label,'ekodi.kr/invest');
+  assert.match(invest.descriptionKo,/Evidence/);
 });
 
 test('autonomous loop is explicit and risk gate precedes execution',()=>{
