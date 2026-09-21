@@ -41,7 +41,7 @@ jobs:
           verify_html() { url="$1"; needle="$2"; code=$(curl -L -sS -o /tmp/verify-body -w '%{http_code}' --connect-timeout 5 --max-time 15 "$url" || true); echo "$url -> $code"; [[ "$code" =~ ^[23] ]] && grep -Fq "$needle" /tmp/verify-body; }
           for attempt in $(seq 1 12); do
             api=$(curl -fsS --connect-timeout 5 --max-time 12 'https://ekodi.kr/api/health' || true)
-            finance=$(curl -fsS --connect-timeout 5 --max-time 12 'https://finance-api.ekodi.kr/health' || true)
+            finance=$(curl -fsS --connect-timeout 5 --max-time 12 'https://ekodi.kr/api/finance/health' || true)
             community=$(curl -fsS --connect-timeout 5 --max-time 12 'https://community.ekodi.kr/health' || true)
             social=$(curl -fsS --connect-timeout 5 --max-time 12 'https://social.ekodi.kr/health' || true)
             if verify_html 'https://ekodi.kr/' 'CONNECTED ECOSYSTEM' \
