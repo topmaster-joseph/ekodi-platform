@@ -1,7 +1,7 @@
 name = "ekodi-storage-control"
 main = "storage-worker.js"
 compatibility_date = "2026-08-25"
-workers_dev = true
+workers_dev = false
 preview_urls = false
 
 [[routes]]
