@@ -1,22 +1,27 @@
 (() => {
   const API = 'https://ekodi.kr';
   const ROLE_OPTIONS = [
+    ['owner', '사이트 책임관리자'],
+    ['admin', '사이트 관리자'],
+    ['manager', '운영책임자'],
+    ['marketer', '마케팅담당자'],
+    ['accountant', '회계담당자'],
+    ['staff', '실무담당자'],
+    ['member', '회원'],
+    ['viewer', '조회·검수자'],
     ['store_owner', '점주/책임자'],
-    ['marketing_manager', '마케팅담당자'],
+    ['marketing_manager', '마케팅담당자 · 점포'],
     ['hq_manager', '본사담당자'],
-    ['accounting_manager', '회계담당자'],
+    ['accounting_manager', '회계담당자 · 점포'],
+    ['client_admin', '점주/책임자 · 기존'],
+    ['client_editor', '마케팅담당자 · 기존'],
+    ['client_viewer', '조회·검수자 · 기존'],
+    ['senior_pastor', '담임목사/책임관리자'],
+    ['pastor', '목회자'],
+    ['care_staff', '돌봄담당자'],
     ['external_developer', '외부개발자'],
   ];
-  const ROLE_LABELS = {
-    store_owner: '점주/책임자',
-    marketing_manager: '마케팅담당자',
-    hq_manager: '본사담당자',
-    accounting_manager: '회계담당자',
-    external_developer: '외부개발자',
-    client_admin: '점주/책임자 · 기존',
-    client_editor: '마케팅담당자 · 기존',
-    client_viewer: '조회·검수자 · 기존',
-  };
+  const ROLE_LABELS = Object.fromEntries(ROLE_OPTIONS);
   const TAB_LABELS = {
     members: '전체 회원',
     sites: '사이트별',
@@ -120,7 +125,7 @@
     const head = document.createElement('div');
     head.className = 'section-head client-access-head';
     const heading = document.createElement('div');
-    heading.append(text('p', 'CLIENTS · IDENTITY & ACCESS', 'kicker'), text('h2', '사용자·외부협력자 권한'));
+    heading.append(text('p', 'CLIENTS · IDENTITY & ACCESS', 'kicker'), text('h2', '사용자 · 관리자 · 권한'));
     heading.append(text('p', 'Google 계정은 하나로 식별하고, 사이트 범위·역할·만료일을 분리해 관리합니다.', 'operations-copy'));
     const refresh = button('↻ 새로고침', 'secondary');
     refresh.id = 'refreshClients';
@@ -183,7 +188,7 @@
       });
       document.querySelectorAll('.sidebar .nav[data-section]').forEach(item => item.classList.toggle('active', item.dataset.section === 'clients'));
       const pageTitle = document.querySelector('#pageTitle');
-      if (pageTitle) pageTitle.textContent = 'Clients · 사용자·외부협력자 권한';
+      if (pageTitle) pageTitle.textContent = '사용자 · 사이트 권한';
       document.querySelector('.sidebar')?.classList.remove('open');
       loadDirectory();
     };
@@ -356,6 +361,15 @@
   function createPreRegisterForm(tenant) {
     const form = document.createElement('form');
     form.className = 'client-invite-form';
+    const nameLabel = text('label', '이름');
+    const displayName = document.createElement('input');
+    displayName.type = 'text';
+    displayName.name = 'displayName';
+    displayName.maxLength = 120;
+    displayName.autocomplete = 'name';
+    displayName.placeholder = '이름';
+    nameLabel.append(displayName);
+
     const emailLabel = text('label', 'Google 이메일');
     const email = document.createElement('input');
     email.type = 'email';
@@ -405,7 +419,7 @@
     const submit = button('Google 계정 등록', 'primary');
     submit.type = 'submit';
     const status = text('p', '', 'client-invite-result');
-    form.append(emailLabel, roleLabel, developerFields, submit, status);
+    form.append(nameLabel, emailLabel, roleLabel, developerFields, submit, status);
 
     form.addEventListener('submit', async event => {
       event.preventDefault();
@@ -420,6 +434,7 @@
           method: 'POST',
           body: JSON.stringify({
             email: email.value.trim(),
+            displayName: displayName.value.trim(),
             role: role.value,
             githubUsername: isDeveloper ? github.value.trim() : '',
             expiresAt,
