@@ -1,5 +1,5 @@
 {
-  "version": 79,
+  "version": 80,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
@@ -1621,7 +1621,9 @@
           "서비스별 운영주체",
           "청계면상인회",
           "/cgma/admin",
-          "local-region-admin-auth.js"
+          "local-region-admin-auth.js",
+          "운영권 이력",
+          "local-region-operations-admin.js"
         ],
         "headerExpect": [
           "x-ekodi-route: local-region-admin",
