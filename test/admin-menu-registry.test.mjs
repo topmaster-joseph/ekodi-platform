@@ -35,8 +35,8 @@ test('every public admin subservice belongs to one canonical area', () => {
     assert.ok(item.labels?.en, `${item.id} missing English label`);
     assert.ok(WORK_AREAS.includes(item.group), `${item.id} is outside workbench navigation`);
   }
-  assert.equal(getAdminMenuLabel('admins', 'ko'), '전체 사용자·관리자');
-  assert.equal(getAdminMenuLabel('admins', 'en'), 'Users & Administrators');
+  assert.equal(getAdminMenuLabel('admins', 'ko'), '관리자설정');
+  assert.equal(getAdminMenuLabel('admins', 'en'), 'Administrator Settings');
   assert.equal(getAdminMenuLabel('engine-common', 'ko'), '공통 엔진');
   assert.equal(getAdminMenuGroupForSection('engine-common'), 'services');
   assert.ok(adminMenuOrder().includes('security'));

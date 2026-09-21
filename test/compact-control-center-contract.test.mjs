@@ -14,7 +14,7 @@ test('Admin navigation is grouped into seven canonical EKODI areas', () => {
     assert.match(registry, new RegExp(`id: '${id}'`));
   }
   assert.match(registry, /id: 'sites-all'[^\n]*en: 'All Sites'/);
-  assert.match(registry, /id: 'admins'[^\n]*group: 'people'[^\n]*en: 'Users & Administrators'/);
+  assert.match(registry, /id: 'admins'[^\n]*group: 'people'[^\n]*en: 'Administrator Settings'/);
 });
 
 test('internal technical sections stay hidden from the human menu and route through AI Ops', () => {
