@@ -163,8 +163,14 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          curl -fsS --retry 3 --retry-delay 2 --connect-timeout 5 --max-time 20 'https://ekodi.kr/ekodibiz/ekodimall/admin/channels' -o /tmp/mall-channels.html
-          grep -Fq 'workspace-admin.js' /tmp/mall-channels.html
+          channel_admin_url='https://ekodi.kr/ekodibiz/ekodimall/admin/channel-settings'
+          channel_admin_code=$(curl -sS -D /tmp/mall-channels.headers -o /tmp/mall-channels.html -w '%{http_code}' --retry 3 --retry-delay 2 --connect-timeout 5 --max-time 20 "$channel_admin_url" || true)
+          if [ "$channel_admin_code" != "200" ]; then
+            echo "Canonical Mall channel admin must return 200: $channel_admin_url -> HTTP $channel_admin_code"
+            cat /tmp/mall-channels.headers || true
+            exit 1
+          fi
+          grep -Fq 'workspace-admin.js' /tmp/mall-channels.html || { echo 'Canonical Mall channel admin is missing workspace-admin.js'; exit 1; }
           asset=$(node -e "const s=require('fs').readFileSync('/tmp/mall-channels.html','utf8');const m=s.match(/<script src=\"([^\"]*workspace-admin\.js[^\"]*)\"/);if(!m)process.exit(1);process.stdout.write(m[1]);")
           curl -fsS --retry 3 --retry-delay 2 --connect-timeout 5 --max-time 20 "https://ekodi.kr${asset}" -o /tmp/workspace-admin.js
           grep -Fq 'channelAccountForm' /tmp/workspace-admin.js

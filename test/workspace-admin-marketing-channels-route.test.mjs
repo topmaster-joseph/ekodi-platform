@@ -20,6 +20,14 @@ test('canonical Mall and child-service publishing routes use site-owned admins',
   assert.match(source,/visibleChannelIds/);
 });
 
+test('Mall production verifier uses the canonical channel-settings route',async()=>{
+  const workflow=await read('.github/workflows/verify-ekodi-mall-production.yml');
+  assert.match(workflow,/ekodibiz\/ekodimall\/admin\/channel-settings/);
+  assert.doesNotMatch(workflow,/ekodibiz\/ekodimall\/admin\/channels['"]/);
+  assert.match(workflow,/Canonical Mall channel admin must return 200/);
+  assert.match(workflow,/Canonical Mall channel admin is missing workspace-admin\.js/);
+});
+
 test('channel admin is login-first and authenticates pre-registered account rows',async()=>{
   const source=await read('workspace-admin-page.js');
   for(const marker of ['channelAccountForm','data-account-auth','registryConnectionId','EXTERNAL_ACCOUNT_CONTROL']) assert.ok(source.includes(marker),marker);
