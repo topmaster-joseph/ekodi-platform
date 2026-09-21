@@ -1,8 +1,15 @@
 import authWorker, { isAllowedOrigin } from './auth-worker.js';
 import { stringifyCapabilityList, validateAccessGrantInput, accessGrantExpired } from './access-governance.js';
+import { accessGrantManagementDecision, resolveTenantAccessAuthority } from './tenant-access-authority.js';
 
 const TENANTS = Object.freeze([
+  { slug: 'ekodibiz', name: '에코디비즈', domain: 'ekodi.kr/ekodibiz', realm: 'ekodibiz-client' },
+  { slug: 'ekodimall', name: '에코디몰', domain: 'ekodi.kr/ekodibiz/ekodimall', realm: 'ekodimall-client' },
+  { slug: 'ekodibiz-trade', name: '에코디비즈 무역', domain: 'ekodi.kr/ekodibiz/trade', realm: 'ekodibiz-trade-client' },
+  { slug: 'ekodichurch', name: '에코디교회', domain: 'ekodi.kr/ekodichurch', realm: 'ekodichurch-client' },
+  { slug: 'ekodimission', name: '에코디선교회', domain: 'ekodi.kr/ekodimission', realm: 'ekodimission-client' },
   { slug: 'cgma', name: '청계면상인회', domain: 'cgma.ekodi.kr', realm: 'cgma-client' },
+  { slug: 'cmpmyi', name: '통합 매장 운영', domain: 'ekodi.kr/cmpmyi', realm: 'cmpmyi-client' },
   { slug: 'jadam', name: '자담치킨 목포대점', domain: 'jadam.ekodi.kr', realm: 'jadam-client' },
   { slug: 'pizzamaru', name: '피자마루 목포대점', domain: 'pizzamaru.ekodi.kr', realm: 'pizzamaru-client' },
   { slug: 'yogurt', name: '요거트퍼플 목포대점', domain: 'yogurt.ekodi.kr', realm: 'yogurt-client' },
@@ -10,14 +17,12 @@ const TENANTS = Object.freeze([
 
 const TENANT_REALMS = Object.freeze(Object.fromEntries(TENANTS.map(item => [item.slug, item.realm])));
 const ROLE_LABELS = Object.freeze({
-  store_owner: '점주/책임자',
-  marketing_manager: '마케팅담당자',
-  hq_manager: '본사담당자',
-  accounting_manager: '회계담당자',
-  external_developer: '외부개발자',
-  client_admin: '점주/책임자 · 기존',
-  client_editor: '마케팅담당자 · 기존',
-  client_viewer: '조회·검수자 · 기존',
+  owner: '사이트 책임관리자', admin: '사이트 관리자', manager: '운영책임자',
+  marketer: '마케팅담당자', accountant: '회계담당자', staff: '실무담당자', member: '회원', viewer: '조회·검수자',
+  tenant_admin: '사이트 책임관리자 · 호환', workspace_admin: '사이트 책임관리자 · 호환',
+  store_owner: '점주/책임자', marketing_manager: '마케팅담당자', hq_manager: '본사담당자',
+  accounting_manager: '회계담당자', senior_pastor: '담임목사/책임관리자', pastor: '목회자', care_staff: '돌봄담당자',
+  external_developer: '외부개발자', client_admin: '점주/책임자 · 기존', client_editor: '마케팅담당자 · 기존', client_viewer: '조회·검수자 · 기존',
 });
 const ROLE_SET = new Set(Object.keys(ROLE_LABELS));
 
@@ -27,7 +32,7 @@ function normalizeEmail(value) {
 
 function normalizeTenant(value) {
   const tenant = String(value || '').trim().toLowerCase();
-  return Object.hasOwn(TENANT_REALMS, tenant) ? tenant : '';
+  return /^[a-z0-9][a-z0-9-]{0,79}$/.test(tenant) ? tenant : '';
 }
 
 function normalizeRole(value) {
@@ -185,10 +190,11 @@ function publicAccessRow(row) {
 }
 
 async function preregister(request, env, slug) {
-  const session = await adminSession(request, env);
-  if (!session) return json({ error: 'EKODI 관리자 인증이 필요합니다.' }, 401, request, env);
   const tenant = await tenantBySlug(env.DB, slug);
-  if (!tenant || tenant.status !== 'active') return json({ error: '등록된 고객사가 아닙니다.' }, 404, request, env);
+  if (!tenant || tenant.status !== 'active') return json({ error: '등록된 사이트가 아닙니다.' }, 404, request, env);
+  const authority = await resolveTenantAccessAuthority(request, env, { tenantSlug: slug });
+  if (!authority.ok) return json({ error: '이 사이트의 사용자·권한 관리 권한이 없습니다.', code: authority.code }, authority.status || 403, request, env);
+  const session = { email: authority.email };
 
   const body = await readJson(request);
   const email = normalizeEmail(body?.email);
@@ -216,6 +222,8 @@ async function preregister(request, env, slug) {
   const existing = await env.DB.prepare(`SELECT role, enabled, last_verified_at, principal_type, github_username, capabilities_json,
       denied_capabilities_json, expires_at
     FROM customer_access_grants WHERE tenant_id = ? AND email = ?`).bind(tenant.id, email).first();
+  const decision = accessGrantManagementDecision(authority, { email, role: existing?.role || '' }, { role });
+  if (!decision.ok) return json({ error: '자기 자신 또는 책임관리자의 보호 권한은 사이트 관리자가 변경할 수 없습니다.', code: decision.code }, 403, request, env);
   const createdBy = await adminId(env.DB, session);
   const now = new Date().toISOString();
   const after = {
@@ -259,22 +267,25 @@ async function preregister(request, env, slug) {
       expiresAt: grantInput.expiresAt || '',
       status: existing?.last_verified_at ? 'active' : 'pre_registered',
       tenant: tenant.slug,
-      loginUrl: `https://auth.ekodi.kr/?site=${TENANT_REALMS[slug]}`,
+      loginUrl: `https://auth.ekodi.kr/?site=${TENANT_REALMS[slug] || `${slug}-client`}`,
     },
   }, existing ? 200 : 201, request, env);
 }
 
 async function revokeAccess(request, env, slug) {
-  const session = await adminSession(request, env);
-  if (!session) return json({ error: 'EKODI 관리자 인증이 필요합니다.' }, 401, request, env);
   const tenant = await tenantBySlug(env.DB, slug);
-  if (!tenant) return json({ error: '등록된 고객사가 아닙니다.' }, 404, request, env);
+  if (!tenant) return json({ error: '등록된 사이트가 아닙니다.' }, 404, request, env);
+  const authority = await resolveTenantAccessAuthority(request, env, { tenantSlug: slug });
+  if (!authority.ok) return json({ error: '이 사이트의 사용자·권한 관리 권한이 없습니다.', code: authority.code }, authority.status || 403, request, env);
+  const session = { email: authority.email };
   const body = await readJson(request);
   const email = normalizeEmail(body?.email);
   if (!validEmail(email)) return json({ error: '접근권한을 회수할 이메일을 확인해 주세요.' }, 400, request, env);
   const existing = await env.DB.prepare(`SELECT role, enabled, last_verified_at, principal_type, github_username, capabilities_json,
       denied_capabilities_json, expires_at FROM customer_access_grants WHERE tenant_id = ? AND email = ?`).bind(tenant.id, email).first();
   if (!existing) return json({ error: '등록된 접근권한을 찾을 수 없습니다.' }, 404, request, env);
+  const decision = accessGrantManagementDecision(authority, { email, role: existing.role }, { role: existing.role });
+  if (!decision.ok) return json({ error: '자기 자신 또는 책임관리자의 권한은 사이트 관리자가 중지할 수 없습니다.', code: decision.code }, 403, request, env);
   const updatedBy = await adminId(env.DB, session);
   const now = new Date().toISOString();
   await env.DB.prepare(`UPDATE customer_access_grants SET enabled = 0, updated_at = ?, updated_by = ? WHERE tenant_id = ? AND email = ?`)
@@ -285,10 +296,10 @@ async function revokeAccess(request, env, slug) {
 }
 
 async function listAccessUsers(request, env, slug) {
-  const session = await adminSession(request, env);
-  if (!session) return json({ error: 'EKODI 관리자 인증이 필요합니다.' }, 401, request, env);
   const tenant = await tenantBySlug(env.DB, slug);
-  if (!tenant) return json({ error: '등록된 고객사가 아닙니다.' }, 404, request, env);
+  if (!tenant) return json({ error: '등록된 사이트가 아닙니다.' }, 404, request, env);
+  const authority = await resolveTenantAccessAuthority(request, env, { tenantSlug: slug });
+  if (!authority.ok) return json({ error: '이 사이트의 사용자·권한을 조회할 권한이 없습니다.', code: authority.code }, authority.status || 403, request, env);
 
   const rows = await env.DB.prepare(`SELECT
       a.email, a.role, a.enabled, a.created_at, a.last_verified_at, a.principal_type, a.github_username, a.expires_at,
