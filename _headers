@@ -50,3 +50,15 @@
   Cache-Control: no-store
   X-Robots-Tag: noindex, nofollow, noarchive
   Cross-Origin-Opener-Policy: same-origin-allow-popups
+
+/seonam-medi
+  ! Content-Security-Policy
+  Content-Security-Policy: default-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; img-src 'self' data: https:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'
+  ! Cache-Control
+  Cache-Control: no-store
+  X-Robots-Tag: index, follow
+
+/seonam-medi/*
+  ! Content-Security-Policy
+  Content-Security-Policy: default-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; img-src 'self' data: https:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'
+  X-Robots-Tag: index, follow
