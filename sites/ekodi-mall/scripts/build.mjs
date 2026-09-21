@@ -32,24 +32,27 @@ const saleTypeLabels = {
   curation: '큐레이션 준비'
 };
 
-const [site, productsRaw, pages, storesRaw, regionsConfig, indexTemplate, productTemplate, pageTemplate, storeTemplate, sellerTemplate, checkoutTemplate] = await Promise.all([
+const [site, productsRaw, pages, storesRaw, regionsConfig, affiliateHubsRaw, indexTemplate, productTemplate, pageTemplate, storeTemplate, sellerTemplate, checkoutTemplate, affiliateHubTemplate] = await Promise.all([
   readJson('content/site.json'),
   readJson('content/products.json'),
   readJson('content/pages.json'),
   readJson('content/stores.json'),
   readJson('content/regions.json'),
+  readJson('content/affiliate-hubs.json'),
   read('src/index.template.html'),
   read('src/product.template.html'),
   read('src/page.template.html'),
   read('src/store.template.html'),
   read('src/seller.template.html'),
-  read('src/checkout.template.html')
+  read('src/checkout.template.html'),
+  read('src/affiliate-hub.template.html')
 ]);
 
 const stores = storesRaw.filter((store) => store.published);
 const storeMap = new Map(stores.map((store) => [store.id, store]));
 const publishedStoreIds = new Set(stores.map((store) => store.id));
 const products = productsRaw.filter((product) => product.published && publishedStoreIds.has(product.storeId));
+const affiliateHubs = affiliateHubsRaw.filter((hub) => hub.published);
 const baseUrl = site.seo.baseUrl.replace(/\/$/, '');
 const basketHref = site.platform?.basketHref || '/checkout/';
 const regions = Array.isArray(regionsConfig?.regions) ? regionsConfig.regions : [];
@@ -277,6 +280,22 @@ const checkoutHtml = fill(checkoutTemplate, {
 });
 await write('checkout/index.html', checkoutHtml);
 
+for (const hub of affiliateHubs) {
+  const pageUrl = `${baseUrl}/${hub.id}/`;
+  const html = fill(affiliateHubTemplate, {
+    NAME: esc(hub.name),
+    EYEBROW: esc(hub.eyebrow),
+    TITLE: esc(hub.title),
+    DESCRIPTION: esc(hub.description),
+    PROMPT: esc(hub.prompt),
+    PROVIDER_KEYS: esc((hub.providerKeys || []).join(',')),
+    DISCLOSURE: esc(hub.disclosure),
+    PAGE_URL: esc(pageUrl),
+    NOTICE: esc(site.notice)
+  });
+  await write(`${hub.id}/index.html`, html);
+}
+
 for (const policy of pages.policies || []) {
   const pageUrl = `${baseUrl}/pages/${policy.slug}/`;
   const body = policy.body.map((paragraph) => `<div class="body-block"><p>${esc(paragraph)}</p></div>`).join('');
@@ -296,7 +315,8 @@ const urls = [
   `${baseUrl}/`,
   ...stores.map((store) => `${baseUrl}/stores/${store.slug}/`),
   ...products.map((product) => `${baseUrl}/products/${product.slug}/`),
-  ...(pages.policies || []).map((policy) => `${baseUrl}/pages/${policy.slug}/`)
+  ...(pages.policies || []).map((policy) => `${baseUrl}/pages/${policy.slug}/`),
+  ...affiliateHubs.map((hub) => `${baseUrl}/${hub.id}/`)
 ];
 const sitemap = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.map((url) => `  <url><loc>${esc(url)}</loc></url>`).join('\n')}\n</urlset>\n`;
 await write('sitemap.xml', sitemap);
@@ -306,6 +326,7 @@ await write('build-meta.json', JSON.stringify({
   stores: stores.length,
   products: products.length,
   policies: (pages.policies || []).length,
+  affiliateHubs: affiliateHubs.length,
   platformMode: site.platform?.mode || 'unknown',
   inquiryBasket: Boolean(site.commerce?.inquiryBasketEnabled),
   paymentsEnabled: Boolean(site.commerce?.paymentsEnabled),

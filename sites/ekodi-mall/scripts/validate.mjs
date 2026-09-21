@@ -4,12 +4,13 @@ import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const load = async (name) => JSON.parse(await readFile(path.join(root, 'content', name), 'utf8'));
-const [site, products, pages, stores, regionsConfig] = await Promise.all([
+const [site, products, pages, stores, regionsConfig, affiliateHubs] = await Promise.all([
   load('site.json'),
   load('products.json'),
   load('pages.json'),
   load('stores.json'),
-  load('regions.json')
+  load('regions.json'),
+  load('affiliate-hubs.json')
 ]);
 
 const wrangler = await readFile(path.join(root, 'api', 'wrangler.toml'), 'utf8');
@@ -45,6 +46,17 @@ validUrl(site?.links?.inquiry, 'site.links.inquiry');
 validUrl(site?.links?.paymentGateway, 'site.links.paymentGateway');
 internalPath(site?.platform?.sellerStudioHref, 'site.platform.sellerStudioHref');
 internalPath(site?.platform?.basketHref, 'site.platform.basketHref');
+
+const affiliateHubIds = new Set();
+for (const [index, hub] of affiliateHubs.entries()) {
+  const label = `affiliateHubs[${index}]`;
+  required(hub.id, `${label}.id`); required(hub.name, `${label}.name`); required(hub.disclosure, `${label}.disclosure`);
+  if (!/^[a-z0-9-]+$/.test(hub.id || '')) errors.push(`${label}.id must use lowercase letters, numbers, and hyphens`);
+  if (affiliateHubIds.has(hub.id)) errors.push(`${label}.id duplicates ${hub.id}`);
+  affiliateHubIds.add(hub.id);
+  if (!Array.isArray(hub.providerKeys) || hub.providerKeys.length === 0) errors.push(`${label}.providerKeys must contain at least one provider key`);
+  if (typeof hub.published !== 'boolean') errors.push(`${label}.published must be boolean`);
+}
 
 if (!Array.isArray(site?.platform?.modules) || site.platform.modules.length < 3) errors.push('site.platform.modules must define platform modules');
 if (site?.commerce?.inquiryBasketEnabled) {
