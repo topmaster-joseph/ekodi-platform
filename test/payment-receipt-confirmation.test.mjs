@@ -55,11 +55,13 @@ test('central and tenant admin surfaces expose separate payment and receipt work
   const api=read('api-worker.js');
   const build=read('scripts/build.mjs');
   const sidebar=read('admin-sidebar.js');
+  const routes=read('admin-canonical-routes.js');
   const script=await (await workspaceAdminScript()).text();
   assert.match(registry,/id: 'confirmations'.*지급·수령 확인/);
   assert.match(loader,/confirmation-admin\.css/);
   assert.match(loader,/confirmation-admin\.js/);
   assert.match(sidebar,/services: \['common-services', 'confirmations'/);
+  assert.match(routes,/confirmations:'services'/);
   assert.match(api,/handleConfirmationPublic/);
   assert.match(api,/handleWorkspaceConfirmations/);
   assert.match(api,/handleAdminConfirmations/);
