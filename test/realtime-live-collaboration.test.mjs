@@ -80,7 +80,7 @@ test('internal recording remains default while optional external channel selecti
   assert.match(control,/external_destination_not_ready/);
   assert.match(live,/destinationIds/);
   assert.match(live,/recording:true/);
-  assert.match(page,/EKODI 내부 방송 · 자동 저장/);
+  assert.match(page,/EKODI · 자동 저장/);
   assert.match(page,/외부 동시방송/);
 });
 
