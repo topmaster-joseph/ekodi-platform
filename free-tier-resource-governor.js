@@ -15,6 +15,7 @@ export const FREE_TIER_RESOURCE_CATALOG=Object.freeze({
       {metric:'kv_reads_daily',label:'KV reads / day',freeLimit:100000,unit:'operations',scope:'consumption'},
       {metric:'kv_writes_daily',label:'KV writes / day',freeLimit:1000,unit:'operations',scope:'consumption'},
       {metric:'kv_storage_bytes',label:'KV storage',freeLimit:GB,unit:'bytes',scope:'consumption'},
+      {metric:'r2_standard_storage_bytes_current',label:'R2 Standard current storage observation',freeLimit:null,unit:'bytes',scope:'observation'},
       {metric:'r2_storage_bytes_month',label:'R2 storage / month',freeLimit:10*GB,unit:'byte-month',scope:'consumption'},
       {metric:'r2_class_a_month',label:'R2 Class A / month',freeLimit:1000000,unit:'operations',scope:'consumption'},
       {metric:'r2_class_b_month',label:'R2 Class B / month',freeLimit:10000000,unit:'operations',scope:'consumption'},
