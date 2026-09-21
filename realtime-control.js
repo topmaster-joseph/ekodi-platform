@@ -594,6 +594,73 @@ async function collaborationRoute(request,env,url,input){
   return null;
 }
 
+async function managementCameraPairRoute(request,env,url,input){
+  const roomCollection=url.pathname.match(/^\/api\/realtime\/rooms\/([^/]+)\/management-cameras$/);
+  if(roomCollection){
+    const room=await roomById(env,decodeURIComponent(roomCollection[1]));if(!room)return json(request,env,{ok:false,error:'room_not_found'},404);
+    const auth=await ownerAllowed(request,env,room);if(!auth.allowed)return json(request,env,{ok:false,error:'room_owner_permission_required'},403);
+    if(request.method==='GET'){
+      const rows=await env.DB.prepare('SELECT * FROM realtime_management_camera_pairs WHERE room_id=? ORDER BY created_at DESC LIMIT 24').bind(room.id).all();
+      const pairs=[];for(const row of rows.results||[])pairs.push(safeManagementCameraPair(await ensureManagementCameraPairActive(env,row)));
+      return json(request,env,{ok:true,pairs});
+    }
+    if(request.method==='POST'){
+      if(!['created','starting','live'].includes(room.status))return json(request,env,{ok:false,error:'room_not_joinable'},409);
+      const code=crypto.randomUUID().replaceAll('-','').slice(0,18),id=uid('cam'),stamp=new Date().toISOString(),expiresAt=new Date(Date.now()+30*60*1000).toISOString(),label=clean(input?.label,60)||'관리 카메라';
+      await env.DB.prepare(`INSERT INTO realtime_management_camera_pairs(id,room_id,tenant_id,pairing_hash,label,status,created_at,expires_at) VALUES(?,?,?,?,?,'issued',?,?)`).bind(id,room.id,room.tenant_id,await sha256('management-camera:'+code),label,stamp,expiresAt).run();
+      const pair=await env.DB.prepare('SELECT * FROM realtime_management_camera_pairs WHERE id=?').bind(id).first();
+      return json(request,env,{ok:true,pair:safeManagementCameraPair(pair),pairCode:code,cameraUrl:`https://ekodi.kr/live/c/${code}`},201);
+    }
+    return json(request,env,{ok:false,error:'method_not_allowed'},405);
+  }
+  const roomItem=url.pathname.match(/^\/api\/realtime\/rooms\/([^/]+)\/management-cameras\/([^/]+)$/);
+  if(roomItem&&request.method==='PATCH'){
+    const room=await roomById(env,decodeURIComponent(roomItem[1]));if(!room)return json(request,env,{ok:false,error:'room_not_found'},404);
+    const auth=await ownerAllowed(request,env,room);if(!auth.allowed)return json(request,env,{ok:false,error:'room_owner_permission_required'},403);
+    const pair=await env.DB.prepare('SELECT * FROM realtime_management_camera_pairs WHERE room_id=? AND id=?').bind(room.id,decodeURIComponent(roomItem[2])).first();if(!pair)return json(request,env,{ok:false,error:'management_camera_pair_not_found'},404);
+    const next=clean(input?.status,20);if(!['approved','revoked'].includes(next))return json(request,env,{ok:false,error:'invalid_management_camera_status'},400);
+    const stamp=new Date().toISOString();
+    if(next==='approved'){
+      if(!['pending','approved'].includes(pair.status))return json(request,env,{ok:false,error:'management_camera_not_pending'},409);
+      await env.DB.prepare("UPDATE realtime_management_camera_pairs SET status='approved',approved_at=? WHERE id=?").bind(stamp,pair.id).run();
+    }else{
+      await env.DB.prepare("UPDATE realtime_management_camera_pairs SET status='revoked',revoked_at=? WHERE id=?").bind(stamp,pair.id).run();
+      await env.DB.prepare("UPDATE realtime_media_tracks SET status='closed',updated_at=? WHERE room_id=? AND publisher_session_id IN (SELECT provider_session_id FROM realtime_media_sessions WHERE room_id=? AND actor_key=?)").bind(stamp,room.id,room.id,'camera:'+pair.id).run().catch(()=>{});
+      await env.DB.prepare("UPDATE realtime_media_sessions SET status='closed',updated_at=? WHERE room_id=? AND actor_key=? AND status='active'").bind(stamp,room.id,'camera:'+pair.id).run().catch(()=>{});
+    }
+    return json(request,env,{ok:true,pair:safeManagementCameraPair(await env.DB.prepare('SELECT * FROM realtime_management_camera_pairs WHERE id=?').bind(pair.id).first())});
+  }
+  const publicPair=url.pathname.match(/^\/api\/realtime\/management-cameras\/([A-Za-z0-9_-]{8,80})\/(request|status|session)$/);
+  if(!publicPair)return null;
+  const code=publicPair[1],action=publicPair[2];
+  let pair=await managementCameraPairByCode(env,code);pair=await ensureManagementCameraPairActive(env,pair);
+  if(!pair)return json(request,env,{ok:false,error:'management_camera_pair_not_found'},404);
+  if(pair.status==='expired')return json(request,env,{ok:false,error:'management_camera_pair_expired'},410);
+  if(pair.status==='revoked')return json(request,env,{ok:false,error:'management_camera_pair_revoked'},410);
+  if(action==='request'&&request.method==='POST'){
+    const deviceKey=clean(input?.deviceKey,180);if(deviceKey.length<24)return json(request,env,{ok:false,error:'management_camera_device_key_required'},400);
+    const deviceHash=await sha256('management-camera-device:'+deviceKey);
+    if(pair.device_key_hash&&pair.device_key_hash!==deviceHash)return json(request,env,{ok:false,error:'management_camera_pair_already_claimed'},409);
+    const stamp=new Date().toISOString(),label=clean(input?.label,60)||pair.label||'관리 카메라';
+    await env.DB.prepare("UPDATE realtime_management_camera_pairs SET device_key_hash=?,label=?,status=CASE WHEN status IN ('approved','connected') THEN status ELSE 'pending' END,requested_at=COALESCE(requested_at,?) WHERE id=?").bind(deviceHash,label,stamp,pair.id).run();
+    pair=await env.DB.prepare('SELECT * FROM realtime_management_camera_pairs WHERE id=?').bind(pair.id).first();
+    return json(request,env,{ok:true,pair:safeManagementCameraPair(pair)});
+  }
+  if(action==='status'&&request.method==='GET'){
+    if(!await managementCameraDeviceAllowed(request,pair))return json(request,env,{ok:false,error:'management_camera_device_forbidden'},403);
+    return json(request,env,{ok:true,pair:safeManagementCameraPair(pair)});
+  }
+  if(action==='session'&&request.method==='POST'){
+    if(!await managementCameraDeviceAllowed(request,pair))return json(request,env,{ok:false,error:'management_camera_device_forbidden'},403);
+    if(!['approved','connected'].includes(pair.status))return json(request,env,{ok:false,error:'management_camera_approval_required'},409);
+    const room=await roomById(env,pair.room_id);if(!room||!['created','starting','live'].includes(room.status))return json(request,env,{ok:false,error:'room_not_joinable'},409);
+    const media=await newProviderMediaSession(env,room,'camera:'+pair.id,'presenter'),stamp=new Date().toISOString();
+    await env.DB.prepare("UPDATE realtime_management_camera_pairs SET status='connected',connected_at=COALESCE(connected_at,?) WHERE id=?").bind(stamp,pair.id).run();
+    return json(request,env,{...media,pair:safeManagementCameraPair(await env.DB.prepare('SELECT * FROM realtime_management_camera_pairs WHERE id=?').bind(pair.id).first())},201);
+  }
+  return json(request,env,{ok:false,error:'method_not_allowed'},405);
+}
+
 async function newProviderMediaSession(env,room,actorKey,role){
   const provider=await providerCall(env,'/sessions/new',{method:'POST'});
   const accessKey=`rts_${crypto.randomUUID().replaceAll('-','')}${crypto.randomUUID().replaceAll('-','')}`;
