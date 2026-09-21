@@ -44,7 +44,7 @@ import { regionalCommerceProgramFromLocalRoute } from './regional-commerce-progr
 import { regionalCommerceProgramPublicPage, regionalCommerceProgramAdminPage } from './regional-commerce-program-page.js';
 import { applyPlatformSecurityHeaders, enforcePlatformRequestSecurity } from './platform-security-policy.js';
 import { handleSeonamMediCivicApi } from './seonam-medi-civic-control.js';
-import { handleSeonamMediMonitorApi, runSeonamMediDailyCheck } from './seonam-medi-monitor.js';
+import { handleSeonamMediMonitorApi } from './seonam-medi-monitor.js';
 
 const PUBLIC_HOST='ekodi.kr';
 const CGMA_HOSTS=new Set(['cgma.or.kr','www.cgma.or.kr']);
@@ -369,5 +369,4 @@ export default {
     const response=await routePlatform(request,env,ctx);
     return applyPlatformSecurityHeaders(response,request);
   },
-  async scheduled(_controller,env,ctx){ctx.waitUntil(runSeonamMediDailyCheck(env));},
 };
