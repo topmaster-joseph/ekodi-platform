@@ -9,6 +9,7 @@ const OPERATOR_ROLES=Object.freeze({
 const CHEONGGYE_MODULES=Object.freeze([
   {id:'directory',label:'기관·단체·지역안내',leadOperatorId:'cgma',operatorIds:['cgma'],publishScope:'regional'},
   {id:'commerce',label:'상점·상권',leadOperatorId:'cgma',operatorIds:['cgma'],publishScope:'regional'},
+  {id:'commerce-pass',label:'청계패스·지역상품권',leadOperatorId:'cgma',operatorIds:['cgma'],publishScope:'regional',financialMode:'external-settlement-required'},
   {id:'events',label:'지역행사·프로그램',leadOperatorId:'cgma',operatorIds:['cgma'],publishScope:'regional'},
   {id:'jobs',label:'구인구직',leadOperatorId:'cgma',operatorIds:['cgma'],publishScope:'regional'},
   {id:'sharing',label:'나눔마켓',leadOperatorId:'cgma',operatorIds:['cgma'],publishScope:'regional'},
