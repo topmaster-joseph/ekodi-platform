@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="description" content="말하면 바로 번역하고 상대 언어로 읽어주는 EKODI 모두의 통역">
+  <title>모두의 통역 | EKODI 모두의 AI</title>
+  <link rel="stylesheet" href="./api/interpreter/style?v=20260922-interpreter-1">
+</head>
+<body>
+  <main class="interpreter-shell">
+    <header class="topbar">
+      <a class="back" href="./">← 모두의 AI</a>
+      <div class="brand"><span>EKODI</span><strong>모두의 통역</strong></div>
+      <span id="sessionState" class="session-state">준비 중</span>
+    </header>
+
+    <section class="hero">
+      <p class="eyebrow">REAL-TIME INTERPRETER</p>
+      <h1>말하면 바로 통역합니다.</h1>
+      <p>언어를 고르고 마이크를 누르세요. 번역문을 화면에 보여주고 선택한 언어로 읽어줍니다.</p>
+    </section>
+
+    <section class="translator" aria-labelledby="translatorTitle">
+      <h2 id="translatorTitle" class="sr-only">실시간 통역</h2>
+      <div class="language-row">
+        <label>말하는 언어<select id="sourceLanguage"></select></label>
+        <button id="swapLanguages" class="swap" type="button" aria-label="언어 바꾸기">⇄</button>
+        <label>통역 언어<select id="targetLanguage"></select></label>
+      </div>
+      <div class="presets" aria-label="빠른 언어 선택">
+        <button type="button" data-preset="ko:ja">한국어 → 日本語</button>
+        <button type="button" data-preset="ko:en">한국어 → English</button>
+        <button type="button" data-preset="ko:zh">한국어 → 中文</button>
+      </div>
+
+      <div class="speech-grid">
+        <article class="speech-card source-card">
+          <div class="card-head"><span>말한 내용</span><small id="listeningState">대기</small></div>
+          <p id="sourceText" class="speech-text muted">마이크를 누르고 말해 주세요.</p>
+          <p id="interimText" class="interim" aria-live="polite"></p>
+        </article>
+        <article class="speech-card target-card">
+          <div class="card-head"><span>통역</span><small id="engineState">준비</small></div>
+          <p id="targetText" class="speech-text" aria-live="polite">통역 결과가 여기에 표시됩니다.</p>
+        </article>
+      </div>
+
+      <div class="primary-actions">
+        <button id="micButton" class="mic" type="button"><span class="mic-dot"></span><span id="micLabel">마이크 시작</span></button>
+        <button id="turnButton" class="secondary" type="button">상대방 차례</button>
+      </div>
+      <div class="minor-actions">
+        <button id="speakAgain" type="button">다시 듣기</button>
+        <button id="clearButton" type="button">지우기</button>
+      </div>
+
+      <details class="text-fallback">
+        <summary>직접 입력해서 통역</summary>
+        <form id="textForm">
+          <textarea id="textInput" maxlength="4000" rows="3" placeholder="통역할 내용을 입력하세요"></textarea>
+          <button type="submit">통역하기</button>
+        </form>
+      </details>
+
+      <div id="notice" class="notice" role="status"></div>
+      <a id="loginLink" class="login-link" hidden>로그인하고 통역 계속하기</a>
+    </section>
+
+    <section class="guide">
+      <strong>사용법</strong>
+      <p>① 언어 선택 → ② 마이크 시작 → ③ 말하기. 상대가 답할 때는 <b>상대방 차례</b>를 누르면 두 언어가 바뀝니다.</p>
+      <p class="privacy">통역 기록은 기본적으로 저장하지 않습니다. 번역에는 필요한 텍스트만 전송하며, 음성 인식 처리 방식은 사용 중인 브라우저·기기의 정책이 적용될 수 있습니다.</p>
+    </section>
+  </main>
+  <script type="module" src="./api/interpreter/client?v=20260922-interpreter-1"></script>
+</body>
+</html>
