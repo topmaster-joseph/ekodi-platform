@@ -63,7 +63,7 @@ test('public health static header replaces the inherited cache policy with no-st
 });
 
 test('training crawlers get only the public health exception while user-requested agents retain public access', () => {
-  const robots = allowOpsHealthForRestrictedCrawlers(renderRobotsTxt());
+  const robots = allowOpsHealthForTrainingCrawlers(renderRobotsTxt());
   for (const crawler of DISCOVERY_CRAWLER_POLICY.training) {
     assert.ok(robots.includes(`User-agent: ${crawler}\nAllow: ${OPS_HEALTH_PATH}\nDisallow: /`));
   }
