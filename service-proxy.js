@@ -34,15 +34,15 @@ function businessHub() {
 <body>
 <main class="shell">
 <header class="top"><a class="brand" href="https://ekodi.kr/ekodibiz"><span class="mark">B</span><span>EKODI BIZ</span></a><a class="root" href="https://ekodi.kr">EKODI ↗</a></header>
-<section class="hero"><div class="eyebrow">BUSINESS LOBBY</div><h1>EKODI BIZ</h1><p>에코디비즈의 사업 서비스를 한곳에서 연결하는 독립 비즈니스 로비입니다. 무역, 쇼핑, 결제, 메일, 라이브를 각 서비스의 정식 주소로 직접 연결합니다.</p><span class="context">직접 서비스 주소 · redirect alias 미사용</span></section>
+<section class="hero"><div class="eyebrow">BUSINESS LOBBY</div><h1>EKODI BIZ</h1><p>에코디비즈의 사업 서비스를 한곳에서 연결하는 독립 비즈니스 로비입니다. 무역, 쇼핑, 결제, 메일, 라이브를 각 서비스의 정식 주소로 직접 연결합니다.</p><span class="context">공개 주소: ekodi.kr/ekodibiz · 내부 Worker host는 비공개</span></section>
 <section class="grid" aria-label="EKODI BIZ 서비스">
 <a class="card" href="https://ekodi.kr/ekodibiz/trade"><div><span class="icon">T</span><strong>Global Trading</strong><small>글로벌 B2B 무역 · GPU · AI Server · Components</small></div><span class="arrow">↗</span></a>
-<a class="card" href="https://ekodi.kr/ekodibiz/ekodimall"><div><span class="icon">M</span><strong>EKODI Mall</strong><small>상품과 서비스의 비즈니스 커머스 허브</small></div><span class="arrow">↗</span></a>
-<a class="card" href="https://pay.biz.ekodi.kr"><div><span class="icon">P</span><strong>EKODI Pay</strong><small>결제와 사업부별 회계 관제 진입점</small></div><span class="arrow">↗</span></a>
-<a class="card" href="https://mail.ekodi.kr"><div><span class="icon">@</span><strong>Business Mail</strong><small>EKODI 공통 Mail 서비스</small></div><span class="arrow">↗</span></a>
-<a class="card" href="https://live.biz.ekodi.kr"><div><span class="icon">▶</span><strong>Business Live</strong><small>비즈니스 방송과 라이브 콘텐츠 로비</small></div><span class="arrow">↗</span></a>
+<a class="card" href="https://ekodi.kr/ekodimall"><div><span class="icon">M</span><strong>EKODI Mall</strong><small>상품과 서비스의 비즈니스 커머스 허브</small></div><span class="arrow">↗</span></a>
+<a class="card" href="https://ekodi.kr/pay"><div><span class="icon">P</span><strong>EKODI Pay</strong><small>결제와 사업부별 회계 관제 진입점</small></div><span class="arrow">↗</span></a>
+<a class="card" href="https://ekodi.kr/mail"><div><span class="icon">@</span><strong>Business Mail</strong><small>EKODI 공통 Mail 서비스</small></div><span class="arrow">↗</span></a>
+<a class="card" href="https://ekodi.kr/live"><div><span class="icon">▶</span><strong>Business Live</strong><small>비즈니스 방송과 라이브 콘텐츠 로비</small></div><span class="arrow">↗</span></a>
 </section>
-<div class="note"><strong>biz.ekodi.kr</strong>은 직접 제공되는 서비스 주소이며 다른 주소를 이곳으로 리다이렉트하지 않습니다.</div>
+<div class="note">공개 진입점은 <strong>ekodi.kr/ekodibiz</strong>이며 내부 Worker host는 사용자 링크로 노출하지 않습니다.</div>
 <footer class="footer"><strong>EKODIBIZ · One business hub, many doors.</strong><span>Managed in the EKODI ecosystem</span></footer>
 </main>
 </body>
