@@ -163,6 +163,8 @@ jobs:
               && grep -Fq '"investPersonalization":"v1"' /tmp/workspace-health \
               && grep -Fq '"investAutomation":"v1"' /tmp/workspace-health \
               && grep -Fq '"investAutomationSchemaReady":true' /tmp/workspace-health \
+              && grep -Fq '"investLifecycle":"v1"' /tmp/workspace-health \
+              && grep -Fq '"investLifecycleSchemaReady":true' /tmp/workspace-health \
               && grep -Fq '"transactionExecution":false' /tmp/workspace-health; then
               exit 0
             fi
@@ -304,7 +306,9 @@ jobs:
               && grep -Fq '"officialDataProvider":"embedded-v1"' "$file" \
               && grep -Fq '"investPersonalization":"v1"' "$file" \
               && grep -Fq '"investAutomation":"v1"' "$file" \
-              && grep -Fq '"investAutomationSchemaReady":true' "$file"
+              && grep -Fq '"investAutomationSchemaReady":true' "$file" \
+              && grep -Fq '"investLifecycle":"v1"' "$file" \
+              && grep -Fq '"investLifecycleSchemaReady":true' "$file"
           }
           for attempt in $(seq 1 18); do
             canonical_code=$(curl -sS -L -o /tmp/live-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://workspace-api.ekodi.kr/health' || true)
