@@ -120,7 +120,8 @@ jobs:
           grep -Fq 'store_admin_route_profile' supabase/migrations/20260906006000_store_admin_routing.sql
           grep -Fq 'store_public_storefront' supabase/migrations/20260909001000_public_storefront.sql
           test -f supabase/migrations/20260913013000_ekodimall_canonical_path.sql
-          grep -Fq "'domain','ekodi.kr/ekodibiz/ekodimall'" supabase/migrations/20260913013000_ekodimall_canonical_path.sql
+          test -f supabase/migrations/20260921040000_ekodimall_root_canonical_path.sql
+          grep -Fq "'domain','ekodi.kr/ekodimall'" supabase/migrations/20260921040000_ekodimall_root_canonical_path.sql
           grep -Fq 'publicStorefront' space/index.html
           grep -Fq 'storefront.json' platform-router-entry-worker.js
 

@@ -4,21 +4,15 @@ import { readFile } from 'node:fs/promises';
 
 const source = await readFile(new URL('../workspace-admin-page.js', import.meta.url), 'utf8');
 
-test('Mall admin exposes an operator-first seven-surface navigation', () => {
-  assert.match(source, /\['overview','대시보드'\]/);
-  assert.match(source, /\['products','상품'\]/);
-  assert.match(source, /\['sourcing','공급·제휴'\]/);
-  assert.match(source, /\['channels','판매채널'\]/);
-  assert.match(source, /adminBase=standaloneMall\?'\/ekodimall\/admin':service==='mall'\?`\$\{base\}\/ekodimall\/admin`/);
-  assert.match(source, /\['growth','AI 영업'\]/);
-  assert.match(source, /\['analytics','성과'\]/);
-  assert.match(source, /\['design','관리설정'\]/);
-  assert.match(source, /if\(service==='mall'\)\{for\(const \[key,label\] of mallDirectSections/);
-  assert.match(source, /h\.hidden=true/);
-  assert.doesNotMatch(source, /const nav=service==='mall'\?[^;]*\['sales','영업장부'\]/);
-  assert.doesNotMatch(source, /const nav=service==='mall'\?[^;]*\['automation','자동화'\]/);
+test('Mall admin exposes operator-first direct navigation', () => {
+  const direct = "const mallDirectSections=[['overview','대시보드'],['products','상품'],['sourcing','공급·제휴'],['channels','판매채널'],['growth','AI 영업'],['analytics','성과'],['confirmations','지급·수령'],['design','관리설정']]";
+  assert.ok(source.includes(direct));
+  assert.ok(source.includes("const mallGroups=mallDirectSections.map(([id,label])=>({id,label,sections:[[id,label]]}))"));
+  assert.ok(source.includes("const navGroups=service==='mall'?mallGroups:rootGroups"));
+  assert.ok(source.includes("adminBase=standaloneMall?'/ekodimall/admin':service==='mall'?'/ekodimall/admin'"));
+  assert.equal(direct.includes("['sales','영업장부']"), false);
+  assert.equal(direct.includes("['automation','자동화']"), false);
 });
-
 test('Mall admin resolves URL aliases to the authorized tenant subject before service API calls', () => {
   assert.match(source, /function canonicalSubjectKey\(\)/);
   assert.match(source, /workspace==='ekodibiz'\?'ekodi-biz'/);

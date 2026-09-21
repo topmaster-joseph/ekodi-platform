@@ -4,9 +4,9 @@ import fs from 'node:fs/promises';
 import { isWorkspaceAdminPath, workspaceAdminScript } from '../workspace-admin-page.js';
 
 test('Mall v8.3 stays inside canonical Workspace Admin', async () => {
-  assert.equal(isWorkspaceAdminPath('/ekodibiz/ekodimall/admin/'), true);
-  assert.equal(isWorkspaceAdminPath('/ekodibiz/ekodimall/admin/growth'), true);
-  assert.equal(isWorkspaceAdminPath('/ekodibiz/ekodimall/admin/analytics'), true);
+  assert.equal(isWorkspaceAdminPath('/ekodimall/admin/'), true);
+  assert.equal(isWorkspaceAdminPath('/ekodimall/admin/growth'), true);
+  assert.equal(isWorkspaceAdminPath('/ekodimall/admin/analytics'), true);
   const js = await workspaceAdminScript().text();
   assert.match(js, /\/mall\/api\/growth\/insights/);
   assert.match(js, /minFeedbackSample/);

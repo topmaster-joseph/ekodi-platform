@@ -26,8 +26,8 @@ test('order fee calculation uses whole-KRW floor and never exceeds gross', () =>
 });
 
 test('canonical product URL stays marketplace while attributed URLs carry opaque ref codes', () => {
-  assert.equal(makePublicUrl('https://ekodi.kr/ekodibiz/ekodimall/', 'ABC123'), 'https://ekodi.kr/ekodibiz/ekodimall/p/ABC123');
-  assert.equal(makeAttributedUrl('https://ekodi.kr/ekodibiz/ekodimall/', 'ABC123', 'sl_OPAQUE'), 'https://ekodi.kr/ekodibiz/ekodimall/p/ABC123?ref=sl_OPAQUE');
+  assert.equal(makePublicUrl('https://ekodi.kr/ekodimall/', 'ABC123'), 'https://ekodi.kr/ekodimall/p/ABC123');
+  assert.equal(makeAttributedUrl('https://ekodi.kr/ekodimall/', 'ABC123', 'sl_OPAQUE'), 'https://ekodi.kr/ekodimall/p/ABC123?ref=sl_OPAQUE');
 });
 
 test('product input keeps Store optional and validates affiliate link', () => {

@@ -332,3 +332,108 @@ body.admin-compact:not(.admin-command-home) .ekodi-assist-bootstrap-send{
     padding:8px 10px max(10px,env(safe-area-inset-bottom))!important;
   }
 }
+
+/* Computed-style authority: the Design Engine remains enabled for layout semantics,
+   but the conversation-first Admin owns the rendered light shell. Keep these selectors
+   more specific than admin-design-engine.css so !important cannot revive the retired dark shell. */
+html body.admin-compact.ekodi-admin-design-engine{
+  background:#fff!important;
+  color:#1f1f1f!important;
+  --ekodi-admin-sidebar-width:272px;
+  --ekodi-assist-left:272px;
+}
+html body.admin-compact.ekodi-admin-design-engine .app{
+  grid-template-columns:272px minmax(0,1fr)!important;
+  background:#fff!important;
+}
+html body.admin-compact.ekodi-admin-design-engine .app>main,
+html body.admin-compact.ekodi-admin-design-engine main,
+html body.admin-compact.ekodi-admin-design-engine .content{
+  background:#fff!important;
+  color:#1f1f1f!important;
+}
+html body.admin-compact.ekodi-admin-design-engine .sidebar{
+  width:272px!important;
+  padding:12px 10px 10px!important;
+  background:#f7f8fc!important;
+  color:#1f1f1f!important;
+  border-right:0!important;
+  box-shadow:none!important;
+}
+html body.admin-compact.ekodi-admin-design-engine .sidebar nav{
+  overflow-y:auto!important;
+  overflow-x:hidden!important;
+  scrollbar-width:thin!important;
+}
+html body.admin-compact.ekodi-admin-design-engine .admin-global-nav{
+  color:#34373b!important;
+  background:transparent!important;
+}
+html body.admin-compact.ekodi-admin-design-engine .admin-global-nav b{
+  color:#5f6368!important;
+}
+html body.admin-compact.ekodi-admin-design-engine .admin-global-nav:hover{
+  background:#eceff5!important;
+  color:#202124!important;
+}
+html body.admin-compact.ekodi-admin-design-engine .admin-global-nav.active{
+  background:#e8f0fe!important;
+  color:#174ea6!important;
+}
+html body.admin-compact.ekodi-admin-design-engine .admin-global-nav.active b{
+  color:#174ea6!important;
+}
+html body.admin-compact.ekodi-admin-design-engine .side-bottom,
+html body.admin-compact.ekodi-admin-design-engine .side-bottom>div{
+  background:transparent!important;
+  color:#303134!important;
+}
+html body.admin-compact.ekodi-admin-design-engine .side-bottom strong{
+  color:#303134!important;
+}
+html body.admin-compact.ekodi-admin-design-engine .side-bottom small,
+html body.admin-compact.ekodi-admin-design-engine .side-bottom .ghost{
+  color:#5f6368!important;
+}
+html body.admin-compact.ekodi-admin-design-engine.admin-command-home.admin-command-active .ekodi-assist{
+  left:272px!important;
+  top:0!important;
+  right:0!important;
+  bottom:0!important;
+  width:auto!important;
+  background:
+    radial-gradient(circle at 50% 46%,rgba(219,238,255,.9) 0,rgba(239,247,255,.74) 24%,rgba(255,255,255,.96) 58%,#fff 78%)!important;
+}
+html body.admin-compact.ekodi-admin-design-engine.admin-command-home.admin-command-active .ekodi-assist-panel,
+html body.admin-compact.ekodi-admin-design-engine.admin-command-home.admin-command-active .ekodi-assist-main{
+  background:transparent!important;
+  border:0!important;
+  box-shadow:none!important;
+}
+html body.admin-compact.ekodi-admin-design-engine.admin-command-home.admin-command-active .ekodi-assist-rail,
+html body.admin-compact.ekodi-admin-design-engine.admin-command-home.admin-command-active .ekodi-assist-head{
+  display:none!important;
+}
+html body.admin-compact.ekodi-admin-design-engine.admin-command-home.admin-command-active .ekodi-assist-welcome{
+  display:block!important;
+  visibility:visible!important;
+}
+html body.admin-compact.ekodi-admin-design-engine.admin-command-home.admin-command-active .ekodi-assist-composer-wrap{
+  display:block!important;
+  visibility:visible!important;
+}
+html body.admin-compact.ekodi-admin-design-engine.admin-command-home.admin-command-active .ekodi-assist-composer{
+  background:#fff!important;
+  border-color:#d9dde5!important;
+  border-radius:32px!important;
+}
+@media(max-width:760px){
+  html body.admin-compact.ekodi-admin-design-engine .sidebar{
+    width:min(86vw,286px)!important;
+  }
+  html body.admin-compact.ekodi-admin-design-engine.admin-command-home.admin-command-active .ekodi-assist{
+    left:0!important;
+    top:calc(78px + env(safe-area-inset-top,0px))!important;
+  }
+}
+

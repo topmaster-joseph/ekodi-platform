@@ -100,7 +100,7 @@ jobs:
           jadam|https://ekodi.kr/jadam/live/|Jadam
           pizzamaru|https://ekodi.kr/pizzamaru/live/|Pizzamaru
           yogurt|https://ekodi.kr/yogurt/live/|Yogurt Purple
-          ekodimall|https://ekodi.kr/ekodibiz/ekodimall/live/|EKODI Mall
+          ekodimall|https://ekodi.kr/ekodimall/live/|EKODI Mall
           ekoditrade|https://ekodi.kr/ekodibiz/trade/live/|EKODI Trade
           TENANTS
           test "$failures" -eq 0

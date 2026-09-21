@@ -24,8 +24,8 @@
     },
     {
       "id": "ekodimall",
-      "publicPath": "/ekodibiz/ekodimall",
-      "adminPath": "/ekodibiz/ekodimall/admin",
+      "publicPath": "/ekodimall",
+      "adminPath": "/ekodimall/admin",
       "parentId": "ekodibiz"
     },
     {
@@ -80,11 +80,11 @@
   "forbiddenAggregationAliases": [
     {
       "alias": "/admin/ekodimall",
-      "canonical": "/ekodibiz/ekodimall/admin"
+      "canonical": "/ekodimall/admin"
     },
     {
       "alias": "/ekodibiz/admin/ekodimall",
-      "canonical": "/ekodibiz/ekodimall/admin"
+      "canonical": "/ekodimall/admin"
     },
     {
       "alias": "/cmpmyi/admin/jadam",
@@ -101,12 +101,16 @@
   ],
   "legacyCompatibilityAliases": [
     {
-      "alias": "/mall/admin",
-      "canonical": "/ekodibiz/ekodimall/admin"
+      "alias": "/ekodibiz/ekodimall/admin",
+      "canonical": "/ekodimall/admin"
     },
     {
       "alias": "/ekodibiz/mall/admin",
-      "canonical": "/ekodibiz/ekodimall/admin"
+      "canonical": "/ekodimall/admin"
+    },
+    {
+      "alias": "/mall/admin",
+      "canonical": "/ekodimall/admin"
     }
   ],
   "rules": [
