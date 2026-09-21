@@ -578,14 +578,17 @@ async function collaborationRoute(request,env,url,input){
   if(sources&&request.method==='GET'){
     const room=await roomById(env,decodeURIComponent(sources[1]));if(!room)return json(request,env,{ok:false,error:'room_not_found'},404);
     const auth=await ownerAllowed(request,env,room);if(!auth.allowed)return json(request,env,{ok:false,error:'room_owner_permission_required'},403);
-    const rows=await env.DB.prepare(`SELECT s.actor_key,COALESCE(p.display_name,'참여자') display_name,t.track_name,t.media_kind,t.source_type
+    const rows=await env.DB.prepare(`SELECT s.actor_key,COALESCE(c.label,p.display_name,'참여자') display_name,
+      CASE WHEN c.id IS NOT NULL THEN 'management_camera' ELSE 'participant' END source_role,
+      t.track_name,t.media_kind,t.source_type,t.language_code
       FROM realtime_media_sessions s
       JOIN realtime_media_tracks t ON t.publisher_session_id=s.provider_session_id AND t.room_id=s.room_id AND t.status='active'
       LEFT JOIN realtime_participation_requests p ON p.room_id=s.room_id AND p.actor_key=s.actor_key
+      LEFT JOIN realtime_management_camera_pairs c ON ('camera:' || c.id)=s.actor_key
       WHERE s.room_id=? AND s.role='presenter' AND s.status='active'
       ORDER BY s.created_at,t.created_at`).bind(room.id).all();
     const map=new Map();
-    for(const row of rows.results||[]){if(!map.has(row.actor_key))map.set(row.actor_key,{actorKey:row.actor_key,displayName:row.display_name||'참여자',tracks:[]});map.get(row.actor_key).tracks.push({trackName:row.track_name,kind:row.media_kind,sourceType:row.source_type});}
+    for(const row of rows.results||[]){if(!map.has(row.actor_key))map.set(row.actor_key,{actorKey:row.actor_key,displayName:row.display_name||'참여자',sourceRole:row.source_role||'participant',tracks:[]});map.get(row.actor_key).tracks.push({trackName:row.track_name,kind:row.media_kind,sourceType:row.source_type,languageCode:row.language_code||null});}
     return json(request,env,{ok:true,sources:[...map.values()]});
   }
   return null;
