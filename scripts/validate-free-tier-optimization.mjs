@@ -72,6 +72,14 @@ expect(collector.includes('/database/query/read-only'),'Supabase database usage 
 expect(!/\/database\/query(?!\/read-only)/.test(collector),'collector must not fall back to the writable Management API query endpoint');
 expect(collector.includes('/actions/cache/usage'),'GitHub cache usage must come from the official repository usage endpoint');
 expect(collector.includes('/actions/artifacts?'),'GitHub artifact usage must come from the official repository artifact endpoint');
+expect(collector.includes('workersInvocationsAdaptive'),'Cloudflare Workers requests must come from GraphQL Analytics');
+expect(collector.includes('d1AnalyticsAdaptiveGroups'),'Cloudflare D1 row usage must come from GraphQL Analytics');
+expect(collector.includes('kvOperationsAdaptiveGroups'),'Cloudflare KV operation usage must come from GraphQL Analytics');
+expect(collector.includes('/d1/database?page='),'Cloudflare D1 storage must come from the D1 REST inventory');
+expect(collector.includes('/r2/metrics'),'Cloudflare R2 current storage must come from account-level metrics');
+expect(collector.includes("metric:'r2_standard_storage_bytes_current'"),'R2 current storage must remain distinct from monthly byte-month billing');
+expect(!collector.includes("metric:'r2_class_a_month'")&&!collector.includes("metric:'r2_class_b_month'"),'R2 Class A/B billing totals must remain unknown until action mapping is verified');
+expect(collectorWorkflow.includes("'cloudflare','supabase','github'"),'resource proof query must include Cloudflare snapshots');
 expect(!/BEGIN TRANSACTION|SAVEPOINT|lines\.push\('COMMIT;'\)/.test(collector),'remote D1 collector must not emit explicit transaction statements');
 
 if(failures.length){
