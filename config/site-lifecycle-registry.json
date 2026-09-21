@@ -97,7 +97,7 @@
       "ownerKind": "business",
       "class": "workspace_user_site",
       "canonicalUrl": "https://ekodi.kr/ekodibiz",
-      "currentServiceUrl": "https://biz.ekodi.kr",
+      "currentServiceUrl": "https://ekodi.kr/ekodibiz",
       "migrationState": "retain_existing",
       "runtime": "tenant_customer_site",
       "action": "connect_core_preserve_public_surface"
@@ -154,13 +154,12 @@
   "legacyPolicy": {
     "subdomainRedirectsAllowed": false,
     "redirectOnlyCompatibilityAliasesAllowed": false,
-    "directServiceSubdomainsAllowed": true,
+    "directServiceSubdomainsAllowed": false,
     "executionOnlySubdomainsAllowed": true,
     "preserveCustomDomainOwnership": true,
     "legacyAliasMayAuthorize": false,
     "deleteExistingSiteBeforeReplacementVerified": false,
-    "publicSubdomainsAllowed": true,
-    "publicSubdomainMode": "direct-service-only"
+    "publicSubdomainsAllowed": false
   },
   "migrationOrder": [
     "inventory",
