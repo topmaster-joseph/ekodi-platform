@@ -311,7 +311,7 @@ jobs:
               && grep -Fq '"investLifecycleSchemaReady":true' "$file"
           }
           for attempt in $(seq 1 18); do
-            canonical_code=$(curl -sS -L -o /tmp/live-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://workspace-api.ekodi.kr/health' || true)
+            canonical_code=$(curl -sS -L -o /tmp/live-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/api/workspace/health' || true)
             apex_code=$(curl -sS -L -o /tmp/apex-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/workspace-api/health' || true)
             if [ "$canonical_code" = '200' ] && [ "$apex_code" = '200' ] \
               && health_ok /tmp/live-health.json \
