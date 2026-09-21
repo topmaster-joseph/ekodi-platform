@@ -58,9 +58,11 @@ test('top-level EKODIMALL admin is parsed as the Mall service surface', async ()
   assert.match(js, /standaloneMall\?'ekodibiz'/);
   assert.match(js, /rawSection=canonicalMall\?\.\[2\]\|\|standaloneMall\?\.\[1\]/);
   assert.match(js, /adminBase=standaloneMall\?'\/ekodimall\/admin'/);
-  assert.ok(js.includes('Google 계정으로 관리자 확인'));
-  assert.ok(js.includes('상품 · 공급'));
+  assert.ok(js.includes('에코디몰 관리자 로그인'));
+  assert.ok(js.includes('관리자 로그인'));
   assert.ok(js.includes('판매채널'));
-  assert.ok(js.includes('AI 영업 · 성과'));
+  assert.ok(js.includes('AI 영업'));
+  assert.ok(!js.includes('Google 계정으로 관리자 확인'));
+  assert.ok(!js.includes('상품 · 공급'));
   assert.match(js,/mallDirectSections/);
 });
