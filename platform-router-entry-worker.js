@@ -39,6 +39,7 @@ import { localRegionFromPath } from './local-region-registry.js';
 import { localRegionPublicPage, localRegionAdminPage, localRegionAccessAdminPage } from './local-region-page.js';
 import { localRegionAdminAuthScript } from './local-region-admin-auth.js';
 import { localRegionAccessAdminScript } from './local-region-access-admin.js';
+import { localRegionOperationsAdminScript } from './local-region-operations-admin.js';
 import { regionalCommerceProgramFromLocalRoute } from './regional-commerce-program-registry.js';
 import { regionalCommerceProgramPublicPage, regionalCommerceProgramAdminPage } from './regional-commerce-program-page.js';
 
@@ -278,6 +279,7 @@ export default {
       if(request.method==='GET'){
         if(url.pathname==='/cheonggye/local-region-admin-auth.js')return localRegionAdminAuthScript();
         if(url.pathname==='/cheonggye/local-region-access-admin.js')return localRegionAccessAdminScript();
+        if(url.pathname==='/cheonggye/local-region-operations-admin.js')return localRegionOperationsAdminScript();
         if(url.pathname==='/tenant-admin-command-home.css')return tenantAdminCommandHomeCss();
         if(url.pathname==='/tenant-admin-command-home.js')return tenantAdminCommandHomeScript();
         if(['/store-admin.css','/jadam-admin.css','/pizzamaru-admin.css','/yogurt-admin.css'].includes(url.pathname))return storeAdminCss();

@@ -1,5 +1,6 @@
 import { runCloudConnectedTask } from './cloud-connection-runtime.js';
 import { evaluateAutonomousOperation } from './sovereign-autonomy-runtime.js';
+import { DEFAULT_TASK_GRANT_CAPABILITIES, ExecutionTaskGrantBroker } from './execution-task-grant.js';
 
 const BRANCH_PATTERN = /^ai\/[a-z0-9][a-z0-9._-]*\/[a-z0-9][a-z0-9._-]*$/;
 const EXECUTION_TIERS = new Set(['execute_reversible', 'execute_bounded_contract']);
@@ -46,13 +47,46 @@ function validateExecutionReceipt(receipt, providerId = 'unknown') {
   return Object.freeze({ ...receipt, evidence: Object.freeze({ ...receipt.evidence }) });
 }
 
-function wrapProvider(provider, envelope) {
+function taskGrantScope(envelope, input = {}) {
+  const authority = envelope.authorityContext || {};
+  const capabilities = Array.isArray(input.taskCapabilities) && input.taskCapabilities.length
+    ? input.taskCapabilities
+    : DEFAULT_TASK_GRANT_CAPABILITIES;
+  return {
+    taskId: envelope.taskId,
+    workspaceId: clean(authority.workspaceId || authority.workspace_id),
+    role: clean(authority.role),
+    capabilities,
+    ttlSeconds: positiveInteger(input.taskGrantTtlSeconds ?? input.task_grant_ttl_seconds, 300),
+  };
+}
+
+function wrapProvider(provider, envelope, credentialBroker, grantScope) {
   if (!provider || typeof provider !== 'object') return provider;
   const originalInvoke = provider.invoke;
   return {
     ...provider,
     invoke: typeof originalInvoke === 'function'
-      ? async () => validateExecutionReceipt(await originalInvoke(envelope), clean(provider.id) || 'unknown')
+      ? async () => {
+          const issued = credentialBroker.issue(grantScope);
+          let validated;
+          try {
+            validated = validateExecutionReceipt(
+              await originalInvoke({
+                ...envelope,
+                taskGrant: issued.grant,
+                taskGrantToken: issued.token,
+              }),
+              clean(provider.id) || 'unknown',
+            );
+          } finally {
+            credentialBroker.revoke(issued.token, { reason: 'provider-invocation-complete' });
+          }
+          return Object.freeze({
+            ...validated,
+            taskGrant: credentialBroker.inspect(issued.token),
+          });
+        }
       : originalInvoke,
   };
 }
@@ -132,7 +166,9 @@ export async function runAutonomousExecutionTask(input = {}) {
   if (!EXECUTION_TIERS.has(decision.tier)) return blockedResult(envelope, decision);
 
   const providerEnvelope = executionEnvelope(envelope, decision, input);
-  const providers = (Array.isArray(input.providers) ? input.providers : []).map(provider => wrapProvider(provider, providerEnvelope));
+  const credentialBroker = input.credentialBroker || new ExecutionTaskGrantBroker();
+  const grantScope = taskGrantScope(providerEnvelope, input);
+  const providers = (Array.isArray(input.providers) ? input.providers : []).map(provider => wrapProvider(provider, providerEnvelope, credentialBroker, grantScope));
 
   const connected = await runCloudConnectedTask({
     env: input.env || {},
@@ -182,6 +218,8 @@ export async function runAutonomousParallelExecutionTask(input = {}) {
 
   const rawProviders = Array.isArray(input.providers) ? input.providers.filter(Boolean) : [];
   const providerEnvelope = executionEnvelope(envelope, decision, input);
+  const credentialBroker = input.credentialBroker || new ExecutionTaskGrantBroker();
+  const grantScope = taskGrantScope(providerEnvelope, input);
   const minimumIndependentLanes = Math.max(
     DEFAULT_MINIMUM_PARALLEL_LANES,
     positiveInteger(input.minimumIndependentLanes ?? input.minimum_independent_lanes, DEFAULT_MINIMUM_PARALLEL_LANES),
@@ -194,7 +232,7 @@ export async function runAutonomousParallelExecutionTask(input = {}) {
   const laneResults = await Promise.all(rawProviders.map(async (provider, index) => {
     const id = clean(provider.id) || `provider_${index + 1}`;
     const methodClass = clean(provider.methodClass || provider.method_class || provider.kind) || 'unknown-method';
-    const wrapped = wrapProvider(provider, providerEnvelope);
+    const wrapped = wrapProvider(provider, providerEnvelope, credentialBroker, grantScope);
     const connected = await runCloudConnectedTask({
       env: input.env || {},
       providers: [wrapped],
