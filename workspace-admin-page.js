@@ -99,7 +99,7 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
       $('mainPanel').innerHTML=`<div class="mall-login-guide"><div class="mall-login-step"><strong>에코디몰 관리자 로그인</strong><p>${ae(message)} 로그인 전에는 상품·주문·채널·수익·AI 영업의 실제 수치를 표시하지 않습니다.</p></div><div class="actions"><a class="button primary" href="${workspaceAuthUrl()}">관리자 로그인</a><a class="button" href="${workspacePublicUrl()}" target="_blank" rel="noopener">고객 화면 보기</a></div><p class="mall-proof">관리자 로그인과 게시 채널 계정 인증은 분리됩니다. 로그인 후 계정을 먼저 등록하고 각 행의 인증 버튼으로 연결합니다.</p></div>`;
     }else{
       $('summaryCards').innerHTML=[card('운영공간',workspaceLabel(),'tenant scoped'),card('현재 상태','로그인 전','운영 데이터 비공개'),card('게시계정','로그인 후 등록','계정별 인증'),card('사용자 화면','공개','관리자와 분리')].join('');
-      $('mainPanel').innerHTML=`<h2>운영공간 로그인</h2><p class="empty">${ae(message)}</p><div class="actions"><a class="button primary" href="${workspaceAuthUrl()}">Google 계정으로 계속</a><a class="button" href="${workspacePublicUrl()}">사용자 화면</a></div><p class="empty">로그인 후 채널 · 게시에서 여러 계정을 등록하고 각 계정별 인증을 진행합니다.</p>`;
+      $('mainPanel').innerHTML=`<h2>운영공간 로그인</h2><p class="empty">${ae(message)}</p><div class="actions"><a class="button primary" href="${workspaceAuthUrl()}">Google 계정으로 계속</a><a class="button" href="${workspacePublicUrl()}">사용자 화면</a></div><p class="empty">로그인 후 채널·자동게시에서 여러 계정을 등록하고 각 계정별 인증을 진행합니다.</p>`;
     }
     state('로그인 필요');
   }
