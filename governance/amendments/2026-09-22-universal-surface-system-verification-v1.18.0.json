@@ -7,7 +7,7 @@
   "changeClass": "C2",
   "taskId": "surface-system-verification-constitution-20260922",
   "issue": null,
-  "pullRequest": null,
+  "pullRequest": 2340,
   "summary": "Require EKODI to verify every public home, My page, operator page and administrator surface itself through synthetic role/device/browser execution and a real canonical production canary before normal completion.",
   "approvalBasis": "The platform owner explicitly instructed EKODI on 2026-09-22 to make comprehensive self-verification and empirical validation of all administrator pages, public homes, My pages, operator pages and the platform-wide My page an operating constitution, including EKODI-run virtualization or equivalent automated verification.",
   "adds": [
@@ -31,6 +31,8 @@
   "rollback": "Revert constitution v1.18.0, SURFACE-SYSTEM-VERIFICATION-001, its operational config/validator/test and agent inheritance rule to v1.17.0. Do not alter workspace identity, user data, production domains or authorization records during rollback.",
   "approvalEvidence": {
     "requiredPullRequestLabel": "constitution-approved",
-    "ownerInstructionRecorded": true
+    "ownerInstructionRecorded": true,
+    "pullRequest": 2340,
+    "approvalLabel": "constitution-approved"
   }
 }
