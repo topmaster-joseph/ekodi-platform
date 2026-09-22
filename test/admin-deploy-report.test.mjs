@@ -42,7 +42,7 @@ test('Admin production verification follows the content fingerprint and lazy AI 
   assert.match(workflow, /verify_asset 'admin-demand-loader\.js' "if \(!button\) return false;"/);
   assert.match(workflow, /verify_asset 'admin-demand-loader\.js' "window\.EKODIAdminSidebar\?\.sync\?\.\(document\);"/);
   assert.match(workflow, /verify_asset 'admin-menu-layout\.js' "window\.EKODICommonServicesAdmin\?\.activate\?\.\(\);"/);
-  assert.match(workflow, /verify_asset 'admin-authenticated-shell\.js' "convergeAdminRelease"/);
+  assert.match(workflow, /verify_asset 'admin-release-convergence\.js' "convergeAdminRelease"/);
   assert.match(workflow, /missing immutable cache contract/);
   assert.match(workflow, /missing production marker/);
   assert.match(workflow, /navLabel\.textContent = '\\\\uc2dc\\\\uc2a4\\\\ud15c \\\\uac74\\\\uac15'/);
@@ -54,6 +54,7 @@ test('Admin production verification follows the content fingerprint and lazy AI 
   assert.doesNotMatch(workflow, /grep -Fq '#aiOpsPanel \.ai-chief-chat[^\n]*dist\/admin-compact\.css/);
   assert.match(workflow, /- 'admin-menu-layout\.js'/);
   assert.match(workflow, /- 'admin-sidebar\.js'/);
+  assert.match(workflow, /- 'admin-release-convergence\.js'/);
 });
 
 test('shared-site guarded release accepts any valid content fingerprint instead of a stale fixed version', async () => {
