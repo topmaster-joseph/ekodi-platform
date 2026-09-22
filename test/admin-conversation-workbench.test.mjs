@@ -5,13 +5,14 @@ import { readFile } from 'node:fs/promises';
 const read = path => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 
 test('Admin authenticated shell ships the conversation-first workbench skin', async () => {
-  const [shell, build, css, dock, bootstrap, thinPostbuild] = await Promise.all([
+  const [shell, build, css, dock, bootstrap, thinPostbuild, menuLayout] = await Promise.all([
     read('admin-authenticated-shell.js'),
     read('scripts/build.mjs'),
     read('admin-conversation-workbench.css'),
     read('admin-assist-dock.js'),
     read('admin-assist-bootstrap.js'),
     read('scripts/admin-thin-postbuild.mjs'),
+    read('admin-menu-layout.js'),
   ]);
 
   assert.doesNotMatch(shell, /admin-conversation-workbench\.css/);
@@ -29,7 +30,10 @@ test('Admin authenticated shell ships the conversation-first workbench skin', as
   assert.match(css, /\.admin-command-entry\{[\s\S]*background:#e8f0fe!important/);
   assert.match(css, /admin-command-home\.admin-command-active \.ekodi-assist-rail\{[\s\S]*display:none!important/);
   assert.match(css, /admin-command-home\.admin-command-active \.ekodi-assist-quick\{[\s\S]*display:none!important/);
-  assert.match(css, /not\(\.admin-command-home\) \.ekodi-assist-bootstrap-form/);
+  assert.match(css, /body\.admin-compact \.ekodi-assist-bootstrap-form/);
+  assert.match(css, /\[data-panel\]\[data-admin-list-layout="single"\]/);
+  assert.match(css, /grid-template-columns:minmax\(0,1fr\)!important/);
+  assert.match(menuLayout, /dataset\.adminListLayout='single'/);
   assert.match(dock, /무엇을 관리하거나 실행할까요\?/);
   assert.match(dock, /placeholder="에코디와 대화하기"/);
   assert.match(bootstrap, /placeholder="에코디와 대화하기"/);

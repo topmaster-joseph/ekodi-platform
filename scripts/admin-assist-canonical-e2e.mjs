@@ -63,13 +63,13 @@ try {
   ));
   await page.waitForSelector('.sidebar', { state: 'visible' });
   await page.waitForSelector('#ekodiAssistPanel:not([hidden])', { timeout: 15_000 });
-  await page.waitForSelector('.ekodi-assist-composer', { state: 'visible', timeout: 15_000 });
+  await page.waitForSelector('#ekodiAssistBootstrap .ekodi-assist-bootstrap-form', { state: 'visible', timeout: 15_000 });
 
   report.visualState = await page.evaluate(() => {
     const sidebar = document.querySelector('.sidebar');
     const assist = document.querySelector('.ekodi-assist');
     const rail = document.querySelector('.ekodi-assist-rail');
-    const composer = document.querySelector('.ekodi-assist-composer');
+    const composer = document.querySelector('#ekodiAssistBootstrap .ekodi-assist-bootstrap-form');
     const welcome = document.querySelector('.ekodi-assist-welcome');
     const bodyStyle = getComputedStyle(document.body);
     return {
@@ -106,7 +106,7 @@ try {
   if (visual?.composerBackground !== 'rgb(255, 255, 255)') {
     throw new Error(`Admin home composer is not white: ${visual?.composerBackground || 'missing'}`);
   }
-  if (visual?.composerRadius !== '32px') {
+  if (visual?.composerRadius !== '30px') {
     throw new Error(`Admin home composer radius mismatch: ${visual?.composerRadius || 'missing'}`);
   }
   if (!String(visual?.assistBackgroundImage || '').includes('radial-gradient')) {
