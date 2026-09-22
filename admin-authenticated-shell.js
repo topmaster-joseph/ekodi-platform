@@ -9,6 +9,9 @@ const postAuthStyles = ['admin-compact.css','admin-design-engine.css','google-ad
 const criticalPostAuthScripts = ['admin-compact.js','admin-menu-layout.js','admin-demand-loader.js'];
 const deferredPostAuthScripts = ['ekodi-message-ui.js','google-admin-auth.js','admin-public-site-controls.js'];
 let started=false;
+const RELEASE_CHECK_MS=60000;
+let releaseCheckedAt=0;
+let releaseCheckPending=null;
 function token(){try{return sessionStorage.getItem(TOKEN_KEY)||''}catch{return''}}
 function authenticated(){return Boolean(token() && app && !app.hidden)}
 function assetUrl(path){const base=path.startsWith('/')?path:`/admin/${path}`;return`${base}${base.includes('?')?'&':'?'}v=${encodeURIComponent(ASSET_VERSION)}`}
@@ -33,6 +36,20 @@ function announceReady(){if(app)app.style.visibility='';delete document.document
 function requestedSection(){const routed=window.EKODIAdminRoutes?.sectionFromLocation?.(location);if(routed)return routed;const raw=location.hash.replace(/^#/,'').trim().toLowerCase()||'command-home';return({storige:'storage',release:'deployments','ai-ops':'aiops','mall-ai-sales':'affiliates'})[raw]||raw}
 async function startAuthenticatedShell(){recoverAuthenticatedSurface();if(started||!authenticated())return;started=true;app.style.visibility='hidden';const requestedHash=location.hash;applyOfficialAdminSurface();document.documentElement.dataset.ekodiAdminReady='loading';for(const href of postAuthStyles)loadStyle(href);for(const src of criticalPostAuthScripts){document.documentElement.dataset.ekodiAdminBootAsset=src;await loadScript(src);if(abortBootIfLoggedOut())return}await waitForNavigationRuntime();delete document.documentElement.dataset.ekodiAdminBootAsset;if(abortBootIfLoggedOut())return;if(requestedHash&&location.hash!==requestedHash)history.replaceState({},document.title,`${location.pathname}${location.search}${requestedHash}`);if(!window.EKODIAdminPanels?.activate||!window.EKODIAdminSidebar){if(abortBootIfLoggedOut())return;console.warn('[EKODI Admin] navigation runtime unavailable; preserving base shell');document.documentElement.dataset.ekodiAdminDegraded='navigation';window.dispatchEvent(new CustomEvent('ekodi-admin-runtime-degraded',{detail:{component:'navigation'}}));installSharedAdminLayout();announceReady();return loadDeferredEnhancements()}await Promise.resolve(window.EKODIAdminPanels.activate(requestedSection())).catch(console.error);if(abortBootIfLoggedOut())return;installSharedAdminLayout();installMallFreeOpsIsolation();announceReady();loadDeferredEnhancements()}
 function onStateChange(){recoverAuthenticatedSurface();if(authenticated())return startAuthenticatedShell();keepLoginInteractive();if(!started&&location.hash)document.documentElement.dataset.ekodiAdminPendingHash=location.hash.slice(1)}
+function adminReleaseVersion(html){return String(html||'').match(/admin-authenticated-shell\.js\?v=([a-f0-9]{16})/)?.[1]||''}
+async function convergeAdminRelease(force=false){
+  if(!authenticated()||document.visibilityState==='hidden')return false;
+  const now=Date.now();
+  if(!force&&now-releaseCheckedAt<RELEASE_CHECK_MS)return false;
+  if(releaseCheckPending)return releaseCheckPending;
+  releaseCheckedAt=now;
+  releaseCheckPending=fetch('/admin/',{cache:'no-store',credentials:'same-origin'})
+    .then(response=>response.ok?response.text():'')
+    .then(html=>{const live=adminReleaseVersion(html);if(live&&live!==ASSET_VERSION){document.documentElement.dataset.ekodiAdminReleaseDrift='true';location.reload();return true}return false})
+    .catch(()=>false)
+    .finally(()=>{releaseCheckPending=null});
+  return releaseCheckPending;
+}
 keepLoginInteractive();onStateChange();
-window.addEventListener('ekodi-authenticated',onStateChange);window.addEventListener('ekodi-session-validated',onStateChange);window.addEventListener('ekodi-nav-changed',()=>{installSharedAdminLayout()});window.addEventListener('ekodi-feature-installed',()=>{installSharedAdminLayout()});matchMedia('(max-width:760px)').addEventListener?.('change',installSharedAdminLayout)
+window.addEventListener('ekodi-authenticated',onStateChange);window.addEventListener('ekodi-session-validated',onStateChange);window.addEventListener('ekodi-nav-changed',()=>{installSharedAdminLayout();void convergeAdminRelease()});window.addEventListener('ekodi-feature-installed',()=>{installSharedAdminLayout()});window.addEventListener('focus',()=>{void convergeAdminRelease()});window.addEventListener('pageshow',event=>{if(event.persisted)void convergeAdminRelease(true)});document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')void convergeAdminRelease()});matchMedia('(max-width:760px)').addEventListener?.('change',installSharedAdminLayout)
 })();
