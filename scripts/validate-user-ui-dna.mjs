@@ -108,7 +108,7 @@ for(const [id,requested] of Object.entries(serviceProfiles)){
 }
 const commerceProfile=experienceProfiles['consumer-commerce'];
 if(!commerceProfile?.geometry?.controlRadius || serviceProfiles.mall!=='consumer-commerce') errors.push('Mall must inherit the reusable consumer-commerce experience profile from the central registry.');
-for (const principle of ['subserviceInheritance','fallbackHeaderWhenMissing','legacyCommonFooterSuppressed','rootInternalPathsExcluded','languageChoiceEverywhere','languageChoiceInHeaderOnly','footerLanguageChoiceForbidden','globalUtilitiesInHeader','unavailableLanguageReturnsToKorean','unreadyLanguageHidden','automaticTranslationLifecycle','progressiveHomeDisclosure']) {
+for (const principle of ['subserviceInheritance','fallbackHeaderWhenMissing','legacyCommonFooterSuppressed','rootInternalPathsExcluded','languageChoiceEverywhere','languageChoiceInHeaderOnly','footerLanguageChoiceForbidden','globalUtilitiesInHeader','unavailableLanguageReturnsToKorean','unreadyLanguageHidden','automaticTranslationLifecycle','progressiveHomeDisclosure','individualSiteHeaderStaysLocal']) {
   if (shell?.principles?.[principle] !== true) errors.push(`User UI Shell principle must remain enabled: ${principle}.`);
 }
 if (shell?.header?.strategy !== 'adopt-existing-first' || shell?.header?.owner !== 'shared-shell') {
@@ -117,7 +117,7 @@ if (shell?.header?.strategy !== 'adopt-existing-first' || shell?.header?.owner !
 if (shell?.header?.fallback !== 'shared-shell-header-when-missing') {
   errors.push('User header must provide the shared fallback header when a page has no service header.');
 }
-for (const meaning of ['EKODI identity', 'current service context', 'account or My EKODI path', 'language choice']) {
+for (const meaning of ['current site identity', 'current service context', 'language choice']) {
   if (!shell?.header?.requiredMeaning?.includes(meaning)) errors.push(`User header is missing required meaning: ${meaning}`);
 }
 for (const selector of ['header','.site-header','.topbar','.app-header','.main-header','[data-ekodi-fixed-header]']) {
