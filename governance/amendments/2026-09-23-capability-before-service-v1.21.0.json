@@ -1,0 +1,40 @@
+{
+  "id": "2026-09-23-capability-before-service-v1.21.0",
+  "constitutionVersion": "1.21.0",
+  "status": "approved",
+  "approvedBy": "topmaster-joseph",
+  "approvedAt": "2026-09-23",
+  "changeClass": "C2",
+  "taskId": "capability-before-service-20260923",
+  "issue": null,
+  "pullRequest": null,
+  "summary": "Make capability accumulation, Foundry validation and evidence-backed service creation mandatory before registering any new user-facing EKODI service.",
+  "approvalBasis": "The platform owner explicitly instructed EKODI in ChatGPT on 2026-09-23 to make the capability-before-service operating model a mandatory rule after approving internal Capability Foundry and Sample Service construction.",
+  "adds": [
+    "existing Capability search is mandatory before any new user-facing service registration",
+    "a capability gap must be addressed in Capability Foundry before service packaging",
+    "synthetic sample validation must precede a new service",
+    "at least three verified sample runs are required",
+    "explicit user demand, measured recurring need, or a security/legal/reliability requirement is required",
+    "EKODI Platform Super Administrator packaging review is required",
+    "automatic user-facing service creation is forbidden",
+    "new service registration without evidence fails CI",
+    "new independent deployment boundaries still require the sustainable boundary-creation gate"
+  ],
+  "preserves": [
+    "all existing services as the adoption baseline only",
+    "shared-before-dedicated architecture",
+    "Generation 10 baseline",
+    "S0 scale baseline",
+    "guarded deployment and production verification",
+    "human sovereign authority",
+    "provider independence and reversible architecture"
+  ],
+  "rollback": "Revert Constitution v1.21.0 capability-before-service policy, its validator, evidence registry and Foundry alignment while preserving all services, Capability modules, user data and the v1.20.0 authentication-return-continuity constitution.",
+  "approvalEvidence": {
+    "requiredPullRequestLabel": "constitution-approved",
+    "ownerInstructionRecorded": true,
+    "approvalLabel": "constitution-approved",
+    "ownerInstructionDate": "2026-09-23"
+  }
+}
