@@ -9,22 +9,32 @@ const READ_ROLES={
   church_services:['senior_pastor','pastor','care_staff','staff','viewer'],
   church_care_tasks:['senior_pastor','pastor','care_staff'],
   church_events:['senior_pastor','pastor','care_staff','staff','viewer'],
+  church_donors:['senior_pastor','church_treasurer','church_finance'],
+  church_offerings:['senior_pastor','church_treasurer','church_finance'],
+  church_ledger_entries:['senior_pastor','church_treasurer','church_finance'],
+  church_receipt_requests:['senior_pastor','church_treasurer','church_finance'],
 };
 const WRITE_ROLES={
   church_members:['senior_pastor','pastor','staff'],
   church_services:['senior_pastor','pastor','staff'],
   church_care_tasks:['senior_pastor','pastor','care_staff'],
   church_events:['senior_pastor','pastor','care_staff','staff'],
+  church_offerings:['senior_pastor','church_treasurer','church_finance'],
+  church_ledger_entries:['senior_pastor','church_treasurer','church_finance'],
+  church_receipt_requests:['senior_pastor','church_treasurer','church_finance'],
 };
 const WRITE_FIELDS={
   church_members:['full_name','preferred_name','phone','email','household_name','status','joined_on'],
   church_services:['service_date','title','scripture','sermon_title','preacher','status'],
   church_care_tasks:['member_id','subject_name','care_type','next_action','due_on','status'],
   church_events:['title','event_date','event_time','location','category','status'],
+  church_offerings:['member_id','donor_name','offering_type','amount','offered_on','method','reference_no','anonymous','note'],
+  church_ledger_entries:['entry_date','direction','account_code','account_name','amount','counterparty','memo','evidence_ref','status'],
+  church_receipt_requests:['id','status','note'],
 };
 
 function cors(origin){
-  const h={'access-control-allow-headers':'authorization,content-type,apikey,prefer','access-control-allow-methods':'GET,POST,OPTIONS','access-control-expose-headers':'content-range','access-control-max-age':'86400','vary':'Origin'};
+  const h={'access-control-allow-headers':'authorization,content-type,apikey,prefer','access-control-allow-methods':'GET,POST,PATCH,OPTIONS','access-control-expose-headers':'content-range','access-control-max-age':'86400','vary':'Origin'};
   if(origin&&ALLOWED_ORIGINS.has(origin))h['access-control-allow-origin']=origin;
   return h;
 }
@@ -76,6 +86,8 @@ function cleanPayload(table,input){
   if(table==='church_services'&&(!body.service_date||!body.title))throw new Error('SERVICE_REQUIRED');
   if(table==='church_care_tasks'&&!body.subject_name)throw new Error('CARE_SUBJECT_REQUIRED');
   if(table==='church_events'&&(!body.event_date||!body.title))throw new Error('EVENT_REQUIRED');
+  if(table==='church_offerings'&&(!body.offered_on||Number(body.amount)<=0))throw new Error('OFFERING_REQUIRED');
+  if(table==='church_ledger_entries'&&(!body.entry_date||Number(body.amount)<=0||!body.account_name))throw new Error('LEDGER_REQUIRED');
   return body;
 }
 function proxyResponse(upstream,origin){
@@ -93,7 +105,7 @@ Deno.serve(async req=>{
   const origin=req.headers.get('origin')||'';
   if(origin&&!ALLOWED_ORIGINS.has(origin))return json({error:'ORIGIN_NOT_ALLOWED'},403,origin);
   if(req.method==='OPTIONS')return new Response(null,{status:204,headers:cors(origin)});
-  if(!['GET','POST'].includes(req.method))return json({error:'METHOD_NOT_ALLOWED'},405,origin);
+  if(!['GET','POST','PATCH'].includes(req.method))return json({error:'METHOD_NOT_ALLOWED'},405,origin);
   const identity=await centralIdentity(req);if(!identity)return json({error:'AUTH_REQUIRED'},401,origin);
   let staff=null;try{staff=await staffFor(identity.id);}catch(error){return json({error:String(error?.message||error)},503,origin);}
   if(!staff)return json({error:'CHURCH_STAFF_REQUIRED'},403,origin);
@@ -101,14 +113,25 @@ Deno.serve(async req=>{
   if(!Object.prototype.hasOwnProperty.call(READ_ROLES,table))return json({error:'TABLE_NOT_ALLOWED'},404,origin);
   if(req.method==='GET'){
     if(!allowed(staff.role,READ_ROLES[table]))return json({error:'ROLE_NOT_ALLOWED'},403,origin);
-    let upstream;try{upstream=await rpc('church_pastor_list',listArgs(table,url,staff,identity));}catch(error){return json({error:String(error?.message||error)},503,origin);}
+    const financeTable=['church_donors','church_offerings','church_ledger_entries','church_receipt_requests'].includes(table);
+    let upstream;
+    try{
+      upstream=financeTable
+        ?await rpc('church_finance_list',{p_table:table,p_church_slug:CHURCH_SLUG,p_status:eqValue(url.searchParams.get('status'))||null,p_limit:Number(url.searchParams.get('limit')||100)})
+        :await rpc('church_pastor_list',listArgs(table,url,staff,identity));
+    }catch(error){return json({error:String(error?.message||error)},503,origin);}
     if(!upstream.ok)return proxyResponse(upstream,origin);
     let rows=await upstream.json().catch(()=>[]);if(!Array.isArray(rows))rows=[];
     if(table==='church_staff'&&staff.role==='senior_pastor'){
       const requested=uuidOrNull(url.searchParams.get('user_id'));if(requested)rows=rows.filter(row=>String(row?.user_id||'')===requested);
     }
     if(String(req.headers.get('prefer')||'').toLowerCase().includes('count=exact')){
-      let counted;try{counted=await rpc('church_pastor_count',{p_table:table,p_church_slug:CHURCH_SLUG,p_requester_user_id:identity.id,p_is_senior:staff.role==='senior_pastor',p_status:eqValue(url.searchParams.get('status'))||null});}catch(error){return json({error:String(error?.message||error)},503,origin);}
+      let counted;
+      try{
+        counted=financeTable
+          ?await rpc('church_finance_count',{p_table:table,p_church_slug:CHURCH_SLUG,p_status:eqValue(url.searchParams.get('status'))||null})
+          :await rpc('church_pastor_count',{p_table:table,p_church_slug:CHURCH_SLUG,p_requester_user_id:identity.id,p_is_senior:staff.role==='senior_pastor',p_status:eqValue(url.searchParams.get('status'))||null});
+      }catch(error){return json({error:String(error?.message||error)},503,origin);}
       if(!counted.ok)return proxyResponse(counted,origin);
       const total=Number(await counted.json().catch(()=>0))||0;
       return jsonWithCount(rows,total,origin);
@@ -118,7 +141,21 @@ Deno.serve(async req=>{
   if(!allowed(staff.role,WRITE_ROLES[table]))return json({error:'ROLE_NOT_ALLOWED'},403,origin);
   let input={};try{input=await req.json();}catch{return json({error:'INVALID_JSON'},400,origin);}
   let payload;try{payload=cleanPayload(table,input);}catch(error){return json({error:String(error?.message||error)},400,origin);}
-  let upstream;try{upstream=await rpc('church_pastor_create',{p_table:table,p_church_slug:CHURCH_SLUG,p_payload:payload,p_actor:identity.id});}catch(error){return json({error:String(error?.message||error)},503,origin);}
+  if(req.method==='PATCH'){
+    if(table!=='church_receipt_requests')return json({error:'PATCH_NOT_ALLOWED'},405,origin);
+    const id=uuidOrNull(payload.id);if(!id)return json({error:'RECEIPT_ID_REQUIRED'},400,origin);
+    const status=String(payload.status||'').trim();
+    let patched;try{patched=await rpc('church_receipt_status_update',{p_church_slug:CHURCH_SLUG,p_id:id,p_status:status,p_note:String(payload.note||''),p_actor:identity.id});}catch(error){return json({error:String(error?.message||error)},503,origin);}
+    if(!patched.ok)return proxyResponse(patched,origin);
+    const row=await patched.json().catch(()=>null);return json(row?[row]:[],200,origin);
+  }
+  if(table==='church_receipt_requests')return json({error:'POST_NOT_ALLOWED'},405,origin);
+  const financeTable=['church_offerings','church_ledger_entries'].includes(table);
+  let upstream;try{
+    upstream=financeTable
+      ?await rpc('church_finance_create',{p_table:table,p_church_slug:CHURCH_SLUG,p_payload:payload,p_actor:identity.id})
+      :await rpc('church_pastor_create',{p_table:table,p_church_slug:CHURCH_SLUG,p_payload:payload,p_actor:identity.id});
+  }catch(error){return json({error:String(error?.message||error)},503,origin);}
   if(!upstream.ok)return proxyResponse(upstream,origin);
   const row=await upstream.json().catch(()=>null);return json(row?[row]:[],201,origin);
 });
