@@ -41,6 +41,41 @@ body.admin-compact .sidebar nav{
   scrollbar-width:thin;
   scrollbar-color:#c9cdd4 transparent;
 }
+body.admin-compact .admin-command-entry{
+  display:flex!important;
+  align-items:center!important;
+  gap:10px!important;
+  width:100%!important;
+  min-height:44px!important;
+  margin:2px 0 8px!important;
+  padding:9px 12px!important;
+  border:0!important;
+  border-radius:16px!important;
+  background:#e8f0fe!important;
+  color:#174ea6!important;
+  font:inherit!important;
+  font-size:14px!important;
+  font-weight:700!important;
+  line-height:1.25!important;
+  text-align:left!important;
+  cursor:pointer!important;
+  box-shadow:none!important;
+}
+body.admin-compact .admin-command-entry:hover{
+  background:#dce8fb!important;
+  color:#0b57d0!important;
+}
+body.admin-compact .admin-command-entry b{
+  display:inline-grid!important;
+  place-items:center!important;
+  min-width:22px!important;
+  font-size:18px!important;
+  font-weight:500!important;
+}
+body.admin-compact.admin-command-home .admin-command-entry{
+  background:#dce8fb!important;
+  color:#0b57d0!important;
+}
 body.admin-compact .admin-global-nav{
   min-height:44px!important;
   padding:9px 11px!important;
@@ -107,7 +142,7 @@ body.admin-compact .admin-detail-more:hover{
   background:#eef1f6!important;
   color:#303134!important;
 }
-body.admin-compact .admin-context-tabs-shell{
+body.admin-compact.admin-command-home .admin-context-tabs-shell{
   display:none!important;
 }
 body.admin-compact .side-bottom{
@@ -364,6 +399,31 @@ html body.admin-compact.ekodi-admin-design-engine .sidebar nav{
   overflow-y:auto!important;
   overflow-x:hidden!important;
   scrollbar-width:thin!important;
+}
+html body.admin-compact.ekodi-admin-design-engine .admin-command-entry{
+  display:flex!important;
+  min-height:44px!important;
+  margin:2px 0 8px!important;
+  padding:9px 12px!important;
+  border:0!important;
+  border-radius:16px!important;
+  background:#e8f0fe!important;
+  color:#174ea6!important;
+  box-shadow:none!important;
+}
+html body.admin-compact.ekodi-admin-design-engine.admin-command-home .admin-command-entry{
+  background:#dce8fb!important;
+  color:#0b57d0!important;
+}
+html body.admin-compact.ekodi-admin-design-engine.admin-command-home .admin-context-tabs-shell{
+  display:none!important;
+}
+html body.admin-compact.ekodi-admin-design-engine:not(.admin-command-home) .admin-context-tabs-shell{
+  display:flex!important;
+  background:rgba(255,255,255,.98)!important;
+  color:#172033!important;
+  border-bottom:1px solid #e5e8ee!important;
+  box-shadow:none!important;
 }
 html body.admin-compact.ekodi-admin-design-engine .admin-global-nav{
   color:#34373b!important;

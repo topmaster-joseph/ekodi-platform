@@ -5,11 +5,12 @@ import { readFile } from 'node:fs/promises';
 const read = path => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 
 test('Admin authenticated shell ships the conversation-first workbench skin', async () => {
-  const [shell, build, css, dock, thinPostbuild] = await Promise.all([
+  const [shell, build, css, dock, bootstrap, thinPostbuild] = await Promise.all([
     read('admin-authenticated-shell.js'),
     read('scripts/build.mjs'),
     read('admin-conversation-workbench.css'),
     read('admin-assist-dock.js'),
+    read('admin-assist-bootstrap.js'),
     read('scripts/admin-thin-postbuild.mjs'),
   ]);
 
@@ -23,12 +24,15 @@ test('Admin authenticated shell ships the conversation-first workbench skin', as
   assert.match(thinPostbuild, /final visual authority/);
   assert.match(thinPostbuild, /conversationWorkbenchCss/);
   assert.match(css, /\.admin-global-details\{[\s\S]*display:grid!important/);
-  assert.match(css, /\.admin-context-tabs-shell\{[\s\S]*display:none!important/);
+  assert.match(css, /admin-command-home \.admin-context-tabs-shell\{[\s\S]*display:none!important/);
+  assert.match(css, /not\(\.admin-command-home\) \.admin-context-tabs-shell\{[\s\S]*display:flex!important/);
+  assert.match(css, /\.admin-command-entry\{[\s\S]*background:#e8f0fe!important/);
   assert.match(css, /admin-command-home\.admin-command-active \.ekodi-assist-rail\{[\s\S]*display:none!important/);
   assert.match(css, /admin-command-home\.admin-command-active \.ekodi-assist-quick\{[\s\S]*display:none!important/);
   assert.match(css, /not\(\.admin-command-home\) \.ekodi-assist-bootstrap-form/);
   assert.match(dock, /무엇을 관리하거나 실행할까요\?/);
   assert.match(dock, /placeholder="에코디와 대화하기"/);
+  assert.match(bootstrap, /placeholder="에코디와 대화하기"/);
 });
 
 test('Admin conversation-first skin preserves mobile drawer and readable light surface', async () => {
