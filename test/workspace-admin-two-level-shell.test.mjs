@@ -13,7 +13,7 @@ test('workspace admin keeps the shared shell while all tenant menus navigate dir
   assert.match(css,/\.sidebar\{position:sticky;top:58px;height:calc\(100dvh - 58px\)[^}]*overflow:hidden/);
   assert.match(css,/\.ekodi-admin-shell-nav\[data-ekodi-admin-nav-mode="primary"\][^{]*\{[^}]*overflow:hidden!important/);
   assert.match(css,/main\{[^}]*max-width:none/);
-  assert.match(script,/const mallDirectSections=\[\['overview','대시보드'\],\['products','상품'\],\['sourcing','공급·제휴'\],\['channels','판매채널'\],\['growth','AI 영업'\],\['analytics','성과'\],\['confirmations','지급·수령'\],\['design','관리설정'\]\]/);
+  assert.match(script,/const mallDirectSections=\[\['overview','홈'\],\['products','상품'\],\['sourcing','공급·제휴'\],\['analytics','주문·매출'\],\['channels','채널'\],\['growth','AI 영업'\],\['confirmations','지급·수령'\],\['design','설정'\]\]/);
   assert.match(script,/function renderSecondaryNav\(_groupId,_role=workspaceRole\)\{[^}]*h\.hidden=true/);
   assert.match(script,/admin-nav-group-label/);
   assert.match(script,/소통 · 홍보/);
@@ -34,14 +34,14 @@ test('workspace admin keeps the shared shell while all tenant menus navigate dir
 test('Mall navigation is one level and routes directly to each operating screen', async()=>{
   const script=await (await workspaceAdminScript()).text();
   assert.match(script,/mallDirectSections/);
-  assert.match(script,/\['overview','대시보드'\]/);
+  assert.match(script,/\['overview','홈'\]/);
   assert.match(script,/\['products','상품'\]/);
   assert.match(script,/\['sourcing','공급·제휴'\]/);
-  assert.match(script,/\['channels','판매채널'\]/);
+  assert.match(script,/\['channels','채널'\]/);
   assert.match(script,/\['growth','AI 영업'\]/);
-  assert.match(script,/\['analytics','성과'\]/);
+  assert.match(script,/\['analytics','주문·매출'\]/);
   assert.match(script,/\['confirmations','지급·수령'\]/);
-  assert.match(script,/\['design','관리설정'\]/);
+  assert.match(script,/\['design','설정'\]/);
   assert.match(script,/sectionHref=key=>key==='overview'\?\`\$\{adminBase\}\/overview\`:.*channel-settings/s);
   assert.match(script,/a\.href=sectionHref\(key\)/);
   assert.match(script,/key==='design'&&section==='languages'/);
