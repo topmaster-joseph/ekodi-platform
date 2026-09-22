@@ -1,5 +1,5 @@
 {
-  "version": "1.17.0",
+  "version": "1.18.0",
   "effectiveDate": "2026-09-22",
   "status": "active",
   "title": "EKODI Platform Constitution",
@@ -34,7 +34,8 @@
     "completion-continuity-through-recoverable-interruptions",
     "supreme-attributes-binding",
     "site-owned-admin-canonical-path",
-    "guest-open-public-user-surfaces"
+    "guest-open-public-user-surfaces",
+    "signed-in-basic-capabilities-free-premium-by-entitlement"
   ],
   "architectureModel": {
     "registry": "governance/architecture/ekodi-os-architecture.json",
@@ -610,7 +611,6 @@
       "private-data",
       "personal-state",
       "workspace-internal-data",
-      "write",
       "application",
       "payment",
       "upload",
@@ -639,6 +639,13 @@
       "validate:constitution",
       "validate:user-surfaces",
       "validate:shell"
-    ]
+    ],
+    "signedInBasicAccess": "free-by-default",
+    "basicCapabilitiesRequirePaidSubscription": false,
+    "premiumCapabilities": "subscription-or-explicit-entitlement",
+    "monetizationRule": "charge-for-additional-or-advanced-capabilities-not-basic-access",
+    "anonymousReadAccessRequired": true,
+    "signedInBasicUseRequired": true,
+    "entitlementUpgradeMustNotBlockPublicOrBasicExperience": true
   }
 }
