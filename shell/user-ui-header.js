@@ -152,13 +152,13 @@ function isIndividualSite(){
   const first=location.pathname.split('/').filter(Boolean)[0]||'';
   if(first&&!new Set(['my','auth','admin','privacy','terms','api','shell']).has(first))return true;
   const host=String(location.hostname||'').toLowerCase();
-  return Boolean(host&&host!=='ekodi.kr'&&host!=='www.ekodi.kr'&&!/^(?:auth|admin|my)\.ekodi\.kr$/.test(host));
+  return Boolean(host&&host!=='ekodi.kr');
 }
 function isGlobalPlatformHeaderLink(anchor){
   if(!(anchor instanceof HTMLAnchorElement))return false;
   try{
     const url=new URL(anchor.getAttribute('href')||'',location.href);
-    if(!['ekodi.kr','www.ekodi.kr'].includes(url.hostname.toLowerCase()))return false;
+    if(url.hostname.toLowerCase()!=='ekodi.kr')return false;
     const path=url.pathname.replace(/\/+$/,'')||'/';
     return path==='/'||path==='/my';
   }catch{return false;}
