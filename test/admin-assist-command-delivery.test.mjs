@@ -16,10 +16,15 @@ test('bootstrap never silently drops a command while Assist is lazy-loading',asy
   assert.match(js,/setCustomValidity\(''\)/);
   assert.match(js,/setCustomValidity/);
   assert.match(js,/reportValidity/);
-  assert.match(js,/ekodi-admin-assist-request/);
+  assert.match(js,/window\.EKODIAdminAssist/);
+  assert.match(js,/bridge\?\.submit/);
+  assert.match(js,/bridge\.submit\(text\)/);
   assert.match(js,/finally\{b\.disabled=0\}/);
   assert.doesNotMatch(js,/if\(!d\?\.loadStyle\|\|!d\?\.loadScript\)return/);
-  assert.ok(js.indexOf('await L')<js.indexOf("new CustomEvent('ekodi-admin-assist-request'"),'Assist runtime must resolve before command dispatch');
+  assert.ok(js.indexOf('await L')<js.indexOf('bridge.submit(text)'),'Assist runtime must resolve before direct command submission');
+  const dock=await read('admin-assist-dock.js');
+  assert.match(dock,/EKODIAdminAssist=Object\.freeze/);
+  assert.match(dock,/submit:text=>\{setOpen\(true\);setTab\('ai',false\);return submitAi\(text\)\}/);
 });
 
 test('bootstrap explicitly awaits the dock listener runtime on demand and direct fallback paths',async()=>{
@@ -71,7 +76,7 @@ test('production verification submits the real bottom command on canonical ekodi
   assert.match(probe,/admin-command-home/);
   assert.match(probe,/admin-command-active/);
   assert.match(probe,/rgb\(247, 248, 252\)/);
-  assert.match(probe,/composerRadius !== '32px'/);
+  assert.match(probe,/composerRadius !== '30px'/);
   assert.match(probe,/radial-gradient/);
   assert.match(probe,/workbench\/sidebar alignment mismatch/);
   assert.match(retry,/scripts\/admin-assist-canonical-e2e\.mjs/);

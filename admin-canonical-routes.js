@@ -61,8 +61,10 @@ function sectionFromPath(pathname){
 function sectionFromLocation(loc=window.location){
   const pathSection=sectionFromPath(loc.pathname);
   if(pathSection&&pathSection!==COMMAND_HOME)return pathSection;
-  const query=normalizeSection(new URLSearchParams(loc.search).get('route'));
+  const params=new URLSearchParams(loc.search);
+  const query=normalizeSection(params.get('route'));
   if(query)return query;
+  if(pathSection===COMMAND_HOME&&String(params.get('service')||'').trim())return'engine-all';
   const hash=normalizeSection(loc.hash);
   if(hash)return hash;
   return pathSection;
