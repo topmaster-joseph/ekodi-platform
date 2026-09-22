@@ -12,10 +12,10 @@
         ],
         "redirect": "manual",
         "expect": [
-          "EKODI 모두의 AI 프로젝트",
+          "EKODI 모두의 AI",
+          "실행 서비스",
           "무엇을 하고 싶으세요?",
-          "AI로 하기",
-          "최근 공개된 AI"
+          "개발 요청"
         ],
         "headerExpect": [
           "x-ekodi-canonical-surface: ai",
@@ -26,10 +26,10 @@
           200
         ],
         "candidateExpect": [
-          "EKODI 모두의 AI 프로젝트",
+          "EKODI 모두의 AI",
+          "실행 서비스",
           "무엇을 하고 싶으세요?",
-          "AI로 하기",
-          "최근 공개된 AI"
+          "개발 요청"
         ],
         "candidateHeaderExpect": [],
         "candidateForbid": [],
