@@ -2,7 +2,7 @@ name: EKODI Delivery Self Heal
 
 on:
   workflow_run:
-    workflows: ["EKODI AI Orchestration Gate", "EKODI Parallel Change Conflict Guard"]
+    workflows: ["EKODI AI Orchestration Gate", "EKODI Parallel Change Conflict Guard", "CI", "Deploy AI Control"]
     types: [completed]
 
 permissions:
@@ -37,5 +37,5 @@ jobs:
             echo "[DELIVERY-SELF-HEAL-001] safety-class failure; never bypass."
             exit 0
           fi
-          echo "[DELIVERY-SELF-HEAL-001] recoverable failure; retry failed jobs."
+          echo "[DELIVERY-SELF-HEAL-001] recoverable gate/conflict/test/staging failure; retry failed jobs."
           gh api -X POST "repos/$REPO/actions/runs/$RUN_ID/rerun-failed-jobs"
