@@ -77,9 +77,12 @@ function fallbackHeader(serviceId){
   const service=cleanServiceId(serviceId)||'ekodi';
   const label=escapeHtml(serviceLabel(service));
   const home=escapeHtml(serviceHomeHref(service));
-  const brand=service==='ekodi'?'EKODI':label;
-  const context=service==='ekodi'?'<span class="ekodi-user-ui-fallback-header__context" aria-hidden="true"></span>':'<span class="ekodi-user-ui-fallback-header__context" data-ekodi-platform-relation="secondary" aria-hidden="true"></span>';
-  return `<header class="ekodi-user-ui-fallback-header" data-ekodi-user-header-root="${USER_UI_VERSION}" data-ekodi-user-header-fallback="${USER_UI_VERSION}" role="banner"><div class="ekodi-user-ui-fallback-header__inner"><a class="ekodi-user-ui-fallback-header__brand" data-ekodi-header-home href="${home}" aria-label="${brand} 홈">${brand}</a>${context}<nav class="ekodi-user-ui-fallback-header__nav" aria-label="사용자 계정"><a href="https://ekodi.kr/my/">My EKODI</a></nav></div></header>`;
+  const platformRoot=service==='ekodi';
+  const brand=platformRoot?'EKODI':label;
+  const scope=platformRoot?'platform':'service-local';
+  const context='<span class="ekodi-user-ui-fallback-header__context" data-ekodi-header-center aria-hidden="true"></span>';
+  const account=platformRoot?'<a class="ekodi-user-ui-header-fallback__my" href="https://ekodi.kr/my/">My EKODI</a>':'';
+  return `<header class="ekodi-user-ui-fallback-header" data-ekodi-user-header-root="${USER_UI_VERSION}" data-ekodi-user-header-fallback="${USER_UI_VERSION}" data-ekodi-header-scope="${scope}" role="banner"><div class="ekodi-user-ui-fallback-header__inner"><a class="ekodi-user-ui-fallback-header__brand" data-ekodi-header-home href="${home}" aria-label="${brand} 홈">${brand}</a>${context}<nav class="ekodi-user-ui-fallback-header__nav" data-ekodi-header-actions aria-label="${platformRoot?'사용자 계정':'사이트 도구'}">${account}</nav></div></header>`;
 }
 
 class ShellHtmlInjector{
