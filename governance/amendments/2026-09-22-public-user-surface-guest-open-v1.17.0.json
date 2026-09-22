@@ -7,7 +7,7 @@
   "changeClass": "C2",
   "taskId": "public-user-surface-guest-open-20260922",
   "issue": null,
-  "pullRequest": null,
+  "pullRequest": 2310,
   "summary": "Make every canonical public user page guest-open by default. Authentication enhances the public experience with tier-, membership-, role- and capability-scoped features instead of replacing the public page with a login or permission wall.",
   "approvalBasis": "The platform owner explicitly confirmed that user pages must be open to everyone by default and instructed EKODI to adopt this as a highest-level rule, while allowing the signed-in experience to change by membership tier and role.",
   "adds": [
@@ -28,9 +28,10 @@
   ],
   "rollback": "Revert constitution v1.17.0, the PUBLIC-USER-SURFACE-001 machine policy, Workspace visibility guard changes, Shell guest-open guard and related validators to v1.16.0. Do not change workspace_id, membership records, private data, domains or administrator routes during rollback.",
   "approvalEvidence": {
-    "pullRequest": null,
+    "pullRequest": 2310,
     "labels": [
-      "constitution-approved"
+      "constitution-approved",
+      "integration-order-approved"
     ],
     "ownerInstructionRecorded": true
   }
