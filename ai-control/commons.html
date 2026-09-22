@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="description" content="필요한 AI는 바로 쓰고, 없으면 함께 만드는 EKODI 모두의 AI">
   <title>EKODI 모두의 AI</title>
-  <link rel="stylesheet" href="./api/commons/style?v=20260922-ai-commons-tabs-1">
+  <link rel="stylesheet" href="./api/commons/style?v=20260923-ai-commons-discovery-1">
 </head>
 <body>
   <main class="page">
@@ -27,16 +27,18 @@
           <p class="kicker">바로 사용</p>
           <h2 id="serviceTitle">실행 서비스</h2>
         </div>
+        <span class="section-badge">분야별 3개</span>
       </div>
       <div id="serviceTabs" class="service-tabs" role="tablist" aria-label="실행 서비스 분류"></div>
       <div id="servicePanel" class="service-panel" aria-live="polite"></div>
     </section>
 
     <section class="want section" aria-labelledby="wantTitle">
+      <p class="kicker">서비스 찾기</p>
       <h2 id="wantTitle">무엇을 하고 싶으세요?</h2>
       <form id="wantForm" class="want-form">
-        <input id="wantInput" name="request" maxlength="1200" required autocomplete="off" placeholder="예) 통역이 필요해요, 제안서를 정리해줘…">
-        <button type="submit">바로 시작</button>
+        <input id="wantInput" name="request" maxlength="1200" required autocomplete="off" placeholder="예) 영어로 바로 통역해줘 · 사진으로 홍보물 만들어줘">
+        <button type="submit">찾기</button>
       </form>
       <p id="wantResult" class="want-result" aria-live="polite"></p>
       <div id="matches" class="match-list"></div>
@@ -76,6 +78,6 @@
 
     <footer><span>EKODI 모두의 AI</span><a href="../">ekodi.kr</a></footer>
   </main>
-  <script type="module" src="./api/commons/client?v=20260922-ai-commons-tabs-1"></script>
+  <script type="module" src="./api/commons/client?v=20260923-ai-commons-discovery-1"></script>
 </body>
 </html>
