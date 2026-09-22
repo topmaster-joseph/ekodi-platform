@@ -53,3 +53,19 @@ test('remaining canonical business, trade and lab surfaces inherit a readability
   assert.match(verifier,/requireReadability\(cgmaRoot,'cgma-root',errors\)/);
   assert.doesNotMatch(verifier,/need\(cgmaRoot,'cgma-root','data-ekodi-tenant-readability/);
 });
+
+
+test('live verifier requires deployed responsive content guards',async()=>{
+  const verifier=await read('scripts/verify-mobile-fixed-headers-live.mjs');
+  for(const marker of [
+    'https://ekodi.kr/responsive.css',
+    'https://ekodi.kr/admin/admin-design-engine.css',
+    'Responsive Typography Standard v3',
+    'word-break:keep-all',
+    '--ekodi-responsive-inline-gutter',
+    'data-ekodi-responsive-grid',
+    'Admin responsive content integrity',
+    'font-size:clamp(',
+    'padding-inline:clamp(',
+  ]) assert.ok(verifier.includes(marker),`missing live responsive verifier marker: ${marker}`);
+});
