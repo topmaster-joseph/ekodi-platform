@@ -2,6 +2,9 @@ name: Verify Admin Production UI E2E
 
 on:
   workflow_dispatch:
+  workflow_run:
+    workflows: ['Deploy EKODI Shared Site Core']
+    types: [completed]
 permissions:
   contents: read
 
@@ -11,10 +14,13 @@ concurrency:
 
 jobs:
   chromium:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
@@ -24,7 +30,7 @@ jobs:
           set -euo pipefail
           npm install --no-save --no-package-lock playwright
           npx playwright install --with-deps chromium
-      - name: Verify production Admin menu paths
+      - name: Verify production Admin menus and responsive content
         shell: bash
         env:
           ADMIN_URL: https://ekodi.kr/admin/
