@@ -16,7 +16,7 @@ test('Admin uses a seven-area primary sidebar with contextual top navigation', a
   for (const marker of [
     "summary: ['platform-overview']",
     "services: ['engine-all', 'engine-core', 'engine-common', 'engine-operations', 'engine-professional', 'engine-ai', 'engine-integration', 'engine-preview']",
-    "sites: ['sites-all', 'sites-internal', 'sites-user', 'sites-customer-partner', 'sites-independent', 'sites-preparing']",
+    "sites: ['sites-all', 'sites-core', 'sites-business', 'sites-community', 'sites-clients', 'sites-knowledge', 'sites-communication', 'sites-worklife', 'sites-other', 'sites-preparing']",
     "people: ['users-access', 'admins', 'security', 'ai-membership']",
     "content: ['work', 'communication', 'community', 'books', 'social']",
     "status: ['health', 'deployments', 'aiops', 'devices', 'api-cost']",
