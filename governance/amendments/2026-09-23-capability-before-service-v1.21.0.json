@@ -7,7 +7,7 @@
   "changeClass": "C2",
   "taskId": "capability-before-service-20260923",
   "issue": null,
-  "pullRequest": null,
+  "pullRequest": 2400,
   "summary": "Make capability accumulation, Foundry validation and evidence-backed service creation mandatory before registering any new user-facing EKODI service.",
   "approvalBasis": "The platform owner explicitly instructed EKODI in ChatGPT on 2026-09-23 to make the capability-before-service operating model a mandatory rule after approving internal Capability Foundry and Sample Service construction.",
   "adds": [
@@ -35,6 +35,7 @@
     "requiredPullRequestLabel": "constitution-approved",
     "ownerInstructionRecorded": true,
     "approvalLabel": "constitution-approved",
-    "ownerInstructionDate": "2026-09-23"
+    "ownerInstructionDate": "2026-09-23",
+    "pullRequest": 2400
   }
 }
