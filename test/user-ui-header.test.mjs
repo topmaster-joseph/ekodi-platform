@@ -23,7 +23,7 @@ test('user UI header/footer/language are shared user-surface-only modules',async
     read('config/user-ui-shell.json')
   ]);
 
-  assert.match(header,/const VERSION=5/);
+  assert.match(header,/const VERSION=6/);
   assert.match(header,/workspace-api\.ekodi\.kr\/v1\/site-chrome\/public/);
   assert.match(header,/async function siteChrome\(\)/);
   assert.match(header,/USER_SURFACES=new Set\(\['public','workspace'\]\)/);
@@ -102,6 +102,11 @@ test('user UI header/footer/language are shared user-surface-only modules',async
   assert.match(userLanguage,/-webkit-text-fill-color:#20362b!important/);
   assert.match(header,/data-ekodi-header-home/);
   assert.match(header,/serviceHomeUrl/);
+  assert.match(header,/isIndividualSite/);
+  assert.match(header,/isGlobalPlatformHeaderLink/);
+  assert.match(header,/pruneIndividualSiteGlobalLinks/);
+  assert.match(header,/isIndividualSite\(\)\?serviceHomeUrl\(\)\.toString\(\):String\(cfg\.homeUrl\)/);
+  assert.match(header,/dataset\.ekodiHeaderScope='service-local'/);
   assert.match(header,/bindHomeAnchor\(header\)/);
   assert.match(header,/serviceHomeAnchor/);
   assert.match(header,/dataset\.ekodiHomeAnchor/);
@@ -159,6 +164,9 @@ test('user UI header/footer/language are shared user-surface-only modules',async
   assert.match(injector,/SHELL_USER_UI_STYLE=`\$\{SHELL_ORIGIN\}\/user-ui-shell\.css\?v=\$\{EKODI_SERVICE_MANIFEST\.shellVersion\}`/);
   assert.match(injector,/renderEkodiUserFooter/);
   assert.match(injector,/data-ekodi-user-ui-style/);
+  assert.match(injector,/platformRoot\?'platform':'service-local'/);
+  assert.match(injector,/platformRoot\?'[^']*사용자 계정':'사이트 도구'/);
+  assert.match(injector,/platformRoot\?'<a class="ekodi-user-ui-header-fallback__my"/);
   assert.doesNotMatch(injector,/213-13-01959/);
   assert.doesNotMatch(injector,/백련동1길 17-4/);
   assert.doesNotMatch(injector,/data-ekodi-user-ui-shell-style/);
@@ -174,6 +182,9 @@ test('user UI header/footer/language are shared user-surface-only modules',async
   assert.equal(parsedPolicy.language.visibleLabel,false);
   assert.equal(parsedPolicy.principles.languageChoiceInHeaderOnly,true);
   assert.equal(parsedPolicy.principles.footerLanguageChoiceForbidden,true);
+  assert.equal(parsedPolicy.principles.individualSiteHeaderStaysLocal,true);
+  assert.deepEqual(parsedPolicy.header.requiredMeaning,['current site identity','current service context','language choice']);
+  assert.ok(parsedPolicy.header.forbidden.includes('global EKODI root or My EKODI links in individual-site headers'));
   assert.equal(parsedPolicy.header.alignment,'centered-canvas');
   assert.equal(parsedPolicy.principles.mainAlignedChrome,true);
   assert.equal(parsedPolicy.header.contentWidth,'match-adopted-main-canvas');
