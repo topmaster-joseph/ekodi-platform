@@ -49,3 +49,30 @@ test('unified directory exposes visibility and external vendor role',async()=>{
   assert.match(source,/visibility: row\.visibility === 'public' \? 'public' : 'private'/);
   assert.match(source,/schemaVersion: 5/);
 });
+
+
+test('central administrator settings connect Cheonggye scopes to their own operation surfaces',async()=>{
+  const runtime=await read('admin-menu-runtime.js');
+  assert.match(runtime,/SPACE_ADMIN_MANAGE_PATHS/);
+  assert.match(runtime,/'cheonggye-local':'\/cheonggye\/admin'/);
+  assert.match(runtime,/'cheonggye-pass':'\/cheonggye\/admin\/pass'/);
+  assert.match(runtime,/cgma:'\/cgma\/admin'/);
+  assert.match(runtime,/data-space-admin-manage/);
+  assert.match(runtime,/syncSpaceAdminManageLink/);
+  assert.match(runtime,/tenant\.domain\?tenant\.name\+' · '\+tenant\.domain/);
+});
+
+test('CGMA active tenant directory uses the canonical apex path while regional scopes stay separate',async()=>{
+  const [access,migration]=await Promise.all([
+    read('customer-google-prereg.js'),
+    read('migrations/0106_cgma_canonical_tenant_domain.sql'),
+  ]);
+  assert.match(access,/slug: 'cgma', name: '청계면상인회', domain: 'ekodi\.kr\/cgma'/);
+  assert.match(access,/slug: 'cheonggye-local', name: '청계잇다 지역플랫폼', domain: 'ekodi\.kr\/cheonggye'/);
+  assert.match(access,/slug: 'cheonggye-pass', name: '청계패스', domain: 'ekodi\.kr\/cheonggye\/pass'/);
+  assert.match(access,/UPDATE customer_tenants SET domain = 'ekodi\.kr\/cgma' WHERE slug = 'cgma'/);
+  assert.match(migration,/UPDATE customer_tenants/);
+  assert.match(migration,/SET domain = 'ekodi\.kr\/cgma'/);
+  assert.match(migration,/WHERE slug = 'cgma'/);
+  assert.doesNotMatch(migration,/DELETE|DROP TABLE/i);
+});
