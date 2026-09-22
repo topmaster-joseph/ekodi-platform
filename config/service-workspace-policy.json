@@ -119,7 +119,9 @@
     "guestExperience": "public-guide-and-open-content",
     "memberMinimumTier": "free",
     "loginProvider": "google",
-    "excludeCustomerSites": true
+    "excludeCustomerSites": true,
+    "freeMemberBasicCapabilitiesRequired": true,
+    "advancedCapabilitiesMayRequireSubscription": true
   },
   "identityAuthority": "ekodi",
   "linkedIdentityProviders": [
@@ -239,6 +241,21 @@
       "requiresExplicitClassification": true,
       "publicRootBehavior": "safe-public-landing-or-privacy-notice",
       "permissionErrorAsLandingForbidden": true
-    }
+    },
+    "anonymousReadAccessRequired": true,
+    "signedInBasicAccess": "free-by-default",
+    "basicCapabilitiesRequirePaidSubscription": false,
+    "premiumCapabilities": "subscription-or-explicit-entitlement",
+    "entitlementUpgradeMustNotBlockPublicOrBasicExperience": true
+  },
+  "adminAccessRule": {
+    "patterns": [
+      "/admin",
+      "*/admin",
+      "*/admin/*"
+    ],
+    "authenticationRequired": true,
+    "authorizationRequired": true,
+    "guestAccess": "forbidden"
   }
 }
