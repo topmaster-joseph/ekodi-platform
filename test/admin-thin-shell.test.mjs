@@ -31,6 +31,13 @@ test('post-auth startup contains only the minimal shell/navigation/demand loader
   assert.doesNotMatch(shell, /'control-center-features\.js'/);
   assert.doesNotMatch(shell, /'device-control-admin\.js'/);
   assert.doesNotMatch(shell, /'system-health-admin\.js'/);
+  assert.match(shell, /const RELEASE_CHECK_MS=60000/);
+  assert.match(shell, /function adminReleaseVersion\(html\)/);
+  assert.match(shell, /async function convergeAdminRelease\(force=false\)/);
+  assert.match(shell, /fetch\('\/admin\/',\{cache:'no-store',credentials:'same-origin'\}\)/);
+  assert.match(shell, /live&&live!==ASSET_VERSION/);
+  assert.match(shell, /location\.reload\(\)/);
+  assert.match(shell, /addEventListener\('focus',\(\)=>\{void convergeAdminRelease\(\)\}\)/);
 });
 
 test('authenticated ADMIN UI declares the official 8th-gen workbench surface and tokens', async () => {
