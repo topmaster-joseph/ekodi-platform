@@ -14,6 +14,8 @@
   ],
   "healthChecks": [
     "/",
+    "/assets/app.js",
+    "/assets/marketplace-live.js",
     "/products/reusable-daily-bottle/",
     "/pages/privacy/"
   ]
