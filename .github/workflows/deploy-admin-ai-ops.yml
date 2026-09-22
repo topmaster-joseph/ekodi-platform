@@ -151,16 +151,16 @@ jobs:
             expected="$2"
             code=$(curl -sS -D /tmp/asset-headers -o /tmp/admin-asset -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/admin/${asset}?v=$LIVE_VERSION" || true)
             echo "$asset?v=$LIVE_VERSION -> $code"
-            [ "$code" = '200' ] || return 1
-            grep -Fiq 'x-content-type-options: nosniff' /tmp/asset-headers || return 1
-            grep -Fiq 'cache-control: public, max-age=31536000, immutable' /tmp/asset-headers || return 1
-            grep -Fq "$expected" /tmp/admin-asset || return 1
+            if [ "$code" != '200' ]; then echo "asset status mismatch: $asset -> $code"; return 1; fi
+            if ! grep -Fiq 'x-content-type-options: nosniff' /tmp/asset-headers; then echo "asset nosniff missing: $asset"; cat /tmp/asset-headers; return 1; fi
+            if ! grep -Fiq 'cache-control: no-store' /tmp/asset-headers; then echo "asset cache contract mismatch: $asset"; cat /tmp/asset-headers; return 1; fi
+            if ! grep -Fq "$expected" /tmp/admin-asset; then echo "asset marker missing: $asset :: $expected"; return 1; fi
           }
 
           verify_compact_without_readable_css() {
             code=$(curl -sS -D /tmp/compact-headers -o /tmp/compact-css -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/admin/admin-compact.css?v=$LIVE_VERSION" || true)
             [ "$code" = '200' ] || return 1
-            grep -Fiq 'cache-control: public, max-age=31536000, immutable' /tmp/compact-headers || return 1
+            grep -Fiq 'cache-control: no-store' /tmp/compact-headers || return 1
             ! grep -Fq 'admin-readable-command.css' /tmp/compact-css || return 1
           }
 
@@ -180,7 +180,7 @@ jobs:
               && verify_asset 'ai-ops-admin.css' '#aiOpsPanel .ai-ops-side' \
               && verify_asset 'admin-perf-diagnostics.js' 'PerformanceObserver' \
               && verify_compact_without_readable_css; then
-              echo "Production Admin verified: version=$LIVE_VERSION, fingerprinted immutable assets, standalone Health, thin shell and flat AI Ops."
+              echo "Production Admin verified: version=$LIVE_VERSION, fingerprinted asset-first no-store assets, standalone Health, thin shell and flat AI Ops."
               exit 0
             fi
             echo "Admin production verification pending (attempt $attempt/24, expected=$EXPECTED_VERSION, live=${LIVE_VERSION:-none})."
@@ -211,7 +211,7 @@ jobs:
           - production check: \`$outcome\`
           - upstream canonical shared-site deployment: \`$UPSTREAM_OUTCOME\`
           - canonical: https://ekodi.kr/admin/
-          - contract: fingerprinted thin shell · immutable assets · standalone Health · flat AI Ops · internal specialist routing
+          - contract: fingerprinted thin shell · asset-first no-store assets · standalone Health · flat AI Ops · internal specialist routing
           - verification workflow: $RUN_URL
           - upstream workflow: $UPSTREAM_RUN_URL
           - checked: $(date -u +'%Y-%m-%dT%H:%M:%SZ')
