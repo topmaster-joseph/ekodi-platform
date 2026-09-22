@@ -57,7 +57,9 @@
     "viewportRequired": true,
     "consoleErrorsCaptured": true,
     "pageErrorsCaptured": true,
-    "requestFailuresCaptured": true
+    "requestFailuresCaptured": true,
+    "initialRuntimeProof": "evidence/runtime/background-browser-worker/2026-09-22-initial-proof.json",
+    "runtimeProven": true
   },
   "provider": {
     "runtime": "playwright-chromium",
