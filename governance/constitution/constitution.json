@@ -1,5 +1,5 @@
 {
-  "version": "1.17.0",
+  "version": "1.18.0",
   "effectiveDate": "2026-09-22",
   "status": "active",
   "title": "EKODI Platform Constitution",
@@ -34,7 +34,8 @@
     "completion-continuity-through-recoverable-interruptions",
     "supreme-attributes-binding",
     "site-owned-admin-canonical-path",
-    "guest-open-public-user-surfaces"
+    "guest-open-public-user-surfaces",
+    "self-verifying-all-surface-system-evidence"
   ],
   "architectureModel": {
     "registry": "governance/architecture/ekodi-os-architecture.json",
@@ -283,7 +284,10 @@
       "governance/architecture/sovereign-autonomous-operations.v1.json",
       "config/sovereign-surface-policy.json",
       "sovereign-autonomy-runtime.js",
-      "scripts/validate-sovereign-autonomous-operations.mjs"
+      "scripts/validate-sovereign-autonomous-operations.mjs",
+      "SURFACE_SYSTEM_VERIFICATION_POLICY.md",
+      "config/surface-system-verification-policy.json",
+      "scripts/validate-surface-system-verification-policy.mjs"
     ],
     "owner": "topmaster-joseph",
     "rule": "C2/C3 changes are proposed first and applied only after explicit owner confirmation."
@@ -640,5 +644,105 @@
       "validate:user-surfaces",
       "validate:shell"
     ]
+  },
+  "surfaceSystemVerificationPolicy": {
+    "id": "SURFACE-SYSTEM-VERIFICATION-001",
+    "status": "active",
+    "scope": "all-current-and-future-user-operator-and-administrator-surfaces",
+    "inheritedBy": [
+      "platform-super-admin",
+      "workspace-admin",
+      "service-admin",
+      "operator",
+      "public-home",
+      "workspace-or-service-my-page",
+      "ekodi-platform-my-page"
+    ],
+    "completionRule": "system-verified-before-complete",
+    "manualUserTestingDefaultGateForbidden": true,
+    "virtualizationPolicy": {
+      "requiredAsAvailableVerificationMethod": true,
+      "virtualizationOnlyArchitectureForbidden": true,
+      "isolatedBrowserOrEquivalentRequiredForUiChanges": true,
+      "independentMethodConvergenceRequiredForHighRiskChanges": true
+    },
+    "syntheticActors": [
+      "guest",
+      "authenticated-user",
+      "workspace-member",
+      "operator",
+      "workspace-or-service-admin",
+      "platform-super-admin"
+    ],
+    "deviceProfiles": [
+      "mobile-portrait",
+      "mobile-landscape",
+      "tablet",
+      "desktop"
+    ],
+    "requiredVerificationLayers": [
+      "route-and-canonical-url",
+      "authentication-session-and-token-hygiene",
+      "authorization-role-capability",
+      "safe-public-projection",
+      "functional-interaction",
+      "responsive-layout-and-overflow",
+      "accessibility-baseline",
+      "secure-projection-and-secret-leakage",
+      "api-and-data-contract",
+      "observability-and-error-surface",
+      "real-production-host-canary"
+    ],
+    "authenticationScenarios": [
+      "guest",
+      "valid-session",
+      "expired-session",
+      "invalid-session",
+      "insufficient-role",
+      "authorized-role"
+    ],
+    "productionCanary": {
+      "required": true,
+      "realCanonicalHostRequired": true,
+      "syntheticWorkspaceOrNonDestructiveFixturePreferred": true,
+      "destructiveMutationForbidden": true,
+      "idempotentOrRollbackVerifiedWritesOnly": true
+    },
+    "evidence": {
+      "machineReadableRequired": true,
+      "requiredFields": [
+        "task_id",
+        "branch_or_commit",
+        "surface",
+        "canonical_url",
+        "synthetic_actor",
+        "device_profile",
+        "auth_state",
+        "checks",
+        "production_host",
+        "observability_result",
+        "verification_timestamp",
+        "result"
+      ],
+      "screenshotsOrEquivalentVisualEvidenceForUiChanges": true,
+      "retention": "auditable-release-evidence"
+    },
+    "completionStates": [
+      "SYSTEM_VERIFIED",
+      "DEPLOYED_AWAITING_SYSTEM_VERIFICATION",
+      "VERIFICATION_EXCEPTION",
+      "FAILED"
+    ],
+    "exceptionPolicy": {
+      "defaultNonBlockingHumanDeviceEvidence": true,
+      "exceptionRequiresUnsimmulatableDeviceOsProviderBehaviorOrTelemetryConflict": true,
+      "exceptionMustBeNarrowScopedAuditableAndOwnerVisible": true
+    },
+    "failurePolicy": {
+      "repairRetestRedeployReverifyBeforeCompletion": true,
+      "askUserToTestAsDefaultFallbackForbidden": true,
+      "permissionFailureMustNotBeMistakenForPublicSurfaceSuccess": true
+    },
+    "finalAuthority": "ekodi_platform_super_administrator"
   }
 }
