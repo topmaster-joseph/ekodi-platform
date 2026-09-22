@@ -1,5 +1,5 @@
 name: Deploy EKODI Church Homepage
-# Release reconciliation marker: church-member-giving-42f8167-20260922
+# Release reconciliation marker: church-member-local-i18n-c44281c-20260923
 
 on:
   workflow_dispatch:
