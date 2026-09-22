@@ -30,9 +30,9 @@ const SERVICE_CATALOG = [
   { id: 'edu', name: 'EKODI Education', domain: 'edu.ekodi.kr', url: 'https://edu.ekodi.kr', group: 'knowledge', defaultState: 'planned', defaultMonitor: false },
   { id: 'learn', name: 'EKODI Learning Fabric', domain: 'ekodi.kr/learn', url: 'https://ekodi.kr/learn', group: 'knowledge', defaultState: 'active', defaultMonitor: true },
   { id: 'media', name: '에코디미디어', domain: 'media.ekodi.kr', url: 'https://media.ekodi.kr', group: 'knowledge', defaultState: 'planned', defaultMonitor: false },
-  { id: 'church', name: '에코디교회', domain: 'church.ekodi.kr', url: 'https://church.ekodi.kr', group: 'ministry', defaultState: 'active', defaultMonitor: true },
-  { id: 'community', name: '커뮤니티', domain: 'community.ekodi.kr', url: 'https://community.ekodi.kr', group: 'ministry', defaultState: 'active', defaultMonitor: true },
-  { id: 'social', name: 'EKODI Social', domain: 'social.ekodi.kr', url: 'https://social.ekodi.kr/health', group: 'platform', defaultState: 'active', defaultMonitor: true }
+  { id: 'church', name: '에코디교회', domain: 'ekodi.kr/ekodichurch', url: 'https://ekodi.kr/ekodichurch', group: 'ministry', defaultState: 'active', defaultMonitor: true },
+  { id: 'community', name: '커뮤니티', domain: 'ekodi.kr/community', url: 'https://ekodi.kr/community', group: 'ministry', defaultState: 'active', defaultMonitor: true },
+  { id: 'social', name: 'EKODI Social', domain: 'ekodi.kr/social', url: 'https://ekodi.kr/social/health', group: 'platform', defaultState: 'active', defaultMonitor: true }
 ];
 
 const LIVE_PUBLIC_SITE_CATALOG = realtimeTenantList().map(tenant => ({
