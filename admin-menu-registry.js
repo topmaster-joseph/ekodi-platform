@@ -25,7 +25,7 @@ export const ADMIN_MENU_REGISTRY = Object.freeze([
   { id: 'engine-integration', group: 'services', icon: '↔', delegateSection: 'common-services', engineCategory: 'integration', labels: { ko: '연동 엔진', en: 'Integration Engines' } },
   { id: 'engine-preview', group: 'services', icon: '…', delegateSection: 'common-services', engineCategory: 'preview', labels: { ko: '체험·준비 중', en: 'Preview & Preparing' } },
 
-  { id: 'sites-all', group: 'sites', icon: '▦', delegateSection: 'campus', siteGroup: 'all', labels: { ko: '전체', en: 'All' } },
+  { id: 'sites-all', group: 'sites', icon: '▦', delegateSection: 'campus', siteGroup: 'all', labels: { ko: '전체', en: 'All Sites' } },
   { id: 'sites-core', group: 'sites', icon: '◆', delegateSection: 'campus', siteGroup: 'core', labels: { ko: '핵심·접근', en: 'Core & Access' } },
   { id: 'sites-business', group: 'sites', icon: 'B', delegateSection: 'campus', siteGroup: 'business', labels: { ko: '사업·상거래', en: 'Business & Commerce' } },
   { id: 'sites-community', group: 'sites', icon: '◌', delegateSection: 'campus', siteGroup: 'community', labels: { ko: '공동체', en: 'Community' } },
