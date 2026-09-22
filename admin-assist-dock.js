@@ -221,7 +221,7 @@
 
   function renderInbox(){
     const chat=root?.querySelector('#ekodiAssistChat');if(!chat)return;chat.replaceChildren();const title=root.querySelector('#ekodiAssistTitle');if(title)title.textContent=activeThread?.thread?.title||'대화 · 문의';
-    const composer=root.querySelector('#ekodiAssistComposer');if(composer)composer.hidden=true;
+    const composer=root.querySelector('#ekodiAssistComposer');if(composer)composer.hidden=false;
     if(activeThread){renderThread(chat,activeThread);return}
     const empty=el('div','ekodi-assist-welcome');empty.append(el('div','ekodi-assist-mark','E'),el('h2','','중요한 대화만 모았습니다.'),el('p','','왼쪽 목록에서 문의를 선택하면 답변·인수·완료 처리를 이어갈 수 있습니다.'));chat.append(empty);
   }
