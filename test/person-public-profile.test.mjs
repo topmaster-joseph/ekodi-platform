@@ -11,11 +11,10 @@ function binding(body='ok',type='text/plain'){
 }
 
 test('public person pages are a public projection of My EKODI, not a second admin surface',async()=>{
-  const [home,app,worker,profileApi,migration]=await Promise.all([
+  const [home,control,worker,migration]=await Promise.all([
     read('my/index.html'),
-    read('my/app.js'),
+    read('my/public-profile.js'),
     read('my-worker.js'),
-    read('supabase/functions/profile-api/index.ts'),
     read('supabase/migrations/20260923085000_person_public_profiles.sql'),
   ]);
   assert.match(home,/개인 관리공간 · 나만 보는 곳/);
@@ -23,14 +22,17 @@ test('public person pages are a public projection of My EKODI, not a second admi
   assert.match(home,/id="publicHandle"/);
   assert.match(home,/id="publicProfileVisibility"/);
   assert.match(home,/공개 개인페이지/);
-  assert.match(app,/public_profile/);
-  assert.match(app,/callProfileApi\('PATCH',payload,'\/public-profile'\)/);
+  assert.match(control,/get_my_public_profile/);
+  assert.match(control,/set_my_public_profile/);
+  assert.match(control,/EKODI_MY_AUTH/);
   assert.match(worker,/PUBLIC_PERSON_PATH_RE/);
   assert.match(worker,/공개 개인페이지 · 다른 사람이 보는 곳/);
   assert.match(worker,/select.*handle,display_name,headline,bio,links,updated_at/);
   assert.doesNotMatch(worker,/select.*person_id.*handle,display_name/);
-  assert.match(profileApi,/path==="\/public-profile"/);
-  assert.match(profileApi,/public_handle_taken/);
+  assert.match(migration,/create or replace function public\.get_my_public_profile\(\)/);
+  assert.match(migration,/create or replace function public\.set_my_public_profile/);
+  assert.match(migration,/security definer/);
+  assert.match(migration,/grant execute on function public\.set_my_public_profile/);
   assert.match(migration,/visibility text not null default 'private'/);
   assert.match(migration,/using \(visibility = 'public'\)/);
   assert.match(migration,/grant select \(handle, display_name, headline, bio, links, visibility, updated_at\)/);
