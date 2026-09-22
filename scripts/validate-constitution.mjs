@@ -18,11 +18,23 @@ const surfaceVerification = json('config/surface-system-verification-policy.json
 const executionFabric = json('config/autonomous-execution-fabric-policy.json');
 const remoteComputer = json('config/remote-computer-execution-policy.json');
 
-if (constitution.version !== '1.20.0') fail('constitution version must be 1.20.0 with authentication return continuity, EKODI-owned virtualization sovereignty, and all prior approved amendments');
+if (constitution.version !== '1.21.0') fail('constitution version must be 1.21.0 with capability-before-service enforcement and all prior approved amendments');
 if (constitution.status !== 'active') fail('constitution must be active');
-for (const principle of ['free-first-not-free-only','ekodi-core-is-source-of-truth','provider-independent-by-default','secure-by-default','one-domain-grammar','isolated-parallel-development','verification-first-evolution','security-native-intelligence','evidence-linked-recommendations','secure-projection-minimum-disclosure','integrated-responsibility-distributed-execution-standardized-connections','layered-governance-os-core-services-connections-workspaces','user-surface-engine-separation','capability-first-reuse','sustainable-scale-by-evidence','workspace-over-space','generation-10-active-baseline','open-ended-evidence-driven-generation-evolution','sovereign-autonomy-with-human-authority','person-workspace-role-capability-authority','observe-detect-reason-plan-execute-verify-recover-learn','ekodibiz-exclusive-commercial-subject','ordinary-user-information-first-commercial-separation','completion-continuity-through-recoverable-interruptions','supreme-attributes-binding','guest-open-public-user-surfaces','self-verifying-all-surface-system-evidence','ekodi-owned-virtualization-first','authentication-return-continuity']) {
+for (const principle of ['free-first-not-free-only','ekodi-core-is-source-of-truth','provider-independent-by-default','secure-by-default','one-domain-grammar','isolated-parallel-development','verification-first-evolution','security-native-intelligence','evidence-linked-recommendations','secure-projection-minimum-disclosure','integrated-responsibility-distributed-execution-standardized-connections','layered-governance-os-core-services-connections-workspaces','user-surface-engine-separation','capability-first-reuse','capability-before-service-enforced','sustainable-scale-by-evidence','workspace-over-space','generation-10-active-baseline','open-ended-evidence-driven-generation-evolution','sovereign-autonomy-with-human-authority','person-workspace-role-capability-authority','observe-detect-reason-plan-execute-verify-recover-learn','ekodibiz-exclusive-commercial-subject','ordinary-user-information-first-commercial-separation','completion-continuity-through-recoverable-interruptions','supreme-attributes-binding','guest-open-public-user-surfaces','self-verifying-all-surface-system-evidence','ekodi-owned-virtualization-first','authentication-return-continuity']) {
   if (!constitution.principles?.includes(principle)) fail(`missing constitutional principle: ${principle}`);
 }
+
+const capabilityBeforeService = constitution.capabilityFirstServiceCreationPolicy || {};
+if (capabilityBeforeService.id !== 'CAPABILITY-BEFORE-SERVICE-001' || capabilityBeforeService.status !== 'enforced' || capabilityBeforeService.mode !== 'mandatory') fail('Capability Before Service constitutional policy must remain mandatory');
+if (capabilityBeforeService.existingCapabilityReuseRequired !== true || capabilityBeforeService.foundryBeforeServiceWhenCapabilityGapExists !== true) fail('existing Capability reuse and Foundry-first gap resolution must remain mandatory');
+if (capabilityBeforeService.sampleBeforeUserService !== true || Number(capabilityBeforeService.minimumVerifiedSampleRuns) < 3) fail('new services must require sample-first validation with at least three verified runs');
+if (capabilityBeforeService.demandEvidenceRequired !== true || capabilityBeforeService.humanPackagingReviewRequired !== true) fail('new services must require demand evidence and human packaging review');
+if (capabilityBeforeService.humanPackagingReviewAuthority !== 'ekodi_platform_super_administrator') fail('new service packaging authority must remain the EKODI Platform Super Administrator');
+if (capabilityBeforeService.automaticUserServiceCreationForbidden !== true || capabilityBeforeService.newServiceWithoutEvidenceBlocksCi !== true) fail('automatic/evidence-free user service creation must remain blocked');
+if (capabilityBeforeService.newIndependentBoundaryAlsoRequiresSustainableBoundaryGate !== true) fail('new independent service boundaries must retain the sustainable boundary gate');
+if (capabilityBeforeService.currentServicesGrandfatheredOnlyAtAdoption !== true || capabilityBeforeService.grandfatheredListExpansionRequiresConstitutionalAmendment !== true) fail('service grandfather baseline must remain adoption-only and constitutionally locked');
+if (capabilityBeforeService.evidenceRegistry !== 'config/service-creation-evidence.json') fail('service creation evidence registry path drifted');
+if (!constitution.changeControl?.protectedPaths?.includes('scripts/validate-capability-first-service-creation.mjs')) fail('capability-before-service validator must remain constitutionally protected');
 
 const virtualizationSovereignty = constitution.virtualizationSovereigntyPolicy || {};
 if (virtualizationSovereignty.id !== 'VIRTUALIZATION-SOVEREIGNTY-001' || virtualizationSovereignty.status !== 'enforced') fail('virtualization sovereignty constitutional policy must remain enforced');
@@ -338,3 +350,4 @@ console.log('- Workspace is canonical; Space remains compatibility-only during m
 console.log('- service workspace routing policy aligned to immutable workspace_id');
 console.log('- Sovereign -> Autonomous -> Agentic -> Services operating hierarchy registered over Governance/OS/Core service boundaries');
 console.log('- data sovereignty, tenant authority, provider, storage and sustainable scaling rules checked');
+console.log('- Capability Before Service: mandatory; evidence-free new service registration is CI-blocked');
