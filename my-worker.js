@@ -6,6 +6,7 @@ import workspacePacks from './config/workspace-packs.json' with { type: 'json' }
 
 const WORKSPACE_KEY_RE=/^[a-z]+:[a-zA-Z0-9:_-]+$/;
 const SERVICE_ID_RE=/^[a-z][a-z0-9-]*$/;
+const PUBLIC_PERSON_PATH_RE=/^\/@([a-z0-9][a-z0-9._-]{2,39})\/?$/;
 const PRIVATE_ROUTER_TAG='<script src="/private-workspace-router.js?v=20260827-private-workspace-1"></script>';
 const ACCESS_CONTEXT_TAG='<script type="module" src="/access-context.js?v=20260829-common-service-access-1"></script>';
 
@@ -57,6 +58,101 @@ function parsePrivateWorkspacePath(pathname){
   if(workspaceKey.length>180||!WORKSPACE_KEY_RE.test(workspaceKey))return false;
   if(serviceId&&(!SERVICE_ID_RE.test(serviceId)||!visibleServices().some(service=>service.id===serviceId)))return false;
   return {workspaceKey,serviceId};
+}
+function parsePublicPersonPath(pathname){
+  const match=String(pathname||'').match(PUBLIC_PERSON_PATH_RE);
+  return match?match[1]:'';
+}
+function escapePublicHtml(value){
+  return String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+}
+function safePublicLink(value){
+  const raw=String(value||'').trim();
+  if(!raw)return '';
+  try{const url=new URL(raw);return ['https:','http:'].includes(url.protocol)?url.href:''}catch{return ''}
+}
+function normalizePublicLinks(value){
+  return (Array.isArray(value)?value:[]).slice(0,6).map(item=>{
+    const url=safePublicLink(item?.url);
+    const label=String(item?.label||'').trim().slice(0,60);
+    return url?{url,label:label||new URL(url).hostname}:null;
+  }).filter(Boolean);
+}
+function publicProfileHeaders({found=true}={}){
+  return {
+    'content-type':'text/html; charset=utf-8',
+    'cache-control':found?'public, max-age=60, s-maxage=120, stale-while-revalidate=300':'public, max-age=30',
+    'content-security-policy':"default-src 'none'; style-src 'unsafe-inline'; img-src https: data:; frame-ancestors 'none'; base-uri 'none'; form-action 'none'",
+    'referrer-policy':'no-referrer',
+    'x-content-type-options':'nosniff',
+    'x-frame-options':'DENY',
+    'permissions-policy':'camera=(), microphone=(), geolocation=()',
+    'x-ekodi-service':'my-ekodi',
+    'x-ekodi-surface-context':'public-person-profile',
+    'x-robots-tag':found?'index, follow, max-image-preview:large':'noindex, nofollow, noarchive',
+  };
+}
+async function publicProfileForHandle(env,handle){
+  const cfg=runtimeConfig(env);
+  if(!cfg.dataEnabled||!handle)return null;
+  const endpoint=new URL(`${String(cfg.supabaseUrl).replace(/\/$/,'')}/rest/v1/person_public_profiles`);
+  endpoint.searchParams.set('select','handle,display_name,headline,bio,links,updated_at');
+  endpoint.searchParams.set('handle',`eq.${handle}`);
+  endpoint.searchParams.set('visibility','eq.public');
+  endpoint.searchParams.set('limit','1');
+  const response=await fetch(endpoint,{headers:{apikey:cfg.supabasePublishableKey,'cache-control':'no-store'}});
+  if(!response.ok)return null;
+  const rows=await response.json().catch(()=>[]);
+  return Array.isArray(rows)&&rows[0]?rows[0]:null;
+}
+function publicProfileHtml(profile,handle){
+  const displayName=String(profile?.display_name||handle).trim().slice(0,120);
+  const headline=String(profile?.headline||'').trim().slice(0,160);
+  const bio=String(profile?.bio||'').trim().slice(0,2000);
+  const links=normalizePublicLinks(profile?.links);
+  const description=(headline||bio||`${displayName}의 공개 개인페이지`).replace(/\s+/g,' ').slice(0,160);
+  const canonical=`https://ekodi.kr/@${handle}`;
+  const linkHtml=links.length?`<nav class="links" aria-label="대표 링크">${links.map(item=>`<a href="${escapePublicHtml(item.url)}" rel="noreferrer"><strong>${escapePublicHtml(item.label)}</strong><span aria-hidden="true">↗</span></a>`).join('')}</nav>`:'';
+  const bioHtml=bio?`<p class="bio">${escapePublicHtml(bio)}</p>`:'';
+  return `<!doctype html>
+<html lang="ko" data-ekodi-global-nav="off" data-ekodi-character="off">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="description" content="${escapePublicHtml(description)}">
+<meta name="robots" content="index,follow,max-image-preview:large">
+<link rel="canonical" href="${canonical}">
+<meta property="og:type" content="profile">
+<meta property="og:title" content="${escapePublicHtml(displayName)}">
+<meta property="og:description" content="${escapePublicHtml(description)}">
+<meta property="og:url" content="${canonical}">
+<title>${escapePublicHtml(displayName)} · @${escapePublicHtml(handle)}</title>
+<style>
+:root{color-scheme:light;--ink:#183126;--muted:#66766d;--line:#dce5dc;--paper:#fbfcf8;--green:#29553b}*{box-sizing:border-box}body{margin:0;background:linear-gradient(180deg,#f3f7ef 0,#fbfcf8 38%,#fff 100%);color:var(--ink);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.6}header,main,footer{width:min(760px,calc(100% - 36px));margin-inline:auto}header{display:flex;justify-content:space-between;gap:16px;align-items:center;padding:22px 0;border-bottom:1px solid var(--line)}.handle{font-size:14px;font-weight:800}.surface{font-size:11px;color:var(--muted);white-space:nowrap}main{padding:clamp(52px,9vw,92px) 0 72px}.eyebrow{font-size:11px;font-weight:800;letter-spacing:.08em;color:#52705e;margin:0 0 10px}.name{font-size:clamp(42px,8vw,72px);line-height:1.05;letter-spacing:-.045em;margin:0}.headline{font-size:clamp(18px,3vw,24px);max-width:640px;margin:20px 0 0;color:#385344;font-weight:650}.bio{white-space:pre-wrap;font-size:16px;max-width:680px;margin:30px 0 0;color:#53665b}.links{display:grid;gap:10px;margin-top:38px}.links a{display:flex;align-items:center;justify-content:space-between;gap:18px;text-decoration:none;color:var(--ink);padding:15px 17px;border:1px solid var(--line);border-radius:15px;background:rgba(255,255,255,.88)}.links a:hover{border-color:#9bb5a2;background:#fff}.links span{color:#6d7e73}footer{padding:22px 0 34px;border-top:1px solid var(--line);font-size:11px;color:#7a877f}.owner-note{margin:0}@media(max-width:520px){header{align-items:flex-start;flex-direction:column;gap:3px}.surface{white-space:normal}main{padding-top:46px}}
+</style>
+</head>
+<body>
+<header><span class="handle">@${escapePublicHtml(handle)}</span><span class="surface">공개 개인페이지 · 다른 사람이 보는 곳</span></header>
+<main>
+<p class="eyebrow">PERSONAL PAGE</p>
+<h1 class="name">${escapePublicHtml(displayName)}</h1>
+${headline?`<p class="headline">${escapePublicHtml(headline)}</p>`:''}
+${bioHtml}
+${linkHtml}
+</main>
+<footer><p class="owner-note">이 페이지의 공개 내용은 본인이 My EKODI에서 관리합니다.</p></footer>
+</body>
+</html>`;
+}
+function publicProfileNotFoundHtml(){
+  return '<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>공개 개인페이지를 찾을 수 없습니다</title><style>body{font-family:system-ui,sans-serif;margin:0;display:grid;place-items:center;min-height:100vh;background:#f7f9f5;color:#23372d}main{width:min(560px,calc(100% - 36px));padding:36px;border:1px solid #dce5dc;border-radius:18px;background:#fff}p{color:#68776e}</style></head><body><main><strong>공개 개인페이지를 찾을 수 없습니다.</strong><p>아직 공개되지 않았거나 주소가 정확하지 않습니다.</p></main></body></html>';
+}
+async function servePublicProfile(request,env,handle){
+  if(!['GET','HEAD'].includes(request.method))return new Response('Method Not Allowed',{status:405,headers:{'allow':'GET, HEAD','cache-control':'no-store'}});
+  const profile=await publicProfileForHandle(env,handle).catch(()=>null);
+  const found=Boolean(profile);
+  const html=found?publicProfileHtml(profile,handle):publicProfileNotFoundHtml();
+  return new Response(request.method==='HEAD'?null:html,{status:found?200:404,headers:publicProfileHeaders({found})});
 }
 function loadIntentCatalog(){return {registry:capabilityRegistry,packs:workspacePacks};}
 function intentShowrooms(plan){
@@ -188,6 +284,8 @@ async function routedMyHome(request,env,route=null){
 export default{
   async fetch(request,env){
     const url=new URL(request.url);
+    const publicHandle=parsePublicPersonPath(url.pathname);
+    if(publicHandle)return servePublicProfile(request,env,publicHandle);
     if(url.pathname==='/config.js'){
       const cfg=runtimeConfig(env);
       return new Response(`window.EKODI_MY_CONFIG=${JSON.stringify(cfg)};`,{headers:{'content-type':'application/javascript; charset=utf-8','cache-control':'no-store',...securityHeaders(env)}});
@@ -201,7 +299,7 @@ export default{
     if(url.pathname==='/life-channels.json')return json(env,{version:1,policy:'opt-in-least-privilege',proactiveLevels:['quiet','balanced','active'],outboundDefault:'human-approval',channels:[{id:'email',availability:'connector-ready'},{id:'sms',availability:'mobile-bridge-required'},{id:'kakao',availability:'official-api-limited'},{id:'instagram',availability:'provider-permission'},{id:'facebook',availability:'provider-permission'},{id:'slack',availability:'connector-ready'}]});
     if(url.pathname==='/health'){
       const cfg=runtimeConfig(env);
-      return json(env,{ok:true,service:'ekodi-my',product:'my-ekodi',identity:'person-scoped',creatorPortfolio:true,personalBrandMarketing:true,universalMembership:true,ekodiShell:true,contextModel:'person-space-role',manifestDrivenServices:true,privateWorkspaceRouting:true,privateWorkspacePath:'/w/{workspace_key}/{service}',accessContextGuidance:true,lifeChannels:true,proactiveUserAi:true,progressivePersonalization:true,characterIdentityPersonalization:true,characterPortraitStorage:'local-device-only',intentOs:true,intentPlanContract:'ekodi.intent-plan.v1',intentExecutionBridge:true,intentExecutionContract:'ekodi.intent-execution.v1',capabilityRegistry:'universal-v3',personalizationPolicy:'detect-suggest-consent-activate-learn-fade',personalizationAuthority:'presentation-only',humanGatedOutbound:true,approvalHub:true,approvalPath:'/approvals/',documentWorkspace:true,documentPath:'/docs/',documentCapability:'core.documents',documentContract:'ekodi.documents.v2',documentHwpx:true,documentVersionHistory:true,documentStorage:'person-scoped-rls',documentFormats:{import:['txt','markdown','html','docx','hwpx'],export:['docx','hwpx','html','markdown','txt','pdf']},personalFinanceControl:true,personalFinanceBoundary:'dedicated-d1',serviceManifestVersion:EKODI_SERVICE_MANIFEST.version,visibleServices:visibleServices().length,privacy:'private-first',dataMode:cfg.dataMode,dataEnabled:cfg.dataEnabled});
+      return json(env,{ok:true,service:'ekodi-my',product:'my-ekodi',identity:'person-scoped',creatorPortfolio:true,personalBrandMarketing:true,publicPersonPage:true,publicPersonPath:'/@{handle}',publicPersonManagement:'/my/#account',universalMembership:true,ekodiShell:true,contextModel:'person-space-role',manifestDrivenServices:true,privateWorkspaceRouting:true,privateWorkspacePath:'/w/{workspace_key}/{service}',accessContextGuidance:true,lifeChannels:true,proactiveUserAi:true,progressivePersonalization:true,characterIdentityPersonalization:true,characterPortraitStorage:'local-device-only',intentOs:true,intentPlanContract:'ekodi.intent-plan.v1',intentExecutionBridge:true,intentExecutionContract:'ekodi.intent-execution.v1',capabilityRegistry:'universal-v3',personalizationPolicy:'detect-suggest-consent-activate-learn-fade',personalizationAuthority:'presentation-only',humanGatedOutbound:true,approvalHub:true,approvalPath:'/approvals/',documentWorkspace:true,documentPath:'/docs/',documentCapability:'core.documents',documentContract:'ekodi.documents.v2',documentHwpx:true,documentVersionHistory:true,documentStorage:'person-scoped-rls',documentFormats:{import:['txt','markdown','html','docx','hwpx'],export:['docx','hwpx','html','markdown','txt','pdf']},personalFinanceControl:true,personalFinanceBoundary:'dedicated-d1',serviceManifestVersion:EKODI_SERVICE_MANIFEST.version,visibleServices:visibleServices().length,privacy:'private-first',dataMode:cfg.dataMode,dataEnabled:cfg.dataEnabled});
     }
     if(url.pathname==='/approvals')return Response.redirect(new URL('/approvals/',request.url).toString(),307);
     if(url.pathname==='/admin'||url.pathname==='/admin/')return Response.redirect('https://ekodi.kr/admin/workspaces/workspace?source=my',307);
