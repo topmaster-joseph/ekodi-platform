@@ -9,11 +9,7 @@
     "externalFallback": true,
     "fallbackMustPreserveOrIncreaseSecurity": true,
     "providerLockInForbidden": true,
-    "nonDisruptiveDefault": true,
-    "externalProviderRole": "temporary-replaceable-fallback-only",
-    "externalFallbackRequiresReasonAndAudit": true,
-    "nativeCapabilityGapMustBeTracked": true,
-    "buildNativeCapabilityBeforePermanentExternalDependency": true
+    "nonDisruptiveDefault": true
   },
   "transition": {
     "phase": "external-bridge-until-native-verified",

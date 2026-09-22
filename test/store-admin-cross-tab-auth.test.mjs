@@ -15,6 +15,6 @@ test('store admin shares authenticated session across tabs and hides logout whil
 
 test('store admin assets are cache-busted for delivery menu batch release',async()=>{
   const page=await storeAdminPage({slug:'jadam',name:'자담치킨 목포대점',id:'4b1e5933-b9ae-4cb9-9d31-dcbb0a5b25aa',mark:'JD',brand:'JADAM CHICKEN'}).text();
-  assert.match(page,/store-admin\.css\?v=20260922-delivery-menu-batch-v1/);
-  assert.match(page,/store-admin\.js\?v=20260922-delivery-menu-batch-v1/);
+  assert.match(page,/store-admin\.css\?v=20260922-delivery-menu-readiness-v2/);
+  assert.match(page,/store-admin\.js\?v=20260922-delivery-menu-readiness-v2/);
 });

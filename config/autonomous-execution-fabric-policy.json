@@ -27,11 +27,7 @@
       "preferIndependentFailureDomains": true,
       "preferDistinctMethodClasses": true,
       "continueHealthyLanesWhenOneLaneFails": true,
-      "doNotDuplicateWorkWithoutVerificationValue": true,
-      "ekodiOwnedVirtualizationFirst": true,
-      "externalVirtualizationProviderRole": "temporary-replaceable-fallback-only",
-      "externalVirtualizationFallbackRequiresReasonAndAudit": true,
-      "missingNativeVirtualizationCapabilityAction": "build-or-complete-and-register-gap"
+      "doNotDuplicateWorkWithoutVerificationValue": true
     },
     "convergence": {
       "requireComparableEvidenceDigest": true,
@@ -46,102 +42,50 @@
         "id": "github-hosted-native",
         "methodClass": "cloud-ci-native",
         "state": "runtime-proven",
-        "roles": [
-          "build",
-          "test",
-          "contract-validation",
-          "evidence-collection"
-        ],
+        "roles": ["build", "test", "contract-validation", "evidence-collection"],
         "mutationBoundary": "ephemeral-workspace-only"
       },
       {
         "id": "rootless-container-sandbox",
         "methodClass": "container-sandbox",
         "state": "runtime-proven",
-        "roles": [
-          "isolated-build",
-          "isolated-test",
-          "failure-injection",
-          "dependency-isolation"
-        ],
+        "roles": ["isolated-build", "isolated-test", "failure-injection", "dependency-isolation"],
         "mutationBoundary": "rootless-ephemeral-workspace-only"
       },
       {
         "id": "serverless-staging",
         "methodClass": "serverless-cloud",
         "state": "conditional",
-        "roles": [
-          "staging-probe",
-          "edge-runtime-verification",
-          "service-contract-test"
-        ],
-        "requires": [
-          "registered-boundary",
-          "delegated-provider-credential"
-        ]
+        "roles": ["staging-probe", "edge-runtime-verification", "service-contract-test"],
+        "requires": ["registered-boundary", "delegated-provider-credential"]
       },
       {
         "id": "database-sandbox",
         "methodClass": "data-sandbox",
         "state": "conditional",
-        "roles": [
-          "schema-test",
-          "rls-test",
-          "migration-dry-run",
-          "integration-test"
-        ],
-        "requires": [
-          "task-needs-data-plane"
-        ]
+        "roles": ["schema-test", "rls-test", "migration-dry-run", "integration-test"],
+        "requires": ["task-needs-data-plane"]
       },
       {
         "id": "browser-e2e",
         "methodClass": "browser-e2e",
         "state": "conditional",
-        "roles": [
-          "ui-reproduction",
-          "login-flow-test",
-          "route-test",
-          "post-deploy-verification"
-        ],
-        "requires": [
-          "browser-capability-available"
-        ],
-        "ownership": "ekodi",
-        "defaultProvider": "ekodi-background-browser-worker",
-        "externalFallback": "temporary-replaceable-fallback-only"
+        "roles": ["ui-reproduction", "login-flow-test", "route-test", "post-deploy-verification"],
+        "requires": ["browser-capability-available"]
       },
       {
         "id": "authorized-remote-node",
         "methodClass": "remote-node",
         "state": "conditional",
-        "roles": [
-          "os-specific-test",
-          "long-running-task",
-          "special-device-test",
-          "local-network-integration"
-        ],
-        "requires": [
-          "registered-node",
-          "fresh-heartbeat",
-          "task-scoped-delegation"
-        ]
+        "roles": ["os-specific-test", "long-running-task", "special-device-test", "local-network-integration"],
+        "requires": ["registered-node", "fresh-heartbeat", "task-scoped-delegation"]
       },
       {
         "id": "external-ai-tool-worker",
         "methodClass": "external-ai-tool",
         "state": "conditional",
-        "roles": [
-          "independent-analysis",
-          "alternate-implementation",
-          "review",
-          "research",
-          "diagnosis"
-        ],
-        "requires": [
-          "approved-provider",
-          "task-scoped-capability"
-        ],
+        "roles": ["independent-analysis", "alternate-implementation", "review", "research", "diagnosis"],
+        "requires": ["approved-provider", "task-scoped-capability"],
         "mutationBoundary": "proposal-or-isolated-branch-only"
       }
     ]
@@ -201,22 +145,6 @@
           "cost-budget-evidence"
         ]
       }
-    },
-    "virtualization": {
-      "nativeFirst": true,
-      "nativeCapabilities": [
-        "ekodi-background-browser-worker",
-        "ekodi-native-remote-computer"
-      ],
-      "externalFallbackAllowedOnlyFor": [
-        "native-capability-not-production-ready",
-        "native-capability-unavailable",
-        "required-capability-not-yet-implemented",
-        "native-capacity-or-runtime-failure"
-      ],
-      "fallbackReasonAndAuditRequired": true,
-      "paidExternalAutoUpgradeForbidden": true,
-      "fallbackMustPreserveOrIncreaseIsolation": true
     }
   },
   "risk": {
