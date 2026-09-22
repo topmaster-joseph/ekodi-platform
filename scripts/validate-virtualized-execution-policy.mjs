@@ -60,6 +60,7 @@ if (failures.length === 0) {
   expect(fabric.providers?.virtualization?.fallbackMustPreserveOrIncreaseIsolation === true, 'virtualization fallback may not weaken isolation');
   const browserMethod=(fabric.orchestration?.methodCatalog||[]).find(item=>item.id==='browser-e2e')||{};
   expect(browserMethod.ownership === 'ekodi' && browserMethod.defaultProvider === 'ekodi-background-browser-worker', 'browser-e2e must default to the EKODI-owned worker');
+  expect(browserMethod.state === 'runtime-proven' && browserMethod.evidence === 'evidence/runtime/background-browser-worker/2026-09-22-initial-proof.json', 'browser-e2e runtime proof missing');
   expect(Number(fabric.orchestration?.minimumIndependentLanes) >= 2, 'fabric must require at least two independent lanes');
   expect(Number(fabric.orchestration?.minimumIndependentMethodClasses) >= 2, 'fabric must require at least two independent method classes');
   expect(Number(fabric.orchestration?.maxConcurrentAtS0) >= 2, 'S0 must support at least two concurrent evidence lanes');
@@ -85,6 +86,8 @@ if (failures.length === 0) {
   expect(architecture.parallelExecution?.virtualizationIsOneMethodNotTheArchitecture === true, 'architecture must define virtualization as one method');
   expect(architecture.runtimeEvidence?.nonProductionIsolatedExecutionProven === true, 'initial non-production isolated execution evidence must be recorded');
   expect(architecture.runtimeEvidence?.parallelMultiMethodRuntimeProofRequired === true, 'parallel multi-method runtime evidence must be required');
+  expect(architecture.runtimeEvidence?.nativeBackgroundBrowserRuntimeProven === true, 'native background browser runtime proof must remain registered');
+  expect(architecture.runtimeEvidence?.nativeBackgroundBrowserInitialProof === 'evidence/runtime/background-browser-worker/2026-09-22-initial-proof.json', 'native background browser evidence path drifted');
   expect(architecture.runtimeEvidence?.autonomousProductionReadinessProven === false, 'production readiness must not be claimed prematurely');
   expect(architecture.activation?.currentState === 'nonproduction_runtime_proven_activation_incomplete', 'activation state must reflect partial runtime proof only');
 
