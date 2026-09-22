@@ -735,8 +735,8 @@
     ],
     "exceptionPolicy": {
       "defaultNonBlockingHumanDeviceEvidence": true,
-      "exceptionRequiresUnsimmulatableDeviceOsProviderBehaviorOrTelemetryConflict": true,
-      "exceptionMustBeNarrowScopedAuditableAndOwnerVisible": true
+      "exceptionMustBeNarrowScopedAuditableAndOwnerVisible": true,
+      "exceptionRequiresUnsimulatableDeviceOsProviderBehaviorOrTelemetryConflict": true
     },
     "failurePolicy": {
       "repairRetestRedeployReverifyBeforeCompletion": true,
