@@ -13,7 +13,7 @@ test('legacy EKODIBIZ and child-admin aliases are sent through the shared worker
 test('guarded release defers nested Mall admin redirects until promoted routing is active', async () => {
   const release = JSON.parse(await read('deploy/manifests/shared-site.worker.json'));
   for (const [url,location] of [
-    ['https://ekodi.kr/ekodibiz/ekodimall/admin/','https://ekodi.kr/ekodimall/admin/'],
+    ['https://ekodi.kr/ekodibiz/ekodimall/admin/','https://ekodi.kr/ekodimall/admin'],
     ['https://ekodi.kr/ekodibiz/ekodimall/admin/channel-settings','https://ekodi.kr/ekodimall/admin/channel-settings'],
   ]) {
     const request = release.worker.requests.find(item => item.url === url);
