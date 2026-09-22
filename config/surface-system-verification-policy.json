@@ -1,0 +1,153 @@
+{
+  "schemaVersion": 1,
+  "policyId": "SURFACE-SYSTEM-VERIFICATION-001",
+  "status": "active",
+  "canonicalOrigin": "https://ekodi.kr",
+  "scope": {
+    "inheritFutureSurfaces": true,
+    "surfaceClasses": [
+      "public-home",
+      "workspace-or-service-my-page",
+      "operator-page",
+      "workspace-or-service-admin",
+      "platform-super-admin",
+      "platform-my"
+    ],
+    "canonicalPatterns": [
+      "/",
+      "/my",
+      "/{slug}",
+      "/{slug}/my",
+      "/{slug}/operator",
+      "/{slug}/admin",
+      "/{slug}/{service}",
+      "/{slug}/{service}/my",
+      "/{slug}/{service}/operator",
+      "/{slug}/{service}/admin",
+      "/admin"
+    ]
+  },
+  "execution": {
+    "orchestrator": "ekodi-orchestrator",
+    "defaultHarness": "isolated-browser-or-equivalent",
+    "virtualizationRequiredWhenAvailable": true,
+    "virtualizationOnly": false,
+    "realProductionCanaryRequired": true,
+    "manualUserTestDefaultGate": false,
+    "independentEvidenceForHighRisk": true
+  },
+  "syntheticActors": [
+    {
+      "id": "guest",
+      "authentication": "none"
+    },
+    {
+      "id": "authenticated-user",
+      "authentication": "valid"
+    },
+    {
+      "id": "workspace-member",
+      "authentication": "valid",
+      "membership": "member"
+    },
+    {
+      "id": "operator",
+      "authentication": "valid",
+      "role": "operator"
+    },
+    {
+      "id": "workspace-or-service-admin",
+      "authentication": "valid",
+      "role": "admin"
+    },
+    {
+      "id": "platform-super-admin",
+      "authentication": "valid",
+      "role": "super-admin"
+    }
+  ],
+  "authStates": [
+    "guest",
+    "valid-session",
+    "expired-session",
+    "invalid-session",
+    "insufficient-role",
+    "authorized-role"
+  ],
+  "deviceProfiles": [
+    {
+      "id": "mobile-portrait",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "id": "mobile-landscape",
+      "width": 844,
+      "height": 390
+    },
+    {
+      "id": "tablet",
+      "width": 768,
+      "height": 1024
+    },
+    {
+      "id": "desktop",
+      "width": 1440,
+      "height": 900
+    }
+  ],
+  "requiredLayers": [
+    "route-and-canonical-url",
+    "authentication-session-and-token-hygiene",
+    "authorization-role-capability",
+    "safe-public-projection",
+    "functional-interaction",
+    "responsive-layout-and-overflow",
+    "accessibility-baseline",
+    "secure-projection-and-secret-leakage",
+    "api-and-data-contract",
+    "observability-and-error-surface",
+    "real-production-host-canary"
+  ],
+  "productionSafety": {
+    "designatedSyntheticWorkspacePreferred": true,
+    "nonDestructiveFixturePreferred": true,
+    "destructiveMutationForbidden": true,
+    "reversibleOrIdempotentWritesOnly": true,
+    "productionSecretsInBrowserForbidden": true
+  },
+  "evidence": {
+    "machineReadable": true,
+    "visualEvidenceForUiChanges": true,
+    "fields": [
+      "task_id",
+      "branch_or_commit",
+      "surface",
+      "canonical_url",
+      "synthetic_actor",
+      "device_profile",
+      "auth_state",
+      "checks",
+      "production_host",
+      "observability_result",
+      "verification_timestamp",
+      "result"
+    ]
+  },
+  "states": {
+    "completion": [
+      "SYSTEM_VERIFIED"
+    ],
+    "nonCompletion": [
+      "DEPLOYED_AWAITING_SYSTEM_VERIFICATION",
+      "VERIFICATION_EXCEPTION",
+      "FAILED"
+    ]
+  },
+  "recovery": [
+    "repair",
+    "retest",
+    "redeploy",
+    "reverify"
+  ]
+}
