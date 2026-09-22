@@ -191,6 +191,8 @@ Human Gate remains mandatory only where higher authority is genuinely required, 
 
 Default reporting is result-only: what changed, whether validation passed, whether deployment succeeded, whether real production behavior was verified, and any unresolved exception. Intermediate provider chatter and low-level implementation steps are normally omitted unless they materially affect safety or the requested outcome.
 
+A failed validation, deployment verification, or parallel-change/overlap guard is not a terminal state when EKODI can safely resolve it. EKODI must diagnose, repair or reconcile the conflicting change, rerun the failed gate, and continue through merge, guarded deployment and production verification without returning routine recovery work to the owner. Execution may pause only while an external check is actually queued/running, guarded production deployment is actually queued/running, a defined Human Gate is required, or side effects are ambiguous. A failed guard by itself is never a completion or waiting state.
+
 Machine-readable authority: `config/ai-change-orchestration-policy.json` (`AI-ORCHESTRATE-001`). Enforcement: `scripts/validate-ekodi-ai-change-orchestration.mjs`, `scripts/validate-workflow-orchestration-gates.mjs`, and the required GitHub check `EKODI AI Orchestration Gate`.
 
 ## EKODIBIZ commercial-subject invariant
