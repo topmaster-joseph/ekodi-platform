@@ -40,7 +40,8 @@ test('forest project API preserves public read, authenticated admin and archive 
   const control=await fs.readFile(new URL('../local-region-operations-control.js',import.meta.url),'utf8');
   assert.match(control,/projectMatch/);
   assert.match(control,/projects/);
-  assert.match(control,/visibility='public'/);
+  assert.match(control,/AND visibility=/);
+  assert.match(control,/PROJECT_VISIBILITIES.*public/);
   assert.match(control,/record_created/);
   assert.match(control,/record_updated/);
   assert.match(control,/record_archived/);
