@@ -8,7 +8,7 @@ const TENANTS = Object.freeze([
   { slug: 'ekodibiz-trade', name: '에코디비즈 무역', domain: 'ekodi.kr/ekodibiz/trade', realm: 'ekodibiz-trade-client' },
   { slug: 'ekodichurch', name: '에코디교회', domain: 'ekodi.kr/ekodichurch', realm: 'ekodichurch-client' },
   { slug: 'ekodimission', name: '에코디선교회', domain: 'ekodi.kr/ekodimission', realm: 'ekodimission-client' },
-  { slug: 'cgma', name: '청계면상인회', domain: 'cgma.ekodi.kr', realm: 'cgma-client' },
+  { slug: 'cgma', name: '청계면상인회', domain: 'ekodi.kr/cgma', realm: 'cgma-client' },
   { slug: 'cheonggye-local', name: '청계잇다 지역플랫폼', domain: 'ekodi.kr/cheonggye', realm: 'portal' },
   { slug: 'cheonggye-pass', name: '청계패스', domain: 'ekodi.kr/cheonggye/pass', realm: 'portal' },
   { slug: 'cmpmyi', name: '통합 매장 운영', domain: 'ekodi.kr/cmpmyi', realm: 'cmpmyi-client' },
@@ -137,6 +137,7 @@ export async function ensureCustomerAccessSchema(db) {
   const seed = db.prepare(`INSERT OR IGNORE INTO customer_tenants (slug, name, domain, status, created_at)
     VALUES (?, ?, ?, 'active', ?)`);
   await db.batch(TENANTS.map(tenant => seed.bind(tenant.slug, tenant.name, tenant.domain, now)));
+  await db.prepare("UPDATE customer_tenants SET domain = 'ekodi.kr/cgma' WHERE slug = 'cgma' AND domain <> 'ekodi.kr/cgma'").run();
   await db.prepare("UPDATE customer_tenants SET domain = 'yogurt.ekodi.kr' WHERE slug = 'yogurt' AND domain <> 'yogurt.ekodi.kr'").run();
 
   try {
