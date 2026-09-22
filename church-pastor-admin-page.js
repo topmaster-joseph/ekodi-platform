@@ -94,13 +94,14 @@ function pastorClient(POLICY){
     state('출결현황 확인 중');
     const [rows,members,services]=await Promise.all([
       rest('church_attendance','limit=250'),
-      rest('church_members','status=neq.inactive&select=id,full_name,preferred_name,status&order=full_name.asc&limit=250'),
+      rest('church_members','select=id,full_name,preferred_name,status&order=full_name.asc&limit=250'),
       rest('church_services','select=id,service_date,title,status&order=service_date.desc&limit=120')
     ]);
     const attendedState=value=>['present','late','online'].includes(value);
     const stateLabel=value=>({present:'출석',late:'지각',online:'온라인',absent:'결석',excused:'인정결석'})[value]||value||'-';
+    const activeMembers=members.filter(member=>member.status!=='inactive');
     const byMember=new Map();
-    for(const member of members){
+    for(const member of activeMembers){
       byMember.set(String(member.id),{member,recorded:0,attended:0,present:0,late:0,online:0,absent:0,excused:0,last:null});
     }
     for(const row of rows){
@@ -118,7 +119,7 @@ function pastorClient(POLICY){
     const avgRate=totalRecorded?Math.round((totalAttended/totalRecorded)*1000)/10:null;
     $('summaryCards').innerHTML=[...staffCards(),card('출결 기록',fmt(totalRecorded),'최근 250건'),card('출석 처리',fmt(totalAttended),'출석·지각·온라인'),card('결석',fmt(totalAbsent),'기록된 결석'),card('기록 기준 출석률',avgRate===null?'-':avgRate+'%','미기록은 결석으로 계산하지 않음')].join('');
     const canEdit=['senior_pastor','pastor','staff'].includes(staff?.role);
-    const memberOptions=members.map(m=>`<option value="${esc(m.id)}">${esc(m.preferred_name||m.full_name)}</option>`).join('');
+    const memberOptions=activeMembers.map(m=>`<option value="${esc(m.id)}">${esc(m.preferred_name||m.full_name)}</option>`).join('');
     const serviceOptions=services.filter(x=>x.status!=='cancelled').map(x=>`<option value="${esc(x.id)}">${esc(x.service_date)} · ${esc(x.title)}</option>`).join('');
     const form=canEdit?`<form id="attendanceForm" class="trade-form"><div class="trade-grid"><label>예배·모임<select name="service_id" required><option value="">선택</option>${serviceOptions}</select></label><label>교인<select name="member_id" required><option value="">선택</option>${memberOptions}</select></label><label>출결상태<select name="attendance_state"><option value="present">출석</option><option value="late">지각</option><option value="online">온라인</option><option value="absent">결석</option><option value="excused">인정결석</option></select></label><label>메모<input name="note" maxlength="200" placeholder="필요할 때만 간단히"></label></div><div class="actions"><button class="button primary" type="submit">출결 저장</button></div><p class="empty">같은 교인·같은 예배 기록을 다시 저장하면 중복 생성하지 않고 최신 상태로 수정합니다.</p><p id="formFlash" class="trade-flash"></p></form>`:'';
     const summaryTable=summaries.length?`<div class="table-wrap"><table><thead><tr><th>교인</th><th>기록</th><th>출석</th><th>지각</th><th>온라인</th><th>결석</th><th>인정결석</th><th>출석률</th><th>최근</th></tr></thead><tbody>${summaries.map(x=>{const rate=x.recorded?Math.round((x.attended/x.recorded)*1000)/10:null;return `<tr><td><strong>${esc(x.member.preferred_name||x.member.full_name||'-')}</strong></td><td>${fmt(x.recorded)}</td><td>${fmt(x.present)}</td><td>${fmt(x.late)}</td><td>${fmt(x.online)}</td><td>${fmt(x.absent)}</td><td>${fmt(x.excused)}</td><td>${rate===null?'-':esc(rate+'%')}</td><td>${x.last?esc(x.last.service_date+' · '+stateLabel(x.last.attendance_state)):'-'}</td></tr>`}).join('')}</tbody></table></div>`:'<p class="empty">등록된 교인 또는 출결 기록이 없습니다.</p>';
