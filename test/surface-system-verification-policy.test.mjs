@@ -19,7 +19,7 @@ test('role, auth and device matrices cover public through super-admin paths',()=
   for(const state of ['guest','valid-session','expired-session','invalid-session','insufficient-role','authorized-role']){
     assert.ok(policy.authStates.includes(state),state);
   }
-  for(const device of ['mobile-portrait','mobile-landscape','tablet','desktop']){
+  for(const device of ['compact-mobile','mobile-portrait','mobile-landscape','tablet','desktop']){
     assert.ok(policy.deviceProfiles.some(item=>item.id===device),device);
   }
 });
@@ -28,4 +28,17 @@ test('production verification remains non-destructive and real-host based',()=>{
   assert.equal(policy.execution.realProductionCanaryRequired,true);
   assert.equal(policy.productionSafety.destructiveMutationForbidden,true);
   assert.equal(policy.productionSafety.reversibleOrIdempotentWritesOnly,true);
+});
+
+
+test('responsive content integrity is mandatory across copy and layout',()=>{
+  const responsive=policy.responsiveContentAssertions;
+  assert.equal(responsive.mandatory,true);
+  assert.equal(responsive.naturalLanguageWordOrEojeolIntegrity,true);
+  assert.equal(responsive.layoutOnlyHardLineBreakForbidden,true);
+  assert.equal(responsive.viewportAdaptiveReflowRequired,true);
+  assert.equal(responsive.reflowBeforeFontShrink,true);
+  assert.equal(responsive.pageHorizontalOverflowForbidden,true);
+  assert.deepEqual(responsive.viewportWidths,[320,390,768,1366,1440]);
+  assert.equal(constitution.surfaceSystemVerificationPolicy.responsiveContentIntegrity.appliesToDesignCopywritingAndImplementation,true);
 });
