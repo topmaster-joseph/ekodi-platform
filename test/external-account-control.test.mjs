@@ -66,3 +66,11 @@ test('external account admin reuses mail OAuth instead of collecting Gmail secre
   assert.doesNotMatch(source, /hamchansa@gmail\.com/);
   assert.doesNotMatch(source, /name="password"/);
 });
+
+
+test('external account admin changes trigger the canonical shared-site production owner', () => {
+  const workflow = read('.github/workflows/deploy-site-core.yml');
+  assert.match(workflow, /- 'external-account-admin\.js'/);
+  assert.match(workflow, /- 'test\/external-account-control\.test\.mjs'/);
+  assert.match(workflow, /node --check[\s\S]*external-account-admin\.js/);
+});
