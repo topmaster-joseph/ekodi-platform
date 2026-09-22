@@ -66,6 +66,13 @@ function isDocumentResponse(response){
   return type.includes('text/html')||type.includes('application/json');
 }
 
+function preservesExplicitPublicApiCache(request,response){
+  if(String(request?.method||'GET').toUpperCase()!=='GET')return false;
+  const url=new URL(request.url);
+  if(url.pathname!=='/api/public/preview/map'||response.status!==200)return false;
+  return /^public(?:,|\s|$)/i.test(String(response.headers.get('cache-control')||'').trim());
+}
+
 export async function enforcePlatformRequestSecurity(request,env={}){
   const method=String(request.method||'GET').toUpperCase();
   const url=new URL(request.url);
@@ -132,7 +139,7 @@ export function applyPlatformSecurityHeaders(response,request){
   if((info.admin||info.auth)&&!headers.has('Cross-Origin-Opener-Policy'))headers.set('Cross-Origin-Opener-Policy','same-origin-allow-popups');
   if(info.sensitive){
     headers.set('X-Robots-Tag','noindex, nofollow, noarchive');
-    if(isDocumentResponse(secured))headers.set('Cache-Control','no-store');
+    if(isDocumentResponse(secured)&&!preservesExplicitPublicApiCache(request,secured))headers.set('Cache-Control','no-store');
   }
   headers.delete('X-Powered-By');
   headers.set('X-EKODI-Security-Policy','platform-edge-v2');
