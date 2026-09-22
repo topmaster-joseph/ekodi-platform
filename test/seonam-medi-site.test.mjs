@@ -19,3 +19,19 @@ test('site daily monitor is runtime-owned and source-only',async()=>{const [moni
 test('seonam-medi static headers allow its first-party CSS, JS and API calls',async()=>{const headers=await readFile(new URL('../_headers',import.meta.url),'utf8');assert.match(headers,/\/seonam-medi\/\*/);assert.match(headers,/style-src 'self'/);assert.match(headers,/script-src 'self'/);assert.match(headers,/connect-src 'self'/);assert.doesNotMatch(headers,/\/seonam-medi\*[\s\S]{0,300}script-src 'none'/);});
 
 test('seonam-medi daily monitoring reuses the existing Control API cron instead of adding a sixth Cloudflare trigger',async()=>{const [siteWrangler,apiWrangler,mission,monitor,router]=await Promise.all([readFile(new URL('../wrangler.site.toml',import.meta.url),'utf8'),readFile(new URL('../wrangler.api.toml',import.meta.url),'utf8'),readFile(new URL('../mission-control-entry-worker.js',import.meta.url),'utf8'),readFile(new URL('../seonam-medi-monitor.js',import.meta.url),'utf8'),readFile(new URL('../platform-router-entry-worker.js',import.meta.url),'utf8')]);assert.doesNotMatch(siteWrangler,/\[triggers\]/);assert.match(apiWrangler,/crons = \["\*\/10 \* \* \* \*"\]/);assert.match(mission,/runSeonamMediDailyCheck/);assert.match(mission,/getUTCHours\(\) === 23/);assert.match(monitor,/status:'already_checked'/);assert.match(monitor,/existing-control-cron/);assert.doesNotMatch(router,/async scheduled\(_controller,env,ctx\)/);});
+
+
+test('shared-site release verifies the canonical Seonam Medi page and its first-party assets',async()=>{
+  const manifest=JSON.parse(await readFile(new URL('../deploy/manifests/shared-site.worker.json',import.meta.url),'utf8'));
+  const byUrl=new Map(manifest.worker.requests.map(item=>[item.url,item]));
+  const page=byUrl.get('https://ekodi.kr/seonam-medi/');
+  const css=byUrl.get('https://ekodi.kr/seonam-medi/app.css');
+  const data=byUrl.get('https://ekodi.kr/seonam-medi/data.json');
+  assert.deepEqual(page?.statuses,[200]);
+  assert.ok(page?.expect?.includes('서남권 국립의대 시민소통센터'));
+  assert.ok(page?.expect?.includes('/seonam-medi/app.css'));
+  assert.deepEqual(css?.statuses,[200]);
+  assert.ok(css?.expect?.includes('.evidence-row'));
+  assert.deepEqual(data?.statuses,[200]);
+  assert.ok(data?.expect?.includes('"mediaPolicy"'));
+});
