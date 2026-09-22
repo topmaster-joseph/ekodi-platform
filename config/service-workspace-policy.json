@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 6,
+  "schemaVersion": 7,
   "provider": {
     "legalOperator": "EKODIBIZ",
     "role": "service_provider"
@@ -116,10 +116,12 @@
       "shared-service"
     ],
     "surface": "user-pages",
-    "guestExperience": "public-guide-and-open-content",
+    "guestExperience": "safe-public-content-and-service-information",
     "memberMinimumTier": "free",
     "loginProvider": "google",
-    "excludeCustomerSites": true
+    "excludeCustomerSites": true,
+    "freeMemberBasicCapabilitiesRequired": true,
+    "advancedCapabilitiesMayRequireSubscription": true
   },
   "identityAuthority": "ekodi",
   "linkedIdentityProviders": [
@@ -239,6 +241,11 @@
       "requiresExplicitClassification": true,
       "publicRootBehavior": "safe-public-landing-or-privacy-notice",
       "permissionErrorAsLandingForbidden": true
-    }
+    },
+    "anonymousReadAccessRequired": true,
+    "signedInBasicAccess": "free-by-default",
+    "basicCapabilitiesRequirePaidSubscription": false,
+    "premiumCapabilities": "subscription-or-explicit-entitlement",
+    "entitlementUpgradeMustNotBlockPublicOrBasicExperience": true
   }
 }
