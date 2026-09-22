@@ -675,6 +675,7 @@
       "platform-super-admin"
     ],
     "deviceProfiles": [
+      "compact-mobile",
       "mobile-portrait",
       "mobile-landscape",
       "tablet",
@@ -687,6 +688,7 @@
       "safe-public-projection",
       "functional-interaction",
       "responsive-layout-and-overflow",
+      "natural-language-word-integrity",
       "accessibility-baseline",
       "secure-projection-and-secret-leakage",
       "api-and-data-contract",
@@ -743,6 +745,23 @@
       "askUserToTestAsDefaultFallbackForbidden": true,
       "permissionFailureMustNotBeMistakenForPublicSurfaceSuccess": true
     },
-    "finalAuthority": "ekodi_platform_super_administrator"
+    "finalAuthority": "ekodi_platform_super_administrator",
+    "responsiveContentIntegrity": {
+      "mandatory": true,
+      "appliesToDesignCopywritingAndImplementation": true,
+      "arbitraryWordOrEojeolSplittingForbidden": true,
+      "layoutOnlyHardLineBreakForbidden": true,
+      "viewportAdaptiveReflowRequired": true,
+      "reflowBeforeFontShrink": true,
+      "horizontalPageOverflowForbidden": true,
+      "viewportWidths": [
+        320,
+        390,
+        768,
+        1366,
+        1440
+      ],
+      "repeatedDefectPromotesToSharedGuardrail": true
+    }
   }
 }
