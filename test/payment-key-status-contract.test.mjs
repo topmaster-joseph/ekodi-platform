@@ -37,13 +37,13 @@ test('payment key status client ships only as an existing Finance lazy asset', (
   assert.doesNotMatch(build, /<script src="author-billing-admin\.js" defer><\/script>/);
 });
 
-test('admin HTML stays no-store while versioned static admin assets are immutable', () => {
+test('admin HTML and unversioned modules stay no-store while versioned static admin assets are immutable', () => {
   assert.match(siteWorker, /'\/admin-central-handoff\.js'/);
   assert.match(siteWorker, /'\/author-billing-admin\.js'/);
   assert.match(siteWorker, /ADMIN_ASSETS/);
   assert.ok(siteWorker.includes("withHostSecurity(response, ADMIN_CSP, 'no-store', 'admin-shell')"));
   assert.match(siteWorker, /function adminAssetCacheControl\(url\)/);
   assert.match(siteWorker, /max-age=31536000, immutable/);
-  assert.match(siteWorker, /max-age=0, must-revalidate/);
+  assert.match(siteWorker, /function adminAssetCacheControl\(url\)[\s\S]*\? 'public, max-age=31536000, immutable'[\s\S]*: 'no-store'/);
   assert.match(siteWorker, /adminAssetCacheControl\(url\), 'admin-asset'/);
 });
