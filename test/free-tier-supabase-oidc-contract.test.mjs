@@ -29,6 +29,10 @@ test('OIDC project registry contains only explicit public endpoint metadata',()=
   assert.equal(config.audience,'ekodi-free-tier-governor');
   assert.equal(config.repository,'topmaster-joseph/ekodi-platform');
   assert.equal(config.requiredRef,'refs/heads/main');
+  assert.equal(config.schemaVersion,2);
+  assert.equal(config.capacityPolicy.freeActiveProjectLimit,2);
+  assert.equal(config.capacityPolicy.requireAllConfiguredProjectsMeasured,true);
+  assert.equal(config.capacityPolicy.organizationMetricKey,'ekodi-free-org');
   assert.equal(config.projects.length,2);
   for(const project of config.projects){
     assert.match(project.ref,/^[a-z]{20}$/);

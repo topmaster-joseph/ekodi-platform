@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "audience": "ekodi-free-tier-governor",
   "repository": "topmaster-joseph/ekodi-platform",
   "requiredRef": "refs/heads/main",
@@ -12,5 +12,10 @@
       "ref": "lxcxwbdwwojjkgybbqii",
       "usageEndpoint": "https://lxcxwbdwwojjkgybbqii.supabase.co/functions/v1/free-tier-usage"
     }
-  ]
+  ],
+  "capacityPolicy": {
+    "freeActiveProjectLimit": 2,
+    "requireAllConfiguredProjectsMeasured": true,
+    "organizationMetricKey": "ekodi-free-org"
+  }
 }

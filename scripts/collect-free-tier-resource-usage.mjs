@@ -119,6 +119,7 @@ export async function collectSupabaseOidc({token,config,fetchJson=jsonFetch,obse
   const snapshots=[];
   const projects=[];
   const errors=[];
+  const storageByProject=new Map();
   for(const project of config.projects){
     const ref=String(project?.ref||'').trim();
     const endpoint=String(project?.usageEndpoint||'').trim();
@@ -137,16 +138,41 @@ export async function collectSupabaseOidc({token,config,fetchJson=jsonFetch,obse
           provider:'supabase',metric:`storage_object_bytes:${ref}`,periodStart:periodDay(observedAt),
           observedValue:storageBytes,freeLimit:null,source:'supabase-edge-github-oidc',observedAt
         });
+        storageByProject.set(ref,storageBytes);
       }
       projects.push(ref);
     }catch(error){
       errors.push({ref,error:error?.message||String(error)});
     }
   }
+  const configuredProjects=config.projects.filter(project=>String(project?.ref||'').trim()&&String(project?.usageEndpoint||'').trim());
+  const capacityPolicy=config.capacityPolicy||{};
+  const requireAll=capacityPolicy.requireAllConfiguredProjectsMeasured!==false;
+  const completeMeasurement=configuredProjects.length>0
+    && projects.length===configuredProjects.length
+    && errors.length===0;
+  if((!requireAll&&projects.length>0)||completeMeasurement){
+    const freeLimit=Number(capacityPolicy.freeActiveProjectLimit);
+    if(Number.isFinite(freeLimit)&&freeLimit>0){
+      snapshots.push({
+        provider:'supabase',metric:'active_projects',periodStart:periodDay(observedAt),
+        observedValue:projects.length,freeLimit,source:'supabase-edge-github-oidc',observedAt
+      });
+    }
+    if(storageByProject.size===projects.length){
+      const totalStorage=[...storageByProject.values()].reduce((sum,value)=>sum+value,0);
+      const metricKey=String(capacityPolicy.organizationMetricKey||'oidc-config').replace(/[^a-z0-9_-]/gi,'-').slice(0,80)||'oidc-config';
+      snapshots.push({
+        provider:'supabase',metric:`storage_bytes_org:${metricKey}`,periodStart:periodMonth(observedAt),
+        observedValue:totalStorage,freeLimit:GB,source:'supabase-edge-github-oidc',observedAt
+      });
+    }
+  }
   return {
     available:projects.length>0,
     reason:projects.length===0?'oidc_endpoint_unavailable':errors.length?'partial':null,
     mode:'github_oidc',
+    capacityMeasured:completeMeasurement,
     snapshots,projects,errors
   };
 }
