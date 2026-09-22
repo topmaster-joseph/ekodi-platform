@@ -198,7 +198,7 @@ for (const marker of ['[data-ekodi-legal-footer]:not(.ekodi-user-ui-footer)','.e
 for (const marker of ['Natural-language word integrity','word-break: keep-all','overflow-wrap: break-word','hyphens: none','[data-ekodi-break-anywhere]']) {
   if (!userUiStyle.includes(marker)) errors.push(`Shared User UI typography lost required marker: ${marker}`);
 }
-for (const marker of ['Responsive Typography Standard v2','word-break:keep-all','overflow-wrap:break-word','hyphens:none','[data-ekodi-break-anywhere]','.ekodi-break-anywhere']) {
+for (const marker of ['Responsive Typography Standard v3','word-break:keep-all','overflow-wrap:break-word','hyphens:none','[data-ekodi-break-anywhere]','.ekodi-break-anywhere','--ekodi-responsive-inline-gutter','data-ekodi-responsive-grid','font-size:clamp(']) {
   if (!responsiveTypographySource.includes(marker)) errors.push(`Responsive typography standard lost required marker: ${marker}`);
 }
 for (const marker of ['EKODI_USER_FOOTER','USER_FOOTER_BOOTSTRAP','USER_EXPERIENCE_PROFILES_BOOTSTRAP','x-ekodi-user-experience-profiles','/user-footer.json','x-ekodi-user-ui-footer','userLanguageUrl','x-ekodi-user-language','LANGUAGE_REGISTRY_BOOTSTRAP','/language-registry.json']) {
