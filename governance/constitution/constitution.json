@@ -1,5 +1,5 @@
 {
-  "version": "1.18.0",
+  "version": "1.19.0",
   "effectiveDate": "2026-09-22",
   "status": "active",
   "title": "EKODI Platform Constitution",
@@ -35,7 +35,8 @@
     "supreme-attributes-binding",
     "site-owned-admin-canonical-path",
     "guest-open-public-user-surfaces",
-    "self-verifying-all-surface-system-evidence"
+    "self-verifying-all-surface-system-evidence",
+    "signed-in-basic-capabilities-free-premium-by-entitlement"
   ],
   "architectureModel": {
     "registry": "governance/architecture/ekodi-os-architecture.json",
@@ -643,7 +644,24 @@
       "validate:constitution",
       "validate:user-surfaces",
       "validate:shell"
-    ]
+    ],
+    "anonymousReadAccessRequired": true,
+    "signedInBasicAccess": "free-by-default",
+    "basicCapabilitiesRequirePaidSubscription": false,
+    "premiumCapabilities": "subscription-or-explicit-entitlement",
+    "monetizationRule": "charge-for-additional-or-advanced-capabilities-not-basic-access",
+    "signedInBasicUseRequired": true,
+    "entitlementUpgradeMustNotBlockPublicOrBasicExperience": true,
+    "adminPathRule": {
+      "patterns": [
+        "/admin",
+        "*/admin",
+        "*/admin/*"
+      ],
+      "authenticationRequired": true,
+      "authorizationRequired": true,
+      "publicFallbackForbidden": true
+    }
   },
   "surfaceSystemVerificationPolicy": {
     "id": "SURFACE-SYSTEM-VERIFICATION-001",
