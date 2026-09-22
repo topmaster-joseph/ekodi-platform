@@ -31,11 +31,20 @@ for(const actor of ['guest','authenticated-user','workspace-member','operator','
 for(const state of ['guest','valid-session','expired-session','invalid-session','insufficient-role','authorized-role']){
   if(!policy.authStates?.includes(state)) fail(`authentication state missing: ${state}`);
 }
-for(const device of ['mobile-portrait','mobile-landscape','tablet','desktop']){
+for(const device of ['compact-mobile','mobile-portrait','mobile-landscape','tablet','desktop']){
   if(!policy.deviceProfiles?.some(item=>item.id===device)) fail(`device profile missing: ${device}`);
 }
-for(const layer of ['route-and-canonical-url','authentication-session-and-token-hygiene','authorization-role-capability','safe-public-projection','functional-interaction','responsive-layout-and-overflow','accessibility-baseline','secure-projection-and-secret-leakage','api-and-data-contract','observability-and-error-surface','real-production-host-canary']){
+for(const layer of ['route-and-canonical-url','authentication-session-and-token-hygiene','authorization-role-capability','safe-public-projection','functional-interaction','responsive-layout-and-overflow','natural-language-word-integrity','accessibility-baseline','secure-projection-and-secret-leakage','api-and-data-contract','observability-and-error-surface','real-production-host-canary']){
   if(!policy.requiredLayers?.includes(layer)) fail(`verification layer missing: ${layer}`);
+}
+
+const responsive=policy.responsiveContentAssertions||{};
+if(responsive.mandatory!==true) fail('responsive content assertions must be mandatory');
+if(responsive.naturalLanguageWordOrEojeolIntegrity!==true||responsive.layoutOnlyHardLineBreakForbidden!==true||responsive.viewportAdaptiveReflowRequired!==true) fail('responsive content copy/reflow contract is incomplete');
+if(responsive.reflowBeforeFontShrink!==true||responsive.pageHorizontalOverflowForbidden!==true||responsive.technicalIdentifierBreakAnywhereExplicitOnly!==true) fail('responsive content layout/exception contract is incomplete');
+if(JSON.stringify(responsive.viewportWidths)!==JSON.stringify([320,390,768,1366,1440])) fail('responsive verification widths must remain 320/390/768/1366/1440');
+for(const check of ['no-mid-word-or-mid-eojeol-break','no-clipped-primary-copy','no-overlapping-primary-content','no-horizontal-page-overflow','responsive-control-and-grid-reflow']){
+  if(!responsive.visualChecks?.includes(check)) fail(`responsive visual assertion missing: ${check}`);
 }
 
 if(policy.productionSafety?.destructiveMutationForbidden!==true||policy.productionSafety?.reversibleOrIdempotentWritesOnly!==true) fail('production canary mutation safety drifted');
@@ -53,6 +62,10 @@ const c=constitution.surfaceSystemVerificationPolicy||{};
 if(c.id!==policy.policyId||c.status!=='active') fail('operational surface verification policy must align with constitution');
 if(c.completionRule!=='system-verified-before-complete'||c.manualUserTestingDefaultGateForbidden!==true) fail('constitutional completion gate drifted');
 if(c.productionCanary?.required!==true||c.productionCanary?.realCanonicalHostRequired!==true) fail('constitutional production canary gate drifted');
+const rc=c.responsiveContentIntegrity||{};
+if(rc.mandatory!==true||rc.appliesToDesignCopywritingAndImplementation!==true||rc.arbitraryWordOrEojeolSplittingForbidden!==true||rc.layoutOnlyHardLineBreakForbidden!==true) fail('constitutional responsive content integrity drifted');
+if(rc.viewportAdaptiveReflowRequired!==true||rc.reflowBeforeFontShrink!==true||rc.horizontalPageOverflowForbidden!==true||rc.repeatedDefectPromotesToSharedGuardrail!==true) fail('constitutional responsive reflow guard drifted');
+if(JSON.stringify(rc.viewportWidths)!==JSON.stringify([320,390,768,1366,1440])) fail('constitutional responsive viewport matrix drifted');
 
 if(failures.length){
   console.error(`EKODI surface system verification validation failed (${failures.length})`);
@@ -61,6 +74,6 @@ if(failures.length){
 }
 console.log('EKODI Surface System Verification: OK');
 console.log('- all public/My/operator/admin surface classes inherit automated verification');
-console.log('- synthetic role + device matrix registered');
+console.log('- synthetic role + 320/390/768/1366/1440 responsive device matrix registered');
 console.log('- real canonical production canary required before SYSTEM_VERIFIED');
 console.log('- manual user testing is additive, not the default completion gate');
