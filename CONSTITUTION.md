@@ -1,6 +1,6 @@
-# EKODI Platform Constitution v1.16.0
+# EKODI Platform Constitution v1.17.0
 
-Effective: 2026-09-14
+Effective: 2026-09-22
 
 This constitution is the highest architecture and operations rule for EKODI Platform. Existing validators remain authoritative implementation guards; this document unifies their intent and governs future changes.
 
@@ -69,6 +69,17 @@ This constitution is the highest architecture and operations rule for EKODI Plat
 - `https://ekodi.kr/support` is the sole canonical Support user entry. `support.ekodi.kr` is retired and is not retained as a compatibility redirect.
 - Customer-owned domains map to a workspace public surface and never redefine EKODI internal identity, `workspace_id` or private routing.
 - CGMA uses `https://ekodi.kr/cgma` as its EKODI platform route and `https://cgma.or.kr` as its customer-owned public address; legacy `cgma.ekodi.kr` is compatibility-only.
+
+## 2A. Public User Surface Constitution
+- Every canonical public user page is **guest-open by default**. A person must be able to reach and read the safe public projection without signing in.
+- Authentication **enhances rather than replaces** the public experience. After sign-in, membership tier, workspace relationship, role and capability may add, personalize, enable or reorder content and actions, but they must not turn the canonical public page into a login wall.
+- Authentication and authorization remain mandatory for private data, personal state, workspace-internal data, write actions, applications, payments, uploads, protected downloads, operator tools and administrator capabilities.
+- A `401`, `403` or private-data lookup failure from a protected capability must degrade the interface back to the safe public projection. It must not replace a canonical public page with an access-denied, unavailable-workspace or equivalent permission screen.
+- A private or closed surface is an exception, not a default. It requires explicit policy classification. Its canonical public root still returns a safe public landing or privacy notice without disclosing private existence, membership or data; protected content stays server-side.
+- `guest_hidden` and equivalent visibility controls may hide discovery or explicitly private content, but they may not gate or replace the canonical public user-page shell.
+- `/my`, administrator surfaces, authentication flows, private workspace tools and other explicitly protected routes may require authentication before rendering their private experience.
+- Public routing, shared Shell, service UI and Workspace UI must enforce this rule consistently. Login state changes the projection and available capabilities, not the existence of the public page.
+- Machine-readable authority: `governance/constitution/constitution.json` -> `publicUserSurfacePolicy` and `config/service-workspace-policy.json` -> `publicUserSurfaceDefault`.
 
 ## 3. Identity and Tenant Constitution
 - EKODI `user_id` is canonical. Google, Microsoft, email and future identities are linked identities.
