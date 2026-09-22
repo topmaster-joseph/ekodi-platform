@@ -52,6 +52,14 @@ if (failures.length === 0) {
   expect(fabric.orchestration?.mode === 'parallel-multi-method-independent-evidence-convergence', 'fabric must use parallel multi-method convergence');
   expect(fabric.orchestration?.virtualizationOnly === false, 'execution fabric must not be virtualization-only');
   expect(fabric.orchestration?.virtualizedIsolationLaneRequiredForMutatingEngineeringWork === true, 'mutating engineering work must retain a virtualized isolation lane');
+  expect(fabric.orchestration?.selection?.ekodiOwnedVirtualizationFirst === true, 'EKODI-owned virtualization must be selected first');
+  expect(fabric.orchestration?.selection?.externalVirtualizationProviderRole === 'temporary-replaceable-fallback-only', 'external virtualization must remain a temporary fallback');
+  expect(fabric.orchestration?.selection?.externalVirtualizationFallbackRequiresReasonAndAudit === true, 'external virtualization fallback must be auditable');
+  expect(fabric.providers?.virtualization?.nativeFirst === true, 'virtualization provider policy must remain native-first');
+  expect(fabric.providers?.virtualization?.paidExternalAutoUpgradeForbidden === true, 'paid external virtualization auto-upgrade must remain forbidden');
+  expect(fabric.providers?.virtualization?.fallbackMustPreserveOrIncreaseIsolation === true, 'virtualization fallback may not weaken isolation');
+  const browserMethod=(fabric.orchestration?.methodCatalog||[]).find(item=>item.id==='browser-e2e')||{};
+  expect(browserMethod.ownership === 'ekodi' && browserMethod.defaultProvider === 'ekodi-background-browser-worker', 'browser-e2e must default to the EKODI-owned worker');
   expect(Number(fabric.orchestration?.minimumIndependentLanes) >= 2, 'fabric must require at least two independent lanes');
   expect(Number(fabric.orchestration?.minimumIndependentMethodClasses) >= 2, 'fabric must require at least two independent method classes');
   expect(Number(fabric.orchestration?.maxConcurrentAtS0) >= 2, 'S0 must support at least two concurrent evidence lanes');
@@ -94,4 +102,5 @@ if (failures.length) {
 
 console.log('[EKODI][EXEC-FABRIC-001] virtualized isolation policy validated as a mandatory safety lane.');
 console.log('[EKODI][EXEC-FABRIC-001] EKODI Orchestrator requires parallel independent execution methods; the architecture is not virtualization-only.');
+console.log('[EKODI][EXEC-FABRIC-001] EKODI-owned virtualization is native-first; external virtualization is temporary fallback only.');
 console.log('[EKODI][EXEC-FABRIC-001] autonomous production readiness remains intentionally unclaimed.');
