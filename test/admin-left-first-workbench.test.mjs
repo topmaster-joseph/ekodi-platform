@@ -24,6 +24,9 @@ test('Admin uses a seven-area primary sidebar with contextual top navigation', a
   ]) assert.ok(sidebar.includes(marker), marker);
   assert.match(sidebar, /admin-context-tabs-shell/);
   assert.match(sidebar, /display:flex!important/);
+  assert.match(sidebar, /admin-command-entry/);
+  assert.match(sidebar, /dataset\.adminCommandHome = 'true'/);
+  assert.match(sidebar, /activateSection\(nav, 'command-home'\)/);
   assert.match(sidebar, /globals\.querySelector\(`:scope>\.\$\{DETAILS_CLASS\}`\)\?\.remove\(\)/);
   assert.match(sidebar, /primary-sidebar-tabs-v3/);
 });
