@@ -1,7 +1,7 @@
 const cfg=window.EKODI_BUSINESS_CONFIG||{};
 const $=(id)=>document.getElementById(id);
 const SESSION_KEY='ekodi-business-session';
-const AUTH_FALLBACK='https://auth.ekodi.kr/';
+const AUTH_FALLBACK='https://ekodi.kr/auth/';
 const state={workspaces:[],current:null,metrics:null,liveSnapshot:null,session:null};
 
 function canonicalBusinessUrl(){
