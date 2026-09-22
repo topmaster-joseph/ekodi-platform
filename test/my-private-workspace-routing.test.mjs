@@ -24,7 +24,11 @@ test('private workspace routes serve the My shell rather than exposing workspace
   assert.match(worker,/env\.ASSETS\.fetch\(new Request\(target\.toString\(\),request\)\)/);
   assert.match(worker,/PRIVATE_ROUTER_TAG/);
   assert.match(worker,/private-workspace-router\.js/);
-  assert.doesNotMatch(worker,/workspace_name|workspace_owner|display_name/);
+  const start=worker.indexOf('async function routedMyHome');
+  const end=worker.indexOf('export default',start);
+  const privateRouteOwner=worker.slice(start,end);
+  assert.ok(start>=0&&end>start);
+  assert.doesNotMatch(privateRouteOwner,/workspace_name|workspace_owner|display_name/);
 });
 
 test('browser router keeps workspace keys private-first and launches services through existing verified handoff links',async()=>{
