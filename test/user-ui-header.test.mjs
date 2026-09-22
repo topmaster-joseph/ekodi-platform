@@ -105,6 +105,7 @@ test('user UI header/footer/language are shared user-surface-only modules',async
   assert.match(header,/isIndividualSite/);
   assert.match(header,/isGlobalPlatformHeaderLink/);
   assert.match(header,/pruneIndividualSiteGlobalLinks/);
+  assert.match(header,/isIndividualSite\(\)\?serviceHomeUrl\(\)\.toString\(\):String\(cfg\.homeUrl\)/);
   assert.match(header,/dataset\.ekodiHeaderScope='service-local'/);
   assert.match(header,/bindHomeAnchor\(header\)/);
   assert.match(header,/serviceHomeAnchor/);
