@@ -92,7 +92,7 @@ jobs:
       - name: Validate current Admin thin shell and mall AI sales surface
         shell: bash
         run: |
-          set -euxo pipefail
+          set -euo pipefail
           node --check admin-staging-worker.js
           node --check site-worker.js
           node --check admin-central-handoff.js
