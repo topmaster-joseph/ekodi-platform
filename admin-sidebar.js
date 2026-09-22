@@ -165,6 +165,20 @@ function ensureContainers(nav, root = document) {
     nav.prepend(globals);
   }
 
+  let commandEntry = nav.querySelector(':scope>.admin-command-entry');
+  if (!commandEntry) {
+    commandEntry = document.createElement('button');
+    commandEntry.type = 'button';
+    commandEntry.className = 'admin-command-entry';
+    commandEntry.dataset.adminCommandHome = 'true';
+    const icon = document.createElement('b');
+    icon.setAttribute('aria-hidden', 'true');
+    icon.textContent = '+';
+    const label = document.createElement('span');
+    commandEntry.append(icon, label);
+    nav.insertBefore(commandEntry, globals);
+  }
+
   let source = nav.querySelector(`:scope>.${SOURCE_CLASS}`);
   if (!source) {
     source = document.createElement('div');
@@ -192,7 +206,7 @@ function ensureContainers(nav, root = document) {
     if (topbar) topbar.insertAdjacentElement('afterend', shell);
     else main.prepend(shell);
   }
-  return { globals, source, shell };
+  return { globals, source, shell, commandEntry };
 }
 
 function globalButtons(globals, locale) {
@@ -320,8 +334,14 @@ function renderContextTabs(nav, shell, group, section, locale) {
 }
 
 function syncWorkbenchState(nav, locale, preferredSection = '') {
-  const { globals, shell } = ensureContainers(nav);
+  const { globals, shell, commandEntry } = ensureContainers(nav);
   globalButtons(globals, locale);
+  if (commandEntry) {
+    const label = commandEntry.querySelector('span');
+    const text = locale === 'en' ? 'New task' : '새 작업';
+    if (label && label.textContent !== text) label.textContent = text;
+    commandEntry.setAttribute('aria-label', locale === 'en' ? 'Start a new EKODI task' : '에코디 새 작업 시작');
+  }
   if (shell && !shell.querySelector('[data-admin-capability-shortcut]')) {
     const shortcut = document.createElement('button');
     shortcut.type = 'button';
@@ -336,6 +356,11 @@ function syncWorkbenchState(nav, locale, preferredSection = '') {
   const focusedGroup = String(nav.dataset.adminFocusedGroup || '').trim();
   const group = ADMIN_MENU_GROUPS.some(item => item.id === focusedGroup) ? focusedGroup : activeGroup;
   const displayedSection = group === activeGroup ? section : '';
+  if (commandEntry) {
+    const selected = section === 'command-home';
+    commandEntry.classList.toggle('active', selected);
+    commandEntry.setAttribute('aria-current', selected ? 'page' : 'false');
+  }
   for (const button of globals.querySelectorAll('[data-admin-global-group]')) {
     const selected = button.dataset.adminGlobalGroup === group;
     button.classList.toggle('active', selected);
@@ -495,6 +520,14 @@ export function mountAdminSidebar(root = document, options = {}) {
   observer.observe(nav, { childList: true, subtree: false });
 
   nav.addEventListener('click', event => {
+    const commandEntry = event.target.closest('[data-admin-command-home]');
+    if (commandEntry) {
+      event.preventDefault();
+      delete nav.dataset.adminFocusedGroup;
+      activateSection(nav, 'command-home');
+      schedule();
+      return;
+    }
     const more = event.target.closest('[data-admin-detail-more]');
     if (more) {
       event.preventDefault();
