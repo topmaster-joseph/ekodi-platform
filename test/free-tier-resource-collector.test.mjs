@@ -77,6 +77,7 @@ test('Supabase OIDC fallback records per-project DB usage without fabricating or
     audience:'ekodi-free-tier-governor',
     repository:'topmaster-joseph/ekodi-platform',
     requiredRef:'refs/heads/main',
+    capacityPolicy:{freeActiveProjectLimit:2,requireAllConfiguredProjectsMeasured:true,organizationMetricKey:'ekodi-free-org'},
     projects:[
       {ref:'project-a',usageEndpoint:'https://project-a.example/functions/v1/free-tier-usage'},
       {ref:'project-b',usageEndpoint:'https://project-b.example/functions/v1/free-tier-usage'},
@@ -95,14 +96,20 @@ test('Supabase OIDC fallback records per-project DB usage without fabricating or
   assert.deepEqual(result.projects,['project-a','project-b']);
   assert.equal(result.snapshots.find(row=>row.metric==='database_bytes:project-a').freeLimit,500*1024*1024);
   assert.equal(result.snapshots.find(row=>row.metric==='storage_object_bytes:project-b').observedValue,33132);
-  assert.equal(result.snapshots.some(row=>row.metric==='active_projects'),false);
+  assert.equal(result.capacityMeasured,true);
+  assert.equal(result.snapshots.find(row=>row.metric==='active_projects').observedValue,2);
+  assert.equal(result.snapshots.find(row=>row.metric==='active_projects').freeLimit,2);
+  assert.equal(result.snapshots.find(row=>row.metric==='storage_bytes_org:ekodi-free-org').observedValue,34132);
 });
 
 test('Supabase OIDC fallback degrades to partial telemetry instead of inventing missing values', async()=>{
-  const config={projects:[
-    {ref:'project-a',usageEndpoint:'https://project-a.example/usage'},
-    {ref:'project-b',usageEndpoint:'https://project-b.example/usage'},
-  ]};
+  const config={
+    capacityPolicy:{freeActiveProjectLimit:2,requireAllConfiguredProjectsMeasured:true,organizationMetricKey:'ekodi-free-org'},
+    projects:[
+      {ref:'project-a',usageEndpoint:'https://project-a.example/usage'},
+      {ref:'project-b',usageEndpoint:'https://project-b.example/usage'},
+    ]
+  };
   const fetchJson=async(url)=>{
     if(url.includes('project-a'))return {database_bytes:1000,storage_object_bytes:20};
     throw new Error('HTTP_503');
@@ -111,5 +118,8 @@ test('Supabase OIDC fallback degrades to partial telemetry instead of inventing 
   assert.equal(result.available,true);
   assert.equal(result.reason,'partial');
   assert.deepEqual(result.projects,['project-a']);
+  assert.equal(result.capacityMeasured,false);
   assert.equal(result.snapshots.some(row=>row.metric==='database_bytes:project-b'),false);
+  assert.equal(result.snapshots.some(row=>row.metric==='active_projects'),false);
+  assert.equal(result.snapshots.some(row=>row.metric.startsWith('storage_bytes_org:')),false);
 });
