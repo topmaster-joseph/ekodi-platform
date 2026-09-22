@@ -1,6 +1,7 @@
 import {createClient} from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 
 const $=id=>document.getElementById(id);
+const FEATURED_PER_CATEGORY=3;
 const state={config:null,client:null,session:null,categories:[],requests:[],sourceServiceId:'',activeCategory:''};
 const API_BASE=location.pathname.startsWith('/ai')?'/ai':'';
 const escText=value=>String(value??'').trim();
@@ -14,12 +15,13 @@ async function api(path,options={}){
 }
 function setSession(session){state.session=session||null;$('loginLink').hidden=Boolean(state.session);$('sessionState').textContent=state.session?'로그인됨':'로그인 없이 바로 사용'}
 function serviceButton(service){
-  const link=document.createElement('a');link.className='service-button';link.href=service.launchUrl;link.textContent=service.label;return link;
+  const link=document.createElement('a');link.className='service-button';link.href=service.launchUrl;
+  const title=document.createElement('strong');title.textContent=service.label;const meta=document.createElement('small');meta.textContent=service.categoryLabel||'바로 시작';link.append(title,meta);return link;
 }
 function serviceCard(service){
   const link=document.createElement('a');link.className='service-card';link.href=service.launchUrl;
   const copy=document.createElement('div');const title=document.createElement('strong');title.textContent=service.label;
-  const path=document.createElement('small');try{path.textContent=new URL(service.launchUrl,location.origin).pathname}catch{path.textContent=service.launchUrl}
+  const path=document.createElement('small');path.textContent='바로 시작';
   copy.append(title,path);const arrow=document.createElement('b');arrow.textContent='›';link.append(copy,arrow);return link;
 }
 function renderActiveCategory(){
@@ -28,7 +30,7 @@ function renderActiveCategory(){
   if(!category){host.textContent='준비 중입니다.';return}
   state.activeCategory=category.id;
   document.querySelectorAll('.service-tab').forEach(button=>button.setAttribute('aria-selected',String(button.dataset.category===category.id)));
-  const services=category.services||[];
+  const services=(category.services||[]).slice(0,FEATURED_PER_CATEGORY);
   for(const service of services)host.append(serviceCard(service));
   if(!services.length){const p=document.createElement('p');p.className='empty';p.textContent='이 분류의 서비스를 준비하고 있습니다.';host.append(p)}
 }
@@ -74,7 +76,7 @@ async function supportRequest(title){
 async function submitWanted(requestText){
   $('wantResult').textContent='가능한 서비스를 찾고 있습니다.';renderMatches([]);
   const matched=await api('/api/commons/match',{method:'POST',body:JSON.stringify({job:requestText})});
-  if((matched.services||[]).length){renderMatches(matched.services);$('wantResult').textContent='바로 사용할 수 있습니다.';return}
+  if((matched.services||[]).length){renderMatches(matched.services);$('wantResult').textContent='관련 서비스를 찾았습니다.';return}
   if(!state.session){$('wantResult').textContent='아직 없는 기능입니다. 로그인하면 개발 요청으로 보낼 수 있습니다.';$('loginLink').hidden=false;return}
   const created=await api('/api/commons/ideas',{method:'POST',body:JSON.stringify({request:requestText,sourceServiceId:state.sourceServiceId})});
   $('wantResult').textContent=created.reusedSubmission?'같은 요청에 참여했습니다.':'개발 요청을 접수했습니다.';await Promise.all([refreshRequests(),refreshMyIdeas()]);
