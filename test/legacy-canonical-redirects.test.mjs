@@ -13,7 +13,7 @@ test('legacy EKODIBIZ and child-admin aliases are sent through the shared worker
 test('guarded release defers nested Mall admin redirects until promoted routing is active', async () => {
   const release = JSON.parse(await read('deploy/manifests/shared-site.worker.json'));
   for (const [url,location] of [
-    ['https://ekodi.kr/ekodibiz/ekodimall/admin/','https://ekodi.kr/ekodimall/admin/'],
+    ['https://ekodi.kr/ekodibiz/ekodimall/admin/','https://ekodi.kr/ekodimall/admin'],
     ['https://ekodi.kr/ekodibiz/ekodimall/admin/channel-settings','https://ekodi.kr/ekodimall/admin/channel-settings'],
   ]) {
     const request = release.worker.requests.find(item => item.url === url);
@@ -36,6 +36,7 @@ test('legacy and aggregate Mall admin paths redirect to the unique site-owned ad
     ['https://ekodi.kr/ekodibiz/ekodimall?ref=nested','https://ekodi.kr/ekodimall?ref=nested','mall-nested-canonical-redirect'],
     ['https://ekodi.kr/ekodibiz/mall/admin/channels','https://ekodi.kr/ekodimall/admin/channel-settings','admin-canonical-handoff'],
     ['https://ekodi.kr/admin/ekodimall/channel-settings','https://ekodi.kr/ekodimall/admin/channel-settings','admin-canonical-handoff'],
+    ['https://ekodi.kr/ekodibiz/ekodimall/admin/','https://ekodi.kr/ekodimall/admin','admin-canonical-handoff'],
     ['https://ekodi.kr/ekodibiz/ekodimall/admin/marketing/channels','https://ekodi.kr/ekodimall/admin/channel-settings','admin-canonical-handoff'],
     ['https://ekodi.kr/org/ekodibiz','https://ekodi.kr/ekodibiz','ekodibiz-legacy-canonical-redirect'],
   ]) {
