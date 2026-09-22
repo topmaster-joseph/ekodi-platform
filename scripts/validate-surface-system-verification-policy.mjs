@@ -22,6 +22,11 @@ for(const pattern of ['/{slug}','/{slug}/my','/{slug}/operator','/{slug}/admin',
 
 if(policy.execution?.orchestrator!=='ekodi-orchestrator') fail('EKODI Orchestrator must own surface verification coordination');
 if(policy.execution?.virtualizationRequiredWhenAvailable!==true||policy.execution?.virtualizationOnly!==false) fail('verification must use virtualization as a method without becoming virtualization-only');
+const vp=policy.execution?.virtualizationProviderPolicy||{};
+if(policy.execution?.defaultHarness!=='ekodi-owned-isolated-browser-runtime'||vp.nativeFirst!==true) fail('surface verification must default to EKODI-owned virtualization');
+if(vp.externalProviderRole!=='temporary-replaceable-fallback-only'||vp.fallbackReasonAndAuditRequired!==true||vp.nativeCapabilityGapRecordRequired!==true) fail('external virtualization must remain an audited temporary fallback');
+if(vp.paidExternalAutoUpgradeForbidden!==true||vp.securityAndIsolationMayNotBeWeakened!==true) fail('external virtualization fallback may not auto-upgrade or weaken security/isolation');
+for(const reason of ['native-capability-not-production-ready','native-capability-unavailable','required-capability-not-yet-implemented','native-capacity-or-runtime-failure']) if(!vp.fallbackAllowedOnlyWhen?.includes(reason)) fail(`virtualization fallback reason missing: ${reason}`);
 if(policy.execution?.realProductionCanaryRequired!==true) fail('real production canary is mandatory');
 if(policy.execution?.manualUserTestDefaultGate!==false) fail('manual user testing must not be the default completion gate');
 
@@ -49,7 +54,7 @@ for(const check of ['no-mid-word-or-mid-eojeol-break','no-clipped-primary-copy',
 
 if(policy.productionSafety?.destructiveMutationForbidden!==true||policy.productionSafety?.reversibleOrIdempotentWritesOnly!==true) fail('production canary mutation safety drifted');
 if(policy.productionSafety?.productionSecretsInBrowserForbidden!==true) fail('production secrets must stay out of browser verification contexts');
-for(const field of ['task_id','branch_or_commit','surface','canonical_url','synthetic_actor','device_profile','auth_state','checks','production_host','observability_result','verification_timestamp','result']){
+for(const field of ['task_id','branch_or_commit','surface','canonical_url','synthetic_actor','device_profile','auth_state','checks','production_host','observability_result','verification_timestamp','result','virtualization_provider','virtualization_fallback_reason','native_capability_gap']){
   if(!policy.evidence?.fields?.includes(field)) fail(`verification evidence field missing: ${field}`);
 }
 if(JSON.stringify(policy.states?.completion)!==JSON.stringify(['SYSTEM_VERIFIED'])) fail('SYSTEM_VERIFIED must be the only normal completion state');
@@ -77,3 +82,4 @@ console.log('- all public/My/operator/admin surface classes inherit automated ve
 console.log('- synthetic role + 320/390/768/1366/1440 responsive device matrix registered');
 console.log('- real canonical production canary required before SYSTEM_VERIFIED');
 console.log('- manual user testing is additive, not the default completion gate');
+console.log('- EKODI-owned virtualization is first; external virtualization is audited temporary fallback only');
