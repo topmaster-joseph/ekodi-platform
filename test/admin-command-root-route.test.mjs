@@ -28,11 +28,18 @@ test('Admin roots resolve to command home while child routes remain independent'
   assert.equal(routes.pathFor('finance'),'/admin/content/finance');
 });
 
-test('legacy query and hash routes override command root for downstream compatibility',()=>{
+test('service, legacy query and hash routes override command root for downstream compatibility',()=>{
   let routes=routesFor({pathname:'/admin/',search:'?route=books'});
   assert.equal(routes.sectionFromLocation({
     href:'https://ekodi.kr/admin/?route=books',hostname:'ekodi.kr',pathname:'/admin/',search:'?route=books',hash:''
   }),'books');
+  routes=routesFor({pathname:'/admin/',search:'?service=openai-integration'});
+  assert.equal(routes.sectionFromLocation({
+    href:'https://ekodi.kr/admin/?service=openai-integration',hostname:'ekodi.kr',pathname:'/admin/',search:'?service=openai-integration',hash:''
+  }),'engine-all');
+  assert.equal(routes.canonicalUrl('engine-all',{
+    href:'https://ekodi.kr/admin/?service=openai-integration',hostname:'ekodi.kr',pathname:'/admin/',search:'?service=openai-integration',hash:''
+  }),'/admin/services/engine-all?service=openai-integration');
   routes=routesFor({pathname:'/admin/',hash:'#insurance'});
   assert.equal(routes.sectionFromLocation({
     href:'https://ekodi.kr/admin/#insurance',hostname:'ekodi.kr',pathname:'/admin/',search:'',hash:'#insurance'
