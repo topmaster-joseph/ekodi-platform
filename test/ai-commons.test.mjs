@@ -80,11 +80,14 @@ test('Commons page loads browser assets only through the Worker-owned API bounda
   assert.match(html,/\.\/api\/commons\/style\?v=/);
   assert.match(html,/실행 서비스/);
   assert.match(html,/serviceTabs/);
+  assert.match(html,/분야별 3개/);
   assert.match(html,/무엇을 하고 싶으세요\?/);
   assert.match(html,/개발 요청/);
   assert.match(client,/releasedRequests/);
   assert.match(client,/item\.status==='shared'/);
   assert.match(client,/\/api\/commons\/match/);
+  assert.match(client,/const FEATURED_PER_CATEGORY=3/);
+  assert.match(client,/\.slice\(0,FEATURED_PER_CATEGORY\)/);
   assert.doesNotMatch(html,/\.\/commons\.js\?v=/);
   assert.doesNotMatch(html,/\.\/commons\.css\?v=/);
   assert.doesNotMatch(html,/api\/commons\/client\.js/);
