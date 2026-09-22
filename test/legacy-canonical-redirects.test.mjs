@@ -23,7 +23,8 @@ test('guarded release defers nested Mall admin redirects until promoted routing 
     assert.deepEqual(request.statuses, [308], url);
     assert.ok(request.headerExpect.includes(`location: ${location}`), url);
     assert.ok(request.headerExpect.includes('cache-control: no-store'), url);
-    assert.ok(request.headerExpect.includes('x-ekodi-route: mall-nested-canonical-redirect'), url);
+    assert.ok(request.headerExpect.includes('x-ekodi-route: admin-canonical-handoff'), url);
+    assert.ok(request.headerExpect.includes('x-ekodi-security-policy: platform-edge-v2'), url);
   }
 });
 
