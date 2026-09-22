@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "policyId": "one-account-free-everywhere-pay-where-needed",
   "identity": {
     "primaryLogin": "google",
@@ -54,6 +54,10 @@
       "legal_notice",
       "health_check",
       "required_webhook"
-    ]
+    ],
+    "publicPageDefault": "guest-open",
+    "authenticationEffect": "enhance-not-replace",
+    "permissionFailureBehavior": "retain-safe-public-projection",
+    "canonicalPublicLoginWallForbidden": true
   }
 }
