@@ -14,12 +14,26 @@ const boundaries = json('platform-boundaries.json');
 const coreData = json('config/core-data-boundaries.json');
 const storage = json('config/storage-policy.json');
 const workspace = json('config/service-workspace-policy.json');
+const surfaceVerification = json('config/surface-system-verification-policy.json');
+const executionFabric = json('config/autonomous-execution-fabric-policy.json');
+const remoteComputer = json('config/remote-computer-execution-policy.json');
 
-if (constitution.version !== '1.18.0') fail('constitution version must be 1.18.0 with universal surface system verification plus all prior approved amendments');
+if (constitution.version !== '1.19.0') fail('constitution version must be 1.19.0 with EKODI-owned virtualization sovereignty plus all prior approved amendments');
 if (constitution.status !== 'active') fail('constitution must be active');
-for (const principle of ['free-first-not-free-only','ekodi-core-is-source-of-truth','provider-independent-by-default','secure-by-default','one-domain-grammar','isolated-parallel-development','verification-first-evolution','security-native-intelligence','evidence-linked-recommendations','secure-projection-minimum-disclosure','integrated-responsibility-distributed-execution-standardized-connections','layered-governance-os-core-services-connections-workspaces','user-surface-engine-separation','capability-first-reuse','sustainable-scale-by-evidence','workspace-over-space','generation-10-active-baseline','open-ended-evidence-driven-generation-evolution','sovereign-autonomy-with-human-authority','person-workspace-role-capability-authority','observe-detect-reason-plan-execute-verify-recover-learn','ekodibiz-exclusive-commercial-subject','ordinary-user-information-first-commercial-separation','completion-continuity-through-recoverable-interruptions','supreme-attributes-binding','guest-open-public-user-surfaces','self-verifying-all-surface-system-evidence']) {
+for (const principle of ['free-first-not-free-only','ekodi-core-is-source-of-truth','provider-independent-by-default','secure-by-default','one-domain-grammar','isolated-parallel-development','verification-first-evolution','security-native-intelligence','evidence-linked-recommendations','secure-projection-minimum-disclosure','integrated-responsibility-distributed-execution-standardized-connections','layered-governance-os-core-services-connections-workspaces','user-surface-engine-separation','capability-first-reuse','sustainable-scale-by-evidence','workspace-over-space','generation-10-active-baseline','open-ended-evidence-driven-generation-evolution','sovereign-autonomy-with-human-authority','person-workspace-role-capability-authority','observe-detect-reason-plan-execute-verify-recover-learn','ekodibiz-exclusive-commercial-subject','ordinary-user-information-first-commercial-separation','completion-continuity-through-recoverable-interruptions','supreme-attributes-binding','guest-open-public-user-surfaces','self-verifying-all-surface-system-evidence','ekodi-owned-virtualization-first']) {
   if (!constitution.principles?.includes(principle)) fail(`missing constitutional principle: ${principle}`);
 }
+
+const virtualizationSovereignty = constitution.virtualizationSovereigntyPolicy || {};
+if (virtualizationSovereignty.id !== 'VIRTUALIZATION-SOVEREIGNTY-001' || virtualizationSovereignty.status !== 'enforced') fail('virtualization sovereignty constitutional policy must remain enforced');
+if (virtualizationSovereignty.orchestrationOwner !== 'ekodi-orchestrator' || virtualizationSovereignty.ekodiOwnedVirtualizationFirst !== true) fail('EKODI Orchestrator must enforce native-first virtualization');
+if (virtualizationSovereignty.externalProviderRole !== 'temporary-replaceable-fallback-only' || virtualizationSovereignty.fallbackReasonAndAuditRequired !== true) fail('external virtualization must remain an audited temporary fallback');
+if (virtualizationSovereignty.fallbackMustPreserveOrIncreaseSecurityAndIsolation !== true || virtualizationSovereignty.paidExternalAutoUpgradeForbidden !== true) fail('virtualization fallback may not weaken security/isolation or auto-upgrade paid capacity');
+if (virtualizationSovereignty.successfulExternalFallbackMustCreateNativeCapabilityGapRecord !== true || virtualizationSovereignty.correctableNativeGapMustNotInterruptUserWorkflow !== true) fail('native virtualization gaps must be tracked and recovered without user handoff');
+if (virtualizationSovereignty.virtualizationOnlyArchitectureForbidden !== true) fail('EKODI execution architecture must not become virtualization-only');
+if (surfaceVerification.execution?.defaultHarness !== 'ekodi-owned-isolated-browser-runtime' || surfaceVerification.execution?.virtualizationProviderPolicy?.nativeFirst !== true) fail('surface verification operational policy must default to EKODI-owned virtualization');
+if (executionFabric.orchestration?.selection?.ekodiOwnedVirtualizationFirst !== true || executionFabric.providers?.virtualization?.nativeFirst !== true) fail('execution fabric must select EKODI-owned virtualization first');
+if (remoteComputer.strategy?.nativeFirst !== true || remoteComputer.strategy?.externalProviderRole !== 'temporary-replaceable-fallback-only' || remoteComputer.strategy?.buildNativeCapabilityBeforePermanentExternalDependency !== true) fail('remote computer policy must preserve EKODI-native-first virtualization');
 
 const supremePolicy = constitution.supremeAttributesPolicy || {};
 if (supremePolicy.id !== 'EKODI-SUPREME-ATTRIBUTES-001') fail('supreme attributes constitutional policy id mismatch');
