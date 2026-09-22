@@ -16,7 +16,10 @@ test('shared user shell bundles the common AI entry for user surfaces',()=>{
   assert.match(worker,/user-ai-entry\.js/);
   assert.match(worker,/x-ekodi-user-ai-entry/);
   assert.match(entry,/AI로 하기/);
-  assert.match(entry,/blocked=new Set\(\['admin','form','document','data'\]\)/);
+  assert.match(entry,/blocked=new Set\(\['admin','form','document','data','workspace','operator','management'\]\)/);
+  assert.match(entry,/\['admin','member','manage','management','operator','workspace'\]\.includes\(segment\)/);
+  assert.match(entry,/const explicitPublic=surface==='public'/);
+  assert.match(entry,/return Boolean\(service\)&&explicitPublic/);
   assert.match(entry,/searchParams\.set\('source',service\)/);
 });
 

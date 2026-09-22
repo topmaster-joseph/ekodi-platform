@@ -3,7 +3,7 @@
 if(window.__EKODI_USER_AI_ENTRY__)return;
 window.__EKODI_USER_AI_ENTRY__=true;
 const AI_URL='https://ekodi.kr/ai/';
-const blocked=new Set(['admin','form','document','data']);
+const blocked=new Set(['admin','form','document','data','workspace','operator','management']);
 const clean=v=>String(v||'').trim();
 function context(){
   const html=document.documentElement;
@@ -14,9 +14,11 @@ function context(){
 function eligible(){
   const {service,surface}=context();
   const path=location.pathname.replace(/\/+$/,'')||'/';
-  const adminPath=path==='/admin'||path.includes('/admin/')||path.endsWith('/admin');
-  if(blocked.has(surface)||adminPath||path==='/ai'||path.startsWith('/ai/'))return false;
-  return Boolean(service)&&['public','workspace'].includes(surface);
+  const segments=path.split('/').filter(Boolean).map(segment=>segment.toLowerCase());
+  const protectedPath=segments.some(segment=>['admin','member','manage','management','operator','workspace'].includes(segment));
+  const explicitPublic=surface==='public';
+  if(blocked.has(surface)||protectedPath||path==='/ai'||path.startsWith('/ai/'))return false;
+  return Boolean(service)&&explicitPublic;
 }
 function style(){
   if(document.querySelector('[data-ekodi-user-ai-entry-style]'))return;

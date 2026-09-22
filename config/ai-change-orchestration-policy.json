@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 7,
+  "schemaVersion": 8,
   "policyId": "AI-ORCHESTRATE-001",
   "status": "enforced",
   "controlPlane": "EKODI AI",
@@ -156,7 +156,17 @@
     },
     "requiredStatusCheck": "EKODI AI Orchestration Gate",
     "forcePush": false,
-    "branchDeletion": false
+    "branchDeletion": false,
+    "requiredCheckRecovery": {
+      "enabled": true,
+      "bypassProtectedBranch": false,
+      "disableOrRemoveRequiredChecks": false,
+      "onExpectedOrFailed": "diagnose-root-cause-repair-rerun-recheck-merge-retry",
+      "rerunFailedJobsFirst": true,
+      "refreshBranchWhenRequired": true,
+      "mergeRetryAfterAllRequiredChecksPass": true,
+      "stopOnlyAtTerminalWaitOrHumanGate": true
+    }
   },
   "mutationBoundary": {
     "orchestrationGateRequiredBeforeMutation": true,

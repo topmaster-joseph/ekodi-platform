@@ -1,4 +1,4 @@
-# EKODI Platform Constitution v1.17.0
+# EKODI Platform Constitution v1.18.0
 
 Effective: 2026-09-22
 
@@ -12,6 +12,13 @@ This constitution is the highest architecture and operations rule for EKODI Plat
 - The attributes are optimized as one system rather than traded away independently. Tensions must be documented and evidence-based; security, data sovereignty and sovereign human authority are mandatory floors that no tradeoff may reduce.
 - The operating maxim is: **independent yet connected; consistent without uniformity; stable without rigidity; creative without losing control; fast without becoming reckless; extensible without uncontrolled complexity**.
 - Machine-readable authority: `governance/constitution/supreme-attributes.v1.json`. Repository validation and CI must fail when the registry, constitutional binding or required enforcement mappings regress.
+
+## 0A. Required Check Recovery and Continuous Merge Constitution
+- A required status check that is expected, queued, failed, cancelled or stale is a recovery state, not permission to bypass branch protection and not a terminal completion state.
+- EKODI must preserve required checks and protected-branch rules, diagnose the blocking check, repair the root cause when actionable, rerun or retrigger validation, re-evaluate the PR, and retry merge automatically after all required checks pass.
+- Required checks must not be disabled, removed, administratively bypassed or weakened merely to complete a change.
+- Execution may pause only while an external check or guarded deployment is actively queued/running, when an explicit human authority gate is required, or when side effects are ambiguous. Otherwise the orchestrator continues repair → validation → merge retry → guarded deployment → production verification.
+- Machine-readable enforcement is defined by `config/ai-change-orchestration-policy.json#sourceControl.requiredCheckRecovery`.
 
 ## 1. Architecture Constitution
 - EKODI Core owns identity linkage, tenant/workspace, membership/RBAC, business state, configuration, automation and audit truth.
