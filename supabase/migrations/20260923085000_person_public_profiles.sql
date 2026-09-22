@@ -179,7 +179,9 @@ begin
   end if;
   return new;
 end
-$$;
+$;
+
+revoke all on function public.sync_person_public_profile_display_name() from public, anon, authenticated;
 
 drop trigger if exists sync_person_public_profile_display_name on public.people;
 create trigger sync_person_public_profile_display_name
