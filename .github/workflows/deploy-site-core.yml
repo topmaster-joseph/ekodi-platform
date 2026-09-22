@@ -736,3 +736,20 @@ jobs:
           done
 
           exit "$failed"
+
+
+  native_surface_verification_desktop:
+    name: EKODI Native Surface Verification · Desktop
+    needs: deploy
+    uses: ./.github/workflows/ekodi-background-browser-worker.yml
+    with:
+      surface_path: /
+      device_profile: desktop
+
+  native_surface_verification_mobile:
+    name: EKODI Native Surface Verification · Mobile
+    needs: deploy
+    uses: ./.github/workflows/ekodi-background-browser-worker.yml
+    with:
+      surface_path: /
+      device_profile: mobile-portrait
