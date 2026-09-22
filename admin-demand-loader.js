@@ -250,6 +250,7 @@
           placeholder.removeAttribute('data-demand-feature');
           if (placeholder !== real && placeholder.isConnected) placeholder.remove();
         }
+        window.EKODIAdminSidebar?.sync?.(document);
         window.dispatchEvent(new CustomEvent('ekodi-nav-changed', { detail:{ feature:key } }));
         mark(`ekodi-feature-${key}-ready`);
         scheduleSecondary(key, feature);
@@ -272,20 +273,9 @@
 
   function placeholder(key, feature) {
     if (!nav || nav.querySelector(`[data-demand-feature="${key}"]`)) return false;
-    let button = nav.querySelector(feature.real);
+    const button = nav.querySelector(feature.real);
+    if (!button) return false;
     let changed = false;
-    if (!button) {
-      button = document.createElement('button');
-      button.type = 'button';
-      button.className = 'nav';
-      button.dataset.lazySection = key === 'marketing' ? 'marketing-ai' : key === 'aimembers' ? 'ai-membership' : key;
-      button.append(document.createTextNode(`${feature.icon} `));
-      const label = document.createElement('span');
-      label.textContent = feature.label;
-      button.append(label);
-      insertPlaceholder(button, feature);
-      changed = true;
-    }
     if (button.dataset.demandFeature !== key) {
       button.dataset.demandFeature = key;
       changed = true;
@@ -323,6 +313,7 @@
     Object.entries(FEATURES).forEach(([key, feature]) => { if (placeholder(key, feature)) changed = true; });
     if (bindBaseEnhancements()) changed = true;
     if(!nav.dataset.cb){nav.dataset.cb='1';nav.addEventListener('click',e=>{if(!e.target.closest('[data-section="books"], [data-lazy-section="books"]')||nav.dataset.cbl)return;nav.dataset.cbl='1';loadStyle('author-billing-admin.css').then(()=>loadScript('author-billing-admin.js')).catch(()=>delete nav.dataset.cbl)},true);changed=true;}
+    window.EKODIAdminSidebar?.sync?.(document);
     if (changed) window.dispatchEvent(new CustomEvent('ekodi-nav-changed', { detail:{ feature:'placeholders' } }));
     const requestedKey = requestedFeature();
     if (requestedKey) {

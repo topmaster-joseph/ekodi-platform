@@ -85,6 +85,8 @@ test('admin root is a command-only workspace while Campus remains a child route'
   assert.match(menuLayout,/section===COMMAND_HOME\)return activateCommandHome\(\)/);
   assert.match(menuLayout,/if\(initialSection===COMMAND_HOME\)activateCommandHome\(\)/);
   assert.match(menuLayout,/dataset\.adminListLayout='single'/);
+  assert.match(menuLayout,/document\.body\.classList\.remove\('admin-command-home','admin-command-active'\)/);
+  assert.match(menuLayout,/EKODICommonServicesAdmin\?\.activate\?\.\(\);[\s\S]*activatePanel\(section\)\|\|activatePanel\(delegate\)/);
   assert.match(menuLayout,/sectionFromLocation\?\.\(location\)/);
   assert.doesNotMatch(menuLayout,/else\{requestedSection = 'campus';dc=true;requestDemand\('campus'\);\}/);
   assert.match(sidebar,/panelSection === 'command-home'/);

@@ -14,6 +14,10 @@ test('post-auth startup contains only the minimal shell/navigation/demand loader
   assert.match(criticalBlock, /'admin-compact\.js'/);
   assert.match(criticalBlock, /'admin-menu-layout\.js'/);
   assert.match(criticalBlock, /'admin-demand-loader\.js'/);
+  assert.ok(
+    criticalBlock.indexOf("'admin-menu-layout.js'") < criticalBlock.indexOf("'admin-demand-loader.js'"),
+    'canonical Admin navigation must mount before demand features can hydrate'
+  );
   assert.doesNotMatch(criticalBlock, /google-admin-auth\.js|ekodi-message-ui\.js/);
   assert.match(deferredBlock, /'google-admin-auth\.js'/);
   assert.match(deferredBlock, /'ekodi-message-ui\.js'/);
