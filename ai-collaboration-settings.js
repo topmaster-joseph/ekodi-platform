@@ -1,6 +1,7 @@
 import { AI_ROUTER_SCORE_POLICY, normalizeRouterWeights } from './ai-router-score.js';
 import { DEFAULT_AI_RESOURCE_POLICY, normalizeAiResourcePolicy } from './ai-resource-policy.js';
 import { localExecutionPolicySnapshot } from './local-execution-policy.js';
+import { EKODI_LEARNING_LOOP_POLICY, buildTaskLearningEvent } from './ekodi-learning-loop.js';
 
 const SCOPE = 'global';
 const MAX_AUDIT_ROWS = 50;
@@ -230,11 +231,17 @@ export async function listAiCollaborationAudit(env = {}, limit = 20) {
 export async function recordAiCoreLearningEvent(env = {}, event = {}) {
   if (!env.DB?.prepare) return null;
   await ensureTables(env.DB);
+  const normalized = buildTaskLearningEvent(event);
+  if (!normalized.eligibleForLearningLedger) return null;
   const now = new Date().toISOString();
-  const evidence = JSON.stringify(event.evidence && typeof event.evidence === 'object' ? event.evidence : {});
+  const evidence = JSON.stringify({
+    ...normalized.evidence,
+    feedback: normalized.feedback,
+    learningPolicyVersion: EKODI_LEARNING_LOOP_POLICY.version,
+  });
   await env.DB.prepare(`INSERT INTO ai_core_learning_events (task_id, capability, outcome, evidence_json, created_at) VALUES (?, ?, ?, ?, ?)` )
-    .bind(text(event.taskId,120), text(event.capability,120), text(event.outcome,40)||'verified', evidence.slice(0,12000), now).run();
-  return { taskId:text(event.taskId,120), outcome:text(event.outcome,40)||'verified', createdAt:now };
+    .bind(normalized.taskId, normalized.capability, normalized.outcome || 'verified', evidence.slice(0,12000), now).run();
+  return { taskId:normalized.taskId, capability:normalized.capability, outcome:normalized.outcome || 'verified', createdAt:now };
 }
 
 export async function getAiCoreLearningStatus(env = {}) {
@@ -263,6 +270,7 @@ export async function getAiCollaborationAdminSnapshot(env = {}) {
       hostedAi: Object.freeze({ configured:Boolean(text(env.EKODI_HOSTED_AI_URL,1000)), mode:'cloud-gpu-on-demand' }),
     }),
     coreLearning: Object.freeze(coreLearning),
+    learningLoop: EKODI_LEARNING_LOOP_POLICY,
     resolvedProfiles: profiles,
     executionRule: 'cloud_first_remote_second_local_exception_only',
     routerScore: Object.freeze({ algorithmVersion: AI_ROUTER_SCORE_POLICY.version, weights: loaded.policy.router.weights }),

@@ -62,5 +62,40 @@
       "verificationPolicy": "ci_and_guarded_release",
       "lifecycleState": "active"
     }
-  ]
+  ],
+  "acquisitionPolicy": {
+    "mode": "on_demand_plus_change_detection",
+    "bulkCrawlingByDefault": false,
+    "order": [
+      "official_connector_or_api",
+      "webhook",
+      "rss_atom",
+      "sitemap_incremental_fetch",
+      "bounded_html_fetch",
+      "manual_reviewed_source"
+    ],
+    "htmlFetchRequires": [
+      "robots_verified",
+      "terms_verified",
+      "rights_verified"
+    ],
+    "changedOnly": true,
+    "adaptiveSchedule": true,
+    "externalInstructions": "untrusted_reference_data_only"
+  },
+  "learningPromotionPolicy": {
+    "stages": [
+      "observation",
+      "verified_candidate",
+      "service_memory_candidate",
+      "platform_review_required",
+      "platform_knowledge_promoted"
+    ],
+    "rawUserContentLearningByDefault": false,
+    "platformMinimumScore": 90,
+    "repeatedVerifiedOutcomes": 3,
+    "humanApprovalRequiredForPlatform": true,
+    "authorityExpansionAllowed": false,
+    "productionMutationAllowed": false
+  }
 }
