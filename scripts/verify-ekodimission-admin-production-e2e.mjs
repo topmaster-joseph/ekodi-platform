@@ -53,6 +53,9 @@ const mutationCalls = [];
 const assetResponses = [];
 const consoleErrors = [];
 const pageErrors = [];
+const signedOutAssetResponses = [];
+const signedOutConsoleErrors = [];
+const signedOutPageErrors = [];
 
 function summary(){
   const result={total:participants.length,applied:0,waitlist:0,confirmed:0,attended:0,no_show:0,cancelled:0};
@@ -73,6 +76,20 @@ function jsonResponse(route,body,status=200){
 function requestBody(request){
   try{return request.postDataJSON()||{}}catch{return{}}
 }
+function captureWorkspaceAsset(list,response){
+  try{
+    const url=new URL(response.url());
+    if(url.origin!==origin||!['/workspace-admin.js','/workspace-admin.css'].includes(url.pathname))return;
+    const headers=response.headers();
+    list.push({
+      path:url.pathname,
+      status:response.status(),
+      contentType:String(headers['content-type']||''),
+      nosniff:String(headers['x-content-type-options']||''),
+      cacheControl:String(headers['cache-control']||''),
+    });
+  }catch{}
+}
 
 const browser=await chromium.launch({headless:true});
 
@@ -83,20 +100,58 @@ const signedOutContext=await browser.newContext({viewport:{width:1440,height:110
 const signedOutPage=await signedOutContext.newPage();
 signedOutPage.setDefaultTimeout(12_000);
 signedOutPage.setDefaultNavigationTimeout(20_000);
-await signedOutPage.goto(targetUrl,{waitUntil:'domcontentloaded'});
-await signedOutPage.waitForFunction(()=>document.querySelector('#pageState')?.textContent?.includes('로그인 필요'));
-const loginAnchor=signedOutPage.locator('#mainPanel a.button.primary[href*="/auth/"]').first();
-await loginAnchor.waitFor({state:'visible'});
-const loginHref=await loginAnchor.getAttribute('href');
-if(!loginHref)throw new Error('Mission admin signed-out login link missing');
-const loginUrl=new URL(loginHref);
-const expectedReturn=new URL(targetUrl);
-if(loginUrl.origin!==origin||loginUrl.pathname!=='/auth/'||loginUrl.searchParams.get('site')!=='mission'||loginUrl.searchParams.get('direct')!=='1'){
-  throw new Error('Mission admin auth scope is not canonical: '+loginUrl.href);
-}
-const returnTo=new URL(loginUrl.searchParams.get('return_to')||'');
-if(returnTo.origin!==expectedReturn.origin||returnTo.pathname!==expectedReturn.pathname||returnTo.search!==expectedReturn.search){
-  throw new Error('Mission admin return_to lost the participant-management route: '+loginUrl.href);
+signedOutPage.on('console',message=>{if(message.type()==='error')signedOutConsoleErrors.push(message.text())});
+signedOutPage.on('pageerror',error=>signedOutPageErrors.push(String(error?.stack||error?.message||error)));
+signedOutPage.on('response',response=>captureWorkspaceAsset(signedOutAssetResponses,response));
+try{
+  await signedOutPage.goto(targetUrl,{waitUntil:'domcontentloaded'});
+  await signedOutPage.waitForFunction(()=>document.querySelector('#pageState')?.textContent?.includes('로그인 필요'));
+  const loginAnchor=signedOutPage.locator('#mainPanel a.button.primary[href*="/auth/"]').first();
+  await loginAnchor.waitFor({state:'visible'});
+  const loginHref=await loginAnchor.getAttribute('href');
+  if(!loginHref)throw new Error('Mission admin signed-out login link missing');
+  const loginUrl=new URL(loginHref);
+  const expectedReturn=new URL(targetUrl);
+  if(loginUrl.origin!==origin||loginUrl.pathname!=='/auth/'||loginUrl.searchParams.get('site')!=='mission'||loginUrl.searchParams.get('direct')!=='1'){
+    throw new Error('Mission admin auth scope is not canonical: '+loginUrl.href);
+  }
+  const returnTo=new URL(loginUrl.searchParams.get('return_to')||'');
+  if(returnTo.origin!==expectedReturn.origin||returnTo.pathname!==expectedReturn.pathname||returnTo.search!==expectedReturn.search){
+    throw new Error('Mission admin return_to lost the participant-management route: '+loginUrl.href);
+  }
+}catch(error){
+  await signedOutPage.screenshot({path:path.join(artifactsDir,'signed-out-failure.png'),fullPage:true}).catch(()=>{});
+  const signedOutState=await signedOutPage.evaluate(()=>({
+    url:location.href,
+    title:document.title,
+    pageState:document.querySelector('#pageState')?.textContent||'',
+    workspaceName:document.querySelector('#workspaceName')?.textContent||'',
+    pageTitle:document.querySelector('#pageTitle')?.textContent||'',
+    mainText:document.querySelector('#mainPanel')?.textContent?.trim().slice(0,1200)||'',
+    hasLoginLink:Boolean(document.querySelector('#mainPanel a.button.primary[href*="/auth/"]')),
+    htmlRuntime:document.documentElement.dataset.ekodiWorkspaceAdminRuntime||'',
+    scriptRuntime:String(window.__EKODI_WORKSPACE_ADMIN_RUNTIME__||''),
+  })).catch(()=>({}));
+  const report={
+    generatedAt:new Date().toISOString(),
+    targetUrl,
+    passed:false,
+    stage:'signed-out-auth-boundary',
+    mode:'production-signed-out-surface',
+    checks:{authSiteMission:false,authReturnToExact:false},
+    mutationCalls:[],
+    assetResponses:signedOutAssetResponses,
+    diagnostics:{
+      signedOutState,
+      pageErrors:signedOutPageErrors,
+      consoleErrors:signedOutConsoleErrors.slice(-40),
+    },
+    error:String(error?.stack||error?.message||error),
+  };
+  await fs.writeFile(path.join(artifactsDir,'report.json'),JSON.stringify(report,null,2));
+  await signedOutContext.close().catch(()=>{});
+  await browser.close().catch(()=>{});
+  throw error;
 }
 await signedOutContext.close();
 
@@ -107,14 +162,7 @@ page.setDefaultNavigationTimeout(20_000);
 
 page.on('console',message=>{if(message.type()==='error')consoleErrors.push(message.text())});
 page.on('pageerror',error=>pageErrors.push(String(error?.stack||error?.message||error)));
-page.on('response',response=>{
-  try{
-    const url=new URL(response.url());
-    if(url.origin===origin && ['/workspace-admin.js','/workspace-admin.css'].includes(url.pathname)){
-      assetResponses.push({path:url.pathname,status:response.status()});
-    }
-  }catch{}
-});
+page.on('response',response=>captureWorkspaceAsset(assetResponses,response));
 
 await page.addInitScript(()=>{
   const now=Math.floor(Date.now()/1000);
@@ -249,6 +297,10 @@ try{
 
   const paths=new Set(assetResponses.filter(item=>item.status===200).map(item=>item.path));
   checks.productionAssets=paths.has('/workspace-admin.js')&&paths.has('/workspace-admin.css');
+  const jsAsset=assetResponses.find(item=>item.path==='/workspace-admin.js'&&item.status===200);
+  const cssAsset=assetResponses.find(item=>item.path==='/workspace-admin.css'&&item.status===200);
+  checks.productionAssetTypes=Boolean(jsAsset&&/javascript|ecmascript/i.test(jsAsset.contentType)&&cssAsset&&/text\/css/i.test(cssAsset.contentType));
+  checks.productionNosniff=Boolean(jsAsset?.nosniff?.toLowerCase()==='nosniff'&&cssAsset?.nosniff?.toLowerCase()==='nosniff');
   checks.noPageErrors=pageErrors.length===0;
   checks.noSeriousConsoleErrors=!consoleErrors.some(text=>/(TypeError|ReferenceError|SyntaxError|uncaught|failed to load module)/i.test(text));
 
@@ -268,7 +320,8 @@ try{
     checks,
     mutationCalls,
     assetResponses,
-    diagnostics:{pageErrors,consoleErrors:consoleErrors.slice(-40)},
+    signedOutAssetResponses,
+    diagnostics:{pageErrors,consoleErrors:consoleErrors.slice(-40),signedOutPageErrors,signedOutConsoleErrors:signedOutConsoleErrors.slice(-40)},
     error:fatal?String(fatal?.stack||fatal?.message||fatal):null,
   };
   await fs.writeFile(path.join(artifactsDir,'report.json'),JSON.stringify(report,null,2));
