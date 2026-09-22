@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-09-10",
+  "updatedAt": "2026-09-22",
   "title": "EKODI Constitution Registry Index",
   "mode": "index-only",
   "authority": {
@@ -320,6 +320,21 @@
         "supabase/functions/trust-api",
         "supabase/migrations/*trust*",
         "docs/security/TRUST_LAYER.md"
+      ]
+    },
+    {
+      "id": "VERIFY-001",
+      "area": "surface-verification",
+      "title": "Universal self-verification for public, My, operator and administrator surfaces",
+      "status": "active",
+      "sourcePointer": "/surfaceSystemVerificationPolicy",
+      "impactPaths": [
+        "SURFACE_SYSTEM_VERIFICATION_POLICY.md",
+        "config/surface-system-verification-policy.json",
+        "scripts/validate-surface-system-verification-policy.mjs",
+        "scripts/**/*e2e*.mjs",
+        ".github/workflows/**/*e2e*.yml",
+        "test/**"
       ]
     }
   ]
