@@ -46,7 +46,7 @@ create policy person_public_profiles_read_published
   using (visibility = 'public');
 
 comment on table public.person_public_profiles is
-  'Public-only person projection. Writes are service-role mediated by profile-api; My EKODI remains the sole management surface.';
+  'Public-only person projection. Writes are authenticated person-scoped RPCs; My EKODI remains the sole management surface.';
 
 
 create or replace function public.get_my_public_profile()
@@ -128,7 +128,8 @@ begin
     raise exception 'public_visibility_invalid' using errcode='22023';
   end if;
   if jsonb_typeof(coalesce(p_links,'[]'::jsonb)) <> 'array'
-     or jsonb_array_length(coalesce(p_links,'[]'::jsonb)) > 6 then
+     or jsonb_array_length(coalesce(p_links,'[]'::jsonb)) > 6
+     or octet_length(coalesce(p_links,'[]'::jsonb)::text) > 10000 then
     raise exception 'public_links_invalid' using errcode='22023';
   end if;
 
