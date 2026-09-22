@@ -577,7 +577,7 @@
         ],
         "redirect": "manual",
         "headerExpect": [
-          "location: https://ekodi.kr/ekodimall/admin/",
+          "location: https://ekodi.kr/ekodimall/admin",
           "cache-control: no-store",
           "x-ekodi-route: admin-canonical-handoff",
           "x-ekodi-security-policy: platform-edge-v2"
@@ -1734,6 +1734,47 @@
           "x-ekodi-route: local-region-access-admin",
           "x-ekodi-shell: v2",
           "cache-control: no-store"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/seonam-medi/",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "서남권 국립의대 시민소통센터",
+          "사실은 출처와 함께",
+          "사이트 일일점검",
+          "/seonam-medi/app.css",
+          "/seonam-medi/app.js"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/seonam-medi/app.css",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          ".site-header",
+          ".timeline",
+          ".evidence-row"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/seonam-medi/data.json",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "\"mediaPolicy\"",
+          "\"timeline\"",
+          "\"sources\""
         ],
         "rollbackVerify": false
       }
