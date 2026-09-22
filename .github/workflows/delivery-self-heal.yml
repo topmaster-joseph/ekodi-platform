@@ -1,0 +1,41 @@
+name: EKODI Delivery Self Heal
+
+on:
+  workflow_run:
+    workflows: ["EKODI AI Orchestration Gate", "EKODI Parallel Change Conflict Guard"]
+    types: [completed]
+
+permissions:
+  actions: write
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: ekodi-self-heal-${{ github.event.workflow_run.head_sha }}
+  cancel-in-progress: false
+
+jobs:
+  recover:
+    if: github.event.workflow_run.conclusion == 'failure'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Classify and retry recoverable failure
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
+        run: |
+          set -euo pipefail
+          if [ "$ATTEMPT" -ge 3 ]; then
+            echo "[DELIVERY-SELF-HEAL-001] retry budget exhausted; preserve failure."
+            exit 0
+          fi
+          jobs="$(gh api "repos/$REPO/actions/runs/$RUN_ID/jobs")"
+          failed="$(jq -r '.jobs[] | select(.conclusion=="failure") | [.name, (.steps[]? | select(.conclusion=="failure") | .name)] | @tsv' <<<"$jobs")"
+          if grep -Eqi 'security|credential|destructive|constitutional|human approval' <<<"$failed"; then
+            echo "[DELIVERY-SELF-HEAL-001] safety-class failure; never bypass."
+            exit 0
+          fi
+          echo "[DELIVERY-SELF-HEAL-001] recoverable failure; retry failed jobs."
+          gh api -X POST "repos/$REPO/actions/runs/$RUN_ID/rerun-failed-jobs"
