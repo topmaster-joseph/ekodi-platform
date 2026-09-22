@@ -9,6 +9,7 @@ const READ_ROLES={
   church_services:['senior_pastor','pastor','care_staff','staff','viewer'],
   church_care_tasks:['senior_pastor','pastor','care_staff'],
   church_events:['senior_pastor','pastor','care_staff','staff','viewer'],
+  church_donors:['senior_pastor','church_treasurer','church_finance'],
   church_offerings:['senior_pastor','church_treasurer','church_finance'],
   church_ledger_entries:['senior_pastor','church_treasurer','church_finance'],
   church_receipt_requests:['senior_pastor','church_treasurer','church_finance'],
@@ -112,7 +113,7 @@ Deno.serve(async req=>{
   if(!Object.prototype.hasOwnProperty.call(READ_ROLES,table))return json({error:'TABLE_NOT_ALLOWED'},404,origin);
   if(req.method==='GET'){
     if(!allowed(staff.role,READ_ROLES[table]))return json({error:'ROLE_NOT_ALLOWED'},403,origin);
-    const financeTable=['church_offerings','church_ledger_entries','church_receipt_requests'].includes(table);
+    const financeTable=['church_donors','church_offerings','church_ledger_entries','church_receipt_requests'].includes(table);
     let upstream;
     try{
       upstream=financeTable
