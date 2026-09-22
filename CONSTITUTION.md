@@ -1,4 +1,4 @@
-# EKODI Platform Constitution v1.17.0
+# EKODI Platform Constitution v1.18.0
 
 Effective: 2026-09-22
 
@@ -139,6 +139,15 @@ This constitution is the highest architecture and operations rule for EKODI Plat
 - Secrets remain server-side and credentials are capability-scoped with least privilege.
 - Existing deployment boundaries are preserved as the migration baseline. New independent deployment boundaries are exceptional and require the sustainable boundary-creation gate defined by the evolution model.
 - Capacity expansion follows the order: remove root cause -> optimize cache/query/workload shape -> queue/retry heavy work -> increase shared capacity -> isolate only measured bottlenecks -> add redundancy only when justified.
+
+## 8A. Automatic Recovery and Non-Blocking Delivery Constitution
+- Every AI-initiated change must validate and, when necessary, generate a compliant branch identity **before branch creation or mutation**. The canonical format is governed by the machine-readable orchestration policy.
+- Branch identity is revalidated before PR creation and again at the central orchestration gate. A correctable naming violation must be automatically repaired by creating or selecting a compliant branch, preserving task and commit identity, retiring the superseded PR/branch when safe, and resuming validation without user interruption.
+- CI, conflict, staging and deployment failures that are deterministic, reversible and resolvable within delegated authority enter **Detect → Repair → Revalidate → Resume** automatically. A recoverable failure must not become the terminal state of an otherwise authorized production-bound change.
+- Central gates are final defenses and evidence producers, not the first or only place where preventable policy violations are detected.
+- Automatic recovery must preserve isolation, audit evidence, rollback capability, security boundaries, required reviews and production verification. It may never weaken or bypass a gate merely to keep delivery moving.
+- Execution stops for human action only when the remaining blocker requires sovereign authority, explicit human approval, unavailable credentials, an ambiguous side effect, an irreversible/high-impact decision, or an external dependency for which no authorized safe fallback remains.
+- Machine-readable enforcement is defined by `config/ai-change-orchestration-policy.json`; CI/workflow implementations must conform to this constitutional behavior.
 
 ## 8A. Completion Continuity Constitution
 - A session ending, execution-window limit, temporary tool unavailability, connector failure, rate limit or transient infrastructure failure is a **recoverable interruption**, not evidence of completion and not by itself a blocked state.
