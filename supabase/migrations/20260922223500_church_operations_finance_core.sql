@@ -129,6 +129,17 @@ begin
   if v_tenant_id is null then return v_result; end if;
 
   case p_table
+    when 'church_donors' then
+      select coalesce(jsonb_agg(x.row_value order by x.sort_name asc),'[]'::jsonb)
+      into v_result
+      from (
+        select jsonb_build_object(
+          'id',m.id,'full_name',m.full_name,'preferred_name',m.preferred_name,'status',m.status
+        ) row_value,lower(m.full_name) sort_name
+        from church_private.members m
+        where m.tenant_id=v_tenant_id and m.status<>'inactive'
+        order by lower(m.full_name) asc limit v_limit
+      ) x;
     when 'church_offerings' then
       select coalesce(jsonb_agg(x.row_value order by x.sort_date desc, x.created_at desc),'[]'::jsonb)
       into v_result
