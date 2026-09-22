@@ -1,8 +1,53 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { collectSupabase, collectSupabaseOidc, collectGitHub, snapshotsToSql } from '../scripts/collect-free-tier-resource-usage.mjs';
+import { collectCloudflare, collectSupabase, collectSupabaseOidc, collectGitHub, snapshotsToSql } from '../scripts/collect-free-tier-resource-usage.mjs';
 
 const observedAt='2026-09-20T08:30:00.000Z';
+
+test('Cloudflare collector records measured Workers requests with the production free limit',async()=>{
+  const config={dailyRequestLimit:100000,knownDevelopmentAccountIds:['dev-known']};
+  const calls=[];
+  const fetchJson=async(url,options={})=>{
+    calls.push({url,options});
+    assert.equal(url,'https://api.cloudflare.com/client/v4/graphql');
+    assert.equal(options.method,'POST');
+    assert.equal(options.body.variables.accountTag,'prod-account');
+    return {data:{viewer:{accounts:[{workersInvocationsAdaptive:[
+      {sum:{requests:12000}},
+      {sum:{requests:3400}},
+    ]}]}}};
+  };
+  const result=await collectCloudflare({
+    token:'cf-token',
+    productionAccountId:'prod-account',
+    developmentAccountId:'dev-account',
+    config,
+    fetchJson,
+    observedAt
+  });
+  assert.equal(result.available,true);
+  assert.equal(result.snapshots.length,1);
+  const row=result.snapshots[0];
+  assert.equal(row.provider,'cloudflare');
+  assert.equal(row.metric,'workers_requests_daily');
+  assert.equal(row.observedValue,15400);
+  assert.equal(row.freeLimit,100000);
+  assert.equal(row.source,'cloudflare-workers-analytics');
+  assert.equal(calls.length,1);
+});
+
+test('Cloudflare collector refuses a Development account as Production',async()=>{
+  await assert.rejects(
+    collectCloudflare({
+      token:'cf-token',
+      productionAccountId:'dev-known',
+      config:{dailyRequestLimit:100000,knownDevelopmentAccountIds:['dev-known']},
+      fetchJson:async()=>{throw new Error('must not fetch')},
+      observedAt
+    }),
+    /known Development/
+  );
+});
 
 test('Supabase collector measures free project capacity and per-project database/storage without billing mutation',async()=>{
   const calls=[];

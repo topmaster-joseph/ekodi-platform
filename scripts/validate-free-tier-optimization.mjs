@@ -70,6 +70,12 @@ expect(collector.includes('collectSupabaseOidc'),'collector must implement GitHu
 expect(collector.includes('supabase-edge-github-oidc'),'OIDC fallback snapshots must identify their measured source');
 expect(collector.includes('/database/query/read-only'),'Supabase database usage must use the dedicated Management API read-only query endpoint');
 expect(!/\/database\/query(?!\/read-only)/.test(collector),'collector must not fall back to the writable Management API query endpoint');
+expect(collector.includes('https://api.cloudflare.com/client/v4/graphql'),'Cloudflare usage must come from Workers Analytics GraphQL');
+expect(collector.includes('workersInvocationsAdaptive'),'Cloudflare collector must measure Workers invocations');
+expect(collector.includes("metric:'workers_requests_daily'"),'Cloudflare collector must persist the Workers daily metric');
+expect(collector.includes("source:'cloudflare-workers-analytics'"),'Cloudflare snapshot must identify its measured source');
+expect(collectorWorkflow.includes("provider IN ('cloudflare','supabase','github')"),'resource collector proof must include Cloudflare in the central ledger');
+expect(collectorWorkflow.includes("providers.has('cloudflare')"),'resource collector must fail closed when Cloudflare snapshot proof is missing');
 expect(collector.includes('/actions/cache/usage'),'GitHub cache usage must come from the official repository usage endpoint');
 expect(collector.includes('/actions/artifacts?'),'GitHub artifact usage must come from the official repository artifact endpoint');
 expect(!/BEGIN TRANSACTION|SAVEPOINT|lines\.push\('COMMIT;'\)/.test(collector),'remote D1 collector must not emit explicit transaction statements');
