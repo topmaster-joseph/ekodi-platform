@@ -47,6 +47,10 @@ For ChatGPT/GPT, Codex, and any agent that reads AGENTS instructions:
 The 21 Supreme Attributes are binding across current and future generations. Agent speed, novelty, local optimization or provider convenience never overrides them.
 
 
+## Universal Surface System Verification Policy (mandatory)
+
+All EKODI public homes, My pages, operator pages, administrator pages and the platform-wide `/my` surface inherit `SURFACE_SYSTEM_VERIFICATION_POLICY.md`. Completion defaults to synthetic role/device/browser E2E plus a real canonical production canary. `SYSTEM_VERIFIED` is sufficient for normal completion; manual owner/operator/user testing is additive and non-blocking except for narrowly scoped behaviors that cannot be meaningfully simulated or when production telemetry conflicts with synthetic evidence. Do not report completion from build/merge/deploy/HTTP success alone, and do not make “ask the user to test it” the default fallback.
+
 ## Broadcast System Verification Policy (mandatory)
 
 All EKODI broadcast/live implementations inherit `BROADCAST_SYSTEM_VERIFICATION_POLICY.md`. Broadcast completion defaults to synthetic broadcaster + synthetic viewer E2E and a production synthetic canary. `System Verified` is sufficient for normal completion; physical `Device Verified` is additive and non-blocking except for narrowly scoped device/OS/provider behaviors that cannot be meaningfully simulated or when production telemetry conflicts with synthetic evidence. Do not make manual broadcaster/participant testing the default completion gate.
