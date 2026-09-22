@@ -2,6 +2,9 @@ const API_PATH='/api/seonam-medi/voices';
 const CATEGORIES=new Set(['question','proposal','experience','factcheck','tip','other']);
 const clean=(value,max)=>String(value??'').trim().slice(0,max);
 const json=(body,status=200)=>new Response(JSON.stringify(body),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff','referrer-policy':'no-referrer'}});
+const publicText=value=>clean(value,3000)
+  .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi,'[이메일 가림]')
+  .replace(/(?:\+?82[- ]?)?0\d{1,2}[- )]?\d{3,4}[- ]?\d{4}/g,'[연락처 가림]');
 async function fingerprint(request){
   const ip=clean(request.headers.get('cf-connecting-ip')||request.headers.get('x-forwarded-for')?.split(',')[0]||'unknown',128);
   const bytes=new TextEncoder().encode(ip);
@@ -28,7 +31,23 @@ async function ensureSchema(db){
 export async function handleSeonamMediCivicApi(request,env){
   const url=new URL(request.url);
   if(url.pathname!==API_PATH)return null;
-  if(request.method==='OPTIONS')return new Response(null,{status:204,headers:{allow:'POST, OPTIONS','cache-control':'no-store'}});
+  if(request.method==='OPTIONS')return new Response(null,{status:204,headers:{allow:'GET, POST, OPTIONS','cache-control':'no-store'}});
+  if(request.method==='GET'){
+    if(!env?.DB?.prepare)return json({ok:false,error:'storage_unavailable',message:'접수목록 저장소를 사용할 수 없습니다.',items:[]},503);
+    await ensureSchema(env.DB);
+    const rows=await env.DB.prepare(`SELECT category,display_name,message,review_status,created_at
+      FROM seonam_med_civic_voices
+      WHERE public_consent=1 AND review_status<>'archived'
+      ORDER BY id DESC LIMIT 50`).all();
+    const items=(rows?.results||[]).map(row=>({
+      category:row.category,
+      displayName:clean(row.display_name,80)||'익명',
+      message:publicText(row.message),
+      status:row.review_status,
+      createdAt:row.created_at
+    }));
+    return json({ok:true,items,count:items.length});
+  }
   if(request.method!=='POST')return json({ok:false,error:'method_not_allowed'},405);
   if(env?.ENVIRONMENT==='production'&&request.headers.get('origin')!=='https://ekodi.kr')return json({ok:false,error:'origin_not_allowed'},403);
   if(!env?.DB?.prepare)return json({ok:false,error:'storage_unavailable',message:'의견 접수 저장소를 사용할 수 없습니다.'},503);
