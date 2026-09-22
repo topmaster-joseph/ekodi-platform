@@ -198,6 +198,12 @@
           "date": "2026-08-30",
           "url": "https://www.newsis.com/view/NISX20260830_0003768417"
         }
+      ],
+      "monitorKeywords": [
+        "후보대학",
+        "순천대",
+        "선정",
+        "목포대"
       ]
     },
     {
@@ -221,6 +227,13 @@
           "date": "2026-09-21",
           "url": "https://www.docdocdoc.co.kr/news/articleView.html?idxno=3042961"
         }
+      ],
+      "monitorKeywords": [
+        "국회",
+        "기자회견",
+        "비상대책위원회",
+        "상경",
+        "공개서한"
       ]
     }
   ],
@@ -272,6 +285,7 @@
     "allowedTypes": [
       "photo",
       "video"
-    ]
+    ],
+    "autoLinkRule": "최근 자동수집 자료 중 활동일과 핵심어가 일치하고 사진·영상 메타데이터가 확인된 경우 해당 활동 카드에 '근거자료 후보'로 자동 연결하며 원문 확인 상태를 표시한다."
   }
 }
