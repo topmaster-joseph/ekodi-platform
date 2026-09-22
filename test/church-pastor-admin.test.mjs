@@ -47,7 +47,7 @@ test('pastor admin page is private-by-default', async () => {
   assert.match(html, /목회자 운영/);
   assert.match(html, /<h1 id="pageTitle">오늘의 교회<\/h1>/);
   assert.match(html, /오늘 일정·다음 예배·새가족·돌봄 후속/);
-  assert.match(html, /church-pastor-admin\.js\?v=20260921-today1/);
+  assert.match(html, /church-pastor-admin\.js\?v=20260922-finance1/);
   assert.match(response.headers.get('content-security-policy') || '', /frame-ancestors 'none'/);
   assert.doesNotMatch(response.headers.get('content-security-policy') || '', /(?:api|workspace-api)\.ekodi\.kr/);
   assert.match(response.headers.get('cache-control') || '', /no-store/);
