@@ -29,6 +29,7 @@ test('interpreter surface supports microphone, speech output and provider-neutra
   assert.match(client,/capability:'translation'/);
   assert.match(client,/\/api\/ai-modules\/v1\/providers\/generate/);
   assert.match(worker,/microphone=\(self\)/);
+  assert.match(worker,/target\.pathname='\/interpreter';/);
   assert.match(worker,/\/interpreter\//);
   assert.match(worker,/api\/interpreter\/client/);
 });
