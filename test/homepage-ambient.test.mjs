@@ -55,6 +55,13 @@ test('quick launch respects homepage presentation and recommends only visible se
   assert.doesNotMatch(js, /function applyFilter/);
 });
 
+test('static Korean cards preserve English translation metadata for locale switching', () => {
+  assert.match(js, /card\.dataset\.serviceNameEn/);
+  assert.match(js, /card\.dataset\.serviceDescriptionEn/);
+  assert.match(js, /card\.dataset\.ekodiEnTitle/);
+  assert.match(js, /card\.dataset\.ekodiEnDescription/);
+});
+
 test('homepage locale handling keeps Korean English Chinese and Japanese paths', () => {
   assert.match(js, /ekodi_user_locale/);
   assert.match(js, /ekodi\.locale/);

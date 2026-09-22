@@ -6,8 +6,9 @@ const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 
 test('homepage carries the EKODIAN guide inside the hero content flow', () => {
   assert.match(html, /data-ekodi-character-village="homepage-guide-v1"/);
-  assert.match(html, /에코디언 · EKODIAN/);
-  assert.match(html, /your guide, not the gate/);
+  assert.match(html, /data-ekodian-role="guide-not-gate"/);
+  assert.match(html, /<strong>에코디언<\/strong>/);
+  assert.doesNotMatch(html, /에코디언 · EKODIAN|your guide, not the gate/);
   assert.match(html, /role="img" aria-label="에코디 생태계를 안내하는 에코디언"/);
 
   const copyStart = html.indexOf('<div class="hero-copy">');
