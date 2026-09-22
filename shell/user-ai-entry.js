@@ -4,6 +4,7 @@ if(window.__EKODI_USER_AI_ENTRY__)return;
 window.__EKODI_USER_AI_ENTRY__=true;
 const AI_URL='https://ekodi.kr/ai/';
 const blocked=new Set(['admin','form','document','data']);
+const ADMIN_SEGMENT='admin';
 const clean=v=>String(v||'').trim();
 function context(){
   const html=document.documentElement;
@@ -14,7 +15,8 @@ function context(){
 function eligible(){
   const {service,surface}=context();
   const path=location.pathname.replace(/\/+$/,'')||'/';
-  const adminPath=path==='/admin'||path.includes('/admin/')||path.endsWith('/admin');
+  const segments=path.split('/').filter(Boolean).map(segment=>segment.toLowerCase());
+  const adminPath=segments.includes(ADMIN_SEGMENT);
   if(blocked.has(surface)||adminPath||path==='/ai'||path.startsWith('/ai/'))return false;
   return Boolean(service)&&['public','workspace'].includes(surface);
 }
@@ -24,8 +26,13 @@ function style(){
   el.textContent='.ekodi-user-ai-entry{position:relative;z-index:1;width:min(1120px,calc(100% - 28px));margin:20px auto 28px;font:inherit}.ekodi-user-ai-entry__open{display:block;margin-left:auto;border:1px solid color-mix(in srgb,currentColor 18%,transparent);border-radius:999px;padding:11px 16px;background:Canvas;color:CanvasText;box-shadow:0 6px 20px rgb(0 0 0/.08);font-weight:800;cursor:pointer}.ekodi-user-ai-entry__panel{display:none;width:min(680px,100%);margin:0 0 10px auto;padding:14px;border:1px solid color-mix(in srgb,currentColor 18%,transparent);border-radius:16px;background:Canvas;color:CanvasText;box-shadow:0 10px 28px rgb(0 0 0/.10)}.ekodi-user-ai-entry[data-open="1"] .ekodi-user-ai-entry__panel{display:block}.ekodi-user-ai-entry__panel strong{display:block;margin:0 0 8px}.ekodi-user-ai-entry__form{display:flex;gap:7px}.ekodi-user-ai-entry__form input{min-width:0;flex:1;min-height:44px;padding:10px 11px;border:1px solid color-mix(in srgb,currentColor 22%,transparent);border-radius:10px;background:Canvas;color:CanvasText;font:inherit}.ekodi-user-ai-entry__form button{min-height:44px;border:0;border-radius:10px;padding:9px 12px;background:CanvasText;color:Canvas;font:inherit;font-weight:800;cursor:pointer}@media(max-width:560px){.ekodi-user-ai-entry{width:calc(100% - 24px);margin:14px 12px 22px}.ekodi-user-ai-entry__panel{width:100%}.ekodi-user-ai-entry__form{flex-direction:column}.ekodi-user-ai-entry__open{width:100%;margin:0}}'
   document.head.append(el);
 }
+function unmountIfIneligible(){
+  if(eligible())return false;
+  document.querySelectorAll('[data-ekodi-user-ai-entry]').forEach(node=>node.remove());
+  return true;
+}
 function mount(){
-  if(!eligible()||document.querySelector('[data-ekodi-user-ai-entry]'))return;
+  if(unmountIfIneligible()||document.querySelector('[data-ekodi-user-ai-entry]'))return;
   style();const {service}=context();
   const root=document.createElement('aside');root.className='ekodi-user-ai-entry';root.dataset.ekodiUserAiEntry='v1';
   root.innerHTML='<div class="ekodi-user-ai-entry__panel"><strong>무엇을 원하세요?</strong><form class="ekodi-user-ai-entry__form"><input name="request" maxlength="600" placeholder="예: 홍보 게시물 만들어줘" autocomplete="off"><button type="submit">해줘</button></form></div><button type="button" class="ekodi-user-ai-entry__open" aria-expanded="false">AI로 하기</button>';
@@ -36,5 +43,8 @@ function mount(){
   });
   const footer=document.querySelector('footer');if(footer?.parentNode)footer.parentNode.insertBefore(root,footer);else document.body.append(root);
 }
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount,{once:true});else mount();
+function reconcile(){if(unmountIfIneligible())return;mount();}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',reconcile,{once:true});else reconcile();
+window.addEventListener('popstate',reconcile);
+window.addEventListener('hashchange',reconcile);
 })();
