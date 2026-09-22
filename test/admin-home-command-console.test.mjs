@@ -30,21 +30,23 @@ test('admin root is a command-only workspace while Campus remains a child route'
   assert.match(bootstrap,/section==='command-home'/);
   assert.match(bootstrap,/p==='\/admin'\|\|p==='\/admin\/home'/);
   assert.doesNotMatch(bootstrap,/section==='campus'/);  assert.match(bootstrap,/ekodiAssistClose/);
-  assert.match(bootstrap,/ekodi-admin-assist-request/);
+  assert.match(bootstrap,/window\.EKODIAdminAssist/);
+  assert.match(bootstrap,/bridge\.submit\(text\)/);
   assert.match(bootstrap,/d\.loadStyle\('ai-ops-admin\.css'\)/);
   assert.match(bootstrap,/d\.loadScript\('admin-lazy-features\.js'\)/);
   assert.match(bootstrap,/import\('\.\/admin-lazy-features\.js'\)/);
 
-  assert.match(bootstrapCss,/html body\.admin-command-home \.ekodi-assist-bootstrap\{display:none!important\}/);
+  assert.match(bootstrapCss,/html body\.admin-command-home \.ekodi-assist-bootstrap\{display:flex!important\}/);
+  assert.doesNotMatch(bootstrapCss,/admin-command-home \.ekodi-assist-bootstrap\{display:none!important\}/);
   assert.match(bootstrapCss,/html body\.admin-command-home\.admin-command-active \.content\{[^}]*visibility:hidden!important/);
   assert.doesNotMatch(bootstrapCss,/\.ekodi-assist-panel/);
 
   assert.match(dockCss,/body\.admin-command-home\.admin-command-active \.ekodi-assist\{[^}]*left:var\(--ekodi-assist-left,260px\)!important/);
   assert.match(dockCss,/body\.admin-command-home\.admin-command-active \.ekodi-assist\{[^}]*width:auto!important/);
   assert.match(dockCss,/body\.admin-command-home\.admin-command-active \.ekodi-assist-rail\{display:flex!important\}/);
-  assert.match(dockCss,/body\.admin-command-home\.admin-command-active \.ekodi-assist-composer-wrap\{display:block!important\}/);
+  assert.match(dockCss,/body\.admin-command-home\.admin-command-active \.ekodi-assist-composer-wrap\{display:none!important\}/);
   assert.match(dockCss,/@media\(max-width:760px\)/);
-  assert.match(dockCss,/\.admin-command-home \.ekodi-assist-bootstrap\{display:none!important\}/);
+  assert.match(dockCss,/\.admin-command-home \.ekodi-assist-bootstrap\{display:flex!important\}/);
 
   assert.match(dock,/id=\"ekodiAssistHistory\"/);
   assert.match(dock,/id=\"ekodiAssistChat\"/);
@@ -82,6 +84,8 @@ test('admin root is a command-only workspace while Campus remains a child route'
   assert.match(menuLayout,/requestedSection=COMMAND_HOME/);
   assert.match(menuLayout,/section===COMMAND_HOME\)return activateCommandHome\(\)/);
   assert.match(menuLayout,/if\(initialSection===COMMAND_HOME\)activateCommandHome\(\)/);
+  assert.match(menuLayout,/dataset\.adminListLayout='single'/);
+  assert.match(menuLayout,/sectionFromLocation\?\.\(location\)/);
   assert.doesNotMatch(menuLayout,/else\{requestedSection = 'campus';dc=true;requestDemand\('campus'\);\}/);
   assert.match(sidebar,/panelSection === 'command-home'/);
 

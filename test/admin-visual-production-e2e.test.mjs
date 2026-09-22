@@ -34,7 +34,8 @@ test('canonical Assist E2E proves the rendered light workbench before command de
   assert.match(source, /admin-command-active/);
   assert.match(source, /bodyBackground !== 'rgb\(255, 255, 255\)'/);
   assert.match(source, /sidebarBackground !== 'rgb\(247, 248, 252\)'/);
-  assert.match(source, /composerRadius !== '32px'/);
+  assert.match(source, /composerRadius !== '30px'/);
+  assert.match(source, /#ekodiAssistBootstrap \.ekodi-assist-bootstrap-form/);
   assert.match(source, /radial-gradient/);
   assert.match(source, /admin-home-visual\.png/);
   assert.match(source, /report\.visualContractVerified = true/);

@@ -228,11 +228,31 @@ body.admin-compact .content .muted{
   color:#6b7280!important;
 }
 
+/* Context-tab work areas use a readable single-column list contract by default. */
+body.admin-compact .content [data-panel][data-admin-list-layout="single"]{
+  width:min(100%,1180px)!important;
+  max-width:1180px!important;
+  margin-left:auto!important;
+  margin-right:auto!important;
+}
+body.admin-compact .content [data-panel][data-admin-list-layout="single"] :is(
+  [class$="-grid"],[class*="-grid "],[class$="-list"],[class*="-list "]
+):not([class*="summary"]):not([class*="metric"]):not([class*="kpi"]):not([class*="status"]):not([class*="toolbar"]):not([class*="actions"]):not([class*="form"]){
+  grid-template-columns:minmax(0,1fr)!important;
+}
+body.admin-compact .content [data-panel][data-admin-list-layout="single"] .common-services-layout,
+body.admin-compact .content [data-panel][data-admin-list-layout="single"] .common-services-grid{
+  grid-template-columns:minmax(0,1fr)!important;
+}
+body.admin-compact .content [data-panel][data-admin-list-layout="single"] :is(article,button,[role="listitem"]){
+  min-width:0;
+}
+
 /* First screen: one Admin sidebar and one conversation canvas. */
 body.admin-compact.admin-command-home.admin-command-active .ekodi-assist{
   left:var(--ekodi-assist-left,var(--ekodi-admin-sidebar-width))!important;
   top:0!important;
-  bottom:0!important;
+  bottom:var(--ekodi-command-dock,92px)!important;
   background:
     radial-gradient(circle at 50% 46%,rgba(219,238,255,.9) 0,rgba(239,247,255,.74) 24%,rgba(255,255,255,.96) 58%,#fff 78%)!important;
 }
@@ -278,7 +298,7 @@ body.admin-compact.admin-command-home.admin-command-active .ekodi-assist-welcome
   line-height:1.65!important;
 }
 body.admin-compact.admin-command-home.admin-command-active .ekodi-assist-composer-wrap{
-  display:block!important;
+  display:none!important;
   padding:12px max(30px,calc((100% - 720px)/2)) max(28px,env(safe-area-inset-bottom))!important;
   background:linear-gradient(to bottom,rgba(255,255,255,0),rgba(255,255,255,.86) 26%,#fff 62%)!important;
 }
@@ -302,13 +322,13 @@ body.admin-compact.admin-command-home.admin-command-active .ekodi-assist-compose
   font-size:10px!important;
 }
 
-/* Persistent command composer on normal Admin panels. */
-body.admin-compact:not(.admin-command-home) .ekodi-assist-bootstrap{
+/* One persistent command composer on every Admin panel, including the first screen. */
+body.admin-compact .ekodi-assist-bootstrap{
   left:var(--ekodi-assist-left,var(--ekodi-admin-sidebar-width))!important;
   padding:10px max(28px,calc((100% - 760px)/2)) max(18px,env(safe-area-inset-bottom))!important;
   background:linear-gradient(to bottom,rgba(255,255,255,0),rgba(255,255,255,.92) 32%,#fff 70%)!important;
 }
-body.admin-compact:not(.admin-command-home) .ekodi-assist-bootstrap-form{
+body.admin-compact .ekodi-assist-bootstrap-form{
   width:min(760px,100%)!important;
   min-height:58px!important;
   padding:8px 10px!important;
@@ -317,11 +337,30 @@ body.admin-compact:not(.admin-command-home) .ekodi-assist-bootstrap-form{
   background:#fff!important;
   box-shadow:0 4px 16px rgba(60,64,67,.12)!important;
 }
-body.admin-compact:not(.admin-command-home) .ekodi-assist-bootstrap-form input{
+body.admin-compact .ekodi-assist-bootstrap-form input{
+  appearance:none!important;
+  flex:1 1 auto!important;
+  min-width:0!important;
+  border:0!important;
+  outline:0!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+}
+body.admin-compact .ekodi-assist-bootstrap-form :is(.ekodi-assist-bootstrap-plus,.ekodi-assist-bootstrap-send){
+  appearance:none!important;
+  flex:0 0 38px!important;
+  width:38px!important;
+  height:38px!important;
+  border:0!important;
+  border-radius:50%!important;
+  box-shadow:none!important;
+}
+body.admin-compact .ekodi-assist-bootstrap-form input{
   color:#202124!important;
   font-size:14px!important;
 }
-body.admin-compact:not(.admin-command-home) .ekodi-assist-bootstrap-send{
+body.admin-compact .ekodi-assist-bootstrap-send{
   background:#1a73e8!important;
 }
 
@@ -362,7 +401,7 @@ body.admin-compact:not(.admin-command-home) .ekodi-assist-bootstrap-send{
   body.admin-compact.admin-command-home.admin-command-active .ekodi-assist-composer-wrap{
     padding:8px 10px max(10px,env(safe-area-inset-bottom))!important;
   }
-  body.admin-compact:not(.admin-command-home) .ekodi-assist-bootstrap{
+  body.admin-compact .ekodi-assist-bootstrap{
     left:0!important;
     padding:8px 10px max(10px,env(safe-area-inset-bottom))!important;
   }
@@ -459,7 +498,7 @@ html body.admin-compact.ekodi-admin-design-engine.admin-command-home.admin-comma
   left:272px!important;
   top:0!important;
   right:0!important;
-  bottom:0!important;
+  bottom:var(--ekodi-command-dock,92px)!important;
   width:auto!important;
   background:
     radial-gradient(circle at 50% 46%,rgba(219,238,255,.9) 0,rgba(239,247,255,.74) 24%,rgba(255,255,255,.96) 58%,#fff 78%)!important;
@@ -479,8 +518,8 @@ html body.admin-compact.ekodi-admin-design-engine.admin-command-home.admin-comma
   visibility:visible!important;
 }
 html body.admin-compact.ekodi-admin-design-engine.admin-command-home.admin-command-active .ekodi-assist-composer-wrap{
-  display:block!important;
-  visibility:visible!important;
+  display:none!important;
+  visibility:hidden!important;
 }
 html body.admin-compact.ekodi-admin-design-engine.admin-command-home.admin-command-active .ekodi-assist-composer{
   background:#fff!important;

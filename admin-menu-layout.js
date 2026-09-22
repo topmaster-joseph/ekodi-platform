@@ -84,7 +84,7 @@ function activatePanel(section){
   for(const panel of content.querySelectorAll('[data-panel]')){
     const visible=panelTargets(panel).includes(section);
     panel.classList.toggle('hidden-panel',!visible);
-    if(visible)panel.removeAttribute('hidden');else panel.hidden=true;
+    if(visible){panel.removeAttribute('hidden');panel.dataset.adminListLayout='single'}else panel.hidden=true;
   }
   for(const item of allNav())item.classList.toggle('active',!isInternalNav(item)&&sectionOf(item)===section);
   syncTitle(section);
@@ -175,7 +175,7 @@ function requestDemand(section){
 function routeInternal(){dc=false;requestedSection='aiops';replaceSectionUrl('aiops');requestDemand('aiops');}
 const explicitHashSection=()=>HASH.get(location.hash.toLowerCase())||'';
 const explicitPathSection=()=>adminRoutes()?.sectionFromPath?.(location.pathname)||'';
-const explicitAdminSection=()=>explicitPathSection()||explicitHashSection();
+const explicitAdminSection=()=>adminRoutes()?.sectionFromLocation?.(location)||explicitPathSection()||explicitHashSection();
 const LEGACY_MALL_AFFILIATE_HASHES=new Set(['#affiliates','#mall-ai-sales']);
 const MALL_SUPPLY_ADMIN='https://ekodi.kr/ekodimall/admin/sourcing';
 const LEGACY_CGMA_MEMBER_HASH='#cheonggye-members';
@@ -221,7 +221,7 @@ window.addEventListener('ekodi-admin-ready',()=>{
   else return activateCommandHome();
 });
 window.addEventListener('popstate',()=>{
-  const section=explicitPathSection();if(!section)return;dc=false;
+  const section=explicitAdminSection();if(!section)return;dc=false;
   if(section===COMMAND_HOME)return activateCommandHome();
   if(isInternal(section))return routeInternal();
   if(section==='sites')return openSites();
