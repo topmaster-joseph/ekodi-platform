@@ -71,40 +71,9 @@ function installStyles(){
 }
 
 function mountQuickMenu(){
-  if(document.querySelector('#ekodiServiceAdminMenu'))return true;
-  const panel=document.querySelector('#campusPanel');
-  const toolbar=panel?.querySelector('.campus-toolbar');
-  if(!panel||!toolbar)return false;
-  const details=document.createElement('details');
-  details.id='ekodiServiceAdminMenu';
-  details.className='ekodi-service-admin-menu';
-  const summary=document.createElement('summary');
-  const title=document.createElement('span');title.textContent='서비스 관리자';
-  const count=document.createElement('small');count.textContent=`${ADMIN_SERVICE_CATALOG.length}개 · 이름을 눌러 관리`;
-  summary.append(title,count);
-  const groups=document.createElement('div');groups.className='ekodi-service-admin-groups';
-  for(const group of ADMIN_SERVICE_GROUPS){
-    const items=ADMIN_SERVICE_CATALOG.filter(item=>item.group===group.id);
-    if(!items.length)continue;
-    const section=document.createElement('section');section.className='ekodi-service-admin-group';
-    const heading=document.createElement('h4');heading.textContent=group.label;
-    const links=document.createElement('div');links.className='ekodi-service-admin-links';
-    for(const item of items){
-      const link=document.createElement('a');
-      link.className='ekodi-service-admin-link';
-      link.href=canonicalServiceAdminUrl(item.basePath);
-      link.textContent=item.name;
-      link.dataset.serviceAdminId=item.id;
-      link.setAttribute('aria-label',`${item.name} 관리자 열기`);
-      links.append(link);
-    }
-    section.append(heading,links);groups.append(section);
-  }
-  details.append(summary,groups);
-  toolbar.insertAdjacentElement('afterend',details);
+  document.querySelector('#ekodiServiceAdminMenu')?.remove();
   return true;
 }
-
 function upgradeCampusRow(row){
   if(!row||row.dataset.serviceAdminHandoff==='ready')return;
   const descriptor=descriptorForRow(row);
