@@ -1,6 +1,6 @@
 {
-  "version": "1.16.0",
-  "effectiveDate": "2026-09-14",
+  "version": "1.17.0",
+  "effectiveDate": "2026-09-22",
   "status": "active",
   "title": "EKODI Platform Constitution",
   "principles": [
@@ -33,7 +33,8 @@
     "ordinary-user-information-first-commercial-separation",
     "completion-continuity-through-recoverable-interruptions",
     "supreme-attributes-binding",
-    "site-owned-admin-canonical-path"
+    "site-owned-admin-canonical-path",
+    "guest-open-public-user-surfaces"
   ],
   "architectureModel": {
     "registry": "governance/architecture/ekodi-os-architecture.json",
@@ -594,5 +595,50 @@
     "aiSelfWaiverForbidden": true,
     "exceptionRequiresConstitutionalAmendment": true,
     "finalAuthority": "ekodi_platform_super_administrator"
+  },
+  "publicUserSurfacePolicy": {
+    "id": "PUBLIC-USER-SURFACE-001",
+    "status": "active",
+    "defaultAccess": "guest-open",
+    "canonicalHost": "ekodi.kr",
+    "authenticationEffect": "enhance-not-replace-public-experience",
+    "safePublicProjectionRequired": true,
+    "canonicalPublicLoginWallForbidden": true,
+    "permissionFailureReplacesPublicPage": false,
+    "protectedCapabilitiesRequireAuthorization": true,
+    "protectedCapabilityClasses": [
+      "private-data",
+      "personal-state",
+      "workspace-internal-data",
+      "write",
+      "application",
+      "payment",
+      "upload",
+      "protected-download",
+      "operator",
+      "admin"
+    ],
+    "insufficientPrivilegeBehavior": "retain-safe-public-projection",
+    "explicitPrivateException": {
+      "allowed": true,
+      "requiresExplicitClassification": true,
+      "publicRootBehavior": "safe-public-landing-or-privacy-notice",
+      "permissionErrorAsLandingForbidden": true,
+      "privateExistenceDisclosureForbidden": true
+    },
+    "visibilityControls": {
+      "guestHiddenMayHideDiscoveryOrExplicitPrivateContent": true,
+      "guestHiddenMayGateCanonicalPublicShell": false
+    },
+    "privateCanonicalSurfaces": [
+      "/my",
+      "/admin",
+      "/auth"
+    ],
+    "enforcement": [
+      "validate:constitution",
+      "validate:user-surfaces",
+      "validate:shell"
+    ]
   }
 }
