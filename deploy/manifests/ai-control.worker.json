@@ -41,6 +41,43 @@
         "rollbackHeaderExpect": []
       },
       {
+        "url": "https://ekodi.kr/ai/interpreter/",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "모두의 통역",
+          "마이크 시작",
+          "상대방 차례"
+        ],
+        "headerExpect": [
+          "x-ekodi-canonical-surface: ai",
+          "x-ekodi-ai-surface: interpreter",
+          "permissions-policy: camera=(), microphone=(self)"
+        ],
+        "candidateUrl": "https://ekodi-ai-control.topmaster-joseph.workers.dev/interpreter/",
+        "candidateStatuses": [
+          200
+        ],
+        "candidateExpect": [
+          "모두의 통역",
+          "마이크 시작",
+          "상대방 차례"
+        ],
+        "candidateHeaderExpect": [
+          "x-ekodi-ai-surface: interpreter",
+          "permissions-policy: camera=(), microphone=(self)"
+        ],
+        "candidateForbid": [],
+        "rollbackStatuses": [
+          200,
+          404
+        ],
+        "rollbackExpect": [],
+        "rollbackHeaderExpect": []
+      },
+      {
         "url": "https://ekodi.kr/ai/api/commons/client",
         "statuses": [
           200

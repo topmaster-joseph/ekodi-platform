@@ -15,6 +15,7 @@
         "core.project",
         "core.documents",
         "core.communication",
+        "core.interpreter",
         "core.analytics",
         "support.benefit-radar"
       ],

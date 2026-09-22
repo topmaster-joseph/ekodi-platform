@@ -126,6 +126,46 @@
       ]
     },
     {
+      "id": "core.interpreter",
+      "name": "모두의 통역",
+      "domain": "core",
+      "ownerAgent": "community",
+      "actionTier": "assist",
+      "maturity": "service-backed",
+      "description": "한국어·일본어·영어·중국어 대화를 음성인식, 번역, 자막, 음성합성으로 이어주는 실시간 양방향 통역 기능.",
+      "surfaces": [
+        "my",
+        "workspace",
+        "dedicated"
+      ],
+      "tags": [
+        "interpreter",
+        "translation",
+        "voice",
+        "speech",
+        "language",
+        "통역",
+        "번역",
+        "동시통역"
+      ],
+      "provider": {
+        "id": "ai-interpreter",
+        "surface": "https://ekodi.kr/ai/interpreter/",
+        "health": "https://ekodi.kr/ai/__health",
+        "contract": "ekodi.interpreter.v1",
+        "generation": 1,
+        "languages": [
+          "ko",
+          "ja",
+          "en",
+          "zh"
+        ],
+        "speech": "browser-native-progressive",
+        "translation": "browser-first-ekodi-provider-fallback",
+        "storage": "none-by-default"
+      }
+    },
+    {
       "id": "core.analytics",
       "name": "분석·리포트 AI",
       "domain": "core",
