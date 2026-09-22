@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "evidenceId": "EKODI-BROWSER-WORKER-RUNTIME-001",
+  "recordedAt": "2026-09-22T15:11:52Z",
+  "policyId": "EKODI-BROWSER-WORKER-001",
+  "source": {
+    "workflow": ".github/workflows/ekodi-background-browser-worker.yml",
+    "runId": 35745358442,
+    "runAttempt": 1,
+    "contractJobId": 106805490606,
+    "runtimeJobId": 106806112193,
+    "artifactId": 10701179146,
+    "artifactName": "ekodi-background-browser-35745358442-1"
+  },
+  "runtimeResult": {
+    "ok": true,
+    "mode": "ekodi-owned-background-browser",
+    "canonicalOrigin": "https://ekodi.kr",
+    "finalUrl": "https://ekodi.kr/",
+    "httpStatus": 200,
+    "deviceProfile": "desktop",
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "headless": true,
+    "ephemeralContext": true,
+    "activeUserProfileReused": false,
+    "clipboardShared": false,
+    "hostInputInjection": false,
+    "allowMutation": false,
+    "blockedMutationCount": 1,
+    "screenshot": {
+      "count": 1,
+      "bytes": 719352
+    },
+    "horizontalOverflow": false
+  },
+  "applicationObservations": {
+    "workerProofPassesIndependentlyOfApplicationHealth": true,
+    "pageErrors": [
+      "serviceId is not defined",
+      "serviceId is not defined"
+    ],
+    "note": "Application observations are retained as diagnostic evidence and do not weaken the browser-worker isolation proof."
+  },
+  "claimBoundary": {
+    "nativeBackgroundBrowserRuntimeProven": true,
+    "externalBrowserServiceRequired": false,
+    "productionRemoteComputerCutoverProven": false,
+    "isolatedDesktopRuntimeProven": false
+  }
+}
