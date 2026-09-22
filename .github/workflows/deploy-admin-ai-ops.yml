@@ -7,6 +7,8 @@ on:
       - 'ai-ops-admin.js'
       - 'ai-ops-admin.css'
       - 'admin-demand-loader.js'
+      - 'admin-menu-layout.js'
+      - 'admin-sidebar.js'
       - 'admin-lazy-features.js'
       - 'admin-readable-command.js'
       - 'admin-readable-command.css'
@@ -93,6 +95,12 @@ jobs:
           grep -Fq 'health:' dist/admin-demand-loader.js
           grep -Fq "styles: ['system-health-admin.css']" dist/admin-demand-loader.js
           grep -Fq "scripts: ['system-health-admin.js']" dist/admin-demand-loader.js
+          grep -Fq "if (!button) return false;" dist/admin-demand-loader.js
+          grep -Fq "window.EKODIAdminSidebar?.sync?.(document);" dist/admin-demand-loader.js
+          ! grep -Fq "button = document.createElement('button')" dist/admin-demand-loader.js
+          grep -Fq "window.EKODICommonServicesAdmin?.activate?.();" dist/admin-menu-layout.js
+          grep -Fq "convergeAdminRelease" dist/admin-authenticated-shell.js
+          grep -Fq "fetch('/admin/',{cache:'no-store',credentials:'same-origin'})" dist/admin-authenticated-shell.js
           grep -Fq "h: ['#health']" dist/admin-demand-loader.js
           ! grep -Fq "secondaryScripts: ['mission-control-admin.js'" dist/admin-demand-loader.js
           grep -Fq 'deployments:' dist/admin-demand-loader.js
@@ -151,10 +159,24 @@ jobs:
             expected="$2"
             code=$(curl -sS -D /tmp/asset-headers -o /tmp/admin-asset -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/admin/${asset}?v=$LIVE_VERSION" || true)
             echo "$asset?v=$LIVE_VERSION -> $code"
-            [ "$code" = '200' ] || return 1
-            grep -Fiq 'x-content-type-options: nosniff' /tmp/asset-headers || return 1
-            grep -Fiq 'cache-control: public, max-age=31536000, immutable' /tmp/asset-headers || return 1
-            grep -Fq "$expected" /tmp/admin-asset || return 1
+            if [ "$code" != '200' ]; then
+              echo "::error::$asset returned HTTP $code"
+              return 1
+            fi
+            if ! grep -Fiq 'x-content-type-options: nosniff' /tmp/asset-headers; then
+              echo "::error::$asset missing x-content-type-options: nosniff"
+              cat /tmp/asset-headers
+              return 1
+            fi
+            if ! grep -Fiq 'cache-control: public, max-age=31536000, immutable' /tmp/asset-headers; then
+              echo "::error::$asset missing immutable cache contract"
+              cat /tmp/asset-headers
+              return 1
+            fi
+            if ! grep -Fq "$expected" /tmp/admin-asset; then
+              echo "::error::$asset missing production marker: $expected"
+              return 1
+            fi
           }
 
           verify_compact_without_readable_css() {
@@ -169,6 +191,10 @@ jobs:
             if verify_root \
               && verify_asset 'admin-demand-loader.js' "secondaryScripts: ['admin-lazy-features.js']" \
               && verify_asset 'admin-demand-loader.js' "scripts: ['system-health-admin.js']" \
+              && verify_asset 'admin-demand-loader.js' "if (!button) return false;" \
+              && verify_asset 'admin-demand-loader.js' "window.EKODIAdminSidebar?.sync?.(document);" \
+              && verify_asset 'admin-menu-layout.js' "window.EKODICommonServicesAdmin?.activate?.();" \
+              && verify_asset 'admin-authenticated-shell.js' "convergeAdminRelease" \
               && verify_asset 'system-health-admin.js' "navLabel.textContent = '\\uc2dc\\uc2a4\\ud15c \\uac74\\uac15'" \
               && verify_asset 'system-health-admin.js' "pageTitle.textContent = '\\uc2dc\\uc2a4\\ud15c \\uac74\\uac15'" \
               && verify_asset 'system-health-admin.js' 'data-traffic-intelligence-status' \
@@ -180,7 +206,7 @@ jobs:
               && verify_asset 'ai-ops-admin.css' '#aiOpsPanel .ai-ops-side' \
               && verify_asset 'admin-perf-diagnostics.js' 'PerformanceObserver' \
               && verify_compact_without_readable_css; then
-              echo "Production Admin verified: version=$LIVE_VERSION, fingerprinted immutable assets, standalone Health, thin shell and flat AI Ops."
+              echo "Production Admin verified: version=$LIVE_VERSION, canonical seven-area sidebar, delegated panels, stale-tab convergence and fingerprinted immutable assets."
               exit 0
             fi
             echo "Admin production verification pending (attempt $attempt/24, expected=$EXPECTED_VERSION, live=${LIVE_VERSION:-none})."
@@ -211,7 +237,7 @@ jobs:
           - production check: \`$outcome\`
           - upstream canonical shared-site deployment: \`$UPSTREAM_OUTCOME\`
           - canonical: https://ekodi.kr/admin/
-          - contract: fingerprinted thin shell · immutable assets · standalone Health · flat AI Ops · internal specialist routing
+          - contract: canonical seven-area sidebar · delegated panels · stale-tab convergence · fingerprinted immutable assets
           - verification workflow: $RUN_URL
           - upstream workflow: $UPSTREAM_RUN_URL
           - checked: $(date -u +'%Y-%m-%dT%H:%M:%SZ')
