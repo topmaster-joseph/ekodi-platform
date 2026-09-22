@@ -31,14 +31,14 @@
   ];
 
   const SITE_GROUPS = [
-    { key: 'core', title: 'Core & Access', description: '홈 · 관리자 · 통합인증' },
-    { key: 'business', title: 'Business & Commerce', description: '비즈 · OS · 몰 · 마케팅 · 무역 · 결제 · 투자 · 지원' },
-    { key: 'community', title: 'Community', description: '교회 · 커뮤니티 · 소셜 · 카페' },
-    { key: 'clients', title: 'Client Sites', description: '외부 고객 · 상권 · 매장' },
-    { key: 'knowledge', title: 'Knowledge & Content', description: '서점 · 출판 · 작가AI · 연구 · 교육' },
-    { key: 'communication', title: 'Communication & Cloud', description: '메신저 · 메일 · 라이브 · 클라우드 · 미디어' },
-    { key: 'worklife', title: 'Work & Life', description: 'My · 업무 · 에너지 · 보험' },
-    { key: 'other', title: 'Other Services', description: '중앙 레지스트리에 새로 등록된 서비스' },
+    { key: 'core', title: '핵심·접근', description: '홈 · 관리자 · 통합인증' },
+    { key: 'business', title: '사업·상거래', description: '비즈 · OS · 몰 · 마케팅 · 무역 · 결제 · 투자 · 지원' },
+    { key: 'community', title: '공동체', description: '교회 · 커뮤니티 · 소셜 · 카페' },
+    { key: 'clients', title: '고객·협력', description: '외부 고객 · 상권 · 매장' },
+    { key: 'knowledge', title: '지식·콘텐츠', description: '서점 · 출판 · 작가AI · 연구 · 교육' },
+    { key: 'communication', title: '소통·클라우드', description: '메신저 · 메일 · 라이브 · 클라우드 · 미디어' },
+    { key: 'worklife', title: '업무·생활', description: 'My · 업무 · 에너지 · 보험' },
+    { key: 'other', title: '기타', description: '중앙 레지스트리에 새로 등록된 사이트' },
   ];
 
   const REGISTRY_GROUP_MAP = Object.freeze({
@@ -78,13 +78,21 @@
   let homepageModulePromise = null;
   let activeSiteGroup = 'all';
   let activeSiteRelation = 'all';
-  const SITE_SECTION_RELATION = Object.freeze({
-    'sites-all':'all',
-    'sites-internal':'internal',
-    'sites-user':'user',
-    'sites-customer-partner':'customer-partner',
-    'sites-independent':'independent',
-    'sites-preparing':'preparing',
+  const SITE_SECTION_FILTER = Object.freeze({
+    'sites-all': { group:'all', relation:'all' },
+    'sites-core': { group:'core', relation:'all' },
+    'sites-business': { group:'business', relation:'all' },
+    'sites-community': { group:'community', relation:'all' },
+    'sites-clients': { group:'clients', relation:'all' },
+    'sites-knowledge': { group:'knowledge', relation:'all' },
+    'sites-communication': { group:'communication', relation:'all' },
+    'sites-worklife': { group:'worklife', relation:'all' },
+    'sites-other': { group:'other', relation:'all' },
+    'sites-preparing': { group:'all', relation:'preparing' },
+    'sites-internal': { group:'all', relation:'internal' },
+    'sites-user': { group:'all', relation:'user' },
+    'sites-customer-partner': { group:'clients', relation:'customer-partner' },
+    'sites-independent': { group:'other', relation:'independent' },
   });
 
   function nav() {
@@ -342,6 +350,17 @@
     return relation === activeSiteRelation;
   }
 
+  function syncVisibleState() {
+    const grid = document.querySelector('#campusSiteGroups');
+    if (!grid) return 0;
+    const visible = grid.querySelectorAll('.campus-site-item:not([hidden])').length;
+    const heading = document.querySelector('#campusPanel .campus-toolbar h2');
+    if (heading) heading.textContent = `사이트 관리 · ${visible}`;
+    const empty = document.querySelector('#campusEmptyState');
+    if (empty) empty.hidden = visible !== 0;
+    return visible;
+  }
+
   function applySiteVisibility() {
     const grid = document.querySelector('#campusSiteGroups');
     if (!grid) return;
@@ -355,26 +374,30 @@
       }
       card.hidden = visible === 0;
     }
+    syncVisibleState();
   }
 
   function applySiteRelation(relation) {
     activeSiteRelation = ['all','internal','user','customer-partner','independent','preparing'].includes(relation) ? relation : 'all';
     applySiteVisibility();
-    const heading = document.querySelector('#campusPanel .campus-toolbar h2');
-    const visible = document.querySelectorAll('#campusSiteGroups .campus-site-item:not([hidden])').length;
-    if (heading) heading.textContent = `사이트 관리 · ${visible}`;
   }
 
   function applyGroupFilter(group, { syncUrl = true } = {}) {
     const valid = group === 'all' || SITE_GROUPS.some(item => item.key === group);
     activeSiteGroup = valid ? group : 'all';
     applySiteVisibility();
-    refreshGroupTabs();
     if (syncUrl) {
       const url = new URL(location.href);
       if (activeSiteGroup === 'all') url.searchParams.delete('site_group'); else url.searchParams.set('site_group', activeSiteGroup);
       history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`);
     }
+  }
+
+  function applySiteSection(section) {
+    const filter = SITE_SECTION_FILTER[String(section || '')] || SITE_SECTION_FILTER['sites-all'];
+    activeSiteGroup = filter.group;
+    activeSiteRelation = filter.relation;
+    applySiteVisibility();
   }
 
   function refreshCampusCounts() {
@@ -391,10 +414,6 @@
       }
     }
     applySiteVisibility();
-    refreshGroupTabs();
-    const heading = document.querySelector('#campusPanel .campus-toolbar h2');
-    const visible = grid.querySelectorAll('.campus-site-item:not([hidden])').length;
-    if (heading) heading.textContent = `사이트 관리 · ${activeSiteRelation === 'all' ? total : visible}`;
   }
 
   function reconcileRegistryServices(services = []) {
@@ -446,7 +465,7 @@
     if (!panel || !wrapper) return false;
     panel.dataset.panel = [...new Set([
       ...String(panel.dataset.panel || 'campus').split(/\s+/).filter(Boolean),
-      ...Object.keys(SITE_SECTION_RELATION),
+      ...Object.keys(SITE_SECTION_FILTER),
     ])].join(' ');
     if (wrapper.dataset.allSitesReady === 'true') {
       loadHomepageAdmin();
@@ -462,9 +481,14 @@
     grid.setAttribute('aria-label', 'EKODI 전체 사이트, 운영 상태 및 첫화면 공개 설정');
     grid.append(...SITE_GROUPS.map(renderGroup));
 
-    const tabs = renderGroupTabs();
+    const empty = document.createElement('div');
+    empty.id = 'campusEmptyState';
+    empty.className = 'campus-empty-state';
+    empty.hidden = true;
+    empty.textContent = '해당 분류의 사이트가 없습니다.';
+
     wrapper.classList.add('campus-groups-wrap');
-    wrapper.replaceChildren(tabs, grid);
+    wrapper.replaceChildren(grid, empty);
     wrapper.dataset.allSitesReady = 'true';
 
     grid.addEventListener('click', event => {
@@ -479,9 +503,9 @@
       if (action === 'status' && location.hash !== '#health') history.replaceState(null, '', '#health');
     });
 
-    const requestedGroup = new URLSearchParams(location.search).get('site_group') || 'all';
-    applyGroupFilter(requestedGroup, { syncUrl:false });
-    applySiteRelation(SITE_SECTION_RELATION[window.EKODIAdminPanels?.current?.()] || 'all');
+    const requestedGroup = new URLSearchParams(location.search).get('site_group');
+    if (requestedGroup) applyGroupFilter(requestedGroup, { syncUrl:false });
+    else applySiteSection(window.EKODIAdminPanels?.current?.() || 'sites-all');
     refreshCampusCounts();
     loadHomepageAdmin();
     return true;
@@ -527,14 +551,15 @@
   }
 
   window.addEventListener('ekodi-admin-section-changed', event => {
-    const relation = SITE_SECTION_RELATION[String(event.detail?.section || '')];
-    if (relation) applySiteRelation(relation);
+    const section = String(event.detail?.section || '');
+    if (SITE_SECTION_FILTER[section]) applySiteSection(section);
   });
 
   window.EKODICampus = Object.freeze({
     reconcileRegistryServices,
     refreshCounts: refreshCampusCounts,
     applySiteRelation,
+    applySiteSection,
     loadHomepageAdmin,
   });
 
