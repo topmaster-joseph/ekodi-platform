@@ -22,6 +22,8 @@ test('EKODI Assist source parses and stays one fixed dock with two modes',async(
   assert.match(css,/position:fixed;left:0;right:0;bottom:0/);
   assert.doesNotMatch(js,/setInterval\s*\(/);
   assert.doesNotMatch(js,/pointermove|dragstart|draggable/);
+  assert.doesNotMatch(js,/composer\.hidden=true/);
+  assert.match(js,/composer\.hidden=false/);
 });
 
 test('Assist combines canonical Operator, Mission Control and server-side Admin AI without browser secrets',async()=>{
