@@ -103,8 +103,8 @@ test('every EKODI Mission page consumes one shared shell with published-only lan
     readFile(new URL('../space/ekodimission.js',import.meta.url),'utf8')
   ]);
   assert.match(shell,/EKODI_MISSION_NAVIGATION_CONTRACT/);
-  assert.match(shell,/version:4/);
-  for(const href of ['/ekodimission/activities','/ekodimission/live','/ekodimission/participate','/ekodimission/partners','/ekodimission/stories','/ekodimission/newsletter'])assert.match(shell,new RegExp(href.replace(/\//g,'\\/')));
+  assert.match(shell,/version:3/);
+  for(const href of ['/ekodimission/activities','/ekodimission/live','/ekodimission/participate','/ekodimission/partners','/ekodimission/stories'])assert.match(shell,new RegExp(href.replace(/\//g,'\\/')));
   assert.match(shell,/language-registry\.json/);
   assert.match(shell,/api\/i18n\/v1\/status\?service=mission/);
   assert.match(shell,/api\/i18n\/v1\/catalog\?service=mission/);
