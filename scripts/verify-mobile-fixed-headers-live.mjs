@@ -40,12 +40,14 @@ function requireReadability(result,label,errors){
 
 async function audit(){
   const errors=[];
-  const [root,adminCss,shell,mobileHeader,readabilityCss,liveManifest]=await Promise.all([
+  const [root,adminCss,shell,mobileHeader,readabilityCss,responsiveCss,adminDesignCss,liveManifest]=await Promise.all([
     get('https://ekodi.kr/'),
     get('https://ekodi.kr/admin-shell.css'),
     get('https://ekodi.kr/shell/shell.js'),
     get('https://ekodi.kr/shell/mobile-fixed-header.js'),
     get('https://ekodi.kr/shell/user-ui-shell.css'),
+    get('https://ekodi.kr/responsive.css'),
+    get('https://ekodi.kr/admin/admin-design-engine.css'),
     get('https://ekodi.kr/shell/manifest.json'),
   ]);
   http(root,'ekodi.kr',errors);
@@ -61,6 +63,10 @@ async function audit(){
   http(readabilityCss,'ekodi.kr/shell/user-ui-shell.css',errors);
   need(readabilityCss,'tenant-readability-css','Brand-neutral tenant readability v1',errors);
   need(readabilityCss,'tenant-readability-css','data-ekodi-tenant-readability="v1"',errors);
+  http(responsiveCss,'ekodi.kr/responsive.css',errors);
+  for(const marker of ['Responsive Typography Standard v3','word-break:keep-all','overflow-wrap:break-word','--ekodi-responsive-inline-gutter','data-ekodi-responsive-grid','font-size:clamp('])need(responsiveCss,'responsive-content-live-contract',marker,errors);
+  http(adminDesignCss,'ekodi.kr/admin/admin-design-engine.css',errors);
+  for(const marker of ['Admin responsive content integrity','word-break:keep-all!important','overflow-wrap:break-word','overflow-wrap:anywhere!important','font-size:clamp(','padding-inline:clamp('])need(adminDesignCss,'admin-responsive-content-live-contract',marker,errors);
   http(liveManifest,'ekodi.kr/shell/manifest.json',errors);
   let productionManifest=null;
   try{productionManifest=JSON.parse(liveManifest.text)}catch{errors.push('shell-manifest:invalid-json')}
@@ -118,7 +124,7 @@ async function audit(){
 for(let attempt=1;attempt<=attempts;attempt++){
   const {errors,activeCount}=await audit();
   if(!errors.length){
-    console.log(`✅ EKODI live mobile/readability audit passed: root + admin + shared assets + ${activeCount} active services + canonical store/CGMA surfaces verified. release=${release}`);
+    console.log(`✅ EKODI live mobile/readability/responsive-content audit passed: root + admin + shared assets + ${activeCount} active services + canonical store/CGMA surfaces verified. release=${release}`);
     process.exit(0);
   }
   console.log(`Mobile/readability live audit ${attempt}/${attempts}: ${errors.join(' | ')}`);
