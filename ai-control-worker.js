@@ -290,7 +290,7 @@ async function commonsBrowserAsset(request,env,assetName,contentType){
 }
 
 async function interpreterPage(request,env){
-  const target=new URL(request.url);target.pathname='/interpreter.html';target.search='';
+  const target=new URL(request.url);target.pathname='/interpreter';target.search='';
   const asset=await env.ASSETS.fetch(new Request(target.toString(),request));if(!asset.ok)return json({error:'interpreter_unavailable'},503);
   const out=new Response(request.method==='HEAD'?null:asset.body,asset);
   for(const [key,value] of Object.entries(interpreterHeaders()))out.headers.set(key,value);
