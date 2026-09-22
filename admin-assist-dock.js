@@ -73,7 +73,9 @@
     const desktop=window.matchMedia('(min-width:761px)').matches;
     const measured=Number(rect?.right)||0;
     const right=desktop?Math.max(measured,configured):Math.max(0,measured);
-    document.documentElement.style.setProperty('--ekodi-assist-left',`${Math.round(right)}px`);
+    const left=`${Math.round(right)}px`;
+    document.documentElement.style.setProperty('--ekodi-assist-left',left);
+    if(root)root.style.setProperty('left',left,'important');
   }
   function watchWorkbenchPosition(){
     positionWorkbench();
