@@ -38,6 +38,17 @@ For UI-affecting changes, verify at minimum:
 
 An isolated browser/runtime such as Playwright/Chromium, an equivalent provider-neutral browser harness, or a stronger compatible method is required when available. Virtualization is one verification method, not the architecture; high-risk work must converge independent evidence where the execution-fabric policy requires it.
 
+## Responsive content integrity
+
+Every UI-affecting task must treat copy and layout as one responsive contract, not as separate cleanup work.
+
+- Korean and other natural-language words/eojeol must not split arbitrarily in headings, body copy, labels, buttons, tabs or cards.
+- Do not insert layout-only `<br>` or equivalent forced line breaks to make one viewport look correct. Copy must remain readable when the viewport changes.
+- Technical identifiers such as URLs, emails, domains and code may use anywhere-breaking only through an explicit technical-text exception.
+- Primary layouts must reflow automatically instead of assuming one fixed viewport. Reflow, stacking and density changes happen before readable text is reduced.
+- Verify at 320, 390, 768, 1366 and 1440px widths. Horizontal page overflow, clipped primary copy, overlapping primary content, or loss of control meaning is a failed verification.
+- These checks apply while writing copy, designing components and implementing CSS/JS, not only after a user reports a defect.
+
 ## Mandatory assertions
 
 As applicable, verify:
