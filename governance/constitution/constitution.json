@@ -1,5 +1,5 @@
 {
-  "version": "1.18.0",
+  "version": "1.19.0",
   "effectiveDate": "2026-09-22",
   "status": "active",
   "title": "EKODI Platform Constitution",
@@ -35,7 +35,8 @@
     "supreme-attributes-binding",
     "site-owned-admin-canonical-path",
     "guest-open-public-user-surfaces",
-    "self-verifying-all-surface-system-evidence"
+    "self-verifying-all-surface-system-evidence",
+    "ekodi-owned-virtualization-first"
   ],
   "architectureModel": {
     "registry": "governance/architecture/ekodi-os-architecture.json",
@@ -763,5 +764,37 @@
       ],
       "repeatedDefectPromotesToSharedGuardrail": true
     }
+  },
+  "virtualizationSovereigntyPolicy": {
+    "id": "VIRTUALIZATION-SOVEREIGNTY-001",
+    "status": "enforced",
+    "orchestrationOwner": "ekodi-orchestrator",
+    "scope": [
+      "browser-ui-validation",
+      "synthetic-surface-verification",
+      "isolated-browser-execution",
+      "isolated-desktop-execution",
+      "computer-use-automation"
+    ],
+    "ekodiOwnedVirtualizationFirst": true,
+    "canonicalNativeCapabilities": [
+      "autonomous-execution-fabric",
+      "ekodi-native-remote-computer",
+      "ekodi-background-browser-worker"
+    ],
+    "nativeCapabilityGapAction": "build-or-complete-ekodi-capability-and-register-gap",
+    "externalProviderRole": "temporary-replaceable-fallback-only",
+    "externalFallbackAllowedOnlyWhen": [
+      "native-capability-not-production-ready",
+      "native-capability-unavailable",
+      "required-capability-not-yet-implemented",
+      "native-capacity-or-runtime-failure"
+    ],
+    "fallbackReasonAndAuditRequired": true,
+    "fallbackMustPreserveOrIncreaseSecurityAndIsolation": true,
+    "paidExternalAutoUpgradeForbidden": true,
+    "successfulExternalFallbackMustCreateNativeCapabilityGapRecord": true,
+    "correctableNativeGapMustNotInterruptUserWorkflow": true,
+    "virtualizationOnlyArchitectureForbidden": true
   }
 }
