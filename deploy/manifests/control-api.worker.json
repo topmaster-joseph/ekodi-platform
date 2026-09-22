@@ -1,5 +1,5 @@
 {
-  "version": 8,
+  "version": 9,
   "evidence": {
     "generation": 10,
     "ledger": "ai_production_evidence",
@@ -24,7 +24,8 @@
         ],
         "headerExpect": [
           "x-content-type-options: nosniff",
-          "cache-control: public"
+          "cache-control: public",
+          "x-ekodi-cache-policy: control-public-preview-v1"
         ],
         "candidateUrl": "https://ekodi-auth-api.topmaster-joseph.workers.dev/api/public/preview/map?scope=ekodi&mode=platform",
         "candidateStatuses": [
