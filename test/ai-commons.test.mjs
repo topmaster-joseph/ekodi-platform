@@ -22,7 +22,7 @@ test('public execution catalog and ranked services hide capability internals',()
   const serialized=JSON.stringify({catalog,ranked});
   assert.doesNotMatch(serialized,/capabilityId|providerId|actionTier|maturity/);
   assert.ok(ranked.length>0);
-  assert.ok(ranked.every(item=>item.launchUrl.startsWith('https://ekodi.kr/')));
+  assert.ok(ranked.every(item=>item.launchUrl.startsWith('https://ekodi.kr/ai/')));
 });
 
 test('public and member request projections hide orchestration internals while admin keeps them',()=>{
@@ -78,9 +78,10 @@ test('Commons page loads browser assets only through the Worker-owned API bounda
   const release=JSON.parse(fs.readFileSync(new URL('../deploy/manifests/ai-control.worker.json',import.meta.url),'utf8'));
   assert.match(html,/\.\/api\/commons\/client\?v=/);
   assert.match(html,/\.\/api\/commons\/style\?v=/);
-  assert.match(html,/AI로 하기/);
-  assert.match(html,/최근 공개된 AI/);
-  assert.match(html,/요청접수[\s\S]*공개준비중[\s\S]*사용가능/);
+  assert.match(html,/실행 서비스/);
+  assert.match(html,/serviceTabs/);
+  assert.match(html,/무엇을 하고 싶으세요\?/);
+  assert.match(html,/개발 요청/);
   assert.match(client,/releasedRequests/);
   assert.match(client,/item\.status==='shared'/);
   assert.match(client,/\/api\/commons\/match/);
@@ -119,4 +120,17 @@ test('public route is wired through the AI service binding',()=>{
 test('admin build publishes the AI Commons governance module',()=>{
   const build=fs.readFileSync(new URL('../scripts/build.mjs',import.meta.url),'utf8');
   assert.match(build,/ai-commons-admin\.js/);
+});
+
+
+test('all public execution services stay under /ai/ and route through the AI worker',()=>{
+  const catalog=JSON.parse(fs.readFileSync(new URL('../config/ai-execution-services.json',import.meta.url),'utf8'));
+  const worker=fs.readFileSync(new URL('../ai-control-worker.js',import.meta.url),'utf8');
+  for(const service of catalog.services){
+    assert.match(service.launchUrl,/^https:\/\/ekodi\.kr\/ai\//);
+  }
+  for(const path of ['/docs','/writing','/marketing','/support','/business','/community','/insurance','/energy']){
+    assert.match(worker,new RegExp(`'\\${path}'`));
+  }
+  assert.match(worker,/aiServiceEntry\(request\)/);
 });
