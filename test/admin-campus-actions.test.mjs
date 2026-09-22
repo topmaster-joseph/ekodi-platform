@@ -40,7 +40,7 @@ test('Campus includes verified ecosystem services that were missing from the old
   for (const domain of ['author.ekodi.kr', 'work.ekodi.kr', 'energy.ekodi.kr', 'business.ekodi.kr']) {
     assert.match(js, new RegExp(domain.replaceAll('.', '\\.')));
   }
-  assert.match(js, /Work & Life/);
+  assert.match(js, /업무·생활/);
   assert.match(js, /에코디 생태계의 전체 사이트와 EKODI\.KR 첫화면 공개 설정을 한 목록에서 관리합니다/);
 });
 
@@ -51,20 +51,23 @@ test('Campus reconciles the canonical homepage registry so the two old lists can
   assert.match(js, /return `\$\{url\.hostname\}\$\{path==='\/'\?'':path\}`/);
   assert.match(js, /window\.EKODICampus = Object\.freeze/);
   assert.match(js, /import\('\.\/homepage-admin\.js'\)/);
-  assert.match(js, /Other Services/);
+  assert.match(js, /기타/);
 });
 
 test('Campus groups related services into a compact two-column layout', () => {
   for (const group of [
-    'Core & Access',
-    'Business & Commerce',
-    'Community',
-    'Client Sites',
-    'Knowledge & Content',
-    'Communication & Cloud',
-    'Work & Life',
-  ]) assert.match(js, new RegExp(group.replaceAll('&', '\\&')));
+    '핵심·접근',
+    '사업·상거래',
+    '공동체',
+    '고객·협력',
+    '지식·콘텐츠',
+    '소통·클라우드',
+    '업무·생활',
+  ]) assert.match(js, new RegExp(group));
   assert.match(js, /className = 'campus-groups-grid'/);
+  assert.match(js, /SITE_SECTION_FILTER/);
+  assert.match(js, /wrapper\.replaceChildren\(grid, empty\)/);
+  assert.doesNotMatch(js, /wrapper\.replaceChildren\(tabs, grid\)/);
   assert.match(js, /className = 'campus-group-card'/);
   assert.match(js, /className = 'campus-site-item'/);
   assert.match(css, /grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);

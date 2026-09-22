@@ -63,7 +63,8 @@ test('machine site hierarchy is represented in the superadmin handoff catalog',(
 test('campus service names hand off to canonical owner admin instead of duplicating CRUD',()=>{
   assert.match(handoffSource,/data-service-admin-name/);
   assert.match(handoffSource,/location\.assign\(url\)/);
-  assert.match(handoffSource,/서비스 관리자/);
+  assert.doesNotMatch(handoffSource,/서비스 관리자/);
+  assert.match(handoffSource,/querySelector\('#ekodiServiceAdminMenu'\)\?\.remove/);
   assert.doesNotMatch(handoffSource,/admin\.ekodi\.kr/);
   assert.match(handoffSource,/legacy==='my\.ekodi\.kr'\)row\.hidden=true/);
   assert.doesNotMatch(handoffSource,/(?:href|adminUrl)\s*=\s*['"`]https?:\/\/my\.ekodi\.kr/);
