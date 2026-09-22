@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import path from 'node:path';
 
 const policy = JSON.parse(fs.readFileSync('config/free-tier-optimization-policy.json','utf8'));
 const wrangler = fs.readFileSync('wrangler.site.toml','utf8');
@@ -18,6 +19,8 @@ expect(policy.resourceGovernor?.mode==='measured-telemetry-only','resource gover
 expect(policy.resourceGovernor?.capacityAndConsumptionSeparated===true,'capacity and consumption must remain separated');
 expect(policy.resourceGovernor?.capacityRules?.['supabase.active_projects']?.action==='block-new-project-only','Supabase project capacity must block only new projects');
 expect(policy.resourceGovernor?.projectCreationPolicy?.automaticPaidProjectCreation===false,'automatic paid Supabase project creation must stay disabled');
+expect(policy.resourceGovernor?.projectCreationPolicy?.ungovernedManagementApiCreate==='forbidden','ungoverned Supabase project creation must stay forbidden');
+expect(policy.resourceGovernor?.projectCreationPolicy?.governedAdapterRequired===true,'Supabase project creation must require a governed adapter');
 expect(JSON.stringify(policy.thresholds)===JSON.stringify({warning:70,conserve:85,protect:90,survival:95,circuitBreaker:100}),'quota thresholds must remain 70/85/90/95/100');
 expect(policy.providerRoles?.cloudflare?.prefer?.includes('static-assets-before-worker'),'Cloudflare must prefer static assets before Worker invocation');
 expect(policy.providerRoles?.supabase?.role==='authoritative-relational-data-auth-and-rls','Supabase authoritative role drifted');
@@ -73,6 +76,41 @@ expect(!/\/database\/query(?!\/read-only)/.test(collector),'collector must not f
 expect(collector.includes('/actions/cache/usage'),'GitHub cache usage must come from the official repository usage endpoint');
 expect(collector.includes('/actions/artifacts?'),'GitHub artifact usage must come from the official repository artifact endpoint');
 expect(!/BEGIN TRANSACTION|SAVEPOINT|lines\.push\('COMMIT;'\)/.test(collector),'remote D1 collector must not emit explicit transaction statements');
+
+
+const scanExtensions=new Set(['.js','.mjs','.cjs','.ts','.tsx','.yml','.yaml','.sh','.ps1']);
+const ignoredDirectories=new Set(['.git','node_modules','test','tests','docs','governance','.wrangler','.supabase']);
+function walkRuntimeFiles(dir='.'){
+  const entries=fs.readdirSync(dir,{withFileTypes:true});
+  const files=[];
+  for(const entry of entries){
+    if(entry.name.startsWith('.')&&entry.name!=='.github')continue;
+    const absolute=path.join(dir,entry.name);
+    if(entry.isDirectory()){
+      if(ignoredDirectories.has(entry.name))continue;
+      files.push(...walkRuntimeFiles(absolute));
+      continue;
+    }
+    if(scanExtensions.has(path.extname(entry.name).toLowerCase()))files.push(absolute);
+  }
+  return files;
+}
+const rootProjectEndpoint=/https:\/\/api\.supabase\.com\/v1\/projects(?=[\"'\`\s)])/ig;
+const variableProjectEndpoint=/\$\{SUPABASE_API\}\/projects(?=[\"'\`\s)])/g;
+const postSignal=/(?:method\s*:\s*['\"]POST['\"]|-X\s+POST\b|--request\s+POST\b)/i;
+for(const file of walkRuntimeFiles()){
+  const source=fs.readFileSync(file,'utf8');
+  for(const matcher of [rootProjectEndpoint,variableProjectEndpoint]){
+    matcher.lastIndex=0;
+    let match;
+    while((match=matcher.exec(source))){
+      const from=Math.max(0,match.index-500);
+      const to=Math.min(source.length,match.index+match[0].length+500);
+      const context=source.slice(from,to);
+      expect(!postSignal.test(context),`ungoverned Supabase project creation call is forbidden: ${file}`);
+    }
+  }
+}
 
 if(failures.length){
   for(const failure of failures) console.error(`[EKODI-FREE-TIER-001] ${failure}`);
