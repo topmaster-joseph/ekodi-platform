@@ -24,6 +24,23 @@ test('visibility policy protects existing members unless explicitly forced off',
   assert.equal(byId.guest_visible.existingMemberAccess, true);
   assert.equal(byId.guest_hidden.guestVisible, false);
   assert.equal(byId.guest_hidden.existingMemberAccess, true);
+  assert.equal(byId.guest_hidden.mayReplaceCanonicalPublicRoot, false);
+  assert.equal(byId.guest_hidden.scope, 'discovery-or-explicit-private-content-only');
   assert.equal(byId.member_forced_off.guestVisible, false);
   assert.equal(byId.member_forced_off.existingMemberAccess, false);
+  assert.equal(byId.member_forced_off.mayReplaceCanonicalPublicRoot, false);
+});
+
+
+test('canonical public user pages are guest-open and login only enhances capabilities', () => {
+  const rule = policy.publicUserSurfaceDefault;
+  assert.equal(policy.schemaVersion, 6);
+  assert.equal(rule.policyId, 'PUBLIC-USER-SURFACE-001');
+  assert.equal(rule.defaultAccess, 'guest-open');
+  assert.equal(rule.safePublicProjectionRequired, true);
+  assert.equal(rule.loginEffect, 'enhance-not-replace');
+  assert.equal(rule.canonicalPublicRootLoginWallForbidden, true);
+  assert.equal(rule.permissionFailureBehavior, 'retain-safe-public-projection');
+  assert.equal(rule.explicitPrivateException.requiresExplicitClassification, true);
+  assert.equal(rule.explicitPrivateException.permissionErrorAsLandingForbidden, true);
 });

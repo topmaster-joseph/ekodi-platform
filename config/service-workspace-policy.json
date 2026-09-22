@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 5,
+  "schemaVersion": 6,
   "provider": {
     "legalOperator": "EKODIBIZ",
     "role": "service_provider"
@@ -24,19 +24,28 @@
       "id": "guest_visible",
       "label": "비회원 노출 ON",
       "guestVisible": true,
-      "existingMemberAccess": true
+      "existingMemberAccess": true,
+      "scope": "public-user-surface-and-discovery",
+      "canonicalPublicSurfaceAllowed": true,
+      "mayReplaceCanonicalPublicRoot": false
     },
     {
       "id": "guest_hidden",
       "label": "비회원 노출 OFF",
       "guestVisible": false,
-      "existingMemberAccess": true
+      "existingMemberAccess": true,
+      "scope": "discovery-or-explicit-private-content-only",
+      "canonicalPublicSurfaceAllowed": false,
+      "mayReplaceCanonicalPublicRoot": false
     },
     {
       "id": "member_forced_off",
       "label": "회원 이용 강제 OFF",
       "guestVisible": false,
-      "existingMemberAccess": false
+      "existingMemberAccess": false,
+      "scope": "service-entitlement-only",
+      "canonicalPublicSurfaceAllowed": false,
+      "mayReplaceCanonicalPublicRoot": false
     }
   ],
   "customerWorkspaceRule": {
@@ -107,7 +116,7 @@
       "shared-service"
     ],
     "surface": "user-pages",
-    "guestExperience": "service-guide-only",
+    "guestExperience": "public-guide-and-open-content",
     "memberMinimumTier": "free",
     "loginProvider": "google",
     "excludeCustomerSites": true
@@ -173,7 +182,9 @@
     "canonicalPath": "/admin/services/common-services",
     "runtimeHostsAreOperatorPages": false,
     "directRuntimeRootBehavior": "redirect_to_admin_control_plane",
-    "publicUserSurfaceExceptions": ["ai-commons"],
+    "publicUserSurfaceExceptions": [
+      "ai-commons"
+    ],
     "sessionAuthority": "central_admin_session",
     "authorityContext": "Person + Workspace + Role + Capability",
     "internalOperationalInfoBeforeAuthentication": false,
@@ -203,5 +214,31 @@
     "workspaces": "/admin/workspaces/{capability}",
     "services": "/admin/services/{service}",
     "system": "/admin/system/{capability}"
+  },
+  "publicUserSurfaceDefault": {
+    "policyId": "PUBLIC-USER-SURFACE-001",
+    "defaultAccess": "guest-open",
+    "safePublicProjectionRequired": true,
+    "loginEffect": "enhance-not-replace",
+    "canonicalPublicRootLoginWallForbidden": true,
+    "permissionFailureBehavior": "retain-safe-public-projection",
+    "protectedCapabilityClasses": [
+      "private-data",
+      "personal-state",
+      "workspace-internal-data",
+      "write",
+      "application",
+      "payment",
+      "upload",
+      "protected-download",
+      "operator",
+      "admin"
+    ],
+    "explicitPrivateException": {
+      "allowed": true,
+      "requiresExplicitClassification": true,
+      "publicRootBehavior": "safe-public-landing-or-privacy-notice",
+      "permissionErrorAsLandingForbidden": true
+    }
   }
 }
