@@ -31,4 +31,5 @@ test('Control public preview keeps canonical post-promotion cache and privacy ve
   assert.ok(request.expect.includes('"personalData":false'));
   assert.ok(request.headerExpect.includes('cache-control: public'));
   assert.ok(request.headerExpect.includes('x-content-type-options: nosniff'));
+  assert.ok(request.headerExpect.includes('x-ekodi-cache-policy: control-public-preview-v1'));
 });
