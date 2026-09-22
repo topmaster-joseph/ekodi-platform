@@ -1,5 +1,5 @@
 {
-  "version": 84,
+  "version": 85,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
@@ -1733,6 +1733,59 @@
         "headerExpect": [
           "x-ekodi-route: local-region-access-admin",
           "x-ekodi-shell: v2",
+          "cache-control: no-store"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/seonam-medi/",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "서남권 국립의대 시민소통센터",
+          "사이트 일일점검",
+          "원출처 링크",
+          "후원·회계 공개"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/seonam-medi/app.js",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "attachMonitorMedia",
+          "mediaCandidateCount",
+          "원문 확인 필요"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/seonam-medi/data.json",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "source-link-first",
+          "monitorKeywords",
+          "근거자료 후보"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/seonam-med",
+        "statuses": [
+          308
+        ],
+        "redirect": "manual",
+        "headerExpect": [
+          "location: https://ekodi.kr/seonam-medi",
+          "x-ekodi-route: seonam-medi-canonical",
           "cache-control: no-store"
         ],
         "rollbackVerify": false
