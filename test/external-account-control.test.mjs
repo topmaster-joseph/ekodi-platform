@@ -72,5 +72,6 @@ test('external account admin changes trigger the canonical shared-site productio
   const workflow = read('.github/workflows/deploy-site-core.yml');
   assert.match(workflow, /- 'external-account-admin\.js'/);
   assert.match(workflow, /- 'test\/external-account-control\.test\.mjs'/);
-  assert.match(workflow, /node --check[\s\S]*external-account-admin\.js/);
+  assert.ok((workflow.match(/external-account-admin\.js/g) || []).length >= 2);
+  assert.match(workflow, /node --check "\$f"/);
 });
