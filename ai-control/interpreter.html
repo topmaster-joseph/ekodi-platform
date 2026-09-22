@@ -6,19 +6,38 @@
   <meta name="description" content="말하면 바로 번역하고 상대 언어로 읽어주는 EKODI 모두의 통역">
   <title>모두의 통역 | EKODI 모두의 AI</title>
   <link rel="stylesheet" href="../api/interpreter/style?v=20260922-interpreter-1">
+  <style>
+    html,body{word-break:keep-all;overflow-wrap:break-word}
+    @media(max-width:520px){
+      .interpreter-shell{padding:14px 12px 24px}
+      .hero .eyebrow{display:none}
+      .hero h1{font-size:34px;line-height:1.12;margin-bottom:8px}
+      .hero>p{font-size:14px}
+      .language-row{grid-template-columns:minmax(0,1fr) 40px minmax(0,1fr);gap:7px}
+      .language-row label{min-width:0}
+      .language-row select{width:100%;min-width:0}
+      .presets{display:flex;overflow-x:auto;gap:7px;scrollbar-width:none}
+      .presets button{flex:0 0 auto}
+      .speech-grid{grid-template-columns:1fr}
+      .speech-card{min-height:112px}
+      .primary-actions{position:sticky;bottom:10px;z-index:3}
+      .mic{flex:1;min-height:58px}
+      .guide{font-size:12px}
+    }
+  </style>
 </head>
 <body>
   <main class="interpreter-shell">
     <header class="topbar">
       <a class="back" href="../">← 모두의 AI</a>
       <div class="brand"><span>EKODI</span><strong>모두의 통역</strong></div>
-      <span id="sessionState" class="session-state">준비 중</span>
+      <span id="sessionState" class="session-state sr-only">준비 중</span>
     </header>
 
     <section class="hero">
       <p class="eyebrow">REAL-TIME INTERPRETER</p>
       <h1>말하면 바로 통역합니다.</h1>
-      <p>언어를 고르고 마이크를 누르세요. 번역문을 화면에 보여주고 선택한 언어로 읽어줍니다.</p>
+      <p>언어를 고르고 마이크를 누르세요.</p>
     </section>
 
     <section class="translator" aria-labelledby="translatorTitle">
