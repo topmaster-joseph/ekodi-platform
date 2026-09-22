@@ -49,7 +49,7 @@ test('canonical apex preserves /@handle while handing the public page to My serv
   assert.equal(my.calls.length,1);
   assert.equal(my.calls[0].pathname,'/@joseph');
   assert.equal(response.headers.get('x-ekodi-canonical-surface'),'person-public-profile');
-  assert.equal(response.headers.get('x-ekodi-canonical-path'),'');
+  assert.equal(response.headers.get('x-ekodi-canonical-path'),'/');
 });
 
 test('invalid @ paths are not claimed by the person profile router',async()=>{
