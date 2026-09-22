@@ -1,0 +1,37 @@
+{
+  "id": "2026-09-22-public-user-surface-guest-open-v1.17.0",
+  "constitutionVersion": "1.17.0",
+  "status": "approved",
+  "approvedBy": "topmaster-joseph",
+  "approvedAt": "2026-09-22",
+  "changeClass": "C2",
+  "taskId": "public-user-surface-guest-open-20260922",
+  "issue": null,
+  "pullRequest": null,
+  "summary": "Make every canonical public user page guest-open by default. Authentication enhances the public experience with tier-, membership-, role- and capability-scoped features instead of replacing the public page with a login or permission wall.",
+  "approvalBasis": "The platform owner explicitly confirmed that user pages must be open to everyone by default and instructed EKODI to adopt this as a highest-level rule, while allowing the signed-in experience to change by membership tier and role.",
+  "adds": [
+    "guest-open default for canonical public user pages",
+    "safe public projection preserved before and after authentication",
+    "authentication-enhances-not-replaces rule",
+    "permission-failure fallback to public projection",
+    "explicit classification requirement for private/closed exceptions",
+    "validators preventing guest-hidden controls from replacing canonical public roots"
+  ],
+  "preserves": [
+    "private data authorization",
+    "workspace and tenant isolation",
+    "administrator authentication boundaries",
+    "Person + Workspace + Role + Capability authority",
+    "secure projection and least privilege",
+    "existing canonical path grammar"
+  ],
+  "rollback": "Revert constitution v1.17.0, the PUBLIC-USER-SURFACE-001 machine policy, Workspace visibility guard changes, Shell guest-open guard and related validators to v1.16.0. Do not change workspace_id, membership records, private data, domains or administrator routes during rollback.",
+  "approvalEvidence": {
+    "pullRequest": null,
+    "labels": [
+      "constitution-approved"
+    ],
+    "ownerInstructionRecorded": true
+  }
+}
