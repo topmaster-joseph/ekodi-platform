@@ -12,13 +12,23 @@ test('tenant command home is command-only and deterministic', async()=>{
   assert.match(css,/ekodi-tenant-command-home-active/);
   assert.match(css,/visibility:hidden!important/);
   assert.match(script,/EKODITenantCommandHome/);
-  assert.ok(script.startsWith('const __name=(target)=>target;\n'));
+  assert.match(script,/^\(\(__name\)=>\{/);
+  assert.doesNotMatch(script,/^const __name=/m);
   assert.match(script,/targetFor\(text\)/);
   assert.match(script,/ekodi-tenant-command-config/);
   assert.match(script,/queueMicrotask\(boot\)/);
   assert.match(script,/location\.assign\(route\.path\)/);
   assert.doesNotMatch(script,/\beval\s*\(/);
   assert.doesNotMatch(script,/\bfetch\s*\(/);
+});
+
+
+test('tenant command home and Workspace Admin coexist without global helper collisions', async()=>{
+  const [commandScript,workspaceScript]=await Promise.all([tenantAdminCommandHomeScript().text(),workspaceAdminScript().text()]);
+  assert.doesNotThrow(()=>new Function(commandScript+'\n'+workspaceScript));
+  assert.doesNotMatch(commandScript,/^const __name=/m);
+  assert.doesNotMatch(workspaceScript,/^const __name=/m);
+  assert.match(workspaceScript,/__EKODI_WORKSPACE_ADMIN_RUNTIME__/);
 });
 
 test('workspace, church and store roots reserve overview for the full manager', async()=>{
