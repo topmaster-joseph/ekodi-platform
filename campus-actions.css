@@ -94,6 +94,9 @@ body.admin-compact .campus-homepage-preview-list{display:flex!important;gap:8px!
 body.admin-compact .campus-homepage-preview-chip{display:inline-flex!important;align-items:center!important;min-height:30px!important;padding:6px 9px!important;border:1px solid #d8e4ef!important;border-radius:8px!important;background:#ffffff!important;color:#35516c!important;font-size:12px!important;line-height:1.25!important}
 body.admin-compact .campus-homepage-preview-chip.featured{border-color:#d8c36c!important;background:#fffbea!important;color:#735e13!important}
 
+body.admin-compact .campus-empty-state{margin:10px 0 0!important;padding:28px 18px!important;border:1px dashed #cbd8e5!important;border-radius:12px!important;background:#fbfdff!important;color:#66768a!important;font-size:14px!important;font-weight:700!important;text-align:center!important}
+body.admin-compact .campus-empty-state[hidden]{display:none!important}
+
 @media (max-width:1180px){
   body.admin-compact .campus-groups-grid{grid-template-columns:minmax(0,1fr)!important}
   body.admin-compact .campus-site-item{grid-template-columns:minmax(0,1fr) auto!important;gap:9px 14px!important}

@@ -24,8 +24,12 @@ test('service and site aliases delegate to existing work surfaces without duplic
     assert.equal(byId.get(id)?.group, 'services');
     assert.equal(byId.get(id)?.delegateSection, 'common-services');
   }
-  for (const id of ['sites-all','sites-internal','sites-user','sites-customer-partner','sites-independent','sites-preparing']) {
+  for (const id of ['sites-all','sites-core','sites-business','sites-community','sites-clients','sites-knowledge','sites-communication','sites-worklife','sites-other','sites-preparing']) {
     assert.equal(byId.get(id)?.group, 'sites');
+    assert.equal(byId.get(id)?.delegateSection, 'campus');
+  }
+  for (const id of ['sites-internal','sites-user','sites-customer-partner','sites-independent']) {
+    assert.equal(byId.get(id)?.internal, true);
     assert.equal(byId.get(id)?.delegateSection, 'campus');
   }
 });
