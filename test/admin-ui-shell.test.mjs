@@ -43,6 +43,7 @@ test('admin shell is separate from user shell and removes the left brand header'
   assert.equal(adminRuntime.includes('<option value="ko">한국어</option><option value="en">English</option>'),false);
 
   for (const label of ['통합현황','서비스','사이트','사용자·권한','콘텐츠·운영','상태·배포','설정·기록']) assert.equal(adminRegistry.includes(`ko: '${label}'`),true);
+  assert.doesNotMatch(adminRegistry,/사이트구조|핵심서비스|공통서비스|전문서비스|고객사이트\(관리자\)/);
   assert.equal(adminRegistry.includes("{ id: 'community', group: 'content'"),true);
   assert.equal(adminRegistry.includes("{ id: 'books', group: 'content'"),true);
   assert.equal(adminRegistry.includes("{ id: 'devotional', group: 'content'"),true);
