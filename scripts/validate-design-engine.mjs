@@ -20,6 +20,11 @@ const [policy, userDna, userShell, theme, adminRuntime, adminCss, adminPrinciple
   readText('shell/user-ai-entry.js'),
 ]);
 
+const [responsiveCss, responsiveStandard] = await Promise.all([
+  readText('responsive.css'),
+  readText('docs/RESPONSIVE-STANDARD.md'),
+]);
+
 const errors = [];
 const expectedAxes = ['summary', 'services', 'sites', 'people', 'content', 'status', 'settings-records'];
 const expectedLabels = ['통합현황', '서비스', '사이트', '사용자·권한', '콘텐츠·운영', '상태·배포', '설정·기록'];
@@ -40,6 +45,16 @@ for (const mode of requiredConstructionModes) {
 }
 if (!String(constructionStandard.completionGate || '').includes('not complete')) errors.push('universal construction standard must define a completion gate.');
 
+const responsiveContent = constructionStandard.responsiveContentContract || {};
+if (responsiveContent.required !== true) errors.push('responsive content contract must be mandatory.');
+if (responsiveContent.scope !== 'all-natural-language-copy-and-primary-layouts-on-user-and-admin-surfaces') errors.push('responsive content contract scope drifted.');
+if (responsiveContent.authoring?.semanticWordOrEojeolWrapping !== true || responsiveContent.authoring?.arbitraryInWordSplitForbidden !== true || responsiveContent.authoring?.layoutOnlyHardLineBreakForbidden !== true) errors.push('responsive copy authoring rules are incomplete.');
+if (responsiveContent.layout?.viewportAdaptive !== true || responsiveContent.layout?.primaryLayoutFixedViewportAssumptionForbidden !== true || responsiveContent.layout?.reflowBeforeFontShrink !== true || responsiveContent.layout?.pageHorizontalOverflowForbidden !== true) errors.push('responsive layout rules are incomplete.');
+if (JSON.stringify(responsiveContent.verification?.viewportWidths) !== JSON.stringify([320,390,768,1366,1440])) errors.push('responsive viewport verification matrix must remain 320/390/768/1366/1440.');
+for (const check of ['no-arbitrary-word-or-eojeol-splitting','no-layout-only-hard-line-breaks','no-horizontal-page-overflow','no-clipped-or-overlapped-primary-copy','controls-and-grids-reflow-without-losing-meaning']) {
+  if (!responsiveContent.verification?.checks?.includes(check)) errors.push(`responsive content check missing: ${check}`);
+}
+
 if (JSON.stringify(policy?.admin?.primaryAxes) !== JSON.stringify(expectedAxes)) errors.push('design-engine policy must define exactly seven admin areas.');
 if (JSON.stringify(actualAxes) !== JSON.stringify(expectedAxes)) errors.push(`admin registry axes drifted: ${actualAxes.join(', ')}`);
 if (JSON.stringify(actualLabels) !== JSON.stringify(expectedLabels)) errors.push(`admin registry Korean labels drifted: ${actualLabels.join(', ')}`);
@@ -53,7 +68,7 @@ for (const group of ADMIN_MENU_GROUPS) {
   if (!target) errors.push(`admin group "${group.id}" has invalid default section "${group.defaultSection}".`);
 }
 
-if (Number(policy?.version) < 5 || Number(policy?.admin?.generation) !== 8) errors.push('design policy v5+ and the 8th-generation admin contract are required.');
+if (Number(policy?.version) < 6 || Number(policy?.admin?.generation) !== 8) errors.push('design policy v6+ and the 8th-generation admin contract are required.');
 if (policy?.admin?.desktopPrimarySidebarScroll !== false) errors.push('desktop primary sidebar scrolling must remain disabled.');
 if (policy?.admin?.scrollContract?.workspace !== 'single-vertical-scroll-owner') errors.push('workspace must be the single vertical scroll owner in policy.');
 if (!Array.isArray(policy?.admin?.regions) || policy.admin.regions.length !== 4) errors.push('admin design policy must define exactly four shell regions.');
@@ -63,6 +78,15 @@ if (!adminRuntime.includes("nav.dataset.ekodiIndependentScroll = 'false'")) erro
 if (!adminRuntime.includes("workspace must own vertical scrolling")) errors.push('admin design runtime must audit the workspace scroll owner.');
 if (!adminCss.includes('overflow-y:hidden!important')) errors.push('admin design CSS must keep the primary sidebar overflow hidden.');
 if (!adminCss.includes('overflow-y:auto!important')) errors.push('admin design CSS must keep the workspace as vertical scroll owner.');
+for (const marker of ['Admin responsive content integrity','word-break:keep-all!important','overflow-wrap:break-word','overflow-wrap:anywhere!important','font-size:clamp(','padding-inline:clamp(']) {
+  if (!adminCss.includes(marker)) errors.push(`admin responsive content guard lost marker: ${marker}`);
+}
+for (const marker of ['Responsive Typography Standard v3','word-break:keep-all','overflow-wrap:break-word','--ekodi-responsive-inline-gutter','data-ekodi-responsive-grid','font-size:clamp(']) {
+  if (!responsiveCss.includes(marker)) errors.push(`global responsive standard lost marker: ${marker}`);
+}
+for (const marker of ['문구 작성·개발 강제 체크','320, 390, 768, 1366, 1440px','완료 게이트','단어·어절']) {
+  if (!responsiveStandard.includes(marker)) errors.push(`responsive standard document lost mandatory marker: ${marker}`);
+}
 if (sidebar.includes('overflow-y:auto!important')) errors.push('shared admin sidebar source must not reintroduce independent vertical scrolling.');
 if (!sidebar.includes('overflow-y:hidden!important')) errors.push('shared admin sidebar source must keep vertical overflow hidden.');
 if (authenticatedShell.includes("nav.dataset.ekodiIndependentScroll = 'true'") || authenticatedShell.includes("nav.style.setProperty('overflow-y', 'auto'")) errors.push('authenticated shell must not reintroduce sidebar scrolling.');
