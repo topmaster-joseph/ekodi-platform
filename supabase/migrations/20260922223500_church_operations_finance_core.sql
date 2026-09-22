@@ -1,6 +1,11 @@
 -- EKODI Church operations core: offerings, accounting ledger, and donation receipt requests.
 -- Finance data stays in church_private and is accessible only through authenticated edge boundaries.
 
+alter table church.staff drop constraint if exists staff_role_check;
+alter table church.staff
+  add constraint staff_role_check
+  check (role in ('senior_pastor','pastor','church_treasurer','church_finance','care_staff','staff','viewer'));
+
 alter table church_private.members
   add column if not exists auth_user_id uuid references auth.users(id) on delete set null;
 
