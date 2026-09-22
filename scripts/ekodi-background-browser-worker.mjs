@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
+import { fileURLToPath } from 'node:url';
 
 const ORIGIN = 'https://ekodi.kr';
 const PROFILE = Object.freeze({
@@ -209,7 +210,7 @@ export async function runTask(rawTask, options={}){
   }
 }
 
-const invoked=process.argv[1]&&path.resolve(process.argv[1])===path.resolve(new URL(import.meta.url).pathname);
+const invoked=process.argv[1]&&path.resolve(process.argv[1])===path.resolve(fileURLToPath(import.meta.url));
 if(invoked){
   const task=await readTask();
   runTask(task).then(result=>console.log(JSON.stringify(result))).catch(error=>{
