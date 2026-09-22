@@ -11,11 +11,12 @@ function binding(body='ok',type='text/plain'){
 }
 
 test('public person pages are a public projection of My EKODI, not a second admin surface',async()=>{
-  const [home,control,worker,migration]=await Promise.all([
+  const [home,control,worker,migration,userHeader]=await Promise.all([
     read('my/index.html'),
     read('my/public-profile.js'),
     read('my-worker.js'),
     read('supabase/migrations/20260923085000_person_public_profiles.sql'),
+    read('shell/user-ui-header.js'),
   ]);
   assert.match(home,/개인 관리공간 · 나만 보는 곳/);
   assert.match(home,/id="publicProfileForm"/);
@@ -37,6 +38,8 @@ test('public person pages are a public projection of My EKODI, not a second admi
   assert.match(migration,/using \(visibility = 'public'\)/);
   assert.match(migration,/grant select \(handle, display_name, headline, bio, links, visibility, updated_at\)/);
   assert.doesNotMatch(migration,/grant select \([^\n]*person_id/);
+  assert.match(userHeader,/운영공간/);
+  assert.match(userHeader,/isIndividualSite\(\)\?\`\$\{base\} · 운영공간\`:base/);
 });
 
 test('canonical apex preserves /@handle while handing the public page to My service ownership',async()=>{
