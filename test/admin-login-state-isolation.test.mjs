@@ -37,6 +37,11 @@ test('returning to login removes authenticated UI residue', () => {
 
 test('canonical Admin login owns the pre-auth surface', () => {
   assert.match(google, /document\.querySelector\('#centralAdminLogin'\)/);
-  assert.match(css, /\.login-screen\{[^}]*background:radial-gradient/);
-  assert.match(css, /\.login-screen \.brand strong,\.login-screen h1\{color:#f3f7fd\}/);
+  assert.match(html, /<meta name="theme-color" content="#f7f8fc">/);
+  assert.match(html, />관리자 로그인<\/a>/);
+  assert.match(css, /EKODI Admin pre-auth visual contract/);
+  assert.match(css, /\.login-screen\{[^}]*color-scheme:light;[^}]*#fff/s);
+  assert.match(css, /\.login-screen \.login-card\{[^}]*background:rgba\(255,255,255,\.86\)/s);
+  assert.match(css, /\.login-screen \.brand strong,[\s\S]*\.login-screen h1\{[\s\S]*color:#202124/);
+  assert.match(css, /\.login-screen \.primary\{[^}]*border-radius:999px;[^}]*background:#1a73e8;[^}]*color:#fff/s);
 });
