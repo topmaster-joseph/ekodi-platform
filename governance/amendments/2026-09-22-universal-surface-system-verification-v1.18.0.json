@@ -33,6 +33,7 @@
     "requiredPullRequestLabel": "constitution-approved",
     "ownerInstructionRecorded": true,
     "pullRequest": 2342,
-    "approvalLabel": "constitution-approved"
+    "approvalLabel": "constitution-approved",
+    "ownerInstructionDate": "2026-09-22"
   }
 }
