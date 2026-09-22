@@ -1,4 +1,4 @@
-# EKODI Platform Constitution v1.17.0
+# EKODI Platform Constitution v1.18.0
 
 Effective: 2026-09-22
 
@@ -72,6 +72,8 @@ This constitution is the highest architecture and operations rule for EKODI Plat
 
 ## 2A. Public User Surface Constitution
 - Every canonical public user page is **guest-open by default**. A person must be able to reach and read the safe public projection without signing in.
+- After sign-in, every ordinary user receives the site's **basic capabilities on the free tier by default**. A paid subscription must not be required merely to use the basic user experience.
+- Subscriptions or explicit entitlements may unlock **additional, advanced, higher-capacity or premium capabilities**. Premium gating is additive and must never remove the guest-readable public projection or the signed-in free basic experience.
 - Authentication **enhances rather than replaces** the public experience. After sign-in, membership tier, workspace relationship, role and capability may add, personalize, enable or reorder content and actions, but they must not turn the canonical public page into a login wall.
 - Authentication and authorization remain mandatory for private data, personal state, workspace-internal data, write actions, applications, payments, uploads, protected downloads, operator tools and administrator capabilities.
 - A `401`, `403` or private-data lookup failure from a protected capability must degrade the interface back to the safe public projection. It must not replace a canonical public page with an access-denied, unavailable-workspace or equivalent permission screen.
