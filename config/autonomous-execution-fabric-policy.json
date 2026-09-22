@@ -97,7 +97,7 @@
       {
         "id": "browser-e2e",
         "methodClass": "browser-e2e",
-        "state": "conditional",
+        "state": "runtime-proven",
         "roles": [
           "ui-reproduction",
           "login-flow-test",
@@ -109,7 +109,8 @@
         ],
         "ownership": "ekodi",
         "defaultProvider": "ekodi-background-browser-worker",
-        "externalFallback": "temporary-replaceable-fallback-only"
+        "externalFallback": "temporary-replaceable-fallback-only",
+        "evidence": "evidence/runtime/background-browser-worker/2026-09-22-initial-proof.json"
       },
       {
         "id": "authorized-remote-node",
