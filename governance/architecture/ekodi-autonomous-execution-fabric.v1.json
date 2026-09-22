@@ -266,7 +266,9 @@
     "nonProductionIsolatedExecutionProven": true,
     "parallelMultiMethodRuntimeProofWorkflow": ".github/workflows/autonomous-execution-fabric-runtime-proof.yml",
     "parallelMultiMethodRuntimeProofRequired": true,
-    "autonomousProductionReadinessProven": false
+    "autonomousProductionReadinessProven": false,
+    "nativeBackgroundBrowserInitialProof": "evidence/runtime/background-browser-worker/2026-09-22-initial-proof.json",
+    "nativeBackgroundBrowserRuntimeProven": true
   },
   "evidenceRequiredBeforeActivation": [
     "sandbox_isolation_test",
