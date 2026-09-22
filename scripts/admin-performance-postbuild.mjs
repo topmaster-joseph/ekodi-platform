@@ -132,7 +132,7 @@ await writeFile(menuRuntimePath, menuCompactSource.slice(menuCompactHeader[0].le
 // Demand-loaded assets are discovered from the generated loader itself so adding a new
 // lazy feature cannot silently reuse an older immutable URL.
 const staticVersionInputs = [
-  'admin-central-handoff.js','admin-authenticated-shell.js','admin-demand-loader.js','admin-menu-layout.js',
+  'admin-central-handoff.js','admin-authenticated-shell.js','admin-release-convergence.js','admin-demand-loader.js','admin-menu-layout.js',
   ...sharedAdminMenuModules,
   'admin-design-engine.js','admin-design-engine.css',
   'admin-compact.js','admin-compact.css','admin-shell.css','finance-monitor.js',
