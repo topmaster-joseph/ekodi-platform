@@ -16,6 +16,10 @@ Remote Desktop Commander is a temporary external bridge only while the EKODI nat
 
 The bridge policy is not evidence that native cutover has happened. Native completion requires the runtime `serviceReady` gate plus real-device proof.
 
+## Native virtualization precedence
+
+Whenever browser/runtime/desktop virtualization or computer-use automation is required, the normal route is an EKODI-owned capability first: the Autonomous Execution Fabric, EKODI Background Browser Worker, or EKODI Native Remote Computer capability as applicable. External browser/computer-use services remain temporary, replaceable fallback adapters only while the required native capability is not ready, unavailable, not yet implemented, or has a verified runtime/capacity failure. Every such fallback records the reason and the native capability gap; it must not become a permanent dependency by convenience.
+
 ## Native cutover gate
 
 Cutover requires all of the following:
