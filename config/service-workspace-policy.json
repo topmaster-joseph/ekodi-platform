@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 6,
+  "schemaVersion": 7,
   "provider": {
     "legalOperator": "EKODIBIZ",
     "role": "service_provider"
@@ -240,5 +240,26 @@
       "publicRootBehavior": "safe-public-landing-or-privacy-notice",
       "permissionErrorAsLandingForbidden": true
     }
+  },
+  "authenticationReturnPolicy": {
+    "policyId": "AUTH-RETURN-CONTINUITY-001",
+    "exactPreLoginUrlFirst": true,
+    "siteLocalContextRequired": true,
+    "fallbackOrder": [
+      "trusted_return_to",
+      "registered_site_my_or_authenticated_home",
+      "initiating_site_canonical_entry"
+    ],
+    "crossSiteFallback": false,
+    "platformMyEkodi": {
+      "path": "https://ekodi.kr/my",
+      "genericFallback": false,
+      "allowedLoginInitiators": [
+        "my",
+        "portal"
+      ]
+    },
+    "adminChildPathReturnRequired": true,
+    "misroutedMyHandoffMustRecoverBeforeTokenConsumption": true
   }
 }

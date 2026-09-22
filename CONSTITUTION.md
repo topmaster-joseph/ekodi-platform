@@ -1,6 +1,6 @@
-# EKODI Platform Constitution v1.18.0
+# EKODI Platform Constitution v1.20.0
 
-Effective: 2026-09-22
+Effective: 2026-09-23
 
 This constitution is the highest architecture and operations rule for EKODI Platform. Existing validators remain authoritative implementation guards; this document unifies their intent and governs future changes.
 
@@ -87,6 +87,17 @@ This constitution is the highest architecture and operations rule for EKODI Plat
 - Provider groups or accounts may synchronize with EKODI but cannot become the authorization source of truth.
 - Protected requests resolve authentication, tenant, authorization, rate policy and input validity before business logic.
 - `Workspace` is the canonical operating-context term. Legacy `Space` terminology may remain only as a compatibility surface during migration and must not create a second identity, authority or routing model.
+
+## 3A. Authentication Return Continuity Constitution
+- Authentication is a temporary identity boundary, never a navigation destination. After successful sign-in, the user returns to the exact trusted page that initiated login whenever a valid `return_to` exists.
+- Every EKODI site, Workspace, service, My page, operator page and administrator page preserves its own navigation context across authentication. A login initiated from one site must not silently land in another site's home, My page or the platform My EKODI hub.
+- If an exact pre-login URL is unavailable, the initiating service may use its explicitly registered authenticated home or service-local My page; otherwise it falls back to that service's canonical entry. Cross-service fallback is forbidden.
+- `https://ekodi.kr/my` is the canonical platform personal home and may be a login destination only for an authentication flow explicitly initiated for My EKODI or the apex EKODI portal. It is forbidden as a generic post-login fallback for other services, Workspaces or administrator surfaces.
+- Workspace/service administrator login must return to the original canonical admin path, including its child section such as `/{slug}/admin/menu`, `/{slug}/admin/delivery` or `/{slug}/admin/connections`.
+- One-time handoff tokens must be delivered directly to the intended destination when possible. If a token is accidentally delivered to My EKODI with a trusted non-My `return_to`, My EKODI must redirect it to that target before consuming the token.
+- Return targets are allowlisted trusted HTTPS EKODI/customer-owned destinations with credential-bearing URLs rejected. Authentication must preserve query context but never propagate reusable secrets in query parameters.
+- This rule applies to all current and future login adapters and is enforced by shared authentication routing tests and production system verification.
+- Machine-readable authority: `governance/constitution/constitution.json` -> `authenticationReturnContinuityPolicy` and `config/service-workspace-policy.json` -> `authenticationReturnPolicy`.
 
 ## 4. Data and Storage Constitution
 - Structured core/operational truth lives in an EKODI-controlled database with tenant isolation and auditability.

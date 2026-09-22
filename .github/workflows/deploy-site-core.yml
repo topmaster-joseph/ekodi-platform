@@ -435,7 +435,7 @@ jobs:
           grep -Fq 'Canonical site: https://ekodi.kr/' dist/llms.txt
           grep -Fq 'data-ekodi-discovery="v2"' dist/index.html
           grep -Fq 'dataset.seamlessSso' dist/auth-bootstrap.js
-          grep -Fq "./auth-router.js?v=20260918-csp-bootstrap-1" dist/auth-entry.js
+          grep -Fq "./auth-router.js?v=20260923-return-continuity-1" dist/auth-entry.js
           grep -Fq 'workspace_key:requested' dist/auth-workspace-target.js
           grep -Eq 'admin-design-engine\.js\?v=[a-f0-9]{16}' dist/admin-menu-registry.js
           grep -Eq 'ekodibiz-admin-registry\.js\?v=[a-f0-9]{16}' dist/admin-menu-runtime.js

@@ -18,9 +18,9 @@ const surfaceVerification = json('config/surface-system-verification-policy.json
 const executionFabric = json('config/autonomous-execution-fabric-policy.json');
 const remoteComputer = json('config/remote-computer-execution-policy.json');
 
-if (constitution.version !== '1.19.0') fail('constitution version must be 1.19.0 with EKODI-owned virtualization sovereignty plus all prior approved amendments');
+if (constitution.version !== '1.20.0') fail('constitution version must be 1.20.0 with authentication return continuity, EKODI-owned virtualization sovereignty, and all prior approved amendments');
 if (constitution.status !== 'active') fail('constitution must be active');
-for (const principle of ['free-first-not-free-only','ekodi-core-is-source-of-truth','provider-independent-by-default','secure-by-default','one-domain-grammar','isolated-parallel-development','verification-first-evolution','security-native-intelligence','evidence-linked-recommendations','secure-projection-minimum-disclosure','integrated-responsibility-distributed-execution-standardized-connections','layered-governance-os-core-services-connections-workspaces','user-surface-engine-separation','capability-first-reuse','sustainable-scale-by-evidence','workspace-over-space','generation-10-active-baseline','open-ended-evidence-driven-generation-evolution','sovereign-autonomy-with-human-authority','person-workspace-role-capability-authority','observe-detect-reason-plan-execute-verify-recover-learn','ekodibiz-exclusive-commercial-subject','ordinary-user-information-first-commercial-separation','completion-continuity-through-recoverable-interruptions','supreme-attributes-binding','guest-open-public-user-surfaces','self-verifying-all-surface-system-evidence','ekodi-owned-virtualization-first']) {
+for (const principle of ['free-first-not-free-only','ekodi-core-is-source-of-truth','provider-independent-by-default','secure-by-default','one-domain-grammar','isolated-parallel-development','verification-first-evolution','security-native-intelligence','evidence-linked-recommendations','secure-projection-minimum-disclosure','integrated-responsibility-distributed-execution-standardized-connections','layered-governance-os-core-services-connections-workspaces','user-surface-engine-separation','capability-first-reuse','sustainable-scale-by-evidence','workspace-over-space','generation-10-active-baseline','open-ended-evidence-driven-generation-evolution','sovereign-autonomy-with-human-authority','person-workspace-role-capability-authority','observe-detect-reason-plan-execute-verify-recover-learn','ekodibiz-exclusive-commercial-subject','ordinary-user-information-first-commercial-separation','completion-continuity-through-recoverable-interruptions','supreme-attributes-binding','guest-open-public-user-surfaces','self-verifying-all-surface-system-evidence','ekodi-owned-virtualization-first','authentication-return-continuity']) {
   if (!constitution.principles?.includes(principle)) fail(`missing constitutional principle: ${principle}`);
 }
 
@@ -256,9 +256,23 @@ if (!Array.isArray(coreData.protectedTables) || coreData.protectedTables.length 
 for (const table of ['customer_tenants','customer_users','customer_memberships','customer_access_grants']) if (!coreData.protectedTables?.includes(table)) fail(`core source-of-truth table not protected: ${table}`);
 if (!String(coreData.rule || '').includes('must not directly reference EKODI Core protected tables')) fail('core data access rule missing');
 
-if (workspace.schemaVersion !== 6) fail('service workspace policy schemaVersion must be 6');
+if (workspace.schemaVersion !== 7) fail('service workspace policy schemaVersion must be 7');
 if (workspace.identityAuthority !== 'ekodi') fail('service workspace identityAuthority must be ekodi');
 if (workspace.commonServiceUserAccessRule?.memberMinimumTier !== 'free') fail('common services must preserve free-member minimum access');
+const authReturn=constitution.authenticationReturnContinuityPolicy||{};
+if(authReturn.id!=='AUTH-RETURN-CONTINUITY-001'||authReturn.status!=='active') fail('authentication return continuity policy must remain active');
+if(authReturn.exactPreLoginReturnPreferred!==true||authReturn.initiatingSiteContextMustBePreserved!==true) fail('authentication must preserve the initiating site and exact trusted pre-login target');
+if(authReturn.crossServicePostLoginFallbackForbidden!==true) fail('cross-service post-login fallback must remain forbidden');
+if(authReturn.myEkodi?.genericPostLoginFallbackForbidden!==true) fail('My EKODI must not be a generic post-login fallback');
+if(JSON.stringify(authReturn.myEkodi?.allowedInitiators)!==JSON.stringify(['my','portal'])) fail('My EKODI login initiators must remain limited to my/portal');
+if(authReturn.myEkodi?.misroutedTrustedTokenMustRedirectBeforeConsumption!==true) fail('My EKODI must redirect misrouted trusted handoff tokens before consumption');
+if(authReturn.adminReturn?.exactAdminChildPathRequired!==true) fail('workspace/service admin login must preserve exact child admin path');
+const workspaceAuthReturn=workspace.authenticationReturnPolicy||{};
+if(workspaceAuthReturn.policyId!=='AUTH-RETURN-CONTINUITY-001'||workspaceAuthReturn.exactPreLoginUrlFirst!==true) fail('service/workspace authentication return policy mismatch');
+if(workspaceAuthReturn.siteLocalContextRequired!==true||workspaceAuthReturn.crossSiteFallback!==false) fail('service/workspace login must preserve site-local context and forbid cross-site fallback');
+if(workspaceAuthReturn.platformMyEkodi?.genericFallback!==false) fail('service/workspace policy must forbid generic My EKODI fallback');
+if(JSON.stringify(workspaceAuthReturn.platformMyEkodi?.allowedLoginInitiators)!==JSON.stringify(['my','portal'])) fail('service/workspace My EKODI initiators drifted');
+if(workspaceAuthReturn.adminChildPathReturnRequired!==true||workspaceAuthReturn.misroutedMyHandoffMustRecoverBeforeTokenConsumption!==true) fail('admin return/misroute recovery policy drifted');
 const publicUserSurface=constitution.publicUserSurfacePolicy||{};
 if(publicUserSurface.id!=='PUBLIC-USER-SURFACE-001'||publicUserSurface.defaultAccess!=='guest-open') fail('constitutional public user surfaces must default to guest-open');
 if(publicUserSurface.authenticationEffect!=='enhance-not-replace-public-experience') fail('authentication must enhance, not replace, public user surfaces');

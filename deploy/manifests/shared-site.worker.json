@@ -938,8 +938,8 @@
         "redirect": "manual",
         "expect": [
           "통합 인증센터",
-          "/auth/auth-bootstrap.js?v=20260918-csp-bootstrap-1",
-          "/auth/auth-entry.js?v=20260918-csp-bootstrap-1"
+          "/auth/auth-bootstrap.js?v=20260923-return-continuity-1",
+          "/auth/auth-entry.js?v=20260923-return-continuity-1"
         ],
         "headerExpect": [
           "x-ekodi-route: central-auth"
@@ -972,7 +972,7 @@
         "redirect": "manual",
         "expect": [
           "loadAuthRouter",
-          "./auth-router.js?v=20260918-csp-bootstrap-1",
+          "./auth-router.js?v=20260923-return-continuity-1",
           "authLoopBlocked"
         ],
         "headerExpect": [
@@ -991,7 +991,7 @@
         "expect": [
           "admin-auth.js?v=20260918-canonical-origin-2",
           "business-auth.js?v=20260826-free-fallback-1",
-          "client-auth.js?v=20260904-direct-login-1",
+          "client-auth.js?v=20260923-return-continuity-1",
           "isRegistryUserService",
           "manifestService"
         ],
