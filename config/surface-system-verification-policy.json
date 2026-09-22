@@ -76,6 +76,11 @@
   ],
   "deviceProfiles": [
     {
+      "id": "compact-mobile",
+      "width": 320,
+      "height": 568
+    },
+    {
       "id": "mobile-portrait",
       "width": 390,
       "height": 844
@@ -103,6 +108,7 @@
     "safe-public-projection",
     "functional-interaction",
     "responsive-layout-and-overflow",
+    "natural-language-word-integrity",
     "accessibility-baseline",
     "secure-projection-and-secret-leakage",
     "api-and-data-contract",
@@ -149,5 +155,28 @@
     "retest",
     "redeploy",
     "reverify"
-  ]
+  ],
+  "responsiveContentAssertions": {
+    "mandatory": true,
+    "naturalLanguageWordOrEojeolIntegrity": true,
+    "layoutOnlyHardLineBreakForbidden": true,
+    "pageHorizontalOverflowForbidden": true,
+    "viewportAdaptiveReflowRequired": true,
+    "reflowBeforeFontShrink": true,
+    "technicalIdentifierBreakAnywhereExplicitOnly": true,
+    "viewportWidths": [
+      320,
+      390,
+      768,
+      1366,
+      1440
+    ],
+    "visualChecks": [
+      "no-mid-word-or-mid-eojeol-break",
+      "no-clipped-primary-copy",
+      "no-overlapping-primary-content",
+      "no-horizontal-page-overflow",
+      "responsive-control-and-grid-reflow"
+    ]
+  }
 }
