@@ -79,11 +79,18 @@ jobs:
           grep -Fq 'PRIVATE FIRST' church/index.html
           grep -Fq 'localStorage' church/church-life-hub.js
           grep -Fq '__EKODI_CHURCH_LIFE_HUB_I18N__' church/church-life-hub-i18n.js
-          grep -Fq 'https://ekodi.kr/ekodichurch/my' church/index.html
-          grep -Fq 'https://ekodi.kr/ekodichurch/my' church/script.js
-          grep -Fq 'https://ekodi.kr/my/' church/my/index.html
+          grep -Fq 'href="/ekodichurch/my/' church/index.html
+          grep -Fq "href: '/ekodichurch/my/'" church/script.js
+          grep -Fq 'data-ekodi-header-actions' church/my/index.html
           grep -Fq 'EKODI CHURCH · MY PAGE' church/my/index.html
-          grep -Fq '내 EKODI' church/my/index.html
+          if grep -Fq 'https://ekodi.kr/my/' church/my/index.html || grep -Eq '내 EKODI|MY EKODI|다른 EKODI 활동' church/my/index.html; then
+            echo 'Church member home must not hand off to My EKODI.'
+            exit 1
+          fi
+          if grep -Fq 'https://ekodi.kr/ekodichurch/my' church/index.html || grep -Fq 'https://ekodi.kr/ekodichurch/my' church/script.js; then
+            echo 'Church header member navigation must use a site-local path.'
+            exit 1
+          fi
           grep -Fq 'clearAuthReturnFragment' church/my/app.js
           grep -Fq '/ekodichurch/my/giving/' church/my/index.html
           grep -Fq 'MY GIVING' church/my/giving/index.html
@@ -162,7 +169,9 @@ jobs:
             if [[ "$root" == 200 && "$member" == 200 && "$giving_member" == 200 && "$giving_member_js" == 200 && "$life" == 200 && "$life_i18n" == 200 && "$life_css" == 200 && "$online_status" == 200 && "$live_css" == 200 && "$live_js" == 200 && "$live_intent" == 200 && "$marker" == 200 ]] \
               && grep -Fq 'data-ekodi-life-hub' /tmp/church.html \
               && grep -Fq 'EKODI CHURCH · MY PAGE' /tmp/church-my.html \
-              && grep -Fq '내 EKODI' /tmp/church-my.html \
+              && grep -Fq 'data-ekodi-header-actions' /tmp/church-my.html \
+              && ! grep -Fq 'https://ekodi.kr/my/' /tmp/church-my.html \
+              && ! grep -Eq '내 EKODI|MY EKODI|다른 EKODI 활동' /tmp/church-my.html \
               && grep -Fq 'MY GIVING' /tmp/church-my-giving.html \
               && grep -Fq 'church-member-giving-api' /tmp/church-my-giving.js \
               && ! grep -Fq '운영자 기능은 별도 관리자 화면에서 처리합니다.' /tmp/church-my.html \
@@ -260,7 +269,17 @@ jobs:
                 assert.equal(Boolean(match),false,`${locale} still contains visible Korean outside language control`);
               }
             }
-            console.log('Rendered life hub verified across all 9 church locales.');
+            await page.goto(`https://ekodi.kr/ekodichurch/my/?lang=ko-KR&release=${release}`,{waitUntil:'domcontentloaded',timeout:30000});
+            await page.waitForSelector('[data-ekodi-language-control]',{timeout:20000});
+            const memberHeader=await page.evaluate(()=>({
+              globalLinks:[...document.querySelectorAll('header a[href]')].map(a=>a.href).filter(href=>href==='https://ekodi.kr/'||href.startsWith('https://ekodi.kr/my')),
+              myPanel:Boolean([...document.querySelectorAll('main *')].some(node=>/다른 활동도 한 번에 이어보세요|내 EKODI 열기/.test(node.textContent||''))),
+              language:Boolean(document.querySelector('header [data-ekodi-language-control]'))
+            }));
+            assert.equal(memberHeader.language,true,'member header must show the shared rounded language selector');
+            assert.deepEqual(memberHeader.globalLinks,[],'member header must not expose EKODI root/My EKODI links');
+            assert.equal(memberHeader.myPanel,false,'member page must not render the My EKODI handoff panel');
+            console.log('Rendered life hub and local-only member header verified.');
           }finally{
             await browser.close();
           }
@@ -270,7 +289,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for target in 'https://ekodi.kr/ekodichurch/' 'https://ekodi.kr/ekodichurch/my/' 'https://ekodi.kr/my/' 'https://ekodi.kr/community/' 'https://ekodi.kr/privacy' 'https://ekodi.kr/terms'; do
+          for target in 'https://ekodi.kr/ekodichurch/' 'https://ekodi.kr/ekodichurch/my/' 'https://ekodi.kr/community/' 'https://ekodi.kr/privacy' 'https://ekodi.kr/terms'; do
             code=$(curl -L -sS -o /dev/null -w '%{http_code}' --connect-timeout 5 --max-time 20 "$target" || true)
             case "$code" in 2*|3*) echo "link ok: $code $target" ;; *) echo "link failed: $code $target"; exit 1 ;; esac
           done
