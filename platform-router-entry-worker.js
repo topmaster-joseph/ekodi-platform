@@ -302,7 +302,7 @@ async function routePlatform(request,env,ctx){
         if(['/store-admin.js','/jadam-admin.js','/pizzamaru-admin.js','/yogurt-admin.js'].includes(url.pathname))return storeAdminScript();
         if(url.pathname==='/cmpmyi/admin'||url.pathname==='/cmpmyi/admin/')return injectEkodiShell(storePortfolioAdminPage({commandHome:true}),'business','admin');
         if(url.pathname==='/cmpmyi/admin/overview'||url.pathname==='/cmpmyi/admin/overview/')return injectEkodiShell(storePortfolioAdminPage(),'business','admin');
-        if(isStoreAdminPathShape(url.pathname)){const storeRoute=await resolveStoreAdminRoute(url.pathname);if(storeRoute)return injectEkodiShell(storeAdminPage(storeRoute),'business','admin');}
+        if(isStoreAdminPathShape(url.pathname)){const storeRoute=await resolveStoreAdminRoute(url.pathname);if(storeRoute)return injectEkodiShell(storeAdminPage({...storeRoute,pathname:url.pathname}),'business','admin');}
         if(url.pathname==='/organization-admin.css')return organizationAdminCss();
         if(url.pathname==='/organization-admin.js')return organizationAdminScript();
         if(isOrganizationAdminPath(url.pathname))return injectEkodiShell(organizationAdminPage(url.pathname),'space','admin');
