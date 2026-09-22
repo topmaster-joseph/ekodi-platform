@@ -60,7 +60,7 @@ async function consumeHandoff(){
 function renderSignedOut(){
   show('signedOut',true);show('signedIn',false);show('spaceSwitcherWrap',false);show('login',true);
   $('login').onclick=authStart;
-  status('로그인하면 내가 권한을 가진 운영공간만 연결됩니다.');
+  status('공개 내용은 누구나 볼 수 있습니다. 로그인하면 등급·소속·권한에 따라 맞춤 기능이 추가됩니다.','ok');
 }
 function renderSpaces(spaces){
   const list=$('spaceList');list.replaceChildren();
@@ -172,6 +172,17 @@ function renderServiceActions(slug,role){
   $('serviceActions').innerHTML=admin+`<a href="/${encodeURIComponent(slug)}/marketing">Marketing AI <span>콘텐츠 · 캠페인 · 채널 →</span></a><a href="/">운영공간 목록 <span>다른 점포로 전환 →</span></a><a href="https://ekodi.kr/my/">내 홈 <span>개인 허브 →</span></a>`;
 }
 function showStoreSections(on){document.querySelectorAll('.store-data').forEach(el=>el.classList.toggle('hidden',!on))}
+function renderPublicWorkspaceFallback(slug,{signedIn=false}={}){
+  show('spaceIndex',false);show('workspaceView',true);showStoreSections(false);
+  const publicName=document.querySelector('#signedOut h1')?.textContent?.trim()||slug||'공개 사용자페이지';
+  const publicLead=document.querySelector('#signedOut p')?.textContent?.trim()||'이 페이지의 공개 내용은 로그인 없이 볼 수 있습니다.';
+  $('workspaceType').textContent='PUBLIC USER PAGE';
+  $('workspaceName').textContent=publicName;
+  $('workspaceMeta').textContent=publicLead;
+  $('workspaceRole').textContent=signedIn?'로그인됨 · 공개보기':'공개';
+  document.documentElement.dataset.ekodiPublicUserSurface='guest-open';
+  status(signedIn?'공개 페이지입니다. 이 공간의 운영 기능은 권한이 있는 계정에만 추가로 표시됩니다.':'공개 페이지입니다. 로그인하면 개인화된 기능이 추가됩니다.','ok');
+}
 function renderStoreDashboard(workspace){
   renderStoreBasics(workspace.store||{});
   renderChannels(Array.isArray(workspace.channels)?workspace.channels:[]);
@@ -199,8 +210,7 @@ async function renderWorkspace(){
     $('workspaceMeta').textContent='이 공간의 권한과 데이터는 고유 workspace ID를 기준으로 연결됩니다.';
     document.title=`${space.name} · EKODI`;status(`${space.name} 운영공간에 연결되었습니다.`,'ok');
   }catch(error){
-    if(error.status===404){$('workspaceName').textContent='접근할 수 없는 공간';$('workspaceMeta').textContent='공간이 없거나 현재 계정에 권한이 없습니다.';showStoreSections(false);status('공간 접근 권한을 확인해 주세요.','error');return;}
-    if(error.status===403){$('workspaceName').textContent='권한이 필요한 공간';$('workspaceMeta').textContent='현재 계정에는 이 점포 운영정보를 볼 권한이 없습니다.';showStoreSections(false);status('점포 운영 권한을 확인해 주세요.','error');return;}
+    if(error.status===404||error.status===403){renderPublicWorkspaceFallback(slug,{signedIn:true});return;}
     throw error;
   }
 }
@@ -220,7 +230,8 @@ async function boot(){
     await consumeHandoff();const current=await session();if(!current){renderSignedOut();return;}await renderSignedIn();
   }catch(error){
     console.error('space bootstrap',error);if(error.message==='login_required'){renderSignedOut();return;}
-    status('운영공간을 불러오지 못했습니다. 다시 로그인해 주세요.','error');show('signedOut',true);show('signedIn',false);show('login',true);$('login').onclick=authStart;
+    if(routeMatch){show('signedOut',false);show('signedIn',true);renderPublicWorkspaceFallback(routeMatch[1],{signedIn:Boolean(await session().catch(()=>null))});return;}
+    status('운영공간을 불러오지 못했습니다. 공개 홈을 표시합니다.','error');show('signedOut',true);show('signedIn',false);show('login',true);$('login').onclick=authStart;
   }
 }
 boot();
