@@ -23,7 +23,7 @@ test('Admin production verifier runs after successful canonical shared-site rele
   assert.match(workflow, /gh issue comment 333/);
   assert.match(workflow, /PRODUCTION NOT VERIFIED/);
   assert.doesNotMatch(workflow, /PRODUCTION VERIFIED/);
-  assert.match(workflow, /fingerprinted thin shell · immutable assets · standalone Health · flat AI Ops · internal specialist routing/);
+  assert.match(workflow, /canonical seven-area sidebar · delegated panels · stale-tab convergence · fingerprinted immutable assets/);
   assert.doesNotMatch(workflow, /guarded-worker-release\.mjs/);
   assert.doesNotMatch(workflow, /CLOUDFLARE_API_TOKEN/);
 });
@@ -39,6 +39,12 @@ test('Admin production verification follows the content fingerprint and lazy AI 
   assert.match(workflow, /verify_asset 'ai-ops-admin\.css'/);
   assert.match(workflow, /verify_asset 'system-health-admin\.js'/);
   assert.match(workflow, /verify_asset 'system-health-admin\.css'/);
+  assert.match(workflow, /verify_asset 'admin-demand-loader\.js' "if \(!button\) return false;"/);
+  assert.match(workflow, /verify_asset 'admin-demand-loader\.js' "window\.EKODIAdminSidebar\?\.sync\?\.\(document\);"/);
+  assert.match(workflow, /verify_asset 'admin-menu-layout\.js' "window\.EKODICommonServicesAdmin\?\.activate\?\.\(\);"/);
+  assert.match(workflow, /verify_asset 'admin-authenticated-shell\.js' "convergeAdminRelease"/);
+  assert.match(workflow, /missing immutable cache contract/);
+  assert.match(workflow, /missing production marker/);
   assert.match(workflow, /navLabel\.textContent = '\\\\uc2dc\\\\uc2a4\\\\ud15c \\\\uac74\\\\uac15'/);
   assert.match(workflow, /pageTitle\.textContent = '\\\\uc2dc\\\\uc2a4\\\\ud15c \\\\uac74\\\\uac15'/);
   assert.match(workflow, /\\\\uc804\\\\ubb38 \\\\uae30\\\\ub2a5 \\\\uc120\\\\ud0dd\\\\uc744/);
@@ -46,6 +52,8 @@ test('Admin production verification follows the content fingerprint and lazy AI 
   assert.match(workflow, /verify_compact_without_readable_css/);
   assert.match(workflow, /! grep -Fq 'admin-readable-command\.css' \/tmp\/compact-css/);
   assert.doesNotMatch(workflow, /grep -Fq '#aiOpsPanel \.ai-chief-chat[^\n]*dist\/admin-compact\.css/);
+  assert.match(workflow, /- 'admin-menu-layout\.js'/);
+  assert.match(workflow, /- 'admin-sidebar\.js'/);
 });
 
 test('shared-site guarded release accepts any valid content fingerprint instead of a stale fixed version', async () => {
