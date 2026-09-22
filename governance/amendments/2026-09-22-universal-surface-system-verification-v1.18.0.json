@@ -35,5 +35,20 @@
     "pullRequest": 2342,
     "approvalLabel": "constitution-approved",
     "ownerInstructionDate": "2026-09-22"
+  },
+  "responsiveContentIntegrity": {
+    "mandatory": true,
+    "appliesToDesignCopywritingAndImplementation": true,
+    "naturalLanguageWordOrEojeolIntegrity": true,
+    "layoutOnlyHardLineBreakForbidden": true,
+    "viewportAdaptiveReflowRequired": true,
+    "viewportWidths": [
+      320,
+      390,
+      768,
+      1366,
+      1440
+    ],
+    "repeatedDefectPromotesToSharedGuardrail": true
   }
 }
