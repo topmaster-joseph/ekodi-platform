@@ -15,7 +15,7 @@ const coreData = json('config/core-data-boundaries.json');
 const storage = json('config/storage-policy.json');
 const workspace = json('config/service-workspace-policy.json');
 
-if (constitution.version !== '1.17.0') fail('constitution version must be 1.17.0 with guest-open public user surfaces plus all prior approved amendments');
+if (constitution.version !== '1.18.0') fail('constitution version must be 1.18.0 with universal surface system verification plus all prior approved amendments');
 if (constitution.status !== 'active') fail('constitution must be active');
 for (const principle of ['free-first-not-free-only','ekodi-core-is-source-of-truth','provider-independent-by-default','secure-by-default','one-domain-grammar','isolated-parallel-development','verification-first-evolution','security-native-intelligence','evidence-linked-recommendations','secure-projection-minimum-disclosure','integrated-responsibility-distributed-execution-standardized-connections','layered-governance-os-core-services-connections-workspaces','user-surface-engine-separation','capability-first-reuse','sustainable-scale-by-evidence','workspace-over-space','generation-10-active-baseline','open-ended-evidence-driven-generation-evolution','sovereign-autonomy-with-human-authority','person-workspace-role-capability-authority','observe-detect-reason-plan-execute-verify-recover-learn','ekodibiz-exclusive-commercial-subject','ordinary-user-information-first-commercial-separation','completion-continuity-through-recoverable-interruptions','supreme-attributes-binding','guest-open-public-user-surfaces']) {
   if (!constitution.principles?.includes(principle)) fail(`missing constitutional principle: ${principle}`);
@@ -92,6 +92,18 @@ if (completionContinuity.alternateAuthorizedPathBeforeEscalation !== true) fail(
 if (completionContinuity.blockedReservedForAuthorityOrDependency !== true) fail('blocked state must be reserved for genuine authority/dependency blocks');
 if (completionContinuity.authorityExpansionForbidden !== true || completionContinuity.productionVerificationStillRequired !== true) fail('continuity must not widen authority or weaken production verification');
 for (const interruptionClass of ['session-ended','tool-unavailable','connector-failure','rate-limit','execution-window-ended','transient-infrastructure-failure']) if (!completionContinuity.recoverableInterruptionClasses?.includes(interruptionClass)) fail(`recoverable interruption class missing: ${interruptionClass}`);
+
+const surfaceSystemVerification = constitution.surfaceSystemVerificationPolicy || {};
+if (surfaceSystemVerification.id !== 'SURFACE-SYSTEM-VERIFICATION-001' || surfaceSystemVerification.status !== 'active') fail('universal surface system verification policy must remain active');
+if (surfaceSystemVerification.completionRule !== 'system-verified-before-complete') fail('all governed surfaces must require System Verified before completion');
+if (surfaceSystemVerification.manualUserTestingDefaultGateForbidden !== true) fail('manual user testing must not be the default completion gate');
+if (surfaceSystemVerification.virtualizationPolicy?.requiredAsAvailableVerificationMethod !== true || surfaceSystemVerification.virtualizationPolicy?.virtualizationOnlyArchitectureForbidden !== true) fail('surface verification must provide virtualization without becoming virtualization-only architecture');
+for (const actor of ['guest','authenticated-user','workspace-member','operator','workspace-or-service-admin','platform-super-admin']) if (!surfaceSystemVerification.syntheticActors?.includes(actor)) fail(`surface verification synthetic actor missing: ${actor}`);
+for (const profile of ['mobile-portrait','mobile-landscape','tablet','desktop']) if (!surfaceSystemVerification.deviceProfiles?.includes(profile)) fail(`surface verification device profile missing: ${profile}`);
+for (const layer of ['route-and-canonical-url','authentication-session-and-token-hygiene','authorization-role-capability','safe-public-projection','functional-interaction','responsive-layout-and-overflow','secure-projection-and-secret-leakage','api-and-data-contract','observability-and-error-surface','real-production-host-canary']) if (!surfaceSystemVerification.requiredVerificationLayers?.includes(layer)) fail(`surface verification layer missing: ${layer}`);
+if (surfaceSystemVerification.productionCanary?.required !== true || surfaceSystemVerification.productionCanary?.realCanonicalHostRequired !== true) fail('real canonical production canary must remain mandatory');
+if (surfaceSystemVerification.productionCanary?.destructiveMutationForbidden !== true) fail('surface verification production canary must forbid destructive mutation');
+if (surfaceSystemVerification.failurePolicy?.repairRetestRedeployReverifyBeforeCompletion !== true || surfaceSystemVerification.failurePolicy?.askUserToTestAsDefaultFallbackForbidden !== true) fail('surface verification failure recovery contract drifted');
 
 const evolution = constitution.evolutionPolicy || {};
 if (evolution.mode !== 'verification_first_security_native_self_evolving') fail('evolution policy must remain verification-first and security-native');
