@@ -102,7 +102,7 @@ grant all privileges on church_private.offerings, church_private.ledger_entries,
 
 comment on table church_private.offerings is 'Restricted church offering register. Donor identity is finance-sensitive.';
 comment on table church_private.ledger_entries is 'Restricted church accounting journal; offering income is auto-linked to the offering register.';
-comment on table church_private.receipt_requests is 'Restricted donation receipt request workflow. Do not store resident registration numbers.';
+comment on table church_private.receipt_requests is 'Restricted donation receipt request workflow. Do not store government-issued personal identifiers.';
 
 create or replace function public.church_finance_list(
   p_table text,
