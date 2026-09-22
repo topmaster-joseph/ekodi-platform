@@ -40,7 +40,7 @@ test('Campus includes verified ecosystem services that were missing from the old
   for (const domain of ['author.ekodi.kr', 'work.ekodi.kr', 'energy.ekodi.kr', 'business.ekodi.kr']) {
     assert.match(js, new RegExp(domain.replaceAll('.', '\\.')));
   }
-  assert.match(js, /Work & Life/);
+  assert.match(js, /업무·생활/);
   assert.match(js, /에코디 생태계의 전체 사이트와 EKODI\.KR 첫화면 공개 설정을 한 목록에서 관리합니다/);
 });
 
@@ -51,7 +51,7 @@ test('Campus reconciles the canonical homepage registry so the two old lists can
   assert.match(js, /return `\$\{url\.hostname\}\$\{path==='\/'\?'':path\}`/);
   assert.match(js, /window\.EKODICampus = Object\.freeze/);
   assert.match(js, /import\('\.\/homepage-admin\.js'\)/);
-  assert.match(js, /Other Services/);
+  assert.match(js, /기타/);
 });
 
 test('Campus groups related services into a compact two-column layout', () => {
