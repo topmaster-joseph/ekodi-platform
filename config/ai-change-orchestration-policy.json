@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 6,
+  "schemaVersion": 7,
   "policyId": "AI-ORCHESTRATE-001",
   "status": "enforced",
   "controlPlane": "EKODI AI",
@@ -58,7 +58,17 @@
     "noProviderFallback": "EKODI Core deterministic path",
     "continueAllResolvableWorkBeforeEscalation": true,
     "rootCauseFirst": true,
-    "retryRepairRedeployReverify": true
+    "retryRepairRedeployReverify": true,
+    "continueUntilTerminalWait": true,
+    "terminalWaitStates": [
+      "external-check-queued-or-running",
+      "guarded-production-deployment-queued-or-running",
+      "human-gate-required",
+      "ambiguous-side-effect"
+    ],
+    "nonTerminalFailuresRequireAutomaticRecovery": true,
+    "validationFailureAction": "diagnose-repair-rerun-continue",
+    "parallelConflictAction": "cross-review-select-winner-retire-or-refresh-overlap-rerun-continue"
   },
   "consultationDecision": {
     "policyId": "AI-CONSULT-001",
@@ -185,7 +195,12 @@
       "reviewCompleteLabel": "related-change-review-complete",
       "integrationOrderLabel": "integration-order-approved",
       "evidenceMarker": "[EKODI RELATED CHANGE REVIEW]",
-      "remainingPrsMustRefreshAfterWinner": true
+      "remainingPrsMustRefreshAfterWinner": true,
+      "autoResolveBeforeStopping": true,
+      "stopOnlyWhenWinnerOrRefreshIsActivelyQueuedOrRunning": true,
+      "failureIsNotTerminal": true,
+      "autoRerunAfterResolution": true,
+      "continueToMergeAndGuardedDeploymentAfterPass": true
     },
     "consultationPolicy": "AI-CONSULT-001"
   },
@@ -230,7 +245,8 @@
         "risk-if-left-unresolved",
         "completion-criteria",
         "next-executable-step"
-      ]
+      ],
+      "mustContinueResolvableWorkBeforeReporting": true
     }
   },
   "executionFallback": {
