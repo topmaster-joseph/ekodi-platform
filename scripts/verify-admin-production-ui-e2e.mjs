@@ -79,6 +79,52 @@ async function waitForAdminShell() {
   await page.waitForFunction(() => Boolean(document.documentElement.dataset.ekodiDesignEngine) && document.documentElement.dataset.ekodiDesignAudit === 'pass', null, { timeout: 30000 });
 }
 
+const RESPONSIVE_ADMIN_VIEWPORTS = [
+  { id:'compact-mobile', width:320, height:568 },
+  { id:'mobile-portrait', width:390, height:844 },
+  { id:'tablet', width:768, height:1024 },
+  { id:'desktop-low', width:1366, height:768 },
+  { id:'desktop-wide', width:1440, height:900 },
+];
+
+async function auditResponsiveAdminProfile(profile) {
+  await page.setViewportSize({ width:profile.width, height:profile.height });
+  const response = await page.goto(ADMIN_URL, { waitUntil:'domcontentloaded', timeout:45000 });
+  if (!response || response.status() !== 200) throw new Error(`Admin responsive ${profile.id} returned ${response?.status() ?? 'no response'}`);
+  await waitForAdminShell();
+  await page.evaluate(() => document.fonts?.ready || Promise.resolve()).catch(() => {});
+  const result = await page.evaluate(() => {
+    const visible = node => {
+      if (!(node instanceof Element)) return false;
+      const style=getComputedStyle(node);
+      const rect=node.getBoundingClientRect();
+      return style.display!=='none' && style.visibility!=='hidden' && Number(style.opacity||1)>0 && rect.width>0 && rect.height>0;
+    };
+    const technical = node => node.matches('code,kbd,samp,.url,.domain,.email,[data-ekodi-break-anywhere],.ekodi-break-anywhere');
+    const textNodes=[...document.querySelectorAll('h1,h2,h3,h4,h5,h6,p,li,dt,dd,label,button,[role="button"],[role="tab"],a,strong,small,span')].filter(visible);
+    const wordBreakViolations=textNodes.filter(node => /[가-힣]/u.test(node.textContent||'') && !technical(node) && getComputedStyle(node).wordBreak!=='keep-all').slice(0,12).map(node=>({
+      tag:node.tagName,id:node.id||'',className:String(node.className||'').slice(0,100),wordBreak:getComputedStyle(node).wordBreak,text:String(node.textContent||'').trim().slice(0,80)
+    }));
+    const clippedText=textNodes.filter(node => {
+      if(technical(node)) return false;
+      const style=getComputedStyle(node);
+      if(style.textOverflow==='ellipsis'||['auto','scroll'].includes(style.overflowX)) return false;
+      return node.scrollWidth>node.clientWidth+2;
+    }).slice(0,12).map(node=>({tag:node.tagName,id:node.id||'',className:String(node.className||'').slice(0,100),scrollWidth:node.scrollWidth,clientWidth:node.clientWidth,text:String(node.textContent||'').trim().slice(0,80)}));
+    const controls=[...document.querySelectorAll('main button,main a[href],main input,main select,main textarea,main [role="button"],main [role="tab"]')].filter(visible);
+    const offscreenControls=controls.filter(node=>{
+      const rect=node.getBoundingClientRect();
+      return rect.left < -2 || rect.right > innerWidth+2;
+    }).slice(0,12).map(node=>({tag:node.tagName,id:node.id||'',className:String(node.className||'').slice(0,100),left:Math.round(node.getBoundingClientRect().left),right:Math.round(node.getBoundingClientRect().right),text:String(node.textContent||node.getAttribute('aria-label')||'').trim().slice(0,80)}));
+    const docWidth=Math.max(document.documentElement.scrollWidth,document.body?.scrollWidth||0);
+    return { viewport:{width:innerWidth,height:innerHeight}, horizontalOverflow:Math.max(0,docWidth-innerWidth), wordBreakViolations, clippedText, offscreenControls };
+  });
+  if(result.horizontalOverflow>2 || result.wordBreakViolations.length || result.clippedText.length || result.offscreenControls.length){
+    throw new Error(`Admin responsive-content contract failed for ${profile.id}: ${JSON.stringify(result)}`);
+  }
+  return result;
+}
+
 const response = await page.goto(ADMIN_URL, { waitUntil: 'domcontentloaded', timeout: 45000 });
 if (!response || response.status() !== 200) throw new Error(`Admin entry returned ${response?.status() ?? 'no response'}`);
 await waitForAdminShell();
@@ -135,6 +181,13 @@ if (!['auto','scroll'].includes(workbenchState.workspaceOverflowY) || workbenchS
 if (workbenchState.contextTabsPosition !== 'sticky' || workbenchState.sidebarTop !== 0) throw new Error(`Admin fixed workbench geometry failed: ${JSON.stringify(workbenchState)}`);
 if (!workbenchState.designEngine || workbenchState.designAudit === 'fail') throw new Error(`Admin Design Engine did not activate cleanly: ${JSON.stringify(workbenchState)}`);
 console.log(`ADMIN_WORKBENCH=${JSON.stringify(workbenchState)}`);
+
+const responsiveResults=[];
+for(const profile of RESPONSIVE_ADMIN_VIEWPORTS) responsiveResults.push({id:profile.id,...await auditResponsiveAdminProfile(profile)});
+console.log(`ADMIN_RESPONSIVE_CONTENT=${JSON.stringify(responsiveResults)}`);
+await page.setViewportSize({ width:1440, height:1000 });
+await page.goto(ADMIN_URL, { waitUntil:'domcontentloaded', timeout:45000 });
+await waitForAdminShell();
 
 const assetVersion = await page.locator('script[src*="admin-authenticated-shell.js?v="]').getAttribute('src').then(src => new URL(src, ADMIN_URL).searchParams.get('v'));
 if (!assetVersion) throw new Error('Production Admin fingerprint is missing');
