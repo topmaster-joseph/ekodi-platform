@@ -19,7 +19,7 @@ Every authenticated action is interpreted as:
 
 `ekodi.kr/my` is the canonical personal home and the canonical place for selecting and changing workspaces. `my.ekodi.kr` is compatibility/internal routing only.
 
-Workspace selection, ecosystem discovery, recommendations, and service switching belong in My EKODI content. Service pages must not duplicate a global workspace directory or add persistent floating selectors.
+Workspace selection, ecosystem discovery, recommendations, and service switching belong in My EKODI content. Service pages must not duplicate a global workspace directory or add persistent floating selectors. Individual-site headers also do not advertise or link back to the EKODI root or My EKODI; those cross-service journeys begin from the central surfaces themselves.
 
 After a user chooses a workspace, central auth/workspace handoff returns to the target service with verified context. Browser context helps navigation but never proves authorization.
 
@@ -33,7 +33,7 @@ A service must not create persistent platform-level chrome for account identity,
 
 The shared visual architecture has three persistent responsibilities:
 
-1. **Common header**: stable identity/service context, home behavior, language/account actions when applicable, mobile-safe fixed positioning, and accessibility behavior.
+1. **Common header**: stable current-site identity/context, site-local home behavior, the rounded language selector, service-local account actions only when applicable, mobile-safe fixed positioning, and accessibility behavior. Individual sites do not carry EKODI-root or My-EKODI jump links.
 2. **Service content**: the widest practical work canvas. Task-specific controls stay local to the task and must not become global floating chrome.
 3. **Common footer**: stable EKODI identity, policy/ecosystem links, language affordance where applicable, and shared closing navigation.
 

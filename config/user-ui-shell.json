@@ -32,16 +32,16 @@
     "globalAmbientAudioForbidden": true,
     "progressiveHomeDisclosure": true,
     "languageChoiceInHeaderOnly": true,
-    "footerLanguageChoiceForbidden": true
+    "footerLanguageChoiceForbidden": true,
+    "individualSiteHeaderStaysLocal": true
   },
   "header": {
     "owner": "shared-shell",
     "strategy": "adopt-existing-first",
     "fallback": "shared-shell-header-when-missing",
     "requiredMeaning": [
-      "EKODI identity",
+      "current site identity",
       "current service context",
-      "account or My EKODI path",
       "language choice"
     ],
     "localNavigation": "service-owned",
@@ -52,7 +52,8 @@
       "responsive",
       "content offset when fixed",
       "compact language control",
-      "brand returns to current service home top"
+      "brand returns to current service home top",
+      "individual-site headers keep navigation inside the current site"
     ],
     "recognizedExistingHeaders": [
       "header",
@@ -67,7 +68,8 @@
       "service-specific copy of shared header runtime",
       "admin navigation mixed into user header",
       "global MR or background-music playback control",
-      "global workspace or space-selection control"
+      "global workspace or space-selection control",
+      "global EKODI root or My EKODI links in individual-site headers"
     ],
     "alignment": "centered-canvas",
     "geometry": "service-token-driven",
