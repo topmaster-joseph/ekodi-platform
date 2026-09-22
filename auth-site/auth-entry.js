@@ -20,7 +20,7 @@ if (!interactive) {
 }
 
 async function loadAuthRouter() {
-  return import('./auth-router.js?v=20260918-csp-bootstrap-1');
+  return import('./auth-router.js?v=20260923-return-continuity-1');
 }
 
 if (repeated) {

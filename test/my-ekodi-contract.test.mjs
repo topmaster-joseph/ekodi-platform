@@ -120,15 +120,16 @@ test('My EKODI security middleware runs before static assets in staging and prod
   assert.match(manifest,/x-ekodi-service: my-ekodi/);
 });
 
-test('My EKODI recovers a misrouted workspace-admin handoff without consuming the one-time token',async()=>{
+test('My EKODI recovers any trusted service handoff before consuming the one-time token',async()=>{
   const app=await read('my/app.js');
-  assert.match(app,/function misroutedWorkspaceAdminReturn\(\)/);
-  assert.match(app,/params\.get\('from'\)!=='space'/);
+  assert.match(app,/function misroutedServiceReturn\(\)/);
   assert.match(app,/hash\.get\('ekodi_token'\)/);
-  assert.match(app,/target\.origin!=='https:\/\/ekodi\.kr'/);
+  assert.match(app,/hostname==='ekodi\.kr'\|\|hostname\.endsWith\('\.ekodi\.kr'\)\|\|hostname==='cgma\.or\.kr'/);
+  assert.match(app,/target\.origin==='https:\/\/ekodi\.kr'.*target\.pathname==='\/my'/);
   assert.match(app,/target\.hash=location\.hash/);
-  assert.match(app,/location\.replace\(MISROUTED_WORKSPACE_ADMIN_RETURN\.href\)/);
-  assert.match(app,/if\(!MISROUTED_WORKSPACE_ADMIN_RETURN\)discardUnsafeReturnTarget\(\)/);
+  assert.match(app,/location\.replace\(MISROUTED_SERVICE_RETURN\.href\)/);
+  assert.match(app,/if\(!MISROUTED_SERVICE_RETURN\)discardUnsafeReturnTarget\(\)/);
+  assert.doesNotMatch(app,/MISROUTED_WORKSPACE_ADMIN_RETURN/);
 });
 
 test('My EKODI rejects recursive or foreign return targets and private pages opt out of indexing',async()=>{

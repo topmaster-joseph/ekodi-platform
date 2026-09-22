@@ -1,5 +1,5 @@
 {
-  "version": "1.19.0",
+  "version": "1.20.0",
   "effectiveDate": "2026-09-22",
   "status": "active",
   "title": "EKODI Platform Constitution",
@@ -36,7 +36,8 @@
     "site-owned-admin-canonical-path",
     "guest-open-public-user-surfaces",
     "self-verifying-all-surface-system-evidence",
-    "ekodi-owned-virtualization-first"
+    "ekodi-owned-virtualization-first",
+    "authentication-return-continuity"
   ],
   "architectureModel": {
     "registry": "governance/architecture/ekodi-os-architecture.json",
@@ -796,5 +797,49 @@
     "successfulExternalFallbackMustCreateNativeCapabilityGapRecord": true,
     "correctableNativeGapMustNotInterruptUserWorkflow": true,
     "virtualizationOnlyArchitectureForbidden": true
+  },
+  "authenticationReturnContinuityPolicy": {
+    "id": "AUTH-RETURN-CONTINUITY-001",
+    "status": "active",
+    "exactPreLoginReturnPreferred": true,
+    "initiatingSiteContextMustBePreserved": true,
+    "crossServicePostLoginFallbackForbidden": true,
+    "fallbackOrder": [
+      "trusted-exact-return-to",
+      "registered-service-authenticated-home",
+      "canonical-initiating-service-entry"
+    ],
+    "myEkodi": {
+      "canonicalPath": "/my",
+      "genericPostLoginFallbackForbidden": true,
+      "allowedInitiators": [
+        "my",
+        "portal"
+      ],
+      "misroutedTrustedTokenMustRedirectBeforeConsumption": true
+    },
+    "adminReturn": {
+      "exactAdminChildPathRequired": true,
+      "examples": [
+        "/{slug}/admin/menu",
+        "/{slug}/admin/delivery",
+        "/{slug}/admin/connections"
+      ]
+    },
+    "trustedTargetRequirements": [
+      "https",
+      "no-url-credentials",
+      "registered-ekodi-or-customer-owned-destination"
+    ],
+    "queryContextPreserved": true,
+    "reusableSecretInQueryForbidden": true,
+    "appliesToAllCurrentAndFutureLoginAdapters": true,
+    "enforcement": [
+      "auth-router",
+      "client-auth",
+      "service-auth",
+      "my-misroute-recovery",
+      "system-verification"
+    ]
   }
 }

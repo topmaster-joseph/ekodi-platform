@@ -42,16 +42,17 @@ test('workspace common services remain member-gated while public services use se
   assert.match(manifest, /userAccessPolicy: 'public-guide-workspace-member-content'/);
 });
 
-test('ordinary common-service members land in My EKODI while platform admins keep original return', () => {
-  assert.match(client, /const commonServiceEntry=config\.operatingModel==='shared-service'/);
-  assert.match(client, /new URL\('https:\/\/ekodi\.kr\/my\/'\)/);
-  assert.match(client, /commonServiceEntry&&proof\.platformAdmin!==true/);
-  assert.match(client, /target\.searchParams\.set\('from',site\)/);
+test('common-service login returns to the initiating service and never uses My EKODI as a generic fallback', () => {
+  assert.match(client, /function postLoginTarget\(\)/);
+  assert.match(client, /const target=new URL\(RETURN_TO\)/);
+  assert.match(client, /isPlatformMy&&!\['my','portal'\]\.includes\(site\)/);
+  assert.match(client, /const target=postLoginTarget\(\)/);
+  assert.doesNotMatch(client, /function myEntryTarget\(\)/);
+  assert.doesNotMatch(client, /commonServiceEntry&&proof\.platformAdmin!==true/);
+  assert.doesNotMatch(client, /로그인 후 일반회원은 My EKODI/);
   assert.match(identity, /async function platformAdminForUser/);
   assert.match(identity, /select\("platform_admin"\)/);
   assert.match(identity, /platformAdmin/);
-  assert.match(identity, /user:\{email:profile\.email,name:profile\.displayName\}/);
-  assert.match(identity, /ekodiId/);
 });
 
 test('workspace selector stays hidden before an authenticated service session', () => {

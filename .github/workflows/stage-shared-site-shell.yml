@@ -195,8 +195,8 @@ jobs:
             code=$(curl -sS -D /tmp/shared-auth.headers -o /tmp/shared-auth.html -w '%{http_code}' --connect-timeout 5 --max-time 15 -H "x-ekodi-staging-host: ekodi.kr" "$STAGING_URL$auth_path" || true)
             echo "$auth_path -> $code"
             [[ "$code" == '200' ]]
-            grep -Fq '/auth/auth-bootstrap.js?v=20260918-csp-bootstrap-1' /tmp/shared-auth.html
-            grep -Fq '/auth/auth-entry.js?v=20260918-csp-bootstrap-1' /tmp/shared-auth.html
+            grep -Fq '/auth/auth-bootstrap.js?v=20260923-return-continuity-1' /tmp/shared-auth.html
+            grep -Fq '/auth/auth-entry.js?v=20260923-return-continuity-1' /tmp/shared-auth.html
             grep -Fiq "content-security-policy:" /tmp/shared-auth.headers
             if grep -Fi 'content-security-policy:' /tmp/shared-auth.headers | grep -Eiq "script-src[^;]*'unsafe-inline'"; then
               echo 'Auth staging CSP unexpectedly permits inline JavaScript.'
@@ -211,7 +211,7 @@ jobs:
               if [[ "$asset" == 'auth-bootstrap.js' ]]; then
                 grep -Fq 'dataset.seamlessSso' /tmp/shared-auth-asset.js
               else
-                grep -Fq "./auth-router.js?v=20260918-csp-bootstrap-1" /tmp/shared-auth-asset.js
+                grep -Fq "./auth-router.js?v=20260923-return-continuity-1" /tmp/shared-auth-asset.js
               fi
             done
           }

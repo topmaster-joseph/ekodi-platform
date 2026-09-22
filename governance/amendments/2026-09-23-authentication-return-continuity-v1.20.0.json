@@ -1,0 +1,38 @@
+{
+  "id": "2026-09-23-authentication-return-continuity-v1.20.0",
+  "constitutionVersion": "1.20.0",
+  "status": "approved",
+  "approvedBy": "topmaster-joseph",
+  "approvedAt": "2026-09-23",
+  "changeClass": "C2",
+  "taskId": "auth-return-continuity-20260923",
+  "issue": null,
+  "pullRequest": 2368,
+  "summary": "Layer site-local authentication return continuity on top of the approved v1.19.0 EKODI-owned virtualization sovereignty constitution.",
+  "approvalBasis": "The platform owner explicitly instructed EKODI on 2026-09-23 to make site-local post-login return behavior a mandatory rule, including restoring workspace/service admin users to the exact admin section and allowing My EKODI only for apex/My-specific login flows.",
+  "adds": [
+    "exact trusted return_to is the first post-login destination",
+    "site-local My/authenticated home or canonical site entry is fallback only",
+    "cross-service login fallback is forbidden",
+    "My EKODI generic fallback is forbidden",
+    "workspace/service admin child path is preserved after login",
+    "misrouted handoff tokens arriving at My EKODI redirect before token consumption"
+  ],
+  "preserves": [
+    "central EKODI identity authority",
+    "Google linked identity",
+    "Person + Workspace + Role + Capability authorization",
+    "trusted HTTPS return-target validation",
+    "one-time handoff token model",
+    "guarded production deployment",
+    "v1.19.0 EKODI-owned virtualization sovereignty and native execution rules"
+  ],
+  "rollback": "Revert only the v1.20.0 authentication-return-continuity policy, service-workspace authenticationReturnPolicy, and matching auth/client/My routing changes while preserving the approved v1.19.0 EKODI-owned virtualization sovereignty constitution and all user identities, memberships, sessions and workspace data.",
+  "approvalEvidence": {
+    "requiredPullRequestLabel": "constitution-approved",
+    "ownerInstructionRecorded": true,
+    "pullRequest": 2368,
+    "approvalLabel": "constitution-approved",
+    "ownerInstructionDate": "2026-09-23"
+  }
+}

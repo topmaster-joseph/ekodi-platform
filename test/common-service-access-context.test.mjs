@@ -6,14 +6,17 @@ import { fileURLToPath } from 'node:url';
 
 const read=path=>readFile(new URL(`../${path}`,import.meta.url),'utf8');
 
-test('central common-service auth preserves source return target and bounded workspace context for My EKODI',async()=>{
+test('central common-service auth preserves the initiating return target without a My EKODI detour',async()=>{
   const auth=await read('auth-site/client-auth.js');
   assert.match(auth,/WORKSPACE_KEY_RE=\/\^\[a-z\]\+:/);
   assert.match(auth,/REQUESTED_WORKSPACE=requestedWorkspaceRaw\.length<=180/);
-  assert.match(auth,/target\.searchParams\.set\('from',site\)/);
-  assert.match(auth,/target\.searchParams\.set\('return_to',RETURN_TO\)/);
-  assert.match(auth,/target\.searchParams\.set\('workspace',REQUESTED_WORKSPACE\)/);
-  assert.match(auth,/commonServiceEntry&&proof\.platformAdmin!==true\?myEntryTarget\(\)/);
+  assert.match(auth,/function postLoginTarget\(\)/);
+  assert.match(auth,/const target=new URL\(RETURN_TO\)/);
+  assert.match(auth,/isPlatformMy&&!\['my','portal'\]\.includes\(site\)/);
+  assert.match(auth,/const target=postLoginTarget\(\)/);
+  assert.doesNotMatch(auth,/function myEntryTarget\(\)/);
+  assert.doesNotMatch(auth,/commonServiceEntry&&proof\.platformAdmin!==true/);
+  assert.doesNotMatch(auth,/target\.searchParams\.set\('from',site\)/);
 });
 
 test('My common-service access guidance resolves only RLS-protected user access and never guesses another workspace',async()=>{
