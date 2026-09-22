@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "policyId": "EKODI-BROWSER-WORKER-001",
+  "status": "enforced",
+  "owner": "ekodi-orchestrator",
+  "purpose": "EKODI-owned isolated browser execution for surface verification and bounded browser tasks.",
+  "canonicalOrigin": "https://ekodi.kr",
+  "originPolicy": {
+    "canonicalOriginOnly": true,
+    "subdomainTargetsForbidden": true,
+    "userinfoForbidden": true,
+    "httpForbidden": true,
+    "dataFileJavascriptSchemesForbidden": true
+  },
+  "isolation": {
+    "ephemeralBrowserContextRequired": true,
+    "persistentUserProfileForbidden": true,
+    "activeUserProfileReuseForbidden": true,
+    "downloadsDefault": "deny",
+    "clipboardIntegration": false,
+    "hostInputInjection": false,
+    "headlessDefault": true
+  },
+  "taskProtocol": {
+    "allowedActions": [
+      "goto",
+      "click",
+      "fill",
+      "press",
+      "waitFor",
+      "assertText",
+      "snapshot",
+      "screenshot"
+    ],
+    "rawJavascriptForbidden": true,
+    "arbitraryShellForbidden": true,
+    "maxActions": 30,
+    "maxTaskSeconds": 120,
+    "maxTextInputChars": 1000,
+    "maxSelectorChars": 300
+  },
+  "networkSafety": {
+    "defaultMutationMode": "block-non-idempotent-http",
+    "allowedReadMethods": [
+      "GET",
+      "HEAD",
+      "OPTIONS"
+    ],
+    "mutationRequiresExplicitTaskGrant": true,
+    "mutationGrantDefault": false,
+    "crossOriginRequests": "browser-default-but-task-navigation-canonical-only"
+  },
+  "evidence": {
+    "machineReadableResultRequired": true,
+    "screenshotSupported": true,
+    "finalUrlRequired": true,
+    "viewportRequired": true,
+    "consoleErrorsCaptured": true,
+    "pageErrorsCaptured": true,
+    "requestFailuresCaptured": true,
+    "initialRuntimeProof": "evidence/runtime/background-browser-worker/2026-09-22-initial-proof.json",
+    "runtimeProven": true
+  },
+  "provider": {
+    "runtime": "playwright-chromium",
+    "orchestration": "ekodi-owned",
+    "underlyingComputeReplaceable": true,
+    "externalBrowserServiceRequired": false
+  }
+}

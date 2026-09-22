@@ -1,0 +1,122 @@
+name: EKODI Background Browser Worker
+
+on:
+  workflow_dispatch:
+    inputs:
+      surface_path:
+        description: Canonical ekodi.kr path to inspect
+        required: false
+        default: /
+      device_profile:
+        description: Device profile
+        required: false
+        default: desktop
+        type: choice
+        options:
+          - compact-mobile
+          - mobile-portrait
+          - mobile-landscape
+          - tablet
+          - desktop
+  pull_request:
+    paths:
+      - 'scripts/ekodi-background-browser-worker.mjs'
+      - 'scripts/validate-background-browser-worker.mjs'
+      - 'config/background-browser-worker-policy.json'
+      - 'config/surface-system-verification-policy.json'
+      - 'config/autonomous-execution-fabric-policy.json'
+      - 'test/background-browser-worker.test.mjs'
+      - '.github/workflows/ekodi-background-browser-worker.yml'
+      - 'package.json'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/ekodi-background-browser-worker.mjs'
+      - 'scripts/validate-background-browser-worker.mjs'
+      - 'config/background-browser-worker-policy.json'
+      - 'config/surface-system-verification-policy.json'
+      - 'config/autonomous-execution-fabric-policy.json'
+      - 'test/background-browser-worker.test.mjs'
+      - '.github/workflows/ekodi-background-browser-worker.yml'
+      - 'package.json'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-background-browser-worker-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate native worker contract
+        run: |
+          node --check scripts/ekodi-background-browser-worker.mjs
+          node scripts/validate-background-browser-worker.mjs
+          node --test test/background-browser-worker.test.mjs
+
+  runtime-smoke:
+    needs: contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Install isolated Chromium harness
+        run: |
+          npm install --no-save --package-lock=false playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Build bounded browser task
+        shell: bash
+        env:
+          INPUT_PATH: ${{ inputs.surface_path || '/' }}
+          INPUT_DEVICE: ${{ inputs.device_profile || 'desktop' }}
+        run: |
+          node - <<'NODE'
+          const fs=require('fs');
+          const raw=String(process.env.INPUT_PATH||'/').trim();
+          if(!raw.startsWith('/')||raw.startsWith('//')) throw new Error('surface_path must be a canonical root-relative path');
+          const device=String(process.env.INPUT_DEVICE||'desktop');
+          const allowed=new Set(['compact-mobile','mobile-portrait','mobile-landscape','tablet','desktop']);
+          if(!allowed.has(device)) throw new Error('invalid device profile');
+          fs.mkdirSync('artifacts',{recursive:true});
+          fs.writeFileSync('artifacts/browser-task.json',JSON.stringify({
+            taskId:'gha-'+process.env.GITHUB_RUN_ID+'-'+process.env.GITHUB_RUN_ATTEMPT,
+            path:raw,
+            deviceProfile:device,
+            allowMutation:false,
+            actions:[
+              {type:'snapshot'},
+              {type:'screenshot',name:'canonical-surface',fullPage:true}
+            ]
+          },null,2));
+          NODE
+      - name: Run EKODI-owned isolated browser
+        env:
+          EKODI_BROWSER_TASK_FILE: artifacts/browser-task.json
+          EKODI_BROWSER_ARTIFACT_DIR: artifacts/background-browser-worker
+        run: node scripts/ekodi-background-browser-worker.mjs
+      - name: Validate evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          result=$(find artifacts/background-browser-worker -name result.json -print -quit)
+          test -n "$result"
+          jq -e '.ok == true and .mode == "ekodi-owned-background-browser" and .canonicalOrigin == "https://ekodi.kr" and .headless == true and .ephemeralContext == true and .activeUserProfileReused == false and .hostInputInjection == false' "$result" >/dev/null
+          jq -e '.allowMutation == false' "$result" >/dev/null
+          echo '## EKODI Background Browser Worker' >> "$GITHUB_STEP_SUMMARY"
+          jq -r '"- Result: (.ok)\n- Final URL: (.finalUrl)\n- Device: (.deviceProfile) (.viewport.width)x(.viewport.height)\n- Headless/ephemeral: (.headless)/(.ephemeralContext)\n- Blocked mutations: (.blockedMutations|length)\n- Screenshots: (.screenshots|length)"' "$result" >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ekodi-background-browser-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/background-browser-worker
+          retention-days: 7

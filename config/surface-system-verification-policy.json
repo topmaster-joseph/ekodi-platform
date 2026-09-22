@@ -29,12 +29,33 @@
   },
   "execution": {
     "orchestrator": "ekodi-orchestrator",
-    "defaultHarness": "isolated-browser-or-equivalent",
+    "defaultHarness": "ekodi-owned-isolated-browser-runtime",
     "virtualizationRequiredWhenAvailable": true,
     "virtualizationOnly": false,
     "realProductionCanaryRequired": true,
     "manualUserTestDefaultGate": false,
-    "independentEvidenceForHighRisk": true
+    "independentEvidenceForHighRisk": true,
+    "nativeWorkerPolicy": "config/background-browser-worker-policy.json",
+    "nativeWorkerId": "ekodi-background-browser-worker",
+    "virtualizationProviderPolicy": {
+      "nativeFirst": true,
+      "nativeCapabilities": [
+        "ekodi-background-browser-worker",
+        "autonomous-execution-fabric:browser-e2e",
+        "ekodi-native-remote-computer"
+      ],
+      "externalProviderRole": "temporary-replaceable-fallback-only",
+      "fallbackAllowedOnlyWhen": [
+        "native-capability-not-production-ready",
+        "native-capability-unavailable",
+        "required-capability-not-yet-implemented",
+        "native-capacity-or-runtime-failure"
+      ],
+      "fallbackReasonAndAuditRequired": true,
+      "nativeCapabilityGapRecordRequired": true,
+      "paidExternalAutoUpgradeForbidden": true,
+      "securityAndIsolationMayNotBeWeakened": true
+    }
   },
   "syntheticActors": [
     {
@@ -137,7 +158,10 @@
       "production_host",
       "observability_result",
       "verification_timestamp",
-      "result"
+      "result",
+      "virtualization_provider",
+      "virtualization_fallback_reason",
+      "native_capability_gap"
     ]
   },
   "states": {
