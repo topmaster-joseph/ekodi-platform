@@ -3,7 +3,7 @@
 if(window.__EKODI_USER_UI_HEADER_BOOTED)return;
 window.__EKODI_USER_UI_HEADER_BOOTED=true;
 
-const VERSION=5;
+const VERSION=6;
 const SITE_CHROME_URL='https://workspace-api.ekodi.kr/v1/site-chrome/public';
 const STYLE_ID='ekodi-user-ui-header-style';
 const USER_SURFACES=new Set(['public','workspace']);
@@ -145,6 +145,29 @@ function updateContentFrame(){
   document.documentElement.style.setProperty('--ekodi-user-content-inline-size',inline+'px');document.documentElement.style.setProperty('--ekodi-user-content-left',left+'px');document.documentElement.style.setProperty('--ekodi-user-content-right',right+'px');document.documentElement.dataset.ekodiContentFrame='main-aligned-v1';
 }
 function surface(){return String(document.documentElement.dataset.ekodiShellSurface||'').toLowerCase();}
+function serviceId(){return String(document.documentElement.dataset.ekodiService||document.body?.dataset?.ekodiService||'').trim().toLowerCase();}
+function isIndividualSite(){
+  const service=serviceId();
+  if(service&&!new Set(['ekodi','my','auth','admin']).has(service))return true;
+  const first=location.pathname.split('/').filter(Boolean)[0]||'';
+  if(first&&!new Set(['my','auth','admin','privacy','terms','api','shell']).has(first))return true;
+  const host=String(location.hostname||'').toLowerCase();
+  return Boolean(host&&host!=='ekodi.kr'&&host!=='www.ekodi.kr'&&!/^(?:auth|admin|my)\.ekodi\.kr$/.test(host));
+}
+function isGlobalPlatformHeaderLink(anchor){
+  if(!(anchor instanceof HTMLAnchorElement))return false;
+  try{
+    const url=new URL(anchor.getAttribute('href')||'',location.href);
+    if(!['ekodi.kr','www.ekodi.kr'].includes(url.hostname.toLowerCase()))return false;
+    const path=url.pathname.replace(/\/+$/,'')||'/';
+    return path==='/'||path==='/my';
+  }catch{return false;}
+}
+function pruneIndividualSiteGlobalLinks(header){
+  if(!header||!isIndividualSite())return;
+  for(const anchor of header.querySelectorAll('a[href]'))if(isGlobalPlatformHeaderLink(anchor))anchor.remove();
+  header.dataset.ekodiHeaderScope='service-local';
+}
 function siteSubject(){const explicit=String(document.documentElement.dataset.ekodiSiteSubject||document.body?.dataset?.ekodiSiteSubject||'').trim().toLowerCase();if(explicit)return explicit;const service=serviceId();const owned={church:'ekodi-church',biz:'ekodi-biz',lab:'ekodi-lab',trade:'ekodi-trade',cafe:'ekodi-cafe'};if(owned[service])return owned[service];const first=location.pathname.split('/').filter(Boolean)[0]||'';const aliases={ekodibiz:'ekodi-biz',biz:'ekodi-biz',ekodichurch:'ekodi-church',church:'ekodi-church',ekodilab:'ekodi-lab',lab:'ekodi-lab',cheonggye:'cgma','cheonggye-merchants':'cgma','cheonggye-merchant-association':'cgma'};return aliases[first]||first}
 async function siteChrome(){const subject=siteSubject();if(!subject||['admin','auth','privacy','terms','api'].includes(subject))return null;if(!siteChromePromise)siteChromePromise=fetch(`${SITE_CHROME_URL}?subject_key=${encodeURIComponent(subject)}`,{credentials:'omit',cache:'no-store'}).then(async r=>r.ok?r.json():null).catch(()=>null);return siteChromePromise}
 function mode(){
@@ -183,13 +206,39 @@ function serviceLabel(){
 function ensureFallback(){
   if(!document.body)return null;
   const existing=document.querySelector(`[${FALLBACK_ATTR}]`);
-  if(existing){fallbackHeader=existing;fallbackHeader.classList.add(FALLBACK_CLASS);return fallbackHeader;}
+  if(existing){fallbackHeader=existing;fallbackHeader.classList.add(FALLBACK_CLASS);pruneIndividualSiteGlobalLinks(fallbackHeader);return fallbackHeader;}
+  const individual=isIndividualSite();
   const header=document.createElement('header');
   header.className=FALLBACK_CLASS;
   header.setAttribute(FALLBACK_ATTR,`v${VERSION}`);
   header.setAttribute('data-ekodi-user-header-root',`v${VERSION}`);
+  header.setAttribute('data-ekodi-header-scope',individual?'service-local':'platform');
   header.setAttribute('role','banner');
-  header.innerHTML=`<div class="ekodi-user-ui-header-fallback__inner"><a class="ekodi-user-ui-header-fallback__brand" data-ekodi-header-home href="https://ekodi.kr/" aria-label="EKODI 홈">EKODI</a><span class="ekodi-user-ui-header-fallback__context" data-ekodi-header-center>${serviceLabel()}</span><a class="ekodi-user-ui-header-fallback__my" href="https://ekodi.kr/my/">My EKODI</a></div>`;
+  const inner=document.createElement('div');
+  inner.className='ekodi-user-ui-header-fallback__inner';
+  const brand=document.createElement('a');
+  brand.className='ekodi-user-ui-header-fallback__brand';
+  brand.setAttribute(HOME_ATTR,`v${VERSION}`);
+  brand.href=individual?serviceHomeUrl().toString():'https://ekodi.kr/';
+  brand.textContent=individual?serviceLabel():'EKODI';
+  brand.setAttribute('aria-label',`${brand.textContent} 홈`);
+  const context=document.createElement('span');
+  context.className='ekodi-user-ui-header-fallback__context';
+  context.setAttribute('data-ekodi-header-center','');
+  context.setAttribute('aria-hidden','true');
+  const actions=document.createElement('nav');
+  actions.className='ekodi-user-ui-header-fallback__nav';
+  actions.setAttribute('data-ekodi-header-actions','');
+  actions.setAttribute('aria-label',individual?'사이트 도구':'사용자 계정');
+  if(!individual){
+    const my=document.createElement('a');
+    my.className='ekodi-user-ui-header-fallback__my';
+    my.href='https://ekodi.kr/my/';
+    my.textContent='My EKODI';
+    actions.append(my);
+  }
+  inner.append(brand,context,actions);
+  header.append(inner);
   document.body.prepend(header);
   fallbackHeader=header;
   return header;
@@ -273,6 +322,7 @@ function detach(){
 }
 function attach(header){
   if(!header||!shouldEnable())return;
+  pruneIndividualSiteGlobalLinks(header);
   bindHomeAnchor(header);
   void siteChrome().then(chrome=>applySiteChromeHeader(header,chrome));
   if(activeHeader===header&&spacer?.isConnected){
