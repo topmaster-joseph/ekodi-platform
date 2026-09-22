@@ -3,6 +3,7 @@ import { injectEkodiShell, injectEkodiTenantReadability } from './ekodi-shell-in
 
 const CANONICAL_HOST='ekodi.kr';
 const SURFACE_PREFIXES=Object.freeze({my:'/my',admin:'/admin',auth:'/auth'});
+const PUBLIC_PERSON_PATH_RE=/^\/@[a-z0-9][a-z0-9._-]{2,39}\/?$/;
 const SYSTEM_PATHS=Object.freeze(['/api','/mcp','/webhooks','/health','/connect']);
 const PERSONAL_FINANCE_CONTROL_PATH='/api/control/personal-finance';
 const PUBLIC_CONTROL_PREVIEW_PATH='/api/public/preview/map';
@@ -315,6 +316,7 @@ async function proxyExecutionSurface(request,env,spec,legacyFetch,externalFetch)
     }});
   }
   const executionSurface=executionSurfaceForPath(path);if(executionSurface){const response=await proxyExecutionSurface(request,env,executionSurface,legacyFetch,externalFetch);return executionSurface.id==='lab'?injectEkodiTenantReadability(response):response;}
+  if(PUBLIC_PERSON_PATH_RE.test(path))return proxyBinding(request,env?.MY,'','person-public-profile');
   if(path===SURFACE_PREFIXES.my)return canonicalSlashRedirect(request,SURFACE_PREFIXES.my);
   if(path.startsWith(`${SURFACE_PREFIXES.my}/`))return proxyBinding(request,env?.MY,SURFACE_PREFIXES.my,'my');
   if(path===SURFACE_PREFIXES.auth)return canonicalSlashRedirect(request,SURFACE_PREFIXES.auth);
@@ -337,6 +339,7 @@ async function proxyExecutionSurface(request,env,spec,legacyFetch,externalFetch)
 export const EKODI_CANONICAL_SURFACES=Object.freeze({
   host:CANONICAL_HOST,
   public:'/',
+  publicPerson:'/@{handle}',
   user:'/my',
   admin:'/admin',
   auth:'/auth',
