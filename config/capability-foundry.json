@@ -1,0 +1,243 @@
+{
+  "schemaVersion": 1,
+  "foundryId": "ekodi.capability-foundry.v1",
+  "status": "active",
+  "visibility": "admin_internal",
+  "principle": "accumulate_reusable_capability_before_creating_user_service",
+  "constitutionalAlignment": [
+    "capability-first-reuse",
+    "shared-before-dedicated",
+    "verification-first-evolution",
+    "no-speculative-scale"
+  ],
+  "lifecycle": [
+    "discovered",
+    "module_candidate",
+    "sandboxed",
+    "verified",
+    "ready_for_reuse",
+    "adopted",
+    "quarantined",
+    "retired"
+  ],
+  "serviceCreationRule": {
+    "capabilityFirst": true,
+    "sampleBeforeUserService": true,
+    "minimumVerifiedSampleRuns": 3,
+    "userRequestOrMeasuredNeedRequired": true,
+    "reuseExistingCapabilitiesFirst": true,
+    "newDedicatedBoundaryByExceptionOnly": true,
+    "serviceCreationAutomatic": false,
+    "humanReviewRequired": true
+  },
+  "sampleService": {
+    "id": "internal-capability-sample",
+    "name": "Capability Sample Service",
+    "surface": "admin-capability-center",
+    "dataPolicy": "synthetic_only",
+    "sideEffects": "none",
+    "externalNetwork": false,
+    "productionWrites": false,
+    "persistsInputs": false,
+    "outputPolicy": "preview_only"
+  },
+  "families": [
+    {
+      "id": "knowledge",
+      "name": "지식·출처",
+      "purpose": "수집·변경감지·검색·출처·최신성 검증"
+    },
+    {
+      "id": "document",
+      "name": "문서",
+      "purpose": "읽기·구조화·작성·변환·양식 처리"
+    },
+    {
+      "id": "language",
+      "name": "언어",
+      "purpose": "언어판별·번역·통역·다국어 출력"
+    },
+    {
+      "id": "media",
+      "name": "미디어",
+      "purpose": "이미지·음성·영상·자막·전사 처리"
+    },
+    {
+      "id": "data",
+      "name": "데이터",
+      "purpose": "정규화·분석·비교·지표·동기화"
+    },
+    {
+      "id": "workflow",
+      "name": "워크플로",
+      "purpose": "조합·자동화·승인·예약·재시도"
+    },
+    {
+      "id": "communication",
+      "name": "소통",
+      "purpose": "메시지·알림·응대·관계 흐름"
+    },
+    {
+      "id": "integration",
+      "name": "연동",
+      "purpose": "API·Webhook·Feed·Provider Adapter"
+    },
+    {
+      "id": "identity_access",
+      "name": "인증·권한",
+      "purpose": "사용자·역할·권한·동의·위임"
+    },
+    {
+      "id": "realtime",
+      "name": "실시간",
+      "purpose": "라이브·상태·presence·실시간 자막"
+    },
+    {
+      "id": "commerce",
+      "name": "상거래",
+      "purpose": "상품·메뉴·가격·판매·공급망 구성요소"
+    },
+    {
+      "id": "safety_verification",
+      "name": "안전·검증",
+      "purpose": "보안·권리·감사·검증·롤백"
+    }
+  ],
+  "modules": [
+    {
+      "id": "source.change-detector",
+      "family": "knowledge",
+      "name": "변경 감지기",
+      "state": "ready_for_reuse",
+      "kind": "pure_module",
+      "actionTier": "observe",
+      "implementation": "capability-sample-runtime:change-detector",
+      "description": "이전/현재 텍스트의 정규화 지문과 변경 여부를 계산한다."
+    },
+    {
+      "id": "text.language-profile",
+      "family": "language",
+      "name": "언어 프로파일러",
+      "state": "ready_for_reuse",
+      "kind": "pure_module",
+      "actionTier": "observe",
+      "implementation": "capability-sample-runtime:language-profile",
+      "description": "텍스트의 문자 계열 분포를 계산해 후속 번역·통역 라우팅에 사용할 언어 단서를 만든다."
+    },
+    {
+      "id": "content.structure-extractor",
+      "family": "document",
+      "name": "구조 추출기",
+      "state": "ready_for_reuse",
+      "kind": "pure_module",
+      "actionTier": "observe",
+      "implementation": "capability-sample-runtime:structure-extractor",
+      "description": "텍스트에서 제목·줄·목록·문장 등 기본 구조를 추출한다."
+    },
+    {
+      "id": "verification.provenance-check",
+      "family": "safety_verification",
+      "name": "출처 검증기",
+      "state": "ready_for_reuse",
+      "kind": "pure_module",
+      "actionTier": "observe",
+      "implementation": "capability-sample-runtime:provenance-check",
+      "description": "HTTPS·출처등급·권리허용·시점 정보로 샘플 출처의 사용 가능성을 점검한다."
+    },
+    {
+      "id": "workflow.capability-composer",
+      "family": "workflow",
+      "name": "Capability 조합기",
+      "state": "ready_for_reuse",
+      "kind": "pure_module",
+      "actionTier": "assist",
+      "implementation": "capability-sample-runtime:capability-composer",
+      "description": "샘플 레시피가 등록된 Capability만 조합하는지 확인하고 누락을 차단한다."
+    }
+  ],
+  "sampleRecipes": [
+    {
+      "id": "official-update-brief",
+      "name": "공식자료 변경 브리프",
+      "purpose": "공식자료가 바뀌었을 때 변경 여부·언어·구조·출처를 먼저 확인하는 샘플",
+      "modules": [
+        "source.change-detector",
+        "text.language-profile",
+        "content.structure-extractor",
+        "verification.provenance-check",
+        "workflow.capability-composer"
+      ],
+      "capabilities": [
+        "knowledge.research",
+        "core.documents",
+        "core.analytics"
+      ],
+      "sampleInput": {
+        "synthetic": true,
+        "beforeText": "2026년 지역지원 안내\\n접수기간: 9월 1일~9월 15일\\n대상: 지역 소상공인",
+        "afterText": "2026년 지역지원 안내\\n접수기간: 9월 1일~9월 30일\\n대상: 지역 소상공인\\n온라인 접수 가능",
+        "source": {
+          "url": "https://example.go.kr/notice/2026-support",
+          "authority": "official_primary",
+          "rightsAllowed": true,
+          "publishedAt": "2026-09-20"
+        }
+      }
+    },
+    {
+      "id": "multilingual-event-kit",
+      "name": "다국어 행사 준비",
+      "purpose": "행사 안내 문안을 구조화하고 언어 라우팅과 필요한 Capability 조합을 검증하는 샘플",
+      "modules": [
+        "text.language-profile",
+        "content.structure-extractor",
+        "verification.provenance-check",
+        "workflow.capability-composer"
+      ],
+      "capabilities": [
+        "community.events",
+        "core.documents",
+        "core.communication",
+        "core.interpreter"
+      ],
+      "sampleInput": {
+        "synthetic": true,
+        "beforeText": "",
+        "afterText": "가을 열린식탁\\n일시: 10월 3일 오후 6시\\n장소: 에코디 샘플홀\\n함께 식사하고 서로의 이야기를 나눕니다.",
+        "source": {
+          "url": "https://example.org/events/autumn-table",
+          "authority": "user_supplied",
+          "rightsAllowed": true,
+          "publishedAt": "2026-09-22"
+        }
+      }
+    },
+    {
+      "id": "small-business-campaign-kit",
+      "name": "소상공인 홍보 준비",
+      "purpose": "가상의 매장 소식을 콘텐츠 제작·분석 Capability로 연결하기 전 내부 조합을 검증하는 샘플",
+      "modules": [
+        "text.language-profile",
+        "content.structure-extractor",
+        "workflow.capability-composer"
+      ],
+      "capabilities": [
+        "business.marketing",
+        "creator.writing",
+        "creator.visual",
+        "core.analytics"
+      ],
+      "sampleInput": {
+        "synthetic": true,
+        "beforeText": "",
+        "afterText": "봄날카페 가을 신메뉴\\n무화과 라떼와 밤 크림 케이크를 이번 주부터 판매합니다.\\n지역 주민 대상 시식 이벤트도 준비합니다.",
+        "source": {
+          "url": "https://example.com/synthetic-cafe/news",
+          "authority": "user_supplied",
+          "rightsAllowed": true,
+          "publishedAt": "2026-09-22"
+        }
+      }
+    }
+  ]
+}
