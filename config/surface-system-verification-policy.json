@@ -34,7 +34,9 @@
     "virtualizationOnly": false,
     "realProductionCanaryRequired": true,
     "manualUserTestDefaultGate": false,
-    "independentEvidenceForHighRisk": true
+    "independentEvidenceForHighRisk": true,
+    "nativeWorkerPolicy": "config/background-browser-worker-policy.json",
+    "nativeWorkerId": "ekodi-background-browser-worker"
   },
   "syntheticActors": [
     {
