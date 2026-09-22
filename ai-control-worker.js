@@ -310,7 +310,7 @@ const AI_SERVICE_ENTRIES=Object.freeze({
   '/marketing':{label:'홍보 콘텐츠 만들기',target:'https://ekodi.kr/ekodibiz/marketing-ai'},
   '/support':{label:'지원사업 찾기',target:'https://ekodi.kr/support/'},
   '/business':{label:'사업 운영하기',target:'https://ekodi.kr/business'},
-  '/community':{label:'회원·공동체 관리하기',target:'https://community.ekodi.kr/'},
+  '/community':{label:'회원·공동체 관리하기',target:'https://ekodi.kr/community'},
   '/insurance':{label:'보험청구 준비하기',target:'https://ekodi.kr/insurance/'},
   '/energy':{label:'에너지 상태 확인하기',target:'https://ekodi.kr/energy/'}
 });
