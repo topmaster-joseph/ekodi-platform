@@ -8,6 +8,12 @@ if(tenants.namespace?.aiGateway!=='ai.ekodi.kr'||tenants.namespace?.providerTopo
 const canon={jadam:'https://ekodi.kr/jadam/marketing',pizzamaru:'https://ekodi.kr/pizzamaru/marketing',yogurt:'https://ekodi.kr/yogurt/marketing',cgma:'https://ekodi.kr/cgma/marketing'};
 for(const t of tenants.tenants||[]){if(t.canonicalUrl!==canon[t.tenant]) fail(`tenant canonical drift: ${t.tenant}`);if(t.domainRole!=='legacy_execution_alias') fail(`tenant alias role drift: ${t.tenant}`);}
 const workspace=json('config/service-workspace-policy.json');
+const constitution=json('governance/constitution/constitution.json');
+const publicUserSurface=constitution.publicUserSurfacePolicy||{};
+if(publicUserSurface.defaultAccess!=='guest-open'||publicUserSurface.canonicalPublicLoginWallForbidden!==true) fail('constitutional guest-open public user surface policy missing');
+if(publicUserSurface.permissionFailureReplacesPublicPage!==false) fail('public page must survive protected capability permission failures');
+if(workspace.publicUserSurfaceDefault?.defaultAccess!=='guest-open'||workspace.publicUserSurfaceDefault?.loginEffect!=='enhance-not-replace') fail('workspace public user surface default missing');
+for(const visibility of workspace.visibilityPolicies||[]) if(visibility.id!=='guest_visible'&&visibility.mayReplaceCanonicalPublicRoot!==false) fail(`${visibility.id} can replace canonical public root`);
 if(workspace.userSurfaceTopologyPolicy?.customerSpecificAiSubdomains!=='forbidden_as_canonical') fail('workspace AI subdomain canonical policy missing');
 if(workspace.userSurfaceTopologyPolicy?.examples?.jadamMarketing!==canon.jadam) fail('workspace Jadam marketing canonical drift');
 const ecosystem=json('config/ecosystem-services.json').services?.find(x=>x.id==='marketing');
@@ -17,7 +23,6 @@ if(!manifest.includes("url:'https://ekodi.kr/ekodibiz/marketing-ai'")) fail('ser
 if(!manifest.includes("engineUrl:'https://marketing.ekodi.kr/'")) fail('service manifest Marketing engine metadata missing');
 const surfaces=['index.html','admin-shell.html','hub.html','trade.html','business-worker.js','business/customer-next.js','business/index.html','bible/index.html','community/index.html','life/index.html','social/index.html','energy/app.js','my-worker.js','my/app.js','my/church-marketing-ai.js','my/site-activity-role-ui.js','management-platform.js','config/management-platform.json','service-proxy.js','social-registry-api.js','social/channels.json'];
 for(const rel of surfaces){const text=read(rel);if(/https:\/\/marketing\.ekodi\.kr/gi.test(text)) fail(`${rel}: Marketing Core exposed as user entry`);if(/https:\/\/(jadam|pizzamaru|yogurt|cgma)\.ai\.ekodi\.kr/gi.test(text)) fail(`${rel}: customer AI alias exposed as user entry`);}
-const constitution=json('governance/constitution/constitution.json');
 if(constitution.userSurfaceEngineSeparation?.canonicalMarketingProduct!=='https://ekodi.kr/ekodibiz/marketing-ai') fail('constitutional Marketing product canonical missing');
 if(!constitution.registeredCommonServiceBoundaries?.includes('marketing.ekodi.kr')) fail('Marketing Core not registered');
 if(!constitution.registeredCoreServiceBoundaries?.includes('ai.ekodi.kr')) fail('AI Gateway/Core not registered');
