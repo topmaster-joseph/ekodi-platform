@@ -1,5 +1,5 @@
 name: Deploy EKODI Church Homepage
-# Release reconciliation marker: church-member-home-v1-20260921
+# Release reconciliation marker: church-member-home-hub-v2-20260922
 
 on:
   workflow_dispatch:
@@ -83,6 +83,9 @@ jobs:
           grep -Fq 'https://ekodi.kr/ekodichurch/my' church/script.js
           grep -Fq 'https://ekodi.kr/my/' church/my/index.html
           grep -Fq 'EKODI CHURCH · MY PAGE' church/my/index.html
+          grep -Fq '내 EKODI' church/my/index.html
+          grep -Fq 'clearAuthReturnFragment' church/my/app.js
+          if grep -Fq '운영자 기능은 별도 관리자 화면에서 처리합니다.' church/my/index.html; then echo 'Member home must not expose internal operator guidance.'; exit 1; fi
           grep -Fq 'https://ekodi.kr/privacy' church/index.html
           grep -Fq 'https://ekodi.kr/terms' church/index.html
           grep -Fq 'data-ekodi-character-identity="founder-pastor"' church/index.html
@@ -153,6 +156,8 @@ jobs:
             if [[ "$root" == 200 && "$member" == 200 && "$life" == 200 && "$life_i18n" == 200 && "$life_css" == 200 && "$online_status" == 200 && "$live_css" == 200 && "$live_js" == 200 && "$live_intent" == 200 && "$marker" == 200 ]] \
               && grep -Fq 'data-ekodi-life-hub' /tmp/church.html \
               && grep -Fq 'EKODI CHURCH · MY PAGE' /tmp/church-my.html \
+              && grep -Fq '내 EKODI' /tmp/church-my.html \
+              && ! grep -Fq '운영자 기능은 별도 관리자 화면에서 처리합니다.' /tmp/church-my.html \
               && grep -Fq '에코디선교회' /tmp/church.html \
               && grep -Fq 'church-i18n-extended.js' /tmp/church.html \
               && grep -Fq 'localStorage' /tmp/life.js \
