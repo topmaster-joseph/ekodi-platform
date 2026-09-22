@@ -68,7 +68,34 @@
     ],
     "nonTerminalFailuresRequireAutomaticRecovery": true,
     "validationFailureAction": "diagnose-repair-rerun-continue",
-    "parallelConflictAction": "cross-review-select-winner-retire-or-refresh-overlap-rerun-continue"
+    "parallelConflictAction": "cross-review-select-winner-retire-or-refresh-overlap-rerun-continue",
+    "autoRecovery": {
+      "mode": "detect-repair-revalidate-resume",
+      "continueWithoutUserInterruptionForCorrectableFailures": true,
+      "preflightPolicyViolationsBeforeMutation": true,
+      "revalidateBeforePullRequest": true,
+      "revalidateAtCentralGate": true,
+      "centralGateRole": "final-defense-and-evidence",
+      "recoverableFailureTerminalState": false,
+      "preserve": [
+        "task-identity",
+        "commit-identity",
+        "isolation",
+        "audit-evidence",
+        "rollback",
+        "security-boundaries",
+        "required-reviews",
+        "production-verification"
+      ],
+      "humanStopOnlyFor": [
+        "sovereign-authority",
+        "explicit-human-approval",
+        "unavailable-credentials",
+        "ambiguous-side-effect",
+        "irreversible-or-high-impact-decision",
+        "external-dependency-without-authorized-safe-fallback"
+      ]
+    }
   },
   "consultationDecision": {
     "policyId": "AI-CONSULT-001",
