@@ -160,7 +160,7 @@ function isGlobalPlatformHeaderLink(anchor){
     const url=new URL(anchor.getAttribute('href')||'',location.href);
     if(url.hostname.toLowerCase()!=='ekodi.kr')return false;
     const path=url.pathname.replace(/\/+$/,'')||'/';
-    return path==='/'||path==='/my';
+    return path==='/'||path==='/my'||path.startsWith('/my/');
   }catch{return false;}
 }
 function pruneIndividualSiteGlobalLinks(header){
