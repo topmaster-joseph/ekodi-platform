@@ -44,6 +44,9 @@ const attachMonitorMedia=items=>{
 async function load(){const r=await fetch('/seonam-medi/data.json',{cache:'no-store'});if(!r.ok)throw new Error('data');const d=await r.json();window.__SEONAM_MEDI_DATA=d;
 el('lastUpdated').textContent='최종 업데이트 '+d.updatedAt;
 el('statusCards').innerHTML=d.status.map(x=>`<article class="card"><h3>${x.title}</h3><p>${x.text}</p></article>`).join('');
+const committee=d.committee||{};
+if(el('committeeOverview'))el('committeeOverview').innerHTML=`<article class="committee-summary"><strong>${escapeHtml(committee.name||'서남권 의대 비상대책위원회')}</strong><p>${escapeHtml(committee.description||'')}</p><div class="chips"><span class="chip">${escapeHtml(committee.formed||'')}</span><span class="chip">${escapeHtml(committee.composition||'')}</span></div></article>`;
+if(el('committeeRoles'))el('committeeRoles').innerHTML=(committee.roles||[]).map(item=>`<article class="committee-role"><div><strong>${escapeHtml(item.name)}</strong><span>${escapeHtml(item.role)}</span></div><small>${escapeHtml(item.sourceType||'출처')}</small>${item.sourceUrl?`<a href="${safeUrl(item.sourceUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(item.sourceLabel||'근거자료 보기')}</a>`:`<em>${escapeHtml(item.sourceLabel||'자료 확인')}</em>`}</article>`).join('');
 const cats=['전체',...new Set(d.timeline.map(x=>x.category))];
 el('timelineFilters').innerHTML=cats.map((c,i)=>`<button data-cat="${c}" class="${i===0?'active':''}">${c}</button>`).join('');
 const render=cat=>{const rows=cat==='전체'?d.timeline:d.timeline.filter(x=>x.category===cat);el('timelineList').innerHTML=rows.map(x=>`<article class="timeline-item" data-event-date="${x.date}"><div class="timeline-date">${x.date}</div><div><h3>${x.title}</h3><p>${x.summary}</p><div class="chips"><span class="chip">${x.category}</span><span class="chip">${x.evidence}</span></div>${evidenceBlock(x)}</div></article>`).join('')};
@@ -77,5 +80,20 @@ if(voiceForm)voiceForm.addEventListener('submit',async event=>{
   const status=el('voiceStatus');const form=new FormData(voiceForm);
   const payload={category:form.get('category'),name:form.get('name'),contact:form.get('contact'),message:form.get('message'),website:form.get('website'),publicConsent:form.get('publicConsent')==='on',privacyConsent:form.get('privacyConsent')==='on'};
   status.textContent='접수 중…';
-  try{const response=await fetch('/api/seonam-medi/voices',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});const body=await response.json().catch(()=>({}));if(!response.ok)throw new Error(body.message||'접수하지 못했습니다.');status.textContent=body.message||'접수되었습니다.';voiceForm.reset()}catch(error){status.textContent=error.message||'접수하지 못했습니다.'}
+  try{const response=await fetch('/api/seonam-medi/voices',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});const body=await response.json().catch(()=>({}));if(!response.ok)throw new Error(body.message||'접수하지 못했습니다.');status.textContent=body.message||'접수되었습니다.';voiceForm.reset();loadPublicVoices()}catch(error){status.textContent=error.message||'접수하지 못했습니다.'}
 });
+
+const voiceCategoryLabel=value=>({question:'질문',proposal:'정책제안',experience:'의료경험',factcheck:'사실확인 요청',tip:'자료제보',other:'기타'})[value]||'기타';
+const voiceDate=value=>{try{return new Intl.DateTimeFormat('ko-KR',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(value))}catch{return''}};
+async function loadPublicVoices(){
+  const list=el('voicePublicList'),count=el('voicePublicCount');if(!list||!count)return;
+  try{
+    const response=await fetch('/api/seonam-medi/voices',{cache:'no-store'});
+    const body=await response.json().catch(()=>({}));
+    if(!response.ok||!body.ok)throw new Error(body.message||'접수목록을 불러오지 못했습니다.');
+    const rows=Array.isArray(body.items)?body.items:[];
+    count.textContent=rows.length+'건';
+    list.innerHTML=rows.length?rows.map(item=>`<article class="voice-item"><span class="voice-kind">${escapeHtml(voiceCategoryLabel(item.category))}</span><span class="voice-name-public">${escapeHtml(item.displayName||'익명')}</span><div class="voice-message-public">${escapeHtml(item.message||'')}</div><time datetime="${escapeHtml(item.createdAt||'')}">${escapeHtml(voiceDate(item.createdAt))}</time></article>`).join(''):'<p class="muted">공개 동의한 의견·제보가 아직 없습니다.</p>';
+  }catch(error){count.textContent='—';list.innerHTML='<p class="muted">'+escapeHtml(error.message||'접수목록을 불러오지 못했습니다.')+'</p>'}
+}
+loadPublicVoices();
