@@ -25,7 +25,23 @@
         "headerExpect": [
           "x-content-type-options: nosniff",
           "cache-control: public"
-        ]
+        ],
+        "candidateUrl": "https://ekodi-auth-api.topmaster-joseph.workers.dev/api/public/preview/map?scope=ekodi&mode=platform",
+        "candidateStatuses": [
+          200
+        ],
+        "candidateExpect": [
+          "\"schemaVersion\":1",
+          "\"secrets\":false",
+          "\"personalData\":false",
+          "\"scope\":{\"id\":\"ekodi\""
+        ],
+        "candidateHeaderExpect": [
+          "x-content-type-options: nosniff",
+          "cache-control: public"
+        ],
+        "candidateForbid": [],
+        "rollbackVerify": false
       },
       {
         "url": "https://ekodi.kr/api/public/preview/map?scope=ekodibiz&mode=dev",
