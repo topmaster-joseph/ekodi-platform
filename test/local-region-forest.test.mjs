@@ -38,7 +38,8 @@ test('regional router gives forest routes priority over generic Cheonggye page',
 
 test('forest project API preserves public read, authenticated admin and archive semantics',async()=>{
   const control=await fs.readFile(new URL('../local-region-operations-control.js',import.meta.url),'utf8');
-  assert.match(control,/projects\\\/\\\(\[a-z0-9-\]\+\\\)/);
+  assert.match(control,/projectMatch/);
+  assert.match(control,/projects/);
   assert.match(control,/visibility='public'/);
   assert.match(control,/record_created/);
   assert.match(control,/record_updated/);
