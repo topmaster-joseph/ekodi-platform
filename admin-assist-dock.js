@@ -67,8 +67,24 @@
   function priorityLabel(value){if(value==='urgent')return'긴급';if(value==='review')return'확인 필요';return'일반'}
   function positionWorkbench(){
     const sidebar=document.querySelector('.sidebar');
-    const right=sidebar?.getBoundingClientRect?.().right||0;
-    document.documentElement.style.setProperty('--ekodi-assist-left',`${Math.max(0,Math.round(right))}px`);
+    const rect=sidebar?.getBoundingClientRect?.();
+    const bodyStyle=getComputedStyle(document.body);
+    const configured=parseFloat(bodyStyle.getPropertyValue('--ekodi-admin-sidebar-width'))||272;
+    const desktop=window.matchMedia('(min-width:761px)').matches;
+    const measured=Number(rect?.right)||0;
+    const right=desktop?Math.max(measured,configured):Math.max(0,measured);
+    document.documentElement.style.setProperty('--ekodi-assist-left',`${Math.round(right)}px`);
+  }
+  function watchWorkbenchPosition(){
+    positionWorkbench();
+    requestAnimationFrame(positionWorkbench);
+    window.setTimeout(positionWorkbench,80);
+    const sidebar=document.querySelector('.sidebar');
+    if(sidebar&&'ResizeObserver'in window){
+      const observer=new ResizeObserver(positionWorkbench);
+      observer.observe(sidebar);
+      window.addEventListener('pagehide',()=>observer.disconnect(),{once:true});
+    }
   }
   function activeSession(){return sessions.find(item=>item.id===state.activeSessionId)||null}
   function currentSection(){return String(context().section||'overview')}
@@ -97,7 +113,7 @@
 
   function install(){
     if(document.querySelector('#ekodiAssistDock')||!token())return;
-    positionWorkbench();
+    watchWorkbenchPosition();
     root=el('div','ekodi-assist');root.id='ekodiAssistDock';
     root.innerHTML='<button type="button" class="ekodi-assist-launcher" id="ekodiAssistLauncher" aria-label="에코디와 대화 열기" aria-expanded="false">✦<span class="ekodi-assist-badge" id="ekodiAssistBadge" hidden></span></button><section class="ekodi-assist-panel" id="ekodiAssistPanel" hidden aria-label="에코디와 대화하기"><aside class="ekodi-assist-rail" id="ekodiAssistRail"><div class="ekodi-assist-rail-head"><strong id="ekodiAssistRailTitle">최근 대화</strong><button type="button" id="ekodiAssistNew" aria-label="새 대화">＋</button></div><div class="ekodi-assist-tabs" role="tablist"><button type="button" class="ekodi-assist-tab" data-assist-tab="ai">에코디와 대화</button><button type="button" class="ekodi-assist-tab" data-assist-tab="inbox">대화 · 문의</button></div><label class="ekodi-assist-search"><span>⌕</span><input id="ekodiAssistSearch" type="search" placeholder="최근 대화 검색" autocomplete="off"></label><div class="ekodi-assist-history" id="ekodiAssistHistory"></div><div class="ekodi-assist-rail-foot"><small id="ekodiAssistContext">현재 화면을 확인 중입니다.</small><a href="/operator" target="_blank" rel="noopener">운영자 전체 화면 ↗</a></div></aside><main class="ekodi-assist-main"><header class="ekodi-assist-head"><button type="button" class="ekodi-assist-rail-toggle" id="ekodiAssistRailToggle" aria-label="최근 대화 보기">☰</button><div class="ekodi-assist-title"><strong id="ekodiAssistTitle">새 대화</strong><small>에코디 헌법 · AI 협업 · 권한 경계를 지키며 실행합니다.</small></div><button type="button" class="ekodi-assist-close" id="ekodiAssistClose" aria-label="관리자 화면으로 돌아가기">×</button></header><div class="ekodi-assist-chat-scroll" id="ekodiAssistChat" aria-live="polite" data-ekodi-main-conversation="true"></div><footer class="ekodi-assist-composer-wrap" id="ekodiAssistComposer"><section class="ekodi-assist-proactive" id="ekodiAssistProactive" aria-label="에코디 선제 제안" hidden></section><form class="ekodi-assist-composer" id="ekodiAssistForm"><button type="button" class="ekodi-assist-plus" id="ekodiAssistComposerNew" aria-label="새 대화">＋</button><textarea class="ekodi-assist-command" id="ekodiAssistCommand" rows="1" maxlength="1800" placeholder="에코디와 대화하기"></textarea><button type="submit" class="ekodi-assist-send" aria-label="보내기">↑</button></form><small>Enter 전송 · Shift+Enter 줄바꿈 · 외부 AI로 보낼 때 민감정보를 먼저 확인하세요.</small></footer></main></section>';
     document.body.appendChild(root);document.body.classList.add('admin-command-history-ready');

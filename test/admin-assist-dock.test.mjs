@@ -130,3 +130,14 @@ test('command history is global across admin menus while current screen context 
   assert.match(bootstrap,/A\(0\)\.then\(H\)/);
   assert.ok(js.includes('ekodi-admin-section-changed'));
 });
+
+test('Assist sidebar alignment survives early install before layout settles',async()=>{
+  const js=await read('admin-assist-dock.js');
+  assert.match(js,/function watchWorkbenchPosition\(\)/);
+  assert.match(js,/requestAnimationFrame\(positionWorkbench\)/);
+  assert.match(js,/window\.setTimeout\(positionWorkbench,80\)/);
+  assert.match(js,/ResizeObserver/);
+  assert.match(js,/--ekodi-admin-sidebar-width/);
+  assert.match(js,/Math\.max\(measured,configured\)/);
+  assert.match(js,/watchWorkbenchPosition\(\);/);
+});
