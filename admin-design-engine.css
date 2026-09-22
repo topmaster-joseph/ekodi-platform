@@ -150,3 +150,25 @@ body.admin-compact.ekodi-admin-design-engine .content [data-panel] :is(.finance-
 body.admin-compact.ekodi-admin-design-engine .content [data-panel] :is(.error,.operations-error){overflow-wrap:anywhere}
 @media(max-width:900px){body.admin-compact.ekodi-admin-design-engine .content{padding:16px 16px 42px!important}body.admin-compact.ekodi-admin-design-engine .section-head{flex-direction:column!important}body.admin-compact.ekodi-admin-design-engine .section-head>p{text-align:left!important}}
 @media(max-width:620px){body.admin-compact.ekodi-admin-design-engine .content{padding:12px 10px 36px!important}body.admin-compact.ekodi-admin-design-engine .section,body.admin-compact.ekodi-admin-design-engine .architecture{padding:15px!important}body.admin-compact.ekodi-admin-design-engine .section-head h2,body.admin-compact.ekodi-admin-design-engine .content [data-panel] h2{font-size:22px!important}body.admin-compact.ekodi-admin-design-engine .content :is(.metrics,.finance-status){grid-template-columns:repeat(2,minmax(0,1fr))!important}body.admin-compact.ekodi-admin-design-engine .content .cards{grid-template-columns:1fr!important}}
+
+/* Admin responsive content integrity · mandatory Design Engine guard */
+body.admin-compact.ekodi-admin-design-engine :where(h1,h2,h3,h4,h5,h6,p,li,dt,dd,label,button,[role="button"],[role="tab"],a,strong,small,span){
+  word-break:keep-all!important;
+  overflow-wrap:break-word;
+  hyphens:none;
+}
+body.admin-compact.ekodi-admin-design-engine :where(h1,h2,h3,h4,h5,h6){text-wrap:balance}
+body.admin-compact.ekodi-admin-design-engine :where(p,li,dd){text-wrap:pretty}
+body.admin-compact.ekodi-admin-design-engine :where(code,kbd,samp,.url,.domain,.email,[data-ekodi-break-anywhere]){
+  word-break:normal!important;
+  overflow-wrap:anywhere!important;
+}
+body.admin-compact.ekodi-admin-design-engine :where(main,section,article,aside,div,li,td,th){min-width:0}
+body.admin-compact.ekodi-admin-design-engine :where(img,video,canvas,iframe,svg){max-width:100%}
+body.admin-compact.ekodi-admin-design-engine .content{
+  padding-inline:clamp(10px,2vw,26px)!important;
+}
+body.admin-compact.ekodi-admin-design-engine .section-head h2,
+body.admin-compact.ekodi-admin-design-engine .content [data-panel] h2{
+  font-size:clamp(22px,1.35rem + .35vw,26px)!important;
+}

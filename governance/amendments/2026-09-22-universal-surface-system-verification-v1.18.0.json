@@ -1,0 +1,54 @@
+{
+  "id": "2026-09-22-universal-surface-system-verification-v1.18.0",
+  "constitutionVersion": "1.18.0",
+  "status": "approved",
+  "approvedBy": "topmaster-joseph",
+  "approvedAt": "2026-09-22",
+  "changeClass": "C2",
+  "taskId": "surface-system-verification-constitution-20260922",
+  "issue": null,
+  "pullRequest": 2342,
+  "summary": "Require EKODI to verify every public home, My page, operator page and administrator surface itself through synthetic role/device/browser execution and a real canonical production canary before normal completion.",
+  "approvalBasis": "The platform owner explicitly instructed EKODI on 2026-09-22 to make comprehensive self-verification and empirical validation of all administrator pages, public homes, My pages, operator pages and the platform-wide My page an operating constitution, including EKODI-run virtualization or equivalent automated verification.",
+  "adds": [
+    "universal SYSTEM_VERIFIED completion gate for governed UI surfaces",
+    "synthetic guest/user/member/operator/admin/super-admin role matrix",
+    "mobile/tablet/desktop device matrix",
+    "session and URL/token hygiene verification",
+    "safe public projection and RBAC verification",
+    "real canonical production canary",
+    "machine-readable evidence contract",
+    "manual user testing is additive rather than the default gate"
+  ],
+  "preserves": [
+    "virtualization as one method rather than the platform architecture",
+    "Person + Workspace + Role + Capability authority",
+    "secure projection and least privilege",
+    "tenant/workspace isolation",
+    "guarded production deployment",
+    "specialized stricter service verification policies"
+  ],
+  "rollback": "Revert constitution v1.18.0, SURFACE-SYSTEM-VERIFICATION-001, its operational config/validator/test and agent inheritance rule to v1.17.0. Do not alter workspace identity, user data, production domains or authorization records during rollback.",
+  "approvalEvidence": {
+    "requiredPullRequestLabel": "constitution-approved",
+    "ownerInstructionRecorded": true,
+    "pullRequest": 2342,
+    "approvalLabel": "constitution-approved",
+    "ownerInstructionDate": "2026-09-22"
+  },
+  "responsiveContentIntegrity": {
+    "mandatory": true,
+    "appliesToDesignCopywritingAndImplementation": true,
+    "naturalLanguageWordOrEojeolIntegrity": true,
+    "layoutOnlyHardLineBreakForbidden": true,
+    "viewportAdaptiveReflowRequired": true,
+    "viewportWidths": [
+      320,
+      390,
+      768,
+      1366,
+      1440
+    ],
+    "repeatedDefectPromotesToSharedGuardrail": true
+  }
+}

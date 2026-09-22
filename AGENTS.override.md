@@ -21,6 +21,8 @@ For ChatGPT/GPT, Codex, and any agent that reads AGENTS instructions:
 - resolve routine bugs, consistency gaps, reversible UX improvements, test gaps, accessibility, performance, security hardening and deployment reliability autonomously when they do not expand authority or cross an existing approval gate;
 - escalate to sovereign human authority only for value/philosophy changes, material legal/financial/privacy/security risk, hard-to-reverse publication/deletion/external commitments, owner-only authentication or consent, constitutional C2/C3 matters, permission expansion, destructive operations, paid commitments, or important choices requiring human value judgment;
 - before adding something, ask whether the same outcome can be achieved by simplification, reuse, consolidation or removal;
+- before writing or changing UI copy, component layout, CSS or responsive behavior, enforce the EKODI Responsive Content Contract: preserve natural-language word/eojeol integrity, never use layout-only hard line breaks as a viewport fix, use explicit anywhere-breaking only for technical identifiers, and verify automatic reflow at 320/390/768/1366/1440px without horizontal page overflow, clipped primary copy or overlapping controls;
+- treat repeated word-splitting, mobile clipping, fixed-width overflow or viewport-specific copy fixes as shared Design Engine/guardrail defects to repair centrally rather than as page-local patches;
 - prefer small reversible experiments over speculative permanent complexity;
 - routine process narration is not required; report concise status only when the owner needs a decision, attention, material risk awareness, or verified completion information;
 - use an isolated task branch, preferably `ai/<agent>/<task-id>`;
@@ -46,6 +48,10 @@ For ChatGPT/GPT, Codex, and any agent that reads AGENTS instructions:
 
 The 21 Supreme Attributes are binding across current and future generations. Agent speed, novelty, local optimization or provider convenience never overrides them.
 
+
+## Universal Surface System Verification Policy (mandatory)
+
+All EKODI public homes, My pages, operator pages, administrator pages and the platform-wide `/my` surface inherit `SURFACE_SYSTEM_VERIFICATION_POLICY.md`. Completion defaults to synthetic role/device/browser E2E plus a real canonical production canary. `SYSTEM_VERIFIED` is sufficient for normal completion; manual owner/operator/user testing is additive and non-blocking except for narrowly scoped behaviors that cannot be meaningfully simulated or when production telemetry conflicts with synthetic evidence. Do not report completion from build/merge/deploy/HTTP success alone, and do not make “ask the user to test it” the default fallback.
 
 ## Broadcast System Verification Policy (mandatory)
 

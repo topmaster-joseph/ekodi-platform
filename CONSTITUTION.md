@@ -1,4 +1,4 @@
-# EKODI Platform Constitution v1.17.0
+# EKODI Platform Constitution v1.18.0
 
 Effective: 2026-09-22
 
@@ -148,6 +148,23 @@ This constitution is the highest architecture and operations rule for EKODI Plat
 - Continuity never expands authority, bypasses credentials, weakens safety gates or permits direct production mutation. A genuine blocked state is reserved for an authority, safety, credential, human-approval or external dependency that cannot be resolved within delegated authority.
 - Commit, PR, merge, deployment, session termination or tool termination never substitutes for required production verification evidence.
 
+## 8B. Universal Surface System Verification Constitution
+- Every current and future EKODI surface that a guest, signed-in user, member, operator, administrator or super administrator can use inherits one verification contract. This includes every public home, workspace/service My page, operator page, workspace/service administrator page, the platform Super Administrator surface, and the canonical EKODI personal home at `ekodi.kr/my`.
+- A change is not complete because source code, unit tests, a build, a pull request, a deployment or an HTTP status succeeded. Normal completion requires **System Verified** evidence from the real canonical production surface after guarded deployment.
+- EKODI must verify these surfaces itself using synthetic actors and isolated browser/runtime virtualization or an equivalent automated execution method. Virtualization is a required available method for UI verification, but it is one method rather than the whole architecture; high-risk changes require independent evidence convergence where policy requires it.
+- The synthetic role matrix must cover, as applicable: guest, authenticated user, workspace member, operator, workspace/service administrator and platform super administrator. Verification must include valid, expired, invalid and insufficient-authority sessions as well as the authorized path.
+- The device matrix must cover mobile portrait, mobile landscape, tablet and desktop. UI verification checks rendering, overflow, navigation, interaction, responsive behavior and a basic accessibility baseline rather than relying only on DOM existence or HTTP success.
+- Natural-language copy is a protected responsive invariant: Korean and other natural-language words/eojeol must not be arbitrarily split for layout, layout-only hard line breaks are forbidden as a responsive technique, and technical identifiers may use anywhere-breaking only through an explicit exception.
+- Every governed UI must reflow automatically across at least 320, 390, 768, 1366 and 1440px viewport widths. When space is constrained, layout reflow and information reprioritization happen before shrinking readable text; horizontal page overflow, clipped primary copy and overlapping primary controls are verification failures.
+- EKODI design, copywriting and implementation work must check this responsive-content contract before completion. Repeated defects of this class are shared-guardrail defects, not page-local exceptions.
+- System verification must check canonical routing, login/session behavior, URL/token hygiene, RBAC and capability boundaries, safe public projection, private-data isolation, functional actions, API/data contracts, secure projection, error handling, observability and the real production host canary.
+- Production canaries use designated synthetic workspaces, test identities, non-destructive fixtures or reversible/idempotent writes. Verification must never weaken authorization, expose reusable secrets or perform destructive production mutation merely to make testing easier.
+- Each verification run records machine-readable evidence including task/commit identity, surface and canonical URL, synthetic actor, device profile, authentication state, performed checks, production host, observability result, timestamp and result. UI-affecting changes retain screenshots or equivalent visual evidence.
+- `SYSTEM_VERIFIED` is sufficient for normal completion. `DEPLOYED_AWAITING_SYSTEM_VERIFICATION`, `VERIFICATION_EXCEPTION` and `FAILED` are not completion states. A verification failure triggers repair -> retest -> redeploy -> reverify within delegated authority.
+- Manual testing by the owner, administrator, operator, broadcaster, applicant, participant or ordinary user is additive evidence and is not the default completion gate. EKODI must not fall back to “ask the user to test it” when an equivalent automated verification path is available.
+- A manual/device exception is allowed only for a narrowly scoped device-, OS-, browser-security- or provider-specific behavior that cannot be meaningfully simulated, or when production telemetry conflicts with synthetic evidence. The exception is explicit, auditable and does not waive unrelated automated verification.
+- Machine-readable authority: `governance/constitution/constitution.json` -> `surfaceSystemVerificationPolicy`. Operational contract: `config/surface-system-verification-policy.json`. Human-readable contract: `SURFACE_SYSTEM_VERIFICATION_POLICY.md`.
+
 ## 9. Change Constitution
 - **C0**: operational parameter change with no constitutional impact. Automated validation may apply it.
 - **C1**: backward-compatible implementation change. CI validation is mandatory.
@@ -159,7 +176,7 @@ This constitution is the highest architecture and operations rule for EKODI Plat
 Workspace type-prefixed public routes are retired and are not part of the runtime routing grammar. Any maintained `space.ekodi.kr` or `user.ekodi.kr` workspace alias maps a workspace slug directly to `ekodi.kr/{slug}`. Workspace type remains internal metadata bound to immutable `workspace_id`; it is not a public path component. Root-route collisions are prevented by the platform route registry and verified before release.
 
 ## 11. Enforcement
-`npm run validate:constitution` validates this constitution against `platform-boundaries.json`, data/storage policy, evolution policy and governance records. `npm run validate:architecture` validates the Governance -> OS -> Core -> Responsible Independent Service -> External Connected Service -> Workspace responsibility registry, capability-routing rules and sustainable boundary-growth rules. `npm run check` includes both. GitHub CI runs the same checks on constitutional and platform changes.
+`npm run validate:constitution` validates this constitution against `platform-boundaries.json`, data/storage policy, evolution policy and governance records. `npm run validate:surface-system-verification` validates the universal self-verification contract for all user, operator and administrator surfaces. `npm run validate:architecture` validates the Governance -> OS -> Core -> Responsible Independent Service -> External Connected Service -> Workspace responsibility registry, capability-routing rules and sustainable boundary-growth rules. `npm run check` includes both. GitHub CI runs the same checks on constitutional and platform changes.
 
 Machine-readable constitutional authority: `governance/constitution/constitution.json`.
 Machine-readable architecture authority: `governance/architecture/ekodi-os-architecture.json`.

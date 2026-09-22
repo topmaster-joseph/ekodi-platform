@@ -156,8 +156,6 @@ on:
       - 'scripts/verify-ai-collaboration-settings-roundtrip.mjs'
       - 'scripts/apply-d1-migrations-with-retry.sh'
       - 'scripts/provision-realtime-sfu.mjs'
-      - 'platform-security-policy.js'
-      - 'test/platform-security-policy.test.mjs'
       - 'deploy/manifests/control-api.worker.json'
       - '.github/workflows/deploy-control-api.yml'
   push:
@@ -315,8 +313,6 @@ on:
       - 'scripts/verify-ai-collaboration-settings-roundtrip.mjs'
       - 'scripts/apply-d1-migrations-with-retry.sh'
       - 'scripts/provision-realtime-sfu.mjs'
-      - 'platform-security-policy.js'
-      - 'test/platform-security-policy.test.mjs'
       - 'deploy/manifests/control-api.worker.json'
       - '.github/workflows/deploy-control-api.yml'
 

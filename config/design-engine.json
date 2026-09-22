@@ -1,7 +1,7 @@
 {
-  "version": 5,
+  "version": 6,
   "name": "EKODI Design Engine",
-  "asOf": "2026-09-21",
+  "asOf": "2026-09-22",
   "principle": "Evidence defines reusable UX rules; EKODI identity, service DNA and EKODIAN character remain first-party layers.",
   "constructionStandard": {
     "scope": "all-ekodi-sites-subservices-and-admin-surfaces",
@@ -19,7 +19,52 @@
     ],
     "completionGate": "a surface is not complete when any required dimension or mode is materially missing",
     "sharedCoreRule": "share accessibility, interaction grammar, security and responsive semantics; preserve site-specific identity and task context",
-    "exceptionPolicy": "exceptions must be explicit, evidence-based and may not reduce accessibility, security, authority boundaries or task clarity"
+    "exceptionPolicy": "exceptions must be explicit, evidence-based and may not reduce accessibility, security, authority boundaries or task clarity",
+    "responsiveContentContract": {
+      "required": true,
+      "scope": "all-natural-language-copy-and-primary-layouts-on-user-and-admin-surfaces",
+      "authoring": {
+        "semanticWordOrEojeolWrapping": true,
+        "arbitraryInWordSplitForbidden": true,
+        "layoutOnlyHardLineBreakForbidden": true,
+        "headlineCopyMustSurviveResponsiveReflow": true,
+        "technicalIdentifierException": "explicit-break-anywhere-only"
+      },
+      "typography": {
+        "naturalLanguageWordBreak": "keep-all",
+        "overflowGuard": "break-word",
+        "technicalIdentifierOverflow": "anywhere-explicit-only",
+        "headingTextWrap": "balance",
+        "bodyTextWrap": "pretty",
+        "hyphenation": "none"
+      },
+      "layout": {
+        "viewportAdaptive": true,
+        "primaryLayoutFixedViewportAssumptionForbidden": true,
+        "reflowBeforeFontShrink": true,
+        "flexibleChildrenMinWidthZero": true,
+        "pageHorizontalOverflowForbidden": true,
+        "mediaMustStayInsideViewport": true,
+        "primaryTouchTargetFloorPx": 44
+      },
+      "verification": {
+        "viewportWidths": [
+          320,
+          390,
+          768,
+          1366,
+          1440
+        ],
+        "checks": [
+          "no-arbitrary-word-or-eojeol-splitting",
+          "no-layout-only-hard-line-breaks",
+          "no-horizontal-page-overflow",
+          "no-clipped-or-overlapped-primary-copy",
+          "controls-and-grids-reflow-without-losing-meaning"
+        ]
+      },
+      "developmentGate": "design, copywriting and implementation must apply and verify this contract before completion"
+    }
   },
   "evidence": {
     "publicUser": {
@@ -360,7 +405,12 @@
       "card spacing",
       "mobile clipping",
       "character overlap",
-      "duplicate shared chrome"
+      "duplicate shared chrome",
+      "arbitrary word or eojeol splitting",
+      "manual line-break layout hacks",
+      "horizontal viewport overflow",
+      "fixed-width mobile overflow",
+      "responsive text clipping or overlap"
     ]
   }
 }

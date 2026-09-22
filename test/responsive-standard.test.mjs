@@ -10,6 +10,7 @@ const [responsiveCss, buildScript, booksHtml, booksResponsiveCss] = await Promis
 ]);
 
 test('EKODI responsive standard keeps words intact and protects long identifiers', () => {
+  assert.match(responsiveCss, /Responsive Typography Standard v3/);
   assert.match(responsiveCss, /word-break:keep-all/);
   assert.match(responsiveCss, /overflow-wrap:break-word/);
   assert.match(responsiveCss, /overflow-wrap:anywhere/);
@@ -26,4 +27,12 @@ test('Books loads the same responsive standard', () => {
   assert.match(booksHtml, /\/responsive\.css/);
   assert.match(booksResponsiveCss, /word-break:keep-all/);
   assert.doesNotMatch(booksResponsiveCss, /word-break:break-all/);
+});
+
+
+test('responsive standard exposes automatic reflow utilities instead of fixed-width assumptions', () => {
+  assert.match(responsiveCss, /--ekodi-responsive-inline-gutter:clamp\(/);
+  assert.match(responsiveCss, /data-ekodi-responsive-grid/);
+  assert.match(responsiveCss, /repeat\(auto-fit,minmax\(min\(100%/);
+  assert.match(responsiveCss, /font-size:clamp\(/);
 });

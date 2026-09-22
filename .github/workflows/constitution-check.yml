@@ -31,7 +31,7 @@ jobs:
   constitution:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - uses: actions/setup-node@v4
@@ -47,6 +47,10 @@ jobs:
         run: node scripts/validate-security-baseline.mjs
       - name: Validate deployment guardrails
         run: node scripts/validate-deployment-guardrails.mjs
+      - name: Validate universal surface system verification
+        run: node scripts/validate-surface-system-verification-policy.mjs
+      - name: Test universal surface system verification contract
+        run: node --test test/surface-system-verification-policy.test.mjs
       - name: Constitutional change approval gate
         if: github.event_name == 'pull_request'
         env:

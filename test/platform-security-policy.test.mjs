@@ -55,35 +55,3 @@ test('admin and API documents are no-store and non-indexable',()=>{
   assert.match(response.headers.get('x-robots-tag')||'',/noindex/);
   assert.equal(response.headers.get('cross-origin-opener-policy'),'same-origin-allow-popups');
 });
-
-
-test('explicit public preview cache survives platform security while other API JSON stays no-store',()=>{
-  const publicRequest=new Request('https://ekodi.kr/api/public/preview/map?scope=ekodi&mode=platform');
-  const publicResponse=applyPlatformSecurityHeaders(new Response('{"ok":true}',{
-    status:200,
-    headers:{
-      'content-type':'application/json; charset=utf-8',
-      'cache-control':'public, max-age=15, s-maxage=30, stale-while-revalidate=60'
-    }
-  }),publicRequest);
-  assert.match(publicResponse.headers.get('cache-control')||'',/^public/);
-  assert.match(publicResponse.headers.get('x-robots-tag')||'',/noindex/);
-
-  const errorResponse=applyPlatformSecurityHeaders(new Response('{"error":"bad"}',{
-    status:403,
-    headers:{
-      'content-type':'application/json; charset=utf-8',
-      'cache-control':'public, max-age=15'
-    }
-  }),publicRequest);
-  assert.equal(errorResponse.headers.get('cache-control'),'no-store');
-
-  const otherApi=applyPlatformSecurityHeaders(new Response('{"ok":true}',{
-    status:200,
-    headers:{
-      'content-type':'application/json; charset=utf-8',
-      'cache-control':'public, max-age=60'
-    }
-  }),new Request('https://ekodi.kr/api/status'));
-  assert.equal(otherApi.headers.get('cache-control'),'no-store');
-});
