@@ -10,6 +10,7 @@ test('store admin shares authenticated session across tabs and hides logout whil
   assert.match(script,/setAuthChrome\(false\)/);
   assert.match(script,/logout\.hidden=!signedIn/);
   assert.match(script,/role\.textContent='로그인 전'/);
+  assert.match(script,/state\.role='';setAuthChrome\(false\);renderNav\(\);publishTenantContext\(''\)/);
 });
 
 test('store admin assets are cache-busted for delivery menu batch release',async()=>{
