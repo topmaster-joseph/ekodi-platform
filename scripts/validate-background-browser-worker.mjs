@@ -1,0 +1,37 @@
+import fs from 'node:fs';
+import path from 'node:path';
+
+const root=process.cwd();
+const read=p=>JSON.parse(fs.readFileSync(path.join(root,p),'utf8').replace(/^\uFEFF/,''));
+const policy=read('config/background-browser-worker-policy.json');
+const surface=read('config/surface-system-verification-policy.json');
+const fabric=read('config/autonomous-execution-fabric-policy.json');
+const constitution=read('governance/constitution/constitution.json');
+const failures=[];
+const fail=m=>failures.push(m);
+
+if(policy.schemaVersion!==1||policy.policyId!=='EKODI-BROWSER-WORKER-001'||policy.status!=='enforced') fail('background browser worker policy identity/status mismatch');
+if(policy.owner!=='ekodi-orchestrator') fail('EKODI Orchestrator must own the browser worker');
+if(policy.canonicalOrigin!=='https://ekodi.kr'||policy.originPolicy?.canonicalOriginOnly!==true||policy.originPolicy?.subdomainTargetsForbidden!==true) fail('browser worker navigation must stay on canonical ekodi.kr');
+if(policy.isolation?.ephemeralBrowserContextRequired!==true||policy.isolation?.persistentUserProfileForbidden!==true||policy.isolation?.activeUserProfileReuseForbidden!==true) fail('browser worker isolation contract drifted');
+if(policy.isolation?.clipboardIntegration!==false||policy.isolation?.hostInputInjection!==false||policy.isolation?.headlessDefault!==true) fail('browser worker must remain headless and detached from user input/clipboard');
+for(const action of ['goto','click','fill','press','waitFor','assertText','snapshot','screenshot']) if(!policy.taskProtocol?.allowedActions?.includes(action)) fail(`browser worker action missing: ${action}`);
+if(policy.taskProtocol?.rawJavascriptForbidden!==true||policy.taskProtocol?.arbitraryShellForbidden!==true) fail('raw JS and arbitrary shell must remain forbidden');
+if(policy.networkSafety?.defaultMutationMode!=='block-non-idempotent-http'||policy.networkSafety?.mutationGrantDefault!==false||policy.networkSafety?.mutationRequiresExplicitTaskGrant!==true) fail('browser worker mutation safety drifted');
+if(policy.provider?.orchestration!=='ekodi-owned'||policy.provider?.externalBrowserServiceRequired!==false||policy.provider?.underlyingComputeReplaceable!==true) fail('browser worker must remain EKODI-owned and provider-replaceable');
+if(surface.execution?.defaultHarness!=='ekodi-owned-isolated-browser-runtime') fail('surface verification must select the EKODI-owned browser harness');
+if(surface.execution?.nativeWorkerPolicy!=='config/background-browser-worker-policy.json') fail('surface verification must bind the native browser worker policy');
+const browserMethod=(fabric.orchestration?.methodCatalog||[]).find(x=>x.id==='browser-e2e')||{};
+if(browserMethod.ownership!=='ekodi'||browserMethod.defaultProvider!=='ekodi-background-browser-worker') fail('execution fabric browser-e2e method must use EKODI background browser worker');
+if(constitution.virtualizationSovereigntyPolicy?.ekodiOwnedVirtualizationFirst!==true) fail('constitutional virtualization sovereignty must remain native-first');
+
+if(failures.length){
+  console.error(`EKODI Background Browser Worker validation failed (${failures.length})`);
+  failures.forEach(x=>console.error('- '+x));
+  process.exit(1);
+}
+console.log('EKODI Background Browser Worker: OK');
+console.log('- canonical ekodi.kr navigation only');
+console.log('- ephemeral headless Playwright context, no active user profile reuse');
+console.log('- read-only network by default; mutation requires an explicit task grant');
+console.log('- external browser service dependency: none');
