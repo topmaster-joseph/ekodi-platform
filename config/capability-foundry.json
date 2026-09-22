@@ -28,7 +28,13 @@
     "reuseExistingCapabilitiesFirst": true,
     "newDedicatedBoundaryByExceptionOnly": true,
     "serviceCreationAutomatic": false,
-    "humanReviewRequired": true
+    "humanReviewRequired": true,
+    "policyId": "CAPABILITY-BEFORE-SERVICE-001",
+    "constitutionVersion": "1.21.0",
+    "newUserServiceRegistrationRequiresEvidence": true,
+    "evidenceRegistry": "config/service-creation-evidence.json",
+    "grandfatherBaselineOwnedBy": "governance/constitution/constitution.json",
+    "independentBoundaryRequiresSustainableGate": true
   },
   "sampleService": {
     "id": "internal-capability-sample",
