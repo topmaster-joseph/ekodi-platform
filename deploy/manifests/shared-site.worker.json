@@ -1,5 +1,5 @@
 {
-  "version": 82,
+  "version": 84,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
@@ -577,9 +577,10 @@
         ],
         "redirect": "manual",
         "headerExpect": [
-          "location: https://ekodi.kr/ekodimall/admin/",
+          "location: https://ekodi.kr/ekodimall/admin",
           "cache-control: no-store",
-          "x-ekodi-route: mall-nested-canonical-redirect"
+          "x-ekodi-route: admin-canonical-handoff",
+          "x-ekodi-security-policy: platform-edge-v2"
         ],
         "rollbackVerify": false,
         "candidateVerify": false,
@@ -614,7 +615,8 @@
         "headerExpect": [
           "location: https://ekodi.kr/ekodimall/admin/channel-settings",
           "cache-control: no-store",
-          "x-ekodi-route: mall-nested-canonical-redirect"
+          "x-ekodi-route: admin-canonical-handoff",
+          "x-ekodi-security-policy: platform-edge-v2"
         ],
         "rollbackVerify": false,
         "candidateVerify": false,

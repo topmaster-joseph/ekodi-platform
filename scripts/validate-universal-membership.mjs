@@ -13,10 +13,13 @@ const reserved = new Set(policy.excludedInfrastructure || []);
 const expectedIds = services.map((service) => String(service.id || '').trim().toLowerCase());
 
 if (policy.policyId !== 'one-account-free-everywhere-pay-where-needed') fail('canonical policy id changed');
+if (policy.schemaVersion !== 2) fail('universal membership policy schema must be 2');
 if (policy.defaultEntitlement?.tier !== 'free') fail('default entitlement must remain FREE');
 if (policy.defaultEntitlement?.scope !== 'all_registry_user_services') fail('FREE must cover all registry user services');
 if (policy.guestAccess?.scope !== 'common_service_user_pages' || policy.guestAccess?.mode !== 'public_content') fail('guest user pages must keep public content visible');
 if (policy.guestAccess?.minimumTierForContent !== 'guest' || policy.guestAccess?.memberTierForPersonalization !== 'free' || policy.guestAccess?.identityProvider !== 'google') fail('public content must be guest-visible while personalization starts at Google FREE membership');
+if (policy.guestAccess?.publicPageDefault !== 'guest-open' || policy.guestAccess?.authenticationEffect !== 'enhance-not-replace') fail('public user pages must be guest-open and authentication must enhance rather than replace them');
+if (policy.guestAccess?.permissionFailureBehavior !== 'retain-safe-public-projection' || policy.guestAccess?.canonicalPublicLoginWallForbidden !== true) fail('permission failures may not replace canonical public user pages');
 if (policy.paidPlans?.scope !== 'service_specific' || policy.paidPlans?.upgradeIndependently !== true) fail('paid plans must remain service-specific');
 if (policy.automaticInheritance?.enabledForFutureRegistryServices !== true) fail('future service inheritance must stay enabled');
 

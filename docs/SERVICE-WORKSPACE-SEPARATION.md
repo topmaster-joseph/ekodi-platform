@@ -31,7 +31,7 @@ Internal platform components such as Core, Auth, Admin and API are infrastructur
 Visibility is not the same as service operation.
 
 - `guest_visible` — 비회원 노출 ON; non-members can discover the service and existing members retain access.
-- `guest_hidden` — 비회원 노출 OFF; discovery is hidden but existing members retain access.
+- `guest_hidden` — 비회원 검색·목록 노출 OFF 또는 명시적 비공개 콘텐츠용. **정식 공개 사용자페이지의 루트 화면을 로그인 벽이나 권한 오류로 대체하는 용도로 사용할 수 없다.** Existing members retain access where entitled.
 - `member_forced_off` — 회원 이용 강제 OFF; discovery and existing-member access are disabled.
 
 The default safe behavior when merely hiding a service is to preserve the rights and access of already entitled users/workspaces.
@@ -39,3 +39,15 @@ The default safe behavior when merely hiding a service is to preserve the rights
 ## Invariant
 
 Customer workspace identifiers must never be added to the provider `SERVICE_CATALOG`. Add or manage them in the customer tenant/workspace directory and connect services by entitlement instead.
+
+
+## Public user surface default
+
+Canonical public user pages are guest-open by default. Authentication changes the projection and capabilities, not whether the public page exists.
+
+- Guest: safe public content and service/site guide remain readable.
+- Signed-in member: public content remains and eligible personalized/free-tier capabilities are added.
+- Workspace member/operator: role/capability-scoped private operations are added.
+- Administrator: admin capabilities remain on the canonical `/admin` surface and never leak into the public projection.
+- A protected API returning 401/403/404 does not authorize replacing the public page with an access-denied screen. The UI falls back to the safe public projection.
+- Explicit private/closed surfaces require a declared private classification and still return a safe public landing/privacy notice at the canonical public root.
