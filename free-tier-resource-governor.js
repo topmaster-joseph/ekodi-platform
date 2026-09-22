@@ -111,8 +111,14 @@ export function buildFreeTierResourceGovernor({snapshots=[],states=[],now=Date.n
     const runtimePolicy=evaluateFreeTierQuota({percent:highest,errorCode:persisted.last_error_code||'',essential:false});
     const capacityBlocks=capacities.filter(item=>item.state==='capacity_full').map(item=>item.metric);
     const catalog=FREE_TIER_RESOURCE_CATALOG[provider]||{metrics:[]};
-    const knownMetrics=new Set(metrics.map(item=>item.metric));
-    const missing=(catalog.metrics||[]).filter(def=>def.metric&&!knownMetrics.has(def.metric)).map(def=>def.metric);
+    const definitionCovered=def=>fresh.some(item=>def.metric
+      ? item.metric===def.metric
+      : def.metricPrefix
+        ? item.metric.startsWith(def.metricPrefix)
+        : false);
+    const missing=(catalog.metrics||[])
+      .filter(def=>!definitionCovered(def))
+      .map(def=>def.metric||`${def.metricPrefix}*`);
     providers[provider]=Object.freeze({
       state,
       action:circuitOpen?'circuit_breaker':runtimePolicy.action,
