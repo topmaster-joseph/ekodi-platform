@@ -1,7 +1,7 @@
 const CENTRAL_SUPABASE_URL='https://renzehysxirjilvdxacv.supabase.co';
 const CENTRAL_PUBLISHABLE_KEY='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
 const CHURCH_SLUG='ekodi-church';
-const ALLOWED_ORIGINS=new Set(['https://ekodi.kr','https://www.ekodi.kr']);
+const ALLOWED_ORIGINS=new Set(['https://ekodi.kr']);
 
 function cors(origin){
   const h={'access-control-allow-headers':'authorization,content-type,apikey','access-control-allow-methods':'GET,POST,OPTIONS','access-control-max-age':'86400','vary':'Origin'};
