@@ -14,6 +14,7 @@ on:
       - 'admin-readable-command.css'
       - 'admin-central-handoff.js'
       - 'admin-authenticated-shell.js'
+      - 'admin-release-convergence.js'
       - 'admin-shell.html'
       - 'admin-shell.css'
       - 'admin-compact.css'
@@ -82,7 +83,7 @@ jobs:
         run: |
           set -euo pipefail
           npm run build
-          for asset in ai-ops-admin.js ai-ops-admin.css admin-demand-loader.js admin-lazy-features.js admin-compact.css admin-perf-diagnostics.js system-health-admin.js system-health-admin.css; do
+          for asset in ai-ops-admin.js ai-ops-admin.css admin-demand-loader.js admin-release-convergence.js admin-lazy-features.js admin-compact.css admin-perf-diagnostics.js system-health-admin.js system-health-admin.css; do
             test -f "dist/$asset"
           done
           version=$(grep -oE 'admin-authenticated-shell\.js\?v=[a-f0-9]{16}' dist/admin-shell.html | head -1 | sed 's/.*?v=//')
@@ -99,8 +100,8 @@ jobs:
           grep -Fq "window.EKODIAdminSidebar?.sync?.(document);" dist/admin-demand-loader.js
           ! grep -Fq "button = document.createElement('button')" dist/admin-demand-loader.js
           grep -Fq "window.EKODICommonServicesAdmin?.activate?.();" dist/admin-menu-layout.js
-          grep -Fq "convergeAdminRelease" dist/admin-authenticated-shell.js
-          grep -Fq "fetch('/admin/',{cache:'no-store',credentials:'same-origin'})" dist/admin-authenticated-shell.js
+          grep -Fq "convergeAdminRelease" dist/admin-release-convergence.js
+          grep -Fq "fetch('/admin/',{cache:'no-store',credentials:'same-origin'})" dist/admin-release-convergence.js
           grep -Fq "h: ['#health']" dist/admin-demand-loader.js
           ! grep -Fq "secondaryScripts: ['mission-control-admin.js'" dist/admin-demand-loader.js
           grep -Fq 'deployments:' dist/admin-demand-loader.js
@@ -194,7 +195,7 @@ jobs:
               && verify_asset 'admin-demand-loader.js' "if (!button) return false;" \
               && verify_asset 'admin-demand-loader.js' "window.EKODIAdminSidebar?.sync?.(document);" \
               && verify_asset 'admin-menu-layout.js' "window.EKODICommonServicesAdmin?.activate?.();" \
-              && verify_asset 'admin-authenticated-shell.js' "convergeAdminRelease" \
+              && verify_asset 'admin-release-convergence.js' "convergeAdminRelease" \
               && verify_asset 'system-health-admin.js' "navLabel.textContent = '\\uc2dc\\uc2a4\\ud15c \\uac74\\uac15'" \
               && verify_asset 'system-health-admin.js' "pageTitle.textContent = '\\uc2dc\\uc2a4\\ud15c \\uac74\\uac15'" \
               && verify_asset 'system-health-admin.js' 'data-traffic-intelligence-status' \
