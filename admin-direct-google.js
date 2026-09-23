@@ -1,21 +1,18 @@
 (()=>{
 'use strict';
-const PROD_AUTH_ORIGIN='https://ekodi.kr';
 const BRIDGE_PATH='/auth/google-origin-bridge?wait=1';
 function adminSurface(){
   const root=document.documentElement;
   const surface=String(root.dataset.ekodiSurface||root.dataset.ekodiUserSurface||'').toLowerCase();
   const ui=String(root.dataset.ekodiUiSurface||'').toLowerCase();
-  const host=location.hostname.toLowerCase();
-  return surface==='admin'||ui.includes('admin')||host==='admin.ekodi.kr'||/(^|\/)admin(?:\/|$)/i.test(location.pathname);
+  return surface==='admin'||ui.includes('admin')||/(^|\/)admin(?:\/|$)/i.test(location.pathname);
 }
 function canonicalAuthUrl(anchor){
-  const url=new URL(anchor.href,location.href);
-  if(!/^https?:$/.test(url.protocol)||url.pathname!=='/auth/'&&url.pathname!=='/auth')return null;
-  if((location.hostname==='ekodi.kr'||location.hostname.endsWith('.ekodi.kr'))&&(url.hostname==='auth.ekodi.kr'||url.hostname==='www.ekodi.kr')){
-    const canonical=new URL(url.href);canonical.protocol='https:';canonical.host='ekodi.kr';canonical.pathname='/auth/';return canonical;
-  }
-  if(url.pathname==='/auth')url.pathname='/auth/';
+  const clicked=new URL(anchor.href,location.href);
+  if(!/^https?:$/.test(clicked.protocol)||clicked.pathname!=='/auth/'&&clicked.pathname!=='/auth')return null;
+  if(clicked.origin!==location.origin)return null;
+  const url=new URL('/auth/',location.origin);
+  for(const [key,value] of clicked.searchParams)url.searchParams.append(key,value);
   return url;
 }
 function openBridge(auth){
@@ -29,8 +26,8 @@ document.addEventListener('click',event=>{
   let auth;try{auth=canonicalAuthUrl(anchor)}catch{return}
   if(!auth)return;
   const returnTo=auth.searchParams.get('return_to')||auth.searchParams.get('returnTo')||'';
-  let adminReturn=false;try{const target=new URL(returnTo,location.href);adminReturn=target.hostname==='admin.ekodi.kr'||/(^|\/)admin(?:\/|$)/i.test(target.pathname)}catch{}
-  if(!adminReturn&&!adminSurface())return;
+  let adminReturn=false;try{adminReturn=/(^|\/)admin(?:\/|$)/i.test(new URL(returnTo,location.href).pathname)}catch{}
+  if(!adminReturn)return;
   let popup=null;try{popup=openBridge(auth)}catch{}
   if(!popup)return;
   event.preventDefault();
