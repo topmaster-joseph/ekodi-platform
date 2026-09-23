@@ -78,9 +78,14 @@ function activateCommandHome(){
   sidebar.classList.remove('open');
   return true;
 }
-function activatePanel(section){
-  if(!section||!hasPanel(section))return false;
+function leaveCommandHome(){
   document.body.classList.remove('admin-command-home','admin-command-active');
+  document.querySelector('#ekodiAssistClose')?.click?.();
+}
+function activatePanel(section){
+  if(!section)return false;
+  leaveCommandHome();
+  if(!hasPanel(section))return false;
   requestedSection=section;
   for(const panel of content.querySelectorAll('[data-panel]')){
     const visible=panelTargets(panel).includes(section);
@@ -260,6 +265,7 @@ window.EKODIAdminPanels=Object.freeze({
   activate:section=>{
     dc=false;
     if(section===COMMAND_HOME)return activateCommandHome();
+    leaveCommandHome();
     if(isInternal(section))return routeInternal();
     if(section==='sites')return openSites();
     requestedSection=section;return activatePanel(section)||requestDemand(section);
@@ -268,5 +274,6 @@ window.EKODIAdminPanels=Object.freeze({
   internalSections:Object.freeze([...INTERNAL]),
   visibleMenuOrder:ORDER
 });
+window.dispatchEvent(new CustomEvent('ekodi-admin-panels-ready'));
 import('./admin-menu-runtime.js').catch(console.error);
 })();
