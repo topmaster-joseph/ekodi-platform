@@ -58,17 +58,28 @@ const FALLBACK_THEME={
   publicExperience:{
     enabled:true,
     timezone:'Asia/Seoul',
-    rotation:'navigation-load-approved-variation',
-    documentStable:true,
-    approvedPaletteOnly:true,
-    maxBackgroundMixPercent:6,
+    rotation:'weekly-deterministic',
+    cycleDays:7,
+    refreshMinutes:60,
     variants:[
-      {id:'mist-1',selectorMix:10,railOpacity:.68,backgroundMix:2},
-      {id:'mist-2',selectorMix:11,railOpacity:.71,backgroundMix:3},
-      {id:'mist-3',selectorMix:12,railOpacity:.74,backgroundMix:4},
-      {id:'mist-4',selectorMix:13,railOpacity:.77,backgroundMix:5},
-      {id:'mist-5',selectorMix:14,railOpacity:.80,backgroundMix:6}
+      {id:'quiet',selectorMix:10,railOpacity:.68},
+      {id:'clear',selectorMix:14,railOpacity:.78},
+      {id:'bright',selectorMix:18,railOpacity:.86}
     ],
+    documentLoadAmbientVariation:{
+      enabled:true,
+      trigger:'top-level-navigation-or-reload',
+      stableForDocumentLifetime:true,
+      approvedPaletteOnly:true,
+      maxBackgroundMixPercent:6,
+      variants:[
+        {id:'mist-1',backgroundMix:2},
+        {id:'mist-2',backgroundMix:3},
+        {id:'mist-3',backgroundMix:4},
+        {id:'mist-4',backgroundMix:5},
+        {id:'mist-5',backgroundMix:6}
+      ]
+    },
     seasonOffsets:{winter:0,spring:1,summer:2,autumn:3},
     motifs:{
       orbit:['linear-gradient(90deg,var(--accent),var(--companion),var(--accent))'],
@@ -148,6 +159,9 @@ function publicVariant(){
   const config=theme.publicExperience||FALLBACK_THEME.publicExperience;
   if(!config?.enabled||!isPublicSurface())return null;
   const date=seoulDate();
+  const ordinal=Math.floor(Date.UTC(date.year,date.month-1,date.day)/86400000);
+  const cycleDays=Math.max(1,Number(config.cycleDays)||7);
+  const cycleIndex=Math.floor(ordinal/cycleDays);
   const season=seasonForMonth(date.month);
   const identity=serviceTheme();
   const publicIdentity=identity.public||{};
@@ -156,23 +170,27 @@ function publicVariant(){
   const seed=hashText(`${service?.id||explicitService||'ekodi'}:${motif}`);
   const seasonOffset=Number(config.seasonOffsets?.[season]||0);
   const variants=config.variants||[];
-  const loadIndex=(DOCUMENT_LOAD_SEED+seed+seasonOffset)>>>0;
-  const variant=variants.length?variants[loadIndex%variants.length]:{id:'mist-1',selectorMix:10,railOpacity:.68,backgroundMix:2};
+  const variant=variants.length?variants[(cycleIndex+seed+seasonOffset)%variants.length]:{id:'quiet',selectorMix:10,railOpacity:.68};
   const motifVariants=config.motifs?.[motif]||config.motifs?.orbit||[];
-  const rail=motifVariants.length?motifVariants[((DOCUMENT_LOAD_SEED>>>5)+(seed>>>5)+seasonOffset)%motifVariants.length]:'linear-gradient(90deg,var(--accent),var(--companion))';
-  const mix=Math.min(18,Math.max(6,Number(variant.selectorMix)||10));
-  const maxBackgroundMix=Math.min(6,Math.max(1,Number(config.maxBackgroundMixPercent)||6));
-  const backgroundMix=Math.min(maxBackgroundMix,Math.max(1,Number(variant.backgroundMix)||2));
+  const rail=motifVariants.length?motifVariants[(cycleIndex+(seed>>>5)+seasonOffset)%motifVariants.length]:'linear-gradient(90deg,var(--accent),var(--companion))';
+  const mix=Math.min(24,Math.max(6,Number(variant.selectorMix)||10));
+  const ambient=config.documentLoadAmbientVariation||FALLBACK_THEME.publicExperience.documentLoadAmbientVariation||{};
+  const ambientVariants=ambient.variants||[];
+  const ambientVariant=ambientVariants.length?ambientVariants[(DOCUMENT_LOAD_SEED+seed+seasonOffset)%ambientVariants.length]:{id:'mist-1',backgroundMix:2};
+  const maxBackgroundMix=Math.min(6,Math.max(1,Number(ambient.maxBackgroundMixPercent)||6));
+  const backgroundMix=Math.min(maxBackgroundMix,Math.max(1,Number(ambientVariant.backgroundMix)||2));
   return {
     enabled:true,
-    mode:config.rotation||'navigation-load-approved-variation',
+    mode:config.rotation||'weekly-deterministic',
     timezone:config.timezone||'Asia/Seoul',
     dateKey:date.key,
-    cycleKey:`load-${DOCUMENT_LOAD_SEED.toString(36)}`,
+    cycleKey:`${date.year}-w${cycleIndex}`,
+    ambientCycleKey:`load-${DOCUMENT_LOAD_SEED.toString(36)}`,
     season,
     motif,
     companion,
     variant:variant.id||'quiet',
+    ambientVariant:ambientVariant.id||'mist-1',
     rail,
     railOpacity:Math.min(1,Math.max(.45,Number(variant.railOpacity)||.72)),
     backgroundMix,
@@ -428,8 +446,7 @@ function applyProgressiveHomeFocus(){
 
 function startCycleRefresh(){
   if(cycleTimer)clearInterval(cycleTimer);
-  if(isPublicSurface())return;
-  const minutes=60;
+  const minutes=Math.max(15,Number(theme.publicExperience?.refreshMinutes)||60);
   cycleTimer=setInterval(refreshThemeCycle,minutes*60000);
   document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')refreshThemeCycle();});
 }
