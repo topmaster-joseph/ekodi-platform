@@ -22,6 +22,7 @@ const SERVICES = [
   {id:'church',name:'에코디교회',shortName:'Church',url:'https://ekodi.kr/ekodichurch',group:'ministry',defaultSurface:'public',workspaceKinds:['church','organization','person'],capabilities:['church','worship','groups','pastoral','events'],sso:true,targetable:true,order:40,shellIntegration:'shared-proxy'},
   {id:'mission',name:'에코디선교회',shortName:'Mission',url:'https://ekodi.kr/ekodimission',group:'ministry',defaultSurface:'public',workspaceKinds:['organization','church','community','person','project'],capabilities:['mission','hospitality','activities','partnerships','giving-information','prayer','realtime','transparency','contact'],sso:true,targetable:false,order:42,state:'preparing',shellIntegration:'external-build',onboardingVersion:1},
   {id:'bible',name:'에코디 말씀대화',shortName:'말씀대화',url:'https://ekodi.kr/bible',group:'ministry',defaultSurface:'public',workspaceKinds:['person','church','community','organization'],capabilities:['scripture','scripture-reader','scripture-search','conversation','reflection','journey','practice','groups'],sso:true,targetable:true,openSso:true,order:45,state:'live',shellIntegration:'worker-injected',authMode:'client',onboardingVersion:1},
+  {id:'pyeonggongmok',name:'평공목',shortName:'평공목',url:'https://ekodi.kr/pyeonggongmok',group:'ministry',defaultSurface:'public',workspaceKinds:['person','church','community','organization'],capabilities:['pastoral-learning','scripture-study','theology','sermon-study','lifelong-learning'],sso:true,targetable:true,openSso:true,order:46,state:'live',shellIntegration:'shared-proxy',authMode:'client',onboardingVersion:1},
   {id:'life',name:'오늘의 질문',shortName:'인생AI',url:'https://ekodi.kr/life',group:'life',defaultSurface:'public',workspaceKinds:['person','church','community','organization'],capabilities:['life-questions','reflection','scripture-bridge','practice','journey','community-handoff'],sso:true,targetable:true,openSso:true,order:47,state:'live',shellIntegration:'worker-injected',authMode:'client',onboardingVersion:1},
   {id:'business',name:'Business OS',shortName:'Business',url:'https://ekodi.kr/business',group:'business',defaultSurface:'workspace',workspaceKinds:['business','organization'],capabilities:['business','operations','dashboard'],sso:true,targetable:false,order:50,shellIntegration:'worker-injected'},
   {id:'biz',name:'에코디비즈',shortName:'Biz',url:'https://ekodi.kr/ekodibiz',group:'business',defaultSurface:'public',workspaceKinds:['business','organization'],capabilities:['business','trade','commerce'],sso:true,targetable:true,order:60,readyLocales:['ko-KR','en','zh-CN','ja','ne','vi'],shellIntegration:'shared-proxy'},
@@ -68,8 +69,8 @@ const canonicalKey=value=>{
 };
 
 export const EKODI_SERVICE_MANIFEST = Object.freeze({
-  version: 21,
-  updatedAt: '2026-09-14',
+  version: 22,
+  updatedAt: '2026-09-23',
   identityModel: 'person-space-role',
   authorityModel: 'platform-admin-is-separate-from-tenant-activity',
   shellVersion: 5,
