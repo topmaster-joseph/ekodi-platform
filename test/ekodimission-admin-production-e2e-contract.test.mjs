@@ -10,7 +10,9 @@ test('Mission tenant-admin production E2E exercises the deployed Activity partic
   const source=await readFile(scriptUrl,'utf8');
   for(const marker of [
     "https://ekodi.kr",
-    "/ekodimission/admin/activities",
+    "/ekodimission/admin",
+    "신청자 관리",
+    "행사 · 신청자",
     "ekodi-workspace-admin-session",
     "current_site_activity_contexts",
     "activity_admin_snapshot",
