@@ -46,6 +46,11 @@ export function rankCommonCapabilities(query,registry={},limit=5){
   return listCommonCapabilities(registry).map(item=>({...item,score:scoreCommonCapability(query,item)})).filter(item=>item.score>0)
     .sort((a,b)=>b.score-a.score||Number(b.usableNow)-Number(a.usableNow)||a.id.localeCompare(b.id)).slice(0,max);
 }
+const EXECUTION_AVAILABILITY_LABELS=Object.freeze({live:'운영',beta:'베타','integration-pending':'연동 준비','read-only':'읽기 전용'});
+const EXECUTION_DELIVERY_LABELS=Object.freeze({direct:'바로 실행',bridge:'전문서비스 연결'});
+function executionAvailability(value){const key=String(value||'live');return EXECUTION_AVAILABILITY_LABELS[key]?key:'live';}
+function executionDeliveryMode(value){return String(value||'bridge')==='direct'?'direct':'bridge';}
+
 function serviceSearchText(service={},capability={}){
   return normalize([service.label,service.category,capability.name,capability.description,...(capability.tags||[])].join(' '));
 }
@@ -64,8 +69,10 @@ export function rankExecutionServices(query,registry={},limit=5){
   return services.sort((a,b)=>b.score-a.score||a.label.localeCompare(b.label,'ko')).slice(0,Math.max(1,Math.min(10,Number(limit)||5)));
 }
 export function publicExecutionServiceView(service={}){
+  const availability=executionAvailability(service.availability);const deliveryMode=executionDeliveryMode(service.deliveryMode);
   return Object.freeze({id:String(service.id||''),category:String(service.category||''),label:String(service.label||''),launchUrl:String(service.launchUrl||''),
-    description:String(service.description||''),usableNow:Boolean(service.usableNow),...(service.categoryLabel?{categoryLabel:String(service.categoryLabel)}:{})});
+    description:String(service.description||''),usableNow:Boolean(service.usableNow),availability,availabilityLabel:EXECUTION_AVAILABILITY_LABELS[availability],
+    deliveryMode,deliveryLabel:EXECUTION_DELIVERY_LABELS[deliveryMode],...(service.categoryLabel?{categoryLabel:String(service.categoryLabel)}:{})});
 }
 export function rankPublicExecutionServices(query,registry={},limit=5){
   return Object.freeze(rankExecutionServices(query,registry,limit).map(publicExecutionServiceView));
