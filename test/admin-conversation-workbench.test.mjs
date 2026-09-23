@@ -49,4 +49,6 @@ test('Admin conversation-first skin preserves mobile drawer and readable light s
   assert.match(css, /@media\(max-width:760px\)/);
   assert.match(css, /\.sidebar\.open/);
   assert.match(css, /box-shadow:18px 0 54px/);
+  assert.match(css, /top:56px!important/);
+  assert.match(css, /margin:48px auto 0!important/);
 });
