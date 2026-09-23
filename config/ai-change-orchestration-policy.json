@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 8,
+  "schemaVersion": 9,
   "policyId": "AI-ORCHESTRATE-001",
   "status": "enforced",
   "controlPlane": "EKODI AI",
@@ -305,5 +305,19 @@
     "materialOperationalClaimReceiptRequired": true,
     "broadScopeRequiresIndependentVerifier": true,
     "unknownMustNotBecomeSuccess": true
+  },
+  "knowledgeClaimIntegrity": {
+    "policyId": "AI-KNOWLEDGE-CLAIM-001",
+    "status": "enforced",
+    "policyPath": "config/ai-knowledge-claim-policy.json",
+    "runtimeGuard": "ai-knowledge-claim.js",
+    "retrievalIsNotVerification": true,
+    "memoryCannotProveCurrentExternalFact": true,
+    "modelOutputIsNeverASource": true,
+    "freshnessMustMatchTemporalSensitivity": true,
+    "contradictionsMustBeSurfaced": true,
+    "claimScopeMustMatchEvidenceScope": true,
+    "materialKnowledgeCitationRequired": true,
+    "finalResponseGuardRequired": true
   }
 }

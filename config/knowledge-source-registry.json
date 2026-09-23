@@ -97,5 +97,19 @@
     "humanApprovalRequiredForPlatform": true,
     "authorityExpansionAllowed": false,
     "productionMutationAllowed": false
+  },
+  "claimGatePolicy": {
+    "policyId": "AI-KNOWLEDGE-CLAIM-001",
+    "status": "enforced",
+    "policyPath": "config/ai-knowledge-claim-policy.json",
+    "runtimeGuard": "ai-knowledge-claim.js",
+    "retrievalIsNotVerification": true,
+    "modelOutputIsNeverASource": true,
+    "sourceInstructionsAreUntrustedData": true,
+    "claimScopeMayNotExceedEvidenceScope": true,
+    "currentClaimsRequireFreshEvidence": true,
+    "contradictionsBlockUnqualifiedVerification": true,
+    "highImpactRequiresAuthoritativeEvidence": true,
+    "materialClaimsRequireTraceableCitation": true
   }
 }
