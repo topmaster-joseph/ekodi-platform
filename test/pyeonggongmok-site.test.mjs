@@ -42,3 +42,29 @@ test('Shared Site router serves pyeonggongmok before generic workspace routing',
   assert.equal(css.headers.get('x-ekodi-route'),'pyeonggongmok-static');
   assert.equal(await css.text(),'/pyeonggongmok/app.css');
 });
+
+
+test('pyeonggongmok is production-discoverable and deployment-owned',async()=>{
+  const [discoveryText,registryText,manifestText,workflow]=await Promise.all([
+    readFile(new URL('../discovery-layer.js',import.meta.url),'utf8'),
+    readFile(new URL('../config/ecosystem-services.json',import.meta.url),'utf8'),
+    readFile(new URL('../deploy/manifests/shared-site.worker.json',import.meta.url),'utf8'),
+    readFile(new URL('../.github/workflows/deploy-site-core.yml',import.meta.url),'utf8')
+  ]);
+  assert.match(discoveryText,/path: '\/pyeonggongmok'/);
+  assert.match(discoveryText,/평공목 \| 평생공부하는 목회자/);
+  const registry=JSON.parse(registryText);
+  const service=registry.services.find(item=>item.id==='pyeonggongmok');
+  assert.ok(service);
+  assert.equal(service.url,'https://ekodi.kr/pyeonggongmok');
+  assert.equal(service.productionVerified,true);
+  assert.equal(service.homepage,false);
+  assert.equal(service.status,'live');
+  const manifest=JSON.parse(manifestText);
+  const probe=manifest.worker.requests.find(item=>item.url==='https://ekodi.kr/pyeonggongmok');
+  assert.ok(probe);
+  assert.deepEqual(probe.statuses,[200]);
+  assert.ok(probe.headerExpect.includes('x-ekodi-route: pyeonggongmok-static'));
+  assert.match(workflow,/sites\/pyeonggongmok\/public\/\*\*/);
+  assert.match(workflow,/test\/pyeonggongmok-site\.test\.mjs/);
+});
