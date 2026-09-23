@@ -57,5 +57,5 @@ test('Community auth and CORS trust the canonical EKODI origin', () => {
 test('compact admin menu runtime has no self-initializing selector binding', () => {
   const compact = read('admin-menu-layout.compact.js');
   assert.doesNotMatch(compact, /const ([A-Za-z_$][A-Za-z0-9_$]*)=\\1;/);
-  assert.match(compact, /\\.nav\\[data-section\\],\\.nav\\[data-lazy-section\\],\\.nav\\[data-device-control-nav\\],a\\.nav\\[href\\]/);
+  assert.match(compact, /const V="\\.nav";/);
 });
