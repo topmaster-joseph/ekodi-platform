@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 3,
+  "schemaVersion": 4,
   "policyId": "AI-COMPLETE-001",
   "status": "active",
   "defaultRule": "production-verified-before-complete",
@@ -27,7 +27,10 @@
     "production_hostname",
     "production_functional_checks",
     "observability_check",
-    "verification_timestamp"
+    "verification_timestamp",
+    "claim_receipt",
+    "claim_scope",
+    "independent_verifier"
   ],
   "rules": {
     "successfulDeployCommandIsNotCompletion": true,
@@ -52,7 +55,13 @@
     "resumeFromCheckpointBeforeRestartingWork": true,
     "interruptionMustPreserveEvidenceAndNextStep": true,
     "rateLimitOrConnectorFailureIsRecoverableByDefault": true,
-    "recoverableInterruptionMustNotBeReportedAsBlockedIfAlternatePathExists": true
+    "recoverableInterruptionMustNotBeReportedAsBlockedIfAlternatePathExists": true,
+    "claimScopeMustMatchEvidenceScope": true,
+    "memoryCannotProveCurrentOperationalState": true,
+    "otherAgentReportCannotProveCompletion": true,
+    "currentOperationalClaimRequiresFreshEvidence": true,
+    "broadScopeCompletionRequiresIndependentVerifier": true,
+    "unknownOrContradictedStateCannotUseSuccessLanguage": true
   },
   "exceptionPolicy": {
     "allowed": true,
@@ -99,7 +108,8 @@
       "completion-criteria",
       "next-executable-step"
     ],
-    "interruptionLabel": "recoverable-interruption-resume-required"
+    "interruptionLabel": "recoverable-interruption-resume-required",
+    "claimIntegrityPolicy": "AI-CLAIM-INTEGRITY-001"
   },
   "requiredCheckpointForRecoverableInterruption": [
     "task_id",
