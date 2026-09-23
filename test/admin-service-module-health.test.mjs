@@ -25,3 +25,8 @@ test('central admin sidebar footer links to the module health registry', () => {
   assert.match(shell, /공통·전문 모듈 점검/);
   assert.match(shell, /data-ekodi-service-module-health/);
 });
+
+test('nested canonical admin URLs load the admin shell directly on ekodi.kr', () => {
+  const worker = read('site-worker.js');
+  assert.match(worker, /PUBLIC_ADMIN_ALIASES\.has\(url\.pathname\) \|\| url\.pathname\.startsWith\('\/admin\/'\)/);
+});
