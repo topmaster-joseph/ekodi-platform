@@ -997,7 +997,7 @@ function Invoke-EkodiCdpCommand($Socket, [int]$Id, [string]$Method, $Params = $n
   }
   $response = Receive-EkodiCdpResponse $Socket $Id
   if ($response.PSObject.Properties.Name -contains 'error' -and $response.error) {
-    throw "cdp_command_failed:$Method:$([string]$response.error.message)"
+    throw "cdp_command_failed:${Method}:$([string]$response.error.message)"
   }
   return $response
 }
