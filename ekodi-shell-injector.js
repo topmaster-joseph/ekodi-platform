@@ -116,6 +116,7 @@ class UserUiHtmlInjector{
     element.setAttribute('data-ekodi-ui-surface',this.uiSurface||uiSurfaceFor(service,this.surface));
     if(this.progressiveHome)element.setAttribute('data-ekodi-home-focus-request','v1');
     element.setAttribute('data-ekodi-user-layout',USER_LAYOUT_VERSION);
+    element.setAttribute('data-ekodi-visual-state','pending');
     element.setAttribute('data-ekodi-ready-locales',readyLocalesForService(service));
     if(serviceOwnsFooter(service))element.setAttribute('data-ekodi-footer-mode','service');
   }
