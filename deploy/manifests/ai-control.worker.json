@@ -78,6 +78,76 @@
         "rollbackHeaderExpect": []
       },
       {
+        "url": "https://ekodi.kr/ai/api/interpreter/style",
+        "statuses": [
+          200
+        ],
+        "expect": [
+          ":root{",
+          ".interpreter-shell",
+          ".translator"
+        ],
+        "headerExpect": [
+          "x-ekodi-ai-asset: interpreter-v1",
+          "content-type: text/css"
+        ],
+        "candidateUrl": "https://ekodi-ai-control.topmaster-joseph.workers.dev/api/interpreter/style",
+        "candidateStatuses": [
+          200
+        ],
+        "candidateExpect": [
+          ":root{",
+          ".interpreter-shell",
+          ".translator"
+        ],
+        "candidateHeaderExpect": [
+          "x-ekodi-ai-asset: interpreter-v1",
+          "content-type: text/css"
+        ],
+        "candidateForbid": [],
+        "rollbackStatuses": [
+          200,
+          404
+        ],
+        "rollbackExpect": [],
+        "rollbackHeaderExpect": []
+      },
+      {
+        "url": "https://ekodi.kr/ai/api/interpreter/client",
+        "statuses": [
+          200
+        ],
+        "expect": [
+          "SpeechRecognition||window.webkitSpeechRecognition",
+          "speechSynthesis",
+          "/ai/api/commons/config"
+        ],
+        "headerExpect": [
+          "x-ekodi-ai-asset: interpreter-v1",
+          "content-type: text/javascript"
+        ],
+        "candidateUrl": "https://ekodi-ai-control.topmaster-joseph.workers.dev/api/interpreter/client",
+        "candidateStatuses": [
+          200
+        ],
+        "candidateExpect": [
+          "SpeechRecognition||window.webkitSpeechRecognition",
+          "speechSynthesis",
+          "/ai/api/commons/config"
+        ],
+        "candidateHeaderExpect": [
+          "x-ekodi-ai-asset: interpreter-v1",
+          "content-type: text/javascript"
+        ],
+        "candidateForbid": [],
+        "rollbackStatuses": [
+          200,
+          404
+        ],
+        "rollbackExpect": [],
+        "rollbackHeaderExpect": []
+      },
+      {
         "url": "https://ekodi.kr/ai/api/commons/client",
         "statuses": [
           200
@@ -86,7 +156,8 @@
           "const API_BASE=location.pathname.startsWith('/ai')?'/ai':'';",
           "function apiUrl(path)",
           "/api/commons/config",
-          "/api/commons/match"
+          "/api/commons/match",
+          "function serviceStatusMeta(service)"
         ],
         "forbid": [
           "/ai/ai/api/commons/"
@@ -103,7 +174,8 @@
           "const API_BASE=location.pathname.startsWith('/ai')?'/ai':'';",
           "function apiUrl(path)",
           "/api/commons/config",
-          "/api/commons/match"
+          "/api/commons/match",
+          "function serviceStatusMeta(service)"
         ],
         "candidateForbid": [
           "/ai/ai/api/commons/"
@@ -126,7 +198,8 @@
         ],
         "expect": [
           ".page",
-          "want-form"
+          "want-form",
+          ".service-state"
         ],
         "headerExpect": [
           "x-ekodi-ai-asset: worker-owned-v1",
@@ -138,7 +211,8 @@
         ],
         "candidateExpect": [
           ".page",
-          "want-form"
+          "want-form",
+          ".service-state"
         ],
         "candidateHeaderExpect": [
           "x-ekodi-ai-asset: worker-owned-v1",
@@ -194,7 +268,9 @@
         ],
         "expect": [
           "\"principle\"",
-          "\"categories\""
+          "\"categories\"",
+          "\"availability\"",
+          "\"deliveryMode\""
         ],
         "candidateUrl": "https://ekodi-ai-control.topmaster-joseph.workers.dev/api/commons/services",
         "candidateStatuses": [
@@ -202,7 +278,9 @@
         ],
         "candidateExpect": [
           "\"principle\"",
-          "\"categories\""
+          "\"categories\"",
+          "\"availability\"",
+          "\"deliveryMode\""
         ],
         "candidateHeaderExpect": [],
         "rollbackStatuses": [
