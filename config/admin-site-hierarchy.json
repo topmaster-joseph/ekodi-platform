@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "principle": "Every independently managed site uses its own public canonical path plus /admin. Higher-level administrators may list, observe and hand off to child administrators, but must not create alternate child-admin URLs under the higher-level admin path.",
   "platformAdmin": {
     "publicPath": "/",
@@ -118,6 +118,18 @@
     "A parent administrator can show child status, search, summaries and links but cannot own a second child-admin route.",
     "Platform /admin routes are reserved for platform-owned control-plane capabilities and directory/observability functions.",
     "A forbidden or legacy aggregate alias may only redirect to the unique canonical site admin during migration; it must never render the child admin UI.",
-    "Authorization continues to resolve from Person + Workspace + Role + Capability and never from URL nesting alone."
-  ]
+    "Authorization continues to resolve from Person + Workspace + Role + Capability and never from URL nesting alone.",
+    "Every independent admin menu, submenu and detail-management view must have one unique directly addressable canonical URL.",
+    "Reload, direct entry and trusted authentication return must restore the same canonical admin route and view state.",
+    "Canonical admin descendant URLs follow the registered site/service admin root; pure action buttons do not create routes."
+  ],
+  "routingContract": {
+    "policyId": "ADMIN-ROUTING-001",
+    "deepRouteAddressability": true,
+    "canonicalDescendantPattern": "{adminPath}/{menu}[/{subpath...}]",
+    "reloadRestoresRoute": true,
+    "directEntryRestoresRoute": true,
+    "authenticationReturnRestoresExactTrustedRoute": true,
+    "buttonActionsDoNotCreateRoutes": true
+  }
 }

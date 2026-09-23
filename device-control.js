@@ -85,6 +85,7 @@ const COMMAND_POLICIES = Object.freeze({
   'profile.workstation.restore': { risk: 'maintain', confirm: true },
   'agent.self_update': { risk: 'maintain', confirm: true },
   'computer.browser.canary': { risk: 'maintain', confirm: true },
+  'computer.browser.execute': { risk: 'maintain', confirm: true, payload: 'background-browser-task' },
   'remote_desktop.recovery.enable': { risk: 'maintain', confirm: true },
   'remote_desktop.recovery.disable': { risk: 'maintain', confirm: true },
   'remote_desktop.recovery.run': { risk: 'maintain', confirm: true },
@@ -103,6 +104,7 @@ const COMMAND_CAPABILITIES = Object.freeze({
   'computer.system.read': 'computerRead',
   'computer.process.list': 'processRead',
   'computer.agent.status': 'agentStatus',
+  'computer.browser.execute': 'backgroundBrowser',
   'network.diagnose': 'networkDiagnostics',
   'printers.diagnose': 'printerDiagnostics',
   'startup.scan': 'startupManagement',
@@ -345,6 +347,16 @@ function sanitizeCommandPayload(type, rawPayload) {
     if (!/^[a-f0-9]{64}$/.test(itemId)) throw new Error('STARTUP_ITEM_INVALID');
     return { itemId };
   }
+  if (policy.payload === 'background-browser-task') {
+    const pathValue=safeText(rawPayload?.path || '/',600);
+    const deviceProfile=safeText(rawPayload?.deviceProfile || 'desktop',40);
+    if(!pathValue.startsWith('/')||pathValue.startsWith('//')||/[\u0000-\u001f]/.test(pathValue)) throw new Error('BROWSER_PATH_INVALID');
+    if(!['compact-mobile','mobile-portrait','mobile-landscape','tablet','desktop'].includes(deviceProfile)) throw new Error('BROWSER_DEVICE_PROFILE_INVALID');
+    let target;
+    try { target=new URL(pathValue,'https://ekodi.kr/'); } catch { throw new Error('BROWSER_PATH_INVALID'); }
+    if(target.protocol!=='https:'||target.hostname!=='ekodi.kr'||target.username||target.password||target.port) throw new Error('BROWSER_TARGET_INVALID');
+    return {path:target.pathname+target.search+target.hash,deviceProfile};
+  }
   if (policy.payload === 'camera-stream') {
     const externalId=safeText(rawPayload?.externalId,100).toLowerCase();
     const sessionId=safeText(rawPayload?.sessionId,80).toLowerCase();
@@ -478,6 +490,37 @@ function summarizeCommandResult(result = {}) {
     : (Number.isFinite(Number(value)) ? Number(value) : null);
   for (const key of ['message', 'freedMB', 'pendingCount', 'installedCount', 'failedCount', 'rebootRequired', 'profile']) {
     if (result[key] !== undefined) summary[key] = result[key];
+  }
+  if (result.browserWorker && typeof result.browserWorker === 'object') {
+    summary.browserWorker = {
+      ok: result.browserWorker.ok === true,
+      mode: safeText(result.browserWorker.mode, 60),
+      virtualizationProvider: safeText(result.browserWorker.virtualizationProvider, 100),
+      routingPolicy: safeText(result.browserWorker.routingPolicy, 100),
+      agentVersion: safeText(result.browserWorker.agentVersion, 40),
+      taskId: safeText(result.browserWorker.taskId, 80),
+      browser: safeText(result.browserWorker.browser, 80),
+      url: safeText(result.browserWorker.url, 300),
+      deviceProfile: safeText(result.browserWorker.deviceProfile, 40),
+      viewportWidth: finiteNumber(result.browserWorker.viewportWidth),
+      viewportHeight: finiteNumber(result.browserWorker.viewportHeight),
+      exitCode: finiteNumber(result.browserWorker.exitCode),
+      contentBytes: finiteNumber(result.browserWorker.contentBytes),
+      contentSha256: safeText(result.browserWorker.contentSha256, 80),
+      screenshotBytes: finiteNumber(result.browserWorker.screenshotBytes),
+      screenshotSha256: safeText(result.browserWorker.screenshotSha256, 80),
+      dedicatedAutomationProfile: result.browserWorker.dedicatedAutomationProfile === true,
+      ephemeralProfile: result.browserWorker.ephemeralProfile === true,
+      profileRemoved: result.browserWorker.profileRemoved === true,
+      activeUserProfileReused: result.browserWorker.activeUserProfileReused === true,
+      offscreenOrHeadless: result.browserWorker.offscreenOrHeadless === true,
+      focusIsolated: result.browserWorker.focusIsolated === true,
+      clipboardShared: result.browserWorker.clipboardShared === true,
+      userInputInjection: result.browserWorker.userInputInjection === true,
+      javascriptEnabled: result.browserWorker.javascriptEnabled === true,
+      mutationMode: safeText(result.browserWorker.mutationMode, 80),
+      checkedAt: safeText(result.browserWorker.checkedAt, 64),
+    };
   }
   if (result.browserCanary && typeof result.browserCanary === 'object') {
     summary.browserCanary = {

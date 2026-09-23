@@ -8,10 +8,14 @@ const CHURCH_SECTION_CAPABILITY=Object.freeze({overview:TENANT_ADMIN_CAPABILITIE
 export function churchPastorCanAccess(role,section){const policy=tenantAdminPolicySnapshot();const allowed=policy.roleCapabilities[String(role||'').trim().toLowerCase()]||[];const capability=CHURCH_SECTION_CAPABILITY[String(section||'overview').toLowerCase()];return Boolean(capability&&(allowed.includes('*')||allowed.includes(capability)));}
 export function churchPastorSectionsForRole(role){return [...ALLOWED_SECTIONS].filter(section=>churchPastorCanAccess(role,section));}
 
+const CHURCH_DETAIL_ROUTE_SECTIONS=new Set(['people','attendance','worship','care','calendar','ministry','offerings','accounting','receipts','reports','ai','chrome']);
 export function isChurchPastorAdminPath(pathname){
   const clean=String(pathname||'').replace(/\/+$/,'');
-  const match=clean.match(/^\/ekodichurch\/admin(?:\/([^/]+))?$/i);
-  return Boolean(match&&ALLOWED_SECTIONS.has(String(match[1]||'overview').toLowerCase()));
+  const match=clean.match(/^\/ekodichurch\/admin(?:\/([^/]+)(\/.*)?)?$/i);
+  if(!match)return false;
+  const section=String(match[1]||'overview').toLowerCase();
+  if(!ALLOWED_SECTIONS.has(section))return false;
+  return !match[2]||CHURCH_DETAIL_ROUTE_SECTIONS.has(section);
 }
 
 function pastorClient(POLICY){
@@ -22,7 +26,7 @@ function pastorClient(POLICY){
   const CHURCH='ekodi-church';
   const SESSION_KEY='ekodi-church-pastor-session';
   const AUTH_URL='https://ekodi.kr/auth/';
-  const section=(location.pathname.replace(/\/+$/,'').match(/^\/ekodichurch\/admin(?:\/([^/]+))?$/i)?.[1]||'overview').toLowerCase();
+  const section=(location.pathname.replace(/\/+$/,'').match(/^\/ekodichurch\/admin(?:\/([^/]+)(?:\/[^/]+)*)?$/i)?.[1]||'overview').toLowerCase();
   const base='/ekodichurch/admin';
   const $=id=>document.getElementById(id);
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
