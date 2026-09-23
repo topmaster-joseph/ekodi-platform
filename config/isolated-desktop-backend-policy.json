@@ -52,12 +52,31 @@
     "executionCommand": "computer.desktop.session.execute",
     "executionCommandMustRemainDisabledUntilVerifiedHeadlessBackend": true,
     "externalFallbackForbiddenWhenVerifiedNativeBackendReady": true,
-    "externalFallbackRequiresRoutingPolicyEvidence": true
+    "externalFallbackRequiresRoutingPolicyEvidence": true,
+    "canaryCommand": "computer.desktop.canary",
+    "canaryState": "agent-version-bound-local-proof",
+    "canaryRequiredBeforeExecution": true,
+    "canaryDoesNotEnableExecutionByItself": true
   },
   "gapClassification": {
     "noVirtualizationFirmware": "native-capability-unavailable",
     "hyperVDisabled": "native-capability-not-production-ready",
     "baseVmMissing": "required-capability-not-yet-implemented",
     "runtimeFailure": "native-capacity-or-runtime-failure"
+  },
+  "canary": {
+    "backend": "hyper-v-ekodi-base",
+    "mode": "ephemeral-differencing-vhdx",
+    "networkAttached": false,
+    "userDesktopAttached": false,
+    "clipboardShared": false,
+    "userInputInjection": false,
+    "credentialCollection": false,
+    "baseVmMustBeOff": true,
+    "baseDiskWriteForbidden": true,
+    "ephemeralVmRequired": true,
+    "cleanupRequired": true,
+    "maximumStartWaitSeconds": 30,
+    "executionCapabilityAfterCanary": false
   }
 }
