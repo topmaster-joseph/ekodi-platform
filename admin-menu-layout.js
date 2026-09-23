@@ -80,7 +80,6 @@ function activateCommandHome(){
 }
 function leaveCommandHome(){
   document.body.classList.remove('admin-command-home','admin-command-active');
-  document.querySelector('#ekodiAssistClose')?.click?.();
 }
 function activatePanel(section){
   if(!section)return false;
