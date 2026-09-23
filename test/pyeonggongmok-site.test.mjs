@@ -69,4 +69,8 @@ test('pyeonggongmok is production-discoverable and deployment-owned',async()=>{
   assert.ok(probe.headerExpect.includes('x-ekodi-route: pyeonggongmok-static'));
   assert.match(workflow,/sites\/pyeonggongmok\/public\/\*\*/);
   assert.match(workflow,/test\/pyeonggongmok-site\.test\.mjs/);
+  const theme=JSON.parse(await readFile(new URL('../shell/theme.json',import.meta.url),'utf8'));
+  assert.equal(theme.services.pyeonggongmok.identity,'pastoral-study-table');
+  const wrangler=await readFile(new URL('../wrangler.site.toml',import.meta.url),'utf8');
+  assert.match(wrangler,/\"\/pyeonggongmok\\\*\"/);
 });
