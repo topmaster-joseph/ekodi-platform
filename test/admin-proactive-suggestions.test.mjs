@@ -13,9 +13,10 @@ test('admin command home includes the small-business proactive briefing', () => 
 
 test('external AI handoff uses official origins and keeps prompt out of the URL', () => {
   assert.match(source, /https:\/\/chatgpt\.com\//);
+  assert.match(source, /https:\/\/claude\.ai\//);
   assert.match(source, /https:\/\/gemini\.google\.com\/app/);
   assert.match(source, /https:\/\/chat\.qwen\.ai\//);
-  assert.match(source, /copyText\(prompt\)/);
+  assert.match(source, /copyText\(value\)/);
   assert.doesNotMatch(source, /searchParams\.set\([^\n]*prompt/);
 });
 
