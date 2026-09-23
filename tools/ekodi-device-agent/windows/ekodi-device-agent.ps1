@@ -10,7 +10,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$AgentVersion = '2.3.0'
+$AgentVersion = '2.3.1'
 $Root = Join-Path $env:ProgramData 'EKODI\DeviceAgent'
 $AgentPath = Join-Path $Root 'ekodi-device-agent.ps1'
 $ConfigPath = Join-Path $Root 'config.json'
@@ -26,6 +26,7 @@ $AllowedApiBase = 'https://ekodi.kr'
 $UpgradeRoot = Join-Path $Root 'transactions'
 $script:RestartAfterCommand = $false
 $BrowserCanaryStatePath = Join-Path $Root 'background-browser-canary.json'
+$IsolatedDesktopCanaryStatePath = Join-Path $Root 'isolated-desktop-canary.json'
 $BrowserCanaryProfileRoot = Join-Path $env:ProgramData 'EKODI\BrowserWorker\CanaryProfile'
 $BrowserWorkerProfileRoot = Join-Path $env:ProgramData 'EKODI\BrowserWorker\Tasks'
 $BrowserCanaryUrl = 'https://ekodi.kr/'
@@ -1192,6 +1193,282 @@ function Invoke-BackgroundBrowserWorker($Payload) {
   return @{ message = 'EKODI 자체 Background Browser Worker가 사용자 화면과 분리된 읽기 전용 작업을 완료했습니다.'; browserWorker = $proof }
 }
 
+function Initialize-EkodiDesktopNative {
+  if ('EkodiDesktopNative' -as [type]) { return }
+  Add-Type -TypeDefinition @'
+using System;
+using System.Runtime.InteropServices;
+using System.Text;
+
+public static class EkodiDesktopNative {
+  [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+  public struct STARTUPINFO {
+    public UInt32 cb;
+    public string lpReserved;
+    public string lpDesktop;
+    public string lpTitle;
+    public UInt32 dwX;
+    public UInt32 dwY;
+    public UInt32 dwXSize;
+    public UInt32 dwYSize;
+    public UInt32 dwXCountChars;
+    public UInt32 dwYCountChars;
+    public UInt32 dwFillAttribute;
+    public UInt32 dwFlags;
+    public UInt16 wShowWindow;
+    public UInt16 cbReserved2;
+    public IntPtr lpReserved2;
+    public IntPtr hStdInput;
+    public IntPtr hStdOutput;
+    public IntPtr hStdError;
+  }
+
+  [StructLayout(LayoutKind.Sequential)]
+  public struct PROCESS_INFORMATION {
+    public IntPtr hProcess;
+    public IntPtr hThread;
+    public UInt32 dwProcessId;
+    public UInt32 dwThreadId;
+  }
+
+  [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+  public static extern IntPtr CreateDesktopW(
+    string lpszDesktop,
+    IntPtr lpszDevice,
+    IntPtr pDevmode,
+    UInt32 dwFlags,
+    UInt32 dwDesiredAccess,
+    IntPtr lpsa
+  );
+
+  [DllImport("user32.dll", SetLastError = true)]
+  [return: MarshalAs(UnmanagedType.Bool)]
+  public static extern bool CloseDesktop(IntPtr hDesktop);
+
+  [DllImport("user32.dll", SetLastError = true)]
+  public static extern IntPtr GetThreadDesktop(UInt32 dwThreadId);
+
+  [DllImport("user32.dll", SetLastError = true)]
+  public static extern IntPtr OpenInputDesktop(UInt32 dwFlags, bool fInherit, UInt32 dwDesiredAccess);
+
+  [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+  [return: MarshalAs(UnmanagedType.Bool)]
+  public static extern bool GetUserObjectInformationW(
+    IntPtr hObj,
+    Int32 nIndex,
+    StringBuilder pvInfo,
+    UInt32 nLength,
+    out UInt32 lpnLengthNeeded
+  );
+
+  [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+  [return: MarshalAs(UnmanagedType.Bool)]
+  public static extern bool CreateProcessW(
+    string lpApplicationName,
+    StringBuilder lpCommandLine,
+    IntPtr lpProcessAttributes,
+    IntPtr lpThreadAttributes,
+    bool bInheritHandles,
+    UInt32 dwCreationFlags,
+    IntPtr lpEnvironment,
+    string lpCurrentDirectory,
+    ref STARTUPINFO lpStartupInfo,
+    out PROCESS_INFORMATION lpProcessInformation
+  );
+
+  [DllImport("kernel32.dll", SetLastError = true)]
+  public static extern UInt32 WaitForSingleObject(IntPtr hHandle, UInt32 dwMilliseconds);
+
+  [DllImport("kernel32.dll", SetLastError = true)]
+  [return: MarshalAs(UnmanagedType.Bool)]
+  public static extern bool TerminateProcess(IntPtr hProcess, UInt32 uExitCode);
+
+  [DllImport("kernel32.dll", SetLastError = true)]
+  [return: MarshalAs(UnmanagedType.Bool)]
+  public static extern bool CloseHandle(IntPtr hObject);
+}
+'@
+}
+
+function Get-EkodiDesktopObjectName([IntPtr]$Handle) {
+  if ($Handle -eq [IntPtr]::Zero) { return '' }
+  $buffer = [Text.StringBuilder]::new(260)
+  [uint32]$needed = 0
+  $ok = [EkodiDesktopNative]::GetUserObjectInformationW($Handle, 2, $buffer, [uint32]$buffer.Capacity, [ref]$needed)
+  if (-not $ok) { return '' }
+  return [string]$buffer.ToString()
+}
+
+function Get-IsolatedDesktopCanaryState {
+  if (-not (Test-Path -LiteralPath $IsolatedDesktopCanaryStatePath)) {
+    return @{ verified = $false; checkedAt = ''; agentVersion = $AgentVersion }
+  }
+  try {
+    $state = Get-Content -LiteralPath $IsolatedDesktopCanaryStatePath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $verified = (
+      $state.ok -eq $true -and
+      [string]$state.agentVersion -eq $AgentVersion -and
+      [string]$state.mode -eq 'windows-secondary-desktop-canary' -and
+      [string]$state.desktopName -and
+      [string]$state.childDesktopName -eq [string]$state.desktopName -and
+      $state.childProofWritten -eq $true -and
+      $state.desktopHandleClosed -eq $true -and
+      $state.switchDesktopCalled -eq $false -and
+      $state.userInputInjection -eq $false -and
+      $state.clipboardShared -eq $false -and
+      $state.screenCapture -eq $false -and
+      $state.sharedInteractiveDesktop -eq $false
+    )
+    return @{
+      verified = [bool]$verified
+      checkedAt = [string]$state.checkedAt
+      agentVersion = [string]$state.agentVersion
+      mode = [string]$state.mode
+      desktopName = [string]$state.desktopName
+      childDesktopName = [string]$state.childDesktopName
+      inputDesktopName = [string]$state.inputDesktopName
+      childProofWritten = [bool]$state.childProofWritten
+      desktopHandleClosed = [bool]$state.desktopHandleClosed
+      switchDesktopCalled = [bool]$state.switchDesktopCalled
+      userInputInjection = [bool]$state.userInputInjection
+      clipboardShared = [bool]$state.clipboardShared
+      screenCapture = [bool]$state.screenCapture
+      sharedInteractiveDesktop = [bool]$state.sharedInteractiveDesktop
+    }
+  } catch {
+    return @{ verified = $false; checkedAt = ''; agentVersion = $AgentVersion; error = 'isolated_desktop_canary_state_invalid' }
+  }
+}
+
+function Invoke-IsolatedDesktopCanary {
+  Initialize-EkodiDesktopNative
+  Remove-Item -LiteralPath $IsolatedDesktopCanaryStatePath -Force -ErrorAction SilentlyContinue
+
+  $desktopName = 'EKODI-' + [guid]::NewGuid().ToString('N')
+  $proofPath = Join-Path $env:TEMP ("ekodi-isolated-desktop-" + [guid]::NewGuid().ToString('N') + ".txt")
+  $nonce = [guid]::NewGuid().ToString('N')
+  $desktop = [IntPtr]::Zero
+  $inputDesktop = [IntPtr]::Zero
+  $processInfo = [EkodiDesktopNative+PROCESS_INFORMATION]::new()
+  $proof = $null
+
+  try {
+    $desktop = [EkodiDesktopNative]::CreateDesktopW(
+      $desktopName,
+      [IntPtr]::Zero,
+      [IntPtr]::Zero,
+      0,
+      0x00C3,
+      [IntPtr]::Zero
+    )
+    if ($desktop -eq [IntPtr]::Zero) {
+      throw "isolated_desktop_create_failed:$([Runtime.InteropServices.Marshal]::GetLastWin32Error())"
+    }
+
+    $createdName = Get-EkodiDesktopObjectName $desktop
+    if ($createdName -ne $desktopName) { throw 'isolated_desktop_name_mismatch' }
+
+    try {
+      $inputDesktop = [EkodiDesktopNative]::OpenInputDesktop(0, $false, 0x0001)
+    } catch {
+      $inputDesktop = [IntPtr]::Zero
+    }
+    $inputDesktopName = Get-EkodiDesktopObjectName $inputDesktop
+
+    $escapedProofPath = $proofPath.Replace("'", "''")
+    $escapedNonce = $nonce.Replace("'", "''")
+    $childScript = "[IO.File]::WriteAllText('$escapedProofPath','$escapedNonce',[Text.Encoding]::UTF8); Start-Sleep -Milliseconds 1800"
+    $encoded = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($childScript))
+    $powerShellExe = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
+    $commandLine = [Text.StringBuilder]::new("powershell.exe -NoLogo -NoProfile -NonInteractive -EncodedCommand $encoded")
+
+    $startup = [EkodiDesktopNative+STARTUPINFO]::new()
+    $startup.cb = [Runtime.InteropServices.Marshal]::SizeOf([type][EkodiDesktopNative+STARTUPINFO])
+    $startup.lpDesktop = $desktopName
+
+    $created = [EkodiDesktopNative]::CreateProcessW(
+      $powerShellExe,
+      $commandLine,
+      [IntPtr]::Zero,
+      [IntPtr]::Zero,
+      $false,
+      0x08000000,
+      [IntPtr]::Zero,
+      $env:TEMP,
+      [ref]$startup,
+      [ref]$processInfo
+    )
+    if (-not $created) {
+      throw "isolated_desktop_child_create_failed:$([Runtime.InteropServices.Marshal]::GetLastWin32Error())"
+    }
+
+    Start-Sleep -Milliseconds 150
+    $childDesktop = [EkodiDesktopNative]::GetThreadDesktop($processInfo.dwThreadId)
+    $childDesktopName = Get-EkodiDesktopObjectName $childDesktop
+
+    $wait = [EkodiDesktopNative]::WaitForSingleObject($processInfo.hProcess, 10000)
+    if ($wait -eq 0x00000102) {
+      [void][EkodiDesktopNative]::TerminateProcess($processInfo.hProcess, 124)
+      throw 'isolated_desktop_child_timeout'
+    }
+
+    $childProofWritten = $false
+    if (Test-Path -LiteralPath $proofPath) {
+      $childProofWritten = ((Get-Content -LiteralPath $proofPath -Raw -Encoding UTF8).Trim() -eq $nonce)
+    }
+
+    $proof = @{
+      ok = [bool]($childProofWritten -and $childDesktopName -eq $desktopName)
+      mode = 'windows-secondary-desktop-canary'
+      virtualizationProvider = 'ekodi-native-remote-computer'
+      routingPolicy = 'EKODI-VIRTUALIZATION-ROUTING-001'
+      agentVersion = $AgentVersion
+      desktopName = $desktopName
+      childDesktopName = $childDesktopName
+      inputDesktopName = $inputDesktopName
+      childProcessIdObserved = [bool]($processInfo.dwProcessId -gt 0)
+      childThreadIdObserved = [bool]($processInfo.dwThreadId -gt 0)
+      childProofWritten = [bool]$childProofWritten
+      createdDesktopIsInputDesktop = [bool]($inputDesktopName -and $inputDesktopName -eq $desktopName)
+      sharedInteractiveDesktop = $false
+      switchDesktopCalled = $false
+      foregroundUserSessionProtected = $true
+      userInputInjection = $false
+      clipboardShared = $false
+      screenCapture = $false
+      arbitraryShellFromCloud = $false
+      checkedAt = (Get-Date).ToUniversalTime().ToString('o')
+      desktopHandleClosed = $false
+    }
+    if (-not $proof.ok) { throw 'isolated_desktop_canary_proof_failed' }
+  } finally {
+    Remove-Item -LiteralPath $proofPath -Force -ErrorAction SilentlyContinue
+
+    if ($processInfo.hThread -ne [IntPtr]::Zero) {
+      [void][EkodiDesktopNative]::CloseHandle($processInfo.hThread)
+    }
+    if ($processInfo.hProcess -ne [IntPtr]::Zero) {
+      [void][EkodiDesktopNative]::CloseHandle($processInfo.hProcess)
+    }
+    if ($inputDesktop -ne [IntPtr]::Zero) {
+      [void][EkodiDesktopNative]::CloseDesktop($inputDesktop)
+    }
+    $desktopClosed = $true
+    if ($desktop -ne [IntPtr]::Zero) {
+      $desktopClosed = [bool][EkodiDesktopNative]::CloseDesktop($desktop)
+    }
+    if ($proof) { $proof.desktopHandleClosed = [bool]$desktopClosed }
+  }
+
+  if (-not $proof -or -not $proof.ok -or -not $proof.desktopHandleClosed) {
+    throw 'isolated_desktop_canary_cleanup_failed'
+  }
+
+  New-Item -ItemType Directory -Path $Root -Force | Out-Null
+  $proof | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $IsolatedDesktopCanaryStatePath -Encoding UTF8
+  return @{ message = 'EKODI 자체 Windows 보조 데스크톱 격리 canary를 사용자 화면 전환 없이 검증했습니다. 실제 데스크톱 작업 실행 권한은 아직 활성화하지 않습니다.'; isolatedDesktopCanary = $proof }
+}
+
 function Get-RemoteAgentStatus {
   $taskState = 'unknown'
   try {
@@ -1210,6 +1487,7 @@ function Get-RemoteAgentStatus {
     foregroundUserSessionProtected = $true
     backgroundBrowserCanaryVerified = [bool](Get-BackgroundBrowserCanaryState).verified
     backgroundBrowserReady = [bool](Get-BackgroundBrowserCanaryState).verified
+    isolatedDesktopCanaryVerified = [bool](Get-IsolatedDesktopCanaryState).verified
     isolatedDesktopReady = $false
     minimizedWindowCountsAsIsolation = $false
   }
@@ -1294,6 +1572,7 @@ function Invoke-DeviceCommand([pscustomobject]$Command) {
     'agent.self_update' { return Update-AgentFromOfficialSource }
     'computer.browser.canary' { return Invoke-BackgroundBrowserCanary }
     'computer.browser.execute' { return Invoke-BackgroundBrowserWorker $payload }
+    'computer.desktop.canary' { return Invoke-IsolatedDesktopCanary }
     'remote_desktop.recovery.enable' { return Set-DesktopCommanderRecovery $true }
     'remote_desktop.recovery.disable' { return Set-DesktopCommanderRecovery $false }
     'remote_desktop.recovery.run' { return Ensure-DesktopCommanderRunning $true }
@@ -1381,7 +1660,7 @@ function Send-Heartbeat($Config) {
       diagnostics = $true; storageMaintenance = $true; windowsUpdate = $true; startupManagement = $true
       networkDiagnostics = $true; printerDiagnostics = $true; workstationProfile = $true; protocolLaunch = $true
       computerRead = $true; processRead = $true; agentStatus = $true
-      isolatedCommand = $false; filesystemRead = $false; filesystemWrite = $false; backgroundBrowserCanary = [bool](Get-BackgroundBrowserCanaryState).verified; backgroundBrowser = [bool](Get-BackgroundBrowserCanaryState).verified; isolatedDesktop = $false
+      isolatedCommand = $false; filesystemRead = $false; filesystemWrite = $false; backgroundBrowserCanary = [bool](Get-BackgroundBrowserCanaryState).verified; backgroundBrowser = [bool](Get-BackgroundBrowserCanaryState).verified; isolatedDesktopCanary = [bool](Get-IsolatedDesktopCanaryState).verified; isolatedDesktop = $false
       desktopCapture = $false; desktopInput = $false
       arbitraryShell = $false; screenCapture = $false; credentialCollection = $false
     }
