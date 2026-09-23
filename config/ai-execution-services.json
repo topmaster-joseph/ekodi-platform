@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "principle": "있는 것은 바로 사용하고, 없는 것은 요청하고, 좋은 요청은 함께 만들어 모두가 사용한다.",
   "categories": [
     {
@@ -44,63 +44,81 @@
       "category": "work",
       "label": "문서 만들기",
       "capabilityId": "core.documents",
-      "launchUrl": "https://ekodi.kr/ai/docs/"
+      "launchUrl": "https://ekodi.kr/ai/docs/",
+      "availability": "live",
+      "deliveryMode": "bridge"
     },
     {
       "id": "find-support",
       "category": "opportunity",
       "label": "지원사업 찾기",
       "capabilityId": "support.benefit-radar",
-      "launchUrl": "https://ekodi.kr/ai/support/"
+      "launchUrl": "https://ekodi.kr/ai/support/",
+      "availability": "live",
+      "deliveryMode": "bridge"
     },
     {
       "id": "write-content",
       "category": "creator",
       "label": "글·원고 쓰기",
       "capabilityId": "creator.writing",
-      "launchUrl": "https://ekodi.kr/ai/writing/"
+      "launchUrl": "https://ekodi.kr/ai/writing/",
+      "availability": "live",
+      "deliveryMode": "bridge"
     },
     {
       "id": "make-marketing",
       "category": "business",
       "label": "홍보 콘텐츠 만들기",
       "capabilityId": "business.marketing",
-      "launchUrl": "https://ekodi.kr/ai/marketing/"
+      "launchUrl": "https://ekodi.kr/ai/marketing/",
+      "availability": "beta",
+      "deliveryMode": "bridge"
     },
     {
       "id": "run-business",
       "category": "business",
       "label": "사업 운영하기",
       "capabilityId": "business.operations",
-      "launchUrl": "https://ekodi.kr/ai/business/"
+      "launchUrl": "https://ekodi.kr/ai/business/",
+      "availability": "integration-pending",
+      "deliveryMode": "bridge"
     },
     {
       "id": "everyone-interpreter",
       "category": "communication",
       "label": "모두의 통역",
       "capabilityId": "core.interpreter",
-      "launchUrl": "https://ekodi.kr/ai/interpreter/"
+      "launchUrl": "https://ekodi.kr/ai/interpreter/",
+      "availability": "live",
+      "deliveryMode": "direct"
     },
     {
       "id": "manage-community",
       "category": "community",
       "label": "회원·공동체 관리하기",
       "capabilityId": "community.membership",
-      "launchUrl": "https://ekodi.kr/ai/community/"
+      "launchUrl": "https://ekodi.kr/ai/community/",
+      "availability": "live",
+      "deliveryMode": "bridge"
     },
     {
       "id": "prepare-insurance-claim",
       "category": "life",
       "label": "보험청구 준비하기",
       "capabilityId": "insurance.claims",
-      "launchUrl": "https://ekodi.kr/ai/insurance/"
+      "launchUrl": "https://ekodi.kr/ai/insurance/",
+      "availability": "beta",
+      "deliveryMode": "bridge"
     },
     {
       "id": "check-energy",
       "category": "life",
       "label": "에너지 상태 확인하기",
       "capabilityId": "energy.manage",
-      "launchUrl": "https://ekodi.kr/ai/energy/"
+      "launchUrl": "https://ekodi.kr/ai/energy/",
+      "availability": "read-only",
+      "deliveryMode": "bridge"
     }
   ]
 }
