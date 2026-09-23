@@ -46,12 +46,12 @@ test('guarded production release verifies current auth entry, bridge and workspa
   const bridgeScript = requests.find(item => item.url === 'https://ekodi.kr/auth/google-origin-bridge.js');
   for (const probe of [root, bootstrap, entry, router, client, workspaceTarget, admin, bridgeDoc, bridgeScript]) assert.ok(probe);
   assert.ok(root.expect.includes('/auth/auth-bootstrap.js?v=20260923-return-continuity-1'));
-  assert.ok(root.expect.includes('/auth/auth-entry.js?v=20260923-return-continuity-1'));
+  assert.ok(root.expect.includes('/auth/auth-entry.js?v=20260923-space-admin-return-2'));
   assert.ok(bootstrap.expect.includes('dataset.seamlessSso'));
-  assert.ok(entry.expect.includes("./auth-router.js?v=20260923-return-continuity-1"));
+  assert.ok(entry.expect.includes("./auth-router.js?v=20260923-space-admin-return-2"));
   assert.ok(router.expect.includes('admin-auth.js?v=20260918-canonical-origin-2'));
   assert.ok(router.expect.includes('business-auth.js?v=20260826-free-fallback-1'));
-  assert.ok(router.expect.includes('client-auth.js?v=20260923-return-continuity-1'));
+  assert.ok(router.expect.includes('client-auth.js?v=20260923-space-admin-return-2'));
   assert.ok(client.expect.includes('/session/handoff'));
   assert.ok(client.expect.includes('session_timeout'));
   assert.ok(workspaceTarget.expect.includes('workspace_key:requested'));
