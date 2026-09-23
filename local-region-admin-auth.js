@@ -1,3 +1,5 @@
+import { serializeBrowserClient } from './browser-client-serializer.js';
+
 function clientMain(){
   const SUPABASE_URL='https://renzehysxirjilvdxacv.supabase.co';
   const SUPABASE_KEY='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
@@ -59,5 +61,5 @@ function clientMain(){
 }
 
 export function localRegionAdminAuthScript(){
-  return new Response('('+clientMain.toString()+')();',{headers:{'content-type':'text/javascript; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}});
+  return new Response(serializeBrowserClient(clientMain),{headers:{'content-type':'text/javascript; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}});
 }

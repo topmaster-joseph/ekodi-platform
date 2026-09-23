@@ -1,3 +1,5 @@
+import { serializeBrowserClient } from './browser-client-serializer.js';
+
 function clientMain(){
   const root=document.documentElement;
   const path=location.pathname.replace(/\/+$/,'');
@@ -207,7 +209,7 @@ function clientMain(){
 }
 
 export function localRegionOperationsAdminScript(){
-  return new Response('('+clientMain.toString()+')();',{headers:{
+  return new Response(serializeBrowserClient(clientMain),{headers:{
     'content-type':'text/javascript; charset=utf-8',
     'cache-control':'no-store',
     'x-content-type-options':'nosniff',

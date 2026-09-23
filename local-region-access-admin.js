@@ -1,3 +1,5 @@
+import { serializeBrowserClient } from './browser-client-serializer.js';
+
 function clientMain(){
   const root=document.documentElement;
   if(root.dataset.ekodiRegionSurface!=='admin'||!location.pathname.replace(/\/+$/,'').endsWith('/admin/access'))return;
@@ -61,5 +63,5 @@ function clientMain(){
 }
 
 export function localRegionAccessAdminScript(){
-  return new Response('('+clientMain.toString()+')();',{headers:{'content-type':'text/javascript; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}});
+  return new Response(serializeBrowserClient(clientMain),{headers:{'content-type':'text/javascript; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}});
 }
