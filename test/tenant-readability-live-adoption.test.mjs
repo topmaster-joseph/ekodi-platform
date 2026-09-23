@@ -14,6 +14,10 @@ test('tenant readability injector stays brand-neutral and idempotent',async()=>{
   assert.match(injector,/data-ekodi-tenant-readability/);
   assert.match(injector,/mobile-fixed-header\.js/);
   assert.match(injector,/data-ekodi-fixed-header/);
+  assert.match(injector,/OPERATING_SPACE_LABEL_HEADER='x-ekodi-operating-space-label'/);
+  assert.match(injector,/data-ekodi-operating-space-label/);
+  assert.match(injector,/options\?\.operatingSpace!==false/);
+  assert.match(injector,/운영공간/);
   assert.match(injector,/x-ekodi-shell/);
   assert.match(injector,/x-ekodi-user-ui/);
   assert.doesNotMatch(injector,/function injectEkodiTenantReadability[\s\S]*fallbackHeader\(/);
@@ -22,6 +26,7 @@ test('tenant readability injector stays brand-neutral and idempotent',async()=>{
   assert.match(css,/html\[data-ekodi-tenant-readability="v1"\]/);
   assert.match(css,/min-height:44px/);
   assert.match(css,/text-wrap:balance/);
+  assert.match(css,/\.ekodi-operating-space-note\[data-ekodi-operating-space-label\]/);
 });
 
 test('live mobile verifier checks canonical apex tenant paths only',async()=>{
@@ -48,8 +53,29 @@ test('remaining canonical business, trade and lab surfaces inherit a readability
     read('scripts/verify-mobile-fixed-headers-live.mjs'),
   ]);
   assert.match(router,/routeEkodiBizPublic[\s\S]*injectEkodiProgressiveHome\(injectEkodiTenantReadability\(rewritten\)\)/);
+  assert.match(router,/LEGACY_OPERATING_SPACE_ROOTS=new Set\(\['ekodichurch','ekodimission'\]\)/);
+  assert.match(router,/legacyOperatingSpacePath\(url\.pathname\)\)return injectEkodiTenantReadability\(legacyResponse\)/);
   assert.match(router,/isTradePartnerPath\(url\.pathname\)\)return injectEkodiTenantReadability\(tradePartnerPage\(\)\)/);
   assert.match(canonical,/executionSurface\.id==='lab'\?injectEkodiTenantReadability\(response\):response/);
   assert.match(verifier,/requireReadability\(cgmaRoot,'cgma-root',errors\)/);
   assert.doesNotMatch(verifier,/need\(cgmaRoot,'cgma-root','data-ekodi-tenant-readability/);
+});
+
+test('guarded release requires the operating-space distinction on representative live sites',async()=>{
+  const manifest=JSON.parse(await read('deploy/manifests/shared-site.worker.json'));
+  for(const url of [
+    'https://ekodi.kr/ekodichurch',
+    'https://ekodi.kr/ekodibiz',
+    'https://ekodi.kr/cgma',
+    'https://ekodi.kr/jadam',
+    'https://ekodi.kr/pizzamaru',
+    'https://ekodi.kr/yogurt',
+  ]){
+    const probe=manifest.worker.requests.find(item=>item.url===url);
+    assert.ok(probe,'missing operating-space release probe: '+url);
+    assert.deepEqual(probe.statuses,[200]);
+    assert.ok(probe.expect?.includes('운영공간'),url+' must render the operating-space distinction');
+    assert.ok(probe.headerExpect?.includes('x-ekodi-operating-space-label: v1'),url+' must prove shared operating-space ownership');
+    assert.equal(probe.rollbackVerify,false);
+  }
 });

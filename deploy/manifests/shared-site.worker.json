@@ -1,5 +1,5 @@
 {
-  "version": 88,
+  "version": 89,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
@@ -216,10 +216,13 @@
         "redirect": "manual",
         "expect": [
           "EKODIBIZ",
-          "WHAT WE DO"
+          "WHAT WE DO",
+          "운영공간"
         ],
         "headerExpect": [
-          "x-ekodi-workspace-gateway: ekodibiz-service-binding"
+          "x-ekodi-workspace-gateway: ekodibiz-service-binding",
+          "x-ekodi-tenant-readability: v1",
+          "x-ekodi-operating-space-label: v1"
         ],
         "rollbackVerify": false
       },
@@ -1843,6 +1846,81 @@
           "location: https://ekodi.kr/seonam-medi",
           "x-ekodi-route: seonam-medi-canonical",
           "cache-control: no-store"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/ekodichurch",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "운영공간"
+        ],
+        "headerExpect": [
+          "x-ekodi-tenant-readability: v1",
+          "x-ekodi-operating-space-label: v1"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/cgma",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "운영공간"
+        ],
+        "headerExpect": [
+          "x-ekodi-tenant-readability: v1",
+          "x-ekodi-operating-space-label: v1"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/jadam",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "운영공간"
+        ],
+        "headerExpect": [
+          "x-ekodi-tenant-readability: v1",
+          "x-ekodi-operating-space-label: v1"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/pizzamaru",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "운영공간"
+        ],
+        "headerExpect": [
+          "x-ekodi-tenant-readability: v1",
+          "x-ekodi-operating-space-label: v1"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/yogurt",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "운영공간"
+        ],
+        "headerExpect": [
+          "x-ekodi-tenant-readability: v1",
+          "x-ekodi-operating-space-label: v1"
         ],
         "rollbackVerify": false
       }
