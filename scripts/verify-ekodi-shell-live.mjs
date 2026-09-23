@@ -116,7 +116,7 @@ for(let attempt=1;attempt<=attempts;attempt++){
     if(languageRegistry.policy?.visibility!=='published-only')failures.push(`language-registry:visibility:${languageRegistry.policy?.visibility||'missing'}`);
   }
   if(theme){
-    if(theme.publicExperience?.rotation!=='navigation-load-approved-variation')failures.push(`theme:rotation:${theme.publicExperience?.rotation||'missing'}`);
+    if(theme.publicExperience?.rotation!=='weekly-deterministic')failures.push(`theme:rotation:${theme.publicExperience?.rotation||'missing'}`);
     if(theme.publicExperience?.timezone!=='Asia/Seoul')failures.push(`theme:timezone:${theme.publicExperience?.timezone||'missing'}`);
   }
   includesAll(shellResult.text,'shell',[
