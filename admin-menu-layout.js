@@ -80,6 +80,7 @@ function activateCommandHome(){
 }
 function activatePanel(section){
   if(!section||!hasPanel(section))return false;
+  document.body.classList.remove('admin-command-home','admin-command-active');
   requestedSection=section;
   for(const panel of content.querySelectorAll('[data-panel]')){
     const visible=panelTargets(panel).includes(section);
@@ -140,7 +141,10 @@ function requestDelegated(section,delegate){
     if(requestedSection!==section)return;
     applyOrder();
     if(!activatePanel(section))activatePanel(delegate);
-    if(delegate==='common-services')window.EKODICommonServicesAdmin?.activate?.();
+    if(delegate==='common-services'){
+      window.EKODICommonServicesAdmin?.activate?.();
+      activatePanel(section)||activatePanel(delegate);
+    }
   })().catch(error=>console.error(`[EKODI Admin] delegated section activation failed: ${section} -> ${delegate}`,error))
     .finally(()=>demandLoading.delete(section));
   demandLoading.set(section,task);

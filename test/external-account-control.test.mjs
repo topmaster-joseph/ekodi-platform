@@ -51,3 +51,27 @@ test('external account control allows only configured browser origins with crede
   const wrangler=read('wrangler.api.toml');
   assert.match(wrangler,/ALLOWED_ORIGINS = .*https:\/\/ekodi\.kr/);
 });
+
+
+test('external account admin reuses mail OAuth instead of collecting Gmail secrets', () => {
+  const source = read('external-account-admin.js');
+  assert.match(source, /Google · Gmail 계정 추가/);
+  assert.match(source, /\/api\/mail\/control/);
+  assert.match(source, /connect\/google/);
+  assert.match(source, /grantSelfRead:true/);
+  assert.match(source, /grantSelfSend:false/);
+  assert.match(source, /data-xac-gmail-scope/);
+  assert.match(source, /메일 원본은 삭제되지 않습니다/);
+  assert.match(source, /Gmail은 위의 “Google · Gmail 계정 추가”에서 공식 OAuth로 연결/);
+  assert.doesNotMatch(source, /hamchansa@gmail\.com/);
+  assert.doesNotMatch(source, /name="password"/);
+});
+
+
+test('external account admin changes trigger the canonical shared-site production owner', () => {
+  const workflow = read('.github/workflows/deploy-site-core.yml');
+  assert.match(workflow, /- 'external-account-admin\.js'/);
+  assert.match(workflow, /- 'test\/external-account-control\.test\.mjs'/);
+  assert.ok((workflow.match(/external-account-admin\.js/g) || []).length >= 2);
+  assert.match(workflow, /node --check "\$f"/);
+});

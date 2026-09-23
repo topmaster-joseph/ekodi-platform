@@ -54,7 +54,7 @@ test('workspace admin projects root and mall sections from tenant-local capabili
 test('entry routers apply the shared Admin Shell to every user-site admin page',async()=>{
   const source=await fs.promises.readFile(new URL('../platform-router-entry-worker.js',import.meta.url),'utf8');
   const siteWorker=await fs.promises.readFile(new URL('../site-worker.js',import.meta.url),'utf8');
-  assert.match(source,/injectEkodiShell\(storeAdminPage\(storeRoute\),'business','admin'\)/);
+  assert.match(source,/injectEkodiShell\(storeAdminPage\(\{\.\.\.storeRoute,pathname:url\.pathname\}\),'business','admin'\)/);
   assert.match(source,/injectEkodiShell\(churchPastorAdminPage\(\),'church','admin'\)/);
   assert.match(source,/injectEkodiShell\(workspaceAdminPage\(\),'space','admin'\)/);
   assert.match(source,/injectEkodiShell\(mailAdminPage\(\),'mail','admin'\)/);

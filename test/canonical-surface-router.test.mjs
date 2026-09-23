@@ -40,6 +40,19 @@ test('My and system paths preserve the internal execution boundary',async()=>{
   assert.equal(response.status,200);assert.equal(control.calls[3].pathname,'/api/control/ai/v8/status');
 });
 
+test('canonical Control preview keeps an explicit public cache contract through the apex gateway',async()=>{
+  const calls=[];
+  const control={fetch:async request=>{calls.push(new URL(request.url));return new Response(JSON.stringify({schemaVersion:1,secrets:false,personalData:false}),{status:200,headers:{'content-type':'application/json; charset=utf-8'}})}};
+  const response=await routeCanonicalSurface(new Request('https://ekodi.kr/api/public/preview/map?scope=ekodi&mode=platform'),{CONTROL_API:control});
+  assert.equal(response.status,200);
+  assert.equal(calls[0].pathname,'/api/public/preview/map');
+  assert.equal(calls[0].search,'?scope=ekodi&mode=platform');
+  assert.match(response.headers.get('cache-control')||'',/^public, max-age=15/);
+  assert.equal(response.headers.get('x-content-type-options'),'nosniff');
+  assert.equal(response.headers.get('x-ekodi-cache-policy'),'control-public-preview-v1');
+  assert.equal(response.headers.get('x-ekodi-canonical-surface'),'system');
+});
+
 test('Personal Finance admin control is owned before the generic Control API',async()=>{
   const calls=[];const personal={fetch:async request=>{calls.push(new URL(request.url));return new Response(JSON.stringify({authenticated:false}),{status:401,headers:{'content-type':'application/json'}})}};
   const control=binding('generic-control');

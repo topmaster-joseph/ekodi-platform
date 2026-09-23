@@ -5,6 +5,8 @@ const CANONICAL_HOST='ekodi.kr';
 const SURFACE_PREFIXES=Object.freeze({my:'/my',admin:'/admin',auth:'/auth'});
 const SYSTEM_PATHS=Object.freeze(['/api','/mcp','/webhooks','/health','/connect']);
 const PERSONAL_FINANCE_CONTROL_PATH='/api/control/personal-finance';
+const PUBLIC_CONTROL_PREVIEW_PATH='/api/public/preview/map';
+const PUBLIC_CONTROL_PREVIEW_CACHE='public, max-age=15, s-maxage=30, stale-while-revalidate=60';
 const PUBLIC_EXECUTION_SURFACES=Object.freeze([
   Object.freeze({id:'shell',prefix:'/shell',binding:'SHELL',basePathAware:true}),
   Object.freeze({id:'mission-application',prefix:'/ekodimission/api/activities/260926-chuseok-open-table/applications',binding:'SPACE',preservePrefix:true,basePathAware:true}),
@@ -119,6 +121,12 @@ async function proxyBinding(request,binding,prefix,surface){
   const routed=new Response(response.body,response);
   routed.headers.set('x-ekodi-canonical-surface',surface);
   routed.headers.set('x-ekodi-canonical-path',prefix||'/');
+  const canonicalPath=new URL(request.url).pathname;
+  if(surface==='system'&&canonicalPath===PUBLIC_CONTROL_PREVIEW_PATH&&routed.status===200){
+    routed.headers.set('cache-control',response.headers.get('cache-control')||PUBLIC_CONTROL_PREVIEW_CACHE);
+    routed.headers.set('x-content-type-options',response.headers.get('x-content-type-options')||'nosniff');
+    routed.headers.set('x-ekodi-cache-policy','control-public-preview-v1');
+  }
   return routed;
 }
 async function proxyPersonalFinanceAdminControl(request,env){

@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
+import { workspaceAdminScript } from '../workspace-admin-page.js';
 
 const scriptUrl=new URL('../scripts/verify-ekodimission-admin-production-e2e.mjs',import.meta.url);
 const workflowUrl=new URL('../.github/workflows/verify-ekodimission-admin-production-e2e.yml',import.meta.url);
@@ -23,7 +24,13 @@ test('Mission tenant-admin production E2E exercises the deployed Activity partic
     "textContent?.includes('로그인 필요')",
     "#mainPanel a.button.primary[href*=\"/auth/\"]",
     "searchParams.get('site')!=='mission'",
-    "authReturnToExact:true"
+    "authReturnToExact:true",
+    "captureWorkspaceAsset",
+    "signed-out-auth-boundary",
+    "signedOutState",
+    "productionAssetTypes",
+    "productionNosniff",
+    "signed-out-failure.png"
   ]) assert.ok(source.includes(marker),marker);
   assert.ok(source.includes("p_privacy_consent===true"));
   assert.ok(source.includes("p_status==='attended'"));
@@ -51,4 +58,19 @@ test('Mission workspace admin selects mission auth scope instead of shared space
   assert.ok(source.includes("if(workspace==='ekodimission')return'mission'"));
   assert.ok(source.includes("u.searchParams.set('site',workspaceAuthSite())"));
   assert.ok(source.includes("u.searchParams.set('return_to',location.origin+location.pathname+location.search)"));
+});
+
+
+test('generated Workspace Admin runtime is executable JavaScript with nosniff-safe headers',async()=>{
+  const response=workspaceAdminScript();
+  const type=response.headers.get('content-type')||'';
+  assert.match(type,/text\/javascript/i);
+  assert.equal(response.headers.get('x-content-type-options'),'nosniff');
+  assert.equal(response.headers.get('cache-control'),'no-store');
+  const source=await response.text();
+  assert.match(source,/boot\(\)/);
+  assert.doesNotThrow(()=>new Function(source));
+  assert.equal(/<html[\s>]/i.test(source),false);
+  assert.match(source,/__EKODI_WORKSPACE_ADMIN_RUNTIME__/);
+  assert.doesNotMatch(source,/^const __name=/m);
 });

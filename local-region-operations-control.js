@@ -368,8 +368,205 @@ async function readPayload(env,region,access,{historyOnly=false,operatorsOnly=fa
   };
 }
 
+
+const PROJECT_ID=/^[a-z0-9][a-z0-9-]{0,63}$/;
+const PROJECT_CATEGORIES=new Set(['administration','research','field','participation','campus','forest','commerce','media']);
+const PROJECT_STATUSES=new Set(['completed','in_progress','planned','waiting']);
+const PROJECT_VISIBILITIES=new Set(['public','private','archived']);
+function boundedText(value,max=500){return String(value??'').trim().slice(0,max)}
+function safeJsonArray(raw){try{const value=JSON.parse(String(raw||'[]'));return Array.isArray(value)?value:[]}catch{return[]}}
+function cleanOrganizations(value){
+  if(!Array.isArray(value))return[];
+  return value.map(item=>boundedText(item,120)).filter(Boolean).slice(0,20);
+}
+function cleanEvidence(value){
+  if(!Array.isArray(value))return[];
+  return value.slice(0,12).map(item=>({
+    type:boundedText(item?.type||'document',40),
+    label:boundedText(item?.label||item?.type||'근거자료',120),
+    url:boundedText(item?.url||'',600),
+  })).filter(item=>item.label);
+}
+function projectRecord(row,{admin=false}={}){
+  return {
+    id:Number(row.id),
+    occurredOn:row.occurred_on,
+    title:row.title,
+    category:row.category,
+    status:row.status,
+    summary:row.summary||'',
+    organizations:safeJsonArray(row.organizations_json),
+    place:row.place||'',
+    evidence:safeJsonArray(row.evidence_json),
+    nextAction:row.next_action||'',
+    ...(admin?{visibility:row.visibility,createdBy:row.created_by||'',createdAt:row.created_at,updatedAt:row.updated_at}:{}),
+  };
+}
+function projectPayload(project,records,{admin=false}={}){
+  return {
+    project:{
+      regionId:project.region_id,
+      projectId:project.project_id,
+      name:project.name,
+      subtitle:project.subtitle||'',
+      phase:project.phase||'',
+      statusText:project.status_text||'',
+      nextStep:project.next_step||'',
+      publicPath:project.public_path||'',
+      ...(admin?{adminPath:project.admin_path||'',updatedAt:project.updated_at}:{}),
+    },
+    records:records.map(row=>projectRecord(row,{admin})),
+  };
+}
+async function loadProject(env,regionId,projectId){
+  return env.DB.prepare(`
+    SELECT region_id,project_id,name,subtitle,phase,status_text,next_step,public_path,admin_path,created_at,updated_at
+    FROM local_region_projects WHERE region_id=? AND project_id=? LIMIT 1
+  `).bind(regionId,projectId).first();
+}
+async function loadProjectRecords(env,regionId,projectId,{admin=false}={}){
+  const where=admin?'':'AND visibility=\'public\'';
+  const rows=await env.DB.prepare(`
+    SELECT id,region_id,project_id,occurred_on,title,category,status,summary,organizations_json,place,evidence_json,next_action,visibility,created_by,created_at,updated_at
+    FROM local_region_project_records
+    WHERE region_id=? AND project_id=? ${where}
+    ORDER BY occurred_on DESC,id DESC
+    LIMIT 300
+  `).bind(regionId,projectId).all();
+  return rows.results||[];
+}
+async function insertProjectEvent(env,{regionId,projectId,recordId=null,eventType,actorEmail='',payload={}}){
+  const now=new Date().toISOString();
+  await env.DB.prepare(`
+    INSERT INTO local_region_project_events
+    (event_key,region_id,project_id,record_id,event_type,actor_email,payload_json,event_at)
+    VALUES(?,?,?,?,?,?,?,?)
+  `).bind(
+    ['project',regionId,projectId,eventType,Date.now(),crypto.randomUUID()].join(':'),
+    regionId,projectId,recordId,eventType,actorEmail,JSON.stringify(payload||{}),now
+  ).run();
+}
+function validProjectDate(value){return /^\d{4}-\d{2}-\d{2}$/.test(String(value||''))}
+function projectWriteFields(body){
+  const occurredOn=boundedText(body.occurredOn,10);
+  const title=boundedText(body.title,160);
+  if(!validProjectDate(occurredOn)||!title)return null;
+  return {
+    occurredOn,
+    title,
+    category:PROJECT_CATEGORIES.has(clean(body.category))?clean(body.category):'administration',
+    status:PROJECT_STATUSES.has(clean(body.status))?clean(body.status):'completed',
+    summary:boundedText(body.summary,1200),
+    organizations:cleanOrganizations(body.organizations),
+    place:boundedText(body.place,240),
+    evidence:cleanEvidence(body.evidence),
+    nextAction:boundedText(body.nextAction,600),
+    visibility:PROJECT_VISIBILITIES.has(clean(body.visibility))?clean(body.visibility):'public',
+  };
+}
+async function handleLocalRegionProject(request,env,match){
+  if(!env?.DB)return json(request,{error:'프로젝트 데이터베이스를 사용할 수 없습니다.',code:'LOCAL_REGION_PROJECT_DB_UNAVAILABLE'},503);
+  const slug=clean(match[1]);
+  const projectId=clean(match[2]);
+  const subroute=clean(match[3]);
+  const region=localRegionBySlug(slug);
+  if(!region||!PROJECT_ID.test(projectId))return json(request,{error:'등록되지 않은 지역 프로젝트입니다.',code:'LOCAL_REGION_PROJECT_NOT_FOUND'},404);
+  const project=await loadProject(env,region.id,projectId);
+  if(!project)return json(request,{error:'등록되지 않은 지역 프로젝트입니다.',code:'LOCAL_REGION_PROJECT_NOT_FOUND'},404);
+
+  if(request.method==='GET'&&!subroute){
+    const records=await loadProjectRecords(env,region.id,projectId,{admin:false});
+    return json(request,projectPayload(project,records));
+  }
+
+  const access=await resolveRegionalAccess(request,env,slug==='cheonggye'?'cheonggye-local':'');
+  if(!access.ok)return json(request,{authenticated:false,error:'지역 프로젝트 운영권한이 없습니다.',code:access.code||'LOCAL_REGION_PROJECT_FORBIDDEN'},access.status||403);
+  if(!canReadOperations(access))return json(request,{authenticated:true,error:'프로젝트 운영권한이 없습니다.',code:'LOCAL_REGION_PROJECT_FORBIDDEN'},403);
+
+  if(request.method==='GET'&&subroute==='admin'){
+    const records=await loadProjectRecords(env,region.id,projectId,{admin:true});
+    return json(request,{...projectPayload(project,records,{admin:true}),access:{email:access.email||'',role:access.role||''}});
+  }
+  if(request.method!=='POST'||subroute!=='actions')return json(request,{error:'method_not_allowed'},405);
+  if(!sameOriginForWrite(request))return json(request,{error:'허용되지 않은 요청 출처입니다.',code:'LOCAL_REGION_ORIGIN_FORBIDDEN'},403);
+
+  const body=await request.json().catch(()=>null);
+  if(!body||typeof body!=='object')return json(request,{error:'요청 본문이 올바르지 않습니다.',code:'LOCAL_REGION_PROJECT_BODY_INVALID'},400);
+  const action=clean(body.action);
+  const now=new Date().toISOString();
+
+  if(action==='update_project'){
+    const phase=boundedText(body.phase,160);
+    if(!phase)return json(request,{error:'현재 단계를 입력해야 합니다.',code:'LOCAL_REGION_PROJECT_PHASE_REQUIRED'},400);
+    const statusText=boundedText(body.statusText,240);
+    const nextStep=boundedText(body.nextStep,240);
+    await env.DB.prepare(`
+      UPDATE local_region_projects SET phase=?,status_text=?,next_step=?,updated_at=?
+      WHERE region_id=? AND project_id=?
+    `).bind(phase,statusText,nextStep,now,region.id,projectId).run();
+    await insertProjectEvent(env,{regionId:region.id,projectId,eventType:'project_updated',actorEmail:access.email||'',payload:{phase,statusText,nextStep}});
+    return json(request,{ok:true,action,updatedAt:now});
+  }
+
+  if(action==='create_record'){
+    const fields=projectWriteFields(body);
+    if(!fields)return json(request,{error:'날짜와 제목을 확인해 주세요.',code:'LOCAL_REGION_PROJECT_RECORD_INVALID'},400);
+    const result=await env.DB.prepare(`
+      INSERT INTO local_region_project_records
+      (region_id,project_id,occurred_on,title,category,status,summary,organizations_json,place,evidence_json,next_action,visibility,created_by,created_at,updated_at)
+      VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+    `).bind(
+      region.id,projectId,fields.occurredOn,fields.title,fields.category,fields.status,fields.summary,
+      JSON.stringify(fields.organizations),fields.place,JSON.stringify(fields.evidence),fields.nextAction,fields.visibility,
+      access.email||'',now,now
+    ).run();
+    const recordId=Number(result?.meta?.last_row_id||0)||null;
+    await insertProjectEvent(env,{regionId:region.id,projectId,recordId,eventType:'record_created',actorEmail:access.email||'',payload:{occurredOn:fields.occurredOn,title:fields.title,visibility:fields.visibility}});
+    return json(request,{ok:true,action,recordId,updatedAt:now},201);
+  }
+
+  const recordId=Number(body.recordId||0);
+  if(!Number.isInteger(recordId)||recordId<1)return json(request,{error:'이력 ID가 올바르지 않습니다.',code:'LOCAL_REGION_PROJECT_RECORD_ID_INVALID'},400);
+  const current=await env.DB.prepare(`
+    SELECT id,visibility FROM local_region_project_records
+    WHERE id=? AND region_id=? AND project_id=? LIMIT 1
+  `).bind(recordId,region.id,projectId).first();
+  if(!current)return json(request,{error:'이력을 찾을 수 없습니다.',code:'LOCAL_REGION_PROJECT_RECORD_NOT_FOUND'},404);
+
+  if(action==='update_record'){
+    const fields=projectWriteFields(body);
+    if(!fields)return json(request,{error:'날짜와 제목을 확인해 주세요.',code:'LOCAL_REGION_PROJECT_RECORD_INVALID'},400);
+    await env.DB.prepare(`
+      UPDATE local_region_project_records
+      SET occurred_on=?,title=?,category=?,status=?,summary=?,organizations_json=?,place=?,evidence_json=?,next_action=?,visibility=?,updated_at=?
+      WHERE id=? AND region_id=? AND project_id=?
+    `).bind(
+      fields.occurredOn,fields.title,fields.category,fields.status,fields.summary,JSON.stringify(fields.organizations),
+      fields.place,JSON.stringify(fields.evidence),fields.nextAction,fields.visibility,now,recordId,region.id,projectId
+    ).run();
+    await insertProjectEvent(env,{regionId:region.id,projectId,recordId,eventType:'record_updated',actorEmail:access.email||'',payload:{occurredOn:fields.occurredOn,title:fields.title,visibility:fields.visibility}});
+    return json(request,{ok:true,action,recordId,updatedAt:now});
+  }
+
+  if(action==='archive_record'){
+    await env.DB.prepare(`
+      UPDATE local_region_project_records SET visibility='archived',updated_at=?
+      WHERE id=? AND region_id=? AND project_id=?
+    `).bind(now,recordId,region.id,projectId).run();
+    await insertProjectEvent(env,{regionId:region.id,projectId,recordId,eventType:'record_archived',actorEmail:access.email||'',payload:{previousVisibility:current.visibility}});
+    return json(request,{ok:true,action,recordId,updatedAt:now});
+  }
+
+  return json(request,{error:'지원하지 않는 프로젝트 작업입니다.',code:'LOCAL_REGION_PROJECT_ACTION_UNKNOWN'},400);
+}
+
 export async function handleLocalRegionOperations(request,env){
   const url=new URL(request.url);
+  const projectMatch=url.pathname.match(/^\/api\/local-operations\/([a-z0-9-]+)\/projects\/([a-z0-9-]+)(?:\/(admin|actions))?$/);
+  if(projectMatch){
+    if(request.method==='OPTIONS')return new Response(null,{status:204,headers:{'access-control-allow-origin':'https://ekodi.kr','access-control-allow-headers':'authorization,content-type','access-control-allow-methods':'GET,POST,OPTIONS','cache-control':'no-store'}});
+    return handleLocalRegionProject(request,env,projectMatch);
+  }
   const match=url.pathname.match(/^\/api\/local-operations\/([a-z0-9-]+)(?:\/(history|operators|actions))?$/);
   if(!match)return null;
   if(request.method==='OPTIONS'){

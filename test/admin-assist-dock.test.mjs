@@ -142,5 +142,6 @@ test('Assist sidebar alignment survives early install before layout settles',asy
   assert.match(js,/ResizeObserver/);
   assert.match(js,/--ekodi-admin-sidebar-width/);
   assert.match(js,/Math\.max\(measured,configured\)/);
+  assert.match(js,/root\.style\.setProperty\('left',left,'important'\)/);
   assert.match(js,/watchWorkbenchPosition\(\);/);
 });

@@ -44,22 +44,22 @@ function discardUnsafeReturnTarget(){
  const query=params.toString();
  history.replaceState({},document.title,`${location.pathname}${query?`?${query}`:''}${location.hash}`);
 }
-function misroutedWorkspaceAdminReturn(){
- const params=new URLSearchParams(location.search);
- if(params.get('from')!=='space')return null;
- const raw=params.get('return_to');
+function misroutedServiceReturn(){
+ const raw=new URLSearchParams(location.search).get('return_to');
  const hash=new URLSearchParams(location.hash.slice(1));
  if(!raw||!hash.get('ekodi_token'))return null;
  try{
   const target=new URL(raw);
-  if(target.origin!=='https://ekodi.kr'||target.username||target.password)return null;
-  if(!/^\/[a-z0-9](?:[a-z0-9-]{0,98}[a-z0-9])?\/admin(?:\/|$)/i.test(target.pathname))return null;
+  const hostname=target.hostname.toLowerCase();
+  const trusted=target.protocol==='https:'&&!target.username&&!target.password&&(hostname==='ekodi.kr'||hostname.endsWith('.ekodi.kr')||hostname==='cgma.or.kr');
+  if(!trusted)return null;
+  if(target.origin==='https://ekodi.kr'&&(target.pathname==='/my'||target.pathname.startsWith('/my/')))return null;
   target.hash=location.hash;
   return target;
  }catch{return null}
 }
-const MISROUTED_WORKSPACE_ADMIN_RETURN=misroutedWorkspaceAdminReturn();
-if(!MISROUTED_WORKSPACE_ADMIN_RETURN)discardUnsafeReturnTarget();
+const MISROUTED_SERVICE_RETURN=misroutedServiceReturn();
+if(!MISROUTED_SERVICE_RETURN)discardUnsafeReturnTarget();
 
 async function handoff(){
  if(!sb||!location.hash.startsWith('#'))return;
@@ -336,8 +336,8 @@ window.addEventListener('ekodi:personalization-signal',event=>{
 });
 window.addEventListener('hashchange',()=>{syncSurfaceState({scroll:true});progressiveSurfaceUi()});
 
-if(MISROUTED_WORKSPACE_ADMIN_RETURN){
- location.replace(MISROUTED_WORKSPACE_ADMIN_RETURN.href);
+if(MISROUTED_SERVICE_RETURN){
+ location.replace(MISROUTED_SERVICE_RETURN.href);
 }else if(!enabled){authUi();await loadAll()}else{
  try{await handoff()}catch(e){console.error('auth handoff',e)}
  const {data}=await sb.auth.getSession();session=data.session;authUi();announceSession();

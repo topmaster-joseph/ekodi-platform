@@ -36,10 +36,10 @@ test('existing first stores are compatibility profiles on one Store Admin Engine
     assert.equal(response.headers.get('x-ekodi-route'),`${store.slug}-store-admin`);
     assert.equal(response.headers.get('x-ekodi-store-scope'),store.id);
     assert.equal(response.headers.get('cache-control'),'no-store');
-    assert.match(html,new RegExp(store.brand));assert.match(html,/\/store-admin\.js\?v=20260922-delivery-menu-readiness-v2/);assert.match(html,/data-ekodi-admin-sidebar/);assert.match(html,/data-ekodi-authority-scope="tenant"/);assert.match(html,/data-ekodi-admin-layout="two-level"/);assert.match(html,/id="sectionNav"[^>]*data-ekodi-admin-subnav/);assert.match(html,/data-ekodi-admin-nav-mode="primary"/);
+    assert.match(html,new RegExp(store.brand));assert.match(html,/\/store-admin\.js\?v=20260923-auth-return-title-v1/);assert.match(html,/data-ekodi-admin-sidebar/);assert.match(html,/data-ekodi-authority-scope="tenant"/);assert.match(html,/data-ekodi-admin-layout="two-level"/);assert.match(html,/id="sectionNav"[^>]*data-ekodi-admin-subnav/);assert.match(html,/data-ekodi-admin-nav-mode="primary"/);assert.match(html,/data-ekodi-admin-page-heading/);
   }
-  assert.match(router,/injectEkodiShell\(storeAdminPage\(storeRoute\),'business','admin'\)/);
-  assert.match(await storeAdminCss().text(),/word-break:keep-all/);
+  assert.match(router,/storeAdminPage\(\{\.\.\.storeRoute,pathname:url\.pathname\}\)/);
+  const css=await storeAdminCss().text();assert.match(css,/word-break:keep-all/);assert.match(css,/\.heading h1\{[\s\S]*font-size:28px!important[\s\S]*line-height:1\.25!important[\s\S]*min-height:35px!important/);
   const script=await storeAdminScript().text();
   assert.match(script,/business_os_store_admin_snapshot/);assert.match(script,/store_operating_space_snapshot/);
   assert.match(script,/운영 데이터 비공개/);assert.match(script,/관리 영역/);
@@ -54,6 +54,21 @@ test('existing first stores are compatibility profiles on one Store Admin Engine
   assert.match(script,/문자주문 상태 반영/);
   assert.doesNotMatch(script,/STORE_SMS_INGRESS_TOKEN|CHANNEL_SMS_TOKEN/);
   assert.doesNotMatch(script,/\/api\/store\/menu/);
+});
+
+test('server-rendered Store Admin headings match the requested route before JavaScript runs',async()=>{
+  const profile={slug:'jadam',name:'자담치킨 목포대점',id:'4b1e5933-b9ae-4cb9-9d31-dcbb0a5b25aa',mark:'JD',brand:'JADAM CHICKEN'};
+  const cases=[
+    ['/jadam/admin/menu','메뉴 · 가격','배달앱·POS에서 들어온 실제 메뉴와 가격 차이를 비교합니다.'],
+    ['/jadam/admin/delivery','배달플랫폼','플랫폼별 매장·메뉴·주문·매출·정산·리뷰를 하나의 운영 흐름으로 관리합니다.'],
+    ['/jadam/admin/connections','연결관리','POS·배달플랫폼·EKODI Orders 연결 상태를 관리합니다.'],
+  ];
+  for(const [pathname,title,copy] of cases){
+    const html=await storeAdminPage({...profile,pathname}).text();
+    assert.match(html,new RegExp('<h1 id="pageTitle">'+title.replace('·','\\·')+'</h1>'));
+    assert.ok(html.includes('<p id="pageCopy">'+copy+'</p>'));
+    assert.ok(html.includes('<title>'+title+' · 자담치킨 목포대점</title>'));
+  }
 });
 
 test('one Store Admin page projects sections from tenant role capabilities',()=>{

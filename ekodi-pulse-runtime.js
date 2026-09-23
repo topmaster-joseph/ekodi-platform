@@ -4,6 +4,10 @@ import { getEkodiAiProviderRegistryStatus } from './ekodi-ai-provider-registry.j
 import { recordAutonomousHealthSnapshot } from './ekodi-autonomous-health-telemetry.js';
 import { attachEkodiConsultationReceipt } from './ekodi-consultation-ledger.js';
 import {
+  buildRuntimeMaintenanceSignals,
+  runEkodiMaintenanceRecoveryCycle,
+} from './ekodi-maintenance-recovery-engine.js';
+import {
   claimEkodiCommandTask,
   claimNextEkodiCommandTask,
   getEkodiCommandLedgerStatus,
@@ -250,22 +254,32 @@ export async function runEkodiPulseSchedule(env = {}, options = {}) {
     detected += 1;
   }
   const queue = await runEkodiCommandQueue(env, { limit: options.limit || 1 });
+  const readiness = await getEkodiProviderOperationalReadiness(env);
+  const ledger = await getEkodiCommandLedgerStatus(env);
+  const maintenanceSignals = buildRuntimeMaintenanceSignals({ autonomousHealth, readiness, ledger });
+  const maintenance = await runEkodiMaintenanceRecoveryCycle({
+    signals: maintenanceSignals,
+    utilization: options.maintenanceUtilization ?? env.EKODI_MAINTENANCE_UTILIZATION,
+    mutationEnabled: enabled(env.EKODI_MAINTENANCE_AUTOMATION_ENABLED, false),
+    adapters: options.maintenanceAdapters || {},
+  });
   return Object.freeze({
     ok: queue.ok,
     detected,
     processed: queue.processed,
     queue: queue.results,
     autonomousHealth,
-    readiness: await getEkodiProviderOperationalReadiness(env),
-    ledger: await getEkodiCommandLedgerStatus(env),
+    readiness,
+    ledger,
+    maintenance,
   });
 }
 
 export const EKODI_PULSE_RUNTIME = Object.freeze({
-  version: '2.1.0',
+  version: '2.2.0',
   schedule: 'existing-control-cron',
   autonomousBatchLimit: 1,
-  automaticTriggers: Object.freeze(['telemetry-snapshot', 'queued-command-task', 'degraded-system-health']),
+  automaticTriggers: Object.freeze(['telemetry-snapshot', 'queued-command-task', 'degraded-system-health', 'maintenance-signal-evaluation']),
   healthLoop: 'observe-assess-predict-act-verify-learn',
   assessmentAiRequired: false,
   principle: 'orchestration-by-default-consultation-by-need-cloud-first-detect-first-standing-delegation',

@@ -34,7 +34,7 @@ test('visibility policy protects existing members unless explicitly forced off',
 
 test('canonical public user pages are guest-open and login only enhances capabilities', () => {
   const rule = policy.publicUserSurfaceDefault;
-  assert.equal(policy.schemaVersion, 6);
+  assert.equal(policy.schemaVersion, 7);
   assert.equal(rule.policyId, 'PUBLIC-USER-SURFACE-001');
   assert.equal(rule.defaultAccess, 'guest-open');
   assert.equal(rule.safePublicProjectionRequired, true);

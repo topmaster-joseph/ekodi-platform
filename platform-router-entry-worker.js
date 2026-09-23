@@ -37,6 +37,9 @@ import { tenantLiveAdminCss, tenantLiveAdminPage, tenantLiveAdminScript } from '
 import { liveServiceAdminPage, liveServiceMaintenancePage, liveServicePage } from './live-service-page.js';
 import { localRegionFromPath } from './local-region-registry.js';
 import { localRegionPublicPage, localRegionAdminPage, localRegionAccessAdminPage } from './local-region-page.js';
+import { localRegionForestPublicPage, localRegionForestAdminPage } from './local-region-forest-page.js';
+import { localRegionForestPublicScript } from './local-region-forest-public.js';
+import { localRegionForestAdminScript } from './local-region-forest-admin.js';
 import { localRegionAdminAuthScript } from './local-region-admin-auth.js';
 import { localRegionAccessAdminScript } from './local-region-access-admin.js';
 import { localRegionOperationsAdminScript } from './local-region-operations-admin.js';
@@ -296,13 +299,15 @@ async function routePlatform(request,env,ctx){
         if(url.pathname==='/cheonggye/local-region-admin-auth.js')return localRegionAdminAuthScript();
         if(url.pathname==='/cheonggye/local-region-access-admin.js')return localRegionAccessAdminScript();
         if(url.pathname==='/cheonggye/local-region-operations-admin.js')return localRegionOperationsAdminScript();
+        if(url.pathname==='/cheonggye/local-region-forest-public.js')return localRegionForestPublicScript();
+        if(url.pathname==='/cheonggye/local-region-forest-admin.js')return localRegionForestAdminScript();
         if(url.pathname==='/tenant-admin-command-home.css')return tenantAdminCommandHomeCss();
         if(url.pathname==='/tenant-admin-command-home.js')return tenantAdminCommandHomeScript();
         if(['/store-admin.css','/jadam-admin.css','/pizzamaru-admin.css','/yogurt-admin.css'].includes(url.pathname))return storeAdminCss();
         if(['/store-admin.js','/jadam-admin.js','/pizzamaru-admin.js','/yogurt-admin.js'].includes(url.pathname))return storeAdminScript();
         if(url.pathname==='/cmpmyi/admin'||url.pathname==='/cmpmyi/admin/')return injectEkodiShell(storePortfolioAdminPage({commandHome:true}),'business','admin');
         if(url.pathname==='/cmpmyi/admin/overview'||url.pathname==='/cmpmyi/admin/overview/')return injectEkodiShell(storePortfolioAdminPage(),'business','admin');
-        if(isStoreAdminPathShape(url.pathname)){const storeRoute=await resolveStoreAdminRoute(url.pathname);if(storeRoute)return injectEkodiShell(storeAdminPage(storeRoute),'business','admin');}
+        if(isStoreAdminPathShape(url.pathname)){const storeRoute=await resolveStoreAdminRoute(url.pathname);if(storeRoute)return injectEkodiShell(storeAdminPage({...storeRoute,pathname:url.pathname}),'business','admin');}
         if(url.pathname==='/organization-admin.css')return organizationAdminCss();
         if(url.pathname==='/organization-admin.js')return organizationAdminScript();
         if(isOrganizationAdminPath(url.pathname))return injectEkodiShell(organizationAdminPage(url.pathname),'space','admin');
@@ -319,9 +324,13 @@ async function routePlatform(request,env,ctx){
         if(localRegionRoute){
           const commerceProgram=regionalCommerceProgramFromLocalRoute(localRegionRoute);
           const accessAdmin=localRegionRoute.admin&&String(localRegionRoute.segments?.[1]||'').toLowerCase()==='access';
+          const forestPublic=!localRegionRoute.admin&&String(localRegionRoute.segments?.[0]||'').toLowerCase()==='forest';
+          const forestAdmin=localRegionRoute.admin&&String(localRegionRoute.segments?.[1]||'').toLowerCase()==='forest';
           const page=commerceProgram
             ?(localRegionRoute.admin?regionalCommerceProgramAdminPage(localRegionRoute.region,commerceProgram):regionalCommerceProgramPublicPage(localRegionRoute.region,commerceProgram))
-            :(accessAdmin?localRegionAccessAdminPage(localRegionRoute.region):(localRegionRoute.admin?localRegionAdminPage(localRegionRoute.region):localRegionPublicPage(localRegionRoute.region)));
+            :(forestPublic?localRegionForestPublicPage(localRegionRoute.region,localRegionRoute.segments.slice(1))
+              :(forestAdmin?localRegionForestAdminPage(localRegionRoute.region)
+                :(accessAdmin?localRegionAccessAdminPage(localRegionRoute.region):(localRegionRoute.admin?localRegionAdminPage(localRegionRoute.region):localRegionPublicPage(localRegionRoute.region)))));
           const surface=localRegionRoute.admin?'admin':'workspace';
           const response=injectEkodiShell(page,'space',surface,{contextKind:'workspace'});
           return request.method==='GET'?decorateDiscoveryResponse(response,url.pathname):response;
