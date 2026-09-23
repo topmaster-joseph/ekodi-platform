@@ -75,6 +75,7 @@ const COMMAND_POLICIES = Object.freeze({
   'computer.agent.status': { risk: 'observe' },
   'computer.desktop.probe': { risk: 'observe' },
   'computer.desktop.canary': { risk: 'maintain', confirm: true },
+  'computer.desktop.guest.canary': { risk: 'maintain', confirm: true },
   'network.diagnose': { risk: 'observe' },
   'printers.diagnose': { risk: 'observe' },
   'startup.scan': { risk: 'observe' },
@@ -108,6 +109,7 @@ const COMMAND_CAPABILITIES = Object.freeze({
   'computer.agent.status': 'agentStatus',
   'computer.desktop.probe': 'isolatedDesktopProbe',
   'computer.desktop.canary': 'isolatedDesktopProbe',
+  'computer.desktop.guest.canary': 'isolatedDesktopCanary',
   'computer.browser.execute': 'backgroundBrowser',
   'network.diagnose': 'networkDiagnostics',
   'printers.diagnose': 'printerDiagnostics',
@@ -494,6 +496,42 @@ function summarizeCommandResult(result = {}) {
     : (Number.isFinite(Number(value)) ? Number(value) : null);
   for (const key of ['message', 'freedMB', 'pendingCount', 'installedCount', 'failedCount', 'rebootRequired', 'profile']) {
     if (result[key] !== undefined) summary[key] = result[key];
+  }
+  if (result.desktopGuestCanary && typeof result.desktopGuestCanary === 'object') {
+    summary.desktopGuestCanary = {
+      ok: result.desktopGuestCanary.ok === true,
+      mode: safeText(result.desktopGuestCanary.mode, 100),
+      provider: safeText(result.desktopGuestCanary.provider, 100),
+      routingPolicy: safeText(result.desktopGuestCanary.routingPolicy, 100),
+      backendPolicy: safeText(result.desktopGuestCanary.backendPolicy, 120),
+      agentVersion: safeText(result.desktopGuestCanary.agentVersion, 40),
+      guestAgentVersion: safeText(result.desktopGuestCanary.guestAgentVersion, 40),
+      backend: safeText(result.desktopGuestCanary.backend, 80),
+      sessionType: safeText(result.desktopGuestCanary.sessionType, 40),
+      sessionId: safeText(result.desktopGuestCanary.sessionId, 80),
+      taskId: safeText(result.desktopGuestCanary.taskId, 80),
+      taskType: safeText(result.desktopGuestCanary.taskType, 80),
+      receiptSha256: safeText(result.desktopGuestCanary.receiptSha256, 80),
+      executedAsSystem: result.desktopGuestCanary.executedAsSystem === true,
+      guestSessionId: finiteNumber(result.desktopGuestCanary.guestSessionId),
+      noNetworkAdapter: result.desktopGuestCanary.noNetworkAdapter === true,
+      noActiveNetwork: result.desktopGuestCanary.noActiveNetwork === true,
+      interactiveDesktopUsed: result.desktopGuestCanary.interactiveDesktopUsed === true,
+      sharedInteractiveDesktop: result.desktopGuestCanary.sharedInteractiveDesktop === true,
+      clipboardShared: result.desktopGuestCanary.clipboardShared === true,
+      userInputInjection: result.desktopGuestCanary.userInputInjection === true,
+      credentialCollection: result.desktopGuestCanary.credentialCollection === true,
+      hostProfileMounted: result.desktopGuestCanary.hostProfileMounted === true,
+      mutationScope: safeText(result.desktopGuestCanary.mutationScope, 80),
+      vmReachedRunning: result.desktopGuestCanary.vmReachedRunning === true,
+      heartbeatObserved: result.desktopGuestCanary.heartbeatObserved === true,
+      networkAttached: result.desktopGuestCanary.networkAttached === true,
+      ephemeralDifferencingDisk: result.desktopGuestCanary.ephemeralDifferencingDisk === true,
+      baseDiskWriteForbidden: result.desktopGuestCanary.baseDiskWriteForbidden === true,
+      sessionVmRemoved: result.desktopGuestCanary.sessionVmRemoved === true,
+      sessionDiskRemoved: result.desktopGuestCanary.sessionDiskRemoved === true,
+      checkedAt: safeText(result.desktopGuestCanary.checkedAt, 64),
+    };
   }
   if (result.desktopCanary && typeof result.desktopCanary === 'object') {
     summary.desktopCanary = {
