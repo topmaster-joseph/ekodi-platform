@@ -10,6 +10,7 @@ const READ_ROLES={
   church_care_tasks:['senior_pastor','pastor','care_staff'],
   church_events:['senior_pastor','pastor','care_staff','staff','viewer'],
   church_attendance:['senior_pastor','pastor','care_staff','staff'],
+  church_attendance_summary:['senior_pastor','pastor','care_staff','staff'],
   church_donors:['senior_pastor','church_treasurer','church_finance'],
   church_offerings:['senior_pastor','church_treasurer','church_finance'],
   church_ledger_entries:['senior_pastor','church_treasurer','church_finance'],
@@ -68,6 +69,7 @@ async function staffFor(userId){
 function allowed(role,list){return Array.isArray(list)&&list.includes(role);}
 function eqValue(value){const v=String(value||'').trim();return v.startsWith('eq.')?v.slice(3):v;}
 function uuidOrNull(value){const v=eqValue(value);return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(v)?v:null;}
+function yearOrCurrent(value){const year=Number.parseInt(String(value||''),10);const current=new Date().getUTCFullYear();return Number.isInteger(year)&&year>=2000&&year<=current?year:current;}
 function listArgs(table,url,staff,identity){
   const rawLimit=Number(url.searchParams.get('limit')||100);
   const p_limit=Number.isFinite(rawLimit)?Math.max(1,Math.min(Math.trunc(rawLimit),250)):100;
@@ -119,19 +121,23 @@ Deno.serve(async req=>{
     if(!allowed(staff.role,READ_ROLES[table]))return json({error:'ROLE_NOT_ALLOWED'},403,origin);
     const financeTable=['church_donors','church_offerings','church_ledger_entries','church_receipt_requests'].includes(table);
     const attendanceTable=table==='church_attendance';
+    const attendanceSummaryTable=table==='church_attendance_summary';
     let upstream;
     try{
       upstream=financeTable
         ?await rpc('church_finance_list',{p_table:table,p_church_slug:CHURCH_SLUG,p_status:eqValue(url.searchParams.get('status'))||null,p_limit:Number(url.searchParams.get('limit')||100)})
         :attendanceTable
           ?await rpc('church_attendance_list',{p_church_slug:CHURCH_SLUG,p_member_id:uuidOrNull(url.searchParams.get('member_id')),p_limit:Number(url.searchParams.get('limit')||250)})
-          :await rpc('church_pastor_list',listArgs(table,url,staff,identity));
+          :attendanceSummaryTable
+            ?await rpc('church_attendance_member_summaries',{p_church_slug:CHURCH_SLUG,p_year:yearOrCurrent(url.searchParams.get('year'))})
+            :await rpc('church_pastor_list',listArgs(table,url,staff,identity));
     }catch(error){return json({error:String(error?.message||error)},503,origin);}
     if(!upstream.ok)return proxyResponse(upstream,origin);
     let rows=await upstream.json().catch(()=>[]);if(!Array.isArray(rows))rows=[];
     if(table==='church_staff'&&staff.role==='senior_pastor'){
       const requested=uuidOrNull(url.searchParams.get('user_id'));if(requested)rows=rows.filter(row=>String(row?.user_id||'')===requested);
     }
+    if(attendanceSummaryTable&&String(req.headers.get('prefer')||'').toLowerCase().includes('count=exact'))return jsonWithCount(rows,rows.length,origin);
     if(String(req.headers.get('prefer')||'').toLowerCase().includes('count=exact')){
       let counted;
       try{
