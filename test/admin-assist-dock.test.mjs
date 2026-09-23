@@ -78,7 +78,7 @@ test('Assist first path is bottom command-entry-only and upgrades through existi
   assert.match(bootstrap,/ekodi-assist-bootstrap-form/);
   assert.match(bootstrap,/에코디와 대화하기/);
   assert.match(bootstrap,/window\.EKODIAdminAssist/);
-  assert.match(bootstrap,/bridge\.execute\(targets,text\)/);
+  assert.match(bootstrap,/bridge\.execute\(0,text\)/);
   assert.match(bootstrap,/loadStyle\('ai-ops-admin\.css'\)/);
   assert.match(bootstrap,/loadScript\('admin-lazy-features\.js'\)/);
   assert.match(bootstrap,/ekodi-admin-section-changed',S/);
