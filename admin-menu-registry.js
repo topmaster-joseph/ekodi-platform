@@ -24,6 +24,7 @@ export const ADMIN_MENU_REGISTRY = Object.freeze([
   { id: 'engine-ai', group: 'services', icon: 'AI', delegateSection: 'common-services', engineCategory: 'ai', labels: { ko: 'AI 엔진', en: 'AI Engines' } },
   { id: 'engine-integration', group: 'services', icon: '↔', delegateSection: 'common-services', engineCategory: 'integration', labels: { ko: '연동 엔진', en: 'Integration Engines' } },
   { id: 'engine-preview', group: 'services', icon: '…', delegateSection: 'common-services', engineCategory: 'preview', labels: { ko: '체험·준비 중', en: 'Preview & Preparing' } },
+  { id: 'service-modules', group: 'services', icon: '✓', delegateSection: 'common-services', engineCategory: 'service-modules', labels: { ko: '공통·전문 모듈 점검', en: 'Common & Professional Modules' }, internal: true },
 
   { id: 'sites-all', group: 'sites', icon: '▦', delegateSection: 'campus', siteGroup: 'all', labels: { ko: '전체', en: 'All Sites' } },
   { id: 'sites-core', group: 'sites', icon: '◆', delegateSection: 'campus', siteGroup: 'core', labels: { ko: '핵심·접근', en: 'Core & Access' } },
@@ -112,7 +113,7 @@ const ADMIN_MENU_CATEGORY_ORDER = Object.freeze({
 });
 const ADMIN_MENU_SECTION_CATEGORY = Object.freeze({
   'platform-overview':'overview','command-home':'overview',
-  'engine-all':'catalog','engine-core':'catalog','engine-common':'catalog','engine-operations':'catalog','engine-professional':'catalog','engine-ai':'catalog','engine-integration':'catalog','engine-preview':'catalog',
+  'engine-all':'catalog','engine-core':'catalog','engine-common':'catalog','engine-operations':'catalog','engine-professional':'catalog','engine-ai':'catalog','engine-integration':'catalog','engine-preview':'catalog','service-modules':'catalog',
   'sites-all':'sites','sites-core':'sites','sites-business':'sites','sites-community':'sites','sites-clients':'sites','sites-knowledge':'sites','sites-communication':'sites','sites-worklife':'sites','sites-other':'sites','sites-preparing':'sites','sites-internal':'sites','sites-user':'sites','sites-customer-partner':'sites','sites-independent':'sites',campus:'sites',clients:'sites','site-chrome':'sites',cmpmyi:'sites',organization:'sites',workspace:'sites',
   'users-access':'access',security:'access',admins:'access','ai-membership':'access',
   work:'content',communication:'content',community:'content',books:'content',devotional:'content',social:'content',finance:'content',tax:'content',
