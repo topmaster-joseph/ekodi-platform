@@ -18,3 +18,10 @@ test('broad EKODIBIZ Worker-first route does not duplicate covered admin module 
   assert.match(wrangler, /"\/ekodibiz\*"/);
   assert.doesNotMatch(wrangler, /"\/ekodibiz-admin-registry\.js"/);
 });
+
+test('apex Admin entry cannot be excluded from Worker-first canonical policy', () => {
+  assert.doesNotMatch(wrangler, /"!\/admin"/);
+  assert.doesNotMatch(wrangler, /"!\/admin\/"/);
+  assert.match(wrangler, /"!\/admin\/\*\.js"/);
+  assert.match(wrangler, /"!\/admin\/\*\.css"/);
+});
