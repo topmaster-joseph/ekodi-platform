@@ -607,3 +607,96 @@ html body.admin-compact .ekodi-assist-execution-row .ekodi-assist-send{
   html body.admin-compact .ekodi-assist-bootstrap-form[data-execution-ready="true"]{min-height:88px!important}
   html body.admin-compact .ekodi-assist-bootstrap-target{min-width:112px!important}
 }
+
+
+/* EKODI multi-target command composer v2 */
+html body.admin-compact .ekodi-assist-bootstrap-form[data-execution-ready="true"],
+html body.admin-compact .ekodi-assist-composer{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr)!important;
+  align-items:stretch!important;
+  gap:8px!important;
+}
+html body.admin-compact .ekodi-assist-bootstrap-targets,
+html body.admin-compact .ekodi-assist-targets{
+  order:0!important;
+  display:flex!important;
+  flex-wrap:wrap!important;
+  align-items:center!important;
+  gap:6px!important;
+  min-width:0!important;
+}
+html body.admin-compact .ekodi-execution-target-option{
+  display:inline-flex!important;
+  align-items:center!important;
+  gap:6px!important;
+  min-height:30px!important;
+  padding:5px 9px!important;
+  border:1px solid #d8dde6!important;
+  border-radius:999px!important;
+  background:#f8fafc!important;
+  color:#303134!important;
+  font-size:12px!important;
+  font-weight:700!important;
+  cursor:pointer!important;
+  user-select:none!important;
+}
+html body.admin-compact .ekodi-execution-target-option:has(input:checked){
+  border-color:#9fc0ef!important;
+  background:#e8f0fe!important;
+  color:#174ea6!important;
+}
+html body.admin-compact .ekodi-execution-target-option input[type="checkbox"][data-ekodi-execution-target]{
+  appearance:auto!important;
+  -webkit-appearance:checkbox!important;
+  flex:0 0 auto!important;
+  width:15px!important;
+  height:15px!important;
+  min-width:15px!important;
+  margin:0!important;
+  padding:0!important;
+  border:initial!important;
+  border-radius:2px!important;
+  box-shadow:none!important;
+  accent-color:#1a73e8!important;
+}
+html body.admin-compact .ekodi-assist-bootstrap-prompt-row,
+html body.admin-compact .ekodi-assist-prompt-row{
+  order:1!important;
+  display:flex!important;
+  align-items:center!important;
+  gap:8px!important;
+  min-width:0!important;
+}
+html body.admin-compact .ekodi-assist-bootstrap-prompt-row>input{
+  appearance:none!important;
+  flex:1 1 auto!important;
+  width:auto!important;
+  min-width:0!important;
+  min-height:38px!important;
+  padding:8px 9px!important;
+  border:0!important;
+  outline:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+}
+html body.admin-compact .ekodi-assist-prompt-row>.ekodi-assist-command{
+  flex:1 1 auto!important;
+  min-width:0!important;
+  margin:0!important;
+}
+html body.admin-compact .ekodi-assist-bootstrap-prompt-row>.ekodi-assist-bootstrap-send,
+html body.admin-compact .ekodi-assist-prompt-row>.ekodi-assist-send{
+  flex:0 0 auto!important;
+  width:auto!important;
+  min-width:64px!important;
+  height:36px!important;
+  margin-left:0!important;
+  padding:0 14px!important;
+  border-radius:10px!important;
+}
+@media(max-width:760px){
+  html body.admin-compact .ekodi-assist-bootstrap-targets,
+  html body.admin-compact .ekodi-assist-targets{gap:5px!important}
+  html body.admin-compact .ekodi-execution-target-option{padding:5px 8px!important;font-size:11px!important}
+}
