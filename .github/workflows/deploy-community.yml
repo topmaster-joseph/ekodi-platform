@@ -18,6 +18,8 @@ on:
     branches: [main]
     paths:
       - 'community/**'
+      - 'supabase/functions/community-api/**'
+      - 'supabase/migrations/20260923224500_community_workspace_scope.sql'
       - 'community-worker.js'
       - 'ekodi-shell-injector.js'
       - 'wrangler.community.toml'
