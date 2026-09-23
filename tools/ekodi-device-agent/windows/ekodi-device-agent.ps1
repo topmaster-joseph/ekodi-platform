@@ -952,6 +952,165 @@ function Resolve-EkodiBrowserViewport([string]$Profile) {
   }
 }
 
+function Receive-EkodiCdpResponse($Socket, [int]$ExpectedId, [int]$TimeoutMs = 15000) {
+  $buffer = New-Object byte[] 65536
+  $deadline = [DateTime]::UtcNow.AddMilliseconds($TimeoutMs)
+  while ([DateTime]::UtcNow -lt $deadline) {
+    $remaining = [int][Math]::Max(250, ($deadline - [DateTime]::UtcNow).TotalMilliseconds)
+    $cts = [Threading.CancellationTokenSource]::new($remaining)
+    try {
+      $stream = [IO.MemoryStream]::new()
+      do {
+        $segment = [ArraySegment[byte]]::new($buffer)
+        $result = $Socket.ReceiveAsync($segment, $cts.Token).GetAwaiter().GetResult()
+        if ($result.MessageType -eq [Net.WebSockets.WebSocketMessageType]::Close) { throw 'cdp_socket_closed' }
+        if ($result.Count -gt 0) { $stream.Write($buffer, 0, $result.Count) }
+      } while (-not $result.EndOfMessage)
+      $json = [Text.Encoding]::UTF8.GetString($stream.ToArray())
+      if (-not $json) { continue }
+      $message = $json | ConvertFrom-Json
+      if ($message.PSObject.Properties.Name -contains 'id' -and [int]$message.id -eq $ExpectedId) {
+        return $message
+      }
+    } finally {
+      $cts.Dispose()
+    }
+  }
+  throw "cdp_response_timeout:$ExpectedId"
+}
+
+function Invoke-EkodiCdpCommand($Socket, [int]$Id, [string]$Method, $Params = $null) {
+  $payload = @{ id = $Id; method = $Method }
+  if ($null -ne $Params) { $payload.params = $Params }
+  $json = $payload | ConvertTo-Json -Depth 10 -Compress
+  $bytes = [Text.Encoding]::UTF8.GetBytes($json)
+  $cts = [Threading.CancellationTokenSource]::new(10000)
+  try {
+    $Socket.SendAsync(
+      [ArraySegment[byte]]::new($bytes),
+      [Net.WebSockets.WebSocketMessageType]::Text,
+      $true,
+      $cts.Token
+    ).GetAwaiter().GetResult()
+  } finally {
+    $cts.Dispose()
+  }
+  $response = Receive-EkodiCdpResponse $Socket $Id
+  if ($response.PSObject.Properties.Name -contains 'error' -and $response.error) {
+    throw "cdp_command_failed:$Method:$([string]$response.error.message)"
+  }
+  return $response
+}
+
+function Invoke-EkodiHeadlessScreenshot(
+  [string]$Browser,
+  [string]$Target,
+  [string]$TaskProfile,
+  [string]$ScreenshotPath,
+  $Viewport
+) {
+  $arguments = @(
+    '--headless=new',
+    '--disable-gpu',
+    '--disable-extensions',
+    '--disable-sync',
+    '--disable-background-networking',
+    '--no-first-run',
+    '--no-default-browser-check',
+    '--hide-scrollbars',
+    '--blink-settings=scriptEnabled=false',
+    '--remote-debugging-port=0',
+    "--window-size=$($Viewport.width),$($Viewport.height)",
+    "--user-data-dir=$TaskProfile",
+    "$Target"
+  ) -join ' '
+
+  $process = [Diagnostics.Process]::new()
+  $process.StartInfo = [Diagnostics.ProcessStartInfo]@{
+    FileName = $Browser
+    Arguments = $arguments
+    UseShellExecute = $false
+    CreateNoWindow = $true
+    RedirectStandardOutput = $true
+    RedirectStandardError = $true
+  }
+
+  $socket = $null
+  try {
+    [void]$process.Start()
+    $stdoutTask = $process.StandardOutput.ReadToEndAsync()
+    $stderrTask = $process.StandardError.ReadToEndAsync()
+
+    $portFile = Join-Path $TaskProfile 'DevToolsActivePort'
+    $deadline = [DateTime]::UtcNow.AddSeconds(20)
+    while (-not (Test-Path -LiteralPath $portFile) -and [DateTime]::UtcNow -lt $deadline) {
+      Start-Sleep -Milliseconds 150
+    }
+    if (-not (Test-Path -LiteralPath $portFile)) { throw 'cdp_port_file_missing' }
+
+    $portLines = @(Get-Content -LiteralPath $portFile -Encoding UTF8)
+    if ($portLines.Count -lt 1 -or [int]$portLines[0] -le 0) { throw 'cdp_port_invalid' }
+    $port = [int]$portLines[0]
+
+    $targets = Invoke-RestMethod -Uri "http://127.0.0.1:$port/json/list" -Method Get -TimeoutSec 10
+    $page = @($targets | Where-Object { $_.type -eq 'page' } | Select-Object -First 1)[0]
+    if (-not $page -or -not $page.webSocketDebuggerUrl) { throw 'cdp_page_target_missing' }
+
+    $socket = [Net.WebSockets.ClientWebSocket]::new()
+    $connectCts = [Threading.CancellationTokenSource]::new(10000)
+    try {
+      $socket.ConnectAsync([Uri]$page.webSocketDebuggerUrl, $connectCts.Token).GetAwaiter().GetResult()
+    } finally {
+      $connectCts.Dispose()
+    }
+
+    [void](Invoke-EkodiCdpCommand $socket 1 'Page.enable' @{})
+    [void](Invoke-EkodiCdpCommand $socket 2 'Emulation.setDeviceMetricsOverride' @{
+      width = [int]$Viewport.width
+      height = [int]$Viewport.height
+      deviceScaleFactor = 1
+      mobile = $false
+    })
+    [void](Invoke-EkodiCdpCommand $socket 3 'Page.navigate' @{ url = $Target })
+    Start-Sleep -Milliseconds 1200
+    $capture = Invoke-EkodiCdpCommand $socket 4 'Page.captureScreenshot' @{
+      format = 'png'
+      fromSurface = $true
+      captureBeyondViewport = $false
+    }
+
+    $data = [string]$capture.result.data
+    if (-not $data) { throw 'cdp_screenshot_data_missing' }
+    $bytes = [Convert]::FromBase64String($data)
+    if ($bytes.Length -le 0) { throw 'cdp_screenshot_empty' }
+    [IO.File]::WriteAllBytes($ScreenshotPath, $bytes)
+
+    return @{
+      processId = $process.Id
+      browserExitCode = $null
+      cdpPort = $port
+      pageUrl = [string]$page.url
+      screenshotBytes = [long]$bytes.Length
+    }
+  } finally {
+    if ($socket) {
+      try {
+        $closeCts = [Threading.CancellationTokenSource]::new(2000)
+        $socket.CloseAsync([Net.WebSockets.WebSocketCloseStatus]::NormalClosure, 'done', $closeCts.Token).GetAwaiter().GetResult()
+        $closeCts.Dispose()
+      } catch { }
+      try { $socket.Dispose() } catch { }
+    }
+    if (-not $process.HasExited) {
+      try { $process.Kill() } catch { }
+      try { [void]$process.WaitForExit(5000) } catch { }
+    }
+    try { [void]$stdoutTask.GetAwaiter().GetResult() } catch { }
+    try { [void]$stderrTask.GetAwaiter().GetResult() } catch { }
+    try { $process.Dispose() } catch { }
+  }
+}
+
 function Invoke-BackgroundBrowserWorker($Payload) {
   $canary = Get-BackgroundBrowserCanaryState
   if (-not $canary.verified) { throw 'background_browser_canary_required' }
@@ -978,43 +1137,10 @@ function Invoke-BackgroundBrowserWorker($Payload) {
     $statusCode = [int]$response.StatusCode
     if ($statusCode -lt 200 -or $statusCode -ge 300) { throw 'background_browser_http_status_failed' }
 
-    $commonArguments = @(
-      '--headless=new',
-      '--disable-gpu',
-      '--disable-extensions',
-      '--disable-sync',
-      '--disable-background-networking',
-      '--no-first-run',
-      '--no-default-browser-check',
-      '--hide-scrollbars',
-      '--blink-settings=scriptEnabled=false',
-      "--window-size=$($viewport.width),$($viewport.height)",
-      "--user-data-dir=$taskProfile"
-    )
-
-    $shotProcess = [Diagnostics.Process]::new()
-    $shotProcess.StartInfo = [Diagnostics.ProcessStartInfo]@{
-      FileName = $browser
-      Arguments = (@($commonArguments + @('--screenshot=surface.png', "$target")) -join ' ')
-      WorkingDirectory = $shotDir
-      UseShellExecute = $false
-      CreateNoWindow = $true
-      RedirectStandardOutput = $true
-      RedirectStandardError = $true
-    }
-    [void]$shotProcess.Start()
-    $shotStdoutTask = $shotProcess.StandardOutput.ReadToEndAsync()
-    $shotStderrTask = $shotProcess.StandardError.ReadToEndAsync()
-    if (-not $shotProcess.WaitForExit(35000)) {
-      try { $shotProcess.Kill() } catch { }
-      throw 'background_browser_screenshot_timeout'
-    }
-    [void]$shotStdoutTask.GetAwaiter().GetResult()
-    $shotStderr = $shotStderrTask.GetAwaiter().GetResult()
+    $capture = Invoke-EkodiHeadlessScreenshot $browser $target $taskProfile $shotPath $viewport
     $screenshotExists = Test-Path -LiteralPath $shotPath
-    if ($shotProcess.ExitCode -ne 0 -or -not $screenshotExists) { $detail = if ($shotStderr) { $shotStderr.Substring(0, [Math]::Min(240, $shotStderr.Length)) } else { 'no-stderr' }; throw "background_browser_screenshot_failed:$($shotProcess.ExitCode):$detail" }
-
-    $stderr = $shotStderr
+    if (-not $screenshotExists) { throw 'background_browser_screenshot_failed:cdp_no_file' }
+    $stderr = ''
     $shot = Get-Item -LiteralPath $shotPath
     $proof = @{
       ok = $true
@@ -1032,7 +1158,9 @@ function Invoke-BackgroundBrowserWorker($Payload) {
       httpStatus = $statusCode
       contentSource = 'canonical-http-get'
       httpMethod = 'GET'
-      screenshotExitCode = $shotProcess.ExitCode
+      screenshotTransport = 'chrome-devtools-protocol'
+      cdpPortAssigned = [bool]($capture.cdpPort -gt 0)
+      browserProcessIdObserved = [bool]($capture.processId -gt 0)
       contentBytes = [Text.Encoding]::UTF8.GetByteCount($stdout)
       contentSha256 = Get-Sha256String $stdout
       screenshotBytes = [long]$shot.Length
