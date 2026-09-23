@@ -1,3 +1,14 @@
+html[data-ekodi-user-ui][data-ekodi-visual-state="pending"] :is([data-ekodi-character-village],[data-ekodi-dynamic-visual],[data-ekodi-decorative-visual]){
+  visibility:hidden!important;
+  opacity:0!important;
+}
+html[data-ekodi-user-ui][data-ekodi-visual-state="ready"] :is([data-ekodi-character-village],[data-ekodi-dynamic-visual],[data-ekodi-decorative-visual]){
+  transition:opacity .24s ease;
+}
+@media(prefers-reduced-motion:reduce){
+  html[data-ekodi-user-ui][data-ekodi-visual-state="ready"] :is([data-ekodi-character-village],[data-ekodi-dynamic-visual],[data-ekodi-decorative-visual]){transition:none!important}
+}
+
 /* EKODI shared user layout + chrome
  * Public/workspace pages inherit one centered visual canvas, header and footer.
  * Service body/hero/card styling remains service-owned inside that canvas.
