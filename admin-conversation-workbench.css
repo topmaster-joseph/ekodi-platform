@@ -537,6 +537,7 @@ html body.admin-compact.ekodi-admin-design-engine.admin-command-home.admin-comma
 }
 
 /* EKODI stacked command authority v1 */
+html body.admin-compact:not(.admin-command-home) .content{padding-bottom:158px!important}
 html body.admin-compact .ekodi-assist-bootstrap-form{
   display:grid!important;
   grid-template-columns:minmax(0,1fr)!important;
@@ -602,6 +603,7 @@ html body.admin-compact .ekodi-assist-execution-row .ekodi-assist-send{
   border-radius:10px!important;
 }
 @media(max-width:760px){
+  html body.admin-compact:not(.admin-command-home) .content{padding-bottom:150px!important}
   html body.admin-compact .ekodi-assist-bootstrap-form{min-height:88px!important}
   html body.admin-compact .ekodi-assist-bootstrap-target{min-width:112px!important}
 }
