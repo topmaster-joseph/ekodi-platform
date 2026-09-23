@@ -1,0 +1,33 @@
+{
+  "id": "2026-09-23-canonical-url-query-hygiene-v1.21.0",
+  "constitutionVersion": "1.21.0",
+  "status": "approved",
+  "approvedBy": "topmaster-joseph",
+  "approvedAt": "2026-09-23",
+  "changeClass": "C2",
+  "taskId": "canonical-query-cleanup-20260923",
+  "summary": "Require all EKODI human-facing public, user, authentication and administrator surfaces to present canonical URLs without marketing or attribution tracking query parameters while preserving functional query context.",
+  "approvalBasis": "The EKODI Platform owner explicitly instructed that ChatGPT and other external-entry tracking parameters such as ?utm_source=chatgpt.com be removed so only the intended EKODI address remains, and requested the rule be applied across all administrator and user pages as a mandatory platform rule.",
+  "runtimeEnforcement": [
+    "canonical-query-policy.js performs shared edge classification and 308 canonicalization for GET/HEAD human surfaces",
+    "platform-router-entry-worker.js applies canonical query normalization before ordinary human-surface routing",
+    "shell/shell.js removes registered tracking parameters from the visible URL as a compatibility fallback",
+    "test/canonical-query-policy.test.mjs verifies tracking removal and functional-query preservation"
+  ],
+  "functionalQueryPreservation": [
+    "return_to",
+    "OAuth code/state",
+    "search and filter state",
+    "pagination",
+    "other route-required parameters"
+  ],
+  "excludedSystemRoutes": [
+    "/api",
+    "/webhooks",
+    "/mcp",
+    "/health",
+    "static assets"
+  ],
+  "rollback": "If canonicalization causes a functional regression, revert the runtime helper/router/Shell changes to the last known-good release while retaining the approved policy intent, restore the affected functional query to the preservation set, rerun canonical-query and authentication-return regression tests, then re-promote through the guarded release pipeline.",
+  "verification": "Run constitution validation, canonical-query unit tests, shared Shell tests, routing/security checks, guarded deployment, and real production URL verification using representative public, user, authentication and administrator routes."
+}
