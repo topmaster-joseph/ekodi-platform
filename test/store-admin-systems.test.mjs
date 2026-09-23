@@ -36,10 +36,10 @@ test('existing first stores are compatibility profiles on one Store Admin Engine
     assert.equal(response.headers.get('x-ekodi-route'),`${store.slug}-store-admin`);
     assert.equal(response.headers.get('x-ekodi-store-scope'),store.id);
     assert.equal(response.headers.get('cache-control'),'no-store');
-    assert.match(html,new RegExp(store.brand));assert.match(html,/\/store-admin\.js\?v=20260923-auth-return-title-v2/);assert.match(html,/data-ekodi-admin-sidebar/);assert.match(html,/data-ekodi-authority-scope="tenant"/);assert.match(html,/data-ekodi-admin-layout="two-level"/);assert.match(html,/id="sectionNav"[^>]*data-ekodi-admin-subnav/);assert.match(html,/data-ekodi-admin-nav-mode="primary"/);assert.match(html,/data-ekodi-admin-page-heading/);
+    assert.match(html,new RegExp(store.brand));assert.match(html,/\/store-admin\.js\?v=20260924-cmpmyi-sidebar-v1/);assert.match(html,/data-ekodi-admin-sidebar/);assert.match(html,/data-ekodi-authority-scope="tenant"/);assert.match(html,/data-ekodi-admin-layout="two-level"/);assert.match(html,/id="sectionNav"[^>]*data-ekodi-admin-subnav[^>]*hidden/);assert.doesNotMatch(html,/로그인 후 세부 메뉴가 표시됩니다/);assert.match(html,/class="portfolio-entry" href="\/cmpmyi\/admin"/);assert.match(html,/통합관리 · 3개 브랜드/);assert.match(html,/data-ekodi-admin-nav-mode="primary"/);assert.match(html,/data-ekodi-admin-page-heading/);
   }
   assert.match(router,/storeAdminPage\(\{\.\.\.storeRoute,pathname:url\.pathname\}\)/);
-  const css=await storeAdminCss().text();assert.match(css,/word-break:keep-all/);assert.match(css,/\.heading h1\{[\s\S]*font-size:30px!important[\s\S]*line-height:1\.25!important[\s\S]*min-height:35px!important/);assert.match(css,/\.heading:before\{[\s\S]*background:#1f5b36/);
+  const css=await storeAdminCss().text();assert.match(css,/word-break:keep-all/);assert.match(css,/\.section-nav\{display:none!important\}/);assert.match(css,/\.portfolio-entry\{/);assert.match(css,/\.scope strong\{[\s\S]*color:#172018!important/);assert.match(css,/\.heading h1\{[\s\S]*font-size:30px!important[\s\S]*line-height:1\.25!important[\s\S]*min-height:35px!important/);assert.match(css,/\.heading:before\{[\s\S]*background:#1f5b36/);
   const script=await storeAdminScript().text();
   assert.match(script,/business_os_store_admin_snapshot/);assert.match(script,/store_operating_space_snapshot/);
   assert.match(script,/운영 데이터 비공개/);assert.match(script,/관리 영역/);
