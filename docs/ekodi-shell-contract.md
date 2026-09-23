@@ -63,10 +63,11 @@ The Shell may retain compatibility code or navigation APIs during migration, but
 Public experience rotation remains presentation-only and provider-independent.
 
 - Time basis: `Asia/Seoul`.
-- Cadence: deterministic seven-day cycle.
+- Cadence: one pre-approved subtle variant per top-level navigation or reload. The selected variant is stable for the document lifetime; timers and ordinary in-page interactions do not rotate it again.
+- Before first paint, conditional decorative characters, illustrations, and scenes remain hidden until the shared Shell resolves their intended state. Visible-then-hidden hydration flashes are forbidden.
 - Service identity, accessibility, navigation position, button geometry, content order, authentication meaning, and transaction meaning remain stable.
-- Rotation may publish accent, companion, motif, rail, or CSS experience tokens, but it must not reintroduce retired floating selectors or global audio controls.
-- Authenticated workspace/admin/form/document/data surfaces stay stable.
+- Rotation may publish accent, companion, motif, rail, background-tint, and bounded background-mix CSS tokens, but it must not reintroduce retired floating selectors or global audio controls.
+- Public/workspace user surfaces inherit the shared seed and visual-ready contract; administrator/auth control surfaces stay outside this ambient rule.
 
 ## Universal site experience principles
 
