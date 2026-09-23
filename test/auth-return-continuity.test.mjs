@@ -32,7 +32,7 @@ test('constitution makes login-return continuity mandatory for every site',()=>{
 test('central client auth returns directly to the initiating trusted URL',()=>{
   assert.match(client,/space:\{name:'EKODI 운영공간',returnTo:'https:\/\/ekodi\.kr\/',origins:\['https:\/\/ekodi\.kr'\],open:true,kind:'space'\}/);
   assert.match(client,/function trustedSpaceAdminTarget\(raw\)/);
-  assert.match(client,/\/\^\\\/[a-z0-9-]\+\\\/admin/);
+  assert.ok(client.includes("if(!/^\\/[a-z0-9-]+\\/admin(?:\\/|$)/i.test(target.pathname))return null;"));
   assert.match(client,/function unwrapSpaceMyRelay\(target\)/);
   assert.match(client,/target\.searchParams\.get\('from'\).*space/);
   assert.match(client,/target\.searchParams\.get\('return_to'\)/);
