@@ -13,7 +13,11 @@
     "externalProviderRole": "temporary-replaceable-fallback-only",
     "externalFallbackRequiresReasonAndAudit": true,
     "nativeCapabilityGapMustBeTracked": true,
-    "buildNativeCapabilityBeforePermanentExternalDependency": true
+    "buildNativeCapabilityBeforePermanentExternalDependency": true,
+    "virtualizationRoutingPolicy": "config/virtualization-routing-policy.json",
+    "externalFallbackForbiddenWhenEligibleNativeHealthy": true,
+    "externalFallbackRequiresAllEligibleNativeUnusable": true,
+    "fallbackMustRetryNativeOnNextEligibleExecution": true
   },
   "transition": {
     "phase": "external-bridge-until-native-verified",
@@ -30,7 +34,8 @@
     ],
     "postCutoverDefault": "ekodi-native-remote-computer",
     "temporaryProviderAfterCutover": "disabled-unless-explicitly-enabled",
-    "rollbackToTemporaryProvider": "allowed-only-if-security-equivalent-and-no-paid-upgrade-required"
+    "rollbackToTemporaryProvider": "allowed-only-if-security-equivalent-and-no-paid-upgrade-required",
+    "temporaryProviderAfterNativeHealthy": "forbidden-by-default"
   },
   "costPolicy": {
     "target": "self-hosted-no-third-party-per-call-fee",

@@ -1,0 +1,61 @@
+name: EKODI Virtualization Routing Guard
+
+on:
+  pull_request:
+    paths:
+      - 'virtualization-router.js'
+      - 'config/virtualization-routing-policy.json'
+      - 'config/autonomous-execution-fabric-policy.json'
+      - 'config/surface-system-verification-policy.json'
+      - 'config/remote-computer-execution-policy.json'
+      - 'config/background-browser-worker-policy.json'
+      - 'scripts/validate-virtualization-routing.mjs'
+      - 'scripts/validate-virtualized-execution-policy.mjs'
+      - 'scripts/validate-surface-system-verification-policy.mjs'
+      - 'scripts/validate-background-browser-worker.mjs'
+      - 'scripts/ekodi-background-browser-worker.mjs'
+      - 'test/virtualization-router.test.mjs'
+      - 'test/background-browser-worker.test.mjs'
+      - '.github/workflows/virtualization-routing.yml'
+      - 'package.json'
+  push:
+    branches: [main]
+    paths:
+      - 'virtualization-router.js'
+      - 'config/virtualization-routing-policy.json'
+      - 'config/autonomous-execution-fabric-policy.json'
+      - 'config/surface-system-verification-policy.json'
+      - 'config/remote-computer-execution-policy.json'
+      - 'config/background-browser-worker-policy.json'
+      - 'scripts/validate-virtualization-routing.mjs'
+      - 'scripts/validate-virtualized-execution-policy.mjs'
+      - 'scripts/validate-surface-system-verification-policy.mjs'
+      - 'scripts/validate-background-browser-worker.mjs'
+      - 'scripts/ekodi-background-browser-worker.mjs'
+      - 'test/virtualization-router.test.mjs'
+      - 'test/background-browser-worker.test.mjs'
+      - '.github/workflows/virtualization-routing.yml'
+      - 'package.json'
+
+permissions:
+  contents: read
+
+jobs:
+  enforce:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Enforce EKODI-native virtualization routing
+        run: |
+          set -euo pipefail
+          node --check virtualization-router.js
+          node --check scripts/ekodi-background-browser-worker.mjs
+          node scripts/validate-virtualization-routing.mjs
+          node scripts/validate-virtualized-execution-policy.mjs
+          node scripts/validate-surface-system-verification-policy.mjs
+          node scripts/validate-background-browser-worker.mjs
+          node --test test/virtualization-router.test.mjs test/background-browser-worker.test.mjs

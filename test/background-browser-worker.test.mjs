@@ -17,6 +17,8 @@ test('EKODI background browser policy is native, canonical-origin and isolated',
   assert.equal(policy.isolation.activeUserProfileReuseForbidden,true);
   assert.equal(policy.networkSafety.mutationGrantDefault,false);
   assert.equal(policy.provider.externalBrowserServiceRequired,false);
+  assert.equal(policy.routingPolicy,'config/virtualization-routing-policy.json');
+  assert.equal(policy.provider.externalFallbackForThisWorker,'forbidden-while-runtime-healthy');
 });
 
 test('task protocol rejects external origins and raw execution surfaces',()=>{
@@ -37,6 +39,9 @@ test('worker uses Playwright isolated context without arbitrary JS task executio
   assert.match(source,/await import\('playwright'\)/);
   assert.match(source,/chromium\.launch\(\{headless:true\}\)/);
   assert.match(source,/browser\.newContext/);
+  assert.match(source,/routingPolicy:'EKODI-VIRTUALIZATION-ROUTING-001'/);
+  assert.match(source,/virtualizationProvider:'ekodi-background-browser-worker'/);
+  assert.match(source,/virtualizationProviderType:'native'/);
   assert.match(source,/acceptDownloads:false/);
   assert.match(source,/block-non-idempotent-http|blockedMutations/);
   assert.doesNotMatch(source,/child_process|exec\(|spawn\(|powershell|cmd\.exe|SendKeys|SetCursorPos/);

@@ -31,7 +31,10 @@
       "ekodiOwnedVirtualizationFirst": true,
       "externalVirtualizationProviderRole": "temporary-replaceable-fallback-only",
       "externalVirtualizationFallbackRequiresReasonAndAudit": true,
-      "missingNativeVirtualizationCapabilityAction": "build-or-complete-and-register-gap"
+      "missingNativeVirtualizationCapabilityAction": "build-or-complete-and-register-gap",
+      "virtualizationRoutingPolicy": "config/virtualization-routing-policy.json",
+      "externalVirtualizationForbiddenWhenEligibleNativeHealthy": true,
+      "externalVirtualizationRequiresAllEligibleNativeUnusable": true
     },
     "convergence": {
       "requireComparableEvidenceDigest": true,
@@ -217,7 +220,10 @@
       ],
       "fallbackReasonAndAuditRequired": true,
       "paidExternalAutoUpgradeForbidden": true,
-      "fallbackMustPreserveOrIncreaseIsolation": true
+      "fallbackMustPreserveOrIncreaseIsolation": true,
+      "externalFallbackForbiddenWhenEligibleNativeHealthy": true,
+      "externalFallbackRequiresAllEligibleNativeUnusable": true,
+      "fallbackMustRetryNativeOnNextEligibleExecution": true
     }
   },
   "risk": {
