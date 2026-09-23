@@ -10,10 +10,11 @@ const [agent, policyRaw, admin, windowsWorkflow] = await Promise.all([
 ]);
 const policy = JSON.parse(policyRaw);
 
-test('Windows Agent enables only the canary-gated background browser while isolated desktop stays disabled', () => {
-  assert.match(agent, /\$AgentVersion = '2\.3\.0'/);
+test('Windows Agent enables browser execution and isolated-desktop canary while full isolated desktop stays disabled', () => {
+  assert.match(agent, /\$AgentVersion = '2\.3\.1'/);
   assert.match(agent, /backgroundBrowserCanary = \[bool\]\(Get-BackgroundBrowserCanaryState\)\.verified/);
   assert.match(agent, /backgroundBrowser = \[bool\]\(Get-BackgroundBrowserCanaryState\)\.verified/);
+  assert.match(agent, /isolatedDesktopCanary = \[bool\]\(Get-IsolatedDesktopCanaryState\)\.verified/);
   assert.match(agent, /isolatedDesktop = \$false/);
   assert.match(agent, /desktopInput = \$false/);
 });
@@ -32,6 +33,7 @@ test('Agent status and admin UI expose non-disruptive readiness without enabling
   assert.match(agent, /foregroundUserSessionProtected = \$true/);
   assert.match(agent, /backgroundBrowserCanaryVerified = \[bool\]\(Get-BackgroundBrowserCanaryState\)\.verified/);
   assert.match(agent, /backgroundBrowserReady = \[bool\]\(Get-BackgroundBrowserCanaryState\)\.verified/);
+  assert.match(agent, /isolatedDesktopCanaryVerified = \[bool\]\(Get-IsolatedDesktopCanaryState\)\.verified/);
   assert.match(agent, /isolatedDesktopReady = \$false/);
   assert.match(agent, /minimizedWindowCountsAsIsolation = \$false/);
   assert.match(admin, /사용자 화면 보호가 기본입니다/);
@@ -68,4 +70,24 @@ test('Windows CI executes the EKODI-native browser runtime proof', () => {
   assert.match(windowsWorkflow, /virtualizationProvider -ne 'ekodi-native-remote-computer'/);
   assert.match(windowsWorkflow, /profileRemoved/);
   assert.match(windowsWorkflow, /mutationMode -ne 'read-only-static-surface'/);
+});
+
+
+test('native isolated desktop canary uses a separate Windows desktop object without foreground takeover', () => {
+  assert.match(agent, /function Invoke-IsolatedDesktopCanary/);
+  assert.match(agent, /CreateDesktopW/);
+  assert.match(agent, /CreateProcessW/);
+  assert.match(agent, /GetThreadDesktop/);
+  assert.match(agent, /OpenInputDesktop/);
+  assert.match(agent, /childDesktopName = \$childDesktopName/);
+  assert.match(agent, /sharedInteractiveDesktop = \$false/);
+  assert.match(agent, /switchDesktopCalled = \$false/);
+  assert.match(agent, /foregroundUserSessionProtected = \$true/);
+  assert.match(agent, /userInputInjection = \$false/);
+  assert.match(agent, /clipboardShared = \$false/);
+  assert.match(agent, /screenCapture = \$false/);
+  assert.match(agent, /arbitraryShellFromCloud = \$false/);
+  assert.match(agent, /desktopHandleClosed = \[bool\]\$desktopClosed/);
+  assert.doesNotMatch(agent, /SwitchDesktop\(/);
+  assert.doesNotMatch(agent, /SetThreadDesktop\(/);
 });
