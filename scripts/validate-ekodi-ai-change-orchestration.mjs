@@ -60,7 +60,7 @@ function runConstitutionalControls() {
 
 if (!fs.existsSync(policyPath)) fail('orchestration policy is missing.');
 const policy = readJson(policyPath);
-if (policy.schemaVersion !== 8) fail('orchestration policy schemaVersion must be 8 with claim integrity.');
+if (policy.schemaVersion !== 9) fail('orchestration policy schemaVersion must be 9 with operational and knowledge claim integrity.');
 if (policy.policyId !== 'AI-ORCHESTRATE-001' || policy.status !== 'enforced') fail('policy must remain enforced.');
 if (policy.controlPlane !== 'EKODI AI') fail('EKODI AI must remain the control plane.');
 if (policy.mutationBoundary?.breakGlassBypassEnabled !== false) fail('break-glass bypass must remain disabled.');
@@ -70,6 +70,11 @@ const claimIntegrity = policy.claimIntegrity || {};
 if (claimIntegrity.policyId !== 'AI-CLAIM-INTEGRITY-001' || claimIntegrity.status !== 'enforced') fail('claim integrity policy binding must remain enforced.');
 for (const key of ['aiStatementNeverCreatesSystemState','agentOutputIsAssertionNotEvidence','memoryCannotProveCurrentOperationalState','currentStateRequiresFreshEvidence','claimScopeMustMatchEvidenceScope','finalResponseGuardRequired','materialOperationalClaimReceiptRequired','broadScopeRequiresIndependentVerifier','unknownMustNotBecomeSuccess']) {
   if (claimIntegrity[key] !== true) fail(`claim integrity orchestration rule must remain true: ${key}`);
+}
+const knowledgeClaimIntegrity = policy.knowledgeClaimIntegrity || {};
+if (knowledgeClaimIntegrity.policyId !== 'AI-KNOWLEDGE-CLAIM-001' || knowledgeClaimIntegrity.status !== 'enforced') fail('knowledge claim integrity policy binding must remain enforced.');
+for (const key of ['retrievalIsNotVerification','memoryCannotProveCurrentExternalFact','modelOutputIsNeverASource','freshnessMustMatchTemporalSensitivity','contradictionsMustBeSurfaced','claimScopeMustMatchEvidenceScope','materialKnowledgeCitationRequired','finalResponseGuardRequired']) {
+  if (knowledgeClaimIntegrity[key] !== true) fail(`knowledge claim integrity orchestration rule must remain true: ${key}`);
 }
 const executionFallback = policy.executionFallback || {};
 if (executionFallback.enabled !== true) fail('automatic execution fallback must remain enabled.');
@@ -271,6 +276,9 @@ const changedFiles = currentChangedFiles();
 const governanceFiles = new Set([
   'config/ai-change-orchestration-policy.json',
   'config/ai-claim-integrity-policy.json',
+  'config/ai-knowledge-claim-policy.json',
+  'ai-knowledge-claim.js',
+  'scripts/validate-ai-knowledge-claim.mjs',
   'ai-claim-integrity.js',
   'scripts/validate-ai-claim-integrity.mjs',
   'scripts/validate-ekodi-ai-change-orchestration.mjs',
