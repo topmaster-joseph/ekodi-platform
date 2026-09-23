@@ -33,5 +33,12 @@
   ],
   "rollback": "Revert constitution v1.25.0 and the PUBLIC-VISUAL-CONTINUITY-001 Shell/theme changes to v1.24.0 while preserving unrelated routing, identity, authentication and workspace policies.",
   "status": "approved",
-  "approvedBy": "topmaster-joseph"
+  "approvedBy": "topmaster-joseph",
+  "approvalEvidence": {
+    "explicitOwnerInstruction": true,
+    "ownerInstructionDate": "2026-09-24",
+    "pullRequest": 2468,
+    "requiredPullRequestLabel": "constitution-approved",
+    "approvalLabel": "constitution-approved"
+  }
 }
