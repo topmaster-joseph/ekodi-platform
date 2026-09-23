@@ -1,5 +1,5 @@
 name: Deploy EKODI Church Homepage
-# Release reconciliation marker: church-member-local-i18n-c44281c-20260923
+# Release reconciliation marker: church-attendance-analytics-20260923
 
 on:
   workflow_dispatch:
@@ -101,6 +101,10 @@ jobs:
           grep -Fq '개인별 출결현황' church/my/attendance/index.html
           grep -Fq 'church-member-attendance-api' church/my/attendance/app.js
           grep -Fq '기록되지 않은 예배는 자동으로 결석 처리하지 않습니다.' church/my/attendance/index.html
+          grep -Fq '현재 연속출석' church/my/attendance/index.html
+          grep -Fq '월별 출결 흐름' church/my/attendance/index.html
+          grep -Fq 'current_streak' church/my/attendance/app.js
+          grep -Fq '<progress class="month-meter"' church/my/attendance/app.js
           if grep -Fq '운영자 기능은 별도 관리자 화면에서 처리합니다.' church/my/index.html; then echo 'Member home must not expose internal operator guidance.'; exit 1; fi
           grep -Fq 'https://ekodi.kr/privacy' church/index.html
           grep -Fq 'https://ekodi.kr/terms' church/index.html
@@ -184,6 +188,9 @@ jobs:
               && grep -Fq 'MY ATTENDANCE' /tmp/church-my-attendance.html \
               && grep -Fq '개인별 출결현황' /tmp/church-my-attendance.html \
               && grep -Fq 'church-member-attendance-api' /tmp/church-my-attendance.js \
+              && grep -Fq '현재 연속출석' /tmp/church-my-attendance.html \
+              && grep -Fq '월별 출결 흐름' /tmp/church-my-attendance.html \
+              && grep -Fq 'current_streak' /tmp/church-my-attendance.js \
               && ! grep -Fq '운영자 기능은 별도 관리자 화면에서 처리합니다.' /tmp/church-my.html \
               && grep -Fq '에코디선교회' /tmp/church.html \
               && grep -Fq 'church-i18n-extended.js' /tmp/church.html \
