@@ -148,7 +148,7 @@
     window.EKODIAdminAssist=Object.freeze({
       open:()=>{setOpen(true);setTab('ai',false);return true},
       submit:text=>{setOpen(true);setTab('ai',false);return submitAi(text)},
-      execute:(targets,text)=>{setOpen(true);setTab('ai',false);return executeTargets(targets,text)},
+      execute:(targets,text)=>{setOpen(true);setTab('ai',false);const picked=targets||selectedExecutionTargets(document.querySelector('.ekodi-assist-bootstrap-form'));if(!picked.length){showStatus('실행 대상을 하나 이상 선택해 주세요.',true);return false}return executeTargets(picked,text)},
       handoff:(provider,text)=>handoffCommand(provider,text),
       ready:()=>Boolean(root),
     });
