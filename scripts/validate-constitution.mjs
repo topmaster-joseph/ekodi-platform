@@ -351,3 +351,4 @@ console.log('- Workspace is canonical; Space remains compatibility-only during m
 console.log('- service workspace routing policy aligned to immutable workspace_id');
 console.log('- Sovereign -> Autonomous -> Agentic -> Services operating hierarchy registered over Governance/OS/Core service boundaries');
 console.log('- data sovereignty, tenant authority, provider, storage and sustainable scaling rules checked');
+console.log('- canonical human URL query hygiene: tracking removed, functional query context preserved');
