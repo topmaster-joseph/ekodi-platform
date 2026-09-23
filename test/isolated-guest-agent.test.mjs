@@ -9,8 +9,8 @@ const policy=JSON.parse(fs.readFileSync(new URL('../config/isolated-desktop-back
 
 test('isolated guest agent is single-purpose, SYSTEM-run and networkless by contract',()=>{
   assert.match(guest,/\$GuestAgentVersion = '1\.0\.0'/);
-  assert.match(guest,/type\) -ne 'guest\.runtime\.probe'/);
-  assert.match(guest,/networkPolicy\) -ne 'none'/);
+  assert.match(guest,/\[string\]\$task\.type -ne 'guest\.runtime\.probe'/);
+  assert.match(guest,/\[string\]\$task\.networkPolicy -ne 'none'/);
   assert.match(guest,/executedAsSystem/);
   assert.match(guest,/noNetworkAdapter/);
   assert.match(guest,/noActiveNetwork/);
