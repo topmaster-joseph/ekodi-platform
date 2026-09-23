@@ -103,7 +103,7 @@ test('Shared Site release and Mission E2E obey the same production quota budget 
   assert.match(mission, /skip_nonessential != 'true'/);
 });
 
-test('Admin static shell bypasses Worker while auth and deep Admin routes keep Worker boundaries', async () => {
+test('Admin entry stays Worker-first while Admin static modules remain asset-first', async () => {
   const [wrangler, build, headers] = await Promise.all([
     readFile(new URL('../wrangler.site.toml', import.meta.url), 'utf8'),
     readFile(new URL('../scripts/build.mjs', import.meta.url), 'utf8'),
@@ -112,9 +112,14 @@ test('Admin static shell bypasses Worker while auth and deep Admin routes keep W
   for (const securityCritical of ['/auth-bootstrap.js','/auth-router.js']) {
     assert.equal(wrangler.includes(`"${securityCritical}"`), true, `${securityCritical} must remain Worker-first`);
   }
-  assert.match(wrangler, /"\/admin\/\*"/);
-  for (const assetFirst of ['!/admin','!/admin/','!/admin/*.js','!/admin/*.css']) {
-    assert.equal(wrangler.includes(`"${assetFirst}"`), true, `${assetFirst} must bypass Worker invocation`);
+  for (const adminEntry of ['/admin','/admin/*']) {
+    assert.equal(wrangler.includes(`"${adminEntry}"`), true, `${adminEntry} must remain Worker-first for canonical URL and security policy`);
+  }
+  for (const forbiddenExclusion of ['!/admin','!/admin/']) {
+    assert.equal(wrangler.includes(`"${forbiddenExclusion}"`), false, `${forbiddenExclusion} must not bypass Worker invocation`);
+  }
+  for (const assetFirst of ['!/admin/*.js','!/admin/*.css']) {
+    assert.equal(wrangler.includes(`"${assetFirst}"`), true, `${assetFirst} should remain asset-first`);
   }
   const routeLine = wrangler.split('\n').find(line => line.trim().startsWith('run_worker_first =')) || '';
   assert.ok((routeLine.match(/"/g) || []).length / 2 <= 100, 'Cloudflare run_worker_first entries must stay within the 100-entry limit');
