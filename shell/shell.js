@@ -36,7 +36,7 @@ const handedTenant=fragment.get('ekodi_tenant')||'';
 const handedStore=fragment.get('ekodi_store')||'';
 
 const FALLBACK_THEME={
-  version:5,
+  version:6,
   workspace:{background:'#071522',surface:'#0B1D2E',surfaceRaised:'#10263A',border:'#24425E',text:'#F4F7FB',muted:'#9FB1C3',focus:'#8EC8FF',radius:'16px'},
   rules:{
     stableSurfaces:['workspace','admin','form','document','data'],
@@ -58,13 +58,16 @@ const FALLBACK_THEME={
   publicExperience:{
     enabled:true,
     timezone:'Asia/Seoul',
-    rotation:'weekly-deterministic',
-    cycleDays:7,
-    refreshMinutes:60,
+    rotation:'navigation-load-approved-variation',
+    documentStable:true,
+    approvedPaletteOnly:true,
+    maxBackgroundMixPercent:6,
     variants:[
-      {id:'quiet',selectorMix:10,railOpacity:.68},
-      {id:'clear',selectorMix:14,railOpacity:.78},
-      {id:'bright',selectorMix:18,railOpacity:.86}
+      {id:'mist-1',selectorMix:10,railOpacity:.68,backgroundMix:2},
+      {id:'mist-2',selectorMix:11,railOpacity:.71,backgroundMix:3},
+      {id:'mist-3',selectorMix:12,railOpacity:.74,backgroundMix:4},
+      {id:'mist-4',selectorMix:13,railOpacity:.77,backgroundMix:5},
+      {id:'mist-5',selectorMix:14,railOpacity:.80,backgroundMix:6}
     ],
     seasonOffsets:{winter:0,spring:1,summer:2,autumn:3},
     motifs:{
@@ -88,6 +91,10 @@ let surface=requestedSurface;
 let cycleTimer=null;
 let memberGateTimer=null;
 let memberGateRoot=null;
+const DOCUMENT_LOAD_SEED=(()=>{
+  try{const values=new Uint32Array(1);crypto.getRandomValues(values);return values[0]>>>0;}
+  catch{return (Date.now()^Math.floor((globalThis.performance?.timeOrigin||0))^hashText(location.href))>>>0;}
+})();
 let memberGateOwnedInert=false;
 let state={workspaceKey:'',workspaceName:'',role:'',personName:'',tenantId:'',storeId:''};
 
@@ -139,9 +146,6 @@ function publicVariant(){
   const config=theme.publicExperience||FALLBACK_THEME.publicExperience;
   if(!config?.enabled||!isPublicSurface())return null;
   const date=seoulDate();
-  const ordinal=Math.floor(Date.UTC(date.year,date.month-1,date.day)/86400000);
-  const cycleDays=Math.max(1,Number(config.cycleDays)||7);
-  const cycleIndex=Math.floor(ordinal/cycleDays);
   const season=seasonForMonth(date.month);
   const identity=serviceTheme();
   const publicIdentity=identity.public||{};
@@ -150,22 +154,27 @@ function publicVariant(){
   const seed=hashText(`${service?.id||explicitService||'ekodi'}:${motif}`);
   const seasonOffset=Number(config.seasonOffsets?.[season]||0);
   const variants=config.variants||[];
-  const variant=variants.length?variants[(cycleIndex+seed+seasonOffset)%variants.length]:{id:'quiet',selectorMix:10,railOpacity:.72};
+  const loadIndex=(DOCUMENT_LOAD_SEED+seed+seasonOffset)>>>0;
+  const variant=variants.length?variants[loadIndex%variants.length]:{id:'mist-1',selectorMix:10,railOpacity:.68,backgroundMix:2};
   const motifVariants=config.motifs?.[motif]||config.motifs?.orbit||[];
-  const rail=motifVariants.length?motifVariants[(cycleIndex+(seed>>>5)+seasonOffset)%motifVariants.length]:'linear-gradient(90deg,var(--accent),var(--companion))';
-  const mix=Math.min(24,Math.max(6,Number(variant.selectorMix)||10));
+  const rail=motifVariants.length?motifVariants[((DOCUMENT_LOAD_SEED>>>5)+(seed>>>5)+seasonOffset)%motifVariants.length]:'linear-gradient(90deg,var(--accent),var(--companion))';
+  const mix=Math.min(18,Math.max(6,Number(variant.selectorMix)||10));
+  const maxBackgroundMix=Math.min(6,Math.max(1,Number(config.maxBackgroundMixPercent)||6));
+  const backgroundMix=Math.min(maxBackgroundMix,Math.max(1,Number(variant.backgroundMix)||2));
   return {
     enabled:true,
     mode:config.rotation||'weekly-deterministic',
     timezone:config.timezone||'Asia/Seoul',
     dateKey:date.key,
-    cycleKey:`${date.year}-w${cycleIndex}`,
+    cycleKey:`load-${DOCUMENT_LOAD_SEED.toString(36)}`,
     season,
     motif,
     companion,
     variant:variant.id||'quiet',
     rail,
     railOpacity:Math.min(1,Math.max(.45,Number(variant.railOpacity)||.72)),
+    backgroundMix,
+    backgroundTint:'color-mix(in srgb,var(--ekodi-public-accent) 55%,var(--ekodi-public-companion))',
     selectorBackground:`linear-gradient(145deg,color-mix(in srgb,var(--accent) ${mix}%,#071522),rgba(7,21,34,.96))`,
     selectorBorder:`color-mix(in srgb,var(--accent) ${Math.min(42,mix+18)}%,#24425e)`,
     selectorShadow:`0 10px 30px rgba(0,0,0,.28),0 0 24px color-mix(in srgb,var(--accent) ${Math.min(28,mix+6)}%,transparent)`
@@ -213,13 +222,18 @@ function applyHostTokens(){
     html.dataset.ekodiShellPublicCycle=value.publicExperience.cycleKey;
     html.dataset.ekodiShellPublicMotif=value.publicExperience.motif;
     html.style.setProperty('--ekodi-public-rail',value.publicExperience.rail);
+    html.style.setProperty('--ekodi-public-background-tint',value.publicExperience.backgroundTint);
+    html.style.setProperty('--ekodi-public-background-mix',String(value.publicExperience.backgroundMix));
     window.dispatchEvent(new CustomEvent('ekodi:public-experience',{detail:{...value.publicExperience,serviceId:value.serviceId,accent:value.accent}}));
   }else{
     delete html.dataset.ekodiShellSeason;
     delete html.dataset.ekodiShellPublicCycle;
     delete html.dataset.ekodiShellPublicMotif;
     html.style.removeProperty('--ekodi-public-rail');
+    html.style.removeProperty('--ekodi-public-background-tint');
+    html.style.removeProperty('--ekodi-public-background-mix');
   }
+  html.dataset.ekodiVisualState='ready';
   window.dispatchEvent(new CustomEvent('ekodi:shell-theme',{detail:value}));
   return value;
 }
@@ -369,7 +383,7 @@ function buildUi(){
 function refreshThemeCycle(){if(!service)return;applyHostTokens();render();}
 
 function applyProgressiveHomeFocus(){
-  if(!service)return;
+  if(!service){document.documentElement.dataset.ekodiVisualState='ready';return;}
   const requested=document.documentElement.dataset.ekodiHomeFocusRequest==='v1';
   if(!requested&&(surface!=='public'||['church','ekodi'].includes(service.id)))return;
   if(requested&&(service.id==='church'||!['public','workspace'].includes(surface)))return;
@@ -412,13 +426,14 @@ function applyProgressiveHomeFocus(){
 
 function startCycleRefresh(){
   if(cycleTimer)clearInterval(cycleTimer);
-  const minutes=Math.max(15,Number(theme.publicExperience?.refreshMinutes)||60);
+  if(isPublicSurface())return;
+  const minutes=60;
   cycleTimer=setInterval(refreshThemeCycle,minutes*60000);
   document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')refreshThemeCycle();});
 }
 async function fetchJson(url){const response=await fetch(url,{cache:'no-store',mode:'cors'});if(!response.ok)throw new Error(`${new URL(url).pathname}_${response.status}`);return response.json();}
 async function boot(){
-  try{manifest=await fetchJson(MANIFEST_URL);}catch(error){console.warn('EKODI Shell manifest unavailable',error);return;}
+  try{manifest=await fetchJson(MANIFEST_URL);}catch(error){console.warn('EKODI Shell manifest unavailable',error);document.documentElement.dataset.ekodiVisualState='ready';return;}
   try{
     const remoteTheme=await fetchJson(THEME_URL);
     if(remoteTheme&&typeof remoteTheme==='object')theme={...FALLBACK_THEME,...remoteTheme,workspace:{...FALLBACK_THEME.workspace,...remoteTheme.workspace},rules:{...FALLBACK_THEME.rules,...remoteTheme.rules},publicExperience:{...FALLBACK_THEME.publicExperience,...remoteTheme.publicExperience,motifs:{...FALLBACK_THEME.publicExperience.motifs,...remoteTheme.publicExperience?.motifs}},services:{...FALLBACK_THEME.services,...remoteTheme.services}};
