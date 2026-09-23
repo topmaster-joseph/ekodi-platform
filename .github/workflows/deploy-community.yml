@@ -5,8 +5,6 @@ on:
   pull_request:
     paths:
       - 'community/**'
-      - 'supabase/functions/community-api/**'
-      - 'supabase/migrations/20260923224500_community_workspace_scope.sql'
       - 'community-worker.js'
       - 'ekodi-shell-injector.js'
       - 'wrangler.community.toml'
@@ -18,8 +16,6 @@ on:
     branches: [main]
     paths:
       - 'community/**'
-      - 'supabase/functions/community-api/**'
-      - 'supabase/migrations/20260923224500_community_workspace_scope.sql'
       - 'community-worker.js'
       - 'ekodi-shell-injector.js'
       - 'wrangler.community.toml'
@@ -61,11 +57,6 @@ jobs:
           node --check community/connect/app.js
           node --check scripts/guarded-worker-release.mjs
           test -f deploy/manifests/community.worker.json
-          test -f supabase/functions/community-api/index.ts
-          test -f supabase/migrations/20260923224500_community_workspace_scope.sql
-          grep -Fq '"https://ekodi.kr"' supabase/functions/community-api/index.ts
-          grep -Fq 'workspace_tenant_id' supabase/functions/community-api/index.ts
-          grep -Fq 'x-ekodi-workspace' supabase/functions/community-api/index.ts
           if grep -Fq '[[routes]]' wrangler.community.toml || grep -Fq 'custom_domain = true' wrangler.community.toml; then
             echo 'Community public custom-domain routing must stay retired.'
             exit 1
@@ -171,11 +162,6 @@ jobs:
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-      TOKEN_A: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-      TOKEN_B: ${{ secrets.SUPABASE_TOKEN }}
-      TOKEN_C: ${{ secrets.SUPABASE_PAT }}
-      TOKEN_D: ${{ secrets.SUPABASE_MANAGEMENT_TOKEN }}
-      PROJECT_REF: renzehysxirjilvdxacv
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -194,81 +180,6 @@ jobs:
         run: |
           test -n "$CLOUDFLARE_API_TOKEN"
           test -n "$CLOUDFLARE_ACCOUNT_ID"
-      - name: Select Supabase deployment credential
-        shell: bash
-        run: |
-          set -euo pipefail
-          token="${TOKEN_A:-}"
-          [ -n "$token" ] || token="${TOKEN_B:-}"
-          [ -n "$token" ] || token="${TOKEN_C:-}"
-          [ -n "$token" ] || token="${TOKEN_D:-}"
-          if [ -z "$token" ]; then
-            echo 'Community API source changed but no Supabase deployment credential is configured.'
-            exit 2
-          fi
-          echo "::add-mask::$token"
-          echo "SUPABASE_ACCESS_TOKEN=$token" >> "$GITHUB_ENV"
-      - name: Deploy Community API
-        run: npx --yes supabase@2.116.0 functions deploy community-api --project-ref "$PROJECT_REF"
-      - name: Verify canonical Community API CORS
-        shell: bash
-        run: |
-          set -euo pipefail
-          endpoint="https://$PROJECT_REF.supabase.co/functions/v1/community-api/profile"
-          code=$(curl -sS -D /tmp/community-api-cors.headers -o /dev/null -w '%{http_code}' -X OPTIONS "$endpoint" -H 'Origin: https://ekodi.kr' -H 'Access-Control-Request-Method: GET' -H 'Access-Control-Request-Headers: authorization,apikey,content-type,x-ekodi-workspace' || true)
-          [[ "$code" =~ ^(200|204)$ ]]
-          grep -Eiq '^access-control-allow-origin:[[:space:]]*https://ekodi\.kr[[:space:]]*        run: |
-          set -euo pipefail
-          node scripts/guarded-worker-release.mjs --manifest deploy/manifests/community.worker.json
-      - name: Deep verify Community production hostname, Shell, Social and Connect assets
-        shell: bash
-        run: |
-          set -euo pipefail
-          for attempt in $(seq 1 18); do
-            root_code=$(curl -L -sS -D /tmp/community.headers -o /tmp/community.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/community/' || true)
-            social_code=$(curl -L -sS -o /tmp/community-social.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/community/social-links.js' || true)
-            connect_code=$(curl -L -sS -o /tmp/community-connect.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/community/connect/' || true)
-            health_code=$(curl -sS -o /tmp/community-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/community/health' || true)
-            if [[ "$root_code" == '200' && "$social_code" == '200' && "$connect_code" == '200' && "$health_code" == '200' ]] \
-              && grep -Fq 'Community' /tmp/community.html \
-              && grep -Fq 'EKODI Connect' /tmp/community-connect.html \
-              && grep -Fq 'https://ekodi.kr/shell/shell.js' /tmp/community.html \
-              && grep -Fiq 'x-ekodi-shell: v2' /tmp/community.headers \
-              && grep -Fq 'api.ekodi.kr/api/social/registry' /tmp/community-social.js \
-              && grep -Fq '"socialRegistry":true' /tmp/community-health.json \
-              && grep -Fq '"ekodiShell":true' /tmp/community-health.json; then
-              echo 'Community production verified with shared Shell v2 and Connect.'
-              break
-            fi
-            if [[ "$attempt" == '18' ]]; then
-              echo "production codes root=${root_code:-?} social=${social_code:-?} connect=${connect_code:-?} health=${health_code:-?}"
-              grep -i '^x-ekodi-shell:' /tmp/community.headers || true
-              exit 1
-            fi
-            sleep 5
-          done
-      - name: Verify Community central auth realm semantically
-        shell: bash
-        run: |
-          set -euo pipefail
-          for attempt in $(seq 1 18); do
-            client_code=$(curl -sS -o /tmp/community-client-auth.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/auth/client-auth.js' || true)
-            router_code=$(curl -sS -o /tmp/community-auth-router.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/auth/auth-router.js' || true)
-            if [[ "$client_code" == '200' && "$router_code" == '200' ]] \
-              && grep -Fq "community:{name:'Community'" /tmp/community-client-auth.js \
-              && grep -Fq "returnTo:'https://ekodi.kr/community/'" /tmp/community-client-auth.js \
-              && grep -Fq "open:true,kind:'community'" /tmp/community-client-auth.js \
-              && grep -Fq "'community'" /tmp/community-auth-router.js \
-              && grep -Fq 'isRegistryUserService' /tmp/community-auth-router.js \
-              && grep -Fq 'await loadClientAuth()' /tmp/community-auth-router.js; then
-              echo 'Community central auth realm verified through registry routing.'
-              exit 0
-            fi
-            sleep 5
-          done
-          exit 1
- /tmp/community-api-cors.headers
-          grep -Eiq '^access-control-allow-headers:.*x-ekodi-workspace' /tmp/community-api-cors.headers
       - name: Candidate at 0%, verify, promote and auto-rollback on failure
         run: |
           set -euo pipefail
