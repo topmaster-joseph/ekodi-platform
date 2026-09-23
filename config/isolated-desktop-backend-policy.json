@@ -56,7 +56,10 @@
     "canaryCommand": "computer.desktop.canary",
     "canaryState": "agent-version-bound-local-proof",
     "canaryRequiredBeforeExecution": true,
-    "canaryDoesNotEnableExecutionByItself": true
+    "canaryDoesNotEnableExecutionByItself": true,
+    "guestCanaryCommand": "computer.desktop.guest.canary",
+    "guestCanaryRequiredBeforeExecution": true,
+    "guestCanaryDoesNotEnableExecutionByItself": true
   },
   "gapClassification": {
     "noVirtualizationFirmware": "native-capability-unavailable",
@@ -78,5 +81,40 @@
     "cleanupRequired": true,
     "maximumStartWaitSeconds": 30,
     "executionCapabilityAfterCanary": false
+  },
+  "guestAgent": {
+    "id": "ekodi-isolated-guest-agent",
+    "version": "1.0.0",
+    "installScript": "tools/ekodi-device-agent/windows/install-isolated-guest-agent.ps1",
+    "runtimeScript": "tools/ekodi-device-agent/windows/ekodi-isolated-guest-agent.ps1",
+    "baseVmProvisioningRequired": true,
+    "transport": "offline-differencing-vhdx-task-and-receipt",
+    "networkRequired": false,
+    "guestCredentialsRequired": false,
+    "taskSchemaVersion": 1,
+    "initialTaskType": "guest.runtime.probe",
+    "taskTtlMinutes": 10,
+    "receiptRequired": true,
+    "executeAs": "SYSTEM",
+    "interactiveDesktopUsed": false,
+    "clipboardShared": false,
+    "userInputInjection": false,
+    "credentialCollection": false,
+    "hostProfileMounted": false,
+    "mutationScope": "ephemeral-guest-only"
+  },
+  "guestCanary": {
+    "requiresHyperVCanary": true,
+    "backend": "hyper-v-ekodi-base",
+    "ephemeralDifferencingDisk": true,
+    "networkAttached": false,
+    "offlineTaskStaging": true,
+    "offlineReceiptCollection": true,
+    "heartbeatRequired": true,
+    "maximumBootWaitSeconds": 50,
+    "postHeartbeatGuestWorkSeconds": 8,
+    "sessionVmCleanupRequired": true,
+    "sessionDiskCleanupRequired": true,
+    "executionCapabilityAfterGuestCanary": false
   }
 }

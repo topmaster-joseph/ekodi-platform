@@ -89,7 +89,13 @@
       "windowsSandboxForegroundUiNotActivationEligible": true,
       "canaryCommand": "computer.desktop.canary",
       "canaryRequiredBeforeExecution": true,
-      "canaryDoesNotEnableExecution": true
+      "canaryDoesNotEnableExecution": true,
+      "guestCanaryCommand": "computer.desktop.guest.canary",
+      "guestAgentPolicy": "config/isolated-desktop-backend-policy.json#guestAgent",
+      "guestCanaryRequiredBeforeExecution": true,
+      "guestCanaryDoesNotEnableExecution": true,
+      "guestCredentialsForbidden": true,
+      "offlineTaskReceiptTransportRequired": true
     },
     "foregroundTakeover": {
       "automaticFallback": false,
