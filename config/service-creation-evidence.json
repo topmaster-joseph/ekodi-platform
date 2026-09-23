@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "policyId": "CAPABILITY-BEFORE-SERVICE-001",
+  "policyVersion": "1.24.0",
+  "status": "active",
+  "rule": "Only services outside the constitutionally grandfathered baseline require a record here. Records are evidence for packaging approval, not a replacement for Capability Foundry, sustainable boundary or release gates.",
+  "requiredRecordShape": {
+    "status": "approved",
+    "existingCapabilitySearch": {
+      "completed": true,
+      "consideredCapabilityIds": [
+        "capability.id"
+      ]
+    },
+    "capabilityGap": {
+      "exists": false,
+      "foundryModuleIds": []
+    },
+    "sampleValidation": {
+      "syntheticOnly": true,
+      "recipeIds": [
+        "sample-recipe-id"
+      ],
+      "verifiedRunIds": [
+        "run-1",
+        "run-2",
+        "run-3"
+      ]
+    },
+    "demandEvidence": {
+      "type": "explicit-user-request",
+      "ref": "auditable-reference"
+    },
+    "humanPackagingReview": {
+      "approved": true,
+      "authority": "ekodi_platform_super_administrator",
+      "ref": "auditable-approval-reference"
+    },
+    "serviceRegistrationDecision": "approved"
+  },
+  "records": {}
+}
