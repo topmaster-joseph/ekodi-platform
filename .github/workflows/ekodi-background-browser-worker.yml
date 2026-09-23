@@ -56,7 +56,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: ekodi-background-browser-worker-${{ github.ref }}
+  group: ekodi-background-browser-worker-${{ github.ref }}-${{ inputs.device_profile || 'desktop' }}
   cancel-in-progress: true
 
 jobs:
