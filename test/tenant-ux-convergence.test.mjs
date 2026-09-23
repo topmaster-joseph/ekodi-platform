@@ -44,13 +44,11 @@ test('delegated admins use task-first navigation without changing authority',asy
   assert.match(trade,/const a=document\.createElement\('a'\);a\.href=sectionHref\(key\)/);
   assert.match(trade,/sub\.hidden=true/);
 
-  assert.doesNotMatch(portfolio,/PORTFOLIO_ACTIONS/);
-  assert.match(portfolio,/\['delivery','배달플랫폼'\]/);
-  assert.match(portfolio,/\['menu','메뉴 · 가격'\]/);
-  assert.match(portfolio,/\['orders','주문 · 채널'\]/);
-  assert.match(portfolio,/\['reviews','리뷰'\]/);
-  assert.match(portfolio,/\['marketing','Marketing AI'\]/);
-  assert.match(portfolio,/브랜드 관리자 전체 메뉴/);
+  assert.match(portfolio,/PORTFOLIO_ACTIONS/);
+  assert.match(portfolio,/\['orders','주문 · 매출'\]/);
+  assert.match(portfolio,/\['menu','메뉴 · 재고'\]/);
+  assert.match(portfolio,/\['reviews','고객 · 리뷰'\]/);
+  assert.match(portfolio,/\['marketing','홍보 · 채널'\]/);
 });
 
 test('shared shells enforce readable public and delegated-admin geometry',async()=>{
