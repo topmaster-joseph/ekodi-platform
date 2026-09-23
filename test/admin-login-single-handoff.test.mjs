@@ -23,7 +23,7 @@ test('every Admin Shell preopens the canonical Google chooser before navigating 
   assert.match(adminDirect, /auth\.searchParams\.set\('direct','1'\)/);
   assert.match(adminDirect, /auth\.searchParams\.set\('bridge','preopened'\)/);
   assert.match(adminDirect, /location\.assign\(auth\.href\)/);
-  assert.match(shellInjector, /surface==='admin'.*adminDirectGoogle/);
+  assert.match(shellInjector, /adminDirectGoogle=surface==='admin'/);
   assert.match(shellInjector, /admin-direct-google\.js\?v=20260924-v1/);
   assert.match(adminShell, /admin-direct-google\.js\?v=20260924-v1/);
   assert.match(build, /'admin-direct-google\.js'/);
