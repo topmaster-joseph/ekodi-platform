@@ -1,7 +1,6 @@
 import {createClient} from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 
 const $=id=>document.getElementById(id);
-const FEATURED_PER_CATEGORY=3;
 const state={config:null,client:null,session:null,categories:[],requests:[],sourceServiceId:'',activeCategory:''};
 const API_BASE=location.pathname.startsWith('/ai')?'/ai':'';
 const escText=value=>String(value??'').trim();
@@ -19,12 +18,22 @@ function serviceButton(service){
   const link=document.createElement('a');link.className='service-button';link.href=service.launchUrl;
   const title=document.createElement('strong');title.textContent=service.label;const meta=document.createElement('small');meta.textContent=serviceStatusMeta(service);link.append(title,meta);return link;
 }
+function serviceAccessMeta(service){
+  if(!service.usableNow)return '준비 중';
+  return service.access?.paidAvailable?'기본 제공 · 고급 구독':'기본 제공 · 고급 로그인';
+}
 function serviceCard(service){
-  const link=document.createElement('a');link.className='service-card';link.href=service.launchUrl;
+  const card=document.createElement(service.usableNow&&service.launchUrl?'a':'article');card.className='service-card';
+  if(card.tagName==='A')card.href=service.launchUrl;else{card.classList.add('preview');card.setAttribute('aria-disabled','true')}
   const copy=document.createElement('div');const title=document.createElement('strong');title.textContent=service.label;
-  const meta=document.createElement('div');meta.className='service-meta';const status=document.createElement('span');status.className='service-state state-'+(service.availability||'live');status.textContent=service.availabilityLabel||'운영';
-  const path=document.createElement('small');path.textContent=service.deliveryLabel||'바로 실행';meta.append(status,path);
-  copy.append(title,meta);const arrow=document.createElement('b');arrow.textContent='›';link.append(copy,arrow);return link;
+  const description=document.createElement('p');description.className='service-description';description.textContent=service.description||'기본 기능을 제공합니다.';
+  const meta=document.createElement('div');meta.className='service-meta';
+  const status=document.createElement('span');status.className='service-state state-'+(service.availability||'live');status.textContent=service.availabilityLabel||'운영';
+  const delivery=document.createElement('small');delivery.textContent=service.deliveryLabel||'전문서비스 연결';meta.append(status,delivery);
+  const access=document.createElement('div');access.className='service-access';
+  const kind=document.createElement('span');kind.textContent=service.sourceKind==='specialist'?'전문서비스':'공통기능';
+  const gate=document.createElement('span');gate.textContent=serviceAccessMeta(service);access.append(kind,gate);
+  copy.append(title,description,meta,access);const arrow=document.createElement('b');arrow.textContent=service.usableNow?'›':'·';card.append(copy,arrow);return card;
 }
 function renderActiveCategory(){
   const host=$('servicePanel');host.replaceChildren();
@@ -32,7 +41,7 @@ function renderActiveCategory(){
   if(!category){host.textContent='준비 중입니다.';return}
   state.activeCategory=category.id;
   document.querySelectorAll('.service-tab').forEach(button=>button.setAttribute('aria-selected',String(button.dataset.category===category.id)));
-  const services=(category.services||[]).slice(0,FEATURED_PER_CATEGORY);
+  const services=category.services||[];
   for(const service of services)host.append(serviceCard(service));
   if(!services.length){const p=document.createElement('p');p.className='empty';p.textContent='이 분류의 서비스를 준비하고 있습니다.';host.append(p)}
 }
