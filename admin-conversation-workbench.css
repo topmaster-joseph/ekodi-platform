@@ -538,7 +538,7 @@ html body.admin-compact.ekodi-admin-design-engine.admin-command-home.admin-comma
 
 /* EKODI stacked command authority v1 */
 html body.admin-compact:not(.admin-command-home) .content{padding-bottom:158px!important}
-html body.admin-compact .ekodi-assist-bootstrap-form{
+html body.admin-compact .ekodi-assist-bootstrap-form[data-execution-ready="true"]{
   display:grid!important;
   grid-template-columns:minmax(0,1fr)!important;
   align-items:stretch!important;
@@ -547,7 +547,7 @@ html body.admin-compact .ekodi-assist-bootstrap-form{
   padding:9px 10px!important;
   border-radius:20px!important;
 }
-html body.admin-compact .ekodi-assist-bootstrap-form>input{
+html body.admin-compact .ekodi-assist-bootstrap-form[data-execution-ready="true"]>input{
   width:100%!important;
   min-height:38px!important;
   padding:8px 9px!important;
@@ -558,12 +558,12 @@ html body.admin-compact .ekodi-assist-bootstrap-actions{
   gap:8px!important;
   min-width:0!important;
 }
-html body.admin-compact .ekodi-assist-bootstrap-form .ekodi-assist-bootstrap-plus{
+html body.admin-compact .ekodi-assist-bootstrap-form[data-execution-ready="true"] .ekodi-assist-bootstrap-plus{
   flex:0 0 36px!important;
   width:36px!important;
   height:36px!important;
 }
-html body.admin-compact .ekodi-assist-bootstrap-form .ekodi-assist-bootstrap-send{
+html body.admin-compact .ekodi-assist-bootstrap-form[data-execution-ready="true"] .ekodi-assist-bootstrap-send{
   flex:0 0 auto!important;
   width:auto!important;
   min-width:64px!important;
@@ -604,6 +604,6 @@ html body.admin-compact .ekodi-assist-execution-row .ekodi-assist-send{
 }
 @media(max-width:760px){
   html body.admin-compact:not(.admin-command-home) .content{padding-bottom:150px!important}
-  html body.admin-compact .ekodi-assist-bootstrap-form{min-height:88px!important}
+  html body.admin-compact .ekodi-assist-bootstrap-form[data-execution-ready="true"]{min-height:88px!important}
   html body.admin-compact .ekodi-assist-bootstrap-target{min-width:112px!important}
 }
