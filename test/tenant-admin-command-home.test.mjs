@@ -1,90 +1,67 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { tenantAdminCommandHomeCss, tenantAdminCommandHomeScript } from '../tenant-admin-command-home.js';
 import { workspaceAdminPage, workspaceAdminScript } from '../workspace-admin-page.js';
 import { churchPastorAdminPage, churchPastorAdminScript } from '../church-pastor-admin-page.js';
 import { storeAdminPage, storeAdminScript } from '../store-admin-engine.js';
 import { workspaceTradeAdminScript } from '../workspace-trade-admin-page.js';
+import { storePortfolioAdminPage } from '../store-portfolio-admin-page.js';
+import { mailAdminPage } from '../mail-admin-page.js';
+import { ekodiBizInvestAdminPage } from '../ekodibiz-invest-admin-page.js';
 
-test('tenant command home is command-only and deterministic', async()=>{
-  const [css,script]=await Promise.all([tenantAdminCommandHomeCss().text(),tenantAdminCommandHomeScript().text()]);
-  assert.match(css,/ekodi-tenant-command-home-active/);
-  assert.match(css,/visibility:hidden!important/);
-  assert.match(script,/EKODITenantCommandHome/);
-  assert.match(script,/^\(\(__name\)=>\{/);
-  assert.doesNotMatch(script,/^const __name=/m);
-  assert.match(script,/targetFor\(text\)/);
-  assert.match(script,/ekodi-tenant-command-config/);
-  assert.match(script,/queueMicrotask\(boot\)/);
-  assert.match(script,/location\.assign\(route\.path\)/);
-  assert.doesNotMatch(script,/\beval\s*\(/);
-  assert.doesNotMatch(script,/\bfetch\s*\(/);
-});
+const commandAsset=/tenant-admin-command-home\.(?:css|js)/;
+const commandRuntime=/EKODITenantCommandHome|mountCommandHome|ekodi-tenant-command-config/;
 
-
-test('tenant command home and Workspace Admin coexist without global helper collisions', async()=>{
-  const [commandScript,workspaceScript]=await Promise.all([tenantAdminCommandHomeScript().text(),workspaceAdminScript().text()]);
-  assert.doesNotThrow(()=>new Function(commandScript+'\n'+workspaceScript));
-  assert.doesNotMatch(commandScript,/^const __name=/m);
-  assert.doesNotMatch(workspaceScript,/^const __name=/m);
-  assert.match(workspaceScript,/__EKODI_WORKSPACE_ADMIN_RUNTIME__/);
-});
-
-test('workspace, church and store roots reserve overview for the full manager', async()=>{
-  const storePage=await storeAdminPage({slug:'jadam',name:'Jadam',mark:'JD'}).text();
-  const [workspacePage,workspaceScript,churchPage,churchScript,storeScript]=await Promise.all([
-    workspaceAdminPage().text(), workspaceAdminScript().text(), churchPastorAdminPage().text(),
-    churchPastorAdminScript().text(), storeAdminScript().text()
-  ]);
-  for(const page of [workspacePage,churchPage,storePage]){
-    assert.match(page,/tenant-admin-command-home\.css/);
-    assert.match(page,/tenant-admin-command-home\.js/);
-  }
-  assert.match(workspaceScript,/mountCommandHome/);
-  assert.match(workspaceScript,/adminBase}\/overview/);
-  assert.match(churchScript,/mountCommandHome/);
-  assert.match(churchScript,/base\+'\/overview'/);
-  assert.match(storeScript,/mountCommandHome/);
-  assert.match(storeScript,/ADMIN_BASE\+'\/overview'/);
-});
-
-test('trade root uses the same command-home contract without widening authority', async()=>{
-  const script=await workspaceTradeAdminScript().text();
-  assert.match(script,/function mountCommandHome/);
-  assert.match(script,/base\+'\/overview'/);
-  assert.match(script,/access\?\.can_manage_access/);
-  assert.match(script,/if\(mountCommandHome\(\)\)return/);
-});
-
-test('shared-site release watches the tenant command-home runtime and contract', async()=>{
-  const workflow=await readFile(new URL('../.github/workflows/deploy-site-core.yml',import.meta.url),'utf8');
-  assert.ok(workflow.includes("      - 'tenant-admin-command-home.js'"));
-  assert.ok(workflow.includes("      - 'test/tenant-admin-command-home.test.mjs'"));
-});
-
-test('both production routers serve the shared command-home assets', async()=>{
-  const [site,platform]=await Promise.all([
-    readFile(new URL('../site-worker.js',import.meta.url),'utf8'),
-    readFile(new URL('../platform-router-entry-worker.js',import.meta.url),'utf8')
-  ]);
-  for(const source of [site,platform]){
-    assert.match(source,/tenantAdminCommandHomeScript/);
-    assert.match(source,/tenant-admin-command-home\.css/);
-    assert.match(source,/tenant-admin-command-home\.js/);
-  }
-});
-
-test('portfolio and Invest admin roots use declarative command homes with overview dashboards',async()=>{
-  const { storePortfolioAdminPage }=await import('../store-portfolio-admin-page.js');
-  const { ekodiBizInvestAdminPage }=await import('../ekodibiz-invest-admin-page.js');
-  const [portfolioRoot,portfolioOverview,investRoot,investOverview]=await Promise.all([
-    storePortfolioAdminPage({commandHome:true}).text(),storePortfolioAdminPage().text(),
+test('tenant and service admin pages never load a command home',async()=>{
+  const pages=await Promise.all([
+    workspaceAdminPage().text(),
+    churchPastorAdminPage().text(),
+    storeAdminPage({slug:'jadam',name:'Jadam',mark:'JD'}).text(),
+    storePortfolioAdminPage().text(),
+    mailAdminPage().text(),
     ekodiBizInvestAdminPage(new Request('https://ekodi.kr/ekodibiz/invest/admin')).text(),
-    ekodiBizInvestAdminPage(new Request('https://ekodi.kr/ekodibiz/invest/admin/overview')).text()
   ]);
-  assert.match(portfolioRoot,/ekodi-tenant-command-config/);assert.match(portfolioRoot,/tenant-admin-command-home\.js/);
-  assert.doesNotMatch(portfolioOverview,/ekodi-tenant-command-config/);
-  assert.match(investRoot,/ekodi-tenant-command-config/);assert.match(investRoot,/tenant-admin-command-home\.js/);
-  assert.doesNotMatch(investOverview,/ekodi-tenant-command-config/);
+  for(const page of pages){
+    assert.doesNotMatch(page,commandAsset);
+    assert.doesNotMatch(page,/ekodi-tenant-command-config/);
+  }
+});
+
+test('tenant admin runtimes open real management screens instead of command homes',async()=>{
+  const [workspace,church,store,trade]=await Promise.all([
+    workspaceAdminScript().then(r=>r.text()),
+    churchPastorAdminScript().then(r=>r.text()),
+    storeAdminScript().then(r=>r.text()),
+    workspaceTradeAdminScript().then(r=>r.text()),
+  ]);
+  for(const script of [workspace,church,store,trade])assert.doesNotMatch(script,commandRuntime);
+  assert.match(workspace,/MISSION_DEFAULT_ACTIVITY='260926-chuseok-open-table'/);
+  assert.match(workspace,/defaultSection=workspace==='ekodimission'&&!service\?'activities':'overview'/);
+  assert.match(store,/if\(!canSection\(section,role\)\)return permissionPanel\(\)/);
+  assert.match(trade,/await loadContext\(\);renderAdminScopeSwitcher\(\);await loadCompanies\(\)/);
+});
+
+test('mail, portfolio and Invest roots are direct dashboards',async()=>{
+  const [router,portfolio,mail,invest]=await Promise.all([
+    readFile(new URL('../platform-router-entry-worker.js',import.meta.url),'utf8'),
+    readFile(new URL('../store-portfolio-admin-page.js',import.meta.url),'utf8'),
+    readFile(new URL('../mail-admin-page.js',import.meta.url),'utf8'),
+    readFile(new URL('../ekodibiz-invest-admin-page.js',import.meta.url),'utf8'),
+  ]);
+  assert.doesNotMatch(router,/commandHome:true/);
+  assert.doesNotMatch(portfolio,/tenantAdminCommandHomeMeta|commandHome=/);
+  assert.doesNotMatch(mail,/EKODITenantCommandHome|commandHome=/);
+  assert.doesNotMatch(invest,/tenantAdminCommandHomeMeta|ekodi-tenant-command-config/);
+});
+
+test('command home remains available on the super-admin surface only',async()=>{
+  const [registry,layout,sidebar]=await Promise.all([
+    readFile(new URL('../admin-menu-registry.js',import.meta.url),'utf8'),
+    readFile(new URL('../admin-menu-layout.js',import.meta.url),'utf8'),
+    readFile(new URL('../admin-sidebar.js',import.meta.url),'utf8'),
+  ]);
+  assert.match(registry,/id: 'command-home'/);
+  assert.match(layout,/const COMMAND_HOME='command-home'/);
+  assert.match(layout,/function activateCommandHome\(\)/);
+  assert.match(sidebar,/dataset\.adminCommandHome = 'true'/);
 });
