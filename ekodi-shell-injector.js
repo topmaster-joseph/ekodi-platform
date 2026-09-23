@@ -22,6 +22,8 @@ const USER_LAYOUT_VERSION='centered-v1';
 const USER_CHROME_HEADER='x-ekodi-user-chrome';
 const TENANT_READABILITY_HEADER='x-ekodi-tenant-readability';
 const TENANT_READABILITY_VERSION='v1';
+const OPERATING_SPACE_LABEL_VERSION='v1';
+const OPERATING_SPACE_LABEL_HEADER='x-ekodi-operating-space-label';
 const SHELL_TENANT_READABILITY_STYLE=`${SHELL_ORIGIN}/user-ui-shell.css?tenant-readability=${TENANT_READABILITY_VERSION}`;
 const SHELL_MOBILE_HEADER_SCRIPT=`${SHELL_ORIGIN}/mobile-fixed-header.js?tenant-readability=${TENANT_READABILITY_VERSION}`;
 const ADMIN_BOOT_STYLE=`<style data-ekodi-admin-shell-boot>:where(.side-brand,.sidebar-brand,.admin-sidebar-brand,[data-ekodi-admin-sidebar-header],[data-ekodi-admin-brand]){display:none!important}</style>`;
@@ -164,6 +166,9 @@ class TenantReadabilityHtmlInjector{
 class TenantReadabilityHeadInjector{
   element(element){element.append(`<link rel="stylesheet" href="${SHELL_TENANT_READABILITY_STYLE}" data-ekodi-tenant-readability-style="${TENANT_READABILITY_VERSION}"><script src="${SHELL_MOBILE_HEADER_SCRIPT}" defer data-ekodi-tenant-mobile-header="${TENANT_READABILITY_VERSION}"></script>`,{html:true});}
 }
+class TenantOperatingSpaceBodyInjector{
+  element(element){element.prepend(`<aside class="ekodi-operating-space-note" data-ekodi-operating-space-label="${OPERATING_SPACE_LABEL_VERSION}" role="note" aria-label="개별 운영공간"><span>운영공간</span></aside>`,{html:true});}
+}
 class TenantReadabilityHeaderAdopter{
   constructor(){this.seen=false;}
   element(element){
@@ -174,7 +179,7 @@ class TenantReadabilityHeaderAdopter{
   }
 }
 
-export function injectEkodiTenantReadability(response){
+export function injectEkodiTenantReadability(response,options={}){
   if(!response)return response;
   const contentType=String(response.headers.get('content-type')||'').toLowerCase();
   if(!contentType.includes('text/html'))return response;
@@ -188,9 +193,11 @@ export function injectEkodiTenantReadability(response){
     headers.set('content-security-policy',next);
   }
   headers.set(TENANT_READABILITY_HEADER,TENANT_READABILITY_VERSION);
+  const operatingSpace=Boolean(options?.operatingSpace);
+  if(operatingSpace)headers.set(OPERATING_SPACE_LABEL_HEADER,OPERATING_SPACE_LABEL_VERSION);
   if(typeof HTMLRewriter!=='function')return new Response(response.body,{status:response.status,statusText:response.statusText,headers});
   const headerAdopter=new TenantReadabilityHeaderAdopter();
-  return new HTMLRewriter()
+  let rewriter=new HTMLRewriter()
     .on('html',new TenantReadabilityHtmlInjector())
     .on('head',new TenantReadabilityHeadInjector())
     .on('header',headerAdopter)
@@ -202,8 +209,9 @@ export function injectEkodiTenantReadability(response){
     .on('.sf-header',headerAdopter)
     .on('.yp-top',headerAdopter)
     .on('.top',headerAdopter)
-    .on('[data-ekodi-fixed-header]',headerAdopter)
-    .transform(new Response(response.body,{status:response.status,statusText:response.statusText,headers}));
+    .on('[data-ekodi-fixed-header]',headerAdopter);
+  if(operatingSpace)rewriter=rewriter.on('body',new TenantOperatingSpaceBodyInjector());
+  return rewriter.transform(new Response(response.body,{status:response.status,statusText:response.statusText,headers}));
 }
 
 class ProgressiveHomeHtmlInjector{element(element){element.setAttribute('data-ekodi-home-focus-request','v1');element.setAttribute('data-ekodi-progressive-home-engine','v1');}}
