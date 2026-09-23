@@ -73,3 +73,20 @@ test('regional admin HTML fails closed until authentication resolves',async()=>{
   assert.match(page,/content:"관리자 로그인 확인 중"/);
   assert.match(page,/data-region-capability/);
 });
+
+
+test('production release probes require serializer helper on every local-region browser asset',async()=>{
+  const manifest=JSON.parse(await read('deploy/manifests/shared-site.worker.json'));
+  const expected=[
+    'https://ekodi.kr/cheonggye/local-region-admin-auth.js',
+    'https://ekodi.kr/cheonggye/local-region-access-admin.js',
+    'https://ekodi.kr/cheonggye/local-region-operations-admin.js',
+    'https://ekodi.kr/cheonggye/local-region-forest-admin.js',
+    'https://ekodi.kr/cheonggye/local-region-forest-public.js',
+  ];
+  for(const url of expected){
+    const probe=manifest.worker.requests.find(item=>item.url===url);
+    assert.ok(probe,'missing production probe '+url);
+    assert.ok(probe.expect.includes('const __name='),'serializer helper probe missing '+url);
+  }
+});
