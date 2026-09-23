@@ -126,16 +126,19 @@ jobs:
           $commands = @(
             'power.always_on','power.presentation','power.normal','power.restore','lock.resume_off','lock.resume_on','autologon.open',
             'diagnostics.collect','network.diagnose','printers.diagnose','startup.scan','startup.disable','startup.restore',
-            'maintenance.temp_cleanup','updates.scan','updates.install','profile.workstation.apply','profile.workstation.restore','agent.self_update','computer.browser.canary',
+            'maintenance.temp_cleanup','updates.scan','updates.install','profile.workstation.apply','profile.workstation.restore','agent.self_update','computer.browser.canary','computer.browser.execute',
             'remote_desktop.recovery.enable','remote_desktop.recovery.disable','remote_desktop.recovery.run'
           )
           foreach ($command in $commands) {
             if (-not $content.Contains("'$command'")) { throw "Missing allowlisted command: $command" }
           }
-          foreach ($guard in @('arbitraryShell = $false','screenCapture = $false','credentialCollection = $false','backgroundBrowser = $false','isolatedDesktop = $false')) {
+          foreach ($guard in @('arbitraryShell = $false','screenCapture = $false','credentialCollection = $false','backgroundBrowser = [bool](Get-BackgroundBrowserCanaryState).verified','isolatedDesktop = $false')) {
             if (-not $content.Contains($guard)) { throw "Missing privacy guard: $guard" }
           }
           if ($content -match '(?i)Restart-Computer|GetAsyncKeyState|SetWindowsHookEx|CopyFromScreen|GetClipboard') { throw 'Forbidden remote-control behavior found.' }
+          foreach ($nativeBrowserGuard in @('background_browser_canary_required','--blink-settings=scriptEnabled=false',"mutationMode = 'read-only-static-surface'",'activeUserProfileReused = $false')) {
+            if (-not $content.Contains($nativeBrowserGuard)) { throw "Missing native browser safety guard: $nativeBrowserGuard" }
+          }
           Write-Host 'Windows agent command and privacy boundary OK.'
       - name: Verify power and lock command mapping without changing runner settings
         shell: pwsh

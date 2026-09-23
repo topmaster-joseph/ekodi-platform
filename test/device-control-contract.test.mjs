@@ -55,7 +55,7 @@ test('cloud operations use a fixed capability allowlist and never expose arbitra
 
 test('maintain and privileged actions require explicit admin confirmation', () => {
   assert.match(api, /DEVICE_COMMAND_CONFIRM_REQUIRED/);
-  for (const command of ['autologon.open','maintenance.temp_cleanup','updates.install','startup.disable','startup.restore','profile.workstation.apply','profile.workstation.restore','agent.self_update','computer.browser.canary']) {
+  for (const command of ['autologon.open','maintenance.temp_cleanup','updates.install','startup.disable','startup.restore','profile.workstation.apply','profile.workstation.restore','agent.self_update','computer.browser.canary','computer.browser.execute']) {
     const escaped = command.replaceAll('.', '\\.');
     assert.match(api, new RegExp(`'${escaped}'[^\n]*confirm: true`));
   }
@@ -90,7 +90,7 @@ test('native remote computer provider exposes bounded observe-only host commands
   assert.match(agent, /persistentShell = \$false/);
   assert.match(agent, /directHostMutation = \$false/);
   assert.match(agent, /backgroundBrowserCanary = \[bool\]\(Get-BackgroundBrowserCanaryState\)\.verified/);
-  assert.match(agent, /backgroundBrowser = \$false/);
+  assert.match(agent, /backgroundBrowser = \[bool\]\(Get-BackgroundBrowserCanaryState\)\.verified/);
   assert.match(agent, /isolatedDesktop = \$false/);
   assert.match(agent, /foregroundUserSessionProtected = \$true/);
   assert.match(agent, /minimizedWindowCountsAsIsolation = \$false/);
@@ -137,7 +137,7 @@ test('one-click device protocol is bounded to EKODI enrollment and official API'
 });
 
 test('existing registered devices upgrade transactionally and preserve registration', () => {
-  assert.match(agent, /\$AgentVersion = '2\.2\.4'/);
+  assert.match(agent, /\$AgentVersion = '2\.3\.0'/);
   assert.match(agent, /Invoke-AgentUpgradeTransaction/);
   assert.match(agent, /Assert-AgentCandidate/);
   assert.match(agent, /New-AgentUpgradeSnapshot/);
@@ -262,13 +262,21 @@ test('unified fleet types reduce authority by default', () => {
 });
 
 
-test('browser canary command is explicit, summarized, and never unlocks browser execution', () => {
+test('native browser execution is bounded, capability-gated and summarized without exposing foreground control', () => {
   assert.match(api, /'computer\.browser\.canary': \{ risk: 'maintain', confirm: true \}/);
+  assert.match(api, /'computer\.browser\.execute': \{ risk: 'maintain', confirm: true, payload: 'background-browser-task' \}/);
+  assert.match(api, /'computer\.browser\.execute': 'backgroundBrowser'/);
+  assert.match(api, /policy\.payload === 'background-browser-task'/);
+  assert.match(api, /target\.hostname!=='ekodi\.kr'/);
   assert.match(api, /summary\.browserCanary/);
+  assert.match(api, /summary\.browserWorker/);
   assert.match(admin, /'computer\.browser\.canary': 'BG Browser Canary'/);
-  assert.match(admin, /사용자 화면·입력·클립보드를 건드리지 않는 전용 headless 브라우저 canary/);
   assert.match(agent, /'computer\.browser\.canary' \{ return Invoke-BackgroundBrowserCanary \}/);
-  assert.doesNotMatch(agent, /backgroundBrowser = \$true/);
+  assert.match(agent, /'computer\.browser\.execute' \{ return Invoke-BackgroundBrowserWorker \$payload \}/);
+  assert.match(agent, /background_browser_canary_required/);
+  assert.match(agent, /mutationMode = 'read-only-static-surface'/);
+  assert.match(agent, /activeUserProfileReused = \$false/);
+  assert.doesNotMatch(admin, /computer\.browser\.execute/);
 });
 
 

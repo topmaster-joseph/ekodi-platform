@@ -10,7 +10,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$AgentVersion = '2.2.4'
+$AgentVersion = '2.3.0'
 $Root = Join-Path $env:ProgramData 'EKODI\DeviceAgent'
 $AgentPath = Join-Path $Root 'ekodi-device-agent.ps1'
 $ConfigPath = Join-Path $Root 'config.json'
@@ -27,6 +27,7 @@ $UpgradeRoot = Join-Path $Root 'transactions'
 $script:RestartAfterCommand = $false
 $BrowserCanaryStatePath = Join-Path $Root 'background-browser-canary.json'
 $BrowserCanaryProfileRoot = Join-Path $env:ProgramData 'EKODI\BrowserWorker\CanaryProfile'
+$BrowserWorkerProfileRoot = Join-Path $env:ProgramData 'EKODI\BrowserWorker\Tasks'
 $BrowserCanaryUrl = 'https://ekodi.kr/'
 
 function Test-IsAdministrator {
@@ -920,7 +921,132 @@ function Invoke-BackgroundBrowserCanary {
   if (-not $ok) { throw 'background_browser_canary_failed' }
   New-Item -ItemType Directory -Path $Root -Force | Out-Null
   $proof | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $BrowserCanaryStatePath -Encoding UTF8
-  return @{ message = 'Background Browser canary를 사용자 화면 개입 없이 검증했습니다. 실제 Browser Worker 실행 권한은 아직 활성화하지 않습니다.'; browserCanary = $proof }
+  return @{ message = 'Background Browser canary를 사용자 화면 개입 없이 검증했습니다. 검증된 버전에서만 EKODI 자체 Browser Worker를 사용할 수 있습니다.'; browserCanary = $proof }
+}
+
+function Resolve-EkodiBrowserTaskUrl([string]$Path) {
+  $value = if ($Path) { $Path.Trim() } else { '/' }
+  if ($value.Length -gt 600) { throw 'browser_path_too_long' }
+  if (-not $value.StartsWith('/') -or $value.StartsWith('//')) { throw 'browser_path_must_be_root_relative' }
+  if ($value -match '[\x00-\x1F]') { throw 'browser_path_control_character_forbidden' }
+  try {
+    $base = [Uri]'https://ekodi.kr/'
+    $uri = [Uri]::new($base, $value)
+  } catch {
+    throw 'browser_path_invalid'
+  }
+  if ($uri.Scheme -ne 'https' -or $uri.Host -ne 'ekodi.kr' -or -not $uri.IsDefaultPort -or $uri.UserInfo) {
+    throw 'browser_target_must_be_canonical_ekodi'
+  }
+  return $uri.AbsoluteUri
+}
+
+function Resolve-EkodiBrowserViewport([string]$Profile) {
+  switch ($Profile) {
+    'compact-mobile' { return @{ id = 'compact-mobile'; width = 320; height = 568 } }
+    'mobile-portrait' { return @{ id = 'mobile-portrait'; width = 390; height = 844 } }
+    'mobile-landscape' { return @{ id = 'mobile-landscape'; width = 844; height = 390 } }
+    'tablet' { return @{ id = 'tablet'; width = 768; height = 1024 } }
+    'desktop' { return @{ id = 'desktop'; width = 1440; height = 900 } }
+    default { throw 'browser_device_profile_invalid' }
+  }
+}
+
+function Invoke-BackgroundBrowserWorker($Payload) {
+  $canary = Get-BackgroundBrowserCanaryState
+  if (-not $canary.verified) { throw 'background_browser_canary_required' }
+
+  $target = Resolve-EkodiBrowserTaskUrl ([string]$Payload.path)
+  $profileName = if ($Payload.PSObject.Properties.Name -contains 'deviceProfile' -and $Payload.deviceProfile) { [string]$Payload.deviceProfile } else { 'desktop' }
+  $viewport = Resolve-EkodiBrowserViewport $profileName
+  $browser = Resolve-EkodiBrowser
+  if (-not $browser) { throw 'supported_browser_not_found' }
+
+  New-Item -ItemType Directory -Path $BrowserWorkerProfileRoot -Force | Out-Null
+  $taskId = [guid]::NewGuid().ToString('N')
+  $taskProfile = Join-Path $BrowserWorkerProfileRoot ("Task-" + $taskId)
+  $shotPath = Join-Path $taskProfile 'surface.png'
+  New-Item -ItemType Directory -Path $taskProfile -Force | Out-Null
+
+  $proof = $null
+  try {
+    $arguments = @(
+      '--headless=new',
+      '--disable-gpu',
+      '--disable-extensions',
+      '--disable-sync',
+      '--disable-background-networking',
+      '--no-first-run',
+      '--no-default-browser-check',
+      '--hide-scrollbars',
+      '--blink-settings=scriptEnabled=false',
+      "--window-size=$($viewport.width),$($viewport.height)",
+      "--user-data-dir=$taskProfile",
+      "--screenshot=$shotPath",
+      '--dump-dom',
+      "$target"
+    ) -join ' '
+
+    $process = [Diagnostics.Process]::new()
+    $process.StartInfo = [Diagnostics.ProcessStartInfo]@{
+      FileName = $browser
+      Arguments = $arguments
+      UseShellExecute = $false
+      CreateNoWindow = $true
+      RedirectStandardOutput = $true
+      RedirectStandardError = $true
+    }
+    [void]$process.Start()
+    $stdoutTask = $process.StandardOutput.ReadToEndAsync()
+    $stderrTask = $process.StandardError.ReadToEndAsync()
+    if (-not $process.WaitForExit(35000)) {
+      try { $process.Kill() } catch { }
+      throw 'background_browser_worker_timeout'
+    }
+    $stdout = $stdoutTask.GetAwaiter().GetResult()
+    $stderr = $stderrTask.GetAwaiter().GetResult()
+    $screenshotExists = Test-Path -LiteralPath $shotPath
+    $ok = ($process.ExitCode -eq 0 -and $stdout.Length -gt 0 -and $screenshotExists)
+    if (-not $ok) { throw 'background_browser_worker_failed' }
+
+    $shot = Get-Item -LiteralPath $shotPath
+    $proof = @{
+      ok = $true
+      mode = 'background-browser-worker'
+      virtualizationProvider = 'ekodi-native-remote-computer'
+      routingPolicy = 'EKODI-VIRTUALIZATION-ROUTING-001'
+      agentVersion = $AgentVersion
+      taskId = $taskId
+      browser = [IO.Path]::GetFileName($browser)
+      url = $target
+      deviceProfile = $viewport.id
+      viewportWidth = [int]$viewport.width
+      viewportHeight = [int]$viewport.height
+      exitCode = $process.ExitCode
+      contentBytes = [Text.Encoding]::UTF8.GetByteCount($stdout)
+      contentSha256 = Get-Sha256String $stdout
+      screenshotBytes = [long]$shot.Length
+      screenshotSha256 = [string](Get-FileHash -LiteralPath $shotPath -Algorithm SHA256).Hash.ToLowerInvariant()
+      dedicatedAutomationProfile = $true
+      ephemeralProfile = $true
+      activeUserProfileReused = $false
+      offscreenOrHeadless = $true
+      focusIsolated = $true
+      clipboardShared = $false
+      userInputInjection = $false
+      javascriptEnabled = $false
+      mutationMode = 'read-only-static-surface'
+      checkedAt = (Get-Date).ToUniversalTime().ToString('o')
+      stderrSummary = $(if ($stderr) { $stderr.Substring(0, [Math]::Min(300, $stderr.Length)) } else { '' })
+      profileRemoved = $false
+    }
+  } finally {
+    Remove-Item -LiteralPath $taskProfile -Recurse -Force -ErrorAction SilentlyContinue
+    if ($proof) { $proof.profileRemoved = -not (Test-Path -LiteralPath $taskProfile) }
+  }
+
+  if (-not $proof -or -not $proof.profileRemoved) { throw 'background_browser_profile_cleanup_failed' }
+  return @{ message = 'EKODI 자체 Background Browser Worker가 사용자 화면과 분리된 읽기 전용 작업을 완료했습니다.'; browserWorker = $proof }
 }
 
 function Get-RemoteAgentStatus {
@@ -940,7 +1066,7 @@ function Get-RemoteAgentStatus {
     directHostMutation = $false
     foregroundUserSessionProtected = $true
     backgroundBrowserCanaryVerified = [bool](Get-BackgroundBrowserCanaryState).verified
-    backgroundBrowserReady = $false
+    backgroundBrowserReady = [bool](Get-BackgroundBrowserCanaryState).verified
     isolatedDesktopReady = $false
     minimizedWindowCountsAsIsolation = $false
   }
@@ -1024,6 +1150,7 @@ function Invoke-DeviceCommand([pscustomobject]$Command) {
     'profile.workstation.restore' { return Restore-WorkstationProfile }
     'agent.self_update' { return Update-AgentFromOfficialSource }
     'computer.browser.canary' { return Invoke-BackgroundBrowserCanary }
+    'computer.browser.execute' { return Invoke-BackgroundBrowserWorker $payload }
     'remote_desktop.recovery.enable' { return Set-DesktopCommanderRecovery $true }
     'remote_desktop.recovery.disable' { return Set-DesktopCommanderRecovery $false }
     'remote_desktop.recovery.run' { return Ensure-DesktopCommanderRunning $true }
@@ -1111,7 +1238,7 @@ function Send-Heartbeat($Config) {
       diagnostics = $true; storageMaintenance = $true; windowsUpdate = $true; startupManagement = $true
       networkDiagnostics = $true; printerDiagnostics = $true; workstationProfile = $true; protocolLaunch = $true
       computerRead = $true; processRead = $true; agentStatus = $true
-      isolatedCommand = $false; filesystemRead = $false; filesystemWrite = $false; backgroundBrowserCanary = [bool](Get-BackgroundBrowserCanaryState).verified; backgroundBrowser = $false; isolatedDesktop = $false
+      isolatedCommand = $false; filesystemRead = $false; filesystemWrite = $false; backgroundBrowserCanary = [bool](Get-BackgroundBrowserCanaryState).verified; backgroundBrowser = [bool](Get-BackgroundBrowserCanaryState).verified; isolatedDesktop = $false
       desktopCapture = $false; desktopInput = $false
       arbitraryShell = $false; screenCapture = $false; credentialCollection = $false
     }
