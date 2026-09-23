@@ -18,7 +18,7 @@ test('constitution makes login-return continuity mandatory for every site',()=>{
   assert.match(constitution,/exact trusted page that initiated login/);
   assert.match(constitution,/must not silently land in another site's home, My page/);
   assert.match(constitution,/ekodi\.kr\/my.*generic post-login fallback/);
-  assert.equal(registry.version,'1.20.0');
+  assert.equal(registry.version,'1.21.0');
   assert.equal(registry.authenticationReturnContinuityPolicy?.exactPreLoginReturnPreferred,true);
   assert.equal(registry.authenticationReturnContinuityPolicy?.crossServicePostLoginFallbackForbidden,true);
   assert.equal(registry.authenticationReturnContinuityPolicy?.myEkodi?.genericPostLoginFallbackForbidden,true);
