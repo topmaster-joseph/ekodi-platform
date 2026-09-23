@@ -31,6 +31,9 @@ test('Mission tenant-admin production E2E exercises the deployed Activity partic
     "#mainPanel a.button.primary[href*=\"/auth/\"]",
     "searchParams.get('site')!=='mission'",
     "authReturnToExact:true",
+    "preAuthNavigationVisible:true",
+    "activityUrl",
+    "콘텐츠 · 운영",
     "captureWorkspaceAsset",
     "signed-out-auth-boundary",
     "signedOutState",
@@ -64,6 +67,9 @@ test('Mission workspace admin selects mission auth scope instead of shared space
   assert.ok(source.includes("if(workspace==='ekodimission')return'mission'"));
   assert.ok(source.includes("u.searchParams.set('site',workspaceAuthSite())"));
   assert.ok(source.includes("u.searchParams.set('return_to',location.origin+location.pathname+location.search)"));
+  assert.ok(source.includes("WORKSPACE_RETURN_KEY='ekodi-workspace-admin-return'"));
+  assert.ok(source.includes("rememberWorkspaceReturn"));
+  assert.ok(source.includes("consumeWorkspaceReturn"));
 });
 
 
