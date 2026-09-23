@@ -16,7 +16,7 @@ const services={
   church:{name:'에코디교회',tenant:null,role:'member',returnTo:'https://church.ekodi.kr',origins:['https://church.ekodi.kr'],requestable:true},
   lab:{name:'에코디연구소',tenant:null,role:'member',returnTo:'https://lab.ekodi.kr',origins:['https://lab.ekodi.kr'],requestable:true},
   mission:{name:'에코디선교회',tenant:'ekodimission',role:'member',returnTo:'https://ekodi.kr/ekodimission',origins:['https://ekodi.kr'],requestable:true},
-  community:{name:'커뮤니티',tenant:null,role:'member',returnTo:'https://community.ekodi.kr',origins:['https://community.ekodi.kr'],requestable:true},
+  community:{name:'커뮤니티',tenant:null,role:'member',returnTo:'https://ekodi.kr/community',origins:['https://ekodi.kr'],requestable:true},
   edu:{name:'에코디교육',tenant:null,role:'member',returnTo:'https://edu.ekodi.kr',origins:['https://edu.ekodi.kr'],requestable:true},
   media:{name:'에코디미디어',tenant:null,role:'member',returnTo:'https://media.ekodi.kr',origins:['https://media.ekodi.kr'],requestable:true},
   social:{name:'EKODI Social',tenant:null,role:'member',returnTo:'https://social.ekodi.kr',origins:['https://social.ekodi.kr'],requestable:false},
