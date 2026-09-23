@@ -179,7 +179,7 @@ function operatingSpaceTarget(header){
 }
 function ensureOperatingSpaceLabel(header,target=operatingSpaceTarget(header)){
   if(!header)return null;
-  const existing=header.querySelector(`[${OPERATING_SCOPE_ATTR}]`);
+  const existing=document.querySelector(`[${OPERATING_SCOPE_ATTR}]`);
   if(!isIndividualSite()){
     if(existing)existing.remove();
     return null;
