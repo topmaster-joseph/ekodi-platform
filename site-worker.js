@@ -1,4 +1,5 @@
 import { injectEkodiShell } from './ekodi-shell-injector.js';
+import { canonicalTrackingQueryRedirect } from './canonical-query-policy.js';
 import { isWorkspaceAdminPath, workspaceAdminPage, workspaceAdminCss, workspaceAdminScript } from './workspace-admin-page.js';
 import { legacyAdminAliasTarget } from './admin-address-policy.js';
 import { churchPastorAdminPage, churchPastorAdminScript, isChurchPastorAdminPath } from './church-pastor-admin-page.js';
@@ -604,6 +605,15 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     const host = url.hostname.toLowerCase();
+
+    const canonicalQueryRedirect = canonicalTrackingQueryRedirect(request);
+    if (canonicalQueryRedirect) {
+      applyBaseSecurityHeaders(canonicalQueryRedirect.headers);
+      if (url.pathname === '/admin' || url.pathname.startsWith('/admin/')) {
+        canonicalQueryRedirect.headers.set('X-Robots-Tag', 'noindex, nofollow, noarchive');
+      }
+      return canonicalQueryRedirect;
+    }
 
     if (PUBLIC_ALIAS_HOSTS.has(host)) return redirectToPublicCanonical(url);
 
