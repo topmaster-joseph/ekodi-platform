@@ -181,6 +181,9 @@ export async function runTask(rawTask, options={}){
     const report={
       ok:true,
       policyId:'EKODI-BROWSER-WORKER-001',
+      routingPolicy:'EKODI-VIRTUALIZATION-ROUTING-001',
+      virtualizationProvider:'ekodi-background-browser-worker',
+      virtualizationProviderType:'native',
       mode:'ekodi-owned-background-browser',
       taskId:task.taskId,
       startedAt,
