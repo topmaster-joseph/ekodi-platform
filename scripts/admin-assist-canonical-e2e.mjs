@@ -131,7 +131,7 @@ try {
     throw new Error(`Canonical campus route mismatch: ${page.url()}`);
   }
 
-  const input = page.locator('#ekodiAssistBootstrap input');
+  const input = page.locator('#ekodiAssistBootstrap .ekodi-assist-bootstrap-prompt-row > input');
   await input.waitFor({ state: 'visible', timeout: 15_000 });
   await input.fill(prompt);
 
