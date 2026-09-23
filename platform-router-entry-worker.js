@@ -1,4 +1,5 @@
 import legacyPlatformRouter from './platform-router-worker.js';
+import { canonicalTrackingQueryRedirect } from './canonical-query-policy.js';
 import financeEntryWorker from './finance-entry-worker.js';
 import taxPortalWorker from './tax-portal-worker.js';
 import { injectTaxLocalFallback } from './tax-local-fallback.js';
@@ -380,6 +381,8 @@ export default {
   async fetch(request,env,ctx){
     const guard=await enforcePlatformRequestSecurity(request,env);
     if(guard)return applyPlatformSecurityHeaders(guard,request);
+    const canonicalQueryRedirect=canonicalTrackingQueryRedirect(request);
+    if(canonicalQueryRedirect)return applyPlatformSecurityHeaders(canonicalQueryRedirect,request);
     const response=await routePlatform(request,env,ctx);
     return applyPlatformSecurityHeaders(response,request);
   },
