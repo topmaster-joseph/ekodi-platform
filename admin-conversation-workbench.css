@@ -387,13 +387,13 @@ body.admin-compact .ekodi-assist-bootstrap-send{
   body.admin-compact .content{padding:14px 12px 112px!important}
   body.admin-compact.admin-command-home.admin-command-active .ekodi-assist{
     left:0!important;
-    top:calc(78px + env(safe-area-inset-top,0px))!important;
+    top:56px!important;
   }
   body.admin-compact.admin-command-home.admin-command-active .ekodi-assist-chat-scroll{
     padding:24px 14px 104px!important;
   }
   body.admin-compact.admin-command-home.admin-command-active .ekodi-assist-welcome{
-    margin:18vh auto 0!important;
+    margin:48px auto 0!important;
   }
   body.admin-compact.admin-command-home.admin-command-active .ekodi-assist-welcome h2{
     font-size:27px!important;
@@ -532,7 +532,7 @@ html body.admin-compact.ekodi-admin-design-engine.admin-command-home.admin-comma
   }
   html body.admin-compact.ekodi-admin-design-engine.admin-command-home.admin-command-active .ekodi-assist{
     left:0!important;
-    top:calc(78px + env(safe-area-inset-top,0px))!important;
+    top:56px!important;
   }
 }
 

@@ -68,6 +68,7 @@ function ensureStyle() {
   style.textContent = `
 body.admin-compact{--admin-readable:#172033;--admin-secondary:#66768a;--admin-border:#d9e2ec;--admin-soft:#f4f7fb;--admin-active:#eaf3ff}
 body.admin-compact .sidebar nav{display:flex!important;flex-direction:column!important;gap:4px!important;overflow-y:hidden!important;overflow-x:hidden!important;overscroll-behavior:none!important}
+body.admin-compact .sidebar nav[data-ekodi-admin-nav-mode="primary"] > .nav{display:none!important}
 body.admin-compact .${GLOBAL_CLASS}{display:grid;gap:5px;margin:6px 0 10px}
 body.admin-compact .admin-global-nav{display:flex;align-items:center;gap:11px;width:100%;min-height:48px;padding:10px 12px;border:1px solid transparent;border-radius:11px;background:transparent;color:#dbe8f6!important;font:inherit;font-size:15px;font-weight:780;line-height:1.25;text-align:left;cursor:pointer;box-shadow:none!important;transition:background .12s ease,border-color .12s ease!important;opacity:1!important}
 body.admin-compact .admin-global-nav span{color:inherit!important;opacity:1!important}
@@ -129,7 +130,7 @@ body.admin-compact #campusPanel .campus-homepage-notice{margin-bottom:9px!import
 body.admin-compact #campusPanel .campus-homepage-notice>span{width:30px!important;height:30px!important;flex-basis:30px!important;font-size:14px!important}
 body.admin-compact #campusPanel .campus-homepage-notice strong{font-size:13px!important}body.admin-compact #campusPanel .campus-homepage-notice small{font-size:12px!important;line-height:1.45!important}
 @media(max-width:1480px){body.admin-compact #campusSiteGroups .campus-groups-grid{grid-template-columns:minmax(0,1fr)!important}}
-@media(max-width:760px){body.admin-compact .admin-global-nav{min-height:46px;font-size:15px}body.admin-compact .${TABS_SHELL_CLASS}{top:0;min-height:52px;padding:6px 10px;gap:7px}body.admin-compact .admin-context-title{display:none}body.admin-compact .admin-context-tab{min-height:42px;padding:0 10px;font-size:15px}body.admin-compact .admin-capability-shortcut{min-height:42px;font-size:15px}body.admin-compact .content{padding:10px 10px 24px!important}body.admin-compact #campusPanel .campus-toolbar{padding:13px!important}body.admin-compact #campusSiteGroups .campus-site-item{padding:11px!important}body.admin-compact #campusSiteGroups .campus-row-action{min-height:44px!important;font-size:14px!important}}
+@media(max-width:760px){body.admin-compact .admin-global-navs{gap:3px;margin:4px 0 8px}body.admin-compact .admin-command-entry{min-height:42px!important;padding:8px 10px!important;margin-bottom:6px!important}body.admin-compact .admin-global-nav{min-height:42px;padding:8px 10px;font-size:14px}body.admin-compact .${TABS_SHELL_CLASS}{top:0;min-height:52px;padding:6px 10px;gap:7px}body.admin-compact .admin-context-title{display:none}body.admin-compact .admin-context-tab{min-height:42px;padding:0 10px;font-size:15px}body.admin-compact .admin-capability-shortcut{min-height:42px;font-size:15px}body.admin-compact .content{padding:10px 10px 24px!important}body.admin-compact #campusPanel .campus-toolbar{padding:13px!important}body.admin-compact #campusSiteGroups .campus-site-item{padding:11px!important}body.admin-compact #campusSiteGroups .campus-row-action{min-height:44px!important;font-size:14px!important}}
 `;
   document.head.append(style);
 }
@@ -499,6 +500,25 @@ export function mountAdminSidebar(root = document, options = {}) {
     return existing;
   }
 
+  const sidebar = nav.closest('.sidebar');
+  const menuButton = root.querySelector?.('#menuButton') || document.querySelector('#menuButton');
+  const closeDrawer = () => {
+    sidebar?.classList.remove('open');
+    menuButton?.setAttribute('aria-expanded','false');
+  };
+  const toggleDrawer = event => {
+    event?.preventDefault?.();
+    if(!sidebar)return;
+    const open=sidebar.classList.toggle('open');
+    menuButton?.setAttribute('aria-expanded',open?'true':'false');
+  };
+  if(menuButton){
+    if(!sidebar?.id)sidebar.id='ekodiAdminSidebar';
+    menuButton.setAttribute('aria-controls',sidebar?.id||'ekodiAdminSidebar');
+    menuButton.setAttribute('aria-expanded',sidebar?.classList.contains('open')?'true':'false');
+    menuButton.addEventListener('click',toggleDrawer);
+  }
+
   let queued = false;
   let syncing = false;
   const sync = () => {
@@ -525,6 +545,7 @@ export function mountAdminSidebar(root = document, options = {}) {
       event.preventDefault();
       delete nav.dataset.adminFocusedGroup;
       activateSection(nav, 'command-home');
+      closeDrawer();
       schedule();
       return;
     }
@@ -542,6 +563,7 @@ export function mountAdminSidebar(root = document, options = {}) {
       event.preventDefault();
       delete nav.dataset.adminFocusedGroup;
       activateSection(nav, detail.dataset.adminDetailSection);
+      closeDrawer();
       schedule();
       return;
     }
@@ -554,6 +576,7 @@ export function mountAdminSidebar(root = document, options = {}) {
       activateSection(nav, getAdminMenuGroupDefault(group));
       delete nav.dataset.adminFocusedGroup;
     }
+    closeDrawer();
     schedule();
   }, true);
 
@@ -569,6 +592,7 @@ export function mountAdminSidebar(root = document, options = {}) {
     }
     delete nav.dataset.adminFocusedGroup;
     activateSection(nav, tab.dataset.adminContextSection);
+    closeDrawer();
     schedule();
   };
   root.addEventListener?.('click', contextClick, true);
@@ -585,6 +609,7 @@ export function mountAdminSidebar(root = document, options = {}) {
     destroy: () => {
       observer.disconnect();
       root.removeEventListener?.('click', contextClick, true);
+      menuButton?.removeEventListener('click',toggleDrawer);
       window.removeEventListener('ekodi-admin-section-changed', sectionChanged);
       mounted.delete(nav);
     },

@@ -57,6 +57,8 @@ test('authenticated ADMIN UI declares the official 8th-gen workbench surface and
   assert.match(shell, /nav\.style\.setProperty\('overflow-y','hidden','important'\)/);
   assert.match(shell, /main\.style\.setProperty\('overflow-y','auto'\)/);
   assert.match(shell, /applyOfficialAdminSurface\(\);/);
+  assert.match(shell, /pageTitle\.parentElement\.hidden=false/);
+  assert.doesNotMatch(shell, /pageTitle\.parentElement\.hidden=true/);
 });
 
 test('shared shell keeps account identity readable above logout', async () => {
@@ -173,6 +175,9 @@ test('admin menu governance uses seven canonical EKODI areas with contextual top
   assert.doesNotMatch(sidebar, /subtree: true/);
   assert.doesNotMatch(sidebar, /innerHTML\s*=/);
   assert.match(sidebar, /tabs\.dataset\.renderSignature/);
+  assert.match(sidebar, /nav\[data-ekodi-admin-nav-mode="primary"\] > \.nav/);
+  assert.match(sidebar, /closeDrawer\(\)/);
+  assert.match(sidebar, /aria-expanded/);
 });
 test('postbuild emits a purpose-built minimal compact runtime and strips legacy Admin chrome', async () => {
   const pkg = JSON.parse(await read('package.json'));

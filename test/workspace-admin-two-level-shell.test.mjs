@@ -28,6 +28,10 @@ test('workspace admin keeps the shared shell while all tenant menus navigate dir
   assert.doesNotMatch(script,/로그인 후 세부 메뉴가 표시됩니다/);
   assert.match(script,/운영 데이터 비공개/);
   assert.match(script,/에코디몰 관리자 로그인/);
+  assert.match(script,/운영권 확인 · 관리/);
+  assert.match(script,/\/admin\/people\/users-access\?workspace=/);
+  assert.match(script,/플랫폼 관리자 권한과 운영공간 권한을 분리합니다/);
+  assert.doesNotMatch(script,/tenant isolated/);
   assert.match(css,/\.mall-quick-actions/);
 });
 

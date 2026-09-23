@@ -29,6 +29,7 @@ let resizeObserver=null;
 let mutationObserver=null;
 
 function isMobile(){return window.matchMedia(`(max-width:${MOBILE_MAX}px)`).matches;}
+function isAdminSurface(){return String(document.documentElement.dataset.ekodiShellSurface||'').trim().toLowerCase()==='admin';}
 function installStyle(){
   if(document.getElementById(STYLE_ID))return;
   const style=document.createElement('style');
@@ -101,6 +102,7 @@ function attach(header){
   requestAnimationFrame(updateSpacer);
 }
 function enforce(){
+  if(isAdminSurface()){detach();return;}
   installStyle();
   if(!isMobile()){detach();return;}
   const header=findHeader();
@@ -113,5 +115,5 @@ else enforce();
 window.addEventListener('resize',schedule,{passive:true});
 window.addEventListener('orientationchange',schedule,{passive:true});
 mutationObserver=new MutationObserver(schedule);
-mutationObserver.observe(document.documentElement,{childList:true,subtree:true});
+mutationObserver.observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['data-ekodi-shell-surface']});
 })();
