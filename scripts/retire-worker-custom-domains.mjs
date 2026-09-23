@@ -31,6 +31,21 @@ async function cf(path,options={}){
   return data;
 }
 async function listDomains(){return (await cf("/accounts/"+account+"/workers/domains")).result||[]}
+async function rootZoneId(){
+  const zones=(await cf("/zones?name="+encodeURIComponent(rootDomain)+"&status=active&per_page=50")).result||[];
+  const exact=zones.find(zone=>String(zone.name||"").toLowerCase()===rootDomain.toLowerCase());
+  if(!exact?.id)throw new Error("Cloudflare zone not found for "+rootDomain);
+  return exact.id;
+}
+async function purgeLegacyDns(zoneId,host){
+  const data=await cf("/zones/"+zoneId+"/dns_records?name="+encodeURIComponent(host)+"&per_page=100");
+  const records=Array.isArray(data.result)?data.result:[];
+  for(const record of records){
+    if(!["A","AAAA","CNAME"].includes(String(record.type||"").toUpperCase()))continue;
+    await cf("/zones/"+zoneId+"/dns_records/"+record.id,{method:"DELETE"});
+    console.log("Deleted stale DNS "+record.type+" for "+host);
+  }
+}
 const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 function retryDelay(response,attempt){
   const header=Number(response?.headers?.get?.("retry-after")||0);
@@ -101,10 +116,15 @@ try{
     await health(t.directHealth,t.directExpect||t.expect);
   }
   rollbackAllowed=false;
+  const zoneId=await rootZoneId();
   for(const t of targets){
     const host=oldHost(t);
-    if(!(await legacyGone(host)))throw new Error("Legacy hostname propagation still active after detach: "+host);
-    console.log("Verified retired: "+host+"; apex healthy: "+t.apexHealth);
+    await purgeLegacyDns(zoneId,host);
+  }
+  for(const t of targets){
+    const host=oldHost(t);
+    if(!(await legacyGone(host)))throw new Error("Legacy hostname propagation still active after detach and DNS purge: "+host);
+    console.log("Verified retired and DNS-purged: "+host+"; apex healthy: "+t.apexHealth);
   }
 }catch(error){
   console.error("Retirement failed: "+(error&&error.message?error.message:error));
