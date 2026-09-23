@@ -63,7 +63,7 @@ function Invoke-GuestRuntimeProbe($ValidatedTask) {
   $receipt = @{
     schemaVersion = 1
     ok = $true
-    mode = 'ekodi-isolated-guest-task-failure'
+    mode = 'ekodi-isolated-guest-runtime-canary'
     guestAgentVersion = $GuestAgentVersion
     taskType = [string]$task.type
     taskId = [string]$task.taskId
@@ -262,7 +262,7 @@ if ($RunOnce) {
     $failure = @{
       schemaVersion = 1
       ok = $false
-      mode = 'ekodi-isolated-guest-runtime-canary'
+      mode = 'ekodi-isolated-guest-task-failure'
       guestAgentVersion = $GuestAgentVersion
       error = $_.Exception.Message
       checkedAt = (Get-Date).ToUniversalTime().ToString('o')
