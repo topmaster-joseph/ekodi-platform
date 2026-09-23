@@ -118,7 +118,9 @@ test('postbuild removes retired first-path assets, versions the current graph an
   assert.match(perf, /content-visibility:auto/);
   assert.match(perf, /backdrop-filter:none!important/);
   assert.match(perf, /admin mobile flow/);
-  assert.match(perf, /position:static!important/);
+  assert.match(perf, /position:sticky!important/);
+  assert.match(perf, /background:#fff!important/);
+  assert.match(perf, /\.topbar \.menu\{color:#172033!important/);
   assert.match(perf, /\.app>main\{padding-top:0!important\}/);
   assert.match(perf, /\.topbar \.kicker\{display:none!important\}/);
   assert.ok(perf.includes('const adminMirrorDir = \`${dist}admin/\`;'));
