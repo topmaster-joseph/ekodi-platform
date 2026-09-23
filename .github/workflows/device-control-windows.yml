@@ -140,6 +140,188 @@ jobs:
             if (-not $content.Contains($nativeBrowserGuard)) { throw "Missing native browser safety guard: $nativeBrowserGuard" }
           }
           Write-Host 'Windows agent command and privacy boundary OK.'
+      - name: Run native Background Browser Worker on Windows runner
+        shell: pwsh
+        run: |
+          $path = Join-Path $PWD 'tools/ekodi-device-agent/windows/ekodi-device-agent.ps1'
+          . $path
+          $canary = Invoke-BackgroundBrowserCanary
+          if (-not $canary.browserCanary.ok) { throw 'Native browser canary did not pass.' }
+          $worker = Invoke-BackgroundBrowserWorker ([pscustomobject]@{ path = '/'; deviceProfile = 'desktop' })
+          $proof = $worker.browserWorker
+          if (-not $proof.ok) { throw 'Native browser worker did not return ok.' }
+          if ($proof.virtualizationProvider -ne 'ekodi-native-remote-computer') { throw 'Unexpected native virtualization provider.' }
+          if ($proof.routingPolicy -ne 'EKODI-VIRTUALIZATION-ROUTING-001') { throw 'Virtualization routing policy evidence missing.' }
+          if ($proof.mode -ne 'background-browser-worker') { throw 'Unexpected browser worker mode.' }
+          if ($proof.url -ne 'https://ekodi.kr/') { throw 'Native browser worker escaped canonical EKODI target.' }
+          if ($proof.deviceProfile -ne 'desktop' -or $proof.viewportWidth -ne 1440 -or $proof.viewportHeight -ne 900) { throw 'Desktop viewport proof mismatch.' }
+          if ($proof.contentBytes -le 0 -or $proof.screenshotBytes -le 0) { throw 'DOM or screenshot evidence missing.' }
+          if ($proof.contentSha256 -notmatch '^[a-f0-9]{64}      - name: Verify power and lock command mapping without changing runner settings
+        shell: pwsh
+        run: |
+          $path = Join-Path $PWD 'tools/ekodi-device-agent/windows/ekodi-device-agent.ps1'
+          . $path
+          function Save-PowerBackup { }
+          function Get-AgentSettings { return @{} }
+          function Restore-PowerBackup { return '11111111-1111-1111-1111-111111111111' }
+          function Open-AutologonManager { return 'local-only' }
+          function Assert-ContainsCall([string[]]$Calls, [string]$Expected) {
+            if ($Calls -notcontains $Expected) { throw "Expected powercfg mapping missing: $Expected`nActual: $($Calls -join '; ')" }
+          }
+          $script:PowerCalls = @()
+          function Invoke-PowerCfg([string[]]$Arguments) { $script:PowerCalls += ($Arguments -join ' '); return '' }
+          [void](Invoke-DeviceCommand ([pscustomobject]@{ type = 'power.always_on' }))
+          Assert-ContainsCall $script:PowerCalls '/change standby-timeout-ac 0'
+          Assert-ContainsCall $script:PowerCalls '/change standby-timeout-dc 0'
+          Assert-ContainsCall $script:PowerCalls '/change hibernate-timeout-ac 0'
+          Assert-ContainsCall $script:PowerCalls '/change hibernate-timeout-dc 0'
+          Assert-ContainsCall $script:PowerCalls '/change monitor-timeout-ac 30'
+          Assert-ContainsCall $script:PowerCalls '/change monitor-timeout-dc 15'
+          $script:PowerCalls = @()
+          [void](Invoke-DeviceCommand ([pscustomobject]@{ type = 'power.presentation' }))
+          Assert-ContainsCall $script:PowerCalls '/change monitor-timeout-ac 0'
+          Assert-ContainsCall $script:PowerCalls '/change monitor-timeout-dc 0'
+          Assert-ContainsCall $script:PowerCalls '/change standby-timeout-ac 0'
+          Assert-ContainsCall $script:PowerCalls '/change standby-timeout-dc 0'
+          $script:PowerCalls = @()
+          [void](Invoke-DeviceCommand ([pscustomobject]@{ type = 'power.normal' }))
+          Assert-ContainsCall $script:PowerCalls '/change monitor-timeout-ac 15'
+          Assert-ContainsCall $script:PowerCalls '/change monitor-timeout-dc 5'
+          Assert-ContainsCall $script:PowerCalls '/change standby-timeout-ac 30'
+          Assert-ContainsCall $script:PowerCalls '/change standby-timeout-dc 15'
+          $script:PowerCalls = @()
+          [void](Invoke-DeviceCommand ([pscustomobject]@{ type = 'lock.resume_off' }))
+          Assert-ContainsCall $script:PowerCalls '/SETACVALUEINDEX SCHEME_CURRENT SUB_NONE CONSOLELOCK 0'
+          Assert-ContainsCall $script:PowerCalls '/SETDCVALUEINDEX SCHEME_CURRENT SUB_NONE CONSOLELOCK 0'
+          Assert-ContainsCall $script:PowerCalls '/SETACTIVE SCHEME_CURRENT'
+          $script:PowerCalls = @()
+          [void](Invoke-DeviceCommand ([pscustomobject]@{ type = 'lock.resume_on' }))
+          Assert-ContainsCall $script:PowerCalls '/SETACVALUEINDEX SCHEME_CURRENT SUB_NONE CONSOLELOCK 1'
+          Assert-ContainsCall $script:PowerCalls '/SETDCVALUEINDEX SCHEME_CURRENT SUB_NONE CONSOLELOCK 1'
+          $restore = Invoke-DeviceCommand ([pscustomobject]@{ type = 'power.restore' })
+          if ($restore.restoredScheme -ne '11111111-1111-1111-1111-111111111111') { throw 'Restore mapping did not call Restore-PowerBackup.' }
+          $autologon = Invoke-DeviceCommand ([pscustomobject]@{ type = 'autologon.open' })
+          if ($autologon.message -ne 'local-only') { throw 'AutoLogon mapping did not remain local-only.' }
+          Write-Host 'Windows Device Control power/lock mapping OK.'
+      - name: Verify protocol parser cannot redirect enrollment to another API
+        shell: pwsh
+        run: |
+          $path = Join-Path $PWD 'tools/ekodi-device-agent/windows/ekodi-device-agent.ps1'
+          . $path
+          $parsed = Parse-ProtocolEnrollment 'ekodi-device://enroll?code=EKD-0123456789ABCDEF0123&api=https%3A%2F%2Fevil.example'
+          if ($parsed.apiBase -ne 'https://ekodi.kr') { throw 'Protocol parser accepted an untrusted API base.' }
+          if ($parsed.enrollmentCode -ne 'EKD-0123456789ABCDEF0123') { throw 'Protocol parser changed the enrollment code.' }
+          $failed = $false
+          try { [void](Parse-ProtocolEnrollment 'ekodi-device://shell?code=EKD-0123456789ABCDEF0123') } catch { $failed = $true }
+          if (-not $failed) { throw 'Protocol parser accepted a non-enrollment action.' }
+          Write-Host 'EKODI protocol boundary OK.'
+      - name: Verify transactional upgrade, injected failure rollback, and re-upgrade
+        shell: pwsh
+        run: |
+          & (Join-Path $PWD 'tools/ekodi-device-agent/windows/transactional-upgrade.test.ps1')
+      - name: Verify bootstrap separates Agent install from Boot WOL and avoids duplicate elevation
+        shell: pwsh
+        run: |
+          $bootstrap = Get-Content (Join-Path $PWD 'ekodi-device-bootstrap.cmd') -Raw
+          if ($bootstrap -notmatch '\$isAdmin=') { throw 'Bootstrap does not detect the current administrator token.' }
+          if ($bootstrap -notmatch 'if\(\$isAdmin\)') { throw 'Bootstrap does not bypass duplicate RunAs when already elevated.' }
+          if ($bootstrap -match 'ekodi-device-startup-bootstrap\.ps1') { throw 'Bootstrap still couples Boot/WOL setup to Agent installation.' }
+          if ($bootstrap -match "'-Install','-RunNow'") { throw 'Bootstrap still auto-installs the Boot/WOL task.' }
+          if ($bootstrap -notmatch 'EKB-130') { throw 'Bootstrap does not expose structured install error codes.' }
+          Write-Host 'Bootstrap elevation and Agent/Boot separation OK.'
+ -or $proof.screenshotSha256 -notmatch '^[a-f0-9]{64}      - name: Verify power and lock command mapping without changing runner settings
+        shell: pwsh
+        run: |
+          $path = Join-Path $PWD 'tools/ekodi-device-agent/windows/ekodi-device-agent.ps1'
+          . $path
+          function Save-PowerBackup { }
+          function Get-AgentSettings { return @{} }
+          function Restore-PowerBackup { return '11111111-1111-1111-1111-111111111111' }
+          function Open-AutologonManager { return 'local-only' }
+          function Assert-ContainsCall([string[]]$Calls, [string]$Expected) {
+            if ($Calls -notcontains $Expected) { throw "Expected powercfg mapping missing: $Expected`nActual: $($Calls -join '; ')" }
+          }
+          $script:PowerCalls = @()
+          function Invoke-PowerCfg([string[]]$Arguments) { $script:PowerCalls += ($Arguments -join ' '); return '' }
+          [void](Invoke-DeviceCommand ([pscustomobject]@{ type = 'power.always_on' }))
+          Assert-ContainsCall $script:PowerCalls '/change standby-timeout-ac 0'
+          Assert-ContainsCall $script:PowerCalls '/change standby-timeout-dc 0'
+          Assert-ContainsCall $script:PowerCalls '/change hibernate-timeout-ac 0'
+          Assert-ContainsCall $script:PowerCalls '/change hibernate-timeout-dc 0'
+          Assert-ContainsCall $script:PowerCalls '/change monitor-timeout-ac 30'
+          Assert-ContainsCall $script:PowerCalls '/change monitor-timeout-dc 15'
+          $script:PowerCalls = @()
+          [void](Invoke-DeviceCommand ([pscustomobject]@{ type = 'power.presentation' }))
+          Assert-ContainsCall $script:PowerCalls '/change monitor-timeout-ac 0'
+          Assert-ContainsCall $script:PowerCalls '/change monitor-timeout-dc 0'
+          Assert-ContainsCall $script:PowerCalls '/change standby-timeout-ac 0'
+          Assert-ContainsCall $script:PowerCalls '/change standby-timeout-dc 0'
+          $script:PowerCalls = @()
+          [void](Invoke-DeviceCommand ([pscustomobject]@{ type = 'power.normal' }))
+          Assert-ContainsCall $script:PowerCalls '/change monitor-timeout-ac 15'
+          Assert-ContainsCall $script:PowerCalls '/change monitor-timeout-dc 5'
+          Assert-ContainsCall $script:PowerCalls '/change standby-timeout-ac 30'
+          Assert-ContainsCall $script:PowerCalls '/change standby-timeout-dc 15'
+          $script:PowerCalls = @()
+          [void](Invoke-DeviceCommand ([pscustomobject]@{ type = 'lock.resume_off' }))
+          Assert-ContainsCall $script:PowerCalls '/SETACVALUEINDEX SCHEME_CURRENT SUB_NONE CONSOLELOCK 0'
+          Assert-ContainsCall $script:PowerCalls '/SETDCVALUEINDEX SCHEME_CURRENT SUB_NONE CONSOLELOCK 0'
+          Assert-ContainsCall $script:PowerCalls '/SETACTIVE SCHEME_CURRENT'
+          $script:PowerCalls = @()
+          [void](Invoke-DeviceCommand ([pscustomobject]@{ type = 'lock.resume_on' }))
+          Assert-ContainsCall $script:PowerCalls '/SETACVALUEINDEX SCHEME_CURRENT SUB_NONE CONSOLELOCK 1'
+          Assert-ContainsCall $script:PowerCalls '/SETDCVALUEINDEX SCHEME_CURRENT SUB_NONE CONSOLELOCK 1'
+          $restore = Invoke-DeviceCommand ([pscustomobject]@{ type = 'power.restore' })
+          if ($restore.restoredScheme -ne '11111111-1111-1111-1111-111111111111') { throw 'Restore mapping did not call Restore-PowerBackup.' }
+          $autologon = Invoke-DeviceCommand ([pscustomobject]@{ type = 'autologon.open' })
+          if ($autologon.message -ne 'local-only') { throw 'AutoLogon mapping did not remain local-only.' }
+          Write-Host 'Windows Device Control power/lock mapping OK.'
+      - name: Verify protocol parser cannot redirect enrollment to another API
+        shell: pwsh
+        run: |
+          $path = Join-Path $PWD 'tools/ekodi-device-agent/windows/ekodi-device-agent.ps1'
+          . $path
+          $parsed = Parse-ProtocolEnrollment 'ekodi-device://enroll?code=EKD-0123456789ABCDEF0123&api=https%3A%2F%2Fevil.example'
+          if ($parsed.apiBase -ne 'https://ekodi.kr') { throw 'Protocol parser accepted an untrusted API base.' }
+          if ($parsed.enrollmentCode -ne 'EKD-0123456789ABCDEF0123') { throw 'Protocol parser changed the enrollment code.' }
+          $failed = $false
+          try { [void](Parse-ProtocolEnrollment 'ekodi-device://shell?code=EKD-0123456789ABCDEF0123') } catch { $failed = $true }
+          if (-not $failed) { throw 'Protocol parser accepted a non-enrollment action.' }
+          Write-Host 'EKODI protocol boundary OK.'
+      - name: Verify transactional upgrade, injected failure rollback, and re-upgrade
+        shell: pwsh
+        run: |
+          & (Join-Path $PWD 'tools/ekodi-device-agent/windows/transactional-upgrade.test.ps1')
+      - name: Verify bootstrap separates Agent install from Boot WOL and avoids duplicate elevation
+        shell: pwsh
+        run: |
+          $bootstrap = Get-Content (Join-Path $PWD 'ekodi-device-bootstrap.cmd') -Raw
+          if ($bootstrap -notmatch '\$isAdmin=') { throw 'Bootstrap does not detect the current administrator token.' }
+          if ($bootstrap -notmatch 'if\(\$isAdmin\)') { throw 'Bootstrap does not bypass duplicate RunAs when already elevated.' }
+          if ($bootstrap -match 'ekodi-device-startup-bootstrap\.ps1') { throw 'Bootstrap still couples Boot/WOL setup to Agent installation.' }
+          if ($bootstrap -match "'-Install','-RunNow'") { throw 'Bootstrap still auto-installs the Boot/WOL task.' }
+          if ($bootstrap -notmatch 'EKB-130') { throw 'Bootstrap does not expose structured install error codes.' }
+          Write-Host 'Bootstrap elevation and Agent/Boot separation OK.'
+) { throw 'Runtime evidence hashes are invalid.' }
+          if (-not $proof.dedicatedAutomationProfile -or -not $proof.ephemeralProfile -or -not $proof.profileRemoved) { throw 'Browser profile isolation proof failed.' }
+          if ($proof.activeUserProfileReused -or -not $proof.focusIsolated -or $proof.clipboardShared -or $proof.userInputInjection) { throw 'Foreground privacy isolation proof failed.' }
+          if ($proof.javascriptEnabled -or $proof.mutationMode -ne 'read-only-static-surface') { throw 'Initial Windows native browser lane must remain read-only.' }
+          @(
+            '## EKODI Windows Native Browser Runtime',
+            '',
+            "- Provider: $($proof.virtualizationProvider)",
+            "- Mode: $($proof.mode)",
+            "- Browser: $($proof.browser)",
+            "- Target: $($proof.url)",
+            "- Viewport: $($proof.viewportWidth)x$($proof.viewportHeight)",
+            "- DOM bytes: $($proof.contentBytes)",
+            "- Screenshot bytes: $($proof.screenshotBytes)",
+            "- Ephemeral profile removed: $($proof.profileRemoved)",
+            "- Foreground isolated: $($proof.focusIsolated)",
+            "- Clipboard shared: $($proof.clipboardShared)",
+            "- User input injection: $($proof.userInputInjection)",
+            "- Mutation mode: $($proof.mutationMode)"
+          ) | Add-Content -LiteralPath $env:GITHUB_STEP_SUMMARY
       - name: Verify power and lock command mapping without changing runner settings
         shell: pwsh
         run: |
