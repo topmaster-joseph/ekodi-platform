@@ -12,6 +12,11 @@ test('workspace admin uses the seven-axis Admin UI v3 shell',async()=>{
   assert.match(html,/운영공간 확인 중/);
   assert.doesNotMatch(html,/tenant-admin-command-home/);
   assert.match(html,/관리자 인증과 운영공간 권한을 확인하고 있습니다/);
+  assert.match(html,/data-ekodi-admin-auth-state="checking"/);
+  assert.match(html,/id="workspaceAuthGate"/);
+  assert.match(html,/id="workspaceAdminApp" class="workspace-admin-app" hidden/);
+  assert.match(script,/setWorkspaceAuthGate\('authorized'\)/);
+  assert.match(css,/\.workspace-auth-gate/);
   assert.match(css,/\.topbar\{display:none/);
   assert.match(css,/\.sidebar\{position:sticky;top:0;height:100dvh/);
   assert.match(css,/\.admin-subnav\{[^}]*justify-content:flex-start/);

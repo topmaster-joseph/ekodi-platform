@@ -46,9 +46,11 @@ test('pastor admin page is private-by-default', async () => {
   assert.match(html, /noindex,nofollow,noarchive/);
   assert.match(html, /church-pastor-admin\.js/);
   assert.match(html, /목회자 운영/);
-  assert.match(html, /<h1 id="pageTitle">오늘의 교회<\/h1>/);
-  assert.match(html, /오늘 일정·다음 예배·새가족·돌봄 후속/);
-  assert.match(html, /church-pastor-admin\.js\?v=20260923-groups1/);
+  assert.match(html, /data-ekodi-admin-auth-state="checking"/);
+  assert.match(html, /id="churchAuthGate"/);
+  assert.match(html, /id="churchAdminApp" class="workspace-admin-app" hidden/);
+  assert.match(html, /<h1 id="pageTitle">관리자<\/h1>/);
+  assert.match(html, /church-pastor-admin\.js\?v=20260924-auth-first-v1/);
   assert.match(response.headers.get('content-security-policy') || '', /frame-ancestors 'none'/);
   assert.doesNotMatch(response.headers.get('content-security-policy') || '', /(?:api|workspace-api)\.ekodi\.kr/);
   assert.match(response.headers.get('cache-control') || '', /no-store/);
@@ -79,7 +81,8 @@ test('pastor admin client enforces church staff lookup before data modules', asy
   assert.match(source, /noRoleSpecificAdminPages/);
   assert.match(source, /ekodi:tenant-context/);
   assert.match(source, /canSection\(section\)/);
-  assert.match(source, /교인·돌봄 데이터 비공개/);
+  assert.match(source, /교인·돌봄·사역 데이터와 관리자 메뉴를 표시하지 않습니다/);
+  assert.match(source, /setChurchAuthGate\('authorized'\)/);
   assert.match(source, /Google 계정으로 관리자 확인/);
   assert.match(source, /https:\/\/ekodi\.kr\/workspace-api\/v1\/site-chrome/);
   assert.doesNotMatch(source, /https:\/\/(?:api|workspace-api)\.ekodi\.kr/);

@@ -20,6 +20,9 @@ function baseStyle(){
   return `<style>
   :root{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Noto Sans KR","Segoe UI",sans-serif;color:#16312a;background:#f4efe4;--local:#22634d;--local-dark:#174837;--local-soft:#e6f1eb;--paper:#fffdf8;--sand:#f4efe4;--ink:#16312a;--muted:#52645e;--line:#d8dfd9;--clay:#b85828}
   *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--sand);color:var(--ink);word-break:keep-all;overflow-wrap:break-word}a{color:inherit}
+  html[data-ekodi-region-surface="admin"][data-region-auth-pending="1"] .admin-header{visibility:hidden}
+  html[data-ekodi-region-surface="admin"][data-region-auth-pending="1"] main{visibility:hidden}
+  html[data-ekodi-region-surface="admin"][data-region-auth-pending="1"] main[data-region-auth-message="true"]{visibility:visible}
   .site-header{width:100%;background:rgba(255,253,248,.97);border-bottom:1px solid var(--line)}
   .site-header__inner{width:min(1120px,calc(100% - 28px));min-height:66px;margin:0 auto;display:flex;align-items:center;gap:18px}
   .site-brand{display:flex;align-items:center;gap:10px;text-decoration:none;font-weight:900;letter-spacing:-.03em}.site-brand__mark{display:grid;place-items:center;width:34px;height:34px;border-radius:12px;background:var(--local);color:#fff;font-size:15px}.site-brand__text{font-size:18px}

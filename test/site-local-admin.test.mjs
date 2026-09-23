@@ -28,7 +28,8 @@ test('site admins use each managed site canonical path plus /admin', async () =>
 
 test('canonical Mall admin renders Workspace Admin while aggregate aliases only hand off', async () => {
   const page=await (await import('../workspace-admin-page.js')).workspaceAdminPage().text();
-  assert.match(page,/EKODI Workspace Admin/);
+  assert.match(page,/data-ekodi-workspace-admin-runtime="20260924-auth-first-v1"/);
+  assert.match(page,/id="workspaceAuthGate"/);
   assert.equal(legacyAdminAliasTarget('/admin/ekodimall/'),'/ekodimall/admin');
   assert.equal(legacyAdminAliasTarget('/ekodibiz/admin/ekodimall'),'/ekodimall/admin');
   assert.equal(legacyAdminAliasTarget('/mall/admin/publishing'),'/ekodimall/admin/publishing');
